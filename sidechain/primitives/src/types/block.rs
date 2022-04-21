@@ -17,12 +17,11 @@
 
 use crate::{
 	traits::{Block as BlockTrait, SignedBlock as SignedBlockTrait},
-	types::header::Header,
+	types::{block_data::BlockData, header::Header},
 };
 use codec::{Decode, Encode};
 use sp_core::{ed25519, H256};
 use sp_runtime::{traits::Verify, MultiSignature};
-use sp_std::vec::Vec;
 
 pub type BlockHash = H256;
 pub type BlockNumber = u64;
@@ -43,76 +42,40 @@ pub type Signature = MultiSignature;
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct SignedBlock {
+	/// Plain sidechain block without author signature.
 	pub block: Block,
-	/// block author signature
+	/// Block author signature.
 	pub signature: Signature,
 }
 
-/// simplified block structure for relay chain submission as an extrinsic
+/// Simplified block structure for relay chain submission as an extrinsic.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct Block {
 	/// Sidechain Header
 	pub header: Header,
 
-	pub timestamp: u64,
-	/// Parentchain header this block is based on
-	pub layer_one_head: H256,
-	///  must be registered on layer one as an enclave for the respective shard
-	pub block_author: ed25519::Public,
-
-	pub signed_top_hashes: Vec<H256>,
-	// encrypted state payload
-	pub encrypted_state_diff: Vec<u8>,
+	/// Sidechain Block data
+	pub block_data: BlockData,
 }
 
 impl BlockTrait for Block {
 	type HeaderType = Header;
 
+	type BlockDataType = BlockData;
+
 	type Public = ed25519::Public;
 
-	/// Get header of the block.
-	fn header(&self) -> Self::HeaderType {
-		self.header
+	fn header(&self) -> &Self::HeaderType {
+		&self.header
 	}
-	/// get timestamp of block
-	fn timestamp(&self) -> Timestamp {
-		self.timestamp
+
+	fn block_data(&self) -> &Self::BlockDataType {
+		&self.block_data
 	}
-	/// get layer one head of block
-	fn layer_one_head(&self) -> H256 {
-		self.layer_one_head
-	}
-	/// get author of block
-	fn block_author(&self) -> &Self::Public {
-		&self.block_author
-	}
-	/// get reference of extrinisics of block
-	fn signed_top_hashes(&self) -> &[H256] {
-		&self.signed_top_hashes
-	}
-	/// get encrypted payload
-	fn encrypted_state_diff(&self) -> &Vec<u8> {
-		&self.encrypted_state_diff
-	}
-	/// Constructs an unsigned block
-	fn new(
-		header: Self::HeaderType,
-		author: Self::Public,
-		layer_one_head: H256,
-		signed_top_hashes: Vec<H256>,
-		encrypted_payload: Vec<u8>,
-		timestamp: Timestamp,
-	) -> Block {
-		// create block
-		Block {
-			header,
-			timestamp,
-			layer_one_head,
-			signed_top_hashes,
-			block_author: author,
-			encrypted_state_diff: encrypted_payload,
-		}
+
+	fn new(header: Self::HeaderType, block_data: Self::BlockDataType) -> Self {
+		Self { header, block_data }
 	}
 }
 
@@ -139,15 +102,16 @@ impl SignedBlockTrait for SignedBlock {
 
 	/// Verifies the signature of a Block
 	fn verify_signature(&self) -> bool {
-		self.block
-			.using_encoded(|p| self.signature.verify(p, &self.block.block_author.into()))
+		self.block.using_encoded(|p| {
+			self.signature.verify(p, &self.block.block_data().block_author.into())
+		})
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::{Block as BlockT, Header, SignBlock};
+	use crate::traits::{Block as BlockT, BlockData, Header, SignBlock};
 	use sp_core::Pair;
 	use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -158,14 +122,15 @@ mod tests {
 
 	fn test_block() -> Block {
 		let header = Header::new(0, H256::random(), H256::random(), Default::default());
-		Block::new(
-			header,
+		let block_data = BlockData::new(
 			ed25519::Pair::from_string("//Alice", None).unwrap().public().into(),
 			H256::random(),
 			Default::default(),
 			Default::default(),
 			timestamp_now(),
-		)
+		);
+
+		Block::new(header, block_data)
 	}
 
 	#[test]

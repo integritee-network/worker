@@ -44,7 +44,7 @@ use itp_top_pool_author::{api::SidechainApi, author::AuthorTopFilter, traits::Au
 use itp_types::{AccountId, Block as ParentchainBlock, Enclave, ShardIdentifier};
 use its_sidechain::{
 	aura::proposer_factory::ProposerFactory,
-	primitives::types::SignedBlock as SignedSidechainBlock,
+	primitives::{traits::Block, types::SignedBlock as SignedSidechainBlock},
 	slots::{slot_from_time_stamp_and_duration, SlotInfo},
 	state::SidechainState,
 };
@@ -229,7 +229,7 @@ fn get_state_hashes_from_block(
 	signed_block: &SignedSidechainBlock,
 	state_key: &Aes,
 ) -> (H256, H256) {
-	let mut encrypted_state_diff = signed_block.block.encrypted_state_diff.clone();
+	let mut encrypted_state_diff = signed_block.block.block_data().encrypted_state_diff.clone();
 	state_key.decrypt(&mut encrypted_state_diff).unwrap();
 	let decoded_state = StatePayload::decode(&mut encrypted_state_diff.as_slice()).unwrap();
 	(decoded_state.state_hash_apriori(), decoded_state.state_hash_aposteriori())

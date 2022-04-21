@@ -18,44 +18,31 @@
 
 //! Builder pattern for a signed sidechain block.
 
-use codec::Encode;
-use itp_time_utils;
-use itp_types::H256;
+use crate::{
+	sidechain_block_data_builder::SidechainBlockDataBuilder,
+	sidechain_header_builder::SidechainHeaderBuilder,
+};
 use its_primitives::{
-	traits::{Block as BlockTrait, Header as HeaderTrait, SignBlock},
-	types::{
-		block::{BlockHash, BlockNumber, Timestamp},
-		Block, ShardIdentifier, SignedBlock,
-	},
+	traits::SignBlock,
+	types::{block_data::BlockData, header::Header, Block, SignedBlock},
 };
 use sp_core::{ed25519, Pair};
-use sp_runtime::traits::{BlakeTwo256, Hash};
 
 type Seed = [u8; 32];
 const ENCLAVE_SEED: Seed = *b"12345678901234567890123456789012";
 
 pub struct SidechainBlockBuilder {
 	signer: ed25519::Pair,
-	number: BlockNumber,
-	parent_hash: BlockHash,
-	parentchain_block_hash: H256,
-	signed_top_hashes: Vec<H256>,
-	encrypted_payload: Vec<u8>,
-	shard: ShardIdentifier,
-	timestamp: Timestamp,
+	header: Header,
+	block_data: BlockData,
 }
 
 impl Default for SidechainBlockBuilder {
 	fn default() -> Self {
 		SidechainBlockBuilder {
 			signer: Pair::from_seed(&ENCLAVE_SEED),
-			number: 1,
-			parent_hash: BlockHash::default(),
-			parentchain_block_hash: Default::default(),
-			signed_top_hashes: Default::default(),
-			encrypted_payload: Default::default(),
-			shard: Default::default(),
-			timestamp: Default::default(),
+			header: SidechainHeaderBuilder::default().build(),
+			block_data: SidechainBlockDataBuilder::default().build(),
 		}
 	}
 }
@@ -64,85 +51,33 @@ impl SidechainBlockBuilder {
 	pub fn random() -> Self {
 		SidechainBlockBuilder {
 			signer: Pair::from_seed(&ENCLAVE_SEED),
-			number: 42,
-			parent_hash: BlockHash::random(),
-			parentchain_block_hash: BlockHash::random(),
-			signed_top_hashes: vec![H256::random(), H256::random()],
-			encrypted_payload: vec![1, 3, 42, 8, 11, 33],
-			shard: ShardIdentifier::random(),
-			timestamp: itp_time_utils::now_as_u64(),
+			header: SidechainHeaderBuilder::random().build(),
+			block_data: SidechainBlockDataBuilder::random().build(),
 		}
 	}
+
+	pub fn with_header(mut self, header: Header) -> Self {
+		self.header = header;
+		self
+	}
+
+	pub fn with_block_data(mut self, block_data: BlockData) -> Self {
+		self.block_data = block_data;
+		self
+	}
+
 	pub fn with_signer(mut self, signer: ed25519::Pair) -> Self {
 		self.signer = signer;
 		self
 	}
 
-	pub fn with_number(mut self, number: BlockNumber) -> Self {
-		self.number = number;
-		self
+	pub fn build(self) -> Block {
+		Block { header: self.header, block_data: self.block_data }
 	}
 
-	pub fn with_parent_hash(mut self, parent_hash: BlockHash) -> Self {
-		self.parent_hash = parent_hash;
-		self
-	}
-
-	pub fn with_parentchain_block_hash(mut self, parentchain_block_hash: H256) -> Self {
-		self.parentchain_block_hash = parentchain_block_hash;
-		self
-	}
-
-	pub fn with_signed_top_hashes(mut self, signed_top_hashes: Vec<H256>) -> Self {
-		self.signed_top_hashes = signed_top_hashes;
-		self
-	}
-
-	pub fn with_payload(mut self, payload: Vec<u8>) -> Self {
-		self.encrypted_payload = payload;
-		self
-	}
-
-	pub fn with_shard(mut self, shard: ShardIdentifier) -> Self {
-		self.shard = shard;
-		self
-	}
-
-	pub fn with_timestamp(mut self, timestamp: Timestamp) -> Self {
-		self.timestamp = timestamp;
-		self
-	}
-
-	/// Calculate the payload of a sidechain block.
-	pub fn block_data_hash(&self) -> H256 {
-		(
-			self.timestamp,
-			self.parentchain_block_hash,
-			self.signer.public(),
-			self.signed_top_hashes.as_slice(),
-			self.encrypted_payload.as_slice(),
-		)
-			.using_encoded(BlakeTwo256::hash)
-	}
-
-	pub fn build(&self) -> Block {
-		let block_data_hash = self.block_data_hash();
-
-		let header = HeaderTrait::new(self.number, self.parent_hash, self.shard, block_data_hash);
-
-		Block::new(
-			header,
-			self.signer.public(),
-			self.parentchain_block_hash,
-			self.signed_top_hashes.clone(),
-			self.encrypted_payload.clone(),
-			self.timestamp,
-		)
-	}
-
-	pub fn build_signed(&self) -> SignedBlock {
-		let signer = &self.signer.clone();
-		self.build().sign_block(signer)
+	pub fn build_signed(self) -> SignedBlock {
+		let signer = self.signer.clone();
+		self.build().sign_block(&signer)
 	}
 }
 

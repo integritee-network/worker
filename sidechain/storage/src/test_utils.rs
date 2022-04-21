@@ -16,15 +16,16 @@
 */
 
 use crate::storage::SidechainStorage;
+use itp_time_utils::now_as_u64;
 use itp_types::ShardIdentifier;
 use its_primitives::types::{BlockHash, SignedBlock as SignedSidechainBlock};
-use its_test::sidechain_block_builder::SidechainBlockBuilder;
-use sp_core::{crypto::Pair, ed25519, H256};
-use std::{
-	path::PathBuf,
-	time::{SystemTime, UNIX_EPOCH},
-	vec::Vec,
+use its_test::{
+	sidechain_block_builder::SidechainBlockBuilder,
+	sidechain_block_data_builder::SidechainBlockDataBuilder,
+	sidechain_header_builder::SidechainHeaderBuilder,
 };
+use sp_core::{crypto::Pair, ed25519, H256};
+use std::{path::PathBuf, vec::Vec};
 use temp_dir::TempDir;
 
 pub fn fill_storage_with_blocks(blocks: Vec<SignedSidechainBlock>) -> TempDir {
@@ -50,9 +51,16 @@ pub fn create_signed_block_with_parenthash(
 	block_number: u64,
 	parent_hash: BlockHash,
 ) -> SignedSidechainBlock {
-	default_block_builder()
+	let header = default_header_builder()
 		.with_parent_hash(parent_hash)
-		.with_number(block_number)
+		.with_block_number(block_number)
+		.build();
+
+	let block_data = default_block_data_builder().build();
+
+	SidechainBlockBuilder::default()
+		.with_header(header)
+		.with_block_data(block_data)
 		.build_signed()
 }
 
@@ -60,18 +68,29 @@ pub fn create_signed_block_with_shard(
 	block_number: u64,
 	shard: ShardIdentifier,
 ) -> SignedSidechainBlock {
-	default_block_builder()
+	let header = default_header_builder()
 		.with_shard(shard)
-		.with_number(block_number)
+		.with_block_number(block_number)
+		.build();
+
+	let block_data = default_block_data_builder().build();
+
+	SidechainBlockBuilder::default()
+		.with_header(header)
+		.with_block_data(block_data)
 		.build_signed()
 }
 
-fn default_block_builder() -> SidechainBlockBuilder {
-	SidechainBlockBuilder::default()
-		.with_signer(ed25519::Pair::from_string("//Alice", None).unwrap())
+fn default_header_builder() -> SidechainHeaderBuilder {
+	SidechainHeaderBuilder::default()
 		.with_parent_hash(H256::random())
-		.with_parentchain_block_hash(H256::random())
-		.with_timestamp(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64)
+		.with_block_number(Default::default())
 		.with_shard(default_shard())
-		.with_number(Default::default())
+}
+
+fn default_block_data_builder() -> SidechainBlockDataBuilder {
+	SidechainBlockDataBuilder::default()
+		.with_timestamp(now_as_u64())
+		.with_layer_one_head(H256::random())
+		.with_signer(ed25519::Pair::from_string("//Alice", None).unwrap())
 }

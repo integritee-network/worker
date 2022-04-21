@@ -443,7 +443,10 @@ mod tests {
 
 		let result = SimpleSlotWorker::on_slot(&mut aura, slot_info, Default::default()).unwrap();
 
-		assert_eq!(result.block.block.layer_one_head, latest_parentchain_header.hash());
+		assert_eq!(
+			result.block.block.block_data().layer_one_head,
+			latest_parentchain_header.hash()
+		);
 		assert!(parentchain_block_import_trigger.has_import_been_called());
 	}
 

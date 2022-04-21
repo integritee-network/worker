@@ -64,7 +64,8 @@ use its_sidechain::{
 	block_composer::{BlockComposer, ComposeBlockAndConfirmation},
 	primitives::{
 		traits::{
-			Block as BlockTrait, Header as SidechainHeaderTrait, SignedBlock as SignedBlockTrait,
+			Block as BlockTrait, BlockData, Header as SidechainHeaderTrait,
+			SignedBlock as SignedBlockTrait,
 		},
 		types::block::SignedBlock,
 	},
@@ -188,7 +189,7 @@ fn test_compose_block_and_confirmation() {
 	let expected_call = OpaqueCall::from_tuple(&(
 		[TEEREX_MODULE, PROPOSED_SIDECHAIN_BLOCK],
 		shard,
-		blake2_256(&signed_block.block().encode()),
+		blake2_256(&signed_block.block().header().encode()),
 	));
 
 	assert!(signed_block.verify_signature());
@@ -340,12 +341,12 @@ fn test_create_block_and_confirmation_works() {
 	let expected_call = OpaqueCall::from_tuple(&(
 		[TEEREX_MODULE, PROPOSED_SIDECHAIN_BLOCK],
 		shard,
-		blake2_256(&signed_block.block().encode()),
+		blake2_256(&signed_block.block().header().encode()),
 	));
 
 	assert!(signed_block.verify_signature());
 	assert_eq!(signed_block.block().header().block_number(), 1);
-	assert_eq!(signed_block.block().signed_top_hashes()[0], top_hash);
+	assert_eq!(signed_block.block().block_data().signed_top_hashes()[0], top_hash);
 	assert!(opaque_call.encode().starts_with(&expected_call.encode()));
 }
 
@@ -404,8 +405,9 @@ fn test_create_state_diff() {
 		)
 		.unwrap();
 
-	let encrypted_state_diff =
-		encrypted_state_diff_from_encrypted(signed_block.block().encrypted_state_diff());
+	let encrypted_state_diff = encrypted_state_diff_from_encrypted(
+		signed_block.block().block_data().encrypted_state_diff(),
+	);
 	let state_diff = encrypted_state_diff.state_update();
 
 	// then

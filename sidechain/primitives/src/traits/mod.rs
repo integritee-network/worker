@@ -26,7 +26,7 @@ use sp_core::{blake2_256, Pair, Public, H256};
 use sp_runtime::traits::Member;
 use sp_std::{fmt::Debug, prelude::*};
 
-pub trait Header {
+pub trait Header: Encode + Decode + Clone {
 	/// Identifier for the shards.
 	type ShardIdentifier: Encode + Decode + Hash + Copy + Member;
 
@@ -39,6 +39,11 @@ pub trait Header {
 	/// get hash of the block's payload
 	fn block_data_hash(&self) -> H256;
 
+	/// get the `blake2_256` hash of the header.
+	fn hash(&self) -> H256 {
+		self.using_encoded(blake2_256).into()
+	}
+
 	fn new(
 		block_number: u64,
 		parent_hash: H256,
@@ -47,17 +52,10 @@ pub trait Header {
 	) -> Self;
 }
 
-/// Abstraction around a sidechain block.
-/// Todo: Make more generic.
-pub trait Block: Encode + Decode + Send + Sync + Debug + Clone {
-	/// Sidechain block header type.
-	type HeaderType: Header;
-
+pub trait BlockData: Encode + Decode + Send + Sync + Debug + Clone {
 	/// Public key type of the block author
 	type Public: Public;
 
-	/// Get header of the block.
-	fn header(&self) -> Self::HeaderType;
 	/// get timestamp of block
 	fn timestamp(&self) -> u64;
 	/// get layer one head of block
@@ -72,15 +70,39 @@ pub trait Block: Encode + Decode + Send + Sync + Debug + Clone {
 	fn hash(&self) -> H256 {
 		self.using_encoded(blake2_256).into()
 	}
-	/// Todo: group arguments in structs -> Header
+
 	fn new(
-		header: Self::HeaderType,
 		author: Self::Public,
 		layer_one_head: H256,
 		signed_top_hashes: Vec<H256>,
 		encrypted_payload: Vec<u8>,
 		timestamp: u64,
 	) -> Self;
+}
+
+/// Abstraction around a sidechain block.
+pub trait Block: Encode + Decode + Send + Sync + Debug + Clone {
+	/// Sidechain block header type.
+	type HeaderType: Header;
+
+	/// Sidechain block data type.
+	type BlockDataType: BlockData<Public = Self::Public>;
+
+	/// Public key type of the block author
+	type Public: Public;
+
+	/// get the `blake2_256` hash of the block
+	fn hash(&self) -> H256 {
+		self.header().hash()
+	}
+
+	/// Get header of the block.
+	fn header(&self) -> &Self::HeaderType;
+
+	/// Get header of the block.
+	fn block_data(&self) -> &Self::BlockDataType;
+
+	fn new(header: Self::HeaderType, block_data: Self::BlockDataType) -> Self;
 }
 
 /// ShardIdentifier for a [`SignedBlock`]

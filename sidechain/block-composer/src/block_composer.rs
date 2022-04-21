@@ -23,15 +23,15 @@ use itp_sgx_crypto::StateCrypto;
 use itp_time_utils::now_as_u64;
 use itp_types::{OpaqueCall, ShardIdentifier, H256};
 use its_primitives::traits::{
-	Block as SidechainBlockTrait, Header as HeaderTrait, SignBlock,
+	Block as SidechainBlockTrait, BlockData, Header as HeaderTrait, SignBlock,
 	SignedBlock as SignedSidechainBlockTrait,
 };
 use its_state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt, StateHash};
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
-use sp_core::{ed25519, Pair};
+use sp_core::Pair;
 use sp_runtime::{
-	traits::{BlakeTwo256, Block as ParentchainBlockTrait, Hash, Header},
+	traits::{Block as ParentchainBlockTrait, Header},
 	MultiSignature,
 };
 use std::{format, marker::PhantomData, vec::Vec};
@@ -78,6 +78,8 @@ where
 }
 
 type HeaderTypeOf<T> = <<T as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType;
+type BlockDataTypeOf<T> =
+	<<T as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::BlockDataType;
 
 impl<ParentchainBlock, SignedSidechainBlock, Signer, StateKey, Externalities>
 	ComposeBlockAndConfirmation<Externalities, ParentchainBlock>
@@ -131,31 +133,22 @@ where
 			Error::Other(format!("Failed to encrypt state payload: {:?}", e).into())
 		})?;
 
-		let now = now_as_u64();
-		let layer_one_hash = latest_parentchain_header.hash();
-		let block_data_hash = calculate_block_data_hash(
-			now,
-			layer_one_hash,
+		let block_data = BlockDataTypeOf::<SignedSidechainBlock>::new(
 			author_public,
-			&top_call_hashes,
-			&payload,
+			latest_parentchain_header.hash(),
+			top_call_hashes,
+			payload,
+			now_as_u64(),
 		);
 
 		let header = HeaderTypeOf::<SignedSidechainBlock>::new(
 			block_number,
 			parent_hash,
 			shard,
-			block_data_hash,
+			block_data.hash(),
 		);
 
-		let block = SignedSidechainBlock::Block::new(
-			header,
-			author_public,
-			layer_one_hash,
-			top_call_hashes,
-			payload,
-			now,
-		);
+		let block = SignedSidechainBlock::Block::new(header, block_data);
 
 		let block_hash = block.hash();
 		debug!("Block hash {}", block_hash);
@@ -171,16 +164,4 @@ where
 /// Creates a proposed_sidechain_block extrinsic for a given shard id and sidechain block hash.
 fn create_proposed_sidechain_block_call(shard_id: ShardIdentifier, block_hash: H256) -> OpaqueCall {
 	OpaqueCall::from_tuple(&([TEEREX_MODULE, PROPOSED_SIDECHAIN_BLOCK], shard_id, block_hash))
-}
-
-/// Calculate the payload of a sidechain block.
-fn calculate_block_data_hash(
-	timestamp: u64,
-	layer_one_head: H256,
-	block_author: ed25519::Public,
-	signed_top_hashes: &[H256],
-	encrypted_state_diff: &[u8],
-) -> H256 {
-	(timestamp, layer_one_head, block_author, signed_top_hashes, encrypted_state_diff)
-		.using_encoded(BlakeTwo256::hash)
 }
