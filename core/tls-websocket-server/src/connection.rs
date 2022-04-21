@@ -107,7 +107,7 @@ where
 		let tls_stream = self.get_active_stream_mut();
 		match tls_stream.sess.write_tls(&mut tls_stream.sock) {
 			Ok(_) => {
-				debug!("TLS write successful, connection is alive");
+				trace!("TLS write successful, connection is alive");
 				if tls_stream.sess.is_handshaking() {
 					return ConnectionState::TlsHandshake
 				}
@@ -143,7 +143,7 @@ where
 	}
 
 	fn initiate_websocket_handshake(&mut self) -> WebSocketResult<()> {
-		debug!("Initiating websocket handshake..");
+		trace!("Initiating websocket handshake..");
 		let tls_stream = self.tls_stream.take().ok_or_else(|| {
 			WebSocketError::HandShakeError(
 				"Missing TLS stream, websocket was already initialized?".to_string(),
@@ -153,22 +153,21 @@ where
 		self.web_socket = Some(
 			accept(tls_stream).map_err(|e| WebSocketError::HandShakeError(format!("{:?}", e)))?,
 		);
-		debug!("Handshake successful");
+		trace!("Handshake successful");
 		Ok(())
 	}
 
 	fn handle_message(&mut self, message: Message) -> WebSocketResult<()> {
 		if let Message::Text(string_message) = message {
-			debug!("Got Message::Text on web-socket, calling handler..");
+			trace!("Got Message::Text on web-socket, calling handler..");
 			if let Some(reply) = self
 				.connection_handler
 				.handle_message(self.connection_token.into(), string_message)?
 			{
-				debug!("Handling message yielded a reply, sending it now..");
+				trace!("Handling message yielded a reply, sending it now..");
 				self.write_message(reply)?;
-				debug!("Reply sent successfully");
+				trace!("Reply sent successfully");
 			}
-			debug!("Successfully handled web-socket message");
 		}
 		Ok(())
 	}
@@ -218,7 +217,7 @@ where
 		let mut is_closing = false;
 
 		if ev.readiness().is_readable() {
-			debug!("Connection ({:?}) is readable", self.token());
+			trace!("Connection ({:?}) is readable", self.token());
 
 			let connection_state = self.do_tls_read();
 
@@ -230,13 +229,13 @@ where
 		}
 
 		if ev.readiness().is_writable() {
-			debug!("Connection ({:?}) is writable", self.token());
+			trace!("Connection ({:?}) is writable", self.token());
 
 			let connection_state = self.do_tls_write();
 
 			if connection_state.is_alive() {
 				if let Some(web_socket) = self.web_socket.as_mut() {
-					debug!("Web-socket, write pending messages");
+					trace!("Web-socket, write pending messages");
 					if let Err(e) = web_socket.write_pending() {
 						match e {
 							tungstenite::Error::ConnectionClosed => is_closing = true,

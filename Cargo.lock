@@ -2461,6 +2461,7 @@ dependencies = [
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl",
  "parity-scale-codec",
+ "parking_lot 0.11.2",
  "serde_derive 1.0.136",
  "serde_json 1.0.79",
  "sgx_crypto_helper",

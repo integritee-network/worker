@@ -25,7 +25,9 @@ use codec::{Decode, Encode};
 use ita_stf::{ShardIdentifier, TrustedCallSigned, TrustedOperation};
 use itc_rpc_client::direct_client::DirectApi;
 use itp_node_api_extensions::TEEREX;
-use itp_types::{DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue};
+use itp_types::{
+	DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue, TrustedOperationStatus,
+};
 use log::*;
 use my_node_runtime::{AccountId, Hash};
 use sp_core::{sr25519 as sr25519_core, Pair, H256};
@@ -200,6 +202,7 @@ fn send_direct_request(
 							if let Ok(value) = String::decode(&mut return_value.value.as_slice()) {
 								println!("[Error] {}", value);
 							}
+							direct_api.close().unwrap();
 							return None
 						},
 						DirectRequestStatus::TrustedOperationStatus(status) => {
@@ -207,24 +210,40 @@ fn send_direct_request(
 							if let Ok(value) = Hash::decode(&mut return_value.value.as_slice()) {
 								println!("Trusted call {:?} is {:?}", value, status);
 							}
+							if connection_can_be_closed(status) {
+								direct_api.close().unwrap();
+							}
 						},
 						_ => {
 							debug!("request status is ignored");
+							direct_api.close().unwrap();
 							return None
 						},
 					}
 					if !return_value.do_watch {
 						debug!("do watch is false, closing connection");
+						direct_api.close().unwrap();
 						return None
 					}
 				};
 			},
 			Err(e) => {
 				error!("failed to receive rpc response: {:?}", e);
+				direct_api.close().unwrap();
 				return None
 			},
 		};
 	}
+}
+
+fn connection_can_be_closed(top_status: TrustedOperationStatus) -> bool {
+	!matches!(
+		top_status,
+		TrustedOperationStatus::Submitted
+			| TrustedOperationStatus::Future
+			| TrustedOperationStatus::Ready
+			| TrustedOperationStatus::Broadcast
+	)
 }
 
 #[allow(dead_code)]

@@ -17,13 +17,16 @@
 
 //! Interface for direct access to a workers rpc.
 
-use crate::ws_client::WsClient;
+use crate::ws_client::{WsClient, WsClientControl};
 use codec::Decode;
 use itp_types::{DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue};
 use log::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use std::{
-	sync::mpsc::{channel, Sender as MpscSender},
+	sync::{
+		mpsc::{channel, Sender as MpscSender},
+		Arc,
+	},
 	thread,
 	thread::JoinHandle,
 };
@@ -34,6 +37,7 @@ pub use crate::error::{Error, Result};
 #[derive(Clone)]
 pub struct DirectClient {
 	url: String,
+	web_socket_control: Arc<WsClientControl>,
 }
 pub trait DirectApi {
 	/// Server connection with only one response.
@@ -44,11 +48,14 @@ pub trait DirectApi {
 	fn get_mu_ra_url(&self) -> Result<String>;
 	fn get_untrusted_worker_url(&self) -> Result<String>;
 	fn get_state_metadata(&self) -> Result<RuntimeMetadataPrefixed>;
+
+	/// Close any open websocket connection.
+	fn close(&self) -> Result<()>;
 }
 
 impl DirectClient {
 	pub fn new(url: String) -> Self {
-		Self { url }
+		Self { url, web_socket_control: Default::default() }
 	}
 }
 
@@ -57,7 +64,7 @@ impl DirectApi for DirectClient {
 		let (port_in, port_out) = channel();
 
 		info!("[WorkerApi Direct]: (get) Sending request: {:?}", request);
-		WsClient::connect(&self.url, request, &port_in, false)?;
+		WsClient::connect_one_shot(&self.url, request, &port_in)?;
 		port_out.recv().map_err(Error::MspcReceiver)
 	}
 
@@ -65,8 +72,12 @@ impl DirectApi for DirectClient {
 		info!("[WorkerApi Direct]: (watch) Sending request: {:?}", request);
 		let url = self.url.clone();
 
+		let web_socket_control = self.web_socket_control.clone();
 		// Unwrap is fine here, because JoinHandle can be used to handle a Thread panic.
-		thread::spawn(move || WsClient::connect(&url, &request, &sender, true).unwrap())
+		thread::spawn(move || {
+			WsClient::connect_watch_with_control(&url, &request, &sender, web_socket_control)
+				.unwrap()
+		})
 	}
 
 	fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey> {
@@ -125,6 +136,10 @@ impl DirectApi for DirectClient {
 
 		println!("[+] Got metadata of enclave runtime");
 		Ok(metadata)
+	}
+
+	fn close(&self) -> Result<()> {
+		self.web_socket_control.close_connection()
 	}
 }
 

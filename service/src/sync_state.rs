@@ -37,7 +37,7 @@ pub(crate) fn sync_state<E: TlsRemoteAttestation, NodeApi: PalletTeerexApi>(
 	// FIXME: we now assume that keys are equal for all shards.
 	let provider_url =
 		executor::block_on(get_author_url_of_last_finalized_sidechain_block(node_api, shard))
-			.unwrap();
+			.expect("Author of last finalized sidechain block could not be found");
 	println!("Requesting state provisioning from worker at {}", &provider_url);
 
 	enclave_request_state_provisioning(
@@ -61,7 +61,9 @@ async fn get_author_url_of_last_finalized_sidechain_block<NodeApi: PalletTeerexA
 	node_api: &NodeApi,
 	shard: &ShardIdentifier,
 ) -> Result<String> {
-	let enclave = node_api.worker_for_shard(shard, None)?.ok_or(Error::EmptyValue)?;
+	let enclave = node_api
+		.worker_for_shard(shard, None)?
+		.ok_or_else(|| Error::NoWorkerForShardFound(*shard))?;
 	let worker_api_direct = DirectWorkerApi::new(enclave.url);
 	Ok(worker_api_direct.get_mu_ra_url()?)
 }

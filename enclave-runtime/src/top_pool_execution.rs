@@ -193,6 +193,8 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 				shards,
 			)?;
 
+			debug!("Aura executed successfully");
+
 			// Drop lock as soon as we don't need it anymore.
 			drop(_enclave_write_lock);
 
@@ -210,6 +212,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 		},
 	};
 
+	debug!("End sidechain block production cycle");
 	Ok(())
 }
 
@@ -289,10 +292,12 @@ where
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	ExtrinsicsFactory: CreateExtrinsics,
 {
+	debug!("Proposing {} sidechain block(s) (broadcasting to peers)", blocks.len());
 	ocall_api.propose_sidechain_blocks(blocks)?;
 
 	let xts = extrinsics_factory.create_extrinsics(opaque_calls.as_slice())?;
 
+	debug!("Sending sidechain block(s) confirmation extrinsic.. ");
 	validator_access.execute_mut_on_validator(|v| v.send_extrinsics(&ocall_api, xts))?;
 	Ok(())
 }

@@ -90,7 +90,7 @@ where
 		let tls_session = rustls::ServerSession::new(&tls_config);
 		let connection_id = self.id_generator.next_id()?;
 		let token = mio::Token(connection_id);
-		debug!("New connection has token {:?}", token);
+		trace!("New connection has token {:?}", token);
 
 		let mut web_socket_connection = TungsteniteWsConnection::new(
 			socket,
@@ -99,14 +99,14 @@ where
 			self.connection_handler.clone(),
 		)?;
 
-		debug!("Web-socket connection created");
+		trace!("Web-socket connection created");
 		web_socket_connection.register(poll)?;
 
 		let mut connections_lock =
 			self.connections.write().map_err(|_| WebSocketError::LockPoisoning)?;
 		connections_lock.insert(token, web_socket_connection);
 
-		debug!("Successfully accepted connection");
+		trace!("Successfully accepted connection");
 		Ok(())
 	}
 
@@ -120,7 +120,7 @@ where
 			connection.ready(poll, event)?;
 
 			if connection.is_closed() {
-				debug!("Connection {:?} is closed, removing", token);
+				trace!("Connection {:?} is closed, removing", token);
 				connections_lock.remove(&token);
 			}
 		}
@@ -201,7 +201,7 @@ where
 			for event in events.iter() {
 				match event.token() {
 					NEW_CONNECTIONS_LISTENER => {
-						debug!("Received new connection event");
+						trace!("Received new connection event");
 						if let Err(e) =
 							self.accept_connection(&mut poll, &tcp_listener, config.clone())
 						{
@@ -209,13 +209,13 @@ where
 						}
 					},
 					SERVER_SIGNAL_TOKEN => {
-						debug!("Received server signal event");
+						trace!("Received server signal event");
 						if self.handle_server_signal(&mut poll, &event, &mut shutdown_receiver)? {
 							break 'outer_event_loop
 						}
 					},
 					_ => {
-						debug!("Connection (token {:?}) activity event", event.token());
+						trace!("Connection (token {:?}) activity event", event.token());
 						if let Err(e) = self.connection_event(&mut poll, &event) {
 							error!("Failed to process connection event: {:?}", e);
 						}
