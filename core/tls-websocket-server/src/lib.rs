@@ -110,12 +110,11 @@ pub(crate) trait WebSocketConnection: Send + Sync {
 	/// Get the underlying socket (TCP stream)
 	fn socket(&self) -> &Self::Socket;
 
-	/// What IO events we're currently waiting for,
-	/// based on wants_read/wants_write.
-	fn event_set(&self) -> mio::Ready;
+	/// Query the underlying session for readiness (read/write).
+	fn get_session_readiness(&self) -> mio::Ready;
 
-	/// Ready event, connection has work to do.
-	fn ready(&mut self, poll: &mut mio::Poll, ev: &mio::event::Event) -> WebSocketResult<()>;
+	/// Handles the ready event, the connection has work to do.
+	fn on_ready(&mut self, poll: &mut mio::Poll, ev: &mio::event::Event) -> WebSocketResult<()>;
 
 	/// True if connection was closed.
 	fn is_closed(&self) -> bool;
@@ -128,7 +127,7 @@ pub(crate) trait WebSocketConnection: Send + Sync {
 		poll.register(
 			self.socket(),
 			self.token(),
-			self.event_set(),
+			self.get_session_readiness(),
 			mio::PollOpt::level() | mio::PollOpt::oneshot(),
 		)?;
 
@@ -140,7 +139,7 @@ pub(crate) trait WebSocketConnection: Send + Sync {
 		poll.reregister(
 			self.socket(),
 			self.token(),
-			self.event_set(),
+			self.get_session_readiness(),
 			mio::PollOpt::level() | mio::PollOpt::oneshot(),
 		)?;
 

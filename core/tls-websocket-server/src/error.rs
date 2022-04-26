@@ -26,15 +26,15 @@ pub type WebSocketResult<T> = Result<T, WebSocketError>;
 /// General web-socket error type
 #[derive(Debug, thiserror::Error)]
 pub enum WebSocketError {
-	#[error("Invalid certificate error: {0}")]
+	#[error("Invalid certificate: {0}")]
 	InvalidCertificate(String),
-	#[error("Invalid private key error: {0}")]
+	#[error("Invalid private key: {0}")]
 	InvalidPrivateKey(String),
-	#[error("Invalid web-socket address error: {0}")]
+	#[error("Invalid web-socket address: {0}")]
 	InvalidWsAddress(AddrParseError),
-	#[error("TCP bind error: {0}")]
+	#[error("TCP bind: {0}")]
 	TcpBindError(IoError),
-	#[error("Web-socket hand shake error")]
+	#[error("Web-socket hand shake: {0}")]
 	HandShakeError(String),
 	#[error("{0} is not a valid and active web-socket connection id")]
 	InvalidConnection(ConnectionId),
@@ -42,14 +42,14 @@ pub enum WebSocketError {
 	ConnectionClosed,
 	#[error("Web-socket connection has not yet been established")]
 	ConnectionNotYetEstablished,
-	#[error("Web-socket write error: {0}")]
+	#[error("Web-socket write: {0}")]
 	SocketWriteError(String),
 	#[error("Lock poisoning")]
 	LockPoisoning,
 	#[error("Failed to receive server signal message: {0}")]
 	MioReceiveError(#[from] std::sync::mpsc::TryRecvError),
-	#[error("I/O error: {0}")]
+	#[error("{0}")]
 	IoError(#[from] std::io::Error),
-	#[error("General web-socket error: {0}")]
+	#[error("{0}")]
 	Other(Box<dyn std::error::Error + Sync + Send + 'static>),
 }

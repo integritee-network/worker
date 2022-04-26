@@ -56,11 +56,11 @@ impl WebSocketConnection for WebSocketConnectionMock {
 		&self.socket
 	}
 
-	fn event_set(&self) -> Ready {
+	fn get_session_readiness(&self) -> Ready {
 		Ready::readable()
 	}
 
-	fn ready(&mut self, _poll: &mut Poll, _ev: &Event) -> WebSocketResult<()> {
+	fn on_ready(&mut self, _poll: &mut Poll, _ev: &Event) -> WebSocketResult<()> {
 		Ok(())
 	}
 

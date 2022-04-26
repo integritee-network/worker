@@ -199,7 +199,7 @@ where
 		&self.get_active_stream().sock
 	}
 
-	fn event_set(&self) -> Ready {
+	fn get_session_readiness(&self) -> Ready {
 		let active_stream = self.get_active_stream();
 		let wants_read = active_stream.sess.wants_read();
 		let wants_write = active_stream.sess.wants_write();
@@ -213,10 +213,10 @@ where
 		}
 	}
 
-	fn ready(&mut self, poll: &mut Poll, ev: &Event) -> WebSocketResult<()> {
+	fn on_ready(&mut self, poll: &mut Poll, event: &Event) -> WebSocketResult<()> {
 		let mut is_closing = false;
 
-		if ev.readiness().is_readable() {
+		if event.readiness().is_readable() {
 			trace!("Connection ({:?}) is readable", self.token());
 
 			let connection_state = self.do_tls_read();
@@ -228,7 +228,7 @@ where
 			}
 		}
 
-		if ev.readiness().is_writable() {
+		if event.readiness().is_writable() {
 			trace!("Connection ({:?}) is writable", self.token());
 
 			let connection_state = self.do_tls_write();

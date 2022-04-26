@@ -117,7 +117,7 @@ where
 			self.connections.write().map_err(|_| WebSocketError::LockPoisoning)?;
 
 		if let Some(connection) = connections_lock.get_mut(&token) {
-			connection.ready(poll, event)?;
+			connection.on_ready(poll, event)?;
 
 			if connection.is_closed() {
 				trace!("Connection {:?} is closed, removing", token);
@@ -387,6 +387,8 @@ mod tests {
 		assert_eq!(1, handler.get_handled_messages().len());
 	}
 
+	// Ignored because it does not directly test any of our own components.
+	// It was used to test the behavior of the tungstenite client configuration with certificates.
 	#[test]
 	#[ignore]
 	fn client_test() {
