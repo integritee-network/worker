@@ -34,16 +34,18 @@ pub struct ConnectionIdGenerator {
 	current_id: RwLock<ConnectionId>,
 }
 
+const MIN_ID: usize = 10;
+
 impl Default for ConnectionIdGenerator {
 	fn default() -> Self {
-		Self { current_id: RwLock::new(10) }
+		Self { current_id: RwLock::new(MIN_ID) }
 	}
 }
 
 impl GenerateConnectionId for ConnectionIdGenerator {
 	fn next_id(&self) -> WebSocketResult<ConnectionId> {
 		let mut id_lock = self.current_id.write().map_err(|_| WebSocketError::LockPoisoning)?;
-		*id_lock += 1;
+		*id_lock = id_lock.checked_add(1).unwrap_or(MIN_ID);
 		Ok(*id_lock)
 	}
 }
