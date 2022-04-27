@@ -292,7 +292,7 @@ mod tests {
 
 		let expected_answer = "websocket server response bidibibup".to_string();
 		let port: u16 = 21777;
-		const NUMBER_OF_CONNECTIONS: usize = 6;
+		const NUMBER_OF_CONNECTIONS: usize = 20;
 
 		let responses: VecDeque<_> =
 			(0..NUMBER_OF_CONNECTIONS).map(|_| expected_answer.clone()).collect();

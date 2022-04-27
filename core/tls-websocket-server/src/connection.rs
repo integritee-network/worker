@@ -27,7 +27,7 @@ use std::{
 	string::{String, ToString},
 	sync::Arc,
 };
-use tungstenite::{accept, Message, WebSocket};
+use tungstenite::{accept, HandshakeError, Message, WebSocket};
 
 type RustlsStream = rustls::StreamOwned<ServerSession, TcpStream>;
 type RustlsWebSocket = WebSocket<RustlsStream>;
@@ -85,6 +85,7 @@ where
 				},
 			Err(err) =>
 				if let std::io::ErrorKind::WouldBlock = err.kind() {
+					debug!("TLS session is blocked");
 					return ConnectionState::Blocked
 				},
 		}
@@ -151,11 +152,59 @@ where
 			)
 		})?;
 
-		self.web_socket = Some(
-			accept(tls_stream).map_err(|e| WebSocketError::HandShakeError(format!("{:?}", e)))?,
-		);
-		trace!("Handshake successful");
-		Ok(())
+		if tls_stream.sess.is_handshaking() {
+			warn!("TLS session still handshaking, cannot initiate web-socket handshake");
+			self.tls_stream = Some(tls_stream);
+			return Ok(())
+		}
+
+		let mut handshake_machine = match accept(tls_stream) {
+			Ok(ws) => {
+				self.web_socket = Some(ws);
+				trace!("Handshake successful");
+				return Ok(())
+			},
+			Err(e) => match e {
+				HandshakeError::Interrupted(mhs) => {
+					warn!("Web-socket handshake interrupted, attempting again");
+					mhs
+				},
+				HandshakeError::Failure(e) =>
+					return Err(WebSocketError::HandShakeError(format!("{:?}", e))),
+			},
+		};
+
+		const MAX_HANDSHAKE_ATTEMPTS: usize = 20;
+		let mut attempt_count = 0;
+		loop {
+			if attempt_count >= MAX_HANDSHAKE_ATTEMPTS {
+				return Err(WebSocketError::HandShakeError(
+					"Maximum number of web-socket handshake attempts reached, aborting.."
+						.to_string(),
+				))
+			}
+
+			handshake_machine = match handshake_machine.handshake() {
+				Ok(ws) => {
+					self.web_socket = Some(ws);
+					trace!("Handshake successful");
+					return Ok(())
+				},
+				Err(e) => match e {
+					HandshakeError::Interrupted(mhs) => {
+						warn!(
+							"Web-socket handshake interrupted, attempting again ({}/{})",
+							attempt_count, MAX_HANDSHAKE_ATTEMPTS
+						);
+						mhs
+					},
+					HandshakeError::Failure(e) =>
+						return Err(WebSocketError::HandShakeError(format!("{:?}", e))),
+				},
+			};
+
+			attempt_count += 1;
+		}
 	}
 
 	fn handle_message(&mut self, message: Message) -> WebSocketResult<()> {
