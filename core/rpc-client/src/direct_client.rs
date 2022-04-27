@@ -205,4 +205,31 @@ mod tests {
 		assert_eq!(1, messages.len());
 		assert_eq!(1, handler.messages_handled.read().unwrap().len());
 	}
+
+	#[test]
+	fn get_works_and_closes_connection() {
+		let _ = env_logger::builder().is_test(true).try_init();
+
+		let server_response = "response 1".to_string();
+		let responses = VecDeque::from([server_response.clone()]);
+
+		let port = 22335;
+		let (server, handler) = create_server(responses, port);
+
+		let server_clone = server.clone();
+		let server_join_handle = thread::spawn(move || server_clone.run());
+
+		// Wait until server is up.
+		thread::sleep(std::time::Duration::from_millis(50));
+
+		let client = DirectClient::new(format!("wss://localhost:{}", port));
+		let received_response = client.get("Request").unwrap();
+
+		info!("Joining server thread");
+		server.shut_down().unwrap();
+		server_join_handle.join().unwrap().unwrap();
+
+		assert_eq!(server_response, received_response);
+		assert_eq!(1, handler.messages_handled.read().unwrap().len());
+	}
 }

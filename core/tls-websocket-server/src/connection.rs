@@ -135,6 +135,7 @@ where
 					},
 				Err(e) => match e {
 					tungstenite::Error::ConnectionClosed => return Ok(true),
+					tungstenite::Error::AlreadyClosed => return Ok(true),
 					_ => error!("Failed to read message from web-socket: {:?}", e),
 				},
 			},
@@ -158,16 +159,37 @@ where
 	}
 
 	fn handle_message(&mut self, message: Message) -> WebSocketResult<()> {
-		if let Message::Text(string_message) = message {
-			trace!("Got Message::Text on web-socket, calling handler..");
-			if let Some(reply) = self
-				.connection_handler
-				.handle_message(self.connection_token.into(), string_message)?
-			{
-				trace!("Handling message yielded a reply, sending it now..");
-				self.write_message(reply)?;
-				trace!("Reply sent successfully");
-			}
+		match message {
+			Message::Text(string_message) => {
+				trace!("Got Message::Text on web-socket, calling handler..");
+				if let Some(reply) = self
+					.connection_handler
+					.handle_message(self.connection_token.into(), string_message)?
+				{
+					trace!("Handling message yielded a reply, sending it now..");
+					self.write_message(reply)?;
+					trace!("Reply sent successfully");
+				}
+			},
+			Message::Binary(_) => {
+				warn!("received binary message, don't have a handler for this format");
+			},
+			Message::Close(_) => {
+				debug!("Received close frame, driving web-socket connection to close");
+				if let Some(web_socket) = self.web_socket.as_mut() {
+					// We need to call write_pending until it returns an error that connection is closed.
+					loop {
+						if let Err(e) = web_socket.write_pending() {
+							match e {
+								tungstenite::Error::ConnectionClosed
+								| tungstenite::Error::AlreadyClosed => break,
+								_ => {},
+							}
+						}
+					}
+				}
+			},
+			_ => {},
 		}
 		Ok(())
 	}
@@ -238,7 +260,8 @@ where
 					trace!("Web-socket, write pending messages");
 					if let Err(e) = web_socket.write_pending() {
 						match e {
-							tungstenite::Error::ConnectionClosed => is_closing = true,
+							tungstenite::Error::ConnectionClosed
+							| tungstenite::Error::AlreadyClosed => is_closing = true,
 							_ => error!("Failed to write pending web-socket messages: {:?}", e),
 						}
 					}

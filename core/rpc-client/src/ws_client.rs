@@ -24,7 +24,7 @@ use log::*;
 use openssl::ssl::{SslConnector, SslMethod, SslStream, SslVerifyMode};
 use parking_lot::Mutex;
 use std::sync::{mpsc::Sender as MpscSender, Arc};
-use url;
+use url::{self};
 use ws::{connect, util::TcpStream, CloseCode, Handler, Handshake, Message, Result, Sender};
 
 /// Control a registered web-socket client.
@@ -44,7 +44,6 @@ impl WsClientControl {
 		if let Some(s) = self.subscriber.lock().as_ref() {
 			debug!("Closing connection");
 			s.close(CloseCode::Normal)?;
-			s.shutdown()?;
 			debug!("Connection is closed");
 		}
 		Ok(())
@@ -109,18 +108,22 @@ impl Handler for WsClient {
 	}
 
 	fn on_message(&mut self, msg: Message) -> Result<()> {
-		debug!("got message");
-		debug!("{}", msg);
-		debug!("sending result to MpscSender..");
+		trace!("got message");
+		trace!("{}", msg);
+		trace!("sending result to MpscSender..");
 		self.result.send(msg.to_string()).unwrap();
 		if !self.do_watch {
 			debug!("do_watch is false, closing connection");
 			self.web_socket.close(CloseCode::Normal).unwrap();
-			self.web_socket.shutdown().unwrap();
-			debug!("connection is closed");
+			debug!("Connection close requested");
 		}
 		debug!("on_message successful, returning");
 		Ok(())
+	}
+
+	fn on_close(&mut self, _code: CloseCode, _reason: &str) {
+		debug!("Web-socket close");
+		self.web_socket.shutdown().unwrap()
 	}
 
 	/// we are overriding the `upgrade_ssl_client` method in order to disable hostname verification
