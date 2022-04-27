@@ -107,7 +107,7 @@ where
 		debug!("sending state");
 
 		// withdraw removes it from the registry
-		let (connection, mut response) = self
+		let (connection_token, mut response) = self
 			.connection_registry
 			.withdraw(&hash)
 			.ok_or(DirectRpcError::InvalidConnectionHash)?;
@@ -121,7 +121,9 @@ where
 		// update response
 		response.result = result.encode();
 
-		self.encode_and_send_response(connection, &response)?;
+		self.encode_and_send_response(connection_token, &response)?;
+
+		self.connection_registry.store(hash, connection_token, response);
 
 		debug!("sending state successful");
 		Ok(())
@@ -191,7 +193,8 @@ pub mod tests {
 			.update_status_event(connection_hash.clone(), TrustedOperationStatus::Finalized);
 
 		assert!(result.is_ok());
-		assert!(connection_registry.withdraw(&connection_hash).is_none());
+
+		verify_closed_connection(&connection_hash, connection_registry);
 		assert_eq!(1, websocket_responder.number_of_updates());
 	}
 
@@ -218,7 +221,7 @@ pub mod tests {
 	}
 
 	#[test]
-	fn sending_state_successfully_sends_update_and_closes_connection() {
+	fn sending_state_successfully_sends_update_and_keeps_connection_open() {
 		let connection_hash = String::from("conn_hash");
 		let connection_registry = create_registry_with_single_connection(connection_hash.clone());
 
@@ -229,12 +232,12 @@ pub mod tests {
 		let result = rpc_responder.send_state(connection_hash.clone(), "new_state".encode());
 		assert!(result.is_ok());
 
-		verify_closed_connection(&connection_hash, connection_registry);
+		verify_open_connection(&connection_hash, connection_registry);
 		assert_eq!(1, websocket_responder.number_of_updates());
 	}
 
 	#[test]
-	fn sending_state_twice_fails_the_second_time() {
+	fn sending_state_twice_works() {
 		let connection_hash = String::from("conn_hash");
 		let connection_registry = create_registry_with_single_connection(connection_hash.clone());
 
@@ -245,12 +248,11 @@ pub mod tests {
 		let first_result = rpc_responder.send_state(connection_hash.clone(), "new_state".encode());
 		assert!(first_result.is_ok());
 
-		// Cannot send_state twice, since it closes the connection automatically after the first send.
 		let second_result =
 			rpc_responder.send_state(connection_hash.clone(), "new_state_2".encode());
-		assert!(!second_result.is_ok());
+		assert!(second_result.is_ok());
 
-		assert_eq!(1, websocket_responder.number_of_updates());
+		assert_eq!(2, websocket_responder.number_of_updates());
 	}
 
 	#[test]
