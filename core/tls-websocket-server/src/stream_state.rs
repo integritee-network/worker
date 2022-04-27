@@ -28,14 +28,15 @@ use tungstenite::{
 };
 
 pub(crate) type RustlsStream = rustls::StreamOwned<ServerSession, TcpStream>;
-pub(crate) type WebSocketServerHandshake = MidHandshake<ServerHandshake<RustlsStream, NoCallback>>;
+pub(crate) type RustlsServerHandshake = ServerHandshake<RustlsStream, NoCallback>;
+pub(crate) type RustlsMidHandshake = MidHandshake<RustlsServerHandshake>;
 pub(crate) type RustlsWebSocket = WebSocket<RustlsStream>;
 
 /// Internal TLS stream state. From pure TLS stream, to web-socket handshake and established WS.
 pub(crate) enum StreamState {
 	Invalid,
 	TlsStream(RustlsStream),
-	WebSocketHandshake(WebSocketServerHandshake),
+	WebSocketHandshake(RustlsMidHandshake),
 	EstablishedWebsocket(RustlsWebSocket),
 }
 
@@ -48,6 +49,10 @@ impl Default for StreamState {
 impl StreamState {
 	pub(crate) fn from_stream(stream: RustlsStream) -> Self {
 		StreamState::TlsStream(stream)
+	}
+
+	pub(crate) fn is_invalid(&self) -> bool {
+		matches!(self, StreamState::Invalid)
 	}
 
 	pub(crate) fn internal_stream(&self) -> Option<&RustlsStream> {
@@ -71,40 +76,29 @@ impl StreamState {
 	pub(crate) fn attempt_handshake(self) -> Self {
 		match self {
 			// We have the bare TLS stream only, attempt to do a web-socket handshake.
-			StreamState::TlsStream(tls_stream) => {
-				match accept(tls_stream) {
-					Ok(ws) => Self::EstablishedWebsocket(ws),
-					Err(e) => match e {
-						// I/O would block our handshake attempt. Need to re-try.
-						HandshakeError::Interrupted(mhs) => {
-							warn!("Web-socket handshake interrupted");
-							Self::WebSocketHandshake(mhs)
-						},
-						HandshakeError::Failure(e) => {
-							error!("Web-socket handshake failed: {:?}", e);
-							Self::Invalid
-						},
-					},
-				}
-			},
+			StreamState::TlsStream(tls_stream) => Self::from_handshake_result(accept(tls_stream)),
 			// We already have an on-going handshake, attempt another try.
-			StreamState::WebSocketHandshake(hs) => {
-				match hs.handshake() {
-					Ok(ws) => Self::EstablishedWebsocket(ws),
-					Err(e) => match e {
-						// I/O would block our handshake attempt. Need to re-try.
-						HandshakeError::Interrupted(mhs) => {
-							warn!("Web-socket handshake interrupted");
-							Self::WebSocketHandshake(mhs)
-						},
-						HandshakeError::Failure(e) => {
-							error!("Web-socket handshake failed: {:?}", e);
-							Self::Invalid
-						},
-					},
-				}
-			},
+			StreamState::WebSocketHandshake(hs) => Self::from_handshake_result(hs.handshake()),
 			_ => self,
+		}
+	}
+
+	fn from_handshake_result(
+		handshake_result: Result<RustlsWebSocket, HandshakeError<RustlsServerHandshake>>,
+	) -> Self {
+		match handshake_result {
+			Ok(ws) => Self::EstablishedWebsocket(ws),
+			Err(e) => match e {
+				// I/O would block our handshake attempt. Need to re-try.
+				HandshakeError::Interrupted(mhs) => {
+					warn!("Web-socket handshake interrupted");
+					Self::WebSocketHandshake(mhs)
+				},
+				HandshakeError::Failure(e) => {
+					error!("Web-socket handshake failed: {:?}", e);
+					Self::Invalid
+				},
+			},
 		}
 	}
 }

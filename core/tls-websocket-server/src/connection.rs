@@ -134,6 +134,10 @@ where
 			}
 		} else {
 			self.stream_state = std::mem::take(&mut self.stream_state).attempt_handshake();
+			if self.stream_state.is_invalid() {
+				warn!("Web-socket connection ({:?}) failed, closing", self.connection_token);
+				return Ok(true)
+			}
 		}
 
 		Ok(false)
