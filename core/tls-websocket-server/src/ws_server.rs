@@ -275,11 +275,10 @@ enum ServerSignal {
 mod tests {
 	use super::*;
 	use crate::test::{
-		fixtures::{
-			no_cert_verifier::NoCertVerifier, test_server_config_provider::TestServerConfigProvider,
-		},
+		fixtures::{no_cert_verifier::NoCertVerifier, test_server::create_server},
 		mocks::web_socket_handler_mock::WebSocketHandlerMock,
 	};
+	use alloc::collections::VecDeque;
 	use rustls::ClientConfig;
 	use std::{net::TcpStream, thread, time::Duration};
 	use tungstenite::{
@@ -287,16 +286,17 @@ mod tests {
 	};
 	use url::Url;
 
-	type TestServer = TungsteniteWsServer<WebSocketHandlerMock, TestServerConfigProvider>;
-
 	#[test]
 	fn server_handles_multiple_connections() {
 		let _ = env_logger::builder().is_test(true).try_init();
 
 		let expected_answer = "websocket server response bidibibup".to_string();
 		let port: u16 = 21777;
+		const NUMBER_OF_CONNECTIONS: usize = 6;
 
-		let (server, handler) = create_server(Some(expected_answer.clone()), port);
+		let responses: VecDeque<_> =
+			(0..NUMBER_OF_CONNECTIONS).map(|_| expected_answer.clone()).collect();
+		let (server, handler) = create_server(responses, port);
 
 		let server_clone = server.clone();
 		let server_join_handle = thread::spawn(move || server_clone.run());
@@ -304,10 +304,8 @@ mod tests {
 		// Wait until server is up.
 		thread::sleep(std::time::Duration::from_millis(50));
 
-		let number_of_connections = 6usize;
-
 		// Spawn multiple clients that connect to the server simultaneously and send a message.
-		let client_handles: Vec<_> = (0..number_of_connections)
+		let client_handles: Vec<_> = (0..NUMBER_OF_CONNECTIONS)
 			.map(|_| {
 				let expected_answer_clone = expected_answer.clone();
 
@@ -337,7 +335,7 @@ mod tests {
 			panic!("Test failed, web-socket returned error: {:?}", e);
 		}
 
-		assert_eq!(number_of_connections, handler.get_handled_messages().len());
+		assert_eq!(NUMBER_OF_CONNECTIONS, handler.get_handled_messages().len());
 	}
 
 	#[test]
@@ -346,7 +344,7 @@ mod tests {
 
 		let expected_answer = "first response".to_string();
 		let port: u16 = 21778;
-		let (server, handler) = create_server(Some(expected_answer.clone()), port);
+		let (server, handler) = create_server(VecDeque::from([expected_answer.clone()]), port);
 
 		let server_clone = server.clone();
 		let server_join_handle = thread::spawn(move || server_clone.run());
@@ -406,23 +404,6 @@ mod tests {
 				Some(m) => return m.0,
 			}
 		}
-	}
-
-	fn create_server(
-		handler_response: Option<String>,
-		port: u16,
-	) -> (Arc<TestServer>, Arc<WebSocketHandlerMock>) {
-		let config_provider = Arc::new(TestServerConfigProvider {});
-		let handler = Arc::new(WebSocketHandlerMock::new(handler_response));
-
-		let server_addr_string = format!("127.0.0.1:{}", port);
-
-		let server = Arc::new(TungsteniteWsServer::new(
-			server_addr_string,
-			config_provider,
-			handler.clone(),
-		));
-		(server, handler)
 	}
 
 	fn get_server_addr(port: u16) -> String {

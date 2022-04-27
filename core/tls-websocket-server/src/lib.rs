@@ -20,6 +20,7 @@
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
 
+extern crate alloc;
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
@@ -56,8 +57,8 @@ pub mod error;
 mod tls_common;
 pub mod ws_server;
 
-#[cfg(test)]
-mod test;
+#[cfg(any(test, feature = "mocks"))]
+pub mod test;
 
 /// Connection token alias.
 #[derive(Eq, PartialEq, Clone, Copy, Debug)]

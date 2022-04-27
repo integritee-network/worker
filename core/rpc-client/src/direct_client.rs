@@ -85,7 +85,7 @@ impl DirectApi for DirectClient {
 			RpcRequest::compose_jsonrpc_call("author_getShieldingKey".to_string(), vec![]);
 
 		// Send json rpc call to ws server.
-		let response_str = Self::get(self, &jsonrpc_call)?;
+		let response_str = self.get(&jsonrpc_call)?;
 
 		let shielding_pubkey_string = decode_from_rpc_response(&response_str)?;
 		let shielding_pubkey: Rsa3072PubKey = serde_json::from_str(&shielding_pubkey_string)?;
@@ -99,7 +99,7 @@ impl DirectApi for DirectClient {
 			RpcRequest::compose_jsonrpc_call("author_getMuRaUrl".to_string(), vec![]);
 
 		// Send json rpc call to ws server.
-		let response_str = Self::get(self, &jsonrpc_call)?;
+		let response_str = self.get(&jsonrpc_call)?;
 
 		let mu_ra_url: String = decode_from_rpc_response(&response_str)?;
 
@@ -112,7 +112,7 @@ impl DirectApi for DirectClient {
 			RpcRequest::compose_jsonrpc_call("author_getUntrustedUrl".to_string(), vec![]);
 
 		// Send json rpc call to ws server.
-		let response_str = Self::get(self, &jsonrpc_call)?;
+		let response_str = self.get(&jsonrpc_call)?;
 
 		let untrusted_url: String = decode_from_rpc_response(&response_str)?;
 
@@ -125,7 +125,7 @@ impl DirectApi for DirectClient {
 			RpcRequest::compose_jsonrpc_call("state_getMetadata".to_string(), vec![]);
 
 		// Send json rpc call to ws server.
-		let response_str = Self::get(self, &jsonrpc_call)?;
+		let response_str = self.get(&jsonrpc_call)?;
 
 		//Decode rpc response
 		let rpc_response: RpcResponse = serde_json::from_str(&response_str)?;
@@ -150,5 +150,59 @@ fn decode_from_rpc_response(json_rpc_response: &str) -> Result<String> {
 	match rpc_return_value.status {
 		DirectRequestStatus::Ok => Ok(response_message),
 		_ => Err(Error::Status(response_message)),
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use itc_tls_websocket_server::{test::fixtures::test_server::create_server, WebSocketServer};
+	use std::collections::VecDeque;
+
+	#[test]
+	fn watch_works_and_closes_connection_on_demand() {
+		let _ = env_logger::builder().is_test(true).try_init();
+
+		const END_MESSAGE: &str = "End of service.";
+		let responses = VecDeque::from([END_MESSAGE.to_string()]);
+
+		let port = 22334;
+		let (server, handler) = create_server(responses, port);
+
+		let server_clone = server.clone();
+		let server_join_handle = thread::spawn(move || server_clone.run());
+
+		// Wait until server is up.
+		thread::sleep(std::time::Duration::from_millis(50));
+
+		let client = DirectClient::new(format!("wss://localhost:{}", port));
+		let (message_sender, message_receiver) = channel::<String>();
+
+		let client_join_handle = client.watch("Request".to_string(), message_sender);
+
+		let mut messages = Vec::<String>::new();
+		loop {
+			info!("Client waiting to receive answer.. ");
+			let message = message_receiver.recv().unwrap();
+			info!("Received answer: {}", message);
+			let do_close = message.as_str() == END_MESSAGE;
+			messages.push(message);
+
+			if do_close {
+				info!("Client closing connection");
+				break
+			}
+		}
+
+		info!("Joining client thread");
+		client.close().unwrap();
+		client_join_handle.join().unwrap();
+
+		info!("Joining server thread");
+		server.shut_down().unwrap();
+		server_join_handle.join().unwrap().unwrap();
+
+		assert_eq!(1, messages.len());
+		assert_eq!(1, handler.messages_handled.read().unwrap().len());
 	}
 }

@@ -20,3 +20,8 @@ ws = { version = "0.9.1", features = ["ssl"] }
 
 # local
 itp-types = { path = "../../core-primitives/types" }
+
+[dev-dependencies]
+env_logger = "0.9.0"
+itc-tls-websocket-server = { path = "../tls-websocket-server", features = ["mocks"] }
+rustls = { version = "0.19", features = ["dangerous_configuration"] }

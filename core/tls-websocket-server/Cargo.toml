@@ -27,6 +27,7 @@ std = [
     "tungstenite",
     "thiserror",
 ]
+mocks = []
 
 [dependencies]
 # sgx dependencies

@@ -15,5 +15,5 @@
 
 */
 
-pub(crate) mod web_socket_connection_mock;
-pub(crate) mod web_socket_handler_mock;
+pub mod web_socket_connection_mock;
+pub mod web_socket_handler_mock;

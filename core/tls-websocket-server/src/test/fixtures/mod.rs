@@ -18,4 +18,5 @@
 pub mod no_cert_verifier;
 pub mod test_cert;
 pub mod test_private_key;
+pub mod test_server;
 pub mod test_server_config_provider;

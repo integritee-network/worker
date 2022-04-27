@@ -23,16 +23,19 @@ use std::sync::RwLock;
 
 use crate::{ConnectionToken, WebSocketMessageHandler, WebSocketResult};
 use log::debug;
-use std::{string::String, vec::Vec};
+use std::{collections::VecDeque, string::String, vec::Vec};
 
 pub struct WebSocketHandlerMock {
-	pub response: Option<String>,
+	pub responses: RwLock<VecDeque<String>>,
 	pub messages_handled: RwLock<Vec<(ConnectionToken, String)>>,
 }
 
 impl WebSocketHandlerMock {
-	pub fn new(response: Option<String>) -> Self {
-		WebSocketHandlerMock { response, messages_handled: Default::default() }
+	pub fn from_response_sequence(responses: VecDeque<String>) -> Self {
+		WebSocketHandlerMock {
+			responses: RwLock::new(responses),
+			messages_handled: Default::default(),
+		}
 	}
 
 	pub fn get_handled_messages(&self) -> Vec<(ConnectionToken, String)> {
@@ -51,6 +54,8 @@ impl WebSocketMessageHandler for WebSocketHandlerMock {
 		debug!("Handling message: {}", message);
 		handled_messages_lock.push((connection_token, message));
 
-		Ok(self.response.clone())
+		let next_response = self.responses.write().unwrap().pop_front();
+
+		Ok(next_response)
 	}
 }

@@ -15,5 +15,5 @@
 
 */
 
-pub(crate) mod fixtures;
-pub(crate) mod mocks;
+pub mod fixtures;
+pub mod mocks;
