@@ -52,8 +52,8 @@ impl WebSocketConnectionMock {
 impl WebSocketConnection for WebSocketConnectionMock {
 	type Socket = SocketMock;
 
-	fn socket(&self) -> &Self::Socket {
-		&self.socket
+	fn socket(&self) -> Option<&Self::Socket> {
+		Some(&self.socket)
 	}
 
 	fn get_session_readiness(&self) -> Ready {

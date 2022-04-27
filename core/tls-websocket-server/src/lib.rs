@@ -40,7 +40,7 @@ use crate::sgx_reexport_prelude::*;
 use crate::{
 	config_provider::FromFileConfigProvider,
 	connection_id_generator::{ConnectionId, ConnectionIdGenerator},
-	error::WebSocketResult,
+	error::{WebSocketError, WebSocketResult},
 	ws_server::TungsteniteWsServer,
 };
 use mio::{event::Evented, Token};
@@ -54,6 +54,7 @@ pub mod config_provider;
 mod connection;
 pub mod connection_id_generator;
 pub mod error;
+mod stream_state;
 mod tls_common;
 pub mod ws_server;
 
@@ -109,7 +110,7 @@ pub(crate) trait WebSocketConnection: Send + Sync {
 	type Socket: Evented;
 
 	/// Get the underlying socket (TCP stream)
-	fn socket(&self) -> &Self::Socket;
+	fn socket(&self) -> Option<&Self::Socket>;
 
 	/// Query the underlying session for readiness (read/write).
 	fn get_session_readiness(&self) -> mio::Ready;
@@ -125,26 +126,35 @@ pub(crate) trait WebSocketConnection: Send + Sync {
 
 	/// Register the connection with the mio poll.
 	fn register(&mut self, poll: &mio::Poll) -> WebSocketResult<()> {
-		poll.register(
-			self.socket(),
-			self.token(),
-			self.get_session_readiness(),
-			mio::PollOpt::level() | mio::PollOpt::oneshot(),
-		)?;
-
-		Ok(())
+		match self.socket() {
+			Some(s) => {
+				poll.register(
+					s,
+					self.token(),
+					self.get_session_readiness(),
+					mio::PollOpt::level() | mio::PollOpt::oneshot(),
+				)?;
+				Ok(())
+			},
+			None => Err(WebSocketError::ConnectionClosed),
+		}
 	}
 
 	/// Re-register the connection with the mio poll, after handling an event.
 	fn reregister(&mut self, poll: &mio::Poll) -> WebSocketResult<()> {
-		poll.reregister(
-			self.socket(),
-			self.token(),
-			self.get_session_readiness(),
-			mio::PollOpt::level() | mio::PollOpt::oneshot(),
-		)?;
+		match self.socket() {
+			Some(s) => {
+				poll.reregister(
+					s,
+					self.token(),
+					self.get_session_readiness(),
+					mio::PollOpt::level() | mio::PollOpt::oneshot(),
+				)?;
 
-		Ok(())
+				Ok(())
+			},
+			None => Err(WebSocketError::ConnectionClosed),
+		}
 	}
 }
 

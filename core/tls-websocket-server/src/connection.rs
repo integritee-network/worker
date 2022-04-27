@@ -18,7 +18,10 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use crate::{error::WebSocketError, WebSocketConnection, WebSocketMessageHandler, WebSocketResult};
+use crate::{
+	error::WebSocketError, stream_state::StreamState, WebSocketConnection, WebSocketMessageHandler,
+	WebSocketResult,
+};
 use log::*;
 use mio::{event::Event, net::TcpStream, Poll, Ready, Token};
 use rustls::{ServerSession, Session};
@@ -27,15 +30,11 @@ use std::{
 	string::{String, ToString},
 	sync::Arc,
 };
-use tungstenite::{accept, HandshakeError, Message, WebSocket};
-
-type RustlsStream = rustls::StreamOwned<ServerSession, TcpStream>;
-type RustlsWebSocket = WebSocket<RustlsStream>;
+use tungstenite::Message;
 
 /// A web-socket connection object.
 pub struct TungsteniteWsConnection<Handler> {
-	tls_stream: Option<RustlsStream>,
-	web_socket: Option<RustlsWebSocket>,
+	stream_state: StreamState,
 	connection_token: Token,
 	connection_handler: Arc<Handler>,
 	is_closed: bool,
@@ -52,30 +51,22 @@ where
 		handler: Arc<Handler>,
 	) -> WebSocketResult<Self> {
 		Ok(TungsteniteWsConnection {
-			tls_stream: Some(rustls::StreamOwned::new(server_session, tcp_stream)),
-			web_socket: None,
+			stream_state: StreamState::from_stream(rustls::StreamOwned::new(
+				server_session,
+				tcp_stream,
+			)),
 			connection_token,
 			connection_handler: handler,
 			is_closed: false,
 		})
 	}
 
-	fn get_active_stream(&self) -> &RustlsStream {
-		match &self.web_socket {
-			Some(w) => w.get_ref(),
-			None => self.tls_stream.as_ref().expect("At least one tls stream object to be active"),
-		}
-	}
-
-	fn get_active_stream_mut(&mut self) -> &mut RustlsStream {
-		match &mut self.web_socket {
-			Some(w) => w.get_mut(),
-			None => self.tls_stream.as_mut().expect("At least one tls stream object to be active"),
-		}
-	}
-
 	fn do_tls_read(&mut self) -> ConnectionState {
-		let tls_stream = self.get_active_stream_mut();
+		let tls_stream = match self.stream_state.internal_stream_mut() {
+			None => return ConnectionState::Closing,
+			Some(s) => s,
+		};
+
 		let tls_session = &mut tls_stream.sess;
 
 		match tls_session.read_tls(&mut tls_stream.sock) {
@@ -105,7 +96,11 @@ where
 	}
 
 	fn do_tls_write(&mut self) -> ConnectionState {
-		let tls_stream = self.get_active_stream_mut();
+		let tls_stream = match self.stream_state.internal_stream_mut() {
+			None => return ConnectionState::Closing,
+			Some(s) => s,
+		};
+
 		match tls_stream.sess.write_tls(&mut tls_stream.sock) {
 			Ok(_) => {
 				trace!("TLS write successful, connection is alive");
@@ -125,11 +120,8 @@ where
 	///
 	/// Returns a boolean 'connection should be closed'.
 	fn read_or_initialize_websocket(&mut self) -> WebSocketResult<bool> {
-		match self.web_socket.as_mut() {
-			None => {
-				self.initiate_websocket_handshake()?;
-			},
-			Some(web_socket) => match web_socket.read_message() {
+		if let StreamState::EstablishedWebsocket(web_socket) = &mut self.stream_state {
+			match web_socket.read_message() {
 				Ok(m) =>
 					if let Err(e) = self.handle_message(m) {
 						error!("Failed to handle web-socket message: {:?}", e);
@@ -139,72 +131,12 @@ where
 					tungstenite::Error::AlreadyClosed => return Ok(true),
 					_ => error!("Failed to read message from web-socket: {:?}", e),
 				},
-			},
-		}
-		Ok(false)
-	}
-
-	fn initiate_websocket_handshake(&mut self) -> WebSocketResult<()> {
-		trace!("Initiating websocket handshake..");
-		let tls_stream = self.tls_stream.take().ok_or_else(|| {
-			WebSocketError::HandShakeError(
-				"Missing TLS stream, websocket was already initialized?".to_string(),
-			)
-		})?;
-
-		if tls_stream.sess.is_handshaking() {
-			warn!("TLS session still handshaking, cannot initiate web-socket handshake");
-			self.tls_stream = Some(tls_stream);
-			return Ok(())
-		}
-
-		let mut handshake_machine = match accept(tls_stream) {
-			Ok(ws) => {
-				self.web_socket = Some(ws);
-				trace!("Handshake successful");
-				return Ok(())
-			},
-			Err(e) => match e {
-				HandshakeError::Interrupted(mhs) => {
-					warn!("Web-socket handshake interrupted, attempting again");
-					mhs
-				},
-				HandshakeError::Failure(e) =>
-					return Err(WebSocketError::HandShakeError(format!("{:?}", e))),
-			},
-		};
-
-		const MAX_HANDSHAKE_ATTEMPTS: usize = 20;
-		let mut attempt_count = 0;
-		loop {
-			if attempt_count >= MAX_HANDSHAKE_ATTEMPTS {
-				return Err(WebSocketError::HandShakeError(
-					"Maximum number of web-socket handshake attempts reached, aborting.."
-						.to_string(),
-				))
 			}
-
-			handshake_machine = match handshake_machine.handshake() {
-				Ok(ws) => {
-					self.web_socket = Some(ws);
-					trace!("Handshake successful");
-					return Ok(())
-				},
-				Err(e) => match e {
-					HandshakeError::Interrupted(mhs) => {
-						warn!(
-							"Web-socket handshake interrupted, attempting again ({}/{})",
-							attempt_count, MAX_HANDSHAKE_ATTEMPTS
-						);
-						mhs
-					},
-					HandshakeError::Failure(e) =>
-						return Err(WebSocketError::HandShakeError(format!("{:?}", e))),
-				},
-			};
-
-			attempt_count += 1;
+		} else {
+			self.stream_state = std::mem::take(&mut self.stream_state).attempt_handshake();
 		}
+
+		Ok(false)
 	}
 
 	fn handle_message(&mut self, message: Message) -> WebSocketResult<()> {
@@ -225,7 +157,7 @@ where
 			},
 			Message::Close(_) => {
 				debug!("Received close frame, driving web-socket connection to close");
-				if let Some(web_socket) = self.web_socket.as_mut() {
+				if let StreamState::EstablishedWebsocket(web_socket) = &mut self.stream_state {
 					// We need to call write_pending until it returns an error that connection is closed.
 					loop {
 						if let Err(e) = web_socket.write_pending() {
@@ -244,8 +176,8 @@ where
 	}
 
 	pub(crate) fn write_message(&mut self, message: String) -> WebSocketResult<()> {
-		match self.web_socket.as_mut() {
-			Some(web_socket) => {
+		match &mut self.stream_state {
+			StreamState::EstablishedWebsocket(web_socket) => {
 				if !web_socket.can_write() {
 					return Err(WebSocketError::ConnectionClosed)
 				}
@@ -254,7 +186,7 @@ where
 					.write_message(Message::Text(message))
 					.map_err(|e| WebSocketError::SocketWriteError(format!("{:?}", e)))
 			},
-			None =>
+			_ =>
 				Err(WebSocketError::SocketWriteError("No active web-socket available".to_string())),
 		}
 	}
@@ -266,21 +198,25 @@ where
 {
 	type Socket = TcpStream;
 
-	fn socket(&self) -> &Self::Socket {
-		&self.get_active_stream().sock
+	fn socket(&self) -> Option<&Self::Socket> {
+		self.stream_state.internal_stream().map(|s| &s.sock)
 	}
 
 	fn get_session_readiness(&self) -> Ready {
-		let active_stream = self.get_active_stream();
-		let wants_read = active_stream.sess.wants_read();
-		let wants_write = active_stream.sess.wants_write();
+		match self.stream_state.internal_stream() {
+			None => mio::Ready::empty(),
+			Some(s) => {
+				let wants_read = s.sess.wants_read();
+				let wants_write = s.sess.wants_write();
 
-		if wants_read && wants_write {
-			mio::Ready::readable() | mio::Ready::writable()
-		} else if wants_write {
-			mio::Ready::writable()
-		} else {
-			mio::Ready::readable()
+				if wants_read && wants_write {
+					mio::Ready::readable() | mio::Ready::writable()
+				} else if wants_write {
+					mio::Ready::writable()
+				} else {
+					mio::Ready::readable()
+				}
+			},
 		}
 	}
 
@@ -307,7 +243,7 @@ where
 			let connection_state = self.do_tls_write();
 
 			if connection_state.is_alive() {
-				if let Some(web_socket) = self.web_socket.as_mut() {
+				if let StreamState::EstablishedWebsocket(web_socket) = &mut self.stream_state {
 					trace!("Web-socket, write pending messages");
 					if let Err(e) = web_socket.write_pending() {
 						match e {
