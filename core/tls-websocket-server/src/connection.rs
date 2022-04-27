@@ -287,19 +287,21 @@ where
 	fn on_ready(&mut self, poll: &mut Poll, event: &Event) -> WebSocketResult<()> {
 		let mut is_closing = false;
 
+		let event_is_writable = event.readiness().is_writable();
+
 		if event.readiness().is_readable() {
 			trace!("Connection ({:?}) is readable", self.token());
 
 			let connection_state = self.do_tls_read();
 
-			if connection_state.is_alive() {
+			if connection_state.is_alive() && !event_is_writable {
 				is_closing = self.read_or_initialize_websocket()?;
 			} else {
 				is_closing = connection_state.is_closing();
 			}
 		}
 
-		if event.readiness().is_writable() {
+		if event_is_writable {
 			trace!("Connection ({:?}) is writable", self.token());
 
 			let connection_state = self.do_tls_write();
