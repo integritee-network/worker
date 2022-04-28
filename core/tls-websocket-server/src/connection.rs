@@ -79,7 +79,7 @@ where
 					debug!("TLS session is blocked");
 					return ConnectionState::Blocked
 				}
-				warn!("I/O error after reading TLS data: {:?}", e);
+				warn!("I/O error after reading TLS data: {:?}", err);
 			},
 		}
 
