@@ -8,7 +8,7 @@ services:
     logging:
       driver: none
   integritee-worker-1:
-    build: "../Dockerfile"
+    build: "../"
     depends_on: ['integritee-node']
     ports:
       - "1234:1234"
@@ -21,7 +21,7 @@ services:
       && /usr/local/bin/integritee --ws-external -M integritee-worker-1 -T wss://integritee-worker-1 -u ws://integritee-node -U ws://integritee-worker-1 -P 2011 run --dev --skip-ra"
     restart: always
   integritee-worker-2:
-    build: "../Dockerfile"
+    build: "../"
     depends_on: ['integritee-node', 'integritee-worker-1']
     entrypoint: bash -c "
       echo Hello 1
