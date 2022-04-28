@@ -74,11 +74,13 @@ where
 				if r == 0 {
 					return ConnectionState::Closing
 				},
-			Err(err) =>
+			Err(err) => {
 				if let std::io::ErrorKind::WouldBlock = err.kind() {
 					debug!("TLS session is blocked");
 					return ConnectionState::Blocked
-				},
+				}
+				warn!("I/O error after reading TLS data: {:?}", e);
+			},
 		}
 
 		match tls_session.process_new_packets() {
@@ -227,21 +229,19 @@ where
 	fn on_ready(&mut self, poll: &mut Poll, event: &Event) -> WebSocketResult<()> {
 		let mut is_closing = false;
 
-		let event_is_writable = event.readiness().is_writable();
-
 		if event.readiness().is_readable() {
 			trace!("Connection ({:?}) is readable", self.token());
 
 			let connection_state = self.do_tls_read();
 
-			if connection_state.is_alive() && !event_is_writable {
+			if connection_state.is_alive() {
 				is_closing = self.read_or_initialize_websocket()?;
 			} else {
 				is_closing = connection_state.is_closing();
 			}
 		}
 
-		if event_is_writable {
+		if event.readiness().is_writable() {
 			trace!("Connection ({:?}) is writable", self.token());
 
 			let connection_state = self.do_tls_write();

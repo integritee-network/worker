@@ -88,7 +88,6 @@ pub fn validate_nonce(who: &AccountId, nonce: Index) -> StfResult<()> {
 	if expected_nonce == nonce {
 		return Ok(())
 	}
-	error!("Expected nonce: {}", expected_nonce);
 	Err(StfError::InvalidNonce(nonce))
 }
 
