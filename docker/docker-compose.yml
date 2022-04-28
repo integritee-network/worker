@@ -11,7 +11,7 @@ services:
     image: integritee-worker:dev
     depends_on: ['integritee-node']
     ports:
-      - "1234:1234"
+      - "4545:4545"
     entrypoint: bash -c "
       sleep 5
       && ls -lh
@@ -31,7 +31,7 @@ services:
       && while [[ $$status_code -ne 200 ]] ; do
         echo You again???;
         sleep 2;
-        status_code=$$(curl --write-out '%{http_code}' --silent --output /dev/null integritee-worker-1:1234/is_initialized);
+        status_code=$$(curl --write-out '%{http_code}' --silent --output /dev/null integritee-worker-1:4545/is_initialized);
         echo You got $$status_code, my friend;
       done
       && echo Hello 3
