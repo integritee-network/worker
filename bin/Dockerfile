@@ -1,4 +1,4 @@
-FROM integritee/integritee-dev:0.1.7
+FROM integritee/integritee-dev:0.1.9
 
 RUN mv /usr/share/ca* /tmp && \
 	rm -rf /usr/share/*  && \
@@ -8,7 +8,8 @@ RUN mv /usr/share/ca* /tmp && \
 	chown -R integritee:integritee /integritee/.local && \
 	ln -s /integritee/.local/share/integritee-service /data
 
-COPY integritee-service enclave.signed.so key.txt spid.txt integritee-service end.rsa end.fullchain /usr/local/bin
+COPY integritee-service enclave.signed.so end.rsa end.fullchain /usr/local/bin/
+
 WORKDIR /usr/local/bin
 RUN chmod +x /usr/local/bin/integritee-service
 RUN touch spid.txt key.txt
