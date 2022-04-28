@@ -15,10 +15,10 @@ services:
     entrypoint: bash -c "
       sleep 5
       && ls -lh
-      && /usr/local/bin/integritee shielding-key
-      && /usr/local/bin/integritee signing-key
+      && /usr/local/bin/integritee-service shielding-key
+      && /usr/local/bin/integritee-service signing-key
       && ls -lh
-      && /usr/local/bin/integritee --ws-external -M integritee-worker-1 -T wss://integritee-worker-1 -u ws://integritee-node -U ws://integritee-worker-1 -P 2011 run --dev --skip-ra"
+      && /usr/local/bin/integritee-service --ws-external -M integritee-worker-1 -T wss://integritee-worker-1 -u ws://integritee-node -U ws://integritee-worker-1 -P 2011 run --dev --skip-ra"
     restart: always
   integritee-worker-2:
     image: integritee-worker:dev
@@ -37,10 +37,10 @@ services:
       && echo Hello 3
       && sleep 10
       && ls -lh
-      && /usr/local/bin/integritee shielding-key
-      && /usr/local/bin/integritee signing-key
+      && /usr/local/bin/integritee-service shielding-key
+      && /usr/local/bin/integritee-service signing-key
       && ls -lh
-      && /usr/local/bin/integritee -u ws://integritee-node request-state --skip-ra
+      && /usr/local/bin/integritee-service -u ws://integritee-node request-state --skip-ra
       && echo Hello 4
-      && /usr/local/bin/integritee --ws-external -u ws://integritee-node -U ws://integritee-worker-2 -P 2012 run --dev --skip-ra"
+      && /usr/local/bin/integritee-service --ws-external -u ws://integritee-node -U ws://integritee-worker-2 -P 2012 run --dev --skip-ra"
     restart: always

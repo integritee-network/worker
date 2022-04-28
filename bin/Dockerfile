@@ -25,4 +25,4 @@ RUN ldd /usr/local/bin/integritee-service && \
 #USER integritee
 EXPOSE 30333 9933 9944 9615
 
-CMD ["/usr/local/bin/integritee-service"]
+#CMD ["/usr/local/bin/integritee-service"]
