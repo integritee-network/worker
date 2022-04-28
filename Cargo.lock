@@ -2457,10 +2457,14 @@ dependencies = [
 name = "itc-rpc-client"
 version = "0.8.0"
 dependencies = [
+ "env_logger 0.9.0",
+ "itc-tls-websocket-server",
  "itp-types",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl",
  "parity-scale-codec",
+ "parking_lot 0.11.2",
+ "rustls 0.19.1",
  "serde_derive 1.0.136",
  "serde_json 1.0.79",
  "sgx_crypto_helper",
@@ -2494,17 +2498,20 @@ dependencies = [
 name = "itc-tls-websocket-server"
 version = "0.8.0"
 dependencies = [
+ "env_logger 0.9.0",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "mio 0.6.21",
  "mio 0.6.23",
+ "mio-extras 2.0.6 (git+https://github.com/integritee-network/mio-extras-sgx?rev=963234b)",
  "rustls 0.19.0 (git+https://github.com/mesalock-linux/rustls?branch=mesalock_sgx)",
  "rustls 0.19.1",
  "sgx_tstd",
  "sgx_types",
  "thiserror 1.0.30",
  "thiserror 1.0.9",
- "tungstenite 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tungstenite 0.14.0 (git+https://github.com/integritee-network/tungstenite-rs-sgx?branch=sgx-experimental)",
+ "tungstenite 0.15.0",
+ "url 2.2.2",
  "webpki 0.21.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "webpki 0.21.4 (git+https://github.com/mesalock-linux/webpki?branch=mesalock_sgx)",
 ]
@@ -3700,6 +3707,20 @@ dependencies = [
  "lazycell",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "mio 0.6.23",
+ "slab 0.4.5",
+]
+
+[[package]]
+name = "mio-extras"
+version = "2.0.6"
+source = "git+https://github.com/integritee-network/mio-extras-sgx?rev=963234b#963234bf55e44f9efff921938255126c48deef3a"
+dependencies = [
+ "lazycell",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mio 0.6.21",
+ "mio 0.6.23",
+ "sgx_tstd",
+ "sgx_types",
  "slab 0.4.5",
 ]
 
@@ -7527,6 +7548,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "tungstenite"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "983d40747bce878d2fb67d910dcb8bd3eca2b2358540c3cc1b98c027407a3ae3"
+dependencies = [
+ "base64 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "byteorder 1.4.3",
+ "bytes 1.1.0",
+ "http 0.2.6",
+ "httparse 1.6.0",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.8.5",
+ "rustls 0.19.1",
+ "sha-1 0.9.8",
+ "thiserror 1.0.30",
+ "url 2.2.2",
+ "utf-8 0.7.6",
+ "webpki 0.21.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "webpki-roots 0.21.1",
+]
+
+[[package]]
 name = "twoway"
 version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8058,7 +8101,7 @@ dependencies = [
  "httparse 1.6.0",
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "mio 0.6.23",
- "mio-extras",
+ "mio-extras 2.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha-1 0.8.2",

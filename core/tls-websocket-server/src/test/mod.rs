@@ -15,19 +15,5 @@
 
 */
 
-use crate::api::SidechainApi;
-use itc_direct_rpc_server::{
-	rpc_connection_registry::ConnectionRegistry, rpc_responder::RpcResponder,
-};
-use itc_tls_websocket_server::connection::TungsteniteWsConnection;
-use itp_top_pool::basic_pool::BasicPool;
-use itp_types::Block;
-
-type Hash = sp_core::H256;
-
-pub(crate) type EnclaveRpcConnectionRegistry = ConnectionRegistry<Hash, TungsteniteWsConnection>;
-
-pub type EnclaveRpcResponder =
-	RpcResponder<EnclaveRpcConnectionRegistry, Hash, TungsteniteWsConnection>;
-
-pub type BPool = BasicPool<SidechainApi<Block>, Block, EnclaveRpcResponder>;
+pub mod fixtures;
+pub mod mocks;

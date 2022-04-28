@@ -20,18 +20,20 @@
 //! This allows the crates themselves to stay as generic as possible
 //! and ensures that the global instances are initialized once.
 
-use crate::ocall::OcallApi;
+use crate::{ocall::OcallApi, rpc::rpc_response_channel::RpcResponseChannel};
 use ita_stf::{Hash, State as StfState};
 use itc_direct_rpc_server::{
-	rpc_connection_registry::ConnectionRegistry, rpc_watch_extractor::RpcWatchExtractor,
-	rpc_ws_handler::RpcWsHandler,
+	rpc_connection_registry::ConnectionRegistry, rpc_responder::RpcResponder,
+	rpc_watch_extractor::RpcWatchExtractor, rpc_ws_handler::RpcWsHandler,
 };
 use itc_parentchain::{
 	block_import_dispatcher::triggered_dispatcher::TriggeredDispatcher,
 	block_importer::ParentchainBlockImporter, indirect_calls_executor::IndirectCallsExecutor,
 	light_client::ValidatorAccessor,
 };
-use itc_tls_websocket_server::connection::TungsteniteWsConnection;
+use itc_tls_websocket_server::{
+	config_provider::FromFileConfigProvider, ws_server::TungsteniteWsServer, ConnectionToken,
+};
 use itp_block_import_queue::BlockImportQueue;
 use itp_component_container::ComponentContainer;
 use itp_extrinsics_factory::ExtrinsicsFactory;
@@ -42,9 +44,10 @@ use itp_stf_state_handler::{
 	file_io::sgx::SgxStateFileIo, state_key_repository::StateKeyRepository,
 	state_snapshot_repository::StateSnapshotRepository, StateHandler,
 };
+use itp_top_pool::basic_pool::BasicPool;
 use itp_top_pool_author::{
+	api::SidechainApi,
 	author::{Author, AuthorTopFilter},
-	pool_types::BPool,
 };
 use itp_types::{Block as ParentchainBlock, SignedBlock as SignedParentchainBlock};
 use its_sidechain::{
@@ -84,22 +87,24 @@ pub type EnclaveParentChainBlockImporter = ParentchainBlockImporter<
 pub type EnclaveParentchainBlockImportQueue = BlockImportQueue<SignedParentchainBlock>;
 pub type EnclaveParentchainBlockImportDispatcher =
 	TriggeredDispatcher<EnclaveParentChainBlockImporter, EnclaveParentchainBlockImportQueue>;
-pub type EnclaveRpcWsHandler = RpcWsHandler<
-	RpcWatchExtractor<Hash>,
-	ConnectionRegistry<Hash, TungsteniteWsConnection>,
-	Hash,
-	TungsteniteWsConnection,
->;
+
+pub type EnclaveRpcConnectionRegistry = ConnectionRegistry<Hash, ConnectionToken>;
+pub type EnclaveRpcWsHandler =
+	RpcWsHandler<RpcWatchExtractor<Hash>, EnclaveRpcConnectionRegistry, Hash>;
+pub type EnclaveWebSocketServer = TungsteniteWsServer<EnclaveRpcWsHandler, FromFileConfigProvider>;
+pub type EnclaveRpcResponder = RpcResponder<EnclaveRpcConnectionRegistry, Hash, RpcResponseChannel>;
+pub type EnclaveSidechainApi = SidechainApi<ParentchainBlock>;
 
 /// Sidechain types
 pub type EnclaveSidechainState =
 	SidechainDB<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block, SgxExternalities>;
-pub type EnclaveRpcAuthor =
-	Author<BPool, AuthorTopFilter, EnclaveStateHandler, Rsa3072KeyPair, EnclaveOCallApi>;
+pub type EnclaveTopPool = BasicPool<EnclaveSidechainApi, ParentchainBlock, EnclaveRpcResponder>;
+pub type EnclaveTopPoolAuthor =
+	Author<EnclaveTopPool, AuthorTopFilter, EnclaveStateHandler, Rsa3072KeyPair, EnclaveOCallApi>;
 pub type EnclaveTopPoolOperationHandler = TopPoolOperationHandler<
 	ParentchainBlock,
 	SignedSidechainBlock,
-	EnclaveRpcAuthor,
+	EnclaveTopPoolAuthor,
 	EnclaveStfExecutor,
 >;
 pub type EnclaveSidechainBlockComposer =
@@ -144,12 +149,16 @@ pub static GLOBAL_STF_EXECUTOR_COMPONENT: ComponentContainer<EnclaveStfExecutor>
 pub static GLOBAL_OCALL_API_COMPONENT: ComponentContainer<EnclaveOCallApi> =
 	ComponentContainer::new("O-call API");
 
+/// Trusted Web-socket server
+pub static GLOBAL_WEB_SOCKET_SERVER_COMPONENT: ComponentContainer<EnclaveWebSocketServer> =
+	ComponentContainer::new("Web-socket server");
+
 /// State handler.
 pub static GLOBAL_STATE_HANDLER_COMPONENT: ComponentContainer<EnclaveStateHandler> =
 	ComponentContainer::new("state handler");
 
 /// TOP pool author.
-pub static GLOBAL_TOP_POOL_AUTHOR_COMPONENT: ComponentContainer<EnclaveRpcAuthor> =
+pub static GLOBAL_TOP_POOL_AUTHOR_COMPONENT: ComponentContainer<EnclaveTopPoolAuthor> =
 	ComponentContainer::new("top_pool_author");
 
 /// Parentchain component instances

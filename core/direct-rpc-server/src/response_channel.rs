@@ -15,5 +15,12 @@
 
 */
 
-pub mod rpc_response_channel;
-pub mod worker_api_direct;
+use crate::DirectRpcError;
+use std::string::String;
+
+/// Response / status update channel for an RPC call.
+pub trait ResponseChannel<Token>: Send + Sync {
+	type Error: Into<DirectRpcError>;
+
+	fn respond(&self, token: Token, message: String) -> Result<(), Self::Error>;
+}

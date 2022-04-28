@@ -15,36 +15,56 @@
 
 */
 
-use crate::{DirectRpcError, DirectRpcResult, RpcConnectionRegistry, RpcHash, SendRpcResponse};
+use crate::{
+	response_channel::ResponseChannel, DirectRpcError, DirectRpcResult, RpcConnectionRegistry,
+	RpcHash, SendRpcResponse,
+};
 use codec::{Decode, Encode};
-use itc_tls_websocket_server::WebSocketConnection;
 use itp_types::{DirectRequestStatus, RpcResponse, RpcReturnValue, TrustedOperationStatus};
 use log::*;
 use std::{sync::Arc, vec::Vec};
 
-pub struct RpcResponder<Registry, Hash, Connection>
+pub struct RpcResponder<Registry, Hash, ResponseChannelType>
 where
-	Registry: RpcConnectionRegistry<Hash = Hash, Connection = Connection>,
+	Registry: RpcConnectionRegistry<Hash = Hash>,
 	Hash: RpcHash,
+	ResponseChannelType: ResponseChannel<Registry::Connection>,
 {
 	connection_registry: Arc<Registry>,
+	response_channel: Arc<ResponseChannelType>,
 }
 
-impl<Registry, Hash, Connection> RpcResponder<Registry, Hash, Connection>
+impl<Registry, Hash, ResponseChannelType> RpcResponder<Registry, Hash, ResponseChannelType>
 where
-	Registry: RpcConnectionRegistry<Hash = Hash, Connection = Connection>,
+	Registry: RpcConnectionRegistry<Hash = Hash>,
 	Hash: RpcHash,
+	ResponseChannelType: ResponseChannel<Registry::Connection>,
 {
-	pub fn new(connection_registry: Arc<Registry>) -> Self {
-		RpcResponder { connection_registry }
+	pub fn new(
+		connection_registry: Arc<Registry>,
+		web_socket_responder: Arc<ResponseChannelType>,
+	) -> Self {
+		RpcResponder { connection_registry, response_channel: web_socket_responder }
+	}
+
+	fn encode_and_send_response(
+		&self,
+		connection: Registry::Connection,
+		rpc_response: &RpcResponse,
+	) -> DirectRpcResult<()> {
+		let string_response =
+			serde_json::to_string(&rpc_response).map_err(DirectRpcError::SerializationError)?;
+
+		self.response_channel.respond(connection, string_response).map_err(|e| e.into())
 	}
 }
 
-impl<Registry, Hash, Connection> SendRpcResponse for RpcResponder<Registry, Hash, Connection>
+impl<Registry, Hash, ResponseChannelType> SendRpcResponse
+	for RpcResponder<Registry, Hash, ResponseChannelType>
 where
-	Registry: RpcConnectionRegistry<Hash = Hash, Connection = Connection>,
+	Registry: RpcConnectionRegistry<Hash = Hash>,
 	Hash: RpcHash,
-	Connection: WebSocketConnection,
+	ResponseChannelType: ResponseChannel<Registry::Connection>,
 {
 	type Hash = Hash;
 
@@ -56,7 +76,7 @@ where
 		debug!("updating status event");
 
 		// withdraw removes it from the registry
-		let (mut connection, rpc_response) = self
+		let (connection_token, rpc_response) = self
 			.connection_registry
 			.withdraw(&hash)
 			.ok_or(DirectRpcError::InvalidConnectionHash)?;
@@ -73,13 +93,10 @@ where
 		result.status = DirectRequestStatus::TrustedOperationStatus(status_update);
 		new_response.result = result.encode();
 
-		encode_and_send_response(&mut connection, &new_response)?;
+		self.encode_and_send_response(connection_token, &new_response)?;
 
 		if do_watch {
-			self.connection_registry.store(hash, connection, new_response);
-		} else {
-			debug!("closing connection");
-			connection.close();
+			self.connection_registry.store(hash, connection_token, new_response);
 		}
 
 		debug!("updating status event successful");
@@ -90,7 +107,7 @@ where
 		debug!("sending state");
 
 		// withdraw removes it from the registry
-		let (mut connection, mut response) = self
+		let (connection_token, mut response) = self
 			.connection_registry
 			.withdraw(&hash)
 			.ok_or(DirectRpcError::InvalidConnectionHash)?;
@@ -104,26 +121,13 @@ where
 		// update response
 		response.result = result.encode();
 
-		encode_and_send_response(&mut connection, &response)?;
+		self.encode_and_send_response(connection_token, &response)?;
 
-		debug!("closing connection");
-		connection.close();
+		self.connection_registry.store(hash, connection_token, response);
 
 		debug!("sending state successful");
 		Ok(())
 	}
-}
-
-fn encode_and_send_response<Connection: WebSocketConnection>(
-	connection: &mut Connection,
-	rpc_response: &RpcResponse,
-) -> DirectRpcResult<()> {
-	let string_response =
-		serde_json::to_string(&rpc_response).map_err(DirectRpcError::SerializationError)?;
-
-	connection
-		.send_update(string_response.as_str())
-		.map_err(DirectRpcError::WebSocketError)
 }
 
 fn continue_watching(status: &TrustedOperationStatus) -> bool {
@@ -142,18 +146,20 @@ pub mod tests {
 	use super::*;
 	use crate::{
 		builders::rpc_response_builder::RpcResponseBuilder,
-		mocks::{connection_mock::ConnectionMock, updates_sink::UpdatesSink},
+		mocks::response_channel_mock::ResponseChannelMock,
 		rpc_connection_registry::ConnectionRegistry,
 	};
-	use core::assert_matches::assert_matches;
+	use std::assert_matches::assert_matches;
 
-	type TestConnection = ConnectionMock;
-	type TestConnectionRegistry = ConnectionRegistry<String, TestConnection>;
+	type TestConnectionToken = u64;
+	type TestResponseChannel = ResponseChannelMock<TestConnectionToken>;
+	type TestConnectionRegistry = ConnectionRegistry<String, TestConnectionToken>;
 
 	#[test]
 	fn given_empty_registry_when_updating_status_event_then_return_error() {
-		let connection_registry = Arc::new(ConnectionRegistry::<String, TestConnection>::new());
-		let rpc_responder = RpcResponder::new(connection_registry);
+		let connection_registry = Arc::new(TestConnectionRegistry::new());
+		let websocket_responder = Arc::new(TestResponseChannel::default());
+		let rpc_responder = RpcResponder::new(connection_registry, websocket_responder);
 
 		assert_matches!(
 			rpc_responder
@@ -164,8 +170,9 @@ pub mod tests {
 
 	#[test]
 	fn given_empty_registry_when_sending_state_then_return_error() {
-		let connection_registry = Arc::new(ConnectionRegistry::<String, TestConnection>::new());
-		let rpc_responder = RpcResponder::new(connection_registry);
+		let connection_registry = Arc::new(TestConnectionRegistry::new());
+		let websocket_responder = Arc::new(TestResponseChannel::default());
+		let rpc_responder = RpcResponder::new(connection_registry, websocket_responder);
 
 		assert_matches!(
 			rpc_responder.send_state("hash".to_string(), vec![1u8, 2u8]),
@@ -176,26 +183,29 @@ pub mod tests {
 	#[test]
 	fn updating_status_event_with_finalized_state_removes_connection() {
 		let connection_hash = String::from("conn_hash");
-		let (connection_registry, updates_sink) =
-			create_registry_with_single_connection(connection_hash.clone());
+		let connection_registry = create_registry_with_single_connection(connection_hash.clone());
 
-		let rpc_responder = RpcResponder::new(connection_registry.clone());
+		let websocket_responder = Arc::new(TestResponseChannel::default());
+		let rpc_responder =
+			RpcResponder::new(connection_registry.clone(), websocket_responder.clone());
 
 		let result = rpc_responder
 			.update_status_event(connection_hash.clone(), TrustedOperationStatus::Finalized);
 
 		assert!(result.is_ok());
-		assert!(connection_registry.withdraw(&connection_hash).is_none());
-		assert_eq!(1, updates_sink.number_of_updates());
+
+		verify_closed_connection(&connection_hash, connection_registry);
+		assert_eq!(1, websocket_responder.number_of_updates());
 	}
 
 	#[test]
 	fn updating_status_event_with_ready_state_keeps_connection_and_sends_update() {
 		let connection_hash = String::from("conn_hash");
-		let (connection_registry, updates_sink) =
-			create_registry_with_single_connection(connection_hash.clone());
+		let connection_registry = create_registry_with_single_connection(connection_hash.clone());
 
-		let rpc_responder = RpcResponder::new(connection_registry.clone());
+		let websocket_responder = Arc::new(TestResponseChannel::default());
+		let rpc_responder =
+			RpcResponder::new(connection_registry.clone(), websocket_responder.clone());
 
 		let first_result = rpc_responder
 			.update_status_event(connection_hash.clone(), TrustedOperationStatus::Ready);
@@ -207,41 +217,42 @@ pub mod tests {
 		assert!(second_result.is_ok());
 
 		verify_open_connection(&connection_hash, connection_registry);
-		assert_eq!(2, updates_sink.number_of_updates());
+		assert_eq!(2, websocket_responder.number_of_updates());
 	}
 
 	#[test]
-	fn sending_state_successfully_sends_update_and_closes_connection() {
+	fn sending_state_successfully_sends_update_and_keeps_connection_open() {
 		let connection_hash = String::from("conn_hash");
-		let (connection_registry, updates_sink) =
-			create_registry_with_single_connection(connection_hash.clone());
+		let connection_registry = create_registry_with_single_connection(connection_hash.clone());
 
-		let rpc_responder = RpcResponder::new(connection_registry.clone());
+		let websocket_responder = Arc::new(TestResponseChannel::default());
+		let rpc_responder =
+			RpcResponder::new(connection_registry.clone(), websocket_responder.clone());
 
 		let result = rpc_responder.send_state(connection_hash.clone(), "new_state".encode());
 		assert!(result.is_ok());
 
-		verify_closed_connection(&connection_hash, connection_registry);
-		assert_eq!(1, updates_sink.number_of_updates());
+		verify_open_connection(&connection_hash, connection_registry);
+		assert_eq!(1, websocket_responder.number_of_updates());
 	}
 
 	#[test]
-	fn sending_state_twice_fails_the_second_time() {
+	fn sending_state_twice_works() {
 		let connection_hash = String::from("conn_hash");
-		let (connection_registry, updates_sink) =
-			create_registry_with_single_connection(connection_hash.clone());
+		let connection_registry = create_registry_with_single_connection(connection_hash.clone());
 
-		let rpc_responder = RpcResponder::new(connection_registry.clone());
+		let websocket_responder = Arc::new(TestResponseChannel::default());
+		let rpc_responder =
+			RpcResponder::new(connection_registry.clone(), websocket_responder.clone());
 
 		let first_result = rpc_responder.send_state(connection_hash.clone(), "new_state".encode());
 		assert!(first_result.is_ok());
 
-		// cannot send_state twice, since it closes the connection automatically after the first send
 		let second_result =
 			rpc_responder.send_state(connection_hash.clone(), "new_state_2".encode());
-		assert!(!second_result.is_ok());
+		assert!(second_result.is_ok());
 
-		assert_eq!(1, updates_sink.number_of_updates());
+		assert_eq!(2, websocket_responder.number_of_updates());
 	}
 
 	#[test]
@@ -258,11 +269,7 @@ pub mod tests {
 		connection_registry: Arc<TestConnectionRegistry>,
 	) {
 		let maybe_connection = connection_registry.withdraw(&connection_hash);
-
 		assert!(maybe_connection.is_some());
-		let connection = maybe_connection.unwrap().0;
-
-		assert_eq!(false, connection.is_closed());
 	}
 
 	fn verify_closed_connection(
@@ -274,14 +281,11 @@ pub mod tests {
 
 	fn create_registry_with_single_connection(
 		connection_hash: String,
-	) -> (Arc<TestConnectionRegistry>, Arc<UpdatesSink>) {
-		let connection_registry = ConnectionRegistry::<String, TestConnection>::new();
-		let updates_sink = Arc::new(UpdatesSink::new());
-
-		let connection = TestConnection::builder().with_updates_sink(updates_sink.clone()).build();
+	) -> Arc<TestConnectionRegistry> {
+		let connection_registry = TestConnectionRegistry::new();
 		let rpc_response = RpcResponseBuilder::new().with_id(2).build();
 
-		connection_registry.store(connection_hash.clone(), connection, rpc_response);
-		(Arc::new(connection_registry), updates_sink)
+		connection_registry.store(connection_hash.clone(), 1, rpc_response);
+		Arc::new(connection_registry)
 	}
 }

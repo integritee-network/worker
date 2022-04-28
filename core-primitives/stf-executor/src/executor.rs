@@ -101,7 +101,7 @@ where
 
 		Stf::update_storage(state, &update_map.into());
 
-		debug!("execute STF");
+		debug!("execute STF, call with nonce {}", stf_call_signed.nonce);
 		let mut extrinsic_call_backs: Vec<OpaqueCall> = Vec::new();
 		if let Err(e) = Stf::execute(state, stf_call_signed.clone(), &mut extrinsic_call_backs) {
 			error!("Stf::execute failed: {:?}", e);

@@ -20,6 +20,7 @@
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
 
+extern crate alloc;
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
@@ -36,87 +37,136 @@ pub mod sgx_reexport_prelude {
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-extern crate alloc;
-
-use crate::{connection::TungsteniteWsConnection, ws_server::TungsteniteWsServer};
-use alloc::boxed::Box;
-use log::*;
+use crate::{
+	config_provider::FromFileConfigProvider,
+	connection_id_generator::{ConnectionId, ConnectionIdGenerator},
+	error::{WebSocketError, WebSocketResult},
+	ws_server::TungsteniteWsServer,
+};
+use mio::{event::Evented, Token};
 use std::{
-	io::Error as IoError,
-	net::AddrParseError,
+	fmt::Debug,
 	string::{String, ToString},
 	sync::Arc,
 };
 
-mod common;
-pub mod connection;
-mod ws_server;
+pub mod config_provider;
+mod connection;
+pub mod connection_id_generator;
+pub mod error;
+mod stream_state;
+mod tls_common;
+pub mod ws_server;
 
-/// General web-socket error type
-#[derive(Debug, thiserror::Error)]
-pub enum WebSocketError {
-	#[error("Invalid certificate error: {0}")]
-	InvalidCertificate(String),
-	#[error("Invalid private key error: {0}")]
-	InvalidPrivateKey(String),
-	#[error("Invalid web-socket address error: {0}")]
-	InvalidWsAddress(AddrParseError),
-	#[error("TCP bind error: {0}")]
-	TcpBindError(IoError),
-	#[error("Web-socket hand shake error")]
-	HandShakeError,
-	#[error("Web-socket connection already closed error")]
-	ConnectionClosed,
-	#[error("Web-socket connection has not yet been established")]
-	ConnectionNotYetEstablished,
-	#[error("Web-socket write error: {0}")]
-	SocketWriteError(String),
-	#[error("Web-socket handler error: {0}")]
-	HandlerError(Box<dyn std::error::Error + Sync + Send + 'static>),
+#[cfg(any(test, feature = "mocks"))]
+pub mod test;
+
+/// Connection token alias.
+#[derive(Eq, PartialEq, Clone, Copy, Debug)]
+pub struct ConnectionToken(pub usize);
+
+impl From<ConnectionToken> for Token {
+	fn from(c: ConnectionToken) -> Self {
+		Token(c.0)
+	}
 }
 
-pub type WebSocketResult<T> = Result<T, WebSocketError>;
-
-/// abstraction of a web socket connection
-pub trait WebSocketConnection: Send + Sync {
-	fn process_request<F>(&mut self, initial_call: F) -> WebSocketResult<String>
-	where
-		F: Fn(&str) -> String;
-
-	fn send_update(&mut self, message: &str) -> WebSocketResult<()>;
-
-	fn close(&mut self);
+impl From<Token> for ConnectionToken {
+	fn from(t: Token) -> Self {
+		ConnectionToken(t.0)
+	}
 }
 
-/// Handles a web-socket connection
-pub trait WebSocketHandler {
-	type Connection: WebSocketConnection;
-
-	fn handle(&self, connection: Self::Connection) -> WebSocketResult<()>;
+/// Handles a web-socket connection message.
+pub trait WebSocketMessageHandler: Send + Sync {
+	fn handle_message(
+		&self,
+		connection_token: ConnectionToken,
+		message: String,
+	) -> WebSocketResult<Option<String>>;
 }
 
-/// Run a web-socket server with a given handler
+/// Allows to send response messages to a specific connection.
+pub trait WebSocketResponder: Send + Sync {
+	fn send_message(
+		&self,
+		connection_token: ConnectionToken,
+		message: String,
+	) -> WebSocketResult<()>;
+}
+
+/// Run a web-socket server with a given handler.
 pub trait WebSocketServer {
 	type Connection;
 
-	fn run<Handler>(&self, handler: Arc<Handler>) -> WebSocketResult<()>
-	where
-		Handler: WebSocketHandler<Connection = Self::Connection>;
+	fn run(&self) -> WebSocketResult<()>;
+
+	fn shut_down(&self) -> WebSocketResult<()>;
 }
 
-pub fn run_ws_server<Handler>(addr_plain: &str, handler: Arc<Handler>)
-where
-	Handler: WebSocketHandler<Connection = TungsteniteWsConnection>,
-{
-	let cert = "end.fullchain".to_string();
-	let key = "end.rsa".to_string();
+/// Abstraction of a web socket connection using mio.
+pub(crate) trait WebSocketConnection: Send + Sync {
+	/// Socket type, typically a TCP stream.
+	type Socket: Evented;
 
-	let web_socket_server = TungsteniteWsServer::new(addr_plain.to_string(), cert, key);
+	/// Get the underlying socket (TCP stream)
+	fn socket(&self) -> Option<&Self::Socket>;
 
-	match web_socket_server.run(handler) {
-		Ok(()) => {},
-		Err(e) => {
-			error!("Web socket server encountered an unexpected error: {:?}", e)
-		},
+	/// Query the underlying session for readiness (read/write).
+	fn get_session_readiness(&self) -> mio::Ready;
+
+	/// Handles the ready event, the connection has work to do.
+	fn on_ready(&mut self, poll: &mut mio::Poll, ev: &mio::event::Event) -> WebSocketResult<()>;
+
+	/// True if connection was closed.
+	fn is_closed(&self) -> bool;
+
+	/// Return the connection token (= ID)
+	fn token(&self) -> mio::Token;
+
+	/// Register the connection with the mio poll.
+	fn register(&mut self, poll: &mio::Poll) -> WebSocketResult<()> {
+		match self.socket() {
+			Some(s) => {
+				poll.register(
+					s,
+					self.token(),
+					self.get_session_readiness(),
+					mio::PollOpt::level() | mio::PollOpt::oneshot(),
+				)?;
+				Ok(())
+			},
+			None => Err(WebSocketError::ConnectionClosed),
+		}
 	}
+
+	/// Re-register the connection with the mio poll, after handling an event.
+	fn reregister(&mut self, poll: &mio::Poll) -> WebSocketResult<()> {
+		match self.socket() {
+			Some(s) => {
+				poll.reregister(
+					s,
+					self.token(),
+					self.get_session_readiness(),
+					mio::PollOpt::level() | mio::PollOpt::oneshot(),
+				)?;
+
+				Ok(())
+			},
+			None => Err(WebSocketError::ConnectionClosed),
+		}
+	}
+}
+
+pub fn create_ws_server<Handler>(
+	addr_plain: &str,
+	handler: Arc<Handler>,
+) -> Arc<TungsteniteWsServer<Handler, FromFileConfigProvider>>
+where
+	Handler: WebSocketMessageHandler,
+{
+	let config_provider =
+		Arc::new(FromFileConfigProvider::new("end.rsa".to_string(), "end.fullchain".to_string()));
+
+	Arc::new(TungsteniteWsServer::new(addr_plain.to_string(), config_provider, handler))
 }

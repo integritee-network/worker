@@ -18,15 +18,15 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use crate::{WebSocketError, WebSocketResult};
-use rustls::NoClientAuth;
-use std::{format, io::BufReader, string::ToString, sync::Arc, vec, vec::Vec};
-
 #[cfg(feature = "std")]
 use std::fs;
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use std::untrusted::fs;
+
+use crate::{error::WebSocketError, WebSocketResult};
+use rustls::NoClientAuth;
+use std::{format, io::BufReader, string::ToString, sync::Arc, vec, vec::Vec};
 
 pub fn make_config(cert: &str, key: &str) -> WebSocketResult<Arc<rustls::ServerConfig>> {
 	let mut config = rustls::ServerConfig::new(NoClientAuth::new());

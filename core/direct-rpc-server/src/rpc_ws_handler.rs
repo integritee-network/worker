@@ -18,35 +18,31 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-extern crate alloc;
-
 use crate::{DetermineWatch, DirectRpcError, RpcConnectionRegistry, RpcHash};
-use alloc::boxed::Box;
 use itc_tls_websocket_server::{
-	WebSocketConnection, WebSocketError, WebSocketHandler, WebSocketResult,
+	error::{WebSocketError, WebSocketResult},
+	ConnectionToken, WebSocketMessageHandler,
 };
 use jsonrpc_core::IoHandler;
 use log::*;
-use std::sync::Arc;
+use std::{boxed::Box, string::String, sync::Arc};
 
-pub struct RpcWsHandler<Watcher, Registry, Hash, Connection>
+pub struct RpcWsHandler<Watcher, Registry, Hash>
 where
 	Watcher: DetermineWatch<Hash = Hash>,
-	Registry: RpcConnectionRegistry<Hash = Hash, Connection = Connection>,
+	Registry: RpcConnectionRegistry<Hash = Hash>,
 	Hash: RpcHash,
-	Connection: WebSocketConnection,
 {
 	rpc_io_handler: IoHandler,
 	connection_watcher: Arc<Watcher>,
 	connection_registry: Arc<Registry>,
 }
 
-impl<Watcher, Registry, Hash, Connection> RpcWsHandler<Watcher, Registry, Hash, Connection>
+impl<Watcher, Registry, Hash> RpcWsHandler<Watcher, Registry, Hash>
 where
 	Watcher: DetermineWatch<Hash = Hash>,
-	Registry: RpcConnectionRegistry<Hash = Hash, Connection = Connection>,
+	Registry: RpcConnectionRegistry<Hash = Hash>,
 	Hash: RpcHash,
-	Connection: WebSocketConnection,
 {
 	pub fn new(
 		rpc_io_handler: IoHandler,
@@ -57,37 +53,40 @@ where
 	}
 }
 
-impl<Watcher, Registry, Hash, Connection> WebSocketHandler
-	for RpcWsHandler<Watcher, Registry, Hash, Connection>
+impl<Watcher, Registry, Hash> WebSocketMessageHandler for RpcWsHandler<Watcher, Registry, Hash>
 where
 	Watcher: DetermineWatch<Hash = Hash>,
-	Registry: RpcConnectionRegistry<Hash = Hash, Connection = Connection>,
+	Registry: RpcConnectionRegistry<Hash = Hash>,
+	Registry::Connection: From<ConnectionToken>,
 	Hash: RpcHash,
-	Connection: WebSocketConnection,
 {
-	type Connection = Connection;
+	fn handle_message(
+		&self,
+		connection_token: ConnectionToken,
+		message: String,
+	) -> WebSocketResult<Option<String>> {
+		let maybe_rpc_response = self.rpc_io_handler.handle_request_sync(message.as_str());
 
-	fn handle(&self, mut connection: Connection) -> WebSocketResult<()> {
-		let rpc_response_string = connection.process_request(|request| {
-			self.rpc_io_handler.handle_request_sync(request).unwrap_or_default()
-		})?;
+		debug!("RPC response string: {:?}", maybe_rpc_response);
 
-		debug!("RPC response string: {}", rpc_response_string);
-
-		let rpc_response = serde_json::from_str(&rpc_response_string).map_err(|e| {
-			WebSocketError::HandlerError(Box::new(DirectRpcError::SerializationError(e)))
-		})?;
+		let rpc_response = serde_json::from_str(
+			maybe_rpc_response.clone().unwrap_or_default().as_str(),
+		)
+		.map_err(|e| WebSocketError::Other(Box::new(DirectRpcError::SerializationError(e))))?;
 
 		match self.connection_watcher.must_be_watched(&rpc_response) {
-			Ok(maybe_connection_hash) => {
+			Ok(maybe_connection_hash) =>
 				if let Some(connection_hash) = maybe_connection_hash {
-					debug!("current connection is kept alive");
-					self.connection_registry.store(connection_hash, connection, rpc_response);
-				}
-				Ok(())
-			},
-			Err(e) => Err(WebSocketError::HandlerError(Box::new(e))),
+					self.connection_registry.store(
+						connection_hash,
+						connection_token.into(),
+						rpc_response,
+					);
+				},
+			Err(e) => return Err(WebSocketError::Other(Box::new(e))),
 		}
+
+		Ok(maybe_rpc_response)
 	}
 }
 
@@ -96,20 +95,19 @@ pub mod tests {
 
 	use super::*;
 	use crate::{
-		mocks::{connection_mock::ConnectionMock, determine_watch_mock::DetermineWatchMock},
+		mocks::determine_watch_mock::DetermineWatchMock,
 		rpc_connection_registry::ConnectionRegistry,
 	};
 	use codec::Encode;
 	use core::assert_matches::assert_matches;
+	use itc_tls_websocket_server::ConnectionToken;
 	use itp_types::{DirectRequestStatus, RpcReturnValue};
 	use jsonrpc_core::Params;
 	use serde_json::json;
 
-	type TestConnection = ConnectionMock;
-	type TestConnectionRegistry = ConnectionRegistry<String, TestConnection>;
+	type TestConnectionRegistry = ConnectionRegistry<String, ConnectionToken>;
 	type TestConnectionWatcher = DetermineWatchMock<String>;
-	type TestWsHandler =
-		RpcWsHandler<TestConnectionWatcher, TestConnectionRegistry, String, TestConnection>;
+	type TestWsHandler = RpcWsHandler<TestConnectionWatcher, TestConnectionRegistry, String>;
 
 	const RPC_METHOD_NAME: &str = "test_call";
 
@@ -117,11 +115,11 @@ pub mod tests {
 	fn valid_rpc_call_without_watch_runs_successfully() {
 		let io_handler = create_io_handler_with_method(RPC_METHOD_NAME);
 
-		let connection = create_connection(RPC_METHOD_NAME);
+		let (connection_token, message) = create_message_to_handle(RPC_METHOD_NAME);
 
 		let (ws_handler, connection_registry) = create_ws_handler(io_handler, None);
 
-		let handle_result = ws_handler.handle(connection);
+		let handle_result = ws_handler.handle_message(connection_token, message);
 
 		assert!(handle_result.is_ok());
 		assert!(connection_registry.is_empty());
@@ -132,12 +130,12 @@ pub mod tests {
 		let io_handler = create_io_handler_with_method(RPC_METHOD_NAME);
 
 		let connection_hash = String::from("connection_hash");
-		let connection = create_connection(RPC_METHOD_NAME);
+		let (connection_token, message) = create_message_to_handle(RPC_METHOD_NAME);
 
 		let (ws_handler, connection_registry) =
 			create_ws_handler(io_handler, Some(connection_hash.clone()));
 
-		let handle_result = ws_handler.handle(connection);
+		let handle_result = ws_handler.handle_message(connection_token, message);
 
 		assert!(handle_result.is_ok());
 		assert!(connection_registry.withdraw(&connection_hash).is_some());
@@ -148,12 +146,12 @@ pub mod tests {
 		let io_handler = create_io_handler_with_error(RPC_METHOD_NAME);
 
 		let connection_hash = String::from("connection_hash");
-		let connection = create_connection(RPC_METHOD_NAME);
+		let (connection_token, message) = create_message_to_handle(RPC_METHOD_NAME);
 
 		let (ws_handler, connection_registry) =
 			create_ws_handler(io_handler, Some(connection_hash.clone()));
 
-		let handle_result = ws_handler.handle(connection);
+		let handle_result = ws_handler.handle_message(connection_token, message);
 
 		assert!(handle_result.is_ok());
 		assert!(connection_registry.withdraw(&connection_hash).is_some());
@@ -162,24 +160,24 @@ pub mod tests {
 	#[test]
 	fn when_rpc_method_does_not_match_anything_return_error() {
 		let io_handler = create_io_handler_with_error(RPC_METHOD_NAME);
-		let connection = create_connection("not_a_valid_method");
+		let (connection_token, message) = create_message_to_handle("not_a_valid_method");
 
 		let (ws_handler, connection_registry) = create_ws_handler(io_handler, None);
 
-		let handle_result = ws_handler.handle(connection);
+		let handle_result = ws_handler.handle_message(connection_token, message);
 
-		assert_matches!(handle_result, Err(WebSocketError::HandlerError(_)));
+		assert_matches!(handle_result, Err(WebSocketError::Other(_)));
 		assert!(connection_registry.is_empty());
 	}
 
-	fn create_connection(method_name: &str) -> ConnectionMock {
+	fn create_message_to_handle(method_name: &str) -> (ConnectionToken, String) {
 		let json_rpc_pre_method = r#"{"jsonrpc": "2.0", "method": ""#;
 		let json_rpc_post_method = r#"", "params": {}, "id": 1}"#;
 
 		let json_string = format!("{}{}{}", json_rpc_pre_method, method_name, json_rpc_post_method);
 		debug!("JSON input: {}", json_string);
 
-		TestConnection::builder().with_input(json_string.as_str()).build()
+		(ConnectionToken(23), json_string)
 	}
 
 	fn create_ws_handler(
@@ -191,7 +189,7 @@ pub mod tests {
 			None => TestConnectionWatcher::no_watch(),
 		};
 
-		let connection_registry = Arc::new(ConnectionRegistry::<String, TestConnection>::new());
+		let connection_registry = Arc::new(TestConnectionRegistry::new());
 
 		(
 			TestWsHandler::new(io_handler, Arc::new(watcher), connection_registry.clone()),

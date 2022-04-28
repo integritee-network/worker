@@ -35,11 +35,11 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::rpc_watch_extractor::RpcWatchExtractor;
 use codec::{Encode, Error as CodecError};
-use itc_tls_websocket_server::{WebSocketConnection, WebSocketError};
+use itc_tls_websocket_server::error::WebSocketError;
 use itp_types::{RpcResponse, TrustedOperationStatus};
 use serde_json::error::Error as SerdeJsonError;
 use sp_runtime::traits;
-use std::{fmt::Debug, vec::Vec};
+use std::{boxed::Box, fmt::Debug, vec::Vec};
 
 #[cfg(test)]
 mod mocks;
@@ -47,6 +47,7 @@ mod mocks;
 #[cfg(test)]
 mod builders;
 
+pub mod response_channel;
 pub mod rpc_connection_registry;
 pub mod rpc_responder;
 pub mod rpc_watch_extractor;
@@ -60,9 +61,11 @@ pub enum DirectRpcError {
 	#[error("RPC serialization error: {0}")]
 	SerializationError(SerdeJsonError),
 	#[error("Web socket error: {0}")]
-	WebSocketError(WebSocketError),
+	WebSocketError(#[from] WebSocketError),
 	#[error("Encoding error: {0}")]
 	EncodingError(CodecError),
+	#[error("Other error: {0}")]
+	Other(Box<dyn std::error::Error + Sync + Send + 'static>),
 }
 
 pub type DirectRpcResult<T> = Result<T, DirectRpcError>;
@@ -71,17 +74,17 @@ pub type DirectRpcResult<T> = Result<T, DirectRpcError>;
 pub trait RpcHash: std::hash::Hash + traits::Member + Encode {}
 impl<T: std::hash::Hash + traits::Member + Encode> RpcHash for T {}
 
-/// registry for RPC connections (i.e. connections that are kept alive to send updates)
+/// Registry for RPC connections (i.e. connections that are kept alive to send updates).
 pub trait RpcConnectionRegistry: Send + Sync {
 	type Hash: RpcHash;
-	type Connection: WebSocketConnection;
+	type Connection: Copy;
 
 	fn store(&self, hash: Self::Hash, connection: Self::Connection, rpc_response: RpcResponse);
 
 	fn withdraw(&self, hash: &Self::Hash) -> Option<(Self::Connection, RpcResponse)>;
 }
 
-/// sends an RPC response back to the client
+/// Sends an RPC response back to the client.
 pub trait SendRpcResponse: Send + Sync {
 	type Hash: RpcHash;
 
@@ -94,15 +97,15 @@ pub trait SendRpcResponse: Send + Sync {
 	fn send_state(&self, hash: Self::Hash, state_encoded: Vec<u8>) -> DirectRpcResult<()>;
 }
 
-/// determines if a given connection must be watched (i.e. kept alive),
-/// based on the information in the RpcResponse
-pub trait DetermineWatch {
+/// Determines if a given connection must be watched (i.e. kept alive),
+/// based on the information in the RpcResponse.
+pub trait DetermineWatch: Send + Sync {
 	type Hash: RpcHash;
 
 	fn must_be_watched(&self, rpc_response: &RpcResponse) -> DirectRpcResult<Option<Self::Hash>>;
 }
 
-/// convenience method to create a do_watch extractor
+/// Convenience method to create a do_watch extractor.
 pub fn create_determine_watch<Hash>() -> RpcWatchExtractor<Hash>
 where
 	Hash: RpcHash,

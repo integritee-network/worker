@@ -15,6 +15,5 @@
 
 */
 
-pub mod connection_mock;
 pub mod determine_watch_mock;
-pub mod updates_sink;
+pub mod response_channel_mock;

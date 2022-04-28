@@ -22,27 +22,23 @@ use std::sync::SgxRwLock as RwLock;
 use std::sync::RwLock;
 
 use crate::{RpcConnectionRegistry, RpcHash};
-use itc_tls_websocket_server::WebSocketConnection;
 use itp_types::RpcResponse;
 use std::collections::HashMap;
 
 type HashMapLock<K, V> = RwLock<HashMap<K, V>>;
 
-pub struct ConnectionRegistry<Hash, Connection>
+pub struct ConnectionRegistry<Hash, Token>
 where
 	Hash: RpcHash,
-	Connection: WebSocketConnection,
+	Token: Copy + Send + Sync,
 {
-	connection_map: HashMapLock<
-		<Self as RpcConnectionRegistry>::Hash,
-		(<Self as RpcConnectionRegistry>::Connection, RpcResponse),
-	>,
+	connection_map: HashMapLock<<Self as RpcConnectionRegistry>::Hash, (Token, RpcResponse)>,
 }
 
-impl<Hash, Connection> ConnectionRegistry<Hash, Connection>
+impl<Hash, Token> ConnectionRegistry<Hash, Token>
 where
 	Hash: RpcHash,
-	Connection: WebSocketConnection,
+	Token: Copy + Send + Sync,
 {
 	pub fn new() -> Self {
 		Self::default()
@@ -54,23 +50,23 @@ where
 	}
 }
 
-impl<Hash, Connection> Default for ConnectionRegistry<Hash, Connection>
+impl<Hash, Token> Default for ConnectionRegistry<Hash, Token>
 where
 	Hash: RpcHash,
-	Connection: WebSocketConnection,
+	Token: Copy + Send + Sync,
 {
 	fn default() -> Self {
 		ConnectionRegistry { connection_map: RwLock::new(HashMap::default()) }
 	}
 }
 
-impl<Hash, Connection> RpcConnectionRegistry for ConnectionRegistry<Hash, Connection>
+impl<Hash, Token> RpcConnectionRegistry for ConnectionRegistry<Hash, Token>
 where
 	Hash: RpcHash,
-	Connection: WebSocketConnection,
+	Token: Copy + Send + Sync,
 {
 	type Hash = Hash;
-	type Connection = Connection;
+	type Connection = Token;
 
 	fn store(&self, hash: Self::Hash, connection: Self::Connection, rpc_response: RpcResponse) {
 		let mut map = self.connection_map.write().unwrap();
@@ -86,10 +82,8 @@ where
 #[cfg(test)]
 pub mod tests {
 	use super::*;
-	use crate::mocks::connection_mock::ConnectionMock;
 
-	type TestConnection = ConnectionMock;
-	type TestRegistry = ConnectionRegistry<String, TestConnection>;
+	type TestRegistry = ConnectionRegistry<String, u64>;
 
 	#[test]
 	pub fn adding_element_with_same_hash_overwrite() {
@@ -97,19 +91,11 @@ pub mod tests {
 
 		let hash = "first".to_string();
 
-		registry.store(
-			hash.clone(),
-			ConnectionMock::builder().with_name("this_connection").build(),
-			dummy_rpc_response(),
-		);
-		registry.store(
-			hash.clone(),
-			ConnectionMock::builder().with_name("other_connection").build(),
-			dummy_rpc_response(),
-		);
+		registry.store(hash.clone(), 1, dummy_rpc_response());
+		registry.store(hash.clone(), 2, dummy_rpc_response());
 
-		let connection = registry.withdraw(&hash).unwrap().0;
-		assert_eq!("other_connection".to_string(), *connection.name());
+		let connection_token = registry.withdraw(&hash).unwrap().0;
+		assert_eq!(2, connection_token);
 	}
 
 	#[test]
@@ -124,7 +110,7 @@ pub mod tests {
 		let registry = TestRegistry::new();
 		let hash = "first".to_string();
 
-		registry.store(hash.clone(), ConnectionMock::builder().build(), dummy_rpc_response());
+		registry.store(hash.clone(), 1, dummy_rpc_response());
 
 		let connection = registry.withdraw(&hash);
 

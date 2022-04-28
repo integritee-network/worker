@@ -96,6 +96,7 @@ where
 		}
 
 		// FIXME: When & where should peers be updated?
+		debug!("Updating peers..");
 		if let Err(e) = self.peer_updater.update_peers() {
 			error!("Error updating peers: {:?}", e);
 		// Fixme: returning an error here results in a `HeaderAncestryMismatch` error.
@@ -104,6 +105,7 @@ where
 			info!("Successfully updated peers");
 		}
 
+		debug!("Gossiping sidechain blocks..");
 		if let Err(e) = self.block_gossiper.gossip_blocks(signed_blocks) {
 			error!("Error gossiping blocks: {:?}", e);
 		// Fixme: returning an error here results in a `HeaderAncestryMismatch` error.

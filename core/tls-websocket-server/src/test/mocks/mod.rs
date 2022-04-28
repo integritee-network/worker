@@ -15,5 +15,5 @@
 
 */
 
-pub mod rpc_response_channel;
-pub mod worker_api_direct;
+pub mod web_socket_connection_mock;
+pub mod web_socket_handler_mock;
