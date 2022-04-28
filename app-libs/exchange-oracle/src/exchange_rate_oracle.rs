@@ -20,7 +20,10 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::{metrics_exporter::ExportMetrics, Error, GetExchangeRate, TradingPair};
 use core::time::Duration;
-use itc_rest_client::{http_client::HttpClient, rest_client::RestClient};
+use itc_rest_client::{
+	http_client::{HttpClient, SendWithCertificateVerification},
+	rest_client::RestClient,
+};
 use itp_types::ExchangeRate;
 use std::{string::String, sync::Arc, time::Instant};
 use url::Url;
@@ -33,9 +36,12 @@ pub trait OracleSource: Default {
 
 	fn base_url(&self) -> Result<Url, Error>;
 
+	/// The server's root certificate. A valid certificate is required to open a tls connection
+	fn root_certificate_content(&self) -> String;
+
 	fn execute_exchange_rate_request(
 		&self,
-		rest_client: &mut RestClient<HttpClient>,
+		rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
 		trading_pair: TradingPair,
 	) -> Result<ExchangeRate, Error>;
 }
@@ -66,7 +72,15 @@ where
 		self.metrics_exporter.increment_number_requests(source_id.clone());
 
 		let base_url = self.oracle_source.base_url()?;
-		let http_client = HttpClient::new(true, self.oracle_source.request_timeout(), None, None);
+		let root_certificate = self.oracle_source.root_certificate_content();
+
+		let http_client = HttpClient::new(
+			SendWithCertificateVerification::new(root_certificate),
+			true,
+			self.oracle_source.request_timeout(),
+			None,
+			None,
+		);
 		let mut rest_client = RestClient::new(http_client, base_url.clone());
 
 		let timer_start = Instant::now();

@@ -18,12 +18,14 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use crate::http_client::HttpClient;
+use crate::{http_client, http_client::HttpClient};
 use http_req::response::Headers;
 use std::{string::String, time::Duration};
 
 /// Builder for `HttpClient`
-pub struct HttpClientBuilder {
+pub struct HttpClientBuilder<SendType> {
+	send: SendType,
+
 	/// Request timeout
 	timeout: Duration,
 
@@ -37,9 +39,13 @@ pub struct HttpClientBuilder {
 	authorization: Option<String>,
 }
 
-impl Default for HttpClientBuilder {
+impl<SendType> Default for HttpClientBuilder<SendType>
+where
+	SendType: Default,
+{
 	fn default() -> Self {
 		Self {
+			send: SendType::default(),
 			timeout: Duration::from_secs(u64::MAX),
 			send_null_body: true,
 			headers: None,
@@ -48,7 +54,19 @@ impl Default for HttpClientBuilder {
 	}
 }
 
-impl HttpClientBuilder {
+impl<SendType> HttpClientBuilder<SendType>
+where
+	SendType: http_client::Send,
+{
+	/// Set send method.
+	///
+	/// Default is calling the default send of http-req lib: all Mozilla's root certificates
+	/// are trusted.
+	pub fn send(mut self, send: SendType) -> Self {
+		self.send = send;
+		self
+	}
+
 	/// Set request timeout
 	///
 	/// Default is no timeout
@@ -82,7 +100,13 @@ impl HttpClientBuilder {
 	}
 
 	/// Create `HttpClient` with the configuration in this builder
-	pub fn build(self) -> HttpClient {
-		HttpClient::new(self.send_null_body, Some(self.timeout), self.headers, self.authorization)
+	pub fn build(self) -> HttpClient<SendType> {
+		HttpClient::<SendType>::new(
+			self.send,
+			self.send_null_body,
+			Some(self.timeout),
+			self.headers,
+			self.authorization,
+		)
 	}
 }

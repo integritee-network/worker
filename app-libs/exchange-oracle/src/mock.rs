@@ -24,7 +24,10 @@ use std::sync::RwLock;
 use crate::{
 	error::Error, exchange_rate_oracle::OracleSource, metrics_exporter::ExportMetrics, TradingPair,
 };
-use itc_rest_client::{http_client::HttpClient, rest_client::RestClient};
+use itc_rest_client::{
+	http_client::{HttpClient, SendWithCertificateVerification},
+	rest_client::RestClient,
+};
 use itp_types::ExchangeRate;
 use std::{
 	time::{Duration, Instant},
@@ -90,9 +93,12 @@ impl OracleSource for OracleSourceMock {
 		Url::parse("https://mock.base.url").map_err(|e| Error::Other(format!("{:?}", e).into()))
 	}
 
+	fn root_certificate_content(&self) -> String {
+		"MOCK_CERTIFICATE".to_string()
+	}
 	fn execute_exchange_rate_request(
 		&self,
-		_rest_client: &mut RestClient<HttpClient>,
+		_rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
 		_trading_pair: TradingPair,
 	) -> Result<ExchangeRate, Error> {
 		Ok(ExchangeRate::from_num(42.3f32))

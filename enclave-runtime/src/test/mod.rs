@@ -21,4 +21,5 @@ pub mod fixtures;
 pub mod ipfs_tests;
 pub mod mocks;
 pub mod on_chain_ocall_tests;
+pub mod oracle_tests;
 pub mod sidechain_aura_tests;

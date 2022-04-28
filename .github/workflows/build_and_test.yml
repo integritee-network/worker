@@ -41,6 +41,8 @@ jobs:
         run: |
           cd bin
           ./integritee-service test -u -e
+        env:
+          COINMARKETCAP_KEY: ${{ secrets.COINMARKETCAP_KEY }}
 
       - name: Upload worker
         uses: actions/upload-artifact@v2
