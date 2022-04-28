@@ -23,6 +23,8 @@ services:
   integritee-worker-2:
     image: integritee-worker:dev
     depends_on: ['integritee-node', 'integritee-worker-1']
+    environment:
+      - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=debug
     entrypoint: bash -c "
       echo Hello 1
       && sleep 10
