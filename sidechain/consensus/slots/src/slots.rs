@@ -140,6 +140,7 @@ impl<T: StaticSealedIO<Unsealed = Slot, Error = ConsensusError>> GetLastSlot for
 pub mod sgx {
 	use super::*;
 	use codec::{Decode, Encode};
+	use itp_settings::files::LAST_SLOT_BIN;
 	use itp_sgx_io::{seal, unseal, StaticSealedIO};
 	use lazy_static::lazy_static;
 	use std::sync::SgxRwLock;
@@ -149,8 +150,6 @@ pub mod sgx {
 	lazy_static! {
 		static ref FILE_LOCK: SgxRwLock<()> = Default::default();
 	}
-
-	const LAST_SLOT_BIN: &'static str = "last_slot.bin";
 
 	impl StaticSealedIO for LastSlotSeal {
 		type Error = ConsensusError;

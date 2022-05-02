@@ -23,6 +23,7 @@ sp-consensus-slots = { version = "0.10.0-dev", default-features = false, git = "
 sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19"}
 
 # local deps
+itp-settings = { path = "../../../core-primitives/settings", default-features = false }
 itp-sgx-io = { path = "../../../core-primitives/sgx/io", default-features = false }
 itp-time-utils = { path = "../../../core-primitives/time-utils", default-features = false }
 itp-types = { path = "../../../core-primitives/types", default-features = false }

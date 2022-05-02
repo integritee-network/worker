@@ -1649,6 +1649,7 @@ name = "its-consensus-slots"
 version = "0.8.0"
 dependencies = [
  "derive_more",
+ "itp-settings",
  "itp-sgx-io",
  "itp-time-utils",
  "itp-types",

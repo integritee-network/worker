@@ -39,8 +39,9 @@ pub mod files {
 	pub const RA_DUMP_CERT_DER_FILE: &str = "ra_dump_cert.der";
 
 	// used by worker and enclave
-	pub const SHARDS_PATH: &str = "./shards";
+	pub const SHARDS_PATH: &str = "shards";
 	pub const ENCRYPTED_STATE_FILE: &str = "state.bin";
+	pub const LAST_SLOT_BIN: &str = "last_slot.bin";
 
 	#[cfg(feature = "production")]
 	pub static RA_SPID_FILE: &str = "spid_production.txt";
