@@ -25,7 +25,7 @@ use itp_settings::files::{
 };
 use itp_types::ShardIdentifier;
 use log::*;
-use std::{fs, fs::File, path::PathBuf};
+use std::{fs, fs::File, path::Path};
 
 /// Purge all worker files from the current working directory (cwd).
 pub(crate) fn purge_files_from_cwd() -> ServiceResult<()> {
@@ -51,17 +51,6 @@ pub(crate) fn initialize_shard_and_keys(
 	generate_shielding_key_file(enclave);
 
 	Ok(())
-}
-
-fn list_items_in_directory(directory: &PathBuf) -> Vec<String> {
-	let items = match directory.read_dir() {
-		Ok(rd) => rd,
-		Err(_) => return Vec::new(),
-	};
-
-	items
-		.flat_map(|fr| fr.map(|de| de.file_name().into_string().ok()).ok().flatten())
-		.collect()
 }
 
 pub(crate) fn init_shard(enclave: &Enclave, shard_identifier: &ShardIdentifier) {
@@ -103,18 +92,18 @@ pub(crate) fn generate_shielding_key_file(enclave: &Enclave) {
 	}
 }
 
-fn purge_files(root_directory: &PathBuf) -> ServiceResult<()> {
-	remove_dir_if_it_exists(&root_directory, SHARDS_PATH)?;
-	remove_dir_if_it_exists(&root_directory, SIDECHAIN_STORAGE_PATH)?;
+fn purge_files(root_directory: &Path) -> ServiceResult<()> {
+	remove_dir_if_it_exists(root_directory, SHARDS_PATH)?;
+	remove_dir_if_it_exists(root_directory, SIDECHAIN_STORAGE_PATH)?;
 
-	remove_file_if_it_exists(&root_directory, LAST_SLOT_BIN)?;
-	remove_file_if_it_exists(&root_directory, LIGHT_CLIENT_DB)?;
-	remove_file_if_it_exists(&root_directory, light_client_backup_file().as_str())?;
+	remove_file_if_it_exists(root_directory, LAST_SLOT_BIN)?;
+	remove_file_if_it_exists(root_directory, LIGHT_CLIENT_DB)?;
+	remove_file_if_it_exists(root_directory, light_client_backup_file().as_str())?;
 
 	Ok(())
 }
 
-fn remove_dir_if_it_exists(root_directory: &PathBuf, dir_name: &str) -> ServiceResult<()> {
+fn remove_dir_if_it_exists(root_directory: &Path, dir_name: &str) -> ServiceResult<()> {
 	let directory_path = root_directory.join(dir_name);
 	if directory_path.exists() {
 		fs::remove_dir_all(directory_path).map_err(|e| Error::Custom(e.into()))?;
@@ -122,7 +111,7 @@ fn remove_dir_if_it_exists(root_directory: &PathBuf, dir_name: &str) -> ServiceR
 	Ok(())
 }
 
-fn remove_file_if_it_exists(root_directory: &PathBuf, file_name: &str) -> ServiceResult<()> {
+fn remove_file_if_it_exists(root_directory: &Path, file_name: &str) -> ServiceResult<()> {
 	let file = root_directory.join(file_name);
 	if file.exists() {
 		fs::remove_file(file).map_err(|e| Error::Custom(e.into()))?;
@@ -138,7 +127,7 @@ fn light_client_backup_file() -> String {
 mod tests {
 	use super::*;
 	use itp_settings::files::SHARDS_PATH;
-	use std::fs;
+	use std::{fs, path::PathBuf};
 
 	#[test]
 	fn purge_files_deletes_all_relevant_files() {
