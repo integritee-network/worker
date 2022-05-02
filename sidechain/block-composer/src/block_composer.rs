@@ -148,12 +148,13 @@ where
 			block_data.hash(),
 		);
 
-		let block = SignedSidechainBlock::Block::new(header, block_data);
+		let block = SignedSidechainBlock::Block::new(header.clone(), block_data);
 
 		let block_hash = block.hash();
 		debug!("Block hash {}", block_hash);
 
-		let opaque_call = create_proposed_sidechain_block_call(shard, block_hash);
+		let opaque_call =
+			create_proposed_sidechain_block_call::<SignedSidechainBlock>(shard, header);
 
 		let signed_block = block.sign_block(&self.signer);
 
@@ -162,6 +163,9 @@ where
 }
 
 /// Creates a proposed_sidechain_block extrinsic for a given shard id and sidechain block hash.
-fn create_proposed_sidechain_block_call(shard_id: ShardIdentifier, block_hash: H256) -> OpaqueCall {
-	OpaqueCall::from_tuple(&([TEEREX_MODULE, PROPOSED_SIDECHAIN_BLOCK], shard_id, block_hash))
+fn create_proposed_sidechain_block_call<T: its_primitives::traits::SignedBlock>(
+	shard_id: ShardIdentifier,
+	header: HeaderTypeOf<T>,
+) -> OpaqueCall {
+	OpaqueCall::from_tuple(&([TEEREX_MODULE, PROPOSED_SIDECHAIN_BLOCK], shard_id, header))
 }

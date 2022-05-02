@@ -195,7 +195,7 @@ fn test_compose_block_and_confirmation() {
 	let expected_call = OpaqueCall::from_tuple(&(
 		[TEEREX_MODULE, PROPOSED_SIDECHAIN_BLOCK],
 		shard,
-		blake2_256(&signed_block.block().header().encode()),
+		&signed_block.block().header(),
 	));
 
 	assert!(signed_block.verify_signature());
@@ -347,7 +347,7 @@ fn test_create_block_and_confirmation_works() {
 	let expected_call = OpaqueCall::from_tuple(&(
 		[TEEREX_MODULE, PROPOSED_SIDECHAIN_BLOCK],
 		shard,
-		blake2_256(&signed_block.block().header().encode()),
+		&signed_block.block().header(),
 	));
 
 	assert!(signed_block.verify_signature());
