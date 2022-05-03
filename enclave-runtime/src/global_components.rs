@@ -38,11 +38,10 @@ use itp_block_import_queue::BlockImportQueue;
 use itp_component_container::ComponentContainer;
 use itp_extrinsics_factory::ExtrinsicsFactory;
 use itp_nonce_cache::NonceCache;
-use itp_sgx_crypto::{Aes, AesSeal};
+use itp_sgx_crypto::{key_repository::KeyRepository, Aes, AesSeal};
 use itp_stf_executor::executor::StfExecutor;
 use itp_stf_state_handler::{
-	file_io::sgx::SgxStateFileIo, state_key_repository::StateKeyRepository,
-	state_snapshot_repository::StateSnapshotRepository, StateHandler,
+	file_io::sgx::SgxStateFileIo, state_snapshot_repository::StateSnapshotRepository, StateHandler,
 };
 use itp_top_pool::basic_pool::BasicPool;
 use itp_top_pool_author::{
@@ -66,7 +65,7 @@ use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_externalities::SgxExternalities;
 use sp_core::ed25519::Pair;
 
-pub type EnclaveStateKeyRepository = StateKeyRepository<Aes, AesSeal>;
+pub type EnclaveStateKeyRepository = KeyRepository<Aes, AesSeal>;
 pub type EnclaveStateFileIo = SgxStateFileIo<EnclaveStateKeyRepository>;
 pub type EnclaveStateSnapshotRepository =
 	StateSnapshotRepository<EnclaveStateFileIo, StfState, H256>;

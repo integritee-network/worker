@@ -22,34 +22,38 @@ use std::sync::SgxRwLock as RwLock;
 use std::sync::RwLock;
 
 use crate::error::{Error, Result};
-use itp_sgx_crypto::StateCrypto;
 use itp_sgx_io::SealedIO;
 use std::sync::Arc;
 
-pub trait AccessStateKey {
-	type KeyType: StateCrypto;
+/// Access a cryptographic key.
+pub trait AccessKey {
+	type KeyType;
 
 	fn retrieve_key(&self) -> Result<Self::KeyType>;
 }
 
-pub trait MutateStateKey<KeyType: StateCrypto> {
+/// Mutate a cryptographic key.
+pub trait MutateKey<KeyType> {
 	fn update_key(&self, key: KeyType) -> Result<()>;
 }
 
-pub struct StateKeyRepository<KeyType, SealedIo> {
+/// Repository implementation. Stores a cryptographic key in-memory and in a file backed.
+/// Uses the SealedIO trait for the file backend.
+pub struct KeyRepository<KeyType, SealedIo> {
 	key_lock: RwLock<KeyType>,
 	sealed_io: Arc<SealedIo>,
 }
 
-impl<KeyType, SealedIo> StateKeyRepository<KeyType, SealedIo> {
+impl<KeyType, SealedIo> KeyRepository<KeyType, SealedIo> {
 	pub fn new(key: KeyType, sealed_io: Arc<SealedIo>) -> Self {
-		StateKeyRepository { key_lock: RwLock::new(key), sealed_io }
+		KeyRepository { key_lock: RwLock::new(key), sealed_io }
 	}
 }
 
-impl<KeyType, SealedIo> AccessStateKey for StateKeyRepository<KeyType, SealedIo>
+impl<KeyType, SealedIo> AccessKey for KeyRepository<KeyType, SealedIo>
 where
-	KeyType: StateCrypto + Clone,
+	KeyType: Clone,
+	SealedIo: SealedIO<Unsealed = KeyType, Error = crate::error::Error>,
 {
 	type KeyType = KeyType;
 
@@ -58,10 +62,10 @@ where
 	}
 }
 
-impl<KeyType, SealedIo> MutateStateKey<KeyType> for StateKeyRepository<KeyType, SealedIo>
+impl<KeyType, SealedIo> MutateKey<KeyType> for KeyRepository<KeyType, SealedIo>
 where
-	KeyType: StateCrypto,
-	SealedIo: SealedIO<Unsealed = KeyType, Error = itp_sgx_crypto::Error>,
+	KeyType: Clone,
+	SealedIo: SealedIO<Unsealed = KeyType, Error = crate::error::Error>,
 {
 	fn update_key(&self, key: KeyType) -> Result<()> {
 		let mut key_lock = self.key_lock.write().map_err(|_| Error::LockPoisoning)?;
@@ -76,9 +80,9 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use itp_sgx_crypto::{aes::Aes, mocks::AesSealMock};
+	use crate::{aes::Aes, mocks::AesSealMock};
 
-	type TestKeyRepository = StateKeyRepository<Aes, AesSealMock>;
+	type TestKeyRepository = KeyRepository<Aes, AesSealMock>;
 
 	#[test]
 	fn update_and_retrieve_key_works() {

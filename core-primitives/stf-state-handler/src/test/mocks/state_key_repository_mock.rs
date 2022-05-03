@@ -21,11 +21,11 @@ use std::sync::SgxRwLock as RwLock;
 #[cfg(feature = "std")]
 use std::sync::RwLock;
 
-use crate::{
+use itp_sgx_crypto::{
 	error::Result,
-	state_key_repository::{AccessStateKey, MutateStateKey},
+	key_repository::{AccessKey, MutateKey},
+	StateCrypto,
 };
-use itp_sgx_crypto::StateCrypto;
 
 #[derive(Default)]
 pub struct StateKeyRepositoryMock<KeyType>
@@ -45,7 +45,7 @@ where
 	}
 }
 
-impl<KeyType> AccessStateKey for StateKeyRepositoryMock<KeyType>
+impl<KeyType> AccessKey for StateKeyRepositoryMock<KeyType>
 where
 	KeyType: StateCrypto + Clone + Default,
 {
@@ -56,7 +56,7 @@ where
 	}
 }
 
-impl<KeyType> MutateStateKey<KeyType> for StateKeyRepositoryMock<KeyType>
+impl<KeyType> MutateKey<KeyType> for StateKeyRepositoryMock<KeyType>
 where
 	KeyType: StateCrypto + Clone + Default,
 {
