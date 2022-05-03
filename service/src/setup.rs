@@ -17,11 +17,12 @@
 */
 
 use crate::error::{Error, ServiceResult};
+use base58::ToBase58;
 use codec::Encode;
 use itp_enclave_api::{enclave_base::EnclaveBase, Enclave};
 use itp_settings::files::{
-	LAST_SLOT_BIN, LIGHT_CLIENT_DB, SHARDS_PATH, SHIELDING_KEY_FILE, SIDECHAIN_STORAGE_PATH,
-	SIGNING_KEY_FILE,
+	LAST_SLOT_BIN, LIGHT_CLIENT_DB, MR_ENCLAVE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE,
+	SIDECHAIN_STORAGE_PATH, SIGNING_KEY_FILE,
 };
 use itp_types::ShardIdentifier;
 use log::*;
@@ -49,6 +50,7 @@ pub(crate) fn initialize_shard_and_keys(
 	println!("[+] Generate key files");
 	generate_signing_key_file(enclave);
 	generate_shielding_key_file(enclave);
+	generate_mrenclave_file(enclave);
 
 	Ok(())
 }
@@ -92,12 +94,25 @@ pub(crate) fn generate_shielding_key_file(enclave: &Enclave) {
 	}
 }
 
+pub(crate) fn generate_mrenclave_file(enclave: &Enclave) {
+	let mr_enclave_b58 = enclave.get_mrenclave().unwrap().encode().to_base58();
+	match fs::write(MR_ENCLAVE_FILE, mr_enclave_b58) {
+		Err(e) => {
+			error!("[-] Failed to write '{}'. {}", MR_ENCLAVE_FILE, e);
+		},
+		_ => {
+			println!("[+] File '{}' written successfully", MR_ENCLAVE_FILE);
+		},
+	}
+}
+
 fn purge_files(root_directory: &Path) -> ServiceResult<()> {
 	remove_dir_if_it_exists(root_directory, SHARDS_PATH)?;
 	remove_dir_if_it_exists(root_directory, SIDECHAIN_STORAGE_PATH)?;
 
 	remove_file_if_it_exists(root_directory, LAST_SLOT_BIN)?;
 	remove_file_if_it_exists(root_directory, LIGHT_CLIENT_DB)?;
+	remove_file_if_it_exists(root_directory, MR_ENCLAVE_FILE)?;
 	remove_file_if_it_exists(root_directory, light_client_backup_file().as_str())?;
 
 	Ok(())
@@ -149,6 +164,7 @@ mod tests {
 		fs::File::create(&root_directory.join(LAST_SLOT_BIN)).unwrap();
 		fs::File::create(&root_directory.join(LIGHT_CLIENT_DB)).unwrap();
 		fs::File::create(&root_directory.join(light_client_backup_file())).unwrap();
+		fs::File::create(&root_directory.join(MR_ENCLAVE_FILE)).unwrap();
 
 		purge_files(&root_directory).unwrap();
 
@@ -157,6 +173,7 @@ mod tests {
 		assert!(!root_directory.join(LAST_SLOT_BIN).exists());
 		assert!(!root_directory.join(LIGHT_CLIENT_DB).exists());
 		assert!(!root_directory.join(light_client_backup_file()).exists());
+		assert!(!root_directory.join(MR_ENCLAVE_FILE).exists());
 	}
 
 	#[test]
