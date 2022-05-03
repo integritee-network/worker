@@ -176,12 +176,12 @@ fn main() {
 		let skip_ra = smatches.is_present("skip-ra");
 		let dev = smatches.is_present("dev");
 
-		let node_api =
-			node_api_factory.create_api().expect("Failed to create parentchain node API");
-
 		if clean_reset {
 			setup::initialize_shard_and_keys(enclave.as_ref(), &shard).unwrap();
 		}
+
+		let node_api =
+			node_api_factory.create_api().expect("Failed to create parentchain node API");
 
 		let request_state = smatches.is_present("request-state");
 		if request_state {

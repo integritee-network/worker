@@ -54,12 +54,14 @@ def main(processes, config_path):
         config = json.load(config_file)
 
     processes.append(run_node(config))
+    # sleep to give the node some time to startup
+    sleep(3)
 
     i = 1
     for w_conf in config["workers"]:
         processes.append(run_worker(w_conf, i))
         # sleep to prevent nonce clash when bootstrapping the enclave's account
-        sleep(6)
+        sleep(3)
         if i == 1:
             # Give worker 1 some time to register itself, otherwise key & state sharing will not work.
             sleep(60)
