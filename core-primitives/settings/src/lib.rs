@@ -35,7 +35,6 @@ pub mod files {
 	pub const SEALED_SIGNER_SEED_FILE: &str = "ed25519_key_sealed.bin";
 	pub const AES_KEY_FILE_AND_INIT_V: &str = "aes_key_sealed.bin";
 	pub const LIGHT_CLIENT_DB: &str = "light_client_db.bin";
-	pub const MR_ENCLAVE_FILE: &str = "mrenclave.b58";
 
 	pub const RA_DUMP_CERT_DER_FILE: &str = "ra_dump_cert.der";
 
