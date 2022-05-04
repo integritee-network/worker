@@ -185,12 +185,7 @@ fn main() {
 
 		let request_state = smatches.is_present("request-state");
 		if request_state {
-			sync_state::sync_state(
-				&node_api,
-				&extract_shard(smatches, enclave.as_ref()),
-				enclave.as_ref(),
-				skip_ra,
-			);
+			sync_state::sync_state(&node_api, &shard, enclave.as_ref(), skip_ra);
 		}
 
 		start_worker(
@@ -492,6 +487,26 @@ fn start_worker<E, T, D>(
 		.unwrap();
 
 	// ------------------------------------------------------------------------
+	// Start polling loop to wait until we have a worker for a shard registered on
+	// the parentchain (TEEREX WorkerForShard). This is the pre-requisite to be
+	// considered initialized and ready for the next worker to start.
+	let node_api_for_initialized = node_api.clone();
+	let shard_for_initialized = shard.clone();
+	thread::spawn(move || {
+		loop {
+			if let Ok(Some(_)) =
+				node_api_for_initialized.worker_for_shard(&shard_for_initialized, None)
+			{
+				// Set that the service is initialized.
+				set_initialized();
+				println!("[+] Found a worker for shard, this worker is considered initialized now");
+				break
+			}
+			thread::sleep(Duration::from_secs(2));
+		}
+	});
+
+	// ------------------------------------------------------------------------
 	// subscribe to events and react on firing
 	println!("*** Subscribing to events");
 	let (sender, receiver) = channel();
@@ -502,9 +517,6 @@ fn start_worker<E, T, D>(
 			node_api.subscribe_events(sender2).unwrap();
 		})
 		.unwrap();
-
-	// Set that the service is initialized.
-	set_initialized();
 
 	println!("[+] Subscribed to events. waiting...");
 	let timeout = Duration::from_millis(10);
