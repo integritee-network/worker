@@ -14,9 +14,10 @@ services:
       dockerfile: build.Dockerfile
     depends_on: ['integritee-node']
     environment:
-      - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=info,ita_stf=warn
+      - RUST_LOG=info,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=info,integritee_service=info,ita_stf=warn
     ports:
       - "4545:4545"
+      - "2011:2011"
     entrypoint: bash -c "
       sleep 5
       && /usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-1 -T wss://integritee-worker-1 -u ws://integritee-node -U ws://integritee-worker-1 -P 2011 run --dev --skip-ra"
@@ -29,18 +30,7 @@ services:
     depends_on: ['integritee-node', 'integritee-worker-1']
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
-    entrypoint: bash -c "
-      echo Hello 1
-      && sleep 10
-      && status_code=404
-      && echo Hello 2
-      && while [[ $$status_code -ne 200 ]] ; do
-      echo You again???;
-      sleep 2;
-      status_code=$$(curl --write-out '%{http_code}' --silent --output /dev/null integritee-worker-1:4545/is_initialized);
-      echo You got $$status_code, my friend;
-      done
-      && echo Hello 3
-      && sleep 10
-      && /usr/local/bin/integritee-service --clean-reset --ws-external -u ws://integritee-node -U ws://integritee-worker-2 -P 2012 run --dev --skip-ra --request-state"
-    restart: always
+    ports:
+      - "2012:2012"
+    entrypoint: dockerize -wait http://integritee-worker-1:4545/is_initialized -timeout 100s /usr/local/bin/integritee-service --clean-reset --ws-external -u ws://integritee-node -U ws://integritee-worker-2 -P 2012 run --dev --skip-ra --request-state
+    restart: "no"
