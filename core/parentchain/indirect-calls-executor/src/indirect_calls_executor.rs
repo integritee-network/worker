@@ -43,18 +43,18 @@ pub trait ExecuteIndirectCalls {
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>;
 }
 
-pub struct IndirectCallsExecutor<ShieldingKey, StfExecutor> {
-	shielding_key_repo: Arc<ShieldingKey>,
+pub struct IndirectCallsExecutor<ShieldingKeyRepository, StfExecutor> {
+	shielding_key_repo: Arc<ShieldingKeyRepository>,
 	stf_executor: Arc<StfExecutor>,
 }
 
-impl<ShieldingKey, StfExecutor> IndirectCallsExecutor<ShieldingKey, StfExecutor>
+impl<ShieldingKeyRepository, StfExecutor> IndirectCallsExecutor<ShieldingKeyRepository, StfExecutor>
 where
-	ShieldingKey: AccessKey,
-	<ShieldingKey as AccessKey>::KeyType: ShieldingCrypto<Error = itp_sgx_crypto::Error>,
+	ShieldingKeyRepository: AccessKey,
+	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCrypto<Error = itp_sgx_crypto::Error>,
 	StfExecutor: StfExecuteTrustedCall + StfExecuteShieldFunds,
 {
-	pub fn new(authority: Arc<ShieldingKey>, stf_executor: Arc<StfExecutor>) -> Self {
+	pub fn new(authority: Arc<ShieldingKeyRepository>, stf_executor: Arc<StfExecutor>) -> Self {
 		IndirectCallsExecutor { shielding_key_repo: authority, stf_executor }
 	}
 
@@ -91,11 +91,11 @@ where
 	}
 }
 
-impl<ShieldingKey, StfExecutor> ExecuteIndirectCalls
-	for IndirectCallsExecutor<ShieldingKey, StfExecutor>
+impl<ShieldingKeyRepository, StfExecutor> ExecuteIndirectCalls
+	for IndirectCallsExecutor<ShieldingKeyRepository, StfExecutor>
 where
-	ShieldingKey: AccessKey,
-	<ShieldingKey as AccessKey>::KeyType: ShieldingCrypto<Error = itp_sgx_crypto::Error>,
+	ShieldingKeyRepository: AccessKey,
+	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCrypto<Error = itp_sgx_crypto::Error>,
 	StfExecutor: StfExecuteTrustedCall + StfExecuteShieldFunds,
 {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(

@@ -59,29 +59,29 @@ const TX_SOURCE: TrustedOperationSource = TrustedOperationSource::External;
 /// Authoring API for RPC calls
 ///
 ///
-pub struct Author<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi>
+pub struct Author<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi>
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
 	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: QueryShardState,
-	EncryptionKey: AccessKey,
-	<EncryptionKey as AccessKey>::KeyType: ShieldingCrypto,
+	ShieldingKeyRepository: AccessKey,
+	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCrypto,
 {
 	top_pool: Arc<TopPool>,
 	top_filter: TopFilter,
 	state_facade: Arc<StateFacade>,
-	shielding_key_repo: Arc<EncryptionKey>,
+	shielding_key_repo: Arc<ShieldingKeyRepository>,
 	ocall_api: Arc<OCallApi>,
 }
 
-impl<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi>
-	Author<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi>
+impl<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi>
+	Author<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi>
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
 	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: QueryShardState,
-	EncryptionKey: AccessKey,
-	<EncryptionKey as AccessKey>::KeyType: ShieldingCrypto,
+	ShieldingKeyRepository: AccessKey,
+	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCrypto,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
 {
 	/// Create new instance of Authoring API.
@@ -89,7 +89,7 @@ where
 		top_pool: Arc<TopPool>,
 		top_filter: TopFilter,
 		state_facade: Arc<StateFacade>,
-		encryption_key: Arc<EncryptionKey>,
+		encryption_key: Arc<ShieldingKeyRepository>,
 		ocall_api: Arc<OCallApi>,
 	) -> Self {
 		Author { top_pool, top_filter, state_facade, shielding_key_repo: encryption_key, ocall_api }
@@ -101,14 +101,14 @@ enum TopSubmissionMode {
 	SubmitWatch,
 }
 
-impl<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi>
-	Author<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi>
+impl<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi>
+	Author<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi>
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
 	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: QueryShardState,
-	EncryptionKey: AccessKey,
-	<EncryptionKey as AccessKey>::KeyType: ShieldingCrypto,
+	ShieldingKeyRepository: AccessKey,
+	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCrypto,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
 {
 	fn process_top(
@@ -192,15 +192,15 @@ fn map_top_error<P: TrustedOperationPool>(error: P::Error) -> RpcError {
 	.into()
 }
 
-impl<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi>
+impl<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi>
 	AuthorApi<TxHash<TopPool>, BlockHash<TopPool>>
-	for Author<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi>
+	for Author<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi>
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
 	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: QueryShardState,
-	EncryptionKey: AccessKey,
-	<EncryptionKey as AccessKey>::KeyType: ShieldingCrypto,
+	ShieldingKeyRepository: AccessKey,
+	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCrypto,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
 {
 	fn submit_top(
@@ -288,14 +288,14 @@ where
 	}
 }
 
-impl<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi> OnBlockImported
-	for Author<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi>
+impl<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi> OnBlockImported
+	for Author<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi>
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
 	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: QueryShardState,
-	EncryptionKey: AccessKey,
-	<EncryptionKey as AccessKey>::KeyType: ShieldingCrypto,
+	ShieldingKeyRepository: AccessKey,
+	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCrypto,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
 {
 	type Hash = <TopPool as TrustedOperationPool>::Hash;
@@ -305,14 +305,14 @@ where
 	}
 }
 
-impl<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi> SendState
-	for Author<TopPool, TopFilter, StateFacade, EncryptionKey, OCallApi>
+impl<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi> SendState
+	for Author<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi>
 where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
 	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: QueryShardState,
-	EncryptionKey: AccessKey,
-	<EncryptionKey as AccessKey>::KeyType: ShieldingCrypto,
+	ShieldingKeyRepository: AccessKey,
+	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCrypto,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
 {
 	type Hash = <TopPool as TrustedOperationPool>::Hash;

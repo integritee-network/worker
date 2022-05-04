@@ -32,13 +32,13 @@ pub(crate) fn purge_files_from_cwd() -> ServiceResult<()> {
 	let current_directory = std::env::current_dir().map_err(|e| Error::Custom(e.into()))?;
 	println!("[+] Performing a clean reset of the worker");
 
-	println!("[+] Purge any previous files");
+	println!("[+] Purge all files from previous runs");
 	purge_files(&current_directory)?;
 
 	Ok(())
 }
 
-/// Initializes the shard and generates the key files after a purge.
+/// Initializes the shard and generates the key files.
 pub(crate) fn initialize_shard_and_keys(
 	enclave: &Enclave,
 	shard_identifier: &ShardIdentifier,
@@ -92,6 +92,7 @@ pub(crate) fn generate_shielding_key_file(enclave: &Enclave) {
 	}
 }
 
+/// Purge all worker files in a given path.
 fn purge_files(root_directory: &Path) -> ServiceResult<()> {
 	remove_dir_if_it_exists(root_directory, SHARDS_PATH)?;
 	remove_dir_if_it_exists(root_directory, SIDECHAIN_STORAGE_PATH)?;
