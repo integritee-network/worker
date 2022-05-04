@@ -13,7 +13,7 @@
 # limitations under the License.
 
 ######## Update SGX SDK ########
-include UpdateRustSGXSDK.mk
+#include UpdateRustSGXSDK.mk
 
 ######## SGX SDK Settings ########
 SGX_SDK ?= /opt/intel/sgxsdk

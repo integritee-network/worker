@@ -1,4 +1,4 @@
-target/
-docker/
+target/*
+docker/*
 build.Dockerfile
 Dockerfile
