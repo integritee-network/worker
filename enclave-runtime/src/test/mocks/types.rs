@@ -20,7 +20,7 @@
 
 use crate::test::mocks::rpc_responder_mock::RpcResponderMock;
 use itc_parentchain::block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
-use itp_sgx_crypto::Aes;
+use itp_sgx_crypto::{mocks::KeyRepositoryMock, Aes};
 use itp_stf_executor::executor::StfExecutor;
 use itp_test::mock::{
 	handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock,
@@ -48,6 +48,8 @@ pub type TestSigner = spEd25519::Pair;
 
 pub type TestShieldingKey = Rsa3072KeyPair;
 
+pub type TestShieldingKeyRepo = KeyRepositoryMock<TestShieldingKey>;
+
 pub type TestStateKey = Aes;
 
 pub type TestStateHandler = HandleStateMock;
@@ -67,7 +69,7 @@ pub type TestTopPool =
 	BasicPool<SidechainApi<ParentchainBlock>, ParentchainBlock, TestRpcResponder>;
 
 pub type TestTopPoolAuthor =
-	Author<TestTopPool, AuthorTopFilter, TestStateHandler, TestShieldingKey, MetricsOCallMock>;
+	Author<TestTopPool, AuthorTopFilter, TestStateHandler, TestShieldingKeyRepo, MetricsOCallMock>;
 
 pub type TestTopPoolExecutor = TopPoolOperationHandler<
 	ParentchainBlock,

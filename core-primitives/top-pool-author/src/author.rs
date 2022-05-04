@@ -28,7 +28,7 @@ use codec::{Decode, Encode};
 use ita_stf::{hash, Getter, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
 use itp_enclave_metrics::EnclaveMetric;
 use itp_ocall_api::EnclaveMetricsOCallApi;
-use itp_sgx_crypto::ShieldingCrypto;
+use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCrypto};
 use itp_stf_state_handler::query_shard_state::QueryShardState;
 use itp_top_pool::{
 	error::{Error as PoolError, IntoPoolError},
@@ -64,12 +64,13 @@ where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
 	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: QueryShardState,
-	EncryptionKey: ShieldingCrypto,
+	EncryptionKey: AccessKey,
+	<EncryptionKey as AccessKey>::KeyType: ShieldingCrypto,
 {
 	top_pool: Arc<TopPool>,
 	top_filter: TopFilter,
 	state_facade: Arc<StateFacade>,
-	encryption_key: EncryptionKey,
+	shielding_key_repo: Arc<EncryptionKey>,
 	ocall_api: Arc<OCallApi>,
 }
 
@@ -79,7 +80,8 @@ where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
 	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: QueryShardState,
-	EncryptionKey: ShieldingCrypto,
+	EncryptionKey: AccessKey,
+	<EncryptionKey as AccessKey>::KeyType: ShieldingCrypto,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
 {
 	/// Create new instance of Authoring API.
@@ -87,10 +89,10 @@ where
 		top_pool: Arc<TopPool>,
 		top_filter: TopFilter,
 		state_facade: Arc<StateFacade>,
-		encryption_key: EncryptionKey,
+		encryption_key: Arc<EncryptionKey>,
 		ocall_api: Arc<OCallApi>,
 	) -> Self {
-		Author { top_pool, top_filter, state_facade, encryption_key, ocall_api }
+		Author { top_pool, top_filter, state_facade, shielding_key_repo: encryption_key, ocall_api }
 	}
 }
 
@@ -105,7 +107,8 @@ where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
 	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: QueryShardState,
-	EncryptionKey: ShieldingCrypto,
+	EncryptionKey: AccessKey,
+	<EncryptionKey as AccessKey>::KeyType: ShieldingCrypto,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
 {
 	fn process_top(
@@ -124,7 +127,11 @@ where
 		};
 
 		// decrypt call
-		let request_vec = match self.encryption_key.decrypt(ext.as_slice()) {
+		let shielding_key = match self.shielding_key_repo.retrieve_key() {
+			Ok(k) => k,
+			Err(_) => return Box::pin(ready(Err(ClientError::BadFormatDecipher.into()))),
+		};
+		let request_vec = match shielding_key.decrypt(ext.as_slice()) {
 			Ok(req) => req,
 			Err(_) => return Box::pin(ready(Err(ClientError::BadFormatDecipher.into()))),
 		};
@@ -192,7 +199,8 @@ where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
 	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: QueryShardState,
-	EncryptionKey: ShieldingCrypto,
+	EncryptionKey: AccessKey,
+	<EncryptionKey as AccessKey>::KeyType: ShieldingCrypto,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
 {
 	fn submit_top(
@@ -286,7 +294,8 @@ where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
 	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: QueryShardState,
-	EncryptionKey: ShieldingCrypto,
+	EncryptionKey: AccessKey,
+	<EncryptionKey as AccessKey>::KeyType: ShieldingCrypto,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
 {
 	type Hash = <TopPool as TrustedOperationPool>::Hash;
@@ -302,7 +311,8 @@ where
 	TopPool: TrustedOperationPool + Sync + Send + 'static,
 	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: QueryShardState,
-	EncryptionKey: ShieldingCrypto,
+	EncryptionKey: AccessKey,
+	<EncryptionKey as AccessKey>::KeyType: ShieldingCrypto,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
 {
 	type Hash = <TopPool as TrustedOperationPool>::Hash;

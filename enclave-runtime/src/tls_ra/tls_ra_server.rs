@@ -21,14 +21,15 @@ use super::{authentication::ClientAuth, Opcode, TcpHeader};
 use crate::{
 	attestation::create_ra_report_and_signature,
 	error::{Error as EnclaveError, Result as EnclaveResult},
-	global_components::GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
+	global_components::{
+		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
+	},
 	ocall::OcallApi,
 	tls_ra::seal_handler::{SealHandler, UnsealStateAndKeys},
 	GLOBAL_STATE_HANDLER_COMPONENT,
 };
 use itp_component_container::ComponentGetter;
 use itp_ocall_api::EnclaveAttestationOCallApi;
-use itp_sgx_crypto::Rsa3072Seal;
 use itp_types::ShardIdentifier;
 use log::*;
 use rustls::{ServerConfig, ServerSession, Stream};
@@ -123,7 +124,16 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 		},
 	};
 
-	let seal_handler = SealHandler::<Rsa3072Seal, _, _>::new(state_handler, state_key_repository);
+	let shielding_key_repository = match GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.get() {
+		Ok(s) => s,
+		Err(e) => {
+			error!("{:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	let seal_handler =
+		SealHandler::new(state_handler, state_key_repository, shielding_key_repository);
 
 	if let Err(e) =
 		run_state_provisioning_server_internal(socket_fd, sign_type, skip_ra, seal_handler)

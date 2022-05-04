@@ -25,7 +25,7 @@ use ita_stf::{
 	Getter, KeyPair, ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedGetter,
 	TrustedOperation,
 };
-use itp_sgx_crypto::ShieldingCrypto;
+use itp_sgx_crypto::{mocks::KeyRepositoryMock, ShieldingCrypto};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{
 	handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock,
@@ -40,8 +40,13 @@ use std::{sync::Arc, vec};
 type Seed = [u8; 32];
 const TEST_SEED: Seed = *b"12345678901234567890123456789012";
 
-type TestAuthor<F> =
-	Author<TrustedOperationPoolMock, F, HandleStateMock, ShieldingCryptoMock, MetricsOCallMock>;
+type TestAuthor<F> = Author<
+	TrustedOperationPoolMock,
+	F,
+	HandleStateMock,
+	KeyRepositoryMock<ShieldingCryptoMock>,
+	MetricsOCallMock,
+>;
 
 pub fn top_encryption_works() {
 	// the sgx crypto crate lacks unit tests, one of the reasons being that the
@@ -108,6 +113,8 @@ fn create_author_with_filter<F: Filter<Value = TrustedOperation>>(
 	let _ = state_facade.load(&shard_id).unwrap();
 
 	let encryption_key = ShieldingCryptoMock::default();
+	let shielding_key_repo =
+		Arc::new(KeyRepositoryMock::<ShieldingCryptoMock>::new(encryption_key.clone()));
 	let ocall_mock = Arc::new(MetricsOCallMock {});
 
 	(
@@ -115,7 +122,7 @@ fn create_author_with_filter<F: Filter<Value = TrustedOperation>>(
 			top_pool.clone(),
 			filter,
 			Arc::new(state_facade),
-			encryption_key.clone(),
+			shielding_key_repo,
 			ocall_mock,
 		),
 		top_pool,

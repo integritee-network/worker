@@ -67,6 +67,7 @@ pub fn produce_sidechain_block_and_import_it() {
 	let signer = TestSigner::from_seed(b"42315678901234567890123456789012");
 	let shielding_key = TestShieldingKey::new().unwrap();
 	let state_key = TestStateKey::new([3u8; 16], [1u8; 16]);
+	let shielding_key_repo = Arc::new(TestShieldingKeyRepo::new(shielding_key));
 
 	let ocall_api = create_ocall_api(&signer);
 
@@ -82,7 +83,7 @@ pub fn produce_sidechain_block_and_import_it() {
 		top_pool,
 		AuthorTopFilter {},
 		state_handler.clone(),
-		shielding_key,
+		shielding_key_repo,
 		Arc::new(MetricsOCallMock {}),
 	));
 	let top_pool_operation_handler =

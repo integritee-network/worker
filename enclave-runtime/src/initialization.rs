@@ -18,18 +18,20 @@
 use crate::{
 	error::{Error, Result as EnclaveResult},
 	global_components::{
-		EnclaveOCallApi, EnclaveRpcConnectionRegistry, EnclaveRpcResponder, EnclaveSidechainApi,
-		EnclaveSidechainBlockImportQueue, EnclaveSidechainBlockImportQueueWorker,
-		EnclaveSidechainBlockImporter, EnclaveSidechainBlockSyncer, EnclaveStateFileIo,
-		EnclaveStateHandler, EnclaveStateKeyRepository, EnclaveStfExecutor, EnclaveTopPool,
-		EnclaveTopPoolAuthor, EnclaveTopPoolOperationHandler, EnclaveValidatorAccessor,
+		EnclaveOCallApi, EnclaveRpcConnectionRegistry, EnclaveRpcResponder,
+		EnclaveShieldingKeyRepository, EnclaveSidechainApi, EnclaveSidechainBlockImportQueue,
+		EnclaveSidechainBlockImportQueueWorker, EnclaveSidechainBlockImporter,
+		EnclaveSidechainBlockSyncer, EnclaveStateFileIo, EnclaveStateHandler,
+		EnclaveStateKeyRepository, EnclaveStfExecutor, EnclaveTopPool, EnclaveTopPoolAuthor,
+		EnclaveTopPoolOperationHandler, EnclaveValidatorAccessor,
 		GLOBAL_EXTRINSICS_FACTORY_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
 		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT, GLOBAL_RPC_WS_HANDLER_COMPONENT,
-		GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT,
-		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
-		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
-		GLOBAL_STF_EXECUTOR_COMPONENT, GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
-		GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT, GLOBAL_WEB_SOCKET_SERVER_COMPONENT,
+		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT,
+		GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+		GLOBAL_STATE_KEY_REPOSITORY_COMPONENT, GLOBAL_STF_EXECUTOR_COMPONENT,
+		GLOBAL_TOP_POOL_AUTHOR_COMPONENT, GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
+		GLOBAL_WEB_SOCKET_SERVER_COMPONENT,
 	},
 	ocall::OcallApi,
 	rpc::{rpc_response_channel::RpcResponseChannel, worker_api_direct::public_api_rpc_handler},
@@ -71,7 +73,6 @@ use its_sidechain::{
 };
 use log::*;
 use primitive_types::H256;
-use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sp_core::crypto::Pair;
 use sp_finality_grandpa::VersionedAuthorityList;
 use std::{string::String, sync::Arc};
@@ -85,6 +86,12 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	info!("[Enclave initialized] Ed25519 prim raw : {:?}", signer.public().0);
 
 	rsa3072::create_sealed_if_absent()?;
+
+	let shielding_key = Rsa3072Seal::unseal_from_static_file()?;
+
+	let shielding_key_repository =
+		Arc::new(EnclaveShieldingKeyRepository::new(shielding_key, Arc::new(Rsa3072Seal)));
+	GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.initialize(shielding_key_repository.clone());
 
 	// Create the aes key that is used for state encryption such that a key is always present in tests.
 	// It will be overwritten anyway if mutual remote attestation is performed with the primary worker.
@@ -124,7 +131,6 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	)
 	.map_err(Error::PrimitivesAccess)?;
 
-	let shielding_key = Rsa3072Seal::unseal_from_static_file()?;
 	let watch_extractor = Arc::new(create_determine_watch::<Hash>());
 
 	let connection_registry = Arc::new(ConnectionRegistry::<Hash, ConnectionToken>::new());
@@ -140,7 +146,7 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 		connection_registry.clone(),
 		state_handler,
 		ocall_api,
-		shielding_key,
+		shielding_key_repository,
 	);
 	GLOBAL_TOP_POOL_AUTHOR_COMPONENT.initialize(top_pool_author.clone());
 
@@ -218,7 +224,7 @@ pub(crate) fn init_light_client(
 
 	// Initialize the global parentchain block import dispatcher instance.
 	let signer = Ed25519Seal::unseal_from_static_file()?;
-	let shielding_key = Rsa3072Seal::unseal_from_static_file()?;
+	let shielding_key_repository = GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.get()?;
 
 	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
@@ -232,7 +238,7 @@ pub(crate) fn init_light_client(
 	GLOBAL_EXTRINSICS_FACTORY_COMPONENT.initialize(extrinsics_factory.clone());
 
 	let indirect_calls_executor =
-		Arc::new(IndirectCallsExecutor::new(shielding_key, stf_executor.clone()));
+		Arc::new(IndirectCallsExecutor::new(shielding_key_repository, stf_executor.clone()));
 	let parentchain_block_importer = ParentchainBlockImporter::new(
 		validator_access,
 		ocall_api,
@@ -279,7 +285,7 @@ pub fn create_top_pool_author(
 	connection_registry: Arc<EnclaveRpcConnectionRegistry>,
 	state_handler: Arc<EnclaveStateHandler>,
 	ocall_api: Arc<EnclaveOCallApi>,
-	shielding_crypto: Rsa3072KeyPair,
+	shielding_key_repository: Arc<EnclaveShieldingKeyRepository>,
 ) -> Arc<EnclaveTopPoolAuthor> {
 	let response_channel = Arc::new(RpcResponseChannel::default());
 	let rpc_responder = Arc::new(EnclaveRpcResponder::new(connection_registry, response_channel));
@@ -292,7 +298,7 @@ pub fn create_top_pool_author(
 		top_pool,
 		AuthorTopFilter {},
 		state_handler,
-		shielding_crypto,
+		shielding_key_repository,
 		ocall_api,
 	))
 }

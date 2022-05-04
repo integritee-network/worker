@@ -24,8 +24,48 @@ use std::sync::RwLock;
 use crate::{
 	aes::Aes,
 	error::{Error, Result},
+	key_repository::{AccessKey, MutateKey},
 };
 use itp_sgx_io::{SealedIO, StaticSealedIO};
+
+#[derive(Default)]
+pub struct KeyRepositoryMock<KeyType>
+where
+	KeyType: Clone + Default,
+{
+	key: RwLock<KeyType>,
+}
+
+impl<KeyType> KeyRepositoryMock<KeyType>
+where
+	KeyType: Clone + Default,
+{
+	pub fn new(key: KeyType) -> Self {
+		KeyRepositoryMock { key: RwLock::new(key) }
+	}
+}
+
+impl<KeyType> AccessKey for KeyRepositoryMock<KeyType>
+where
+	KeyType: Clone + Default,
+{
+	type KeyType = KeyType;
+
+	fn retrieve_key(&self) -> Result<Self::KeyType> {
+		Ok(self.key.read().unwrap().clone())
+	}
+}
+
+impl<KeyType> MutateKey<KeyType> for KeyRepositoryMock<KeyType>
+where
+	KeyType: Clone + Default,
+{
+	fn update_key(&self, key: KeyType) -> Result<()> {
+		let mut lock = self.key.write().unwrap();
+		*lock = key;
+		Ok(())
+	}
+}
 
 #[derive(Default)]
 pub struct AesSealMock {

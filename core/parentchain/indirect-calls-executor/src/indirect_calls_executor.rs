@@ -21,7 +21,7 @@ use crate::error::Result;
 use codec::{Decode, Encode};
 use ita_stf::{AccountId, TrustedCallSigned};
 use itp_settings::node::{CALL_WORKER, SHIELD_FUNDS, TEEREX_MODULE};
-use itp_sgx_crypto::ShieldingCrypto;
+use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCrypto};
 use itp_stf_executor::traits::{StatePostProcessing, StfExecuteShieldFunds, StfExecuteTrustedCall};
 use itp_types::{CallWorkerFn, OpaqueCall, ShardIdentifier, ShieldFundsFn, H256};
 use log::*;
@@ -44,17 +44,18 @@ pub trait ExecuteIndirectCalls {
 }
 
 pub struct IndirectCallsExecutor<ShieldingKey, StfExecutor> {
-	shielding_key: ShieldingKey,
+	shielding_key_repo: Arc<ShieldingKey>,
 	stf_executor: Arc<StfExecutor>,
 }
 
 impl<ShieldingKey, StfExecutor> IndirectCallsExecutor<ShieldingKey, StfExecutor>
 where
-	ShieldingKey: ShieldingCrypto<Error = itp_sgx_crypto::Error>,
+	ShieldingKey: AccessKey,
+	<ShieldingKey as AccessKey>::KeyType: ShieldingCrypto<Error = itp_sgx_crypto::Error>,
 	StfExecutor: StfExecuteTrustedCall + StfExecuteShieldFunds,
 {
-	pub fn new(authority: ShieldingKey, stf_executor: Arc<StfExecutor>) -> Self {
-		IndirectCallsExecutor { shielding_key: authority, stf_executor }
+	pub fn new(authority: Arc<ShieldingKey>, stf_executor: Arc<StfExecutor>) -> Self {
+		IndirectCallsExecutor { shielding_key_repo: authority, stf_executor }
 	}
 
 	fn handle_shield_funds_xt(&self, xt: &UncheckedExtrinsicV4<ShieldFundsFn>) -> Result<()> {
@@ -64,7 +65,8 @@ where
 
 		debug!("decrypt the account id");
 
-		let account_vec = self.shielding_key.decrypt(account_encrypted)?;
+		let shielding_key = self.shielding_key_repo.retrieve_key()?;
+		let account_vec = shielding_key.decrypt(account_encrypted)?;
 
 		let account = AccountId::decode(&mut account_vec.as_slice())?;
 
@@ -82,8 +84,8 @@ where
         	call, bs58::encode(shard.encode()).into_string(), cyphertext);
 
 		debug!("decrypt the call");
-		//let request_vec = Rsa3072KeyPair::decrypt(&cyphertext)?;
-		let request_vec = self.shielding_key.decrypt(&cyphertext)?;
+		let shielding_key = self.shielding_key_repo.retrieve_key()?;
+		let request_vec = shielding_key.decrypt(&cyphertext)?;
 
 		Ok(TrustedCallSigned::decode(&mut request_vec.as_slice()).map(|call| (call, shard))?)
 	}
@@ -92,7 +94,8 @@ where
 impl<ShieldingKey, StfExecutor> ExecuteIndirectCalls
 	for IndirectCallsExecutor<ShieldingKey, StfExecutor>
 where
-	ShieldingKey: ShieldingCrypto<Error = itp_sgx_crypto::Error>,
+	ShieldingKey: AccessKey,
+	<ShieldingKey as AccessKey>::KeyType: ShieldingCrypto<Error = itp_sgx_crypto::Error>,
 	StfExecutor: StfExecuteTrustedCall + StfExecuteShieldFunds,
 {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(

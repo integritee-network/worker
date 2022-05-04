@@ -71,3 +71,6 @@ derive_more = { version = "0.99.5" }
 log = { version = "0.4", default-features = false }
 sp-core = { version = "6.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19" }
 sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19"}
+
+[dev-dependencies]
+itp-sgx-crypto = { path = "../sgx/crypto", features = ["mocks"] }
