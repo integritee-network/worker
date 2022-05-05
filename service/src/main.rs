@@ -491,7 +491,7 @@ fn start_worker<E, T, D>(
 	// the parentchain (TEEREX WorkerForShard). This is the pre-requisite to be
 	// considered initialized and ready for the next worker to start.
 	let node_api_for_initialized = node_api.clone();
-	let shard_for_initialized = shard.clone();
+	let shard_for_initialized = *shard;
 	thread::spawn(move || {
 		loop {
 			if let Ok(Some(_)) =
