@@ -47,7 +47,7 @@ jobs:
         run: docker run --rm integritee-worker-ctest-${{ github.sha }}
 
       - name: Build Deployable Image
-        run: docker built -t integritee-worker-${{ github.sha }} --target deployed --output type=docker,dest=/tmp/integritee-worker.tar -f build.Dockerfile .
+        run: docker build -t integritee-worker-${{ github.sha }} --target deployed --output type=docker,dest=/tmp/integritee-worker.tar -f build.Dockerfile .
       
       - name: Copy artifacts from container
         run: |
