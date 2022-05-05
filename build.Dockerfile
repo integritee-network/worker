@@ -38,7 +38,7 @@ WORKDIR /root/work/worker/bin
 RUN touch spid.txt key.txt
 
 
-### Enclave Test Stages
+### Enclave Test Stage
 ##################################################
 FROM builder AS enclave-test
 LABEL maintainer="zoltan@integritee.network"
@@ -46,6 +46,16 @@ LABEL maintainer="zoltan@integritee.network"
 WORKDIR /root/work/worker/bin
 
 CMD ./integritee-service test --all
+
+
+### Cargo Test Stage
+##################################################
+FROM builder AS cargo-test
+LABEL maintainer="zoltan@integritee.network"
+
+WORKDIR /root/work/worker
+
+CMD cargo test
 
 
 ### Dockerize installation stage
@@ -71,7 +81,7 @@ RUN gpg --verify dockerize.asc /usr/local/bin/dockerize
 
 ### Deployment stage
 ##################################################
-FROM ubuntu:20.04
+FROM ubuntu:20.04 AS deployed
 LABEL maintainer="zoltan@integritee.network"
 
 WORKDIR /usr/local/bin

@@ -1,3 +1,5 @@
+.githooks/*
+.github/*
 target/*
 docker/*
 build.Dockerfile
