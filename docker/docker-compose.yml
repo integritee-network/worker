@@ -3,8 +3,8 @@ services:
   integritee-node:
     image: "integritee/integritee-node-dev:1.0.10"
     ports:
-      - "9944:9944"
-    command: --dev --rpc-methods unsafe --ws-external --rpc-external
+      - "9912:9912"
+    command: --dev --rpc-methods unsafe --ws-external --rpc-external --ws-port 9912
     logging:
       driver: local
   integritee-worker-1:
@@ -16,12 +16,12 @@ services:
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
     ports:
-      - "4545:4545"
+      - "4645:4645"
       - "2011:2011"
       - "2001:2001"
-    entrypoint: "dockerize -wait tcp://integritee-node:9944 -timeout 30s
+    entrypoint: "dockerize -wait tcp://integritee-node:9912 -timeout 30s
       /usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-1 -T wss://integritee-worker-1 
-      -u ws://integritee-node -U ws://integritee-worker-1 -P 2011 -w 2001 
+      -u ws://integritee-node -U ws://integritee-worker-1 -P 2011 -w 2001 -p 9912 -h 4645
       run --dev --skip-ra"
     restart: always
   integritee-worker-2:
@@ -35,9 +35,9 @@ services:
     ports:
       - "2012:2012"
       - "2002:2002"
-      - "4545:4546"
-    entrypoint: "dockerize -wait http://integritee-worker-1:4545/is_initialized -timeout 150s 
+      - "4646:4646"
+    entrypoint: "dockerize -wait http://integritee-worker-1:4645/is_initialized -timeout 150s 
       /usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-2 -T wss://integritee-worker-2 
-      -u ws://integritee-node -U ws://integritee-worker-2 -P 2012 -w 2002 
+      -u ws://integritee-node -U ws://integritee-worker-2 -P 2012 -w 2002 -p 9912 -h 4646
       run --dev --skip-ra --request-state"
     restart: "no"

@@ -14,20 +14,11 @@
 
 ### Build Pumba image with dockerize
 ##################################################
-FROM gaiaadm/pumba AS fork-simulator-deployed
+FROM scratch AS fork-simulator-deployed
 LABEL maintainer="zoltan@integritee.network"
 
-ENV DEBIAN_FRONTEND=noninteractive
+COPY --from=gaiaadm/pumba /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=gaiaadm/pumba /pumba /usr/local/bin/pumba
+COPY --from=powerman/dockerize /usr/local/bin/dockerize /usr/local/bin/dockerize
 
-RUN apt update && apt install -y curl gpg
-RUN curl --version
-# Curl already installed in base image
-# RUN apt update && apt install -y curl && rm -rf /var/lib/apt/lists/*
-
-RUN curl -sfL https://github.com/powerman/dockerize/releases/download/v0.11.5/dockerize-`uname -s`-`uname -m` | install /dev/stdin /usr/local/bin/dockerize
-
-# Verify signature of 'dockerize'
-
-RUN curl -sfL https://powerman.name/about/Powerman.asc | gpg --import
-RUN curl -sfL https://github.com/powerman/dockerize/releases/download/v0.11.5/dockerize-`uname -s`-`uname -m`.asc >dockerize.asc
-RUN gpg --verify dockerize.asc /usr/local/bin/dockerize
+ENTRYPOINT ["/pumba"]
