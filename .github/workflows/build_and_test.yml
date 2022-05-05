@@ -15,6 +15,7 @@ env:
   CLIENT_BIN: integritee-cli
   ENCLAVE_BIN: enclave.signed.so
   LOG_DIR: log
+  BUILD_CONTAINER_NAME: integritee_worker_enclave_test
 
 jobs:
   cancel_previous_runs:
@@ -25,40 +26,49 @@ jobs:
         with:
           access_token: ${{ secrets.GITHUB_TOKEN }}
 
-  build-test:
+  cargo-test:
     runs-on: ubuntu-latest
     container: "integritee/integritee-dev:0.1.9"
     steps:
       - uses: actions/checkout@v2
-      - name: init rust
+      - name: Init rust
         run: rustup show
-
-      - name: Build
-        run:  env "MITIGATION-CVE-2020-0551=LOAD" "SGX_MODE=SW" make
-      - name: Test Service & Client
+      - name: Run cargo test
         run: cargo test
+      
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Build
+        run:  docker build -t integritee-worker-${{ github.sha }} --target enclave-test -f build.Dockerfile .
       - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
+        run: docker run -it --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-${{ github.sha }}
+      - name: Copy artifacts from container
         run: |
-          cd bin
-          ./integritee-service test -u -e
+          docker cp ${{ env.BUILD_CONTAINER_NAME }}:/root/work/worker/bin/${{ env.WORKER_BIN }} .
+          docker cp ${{ env.BUILD_CONTAINER_NAME }}:/root/work/worker/bin/${{ env.CLIENT_BIN }} .
+          docker cp ${{ env.BUILD_CONTAINER_NAME }}:/root/work/worker/bin/${{ env.ENCLAVE_BIN }} .
 
       - name: Upload worker
         uses: actions/upload-artifact@v2
         with:
           name: integritee-worker-${{ github.sha }}
-          path: bin/${{ env.WORKER_BIN }}
+          path: ${{ env.WORKER_BIN }}
 
       - name: Upload client
         uses: actions/upload-artifact@v2
         with:
           name: integritee-client-${{ github.sha }}
-          path: bin/${{ env.CLIENT_BIN }}
+          path: ${{ env.CLIENT_BIN }}
 
       - name: Upload enclave
         uses: actions/upload-artifact@v2
         with:
           name: enclave-signed-${{ github.sha }}
-          path: bin/${{ env.ENCLAVE_BIN }}
+          path: ${{ env.ENCLAVE_BIN }}
 
   clippy:
     runs-on: ubuntu-latest
