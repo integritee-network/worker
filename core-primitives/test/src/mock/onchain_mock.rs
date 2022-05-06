@@ -18,17 +18,20 @@
 
 use codec::{Decode, Encode};
 use core::fmt::Debug;
-use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveSidechainOCallApi};
+use itp_ocall_api::{
+	EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi,
+	EnclaveSidechainOCallApi,
+};
 use itp_storage::StorageEntryVerified;
 use itp_teerex_storage::{TeeRexStorage, TeerexStorageKeys};
-use itp_types::{BlockHash, Enclave, ShardIdentifier};
+use itp_types::{BlockHash, Enclave, ShardIdentifier, WorkerRequest, WorkerResponse};
 use sgx_types::{
 	sgx_epid_group_id_t, sgx_measurement_t, sgx_platform_info_t, sgx_quote_nonce_t,
 	sgx_quote_sign_type_t, sgx_report_t, sgx_spid_t, sgx_target_info_t, sgx_update_info_bit_t,
 	SgxResult, SGX_HASH_SIZE,
 };
 use sp_core::H256;
-use sp_runtime::{traits::Header as HeaderT, AccountId32};
+use sp_runtime::{traits::Header as HeaderT, AccountId32, OpaqueExtrinsic};
 use sp_std::prelude::*;
 use std::collections::HashMap;
 
@@ -145,11 +148,12 @@ impl EnclaveOnChainOCallApi for OnchainMock {
 		&self,
 		storage_hash: Vec<u8>,
 		_header: &H,
-	) -> Result<StorageEntryVerified<V>> {
+	) -> Result<StorageEntryVerified<V>, itp_ocall_api::Error> {
 		let value = self
 			.get(&storage_hash)
 			.map(|val| Decode::decode(&mut val.as_slice()))
-			.transpose()?;
+			.transpose()
+			.map_err(|e| itp_ocall_api::Error::Codec(e))?;
 
 		Ok(StorageEntryVerified::new(storage_hash, value))
 	}
@@ -158,11 +162,14 @@ impl EnclaveOnChainOCallApi for OnchainMock {
 		&self,
 		storage_hashes: Vec<Vec<u8>>,
 		_header: &H,
-	) -> Result<Vec<StorageEntryVerified<V>>> {
+	) -> Result<Vec<StorageEntryVerified<V>>, itp_ocall_api::Error> {
 		let mut entries = Vec::with_capacity(storage_hashes.len());
 		for hash in storage_hashes.into_iter() {
-			let value =
-				self.get(&hash).map(|val| Decode::decode(&mut val.as_slice())).transpose()?;
+			let value = self
+				.get(&hash)
+				.map(|val| Decode::decode(&mut val.as_slice()))
+				.transpose()
+				.map_err(|e| itp_ocall_api::Error::Codec(e))?;
 
 			entries.push(StorageEntryVerified::new(hash, value))
 		}

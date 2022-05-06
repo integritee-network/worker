@@ -22,16 +22,14 @@ pub extern crate alloc;
 use alloc::vec::Vec;
 use codec::{Decode, Encode};
 use core::result::Result as StdResult;
-use derive_more::{Display, From};
-use itp_ocall_api::EnclaveOnChainOCallApi;
-use itp_storage::{verify_storage_entries, Error as StorageError, StorageEntryVerified};
+use itp_storage::{Error as StorageError, StorageEntryVerified};
 use itp_types::{
 	BlockHash, ShardIdentifier, TrustedOperationStatus, WorkerRequest, WorkerResponse,
 };
 use sgx_types::*;
 use sp_core::H256;
 use sp_runtime::{traits::Header, OpaqueExtrinsic};
-use sp_std::{prelude::*, vec};
+use sp_std::prelude::*;
 
 /// Trait for the enclave to make o-calls related to remote attestation
 pub trait EnclaveAttestationOCallApi: Clone + Send + Sync {
