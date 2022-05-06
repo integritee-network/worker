@@ -18,8 +18,6 @@ use crate::{stf_sgx_primitives::types::*, AccountId, Index, StfError, StfResult,
 use codec::{Decode, Encode};
 use itp_storage::{storage_double_map_key, storage_map_key, storage_value_key, StorageHasher};
 use log::*;
-use sgx_runtime::BlockNumber;
-use sgx_tstd as std;
 use std::prelude::v1::*;
 
 pub fn get_storage_value<V: Decode>(

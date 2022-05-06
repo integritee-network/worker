@@ -15,26 +15,26 @@
 
 */
 
+use super::{Balance, Index};
 use codec::{Decode, Encode};
 use itp_types::H256;
+#[cfg(all(not(feature = "sgx"), feature = "std"))]
+use sp_runtime::traits::BlakeTwo256;
 
 pub mod types {
-	#[cfg(feature = "sgx")]
-	pub use sgx_runtime::{Balance, Index};
-	#[cfg(all(not(feature = "sgx"), feature = "std"))]
-	use sp_runtime::{generic, traits::BlakeTwo256};
+	use super::*;
 
-	#[cfg(feature = "sgx")]
 	pub type AccountData = balances::AccountData<Balance>;
-	#[cfg(feature = "sgx")]
 	pub type AccountInfo = system::AccountInfo<Index, AccountData>;
 	// FIXME after fixing sgx-runtime issue #37
 	#[cfg(all(not(feature = "std"), feature = "sgx"))]
 	pub type ParentchainHeader = sgx_runtime::Header;
 	#[cfg(all(not(feature = "sgx"), feature = "std"))]
 	pub type BlockNumber = u32;
+	#[cfg(all(not(feature = "std"), feature = "sgx"))]
+	pub type BlockNumber = sgx_runtime::BlockNumber;
 	#[cfg(all(not(feature = "sgx"), feature = "std"))]
-	pub type ParentchainHeader = generic::Header<BlockNumber, BlakeTwo256>;
+	pub type ParentchainHeader = sp_runtime::generic::Header<BlockNumber, BlakeTwo256>;
 
 	pub type StateType = sgx_externalities::SgxExternalitiesType;
 	pub type State = sgx_externalities::SgxExternalities;
