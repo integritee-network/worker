@@ -18,7 +18,6 @@
 use crate::{authorities, slot_author};
 use core::marker::PhantomData;
 use frame_support::ensure;
-use itp_storage_verifier::GetStorageVerified;
 use its_consensus_common::{Error as ConsensusError, Verifier};
 use its_consensus_slots::{slot_from_time_stamp_and_duration, Slot};
 use its_primitives::{

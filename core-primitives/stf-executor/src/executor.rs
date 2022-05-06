@@ -33,7 +33,6 @@ use ita_stf::{
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_storage::StorageEntryVerified;
-use itp_storage_verifier::GetStorageVerified;
 use itp_time_utils::duration_now;
 use itp_types::{Amount, OpaqueCall, H256};
 use log::*;

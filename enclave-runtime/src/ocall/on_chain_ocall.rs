@@ -74,4 +74,35 @@ impl EnclaveOnChainOCallApi for OcallApi {
 
 		Ok(decoded_response)
 	}
+
+	fn get_storage_verified<H: Header<Hash = H256>, V: Decode>(
+		&self,
+		storage_hash: Vec<u8>,
+		header: &H,
+	) -> Result<StorageEntryVerified<V>> {
+		// the code below seems like an overkill, but it is surprisingly difficult to
+		// get an owned value from a `Vec` without cloning.
+		Ok(self
+			.get_multiple_storages_verified(vec![storage_hash], header)?
+			.into_iter()
+			.next()
+			.ok_or(StorageError::StorageValueUnavailable)?)
+	}
+
+	fn get_multiple_storages_verified<H: Header<Hash = H256>, V: Decode>(
+		&self,
+		storage_hashes: Vec<Vec<u8>>,
+		header: &H,
+	) -> Result<Vec<StorageEntryVerified<V>>> {
+		let requests = storage_hashes
+			.into_iter()
+			.map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
+			.collect();
+
+		let storage_entries = self
+			.worker_request::<Vec<u8>>(requests)
+			.map(|storages| verify_storage_entries(storages, header))??;
+
+		Ok(storage_entries)
+	}
 }

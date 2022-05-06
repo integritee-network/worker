@@ -34,8 +34,8 @@ pub enum Error {
 	StateHandler(#[from] itp_stf_state_handler::error::Error),
 	#[error("STF error: {0}")]
 	Stf(ita_stf::StfError),
-	#[error("Storage verified error: {0}")]
-	StorageVerified(itp_storage_verifier::Error),
+	#[error("Ocall Api error: {0}")]
+	OcallApi(itp_ocall_api::Error),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }
@@ -58,8 +58,8 @@ impl From<ita_stf::StfError> for Error {
 	}
 }
 
-impl From<itp_storage_verifier::Error> for Error {
-	fn from(error: itp_storage_verifier::Error) -> Self {
-		Self::StorageVerified(error)
+impl From<itp_ocall_api::Error> for Error {
+	fn from(error: itp_ocall_api::Error) -> Self {
+		Self::OcallApi(error)
 	}
 }

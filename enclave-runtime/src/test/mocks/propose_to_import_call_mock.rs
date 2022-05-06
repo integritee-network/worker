@@ -57,6 +57,22 @@ impl EnclaveOnChainOCallApi for ProposeToImportOCallApi {
 	) -> SgxResult<Vec<WorkerResponse<V>>> {
 		todo!()
 	}
+
+	fn get_storage_verified<H: HeaderT<Hash = H256>, V: Decode>(
+		&self,
+		storage_hash: Vec<u8>,
+		_header: &H,
+	) -> Result<StorageEntryVerified<V>> {
+		todo!()
+	}
+
+	fn get_multiple_storages_verified<H: HeaderT<Hash = H256>, V: Decode>(
+		&self,
+		storage_hashes: Vec<Vec<u8>>,
+		_header: &H,
+	) -> Result<Vec<StorageEntryVerified<V>>> {
+		todo!()
+	}
 }
 
 impl EnclaveSidechainOCallApi for ProposeToImportOCallApi {

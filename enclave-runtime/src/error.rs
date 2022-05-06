@@ -27,7 +27,7 @@ pub enum Error {
 	Codec(codec::Error),
 	ComponentContainer(itp_component_container::error::Error),
 	Crypto(itp_sgx_crypto::Error),
-	ChainStorage(itp_storage_verifier::Error),
+	ChainStorage(itp_ocall_api::Error),
 	ExtrinsicsFactory(itp_extrinsics_factory::error::Error),
 	IO(std::io::Error),
 	LightClient(itc_parentchain::light_client::error::Error),

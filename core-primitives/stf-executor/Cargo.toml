@@ -18,7 +18,6 @@ ita-stf = { path = "../../app-libs/stf", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
 itp-storage = { path = "../storage", default-features = false }
-itp-storage-verifier = { path = "../storage-verified", default-features = false }
 itp-time-utils = { path = "../time-utils", default-features = false }
 itp-types = { path = "../types", default-features = false }
 
@@ -49,7 +48,6 @@ std = [
     "itp-ocall-api/std",
     "itp-stf-state-handler/std",
     "itp-storage/std",
-    "itp-storage-verifier/std",
     "itp-types/std",
     "itp-time-utils/std",
     # crates.io
