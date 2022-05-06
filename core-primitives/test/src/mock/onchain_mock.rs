@@ -153,7 +153,7 @@ impl EnclaveOnChainOCallApi for OnchainMock {
 			.get(&storage_hash)
 			.map(|val| Decode::decode(&mut val.as_slice()))
 			.transpose()
-			.map_err(|e| itp_ocall_api::Error::Codec(e))?;
+			.map_err(itp_ocall_api::Error::Codec)?;
 
 		Ok(StorageEntryVerified::new(storage_hash, value))
 	}
@@ -169,7 +169,7 @@ impl EnclaveOnChainOCallApi for OnchainMock {
 				.get(&hash)
 				.map(|val| Decode::decode(&mut val.as_slice()))
 				.transpose()
-				.map_err(|e| itp_ocall_api::Error::Codec(e))?;
+				.map_err(itp_ocall_api::Error::Codec)?;
 
 			entries.push(StorageEntryVerified::new(hash, value))
 		}

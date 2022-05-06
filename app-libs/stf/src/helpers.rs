@@ -111,7 +111,7 @@ pub fn account_nonce(account: &AccountId) -> Index {
 	if let Some(info) = get_account_info(account) {
 		info.nonce
 	} else {
-		0 as Index
+		0_u32
 	}
 }
 
