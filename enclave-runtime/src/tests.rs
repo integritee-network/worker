@@ -38,7 +38,7 @@ use ita_stf::{
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::{
 	enclave::MAX_TRUSTED_OPS_EXEC_DURATION,
-	node::{PROPOSED_SIDECHAIN_BLOCK, TEEREX_MODULE},
+	node::{PROPOSED_SIDECHAIN_BLOCK, SIDECHAIN_MODULE},
 };
 use itp_sgx_crypto::{mocks::KeyRepositoryMock, Aes, StateCrypto};
 use itp_stf_executor::{
@@ -193,7 +193,7 @@ fn test_compose_block_and_confirmation() {
 
 	// then
 	let expected_call = OpaqueCall::from_tuple(&(
-		[TEEREX_MODULE, PROPOSED_SIDECHAIN_BLOCK],
+		[SIDECHAIN_MODULE, PROPOSED_SIDECHAIN_BLOCK],
 		shard,
 		&signed_block.block().header(),
 	));
@@ -345,7 +345,7 @@ fn test_create_block_and_confirmation_works() {
 
 	// then
 	let expected_call = OpaqueCall::from_tuple(&(
-		[TEEREX_MODULE, PROPOSED_SIDECHAIN_BLOCK],
+		[SIDECHAIN_MODULE, PROPOSED_SIDECHAIN_BLOCK],
 		shard,
 		&signed_block.block().header(),
 	));

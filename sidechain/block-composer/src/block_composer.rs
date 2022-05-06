@@ -18,7 +18,7 @@
 use crate::error::{Error, Result};
 use codec::Encode;
 use ita_stf::StatePayload;
-use itp_settings::node::{PROPOSED_SIDECHAIN_BLOCK, TEEREX_MODULE};
+use itp_settings::node::{PROPOSED_SIDECHAIN_BLOCK, SIDECHAIN_MODULE};
 use itp_sgx_crypto::StateCrypto;
 use itp_time_utils::now_as_u64;
 use itp_types::{OpaqueCall, ShardIdentifier, H256};
@@ -167,5 +167,5 @@ fn create_proposed_sidechain_block_call<T: its_primitives::traits::SignedBlock>(
 	shard_id: ShardIdentifier,
 	header: HeaderTypeOf<T>,
 ) -> OpaqueCall {
-	OpaqueCall::from_tuple(&([TEEREX_MODULE, PROPOSED_SIDECHAIN_BLOCK], shard_id, header))
+	OpaqueCall::from_tuple(&([SIDECHAIN_MODULE, PROPOSED_SIDECHAIN_BLOCK], shard_id, header))
 }

@@ -309,15 +309,6 @@ fn listen(cli: &Cli, events_arg: &Option<u32>, blocks_arg: &Option<u32>) {
 										accountid, block_hash, merkle_root
 									);
 								},
-								my_node_runtime::pallet_teerex::Event::ProposedSidechainBlock(
-									accountid,
-									block_hash,
-								) => {
-									println!(
-										"ProposedSidechainBlock from {} with hash {:?}",
-										accountid, block_hash
-									);
-								},
 								my_node_runtime::pallet_teerex::Event::ShieldFunds(
 									incognito_account,
 								) => {
@@ -329,6 +320,22 @@ fn listen(cli: &Cli, events_arg: &Option<u32>, blocks_arg: &Option<u32>) {
 									println!("UnshieldFunds for {:?}", public_account);
 								},
 								_ => debug!("ignoring unsupported teerex event: {:?}", ee),
+							}
+						},
+						Event::Sidechain(ee) => {
+							println!(">>>>>>>>>> integritee event: {:?}", ee);
+							count += 1;
+							match &ee {
+								my_node_runtime::pallet_sidechain::Event::ProposedSidechainBlock(
+									accountid,
+									block_hash,
+								) => {
+									println!(
+										"ProposedSidechainBlock from {} with hash {:?}",
+										accountid, block_hash
+									);
+								},
+								_ => debug!("ignoring unsupported sidechain event: {:?}", ee),
 							}
 						},
 						_ => debug!("ignoring unsupported module event: {:?}", evr.event),

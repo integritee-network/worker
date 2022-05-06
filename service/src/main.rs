@@ -612,14 +612,6 @@ fn print_events(events: Events, _sender: Sender<String>) {
 						debug!("    Block Hash: {:?}", hex::encode(block_hash));
 						debug!("    Merkle Root: {:?}", hex::encode(merkle_root));
 					},
-					my_node_runtime::pallet_teerex::Event::ProposedSidechainBlock(
-						sender,
-						payload,
-					) => {
-						info!("[+] Received ProposedSidechainBlock event");
-						debug!("    From:    {:?}", sender);
-						debug!("    Payload: {:?}", hex::encode(payload));
-					},
 					my_node_runtime::pallet_teerex::Event::ShieldFunds(incognito_account) => {
 						info!("[+] Received ShieldFunds event");
 						debug!("    For:    {:?}", incognito_account);
@@ -630,6 +622,22 @@ fn print_events(events: Events, _sender: Sender<String>) {
 					},
 					_ => {
 						trace!("Ignoring unsupported pallet_teerex event");
+					},
+				}
+			},
+			Event::Sidechain(re) => {
+				debug!("{:?}", re);
+				match &re {
+					my_node_runtime::pallet_sidechain::Event::ProposedSidechainBlock(
+						sender,
+						payload,
+					) => {
+						info!("[+] Received ProposedSidechainBlock event");
+						debug!("    From:    {:?}", sender);
+						debug!("    Payload: {:?}", hex::encode(payload));
+					},
+					_ => {
+						trace!("Ignoring unsupported pallet_sidechain event");
 					},
 				}
 			},
