@@ -20,7 +20,7 @@
 // Reexport BlockImport trait which implements fn block_import()
 pub use its_consensus_common::BlockImport;
 
-use crate::{AuraVerifier, SidechainBlockTrait};
+use crate::{AuraVerifier, EnclaveOnChainOCallApi, SidechainBlockTrait};
 use ita_stf::hash::TrustedOperationOrHash;
 use itc_parentchain_block_import_dispatcher::triggered_dispatcher::{
 	PeekParentchainBlockImportQueue, TriggerParentchainBlockImport,
@@ -100,7 +100,7 @@ impl<
 		HeaderTrait<ShardIdentifier = H256>,
 	OCallApi: EnclaveSidechainOCallApi
 		+ ValidateerFetch
-		+ GetStorageVerified
+		+ EnclaveOnChainOCallApi
 		+ EnclaveMetricsOCallApi
 		+ Send
 		+ Sync,
@@ -195,7 +195,7 @@ impl<
 		HeaderTrait<ShardIdentifier = H256>,
 	OCallApi: EnclaveSidechainOCallApi
 		+ ValidateerFetch
-		+ GetStorageVerified
+		+ EnclaveOnChainOCallApi
 		+ EnclaveMetricsOCallApi
 		+ Send
 		+ Sync,

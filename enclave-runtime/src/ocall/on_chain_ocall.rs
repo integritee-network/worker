@@ -19,11 +19,12 @@
 use crate::ocall::{ffi, OcallApi};
 use codec::{Decode, Encode};
 use frame_support::ensure;
-use itp_ocall_api::EnclaveOnChainOCallApi;
-use itp_types::{WorkerRequest, WorkerResponse};
+use itp_ocall_api::{EnclaveOnChainOCallApi, Result};
+use itp_storage::{verify_storage_entries, Error as StorageError, StorageEntryVerified};
+use itp_types::{WorkerRequest, WorkerResponse, H256};
 use log::*;
 use sgx_types::*;
-use sp_runtime::OpaqueExtrinsic;
+use sp_runtime::{traits::Header, OpaqueExtrinsic};
 use std::vec::Vec;
 
 impl EnclaveOnChainOCallApi for OcallApi {

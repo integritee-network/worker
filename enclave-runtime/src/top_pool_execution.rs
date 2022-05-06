@@ -241,7 +241,7 @@ where
 	SignedSidechainBlock::Signature: From<Authority::Signature>,
 	Authority: Pair<Public = sp_core::ed25519::Public>,
 	Authority::Public: Encode,
-	OCallApi: ValidateerFetch + GetStorageVerified + Send + 'static,
+	OCallApi: ValidateerFetch + EnclaveOnChainOCallApi + Send + 'static,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	PEnvironment:
 		Environment<ParentchainBlock, SignedSidechainBlock, Error = ConsensusError> + Send + Sync,
