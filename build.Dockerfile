@@ -59,7 +59,7 @@ LABEL maintainer="zoltan@integritee.network"
 
 WORKDIR /usr/local/bin
 
-RUN apt update && apt install -y libssl-dev
+RUN apt update && apt install -y libssl-dev iproute2
 
 COPY --from=builder /opt/sgxsdk/lib64 /opt/sgxsdk/lib64
 COPY --from=builder /root/work/worker/bin/* ./
