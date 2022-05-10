@@ -38,11 +38,10 @@ use itp_block_import_queue::BlockImportQueue;
 use itp_component_container::ComponentContainer;
 use itp_extrinsics_factory::ExtrinsicsFactory;
 use itp_nonce_cache::NonceCache;
-use itp_sgx_crypto::{Aes, AesSeal};
+use itp_sgx_crypto::{key_repository::KeyRepository, Aes, AesSeal, Rsa3072Seal};
 use itp_stf_executor::executor::StfExecutor;
 use itp_stf_state_handler::{
-	file_io::sgx::SgxStateFileIo, state_key_repository::StateKeyRepository,
-	state_snapshot_repository::StateSnapshotRepository, StateHandler,
+	file_io::sgx::SgxStateFileIo, state_snapshot_repository::StateSnapshotRepository, StateHandler,
 };
 use itp_top_pool::basic_pool::BasicPool;
 use itp_top_pool_author::{
@@ -66,7 +65,8 @@ use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_externalities::SgxExternalities;
 use sp_core::ed25519::Pair;
 
-pub type EnclaveStateKeyRepository = StateKeyRepository<Aes, AesSeal>;
+pub type EnclaveStateKeyRepository = KeyRepository<Aes, AesSeal>;
+pub type EnclaveShieldingKeyRepository = KeyRepository<Rsa3072KeyPair, Rsa3072Seal>;
 pub type EnclaveStateFileIo = SgxStateFileIo<EnclaveStateKeyRepository>;
 pub type EnclaveStateSnapshotRepository =
 	StateSnapshotRepository<EnclaveStateFileIo, StfState, H256>;
@@ -74,7 +74,8 @@ pub type EnclaveStateHandler = StateHandler<EnclaveStateSnapshotRepository>;
 pub type EnclaveOCallApi = OcallApi;
 pub type EnclaveStfExecutor = StfExecutor<EnclaveOCallApi, EnclaveStateHandler, SgxExternalities>;
 pub type EnclaveExtrinsicsFactory = ExtrinsicsFactory<Pair, NonceCache>;
-pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<Rsa3072KeyPair, EnclaveStfExecutor>;
+pub type EnclaveIndirectCallsExecutor =
+	IndirectCallsExecutor<EnclaveShieldingKeyRepository, EnclaveStfExecutor>;
 pub type EnclaveValidatorAccessor = ValidatorAccessor<ParentchainBlock>;
 pub type EnclaveParentChainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
@@ -99,8 +100,13 @@ pub type EnclaveSidechainApi = SidechainApi<ParentchainBlock>;
 pub type EnclaveSidechainState =
 	SidechainDB<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block, SgxExternalities>;
 pub type EnclaveTopPool = BasicPool<EnclaveSidechainApi, ParentchainBlock, EnclaveRpcResponder>;
-pub type EnclaveTopPoolAuthor =
-	Author<EnclaveTopPool, AuthorTopFilter, EnclaveStateHandler, Rsa3072KeyPair, EnclaveOCallApi>;
+pub type EnclaveTopPoolAuthor = Author<
+	EnclaveTopPool,
+	AuthorTopFilter,
+	EnclaveStateHandler,
+	EnclaveShieldingKeyRepository,
+	EnclaveOCallApi,
+>;
 pub type EnclaveTopPoolOperationHandler = TopPoolOperationHandler<
 	ParentchainBlock,
 	SignedSidechainBlock,
@@ -140,6 +146,11 @@ pub type EnclaveSidechainBlockImportQueueWorker = BlockImportQueueWorker<
 /// State key repository
 pub static GLOBAL_STATE_KEY_REPOSITORY_COMPONENT: ComponentContainer<EnclaveStateKeyRepository> =
 	ComponentContainer::new("State key repository");
+
+/// Shielding key repository
+pub static GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT: ComponentContainer<
+	EnclaveShieldingKeyRepository,
+> = ComponentContainer::new("Shielding key repository");
 
 /// STF executor.
 pub static GLOBAL_STF_EXECUTOR_COMPONENT: ComponentContainer<EnclaveStfExecutor> =

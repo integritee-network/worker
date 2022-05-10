@@ -40,7 +40,7 @@ use itp_settings::{
 	enclave::MAX_TRUSTED_OPS_EXEC_DURATION,
 	node::{PROPOSED_SIDECHAIN_BLOCK, TEEREX_MODULE},
 };
-use itp_sgx_crypto::{Aes, StateCrypto};
+use itp_sgx_crypto::{mocks::KeyRepositoryMock, Aes, StateCrypto};
 use itp_stf_executor::{
 	executor::StfExecutor,
 	executor_tests as stf_executor_tests,
@@ -81,8 +81,14 @@ use std::{string::String, sync::Arc, vec::Vec};
 
 type TestRpcResponder = RpcResponderMock<ExtrinsicHash<SidechainApi<Block>>>;
 type TestTopPool = BasicPool<SidechainApi<Block>, Block, TestRpcResponder>;
-type TestTopPoolAuthor =
-	Author<TestTopPool, AllowAllTopsFilter, HandleStateMock, ShieldingCryptoMock, MetricsOCallMock>;
+type TestShieldingKeyRepo = KeyRepositoryMock<ShieldingCryptoMock>;
+type TestTopPoolAuthor = Author<
+	TestTopPool,
+	AllowAllTopsFilter,
+	HandleStateMock,
+	TestShieldingKeyRepo,
+	MetricsOCallMock,
+>;
 
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
@@ -604,12 +610,14 @@ pub fn test_setup() -> (
 	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
 
 	let encryption_key = ShieldingCryptoMock::default();
+	let shielding_key_repo = Arc::new(KeyRepositoryMock::new(encryption_key.clone()));
+
 	(
 		Arc::new(TestTopPoolAuthor::new(
 			Arc::new(top_pool),
 			AllowAllTopsFilter,
 			state_handler.clone(),
-			encryption_key.clone(),
+			shielding_key_repo,
 			Arc::new(MetricsOCallMock {}),
 		)),
 		state,

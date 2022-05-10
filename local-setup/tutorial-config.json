@@ -17,6 +17,7 @@
     {
       "source": "bin",
       "flags": [
+        "--clean-reset",
         "-P",
         "2000",
         "-p",
@@ -34,6 +35,7 @@
     {
       "source": "bin",
       "flags": [
+        "--clean-reset",
         "-P",
         "3000",
         "-p",
@@ -45,7 +47,8 @@
       ],
       "subcommand_flags": [
         "--skip-ra",
-        "--dev"
+        "--dev",
+        "--request-state"
       ]
     }
   ]

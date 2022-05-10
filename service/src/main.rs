@@ -54,10 +54,7 @@ use itp_node_api_extensions::{
 	AccountApi, ChainApi, PalletTeerexApi,
 };
 use itp_settings::{
-	files::{
-		SHIELDING_KEY_FILE, SIDECHAIN_PURGE_INTERVAL, SIDECHAIN_PURGE_LIMIT,
-		SIDECHAIN_STORAGE_PATH, SIGNING_KEY_FILE,
-	},
+	files::{SIDECHAIN_PURGE_INTERVAL, SIDECHAIN_PURGE_LIMIT, SIDECHAIN_STORAGE_PATH},
 	sidechain::SLOT_DURATION,
 };
 use its_consensus_slots::start_slot_worker;
@@ -78,7 +75,6 @@ use sp_core::{
 use sp_finality_grandpa::VersionedAuthorityList;
 use sp_keyring::AccountKeyring;
 use std::{
-	fs::{self, File},
 	path::PathBuf,
 	str,
 	sync::{
@@ -102,6 +98,7 @@ mod initialized_service;
 mod ocall_bridge;
 mod parentchain_block_syncer;
 mod prometheus_metrics;
+mod setup;
 mod sync_block_gossiper;
 mod sync_state;
 mod tests;
@@ -131,6 +128,11 @@ fn main() {
 	info!("*** Starting service in SGX production mode");
 	#[cfg(not(feature = "production"))]
 	info!("*** Starting service in SGX debug mode");
+
+	let clean_reset = matches.is_present("clean-reset");
+	if clean_reset {
+		setup::purge_files_from_cwd().unwrap();
+	}
 
 	// build the entire dependency tree
 	let tokio_handle = Arc::new(GlobalTokioHandle {});
@@ -174,8 +176,22 @@ fn main() {
 		let skip_ra = smatches.is_present("skip-ra");
 		let dev = smatches.is_present("dev");
 
+		if clean_reset {
+			setup::initialize_shard_and_keys(enclave.as_ref(), &shard).unwrap();
+		}
+
 		let node_api =
 			node_api_factory.create_api().expect("Failed to create parentchain node API");
+
+		let request_state = smatches.is_present("request-state");
+		if request_state {
+			sync_state::sync_state(
+				&node_api,
+				&extract_shard(smatches, enclave.as_ref()),
+				enclave.as_ref(),
+				skip_ra,
+			);
+		}
 
 		start_worker(
 			config,
@@ -198,68 +214,40 @@ fn main() {
 			smatches.is_present("skip-ra"),
 		);
 	} else if matches.is_present("shielding-key") {
-		info!("*** Get the public key from the TEE\n");
-		let pubkey = enclave.get_rsa_shielding_pubkey().unwrap();
-		let file = File::create(SHIELDING_KEY_FILE).unwrap();
-		match serde_json::to_writer(file, &pubkey) {
-			Err(x) => {
-				error!("[-] Failed to write '{}'. {}", SHIELDING_KEY_FILE, x);
-			},
-			_ => {
-				println!("[+] File '{}' written successfully", SHIELDING_KEY_FILE);
-			},
-		}
+		setup::generate_shielding_key_file(enclave.as_ref());
 	} else if matches.is_present("signing-key") {
-		info!("*** Get the signing key from the TEE\n");
-		let pubkey = enclave.get_ecc_signing_pubkey().unwrap();
-		debug!("[+] Signing key raw: {:?}", pubkey);
-		match fs::write(SIGNING_KEY_FILE, pubkey) {
-			Err(x) => {
-				error!("[-] Failed to write '{}'. {}", SIGNING_KEY_FILE, x);
-			},
-			_ => {
-				println!("[+] File '{}' written successfully", SIGNING_KEY_FILE);
-			},
-		}
+		setup::generate_signing_key_file(enclave.as_ref());
 	} else if matches.is_present("dump-ra") {
 		info!("*** Perform RA and dump cert to disk");
 		enclave.dump_ra_to_disk().unwrap();
 	} else if matches.is_present("mrenclave") {
 		println!("{}", enclave.get_mrenclave().unwrap().encode().to_base58());
-	} else if let Some(_matches) = matches.subcommand_matches("init-shard") {
-		let shard = extract_shard(_matches, enclave.as_ref());
-		match enclave.init_shard(shard.encode()) {
-			Err(e) => {
-				println!("Failed to initialize shard {:?}: {:?}", shard, e);
-			},
-			Ok(_) => {
-				println!("Successfully initialized shard {:?}", shard);
-			},
-		}
-	} else if let Some(_matches) = matches.subcommand_matches("test") {
-		if _matches.is_present("provisioning-server") {
+	} else if let Some(sub_matches) = matches.subcommand_matches("init-shard") {
+		setup::init_shard(enclave.as_ref(), &extract_shard(sub_matches, enclave.as_ref()));
+	} else if let Some(sub_matches) = matches.subcommand_matches("test") {
+		if sub_matches.is_present("provisioning-server") {
 			println!("*** Running Enclave MU-RA TLS server\n");
 			enclave_run_state_provisioning_server(
 				enclave.as_ref(),
 				sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
 				&config.mu_ra_url(),
-				_matches.is_present("skip-ra"),
+				sub_matches.is_present("skip-ra"),
 			);
 			println!("[+] Done!");
-		} else if _matches.is_present("provisioning-client") {
+		} else if sub_matches.is_present("provisioning-client") {
 			println!("*** Running Enclave MU-RA TLS client\n");
-			let shard = extract_shard(_matches, enclave.as_ref());
+			let shard = extract_shard(sub_matches, enclave.as_ref());
 			enclave_request_state_provisioning(
 				enclave.as_ref(),
 				sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
 				&config.mu_ra_url_external(),
 				&shard,
-				_matches.is_present("skip-ra"),
+				sub_matches.is_present("skip-ra"),
 			)
 			.unwrap();
 			println!("[+] Done!");
 		} else {
-			tests::run_enclave_tests(_matches);
+			tests::run_enclave_tests(sub_matches);
 		}
 	} else {
 		println!("For options: use --help");

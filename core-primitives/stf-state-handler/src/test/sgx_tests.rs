@@ -27,11 +27,10 @@ use crate::{
 	state_handler::StateHandler,
 	state_snapshot_repository::StateSnapshotRepository,
 	state_snapshot_repository_loader::StateSnapshotRepositoryLoader,
-	test::mocks::state_key_repository_mock::StateKeyRepositoryMock,
 };
 use codec::{Decode, Encode};
 use ita_stf::{State as StfState, StateType as StfStateType};
-use itp_sgx_crypto::{Aes, AesSeal, StateCrypto};
+use itp_sgx_crypto::{mocks::KeyRepositoryMock, Aes, AesSeal, StateCrypto};
 use itp_sgx_io::{write, StaticSealedIO};
 use itp_types::{ShardIdentifier, H256};
 use sgx_externalities::SgxExternalitiesTrait;
@@ -40,7 +39,8 @@ use std::{sync::Arc, thread, vec::Vec};
 
 const STATE_SNAPSHOTS_CACHE_SIZE: usize = 3;
 
-type TestStateFileIo = SgxStateFileIo<StateKeyRepositoryMock<Aes>>;
+type StateKeyRepositoryMock = KeyRepositoryMock<Aes>;
+type TestStateFileIo = SgxStateFileIo<StateKeyRepositoryMock>;
 type TestStateRepository = StateSnapshotRepository<TestStateFileIo, StfState, H256>;
 type TestStateRepositoryLoader = StateSnapshotRepositoryLoader<TestStateFileIo, StfState, H256>;
 type TestStateHandler = StateHandler<TestStateRepository>;

@@ -21,46 +21,44 @@
 use crate::error::{Error as EnclaveError, Result as EnclaveResult};
 use codec::{Decode, Encode};
 use ita_stf::{State as StfState, StateType as StfStateType};
-use itp_sgx_crypto::{Aes, Error as CryptoError};
-use itp_sgx_io::StaticSealedIO;
-use itp_stf_state_handler::{
-	handle_state::HandleState,
-	state_key_repository::{AccessStateKey, MutateStateKey},
+use itp_sgx_crypto::{
+	key_repository::{AccessKey, MutateKey},
+	Aes,
 };
+use itp_stf_state_handler::handle_state::HandleState;
 use itp_types::ShardIdentifier;
 use log::*;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
-use std::{marker::PhantomData, sync::Arc, vec::Vec};
-
-pub trait SealedIOForShieldingKey = StaticSealedIO<Unsealed = Rsa3072KeyPair, Error = CryptoError>;
+use std::{sync::Arc, vec::Vec};
 
 /// Handles the sealing and unsealing of the shielding key, state key and the state.
 #[derive(Default)]
-pub struct SealHandler<ShieldingKeyHandler, StateKeyRepository, StateHandler>
+pub struct SealHandler<ShieldingKeyRepository, StateKeyRepository, StateHandler>
 where
-	ShieldingKeyHandler: SealedIOForShieldingKey,
-	StateKeyRepository: AccessStateKey<KeyType = Aes> + MutateStateKey<Aes>,
+	ShieldingKeyRepository: AccessKey<KeyType = Rsa3072KeyPair> + MutateKey<Rsa3072KeyPair>,
+	StateKeyRepository: AccessKey<KeyType = Aes> + MutateKey<Aes>,
 	// Constraint StateT = StfState currently necessary because SgxExternalities Encode/Decode does not work.
 	// See https://github.com/integritee-network/sgx-runtime/issues/46.
 	StateHandler: HandleState<StateT = StfState>,
 {
 	state_handler: Arc<StateHandler>,
 	state_key_repository: Arc<StateKeyRepository>,
-	_phantom_key_handler: PhantomData<ShieldingKeyHandler>,
+	shielding_key_repository: Arc<ShieldingKeyRepository>,
 }
 
-impl<ShieldingKeyHandler, StateKeyRepository, StateHandler>
-	SealHandler<ShieldingKeyHandler, StateKeyRepository, StateHandler>
+impl<ShieldingKeyRepository, StateKeyRepository, StateHandler>
+	SealHandler<ShieldingKeyRepository, StateKeyRepository, StateHandler>
 where
-	ShieldingKeyHandler: SealedIOForShieldingKey,
-	StateKeyRepository: AccessStateKey<KeyType = Aes> + MutateStateKey<Aes>,
+	ShieldingKeyRepository: AccessKey<KeyType = Rsa3072KeyPair> + MutateKey<Rsa3072KeyPair>,
+	StateKeyRepository: AccessKey<KeyType = Aes> + MutateKey<Aes>,
 	StateHandler: HandleState<StateT = StfState>,
 {
 	pub fn new(
 		state_handler: Arc<StateHandler>,
 		state_key_repository: Arc<StateKeyRepository>,
+		shielding_key_repository: Arc<ShieldingKeyRepository>,
 	) -> Self {
-		Self { state_handler, state_key_repository, _phantom_key_handler: Default::default() }
+		Self { state_handler, state_key_repository, shielding_key_repository }
 	}
 }
 pub trait SealStateAndKeys {
@@ -75,11 +73,11 @@ pub trait UnsealStateAndKeys {
 	fn unseal_state(&self, shard: &ShardIdentifier) -> EnclaveResult<Vec<u8>>;
 }
 
-impl<ShieldingKeyHandler, StateKeyRepository, StateHandler> SealStateAndKeys
-	for SealHandler<ShieldingKeyHandler, StateKeyRepository, StateHandler>
+impl<ShieldingKeyRepository, StateKeyRepository, StateHandler> SealStateAndKeys
+	for SealHandler<ShieldingKeyRepository, StateKeyRepository, StateHandler>
 where
-	ShieldingKeyHandler: SealedIOForShieldingKey,
-	StateKeyRepository: AccessStateKey<KeyType = Aes> + MutateStateKey<Aes>,
+	ShieldingKeyRepository: AccessKey<KeyType = Rsa3072KeyPair> + MutateKey<Rsa3072KeyPair>,
+	StateKeyRepository: AccessKey<KeyType = Aes> + MutateKey<Aes>,
 	StateHandler: HandleState<StateT = StfState>,
 {
 	fn seal_shielding_key(&self, bytes: &[u8]) -> EnclaveResult<()> {
@@ -87,7 +85,7 @@ where
 			error!("    [Enclave] Received Invalid RSA key");
 			EnclaveError::Other(e.into())
 		})?;
-		ShieldingKeyHandler::seal_to_static_file(key)?;
+		self.shielding_key_repository.update_key(key)?;
 		info!("Successfully stored a new shielding key");
 		Ok(())
 	}
@@ -109,15 +107,18 @@ where
 	}
 }
 
-impl<ShieldingKeyHandler, StateKeyRepository, StateHandler> UnsealStateAndKeys
-	for SealHandler<ShieldingKeyHandler, StateKeyRepository, StateHandler>
+impl<ShieldingKeyRepository, StateKeyRepository, StateHandler> UnsealStateAndKeys
+	for SealHandler<ShieldingKeyRepository, StateKeyRepository, StateHandler>
 where
-	ShieldingKeyHandler: SealedIOForShieldingKey,
-	StateKeyRepository: AccessStateKey<KeyType = Aes> + MutateStateKey<Aes>,
+	ShieldingKeyRepository: AccessKey<KeyType = Rsa3072KeyPair> + MutateKey<Rsa3072KeyPair>,
+	StateKeyRepository: AccessKey<KeyType = Aes> + MutateKey<Aes>,
 	StateHandler: HandleState<StateT = StfState>,
 {
 	fn unseal_shielding_key(&self) -> EnclaveResult<Vec<u8>> {
-		let shielding_key = ShieldingKeyHandler::unseal_from_static_file()?;
+		let shielding_key = self
+			.shielding_key_repository
+			.retrieve_key()
+			.map_err(|e| EnclaveError::Other(format!("{:?}", e).into()))?;
 		serde_json::to_vec(&shielding_key).map_err(|e| EnclaveError::Other(e.into()))
 	}
 
@@ -125,7 +126,7 @@ where
 		self.state_key_repository
 			.retrieve_key()
 			.map(|k| k.encode())
-			.map_err(|e| EnclaveError::Other(e.into()))
+			.map_err(|e| EnclaveError::Other(format!("{:?}", e).into()))
 	}
 
 	fn unseal_state(&self, shard: &ShardIdentifier) -> EnclaveResult<Vec<u8>> {
@@ -137,13 +138,15 @@ where
 #[cfg(feature = "test")]
 pub mod test {
 	use super::*;
-	use itp_sgx_crypto::mocks::sgx::Rsa3072SealMock;
-	use itp_stf_state_handler::test::mocks::state_key_repository_mock::StateKeyRepositoryMock;
+	use itp_sgx_crypto::mocks::KeyRepositoryMock;
 	use itp_test::mock::handle_state_mock::HandleStateMock;
 	use sgx_externalities::SgxExternalitiesTrait;
 
+	type StateKeyRepositoryMock = KeyRepositoryMock<Aes>;
+	type ShieldingKeyRepositoryMock = KeyRepositoryMock<Rsa3072KeyPair>;
+
 	type SealHandlerMock =
-		SealHandler<Rsa3072SealMock, StateKeyRepositoryMock<Aes>, HandleStateMock>;
+		SealHandler<ShieldingKeyRepositoryMock, StateKeyRepositoryMock, HandleStateMock>;
 
 	pub fn seal_shielding_key_works() {
 		let seal_handler = SealHandlerMock::default();

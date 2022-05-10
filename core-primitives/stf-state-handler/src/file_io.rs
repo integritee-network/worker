@@ -88,11 +88,11 @@ pub trait StateFileIo {
 pub mod sgx {
 
 	use super::*;
-	use crate::{error::Error, state_key_repository::AccessStateKey};
+	use crate::error::Error;
 	use base58::FromBase58;
 	use codec::Decode;
 	use ita_stf::{State as StfState, StateType as StfStateType, Stf};
-	use itp_sgx_crypto::StateCrypto;
+	use itp_sgx_crypto::{key_repository::AccessKey, StateCrypto};
 	use itp_sgx_io::{read as io_read, write as io_write};
 	use itp_types::H256;
 	use log::*;
@@ -106,7 +106,8 @@ pub mod sgx {
 
 	impl<StateKeyRepository> SgxStateFileIo<StateKeyRepository>
 	where
-		StateKeyRepository: AccessStateKey,
+		StateKeyRepository: AccessKey,
+		<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
 	{
 		pub fn new(state_key_repository: Arc<StateKeyRepository>) -> Self {
 			SgxStateFileIo { state_key_repository }
@@ -146,9 +147,10 @@ pub mod sgx {
 		}
 	}
 
-	impl<StateKey> StateFileIo for SgxStateFileIo<StateKey>
+	impl<StateKeyRepository> StateFileIo for SgxStateFileIo<StateKeyRepository>
 	where
-		StateKey: AccessStateKey,
+		StateKeyRepository: AccessKey,
+		<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
 	{
 		type StateType = StfState;
 		type HashType = H256;
@@ -293,7 +295,7 @@ pub mod sgx {
 	/// List any valid shards that are found in the shard path.
 	/// Ignore any items (files, directories) that are not valid shard identifiers.
 	pub(crate) fn list_shards() -> Result<Vec<ShardIdentifier>> {
-		let directory_items = list_items_in_directory(&PathBuf::from(SHARDS_PATH));
+		let directory_items = list_items_in_directory(&PathBuf::from(format!("./{}", SHARDS_PATH)));
 		Ok(directory_items
 			.iter()
 			.flat_map(|item| {
@@ -328,7 +330,7 @@ pub fn purge_shard_dir(shard: &ShardIdentifier) {
 }
 
 pub(crate) fn shard_path(shard: &ShardIdentifier) -> PathBuf {
-	PathBuf::from(format!("{}/{}", SHARDS_PATH, shard.encode().to_base58()))
+	PathBuf::from(format!("./{}/{}", SHARDS_PATH, shard.encode().to_base58()))
 }
 
 #[cfg(any(test, feature = "sgx"))]

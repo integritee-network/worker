@@ -60,12 +60,9 @@ pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) -> Res
 }
 
 pub fn check_files() {
-	use itp_settings::files::{
-		ENCLAVE_FILE, RA_API_KEY_FILE, RA_SPID_FILE, SHIELDING_KEY_FILE, SIGNING_KEY_FILE,
-	};
+	use itp_settings::files::{ENCLAVE_FILE, RA_API_KEY_FILE, RA_SPID_FILE};
 	debug!("*** Check files");
-	let files =
-		vec![ENCLAVE_FILE, SHIELDING_KEY_FILE, SIGNING_KEY_FILE, RA_SPID_FILE, RA_API_KEY_FILE];
+	let files = vec![ENCLAVE_FILE, RA_SPID_FILE, RA_API_KEY_FILE];
 	for f in files.iter() {
 		assert!(Path::new(f).exists(), "File doesn't exist: {}", f);
 	}

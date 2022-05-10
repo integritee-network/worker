@@ -30,7 +30,9 @@ sgx = [
     "sgx-externalities/sgx",
     "thiserror_sgx",
 ]
-test = []
+test = [
+    "itp-sgx-crypto/mocks"
+]
 
 [dependencies]
 # sgx dependencies
