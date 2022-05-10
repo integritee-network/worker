@@ -30,6 +30,8 @@ logging:
 ```
 Mind the indent. Explanations for all the logging drivers in `docker-compose` can be found [here](https://docs.docker.com/config/containers/logging/local/).
 
+```
+docker-compose -f docker-compose.yml -f fork-inducer.yml build
 
 
-
+```
