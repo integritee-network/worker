@@ -20,7 +20,7 @@
 /// This should serve as a proof of concept for a potential refactoring design. Ultimately, everything
 /// from the main.rs should be covered by the worker struct here - hidden and split across
 /// multiple traits.
-use crate::{config::Config, error::Error};
+use crate::{config::Config, error::Error, TrackInitialization};
 use async_trait::async_trait;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use itp_node_api_extensions::{node_api_factory::CreateNodeApi, PalletTeerexApi};
@@ -36,25 +36,30 @@ use std::sync::{Arc, RwLock};
 
 pub type WorkerResult<T> = Result<T, Error>;
 pub type Url = String;
-pub struct Worker<Config, NodeApiFactory, Enclave> {
+pub struct Worker<Config, NodeApiFactory, Enclave, InitializationHandler> {
 	_config: Config,
 	// unused yet, but will be used when more methods are migrated to the worker
 	_enclave_api: Arc<Enclave>,
 	node_api_factory: Arc<NodeApiFactory>,
+	initialization_handler: Arc<InitializationHandler>,
 	peers: RwLock<Vec<Url>>,
 }
 
-impl<Config, NodeApiFactory, Enclave> Worker<Config, NodeApiFactory, Enclave> {
+impl<Config, NodeApiFactory, Enclave, InitializationHandler>
+	Worker<Config, NodeApiFactory, Enclave, InitializationHandler>
+{
 	pub fn new(
 		config: Config,
 		enclave_api: Arc<Enclave>,
 		node_api_factory: Arc<NodeApiFactory>,
+		initialization_handler: Arc<InitializationHandler>,
 		peers: Vec<Url>,
 	) -> Self {
 		Self {
 			_config: config,
 			_enclave_api: enclave_api,
 			node_api_factory,
+			initialization_handler,
 			peers: RwLock::new(peers),
 		}
 	}
@@ -67,10 +72,12 @@ pub trait AsyncBlockGossiper {
 }
 
 #[async_trait]
-impl<NodeApiFactory, Enclave> AsyncBlockGossiper for Worker<Config, NodeApiFactory, Enclave>
+impl<NodeApiFactory, Enclave, InitializationHandler> AsyncBlockGossiper
+	for Worker<Config, NodeApiFactory, Enclave, InitializationHandler>
 where
 	NodeApiFactory: CreateNodeApi + Send + Sync,
 	Enclave: Send + Sync,
+	InitializationHandler: TrackInitialization + Send + Sync,
 {
 	async fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()> {
 		if blocks.is_empty() {
@@ -82,6 +89,8 @@ where
 		let peers = self.peers.read().map_err(|e| {
 			Error::Custom(format!("Encountered poisoned lock for peers: {:?}", e).into())
 		})?;
+
+		self.initialization_handler.sidechain_block_produced();
 
 		for url in peers.iter().cloned() {
 			let blocks = blocks_json.clone();
@@ -123,7 +132,8 @@ pub trait UpdatePeers {
 	}
 }
 
-impl<NodeApiFactory, Enclave> UpdatePeers for Worker<Config, NodeApiFactory, Enclave>
+impl<NodeApiFactory, Enclave, InitializationHandler> UpdatePeers
+	for Worker<Config, NodeApiFactory, Enclave, InitializationHandler>
 where
 	NodeApiFactory: CreateNodeApi + Send + Sync,
 {
@@ -166,6 +176,7 @@ mod tests {
 		tests::{
 			commons::local_worker_config,
 			mock::{W1_URL, W2_URL},
+			mocks::initialization_handler_mock::TrackInitializationMock,
 		},
 		worker::{AsyncBlockGossiper, Worker},
 	};
@@ -215,6 +226,7 @@ mod tests {
 				"ws://invalid.url".to_string(),
 				AccountKeyring::Alice.pair(),
 			)),
+			Arc::new(TrackInitializationMock {}),
 			peers,
 		);
 

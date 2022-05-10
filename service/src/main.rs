@@ -21,7 +21,9 @@ use crate::{
 	account_funding::{setup_account_funding, EnclaveAccountInfoProvider},
 	error::Error,
 	globals::tokio_handle::{GetTokioHandle, GlobalTokioHandle},
-	initialized_service::{set_initialized, start_is_initialized_server},
+	initialized_service::{
+		start_is_initialized_server, InitializationHandler, IsInitialized, TrackInitialization,
+	},
 	ocall_bridge::{
 		bridge_api::Bridge as OCallBridge, component_factory::OCallBridgeComponentFactory,
 	},
@@ -109,7 +111,7 @@ mod worker_peers_updater;
 /// how many blocks will be synced before storing the chain db to disk
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub type EnclaveWorker = Worker<Config, NodeApiFactory, Enclave>;
+pub type EnclaveWorker = Worker<Config, NodeApiFactory, Enclave, InitializationHandler>;
 
 fn main() {
 	// Setup logging
@@ -143,10 +145,12 @@ fn main() {
 	let node_api_factory =
 		Arc::new(NodeApiFactory::new(config.node_url(), AccountKeyring::Alice.pair()));
 	let enclave = Arc::new(enclave_init(&config).unwrap());
+	let initialization_handler = Arc::new(InitializationHandler::default());
 	let worker = Arc::new(EnclaveWorker::new(
 		config.clone(),
 		enclave.clone(),
 		node_api_factory.clone(),
+		initialization_handler.clone(),
 		Vec::new(),
 	));
 	let sync_block_gossiper =
@@ -197,6 +201,7 @@ fn main() {
 			dev,
 			node_api,
 			tokio_handle,
+			initialization_handler,
 		);
 	} else if let Some(smatches) = matches.subcommand_matches("request-state") {
 		println!("*** Requesting state from a registered worker \n");
@@ -251,7 +256,7 @@ fn main() {
 
 /// FIXME: needs some discussion (restructuring?)
 #[allow(clippy::too_many_arguments)]
-fn start_worker<E, T, D>(
+fn start_worker<E, T, D, InitializationHandler>(
 	config: Config,
 	shard: &ShardIdentifier,
 	enclave: Arc<E>,
@@ -260,6 +265,7 @@ fn start_worker<E, T, D>(
 	dev: bool,
 	node_api: Api<sr25519::Pair, WsRpcClient>,
 	tokio_handle_getter: Arc<T>,
+	initialization_handler: Arc<InitializationHandler>,
 ) where
 	T: GetTokioHandle,
 	E: EnclaveBase
@@ -270,6 +276,7 @@ fn start_worker<E, T, D>(
 		+ TeerexApi
 		+ Clone,
 	D: BlockPruner + FetchBlocks<SignedSidechainBlock> + Sync + Send + 'static,
+	InitializationHandler: TrackInitialization + IsInitialized + Sync + Send + 'static,
 {
 	println!("IntegriTEE Worker v{}", VERSION);
 	info!("starting worker on shard {}", shard.encode().to_base58());
@@ -307,8 +314,12 @@ fn start_worker<E, T, D>(
 	let untrusted_http_server_port = config
 		.try_parse_untrusted_http_server_port()
 		.expect("untrusted http server port to be a valid port number");
+	let initialization_handler_clone = initialization_handler.clone();
 	tokio_handle.spawn(async move {
-		if let Err(e) = start_is_initialized_server(untrusted_http_server_port).await {
+		if let Err(e) =
+			start_is_initialized_server(initialization_handler_clone, untrusted_http_server_port)
+				.await
+		{
 			error!("Unexpected error in `is_initialized` server: {:?}", e);
 		}
 	});
@@ -406,6 +417,8 @@ fn start_worker<E, T, D>(
 		println!("[+] We are NOT the primary validateer");
 	}
 
+	initialization_handler.registered_on_parentchain();
+
 	let last_synced_header = init_light_client(&node_api, enclave.clone()).unwrap();
 	println!("*** [+] Finished syncing light client, syncing parentchain...");
 
@@ -498,8 +511,7 @@ fn start_worker<E, T, D>(
 				node_api_for_initialized.worker_for_shard(&shard_for_initialized, None)
 			{
 				// Set that the service is initialized.
-				set_initialized();
-				println!("[+] Found a worker for shard, this worker is considered initialized now");
+				initialization_handler.worker_for_shard_registered();
 				break
 			}
 			thread::sleep(Duration::from_secs(2));
