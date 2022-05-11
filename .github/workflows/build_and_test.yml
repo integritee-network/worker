@@ -35,7 +35,7 @@ jobs:
         uses: docker/setup-buildx-action@v2
 
       - name: Cache Docker layers
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
@@ -43,19 +43,40 @@ jobs:
             ${{ runner.os }}-buildx-
 
       - name: Build Enclave Test Image
-        run:  docker buildx build -t integritee-worker-enclave-test-${{ github.sha }} --cache-to=type=local,src=/tmp/.buildx-cache --load --target enclave-test -f build.Dockerfile .
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: build.DockerFile
+          target: enclave-test
+          load: true
+          tags: integritee-worker-enclave-test-${{ github.sha }}
+          cache-to: type=local,dest=/tmp/.buildx-cache
 
       - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
         run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-enclave-test-${{ github.sha }}
 
       - name: Build Cargo Test Image
-        run:  docker buildx build -t integritee-worker-ctest-${{ github.sha }} --cache-from=type=local,src=/tmp/.buildx-cache --load --target cargo-test -f build.Dockerfile .
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: build.DockerFile
+          target: cargo-test
+          load: true
+          tags: integritee-worker-ctest-${{ github.sha }}
+          cache-from: type=local,src=/tmp/.buildx-cache
 
       - name: Run Cargo Test
         run: docker run --rm integritee-worker-ctest-${{ github.sha }}
 
       - name: Build Deployable Image
-        run: docker buildx build -t integritee-worker-${{ github.sha }} --cache-from=type=local,src=/tmp/.buildx-cache --target deployed --output=type=docker,dest=/tmp/integritee-worker.tar -f build.Dockerfile .
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: build.DockerFile
+          target: cargo-test
+          tags: integritee-worker-${{ github.sha }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          outputs: type=docker,dest=/tmp/integritee-worker.tar
       
       - name: Copy artifacts from container
         run: |
