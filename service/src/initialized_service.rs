@@ -20,7 +20,7 @@
 
 use crate::error::ServiceResult;
 use log::*;
-use parking_lot::Mutex;
+use parking_lot::RwLock;
 use std::{net::SocketAddr, sync::Arc};
 use warp::Filter;
 
@@ -67,32 +67,32 @@ pub trait TrackInitialization {
 
 #[derive(Default)]
 pub struct InitializationHandler {
-	registered_on_parentchain: Mutex<bool>,
-	sidechain_block_produced: Mutex<bool>,
-	worker_for_shard_registered: Mutex<bool>,
+	registered_on_parentchain: RwLock<bool>,
+	sidechain_block_produced: RwLock<bool>,
+	worker_for_shard_registered: RwLock<bool>,
 }
 
 impl TrackInitialization for InitializationHandler {
 	fn registered_on_parentchain(&self) {
-		let mut registered_lock = self.registered_on_parentchain.lock();
+		let mut registered_lock = self.registered_on_parentchain.write();
 		*registered_lock = true;
 	}
 
 	fn sidechain_block_produced(&self) {
-		let mut block_produced_lock = self.sidechain_block_produced.lock();
+		let mut block_produced_lock = self.sidechain_block_produced.write();
 		*block_produced_lock = true;
 	}
 
 	fn worker_for_shard_registered(&self) {
-		let mut registered_lock = self.worker_for_shard_registered.lock();
+		let mut registered_lock = self.worker_for_shard_registered.write();
 		*registered_lock = true;
 	}
 }
 
 impl IsInitialized for InitializationHandler {
 	fn is_initialized(&self) -> bool {
-		*self.registered_on_parentchain.lock()
-			&& *self.worker_for_shard_registered.lock()
-			&& *self.sidechain_block_produced.lock()
+		*self.registered_on_parentchain.read()
+			&& *self.worker_for_shard_registered.read()
+			&& *self.sidechain_block_produced.read()
 	}
 }

@@ -73,6 +73,7 @@ use sgx_types::*;
 use sp_core::{
 	crypto::{AccountId32, Ss58Codec},
 	sr25519,
+	sr25519::Pair,
 };
 use sp_finality_grandpa::VersionedAuthorityList;
 use sp_keyring::AccountKeyring;
@@ -500,23 +501,7 @@ fn start_worker<E, T, D, InitializationHandler>(
 		.unwrap();
 
 	// ------------------------------------------------------------------------
-	// Start polling loop to wait until we have a worker for a shard registered on
-	// the parentchain (TEEREX WorkerForShard). This is the pre-requisite to be
-	// considered initialized and ready for the next worker to start.
-	let node_api_for_initialized = node_api.clone();
-	let shard_for_initialized = *shard;
-	thread::spawn(move || {
-		loop {
-			if let Ok(Some(_)) =
-				node_api_for_initialized.worker_for_shard(&shard_for_initialized, None)
-			{
-				// Set that the service is initialized.
-				initialization_handler.worker_for_shard_registered();
-				break
-			}
-			thread::sleep(Duration::from_secs(2));
-		}
-	});
+	spawn_worker_for_shard_polling(shard, node_api.clone(), initialization_handler);
 
 	// ------------------------------------------------------------------------
 	// subscribe to events and react on firing
@@ -539,6 +524,33 @@ fn start_worker<E, T, D, InitializationHandler>(
 			}
 		}
 	}
+}
+
+/// Start polling loop to wait until we have a worker for a shard registered on
+/// the parentchain (TEEREX WorkerForShard). This is the pre-requisite to be
+/// considered initialized and ready for the next worker to start.
+fn spawn_worker_for_shard_polling<InitializationHandler>(
+	shard: &ShardIdentifier,
+	node_api: Api<Pair, WsRpcClient>,
+	initialization_handler: Arc<InitializationHandler>,
+) where
+	InitializationHandler: TrackInitialization + Sync + Send + 'static,
+{
+	let shard_for_initialized = *shard;
+	thread::spawn(move || {
+		const POLL_INTERVAL_SECS: u64 = 2;
+
+		loop {
+			info!("Polling for worker for shard ({} seconds interval)", POLL_INTERVAL_SECS);
+			if let Ok(Some(_)) = node_api.worker_for_shard(&shard_for_initialized, None) {
+				// Set that the service is initialized.
+				initialization_handler.worker_for_shard_registered();
+				println!("[+] Found `WorkerForShard` on parentchain state");
+				break
+			}
+			thread::sleep(Duration::from_secs(POLL_INTERVAL_SECS));
+		}
+	});
 }
 
 /// Starts the execution of trusted getters in repeating intervals.
