@@ -58,27 +58,6 @@ WORKDIR /root/work/worker
 CMD cargo test
 
 
-### Dockerize installation stage
-##################################################
-FROM ubuntu:20.04 AS dockerize
-LABEL maintainer="zoltan@integritee.network"
-
-ENV DEBIAN_FRONTEND=noninteractive
-
-RUN apt update && apt install -y curl gpg
-RUN curl --version
-# Curl already installed in base image
-# RUN apt update && apt install -y curl && rm -rf /var/lib/apt/lists/*
-
-RUN curl -sfL https://github.com/powerman/dockerize/releases/download/v0.11.5/dockerize-`uname -s`-`uname -m` | install /dev/stdin /usr/local/bin/dockerize
-
-# Verify signature of 'dockerize'
-
-RUN curl -sfL https://powerman.name/about/Powerman.asc | gpg --import
-RUN curl -sfL https://github.com/powerman/dockerize/releases/download/v0.11.5/dockerize-`uname -s`-`uname -m`.asc >dockerize.asc
-RUN gpg --verify dockerize.asc /usr/local/bin/dockerize
-
-
 ### Deployment stage
 ##################################################
 FROM ubuntu:20.04 AS deployed
@@ -90,7 +69,7 @@ RUN apt update && apt install -y libssl-dev
 
 COPY --from=builder /opt/sgxsdk/lib64 /opt/sgxsdk/lib64
 COPY --from=builder /root/work/worker/bin/* ./
-COPY --from=dockerize /usr/local/bin/dockerize ./
+COPY --from=powerman/dockerize /usr/local/bin/dockerize /usr/local/bin/dockerize
 
 ENV SGX_SDK /opt/sgxsdk
 ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${SGX_SDK}/lib64"
