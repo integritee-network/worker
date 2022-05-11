@@ -45,46 +45,50 @@ jobs:
             ${{ runner.os }}-buildx-
 
       - name: Build Worker Source
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: build.Dockerfile
-          target: builder
-          load: true
-          tags: integritee-worker-builder-${{ github.sha }}
+        run: docker buildx build --load --target=builder --tag integritee-worker-builder-${{ github.sha }} -f build.Dockerfile .
+#        uses: docker/build-push-action@v2
+#        with:
+#          context: .
+#          file: build.Dockerfile
+#          target: builder
+#          load: true
+#          tags: integritee-worker-builder-${{ github.sha }}
 
       - name: Build Enclave Test Image
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: build.Dockerfile
-          target: enclave-test
-          load: true
-          tags: integritee-worker-enclave-test-${{ github.sha }}
+        run: docker buildx build --load --target=enclave-test --tag integritee-worker-enclave-test-${{ github.sha }} -f build.Dockerfile .
+#        uses: docker/build-push-action@v2
+#        with:
+#          context: .
+#          file: build.Dockerfile
+#          target: enclave-test
+#          load: true
+#          tags: integritee-worker-enclave-test-${{ github.sha }}
 
       - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
         run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-enclave-test-${{ github.sha }}
 
       - name: Build Cargo Test Image
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: build.Dockerfile
-          target: cargo-test
-          load: true
-          tags: integritee-worker-ctest-${{ github.sha }}
+        run: docker buildx build --load --target=cargo-test --tag integritee-worker-ctest-${{ github.sha }} -f build.Dockerfile .
+#        uses: docker/build-push-action@v2
+#        with:
+#          context: .
+#          file: build.Dockerfile
+#          target: cargo-test
+#          load: true
+#          tags: integritee-worker-ctest-${{ github.sha }}
 
       - name: Run Cargo Test
         run: docker run --rm integritee-worker-ctest-${{ github.sha }}
 
       - name: Build Deployable Image
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: build.Dockerfile
-          target: cargo-test
-          tags: integritee-worker-${{ github.sha }}
-          outputs: type=docker,dest=/tmp/integritee-worker.tar
+        run: docker buildx build --output=type=docker,dest=/tmp/integritee-worker.tar --target=deployed -f build.Dockerfile .
+#        uses: docker/build-push-action@v2
+#        with:
+#          context: .
+#          file: build.Dockerfile
+#          target: cargo-test
+#          tags: integritee-worker-${{ github.sha }}
+#          outputs: type=docker,dest=/tmp/integritee-worker.tar
       
       - name: Copy artifacts from container
         run: |
