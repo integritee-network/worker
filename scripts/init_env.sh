@@ -1,5 +1,4 @@
 #!/bin/bash
-set -euo pipefail
 
 # script that sets the correct environment variables to execute other scripts
 
