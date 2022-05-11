@@ -25,23 +25,18 @@ ENV SGX_SDK /opt/sgxsdk
 ENV PATH "$PATH:${SGX_SDK}/bin:${SGX_SDK}/bin/x64:/root/.cargo/bin"
 ENV PKG_CONFIG_PATH "${PKG_CONFIG_PATH}:${SGX_SDK}/pkgconfig"
 ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${SGX_SDK}/sdk_libs"
-
-COPY . /root/work/worker/
-
 ENV CARGO_NET_GIT_FETCH_WITH_CLI true
 ENV SGX_MODE SW
 
+COPY . /root/work/worker/
 WORKDIR /root/work/worker
-RUN make
 
-WORKDIR /root/work/worker/bin
-RUN touch spid.txt key.txt
+RUN make
 
 
 ### Enclave Test Stage
 ##################################################
 FROM builder AS enclave-test
-LABEL maintainer="zoltan@integritee.network"
 
 WORKDIR /root/work/worker/bin
 
@@ -51,7 +46,6 @@ CMD ./integritee-service test --all
 ### Cargo Test Stage
 ##################################################
 FROM builder AS cargo-test
-LABEL maintainer="zoltan@integritee.network"
 
 WORKDIR /root/work/worker
 
@@ -80,5 +74,8 @@ RUN ls -al /usr/local/bin
 # checks
 RUN ldd /usr/local/bin/integritee-service && \
 	/usr/local/bin/integritee-service --version
+
+WORKDIR /root/work/worker/bin
+RUN touch spid.txt key.txt
 
 ENTRYPOINT ["/usr/local/bin/integritee-service"]
