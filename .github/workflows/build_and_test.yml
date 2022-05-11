@@ -32,16 +32,16 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
 
       - name: Build Enclave Test Image
-        run:  docker buildx build -t integritee-worker-enclave-test-${{ github.sha }} --target enclave-test -f build.Dockerfile .
+        run:  docker buildx build -t integritee-worker-enclave-test-${{ github.sha }} --load --target enclave-test -f build.Dockerfile .
 
       - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
         run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-enclave-test-${{ github.sha }}
 
       - name: Build Cargo Test Image
-        run:  docker buildx build -t integritee-worker-ctest-${{ github.sha }} --target cargo-test -f build.Dockerfile .
+        run:  docker buildx build -t integritee-worker-ctest-${{ github.sha }} --load --target cargo-test -f build.Dockerfile .
 
       - name: Run Cargo Test
         run: docker run --rm integritee-worker-ctest-${{ github.sha }}
