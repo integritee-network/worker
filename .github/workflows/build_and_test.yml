@@ -34,7 +34,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Cache Docker layers
+      - name: Set up Actions Cache
         uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
@@ -50,7 +50,7 @@ jobs:
           target: enclave-test
           load: true
           tags: integritee-worker-enclave-test-${{ github.sha }}
-          cache-to: type=local,dest=/tmp/.buildx-cache
+          cache-to: type=inline,mode=max
 
       - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
         run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-enclave-test-${{ github.sha }}
@@ -63,7 +63,7 @@ jobs:
           target: cargo-test
           load: true
           tags: integritee-worker-ctest-${{ github.sha }}
-          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-from: integritee-worker-enclave-test-${{ github.sha }}
 
       - name: Run Cargo Test
         run: docker run --rm integritee-worker-ctest-${{ github.sha }}
@@ -75,7 +75,7 @@ jobs:
           file: build.Dockerfile
           target: cargo-test
           tags: integritee-worker-${{ github.sha }}
-          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-from: integritee-worker-enclave-test-${{ github.sha }}
           outputs: type=docker,dest=/tmp/integritee-worker.tar
       
       - name: Copy artifacts from container
