@@ -27,10 +27,8 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use crate::{
-	cert, io,
-	ocall::OcallApi,
-	utils::{hash_from_slice, write_slice_and_whitespace_pad},
-	Error as EnclaveError, Result as EnclaveResult,
+	cert, io, ocall::OcallApi, utils::hash_from_slice, Error as EnclaveError,
+	Result as EnclaveResult,
 };
 use codec::Encode;
 use core::default::Default;
@@ -42,6 +40,7 @@ use itp_settings::{
 };
 use itp_sgx_crypto::Ed25519Seal;
 use itp_sgx_io::StaticSealedIO;
+use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use sgx_rand::*;
 use sgx_tcrypto::*;
@@ -547,7 +546,9 @@ pub unsafe extern "C" fn perform_ra(
 	let xt_hash = blake2_256(&xt_encoded);
 	debug!("    [Enclave] Encoded extrinsic ( len = {} B), hash {:?}", xt_encoded.len(), xt_hash);
 
-	write_slice_and_whitespace_pad(extrinsic_slice, xt_encoded);
+	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, xt_encoded) {
+		return EnclaveError::Other(Box::new(e)).into()
+	};
 
 	sgx_status_t::SGX_SUCCESS
 }

@@ -40,7 +40,7 @@ use crate::{
 	},
 	ocall::OcallApi,
 	rpc::worker_api_direct::sidechain_io_handler,
-	utils::{hash_from_slice, utf8_str_from_raw, write_slice_and_whitespace_pad, DecodeRaw},
+	utils::{hash_from_slice, utf8_str_from_raw, DecodeRaw},
 };
 use codec::{alloc::string::String, Decode, Encode};
 use ita_stf::{Getter, ShardIdentifier, Stf};
@@ -60,11 +60,12 @@ use itp_sgx_io::StaticSealedIO;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_storage::StorageProof;
 use itp_types::{Header, SignedBlock};
+use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use sgx_types::sgx_status_t;
 use sp_core::crypto::Pair;
 use sp_finality_grandpa::VersionedAuthorityList;
-use std::{slice, vec::Vec};
+use std::{boxed::Box, slice, vec::Vec};
 use substrate_api_client::compose_extrinsic_offline;
 
 mod attestation;
@@ -149,7 +150,12 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(
 	};
 
 	let pubkey_slice = slice::from_raw_parts_mut(pubkey, pubkey_size as usize);
-	write_slice_and_whitespace_pad(pubkey_slice, rsa_pubkey_json.as_bytes().to_vec());
+
+	if let Err(e) =
+		write_slice_and_whitespace_pad(pubkey_slice, rsa_pubkey_json.as_bytes().to_vec())
+	{
+		return Error::Other(Box::new(e)).into()
+	};
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -233,7 +239,9 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
 	*nonce_lock = Nonce(nonce_value + 1);
 	std::mem::drop(nonce_lock);
 
-	write_slice_and_whitespace_pad(extrinsic_slice, xt);
+	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, xt) {
+		return Error::Other(Box::new(e)).into()
+	};
 	sgx_status_t::SGX_SUCCESS
 }
 
@@ -263,7 +271,9 @@ pub unsafe extern "C" fn call_rpc_methods(
 	};
 
 	let response_slice = slice::from_raw_parts_mut(response, response_len as usize);
-	write_slice_and_whitespace_pad(response_slice, res.into_bytes());
+	if let Err(e) = write_slice_and_whitespace_pad(response_slice, res.into_bytes()) {
+		return Error::Other(Box::new(e)).into()
+	};
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -326,7 +336,9 @@ pub unsafe extern "C" fn get_state(
 	let value_opt = Stf::get_state(&mut state, getter);
 
 	debug!("returning getter result");
-	write_slice_and_whitespace_pad(value_slice, value_opt.encode());
+	if let Err(e) = write_slice_and_whitespace_pad(value_slice, value_opt.encode()) {
+		return Error::Other(Box::new(e)).into()
+	};
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -394,35 +406,27 @@ pub unsafe extern "C" fn init_light_client(
 
 	let header = match Header::decode(&mut header) {
 		Ok(h) => h,
-		Err(e) => {
-			error!("Decoding Header failed. Error: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
+		Err(e) => return Error::Codec(e).into(),
 	};
 
 	let auth = match VersionedAuthorityList::decode(&mut auth) {
 		Ok(a) => a,
-		Err(e) => {
-			error!("Decoding VersionedAuthorityList failed. Error: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
+		Err(e) => return Error::Codec(e).into(),
 	};
 
 	let proof = match StorageProof::decode(&mut proof) {
 		Ok(h) => h,
-		Err(e) => {
-			error!("Decoding Header failed. Error: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
+		Err(e) => return Error::Codec(e).into(),
 	};
 
-	match initialization::init_light_client(header, auth, proof) {
-		Ok(h) => write_slice_and_whitespace_pad(latest_header_slice, h.encode()),
-		Err(e) => {
-			error!("Failed to initialize light-client: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
-	}
+	let latest_header = match initialization::init_light_client(header, auth, proof) {
+		Ok(header) => header,
+		Err(e) => return e.into(),
+	};
+
+	if let Err(e) = write_slice_and_whitespace_pad(latest_header_slice, latest_header.encode()) {
+		return Error::Other(Box::new(e)).into()
+	};
 
 	sgx_status_t::SGX_SUCCESS
 }

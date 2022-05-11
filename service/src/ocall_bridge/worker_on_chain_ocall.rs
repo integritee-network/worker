@@ -16,13 +16,11 @@
 
 */
 
-use crate::{
-	ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, WorkerOnChainBridge},
-	utils::hex_encode,
-};
+use crate::ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, WorkerOnChainBridge};
 use codec::{Decode, Encode};
 use itp_node_api_extensions::node_api_factory::CreateNodeApi;
 use itp_types::{WorkerRequest, WorkerResponse};
+use itp_utils::hex_encode;
 use log::*;
 use sp_core::storage::StorageKey;
 use sp_runtime::OpaqueExtrinsic;
