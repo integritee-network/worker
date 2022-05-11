@@ -18,18 +18,20 @@
 
 use codec::{Decode, Encode};
 use core::fmt::Debug;
-use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveSidechainOCallApi};
+use itp_ocall_api::{
+	EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi,
+	EnclaveSidechainOCallApi,
+};
 use itp_storage::StorageEntryVerified;
-use itp_storage_verifier::{GetStorageVerified, Result};
 use itp_teerex_storage::{TeeRexStorage, TeerexStorageKeys};
-use itp_types::{BlockHash, Enclave, ShardIdentifier};
+use itp_types::{BlockHash, Enclave, ShardIdentifier, WorkerRequest, WorkerResponse};
 use sgx_types::{
 	sgx_epid_group_id_t, sgx_measurement_t, sgx_platform_info_t, sgx_quote_nonce_t,
 	sgx_quote_sign_type_t, sgx_report_t, sgx_spid_t, sgx_target_info_t, sgx_update_info_bit_t,
 	SgxResult, SGX_HASH_SIZE,
 };
 use sp_core::H256;
-use sp_runtime::{traits::Header as HeaderT, AccountId32};
+use sp_runtime::{traits::Header as HeaderT, AccountId32, OpaqueExtrinsic};
 use sp_std::prelude::*;
 use std::collections::HashMap;
 
@@ -64,36 +66,6 @@ impl OnchainMock {
 
 	pub fn get(&self, key: &[u8]) -> Option<&Vec<u8>> {
 		self.inner.get(key)
-	}
-}
-
-impl GetStorageVerified for OnchainMock {
-	fn get_storage_verified<H: HeaderT<Hash = H256>, V: Decode>(
-		&self,
-		storage_hash: Vec<u8>,
-		_header: &H,
-	) -> Result<StorageEntryVerified<V>> {
-		let value = self
-			.get(&storage_hash)
-			.map(|val| Decode::decode(&mut val.as_slice()))
-			.transpose()?;
-
-		Ok(StorageEntryVerified::new(storage_hash, value))
-	}
-
-	fn get_multiple_storages_verified<H: HeaderT<Hash = H256>, V: Decode>(
-		&self,
-		storage_hashes: Vec<Vec<u8>>,
-		_header: &H,
-	) -> Result<Vec<StorageEntryVerified<V>>> {
-		let mut entries = Vec::with_capacity(storage_hashes.len());
-		for hash in storage_hashes.into_iter() {
-			let value =
-				self.get(&hash).map(|val| Decode::decode(&mut val.as_slice())).transpose()?;
-
-			entries.push(StorageEntryVerified::new(hash, value))
-		}
-		Ok(entries)
 	}
 }
 
@@ -160,22 +132,50 @@ impl EnclaveMetricsOCallApi for OnchainMock {
 	}
 }
 
-// We cannot implement EnclaveOnChainOCallApi specifically here, because OnchainMock already
-// implements `GetStorageVerified`. And all implementers of `EnclaveOnChainOCallApi` automatically
-// implement GetStorageVerified too (-> see `core-primitives/storage-verified/src/lib.rs`),
-// so it results in duplicate implementations.
-// impl EnclaveOnChainOCallApi for OnchainMock {
-// 	fn send_to_parentchain(&self, _extrinsics: Vec<OpaqueExtrinsic>) -> SgxResult<()> {
-// 		Ok(())
-// 	}
-//
-// 	fn worker_request<V: Encode + Decode>(
-// 		&self,
-// 		_req: Vec<WorkerRequest>,
-// 	) -> SgxResult<Vec<WorkerResponse<V>>> {
-// 		Ok(Vec::new())
-// 	}
-// }
+impl EnclaveOnChainOCallApi for OnchainMock {
+	fn send_to_parentchain(&self, _extrinsics: Vec<OpaqueExtrinsic>) -> SgxResult<()> {
+		Ok(())
+	}
+
+	fn worker_request<V: Encode + Decode>(
+		&self,
+		_req: Vec<WorkerRequest>,
+	) -> SgxResult<Vec<WorkerResponse<V>>> {
+		Ok(Vec::new())
+	}
+
+	fn get_storage_verified<H: HeaderT<Hash = H256>, V: Decode>(
+		&self,
+		storage_hash: Vec<u8>,
+		_header: &H,
+	) -> Result<StorageEntryVerified<V>, itp_ocall_api::Error> {
+		let value = self
+			.get(&storage_hash)
+			.map(|val| Decode::decode(&mut val.as_slice()))
+			.transpose()
+			.map_err(itp_ocall_api::Error::Codec)?;
+
+		Ok(StorageEntryVerified::new(storage_hash, value))
+	}
+
+	fn get_multiple_storages_verified<H: HeaderT<Hash = H256>, V: Decode>(
+		&self,
+		storage_hashes: Vec<Vec<u8>>,
+		_header: &H,
+	) -> Result<Vec<StorageEntryVerified<V>>, itp_ocall_api::Error> {
+		let mut entries = Vec::with_capacity(storage_hashes.len());
+		for hash in storage_hashes.into_iter() {
+			let value = self
+				.get(&hash)
+				.map(|val| Decode::decode(&mut val.as_slice()))
+				.transpose()
+				.map_err(itp_ocall_api::Error::Codec)?;
+
+			entries.push(StorageEntryVerified::new(hash, value))
+		}
+		Ok(entries)
+	}
+}
 
 pub fn validateer_set() -> Vec<Enclave> {
 	let default_enclave = Enclave::new(

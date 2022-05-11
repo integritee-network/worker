@@ -15,10 +15,9 @@
 
 */
 
-use crate::{authorities, slot_author};
+use crate::{authorities, slot_author, EnclaveOnChainOCallApi};
 use core::marker::PhantomData;
 use frame_support::ensure;
-use itp_storage_verifier::GetStorageVerified;
 use its_consensus_common::{Error as ConsensusError, Verifier};
 use its_consensus_slots::{slot_from_time_stamp_and_duration, Slot};
 use its_primitives::{
@@ -62,7 +61,7 @@ where
 	SignedSidechainBlock: SignedSidechainBlockTrait<Public = AuthorityPair::Public> + 'static,
 	SignedSidechainBlock::Block: SidechainBlockTrait,
 	SidechainState: LastBlockExt<SignedSidechainBlock::Block> + Send + Sync,
-	Context: ValidateerFetch + GetStorageVerified + Send + Sync,
+	Context: ValidateerFetch + EnclaveOnChainOCallApi + Send + Sync,
 {
 	type BlockImportParams = SignedSidechainBlock;
 
@@ -117,7 +116,7 @@ where
 	AuthorityPair::Public: Debug,
 	SignedSidechainBlock: SignedSidechainBlockTrait<Public = AuthorityPair::Public> + 'static,
 	ParentchainHeader: ParentchainHeaderTrait<Hash = BlockHash>,
-	Context: ValidateerFetch + GetStorageVerified,
+	Context: ValidateerFetch + EnclaveOnChainOCallApi,
 {
 	ensure!(
 		parentchain_head.hash() == block.block_data().layer_one_head(),

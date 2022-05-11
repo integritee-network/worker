@@ -31,7 +31,7 @@ extern crate sgx_tstd as std;
 
 use core::marker::PhantomData;
 use itc_parentchain_block_import_dispatcher::triggered_dispatcher::TriggerParentchainBlockImport;
-use itp_storage_verifier::GetStorageVerified;
+use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_time_utils::duration_now;
 use its_consensus_common::{Environment, Error as ConsensusError, Proposer};
 use its_consensus_slots::{SimpleSlotWorker, Slot, SlotInfo};
@@ -137,7 +137,7 @@ where
 	E: Environment<ParentchainBlock, SignedSidechainBlock, Error = ConsensusError>,
 	E::Proposer: Proposer<ParentchainBlock, SignedSidechainBlock>,
 	SignedSidechainBlock: SignedBlock + Send + 'static,
-	OcallApi: ValidateerFetch + GetStorageVerified + Send + 'static,
+	OcallApi: ValidateerFetch + EnclaveOnChainOCallApi + Send + 'static,
 	ImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>>,
 {
 	type Proposer = E::Proposer;
@@ -239,7 +239,7 @@ fn authorities<ValidateerFetcher, P, ParentchainHeader>(
 	header: &ParentchainHeader,
 ) -> Result<Vec<AuthorityId<P>>, ConsensusError>
 where
-	ValidateerFetcher: ValidateerFetch + GetStorageVerified,
+	ValidateerFetcher: ValidateerFetch + EnclaveOnChainOCallApi,
 	P: Pair,
 	ParentchainHeader: ParentchainHeaderTrait<Hash = H256>,
 {

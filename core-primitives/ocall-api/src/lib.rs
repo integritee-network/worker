@@ -21,12 +21,25 @@ pub extern crate alloc;
 
 use alloc::vec::Vec;
 use codec::{Decode, Encode};
+use core::result::Result as StdResult;
+use derive_more::{Display, From};
+use itp_storage::{Error as StorageError, StorageEntryVerified};
 use itp_types::{
 	BlockHash, ShardIdentifier, TrustedOperationStatus, WorkerRequest, WorkerResponse,
 };
 use sgx_types::*;
-use sp_runtime::OpaqueExtrinsic;
+use sp_core::H256;
+use sp_runtime::{traits::Header, OpaqueExtrinsic};
+use sp_std::prelude::*;
 
+#[derive(Debug, Display, From)]
+pub enum Error {
+	Storage(StorageError),
+	Codec(codec::Error),
+	Sgx(sgx_types::sgx_status_t),
+}
+
+pub type Result<T> = StdResult<T, Error>;
 /// Trait for the enclave to make o-calls related to remote attestation
 pub trait EnclaveAttestationOCallApi: Clone + Send + Sync {
 	fn sgx_init_quote(&self) -> SgxResult<(sgx_target_info_t, sgx_epid_group_id_t)>;
@@ -70,6 +83,18 @@ pub trait EnclaveOnChainOCallApi: Clone + Send + Sync {
 		&self,
 		req: Vec<WorkerRequest>,
 	) -> SgxResult<Vec<WorkerResponse<V>>>;
+
+	fn get_storage_verified<H: Header<Hash = H256>, V: Decode>(
+		&self,
+		storage_hash: Vec<u8>,
+		header: &H,
+	) -> Result<StorageEntryVerified<V>>;
+
+	fn get_multiple_storages_verified<H: Header<Hash = H256>, V: Decode>(
+		&self,
+		storage_hashes: Vec<Vec<u8>>,
+		header: &H,
+	) -> Result<Vec<StorageEntryVerified<V>>>;
 }
 
 /// Trait for sending metric updates.

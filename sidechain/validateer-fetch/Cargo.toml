@@ -20,7 +20,6 @@ itp-teerex-storage = { path = "../../core-primitives/teerex-storage", default-fe
 itp-types = { path = "../../core-primitives/types", default-features = false }
 itp-storage = { path = "../../core-primitives/storage", default-features = false }
 itp-ocall-api = { path = "../../core-primitives/ocall-api", default-features = false }
-itp-storage-verifier = { path = "../../core-primitives/storage-verified", default-features = false }
 
 [features]
 default = ["std"]
@@ -32,7 +31,6 @@ std = [
     "itp-types/std",
     "itp-storage/std",
     "itp-ocall-api/std",
-    "itp-storage-verifier/std",
 ]
 
 [dev-dependencies]

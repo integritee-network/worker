@@ -43,7 +43,6 @@ use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::Ed25519Seal;
 use itp_sgx_io::StaticSealedIO;
 use itp_stf_state_handler::query_shard_state::QueryShardState;
-use itp_storage_verifier::GetStorageVerified;
 use itp_time_utils::{duration_now, remaining_time};
 use itp_types::{Block, OpaqueCall, H256};
 use its_sidechain::{
@@ -242,7 +241,7 @@ where
 	SignedSidechainBlock::Signature: From<Authority::Signature>,
 	Authority: Pair<Public = sp_core::ed25519::Public>,
 	Authority::Public: Encode,
-	OCallApi: ValidateerFetch + GetStorageVerified + Send + 'static,
+	OCallApi: ValidateerFetch + EnclaveOnChainOCallApi + Send + 'static,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	PEnvironment:
 		Environment<ParentchainBlock, SignedSidechainBlock, Error = ConsensusError> + Send + Sync,

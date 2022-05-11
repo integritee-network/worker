@@ -2658,9 +2658,12 @@ dependencies = [
 name = "itp-ocall-api"
 version = "0.8.0"
 dependencies = [
+ "derive_more",
+ "itp-storage",
  "itp-types",
  "parity-scale-codec",
  "sgx_types",
+ "sp-core",
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
 ]
@@ -2717,7 +2720,6 @@ dependencies = [
  "itp-ocall-api",
  "itp-stf-state-handler",
  "itp-storage",
- "itp-storage-verifier",
  "itp-test",
  "itp-time-utils",
  "itp-types",
@@ -2776,21 +2778,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "itp-storage-verifier"
-version = "0.8.0"
-dependencies = [
- "derive_more",
- "itp-ocall-api",
- "itp-storage",
- "itp-types",
- "parity-scale-codec",
- "sgx_types",
- "sp-core",
- "sp-runtime",
- "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
-]
-
-[[package]]
 name = "itp-teerex-storage"
 version = "0.8.0"
 dependencies = [
@@ -2808,7 +2795,6 @@ dependencies = [
  "itp-sgx-crypto",
  "itp-stf-state-handler",
  "itp-storage",
- "itp-storage-verifier",
  "itp-teerex-storage",
  "itp-time-utils",
  "itp-types",
@@ -2945,7 +2931,6 @@ dependencies = [
  "itp-stf-executor",
  "itp-stf-state-handler",
  "itp-storage",
- "itp-storage-verifier",
  "itp-test",
  "itp-time-utils",
  "itp-types",
@@ -3160,7 +3145,6 @@ dependencies = [
  "frame-support",
  "itp-ocall-api",
  "itp-storage",
- "itp-storage-verifier",
  "itp-teerex-storage",
  "itp-test",
  "itp-types",

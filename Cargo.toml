@@ -29,7 +29,6 @@ members = [
     "core-primitives/stf-executor",
     "core-primitives/stf-state-handler",
     "core-primitives/storage",
-    "core-primitives/storage-verified",
     "core-primitives/teerex-storage",
     "core-primitives/test",
     "core-primitives/time-utils",

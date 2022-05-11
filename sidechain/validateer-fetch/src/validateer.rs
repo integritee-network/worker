@@ -17,7 +17,7 @@
 
 use crate::error::{Error, Result};
 use frame_support::ensure;
-use itp_storage_verifier::GetStorageVerified;
+use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_teerex_storage::{TeeRexStorage, TeerexStorageKeys};
 use itp_types::Enclave;
 use sp_core::H256;
@@ -33,7 +33,7 @@ pub trait ValidateerFetch {
 		-> Result<u64>;
 }
 
-impl<OnchainStorage: GetStorageVerified> ValidateerFetch for OnchainStorage {
+impl<OnchainStorage: EnclaveOnChainOCallApi> ValidateerFetch for OnchainStorage {
 	fn current_validateers<Header: HeaderT<Hash = H256>>(
 		&self,
 		header: &Header,

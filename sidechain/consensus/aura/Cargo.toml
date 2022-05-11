@@ -26,7 +26,6 @@ itp-settings = { path = "../../../core-primitives/settings" }
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
 itp-stf-executor = { path = "../../../core-primitives/stf-executor", default-features = false }
 itp-stf-state-handler = { path = "../../../core-primitives/stf-state-handler", default-features = false }
-itp-storage-verifier = { path =  "../../../core-primitives/storage-verified", default-features = false }
 itp-time-utils = { path = "../../../core-primitives/time-utils", default-features = false }
 itp-types = { path = "../../../core-primitives/types", default-features = false }
 its-block-composer = { path = "../../block-composer", default-features = false }
@@ -57,7 +56,6 @@ std = [
    "itp-sgx-crypto/std",
    "itp-stf-executor/std",
    "itp-stf-state-handler/std",
-   "itp-storage-verifier/std",
    "itp-time-utils/std",
    "itp-types/std",
    "its-block-composer/std",

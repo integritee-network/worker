@@ -30,7 +30,6 @@ itp-teerex-storage = { path = "../teerex-storage", default-features = false }
 itp-time-utils = { path = "../time-utils", default-features = false }
 itp-types = { path = "../types", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
-itp-storage-verifier = { path = "../storage-verified", default-features = false }
 itp-storage = { path = "../storage", default-features = false, features = ["test"] }
 
 [features]
@@ -48,7 +47,6 @@ std = [
     "itp-time-utils/std",
     "itp-types/std",
     "itp-ocall-api/std",
-    "itp-storage-verifier/std",
     "jsonrpc-core",
 ]
 sgx = [

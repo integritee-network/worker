@@ -22,6 +22,6 @@ pub type Result<T> = core::result::Result<T, Error>;
 #[derive(Debug, Display, From)]
 pub enum Error {
 	Codec(codec::Error),
-	Onchain(itp_storage_verifier::Error),
+	Onchain(itp_ocall_api::Error),
 	Other(&'static str),
 }
