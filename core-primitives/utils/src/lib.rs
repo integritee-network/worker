@@ -60,15 +60,11 @@ pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) -> Res
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use std::assert_matches::assert_matches;
 
 	#[test]
 	fn write_slice_and_whitespace_pad_returns_error_if_buffer_too_small() {
 		let mut writable = vec![0; 32];
 		let data = vec![1; 33];
-		assert_matches!(
-			write_slice_and_whitespace_pad(&mut writable, data),
-			Err(Error::InsufficientBufferSize(_, _))
-		);
+		assert!(write_slice_and_whitespace_pad(&mut writable, data).is_err());
 	}
 }
