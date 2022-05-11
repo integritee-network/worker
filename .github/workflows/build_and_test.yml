@@ -46,11 +46,10 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: build.Dockerfile
+          file: test.Dockerfile
           target: enclave-test
           load: true
           tags: integritee-worker-enclave-test-${{ github.sha }}
-          cache-to: type=inline,mode=max
 
       - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
         run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-enclave-test-${{ github.sha }}
@@ -59,7 +58,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: build.Dockerfile
+          file: test.Dockerfile
           target: cargo-test
           load: true
           tags: integritee-worker-ctest-${{ github.sha }}
@@ -72,7 +71,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: build.Dockerfile
+          file: test.Dockerfile
           target: cargo-test
           tags: integritee-worker-${{ github.sha }}
           cache-from: integritee-worker-enclave-test-${{ github.sha }}
