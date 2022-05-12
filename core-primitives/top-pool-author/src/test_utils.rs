@@ -19,12 +19,12 @@
 use crate::sgx_reexport_prelude::*;
 
 use crate::traits::AuthorApi;
-use codec::Encode;
 use ita_stf::{ShardIdentifier, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
 use itp_sgx_crypto::ShieldingCrypto;
 use jsonrpc_core::futures::executor;
 use sp_core::H256;
 use std::{fmt::Debug, vec::Vec};
+use itp_utils::encrypt_to_hex_bytes;
 
 /// Test utility function to submit a trusted operation on an RPC author
 pub fn submit_operation_to_top_pool<R, S>(
@@ -38,7 +38,8 @@ where
 	S: ShieldingCrypto,
 	S::Error: Debug,
 {
-	let top_encrypted = shielding_key.encrypt(top.encode().as_slice()).unwrap();
+
+	let top_encrypted = encrypt_to_hex_bytes(shielding_key, top).unwrap();
 	let submit_future = async { author.submit_top(top_encrypted, shard).await };
 	executor::block_on(submit_future)
 }

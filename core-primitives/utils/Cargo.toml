@@ -9,13 +9,14 @@ edition = "2018"
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 
+# local
+itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
+
 # substrate
 frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19" }
 
 # teaclave
-sgx_crypto_helper = { default-features = false, branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # sgx enabled external libraries
 thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
@@ -27,10 +28,12 @@ default = ["std"]
 std = [
     "codec/std",
     "hex/std",
+    "itp-sgx-crypto/std",
     "frame-support/std",
     "thiserror",
 ]
 sgx = [
     "sgx_tstd",
     "thiserror_sgx",
+    "itp-sgx-crypto/sgx",
 ]

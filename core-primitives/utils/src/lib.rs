@@ -37,8 +37,8 @@ pub use error::{Error, Result};
 
 use codec::Encode;
 use frame_support::ensure;
-use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
-use std::{string::String, vec::Vec};
+use itp_sgx_crypto::ShieldingCrypto;
+use std::{format, string::String, vec::Vec};
 
 /// Hex encodes given data and preappends a "0x".
 pub fn hex_encode(data: Vec<u8>) -> String {
@@ -48,15 +48,13 @@ pub fn hex_encode(data: Vec<u8>) -> String {
 }
 
 /// Encrypts and hex encodes data with a given public key.
-pub fn encrypt_to_hex_bytes<E: Encode>(
-	encryption_key: Rsa3072PubKey,
-	to_encrypt: E,
+pub fn encrypt_to_hex_bytes<Key: ShieldingCrypto, E: Encode>(
+	encryption_key: &Key,
+	data: E,
 ) -> Result<Vec<u8>> {
-	let encoded = to_encrypt.encode();
-	let mut encrypted: Vec<u8> = Vec::new();
-	encryption_key
-		.encrypt_buffer(&encoded, &mut encrypted)
-		.map_err(Error::Encryption)?;
+	let encrypted = encryption_key
+		.encrypt(data.encode().as_slice())
+		.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 
 	let hex_encoded = hex_encode(encrypted);
 
