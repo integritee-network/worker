@@ -5,40 +5,6 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 resolver = "2"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[features]
-default = ["std"]
-std = [
-    "ita-stf/std",
-    "itp-sgx-crypto/std",
-    "itc-direct-rpc-server/std",
-    "itc-tls-websocket-server/std",
-    "itp-enclave-metrics/std",
-    "itp-ocall-api/std",
-    "itp-stf-state-handler/std",
-    "itp-top-pool/std",
-    "itp-types/std",
-    "jsonrpc-core",
-    "log/std",
-    "thiserror",
-]
-sgx = [
-    "sgx_tstd",
-    "sgx-crypto-helper",
-    "jsonrpc-core_sgx",
-    "ita-stf/sgx",
-    "itc-direct-rpc-server/sgx",
-    "itc-tls-websocket-server/sgx",
-    "itp-enclave-metrics/sgx",
-    "itp-sgx-crypto/sgx",
-    "itp-stf-state-handler/sgx",
-    "itp-top-pool/sgx",
-    "itp-types/sgx",
-    "thiserror_sgx",
-]
-test = [ "itp-test/sgx", "itp-top-pool/mocks" ]
-
 [dependencies]
 # sgx dependencies
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
@@ -56,6 +22,7 @@ itp-stf-state-handler = { path = "../stf-state-handler", default-features = fals
 itp-test = { path = "../test", default-features = false, optional = true }
 itp-top-pool = { path = "../top-pool", default-features = false }
 itp-types = { path = "../types", default-features = false }
+itp-utils = { path = "../utils", default-features = false }
 
 # sgx enabled external libraries
 jsonrpc-core_sgx = { package = "jsonrpc-core", git = "https://github.com/scs/jsonrpc", branch = "no_std", default-features = false, optional = true }
@@ -74,3 +41,39 @@ sp-runtime = { version = "6.0.0", default-features = false, git = "https://githu
 
 [dev-dependencies]
 itp-sgx-crypto = { path = "../sgx/crypto", features = ["mocks"] }
+
+
+
+[features]
+default = ["std"]
+std = [
+    "ita-stf/std",
+    "itp-sgx-crypto/std",
+    "itc-direct-rpc-server/std",
+    "itc-tls-websocket-server/std",
+    "itp-enclave-metrics/std",
+    "itp-ocall-api/std",
+    "itp-stf-state-handler/std",
+    "itp-top-pool/std",
+    "itp-types/std",
+    "itp-utils/std",
+    "jsonrpc-core",
+    "log/std",
+    "thiserror",
+]
+sgx = [
+    "sgx_tstd",
+    "sgx-crypto-helper",
+    "jsonrpc-core_sgx",
+    "ita-stf/sgx",
+    "itc-direct-rpc-server/sgx",
+    "itc-tls-websocket-server/sgx",
+    "itp-enclave-metrics/sgx",
+    "itp-sgx-crypto/sgx",
+    "itp-stf-state-handler/sgx",
+    "itp-top-pool/sgx",
+    "itp-types/sgx",
+    "itp-utils/sgx",
+    "thiserror_sgx",
+]
+test = [ "itp-test/sgx", "itp-top-pool/mocks" ]

@@ -16,9 +16,7 @@
 */
 
 use crate::Cli;
-use codec::Encode;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
-use itp_utils::hex_encode;
 use log::*;
 use my_node_runtime::{AccountId, Signature};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
@@ -35,21 +33,6 @@ pub(crate) const KEYSTORE_PATH: &str = "my_keystore";
 pub(crate) fn get_shielding_key(cli: &Cli) -> Result<Rsa3072PubKey, String> {
 	let worker_api_direct = get_worker_api_direct(cli);
 	worker_api_direct.get_rsa_pubkey().map_err(|e| e.to_string())
-}
-
-pub(crate) fn encrypt_to_hex_bytes<E: Encode>(
-	encryption_key: Rsa3072PubKey,
-	to_encrypt: E,
-) -> Result<Vec<u8>, String> {
-	let encoded = to_encrypt.encode();
-	let mut encrypted: Vec<u8> = Vec::new();
-	encryption_key
-		.encrypt_buffer(&encoded, &mut encrypted)
-		.map_err(|e| e.to_string())?;
-
-	let hex_encoded = hex_encode(encrypted);
-
-	Ok(hex_encoded.into_bytes())
 }
 
 pub(crate) fn get_chain_api(cli: &Cli) -> Api<sr25519::Pair, WsRpcClient> {

@@ -35,16 +35,35 @@ mod error;
 
 pub use error::{Error, Result};
 
+use codec::Encode;
 use frame_support::ensure;
-use hex;
+use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use std::{string::String, vec::Vec};
 
+/// Hex encodes given data and preappends a "0x".
 pub fn hex_encode(data: Vec<u8>) -> String {
 	let mut hex_str = hex::encode(data);
 	hex_str.insert_str(0, "0x");
 	hex_str
 }
 
+/// Encrypts and hex encodes data with a given public key.
+pub fn encrypt_to_hex_bytes<E: Encode>(
+	encryption_key: Rsa3072PubKey,
+	to_encrypt: E,
+) -> Result<Vec<u8>> {
+	let encoded = to_encrypt.encode();
+	let mut encrypted: Vec<u8> = Vec::new();
+	encryption_key
+		.encrypt_buffer(&encoded, &mut encrypted)
+		.map_err(Error::Encryption)?;
+
+	let hex_encoded = hex_encode(encrypted);
+
+	Ok(hex_encoded.into_bytes())
+}
+
+/// Fills a given buffer with data and fill the left over buffer space with white spaces.
 pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) -> Result<()> {
 	ensure!(
 		data.len() <= writable.len(),
@@ -63,6 +82,13 @@ mod tests {
 
 	#[test]
 	fn write_slice_and_whitespace_pad_returns_error_if_buffer_too_small() {
+		let mut writable = vec![0; 32];
+		let data = vec![1; 33];
+		assert!(write_slice_and_whitespace_pad(&mut writable, data).is_err());
+	}
+
+	#[test]
+	fn hex_encoding_round_trip_works() {
 		let mut writable = vec![0; 32];
 		let data = vec![1; 33];
 		assert!(write_slice_and_whitespace_pad(&mut writable, data).is_err());

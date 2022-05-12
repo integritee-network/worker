@@ -1590,6 +1590,7 @@ dependencies = [
  "itp-test",
  "itp-top-pool",
  "itp-types",
+ "itp-utils",
  "jsonrpc-core",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "parity-scale-codec",
@@ -1624,7 +1625,10 @@ version = "0.8.0"
 dependencies = [
  "frame-support 4.0.0-dev (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
  "hex",
+ "parity-scale-codec",
+ "sgx_crypto_helper",
  "sgx_tstd",
+ "sgx_types",
  "thiserror 1.0.9",
 ]
 

@@ -2926,6 +2926,7 @@ dependencies = [
  "itp-test",
  "itp-top-pool",
  "itp-types",
+ "itp-utils",
  "jsonrpc-core 16.1.0",
  "jsonrpc-core 18.0.0",
  "log 0.4.17",
@@ -2963,7 +2964,10 @@ version = "0.8.0"
 dependencies = [
  "frame-support 4.0.0-dev (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
  "hex",
+ "parity-scale-codec",
+ "sgx_crypto_helper",
  "sgx_tstd",
+ "sgx_types",
  "thiserror 1.0.31",
  "thiserror 1.0.9",
 ]

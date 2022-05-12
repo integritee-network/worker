@@ -16,10 +16,7 @@
 */
 
 use crate::{
-	command_utils::{
-		encrypt_to_hex_bytes, get_chain_api, get_pair_from_str, get_shielding_key,
-		get_worker_api_direct,
-	},
+	command_utils::{get_chain_api, get_pair_from_str, get_shielding_key, get_worker_api_direct},
 	trusted_commands::TrustedArgs,
 	Cli,
 };
@@ -31,6 +28,7 @@ use itp_node_api_extensions::TEEREX;
 use itp_types::{
 	DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue, TrustedOperationStatus,
 };
+use itp_utils::encrypt_to_hex_bytes;
 use log::*;
 use my_node_runtime::{AccountId, Hash};
 use sp_core::{sr25519 as sr25519_core, Pair, H256};
