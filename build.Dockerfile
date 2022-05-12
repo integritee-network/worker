@@ -51,31 +51,61 @@ WORKDIR /root/work/worker
 
 CMD cargo test
 
-
-### Deployment stage
+### Base Runner Stage
 ##################################################
-FROM ubuntu:20.04 AS deployed
-LABEL maintainer="zoltan@integritee.network"
-
-WORKDIR /usr/local/bin
+FROM ubuntu:20.04 AS runner
 
 RUN apt update && apt install -y libssl-dev iproute2
 
-COPY --from=builder /opt/sgxsdk/lib64 /opt/sgxsdk/lib64
-COPY --from=builder /root/work/worker/bin/* ./
 COPY --from=powerman/dockerize /usr/local/bin/dockerize /usr/local/bin/dockerize
+
+
+### Deployed CLI client
+##################################################
+FROM runner AS deployed-client
+LABEL maintainer="zoltan@integritee.network"
+
+ARG SCRIPT_DIR=/usr/local/scripts
+# The 'CLIENT_DIR' is set to the directory of the shell scripts, not the client binary,
+# which is confusing. But that's the naming that was chosen in the scripts unfortunately.
+ARG CLIENT_DIR=/usr/local/worker-cli
+ARG LOG_DIR=/usr/local/log
+
+ENV CLIENT_DIR ${CLIENT_DIR}
+ENV LOG_DIR ${LOG_DIR}
+
+COPY --from=builder /root/work/worker/bin/integritee-cli /usr/local/bin
+COPY ./cli/*.sh /usr/local/worker-cli/
+COPY ./scripts/*.sh /usr/local/scripts/
+
+RUN chmod +x /usr/local/bin/integritee-cli ${CLIENT_DIR}/*.sh ${SCRIPT_DIR}/*.sh
+RUN mkdir ${LOG_DIR}
+
+RUN ldd /usr/local/bin/integritee-cli && \
+	/usr/local/bin/integritee-cli --version
+
+ENTRYPOINT ["/usr/local/bin/integritee-cli"]
+
+
+### Deployed worker service
+##################################################
+FROM runner AS deployed-worker
+LABEL maintainer="zoltan@integritee.network"
 
 ENV SGX_SDK /opt/sgxsdk
 ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${SGX_SDK}/lib64"
 
+WORKDIR /usr/local/bin
+
+COPY --from=builder /opt/sgxsdk/lib64 /opt/sgxsdk/lib64
+COPY --from=builder /root/work/worker/bin/* ./
+
+RUN touch spid.txt key.txt
 RUN chmod +x /usr/local/bin/integritee-service
 RUN ls -al /usr/local/bin
 
 # checks
 RUN ldd /usr/local/bin/integritee-service && \
 	/usr/local/bin/integritee-service --version
-
-WORKDIR /root/work/worker/bin
-RUN touch spid.txt key.txt
 
 ENTRYPOINT ["/usr/local/bin/integritee-service"]

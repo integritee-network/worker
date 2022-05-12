@@ -81,7 +81,7 @@ jobs:
         run: docker run --rm integritee-worker-ctest-${{ github.sha }}
 
       - name: Build Deployable Image
-        run: docker build --output=type=docker,dest=/tmp/integritee-worker.tar --target=deployed -f build.Dockerfile .
+        run: docker build --output=type=docker,dest=/tmp/integritee-worker.tar --target=deployed-worker -f build.Dockerfile .
 #        uses: docker/build-push-action@v2
 #        with:
 #          context: .

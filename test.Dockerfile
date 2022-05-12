@@ -60,7 +60,7 @@ CMD cargo test
 
 ### Deployment stage
 ##################################################
-FROM ubuntu:20.04 AS deployed
+FROM ubuntu:20.04 AS deployed-worker
 LABEL maintainer="zoltan@integritee.network"
 
 WORKDIR /usr/local/bin

@@ -1,7 +1,8 @@
-version: "3.3"
+version: "3.4"
 services:
   integritee-node:
     image: "integritee/integritee-node-dev:1.0.10"
+    container_name: integritee-node
     ports:
       - "9912:9912"
     command: --dev --rpc-methods unsafe --ws-external --rpc-external --ws-port 9912
@@ -13,6 +14,7 @@ services:
     build:
       context: ..
       dockerfile: build.Dockerfile
+      target: deployed-worker
     depends_on: ['integritee-node']
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
@@ -31,6 +33,7 @@ services:
     build:
       context: ..
       dockerfile: build.Dockerfile
+      target: deployed-worker
     depends_on: ['integritee-node', 'integritee-worker-1']
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
@@ -42,4 +45,16 @@ services:
       /usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-2 -T wss://integritee-worker-2 
       -u ws://integritee-node -U ws://integritee-worker-2 -P 2012 -w 2102 -p 9912 -h 4646
       run --dev --skip-ra --request-state"
+    restart: "no"
+  sidechain-integration-test:
+    image: integritee-cli:dev
+    container_name: integritee-integration-test
+    build:
+      context: ..
+      dockerfile: build.Dockerfile
+      target: deployed-client
+    depends_on: ['integritee-node', 'integritee-worker-1', 'integritee-worker-2']
+    entrypoint: "dockerize -wait http://integritee-worker-2:4646/is_initialized -timeout 250s    
+      /usr/local/worker-cli/demo_sidechain.sh -p 9912 -A 2011 -B 2012 -u ws://integritee-node 
+      -W wss://integritee-worker-1 -V wss://integritee-worker-2 -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"
