@@ -27,7 +27,7 @@ use crate::{
 	StateTypeDiff, Stf, StfError, StfResult, TrustedCall, TrustedCallSigned, TrustedGetter,
 };
 use codec::Encode;
-use itp_settings::node::{TEEREX_MODULE, UNSHIELD};
+use itp_settings::node::{TEEREX_MODULE, UNSHIELD_FUNDS};
 use itp_storage::storage_value_key;
 use itp_types::OpaqueCall;
 use its_primitives::types::{BlockHash, BlockNumber as SidechainBlockNumber, Timestamp};
@@ -162,7 +162,7 @@ impl Stf {
 
 					Self::unshield_funds(account_incognito, value)?;
 					calls.push(OpaqueCall::from_tuple(&(
-						[TEEREX_MODULE, UNSHIELD],
+						[TEEREX_MODULE, UNSHIELD_FUNDS],
 						beneficiary,
 						value,
 						shard,

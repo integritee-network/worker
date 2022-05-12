@@ -625,21 +625,18 @@ fn print_events(events: Events, _sender: Sender<String>) {
 					},
 				}
 			},
-			Event::Sidechain(re) => {
-				debug!("{:?}", re);
-				match &re {
-					my_node_runtime::pallet_sidechain::Event::ProposedSidechainBlock(
-						sender,
-						payload,
-					) => {
-						info!("[+] Received ProposedSidechainBlock event");
-						debug!("    From:    {:?}", sender);
-						debug!("    Payload: {:?}", hex::encode(payload));
-					},
-					_ => {
-						trace!("Ignoring unsupported pallet_sidechain event");
-					},
-				}
+			Event::Sidechain(re) => match &re {
+				my_node_runtime::pallet_sidechain::Event::ProposedSidechainBlock(
+					sender,
+					payload,
+				) => {
+					info!("[+] Received ProposedSidechainBlock event");
+					debug!("    From:    {:?}", sender);
+					debug!("    Payload: {:?}", hex::encode(payload));
+				},
+				_ => {
+					trace!("Ignoring unsupported pallet_sidechain event");
+				},
 			},
 			_ => {
 				trace!("Ignoring event {:?}", evr);

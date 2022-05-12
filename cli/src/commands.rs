@@ -323,7 +323,6 @@ fn listen(cli: &Cli, events_arg: &Option<u32>, blocks_arg: &Option<u32>) {
 							}
 						},
 						Event::Sidechain(ee) => {
-							println!(">>>>>>>>>> integritee event: {:?}", ee);
 							count += 1;
 							match &ee {
 								my_node_runtime::pallet_sidechain::Event::ProposedSidechainBlock(
