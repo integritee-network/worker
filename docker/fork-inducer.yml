@@ -6,7 +6,12 @@ services:
       context: .
       dockerfile: fork.Dockerfile
     depends_on: [ 'integritee-node', 'integritee-worker-1', 'integritee-worker-2' ]
+    networks:
+      - integritee-test-network
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     entrypoint: "dockerize -wait http://integritee-worker-2:4646/is_initialized -timeout 250s
-     pumba netem --interface eth0 --duration 10s delay --time 800 integritee-worker-2"
+     pumba --interval 30s netem --interface eth0 --target integritee-worker-2 --duration 10s delay --time 900 integritee-worker-2"
+networks:
+  integritee-test-network:
+    driver: bridge

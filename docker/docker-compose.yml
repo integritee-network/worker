@@ -3,6 +3,8 @@ services:
   integritee-node:
     image: "integritee/integritee-node-dev:1.0.10"
     container_name: integritee-node
+    networks:
+      - integritee-test-network
     ports:
       - "9912:9912"
     command: --dev --rpc-methods unsafe --ws-external --rpc-external --ws-port 9912
@@ -18,6 +20,8 @@ services:
     depends_on: ['integritee-node']
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
+    networks:
+      - integritee-test-network
     ports:
       - "4645:4645"
       - "2011:2011"
@@ -37,6 +41,8 @@ services:
     depends_on: ['integritee-node', 'integritee-worker-1']
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
+    networks:
+      - integritee-test-network
     ports:
       - "2012:2012"
       - "2102:2102"
@@ -46,3 +52,6 @@ services:
       -u ws://integritee-node -U ws://integritee-worker-2 -P 2012 -w 2102 -p 9912 -h 4646
       run --dev --skip-ra --request-state"
     restart: "no"
+networks:
+  integritee-test-network:
+    driver: bridge

@@ -32,15 +32,15 @@ Mind the indent. Explanations for all the logging drivers in `docker-compose` ca
 
 ## Run the integration tests
 ```
-docker-compose up --abort-on-container-exit --exit-code-from sidechain-integration-test
+docker-compose -f docker-compose.yml -f integration-test.yml up --exit-code-from sidechain-integration-test
 ```
 
 ## Run the fork simulator
 Build the docker-compose setup with
 ```
-docker-compose -f docker-compose.yml -f fork-inducer.yml build
+docker-compose -f docker-compose.yml -f fork-inducer.yml -f integration-test.yml build
 ```
 Run the 2-worker setup with a fork inducer (pumba) that delays the traffic on worker 2
 ```
-docker-compose -f docker-compose.yml -f fork-inducer.yml up --exit-code-from sidechain-integration-test
+docker-compose -f docker-compose.yml -f fork-inducer.yml -f integration-test.yml up --exit-code-from sidechain-integration-test
 ```
