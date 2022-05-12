@@ -2189,6 +2189,7 @@ dependencies = [
  "itc-rpc-client",
  "itp-node-api-extensions",
  "itp-types",
+ "itp-utils",
  "json",
  "log 0.4.17",
  "pallet-balances",

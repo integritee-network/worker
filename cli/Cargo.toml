@@ -39,7 +39,8 @@ sp-application-crypto = { version = "6.0.0", git = "https://github.com/paritytec
 sp-core = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
 
 #local dependencies
-itp-types = { path = "../core-primitives/types" }
 itp-node-api-extensions = { path = "../core-primitives/node-api-extensions" }
+itp-types = { path = "../core-primitives/types" }
+itp-utils = { path = "../core-primitives/utils" }
 ita-stf = { path = "../app-libs/stf" }
 itc-rpc-client = { path = "../core/rpc-client" }

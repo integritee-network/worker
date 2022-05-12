@@ -16,7 +16,10 @@
 */
 
 use crate::{
-	command_utils::{encode_encrypt, get_chain_api, get_pair_from_str, get_worker_api_direct},
+	command_utils::{
+		encrypt_to_hex_bytes, get_chain_api, get_pair_from_str, get_shielding_key,
+		get_worker_api_direct,
+	},
 	trusted_commands::TrustedArgs,
 	Cli,
 };
@@ -51,13 +54,8 @@ pub fn perform_trusted_operation(
 
 fn get_state(cli: &Cli, trusted_args: &TrustedArgs, getter: TrustedOperation) -> Option<Vec<u8>> {
 	// TODO: ensure getter is signed?
-	let (_operation_call_encoded, operation_call_encrypted) = match encode_encrypt(cli, getter) {
-		Ok((encoded, encrypted)) => (encoded, encrypted),
-		Err(msg) => {
-			println!("[Error] {}", msg);
-			return None
-		},
-	};
+	let encryption_key = get_shielding_key(cli).unwrap();
+	let operation_call_encrypted = encrypt_to_hex_bytes(encryption_key, getter).unwrap();
 	let shard = read_shard(trusted_args).unwrap();
 
 	// compose jsonrpc call
@@ -96,13 +94,8 @@ fn get_state(cli: &Cli, trusted_args: &TrustedArgs, getter: TrustedOperation) ->
 
 fn send_request(cli: &Cli, trusted_args: &TrustedArgs, call: TrustedCallSigned) -> Option<Vec<u8>> {
 	let chain_api = get_chain_api(cli);
-	let (_, call_encrypted) = match encode_encrypt(cli, call) {
-		Ok((encoded, encrypted)) => (encoded, encrypted),
-		Err(msg) => {
-			println!("[Error]: {}", msg);
-			return None
-		},
-	};
+	let encryption_key = get_shielding_key(cli).unwrap();
+	let call_encrypted = encrypt_to_hex_bytes(encryption_key, call).unwrap();
 
 	let shard = read_shard(trusted_args).unwrap();
 
@@ -161,14 +154,8 @@ fn send_direct_request(
 	trusted_args: &TrustedArgs,
 	operation_call: TrustedOperation,
 ) -> Option<Vec<u8>> {
-	let (_operation_call_encoded, operation_call_encrypted) =
-		match encode_encrypt(cli, operation_call) {
-			Ok((encoded, encrypted)) => (encoded, encrypted),
-			Err(msg) => {
-				println!("[Error] {}", msg);
-				return None
-			},
-		};
+	let encryption_key = get_shielding_key(cli).unwrap();
+	let operation_call_encrypted = encrypt_to_hex_bytes(encryption_key, operation_call).unwrap();
 	let shard = read_shard(trusted_args).unwrap();
 
 	// compose jsonrpc call
