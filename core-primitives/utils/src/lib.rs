@@ -35,9 +35,9 @@ mod error;
 
 pub use error::{Error, Result};
 
-use codec::Encode;
+use codec::{Decode, Encode};
 use frame_support::ensure;
-use itp_sgx_crypto::ShieldingCrypto;
+use itp_sgx_crypto::{ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
 use std::{format, string::String, vec::Vec};
 
 /// Hex encodes given data and preappends a "0x".
@@ -48,7 +48,7 @@ pub fn hex_encode(data: Vec<u8>) -> String {
 }
 
 /// Encrypts and hex encodes data with a given public key.
-pub fn encrypt_to_hex_bytes<Key: ShieldingCrypto, E: Encode>(
+pub fn shielding_encrypt_to_hex_bytes<Key: ShieldingCryptoEncrypt, E: Encode>(
 	encryption_key: &Key,
 	data: E,
 ) -> Result<Vec<u8>> {
@@ -59,6 +59,19 @@ pub fn encrypt_to_hex_bytes<Key: ShieldingCrypto, E: Encode>(
 	let hex_encoded = hex_encode(encrypted);
 
 	Ok(hex_encoded.into_bytes())
+}
+
+/// Encrypts and hex encodes data with a given public key.
+pub fn shielding_decrypt_from_hex_bytes<Key: ShieldingCryptoDecrypt, E: Decode>(
+	decryption_key: &Key,
+	hex_encoded_data: Vec<u8>,
+) -> Result<E> {
+	let encrypted_data = hex::decode(hex_encoded_data).map_err(Error::Hex)?;
+	let encoded_data = decryption_key
+		.decrypt(&encrypted_data)
+		.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
+	let decoded_data = E::decode(&mut encoded_data.as_slice()).map_err(Error::Codec)?;
+	Ok(decoded_data)
 }
 
 /// Fills a given buffer with data and fill the left over buffer space with white spaces.

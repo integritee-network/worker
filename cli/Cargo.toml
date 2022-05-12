@@ -38,8 +38,9 @@ sp-keyring = { version = "6.0.0", git = "https://github.com/paritytech/substrate
 sp-application-crypto = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
 sp-core = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
 
-#local dependencies
+# local dependencies
 itp-node-api-extensions = { path = "../core-primitives/node-api-extensions" }
+itp-sgx-crypto = { path = "../core-primitives/sgx/crypto" }
 itp-types = { path = "../core-primitives/types" }
 itp-utils = { path = "../core-primitives/utils" }
 ita-stf = { path = "../app-libs/stf" }

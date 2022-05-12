@@ -15,7 +15,7 @@
 
 */
 
-use itp_sgx_crypto::ShieldingCrypto;
+use itp_sgx_crypto::{ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
 use sgx_crypto_helper::{rsa3072::Rsa3072KeyPair, RsaKeyPair};
 use std::vec::Vec;
 
@@ -36,12 +36,16 @@ impl Default for ShieldingCryptoMock {
 	}
 }
 
-impl ShieldingCrypto for ShieldingCryptoMock {
+impl ShieldingCryptoEncrypt for ShieldingCryptoMock {
 	type Error = itp_sgx_crypto::Error;
 
 	fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error> {
 		self.key.encrypt(data)
 	}
+}
+
+impl ShieldingCryptoDecrypt for ShieldingCryptoMock {
+	type Error = itp_sgx_crypto::Error;
 
 	fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error> {
 		self.key.decrypt(data)

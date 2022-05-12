@@ -28,7 +28,7 @@ use codec::{Decode, Encode};
 use ita_stf::{hash, Getter, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
 use itp_enclave_metrics::EnclaveMetric;
 use itp_ocall_api::EnclaveMetricsOCallApi;
-use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCrypto};
+use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt};
 use itp_stf_state_handler::query_shard_state::QueryShardState;
 use itp_top_pool::{
 	error::{Error as PoolError, IntoPoolError},
@@ -65,7 +65,7 @@ where
 	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: QueryShardState,
 	ShieldingKeyRepository: AccessKey,
-	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCrypto,
+	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
 {
 	top_pool: Arc<TopPool>,
 	top_filter: TopFilter,
@@ -81,7 +81,7 @@ where
 	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: QueryShardState,
 	ShieldingKeyRepository: AccessKey,
-	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCrypto,
+	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
 {
 	/// Create new instance of Authoring API.
@@ -108,7 +108,7 @@ where
 	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: QueryShardState,
 	ShieldingKeyRepository: AccessKey,
-	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCrypto,
+	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
 {
 	fn process_top(
@@ -200,7 +200,7 @@ where
 	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: QueryShardState,
 	ShieldingKeyRepository: AccessKey,
-	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCrypto,
+	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
 {
 	fn submit_top(
@@ -295,7 +295,7 @@ where
 	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: QueryShardState,
 	ShieldingKeyRepository: AccessKey,
-	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCrypto,
+	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
 {
 	type Hash = <TopPool as TrustedOperationPool>::Hash;
@@ -312,7 +312,7 @@ where
 	TopFilter: Filter<Value = TrustedOperation>,
 	StateFacade: QueryShardState,
 	ShieldingKeyRepository: AccessKey,
-	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCrypto,
+	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
 {
 	type Hash = <TopPool as TrustedOperationPool>::Hash;

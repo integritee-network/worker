@@ -25,7 +25,7 @@ use ita_stf::{
 	Getter, KeyPair, ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedGetter,
 	TrustedOperation,
 };
-use itp_sgx_crypto::{mocks::KeyRepositoryMock, ShieldingCrypto};
+use itp_sgx_crypto::{mocks::KeyRepositoryMock, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{
 	handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock,

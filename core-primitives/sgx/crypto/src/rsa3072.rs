@@ -19,52 +19,20 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::{
 	error::{Error, Result},
-	traits::ShieldingCrypto,
+	traits::{ShieldingCryptoDecrypt, ShieldingCryptoEncrypt},
 };
-use derive_more::Display;
-use itp_settings::files::RSA3072_SEALED_KEY_FILE;
-use itp_sgx_io::{seal, unseal, SealedIO, StaticSealedIO};
-use log::*;
+
 use sgx_crypto_helper::{
 	rsa3072::{Rsa3072KeyPair, Rsa3072PubKey},
 	RsaKeyPair,
 };
-use std::{sgxfs::SgxFile, vec::Vec};
+use std::vec::Vec;
 
-#[derive(Copy, Clone, Debug, Display)]
-pub struct Rsa3072Seal;
+// Reexport sgx module
+#[cfg(feature = "sgx")]
+pub use sgx::*;
 
-impl StaticSealedIO for Rsa3072Seal {
-	type Error = Error;
-	type Unsealed = Rsa3072KeyPair;
-	fn unseal_from_static_file() -> Result<Self::Unsealed> {
-		let raw = unseal(RSA3072_SEALED_KEY_FILE)?;
-		let key: Rsa3072KeyPair =
-			serde_json::from_slice(&raw).map_err(|e| Error::Other(format!("{:?}", e).into()))?;
-		Ok(key.into())
-	}
-
-	fn seal_to_static_file(unsealed: Rsa3072KeyPair) -> Result<()> {
-		let key_json =
-			serde_json::to_vec(&unsealed).map_err(|e| Error::Other(format!("{:?}", e).into()))?;
-		Ok(seal(&key_json, RSA3072_SEALED_KEY_FILE)?)
-	}
-}
-
-impl SealedIO for Rsa3072Seal {
-	type Error = Error;
-	type Unsealed = Rsa3072KeyPair;
-
-	fn unseal(&self) -> Result<Self::Unsealed> {
-		Self::unseal_from_static_file()
-	}
-
-	fn seal(&self, unsealed: Self::Unsealed) -> Result<()> {
-		Self::seal_to_static_file(unsealed)
-	}
-}
-
-impl ShieldingCrypto for Rsa3072KeyPair {
+impl ShieldingCryptoEncrypt for Rsa3072KeyPair {
 	type Error = Error;
 
 	fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>> {
@@ -73,6 +41,10 @@ impl ShieldingCrypto for Rsa3072KeyPair {
 			.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 		Ok(cipher_buffer)
 	}
+}
+
+impl ShieldingCryptoDecrypt for Rsa3072KeyPair {
+	type Error = Error;
 
 	fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>> {
 		let mut decrypted_buffer = Vec::new();
@@ -82,24 +54,80 @@ impl ShieldingCrypto for Rsa3072KeyPair {
 	}
 }
 
-impl Rsa3072Seal {
-	pub fn unseal_pubkey() -> Result<Rsa3072PubKey> {
-		let pair = Self::unseal_from_static_file()?;
-		let pubkey = pair.export_pubkey().map_err(|e| Error::Other(format!("{:?}", e).into()))?;
-		Ok(pubkey)
+impl ShieldingCryptoEncrypt for Rsa3072PubKey {
+	type Error = Error;
+
+	fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>> {
+		let mut cipher_buffer = Vec::new();
+		self.encrypt_buffer(data, &mut cipher_buffer)
+			.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
+		Ok(cipher_buffer)
 	}
 }
 
-pub fn create_sealed_if_absent() -> Result<()> {
-	if SgxFile::open(RSA3072_SEALED_KEY_FILE).is_err() {
-		info!("[Enclave] Keyfile not found, creating new! {}", RSA3072_SEALED_KEY_FILE);
-		return create_sealed()
-	}
-	Ok(())
-}
+#[cfg(feature = "sgx")]
+pub mod sgx {
+	use super::*;
+	use derive_more::Display;
+	use itp_settings::files::RSA3072_SEALED_KEY_FILE;
+	use itp_sgx_io::{seal, unseal, SealedIO, StaticSealedIO};
+	use log::*;
+	use std::sgxfs::SgxFile;
 
-pub fn create_sealed() -> Result<()> {
-	let rsa_keypair = Rsa3072KeyPair::new().map_err(|e| Error::Other(format!("{:?}", e).into()))?;
-	// println!("[Enclave] generated RSA3072 key pair. Cleartext: {}", rsa_key_json);
-	Rsa3072Seal::seal_to_static_file(rsa_keypair)
+	impl Rsa3072Seal {
+		pub fn unseal_pubkey() -> Result<Rsa3072PubKey> {
+			let pair = Self::unseal_from_static_file()?;
+			let pubkey =
+				pair.export_pubkey().map_err(|e| Error::Other(format!("{:?}", e).into()))?;
+			Ok(pubkey)
+		}
+	}
+
+	pub fn create_sealed_if_absent() -> Result<()> {
+		if SgxFile::open(RSA3072_SEALED_KEY_FILE).is_err() {
+			info!("[Enclave] Keyfile not found, creating new! {}", RSA3072_SEALED_KEY_FILE);
+			return create_sealed()
+		}
+		Ok(())
+	}
+
+	pub fn create_sealed() -> Result<()> {
+		let rsa_keypair =
+			Rsa3072KeyPair::new().map_err(|e| Error::Other(format!("{:?}", e).into()))?;
+		// println!("[Enclave] generated RSA3072 key pair. Cleartext: {}", rsa_key_json);
+		Rsa3072Seal::seal_to_static_file(rsa_keypair)
+	}
+
+	#[derive(Copy, Clone, Debug, Display)]
+	pub struct Rsa3072Seal;
+
+	impl StaticSealedIO for Rsa3072Seal {
+		type Error = Error;
+		type Unsealed = Rsa3072KeyPair;
+		fn unseal_from_static_file() -> Result<Self::Unsealed> {
+			let raw = unseal(RSA3072_SEALED_KEY_FILE)?;
+			let key: Rsa3072KeyPair = serde_json::from_slice(&raw)
+				.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
+			Ok(key.into())
+		}
+
+		fn seal_to_static_file(unsealed: Rsa3072KeyPair) -> Result<()> {
+			let key_json = serde_json::to_vec(&unsealed)
+				.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
+			Ok(seal(&key_json, RSA3072_SEALED_KEY_FILE)?)
+		}
+	}
+
+	impl SealedIO for Rsa3072Seal {
+		type Error = Error;
+		type Unsealed = Rsa3072KeyPair;
+
+		fn unseal(&self) -> Result<Self::Unsealed> {
+			Self::unseal_from_static_file()
+		}
+
+		fn seal(&self, unsealed: Self::Unsealed) -> Result<()> {
+			Self::seal_to_static_file(unsealed)
+		}
+	}
 }

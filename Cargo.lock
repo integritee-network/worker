@@ -2188,6 +2188,7 @@ dependencies = [
  "ita-stf",
  "itc-rpc-client",
  "itp-node-api-extensions",
+ "itp-sgx-crypto",
  "itp-types",
  "itp-utils",
  "json",

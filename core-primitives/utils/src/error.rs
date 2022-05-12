@@ -27,6 +27,10 @@ pub type Result<T> = core::result::Result<T, Error>;
 pub enum Error {
 	#[error("Insufficient buffer size. Actual: {0}, required: {1}")]
 	InsufficientBufferSize(usize, usize),
+	#[error("Could not decode from hex data: {0}")]
+	Hex(hex::FromHexError),
+	#[error("Could not decode: {0}")]
+	Codec(codec::Error),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }

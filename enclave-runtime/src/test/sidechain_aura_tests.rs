@@ -32,7 +32,7 @@ use itc_parentchain::light_client::mocks::validator_access_mock::ValidatorAccess
 use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::sidechain::SLOT_DURATION;
-use itp_sgx_crypto::{Aes, ShieldingCrypto, StateCrypto};
+use itp_sgx_crypto::{Aes, ShieldingCryptoEncrypt, StateCrypto};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::{
 	builders::parentchain_header_builder::ParentchainHeaderBuilder,
@@ -202,7 +202,7 @@ pub fn produce_sidechain_block_and_import_it() {
 
 fn encrypted_trusted_operation_transfer_balance<
 	AttestationApi: EnclaveAttestationOCallApi,
-	ShieldingKey: ShieldingCrypto,
+	ShieldingKey: ShieldingCryptoEncrypt,
 >(
 	attestation_api: &AttestationApi,
 	shard_id: &ShardIdentifier,
