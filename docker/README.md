@@ -42,5 +42,5 @@ docker-compose -f docker-compose.yml -f fork-inducer.yml build
 ```
 Run the 2-worker setup with a fork inducer (pumba) that delays the traffic on worker 2
 ```
-docker-compose -f docker-compose.yml -f fork-inducer.yml up
+docker-compose -f docker-compose.yml -f fork-inducer.yml up --exit-code-from sidechain-integration-test
 ```

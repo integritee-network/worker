@@ -6,5 +6,6 @@ ci/
 docker/
 docs/
 local-setup/
+scripts/
 *.Dockerfile
 Dockerfile

@@ -9,4 +9,4 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     entrypoint: "dockerize -wait http://integritee-worker-2:4646/is_initialized -timeout 250s
-     pumba netem --interface eth0 --duration 5s delay --time 800 integritee-worker-2"
+     pumba netem --interface eth0 --duration 10s delay --time 800 integritee-worker-2"
