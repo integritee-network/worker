@@ -16,9 +16,7 @@
 
 */
 
-use crate::{
-	ocall_bridge::bridge_api::{Bridge, WorkerOnChainBridge},
-};
+use crate::ocall_bridge::bridge_api::{Bridge, WorkerOnChainBridge};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use sgx_types::sgx_status_t;

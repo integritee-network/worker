@@ -30,6 +30,7 @@ use substrate_client_keystore::LocalKeystore;
 type AccountPublic = <Signature as Verify>::Signer;
 pub(crate) const KEYSTORE_PATH: &str = "my_keystore";
 
+/// Retrieves the public shielding key via the enclave websocket server.
 pub(crate) fn get_shielding_key(cli: &Cli) -> Result<Rsa3072PubKey, String> {
 	let worker_api_direct = get_worker_api_direct(cli);
 	worker_api_direct.get_rsa_pubkey().map_err(|e| e.to_string())

@@ -19,12 +19,12 @@
 use crate::sgx_reexport_prelude::*;
 
 use crate::traits::AuthorApi;
+use codec::Encode;
 use ita_stf::{ShardIdentifier, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use jsonrpc_core::futures::executor;
 use sp_core::H256;
 use std::{fmt::Debug, vec::Vec};
-use codec::Encode;
 
 /// Test utility function to submit a trusted operation on an RPC author
 pub fn submit_operation_to_top_pool<R, S>(
