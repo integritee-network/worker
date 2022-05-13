@@ -140,15 +140,14 @@ impl<
 
 		debug!("Import blocks to light-client!");
 		for signed_block in blocks_to_import.into_iter() {
-			let block = signed_block.block;
-			let justifications = signed_block.justifications.clone();
+			let block = signed_block.block.clone();
 
 			// Check if there are any extrinsics in the to-be-imported block that we sent and cached in the light-client before.
 			// If so, remove them now from the cache.
 			if let Err(e) = self.validator_accessor.execute_mut_on_validator(|v| {
 				v.check_xt_inclusion(v.num_relays(), &block)?;
 
-				v.submit_simple_header(v.num_relays(), block.header().clone(), justifications)
+				v.submit_simple_header(v.num_relays(), &signed_block)
 			}) {
 				error!("[Validator] Header submission failed: {:?}", e);
 				return Err(e.into())

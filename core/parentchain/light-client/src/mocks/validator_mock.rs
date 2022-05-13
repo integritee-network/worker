@@ -19,7 +19,7 @@ use crate::{error::Result, AuthorityList, HashFor, LightClientState, RelayId, Se
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_storage::StorageProof;
 use itp_types::Block;
-use sp_runtime::{traits::Block as BlockT, Justifications, OpaqueExtrinsic};
+use sp_runtime::{generic::SignedBlock, traits::Block as BlockT, Justifications, OpaqueExtrinsic};
 use std::vec::Vec;
 
 type Header = <Block as BlockT>::Header;
@@ -53,8 +53,7 @@ impl Validator<Block> for ValidatorMock {
 	fn submit_simple_header(
 		&mut self,
 		_relay_id: RelayId,
-		_header: Header,
-		_justifications: Option<Justifications>,
+		_signed_block: &SignedBlock<Block>,
 	) -> Result<()> {
 		Ok(())
 	}
