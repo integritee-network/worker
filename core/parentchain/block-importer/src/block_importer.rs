@@ -147,7 +147,7 @@ impl<
 			if let Err(e) = self.validator_accessor.execute_mut_on_validator(|v| {
 				v.check_xt_inclusion(v.num_relays(), &block)?;
 
-				v.submit_simple_header(v.num_relays(), &signed_block)
+				v.submit_block(v.num_relays(), &signed_block)
 			}) {
 				error!("[Validator] Header submission failed: {:?}", e);
 				return Err(e.into())

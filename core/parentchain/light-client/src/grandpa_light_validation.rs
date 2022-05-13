@@ -247,7 +247,7 @@ where
 		Ok(())
 	}
 
-	fn submit_simple_header(
+	fn submit_block(
 		&mut self,
 		relay_id: RelayId,
 		signed_block: &SignedBlock<Block>,

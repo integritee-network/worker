@@ -50,7 +50,7 @@ impl Validator<Block> for ValidatorMock {
 		Ok(())
 	}
 
-	fn submit_simple_header(
+	fn submit_block(
 		&mut self,
 		_relay_id: RelayId,
 		_signed_block: &SignedBlock<Block>,
