@@ -24,8 +24,7 @@ use codec::{Decode, Encode};
 use ita_stf::ShardIdentifier;
 use itc_rpc_client::direct_client::DirectApi;
 use itp_node_api_extensions::{PalletTeerexApi, TEEREX};
-use itp_sgx_crypto::{ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
-use itp_utils::shielding_encrypt_to_hex_bytes;
+use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use log::*;
 use my_node_runtime::{Balance, BalancesCall, Call, Event, Hash};
 use sp_application_crypto::{ed25519, sr25519};
@@ -368,7 +367,7 @@ fn shield_funds(cli: &Cli, arg_from: &str, arg_to: &str, amount: &Balance, shard
 	let to = get_accountid_from_str(arg_to);
 
 	let encryption_key = get_shielding_key(cli).unwrap();
-	let encrypted_recevier = shielding_encrypt_to_hex_bytes(&encryption_key, to).unwrap();
+	let encrypted_recevier = encryption_key.encrypt_to_hex_bytes(&to.encode()).unwrap();
 
 	// compose the extrinsic
 	let xt: UncheckedExtrinsicV4<([u8; 2], Vec<u8>, u128, H256)> =

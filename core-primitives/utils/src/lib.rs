@@ -34,44 +34,14 @@ pub mod sgx_reexport_prelude {
 mod error;
 
 pub use error::{Error, Result};
-
-use codec::{Decode, Encode};
 use frame_support::ensure;
-use itp_sgx_crypto::{ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
-use std::{format, string::String, vec::Vec};
+use std::{string::String, vec::Vec};
 
 /// Hex encodes given data and preappends a "0x".
 pub fn hex_encode(data: Vec<u8>) -> String {
 	let mut hex_str = hex::encode(data);
 	hex_str.insert_str(0, "0x");
 	hex_str
-}
-
-/// Encrypts and hex encodes data with a given public key.
-pub fn shielding_encrypt_to_hex_bytes<Key: ShieldingCryptoEncrypt, E: Encode>(
-	encryption_key: &Key,
-	data: E,
-) -> Result<Vec<u8>> {
-	let encrypted = encryption_key
-		.encrypt(data.encode().as_slice())
-		.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
-
-	let hex_encoded = hex_encode(encrypted);
-
-	Ok(hex_encoded.into_bytes())
-}
-
-/// Encrypts and hex encodes data with a given public key.
-pub fn shielding_decrypt_from_hex_bytes<Key: ShieldingCryptoDecrypt, E: Decode>(
-	decryption_key: &Key,
-	hex_encoded_data: Vec<u8>,
-) -> Result<E> {
-	let encrypted_data = hex::decode(hex_encoded_data).map_err(Error::Hex)?;
-	let encoded_data = decryption_key
-		.decrypt(&encrypted_data)
-		.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
-	let decoded_data = E::decode(&mut encoded_data.as_slice()).map_err(Error::Codec)?;
-	Ok(decoded_data)
 }
 
 /// Fills a given buffer with data and fill the left over buffer space with white spaces.
@@ -93,13 +63,6 @@ mod tests {
 
 	#[test]
 	fn write_slice_and_whitespace_pad_returns_error_if_buffer_too_small() {
-		let mut writable = vec![0; 32];
-		let data = vec![1; 33];
-		assert!(write_slice_and_whitespace_pad(&mut writable, data).is_err());
-	}
-
-	#[test]
-	fn hex_encoding_round_trip_works() {
 		let mut writable = vec![0; 32];
 		let data = vec![1; 33];
 		assert!(write_slice_and_whitespace_pad(&mut writable, data).is_err());

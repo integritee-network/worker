@@ -25,11 +25,10 @@ use codec::{Decode, Encode};
 use ita_stf::{ShardIdentifier, TrustedCallSigned, TrustedOperation};
 use itc_rpc_client::direct_client::DirectApi;
 use itp_node_api_extensions::TEEREX;
-use itp_sgx_crypto::{ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
+use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_types::{
 	DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue, TrustedOperationStatus,
 };
-use itp_utils::shielding_encrypt_to_hex_bytes;
 use log::*;
 use my_node_runtime::{AccountId, Hash};
 use sp_core::{sr25519 as sr25519_core, Pair, H256};
@@ -54,7 +53,7 @@ pub fn perform_trusted_operation(
 fn get_state(cli: &Cli, trusted_args: &TrustedArgs, getter: TrustedOperation) -> Option<Vec<u8>> {
 	// TODO: ensure getter is signed?
 	let encryption_key = get_shielding_key(cli).unwrap();
-	let operation_call_encrypted = shielding_encrypt_to_hex_bytes(&encryption_key, getter).unwrap();
+	let operation_call_encrypted = encryption_key.encrypt_to_hex_bytes(&getter.encode()).unwrap();
 	let shard = read_shard(trusted_args).unwrap();
 
 	// compose jsonrpc call
@@ -94,7 +93,7 @@ fn get_state(cli: &Cli, trusted_args: &TrustedArgs, getter: TrustedOperation) ->
 fn send_request(cli: &Cli, trusted_args: &TrustedArgs, call: TrustedCallSigned) -> Option<Vec<u8>> {
 	let chain_api = get_chain_api(cli);
 	let encryption_key = get_shielding_key(cli).unwrap();
-	let call_encrypted = shielding_encrypt_to_hex_bytes(&encryption_key, call).unwrap();
+	let call_encrypted = encryption_key.encrypt_to_hex_bytes(&call.encode()).unwrap();
 
 	let shard = read_shard(trusted_args).unwrap();
 
@@ -155,7 +154,7 @@ fn send_direct_request(
 ) -> Option<Vec<u8>> {
 	let encryption_key = get_shielding_key(cli).unwrap();
 	let operation_call_encrypted =
-		shielding_encrypt_to_hex_bytes(&encryption_key, operation_call).unwrap();
+		encryption_key.encrypt_to_hex_bytes(&operation_call.encode()).unwrap();
 	let shard = read_shard(trusted_args).unwrap();
 
 	// compose jsonrpc call

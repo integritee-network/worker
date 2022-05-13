@@ -22,6 +22,7 @@ use crate::{
 	traits::{ShieldingCryptoDecrypt, ShieldingCryptoEncrypt},
 };
 
+use itp_utils::hex_encode;
 use sgx_crypto_helper::{
 	rsa3072::{Rsa3072KeyPair, Rsa3072PubKey},
 	RsaKeyPair,
@@ -41,6 +42,11 @@ impl ShieldingCryptoEncrypt for Rsa3072KeyPair {
 			.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 		Ok(cipher_buffer)
 	}
+
+	fn encrypt_to_hex_bytes(&self, data: &[u8]) -> Result<Vec<u8>> {
+		let encrypted = self.encrypt(data)?;
+		Ok(hex_encode(encrypted).into_bytes())
+	}
 }
 
 impl ShieldingCryptoDecrypt for Rsa3072KeyPair {
@@ -52,6 +58,12 @@ impl ShieldingCryptoDecrypt for Rsa3072KeyPair {
 			.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 		Ok(decrypted_buffer)
 	}
+
+	fn decrypt_from_hex_bytes(&self, data: &[u8]) -> Result<Vec<u8>> {
+		let encrypted_data =
+			hex::decode(data).map_err(|e| Error::Other(format!("{:?}", e).into()))?;
+		self.decrypt(&encrypted_data)
+	}
 }
 
 impl ShieldingCryptoEncrypt for Rsa3072PubKey {
@@ -62,6 +74,11 @@ impl ShieldingCryptoEncrypt for Rsa3072PubKey {
 		self.encrypt_buffer(data, &mut cipher_buffer)
 			.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 		Ok(cipher_buffer)
+	}
+
+	fn encrypt_to_hex_bytes(&self, data: &[u8]) -> Result<Vec<u8>> {
+		let encrypted = self.encrypt(data)?;
+		Ok(hex_encode(encrypted).into_bytes())
 	}
 }
 

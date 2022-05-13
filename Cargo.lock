@@ -2756,8 +2756,10 @@ version = "0.8.0"
 dependencies = [
  "aes",
  "derive_more",
+ "hex",
  "itp-settings",
  "itp-sgx-io",
+ "itp-utils",
  "log 0.4.17",
  "ofb",
  "parity-scale-codec",
@@ -2965,7 +2967,6 @@ version = "0.8.0"
 dependencies = [
  "frame-support 4.0.0-dev (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.19)",
  "hex",
- "itp-sgx-crypto",
  "parity-scale-codec",
  "sgx_tstd",
  "thiserror 1.0.31",

@@ -24,7 +24,7 @@ use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use jsonrpc_core::futures::executor;
 use sp_core::H256;
 use std::{fmt::Debug, vec::Vec};
-use itp_utils::shielding_encrypt_to_hex_bytes;
+use codec::Encode;
 
 /// Test utility function to submit a trusted operation on an RPC author
 pub fn submit_operation_to_top_pool<R, S>(
@@ -38,7 +38,7 @@ where
 	S: ShieldingCryptoEncrypt,
 	S::Error: Debug,
 {
-	let top_encrypted = shielding_encrypt_to_hex_bytes(shielding_key, top).unwrap();
+	let top_encrypted = shielding_key.encrypt_to_hex_bytes(&top.encode()).unwrap();
 	let submit_future = async { author.submit_top(top_encrypted, shard).await };
 	executor::block_on(submit_future)
 }
