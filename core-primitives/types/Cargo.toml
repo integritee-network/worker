@@ -10,7 +10,7 @@ primitive-types = { version = "0.11.1", default-features = false, features = ["c
 chrono          = { version = "0.4.19", default-features = false, features = ["alloc"]}
 serde           = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 serde_json      = { version = "1.0", default-features = false, features = ["alloc"] }
-substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.19", default-features = false }
+substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.20", default-features = false }
 
 sgx_tstd = { branch = "master", features = ["untrusted_fs","net","backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true}
 
@@ -18,9 +18,9 @@ sgx_tstd = { branch = "master", features = ["untrusted_fs","net","backtrace"], g
 itp-storage = { path = "../storage", default-features = false }
 
 # substrate-deps
-sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19"}
-sp-core = { version = "6.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19"}
-sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19" }
+sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
+sp-core = { version = "6.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
+sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
 
 [features]
 default = ['std']
@@ -37,4 +37,4 @@ std = [ 'codec/std',
 sgx = [ 'sgx_tstd' ]
 
 [dev-dependencies]
-sp-keyring = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19"}
+sp-keyring = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
