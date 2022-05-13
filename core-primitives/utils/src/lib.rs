@@ -44,7 +44,7 @@ pub fn hex_encode(data: Vec<u8>) -> String {
 	hex_str
 }
 
-/// helper method for decoding hex
+/// Helper method for decoding hex.
 pub fn decode_hex<T: AsRef<[u8]>>(message: T) -> Result<Vec<u8>> {
 	let mut message = message.as_ref();
 	if message[..2] == [b'0', b'x'] {

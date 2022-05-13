@@ -52,7 +52,8 @@ where
 	type Hash = Hash;
 
 	fn must_be_watched(&self, rpc_response: &RpcResponse) -> DirectRpcResult<Option<Self::Hash>> {
-		let rpc_return_value = RpcReturnValue::decode(&mut rpc_response.result.as_slice())
+		let response_result = decode_hex(rpc_response.result)?;
+		let rpc_return_value = RpcReturnValue::decode(&mut response_result.as_slice())
 			.map_err(DirectRpcError::EncodingError)?;
 
 		if !rpc_return_value.do_watch {
@@ -84,7 +85,7 @@ pub mod tests {
 	fn invalid_rpc_response_returns_encoding_error() {
 		let watch_extractor = RpcWatchExtractor::<String>::new();
 		let rpc_response =
-			RpcResponse { id: 1u32, jsonrpc: String::from("json"), result: vec![1u8, 2u8, 3u8] };
+			RpcResponse { id: 1u32, jsonrpc: String::from("json"), result: "hello".to_string() };
 
 		assert_matches!(
 			watch_extractor.must_be_watched(&rpc_response),

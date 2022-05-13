@@ -29,6 +29,7 @@ use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_types::{
 	DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue, TrustedOperationStatus,
 };
+use itp_utils::hex_encode;
 use log::*;
 use my_node_runtime::{AccountId, Hash};
 use sp_core::{sr25519 as sr25519_core, Pair, H256};
@@ -53,13 +54,14 @@ pub fn perform_trusted_operation(
 fn get_state(cli: &Cli, trusted_args: &TrustedArgs, getter: TrustedOperation) -> Option<Vec<u8>> {
 	// TODO: ensure getter is signed?
 	let encryption_key = get_shielding_key(cli).unwrap();
-	let operation_call_encrypted = encryption_key.encrypt_to_hex_bytes(&getter.encode()).unwrap();
+	let operation_call_encrypted = encryption_key.encrypt(&getter.encode()).unwrap();
 	let shard = read_shard(trusted_args).unwrap();
 
 	// compose jsonrpc call
 	let data = Request { shard, cyphertext: operation_call_encrypted };
 	let rpc_method = "author_submitAndWatchExtrinsic".to_owned();
-	let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(rpc_method, data.encode());
+	let jsonrpc_call: String =
+		RpcRequest::compose_jsonrpc_call(rpc_method, Some(hex_encode(data.encode())));
 
 	let direct_api = get_worker_api_direct(cli);
 	let (sender, receiver) = channel();
@@ -69,7 +71,8 @@ fn get_state(cli: &Cli, trusted_args: &TrustedArgs, getter: TrustedOperation) ->
 		match receiver.recv() {
 			Ok(response) => {
 				let response: RpcResponse = serde_json::from_str(&response).unwrap();
-				if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {
+				let response_result = decode_hex(response.result).unwrap();
+				if let Ok(return_value) = RpcReturnValue::decode(&mut response_result.as_slice()) {
 					if return_value.status == DirectRequestStatus::Error {
 						println!(
 							"[Error] {}",
@@ -93,7 +96,7 @@ fn get_state(cli: &Cli, trusted_args: &TrustedArgs, getter: TrustedOperation) ->
 fn send_request(cli: &Cli, trusted_args: &TrustedArgs, call: TrustedCallSigned) -> Option<Vec<u8>> {
 	let chain_api = get_chain_api(cli);
 	let encryption_key = get_shielding_key(cli).unwrap();
-	let call_encrypted = encryption_key.encrypt_to_hex_bytes(&call.encode()).unwrap();
+	let call_encrypted = encryption_key.encrypt(&call.encode()).unwrap();
 
 	let shard = read_shard(trusted_args).unwrap();
 
@@ -153,19 +156,14 @@ fn send_direct_request(
 	operation_call: TrustedOperation,
 ) -> Option<Vec<u8>> {
 	let encryption_key = get_shielding_key(cli).unwrap();
-	let operation_call_encrypted =
-		encryption_key.encrypt_to_hex_bytes(&operation_call.encode()).unwrap();
+	let operation_call_encrypted = encryption_key.encrypt(&operation_call.encode()).unwrap();
 	let shard = read_shard(trusted_args).unwrap();
+	let data = Request { shard, cyphertext: operation_call_encrypted }.encode();
 
-	// compose jsonrpc call
-	let data = Request { shard, cyphertext: operation_call_encrypted };
-	let direct_invocation_call = RpcRequest {
-		jsonrpc: "2.0".to_owned(),
-		method: "author_submitAndWatchExtrinsic".to_owned(),
-		params: data.encode(),
-		id: 1,
-	};
-	let jsonrpc_call: String = serde_json::to_string(&direct_invocation_call).unwrap();
+	let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(
+		"author_submitAndWatchExtrinsic".to_string(),
+		Some(hex_encode(data)),
+	);
 
 	debug!("get direct api");
 	let direct_api = get_worker_api_direct(cli);
@@ -180,7 +178,8 @@ fn send_direct_request(
 			Ok(response) => {
 				debug!("received response");
 				let response: RpcResponse = serde_json::from_str(&response).unwrap();
-				if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {
+				let response_result = decode_hex(response.result).unwrap();
+				if let Ok(return_value) = RpcReturnValue::decode(&mut response_result.as_slice()) {
 					debug!("successfully decoded rpc response");
 					match return_value.status {
 						DirectRequestStatus::Error => {

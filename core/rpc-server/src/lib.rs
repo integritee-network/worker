@@ -17,6 +17,7 @@
 
 use itp_enclave_api::direct_request::DirectRequest;
 use itp_types::RpcRequest;
+use itp_utils::hex_encode;
 use its_peer_fetch::block_fetch_server::BlockFetchServerModuleBuilder;
 use its_primitives::{constants::RPC_METHOD_NAME_IMPORT_BLOCKS, types::SignedBlock};
 use its_storage::interface::FetchBlocks;
@@ -54,7 +55,7 @@ where
 
 			let enclave_req = RpcRequest::compose_jsonrpc_call(
 				RPC_METHOD_NAME_IMPORT_BLOCKS.into(),
-				params.one::<Vec<SignedBlock>>()?.encode(),
+				Some(hex_encode(params.one::<Vec<SignedBlock>>()?.encode())),
 			);
 
 			enclave

@@ -367,7 +367,7 @@ fn shield_funds(cli: &Cli, arg_from: &str, arg_to: &str, amount: &Balance, shard
 	let to = get_accountid_from_str(arg_to);
 
 	let encryption_key = get_shielding_key(cli).unwrap();
-	let encrypted_recevier = encryption_key.encrypt_to_hex_bytes(&to.encode()).unwrap();
+	let encrypted_recevier = encryption_key.encrypt(&to.encode()).unwrap();
 
 	// compose the extrinsic
 	let xt: UncheckedExtrinsicV4<([u8; 2], Vec<u8>, u128, H256)> =

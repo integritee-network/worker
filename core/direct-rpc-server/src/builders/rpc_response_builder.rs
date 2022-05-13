@@ -59,6 +59,6 @@ impl RpcResponseBuilder {
 			.unwrap_or_else(|| RpcReturnValueBuilder::new().build())
 			.encode();
 
-		RpcResponse { result, jsonrpc: json_rpc, id }
+		RpcResponse { hex_encode(result), jsonrpc: json_rpc, id }
 	}
 }
