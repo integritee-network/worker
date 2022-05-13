@@ -2756,10 +2756,8 @@ version = "0.8.0"
 dependencies = [
  "aes",
  "derive_more",
- "hex",
  "itp-settings",
  "itp-sgx-io",
- "itp-utils",
  "log 0.4.17",
  "ofb",
  "parity-scale-codec",

@@ -42,20 +42,12 @@ impl ShieldingCryptoEncrypt for ShieldingCryptoMock {
 	fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error> {
 		self.key.encrypt(data)
 	}
-
-	fn encrypt_to_hex_bytes(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error> {
-		self.key.encrypt(data)
-	}
 }
 
 impl ShieldingCryptoDecrypt for ShieldingCryptoMock {
 	type Error = itp_sgx_crypto::Error;
 
 	fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error> {
-		self.key.decrypt(data)
-	}
-
-	fn decrypt_from_hex_bytes(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error> {
 		self.key.decrypt(data)
 	}
 }

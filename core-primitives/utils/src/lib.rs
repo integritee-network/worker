@@ -44,6 +44,16 @@ pub fn hex_encode(data: Vec<u8>) -> String {
 	hex_str
 }
 
+/// helper method for decoding hex
+pub fn decode_hex<T: AsRef<[u8]>>(message: T) -> Result<Vec<u8>> {
+	let mut message = message.as_ref();
+	if message[..2] == [b'0', b'x'] {
+		message = &message[2..]
+	}
+	let decoded_message = hex::decode(message).map_err(Error::Hex)?;
+	Ok(decoded_message)
+}
+
 /// Fills a given buffer with data and fill the left over buffer space with white spaces.
 pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) -> Result<()> {
 	ensure!(

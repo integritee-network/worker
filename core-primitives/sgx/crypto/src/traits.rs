@@ -27,11 +27,9 @@ pub trait StateCrypto {
 pub trait ShieldingCryptoEncrypt {
 	type Error: Debug;
 	fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error>;
-	fn encrypt_to_hex_bytes(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error>;
 }
 
 pub trait ShieldingCryptoDecrypt {
 	type Error: Debug;
 	fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error>;
-	fn decrypt_from_hex_bytes(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error>;
 }

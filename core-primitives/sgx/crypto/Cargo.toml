@@ -10,7 +10,6 @@ aes = { version = "0.6.0" }
 ofb = { version = "0.4.0" }
 codec  = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 derive_more = { version = "0.99.5" }
-hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 log = { version = "0.4.14", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["alloc"], optional = true }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"], optional = true }
@@ -29,16 +28,13 @@ sp-core = { version = "6.0.0", default-features = false, git = "https://github.c
 # local deps
 itp-settings = { path = "../../settings" }
 itp-sgx-io = { path = "../io", default-features = false }
-itp-utils = { path = "../../utils", default-features = false }
 
 [features]
 default = ["std"]
 std = [
     "codec/std",
     "log/std",
-    "hex/std",
     "itp-sgx-io/std",
-    "itp-utils/std",
     "sp-core/std",
     'serde/std',
     'serde_json/std',
@@ -47,7 +43,6 @@ sgx = [
     "sgx_tstd",
     "sgx_rand",
     "itp-sgx-io/sgx",
-    "itp-utils/sgx",
     "serde_json-sgx",
     "serde-sgx"
 ]
