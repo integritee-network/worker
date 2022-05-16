@@ -87,7 +87,7 @@ jobs:
       - name: Build Deployable Image
         env:
           DOCKER_BUILDKIT: 1
-        run: docker build --output=type=docker,dest=/tmp/integritee-worker.tar --target=deployed-worker -f build.Dockerfile .
+        run: docker build --output=type=tar,dest=/tmp/integritee-worker.tar --target=deployed-worker -f build.Dockerfile .
 #        uses: docker/build-push-action@v2
 #        with:
 #          context: .
