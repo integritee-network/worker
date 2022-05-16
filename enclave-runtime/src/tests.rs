@@ -75,7 +75,7 @@ use its_sidechain::{
 use sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use sgx_tunittest::*;
 use sgx_types::size_t;
-use sp_core::{crypto::Pair, ed25519 as spEd25519, hashing::blake2_256, H256};
+use sp_core::{crypto::Pair, ed25519 as spEd25519, H256};
 use sp_runtime::traits::Header as HeaderT;
 use std::{string::String, sync::Arc, vec::Vec};
 
