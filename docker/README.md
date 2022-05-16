@@ -38,9 +38,19 @@ docker-compose -f docker-compose.yml -f integration-test.yml up --exit-code-from
 ## Run the fork simulator
 Build the docker-compose setup with
 ```
-docker-compose -f docker-compose.yml -f fork-inducer.yml -f integration-test.yml build
+COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose -f docker-compose.yml -f fork-inducer.yml -f integration-test.yml build
 ```
+
+This requires the docker BuildKit (docker version >= 18.09) and support for it in docker-compose (version >= 1.25.0)
+
 Run the 2-worker setup with a fork inducer (pumba) that delays the traffic on worker 2
 ```
 docker-compose -f docker-compose.yml -f fork-inducer.yml -f integration-test.yml up --exit-code-from sidechain-integration-test
 ```
+
+This should show that the integration test fails, because we had an unhandled fork in the sidechain. Clean up the containers after each run with:
+```
+docker-compose -f docker-compose.yml -f fork-inducer.yml -f integration-test.yml down
+```
+
+We need these different compose files to separate the services that we're using. E.g. we want the integration test and fork simulator to be optional. The same could be solved using `profiles` - but that requires a more up-to-date version of `docker-compose`.

@@ -31,7 +31,9 @@ ENV SGX_MODE SW
 COPY . /root/work/worker/
 WORKDIR /root/work/worker
 
-RUN make
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+	--mount=type=cache,target=/root/work/worker/target \
+	make
 
 
 ### Enclave Test Stage
@@ -55,7 +57,7 @@ CMD cargo test
 ##################################################
 FROM ubuntu:20.04 AS runner
 
-RUN apt update && apt install -y libssl-dev iproute2
+RUN apt update && apt install -y libssl-dev iproute2 net-tools
 
 COPY --from=powerman/dockerize /usr/local/bin/dockerize /usr/local/bin/dockerize
 

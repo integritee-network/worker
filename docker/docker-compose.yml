@@ -9,7 +9,7 @@ services:
       - "9912:9912"
     command: --dev --rpc-methods unsafe --ws-external --rpc-external --ws-port 9912
     logging:
-      driver: local
+      driver: none
   integritee-worker-1:
     image: integritee-worker:dev
     container_name: integritee-worker-1
