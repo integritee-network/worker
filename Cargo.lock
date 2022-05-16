@@ -3120,6 +3120,7 @@ version = "0.8.0"
 dependencies = [
  "itp-top-pool-author",
  "itp-types",
+ "itp-utils",
  "its-primitives",
  "jsonrpc-core 16.1.0",
  "jsonrpc-core 18.0.0",

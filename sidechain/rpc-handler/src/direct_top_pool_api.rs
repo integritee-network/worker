@@ -29,6 +29,7 @@ use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{
 	DirectRequestStatus, Request, RpcReturnValue, ShardIdentifier, TrustedOperationStatus,
 };
+use itp_utils::hex_encode;
 use jsonrpc_core::{
 	futures::executor, serde_json::json, Error as RpcError, IoHandler, Params, Value,
 };
@@ -69,11 +70,12 @@ where
 					};
 					Ok(json!(json_value))
 				},
-				Err(_) => Ok(json!(compute_encoded_return_error("Could not decode request"))),
+				Err(_) =>
+					Ok(json!(hex_encode(compute_encoded_return_error("Could not decode request")))),
 			},
 			Err(e) => {
 				let error_msg: String = format!("Could not submit trusted call due to: {}", e);
-				Ok(json!(compute_encoded_return_error(error_msg.as_str())))
+				Ok(json!(hex_encode(compute_encoded_return_error(error_msg.as_str()))))
 			},
 		}
 	});
@@ -102,13 +104,14 @@ where
 						.encode(),
 						Err(rpc_error) => compute_encoded_return_error(rpc_error.message.as_str()),
 					};
-					Ok(json!(json_value))
+					Ok(json!(hex_encode(json_value)))
 				},
-				Err(_) => Ok(json!(compute_encoded_return_error("Could not decode request"))),
+				Err(_) =>
+					Ok(json!(hex_encode(compute_encoded_return_error("Could not decode request")))),
 			},
 			Err(e) => {
 				let error_msg: String = format!("Could not submit trusted call due to: {}", e);
-				Ok(json!(compute_encoded_return_error(error_msg.as_str())))
+				Ok(json!(hex_encode(compute_encoded_return_error(error_msg.as_str()))))
 			},
 		}
 	});
@@ -134,11 +137,11 @@ where
 					value: retrieved_operations.encode(),
 					status: DirectRequestStatus::Ok,
 				};
-				Ok(json!(json_value.encode()))
+				Ok(json!(hex_encode(json_value.encode())))
 			},
 			Err(e) => {
 				let error_msg: String = format!("Could not retrieve pending calls due to: {}", e);
-				Ok(json!(compute_encoded_return_error(error_msg.as_str())))
+				Ok(json!(hex_encode(compute_encoded_return_error(error_msg.as_str()))))
 			},
 		}
 	});

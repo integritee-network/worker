@@ -21,6 +21,7 @@ use itp_primitives_cache::{GetPrimitives, GLOBAL_PRIMITIVES_CACHE};
 use itp_sgx_crypto::Rsa3072Seal;
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{DirectRequestStatus, RpcReturnValue, H256};
+use itp_utils::hex_encode;
 use its_sidechain::{
 	primitives::types::SignedBlock,
 	rpc_handler::{direct_top_pool_api, import_block_api},
@@ -59,7 +60,7 @@ where
 			Ok(key) => key,
 			Err(status) => {
 				let error_msg: String = format!("Could not get rsa pubkey due to: {}", status);
-				return Ok(json!(compute_encoded_return_error(error_msg.as_str())))
+				return Ok(json!(hex_encode(compute_encoded_return_error(error_msg.as_str()))))
 			},
 		};
 
@@ -68,12 +69,12 @@ where
 			Err(x) => {
 				let error_msg: String =
 					format!("[Enclave] can't serialize rsa_pubkey {:?} {}", rsa_pubkey, x);
-				return Ok(json!(compute_encoded_return_error(error_msg.as_str())))
+				return Ok(json!(hex_encode(compute_encoded_return_error(error_msg.as_str()))))
 			},
 		};
 		let json_value =
 			RpcReturnValue::new(rsa_pubkey_json.encode(), false, DirectRequestStatus::Ok);
-		Ok(json!(json_value.encode()))
+		Ok(json!(hex_encode(json_value.encode())))
 	});
 
 	let mu_ra_url_name: &str = "author_getMuRaUrl";
@@ -82,12 +83,12 @@ where
 			Ok(url) => url,
 			Err(status) => {
 				let error_msg: String = format!("Could not get mu ra url due to: {}", status);
-				return Ok(json!(compute_encoded_return_error(error_msg.as_str())))
+				return Ok(json!(hex_encode(compute_encoded_return_error(error_msg.as_str()))))
 			},
 		};
 
 		let json_value = RpcReturnValue::new(url.encode(), false, DirectRequestStatus::Ok);
-		Ok(json!(json_value.encode()))
+		Ok(json!(hex_encode(json_value.encode())))
 	});
 
 	let untrusted_url_name: &str = "author_getUntrustedUrl";
@@ -96,12 +97,12 @@ where
 			Ok(url) => url,
 			Err(status) => {
 				let error_msg: String = format!("Could not get untrusted url due to: {}", status);
-				return Ok(json!(compute_encoded_return_error(error_msg.as_str())))
+				return Ok(json!(hex_encode(compute_encoded_return_error(error_msg.as_str()))))
 			},
 		};
 
 		let json_value = RpcReturnValue::new(url.encode(), false, DirectRequestStatus::Ok);
-		Ok(json!(json_value.encode()))
+		Ok(json!(hex_encode(json_value.encode())))
 	});
 
 	// chain_subscribeAllHeads
@@ -116,7 +117,7 @@ where
 	io.add_sync_method(state_get_metadata_name, |_: Params| {
 		let metadata = Runtime::metadata();
 		let json_value = RpcReturnValue::new(metadata.into(), false, DirectRequestStatus::Ok);
-		Ok(json!(json_value.encode()))
+		Ok(json!(hex_encode(json_value.encode())))
 	});
 
 	// state_getRuntimeVersion

@@ -11,6 +11,7 @@ default = ["std"]
 std = [
     "itp-top-pool-author/std",
     "itp-types/std",
+    "itp-utils/std",
     "its-primitives/std",
     "jsonrpc-core",
     "log/std",
@@ -20,6 +21,7 @@ sgx = [
     "sgx_tstd",
     "itp-top-pool-author/sgx",
     "itp-types/sgx",
+    "itp-utils/sgx",
     "jsonrpc-core_sgx",
     "rust-base58_sgx",
 ]
@@ -32,6 +34,7 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 # local dependencies
 itp-top-pool-author = { path = "../../core-primitives/top-pool-author", default-features = false }
 itp-types = { path = "../../core-primitives/types", default-features = false }
+itp-utils = { path = "../../core-primitives/utils", default-features = false }
 its-primitives = { path = "../primitives", default-features = false }
 
 # sgx enabled external libraries
