@@ -10,7 +10,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 
 # substrate
-frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.19" }
+frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
 
 # teaclave
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
