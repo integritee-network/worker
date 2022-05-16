@@ -55,7 +55,9 @@ jobs:
 #          tags: integritee-worker-builder-${{ github.sha }}
 
       - name: Build Enclave Test Image
-        run:  docker build -t integritee-worker-enclave-test-${{ github.sha }} --target enclave-test -f build.Dockerfile .
+        env:
+          DOCKER_BUILDKIT: 1
+        run: docker build -t integritee-worker-enclave-test-${{ github.sha }} --target enclave-test -f build.Dockerfile .
 #        uses: docker/build-push-action@v2
 #        with:
 #          context: .
@@ -68,6 +70,8 @@ jobs:
         run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-enclave-test-${{ github.sha }}
 
       - name: Build Cargo Test Image
+        env:
+          DOCKER_BUILDKIT: 1
         run:  docker build -t integritee-worker-ctest-${{ github.sha }} --target cargo-test -f build.Dockerfile .
 #        uses: docker/build-push-action@v2
 #        with:
@@ -81,6 +85,8 @@ jobs:
         run: docker run --rm integritee-worker-ctest-${{ github.sha }}
 
       - name: Build Deployable Image
+        env:
+          DOCKER_BUILDKIT: 1
         run: docker build --output=type=docker,dest=/tmp/integritee-worker.tar --target=deployed-worker -f build.Dockerfile .
 #        uses: docker/build-push-action@v2
 #        with:
