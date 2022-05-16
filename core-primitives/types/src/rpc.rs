@@ -42,16 +42,14 @@ pub struct RpcResponse {
 pub struct RpcRequest {
 	pub jsonrpc: String,
 	pub method: String,
-	pub params: String,
+	pub params: Option<String>,
 	pub id: i32,
 }
 
 impl RpcRequest {
 	pub fn compose_jsonrpc_call(method: String, data: Option<String>) -> String {
-		let params = data.unwrap_or_default();
-
 		let direct_invocation_call =
-			RpcRequest { jsonrpc: "2.0".to_owned(), method, params, id: 1 };
+			RpcRequest { jsonrpc: "2.0".to_owned(), method, params: data, id: 1 };
 		serde_json::to_string(&direct_invocation_call).unwrap()
 	}
 }
