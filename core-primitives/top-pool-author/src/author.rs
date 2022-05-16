@@ -136,14 +136,14 @@ where
 			Err(_) => return Box::pin(ready(Err(ClientError::BadFormatDecipher.into()))),
 		};
 		// decode call
-		let stf_operation = match TrustedOperation::decode(&mut request_vec.as_slice()) {
+		let trusted_operation = match TrustedOperation::decode(&mut request_vec.as_slice()) {
 			Ok(op) => op,
 			Err(_) => return Box::pin(ready(Err(ClientError::BadFormat.into()))),
 		};
 
 		// apply top filter - return error if this specific type of trusted operation
 		// is not allowed by the filter
-		if !self.top_filter.filter(&stf_operation) {
+		if !self.top_filter.filter(&trusted_operation) {
 			return Box::pin(ready(Err(ClientError::UnsupportedOperation.into())))
 		}
 
@@ -162,7 +162,7 @@ where
 					.submit_one(
 						&generic::BlockId::hash(best_block_hash),
 						TX_SOURCE,
-						stf_operation,
+						trusted_operation,
 						shard,
 					)
 					.map_err(map_top_error::<TopPool>),
@@ -173,7 +173,7 @@ where
 					.submit_and_watch(
 						&generic::BlockId::hash(best_block_hash),
 						TX_SOURCE,
-						stf_operation,
+						trusted_operation,
 						shard,
 					)
 					.map_err(map_top_error::<TopPool>),
