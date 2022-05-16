@@ -15,10 +15,22 @@
 
 */
 
-pub mod direct_request_mock;
-pub mod enclave_api_mock;
-pub mod gossip_blocks_mock;
-pub mod initialization_handler_mock;
-pub mod parentchain_api_mock;
-pub mod sidechain_api_mock;
-pub mod update_worker_peers_mock;
+use crate::{IsInitialized, TrackInitialization};
+
+pub struct TrackInitializationMock;
+
+impl TrackInitialization for TrackInitializationMock {
+	fn registered_on_parentchain(&self) {}
+
+	fn sidechain_block_produced(&self) {}
+
+	fn worker_for_shard_registered(&self) {}
+}
+
+pub struct IsInitializedMock;
+
+impl IsInitialized for IsInitializedMock {
+	fn is_initialized(&self) -> bool {
+		true
+	}
+}

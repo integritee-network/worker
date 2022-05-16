@@ -19,22 +19,26 @@
 //! hosted on a http server.
 
 use crate::error::ServiceResult;
-use lazy_static::lazy_static;
 use log::*;
 use parking_lot::RwLock;
-use std::net::SocketAddr;
+use std::{net::SocketAddr, sync::Arc};
 use warp::Filter;
 
-lazy_static! {
-	static ref INITIALIZED_HANDLE: RwLock<bool> = RwLock::new(false);
-}
-
-pub async fn start_is_initialized_server(port: u16) -> ServiceResult<()> {
-	let is_initialized_route = warp::path!("is_initialized").and_then(|| async move {
-		if *INITIALIZED_HANDLE.read() {
-			Ok("I am initialized.")
-		} else {
-			Err(warp::reject::not_found())
+pub async fn start_is_initialized_server<Handler>(
+	initialization_handler: Arc<Handler>,
+	port: u16,
+) -> ServiceResult<()>
+where
+	Handler: IsInitialized + Send + Sync + 'static,
+{
+	let is_initialized_route = warp::path!("is_initialized").and_then(move || {
+		let handler_clone = initialization_handler.clone();
+		async move {
+			if handler_clone.is_initialized() {
+				Ok("I am initialized.")
+			} else {
+				Err(warp::reject::not_found())
+			}
 		}
 	});
 
@@ -47,8 +51,48 @@ pub async fn start_is_initialized_server(port: u16) -> ServiceResult<()> {
 	Ok(())
 }
 
-/// Set initialized handler value to true.
-pub fn set_initialized() {
-	let mut initialized_lock = INITIALIZED_HANDLE.write();
-	*initialized_lock = true;
+/// Trait to query of a worker is considered fully initialized.
+pub trait IsInitialized {
+	fn is_initialized(&self) -> bool;
+}
+
+/// Tracker for initialization. Used by components that ensure these steps were taken.
+pub trait TrackInitialization {
+	fn registered_on_parentchain(&self);
+
+	fn sidechain_block_produced(&self);
+
+	fn worker_for_shard_registered(&self);
+}
+
+#[derive(Default)]
+pub struct InitializationHandler {
+	registered_on_parentchain: RwLock<bool>,
+	sidechain_block_produced: RwLock<bool>,
+	worker_for_shard_registered: RwLock<bool>,
+}
+
+impl TrackInitialization for InitializationHandler {
+	fn registered_on_parentchain(&self) {
+		let mut registered_lock = self.registered_on_parentchain.write();
+		*registered_lock = true;
+	}
+
+	fn sidechain_block_produced(&self) {
+		let mut block_produced_lock = self.sidechain_block_produced.write();
+		*block_produced_lock = true;
+	}
+
+	fn worker_for_shard_registered(&self) {
+		let mut registered_lock = self.worker_for_shard_registered.write();
+		*registered_lock = true;
+	}
+}
+
+impl IsInitialized for InitializationHandler {
+	fn is_initialized(&self) -> bool {
+		*self.registered_on_parentchain.read()
+			&& *self.worker_for_shard_registered.read()
+			&& *self.sidechain_block_produced.read()
+	}
 }
