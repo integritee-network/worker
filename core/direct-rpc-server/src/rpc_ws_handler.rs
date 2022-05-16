@@ -18,7 +18,7 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use crate::{DetermineWatch, DirectRpcError, RpcConnectionRegistry, RpcHash};
+use crate::{DetermineWatch, RpcConnectionRegistry, RpcHash};
 use itc_tls_websocket_server::{
 	error::{WebSocketError, WebSocketResult},
 	ConnectionToken, WebSocketMessageHandler,
@@ -69,21 +69,20 @@ where
 
 		debug!("RPC response string: {:?}", maybe_rpc_response);
 
-		let rpc_response = serde_json::from_str(
-			maybe_rpc_response.clone().unwrap_or_default().as_str(),
-		)
-		.map_err(|e| WebSocketError::Other(Box::new(DirectRpcError::SerializationError(e))))?;
-
-		match self.connection_watcher.must_be_watched(&rpc_response) {
-			Ok(maybe_connection_hash) =>
-				if let Some(connection_hash) = maybe_connection_hash {
-					self.connection_registry.store(
-						connection_hash,
-						connection_token.into(),
-						rpc_response,
-					);
-				},
-			Err(e) => return Err(WebSocketError::Other(Box::new(e))),
+		if let Ok(rpc_response) =
+			serde_json::from_str(maybe_rpc_response.clone().unwrap_or_default().as_str())
+		{
+			match self.connection_watcher.must_be_watched(&rpc_response) {
+				Ok(maybe_connection_hash) =>
+					if let Some(connection_hash) = maybe_connection_hash {
+						self.connection_registry.store(
+							connection_hash,
+							connection_token.into(),
+							rpc_response,
+						);
+					},
+				Err(e) => return Err(WebSocketError::Other(Box::new(e))),
+			}
 		}
 
 		Ok(maybe_rpc_response)
@@ -99,7 +98,6 @@ pub mod tests {
 		rpc_connection_registry::ConnectionRegistry,
 	};
 	use codec::Encode;
-	use core::assert_matches::assert_matches;
 	use itc_tls_websocket_server::ConnectionToken;
 	use itp_types::{DirectRequestStatus, RpcReturnValue};
 	use jsonrpc_core::Params;
@@ -158,15 +156,15 @@ pub mod tests {
 	}
 
 	#[test]
-	fn when_rpc_method_does_not_match_anything_return_error() {
+	fn when_rpc_method_does_not_match_anything_return_json_error_message() {
 		let io_handler = create_io_handler_with_error(RPC_METHOD_NAME);
 		let (connection_token, message) = create_message_to_handle("not_a_valid_method");
 
 		let (ws_handler, connection_registry) = create_ws_handler(io_handler, None);
 
-		let handle_result = ws_handler.handle_message(connection_token, message);
+		let handle_result = ws_handler.handle_message(connection_token, message).unwrap().unwrap();
 
-		assert_matches!(handle_result, Err(WebSocketError::Other(_)));
+		assert_eq!(handle_result, "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32601,\"message\":\"Method not found\"},\"id\":1}");
 		assert!(connection_registry.is_empty());
 	}
 
