@@ -286,7 +286,7 @@ mod tests {
 	fn timestamp_within_slot_returns_false_if_timestamp_after_slot() {
 		let slot = slot(1);
 		let time_stamp_after_slot =
-			timestamp_in_the_future(SLOT_DURATION + Duration::from_millis(1));
+			timestamp_in_the_future(SLOT_DURATION + Duration::from_millis(10));
 
 		let block_too_late = test_block_with_time_stamp(time_stamp_after_slot);
 
@@ -296,7 +296,7 @@ mod tests {
 	#[test]
 	fn timestamp_within_slot_returns_false_if_timestamp_before_slot() {
 		let slot = slot(1);
-		let time_stamp_before_slot = timestamp_in_the_past(Duration::from_millis(1));
+		let time_stamp_before_slot = timestamp_in_the_past(Duration::from_millis(10));
 
 		let block_too_early = test_block_with_time_stamp(time_stamp_before_slot);
 
