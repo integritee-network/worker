@@ -17,6 +17,7 @@
 
 use itp_enclave_api::{direct_request::DirectRequest, EnclaveResult};
 use itp_types::RpcResponse;
+use itp_utils::hex_encode;
 use its_primitives::{
 	traits::ShardIdentifierFor,
 	types::{BlockHash, SignedBlock, SignedBlock as SignedSidechainBlock},

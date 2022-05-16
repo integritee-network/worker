@@ -1201,6 +1201,7 @@ version = "0.8.0"
 dependencies = [
  "itc-tls-websocket-server",
  "itp-types",
+ "itp-utils",
  "jsonrpc-core",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "parity-scale-codec",

@@ -2399,6 +2399,7 @@ version = "0.8.0"
 dependencies = [
  "itc-tls-websocket-server",
  "itp-types",
+ "itp-utils",
  "jsonrpc-core 16.1.0",
  "jsonrpc-core 18.0.0",
  "log 0.4.17",
@@ -2536,6 +2537,7 @@ dependencies = [
  "env_logger 0.9.0",
  "itc-tls-websocket-server",
  "itp-types",
+ "itp-utils",
  "log 0.4.17",
  "openssl",
  "parity-scale-codec",

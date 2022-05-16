@@ -29,7 +29,7 @@ use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_types::{
 	DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue, TrustedOperationStatus,
 };
-use itp_utils::hex_encode;
+use itp_utils::{decode_hex, hex_encode};
 use log::*;
 use my_node_runtime::{AccountId, Hash};
 use sp_core::{sr25519 as sr25519_core, Pair, H256};

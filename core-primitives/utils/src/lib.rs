@@ -70,11 +70,23 @@ pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) -> Res
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use codec::{Decode, Encode};
 
 	#[test]
 	fn write_slice_and_whitespace_pad_returns_error_if_buffer_too_small() {
 		let mut writable = vec![0; 32];
 		let data = vec![1; 33];
 		assert!(write_slice_and_whitespace_pad(&mut writable, data).is_err());
+	}
+
+	#[test]
+	fn hex_encode_decode_works() {
+		let data = "Hello World!".to_string();
+
+		let hex_encoded_data = hex_encode(data.encode());
+		let decoded_data =
+			String::decode(&mut decode_hex(hex_encoded_data).unwrap().as_slice()).unwrap();
+
+		assert_eq!(data, decoded_data);
 	}
 }
