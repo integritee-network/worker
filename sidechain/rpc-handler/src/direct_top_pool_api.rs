@@ -29,7 +29,7 @@ use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{
 	DirectRequestStatus, Request, RpcReturnValue, ShardIdentifier, TrustedOperationStatus,
 };
-use itp_utils::hex_encode;
+use itp_utils::{decode_hex, hex_encode};
 use jsonrpc_core::{
 	futures::executor, serde_json::json, Error as RpcError, IoHandler, Params, Value,
 };
@@ -48,30 +48,40 @@ where
 	let author_submit_and_watch_extrinsic_name: &str = "author_submitAndWatchExtrinsic";
 	let submit_watch_author = top_pool_author.clone();
 	io_handler.add_sync_method(author_submit_and_watch_extrinsic_name, move |params: Params| {
-		match params.parse::<Vec<u8>>() {
-			Ok(encoded_params) => match Request::decode(&mut encoded_params.as_slice()) {
-				Ok(request) => {
-					let shard: ShardIdentifier = request.shard;
-					let encrypted_trusted_call: Vec<u8> = request.cyphertext;
-					let result = async {
-						submit_watch_author.watch_top(encrypted_trusted_call.clone(), shard).await
-					};
-					let response: Result<Hash, RpcError> = executor::block_on(result);
-					let json_value = match response {
-						Ok(hash_value) => RpcReturnValue {
-							do_watch: true,
-							value: hash_value.encode(),
-							status: DirectRequestStatus::TrustedOperationStatus(
-								TrustedOperationStatus::Submitted,
-							),
-						}
-						.encode(),
-						Err(rpc_error) => compute_encoded_return_error(rpc_error.message.as_str()),
-					};
-					Ok(json!(json_value))
+		match params.parse::<String>() {
+			Ok(hex_encoded_params) => match decode_hex(hex_encoded_params) {
+				Ok(encoded_params) => match Request::decode(&mut encoded_params.as_slice()) {
+					Ok(request) => {
+						let shard: ShardIdentifier = request.shard;
+						let encrypted_trusted_call: Vec<u8> = request.cyphertext;
+						let result = async {
+							submit_watch_author
+								.watch_top(encrypted_trusted_call.clone(), shard)
+								.await
+						};
+						let response: Result<Hash, RpcError> = executor::block_on(result);
+						let json_value = match response {
+							Ok(hash_value) => RpcReturnValue {
+								do_watch: true,
+								value: hash_value.encode(),
+								status: DirectRequestStatus::TrustedOperationStatus(
+									TrustedOperationStatus::Submitted,
+								),
+							}
+							.encode(),
+							Err(rpc_error) =>
+								compute_encoded_return_error(rpc_error.message.as_str()),
+						};
+						Ok(json!(json_value))
+					},
+					Err(_) => Ok(json!(hex_encode(compute_encoded_return_error(
+						"Could not decode request"
+					)))),
 				},
-				Err(_) =>
-					Ok(json!(hex_encode(compute_encoded_return_error("Could not decode request")))),
+				Err(e) => {
+					let error_msg: String = format!("Could not submit trusted call due to: {}", e);
+					Ok(json!(hex_encode(compute_encoded_return_error(error_msg.as_str()))))
+				},
 			},
 			Err(e) => {
 				let error_msg: String = format!("Could not submit trusted call due to: {}", e);
@@ -84,30 +94,38 @@ where
 	let author_submit_extrinsic_name: &str = "author_submitExtrinsic";
 	let submit_author = top_pool_author.clone();
 	io_handler.add_sync_method(author_submit_extrinsic_name, move |params: Params| {
-		match params.parse::<Vec<u8>>() {
-			Ok(encoded_params) => match Request::decode(&mut encoded_params.as_slice()) {
-				Ok(request) => {
-					let shard: ShardIdentifier = request.shard;
-					let encrypted_trusted_op: Vec<u8> = request.cyphertext;
-					let result = async {
-						submit_author.submit_top(encrypted_trusted_op.clone(), shard).await
-					};
-					let response: Result<Hash, RpcError> = executor::block_on(result);
-					let json_value = match response {
-						Ok(hash_value) => RpcReturnValue {
-							do_watch: false,
-							value: hash_value.encode(),
-							status: DirectRequestStatus::TrustedOperationStatus(
-								TrustedOperationStatus::Submitted,
-							),
-						}
-						.encode(),
-						Err(rpc_error) => compute_encoded_return_error(rpc_error.message.as_str()),
-					};
-					Ok(json!(hex_encode(json_value)))
+		match params.parse::<String>() {
+			Ok(hex_encoded_params) => match decode_hex(hex_encoded_params) {
+				Ok(encoded_params) => match Request::decode(&mut encoded_params.as_slice()) {
+					Ok(request) => {
+						let shard: ShardIdentifier = request.shard;
+						let encrypted_trusted_op: Vec<u8> = request.cyphertext;
+						let result = async {
+							submit_author.submit_top(encrypted_trusted_op.clone(), shard).await
+						};
+						let response: Result<Hash, RpcError> = executor::block_on(result);
+						let json_value = match response {
+							Ok(hash_value) => RpcReturnValue {
+								do_watch: false,
+								value: hash_value.encode(),
+								status: DirectRequestStatus::TrustedOperationStatus(
+									TrustedOperationStatus::Submitted,
+								),
+							}
+							.encode(),
+							Err(rpc_error) =>
+								compute_encoded_return_error(rpc_error.message.as_str()),
+						};
+						Ok(json!(hex_encode(json_value)))
+					},
+					Err(_) => Ok(json!(hex_encode(compute_encoded_return_error(
+						"Could not decode request"
+					)))),
 				},
-				Err(_) =>
-					Ok(json!(hex_encode(compute_encoded_return_error("Could not decode request")))),
+				Err(e) => {
+					let error_msg: String = format!("Could not submit trusted call due to: {}", e);
+					Ok(json!(hex_encode(compute_encoded_return_error(error_msg.as_str()))))
+				},
 			},
 			Err(e) => {
 				let error_msg: String = format!("Could not submit trusted call due to: {}", e);
