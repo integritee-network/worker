@@ -4,27 +4,6 @@ version = "0.8.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 resolver = "2"
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[features]
-default = ["std"]
-std = [
-    "itp-top-pool-author/std",
-    "itp-types/std",
-    "itp-utils/std",
-    "its-primitives/std",
-    "jsonrpc-core",
-    "log/std",
-    "rust-base58",
-]
-sgx = [
-    "sgx_tstd",
-    "itp-top-pool-author/sgx",
-    "itp-types/sgx",
-    "itp-utils/sgx",
-    "jsonrpc-core_sgx",
-    "rust-base58_sgx",
-]
 
 [dependencies]
 # sgx dependencies
@@ -49,3 +28,23 @@ jsonrpc-core = { version = "18", optional = true }
 codec  = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 log = { version = "0.4", default-features = false }
 sp-core = { version = "6.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
+
+[features]
+default = ["std"]
+std = [
+    "itp-top-pool-author/std",
+    "itp-types/std",
+    "itp-utils/std",
+    "its-primitives/std",
+    "jsonrpc-core",
+    "log/std",
+    "rust-base58",
+]
+sgx = [
+    "sgx_tstd",
+    "itp-top-pool-author/sgx",
+    "itp-types/sgx",
+    "itp-utils/sgx",
+    "jsonrpc-core_sgx",
+    "rust-base58_sgx",
+]

@@ -48,8 +48,8 @@ where
 	let author_submit_and_watch_extrinsic_name: &str = "author_submitAndWatchExtrinsic";
 	let submit_watch_author = top_pool_author.clone();
 	io_handler.add_sync_method(author_submit_and_watch_extrinsic_name, move |params: Params| {
-		match params.parse::<String>() {
-			Ok(hex_encoded_params) => match decode_hex(hex_encoded_params) {
+		match params.parse::<Vec<String>>() {
+			Ok(hex_encoded_params) => match decode_hex(hex_encoded_params[0].clone()) {
 				Ok(encoded_params) => match Request::decode(&mut encoded_params.as_slice()) {
 					Ok(request) => {
 						let shard: ShardIdentifier = request.shard;
@@ -72,7 +72,7 @@ where
 							Err(rpc_error) =>
 								compute_encoded_return_error(rpc_error.message.as_str()),
 						};
-						Ok(json!(json_value))
+						Ok(json!(hex_encode(json_value)))
 					},
 					Err(_) => Ok(json!(hex_encode(compute_encoded_return_error(
 						"Could not decode request"
@@ -94,8 +94,8 @@ where
 	let author_submit_extrinsic_name: &str = "author_submitExtrinsic";
 	let submit_author = top_pool_author.clone();
 	io_handler.add_sync_method(author_submit_extrinsic_name, move |params: Params| {
-		match params.parse::<String>() {
-			Ok(hex_encoded_params) => match decode_hex(hex_encoded_params) {
+		match params.parse::<Vec<String>>() {
+			Ok(hex_encoded_params) => match decode_hex(hex_encoded_params[0].clone()) {
 				Ok(encoded_params) => match Request::decode(&mut encoded_params.as_slice()) {
 					Ok(request) => {
 						let shard: ShardIdentifier = request.shard;

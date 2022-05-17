@@ -82,8 +82,10 @@ impl DirectApi for DirectClient {
 	}
 
 	fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey> {
-		let jsonrpc_call: String =
-			RpcRequest::compose_jsonrpc_call("author_getShieldingKey".to_string(), None);
+		let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(
+			"author_getShieldingKey".to_string(),
+			Default::default(),
+		)?;
 
 		// Send json rpc call to ws server.
 		let response_str = self.get(&jsonrpc_call)?;
@@ -97,7 +99,7 @@ impl DirectApi for DirectClient {
 
 	fn get_mu_ra_url(&self) -> Result<String> {
 		let jsonrpc_call: String =
-			RpcRequest::compose_jsonrpc_call("author_getMuRaUrl".to_string(), None);
+			RpcRequest::compose_jsonrpc_call("author_getMuRaUrl".to_string(), Default::default())?;
 
 		// Send json rpc call to ws server.
 		let response_str = self.get(&jsonrpc_call)?;
@@ -109,8 +111,10 @@ impl DirectApi for DirectClient {
 	}
 
 	fn get_untrusted_worker_url(&self) -> Result<String> {
-		let jsonrpc_call: String =
-			RpcRequest::compose_jsonrpc_call("author_getUntrustedUrl".to_string(), None);
+		let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(
+			"author_getUntrustedUrl".to_string(),
+			Default::default(),
+		)?;
 
 		// Send json rpc call to ws server.
 		let response_str = self.get(&jsonrpc_call)?;
@@ -123,7 +127,7 @@ impl DirectApi for DirectClient {
 
 	fn get_state_metadata(&self) -> Result<RuntimeMetadataPrefixed> {
 		let jsonrpc_call: String =
-			RpcRequest::compose_jsonrpc_call("state_getMetadata".to_string(), None);
+			RpcRequest::compose_jsonrpc_call("state_getMetadata".to_string(), Default::default())?;
 
 		// Send json rpc call to ws server.
 		let response_str = self.get(&jsonrpc_call)?;

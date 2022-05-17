@@ -55,8 +55,9 @@ where
 
 			let enclave_req = RpcRequest::compose_jsonrpc_call(
 				RPC_METHOD_NAME_IMPORT_BLOCKS.into(),
-				Some(hex_encode(params.one::<Vec<SignedBlock>>()?.encode())),
-			);
+				vec![hex_encode(params.one::<Vec<SignedBlock>>()?.encode())],
+			)
+			.unwrap();
 
 			enclave
 				.rpc(enclave_req.as_bytes().to_vec())

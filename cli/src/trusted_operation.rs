@@ -61,7 +61,7 @@ fn get_state(cli: &Cli, trusted_args: &TrustedArgs, getter: TrustedOperation) ->
 	let data = Request { shard, cyphertext: operation_call_encrypted };
 	let rpc_method = "author_submitAndWatchExtrinsic".to_owned();
 	let jsonrpc_call: String =
-		RpcRequest::compose_jsonrpc_call(rpc_method, Some(hex_encode(data.encode())));
+		RpcRequest::compose_jsonrpc_call(rpc_method, vec![hex_encode(data.encode())]).unwrap();
 
 	let direct_api = get_worker_api_direct(cli);
 	let (sender, receiver) = channel();
@@ -70,6 +70,7 @@ fn get_state(cli: &Cli, trusted_args: &TrustedArgs, getter: TrustedOperation) ->
 	loop {
 		match receiver.recv() {
 			Ok(response) => {
+				debug!("Response: {:?}", response);
 				let response: RpcResponse = serde_json::from_str(&response).unwrap();
 				let response_result = decode_hex(response.result).unwrap();
 				if let Ok(return_value) = RpcReturnValue::decode(&mut response_result.as_slice()) {
@@ -162,8 +163,9 @@ fn send_direct_request(
 
 	let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(
 		"author_submitAndWatchExtrinsic".to_string(),
-		Some(hex_encode(data)),
-	);
+		vec![hex_encode(data)],
+	)
+	.unwrap();
 
 	debug!("get direct api");
 	let direct_api = get_worker_api_direct(cli);
