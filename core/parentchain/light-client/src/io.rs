@@ -25,7 +25,7 @@ use itp_settings::files::LIGHT_CLIENT_DB;
 use itp_sgx_io::{seal, unseal, StaticSealedIO};
 use itp_storage::StorageProof;
 use log::*;
-use sp_finality_grandpa::VersionedAuthorityList;
+use sp_finality_grandpa::AuthorityList;
 use sp_runtime::traits::{Block, Header};
 use std::{fs, sgxfs::SgxFile};
 
@@ -54,7 +54,7 @@ impl<B: Block> StaticSealedIO for LightClientSeal<B> {
 
 pub fn read_or_init_validator<B: Block>(
 	header: B::Header,
-	auth: VersionedAuthorityList,
+	auth: AuthorityList,
 	proof: StorageProof,
 ) -> Result<B::Header>
 where
@@ -79,13 +79,14 @@ where
 
 fn init_validator<B: Block>(
 	header: B::Header,
-	auth: VersionedAuthorityList,
+	auth: AuthorityList,
 	proof: StorageProof,
 ) -> Result<B::Header>
 where
 	NumberFor<B>: finality_grandpa::BlockNumberOps,
 {
 	let mut validator = GrandpaLightValidation::<B>::new();
+	// TODO: replace params and match
 
 	validator.initialize_relay(header, auth.into(), proof)?;
 	LightClientSeal::<B>::seal_to_static_file(validator.clone())?;

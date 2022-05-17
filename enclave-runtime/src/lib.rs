@@ -58,13 +58,11 @@ use itp_sgx_crypto::{ed25519, Ed25519Seal, Rsa3072Seal};
 use itp_sgx_io as io;
 use itp_sgx_io::StaticSealedIO;
 use itp_stf_state_handler::handle_state::HandleState;
-use itp_storage::StorageProof;
-use itp_types::{Header, SignedBlock};
+use itp_types::{light_client_init_params::LightClientInitParams, Header, SignedBlock};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use sgx_types::sgx_status_t;
 use sp_core::crypto::Pair;
-use sp_finality_grandpa::VersionedAuthorityList;
 use std::{boxed::Box, slice, vec::Vec};
 use substrate_api_client::compose_extrinsic_offline;
 
@@ -388,39 +386,23 @@ pub unsafe extern "C" fn init_direct_invocation_server(
 
 #[no_mangle]
 pub unsafe extern "C" fn init_light_client(
-	genesis_header: *const u8,
-	genesis_header_size: usize,
-	authority_list: *const u8,
-	authority_list_size: usize,
-	authority_proof: *const u8,
-	authority_proof_size: usize,
+	params: *const u8,
+	params_size: usize,
 	latest_header: *mut u8,
 	latest_header_size: usize,
 ) -> sgx_status_t {
 	info!("Initializing light client!");
 
-	let mut header = slice::from_raw_parts(genesis_header, genesis_header_size);
+	let mut params = slice::from_raw_parts(params, params_size);
 	let latest_header_slice = slice::from_raw_parts_mut(latest_header, latest_header_size);
-	let mut auth = slice::from_raw_parts(authority_list, authority_list_size);
-	let mut proof = slice::from_raw_parts(authority_proof, authority_proof_size);
 
-	let header = match Header::decode(&mut header) {
+	let params = match LightClientInitParams::<Header>::decode(&mut params) {
+		Ok(p) => p,
+		Err(e) => return Error::Codec(e).into(),
+	};
+
+	let latest_header = match initialization::init_light_client(params) {
 		Ok(h) => h,
-		Err(e) => return Error::Codec(e).into(),
-	};
-
-	let auth = match VersionedAuthorityList::decode(&mut auth) {
-		Ok(a) => a,
-		Err(e) => return Error::Codec(e).into(),
-	};
-
-	let proof = match StorageProof::decode(&mut proof) {
-		Ok(h) => h,
-		Err(e) => return Error::Codec(e).into(),
-	};
-
-	let latest_header = match initialization::init_light_client(header, auth, proof) {
-		Ok(header) => header,
 		Err(e) => return e.into(),
 	};
 

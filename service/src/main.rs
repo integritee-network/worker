@@ -59,6 +59,7 @@ use itp_settings::{
 	files::{SIDECHAIN_PURGE_INTERVAL, SIDECHAIN_PURGE_LIMIT, SIDECHAIN_STORAGE_PATH},
 	sidechain::SLOT_DURATION,
 };
+use itp_types::light_client_init_params::LightClientInitParams;
 use its_consensus_slots::start_slot_worker;
 use its_peer_fetch::{
 	block_fetch_client::BlockFetcher, untrusted_peer_fetch::UntrustedPeerFetcher,
@@ -688,16 +689,24 @@ pub fn init_light_client<E: EnclaveBase + Sidechain>(
 	let genesis_hash = api.get_genesis_hash().unwrap();
 	let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap().unwrap();
 	info!("Got genesis Header: \n {:?} \n", genesis_header);
-	let grandpas = api.grandpa_authorities(Some(genesis_hash)).unwrap();
-	let grandpa_proof = api.grandpa_authorities_proof(Some(genesis_hash)).unwrap();
+	if api.is_grandpa_available()? {
+		let grandpas = api.grandpa_authorities(Some(genesis_hash)).unwrap();
+		let grandpa_proof = api.grandpa_authorities_proof(Some(genesis_hash)).unwrap();
 
-	debug!("Grandpa Authority List: \n {:?} \n ", grandpas);
+		debug!("Grandpa Authority List: \n {:?} \n ", grandpas);
 
-	let authority_list = VersionedAuthorityList::from(grandpas);
+		let authority_list = VersionedAuthorityList::from(grandpas);
 
-	Ok(enclave_api
-		.init_light_client(genesis_header, authority_list, grandpa_proof)
-		.unwrap())
+		let params = LightClientInitParams::Grandpa {
+			genesis_header,
+			authorities: authority_list.into(),
+			authority_proof: grandpa_proof,
+		};
+
+		Ok(enclave_api.init_light_client(params).unwrap())
+	} else {
+		unimplemented!()
+	}
 }
 
 /// Subscribe to the node API finalized heads stream and trigger a parent chain sync

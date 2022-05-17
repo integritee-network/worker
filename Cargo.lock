@@ -2893,6 +2893,7 @@ dependencies = [
  "serde_json 1.0.81",
  "sgx_tstd",
  "sp-core",
+ "sp-finality-grandpa",
  "sp-keyring",
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.20)",

@@ -23,11 +23,11 @@ use itp_enclave_api_ffi as ffi;
 use itp_settings::worker::{
 	HEADER_MAX_SIZE, MR_ENCLAVE_SIZE, SHIELDING_KEY_SIZE, SIGNING_KEY_SIZE, STATE_VALUE_MAX_SIZE,
 };
+use itp_types::light_client_init_params::LightClientInitParams;
 use log::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;
 use sp_core::ed25519;
-use sp_finality_grandpa::VersionedAuthorityList;
 use sp_runtime::traits::Header;
 
 /// Trait for base/common Enclave API functions
@@ -44,9 +44,7 @@ pub trait EnclaveBase: Send + Sync + 'static {
 	/// Initialize the light client (needs to be called once at application startup).
 	fn init_light_client<SpHeader: Header>(
 		&self,
-		genesis_header: SpHeader,
-		authority_list: VersionedAuthorityList,
-		authority_proof: Vec<Vec<u8>>,
+		params: LightClientInitParams<SpHeader>,
 	) -> EnclaveResult<SpHeader>;
 
 	/// Initialize a new shard.
@@ -125,22 +123,13 @@ impl EnclaveBase for Enclave {
 
 	fn init_light_client<SpHeader: Header>(
 		&self,
-		genesis_header: SpHeader,
-		authority_list: VersionedAuthorityList,
-		authority_proof: Vec<Vec<u8>>,
+		params: LightClientInitParams<SpHeader>,
 	) -> EnclaveResult<SpHeader> {
-		let encoded_genesis_header = genesis_header.encode();
-		let authority_proof_encoded = authority_proof.encode();
-
+		let encoded_params = params.encode();
 		// Todo: this is a bit ugly but the common `encode()` is not implemented for authority list
-		let latest_header_encoded = authority_list.using_encoded(|authorities| {
-			init_light_client_ffi(
-				self.eid,
-				authorities.to_vec(),
-				encoded_genesis_header,
-				authority_proof_encoded,
-			)
-		})?;
+		let latest_header_encoded = params
+			.get_authorities()
+			.using_encoded(|_authorities| init_light_client_ffi(self.eid, encoded_params))?;
 
 		let latest: SpHeader = Decode::decode(&mut latest_header_encoded.as_slice()).unwrap();
 		info!("Latest Header {:?}", latest);
@@ -269,12 +258,7 @@ impl EnclaveBase for Enclave {
 	}
 }
 
-fn init_light_client_ffi(
-	enclave_id: sgx_enclave_id_t,
-	authorities_vec: Vec<u8>,
-	encoded_genesis_header: Vec<u8>,
-	authority_proof_encoded: Vec<u8>,
-) -> EnclaveResult<Vec<u8>> {
+fn init_light_client_ffi(enclave_id: sgx_enclave_id_t, params: Vec<u8>) -> EnclaveResult<Vec<u8>> {
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 
 	let latest_header_size = HEADER_MAX_SIZE;
@@ -284,12 +268,8 @@ fn init_light_client_ffi(
 		ffi::init_light_client(
 			enclave_id,
 			&mut retval,
-			encoded_genesis_header.as_ptr(),
-			encoded_genesis_header.len(),
-			authorities_vec.as_ptr(),
-			authorities_vec.len(),
-			authority_proof_encoded.as_ptr(),
-			authority_proof_encoded.len(),
+			params.as_ptr(),
+			params.len(),
 			latest_header.as_mut_ptr(),
 			latest_header.len(),
 		)
