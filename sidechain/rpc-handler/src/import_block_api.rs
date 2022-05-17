@@ -19,10 +19,11 @@
 use crate::sgx_reexport_prelude::*;
 
 use codec::Decode;
+use itp_utils::decode_hex;
 use its_primitives::{constants::RPC_METHOD_NAME_IMPORT_BLOCKS, types::SignedBlock};
 use jsonrpc_core::{IoHandler, Params, Value};
 use log::*;
-use std::{borrow::ToOwned, fmt::Debug, vec::Vec};
+use std::{borrow::ToOwned, fmt::Debug, string::String, vec::Vec};
 
 pub fn add_import_block_rpc_method<ImportFn, Error>(
 	import_fn: ImportFn,
@@ -36,7 +37,14 @@ where
 	io_handler.add_sync_method(sidechain_import_import_name, move |sidechain_blocks: Params| {
 		debug!("{} rpc. Params: {:?}", RPC_METHOD_NAME_IMPORT_BLOCKS, sidechain_blocks);
 
-		let block_vec: Vec<u8> = sidechain_blocks.parse()?;
+		let hex_encoded_block_vec: Vec<String> = sidechain_blocks.parse()?;
+
+		let block_vec: Vec<u8> = decode_hex(&hex_encoded_block_vec[0]).map_err(|_| {
+			jsonrpc_core::error::Error::invalid_params_with_details(
+				"Could not hex decode Vec<SignedBlock>",
+				hex_encoded_block_vec,
+			)
+		})?;
 
 		let blocks: Vec<SignedBlock> = Decode::decode(&mut block_vec.as_slice()).map_err(|_| {
 			jsonrpc_core::error::Error::invalid_params_with_details(
@@ -44,7 +52,6 @@ where
 				block_vec,
 			)
 		})?;
-
 		info!("{}. Blocks: {:?}", RPC_METHOD_NAME_IMPORT_BLOCKS, blocks);
 
 		for block in blocks {
