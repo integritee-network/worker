@@ -19,7 +19,6 @@ use crate::{
 	response_channel::ResponseChannel, DirectRpcError, DirectRpcResult, RpcConnectionRegistry,
 	RpcHash, SendRpcResponse,
 };
-use codec::Decode;
 use itp_types::{DirectRequestStatus, RpcResponse, RpcReturnValue, TrustedOperationStatus};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use log::*;
@@ -84,7 +83,7 @@ where
 
 		let mut new_response = rpc_response.clone();
 
-		let result = RpcReturnValue::from_hex(&rpc_response.result)
+		let mut result = RpcReturnValue::from_hex(&rpc_response.result)
 			.map_err(|e| DirectRpcError::Other(Box::new(e)))?;
 
 		let do_watch = continue_watching(&status_update);
