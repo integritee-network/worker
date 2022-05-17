@@ -26,7 +26,7 @@ futures_sgx = { package = "futures", git = "https://github.com/mesalock-linux/fu
 
 # std compatible external libraries (make sure these versions match with the sgx-enabled ones above)
 thiserror = { version = "1.0", optional = true }
-futures = { version = "0.3", default-features = false, optional = true }
+futures = { version = "0.3.8", default-features = false, optional = true }
 
 # no-std compatible libraries
 bs58 = { version = "0.4.0", default-features = false, features = ["alloc"] }
