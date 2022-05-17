@@ -19,13 +19,10 @@
 use crate::sgx_reexport_prelude::*;
 
 use crate::{DetermineWatch, RpcConnectionRegistry, RpcHash};
-use itc_tls_websocket_server::{
-	error::{WebSocketError, WebSocketResult},
-	ConnectionToken, WebSocketMessageHandler,
-};
+use itc_tls_websocket_server::{error::WebSocketResult, ConnectionToken, WebSocketMessageHandler};
 use jsonrpc_core::IoHandler;
 use log::*;
-use std::{boxed::Box, string::String, sync::Arc};
+use std::{string::String, sync::Arc};
 
 pub struct RpcWsHandler<Watcher, Registry, Hash>
 where
@@ -72,16 +69,14 @@ where
 		if let Ok(rpc_response) =
 			serde_json::from_str(maybe_rpc_response.clone().unwrap_or_default().as_str())
 		{
-			match self.connection_watcher.must_be_watched(&rpc_response) {
-				Ok(maybe_connection_hash) =>
-					if let Some(connection_hash) = maybe_connection_hash {
-						self.connection_registry.store(
-							connection_hash,
-							connection_token.into(),
-							rpc_response,
-						);
-					},
-				Err(e) => return Err(WebSocketError::Other(Box::new(e))),
+			if let Ok(Some(connection_hash)) =
+				self.connection_watcher.must_be_watched(&rpc_response)
+			{
+				self.connection_registry.store(
+					connection_hash,
+					connection_token.into(),
+					rpc_response,
+				);
 			}
 		}
 
