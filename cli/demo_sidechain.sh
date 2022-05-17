@@ -40,10 +40,10 @@ while getopts ":m:p:A:B:t:u:W:V:C:" opt; do
         u)
             NODEURL=$OPTARG
             ;;
-        W)
+        V)
             WORKER1URL=$OPTARG
             ;;
-        V)
+        W)
             WORKER2URL=$OPTARG
             ;;
         C)
