@@ -74,7 +74,7 @@ where
 		F: FnOnce(Self::SidechainState) -> Result<SignedSidechainBlock, Error>;
 
 	/// Key that is used for state encryption.
-	fn state_key(&self) -> Self::StateCrypto;
+	fn state_key(&self) -> Result<Self::StateCrypto, Error>;
 
 	/// Getter for the context.
 	fn get_context(&self) -> &Self::Context;
@@ -138,10 +138,12 @@ where
 		let latest_parentchain_header =
 			self.import_parentchain_block(&sidechain_block, parentchain_header)?;
 
+		let state_key = self.state_key()?;
+
 		self.apply_state_update(&shard, |mut state| {
 			let update = state_update_from_encrypted(
 				block_import_params.block().block_data().encrypted_state_diff(),
-				self.state_key(),
+				state_key,
 			)?;
 
 			state.apply_state_update(&update).map_err(|e| Error::Other(e.into()))?;

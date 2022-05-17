@@ -68,6 +68,7 @@ pub fn produce_sidechain_block_and_import_it() {
 	let shielding_key = TestShieldingKey::new().unwrap();
 	let state_key = TestStateKey::new([3u8; 16], [1u8; 16]);
 	let shielding_key_repo = Arc::new(TestShieldingKeyRepo::new(shielding_key));
+	let state_key_repo = Arc::new(TestStateKeyRepo::new(state_key));
 
 	let ocall_api = create_ocall_api(&signer);
 
@@ -91,13 +92,12 @@ pub fn produce_sidechain_block_and_import_it() {
 	let parentchain_block_import_trigger = Arc::new(TestParentchainBlockImportTrigger::default());
 	let block_importer = Arc::new(TestBlockImporter::new(
 		state_handler.clone(),
-		state_key,
-		signer.clone(),
+		state_key_repo.clone(),
 		top_pool_operation_handler.clone(),
 		parentchain_block_import_trigger.clone(),
 		ocall_api.clone(),
 	));
-	let block_composer = Arc::new(TestBlockComposer::new(signer.clone(), state_key));
+	let block_composer = Arc::new(TestBlockComposer::new(signer.clone(), state_key_repo.clone()));
 	let proposer_environment =
 		ProposerFactory::new(top_pool_operation_handler, stf_executor.clone(), block_composer);
 	let extrinsics_factory = ExtrinsicsFactoryMock::default();

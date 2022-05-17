@@ -123,7 +123,7 @@ where
 		todo!()
 	}
 
-	fn state_key(&self) -> Self::StateCrypto {
+	fn state_key(&self) -> Result<Self::StateCrypto> {
 		todo!()
 	}
 

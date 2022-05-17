@@ -45,12 +45,12 @@ use sgx_externalities::SgxExternalities;
 use sp_core::ed25519 as spEd25519;
 
 pub type TestSigner = spEd25519::Pair;
-
 pub type TestShieldingKey = Rsa3072KeyPair;
+pub type TestStateKey = Aes;
 
 pub type TestShieldingKeyRepo = KeyRepositoryMock<TestShieldingKey>;
 
-pub type TestStateKey = Aes;
+pub type TestStateKeyRepo = KeyRepositoryMock<TestStateKey>;
 
 pub type TestStateHandler = HandleStateMock;
 
@@ -79,7 +79,7 @@ pub type TestTopPoolExecutor = TopPoolOperationHandler<
 >;
 
 pub type TestBlockComposer =
-	BlockComposer<ParentchainBlock, SignedSidechainBlock, TestSigner, TestStateKey>;
+	BlockComposer<ParentchainBlock, SignedSidechainBlock, TestSigner, TestStateKeyRepo>;
 
 pub type TestBlockImporter = BlockImporter<
 	TestSigner,
@@ -88,7 +88,7 @@ pub type TestBlockImporter = BlockImporter<
 	TestOCallApi,
 	TestSidechainDb,
 	HandleStateMock,
-	Aes,
+	TestStateKeyRepo,
 	TestTopPoolExecutor,
 	TestParentchainBlockImportTrigger,
 >;

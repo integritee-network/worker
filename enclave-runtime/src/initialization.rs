@@ -180,13 +180,13 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 	let parentchain_block_import_dispatcher =
 		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get()?;
 
+	let state_key_repository = GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.get()?;
+
 	let signer = Ed25519Seal::unseal_from_static_file()?;
-	let state_key = AesSeal::unseal_from_static_file()?;
 
 	let sidechain_block_importer = Arc::<EnclaveSidechainBlockImporter>::new(BlockImporter::new(
 		state_handler,
-		state_key,
-		signer.clone(),
+		state_key_repository.clone(),
 		top_pool_executor,
 		parentchain_block_import_dispatcher,
 		ocall_api.clone(),
@@ -205,7 +205,7 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 		));
 	GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT.initialize(sidechain_block_import_queue_worker);
 
-	let block_composer = Arc::new(BlockComposer::new(signer, state_key));
+	let block_composer = Arc::new(BlockComposer::new(signer, state_key_repository));
 	GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT.initialize(block_composer);
 
 	Ok(())

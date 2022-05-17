@@ -114,7 +114,7 @@ pub type EnclaveTopPoolOperationHandler = TopPoolOperationHandler<
 	EnclaveStfExecutor,
 >;
 pub type EnclaveSidechainBlockComposer =
-	BlockComposer<ParentchainBlock, SignedSidechainBlock, Pair, Aes>;
+	BlockComposer<ParentchainBlock, SignedSidechainBlock, Pair, EnclaveStateKeyRepository>;
 pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 	Pair,
 	ParentchainBlock,
@@ -122,7 +122,7 @@ pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 	EnclaveOCallApi,
 	EnclaveSidechainState,
 	EnclaveStateHandler,
-	Aes,
+	EnclaveStateKeyRepository,
 	EnclaveTopPoolOperationHandler,
 	EnclaveParentchainBlockImportDispatcher,
 >;
