@@ -19,7 +19,7 @@
 use crate::sgx_reexport_prelude::*;
 
 use codec::Decode;
-use itp_utils::decode_hex;
+use itp_utils::FromHexPrefixed;
 use its_primitives::{constants::RPC_METHOD_NAME_IMPORT_BLOCKS, types::SignedBlock};
 use jsonrpc_core::{IoHandler, Params, Value};
 use log::*;
@@ -39,19 +39,13 @@ where
 
 		let hex_encoded_block_vec: Vec<String> = sidechain_blocks.parse()?;
 
-		let block_vec: Vec<u8> = decode_hex(&hex_encoded_block_vec[0]).map_err(|_| {
+		let blocks = Vec<SignedBlock>::from_hex(&hex_encoded_block_vec[0]).map_err(|_| {
 			jsonrpc_core::error::Error::invalid_params_with_details(
-				"Could not hex decode Vec<u8>",
+				"Could not decode Vec<SignedBlock>",
 				hex_encoded_block_vec,
 			)
 		})?;
 
-		let blocks: Vec<SignedBlock> = Decode::decode(&mut block_vec.as_slice()).map_err(|_| {
-			jsonrpc_core::error::Error::invalid_params_with_details(
-				"Could not decode Vec<SignedBlock>",
-				block_vec,
-			)
-		})?;
 		info!("{}. Blocks: {:?}", RPC_METHOD_NAME_IMPORT_BLOCKS, blocks);
 
 		for block in blocks {

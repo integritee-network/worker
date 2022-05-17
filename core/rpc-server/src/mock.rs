@@ -17,7 +17,7 @@
 
 use itp_enclave_api::{direct_request::DirectRequest, EnclaveResult};
 use itp_types::RpcResponse;
-use itp_utils::hex_encode;
+use itp_utils::ToHexPrefixed;
 use its_primitives::{
 	traits::ShardIdentifierFor,
 	types::{BlockHash, SignedBlock, SignedBlock as SignedSidechainBlock},
@@ -29,12 +29,7 @@ pub struct TestEnclave;
 
 impl DirectRequest for TestEnclave {
 	fn rpc(&self, _request: Vec<u8>) -> EnclaveResult<Vec<u8>> {
-		Ok(RpcResponse {
-			jsonrpc: "mock_response".into(),
-			result: hex_encode("null".encode()),
-			id: 1,
-		}
-		.encode())
+		Ok(RpcResponse { jsonrpc: "mock_response".into(), result: "null".to_hex(), id: 1 }.encode())
 	}
 }
 

@@ -18,7 +18,7 @@
 use crate::{DetermineWatch, DirectRpcError, DirectRpcResult, RpcHash};
 use codec::Decode;
 use itp_types::{DirectRequestStatus, RpcResponse, RpcReturnValue};
-use itp_utils::decode_hex;
+use itp_utils::FromHexPrefixed;
 use std::{boxed::Box, marker::PhantomData};
 
 pub struct RpcWatchExtractor<Hash>
@@ -53,10 +53,8 @@ where
 	type Hash = Hash;
 
 	fn must_be_watched(&self, rpc_response: &RpcResponse) -> DirectRpcResult<Option<Self::Hash>> {
-		let response_result = decode_hex(rpc_response.result.clone())
+		let rpc_return_value = RpcReturnValue::from_hex(&rpc_response.result)
 			.map_err(|e| DirectRpcError::Other(Box::new(e)))?;
-		let rpc_return_value = RpcReturnValue::decode(&mut response_result.as_slice())
-			.map_err(DirectRpcError::EncodingError)?;
 
 		if !rpc_return_value.do_watch {
 			return Ok(None)

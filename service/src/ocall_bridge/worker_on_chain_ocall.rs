@@ -20,7 +20,7 @@ use crate::ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, Worke
 use codec::{Decode, Encode};
 use itp_node_api_extensions::node_api_factory::CreateNodeApi;
 use itp_types::{WorkerRequest, WorkerResponse};
-use itp_utils::hex_encode;
+use itp_utils::ToHexPrefixed;
 use log::*;
 use sp_core::storage::StorageKey;
 use sp_runtime::OpaqueExtrinsic;
@@ -89,7 +89,7 @@ where
 		if !extrinsics.is_empty() {
 			debug!("Enclave wants to send {} extrinsics", extrinsics.len());
 			for call in extrinsics.into_iter() {
-				if let Err(e) = api.send_extrinsic(hex_encode(call.encode()), XtStatus::Ready) {
+				if let Err(e) = api.send_extrinsic(call.to_hex(), XtStatus::Ready) {
 					error!("Could not send extrsinic to node: {:?}", e);
 				}
 			}

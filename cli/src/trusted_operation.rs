@@ -29,7 +29,7 @@ use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_types::{
 	DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue, TrustedOperationStatus,
 };
-use itp_utils::{decode_hex, hex_encode};
+use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use log::*;
 use my_node_runtime::{AccountId, Hash};
 use sp_core::{sr25519 as sr25519_core, Pair, H256};
@@ -61,7 +61,7 @@ fn get_state(cli: &Cli, trusted_args: &TrustedArgs, getter: TrustedOperation) ->
 	let data = Request { shard, cyphertext: operation_call_encrypted };
 	let rpc_method = "author_submitAndWatchExtrinsic".to_owned();
 	let jsonrpc_call: String =
-		RpcRequest::compose_jsonrpc_call(rpc_method, vec![hex_encode(data.encode())]).unwrap();
+		RpcRequest::compose_jsonrpc_call(rpc_method, vec![data.to_hex()]).unwrap();
 
 	let direct_api = get_worker_api_direct(cli);
 	let (sender, receiver) = channel();
@@ -72,8 +72,7 @@ fn get_state(cli: &Cli, trusted_args: &TrustedArgs, getter: TrustedOperation) ->
 			Ok(response) => {
 				debug!("Response: {:?}", response);
 				let response: RpcResponse = serde_json::from_str(&response).unwrap();
-				let response_result = decode_hex(response.result).unwrap();
-				if let Ok(return_value) = RpcReturnValue::decode(&mut response_result.as_slice()) {
+				if let Ok(return_value) = RpcReturnValue::from_hex(&response.result) {
 					if return_value.status == DirectRequestStatus::Error {
 						println!(
 							"[Error] {}",
@@ -159,11 +158,11 @@ fn send_direct_request(
 	let encryption_key = get_shielding_key(cli).unwrap();
 	let operation_call_encrypted = encryption_key.encrypt(&operation_call.encode()).unwrap();
 	let shard = read_shard(trusted_args).unwrap();
-	let data = Request { shard, cyphertext: operation_call_encrypted }.encode();
+	let request = Request { shard, cyphertext: operation_call_encrypted };
 
 	let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(
 		"author_submitAndWatchExtrinsic".to_string(),
-		vec![hex_encode(data)],
+		vec![request.to_hex()],
 	)
 	.unwrap();
 
@@ -180,8 +179,7 @@ fn send_direct_request(
 			Ok(response) => {
 				debug!("received response");
 				let response: RpcResponse = serde_json::from_str(&response).unwrap();
-				let response_result = decode_hex(response.result).unwrap();
-				if let Ok(return_value) = RpcReturnValue::decode(&mut response_result.as_slice()) {
+				if let Ok(return_value) = RpcReturnValue::from_hex(&response.result) {
 					debug!("successfully decoded rpc response");
 					match return_value.status {
 						DirectRequestStatus::Error => {

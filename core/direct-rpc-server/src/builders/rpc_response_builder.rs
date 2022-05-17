@@ -55,11 +55,10 @@ impl RpcResponseBuilder {
 	pub fn build(self) -> RpcResponse {
 		let id = self.maybe_id.unwrap_or(1u32);
 		let json_rpc = self.maybe_json_rpc.unwrap_or(String::from("json_rpc"));
-		let result = hex_encode(
-			self.maybe_result
-				.unwrap_or_else(|| RpcReturnValueBuilder::new().build())
-				.encode(),
-		);
+		let result = self
+			.maybe_result
+			.unwrap_or_else(|| RpcReturnValueBuilder::new().build())
+			.to_hex();
 
 		RpcResponse { result, jsonrpc: json_rpc, id }
 	}

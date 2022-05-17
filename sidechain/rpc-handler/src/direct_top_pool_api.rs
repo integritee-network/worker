@@ -29,7 +29,7 @@ use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{
 	DirectRequestStatus, Request, RpcReturnValue, ShardIdentifier, TrustedOperationStatus,
 };
-use itp_utils::{decode_hex, hex_encode};
+use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use jsonrpc_core::{
 	futures::executor, serde_json::json, Error as RpcError, IoHandler, Params, Value,
 };
@@ -56,10 +56,10 @@ where
 					TrustedOperationStatus::Submitted,
 				),
 			}
-			.encode(),
-			Err(error) => compute_encoded_return_error(error.as_str()),
+			.to_hex(),
+			Err(error) => compute_hex_encoded_return_error(error.as_str()),
 		};
-		Ok(json!(hex_encode(json_value)))
+		Ok(json!(json_value))
 	});
 
 	// author_submitExtrinsic
@@ -74,10 +74,10 @@ where
 					TrustedOperationStatus::Submitted,
 				),
 			}
-			.encode(),
-			Err(error) => compute_encoded_return_error(error.as_str()),
+			.to_hex(),
+			Err(error) => compute_hex_encoded_return_error(error.as_str()),
 		};
-		Ok(json!(hex_encode(json_value)))
+		Ok(json!(json_value))
 	});
 
 	// author_pendingExtrinsics
@@ -101,11 +101,11 @@ where
 					value: retrieved_operations.encode(),
 					status: DirectRequestStatus::Ok,
 				};
-				Ok(json!(hex_encode(json_value.encode())))
+				Ok(json!(json_value.to_hex()))
 			},
 			Err(e) => {
 				let error_msg: String = format!("Could not retrieve pending calls due to: {}", e);
-				Ok(json!(hex_encode(compute_encoded_return_error(error_msg.as_str()))))
+				Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
 			},
 		}
 	});
@@ -136,11 +136,8 @@ fn author_submit_extrinsic_inner<R: AuthorApi<Hash, Hash> + Send + Sync + 'stati
 ) -> Result<Hash, String> {
 	let hex_encoded_params = params.parse::<Vec<String>>().map_err(|e| format!("{:?}", e))?;
 
-	let encoded_params =
-		decode_hex(hex_encoded_params[0].clone()).map_err(|e| format!("{:?}", e))?;
-
 	let request =
-		Request::decode(&mut encoded_params.as_slice()).map_err(|e| format!("{:?}", e))?;
+		Request::from_hex(&hex_encoded_params[0].clone()).map_err(|e| format!("{:?}", e))?;
 
 	let shard: ShardIdentifier = request.shard;
 	let encrypted_trusted_call: Vec<u8> = request.cyphertext;

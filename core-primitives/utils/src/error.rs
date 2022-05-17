@@ -29,6 +29,8 @@ pub enum Error {
 	InsufficientBufferSize(usize, usize),
 	#[error("Could not decode from hex data: {0}")]
 	Hex(hex::FromHexError),
+	#[error("Parity Scale Codec: {0}")]
+	Codec(codec::Error),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }
