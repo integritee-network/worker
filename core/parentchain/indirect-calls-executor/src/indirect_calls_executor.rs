@@ -23,6 +23,7 @@ use ita_stf::{AccountId, TrustedCallSigned};
 use itp_settings::node::{CALL_WORKER, SHIELD_FUNDS, TEEREX_MODULE};
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt};
 use itp_stf_executor::traits::{StatePostProcessing, StfExecuteShieldFunds, StfExecuteTrustedCall};
+use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{CallWorkerFn, OpaqueCall, ShardIdentifier, ShieldFundsFn, H256};
 use log::*;
 use sp_core::blake2_256;
@@ -43,20 +44,27 @@ pub trait ExecuteIndirectCalls {
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>;
 }
 
-pub struct IndirectCallsExecutor<ShieldingKeyRepository, StfExecutor> {
+pub struct IndirectCallsExecutor<ShieldingKeyRepository, StfExecutor, TopPoolAuthor> {
 	shielding_key_repo: Arc<ShieldingKeyRepository>,
 	stf_executor: Arc<StfExecutor>,
+	top_pool_author: Arc<TopPoolAuthor>,
 }
 
-impl<ShieldingKeyRepository, StfExecutor> IndirectCallsExecutor<ShieldingKeyRepository, StfExecutor>
+impl<ShieldingKeyRepository, StfExecutor, TopPoolAuthor>
+	IndirectCallsExecutor<ShieldingKeyRepository, StfExecutor, TopPoolAuthor>
 where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType:
 		ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>,
 	StfExecutor: StfExecuteTrustedCall + StfExecuteShieldFunds,
+	TopPoolAuthor: AuthorApi<H256, H256> + Send + Sync + 'static,
 {
-	pub fn new(authority: Arc<ShieldingKeyRepository>, stf_executor: Arc<StfExecutor>) -> Self {
-		IndirectCallsExecutor { shielding_key_repo: authority, stf_executor }
+	pub fn new(
+		authority: Arc<ShieldingKeyRepository>,
+		stf_executor: Arc<StfExecutor>,
+		top_pool_author: Arc<TopPoolAuthor>,
+	) -> Self {
+		IndirectCallsExecutor { shielding_key_repo: authority, stf_executor, top_pool_author }
 	}
 
 	fn handle_shield_funds_xt(&self, xt: &UncheckedExtrinsicV4<ShieldFundsFn>) -> Result<()> {
@@ -92,13 +100,14 @@ where
 	}
 }
 
-impl<ShieldingKeyRepository, StfExecutor> ExecuteIndirectCalls
-	for IndirectCallsExecutor<ShieldingKeyRepository, StfExecutor>
+impl<ShieldingKeyRepository, StfExecutor, TopPoolAuthor> ExecuteIndirectCalls
+	for IndirectCallsExecutor<ShieldingKeyRepository, StfExecutor, TopPoolAuthor>
 where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType:
 		ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>,
 	StfExecutor: StfExecuteTrustedCall + StfExecuteShieldFunds,
+	TopPoolAuthor: AuthorApi<H256, H256> + Send + Sync + 'static,
 {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
@@ -130,19 +139,26 @@ where
 				UncheckedExtrinsicV4::<CallWorkerFn>::decode(&mut xt_opaque.encode().as_slice())
 			{
 				if xt.function.0 == [TEEREX_MODULE, CALL_WORKER] {
-					if let Ok((decrypted_trusted_call, shard)) =
-						self.decrypt_unchecked_extrinsic(xt)
-					{
-						if let Err(e) = self.stf_executor.execute_trusted_call(
-							&mut opaque_calls,
-							&decrypted_trusted_call,
-							block.header(),
-							&shard,
-							StatePostProcessing::Prune, // we only want to store the state diff for direct stuff.
-						) {
-							error!("Error executing trusted call: Error: {:?}", e);
-						}
-					}
+					let (_, request) = xt.function;
+					let (shard, cypher_text) = (request.shard, request.cyphertext);
+
+					let result =
+						async { self.top_pool_author.submit_top(cypher_text, shard).await };
+					let response: Result<H256, RpcError> = executor::block_on(result);
+
+					// if let Ok((decrypted_trusted_call, shard)) =
+					// 	self.decrypt_unchecked_extrinsic(xt)
+					// {
+					// 	if let Err(e) = self.stf_executor.execute_trusted_call(
+					// 		&mut opaque_calls,
+					// 		&decrypted_trusted_call,
+					// 		block.header(),
+					// 		&shard,
+					// 		StatePostProcessing::Prune, // we only want to store the state diff for direct stuff.
+					// 	) {
+					// 		error!("Error executing trusted call: Error: {:?}", e);
+					// 	}
+					// }
 				}
 			}
 		}

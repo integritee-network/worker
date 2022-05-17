@@ -17,6 +17,7 @@ itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features 
 itp-settings = { path = "../../../core-primitives/settings" }
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
 itp-stf-executor = { path = "../../../core-primitives/stf-executor", default-features = false }
+itp-top-pool-author = { path = "../../../core-primitives/top-pool-author", default-features = false }
 itp-types = { path = "../../../core-primitives/types", default-features = false }
 
 # sgx enabled external libraries
@@ -45,6 +46,7 @@ std = [
     "itp-ocall-api/std",
     "itp-sgx-crypto/std",
     "itp-stf-executor/std",
+    "itp-top-pool-author/std",
     "itp-types/std",
     "log/std",
     "sp-core/std",
@@ -58,6 +60,7 @@ sgx = [
     "itp-extrinsics-factory/sgx",
     "itp-sgx-crypto/sgx",
     "itp-stf-executor/sgx",
+    "itp-top-pool-author/sgx",
     "itp-types/sgx",
     "thiserror_sgx",
 ]

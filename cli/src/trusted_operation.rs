@@ -43,15 +43,13 @@ pub fn perform_trusted_operation(
 	top: &TrustedOperation,
 ) -> Option<Vec<u8>> {
 	match top {
-		TrustedOperation::indirect_call(call) => send_request(cli, trusted_args, call.clone()),
-		TrustedOperation::direct_call(call) =>
-			send_direct_request(cli, trusted_args, TrustedOperation::direct_call(call.clone())),
-		TrustedOperation::get(getter) =>
-			get_state(cli, trusted_args, TrustedOperation::get(getter.clone())),
+		TrustedOperation::indirect_call(_) => send_request(cli, trusted_args, top),
+		TrustedOperation::direct_call(_) => send_direct_request(cli, trusted_args, top),
+		TrustedOperation::get(_) => get_state(cli, trusted_args, top),
 	}
 }
 
-fn get_state(cli: &Cli, trusted_args: &TrustedArgs, getter: TrustedOperation) -> Option<Vec<u8>> {
+fn get_state(cli: &Cli, trusted_args: &TrustedArgs, getter: &TrustedOperation) -> Option<Vec<u8>> {
 	// TODO: ensure getter is signed?
 	let encryption_key = get_shielding_key(cli).unwrap();
 	let operation_call_encrypted = encryption_key.encrypt(&getter.encode()).unwrap();
@@ -93,10 +91,14 @@ fn get_state(cli: &Cli, trusted_args: &TrustedArgs, getter: TrustedOperation) ->
 	}
 }
 
-fn send_request(cli: &Cli, trusted_args: &TrustedArgs, call: TrustedCallSigned) -> Option<Vec<u8>> {
+fn send_request(
+	cli: &Cli,
+	trusted_args: &TrustedArgs,
+	trusted_operation: &TrustedOperation,
+) -> Option<Vec<u8>> {
 	let chain_api = get_chain_api(cli);
 	let encryption_key = get_shielding_key(cli).unwrap();
-	let call_encrypted = encryption_key.encrypt(&call.encode()).unwrap();
+	let call_encrypted = encryption_key.encrypt(&trusted_operation.encode()).unwrap();
 
 	let shard = read_shard(trusted_args).unwrap();
 
@@ -153,7 +155,7 @@ fn read_shard(trusted_args: &TrustedArgs) -> StdResult<ShardIdentifier, codec::E
 fn send_direct_request(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
-	operation_call: TrustedOperation,
+	operation_call: &TrustedOperation,
 ) -> Option<Vec<u8>> {
 	let encryption_key = get_shielding_key(cli).unwrap();
 	let operation_call_encrypted = encryption_key.encrypt(&operation_call.encode()).unwrap();

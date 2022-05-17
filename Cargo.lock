@@ -2407,6 +2407,7 @@ dependencies = [
  "itp-settings",
  "itp-sgx-crypto",
  "itp-stf-executor",
+ "itp-top-pool-author",
  "itp-types",
  "log 0.4.17",
  "parity-scale-codec",
