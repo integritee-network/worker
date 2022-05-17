@@ -17,14 +17,18 @@
 
 //! Execute indirect calls, i.e. extrinsics extracted from parentchain blocks
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
+
 use crate::error::Result;
 use codec::{Decode, Encode};
-use ita_stf::{AccountId, TrustedCallSigned};
+use futures::executor;
+use ita_stf::AccountId;
 use itp_settings::node::{CALL_WORKER, SHIELD_FUNDS, TEEREX_MODULE};
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt};
-use itp_stf_executor::traits::{StatePostProcessing, StfExecuteShieldFunds, StfExecuteTrustedCall};
+use itp_stf_executor::traits::{StfExecuteShieldFunds, StfExecuteTrustedCall};
 use itp_top_pool_author::traits::AuthorApi;
-use itp_types::{CallWorkerFn, OpaqueCall, ShardIdentifier, ShieldFundsFn, H256};
+use itp_types::{CallWorkerFn, ShieldFundsFn, H256};
 use log::*;
 use sp_core::blake2_256;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header};
@@ -39,7 +43,7 @@ pub trait ExecuteIndirectCalls {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
 		block: &ParentchainBlock,
-	) -> Result<(Vec<OpaqueCall>, Vec<H256>)>
+	) -> Result<Vec<H256>>
 	where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>;
 }
@@ -82,22 +86,6 @@ where
 		self.stf_executor.execute_shield_funds(account, *amount, shard)?;
 		Ok(())
 	}
-
-	fn decrypt_unchecked_extrinsic(
-		&self,
-		xt: UncheckedExtrinsicV4<CallWorkerFn>,
-	) -> Result<(TrustedCallSigned, ShardIdentifier)> {
-		let (call, request) = xt.function;
-		let (shard, cyphertext) = (request.shard, request.cyphertext);
-		debug!("Found CallWorker extrinsic in block: \nCall: {:?} \nRequest: \nshard: {}\ncyphertext: {:?}",
-        	call, bs58::encode(shard.encode()).into_string(), cyphertext);
-
-		debug!("decrypt the call");
-		let shielding_key = self.shielding_key_repo.retrieve_key()?;
-		let request_vec = shielding_key.decrypt(&cyphertext)?;
-
-		Ok(TrustedCallSigned::decode(&mut request_vec.as_slice()).map(|call| (call, shard))?)
-	}
 }
 
 impl<ShieldingKeyRepository, StfExecutor, TopPoolAuthor> ExecuteIndirectCalls
@@ -112,12 +100,11 @@ where
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
 		block: &ParentchainBlock,
-	) -> Result<(Vec<OpaqueCall>, Vec<H256>)>
+	) -> Result<Vec<H256>>
 	where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	{
 		debug!("Scanning block {:?} for relevant xt", block.header().number());
-		let mut opaque_calls = Vec::<OpaqueCall>::new();
 		let mut executed_shielding_calls = Vec::<H256>::new();
 		for xt_opaque in block.extrinsics().iter() {
 			// Found ShieldFunds extrinsic in block.
@@ -142,27 +129,15 @@ where
 					let (_, request) = xt.function;
 					let (shard, cypher_text) = (request.shard, request.cyphertext);
 
-					let result =
+					let top_submit_future =
 						async { self.top_pool_author.submit_top(cypher_text, shard).await };
-					let response: Result<H256, RpcError> = executor::block_on(result);
-
-					// if let Ok((decrypted_trusted_call, shard)) =
-					// 	self.decrypt_unchecked_extrinsic(xt)
-					// {
-					// 	if let Err(e) = self.stf_executor.execute_trusted_call(
-					// 		&mut opaque_calls,
-					// 		&decrypted_trusted_call,
-					// 		block.header(),
-					// 		&shard,
-					// 		StatePostProcessing::Prune, // we only want to store the state diff for direct stuff.
-					// 	) {
-					// 		error!("Error executing trusted call: Error: {:?}", e);
-					// 	}
-					// }
+					if let Err(e) = executor::block_on(top_submit_future) {
+						error!("Error adding indirect trusted call to TOP pool: {:?}", e);
+					}
 				}
 			}
 		}
-		Ok((opaque_calls, executed_shielding_calls))
+		Ok(executed_shielding_calls)
 	}
 }
 

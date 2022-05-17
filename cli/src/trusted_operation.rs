@@ -22,7 +22,7 @@ use crate::{
 };
 use base58::FromBase58;
 use codec::{Decode, Encode};
-use ita_stf::{ShardIdentifier, TrustedCallSigned, TrustedOperation};
+use ita_stf::{ShardIdentifier, TrustedOperation};
 use itc_rpc_client::direct_client::DirectApi;
 use itp_node_api_extensions::TEEREX;
 use itp_sgx_crypto::ShieldingCryptoEncrypt;

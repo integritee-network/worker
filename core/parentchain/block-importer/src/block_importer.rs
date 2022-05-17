@@ -161,9 +161,7 @@ impl<
 			// Execute indirect calls that were found in the extrinsics of the block,
 			// incl. shielding and unshielding.
 			match self.indirect_calls_executor.execute_indirect_calls_in_extrinsics(&block) {
-				Ok((unshielding_call_confirmations, executed_shielding_calls)) => {
-					// Include all unshielding confirmations that need to be executed on the parentchain.
-					calls.extend(unshielding_call_confirmations.into_iter());
+				Ok(executed_shielding_calls) => {
 					// Include a processed parentchain block confirmation for each block.
 					calls.push(create_processed_parentchain_block_call(
 						block.hash(),

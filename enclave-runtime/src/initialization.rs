@@ -228,6 +228,7 @@ pub(crate) fn init_light_client(
 
 	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
+	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 
 	let validator_access = Arc::new(EnclaveValidatorAccessor::default());
 	let genesis_hash = validator_access.execute_on_validator(|v| v.genesis_hash(v.num_relays()))?;
@@ -237,8 +238,11 @@ pub(crate) fn init_light_client(
 
 	GLOBAL_EXTRINSICS_FACTORY_COMPONENT.initialize(extrinsics_factory.clone());
 
-	let indirect_calls_executor =
-		Arc::new(IndirectCallsExecutor::new(shielding_key_repository, stf_executor.clone()));
+	let indirect_calls_executor = Arc::new(IndirectCallsExecutor::new(
+		shielding_key_repository,
+		stf_executor.clone(),
+		top_pool_author,
+	));
 	let parentchain_block_importer = ParentchainBlockImporter::new(
 		validator_access,
 		ocall_api,

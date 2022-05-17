@@ -1201,6 +1201,7 @@ name = "itc-parentchain-indirect-calls-executor"
 version = "0.8.0"
 dependencies = [
  "bs58",
+ "futures 0.3.8",
  "ita-stf",
  "itp-extrinsics-factory",
  "itp-ocall-api",
