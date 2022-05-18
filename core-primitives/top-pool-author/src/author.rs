@@ -229,12 +229,11 @@ where
 		for operation in self.top_pool.ready(shard) {
 			match operation.data() {
 				TrustedOperation::direct_call(call) => calls.push(call.clone()),
+				TrustedOperation::indirect_call(call) => calls.push(call.clone()),
 				TrustedOperation::get(getter) => match getter {
 					Getter::trusted(trusted_getter_signed) =>
 						getters.push(trusted_getter_signed.clone()),
 					_ => error!("Found invalid trusted getter in top pool"),
-				},
-				_ => { // might be emtpy?
 				},
 			}
 		}

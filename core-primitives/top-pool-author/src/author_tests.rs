@@ -19,6 +19,7 @@ use crate::{
 	author::Author,
 	test_utils::submit_operation_to_top_pool,
 	top_filter::{AllowAllTopsFilter, Filter, GettersOnlyFilter},
+	traits::AuthorApi,
 };
 use codec::{Decode, Encode};
 use ita_stf::{Getter, KeyPair, TrustedCall, TrustedCallSigned, TrustedGetter, TrustedOperation};
@@ -110,6 +111,7 @@ fn submitting_direct_call_works() {
 		.unwrap();
 
 	assert_eq!(1, top_pool.get_last_submitted_transactions().len());
+	assert_eq!(1, author.get_pending_tops_separated(shard_id()).unwrap().0.len());
 }
 
 #[test]
@@ -121,6 +123,7 @@ fn submitting_indirect_call_works() {
 		.unwrap();
 
 	assert_eq!(1, top_pool.get_last_submitted_transactions().len());
+	assert_eq!(1, author.get_pending_tops_separated(shard_id()).unwrap().0.len());
 }
 
 fn create_author_with_filter<F: Filter<Value = TrustedOperation>>(

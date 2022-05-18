@@ -18,15 +18,20 @@
 
 use crate::{
 	test::{
-		fixtures::initialize_test_state::init_state,
+		fixtures::{
+			components::{
+				create_ocall_api, create_top_pool, encrypt_trusted_operation, sign_trusted_call,
+			},
+			initialize_test_state::init_state,
+		},
 		mocks::{propose_to_import_call_mock::ProposeToImportOCallApi, types::*},
 	},
 	top_pool_execution::{exec_aura_on_slot, send_blocks_and_extrinsics},
 };
-use codec::{Decode, Encode};
+use codec::Decode;
 use ita_stf::{
 	test_genesis::{endowed_account, second_endowed_account, unendowed_account},
-	Balance, KeyPair, StatePayload, Stf, TrustedCall, TrustedOperation,
+	Balance, StatePayload, Stf, TrustedCall, TrustedOperation,
 };
 use itc_parentchain::light_client::mocks::validator_access_mock::ValidatorAccessMock;
 use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
@@ -39,9 +44,8 @@ use itp_test::{
 	mock::{handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock},
 };
 use itp_time_utils::duration_now;
-use itp_top_pool::pool::Options as PoolOptions;
-use itp_top_pool_author::{api::SidechainApi, author::AuthorTopFilter, traits::AuthorApi};
-use itp_types::{AccountId, Block as ParentchainBlock, Enclave, ShardIdentifier};
+use itp_top_pool_author::{author::AuthorTopFilter, traits::AuthorApi};
+use itp_types::{AccountId, Block as ParentchainBlock, ShardIdentifier};
 use its_sidechain::{
 	aura::proposer_factory::ProposerFactory,
 	primitives::{traits::Block, types::SignedBlock as SignedSidechainBlock},
@@ -211,19 +215,10 @@ fn encrypted_trusted_operation_transfer_balance<
 	to: AccountId,
 	amount: Balance,
 ) -> Vec<u8> {
-	let mr_enclave = attestation_api.get_mrenclave_of_self().unwrap();
-
-	let call = TrustedCall::balance_transfer(from.public().into(), to, amount).sign(
-		&KeyPair::Ed25519(from),
-		0,
-		&mr_enclave.m,
-		shard_id,
-	);
-
-	let trusted_operation = TrustedOperation::direct_call(call);
-	let encoded_operation = trusted_operation.encode();
-
-	shielding_key.encrypt(encoded_operation.as_slice()).unwrap()
+	let call = TrustedCall::balance_transfer(from.public().into(), to, amount);
+	let call_signed = sign_trusted_call(&call, attestation_api, shard_id, from);
+	let trusted_operation = TrustedOperation::direct_call(call_signed);
+	encrypt_trusted_operation(shielding_key, &trusted_operation)
 }
 
 fn get_state_hashes_from_block(
@@ -240,20 +235,4 @@ fn get_state_hash(state_handler: &HandleStateMock, shard_id: &ShardIdentifier) -
 	let state = state_handler.load(shard_id).unwrap();
 	let sidechain_state = TestSidechainDb::new(state);
 	sidechain_state.state_hash()
-}
-
-fn create_top_pool() -> Arc<TestTopPool> {
-	let rpc_responder = Arc::new(TestRpcResponder::new());
-	let sidechain_api = Arc::new(SidechainApi::<ParentchainBlock>::new());
-	Arc::new(TestTopPool::create(PoolOptions::default(), sidechain_api, rpc_responder))
-}
-
-fn create_ocall_api(signer: &TestSigner) -> Arc<TestOCallApi> {
-	let enclave_validateer = Enclave::new(
-		signer.public().into(),
-		Default::default(),
-		Default::default(),
-		Default::default(),
-	);
-	Arc::new(TestOCallApi::default().with_validateer_set(Some(vec![enclave_validateer])))
 }

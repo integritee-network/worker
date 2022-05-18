@@ -23,7 +23,7 @@ use crate::{
 		cert_tests::*,
 		fixtures::initialize_test_state::init_state,
 		mocks::{rpc_responder_mock::RpcResponderMock, types::TestStateKeyRepo},
-		sidechain_aura_tests,
+		sidechain_aura_tests, top_pool_tests,
 	},
 	tls_ra,
 };
@@ -143,6 +143,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		stf_executor_tests::propose_state_update_executes_all_calls_given_enough_time,
 		// sidechain integration tests
 		sidechain_aura_tests::produce_sidechain_block_and_import_it,
+		top_pool_tests::process_indirect_call_in_top_pool,
 		// tls_ra unit tests
 		tls_ra::seal_handler::test::seal_shielding_key_works,
 		tls_ra::seal_handler::test::seal_shielding_key_fails_for_invalid_key,

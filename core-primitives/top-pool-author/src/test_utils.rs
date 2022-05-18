@@ -39,7 +39,7 @@ where
 	S::Error: Debug,
 {
 	let top_encrypted = shielding_key.encrypt(&top.encode()).unwrap();
-	let submit_future = async { author.submit_top(top_encrypted, shard).await };
+	let submit_future = async { author.watch_top(top_encrypted, shard).await };
 	executor::block_on(submit_future)
 }
 
