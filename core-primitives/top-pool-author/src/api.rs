@@ -55,7 +55,7 @@ impl<Block> SidechainApi<Block> {
 		SidechainApi { _marker: Default::default() }
 	}
 
-	fn trusted_call_to_validity(trusted_call_signed: TrustedCallSigned) -> ValidTransaction {
+	fn validate_trusted_call(trusted_call_signed: TrustedCallSigned) -> ValidTransaction {
 		let from = trusted_call_signed.call.account();
 		let requires = vec![];
 		let provides = vec![from.encode()];
@@ -88,9 +88,9 @@ where
 	) -> Self::ValidationFuture {
 		let operation = match uxt {
 			StfTrustedOperation::direct_call(signed_call) =>
-				Self::trusted_call_to_validity(signed_call),
+				Self::validate_trusted_call(signed_call),
 			StfTrustedOperation::indirect_call(signed_call) =>
-				Self::trusted_call_to_validity(signed_call),
+				Self::validate_trusted_call(signed_call),
 			StfTrustedOperation::get(getter) => match getter {
 				Getter::public(_) =>
 					return Box::pin(ready(Ok(Err(TransactionValidityError::Unknown(
@@ -144,7 +144,7 @@ where
 mod tests {
 	use super::*;
 	use futures::executor;
-	use ita_stf::{KeyPair, TrustedCall, TrustedOperation};
+	use ita_stf::{KeyPair, PublicGetter, TrustedCall, TrustedOperation};
 	use itp_types::Block as ParentchainBlock;
 	use sp_core::{ed25519, Pair};
 	use sp_keyring::AccountKeyring;
@@ -167,6 +167,21 @@ mod tests {
 		.unwrap();
 
 		assert!(validation.is_ok());
+	}
+
+	#[test]
+	fn public_getters_are_not_valid() {
+		let chain_api = TestChainApi::default();
+		let public_getter = TrustedOperation::get(Getter::public(PublicGetter::some_value));
+
+		let validation = executor::block_on(chain_api.validate_transaction(
+			TrustedOperationSource::Local,
+			public_getter,
+			ShardIdentifier::default(),
+		))
+		.unwrap();
+
+		assert!(validation.is_err());
 	}
 
 	fn create_indirect_trusted_operation() -> TrustedOperation {
