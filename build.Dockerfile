@@ -31,7 +31,9 @@ ENV SGX_MODE SW
 COPY . /root/work/worker/
 WORKDIR /root/work/worker
 
-RUN make
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+	--mount=type=cache,target=/root/work/worker/target \
+	make
 
 
 ### Enclave Test Stage
@@ -51,31 +53,57 @@ WORKDIR /root/work/worker
 
 CMD cargo test
 
-
-### Deployment stage
+### Base Runner Stage
 ##################################################
-FROM ubuntu:20.04 AS deployed
+FROM ubuntu:20.04 AS runner
+
+RUN apt update && apt install -y libssl-dev iproute2
+
+COPY --from=powerman/dockerize /usr/local/bin/dockerize /usr/local/bin/dockerize
+
+
+### Deployed CLI client
+##################################################
+FROM runner AS deployed-client
 LABEL maintainer="zoltan@integritee.network"
 
-WORKDIR /usr/local/bin
+ARG SCRIPT_DIR=/usr/local/worker-cli
+ARG LOG_DIR=/usr/local/log
 
-RUN apt update && apt install -y libssl-dev
+ENV SCRIPT_DIR ${SCRIPT_DIR}
+ENV LOG_DIR ${LOG_DIR}
 
-COPY --from=builder /opt/sgxsdk/lib64 /opt/sgxsdk/lib64
-COPY --from=builder /root/work/worker/bin/* ./
-COPY --from=powerman/dockerize /usr/local/bin/dockerize /usr/local/bin/dockerize
+COPY --from=builder /root/work/worker/bin/integritee-cli /usr/local/bin
+COPY ./cli/*.sh /usr/local/worker-cli/
+
+RUN chmod +x /usr/local/bin/integritee-cli ${SCRIPT_DIR}/*.sh
+RUN mkdir ${LOG_DIR}
+
+RUN ldd /usr/local/bin/integritee-cli && \
+	/usr/local/bin/integritee-cli --version
+
+ENTRYPOINT ["/usr/local/bin/integritee-cli"]
+
+
+### Deployed worker service
+##################################################
+FROM runner AS deployed-worker
+LABEL maintainer="zoltan@integritee.network"
 
 ENV SGX_SDK /opt/sgxsdk
 ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${SGX_SDK}/lib64"
 
+WORKDIR /usr/local/bin
+
+COPY --from=builder /opt/sgxsdk/lib64 /opt/sgxsdk/lib64
+COPY --from=builder /root/work/worker/bin/* ./
+
+RUN touch spid.txt key.txt
 RUN chmod +x /usr/local/bin/integritee-service
 RUN ls -al /usr/local/bin
 
 # checks
 RUN ldd /usr/local/bin/integritee-service && \
 	/usr/local/bin/integritee-service --version
-
-WORKDIR /root/work/worker/bin
-RUN touch spid.txt key.txt
 
 ENTRYPOINT ["/usr/local/bin/integritee-service"]
