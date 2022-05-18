@@ -38,6 +38,13 @@ sp-runtime = { version = "6.0.0", default-features = false, git = "https://githu
 # scs/integritee
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.20", default-features = false }
 
+[dev-dependencies]
+env_logger = "0.9.0"
+itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", features = ["mocks"] }
+itp-stf-executor = { path = "../../../core-primitives/stf-executor", features = ["mocks"] }
+itp-test = { path = "../../../core-primitives/test" }
+itp-top-pool-author = { path = "../../../core-primitives/top-pool-author", features = ["mocks"] }
+
 [features]
 default = ["std"]
 std = [

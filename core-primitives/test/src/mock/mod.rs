@@ -18,6 +18,7 @@
 pub mod handle_state_mock;
 pub mod metrics_ocall_mock;
 pub mod onchain_mock;
+pub mod shielding_crypto_mock_std;
 pub mod sidechain_ocall_api_mock;
 
 #[cfg(feature = "sgx")]

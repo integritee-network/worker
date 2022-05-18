@@ -1537,7 +1537,6 @@ dependencies = [
  "jsonrpc-core",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "parity-scale-codec",
- "sgx_tcrypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",

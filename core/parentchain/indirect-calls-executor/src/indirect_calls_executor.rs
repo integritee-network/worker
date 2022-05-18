@@ -26,7 +26,7 @@ use futures::executor;
 use ita_stf::AccountId;
 use itp_settings::node::{CALL_WORKER, SHIELD_FUNDS, TEEREX_MODULE};
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt};
-use itp_stf_executor::traits::{StfExecuteShieldFunds, StfExecuteTrustedCall};
+use itp_stf_executor::traits::StfExecuteShieldFunds;
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{CallWorkerFn, ShieldFundsFn, H256};
 use log::*;
@@ -60,15 +60,15 @@ where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType:
 		ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>,
-	StfExecutor: StfExecuteTrustedCall + StfExecuteShieldFunds,
+	StfExecutor: StfExecuteShieldFunds,
 	TopPoolAuthor: AuthorApi<H256, H256> + Send + Sync + 'static,
 {
 	pub fn new(
-		authority: Arc<ShieldingKeyRepository>,
+		shielding_key_repo: Arc<ShieldingKeyRepository>,
 		stf_executor: Arc<StfExecutor>,
 		top_pool_author: Arc<TopPoolAuthor>,
 	) -> Self {
-		IndirectCallsExecutor { shielding_key_repo: authority, stf_executor, top_pool_author }
+		IndirectCallsExecutor { shielding_key_repo, stf_executor, top_pool_author }
 	}
 
 	fn handle_shield_funds_xt(&self, xt: &UncheckedExtrinsicV4<ShieldFundsFn>) -> Result<()> {
@@ -94,7 +94,7 @@ where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType:
 		ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>,
-	StfExecutor: StfExecuteTrustedCall + StfExecuteShieldFunds,
+	StfExecutor: StfExecuteShieldFunds,
 	TopPoolAuthor: AuthorApi<H256, H256> + Send + Sync + 'static,
 {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
@@ -143,4 +143,82 @@ where
 
 fn hash_of<T: Encode>(xt: T) -> H256 {
 	blake2_256(&xt.encode()).into()
+}
+
+#[cfg(test)]
+mod test {
+	use super::*;
+	use itp_sgx_crypto::mocks::KeyRepositoryMock;
+	use itp_stf_executor::mocks::StfExecutorMock;
+	use itp_test::{
+		builders::parentchain_block_builder::ParentchainBlockBuilder,
+		mock::shielding_crypto_mock_std::ShieldingCryptoMock,
+	};
+	use itp_top_pool_author::mocks::AuthorApiMock;
+	use itp_types::{Request, ShardIdentifier};
+	use sp_core::{ed25519, Pair};
+	use sp_runtime::{MultiSignature, OpaqueExtrinsic};
+	use substrate_api_client::{GenericAddress, GenericExtra};
+
+	type TestShieldingKeyRepo = KeyRepositoryMock<ShieldingCryptoMock>;
+	type TestStfExecutor = StfExecutorMock;
+	type TestTopPoolAuthor = AuthorApiMock<H256, H256>;
+	type TestIndirectCallExecutor =
+		IndirectCallsExecutor<TestShieldingKeyRepo, TestStfExecutor, TestTopPoolAuthor>;
+
+	type Seed = [u8; 32];
+	const TEST_SEED: Seed = *b"12345678901234567890123456789012";
+
+	#[test]
+	fn indirect_call_can_be_added_to_pool_successfully() {
+		let _ = env_logger::builder().is_test(false).try_init();
+
+		let (indirect_calls_executor, top_pool_author) = test_fixtures();
+		let request = Request { shard: shard_id(), cyphertext: vec![1u8, 2u8] };
+
+		let opaque_extrinsic = OpaqueExtrinsic::from_bytes(
+			UncheckedExtrinsicV4::<CallWorkerFn>::new_signed(
+				([TEEREX_MODULE, CALL_WORKER], request),
+				GenericAddress::Address32([1u8; 32]),
+				MultiSignature::Ed25519(default_signature()),
+				GenericExtra::default(),
+			)
+			.encode()
+			.as_slice(),
+		)
+		.unwrap();
+
+		let parentchain_block = ParentchainBlockBuilder::default()
+			.with_extrinsics(vec![opaque_extrinsic])
+			.build();
+
+		indirect_calls_executor
+			.execute_indirect_calls_in_extrinsics(&parentchain_block)
+			.unwrap();
+
+		assert_eq!(1, top_pool_author.pending_tops(shard_id()).unwrap().len());
+	}
+
+	fn default_signature() -> ed25519::Signature {
+		signer().sign(&[0u8])
+	}
+
+	fn signer() -> ed25519::Pair {
+		ed25519::Pair::from_seed(&TEST_SEED)
+	}
+
+	fn shard_id() -> ShardIdentifier {
+		ShardIdentifier::default()
+	}
+
+	fn test_fixtures() -> (TestIndirectCallExecutor, Arc<TestTopPoolAuthor>) {
+		let shielding_key_repo = Arc::new(TestShieldingKeyRepo::default());
+		let stf_executor = Arc::new(TestStfExecutor::default());
+		let top_pool_author = Arc::new(TestTopPoolAuthor::default());
+
+		let executor =
+			IndirectCallsExecutor::new(shielding_key_repo, stf_executor, top_pool_author.clone());
+
+		(executor, top_pool_author)
+	}
 }
