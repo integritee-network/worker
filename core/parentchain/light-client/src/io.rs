@@ -15,7 +15,10 @@
 
 */
 
-use crate::{error::Result, Error, LightClientState, LightValidation, NumberFor, Validator};
+use crate::{
+	error::Result, grandpa_light_validation::GrandpaLightValidation, Error, LightClientState,
+	NumberFor, Validator,
+};
 use codec::{Decode, Encode};
 use derive_more::Display;
 use itp_settings::files::LIGHT_CLIENT_DB;
@@ -33,7 +36,7 @@ pub struct LightClientSeal<B> {
 
 impl<B: Block> StaticSealedIO for LightClientSeal<B> {
 	type Error = Error;
-	type Unsealed = LightValidation<B>;
+	type Unsealed = GrandpaLightValidation<B>;
 
 	fn unseal_from_static_file() -> Result<Self::Unsealed> {
 		Ok(unseal(LIGHT_CLIENT_DB).map(|b| Decode::decode(&mut b.as_slice()))??)
@@ -82,7 +85,7 @@ fn init_validator<B: Block>(
 where
 	NumberFor<B>: finality_grandpa::BlockNumberOps,
 {
-	let mut validator = LightValidation::<B>::new();
+	let mut validator = GrandpaLightValidation::<B>::new();
 
 	validator.initialize_relay(header, auth.into(), proof)?;
 	LightClientSeal::<B>::seal_to_static_file(validator.clone())?;
