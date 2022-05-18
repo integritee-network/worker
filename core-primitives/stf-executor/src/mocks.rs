@@ -23,6 +23,7 @@ use ita_stf::{AccountId, ShardIdentifier, TrustedCallSigned};
 use itp_types::{Amount, OpaqueCall};
 use sp_core::H256;
 use sp_runtime::traits::Header as HeaderTrait;
+use std::vec::Vec;
 
 /// Mock for the StfExecutor.
 #[derive(Default)]

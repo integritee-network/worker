@@ -57,7 +57,6 @@ use itp_top_pool::{basic_pool::BasicPool, pool::ExtrinsicHash};
 use itp_top_pool_author::{
 	api::SidechainApi,
 	author::Author,
-	author_tests,
 	test_utils::{get_pending_tops_separated, submit_operation_to_top_pool},
 	top_filter::AllowAllTopsFilter,
 };
@@ -119,10 +118,6 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		test_invalid_nonce_call_is_not_executed,
 		test_non_root_shielding_call_is_not_executed,
 		rpc::worker_api_direct::tests::test_given_io_handler_methods_then_retrieve_all_names_as_string,
-		author_tests::top_encryption_works,
-		author_tests::submitting_to_author_inserts_in_pool,
-		author_tests::submitting_call_to_author_when_top_is_filtered_returns_error,
-		author_tests::submitting_getter_to_author_when_top_is_filtered_inserts_in_pool,
 		handle_state_mock::tests::initialized_shards_list_is_empty,
 		handle_state_mock::tests::shard_exists_after_inserting,
 		handle_state_mock::tests::initialize_creates_default_state,

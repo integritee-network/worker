@@ -152,7 +152,7 @@ mod test {
 	use itp_stf_executor::mocks::StfExecutorMock;
 	use itp_test::{
 		builders::parentchain_block_builder::ParentchainBlockBuilder,
-		mock::shielding_crypto_mock_std::ShieldingCryptoMock,
+		mock::shielding_crypto_mock::ShieldingCryptoMock,
 	};
 	use itp_top_pool_author::mocks::AuthorApiMock;
 	use itp_types::{Request, ShardIdentifier};
@@ -171,7 +171,7 @@ mod test {
 
 	#[test]
 	fn indirect_call_can_be_added_to_pool_successfully() {
-		let _ = env_logger::builder().is_test(false).try_init();
+		let _ = env_logger::builder().is_test(true).try_init();
 
 		let (indirect_calls_executor, top_pool_author) = test_fixtures();
 		let request = Request { shard: shard_id(), cyphertext: vec![1u8, 2u8] };

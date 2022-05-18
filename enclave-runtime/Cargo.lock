@@ -1479,7 +1479,7 @@ dependencies = [
  "jsonrpc-core",
  "parity-scale-codec",
  "sgx-externalities",
- "sgx_tcrypto_helper",
+ "sgx_crypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
