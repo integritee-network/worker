@@ -95,7 +95,7 @@ pub mod tests {
 	use codec::Encode;
 	use itc_tls_websocket_server::ConnectionToken;
 	use itp_types::{DirectRequestStatus, RpcReturnValue};
-	use itp_utils::hex_encode;
+	use itp_utils::ToHexPrefixed;
 	use jsonrpc_core::Params;
 	use serde_json::json;
 

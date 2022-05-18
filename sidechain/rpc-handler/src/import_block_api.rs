@@ -100,17 +100,17 @@ pub mod tests {
 	}
 
 	#[test]
-	pub fn sidechain_import_block_returns_hex_decode_err() {
+	pub fn sidechain_import_block_returns_decode_err() {
 		let io = io_handler();
 		let enclave_req = r#"{"jsonrpc":"2.0","method":"sidechain_importBlock","params":["SophisticatedInvalidParam"],"id":1}"#;
 
 		let response_string = io.handle_request_sync(enclave_req).unwrap();
 
-		let err_msg = r#"{"jsonrpc":"2.0","error":{"code":-32602,"message":"Invalid parameters: Could not hex decode Vec<u8>","data":"[\"SophisticatedInvalidParam\"]"},"id":1}"#;
+		let err_msg = r#"{"jsonrpc":"2.0","error":{"code":-32602,"message":"Invalid parameters: Could not decode Vec<SignedBlock>","data":"[\"SophisticatedInvalidParam\"]"},"id":1}"#;
 		assert_eq!(response_string, err_msg);
 	}
 
-	pub fn sidechain_import_block_returns_decode_err() {
+	pub fn sidechain_import_block_returns_decode_err_for_valid_hex() {
 		let io = io_handler();
 
 		let enclave_req =

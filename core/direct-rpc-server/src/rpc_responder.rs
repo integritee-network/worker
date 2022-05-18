@@ -149,6 +149,7 @@ pub mod tests {
 		mocks::response_channel_mock::ResponseChannelMock,
 		rpc_connection_registry::ConnectionRegistry,
 	};
+	use codec::Encode;
 	use std::assert_matches::assert_matches;
 
 	type TestConnectionToken = u64;

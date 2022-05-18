@@ -16,9 +16,8 @@
 */
 
 use crate::builders::rpc_return_value_builder::RpcReturnValueBuilder;
-use codec::Encode;
 use itp_types::{RpcResponse, RpcReturnValue};
-use itp_utils::hex_encode;
+use itp_utils::ToHexPrefixed;
 
 /// builder pattern for RpcResponse
 pub struct RpcResponseBuilder {
