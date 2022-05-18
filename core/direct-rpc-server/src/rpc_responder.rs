@@ -19,10 +19,10 @@ use crate::{
 	response_channel::ResponseChannel, DirectRpcError, DirectRpcResult, RpcConnectionRegistry,
 	RpcHash, SendRpcResponse,
 };
-use codec::{Decode, Encode};
 use itp_types::{DirectRequestStatus, RpcResponse, RpcReturnValue, TrustedOperationStatus};
+use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use log::*;
-use std::{sync::Arc, vec::Vec};
+use std::{boxed::Box, sync::Arc, vec::Vec};
 
 pub struct RpcResponder<Registry, Hash, ResponseChannelType>
 where
@@ -83,15 +83,15 @@ where
 
 		let mut new_response = rpc_response.clone();
 
-		let mut result = RpcReturnValue::decode(&mut rpc_response.result.as_slice())
-			.map_err(DirectRpcError::EncodingError)?;
+		let mut result = RpcReturnValue::from_hex(&rpc_response.result)
+			.map_err(|e| DirectRpcError::Other(Box::new(e)))?;
 
 		let do_watch = continue_watching(&status_update);
 
 		// update response
 		result.do_watch = do_watch;
 		result.status = DirectRequestStatus::TrustedOperationStatus(status_update);
-		new_response.result = result.encode();
+		new_response.result = result.to_hex();
 
 		self.encode_and_send_response(connection_token, &new_response)?;
 
@@ -119,7 +119,7 @@ where
 		let result = RpcReturnValue::new(state_encoded, false, submitted);
 
 		// update response
-		response.result = result.encode();
+		response.result = result.to_hex();
 
 		self.encode_and_send_response(connection_token, &response)?;
 
@@ -149,6 +149,7 @@ pub mod tests {
 		mocks::response_channel_mock::ResponseChannelMock,
 		rpc_connection_registry::ConnectionRegistry,
 	};
+	use codec::Encode;
 	use std::assert_matches::assert_matches;
 
 	type TestConnectionToken = u64;

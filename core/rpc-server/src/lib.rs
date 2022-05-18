@@ -17,6 +17,7 @@
 
 use itp_enclave_api::direct_request::DirectRequest;
 use itp_types::RpcRequest;
+use itp_utils::ToHexPrefixed;
 use its_peer_fetch::block_fetch_server::BlockFetchServerModuleBuilder;
 use its_primitives::{constants::RPC_METHOD_NAME_IMPORT_BLOCKS, types::SignedBlock};
 use its_storage::interface::FetchBlocks;
@@ -25,7 +26,6 @@ use jsonrpsee::{
 	ws_server::{RpcModule, WsServerBuilder},
 };
 use log::debug;
-use parity_scale_codec::Encode;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::net::ToSocketAddrs;
 
@@ -54,8 +54,9 @@ where
 
 			let enclave_req = RpcRequest::compose_jsonrpc_call(
 				RPC_METHOD_NAME_IMPORT_BLOCKS.into(),
-				params.one::<Vec<SignedBlock>>()?.encode(),
-			);
+				vec![params.one::<Vec<SignedBlock>>()?.to_hex()],
+			)
+			.unwrap();
 
 			enclave
 				.rpc(enclave_req.as_bytes().to_vec())

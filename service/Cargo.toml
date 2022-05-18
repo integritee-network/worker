@@ -52,6 +52,7 @@ itp-settings = { path = "../core-primitives/settings" }
 itp-stf-state-handler = { path = "../core-primitives/stf-state-handler" }
 itp-test = { path = "../core-primitives/test" }
 itp-types = { path = "../core-primitives/types" }
+itp-utils = { path = "../core-primitives/utils" }
 its-consensus-slots = { path = "../sidechain/consensus/slots" }
 its-peer-fetch = { path = "../sidechain/peer-fetch" }
 its-primitives = { path = "../sidechain/primitives"}

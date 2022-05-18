@@ -15,21 +15,22 @@
 
 */
 
-//! Abstraction over the state crypto that is used in the enclave
-use std::{fmt::Debug, vec::Vec};
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
 
-pub trait StateCrypto {
-	type Error: Debug;
-	fn encrypt(&self, data: &mut [u8]) -> Result<(), Self::Error>;
-	fn decrypt(&self, data: &mut [u8]) -> Result<(), Self::Error>;
-}
+use std::boxed::Box;
 
-pub trait ShieldingCryptoEncrypt {
-	type Error: Debug;
-	fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error>;
-}
+pub type Result<T> = core::result::Result<T, Error>;
 
-pub trait ShieldingCryptoDecrypt {
-	type Error: Debug;
-	fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error>;
+/// extrinsics factory error
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+	#[error("Insufficient buffer size. Actual: {0}, required: {1}")]
+	InsufficientBufferSize(usize, usize),
+	#[error("Could not decode from hex data: {0}")]
+	Hex(hex::FromHexError),
+	#[error("Parity Scale Codec: {0}")]
+	Codec(codec::Error),
+	#[error(transparent)]
+	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }

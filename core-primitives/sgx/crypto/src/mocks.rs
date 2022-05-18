@@ -27,6 +27,7 @@ use crate::{
 	key_repository::{AccessKey, MutateKey},
 };
 use itp_sgx_io::{SealedIO, StaticSealedIO};
+use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 
 #[derive(Default)]
 pub struct KeyRepositoryMock<KeyType>
@@ -103,24 +104,18 @@ impl SealedIO for AesSealMock {
 	}
 }
 
-#[cfg(feature = "sgx")]
-pub mod sgx {
-	use super::*;
-	use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
+#[derive(Default)]
+pub struct Rsa3072SealMock {}
 
-	#[derive(Default)]
-	pub struct Rsa3072SealMock {}
+impl StaticSealedIO for Rsa3072SealMock {
+	type Error = Error;
+	type Unsealed = Rsa3072KeyPair;
 
-	impl StaticSealedIO for Rsa3072SealMock {
-		type Error = Error;
-		type Unsealed = Rsa3072KeyPair;
+	fn unseal_from_static_file() -> Result<Self::Unsealed> {
+		Ok(Rsa3072KeyPair::default())
+	}
 
-		fn unseal_from_static_file() -> Result<Self::Unsealed> {
-			Ok(Rsa3072KeyPair::default())
-		}
-
-		fn seal_to_static_file(_unsealed: Self::Unsealed) -> Result<()> {
-			Ok(())
-		}
+	fn seal_to_static_file(_unsealed: Self::Unsealed) -> Result<()> {
+		Ok(())
 	}
 }

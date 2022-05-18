@@ -15,7 +15,7 @@
 
 */
 
-//! All the different crypto schemes that we use in sgx
+//! General utility functions.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -23,26 +23,21 @@
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
-#[macro_use]
 extern crate sgx_tstd as std;
 
 // re-export module to properly feature gate sgx and regular std environment
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub mod sgx_reexport_prelude {
-	pub use serde_json_sgx as serde_json;
-	pub use serde_sgx as serde;
+	pub use thiserror_sgx as thiserror;
 }
 
-pub mod aes;
-pub mod ed25519;
+pub mod buffer;
 pub mod error;
-pub mod key_repository;
-pub mod rsa3072;
-pub mod traits;
+pub mod hex;
 
-pub use self::{aes::*, ed25519::*, rsa3072::*};
-pub use error::*;
-pub use traits::*;
-
-#[cfg(feature = "mocks")]
-pub mod mocks;
+// Public re-exports.
+pub use self::{
+	buffer::write_slice_and_whitespace_pad,
+	hex::{FromHexPrefixed, ToHexPrefixed},
+};
+pub use error::Error;

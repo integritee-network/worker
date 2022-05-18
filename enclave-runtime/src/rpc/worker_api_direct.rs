@@ -21,6 +21,7 @@ use itp_primitives_cache::{GetPrimitives, GLOBAL_PRIMITIVES_CACHE};
 use itp_sgx_crypto::Rsa3072Seal;
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{DirectRequestStatus, RpcReturnValue, H256};
+use itp_utils::ToHexPrefixed;
 use its_sidechain::{
 	primitives::types::SignedBlock,
 	rpc_handler::{direct_top_pool_api, import_block_api},
@@ -29,8 +30,8 @@ use jsonrpc_core::{serde_json::json, IoHandler, Params, Value};
 use sgx_runtime::Runtime;
 use std::{borrow::ToOwned, format, str, string::String, sync::Arc, vec::Vec};
 
-fn compute_encoded_return_error(error_msg: &str) -> Vec<u8> {
-	RpcReturnValue::from_error_message(error_msg).encode()
+fn compute_hex_encoded_return_error(error_msg: &str) -> String {
+	RpcReturnValue::from_error_message(error_msg).to_hex()
 }
 
 fn get_all_rpc_methods_string(io_handler: &IoHandler) -> String {
@@ -59,7 +60,7 @@ where
 			Ok(key) => key,
 			Err(status) => {
 				let error_msg: String = format!("Could not get rsa pubkey due to: {}", status);
-				return Ok(json!(compute_encoded_return_error(error_msg.as_str())))
+				return Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
 			},
 		};
 
@@ -68,12 +69,12 @@ where
 			Err(x) => {
 				let error_msg: String =
 					format!("[Enclave] can't serialize rsa_pubkey {:?} {}", rsa_pubkey, x);
-				return Ok(json!(compute_encoded_return_error(error_msg.as_str())))
+				return Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
 			},
 		};
 		let json_value =
 			RpcReturnValue::new(rsa_pubkey_json.encode(), false, DirectRequestStatus::Ok);
-		Ok(json!(json_value.encode()))
+		Ok(json!(json_value.to_hex()))
 	});
 
 	let mu_ra_url_name: &str = "author_getMuRaUrl";
@@ -82,12 +83,12 @@ where
 			Ok(url) => url,
 			Err(status) => {
 				let error_msg: String = format!("Could not get mu ra url due to: {}", status);
-				return Ok(json!(compute_encoded_return_error(error_msg.as_str())))
+				return Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
 			},
 		};
 
 		let json_value = RpcReturnValue::new(url.encode(), false, DirectRequestStatus::Ok);
-		Ok(json!(json_value.encode()))
+		Ok(json!(json_value.to_hex()))
 	});
 
 	let untrusted_url_name: &str = "author_getUntrustedUrl";
@@ -96,12 +97,12 @@ where
 			Ok(url) => url,
 			Err(status) => {
 				let error_msg: String = format!("Could not get untrusted url due to: {}", status);
-				return Ok(json!(compute_encoded_return_error(error_msg.as_str())))
+				return Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
 			},
 		};
 
 		let json_value = RpcReturnValue::new(url.encode(), false, DirectRequestStatus::Ok);
-		Ok(json!(json_value.encode()))
+		Ok(json!(json_value.to_hex()))
 	});
 
 	// chain_subscribeAllHeads
@@ -116,7 +117,7 @@ where
 	io.add_sync_method(state_get_metadata_name, |_: Params| {
 		let metadata = Runtime::metadata();
 		let json_value = RpcReturnValue::new(metadata.into(), false, DirectRequestStatus::Ok);
-		Ok(json!(json_value.encode()))
+		Ok(json!(json_value.to_hex()))
 	});
 
 	// state_getRuntimeVersion

@@ -559,6 +559,7 @@ dependencies = [
  "itp-top-pool",
  "itp-top-pool-author",
  "itp-types",
+ "itp-utils",
  "its-sidechain",
  "jsonrpc-core",
  "lazy_static",
@@ -1140,6 +1141,7 @@ version = "0.8.0"
 dependencies = [
  "itc-tls-websocket-server",
  "itp-types",
+ "itp-utils",
  "jsonrpc-core",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "parity-scale-codec",
@@ -1529,6 +1531,7 @@ dependencies = [
  "itp-test",
  "itp-top-pool",
  "itp-types",
+ "itp-utils",
  "jsonrpc-core",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "parity-scale-codec",
@@ -1555,6 +1558,17 @@ dependencies = [
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.20)",
  "substrate-api-client",
+]
+
+[[package]]
+name = "itp-utils"
+version = "0.8.0"
+dependencies = [
+ "frame-support",
+ "hex",
+ "parity-scale-codec",
+ "sgx_tstd",
+ "thiserror 1.0.9",
 ]
 
 [[package]]
@@ -1663,6 +1677,7 @@ version = "0.8.0"
 dependencies = [
  "itp-top-pool-author",
  "itp-types",
+ "itp-utils",
  "its-primitives",
  "jsonrpc-core",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",

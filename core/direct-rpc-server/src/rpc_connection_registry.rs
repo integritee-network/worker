@@ -119,10 +119,6 @@ pub mod tests {
 	}
 
 	fn dummy_rpc_response() -> RpcResponse {
-		RpcResponse {
-			jsonrpc: String::new(),
-			result: Vec::<u8>::new(), // encoded RpcReturnValue
-			id: 1u32,
-		}
+		RpcResponse { jsonrpc: String::new(), result: Default::default(), id: 1u32 }
 	}
 }

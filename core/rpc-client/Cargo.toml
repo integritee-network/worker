@@ -20,6 +20,7 @@ ws = { version = "0.9.1", features = ["ssl"] }
 
 # local
 itp-types = { path = "../../core-primitives/types" }
+itp-utils = { path = "../../core-primitives/utils" }
 
 [dev-dependencies]
 env_logger = "0.9.0"

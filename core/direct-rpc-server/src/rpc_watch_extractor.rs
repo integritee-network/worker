@@ -18,7 +18,8 @@
 use crate::{DetermineWatch, DirectRpcError, DirectRpcResult, RpcHash};
 use codec::Decode;
 use itp_types::{DirectRequestStatus, RpcResponse, RpcReturnValue};
-use std::marker::PhantomData;
+use itp_utils::FromHexPrefixed;
+use std::{boxed::Box, marker::PhantomData};
 
 pub struct RpcWatchExtractor<Hash>
 where
@@ -52,8 +53,8 @@ where
 	type Hash = Hash;
 
 	fn must_be_watched(&self, rpc_response: &RpcResponse) -> DirectRpcResult<Option<Self::Hash>> {
-		let rpc_return_value = RpcReturnValue::decode(&mut rpc_response.result.as_slice())
-			.map_err(DirectRpcError::EncodingError)?;
+		let rpc_return_value = RpcReturnValue::from_hex(&rpc_response.result)
+			.map_err(|e| DirectRpcError::Other(Box::new(e)))?;
 
 		if !rpc_return_value.do_watch {
 			return Ok(None)
@@ -77,19 +78,15 @@ pub mod tests {
 		rpc_response_builder::RpcResponseBuilder, rpc_return_value_builder::RpcReturnValueBuilder,
 	};
 	use codec::Encode;
-	use core::assert_matches::assert_matches;
 	use itp_types::TrustedOperationStatus;
 
 	#[test]
-	fn invalid_rpc_response_returns_encoding_error() {
+	fn invalid_rpc_response_returns_error() {
 		let watch_extractor = RpcWatchExtractor::<String>::new();
 		let rpc_response =
-			RpcResponse { id: 1u32, jsonrpc: String::from("json"), result: vec![1u8, 2u8, 3u8] };
+			RpcResponse { id: 1u32, jsonrpc: String::from("json"), result: "hello".to_string() };
 
-		assert_matches!(
-			watch_extractor.must_be_watched(&rpc_response),
-			Err(DirectRpcError::EncodingError(_))
-		);
+		assert!(watch_extractor.must_be_watched(&rpc_response).is_err());
 	}
 
 	#[test]

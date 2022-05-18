@@ -42,8 +42,6 @@ pub enum Error {
 	ApplicationSetup,
 	#[error("No worker for shard {0} found on parentchain")]
 	NoWorkerForShardFound(ShardIdentifier),
-	#[error("Insufficient buffer size. Actual: {0}, required: {1}")]
-	InsufficientBufferSize(usize, usize),
 	#[error("Custom Error: {0}")]
 	Custom(Box<dyn std::error::Error + Sync + Send + 'static>),
 }

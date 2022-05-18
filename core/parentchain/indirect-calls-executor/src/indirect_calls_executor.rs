@@ -21,7 +21,7 @@ use crate::error::Result;
 use codec::{Decode, Encode};
 use ita_stf::{AccountId, TrustedCallSigned};
 use itp_settings::node::{CALL_WORKER, SHIELD_FUNDS, TEEREX_MODULE};
-use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCrypto};
+use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt};
 use itp_stf_executor::traits::{StatePostProcessing, StfExecuteShieldFunds, StfExecuteTrustedCall};
 use itp_types::{CallWorkerFn, OpaqueCall, ShardIdentifier, ShieldFundsFn, H256};
 use log::*;
@@ -51,7 +51,8 @@ pub struct IndirectCallsExecutor<ShieldingKeyRepository, StfExecutor> {
 impl<ShieldingKeyRepository, StfExecutor> IndirectCallsExecutor<ShieldingKeyRepository, StfExecutor>
 where
 	ShieldingKeyRepository: AccessKey,
-	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCrypto<Error = itp_sgx_crypto::Error>,
+	<ShieldingKeyRepository as AccessKey>::KeyType:
+		ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>,
 	StfExecutor: StfExecuteTrustedCall + StfExecuteShieldFunds,
 {
 	pub fn new(authority: Arc<ShieldingKeyRepository>, stf_executor: Arc<StfExecutor>) -> Self {
@@ -95,7 +96,8 @@ impl<ShieldingKeyRepository, StfExecutor> ExecuteIndirectCalls
 	for IndirectCallsExecutor<ShieldingKeyRepository, StfExecutor>
 where
 	ShieldingKeyRepository: AccessKey,
-	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCrypto<Error = itp_sgx_crypto::Error>,
+	<ShieldingKeyRepository as AccessKey>::KeyType:
+		ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>,
 	StfExecutor: StfExecuteTrustedCall + StfExecuteShieldFunds,
 {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(

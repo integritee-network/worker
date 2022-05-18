@@ -16,7 +16,6 @@
 */
 
 use crate::Cli;
-use codec::Encode;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use log::*;
 use my_node_runtime::{AccountId, Signature};
@@ -31,20 +30,10 @@ use substrate_client_keystore::LocalKeystore;
 type AccountPublic = <Signature as Verify>::Signer;
 pub(crate) const KEYSTORE_PATH: &str = "my_keystore";
 
-pub(crate) fn encode_encrypt<E: Encode>(
-	cli: &Cli,
-	to_encrypt: E,
-) -> Result<(Vec<u8>, Vec<u8>), String> {
+/// Retrieves the public shielding key via the enclave websocket server.
+pub(crate) fn get_shielding_key(cli: &Cli) -> Result<Rsa3072PubKey, String> {
 	let worker_api_direct = get_worker_api_direct(cli);
-	let shielding_pubkey: Rsa3072PubKey = match worker_api_direct.get_rsa_pubkey() {
-		Ok(key) => key,
-		Err(err_msg) => return Err(err_msg.to_string()),
-	};
-
-	let encoded = to_encrypt.encode();
-	let mut encrypted: Vec<u8> = Vec::new();
-	shielding_pubkey.encrypt_buffer(&encoded, &mut encrypted).unwrap();
-	Ok((encoded, encrypted))
+	worker_api_direct.get_rsa_pubkey().map_err(|e| e.to_string())
 }
 
 pub(crate) fn get_chain_api(cli: &Cli) -> Api<sr25519::Pair, WsRpcClient> {

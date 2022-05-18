@@ -20,6 +20,7 @@
 use crate::ws_client::{WsClient, WsClientControl};
 use codec::Decode;
 use itp_types::{DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue};
+use itp_utils::FromHexPrefixed;
 use log::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use std::{
@@ -81,8 +82,10 @@ impl DirectApi for DirectClient {
 	}
 
 	fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey> {
-		let jsonrpc_call: String =
-			RpcRequest::compose_jsonrpc_call("author_getShieldingKey".to_string(), vec![]);
+		let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(
+			"author_getShieldingKey".to_string(),
+			Default::default(),
+		)?;
 
 		// Send json rpc call to ws server.
 		let response_str = self.get(&jsonrpc_call)?;
@@ -96,7 +99,7 @@ impl DirectApi for DirectClient {
 
 	fn get_mu_ra_url(&self) -> Result<String> {
 		let jsonrpc_call: String =
-			RpcRequest::compose_jsonrpc_call("author_getMuRaUrl".to_string(), vec![]);
+			RpcRequest::compose_jsonrpc_call("author_getMuRaUrl".to_string(), Default::default())?;
 
 		// Send json rpc call to ws server.
 		let response_str = self.get(&jsonrpc_call)?;
@@ -108,8 +111,10 @@ impl DirectApi for DirectClient {
 	}
 
 	fn get_untrusted_worker_url(&self) -> Result<String> {
-		let jsonrpc_call: String =
-			RpcRequest::compose_jsonrpc_call("author_getUntrustedUrl".to_string(), vec![]);
+		let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(
+			"author_getUntrustedUrl".to_string(),
+			Default::default(),
+		)?;
 
 		// Send json rpc call to ws server.
 		let response_str = self.get(&jsonrpc_call)?;
@@ -122,16 +127,17 @@ impl DirectApi for DirectClient {
 
 	fn get_state_metadata(&self) -> Result<RuntimeMetadataPrefixed> {
 		let jsonrpc_call: String =
-			RpcRequest::compose_jsonrpc_call("state_getMetadata".to_string(), vec![]);
+			RpcRequest::compose_jsonrpc_call("state_getMetadata".to_string(), Default::default())?;
 
 		// Send json rpc call to ws server.
 		let response_str = self.get(&jsonrpc_call)?;
 
-		//Decode rpc response
+		// Decode rpc response.
 		let rpc_response: RpcResponse = serde_json::from_str(&response_str)?;
-		let rpc_return_value = RpcReturnValue::decode(&mut rpc_response.result.as_slice())?;
+		let rpc_return_value = RpcReturnValue::from_hex(&rpc_response.result)
+			.map_err(|e| Error::Custom(Box::new(e)))?;
 
-		//Decode Metadata
+		// Decode Metadata.
 		let metadata = RuntimeMetadataPrefixed::decode(&mut rpc_return_value.value.as_slice())?;
 
 		println!("[+] Got metadata of enclave runtime");
@@ -145,7 +151,8 @@ impl DirectApi for DirectClient {
 
 fn decode_from_rpc_response(json_rpc_response: &str) -> Result<String> {
 	let rpc_response: RpcResponse = serde_json::from_str(json_rpc_response)?;
-	let rpc_return_value = RpcReturnValue::decode(&mut rpc_response.result.as_slice())?;
+	let rpc_return_value =
+		RpcReturnValue::from_hex(&rpc_response.result).map_err(|e| Error::Custom(Box::new(e)))?;
 	let response_message = String::decode(&mut rpc_return_value.value.as_slice())?;
 	match rpc_return_value.status {
 		DirectRequestStatus::Ok => Ok(response_message),

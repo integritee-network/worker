@@ -105,6 +105,7 @@ itp-test = { path = "../core-primitives/test", default-features = false, optiona
 itp-top-pool = { path = "../core-primitives/top-pool", default-features = false, features = ["sgx"] }
 itp-top-pool-author = { path = "../core-primitives/top-pool-author", default-features = false, features = ["sgx"] }
 itp-types = { path = "../core-primitives/types", default-features = false, features = ["sgx"] }
+itp-utils = { path = "../core-primitives/utils", default-features = false, features = ["sgx"] }
 its-sidechain = { path = "../sidechain/sidechain-crate", default-features = false, features = ["sgx"] }
 
 # substrate deps

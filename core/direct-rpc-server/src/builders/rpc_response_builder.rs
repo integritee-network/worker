@@ -16,8 +16,8 @@
 */
 
 use crate::builders::rpc_return_value_builder::RpcReturnValueBuilder;
-use codec::Encode;
 use itp_types::{RpcResponse, RpcReturnValue};
+use itp_utils::ToHexPrefixed;
 
 /// builder pattern for RpcResponse
 pub struct RpcResponseBuilder {
@@ -57,7 +57,7 @@ impl RpcResponseBuilder {
 		let result = self
 			.maybe_result
 			.unwrap_or_else(|| RpcReturnValueBuilder::new().build())
-			.encode();
+			.to_hex();
 
 		RpcResponse { result, jsonrpc: json_rpc, id }
 	}

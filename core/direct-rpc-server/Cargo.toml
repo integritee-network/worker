@@ -5,28 +5,10 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 resolver = "2"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[features]
-default = ["std"]
-sgx = [
-    "sgx_tstd",
-    "sgx_types",
-    "jsonrpc-core_sgx",
-    "thiserror_sgx",
-    "itc-tls-websocket-server/sgx",
-]
-std = [
-    "jsonrpc-core",
-    "itp-types/std",
-    "thiserror",
-    "itc-tls-websocket-server/std",
-]
-
 [dependencies]
 # sgx dependencies
-sgx_types   = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-sgx_tstd    = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["net", "thread"] }
+sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["net", "thread"] }
 
 # no-std dependencies
 codec  = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
@@ -36,6 +18,7 @@ sp-runtime = { version = "6.0.0", default-features = false, git = "https://githu
 
 # internal dependencies
 itp-types = { path = "../../core-primitives/types", default-features = false }
+itp-utils = { path = "../../core-primitives/utils", default-features = false }
 itc-tls-websocket-server = { path = "../tls-websocket-server", default-features = false }
 
 # sgx enabled external libraries
@@ -45,3 +28,21 @@ thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linu
 # std compatible external libraries (make sure these versions match with the sgx-enabled ones above)
 jsonrpc-core = { version = "18", optional = true }
 thiserror = { version = "1.0", optional = true }
+
+[features]
+default = ["std"]
+sgx = [
+    "sgx_tstd",
+    "sgx_types",
+    "jsonrpc-core_sgx",
+    "thiserror_sgx",
+    "itp-utils/sgx",
+    "itc-tls-websocket-server/sgx",
+]
+std = [
+    "jsonrpc-core",
+    "itp-types/std",
+    "itp-utils/std",
+    "thiserror",
+    "itc-tls-websocket-server/std",
+]

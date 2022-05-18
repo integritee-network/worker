@@ -21,7 +21,7 @@ use crate::sgx_reexport_prelude::*;
 use crate::traits::AuthorApi;
 use codec::Encode;
 use ita_stf::{ShardIdentifier, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
-use itp_sgx_crypto::ShieldingCrypto;
+use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use jsonrpc_core::futures::executor;
 use sp_core::H256;
 use std::{fmt::Debug, vec::Vec};
@@ -35,10 +35,10 @@ pub fn submit_operation_to_top_pool<R, S>(
 ) -> Result<H256, jsonrpc_core::Error>
 where
 	R: AuthorApi<H256, H256>,
-	S: ShieldingCrypto,
+	S: ShieldingCryptoEncrypt,
 	S::Error: Debug,
 {
-	let top_encrypted = shielding_key.encrypt(top.encode().as_slice()).unwrap();
+	let top_encrypted = shielding_key.encrypt(&top.encode()).unwrap();
 	let submit_future = async { author.submit_top(top_encrypted, shard).await };
 	executor::block_on(submit_future)
 }
