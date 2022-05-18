@@ -40,11 +40,7 @@ pub mod key_repository;
 pub mod rsa3072;
 pub mod traits;
 
-#[cfg(feature = "sgx")]
-pub use self::aes::*;
-#[cfg(feature = "sgx")]
-pub use self::ed25519::*;
-pub use self::rsa3072::*;
+pub use self::{aes::*, ed25519::*, rsa3072::*};
 pub use error::*;
 pub use traits::*;
 
