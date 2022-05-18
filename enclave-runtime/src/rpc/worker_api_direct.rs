@@ -21,7 +21,7 @@ use itp_primitives_cache::{GetPrimitives, GLOBAL_PRIMITIVES_CACHE};
 use itp_sgx_crypto::Rsa3072Seal;
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{DirectRequestStatus, RpcReturnValue, H256};
-use itp_utils::hex_encode;
+use itp_utils::ToHexPrefixed;
 use its_sidechain::{
 	primitives::types::SignedBlock,
 	rpc_handler::{direct_top_pool_api, import_block_api},

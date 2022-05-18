@@ -18,7 +18,6 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use codec::Decode;
 use itp_utils::FromHexPrefixed;
 use its_primitives::{constants::RPC_METHOD_NAME_IMPORT_BLOCKS, types::SignedBlock};
 use jsonrpc_core::{IoHandler, Params, Value};
@@ -39,7 +38,7 @@ where
 
 		let hex_encoded_block_vec: Vec<String> = sidechain_blocks.parse()?;
 
-		let blocks = Vec<SignedBlock>::from_hex(&hex_encoded_block_vec[0]).map_err(|_| {
+		let blocks = Vec::<SignedBlock>::from_hex(&hex_encoded_block_vec[0]).map_err(|_| {
 			jsonrpc_core::error::Error::invalid_params_with_details(
 				"Could not decode Vec<SignedBlock>",
 				hex_encoded_block_vec,

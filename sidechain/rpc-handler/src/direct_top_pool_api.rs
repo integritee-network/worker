@@ -126,8 +126,8 @@ fn decode_shard_from_base58(shard_base58: &str) -> Result<ShardIdentifier, Strin
 	Ok(shard)
 }
 
-fn compute_encoded_return_error(error_msg: &str) -> Vec<u8> {
-	RpcReturnValue::from_error_message(error_msg).encode()
+fn compute_hex_encoded_return_error(error_msg: &str) -> String {
+	RpcReturnValue::from_error_message(error_msg).to_hex()
 }
 
 fn author_submit_extrinsic_inner<R: AuthorApi<Hash, Hash> + Send + Sync + 'static>(
