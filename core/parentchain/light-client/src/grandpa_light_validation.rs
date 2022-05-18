@@ -17,9 +17,6 @@
 
 //! Grandpa Light-client validation crate that verifies parentchain blocks.
 
-#[cfg(all(feature = "std", feature = "sgx"))]
-compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
-
 use crate::{
 	error::Error,
 	grandpa_log,
