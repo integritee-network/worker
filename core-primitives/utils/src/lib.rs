@@ -31,100 +31,13 @@ pub mod sgx_reexport_prelude {
 	pub use thiserror_sgx as thiserror;
 }
 
-mod error;
+pub mod buffer;
+pub mod error;
+pub mod hex;
 
-use codec::{Decode, Encode};
-pub use error::{Error, Result};
-use frame_support::ensure;
-use std::{string::String, vec::Vec};
-
-/// Trait to encode a given value to a hex string, prefixed with "0x".
-pub trait ToHexPrefixed {
-	fn to_hex(&self) -> String;
-}
-
-impl<T: Encode> ToHexPrefixed for T {
-	fn to_hex(&self) -> String {
-		hex_encode(self.encode())
-	}
-}
-
-/// Trait to decode a hex string to a given output.
-pub trait FromHexPrefixed {
-	type Output;
-
-	fn from_hex(msg: &str) -> Result<Self::Output>;
-}
-
-impl<T: Decode> FromHexPrefixed for T {
-	type Output = T;
-
-	fn from_hex(msg: &str) -> Result<Self::Output> {
-		let byte_array = decode_hex(msg)?;
-		Decode::decode(&mut byte_array.as_slice()).map_err(Error::Codec)
-	}
-}
-
-/// Hex encodes given data and preappends a "0x".
-pub fn hex_encode(data: Vec<u8>) -> String {
-	let mut hex_str = hex::encode(data);
-	hex_str.insert_str(0, "0x");
-	hex_str
-}
-
-/// Helper method for decoding hex.
-pub fn decode_hex<T: AsRef<[u8]>>(message: T) -> Result<Vec<u8>> {
-	let mut message = message.as_ref();
-	if message[..2] == [b'0', b'x'] {
-		message = &message[2..]
-	}
-	let decoded_message = hex::decode(message).map_err(Error::Hex)?;
-	Ok(decoded_message)
-}
-
-/// Fills a given buffer with data and fill the left over buffer space with white spaces.
-pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) -> Result<()> {
-	ensure!(
-		data.len() <= writable.len(),
-		Error::InsufficientBufferSize(writable.len(), data.len())
-	);
-	let (left, right) = writable.split_at_mut(data.len());
-	left.clone_from_slice(&data);
-	// fill the right side with whitespace
-	right.iter_mut().for_each(|x| *x = 0x20);
-	Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-	use codec::{Decode, Encode};
-
-	#[test]
-	fn write_slice_and_whitespace_pad_returns_error_if_buffer_too_small() {
-		let mut writable = vec![0; 32];
-		let data = vec![1; 33];
-		assert!(write_slice_and_whitespace_pad(&mut writable, data).is_err());
-	}
-
-	#[test]
-	fn hex_encode_decode_works() {
-		let data = "Hello World!".to_string();
-
-		let hex_encoded_data = hex_encode(data.encode());
-		let decoded_data =
-			String::decode(&mut decode_hex(hex_encoded_data).unwrap().as_slice()).unwrap();
-
-		assert_eq!(data, decoded_data);
-	}
-
-	#[test]
-	fn to_hex_from_hex_works() {
-		let data = "Hello World!".to_string();
-
-		let hex_encoded_data = data.to_hex();
-		let decoded_data = String::from_hex(&hex_encoded_data).unwrap();
-
-		assert_eq!(data, decoded_data);
-	}
-}
+// Public re-exports.
+pub use self::{
+	buffer::write_slice_and_whitespace_pad,
+	hex::{FromHexPrefixed, ToHexPrefixed},
+};
+pub use error::Error;
