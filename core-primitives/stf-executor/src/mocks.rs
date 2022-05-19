@@ -19,7 +19,7 @@ use crate::{
 	error::Result,
 	traits::{StatePostProcessing, StfExecuteShieldFunds, StfExecuteTrustedCall},
 };
-use ita_stf::{AccountId, ShardIdentifier, TrustedCallSigned};
+use ita_stf::{AccountId, ShardIdentifier, TrustedOperation};
 use itp_types::{Amount, OpaqueCall};
 use sp_core::H256;
 use sp_runtime::traits::Header as HeaderTrait;
@@ -33,7 +33,7 @@ impl StfExecuteTrustedCall for StfExecutorMock {
 	fn execute_trusted_call<PH>(
 		&self,
 		_calls: &mut Vec<OpaqueCall>,
-		_stf_call_signed: &TrustedCallSigned,
+		_stf_call_signed: &TrustedOperation,
 		_header: &PH,
 		_shard: &ShardIdentifier,
 		_post_processing: StatePostProcessing,

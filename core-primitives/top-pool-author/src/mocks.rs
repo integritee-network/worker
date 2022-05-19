@@ -22,9 +22,7 @@ use std::sync::SgxRwLock as RwLock;
 use std::sync::RwLock;
 
 use crate::{error::Result, traits::AuthorApi};
-use ita_stf::{
-	hash::TrustedOperationOrHash, TrustedCallSigned, TrustedGetterSigned, TrustedOperation,
-};
+use ita_stf::{hash::TrustedOperationOrHash, TrustedGetterSigned, TrustedOperation};
 use itp_top_pool::primitives::PoolFuture;
 use itp_types::ShardIdentifier;
 use jsonrpc_core::{futures_util::future::ready, Error as RpcError};
@@ -59,7 +57,7 @@ where
 	fn get_pending_tops_separated(
 		&self,
 		_shard: ShardIdentifier,
-	) -> Result<(Vec<TrustedCallSigned>, Vec<TrustedGetterSigned>)> {
+	) -> Result<(Vec<TrustedOperation>, Vec<TrustedGetterSigned>)> {
 		todo!()
 	}
 

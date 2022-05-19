@@ -25,7 +25,7 @@ use crate::{
 	traits::{AuthorApi, OnBlockImported, SendState},
 };
 use codec::{Decode, Encode};
-use ita_stf::{hash, Getter, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
+use ita_stf::{hash, Getter, TrustedGetterSigned, TrustedOperation};
 use itp_enclave_metrics::EnclaveMetric;
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt};
@@ -223,13 +223,13 @@ where
 	fn get_pending_tops_separated(
 		&self,
 		shard: ShardIdentifier,
-	) -> Result<(Vec<TrustedCallSigned>, Vec<TrustedGetterSigned>)> {
-		let mut calls: Vec<TrustedCallSigned> = vec![];
+	) -> Result<(Vec<TrustedOperation>, Vec<TrustedGetterSigned>)> {
+		let mut calls: Vec<TrustedOperation> = vec![];
 		let mut getters: Vec<TrustedGetterSigned> = vec![];
 		for operation in self.top_pool.ready(shard) {
 			match operation.data() {
-				TrustedOperation::direct_call(call) => calls.push(call.clone()),
-				TrustedOperation::indirect_call(call) => calls.push(call.clone()),
+				TrustedOperation::direct_call(_) => calls.push(operation.data().clone()),
+				TrustedOperation::indirect_call(_) => calls.push(operation.data().clone()),
 				TrustedOperation::get(getter) => match getter {
 					Getter::trusted(trusted_getter_signed) =>
 						getters.push(trusted_getter_signed.clone()),

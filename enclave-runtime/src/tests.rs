@@ -55,10 +55,8 @@ use itp_test::mock::{
 };
 use itp_top_pool::{basic_pool::BasicPool, pool::ExtrinsicHash};
 use itp_top_pool_author::{
-	api::SidechainApi,
-	author::Author,
-	test_utils::{get_pending_tops_separated, submit_operation_to_top_pool},
-	top_filter::AllowAllTopsFilter,
+	api::SidechainApi, author::Author, test_utils::submit_operation_to_top_pool,
+	top_filter::AllowAllTopsFilter, traits::AuthorApi,
 };
 use itp_types::{AccountId, Block, Header, MrEnclave, OpaqueCall};
 use its_sidechain::{
@@ -212,20 +210,21 @@ fn test_submit_trusted_call_to_top_pool() {
 	let signed_call =
 		TrustedCall::balance_set_balance(sender.public().into(), sender.public().into(), 42, 42)
 			.sign(&sender.into(), 0, &mrenclave, &shard);
+	let trusted_operation = direct_top(signed_call);
 
 	// when
 	submit_operation_to_top_pool(
 		top_pool_author.as_ref(),
-		&direct_top(signed_call.clone()),
+		&trusted_operation,
 		&shielding_key,
 		shard,
 	)
 	.unwrap();
 
-	let (calls, _) = get_pending_tops_separated(top_pool_author.as_ref(), shard);
+	let (calls, _) = top_pool_author.get_pending_tops_separated(shard).unwrap();
 
 	// then
-	assert_eq!(calls[0], signed_call);
+	assert_eq!(calls[0], trusted_operation);
 }
 
 fn test_submit_trusted_getter_to_top_pool() {
@@ -245,7 +244,7 @@ fn test_submit_trusted_getter_to_top_pool() {
 	)
 	.unwrap();
 
-	let (_, getters) = get_pending_tops_separated(top_pool_author.as_ref(), shard);
+	let (_, getters) = top_pool_author.get_pending_tops_separated(shard).unwrap();
 
 	// then
 	assert_eq!(getters[0], signed_getter);
@@ -264,6 +263,7 @@ fn test_differentiate_getter_and_call_works() {
 	let signed_call =
 		TrustedCall::balance_set_balance(sender.public().into(), sender.public().into(), 42, 42)
 			.sign(&sender.clone().into(), 0, &mrenclave, &shard);
+	let trusted_operation = direct_top(signed_call);
 
 	// when
 	submit_operation_to_top_pool(
@@ -275,16 +275,16 @@ fn test_differentiate_getter_and_call_works() {
 	.unwrap();
 	submit_operation_to_top_pool(
 		top_pool_author.as_ref(),
-		&direct_top(signed_call.clone()),
+		&trusted_operation,
 		&shielding_key,
 		shard,
 	)
 	.unwrap();
 
-	let (calls, getters) = get_pending_tops_separated(top_pool_author.as_ref(), shard);
+	let (calls, getters) = top_pool_author.get_pending_tops_separated(shard).unwrap();
 
 	// then
-	assert_eq!(calls[0], signed_call);
+	assert_eq!(calls[0], trusted_operation);
 	assert_eq!(getters[0], signed_getter);
 }
 
@@ -306,10 +306,11 @@ fn test_create_block_and_confirmation_works() {
 
 	let signed_call = TrustedCall::balance_transfer(sender.public().into(), receiver.into(), 1000)
 		.sign(&sender.into(), 0, &mrenclave, &shard);
+	let trusted_operation = direct_top(signed_call);
 
 	let top_hash = submit_operation_to_top_pool(
 		top_pool_author.as_ref(),
-		&direct_top(signed_call),
+		&trusted_operation,
 		&shielding_key,
 		shard,
 	)
@@ -376,10 +377,11 @@ fn test_create_state_diff() {
 
 	let signed_call = TrustedCall::balance_transfer(sender.public().into(), receiver.into(), 1000)
 		.sign(&sender.clone().into(), 0, &mrenclave, &shard);
+	let trusted_operation = direct_top(signed_call);
 
 	submit_operation_to_top_pool(
 		top_pool_author.as_ref(),
-		&direct_top(signed_call),
+		&trusted_operation,
 		&shielding_key,
 		shard,
 	)
@@ -448,10 +450,11 @@ fn test_executing_call_updates_account_nonce() {
 
 	let signed_call = TrustedCall::balance_transfer(sender.public().into(), receiver.into(), 1000)
 		.sign(&sender.clone().into(), 0, &mrenclave, &shard);
+	let trusted_operation = direct_top(signed_call);
 
 	submit_operation_to_top_pool(
 		top_pool_author.as_ref(),
-		&direct_top(signed_call),
+		&trusted_operation,
 		&shielding_key,
 		shard,
 	)
@@ -514,10 +517,11 @@ fn test_invalid_nonce_call_is_not_executed() {
 
 	let signed_call = TrustedCall::balance_transfer(sender.public().into(), receiver.into(), 1000)
 		.sign(&sender.clone().into(), 10, &mrenclave, &shard);
+	let trusted_operation = direct_top(signed_call);
 
 	submit_operation_to_top_pool(
 		top_pool_author.as_ref(),
-		&direct_top(signed_call),
+		&trusted_operation,
 		&shielding_key,
 		shard,
 	)

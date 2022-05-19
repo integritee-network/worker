@@ -20,11 +20,11 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::traits::AuthorApi;
 use codec::Encode;
-use ita_stf::{ShardIdentifier, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
+use ita_stf::{ShardIdentifier, TrustedOperation};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use jsonrpc_core::futures::executor;
 use sp_core::H256;
-use std::{fmt::Debug, vec::Vec};
+use std::fmt::Debug;
 
 /// Test utility function to submit a trusted operation on an RPC author
 pub fn submit_operation_to_top_pool<R, S>(
@@ -41,15 +41,4 @@ where
 	let top_encrypted = shielding_key.encrypt(&top.encode()).unwrap();
 	let submit_future = async { author.watch_top(top_encrypted, shard).await };
 	executor::block_on(submit_future)
-}
-
-/// Get all pending trusted operations, grouped into calls and getters
-pub fn get_pending_tops_separated<R>(
-	top_pool_author: &R,
-	shard: ShardIdentifier,
-) -> (Vec<TrustedCallSigned>, Vec<TrustedGetterSigned>)
-where
-	R: AuthorApi<H256, H256>,
-{
-	top_pool_author.get_pending_tops_separated(shard).unwrap()
 }

@@ -16,7 +16,7 @@
 */
 
 use crate::{error::Result, TopPoolOperationHandler};
-use ita_stf::TrustedCallSigned;
+use ita_stf::TrustedOperation;
 use itp_stf_executor::traits::{StateUpdateProposer, StfExecuteTimedGettersBatch};
 use itp_top_pool_author::traits::{AuthorApi, OnBlockImported, SendState};
 use itp_types::H256;
@@ -43,7 +43,7 @@ pub trait TopPoolCallOperator<
 	fn get_trusted_calls(
 		&self,
 		shard: &ShardIdentifierFor<SignedSidechainBlock>,
-	) -> Result<Vec<TrustedCallSigned>>;
+	) -> Result<Vec<TrustedOperation>>;
 
 	/// Removes the given trusted calls from the top pool.
 	/// Returns all hashes that were NOT successfully removed.
@@ -77,7 +77,7 @@ where
 	fn get_trusted_calls(
 		&self,
 		shard: &ShardIdentifierFor<SignedSidechainBlock>,
-	) -> Result<Vec<TrustedCallSigned>> {
+	) -> Result<Vec<TrustedOperation>> {
 		Ok(self.top_pool_author.get_pending_tops_separated(*shard)?.0)
 	}
 

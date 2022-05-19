@@ -28,6 +28,8 @@ pub type Result<T> = core::result::Result<T, Error>;
 pub enum Error {
 	#[error("Trusted operation has invalid signature")]
 	OperationHasInvalidSignature,
+	#[error("Invalid or unsupported trusted call type")]
+	InvalidTrustedCallType,
 	#[error("SGX error, status: {0}")]
 	Sgx(sgx_status_t),
 	#[error("State handling error: {0}")]

@@ -22,7 +22,7 @@ use crate::{
 	error::Result,
 };
 use core::marker::PhantomData;
-use ita_stf::TrustedCallSigned;
+use ita_stf::TrustedOperation;
 use its_primitives::traits::{ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait};
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::{collections::HashMap, sync::RwLock};
@@ -32,7 +32,7 @@ where
 	ParentchainBlock: ParentchainBlockTrait,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
 {
-	trusted_calls: HashMap<ShardIdentifierFor<SignedSidechainBlock>, Vec<TrustedCallSigned>>,
+	trusted_calls: HashMap<ShardIdentifierFor<SignedSidechainBlock>, Vec<TrustedOperation>>,
 	remove_calls_invoked:
 		RwLock<Vec<(ShardIdentifierFor<SignedSidechainBlock>, Vec<ExecutedOperation>)>>,
 	_phantom: PhantomData<ParentchainBlock>,
@@ -62,7 +62,7 @@ where
 	pub fn add_trusted_calls(
 		&mut self,
 		shard: ShardIdentifierFor<SignedSidechainBlock>,
-		trusted_calls: Vec<TrustedCallSigned>,
+		trusted_calls: Vec<TrustedOperation>,
 	) {
 		self.trusted_calls.insert(shard, trusted_calls);
 	}
@@ -84,7 +84,7 @@ where
 	fn get_trusted_calls(
 		&self,
 		shard: &ShardIdentifierFor<SignedSidechainBlock>,
-	) -> Result<Vec<TrustedCallSigned>> {
+	) -> Result<Vec<TrustedOperation>> {
 		Ok(self.trusted_calls.get(shard).map(|v| v.clone()).unwrap_or_default())
 	}
 

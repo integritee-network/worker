@@ -18,7 +18,7 @@
 use crate::{error::Result, BatchExecutionResult};
 use codec::Encode;
 use ita_stf::{
-	AccountId, ParentchainHeader, ShardIdentifier, TrustedCallSigned, TrustedGetterSigned,
+	AccountId, ParentchainHeader, ShardIdentifier, TrustedGetterSigned, TrustedOperation,
 };
 use itp_types::{Amount, OpaqueCall, H256};
 use sgx_externalities::SgxExternalitiesTrait;
@@ -46,7 +46,7 @@ pub trait StfExecuteTrustedCall {
 	fn execute_trusted_call<PH>(
 		&self,
 		calls: &mut Vec<OpaqueCall>,
-		stf_call_signed: &TrustedCallSigned,
+		stf_call_signed: &TrustedOperation,
 		header: &PH,
 		shard: &ShardIdentifier,
 		post_processing: StatePostProcessing,
@@ -65,7 +65,7 @@ pub trait StateUpdateProposer {
 	/// If the time expires, any remaining trusted calls within the batch will be ignored.
 	fn propose_state_update<PH, F>(
 		&self,
-		trusted_calls: &[TrustedCallSigned],
+		trusted_calls: &[TrustedOperation],
 		header: &PH,
 		shard: &ShardIdentifier,
 		max_exec_duration: Duration,

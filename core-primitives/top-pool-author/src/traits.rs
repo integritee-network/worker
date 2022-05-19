@@ -19,7 +19,7 @@
 use crate::sgx_reexport_prelude::*;
 
 use crate::error::Result;
-use ita_stf::{hash, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
+use ita_stf::{hash, TrustedGetterSigned, TrustedOperation};
 use itp_top_pool::primitives::PoolFuture;
 use itp_types::{BlockHash as SidechainBlockHash, ShardIdentifier, H256};
 use jsonrpc_core::Error as RpcError;
@@ -48,7 +48,7 @@ pub trait AuthorApi<Hash, BlockHash> {
 	fn get_pending_tops_separated(
 		&self,
 		shard: ShardIdentifier,
-	) -> Result<(Vec<TrustedCallSigned>, Vec<TrustedGetterSigned>)>;
+	) -> Result<(Vec<TrustedOperation>, Vec<TrustedGetterSigned>)>;
 
 	fn get_shards(&self) -> Vec<ShardIdentifier>;
 
