@@ -23,9 +23,8 @@ use codec::{Decode, Encode};
 use derive_more::Display;
 use itp_settings::files::LIGHT_CLIENT_DB;
 use itp_sgx_io::{seal, unseal, StaticSealedIO};
-use itp_storage::StorageProof;
+use itp_types::light_client_init_params::LightClientInitParams;
 use log::*;
-use sp_finality_grandpa::AuthorityList;
 use sp_runtime::traits::{Block, Header};
 use std::{fs, sgxfs::SgxFile};
 
@@ -53,43 +52,40 @@ impl<B: Block> StaticSealedIO for LightClientSeal<B> {
 }
 
 pub fn read_or_init_validator<B: Block>(
-	header: B::Header,
-	auth: AuthorityList,
-	proof: StorageProof,
+	params: LightClientInitParams<B::Header>,
 ) -> Result<B::Header>
 where
 	NumberFor<B>: finality_grandpa::BlockNumberOps,
 {
 	if SgxFile::open(LIGHT_CLIENT_DB).is_err() {
 		info!("[Enclave] ChainRelay DB not found, creating new! {}", LIGHT_CLIENT_DB);
-		return init_validator::<B>(header, auth, proof)
+		return init_validator::<B>(params)
 	}
 
 	let validator = LightClientSeal::<B>::unseal_from_static_file()?;
 
 	let genesis = validator.genesis_hash(validator.num_relays()).unwrap();
-	if genesis == header.hash() {
+	if genesis == params.get_genesis_header().hash() {
 		info!("Found already initialized light client with Genesis Hash: {:?}", genesis);
 		info!("light client state: {:?}", validator);
 		Ok(validator.latest_finalized_header(validator.num_relays()).unwrap())
 	} else {
-		init_validator::<B>(header, auth, proof)
+		init_validator::<B>(params)
 	}
 }
 
-fn init_validator<B: Block>(
-	header: B::Header,
-	auth: AuthorityList,
-	proof: StorageProof,
-) -> Result<B::Header>
+fn init_validator<B: Block>(params: LightClientInitParams<B::Header>) -> Result<B::Header>
 where
 	NumberFor<B>: finality_grandpa::BlockNumberOps,
 {
-	let mut validator = GrandpaLightValidation::<B>::new();
-	// TODO: replace params and match
+	match params {
+		LightClientInitParams::Grandpa { authorities, genesis_header, authority_proof } => {
+			let mut validator = GrandpaLightValidation::<B>::new();
 
-	validator.initialize_relay(header, auth.into(), proof)?;
-	LightClientSeal::<B>::seal_to_static_file(validator.clone())?;
+			validator.initialize_relay(genesis_header, authorities, authority_proof)?;
+			LightClientSeal::<B>::seal_to_static_file(validator.clone())?;
 
-	Ok(validator.latest_finalized_header(validator.num_relays()).unwrap())
+			return Ok(validator.latest_finalized_header(validator.num_relays()).unwrap())
+		},
+	}
 }

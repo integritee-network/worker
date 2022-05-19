@@ -54,6 +54,7 @@ where
 		let genesis_hash = Some(self.get_genesis_hash().unwrap());
 		Ok(self
 			.get_storage_by_key_hash(StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec()), genesis_hash)?
+			.map(|v: VersionedAuthorityList| v.into())
 			.map(|v: AuthorityList| !v.is_empty())
 			.unwrap_or(false))
 	}
