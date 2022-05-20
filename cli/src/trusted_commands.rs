@@ -199,6 +199,11 @@ fn transfer(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, arg_to: &str,
 	let _ = perform_operation(cli, trusted_args, &top);
 }
 
+struct BenchmarkClient {
+	account1: sr25519_core::Pair,
+	account2: sr25519_core::Pair,
+}
+
 fn transfer_benchmark(cli: &Cli, trusted_args: &TrustedArgs) {
 	let alice = get_pair_from_str(trusted_args, "//Alice");
 
@@ -213,7 +218,8 @@ fn transfer_benchmark(cli: &Cli, trusted_args: &TrustedArgs) {
 
 	let mut accounts = Vec::new();
 
-	for i in 0..10 {
+	let num_threads = 30;
+	for i in 0..num_threads {
 		let nonce_alice = i * 2;
 		println!("Initialization {}", i);
 
@@ -223,15 +229,16 @@ fn transfer_benchmark(cli: &Cli, trusted_args: &TrustedArgs) {
 		let a2: sr25519::AppPair = store.generate().unwrap();
 		let account1 = get_pair_from_str(trusted_args, a1.public().to_string().as_str());
 		let account2 = get_pair_from_str(trusted_args, a2.public().to_string().as_str());
+		let client = BenchmarkClient { account1, account2 };
 		drop(store);
 
 		// transfer amount from Alice to new accounts
 		let top: TrustedOperation =
-			TrustedCall::balance_transfer(alice.public().into(), account1.public().into(), 100000)
+			TrustedCall::balance_transfer(alice.public().into(), client.account1.public().into(), 100000)
 				.sign(&KeyPair::Sr25519(alice.clone()), nonce_alice, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct);
 
-		let results = run_transaction(cli, trusted_args, shielding_pubkey, top, true);
+		let results = run_transaction(cli, trusted_args, shielding_pubkey, top, true, &client);
 
 		if results.iter().any(|r| r.0 == "InSidechainBlock") {
 			println!("initialization of new account1 successfull");
@@ -240,11 +247,11 @@ fn transfer_benchmark(cli: &Cli, trusted_args: &TrustedArgs) {
 		}
 
 		let top2: TrustedOperation =
-			TrustedCall::balance_transfer(alice.public().into(), account2.public().into(), 100000)
+			TrustedCall::balance_transfer(alice.public().into(), client.account2.public().into(), 100000)
 				.sign(&KeyPair::Sr25519(alice.clone()), nonce_alice + 1, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct);
 
-		let results2 = run_transaction(cli, trusted_args, shielding_pubkey, top2, true);
+		let results2 = run_transaction(cli, trusted_args, shielding_pubkey, top2, true, &client);
 
 		if results2.iter().any(|r| r.0 == "InSidechainBlock") {
 			println!("initialization of new account2 successfull");
@@ -252,32 +259,40 @@ fn transfer_benchmark(cli: &Cli, trusted_args: &TrustedArgs) {
 			println!("initialization of new account2 NOT successfull");
 		}
 
-		println!("account1 is {}", account1.public());
-		println!("account2 is {}", account2.public());
+		println!("account1 is {}", client.account1.public());
+		println!("account2 is {}", client.account2.public());
 
-		accounts.push((account1, account2));
+		accounts.push(client);
 	}
 
+	let proc_info = procfs::process::Process::myself().unwrap();
+	let max_fds = proc_info.limits().unwrap().max_open_files;
+	println!("Max fds: {:?}/{:?}", max_fds.soft_limit, max_fds.hard_limit);
 	let overall_start = Instant::now();
 
-	let outputs: Vec<(Vec<String>, Vec<u64>)> = accounts
+	rayon::ThreadPoolBuilder::new().num_threads(num_threads as usize).build_global().unwrap();
+
+	let outputs: Vec<(Vec<String>, Vec<u128>)> = accounts
 		.into_par_iter()
-		.map(|(account1, account2)| {
+		.map(| client| {
 			let mut output: Vec<String> = Vec::new();
 			let mut in_sidechain_block_timestamps = Vec::new();
 
-			for nonce in 0..10 {
+			for nonce in 0..30 {
+				let number_fd = proc_info.fd_count().unwrap();
+				let threads = proc_info.status().unwrap().threads;
+				println!("#fd: {}, #threads: {}", number_fd, threads);
 				//account1 -> account2
 				let top: TrustedOperation = TrustedCall::balance_transfer(
-					account1.public().into(),
-					account2.public().into(),
+					client.account1.public().into(),
+					client.account2.public().into(),
 					50000,
 				)
-				.sign(&KeyPair::Sr25519(account1.clone()), nonce, &mrenclave, &shard)
+				.sign(&KeyPair::Sr25519(client.account1.clone()), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct);
 
 				let start_time = Instant::now();
-				let results = run_transaction(cli, trusted_args, shielding_pubkey, top, true);
+				let results = run_transaction(cli, trusted_args, shielding_pubkey, top, true, &client);
 				for (key, value) in results {
 					output.push(format!(
 						"{}: {}",
@@ -286,21 +301,21 @@ fn transfer_benchmark(cli: &Cli, trusted_args: &TrustedArgs) {
 					));
 					if key == "InSidechainBlock" {
 						in_sidechain_block_timestamps
-							.push(value.duration_since(overall_start).as_secs());
+							.push(value.duration_since(start_time).as_millis());
 					}
 				}
 
 				//account2 -> account1
 				let top2: TrustedOperation = TrustedCall::balance_transfer(
-					account2.public().into(),
-					account1.public().into(),
+					client.account2.public().into(),
+					client.account1.public().into(),
 					50000,
 				)
-				.sign(&KeyPair::Sr25519(account2.clone()), nonce, &mrenclave, &shard)
+				.sign(&KeyPair::Sr25519(client.account2.clone()), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct);
 
 				let start_time2 = Instant::now();
-				let results2 = run_transaction(cli, trusted_args, shielding_pubkey, top2, true);
+				let results2 = run_transaction(cli, trusted_args, shielding_pubkey, top2, true, &client);
 				for (key, value) in results2 {
 					output.push(format!(
 						"{}: {}",
@@ -309,7 +324,7 @@ fn transfer_benchmark(cli: &Cli, trusted_args: &TrustedArgs) {
 					));
 					if key == "InSidechainBlock" {
 						in_sidechain_block_timestamps
-							.push(value.duration_since(overall_start).as_secs());
+							.push(value.duration_since(start_time2).as_millis());
 					}
 				}
 			}
@@ -318,9 +333,8 @@ fn transfer_benchmark(cli: &Cli, trusted_args: &TrustedArgs) {
 		})
 		.collect();
 
-	// Create and Calculate Benchmark Output
-	let mut throughput: HashMap<u64, u64> = HashMap::new();
 
+	println!("Time for transactions: {}", overall_start.elapsed().as_secs());
 	let file = File::create(format!(
 		"benchmark_{}.txt",
 		chrono::offset::Local::now().format("%Y-%m-%d_%H_%M")
@@ -328,26 +342,15 @@ fn transfer_benchmark(cli: &Cli, trusted_args: &TrustedArgs) {
 	.expect("unable to create file");
 	let mut file = BufWriter::new(file);
 
-	for output in outputs {
-		for t in output.0 {
-			writeln!(file, "{}", t).expect("cannot write to file");
-			println!("{}", t);
-		}
-
-		for t in output.1 {
-			let mut current = 0;
-			if throughput.contains_key(&t) {
-				current = *throughput.get(&t).unwrap();
-			}
-			throughput.insert(t, current + 1);
-		}
-	}
-
 	let mut hist = Histogram::<u64>::new(1).unwrap();
-	for (_, value) in throughput {
-		hist += value;
+	println!("Size of outputs: {}", outputs.len());
+	for output in outputs {
+		for t in output.1 {
+			hist += t as u64;
+		}
 	}
 
+	println!("Samples recorded: {}", hist.len());
 	for v in hist.iter_recorded() {
 		let text = format!(
 			"{}'th percentile of data is {} with {} samples",
@@ -366,20 +369,22 @@ fn run_transaction(
 	shielding_pubkey: Rsa3072PubKey,
 	top: TrustedOperation,
 	wait_for_sidechain_block: bool,
+	client: &BenchmarkClient,
 ) -> Vec<(String, Instant)> {
 	let mut timestamps = Vec::new();
 
-	let receiver = match top {
+	let (direct_api, receiver) = match top {
 		TrustedOperation::direct_call(call) => initialize_receiver_for_direct_request(
 			cli,
 			trusted_args,
 			TrustedOperation::direct_call(call),
 			shielding_pubkey,
 		),
-		_ => None,
+		_ => (None, None),
 	};
 
 	if let Some(r) = receiver {
+
 		if let Some(t) = wait_until(&r, is_submitted) {
 			timestamps.push(("Submitted".to_string(), t))
 		}
@@ -390,6 +395,9 @@ fn run_transaction(
 			}
 		}
 	};
+	if let Some(api) = direct_api {
+		api.close();
+	}
 
 	timestamps
 }

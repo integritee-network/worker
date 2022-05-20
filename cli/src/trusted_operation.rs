@@ -26,7 +26,7 @@ use crate::{
 use base58::FromBase58;
 use codec::{Decode, Encode};
 use ita_stf::{ShardIdentifier, TrustedOperation};
-use itc_rpc_client::direct_client::DirectApi;
+use itc_rpc_client::direct_client::{DirectApi, DirectClient};
 use itp_node_api_extensions::TEEREX;
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_types::{
@@ -241,13 +241,13 @@ pub fn initialize_receiver_for_direct_request(
 	trusted_args: &TrustedArgs,
 	operation_call: TrustedOperation,
 	shielding_pubkey: sgx_crypto_helper::rsa3072::Rsa3072PubKey,
-) -> Option<Receiver<String>> {
+) -> (Option<DirectClient>, Option<Receiver<String>>) {
 	let (_operation_call_encoded, operation_call_encrypted) =
 		match encode_encrypt_with_key(shielding_pubkey, operation_call) {
 			Ok((encoded, encrypted)) => (encoded, encrypted),
 			Err(msg) => {
 				println!("[Error] {}", msg);
-				return None
+				return (None, None)
 			},
 		};
 	let shard = read_shard(trusted_args).unwrap();
@@ -269,7 +269,7 @@ pub fn initialize_receiver_for_direct_request(
 	let (sender, receiver) = channel();
 	direct_api.watch(jsonrpc_call, sender);
 
-	Some(receiver)
+	(Some(direct_api), Some(receiver))
 }
 
 pub fn wait_until(
