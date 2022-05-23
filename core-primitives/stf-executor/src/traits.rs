@@ -21,7 +21,7 @@ use ita_stf::{
 	AccountId, ParentchainHeader, ShardIdentifier, TrustedCall, TrustedCallSigned,
 	TrustedGetterSigned, TrustedOperation,
 };
-use itp_types::{Amount, OpaqueCall, H256};
+use itp_types::H256;
 use sgx_externalities::SgxExternalitiesTrait;
 use sp_runtime::traits::Header as HeaderTrait;
 use std::{fmt::Debug, result::Result as StdResult, time::Duration, vec::Vec};
@@ -30,16 +30,6 @@ use std::{fmt::Debug, result::Result as StdResult, time::Duration, vec::Vec};
 pub enum StatePostProcessing {
 	None,
 	Prune,
-}
-
-/// Execute shield funds on the STF
-pub trait StfExecuteShieldFunds {
-	fn execute_shield_funds(
-		&self,
-		account: AccountId,
-		amount: Amount,
-		shard: &ShardIdentifier,
-	) -> Result<H256>;
 }
 
 /// Operations as STF root.
@@ -51,20 +41,6 @@ pub trait StfRootOperations {
 		trusted_call: &TrustedCall,
 		shard: &ShardIdentifier,
 	) -> Result<TrustedCallSigned>;
-}
-
-/// Execute a trusted call on the STF
-pub trait StfExecuteTrustedCall {
-	fn execute_trusted_call<PH>(
-		&self,
-		calls: &mut Vec<OpaqueCall>,
-		stf_call_signed: &TrustedOperation,
-		header: &PH,
-		shard: &ShardIdentifier,
-		post_processing: StatePostProcessing,
-	) -> Result<Option<H256>>
-	where
-		PH: HeaderTrait<Hash = H256>;
 }
 
 /// Proposes a state update to `Externalities`.

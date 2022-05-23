@@ -287,7 +287,7 @@ pub fn upon_false_signature_get_stf_state_errs() {
 
 // Helper Functions
 fn stf_executor(
-) -> (StfExecutor<OnchainMock, HandleStateMock, State>, Arc<OnchainMock>, Arc<HandleStateMock>) {
+) -> (StfExecutor<OnchainMock, HandleStateMock>, Arc<OnchainMock>, Arc<HandleStateMock>) {
 	let ocall_api = Arc::new(OnchainMock::default());
 	let state_handler = Arc::new(HandleStateMock::default());
 	let executor = StfExecutor::new(ocall_api.clone(), state_handler.clone());

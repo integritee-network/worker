@@ -72,7 +72,7 @@ pub type EnclaveStateSnapshotRepository =
 	StateSnapshotRepository<EnclaveStateFileIo, StfState, H256>;
 pub type EnclaveStateHandler = StateHandler<EnclaveStateSnapshotRepository>;
 pub type EnclaveOCallApi = OcallApi;
-pub type EnclaveStfExecutor = StfExecutor<EnclaveOCallApi, EnclaveStateHandler, SgxExternalities>;
+pub type EnclaveStfExecutor = StfExecutor<EnclaveOCallApi, EnclaveStateHandler>;
 pub type EnclaveStfRootOperator = StfRootOperator<EnclaveOCallApi, EnclaveStateHandler, Pair>;
 pub type EnclaveExtrinsicsFactory = ExtrinsicsFactory<Pair, NonceCache>;
 pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<

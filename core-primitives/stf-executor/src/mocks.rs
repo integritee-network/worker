@@ -15,50 +15,13 @@
 
 */
 
-use crate::{
-	error::Result,
-	traits::{
-		StatePostProcessing, StfExecuteShieldFunds, StfExecuteTrustedCall, StfRootOperations,
-	},
-};
-use ita_stf::{
-	AccountId, KeyPair, ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedOperation,
-};
-use itp_types::{Amount, OpaqueCall};
-use sp_core::{Pair, H256};
-use sp_runtime::traits::Header as HeaderTrait;
-use std::vec::Vec;
+use crate::{error::Result, traits::StfRootOperations};
+use ita_stf::{AccountId, KeyPair, ShardIdentifier, TrustedCall, TrustedCallSigned};
+use sp_core::Pair;
 
 /// Mock for the StfExecutor.
 #[derive(Default)]
 pub struct StfExecutorMock;
-
-impl StfExecuteTrustedCall for StfExecutorMock {
-	fn execute_trusted_call<PH>(
-		&self,
-		_calls: &mut Vec<OpaqueCall>,
-		_stf_call_signed: &TrustedOperation,
-		_header: &PH,
-		_shard: &ShardIdentifier,
-		_post_processing: StatePostProcessing,
-	) -> Result<Option<H256>>
-	where
-		PH: HeaderTrait<Hash = H256>,
-	{
-		todo!()
-	}
-}
-
-impl StfExecuteShieldFunds for StfExecutorMock {
-	fn execute_shield_funds(
-		&self,
-		_account: AccountId,
-		_amount: Amount,
-		_shard: &ShardIdentifier,
-	) -> Result<H256> {
-		todo!()
-	}
-}
 
 #[derive(Default)]
 pub struct StfRootOperationsMock;

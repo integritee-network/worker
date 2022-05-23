@@ -80,7 +80,7 @@ use std::{string::String, sync::Arc, vec::Vec};
 type TestRpcResponder = RpcResponderMock<ExtrinsicHash<SidechainApi<Block>>>;
 type TestTopPool = BasicPool<SidechainApi<Block>, Block, TestRpcResponder>;
 type TestShieldingKeyRepo = KeyRepositoryMock<ShieldingCryptoMock>;
-type TestStfExecutor = StfExecutor<OcallApi, HandleStateMock, SgxExternalities>;
+type TestStfExecutor = StfExecutor<OcallApi, HandleStateMock>;
 type TestTopPoolAuthor = Author<
 	TestTopPool,
 	AllowAllTopsFilter,
