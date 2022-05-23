@@ -194,29 +194,19 @@ fn block_import_with_invalid_signature_fails() {
 }
 
 #[test]
-fn if_block_author_is_self_remove_tops_from_pool() {
+fn cleanup_removes_tops_from_pool() {
 	let (block_importer, state_handler, top_pool_call_operator) =
 		test_fixtures_with_default_import_trigger();
 	let parentchain_header = ParentchainHeaderBuilder::default().build();
 	let signed_sidechain_block =
 		default_authority_signed_block(&parentchain_header, state_handler.as_ref());
-
-	block_importer.cleanup(&signed_sidechain_block).unwrap();
-
-	assert_eq!(1, top_pool_call_operator.remove_calls_invoked().len());
-}
-
-#[test]
-fn if_block_author_is_not_self_remove_tops_from_pool() {
-	let (block_importer, state_handler, top_pool_call_operator) =
-		test_fixtures_with_default_import_trigger();
-	let parentchain_header = ParentchainHeaderBuilder::default().build();
-	let signed_sidechain_block =
+	let bob_signed_sidechain_block =
 		signed_block(&parentchain_header, state_handler.as_ref(), Keyring::Bob.pair());
 
 	block_importer.cleanup(&signed_sidechain_block).unwrap();
+	block_importer.cleanup(&bob_signed_sidechain_block).unwrap();
 
-	assert_eq!(1, top_pool_call_operator.remove_calls_invoked().len());
+	assert_eq!(2, top_pool_call_operator.remove_calls_invoked().len());
 }
 
 #[test]
