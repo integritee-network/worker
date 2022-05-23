@@ -63,11 +63,11 @@ fi
 [[ -z $MRENCLAVE ]] && { echo "MRENCLAVE is empty. cannot continue" ; exit 1; }
 
 echo "* Get balance of Alice's on-chain account"
-ALICE_ONCHAIN_BALANCE = $(${CLIENT} balance "//Alice" | xargs )
+ALICE_ONCHAIN_BALANCE=$(${CLIENT} balance "//Alice" | xargs )
 echo $ALICE_ONCHAIN_BALANCE
 echo ""
 echo "Multiplying Alice Balance by ten:"
-MORE_THAN_ALICE_BALANCE = $((${ALICE_ONCHAIN_BALANCE} * 10))
+MORE_THAN_ALICE_BALANCE=$((${ALICE_ONCHAIN_BALANCE} * 10))
 echo $MORE_THAN_ALICE_BALANCE
 echo ""
 
@@ -83,11 +83,6 @@ echo ""
 echo "* Waiting 10 seconds"
 sleep 10
 echo ""
-
-echo "Get balance of Alice's incognito account"
-${CLIENT} trusted --mrenclave ${MRENCLAVE} balance ${ICGACCOUNTALICE}
-echo ""
-
 
 echo "Get balance of Alice's incognito account"
 ALICE_OFFCHAIN_BALANCE=$(${CLIENT} trusted --mrenclave ${MRENCLAVE} balance ${ICGACCOUNTALICE}  | xargs)
