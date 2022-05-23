@@ -25,7 +25,7 @@ jobs:
       - uses: styfle/cancel-workflow-action@0.4.1
         with:
           access_token: ${{ secrets.GITHUB_TOKEN }}
-      
+
   build-test:
     runs-on: ubuntu-latest
     steps:
@@ -95,7 +95,7 @@ jobs:
 #          target: cargo-test
 #          tags: integritee-worker-${{ github.sha }}
 #          outputs: type=docker,dest=/tmp/integritee-worker.tar
-      
+
       - name: Copy artifacts from container
         run: |
           docker cp ${{ env.BUILD_CONTAINER_NAME }}:/root/work/worker/bin/${{ env.WORKER_BIN }} .
@@ -183,6 +183,9 @@ jobs:
           - test: Sidechain
             demo_name: sidechain_demo
             demo_script: sidechain.sh
+          - test: Error
+            demo_name: error
+            demo_script: error.sh
 
     env:
       BIN_DIR: bin
