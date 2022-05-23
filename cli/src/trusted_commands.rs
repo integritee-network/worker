@@ -216,11 +216,14 @@ fn transfer_benchmark(cli: &Cli, trusted_args: &TrustedArgs) {
 		Err(err_msg) => panic!("{}", err_msg.to_string()),
 	};
 
+	let nonce_alice_start = get_layer_two_nonce!(alice, cli, trusted_args);
+	println!("Alice nonce: {}", nonce_alice_start);
+
 	let mut accounts = Vec::new();
 
 	let num_threads = 30;
 	for i in 0..num_threads {
-		let nonce_alice = i * 2;
+		let nonce_alice = i * 2 + nonce_alice_start;
 		println!("Initialization {}", i);
 
 		// create new accounts to use
