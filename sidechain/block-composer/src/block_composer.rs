@@ -152,6 +152,7 @@ where
 
 		let block_hash = block.hash();
 		debug!("Block hash {}", block_hash);
+		error!("block number {}", header.block_number());
 
 		let opaque_call =
 			create_proposed_sidechain_block_call::<SignedSidechainBlock>(shard, header);
