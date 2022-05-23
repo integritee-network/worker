@@ -22,8 +22,8 @@ use crate::{
 		EnclaveShieldingKeyRepository, EnclaveSidechainApi, EnclaveSidechainBlockImportQueue,
 		EnclaveSidechainBlockImportQueueWorker, EnclaveSidechainBlockImporter,
 		EnclaveSidechainBlockSyncer, EnclaveStateFileIo, EnclaveStateHandler,
-		EnclaveStateKeyRepository, EnclaveStfExecutor, EnclaveTopPool, EnclaveTopPoolAuthor,
-		EnclaveTopPoolOperationHandler, EnclaveValidatorAccessor,
+		EnclaveStateKeyRepository, EnclaveStfExecutor, EnclaveStfRootOperator, EnclaveTopPool,
+		EnclaveTopPoolAuthor, EnclaveTopPoolOperationHandler, EnclaveValidatorAccessor,
 		GLOBAL_EXTRINSICS_FACTORY_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
 		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT, GLOBAL_RPC_WS_HANDLER_COMPONENT,
 		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT,
@@ -218,6 +218,7 @@ pub(crate) fn init_light_client(params: LightClientInitParams<Header>) -> Enclav
 	let signer = Ed25519Seal::unseal_from_static_file()?;
 	let shielding_key_repository = GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.get()?;
 
+	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
@@ -226,13 +227,15 @@ pub(crate) fn init_light_client(params: LightClientInitParams<Header>) -> Enclav
 	let genesis_hash = validator_access.execute_on_validator(|v| v.genesis_hash(v.num_relays()))?;
 
 	let extrinsics_factory =
-		Arc::new(ExtrinsicsFactory::new(genesis_hash, signer, GLOBAL_NONCE_CACHE.clone()));
+		Arc::new(ExtrinsicsFactory::new(genesis_hash, signer.clone(), GLOBAL_NONCE_CACHE.clone()));
 
 	GLOBAL_EXTRINSICS_FACTORY_COMPONENT.initialize(extrinsics_factory.clone());
 
+	let stf_root_operator =
+		Arc::new(EnclaveStfRootOperator::new(state_handler, ocall_api.clone(), signer));
 	let indirect_calls_executor = Arc::new(IndirectCallsExecutor::new(
 		shielding_key_repository,
-		stf_executor.clone(),
+		stf_root_operator,
 		top_pool_author,
 	));
 	let parentchain_block_importer = ParentchainBlockImporter::new(

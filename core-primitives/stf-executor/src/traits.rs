@@ -18,7 +18,8 @@
 use crate::{error::Result, BatchExecutionResult};
 use codec::Encode;
 use ita_stf::{
-	AccountId, ParentchainHeader, ShardIdentifier, TrustedGetterSigned, TrustedOperation,
+	AccountId, ParentchainHeader, ShardIdentifier, TrustedCall, TrustedCallSigned,
+	TrustedGetterSigned, TrustedOperation,
 };
 use itp_types::{Amount, OpaqueCall, H256};
 use sgx_externalities::SgxExternalitiesTrait;
@@ -39,6 +40,17 @@ pub trait StfExecuteShieldFunds {
 		amount: Amount,
 		shard: &ShardIdentifier,
 	) -> Result<H256>;
+}
+
+/// Operations as STF root.
+pub trait StfRootOperations {
+	fn get_root_account(&self, shard: &ShardIdentifier) -> Result<AccountId>;
+
+	fn sign_call_with_root(
+		&self,
+		trusted_call: &TrustedCall,
+		shard: &ShardIdentifier,
+	) -> Result<TrustedCallSigned>;
 }
 
 /// Execute a trusted call on the STF

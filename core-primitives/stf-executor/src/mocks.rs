@@ -17,11 +17,15 @@
 
 use crate::{
 	error::Result,
-	traits::{StatePostProcessing, StfExecuteShieldFunds, StfExecuteTrustedCall},
+	traits::{
+		StatePostProcessing, StfExecuteShieldFunds, StfExecuteTrustedCall, StfRootOperations,
+	},
 };
-use ita_stf::{AccountId, ShardIdentifier, TrustedOperation};
+use ita_stf::{
+	AccountId, KeyPair, ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedOperation,
+};
 use itp_types::{Amount, OpaqueCall};
-use sp_core::H256;
+use sp_core::{Pair, H256};
 use sp_runtime::traits::Header as HeaderTrait;
 use std::vec::Vec;
 
@@ -53,5 +57,26 @@ impl StfExecuteShieldFunds for StfExecutorMock {
 		_shard: &ShardIdentifier,
 	) -> Result<H256> {
 		todo!()
+	}
+}
+
+#[derive(Default)]
+pub struct StfRootOperationsMock;
+
+impl StfRootOperations for StfRootOperationsMock {
+	fn get_root_account(&self, _shard: &ShardIdentifier) -> Result<AccountId> {
+		Ok(AccountId::new([42u8; 32]))
+	}
+
+	fn sign_call_with_root(
+		&self,
+		trusted_call: &TrustedCall,
+		shard: &ShardIdentifier,
+	) -> Result<TrustedCallSigned> {
+		type Seed = [u8; 32];
+		const TEST_SEED: Seed = *b"42345678901234567890123456789012";
+		let signer = sp_core::ed25519::Pair::from_seed(&TEST_SEED);
+
+		Ok(trusted_call.sign(&KeyPair::Ed25519(signer), 1, &[0u8; 32], shard))
 	}
 }
