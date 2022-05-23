@@ -262,9 +262,9 @@ fn transfer_benchmark(
 		let results = run_transaction(trusted_args, shielding_pubkey, top, true, &client);
 
 		if results.iter().any(|r| r.0 == "InSidechainBlock") {
-			println!("initialization of new account1 successfull");
+			println!("initialization of new account1 successful");
 		} else {
-			println!("initialization of new account1 NOT successfull");
+			println!("initialization of new account1 NOT successful");
 		}
 
 		let top2: TrustedOperation = TrustedCall::balance_transfer(
@@ -278,9 +278,9 @@ fn transfer_benchmark(
 		let results2 = run_transaction(trusted_args, shielding_pubkey, top2, true, &client);
 
 		if results2.iter().any(|r| r.0 == "InSidechainBlock") {
-			println!("initialization of new account2 successfull");
+			println!("initialization of new account2 successful");
 		} else {
-			println!("initialization of new account2 NOT successfull");
+			println!("initialization of new account2 NOT successful");
 		}
 
 		println!("account1 is {}", client.account1.public());
@@ -361,6 +361,10 @@ fn transfer_benchmark(
 		})
 		.collect();
 
+	println!(
+		"Finished benchmark with {} clients and {} transactions",
+		number_clients, number_transactions
+	);
 	println!("Time for transactions: {}", overall_start.elapsed().as_secs());
 
 	let file = File::create(format!(
@@ -379,6 +383,9 @@ fn transfer_benchmark(
 	}
 
 	println!("Samples recorded: {}", hist.len());
+	for i in (5..=100).step_by(5) {
+		println!("{} percent are done within {} ms", i, hist.value_at_quantile(i as f64 / 100.0));
+	}
 	for v in hist.iter_recorded() {
 		let text = format!(
 			"{}'th percentile of data is {} with {} samples",
