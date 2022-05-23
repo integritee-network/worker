@@ -67,7 +67,7 @@ ALICE_ONCHAIN_BALANCE = $(${CLIENT} balance "//Alice" | xargs )
 echo $ALICE_ONCHAIN_BALANCE
 echo ""
 echo "Multiplying Alice Balance by ten:"
-MORE_THAN_ALICE_BALANCE = $(expr ${ALICE_ONCHAIN_BALANCE} \* 10)
+MORE_THAN_ALICE_BALANCE = $((${ALICE_ONCHAIN_BALANCE} * 10))
 echo $MORE_THAN_ALICE_BALANCE
 echo ""
 
