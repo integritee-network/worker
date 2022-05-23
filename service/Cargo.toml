@@ -60,8 +60,8 @@ its-storage = { path = "../sidechain/storage" }
 
 # scs / integritee
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.20" }
-my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node", branch = "master" }
-teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node", branch = "verbose" }
+teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "verbose" }
 
 # Substrate dependencies
 sp-runtime = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
