@@ -39,7 +39,8 @@ use sp_core::{sr25519 as sr25519_core, Pair, H256};
 use std::{
 	result::Result as StdResult,
 	sync::mpsc::{channel, Receiver},
-	time::Instant,
+	thread,
+	time::{Duration, Instant},
 };
 use substrate_api_client::{compose_extrinsic, XtStatus};
 use teerex_primitives::Request;
@@ -235,19 +236,30 @@ fn send_direct_request(
 	}
 }
 
+pub fn create_connection(cli: &Cli) -> (DirectClient, Receiver<String>) {
+	debug!("get direct api");
+	let direct_api = get_worker_api_direct(cli);
+
+	debug!("setup sender and receiver");
+	let (sender, receiver) = channel();
+	direct_api.watch("".to_string(), sender);
+	thread::sleep(Duration::from_millis(200));
+	(direct_api, receiver)
+}
+
 /// sends a rpc watch request to the worker api server
 pub fn initialize_receiver_for_direct_request(
-	cli: &Cli,
+	client_api: &DirectClient,
 	trusted_args: &TrustedArgs,
 	operation_call: TrustedOperation,
 	shielding_pubkey: sgx_crypto_helper::rsa3072::Rsa3072PubKey,
-) -> (Option<DirectClient>, Option<Receiver<String>>) {
+) {
 	let (_operation_call_encoded, operation_call_encrypted) =
 		match encode_encrypt_with_key(shielding_pubkey, operation_call) {
 			Ok((encoded, encrypted)) => (encoded, encrypted),
 			Err(msg) => {
 				println!("[Error] {}", msg);
-				return (None, None)
+				return ()
 			},
 		};
 	let shard = read_shard(trusted_args).unwrap();
@@ -262,14 +274,7 @@ pub fn initialize_receiver_for_direct_request(
 	};
 	let jsonrpc_call: String = serde_json::to_string(&direct_invocation_call).unwrap();
 
-	debug!("get direct api");
-	let direct_api = get_worker_api_direct(cli);
-
-	debug!("setup sender and receiver");
-	let (sender, receiver) = channel();
-	direct_api.watch(jsonrpc_call, sender);
-
-	(Some(direct_api), Some(receiver))
+	client_api.send(&jsonrpc_call).unwrap();
 }
 
 pub fn wait_until(

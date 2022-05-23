@@ -15,7 +15,7 @@
 
 */
 
-use crate::error::Result as RpcClientResult;
+use crate::error::{Error, Result as RpcClientResult};
 ///! Websocket client implementation to access the direct-rpc-server running inside an enclave.
 ///
 /// This should be replaced with the `jsonrpsee::WsClient`as soon as available in no-std:
@@ -53,6 +53,15 @@ impl WsClientControl {
 		let mut subscriber_lock = self.subscriber.lock();
 		*subscriber_lock = Some(sender);
 		Ok(())
+	}
+
+	pub fn send(&self, request: &str) -> RpcClientResult<()> {
+		if let Some(s) = self.subscriber.lock().as_ref() {
+			s.send(request)?;
+			Ok(())
+		} else {
+			Err(Error::Custom("Sender not initialized".into()))
+		}
 	}
 }
 
