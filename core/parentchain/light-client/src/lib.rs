@@ -25,6 +25,7 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 #[macro_use]
 extern crate sgx_tstd as std;
+extern crate core;
 
 // Re-export useful types.
 pub use finality_grandpa::BlockNumberOps;
@@ -79,7 +80,7 @@ use crate::concurrent_access::GlobalValidatorAccessor;
 pub type ValidatorAccessor<Block> = GlobalValidatorAccessor<
 	GrandpaLightValidation<Block>,
 	Block,
-	crate::io::LightClientSeal<Block>,
+	crate::io::LightClientSeal<Block, GrandpaLightValidation<Block>>,
 >;
 
 /// Validator trait

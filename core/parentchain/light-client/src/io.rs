@@ -20,7 +20,7 @@ use crate::{
 	NumberFor, Validator,
 };
 use codec::{Decode, Encode};
-use derive_more::Display;
+use core::fmt::Debug;
 use itp_settings::files::LIGHT_CLIENT_DB;
 use itp_sgx_io::{seal, unseal, StaticSealedIO};
 use itp_types::light_client_init_params::LightClientInitParams;
@@ -28,14 +28,14 @@ use log::*;
 use sp_runtime::traits::{Block, Header};
 use std::{fs, sgxfs::SgxFile};
 
-#[derive(Copy, Clone, Debug, Display)]
-pub struct LightClientSeal<B> {
-	_phantom: B,
+#[derive(Copy, Clone, Debug)]
+pub struct LightClientSeal<B, LightClient> {
+	_phantom: (B, LightClient),
 }
 
-impl<B: Block> StaticSealedIO for LightClientSeal<B> {
+impl<B: Block, Client: Decode + Encode + Debug> StaticSealedIO for LightClientSeal<B, Client> {
 	type Error = Error;
-	type Unsealed = GrandpaLightValidation<B>;
+	type Unsealed = Client;
 
 	fn unseal_from_static_file() -> Result<Self::Unsealed> {
 		Ok(unseal(LIGHT_CLIENT_DB).map(|b| Decode::decode(&mut b.as_slice()))??)
@@ -57,20 +57,25 @@ pub fn read_or_init_validator<B: Block>(
 where
 	NumberFor<B>: finality_grandpa::BlockNumberOps,
 {
-	if SgxFile::open(LIGHT_CLIENT_DB).is_err() {
-		info!("[Enclave] ChainRelay DB not found, creating new! {}", LIGHT_CLIENT_DB);
-		return init_validator::<B>(params)
-	}
+	match params {
+		LightClientInitParams::Grandpa { .. } => {
+			if SgxFile::open(LIGHT_CLIENT_DB).is_err() {
+				info!("[Enclave] ChainRelay DB not found, creating new! {}", LIGHT_CLIENT_DB);
+				return init_validator::<B>(params)
+			}
 
-	let validator = LightClientSeal::<B>::unseal_from_static_file()?;
+			let validator =
+				LightClientSeal::<B, GrandpaLightValidation<B>>::unseal_from_static_file()?;
 
-	let genesis = validator.genesis_hash(validator.num_relays()).unwrap();
-	if genesis == params.get_genesis_header().hash() {
-		info!("Found already initialized light client with Genesis Hash: {:?}", genesis);
-		info!("light client state: {:?}", validator);
-		Ok(validator.latest_finalized_header(validator.num_relays()).unwrap())
-	} else {
-		init_validator::<B>(params)
+			let genesis = validator.genesis_hash(validator.num_relays()).unwrap();
+			if genesis == params.get_genesis_header().hash() {
+				info!("Found already initialized light client with Genesis Hash: {:?}", genesis);
+				info!("light client state: {:?}", validator);
+				Ok(validator.latest_finalized_header(validator.num_relays()).unwrap())
+			} else {
+				init_validator::<B>(params)
+			}
+		},
 	}
 }
 
@@ -83,7 +88,9 @@ where
 			let mut validator = GrandpaLightValidation::<B>::new();
 
 			validator.initialize_relay(genesis_header, authorities, authority_proof)?;
-			LightClientSeal::<B>::seal_to_static_file(validator.clone())?;
+			LightClientSeal::<B, GrandpaLightValidation<B>>::seal_to_static_file(
+				validator.clone(),
+			)?;
 
 			return Ok(validator.latest_finalized_header(validator.num_relays()).unwrap())
 		},
