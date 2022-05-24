@@ -2401,12 +2401,17 @@ name = "itc-parentchain-indirect-calls-executor"
 version = "0.8.0"
 dependencies = [
  "bs58",
+ "env_logger 0.9.0",
+ "futures 0.3.21",
+ "futures 0.3.8",
  "ita-stf",
  "itp-extrinsics-factory",
  "itp-ocall-api",
  "itp-settings",
  "itp-sgx-crypto",
  "itp-stf-executor",
+ "itp-test",
+ "itp-top-pool-author",
  "itp-types",
  "log 0.4.17",
  "parity-scale-codec",
@@ -2809,7 +2814,7 @@ dependencies = [
  "jsonrpc-core 18.0.0",
  "parity-scale-codec",
  "sgx-externalities",
- "sgx_tcrypto_helper",
+ "sgx_crypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
@@ -2857,6 +2862,7 @@ name = "itp-top-pool-author"
 version = "0.8.0"
 dependencies = [
  "derive_more",
+ "futures 0.3.21",
  "ita-stf",
  "itc-direct-rpc-server",
  "itc-tls-websocket-server",
@@ -2872,10 +2878,11 @@ dependencies = [
  "jsonrpc-core 18.0.0",
  "log 0.4.17",
  "parity-scale-codec",
- "sgx_tcrypto_helper",
+ "sgx_crypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
+ "sp-keyring",
  "sp-runtime",
  "thiserror 1.0.31",
  "thiserror 1.0.9",
@@ -5853,15 +5860,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde-big-array"
-version = "0.3.0"
-source = "git+https://github.com/mesalock-linux/serde-big-array-sgx#94122c5167aee38b39b09a620a60db2c28cf7428"
-dependencies = [
- "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx)",
- "serde_derive 1.0.118",
-]
-
-[[package]]
 name = "serde_derive"
 version = "1.0.118"
 source = "git+https://github.com/mesalock-linux/serde-sgx#db0226f1d5d70fca6b96af2c285851502204e21c"
@@ -6002,14 +6000,9 @@ source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=maste
 dependencies = [
  "itertools",
  "libc",
- "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx)",
  "serde 1.0.137",
- "serde-big-array 0.1.5",
- "serde-big-array 0.3.0",
- "serde_derive 1.0.118",
+ "serde-big-array",
  "serde_derive 1.0.137",
- "sgx_tcrypto",
- "sgx_tstd",
  "sgx_types",
  "sgx_ucrypto",
 ]
@@ -6043,14 +6036,6 @@ version = "1.1.4"
 source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#08264d6bff679d6047e5e9bc36058b4475c58ed4"
 dependencies = [
  "sgx_types",
-]
-
-[[package]]
-name = "sgx_tcrypto_helper"
-version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#08264d6bff679d6047e5e9bc36058b4475c58ed4"
-dependencies = [
- "sgx_crypto_helper",
 ]
 
 [[package]]
@@ -8278,5 +8263,10 @@ source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=maste
 
 [[patch.unused]]
 name = "sgx_serialize_derive_internals"
+version = "1.1.4"
+source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#08264d6bff679d6047e5e9bc36058b4475c58ed4"
+
+[[patch.unused]]
+name = "sgx_tcrypto_helper"
 version = "1.1.4"
 source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#08264d6bff679d6047e5e9bc36058b4475c58ed4"

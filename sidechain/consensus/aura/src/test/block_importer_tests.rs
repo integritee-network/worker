@@ -19,7 +19,7 @@ use crate::{block_importer::BlockImporter, test::fixtures::validateer, ShardIden
 use codec::Encode;
 use core::assert_matches::assert_matches;
 use itc_parentchain_block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
-use itp_sgx_crypto::{aes::Aes, StateCrypto};
+use itp_sgx_crypto::{aes::Aes, mocks::KeyRepositoryMock, StateCrypto};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::{
 	builders::{
@@ -52,6 +52,7 @@ type TestSidechainState = SidechainDB<SidechainBlock, SgxExternalities>;
 type TestTopPoolCallOperator = TopPoolCallOperatorMock<ParentchainBlock, SignedSidechainBlock>;
 type TestParentchainBlockImportTrigger =
 	TriggerParentchainBlockImportMock<SignedParentchainBlock<ParentchainBlock>>;
+type TestStateKeyRepo = KeyRepositoryMock<Aes>;
 type TestBlockImporter = BlockImporter<
 	Pair,
 	ParentchainBlock,
@@ -59,7 +60,7 @@ type TestBlockImporter = BlockImporter<
 	OnchainMock,
 	TestSidechainState,
 	HandleStateMock,
-	Aes,
+	TestStateKeyRepo,
 	TestTopPoolCallOperator,
 	TestParentchainBlockImportTrigger,
 >;
@@ -85,11 +86,11 @@ fn test_fixtures(
 		OnchainMock::default()
 			.with_validateer_set(Some(vec![validateer(Keyring::Alice.public().into())])),
 	);
+	let state_key_repository = Arc::new(TestStateKeyRepo::new(state_key()));
 
 	let block_importer = TestBlockImporter::new(
 		state_handler.clone(),
-		state_key(),
-		default_authority(),
+		state_key_repository,
 		top_pool_call_operator.clone(),
 		parentchain_block_import_trigger,
 		ocall_api,
@@ -193,29 +194,19 @@ fn block_import_with_invalid_signature_fails() {
 }
 
 #[test]
-fn if_block_author_is_self_remove_tops_from_pool() {
+fn cleanup_removes_tops_from_pool() {
 	let (block_importer, state_handler, top_pool_call_operator) =
 		test_fixtures_with_default_import_trigger();
 	let parentchain_header = ParentchainHeaderBuilder::default().build();
 	let signed_sidechain_block =
 		default_authority_signed_block(&parentchain_header, state_handler.as_ref());
-
-	block_importer.cleanup(&signed_sidechain_block).unwrap();
-
-	assert_eq!(1, top_pool_call_operator.remove_calls_invoked().len());
-}
-
-#[test]
-fn if_block_author_is_not_self_do_not_remove_tops() {
-	let (block_importer, state_handler, top_pool_call_operator) =
-		test_fixtures_with_default_import_trigger();
-	let parentchain_header = ParentchainHeaderBuilder::default().build();
-	let signed_sidechain_block =
+	let bob_signed_sidechain_block =
 		signed_block(&parentchain_header, state_handler.as_ref(), Keyring::Bob.pair());
 
 	block_importer.cleanup(&signed_sidechain_block).unwrap();
+	block_importer.cleanup(&bob_signed_sidechain_block).unwrap();
 
-	assert!(top_pool_call_operator.remove_calls_invoked().is_empty());
+	assert_eq!(2, top_pool_call_operator.remove_calls_invoked().len());
 }
 
 #[test]

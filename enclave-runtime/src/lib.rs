@@ -85,9 +85,6 @@ pub mod top_pool_execution;
 #[cfg(feature = "test")]
 pub mod test;
 
-#[cfg(feature = "test")]
-pub mod tests;
-
 // this is a 'dummy' for production mode
 #[cfg(not(feature = "test"))]
 #[no_mangle]

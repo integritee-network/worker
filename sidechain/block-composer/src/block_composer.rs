@@ -19,7 +19,7 @@ use crate::error::{Error, Result};
 use codec::Encode;
 use ita_stf::StatePayload;
 use itp_settings::node::{PROPOSED_SIDECHAIN_BLOCK, SIDECHAIN_MODULE};
-use itp_sgx_crypto::StateCrypto;
+use itp_sgx_crypto::{key_repository::AccessKey, StateCrypto};
 use itp_time_utils::now_as_u64;
 use itp_types::{OpaqueCall, ShardIdentifier, H256};
 use its_primitives::traits::{
@@ -34,7 +34,7 @@ use sp_runtime::{
 	traits::{Block as ParentchainBlockTrait, Header},
 	MultiSignature,
 };
-use std::{format, marker::PhantomData, vec::Vec};
+use std::{format, marker::PhantomData, sync::Arc, vec::Vec};
 
 /// Compose a sidechain block and corresponding confirmation extrinsic for the parentchain
 ///
@@ -52,14 +52,14 @@ pub trait ComposeBlockAndConfirmation<Externalities, ParentchainBlock: Parentcha
 }
 
 /// Block composer implementation for the sidechain
-pub struct BlockComposer<ParentchainBlock, SignedSidechainBlock, Signer, StateKey> {
+pub struct BlockComposer<ParentchainBlock, SignedSidechainBlock, Signer, StateKeyRepository> {
 	signer: Signer,
-	state_key: StateKey,
+	state_key_repository: Arc<StateKeyRepository>,
 	_phantom: PhantomData<(ParentchainBlock, SignedSidechainBlock)>,
 }
 
-impl<ParentchainBlock, SignedSidechainBlock, Signer, StateKey>
-	BlockComposer<ParentchainBlock, SignedSidechainBlock, Signer, StateKey>
+impl<ParentchainBlock, SignedSidechainBlock, Signer, StateKeyRepository>
+	BlockComposer<ParentchainBlock, SignedSidechainBlock, Signer, StateKeyRepository>
 where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	SignedSidechainBlock:
@@ -70,10 +70,11 @@ where
 	SignedSidechainBlock::Signature: From<Signer::Signature>,
 	Signer: Pair<Public = sp_core::ed25519::Public>,
 	Signer::Public: Encode,
-	StateKey: StateCrypto,
+	StateKeyRepository: AccessKey,
+	<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
 {
-	pub fn new(signer: Signer, state_key: StateKey) -> Self {
-		BlockComposer { signer, state_key, _phantom: Default::default() }
+	pub fn new(signer: Signer, state_key_repository: Arc<StateKeyRepository>) -> Self {
+		BlockComposer { signer, state_key_repository, _phantom: Default::default() }
 	}
 }
 
@@ -81,9 +82,9 @@ type HeaderTypeOf<T> = <<T as SignedSidechainBlockTrait>::Block as SidechainBloc
 type BlockDataTypeOf<T> =
 	<<T as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::BlockDataType;
 
-impl<ParentchainBlock, SignedSidechainBlock, Signer, StateKey, Externalities>
+impl<ParentchainBlock, SignedSidechainBlock, Signer, StateKeyRepository, Externalities>
 	ComposeBlockAndConfirmation<Externalities, ParentchainBlock>
-	for BlockComposer<ParentchainBlock, SignedSidechainBlock, Signer, StateKey>
+	for BlockComposer<ParentchainBlock, SignedSidechainBlock, Signer, StateKeyRepository>
 where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	SignedSidechainBlock:
@@ -95,7 +96,8 @@ where
 	Externalities: SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash + Encode,
 	Signer: Pair<Public = sp_core::ed25519::Public>,
 	Signer::Public: Encode,
-	StateKey: StateCrypto,
+	StateKeyRepository: AccessKey,
+	<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
 {
 	type SignedSidechainBlock = SignedSidechainBlock;
 
@@ -129,7 +131,12 @@ where
 			StatePayload::new(state_hash_apriori, state_hash_new, db.ext().state_diff().clone())
 				.encode();
 
-		self.state_key.encrypt(&mut payload).map_err(|e| {
+		let state_key = self
+			.state_key_repository
+			.retrieve_key()
+			.map_err(|e| Error::Other(format!("Failed to retrieve state key: {:?}", e).into()))?;
+
+		state_key.encrypt(&mut payload).map_err(|e| {
 			Error::Other(format!("Failed to encrypt state payload: {:?}", e).into())
 		})?;
 

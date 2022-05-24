@@ -16,4 +16,5 @@
 
 */
 
+pub mod components;
 pub mod initialize_test_state;

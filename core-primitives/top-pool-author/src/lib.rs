@@ -38,8 +38,11 @@ pub mod error;
 pub mod top_filter;
 pub mod traits;
 
-#[cfg(all(feature = "sgx", feature = "test"))]
-pub mod author_tests;
+#[cfg(test)]
+mod author_tests;
 
-#[cfg(feature = "test")]
+#[cfg(any(test, feature = "test"))]
 pub mod test_utils;
+
+#[cfg(feature = "mocks")]
+pub mod mocks;

@@ -44,8 +44,5 @@ pub mod tracked_map;
 pub mod validated_pool;
 pub mod watcher;
 
-#[cfg(test)]
-mod mocks;
-
-#[cfg(feature = "mocks")]
+#[cfg(any(test, feature = "mocks"))]
 pub mod mocks;

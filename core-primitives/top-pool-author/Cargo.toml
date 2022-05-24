@@ -9,7 +9,6 @@ resolver = "2"
 # sgx dependencies
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_tcrypto_helper", optional = true }
 
 # local dependencies
 ita-stf = { path = "../../app-libs/stf", default-features = false }
@@ -40,8 +39,12 @@ sp-core = { version = "6.0.0", default-features = false, features = ["full_crypt
 sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
 
 [dev-dependencies]
+futures = { version = "0.3.8" }
 itp-sgx-crypto = { path = "../sgx/crypto", features = ["mocks"] }
-
+itp-test = { path = "../test" }
+itp-top-pool = { path = "../top-pool", features = ["mocks"] }
+sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_crypto_helper", default-features = false }
+sp-keyring = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
 
 
 [features]
@@ -63,7 +66,6 @@ std = [
 ]
 sgx = [
     "sgx_tstd",
-    "sgx-crypto-helper",
     "jsonrpc-core_sgx",
     "ita-stf/sgx",
     "itc-direct-rpc-server/sgx",
@@ -77,3 +79,4 @@ sgx = [
     "thiserror_sgx",
 ]
 test = [ "itp-test/sgx", "itp-top-pool/mocks" ]
+mocks = []
