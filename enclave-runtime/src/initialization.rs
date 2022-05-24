@@ -15,13 +15,6 @@
 
 */
 
-use base58::ToBase58;
-use codec::Encode;
-use log::*;
-use primitive_types::H256;
-use sp_core::crypto::Pair;
-use std::{string::String, sync::Arc};
-
 use crate::{
 	error::{Error, Result as EnclaveResult},
 	global_components::{
@@ -44,6 +37,8 @@ use crate::{
 	rpc::{rpc_response_channel::RpcResponseChannel, worker_api_direct::public_api_rpc_handler},
 	Hash,
 };
+use base58::ToBase58;
+use codec::Encode;
 use ita_stf::State as StfState;
 use itc_direct_rpc_server::{
 	create_determine_watch, rpc_connection_registry::ConnectionRegistry,
@@ -77,6 +72,10 @@ use its_sidechain::{
 	aura::block_importer::BlockImporter, block_composer::BlockComposer,
 	top_pool_executor::TopPoolOperationHandler,
 };
+use log::*;
+use primitive_types::H256;
+use sp_core::crypto::Pair;
+use std::{string::String, sync::Arc};
 
 pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> EnclaveResult<()> {
 	// Initialize the logging environment in the enclave.

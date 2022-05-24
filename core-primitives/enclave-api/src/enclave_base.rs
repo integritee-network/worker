@@ -125,11 +125,7 @@ impl EnclaveBase for Enclave {
 		&self,
 		params: LightClientInitParams<SpHeader>,
 	) -> EnclaveResult<SpHeader> {
-		let encoded_params = params.encode();
-		// Todo: this is a bit ugly but the common `encode()` is not implemented for authority list
-		let latest_header_encoded = params
-			.get_authorities()
-			.using_encoded(|_authorities| init_light_client_ffi(self.eid, encoded_params))?;
+		let latest_header_encoded = init_light_client_ffi(self.eid, params.encode())?;
 
 		let latest: SpHeader = Decode::decode(&mut latest_header_encoded.as_slice()).unwrap();
 		info!("Latest Header {:?}", latest);

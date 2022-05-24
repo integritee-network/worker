@@ -27,12 +27,6 @@ pub enum LightClientInitParams<Header> {
 }
 
 impl<Header> LightClientInitParams<Header> {
-	pub fn get_authorities(&self) -> &AuthorityList {
-		match self {
-			LightClientInitParams::Grandpa { authorities, .. } => authorities,
-		}
-	}
-
 	pub fn get_genesis_header(&self) -> &Header {
 		match self {
 			LightClientInitParams::Grandpa { genesis_header, .. } => genesis_header,
