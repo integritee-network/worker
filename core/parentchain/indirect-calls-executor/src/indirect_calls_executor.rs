@@ -23,7 +23,7 @@ use crate::sgx_reexport_prelude::*;
 use crate::error::Result;
 use codec::{Decode, Encode};
 use futures::executor;
-use ita_stf::{AccountId, TrustedCall};
+use ita_stf::{AccountId, TrustedCall, TrustedOperation};
 use itp_settings::node::{CALL_WORKER, SHIELD_FUNDS, TEEREX_MODULE};
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
 use itp_stf_executor::traits::StfRootOperations;
@@ -87,8 +87,9 @@ where
 		let trusted_call = TrustedCall::balance_shield(root_account_id, account, amount);
 		let signed_trusted_call =
 			self.stf_root_operator.sign_call_with_root(&trusted_call, &shard)?;
+		let trusted_operation = TrustedOperation::indirect_call(signed_trusted_call);
 
-		let encrypted_trusted_call = shielding_key.encrypt(&signed_trusted_call.encode())?;
+		let encrypted_trusted_call = shielding_key.encrypt(&trusted_operation.encode())?;
 		self.submit_trusted_call(shard, encrypted_trusted_call);
 		Ok(())
 	}
@@ -171,6 +172,7 @@ mod test {
 	use itp_types::{Request, ShardIdentifier};
 	use sp_core::{ed25519, Pair};
 	use sp_runtime::{MultiSignature, OpaqueExtrinsic};
+	use std::assert_matches::assert_matches;
 	use substrate_api_client::{GenericAddress, GenericExtra};
 
 	type TestShieldingKeyRepo = KeyRepositoryMock<ShieldingCryptoMock>;
@@ -186,7 +188,7 @@ mod test {
 	fn indirect_call_can_be_added_to_pool_successfully() {
 		let _ = env_logger::builder().is_test(true).try_init();
 
-		let (indirect_calls_executor, top_pool_author, _) = test_fixtures();
+		let (indirect_calls_executor, top_pool_author, _) = test_fixtures([0u8; 32]);
 		let request = Request { shard: shard_id(), cyphertext: vec![1u8, 2u8] };
 
 		let opaque_extrinsic = OpaqueExtrinsic::from_bytes(
@@ -216,13 +218,12 @@ mod test {
 	fn shielding_call_can_be_added_to_pool_successfully() {
 		let _ = env_logger::builder().is_test(true).try_init();
 
-		let (indirect_calls_executor, top_pool_author, shielding_key_repo) = test_fixtures();
+		let mr_enclave = [33u8; 32];
+		let (indirect_calls_executor, top_pool_author, shielding_key_repo) =
+			test_fixtures(mr_enclave.clone());
+		let shielding_key = shielding_key_repo.retrieve_key().unwrap();
 
-		let target_account = shielding_key_repo
-			.retrieve_key()
-			.unwrap()
-			.encrypt(&AccountId::new([2u8; 32]).encode())
-			.unwrap();
+		let target_account = shielding_key.encrypt(&AccountId::new([2u8; 32]).encode()).unwrap();
 
 		let opaque_extrinsic = OpaqueExtrinsic::from_bytes(
 			UncheckedExtrinsicV4::<ShieldFundsFn>::new_signed(
@@ -245,6 +246,14 @@ mod test {
 			.unwrap();
 
 		assert_eq!(1, top_pool_author.pending_tops(shard_id()).unwrap().len());
+		let submitted_extrinsic =
+			top_pool_author.pending_tops(shard_id()).unwrap().first().cloned().unwrap();
+		let decrypted_extrinsic = shielding_key.decrypt(&submitted_extrinsic).unwrap();
+		let decoded_operation =
+			TrustedOperation::decode(&mut decrypted_extrinsic.as_slice()).unwrap();
+		assert_matches!(decoded_operation, TrustedOperation::indirect_call(_));
+		let trusted_call_signed = decoded_operation.to_call().unwrap();
+		assert!(trusted_call_signed.verify_signature(&mr_enclave, &shard_id()));
 	}
 
 	fn default_signature() -> ed25519::Signature {
@@ -260,14 +269,15 @@ mod test {
 	}
 
 	fn test_fixtures(
+		mr_enclave: [u8; 32],
 	) -> (TestIndirectCallExecutor, Arc<TestTopPoolAuthor>, Arc<TestShieldingKeyRepo>) {
 		let shielding_key_repo = Arc::new(TestShieldingKeyRepo::default());
-		let stf_executor = Arc::new(TestStfRootOperator::default());
+		let stf_root_operator = Arc::new(TestStfRootOperator::new(mr_enclave));
 		let top_pool_author = Arc::new(TestTopPoolAuthor::default());
 
 		let executor = IndirectCallsExecutor::new(
 			shielding_key_repo.clone(),
-			stf_executor,
+			stf_root_operator,
 			top_pool_author.clone(),
 		);
 

@@ -23,8 +23,21 @@ use sp_core::Pair;
 #[derive(Default)]
 pub struct StfExecutorMock;
 
-#[derive(Default)]
-pub struct StfRootOperationsMock;
+pub struct StfRootOperationsMock {
+	mr_enclave: [u8; 32],
+}
+
+impl StfRootOperationsMock {
+	pub fn new(mr_enclave: [u8; 32]) -> Self {
+		Self { mr_enclave }
+	}
+}
+
+impl Default for StfRootOperationsMock {
+	fn default() -> Self {
+		Self::new([0u8; 32])
+	}
+}
 
 impl StfRootOperations for StfRootOperationsMock {
 	fn get_root_account(&self, _shard: &ShardIdentifier) -> Result<AccountId> {
@@ -40,6 +53,6 @@ impl StfRootOperations for StfRootOperationsMock {
 		const TEST_SEED: Seed = *b"42345678901234567890123456789012";
 		let signer = sp_core::ed25519::Pair::from_seed(&TEST_SEED);
 
-		Ok(trusted_call.sign(&KeyPair::Ed25519(signer), 1, &[0u8; 32], shard))
+		Ok(trusted_call.sign(&KeyPair::Ed25519(signer), 1, &self.mr_enclave, shard))
 	}
 }

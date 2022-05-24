@@ -27,20 +27,29 @@ use crate::test::{
 		TestShieldingKey, TestShieldingKeyRepo, TestSigner, TestStateHandler, TestTopPoolAuthor,
 	},
 };
+use codec::Encode;
 use ita_stf::{
 	test_genesis::{endowed_account, unendowed_account},
 	TrustedCall, TrustedOperation,
 };
+use itc_parentchain::indirect_calls_executor::{ExecuteIndirectCalls, IndirectCallsExecutor};
 use itp_ocall_api::EnclaveAttestationOCallApi;
+use itp_settings::node::{SHIELD_FUNDS, TEEREX_MODULE};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
-use itp_test::mock::metrics_ocall_mock::MetricsOCallMock;
+use itp_stf_executor::root_operator::StfRootOperator;
+use itp_test::{
+	builders::parentchain_block_builder::ParentchainBlockBuilder,
+	mock::metrics_ocall_mock::MetricsOCallMock,
+};
 use itp_top_pool_author::{author::AuthorTopFilter, traits::AuthorApi};
-use itp_types::ShardIdentifier;
+use itp_types::{AccountId, Block, ShardIdentifier, ShieldFundsFn};
 use jsonrpc_core::futures::executor;
 use log::*;
 use sgx_crypto_helper::RsaKeyPair;
-use sp_core::Pair;
+use sp_core::{ed25519, Pair};
+use sp_runtime::{MultiSignature, OpaqueExtrinsic};
 use std::{sync::Arc, vec::Vec};
+use substrate_api_client::{GenericAddress, GenericExtra, UncheckedExtrinsicV4};
 
 pub fn process_indirect_call_in_top_pool() {
 	let _ = env_logger::builder().is_test(true).try_init();
@@ -73,6 +82,52 @@ pub fn process_indirect_call_in_top_pool() {
 	assert_eq!(1, top_pool_author.get_pending_tops_separated(shard_id).unwrap().0.len());
 }
 
+pub fn submit_shielding_call_to_top_pool() {
+	let _ = env_logger::builder().is_test(true).try_init();
+
+	let signer = TestSigner::from_seed(b"42315678901234567890123456789012");
+	let shielding_key = TestShieldingKey::new().unwrap();
+	let shielding_key_repo = Arc::new(TestShieldingKeyRepo::new(shielding_key.clone()));
+
+	let ocall_api = create_ocall_api(&signer);
+	let mr_enclave = ocall_api.get_mrenclave_of_self().unwrap();
+
+	let state_handler = Arc::new(TestStateHandler::default());
+	let (_, shard_id) = init_state(state_handler.as_ref());
+
+	let top_pool = create_top_pool();
+
+	let top_pool_author = Arc::new(TestTopPoolAuthor::new(
+		top_pool,
+		AuthorTopFilter {},
+		state_handler.clone(),
+		shielding_key_repo.clone(),
+		Arc::new(MetricsOCallMock {}),
+	));
+
+	let root_operator =
+		Arc::new(StfRootOperator::new(state_handler.clone(), ocall_api.clone(), signer.clone()));
+	let indirect_calls_executor =
+		IndirectCallsExecutor::new(shielding_key_repo, root_operator, top_pool_author.clone());
+
+	let block_with_shielding_call = create_shielding_call_extrinsic(shard_id, &shielding_key);
+
+	let _ = indirect_calls_executor
+		.execute_indirect_calls_in_extrinsics(&block_with_shielding_call)
+		.unwrap();
+
+	assert_eq!(1, top_pool_author.get_pending_tops_separated(shard_id).unwrap().0.len());
+	let trusted_operation = top_pool_author
+		.get_pending_tops_separated(shard_id)
+		.unwrap()
+		.0
+		.first()
+		.cloned()
+		.unwrap();
+	let trusted_call = trusted_operation.to_call().unwrap();
+	assert!(trusted_call.verify_signature(&mr_enclave.m, &shard_id));
+}
+
 fn encrypted_indirect_call<
 	AttestationApi: EnclaveAttestationOCallApi,
 	ShieldingKey: ShieldingCryptoEncrypt,
@@ -89,4 +144,29 @@ fn encrypted_indirect_call<
 	let call_signed = sign_trusted_call(&call, attestation_api, shard_id, sender);
 	let trusted_operation = TrustedOperation::indirect_call(call_signed);
 	encrypt_trusted_operation(shielding_key, &trusted_operation)
+}
+
+fn create_shielding_call_extrinsic<ShieldingKey: ShieldingCryptoEncrypt>(
+	shard: ShardIdentifier,
+	shielding_key: &ShieldingKey,
+) -> Block {
+	let target_account = shielding_key.encrypt(&AccountId::new([2u8; 32]).encode()).unwrap();
+	let test_signer = ed25519::Pair::from_seed(b"33345678901234567890123456789012");
+	let signature = test_signer.sign(&[0u8]);
+
+	let opaque_extrinsic = OpaqueExtrinsic::from_bytes(
+		UncheckedExtrinsicV4::<ShieldFundsFn>::new_signed(
+			([TEEREX_MODULE, SHIELD_FUNDS], target_account, 1000u128, shard),
+			GenericAddress::Address32([1u8; 32]),
+			MultiSignature::Ed25519(signature),
+			GenericExtra::default(),
+		)
+		.encode()
+		.as_slice(),
+	)
+	.unwrap();
+
+	ParentchainBlockBuilder::default()
+		.with_extrinsics(vec![opaque_extrinsic])
+		.build()
 }

@@ -47,6 +47,9 @@ pub mod root_operator;
 #[cfg(all(feature = "sgx", feature = "test"))]
 pub mod executor_tests;
 
+#[cfg(all(feature = "sgx", feature = "test"))]
+pub mod root_operator_tests;
+
 #[cfg(feature = "mocks")]
 pub mod mocks;
 
