@@ -76,10 +76,14 @@ where
 				},
 			Err(err) => {
 				if let std::io::ErrorKind::WouldBlock = err.kind() {
-					debug!("TLS session is blocked");
+					debug!("TLS session is blocked (connection {})", self.connection_token.0);
 					return ConnectionState::Blocked
 				}
-				warn!("I/O error after reading TLS data: {:?}", err);
+				warn!(
+					"I/O error after reading TLS data (connection {}): {:?}",
+					self.connection_token.0, err
+				);
+				return ConnectionState::Closing
 			},
 		}
 
@@ -105,14 +109,14 @@ where
 
 		match tls_stream.sess.write_tls(&mut tls_stream.sock) {
 			Ok(_) => {
-				trace!("TLS write successful, connection is alive");
+				trace!("TLS write successful, connection {} is alive", self.connection_token.0);
 				if tls_stream.sess.is_handshaking() {
 					return ConnectionState::TlsHandshake
 				}
 				ConnectionState::Alive
 			},
 			Err(e) => {
-				error!("TLS write error: {:?}", e);
+				error!("TLS write error (connection {}): {:?}", self.connection_token.0, e);
 				ConnectionState::Closing
 			},
 		}
@@ -123,23 +127,33 @@ where
 	/// Returns a boolean 'connection should be closed'.
 	fn read_or_initialize_websocket(&mut self) -> WebSocketResult<bool> {
 		if let StreamState::EstablishedWebsocket(web_socket) = &mut self.stream_state {
+			debug!("Read message for connection {}", self.connection_token.0);
 			match web_socket.read_message() {
 				Ok(m) =>
 					if let Err(e) = self.handle_message(m) {
-						error!("Failed to handle web-socket message: {:?}", e);
+						error!(
+							"Failed to handle web-socket message (connection {}): {:?}",
+							self.connection_token.0, e
+						);
 					},
 				Err(e) => match e {
 					tungstenite::Error::ConnectionClosed => return Ok(true),
 					tungstenite::Error::AlreadyClosed => return Ok(true),
-					_ => error!("Failed to read message from web-socket: {:?}", e),
+					_ => error!(
+						"Failed to read message from web-socket (connection {}): {:?}",
+						self.connection_token.0, e
+					),
 				},
 			}
+			debug!("Read successful for connection {}", self.connection_token.0);
 		} else {
+			debug!("Initialize connection {}", self.connection_token.0);
 			self.stream_state = std::mem::take(&mut self.stream_state).attempt_handshake();
 			if self.stream_state.is_invalid() {
 				warn!("Web-socket connection ({:?}) failed, closing", self.connection_token);
 				return Ok(true)
 			}
+			debug!("Initialized connection {} successfully", self.connection_token.0);
 		}
 
 		Ok(false)
@@ -153,9 +167,12 @@ where
 					.connection_handler
 					.handle_message(self.connection_token.into(), string_message)?
 				{
-					trace!("Handling message yielded a reply, sending it now..");
+					debug!(
+						"Handling message yielded a reply, sending it now to connection {}..",
+						self.connection_token.0
+					);
 					self.write_message(reply)?;
-					trace!("Reply sent successfully");
+					debug!("Reply sent successfully to connection {}", self.connection_token.0);
 				}
 			},
 			Message::Binary(_) => {
@@ -165,16 +182,27 @@ where
 				debug!("Received close frame, driving web-socket connection to close");
 				if let StreamState::EstablishedWebsocket(web_socket) = &mut self.stream_state {
 					// We need to call write_pending until it returns an error that connection is closed.
-					loop {
-						if let Err(e) = web_socket.write_pending() {
-							match e {
-								tungstenite::Error::ConnectionClosed
-								| tungstenite::Error::AlreadyClosed => break,
-								_ => {},
-							}
+					if let Err(e) = web_socket.close(None) {
+						match e {
+							tungstenite::Error::ConnectionClosed
+							| tungstenite::Error::AlreadyClosed => {},
+							_ => warn!(
+								"Failed to send close frame (connection {}): {:?}",
+								self.connection_token.0, e
+							),
 						}
 					}
+
+					match web_socket.write_pending() {
+						Ok(_) => {},
+						Err(e) => match e {
+							tungstenite::Error::ConnectionClosed
+							| tungstenite::Error::AlreadyClosed => {},
+							_ => warn!("Failed to write pending frames after closing (connection {}): {:?}", self.connection_token.0, e),
+						},
+					}
 				}
+				debug!("Successfully closed connection {}", self.connection_token.0);
 			},
 			_ => {},
 		}

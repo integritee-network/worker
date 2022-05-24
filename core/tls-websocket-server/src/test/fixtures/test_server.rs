@@ -22,12 +22,12 @@ use crate::{
 	},
 	TungsteniteWsServer,
 };
-use std::{collections::VecDeque, string::String, sync::Arc};
+use std::{string::String, sync::Arc};
 
 pub type TestServer = TungsteniteWsServer<WebSocketHandlerMock, TestServerConfigProvider>;
 
 pub fn create_server(
-	handler_responses: VecDeque<String>,
+	handler_responses: Vec<String>,
 	port: u16,
 ) -> (Arc<TestServer>, Arc<WebSocketHandlerMock>) {
 	let config_provider = Arc::new(TestServerConfigProvider {});

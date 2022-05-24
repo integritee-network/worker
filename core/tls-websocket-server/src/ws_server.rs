@@ -99,14 +99,14 @@ where
 			self.connection_handler.clone(),
 		)?;
 
-		trace!("Web-socket connection created");
+		debug!("Web-socket connection created");
 		web_socket_connection.register(poll)?;
 
 		let mut connections_lock =
 			self.connections.write().map_err(|_| WebSocketError::LockPoisoning)?;
 		connections_lock.insert(token, web_socket_connection);
 
-		trace!("Successfully accepted connection");
+		debug!("Accepted connection, {} active connections", connections_lock.len());
 		Ok(())
 	}
 
@@ -120,8 +120,13 @@ where
 			connection.on_ready(poll, event)?;
 
 			if connection.is_closed() {
-				trace!("Connection {:?} is closed, removing", token);
+				debug!("Connection {:?} is closed, removing", token);
 				connections_lock.remove(&token);
+				debug!(
+					"Closed {:?}, {} active connections remaining",
+					token,
+					connections_lock.len()
+				);
 			}
 		}
 
@@ -192,7 +197,7 @@ where
 			mio::PollOpt::level(),
 		)?;
 
-		let mut events = mio::Events::with_capacity(1024);
+		let mut events = mio::Events::with_capacity(2048);
 
 		// Run the event loop.
 		'outer_event_loop: loop {
@@ -278,7 +283,6 @@ mod tests {
 		fixtures::{no_cert_verifier::NoCertVerifier, test_server::create_server},
 		mocks::web_socket_handler_mock::WebSocketHandlerMock,
 	};
-	use alloc::collections::VecDeque;
 	use rustls::ClientConfig;
 	use std::{net::TcpStream, thread, time::Duration};
 	use tungstenite::{
@@ -292,11 +296,9 @@ mod tests {
 
 		let expected_answer = "websocket server response bidibibup".to_string();
 		let port: u16 = 21777;
-		const NUMBER_OF_CONNECTIONS: usize = 20;
+		const NUMBER_OF_CONNECTIONS: usize = 100;
 
-		let responses: VecDeque<_> =
-			(0..NUMBER_OF_CONNECTIONS).map(|_| expected_answer.clone()).collect();
-		let (server, handler) = create_server(responses, port);
+		let (server, handler) = create_server(vec![expected_answer.clone()], port);
 
 		let server_clone = server.clone();
 		let server_join_handle = thread::spawn(move || server_clone.run());
@@ -309,8 +311,11 @@ mod tests {
 			.map(|_| {
 				let expected_answer_clone = expected_answer.clone();
 
+				thread::sleep(Duration::from_millis(5));
+
 				thread::spawn(move || {
 					let mut socket = connect_tls_client(get_server_addr(port).as_str());
+
 					socket
 						.write_message(Message::Text("Hello WebSocket".into()))
 						.expect("client write message to be successful");
@@ -319,6 +324,17 @@ mod tests {
 						Message::Text(expected_answer_clone),
 						socket.read_message().unwrap()
 					);
+
+					thread::sleep(Duration::from_millis(2));
+
+					socket
+						.write_message(Message::Text("Second message".into()))
+						.expect("client write message to be successful");
+
+					thread::sleep(Duration::from_millis(2));
+
+					socket.close(None).unwrap();
+					socket.write_pending().unwrap();
 				})
 			})
 			.collect();
@@ -335,7 +351,41 @@ mod tests {
 			panic!("Test failed, web-socket returned error: {:?}", e);
 		}
 
-		assert_eq!(NUMBER_OF_CONNECTIONS, handler.get_handled_messages().len());
+		assert_eq!(2 * NUMBER_OF_CONNECTIONS, handler.get_handled_messages().len());
+	}
+
+	#[test]
+	fn server_closes_connection_if_client_does_not_wait_for_reply() {
+		let _ = env_logger::builder().is_test(true).try_init();
+
+		let expected_answer = "websocket server response".to_string();
+		let port: u16 = 21778;
+
+		let (server, handler) = create_server(vec![expected_answer.clone()], port);
+
+		let server_clone = server.clone();
+		let server_join_handle = thread::spawn(move || server_clone.run());
+
+		// Wait until server is up.
+		thread::sleep(std::time::Duration::from_millis(50));
+
+		let client_join_handle = thread::spawn(move || {
+			let mut socket = connect_tls_client(get_server_addr(port).as_str());
+			socket
+				.write_message(Message::Text("First request".into()))
+				.expect("client write message to be successful");
+
+			// We never read, just send a message and close the connection, despite the server
+			// trying to send a reply (which will fail).
+			socket.close(None).unwrap();
+			socket.write_pending().unwrap();
+		});
+
+		client_join_handle.join().unwrap();
+		server.shut_down().unwrap();
+		server_join_handle.join().unwrap().unwrap();
+
+		assert_eq!(1, handler.get_handled_messages().len());
 	}
 
 	#[test]
@@ -343,8 +393,8 @@ mod tests {
 		let _ = env_logger::builder().is_test(true).try_init();
 
 		let expected_answer = "first response".to_string();
-		let port: u16 = 21778;
-		let (server, handler) = create_server(VecDeque::from([expected_answer.clone()]), port);
+		let port: u16 = 21779;
+		let (server, handler) = create_server(vec![expected_answer.clone()], port);
 
 		let server_clone = server.clone();
 		let server_join_handle = thread::spawn(move || server_clone.run());
