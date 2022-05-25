@@ -127,6 +127,10 @@ pub fn root() -> AccountId {
 	get_storage_value("Sudo", "Key").unwrap()
 }
 
+pub fn enclave_self_account() -> AccountId {
+	get_storage_value("Sudo", "Enclave_Self_Key").unwrap()
+}
+
 // FIXME: Use Option<ParentchainHeader:Hash> as return type after fixing sgx-runtime issue #37
 pub fn get_parentchain_blockhash() -> Option<H256> {
 	get_storage_value("Parentchain", "BlockHash")
@@ -139,6 +143,12 @@ pub fn get_parentchain_parenthash() -> Option<H256> {
 
 pub fn get_parentchain_number() -> Option<BlockNumber> {
 	get_storage_value("Parentchain", "Number")
+}
+
+pub fn ensure_self(account: AccountId) -> StfResult<()> {
+	if enclave_self_account() == account {
+		Ok(())
+	}
 }
 
 pub fn ensure_root(account: AccountId) -> StfResult<()> {
