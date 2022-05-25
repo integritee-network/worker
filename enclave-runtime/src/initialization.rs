@@ -22,7 +22,7 @@ use crate::{
 		EnclaveShieldingKeyRepository, EnclaveSidechainApi, EnclaveSidechainBlockImportQueue,
 		EnclaveSidechainBlockImportQueueWorker, EnclaveSidechainBlockImporter,
 		EnclaveSidechainBlockSyncer, EnclaveStateFileIo, EnclaveStateHandler,
-		EnclaveStateKeyRepository, EnclaveStfExecutor, EnclaveStfRootOperator, EnclaveTopPool,
+		EnclaveStateKeyRepository, EnclaveStfEnclaveSigner, EnclaveStfExecutor, EnclaveTopPool,
 		EnclaveTopPoolAuthor, EnclaveTopPoolOperationHandler, EnclaveValidatorAccessor,
 		GLOBAL_EXTRINSICS_FACTORY_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
 		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT, GLOBAL_RPC_WS_HANDLER_COMPONENT,
@@ -102,7 +102,8 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 		Arc::new(EnclaveStateKeyRepository::new(state_key, Arc::new(AesSeal)));
 	GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.initialize(state_key_repository.clone());
 
-	let state_file_io = Arc::new(EnclaveStateFileIo::new(state_key_repository));
+	let state_file_io =
+		Arc::new(EnclaveStateFileIo::new(state_key_repository, signer.public().into()));
 	let state_snapshot_repository_loader =
 		StateSnapshotRepositoryLoader::<EnclaveStateFileIo, StfState, H256>::new(state_file_io);
 	let state_snapshot_repository =
@@ -232,7 +233,7 @@ pub(crate) fn init_light_client(params: LightClientInitParams<Header>) -> Enclav
 	GLOBAL_EXTRINSICS_FACTORY_COMPONENT.initialize(extrinsics_factory.clone());
 
 	let stf_root_operator =
-		Arc::new(EnclaveStfRootOperator::new(state_handler, ocall_api.clone(), signer));
+		Arc::new(EnclaveStfEnclaveSigner::new(state_handler, ocall_api.clone(), signer));
 	let indirect_calls_executor = Arc::new(IndirectCallsExecutor::new(
 		shielding_key_repository,
 		stf_root_operator,

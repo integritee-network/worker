@@ -26,7 +26,7 @@ use futures::executor;
 use ita_stf::{AccountId, TrustedCall, TrustedOperation};
 use itp_settings::node::{CALL_WORKER, SHIELD_FUNDS, TEEREX_MODULE};
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
-use itp_stf_executor::traits::StfRootOperations;
+use itp_stf_executor::traits::StfEnclaveSigning;
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{CallWorkerFn, ShardIdentifier, ShieldFundsFn, H256};
 use log::*;
@@ -48,27 +48,27 @@ pub trait ExecuteIndirectCalls {
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>;
 }
 
-pub struct IndirectCallsExecutor<ShieldingKeyRepository, StfRootOperator, TopPoolAuthor> {
+pub struct IndirectCallsExecutor<ShieldingKeyRepository, StfEnclaveSigner, TopPoolAuthor> {
 	shielding_key_repo: Arc<ShieldingKeyRepository>,
-	stf_root_operator: Arc<StfRootOperator>,
+	stf_enclave_signer: Arc<StfEnclaveSigner>,
 	top_pool_author: Arc<TopPoolAuthor>,
 }
 
-impl<ShieldingKeyRepository, StfRootOperator, TopPoolAuthor>
-	IndirectCallsExecutor<ShieldingKeyRepository, StfRootOperator, TopPoolAuthor>
+impl<ShieldingKeyRepository, StfEnclaveSigner, TopPoolAuthor>
+	IndirectCallsExecutor<ShieldingKeyRepository, StfEnclaveSigner, TopPoolAuthor>
 where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
 		+ ShieldingCryptoEncrypt<Error = itp_sgx_crypto::Error>,
-	StfRootOperator: StfRootOperations,
+	StfEnclaveSigner: StfEnclaveSigning,
 	TopPoolAuthor: AuthorApi<H256, H256> + Send + Sync + 'static,
 {
 	pub fn new(
 		shielding_key_repo: Arc<ShieldingKeyRepository>,
-		stf_root_operator: Arc<StfRootOperator>,
+		stf_enclave_signer: Arc<StfEnclaveSigner>,
 		top_pool_author: Arc<TopPoolAuthor>,
 	) -> Self {
-		IndirectCallsExecutor { shielding_key_repo, stf_root_operator, top_pool_author }
+		IndirectCallsExecutor { shielding_key_repo, stf_enclave_signer, top_pool_author }
 	}
 
 	fn handle_shield_funds_xt(&self, xt: UncheckedExtrinsicV4<ShieldFundsFn>) -> Result<()> {
@@ -83,10 +83,10 @@ where
 
 		let account = AccountId::decode(&mut account_vec.as_slice())?;
 
-		let root_account_id = self.stf_root_operator.get_root_account(&shard)?;
-		let trusted_call = TrustedCall::balance_shield(root_account_id, account, amount);
+		let enclave_account_id = self.stf_enclave_signer.get_enclave_account();
+		let trusted_call = TrustedCall::balance_shield(enclave_account_id, account, amount);
 		let signed_trusted_call =
-			self.stf_root_operator.sign_call_with_root(&trusted_call, &shard)?;
+			self.stf_enclave_signer.sign_call_with_self(&trusted_call, &shard)?;
 		let trusted_operation = TrustedOperation::indirect_call(signed_trusted_call);
 
 		let encrypted_trusted_call = shielding_key.encrypt(&trusted_operation.encode())?;
@@ -103,13 +103,13 @@ where
 	}
 }
 
-impl<ShieldingKeyRepository, StfRootOperator, TopPoolAuthor> ExecuteIndirectCalls
-	for IndirectCallsExecutor<ShieldingKeyRepository, StfRootOperator, TopPoolAuthor>
+impl<ShieldingKeyRepository, StfEnclaveSigner, TopPoolAuthor> ExecuteIndirectCalls
+	for IndirectCallsExecutor<ShieldingKeyRepository, StfEnclaveSigner, TopPoolAuthor>
 where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
 		+ ShieldingCryptoEncrypt<Error = itp_sgx_crypto::Error>,
-	StfRootOperator: StfRootOperations,
+	StfEnclaveSigner: StfEnclaveSigning,
 	TopPoolAuthor: AuthorApi<H256, H256> + Send + Sync + 'static,
 {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
@@ -163,7 +163,7 @@ fn hash_of<T: Encode>(xt: &T) -> H256 {
 mod test {
 	use super::*;
 	use itp_sgx_crypto::mocks::KeyRepositoryMock;
-	use itp_stf_executor::mocks::StfRootOperationsMock;
+	use itp_stf_executor::mocks::StfEnclaveSignerMock;
 	use itp_test::{
 		builders::parentchain_block_builder::ParentchainBlockBuilder,
 		mock::shielding_crypto_mock::ShieldingCryptoMock,
@@ -176,10 +176,10 @@ mod test {
 	use substrate_api_client::{GenericAddress, GenericExtra};
 
 	type TestShieldingKeyRepo = KeyRepositoryMock<ShieldingCryptoMock>;
-	type TestStfRootOperator = StfRootOperationsMock;
+	type TestStfEnclaveSigner = StfEnclaveSignerMock;
 	type TestTopPoolAuthor = AuthorApiMock<H256, H256>;
 	type TestIndirectCallExecutor =
-		IndirectCallsExecutor<TestShieldingKeyRepo, TestStfRootOperator, TestTopPoolAuthor>;
+		IndirectCallsExecutor<TestShieldingKeyRepo, TestStfEnclaveSigner, TestTopPoolAuthor>;
 
 	type Seed = [u8; 32];
 	const TEST_SEED: Seed = *b"12345678901234567890123456789012";
@@ -272,7 +272,7 @@ mod test {
 		mr_enclave: [u8; 32],
 	) -> (TestIndirectCallExecutor, Arc<TestTopPoolAuthor>, Arc<TestShieldingKeyRepo>) {
 		let shielding_key_repo = Arc::new(TestShieldingKeyRepo::default());
-		let stf_root_operator = Arc::new(TestStfRootOperator::new(mr_enclave));
+		let stf_root_operator = Arc::new(TestStfEnclaveSigner::new(mr_enclave));
 		let top_pool_author = Arc::new(TestTopPoolAuthor::default());
 
 		let executor = IndirectCallsExecutor::new(

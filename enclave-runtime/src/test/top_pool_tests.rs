@@ -36,7 +36,7 @@ use itc_parentchain::indirect_calls_executor::{ExecuteIndirectCalls, IndirectCal
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::node::{SHIELD_FUNDS, TEEREX_MODULE};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
-use itp_stf_executor::root_operator::StfRootOperator;
+use itp_stf_executor::enclave_signer::StfEnclaveSigner;
 use itp_test::{
 	builders::parentchain_block_builder::ParentchainBlockBuilder,
 	mock::metrics_ocall_mock::MetricsOCallMock,
@@ -62,7 +62,7 @@ pub fn process_indirect_call_in_top_pool() {
 	let ocall_api = create_ocall_api(&signer);
 
 	let state_handler = Arc::new(TestStateHandler::default());
-	let (_, shard_id) = init_state(state_handler.as_ref());
+	let (_, shard_id) = init_state(state_handler.as_ref(), signer.public().into());
 
 	let top_pool = create_top_pool();
 
@@ -93,7 +93,7 @@ pub fn submit_shielding_call_to_top_pool() {
 	let mr_enclave = ocall_api.get_mrenclave_of_self().unwrap();
 
 	let state_handler = Arc::new(TestStateHandler::default());
-	let (_, shard_id) = init_state(state_handler.as_ref());
+	let (_, shard_id) = init_state(state_handler.as_ref(), signer.public().into());
 
 	let top_pool = create_top_pool();
 
@@ -105,10 +105,10 @@ pub fn submit_shielding_call_to_top_pool() {
 		Arc::new(MetricsOCallMock {}),
 	));
 
-	let root_operator =
-		Arc::new(StfRootOperator::new(state_handler.clone(), ocall_api.clone(), signer.clone()));
+	let enclave_signer =
+		Arc::new(StfEnclaveSigner::new(state_handler.clone(), ocall_api.clone(), signer.clone()));
 	let indirect_calls_executor =
-		IndirectCallsExecutor::new(shielding_key_repo, root_operator, top_pool_author.clone());
+		IndirectCallsExecutor::new(shielding_key_repo, enclave_signer, top_pool_author.clone());
 
 	let block_with_shielding_call = create_shielding_call_extrinsic(shard_id, &shielding_key);
 

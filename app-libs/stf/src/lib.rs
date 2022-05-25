@@ -53,7 +53,7 @@ pub type StfResult<T> = Result<T, StfError>;
 pub enum StfError {
 	#[display(fmt = "Insufficient privileges {:?}, are you sure you are root?", _0)]
 	MissingPrivileges(AccountId),
-	#[display(fmt = "Insufficient privileges {:?}, are you sure you are root?", _0)]
+	#[display(fmt = "Enclave self account is required")]
 	RequireSelfEnclaveAccount,
 	#[display(fmt = "Error dispatching runtime call. {:?}", _0)]
 	Dispatch(String),
@@ -104,6 +104,8 @@ pub mod stf_sgx;
 pub mod test_genesis;
 
 pub use stf_sgx_primitives::types::*;
+
+pub(crate) const ENCLAVE_ACCOUNT_KEY: &str = "Enclave_Account_Key";
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]

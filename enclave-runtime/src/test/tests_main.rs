@@ -44,9 +44,8 @@ use itp_settings::{
 };
 use itp_sgx_crypto::{mocks::KeyRepositoryMock, Aes, StateCrypto};
 use itp_stf_executor::{
-	executor::StfExecutor, executor_tests as stf_executor_tests,
-	root_operator_tests as stf_root_operator_tests, traits::StateUpdateProposer,
-	BatchExecutionResult,
+	enclave_signer_tests as stf_root_operator_tests, executor::StfExecutor,
+	executor_tests as stf_executor_tests, traits::StateUpdateProposer, BatchExecutionResult,
 };
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{
@@ -142,7 +141,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		stf_executor_tests::propose_state_update_always_executes_preprocessing_step,
 		stf_executor_tests::propose_state_update_executes_only_one_trusted_call_given_not_enough_time,
 		stf_executor_tests::propose_state_update_executes_all_calls_given_enough_time,
-		stf_root_operator_tests::root_operator_signatures_are_valid,
+		stf_root_operator_tests::enclave_signer_signatures_are_valid,
 		// sidechain integration tests
 		sidechain_aura_tests::produce_sidechain_block_and_import_it,
 		top_pool_tests::process_indirect_call_in_top_pool,
@@ -591,7 +590,7 @@ pub fn test_setup() -> (
 	Arc<HandleStateMock>,
 ) {
 	let state_handler = Arc::new(HandleStateMock::default());
-	let (state, shard) = init_state(state_handler.as_ref());
+	let (state, shard) = init_state(state_handler.as_ref(), AccountId::new([0u8; 32]));
 	let top_pool = test_top_pool();
 	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
 

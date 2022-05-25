@@ -15,61 +15,65 @@
 
 */
 
-use crate::{error::Result, traits::StfRootOperations};
+use crate::{error::Result, traits::StfEnclaveSigning};
 use ita_stf::{AccountId, Index, KeyPair, Stf, TrustedCall, TrustedCallSigned};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_types::ShardIdentifier;
 use sgx_externalities::SgxExternalitiesTrait;
-use sp_core::{ed25519::Pair, H256};
+use sp_core::{ed25519::Pair as Ed25519Pair, Pair, H256};
 use std::sync::Arc;
 
-pub struct StfRootOperator<OCallApi, StateHandler, Signer> {
+pub struct StfEnclaveSigner<OCallApi, StateHandler, SigningKey> {
 	state_handler: Arc<StateHandler>,
 	ocall_api: Arc<OCallApi>,
-	signer: Signer,
+	signer: SigningKey,
 }
 
-impl<OCallApi, StateHandler> StfRootOperator<OCallApi, StateHandler, Pair>
+impl<OCallApi, StateHandler> StfEnclaveSigner<OCallApi, StateHandler, Ed25519Pair>
 where
 	OCallApi: EnclaveAttestationOCallApi,
 	StateHandler: HandleState<HashType = H256>,
 	StateHandler::StateT: SgxExternalitiesTrait,
 {
-	pub fn new(state_handler: Arc<StateHandler>, ocall_api: Arc<OCallApi>, signer: Pair) -> Self {
+	pub fn new(
+		state_handler: Arc<StateHandler>,
+		ocall_api: Arc<OCallApi>,
+		signer: Ed25519Pair,
+	) -> Self {
 		Self { state_handler, ocall_api, signer }
 	}
 
-	fn get_root_nonce(&self, shard: &ShardIdentifier) -> Result<Index> {
+	fn get_enclave_account_nonce(&self, shard: &ShardIdentifier) -> Result<Index> {
+		let enclave_account = self.get_enclave_account();
 		let mut state = self.state_handler.load(shard)?;
-		let root = Stf::get_root(&mut state);
-		let nonce = Stf::account_nonce(&mut state, &root);
+		let nonce = Stf::account_nonce(&mut state, &enclave_account);
 		Ok(nonce)
 	}
 }
 
-impl<OCallApi, StateHandler> StfRootOperations for StfRootOperator<OCallApi, StateHandler, Pair>
+impl<OCallApi, StateHandler> StfEnclaveSigning
+	for StfEnclaveSigner<OCallApi, StateHandler, Ed25519Pair>
 where
 	OCallApi: EnclaveAttestationOCallApi,
 	StateHandler: HandleState<HashType = H256>,
 	StateHandler::StateT: SgxExternalitiesTrait,
 {
-	fn get_root_account(&self, shard: &ShardIdentifier) -> Result<AccountId> {
-		let mut state = self.state_handler.load(shard)?;
-		Ok(Stf::get_root(&mut state))
+	fn get_enclave_account(&self) -> AccountId {
+		self.signer.public().into()
 	}
 
-	fn sign_call_with_root(
+	fn sign_call_with_self(
 		&self,
 		trusted_call: &TrustedCall,
 		shard: &ShardIdentifier,
 	) -> Result<TrustedCallSigned> {
 		let mr_enclave = self.ocall_api.get_mrenclave_of_self()?;
-		let root_nonce = self.get_root_nonce(shard)?;
+		let enclave_account_nonce = self.get_enclave_account_nonce(shard)?;
 
 		Ok(trusted_call.sign(
 			&KeyPair::Ed25519(self.signer.clone()),
-			root_nonce,
+			enclave_account_nonce,
 			&mr_enclave.m,
 			shard,
 		))

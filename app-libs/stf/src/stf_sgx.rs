@@ -20,11 +20,12 @@ use crate::test_genesis::test_genesis_setup;
 
 use crate::{
 	helpers::{
-		account_data, account_nonce, ensure_root, get_account_info, increment_nonce, root,
-		validate_nonce,
+		account_data, account_nonce, enclave_self_account, ensure_root, ensure_self,
+		get_account_info, increment_nonce, root, validate_nonce,
 	},
 	AccountData, AccountId, Getter, Index, ParentchainHeader, PublicGetter, ShardIdentifier, State,
 	StateTypeDiff, Stf, StfError, StfResult, TrustedCall, TrustedCallSigned, TrustedGetter,
+	ENCLAVE_ACCOUNT_KEY,
 };
 use codec::Encode;
 use itp_settings::node::{TEEREX_MODULE, UNSHIELD_FUNDS};
@@ -42,7 +43,7 @@ use std::{prelude::v1::*, vec};
 use support::traits::UnfilteredDispatchable;
 
 impl Stf {
-	pub fn init_state() -> State {
+	pub fn init_state(enclave_account: AccountId) -> State {
 		debug!("initializing stf state");
 		let mut ext = State::new();
 
@@ -64,6 +65,13 @@ impl Stf {
 			sp_io::storage::set(
 				&storage_value_key("Balances", "ExistentialDeposit"),
 				&1u128.encode(),
+			);
+		});
+
+		ext.execute_with(|| {
+			sp_io::storage::set(
+				&storage_value_key("Sudo", ENCLAVE_ACCOUNT_KEY),
+				&enclave_account.encode(),
 			);
 		});
 
@@ -170,8 +178,8 @@ impl Stf {
 					)));
 					Ok(())
 				},
-				TrustedCall::balance_shield(root, who, value) => {
-					ensure_root(root)?;
+				TrustedCall::balance_shield(enclave_account, who, value) => {
+					ensure_self(enclave_account)?;
 					debug!("balance_shield({:x?}, {})", who.encode(), value);
 					Self::shield_funds(who, value)?;
 					Ok(())
@@ -275,6 +283,10 @@ impl Stf {
 
 	pub fn get_root(ext: &mut impl SgxExternalitiesTrait) -> AccountId {
 		ext.execute_with(|| root())
+	}
+
+	pub fn get_enclave_account(ext: &mut impl SgxExternalitiesTrait) -> AccountId {
+		ext.execute_with(|| enclave_self_account())
 	}
 
 	pub fn account_nonce(ext: &mut impl SgxExternalitiesTrait, account: &AccountId) -> Index {

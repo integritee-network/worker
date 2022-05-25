@@ -16,29 +16,28 @@
 */
 
 use crate::{
-	executor_tests::init_state_and_shard_with_state_handler, root_operator::StfRootOperator,
-	traits::StfRootOperations,
+	enclave_signer::StfEnclaveSigner, executor_tests::init_state_and_shard_with_state_handler,
+	traits::StfEnclaveSigning,
 };
-use ita_stf::{AccountId, ShardIdentifier, TrustedCall};
+use ita_stf::{AccountId, TrustedCall};
 use itp_ocall_api::EnclaveAttestationOCallApi;
-use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{handle_state_mock::HandleStateMock, onchain_mock::OnchainMock};
 use sp_core::Pair;
 use std::sync::Arc;
 
-pub fn root_operator_signatures_are_valid() {
+pub fn enclave_signer_signatures_are_valid() {
 	let ocall_api = Arc::new(OnchainMock::default());
 	let state_handler = Arc::new(HandleStateMock::default());
 	let signer = sp_core::ed25519::Pair::from_seed(b"61345678901234567890123456789012");
 	let (_, shard) = init_state_and_shard_with_state_handler(state_handler.as_ref());
 	let mr_enclave = ocall_api.get_mrenclave_of_self().unwrap();
 
-	let root_operator = StfRootOperator::new(state_handler, ocall_api, signer);
+	let enclave_signer = StfEnclaveSigner::new(state_handler, ocall_api, signer);
 
-	let root_account = root_operator.get_root_account(&shard).unwrap();
+	let enclave_account = enclave_signer.get_enclave_account();
 	let trusted_call =
-		TrustedCall::balance_shield(root_account, AccountId::new([3u8; 32]), 200u128);
+		TrustedCall::balance_shield(enclave_account, AccountId::new([3u8; 32]), 200u128);
 
-	let trusted_call_signed = root_operator.sign_call_with_root(&trusted_call, &shard).unwrap();
+	let trusted_call_signed = enclave_signer.sign_call_with_self(&trusted_call, &shard).unwrap();
 	assert!(trusted_call_signed.verify_signature(&mr_enclave.m, &shard));
 }

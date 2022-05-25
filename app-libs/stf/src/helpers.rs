@@ -14,7 +14,9 @@
 	limitations under the License.
 
 */
-use crate::{stf_sgx_primitives::types::*, AccountId, Index, StfError, StfResult, H256};
+use crate::{
+	stf_sgx_primitives::types::*, AccountId, Index, StfError, StfResult, ENCLAVE_ACCOUNT_KEY, H256,
+};
 use codec::{Decode, Encode};
 use itp_storage::{storage_double_map_key, storage_map_key, storage_value_key, StorageHasher};
 use log::*;
@@ -128,7 +130,7 @@ pub fn root() -> AccountId {
 }
 
 pub fn enclave_self_account() -> AccountId {
-	get_storage_value("Sudo", "Enclave_Self_Key").unwrap()
+	get_storage_value("Sudo", ENCLAVE_ACCOUNT_KEY).unwrap()
 }
 
 // FIXME: Use Option<ParentchainHeader:Hash> as return type after fixing sgx-runtime issue #37
@@ -148,6 +150,8 @@ pub fn get_parentchain_number() -> Option<BlockNumber> {
 pub fn ensure_self(account: AccountId) -> StfResult<()> {
 	if enclave_self_account() == account {
 		Ok(())
+	} else {
+		Err(StfError::RequireSelfEnclaveAccount)
 	}
 }
 

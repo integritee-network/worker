@@ -39,7 +39,7 @@ use itp_component_container::ComponentContainer;
 use itp_extrinsics_factory::ExtrinsicsFactory;
 use itp_nonce_cache::NonceCache;
 use itp_sgx_crypto::{key_repository::KeyRepository, Aes, AesSeal, Rsa3072Seal};
-use itp_stf_executor::{executor::StfExecutor, root_operator::StfRootOperator};
+use itp_stf_executor::{enclave_signer::StfEnclaveSigner, executor::StfExecutor};
 use itp_stf_state_handler::{
 	file_io::sgx::SgxStateFileIo, state_snapshot_repository::StateSnapshotRepository, StateHandler,
 };
@@ -73,11 +73,11 @@ pub type EnclaveStateSnapshotRepository =
 pub type EnclaveStateHandler = StateHandler<EnclaveStateSnapshotRepository>;
 pub type EnclaveOCallApi = OcallApi;
 pub type EnclaveStfExecutor = StfExecutor<EnclaveOCallApi, EnclaveStateHandler>;
-pub type EnclaveStfRootOperator = StfRootOperator<EnclaveOCallApi, EnclaveStateHandler, Pair>;
+pub type EnclaveStfEnclaveSigner = StfEnclaveSigner<EnclaveOCallApi, EnclaveStateHandler, Pair>;
 pub type EnclaveExtrinsicsFactory = ExtrinsicsFactory<Pair, NonceCache>;
 pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
 	EnclaveShieldingKeyRepository,
-	EnclaveStfRootOperator,
+	EnclaveStfEnclaveSigner,
 	EnclaveTopPoolAuthor,
 >;
 pub type EnclaveValidatorAccessor = ValidatorAccessor<ParentchainBlock>;

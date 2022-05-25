@@ -15,7 +15,7 @@
 
 */
 
-use crate::{error::Result, traits::StfRootOperations};
+use crate::{error::Result, traits::StfEnclaveSigning};
 use ita_stf::{AccountId, KeyPair, ShardIdentifier, TrustedCall, TrustedCallSigned};
 use sp_core::Pair;
 
@@ -23,36 +23,36 @@ use sp_core::Pair;
 #[derive(Default)]
 pub struct StfExecutorMock;
 
-pub struct StfRootOperationsMock {
+pub struct StfEnclaveSignerMock {
 	mr_enclave: [u8; 32],
+	signer: sp_core::ed25519::Pair,
 }
 
-impl StfRootOperationsMock {
+impl StfEnclaveSignerMock {
 	pub fn new(mr_enclave: [u8; 32]) -> Self {
-		Self { mr_enclave }
+		type Seed = [u8; 32];
+		const TEST_SEED: Seed = *b"42345678901234567890123456789012";
+
+		Self { mr_enclave, signer: sp_core::ed25519::Pair::from_seed(&TEST_SEED) }
 	}
 }
 
-impl Default for StfRootOperationsMock {
+impl Default for StfEnclaveSignerMock {
 	fn default() -> Self {
 		Self::new([0u8; 32])
 	}
 }
 
-impl StfRootOperations for StfRootOperationsMock {
-	fn get_root_account(&self, _shard: &ShardIdentifier) -> Result<AccountId> {
-		Ok(AccountId::new([42u8; 32]))
+impl StfEnclaveSigning for StfEnclaveSignerMock {
+	fn get_enclave_account(&self) -> AccountId {
+		self.signer.public().into()
 	}
 
-	fn sign_call_with_root(
+	fn sign_call_with_self(
 		&self,
 		trusted_call: &TrustedCall,
 		shard: &ShardIdentifier,
 	) -> Result<TrustedCallSigned> {
-		type Seed = [u8; 32];
-		const TEST_SEED: Seed = *b"42345678901234567890123456789012";
-		let signer = sp_core::ed25519::Pair::from_seed(&TEST_SEED);
-
-		Ok(trusted_call.sign(&KeyPair::Ed25519(signer), 1, &self.mr_enclave, shard))
+		Ok(trusted_call.sign(&KeyPair::Ed25519(self.signer.clone()), 1, &self.mr_enclave, shard))
 	}
 }

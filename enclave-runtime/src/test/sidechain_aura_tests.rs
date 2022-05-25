@@ -78,7 +78,7 @@ pub fn produce_sidechain_block_and_import_it() {
 
 	info!("Initializing state and shard..");
 	let state_handler = Arc::new(TestStateHandler::default());
-	let (_, shard_id) = init_state(state_handler.as_ref());
+	let (_, shard_id) = init_state(state_handler.as_ref(), signer.public().into());
 	let shards = vec![shard_id];
 
 	let stf_executor = Arc::new(TestStfExecutor::new(ocall_api.clone(), state_handler.clone()));

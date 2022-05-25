@@ -42,13 +42,13 @@ pub mod traits;
 pub mod executor;
 
 #[cfg(feature = "sgx")]
-pub mod root_operator;
+pub mod enclave_signer;
 
 #[cfg(all(feature = "sgx", feature = "test"))]
 pub mod executor_tests;
 
 #[cfg(all(feature = "sgx", feature = "test"))]
-pub mod root_operator_tests;
+pub mod enclave_signer_tests;
 
 #[cfg(feature = "mocks")]
 pub mod mocks;

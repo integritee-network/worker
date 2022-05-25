@@ -33,10 +33,10 @@ pub enum StatePostProcessing {
 }
 
 /// Operations as STF root.
-pub trait StfRootOperations {
-	fn get_root_account(&self, shard: &ShardIdentifier) -> Result<AccountId>;
+pub trait StfEnclaveSigning {
+	fn get_enclave_account(&self) -> AccountId;
 
-	fn sign_call_with_root(
+	fn sign_call_with_self(
 		&self,
 		trusted_call: &TrustedCall,
 		shard: &ShardIdentifier,
