@@ -9,7 +9,7 @@ edition = "2018"
 ws = "0.9.1"
 hex = "0.4.3"
 log = "0.4"
-env_logger = "0.7"
+env_logger = "0.9"
 base58 = "0.1"
 rust-crypto = "0.2"
 clap = { version = "2.33", features = ["yaml"] }

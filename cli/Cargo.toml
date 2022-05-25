@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 log = "0.4"
-env_logger = "0.7"
+env_logger = "0.9"
 hex = "0.4.2"
 json = "0.12.0"
 substrate-bip39 = "0.4.2"
