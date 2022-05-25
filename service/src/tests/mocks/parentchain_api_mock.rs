@@ -65,6 +65,10 @@ impl ChainApi for ParentchainApiMock {
 		ApiResult::Ok(blocks)
 	}
 
+	fn is_grandpa_available(&self) -> ApiResult<bool> {
+		todo!()
+	}
+
 	fn grandpa_authorities(&self, _hash: Option<H256>) -> ApiResult<AuthorityList> {
 		todo!()
 	}

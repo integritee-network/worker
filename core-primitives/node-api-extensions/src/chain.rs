@@ -18,6 +18,7 @@ pub trait ChainApi {
 	/// Returns a vector with one element if from equals to.
 	/// Returns an empty vector if from is greater than to.
 	fn get_blocks(&self, from: u32, to: u32) -> ApiResult<Vec<SignedBlock>>;
+	fn is_grandpa_available(&self) -> ApiResult<bool>;
 	fn grandpa_authorities(&self, hash: Option<H256>) -> ApiResult<AuthorityList>;
 	fn grandpa_authorities_proof(&self, hash: Option<H256>) -> ApiResult<StorageProof>;
 }
@@ -49,11 +50,20 @@ where
 		Ok(blocks)
 	}
 
+	fn is_grandpa_available(&self) -> ApiResult<bool> {
+		let genesis_hash = Some(self.get_genesis_hash().unwrap());
+		Ok(self
+			.get_storage_by_key_hash(StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec()), genesis_hash)?
+			.map(|v: VersionedAuthorityList| v.into())
+			.map(|v: AuthorityList| !v.is_empty())
+			.unwrap_or(false))
+	}
+
 	fn grandpa_authorities(&self, at_block: Option<H256>) -> ApiResult<AuthorityList> {
 		Ok(self
 			.get_storage_by_key_hash(StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec()), at_block)?
 			.map(|g: VersionedAuthorityList| g.into())
-			.unwrap()) // todo: Introduce an error instead of unwrap: See: https://github.com/scs/substrate-api-client/issues/123
+			.unwrap_or_default())
 	}
 
 	fn grandpa_authorities_proof(&self, at_block: Option<H256>) -> ApiResult<StorageProof> {
@@ -63,6 +73,6 @@ where
 				at_block,
 			)?
 			.map(|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect())
-			.unwrap()) // todo: Introduce an error instead of unwrap: See: https://github.com/scs/substrate-api-client/issues/123
+			.unwrap_or_default())
 	}
 }

@@ -79,7 +79,7 @@ use crate::concurrent_access::GlobalValidatorAccessor;
 pub type ValidatorAccessor<Block> = GlobalValidatorAccessor<
 	GrandpaLightValidation<Block>,
 	Block,
-	crate::io::LightClientSeal<Block>,
+	crate::io::LightClientSeal<Block, GrandpaLightValidation<Block>>,
 >;
 
 /// Validator trait

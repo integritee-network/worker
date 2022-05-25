@@ -13,6 +13,7 @@ use std::vec::Vec;
 
 use itp_storage::storage_entry::StorageEntry;
 pub use rpc::*;
+pub mod light_client_init_params;
 pub mod rpc;
 
 /// Substrate runtimes provide no string type. Hence, for arbitrary data of varying length the

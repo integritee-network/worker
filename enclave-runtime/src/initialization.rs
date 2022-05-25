@@ -63,10 +63,11 @@ use itp_stf_state_handler::{
 	handle_state::HandleState, query_shard_state::QueryShardState,
 	state_snapshot_repository_loader::StateSnapshotRepositoryLoader, StateHandler,
 };
-use itp_storage::StorageProof;
 use itp_top_pool::pool::Options as PoolOptions;
 use itp_top_pool_author::author::AuthorTopFilter;
-use itp_types::{Block, Header, ShardIdentifier, SignedBlock};
+use itp_types::{
+	light_client_init_params::LightClientInitParams, Block, Header, ShardIdentifier, SignedBlock,
+};
 use its_sidechain::{
 	aura::block_importer::BlockImporter, block_composer::BlockComposer,
 	top_pool_executor::TopPoolOperationHandler,
@@ -74,7 +75,6 @@ use its_sidechain::{
 use log::*;
 use primitive_types::H256;
 use sp_core::crypto::Pair;
-use sp_finality_grandpa::VersionedAuthorityList;
 use std::{string::String, sync::Arc};
 
 pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> EnclaveResult<()> {
@@ -211,16 +211,8 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 	Ok(())
 }
 
-pub(crate) fn init_light_client(
-	genesis_header: Header,
-	authorities: VersionedAuthorityList,
-	storage_proof: StorageProof,
-) -> EnclaveResult<Header> {
-	let latest_header = itc_parentchain::light_client::io::read_or_init_validator::<Block>(
-		genesis_header,
-		authorities,
-		storage_proof,
-	)?;
+pub(crate) fn init_light_client(params: LightClientInitParams<Header>) -> EnclaveResult<Header> {
+	let latest_header = itc_parentchain::light_client::io::read_or_init_validator::<Block>(params)?;
 
 	// Initialize the global parentchain block import dispatcher instance.
 	let signer = Ed25519Seal::unseal_from_static_file()?;
