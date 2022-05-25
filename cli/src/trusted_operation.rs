@@ -255,14 +255,12 @@ pub fn initialize_receiver_for_direct_request(
 	let shard = read_shard(trusted_args).unwrap();
 
 	// compose jsonrpc call
-	let data = Request { shard, cyphertext: operation_call_encrypted };
-	let direct_invocation_call = RpcRequest {
-		jsonrpc: "2.0".to_owned(),
-		method: "author_submitAndWatchExtrinsic".to_owned(),
-		params: vec![data.to_hex()],
-		id: 1,
-	};
-	let jsonrpc_call: String = serde_json::to_string(&direct_invocation_call).unwrap();
+	let request = Request { shard, cyphertext: operation_call_encrypted };
+	let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(
+		"author_submitAndWatchExtrinsic".to_string(),
+		vec![request.to_hex()],
+	)
+	.unwrap();
 
 	client_api.send(&jsonrpc_call).unwrap();
 }
