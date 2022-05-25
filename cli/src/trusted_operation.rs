@@ -16,10 +16,7 @@
 */
 
 use crate::{
-	command_utils::{
-		encode_encrypt, encode_encrypt_with_key, get_chain_api, get_pair_from_str,
-		get_shielding_key, get_worker_api_direct,
-	},
+	command_utils::{get_chain_api, get_pair_from_str, get_shielding_key, get_worker_api_direct},
 	trusted_commands::TrustedArgs,
 	Cli,
 };
@@ -254,14 +251,7 @@ pub fn initialize_receiver_for_direct_request(
 	operation_call: TrustedOperation,
 	shielding_pubkey: sgx_crypto_helper::rsa3072::Rsa3072PubKey,
 ) {
-	let (_operation_call_encoded, operation_call_encrypted) =
-		match encode_encrypt_with_key(shielding_pubkey, operation_call) {
-			Ok((encoded, encrypted)) => (encoded, encrypted),
-			Err(msg) => {
-				println!("[Error] {}", msg);
-				return ()
-			},
-		};
+	let operation_call_encrypted = shielding_pubkey.encrypt(&operation_call.encode()).unwrap();
 	let shard = read_shard(trusted_args).unwrap();
 
 	// compose jsonrpc call
@@ -269,7 +259,7 @@ pub fn initialize_receiver_for_direct_request(
 	let direct_invocation_call = RpcRequest {
 		jsonrpc: "2.0".to_owned(),
 		method: "author_submitAndWatchExtrinsic".to_owned(),
-		params: data.encode(),
+		params: vec![data.to_hex()],
 		id: 1,
 	};
 	let jsonrpc_call: String = serde_json::to_string(&direct_invocation_call).unwrap();
@@ -285,37 +275,44 @@ pub fn wait_until(
 	loop {
 		match receiver.recv() {
 			Ok(response) => {
-				debug!("received response");
-				let response: RpcResponse = serde_json::from_str(&response).unwrap();
-				if let Ok(return_value) = RpcReturnValue::decode(&mut response.result.as_slice()) {
-					debug!("successfully decoded rpc response");
-					match return_value.status {
-						DirectRequestStatus::Error => {
-							debug!("request status is error");
-							if let Ok(value) = String::decode(&mut return_value.value.as_slice()) {
-								println!("[Error] {}", value);
-							}
-							return None
-						},
-						DirectRequestStatus::TrustedOperationStatus(status) => {
-							debug!("request status is: {:?}", status);
-							if let Ok(value) = Hash::decode(&mut return_value.value.as_slice()) {
-								println!("Trusted call {:?} is {:?}", value, status);
-							}
+				debug!("received response: {}", response);
+				let parse_result: Result<RpcResponse, _> = serde_json::from_str(&response);
+				if let Ok(response) = parse_result {
+					if let Ok(return_value) = RpcReturnValue::from_hex(&response.result) {
+						debug!("successfully decoded rpc response");
+						match return_value.status {
+							DirectRequestStatus::Error => {
+								debug!("request status is error");
+								if let Ok(value) =
+									String::decode(&mut return_value.value.as_slice())
+								{
+									println!("[Error] {}", value);
+								}
+								return None
+							},
+							DirectRequestStatus::TrustedOperationStatus(status) => {
+								debug!("request status is: {:?}", status);
+								if let Ok(value) = Hash::decode(&mut return_value.value.as_slice())
+								{
+									println!("Trusted call {:?} is {:?}", value, status);
+								}
 
-							if until(status) {
-								return Some(Instant::now())
-							}
-						},
-						_ => {
-							debug!("request status is ignored");
+								if until(status) {
+									return Some(Instant::now())
+								}
+							},
+							_ => {
+								debug!("request status is ignored");
+								return None
+							},
+						}
+						if !return_value.do_watch {
+							debug!("do watch is false, closing connection");
 							return None
-						},
-					}
-					if !return_value.do_watch {
-						debug!("do watch is false, closing connection");
-						return None
-					}
+						}
+					};
+				} else {
+					error!("Could not parse response");
 				};
 			},
 			Err(e) => {

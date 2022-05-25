@@ -1774,7 +1774,7 @@ dependencies = [
  "crossbeam-channel",
  "flate2",
  "nom",
- "num-traits 0.2.14",
+ "num-traits 0.2.15",
 ]
 
 [[package]]
