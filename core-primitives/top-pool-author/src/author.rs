@@ -25,7 +25,7 @@ use crate::{
 	traits::{AuthorApi, OnBlockImported, SendState},
 };
 use codec::{Decode, Encode};
-use ita_stf::{hash, Getter, TrustedCallSigned, TrustedGetterSigned, TrustedOperation};
+use ita_stf::{hash, Getter, TrustedGetterSigned, TrustedOperation};
 use itp_enclave_metrics::EnclaveMetric;
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt};
@@ -136,14 +136,14 @@ where
 			Err(_) => return Box::pin(ready(Err(ClientError::BadFormatDecipher.into()))),
 		};
 		// decode call
-		let stf_operation = match TrustedOperation::decode(&mut request_vec.as_slice()) {
+		let trusted_operation = match TrustedOperation::decode(&mut request_vec.as_slice()) {
 			Ok(op) => op,
 			Err(_) => return Box::pin(ready(Err(ClientError::BadFormat.into()))),
 		};
 
 		// apply top filter - return error if this specific type of trusted operation
 		// is not allowed by the filter
-		if !self.top_filter.filter(&stf_operation) {
+		if !self.top_filter.filter(&trusted_operation) {
 			return Box::pin(ready(Err(ClientError::UnsupportedOperation.into())))
 		}
 
@@ -162,7 +162,7 @@ where
 					.submit_one(
 						&generic::BlockId::hash(best_block_hash),
 						TX_SOURCE,
-						stf_operation,
+						trusted_operation,
 						shard,
 					)
 					.map_err(map_top_error::<TopPool>),
@@ -173,7 +173,7 @@ where
 					.submit_and_watch(
 						&generic::BlockId::hash(best_block_hash),
 						TX_SOURCE,
-						stf_operation,
+						trusted_operation,
 						shard,
 					)
 					.map_err(map_top_error::<TopPool>),
@@ -223,18 +223,17 @@ where
 	fn get_pending_tops_separated(
 		&self,
 		shard: ShardIdentifier,
-	) -> Result<(Vec<TrustedCallSigned>, Vec<TrustedGetterSigned>)> {
-		let mut calls: Vec<TrustedCallSigned> = vec![];
+	) -> Result<(Vec<TrustedOperation>, Vec<TrustedGetterSigned>)> {
+		let mut calls: Vec<TrustedOperation> = vec![];
 		let mut getters: Vec<TrustedGetterSigned> = vec![];
 		for operation in self.top_pool.ready(shard) {
 			match operation.data() {
-				TrustedOperation::direct_call(call) => calls.push(call.clone()),
+				TrustedOperation::direct_call(_) => calls.push(operation.data().clone()),
+				TrustedOperation::indirect_call(_) => calls.push(operation.data().clone()),
 				TrustedOperation::get(getter) => match getter {
 					Getter::trusted(trusted_getter_signed) =>
 						getters.push(trusted_getter_signed.clone()),
 					_ => error!("Found invalid trusted getter in top pool"),
-				},
-				_ => { // might be emtpy?
 				},
 			}
 		}

@@ -29,11 +29,13 @@ use its_primitives::{
 };
 use its_state::LastBlockExt;
 use its_validateer_fetch::ValidateerFetch;
+use log::*;
+use sp_core::{hexdisplay::HexDisplay, Public};
 use sp_runtime::{
 	app_crypto::Pair,
 	traits::{Block as ParentchainBlockTrait, Header as ParentchainHeaderTrait},
 };
-use std::{fmt::Debug, time::Duration};
+use std::{fmt::Debug, string::String, time::Duration};
 
 #[derive(Default)]
 pub struct AuraVerifier<AuthorityPair, ParentchainBlock, SidechainBlock, SidechainState, Context> {
@@ -93,12 +95,19 @@ where
 			None => ensure_first_block(signed_block.block())?,
 		}
 
-		verify_author::<AuthorityPair, ParentchainBlock::Header, SignedSidechainBlock, _>(
-			&slot,
-			signed_block.block(),
-			parentchain_header,
-			ctx,
-		)?;
+		if let Err(e) = verify_author::<
+			AuthorityPair,
+			ParentchainBlock::Header,
+			SignedSidechainBlock,
+			_,
+		>(&slot, signed_block.block(), parentchain_header, ctx)
+		{
+			error!(
+				"Author verification for block (number: {}) failed, block will be discarded",
+				signed_block.block().header().block_number()
+			);
+			return Err(e)
+		}
 
 		Ok(signed_block)
 	}
@@ -134,13 +143,18 @@ where
 	ensure!(
 		expected_author == block.block_data().block_author(),
 		ConsensusError::InvalidAuthority(format!(
-			"Expected author: {:?}, author found in block: {:?}",
-			expected_author,
-			block.block_data().block_author()
+			"Expected author: {}, author found in block: {}",
+			to_string(expected_author),
+			to_string(block.block_data().block_author())
 		))
 	);
 
 	Ok(())
+}
+
+fn to_string<T: Public>(t: &T) -> String {
+	let crypto_pair = t.to_public_crypto_pair();
+	format!("{}", HexDisplay::from(&crypto_pair.1))
 }
 
 fn verify_block_ancestry<SidechainBlock: SidechainBlockTrait>(

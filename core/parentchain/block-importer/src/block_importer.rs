@@ -30,7 +30,7 @@ use itc_parentchain_light_client::{
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_settings::node::{PROCESSED_PARENTCHAIN_BLOCK, TEEREX_MODULE};
-use itp_stf_executor::traits::{StfExecuteShieldFunds, StfExecuteTrustedCall, StfUpdateState};
+use itp_stf_executor::traits::StfUpdateState;
 use itp_types::{OpaqueCall, H256};
 use log::*;
 use sp_runtime::{
@@ -52,7 +52,7 @@ pub struct ParentchainBlockImporter<
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	ValidatorAccessor: ValidatorAccess<ParentchainBlock>,
 	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
-	StfExecutor: StfUpdateState + StfExecuteTrustedCall + StfExecuteShieldFunds,
+	StfExecutor: StfUpdateState,
 	ExtrinsicsFactory: CreateExtrinsics,
 	IndirectCallsExecutor: ExecuteIndirectCalls,
 {
@@ -84,7 +84,7 @@ impl<
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	ValidatorAccessor: ValidatorAccess<ParentchainBlock>,
 	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
-	StfExecutor: StfUpdateState + StfExecuteTrustedCall + StfExecuteShieldFunds,
+	StfExecutor: StfUpdateState,
 	ExtrinsicsFactory: CreateExtrinsics,
 	IndirectCallsExecutor: ExecuteIndirectCalls,
 {
@@ -126,7 +126,7 @@ impl<
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	ValidatorAccessor: ValidatorAccess<ParentchainBlock>,
 	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
-	StfExecutor: StfUpdateState + StfExecuteTrustedCall + StfExecuteShieldFunds,
+	StfExecutor: StfUpdateState,
 	ExtrinsicsFactory: CreateExtrinsics,
 	IndirectCallsExecutor: ExecuteIndirectCalls,
 {
@@ -161,9 +161,7 @@ impl<
 			// Execute indirect calls that were found in the extrinsics of the block,
 			// incl. shielding and unshielding.
 			match self.indirect_calls_executor.execute_indirect_calls_in_extrinsics(&block) {
-				Ok((unshielding_call_confirmations, executed_shielding_calls)) => {
-					// Include all unshielding confirmations that need to be executed on the parentchain.
-					calls.extend(unshielding_call_confirmations.into_iter());
+				Ok(executed_shielding_calls) => {
 					// Include a processed parentchain block confirmation for each block.
 					calls.push(create_processed_parentchain_block_call(
 						block.hash(),

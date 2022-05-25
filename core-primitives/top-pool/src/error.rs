@@ -28,10 +28,10 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug, From, Display)]
 #[allow(missing_docs)]
 pub enum Error {
-	#[display(fmt = "Unknown trusted operation validity")]
+	#[display(fmt = "Unknown trusted operation")]
 	UnknownTrustedOperation,
 
-	#[display(fmt = "Invalid trusted operation validity")]
+	#[display(fmt = "Invalid trusted operation")]
 	InvalidTrustedOperation,
 
 	/// Incorrect extrinsic format.

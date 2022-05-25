@@ -28,7 +28,7 @@ use ita_stf::{
 	hash::TrustedOperationOrHash,
 	stf_sgx::{shards_key_hash, storage_hashes_to_update_per_shard},
 	AccountId, ParentchainHeader, ShardIdentifier, StateTypeDiff, Stf, TrustedCall,
-	TrustedCallSigned, TrustedGetterSigned,
+	TrustedCallSigned, TrustedGetterSigned, TrustedOperation,
 };
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
@@ -69,7 +69,7 @@ where
 	fn execute_trusted_call_on_stf<PH, E>(
 		&self,
 		state: &mut E,
-		stf_call_signed: &TrustedCallSigned,
+		trusted_operation: &TrustedOperation,
 		header: &PH,
 		shard: &ShardIdentifier,
 		post_processing: StatePostProcessing,
@@ -81,18 +81,25 @@ where
 		debug!("query mrenclave of self");
 		let mrenclave = self.ocall_api.get_mrenclave_of_self()?;
 
-		let top_or_hash = top_or_hash::<H256>(stf_call_signed.clone(), true);
+		let top_or_hash = top_or_hash::<H256>(trusted_operation.clone());
 
-		if let false = stf_call_signed.verify_signature(&mrenclave.m, &shard) {
+		let trusted_call = match trusted_operation.to_call().ok_or(Error::InvalidTrustedCallType) {
+			Ok(c) => c,
+			Err(e) => {
+				error!("Error: {:?}", e);
+				return Ok(ExecutedOperation::failed(top_or_hash))
+			},
+		};
+
+		if let false = trusted_call.verify_signature(&mrenclave.m, &shard) {
 			error!("TrustedCallSigned: bad signature");
-			// do not panic here or users will be able to shoot workers dead by supplying a bad signature
 			return Ok(ExecutedOperation::failed(top_or_hash))
 		}
 
 		// Necessary because light client sync may not be up to date
 		// see issue #208
 		debug!("Update STF storage!");
-		let storage_hashes = Stf::get_storage_hashes_to_update(&stf_call_signed);
+		let storage_hashes = Stf::get_storage_hashes_to_update(&trusted_call);
 		let update_map = self
 			.ocall_api
 			.get_multiple_storages_verified(storage_hashes, header)
@@ -100,15 +107,14 @@ where
 
 		Stf::update_storage(state, &update_map.into());
 
-		debug!("execute STF, call with nonce {}", stf_call_signed.nonce);
+		debug!("execute STF, call with nonce {}", trusted_call.nonce);
 		let mut extrinsic_call_backs: Vec<OpaqueCall> = Vec::new();
-		if let Err(e) = Stf::execute(state, stf_call_signed.clone(), &mut extrinsic_call_backs) {
+		if let Err(e) = Stf::execute(state, trusted_call.clone(), &mut extrinsic_call_backs) {
 			error!("Stf::execute failed: {:?}", e);
 			return Ok(ExecutedOperation::failed(top_or_hash))
 		}
 
-		let operation = stf_call_signed.clone().into_trusted_operation(true);
-		let operation_hash: H256 = blake2_256(&operation.encode()).into();
+		let operation_hash: H256 = blake2_256(&trusted_operation.encode()).into();
 		debug!("Operation hash {:?}", operation_hash);
 
 		if let StatePostProcessing::Prune = post_processing {
@@ -129,7 +135,7 @@ where
 	fn execute_trusted_call<PH>(
 		&self,
 		calls: &mut Vec<OpaqueCall>,
-		stf_call_signed: &TrustedCallSigned,
+		stf_call_signed: &TrustedOperation,
 		header: &PH,
 		shard: &ShardIdentifier,
 		post_processing: StatePostProcessing,
@@ -185,6 +191,8 @@ where
 			nonce,
 			ed25519::Signature::from_raw([0u8; 64]).into(), //don't care about signature here
 		);
+
+		debug!("Execute shield funds (nonce: {})", nonce);
 
 		Stf::execute(&mut state, trusted_call, &mut Vec::<OpaqueCall>::new())
 			.map_err::<Error, _>(|e| e.into())?;
@@ -274,7 +282,7 @@ where
 
 	fn propose_state_update<PH, F>(
 		&self,
-		trusted_calls: &[TrustedCallSigned],
+		trusted_calls: &[TrustedOperation],
 		header: &PH,
 		shard: &ShardIdentifier,
 		max_exec_duration: Duration,
@@ -357,6 +365,8 @@ where
 			// get state
 			let getter_state = get_stf_state(trusted_getter_signed, &mut state);
 
+			debug!("Executing trusted getter");
+
 			getter_callback(trusted_getter_signed, getter_state);
 
 			// Check time
@@ -406,8 +416,8 @@ fn into_map(
 	storage_entries.into_iter().map(|e| e.into_tuple()).collect()
 }
 
-fn top_or_hash<H>(tcs: TrustedCallSigned, direct: bool) -> TrustedOperationOrHash<H> {
-	TrustedOperationOrHash::<H>::Operation(tcs.into_trusted_operation(direct))
+fn top_or_hash<H>(tcs: TrustedOperation) -> TrustedOperationOrHash<H> {
+	TrustedOperationOrHash::<H>::Operation(tcs)
 }
 
 /// Compute the state hash.

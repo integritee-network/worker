@@ -75,7 +75,7 @@ pub type EnclaveOCallApi = OcallApi;
 pub type EnclaveStfExecutor = StfExecutor<EnclaveOCallApi, EnclaveStateHandler, SgxExternalities>;
 pub type EnclaveExtrinsicsFactory = ExtrinsicsFactory<Pair, NonceCache>;
 pub type EnclaveIndirectCallsExecutor =
-	IndirectCallsExecutor<EnclaveShieldingKeyRepository, EnclaveStfExecutor>;
+	IndirectCallsExecutor<EnclaveShieldingKeyRepository, EnclaveStfExecutor, EnclaveTopPoolAuthor>;
 pub type EnclaveValidatorAccessor = ValidatorAccessor<ParentchainBlock>;
 pub type EnclaveParentChainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
@@ -114,7 +114,7 @@ pub type EnclaveTopPoolOperationHandler = TopPoolOperationHandler<
 	EnclaveStfExecutor,
 >;
 pub type EnclaveSidechainBlockComposer =
-	BlockComposer<ParentchainBlock, SignedSidechainBlock, Pair, Aes>;
+	BlockComposer<ParentchainBlock, SignedSidechainBlock, Pair, EnclaveStateKeyRepository>;
 pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 	Pair,
 	ParentchainBlock,
@@ -122,7 +122,7 @@ pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 	EnclaveOCallApi,
 	EnclaveSidechainState,
 	EnclaveStateHandler,
-	Aes,
+	EnclaveStateKeyRepository,
 	EnclaveTopPoolOperationHandler,
 	EnclaveParentchainBlockImportDispatcher,
 >;

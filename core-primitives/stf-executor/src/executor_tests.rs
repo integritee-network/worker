@@ -52,23 +52,23 @@ pub fn propose_state_update_executes_all_calls_given_enough_time() {
 		42,
 	)
 	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
-	let call_operation_hash: H256 =
-		blake2_256(&signed_call.clone().into_trusted_operation(true).encode()).into();
+	let trusted_operation_1 = signed_call.into_trusted_operation(true);
+	let call_operation_hash: H256 = blake2_256(&trusted_operation_1.encode()).into();
 	let signed_call_two = TrustedCall::balance_transfer(
 		sender.public().into(),
 		sender.public().into(),
 		100,
 	)
 	.sign(&sender.clone().into(), 1, &mrenclave, &shard);
-	let call_operation_hash_two: H256 =
-		blake2_256(&signed_call_two.clone().into_trusted_operation(true).encode()).into();
+	let trusted_operation_2 = signed_call_two.into_trusted_operation(true);
+	let call_operation_hash_two: H256 = blake2_256(&trusted_operation_2.encode()).into();
 
 	let old_state_hash = state_hash(&state_handler.load(&shard).unwrap());
 
 	// when
 	let batch_execution_result = stf_executor
 		.propose_state_update(
-			&vec![signed_call.clone(), signed_call_two.clone()],
+			&vec![trusted_operation_1, trusted_operation_2],
 			&ParentchainHeaderBuilder::default().build(),
 			&shard,
 			Duration::from_secs(1000),
@@ -99,21 +99,23 @@ pub fn propose_state_update_executes_only_one_trusted_call_given_not_enough_time
 		42,
 	)
 	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
-	let call_operation_hash: H256 =
-		blake2_256(&signed_call.clone().into_trusted_operation(true).encode()).into();
+	let trusted_operation_1 = signed_call.into_trusted_operation(true);
+	let call_operation_hash: H256 = blake2_256(&trusted_operation_1.encode()).into();
+
 	let signed_call_two = TrustedCall::balance_transfer(
 		sender.public().into(),
 		sender.public().into(),
 		100,
 	)
 	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
+	let trusted_operation_2 = signed_call_two.into_trusted_operation(true);
 
 	let old_state_hash = state_hash(&state_handler.load(&shard).unwrap());
 
 	// when
 	let batch_execution_result = stf_executor
 		.propose_state_update(
-			&vec![signed_call.clone(), signed_call_two.clone()],
+			&vec![trusted_operation_1.clone(), trusted_operation_2.clone()],
 			&ParentchainHeaderBuilder::default().build(),
 			&shard,
 			Duration::ZERO,

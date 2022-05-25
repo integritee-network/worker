@@ -135,6 +135,16 @@ impl From<PublicGetter> for TrustedOperation {
 	}
 }
 
+impl TrustedOperation {
+	pub fn to_call(&self) -> Option<&TrustedCallSigned> {
+		match self {
+			TrustedOperation::direct_call(c) => Some(c),
+			TrustedOperation::indirect_call(c) => Some(c),
+			_ => None,
+		}
+	}
+}
+
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum Getter {
