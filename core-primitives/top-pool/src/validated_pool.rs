@@ -44,7 +44,6 @@ use ita_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
 use itc_direct_rpc_server::SendRpcResponse;
 use itp_types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::channel::mpsc::{channel, Sender};
-#[allow(deprecated)]
 use retain_mut::RetainMut;
 use sp_runtime::{
 	generic::BlockId,
@@ -201,7 +200,6 @@ where
 				let imported =
 					self.pool.write().map_err(|_| error::Error::UnlockError)?.import(tx, shard)?;
 
-				#[allow(deprecated)]
 				if let base::Imported::Ready { ref hash, .. } = imported {
 					self.import_notification_sinks
 						.lock()
