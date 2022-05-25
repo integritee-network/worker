@@ -15,38 +15,36 @@
 
 */
 
-//! Grandpa Light-client validation crate that verifies parentchain blocks.
+//! Parachain Light-client validation crate that verifies parentchain blocks.
 
 use crate::{
 	error::Error,
 	grandpa_log,
-	justification::GrandpaJustification,
 	state::{RelayState, ScheduledChangeAtBlock},
 	AuthorityList, AuthorityListRef, HashFor, HashingFor, LightClientState, NumberFor, RelayId,
 	Validator,
 };
 use codec::{Decode, Encode};
 use core::iter::Iterator;
-use finality_grandpa::voter_set::VoterSet;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_storage::{Error as StorageError, StorageProof, StorageProofChecker};
 use log::*;
+use sp_finality_grandpa::ScheduledChange;
 pub use sp_finality_grandpa::SetId;
-use sp_finality_grandpa::{AuthorityId, ScheduledChange, GRANDPA_ENGINE_ID};
 use sp_runtime::{
 	generic::{Digest, SignedBlock},
 	traits::{Block as ParentchainBlockTrait, Hash as HashTrait, Header as HeaderTrait},
-	Justification, Justifications, OpaqueExtrinsic,
+	Justifications, OpaqueExtrinsic,
 };
 use std::{collections::BTreeMap, fmt, vec::Vec};
 
 #[derive(Encode, Decode, Clone, Default)]
-pub struct GrandpaLightValidation<Block: ParentchainBlockTrait> {
+pub struct ParachainLightValidation<Block: ParentchainBlockTrait> {
 	num_relays: RelayId,
 	tracked_relays: BTreeMap<RelayId, RelayState<Block>>,
 }
 
-impl<Block: ParentchainBlockTrait> GrandpaLightValidation<Block> {
+impl<Block: ParentchainBlockTrait> ParachainLightValidation<Block> {
 	pub fn new() -> Self {
 		Self { num_relays: Default::default(), tracked_relays: Default::default() }
 	}
@@ -97,27 +95,6 @@ impl<Block: ParentchainBlockTrait> GrandpaLightValidation<Block> {
 		}
 	}
 
-	fn verify_grandpa_proof(
-		justification: Justification,
-		hash: Block::Hash,
-		number: NumberFor<Block>,
-		set_id: u64,
-		voters: &VoterSet<AuthorityId>,
-	) -> Result<(), Error>
-	where
-		NumberFor<Block>: finality_grandpa::BlockNumberOps,
-	{
-		// We don't really care about the justification, as long as it's valid
-		let _ = GrandpaJustification::<Block>::decode_and_verify_finalizes(
-			&justification.1,
-			(hash, number),
-			set_id,
-			voters,
-		)?;
-
-		Ok(())
-	}
-
 	// A naive way to check whether a `child` header is a descendant
 	// of an `ancestor` header. For this it requires a proof which
 	// is a chain of headers between (but not including) the `child`
@@ -150,7 +127,7 @@ impl<Block: ParentchainBlockTrait> GrandpaLightValidation<Block> {
 	}
 }
 
-impl<Block: ParentchainBlockTrait> Validator<Block> for GrandpaLightValidation<Block>
+impl<Block: ParentchainBlockTrait> Validator<Block> for ParachainLightValidation<Block>
 where
 	NumberFor<Block>: finality_grandpa::BlockNumberOps,
 {
@@ -181,53 +158,12 @@ where
 		ancestry_proof: Vec<Block::Header>,
 		validator_set: AuthorityList,
 		validator_set_id: SetId,
-		justifications: Option<Justifications>,
 	) -> Result<(), Error> {
 		let mut relay = self.tracked_relays.get_mut(&relay_id).ok_or(Error::NoSuchRelayExists)?;
 
 		// Check that the new header is a descendant of the old header
 		let last_header = &relay.last_finalized_block_header;
 		Self::verify_ancestry(ancestry_proof, last_header.hash(), &header)?;
-
-		// Check that the header has been finalized
-		let voter_set =
-			VoterSet::new(validator_set.clone().into_iter()).expect("VoterSet may not be empty");
-
-		// ensure justifications is a grandpa justification
-		let grandpa_justification =
-			justifications.and_then(|just| just.into_justification(GRANDPA_ENGINE_ID));
-
-		let block_hash = header.hash();
-		let block_num = *header.number();
-
-		match grandpa_justification {
-			Some(justification) => {
-				if let Err(err) = Self::verify_grandpa_proof(
-					(GRANDPA_ENGINE_ID, justification),
-					block_hash,
-					block_num,
-					validator_set_id,
-					&voter_set,
-				) {
-					// FIXME: Printing error upon invalid justification, but this will need a better fix
-					// see issue #353
-					error!("Block {:?} contained invalid justification: {:?}", block_num, err);
-					relay.unjustified_headers.push(header.hash());
-					relay.set_last_finalized_block_header(header);
-					return Ok(())
-				}
-			},
-			None => {
-				relay.unjustified_headers.push(header.hash());
-				relay.set_last_finalized_block_header(header);
-
-				debug!(
-					"Syncing finalized block without grandpa proof. Amount of unjustified headers: {}",
-					relay.unjustified_headers.len()
-				);
-				return Ok(())
-			},
-		}
 
 		Self::schedule_validator_set_change(relay, &header);
 
@@ -270,7 +206,6 @@ where
 			ancestry_proof,
 			validator_set,
 			validator_set_id,
-			justifications,
 		)
 	}
 
@@ -328,7 +263,7 @@ where
 	}
 }
 
-impl<Block: ParentchainBlockTrait> LightClientState<Block> for GrandpaLightValidation<Block> {
+impl<Block: ParentchainBlockTrait> LightClientState<Block> for ParachainLightValidation<Block> {
 	fn num_xt_to_be_included(&mut self, relay_id: RelayId) -> Result<usize, Error> {
 		let relay = self.tracked_relays.get(&relay_id).ok_or(Error::NoSuchRelayExists)?;
 		Ok(relay.verify_tx_inclusion.len())
@@ -357,7 +292,7 @@ impl<Block: ParentchainBlockTrait> LightClientState<Block> for GrandpaLightValid
 	}
 }
 
-impl<B: ParentchainBlockTrait> fmt::Debug for GrandpaLightValidation<B> {
+impl<B: ParentchainBlockTrait> fmt::Debug for ParachainLightValidation<B> {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		write!(
 			f,

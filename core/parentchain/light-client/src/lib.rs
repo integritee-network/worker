@@ -48,6 +48,7 @@ pub mod concurrent_access;
 pub mod error;
 pub mod grandpa_light_validation;
 pub mod justification;
+pub mod parachain_light_validation;
 pub mod state;
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]

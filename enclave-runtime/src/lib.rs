@@ -28,6 +28,7 @@
 #[cfg(not(target_env = "sgx"))]
 #[macro_use]
 extern crate sgx_tstd as std;
+extern crate alloc;
 
 #[cfg(not(feature = "test"))]
 use sgx_types::size_t;

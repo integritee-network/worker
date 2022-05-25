@@ -46,9 +46,8 @@ use itc_direct_rpc_server::{
 };
 use itc_parentchain::{
 	block_import_dispatcher::triggered_dispatcher::TriggeredDispatcher,
-	block_importer::ParentchainBlockImporter,
-	indirect_calls_executor::IndirectCallsExecutor,
-	light_client::{concurrent_access::ValidatorAccess, LightClientState},
+	block_importer::ParentchainBlockImporter, indirect_calls_executor::IndirectCallsExecutor,
+	light_client::Validator,
 };
 use itc_tls_websocket_server::{create_ws_server, ConnectionToken, WebSocketServer};
 use itp_block_import_queue::BlockImportQueue;
@@ -77,7 +76,7 @@ use its_sidechain::{
 use log::*;
 use primitive_types::H256;
 use sp_core::crypto::Pair;
-use std::{string::String, sync::Arc};
+use std::{boxed::Box, string::String, sync::Arc};
 
 pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> EnclaveResult<()> {
 	// Initialize the logging environment in the enclave.
@@ -229,7 +228,13 @@ pub(crate) fn init_light_client(params: LightClientInitParams<Header>) -> Enclav
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 
-	let validator_access = Arc::new(EnclaveValidatorAccessor::default());
+	let validator_access: Arc<Box<dyn Validator<Block>>> = match params {
+		LightClientInitParams::Grandpa { .. } =>
+			Arc::new(Box::new(EnclaveValidatorAccessor::default())),
+		LightClientInitParams::Parachain { .. } =>
+			Arc::new(Box::new(EnclaveValidatorAccessor::default())),
+	};
+
 	let genesis_hash = validator_access.execute_on_validator(|v| v.genesis_hash(v.num_relays()))?;
 
 	let extrinsics_factory =

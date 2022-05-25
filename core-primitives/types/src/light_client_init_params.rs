@@ -24,12 +24,14 @@ use sp_std::vec::Vec;
 #[derive(Encode, Decode)]
 pub enum LightClientInitParams<Header> {
 	Grandpa { genesis_header: Header, authorities: AuthorityList, authority_proof: Vec<Vec<u8>> },
+	Parachain { genesis_header: Header },
 }
 
 impl<Header> LightClientInitParams<Header> {
 	pub fn get_genesis_header(&self) -> &Header {
 		match self {
 			LightClientInitParams::Grandpa { genesis_header, .. } => genesis_header,
+			LightClientInitParams::Parachain { genesis_header } => genesis_header,
 		}
 	}
 }

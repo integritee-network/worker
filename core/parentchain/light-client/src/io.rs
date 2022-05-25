@@ -76,6 +76,9 @@ where
 				init_validator::<B>(params)
 			}
 		},
+		LightClientInitParams::Parachain { .. } => {
+			unimplemented!("hahahaha")
+		},
 	}
 }
 
@@ -93,6 +96,9 @@ where
 			)?;
 
 			return Ok(validator.latest_finalized_header(validator.num_relays()).unwrap())
+		},
+		LightClientInitParams::Parachain { .. } => {
+			unimplemented!("hahahaha")
 		},
 	}
 }
