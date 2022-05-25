@@ -232,11 +232,11 @@ pub(crate) fn init_light_client(params: LightClientInitParams<Header>) -> Enclav
 
 	GLOBAL_EXTRINSICS_FACTORY_COMPONENT.initialize(extrinsics_factory.clone());
 
-	let stf_root_operator =
+	let stf_enclave_signer =
 		Arc::new(EnclaveStfEnclaveSigner::new(state_handler, ocall_api.clone(), signer));
 	let indirect_calls_executor = Arc::new(IndirectCallsExecutor::new(
 		shielding_key_repository,
-		stf_root_operator,
+		stf_enclave_signer,
 		top_pool_author,
 	));
 	let parentchain_block_importer = ParentchainBlockImporter::new(

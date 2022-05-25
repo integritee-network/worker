@@ -32,7 +32,7 @@ pub enum StatePostProcessing {
 	Prune,
 }
 
-/// Operations as STF root.
+/// Allows signing of a trusted call with the enclave account that is registered in the STF.
 pub trait StfEnclaveSigning {
 	fn get_enclave_account(&self) -> AccountId;
 

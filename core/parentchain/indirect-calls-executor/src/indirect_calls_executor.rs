@@ -272,12 +272,12 @@ mod test {
 		mr_enclave: [u8; 32],
 	) -> (TestIndirectCallExecutor, Arc<TestTopPoolAuthor>, Arc<TestShieldingKeyRepo>) {
 		let shielding_key_repo = Arc::new(TestShieldingKeyRepo::default());
-		let stf_root_operator = Arc::new(TestStfEnclaveSigner::new(mr_enclave));
+		let stf_enclave_signer = Arc::new(TestStfEnclaveSigner::new(mr_enclave));
 		let top_pool_author = Arc::new(TestTopPoolAuthor::default());
 
 		let executor = IndirectCallsExecutor::new(
 			shielding_key_repo.clone(),
-			stf_root_operator,
+			stf_enclave_signer,
 			top_pool_author.clone(),
 		);
 
