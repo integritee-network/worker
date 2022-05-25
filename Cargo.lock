@@ -838,16 +838,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dashmap"
-version = "4.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e77a43b28d0668df09411cb0bc9a8c2adc40f9a048afe863e05fd43251e8e39c"
-dependencies = [
- "cfg-if 1.0.0",
- "num_cpus",
-]
-
-[[package]]
 name = "data-encoding"
 version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2158,7 +2148,6 @@ dependencies = [
  "base58 0.1.0",
  "cid",
  "clap 2.34.0",
- "dashmap",
  "dirs 1.0.5",
  "env_logger 0.9.0",
  "frame-support",
@@ -2190,7 +2179,7 @@ dependencies = [
  "multihash 0.8.0",
  "pallet-balances",
  "parity-scale-codec",
- "parking_lot 0.11.2",
+ "parking_lot 0.12.0",
  "primitive-types",
  "prometheus",
  "rust-crypto",
