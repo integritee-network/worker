@@ -121,7 +121,6 @@ sp-application-crypto = { version = "6.0.0", default-features = false, git = "ht
 log = { git = "https://github.com/mesalock-linux/log-sgx" }
 env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx" }
 getrandom = { git = "https://github.com/integritee-network/getrandom-sgx", branch = "update-v2.3"}
-Inflector = { git = "https://github.com/integritee-network/Inflector", branch = "bh-change-to-unstable-default"}
 
 [patch."https://github.com/paritytech/substrate"]
 log = { git = "https://github.com/mesalock-linux/log-sgx" }
