@@ -181,7 +181,7 @@ where
 			Message::Close(_) => {
 				debug!("Received close frame, driving web-socket connection to close");
 				if let StreamState::EstablishedWebsocket(web_socket) = &mut self.stream_state {
-					// We need to call write_pending until it returns an error that connection is closed.
+					// Send a close frame back and then flush the send queue.
 					if let Err(e) = web_socket.close(None) {
 						match e {
 							tungstenite::Error::ConnectionClosed
@@ -192,7 +192,6 @@ where
 							),
 						}
 					}
-
 					match web_socket.write_pending() {
 						Ok(_) => {},
 						Err(e) => match e {
