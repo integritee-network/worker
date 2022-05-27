@@ -71,7 +71,7 @@ sp-runtime = { version = "6.0.0", default-features = false, git = "https://githu
 sc-keystore = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20", optional = true }
 
 # scs / integritee
-my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node", branch = "master", optional = true }
+my-node-runtime = { package = "ajuna-solo-runtime", git = "https://github.com/ajuna-network/Ajuna", rev = "polkadot-v0.9.20", optional = true }
 sgx-externalities = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", rev = "polkadot-v0.9.20" }
 sgx-runtime = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", rev = "polkadot-v0.9.20", optional = true }
 sp-io = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", rev = "polkadot-v0.9.20", features = ["disable_oom", "disable_panic_handler", "disable_allocator"], optional = true }
