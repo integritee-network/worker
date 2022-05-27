@@ -132,6 +132,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "ajuna-common"
+version = "0.1.0"
+source = "git+https://github.com/ajuna-network/Ajuna.git?rev=polkadot-v0.9.20#4b94816df69a9c6668ebb505f57e864e03fdc01a"
+dependencies = [
+ "frame-support",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.20)",
+]
+
+[[package]]
 name = "ansi_term"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2323,7 +2334,7 @@ dependencies = [
  "sgx_tstd",
  "sp-application-crypto",
  "sp-core",
- "sp-io 6.0.0 (git+https://github.com/integritee-network/sgx-runtime?branch=master)",
+ "sp-io 6.0.0 (git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20)",
  "sp-keyring",
  "sp-runtime",
  "substrate-api-client",
@@ -3106,7 +3117,7 @@ dependencies = [
  "sgx-externalities",
  "sgx_tstd",
  "sp-core",
- "sp-io 6.0.0 (git+https://github.com/integritee-network/sgx-runtime?branch=master)",
+ "sp-io 6.0.0 (git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20)",
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.20)",
  "thiserror 1.0.31",
@@ -4242,6 +4253,33 @@ name = "os_str_bytes"
 version = "6.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "029d8d0b2f198229de29dca79676f2738ff952edf3fde542eb8bf94d8c21b435"
+
+[[package]]
+name = "pallet-ajuna-connectfour"
+version = "0.1.0"
+source = "git+https://github.com/ajuna-network/Ajuna.git?rev=polkadot-v0.9.20#4b94816df69a9c6668ebb505f57e864e03fdc01a"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-ajuna-matchmaker",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.20)",
+]
+
+[[package]]
+name = "pallet-ajuna-matchmaker"
+version = "0.1.0"
+source = "git+https://github.com/ajuna-network/Ajuna.git?rev=polkadot-v0.9.20#4b94816df69a9c6668ebb505f57e864e03fdc01a"
+dependencies = [
+ "ajuna-common",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.20)",
+]
 
 [[package]]
 name = "pallet-aura"
@@ -5929,7 +5967,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.4.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#d131a9c98446edd3dfd812f87a484ab59c3b268f"
+source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20#44e2e6a899f90a9056afe8a7113dc41a6ae20c09"
 dependencies = [
  "derive_more",
  "environmental",
@@ -5944,17 +5982,19 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#d131a9c98446edd3dfd812f87a484ab59c3b268f"
+source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20#44e2e6a899f90a9056afe8a7113dc41a6ae20c09"
 dependencies = [
  "frame-executive",
  "frame-support",
  "frame-system",
  "frame-system-rpc-runtime-api",
+ "pallet-ajuna-connectfour",
  "pallet-aura",
  "pallet-balances",
  "pallet-grandpa",
  "pallet-parentchain",
  "pallet-randomness-collective-flip",
+ "pallet-scheduler",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
@@ -6590,18 +6630,15 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "6.0.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#d131a9c98446edd3dfd812f87a484ab59c3b268f"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.20#563f4820d8f36d256ada7ea3fef46b2e94c4cd5a"
 dependencies = [
- "environmental",
  "futures 0.3.21",
  "hash-db",
  "libsecp256k1",
  "log 0.4.17",
  "parity-scale-codec",
  "parking_lot 0.12.0",
- "sgx-externalities",
- "sgx_tstd",
- "sgx_types",
+ "secp256k1",
  "sp-core",
  "sp-externalities",
  "sp-keystore",
@@ -6618,15 +6655,18 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "6.0.0"
-source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.20#563f4820d8f36d256ada7ea3fef46b2e94c4cd5a"
+source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20#44e2e6a899f90a9056afe8a7113dc41a6ae20c09"
 dependencies = [
+ "environmental",
  "futures 0.3.21",
  "hash-db",
  "libsecp256k1",
  "log 0.4.17",
  "parity-scale-codec",
  "parking_lot 0.12.0",
- "secp256k1",
+ "sgx-externalities",
+ "sgx_tstd",
+ "sgx_types",
  "sp-core",
  "sp-externalities",
  "sp-keystore",

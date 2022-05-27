@@ -56,7 +56,7 @@ rust-base58 = { package = "rust-base58", version = "0.0.4", optional = true }
 thiserror = { version = "1.0", optional = true }
 
 # scs / integritee
-sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
+sgx-externalities = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", rev = "polkadot-v0.9.20", optional = true }
 
 # no-std dependencies
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }

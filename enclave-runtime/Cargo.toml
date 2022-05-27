@@ -53,9 +53,9 @@ ipfs-unixfs = { default-features = false, git = "https://github.com/whalelephant
 
 # scs / integritee
 jsonrpc-core = { default-features = false, git = "https://github.com/scs/jsonrpc", branch = "no_std" }
-sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master", features = ["sgx"] }
-sgx-runtime = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master"}
-sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"], git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
+sgx-externalities = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", rev = "polkadot-v0.9.20", features = ["sgx"] }
+sgx-runtime = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", rev = "polkadot-v0.9.20"}
+sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"], git = "https://github.com/ajuna-network/sgx-runtime", rev = "polkadot-v0.9.20", optional = true }
 substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.20" }
 
 # mesalock
@@ -125,10 +125,10 @@ getrandom = { git = "https://github.com/integritee-network/getrandom-sgx", branc
 [patch."https://github.com/paritytech/substrate"]
 log = { git = "https://github.com/mesalock-linux/log-sgx" }
 env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx" }
-sp-io = { git = "https://github.com/integritee-network/sgx-runtime", branch = "master"}
+sp-io = { git = "https://github.com/ajuna-network/sgx-runtime", rev = "polkadot-v0.9.20"}
 #sp-io = { path = "../../sgx-runtime/substrate-sgx/sp-io"}
 
-#[patch."https://github.com/integritee-network/sgx-runtime"]
+#[patch."https://github.com/ajuna-network/sgx-runtime"]
 #sgx-runtime = { path = "../../sgx-runtime/runtime", default-features = false}
 #sp-io = { path = "../../sgx-runtime/substrate-sgx/sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
 #sgx-externalities = { path = "../../sgx-runtime/substrate-sgx/externalities"}
