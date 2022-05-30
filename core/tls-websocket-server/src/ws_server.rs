@@ -133,6 +133,21 @@ where
 		Ok(())
 	}
 
+	/// Send a message response to a connection.
+	/// Make sure this is called inside the event loop, otherwise dead-locks are possible.
+	fn write_message_to_connection(
+		&self,
+		message: String,
+		connection_token: ConnectionToken,
+	) -> WebSocketResult<()> {
+		let mut connections_lock =
+			self.connections.write().map_err(|_| WebSocketError::LockPoisoning)?;
+		let connection = connections_lock
+			.get_mut(&connection_token.into())
+			.ok_or(WebSocketError::InvalidConnection(connection_token.0))?;
+		connection.write_message(message)
+	}
+
 	fn handle_server_signal(
 		&self,
 		poll: &mut mio::Poll,
@@ -140,10 +155,18 @@ where
 		signal_receiver: &mut Receiver<ServerSignal>,
 	) -> WebSocketResult<bool> {
 		let signal = signal_receiver.try_recv()?;
+		let mut do_shutdown = false;
 
-		let initiate_shut_down = match signal {
-			ServerSignal::ShutDown => true,
-		};
+		match signal {
+			ServerSignal::ShutDown => {
+				do_shutdown = true;
+			},
+			ServerSignal::SendResponse(message, connection_token) => {
+				if let Err(e) = self.write_message_to_connection(message, connection_token) {
+					error!("Failed to send web-socket response: {:?}", e);
+				}
+			},
+		}
 
 		signal_receiver.reregister(
 			poll,
@@ -152,13 +175,30 @@ where
 			mio::PollOpt::level(),
 		)?;
 
-		Ok(initiate_shut_down)
+		Ok(do_shutdown)
 	}
 
 	fn register_server_signal_sender(&self, sender: Sender<ServerSignal>) -> WebSocketResult<()> {
 		let mut sender_lock =
 			self.signal_sender.lock().map_err(|_| WebSocketError::LockPoisoning)?;
 		*sender_lock = Some(sender);
+		Ok(())
+	}
+
+	fn send_server_signal(&self, server_signal: ServerSignal) -> WebSocketResult<()> {
+		match self.signal_sender.lock().map_err(|_| WebSocketError::LockPoisoning)?.as_ref() {
+			None => {
+				warn!(
+					"Signal sender has not been initialized, cannot send web-socket server signal"
+				);
+			},
+			Some(signal_sender) => {
+				signal_sender
+					.send(server_signal)
+					.map_err(|e| WebSocketError::Other(format!("{:?}", e).into()))?;
+			},
+		}
+
 		Ok(())
 	}
 }
@@ -178,7 +218,7 @@ where
 
 		let config = self.config_provider.get_config()?;
 
-		let (server_signal_sender, mut shutdown_receiver) = channel::<ServerSignal>();
+		let (server_signal_sender, mut signal_receiver) = channel::<ServerSignal>();
 		self.register_server_signal_sender(server_signal_sender)?;
 
 		let tcp_listener = TcpListener::bind(&socket_addr).map_err(WebSocketError::TcpBindError)?;
@@ -191,7 +231,7 @@ where
 		)?;
 
 		poll.register(
-			&shutdown_receiver,
+			&signal_receiver,
 			SERVER_SIGNAL_TOKEN,
 			mio::Ready::readable(),
 			mio::PollOpt::level(),
@@ -215,7 +255,7 @@ where
 					},
 					SERVER_SIGNAL_TOKEN => {
 						trace!("Received server signal event");
-						if self.handle_server_signal(&mut poll, &event, &mut shutdown_receiver)? {
+						if self.handle_server_signal(&mut poll, &event, &mut signal_receiver)? {
 							break 'outer_event_loop
 						}
 					},
@@ -235,20 +275,7 @@ where
 
 	fn shut_down(&self) -> WebSocketResult<()> {
 		info!("Shutdown request of web-socket server detected, shutting down..");
-		match self.signal_sender.lock().map_err(|_| WebSocketError::LockPoisoning)?.as_ref() {
-			None => {
-				warn!(
-					"Signal sender has not been initialized, cannot send web-socket server signal"
-				);
-			},
-			Some(signal_sender) => {
-				signal_sender
-					.send(ServerSignal::ShutDown)
-					.map_err(|e| WebSocketError::Other(format!("{:?}", e).into()))?;
-			},
-		}
-
-		Ok(())
+		self.send_server_signal(ServerSignal::ShutDown)
 	}
 }
 
@@ -262,18 +289,14 @@ where
 		connection_token: ConnectionToken,
 		message: String,
 	) -> WebSocketResult<()> {
-		let mut connections_lock =
-			self.connections.write().map_err(|_| WebSocketError::LockPoisoning)?;
-		let connection = connections_lock
-			.get_mut(&connection_token.into())
-			.ok_or(WebSocketError::InvalidConnection(connection_token.0))?;
-		connection.write_message(message)
+		self.send_server_signal(ServerSignal::SendResponse(message, connection_token))
 	}
 }
 
 /// Internal server signal enum.
 enum ServerSignal {
 	ShutDown,
+	SendResponse(String, ConnectionToken),
 }
 
 #[cfg(test)]
@@ -417,13 +440,14 @@ mod tests {
 
 		let connection_token = poll_handler_for_first_connection(handler.as_ref());
 
-		// Send reply to a wrong connection token, should fail.
+		// Send reply to a wrong connection token. Succeeds, because error is caught in the event loop
+		// and not the `send_message` method itself.
 		assert!(server
 			.send_message(
 				ConnectionToken(connection_token.0 + 1),
 				"wont get to the client".to_string()
 			)
-			.is_err());
+			.is_ok());
 
 		// Send reply to the correct connection token.
 		server.send_message(connection_token, update_message).unwrap();

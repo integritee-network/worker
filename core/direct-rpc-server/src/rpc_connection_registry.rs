@@ -23,14 +23,14 @@ use std::sync::RwLock;
 
 use crate::{RpcConnectionRegistry, RpcHash};
 use itp_types::RpcResponse;
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Debug};
 
 type HashMapLock<K, V> = RwLock<HashMap<K, V>>;
 
 pub struct ConnectionRegistry<Hash, Token>
 where
 	Hash: RpcHash,
-	Token: Copy + Send + Sync,
+	Token: Copy + Send + Sync + Debug,
 {
 	connection_map: HashMapLock<<Self as RpcConnectionRegistry>::Hash, (Token, RpcResponse)>,
 }
@@ -38,7 +38,7 @@ where
 impl<Hash, Token> ConnectionRegistry<Hash, Token>
 where
 	Hash: RpcHash,
-	Token: Copy + Send + Sync,
+	Token: Copy + Send + Sync + Debug,
 {
 	pub fn new() -> Self {
 		Self::default()
@@ -53,7 +53,7 @@ where
 impl<Hash, Token> Default for ConnectionRegistry<Hash, Token>
 where
 	Hash: RpcHash,
-	Token: Copy + Send + Sync,
+	Token: Copy + Send + Sync + Debug,
 {
 	fn default() -> Self {
 		ConnectionRegistry { connection_map: RwLock::new(HashMap::default()) }
@@ -63,7 +63,7 @@ where
 impl<Hash, Token> RpcConnectionRegistry for ConnectionRegistry<Hash, Token>
 where
 	Hash: RpcHash,
-	Token: Copy + Send + Sync,
+	Token: Copy + Send + Sync + Debug,
 {
 	type Hash = Hash;
 	type Connection = Token;

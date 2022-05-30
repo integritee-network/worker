@@ -127,7 +127,11 @@ where
 	/// Returns a boolean 'connection should be closed'.
 	fn read_or_initialize_websocket(&mut self) -> WebSocketResult<bool> {
 		if let StreamState::EstablishedWebsocket(web_socket) = &mut self.stream_state {
-			debug!("Read message for connection {}", self.connection_token.0);
+			debug!(
+				"Read is possible for connection {}: {}",
+				self.connection_token.0,
+				web_socket.can_read()
+			);
 			match web_socket.read_message() {
 				Ok(m) =>
 					if let Err(e) = self.handle_message(m) {
@@ -162,7 +166,10 @@ where
 	fn handle_message(&mut self, message: Message) -> WebSocketResult<()> {
 		match message {
 			Message::Text(string_message) => {
-				trace!("Got Message::Text on web-socket, calling handler..");
+				debug!(
+					"Got Message::Text on web-socket (connection {}), calling handler..",
+					self.connection_token.0
+				);
 				if let Some(reply) = self
 					.connection_handler
 					.handle_message(self.connection_token.into(), string_message)?
@@ -179,7 +186,10 @@ where
 				warn!("received binary message, don't have a handler for this format");
 			},
 			Message::Close(_) => {
-				debug!("Received close frame, driving web-socket connection to close");
+				debug!(
+					"Received close frame, driving web-socket connection {} to close",
+					self.connection_token.0
+				);
 				if let StreamState::EstablishedWebsocket(web_socket) = &mut self.stream_state {
 					// Send a close frame back and then flush the send queue.
 					if let Err(e) = web_socket.close(None) {
@@ -214,7 +224,7 @@ where
 				if !web_socket.can_write() {
 					return Err(WebSocketError::ConnectionClosed)
 				}
-
+				debug!("Write message to connection {}: {}", self.connection_token.0, message);
 				web_socket
 					.write_message(Message::Text(message))
 					.map_err(|e| WebSocketError::SocketWriteError(format!("{:?}", e)))
