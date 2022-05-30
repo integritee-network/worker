@@ -16,7 +16,6 @@
 */
 
 use crate::Cli;
-use codec::Encode;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use log::*;
 use my_node_runtime::{AccountId, Signature};

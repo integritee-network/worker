@@ -361,18 +361,13 @@ fn transfer_benchmark(
 		})
 		.collect();
 
-	println!(
-		"Finished benchmark with {} clients and {} transactions",
-		number_clients, number_transactions
+	let summary_string = format!(
+		"Finished benchmark with {} clients and {} transactions in {} ms",
+		number_clients,
+		number_transactions,
+		overall_start.elapsed().as_millis()
 	);
-	println!("Time for transactions: {}", overall_start.elapsed().as_secs());
-
-	let file = File::create(format!(
-		"benchmark_{}.txt",
-		chrono::offset::Local::now().format("%Y-%m-%d_%H_%M")
-	))
-	.expect("unable to create file");
-	let mut file = BufWriter::new(file);
+	println!("{}", summary_string);
 
 	let mut hist = Histogram::<u64>::new(1).unwrap();
 	println!("Size of outputs: {}", outputs.len());
@@ -383,8 +378,21 @@ fn transfer_benchmark(
 	}
 
 	println!("Samples recorded: {}", hist.len());
+	let file = File::create(format!(
+		"benchmark_{:03}.txt",
+		number_clients //chrono::offset::Local::now().format("%Y-%m-%d_%H_%M")
+	))
+	.expect("unable to create file");
+	let mut file = BufWriter::new(file);
+	writeln!(file, "{}", summary_string).unwrap();
 	for i in (5..=100).step_by(5) {
-		println!("{} percent are done within {} ms", i, hist.value_at_quantile(i as f64 / 100.0));
+		let text = format!(
+			"{} percent are done within {} ms",
+			i,
+			hist.value_at_quantile(i as f64 / 100.0)
+		);
+		println!("{}", text);
+		writeln!(file, "{}", text).expect("cannot write to file");
 	}
 	for v in hist.iter_recorded() {
 		let text = format!(
@@ -393,7 +401,7 @@ fn transfer_benchmark(
 			v.value_iterated_to(),
 			v.count_at_value()
 		);
-		writeln!(file, "{}", text).expect("cannot write to file");
+
 		println!("{}", text);
 	}
 }
