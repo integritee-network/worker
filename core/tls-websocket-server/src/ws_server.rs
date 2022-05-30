@@ -315,7 +315,7 @@ mod tests {
 
 	#[test]
 	fn server_handles_multiple_connections() {
-		let _ = env_logger::builder().is_test(false).try_init();
+		let _ = env_logger::builder().is_test(true).try_init();
 
 		let expected_answer = "websocket server response bidibibup".to_string();
 		let port: u16 = 21777;
