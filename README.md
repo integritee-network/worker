@@ -10,7 +10,7 @@ Please see our [Integritee Book](https://book.integritee.network/howto_worker.ht
 To start multiple worker and a node with one simple command: Check out [this README](local-setup/README.md).
 
 ## Tests
-### environment
+### Environment
 Unit tests within the enclave can't be run by `cargo test`. All unit and integration tests can be run by the worker binary
 
 first, you should run ipfs daemon because it is needed for testing
@@ -27,7 +27,7 @@ worker/bin$ rm sealed_stf_state.bin
 worker/bin$ touch sealed_stf_state.bin
 ```
 
-### execute tests
+### Execute tests
 Run these with
 ```
 integritee-service/bin$ ./integritee-service test --all
@@ -64,3 +64,8 @@ now bootstrap a new bot community
 ```
 
 now you should see the community growing from 10 to hundreds, increasing with every ceremony
+
+## Direct calls scalability
+
+For direct calls, a worker runs a web-socket server inside the enclave. An important factor for scalability is the transaction throughput of a single worker instance, which is in part defined by the maximum number of concurrent socket connections possible. On Linux by default, a process can have a maximum of `1024` concurrent file descriptors (show by `ulimit -n`).
+If the web-socket server hits that limit, incoming connections will be declined until one of the established connections is closed. Permanently changing the `ulimit -n` value can be done in the `/etc/security/limits.conf` configuration file. See [this](https://linuxhint.com/permanently_set_ulimit_value/) guide for more information.

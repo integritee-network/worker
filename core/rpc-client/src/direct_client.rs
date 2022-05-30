@@ -164,14 +164,14 @@ fn decode_from_rpc_response(json_rpc_response: &str) -> Result<String> {
 mod tests {
 	use super::*;
 	use itc_tls_websocket_server::{test::fixtures::test_server::create_server, WebSocketServer};
-	use std::collections::VecDeque;
+	use std::vec;
 
 	#[test]
 	fn watch_works_and_closes_connection_on_demand() {
 		let _ = env_logger::builder().is_test(true).try_init();
 
 		const END_MESSAGE: &str = "End of service.";
-		let responses = VecDeque::from([END_MESSAGE.to_string()]);
+		let responses = vec![END_MESSAGE.to_string()];
 
 		let port = 22334;
 		let (server, handler) = create_server(responses, port);
@@ -218,7 +218,7 @@ mod tests {
 		let _ = env_logger::builder().is_test(true).try_init();
 
 		let server_response = "response 1".to_string();
-		let responses = VecDeque::from([server_response.clone()]);
+		let responses = vec![server_response.clone()];
 
 		let port = 22335;
 		let (server, handler) = create_server(responses, port);

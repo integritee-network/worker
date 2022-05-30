@@ -77,7 +77,7 @@ impl<T: std::hash::Hash + traits::Member + Encode> RpcHash for T {}
 /// Registry for RPC connections (i.e. connections that are kept alive to send updates).
 pub trait RpcConnectionRegistry: Send + Sync {
 	type Hash: RpcHash;
-	type Connection: Copy;
+	type Connection: Copy + Debug;
 
 	fn store(&self, hash: Self::Hash, connection: Self::Connection, rpc_response: RpcResponse);
 

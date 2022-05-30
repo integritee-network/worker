@@ -23,17 +23,19 @@ use std::sync::RwLock;
 
 use crate::{ConnectionToken, WebSocketMessageHandler, WebSocketResult};
 use log::debug;
-use std::{collections::VecDeque, string::String, vec::Vec};
+use std::{collections::HashMap, string::String, vec::Vec};
 
 pub struct WebSocketHandlerMock {
-	pub responses: RwLock<VecDeque<String>>,
+	pub responses: Vec<String>,
+	pub connection_message_indices: RwLock<HashMap<ConnectionToken, usize>>,
 	pub messages_handled: RwLock<Vec<(ConnectionToken, String)>>,
 }
 
 impl WebSocketHandlerMock {
-	pub fn from_response_sequence(responses: VecDeque<String>) -> Self {
+	pub fn from_response_sequence(responses: Vec<String>) -> Self {
 		WebSocketHandlerMock {
-			responses: RwLock::new(responses),
+			responses,
+			connection_message_indices: RwLock::default(),
 			messages_handled: Default::default(),
 		}
 	}
@@ -54,8 +56,13 @@ impl WebSocketMessageHandler for WebSocketHandlerMock {
 		debug!("Handling message: {}", message);
 		handled_messages_lock.push((connection_token, message));
 
-		let next_response = self.responses.write().unwrap().pop_front();
+		let mut connection_indices_lock = self.connection_message_indices.write().unwrap();
 
-		Ok(next_response)
+		let message_index = connection_indices_lock.entry(connection_token).or_insert(0usize);
+
+		let response = self.responses.get(*message_index).cloned();
+
+		*message_index += 1;
+		Ok(response)
 	}
 }

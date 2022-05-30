@@ -76,9 +76,11 @@ fn get_state(cli: &Cli, trusted_args: &TrustedArgs, getter: &TrustedOperation) -
 							"[Error] {}",
 							String::decode(&mut return_value.value.as_slice()).unwrap()
 						);
+						direct_api.close().unwrap();
 						return None
 					}
 					if !return_value.do_watch {
+						direct_api.close().unwrap();
 						return match Option::decode(&mut return_value.value.as_slice()) {
 							Ok(value_opt) => value_opt,
 							Err(_) => panic!("Error when decoding response"),
@@ -86,7 +88,10 @@ fn get_state(cli: &Cli, trusted_args: &TrustedArgs, getter: &TrustedOperation) -
 					}
 				};
 			},
-			Err(_) => return None,
+			Err(_) => {
+				direct_api.close().unwrap();
+				return None
+			},
 		};
 	}
 }

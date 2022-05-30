@@ -99,14 +99,14 @@ where
 			self.connection_handler.clone(),
 		)?;
 
-		trace!("Web-socket connection created");
+		debug!("Web-socket connection created");
 		web_socket_connection.register(poll)?;
 
 		let mut connections_lock =
 			self.connections.write().map_err(|_| WebSocketError::LockPoisoning)?;
 		connections_lock.insert(token, web_socket_connection);
 
-		trace!("Successfully accepted connection");
+		debug!("Accepted connection, {} active connections", connections_lock.len());
 		Ok(())
 	}
 
@@ -120,12 +120,32 @@ where
 			connection.on_ready(poll, event)?;
 
 			if connection.is_closed() {
-				trace!("Connection {:?} is closed, removing", token);
+				debug!("Connection {:?} is closed, removing", token);
 				connections_lock.remove(&token);
+				debug!(
+					"Closed {:?}, {} active connections remaining",
+					token,
+					connections_lock.len()
+				);
 			}
 		}
 
 		Ok(())
+	}
+
+	/// Send a message response to a connection.
+	/// Make sure this is called inside the event loop, otherwise dead-locks are possible.
+	fn write_message_to_connection(
+		&self,
+		message: String,
+		connection_token: ConnectionToken,
+	) -> WebSocketResult<()> {
+		let mut connections_lock =
+			self.connections.write().map_err(|_| WebSocketError::LockPoisoning)?;
+		let connection = connections_lock
+			.get_mut(&connection_token.into())
+			.ok_or(WebSocketError::InvalidConnection(connection_token.0))?;
+		connection.write_message(message)
 	}
 
 	fn handle_server_signal(
@@ -135,10 +155,18 @@ where
 		signal_receiver: &mut Receiver<ServerSignal>,
 	) -> WebSocketResult<bool> {
 		let signal = signal_receiver.try_recv()?;
+		let mut do_shutdown = false;
 
-		let initiate_shut_down = match signal {
-			ServerSignal::ShutDown => true,
-		};
+		match signal {
+			ServerSignal::ShutDown => {
+				do_shutdown = true;
+			},
+			ServerSignal::SendResponse(message, connection_token) => {
+				if let Err(e) = self.write_message_to_connection(message, connection_token) {
+					error!("Failed to send web-socket response: {:?}", e);
+				}
+			},
+		}
 
 		signal_receiver.reregister(
 			poll,
@@ -147,13 +175,30 @@ where
 			mio::PollOpt::level(),
 		)?;
 
-		Ok(initiate_shut_down)
+		Ok(do_shutdown)
 	}
 
 	fn register_server_signal_sender(&self, sender: Sender<ServerSignal>) -> WebSocketResult<()> {
 		let mut sender_lock =
 			self.signal_sender.lock().map_err(|_| WebSocketError::LockPoisoning)?;
 		*sender_lock = Some(sender);
+		Ok(())
+	}
+
+	fn send_server_signal(&self, server_signal: ServerSignal) -> WebSocketResult<()> {
+		match self.signal_sender.lock().map_err(|_| WebSocketError::LockPoisoning)?.as_ref() {
+			None => {
+				warn!(
+					"Signal sender has not been initialized, cannot send web-socket server signal"
+				);
+			},
+			Some(signal_sender) => {
+				signal_sender
+					.send(server_signal)
+					.map_err(|e| WebSocketError::Other(format!("{:?}", e).into()))?;
+			},
+		}
+
 		Ok(())
 	}
 }
@@ -173,7 +218,7 @@ where
 
 		let config = self.config_provider.get_config()?;
 
-		let (server_signal_sender, mut shutdown_receiver) = channel::<ServerSignal>();
+		let (server_signal_sender, mut signal_receiver) = channel::<ServerSignal>();
 		self.register_server_signal_sender(server_signal_sender)?;
 
 		let tcp_listener = TcpListener::bind(&socket_addr).map_err(WebSocketError::TcpBindError)?;
@@ -186,13 +231,13 @@ where
 		)?;
 
 		poll.register(
-			&shutdown_receiver,
+			&signal_receiver,
 			SERVER_SIGNAL_TOKEN,
 			mio::Ready::readable(),
 			mio::PollOpt::level(),
 		)?;
 
-		let mut events = mio::Events::with_capacity(1024);
+		let mut events = mio::Events::with_capacity(2048);
 
 		// Run the event loop.
 		'outer_event_loop: loop {
@@ -210,7 +255,7 @@ where
 					},
 					SERVER_SIGNAL_TOKEN => {
 						trace!("Received server signal event");
-						if self.handle_server_signal(&mut poll, &event, &mut shutdown_receiver)? {
+						if self.handle_server_signal(&mut poll, &event, &mut signal_receiver)? {
 							break 'outer_event_loop
 						}
 					},
@@ -230,20 +275,7 @@ where
 
 	fn shut_down(&self) -> WebSocketResult<()> {
 		info!("Shutdown request of web-socket server detected, shutting down..");
-		match self.signal_sender.lock().map_err(|_| WebSocketError::LockPoisoning)?.as_ref() {
-			None => {
-				warn!(
-					"Signal sender has not been initialized, cannot send web-socket server signal"
-				);
-			},
-			Some(signal_sender) => {
-				signal_sender
-					.send(ServerSignal::ShutDown)
-					.map_err(|e| WebSocketError::Other(format!("{:?}", e).into()))?;
-			},
-		}
-
-		Ok(())
+		self.send_server_signal(ServerSignal::ShutDown)
 	}
 }
 
@@ -257,18 +289,14 @@ where
 		connection_token: ConnectionToken,
 		message: String,
 	) -> WebSocketResult<()> {
-		let mut connections_lock =
-			self.connections.write().map_err(|_| WebSocketError::LockPoisoning)?;
-		let connection = connections_lock
-			.get_mut(&connection_token.into())
-			.ok_or(WebSocketError::InvalidConnection(connection_token.0))?;
-		connection.write_message(message)
+		self.send_server_signal(ServerSignal::SendResponse(message, connection_token))
 	}
 }
 
 /// Internal server signal enum.
 enum ServerSignal {
 	ShutDown,
+	SendResponse(String, ConnectionToken),
 }
 
 #[cfg(test)]
@@ -278,7 +306,6 @@ mod tests {
 		fixtures::{no_cert_verifier::NoCertVerifier, test_server::create_server},
 		mocks::web_socket_handler_mock::WebSocketHandlerMock,
 	};
-	use alloc::collections::VecDeque;
 	use rustls::ClientConfig;
 	use std::{net::TcpStream, thread, time::Duration};
 	use tungstenite::{
@@ -292,11 +319,9 @@ mod tests {
 
 		let expected_answer = "websocket server response bidibibup".to_string();
 		let port: u16 = 21777;
-		const NUMBER_OF_CONNECTIONS: usize = 20;
+		const NUMBER_OF_CONNECTIONS: usize = 100;
 
-		let responses: VecDeque<_> =
-			(0..NUMBER_OF_CONNECTIONS).map(|_| expected_answer.clone()).collect();
-		let (server, handler) = create_server(responses, port);
+		let (server, handler) = create_server(vec![expected_answer.clone()], port);
 
 		let server_clone = server.clone();
 		let server_join_handle = thread::spawn(move || server_clone.run());
@@ -309,8 +334,11 @@ mod tests {
 			.map(|_| {
 				let expected_answer_clone = expected_answer.clone();
 
+				thread::sleep(Duration::from_millis(5));
+
 				thread::spawn(move || {
 					let mut socket = connect_tls_client(get_server_addr(port).as_str());
+
 					socket
 						.write_message(Message::Text("Hello WebSocket".into()))
 						.expect("client write message to be successful");
@@ -319,6 +347,17 @@ mod tests {
 						Message::Text(expected_answer_clone),
 						socket.read_message().unwrap()
 					);
+
+					thread::sleep(Duration::from_millis(2));
+
+					socket
+						.write_message(Message::Text("Second message".into()))
+						.expect("client write message to be successful");
+
+					thread::sleep(Duration::from_millis(2));
+
+					socket.close(None).unwrap();
+					socket.write_pending().unwrap();
 				})
 			})
 			.collect();
@@ -335,7 +374,41 @@ mod tests {
 			panic!("Test failed, web-socket returned error: {:?}", e);
 		}
 
-		assert_eq!(NUMBER_OF_CONNECTIONS, handler.get_handled_messages().len());
+		assert_eq!(2 * NUMBER_OF_CONNECTIONS, handler.get_handled_messages().len());
+	}
+
+	#[test]
+	fn server_closes_connection_if_client_does_not_wait_for_reply() {
+		let _ = env_logger::builder().is_test(true).try_init();
+
+		let expected_answer = "websocket server response".to_string();
+		let port: u16 = 21778;
+
+		let (server, handler) = create_server(vec![expected_answer.clone()], port);
+
+		let server_clone = server.clone();
+		let server_join_handle = thread::spawn(move || server_clone.run());
+
+		// Wait until server is up.
+		thread::sleep(std::time::Duration::from_millis(50));
+
+		let client_join_handle = thread::spawn(move || {
+			let mut socket = connect_tls_client(get_server_addr(port).as_str());
+			socket
+				.write_message(Message::Text("First request".into()))
+				.expect("client write message to be successful");
+
+			// We never read, just send a message and close the connection, despite the server
+			// trying to send a reply (which will fail).
+			socket.close(None).unwrap();
+			socket.write_pending().unwrap();
+		});
+
+		client_join_handle.join().unwrap();
+		server.shut_down().unwrap();
+		server_join_handle.join().unwrap().unwrap();
+
+		assert_eq!(1, handler.get_handled_messages().len());
 	}
 
 	#[test]
@@ -343,8 +416,8 @@ mod tests {
 		let _ = env_logger::builder().is_test(true).try_init();
 
 		let expected_answer = "first response".to_string();
-		let port: u16 = 21778;
-		let (server, handler) = create_server(VecDeque::from([expected_answer.clone()]), port);
+		let port: u16 = 21779;
+		let (server, handler) = create_server(vec![expected_answer.clone()], port);
 
 		let server_clone = server.clone();
 		let server_join_handle = thread::spawn(move || server_clone.run());
@@ -367,13 +440,14 @@ mod tests {
 
 		let connection_token = poll_handler_for_first_connection(handler.as_ref());
 
-		// Send reply to a wrong connection token, should fail.
+		// Send reply to a wrong connection token. Succeeds, because error is caught in the event loop
+		// and not the `send_message` method itself.
 		assert!(server
 			.send_message(
 				ConnectionToken(connection_token.0 + 1),
 				"wont get to the client".to_string()
 			)
-			.is_err());
+			.is_ok());
 
 		// Send reply to the correct connection token.
 		server.send_message(connection_token, update_message).unwrap();
