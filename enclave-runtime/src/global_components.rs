@@ -81,7 +81,7 @@ pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
 	EnclaveStfEnclaveSigner,
 	EnclaveTopPoolAuthor,
 >;
-pub type EnclaveValidatorAccessor = ValidatorAccessor<ParentchainBlock>;
+pub type EnclaveValidatorAccessor = ValidatorAccessor<ParentchainBlock, EnclaveOCallApi>;
 pub type EnclaveParentChainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
 	EnclaveValidatorAccessor,

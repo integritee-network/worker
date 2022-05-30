@@ -26,9 +26,10 @@ use std::sync::RwLock;
 
 use crate::{
 	error::{Error, Result},
-	LightClientState, Validator as ValidatorTrait,
+	ExtrinsicSender as ExtrinsicSenderTrait, LightClientState, Validator as ValidatorTrait,
 };
 use finality_grandpa::BlockNumberOps;
+use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_sgx_io::StaticSealedIO;
 use lazy_static::lazy_static;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, NumberFor};
@@ -46,12 +47,14 @@ lazy_static! {
 /// either a mutating, or a non-mutating function on the validator.
 /// The reason we have this additional wrapper around `SealedIO`, is that we need
 /// to guard against concurrent access by using RWLocks (which `SealedIO` does not do).
-pub trait ValidatorAccess<ParentchainBlock>
+pub trait ValidatorAccess<ParentchainBlock, OCallApi: EnclaveOnChainOCallApi>
 where
 	ParentchainBlock: ParentchainBlockTrait,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 {
-	type ValidatorType: ValidatorTrait<ParentchainBlock> + LightClientState<ParentchainBlock>;
+	type ValidatorType: ValidatorTrait<ParentchainBlock>
+		+ LightClientState<ParentchainBlock>
+		+ ExtrinsicSenderTrait<OCallApi>;
 
 	/// Execute a non-mutating function on the validator.
 	fn execute_on_validator<F, R>(&self, getter_function: F) -> Result<R>
@@ -66,48 +69,61 @@ where
 
 /// Implementation of a validator access based on a global lock and corresponding file.
 #[derive(Clone, Debug)]
-pub struct GlobalValidatorAccessor<Validator, ParentchainBlock, Seal>
+pub struct GlobalValidatorAccessor<Validator, ParentchainBlock, Seal, OCallApi>
 where
-	Validator: ValidatorTrait<ParentchainBlock> + LightClientState<ParentchainBlock>,
+	Validator: ValidatorTrait<ParentchainBlock>
+		+ LightClientState<ParentchainBlock>
+		+ ExtrinsicSenderTrait<OCallApi>,
 	Seal: StaticSealedIO<Error = Error, Unsealed = Validator>,
 	ParentchainBlock: ParentchainBlockTrait,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
+	OCallApi: EnclaveOnChainOCallApi,
 {
-	_phantom: PhantomData<(Seal, Validator, ParentchainBlock)>,
+	_phantom: PhantomData<(Seal, Validator, ParentchainBlock, OCallApi)>,
 }
 
-impl<Validator, ParentchainBlock, Seal> Default
-	for GlobalValidatorAccessor<Validator, ParentchainBlock, Seal>
+impl<Validator, ParentchainBlock, Seal, OCallApi> Default
+	for GlobalValidatorAccessor<Validator, ParentchainBlock, Seal, OCallApi>
 where
-	Validator: ValidatorTrait<ParentchainBlock> + LightClientState<ParentchainBlock>,
+	Validator: ValidatorTrait<ParentchainBlock>
+		+ LightClientState<ParentchainBlock>
+		+ ExtrinsicSenderTrait<OCallApi>,
 	Seal: StaticSealedIO<Error = Error, Unsealed = Validator>,
 	ParentchainBlock: ParentchainBlockTrait,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
+	OCallApi: EnclaveOnChainOCallApi,
 {
 	fn default() -> Self {
 		GlobalValidatorAccessor { _phantom: Default::default() }
 	}
 }
 
-impl<Validator, ParentchainBlock, Seal> GlobalValidatorAccessor<Validator, ParentchainBlock, Seal>
+impl<Validator, ParentchainBlock, Seal, OCallApi>
+	GlobalValidatorAccessor<Validator, ParentchainBlock, Seal, OCallApi>
 where
-	Validator: ValidatorTrait<ParentchainBlock> + LightClientState<ParentchainBlock>,
+	Validator: ValidatorTrait<ParentchainBlock>
+		+ LightClientState<ParentchainBlock>
+		+ ExtrinsicSenderTrait<OCallApi>,
 	Seal: StaticSealedIO<Error = Error, Unsealed = Validator>,
 	ParentchainBlock: ParentchainBlockTrait,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
+	OCallApi: EnclaveOnChainOCallApi,
 {
 	pub fn new() -> Self {
 		GlobalValidatorAccessor { _phantom: Default::default() }
 	}
 }
 
-impl<Validator, ParentchainBlock, Seal> ValidatorAccess<ParentchainBlock>
-	for GlobalValidatorAccessor<Validator, ParentchainBlock, Seal>
+impl<Validator, ParentchainBlock, Seal, OCallApi> ValidatorAccess<ParentchainBlock, OCallApi>
+	for GlobalValidatorAccessor<Validator, ParentchainBlock, Seal, OCallApi>
 where
-	Validator: ValidatorTrait<ParentchainBlock> + LightClientState<ParentchainBlock>,
+	Validator: ValidatorTrait<ParentchainBlock>
+		+ LightClientState<ParentchainBlock>
+		+ ExtrinsicSenderTrait<OCallApi>,
 	Seal: StaticSealedIO<Error = Error, Unsealed = Validator>,
 	ParentchainBlock: ParentchainBlockTrait,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
+	OCallApi: EnclaveOnChainOCallApi,
 {
 	type ValidatorType = Validator;
 

@@ -22,8 +22,8 @@ use crate::{
 	grandpa_log,
 	justification::GrandpaJustification,
 	state::{RelayState, ScheduledChangeAtBlock},
-	AuthorityList, AuthorityListRef, HashFor, HashingFor, LightClientState, NumberFor, RelayId,
-	Validator,
+	AuthorityList, AuthorityListRef, ExtrinsicSender, HashFor, HashingFor, LightClientState,
+	NumberFor, RelayId, Validator,
 };
 use codec::{Decode, Encode};
 use core::iter::Iterator;
@@ -41,14 +41,16 @@ use sp_runtime::{
 use std::{collections::BTreeMap, fmt, vec::Vec};
 
 #[derive(Encode, Decode, Clone, Default)]
-pub struct GrandpaLightValidation<Block: ParentchainBlockTrait> {
-	num_relays: RelayId,
-	tracked_relays: BTreeMap<RelayId, RelayState<Block>>,
+pub struct GrandpaLightValidation<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi> {
+	relay_state: RelayState<Block>,
+	ocall_api: OcallApi,
 }
 
-impl<Block: ParentchainBlockTrait> GrandpaLightValidation<Block> {
-	pub fn new() -> Self {
-		Self { num_relays: Default::default(), tracked_relays: Default::default() }
+impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi>
+	GrandpaLightValidation<Block, OcallApi>
+{
+	pub fn new(ocall_api: OcallApi) -> Self {
+		Self { num_relays: Default::default(), tracked_relays: Default::default(), ocall_api }
 	}
 
 	fn apply_validator_set_change(relay: &mut RelayState<Block>, header: &Block::Header) {
@@ -150,7 +152,8 @@ impl<Block: ParentchainBlockTrait> GrandpaLightValidation<Block> {
 	}
 }
 
-impl<Block: ParentchainBlockTrait> Validator<Block> for GrandpaLightValidation<Block>
+impl<Block: ParentchainBlockTrait, OCallApi: EnclaveOnChainOCallApi> Validator<Block>
+	for GrandpaLightValidation<Block, OCallApi>
 where
 	NumberFor<Block>: finality_grandpa::BlockNumberOps,
 {
@@ -284,18 +287,10 @@ where
 		Ok(())
 	}
 
-	fn send_extrinsics<OCallApi: EnclaveOnChainOCallApi>(
-		&mut self,
-		ocall_api: &OCallApi,
-		extrinsics: Vec<OpaqueExtrinsic>,
-	) -> Result<(), Error> {
-		for xt in extrinsics.iter() {
-			self.submit_xt_to_be_included(self.num_relays(), xt.clone()).unwrap();
+	fn submit_xts(&mut self, extrinsics: Vec<OpaqueExtrinsic>) -> Result<(), Error> {
+		for xt in extrinsics.into_iter() {
+			self.submit_xt_to_be_included(self.num_relays(), xt)?;
 		}
-
-		ocall_api
-			.send_to_parentchain(extrinsics)
-			.map_err(|e| Error::Other(format!("Failed to send extrinsics: {}", e).into()))
 	}
 
 	fn check_xt_inclusion(&mut self, relay_id: RelayId, block: &Block) -> Result<(), Error> {
@@ -328,7 +323,25 @@ where
 	}
 }
 
-impl<Block: ParentchainBlockTrait> LightClientState<Block> for GrandpaLightValidation<Block> {
+impl<Block: ParentchainBlockTrait, OCallApi: EnclaveOnChainOCallApi> ExtrinsicSender<OCallApi>
+	for GrandpaLightValidation<Block, OCallApi>
+where
+	NumberFor<Block>: finality_grandpa::BlockNumberOps,
+{
+	fn send_extrinsics(
+		// submit_xt_to_be
+		&mut self,
+		extrinsics: Vec<OpaqueExtrinsic>,
+	) -> Result<(), Error> {
+		for xt in extrinsics.iter() {
+			self.submit_xt_to_be_included(self.num_relays(), xt.clone()).unwrap();
+		}
+	}
+}
+
+impl<Block: ParentchainBlockTrait, OCallApi: EnclaveOnChainOCallApi> LightClientState<Block>
+	for GrandpaLightValidation<Block, OCallApi>
+{
 	fn num_xt_to_be_included(&mut self, relay_id: RelayId) -> Result<usize, Error> {
 		let relay = self.tracked_relays.get(&relay_id).ok_or(Error::NoSuchRelayExists)?;
 		Ok(relay.verify_tx_inclusion.len())
@@ -357,7 +370,9 @@ impl<Block: ParentchainBlockTrait> LightClientState<Block> for GrandpaLightValid
 	}
 }
 
-impl<B: ParentchainBlockTrait> fmt::Debug for GrandpaLightValidation<B> {
+impl<Block: ParentchainBlockTrait, OCallApi: EnclaveOnChainOCallApi> fmt::Debug
+	for GrandpaLightValidation<Block, OCallApi>
+{
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		write!(
 			f,

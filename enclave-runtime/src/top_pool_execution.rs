@@ -32,7 +32,7 @@ use itc_parentchain::{
 		PeekParentchainBlockImportQueue, TriggerParentchainBlockImport,
 	},
 	light_client::{
-		concurrent_access::ValidatorAccess, BlockNumberOps, LightClientState, NumberFor, Validator,
+		concurrent_access::ValidatorAccess, BlockNumberOps, LightClientState, NumberFor,
 		ValidatorAccessor,
 	},
 };
@@ -287,7 +287,7 @@ where
 	ParentchainBlock: BlockTrait,
 	SignedSidechainBlock: SignedBlock + 'static,
 	OCallApi: EnclaveSidechainOCallApi + EnclaveOnChainOCallApi,
-	ValidatorAccessor: ValidatorAccess<ParentchainBlock> + Send + Sync + 'static,
+	ValidatorAccessor: ValidatorAccess<ParentchainBlock, OCallApi> + Send + Sync + 'static,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	ExtrinsicsFactory: CreateExtrinsics,
 {
@@ -298,5 +298,9 @@ where
 
 	debug!("Sending sidechain block(s) confirmation extrinsic.. ");
 	validator_access.execute_mut_on_validator(|v| v.send_extrinsics(&ocall_api, xts))?;
+
+	ocall_api
+		.send_to_parentchain(extrinsics)
+		.map_err(|e| Error::Other(format!("Failed to send extrinsics: {}", e).into()))
 	Ok(())
 }

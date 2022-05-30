@@ -217,7 +217,9 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 }
 
 pub(crate) fn init_light_client(params: LightClientInitParams<Header>) -> EnclaveResult<Header> {
-	let latest_header = itc_parentchain::light_client::io::read_or_init_validator::<Block>(params)?;
+	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
+	let latest_header =
+		itc_parentchain::light_client::io::read_or_init_validator::<Block>(params, ocall_api)?;
 
 	// Initialize the global parentchain block import dispatcher instance.
 	let signer = Ed25519Seal::unseal_from_static_file()?;
@@ -225,7 +227,6 @@ pub(crate) fn init_light_client(params: LightClientInitParams<Header>) -> Enclav
 
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
-	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 
 	let validator_access: Arc<Box<dyn Validator<Block>>> = match params {

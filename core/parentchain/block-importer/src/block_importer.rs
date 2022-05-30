@@ -25,7 +25,8 @@ use crate::{
 use ita_stf::ParentchainHeader;
 use itc_parentchain_indirect_calls_executor::ExecuteIndirectCalls;
 use itc_parentchain_light_client::{
-	concurrent_access::ValidatorAccess, BlockNumberOps, LightClientState, Validator,
+	concurrent_access::ValidatorAccess, BlockNumberOps, ExtrinsicSender, LightClientState,
+	Validator,
 };
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
@@ -50,7 +51,7 @@ pub struct ParentchainBlockImporter<
 > where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
-	ValidatorAccessor: ValidatorAccess<ParentchainBlock>,
+	ValidatorAccessor: ValidatorAccess<ParentchainBlock, OCallApi>,
 	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
 	StfExecutor: StfUpdateState,
 	ExtrinsicsFactory: CreateExtrinsics,
@@ -82,7 +83,7 @@ impl<
 	> where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256, Header = ParentchainHeader>,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
-	ValidatorAccessor: ValidatorAccess<ParentchainBlock>,
+	ValidatorAccessor: ValidatorAccess<ParentchainBlock, OCallApi>,
 	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
 	StfExecutor: StfUpdateState,
 	ExtrinsicsFactory: CreateExtrinsics,
@@ -124,7 +125,7 @@ impl<
 	> where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256, Header = ParentchainHeader>,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
-	ValidatorAccessor: ValidatorAccess<ParentchainBlock>,
+	ValidatorAccessor: ValidatorAccess<ParentchainBlock, OCallApi>,
 	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
 	StfExecutor: StfUpdateState,
 	ExtrinsicsFactory: CreateExtrinsics,

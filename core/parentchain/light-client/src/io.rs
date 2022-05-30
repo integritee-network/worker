@@ -21,6 +21,7 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use core::fmt::Debug;
+use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_settings::files::LIGHT_CLIENT_DB;
 use itp_sgx_io::{seal, unseal, StaticSealedIO};
 use itp_types::light_client_init_params::LightClientInitParams;
@@ -51,21 +52,24 @@ impl<B: Block, Client: Decode + Encode + Debug> StaticSealedIO for LightClientSe
 	}
 }
 
-pub fn read_or_init_validator<B: Block>(
+pub fn read_or_init_validator<B: Block, OCallApi: EnclaveOnChainOCallApi>(
 	params: LightClientInitParams<B::Header>,
+	ocall_api: OCallApi,
 ) -> Result<B::Header>
 where
 	NumberFor<B>: finality_grandpa::BlockNumberOps,
+	GrandpaLightValidation<B, OCallApi>: Decode + Encode + Debug,
 {
 	match params {
 		LightClientInitParams::Grandpa { .. } => {
 			if SgxFile::open(LIGHT_CLIENT_DB).is_err() {
 				info!("[Enclave] ChainRelay DB not found, creating new! {}", LIGHT_CLIENT_DB);
-				return init_validator::<B>(params)
+				return init_validator::<B, OCallApi>(params, ocall_api)
 			}
 
 			let validator =
-				LightClientSeal::<B, GrandpaLightValidation<B>>::unseal_from_static_file()?;
+				LightClientSeal::<B, GrandpaLightValidation<B, OCallApi>>::unseal_from_static_file(
+				)?;
 
 			let genesis = validator.genesis_hash(validator.num_relays()).unwrap();
 			if genesis == params.get_genesis_header().hash() {
@@ -73,7 +77,7 @@ where
 				info!("light client state: {:?}", validator);
 				Ok(validator.latest_finalized_header(validator.num_relays()).unwrap())
 			} else {
-				init_validator::<B>(params)
+				init_validator::<B, OCallApi>(params, ocall_api)
 			}
 		},
 		LightClientInitParams::Parachain { .. } => {
@@ -82,16 +86,20 @@ where
 	}
 }
 
-fn init_validator<B: Block>(params: LightClientInitParams<B::Header>) -> Result<B::Header>
+fn init_validator<B: Block, OCallApi: EnclaveOnChainOCallApi>(
+	params: LightClientInitParams<B::Header>,
+	ocall_api: OCallApi,
+) -> Result<B::Header>
 where
 	NumberFor<B>: finality_grandpa::BlockNumberOps,
+	GrandpaLightValidation<B, OCallApi>: Decode + Encode + Debug,
 {
 	match params {
 		LightClientInitParams::Grandpa { authorities, genesis_header, authority_proof } => {
-			let mut validator = GrandpaLightValidation::<B>::new();
+			let mut validator = GrandpaLightValidation::<B, OCallApi>::new(ocall_api);
 
 			validator.initialize_relay(genesis_header, authorities, authority_proof)?;
-			LightClientSeal::<B, GrandpaLightValidation<B>>::seal_to_static_file(
+			LightClientSeal::<B, GrandpaLightValidation<B, OCallApi>>::seal_to_static_file(
 				validator.clone(),
 			)?;
 

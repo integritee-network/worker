@@ -77,10 +77,11 @@ use crate::concurrent_access::GlobalValidatorAccessor;
 
 /// Global validator accessor type
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
-pub type ValidatorAccessor<Block> = GlobalValidatorAccessor<
-	GrandpaLightValidation<Block>,
+pub type ValidatorAccessor<Block, OCallApi> = GlobalValidatorAccessor<
+	GrandpaLightValidation<Block, OCallApi>,
 	Block,
-	crate::io::LightClientSeal<Block, GrandpaLightValidation<Block>>,
+	crate::io::LightClientSeal<Block, GrandpaLightValidation<Block, OCallApi>>,
+	OCallApi,
 >;
 
 /// Validator trait
@@ -117,14 +118,19 @@ where
 		extrinsic: OpaqueExtrinsic,
 	) -> Result<(), Error>;
 
+	fn check_xt_inclusion(&mut self, relay_id: RelayId, block: &Block) -> Result<(), Error>;
+}
+
+pub trait ExtrinsicSender<OCallApi>
+where
+	OCallApi: EnclaveOnChainOCallApi,
+{
 	/// Sends encoded extrinsics to the parentchain and cache them internally for later confirmation.
-	fn send_extrinsics<OCallApi: EnclaveOnChainOCallApi>(
+	fn send_extrinsics(
 		&mut self,
 		ocall_api: &OCallApi,
 		extrinsics: Vec<OpaqueExtrinsic>,
 	) -> Result<(), Error>;
-
-	fn check_xt_inclusion(&mut self, relay_id: RelayId, block: &Block) -> Result<(), Error>;
 }
 
 pub trait LightClientState<Block: ParentchainBlockTrait> {

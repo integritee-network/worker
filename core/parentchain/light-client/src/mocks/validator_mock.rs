@@ -15,7 +15,10 @@
 
 */
 
-use crate::{error::Result, AuthorityList, HashFor, LightClientState, RelayId, SetId, Validator};
+use crate::{
+	error::Result, AuthorityList, ExtrinsicSender, HashFor, LightClientState, RelayId, SetId,
+	Validator,
+};
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_storage::StorageProof;
 use itp_types::Block;
@@ -66,15 +69,17 @@ impl Validator<Block> for ValidatorMock {
 		Ok(())
 	}
 
-	fn send_extrinsics<OCallApi: EnclaveOnChainOCallApi>(
+	fn check_xt_inclusion(&mut self, _relay_id: RelayId, _block: &Block) -> Result<()> {
+		Ok(())
+	}
+}
+
+impl<OCallApi: EnclaveOnChainOCallApi> ExtrinsicSender<OCallApi> for ValidatorMock {
+	fn send_extrinsics(
 		&mut self,
 		_ocall_api: &OCallApi,
 		_extrinsics: Vec<OpaqueExtrinsic>,
 	) -> Result<()> {
-		Ok(())
-	}
-
-	fn check_xt_inclusion(&mut self, _relay_id: RelayId, _block: &Block) -> Result<()> {
 		Ok(())
 	}
 }

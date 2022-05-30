@@ -18,6 +18,7 @@
 #[cfg(feature = "sgx")]
 use std::sync::SgxRwLock as RwLock;
 
+use itp_ocall_api::EnclaveOnChainOCallApi;
 #[cfg(feature = "std")]
 use std::sync::RwLock;
 
@@ -36,7 +37,7 @@ pub struct ValidatorAccessMock {
 	validator: RwLock<ValidatorMock>,
 }
 
-impl ValidatorAccess<Block> for ValidatorAccessMock {
+impl<OCallApi: EnclaveOnChainOCallApi> ValidatorAccess<Block, OCallApi> for ValidatorAccessMock {
 	type ValidatorType = ValidatorMock;
 
 	fn execute_on_validator<F, R>(&self, getter_function: F) -> Result<R>
