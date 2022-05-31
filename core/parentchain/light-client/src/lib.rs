@@ -25,6 +25,7 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 #[macro_use]
 extern crate sgx_tstd as std;
+extern crate alloc;
 
 // Re-export useful types.
 pub use finality_grandpa::BlockNumberOps;
@@ -42,13 +43,14 @@ use sp_runtime::{
 use std::vec::Vec;
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
-use crate::grandpa_light_validation::GrandpaLightValidation;
+use crate::light_validation::LightValidation;
 
 pub mod concurrent_access;
 pub mod error;
-pub mod grandpa_light_validation;
+pub mod finality;
 pub mod justification;
-pub mod parachain_light_validation;
+pub mod light_validation;
+//pub mod parachain_light_validation;
 pub mod state;
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
@@ -78,9 +80,9 @@ use crate::concurrent_access::GlobalValidatorAccessor;
 /// Global validator accessor type
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub type ValidatorAccessor<Block, OCallApi> = GlobalValidatorAccessor<
-	GrandpaLightValidation<Block, OCallApi>,
+	LightValidation<Block, OCallApi>,
 	Block,
-	crate::io::LightClientSeal<Block, GrandpaLightValidation<Block, OCallApi>>,
+	crate::io::LightClientSeal<Block, LightValidation<Block, OCallApi>>,
 	OCallApi,
 >;
 

@@ -16,9 +16,12 @@
 */
 
 use crate::{
-	error::Result, grandpa_light_validation::GrandpaLightValidation, Error, LightClientState,
-	NumberFor, Validator,
+	error::Result,
+	finality::{Finality, Grandpa, Parachain},
+	light_validation::LightValidation,
+	Error, LightClientState, NumberFor, Validator,
 };
+use alloc::sync::Arc;
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use itp_ocall_api::EnclaveOnChainOCallApi;
@@ -26,6 +29,7 @@ use itp_settings::files::LIGHT_CLIENT_DB;
 use itp_sgx_io::{seal, unseal, StaticSealedIO};
 use itp_types::light_client_init_params::LightClientInitParams;
 use log::*;
+use sgx_tstd::boxed::Box;
 use sp_runtime::traits::{Block, Header};
 use std::{fs, sgxfs::SgxFile};
 
@@ -58,31 +62,22 @@ pub fn read_or_init_validator<B: Block, OCallApi: EnclaveOnChainOCallApi>(
 ) -> Result<B::Header>
 where
 	NumberFor<B>: finality_grandpa::BlockNumberOps,
-	GrandpaLightValidation<B, OCallApi>: Decode + Encode + Debug,
+	LightValidation<B, OCallApi>: Decode + Encode + Debug,
 {
-	match params {
-		LightClientInitParams::Grandpa { .. } => {
-			if SgxFile::open(LIGHT_CLIENT_DB).is_err() {
-				info!("[Enclave] ChainRelay DB not found, creating new! {}", LIGHT_CLIENT_DB);
-				return init_validator::<B, OCallApi>(params, ocall_api)
-			}
+	if SgxFile::open(LIGHT_CLIENT_DB).is_err() {
+		info!("[Enclave] ChainRelay DB not found, creating new! {}", LIGHT_CLIENT_DB);
+		return init_validator::<B, OCallApi>(params, ocall_api)
+	}
 
-			let validator =
-				LightClientSeal::<B, GrandpaLightValidation<B, OCallApi>>::unseal_from_static_file(
-				)?;
+	let validator = LightClientSeal::<B, LightValidation<B, OCallApi>>::unseal_from_static_file()?;
 
-			let genesis = validator.genesis_hash(validator.num_relays()).unwrap();
-			if genesis == params.get_genesis_header().hash() {
-				info!("Found already initialized light client with Genesis Hash: {:?}", genesis);
-				info!("light client state: {:?}", validator);
-				Ok(validator.latest_finalized_header(validator.num_relays()).unwrap())
-			} else {
-				init_validator::<B, OCallApi>(params, ocall_api)
-			}
-		},
-		LightClientInitParams::Parachain { .. } => {
-			unimplemented!("hahahaha")
-		},
+	let genesis = validator.genesis_hash(validator.num_relays()).unwrap();
+	if genesis == params.get_genesis_header().hash() {
+		info!("Found already initialized light client with Genesis Hash: {:?}", genesis);
+		info!("light client state: {:?}", validator);
+		Ok(validator.latest_finalized_header(validator.num_relays()).unwrap())
+	} else {
+		init_validator::<B, OCallApi>(params, ocall_api)
 	}
 }
 
@@ -92,21 +87,22 @@ fn init_validator<B: Block, OCallApi: EnclaveOnChainOCallApi>(
 ) -> Result<B::Header>
 where
 	NumberFor<B>: finality_grandpa::BlockNumberOps,
-	GrandpaLightValidation<B, OCallApi>: Decode + Encode + Debug,
+	LightValidation<B, OCallApi>: Decode + Encode + Debug,
 {
-	match params {
-		LightClientInitParams::Grandpa { authorities, genesis_header, authority_proof } => {
-			let mut validator = GrandpaLightValidation::<B, OCallApi>::new(ocall_api);
+	let genesis_header = params.get_genesis_header().clone();
+	let authorities = params.get_authorities().unwrap().clone();
+	let authority_proof = params.get_authority_proof().unwrap().clone();
+	let finality: Arc<Box<dyn Finality<B>>> = match params {
+		LightClientInitParams::Grandpa { authorities, authority_proof, .. } =>
+			Arc::new(Box::new(Grandpa { authorities, authority_proof })),
+		LightClientInitParams::Parachain { .. } => Arc::new(Box::new(Parachain {})),
+	};
 
-			validator.initialize_relay(genesis_header, authorities, authority_proof)?;
-			LightClientSeal::<B, GrandpaLightValidation<B, OCallApi>>::seal_to_static_file(
-				validator.clone(),
-			)?;
+	let mut validator = LightValidation::<B, OCallApi>::new(ocall_api, finality);
 
-			return Ok(validator.latest_finalized_header(validator.num_relays()).unwrap())
-		},
-		LightClientInitParams::Parachain { .. } => {
-			unimplemented!("hahahaha")
-		},
-	}
+	// TODO.
+	validator.initialize_relay(genesis_header, authorities, authority_proof)?;
+	LightClientSeal::<B, LightValidation<B, OCallApi>>::seal_to_static_file(validator.clone())?;
+
+	return Ok(validator.latest_finalized_header(validator.num_relays()).unwrap())
 }

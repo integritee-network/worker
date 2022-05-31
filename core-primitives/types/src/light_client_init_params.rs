@@ -34,4 +34,18 @@ impl<Header> LightClientInitParams<Header> {
 			LightClientInitParams::Parachain { genesis_header } => genesis_header,
 		}
 	}
+
+	pub fn get_authorities(&self) -> Option<&AuthorityList> {
+		match self {
+			LightClientInitParams::Grandpa { authorities, .. } => Some(authorities),
+			LightClientInitParams::Parachain { .. } => None,
+		}
+	}
+
+	pub fn get_authority_proof(&self) -> Option<&Vec<Vec<u8>>> {
+		match self {
+			LightClientInitParams::Grandpa { authority_proof, .. } => Some(authority_proof),
+			LightClientInitParams::Parachain { .. } => None,
+		}
+	}
 }
