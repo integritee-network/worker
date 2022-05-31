@@ -34,6 +34,7 @@ pub mod sgx_reexport_prelude {
 pub mod buffer;
 pub mod error;
 pub mod hex;
+pub mod stringify;
 
 // Public re-exports.
 pub use self::{

@@ -21,7 +21,7 @@ use crate::test_genesis::test_genesis_setup;
 use crate::{
 	helpers::{
 		account_data, account_nonce, enclave_self_account, ensure_root, ensure_self,
-		get_account_info, increment_nonce, root, validate_nonce,
+		get_account_info, increment_nonce, root, sign_with_enclave_account, validate_nonce,
 	},
 	AccountData, AccountId, Getter, Index, ParentchainHeader, PublicGetter, ShardIdentifier, State,
 	StateTypeDiff, Stf, StfError, StfResult, TrustedCall, TrustedCallSigned, TrustedGetter,
@@ -31,20 +31,25 @@ use codec::Encode;
 use itp_settings::node::{TEEREX_MODULE, UNSHIELD_FUNDS};
 use itp_storage::storage_value_key;
 use itp_types::OpaqueCall;
+use itp_utils::stringify::account_id_to_string;
 use its_primitives::types::{BlockHash, BlockNumber as SidechainBlockNumber, Timestamp};
 use its_state::SidechainSystemExt;
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
 use sgx_runtime::Runtime;
 use sgx_tstd as std;
+use sp_core::{
+	ed25519::{Pair as Ed25519Pair, Signature},
+	Pair,
+};
 use sp_io::hashing::blake2_256;
 use sp_runtime::MultiAddress;
 use std::{prelude::v1::*, vec};
 use support::traits::UnfilteredDispatchable;
 
 impl Stf {
-	pub fn init_state(enclave_account: AccountId) -> State {
-		debug!("initializing stf state");
+	pub fn init_state() -> State {
+		debug!("initializing stf state, account id {}", account_id_to_string(&enclave_account));
 		let mut ext = State::new();
 
 		ext.execute_with(|| {
@@ -69,9 +74,10 @@ impl Stf {
 		});
 
 		ext.execute_with(|| {
+			let (enclave_key_pair, _, _) = Ed25519Pair::generate_with_phrase(None);
 			sp_io::storage::set(
 				&storage_value_key("Sudo", ENCLAVE_ACCOUNT_KEY),
-				&enclave_account.encode(),
+				&enclave_key_pair.encode(),
 			);
 		});
 
@@ -287,6 +293,13 @@ impl Stf {
 
 	pub fn get_enclave_account(ext: &mut impl SgxExternalitiesTrait) -> AccountId {
 		ext.execute_with(|| enclave_self_account())
+	}
+
+	pub fn sign_with_enclave_account(
+		ext: &mut impl SgxExternalitiesTrait,
+		payload: &[u8],
+	) -> Signature {
+		ext.execute_with(|| sign_with_enclave_account(payload))
 	}
 
 	pub fn account_nonce(ext: &mut impl SgxExternalitiesTrait, account: &AccountId) -> Index {

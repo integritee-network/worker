@@ -33,6 +33,7 @@ use ita_stf::{
 		account_key_hash, get_parentchain_blockhash, get_parentchain_number,
 		get_parentchain_parenthash,
 	},
+	stf_sgx_tests,
 	test_genesis::endowed_account as funded_pair,
 	AccountInfo, ShardIdentifier, State, StatePayload, StateTypeDiff, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetter, TrustedOperation,
@@ -95,6 +96,7 @@ type TestTopPoolOperationHandler =
 pub extern "C" fn test_main_entrance() -> size_t {
 	rsgx_unit_tests!(
 		attestation::tests::decode_spid_works,
+		stf_sgx_tests::enclave_account_signing_works,
 		itp_stf_state_handler::test::sgx_tests::test_write_and_load_state_works,
 		itp_stf_state_handler::test::sgx_tests::test_sgx_state_decode_encode_works,
 		itp_stf_state_handler::test::sgx_tests::test_encrypt_decrypt_state_type_works,
@@ -117,6 +119,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		test_call_set_update_parentchain_block,
 		test_invalid_nonce_call_is_not_executed,
 		test_non_root_shielding_call_is_not_executed,
+		test_shielding_call_with_enclave_self_is_executed,
 		rpc::worker_api_direct::tests::test_given_io_handler_methods_then_retrieve_all_names_as_string,
 		handle_state_mock::tests::initialized_shards_list_is_empty,
 		handle_state_mock::tests::shard_exists_after_inserting,
@@ -535,6 +538,40 @@ fn test_non_root_shielding_call_is_not_executed() {
 	assert!(!executed_batch.executed_operations[0].is_success());
 }
 
+fn test_shielding_call_with_enclave_self_is_executed() {
+	let (top_pool_author, _state, shard, mrenclave, shielding_key, state_handler) = test_setup();
+	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
+	let top_pool_operation_handler = TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(
+		top_pool_author.clone(),
+		stf_executor.clone(),
+	);
+
+	let sender = funded_pair();
+	let sender_account: AccountId = sender.public().into();
+	let enclave_signer = enclave_signer();
+
+	let signed_call =
+		TrustedCall::balance_shield(enclave_signer.public().into(), sender_account.clone(), 1000)
+			.sign(&enclave_signer.into(), 0, &mrenclave, &shard);
+	let trusted_operation = TrustedOperation::indirect_call(signed_call);
+
+	submit_operation_to_top_pool(
+		top_pool_author.as_ref(),
+		&trusted_operation,
+		&shielding_key,
+		shard,
+	)
+	.unwrap();
+
+	// when
+	let executed_batch =
+		execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_operation_handler);
+
+	// then
+	assert_eq!(1, executed_batch.executed_operations.len());
+	assert!(executed_batch.executed_operations[0].is_success());
+}
+
 fn execute_trusted_calls(
 	shard: &ShardIdentifier,
 	stf_executor: &TestStfExecutor,
@@ -590,7 +627,7 @@ pub fn test_setup() -> (
 	Arc<HandleStateMock>,
 ) {
 	let state_handler = Arc::new(HandleStateMock::default());
-	let (state, shard) = init_state(state_handler.as_ref(), AccountId::new([0u8; 32]));
+	let (state, shard) = init_state(state_handler.as_ref(), enclave_signer().public().into());
 	let top_pool = test_top_pool();
 	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
 
@@ -620,6 +657,10 @@ pub fn unfunded_public() -> spEd25519::Public {
 
 pub fn test_account() -> spEd25519::Pair {
 	spEd25519::Pair::from_seed(b"42315678901234567890123456789012")
+}
+
+pub fn enclave_signer() -> spEd25519::Pair {
+	spEd25519::Pair::from_seed(b"43166698901234567890123456789012")
 }
 
 /// transforms `call` into `TrustedOperation::direct(call)`
