@@ -50,6 +50,8 @@ pub mod error;
 pub mod finality;
 pub mod justification;
 pub mod light_validation;
+pub mod light_validation_state;
+//TODO : delete
 //pub mod parachain_light_validation;
 pub mod state;
 

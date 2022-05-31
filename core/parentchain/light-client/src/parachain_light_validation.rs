@@ -15,7 +15,8 @@
 
 */
 
-//! Parachain Light-client validation crate that verifies parentchain blocks.
+//! Parachain Light-client validation crate that verifies parentchain blocks.:
+// TODO delete
 
 use crate::{
 	error::Error,

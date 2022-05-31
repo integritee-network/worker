@@ -31,6 +31,7 @@ use itc_parentchain::{
 	block_import_dispatcher::triggered_dispatcher::{
 		PeekParentchainBlockImportQueue, TriggerParentchainBlockImport,
 	},
+	itc_parentchain_light_client::ExtrinsicSender,
 	light_client::{
 		concurrent_access::ValidatorAccess, BlockNumberOps, LightClientState, NumberFor,
 		ValidatorAccessor,
@@ -140,7 +141,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 
 	let parentchain_import_dispatcher = GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get()?;
 
-	let validator_access = ValidatorAccessor::<Block>::default();
+	let validator_access = ValidatorAccessor::<Block, OcallApi>::default();
 
 	// This gets the latest imported block. We accept that all of AURA, up until the block production
 	// itself, will  operate on a parentchain block that is potentially outdated by one block

@@ -21,45 +21,54 @@ use crate::{
 	error::Error,
 	finality::Finality,
 	grandpa_log,
-	justification::GrandpaJustification,
+	light_validation_state::LightValidationState,
 	state::{RelayState, ScheduledChangeAtBlock},
 	AuthorityList, AuthorityListRef, ExtrinsicSender, HashFor, HashingFor, LightClientState,
 	NumberFor, RelayId, Validator,
 };
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, Input, Output};
 use core::iter::Iterator;
-use finality_grandpa::voter_set::VoterSet;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_storage::{Error as StorageError, StorageProof, StorageProofChecker};
 use log::*;
 use sgx_tstd::{boxed::Box, sync::Arc};
+use sp_finality_grandpa::ScheduledChange;
 pub use sp_finality_grandpa::SetId;
-use sp_finality_grandpa::{AuthorityId, ScheduledChange};
 use sp_runtime::{
 	generic::{Digest, SignedBlock},
 	traits::{Block as ParentchainBlockTrait, Hash as HashTrait, Header as HeaderTrait},
-	Justification, Justifications, OpaqueExtrinsic,
+	Justifications, OpaqueExtrinsic,
 };
-use std::{collections::BTreeMap, fmt, vec::Vec};
+use std::{fmt, vec::Vec};
 
-#[derive(Encode, Decode, Clone)] //Default
+#[derive(Clone)]
 pub struct LightValidation<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi> {
-	num_relays: RelayId,
-	tracked_relays: BTreeMap<RelayId, RelayState<Block>>,
+	light_validation_state: LightValidationState<Block>,
 	ocall_api: OcallApi,
 	finality: Arc<Box<dyn Finality<Block>>>,
+}
+
+impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi> Decode
+	for LightValidation<Block, OcallApi>
+{
+	fn decode<I: Input>(input: &mut I) -> Result<Self, codec::Error> {
+		todo!()
+	}
+}
+
+impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi> Encode
+	for LightValidation<Block, OcallApi>
+{
+	fn encode(&self) -> Vec<u8> {
+		todo!()
+	}
 }
 
 impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi>
 	LightValidation<Block, OcallApi>
 {
 	pub fn new(ocall_api: OcallApi, finality: Arc<Box<dyn Finality<Block>>>) -> Self {
-		Self {
-			num_relays: Default::default(),
-			tracked_relays: Default::default(),
-			ocall_api,
-			finality,
-		}
+		Self { light_validation_state: LightValidationState::new(), ocall_api, finality }
 	}
 
 	fn apply_validator_set_change(relay: &mut RelayState<Block>, header: &Block::Header) {
@@ -106,27 +115,6 @@ impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi>
 		} else {
 			Err(Error::ValidatorSetMismatch)
 		}
-	}
-
-	fn verify_grandpa_proof(
-		justification: Justification,
-		hash: Block::Hash,
-		number: NumberFor<Block>,
-		set_id: u64,
-		voters: &VoterSet<AuthorityId>,
-	) -> Result<(), Error>
-	where
-		NumberFor<Block>: finality_grandpa::BlockNumberOps,
-	{
-		// We don't really care about the justification, as long as it's valid
-		let _ = GrandpaJustification::<Block>::decode_and_verify_finalizes(
-			&justification.1,
-			(hash, number),
-			set_id,
-			voters,
-		)?;
-
-		Ok(())
 	}
 
 	// A naive way to check whether a `child` header is a descendant
@@ -178,10 +166,10 @@ where
 
 		let relay_info = RelayState::new(block_header, validator_set);
 
-		let new_relay_id = self.num_relays + 1;
-		self.tracked_relays.insert(new_relay_id, relay_info);
+		let new_relay_id = self.num_relays() + 1;
+		self.light_validation_state.tracked_relays.insert(new_relay_id, relay_info);
 
-		self.num_relays = new_relay_id;
+		self.light_validation_state.num_relays = new_relay_id;
 
 		Ok(new_relay_id)
 	}
@@ -195,7 +183,11 @@ where
 		validator_set_id: SetId,
 		justifications: Option<Justifications>,
 	) -> Result<(), Error> {
-		let mut relay = self.tracked_relays.get_mut(&relay_id).ok_or(Error::NoSuchRelayExists)?;
+		let mut relay = self
+			.light_validation_state
+			.tracked_relays
+			.get_mut(&relay_id)
+			.ok_or(Error::NoSuchRelayExists)?;
 
 		// Check that the new header is a descendant of the old header
 		let last_header = &relay.last_finalized_block_header;
@@ -233,7 +225,11 @@ where
 		let header = signed_block.block.header();
 		let justifications = signed_block.justifications.clone();
 
-		let relay = self.tracked_relays.get_mut(&relay_id).ok_or(Error::NoSuchRelayExists)?;
+		let relay = self
+			.light_validation_state
+			.tracked_relays
+			.get_mut(&relay_id)
+			.ok_or(Error::NoSuchRelayExists)?;
 
 		if relay.last_finalized_block_header.hash() != *header.parent_hash() {
 			return Err(Error::HeaderAncestryMismatch)
@@ -259,13 +255,21 @@ where
 		relay_id: RelayId,
 		extrinsic: OpaqueExtrinsic,
 	) -> Result<(), Error> {
-		let relay = self.tracked_relays.get_mut(&relay_id).ok_or(Error::NoSuchRelayExists)?;
+		let relay = self
+			.light_validation_state
+			.tracked_relays
+			.get_mut(&relay_id)
+			.ok_or(Error::NoSuchRelayExists)?;
 		relay.verify_tx_inclusion.push(extrinsic);
 		Ok(())
 	}
 
 	fn check_xt_inclusion(&mut self, relay_id: RelayId, block: &Block) -> Result<(), Error> {
-		let relay = self.tracked_relays.get_mut(&relay_id).ok_or(Error::NoSuchRelayExists)?;
+		let relay = self
+			.light_validation_state
+			.tracked_relays
+			.get_mut(&relay_id)
+			.ok_or(Error::NoSuchRelayExists)?;
 
 		if relay.verify_tx_inclusion.is_empty() {
 			return Ok(())
@@ -318,17 +322,29 @@ impl<Block: ParentchainBlockTrait, OCallApi: EnclaveOnChainOCallApi> LightClient
 	for LightValidation<Block, OCallApi>
 {
 	fn num_xt_to_be_included(&mut self, relay_id: RelayId) -> Result<usize, Error> {
-		let relay = self.tracked_relays.get(&relay_id).ok_or(Error::NoSuchRelayExists)?;
+		let relay = self
+			.light_validation_state
+			.tracked_relays
+			.get(&relay_id)
+			.ok_or(Error::NoSuchRelayExists)?;
 		Ok(relay.verify_tx_inclusion.len())
 	}
 
 	fn genesis_hash(&self, relay_id: RelayId) -> Result<HashFor<Block>, Error> {
-		let relay = self.tracked_relays.get(&relay_id).ok_or(Error::NoSuchRelayExists)?;
+		let relay = self
+			.light_validation_state
+			.tracked_relays
+			.get(&relay_id)
+			.ok_or(Error::NoSuchRelayExists)?;
 		Ok(relay.header_hashes[0])
 	}
 
 	fn latest_finalized_header(&self, relay_id: RelayId) -> Result<Block::Header, Error> {
-		let relay = self.tracked_relays.get(&relay_id).ok_or(Error::NoSuchRelayExists)?;
+		let relay = self
+			.light_validation_state
+			.tracked_relays
+			.get(&relay_id)
+			.ok_or(Error::NoSuchRelayExists)?;
 		Ok(relay.last_finalized_block_header.clone())
 	}
 
@@ -336,12 +352,16 @@ impl<Block: ParentchainBlockTrait, OCallApi: EnclaveOnChainOCallApi> LightClient
 		&self,
 		relay_id: RelayId,
 	) -> Result<Block::Header, Error> {
-		let relay = self.tracked_relays.get(&relay_id).ok_or(Error::NoSuchRelayExists)?;
+		let relay = self
+			.light_validation_state
+			.tracked_relays
+			.get(&relay_id)
+			.ok_or(Error::NoSuchRelayExists)?;
 		Ok(relay.penultimate_finalized_block_header.clone())
 	}
 
 	fn num_relays(&self) -> RelayId {
-		self.num_relays
+		self.light_validation_state.num_relays
 	}
 }
 
@@ -352,7 +372,7 @@ impl<Block: ParentchainBlockTrait, OCallApi: EnclaveOnChainOCallApi> fmt::Debug
 		write!(
 			f,
 			"LightValidation {{ num_relays: {}, tracked_relays: {:?} }}",
-			self.num_relays, self.tracked_relays
+			self.light_validation_state.num_relays, self.light_validation_state.tracked_relays
 		)
 	}
 }
