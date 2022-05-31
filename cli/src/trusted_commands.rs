@@ -40,12 +40,7 @@ use rayon::prelude::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_application_crypto::{ed25519, sr25519};
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
-use std::{
-	fs::File,
-	io::{BufWriter, Write},
-	sync::mpsc::Receiver,
-	time::Instant,
-};
+use std::{fs::OpenOptions, io::Write, sync::mpsc::Receiver, time::Instant};
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
 
 macro_rules! get_layer_two_nonce {
@@ -254,7 +249,7 @@ fn transfer_benchmark(
 		let top: TrustedOperation = TrustedCall::balance_transfer(
 			alice.public().into(),
 			client.account1.public().into(),
-			100000,
+			1000000,
 		)
 		.sign(&KeyPair::Sr25519(alice.clone()), nonce_alice, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
@@ -270,7 +265,7 @@ fn transfer_benchmark(
 		let top2: TrustedOperation = TrustedCall::balance_transfer(
 			alice.public().into(),
 			client.account2.public().into(),
-			100000,
+			1000000,
 		)
 		.sign(&KeyPair::Sr25519(alice.clone()), nonce_alice + 1, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
@@ -320,7 +315,7 @@ fn transfer_benchmark(
 				.into_trusted_operation(trusted_args.direct);
 
 				let start_time = Instant::now();
-				let results = run_transaction(trusted_args, shielding_pubkey, top, true, &client);
+				let results = run_transaction(trusted_args, shielding_pubkey, top, false, &client);
 				for (key, value) in results {
 					output.push(format!(
 						"{}: {}",
@@ -343,7 +338,8 @@ fn transfer_benchmark(
 				.into_trusted_operation(trusted_args.direct);
 
 				let start_time2 = Instant::now();
-				let results2 = run_transaction(trusted_args, shielding_pubkey, top2, true, &client);
+				let results2 =
+					run_transaction(trusted_args, shielding_pubkey, top2, false, &client);
 				for (key, value) in results2 {
 					output.push(format!(
 						"{}: {}",
@@ -364,27 +360,35 @@ fn transfer_benchmark(
 	let summary_string = format!(
 		"Finished benchmark with {} clients and {} transactions in {} ms",
 		number_clients,
-		number_transactions,
+		2 * number_transactions,
 		overall_start.elapsed().as_millis()
 	);
 	println!("{}", summary_string);
 
 	let mut hist = Histogram::<u64>::new(1).unwrap();
-	println!("Size of outputs: {}", outputs.len());
 	for output in outputs {
 		for t in output.1 {
 			hist += t as u64;
 		}
 	}
 
-	println!("Samples recorded: {}", hist.len());
-	let file = File::create(format!(
-		"benchmark_{:03}.txt",
-		number_clients //chrono::offset::Local::now().format("%Y-%m-%d_%H_%M")
-	))
-	.expect("unable to create file");
-	let mut file = BufWriter::new(file);
-	writeln!(file, "{}", summary_string).unwrap();
+	let mut file = OpenOptions::new()
+		.write(true)
+		.append(true)
+		.create(true)
+		.open(format!("benchmark_summary_{}.txt", chrono::offset::Local::now().format("%Y-%m-%d")))
+		.expect("unable to create file");
+
+	writeln!(
+		file,
+		"{};{};{};{};",
+		number_clients,
+		2 * number_transactions,
+		overall_start.elapsed().as_millis(),
+		hist.value_at_quantile(0.95)
+	)
+	.unwrap();
+
 	for i in (5..=100).step_by(5) {
 		let text = format!(
 			"{} percent are done within {} ms",
@@ -392,7 +396,7 @@ fn transfer_benchmark(
 			hist.value_at_quantile(i as f64 / 100.0)
 		);
 		println!("{}", text);
-		writeln!(file, "{}", text).expect("cannot write to file");
+		//writeln!(file, "{}", text).expect("cannot write to file");
 	}
 	for v in hist.iter_recorded() {
 		let text = format!(
