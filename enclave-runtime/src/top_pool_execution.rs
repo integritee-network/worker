@@ -299,8 +299,5 @@ where
 	debug!("Sending sidechain block(s) confirmation extrinsic.. ");
 	validator_access.execute_mut_on_validator(|v| v.send_extrinsics(&ocall_api, xts))?;
 
-	ocall_api
-		.send_to_parentchain(extrinsics)
-		.map_err(|e| Error::Other(format!("Failed to send extrinsics: {}", e).into()))
 	Ok(())
 }

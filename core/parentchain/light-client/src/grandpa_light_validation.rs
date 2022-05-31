@@ -42,7 +42,8 @@ use std::{collections::BTreeMap, fmt, vec::Vec};
 
 #[derive(Encode, Decode, Clone, Default)]
 pub struct GrandpaLightValidation<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi> {
-	relay_state: RelayState<Block>,
+	num_relays: RelayId,
+	tracked_relays: BTreeMap<RelayId, RelayState<Block>>,
 	ocall_api: OcallApi,
 }
 
@@ -287,12 +288,6 @@ where
 		Ok(())
 	}
 
-	fn submit_xts(&mut self, extrinsics: Vec<OpaqueExtrinsic>) -> Result<(), Error> {
-		for xt in extrinsics.into_iter() {
-			self.submit_xt_to_be_included(self.num_relays(), xt)?;
-		}
-	}
-
 	fn check_xt_inclusion(&mut self, relay_id: RelayId, block: &Block) -> Result<(), Error> {
 		let relay = self.tracked_relays.get_mut(&relay_id).ok_or(Error::NoSuchRelayExists)?;
 
@@ -329,13 +324,17 @@ where
 	NumberFor<Block>: finality_grandpa::BlockNumberOps,
 {
 	fn send_extrinsics(
-		// submit_xt_to_be
 		&mut self,
+		ocall_api: &OCallApi,
 		extrinsics: Vec<OpaqueExtrinsic>,
 	) -> Result<(), Error> {
 		for xt in extrinsics.iter() {
 			self.submit_xt_to_be_included(self.num_relays(), xt.clone()).unwrap();
 		}
+
+		ocall_api
+			.send_to_parentchain(extrinsics)
+			.map_err(|e| Error::Other(format!("Failed to send extrinsics: {}", e).into()))
 	}
 }
 
