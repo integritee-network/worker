@@ -138,7 +138,9 @@ pub enum TrustedCommands {
 		#[clap(default_value_t = 10)]
 		number_clients: u32,
 		#[clap(default_value_t = 30)]
-		number_transactions: u32,
+		number_iterations: u32,
+		#[clap(short, long)]
+		wait_for_confirmation: bool,
 	},
 }
 
@@ -153,8 +155,14 @@ pub fn match_trusted_commands(cli: &Cli, trusted_args: &TrustedArgs) {
 		TrustedCommands::Balance { account } => balance(cli, trusted_args, account),
 		TrustedCommands::UnshieldFunds { from, to, amount } =>
 			unshield_funds(cli, trusted_args, from, to, amount),
-		TrustedCommands::Benchmark { number_clients, number_transactions } =>
-			transfer_benchmark(cli, trusted_args, *number_clients, *number_transactions),
+		TrustedCommands::Benchmark { number_clients, number_iterations, wait_for_confirmation } =>
+			transfer_benchmark(
+				cli,
+				trusted_args,
+				*number_clients,
+				*number_iterations,
+				*wait_for_confirmation,
+			),
 	}
 }
 
@@ -212,7 +220,8 @@ fn transfer_benchmark(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
 	number_clients: u32,
-	number_transactions: u32,
+	number_iterations: u32,
+	wait_for_confirmation: bool,
 ) {
 	let alice = get_pair_from_str(trusted_args, "//Alice");
 
@@ -301,7 +310,7 @@ fn transfer_benchmark(
 			let mut output: Vec<String> = Vec::new();
 			let mut in_sidechain_block_timestamps = Vec::new();
 
-			for nonce in 0..number_transactions {
+			for nonce in 0..number_iterations {
 				let number_fd = proc_info.fd_count().unwrap();
 				let threads = proc_info.status().unwrap().threads;
 				println!("Iteration: {}, #fd: {}, #threads: {}", nonce, number_fd, threads);
@@ -315,7 +324,13 @@ fn transfer_benchmark(
 				.into_trusted_operation(trusted_args.direct);
 
 				let start_time = Instant::now();
-				let results = run_transaction(trusted_args, shielding_pubkey, top, false, &client);
+				let results = run_transaction(
+					trusted_args,
+					shielding_pubkey,
+					top,
+					wait_for_confirmation,
+					&client,
+				);
 				for (key, value) in results {
 					output.push(format!(
 						"{}: {}",
@@ -338,8 +353,13 @@ fn transfer_benchmark(
 				.into_trusted_operation(trusted_args.direct);
 
 				let start_time2 = Instant::now();
-				let results2 =
-					run_transaction(trusted_args, shielding_pubkey, top2, false, &client);
+				let results2 = run_transaction(
+					trusted_args,
+					shielding_pubkey,
+					top2,
+					wait_for_confirmation,
+					&client,
+				);
 				for (key, value) in results2 {
 					output.push(format!(
 						"{}: {}",
@@ -360,7 +380,7 @@ fn transfer_benchmark(
 	let summary_string = format!(
 		"Finished benchmark with {} clients and {} transactions in {} ms",
 		number_clients,
-		2 * number_transactions,
+		2 * number_iterations,
 		overall_start.elapsed().as_millis()
 	);
 	println!("{}", summary_string);
@@ -383,7 +403,7 @@ fn transfer_benchmark(
 		file,
 		"{};{};{};{};",
 		number_clients,
-		2 * number_transactions,
+		2 * number_iterations,
 		overall_start.elapsed().as_millis(),
 		hist.value_at_quantile(0.95)
 	)
