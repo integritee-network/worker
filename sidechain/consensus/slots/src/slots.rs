@@ -62,7 +62,7 @@ pub struct SlotInfo<ParentchainBlock: ParentchainBlockTrait> {
 impl<ParentchainBlock: ParentchainBlockTrait> SlotInfo<ParentchainBlock> {
 	/// Create a new [`SlotInfo`].
 	///
-	/// `ends_at` is calculated using `timestamp` and `duration`.
+	/// `ends_at` is calculated using `now` and `time_until_next_slot`.
 	pub fn new(
 		slot: Slot,
 		timestamp: Duration,
@@ -190,9 +190,10 @@ mod tests {
 	};
 	use sp_keyring::ed25519::Keyring;
 	use sp_runtime::traits::Header as HeaderT;
-	use std::{fmt::Debug, time::SystemTime};
+	use std::{fmt::Debug, thread, time::SystemTime};
 
 	const SLOT_DURATION: Duration = Duration::from_millis(1000);
+	const ALLOWED_THRESHOLD: Duration = Duration::from_millis(1);
 
 	struct LastSlotSealMock;
 
@@ -270,6 +271,27 @@ mod tests {
 	fn time_until_next_slot_returns_default_on_nano_duration() {
 		// prevent panic: https://github.com/integritee-network/worker/issues/439
 		assert_eq!(time_until_next_slot(Duration::from_nanos(999)), Default::default())
+	}
+
+	#[test]
+	fn slot_info_ends_at_does_not_change_after_second_calculation() {
+		let timestamp = duration_now();
+		let pc_header = default_header();
+		let slot: Slot = 1000.into();
+
+		let slot_one: SlotInfo<ParentchainBlock> =
+			SlotInfo::new(slot, timestamp, SLOT_DURATION, pc_header.clone());
+		thread::sleep(Duration::from_millis(200));
+		let slot_two: SlotInfo<ParentchainBlock> =
+			SlotInfo::new(slot, timestamp, SLOT_DURATION, pc_header);
+
+		let difference_of_ends_at = if slot_one.ends_at >= slot_two.ends_at {
+			slot_one.ends_at - slot_two.ends_at
+		} else {
+			slot_two.ends_at - slot_one.ends_at
+		};
+
+		assert!(difference_of_ends_at < ALLOWED_THRESHOLD);
 	}
 
 	#[test]
