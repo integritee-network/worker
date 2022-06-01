@@ -210,8 +210,9 @@ fn transfer(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, arg_to: &str,
 }
 
 struct BenchmarkClient {
-	account1: sr25519_core::Pair,
-	account2: sr25519_core::Pair,
+	account: sr25519_core::Pair,
+	//account2: sr25519_core::Pair,
+	current_balance: u128,
 	client_api: DirectClient,
 	receiver: Receiver<String>,
 }
@@ -223,6 +224,7 @@ fn transfer_benchmark(
 	number_iterations: u32,
 	wait_for_confirmation: bool,
 ) {
+	let store = LocalKeystore::open(get_keystore_path(trusted_args), None).unwrap();
 	let alice = get_pair_from_str(trusted_args, "//Alice");
 
 	let (mrenclave, shard) = get_identifiers(trusted_args);
@@ -241,24 +243,22 @@ fn transfer_benchmark(
 
 	let num_threads = number_clients;
 	for i in 0..num_threads {
-		let nonce_alice = i * 2 + nonce_alice_start;
-		println!("Initialization {}", i);
+		let nonce_alice = i + nonce_alice_start;
+		println!("Initializing account {}", i);
 
-		// create new accounts to use
-		let store = LocalKeystore::open(get_keystore_path(trusted_args), None).unwrap();
-		let a1: sr25519::AppPair = store.generate().unwrap();
-		let a2: sr25519::AppPair = store.generate().unwrap();
-		let account1 = get_pair_from_str(trusted_args, a1.public().to_string().as_str());
-		let account2 = get_pair_from_str(trusted_args, a2.public().to_string().as_str());
+		// create new account to use
+		let a: sr25519::AppPair = store.generate().unwrap();
+		let account = get_pair_from_str(trusted_args, a.public().to_string().as_str());
 		let (client_api, receiver) = create_connection(&cli);
-		let client = BenchmarkClient { account1, account2, client_api, receiver };
-		drop(store);
+		let initial_balance = 10000000;
+		let client =
+			BenchmarkClient { account, current_balance: initial_balance, client_api, receiver };
 
 		// transfer amount from Alice to new accounts
 		let top: TrustedOperation = TrustedCall::balance_transfer(
 			alice.public().into(),
-			client.account1.public().into(),
-			1000000,
+			client.account.public().into(),
+			initial_balance,
 		)
 		.sign(&KeyPair::Sr25519(alice.clone()), nonce_alice, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
@@ -266,30 +266,10 @@ fn transfer_benchmark(
 		let results = run_transaction(trusted_args, shielding_pubkey, top, true, &client);
 
 		if results.iter().any(|r| r.0 == "InSidechainBlock") {
-			println!("initialization of new account1 successful");
+			println!("initialization of new account1 successful: {}", client.account.public());
 		} else {
 			println!("initialization of new account1 NOT successful");
 		}
-
-		let top2: TrustedOperation = TrustedCall::balance_transfer(
-			alice.public().into(),
-			client.account2.public().into(),
-			1000000,
-		)
-		.sign(&KeyPair::Sr25519(alice.clone()), nonce_alice + 1, &mrenclave, &shard)
-		.into_trusted_operation(trusted_args.direct);
-
-		let results2 = run_transaction(trusted_args, shielding_pubkey, top2, true, &client);
-
-		if results2.iter().any(|r| r.0 == "InSidechainBlock") {
-			println!("initialization of new account2 successful");
-		} else {
-			println!("initialization of new account2 NOT successful");
-		}
-
-		println!("account1 is {}", client.account1.public());
-		println!("account2 is {}", client.account2.public());
-
 		accounts.push(client);
 	}
 
@@ -306,21 +286,33 @@ fn transfer_benchmark(
 
 	let outputs: Vec<(Vec<String>, Vec<u128>)> = accounts
 		.into_par_iter()
-		.map(|client| {
+		.map(move |mut client| {
 			let mut output: Vec<String> = Vec::new();
 			let mut in_sidechain_block_timestamps = Vec::new();
 
-			for nonce in 0..number_iterations {
+			for i in 0..number_iterations {
 				let number_fd = proc_info.fd_count().unwrap();
 				let threads = proc_info.status().unwrap().threads;
-				println!("Iteration: {}, #fd: {}, #threads: {}", nonce, number_fd, threads);
-				//account1 -> account2
+				println!("Iteration: {}, #fd: {}, #threads: {}", i, number_fd, threads);
+				let nonce = 0;
+
+				let account_keys: sr25519::AppPair = store.generate().unwrap();
+				let new_account =
+					get_pair_from_str(trusted_args, account_keys.public().to_string().as_str());
+
+				println!("  Transfer amount: {}", client.current_balance);
+				println!("  From: {:?}", client.account.public());
+				println!("  To:   {:?}", new_account.public());
+
+				let leftover_balance = 1000;
+
+				//account -> new_account
 				let top: TrustedOperation = TrustedCall::balance_transfer(
-					client.account1.public().into(),
-					client.account2.public().into(),
-					50000,
+					client.account.public().into(),
+					new_account.public().into(),
+					client.current_balance - leftover_balance,
 				)
-				.sign(&KeyPair::Sr25519(client.account1.clone()), nonce, &mrenclave, &shard)
+				.sign(&KeyPair::Sr25519(client.account.clone()), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct);
 
 				let start_time = Instant::now();
@@ -331,6 +323,10 @@ fn transfer_benchmark(
 					wait_for_confirmation,
 					&client,
 				);
+
+				client.current_balance = client.current_balance - leftover_balance;
+				client.account = new_account;
+
 				for (key, value) in results {
 					output.push(format!(
 						"{}: {}",
@@ -340,35 +336,6 @@ fn transfer_benchmark(
 					if key == "InSidechainBlock" {
 						in_sidechain_block_timestamps
 							.push(value.duration_since(start_time).as_millis());
-					}
-				}
-
-				//account2 -> account1
-				let top2: TrustedOperation = TrustedCall::balance_transfer(
-					client.account2.public().into(),
-					client.account1.public().into(),
-					50000,
-				)
-				.sign(&KeyPair::Sr25519(client.account2.clone()), nonce, &mrenclave, &shard)
-				.into_trusted_operation(trusted_args.direct);
-
-				let start_time2 = Instant::now();
-				let results2 = run_transaction(
-					trusted_args,
-					shielding_pubkey,
-					top2,
-					wait_for_confirmation,
-					&client,
-				);
-				for (key, value) in results2 {
-					output.push(format!(
-						"{}: {}",
-						key,
-						value.duration_since(start_time2).as_millis()
-					));
-					if key == "InSidechainBlock" {
-						in_sidechain_block_timestamps
-							.push(value.duration_since(start_time2).as_millis());
 					}
 				}
 			}
@@ -403,7 +370,7 @@ fn transfer_benchmark(
 		file,
 		"{};{};{};{};",
 		number_clients,
-		2 * number_iterations,
+		number_iterations,
 		overall_start.elapsed().as_millis(),
 		hist.value_at_quantile(0.95)
 	)
