@@ -285,13 +285,10 @@ mod tests {
 		let slot_two: SlotInfo<ParentchainBlock> =
 			SlotInfo::new(slot, timestamp, SLOT_DURATION, pc_header);
 
-		let difference_of_ends_at = if slot_one.ends_at >= slot_two.ends_at {
-			slot_one.ends_at - slot_two.ends_at
-		} else {
-			slot_two.ends_at - slot_one.ends_at
-		};
+		let difference_of_ends_at =
+			(slot_one.ends_at.as_millis()).abs_diff(slot_two.ends_at.as_millis());
 
-		assert!(difference_of_ends_at < ALLOWED_THRESHOLD);
+		assert!(difference_of_ends_at < ALLOWED_THRESHOLD.as_millis());
 	}
 
 	#[test]

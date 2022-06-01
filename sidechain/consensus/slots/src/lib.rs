@@ -23,6 +23,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(test, feature(assert_matches))]
+#![feature(int_abs_diff)] // can be removed once rust version > 1.60.0 (07.04.22)
 
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
