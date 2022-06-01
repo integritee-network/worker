@@ -3,7 +3,7 @@ name: Build, Test, Clippy
 on:
   workflow_dispatch:
   push:
-    branches: [  master, bh-investigate-invalid-authority ]
+    branches: [ master, bh-investigate-invalid-authority ]
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
   pull_request:
@@ -125,45 +125,6 @@ jobs:
         with:
           name: integritee-worker-image-${{ github.sha }}
           path: /tmp/integritee-worker.tar
-
-#      - name: Clean docker layer cache
-#        run: |
-#          rm -rf /tmp/.buildx-cache
-#          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
-
-  clippy:
-    runs-on: ubuntu-latest
-    container: "integritee/integritee-dev:0.1.9"
-    steps:
-      - uses: actions/checkout@v2
-      - name: init rust
-        # enclave is not in the same workspace
-        run: rustup show && cd enclave-runtime && rustup show
-
-      - name: Worker & Client
-        run: cargo clippy -- -D warnings
-      - name: Enclave # Enclave is separate as it's not in the workspace
-        run: cd enclave-runtime && cargo clippy -- -D warnings
-
-      - name: Fail-fast; cancel other jobs
-        if: failure()
-        uses: andymckay/cancel-action@0.2
-
-  fmt:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: init rust
-        run: rustup show
-
-      - name: Worker & Client
-        run: cargo fmt --all -- --check
-      - name: Enclave # Enclave is separate as it's not in the workspace
-        run: cd enclave-runtime && cargo fmt --all -- --check
-
-      - name: Fail-fast; cancel other jobs
-        if: failure()
-        uses: andymckay/cancel-action@0.2
 
   integration-tests:
     runs-on: ubuntu-latest
