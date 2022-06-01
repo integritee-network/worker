@@ -19,7 +19,7 @@ use crate::{authorities, slot_author, EnclaveOnChainOCallApi};
 use core::marker::PhantomData;
 use frame_support::ensure;
 use its_consensus_common::{Error as ConsensusError, Verifier};
-use its_consensus_slots::{slot_from_time_stamp_and_duration, Slot};
+use its_consensus_slots::{slot_from_timestamp_and_duration, Slot};
 use its_primitives::{
 	traits::{
 		Block as SidechainBlockTrait, BlockData, Header as HeaderTrait,
@@ -80,7 +80,7 @@ where
 			ConsensusError::BadSidechainBlock(signed_block.block().hash(), "bad signature".into())
 		);
 
-		let slot = slot_from_time_stamp_and_duration(
+		let slot = slot_from_timestamp_and_duration(
 			Duration::from_millis(signed_block.block().block_data().timestamp()),
 			self.slot_duration,
 		);

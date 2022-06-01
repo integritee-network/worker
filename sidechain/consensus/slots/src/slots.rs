@@ -73,7 +73,7 @@ impl<ParentchainBlock: ParentchainBlockTrait> SlotInfo<ParentchainBlock> {
 			slot,
 			timestamp,
 			duration,
-			ends_at: timestamp + time_until_next_slot(duration),
+			ends_at: duration_now() + time_until_next_slot(duration),
 			last_imported_parentchain_head: parentchain_head,
 		}
 	}
@@ -92,7 +92,7 @@ pub(crate) fn timestamp_within_slot<
 		&& slot.ends_at.as_millis() as u64 >= proposal_stamp
 }
 
-pub fn slot_from_time_stamp_and_duration(timestamp: Duration, duration: Duration) -> Slot {
+pub fn slot_from_timestamp_and_duration(timestamp: Duration, duration: Duration) -> Slot {
 	((timestamp.as_millis() / duration.as_millis()) as u64).into()
 }
 
@@ -111,7 +111,7 @@ where
 	}
 
 	let last_slot = last_slot_getter.get_last_slot()?;
-	let slot = slot_from_time_stamp_and_duration(timestamp, duration);
+	let slot = slot_from_timestamp_and_duration(timestamp, duration);
 
 	if slot <= last_slot {
 		return Ok(None)
@@ -201,7 +201,7 @@ mod tests {
 		type Unsealed = Slot;
 
 		fn unseal_from_static_file() -> Result<Self::Unsealed, Self::Error> {
-			Ok(slot_from_time_stamp_and_duration(duration_now(), SLOT_DURATION))
+			Ok(slot_from_timestamp_and_duration(duration_now(), SLOT_DURATION))
 		}
 
 		fn seal_to_static_file(_unsealed: Self::Unsealed) -> Result<(), Self::Error> {
