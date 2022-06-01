@@ -83,7 +83,7 @@ where
 
 		let account = AccountId::decode(&mut account_vec.as_slice())?;
 
-		let enclave_account_id = self.stf_enclave_signer.get_enclave_account();
+		let enclave_account_id = self.stf_enclave_signer.get_enclave_account()?;
 		let trusted_call = TrustedCall::balance_shield(enclave_account_id, account, amount);
 		let signed_trusted_call =
 			self.stf_enclave_signer.sign_call_with_self(&trusted_call, &shard)?;

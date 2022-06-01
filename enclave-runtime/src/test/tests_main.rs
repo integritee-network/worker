@@ -43,7 +43,9 @@ use itp_settings::{
 	enclave::MAX_TRUSTED_OPS_EXEC_DURATION,
 	node::{PROPOSED_SIDECHAIN_BLOCK, SIDECHAIN_MODULE},
 };
-use itp_sgx_crypto::{mocks::KeyRepositoryMock, Aes, StateCrypto};
+use itp_sgx_crypto::{
+	ed25519_derivation::DeriveEd25519, mocks::KeyRepositoryMock, Aes, StateCrypto,
+};
 use itp_stf_executor::{
 	enclave_signer_tests as stf_enclave_signer_tests, executor::StfExecutor,
 	executor_tests as stf_executor_tests, traits::StateUpdateProposer, BatchExecutionResult,
@@ -96,7 +98,7 @@ type TestTopPoolOperationHandler =
 pub extern "C" fn test_main_entrance() -> size_t {
 	rsgx_unit_tests!(
 		attestation::tests::decode_spid_works,
-		stf_sgx_tests::enclave_account_signing_works,
+		stf_sgx_tests::enclave_account_initialization_works,
 		itp_stf_state_handler::test::sgx_tests::test_write_and_load_state_works,
 		itp_stf_state_handler::test::sgx_tests::test_sgx_state_decode_encode_works,
 		itp_stf_state_handler::test::sgx_tests::test_encrypt_decrypt_state_type_works,
@@ -145,6 +147,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		stf_executor_tests::propose_state_update_executes_only_one_trusted_call_given_not_enough_time,
 		stf_executor_tests::propose_state_update_executes_all_calls_given_enough_time,
 		stf_enclave_signer_tests::enclave_signer_signatures_are_valid,
+		stf_enclave_signer_tests::derive_key_is_deterministic,
 		// sidechain integration tests
 		sidechain_aura_tests::produce_sidechain_block_and_import_it,
 		top_pool_tests::process_indirect_call_in_top_pool,
@@ -548,11 +551,14 @@ fn test_shielding_call_with_enclave_self_is_executed() {
 
 	let sender = funded_pair();
 	let sender_account: AccountId = sender.public().into();
-	let enclave_signer = enclave_signer();
+	let enclave_call_signer = enclave_call_signer(&shielding_key);
 
-	let signed_call =
-		TrustedCall::balance_shield(enclave_signer.public().into(), sender_account.clone(), 1000)
-			.sign(&enclave_signer.into(), 0, &mrenclave, &shard);
+	let signed_call = TrustedCall::balance_shield(
+		enclave_call_signer.public().into(),
+		sender_account.clone(),
+		1000,
+	)
+	.sign(&enclave_call_signer.into(), 0, &mrenclave, &shard);
 	let trusted_operation = TrustedOperation::indirect_call(signed_call);
 
 	submit_operation_to_top_pool(
@@ -626,13 +632,14 @@ pub fn test_setup() -> (
 	ShieldingCryptoMock,
 	Arc<HandleStateMock>,
 ) {
+	let shielding_key = ShieldingCryptoMock::default();
+	let shielding_key_repo = Arc::new(KeyRepositoryMock::new(shielding_key.clone()));
+
 	let state_handler = Arc::new(HandleStateMock::default());
-	let (state, shard) = init_state(state_handler.as_ref(), enclave_signer().public().into());
+	let (state, shard) =
+		init_state(state_handler.as_ref(), enclave_call_signer(&shielding_key).public().into());
 	let top_pool = test_top_pool();
 	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
-
-	let encryption_key = ShieldingCryptoMock::default();
-	let shielding_key_repo = Arc::new(KeyRepositoryMock::new(encryption_key.clone()));
 
 	(
 		Arc::new(TestTopPoolAuthor::new(
@@ -645,7 +652,7 @@ pub fn test_setup() -> (
 		state,
 		shard,
 		mrenclave,
-		encryption_key,
+		shielding_key,
 		state_handler,
 	)
 }
@@ -659,8 +666,8 @@ pub fn test_account() -> spEd25519::Pair {
 	spEd25519::Pair::from_seed(b"42315678901234567890123456789012")
 }
 
-pub fn enclave_signer() -> spEd25519::Pair {
-	spEd25519::Pair::from_seed(b"43166698901234567890123456789012")
+pub fn enclave_call_signer<Source: DeriveEd25519>(key_source: &Source) -> spEd25519::Pair {
+	key_source.derive_ed25519().unwrap()
 }
 
 /// transforms `call` into `TrustedOperation::direct(call)`

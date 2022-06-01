@@ -44,8 +44,8 @@ impl Default for StfEnclaveSignerMock {
 }
 
 impl StfEnclaveSigning for StfEnclaveSignerMock {
-	fn get_enclave_account(&self) -> AccountId {
-		self.signer.public().into()
+	fn get_enclave_account(&self) -> Result<AccountId> {
+		Ok(self.signer.public().into())
 	}
 
 	fn sign_call_with_self(

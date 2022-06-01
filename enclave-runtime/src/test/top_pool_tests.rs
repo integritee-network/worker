@@ -105,8 +105,11 @@ pub fn submit_shielding_call_to_top_pool() {
 		Arc::new(MetricsOCallMock {}),
 	));
 
-	let enclave_signer =
-		Arc::new(StfEnclaveSigner::new(state_handler.clone(), ocall_api.clone(), signer.clone()));
+	let enclave_signer = Arc::new(StfEnclaveSigner::new(
+		state_handler.clone(),
+		ocall_api.clone(),
+		shielding_key_repo.clone(),
+	));
 	let indirect_calls_executor =
 		IndirectCallsExecutor::new(shielding_key_repo, enclave_signer, top_pool_author.clone());
 

@@ -21,10 +21,6 @@ use codec::{Decode, Encode};
 use itp_storage::{storage_double_map_key, storage_map_key, storage_value_key, StorageHasher};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
-use sp_core::{
-	ed25519::{Pair as Ed25519Pair, Signature},
-	Pair,
-};
 use std::prelude::v1::*;
 
 pub fn get_storage_value<V: Decode>(
@@ -79,15 +75,15 @@ pub fn get_storage_by_key_hash<V: Decode>(key: Vec<u8>) -> Option<V> {
 }
 
 // get the AccountInfo key where the account is stored
-pub(crate) fn account_key_hash(account: &AccountId) -> Vec<u8> {
+pub fn account_key_hash(account: &AccountId) -> Vec<u8> {
 	storage_map_key("System", "Account", account, &StorageHasher::Blake2_128Concat)
 }
 
-pub(crate) fn get_account_info(who: &AccountId) -> Option<AccountInfo> {
+pub fn get_account_info(who: &AccountId) -> Option<AccountInfo> {
 	get_storage_map("System", "Account", who, &StorageHasher::Blake2_128Concat)
 }
 
-pub(crate) fn validate_nonce(who: &AccountId, nonce: Index) -> StfResult<()> {
+pub fn validate_nonce(who: &AccountId, nonce: Index) -> StfResult<()> {
 	// validate
 	let expected_nonce = get_account_info(who).map_or_else(|| 0, |acc| acc.nonce);
 	if expected_nonce == nonce {
@@ -97,7 +93,7 @@ pub(crate) fn validate_nonce(who: &AccountId, nonce: Index) -> StfResult<()> {
 }
 
 /// increment nonce after a successful call execution
-pub(crate) fn increment_nonce(account: &AccountId) {
+pub fn increment_nonce(account: &AccountId) {
 	//FIXME: Proper error handling - should be taken into
 	// consideration after implementing pay fee check
 	if let Some(mut acc_info) = get_account_info(account) {
@@ -114,7 +110,7 @@ pub(crate) fn increment_nonce(account: &AccountId) {
 	}
 }
 
-pub(crate) fn account_nonce(account: &AccountId) -> Index {
+pub fn account_nonce(account: &AccountId) -> Index {
 	if let Some(info) = get_account_info(account) {
 		info.nonce
 	} else {
@@ -122,7 +118,7 @@ pub(crate) fn account_nonce(account: &AccountId) -> Index {
 	}
 }
 
-pub(crate) fn account_data(account: &AccountId) -> Option<AccountData> {
+pub fn account_data(account: &AccountId) -> Option<AccountData> {
 	if let Some(info) = get_account_info(account) {
 		Some(info.data)
 	} else {
@@ -130,35 +126,29 @@ pub(crate) fn account_data(account: &AccountId) -> Option<AccountData> {
 	}
 }
 
-pub(crate) fn root() -> AccountId {
+pub fn root() -> AccountId {
 	get_storage_value("Sudo", "Key").unwrap()
 }
 
-pub(crate) fn enclave_self_account() -> AccountId {
-	let enclave_key_pair: Ed25519Pair = get_storage_value("Sudo", ENCLAVE_ACCOUNT_KEY).unwrap();
-	enclave_key_pair.public().into()
-}
-
-pub(crate) fn sign_with_enclave_account(payload: &[u8]) -> Signature {
-	let enclave_key_pair: Ed25519Pair = get_storage_value("Sudo", ENCLAVE_ACCOUNT_KEY).unwrap();
-	enclave_key_pair.sign(payload)
+pub fn enclave_self_account() -> AccountId {
+	get_storage_value("Sudo", ENCLAVE_ACCOUNT_KEY).unwrap()
 }
 
 // FIXME: Use Option<ParentchainHeader:Hash> as return type after fixing sgx-runtime issue #37
-pub(crate) fn get_parentchain_blockhash() -> Option<H256> {
+pub fn get_parentchain_blockhash() -> Option<H256> {
 	get_storage_value("Parentchain", "BlockHash")
 }
 
 // FIXME: Use Option<ParentchainHeader:Hash> as return type after fixing sgx-runtime issue #37
-pub(crate) fn get_parentchain_parenthash() -> Option<H256> {
+pub fn get_parentchain_parenthash() -> Option<H256> {
 	get_storage_value("Parentchain", "ParentHash")
 }
 
-pub(crate) fn get_parentchain_number() -> Option<BlockNumber> {
+pub fn get_parentchain_number() -> Option<BlockNumber> {
 	get_storage_value("Parentchain", "Number")
 }
 
-pub(crate) fn ensure_self(account: &AccountId) -> StfResult<()> {
+pub fn ensure_self(account: &AccountId) -> StfResult<()> {
 	let expected_enclave_account = enclave_self_account();
 	if &expected_enclave_account == account {
 		Ok(())
@@ -166,13 +156,13 @@ pub(crate) fn ensure_self(account: &AccountId) -> StfResult<()> {
 		error!(
 			"Expected enclave account {}, but found {}",
 			account_id_to_string(&expected_enclave_account),
-			account_id_to_string(&account)
+			account_id_to_string(account)
 		);
 		Err(StfError::RequireSelfEnclaveAccount)
 	}
 }
 
-pub(crate) fn ensure_root(account: AccountId) -> StfResult<()> {
+pub fn ensure_root(account: AccountId) -> StfResult<()> {
 	if root() == account {
 		Ok(())
 	} else {

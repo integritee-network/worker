@@ -2625,6 +2625,7 @@ version = "0.8.0"
 dependencies = [
  "ita-stf",
  "itp-ocall-api",
+ "itp-sgx-crypto",
  "itp-stf-state-handler",
  "itp-storage",
  "itp-test",
@@ -2633,6 +2634,7 @@ dependencies = [
  "log 0.4.17",
  "parity-scale-codec",
  "sgx-externalities",
+ "sgx_crypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",

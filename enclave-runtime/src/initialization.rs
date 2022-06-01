@@ -57,7 +57,9 @@ use itp_extrinsics_factory::ExtrinsicsFactory;
 use itp_nonce_cache::GLOBAL_NONCE_CACHE;
 use itp_primitives_cache::GLOBAL_PRIMITIVES_CACHE;
 use itp_settings::files::STATE_SNAPSHOTS_CACHE_SIZE;
-use itp_sgx_crypto::{aes, ed25519, rsa3072, AesSeal, Ed25519Seal, Rsa3072Seal};
+use itp_sgx_crypto::{
+	aes, ed25519, ed25519_derivation::DeriveEd25519, rsa3072, AesSeal, Ed25519Seal, Rsa3072Seal,
+};
 use itp_sgx_io::StaticSealedIO;
 use itp_stf_state_handler::{
 	handle_state::HandleState, query_shard_state::QueryShardState,
@@ -90,7 +92,7 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	let shielding_key = Rsa3072Seal::unseal_from_static_file()?;
 
 	let shielding_key_repository =
-		Arc::new(EnclaveShieldingKeyRepository::new(shielding_key, Arc::new(Rsa3072Seal)));
+		Arc::new(EnclaveShieldingKeyRepository::new(shielding_key.clone(), Arc::new(Rsa3072Seal)));
 	GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.initialize(shielding_key_repository.clone());
 
 	// Create the aes key that is used for state encryption such that a key is always present in tests.
@@ -102,8 +104,11 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 		Arc::new(EnclaveStateKeyRepository::new(state_key, Arc::new(AesSeal)));
 	GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.initialize(state_key_repository.clone());
 
-	let state_file_io =
-		Arc::new(EnclaveStateFileIo::new(state_key_repository, signer.public().into()));
+	let enclave_call_signer_key = shielding_key.derive_ed25519()?;
+	let state_file_io = Arc::new(EnclaveStateFileIo::new(
+		state_key_repository,
+		enclave_call_signer_key.public().into(),
+	));
 	let state_snapshot_repository_loader =
 		StateSnapshotRepositoryLoader::<EnclaveStateFileIo, StfState, H256>::new(state_file_io);
 	let state_snapshot_repository =
@@ -228,12 +233,15 @@ pub(crate) fn init_light_client(params: LightClientInitParams<Header>) -> Enclav
 	let genesis_hash = validator_access.execute_on_validator(|v| v.genesis_hash(v.num_relays()))?;
 
 	let extrinsics_factory =
-		Arc::new(ExtrinsicsFactory::new(genesis_hash, signer.clone(), GLOBAL_NONCE_CACHE.clone()));
+		Arc::new(ExtrinsicsFactory::new(genesis_hash, signer, GLOBAL_NONCE_CACHE.clone()));
 
 	GLOBAL_EXTRINSICS_FACTORY_COMPONENT.initialize(extrinsics_factory.clone());
 
-	let stf_enclave_signer =
-		Arc::new(EnclaveStfEnclaveSigner::new(state_handler, ocall_api.clone(), signer));
+	let stf_enclave_signer = Arc::new(EnclaveStfEnclaveSigner::new(
+		state_handler,
+		ocall_api.clone(),
+		shielding_key_repository.clone(),
+	));
 	let indirect_calls_executor = Arc::new(IndirectCallsExecutor::new(
 		shielding_key_repository,
 		stf_enclave_signer,

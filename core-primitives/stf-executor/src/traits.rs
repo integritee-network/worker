@@ -34,7 +34,7 @@ pub enum StatePostProcessing {
 
 /// Allows signing of a trusted call with the enclave account that is registered in the STF.
 pub trait StfEnclaveSigning {
-	fn get_enclave_account(&self) -> AccountId;
+	fn get_enclave_account(&self) -> Result<AccountId>;
 
 	fn sign_call_with_self(
 		&self,

@@ -102,6 +102,7 @@ pub mod sgx {
 	/// SGX state file I/O.
 	pub struct SgxStateFileIo<StateKeyRepository> {
 		state_key_repository: Arc<StateKeyRepository>,
+		enclave_account: AccountId,
 	}
 
 	impl<StateKeyRepository> SgxStateFileIo<StateKeyRepository>
@@ -109,8 +110,11 @@ pub mod sgx {
 		StateKeyRepository: AccessKey,
 		<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
 	{
-		pub fn new(state_key_repository: Arc<StateKeyRepository>) -> Self {
-			SgxStateFileIo { state_key_repository }
+		pub fn new(
+			state_key_repository: Arc<StateKeyRepository>,
+			enclave_account: AccountId,
+		) -> Self {
+			SgxStateFileIo { state_key_repository, enclave_account }
 		}
 
 		fn read(&self, path: &Path) -> Result<Vec<u8>> {
@@ -204,7 +208,7 @@ pub mod sgx {
 			state_id: StateId,
 		) -> Result<Self::HashType> {
 			init_shard(&shard_identifier)?;
-			let state = Stf::init_state();
+			let state = Stf::init_state(self.enclave_account.clone());
 			self.write(shard_identifier, state_id, state)
 		}
 

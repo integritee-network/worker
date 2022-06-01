@@ -15,11 +15,22 @@
 
 */
 
-use crate::{AccountId, Stf};
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
 
-pub fn enclave_account_initialization_works() {
-	let enclave_account = AccountId::new([2u8; 32]);
-	let mut state = Stf::init_state(enclave_account.clone());
-	assert_eq!(0, Stf::account_nonce(&mut state, &enclave_account));
-	assert_eq!(enclave_account, Stf::get_enclave_account(&mut state));
+use crate::error::Result;
+use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
+use sp_core::{blake2_256, ed25519::Pair as Ed25519Pair, Pair};
+
+/// Trait to derive an Ed25519 key pair.
+pub trait DeriveEd25519 {
+	fn derive_ed25519(&self) -> Result<Ed25519Pair>;
+}
+
+impl DeriveEd25519 for Rsa3072KeyPair {
+	fn derive_ed25519(&self) -> Result<Ed25519Pair> {
+		let encoded_key = serde_json::to_vec(self)?;
+		let seed = blake2_256(&encoded_key);
+		Ok(Ed25519Pair::from_seed(&seed))
+	}
 }

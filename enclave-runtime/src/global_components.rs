@@ -73,7 +73,8 @@ pub type EnclaveStateSnapshotRepository =
 pub type EnclaveStateHandler = StateHandler<EnclaveStateSnapshotRepository>;
 pub type EnclaveOCallApi = OcallApi;
 pub type EnclaveStfExecutor = StfExecutor<EnclaveOCallApi, EnclaveStateHandler>;
-pub type EnclaveStfEnclaveSigner = StfEnclaveSigner<EnclaveOCallApi, EnclaveStateHandler, Pair>;
+pub type EnclaveStfEnclaveSigner =
+	StfEnclaveSigner<EnclaveOCallApi, EnclaveStateHandler, EnclaveShieldingKeyRepository>;
 pub type EnclaveExtrinsicsFactory = ExtrinsicsFactory<Pair, NonceCache>;
 pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
 	EnclaveShieldingKeyRepository,
