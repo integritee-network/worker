@@ -264,7 +264,7 @@ mod tests {
 	fn assert_consensus_other_err<T: Debug>(result: Result<T, ConsensusError>, msg: &str) {
 		assert_matches!(result.unwrap_err(), ConsensusError::Other(
 			m,
-		) if &m.to_string() == msg)
+		) if m.to_string() == msg)
 	}
 
 	#[test]
