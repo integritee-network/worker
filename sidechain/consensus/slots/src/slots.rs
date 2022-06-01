@@ -73,7 +73,7 @@ impl<ParentchainBlock: ParentchainBlockTrait> SlotInfo<ParentchainBlock> {
 			slot,
 			timestamp,
 			duration,
-			ends_at: duration_now() + time_until_next_slot(duration),
+			ends_at: timestamp + time_until_next_slot(duration),
 			last_imported_parentchain_head: parentchain_head,
 		}
 	}
