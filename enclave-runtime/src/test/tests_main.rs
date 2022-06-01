@@ -99,6 +99,8 @@ pub extern "C" fn test_main_entrance() -> size_t {
 	rsgx_unit_tests!(
 		attestation::tests::decode_spid_works,
 		stf_sgx_tests::enclave_account_initialization_works,
+		stf_sgx_tests::shield_funds_increments_signer_account_nonce,
+		stf_sgx_tests::test_root_account_exists_after_initialization,
 		itp_stf_state_handler::test::sgx_tests::test_write_and_load_state_works,
 		itp_stf_state_handler::test::sgx_tests::test_sgx_state_decode_encode_works,
 		itp_stf_state_handler::test::sgx_tests::test_encrypt_decrypt_state_type_works,

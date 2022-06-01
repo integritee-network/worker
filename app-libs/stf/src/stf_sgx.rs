@@ -68,15 +68,19 @@ impl Stf {
 			);
 		});
 
+		#[cfg(feature = "test")]
+		test_genesis_setup(&mut ext);
+
 		ext.execute_with(|| {
 			sp_io::storage::set(
 				&storage_value_key("Sudo", ENCLAVE_ACCOUNT_KEY),
 				&enclave_account.encode(),
 			);
-		});
 
-		#[cfg(feature = "test")]
-		test_genesis_setup(&mut ext);
+			if let Err(e) = Self::ensure_self_has_valid_account(&enclave_account) {
+				error!("Failed to initialize the enclave signer account: {:?}", e);
+			}
+		});
 
 		trace!("Returning updated state: {:?}", ext);
 		ext
@@ -188,6 +192,20 @@ impl Stf {
 			increment_nonce(&sender);
 			Ok(())
 		})
+	}
+
+	/// Ensures that the enclave account has a valid account with a balance
+	/// that is above the existential deposit.
+	/// !! Requires a root to be set.
+	fn ensure_self_has_valid_account(enclave_account: &AccountId) -> StfResult<()> {
+		sgx_runtime::BalancesCall::<Runtime>::set_balance {
+			who: MultiAddress::Id(enclave_account.clone()),
+			new_free: 1000,
+			new_reserved: 0,
+		}
+		.dispatch_bypass_filter(sgx_runtime::Origin::root())
+		.map_err(|_| StfError::Dispatch("set_balance for enclave signer account".to_string()))
+		.map(|_| ())
 	}
 
 	fn shield_funds(account: AccountId, amount: u128) -> StfResult<()> {
