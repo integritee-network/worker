@@ -30,7 +30,7 @@ impl StaticSealedIO for ValidatorMockSeal {
 		Ok(ValidatorMock)
 	}
 
-	fn seal_to_static_file(_unsealed: Self::Unsealed) -> Result<(), Self::Error> {
+	fn seal_to_static_file(_unsealed: &Self::Unsealed) -> Result<(), Self::Error> {
 		Ok(())
 	}
 }

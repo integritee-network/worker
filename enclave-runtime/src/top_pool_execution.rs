@@ -18,10 +18,10 @@
 use crate::{
 	error::Result,
 	global_components::{
-		GLOBAL_EXTRINSICS_FACTORY_COMPONENT, GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
-		GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
-		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STF_EXECUTOR_COMPONENT,
-		GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
+		GLOBAL_EXTRINSICS_FACTORY_COMPONENT, GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT,
+		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT,
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+		GLOBAL_STF_EXECUTOR_COMPONENT, GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
 	},
 	ocall::OcallApi,
 	sync::{EnclaveLock, EnclaveStateRWLock},
@@ -31,10 +31,9 @@ use itc_parentchain::{
 	block_import_dispatcher::triggered_dispatcher::{
 		PeekParentchainBlockImportQueue, TriggerParentchainBlockImport,
 	},
-	itc_parentchain_light_client::ExtrinsicSender,
 	light_client::{
-		concurrent_access::ValidatorAccess, BlockNumberOps, LightClientState, NumberFor,
-		ValidatorAccessor,
+		concurrent_access::ValidatorAccess, BlockNumberOps, ExtrinsicSender, LightClientState,
+		NumberFor,
 	},
 };
 use itp_component_container::ComponentGetter;
@@ -141,7 +140,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 
 	let parentchain_import_dispatcher = GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get()?;
 
-	let validator_access = ValidatorAccessor::<Block, OcallApi>::default();
+	let validator_access = GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT.get()?;
 
 	// This gets the latest imported block. We accept that all of AURA, up until the block production
 	// itself, will  operate on a parentchain block that is potentially outdated by one block
@@ -166,7 +165,10 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	let block_composer = GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT.get()?;
 
 	let extrinsics_factory = GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get()?;
+
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
+
+	let ocall_api = OcallApi {};
 
 	let authority = Ed25519Seal::unseal_from_static_file()?;
 
@@ -187,7 +189,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 			let (blocks, opaque_calls) = exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _, _>(
 				slot,
 				authority,
-				OcallApi,
+				ocall_api.clone(),
 				parentchain_import_dispatcher,
 				env,
 				shards,
@@ -201,8 +203,8 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 			send_blocks_and_extrinsics::<Block, _, _, _, _>(
 				blocks,
 				opaque_calls,
-				OcallApi,
-				&validator_access,
+				&ocall_api,
+				validator_access.as_ref(),
 				extrinsics_factory.as_ref(),
 			)?
 		},
@@ -280,7 +282,7 @@ pub(crate) fn send_blocks_and_extrinsics<
 >(
 	blocks: Vec<SignedSidechainBlock>,
 	opaque_calls: Vec<OpaqueCall>,
-	ocall_api: OCallApi,
+	ocall_api: &OCallApi,
 	validator_access: &ValidatorAccessor,
 	extrinsics_factory: &ExtrinsicsFactory,
 ) -> Result<()>
@@ -298,7 +300,7 @@ where
 	let xts = extrinsics_factory.create_extrinsics(opaque_calls.as_slice())?;
 
 	debug!("Sending sidechain block(s) confirmation extrinsic.. ");
-	validator_access.execute_mut_on_validator(|v| v.send_extrinsics(&ocall_api, xts))?;
+	validator_access.execute_mut_on_validator(|v| v.send_extrinsics(xts))?;
 
 	Ok(())
 }

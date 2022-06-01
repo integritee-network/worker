@@ -26,7 +26,7 @@ use crate::{
 	AuthorityList, AuthorityListRef, ExtrinsicSender, HashFor, HashingFor, LightClientState,
 	NumberFor, RelayId, Validator,
 };
-use codec::{Decode, Encode, Input, Output};
+use codec::Encode;
 use core::iter::Iterator;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_storage::{Error as StorageError, StorageProof, StorageProofChecker};
@@ -44,30 +44,17 @@ use std::{fmt, vec::Vec};
 #[derive(Clone)]
 pub struct LightValidation<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi> {
 	light_validation_state: LightValidationState<Block>,
-	ocall_api: OcallApi,
-	finality: Arc<Box<dyn Finality<Block>>>,
-}
-
-impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi> Decode
-	for LightValidation<Block, OcallApi>
-{
-	fn decode<I: Input>(input: &mut I) -> Result<Self, codec::Error> {
-		todo!()
-	}
-}
-
-impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi> Encode
-	for LightValidation<Block, OcallApi>
-{
-	fn encode(&self) -> Vec<u8> {
-		todo!()
-	}
+	ocall_api: Arc<OcallApi>,
+	finality: Arc<Box<dyn Finality<Block> + Sync + Send + 'static>>,
 }
 
 impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi>
 	LightValidation<Block, OcallApi>
 {
-	pub fn new(ocall_api: OcallApi, finality: Arc<Box<dyn Finality<Block>>>) -> Self {
+	pub fn new(
+		ocall_api: Arc<OcallApi>,
+		finality: Arc<Box<dyn Finality<Block> + Sync + Send + 'static>>,
+	) -> Self {
 		Self { light_validation_state: LightValidationState::new(), ocall_api, finality }
 	}
 
@@ -193,7 +180,7 @@ where
 		let last_header = &relay.last_finalized_block_header;
 		Self::verify_ancestry(ancestry_proof, last_header.hash(), &header)?;
 
-		self.finality.validate(
+		let _ = self.finality.validate(
 			header.clone(),
 			&validator_set,
 			validator_set_id,
@@ -296,23 +283,27 @@ where
 
 		Ok(())
 	}
+
+	fn set_state(&mut self, state: LightValidationState<Block>) {
+		self.light_validation_state = state;
+	}
+
+	fn get_state(&self) -> &LightValidationState<Block> {
+		&self.light_validation_state
+	}
 }
 
-impl<Block: ParentchainBlockTrait, OCallApi: EnclaveOnChainOCallApi> ExtrinsicSender<OCallApi>
+impl<Block: ParentchainBlockTrait, OCallApi: EnclaveOnChainOCallApi> ExtrinsicSender
 	for LightValidation<Block, OCallApi>
 where
 	NumberFor<Block>: finality_grandpa::BlockNumberOps,
 {
-	fn send_extrinsics(
-		&mut self,
-		ocall_api: &OCallApi,
-		extrinsics: Vec<OpaqueExtrinsic>,
-	) -> Result<(), Error> {
+	fn send_extrinsics(&mut self, extrinsics: Vec<OpaqueExtrinsic>) -> Result<(), Error> {
 		for xt in extrinsics.iter() {
 			self.submit_xt_to_be_included(self.num_relays(), xt.clone()).unwrap();
 		}
 
-		ocall_api
+		self.ocall_api
 			.send_to_parentchain(extrinsics)
 			.map_err(|e| Error::Other(format!("Failed to send extrinsics: {}", e).into()))
 	}

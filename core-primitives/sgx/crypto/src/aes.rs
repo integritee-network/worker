@@ -91,7 +91,7 @@ pub mod sgx {
 			Ok(unseal(AES_KEY_FILE_AND_INIT_V).map(|b| Decode::decode(&mut b.as_slice()))??)
 		}
 
-		fn seal_to_static_file(unsealed: Self::Unsealed) -> Result<()> {
+		fn seal_to_static_file(unsealed: &Self::Unsealed) -> Result<()> {
 			Ok(unsealed.using_encoded(|bytes| seal(bytes, AES_KEY_FILE_AND_INIT_V))?)
 		}
 	}
@@ -104,8 +104,8 @@ pub mod sgx {
 			Self::unseal_from_static_file()
 		}
 
-		fn seal(&self, unsealed: Self::Unsealed) -> Result<()> {
-			Self::seal_to_static_file(unsealed)
+		fn seal(&self, unsealed: &Self::Unsealed) -> Result<()> {
+			Self::seal_to_static_file(&unsealed)
 		}
 	}
 
@@ -125,6 +125,6 @@ pub mod sgx {
 
 		rand.fill_bytes(&mut key);
 		rand.fill_bytes(&mut iv);
-		AesSeal::seal_to_static_file(Aes::new(key, iv))
+		AesSeal::seal_to_static_file(&Aes::new(key, iv))
 	}
 }

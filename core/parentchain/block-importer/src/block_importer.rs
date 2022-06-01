@@ -58,11 +58,10 @@ pub struct ParentchainBlockImporter<
 	IndirectCallsExecutor: ExecuteIndirectCalls,
 {
 	validator_accessor: Arc<ValidatorAccessor>,
-	ocall_api: Arc<OCallApi>,
 	stf_executor: Arc<StfExecutor>,
 	extrinsics_factory: Arc<ExtrinsicsFactory>,
 	indirect_calls_executor: Arc<IndirectCallsExecutor>,
-	_phantom: PhantomData<ParentchainBlock>,
+	_phantom: PhantomData<(ParentchainBlock, OCallApi)>,
 }
 
 impl<
@@ -91,14 +90,12 @@ impl<
 {
 	pub fn new(
 		validator_accessor: Arc<ValidatorAccessor>,
-		ocall_api: Arc<OCallApi>,
 		stf_executor: Arc<StfExecutor>,
 		extrinsics_factory: Arc<ExtrinsicsFactory>,
 		indirect_calls_executor: Arc<IndirectCallsExecutor>,
 	) -> Self {
 		ParentchainBlockImporter {
 			validator_accessor,
-			ocall_api,
 			stf_executor,
 			extrinsics_factory,
 			indirect_calls_executor,
@@ -183,9 +180,8 @@ impl<
 		let parentchain_extrinsics = self.extrinsics_factory.create_extrinsics(calls.as_slice())?;
 
 		// Sending the extrinsic requires mut access because the validator caches the sent extrinsics internally.
-		self.validator_accessor.execute_mut_on_validator(|v| {
-			v.send_extrinsics(self.ocall_api.as_ref(), parentchain_extrinsics)
-		})?;
+		self.validator_accessor
+			.execute_mut_on_validator(|v| v.send_extrinsics(parentchain_extrinsics))?;
 
 		Ok(())
 	}

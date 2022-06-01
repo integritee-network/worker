@@ -23,7 +23,7 @@ pub use sp_finality_grandpa::SetId;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::collections::BTreeMap;
 
-#[derive(Encode, Decode, Clone)]
+#[derive(Encode, Decode, Clone, Debug)]
 pub struct LightValidationState<Block: ParentchainBlockTrait> {
 	pub num_relays: RelayId,
 	pub tracked_relays: BTreeMap<RelayId, RelayState<Block>>,

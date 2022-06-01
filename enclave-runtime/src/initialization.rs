@@ -25,6 +25,7 @@ use crate::{
 		EnclaveStateKeyRepository, EnclaveStfEnclaveSigner, EnclaveStfExecutor, EnclaveTopPool,
 		EnclaveTopPoolAuthor, EnclaveTopPoolOperationHandler, EnclaveValidatorAccessor,
 		GLOBAL_EXTRINSICS_FACTORY_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
+		GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT,
 		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT, GLOBAL_RPC_WS_HANDLER_COMPONENT,
 		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT,
 		GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
@@ -46,8 +47,9 @@ use itc_direct_rpc_server::{
 };
 use itc_parentchain::{
 	block_import_dispatcher::triggered_dispatcher::TriggeredDispatcher,
-	block_importer::ParentchainBlockImporter, indirect_calls_executor::IndirectCallsExecutor,
-	light_client::Validator,
+	block_importer::ParentchainBlockImporter,
+	indirect_calls_executor::IndirectCallsExecutor,
+	light_client::{concurrent_access::ValidatorAccess, LightClientState},
 };
 use itc_tls_websocket_server::{create_ws_server, ConnectionToken, WebSocketServer};
 use itp_block_import_queue::BlockImportQueue;
@@ -76,7 +78,7 @@ use its_sidechain::{
 use log::*;
 use primitive_types::H256;
 use sp_core::crypto::Pair;
-use std::{boxed::Box, string::String, sync::Arc};
+use std::{string::String, sync::Arc};
 
 pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> EnclaveResult<()> {
 	// Initialize the logging environment in the enclave.
@@ -218,8 +220,9 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 
 pub(crate) fn init_light_client(params: LightClientInitParams<Header>) -> EnclaveResult<Header> {
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
-	let latest_header =
-		itc_parentchain::light_client::io::read_or_init_validator::<Block>(params, ocall_api)?;
+	let validator =
+		itc_parentchain::light_client::io::init_validator::<Block, OcallApi>(params, ocall_api)?;
+	let latest_header = validator.latest_finalized_header(validator.num_relays()).unwrap();
 
 	// Initialize the global parentchain block import dispatcher instance.
 	let signer = Ed25519Seal::unseal_from_static_file()?;
@@ -229,12 +232,8 @@ pub(crate) fn init_light_client(params: LightClientInitParams<Header>) -> Enclav
 	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 
-	let validator_access: Arc<Box<dyn Validator<Block>>> = match params {
-		LightClientInitParams::Grandpa { .. } =>
-			Arc::new(Box::new(EnclaveValidatorAccessor::default())),
-		LightClientInitParams::Parachain { .. } =>
-			Arc::new(Box::new(EnclaveValidatorAccessor::default())),
-	};
+	let validator_access = Arc::new(EnclaveValidatorAccessor::new(validator));
+	GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT.initialize(validator_access.clone());
 
 	let genesis_hash = validator_access.execute_on_validator(|v| v.genesis_hash(v.num_relays()))?;
 
@@ -255,7 +254,6 @@ pub(crate) fn init_light_client(params: LightClientInitParams<Header>) -> Enclav
 	));
 	let parentchain_block_importer = ParentchainBlockImporter::new(
 		validator_access,
-		ocall_api,
 		stf_executor,
 		extrinsics_factory,
 		indirect_calls_executor,

@@ -40,7 +40,7 @@ pub trait StaticSealedIO: Sized {
 	type Unsealed;
 
 	fn unseal_from_static_file() -> Result<Self::Unsealed, Self::Error>;
-	fn seal_to_static_file(unsealed: Self::Unsealed) -> Result<(), Self::Error>;
+	fn seal_to_static_file(unsealed: &Self::Unsealed) -> Result<(), Self::Error>;
 }
 
 /// Abstraction around IO that is supposed to use `SgxFile`. We expose it also in `std` to
@@ -53,7 +53,7 @@ pub trait SealedIO: Sized {
 	type Unsealed;
 
 	fn unseal(&self) -> Result<Self::Unsealed, Self::Error>;
-	fn seal(&self, unsealed: Self::Unsealed) -> Result<(), Self::Error>;
+	fn seal(&self, unsealed: &Self::Unsealed) -> Result<(), Self::Error>;
 }
 
 pub fn read<P: AsRef<Path>>(path: P) -> IOResult<Vec<u8>> {

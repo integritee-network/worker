@@ -185,6 +185,11 @@ pub static GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT: ComponentContainer<
 	EnclaveParentchainBlockImportDispatcher,
 > = ComponentContainer::new("parentchain import dispatcher");
 
+/// Parentchain block validator accessor.
+pub static GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT: ComponentContainer<
+	EnclaveValidatorAccessor,
+> = ComponentContainer::new("parentchain block validator accessor");
+
 /// Extrinsics factory.
 pub static GLOBAL_EXTRINSICS_FACTORY_COMPONENT: ComponentContainer<EnclaveExtrinsicsFactory> =
 	ComponentContainer::new("extrinsics_factory");

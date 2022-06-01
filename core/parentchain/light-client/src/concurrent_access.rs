@@ -26,7 +26,8 @@ use std::sync::RwLock;
 
 use crate::{
 	error::{Error, Result},
-	ExtrinsicSender as ExtrinsicSenderTrait, LightClientState, Validator as ValidatorTrait,
+	ExtrinsicSender as ExtrinsicSenderTrait, LightClientState, LightValidationState,
+	Validator as ValidatorTrait,
 };
 use finality_grandpa::BlockNumberOps;
 use itp_ocall_api::EnclaveOnChainOCallApi;
@@ -54,7 +55,7 @@ where
 {
 	type ValidatorType: ValidatorTrait<ParentchainBlock>
 		+ LightClientState<ParentchainBlock>
-		+ ExtrinsicSenderTrait<OCallApi>;
+		+ ExtrinsicSenderTrait;
 
 	/// Execute a non-mutating function on the validator.
 	fn execute_on_validator<F, R>(&self, getter_function: F) -> Result<R>
@@ -68,34 +69,19 @@ where
 }
 
 /// Implementation of a validator access based on a global lock and corresponding file.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct GlobalValidatorAccessor<Validator, ParentchainBlock, Seal, OCallApi>
 where
 	Validator: ValidatorTrait<ParentchainBlock>
 		+ LightClientState<ParentchainBlock>
-		+ ExtrinsicSenderTrait<OCallApi>,
-	Seal: StaticSealedIO<Error = Error, Unsealed = Validator>,
+		+ ExtrinsicSenderTrait,
+	Seal: StaticSealedIO<Error = Error, Unsealed = LightValidationState<ParentchainBlock>>,
 	ParentchainBlock: ParentchainBlockTrait,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	OCallApi: EnclaveOnChainOCallApi,
 {
+	light_validation: RwLock<Validator>,
 	_phantom: PhantomData<(Seal, Validator, ParentchainBlock, OCallApi)>,
-}
-
-impl<Validator, ParentchainBlock, Seal, OCallApi> Default
-	for GlobalValidatorAccessor<Validator, ParentchainBlock, Seal, OCallApi>
-where
-	Validator: ValidatorTrait<ParentchainBlock>
-		+ LightClientState<ParentchainBlock>
-		+ ExtrinsicSenderTrait<OCallApi>,
-	Seal: StaticSealedIO<Error = Error, Unsealed = Validator>,
-	ParentchainBlock: ParentchainBlockTrait,
-	NumberFor<ParentchainBlock>: BlockNumberOps,
-	OCallApi: EnclaveOnChainOCallApi,
-{
-	fn default() -> Self {
-		GlobalValidatorAccessor { _phantom: Default::default() }
-	}
 }
 
 impl<Validator, ParentchainBlock, Seal, OCallApi>
@@ -103,14 +89,17 @@ impl<Validator, ParentchainBlock, Seal, OCallApi>
 where
 	Validator: ValidatorTrait<ParentchainBlock>
 		+ LightClientState<ParentchainBlock>
-		+ ExtrinsicSenderTrait<OCallApi>,
-	Seal: StaticSealedIO<Error = Error, Unsealed = Validator>,
+		+ ExtrinsicSenderTrait,
+	Seal: StaticSealedIO<Error = Error, Unsealed = LightValidationState<ParentchainBlock>>,
 	ParentchainBlock: ParentchainBlockTrait,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	OCallApi: EnclaveOnChainOCallApi,
 {
-	pub fn new() -> Self {
-		GlobalValidatorAccessor { _phantom: Default::default() }
+	pub fn new(validator: Validator) -> Self {
+		GlobalValidatorAccessor {
+			light_validation: RwLock::new(validator),
+			_phantom: Default::default(),
+		}
 	}
 }
 
@@ -119,8 +108,8 @@ impl<Validator, ParentchainBlock, Seal, OCallApi> ValidatorAccess<ParentchainBlo
 where
 	Validator: ValidatorTrait<ParentchainBlock>
 		+ LightClientState<ParentchainBlock>
-		+ ExtrinsicSenderTrait<OCallApi>,
-	Seal: StaticSealedIO<Error = Error, Unsealed = Validator>,
+		+ ExtrinsicSenderTrait,
+	Seal: StaticSealedIO<Error = Error, Unsealed = LightValidationState<ParentchainBlock>>,
 	ParentchainBlock: ParentchainBlockTrait,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	OCallApi: EnclaveOnChainOCallApi,
@@ -131,19 +120,23 @@ where
 	where
 		F: FnOnce(&Self::ValidatorType) -> Result<R>,
 	{
-		let _read_lock = VALIDATOR_LOCK.read().map_err(|_| Error::PoisonedLock)?;
-		let validator = Seal::unseal_from_static_file()?;
-		getter_function(&validator)
+		let mut light_validation_lock =
+			self.light_validation.write().map_err(|_| Error::PoisonedLock)?;
+		let state = Seal::unseal_from_static_file()?;
+		light_validation_lock.set_state(state);
+		getter_function(&light_validation_lock)
 	}
 
 	fn execute_mut_on_validator<F, R>(&self, mutating_function: F) -> Result<R>
 	where
 		F: FnOnce(&mut Self::ValidatorType) -> Result<R>,
 	{
-		let _write_lock = VALIDATOR_LOCK.write().map_err(|_| Error::PoisonedLock)?;
-		let mut validator = Seal::unseal_from_static_file()?;
-		let result = mutating_function(&mut validator);
-		Seal::seal_to_static_file(validator)?;
+		let mut light_validation_lock =
+			self.light_validation.write().map_err(|_| Error::PoisonedLock)?;
+		let state = Seal::unseal_from_static_file()?;
+		light_validation_lock.set_state(state);
+		let result = mutating_function(&mut light_validation_lock);
+		Seal::seal_to_static_file(&light_validation_lock.get_state())?;
 		result
 	}
 }

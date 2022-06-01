@@ -16,10 +16,9 @@
 */
 
 use crate::{
-	error::Result, AuthorityList, ExtrinsicSender, HashFor, LightClientState, RelayId, SetId,
-	Validator,
+	error::Result, AuthorityList, ExtrinsicSender, HashFor, LightClientState, LightValidationState,
+	RelayId, SetId, Validator,
 };
-use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_storage::StorageProof;
 use itp_types::Block;
 use sp_runtime::{generic::SignedBlock, traits::Block as BlockT, Justifications, OpaqueExtrinsic};
@@ -72,14 +71,18 @@ impl Validator<Block> for ValidatorMock {
 	fn check_xt_inclusion(&mut self, _relay_id: RelayId, _block: &Block) -> Result<()> {
 		Ok(())
 	}
+
+	fn set_state(&mut self, _state: LightValidationState<Block>) {
+		todo!()
+	}
+
+	fn get_state(&self) -> &LightValidationState<Block> {
+		todo!()
+	}
 }
 
-impl<OCallApi: EnclaveOnChainOCallApi> ExtrinsicSender<OCallApi> for ValidatorMock {
-	fn send_extrinsics(
-		&mut self,
-		_ocall_api: &OCallApi,
-		_extrinsics: Vec<OpaqueExtrinsic>,
-	) -> Result<()> {
+impl ExtrinsicSender for ValidatorMock {
+	fn send_extrinsics(&mut self, _extrinsics: Vec<OpaqueExtrinsic>) -> Result<()> {
 		Ok(())
 	}
 }

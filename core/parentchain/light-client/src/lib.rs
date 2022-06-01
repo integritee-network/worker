@@ -32,7 +32,6 @@ pub use finality_grandpa::BlockNumberOps;
 pub use sp_finality_grandpa::{AuthorityList, SetId};
 
 use error::Error;
-use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_storage::StorageProof;
 use sp_finality_grandpa::{AuthorityId, AuthorityWeight, ConsensusLog, GRANDPA_ENGINE_ID};
 use sp_runtime::{
@@ -78,13 +77,14 @@ pub type HashingFor<Block> = <<Block as ParentchainBlockTrait>::Header as Header
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::concurrent_access::GlobalValidatorAccessor;
+use crate::light_validation_state::LightValidationState;
 
 /// Global validator accessor type
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub type ValidatorAccessor<Block, OCallApi> = GlobalValidatorAccessor<
 	LightValidation<Block, OCallApi>,
 	Block,
-	crate::io::LightClientSeal<Block, LightValidation<Block, OCallApi>>,
+	crate::io::LightClientStateSeal<Block, LightValidationState<Block>>,
 	OCallApi,
 >;
 
@@ -123,18 +123,15 @@ where
 	) -> Result<(), Error>;
 
 	fn check_xt_inclusion(&mut self, relay_id: RelayId, block: &Block) -> Result<(), Error>;
+
+	fn set_state(&mut self, state: LightValidationState<Block>);
+
+	fn get_state(&self) -> &LightValidationState<Block>;
 }
 
-pub trait ExtrinsicSender<OCallApi>
-where
-	OCallApi: EnclaveOnChainOCallApi,
-{
+pub trait ExtrinsicSender {
 	/// Sends encoded extrinsics to the parentchain and cache them internally for later confirmation.
-	fn send_extrinsics(
-		&mut self,
-		ocall_api: &OCallApi,
-		extrinsics: Vec<OpaqueExtrinsic>,
-	) -> Result<(), Error>;
+	fn send_extrinsics(&mut self, extrinsics: Vec<OpaqueExtrinsic>) -> Result<(), Error>;
 }
 
 pub trait LightClientState<Block: ParentchainBlockTrait> {
