@@ -268,7 +268,7 @@ pub fn initialize_receiver_for_direct_request(
 pub fn wait_until(
 	receiver: &Receiver<String>,
 	until: fn(TrustedOperationStatus) -> bool,
-) -> Option<Instant> {
+) -> Option<(H256, Instant)> {
 	debug!("waiting for rpc response");
 	loop {
 		match receiver.recv() {
@@ -293,10 +293,9 @@ pub fn wait_until(
 								if let Ok(value) = Hash::decode(&mut return_value.value.as_slice())
 								{
 									println!("Trusted call {:?} is {:?}", value, status);
-								}
-
-								if until(status) {
-									return Some(Instant::now())
+									if until(status) {
+										return Some((value, Instant::now()))
+									}
 								}
 							},
 							_ => {

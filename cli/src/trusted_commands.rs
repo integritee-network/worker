@@ -36,6 +36,7 @@ use itp_types::{
 };
 use log::*;
 use my_node_runtime::Balance;
+use primitive_types::H256;
 use rayon::prelude::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_application_crypto::{ed25519, sr25519};
@@ -217,6 +218,13 @@ struct BenchmarkClient {
 	receiver: Receiver<String>,
 }
 
+struct BenchmarkTransaction {
+	hash: H256,
+	started: Instant,
+	submitted: Instant,
+	confirmed: Option<Instant>,
+}
+
 fn transfer_benchmark(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
@@ -241,8 +249,7 @@ fn transfer_benchmark(
 
 	let mut accounts = Vec::new();
 
-	let num_threads = number_clients;
-	for i in 0..num_threads {
+	for i in 0..number_clients {
 		let nonce_alice = i + nonce_alice_start;
 		println!("Initializing account {}", i);
 
@@ -263,9 +270,9 @@ fn transfer_benchmark(
 		.sign(&KeyPair::Sr25519(alice.clone()), nonce_alice, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
 
-		let results = run_transaction(trusted_args, shielding_pubkey, top, true, &client);
+		let result = run_transaction(trusted_args, shielding_pubkey, top, true, &client);
 
-		if results.iter().any(|r| r.0 == "InSidechainBlock") {
+		if result.confirmed.is_some() {
 			println!("initialization of new account1 successful: {}", client.account.public());
 		} else {
 			println!("initialization of new account1 NOT successful");
@@ -277,6 +284,7 @@ fn transfer_benchmark(
 	let max_fds = proc_info.limits().unwrap().max_open_files;
 	println!("Max fds: {:?}/{:?}", max_fds.soft_limit, max_fds.hard_limit);
 
+	let num_threads = number_clients.min(100);
 	rayon::ThreadPoolBuilder::new()
 		.num_threads(num_threads as usize)
 		.build_global()
@@ -284,11 +292,10 @@ fn transfer_benchmark(
 
 	let overall_start = Instant::now();
 
-	let outputs: Vec<(Vec<String>, Vec<u128>)> = accounts
+	let outputs: Vec<Vec<BenchmarkTransaction>> = accounts
 		.into_par_iter()
 		.map(move |mut client| {
-			let mut output: Vec<String> = Vec::new();
-			let mut in_sidechain_block_timestamps = Vec::new();
+			let mut output: Vec<BenchmarkTransaction> = Vec::new();
 
 			for i in 0..number_iterations {
 				let number_fd = proc_info.fd_count().unwrap();
@@ -315,8 +322,7 @@ fn transfer_benchmark(
 				.sign(&KeyPair::Sr25519(client.account.clone()), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct);
 
-				let start_time = Instant::now();
-				let results = run_transaction(
+				let result = run_transaction(
 					trusted_args,
 					shielding_pubkey,
 					top,
@@ -327,20 +333,10 @@ fn transfer_benchmark(
 				client.current_balance = client.current_balance - leftover_balance;
 				client.account = new_account;
 
-				for (key, value) in results {
-					output.push(format!(
-						"{}: {}",
-						key,
-						value.duration_since(start_time).as_millis()
-					));
-					if key == "InSidechainBlock" {
-						in_sidechain_block_timestamps
-							.push(value.duration_since(start_time).as_millis());
-					}
-				}
+				output.push(result);
 			}
 			client.client_api.close().unwrap();
-			(output, in_sidechain_block_timestamps)
+			output
 		})
 		.collect();
 
@@ -354,8 +350,14 @@ fn transfer_benchmark(
 
 	let mut hist = Histogram::<u64>::new(1).unwrap();
 	for output in outputs {
-		for t in output.1 {
-			hist += t as u64;
+		for t in output {
+			let benchmarked_timestamp =
+				if wait_for_confirmation { t.confirmed } else { Some(t.submitted) };
+			if let Some(confirmed) = benchmarked_timestamp {
+				hist += confirmed.duration_since(t.submitted).as_millis() as u64;
+			} else {
+				println!("Missing measurement data");
+			}
 		}
 	}
 
@@ -403,9 +405,8 @@ fn run_transaction(
 	top: TrustedOperation,
 	wait_for_sidechain_block: bool,
 	client: &BenchmarkClient,
-) -> Vec<(String, Instant)> {
-	let mut timestamps = Vec::new();
-
+) -> BenchmarkTransaction {
+	let started = Instant::now();
 	match top {
 		TrustedOperation::direct_call(call) => initialize_receiver_for_direct_request(
 			&client.client_api,
@@ -416,16 +417,24 @@ fn run_transaction(
 		_ => (),
 	};
 
-	if let Some(t) = wait_until(&client.receiver, is_submitted) {
-		timestamps.push(("Submitted".to_string(), t))
+	let submitted = wait_until(&client.receiver, is_submitted);
+
+	let confirmed = if wait_for_sidechain_block {
+		wait_until(&client.receiver, is_sidechain_block)
+	} else {
+		None
+	};
+	if let (Some(s), Some(c)) = (submitted, confirmed) {
+		// Assert the two hashes are identical
+		assert_eq!(s.0, c.0);
 	}
 
-	if wait_for_sidechain_block {
-		if let Some(t) = wait_until(&client.receiver, is_sidechain_block) {
-			timestamps.push(("InSidechainBlock".to_string(), t))
-		}
+	BenchmarkTransaction {
+		hash: submitted.unwrap().0,
+		started,
+		submitted: submitted.unwrap().1,
+		confirmed: confirmed.map(|v| v.1),
 	}
-	timestamps
 }
 
 fn is_submitted(s: TrustedOperationStatus) -> bool {
