@@ -62,7 +62,7 @@ pub struct SlotInfo<ParentchainBlock: ParentchainBlockTrait> {
 impl<ParentchainBlock: ParentchainBlockTrait> SlotInfo<ParentchainBlock> {
 	/// Create a new [`SlotInfo`].
 	///
-	/// `ends_at` is calculated using `timestamp` and `duration`.
+	/// `ends_at` is calculated using `now` and `time_until_next_slot`.
 	pub fn new(
 		slot: Slot,
 		timestamp: Duration,
@@ -73,7 +73,7 @@ impl<ParentchainBlock: ParentchainBlockTrait> SlotInfo<ParentchainBlock> {
 			slot,
 			timestamp,
 			duration,
-			ends_at: timestamp + time_until_next_slot(duration),
+			ends_at: duration_now() + time_until_next_slot(duration),
 			last_imported_parentchain_head: parentchain_head,
 		}
 	}
@@ -92,7 +92,7 @@ pub(crate) fn timestamp_within_slot<
 		&& slot.ends_at.as_millis() as u64 >= proposal_stamp
 }
 
-pub fn slot_from_time_stamp_and_duration(timestamp: Duration, duration: Duration) -> Slot {
+pub fn slot_from_timestamp_and_duration(timestamp: Duration, duration: Duration) -> Slot {
 	((timestamp.as_millis() / duration.as_millis()) as u64).into()
 }
 
@@ -111,7 +111,7 @@ where
 	}
 
 	let last_slot = last_slot_getter.get_last_slot()?;
-	let slot = slot_from_time_stamp_and_duration(timestamp, duration);
+	let slot = slot_from_timestamp_and_duration(timestamp, duration);
 
 	if slot <= last_slot {
 		return Ok(None)
@@ -190,9 +190,10 @@ mod tests {
 	};
 	use sp_keyring::ed25519::Keyring;
 	use sp_runtime::traits::Header as HeaderT;
-	use std::{fmt::Debug, time::SystemTime};
+	use std::{fmt::Debug, thread, time::SystemTime};
 
 	const SLOT_DURATION: Duration = Duration::from_millis(1000);
+	const ALLOWED_THRESHOLD: Duration = Duration::from_millis(1);
 
 	struct LastSlotSealMock;
 
@@ -201,7 +202,7 @@ mod tests {
 		type Unsealed = Slot;
 
 		fn unseal_from_static_file() -> Result<Self::Unsealed, Self::Error> {
-			Ok(slot_from_time_stamp_and_duration(duration_now(), SLOT_DURATION))
+			Ok(slot_from_timestamp_and_duration(duration_now(), SLOT_DURATION))
 		}
 
 		fn seal_to_static_file(_unsealed: Self::Unsealed) -> Result<(), Self::Error> {
@@ -263,13 +264,31 @@ mod tests {
 	fn assert_consensus_other_err<T: Debug>(result: Result<T, ConsensusError>, msg: &str) {
 		assert_matches!(result.unwrap_err(), ConsensusError::Other(
 			m,
-		) if &m.to_string() == msg)
+		) if m.to_string() == msg)
 	}
 
 	#[test]
 	fn time_until_next_slot_returns_default_on_nano_duration() {
 		// prevent panic: https://github.com/integritee-network/worker/issues/439
 		assert_eq!(time_until_next_slot(Duration::from_nanos(999)), Default::default())
+	}
+
+	#[test]
+	fn slot_info_ends_at_does_not_change_after_second_calculation() {
+		let timestamp = duration_now();
+		let pc_header = default_header();
+		let slot: Slot = 1000.into();
+
+		let slot_one: SlotInfo<ParentchainBlock> =
+			SlotInfo::new(slot, timestamp, SLOT_DURATION, pc_header.clone());
+		thread::sleep(Duration::from_millis(200));
+		let slot_two: SlotInfo<ParentchainBlock> =
+			SlotInfo::new(slot, timestamp, SLOT_DURATION, pc_header);
+
+		let difference_of_ends_at =
+			(slot_one.ends_at.as_millis()).abs_diff(slot_two.ends_at.as_millis());
+
+		assert!(difference_of_ends_at < ALLOWED_THRESHOLD.as_millis());
 	}
 
 	#[test]

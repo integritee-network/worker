@@ -49,7 +49,7 @@ use itp_types::{AccountId, Block as ParentchainBlock, ShardIdentifier};
 use its_sidechain::{
 	aura::proposer_factory::ProposerFactory,
 	primitives::{traits::Block, types::SignedBlock as SignedSidechainBlock},
-	slots::{slot_from_time_stamp_and_duration, SlotInfo},
+	slots::{slot_from_timestamp_and_duration, SlotInfo},
 	state::SidechainState,
 };
 use jsonrpc_core::futures::executor;
@@ -139,7 +139,7 @@ pub fn produce_sidechain_block_and_import_it() {
 	info!("Setup AURA SlotInfo");
 	let parentchain_header = ParentchainHeaderBuilder::default().build();
 	let timestamp = duration_now();
-	let slot = slot_from_time_stamp_and_duration(duration_now(), SLOT_DURATION);
+	let slot = slot_from_timestamp_and_duration(duration_now(), SLOT_DURATION);
 	let slot_info = SlotInfo::new(slot, timestamp, SLOT_DURATION, parentchain_header.clone());
 
 	info!("Test setup is done.");
