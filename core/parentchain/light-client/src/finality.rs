@@ -27,13 +27,9 @@ use sp_runtime::{
 	traits::{Block as ParentchainBlockTrait, Header as HeaderTrait},
 	Justification, Justifications,
 };
-use std::vec::Vec;
 
 #[derive(Default)]
-pub struct GrandpaFinality {
-	pub authorities: AuthorityList,
-	pub authority_proof: Vec<Vec<u8>>,
-}
+pub struct GrandpaFinality;
 
 #[derive(Default)]
 pub struct ParachainFinality;

@@ -64,20 +64,22 @@ pub fn init_validator<B: Block, OCallApi: EnclaveOnChainOCallApi>(
 where
 	NumberFor<B>: finality_grandpa::BlockNumberOps,
 {
-	let genesis_header = params.get_genesis_header().clone();
-	let authorities = params.get_authorities().unwrap().clone();
-	let authority_proof = params.get_authority_proof().unwrap().clone();
+	let genesis_header = params.get_genesis_header();
+	let authorities = params.get_authorities().unwrap();
+	let authority_proof = params.get_authority_proof().unwrap();
 
 	let finality: Arc<Box<dyn Finality<B> + Sync + Send + 'static>> = match params {
-		LightClientInitParams::Grandpa { authorities, authority_proof, .. } =>
-			Arc::new(Box::new(GrandpaFinality { authorities, authority_proof })),
+		LightClientInitParams::Grandpa { .. } => Arc::new(Box::new(GrandpaFinality {})),
 		LightClientInitParams::Parachain { .. } => Arc::new(Box::new(ParachainFinality {})),
 	};
 
 	let mut validator = LightValidation::<B, OCallApi>::new(ocall_api, finality);
 
-	// TODO.
-	validator.initialize_relay(genesis_header, authorities, authority_proof)?;
+	validator.initialize_relay(
+		genesis_header.clone(),
+		authorities.clone(),
+		authority_proof.clone(),
+	)?;
 	LightClientStateSeal::<B, LightValidationState<B>>::seal_to_static_file(validator.get_state())?;
 
 	return Ok(validator)
