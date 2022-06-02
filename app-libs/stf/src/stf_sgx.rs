@@ -20,8 +20,8 @@ use crate::test_genesis::test_genesis_setup;
 
 use crate::{
 	helpers::{
-		account_data, account_nonce, enclave_self_account, ensure_root, ensure_self,
-		get_account_info, increment_nonce, root, validate_nonce,
+		account_data, account_nonce, enclave_signer_account, ensure_registered_enclave,
+		ensure_root, get_account_info, increment_nonce, root, validate_nonce,
 	},
 	AccountData, AccountId, Getter, Index, ParentchainHeader, PublicGetter, ShardIdentifier, State,
 	StateTypeDiff, Stf, StfError, StfResult, TrustedCall, TrustedCallSigned, TrustedGetter,
@@ -183,7 +183,7 @@ impl Stf {
 					Ok(())
 				},
 				TrustedCall::balance_shield(enclave_account, who, value) => {
-					ensure_self(&enclave_account)?;
+					ensure_registered_enclave(&enclave_account)?;
 					debug!("balance_shield({:x?}, {})", who.encode(), value);
 					Self::shield_funds(who, value)?;
 					Ok(())
@@ -303,7 +303,7 @@ impl Stf {
 	}
 
 	pub fn get_enclave_account(ext: &mut impl SgxExternalitiesTrait) -> AccountId {
-		ext.execute_with(|| enclave_self_account())
+		ext.execute_with(|| enclave_signer_account())
 	}
 
 	pub fn account_nonce(ext: &mut impl SgxExternalitiesTrait, account: &AccountId) -> Index {

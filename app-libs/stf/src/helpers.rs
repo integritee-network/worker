@@ -130,7 +130,7 @@ pub fn root() -> AccountId {
 	get_storage_value("Sudo", "Key").unwrap()
 }
 
-pub fn enclave_self_account() -> AccountId {
+pub fn enclave_signer_account() -> AccountId {
 	get_storage_value("Sudo", ENCLAVE_ACCOUNT_KEY).unwrap()
 }
 
@@ -148,8 +148,9 @@ pub fn get_parentchain_number() -> Option<BlockNumber> {
 	get_storage_value("Parentchain", "Number")
 }
 
-pub fn ensure_self(account: &AccountId) -> StfResult<()> {
-	let expected_enclave_account = enclave_self_account();
+/// Ensures an account is a registered enclave account.
+pub fn ensure_registered_enclave(account: &AccountId) -> StfResult<()> {
+	let expected_enclave_account = enclave_signer_account();
 	if &expected_enclave_account == account {
 		Ok(())
 	} else {
