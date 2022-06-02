@@ -92,7 +92,7 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	let shielding_key = Rsa3072Seal::unseal_from_static_file()?;
 
 	let shielding_key_repository =
-		Arc::new(EnclaveShieldingKeyRepository::new(shielding_key.clone(), Arc::new(Rsa3072Seal)));
+		Arc::new(EnclaveShieldingKeyRepository::new(shielding_key, Arc::new(Rsa3072Seal)));
 	GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.initialize(shielding_key_repository.clone());
 
 	// Create the aes key that is used for state encryption such that a key is always present in tests.
