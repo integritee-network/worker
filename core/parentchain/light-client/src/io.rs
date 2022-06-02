@@ -21,7 +21,6 @@ use crate::{
 	light_validation::LightValidation,
 	Error, LightValidationState, NumberFor, Validator,
 };
-use alloc::sync::Arc;
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use itp_ocall_api::EnclaveOnChainOCallApi;
@@ -30,7 +29,7 @@ use itp_sgx_io::{seal, unseal, StaticSealedIO};
 use itp_types::light_client_init_params::LightClientInitParams;
 use log::*;
 use sp_runtime::traits::Block;
-use std::{boxed::Box, fs};
+use std::{boxed::Box, fs, sync::Arc};
 
 #[derive(Copy, Clone, Debug)]
 pub struct LightClientStateSeal<B, LightClientState> {

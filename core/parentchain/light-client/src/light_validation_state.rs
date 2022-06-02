@@ -15,7 +15,7 @@
 
 */
 
-//! Grandpa Light-client validation crate that verifies parentchain blocks.
+//! State of the light-client validation.
 
 use crate::{state::RelayState, RelayId};
 use codec::{Decode, Encode};

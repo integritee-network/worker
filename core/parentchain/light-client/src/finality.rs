@@ -15,9 +15,11 @@
 
 */
 
-/// Finali
+//! Finality for determination of the light client validation.
+
 use crate::{
-	error::Result, justification::GrandpaJustification, state::RelayState, AuthorityList, NumberFor,
+	error::Result, justification::GrandpaJustification, state::RelayState, AuthorityList, Error,
+	NumberFor,
 };
 use finality_grandpa::voter_set::VoterSet;
 use log::*;
@@ -99,8 +101,9 @@ where
 					error!("Block {:?} contained invalid justification: {:?}", block_num, err);
 					relay.unjustified_headers.push(header.hash());
 					relay.set_last_finalized_block_header(header);
-					return Ok(())
+					return Err(err)
 				}
+				return Ok(())
 			},
 			None => {
 				relay.unjustified_headers.push(header.hash());
@@ -110,10 +113,9 @@ where
 					"Syncing finalized block without grandpa proof. Amount of unjustified headers: {}",
 					relay.unjustified_headers.len()
 				);
-				return Ok(())
+				return Err(Error::NoJustificationFound)
 			},
 		}
-		Ok(())
 	}
 }
 

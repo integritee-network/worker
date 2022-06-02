@@ -15,7 +15,7 @@
 
 */
 
-//! Grandpa Light-client validation crate that verifies parentchain blocks.
+//! Light-client validation crate that verifies parentchain blocks.
 
 use crate::{
 	error::Error,
@@ -178,13 +178,15 @@ where
 		let last_header = &relay.last_finalized_block_header;
 		Self::verify_ancestry(ancestry_proof, last_header.hash(), &header)?;
 
-		let _ = self.finality.validate(
+		if let Err(_) = self.finality.validate(
 			header.clone(),
 			&validator_set,
 			validator_set_id,
 			justifications,
 			relay,
-		);
+		) {
+			return Ok(())
+		}
 
 		Self::schedule_validator_set_change(relay, &header);
 
