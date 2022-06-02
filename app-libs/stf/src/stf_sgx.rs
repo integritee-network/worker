@@ -77,7 +77,7 @@ impl Stf {
 				&enclave_account.encode(),
 			);
 
-			if let Err(e) = Self::ensure_self_has_valid_account(&enclave_account) {
+			if let Err(e) = Self::create_enclave_self_account(&enclave_account) {
 				error!("Failed to initialize the enclave signer account: {:?}", e);
 			}
 		});
@@ -194,10 +194,9 @@ impl Stf {
 		})
 	}
 
-	/// Ensures that the enclave account has a valid account with a balance
-	/// that is above the existential deposit.
+	/// Creates valid enclave account with a balance that is above the existential deposit.
 	/// !! Requires a root to be set.
-	fn ensure_self_has_valid_account(enclave_account: &AccountId) -> StfResult<()> {
+	fn create_enclave_self_account(enclave_account: &AccountId) -> StfResult<()> {
 		sgx_runtime::BalancesCall::<Runtime>::set_balance {
 			who: MultiAddress::Id(enclave_account.clone()),
 			new_free: 1000,
