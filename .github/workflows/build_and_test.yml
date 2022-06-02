@@ -29,7 +29,7 @@ jobs:
   build-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -135,7 +135,7 @@ jobs:
     runs-on: ubuntu-latest
     container: "integritee/integritee-dev:0.1.9"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: init rust
         # enclave is not in the same workspace
         run: rustup show && cd enclave-runtime && rustup show
@@ -152,7 +152,7 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: init rust
         run: rustup show
 
@@ -187,9 +187,9 @@ jobs:
     env:
       BIN_DIR: bin
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v3
         with:
           python-version: '3.7'
 
@@ -308,7 +308,7 @@ jobs:
       release_url: ${{ steps.create-release.outputs.html_url }}
       asset_upload_url: ${{ steps.create-release.outputs.upload_url }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Download Integritee Service
         uses: actions/download-artifact@v2
