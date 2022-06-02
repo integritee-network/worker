@@ -178,13 +178,11 @@ where
 		let last_header = &relay.last_finalized_block_header;
 		Self::verify_ancestry(ancestry_proof, last_header.hash(), &header)?;
 
-		if let Err(_) = self.finality.validate(
-			header.clone(),
-			&validator_set,
-			validator_set_id,
-			justifications,
-			relay,
-		) {
+		if self
+			.finality
+			.validate(header.clone(), &validator_set, validator_set_id, justifications, relay)
+			.is_err()
+		{
 			return Ok(())
 		}
 

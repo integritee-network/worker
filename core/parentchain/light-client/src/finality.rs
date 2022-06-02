@@ -103,7 +103,7 @@ where
 					relay.set_last_finalized_block_header(header);
 					return Err(err)
 				}
-				return Ok(())
+				Ok(())
 			},
 			None => {
 				relay.unjustified_headers.push(header.hash());
@@ -113,7 +113,7 @@ where
 					"Syncing finalized block without grandpa proof. Amount of unjustified headers: {}",
 					relay.unjustified_headers.len()
 				);
-				return Err(Error::NoJustificationFound)
+				Err(Error::NoJustificationFound)
 			},
 		}
 	}

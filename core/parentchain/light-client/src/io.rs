@@ -28,8 +28,8 @@ use itp_settings::files::LIGHT_CLIENT_DB;
 use itp_sgx_io::{seal, unseal, StaticSealedIO};
 use itp_types::light_client_init_params::LightClientInitParams;
 use log::*;
-use sp_runtime::traits::Block;
-use std::{boxed::Box, fs, sync::Arc};
+use sp_runtime::traits::{Block, Header};
+use std::{boxed::Box, fs, sgxfs::SgxFile, sync::Arc};
 
 #[derive(Copy, Clone, Debug)]
 pub struct LightClientStateSeal<B, LightClientState> {
@@ -56,7 +56,42 @@ impl<B: Block, LightClientState: Decode + Encode + Debug> StaticSealedIO
 	}
 }
 
-pub fn init_validator<B, OCallApi>(
+pub fn read_or_init_validator<B, OCallApi>(
+	params: LightClientInitParams<B::Header>,
+	ocall_api: Arc<OCallApi>,
+) -> Result<LightValidation<B, OCallApi>>
+where
+	B: Block,
+	NumberFor<B>: finality_grandpa::BlockNumberOps,
+	OCallApi: EnclaveOnChainOCallApi,
+{
+	if SgxFile::open(LIGHT_CLIENT_DB).is_err() {
+		info!("[Enclave] ChainRelay DB not found, creating new! {}", LIGHT_CLIENT_DB);
+		return init_validator::<B, OCallApi>(params, ocall_api)
+	}
+
+	let validation_state =
+		LightClientStateSeal::<B, LightValidationState<B>>::unseal_from_static_file()?;
+
+	let relay = validation_state
+		.tracked_relays
+		.get(&validation_state.num_relays)
+		.ok_or(Error::NoSuchRelayExists)?;
+
+	let genesis = relay.header_hashes[0];
+
+	if genesis == params.get_genesis_header().hash() {
+		let mut validator = init_validator::<B, OCallApi>(params, ocall_api)?;
+		validator.set_state(validation_state);
+		info!("Found already initialized light client with Genesis Hash: {:?}", genesis);
+		info!("light client state: {:?}", validator);
+		Ok(validator)
+	} else {
+		init_validator::<B, OCallApi>(params, ocall_api)
+	}
+}
+
+fn init_validator<B, OCallApi>(
 	params: LightClientInitParams<B::Header>,
 	ocall_api: Arc<OCallApi>,
 ) -> Result<LightValidation<B, OCallApi>>
