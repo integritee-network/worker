@@ -153,7 +153,7 @@ pub fn match_trusted_commands(cli: &Cli, trusted_args: &TrustedArgs) {
 			transfer(cli, trusted_args, from, to, amount),
 		TrustedCommands::SetBalance { account, amount } =>
 			set_balance(cli, trusted_args, account, amount),
-		TrustedCommands::Balance { account } => balance(cli, trusted_args, account),
+		TrustedCommands::Balance { account } => print_balance(cli, trusted_args, account),
 		TrustedCommands::UnshieldFunds { from, to, amount } =>
 			unshield_funds(cli, trusted_args, from, to, amount),
 		TrustedCommands::Benchmark { number_clients, number_iterations, wait_for_confirmation } =>
@@ -212,7 +212,6 @@ fn transfer(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, arg_to: &str,
 
 struct BenchmarkClient {
 	account: sr25519_core::Pair,
-	//account2: sr25519_core::Pair,
 	current_balance: u128,
 	client_api: DirectClient,
 	receiver: Receiver<String>,
@@ -270,7 +269,7 @@ fn transfer_benchmark(
 		.sign(&KeyPair::Sr25519(alice.clone()), nonce_alice, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
 
-		let result = run_transaction(trusted_args, shielding_pubkey, top, true, &client);
+		let result = run_transaction(trusted_args, shielding_pubkey, top, false, &client);
 
 		if result.confirmed.is_some() {
 			println!("initialization of new account1 successful: {}", client.account.public());
@@ -311,31 +310,37 @@ fn transfer_benchmark(
 				println!("  From: {:?}", client.account.public());
 				println!("  To:   {:?}", new_account.public());
 
-				let leftover_balance = 1000;
+				let keep_alive_balance = 1000;
 
 				//account -> new_account
 				let top: TrustedOperation = TrustedCall::balance_transfer(
 					client.account.public().into(),
 					new_account.public().into(),
-					client.current_balance - leftover_balance,
+					client.current_balance - keep_alive_balance,
 				)
 				.sign(&KeyPair::Sr25519(client.account.clone()), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct);
 
+				let last_iteration = i == number_iterations - 1;
 				let result = run_transaction(
 					trusted_args,
 					shielding_pubkey,
 					top,
-					wait_for_confirmation,
+					wait_for_confirmation || last_iteration,
 					&client,
 				);
 
-				client.current_balance = client.current_balance - leftover_balance;
+				client.current_balance = client.current_balance - keep_alive_balance;
 				client.account = new_account;
 
 				output.push(result);
 			}
 			client.client_api.close().unwrap();
+
+			let balance = get_balance(cli, trusted_args, &client.account.public().to_string());
+			println!("Balance: {}", balance.unwrap_or_default());
+			assert_eq!(client.current_balance, balance.unwrap());
+
 			output
 		})
 		.collect();
@@ -343,7 +348,7 @@ fn transfer_benchmark(
 	let summary_string = format!(
 		"Finished benchmark with {} clients and {} transactions in {} ms",
 		number_clients,
-		2 * number_iterations,
+		number_iterations,
 		overall_start.elapsed().as_millis()
 	);
 	println!("{}", summary_string);
@@ -354,7 +359,7 @@ fn transfer_benchmark(
 			let benchmarked_timestamp =
 				if wait_for_confirmation { t.confirmed } else { Some(t.submitted) };
 			if let Some(confirmed) = benchmarked_timestamp {
-				hist += confirmed.duration_since(t.submitted).as_millis() as u64;
+				hist += confirmed.duration_since(t.started).as_millis() as u64;
 			} else {
 				println!("Missing measurement data");
 			}
@@ -420,7 +425,15 @@ fn run_transaction(
 	let submitted = wait_until(&client.receiver, is_submitted);
 
 	let confirmed = if wait_for_sidechain_block {
-		wait_until(&client.receiver, is_sidechain_block)
+		// We wait for the transaction hash that actually matches the submitted hash
+		loop {
+			let transaction_information = wait_until(&client.receiver, is_sidechain_block);
+			if let Some((hash, _)) = transaction_information {
+				if hash == submitted.unwrap().0 {
+					break transaction_information
+				}
+			}
+		}
 	} else {
 		None
 	};
@@ -465,7 +478,11 @@ fn set_balance(cli: &Cli, trusted_args: &TrustedArgs, arg_who: &str, amount: &Ba
 	let _ = perform_operation(cli, trusted_args, &top);
 }
 
-fn balance(cli: &Cli, trusted_args: &TrustedArgs, arg_who: &str) {
+fn print_balance(cli: &Cli, trusted_args: &TrustedArgs, arg_who: &str) {
+	println!("{}", get_balance(cli, trusted_args, arg_who).unwrap_or_default());
+}
+
+fn get_balance(cli: &Cli, trusted_args: &TrustedArgs, arg_who: &str) -> Option<u128> {
 	debug!("arg_who = {:?}", arg_who);
 	let who = get_pair_from_str(trusted_args, arg_who);
 	let top: TrustedOperation = TrustedGetter::free_balance(who.public().into())
@@ -475,15 +492,15 @@ fn balance(cli: &Cli, trusted_args: &TrustedArgs, arg_who: &str) {
 	debug!("received result for balance");
 	let bal = if let Some(v) = res {
 		if let Ok(vd) = Balance::decode(&mut v.as_slice()) {
-			vd
+			Some(vd)
 		} else {
 			info!("could not decode value. maybe hasn't been set? {:x?}", v);
-			0
+			None
 		}
 	} else {
-		0
+		None
 	};
-	println!("{}", bal);
+	bal
 }
 
 fn unshield_funds(

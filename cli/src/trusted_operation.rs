@@ -303,10 +303,10 @@ pub fn wait_until(
 								return None
 							},
 						}
-						if !return_value.do_watch {
+						/*if !return_value.do_watch {
 							debug!("do watch is false, closing connection");
 							return None
-						}
+						}*/
 					};
 				} else {
 					error!("Could not parse response");
