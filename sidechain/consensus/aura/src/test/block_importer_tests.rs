@@ -194,6 +194,21 @@ fn block_import_with_invalid_signature_fails() {
 }
 
 #[test]
+fn block_import_with_invalid_parentchain_block_fails() {
+	let (block_importer, state_handler, _) = test_fixtures_with_default_import_trigger();
+
+	let parentchain_header_invalid = ParentchainHeaderBuilder::default().with_number(2).build();
+	let parentchain_header = ParentchainHeaderBuilder::default().with_number(10).build();
+
+	let signed_sidechain_block =
+		default_authority_signed_block(&parentchain_header_invalid, state_handler.as_ref());
+
+	assert!(block_importer
+		.import_block(signed_sidechain_block, &parentchain_header)
+		.is_err());
+}
+
+#[test]
 fn cleanup_removes_tops_from_pool() {
 	let (block_importer, state_handler, top_pool_call_operator) =
 		test_fixtures_with_default_import_trigger();
