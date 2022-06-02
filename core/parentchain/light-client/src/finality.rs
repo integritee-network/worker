@@ -30,13 +30,13 @@ use sp_runtime::{
 use std::vec::Vec;
 
 #[derive(Default)]
-pub struct Grandpa {
+pub struct GrandpaFinality {
 	pub authorities: AuthorityList,
 	pub authority_proof: Vec<Vec<u8>>,
 }
 
 #[derive(Default)]
-pub struct Parachain;
+pub struct ParachainFinality;
 
 pub trait Finality<Block: ParentchainBlockTrait> {
 	fn validate(
@@ -49,7 +49,7 @@ pub trait Finality<Block: ParentchainBlockTrait> {
 	) -> Result<()>;
 }
 
-impl<Block> Finality<Block> for Parachain
+impl<Block> Finality<Block> for ParachainFinality
 where
 	Block: ParentchainBlockTrait,
 {
@@ -65,7 +65,7 @@ where
 	}
 }
 
-impl<Block> Finality<Block> for Grandpa
+impl<Block> Finality<Block> for GrandpaFinality
 where
 	Block: ParentchainBlockTrait,
 	NumberFor<Block>: finality_grandpa::BlockNumberOps,
@@ -121,7 +121,7 @@ where
 	}
 }
 
-impl Grandpa {
+impl GrandpaFinality {
 	fn verify_grandpa_proof<Block: ParentchainBlockTrait>(
 		justification: Justification,
 		hash: Block::Hash,

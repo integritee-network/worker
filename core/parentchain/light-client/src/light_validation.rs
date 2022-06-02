@@ -135,10 +135,11 @@ impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi>
 	}
 }
 
-impl<Block: ParentchainBlockTrait, OCallApi: EnclaveOnChainOCallApi> Validator<Block>
-	for LightValidation<Block, OCallApi>
+impl<Block, OCallApi> Validator<Block> for LightValidation<Block, OCallApi>
 where
 	NumberFor<Block>: finality_grandpa::BlockNumberOps,
+	Block: ParentchainBlockTrait,
+	OCallApi: EnclaveOnChainOCallApi,
 {
 	fn initialize_relay(
 		// nur grandpa
@@ -292,10 +293,11 @@ where
 	}
 }
 
-impl<Block: ParentchainBlockTrait, OCallApi: EnclaveOnChainOCallApi> ExtrinsicSender
-	for LightValidation<Block, OCallApi>
+impl<Block, OCallApi> ExtrinsicSender for LightValidation<Block, OCallApi>
 where
 	NumberFor<Block>: finality_grandpa::BlockNumberOps,
+	Block: ParentchainBlockTrait,
+	OCallApi: EnclaveOnChainOCallApi,
 {
 	fn send_extrinsics(&mut self, extrinsics: Vec<OpaqueExtrinsic>) -> Result<(), Error> {
 		for xt in extrinsics.iter() {
@@ -308,8 +310,11 @@ where
 	}
 }
 
-impl<Block: ParentchainBlockTrait, OCallApi: EnclaveOnChainOCallApi> LightClientState<Block>
-	for LightValidation<Block, OCallApi>
+impl<Block, OCallApi> LightClientState<Block> for LightValidation<Block, OCallApi>
+where
+	NumberFor<Block>: finality_grandpa::BlockNumberOps,
+	Block: ParentchainBlockTrait,
+	OCallApi: EnclaveOnChainOCallApi,
 {
 	fn num_xt_to_be_included(&mut self, relay_id: RelayId) -> Result<usize, Error> {
 		let relay = self
@@ -355,8 +360,11 @@ impl<Block: ParentchainBlockTrait, OCallApi: EnclaveOnChainOCallApi> LightClient
 	}
 }
 
-impl<Block: ParentchainBlockTrait, OCallApi: EnclaveOnChainOCallApi> fmt::Debug
-	for LightValidation<Block, OCallApi>
+impl<Block, OCallApi> fmt::Debug for LightValidation<Block, OCallApi>
+where
+	NumberFor<Block>: finality_grandpa::BlockNumberOps,
+	Block: ParentchainBlockTrait,
+	OCallApi: EnclaveOnChainOCallApi,
 {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		write!(

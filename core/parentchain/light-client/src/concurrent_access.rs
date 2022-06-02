@@ -32,15 +32,8 @@ use crate::{
 use finality_grandpa::BlockNumberOps;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_sgx_io::StaticSealedIO;
-use lazy_static::lazy_static;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, NumberFor};
 use std::marker::PhantomData;
-
-lazy_static! {
-	// As long as we have a file backend, we use this 'dummy' lock,
-	// which guards against concurrent read/write access.
-	pub static ref VALIDATOR_LOCK: RwLock<()> = Default::default();
-}
 
 /// Retrieve an exclusive lock on a validator for either read or write access.
 ///

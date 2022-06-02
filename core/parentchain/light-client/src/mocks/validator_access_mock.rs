@@ -18,7 +18,6 @@
 #[cfg(feature = "sgx")]
 use std::sync::SgxRwLock as RwLock;
 
-use itp_ocall_api::EnclaveOnChainOCallApi;
 #[cfg(feature = "std")]
 use std::sync::RwLock;
 
@@ -27,6 +26,7 @@ use crate::{
 	error::{Error, Result},
 	mocks::validator_mock::ValidatorMock,
 };
+use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_types::Block;
 
 /// Mock for the validator access.

@@ -17,7 +17,7 @@
 
 use crate::{
 	error::Result,
-	finality::{Finality, Grandpa, Parachain},
+	finality::{Finality, GrandpaFinality, ParachainFinality},
 	light_validation::LightValidation,
 	Error, LightValidationState, NumberFor, Validator,
 };
@@ -70,8 +70,8 @@ where
 
 	let finality: Arc<Box<dyn Finality<B> + Sync + Send + 'static>> = match params {
 		LightClientInitParams::Grandpa { authorities, authority_proof, .. } =>
-			Arc::new(Box::new(Grandpa { authorities, authority_proof })),
-		LightClientInitParams::Parachain { .. } => Arc::new(Box::new(Parachain {})),
+			Arc::new(Box::new(GrandpaFinality { authorities, authority_proof })),
+		LightClientInitParams::Parachain { .. } => Arc::new(Box::new(ParachainFinality {})),
 	};
 
 	let mut validator = LightValidation::<B, OCallApi>::new(ocall_api, finality);

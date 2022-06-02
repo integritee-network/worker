@@ -222,7 +222,7 @@ pub(crate) fn init_light_client(params: LightClientInitParams<Header>) -> Enclav
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 	let validator =
 		itc_parentchain::light_client::io::init_validator::<Block, OcallApi>(params, ocall_api)?;
-	let latest_header = validator.latest_finalized_header(validator.num_relays()).unwrap();
+	let latest_header = validator.latest_finalized_header(validator.num_relays())?;
 
 	// Initialize the global parentchain block import dispatcher instance.
 	let signer = Ed25519Seal::unseal_from_static_file()?;
