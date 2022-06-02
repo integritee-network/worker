@@ -29,7 +29,6 @@ use itp_settings::files::LIGHT_CLIENT_DB;
 use itp_sgx_io::{seal, unseal, StaticSealedIO};
 use itp_types::light_client_init_params::LightClientInitParams;
 use log::*;
-use sp_finality_grandpa::AuthorityList;
 use sp_runtime::traits::Block;
 use std::{boxed::Box, fs};
 

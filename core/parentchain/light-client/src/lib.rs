@@ -41,17 +41,12 @@ use sp_runtime::{
 };
 use std::vec::Vec;
 
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-use crate::light_validation::LightValidation;
-
 pub mod concurrent_access;
 pub mod error;
 pub mod finality;
 pub mod justification;
 pub mod light_validation;
 pub mod light_validation_state;
-//TODO : delete
-//pub mod parachain_light_validation;
 pub mod state;
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
@@ -75,18 +70,7 @@ pub type HashFor<Block> = <<Block as ParentchainBlockTrait>::Header as HeaderTra
 /// Hashing function used to produce `HashOf<Block>`
 pub type HashingFor<Block> = <<Block as ParentchainBlockTrait>::Header as HeaderTrait>::Hashing;
 
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-use crate::concurrent_access::GlobalValidatorAccessor;
 use crate::light_validation_state::LightValidationState;
-
-/// Global validator accessor type
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-pub type ValidatorAccessor<Block, OCallApi> = GlobalValidatorAccessor<
-	LightValidation<Block, OCallApi>,
-	Block,
-	crate::io::LightClientStateSeal<Block, LightValidationState<Block>>,
-	OCallApi,
->;
 
 /// Validator trait
 pub trait Validator<Block: ParentchainBlockTrait>

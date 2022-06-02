@@ -63,7 +63,7 @@ where
 
 /// Implementation of a validator access based on a global lock and corresponding file.
 #[derive(Debug)]
-pub struct GlobalValidatorAccessor<Validator, ParentchainBlock, Seal, OCallApi>
+pub struct ValidatorAccessor<Validator, ParentchainBlock, Seal, OCallApi>
 where
 	Validator: ValidatorTrait<ParentchainBlock>
 		+ LightClientState<ParentchainBlock>
@@ -78,7 +78,7 @@ where
 }
 
 impl<Validator, ParentchainBlock, Seal, OCallApi>
-	GlobalValidatorAccessor<Validator, ParentchainBlock, Seal, OCallApi>
+	ValidatorAccessor<Validator, ParentchainBlock, Seal, OCallApi>
 where
 	Validator: ValidatorTrait<ParentchainBlock>
 		+ LightClientState<ParentchainBlock>
@@ -89,15 +89,12 @@ where
 	OCallApi: EnclaveOnChainOCallApi,
 {
 	pub fn new(validator: Validator) -> Self {
-		GlobalValidatorAccessor {
-			light_validation: RwLock::new(validator),
-			_phantom: Default::default(),
-		}
+		ValidatorAccessor { light_validation: RwLock::new(validator), _phantom: Default::default() }
 	}
 }
 
 impl<Validator, ParentchainBlock, Seal, OCallApi> ValidatorAccess<ParentchainBlock, OCallApi>
-	for GlobalValidatorAccessor<Validator, ParentchainBlock, Seal, OCallApi>
+	for ValidatorAccessor<Validator, ParentchainBlock, Seal, OCallApi>
 where
 	Validator: ValidatorTrait<ParentchainBlock>
 		+ LightClientState<ParentchainBlock>
@@ -144,7 +141,7 @@ mod tests {
 	use itp_types::Block;
 
 	type TestAccessor =
-		GlobalValidatorAccessor<ValidatorMock, Block, LightValidationStateSealMock, OnchainMock>;
+		ValidatorAccessor<ValidatorMock, Block, LightValidationStateSealMock, OnchainMock>;
 
 	#[test]
 	fn execute_with_and_without_mut_in_single_thread_works() {
