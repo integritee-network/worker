@@ -57,12 +57,14 @@ impl<B: Block, LightClientState: Decode + Encode + Debug> StaticSealedIO
 	}
 }
 
-pub fn init_validator<B: Block, OCallApi: EnclaveOnChainOCallApi>(
+pub fn init_validator<B, OCallApi>(
 	params: LightClientInitParams<B::Header>,
 	ocall_api: Arc<OCallApi>,
 ) -> Result<LightValidation<B, OCallApi>>
 where
+	B: Block,
 	NumberFor<B>: finality_grandpa::BlockNumberOps,
+	OCallApi: EnclaveOnChainOCallApi,
 {
 	let genesis_header = params.get_genesis_header().clone();
 	let authorities = params.get_authorities().cloned().unwrap_or_default();

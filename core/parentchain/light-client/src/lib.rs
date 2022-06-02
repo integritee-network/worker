@@ -25,12 +25,12 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 #[macro_use]
 extern crate sgx_tstd as std;
-extern crate alloc;
 
 // Re-export useful types.
 pub use finality_grandpa::BlockNumberOps;
 pub use sp_finality_grandpa::{AuthorityList, SetId};
 
+use crate::light_validation_state::LightValidationState;
 use error::Error;
 use itp_storage::StorageProof;
 use sp_finality_grandpa::{AuthorityId, AuthorityWeight, ConsensusLog, GRANDPA_ENGINE_ID};
@@ -69,8 +69,6 @@ pub type NumberFor<Block> = <<Block as ParentchainBlockTrait>::Header as HeaderT
 pub type HashFor<Block> = <<Block as ParentchainBlockTrait>::Header as HeaderTrait>::Hash;
 /// Hashing function used to produce `HashOf<Block>`
 pub type HashingFor<Block> = <<Block as ParentchainBlockTrait>::Header as HeaderTrait>::Hashing;
-
-use crate::light_validation_state::LightValidationState;
 
 /// Validator trait
 pub trait Validator<Block: ParentchainBlockTrait>

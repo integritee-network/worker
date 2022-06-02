@@ -31,8 +31,7 @@ use core::iter::Iterator;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_storage::{Error as StorageError, StorageProof, StorageProofChecker};
 use log::*;
-use sp_finality_grandpa::ScheduledChange;
-pub use sp_finality_grandpa::SetId;
+use sp_finality_grandpa::{ScheduledChange, SetId};
 use sp_runtime::{
 	generic::{Digest, SignedBlock},
 	traits::{Block as ParentchainBlockTrait, Hash as HashTrait, Header as HeaderTrait},
@@ -142,7 +141,6 @@ where
 	OCallApi: EnclaveOnChainOCallApi,
 {
 	fn initialize_relay(
-		// nur grandpa
 		&mut self,
 		block_header: Block::Header,
 		validator_set: AuthorityList,
