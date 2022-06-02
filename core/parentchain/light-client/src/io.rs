@@ -29,6 +29,7 @@ use itp_settings::files::LIGHT_CLIENT_DB;
 use itp_sgx_io::{seal, unseal, StaticSealedIO};
 use itp_types::light_client_init_params::LightClientInitParams;
 use log::*;
+use sp_finality_grandpa::AuthorityList;
 use sp_runtime::traits::Block;
 use std::{boxed::Box, fs};
 
@@ -64,9 +65,9 @@ pub fn init_validator<B: Block, OCallApi: EnclaveOnChainOCallApi>(
 where
 	NumberFor<B>: finality_grandpa::BlockNumberOps,
 {
-	let genesis_header = params.get_genesis_header();
-	let authorities = params.get_authorities().unwrap();
-	let authority_proof = params.get_authority_proof().unwrap();
+	let genesis_header = params.get_genesis_header().clone();
+	let authorities = params.get_authorities().cloned().unwrap_or_default();
+	let authority_proof = params.get_authority_proof().cloned().unwrap_or_default();
 
 	let finality: Arc<Box<dyn Finality<B> + Sync + Send + 'static>> = match params {
 		LightClientInitParams::Grandpa { .. } => Arc::new(Box::new(GrandpaFinality {})),
@@ -75,11 +76,7 @@ where
 
 	let mut validator = LightValidation::<B, OCallApi>::new(ocall_api, finality);
 
-	validator.initialize_relay(
-		genesis_header.clone(),
-		authorities.clone(),
-		authority_proof.clone(),
-	)?;
+	validator.initialize_relay(genesis_header, authorities, authority_proof)?;
 	LightClientStateSeal::<B, LightValidationState<B>>::seal_to_static_file(validator.get_state())?;
 
 	return Ok(validator)
