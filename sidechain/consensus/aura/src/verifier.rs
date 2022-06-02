@@ -127,14 +127,6 @@ where
 	ParentchainHeader: ParentchainHeaderTrait<Hash = BlockHash>,
 	Context: ValidateerFetch + EnclaveOnChainOCallApi,
 {
-	ensure!(
-		parentchain_head.hash() == block.block_data().layer_one_head(),
-		ConsensusError::BadParentchainBlock(
-			parentchain_head.hash(),
-			"Invalid parentchain head".into(),
-		)
-	);
-
 	let authorities = authorities::<_, AuthorityPair, ParentchainHeader>(ctx, parentchain_head)?;
 
 	let expected_author = slot_author::<AuthorityPair>(*slot, &authorities)

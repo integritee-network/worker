@@ -118,6 +118,10 @@ where
 			signed_sidechain_block.block().block_data().layer_one_head()
 		);
 
+		// Peeking the parentchain header to ensure the sidechain block points to a valid parentchain block.
+		let _peeked_parentchain_header =
+			self.peek_parentchain_header(&sidechain_block, parentchain_header)?;
+
 		let block_import_params = self.verify_import(&shard, |state| {
 			let verifier = self.verifier(state);
 
