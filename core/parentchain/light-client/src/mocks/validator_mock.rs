@@ -27,8 +27,10 @@ use std::vec::Vec;
 type Header = <Block as BlockT>::Header;
 
 /// Validator mock to be used in tests.
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ValidatorMock;
+#[derive(Clone, Debug, Default)]
+pub struct ValidatorMock {
+	light_validation_state: LightValidationState<Block>,
+}
 
 impl Validator<Block> for ValidatorMock {
 	fn initialize_relay(
@@ -72,12 +74,12 @@ impl Validator<Block> for ValidatorMock {
 		Ok(())
 	}
 
-	fn set_state(&mut self, _state: LightValidationState<Block>) {
-		todo!()
+	fn set_state(&mut self, state: LightValidationState<Block>) {
+		self.light_validation_state = state;
 	}
 
 	fn get_state(&self) -> &LightValidationState<Block> {
-		todo!()
+		&self.light_validation_state
 	}
 }
 

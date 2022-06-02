@@ -205,7 +205,7 @@ mod tests {
 			Ok(slot_from_timestamp_and_duration(duration_now(), SLOT_DURATION))
 		}
 
-		fn seal_to_static_file(unsealed: &Self::Unsealed) -> Result<(), Self::Error> {
+		fn seal_to_static_file(_unsealed: &Self::Unsealed) -> Result<(), Self::Error> {
 			println!("Seal method stub called.");
 			Ok(())
 		}

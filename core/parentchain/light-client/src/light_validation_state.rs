@@ -34,3 +34,9 @@ impl<Block: ParentchainBlockTrait> LightValidationState<Block> {
 		Self { num_relays: Default::default(), tracked_relays: Default::default() }
 	}
 }
+
+impl<Block: ParentchainBlockTrait> Default for LightValidationState<Block> {
+	fn default() -> Self {
+		Self { num_relays: Default::default(), tracked_relays: Default::default() }
+	}
+}

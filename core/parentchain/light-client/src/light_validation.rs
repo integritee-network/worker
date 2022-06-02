@@ -31,7 +31,6 @@ use core::iter::Iterator;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_storage::{Error as StorageError, StorageProof, StorageProofChecker};
 use log::*;
-use sgx_tstd::{boxed::Box, sync::Arc};
 use sp_finality_grandpa::ScheduledChange;
 pub use sp_finality_grandpa::SetId;
 use sp_runtime::{
@@ -39,7 +38,7 @@ use sp_runtime::{
 	traits::{Block as ParentchainBlockTrait, Hash as HashTrait, Header as HeaderTrait},
 	Justifications, OpaqueExtrinsic,
 };
-use std::{fmt, vec::Vec};
+use std::{boxed::Box, fmt, sync::Arc, vec::Vec};
 
 #[derive(Clone)]
 pub struct LightValidation<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi> {
@@ -185,7 +184,7 @@ where
 			&validator_set,
 			validator_set_id,
 			justifications,
-			&mut relay,
+			relay,
 		);
 
 		Self::schedule_validator_set_change(relay, &header);

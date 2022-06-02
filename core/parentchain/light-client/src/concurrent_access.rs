@@ -136,7 +136,7 @@ where
 		let state = Seal::unseal_from_static_file()?;
 		light_validation_lock.set_state(state);
 		let result = mutating_function(&mut light_validation_lock);
-		Seal::seal_to_static_file(&light_validation_lock.get_state())?;
+		Seal::seal_to_static_file(light_validation_lock.get_state())?;
 		result
 	}
 }
@@ -144,14 +144,20 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::mocks::{validator_mock::ValidatorMock, validator_mock_seal::ValidatorMockSeal};
+	use crate::mocks::{
+		validator_mock::ValidatorMock, validator_mock_seal::LightValidationStateSealMock,
+	};
+	use itp_test::mock::onchain_mock::OnchainMock;
 	use itp_types::Block;
 
-	type TestAccessor = GlobalValidatorAccessor<ValidatorMock, Block, ValidatorMockSeal>;
+	type TestAccessor =
+		GlobalValidatorAccessor<ValidatorMock, Block, LightValidationStateSealMock, OnchainMock>;
 
 	#[test]
 	fn execute_with_and_without_mut_in_single_thread_works() {
-		let accessor = TestAccessor::default();
+		let validator_mock = ValidatorMock::default();
+		let accessor = TestAccessor::new(validator_mock);
+
 		let _read_result = accessor.execute_on_validator(|_v| Ok(())).unwrap();
 		let _write_result = accessor.execute_mut_on_validator(|_v| Ok(())).unwrap();
 	}

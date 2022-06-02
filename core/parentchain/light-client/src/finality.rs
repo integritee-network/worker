@@ -21,13 +21,13 @@ use crate::{
 };
 use finality_grandpa::voter_set::VoterSet;
 use log::*;
-use sgx_tstd::vec::Vec;
 pub use sp_finality_grandpa::SetId;
 use sp_finality_grandpa::{AuthorityId, GRANDPA_ENGINE_ID};
 use sp_runtime::{
 	traits::{Block as ParentchainBlockTrait, Header as HeaderTrait},
 	Justification, Justifications,
 };
+use std::vec::Vec;
 
 #[derive(Default)]
 pub struct Grandpa {

@@ -29,9 +29,8 @@ use itp_settings::files::LIGHT_CLIENT_DB;
 use itp_sgx_io::{seal, unseal, StaticSealedIO};
 use itp_types::light_client_init_params::LightClientInitParams;
 use log::*;
-use sgx_tstd::boxed::Box;
 use sp_runtime::traits::Block;
-use std::fs;
+use std::{boxed::Box, fs};
 
 #[derive(Copy, Clone, Debug)]
 pub struct LightClientStateSeal<B, LightClientState> {
