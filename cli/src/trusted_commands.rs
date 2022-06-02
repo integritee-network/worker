@@ -269,7 +269,10 @@ fn transfer_benchmark(
 		.sign(&KeyPair::Sr25519(alice.clone()), nonce_alice, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
 
-		let result = run_transaction(trusted_args, shielding_pubkey, top, false, &client);
+		// For the last account we wait for confirmation in order to ensure all accounts were setup correctly
+		let wait_for_confirmation = i == number_clients - 1;
+		let result =
+			run_transaction(trusted_args, shielding_pubkey, top, wait_for_confirmation, &client);
 
 		if result.confirmed.is_some() {
 			println!("initialization of new account1 successful: {}", client.account.public());
