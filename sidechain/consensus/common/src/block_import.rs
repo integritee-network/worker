@@ -118,21 +118,10 @@ where
 			signed_sidechain_block.block().block_data().layer_one_head()
 		);
 
-		let peeked_parentchain_header =
-			self.peek_parentchain_header(&sidechain_block, parentchain_header)
-				.unwrap_or_else(|e| {
-					warn!("Could not peek parentchain block, returning latest parentchain block ({:?})", e);
-					parentchain_header.clone()
-				});
-
 		let block_import_params = self.verify_import(&shard, |state| {
 			let verifier = self.verifier(state);
 
-			verifier.verify(
-				signed_sidechain_block.clone(),
-				&peeked_parentchain_header,
-				self.get_context(),
-			)
+			verifier.verify(signed_sidechain_block.clone(), parentchain_header, self.get_context())
 		})?;
 
 		let latest_parentchain_header =
