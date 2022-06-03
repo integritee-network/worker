@@ -124,20 +124,11 @@ where
 
 		let block_import_params = self.verify_import(&shard, |state| {
 			let verifier = self.verifier(state);
-			match verifier.verify(
+			verifier.verify(
 				signed_sidechain_block.clone(),
 				&peeked_parentchain_header,
 				self.get_context(),
-			) {
-				Ok(signed_sidechain_block) => Ok(signed_sidechain_block),
-				Err(Error::InvalidAuthority(_)) => {
-					warn!("Could not verify with the expected authority set of the peeked parentchain header. Trying with the previous block,\
-					as maybe a new worker has registered, but slot was based on the knowledge of the previous one");
-					verifier.verify(signed_sidechain_block.clone(), parentchain_header, self.get_context())
-				},
-				Err(e) => Err(e),
-			}
-
+			)
 		})?;
 
 		let latest_parentchain_header =
