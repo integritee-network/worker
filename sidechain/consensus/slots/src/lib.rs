@@ -209,7 +209,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 			Err(e) => {
 				warn!(
 					target: logging_target,
-					"Failed to import and retrieve latest parentchain block header: {:?}", e
+					"Failed to peek latest parentchain block header: {:?}", e
 				);
 				return None
 			},
@@ -243,27 +243,15 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 		let _claim = self.claim_slot(&latest_parentchain_header, slot, &epoch_data)?;
 
 		// Import the peeked parentchain header(s).
-		let latest_imported_parentchain_header =
-			match self.import_parentchain_blocks_until(&latest_parentchain_header.hash()) {
-				Ok(Some(p)) => p,
-				Ok(None) => {
-					error!(
-					target: logging_target,
-					"Failed to import and retrieve latest parentchain block header even though \
-					it was peeked beforehand. Blocknumber {:?}", latest_parentchain_header.number()
-				);
-					return None
-				},
-				Err(e) => {
-					warn!(
-						target: logging_target,
-						"Failed to import and retrieve latest parentchain block header: {:?}", e
-					);
-					return None
-				},
-			};
+		if let Err(e) = self.import_parentchain_blocks_until(&latest_parentchain_header.hash()) {
+			warn!(
+				target: logging_target,
+				"Failed to import and retrieve parentchain block header: {:?}", e
+			);
+			return None
+		};
 
-		let proposer = match self.proposer(latest_imported_parentchain_header.clone(), shard) {
+		let proposer = match self.proposer(latest_parentchain_header.clone(), shard) {
 			Ok(p) => p,
 			Err(e) => {
 				warn!(target: logging_target, "Could not create proposer: {:?}", e);
@@ -290,7 +278,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 
 		info!("Proposing sidechain block (number: {}, hash: {}) based on parentchain block (number: {:?}, hash: {:?})",
 			proposing.block.block().header().block_number(), proposing.block.hash(),
-			latest_imported_parentchain_header.number(), latest_imported_parentchain_header.hash()
+			latest_parentchain_header.number(), latest_parentchain_header.hash()
 		);
 
 		Some(SlotResult {
