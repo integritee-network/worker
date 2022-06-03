@@ -30,7 +30,9 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 extern crate sgx_tstd as std;
 
 use core::marker::PhantomData;
-use itc_parentchain_block_import_dispatcher::triggered_dispatcher::TriggerParentchainBlockImport;
+use itc_parentchain_block_import_dispatcher::triggered_dispatcher::{
+	PeekParentchainBlockImportQueue, TriggerParentchainBlockImport,
+};
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_time_utils::duration_now;
 use its_consensus_common::{Environment, Error as ConsensusError, Proposer};
@@ -138,7 +140,8 @@ where
 	E::Proposer: Proposer<ParentchainBlock, SignedSidechainBlock>,
 	SignedSidechainBlock: SignedBlock + Send + 'static,
 	OcallApi: ValidateerFetch + EnclaveOnChainOCallApi + Send + 'static,
-	ImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>>,
+	ImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>>
+		+ PeekParentchainBlockImportQueue<SignedParentchainBlock<ParentchainBlock>>,
 {
 	type Proposer = E::Proposer;
 	type Claim = AuthorityPair::Public;
@@ -201,15 +204,29 @@ where
 		self.allow_delayed_proposal
 	}
 
-	fn import_latest_parentchain_block(
+	fn import_parentchain_blocks_until(
 		&self,
+		parentchain_header_hash: &<ParentchainBlock::Header as ParentchainHeaderTrait>::Hash,
 	) -> Result<Option<ParentchainBlock::Header>, ConsensusError> {
-		let maybe_latest_imported_header = self
+		let maybe_parentchain_block = self
 			.parentchain_import_trigger
-			.import_all()
+			.import_until(|parentchain_block| {
+				parentchain_block.block.hash() == *parentchain_header_hash
+			})
 			.map_err(|e| ConsensusError::Other(e.into()))?;
 
-		Ok(maybe_latest_imported_header.map(|b| b.block.header().clone()))
+		Ok(maybe_parentchain_block.map(|b| b.block.header().clone()))
+	}
+
+	fn peek_latest_parentchain_header(
+		&self,
+	) -> Result<Option<ParentchainBlock::Header>, ConsensusError> {
+		let maybe_parentchain_block = self
+			.parentchain_import_trigger
+			.peek_latest()
+			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
+
+		Ok(maybe_parentchain_block.map(|b| b.block.header().clone()))
 	}
 }
 
