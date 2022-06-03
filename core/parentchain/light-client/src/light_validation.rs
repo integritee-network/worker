@@ -18,22 +18,18 @@
 //! Light-client validation crate that verifies parentchain blocks.
 
 use crate::{
-	error::Error,
-	finality::Finality,
-	grandpa_log,
-	light_validation_state::LightValidationState,
-	state::{RelayState, ScheduledChangeAtBlock},
-	AuthorityList, AuthorityListRef, ExtrinsicSender, HashFor, HashingFor, LightClientState,
-	NumberFor, RelayId, Validator,
+	error::Error, finality::Finality, light_validation_state::LightValidationState,
+	state::RelayState, AuthorityList, AuthorityListRef, ExtrinsicSender, HashFor, HashingFor,
+	LightClientState, NumberFor, RelayId, Validator,
 };
 use codec::Encode;
 use core::iter::Iterator;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_storage::{Error as StorageError, StorageProof, StorageProofChecker};
 use log::*;
-use sp_finality_grandpa::{ScheduledChange, SetId};
+use sp_finality_grandpa::SetId;
 use sp_runtime::{
-	generic::{Digest, SignedBlock},
+	generic::SignedBlock,
 	traits::{Block as ParentchainBlockTrait, Hash as HashTrait, Header as HeaderTrait},
 	Justifications, OpaqueExtrinsic,
 };
@@ -54,30 +50,6 @@ impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi>
 		finality: Arc<Box<dyn Finality<Block> + Sync + Send + 'static>>,
 	) -> Self {
 		Self { light_validation_state: LightValidationState::new(), ocall_api, finality }
-	}
-
-	fn apply_validator_set_change(relay: &mut RelayState<Block>, header: &Block::Header) {
-		if let Some(change) = relay.scheduled_change.take() {
-			if &change.at_block == header.number() {
-				relay.current_validator_set = change.next_authority_list;
-				relay.current_validator_set_id += 1;
-			}
-		}
-	}
-
-	fn schedule_validator_set_change(relay: &mut RelayState<Block>, header: &Block::Header) {
-		if let Some(log) = pending_change::<Block>(header.digest()) {
-			if relay.scheduled_change.is_some() {
-				error!(
-					"Tried to scheduled authorities change even though one is already scheduled!!"
-				); // should not happen if blockchain is configured properly
-			} else {
-				relay.scheduled_change = Some(ScheduledChangeAtBlock {
-					at_block: log.delay + *header.number(),
-					next_authority_list: log.next_authorities,
-				})
-			}
-		}
 	}
 
 	fn check_validator_set_proof(
@@ -140,7 +112,7 @@ where
 	Block: ParentchainBlockTrait,
 	OCallApi: EnclaveOnChainOCallApi,
 {
-	fn initialize_relay(
+	fn initialize_grandpa_relay(
 		&mut self,
 		block_header: Block::Header,
 		validator_set: AuthorityList,
@@ -149,6 +121,22 @@ where
 		let state_root = block_header.state_root();
 		Self::check_validator_set_proof(state_root, validator_set_proof, &validator_set)?;
 
+		self.initialize_relay(block_header, validator_set)
+	}
+
+	fn initialize_parachain_relay(
+		&mut self,
+		block_header: Block::Header,
+		validator_set: AuthorityList,
+	) -> Result<RelayId, Error> {
+		self.initialize_relay(block_header, validator_set)
+	}
+
+	fn initialize_relay(
+		&mut self,
+		block_header: Block::Header,
+		validator_set: AuthorityList,
+	) -> Result<RelayId, Error> {
 		let relay_info = RelayState::new(block_header, validator_set);
 
 		let new_relay_id = self.num_relays() + 1;
@@ -178,15 +166,18 @@ where
 		let last_header = &relay.last_finalized_block_header;
 		Self::verify_ancestry(ancestry_proof, last_header.hash(), &header)?;
 
-		if self
-			.finality
-			.validate(header.clone(), &validator_set, validator_set_id, justifications, relay)
-			.is_err()
-		{
-			return Ok(())
+		if let Err(e) = self.finality.validate(
+			header.clone(),
+			&validator_set,
+			validator_set_id,
+			justifications,
+			relay,
+		) {
+			match e {
+				Error::NoJustificationFound => return Ok(()),
+				_ => return Err(e),
+			}
 		}
-
-		Self::schedule_validator_set_change(relay, &header);
 
 		// a valid grandpa proof proofs finalization of all previous unjustified blocks
 		relay.header_hashes.append(&mut relay.unjustified_headers);
@@ -220,8 +211,6 @@ where
 			return Err(Error::HeaderAncestryMismatch)
 		}
 		let ancestry_proof = vec![];
-
-		Self::apply_validator_set_change(relay, header);
 
 		let validator_set = relay.current_validator_set.clone();
 		let validator_set_id = relay.current_validator_set_id;
@@ -371,10 +360,4 @@ where
 			self.light_validation_state.num_relays, self.light_validation_state.tracked_relays
 		)
 	}
-}
-
-pub fn pending_change<Block: ParentchainBlockTrait>(
-	digest: &Digest,
-) -> Option<ScheduledChange<NumberFor<Block>>> {
-	grandpa_log::<Block>(digest).and_then(|log| log.try_into_change())
 }

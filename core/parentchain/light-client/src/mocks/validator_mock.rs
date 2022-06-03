@@ -33,11 +33,27 @@ pub struct ValidatorMock {
 }
 
 impl Validator<Block> for ValidatorMock {
-	fn initialize_relay(
+	fn initialize_grandpa_relay(
 		&mut self,
 		_block_header: Header,
 		_validator_set: AuthorityList,
 		_validator_set_proof: StorageProof,
+	) -> Result<RelayId> {
+		todo!()
+	}
+
+	fn initialize_parachain_relay(
+		&mut self,
+		_block_header: Header,
+		_validator_set: AuthorityList,
+	) -> Result<RelayId> {
+		todo!()
+	}
+
+	fn initialize_relay(
+		&mut self,
+		_block_header: Header,
+		_validator_set: AuthorityList,
 	) -> Result<RelayId> {
 		todo!()
 	}

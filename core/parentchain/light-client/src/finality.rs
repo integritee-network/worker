@@ -18,14 +18,18 @@
 //! Finality for determination of the light client validation.
 
 use crate::{
-	error::Result, justification::GrandpaJustification, state::RelayState, AuthorityList, Error,
-	NumberFor,
+	error::Result,
+	grandpa_log,
+	justification::GrandpaJustification,
+	state::{RelayState, ScheduledChangeAtBlock},
+	AuthorityList, Error, NumberFor,
 };
 use finality_grandpa::voter_set::VoterSet;
 use log::*;
 pub use sp_finality_grandpa::SetId;
-use sp_finality_grandpa::{AuthorityId, GRANDPA_ENGINE_ID};
+use sp_finality_grandpa::{AuthorityId, ScheduledChange, GRANDPA_ENGINE_ID};
 use sp_runtime::{
+	generic::Digest,
 	traits::{Block as ParentchainBlockTrait, Header as HeaderTrait},
 	Justification, Justifications,
 };
@@ -76,6 +80,8 @@ where
 		justifications: Option<Justifications>,
 		relay: &mut RelayState<Block>,
 	) -> Result<()> {
+		Self::apply_validator_set_change(relay, &header);
+
 		// Check that the header has been finalized
 		let voter_set =
 			VoterSet::new(validator_set.clone().into_iter()).expect("VoterSet may not be empty");
@@ -103,6 +109,8 @@ where
 					relay.set_last_finalized_block_header(header);
 					return Err(err)
 				}
+				Self::schedule_validator_set_change(relay, &header);
+
 				Ok(())
 			},
 			None => {
@@ -120,6 +128,36 @@ where
 }
 
 impl GrandpaFinality {
+	fn apply_validator_set_change<Block: ParentchainBlockTrait>(
+		relay: &mut RelayState<Block>,
+		header: &Block::Header,
+	) {
+		if let Some(change) = relay.scheduled_change.take() {
+			if &change.at_block == header.number() {
+				relay.current_validator_set = change.next_authority_list;
+				relay.current_validator_set_id += 1;
+			}
+		}
+	}
+
+	fn schedule_validator_set_change<Block: ParentchainBlockTrait>(
+		relay: &mut RelayState<Block>,
+		header: &Block::Header,
+	) {
+		if let Some(log) = pending_change::<Block>(header.digest()) {
+			if relay.scheduled_change.is_some() {
+				error!(
+					"Tried to scheduled authorities change even though one is already scheduled!!"
+				); // should not happen if blockchain is configured properly
+			} else {
+				relay.scheduled_change = Some(ScheduledChangeAtBlock {
+					at_block: log.delay + *header.number(),
+					next_authority_list: log.next_authorities,
+				})
+			}
+		}
+	}
+
 	fn verify_grandpa_proof<Block: ParentchainBlockTrait>(
 		justification: Justification,
 		hash: Block::Hash,
@@ -140,4 +178,10 @@ impl GrandpaFinality {
 
 		Ok(())
 	}
+}
+
+fn pending_change<Block: ParentchainBlockTrait>(
+	digest: &Digest,
+) -> Option<ScheduledChange<NumberFor<Block>>> {
+	grandpa_log::<Block>(digest).and_then(|log| log.try_into_change())
 }

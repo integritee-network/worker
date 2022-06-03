@@ -75,11 +75,23 @@ pub trait Validator<Block: ParentchainBlockTrait>
 where
 	NumberFor<Block>: finality_grandpa::BlockNumberOps,
 {
-	fn initialize_relay(
+	fn initialize_grandpa_relay(
 		&mut self,
 		block_header: Block::Header,
 		validator_set: AuthorityList,
 		validator_set_proof: StorageProof,
+	) -> Result<RelayId, Error>;
+
+	fn initialize_parachain_relay(
+		&mut self,
+		block_header: Block::Header,
+		validator_set: AuthorityList,
+	) -> Result<RelayId, Error>;
+
+	fn initialize_relay(
+		&mut self,
+		block_header: Block::Header,
+		validator_set: AuthorityList,
 	) -> Result<RelayId, Error>;
 
 	fn submit_finalized_headers(
