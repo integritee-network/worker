@@ -203,16 +203,13 @@ where
 
 	fn import_latest_parentchain_block(
 		&self,
-		current_latest_imported_header: &ParentchainBlock::Header,
-	) -> Result<ParentchainBlock::Header, ConsensusError> {
+	) -> Result<Option<ParentchainBlock::Header>, ConsensusError> {
 		let maybe_latest_imported_header = self
 			.parentchain_import_trigger
 			.import_all()
 			.map_err(|e| ConsensusError::Other(e.into()))?;
 
-		Ok(maybe_latest_imported_header
-			.map(|b| b.block.header().clone())
-			.unwrap_or_else(|| current_latest_imported_header.clone()))
+		Ok(maybe_latest_imported_header.map(|b| b.block.header().clone()))
 	}
 }
 

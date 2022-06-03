@@ -164,10 +164,7 @@ pub trait SimpleSlotWorker<B: ParentchainBlock> {
 	///
 	/// Returns the header of the latest imported block. In case no block was imported with this trigger,
 	/// the `current_latest_imported_header` is returned.
-	fn import_latest_parentchain_block(
-		&self,
-		current_latest_imported_header: &B::Header,
-	) -> Result<B::Header, ConsensusError>;
+	fn import_latest_parentchain_block(&self) -> Result<Option<B::Header>, ConsensusError>;
 
 	/// Implements [`SlotWorker::on_slot`]. This is an adaption from
 	/// substrate's sc-consensus-slots implementation. There, the slot worker handles all the
@@ -222,9 +219,11 @@ pub trait SimpleSlotWorker<B: ParentchainBlock> {
 		let _claim =
 			self.claim_slot(&slot_info.last_imported_parentchain_head, slot, &epoch_data)?;
 
+		let current_imported_parentchain_header = &slot_info.last_imported_parentchain_head;
+
 		// Import and retrieve the parentchain header on which the new sidechain block will be based on.
-		let latest_imported_parentchain_header =
-			match self.import_latest_parentchain_block(&slot_info.last_imported_parentchain_head) {
+		let maybe_updated_latest_imported_parentchain_header =
+			match self.import_latest_parentchain_block() {
 				Ok(p) => p,
 				Err(e) => {
 					warn!(
@@ -233,6 +232,34 @@ pub trait SimpleSlotWorker<B: ParentchainBlock> {
 					);
 					return None
 				},
+			};
+
+		let latest_imported_parentchain_header =
+			match maybe_updated_latest_imported_parentchain_header {
+				// If we import a new parentchain block, reevaluate epoch data based upon this block and try to reclaim the slot.
+				Some(updated_parentchain_header) => {
+					let updated_epoch_data =
+						match self.epoch_data(&updated_parentchain_header, slot) {
+							Ok(epoch_data) => epoch_data,
+							Err(e) => {
+								warn!(
+									target: logging_target,
+									"Unable to fetch epoch data at block {:?}: {:?}",
+									slot_info.last_imported_parentchain_head.hash(),
+									e,
+								);
+								return None
+							},
+						};
+					let _claim = self.claim_slot(
+						&slot_info.last_imported_parentchain_head,
+						slot,
+						&updated_epoch_data,
+					)?;
+
+					updated_parentchain_header
+				},
+				None => current_imported_parentchain_header.clone(),
 			};
 
 		let proposer = match self.proposer(latest_imported_parentchain_header.clone(), shard) {
