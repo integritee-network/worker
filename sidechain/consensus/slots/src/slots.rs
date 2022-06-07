@@ -193,7 +193,7 @@ mod tests {
 	use std::{fmt::Debug, thread, time::SystemTime};
 
 	const SLOT_DURATION: Duration = Duration::from_millis(1000);
-	const ALLOWED_THRESHOLD: Duration = Duration::from_millis(1);
+	const ALLOWED_THRESHOLD: Duration = Duration::from_millis(2);
 
 	struct LastSlotSealMock;
 
@@ -288,7 +288,12 @@ mod tests {
 		let difference_of_ends_at =
 			(slot_one.ends_at.as_millis()).abs_diff(slot_two.ends_at.as_millis());
 
-		assert!(difference_of_ends_at < ALLOWED_THRESHOLD.as_millis());
+		assert!(
+			difference_of_ends_at < ALLOWED_THRESHOLD.as_millis(),
+			"Diff in ends at timestamp: {} ms, tolerance: {} ms",
+			difference_of_ends_at,
+			ALLOWED_THRESHOLD.as_millis()
+		);
 	}
 
 	#[test]
