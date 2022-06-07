@@ -284,7 +284,7 @@ fn slot_author<P: Pair>(slot: Slot, authorities: &[AuthorityId<P>]) -> Option<&A
 mod tests {
 	use super::*;
 	use crate::test::{
-		fixtures::{default_header, types::TestAura, validateer, SLOT_DURATION},
+		fixtures::{types::TestAura, validateer, SLOT_DURATION},
 		mocks::environment_mock::EnvironmentMock,
 	};
 	use itc_parentchain_block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
@@ -296,7 +296,7 @@ mod tests {
 		mock::onchain_mock::OnchainMock,
 	};
 	use itp_types::{
-		Block as ParentchainBlock, Header as ParentchainHeader,
+		Block as ParentchainBlock, Enclave, Header as ParentchainHeader,
 		SignedBlock as SignedParentchainBlock,
 	};
 	use its_consensus_slots::PerShardSlotWorkerScheduler;
@@ -314,13 +314,23 @@ mod tests {
 		get_aura(Default::default(), Default::default())
 	}
 
-	fn now_slot(slot: Slot) -> SlotInfo<ParentchainBlock> {
+	fn now_slot(slot: Slot, header: &ParentchainHeader) -> SlotInfo<ParentchainBlock> {
 		SlotInfo {
 			slot,
 			timestamp: duration_now(),
 			duration: SLOT_DURATION,
 			ends_at: duration_now() + SLOT_DURATION,
-			last_imported_parentchain_head: default_header(),
+			last_imported_parentchain_head: header.clone(),
+		}
+	}
+
+	fn now_slot_with_default_header(slot: Slot) -> SlotInfo<ParentchainBlock> {
+		SlotInfo {
+			slot,
+			timestamp: duration_now(),
+			duration: SLOT_DURATION,
+			ends_at: duration_now() + SLOT_DURATION,
+			last_imported_parentchain_head: ParentchainHeaderBuilder::default().build(),
 		}
 	}
 
@@ -328,13 +338,21 @@ mod tests {
 		vec![Keyring::Alice.public(), Keyring::Bob.public(), Keyring::Charlie.public()]
 	}
 
-	fn onchain_mock(authorities: Vec<Public>) -> OnchainMock {
-		let validateers = authorities.iter().map(|a| validateer(a.clone().into())).collect();
-		OnchainMock::default().with_validateer_set(Some(validateers))
+	fn create_validateer_set_from_publics(authorities: Vec<Public>) -> Vec<Enclave> {
+		authorities.iter().map(|a| validateer(a.clone().into())).collect()
 	}
 
-	fn onchain_mock_with_default_authorities() -> OnchainMock {
-		onchain_mock(default_authorities())
+	fn onchain_mock(
+		parentchain_header: &ParentchainHeader,
+		authorities: Vec<Public>,
+	) -> OnchainMock {
+		let validateers = create_validateer_set_from_publics(authorities);
+		OnchainMock::default().add_validateer_set(parentchain_header, Some(validateers))
+	}
+
+	fn onchain_mock_with_default_authorities_and_header() -> OnchainMock {
+		let parentchain_header = ParentchainHeaderBuilder::default().build();
+		onchain_mock(&parentchain_header, default_authorities())
 	}
 
 	fn create_import_trigger_with_header(
@@ -381,10 +399,10 @@ mod tests {
 	fn on_slot_returns_block() {
 		let _ = env_logger::builder().is_test(true).try_init();
 
-		let onchain_mock = onchain_mock_with_default_authorities();
+		let onchain_mock = onchain_mock_with_default_authorities_and_header();
 		let mut aura = get_aura(onchain_mock, Default::default());
 
-		let slot_info = now_slot(0.into());
+		let slot_info = now_slot_with_default_header(0.into());
 
 		assert!(SimpleSlotWorker::on_slot(&mut aura, slot_info, Default::default()).is_some());
 	}
@@ -393,10 +411,10 @@ mod tests {
 	fn on_slot_for_multiple_shards_returns_blocks() {
 		let _ = env_logger::builder().is_test(true).try_init();
 
-		let onchain_mock = onchain_mock_with_default_authorities();
+		let onchain_mock = onchain_mock_with_default_authorities_and_header();
 		let mut aura = get_aura(onchain_mock, Default::default());
 
-		let slot_info = now_slot(0.into());
+		let slot_info = now_slot_with_default_header(0.into());
 
 		let result = PerShardSlotWorkerScheduler::on_slot(
 			&mut aura,
@@ -421,7 +439,7 @@ mod tests {
 			timestamp: now,
 			duration: nano_dur,
 			ends_at: now + nano_dur,
-			last_imported_parentchain_head: default_header(),
+			last_imported_parentchain_head: ParentchainHeaderBuilder::default().build(),
 		};
 
 		let result = PerShardSlotWorkerScheduler::on_slot(
@@ -439,13 +457,14 @@ mod tests {
 		let latest_parentchain_header = ParentchainHeaderBuilder::default().with_number(84).build();
 		let parentchain_block_import_trigger =
 			create_import_trigger_with_header(latest_parentchain_header.clone());
+		let authorities = default_authorities();
 
 		let mut aura = get_aura(
-			onchain_mock_with_default_authorities(),
+			onchain_mock(&latest_parentchain_header, authorities),
 			parentchain_block_import_trigger.clone(),
 		);
 
-		let slot_info = now_slot(0.into());
+		let slot_info = now_slot(0.into(), &latest_parentchain_header);
 
 		let result = SimpleSlotWorker::on_slot(&mut aura, slot_info, Default::default()).unwrap();
 
@@ -461,14 +480,79 @@ mod tests {
 		let _ = env_logger::builder().is_test(true).try_init();
 		let latest_parentchain_header = ParentchainHeaderBuilder::default().with_number(84).build();
 		let parentchain_block_import_trigger =
-			create_import_trigger_with_header(latest_parentchain_header);
+			create_import_trigger_with_header(latest_parentchain_header.clone());
+		let authorities = default_authorities();
 
 		let mut aura = get_aura(
-			onchain_mock_with_default_authorities(),
+			onchain_mock(&latest_parentchain_header, authorities),
 			parentchain_block_import_trigger.clone(),
 		);
 
-		let slot_info = now_slot(2.into());
+		let slot_info = now_slot(2.into(), &latest_parentchain_header);
+
+		let result = SimpleSlotWorker::on_slot(&mut aura, slot_info, Default::default());
+
+		assert!(result.is_none());
+		assert!(!parentchain_block_import_trigger.has_import_been_called());
+	}
+
+	#[test]
+	fn on_slot_claims_slot_if_latest_parentchain_header_in_queue_contains_correspondent_validateer_set(
+	) {
+		let _ = env_logger::builder().is_test(true).try_init();
+		let previous_parentchain_header =
+			ParentchainHeaderBuilder::default().with_number(84).build();
+		let latest_parentchain_header = ParentchainHeaderBuilder::default().with_number(85).build();
+		let parentchain_block_import_trigger =
+			create_import_trigger_with_header(latest_parentchain_header.clone());
+		let validateer_set_one = create_validateer_set_from_publics(vec![
+			Keyring::Alice.public(),
+			Keyring::Bob.public(),
+		]);
+		let validateer_set_two = create_validateer_set_from_publics(vec![
+			Keyring::Alice.public(),
+			Keyring::Bob.public(),
+			Keyring::Charlie.public(),
+		]);
+		let onchain_mock = OnchainMock::default()
+			.add_validateer_set(&previous_parentchain_header, Some(validateer_set_one))
+			.add_validateer_set(&latest_parentchain_header, Some(validateer_set_two));
+
+		let mut aura = get_aura(onchain_mock, parentchain_block_import_trigger.clone());
+
+		let slot_info = now_slot(3.into(), &previous_parentchain_header);
+
+		let result = SimpleSlotWorker::on_slot(&mut aura, slot_info, Default::default());
+
+		assert!(result.is_some());
+		assert!(parentchain_block_import_trigger.has_import_been_called());
+	}
+
+	#[test]
+	fn on_slot_does_not_claim_slot_if_latest_parentchain_header_in_queue_contains_correspondent_validateer_set(
+	) {
+		let _ = env_logger::builder().is_test(true).try_init();
+		let previous_parentchain_header =
+			ParentchainHeaderBuilder::default().with_number(84).build();
+		let latest_parentchain_header = ParentchainHeaderBuilder::default().with_number(85).build();
+		let parentchain_block_import_trigger =
+			create_import_trigger_with_header(latest_parentchain_header.clone());
+		let validateer_set_one = create_validateer_set_from_publics(vec![
+			Keyring::Alice.public(),
+			Keyring::Bob.public(),
+		]);
+		let validateer_set_two = create_validateer_set_from_publics(vec![
+			Keyring::Alice.public(),
+			Keyring::Bob.public(),
+			Keyring::Charlie.public(),
+		]);
+		let onchain_mock = OnchainMock::default()
+			.add_validateer_set(&previous_parentchain_header, Some(validateer_set_one))
+			.add_validateer_set(&latest_parentchain_header, Some(validateer_set_two));
+
+		let mut aura = get_aura(onchain_mock, parentchain_block_import_trigger.clone());
+
+		let slot_info = now_slot(2.into(), &previous_parentchain_header);
 
 		let result = SimpleSlotWorker::on_slot(&mut aura, slot_info, Default::default());
 
@@ -478,7 +562,7 @@ mod tests {
 
 	#[test]
 	fn proposing_remaining_duration_works() {
-		let slot_info = now_slot(0.into());
+		let slot_info = now_slot_with_default_header(0.into());
 
 		// hard to compare actual numbers but we can at least ensure that the general concept works
 		assert!(
@@ -490,7 +574,7 @@ mod tests {
 
 	#[test]
 	fn proposing_remaining_duration_works_for_now_before_slot_timestamp() {
-		let slot_info = now_slot(0.into());
+		let slot_info = now_slot_with_default_header(0.into());
 
 		assert!(
 			proposing_remaining_duration(&slot_info, Duration::from_millis(0)) > SLOT_DURATION / 2
@@ -501,7 +585,7 @@ mod tests {
 
 	#[test]
 	fn proposing_remaining_duration_returns_default_if_now_after_slot() {
-		let slot_info = now_slot(0.into());
+		let slot_info = now_slot_with_default_header(0.into());
 
 		assert_eq!(
 			proposing_remaining_duration(&slot_info, duration_now() + SLOT_DURATION),

@@ -17,22 +17,11 @@
 
 pub mod types;
 
-use itp_types::{AccountId, Enclave, Header};
-use sp_runtime::traits::Header as HeaderTrait;
+use itp_types::{AccountId, Enclave};
 use std::time::Duration;
 
 pub const SLOT_DURATION: Duration = Duration::from_millis(300);
 
 pub fn validateer(account: AccountId) -> Enclave {
 	Enclave::new(account, Default::default(), Default::default(), Default::default())
-}
-
-pub fn default_header() -> Header {
-	Header::new(
-		Default::default(),
-		Default::default(),
-		Default::default(),
-		Default::default(),
-		Default::default(),
-	)
 }

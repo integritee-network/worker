@@ -38,7 +38,10 @@ use itp_settings::node::{SHIELD_FUNDS, TEEREX_MODULE};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_stf_executor::enclave_signer::StfEnclaveSigner;
 use itp_test::{
-	builders::parentchain_block_builder::ParentchainBlockBuilder,
+	builders::{
+		parentchain_block_builder::ParentchainBlockBuilder,
+		parentchain_header_builder::ParentchainHeaderBuilder,
+	},
 	mock::metrics_ocall_mock::MetricsOCallMock,
 };
 use itp_top_pool_author::{author::AuthorTopFilter, traits::AuthorApi};
@@ -58,8 +61,9 @@ pub fn process_indirect_call_in_top_pool() {
 	let signer = TestSigner::from_seed(b"42315678901234567890123456789012");
 	let shielding_key = TestShieldingKey::new().unwrap();
 	let shielding_key_repo = Arc::new(TestShieldingKeyRepo::new(shielding_key));
+	let header = ParentchainHeaderBuilder::default().build();
 
-	let ocall_api = create_ocall_api(&signer);
+	let ocall_api = create_ocall_api(&header, &signer);
 
 	let state_handler = Arc::new(TestStateHandler::default());
 	let (_, shard_id) = init_state(state_handler.as_ref(), signer.public().into());
@@ -88,8 +92,9 @@ pub fn submit_shielding_call_to_top_pool() {
 	let signer = TestSigner::from_seed(b"42315678901234567890123456789012");
 	let shielding_key = TestShieldingKey::new().unwrap();
 	let shielding_key_repo = Arc::new(TestShieldingKeyRepo::new(shielding_key.clone()));
+	let header = ParentchainHeaderBuilder::default().build();
 
-	let ocall_api = create_ocall_api(&signer);
+	let ocall_api = create_ocall_api(&header, &signer);
 	let mr_enclave = ocall_api.get_mrenclave_of_self().unwrap();
 
 	let state_handler = Arc::new(TestStateHandler::default());
