@@ -50,14 +50,6 @@ impl Validator<Block> for ValidatorMock {
 		todo!()
 	}
 
-	fn initialize_relay(
-		&mut self,
-		_block_header: Header,
-		_validator_set: AuthorityList,
-	) -> Result<RelayId> {
-		todo!()
-	}
-
 	fn submit_finalized_headers(
 		&mut self,
 		_relay_id: RelayId,

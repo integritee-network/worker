@@ -88,12 +88,6 @@ where
 		validator_set: AuthorityList,
 	) -> Result<RelayId, Error>;
 
-	fn initialize_relay(
-		&mut self,
-		block_header: Block::Header,
-		validator_set: AuthorityList,
-	) -> Result<RelayId, Error>;
-
 	fn submit_finalized_headers(
 		&mut self,
 		relay_id: RelayId,

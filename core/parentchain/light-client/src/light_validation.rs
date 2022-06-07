@@ -52,6 +52,21 @@ impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi>
 		Self { light_validation_state: LightValidationState::new(), ocall_api, finality }
 	}
 
+	fn initialize_relay(
+		&mut self,
+		block_header: Block::Header,
+		validator_set: AuthorityList,
+	) -> Result<RelayId, Error> {
+		let relay_info = RelayState::new(block_header, validator_set);
+
+		let new_relay_id = self.light_validation_state.num_relays + 1;
+		self.light_validation_state.tracked_relays.insert(new_relay_id, relay_info);
+
+		self.light_validation_state.num_relays = new_relay_id;
+
+		Ok(new_relay_id)
+	}
+
 	fn check_validator_set_proof(
 		state_root: &HashFor<Block>,
 		proof: StorageProof,
@@ -130,21 +145,6 @@ where
 		validator_set: AuthorityList,
 	) -> Result<RelayId, Error> {
 		self.initialize_relay(block_header, validator_set)
-	}
-
-	fn initialize_relay(
-		&mut self,
-		block_header: Block::Header,
-		validator_set: AuthorityList,
-	) -> Result<RelayId, Error> {
-		let relay_info = RelayState::new(block_header, validator_set);
-
-		let new_relay_id = self.num_relays() + 1;
-		self.light_validation_state.tracked_relays.insert(new_relay_id, relay_info);
-
-		self.light_validation_state.num_relays = new_relay_id;
-
-		Ok(new_relay_id)
 	}
 
 	fn submit_finalized_headers(
