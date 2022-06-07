@@ -41,10 +41,11 @@ use std::marker::PhantomData;
 /// either a mutating, or a non-mutating function on the validator.
 /// The reason we have this additional wrapper around `SealedIO`, is that we need
 /// to guard against concurrent access by using RWLocks (which `SealedIO` does not do).
-pub trait ValidatorAccess<ParentchainBlock, OCallApi: EnclaveOnChainOCallApi>
+pub trait ValidatorAccess<ParentchainBlock, OCallApi>
 where
 	ParentchainBlock: ParentchainBlockTrait,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
+	OCallApi: EnclaveOnChainOCallApi,
 {
 	type ValidatorType: ValidatorTrait<ParentchainBlock>
 		+ LightClientState<ParentchainBlock>
