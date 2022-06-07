@@ -193,7 +193,7 @@ mod tests {
 	use std::{fmt::Debug, thread, time::SystemTime};
 
 	const SLOT_DURATION: Duration = Duration::from_millis(1000);
-	const ALLOWED_THRESHOLD: Duration = Duration::from_millis(5);
+	const ALLOWED_THRESHOLD: Duration = Duration::from_millis(2);
 
 	struct LastSlotSealMock;
 
