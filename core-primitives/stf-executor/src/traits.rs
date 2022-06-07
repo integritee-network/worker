@@ -33,6 +33,8 @@ pub enum StatePostProcessing {
 }
 
 /// Allows signing of a trusted call with the enclave account that is registered in the STF.
+///
+/// The signing key is derived from the shielding key, which guarantees that all enclaves sign the same key.
 pub trait StfEnclaveSigning {
 	fn get_enclave_account(&self) -> Result<AccountId>;
 

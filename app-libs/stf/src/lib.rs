@@ -51,8 +51,8 @@ pub type StfResult<T> = Result<T, StfError>;
 pub enum StfError {
 	#[display(fmt = "Insufficient privileges {:?}, are you sure you are root?", _0)]
 	MissingPrivileges(AccountId),
-	#[display(fmt = "Enclave self account is required")]
-	RequireSelfEnclaveAccount,
+	#[display(fmt = "Valid enclave signer account is required")]
+	RequireEnclaveSignerAccount,
 	#[display(fmt = "Error dispatching runtime call. {:?}", _0)]
 	Dispatch(String),
 	#[display(fmt = "Not enough funds to perform operation")]

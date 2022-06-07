@@ -149,7 +149,7 @@ pub fn get_parentchain_number() -> Option<BlockNumber> {
 }
 
 /// Ensures an account is a registered enclave account.
-pub fn ensure_registered_enclave(account: &AccountId) -> StfResult<()> {
+pub fn ensure_enclave_signer_account(account: &AccountId) -> StfResult<()> {
 	let expected_enclave_account = enclave_signer_account();
 	if &expected_enclave_account == account {
 		Ok(())
@@ -159,7 +159,7 @@ pub fn ensure_registered_enclave(account: &AccountId) -> StfResult<()> {
 			account_id_to_string(&expected_enclave_account),
 			account_id_to_string(account)
 		);
-		Err(StfError::RequireSelfEnclaveAccount)
+		Err(StfError::RequireEnclaveSignerAccount)
 	}
 }
 
