@@ -141,12 +141,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 	fn authorities_len(&self, epoch_data: &Self::EpochData) -> Option<usize>;
 
 	/// Tries to claim the given slot, returning an object with claim data if successful.
-	fn claim_slot(
-		&self,
-		header: &ParentchainBlock::Header,
-		slot: Slot,
-		epoch_data: &Self::EpochData,
-	) -> Option<Self::Claim>;
+	fn claim_slot(&self, slot: Slot, epoch_data: &Self::EpochData) -> Option<Self::Claim>;
 
 	/// Creates the proposer for the current slot
 	fn proposer(
@@ -240,7 +235,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 			);
 		}
 
-		let _claim = self.claim_slot(&latest_parentchain_header, slot, &epoch_data)?;
+		let _claim = self.claim_slot(slot, &epoch_data)?;
 
 		// Import the peeked parentchain header(s).
 		if let Err(e) = self.import_parentchain_blocks_until(&latest_parentchain_header.hash()) {
