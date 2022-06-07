@@ -290,9 +290,9 @@ mod tests {
 
 		assert!(
 			difference_of_ends_at < ALLOWED_THRESHOLD.as_millis(),
-			"Diff in ends at timestamp: {}, tolerance: {}",
+			"Diff in ends at timestamp: {} ms, tolerance: {} ms",
 			difference_of_ends_at,
-			ALLOWED_THRESHOLD
+			ALLOWED_THRESHOLD.as_millis()
 		);
 	}
 
