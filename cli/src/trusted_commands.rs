@@ -142,6 +142,8 @@ pub enum TrustedCommands {
 		number_iterations: u32,
 		#[clap(short, long)]
 		wait_for_confirmation: bool,
+		#[clap(default_value_t = String::from("//Alice"))]
+		funding_account: String,
 	},
 }
 
@@ -156,14 +158,19 @@ pub fn match_trusted_commands(cli: &Cli, trusted_args: &TrustedArgs) {
 		TrustedCommands::Balance { account } => print_balance(cli, trusted_args, account),
 		TrustedCommands::UnshieldFunds { from, to, amount } =>
 			unshield_funds(cli, trusted_args, from, to, amount),
-		TrustedCommands::Benchmark { number_clients, number_iterations, wait_for_confirmation } =>
-			transfer_benchmark(
-				cli,
-				trusted_args,
-				*number_clients,
-				*number_iterations,
-				*wait_for_confirmation,
-			),
+		TrustedCommands::Benchmark {
+			number_clients,
+			number_iterations,
+			wait_for_confirmation,
+			funding_account,
+		} => transfer_benchmark(
+			cli,
+			trusted_args,
+			*number_clients,
+			*number_iterations,
+			*wait_for_confirmation,
+			funding_account,
+		),
 	}
 }
 
@@ -230,9 +237,10 @@ fn transfer_benchmark(
 	number_clients: u32,
 	number_iterations: u32,
 	wait_for_confirmation: bool,
+	funding_account: &str,
 ) {
 	let store = LocalKeystore::open(get_keystore_path(trusted_args), None).unwrap();
-	let alice = get_pair_from_str(trusted_args, "//Alice");
+	let funding_account_keys = get_pair_from_str(trusted_args, funding_account);
 
 	let (mrenclave, shard) = get_identifiers(trusted_args);
 
@@ -243,13 +251,13 @@ fn transfer_benchmark(
 		Err(err_msg) => panic!("{}", err_msg.to_string()),
 	};
 
-	let nonce_alice_start = get_layer_two_nonce!(alice, cli, trusted_args);
-	println!("Alice nonce: {}", nonce_alice_start);
+	let nonce_start = get_layer_two_nonce!(funding_account_keys, cli, trusted_args);
+	println!("Nonce for account {}: {}", funding_account, nonce_start);
 
 	let mut accounts = Vec::new();
 
 	for i in 0..number_clients {
-		let nonce_alice = i + nonce_alice_start;
+		let nonce = i + nonce_start;
 		println!("Initializing account {}", i);
 
 		// create new account to use
@@ -262,11 +270,11 @@ fn transfer_benchmark(
 
 		// transfer amount from Alice to new accounts
 		let top: TrustedOperation = TrustedCall::balance_transfer(
-			alice.public().into(),
+			funding_account_keys.public().into(),
 			client.account.public().into(),
 			initial_balance,
 		)
-		.sign(&KeyPair::Sr25519(alice.clone()), nonce_alice, &mrenclave, &shard)
+		.sign(&KeyPair::Sr25519(funding_account_keys.clone()), nonce, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
 
 		// For the last account we wait for confirmation in order to ensure all accounts were setup correctly
@@ -274,11 +282,6 @@ fn transfer_benchmark(
 		let result =
 			run_transaction(trusted_args, shielding_pubkey, top, wait_for_confirmation, &client);
 
-		if result.confirmed.is_some() {
-			println!("initialization of new account1 successful: {}", client.account.public());
-		} else {
-			println!("initialization of new account1 NOT successful");
-		}
 		accounts.push(client);
 	}
 
@@ -392,17 +395,6 @@ fn transfer_benchmark(
 			i,
 			hist.value_at_quantile(i as f64 / 100.0)
 		);
-		println!("{}", text);
-		//writeln!(file, "{}", text).expect("cannot write to file");
-	}
-	for v in hist.iter_recorded() {
-		let text = format!(
-			"{}'th percentile of data is {} with {} samples",
-			v.percentile(),
-			v.value_iterated_to(),
-			v.count_at_value()
-		);
-
 		println!("{}", text);
 	}
 }
