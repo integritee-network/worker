@@ -18,6 +18,7 @@
 use crate::{authorities, slot_author, EnclaveOnChainOCallApi};
 use core::marker::PhantomData;
 use frame_support::ensure;
+use itp_utils::stringify::public_to_string;
 use its_consensus_common::{Error as ConsensusError, Verifier};
 use its_consensus_slots::{slot_from_timestamp_and_duration, Slot};
 use its_primitives::{
@@ -30,12 +31,11 @@ use its_primitives::{
 use its_state::LastBlockExt;
 use its_validateer_fetch::ValidateerFetch;
 use log::*;
-use sp_core::{hexdisplay::HexDisplay, Public};
 use sp_runtime::{
 	app_crypto::Pair,
 	traits::{Block as ParentchainBlockTrait, Header as ParentchainHeaderTrait},
 };
-use std::{fmt::Debug, string::String, time::Duration};
+use std::{fmt::Debug, time::Duration};
 
 #[derive(Default)]
 pub struct AuraVerifier<AuthorityPair, ParentchainBlock, SidechainBlock, SidechainState, Context> {
@@ -144,17 +144,12 @@ where
 		expected_author == block.block_data().block_author(),
 		ConsensusError::InvalidAuthority(format!(
 			"Expected author: {}, author found in block: {}",
-			to_string(expected_author),
-			to_string(block.block_data().block_author())
+			public_to_string(expected_author),
+			public_to_string(block.block_data().block_author())
 		))
 	);
 
 	Ok(())
-}
-
-fn to_string<T: Public>(t: &T) -> String {
-	let crypto_pair = t.to_public_crypto_pair();
-	format!("{}", HexDisplay::from(&crypto_pair.1))
 }
 
 fn verify_block_ancestry<SidechainBlock: SidechainBlockTrait>(

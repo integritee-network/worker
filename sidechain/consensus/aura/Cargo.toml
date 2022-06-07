@@ -28,6 +28,7 @@ itp-stf-executor = { path = "../../../core-primitives/stf-executor", default-fea
 itp-stf-state-handler = { path = "../../../core-primitives/stf-state-handler", default-features = false }
 itp-time-utils = { path = "../../../core-primitives/time-utils", default-features = false }
 itp-types = { path = "../../../core-primitives/types", default-features = false }
+itp-utils = { path = "../../../core-primitives/utils", default-features = false }
 its-block-composer = { path = "../../block-composer", default-features = false }
 its-consensus-common = { path = "../common", default-features = false }
 its-consensus-slots = { path = "../slots", default-features = false }
@@ -58,6 +59,7 @@ std = [
    "itp-stf-state-handler/std",
    "itp-time-utils/std",
    "itp-types/std",
+   "itp-utils/std",
    "its-block-composer/std",
    "its-consensus-common/std",
    "its-consensus-slots/std",
@@ -77,6 +79,7 @@ sgx = [
    "itp-stf-executor/sgx",
    "itp-stf-state-handler/sgx",
    "itp-time-utils/sgx",
+   "itp-utils/sgx",
    "its-block-composer/sgx",
    "its-consensus-common/sgx",
    "its-consensus-slots/sgx",

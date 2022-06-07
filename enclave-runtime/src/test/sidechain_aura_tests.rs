@@ -25,6 +25,7 @@ use crate::{
 			initialize_test_state::init_state,
 		},
 		mocks::{propose_to_import_call_mock::ProposeToImportOCallApi, types::*},
+		tests_main::enclave_call_signer,
 	},
 	top_pool_execution::{exec_aura_on_slot, send_blocks_and_extrinsics},
 };
@@ -78,7 +79,8 @@ pub fn produce_sidechain_block_and_import_it() {
 
 	info!("Initializing state and shard..");
 	let state_handler = Arc::new(TestStateHandler::default());
-	let (_, shard_id) = init_state(state_handler.as_ref());
+	let enclave_call_signer = enclave_call_signer(&shielding_key);
+	let (_, shard_id) = init_state(state_handler.as_ref(), enclave_call_signer.public().into());
 	let shards = vec![shard_id];
 
 	let stf_executor = Arc::new(TestStfExecutor::new(ocall_api.clone(), state_handler.clone()));

@@ -15,6 +15,9 @@
 
 */
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
+
 use derive_more::{Display, From};
 use sgx_types::sgx_status_t;
 use std::prelude::v1::Box;
@@ -24,6 +27,7 @@ pub enum Error {
 	IO(std::io::Error),
 	InvalidNonceKeyLength,
 	Codec(codec::Error),
+	Serialization(serde_json::Error),
 	LockPoisoning,
 	Other(Box<dyn std::error::Error + Sync + Send + 'static>),
 }

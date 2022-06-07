@@ -6,20 +6,18 @@ edition = "2018"
 
 [dependencies]
 # crates.io
-base58 = { version = "0.1", optional = true }
 codec = { version = "3.0.0", default-features = false, features = ["derive"], package = "parity-scale-codec" }
 derive_more = { version = "0.99.5" }
-hex = { version = "0.4.2", optional = true }
 log = { version = "0.4", default-features = false }
 
 # sgx deps
 sgx_tstd = { branch = "master", features = ["untrusted_fs","net","backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx", default-features = false, features = ["mesalock_sgx"], optional = true }
 
 # local crates
 itp-settings = { path = "../../core-primitives/settings" }
 itp-storage = { default-features = false, path = "../../core-primitives/storage" }
 itp-types = {  default-features = false, path = "../../core-primitives/types" }
+itp-utils = { default-features = false, path = "../../core-primitives/utils" }
 its-primitives = { default-features = false, path = "../../sidechain/primitives" }
 its-state = { default-features = false, optional = true, path = "../../sidechain/state" }
 
@@ -48,21 +46,20 @@ sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "po
 default = ["std"]
 sgx = [
     "sgx_tstd",
-    "env_logger",
+    "its-state/sgx",
+    "itp-utils/sgx",
     "sp-io/sgx",
     "sgx-externalities/sgx",
     "sgx-runtime",
-    "its-state/sgx",
 ]
 std = [
     # crates.io
-    "base58",
     "codec/std",
-    "hex",
     "log/std",
     # local
     "itp-storage/std",
     "itp-types/std",
+    "itp-utils/std",
     "its-primitives/std",
     "its-state/std",
     # substrate

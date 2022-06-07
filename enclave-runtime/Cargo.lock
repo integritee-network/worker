@@ -1094,12 +1094,12 @@ name = "ita-stf"
 version = "0.8.0"
 dependencies = [
  "derive_more",
- "env_logger",
  "frame-support",
  "frame-system",
  "itp-settings",
  "itp-storage",
  "itp-types",
+ "itp-utils",
  "its-primitives",
  "its-state",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
@@ -1380,6 +1380,7 @@ version = "0.8.0"
 dependencies = [
  "ita-stf",
  "itp-ocall-api",
+ "itp-sgx-crypto",
  "itp-stf-state-handler",
  "itp-storage",
  "itp-test",
@@ -1388,6 +1389,7 @@ dependencies = [
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "parity-scale-codec",
  "sgx-externalities",
+ "sgx_crypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
@@ -1549,6 +1551,7 @@ dependencies = [
  "hex",
  "parity-scale-codec",
  "sgx_tstd",
+ "sp-core",
  "thiserror 1.0.9",
 ]
 
@@ -1591,6 +1594,7 @@ dependencies = [
  "itp-stf-state-handler",
  "itp-time-utils",
  "itp-types",
+ "itp-utils",
  "its-block-composer",
  "its-consensus-common",
  "its-consensus-slots",
