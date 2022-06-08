@@ -164,7 +164,13 @@ where
 		Some(epoch_data.len())
 	}
 
-	fn claim_slot(&self, slot: Slot, epoch_data: &Self::EpochData) -> Option<Self::Claim> {
+	// While the header is not used in aura, it is used in different consensus systems, so it should be left there.
+	fn claim_slot(
+		&self,
+		_header: &ParentchainBlock::Header,
+		slot: Slot,
+		epoch_data: &Self::EpochData,
+	) -> Option<Self::Claim> {
 		let expected_author = slot_author::<AuthorityPair>(slot, epoch_data)?;
 
 		if expected_author == &self.authority_pair.public() {
@@ -365,28 +371,30 @@ mod tests {
 		let authorities =
 			vec![Keyring::Bob.public(), Keyring::Charlie.public(), Keyring::Alice.public()];
 		let aura = get_default_aura();
+		let header = ParentchainHeaderBuilder::default().build();
 
-		assert!(aura.claim_slot(0.into(), &authorities).is_none());
-		assert!(aura.claim_slot(1.into(), &authorities).is_none());
+		assert!(aura.claim_slot(&header, 0.into(), &authorities).is_none());
+		assert!(aura.claim_slot(&header, 1.into(), &authorities).is_none());
 		// this our authority
-		assert!(aura.claim_slot(2.into(), &authorities).is_some());
+		assert!(aura.claim_slot(&header, 2.into(), &authorities).is_some());
 
-		assert!(aura.claim_slot(3.into(), &authorities).is_none());
-		assert!(aura.claim_slot(4.into(), &authorities).is_none());
+		assert!(aura.claim_slot(&header, 3.into(), &authorities).is_none());
+		assert!(aura.claim_slot(&header, 4.into(), &authorities).is_none());
 		// this our authority
-		assert!(aura.claim_slot(5.into(), &authorities).is_some());
+		assert!(aura.claim_slot(&header, 5.into(), &authorities).is_some());
 	}
 
 	#[test]
 	fn current_authority_should_claim_all_slots() {
+		let header = ParentchainHeaderBuilder::default().build();
 		let authorities = default_authorities();
 		let aura = get_default_aura().with_claim_strategy(SlotClaimStrategy::Always);
 
-		assert!(aura.claim_slot(0.into(), &authorities).is_some());
-		assert!(aura.claim_slot(1.into(), &authorities).is_some());
+		assert!(aura.claim_slot(&header, 0.into(), &authorities).is_some());
+		assert!(aura.claim_slot(&header, 1.into(), &authorities).is_some());
 		// this our authority
-		assert!(aura.claim_slot(2.into(), &authorities).is_some());
-		assert!(aura.claim_slot(3.into(), &authorities).is_some());
+		assert!(aura.claim_slot(&header, 2.into(), &authorities).is_some());
+		assert!(aura.claim_slot(&header, 3.into(), &authorities).is_some());
 	}
 
 	#[test]
