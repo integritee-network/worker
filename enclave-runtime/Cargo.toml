@@ -89,7 +89,7 @@ itc-direct-rpc-server = { path = "../core/direct-rpc-server", default-features =
 itc-parentchain = { path = "../core/parentchain/parentchain-crate", default-features = false, features = ["sgx"] }
 itp-block-import-queue = { path = "../core-primitives/block-import-queue", default-features = false, features = ["sgx"] }
 itp-component-container = { path = "../core-primitives/component-container", default-features = false, features = ["sgx"] }
-itp-extrinsics-factory = { path = "../core-primitives/extrinsics-factory", default-features = false, features = ["sgx"]}
+itp-extrinsics-factory = { path = "../core-primitives/extrinsics-factory", default-features = false, features = ["sgx"] }
 itp-nonce-cache = { path = "../core-primitives/nonce-cache", default-features = false, features = ["sgx"] }
 itp-ocall-api = { path = "../core-primitives/ocall-api", default-features = false }
 itp-primitives-cache = { path = "../core-primitives/primitives-cache", default-features = false, features = ["sgx"] }

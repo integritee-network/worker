@@ -28,8 +28,12 @@ use itc_direct_rpc_server::{
 };
 use itc_parentchain::{
 	block_import_dispatcher::triggered_dispatcher::TriggeredDispatcher,
-	block_importer::ParentchainBlockImporter, indirect_calls_executor::IndirectCallsExecutor,
-	light_client::ValidatorAccessor,
+	block_importer::ParentchainBlockImporter,
+	indirect_calls_executor::IndirectCallsExecutor,
+	light_client::{
+		concurrent_access::ValidatorAccessor, io::LightClientStateSeal,
+		light_validation::LightValidation, light_validation_state::LightValidationState,
+	},
 };
 use itc_tls_websocket_server::{
 	config_provider::FromFileConfigProvider, ws_server::TungsteniteWsServer, ConnectionToken,
@@ -81,7 +85,12 @@ pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
 	EnclaveStfEnclaveSigner,
 	EnclaveTopPoolAuthor,
 >;
-pub type EnclaveValidatorAccessor = ValidatorAccessor<ParentchainBlock>;
+pub type EnclaveValidatorAccessor = ValidatorAccessor<
+	LightValidation<ParentchainBlock, EnclaveOCallApi>,
+	ParentchainBlock,
+	LightClientStateSeal<ParentchainBlock, LightValidationState<ParentchainBlock>>,
+	EnclaveOCallApi,
+>;
 pub type EnclaveParentChainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
 	EnclaveValidatorAccessor,
@@ -184,6 +193,11 @@ pub static GLOBAL_TOP_POOL_AUTHOR_COMPONENT: ComponentContainer<EnclaveTopPoolAu
 pub static GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT: ComponentContainer<
 	EnclaveParentchainBlockImportDispatcher,
 > = ComponentContainer::new("parentchain import dispatcher");
+
+/// Parentchain block validator accessor.
+pub static GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT: ComponentContainer<
+	EnclaveValidatorAccessor,
+> = ComponentContainer::new("parentchain block validator accessor");
 
 /// Extrinsics factory.
 pub static GLOBAL_EXTRINSICS_FACTORY_COMPONENT: ComponentContainer<EnclaveExtrinsicsFactory> =

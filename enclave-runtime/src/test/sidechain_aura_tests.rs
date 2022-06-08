@@ -184,7 +184,7 @@ pub fn produce_sidechain_block_and_import_it() {
 	send_blocks_and_extrinsics::<ParentchainBlock, _, _, _, _>(
 		blocks,
 		opaque_calls,
-		propose_to_block_import_ocall_api,
+		&propose_to_block_import_ocall_api,
 		&validator_access,
 		&extrinsics_factory,
 	)

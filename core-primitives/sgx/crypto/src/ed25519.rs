@@ -49,7 +49,7 @@ pub mod sgx {
 			Ok(key.into())
 		}
 
-		fn seal_to_static_file(unsealed: Self::Unsealed) -> Result<()> {
+		fn seal_to_static_file(unsealed: &Self::Unsealed) -> Result<()> {
 			Ok(unsealed.seed().using_encoded(|bytes| seal(bytes, SEALED_SIGNER_SEED_FILE))?)
 		}
 	}
@@ -62,7 +62,7 @@ pub mod sgx {
 			Self::unseal_from_static_file()
 		}
 
-		fn seal(&self, unsealed: Self::Unsealed) -> Result<()> {
+		fn seal(&self, unsealed: &Self::Unsealed) -> Result<()> {
 			Self::seal_to_static_file(unsealed)
 		}
 	}

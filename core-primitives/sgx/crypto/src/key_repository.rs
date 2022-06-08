@@ -70,7 +70,7 @@ where
 	fn update_key(&self, key: KeyType) -> Result<()> {
 		let mut key_lock = self.key_lock.write().map_err(|_| Error::LockPoisoning)?;
 
-		self.sealed_io.seal(key)?;
+		self.sealed_io.seal(&key)?;
 		*key_lock = self.sealed_io.unseal()?;
 
 		Ok(())

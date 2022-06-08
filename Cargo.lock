@@ -2331,6 +2331,7 @@ dependencies = [
  "itp-settings",
  "itp-sgx-io",
  "itp-storage",
+ "itp-test",
  "itp-types",
  "lazy_static",
  "log 0.4.17",

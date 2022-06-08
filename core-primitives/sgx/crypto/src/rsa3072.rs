@@ -94,7 +94,7 @@ pub mod sgx {
 		let rsa_keypair =
 			Rsa3072KeyPair::new().map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 		// println!("[Enclave] generated RSA3072 key pair. Cleartext: {}", rsa_key_json);
-		Rsa3072Seal::seal_to_static_file(rsa_keypair)
+		Rsa3072Seal::seal_to_static_file(&rsa_keypair)
 	}
 
 	#[derive(Copy, Clone, Debug, Display)]
@@ -110,7 +110,7 @@ pub mod sgx {
 			Ok(key.into())
 		}
 
-		fn seal_to_static_file(unsealed: Rsa3072KeyPair) -> Result<()> {
+		fn seal_to_static_file(unsealed: &Self::Unsealed) -> Result<()> {
 			let key_json = serde_json::to_vec(&unsealed)
 				.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 			Ok(seal(&key_json, RSA3072_SEALED_KEY_FILE)?)
@@ -125,7 +125,7 @@ pub mod sgx {
 			Self::unseal_from_static_file()
 		}
 
-		fn seal(&self, unsealed: Self::Unsealed) -> Result<()> {
+		fn seal(&self, unsealed: &Self::Unsealed) -> Result<()> {
 			Self::seal_to_static_file(unsealed)
 		}
 	}

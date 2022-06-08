@@ -132,7 +132,7 @@ impl<T: StaticSealedIO<Unsealed = Slot, Error = ConsensusError>> GetLastSlot for
 		T::unseal_from_static_file()
 	}
 	fn set_last_slot(&mut self, slot: Slot) -> Result<(), ConsensusError> {
-		T::seal_to_static_file(slot)
+		T::seal_to_static_file(&slot)
 	}
 }
 
@@ -167,7 +167,7 @@ pub mod sgx {
 			}
 		}
 
-		fn seal_to_static_file(unsealed: Self::Unsealed) -> Result<(), Self::Error> {
+		fn seal_to_static_file(unsealed: &Self::Unsealed) -> Result<(), Self::Error> {
 			let _ = FILE_LOCK.write().map_err(|e| Self::Error::Other(format!("{:?}", e).into()))?;
 			Ok(unsealed.using_encoded(|bytes| seal(bytes, LAST_SLOT_BIN))?)
 		}
@@ -205,7 +205,7 @@ mod tests {
 			Ok(slot_from_timestamp_and_duration(duration_now(), SLOT_DURATION))
 		}
 
-		fn seal_to_static_file(_unsealed: Self::Unsealed) -> Result<(), Self::Error> {
+		fn seal_to_static_file(_unsealed: &Self::Unsealed) -> Result<(), Self::Error> {
 			println!("Seal method stub called.");
 			Ok(())
 		}

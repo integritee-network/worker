@@ -15,64 +15,56 @@
 
 */
 
-//! Grandpa Light-client validation crate that verifies parentchain blocks.
+//! Light-client validation crate that verifies parentchain blocks.
 
 use crate::{
-	error::Error,
-	grandpa_log,
-	justification::GrandpaJustification,
-	state::{RelayState, ScheduledChangeAtBlock},
-	AuthorityList, AuthorityListRef, HashFor, HashingFor, LightClientState, NumberFor, RelayId,
-	Validator,
+	error::Error, finality::Finality, light_validation_state::LightValidationState,
+	state::RelayState, AuthorityList, AuthorityListRef, ExtrinsicSender, HashFor, HashingFor,
+	LightClientState, NumberFor, RelayId, Validator,
 };
-use codec::{Decode, Encode};
+use codec::Encode;
 use core::iter::Iterator;
-use finality_grandpa::voter_set::VoterSet;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_storage::{Error as StorageError, StorageProof, StorageProofChecker};
 use log::*;
-pub use sp_finality_grandpa::SetId;
-use sp_finality_grandpa::{AuthorityId, ScheduledChange, GRANDPA_ENGINE_ID};
+use sp_finality_grandpa::SetId;
 use sp_runtime::{
-	generic::{Digest, SignedBlock},
+	generic::SignedBlock,
 	traits::{Block as ParentchainBlockTrait, Hash as HashTrait, Header as HeaderTrait},
-	Justification, Justifications, OpaqueExtrinsic,
+	Justifications, OpaqueExtrinsic,
 };
-use std::{collections::BTreeMap, fmt, vec::Vec};
+use std::{boxed::Box, fmt, sync::Arc, vec::Vec};
 
-#[derive(Encode, Decode, Clone, Default)]
-pub struct GrandpaLightValidation<Block: ParentchainBlockTrait> {
-	num_relays: RelayId,
-	tracked_relays: BTreeMap<RelayId, RelayState<Block>>,
+#[derive(Clone)]
+pub struct LightValidation<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi> {
+	light_validation_state: LightValidationState<Block>,
+	ocall_api: Arc<OcallApi>,
+	finality: Arc<Box<dyn Finality<Block> + Sync + Send + 'static>>,
 }
 
-impl<Block: ParentchainBlockTrait> GrandpaLightValidation<Block> {
-	pub fn new() -> Self {
-		Self { num_relays: Default::default(), tracked_relays: Default::default() }
+impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi>
+	LightValidation<Block, OcallApi>
+{
+	pub fn new(
+		ocall_api: Arc<OcallApi>,
+		finality: Arc<Box<dyn Finality<Block> + Sync + Send + 'static>>,
+	) -> Self {
+		Self { light_validation_state: LightValidationState::new(), ocall_api, finality }
 	}
 
-	fn apply_validator_set_change(relay: &mut RelayState<Block>, header: &Block::Header) {
-		if let Some(change) = relay.scheduled_change.take() {
-			if &change.at_block == header.number() {
-				relay.current_validator_set = change.next_authority_list;
-				relay.current_validator_set_id += 1;
-			}
-		}
-	}
+	fn initialize_relay(
+		&mut self,
+		block_header: Block::Header,
+		validator_set: AuthorityList,
+	) -> Result<RelayId, Error> {
+		let relay_info = RelayState::new(block_header, validator_set);
 
-	fn schedule_validator_set_change(relay: &mut RelayState<Block>, header: &Block::Header) {
-		if let Some(log) = pending_change::<Block>(header.digest()) {
-			if relay.scheduled_change.is_some() {
-				error!(
-					"Tried to scheduled authorities change even though one is already scheduled!!"
-				); // should not happen if blockchain is configured properly
-			} else {
-				relay.scheduled_change = Some(ScheduledChangeAtBlock {
-					at_block: log.delay + *header.number(),
-					next_authority_list: log.next_authorities,
-				})
-			}
-		}
+		let new_relay_id = self.light_validation_state.num_relays + 1;
+		self.light_validation_state.tracked_relays.insert(new_relay_id, relay_info);
+
+		self.light_validation_state.num_relays = new_relay_id;
+
+		Ok(new_relay_id)
 	}
 
 	fn check_validator_set_proof(
@@ -95,27 +87,6 @@ impl<Block: ParentchainBlockTrait> GrandpaLightValidation<Block> {
 		} else {
 			Err(Error::ValidatorSetMismatch)
 		}
-	}
-
-	fn verify_grandpa_proof(
-		justification: Justification,
-		hash: Block::Hash,
-		number: NumberFor<Block>,
-		set_id: u64,
-		voters: &VoterSet<AuthorityId>,
-	) -> Result<(), Error>
-	where
-		NumberFor<Block>: finality_grandpa::BlockNumberOps,
-	{
-		// We don't really care about the justification, as long as it's valid
-		let _ = GrandpaJustification::<Block>::decode_and_verify_finalizes(
-			&justification.1,
-			(hash, number),
-			set_id,
-			voters,
-		)?;
-
-		Ok(())
 	}
 
 	// A naive way to check whether a `child` header is a descendant
@@ -150,11 +121,13 @@ impl<Block: ParentchainBlockTrait> GrandpaLightValidation<Block> {
 	}
 }
 
-impl<Block: ParentchainBlockTrait> Validator<Block> for GrandpaLightValidation<Block>
+impl<Block, OCallApi> Validator<Block> for LightValidation<Block, OCallApi>
 where
 	NumberFor<Block>: finality_grandpa::BlockNumberOps,
+	Block: ParentchainBlockTrait,
+	OCallApi: EnclaveOnChainOCallApi,
 {
-	fn initialize_relay(
+	fn initialize_grandpa_relay(
 		&mut self,
 		block_header: Block::Header,
 		validator_set: AuthorityList,
@@ -163,14 +136,15 @@ where
 		let state_root = block_header.state_root();
 		Self::check_validator_set_proof(state_root, validator_set_proof, &validator_set)?;
 
-		let relay_info = RelayState::new(block_header, validator_set);
+		self.initialize_relay(block_header, validator_set)
+	}
 
-		let new_relay_id = self.num_relays + 1;
-		self.tracked_relays.insert(new_relay_id, relay_info);
-
-		self.num_relays = new_relay_id;
-
-		Ok(new_relay_id)
+	fn initialize_parachain_relay(
+		&mut self,
+		block_header: Block::Header,
+		validator_set: AuthorityList,
+	) -> Result<RelayId, Error> {
+		self.initialize_relay(block_header, validator_set)
 	}
 
 	fn submit_finalized_headers(
@@ -182,53 +156,28 @@ where
 		validator_set_id: SetId,
 		justifications: Option<Justifications>,
 	) -> Result<(), Error> {
-		let mut relay = self.tracked_relays.get_mut(&relay_id).ok_or(Error::NoSuchRelayExists)?;
+		let mut relay = self
+			.light_validation_state
+			.tracked_relays
+			.get_mut(&relay_id)
+			.ok_or(Error::NoSuchRelayExists)?;
 
 		// Check that the new header is a descendant of the old header
 		let last_header = &relay.last_finalized_block_header;
 		Self::verify_ancestry(ancestry_proof, last_header.hash(), &header)?;
 
-		// Check that the header has been finalized
-		let voter_set =
-			VoterSet::new(validator_set.clone().into_iter()).expect("VoterSet may not be empty");
-
-		// ensure justifications is a grandpa justification
-		let grandpa_justification =
-			justifications.and_then(|just| just.into_justification(GRANDPA_ENGINE_ID));
-
-		let block_hash = header.hash();
-		let block_num = *header.number();
-
-		match grandpa_justification {
-			Some(justification) => {
-				if let Err(err) = Self::verify_grandpa_proof(
-					(GRANDPA_ENGINE_ID, justification),
-					block_hash,
-					block_num,
-					validator_set_id,
-					&voter_set,
-				) {
-					// FIXME: Printing error upon invalid justification, but this will need a better fix
-					// see issue #353
-					error!("Block {:?} contained invalid justification: {:?}", block_num, err);
-					relay.unjustified_headers.push(header.hash());
-					relay.set_last_finalized_block_header(header);
-					return Ok(())
-				}
-			},
-			None => {
-				relay.unjustified_headers.push(header.hash());
-				relay.set_last_finalized_block_header(header);
-
-				debug!(
-					"Syncing finalized block without grandpa proof. Amount of unjustified headers: {}",
-					relay.unjustified_headers.len()
-				);
-				return Ok(())
-			},
+		if let Err(e) = self.finality.validate(
+			header.clone(),
+			&validator_set,
+			validator_set_id,
+			justifications,
+			relay,
+		) {
+			match e {
+				Error::NoJustificationFound => return Ok(()),
+				_ => return Err(e),
+			}
 		}
-
-		Self::schedule_validator_set_change(relay, &header);
 
 		// a valid grandpa proof proofs finalization of all previous unjustified blocks
 		relay.header_hashes.append(&mut relay.unjustified_headers);
@@ -252,14 +201,16 @@ where
 		let header = signed_block.block.header();
 		let justifications = signed_block.justifications.clone();
 
-		let relay = self.tracked_relays.get_mut(&relay_id).ok_or(Error::NoSuchRelayExists)?;
+		let relay = self
+			.light_validation_state
+			.tracked_relays
+			.get_mut(&relay_id)
+			.ok_or(Error::NoSuchRelayExists)?;
 
 		if relay.last_finalized_block_header.hash() != *header.parent_hash() {
 			return Err(Error::HeaderAncestryMismatch)
 		}
 		let ancestry_proof = vec![];
-
-		Self::apply_validator_set_change(relay, header);
 
 		let validator_set = relay.current_validator_set.clone();
 		let validator_set_id = relay.current_validator_set_id;
@@ -278,27 +229,21 @@ where
 		relay_id: RelayId,
 		extrinsic: OpaqueExtrinsic,
 	) -> Result<(), Error> {
-		let relay = self.tracked_relays.get_mut(&relay_id).ok_or(Error::NoSuchRelayExists)?;
+		let relay = self
+			.light_validation_state
+			.tracked_relays
+			.get_mut(&relay_id)
+			.ok_or(Error::NoSuchRelayExists)?;
 		relay.verify_tx_inclusion.push(extrinsic);
 		Ok(())
 	}
 
-	fn send_extrinsics<OCallApi: EnclaveOnChainOCallApi>(
-		&mut self,
-		ocall_api: &OCallApi,
-		extrinsics: Vec<OpaqueExtrinsic>,
-	) -> Result<(), Error> {
-		for xt in extrinsics.iter() {
-			self.submit_xt_to_be_included(self.num_relays(), xt.clone()).unwrap();
-		}
-
-		ocall_api
-			.send_to_parentchain(extrinsics)
-			.map_err(|e| Error::Other(format!("Failed to send extrinsics: {}", e).into()))
-	}
-
 	fn check_xt_inclusion(&mut self, relay_id: RelayId, block: &Block) -> Result<(), Error> {
-		let relay = self.tracked_relays.get_mut(&relay_id).ok_or(Error::NoSuchRelayExists)?;
+		let relay = self
+			.light_validation_state
+			.tracked_relays
+			.get_mut(&relay_id)
+			.ok_or(Error::NoSuchRelayExists)?;
 
 		if relay.verify_tx_inclusion.is_empty() {
 			return Ok(())
@@ -325,21 +270,63 @@ where
 
 		Ok(())
 	}
+
+	fn set_state(&mut self, state: LightValidationState<Block>) {
+		self.light_validation_state = state;
+	}
+
+	fn get_state(&self) -> &LightValidationState<Block> {
+		&self.light_validation_state
+	}
 }
 
-impl<Block: ParentchainBlockTrait> LightClientState<Block> for GrandpaLightValidation<Block> {
+impl<Block, OCallApi> ExtrinsicSender for LightValidation<Block, OCallApi>
+where
+	NumberFor<Block>: finality_grandpa::BlockNumberOps,
+	Block: ParentchainBlockTrait,
+	OCallApi: EnclaveOnChainOCallApi,
+{
+	fn send_extrinsics(&mut self, extrinsics: Vec<OpaqueExtrinsic>) -> Result<(), Error> {
+		for xt in extrinsics.iter() {
+			self.submit_xt_to_be_included(self.num_relays(), xt.clone()).unwrap();
+		}
+
+		self.ocall_api
+			.send_to_parentchain(extrinsics)
+			.map_err(|e| Error::Other(format!("Failed to send extrinsics: {}", e).into()))
+	}
+}
+
+impl<Block, OCallApi> LightClientState<Block> for LightValidation<Block, OCallApi>
+where
+	NumberFor<Block>: finality_grandpa::BlockNumberOps,
+	Block: ParentchainBlockTrait,
+	OCallApi: EnclaveOnChainOCallApi,
+{
 	fn num_xt_to_be_included(&mut self, relay_id: RelayId) -> Result<usize, Error> {
-		let relay = self.tracked_relays.get(&relay_id).ok_or(Error::NoSuchRelayExists)?;
+		let relay = self
+			.light_validation_state
+			.tracked_relays
+			.get(&relay_id)
+			.ok_or(Error::NoSuchRelayExists)?;
 		Ok(relay.verify_tx_inclusion.len())
 	}
 
 	fn genesis_hash(&self, relay_id: RelayId) -> Result<HashFor<Block>, Error> {
-		let relay = self.tracked_relays.get(&relay_id).ok_or(Error::NoSuchRelayExists)?;
+		let relay = self
+			.light_validation_state
+			.tracked_relays
+			.get(&relay_id)
+			.ok_or(Error::NoSuchRelayExists)?;
 		Ok(relay.header_hashes[0])
 	}
 
 	fn latest_finalized_header(&self, relay_id: RelayId) -> Result<Block::Header, Error> {
-		let relay = self.tracked_relays.get(&relay_id).ok_or(Error::NoSuchRelayExists)?;
+		let relay = self
+			.light_validation_state
+			.tracked_relays
+			.get(&relay_id)
+			.ok_or(Error::NoSuchRelayExists)?;
 		Ok(relay.last_finalized_block_header.clone())
 	}
 
@@ -347,27 +334,30 @@ impl<Block: ParentchainBlockTrait> LightClientState<Block> for GrandpaLightValid
 		&self,
 		relay_id: RelayId,
 	) -> Result<Block::Header, Error> {
-		let relay = self.tracked_relays.get(&relay_id).ok_or(Error::NoSuchRelayExists)?;
+		let relay = self
+			.light_validation_state
+			.tracked_relays
+			.get(&relay_id)
+			.ok_or(Error::NoSuchRelayExists)?;
 		Ok(relay.penultimate_finalized_block_header.clone())
 	}
 
 	fn num_relays(&self) -> RelayId {
-		self.num_relays
+		self.light_validation_state.num_relays
 	}
 }
 
-impl<B: ParentchainBlockTrait> fmt::Debug for GrandpaLightValidation<B> {
+impl<Block, OCallApi> fmt::Debug for LightValidation<Block, OCallApi>
+where
+	NumberFor<Block>: finality_grandpa::BlockNumberOps,
+	Block: ParentchainBlockTrait,
+	OCallApi: EnclaveOnChainOCallApi,
+{
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		write!(
 			f,
 			"LightValidation {{ num_relays: {}, tracked_relays: {:?} }}",
-			self.num_relays, self.tracked_relays
+			self.light_validation_state.num_relays, self.light_validation_state.tracked_relays
 		)
 	}
-}
-
-pub fn pending_change<Block: ParentchainBlockTrait>(
-	digest: &Digest,
-) -> Option<ScheduledChange<NumberFor<Block>>> {
-	grandpa_log::<Block>(digest).and_then(|log| log.try_into_change())
 }
