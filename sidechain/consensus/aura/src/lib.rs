@@ -325,13 +325,7 @@ mod tests {
 	}
 
 	fn now_slot_with_default_header(slot: Slot) -> SlotInfo<ParentchainBlock> {
-		SlotInfo {
-			slot,
-			timestamp: duration_now(),
-			duration: SLOT_DURATION,
-			ends_at: duration_now() + SLOT_DURATION,
-			last_imported_parentchain_head: ParentchainHeaderBuilder::default().build(),
-		}
+		now_slot(slot, &ParentchainHeaderBuilder::default().build())
 	}
 
 	fn default_authorities() -> Vec<Public> {
