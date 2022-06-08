@@ -179,6 +179,7 @@ mod tests {
 	use super::*;
 	use core::assert_matches::assert_matches;
 	use itp_sgx_io::StaticSealedIO;
+	use itp_test::builders::parentchain_header_builder::ParentchainHeaderBuilder;
 	use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader};
 	use its_primitives::{
 		traits::{Block as BlockT, SignBlock},
@@ -189,11 +190,10 @@ mod tests {
 		sidechain_header_builder::SidechainHeaderBuilder,
 	};
 	use sp_keyring::ed25519::Keyring;
-	use sp_runtime::traits::Header as HeaderT;
 	use std::{fmt::Debug, thread, time::SystemTime};
 
 	const SLOT_DURATION: Duration = Duration::from_millis(1000);
-	const ALLOWED_THRESHOLD: Duration = Duration::from_millis(2);
+	const ALLOWED_THRESHOLD: Duration = Duration::from_millis(1);
 
 	struct LastSlotSealMock;
 
@@ -235,16 +235,6 @@ mod tests {
 		}
 	}
 
-	pub fn default_header() -> ParentchainHeader {
-		ParentchainHeader::new(
-			Default::default(),
-			Default::default(),
-			Default::default(),
-			Default::default(),
-			Default::default(),
-		)
-	}
-
 	fn timestamp_in_the_future(later: Duration) -> u64 {
 		let moment = SystemTime::now() + later;
 		let dur = moment.duration_since(SystemTime::UNIX_EPOCH).unwrap_or_else(|e| {
@@ -276,7 +266,7 @@ mod tests {
 	#[test]
 	fn slot_info_ends_at_does_not_change_after_second_calculation() {
 		let timestamp = duration_now();
-		let pc_header = default_header();
+		let pc_header = ParentchainHeaderBuilder::default().build();
 		let slot: Slot = 1000.into();
 
 		let slot_one: SlotInfo<ParentchainBlock> =
@@ -285,8 +275,15 @@ mod tests {
 		let slot_two: SlotInfo<ParentchainBlock> =
 			SlotInfo::new(slot, timestamp, SLOT_DURATION, pc_header);
 
-		let difference_of_ends_at =
+		let mut difference_of_ends_at =
 			(slot_one.ends_at.as_millis()).abs_diff(slot_two.ends_at.as_millis());
+
+		// This is necessary, because if, due to whatever reason, the next slot starts before this test has finished running,
+		// the slot_two.ends_at is already within the next slot. But if we take the modulo, we can still compare the difference,
+		// because we only care about the time difference within one slot.
+		if difference_of_ends_at >= SLOT_DURATION.as_millis() {
+			difference_of_ends_at %= SLOT_DURATION.as_millis();
+		}
 
 		assert!(
 			difference_of_ends_at < ALLOWED_THRESHOLD.as_millis(),
@@ -332,7 +329,7 @@ mod tests {
 		assert!(yield_next_slot::<_, ParentchainBlock>(
 			duration_now(),
 			SLOT_DURATION,
-			default_header(),
+			ParentchainHeaderBuilder::default().build(),
 			&mut LastSlotSealMock,
 		)
 		.unwrap()
@@ -344,7 +341,7 @@ mod tests {
 		assert!(yield_next_slot::<_, ParentchainBlock>(
 			duration_now() + SLOT_DURATION,
 			SLOT_DURATION,
-			default_header(),
+			ParentchainHeaderBuilder::default().build(),
 			&mut LastSlotSealMock
 		)
 		.unwrap()
@@ -357,7 +354,7 @@ mod tests {
 			yield_next_slot::<_, ParentchainBlock>(
 				duration_now(),
 				Default::default(),
-				default_header(),
+				ParentchainHeaderBuilder::default().build(),
 				&mut LastSlotSealMock,
 			),
 			"Tried to yield next slot with 0 duration",
