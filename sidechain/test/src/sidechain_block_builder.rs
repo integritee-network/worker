@@ -24,8 +24,9 @@ use crate::{
 };
 use its_primitives::{
 	traits::SignBlock,
-	types::{block_data::BlockData, header::Header, Block, SignedBlock},
+	types::{block_data::BlockData, Block, SignedBlock},
 };
+use sidechain_primitives::SidechainHeader as Header;
 use sp_core::{ed25519, Pair};
 
 type Seed = [u8; 32];

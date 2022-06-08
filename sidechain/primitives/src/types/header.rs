@@ -16,29 +16,10 @@
 */
 
 use crate::traits::Header as HeaderTrait;
-use codec::{Decode, Encode};
+use sidechain_primitives::SidechainHeader as Header;
 use sp_core::H256;
 
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
-
 pub type ShardIdentifier = H256;
-
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Debug, Copy)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct Header {
-	/// The parent hash.
-	pub parent_hash: H256,
-
-	/// The block number.
-	pub block_number: u64,
-
-	/// The Shard id.
-	pub shard_id: ShardIdentifier,
-
-	/// The payload hash.
-	pub block_data_hash: H256,
-}
 
 impl HeaderTrait for Header {
 	type ShardIdentifier = H256;

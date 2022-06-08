@@ -229,12 +229,13 @@ mod tests {
 		builders::parentchain_header_builder::ParentchainHeaderBuilder,
 		mock::onchain_mock::OnchainMock,
 	};
-	use its_primitives::types::{header::Header, SignedBlock};
+	use its_primitives::types::SignedBlock;
 	use its_test::{
 		sidechain_block_builder::SidechainBlockBuilder,
 		sidechain_block_data_builder::SidechainBlockDataBuilder,
 		sidechain_header_builder::SidechainHeaderBuilder,
 	};
+	use sidechain_primitives::SidechainHeader as Header;
 	use sp_keyring::ed25519::Keyring;
 	use sp_runtime::testing::H256;
 

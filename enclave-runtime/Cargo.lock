@@ -1651,6 +1651,7 @@ name = "its-primitives"
 version = "0.8.0"
 dependencies = [
  "parity-scale-codec",
+ "sidechain-primitives",
  "sp-core",
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.20)",
@@ -3145,6 +3146,19 @@ checksum = "881bf8156c87b6301fc5ca6b27f11eeb2761224c7081e69b409d5a1951a70c86"
 dependencies = [
  "digest 0.10.3",
  "keccak",
+]
+
+[[package]]
+name = "sidechain-primitives"
+version = "0.1.0"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#4d1b0e9d412b4e3b94f3e5afd853213b6ecc97b7"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde 1.0.137",
+ "sp-core",
+ "sp-io",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.20)",
 ]
 
 [[package]]

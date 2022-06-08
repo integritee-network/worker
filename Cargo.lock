@@ -2874,6 +2874,7 @@ dependencies = [
  "parity-scale-codec",
  "sgx-externalities",
  "sgx_tstd",
+ "sidechain-primitives",
  "sp-core",
  "sp-keyring",
  "sp-runtime",
@@ -2954,6 +2955,7 @@ version = "0.8.0"
 dependencies = [
  "parity-scale-codec",
  "serde 1.0.137",
+ "sidechain-primitives",
  "sp-core",
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.20)",
@@ -3040,6 +3042,7 @@ dependencies = [
  "its-primitives",
  "parity-scale-codec",
  "sgx_tstd",
+ "sidechain-primitives",
  "sp-core",
  "sp-runtime",
 ]
