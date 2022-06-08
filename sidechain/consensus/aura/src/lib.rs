@@ -494,7 +494,7 @@ mod tests {
 	fn on_slot_claims_slot_if_latest_parentchain_header_in_queue_contains_correspondent_validateer_set(
 	) {
 		let _ = env_logger::builder().is_test(true).try_init();
-		let previous_parentchain_header =
+		let already_imported_parentchain_header =
 			ParentchainHeaderBuilder::default().with_number(84).build();
 		let latest_parentchain_header = ParentchainHeaderBuilder::default().with_number(85).build();
 		let parentchain_block_import_trigger =
@@ -509,16 +509,19 @@ mod tests {
 			Keyring::Charlie.public(),
 		]);
 		let onchain_mock = OnchainMock::default()
-			.add_validateer_set(&previous_parentchain_header, Some(validateer_set_one))
+			.add_validateer_set(&already_imported_parentchain_header, Some(validateer_set_one))
 			.add_validateer_set(&latest_parentchain_header, Some(validateer_set_two));
 
 		let mut aura = get_aura(onchain_mock, parentchain_block_import_trigger.clone());
 
-		let slot_info = now_slot(3.into(), &previous_parentchain_header);
+		let slot_info = now_slot(3.into(), &already_imported_parentchain_header);
 
-		let result = SimpleSlotWorker::on_slot(&mut aura, slot_info, Default::default());
+		let result = SimpleSlotWorker::on_slot(&mut aura, slot_info, Default::default()).unwrap();
 
-		assert!(result.is_some());
+		assert_eq!(
+			result.block.block.block_data().layer_one_head,
+			latest_parentchain_header.hash()
+		);
 		assert!(parentchain_block_import_trigger.has_import_been_called());
 	}
 
@@ -526,7 +529,7 @@ mod tests {
 	fn on_slot_does_not_claim_slot_if_latest_parentchain_header_in_queue_contains_correspondent_validateer_set(
 	) {
 		let _ = env_logger::builder().is_test(true).try_init();
-		let previous_parentchain_header =
+		let already_imported_parentchain_header =
 			ParentchainHeaderBuilder::default().with_number(84).build();
 		let latest_parentchain_header = ParentchainHeaderBuilder::default().with_number(85).build();
 		let parentchain_block_import_trigger =
@@ -541,13 +544,13 @@ mod tests {
 			Keyring::Charlie.public(),
 		]);
 		let onchain_mock = OnchainMock::default()
-			.add_validateer_set(&previous_parentchain_header, Some(validateer_set_one))
+			.add_validateer_set(&already_imported_parentchain_header, Some(validateer_set_one))
 			.add_validateer_set(&latest_parentchain_header, Some(validateer_set_two));
 
 		let mut aura = get_aura(onchain_mock, parentchain_block_import_trigger.clone());
 
-		let slot_info = now_slot(2.into(), &previous_parentchain_header);
-
+		// If the validateer set one (instead of the latest one) is looked up, the slot will be claimed. But it should not, as the latest one should be used.
+		let slot_info = now_slot(2.into(), &already_imported_parentchain_header);
 		let result = SimpleSlotWorker::on_slot(&mut aura, slot_info, Default::default());
 
 		assert!(result.is_none());
