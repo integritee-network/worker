@@ -215,8 +215,6 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 			},
 		};
 
-		// The parentchain block header we use here is potentially outdated by one block.
-		// Importing is triggered by the worker that claims the current slot.
 		let epoch_data = match self.epoch_data(&latest_parentchain_header, slot) {
 			Ok(epoch_data) => epoch_data,
 			Err(e) => {
