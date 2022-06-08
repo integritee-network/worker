@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 codec  = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
-sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master", optional = true }
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # sgx dependencies
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
