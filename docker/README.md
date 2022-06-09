@@ -19,7 +19,7 @@ in this folder to build the worker image. This will build the worker from source
 ## Run the integration tests
 Build with
 ```
-COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose -f docker-compose.yml -f integration-test.yml
+COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose -f docker-compose.yml -f integration-test.yml build
 ```
 and then run with
 ```
