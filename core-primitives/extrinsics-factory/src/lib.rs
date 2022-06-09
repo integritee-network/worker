@@ -33,11 +33,11 @@ use codec::Encode;
 use error::Result;
 use itp_nonce_cache::{MutateNonce, Nonce};
 use itp_settings::node::{RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION};
-use itp_types::OpaqueCall;
+use itp_types::{OpaqueCall, ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder};
 use sp_core::{Pair, H256};
-use sp_runtime::{MultiSignature, OpaqueExtrinsic};
+use sp_runtime::{generic::Era, MultiSignature, OpaqueExtrinsic};
 use std::{sync::Arc, vec::Vec};
-use substrate_api_client::compose_extrinsic_offline;
+use substrate_api_client::{compose_extrinsic_offline, ExtrinsicParams};
 
 pub mod error;
 
@@ -84,20 +84,23 @@ where
 		let mut nonce_lock = self.nonce_cache.load_for_mutation()?;
 		let mut nonce_value = nonce_lock.0;
 
+		//TODO: make also possible to pay in AssetId. See issue #https://github.com/integritee-network/worker/issues/794
+		let extrinsic_params_builder = ParentchainExtrinsicParamsBuilder::new()
+			.era(Era::Immortal, self.genesis_hash)
+			.tip(0);
+
 		let extrinsics_buffer: Vec<OpaqueExtrinsic> = calls
 			.iter()
 			.map(|call| {
-				let xt = compose_extrinsic_offline!(
-					self.signer.clone(),
-					call,
-					nonce_value,
-					Era::Immortal,
-					self.genesis_hash,
-					self.genesis_hash,
+				let extrinsic_params = ParentchainExtrinsicParams::new(
 					RUNTIME_SPEC_VERSION,
-					RUNTIME_TRANSACTION_VERSION
-				)
-				.encode();
+					RUNTIME_TRANSACTION_VERSION,
+					nonce_value,
+					self.genesis_hash,
+					extrinsic_params_builder,
+				);
+				let xt = compose_extrinsic_offline!(self.signer.clone(), call, extrinsic_params)
+					.encode();
 				nonce_value += 1;
 				xt
 			})

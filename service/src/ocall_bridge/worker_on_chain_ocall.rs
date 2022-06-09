@@ -103,17 +103,18 @@ where
 mod tests {
 
 	use super::*;
-	use itp_node_api_extensions::node_api_factory::{CreateNodeApi, Result as NodeApiResult};
+	use itp_node_api_extensions::{
+		node_api_factory::{CreateNodeApi, Result as NodeApiResult},
+		ParentchainApi,
+	};
 	use mockall::mock;
-	use sp_core::sr25519;
-	use substrate_api_client::{rpc::WsRpcClient, Api};
 
 	#[test]
 	fn given_empty_worker_request_when_submitting_then_return_empty_response() {
 		mock! {
 			NodeApiFactory {}
 			impl CreateNodeApi for NodeApiFactory {
-				fn create_api(&self) -> NodeApiResult<Api<sr25519::Pair, WsRpcClient>>;
+				fn create_api(&self) -> NodeApiResult<ParentchainApi>;
 			}
 		}
 

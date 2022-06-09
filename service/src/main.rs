@@ -53,7 +53,7 @@ use itp_enclave_api::{
 };
 use itp_node_api_extensions::{
 	node_api_factory::{CreateNodeApi, NodeApiFactory},
-	AccountApi, ChainApi, PalletTeerexApi,
+	AccountApi, ChainApi, PalletTeerexApi, ParentchainApi,
 };
 use itp_settings::{
 	files::{SIDECHAIN_PURGE_INTERVAL, SIDECHAIN_PURGE_LIMIT, SIDECHAIN_STORAGE_PATH},
@@ -71,11 +71,7 @@ use its_storage::{
 use log::*;
 use my_node_runtime::{Event, Hash, Header};
 use sgx_types::*;
-use sp_core::{
-	crypto::{AccountId32, Ss58Codec},
-	sr25519,
-	sr25519::Pair,
-};
+use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_finality_grandpa::VersionedAuthorityList;
 use sp_keyring::AccountKeyring;
 use std::{
@@ -88,9 +84,7 @@ use std::{
 	thread,
 	time::{Duration, Instant},
 };
-use substrate_api_client::{
-	rpc::WsRpcClient, utils::FromHexString, Api, Header as HeaderTrait, XtStatus,
-};
+use substrate_api_client::{utils::FromHexString, Header as HeaderTrait, XtStatus};
 use teerex_primitives::ShardIdentifier;
 
 mod account_funding;
@@ -265,7 +259,7 @@ fn start_worker<E, T, D, InitializationHandler>(
 	sidechain_storage: Arc<D>,
 	skip_ra: bool,
 	dev: bool,
-	node_api: Api<sr25519::Pair, WsRpcClient>,
+	node_api: ParentchainApi,
 	tokio_handle_getter: Arc<T>,
 	initialization_handler: Arc<InitializationHandler>,
 ) where
@@ -532,7 +526,7 @@ fn start_worker<E, T, D, InitializationHandler>(
 /// considered initialized and ready for the next worker to start.
 fn spawn_worker_for_shard_polling<InitializationHandler>(
 	shard: &ShardIdentifier,
-	node_api: Api<Pair, WsRpcClient>,
+	node_api: ParentchainApi,
 	initialization_handler: Arc<InitializationHandler>,
 ) where
 	InitializationHandler: TrackInitialization + Sync + Send + 'static,
@@ -683,7 +677,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
 }
 
 pub fn init_light_client<E: EnclaveBase + Sidechain>(
-	api: &Api<sr25519::Pair, WsRpcClient>,
+	api: &ParentchainApi,
 	enclave_api: Arc<E>,
 ) -> Result<Header, Error> {
 	let genesis_hash = api.get_genesis_hash().unwrap();
@@ -715,7 +709,7 @@ pub fn init_light_client<E: EnclaveBase + Sidechain>(
 /// upon receiving a new header.
 fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 	enclave_api: Arc<E>,
-	api: &Api<sr25519::Pair, WsRpcClient>,
+	api: &ParentchainApi,
 	mut last_synced_header: Header,
 ) -> Result<(), Error> {
 	let (sender, receiver) = channel();
@@ -778,7 +772,7 @@ fn import_parentchain_blocks_until_self_registry<
 
 /// Checks if we are the first validateer to register on the parentchain.
 fn we_are_primary_validateer(
-	node_api: &Api<sr25519::Pair, WsRpcClient>,
+	node_api: &ParentchainApi,
 	register_enclave_xt_header: &Header,
 ) -> Result<bool, Error> {
 	let enclave_count_of_previous_block =

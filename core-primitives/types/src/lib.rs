@@ -10,6 +10,10 @@ use sp_runtime::{
 	OpaqueExtrinsic,
 };
 use std::vec::Vec;
+use substrate_api_client::{
+	PlainTip, PlainTipExtrinsicParams, PlainTipExtrinsicParamsBuilder, SubstrateDefaultSignedExtra,
+	UncheckedExtrinsicV4,
+};
 
 use itp_storage::storage_entry::StorageEntry;
 pub use rpc::*;
@@ -44,6 +48,18 @@ pub type ShieldFundsFn = ([u8; 2], Vec<u8>, Amount, ShardIdentifier);
 pub type CallWorkerFn = ([u8; 2], Request);
 
 pub type Enclave = EnclaveGen<AccountId>;
+
+/// Configuration for the ExtrinsicParams.
+/// PlainTipExtrinsicParams to construct a transaction for the default integritee node
+pub type ParentchainExtrinsicParams = PlainTipExtrinsicParams;
+pub type ParentchainExtrinsicParamsBuilder = PlainTipExtrinsicParamsBuilder;
+/// To pay in asset fees use different ExtrinsicParams Config.
+/// For asset payment in default substrate node :
+//pub type ParentchainExtrinsicParams = AssetTipExtrinsicParams;
+//pub type ParentchainExtrinsicParamsBuilder = AssetTipExtrinsicParamsBuilder;
+pub type ParentchainUncheckedExtrinsic<Call> =
+	UncheckedExtrinsicV4<Call, SubstrateDefaultSignedExtra<PlainTip>>;
+
 /// Simple blob to hold an encoded call
 #[derive(Debug, PartialEq, Eq, Clone, Default)]
 pub struct OpaqueCall(pub Vec<u8>);

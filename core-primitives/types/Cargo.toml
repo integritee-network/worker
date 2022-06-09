@@ -10,7 +10,7 @@ primitive-types = { version = "0.11.1", default-features = false, features = ["c
 chrono          = { version = "0.4.19", default-features = false, features = ["alloc"]}
 serde           = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 serde_json      = { version = "1.0", default-features = false, features = ["alloc"] }
-substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.20", default-features = false }
+substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.20-asset", default-features = false }
 
 sgx_tstd = { branch = "master", features = ["untrusted_fs","net","backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true}
 
