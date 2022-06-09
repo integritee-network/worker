@@ -316,10 +316,12 @@ impl<B: ParentchainBlock, T: SimpleSlotWorker<B>> PerShardSlotWorkerScheduler<B>
 				return slot_results
 			}
 
+			let shard_slot_ends_at = duration_now() + shard_remaining_duration;
 			let shard_slot = SlotInfo::new(
 				slot_info.slot,
 				duration_now(),
-				shard_remaining_duration,
+				slot_info.duration,
+				shard_slot_ends_at,
 				slot_info.last_imported_parentchain_head.clone(),
 			);
 

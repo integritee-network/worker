@@ -67,16 +67,22 @@ impl<ParentchainBlock: ParentchainBlockTrait> SlotInfo<ParentchainBlock> {
 		slot: Slot,
 		timestamp: Duration,
 		duration: Duration,
+		ends_at: Duration,
 		parentchain_head: ParentchainBlock::Header,
 	) -> Self {
 		Self {
 			slot,
 			timestamp,
 			duration,
-			ends_at: duration_now() + time_until_next_slot(duration),
+			ends_at,
 			last_imported_parentchain_head: parentchain_head,
 		}
 	}
+}
+
+/// The time at which the slot ends.
+pub fn slot_ends_at(slot: Slot, slot_duration: Duration) -> Duration {
+	Duration::from_millis(*slot.saturating_add(1u64) * (slot_duration.as_millis() as u64))
 }
 
 pub(crate) fn timestamp_within_slot<
@@ -119,7 +125,8 @@ where
 
 	last_slot_getter.set_last_slot(slot)?;
 
-	Ok(Some(SlotInfo::new(slot, timestamp, duration, header)))
+	let slot_ends_time = slot_ends_at(slot, duration);
+	Ok(Some(SlotInfo::new(slot, timestamp, duration, slot_ends_time, header)))
 }
 
 pub trait GetLastSlot {
@@ -279,11 +286,12 @@ mod tests {
 		let pc_header = default_header();
 		let slot: Slot = 1000.into();
 
+		let slot_end_time = slot_ends_at(slot, SLOT_DURATION);
 		let slot_one: SlotInfo<ParentchainBlock> =
-			SlotInfo::new(slot, timestamp, SLOT_DURATION, pc_header.clone());
+			SlotInfo::new(slot, timestamp, SLOT_DURATION, slot_end_time, pc_header.clone());
 		thread::sleep(Duration::from_millis(200));
 		let slot_two: SlotInfo<ParentchainBlock> =
-			SlotInfo::new(slot, timestamp, SLOT_DURATION, pc_header);
+			SlotInfo::new(slot, timestamp, SLOT_DURATION, slot_end_time, pc_header);
 
 		let difference_of_ends_at =
 			(slot_one.ends_at.as_millis()).abs_diff(slot_two.ends_at.as_millis());
@@ -294,6 +302,20 @@ mod tests {
 			difference_of_ends_at,
 			ALLOWED_THRESHOLD.as_millis()
 		);
+	}
+
+	#[test]
+	fn slot_info_ends_at_does_is_correct_even_if_delay_is_more_than_slot_duration() {
+		let timestamp = duration_now();
+		let pc_header = default_header();
+		let slot: Slot = 1000.into();
+		let slot_end_time = slot_ends_at(slot, SLOT_DURATION);
+
+		thread::sleep(SLOT_DURATION * 2);
+		let slot: SlotInfo<ParentchainBlock> =
+			SlotInfo::new(slot, timestamp, SLOT_DURATION, slot_end_time, pc_header);
+
+		assert!(slot.ends_at < duration_now());
 	}
 
 	#[test]

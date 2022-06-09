@@ -306,11 +306,12 @@ mod tests {
 	}
 
 	fn now_slot(slot: Slot) -> SlotInfo<ParentchainBlock> {
+		let now = duration_now();
 		SlotInfo {
 			slot,
-			timestamp: duration_now(),
+			timestamp: now,
 			duration: SLOT_DURATION,
-			ends_at: duration_now() + SLOT_DURATION,
+			ends_at: now + SLOT_DURATION,
 			last_imported_parentchain_head: default_header(),
 		}
 	}
