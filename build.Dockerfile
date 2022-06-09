@@ -31,10 +31,10 @@ ENV SGX_MODE SW
 COPY . /root/work/worker/
 WORKDIR /root/work/worker
 
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-	--mount=type=cache,target=/root/work/worker/target \
-	make
-
+#RUN --mount=type=cache,target=/usr/local/cargo/registry \
+#	--mount=type=cache,target=/root/work/worker/target \
+#	make
+RUN make
 
 ### Enclave Test Stage
 ##################################################
