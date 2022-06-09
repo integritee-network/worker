@@ -45,7 +45,7 @@ pub fn time_until_next_slot(slot_duration: Duration) -> Duration {
 }
 
 /// Information about a slot.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SlotInfo<ParentchainBlock: ParentchainBlockTrait> {
 	/// The slot number as found in the inherent data.
 	pub slot: Slot,

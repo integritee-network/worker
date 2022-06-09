@@ -51,6 +51,12 @@ use std::{fmt::Debug, time::Duration, vec::Vec};
 mod slot_stream;
 mod slots;
 
+#[cfg(test)]
+mod mocks;
+
+#[cfg(test)]
+mod per_shard_slot_worker_tests;
+
 #[cfg(feature = "std")]
 pub use slot_stream::*;
 pub use slots::*;
