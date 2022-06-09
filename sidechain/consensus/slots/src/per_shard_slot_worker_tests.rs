@@ -40,6 +40,14 @@ fn slot_timings_are_correct_with_multiple_shards() {
 
 	assert_eq!(slot_worker.slot_infos.len(), shards.len());
 
+	// end-time of the first shard slot should not exceed timestamp + 1/(n_shards) of the total slot duration
+	assert!(
+		slot_worker.slot_infos.first().unwrap().ends_at.as_millis()
+			<= (slot_info.timestamp + SLOT_DURATION.checked_div(shards.len() as u32).unwrap())
+				.as_millis()
+	);
+
+	// none of the shard slot end times should exceed the global slot end time
 	for shard_slot_info in slot_worker.slot_infos {
 		assert!(
 			shard_slot_info.ends_at.as_millis() <= slot_info.ends_at.as_millis(),
