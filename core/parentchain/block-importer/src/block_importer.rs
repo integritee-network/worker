@@ -19,7 +19,7 @@
 
 use crate::{
 	beefy_merkle_tree::{merkle_root, Keccak256},
-	error::Result,
+	error::{Error, Result},
 	ImportParentchainBlocks,
 };
 use ita_stf::ParentchainHeader;
@@ -29,15 +29,19 @@ use itc_parentchain_light_client::{
 };
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
-use itp_settings::node::{PROCESSED_PARENTCHAIN_BLOCK, TEEREX_MODULE};
+use itp_registry_storage::{RegistryStorage, RegistryStorageKeys};
+use itp_settings::node::{
+	ACK_GAME, GAME_REGISTRY_MODULE, PROCESSED_PARENTCHAIN_BLOCK, TEEREX_MODULE,
+};
 use itp_stf_executor::traits::StfUpdateState;
-use itp_types::{OpaqueCall, H256};
+use itp_stf_state_handler::query_shard_state::QueryShardState;
+use itp_types::{GameId, OpaqueCall, H256};
 use log::*;
 use sp_runtime::{
 	generic::SignedBlock as SignedBlockG,
 	traits::{Block as ParentchainBlockTrait, NumberFor},
 };
-use std::{marker::PhantomData, sync::Arc, vec::Vec};
+use std::{format, marker::PhantomData, sync::Arc, vec::Vec};
 
 /// Parentchain block import implementation.
 pub struct ParentchainBlockImporter<
@@ -47,6 +51,7 @@ pub struct ParentchainBlockImporter<
 	StfExecutor,
 	ExtrinsicsFactory,
 	IndirectCallsExecutor,
+	StateHandler,
 > where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
@@ -55,12 +60,14 @@ pub struct ParentchainBlockImporter<
 	StfExecutor: StfUpdateState,
 	ExtrinsicsFactory: CreateExtrinsics,
 	IndirectCallsExecutor: ExecuteIndirectCalls,
+	StateHandler: QueryShardState,
 {
 	validator_accessor: Arc<ValidatorAccessor>,
 	ocall_api: Arc<OCallApi>,
 	stf_executor: Arc<StfExecutor>,
 	extrinsics_factory: Arc<ExtrinsicsFactory>,
 	indirect_calls_executor: Arc<IndirectCallsExecutor>,
+	file_state_handler: Arc<StateHandler>,
 	_phantom: PhantomData<ParentchainBlock>,
 }
 
@@ -71,6 +78,7 @@ impl<
 		StfExecutor,
 		ExtrinsicsFactory,
 		IndirectCallsExecutor,
+		StateHandler,
 	>
 	ParentchainBlockImporter<
 		ParentchainBlock,
@@ -79,6 +87,7 @@ impl<
 		StfExecutor,
 		ExtrinsicsFactory,
 		IndirectCallsExecutor,
+		StateHandler,
 	> where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256, Header = ParentchainHeader>,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
@@ -87,6 +96,7 @@ impl<
 	StfExecutor: StfUpdateState,
 	ExtrinsicsFactory: CreateExtrinsics,
 	IndirectCallsExecutor: ExecuteIndirectCalls,
+	StateHandler: QueryShardState,
 {
 	pub fn new(
 		validator_accessor: Arc<ValidatorAccessor>,
@@ -94,6 +104,7 @@ impl<
 		stf_executor: Arc<StfExecutor>,
 		extrinsics_factory: Arc<ExtrinsicsFactory>,
 		indirect_calls_executor: Arc<IndirectCallsExecutor>,
+		file_state_handler: Arc<StateHandler>,
 	) -> Self {
 		ParentchainBlockImporter {
 			validator_accessor,
@@ -101,6 +112,7 @@ impl<
 			stf_executor,
 			extrinsics_factory,
 			indirect_calls_executor,
+			file_state_handler,
 			_phantom: Default::default(),
 		}
 	}
@@ -113,6 +125,7 @@ impl<
 		StfExecutor,
 		ExtrinsicsFactory,
 		IndirectCallsExecutor,
+		StateHandler,
 	> ImportParentchainBlocks
 	for ParentchainBlockImporter<
 		ParentchainBlock,
@@ -121,6 +134,7 @@ impl<
 		StfExecutor,
 		ExtrinsicsFactory,
 		IndirectCallsExecutor,
+		StateHandler,
 	> where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256, Header = ParentchainHeader>,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
@@ -129,6 +143,7 @@ impl<
 	StfExecutor: StfUpdateState,
 	ExtrinsicsFactory: CreateExtrinsics,
 	IndirectCallsExecutor: ExecuteIndirectCalls,
+	StateHandler: QueryShardState,
 {
 	type SignedBlockType = SignedBlockG<ParentchainBlock>;
 
@@ -176,6 +191,33 @@ impl<
 				block.header().number,
 				block.header().hash()
 			);
+
+			// FIXME: Putting these blocks below in a separate function would be a little bit cleaner
+			let maybe_queued: Option<Vec<GameId>> = self
+				.ocall_api
+				.get_storage_verified(RegistryStorage::queued(), block.header())
+				.map_err(|e| Error::StorageVerified(format!("{:?}", e)))?
+				.into_tuple()
+				.1;
+
+			match maybe_queued {
+				Some(queued) => {
+					if !queued.is_empty() {
+						//FIXME: we currently only take the first shard. How we handle sharding in general?
+						let shard = self.file_state_handler.list_shards().unwrap()[0];
+						let ack_game_call = OpaqueCall::from_tuple(&(
+							[GAME_REGISTRY_MODULE, ACK_GAME],
+							queued,
+							shard,
+						));
+
+						calls.push(ack_game_call);
+					}
+				},
+				None => {
+					debug!("No game queued in GameRegistry pallet.");
+				},
+			}
 		}
 
 		// Create extrinsics for all `unshielding` and `block processed` calls we've gathered.

@@ -11,11 +11,12 @@ sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-s
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["untrusted_time"] }
 
 # integritee dependencies
-sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
+sgx-externalities = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", rev = "polkadot-v0.9.20", optional = true }
 
 # local dependencies
 ita-stf = { path = "../../app-libs/stf", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
+itp-registry-storage = { path = "../registry-storage", default-features = false }
 itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
 itp-storage = { path = "../storage", default-features = false }
 itp-time-utils = { path = "../time-utils", default-features = false }
@@ -34,6 +35,10 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 # substrate dependencies
 sp-core = { version = "6.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
 sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
+
+# node deps
+ajuna-common = { default-features = false, git = "https://github.com/ajuna-network/Ajuna", rev = "polkadot-v0.9.20" }
+pallet-ajuna-gameregistry = { default-features = false, git = "https://github.com/ajuna-network/Ajuna", rev = "polkadot-v0.9.20" }
 
 # dev dependencies
 itp-test = { path = "../test", default-features = false, optional = true }

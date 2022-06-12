@@ -21,32 +21,40 @@
 pub use its_consensus_common::BlockImport;
 
 use crate::{AuraVerifier, EnclaveOnChainOCallApi, SidechainBlockTrait};
-use ita_stf::hash::TrustedOperationOrHash;
+use ita_stf::{
+	hash::TrustedOperationOrHash, helpers::get_board_for, ParentchainHeader, SgxBoardStruct,
+	TrustedCall, TrustedCallSigned,
+};
 use itc_parentchain_block_import_dispatcher::triggered_dispatcher::{
 	PeekParentchainBlockImportQueue, TriggerParentchainBlockImport,
 };
+use itc_parentchain_light_client::{concurrent_access::ValidatorAccess, Validator};
 use itp_enclave_metrics::EnclaveMetric;
+use itp_extrinsics_factory::CreateExtrinsics;
 use itp_ocall_api::{EnclaveMetricsOCallApi, EnclaveSidechainOCallApi};
-use itp_settings::sidechain::SLOT_DURATION;
+use itp_settings::{
+	node::{FINISH_GAME, GAME_REGISTRY_MODULE},
+	sidechain::SLOT_DURATION,
+};
 use itp_sgx_crypto::{key_repository::AccessKey, StateCrypto};
 use itp_stf_executor::ExecutedOperation;
 use itp_stf_state_handler::handle_state::HandleState;
-use itp_types::H256;
+use itp_types::{OpaqueCall, H256};
 use its_consensus_common::Error as ConsensusError;
 use its_primitives::traits::{
 	BlockData, Header as HeaderTrait, ShardIdentifierFor, SignedBlock as SignedBlockTrait,
 };
-use its_state::SidechainDB;
+use its_state::{SidechainDB, SidechainState};
 use its_top_pool_executor::TopPoolCallOperator;
 use its_validateer_fetch::ValidateerFetch;
 use log::*;
-use sgx_externalities::SgxExternalities;
+use pallet_ajuna_connectfour::BoardState;
+use sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use sp_core::Pair;
 use sp_runtime::{
-	generic::SignedBlock as SignedParentchainBlock,
-	traits::{Block as ParentchainBlockTrait, Header},
+	generic::SignedBlock as SignedParentchainBlock, traits::Block as ParentchainBlockTrait,
 };
-use std::{marker::PhantomData, sync::Arc, vec::Vec};
+use std::{borrow::ToOwned, marker::PhantomData, string::ToString, sync::Arc, vec::Vec};
 
 /// Implements `BlockImport`.
 #[derive(Clone)]
@@ -60,6 +68,8 @@ pub struct BlockImporter<
 	StateKeyRepository,
 	TopPoolExecutor,
 	ParentchainBlockImporter,
+	ExtrinsicsFactory,
+	ValidatorAccessor,
 > {
 	state_handler: Arc<StateHandler>,
 	state_key_repository: Arc<StateKeyRepository>,
@@ -67,6 +77,8 @@ pub struct BlockImporter<
 	parentchain_block_importer: Arc<ParentchainBlockImporter>,
 	ocall_api: Arc<OCallApi>,
 	_phantom: PhantomData<(Authority, ParentchainBlock, SignedSidechainBlock, SidechainState)>,
+	extrinsics_factory: Arc<ExtrinsicsFactory>,
+	validator_accessor: Arc<ValidatorAccessor>,
 }
 
 impl<
@@ -79,6 +91,8 @@ impl<
 		StateKeyRepository,
 		TopPoolExecutor,
 		ParentchainBlockImporter,
+		ExtrinsicsFactory,
+		ValidatorAccessor,
 	>
 	BlockImporter<
 		Authority,
@@ -90,10 +104,12 @@ impl<
 		StateKeyRepository,
 		TopPoolExecutor,
 		ParentchainBlockImporter,
+		ExtrinsicsFactory,
+		ValidatorAccessor,
 	> where
 	Authority: Pair,
 	Authority::Public: std::fmt::Debug,
-	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
+	ParentchainBlock: ParentchainBlockTrait<Hash = H256, Header = ParentchainHeader>,
 	SignedSidechainBlock: SignedBlockTrait<Public = Authority::Public> + 'static,
 	<<SignedSidechainBlock as SignedBlockTrait>::Block as SidechainBlockTrait>::HeaderType:
 		HeaderTrait<ShardIdentifier = H256>,
@@ -112,6 +128,8 @@ impl<
 		+ PeekParentchainBlockImportQueue<SignedParentchainBlock<ParentchainBlock>>
 		+ Send
 		+ Sync,
+	ExtrinsicsFactory: CreateExtrinsics,
+	ValidatorAccessor: ValidatorAccess<ParentchainBlock>,
 {
 	pub fn new(
 		state_handler: Arc<StateHandler>,
@@ -119,6 +137,8 @@ impl<
 		top_pool_executor: Arc<TopPoolExecutor>,
 		parentchain_block_importer: Arc<ParentchainBlockImporter>,
 		ocall_api: Arc<OCallApi>,
+		extrinsics_factory: Arc<ExtrinsicsFactory>,
+		validator_accessor: Arc<ValidatorAccessor>,
 	) -> Self {
 		Self {
 			state_handler,
@@ -127,6 +147,8 @@ impl<
 			parentchain_block_importer,
 			ocall_api,
 			_phantom: Default::default(),
+			extrinsics_factory,
+			validator_accessor,
 		}
 	}
 
@@ -158,6 +180,91 @@ impl<
 			);
 		}
 	}
+
+	fn get_calls_in_block(
+		&self,
+		sidechain_block: &SignedSidechainBlock::Block,
+	) -> Result<Vec<TrustedCallSigned>, ConsensusError> {
+		let shard = &sidechain_block.header().shard_id();
+		let top_hashes = sidechain_block.block_data().signed_top_hashes();
+		let tops = self
+			.top_pool_executor
+			.get_trusted_calls(shard)
+			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
+
+		let calls = tops
+			.iter()
+			.filter_map(|top| top.to_call())
+			.map(|top| top.to_owned())
+			.collect::<Vec<_>>();
+
+		Ok(calls
+			.iter()
+			.filter(|call| top_hashes.contains(&self.top_pool_executor.get_trusted_call_hash(call)))
+			.cloned()
+			.collect())
+	}
+
+	fn get_board_if_game_finished(
+		&self,
+		sidechain_block: &SignedSidechainBlock::Block,
+		call: &TrustedCallSigned,
+	) -> Result<Option<SgxBoardStruct>, ConsensusError> {
+		let shard = &sidechain_block.header().shard_id();
+		if let TrustedCall::connectfour_play_turn(account, _b) = &call.call {
+			let mut state = self
+				.state_handler
+				.load(shard)
+				.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
+			if let Some(board) = state.execute_with(|| get_board_for(account.clone())) {
+				if let BoardState::Finished(_) = board.board_state {
+					return Ok(Some(board))
+				}
+			} else {
+				error!("could not decode board. maybe hasn't been set?");
+			}
+		}
+		Ok(None)
+	}
+
+	fn send_game_finished_extrinsic(
+		&self,
+		sidechain_block: &SignedSidechainBlock::Block,
+		board: SgxBoardStruct,
+	) -> Result<(), ConsensusError> {
+		let shard = &sidechain_block.header().shard_id();
+		// player 1 is red, player 2 is blue
+		// the winner is not the next player
+		let winner = match board.next_player {
+			1 => board.blue,
+			2 => board.red,
+			_ =>
+				return Err(ConsensusError::BadSidechainBlock(
+					sidechain_block.hash(),
+					"Unknown player, could not get the Winner.".to_string(),
+				)),
+		};
+
+		let opaque_call =
+			OpaqueCall::from_tuple(&([GAME_REGISTRY_MODULE, FINISH_GAME], shard, winner));
+
+		let calls = vec![opaque_call];
+
+		// Create extrinsic for finish game.
+		let finish_game_extrinsic = self
+			.extrinsics_factory
+			.create_extrinsics(calls.as_slice())
+			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
+
+		// Sending the extrinsic requires mut access because the validator caches the sent extrinsics internally.
+		self.validator_accessor
+			.execute_mut_on_validator(|v| {
+				v.send_extrinsics(self.ocall_api.as_ref(), finish_game_extrinsic)
+			})
+			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
+		trace!("extrinsic finish game sent");
+		Ok(())
+	}
 }
 
 impl<
@@ -169,6 +276,8 @@ impl<
 		StateKeyRepository,
 		TopPoolExecutor,
 		ParentchainBlockImporter,
+		ExtrinsicsFactory,
+		ValidatorAccessor,
 	> BlockImport<ParentchainBlock, SignedSidechainBlock>
 	for BlockImporter<
 		Authority,
@@ -180,10 +289,12 @@ impl<
 		StateKeyRepository,
 		TopPoolExecutor,
 		ParentchainBlockImporter,
+		ExtrinsicsFactory,
+		ValidatorAccessor,
 	> where
 	Authority: Pair,
 	Authority::Public: std::fmt::Debug,
-	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
+	ParentchainBlock: ParentchainBlockTrait<Hash = H256, Header = ParentchainHeader>,
 	SignedSidechainBlock: SignedBlockTrait<Public = Authority::Public> + 'static,
 	<<SignedSidechainBlock as SignedBlockTrait>::Block as SidechainBlockTrait>::HeaderType:
 		HeaderTrait<ShardIdentifier = H256>,
@@ -202,6 +313,9 @@ impl<
 		+ PeekParentchainBlockImportQueue<SignedParentchainBlock<ParentchainBlock>>
 		+ Send
 		+ Sync,
+	ExtrinsicsFactory: CreateExtrinsics,
+	ValidatorAccessor: ValidatorAccess<ParentchainBlock>,
+	SidechainDB<SignedSidechainBlock::Block, SgxExternalities>: SidechainState,
 {
 	type Verifier = AuraVerifier<
 		Authority,
@@ -322,6 +436,12 @@ impl<
 
 	fn cleanup(&self, signed_sidechain_block: &SignedSidechainBlock) -> Result<(), ConsensusError> {
 		let sidechain_block = signed_sidechain_block.block();
+
+		for call in self.get_calls_in_block(sidechain_block)? {
+			if let Some(board) = self.get_board_if_game_finished(sidechain_block, &call)? {
+				self.send_game_finished_extrinsic(sidechain_block, board)?;
+			}
+		}
 
 		// Remove all successfully applied trusted calls from the top pool.
 		self.update_top_pool(sidechain_block);

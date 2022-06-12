@@ -3,11 +3,11 @@ name: Build, Test, Clippy
 on:
   workflow_dispatch:
   push:
-    branches: [ master ]
+    branches: [ main ]
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -240,22 +240,22 @@ jobs:
 #          name: enclave-signed-da8d4b442d3f2b09dbafb097d4d7a1bce409d518
 #          path: ${{ env.BIN_DIR }}
 
-      - name: Download integritee-node
+      - name: Download Ajuna node
         uses: dawidd6/action-download-artifact@v2
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
-          workflow: ci.yml
-          name: integritee-node-dev-ecc97eafd9db460b75df46a99ba8edc01d4180de
+          workflow: check-pull-request.yml
+          name: ajuna-solo-dev-c3109a5ecf1a9c9d549994158147a99a57d9a530
           # in fact this action should download the latest artifact, but sometimes fails. Then we need to
           # set the `run_id` to force a download of an updated binary.
-          run_id: 2307398354
+          run_id: 2482825674
           path: node
-          repo: integritee-network/integritee-node
+          repo: ajuna-network/Ajuna
 
       - name: Prepare working directory
         run: |
           mkdir -p ${{ env.LOG_DIR}}
-          chmod +x node/integritee-node
+          chmod +x node/ajuna-solo
           cd ${{ env.BIN_DIR }}
           chmod +x ${{ env.WORKER_BIN }}
           chmod +x ${{ env.CLIENT_BIN }}

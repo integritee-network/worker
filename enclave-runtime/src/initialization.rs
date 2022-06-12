@@ -184,12 +184,20 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 
 	let signer = Ed25519Seal::unseal_from_static_file()?;
 
+	let validator_access = Arc::new(EnclaveValidatorAccessor::default());
+	let genesis_hash = validator_access.execute_on_validator(|v| v.genesis_hash(v.num_relays()))?;
+
+	let extrinsics_factory =
+		Arc::new(ExtrinsicsFactory::new(genesis_hash, signer.clone(), GLOBAL_NONCE_CACHE.clone()));
+
 	let sidechain_block_importer = Arc::<EnclaveSidechainBlockImporter>::new(BlockImporter::new(
 		state_handler,
 		state_key_repository.clone(),
 		top_pool_executor,
 		parentchain_block_import_dispatcher,
 		ocall_api.clone(),
+		extrinsics_factory,
+		validator_access,
 	));
 
 	let sidechain_block_import_queue = GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.get()?;
@@ -217,6 +225,7 @@ pub(crate) fn init_light_client(params: LightClientInitParams<Header>) -> Enclav
 	// Initialize the global parentchain block import dispatcher instance.
 	let signer = Ed25519Seal::unseal_from_static_file()?;
 	let shielding_key_repository = GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.get()?;
+	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 
 	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
@@ -241,6 +250,7 @@ pub(crate) fn init_light_client(params: LightClientInitParams<Header>) -> Enclav
 		stf_executor,
 		extrinsics_factory,
 		indirect_calls_executor,
+		state_handler,
 	);
 	let parentchain_block_import_queue = BlockImportQueue::<SignedBlock>::default();
 	let parentchain_block_import_dispatcher = Arc::new(TriggeredDispatcher::new(

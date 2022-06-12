@@ -14,11 +14,18 @@
 	limitations under the License.
 
 */
-use crate::{stf_sgx_primitives::types::*, AccountId, Index, StfError, StfResult, H256};
+use crate::{
+	stf_sgx_primitives::types::*, AccountId, Hash, Index, SgxBoardStruct, StfError, StfResult, H256,
+};
 use codec::{Decode, Encode};
 use itp_storage::{storage_double_map_key, storage_map_key, storage_value_key, StorageHasher};
 use log::*;
 use std::prelude::v1::*;
+
+#[cfg(feature = "sgx")]
+use crate::stf_sgx_primitives::types::{AccountData, AccountInfo};
+#[cfg(feature = "std")]
+use itp_types::{AccountData, AccountInfo};
 
 pub fn get_storage_value<V: Decode>(
 	storage_prefix: &'static str,
@@ -146,5 +153,30 @@ pub fn ensure_root(account: AccountId) -> StfResult<()> {
 		Ok(())
 	} else {
 		Err(StfError::MissingPrivileges(account))
+	}
+}
+
+pub fn get_board_for(who: AccountId) -> Option<SgxBoardStruct> {
+	if let Some(board_id) = get_storage_map::<AccountId, Hash>(
+		"ConnectFour",
+		"PlayerBoard",
+		&who,
+		&StorageHasher::Identity,
+	) {
+		if let Some(board) = get_storage_map::<Hash, SgxBoardStruct>(
+			"ConnectFour",
+			"Boards",
+			&board_id,
+			&StorageHasher::Identity,
+		) {
+			info!("Retrieved board of player {:?} is: {:?}", who.encode(), board);
+			Some(board)
+		} else {
+			debug!("could not read board");
+			None
+		}
+	} else {
+		debug!("could not read board id");
+		None
 	}
 }

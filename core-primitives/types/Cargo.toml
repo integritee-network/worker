@@ -23,6 +23,9 @@ sp-core = { version = "6.0.0", default-features = false, features = ["full_crypt
 sp-finality-grandpa = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
 sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
 
+# node deps
+pallet-ajuna-gameregistry  = { default-features = false, git = "https://github.com/ajuna-network/Ajuna", rev = "polkadot-v0.9.20" }
+
 [features]
 default = ['std']
 std = [ 'codec/std',
@@ -31,6 +34,7 @@ std = [ 'codec/std',
         'chrono/std',
         'serde/std',
         'serde_json/std',
+        'pallet-ajuna-gameregistry/std',
         'primitive-types/std',
         'itp-storage/std',
         'sp-runtime/std',

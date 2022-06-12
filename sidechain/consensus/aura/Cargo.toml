@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 log = { version = "0.4.14", default-features = false }
 finality-grandpa = { version = "0.15.0", default-features = false, features = ["derive-codec"] }
-sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
+sgx-externalities = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", rev = "polkadot-v0.9.20", optional = true }
 
 # sgx deps
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
@@ -20,7 +20,9 @@ sp-runtime = { version = "6.0.0", default-features = false, git = "https://githu
 # local deps
 ita-stf = { path = "../../../app-libs/stf", default-features = false }
 itc-parentchain-block-import-dispatcher = { path = "../../../core/parentchain/block-import-dispatcher", default-features = false }
+itc-parentchain-light-client = { path = "../../../core/parentchain/light-client", default-features = false }
 itp-enclave-metrics = { path = "../../../core-primitives/enclave-metrics", default-features = false }
+itp-extrinsics-factory = { path = "../../../core-primitives/extrinsics-factory", default-features = false }
 itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
 itp-settings = { path = "../../../core-primitives/settings" }
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
@@ -36,10 +38,14 @@ its-state = { path = "../../state", default-features = false }
 its-top-pool-executor = { path = "../../top-pool-executor", default-features = false }
 its-validateer-fetch = { path = "../../validateer-fetch", default-features = false }
 
+pallet-ajuna-connectfour = { default-features = false, git = "https://github.com/ajuna-network/Ajuna", rev = "polkadot-v0.9.20" }
+
 [dev-dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
 env_logger = "0.9.0"
 itc-parentchain-block-import-dispatcher = { path = "../../../core/parentchain/block-import-dispatcher", features = ["mocks"] }
+itc-parentchain-light-client = { path = "../../../core/parentchain/light-client", features = ["mocks"] }
+itp-extrinsics-factory = { path = "../../../core-primitives/extrinsics-factory", features = ["mocks"] }
 itp-storage = { path = "../../../core-primitives/storage" }
 itp-test = { path = "../../../core-primitives/test" }
 its-test = { path = "../../test" }
@@ -66,6 +72,7 @@ std = [
    "its-top-pool-executor/std",
    "its-validateer-fetch/std",
    "log/std",
+   "pallet-ajuna-connectfour/std",
    "sgx-externalities/std",
 ]
 sgx = [

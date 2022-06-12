@@ -59,4 +59,4 @@ its-test = { path = "../../test" }
 sp-core = { version = "6.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
 sp-keyring = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
 # integritee / scs
-sgx-externalities = { git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
+sgx-externalities = { git = "https://github.com/ajuna-network/sgx-runtime", rev = "polkadot-v0.9.20" }

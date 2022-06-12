@@ -84,6 +84,7 @@ pub type EnclaveParentChainBlockImporter = ParentchainBlockImporter<
 	EnclaveStfExecutor,
 	EnclaveExtrinsicsFactory,
 	EnclaveIndirectCallsExecutor,
+	EnclaveStateHandler,
 >;
 pub type EnclaveParentchainBlockImportQueue = BlockImportQueue<SignedParentchainBlock>;
 pub type EnclaveParentchainBlockImportDispatcher =
@@ -125,6 +126,8 @@ pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 	EnclaveStateKeyRepository,
 	EnclaveTopPoolOperationHandler,
 	EnclaveParentchainBlockImportDispatcher,
+	EnclaveExtrinsicsFactory,
+	ValidatorAccessor<ParentchainBlock>,
 >;
 pub type EnclaveSidechainBlockImportQueue = BlockImportQueue<SignedSidechainBlock>;
 pub type EnclaveSidechainBlockSyncer = PeerBlockSync<

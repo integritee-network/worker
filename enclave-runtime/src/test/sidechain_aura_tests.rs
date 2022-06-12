@@ -100,6 +100,8 @@ pub fn produce_sidechain_block_and_import_it() {
 		top_pool_operation_handler.clone(),
 		parentchain_block_import_trigger.clone(),
 		ocall_api.clone(),
+		Arc::new(ExtrinsicsFactoryMock::default()),
+		Arc::new(ValidatorAccessMock::default()),
 	));
 	let block_composer = Arc::new(TestBlockComposer::new(signer.clone(), state_key_repo.clone()));
 	let proposer_environment =

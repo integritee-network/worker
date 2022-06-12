@@ -19,7 +19,7 @@
 use crate::sgx_reexport_prelude::*;
 
 use sgx_types::sgx_status_t;
-use std::{boxed::Box, format};
+use std::{boxed::Box, format, string::String};
 
 pub type Result<T> = core::result::Result<T, Error>;
 
@@ -34,6 +34,10 @@ pub enum Error {
 	StfExecution(#[from] itp_stf_executor::error::Error),
 	#[error("Light-client error: {0}")]
 	LightClient(#[from] itc_parentchain_light_client::error::Error),
+	#[error("Storage verified error: {0}")]
+	StorageVerified(String),
+	#[error("State handling error: {0}")]
+	StateHandler(#[from] itp_stf_state_handler::error::Error),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }

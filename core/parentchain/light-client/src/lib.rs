@@ -53,10 +53,10 @@ pub mod state;
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub mod io;
 
-#[cfg(test)]
-mod mocks;
-
 #[cfg(feature = "mocks")]
+pub mod mocks;
+
+#[cfg(all(not(feature = "mocks"), test))]
 pub mod mocks;
 
 pub type RelayId = u64;

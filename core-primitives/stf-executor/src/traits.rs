@@ -20,9 +20,9 @@ use codec::Encode;
 use ita_stf::{
 	AccountId, ParentchainHeader, ShardIdentifier, TrustedGetterSigned, TrustedOperation,
 };
-use itp_types::{Amount, OpaqueCall, H256};
+use itp_types::{Amount, GameId, OpaqueCall, H256};
 use sgx_externalities::SgxExternalitiesTrait;
-use sp_runtime::traits::Header as HeaderTrait;
+use sp_runtime::traits::{Block as ParentchainBlockTrait, Header as HeaderTrait};
 use std::{fmt::Debug, result::Result as StdResult, time::Duration, vec::Vec};
 
 /// Post-processing steps after executing STF
@@ -39,6 +39,15 @@ pub trait StfExecuteShieldFunds {
 		amount: Amount,
 		shard: &ShardIdentifier,
 	) -> Result<H256>;
+
+	fn execute_new_game<ParentchainBlock>(
+		&self,
+		game_id: GameId,
+		shard: &ShardIdentifier,
+		block: &ParentchainBlock,
+	) -> Result<GameId>
+	where
+		ParentchainBlock: ParentchainBlockTrait<Hash = H256>;
 }
 
 /// Execute a trusted call on the STF

@@ -20,11 +20,13 @@
 use crate::{
 	call_operator::{ExecutedOperation, TopPoolCallOperator},
 	error::Result,
+	H256,
 };
+use codec::Encode;
 use core::marker::PhantomData;
-use ita_stf::TrustedOperation;
+use ita_stf::{TrustedCallSigned, TrustedOperation};
 use its_primitives::traits::{ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait};
-use sp_runtime::traits::Block as ParentchainBlockTrait;
+use sp_runtime::traits::{BlakeTwo256, Block as ParentchainBlockTrait, Hash};
 use std::{collections::HashMap, sync::RwLock};
 
 pub struct TopPoolCallOperatorMock<ParentchainBlock, SignedSidechainBlock>
@@ -86,6 +88,11 @@ where
 		shard: &ShardIdentifierFor<SignedSidechainBlock>,
 	) -> Result<Vec<TrustedOperation>> {
 		Ok(self.trusted_calls.get(shard).map(|v| v.clone()).unwrap_or_default())
+	}
+
+	fn get_trusted_call_hash(&self, call: &TrustedCallSigned) -> H256 {
+		let top: TrustedOperation = TrustedOperation::direct_call(call.clone());
+		top.using_encoded(|x| BlakeTwo256::hash(x))
 	}
 
 	fn remove_calls_from_pool(

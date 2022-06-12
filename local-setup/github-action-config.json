@@ -1,6 +1,6 @@
 {
   "node": {
-    "bin": "./node/integritee-node",
+    "bin": "./node/ajuna-solo",
     "flags": [
       "--tmp",
       "--dev",

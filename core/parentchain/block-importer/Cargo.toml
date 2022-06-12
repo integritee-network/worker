@@ -16,8 +16,10 @@ itc-parentchain-indirect-calls-executor = { path = "../indirect-calls-executor",
 itc-parentchain-light-client = { path = "../light-client", default-features = false }
 itp-extrinsics-factory = { path = "../../../core-primitives/extrinsics-factory", default-features = false }
 itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
+itp-registry-storage = { path = "../../../core-primitives/registry-storage", default-features = false }
 itp-settings = { path = "../../../core-primitives/settings" }
 itp-stf-executor = { path = "../../../core-primitives/stf-executor", default-features = false }
+itp-stf-state-handler = { path = "../../../core-primitives/stf-state-handler", default-features = false }
 itp-types = { path = "../../../core-primitives/types", default-features = false }
 
 # sgx enabled external libraries
@@ -34,6 +36,8 @@ sp-runtime = { version = "6.0.0", default-features = false, git = "https://githu
 #remove as soon as we can import beefy-merkle-tree:
 tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 
+pallet-ajuna-gameregistry = { default-features = false, git = "https://github.com/ajuna-network/Ajuna", rev = "polkadot-v0.9.20" }
+
 [features]
 default = ["std"]
 std = [
@@ -43,7 +47,10 @@ std = [
     "itc-parentchain-light-client/std",
     "itp-extrinsics-factory/std",
     "itp-ocall-api/std",
+    "itp-registry-storage/std",
     "itp-stf-executor/std",
+    "itp-stf-state-handler/std",
+    "pallet-ajuna-gameregistry/std",
     "itp-types/std",
     # no-std compatible libraries
     "codec/std",
@@ -61,6 +68,7 @@ sgx = [
     "itc-parentchain-light-client/sgx",
     "itp-extrinsics-factory/sgx",
     "itp-stf-executor/sgx",
+    "itp-stf-state-handler/sgx",
     "itp-types/sgx",
     # sgx enabled external libraries
     "thiserror_sgx",

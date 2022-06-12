@@ -24,11 +24,13 @@ use crate::error::Result;
 use codec::{Decode, Encode};
 use futures::executor;
 use ita_stf::AccountId;
-use itp_settings::node::{CALL_WORKER, SHIELD_FUNDS, TEEREX_MODULE};
+use itp_settings::node::{
+	ACK_GAME, CALL_WORKER, GAME_REGISTRY_MODULE, SHIELD_FUNDS, TEEREX_MODULE,
+};
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt};
 use itp_stf_executor::traits::StfExecuteShieldFunds;
 use itp_top_pool_author::traits::AuthorApi;
-use itp_types::{CallWorkerFn, ShieldFundsFn, H256};
+use itp_types::{AckGameFn, CallWorkerFn, ShieldFundsFn, H256};
 use log::*;
 use sp_core::blake2_256;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header};
@@ -86,6 +88,24 @@ where
 		self.stf_executor.execute_shield_funds(account, *amount, shard)?;
 		Ok(())
 	}
+
+	fn handle_ack_game_xt<ParentchainBlock>(
+		&self,
+		xt: &UncheckedExtrinsicV4<AckGameFn>,
+		block: &ParentchainBlock,
+	) -> Result<()>
+	where
+		ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
+	{
+		let (_call, games, shard) = &xt.function;
+
+		info!("found {:?} games", games.len());
+
+		for game in games {
+			self.stf_executor.execute_new_game(*game, shard, block)?;
+		}
+		Ok(())
+	}
 }
 
 impl<ShieldingKeyRepository, StfExecutor, TopPoolAuthor> ExecuteIndirectCalls
@@ -105,7 +125,7 @@ where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	{
 		debug!("Scanning block {:?} for relevant xt", block.header().number());
-		let mut executed_shielding_calls = Vec::<H256>::new();
+		let mut executed_extrinsics = Vec::<H256>::new();
 		for xt_opaque in block.extrinsics().iter() {
 			// Found ShieldFunds extrinsic in block.
 			if let Ok(xt) =
@@ -116,7 +136,21 @@ where
 						error!("Error performing shield funds. Error: {:?}", e);
 					} else {
 						// Cache successfully executed shielding call.
-						executed_shielding_calls.push(hash_of(xt))
+						executed_extrinsics.push(hash_of(xt))
+					}
+				}
+			};
+
+			// Found Ack_Game extrinsic in block.
+			if let Ok(xt) =
+				UncheckedExtrinsicV4::<AckGameFn>::decode(&mut xt_opaque.encode().as_slice())
+			{
+				if xt.function.0 == [GAME_REGISTRY_MODULE, ACK_GAME] {
+					if let Err(e) = self.handle_ack_game_xt(&xt, block) {
+						error!("Error performing acknowledge game. Error: {:?}", e);
+					} else {
+						// Cache successfully executed shielding call.
+						executed_extrinsics.push(hash_of(xt))
 					}
 				}
 			};
@@ -137,7 +171,7 @@ where
 				}
 			}
 		}
-		Ok(executed_shielding_calls)
+		Ok(executed_extrinsics)
 	}
 }
 

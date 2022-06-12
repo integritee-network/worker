@@ -20,7 +20,7 @@ use crate::{
 	traits::{StatePostProcessing, StfExecuteShieldFunds, StfExecuteTrustedCall},
 };
 use ita_stf::{AccountId, ShardIdentifier, TrustedOperation};
-use itp_types::{Amount, OpaqueCall};
+use itp_types::{Amount, GameId, OpaqueCall};
 use sp_core::H256;
 use sp_runtime::traits::Header as HeaderTrait;
 use std::vec::Vec;
@@ -52,6 +52,15 @@ impl StfExecuteShieldFunds for StfExecutorMock {
 		_amount: Amount,
 		_shard: &ShardIdentifier,
 	) -> Result<H256> {
+		todo!()
+	}
+
+	fn execute_new_game<ParentchainBlock>(
+		&self,
+		_game_id: GameId,
+		_shard: &ShardIdentifier,
+		_block: &ParentchainBlock,
+	) -> Result<GameId> {
 		todo!()
 	}
 }

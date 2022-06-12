@@ -88,6 +88,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "ajuna-common"
+version = "0.1.0"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#4b94816df69a9c6668ebb505f57e864e03fdc01a"
+dependencies = [
+ "frame-support",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.20)",
+]
+
+[[package]]
 name = "arrayref"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -530,6 +541,7 @@ dependencies = [
  "ita-stf",
  "itc-direct-rpc-server",
  "itc-parentchain",
+ "itc-parentchain-light-client",
  "itc-tls-websocket-server",
  "itertools",
  "itp-block-import-queue",
@@ -1103,6 +1115,7 @@ dependencies = [
  "its-primitives",
  "its-state",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
+ "pallet-ajuna-connectfour",
  "pallet-balances",
  "parity-scale-codec",
  "sgx-externalities",
@@ -1163,10 +1176,13 @@ dependencies = [
  "itc-parentchain-light-client",
  "itp-extrinsics-factory",
  "itp-ocall-api",
+ "itp-registry-storage",
  "itp-settings",
  "itp-stf-executor",
+ "itp-stf-state-handler",
  "itp-types",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
+ "pallet-ajuna-gameregistry",
  "parity-scale-codec",
  "sgx_tstd",
  "sgx_types",
@@ -1344,6 +1360,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "itp-registry-storage"
+version = "0.8.0"
+dependencies = [
+ "itp-storage",
+ "itp-types",
+ "pallet-ajuna-gameregistry",
+ "parity-scale-codec",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.20)",
+]
+
+[[package]]
 name = "itp-settings"
 version = "0.8.0"
 
@@ -1378,14 +1405,17 @@ dependencies = [
 name = "itp-stf-executor"
 version = "0.8.0"
 dependencies = [
+ "ajuna-common",
  "ita-stf",
  "itp-ocall-api",
+ "itp-registry-storage",
  "itp-stf-state-handler",
  "itp-storage",
  "itp-test",
  "itp-time-utils",
  "itp-types",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
+ "pallet-ajuna-gameregistry",
  "parity-scale-codec",
  "sgx-externalities",
  "sgx_tstd",
@@ -1529,6 +1559,7 @@ version = "0.8.0"
 dependencies = [
  "chrono 0.4.19",
  "itp-storage",
+ "pallet-ajuna-gameregistry",
  "parity-scale-codec",
  "primitive-types",
  "serde 1.0.137",
@@ -1583,7 +1614,9 @@ dependencies = [
  "frame-support",
  "ita-stf",
  "itc-parentchain-block-import-dispatcher",
+ "itc-parentchain-light-client",
  "itp-enclave-metrics",
+ "itp-extrinsics-factory",
  "itp-ocall-api",
  "itp-settings",
  "itp-sgx-crypto",
@@ -1599,6 +1632,7 @@ dependencies = [
  "its-top-pool-executor",
  "its-validateer-fetch",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
+ "pallet-ajuna-connectfour",
  "sgx-externalities",
  "sgx_tstd",
  "sp-core",
@@ -1852,6 +1886,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "log"
+version = "0.4.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "abb12e687cfb44aa40f41fc3978ef76448f9b6038cad6aef4259d3c095a2382e"
+dependencies = [
+ "cfg-if 1.0.0",
+]
+
+[[package]]
 name = "matches"
 version = "0.1.8"
 source = "git+https://github.com/mesalock-linux/rust-std-candidates-sgx#5747bcf37f3e18687758838da0339ff0f2c83924"
@@ -2092,6 +2135,49 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
+name = "pallet-ajuna-connectfour"
+version = "0.1.0"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#4b94816df69a9c6668ebb505f57e864e03fdc01a"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-ajuna-matchmaker",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.20)",
+]
+
+[[package]]
+name = "pallet-ajuna-gameregistry"
+version = "0.1.0"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#4b94816df69a9c6668ebb505f57e864e03fdc01a"
+dependencies = [
+ "ajuna-common",
+ "frame-support",
+ "frame-system",
+ "log 0.4.17",
+ "pallet-ajuna-matchmaker",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.20)",
+]
+
+[[package]]
+name = "pallet-ajuna-matchmaker"
+version = "0.1.0"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#4b94816df69a9c6668ebb505f57e864e03fdc01a"
+dependencies = [
+ "ajuna-common",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.20)",
+]
+
+[[package]]
 name = "pallet-aura"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.20#563f4820d8f36d256ada7ea3fef46b2e94c4cd5a"
@@ -2184,6 +2270,21 @@ dependencies = [
  "parity-scale-codec",
  "safe-mix",
  "scale-info",
+ "sp-runtime",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.20)",
+]
+
+[[package]]
+name = "pallet-scheduler"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.20#563f4820d8f36d256ada7ea3fef46b2e94c4cd5a"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.20)",
 ]
@@ -2846,7 +2947,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.4.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#d131a9c98446edd3dfd812f87a484ab59c3b268f"
+source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20#44e2e6a899f90a9056afe8a7113dc41a6ae20c09"
 dependencies = [
  "derive_more",
  "environmental",
@@ -2861,17 +2962,19 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#d131a9c98446edd3dfd812f87a484ab59c3b268f"
+source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20#44e2e6a899f90a9056afe8a7113dc41a6ae20c09"
 dependencies = [
  "frame-executive",
  "frame-support",
  "frame-system",
  "frame-system-rpc-runtime-api",
+ "pallet-ajuna-connectfour",
  "pallet-aura",
  "pallet-balances",
  "pallet-grandpa",
  "pallet-parentchain",
  "pallet-randomness-collective-flip",
+ "pallet-scheduler",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
@@ -3377,7 +3480,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "6.0.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#d131a9c98446edd3dfd812f87a484ab59c3b268f"
+source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20#44e2e6a899f90a9056afe8a7113dc41a6ae20c09"
 dependencies = [
  "environmental",
  "hash-db",
@@ -3807,7 +3910,7 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "digest 0.10.3",
  "static_assertions",
 ]
