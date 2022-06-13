@@ -289,7 +289,7 @@ fn transfer_benchmark(
 	let max_fds = proc_info.limits().unwrap().max_open_files;
 	println!("Max fds: {:?}/{:?}", max_fds.soft_limit, max_fds.hard_limit);
 
-	let num_threads = number_clients.min(100);
+	let num_threads = number_clients;
 	rayon::ThreadPoolBuilder::new()
 		.num_threads(num_threads as usize)
 		.build_global()
