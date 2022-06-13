@@ -20,7 +20,7 @@ use crate::{
 	types::block_data::BlockData,
 };
 use codec::{Decode, Encode};
-use sidechain_primitives::SidechainHeader as Header;
+use sidechain_primitives::types::header::SidechainHeader as Header;
 use sp_core::{ed25519, H256};
 use sp_runtime::{traits::Verify, MultiSignature};
 

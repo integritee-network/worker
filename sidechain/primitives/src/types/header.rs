@@ -16,7 +16,7 @@
 */
 
 use crate::traits::Header as HeaderTrait;
-use sidechain_primitives::SidechainHeader as Header;
+use sidechain_primitives::types::header::SidechainHeader as Header;
 use sp_core::H256;
 
 pub type ShardIdentifier = H256;

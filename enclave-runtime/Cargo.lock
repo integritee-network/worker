@@ -3152,13 +3152,14 @@ dependencies = [
 [[package]]
 name = "sidechain-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#4d1b0e9d412b4e3b94f3e5afd853213b6ecc97b7"
+source = "git+https://github.com/integritee-network/pallets.git?branch=blaster#15ad81ef34447c937b1eaff8258f66e566dc8d0d"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde 1.0.137",
  "sp-core",
  "sp-io",
+ "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.20)",
 ]
 
