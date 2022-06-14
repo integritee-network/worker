@@ -74,7 +74,7 @@ pub mod worker {
 	// Factors to tune the initial amount of enclave funding:
 	// Should be set to a value that ensures that the enclave can register itself
 	// and the worker can run for a certain time. Only for development.
-	pub const EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS: u128 = 100;
+	pub const EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS: u128 = 10_000;
 	// Should be set to a value that ensures that the enclave can register itself
 	// and that the worker can start.
 	pub const REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS: u128 = 10;
@@ -111,6 +111,6 @@ pub mod node {
 	pub static SIDECHAIN_MODULE: u8 = 53u8;
 	pub static PROPOSED_SIDECHAIN_BLOCK: u8 = 0u8;
 	// bump this to be consistent with integritee-node runtime
-	pub static RUNTIME_SPEC_VERSION: u32 = 23;
-	pub static RUNTIME_TRANSACTION_VERSION: u32 = 3;
+	pub static RUNTIME_SPEC_VERSION: u32 = 9;
+	pub static RUNTIME_TRANSACTION_VERSION: u32 = 2;
 }
