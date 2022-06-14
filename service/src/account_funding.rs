@@ -144,7 +144,7 @@ fn bootstrap_funds_from_alice(
 
 	if funding_amount > alice_free {
 		println!(
-            "funding amount is to high: please change EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS ({:?})",
+            "funding amount is too high: please change EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS ({:?})",
             funding_amount
         );
 		return Err(Error::ApplicationSetup)

@@ -705,7 +705,9 @@ pub fn init_light_client<E: EnclaveBase + Sidechain>(
 
 		Ok(enclave_api.init_light_client(params).unwrap())
 	} else {
-		unimplemented!()
+		let params = LightClientInitParams::Parachain { genesis_header };
+
+		Ok(enclave_api.init_light_client(params).unwrap())
 	}
 }
 
