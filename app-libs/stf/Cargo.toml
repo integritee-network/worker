@@ -39,7 +39,7 @@ sgx-runtime = { default-features = false, git = "https://github.com/ajuna-networ
 sp-io = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", rev = "polkadot-v0.9.20", features = ["disable_oom", "disable_panic_handler", "disable_allocator"], optional = true }
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.20", optional = true }
 substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.20", optional = true }
-pallet-ajuna-connectfour = { default-features = false, git = "https://github.com/ajuna-network/Ajuna", rev = "polkadot-v0.9.20" }
+pallet-ajuna-board = { default-features = false, git = "https://github.com/ajuna-network/Ajuna", rev = "polkadot-v0.9.20" }
 
 [dev-dependencies]
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
@@ -80,6 +80,6 @@ std = [
     "sp-io/std",
     "substrate-api-client",
     "substrate-client-keystore",
-    "pallet-ajuna-connectfour/std",
+    "pallet-ajuna-board/std",
 ]
 test = []

@@ -26,14 +26,20 @@ use sp_runtime::{
 	traits::{Block as ParentchainBlockTrait, Header as HeaderTrait},
 };
 use std::{
-	collections::BTreeMap, fmt::Debug, format, marker::PhantomData, result::Result as StdResult,
-	sync::Arc, time::Duration, vec::Vec,
+	collections::{BTreeMap, BTreeSet},
+	fmt::Debug,
+	format,
+	marker::PhantomData,
+	result::Result as StdResult,
+	sync::Arc,
+	time::Duration,
+	vec::Vec,
 };
 
 use ita_stf::{
 	hash::TrustedOperationOrHash,
 	stf_sgx::{shards_key_hash, storage_hashes_to_update_per_shard},
-	AccountId, ParentchainHeader, ShardIdentifier, StateTypeDiff, Stf, TrustedCall,
+	AccountId, ParentchainHeader, SgxBoardId, ShardIdentifier, StateTypeDiff, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetterSigned, TrustedOperation,
 };
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
@@ -238,7 +244,11 @@ where
 							let player_two = game.players[1].clone();
 
 							let trusted_call = TrustedCallSigned::new(
-								TrustedCall::new_game(root, player_one, player_two),
+								TrustedCall::board_new_game(
+									root,
+									game_id,
+									BTreeSet::from([player_one, player_two]),
+								),
 								nonce,
 								ed25519::Signature::from_raw([0u8; 64]).into(), //don't care about signature here
 							);
@@ -270,6 +280,34 @@ where
 				Ok(game_id)
 			},
 		}
+	}
+
+	fn flush_winner<ParentchainBlock>(
+		&self,
+		game_id: GameId,
+		shard: &ShardIdentifier,
+		block: &ParentchainBlock,
+	) -> Result<GameId>
+	where
+		ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
+	{
+		let (state_lock, mut state) = self.state_handler.load_for_mutation(shard)?;
+		let root = Stf::get_root(&mut state);
+		let nonce = Stf::account_nonce(&mut state, &root);
+		let trusted_call = TrustedCallSigned::new(
+			TrustedCall::board_flush_winner(root, game_id),
+			nonce,
+			ed25519::Signature::from_raw([0u8; 64]).into(), //don't care about signature here
+		);
+
+		Stf::execute(&mut state, trusted_call, &mut Vec::<OpaqueCall>::new())
+			.map_err::<Error, _>(|e| e.into())?;
+
+		self.state_handler
+			.write_after_mutation(state, state_lock, shard)
+			.expect("write after mutation");
+
+		Ok(game_id)
 	}
 }
 

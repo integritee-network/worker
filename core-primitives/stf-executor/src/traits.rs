@@ -48,6 +48,15 @@ pub trait StfExecuteShieldFunds {
 	) -> Result<GameId>
 	where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>;
+
+	fn flush_winner<ParentchainBlock>(
+		&self,
+		game_id: GameId,
+		shard: &ShardIdentifier,
+		block: &ParentchainBlock,
+	) -> Result<GameId>
+	where
+		ParentchainBlock: ParentchainBlockTrait<Hash = H256>;
 }
 
 /// Execute a trusted call on the STF

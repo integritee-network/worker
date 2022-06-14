@@ -38,7 +38,7 @@ its-state = { path = "../../state", default-features = false }
 its-top-pool-executor = { path = "../../top-pool-executor", default-features = false }
 its-validateer-fetch = { path = "../../validateer-fetch", default-features = false }
 
-pallet-ajuna-connectfour = { default-features = false, git = "https://github.com/ajuna-network/Ajuna", rev = "polkadot-v0.9.20" }
+pallet-ajuna-board = { default-features = false, git = "https://github.com/ajuna-network/Ajuna", rev = "polkadot-v0.9.20" }
 
 [dev-dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
@@ -72,8 +72,9 @@ std = [
    "its-top-pool-executor/std",
    "its-validateer-fetch/std",
    "log/std",
-   "pallet-ajuna-connectfour/std",
+   "pallet-ajuna-board/std",
    "sgx-externalities/std",
+   "pallet-ajuna-board/std",
 ]
 sgx = [
    "sgx_tstd",

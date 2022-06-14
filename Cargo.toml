@@ -70,7 +70,7 @@ sgx_crypto_helper = { version = "1.1.4", git = "https://github.com/haerdib/incub
 
 # [patch."https://github.com/ajuna-network/Ajuna"]
 # my-node-runtime = { package = "ajuna-solo-runtime", path = "../Ajuna/runtime/solo"}
-# pallet-ajuna-connectfour = { path = "../Ajuna/pallets/ajuna-connectfour"}
+# pallet-ajuna-board = { path = "../Ajuna/pallets/ajuna-board"}
 # pallet-ajuna-gameregistry = { path = "../Ajuna/pallets/ajuna-gameregistry"}
 # ajuna-common = { path = "../Ajuna/ajuna-common"}
 

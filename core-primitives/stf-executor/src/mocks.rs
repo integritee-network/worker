@@ -63,4 +63,13 @@ impl StfExecuteShieldFunds for StfExecutorMock {
 	) -> Result<GameId> {
 		todo!()
 	}
+
+	fn flush_winner<ParentchainBlock>(
+		&self,
+		_game_id: GameId,
+		_shard: &ShardIdentifier,
+		_block: &ParentchainBlock,
+	) -> Result<GameId> {
+		todo!()
+	}
 }

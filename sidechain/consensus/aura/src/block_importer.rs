@@ -22,7 +22,7 @@ pub use its_consensus_common::BlockImport;
 
 use crate::{AuraVerifier, EnclaveOnChainOCallApi, SidechainBlockTrait};
 use ita_stf::{
-	hash::TrustedOperationOrHash, helpers::get_board_for, ParentchainHeader, SgxBoardStruct,
+	hash::TrustedOperationOrHash, helpers::is_winner, ParentchainHeader, SgxWinningBoard,
 	TrustedCall, TrustedCallSigned,
 };
 use itc_parentchain_block_import_dispatcher::triggered_dispatcher::{
@@ -48,13 +48,12 @@ use its_state::{SidechainDB, SidechainState};
 use its_top_pool_executor::TopPoolCallOperator;
 use its_validateer_fetch::ValidateerFetch;
 use log::*;
-use pallet_ajuna_connectfour::BoardState;
 use sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use sp_core::Pair;
 use sp_runtime::{
 	generic::SignedBlock as SignedParentchainBlock, traits::Block as ParentchainBlockTrait,
 };
-use std::{borrow::ToOwned, marker::PhantomData, string::ToString, sync::Arc, vec::Vec};
+use std::{borrow::ToOwned, marker::PhantomData, sync::Arc, vec::Vec};
 
 /// Implements `BlockImport`.
 #[derive(Clone)]
@@ -209,17 +208,15 @@ impl<
 		&self,
 		sidechain_block: &SignedSidechainBlock::Block,
 		call: &TrustedCallSigned,
-	) -> Result<Option<SgxBoardStruct>, ConsensusError> {
+	) -> Result<Option<SgxWinningBoard>, ConsensusError> {
 		let shard = &sidechain_block.header().shard_id();
-		if let TrustedCall::connectfour_play_turn(account, _b) = &call.call {
+		if let TrustedCall::board_play_turn(account, _b) = &call.call {
 			let mut state = self
 				.state_handler
 				.load(shard)
 				.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
-			if let Some(board) = state.execute_with(|| get_board_for(account.clone())) {
-				if let BoardState::Finished(_) = board.board_state {
-					return Ok(Some(board))
-				}
+			if let Some(board) = state.execute_with(|| is_winner(account.clone())) {
+				return Ok(Some(board))
 			} else {
 				error!("could not decode board. maybe hasn't been set?");
 			}
@@ -230,23 +227,16 @@ impl<
 	fn send_game_finished_extrinsic(
 		&self,
 		sidechain_block: &SignedSidechainBlock::Block,
-		board: SgxBoardStruct,
+		winning_board: SgxWinningBoard,
 	) -> Result<(), ConsensusError> {
 		let shard = &sidechain_block.header().shard_id();
-		// player 1 is red, player 2 is blue
-		// the winner is not the next player
-		let winner = match board.next_player {
-			1 => board.blue,
-			2 => board.red,
-			_ =>
-				return Err(ConsensusError::BadSidechainBlock(
-					sidechain_block.hash(),
-					"Unknown player, could not get the Winner.".to_string(),
-				)),
-		};
 
-		let opaque_call =
-			OpaqueCall::from_tuple(&([GAME_REGISTRY_MODULE, FINISH_GAME], shard, winner));
+		let opaque_call = OpaqueCall::from_tuple(&(
+			[GAME_REGISTRY_MODULE, FINISH_GAME],
+			winning_board.board_id,
+			winning_board.winner,
+			shard,
+		));
 
 		let calls = vec![opaque_call];
 
