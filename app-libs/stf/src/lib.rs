@@ -202,7 +202,7 @@ pub enum TrustedCall {
 	balance_shield(AccountId, AccountId, Balance), // (Root, AccountIncognito, Amount)
 	board_new_game(AccountId, SgxBoardId, BTreeSet<AccountId>),
 	board_play_turn(AccountId, SgxGuessingTurn),
-	board_flush_winner(AccountId, SgxBoardId),
+	board_finish_game(AccountId, SgxBoardId),
 }
 
 impl TrustedCall {
@@ -214,7 +214,7 @@ impl TrustedCall {
 			TrustedCall::balance_shield(account, _, _) => account,
 			TrustedCall::board_new_game(account, _, _) => account,
 			TrustedCall::board_play_turn(account, _) => account,
-			TrustedCall::board_flush_winner(account, _) => account,
+			TrustedCall::board_finish_game(account, _) => account,
 		}
 	}
 

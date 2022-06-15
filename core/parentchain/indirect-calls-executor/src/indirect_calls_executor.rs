@@ -119,7 +119,7 @@ where
 
 		info!("handle finish game {}", game_id);
 
-		self.stf_executor.flush_winner(*game_id, shard, block)?;
+		self.stf_executor.finish_game(*game_id, shard, block)?;
 
 		Ok(())
 	}

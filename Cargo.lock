@@ -125,7 +125,7 @@ dependencies = [
 [[package]]
 name = "ajuna-common"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#d1756fb178294bb5d2eb40c8e5711d5fb3570b8a"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#77050a436ab74c453cb49661ae08bac9d21708fa"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -136,7 +136,7 @@ dependencies = [
 [[package]]
 name = "ajuna-primitives"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#d1756fb178294bb5d2eb40c8e5711d5fb3570b8a"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#77050a436ab74c453cb49661ae08bac9d21708fa"
 dependencies = [
  "sp-core",
  "sp-runtime",
@@ -145,7 +145,7 @@ dependencies = [
 [[package]]
 name = "ajuna-solo-runtime"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#d1756fb178294bb5d2eb40c8e5711d5fb3570b8a"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#77050a436ab74c453cb49661ae08bac9d21708fa"
 dependencies = [
  "ajuna-common",
  "ajuna-primitives",
@@ -4210,7 +4210,7 @@ checksum = "029d8d0b2f198229de29dca79676f2738ff952edf3fde542eb8bf94d8c21b435"
 [[package]]
 name = "pallet-ajuna-board"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#d1756fb178294bb5d2eb40c8e5711d5fb3570b8a"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#77050a436ab74c453cb49661ae08bac9d21708fa"
 dependencies = [
  "ajuna-common",
  "frame-support",
@@ -4224,7 +4224,7 @@ dependencies = [
 [[package]]
 name = "pallet-ajuna-gameregistry"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#d1756fb178294bb5d2eb40c8e5711d5fb3570b8a"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#77050a436ab74c453cb49661ae08bac9d21708fa"
 dependencies = [
  "ajuna-common",
  "frame-benchmarking",
@@ -4241,7 +4241,7 @@ dependencies = [
 [[package]]
 name = "pallet-ajuna-matchmaker"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#d1756fb178294bb5d2eb40c8e5711d5fb3570b8a"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#77050a436ab74c453cb49661ae08bac9d21708fa"
 dependencies = [
  "ajuna-common",
  "frame-support",
@@ -4254,7 +4254,7 @@ dependencies = [
 [[package]]
 name = "pallet-ajuna-runner"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#d1756fb178294bb5d2eb40c8e5711d5fb3570b8a"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#77050a436ab74c453cb49661ae08bac9d21708fa"
 dependencies = [
  "ajuna-common",
  "frame-support",

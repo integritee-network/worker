@@ -199,10 +199,10 @@ impl Stf {
 						.map_err(|e| StfError::Dispatch(format!("{:?}", e.error)))?;
 					Ok(())
 				},
-				TrustedCall::board_flush_winner(sender, board_id) => {
+				TrustedCall::board_finish_game(sender, board_id) => {
 					let origin = sgx_runtime::Origin::signed(sender.clone());
-					debug!("board flush ({:x?}, {:?})", sender.encode(), board_id);
-					sgx_runtime::AjunaBoardCall::<Runtime>::flush_winner { board_id }
+					debug!("board finished ({:x?}, {:?})", sender.encode(), board_id);
+					sgx_runtime::AjunaBoardCall::<Runtime>::finish_game { board_id }
 						.dispatch_bypass_filter(origin.clone())
 						.map_err(|e| StfError::Dispatch(format!("{:?}", e.error)))?;
 					Ok(())
@@ -286,7 +286,7 @@ impl Stf {
 			TrustedCall::balance_shield(_, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::board_new_game(_, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::board_play_turn(_, _) => debug!("No storage updates needed..."),
-			TrustedCall::board_flush_winner(_, _) => debug!("No storage updates needed..."),
+			TrustedCall::board_finish_game(_, _) => debug!("No storage updates needed..."),
 		};
 		key_hashes
 	}

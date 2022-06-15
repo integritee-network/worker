@@ -285,23 +285,10 @@ fn get_board(cli: &Cli, trusted_args: &TrustedArgs, arg_player: &str) {
 	let res = perform_operation(cli, trusted_args, &top);
 	debug!("received result for board");
 	if let Some(v) = res {
-		if let Ok(_board) = SgxGuessingBoardStruct::decode(&mut v.as_slice()) {
-			// println!("Last turn in block number: {}", board.last_turn);
-			// println!("Next player: {}", board.next_player);
-			// println!("Board state: {:?}", board.board_state);
-			// println!("Board:");
-			// for row in 0..6 {
-			// 	for column in 0..7 {
-			// 		print!(" {} ", board.board[column][row]);
-			// 	}
-			// 	println!()
-			// }
-			// println!("=====================");
-			// for column in 0..7 {
-			// 	print!(" {} ", column);
-			// }
-			// println!();
-			println!("Decode board successfully");
+		if let Ok(board) = SgxGuessingBoardStruct::decode(&mut v.as_slice()) {
+			println!("Players: {:?}", board.state.players);
+			println!("Winner: {:?}", board.state.winner);
+			println!("Next player: {}", board.state.next_player);
 		} else {
 			println!("could not decode board. maybe hasn't been set? {:x?}", v);
 		}

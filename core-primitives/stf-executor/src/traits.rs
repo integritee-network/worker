@@ -49,7 +49,7 @@ pub trait StfExecuteShieldFunds {
 	where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>;
 
-	fn flush_winner<ParentchainBlock>(
+	fn finish_game<ParentchainBlock>(
 		&self,
 		game_id: GameId,
 		shard: &ShardIdentifier,

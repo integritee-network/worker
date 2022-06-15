@@ -282,7 +282,7 @@ where
 		}
 	}
 
-	fn flush_winner<ParentchainBlock>(
+	fn finish_game<ParentchainBlock>(
 		&self,
 		game_id: GameId,
 		shard: &ShardIdentifier,
@@ -295,7 +295,7 @@ where
 		let root = Stf::get_root(&mut state);
 		let nonce = Stf::account_nonce(&mut state, &root);
 		let trusted_call = TrustedCallSigned::new(
-			TrustedCall::board_flush_winner(root, game_id),
+			TrustedCall::board_finish_game(root, game_id),
 			nonce,
 			ed25519::Signature::from_raw([0u8; 64]).into(), //don't care about signature here
 		);
