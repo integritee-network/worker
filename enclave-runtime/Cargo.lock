@@ -15,7 +15,7 @@ dependencies = [
 [[package]]
 name = "ac-compose-macros"
 version = "0.1.0"
-source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.20#2adb257ceefa8db387b61f26d4d41a5bbf5b31dc"
+source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.20-asset#5e183b979d5b036f6d086c8b846d13ab44eb2ee0"
 dependencies = [
  "ac-primitives",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
@@ -27,7 +27,7 @@ dependencies = [
 [[package]]
 name = "ac-primitives"
 version = "0.1.0"
-source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.20#2adb257ceefa8db387b61f26d4d41a5bbf5b31dc"
+source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.20-asset#5e183b979d5b036f6d086c8b846d13ab44eb2ee0"
 dependencies = [
  "hex",
  "parity-scale-codec",
@@ -3613,7 +3613,7 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 [[package]]
 name = "substrate-api-client"
 version = "0.6.0"
-source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.20#2adb257ceefa8db387b61f26d4d41a5bbf5b31dc"
+source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.20-asset#5e183b979d5b036f6d086c8b846d13ab44eb2ee0"
 dependencies = [
  "ac-compose-macros",
  "ac-primitives",

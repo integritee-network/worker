@@ -17,6 +17,8 @@
 
 use crate::Cli;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
+use itp_node_api_extensions::ParentchainApi;
+use itp_types::ParentchainExtrinsicParams;
 use log::*;
 use my_node_runtime::{AccountId, Signature};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
@@ -36,10 +38,11 @@ pub(crate) fn get_shielding_key(cli: &Cli) -> Result<Rsa3072PubKey, String> {
 	worker_api_direct.get_rsa_pubkey().map_err(|e| e.to_string())
 }
 
-pub(crate) fn get_chain_api(cli: &Cli) -> Api<sr25519::Pair, WsRpcClient> {
+pub(crate) fn get_chain_api(cli: &Cli) -> ParentchainApi {
 	let url = format!("{}:{}", cli.node_url, cli.node_port);
 	info!("connecting to {}", url);
-	Api::<sr25519::Pair, WsRpcClient>::new(WsRpcClient::new(&url)).unwrap()
+	Api::<sr25519::Pair, WsRpcClient, ParentchainExtrinsicParams>::new(WsRpcClient::new(&url))
+		.unwrap()
 }
 
 pub(crate) fn get_accountid_from_str(account: &str) -> AccountId {
