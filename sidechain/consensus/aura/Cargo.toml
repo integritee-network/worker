@@ -63,7 +63,6 @@ std = [
    "its-block-composer/std",
    "its-consensus-common/std",
    "its-consensus-slots/std",
-   "sidechain-primitives/std",
    "its-state/std",
    "its-top-pool-executor/std",
    "its-validateer-fetch/std",
