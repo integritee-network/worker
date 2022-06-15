@@ -30,7 +30,6 @@ std = [
     # substrate
     "sp-core/std",
     "sp-runtime/std",
-    "sidechain-primitives/std",
 ]
 sgx = [
     "itp-time-utils/sgx",
