@@ -50,7 +50,7 @@ thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linu
 sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
 
 # scs / integritee
-sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "blaster" }
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 [dev-dependencies]
 # local

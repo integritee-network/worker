@@ -3141,7 +3141,7 @@ dependencies = [
 [[package]]
 name = "sidechain-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=blaster#2ba738cef62a06d7e60de0354b86443de4ca9dd7"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#556abc0f15e0011e5a7a47a0e0116d966968e3b3"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
