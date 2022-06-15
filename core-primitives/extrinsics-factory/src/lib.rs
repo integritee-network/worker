@@ -48,7 +48,11 @@ pub mod mock;
 ///
 /// Also increases the nonce counter for each extrinsic that is created.
 pub trait CreateExtrinsics {
-	fn create_extrinsics(&self, calls: &[OpaqueCall]) -> Result<Vec<OpaqueExtrinsic>>;
+	fn create_extrinsics(
+		&self,
+		calls: &[OpaqueCall],
+		extrinsics_params_builder: Option<ParentchainExtrinsicParamsBuilder>,
+	) -> Result<Vec<OpaqueExtrinsic>>;
 }
 
 /// Extrinsics factory
@@ -80,14 +84,19 @@ where
 	Signer::Signature: Into<MultiSignature>,
 	NonceCache: MutateNonce,
 {
-	fn create_extrinsics(&self, calls: &[OpaqueCall]) -> Result<Vec<OpaqueExtrinsic>> {
+	fn create_extrinsics(
+		&self,
+		calls: &[OpaqueCall],
+		extrinsics_params_builder: Option<ParentchainExtrinsicParamsBuilder>,
+	) -> Result<Vec<OpaqueExtrinsic>> {
 		let mut nonce_lock = self.nonce_cache.load_for_mutation()?;
 		let mut nonce_value = nonce_lock.0;
 
-		//TODO: make also possible to pay in AssetId. See issue #https://github.com/integritee-network/worker/issues/794
-		let extrinsic_params_builder = ParentchainExtrinsicParamsBuilder::new()
-			.era(Era::Immortal, self.genesis_hash)
-			.tip(0);
+		let params_builder = extrinsics_params_builder.unwrap_or_else(|| {
+			ParentchainExtrinsicParamsBuilder::new()
+				.era(Era::Immortal, self.genesis_hash)
+				.tip(0)
+		});
 
 		let extrinsics_buffer: Vec<OpaqueExtrinsic> = calls
 			.iter()
@@ -97,7 +106,7 @@ where
 					RUNTIME_TRANSACTION_VERSION,
 					nonce_value,
 					self.genesis_hash,
-					extrinsic_params_builder,
+					params_builder,
 				);
 				let xt = compose_extrinsic_offline!(self.signer.clone(), call, extrinsic_params)
 					.encode();
@@ -131,7 +140,7 @@ pub mod tests {
 			ExtrinsicsFactory::new(test_genesis_hash(), test_account(), nonce_cache.clone());
 
 		let opaque_calls = [OpaqueCall(vec![3u8; 42]), OpaqueCall(vec![12u8, 78])];
-		let xts = extrinsics_factory.create_extrinsics(&opaque_calls).unwrap();
+		let xts = extrinsics_factory.create_extrinsics(&opaque_calls, None).unwrap();
 
 		assert_eq!(opaque_calls.len(), xts.len());
 		assert_eq!(nonce_cache.get_nonce().unwrap(), Nonce(opaque_calls.len() as NonceValue));
