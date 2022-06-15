@@ -24,14 +24,14 @@ use crate::{config::Config, error::Error, TrackInitialization};
 use async_trait::async_trait;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use itp_node_api_extensions::{node_api_factory::CreateNodeApi, PalletTeerexApi};
-use its_primitives::{
-	constants::RPC_METHOD_NAME_IMPORT_BLOCKS, types::SignedBlock as SignedSidechainBlock,
-};
 use jsonrpsee::{
 	types::{to_json_value, traits::Client},
 	ws_client::WsClientBuilder,
 };
 use log::*;
+use sidechain_primitives::{
+	constants::RPC_METHOD_NAME_IMPORT_BLOCKS, types::SignedBlock as SignedSidechainBlock,
+};
 use std::sync::{Arc, RwLock};
 
 pub type WorkerResult<T> = Result<T, Error>;
@@ -182,10 +182,10 @@ mod tests {
 	};
 	use frame_support::assert_ok;
 	use itp_node_api_extensions::node_api_factory::NodeApiFactory;
-	use its_primitives::types::SignedBlock as SignedSidechainBlock;
 	use its_test::sidechain_block_builder::SidechainBlockBuilder;
 	use jsonrpsee::{ws_server::WsServerBuilder, RpcModule};
 	use log::debug;
+	use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;
 	use sp_keyring::AccountKeyring;
 	use std::{net::SocketAddr, sync::Arc};
 	use tokio::net::ToSocketAddrs;

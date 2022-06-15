@@ -16,11 +16,11 @@ itp-stf-executor = { path = "../../core-primitives/stf-executor", default-featur
 itp-time-utils = { path = "../../core-primitives/time-utils", default-features = false }
 itp-top-pool-author = { path = "../../core-primitives/top-pool-author", default-features = false }
 itp-types = { path = "../../core-primitives/types", default-features = false }
-its-primitives = { path = "../primitives", default-features = false }
 its-state = { path = "../state", default-features = false }
 
 # integritee dependencies
 sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "blaster" }
 
 # sgx enabled external libraries
 thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
@@ -46,7 +46,6 @@ std = [
     "itp-time-utils/std",
     "itp-top-pool-author/std",
     "itp-types/std",
-    "its-primitives/std",
     "its-state/std",
 
     # crate.io
@@ -58,6 +57,7 @@ std = [
     "sp-runtime/std",
     # integritee
     "sgx-externalities/std",
+    "sidechain-primitives/std",
 ]
 sgx = [
     "sgx_tstd",

@@ -21,16 +21,16 @@ use frame_support::ensure;
 use itp_utils::stringify::public_to_string;
 use its_consensus_common::{Error as ConsensusError, Verifier};
 use its_consensus_slots::{slot_from_timestamp_and_duration, Slot};
-use its_primitives::{
+use its_state::LastBlockExt;
+use its_validateer_fetch::ValidateerFetch;
+use log::*;
+use sidechain_primitives::{
 	traits::{
 		Block as SidechainBlockTrait, BlockData, Header as HeaderTrait,
 		SignedBlock as SignedSidechainBlockTrait,
 	},
 	types::block::BlockHash,
 };
-use its_state::LastBlockExt;
-use its_validateer_fetch::ValidateerFetch;
-use log::*;
 use sp_runtime::{
 	app_crypto::Pair,
 	traits::{Block as ParentchainBlockTrait, Header as ParentchainHeaderTrait},
@@ -229,13 +229,12 @@ mod tests {
 		builders::parentchain_header_builder::ParentchainHeaderBuilder,
 		mock::onchain_mock::OnchainMock,
 	};
-	use its_primitives::types::SignedBlock;
 	use its_test::{
 		sidechain_block_builder::SidechainBlockBuilder,
 		sidechain_block_data_builder::SidechainBlockDataBuilder,
 		sidechain_header_builder::SidechainHeaderBuilder,
 	};
-	use sidechain_primitives::SidechainHeader as Header;
+	use sidechain_primitives::types::{block::SignedBlock, header::SidechainHeader as Header};
 	use sp_keyring::ed25519::Keyring;
 	use sp_runtime::testing::H256;
 

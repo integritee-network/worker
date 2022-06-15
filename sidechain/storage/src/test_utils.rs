@@ -18,12 +18,12 @@
 use crate::storage::SidechainStorage;
 use itp_time_utils::now_as_u64;
 use itp_types::ShardIdentifier;
-use its_primitives::types::{BlockHash, SignedBlock as SignedSidechainBlock};
 use its_test::{
 	sidechain_block_builder::SidechainBlockBuilder,
 	sidechain_block_data_builder::SidechainBlockDataBuilder,
 	sidechain_header_builder::SidechainHeaderBuilder,
 };
+use sidechain_primitives::types::{BlockHash, SignedBlock as SignedSidechainBlock};
 use sp_core::{crypto::Pair, ed25519, H256};
 use std::{path::PathBuf, vec::Vec};
 use temp_dir::TempDir;

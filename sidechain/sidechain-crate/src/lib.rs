@@ -30,7 +30,7 @@ pub use its_consensus_common as consensus_common;
 
 pub use its_consensus_slots as slots;
 
-pub use its_primitives as primitives;
+pub use sidechain_primitives as primitives;
 
 pub use its_rpc_handler as rpc_handler;
 

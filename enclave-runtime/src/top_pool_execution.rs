@@ -48,18 +48,18 @@ use itp_types::{Block, OpaqueCall, H256};
 use its_sidechain::{
 	aura::{proposer_factory::ProposerFactory, Aura, SlotClaimStrategy},
 	consensus_common::{Environment, Error as ConsensusError, ProcessBlockImportQueue},
-	primitives::{
-		traits::{
-			Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor, SignedBlock,
-		},
-		types::block::SignedBlock as SignedSidechainBlock,
-	},
 	slots::{sgx::LastSlotSeal, yield_next_slot, PerShardSlotWorkerScheduler, SlotInfo},
 	top_pool_executor::TopPoolGetterOperator,
 	validateer_fetch::ValidateerFetch,
 };
 use log::*;
 use sgx_types::sgx_status_t;
+use sidechain_primitives::{
+	traits::{
+		Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor, SignedBlock,
+	},
+	types::block::SignedBlock as SignedSidechainBlock,
+};
 use sp_core::Pair;
 use sp_runtime::{
 	generic::SignedBlock as SignedParentchainBlock, traits::Block as BlockTrait, MultiSignature,

@@ -24,12 +24,12 @@ use ita_stf::{hash::TrustedOperationOrHash, TrustedGetterSigned};
 use itp_stf_executor::traits::{StateUpdateProposer, StfExecuteTimedGettersBatch};
 use itp_top_pool_author::traits::{AuthorApi, OnBlockImported, SendState};
 use itp_types::{ShardIdentifier, H256};
-use its_primitives::traits::{
-	Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait,
-};
 use its_state::{SidechainState, SidechainSystemExt, StateHash};
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
+use sidechain_primitives::traits::{
+	Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait,
+};
 use sp_runtime::{traits::Block as ParentchainBlockTrait, MultiSignature};
 use std::{time::Duration, vec, vec::Vec};
 

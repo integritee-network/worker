@@ -18,8 +18,8 @@
 //! Error types in sidechain consensus
 
 use itp_types::BlockHash as ParentchainBlockHash;
-use its_primitives::types::{block::BlockHash as SidechainBlockHash, BlockNumber};
 use sgx_types::sgx_status_t;
+use sidechain_primitives::types::{block::BlockHash as SidechainBlockHash, BlockNumber};
 use std::{
 	boxed::Box,
 	error,

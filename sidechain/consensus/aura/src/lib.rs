@@ -35,11 +35,11 @@ use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_time_utils::duration_now;
 use its_consensus_common::{Environment, Error as ConsensusError, Proposer};
 use its_consensus_slots::{SimpleSlotWorker, Slot, SlotInfo};
-use its_primitives::{
+use its_validateer_fetch::ValidateerFetch;
+use sidechain_primitives::{
 	traits::{Block as SidechainBlockTrait, Header as HeaderTrait, SignedBlock},
 	types::block::BlockHash,
 };
-use its_validateer_fetch::ValidateerFetch;
 use sp_core::ByteArray;
 use sp_runtime::{
 	app_crypto::{sp_core::H256, Pair},

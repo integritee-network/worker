@@ -18,9 +18,9 @@ std = [
 
     # local crates
     "itp-storage/std",
-    "its-primitives/std",
 
     # scs crates
+    "sidechain-primitives/std",
     "sp-io/std",
     "sgx-externalities/std",
 
@@ -60,11 +60,11 @@ thiserror_sgx = { package = "thiserror", version = "1.0.9", git = "https://githu
 
 # local deps
 itp-storage = { path = "../../core-primitives/storage", default-features = false}
-its-primitives = { path = "../primitives", default-features = false }
 
 # scs deps
 sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
 sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "blaster" }
 
 # substrate deps
 sp-core = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}

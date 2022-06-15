@@ -21,11 +21,11 @@ use mockall::predicate::*;
 use mockall::*;
 
 use super::{storage::SidechainStorage, Result};
-use its_primitives::{
+use parking_lot::RwLock;
+use sidechain_primitives::{
 	traits::{ShardIdentifierFor, SignedBlock as SignedBlockT},
 	types::{BlockHash, BlockNumber},
 };
-use parking_lot::RwLock;
 use std::path::PathBuf;
 
 /// Lock wrapper around sidechain storage

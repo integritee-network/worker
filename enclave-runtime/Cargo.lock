@@ -579,6 +579,7 @@ dependencies = [
  "sgx_tstd",
  "sgx_tunittest",
  "sgx_types",
+ "sidechain-primitives",
  "sp-application-crypto",
  "sp-core",
  "sp-finality-grandpa",
@@ -1100,7 +1101,6 @@ dependencies = [
  "itp-storage",
  "itp-types",
  "itp-utils",
- "its-primitives",
  "its-state",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "pallet-balances",
@@ -1108,6 +1108,7 @@ dependencies = [
  "sgx-externalities",
  "sgx-runtime",
  "sgx_tstd",
+ "sidechain-primitives",
  "sp-application-crypto",
  "sp-core",
  "sp-io",
@@ -1484,7 +1485,6 @@ dependencies = [
  "ita-stf",
  "itc-direct-rpc-server",
  "itp-types",
- "its-primitives",
  "jsonrpc-core",
  "linked-hash-map",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
@@ -1493,6 +1493,7 @@ dependencies = [
  "serde 1.0.137",
  "sgx_tstd",
  "sgx_types",
+ "sidechain-primitives",
  "sp-application-crypto",
  "sp-core",
  "sp-runtime",
@@ -1566,13 +1567,13 @@ dependencies = [
  "itp-time-utils",
  "itp-top-pool-author",
  "itp-types",
- "its-primitives",
  "its-state",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "parity-scale-codec",
  "sgx-externalities",
  "sgx_tstd",
  "sgx_types",
+ "sidechain-primitives",
  "sp-core",
  "sp-runtime",
  "thiserror 1.0.9",
@@ -1598,7 +1599,6 @@ dependencies = [
  "its-block-composer",
  "its-consensus-common",
  "its-consensus-slots",
- "its-primitives",
  "its-state",
  "its-top-pool-executor",
  "its-validateer-fetch",
@@ -1618,12 +1618,12 @@ dependencies = [
  "itp-ocall-api",
  "itp-sgx-crypto",
  "itp-types",
- "its-primitives",
  "its-state",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "parity-scale-codec",
  "sgx_tstd",
  "sgx_types",
+ "sidechain-primitives",
  "sp-runtime",
  "thiserror 1.0.9",
 ]
@@ -1638,24 +1638,13 @@ dependencies = [
  "itp-time-utils",
  "itp-types",
  "its-consensus-common",
- "its-primitives",
  "lazy_static",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "parity-scale-codec",
  "sgx_tstd",
+ "sidechain-primitives",
  "sp-consensus-slots",
  "sp-runtime",
-]
-
-[[package]]
-name = "its-primitives"
-version = "0.8.0"
-dependencies = [
- "parity-scale-codec",
- "sidechain-primitives",
- "sp-core",
- "sp-runtime",
- "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.20)",
 ]
 
 [[package]]
@@ -1665,13 +1654,13 @@ dependencies = [
  "itp-top-pool-author",
  "itp-types",
  "itp-utils",
- "its-primitives",
  "jsonrpc-core",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "parity-scale-codec",
  "rust-base58",
  "sgx_tstd",
  "sgx_types",
+ "sidechain-primitives",
  "sp-core",
 ]
 
@@ -1683,11 +1672,11 @@ dependencies = [
  "its-consensus-aura",
  "its-consensus-common",
  "its-consensus-slots",
- "its-primitives",
  "its-rpc-handler",
  "its-state",
  "its-top-pool-executor",
  "its-validateer-fetch",
+ "sidechain-primitives",
 ]
 
 [[package]]
@@ -1696,12 +1685,12 @@ version = "0.8.0"
 dependencies = [
  "frame-support",
  "itp-storage",
- "its-primitives",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "parity-scale-codec",
  "serde 1.0.137",
  "sgx-externalities",
  "sgx_tstd",
+ "sidechain-primitives",
  "sp-core",
  "sp-io",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.20)",
@@ -1717,13 +1706,13 @@ dependencies = [
  "itp-time-utils",
  "itp-top-pool-author",
  "itp-types",
- "its-primitives",
  "its-state",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "parity-scale-codec",
  "sgx-externalities",
  "sgx_tstd",
  "sgx_types",
+ "sidechain-primitives",
  "sp-core",
  "sp-runtime",
  "thiserror 1.0.9",
@@ -3152,7 +3141,7 @@ dependencies = [
 [[package]]
 name = "sidechain-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=blaster#15ad81ef34447c937b1eaff8258f66e566dc8d0d"
+source = "git+https://github.com/integritee-network/pallets.git?branch=blaster#2ba738cef62a06d7e60de0354b86443de4ca9dd7"
 dependencies = [
  "parity-scale-codec",
  "scale-info",

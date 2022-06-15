@@ -24,7 +24,7 @@ pub use sp_consensus_slots::Slot;
 use itp_sgx_io::StaticSealedIO;
 use itp_time_utils::duration_now;
 use its_consensus_common::Error as ConsensusError;
-use its_primitives::traits::{
+use sidechain_primitives::traits::{
 	Block as SidechainBlockTrait, BlockData, SignedBlock as SignedSidechainBlockTrait,
 };
 use sp_runtime::traits::Block as ParentchainBlockTrait;
@@ -180,13 +180,13 @@ mod tests {
 	use core::assert_matches::assert_matches;
 	use itp_sgx_io::StaticSealedIO;
 	use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader};
-	use its_primitives::{
-		traits::{Block as BlockT, SignBlock},
-		types::block::{Block, SignedBlock},
-	};
 	use its_test::{
 		sidechain_block_data_builder::SidechainBlockDataBuilder,
 		sidechain_header_builder::SidechainHeaderBuilder,
+	};
+	use sidechain_primitives::{
+		traits::{Block as BlockT, SignBlock},
+		types::block::{Block, SignedBlock},
 	};
 	use sp_keyring::ed25519::Keyring;
 	use sp_runtime::traits::Header as HeaderT;

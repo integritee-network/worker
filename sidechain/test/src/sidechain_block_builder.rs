@@ -22,11 +22,10 @@ use crate::{
 	sidechain_block_data_builder::SidechainBlockDataBuilder,
 	sidechain_header_builder::SidechainHeaderBuilder,
 };
-use its_primitives::{
+use sidechain_primitives::{
 	traits::SignBlock,
-	types::{block_data::BlockData, Block, SignedBlock},
+	types::{block_data::BlockData, header::SidechainHeader as Header, Block, SignedBlock},
 };
-use sidechain_primitives::SidechainHeader as Header;
 use sp_core::{ed25519, Pair};
 
 type Seed = [u8; 32];
@@ -84,7 +83,7 @@ impl SidechainBlockBuilder {
 
 #[test]
 fn build_signed_block_has_valid_signature() {
-	use its_primitives::traits::SignedBlock as SignedBlockTrait;
+	use sidechain_primitives::traits::SignedBlock as SignedBlockTrait;
 
 	let signed_block = SidechainBlockBuilder::default().build_signed();
 	assert!(signed_block.verify_signature());

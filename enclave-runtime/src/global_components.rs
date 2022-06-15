@@ -57,16 +57,16 @@ use its_sidechain::{
 	aura::block_importer::BlockImporter as SidechainBlockImporter,
 	block_composer::BlockComposer,
 	consensus_common::{BlockImportQueueWorker, PeerBlockSync},
-	primitives::{
-		traits::SignedBlock as SignedSidechainBlockTrait,
-		types::SignedBlock as SignedSidechainBlock,
-	},
 	state::SidechainDB,
 	top_pool_executor::TopPoolOperationHandler,
 };
 use primitive_types::H256;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_externalities::SgxExternalities;
+use sidechain_primitives::{
+	traits::SignedBlock as SignedSidechainBlockTrait,
+	types::block::SignedBlock as SignedSidechainBlock,
+};
 use sp_core::ed25519::Pair;
 
 pub type EnclaveStateKeyRepository = KeyRepository<Aes, AesSeal>;

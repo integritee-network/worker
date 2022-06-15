@@ -14,10 +14,13 @@ serde = "1.0"
 serde_json = "1.0"
 thiserror = { version = "1.0" }
 tokio = { version = "1.6.1", features = ["full"] }
+
+# scs / integritee
+sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "blaster" }
+
 # local
 itc-rpc-client = { path = "../../core/rpc-client" }
 itp-node-api-extensions = { path = "../../core-primitives/node-api-extensions" }
-its-primitives = { path = "../primitives" }
 its-storage = { path = "../storage" }
 
 [dev-dependencies]

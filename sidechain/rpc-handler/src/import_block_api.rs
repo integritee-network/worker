@@ -19,9 +19,9 @@
 use crate::sgx_reexport_prelude::*;
 
 use itp_utils::FromHexPrefixed;
-use its_primitives::{constants::RPC_METHOD_NAME_IMPORT_BLOCKS, types::SignedBlock};
 use jsonrpc_core::{IoHandler, Params, Value};
 use log::*;
+use sidechain_primitives::{constants::RPC_METHOD_NAME_IMPORT_BLOCKS, types::SignedBlock};
 use std::{borrow::ToOwned, fmt::Debug, string::String, vec::Vec};
 
 pub fn add_import_block_rpc_method<ImportFn, Error>(

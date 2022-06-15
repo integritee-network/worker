@@ -16,7 +16,7 @@
 */
 
 use crate::{sync_block_gossiper::GossipBlocks, worker::WorkerResult};
-use its_primitives::types::SignedBlock as SignedSidechainBlock;
+use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use std::vec::Vec;
 
 pub struct GossipBlocksMock;

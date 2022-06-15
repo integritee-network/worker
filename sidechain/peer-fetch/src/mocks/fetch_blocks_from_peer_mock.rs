@@ -17,7 +17,7 @@
 
 use crate::{FetchBlocksFromPeer, Result};
 use async_trait::async_trait;
-use its_primitives::{
+use sidechain_primitives::{
 	traits::SignedBlock as SignedBlockTrait,
 	types::{BlockHash, ShardIdentifier},
 };

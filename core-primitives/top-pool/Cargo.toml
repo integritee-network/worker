@@ -23,7 +23,7 @@ std = [
     "ita-stf/std",
     "itc-direct-rpc-server/std",
     "itp-types/std",
-    "its-primitives/std",
+    "sidechain-primitives/std",
     "jsonrpc-core",
     "linked-hash-map",
     "log/std",
@@ -44,7 +44,6 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 ita-stf = { path = "../../app-libs/stf", default-features = false }
 itc-direct-rpc-server = { path = "../../core/direct-rpc-server", default-features = false }
 itp-types = { path = "../../core-primitives/types", default-features = false }
-its-primitives = { path = "../../sidechain/primitives", default-features = false }
 
 # sgx enabled external libraries
 jsonrpc-core_sgx = { package = "jsonrpc-core", git = "https://github.com/scs/jsonrpc", branch = "no_std", default-features = false, optional = true }
@@ -66,6 +65,7 @@ serde = { version = "1.0", default-features = false, features = ["alloc", "deriv
 sp-application-crypto = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
 sp-core = { version = "6.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
 sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "blaster" }
 
 # dev dependencies (for tests)
 [dev-dependencies]
