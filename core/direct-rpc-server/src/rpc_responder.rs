@@ -123,7 +123,8 @@ where
 
 		self.encode_and_send_response(connection_token, &response)?;
 
-		self.connection_registry.store(hash, connection_token, response);
+		// FIXME part of the workaround for multiple responses
+		//self.connection_registry.store(hash, connection_token, response);
 
 		debug!("sending state successful");
 		Ok(())
