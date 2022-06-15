@@ -19,6 +19,7 @@ itp-enclave-api = { path = "../../core-primitives/enclave-api" }
 itp-types = { path = "../../core-primitives/types" }
 itp-utils = { path = "../../core-primitives/utils" }
 its-peer-fetch = { path = "../../sidechain/peer-fetch" }
+its-rpc-handler = { path = "../../sidechain/rpc-handler" }
 its-storage = { path = "../../sidechain/storage" }
 
 [features]

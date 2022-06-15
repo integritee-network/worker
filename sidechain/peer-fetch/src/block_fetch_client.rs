@@ -17,6 +17,7 @@
 
 use crate::{error::Result, untrusted_peer_fetch::FetchUntrustedPeers, FetchBlocksFromPeer};
 use async_trait::async_trait;
+use its_rpc_handler::constants::RPC_METHOD_NAME_FETCH_BLOCKS_FROM_PEER;
 use jsonrpsee::{
 	types::to_json_value,
 	ws_client::{traits::Client, WsClientBuilder},
@@ -24,7 +25,6 @@ use jsonrpsee::{
 use log::info;
 use serde::de::DeserializeOwned;
 use sidechain_primitives::{
-	constants::RPC_METHOD_NAME_FETCH_BLOCKS_FROM_PEER,
 	traits::SignedBlock as SignedBlockTrait,
 	types::{BlockHash, ShardIdentifier},
 };

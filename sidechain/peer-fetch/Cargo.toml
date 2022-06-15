@@ -21,6 +21,7 @@ sidechain-primitives = { git = "https://github.com/integritee-network/pallets.gi
 # local
 itc-rpc-client = { path = "../../core/rpc-client" }
 itp-node-api-extensions = { path = "../../core-primitives/node-api-extensions" }
+its-rpc-handler = { path = "../rpc-handler" }
 its-storage = { path = "../storage" }
 
 [dev-dependencies]

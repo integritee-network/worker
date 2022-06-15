@@ -52,6 +52,7 @@ itp-types = { path = "../core-primitives/types" }
 itp-utils = { path = "../core-primitives/utils" }
 its-consensus-slots = { path = "../sidechain/consensus/slots" }
 its-peer-fetch = { path = "../sidechain/peer-fetch" }
+its-rpc-handler = { path = "../sidechain/rpc-handler" }
 its-storage = { path = "../sidechain/storage" }
 
 # scs / integritee
