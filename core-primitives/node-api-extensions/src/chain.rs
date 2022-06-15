@@ -1,7 +1,7 @@
 use sp_core::{storage::StorageKey, Pair, H256};
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use sp_runtime::MultiSignature;
-use substrate_api_client::{Api, RpcClient};
+use substrate_api_client::{Api, ExtrinsicParams, RpcClient};
 
 use itp_types::SignedBlock;
 
@@ -23,7 +23,7 @@ pub trait ChainApi {
 	fn grandpa_authorities_proof(&self, hash: Option<H256>) -> ApiResult<StorageProof>;
 }
 
-impl<P: Pair, Client: RpcClient> ChainApi for Api<P, Client>
+impl<P: Pair, Client: RpcClient, Params: ExtrinsicParams> ChainApi for Api<P, Client, Params>
 where
 	MultiSignature: From<P::Signature>,
 {

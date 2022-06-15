@@ -17,7 +17,7 @@
 
 //! Some substrate-api-client extension traits.
 
-pub use substrate_api_client::ApiClientError;
+pub use substrate_api_client::{rpc::WsRpcClient, Api, ApiClientError};
 
 pub mod account;
 pub mod chain;
@@ -29,6 +29,9 @@ pub mod pallet_teerex_api_mock;
 
 pub use account::*;
 pub use chain::*;
+use itp_types::ParentchainExtrinsicParams;
 pub use pallet_teerex::*;
+use sp_core::sr25519;
 
 pub type ApiResult<T> = Result<T, ApiClientError>;
+pub type ParentchainApi = Api<sr25519::Pair, WsRpcClient, ParentchainExtrinsicParams>;

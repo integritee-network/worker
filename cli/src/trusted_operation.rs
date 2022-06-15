@@ -34,7 +34,7 @@ use log::*;
 use my_node_runtime::{AccountId, Hash};
 use sp_core::{sr25519 as sr25519_core, Pair, H256};
 use std::{result::Result as StdResult, sync::mpsc::channel};
-use substrate_api_client::{compose_extrinsic, XtStatus};
+use substrate_api_client::{compose_extrinsic, ExtrinsicParams, XtStatus};
 use teerex_primitives::Request;
 
 pub fn perform_trusted_operation(

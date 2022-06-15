@@ -58,13 +58,16 @@ use itp_sgx_crypto::{ed25519, Ed25519Seal, Rsa3072Seal};
 use itp_sgx_io as io;
 use itp_sgx_io::StaticSealedIO;
 use itp_stf_state_handler::handle_state::HandleState;
-use itp_types::{light_client_init_params::LightClientInitParams, Header, SignedBlock};
+use itp_types::{
+	light_client_init_params::LightClientInitParams, Header, ParentchainExtrinsicParams,
+	ParentchainExtrinsicParamsBuilder, SignedBlock,
+};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use sgx_types::sgx_status_t;
 use sp_core::crypto::Pair;
 use std::{boxed::Box, slice, vec::Vec};
-use substrate_api_client::compose_extrinsic_offline;
+use substrate_api_client::{compose_extrinsic_offline, ExtrinsicParams};
 
 mod attestation;
 mod global_components;
@@ -219,17 +222,14 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
 	let mut nonce_lock = nonce_cache.load_for_mutation().expect("Nonce lock poisoning");
 	let nonce_value = nonce_lock.0;
 
-	let xt = compose_extrinsic_offline!(
-		signer,
-		call,
-		nonce_value,
-		Era::Immortal,
-		genesis_hash,
-		genesis_hash,
+	let extrinsic_params = ParentchainExtrinsicParams::new(
 		RUNTIME_SPEC_VERSION,
-		RUNTIME_TRANSACTION_VERSION
-	)
-	.encode();
+		RUNTIME_TRANSACTION_VERSION,
+		nonce_value,
+		genesis_hash,
+		ParentchainExtrinsicParamsBuilder::default(),
+	);
+	let xt = compose_extrinsic_offline!(signer, call, extrinsic_params).encode();
 
 	*nonce_lock = Nonce(nonce_value + 1);
 	std::mem::drop(nonce_lock);
