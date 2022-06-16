@@ -38,6 +38,9 @@ pub mod files {
 
 	pub const RA_DUMP_CERT_DER_FILE: &str = "ra_dump_cert.der";
 
+	pub const ENCLAVE_CERTIFICATE_FILE_PATH: &str = "cert.pem";
+	pub const ENCLAVE_CERTIFICATE_PRIVATE_KEY_PATH: &str = "private_key.pem";
+
 	// used by worker and enclave
 	pub const SHARDS_PATH: &str = "shards";
 	pub const ENCRYPTED_STATE_FILE: &str = "state.bin";

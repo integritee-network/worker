@@ -51,13 +51,18 @@ use itc_parentchain::{
 	indirect_calls_executor::IndirectCallsExecutor,
 	light_client::{concurrent_access::ValidatorAccess, LightClientState},
 };
-use itc_tls_websocket_server::{create_ws_server, ConnectionToken, WebSocketServer};
+use itc_tls_websocket_server::{
+	certificate_generation::ed25519_self_signed_certificate, create_ws_server, ConnectionToken,
+	WebSocketServer,
+};
 use itp_block_import_queue::BlockImportQueue;
 use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_extrinsics_factory::ExtrinsicsFactory;
 use itp_nonce_cache::GLOBAL_NONCE_CACHE;
 use itp_primitives_cache::GLOBAL_PRIMITIVES_CACHE;
-use itp_settings::files::STATE_SNAPSHOTS_CACHE_SIZE;
+use itp_settings::files::{
+	ENCLAVE_CERTIFICATE_FILE_PATH, ENCLAVE_CERTIFICATE_PRIVATE_KEY_PATH, STATE_SNAPSHOTS_CACHE_SIZE,
+};
 use itp_sgx_crypto::{
 	aes, ed25519, ed25519_derivation::DeriveEd25519, rsa3072, AesSeal, Ed25519Seal, Rsa3072Seal,
 };
@@ -78,7 +83,7 @@ use its_sidechain::{
 use log::*;
 use primitive_types::H256;
 use sp_core::crypto::Pair;
-use std::{string::String, sync::Arc};
+use std::{fs, string::String, sync::Arc};
 
 pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> EnclaveResult<()> {
 	// Initialize the logging environment in the enclave.
@@ -273,8 +278,25 @@ pub(crate) fn init_light_client(params: LightClientInitParams<Header>) -> Enclav
 
 pub(crate) fn init_direct_invocation_server(server_addr: String) -> EnclaveResult<()> {
 	let rpc_handler = GLOBAL_RPC_WS_HANDLER_COMPONENT.get()?;
+	let signing = Ed25519Seal::unseal_from_static_file()?;
 
-	let web_socket_server = create_ws_server(server_addr.as_str(), rpc_handler);
+	let cert =
+		ed25519_self_signed_certificate(signing, "Enclave").map_err(|e| Error::Other(e.into()))?;
+
+	//write certificate and private key pem file
+	let pem_serialized = cert.serialize_pem().map_err(|e| Error::Other(e.into()))?;
+	let private_key = cert.serialize_private_key_pem();
+	fs::write(ENCLAVE_CERTIFICATE_FILE_PATH, &pem_serialized.as_bytes())
+		.map_err(|e| Error::Other(e.into()))?;
+	fs::write(ENCLAVE_CERTIFICATE_PRIVATE_KEY_PATH, &private_key.as_bytes())
+		.map_err(|e| Error::Other(e.into()))?;
+
+	let web_socket_server = create_ws_server(
+		server_addr.as_str(),
+		ENCLAVE_CERTIFICATE_PRIVATE_KEY_PATH,
+		ENCLAVE_CERTIFICATE_FILE_PATH,
+		rpc_handler,
+	);
 
 	GLOBAL_WEB_SOCKET_SERVER_COMPONENT.initialize(web_socket_server.clone());
 
