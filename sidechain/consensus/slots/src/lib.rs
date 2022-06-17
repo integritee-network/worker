@@ -38,11 +38,11 @@ use derive_more::From;
 use itp_time_utils::{duration_now, remaining_time};
 use itp_types::OpaqueCall;
 use its_consensus_common::{Error as ConsensusError, Proposer};
-use its_primitives::traits::{
+use log::{debug, info, warn};
+use sidechain_primitives::traits::{
 	Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor,
 	SignedBlock as SignedSidechainBlock,
 };
-use log::{debug, info, warn};
 pub use slots::*;
 use sp_runtime::traits::{Block as ParentchainBlock, Header};
 use std::{fmt::Debug, time::Duration, vec::Vec};

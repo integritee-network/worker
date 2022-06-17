@@ -33,15 +33,13 @@ use itp_top_pool_author::{
 };
 use itp_types::{Block as ParentchainBlock, SignedBlock as SignedParentchainBlock};
 use its_sidechain::{
-	aura::block_importer::BlockImporter,
-	block_composer::BlockComposer,
-	primitives::types::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
-	state::SidechainDB,
+	aura::block_importer::BlockImporter, block_composer::BlockComposer, state::SidechainDB,
 	top_pool_executor::TopPoolOperationHandler,
 };
 use primitive_types::H256;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_externalities::SgxExternalities;
+use sidechain_primitives::types::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock};
 use sp_core::ed25519 as spEd25519;
 
 pub type TestSigner = spEd25519::Pair;

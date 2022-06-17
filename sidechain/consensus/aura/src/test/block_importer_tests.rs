@@ -31,10 +31,6 @@ use itp_test::{
 use itp_time_utils::{duration_now, now_as_u64};
 use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader, H256};
 use its_consensus_common::{BlockImport, Error as ConsensusError};
-use its_primitives::{
-	traits::{SignBlock, SignedBlock},
-	types::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
-};
 use its_state::{SidechainDB, SidechainState, StateUpdate};
 use its_test::{
 	sidechain_block_builder::SidechainBlockBuilder,
@@ -43,6 +39,10 @@ use its_test::{
 };
 use its_top_pool_executor::call_operator_mock::TopPoolCallOperatorMock;
 use sgx_externalities::{SgxExternalities, SgxExternalitiesDiffType};
+use sidechain_primitives::{
+	traits::{SignBlock, SignedBlock},
+	types::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
+};
 use sp_core::{blake2_256, ed25519::Pair};
 use sp_keyring::ed25519::Keyring;
 use sp_runtime::generic::SignedBlock as SignedParentchainBlock;

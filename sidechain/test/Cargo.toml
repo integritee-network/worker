@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 codec  = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # sgx dependencies
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
@@ -13,7 +14,6 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 # local dependencies
 itp-time-utils = { path = "../../core-primitives/time-utils", default-features = false }
 itp-types = { path = "../../core-primitives/types", default-features = false }
-its-primitives = { path = "../primitives", default-features = false }
 
 # Substrate dependencies
 sp-core = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20", default_features = false }
@@ -26,7 +26,7 @@ std = [
     "codec/std",
     "itp-time-utils/std",
     "itp-types/std",
-    "its-primitives/std",
+    "sidechain-primitives/std",
     # substrate
     "sp-core/std",
     "sp-runtime/std",

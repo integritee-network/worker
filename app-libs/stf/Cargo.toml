@@ -18,7 +18,6 @@ itp-settings = { path = "../../core-primitives/settings" }
 itp-storage = { default-features = false, path = "../../core-primitives/storage" }
 itp-types = {  default-features = false, path = "../../core-primitives/types" }
 itp-utils = { default-features = false, path = "../../core-primitives/utils" }
-its-primitives = { default-features = false, path = "../../sidechain/primitives" }
 its-state = { default-features = false, optional = true, path = "../../sidechain/state" }
 
 # Substrate dependencies
@@ -37,6 +36,7 @@ sgx-runtime = { default-features = false, git = "https://github.com/integritee-n
 sp-io = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master", features = ["disable_oom", "disable_panic_handler", "disable_allocator"], optional = true }
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.20-asset", optional = true }
 substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.20-asset", optional = true }
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 [dev-dependencies]
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
@@ -60,7 +60,6 @@ std = [
     "itp-storage/std",
     "itp-types/std",
     "itp-utils/std",
-    "its-primitives/std",
     "its-state/std",
     # substrate
     "sp-core/std",
@@ -72,6 +71,7 @@ std = [
     "sc-keystore",
     # scs/integritee
     "my-node-runtime",
+    "sidechain-primitives/std",
     "sgx-externalities/std",
     "sp-io/std",
     "substrate-api-client",

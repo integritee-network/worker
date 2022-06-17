@@ -49,7 +49,6 @@ use itp_top_pool_author::{author::AuthorTopFilter, traits::AuthorApi};
 use itp_types::{AccountId, Block as ParentchainBlock, ShardIdentifier};
 use its_sidechain::{
 	aura::proposer_factory::ProposerFactory,
-	primitives::{traits::Block, types::SignedBlock as SignedSidechainBlock},
 	slots::{slot_from_timestamp_and_duration, SlotInfo},
 	state::SidechainState,
 };
@@ -57,6 +56,7 @@ use jsonrpc_core::futures::executor;
 use log::*;
 use primitive_types::H256;
 use sgx_crypto_helper::RsaKeyPair;
+use sidechain_primitives::{traits::Block, types::SignedBlock as SignedSidechainBlock};
 use sp_core::{ed25519, Pair};
 use std::{sync::Arc, vec, vec::Vec};
 

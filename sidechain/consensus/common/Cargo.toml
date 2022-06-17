@@ -15,7 +15,7 @@ std = [
     "itp-ocall-api/std",
     "itp-sgx-crypto/std",
     "itp-types/std",
-    "its-primitives/std",
+    "sidechain-primitives/std",
     "its-state/std",
     # substrate
     "sp-runtime/std",
@@ -39,7 +39,6 @@ itp-block-import-queue = { path = "../../../core-primitives/block-import-queue",
 itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
 itp-types = { path = "../../../core-primitives/types", default-features = false }
-its-primitives = { path = "../../primitives", default-features = false }
 its-state = { path = "../../state", default-features = false }
 
 # sgx deps
@@ -49,6 +48,9 @@ thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linu
 
 # substrate deps
 sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
+
+# scs / integritee
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 [dev-dependencies]
 # local
