@@ -136,12 +136,19 @@ pub enum TrustedCommands {
 
 	/// Run Benchmark
 	Benchmark {
+		/// The number of clients (=threads) to be used in the benchmark
 		#[clap(default_value_t = 10)]
 		number_clients: u32,
+
+		/// The number of iterations to execute for each client
 		#[clap(default_value_t = 30)]
 		number_iterations: u32,
+
+		/// Whether to wait for "InSidechainBlock" confirmation for each transaction
 		#[clap(short, long)]
 		wait_for_confirmation: bool,
+
+		/// Account to be used for initial funding of generated accounts used in benchmark
 		#[clap(default_value_t = String::from("//Alice"))]
 		funding_account: String,
 	},
@@ -224,6 +231,7 @@ struct BenchmarkClient {
 	receiver: Receiver<String>,
 }
 
+/// Stores timing information about a specific transaction
 struct BenchmarkTransaction {
 	hash: H256,
 	started: Instant,
