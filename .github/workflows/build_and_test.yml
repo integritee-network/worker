@@ -112,6 +112,9 @@ jobs:
       - name: init rust
         run: rustup show
 
+      - name: ls sidechain primitives
+        run: ls ./sidechain/primitives/
+
       - name: Worker & Client
         run: cargo fmt --all -- --check
       - name: Enclave # Enclave is separate as it's not in the workspace
