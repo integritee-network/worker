@@ -34,6 +34,7 @@ its-consensus-common = { path = "../common", default-features = false }
 
 [dev-dependencies]
 itp-test = { path = "../../../core-primitives/test" }
+its-primitives = { path = "../../primitives" }
 its-test = { path = "../../test" }
 sp-keyring = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
 tokio = "*"
