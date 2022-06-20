@@ -64,13 +64,13 @@ use its_consensus_slots::start_slot_worker;
 use its_peer_fetch::{
 	block_fetch_client::BlockFetcher, untrusted_peer_fetch::UntrustedPeerFetcher,
 };
-use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use its_storage::{
 	interface::FetchBlocks, start_sidechain_pruning_loop, BlockPruner, SidechainStorageLock,
 };
 use log::*;
 use my_node_runtime::{Event, Hash, Header};
 use sgx_types::*;
+use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_finality_grandpa::VersionedAuthorityList;
 use sp_keyring::AccountKeyring;

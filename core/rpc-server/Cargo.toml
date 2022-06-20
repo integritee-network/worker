@@ -12,13 +12,14 @@ jsonrpsee = { version = "0.2.0-alpha.7", features = ["full"] }
 serde_json = "1.0.64"
 tokio = { version = "1.6.1", features = ["full"] }
 parity-scale-codec = "3.0.0"
+sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # local
 itp-enclave-api = { path = "../../core-primitives/enclave-api" }
 itp-types = { path = "../../core-primitives/types" }
 itp-utils = { path = "../../core-primitives/utils" }
 its-peer-fetch = { path = "../../sidechain/peer-fetch" }
-its-primitives = { path = "../../sidechain/primitives" }
+its-rpc-handler = { path = "../../sidechain/rpc-handler" }
 its-storage = { path = "../../sidechain/storage" }
 
 [features]

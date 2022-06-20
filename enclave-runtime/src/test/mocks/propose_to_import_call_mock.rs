@@ -23,10 +23,9 @@ use itp_storage::StorageEntryVerified;
 use itp_types::{
 	BlockHash, Header as ParentchainHeader, ShardIdentifier, WorkerRequest, WorkerResponse, H256,
 };
-use its_sidechain::{
-	consensus_common::BlockImport, primitives::types::SignedBlock as SignedSidechainBlockType,
-};
+use its_sidechain::consensus_common::BlockImport;
 use sgx_types::SgxResult;
+use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlockType;
 use sp_runtime::{traits::Header as ParentchainHeaderTrait, OpaqueExtrinsic};
 use std::{sync::Arc, vec::Vec};
 

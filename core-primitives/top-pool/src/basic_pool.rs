@@ -22,11 +22,11 @@ use alloc::{boxed::Box, string::String, sync::Arc};
 use core::pin::Pin;
 use ita_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
 use itc_direct_rpc_server::SendRpcResponse;
-use its_primitives::types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::{
 	channel::oneshot,
 	future::{ready, Future, FutureExt},
 };
+use sidechain_primitives::types::BlockHash as SidechainBlockHash;
 use sp_runtime::{
 	generic::BlockId,
 	traits::{Block as BlockT, NumberFor, Zero},

@@ -25,7 +25,7 @@ use crate::{
 	globals::tokio_handle::GetTokioHandle,
 	worker::{AsyncBlockGossiper, WorkerResult},
 };
-use its_primitives::types::SignedBlock as SignedSidechainBlock;
+use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use std::sync::Arc;
 
 /// Allows to gossip blocks, does it in a synchronous (i.e. blocking) manner

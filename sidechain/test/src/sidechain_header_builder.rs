@@ -18,7 +18,7 @@
 
 //! Builder pattern for a sidechain header.
 
-use its_primitives::types::{header::Header, ShardIdentifier};
+use sidechain_primitives::types::{header::SidechainHeader as Header, ShardIdentifier};
 use sp_core::H256;
 
 pub struct SidechainHeaderBuilder {

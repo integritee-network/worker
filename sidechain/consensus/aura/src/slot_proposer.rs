@@ -21,14 +21,14 @@ use itp_time_utils::now_as_u64;
 use itp_types::H256;
 use its_block_composer::ComposeBlockAndConfirmation;
 use its_consensus_common::{Error as ConsensusError, Proposal, Proposer};
-use its_primitives::traits::{
-	Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor,
-	SignedBlock as SignedSidechainBlockTrait,
-};
 use its_state::{SidechainDB, SidechainState, SidechainSystemExt, StateHash};
 use its_top_pool_executor::call_operator::TopPoolCallOperator;
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
+use sidechain_primitives::traits::{
+	Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor,
+	SignedBlock as SignedSidechainBlockTrait,
+};
 use sp_runtime::{
 	traits::{Block, NumberFor},
 	MultiSignature,

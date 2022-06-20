@@ -63,19 +63,19 @@ use itp_top_pool_author::{
 use itp_types::{AccountId, Block, Header, MrEnclave, OpaqueCall};
 use its_sidechain::{
 	block_composer::{BlockComposer, ComposeBlockAndConfirmation},
-	primitives::{
-		traits::{
-			Block as BlockTrait, BlockData, Header as SidechainHeaderTrait,
-			SignedBlock as SignedBlockTrait,
-		},
-		types::block::SignedBlock,
-	},
 	state::{SidechainDB, SidechainState, SidechainSystemExt},
 	top_pool_executor::{TopPoolCallOperator, TopPoolOperationHandler},
 };
 use sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use sgx_tunittest::*;
 use sgx_types::size_t;
+use sidechain_primitives::{
+	traits::{
+		Block as BlockTrait, BlockData, Header as SidechainHeaderTrait,
+		SignedBlock as SignedBlockTrait,
+	},
+	types::block::SignedBlock,
+};
 use sp_core::{crypto::Pair, ed25519 as spEd25519, H256};
 use sp_runtime::traits::Header as HeaderT;
 use std::{string::String, sync::Arc, vec::Vec};

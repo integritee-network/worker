@@ -11,11 +11,11 @@ std = [
     "its-consensus-aura/std",
     "its-consensus-common/std",
     "its-consensus-slots/std",
-    "its-primitives/std",
     "its-rpc-handler/std",
     "its-state/std",
     "its-top-pool-executor/std",
     "its-validateer-fetch/std",
+    "sidechain-primitives/std",
 ]
 sgx = [
     "its-block-composer/sgx",
@@ -32,8 +32,9 @@ its-block-composer = { path = "../block-composer", default-features = false }
 its-consensus-aura = { path = "../consensus/aura", default-features = false }
 its-consensus-common = { path = "../consensus/common", default-features = false }
 its-consensus-slots = { path = "../consensus/slots", default-features = false }
-its-primitives = { path = "../primitives", default-features = false }
 its-rpc-handler = { path = "../rpc-handler", default-features = false }
 its-state = { path = "../state", default-features = false }
 its-top-pool-executor = { path = "../top-pool-executor", default-features = false }
 its-validateer-fetch = { path = "../validateer-fetch", default-features = false }
+
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }

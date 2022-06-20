@@ -48,18 +48,18 @@ use itp_types::{Block, OpaqueCall, H256};
 use its_sidechain::{
 	aura::{proposer_factory::ProposerFactory, Aura, SlotClaimStrategy},
 	consensus_common::{Environment, Error as ConsensusError, ProcessBlockImportQueue},
-	primitives::{
-		traits::{
-			Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor, SignedBlock,
-		},
-		types::block::SignedBlock as SignedSidechainBlock,
-	},
 	slots::{sgx::LastSlotSeal, yield_next_slot, PerShardSlotWorkerScheduler, SlotInfo},
 	top_pool_executor::TopPoolGetterOperator,
 	validateer_fetch::ValidateerFetch,
 };
 use log::*;
 use sgx_types::sgx_status_t;
+use sidechain_primitives::{
+	traits::{
+		Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor, SignedBlock,
+	},
+	types::block::SignedBlock as SignedSidechainBlock,
+};
 use sp_core::Pair;
 use sp_runtime::{
 	generic::SignedBlock as SignedParentchainBlock, traits::Block as BlockTrait, MultiSignature,
@@ -297,7 +297,7 @@ where
 	debug!("Proposing {} sidechain block(s) (broadcasting to peers)", blocks.len());
 	ocall_api.propose_sidechain_blocks(blocks)?;
 
-	let xts = extrinsics_factory.create_extrinsics(opaque_calls.as_slice())?;
+	let xts = extrinsics_factory.create_extrinsics(opaque_calls.as_slice(), None)?;
 
 	debug!("Sending sidechain block(s) confirmation extrinsic.. ");
 	validator_access.execute_mut_on_validator(|v| v.send_extrinsics(xts))?;

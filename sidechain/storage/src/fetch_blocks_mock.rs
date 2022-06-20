@@ -16,7 +16,7 @@
 */
 
 use crate::{error::Result, interface::FetchBlocks};
-use its_primitives::{
+use sidechain_primitives::{
 	traits::ShardIdentifierFor,
 	types::{BlockHash, SignedBlock},
 };

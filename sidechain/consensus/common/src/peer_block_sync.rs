@@ -19,14 +19,14 @@ use crate::{BlockImport, Error, Result};
 use core::marker::PhantomData;
 use itp_ocall_api::EnclaveSidechainOCallApi;
 use itp_types::H256;
-use its_primitives::{
+use log::*;
+use sidechain_primitives::{
 	traits::{
 		Block as BlockTrait, Header as HeaderTrait, ShardIdentifierFor,
 		SignedBlock as SignedSidechainBlockTrait,
 	},
 	types::BlockHash,
 };
-use log::*;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header as ParentchainHeaderTrait};
 use std::{sync::Arc, vec::Vec};
 
@@ -116,7 +116,7 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImporter, SidechainOCallApi>
 where
 	ParentchainBlock: ParentchainBlockTrait,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
-	<<SignedSidechainBlock as its_primitives::traits::SignedBlock>::Block as BlockTrait>::HeaderType:
+	<<SignedSidechainBlock as sidechain_primitives::traits::SignedBlock>::Block as BlockTrait>::HeaderType:
 	HeaderTrait<ShardIdentifier = H256>,
 	BlockImporter: BlockImport<ParentchainBlock, SignedSidechainBlock>,
 	SidechainOCallApi: EnclaveSidechainOCallApi,
@@ -176,8 +176,8 @@ mod tests {
 		mock::sidechain_ocall_api_mock::SidechainOCallApiMock,
 	};
 	use itp_types::Block as ParentchainBlock;
-	use its_primitives::types::SignedBlock as SignedSidechainBlock;
 	use its_test::sidechain_block_builder::SidechainBlockBuilder;
+	use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;
 
 	#[test]
 	fn if_block_import_is_successful_no_peer_fetching_happens() {
