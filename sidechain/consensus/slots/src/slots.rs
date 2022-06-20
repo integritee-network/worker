@@ -24,10 +24,10 @@ pub use sp_consensus_slots::Slot;
 use itp_sgx_io::StaticSealedIO;
 use itp_time_utils::duration_now;
 use its_consensus_common::Error as ConsensusError;
+use log::warn;
 use sidechain_primitives::traits::{
 	Block as SidechainBlockTrait, BlockData, SignedBlock as SignedSidechainBlockTrait,
 };
-use log::warn;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::time::Duration;
 
