@@ -27,6 +27,7 @@ use its_consensus_common::Error as ConsensusError;
 use sidechain_primitives::traits::{
 	Block as SidechainBlockTrait, BlockData, SignedBlock as SignedSidechainBlockTrait,
 };
+use log::warn;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::time::Duration;
 
@@ -94,8 +95,19 @@ pub(crate) fn timestamp_within_slot<
 ) -> bool {
 	let proposal_stamp = proposal.block().block_data().timestamp();
 
-	slot.timestamp.as_millis() as u64 <= proposal_stamp
-		&& slot.ends_at.as_millis() as u64 >= proposal_stamp
+	let is_within_slot = slot.timestamp.as_millis() as u64 <= proposal_stamp
+		&& slot.ends_at.as_millis() as u64 >= proposal_stamp;
+
+	if !is_within_slot {
+		warn!(
+			"Proposed block slot time: {} ms, slot start: {} ms , slot end: {} ms",
+			proposal_stamp,
+			slot.timestamp.as_millis(),
+			slot.ends_at.as_millis()
+		);
+	}
+
+	is_within_slot
 }
 
 pub fn slot_from_timestamp_and_duration(timestamp: Duration, duration: Duration) -> Slot {
