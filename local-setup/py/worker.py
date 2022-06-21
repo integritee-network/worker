@@ -168,6 +168,7 @@ class Worker:
                                         'integritee_service=warn,'
                                         'itp_stf_executor::executor=debug,'
                                         'itc_parentchain_indirect_calls_executor::indirect_calls_executor=debug,'
+                                        'itp_top_pool_author::author=debug,'
                                         'ita_stf=debug')
 
         return Popen(

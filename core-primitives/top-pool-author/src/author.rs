@@ -156,6 +156,8 @@ where
 			warn!("Failed to update metric for top pool size: {:?}", e);
 		}
 
+		debug!("Submitting trusted operation to TOP pool");
+
 		match submission_mode {
 			TopSubmissionMode::Submit => Box::pin(
 				self.top_pool
