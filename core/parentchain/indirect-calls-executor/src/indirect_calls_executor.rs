@@ -148,6 +148,7 @@ where
 			else if let Ok(xt) = ParentchainUncheckedExtrinsic::<CallWorkerFn>::decode(
 				&mut xt_opaque.encode().as_slice(),
 			) {
+				debug!("Found trusted call extrinsic, submitting it to the top pool");
 				if xt.function.0 == [TEEREX_MODULE, CALL_WORKER] {
 					let (_, request) = xt.function;
 					let (shard, cypher_text) = (request.shard, request.cyphertext);

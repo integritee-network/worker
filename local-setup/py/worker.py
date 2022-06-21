@@ -166,6 +166,8 @@ class Worker:
                                         'jsonrpsee_ws_server=warn,'
                                         'enclave_runtime=warn,'
                                         'integritee_service=warn,'
+                                        'itp_stf_executor::executor=debug,'
+                                        'itc_parentchain_indirect_calls_executor::indirect_calls_executor=debug,'
                                         'ita_stf=debug')
 
         return Popen(
