@@ -156,7 +156,9 @@ where
 			warn!("Failed to update metric for top pool size: {:?}", e);
 		}
 
-		debug!("Submitting trusted operation to TOP pool");
+		if let Some(trusted_call_signed) = trusted_operation.to_call() {
+			debug!("Submitting trusted call to TOP pool: {:?}", trusted_call_signed.call);
+		}
 
 		match submission_mode {
 			TopSubmissionMode::Submit => Box::pin(

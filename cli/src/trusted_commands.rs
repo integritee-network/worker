@@ -177,6 +177,7 @@ fn transfer(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, arg_to: &str,
 		.sign(&KeyPair::Sr25519(from), nonce, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
 	let _ = perform_operation(cli, trusted_args, &top);
+	info!("trusted call transfer executed");
 }
 
 fn set_balance(cli: &Cli, trusted_args: &TrustedArgs, arg_who: &str, amount: &Balance) {
