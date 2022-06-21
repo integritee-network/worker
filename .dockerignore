@@ -7,5 +7,6 @@ docker/
 docs/
 local-setup/
 scripts/
+target/
 *.Dockerfile
 Dockerfile
