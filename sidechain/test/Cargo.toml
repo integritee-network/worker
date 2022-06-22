@@ -16,8 +16,8 @@ itp-time-utils = { path = "../../core-primitives/time-utils", default-features =
 itp-types = { path = "../../core-primitives/types", default-features = false }
 
 # Substrate dependencies
-sp-core = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20", default_features = false }
-sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24", default_features = false }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 
 
 [features]
