@@ -201,19 +201,10 @@ mod test {
 		let _ = env_logger::builder().is_test(true).try_init();
 
 		let (indirect_calls_executor, top_pool_author, _) = test_fixtures([0u8; 32]);
-		let request = Request { shard: shard_id(), cyphertext: vec![1u8, 2u8] };
 
-		let opaque_extrinsic = OpaqueExtrinsic::from_bytes(
-			ParentchainUncheckedExtrinsic::<CallWorkerFn>::new_signed(
-				([TEEREX_MODULE, CALL_WORKER], request),
-				GenericAddress::Address32([1u8; 32]),
-				MultiSignature::Ed25519(default_signature()),
-				default_extrinsic_params().signed_extra(),
-			)
-			.encode()
-			.as_slice(),
-		)
-		.unwrap();
+		let opaque_extrinsic =
+			OpaqueExtrinsic::from_bytes(call_worker_unchecked_extrinsic().encode().as_slice())
+				.unwrap();
 
 		let parentchain_block = ParentchainBlockBuilder::default()
 			.with_extrinsics(vec![opaque_extrinsic])
@@ -227,6 +218,34 @@ mod test {
 	}
 
 	#[test]
+	#[ignore = "Cannot run until we know how substrate packs multiple extrinsics into an opaque extrinsic"]
+	fn multiple_calls_in_extrinsic_are_picked_up() {
+		let _ = env_logger::builder().is_test(true).try_init();
+
+		let (indirect_calls_executor, top_pool_author, shielding_key_repo) =
+			test_fixtures([0u8; 32]);
+		let shielding_key = shielding_key_repo.retrieve_key().unwrap();
+
+		// TODO: it is unclear how substrate constructs an opaque extrinsic that contains multiple extrinsics
+		// (the case we want to test here, because that has caused failures in the past).
+		let mut unchecked_extrinsics = call_worker_unchecked_extrinsic().encode();
+		unchecked_extrinsics.extend(shield_funds_unchecked_extrinsic(&shielding_key).encode());
+
+		let opaque_extrinsic =
+			OpaqueExtrinsic::from_bytes(unchecked_extrinsics.as_slice()).unwrap();
+
+		let parentchain_block = ParentchainBlockBuilder::default()
+			.with_extrinsics(vec![opaque_extrinsic])
+			.build();
+
+		indirect_calls_executor
+			.execute_indirect_calls_in_extrinsics(&parentchain_block)
+			.unwrap();
+
+		assert_eq!(2, top_pool_author.pending_tops(shard_id()).unwrap().len());
+	}
+
+	#[test]
 	fn shielding_call_can_be_added_to_pool_successfully() {
 		let _ = env_logger::builder().is_test(true).try_init();
 
@@ -235,17 +254,8 @@ mod test {
 			test_fixtures(mr_enclave.clone());
 		let shielding_key = shielding_key_repo.retrieve_key().unwrap();
 
-		let target_account = shielding_key.encrypt(&AccountId::new([2u8; 32]).encode()).unwrap();
-
 		let opaque_extrinsic = OpaqueExtrinsic::from_bytes(
-			ParentchainUncheckedExtrinsic::<ShieldFundsFn>::new_signed(
-				([TEEREX_MODULE, SHIELD_FUNDS], target_account, 1000u128, shard_id()),
-				GenericAddress::Address32([1u8; 32]),
-				MultiSignature::Ed25519(default_signature()),
-				default_extrinsic_params().signed_extra(),
-			)
-			.encode()
-			.as_slice(),
+			shield_funds_unchecked_extrinsic(&shielding_key).encode().as_slice(),
 		)
 		.unwrap();
 
@@ -266,6 +276,30 @@ mod test {
 		assert_matches!(decoded_operation, TrustedOperation::indirect_call(_));
 		let trusted_call_signed = decoded_operation.to_call().unwrap();
 		assert!(trusted_call_signed.verify_signature(&mr_enclave, &shard_id()));
+	}
+
+	fn shield_funds_unchecked_extrinsic(
+		shielding_key: &ShieldingCryptoMock,
+	) -> ParentchainUncheckedExtrinsic<ShieldFundsFn> {
+		let target_account = shielding_key.encrypt(&AccountId::new([2u8; 32]).encode()).unwrap();
+
+		ParentchainUncheckedExtrinsic::<ShieldFundsFn>::new_signed(
+			([TEEREX_MODULE, SHIELD_FUNDS], target_account, 1000u128, shard_id()),
+			GenericAddress::Address32([1u8; 32]),
+			MultiSignature::Ed25519(default_signature()),
+			default_extrinsic_params().signed_extra(),
+		)
+	}
+
+	fn call_worker_unchecked_extrinsic() -> ParentchainUncheckedExtrinsic<CallWorkerFn> {
+		let request = Request { shard: shard_id(), cyphertext: vec![1u8, 2u8] };
+
+		ParentchainUncheckedExtrinsic::<CallWorkerFn>::new_signed(
+			([TEEREX_MODULE, CALL_WORKER], request),
+			GenericAddress::Address32([1u8; 32]),
+			MultiSignature::Ed25519(default_signature()),
+			default_extrinsic_params().signed_extra(),
+		)
 	}
 
 	fn default_signature() -> ed25519::Signature {
