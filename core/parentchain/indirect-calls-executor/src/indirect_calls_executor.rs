@@ -129,10 +129,11 @@ where
 		for xt_opaque in block.extrinsics().iter() {
 			let mut shield_funds_decoded = false;
 			let mut call_worker_decoded = false;
+			let encoded_xt_opaque = xt_opaque.encode();
 
 			// Found ShieldFunds extrinsic in block.
 			if let Ok(xt) = ParentchainUncheckedExtrinsic::<ShieldFundsFn>::decode(
-				&mut xt_opaque.encode().as_slice(),
+				&mut encoded_xt_opaque.as_slice(),
 			) {
 				trace!("Found ShieldFundsFn extrinsics in parentchain block {:?}", block_number);
 				if xt.function.0 == [TEEREX_MODULE, SHIELD_FUNDS] {
@@ -152,8 +153,9 @@ where
 			}
 
 			// Found CallWorker extrinsic in block.
+			// No else-if here! Because the same opaque extrinsic can contain multiple Fns at once (this lead to intermittent M6 failures)
 			if let Ok(xt) = ParentchainUncheckedExtrinsic::<CallWorkerFn>::decode(
-				&mut xt_opaque.encode().as_slice(),
+				&mut encoded_xt_opaque.as_slice(),
 			) {
 				trace!("Found CallWorkerFn extrinsics in parentchain block {:?}", block_number);
 				if xt.function.0 == [TEEREX_MODULE, CALL_WORKER] {
@@ -166,7 +168,7 @@ where
 			}
 
 			if shield_funds_decoded && call_worker_decoded {
-				debug!(
+				trace!(
 					"Found BOTH shield_funds and call_worker function in the same opaque extrinsic"
 				);
 			}
