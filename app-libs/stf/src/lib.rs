@@ -54,15 +54,16 @@ impl Get<u32> for MaxPlayers {
 		MAX_PLAYERS_ALLOWED
 	}
 }
-// Guessing Game
+
 pub type SgxBoardId = u32;
-pub type SgxGuessingGameState = pallet_ajuna_board::guessing::GameState<AccountId>;
-pub type SgxGuessingBoardStruct = pallet_ajuna_board::BoardGame<
-	SgxBoardId,
-	SgxGuessingGameState,
-	BoundedVec<AccountId, MaxPlayers>,
->;
-pub type SgxGuessingTurn = pallet_ajuna_board::guessing::Guess;
+pub type SgxGameState = pallet_ajuna_board::dot4gravity::GameState<AccountId>;
+pub type SgxGameTurn = pallet_ajuna_board::dot4gravity::Turn;
+pub type Coordinates = pallet_ajuna_board::dot4gravity::Coordinates;
+pub type Side = pallet_ajuna_board::dot4gravity::Side;
+
+pub type SgxGameBoardStruct =
+	pallet_ajuna_board::BoardGame<SgxBoardId, SgxGameState, BoundedVec<AccountId, MaxPlayers>>;
+
 pub struct SgxWinningBoard {
 	pub winner: AccountId,
 	pub board_id: SgxBoardId,
@@ -201,7 +202,7 @@ pub enum TrustedCall {
 	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
 	balance_shield(AccountId, AccountId, Balance), // (Root, AccountIncognito, Amount)
 	board_new_game(AccountId, SgxBoardId, BTreeSet<AccountId>),
-	board_play_turn(AccountId, SgxGuessingTurn),
+	board_play_turn(AccountId, SgxGameTurn),
 	board_finish_game(AccountId, SgxBoardId),
 }
 

@@ -90,7 +90,7 @@ dependencies = [
 [[package]]
 name = "ajuna-common"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#77050a436ab74c453cb49661ae08bac9d21708fa"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#dbc6a9fe50f6baa59250736a6dd436bc25c72169"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -492,6 +492,15 @@ dependencies = [
  "block-buffer 0.10.2",
  "crypto-common",
  "subtle",
+]
+
+[[package]]
+name = "dot4gravity"
+version = "0.1.0"
+source = "git+https://github.com/ajuna-network/ajuna-games?rev=polkadot-v0.9.20#159ae6d601374af2295fb17b0be89b344a1afaf0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
 ]
 
 [[package]]
@@ -2137,9 +2146,10 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 [[package]]
 name = "pallet-ajuna-board"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#77050a436ab74c453cb49661ae08bac9d21708fa"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#dbc6a9fe50f6baa59250736a6dd436bc25c72169"
 dependencies = [
  "ajuna-common",
+ "dot4gravity",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -2151,7 +2161,7 @@ dependencies = [
 [[package]]
 name = "pallet-ajuna-gameregistry"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#77050a436ab74c453cb49661ae08bac9d21708fa"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#dbc6a9fe50f6baa59250736a6dd436bc25c72169"
 dependencies = [
  "ajuna-common",
  "frame-support",
@@ -2167,7 +2177,7 @@ dependencies = [
 [[package]]
 name = "pallet-ajuna-matchmaker"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#77050a436ab74c453cb49661ae08bac9d21708fa"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#dbc6a9fe50f6baa59250736a6dd436bc25c72169"
 dependencies = [
  "ajuna-common",
  "frame-support",
@@ -2947,7 +2957,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.4.0"
-source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20#11b3b4571c9bbb68d568db91916674a7f2073aa2"
+source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20#902e1266a49b2ecb675fa3d918bc5bf0b2d1a584"
 dependencies = [
  "derive_more",
  "environmental",
@@ -2962,7 +2972,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20#11b3b4571c9bbb68d568db91916674a7f2073aa2"
+source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20#902e1266a49b2ecb675fa3d918bc5bf0b2d1a584"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -3480,7 +3490,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "6.0.0"
-source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20#11b3b4571c9bbb68d568db91916674a7f2073aa2"
+source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20#902e1266a49b2ecb675fa3d918bc5bf0b2d1a584"
 dependencies = [
  "environmental",
  "hash-db",
@@ -3910,7 +3920,7 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "digest 0.10.3",
  "static_assertions",
 ]

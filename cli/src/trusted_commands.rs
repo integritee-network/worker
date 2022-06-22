@@ -24,7 +24,7 @@ use crate::{
 };
 use codec::Decode;
 use ita_stf::{
-	Index, KeyPair, SgxGuessingBoardStruct, SgxGuessingTurn, TrustedCall, TrustedGetter,
+	Coordinates, Index, KeyPair, SgxGameBoardStruct, SgxGameTurn, Side, TrustedCall, TrustedGetter,
 	TrustedOperation,
 };
 use log::*;
@@ -124,13 +124,19 @@ pub enum TrustedCommands {
 	},
 
 	/// Play a turn of a board game
-	PlayTurn {
+	DropBomb {
 		/// Player's incognito AccountId in ss58check format
 		player: String,
+		// Column
+		col: u8,
+		// Row
+		row: u8,
+	},
 
-		// TODO this would be generic at some point, right?
-		/// Turn to be played
-		turn: SgxGuessingTurn,
+	DropStone {
+		player: String,
+		side: SideCommand,
+		n: u8,
 	},
 
 	/// Query board state for account in keystore
@@ -138,6 +144,28 @@ pub enum TrustedCommands {
 		/// Player's incognito AccountId in ss58check format
 		player: String,
 	},
+}
+
+pub struct SideCommand(Side);
+use std::str::FromStr;
+
+impl FromStr for SideCommand {
+	type Err = &'static str;
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		if s.eq("north") {
+			return Ok(SideCommand(Side::North))
+		}
+		if s.eq("east") {
+			return Ok(SideCommand(Side::East))
+		}
+		if s.eq("south") {
+			return Ok(SideCommand(Side::South))
+		}
+		if s.eq("west") {
+			return Ok(SideCommand(Side::West))
+		}
+		Err("Invalid side")
+	}
 }
 
 pub fn match_trusted_commands(cli: &Cli, trusted_args: &TrustedArgs) {
@@ -151,7 +179,14 @@ pub fn match_trusted_commands(cli: &Cli, trusted_args: &TrustedArgs) {
 		TrustedCommands::Balance { account } => balance(cli, trusted_args, account),
 		TrustedCommands::UnshieldFunds { from, to, amount } =>
 			unshield_funds(cli, trusted_args, from, to, amount),
-		TrustedCommands::PlayTurn { player, turn } => play_turn(cli, trusted_args, player, *turn),
+		TrustedCommands::DropBomb { player, col, row } => play_turn(
+			cli,
+			trusted_args,
+			player,
+			SgxGameTurn::DropBomb(Coordinates { col: *col, row: *row }),
+		),
+		TrustedCommands::DropStone { player, side, n } =>
+			play_turn(cli, trusted_args, player, SgxGameTurn::DropStone(((*side).0.clone(), *n))),
 		TrustedCommands::GetBoard { player } => get_board(cli, trusted_args, player),
 	}
 }
@@ -263,7 +298,7 @@ fn unshield_funds(
 	let _ = perform_operation(cli, trusted_args, &top);
 }
 
-fn play_turn(cli: &Cli, trusted_args: &TrustedArgs, arg_player: &str, turn: SgxGuessingTurn) {
+fn play_turn(cli: &Cli, trusted_args: &TrustedArgs, arg_player: &str, turn: SgxGameTurn) {
 	let player = get_pair_from_str(trusted_args, arg_player);
 	println!("player ss58 is {}", player.public().to_ss58check());
 
@@ -285,10 +320,8 @@ fn get_board(cli: &Cli, trusted_args: &TrustedArgs, arg_player: &str) {
 	let res = perform_operation(cli, trusted_args, &top);
 	debug!("received result for board");
 	if let Some(v) = res {
-		if let Ok(board) = SgxGuessingBoardStruct::decode(&mut v.as_slice()) {
-			println!("Players: {:?}", board.state.players);
-			println!("Winner: {:?}", board.state.winner);
-			println!("Next player: {}", board.state.next_player);
+		if let Ok(board) = SgxGameBoardStruct::decode(&mut v.as_slice()) {
+			println!("Board: {:?}", board.state);
 		} else {
 			println!("could not decode board. maybe hasn't been set? {:x?}", v);
 		}

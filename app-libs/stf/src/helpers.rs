@@ -15,7 +15,7 @@
 
 */
 use crate::{
-	stf_sgx_primitives::types::*, AccountId, Index, SgxBoardId, SgxGuessingBoardStruct,
+	stf_sgx_primitives::types::*, AccountId, Index, SgxBoardId, SgxGameBoardStruct,
 	SgxWinningBoard, StfError, StfResult, H256,
 };
 use codec::{Decode, Encode};
@@ -157,14 +157,14 @@ pub fn ensure_root(account: AccountId) -> StfResult<()> {
 	}
 }
 
-pub fn get_board_for(who: AccountId) -> Option<SgxGuessingBoardStruct> {
+pub fn get_board_for(who: AccountId) -> Option<SgxGameBoardStruct> {
 	if let Some(board_id) = get_storage_map::<AccountId, SgxBoardId>(
 		"AjunaBoard",
 		"PlayerBoards",
 		&who,
 		&StorageHasher::Identity,
 	) {
-		if let Some(board) = get_storage_map::<SgxBoardId, SgxGuessingBoardStruct>(
+		if let Some(board) = get_storage_map::<SgxBoardId, SgxGameBoardStruct>(
 			"AjunaBoard",
 			"BoardStates",
 			&board_id,
@@ -195,7 +195,7 @@ pub fn is_winner(who: AccountId) -> Option<SgxWinningBoard> {
 			&StorageHasher::Identity,
 		) {
 			if who == winner {
-				if let Some(_board) = get_storage_map::<SgxBoardId, SgxGuessingBoardStruct>(
+				if let Some(_board) = get_storage_map::<SgxBoardId, SgxGameBoardStruct>(
 					"AjunaBoard",
 					"BoardStates",
 					&board_id,
