@@ -92,7 +92,7 @@ pub fn validate_nonce(who: &AccountId, nonce: Index) -> StfResult<()> {
 	// validate
 	let expected_nonce = get_account_info(who).map_or_else(
 		|| {
-			warn!(
+			info!(
 				"Attempted to validate account nonce of non-existent account: {}",
 				account_id_to_string(who)
 			);
