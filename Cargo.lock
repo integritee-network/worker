@@ -125,7 +125,7 @@ dependencies = [
 [[package]]
 name = "ajuna-common"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#dbc6a9fe50f6baa59250736a6dd436bc25c72169"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#fde27393de0c7af8a5a8d9df393e8c7c1bae9b8c"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -4219,7 +4219,7 @@ checksum = "029d8d0b2f198229de29dca79676f2738ff952edf3fde542eb8bf94d8c21b435"
 [[package]]
 name = "pallet-ajuna-board"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#dbc6a9fe50f6baa59250736a6dd436bc25c72169"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#fde27393de0c7af8a5a8d9df393e8c7c1bae9b8c"
 dependencies = [
  "ajuna-common",
  "dot4gravity",
@@ -5851,7 +5851,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.4.0"
-source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20#902e1266a49b2ecb675fa3d918bc5bf0b2d1a584"
+source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20#b37e1d8680e200b52db10d05c207b37206623c9e"
 dependencies = [
  "derive_more",
  "environmental",
@@ -5866,7 +5866,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20#902e1266a49b2ecb675fa3d918bc5bf0b2d1a584"
+source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20#b37e1d8680e200b52db10d05c207b37206623c9e"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -6539,7 +6539,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "6.0.0"
-source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20#902e1266a49b2ecb675fa3d918bc5bf0b2d1a584"
+source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20#b37e1d8680e200b52db10d05c207b37206623c9e"
 dependencies = [
  "environmental",
  "futures 0.3.21",
@@ -7544,9 +7544,9 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 0.1.10",
+ "cfg-if 1.0.0",
  "digest 0.10.3",
- "rand 0.6.5",
+ "rand 0.8.5",
  "static_assertions",
 ]
 
