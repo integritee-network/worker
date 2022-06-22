@@ -170,6 +170,7 @@ class Worker:
                                         'itc_parentchain_indirect_calls_executor::indirect_calls_executor=debug,'
                                         'itp_top_pool_author::author=debug,'
                                         'its_consensus_aura::slot_proposer=debug,'
+                                        'its_rpc_handler::direct_top_pool_api=debug,'
                                         'ita_stf=debug')
 
         return Popen(

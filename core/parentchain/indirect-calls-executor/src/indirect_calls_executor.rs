@@ -123,13 +123,18 @@ where
 	where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	{
-		debug!("Scanning block {:?} for relevant xt", block.header().number());
+		let block_number = *block.header().number();
+		debug!("Scanning block {:?} for relevant xt", block_number);
 		let mut executed_shielding_calls = Vec::<H256>::new();
 		for xt_opaque in block.extrinsics().iter() {
+			let mut shield_funds_decoded = false;
+			let mut call_worker_decoded = false;
+
 			// Found ShieldFunds extrinsic in block.
 			if let Ok(xt) = ParentchainUncheckedExtrinsic::<ShieldFundsFn>::decode(
 				&mut xt_opaque.encode().as_slice(),
 			) {
+				trace!("Found ShieldFundsFn extrinsics in parentchain block {:?}", block_number);
 				if xt.function.0 == [TEEREX_MODULE, SHIELD_FUNDS] {
 					let hash_of_xt = hash_of(&xt);
 
@@ -143,17 +148,27 @@ where
 						},
 					}
 				}
+				shield_funds_decoded = true;
 			}
+
 			// Found CallWorker extrinsic in block.
-			else if let Ok(xt) = ParentchainUncheckedExtrinsic::<CallWorkerFn>::decode(
+			if let Ok(xt) = ParentchainUncheckedExtrinsic::<CallWorkerFn>::decode(
 				&mut xt_opaque.encode().as_slice(),
 			) {
+				trace!("Found CallWorkerFn extrinsics in parentchain block {:?}", block_number);
 				if xt.function.0 == [TEEREX_MODULE, CALL_WORKER] {
 					let (_, request) = xt.function;
 					let (shard, cypher_text) = (request.shard, request.cyphertext);
 					debug!("Found trusted call extrinsic, submitting it to the top pool");
 					self.submit_trusted_call(shard, cypher_text);
 				}
+				call_worker_decoded = true;
+			}
+
+			if shield_funds_decoded && call_worker_decoded {
+				debug!(
+					"Found BOTH shield_funds and call_worker function in the same opaque extrinsic"
+				);
 			}
 		}
 		Ok(executed_shielding_calls)

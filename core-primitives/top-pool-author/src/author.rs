@@ -157,7 +157,19 @@ where
 		}
 
 		if let Some(trusted_call_signed) = trusted_operation.to_call() {
-			debug!("Submitting trusted call to TOP pool: {:?}", trusted_call_signed.call);
+			debug!(
+				"Submitting trusted call to TOP pool: {:?}, TOP hash: {:?}",
+				trusted_call_signed.call,
+				self.hash_of(&trusted_operation)
+			);
+		} else if let TrustedOperation::get(Getter::trusted(ref trusted_getter_signed)) =
+			trusted_operation
+		{
+			debug!(
+				"Submitting trusted getter to TOP pool: {:?}, TOP hash: {:?}",
+				trusted_getter_signed.getter,
+				self.hash_of(&trusted_operation)
+			);
 		}
 
 		match submission_mode {
