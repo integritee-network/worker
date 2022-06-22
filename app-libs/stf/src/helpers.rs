@@ -83,7 +83,7 @@ pub fn get_account_info(who: &AccountId) -> Option<AccountInfo> {
 	let maybe_storage_map =
 		get_storage_map("System", "Account", who, &StorageHasher::Blake2_128Concat);
 	if maybe_storage_map.is_none() {
-		warn!("Failed to get account info for account {}", account_id_to_string(who));
+		info!("Failed to get account info for account {}", account_id_to_string(who));
 	}
 	maybe_storage_map
 }
@@ -131,7 +131,7 @@ pub fn account_nonce(account: &AccountId) -> Index {
 	if let Some(info) = get_account_info(account) {
 		info.nonce
 	} else {
-		warn!("Attempted to get nonce of non-existent account: {}", account_id_to_string(account));
+		info!("Attempted to get nonce of non-existent account: {}", account_id_to_string(account));
 		0_u32
 	}
 }
@@ -140,7 +140,7 @@ pub fn account_data(account: &AccountId) -> Option<AccountData> {
 	if let Some(info) = get_account_info(account) {
 		Some(info.data)
 	} else {
-		warn!(
+		info!(
 			"Attempted to get account data of non-existent account: {}",
 			account_id_to_string(account)
 		);

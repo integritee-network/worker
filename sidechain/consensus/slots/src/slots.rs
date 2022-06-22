@@ -82,6 +82,9 @@ impl<ParentchainBlock: ParentchainBlockTrait> SlotInfo<ParentchainBlock> {
 }
 
 /// The time at which the slot ends.
+///
+/// !! Slot duration needs to be the 'global' slot duration that is used for the sidechain.
+/// Do not use this with 'custom' slot durations, as used e.g. for the shard slots.  
 pub fn slot_ends_at(slot: Slot, slot_duration: Duration) -> Duration {
 	Duration::from_millis(*slot.saturating_add(1u64) * (slot_duration.as_millis() as u64))
 }
