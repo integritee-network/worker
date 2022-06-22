@@ -312,7 +312,7 @@ mod tests {
 	#[test]
 	fn slot_info_ends_at_does_is_correct_even_if_delay_is_more_than_slot_duration() {
 		let timestamp = duration_now();
-		let pc_header = default_header();
+		let pc_header = ParentchainHeaderBuilder::default().build();
 		let slot: Slot = 1000.into();
 		let slot_end_time = slot_ends_at(slot, SLOT_DURATION);
 

@@ -15,11 +15,12 @@
 
 */
 
-use crate::{slots::Slot, ParentchainBlock, SimpleSlotWorker, SlotInfo, SlotResult};
+use crate::{slots::Slot, SimpleSlotWorker, SlotInfo, SlotResult};
 use its_consensus_common::{Proposal, Proposer, Result};
 use sidechain_primitives::{
 	traits::ShardIdentifierFor, types::SignedBlock as SignedSidechainBlock,
 };
+use sp_runtime::traits::{Block as ParentchainBlockTrait, Header as ParentchainHeaderTrait};
 use std::{marker::PhantomData, thread, time::Duration};
 
 #[derive(Default)]
@@ -29,7 +30,7 @@ pub(crate) struct ProposerMock<ParentchainBlock> {
 
 impl<B> Proposer<B, SignedSidechainBlock> for ProposerMock<B>
 where
-	B: ParentchainBlock,
+	B: ParentchainBlockTrait,
 {
 	fn propose(&self, _max_duration: Duration) -> Result<Proposal<SignedSidechainBlock>> {
 		todo!()
@@ -39,7 +40,7 @@ where
 #[derive(Default)]
 pub(crate) struct SimpleSlotWorkerMock<B>
 where
-	B: ParentchainBlock,
+	B: ParentchainBlockTrait,
 {
 	pub slot_infos: Vec<SlotInfo<B>>,
 	pub slot_time_spent: Option<Duration>,
@@ -47,7 +48,7 @@ where
 
 impl<B> SimpleSlotWorker<B> for SimpleSlotWorkerMock<B>
 where
-	B: ParentchainBlock,
+	B: ParentchainBlockTrait,
 {
 	type Proposer = ProposerMock<B>;
 
@@ -94,10 +95,14 @@ where
 		todo!()
 	}
 
-	fn import_latest_parentchain_block(
+	fn import_parentchain_blocks_until(
 		&self,
-		_current_latest_imported_header: &B::Header,
-	) -> Result<B::Header> {
+		_last_imported_parentchain_header: &<B::Header as ParentchainHeaderTrait>::Hash,
+	) -> Result<Option<B::Header>> {
+		todo!()
+	}
+
+	fn peek_latest_parentchain_header(&self) -> Result<Option<B::Header>> {
 		todo!()
 	}
 
