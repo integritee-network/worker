@@ -22,7 +22,7 @@ use itp_ocall_api::{
 	EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi,
 	EnclaveSidechainOCallApi,
 };
-use itp_storage::StorageEntryVerified;
+use itp_storage::{Error::StorageValueUnavailable, StorageEntryVerified};
 use itp_teerex_storage::{TeeRexStorage, TeerexStorageKeys};
 use itp_types::{BlockHash, Enclave, ShardIdentifier, WorkerRequest, WorkerResponse};
 use sgx_types::{
@@ -31,7 +31,7 @@ use sgx_types::{
 	SgxResult, SGX_HASH_SIZE,
 };
 use sp_core::H256;
-use sp_runtime::{traits::Header as HeaderT, AccountId32, OpaqueExtrinsic};
+use sp_runtime::{traits::Header as HeaderTrait, AccountId32, OpaqueExtrinsic};
 use sp_std::prelude::*;
 use std::collections::HashMap;
 
@@ -42,17 +42,25 @@ pub struct OnchainMock {
 }
 
 impl OnchainMock {
-	pub fn with_storage_entries<V: Encode>(mut self, entries: Vec<(Vec<u8>, V)>) -> Self {
-		for (k, v) in entries.into_iter() {
-			self.inner.insert(k, v.encode());
+	pub fn with_storage_entries_at_header<Header: HeaderTrait<Hash = H256>, V: Encode>(
+		mut self,
+		header: &Header,
+		entries: Vec<(Vec<u8>, V)>,
+	) -> Self {
+		for (key, value) in entries.into_iter() {
+			self.insert_at_header(header, key, value.encode());
 		}
 		self
 	}
 
-	pub fn with_validateer_set(mut self, set: Option<Vec<Enclave>>) -> Self {
+	pub fn add_validateer_set<Header: HeaderTrait<Hash = H256>>(
+		mut self,
+		header: &Header,
+		set: Option<Vec<Enclave>>,
+	) -> Self {
 		let set = set.unwrap_or_else(validateer_set);
-		self.inner.insert(TeeRexStorage::enclave_count(), (set.len() as u64).encode());
-		self.with_storage_entries(into_key_value_storage(set))
+		self.insert_at_header(header, TeeRexStorage::enclave_count(), (set.len() as u64).encode());
+		self.with_storage_entries_at_header(header, into_key_value_storage(set))
 	}
 
 	pub fn with_mr_enclave(mut self, mr_enclave: [u8; SGX_HASH_SIZE]) -> Self {
@@ -60,12 +68,23 @@ impl OnchainMock {
 		self
 	}
 
-	pub fn insert(&mut self, key: Vec<u8>, value: Vec<u8>) {
-		self.inner.insert(key, value);
+	pub fn insert_at_header<Header: HeaderTrait<Hash = H256>>(
+		&mut self,
+		header: &Header,
+		key: Vec<u8>,
+		value: Vec<u8>,
+	) {
+		let key_with_header = (header, key).encode();
+		self.inner.insert(key_with_header, value);
 	}
 
-	pub fn get(&self, key: &[u8]) -> Option<&Vec<u8>> {
-		self.inner.get(key)
+	pub fn get_at_header<Header: HeaderTrait<Hash = H256>>(
+		&self,
+		header: &Header,
+		key: &[u8],
+	) -> Option<&Vec<u8>> {
+		let key_with_header = (header, key).encode();
+		self.inner.get(&key_with_header)
 	}
 }
 
@@ -144,29 +163,26 @@ impl EnclaveOnChainOCallApi for OnchainMock {
 		Ok(Vec::new())
 	}
 
-	fn get_storage_verified<H: HeaderT<Hash = H256>, V: Decode>(
+	fn get_storage_verified<Header: HeaderTrait<Hash = H256>, V: Decode>(
 		&self,
 		storage_hash: Vec<u8>,
-		_header: &H,
+		header: &Header,
 	) -> Result<StorageEntryVerified<V>, itp_ocall_api::Error> {
-		let value = self
-			.get(&storage_hash)
-			.map(|val| Decode::decode(&mut val.as_slice()))
-			.transpose()
-			.map_err(itp_ocall_api::Error::Codec)?;
-
-		Ok(StorageEntryVerified::new(storage_hash, value))
+		self.get_multiple_storages_verified(vec![storage_hash], header)?
+			.into_iter()
+			.next()
+			.ok_or(itp_ocall_api::Error::Storage(StorageValueUnavailable))
 	}
 
-	fn get_multiple_storages_verified<H: HeaderT<Hash = H256>, V: Decode>(
+	fn get_multiple_storages_verified<Header: HeaderTrait<Hash = H256>, V: Decode>(
 		&self,
 		storage_hashes: Vec<Vec<u8>>,
-		_header: &H,
+		header: &Header,
 	) -> Result<Vec<StorageEntryVerified<V>>, itp_ocall_api::Error> {
 		let mut entries = Vec::with_capacity(storage_hashes.len());
 		for hash in storage_hashes.into_iter() {
 			let value = self
-				.get(&hash)
+				.get_at_header(header, &hash)
 				.map(|val| Decode::decode(&mut val.as_slice()))
 				.transpose()
 				.map_err(itp_ocall_api::Error::Codec)?;
