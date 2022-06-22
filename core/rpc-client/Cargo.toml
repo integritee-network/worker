@@ -18,9 +18,9 @@ thiserror = { version = "1.0" }
 url = { version = "2.0.0" }
 ws = { version = "0.9.1", features = ["ssl"] }
 
-# local
-itp-types = { path = "../../core-primitives/types" }
-itp-utils = { path = "../../core-primitives/utils" }
+# integritee
+itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
+itp-utils = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 
 [dev-dependencies]
 env_logger = "0.9.0"

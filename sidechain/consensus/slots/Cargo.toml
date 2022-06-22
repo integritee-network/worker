@@ -12,7 +12,8 @@ derive_more = "0.99.16"
 lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
 
 # scs / integritee
-sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 
 # only for slot-stream
 futures = { version = "0.3", optional = true }
@@ -29,7 +30,6 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 itp-settings = { path = "../../../core-primitives/settings" }
 itp-sgx-io = { path = "../../../core-primitives/sgx/io", default-features = false }
 itp-time-utils = { path = "../../../core-primitives/time-utils", default-features = false }
-itp-types = { path = "../../../core-primitives/types", default-features = false }
 its-consensus-common = { path = "../common", default-features = false }
 
 [dev-dependencies]

@@ -21,7 +21,8 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "po
 
 itp-enclave-api-ffi = { path = "ffi" }
 itp-settings = { path = "../settings" }
-itp-types = { path = "../types" }
+
+itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 
 
 [dev-dependencies]

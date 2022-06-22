@@ -31,9 +31,8 @@ use ita_stf::{
 };
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
-use itp_storage::StorageEntryVerified;
 use itp_time_utils::duration_now;
-use itp_types::{OpaqueCall, H256};
+use itp_types::{storage::StorageEntryVerified, OpaqueCall, H256};
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
 use sp_runtime::{app_crypto::sp_core::blake2_256, traits::Header as HeaderTrait};

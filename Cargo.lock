@@ -599,7 +599,7 @@ dependencies = [
 [[package]]
 name = "claims-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#9b8084d5b97194ee22f2cacd1c8cbaf310ab9253"
+source = "git+https://github.com/integritee-network/pallets.git?branch=gk/types_and_utils#db94b692645521237e2dec1bdadabb8647513f14"
 dependencies = [
  "parity-scale-codec",
  "rustc-hex",
@@ -694,7 +694,7 @@ dependencies = [
 [[package]]
 name = "common-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#9b8084d5b97194ee22f2cacd1c8cbaf310ab9253"
+source = "git+https://github.com/integritee-network/pallets.git?branch=gk/types_and_utils#db94b692645521237e2dec1bdadabb8647513f14"
 dependencies = [
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.24)",
 ]
@@ -1952,7 +1952,7 @@ dependencies = [
 [[package]]
 name = "ias-verify"
 version = "0.1.4"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#9b8084d5b97194ee22f2cacd1c8cbaf310ab9253"
+source = "git+https://github.com/integritee-network/pallets.git?branch=gk/types_and_utils#db94b692645521237e2dec1bdadabb8647513f14"
 dependencies = [
  "base64 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.19",
@@ -2098,7 +2098,7 @@ dependencies = [
 [[package]]
 name = "integritee-node-runtime"
 version = "1.0.9"
-source = "git+https://github.com/integritee-network/integritee-node?branch=master#704f7be535eca74e27584c30ccd42324927323a0"
+source = "git+https://github.com/integritee-network/integritee-node?branch=gk/types_and_utils#ebb9cf4705d2066d55e62dba9111b3ba1ccc695f"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -2265,7 +2265,7 @@ dependencies = [
  "sidechain-primitives",
  "sp-application-crypto",
  "sp-core",
- "sp-io 6.0.0 (git+https://github.com/integritee-network/sgx-runtime?branch=master)",
+ "sp-io 6.0.0 (git+https://github.com/integritee-network/sgx-runtime?branch=gk/types_and_utils)",
  "sp-keyring",
  "sp-runtime",
  "substrate-api-client",
@@ -2732,6 +2732,7 @@ dependencies = [
  "frame-metadata",
  "frame-support",
  "hash-db",
+ "itp-types",
  "parity-scale-codec",
  "sgx_tstd",
  "sp-core",
@@ -2844,9 +2845,9 @@ dependencies = [
 [[package]]
 name = "itp-types"
 version = "0.8.0"
+source = "git+https://github.com/integritee-network/pallets.git?branch=gk/types_and_utils#db94b692645521237e2dec1bdadabb8647513f14"
 dependencies = [
  "chrono 0.4.19",
- "itp-storage",
  "parity-scale-codec",
  "primitive-types",
  "serde 1.0.137",
@@ -2854,7 +2855,6 @@ dependencies = [
  "sgx_tstd",
  "sp-core",
  "sp-finality-grandpa",
- "sp-keyring",
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.24)",
  "substrate-api-client",
@@ -2863,6 +2863,7 @@ dependencies = [
 [[package]]
 name = "itp-utils"
 version = "0.8.0"
+source = "git+https://github.com/integritee-network/pallets.git?branch=gk/types_and_utils#db94b692645521237e2dec1bdadabb8647513f14"
 dependencies = [
  "frame-support",
  "hex",
@@ -3052,7 +3053,7 @@ dependencies = [
  "sgx_tstd",
  "sidechain-primitives",
  "sp-core",
- "sp-io 6.0.0 (git+https://github.com/integritee-network/sgx-runtime?branch=master)",
+ "sp-io 6.0.0 (git+https://github.com/integritee-network/sgx-runtime?branch=gk/types_and_utils)",
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.24)",
  "thiserror 1.0.31",
@@ -4226,7 +4227,7 @@ dependencies = [
 [[package]]
 name = "pallet-claims"
 version = "0.9.12"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#9b8084d5b97194ee22f2cacd1c8cbaf310ab9253"
+source = "git+https://github.com/integritee-network/pallets.git?branch=gk/types_and_utils#db94b692645521237e2dec1bdadabb8647513f14"
 dependencies = [
  "claims-primitives",
  "frame-support",
@@ -4281,7 +4282,7 @@ dependencies = [
 [[package]]
 name = "pallet-parentchain"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#9b8084d5b97194ee22f2cacd1c8cbaf310ab9253"
+source = "git+https://github.com/integritee-network/pallets.git?branch=gk/types_and_utils#db94b692645521237e2dec1bdadabb8647513f14"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4362,7 +4363,7 @@ dependencies = [
 [[package]]
 name = "pallet-sidechain"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#9b8084d5b97194ee22f2cacd1c8cbaf310ab9253"
+source = "git+https://github.com/integritee-network/pallets.git?branch=gk/types_and_utils#db94b692645521237e2dec1bdadabb8647513f14"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4397,7 +4398,7 @@ dependencies = [
 [[package]]
 name = "pallet-teeracle"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#9b8084d5b97194ee22f2cacd1c8cbaf310ab9253"
+source = "git+https://github.com/integritee-network/pallets.git?branch=gk/types_and_utils#db94b692645521237e2dec1bdadabb8647513f14"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4416,7 +4417,7 @@ dependencies = [
 [[package]]
 name = "pallet-teerex"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#9b8084d5b97194ee22f2cacd1c8cbaf310ab9253"
+source = "git+https://github.com/integritee-network/pallets.git?branch=gk/types_and_utils#db94b692645521237e2dec1bdadabb8647513f14"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5705,7 +5706,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.4.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#fa5018bfea7b673f30ee8b871f1d18ebf850e99b"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=gk/types_and_utils#9051d1223f4acfac827185090f38be645e747796"
 dependencies = [
  "derive_more",
  "environmental",
@@ -5720,7 +5721,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#fa5018bfea7b673f30ee8b871f1d18ebf850e99b"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=gk/types_and_utils#9051d1223f4acfac827185090f38be645e747796"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -6008,7 +6009,7 @@ checksum = "43b2853a4d09f215c24cc5489c992ce46052d359b5109343cbafbf26bc62f8a3"
 [[package]]
 name = "sidechain-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#9b8084d5b97194ee22f2cacd1c8cbaf310ab9253"
+source = "git+https://github.com/integritee-network/pallets.git?branch=gk/types_and_utils#db94b692645521237e2dec1bdadabb8647513f14"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -6362,7 +6363,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "6.0.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#fa5018bfea7b673f30ee8b871f1d18ebf850e99b"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=gk/types_and_utils#9051d1223f4acfac827185090f38be645e747796"
 dependencies = [
  "environmental",
  "futures 0.3.21",
@@ -6890,7 +6891,7 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 [[package]]
 name = "teeracle-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#9b8084d5b97194ee22f2cacd1c8cbaf310ab9253"
+source = "git+https://github.com/integritee-network/pallets.git?branch=gk/types_and_utils#db94b692645521237e2dec1bdadabb8647513f14"
 dependencies = [
  "common-primitives",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.24)",
@@ -6900,7 +6901,7 @@ dependencies = [
 [[package]]
 name = "teerex-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#9b8084d5b97194ee22f2cacd1c8cbaf310ab9253"
+source = "git+https://github.com/integritee-network/pallets.git?branch=gk/types_and_utils#db94b692645521237e2dec1bdadabb8647513f14"
 dependencies = [
  "ias-verify",
  "parity-scale-codec",

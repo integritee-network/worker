@@ -16,9 +16,11 @@ log = { version = "0.4", default-features = false }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 
-# internal dependencies
-itp-types = { path = "../../core-primitives/types", default-features = false }
-itp-utils = { path = "../../core-primitives/utils", default-features = false }
+# integritee dependencies
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
+itp-utils = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
+
+# local
 itc-tls-websocket-server = { path = "../tls-websocket-server", default-features = false }
 
 # sgx enabled external libraries

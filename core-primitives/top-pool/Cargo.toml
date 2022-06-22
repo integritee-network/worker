@@ -43,7 +43,9 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 # local dependencies
 ita-stf = { path = "../../app-libs/stf", default-features = false }
 itc-direct-rpc-server = { path = "../../core/direct-rpc-server", default-features = false }
-itp-types = { path = "../../core-primitives/types", default-features = false }
+
+# integritee
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 
 # sgx enabled external libraries
 jsonrpc-core_sgx = { package = "jsonrpc-core", git = "https://github.com/scs/jsonrpc", branch = "no_std", default-features = false, optional = true }
@@ -64,7 +66,7 @@ serde = { version = "1.0", default-features = false, features = ["alloc", "deriv
 sp-application-crypto = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
-sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 
 # dev dependencies (for tests)
 [dev-dependencies]

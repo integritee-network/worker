@@ -53,11 +53,13 @@ ipfs-unixfs = { default-features = false, git = "https://github.com/whalelephant
 
 # scs / integritee
 jsonrpc-core = { default-features = false, git = "https://github.com/scs/jsonrpc", branch = "no_std" }
-sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master", features = ["sgx"] }
-sgx-runtime = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master"}
-sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"], git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
+sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "gk/types_and_utils", features = ["sgx"] }
+sgx-runtime = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "gk/types_and_utils"}
+sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"], git = "https://github.com/integritee-network/sgx-runtime", branch = "gk/types_and_utils", optional = true }
 substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.24" }
-sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils", features = ["sgx"] }
+itp-utils = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils", features = ["sgx"] }
 
 # mesalock
 linked-hash-map = { git = "https://github.com/mesalock-linux/linked-hash-map-sgx" }
@@ -105,8 +107,6 @@ itp-teerex-storage = { path = "../core-primitives/teerex-storage", default-featu
 itp-test = { path = "../core-primitives/test", default-features = false, optional = true }
 itp-top-pool = { path = "../core-primitives/top-pool", default-features = false, features = ["sgx"] }
 itp-top-pool-author = { path = "../core-primitives/top-pool-author", default-features = false, features = ["sgx"] }
-itp-types = { path = "../core-primitives/types", default-features = false, features = ["sgx"] }
-itp-utils = { path = "../core-primitives/utils", default-features = false, features = ["sgx"] }
 its-sidechain = { path = "../sidechain/sidechain-crate", default-features = false, features = ["sgx"] }
 
 # substrate deps
@@ -124,7 +124,7 @@ getrandom = { git = "https://github.com/integritee-network/getrandom-sgx", branc
 
 [patch."https://github.com/paritytech/substrate"]
 env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx" }
-sp-io = { git = "https://github.com/integritee-network/sgx-runtime", branch = "master"}
+sp-io = { git = "https://github.com/integritee-network/sgx-runtime", branch = "gk/types_and_utils"}
 #sp-io = { path = "../../sgx-runtime/substrate-sgx/sp-io"}
 
 #[patch."https://github.com/integritee-network/sgx-runtime"]
@@ -154,3 +154,5 @@ sgx_tunittest = { version = "1.1.5", git = "https://github.com/apache/incubator-
 
 #[patch."https://github.com/integritee-network/pallets.git"]
 #pallet-parentchain = { path = '../../pallets/parentchain' }
+#itp-types = {  path = '../../pallets/primitives/types' }
+#itp-utils = {  path = '../../pallets/primitives/utils' }

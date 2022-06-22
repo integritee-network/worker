@@ -62,9 +62,9 @@ thiserror_sgx = { package = "thiserror", version = "1.0.9", git = "https://githu
 itp-storage = { path = "../../core-primitives/storage", default-features = false}
 
 # scs deps
-sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
-sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
-sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "gk/types_and_utils" }
+sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], git = "https://github.com/integritee-network/sgx-runtime", branch = "gk/types_and_utils", optional = true }
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 
 # substrate deps
 sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }

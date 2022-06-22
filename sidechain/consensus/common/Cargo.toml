@@ -38,7 +38,6 @@ thiserror = { version = "1.0.26", optional = true }
 itp-block-import-queue = { path = "../../../core-primitives/block-import-queue", default-features = false }
 itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
-itp-types = { path = "../../../core-primitives/types", default-features = false }
 its-state = { path = "../../state", default-features = false }
 
 # sgx deps
@@ -50,7 +49,8 @@ thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linu
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 
 # scs / integritee
-sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 
 [dev-dependencies]
 # local
@@ -61,4 +61,4 @@ its-test = { path = "../../test" }
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 # integritee / scs
-sgx-externalities = { git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
+sgx-externalities = { git = "https://github.com/integritee-network/sgx-runtime", branch = "gk/types_and_utils" }

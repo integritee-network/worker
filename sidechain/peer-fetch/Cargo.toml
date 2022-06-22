@@ -16,7 +16,7 @@ thiserror = { version = "1.0" }
 tokio = { version = "1.6.1", features = ["full"] }
 
 # scs / integritee
-sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 
 # local
 itc-rpc-client = { path = "../../core/rpc-client" }

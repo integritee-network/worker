@@ -11,7 +11,7 @@ sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teacla
 # sgx deps
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
+sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "gk/types_and_utils", optional = true }
 jsonrpc-core_sgx = { package = "jsonrpc-core", git = "https://github.com/scs/jsonrpc", branch = "no_std", default-features = false, optional = true }
 
 # std-only deps
@@ -28,9 +28,11 @@ itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
 itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
 itp-teerex-storage = { path = "../teerex-storage", default-features = false }
 itp-time-utils = { path = "../time-utils", default-features = false }
-itp-types = { path = "../types", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-storage = { path = "../storage", default-features = false, features = ["test"] }
+
+# integritee
+itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils", default-features = false, features = ["test"] }
 
 [features]
 default = ["std"]
