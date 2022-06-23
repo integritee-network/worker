@@ -14,7 +14,7 @@
 
 ######## Update SGX SDK ########
 # use this manually to update sdk
-#include UpdateRustSGXSDK.mk
+include UpdateRustSGXSDK.mk
 
 ######## SGX SDK Settings ########
 SGX_SDK ?= /opt/intel/sgxsdk
