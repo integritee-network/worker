@@ -1088,8 +1088,8 @@ dependencies = [
 
 [[package]]
 name = "hashbrown_tstd"
-version = "0.12.0"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#841c3000e6154704c926b3f310a4550f70f53f9c"
+version = "0.11.2"
+source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#08264d6bff679d6047e5e9bc36058b4475c58ed4"
 
 [[package]]
 name = "hex"
@@ -3037,12 +3037,12 @@ dependencies = [
 [[package]]
 name = "sgx_alloc"
 version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#841c3000e6154704c926b3f310a4550f70f53f9c"
+source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#08264d6bff679d6047e5e9bc36058b4475c58ed4"
 
 [[package]]
 name = "sgx_backtrace_sys"
 version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#841c3000e6154704c926b3f310a4550f70f53f9c"
+source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#08264d6bff679d6047e5e9bc36058b4475c58ed4"
 dependencies = [
  "cc",
  "sgx_build_helper",
@@ -3052,12 +3052,12 @@ dependencies = [
 [[package]]
 name = "sgx_build_helper"
 version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#841c3000e6154704c926b3f310a4550f70f53f9c"
+source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#08264d6bff679d6047e5e9bc36058b4475c58ed4"
 
 [[package]]
 name = "sgx_crypto_helper"
 version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#841c3000e6154704c926b3f310a4550f70f53f9c"
+source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#08264d6bff679d6047e5e9bc36058b4475c58ed4"
 dependencies = [
  "itertools",
  "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx)",
@@ -3071,12 +3071,12 @@ dependencies = [
 [[package]]
 name = "sgx_demangle"
 version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#841c3000e6154704c926b3f310a4550f70f53f9c"
+source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#08264d6bff679d6047e5e9bc36058b4475c58ed4"
 
 [[package]]
 name = "sgx_libc"
 version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#841c3000e6154704c926b3f310a4550f70f53f9c"
+source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#08264d6bff679d6047e5e9bc36058b4475c58ed4"
 dependencies = [
  "sgx_types",
 ]
@@ -3094,7 +3094,7 @@ dependencies = [
 [[package]]
 name = "sgx_serialize"
 version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#841c3000e6154704c926b3f310a4550f70f53f9c"
+source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#08264d6bff679d6047e5e9bc36058b4475c58ed4"
 dependencies = [
  "sgx_tstd",
 ]
@@ -3102,7 +3102,7 @@ dependencies = [
 [[package]]
 name = "sgx_serialize_derive"
 version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#841c3000e6154704c926b3f310a4550f70f53f9c"
+source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#08264d6bff679d6047e5e9bc36058b4475c58ed4"
 dependencies = [
  "quote 0.3.15",
  "sgx_serialize_derive_internals",
@@ -3112,7 +3112,7 @@ dependencies = [
 [[package]]
 name = "sgx_serialize_derive_internals"
 version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#841c3000e6154704c926b3f310a4550f70f53f9c"
+source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#08264d6bff679d6047e5e9bc36058b4475c58ed4"
 dependencies = [
  "syn 0.11.11",
 ]
@@ -3120,7 +3120,7 @@ dependencies = [
 [[package]]
 name = "sgx_tcrypto"
 version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#841c3000e6154704c926b3f310a4550f70f53f9c"
+source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#08264d6bff679d6047e5e9bc36058b4475c58ed4"
 dependencies = [
  "sgx_types",
 ]
@@ -3128,7 +3128,7 @@ dependencies = [
 [[package]]
 name = "sgx_tcrypto_helper"
 version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#841c3000e6154704c926b3f310a4550f70f53f9c"
+source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#08264d6bff679d6047e5e9bc36058b4475c58ed4"
 dependencies = [
  "sgx_crypto_helper",
 ]
@@ -3136,7 +3136,7 @@ dependencies = [
 [[package]]
 name = "sgx_tprotected_fs"
 version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#841c3000e6154704c926b3f310a4550f70f53f9c"
+source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#08264d6bff679d6047e5e9bc36058b4475c58ed4"
 dependencies = [
  "sgx_trts",
  "sgx_types",
@@ -3145,7 +3145,7 @@ dependencies = [
 [[package]]
 name = "sgx_trts"
 version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#841c3000e6154704c926b3f310a4550f70f53f9c"
+source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#08264d6bff679d6047e5e9bc36058b4475c58ed4"
 dependencies = [
  "sgx_libc",
  "sgx_types",
@@ -3173,7 +3173,7 @@ dependencies = [
 [[package]]
 name = "sgx_tstd"
 version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#841c3000e6154704c926b3f310a4550f70f53f9c"
+source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#08264d6bff679d6047e5e9bc36058b4475c58ed4"
 dependencies = [
  "hashbrown_tstd",
  "sgx_alloc",
@@ -3197,12 +3197,12 @@ dependencies = [
 [[package]]
 name = "sgx_types"
 version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#841c3000e6154704c926b3f310a4550f70f53f9c"
+source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#08264d6bff679d6047e5e9bc36058b4475c58ed4"
 
 [[package]]
 name = "sgx_unwind"
 version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#841c3000e6154704c926b3f310a4550f70f53f9c"
+source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#08264d6bff679d6047e5e9bc36058b4475c58ed4"
 dependencies = [
  "sgx_build_helper",
 ]
@@ -3642,7 +3642,7 @@ dependencies = [
 [[package]]
 name = "sp-std"
 version = "4.0.0"
-source = "git+https://github.com/paritytech/substrate.git?branch=master#ee3eb220974f55146cf238f28ec2b1ec61141999"
+source = "git+https://github.com/paritytech/substrate.git?branch=master#622f532e605270c9d4f932aea666073e409e02f9"
 
 [[package]]
 name = "sp-std"

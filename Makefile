@@ -225,9 +225,9 @@ clean:
 
 .PHONY: pin-sgx
 pin-sgx:
-	@echo "Pin sgx dependencies to 565960cd7b4b36d1188459d75652619971c43f7e"
-	@cd enclave-runtime && cargo update -p sgx_tstd --precise 565960cd7b4b36d1188459d75652619971c43f7e
-	@cargo update -p sgx_tstd --precise 565960cd7b4b36d1188459d75652619971c43f7e
+	@echo "Pin sgx dependencies to 08264d6bff679d6047e5e9bc36058b4475c58ed4"
+	@cd enclave-runtime && cargo update -p sgx_tstd --precise 08264d6bff679d6047e5e9bc36058b4475c58ed4
+	@cargo update -p sgx_tstd --precise 08264d6bff679d6047e5e9bc36058b4475c58ed4
 
 mrenclave:
 	@$(SGX_ENCLAVE_SIGNER) dump -enclave ./bin/enclave.signed.so -dumpfile df.out && ./extract_identity < df.out && rm df.out
