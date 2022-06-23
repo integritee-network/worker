@@ -142,7 +142,9 @@ pub fn produce_sidechain_block_and_import_it() {
 	let parentchain_header = ParentchainHeaderBuilder::default().build();
 	let timestamp = duration_now();
 	let slot = slot_from_timestamp_and_duration(duration_now(), SLOT_DURATION);
-	let slot_info = SlotInfo::new(slot, timestamp, SLOT_DURATION, parentchain_header.clone());
+	let ends_at = timestamp + SLOT_DURATION;
+	let slot_info =
+		SlotInfo::new(slot, timestamp, SLOT_DURATION, ends_at, parentchain_header.clone());
 
 	info!("Test setup is done.");
 

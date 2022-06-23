@@ -160,7 +160,7 @@ class Worker:
         """
 
         # Todo: make this configurable
-        env = dict(os.environ, RUST_LOG='warn,ws=warn,sp_io=warn,'
+        env = dict(os.environ, RUST_LOG='warn,ws=warn,sp_io=error,'
                                         'substrate_api_client=warn,'
                                         'jsonrpsee_ws_client=warn,'
                                         'jsonrpsee_ws_server=warn,'

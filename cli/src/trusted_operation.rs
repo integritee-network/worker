@@ -118,7 +118,7 @@ fn send_request(
 	let block_hash =
 		_chain_api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock).unwrap().unwrap();
 	info!(
-		"Trusted call extrinsic sent and sucessfully included in parentchain block with hash {:?}.",
+		"Trusted call extrinsic sent and successfully included in parentchain block with hash {:?}.",
 		block_hash
 	);
 	info!("Waiting for execution confirmation from enclave...");

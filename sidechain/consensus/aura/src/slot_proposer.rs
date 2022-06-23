@@ -99,18 +99,7 @@ impl<ParentchainBlock, SignedSidechainBlock, TopPoolExecutor, BlockComposer, Stf
 			.get_trusted_calls(&self.shard)
 			.map_err(|e| ConsensusError::Other(e.to_string().into()))?;
 
-		// TODO: remove when we have proper on-boarding of new workers #273.
-		if trusted_calls.is_empty() {
-			info!("No trusted calls in top for shard: {:?}", self.shard);
-		// We return here when we actually import sidechain blocks because we currently have no
-		// means of worker on-boarding. Without on-boarding we have can't get a working multi
-		// worker-setup.
-		//
-		// But if we use this trick (only produce a sidechain block if there are trusted_calls), we
-		// we can simply wait with the submission of trusted calls until all workers are ready. Then
-		// we don't need to exchange any state and can have a functional multi-worker setup.
-		// return Ok(Default::default())
-		} else {
+		if !trusted_calls.is_empty() {
 			debug!("Got following trusted calls from pool: {:?}", trusted_calls);
 		}
 

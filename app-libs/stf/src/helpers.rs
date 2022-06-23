@@ -69,7 +69,7 @@ pub fn get_storage_by_key_hash<V: Decode>(key: Vec<u8>) -> Option<V> {
 			None
 		}
 	} else {
-		error!("key not found in state {:x?}", key);
+		info!("key not found in state {:x?}", key);
 		None
 	}
 }
@@ -80,12 +80,26 @@ pub fn account_key_hash(account: &AccountId) -> Vec<u8> {
 }
 
 pub fn get_account_info(who: &AccountId) -> Option<AccountInfo> {
-	get_storage_map("System", "Account", who, &StorageHasher::Blake2_128Concat)
+	let maybe_storage_map =
+		get_storage_map("System", "Account", who, &StorageHasher::Blake2_128Concat);
+	if maybe_storage_map.is_none() {
+		info!("Failed to get account info for account {}", account_id_to_string(who));
+	}
+	maybe_storage_map
 }
 
 pub fn validate_nonce(who: &AccountId, nonce: Index) -> StfResult<()> {
 	// validate
-	let expected_nonce = get_account_info(who).map_or_else(|| 0, |acc| acc.nonce);
+	let expected_nonce = match get_account_info(who) {
+		None => {
+			info!(
+				"Attempted to validate account nonce of non-existent account: {}",
+				account_id_to_string(who)
+			);
+			0
+		},
+		Some(account_info) => account_info.nonce,
+	};
 	if expected_nonce == nonce {
 		return Ok(())
 	}
@@ -101,12 +115,15 @@ pub fn increment_nonce(account: &AccountId) {
 		acc_info.nonce += 1;
 		sp_io::storage::set(&account_key_hash(account), &acc_info.encode());
 		debug!(
-			"updated account {:?} nonce: {:?}",
-			account.encode(),
+			"updated account {} nonce: {:?}",
+			account_id_to_string(account),
 			get_account_info(account).unwrap().nonce
 		);
 	} else {
-		error!("tried to increment nonce of a non-existent account")
+		error!(
+			"tried to increment nonce of a non-existent account: {}",
+			account_id_to_string(account)
+		)
 	}
 }
 
@@ -114,6 +131,7 @@ pub fn account_nonce(account: &AccountId) -> Index {
 	if let Some(info) = get_account_info(account) {
 		info.nonce
 	} else {
+		info!("Attempted to get nonce of non-existent account: {}", account_id_to_string(account));
 		0_u32
 	}
 }
@@ -122,6 +140,10 @@ pub fn account_data(account: &AccountId) -> Option<AccountData> {
 	if let Some(info) = get_account_info(account) {
 		Some(info.data)
 	} else {
+		info!(
+			"Attempted to get account data of non-existent account: {}",
+			account_id_to_string(account)
+		);
 		None
 	}
 }
