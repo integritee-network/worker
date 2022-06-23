@@ -39,7 +39,7 @@ sp-core = { default-features = false, features = ["full_crypto"], git = "https:/
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 
 [dev-dependencies]
-futures = { version = "0.3.8" }
+futures = { version = "0.3" }
 itp-sgx-crypto = { path = "../sgx/crypto", features = ["mocks"] }
 itp-test = { path = "../test" }
 itp-top-pool = { path = "../top-pool", features = ["mocks"] }
