@@ -90,16 +90,16 @@ pub fn get_account_info(who: &AccountId) -> Option<AccountInfo> {
 
 pub fn validate_nonce(who: &AccountId, nonce: Index) -> StfResult<()> {
 	// validate
-	let expected_nonce = get_account_info(who).map_or_else(
-		|| {
+	let expected_nonce = match get_account_info(who) {
+		None => {
 			info!(
 				"Attempted to validate account nonce of non-existent account: {}",
 				account_id_to_string(who)
 			);
 			0
 		},
-		|acc| acc.nonce,
-	);
+		Some(account_info) => account_info.nonce,
+	};
 	if expected_nonce == nonce {
 		return Ok(())
 	}
