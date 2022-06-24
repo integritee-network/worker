@@ -83,6 +83,18 @@ where
 			})
 	}
 
+	fn get_dcap_quote(&self, report: sgx_report_t) -> OCallBridgeResult<Vec<u8>> {
+		let real_quote_len = self.enclave_api.get_dcap_quote_size().map_err(|e| match e {
+			itp_enclave_api::error::Error::Sgx(s) => OCallBridgeError::GetQuote(s),
+			_ => OCallBridgeError::GetQuote(sgx_status_t::SGX_ERROR_UNEXPECTED),
+		})?;
+
+		self.enclave_api.get_dcap_quote(report, real_quote_len).map_err(|e| match e {
+			itp_enclave_api::error::Error::Sgx(s) => OCallBridgeError::GetQuote(s),
+			_ => OCallBridgeError::GetQuote(sgx_status_t::SGX_ERROR_UNEXPECTED),
+		})
+	}
+
 	fn get_update_info(
 		&self,
 		platform_blob: sgx_platform_info_t,

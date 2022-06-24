@@ -175,6 +175,9 @@ pub trait RemoteAttestationBridge {
 		quote_nonce: sgx_quote_nonce_t,
 	) -> OCallBridgeResult<(sgx_report_t, Vec<u8>)>;
 
+	/// retrieve the quote from dcap server
+	fn get_dcap_quote(&self, report: sgx_report_t) -> OCallBridgeResult<Vec<u8>>;
+
 	/// --
 	fn get_update_info(
 		&self,

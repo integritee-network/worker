@@ -97,3 +97,51 @@ fn get_quote(
 
 	sgx_status_t::SGX_SUCCESS
 }
+
+#[no_mangle]
+pub extern "C" fn ocall_get_dcap_quote(
+	p_report: *const sgx_report_t,
+	p_quote: *mut u8,
+	maxlen: u32,
+	p_quote_len: *mut u32,
+) -> sgx_status_t {
+	get_dcap_quote(
+		p_report,
+		p_quote,
+		maxlen,
+		p_quote_len,
+		Bridge::get_ra_api(), // inject the RA API (global state)
+	)
+}
+
+fn get_dcap_quote(
+	p_report: *const sgx_report_t,
+	p_quote: *mut u8,
+	maxlen: u32,
+	p_quote_len: *mut u32,
+	ra_api: Arc<dyn RemoteAttestationBridge>,
+) -> sgx_status_t {
+	debug!("    Entering ocall_get_dcap_quote");
+	let report = unsafe { *p_report };
+
+	let quote = match ra_api.get_dcap_quote(report) {
+		Ok(r) => r,
+		Err(e) => {
+			error!("[-]  Failed to get dcap quote: {:?}", e);
+			return e.into()
+		},
+	};
+
+	if quote.len() as u32 > maxlen {
+		return sgx_status_t::SGX_ERROR_FAAS_BUFFER_TOO_SHORT
+	}
+
+	let quote_slice = unsafe { slice::from_raw_parts_mut(p_quote, quote.len()) };
+	quote_slice.clone_from_slice(quote.as_slice());
+
+	unsafe {
+		*p_quote_len = quote.len() as u32;
+	};
+
+	sgx_status_t::SGX_SUCCESS
+}

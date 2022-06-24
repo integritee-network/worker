@@ -58,6 +58,10 @@ impl EnclaveAttestationOCallApi for AttestationOCallMock {
 		unreachable!()
 	}
 
+	fn get_dcap_quote(&self, _report: sgx_report_t) -> SgxResult<Vec<u8>> {
+		unreachable!()
+	}
+
 	fn get_update_info(
 		&self,
 		_platform_info: sgx_platform_info_t,

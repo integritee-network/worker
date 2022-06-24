@@ -115,6 +115,35 @@ impl EnclaveAttestationOCallApi for OcallApi {
 		Ok((qe_report, quote_vec))
 	}
 
+	fn get_dcap_quote(&self, report: sgx_report_t) -> SgxResult<Vec<u8>> {
+		let mut qe_report = sgx_report_t::default();
+		let mut return_quote_buf = [0u8; RET_QUOTE_BUF_LEN];
+		let mut quote_len: u32 = 0;
+		let p_report = &report as *const sgx_report_t;
+
+		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+		let p_quote = return_quote_buf.as_mut_ptr();
+		let maxlen = RET_QUOTE_BUF_LEN as u32;
+		let p_quote_len = &mut quote_len as *mut u32;
+
+		let result = unsafe {
+			ffi::ocall_get_dcap_quote(
+				&mut rt as *mut sgx_status_t,
+				p_report,
+				p_quote,
+				maxlen,
+				p_quote_len,
+			)
+		};
+
+		ensure!(result == sgx_status_t::SGX_SUCCESS, result);
+		ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
+
+		let quote_vec: Vec<u8> = Vec::from(&return_quote_buf[..quote_len as usize]);
+
+		Ok(quote_vec)
+	}
+
 	fn get_update_info(
 		&self,
 		platform_info: sgx_platform_info_t,

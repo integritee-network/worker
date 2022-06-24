@@ -33,6 +33,14 @@ pub trait RemoteAttestation {
 		w_url: Vec<u8>,
 	) -> EnclaveResult<Vec<u8>>;
 
+	fn perform_dcap_ra(
+		&self,
+		genesis_hash: Vec<u8>,
+		nonce: u32,
+		w_url: Vec<u8>,
+		quoting_enclave_target_info: &sgx_target_info_t,
+	) -> EnclaveResult<Vec<u8>>;
+
 	fn dump_ra_to_disk(&self) -> EnclaveResult<()>;
 }
 
@@ -41,6 +49,8 @@ pub trait RemoteAttestationCallBacks {
 	fn init_quote(&self) -> EnclaveResult<(sgx_target_info_t, sgx_epid_group_id_t)>;
 
 	fn calc_quote_size(&self, revocation_list: Vec<u8>) -> EnclaveResult<u32>;
+
+	fn get_dcap_quote_size(&self) -> EnclaveResult<u32>;
 
 	fn get_quote(
 		&self,
@@ -51,6 +61,8 @@ pub trait RemoteAttestationCallBacks {
 		quote_nonce: sgx_quote_nonce_t,
 		quote_length: u32,
 	) -> EnclaveResult<(sgx_report_t, Vec<u8>)>;
+
+	fn get_dcap_quote(&self, report: sgx_report_t, quote_length: u32) -> EnclaveResult<Vec<u8>>;
 
 	fn get_update_info(
 		&self,
@@ -109,6 +121,39 @@ impl RemoteAttestation for Enclave {
 		Ok(unchecked_extrinsic)
 	}
 
+	fn perform_dcap_ra(
+		&self,
+		genesis_hash: Vec<u8>,
+		nonce: u32,
+		w_url: Vec<u8>,
+		quoting_enclave_target_info: &sgx_target_info_t,
+	) -> EnclaveResult<Vec<u8>> {
+		let mut retval = sgx_status_t::SGX_SUCCESS;
+
+		let unchecked_extrinsic_size = EXTRINSIC_MAX_SIZE;
+		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
+
+		let result = unsafe {
+			ffi::perform_dcap_ra(
+				self.eid,
+				&mut retval,
+				genesis_hash.as_ptr(),
+				genesis_hash.len() as u32,
+				&nonce,
+				w_url.as_ptr(),
+				w_url.len() as u32,
+				unchecked_extrinsic.as_mut_ptr(),
+				unchecked_extrinsic.len() as u32,
+				quoting_enclave_target_info,
+			)
+		};
+
+		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+
+		Ok(unchecked_extrinsic)
+	}
+
 	fn dump_ra_to_disk(&self) -> EnclaveResult<()> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
@@ -148,6 +193,15 @@ impl RemoteAttestationCallBacks for Enclave {
 		Ok(real_quote_len)
 	}
 
+	fn get_dcap_quote_size(&self) -> EnclaveResult<u32> {
+		let mut quote_size: u32 = 0;
+		let qe3_ret = unsafe { sgx_qe_get_quote_size(&mut quote_size as _) };
+
+		ensure!(qe3_ret == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(qe3_ret));
+
+		Ok(quote_size)
+	}
+
 	fn get_quote(
 		&self,
 		revocation_list: Vec<u8>,
@@ -185,6 +239,17 @@ impl RemoteAttestationCallBacks for Enclave {
 		ensure!(ret == sgx_status_t::SGX_SUCCESS, Error::Sgx(ret));
 
 		Ok((qe_report, return_quote_buf))
+	}
+
+	fn get_dcap_quote(&self, report: sgx_report_t, quote_length: u32) -> EnclaveResult<Vec<u8>> {
+		let mut quote_vec: Vec<u8> = vec![0; quote_length as usize];
+
+		let qe3_ret =
+			unsafe { sgx_qe_get_quote(&report, quote_length, quote_vec.as_mut_ptr() as _) };
+
+		ensure!(qe3_ret == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(qe3_ret));
+
+		Ok(quote_vec)
 	}
 
 	fn get_update_info(

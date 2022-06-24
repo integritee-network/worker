@@ -111,6 +111,10 @@ impl EnclaveAttestationOCallApi for OnchainMock {
 		todo!()
 	}
 
+	fn get_dcap_quote(&self, _report: sgx_report_t) -> SgxResult<Vec<u8>> {
+		todo!()
+	}
+
 	fn get_update_info(
 		&self,
 		_platform_info: sgx_platform_info_t,

@@ -27,11 +27,14 @@ enclave {
 	from "sgx_env.edl" import *;
 	from "sgx_thread.edl" import *;
 	from "sgx_pipe.edl" import *;
+	from "sgx_file.edl" import *;
 
 	include "sgx_quote.h"
+	include "sgx_report.h"
 
 	trusted {
 		/* define ECALLs here. */
+
 		public sgx_status_t init(
 			[in, size=mu_ra_addr_size] uint8_t* mu_ra_addr, uint32_t mu_ra_addr_size,
 			[in, size=untrusted_worker_addr_size] uint8_t* untrusted_worker_addr, uint32_t untrusted_worker_addr_size
@@ -93,6 +96,15 @@ enclave {
 			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
 		);
 
+		public sgx_status_t perform_dcap_ra(
+			[in, size=genesis_hash_size] uint8_t* genesis_hash, uint32_t genesis_hash_size,
+			[in] uint32_t* nonce,
+			[in, size=w_url_size] uint8_t* w_url, uint32_t w_url_size,
+			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size,
+			[in] const sgx_target_info_t* quoting_enclave_target_info
+		);
+
+
 		public sgx_status_t mock_register_enclave_xt(
             [in, size=genesis_hash_size] uint8_t* genesis_hash, uint32_t genesis_hash_size,
             [in] uint32_t* nonce,
@@ -130,6 +142,13 @@ enclave {
 			[in, size = sigrl_len] uint8_t * p_sigrl, uint32_t sigrl_len,
 			[in] sgx_report_t *report, sgx_quote_sign_type_t quote_type,
 			[in] sgx_spid_t *p_spid, [in] sgx_quote_nonce_t *p_nonce,
+			[out] sgx_report_t *p_qe_report,
+			[out, size = maxlen] sgx_quote_t *p_quote, uint32_t maxlen,
+			[out] uint32_t* p_quote_len
+		);
+
+		sgx_status_t ocall_get_dcap_quote(
+			[in] sgx_report_t *report,
 			[out] sgx_report_t *p_qe_report,
 			[out, size = maxlen] sgx_quote_t *p_quote, uint32_t maxlen,
 			[out] uint32_t* p_quote_len

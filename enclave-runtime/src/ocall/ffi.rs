@@ -43,6 +43,14 @@ extern "C" {
 		p_quote_len: *mut u32,
 	) -> sgx_status_t;
 
+	pub fn ocall_get_dcap_quote(
+		ret_val: *mut sgx_status_t,
+		p_report: *const sgx_report_t,
+		p_quote: *mut u8,
+		maxlen: u32,
+		p_quote_len: *mut u32,
+	) -> sgx_status_t;
+
 	pub fn ocall_get_update_info(
 		ret_val: *mut sgx_status_t,
 		platform_blob: *const sgx_platform_info_t,

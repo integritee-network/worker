@@ -56,6 +56,8 @@ pub trait EnclaveAttestationOCallApi: Clone + Send + Sync {
 		quote_nonce: sgx_quote_nonce_t,
 	) -> SgxResult<(sgx_report_t, Vec<u8>)>;
 
+	fn get_dcap_quote(&self, report: sgx_report_t) -> SgxResult<Vec<u8>>;
+
 	fn get_update_info(
 		&self,
 		platform_info: sgx_platform_info_t,
