@@ -43,7 +43,7 @@ derive_more = { version = "0.99.5" }
 finality-grandpa = { version = "0.15.0", default-features = false, features = ["derive-codec"] }
 hash-db = { version = "0.15.2", default-features = false }
 lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
-log = { version = "0.4.14", default-features = false }
+log = { version = "0.4.17", default-features = false }
 num = { package = "num-traits", version = "0.2", default-features = false }
 thiserror = { version = "1.0.26", optional = true }
 
@@ -69,4 +69,3 @@ sp-trie = { default-features = false, git = "https://github.com/paritytech/subst
 
 [dev-dependencies]
 itp-test = { path = "../../../core-primitives/test" }
-
