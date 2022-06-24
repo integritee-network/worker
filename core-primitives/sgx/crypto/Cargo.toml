@@ -10,7 +10,7 @@ aes = { version = "0.6.0" }
 ofb = { version = "0.4.0" }
 codec  = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 derive_more = { version = "0.99.5" }
-log = { version = "0.4.14", default-features = false }
+log = { version = "0.4.17", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["alloc"], optional = true }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"], optional = true }
 

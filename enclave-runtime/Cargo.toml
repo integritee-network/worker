@@ -119,12 +119,10 @@ sp-version = { default-features = false, git = "https://github.com/paritytech/su
 sp-application-crypto = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 
 [patch.crates-io]
-log = { git = "https://github.com/mesalock-linux/log-sgx" }
 env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx" }
 getrandom = { git = "https://github.com/integritee-network/getrandom-sgx", branch = "update-v2.3"}
 
 [patch."https://github.com/paritytech/substrate"]
-log = { git = "https://github.com/mesalock-linux/log-sgx" }
 env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx" }
 sp-io = { git = "https://github.com/integritee-network/sgx-runtime", branch = "gk/subdate"}
 #sp-io = { path = "../../sgx-runtime/substrate-sgx/sp-io"}

@@ -5,7 +5,7 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 
 [dependencies]
-log = { version = "0.4.14", default-features = false }
+log = { version = "0.4.17", default-features = false }
 finality-grandpa = { version = "0.15.0", default-features = false, features = ["derive-codec"] }
 sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "gk/subdate", optional = true }
 sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
