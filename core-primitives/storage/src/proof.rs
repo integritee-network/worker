@@ -77,11 +77,12 @@ mod tests {
 
 	use sp_core::{Blake2Hasher, H256};
 	use sp_state_machine::{backend::Backend, new_in_mem, prove_read};
+	use sp_trie::HashKey;
 
 	#[test]
 	fn storage_proof_check() {
 		// construct storage proof
-		let mut backend = new_in_mem::<Blake2Hasher>();
+		let mut backend = new_in_mem::<Blake2Hasher, HashKey<Blake2Hasher>>();
 		backend.insert(
 			vec![
 				(None, vec![(b"key1".to_vec(), Some(b"value1".to_vec()))]),
