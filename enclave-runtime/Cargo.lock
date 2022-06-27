@@ -2282,7 +2282,7 @@ dependencies = [
 [[package]]
 name = "pallet-parentchain"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.24#3eaac0d149c5af2abecd90af3391b73d7e138447"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#9b8084d5b97194ee22f2cacd1c8cbaf310ab9253"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -2989,7 +2989,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.4.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=gk/subdate#7ab61f897d5d53de9ca7b3a28de6231891546566"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#fa5018bfea7b673f30ee8b871f1d18ebf850e99b"
 dependencies = [
  "derive_more",
  "environmental",
@@ -3004,7 +3004,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=gk/subdate#7ab61f897d5d53de9ca7b3a28de6231891546566"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#fa5018bfea7b673f30ee8b871f1d18ebf850e99b"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -3538,7 +3538,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "6.0.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=gk/subdate#7ab61f897d5d53de9ca7b3a28de6231891546566"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#fa5018bfea7b673f30ee8b871f1d18ebf850e99b"
 dependencies = [
  "environmental",
  "hash-db",
