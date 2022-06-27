@@ -148,7 +148,7 @@ where
 						shard_identifier,
 					)?;
 
-					self.importer.import_block(sidechain_block.clone(), &updated_parentchain_header)
+					self.importer.import_block(sidechain_block, &updated_parentchain_header)
 				},
 				Error::InvalidFirstBlock(block_number, _) => {
 					warn!("Got invalid first block error upon block import (expected first block, but got block with number {}). \
@@ -160,7 +160,7 @@ where
 						shard_identifier,
 					)?;
 
-					self.importer.import_block(sidechain_block.clone(), &updated_parentchain_header)
+					self.importer.import_block(sidechain_block, &updated_parentchain_header)
 				},
 				Error::BlockAlreadyImported(to_import_block_number, last_known_block_number) => {
 					warn!("Sidechain block from queue (number: {}) was already imported (current block number: {}). Block will be ignored.", 

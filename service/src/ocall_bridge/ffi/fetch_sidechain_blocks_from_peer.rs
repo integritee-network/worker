@@ -49,6 +49,7 @@ pub unsafe extern "C" fn ocall_fetch_sidechain_blocks_from_peer(
 	)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn fetch_sidechain_blocks_from_peer(
 	last_imported_block_hash_ptr: *const u8,
 	last_imported_block_hash_size: u32,
