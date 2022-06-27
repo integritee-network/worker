@@ -41,7 +41,8 @@ impl SidechainBridge for SidechainBridgeMock {
 
 	fn fetch_sidechain_blocks_from_peer(
 		&self,
-		_last_known_block_hash_encoded: Vec<u8>,
+		_last_imported_block_hash_encoded: Vec<u8>,
+		_maybe_until_block_hash_encoded: Vec<u8>,
 		_shard_identifier_encoded: Vec<u8>,
 	) -> OCallBridgeResult<Vec<u8>> {
 		Ok(self.peer_blocks_encoded.clone())

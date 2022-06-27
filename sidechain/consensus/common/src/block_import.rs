@@ -113,8 +113,9 @@ where
 		let shard = sidechain_block.header().shard_id();
 
 		debug!(
-			"Attempting to import sidechain block (number: {}, parentchain hash: {:?})",
+			"Attempting to import sidechain block (number: {}, hash: {:?}, parentchain hash: {:?})",
 			signed_sidechain_block.block().header().block_number(),
+			signed_sidechain_block.block().hash(),
 			signed_sidechain_block.block().block_data().layer_one_head()
 		);
 

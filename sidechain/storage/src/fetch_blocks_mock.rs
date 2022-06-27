@@ -41,4 +41,13 @@ impl FetchBlocks<SignedBlock> for FetchBlocksMock {
 	) -> Result<Vec<SignedBlock>> {
 		Ok(self.blocks_to_be_fetched.clone())
 	}
+
+	fn fetch_blocks_in_range(
+		&self,
+		_block_hash_from: &BlockHash,
+		_block_hash_until: &BlockHash,
+		_shard_identifier: &ShardIdentifierFor<SignedBlock>,
+	) -> Result<Vec<SignedBlock>> {
+		Ok(self.blocks_to_be_fetched.clone())
+	}
 }

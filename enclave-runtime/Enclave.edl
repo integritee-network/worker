@@ -163,7 +163,8 @@ enclave {
 	    );
 
 	    sgx_status_t ocall_fetch_sidechain_blocks_from_peer(
-	        [in, size = last_known_block_hash_size] uint8_t * last_known_block_hash, uint32_t last_known_block_hash_size,
+	        [in, size = last_imported_block_hash_size] uint8_t * last_imported_block_hash, uint32_t last_imported_block_hash_size,
+	        [in, size = maybe_until_block_hash_size] uint8_t * maybe_until_block_hash, uint32_t maybe_until_block_hash_size,
 	        [in, size = shard_identifier_size] uint8_t * shard_identifier, uint32_t shard_identifier_size,
 	        [out, size = sidechain_blocks_size] uint8_t * sidechain_blocks, uint32_t sidechain_blocks_size
 	    );

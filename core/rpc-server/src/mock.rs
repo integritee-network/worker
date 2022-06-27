@@ -43,4 +43,13 @@ impl FetchBlocks<SignedSidechainBlock> for MockSidechainBlockFetcher {
 	) -> its_storage::Result<Vec<SignedBlock>> {
 		Ok(Vec::new())
 	}
+
+	fn fetch_blocks_in_range(
+		&self,
+		_block_hash_from: &BlockHash,
+		_block_hash_until: &BlockHash,
+		_shard_identifier: &ShardIdentifierFor<SignedBlock>,
+	) -> its_storage::Result<Vec<SignedBlock>> {
+		Ok(Vec::new())
+	}
 }
