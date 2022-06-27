@@ -9,7 +9,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe438c63458706e03479442743baae6c88256498e6431708f6dfc520a26515d3"
 dependencies = [
  "lazy_static",
- "regex",
+ "regex 1.5.5",
 ]
 
 [[package]]
@@ -1231,15 +1231,22 @@ dependencies = [
 name = "itc-tls-websocket-server"
 version = "0.8.0"
 dependencies = [
+ "bit-vec",
+ "chrono 0.4.19",
+ "itp-sgx-crypto",
+ "itp-sgx-io",
  "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "mio",
  "mio-extras",
+ "rcgen",
  "rustls 0.19.0 (git+https://github.com/mesalock-linux/rustls?branch=mesalock_sgx)",
  "sgx_tstd",
  "sgx_types",
+ "sp-core",
  "thiserror 1.0.9",
  "tungstenite",
  "webpki",
+ "yasna",
 ]
 
 [[package]]
@@ -2318,6 +2325,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c520e05135d6e763148b6426a837e239041653ba7becd2e538c076c738025fc"
 
 [[package]]
+name = "pem"
+version = "0.8.2"
+source = "git+https://github.com/mesalock-linux/pem-rs-sgx#fdfef4f24a9fb3fa72e8a71bb28bd8ff15feff2f"
+dependencies = [
+ "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx)",
+ "once_cell 1.4.0",
+ "regex 1.3.1",
+ "sgx_tstd",
+]
+
+[[package]]
+name = "pem"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9a3b09a20e374558580a4914d3b7d89bd61b954a5a5e1dcbea98753addb1947"
+dependencies = [
+ "base64 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "percent-encoding"
 version = "2.1.0"
 source = "git+https://github.com/mesalock-linux/rust-url-sgx?tag=sgx_1.1.3#23832f3191456c2d4a0faab10952e1747be58ca8"
@@ -2517,6 +2544,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "rcgen"
+version = "0.9.2"
+source = "git+https://github.com/integritee-network/rcgen#deb300ea990abce3d105443ef85e4da8a5943c32"
+dependencies = [
+ "chrono 0.4.11",
+ "pem 0.8.2",
+ "pem 1.0.2",
+ "ring",
+ "sgx_tstd",
+ "yasna",
+]
+
+[[package]]
 name = "ref-cast"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2538,13 +2578,30 @@ dependencies = [
 
 [[package]]
 name = "regex"
+version = "1.3.1"
+source = "git+https://github.com/mesalock-linux/regex-sgx#76aef86f9836532d17764523d0fa23bb7d2e31cf"
+dependencies = [
+ "regex-syntax 0.6.12",
+ "sgx_tstd",
+]
+
+[[package]]
+name = "regex"
 version = "1.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1a11647b6b25ff05a515cb92c365cec08801e83423a235b51e231e1808747286"
 dependencies = [
  "aho-corasick",
  "memchr 2.5.0",
- "regex-syntax",
+ "regex-syntax 0.6.25",
+]
+
+[[package]]
+name = "regex-syntax"
+version = "0.6.12"
+source = "git+https://github.com/mesalock-linux/regex-sgx#76aef86f9836532d17764523d0fa23bb7d2e31cf"
+dependencies = [
+ "sgx_tstd",
 ]
 
 [[package]]
