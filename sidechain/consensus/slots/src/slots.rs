@@ -201,6 +201,7 @@ mod tests {
 	use super::*;
 	use core::assert_matches::assert_matches;
 	use itp_sgx_io::StaticSealedIO;
+	use itp_test::builders::parentchain_header_builder::ParentchainHeaderBuilder;
 	use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader};
 	use its_test::{
 		sidechain_block_data_builder::SidechainBlockDataBuilder,
@@ -211,11 +212,10 @@ mod tests {
 		types::block::{Block, SignedBlock},
 	};
 	use sp_keyring::ed25519::Keyring;
-	use sp_runtime::traits::Header as HeaderT;
 	use std::{fmt::Debug, thread, time::SystemTime};
 
 	const SLOT_DURATION: Duration = Duration::from_millis(1000);
-	const ALLOWED_THRESHOLD: Duration = Duration::from_millis(2);
+	const ALLOWED_THRESHOLD: Duration = Duration::from_millis(1);
 
 	struct LastSlotSealMock;
 
@@ -257,16 +257,6 @@ mod tests {
 		}
 	}
 
-	pub fn default_header() -> ParentchainHeader {
-		ParentchainHeader::new(
-			Default::default(),
-			Default::default(),
-			Default::default(),
-			Default::default(),
-			Default::default(),
-		)
-	}
-
 	fn timestamp_in_the_future(later: Duration) -> u64 {
 		let moment = SystemTime::now() + later;
 		let dur = moment.duration_since(SystemTime::UNIX_EPOCH).unwrap_or_else(|e| {
@@ -298,7 +288,7 @@ mod tests {
 	#[test]
 	fn slot_info_ends_at_does_not_change_after_second_calculation() {
 		let timestamp = duration_now();
-		let pc_header = default_header();
+		let pc_header = ParentchainHeaderBuilder::default().build();
 		let slot: Slot = 1000.into();
 
 		let slot_end_time = slot_ends_at(slot, SLOT_DURATION);
@@ -322,7 +312,7 @@ mod tests {
 	#[test]
 	fn slot_info_ends_at_does_is_correct_even_if_delay_is_more_than_slot_duration() {
 		let timestamp = duration_now();
-		let pc_header = default_header();
+		let pc_header = ParentchainHeaderBuilder::default().build();
 		let slot: Slot = 1000.into();
 		let slot_end_time = slot_ends_at(slot, SLOT_DURATION);
 
@@ -369,7 +359,7 @@ mod tests {
 		assert!(yield_next_slot::<_, ParentchainBlock>(
 			duration_now(),
 			SLOT_DURATION,
-			default_header(),
+			ParentchainHeaderBuilder::default().build(),
 			&mut LastSlotSealMock,
 		)
 		.unwrap()
@@ -381,7 +371,7 @@ mod tests {
 		assert!(yield_next_slot::<_, ParentchainBlock>(
 			duration_now() + SLOT_DURATION,
 			SLOT_DURATION,
-			default_header(),
+			ParentchainHeaderBuilder::default().build(),
 			&mut LastSlotSealMock
 		)
 		.unwrap()
@@ -394,7 +384,7 @@ mod tests {
 			yield_next_slot::<_, ParentchainBlock>(
 				duration_now(),
 				Default::default(),
-				default_header(),
+				ParentchainHeaderBuilder::default().build(),
 				&mut LastSlotSealMock,
 			),
 			"Tried to yield next slot with 0 duration",

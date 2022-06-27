@@ -74,8 +74,9 @@ pub fn produce_sidechain_block_and_import_it() {
 	let state_key = TestStateKey::new([3u8; 16], [1u8; 16]);
 	let shielding_key_repo = Arc::new(TestShieldingKeyRepo::new(shielding_key));
 	let state_key_repo = Arc::new(TestStateKeyRepo::new(state_key));
+	let parentchain_header = ParentchainHeaderBuilder::default().build();
 
-	let ocall_api = create_ocall_api(&signer);
+	let ocall_api = create_ocall_api(&parentchain_header, &signer);
 
 	info!("Initializing state and shard..");
 	let state_handler = Arc::new(TestStateHandler::default());
@@ -139,7 +140,6 @@ pub fn produce_sidechain_block_and_import_it() {
 	assert!(top_pool_author.get_pending_tops_separated(shard_id).unwrap().1.is_empty());
 
 	info!("Setup AURA SlotInfo");
-	let parentchain_header = ParentchainHeaderBuilder::default().build();
 	let timestamp = duration_now();
 	let slot = slot_from_timestamp_and_duration(duration_now(), SLOT_DURATION);
 	let ends_at = timestamp + SLOT_DURATION;

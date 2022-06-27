@@ -24,7 +24,8 @@ use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_top_pool::pool::Options as PoolOptions;
 use itp_top_pool_author::api::SidechainApi;
 use itp_types::{Block as ParentchainBlock, Enclave, ShardIdentifier};
-use sp_core::{ed25519, Pair};
+use sp_core::{ed25519, Pair, H256};
+use sp_runtime::traits::Header as HeaderTrait;
 use std::{sync::Arc, vec::Vec};
 
 pub(crate) fn create_top_pool() -> Arc<TestTopPool> {
@@ -33,14 +34,17 @@ pub(crate) fn create_top_pool() -> Arc<TestTopPool> {
 	Arc::new(TestTopPool::create(PoolOptions::default(), sidechain_api, rpc_responder))
 }
 
-pub(crate) fn create_ocall_api(signer: &TestSigner) -> Arc<TestOCallApi> {
+pub(crate) fn create_ocall_api<Header: HeaderTrait<Hash = H256>>(
+	header: &Header,
+	signer: &TestSigner,
+) -> Arc<TestOCallApi> {
 	let enclave_validateer = Enclave::new(
 		signer.public().into(),
 		Default::default(),
 		Default::default(),
 		Default::default(),
 	);
-	Arc::new(TestOCallApi::default().with_validateer_set(Some(vec![enclave_validateer])))
+	Arc::new(TestOCallApi::default().add_validateer_set(header, Some(vec![enclave_validateer])))
 }
 
 pub(crate) fn encrypt_trusted_operation<ShieldingKey: ShieldingCryptoEncrypt>(

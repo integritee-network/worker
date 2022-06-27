@@ -218,34 +218,6 @@ mod test {
 	}
 
 	#[test]
-	#[ignore = "Cannot run until we know how substrate packs multiple extrinsics into an opaque extrinsic"]
-	fn multiple_calls_in_extrinsic_are_picked_up() {
-		let _ = env_logger::builder().is_test(true).try_init();
-
-		let (indirect_calls_executor, top_pool_author, shielding_key_repo) =
-			test_fixtures([0u8; 32]);
-		let shielding_key = shielding_key_repo.retrieve_key().unwrap();
-
-		// TODO: it is unclear how substrate constructs an opaque extrinsic that contains multiple extrinsics
-		// (the case we want to test here, because that has caused failures in the past).
-		let mut unchecked_extrinsics = call_worker_unchecked_extrinsic().encode();
-		unchecked_extrinsics.extend(shield_funds_unchecked_extrinsic(&shielding_key).encode());
-
-		let opaque_extrinsic =
-			OpaqueExtrinsic::from_bytes(unchecked_extrinsics.as_slice()).unwrap();
-
-		let parentchain_block = ParentchainBlockBuilder::default()
-			.with_extrinsics(vec![opaque_extrinsic])
-			.build();
-
-		indirect_calls_executor
-			.execute_indirect_calls_in_extrinsics(&parentchain_block)
-			.unwrap();
-
-		assert_eq!(2, top_pool_author.pending_tops(shard_id()).unwrap().len());
-	}
-
-	#[test]
 	fn shielding_call_can_be_added_to_pool_successfully() {
 		let _ = env_logger::builder().is_test(true).try_init();
 
