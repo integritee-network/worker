@@ -2546,7 +2546,7 @@ dependencies = [
 [[package]]
 name = "rcgen"
 version = "0.9.2"
-source = "git+https://github.com/integritee-network/rcgen#a8bc54a1f668ad5216193ca17d2ec2a8ba86a590"
+source = "git+https://github.com/integritee-network/rcgen#deb300ea990abce3d105443ef85e4da8a5943c32"
 dependencies = [
  "chrono 0.4.11",
  "pem 0.8.2",
