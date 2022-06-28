@@ -177,6 +177,12 @@ impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi>
 			.get_mut(&relay_id)
 			.ok_or(Error::NoSuchRelayExists)?;
 		relay.verify_tx_inclusion.push(extrinsic);
+
+		debug!(
+			"{} extrinsics in cache, waiting for inclusion verification",
+			relay.verify_tx_inclusion.len()
+		);
+
 		Ok(())
 	}
 }
@@ -258,6 +264,10 @@ where
 		if !rm.is_empty() {
 			info!("Verified inclusion proof of {} extrinsics.", rm.len());
 		}
+		debug!(
+			"{} extrinsics remaining in cache, waiting for inclusion verification",
+			relay.verify_tx_inclusion.len()
+		);
 
 		Ok(())
 	}
