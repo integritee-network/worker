@@ -27,7 +27,6 @@ use core::iter::Iterator;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_storage::{Error as StorageError, StorageProof, StorageProofChecker};
 use log::*;
-use sp_finality_grandpa::SetId;
 use sp_runtime::{
 	generic::SignedBlock,
 	traits::{Block as ParentchainBlockTrait, Hash as HashTrait, Header as HeaderTrait},
@@ -119,6 +118,67 @@ impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi>
 
 		Err(Error::InvalidAncestryProof)
 	}
+
+	fn submit_finalized_headers(
+		&mut self,
+		relay_id: RelayId,
+		header: Block::Header,
+		ancestry_proof: Vec<Block::Header>,
+		justifications: Option<Justifications>,
+	) -> Result<(), Error> {
+		let relay = self
+			.light_validation_state
+			.tracked_relays
+			.get_mut(&relay_id)
+			.ok_or(Error::NoSuchRelayExists)?;
+
+		let validator_set = relay.current_validator_set.clone();
+		let validator_set_id = relay.current_validator_set_id;
+
+		// Check that the new header is a descendant of the old header
+		let last_header = &relay.last_finalized_block_header;
+		Self::verify_ancestry(ancestry_proof, last_header.hash(), &header)?;
+
+		if let Err(e) = self.finality.validate(
+			header.clone(),
+			&validator_set,
+			validator_set_id,
+			justifications,
+			relay,
+		) {
+			match e {
+				Error::NoJustificationFound => return Ok(()),
+				_ => return Err(e),
+			}
+		}
+
+		// A valid grandpa proof proves finalization of all previous unjustified blocks
+		relay.header_hashes.append(&mut relay.unjustified_headers);
+		relay.header_hashes.push(header.hash());
+
+		relay.set_last_finalized_block_header(header);
+
+		if validator_set_id > relay.current_validator_set_id {
+			relay.current_validator_set = validator_set;
+			relay.current_validator_set_id = validator_set_id;
+		}
+
+		Ok(())
+	}
+
+	fn submit_xt_to_be_included(
+		&mut self,
+		relay_id: RelayId,
+		extrinsic: OpaqueExtrinsic,
+	) -> Result<(), Error> {
+		let relay = self
+			.light_validation_state
+			.tracked_relays
+			.get_mut(&relay_id)
+			.ok_or(Error::NoSuchRelayExists)?;
+		relay.verify_tx_inclusion.push(extrinsic);
+		Ok(())
+	}
 }
 
 impl<Block, OCallApi> Validator<Block> for LightValidation<Block, OCallApi>
@@ -147,52 +207,6 @@ where
 		self.initialize_relay(block_header, validator_set)
 	}
 
-	fn submit_finalized_headers(
-		&mut self,
-		relay_id: RelayId,
-		header: Block::Header,
-		ancestry_proof: Vec<Block::Header>,
-		validator_set: AuthorityList,
-		validator_set_id: SetId,
-		justifications: Option<Justifications>,
-	) -> Result<(), Error> {
-		let mut relay = self
-			.light_validation_state
-			.tracked_relays
-			.get_mut(&relay_id)
-			.ok_or(Error::NoSuchRelayExists)?;
-
-		// Check that the new header is a descendant of the old header
-		let last_header = &relay.last_finalized_block_header;
-		Self::verify_ancestry(ancestry_proof, last_header.hash(), &header)?;
-
-		if let Err(e) = self.finality.validate(
-			header.clone(),
-			&validator_set,
-			validator_set_id,
-			justifications,
-			relay,
-		) {
-			match e {
-				Error::NoJustificationFound => return Ok(()),
-				_ => return Err(e),
-			}
-		}
-
-		// a valid grandpa proof proofs finalization of all previous unjustified blocks
-		relay.header_hashes.append(&mut relay.unjustified_headers);
-		relay.header_hashes.push(header.hash());
-
-		relay.set_last_finalized_block_header(header);
-
-		if validator_set_id > relay.current_validator_set_id {
-			relay.current_validator_set = validator_set;
-			relay.current_validator_set_id = validator_set_id;
-		}
-
-		Ok(())
-	}
-
 	fn submit_block(
 		&mut self,
 		relay_id: RelayId,
@@ -212,30 +226,7 @@ where
 		}
 		let ancestry_proof = vec![];
 
-		let validator_set = relay.current_validator_set.clone();
-		let validator_set_id = relay.current_validator_set_id;
-		self.submit_finalized_headers(
-			relay_id,
-			header.clone(),
-			ancestry_proof,
-			validator_set,
-			validator_set_id,
-			justifications,
-		)
-	}
-
-	fn submit_xt_to_be_included(
-		&mut self,
-		relay_id: RelayId,
-		extrinsic: OpaqueExtrinsic,
-	) -> Result<(), Error> {
-		let relay = self
-			.light_validation_state
-			.tracked_relays
-			.get_mut(&relay_id)
-			.ok_or(Error::NoSuchRelayExists)?;
-		relay.verify_tx_inclusion.push(extrinsic);
-		Ok(())
+		self.submit_finalized_headers(relay_id, header.clone(), ancestry_proof, justifications)
 	}
 
 	fn check_xt_inclusion(&mut self, relay_id: RelayId, block: &Block) -> Result<(), Error> {
@@ -303,7 +294,7 @@ where
 	Block: ParentchainBlockTrait,
 	OCallApi: EnclaveOnChainOCallApi,
 {
-	fn num_xt_to_be_included(&mut self, relay_id: RelayId) -> Result<usize, Error> {
+	fn num_xt_to_be_included(&self, relay_id: RelayId) -> Result<usize, Error> {
 		let relay = self
 			.light_validation_state
 			.tracked_relays
