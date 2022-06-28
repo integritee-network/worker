@@ -53,12 +53,12 @@ its-rpc-handler = { path = "../sidechain/rpc-handler" }
 its-storage = { path = "../sidechain/storage" }
 
 # scs / integritee
-substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.24" }
-my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node", branch = "gk/types_and_utils" }
-teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
-sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 itp-utils = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
+my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node", branch = "gk/types_and_utils" }
+sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
+substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.24" }
+teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 
 # Substrate dependencies
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }

@@ -11,8 +11,10 @@ log = "0.4"
 parking_lot = "0.12.1"
 rocksdb = "0.17.0"
 thiserror = "1.0"
-sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
+
+# integritee
 itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
+sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 
 # Substrate dependencies
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }

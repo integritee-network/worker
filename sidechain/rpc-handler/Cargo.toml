@@ -27,9 +27,9 @@ log = { version = "0.4", default-features = false }
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 
 # scs / integritee
-sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 itp-utils = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 
 [features]
 default = ["std"]

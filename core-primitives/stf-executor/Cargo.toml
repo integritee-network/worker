@@ -12,8 +12,8 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_crypto_helper", default-features = false, optional = true }
 
 # integritee dependencies
-sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "gk/types_and_utils", optional = true }
 itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
+sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "gk/types_and_utils", optional = true }
 
 # local dependencies
 ita-stf = { path = "../../app-libs/stf", default-features = false }

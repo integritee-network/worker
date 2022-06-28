@@ -24,12 +24,12 @@ codec = { version = "3.0.0", package = "parity-scale-codec", features = ["derive
 sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # scs / integritee
-substrate-api-client = { features = ["ws-client"], git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.24" }
-substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.24" }
-my-node-runtime = { git = "https://github.com/integritee-network/integritee-node", branch = "gk/types_and_utils", package = "integritee-node-runtime" }
-teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 itp-utils = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
+my-node-runtime = { git = "https://github.com/integritee-network/integritee-node", branch = "gk/types_and_utils", package = "integritee-node-runtime" }
+substrate-api-client = { features = ["ws-client"], git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.24" }
+substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.24" }
+teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 
 # substrate dependencies
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }

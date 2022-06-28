@@ -27,9 +27,9 @@ pub use error::Error;
 pub use frame_metadata::v14::StorageHasher;
 pub use keys::*;
 pub use proof::*;
-pub use storage_entry::*;
+pub use verify_storage_proof::*;
 
 pub mod error;
 pub mod keys;
 pub mod proof;
-pub mod storage_entry;
+pub mod verify_storage_proof;

@@ -5,12 +5,12 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 
 [dependencies]
-log = { version = "0.4.17", default-features = false }
 finality-grandpa = { version = "0.15.0", default-features = false, features = ["derive-codec"] }
-sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "gk/types_and_utils", optional = true }
-sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 itp-utils = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
+log = { version = "0.4.17", default-features = false }
+sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "gk/types_and_utils", optional = true }
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 
 # sgx deps
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
