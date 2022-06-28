@@ -258,7 +258,7 @@ mod tests {
 
 		peer_syncer.sync_block(signed_sidechain_block, &parentchain_header).unwrap();
 
-		assert_eq!(3, block_importer_mock.get_imported_blocks().len());
+		assert_eq!(4, block_importer_mock.get_imported_blocks().len());
 		assert_eq!(1, sidechain_ocall_api.number_of_fetch_calls());
 	}
 }
