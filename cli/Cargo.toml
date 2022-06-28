@@ -10,33 +10,33 @@ env_logger = "0.9"
 hex = "0.4.2"
 json = "0.12.0"
 substrate-bip39 = "0.4.2"
-tiny-bip39 = "0.6.2"
+tiny-bip39 = "1.0"
 serde_json = "1.0"
 clap = { version = "3.1.6", features = ["derive"]}
 primitive-types = { version = "0.11.1", features = ["codec"] }
-base58 			        = "0.1"
+base58 			        = "0.2"
 chrono = "*"
 blake2-rfc      = { version = "0.2.18" }
-geojson = "0.17"
+geojson = "0.23"
 ws = { version = "0.9.1", features = ["ssl"] }
 serde = { version = "1.0", features = ["derive"] }
 codec = { version = "3.0.0", package = "parity-scale-codec", features = ["derive"] }
 sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # scs / integritee
-substrate-api-client = { features = ["ws-client"], git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.20-asset" }
-substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.20-asset" }
+substrate-api-client = { features = ["ws-client"], git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.24" }
+substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.24" }
 my-node-runtime = { git = "https://github.com/integritee-network/integritee-node", branch = "master", package = "integritee-node-runtime" }
 teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # substrate dependencies
-sp-runtime = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
-sc-keystore = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
-pallet-balances = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
-frame-system = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
-sp-keyring = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
-sp-application-crypto = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
-sp-core = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+sc-keystore = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+sp-application-crypto = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 
 # local dependencies
 itp-node-api-extensions = { path = "../core-primitives/node-api-extensions" }

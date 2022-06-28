@@ -69,7 +69,7 @@ itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", default-features =
 itp-sgx-io = { path = "../../core-primitives/sgx/io", default-features = false }
 
 # Substrate dependencies
-sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20", features = ["full_crypto"] }
+sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24", features = ["full_crypto"] }
 
 # no-std compatible libraries
 log = { version = "0.4", default-features = false }

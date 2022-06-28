@@ -114,6 +114,6 @@ pub mod node {
 	pub static SIDECHAIN_MODULE: u8 = 53u8;
 	pub static PROPOSED_SIDECHAIN_BLOCK: u8 = 0u8;
 	// bump this to be consistent with integritee-node runtime
-	pub static RUNTIME_SPEC_VERSION: u32 = 23;
+	pub static RUNTIME_SPEC_VERSION: u32 = 24;
 	pub static RUNTIME_TRANSACTION_VERSION: u32 = 3;
 }
