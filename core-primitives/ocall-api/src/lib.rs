@@ -115,7 +115,8 @@ pub trait EnclaveSidechainOCallApi: Clone + Send + Sync {
 
 	fn fetch_sidechain_blocks_from_peer<SignedSidechainBlock: Decode>(
 		&self,
-		last_known_block_hash: BlockHash,
+		last_imported_block_hash: BlockHash,
+		maybe_until_block_hash: Option<BlockHash>,
 		shard_identifier: ShardIdentifier,
 	) -> SgxResult<Vec<SignedSidechainBlock>>;
 }

@@ -70,11 +70,13 @@ impl EnclaveSidechainOCallApi for OcallApi {
 
 	fn fetch_sidechain_blocks_from_peer<SignedSidechainBlock: Decode>(
 		&self,
-		last_known_block_hash: BlockHash,
+		last_imported_block_hash: BlockHash,
+		maybe_until_block_hash: Option<BlockHash>,
 		shard_identifier: ShardIdentifier,
 	) -> SgxResult<Vec<SignedSidechainBlock>> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-		let last_known_block_hash_encoded = last_known_block_hash.encode();
+		let last_imported_block_hash_encoded = last_imported_block_hash.encode();
+		let maybe_until_block_hash_encoded = maybe_until_block_hash.encode();
 		let shard_identifier_encoded = shard_identifier.encode();
 
 		// We have to pre-allocate the vector and hope it's large enough
@@ -83,8 +85,10 @@ impl EnclaveSidechainOCallApi for OcallApi {
 		let res = unsafe {
 			ffi::ocall_fetch_sidechain_blocks_from_peer(
 				&mut rt as *mut sgx_status_t,
-				last_known_block_hash_encoded.as_ptr(),
-				last_known_block_hash_encoded.len() as u32,
+				last_imported_block_hash_encoded.as_ptr(),
+				last_imported_block_hash_encoded.len() as u32,
+				maybe_until_block_hash_encoded.as_ptr(),
+				maybe_until_block_hash_encoded.len() as u32,
 				shard_identifier_encoded.as_ptr(),
 				shard_identifier_encoded.len() as u32,
 				signed_blocks_encoded.as_mut_ptr(),

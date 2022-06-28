@@ -138,7 +138,8 @@ impl EnclaveSidechainOCallApi for OnchainMock {
 
 	fn fetch_sidechain_blocks_from_peer<SignedSidechainBlock: Decode>(
 		&self,
-		_last_known_block_hash: BlockHash,
+		_last_imported_block_hash: BlockHash,
+		_maybe_until_block_hash: Option<BlockHash>,
 		_shard_identifier: ShardIdentifier,
 	) -> SgxResult<Vec<SignedSidechainBlock>> {
 		Ok(Vec::new())
