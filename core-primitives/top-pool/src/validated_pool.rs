@@ -44,7 +44,6 @@ use ita_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
 use itc_direct_rpc_server::SendRpcResponse;
 use itp_types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::channel::mpsc::{channel, Sender};
-use retain_mut::RetainMut;
 use sp_runtime::{
 	generic::BlockId,
 	traits::{self, SaturatedConversion},

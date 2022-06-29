@@ -85,13 +85,17 @@ where
 		}
 
 		let blocks_json = vec![to_json_value(blocks)?];
-		let peers = self.peers.read().map_err(|e| {
-			Error::Custom(format!("Encountered poisoned lock for peers: {:?}", e).into())
-		})?;
+		let peers = self
+			.peers
+			.read()
+			.map_err(|e| {
+				Error::Custom(format!("Encountered poisoned lock for peers: {:?}", e).into())
+			})
+			.map(|l| l.clone())?;
 
 		self.initialization_handler.sidechain_block_produced();
 
-		for url in peers.iter().cloned() {
+		for url in peers {
 			let blocks = blocks_json.clone();
 
 			tokio::spawn(async move {

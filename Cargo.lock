@@ -2799,7 +2799,6 @@ dependencies = [
  "log 0.4.17",
  "parity-scale-codec",
  "parity-util-mem",
- "retain_mut",
  "serde 1.0.137",
  "sgx_tstd",
  "sgx_types",
@@ -5203,12 +5202,6 @@ checksum = "3acd125665422973a33ac9d3dd2df85edad0f4ae9b00dafb1a05e43a9f5ef8e7"
 dependencies = [
  "winapi 0.3.9",
 ]
-
-[[package]]
-name = "retain_mut"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "448296241d034b96c11173591deaa1302f2c17b56092106c1f92c1bc0183a8c9"
 
 [[package]]
 name = "rfc6979"
@@ -8040,38 +8033,3 @@ dependencies = [
  "cc",
  "libc",
 ]
-
-[[patch.unused]]
-name = "sgx_serialize"
-version = "1.1.5"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"
-
-[[patch.unused]]
-name = "sgx_serialize_derive"
-version = "1.1.5"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"
-
-[[patch.unused]]
-name = "sgx_serialize_derive_internals"
-version = "1.1.5"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"
-
-[[patch.unused]]
-name = "sgx_tcrypto_helper"
-version = "1.1.5"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"
-
-[[patch.unused]]
-name = "sgx_tse"
-version = "1.1.5"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"
-
-[[patch.unused]]
-name = "sgx_tseal"
-version = "1.1.5"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"
-
-[[patch.unused]]
-name = "sgx_tunittest"
-version = "1.1.5"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"

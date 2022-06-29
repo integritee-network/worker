@@ -1601,7 +1601,6 @@ dependencies = [
  "linked-hash-map",
  "log 0.4.17",
  "parity-scale-codec",
- "retain_mut",
  "serde 1.0.137",
  "sgx_tstd",
  "sgx_types",
@@ -4210,8 +4209,3 @@ dependencies = [
  "syn 1.0.98",
  "synstructure",
 ]
-
-[[patch.unused]]
-name = "sgx_urts"
-version = "1.1.5"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"
