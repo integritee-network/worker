@@ -293,10 +293,6 @@ fn transfer_benchmark(
 		accounts.push(client);
 	}
 
-	let proc_info = procfs::process::Process::myself().unwrap();
-	let max_fds = proc_info.limits().unwrap().max_open_files;
-	println!("Max fds: {:?}/{:?}", max_fds.soft_limit, max_fds.hard_limit);
-
 	let num_threads = number_clients;
 	rayon::ThreadPoolBuilder::new()
 		.num_threads(num_threads as usize)
@@ -311,9 +307,7 @@ fn transfer_benchmark(
 			let mut output: Vec<BenchmarkTransaction> = Vec::new();
 
 			for i in 0..number_iterations {
-				let number_fd = proc_info.fd_count().unwrap();
-				let threads = proc_info.status().unwrap().threads;
-				println!("Iteration: {}, #fd: {}, #threads: {}", i, number_fd, threads);
+				println!("Iteration: {}", i);
 				let nonce = 0;
 
 				let account_keys: sr25519::AppPair = store.generate().unwrap();

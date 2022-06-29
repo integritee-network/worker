@@ -2183,7 +2183,6 @@ dependencies = [
  "pallet-balances",
  "parity-scale-codec",
  "primitive-types",
- "procfs 0.12.0",
  "rayon",
  "sc-keystore",
  "serde 1.0.137",
@@ -5034,21 +5033,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "procfs"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0941606b9934e2d98a3677759a971756eb821f75764d0e0d26946d08e74d9104"
-dependencies = [
- "bitflags",
- "byteorder 1.4.3",
- "chrono",
- "flate2",
- "hex",
- "lazy_static",
- "libc",
-]
-
-[[package]]
 name = "prometheus"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5060,7 +5044,7 @@ dependencies = [
  "libc",
  "memchr 2.5.0",
  "parking_lot 0.11.2",
- "procfs 0.10.1",
+ "procfs",
  "protobuf",
  "thiserror 1.0.31",
 ]
