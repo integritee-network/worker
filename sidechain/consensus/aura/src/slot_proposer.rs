@@ -139,18 +139,11 @@ impl<ParentchainBlock, SignedSidechainBlock, TopPoolExecutor, BlockComposer, Stf
 
 		let executed_operation_hashes: Vec<_> =
 			batch_execution_result.get_executed_operation_hashes().iter().copied().collect();
+		let number_executed_transactions = executed_operation_hashes.len();
 
 		// Remove all not successfully executed operations from the top pool.
 		let failed_operations = batch_execution_result.get_failed_operations();
 		self.top_pool_executor.remove_calls_from_pool(&self.shard, failed_operations);
-
-		// TODO Output for performance benchmarking. Should not stay here for productive code.
-		error!(
-			"Operations queue: {:?} Time slot: {} Transactions in Block: {}",
-			trusted_calls.len(),
-			max_duration.as_millis(),
-			executed_operation_hashes.len()
-		);
 
 		// 3) Compose sidechain block and parentchain confirmation.
 		let (confirmation_extrinsic, sidechain_block) = self
@@ -165,6 +158,13 @@ impl<ParentchainBlock, SignedSidechainBlock, TopPoolExecutor, BlockComposer, Stf
 			.map_err(|e| ConsensusError::Other(e.to_string().into()))?;
 
 		parentchain_extrinsics.push(confirmation_extrinsic);
+
+		info!(
+			"Queue/Timeslot/Transactions: {:?};{};{}",
+			trusted_calls.len(),
+			max_duration.as_millis(),
+			number_executed_transactions
+		);
 
 		Ok(Proposal { block: sidechain_block, parentchain_effects: parentchain_extrinsics })
 	}
