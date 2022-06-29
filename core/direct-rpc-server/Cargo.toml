@@ -22,6 +22,7 @@ itp-utils = { default-features = false, git = "https://github.com/integritee-net
 
 # local
 itc-tls-websocket-server = { path = "../tls-websocket-server", default-features = false }
+itp-rpc = { path = "../../core-primitives/rpc", default-features = false }
 
 # sgx enabled external libraries
 jsonrpc-core_sgx = { package = "jsonrpc-core", git = "https://github.com/scs/jsonrpc", branch = "no_std", default-features = false, optional = true }

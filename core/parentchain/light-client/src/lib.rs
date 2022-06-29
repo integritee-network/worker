@@ -45,6 +45,7 @@ pub mod concurrent_access;
 pub mod error;
 pub mod finality;
 pub mod justification;
+pub mod light_client_init_params;
 pub mod light_validation;
 pub mod light_validation_state;
 pub mod state;

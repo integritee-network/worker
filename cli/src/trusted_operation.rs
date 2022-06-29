@@ -25,10 +25,9 @@ use codec::{Decode, Encode};
 use ita_stf::{ShardIdentifier, TrustedOperation};
 use itc_rpc_client::direct_client::DirectApi;
 use itp_node_api_extensions::TEEREX;
+use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
-use itp_types::{
-	DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue, TrustedOperationStatus,
-};
+use itp_types::{DirectRequestStatus, TrustedOperationStatus};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use log::*;
 use my_node_runtime::{AccountId, Hash};

@@ -14,12 +14,12 @@ tokio = { version = "1.6.1", features = ["full"] }
 parity-scale-codec = "3.0.0"
 
 # integritee deps
-itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 itp-utils = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 
 # local
 itp-enclave-api = { path = "../../core-primitives/enclave-api" }
+itp-rpc = { path = "../../core-primitives/rpc" }
 its-peer-fetch = { path = "../../sidechain/peer-fetch" }
 its-rpc-handler = { path = "../../sidechain/rpc-handler" }
 its-storage = { path = "../../sidechain/storage" }

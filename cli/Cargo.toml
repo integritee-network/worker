@@ -42,6 +42,7 @@ sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polka
 
 # local dependencies
 itp-node-api-extensions = { path = "../core-primitives/node-api-extensions" }
+itp-rpc = { path = "../core-primitives/rpc" }
 itp-sgx-crypto = { path = "../core-primitives/sgx/crypto" }
 ita-stf = { path = "../app-libs/stf" }
 itc-rpc-client = { path = "../core/rpc-client" }
