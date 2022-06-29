@@ -337,10 +337,11 @@ impl<ParentchainBlock: ParentchainBlockTrait, T: SimpleSlotWorker<ParentchainBlo
 				return slot_results
 			}
 
-			let shard_slot_ends_at = duration_now() + shard_remaining_duration;
+			let now = duration_now();
+			let shard_slot_ends_at = now + shard_remaining_duration;
 			let shard_slot = SlotInfo::new(
 				slot_info.slot,
-				duration_now(),
+				now,
 				shard_remaining_duration,
 				shard_slot_ends_at,
 				slot_info.last_imported_parentchain_head.clone(),
