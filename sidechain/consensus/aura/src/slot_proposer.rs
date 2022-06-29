@@ -127,7 +127,7 @@ impl<ParentchainBlock, SignedSidechainBlock, TopPoolExecutor, BlockComposer, Stf
 		let mut parentchain_extrinsics = batch_execution_result.get_extrinsic_callbacks();
 
 		let executed_operation_hashes =
-			batch_execution_result.get_executed_operation_hashes().iter().copied().collect();
+			batch_execution_result.get_executed_operation_hashes().to_vec();
 
 		// Remove all not successfully executed operations from the top pool.
 		let failed_operations = batch_execution_result.get_failed_operations();
