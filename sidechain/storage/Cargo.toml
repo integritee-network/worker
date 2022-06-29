@@ -8,7 +8,7 @@ edition = "2018"
 # crate.io
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
 log = "0.4"
-parking_lot = "0.11.1"
+parking_lot = "0.12.1"
 rocksdb = "0.17.0"
 thiserror = "1.0"
 sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
