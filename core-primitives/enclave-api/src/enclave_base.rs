@@ -56,6 +56,8 @@ pub trait EnclaveBase: Send + Sync + 'static {
 
 	fn set_nonce(&self, nonce: u32) -> EnclaveResult<()>;
 
+	fn set_node_metadata(&self, metadata: Vec<u8>) -> EnclaveResult<()>;
+
 	fn get_state(&self, cyphertext: Vec<u8>, shard: Vec<u8>) -> EnclaveResult<Vec<u8>>;
 
 	fn get_rsa_shielding_pubkey(&self) -> EnclaveResult<Rsa3072PubKey>;
@@ -160,6 +162,19 @@ impl EnclaveBase for Enclave {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
 		let result = unsafe { ffi::set_nonce(self.eid, &mut retval, &nonce) };
+
+		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+
+		Ok(())
+	}
+
+	fn set_node_metadata(&self, metadata: Vec<u8>) -> EnclaveResult<()> {
+		let mut retval = sgx_status_t::SGX_SUCCESS;
+
+		let result = unsafe {
+			ffi::set_node_metadata(self.eid, &mut retval, metadata.as_ptr(), metadata.len() as u32)
+		};
 
 		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));

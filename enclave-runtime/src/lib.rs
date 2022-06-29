@@ -35,8 +35,8 @@ use sgx_types::size_t;
 use crate::{
 	error::{Error, Result},
 	global_components::{
-		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
-		GLOBAL_STATE_HANDLER_COMPONENT,
+		GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT, GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 	},
 	ocall::OcallApi,
 	rpc::worker_api_direct::sidechain_io_handler,
@@ -52,6 +52,7 @@ use itc_parentchain::{
 };
 use itp_block_import_queue::PushToBlockQueue;
 use itp_component_container::ComponentGetter;
+use itp_node_api_extensions::node_api_metadata_provider::NodeApiMetadata;
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::node::{
@@ -191,6 +192,34 @@ pub unsafe extern "C" fn set_nonce(nonce: *const u32) -> sgx_status_t {
 	};
 
 	*nonce_lock = Nonce(*nonce);
+
+	sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn set_node_metadata(
+	node_metadata: *const u8,
+	node_metadata_size: u32,
+) -> sgx_status_t {
+	let mut node_metadata_slice = slice::from_raw_parts(node_metadata, node_metadata_size as usize);
+	let metadata = match NodeApiMetadata::decode(&mut node_metadata_slice).map_err(Error::Codec) {
+		Err(e) => {
+			error!("Failed to decode node metadata: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+		Ok(m) => m,
+	};
+
+	let meta_data_repository = match GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get() {
+		Ok(r) => r,
+		Err(e) => {
+			error!("Component get failure: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	meta_data_repository.set_metadata(metadata);
+	info!("Successfully set the node meta data");
 
 	sgx_status_t::SGX_SUCCESS
 }
