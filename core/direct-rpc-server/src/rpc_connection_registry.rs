@@ -69,12 +69,12 @@ where
 	type Connection = Token;
 
 	fn store(&self, hash: Self::Hash, connection: Self::Connection, rpc_response: RpcResponse) {
-		let mut map = self.connection_map.write().unwrap();
+		let mut map = self.connection_map.write().expect("Lock poisoning");
 		map.insert(hash, (connection, rpc_response));
 	}
 
 	fn withdraw(&self, hash: &Self::Hash) -> Option<(Self::Connection, RpcResponse)> {
-		let mut map = self.connection_map.write().unwrap();
+		let mut map = self.connection_map.write().expect("Lock poisoning");
 		map.remove(hash)
 	}
 }

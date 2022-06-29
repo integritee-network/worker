@@ -66,7 +66,7 @@ pub fn ed25519_self_signed_certificate(
 	common_name: &str,
 ) -> WebSocketResult<Certificate> {
 	let mut params = CertificateParams::new(vec![common_name.to_string()]);
-	let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+	let now = SystemTime::now().duration_since(UNIX_EPOCH).expect("Error: UNIX_EPOCH");
 	let issue_ts = TzUtc.timestamp(now.as_secs() as i64, 0);
 	let year = issue_ts.year();
 	let month = issue_ts.month();
@@ -82,7 +82,7 @@ pub fn ed25519_self_signed_certificate(
 
 	let private_key_der = ed25519_private_key_pkcs8_der(key_pair)?;
 
-	let key_pair = rcgen::KeyPair::try_from(private_key_der.as_ref()).unwrap();
+	let key_pair = rcgen::KeyPair::try_from(private_key_der.as_ref()).expect("Invalid pkcs8 der");
 	params.key_pair = Some(key_pair);
 
 	Certificate::from_params(params).map_err(|e| WebSocketError::Other(e.into()))

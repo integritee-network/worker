@@ -20,16 +20,21 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use crate::error::Result;
+use crate::{
+	beefy_merkle_tree::{merkle_root, Keccak256},
+	error::Result,
+};
 use codec::{Decode, Encode};
 use futures::executor;
 use ita_stf::{AccountId, TrustedCall, TrustedOperation};
-use itp_settings::node::{CALL_WORKER, SHIELD_FUNDS, TEEREX_MODULE};
+use itp_node_api_extensions::metadata::{
+	node_metadata_provider::AccessNodeMetadata, pallet_teerex::TeeracleCallIndexes,
+};
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
 use itp_stf_executor::traits::StfEnclaveSigning;
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{
-	CallWorkerFn, ParentchainUncheckedExtrinsic, ShardIdentifier, ShieldFundsFn, H256,
+	CallWorkerFn, OpaqueCall, ParentchainUncheckedExtrinsic, ShardIdentifier, ShieldFundsFn, H256,
 };
 use log::*;
 use sp_core::blake2_256;
@@ -44,32 +49,46 @@ pub trait ExecuteIndirectCalls {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
 		block: &ParentchainBlock,
-	) -> Result<Vec<H256>>
+	) -> Result<OpaqueCall>
 	where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>;
 }
 
-pub struct IndirectCallsExecutor<ShieldingKeyRepository, StfEnclaveSigner, TopPoolAuthor> {
+pub struct IndirectCallsExecutor<
+	ShieldingKeyRepository,
+	StfEnclaveSigner,
+	TopPoolAuthor,
+	NodeMetadataProvider,
+> {
 	shielding_key_repo: Arc<ShieldingKeyRepository>,
 	stf_enclave_signer: Arc<StfEnclaveSigner>,
 	top_pool_author: Arc<TopPoolAuthor>,
+	node_meta_data_provider: Arc<NodeMetadataProvider>,
 }
 
-impl<ShieldingKeyRepository, StfEnclaveSigner, TopPoolAuthor>
-	IndirectCallsExecutor<ShieldingKeyRepository, StfEnclaveSigner, TopPoolAuthor>
+impl<ShieldingKeyRepository, StfEnclaveSigner, TopPoolAuthor, NodeMetadataProvider>
+	IndirectCallsExecutor<ShieldingKeyRepository, StfEnclaveSigner, TopPoolAuthor, NodeMetadataProvider>
 where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
 		+ ShieldingCryptoEncrypt<Error = itp_sgx_crypto::Error>,
 	StfEnclaveSigner: StfEnclaveSigning,
 	TopPoolAuthor: AuthorApi<H256, H256> + Send + Sync + 'static,
+	NodeMetadataProvider: AccessNodeMetadata,
+	NodeMetadataProvider::MetadataType: TeeracleCallIndexes,
 {
 	pub fn new(
 		shielding_key_repo: Arc<ShieldingKeyRepository>,
 		stf_enclave_signer: Arc<StfEnclaveSigner>,
 		top_pool_author: Arc<TopPoolAuthor>,
+		node_meta_data_provider: Arc<NodeMetadataProvider>,
 	) -> Self {
-		IndirectCallsExecutor { shielding_key_repo, stf_enclave_signer, top_pool_author }
+		IndirectCallsExecutor {
+			shielding_key_repo,
+			stf_enclave_signer,
+			top_pool_author,
+			node_meta_data_provider,
+		}
 	}
 
 	fn handle_shield_funds_xt(
@@ -105,25 +124,79 @@ where
 			error!("Error adding indirect trusted call to TOP pool: {:?}", e);
 		}
 	}
+
+	/// Creates a processed_parentchain_block extrinsic for a given parentchain block hash and the merkle executed extrinsics.
+	///
+	/// Calculates the merkle root of the extrinsics. In case no extrinsics are supplied, the root will be a hash filled with zeros.
+	fn create_processed_parentchain_block_call(
+		&self,
+		block_hash: H256,
+		extrinsics: Vec<H256>,
+	) -> Result<OpaqueCall> {
+		let call = self.node_meta_data_provider.get_from_metadata(|meta_data| {
+			meta_data.confirm_processed_parentchain_block_call_indexes()
+		})??;
+
+		let root: H256 = merkle_root::<Keccak256, _, _>(extrinsics).into();
+		Ok(OpaqueCall::from_tuple(&(call, block_hash, root)))
+	}
+
+	fn is_shield_funds_function(&self, function: &[u8; 2]) -> bool {
+		self.node_meta_data_provider
+			.get_from_metadata(|meta_data| {
+				let call = match meta_data.shield_funds_call_indexes() {
+					Ok(c) => c,
+					Err(e) => {
+						error!("Failed to get the indexes for the shield_funds call from the metadata: {:?}", e);
+						return false
+					},
+				};
+				function == &call
+			})
+			.unwrap_or(false)
+	}
+
+	fn is_call_worker_function(&self, function: &[u8; 2]) -> bool {
+		self.node_meta_data_provider
+			.get_from_metadata(|meta_data| {
+				let call = match meta_data.call_worker_call_indexes() {
+					Ok(c) => c,
+					Err(e) => {
+						error!("Failed to get the indexes for the call_worker call from the metadata: {:?}", e);
+						return false
+					},
+				};
+				function == &call
+			})
+			.unwrap_or(false)
+	}
 }
 
-impl<ShieldingKeyRepository, StfEnclaveSigner, TopPoolAuthor> ExecuteIndirectCalls
-	for IndirectCallsExecutor<ShieldingKeyRepository, StfEnclaveSigner, TopPoolAuthor>
-where
+impl<ShieldingKeyRepository, StfEnclaveSigner, TopPoolAuthor, NodeMetadataProvider>
+	ExecuteIndirectCalls
+	for IndirectCallsExecutor<
+		ShieldingKeyRepository,
+		StfEnclaveSigner,
+		TopPoolAuthor,
+		NodeMetadataProvider,
+	> where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
 		+ ShieldingCryptoEncrypt<Error = itp_sgx_crypto::Error>,
 	StfEnclaveSigner: StfEnclaveSigning,
 	TopPoolAuthor: AuthorApi<H256, H256> + Send + Sync + 'static,
+	NodeMetadataProvider: AccessNodeMetadata,
+	NodeMetadataProvider::MetadataType: TeeracleCallIndexes,
 {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
 		block: &ParentchainBlock,
-	) -> Result<Vec<H256>>
+	) -> Result<OpaqueCall>
 	where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	{
 		let block_number = *block.header().number();
+		let block_hash = block.hash();
 		debug!("Scanning block {:?} for relevant xt", block_number);
 		let mut executed_shielding_calls = Vec::<H256>::new();
 		for xt_opaque in block.extrinsics().iter() {
@@ -133,7 +206,7 @@ where
 			if let Ok(xt) = ParentchainUncheckedExtrinsic::<ShieldFundsFn>::decode(
 				&mut encoded_xt_opaque.as_slice(),
 			) {
-				if xt.function.0 == [TEEREX_MODULE, SHIELD_FUNDS] {
+				if self.is_shield_funds_function(&xt.function.0) {
 					let hash_of_xt = hash_of(&xt);
 
 					match self.handle_shield_funds_xt(xt) {
@@ -153,7 +226,7 @@ where
 			if let Ok(xt) = ParentchainUncheckedExtrinsic::<CallWorkerFn>::decode(
 				&mut encoded_xt_opaque.as_slice(),
 			) {
-				if xt.function.0 == [TEEREX_MODULE, CALL_WORKER] {
+				if self.is_call_worker_function(&xt.function.0) {
 					let (_, request) = xt.function;
 					let (shard, cypher_text) = (request.shard, request.cyphertext);
 					debug!("Found trusted call extrinsic, submitting it to the top pool");
@@ -161,7 +234,9 @@ where
 				}
 			}
 		}
-		Ok(executed_shielding_calls)
+
+		// Include a processed parentchain block confirmation for each block.
+		self.create_processed_parentchain_block_call(block_hash, executed_shielding_calls)
 	}
 }
 
@@ -172,6 +247,10 @@ fn hash_of<T: Encode>(xt: &T) -> H256 {
 #[cfg(test)]
 mod test {
 	use super::*;
+	use codec::Encode;
+	use itp_node_api_extensions::metadata::{
+		metadata_mocks::NodeMetadataMock, node_metadata_provider::NodeMetadataRepository,
+	};
 	use itp_sgx_crypto::mocks::KeyRepositoryMock;
 	use itp_stf_executor::mocks::StfEnclaveSignerMock;
 	use itp_test::mock::shielding_crypto_mock::ShieldingCryptoMock;
@@ -188,8 +267,13 @@ mod test {
 	type TestShieldingKeyRepo = KeyRepositoryMock<ShieldingCryptoMock>;
 	type TestStfEnclaveSigner = StfEnclaveSignerMock;
 	type TestTopPoolAuthor = AuthorApiMock<H256, H256>;
-	type TestIndirectCallExecutor =
-		IndirectCallsExecutor<TestShieldingKeyRepo, TestStfEnclaveSigner, TestTopPoolAuthor>;
+	type TestNodeMetadataRepository = NodeMetadataRepository<NodeMetadataMock>;
+	type TestIndirectCallExecutor = IndirectCallsExecutor<
+		TestShieldingKeyRepo,
+		TestStfEnclaveSigner,
+		TestTopPoolAuthor,
+		TestNodeMetadataRepository,
+	>;
 
 	type Seed = [u8; 32];
 	const TEST_SEED: Seed = *b"12345678901234567890123456789012";
@@ -198,7 +282,8 @@ mod test {
 	fn indirect_call_can_be_added_to_pool_successfully() {
 		let _ = env_logger::builder().is_test(true).try_init();
 
-		let (indirect_calls_executor, top_pool_author, _) = test_fixtures([0u8; 32]);
+		let (indirect_calls_executor, top_pool_author, _) =
+			test_fixtures([0u8; 32], NodeMetadataMock::new());
 
 		let opaque_extrinsic =
 			OpaqueExtrinsic::from_bytes(call_worker_unchecked_extrinsic().encode().as_slice())
@@ -221,7 +306,7 @@ mod test {
 
 		let mr_enclave = [33u8; 32];
 		let (indirect_calls_executor, top_pool_author, shielding_key_repo) =
-			test_fixtures(mr_enclave.clone());
+			test_fixtures(mr_enclave.clone(), NodeMetadataMock::new());
 		let shielding_key = shielding_key_repo.retrieve_key().unwrap();
 
 		let opaque_extrinsic = OpaqueExtrinsic::from_bytes(
@@ -248,13 +333,60 @@ mod test {
 		assert!(trusted_call_signed.verify_signature(&mr_enclave, &shard_id()));
 	}
 
+	#[test]
+	fn ensure_empty_extrinsic_vec_triggers_zero_filled_merkle_root() {
+		// given
+		let dummy_metadata = NodeMetadataMock::new();
+		let (indirect_calls_executor, _, _) = test_fixtures([38u8; 32], dummy_metadata.clone());
+
+		let block_hash = H256::from([1; 32]);
+		let extrinsics = Vec::new();
+		let confirm_processed_parentchain_block_indexes =
+			dummy_metadata.confirm_processed_parentchain_block_call_indexes().unwrap();
+		let expected_call =
+			(confirm_processed_parentchain_block_indexes, block_hash, H256::default()).encode();
+
+		// when
+		let call = indirect_calls_executor
+			.create_processed_parentchain_block_call(block_hash, extrinsics)
+			.unwrap();
+
+		// then
+		assert_eq!(call.0, expected_call);
+	}
+
+	#[test]
+	fn ensure_non_empty_extrinsic_vec_triggers_non_zero_merkle_root() {
+		// given
+		let dummy_metadata = NodeMetadataMock::new();
+		let (indirect_calls_executor, _, _) = test_fixtures([39u8; 32], dummy_metadata.clone());
+
+		let block_hash = H256::from([1; 32]);
+		let extrinsics = vec![H256::from([4; 32]), H256::from([9; 32])];
+		let confirm_processed_parentchain_block_indexes =
+			dummy_metadata.confirm_processed_parentchain_block_call_indexes().unwrap();
+
+		let zero_root_call =
+			(confirm_processed_parentchain_block_indexes, block_hash, H256::default()).encode();
+
+		// when
+		let call = indirect_calls_executor
+			.create_processed_parentchain_block_call(block_hash, extrinsics)
+			.unwrap();
+
+		// then
+		assert_ne!(call.0, zero_root_call);
+	}
+
 	fn shield_funds_unchecked_extrinsic(
 		shielding_key: &ShieldingCryptoMock,
 	) -> ParentchainUncheckedExtrinsic<ShieldFundsFn> {
 		let target_account = shielding_key.encrypt(&AccountId::new([2u8; 32]).encode()).unwrap();
+		let dummy_metadata = NodeMetadataMock::new();
 
+		let shield_funds_indexes = dummy_metadata.shield_funds_call_indexes().unwrap();
 		ParentchainUncheckedExtrinsic::<ShieldFundsFn>::new_signed(
-			([TEEREX_MODULE, SHIELD_FUNDS], target_account, 1000u128, shard_id()),
+			(shield_funds_indexes, target_account, 1000u128, shard_id()),
 			GenericAddress::Address32([1u8; 32]),
 			MultiSignature::Ed25519(default_signature()),
 			default_extrinsic_params().signed_extra(),
@@ -263,9 +395,11 @@ mod test {
 
 	fn call_worker_unchecked_extrinsic() -> ParentchainUncheckedExtrinsic<CallWorkerFn> {
 		let request = Request { shard: shard_id(), cyphertext: vec![1u8, 2u8] };
+		let dummy_metadata = NodeMetadataMock::new();
+		let call_worker_indexes = dummy_metadata.call_worker_call_indexes().unwrap();
 
 		ParentchainUncheckedExtrinsic::<CallWorkerFn>::new_signed(
-			([TEEREX_MODULE, CALL_WORKER], request),
+			(call_worker_indexes, request),
 			GenericAddress::Address32([1u8; 32]),
 			MultiSignature::Ed25519(default_signature()),
 			default_extrinsic_params().signed_extra(),
@@ -295,15 +429,18 @@ mod test {
 	}
 	fn test_fixtures(
 		mr_enclave: [u8; 32],
+		metadata: NodeMetadataMock,
 	) -> (TestIndirectCallExecutor, Arc<TestTopPoolAuthor>, Arc<TestShieldingKeyRepo>) {
 		let shielding_key_repo = Arc::new(TestShieldingKeyRepo::default());
 		let stf_enclave_signer = Arc::new(TestStfEnclaveSigner::new(mr_enclave));
 		let top_pool_author = Arc::new(TestTopPoolAuthor::default());
+		let node_metadata_repo = Arc::new(NodeMetadataRepository::new(metadata));
 
 		let executor = IndirectCallsExecutor::new(
 			shielding_key_repo.clone(),
 			stf_enclave_signer,
 			top_pool_author.clone(),
+			node_metadata_repo,
 		);
 
 		(executor, top_pool_author, shielding_key_repo)

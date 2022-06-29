@@ -29,6 +29,9 @@ use ita_stf::{
 	stf_sgx::{shards_key_hash, storage_hashes_to_update_per_shard},
 	ParentchainHeader, ShardIdentifier, StateTypeDiff, Stf, TrustedGetterSigned, TrustedOperation,
 };
+use itp_node_api_extensions::metadata::{
+	node_metadata_provider::AccessNodeMetadata, pallet_teerex::TeeracleCallIndexes,
+};
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_time_utils::duration_now;
@@ -41,19 +44,27 @@ use std::{
 	time::Duration, vec::Vec,
 };
 
-pub struct StfExecutor<OCallApi, StateHandler> {
+pub struct StfExecutor<OCallApi, StateHandler, NodeMetadataRepository> {
 	ocall_api: Arc<OCallApi>,
 	state_handler: Arc<StateHandler>,
+	node_metadata_repo: Arc<NodeMetadataRepository>,
 }
 
-impl<OCallApi, StateHandler> StfExecutor<OCallApi, StateHandler>
+impl<OCallApi, StateHandler, NodeMetadataRepository>
+	StfExecutor<OCallApi, StateHandler, NodeMetadataRepository>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
 	StateHandler: HandleState<HashType = H256>,
 	StateHandler::StateT: SgxExternalitiesTrait + Encode,
+	NodeMetadataRepository: AccessNodeMetadata,
+	NodeMetadataRepository::MetadataType: TeeracleCallIndexes,
 {
-	pub fn new(ocall_api: Arc<OCallApi>, state_handler: Arc<StateHandler>) -> Self {
-		StfExecutor { ocall_api, state_handler }
+	pub fn new(
+		ocall_api: Arc<OCallApi>,
+		state_handler: Arc<StateHandler>,
+		node_metadata_repo: Arc<NodeMetadataRepository>,
+	) -> Self {
+		StfExecutor { ocall_api, state_handler, node_metadata_repo }
 	}
 
 	/// Execute a trusted call on the STF
@@ -92,6 +103,10 @@ where
 			return Ok(ExecutedOperation::failed(top_or_hash))
 		}
 
+		let unshield_funds_fn = self
+			.node_metadata_repo
+			.get_from_metadata(|m| m.unshield_funds_call_indexes())??;
+
 		// Necessary because light client sync may not be up to date
 		// see issue #208
 		debug!("Update STF storage!");
@@ -105,7 +120,9 @@ where
 
 		debug!("execute STF, call with nonce {}", trusted_call.nonce);
 		let mut extrinsic_call_backs: Vec<OpaqueCall> = Vec::new();
-		if let Err(e) = Stf::execute(state, trusted_call.clone(), &mut extrinsic_call_backs) {
+		if let Err(e) =
+			Stf::execute(state, trusted_call.clone(), &mut extrinsic_call_backs, unshield_funds_fn)
+		{
 			error!("Stf::execute failed: {:?}", e);
 			return Ok(ExecutedOperation::failed(top_or_hash))
 		}
@@ -121,11 +138,13 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler> StfUpdateState for StfExecutor<OCallApi, StateHandler>
+impl<OCallApi, StateHandler, NodeMetadataRepository> StfUpdateState
+	for StfExecutor<OCallApi, StateHandler, NodeMetadataRepository>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
 	StateHandler: HandleState<HashType = H256> + QueryShardState,
 	StateHandler::StateT: SgxExternalitiesTrait + Encode,
+	NodeMetadataRepository: AccessNodeMetadata,
 {
 	fn update_states(&self, header: &ParentchainHeader) -> Result<()> {
 		debug!("Update STF storage upon block import!");
@@ -188,11 +207,14 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler> StateUpdateProposer for StfExecutor<OCallApi, StateHandler>
+impl<OCallApi, StateHandler, NodeMetadataRepository> StateUpdateProposer
+	for StfExecutor<OCallApi, StateHandler, NodeMetadataRepository>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
 	StateHandler: HandleState<HashType = H256>,
 	StateHandler::StateT: SgxExternalitiesTrait + Encode,
+	NodeMetadataRepository: AccessNodeMetadata,
+	NodeMetadataRepository::MetadataType: TeeracleCallIndexes,
 {
 	type Externalities = StateHandler::StateT;
 
@@ -248,11 +270,13 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler> StfExecuteTimedGettersBatch for StfExecutor<OCallApi, StateHandler>
+impl<OCallApi, StateHandler, NodeMetadataRepository> StfExecuteTimedGettersBatch
+	for StfExecutor<OCallApi, StateHandler, NodeMetadataRepository>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
 	StateHandler: HandleState<HashType = H256>,
 	StateHandler::StateT: SgxExternalitiesTrait + Encode,
+	NodeMetadataRepository: AccessNodeMetadata,
 {
 	type Externalities = StateHandler::StateT;
 
@@ -294,10 +318,12 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler> StfExecuteGenericUpdate for StfExecutor<OCallApi, StateHandler>
+impl<OCallApi, StateHandler, NodeMetadataRepository> StfExecuteGenericUpdate
+	for StfExecutor<OCallApi, StateHandler, NodeMetadataRepository>
 where
 	StateHandler: HandleState<HashType = H256>,
 	StateHandler::StateT: SgxExternalitiesTrait + Encode,
+	NodeMetadataRepository: AccessNodeMetadata,
 {
 	type Externalities = StateHandler::StateT;
 

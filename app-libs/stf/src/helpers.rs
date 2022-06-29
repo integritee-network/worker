@@ -60,6 +60,7 @@ pub fn get_storage_double_map<K: Encode, Q: Encode, V: Decode + Clone>(
 	get_storage_by_key_hash(key)
 }
 
+/// Get value in storage.
 pub fn get_storage_by_key_hash<V: Decode>(key: Vec<u8>) -> Option<V> {
 	if let Some(value_encoded) = sp_io::storage::get(&key) {
 		if let Ok(value) = Decode::decode(&mut value_encoded.as_slice()) {
@@ -74,7 +75,7 @@ pub fn get_storage_by_key_hash<V: Decode>(key: Vec<u8>) -> Option<V> {
 	}
 }
 
-// get the AccountInfo key where the account is stored
+/// Get the AccountInfo key where the account is stored.
 pub fn account_key_hash(account: &AccountId) -> Vec<u8> {
 	storage_map_key("System", "Account", account, &StorageHasher::Blake2_128Concat)
 }
@@ -149,11 +150,11 @@ pub fn account_data(account: &AccountId) -> Option<AccountData> {
 }
 
 pub fn root() -> AccountId {
-	get_storage_value("Sudo", "Key").unwrap()
+	get_storage_value("Sudo", "Key").expect("No root account")
 }
 
 pub fn enclave_signer_account() -> AccountId {
-	get_storage_value("Sudo", ENCLAVE_ACCOUNT_KEY).unwrap()
+	get_storage_value("Sudo", ENCLAVE_ACCOUNT_KEY).expect("No enclave account")
 }
 
 // FIXME: Use Option<ParentchainHeader:Hash> as return type after fixing sgx-runtime issue #37

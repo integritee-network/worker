@@ -33,8 +33,11 @@ use ita_stf::{
 	TrustedCall, TrustedOperation,
 };
 use itc_parentchain::indirect_calls_executor::{ExecuteIndirectCalls, IndirectCallsExecutor};
+use itp_node_api_extensions::metadata::{
+	metadata_mocks::NodeMetadataMock, node_metadata_provider::NodeMetadataRepository,
+	pallet_teerex::TeeracleCallIndexes,
+};
 use itp_ocall_api::EnclaveAttestationOCallApi;
-use itp_settings::node::{SHIELD_FUNDS, TEEREX_MODULE};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_stf_executor::enclave_signer::StfEnclaveSigner;
 use itp_test::mock::metrics_ocall_mock::MetricsOCallMock;
@@ -116,8 +119,14 @@ pub fn submit_shielding_call_to_top_pool() {
 		ocall_api.clone(),
 		shielding_key_repo.clone(),
 	));
-	let indirect_calls_executor =
-		IndirectCallsExecutor::new(shielding_key_repo, enclave_signer, top_pool_author.clone());
+	let node_meta_data_repository = Arc::new(NodeMetadataRepository::default());
+	node_meta_data_repository.set_metadata(NodeMetadataMock::new());
+	let indirect_calls_executor = IndirectCallsExecutor::new(
+		shielding_key_repo,
+		enclave_signer,
+		top_pool_author.clone(),
+		node_meta_data_repository,
+	);
 
 	let block_with_shielding_call = create_shielding_call_extrinsic(shard_id, &shielding_key);
 
@@ -171,9 +180,12 @@ fn create_shielding_call_extrinsic<ShieldingKey: ShieldingCryptoEncrypt>(
 		ParentchainExtrinsicParamsBuilder::default(),
 	);
 
+	let dummy_node_metadata = NodeMetadataMock::new();
+
+	let shield_funds_indexes = dummy_node_metadata.shield_funds_call_indexes().unwrap();
 	let opaque_extrinsic = OpaqueExtrinsic::from_bytes(
 		ParentchainUncheckedExtrinsic::<ShieldFundsFn>::new_signed(
-			([TEEREX_MODULE, SHIELD_FUNDS], target_account, 1000u128, shard),
+			(shield_funds_indexes, target_account, 1000u128, shard),
 			GenericAddress::Address32([1u8; 32]),
 			MultiSignature::Ed25519(signature),
 			default_extra_for_test.signed_extra(),
