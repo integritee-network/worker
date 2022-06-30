@@ -44,8 +44,11 @@ use crate::{
 };
 use codec::{alloc::string::String, Decode, Encode};
 use ita_stf::{Getter, ShardIdentifier, Stf};
-use itc_parentchain::block_import_dispatcher::{
-	triggered_dispatcher::TriggerParentchainBlockImport, DispatchBlockImport,
+use itc_parentchain::{
+	block_import_dispatcher::{
+		triggered_dispatcher::TriggerParentchainBlockImport, DispatchBlockImport,
+	},
+	light_client::light_client_init_params::LightClientInitParams,
 };
 use itp_block_import_queue::PushToBlockQueue;
 use itp_component_container::ComponentGetter;
@@ -59,8 +62,7 @@ use itp_sgx_io as io;
 use itp_sgx_io::StaticSealedIO;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_types::{
-	light_client_init_params::LightClientInitParams, Header, ParentchainExtrinsicParams,
-	ParentchainExtrinsicParamsBuilder, SignedBlock,
+	Header, ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder, SignedBlock,
 };
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;

@@ -18,7 +18,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "po
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.24" }
 
 # integritee
-itp-types = { path = "../types" }
+itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 [features]
 # used for unit testing only!

@@ -19,9 +19,9 @@
 use crate::test::mocks::types::TestBlockImporter;
 use codec::{Decode, Encode};
 use itp_ocall_api::{EnclaveOnChainOCallApi, EnclaveSidechainOCallApi, Result};
-use itp_storage::StorageEntryVerified;
 use itp_types::{
-	BlockHash, Header as ParentchainHeader, ShardIdentifier, WorkerRequest, WorkerResponse, H256,
+	storage::StorageEntryVerified, BlockHash, Header as ParentchainHeader, ShardIdentifier,
+	WorkerRequest, WorkerResponse, H256,
 };
 use its_sidechain::consensus_common::BlockImport;
 use sgx_types::SgxResult;

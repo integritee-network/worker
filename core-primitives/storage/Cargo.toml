@@ -23,6 +23,9 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 sp-trie = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 
+# integritee
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+
 [dev-dependencies]
 sp-state-machine = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 
@@ -30,9 +33,10 @@ sp-state-machine = { git = "https://github.com/paritytech/substrate.git", branch
 default = ["std"]
 std = [
     "codec/std",
-    "hash-db/std",
     "frame-metadata/std",
     "frame-support/std",
+    "hash-db/std",
+    "itp-types/std",
     "sp-core/std",
     "sp-runtime/std",
     "sp-std/std",

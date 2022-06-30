@@ -18,7 +18,9 @@ itp-extrinsics-factory = { path = "../../../core-primitives/extrinsics-factory",
 itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
 itp-settings = { path = "../../../core-primitives/settings" }
 itp-stf-executor = { path = "../../../core-primitives/stf-executor", default-features = false }
-itp-types = { path = "../../../core-primitives/types", default-features = false }
+
+# integritee
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # sgx enabled external libraries
 thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
