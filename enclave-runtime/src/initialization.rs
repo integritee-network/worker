@@ -61,7 +61,7 @@ use itc_tls_websocket_server::{
 use itp_block_import_queue::BlockImportQueue;
 use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_extrinsics_factory::ExtrinsicsFactory;
-use itp_node_api_extensions::node_api_metadata_provider::NodeApiMetadataRepository;
+use itp_node_api_extensions::node_metadata_provider::NodeMetadataRepository;
 use itp_nonce_cache::GLOBAL_NONCE_CACHE;
 use itp_primitives_cache::GLOBAL_PRIMITIVES_CACHE;
 use itp_settings::files::{
@@ -131,7 +131,7 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	let stf_executor = Arc::new(EnclaveStfExecutor::new(ocall_api.clone(), state_handler.clone()));
 	GLOBAL_STF_EXECUTOR_COMPONENT.initialize(stf_executor);
 
-	let node_metadata_repository = Arc::new(NodeApiMetadataRepository::default());
+	let node_metadata_repository = Arc::new(NodeMetadataRepository::default());
 	GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.initialize(node_metadata_repository);
 
 	// For debug purposes, list shards. no problem to panic if fails.
@@ -243,6 +243,7 @@ pub(crate) fn init_light_client(params: LightClientInitParams<Header>) -> Enclav
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
+	let node_metadata_repository = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
 
 	let validator_access = Arc::new(EnclaveValidatorAccessor::new(validator));
 	GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT.initialize(validator_access.clone());
@@ -263,6 +264,7 @@ pub(crate) fn init_light_client(params: LightClientInitParams<Header>) -> Enclav
 		shielding_key_repository,
 		stf_enclave_signer,
 		top_pool_author,
+		node_metadata_repository,
 	));
 	let parentchain_block_importer = ParentchainBlockImporter::new(
 		validator_access,

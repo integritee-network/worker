@@ -25,15 +25,41 @@ use crate::error::{Error, Result};
 use codec::{Decode, Encode};
 use std::ops::Deref;
 
-#[derive(Default, Encode, Decode, Debug)]
+#[derive(Default, Encode, Decode, Debug, Clone)]
 pub struct DummyMetadata {
-	version: u32,
+	pub teerex_module: u8,
+	pub register_enclave: u8,
+	pub call_worker: u8,
+	pub processed_parentchain_block: u8,
+	pub shield_funds: u8,
+	pub unshield_funds: u8,
+	pub sidechain_module: u8,
+	pub proposed_sidechain_block: u8,
+	pub runtime_spec_version: u32,
+	pub runtime_transaction_version: u32,
 }
 
-pub type NodeApiMetadata = DummyMetadata;
+impl DummyMetadata {
+	pub fn new() -> Self {
+		DummyMetadata {
+			teerex_module: 50u8,
+			register_enclave: 0u8,
+			call_worker: 2u8,
+			processed_parentchain_block: 3u8,
+			shield_funds: 4u8,
+			unshield_funds: 5u8,
+			sidechain_module: 53u8,
+			proposed_sidechain_block: 0u8,
+			runtime_spec_version: 24,
+			runtime_transaction_version: 3,
+		}
+	}
+}
+
+pub type NodeMetadata = DummyMetadata;
 
 /// Trait to get access to the node API metadata.
-pub trait AccessNodeApiMetadata {
+pub trait AccessNodeMetadata {
 	type MetadataType;
 
 	fn get_from_metadata<F, R>(&self, getter_function: F) -> Result<R>
@@ -42,19 +68,23 @@ pub trait AccessNodeApiMetadata {
 }
 
 #[derive(Default)]
-pub struct NodeApiMetadataRepository {
-	metadata_lock: RwLock<Option<NodeApiMetadata>>,
+pub struct NodeMetadataRepository {
+	metadata_lock: RwLock<Option<NodeMetadata>>,
 }
 
-impl NodeApiMetadataRepository {
-	pub fn set_metadata(&self, metadata: NodeApiMetadata) {
+impl NodeMetadataRepository {
+	pub fn new(metadata: NodeMetadata) -> Self {
+		NodeMetadataRepository { metadata_lock: RwLock::new(Some(metadata)) }
+	}
+
+	pub fn set_metadata(&self, metadata: NodeMetadata) {
 		let mut metadata_lock = self.metadata_lock.write().unwrap();
 		*metadata_lock = Some(metadata)
 	}
 }
 
-impl AccessNodeApiMetadata for NodeApiMetadataRepository {
-	type MetadataType = NodeApiMetadata;
+impl AccessNodeMetadata for NodeMetadataRepository {
+	type MetadataType = NodeMetadata;
 
 	fn get_from_metadata<F, R>(&self, getter_function: F) -> Result<R>
 	where
@@ -74,16 +104,19 @@ mod tests {
 
 	#[test]
 	fn get_from_meta_data_returns_error_if_not_set() {
-		let repo = NodeApiMetadataRepository::default();
+		let repo = NodeMetadataRepository::default();
 
-		assert_matches!(repo.get_from_metadata(|m| { m.version }), Err(Error::MetadataNotSet));
+		assert_matches!(
+			repo.get_from_metadata(|m| { m.teerex_module }),
+			Err(Error::MetadataNotSet)
+		);
 	}
 
 	#[test]
 	fn get_from_metadata_works() {
-		let repo = NodeApiMetadataRepository::default();
-		repo.set_metadata(NodeApiMetadata { version: 42 });
+		let repo = NodeMetadataRepository::default();
+		repo.set_metadata(NodeMetadata::new());
 
-		assert_eq!(42, repo.get_from_metadata(|m| { m.version }).unwrap());
+		assert_eq!(50, repo.get_from_metadata(|m| { m.teerex_module }).unwrap());
 	}
 }

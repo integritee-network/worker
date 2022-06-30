@@ -51,7 +51,7 @@ pub mod pallet_teerex;
 pub mod pallet_teerex_api_mock;
 
 pub mod error;
-pub mod node_api_metadata_provider;
+pub mod node_metadata_provider;
 
 #[cfg(all(not(feature = "sgx"), feature = "std"))]
 pub use account::*;

@@ -13,8 +13,8 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 # local dependencies
 ita-stf = { path = "../../../app-libs/stf", default-features = false }
 itp-extrinsics-factory = { path = "../../../core-primitives/extrinsics-factory", default-features = false }
+itp-node-api-extensions = { path = "../../../core-primitives/node-api-extensions", default-features = false }
 itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
-itp-settings = { path = "../../../core-primitives/settings" }
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
 itp-stf-executor = { path = "../../../core-primitives/stf-executor", default-features = false }
 itp-top-pool-author = { path = "../../../core-primitives/top-pool-author", default-features = false }
@@ -56,6 +56,7 @@ std = [
     "futures",
     "ita-stf/std",
     "itp-extrinsics-factory/std",
+    "itp-node-api-extensions/std",
     "itp-ocall-api/std",
     "itp-sgx-crypto/std",
     "itp-stf-executor/std",
@@ -72,6 +73,7 @@ sgx = [
     "futures_sgx",
     "ita-stf/sgx",
     "itp-extrinsics-factory/sgx",
+    "itp-node-api-extensions/sgx",
     "itp-sgx-crypto/sgx",
     "itp-stf-executor/sgx",
     "itp-top-pool-author/sgx",

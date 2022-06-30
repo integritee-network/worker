@@ -52,7 +52,7 @@ use itc_parentchain::{
 };
 use itp_block_import_queue::PushToBlockQueue;
 use itp_component_container::ComponentGetter;
-use itp_node_api_extensions::node_api_metadata_provider::NodeApiMetadata;
+use itp_node_api_extensions::node_metadata_provider::NodeMetadata;
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::node::{
@@ -202,7 +202,7 @@ pub unsafe extern "C" fn set_node_metadata(
 	node_metadata_size: u32,
 ) -> sgx_status_t {
 	let mut node_metadata_slice = slice::from_raw_parts(node_metadata, node_metadata_size as usize);
-	let metadata = match NodeApiMetadata::decode(&mut node_metadata_slice).map_err(Error::Codec) {
+	let metadata = match NodeMetadata::decode(&mut node_metadata_slice).map_err(Error::Codec) {
 		Err(e) => {
 			error!("Failed to decode node metadata: {:?}", e);
 			return sgx_status_t::SGX_ERROR_UNEXPECTED

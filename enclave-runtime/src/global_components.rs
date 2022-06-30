@@ -41,7 +41,7 @@ use itc_tls_websocket_server::{
 use itp_block_import_queue::BlockImportQueue;
 use itp_component_container::ComponentContainer;
 use itp_extrinsics_factory::ExtrinsicsFactory;
-use itp_node_api_extensions::node_api_metadata_provider::NodeApiMetadataRepository;
+use itp_node_api_extensions::node_metadata_provider::NodeMetadataRepository;
 use itp_nonce_cache::NonceCache;
 use itp_sgx_crypto::{key_repository::KeyRepository, Aes, AesSeal, Rsa3072Seal};
 use itp_stf_executor::{enclave_signer::StfEnclaveSigner, executor::StfExecutor};
@@ -85,6 +85,7 @@ pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
 	EnclaveShieldingKeyRepository,
 	EnclaveStfEnclaveSigner,
 	EnclaveTopPoolAuthor,
+	NodeMetadataRepository,
 >;
 pub type EnclaveValidatorAccessor = ValidatorAccessor<
 	LightValidation<ParentchainBlock, EnclaveOCallApi>,
@@ -204,9 +205,8 @@ pub static GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT: ComponentContain
 pub static GLOBAL_EXTRINSICS_FACTORY_COMPONENT: ComponentContainer<EnclaveExtrinsicsFactory> =
 	ComponentContainer::new("extrinsics_factory");
 
-pub static GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT: ComponentContainer<
-	NodeApiMetadataRepository,
-> = ComponentContainer::new("node metadata repository");
+pub static GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT: ComponentContainer<NodeMetadataRepository> =
+	ComponentContainer::new("node metadata repository");
 
 /// Sidechain component instances
 ///-------------------------------------------------------------------------------------------------

@@ -30,6 +30,8 @@ pub enum Error {
 	Sgx(sgx_status_t),
 	#[error("STF execution error: {0}")]
 	StfExecution(#[from] itp_stf_executor::error::Error),
+	#[error("Node API error: {0}")]
+	NodeApi(#[from] itp_node_api_extensions::error::Error),
 	#[error("Crypto error: {0}")]
 	Crypto(itp_sgx_crypto::Error),
 	#[error(transparent)]
