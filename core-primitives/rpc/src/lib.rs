@@ -33,16 +33,10 @@ pub struct RpcReturnValue {
 	pub value: Vec<u8>,
 	pub do_watch: bool,
 	pub status: DirectRequestStatus,
-	//pub signature: Signature,
 }
 impl RpcReturnValue {
 	pub fn new(val: Vec<u8>, watch: bool, status: DirectRequestStatus) -> Self {
-		Self {
-			value: val,
-			do_watch: watch,
-			status,
-			//signature: sign,
-		}
+		Self { value: val, do_watch: watch, status }
 	}
 
 	pub fn from_error_message(error_msg: &str) -> Self {

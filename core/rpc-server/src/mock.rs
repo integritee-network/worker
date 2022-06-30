@@ -16,7 +16,7 @@
 */
 
 use itp_enclave_api::{direct_request::DirectRequest, EnclaveResult};
-use itp_types::RpcResponse;
+use itp_rpc::RpcResponse;
 use itp_utils::ToHexPrefixed;
 use its_storage::interface::FetchBlocks;
 use parity_scale_codec::Encode;

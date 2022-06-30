@@ -16,7 +16,7 @@
 */
 
 use crate::{DetermineWatch, DirectRpcResult, RpcHash};
-use itp_types::RpcResponse;
+use itp_rpc::RpcResponse;
 
 pub struct DetermineWatchMock<Hash>
 where
