@@ -52,12 +52,9 @@ use itc_parentchain::{
 };
 use itp_block_import_queue::PushToBlockQueue;
 use itp_component_container::ComponentGetter;
-use itp_node_api_extensions::node_metadata_provider::NodeMetadata;
+use itp_node_api_extensions::node_metadata_provider::{AccessNodeMetadata, NodeMetadata};
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_ocall_api::EnclaveAttestationOCallApi;
-use itp_settings::node::{
-	REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, TEEREX_MODULE,
-};
 use itp_sgx_crypto::{ed25519, Ed25519Seal, Rsa3072Seal};
 use itp_sgx_io as io;
 use itp_sgx_io::StaticSealedIO;
@@ -210,7 +207,7 @@ pub unsafe extern "C" fn set_node_metadata(
 		Ok(m) => m,
 	};
 
-	let meta_data_repository = match GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get() {
+	let node_metadata_repository = match GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get() {
 		Ok(r) => r,
 		Err(e) => {
 			error!("Component get failure: {:?}", e);
@@ -218,7 +215,7 @@ pub unsafe extern "C" fn set_node_metadata(
 		},
 	};
 
-	meta_data_repository.set_metadata(metadata);
+	node_metadata_repository.set_metadata(metadata);
 	info!("Successfully set the node meta data");
 
 	sgx_status_t::SGX_SUCCESS
@@ -247,15 +244,40 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
 		.map_or_else(|_| Vec::<u8>::new(), |m| m.m.encode());
 
 	let signer = Ed25519Seal::unseal_from_static_file().unwrap();
-	let call = ([TEEREX_MODULE, REGISTER_ENCLAVE], mre, url);
+
+	let node_metadata_repository = match GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get() {
+		Ok(r) => r,
+		Err(e) => {
+			error!("Component get failure: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	let (teerex_module, register_enclave, runtime_spec_version, runtime_transaction_version) =
+		match node_metadata_repository.get_from_metadata(|m| {
+			(
+				m.teerex_module,
+				m.register_enclave,
+				m.runtime_spec_version,
+				m.runtime_transaction_version,
+			)
+		}) {
+			Ok(r) => r,
+			Err(e) => {
+				error!("Failed to get node metadata: {:?}", e);
+				return sgx_status_t::SGX_ERROR_UNEXPECTED
+			},
+		};
+
+	let call = ([teerex_module, register_enclave], mre, url);
 
 	let nonce_cache = GLOBAL_NONCE_CACHE.clone();
 	let mut nonce_lock = nonce_cache.load_for_mutation().expect("Nonce lock poisoning");
 	let nonce_value = nonce_lock.0;
 
 	let extrinsic_params = ParentchainExtrinsicParams::new(
-		RUNTIME_SPEC_VERSION,
-		RUNTIME_TRANSACTION_VERSION,
+		runtime_spec_version,
+		runtime_transaction_version,
 		nonce_value,
 		genesis_hash,
 		ParentchainExtrinsicParamsBuilder::default(),

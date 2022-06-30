@@ -35,7 +35,6 @@ use ita_stf::{
 use itc_parentchain::indirect_calls_executor::{ExecuteIndirectCalls, IndirectCallsExecutor};
 use itp_node_api_extensions::node_metadata_provider::{DummyMetadata, NodeMetadataRepository};
 use itp_ocall_api::EnclaveAttestationOCallApi;
-use itp_settings::node::{SHIELD_FUNDS, TEEREX_MODULE};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_stf_executor::enclave_signer::StfEnclaveSigner;
 use itp_test::{
@@ -180,9 +179,16 @@ fn create_shielding_call_extrinsic<ShieldingKey: ShieldingCryptoEncrypt>(
 		ParentchainExtrinsicParamsBuilder::default(),
 	);
 
+	let dummy_node_metadata = DummyMetadata::new();
+
 	let opaque_extrinsic = OpaqueExtrinsic::from_bytes(
 		ParentchainUncheckedExtrinsic::<ShieldFundsFn>::new_signed(
-			([TEEREX_MODULE, SHIELD_FUNDS], target_account, 1000u128, shard),
+			(
+				[dummy_node_metadata.teerex_module, dummy_node_metadata.shield_funds],
+				target_account,
+				1000u128,
+				shard,
+			),
 			GenericAddress::Address32([1u8; 32]),
 			MultiSignature::Ed25519(signature),
 			default_extra_for_test.signed_extra(),
