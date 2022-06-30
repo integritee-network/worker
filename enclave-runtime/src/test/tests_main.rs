@@ -38,11 +38,9 @@ use ita_stf::{
 	AccountInfo, ShardIdentifier, State, StatePayload, StateTypeDiff, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetter, TrustedOperation,
 };
+use itp_node_api_extensions::node_metadata_provider::{DummyMetadata, NodeMetadataRepository};
 use itp_ocall_api::EnclaveAttestationOCallApi;
-use itp_settings::{
-	enclave::MAX_TRUSTED_OPS_EXEC_DURATION,
-	node::{PROPOSED_SIDECHAIN_BLOCK, SIDECHAIN_MODULE},
-};
+use itp_settings::enclave::MAX_TRUSTED_OPS_EXEC_DURATION;
 use itp_sgx_crypto::{
 	ed25519_derivation::DeriveEd25519, mocks::KeyRepositoryMock, Aes, StateCrypto,
 };
@@ -177,9 +175,12 @@ pub extern "C" fn test_main_entrance() -> size_t {
 fn test_compose_block_and_confirmation() {
 	// given
 	let (_, _, shard, _, _, state_handler) = test_setup();
-	let block_composer = BlockComposer::<Block, SignedBlock, _, _>::new(
+	let node_metadata = DummyMetadata::new();
+	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(node_metadata.clone()));
+	let block_composer = BlockComposer::<Block, SignedBlock, _, _, _>::new(
 		test_account(),
 		Arc::new(TestStateKeyRepo::new(state_key())),
+		node_metadata_repo,
 	);
 
 	let signed_top_hashes: Vec<H256> = vec![[94; 32].into(), [1; 32].into()].to_vec();
@@ -203,7 +204,7 @@ fn test_compose_block_and_confirmation() {
 
 	// then
 	let expected_call = OpaqueCall::from_tuple(&(
-		[SIDECHAIN_MODULE, PROPOSED_SIDECHAIN_BLOCK],
+		[node_metadata.sidechain_module, node_metadata.proposed_sidechain_block],
 		shard,
 		&signed_block.block().header(),
 	));
@@ -308,9 +309,12 @@ fn test_create_block_and_confirmation_works() {
 		top_pool_author.clone(),
 		stf_executor.clone(),
 	);
-	let block_composer = BlockComposer::<Block, SignedBlock, _, _>::new(
+	let node_metadata = DummyMetadata::new();
+	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(node_metadata.clone()));
+	let block_composer = BlockComposer::<Block, SignedBlock, _, _, _>::new(
 		test_account(),
 		Arc::new(TestStateKeyRepo::new(state_key())),
+		node_metadata_repo,
 	);
 
 	let sender = funded_pair();
@@ -347,7 +351,7 @@ fn test_create_block_and_confirmation_works() {
 
 	// then
 	let expected_call = OpaqueCall::from_tuple(&(
-		[SIDECHAIN_MODULE, PROPOSED_SIDECHAIN_BLOCK],
+		[node_metadata.sidechain_module, node_metadata.proposed_sidechain_block],
 		shard,
 		&signed_block.block().header(),
 	));
@@ -366,9 +370,11 @@ fn test_create_state_diff() {
 		top_pool_author.clone(),
 		stf_executor.clone(),
 	);
-	let block_composer = BlockComposer::<Block, SignedBlock, _, _>::new(
+	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(DummyMetadata::new()));
+	let block_composer = BlockComposer::<Block, SignedBlock, _, _, _>::new(
 		test_account(),
 		Arc::new(TestStateKeyRepo::new(state_key())),
+		node_metadata_repo,
 	);
 
 	let sender = funded_pair();

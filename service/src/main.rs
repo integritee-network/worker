@@ -378,6 +378,7 @@ fn start_worker<E, T, D, InitializationHandler>(
 		.set_nonce(nonce)
 		.expect("Could not set nonce of enclave. Returning here...");
 
+	// TODO @echevrier: Set the 'real' metadata here, from the node API
 	enclave
 		.set_node_metadata(DummyMetadata::new().encode())
 		.expect("Could not set the node meta data in the enclave");

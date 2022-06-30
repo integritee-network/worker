@@ -2898,7 +2898,7 @@ name = "its-block-composer"
 version = "0.8.0"
 dependencies = [
  "ita-stf",
- "itp-settings",
+ "itp-node-api-extensions",
  "itp-sgx-crypto",
  "itp-stf-executor",
  "itp-time-utils",

@@ -36,6 +36,7 @@ use ita_stf::{
 };
 use itc_parentchain::light_client::mocks::validator_access_mock::ValidatorAccessMock;
 use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
+use itp_node_api_extensions::node_metadata_provider::{DummyMetadata, NodeMetadataRepository};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::{Aes, ShieldingCryptoEncrypt, StateCrypto};
@@ -104,7 +105,12 @@ pub fn produce_sidechain_block_and_import_it() {
 		parentchain_block_import_trigger.clone(),
 		ocall_api.clone(),
 	));
-	let block_composer = Arc::new(TestBlockComposer::new(signer.clone(), state_key_repo.clone()));
+	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(DummyMetadata::new()));
+	let block_composer = Arc::new(TestBlockComposer::new(
+		signer.clone(),
+		state_key_repo.clone(),
+		node_metadata_repo,
+	));
 	let proposer_environment =
 		ProposerFactory::new(top_pool_operation_handler, stf_executor.clone(), block_composer);
 	let extrinsics_factory = ExtrinsicsFactoryMock::default();

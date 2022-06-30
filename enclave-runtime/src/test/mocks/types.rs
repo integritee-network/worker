@@ -20,6 +20,7 @@
 
 use crate::test::mocks::rpc_responder_mock::RpcResponderMock;
 use itc_parentchain::block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
+use itp_node_api_extensions::node_metadata_provider::NodeMetadataRepository;
 use itp_sgx_crypto::{mocks::KeyRepositoryMock, Aes};
 use itp_stf_executor::executor::StfExecutor;
 use itp_test::mock::{
@@ -76,8 +77,13 @@ pub type TestTopPoolExecutor = TopPoolOperationHandler<
 	TestStfExecutor,
 >;
 
-pub type TestBlockComposer =
-	BlockComposer<ParentchainBlock, SignedSidechainBlock, TestSigner, TestStateKeyRepo>;
+pub type TestBlockComposer = BlockComposer<
+	ParentchainBlock,
+	SignedSidechainBlock,
+	TestSigner,
+	TestStateKeyRepo,
+	NodeMetadataRepository,
+>;
 
 pub type TestBlockImporter = BlockImporter<
 	TestSigner,

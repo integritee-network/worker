@@ -56,6 +56,7 @@ impl DummyMetadata {
 	}
 }
 
+// TODO @echevrier: Instead of the type alias, use your real metadata struct
 pub type NodeMetadata = DummyMetadata;
 
 /// Trait to get access to the node API metadata.

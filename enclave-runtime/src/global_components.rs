@@ -129,8 +129,13 @@ pub type EnclaveTopPoolOperationHandler = TopPoolOperationHandler<
 	EnclaveTopPoolAuthor,
 	EnclaveStfExecutor,
 >;
-pub type EnclaveSidechainBlockComposer =
-	BlockComposer<ParentchainBlock, SignedSidechainBlock, Pair, EnclaveStateKeyRepository>;
+pub type EnclaveSidechainBlockComposer = BlockComposer<
+	ParentchainBlock,
+	SignedSidechainBlock,
+	Pair,
+	EnclaveStateKeyRepository,
+	NodeMetadataRepository,
+>;
 pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 	Pair,
 	ParentchainBlock,
