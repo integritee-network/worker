@@ -35,6 +35,7 @@ sidechain-primitives = { default-features = false, git = "https://github.com/int
 [features]
 default = ["std"]
 std = [
+    "itp-rpc/std",
     "itp-top-pool-author/std",
     "itp-types/std",
     "itp-utils/std",

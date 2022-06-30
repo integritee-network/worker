@@ -23,7 +23,7 @@ itp-types = { git = "https://github.com/integritee-network/pallets.git", branch 
 itp-utils = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
 
 # local
-itp-rpc = { path = "../../core-primitives/rpc"}
+itp-rpc = { path = "../../core-primitives/rpc" }
 
 
 [dev-dependencies]

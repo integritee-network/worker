@@ -33,9 +33,10 @@ sp-state-machine = { git = "https://github.com/paritytech/substrate.git", branch
 default = ["std"]
 std = [
     "codec/std",
-    "hash-db/std",
     "frame-metadata/std",
     "frame-support/std",
+    "hash-db/std",
+    "itp-types/std",
     "sp-core/std",
     "sp-runtime/std",
     "sp-std/std",

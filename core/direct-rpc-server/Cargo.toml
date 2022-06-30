@@ -44,6 +44,7 @@ sgx = [
 ]
 std = [
     "jsonrpc-core",
+    "itp-rpc/std",
     "itp-types/std",
     "itp-utils/std",
     "thiserror",
