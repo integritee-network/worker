@@ -34,19 +34,20 @@ thiserror = { version = "1.0", optional = true }
 
 [features]
 default = ["std"]
-sgx = [
-    "sgx_tstd",
-    "sgx_types",
-    "jsonrpc-core_sgx",
-    "thiserror_sgx",
-    "itp-utils/sgx",
-    "itc-tls-websocket-server/sgx",
-]
 std = [
-    "jsonrpc-core",
+    "itc-tls-websocket-server/std",
     "itp-rpc/std",
     "itp-types/std",
     "itp-utils/std",
+    "jsonrpc-core",
     "thiserror",
-    "itc-tls-websocket-server/std",
+]
+sgx = [
+    "itc-tls-websocket-server/sgx",
+    "itp-rpc/sgx",
+    "itp-utils/sgx",
+    "jsonrpc-core_sgx",
+    "sgx_tstd",
+    "sgx_types",
+    "thiserror_sgx",
 ]
