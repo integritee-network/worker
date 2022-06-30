@@ -20,16 +20,19 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use crate::error::Result;
+use crate::{
+	beefy_merkle_tree::{merkle_root, Keccak256},
+	error::Result,
+};
 use codec::{Decode, Encode};
 use futures::executor;
 use ita_stf::{AccountId, TrustedCall, TrustedOperation};
-use itp_settings::node::{CALL_WORKER, SHIELD_FUNDS, TEEREX_MODULE};
+use itp_settings::node::{CALL_WORKER, PROCESSED_PARENTCHAIN_BLOCK, SHIELD_FUNDS, TEEREX_MODULE};
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
 use itp_stf_executor::traits::StfEnclaveSigning;
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{
-	CallWorkerFn, ParentchainUncheckedExtrinsic, ShardIdentifier, ShieldFundsFn, H256,
+	CallWorkerFn, OpaqueCall, ParentchainUncheckedExtrinsic, ShardIdentifier, ShieldFundsFn, H256,
 };
 use log::*;
 use sp_core::blake2_256;
@@ -44,7 +47,7 @@ pub trait ExecuteIndirectCalls {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
 		block: &ParentchainBlock,
-	) -> Result<Vec<H256>>
+	) -> Result<OpaqueCall>
 	where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>;
 }
@@ -119,11 +122,12 @@ where
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
 		block: &ParentchainBlock,
-	) -> Result<Vec<H256>>
+	) -> Result<OpaqueCall>
 	where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	{
 		let block_number = *block.header().number();
+		let block_hash = block.hash();
 		debug!("Scanning block {:?} for relevant xt", block_number);
 		let mut executed_shielding_calls = Vec::<H256>::new();
 		for xt_opaque in block.extrinsics().iter() {
@@ -161,7 +165,9 @@ where
 				}
 			}
 		}
-		Ok(executed_shielding_calls)
+
+		// Include a processed parentchain block confirmation for each block.
+		Ok(create_processed_parentchain_block_call(block_hash, executed_shielding_calls))
 	}
 }
 
@@ -169,9 +175,18 @@ fn hash_of<T: Encode>(xt: &T) -> H256 {
 	blake2_256(&xt.encode()).into()
 }
 
+/// Creates a processed_parentchain_block extrinsic for a given parentchain block hash and the merkle executed extrinsics.
+///
+/// Calculates the merkle root of the extrinsics. In case no extrinsics are supplied, the root will be a hash filled with zeros.
+fn create_processed_parentchain_block_call(block_hash: H256, extrinsics: Vec<H256>) -> OpaqueCall {
+	let root: H256 = merkle_root::<Keccak256, _, _>(extrinsics).into();
+	OpaqueCall::from_tuple(&([TEEREX_MODULE, PROCESSED_PARENTCHAIN_BLOCK], block_hash, root))
+}
+
 #[cfg(test)]
 mod test {
 	use super::*;
+	use codec::Encode;
 	use itp_sgx_crypto::mocks::KeyRepositoryMock;
 	use itp_stf_executor::mocks::StfEnclaveSignerMock;
 	use itp_test::{
@@ -248,6 +263,36 @@ mod test {
 		assert_matches!(decoded_operation, TrustedOperation::indirect_call(_));
 		let trusted_call_signed = decoded_operation.to_call().unwrap();
 		assert!(trusted_call_signed.verify_signature(&mr_enclave, &shard_id()));
+	}
+
+	#[test]
+	fn ensure_empty_extrinsic_vec_triggers_zero_filled_merkle_root() {
+		// given
+		let block_hash = H256::from([1; 32]);
+		let extrinsics = Vec::new();
+		let expected_call =
+			([TEEREX_MODULE, PROCESSED_PARENTCHAIN_BLOCK], block_hash, H256::default()).encode();
+
+		// when
+		let call = create_processed_parentchain_block_call(block_hash, extrinsics);
+
+		// then
+		assert_eq!(call.0, expected_call);
+	}
+
+	#[test]
+	fn ensure_non_empty_extrinsic_vec_triggers_non_zero_merkle_root() {
+		// given
+		let block_hash = H256::from([1; 32]);
+		let extrinsics = vec![H256::from([4; 32]), H256::from([9; 32])];
+		let zero_root_call =
+			([TEEREX_MODULE, PROCESSED_PARENTCHAIN_BLOCK], block_hash, H256::default()).encode();
+
+		// when
+		let call = create_processed_parentchain_block_call(block_hash, extrinsics);
+
+		// then
+		assert_ne!(call.0, zero_root_call);
 	}
 
 	fn shield_funds_unchecked_extrinsic(

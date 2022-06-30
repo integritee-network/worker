@@ -32,6 +32,7 @@ pub mod sgx_reexport_prelude {
 	pub use thiserror_sgx as thiserror;
 }
 
+mod beefy_merkle_tree;
 pub mod error;
 pub mod indirect_calls_executor;
 

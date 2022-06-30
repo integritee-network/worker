@@ -17,11 +17,7 @@
 
 //! Imports parentchain blocks and executes any indirect calls found in the extrinsics.
 
-use crate::{
-	beefy_merkle_tree::{merkle_root, Keccak256},
-	error::Result,
-	ImportParentchainBlocks,
-};
+use crate::{error::Result, ImportParentchainBlocks};
 use ita_stf::ParentchainHeader;
 use itc_parentchain_indirect_calls_executor::ExecuteIndirectCalls;
 use itc_parentchain_light_client::{
@@ -30,7 +26,6 @@ use itc_parentchain_light_client::{
 };
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
-use itp_settings::node::{PROCESSED_PARENTCHAIN_BLOCK, TEEREX_MODULE};
 use itp_stf_executor::traits::StfUpdateState;
 use itp_types::{OpaqueCall, H256};
 use log::*;
@@ -160,11 +155,7 @@ impl<
 			// incl. shielding and unshielding.
 			match self.indirect_calls_executor.execute_indirect_calls_in_extrinsics(&block) {
 				Ok(executed_shielding_calls) => {
-					// Include a processed parentchain block confirmation for each block.
-					calls.push(create_processed_parentchain_block_call(
-						block.hash(),
-						executed_shielding_calls,
-					));
+					calls.push(executed_shielding_calls);
 				},
 				Err(_) => error!("Error executing relevant extrinsics"),
 			};
@@ -185,49 +176,5 @@ impl<
 			.execute_mut_on_validator(|v| v.send_extrinsics(parentchain_extrinsics))?;
 
 		Ok(())
-	}
-}
-
-/// Creates a processed_parentchain_block extrinsic for a given parentchain block hash and the merkle executed extrinsics.
-///
-/// Calculates the merkle root of the extrinsics. In case no extrinsics are supplied, the root will be a hash filled with zeros.
-fn create_processed_parentchain_block_call(block_hash: H256, extrinsics: Vec<H256>) -> OpaqueCall {
-	let root: H256 = merkle_root::<Keccak256, _, _>(extrinsics).into();
-	OpaqueCall::from_tuple(&([TEEREX_MODULE, PROCESSED_PARENTCHAIN_BLOCK], block_hash, root))
-}
-
-#[cfg(test)]
-pub mod tests {
-	use super::*;
-	use codec::Encode;
-
-	#[test]
-	fn ensure_empty_extrinsic_vec_triggers_zero_filled_merkle_root() {
-		// given
-		let block_hash = H256::from([1; 32]);
-		let extrinsics = Vec::new();
-		let expected_call =
-			([TEEREX_MODULE, PROCESSED_PARENTCHAIN_BLOCK], block_hash, H256::default()).encode();
-
-		// when
-		let call = create_processed_parentchain_block_call(block_hash, extrinsics);
-
-		// then
-		assert_eq!(call.0, expected_call);
-	}
-
-	#[test]
-	fn ensure_non_empty_extrinsic_vec_triggers_non_zero_merkle_root() {
-		// given
-		let block_hash = H256::from([1; 32]);
-		let extrinsics = vec![H256::from([4; 32]), H256::from([9; 32])];
-		let zero_root_call =
-			([TEEREX_MODULE, PROCESSED_PARENTCHAIN_BLOCK], block_hash, H256::default()).encode();
-
-		// when
-		let call = create_processed_parentchain_block_call(block_hash, extrinsics);
-
-		// then
-		assert_ne!(call.0, zero_root_call);
 	}
 }

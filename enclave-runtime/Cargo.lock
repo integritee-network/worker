@@ -1281,7 +1281,6 @@ dependencies = [
  "sgx_types",
  "sp-runtime",
  "thiserror 1.0.9",
- "tiny-keccak",
 ]
 
 [[package]]
@@ -1306,6 +1305,7 @@ dependencies = [
  "sp-runtime",
  "substrate-api-client",
  "thiserror 1.0.9",
+ "tiny-keccak",
 ]
 
 [[package]]
