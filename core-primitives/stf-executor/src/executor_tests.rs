@@ -25,6 +25,7 @@ use ita_stf::{
 	test_genesis::{endowed_account, test_genesis_setup, ENDOWED_ACC_FUNDS},
 	AccountId, Balance, ShardIdentifier, State, TrustedCall, TrustedGetter, TrustedGetterSigned,
 };
+use itp_node_api_extensions::node_metadata_provider::{NodeMetadata, NodeMetadataRepository};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::{
@@ -286,11 +287,15 @@ pub fn upon_false_signature_get_stf_state_errs() {
 }
 
 // Helper Functions
-fn stf_executor(
-) -> (StfExecutor<OnchainMock, HandleStateMock>, Arc<OnchainMock>, Arc<HandleStateMock>) {
+fn stf_executor() -> (
+	StfExecutor<OnchainMock, HandleStateMock, NodeMetadataRepository>,
+	Arc<OnchainMock>,
+	Arc<HandleStateMock>,
+) {
 	let ocall_api = Arc::new(OnchainMock::default());
 	let state_handler = Arc::new(HandleStateMock::default());
-	let executor = StfExecutor::new(ocall_api.clone(), state_handler.clone());
+	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadata::new()));
+	let executor = StfExecutor::new(ocall_api.clone(), state_handler.clone(), node_metadata_repo);
 	(executor, ocall_api, state_handler)
 }
 

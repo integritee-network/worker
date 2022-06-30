@@ -38,7 +38,7 @@ use ita_stf::{
 	AccountInfo, ShardIdentifier, State, StatePayload, StateTypeDiff, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetter, TrustedOperation,
 };
-use itp_node_api_extensions::node_metadata_provider::{DummyMetadata, NodeMetadataRepository};
+use itp_node_api_extensions::node_metadata_provider::{NodeMetadata, NodeMetadataRepository};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::enclave::MAX_TRUSTED_OPS_EXEC_DURATION;
 use itp_sgx_crypto::{
@@ -81,7 +81,7 @@ use std::{string::String, sync::Arc, vec::Vec};
 type TestRpcResponder = RpcResponderMock<ExtrinsicHash<SidechainApi<Block>>>;
 type TestTopPool = BasicPool<SidechainApi<Block>, Block, TestRpcResponder>;
 type TestShieldingKeyRepo = KeyRepositoryMock<ShieldingCryptoMock>;
-type TestStfExecutor = StfExecutor<OcallApi, HandleStateMock>;
+type TestStfExecutor = StfExecutor<OcallApi, HandleStateMock, NodeMetadataRepository>;
 type TestTopPoolAuthor = Author<
 	TestTopPool,
 	AllowAllTopsFilter,
@@ -175,7 +175,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 fn test_compose_block_and_confirmation() {
 	// given
 	let (_, _, shard, _, _, state_handler) = test_setup();
-	let node_metadata = DummyMetadata::new();
+	let node_metadata = NodeMetadata::new();
 	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(node_metadata.clone()));
 	let block_composer = BlockComposer::<Block, SignedBlock, _, _, _>::new(
 		test_account(),
@@ -304,13 +304,17 @@ fn test_differentiate_getter_and_call_works() {
 fn test_create_block_and_confirmation_works() {
 	// given
 	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
-	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
+	let node_metadata = NodeMetadata::new();
+	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(node_metadata.clone()));
+	let stf_executor = Arc::new(StfExecutor::new(
+		Arc::new(OcallApi),
+		state_handler.clone(),
+		node_metadata_repo.clone(),
+	));
 	let top_pool_operation_handler = TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(
 		top_pool_author.clone(),
 		stf_executor.clone(),
 	);
-	let node_metadata = DummyMetadata::new();
-	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(node_metadata.clone()));
 	let block_composer = BlockComposer::<Block, SignedBlock, _, _, _>::new(
 		test_account(),
 		Arc::new(TestStateKeyRepo::new(state_key())),
@@ -365,12 +369,16 @@ fn test_create_block_and_confirmation_works() {
 fn test_create_state_diff() {
 	// given
 	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
-	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
+	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadata::new()));
+	let stf_executor = Arc::new(StfExecutor::new(
+		Arc::new(OcallApi),
+		state_handler.clone(),
+		node_metadata_repo.clone(),
+	));
 	let top_pool_operation_handler = TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(
 		top_pool_author.clone(),
 		stf_executor.clone(),
 	);
-	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(DummyMetadata::new()));
 	let block_composer = BlockComposer::<Block, SignedBlock, _, _, _>::new(
 		test_account(),
 		Arc::new(TestStateKeyRepo::new(state_key())),
@@ -431,7 +439,9 @@ fn test_create_state_diff() {
 fn test_executing_call_updates_account_nonce() {
 	// given
 	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
-	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
+	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadata::new()));
+	let stf_executor =
+		Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone(), node_metadata_repo));
 	let top_pool_operation_handler = TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(
 		top_pool_author.clone(),
 		stf_executor.clone(),
@@ -487,7 +497,9 @@ fn test_call_set_update_parentchain_block() {
 fn test_invalid_nonce_call_is_not_executed() {
 	// given
 	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
-	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
+	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadata::new()));
+	let stf_executor =
+		Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone(), node_metadata_repo));
 	let top_pool_operation_handler = TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(
 		top_pool_author.clone(),
 		stf_executor.clone(),
@@ -521,7 +533,9 @@ fn test_invalid_nonce_call_is_not_executed() {
 fn test_non_root_shielding_call_is_not_executed() {
 	// given
 	let (top_pool_author, _state, shard, mrenclave, shielding_key, state_handler) = test_setup();
-	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
+	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadata::new()));
+	let stf_executor =
+		Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone(), node_metadata_repo));
 	let top_pool_operation_handler = TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(
 		top_pool_author.clone(),
 		stf_executor.clone(),
@@ -551,7 +565,9 @@ fn test_non_root_shielding_call_is_not_executed() {
 
 fn test_shielding_call_with_enclave_self_is_executed() {
 	let (top_pool_author, _state, shard, mrenclave, shielding_key, state_handler) = test_setup();
-	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
+	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadata::new()));
+	let stf_executor =
+		Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone(), node_metadata_repo));
 	let top_pool_operation_handler = TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(
 		top_pool_author.clone(),
 		stf_executor.clone(),

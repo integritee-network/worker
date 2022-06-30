@@ -54,7 +54,7 @@ use itp_enclave_api::{
 };
 use itp_node_api_extensions::{
 	node_api_factory::{CreateNodeApi, NodeApiFactory},
-	node_metadata_provider::DummyMetadata,
+	node_metadata_provider::NodeMetadata,
 	AccountApi, ChainApi, PalletTeerexApi, ParentchainApi,
 };
 use itp_settings::{
@@ -380,7 +380,7 @@ fn start_worker<E, T, D, InitializationHandler>(
 
 	// TODO @echevrier: Set the 'real' metadata here, from the node API
 	enclave
-		.set_node_metadata(DummyMetadata::new().encode())
+		.set_node_metadata(NodeMetadata::new().encode())
 		.expect("Could not set the node meta data in the enclave");
 
 	let trusted_url = config.trusted_worker_url_external();

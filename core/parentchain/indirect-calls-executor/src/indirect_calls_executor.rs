@@ -235,7 +235,7 @@ fn hash_of<T: Encode>(xt: &T) -> H256 {
 mod test {
 	use super::*;
 	use codec::Encode;
-	use itp_node_api_extensions::node_metadata_provider::{DummyMetadata, NodeMetadataRepository};
+	use itp_node_api_extensions::node_metadata_provider::{NodeMetadata, NodeMetadataRepository};
 	use itp_sgx_crypto::mocks::KeyRepositoryMock;
 	use itp_stf_executor::mocks::StfEnclaveSignerMock;
 	use itp_test::{
@@ -269,7 +269,7 @@ mod test {
 		let _ = env_logger::builder().is_test(true).try_init();
 
 		let (indirect_calls_executor, top_pool_author, _) =
-			test_fixtures([0u8; 32], DummyMetadata::new());
+			test_fixtures([0u8; 32], NodeMetadata::new());
 
 		let opaque_extrinsic =
 			OpaqueExtrinsic::from_bytes(call_worker_unchecked_extrinsic().encode().as_slice())
@@ -292,7 +292,7 @@ mod test {
 
 		let mr_enclave = [33u8; 32];
 		let (indirect_calls_executor, top_pool_author, shielding_key_repo) =
-			test_fixtures(mr_enclave.clone(), DummyMetadata::new());
+			test_fixtures(mr_enclave.clone(), NodeMetadata::new());
 		let shielding_key = shielding_key_repo.retrieve_key().unwrap();
 
 		let opaque_extrinsic = OpaqueExtrinsic::from_bytes(
@@ -322,7 +322,7 @@ mod test {
 	#[test]
 	fn ensure_empty_extrinsic_vec_triggers_zero_filled_merkle_root() {
 		// given
-		let dummy_metadata = DummyMetadata::new();
+		let dummy_metadata = NodeMetadata::new();
 		let (indirect_calls_executor, _, _) = test_fixtures([38u8; 32], dummy_metadata.clone());
 
 		let block_hash = H256::from([1; 32]);
@@ -346,7 +346,7 @@ mod test {
 	#[test]
 	fn ensure_non_empty_extrinsic_vec_triggers_non_zero_merkle_root() {
 		// given
-		let dummy_metadata = DummyMetadata::new();
+		let dummy_metadata = NodeMetadata::new();
 		let (indirect_calls_executor, _, _) = test_fixtures([39u8; 32], dummy_metadata.clone());
 
 		let block_hash = H256::from([1; 32]);
@@ -371,7 +371,7 @@ mod test {
 		shielding_key: &ShieldingCryptoMock,
 	) -> ParentchainUncheckedExtrinsic<ShieldFundsFn> {
 		let target_account = shielding_key.encrypt(&AccountId::new([2u8; 32]).encode()).unwrap();
-		let dummy_metadata = DummyMetadata::new();
+		let dummy_metadata = NodeMetadata::new();
 
 		ParentchainUncheckedExtrinsic::<ShieldFundsFn>::new_signed(
 			(
@@ -388,7 +388,7 @@ mod test {
 
 	fn call_worker_unchecked_extrinsic() -> ParentchainUncheckedExtrinsic<CallWorkerFn> {
 		let request = Request { shard: shard_id(), cyphertext: vec![1u8, 2u8] };
-		let dummy_metadata = DummyMetadata::new();
+		let dummy_metadata = NodeMetadata::new();
 
 		ParentchainUncheckedExtrinsic::<CallWorkerFn>::new_signed(
 			([dummy_metadata.teerex_module, dummy_metadata.call_worker], request),
@@ -421,7 +421,7 @@ mod test {
 	}
 	fn test_fixtures(
 		mr_enclave: [u8; 32],
-		metadata: DummyMetadata,
+		metadata: NodeMetadata,
 	) -> (TestIndirectCallExecutor, Arc<TestTopPoolAuthor>, Arc<TestShieldingKeyRepo>) {
 		let shielding_key_repo = Arc::new(TestShieldingKeyRepo::default());
 		let stf_enclave_signer = Arc::new(TestStfEnclaveSigner::new(mr_enclave));

@@ -28,7 +28,6 @@ use crate::{
 	ENCLAVE_ACCOUNT_KEY,
 };
 use codec::Encode;
-use itp_settings::node::{TEEREX_MODULE, UNSHIELD_FUNDS};
 use itp_storage::storage_value_key;
 use itp_types::OpaqueCall;
 use itp_utils::stringify::account_id_to_string;
@@ -127,6 +126,7 @@ impl Stf {
 		ext: &mut impl SgxExternalitiesTrait,
 		call: TrustedCallSigned,
 		calls: &mut Vec<OpaqueCall>,
+		unshield_funds_fn: [u8; 2],
 	) -> StfResult<()> {
 		let call_hash = blake2_256(&call.encode());
 		ext.execute_with(|| {
@@ -182,7 +182,7 @@ impl Stf {
 
 					Self::unshield_funds(account_incognito, value)?;
 					calls.push(OpaqueCall::from_tuple(&(
-						[TEEREX_MODULE, UNSHIELD_FUNDS],
+						unshield_funds_fn,
 						beneficiary,
 						value,
 						shard,

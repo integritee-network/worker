@@ -60,7 +60,7 @@ pub type TestOCallApi = OnchainMock;
 pub type TestParentchainBlockImportTrigger =
 	TriggerParentchainBlockImportMock<SignedParentchainBlock>;
 
-pub type TestStfExecutor = StfExecutor<TestOCallApi, TestStateHandler>;
+pub type TestStfExecutor = StfExecutor<TestOCallApi, TestStateHandler, NodeMetadataRepository>;
 
 pub type TestRpcResponder = RpcResponderMock<H256>;
 

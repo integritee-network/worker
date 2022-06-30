@@ -36,7 +36,7 @@ use ita_stf::{
 };
 use itc_parentchain::light_client::mocks::validator_access_mock::ValidatorAccessMock;
 use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
-use itp_node_api_extensions::node_metadata_provider::{DummyMetadata, NodeMetadataRepository};
+use itp_node_api_extensions::node_metadata_provider::{NodeMetadata, NodeMetadataRepository};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::{Aes, ShieldingCryptoEncrypt, StateCrypto};
@@ -85,7 +85,12 @@ pub fn produce_sidechain_block_and_import_it() {
 	let (_, shard_id) = init_state(state_handler.as_ref(), enclave_call_signer.public().into());
 	let shards = vec![shard_id];
 
-	let stf_executor = Arc::new(TestStfExecutor::new(ocall_api.clone(), state_handler.clone()));
+	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadata::new()));
+	let stf_executor = Arc::new(TestStfExecutor::new(
+		ocall_api.clone(),
+		state_handler.clone(),
+		node_metadata_repo.clone(),
+	));
 	let top_pool = create_top_pool();
 
 	let top_pool_author = Arc::new(TestTopPoolAuthor::new(
@@ -105,7 +110,6 @@ pub fn produce_sidechain_block_and_import_it() {
 		parentchain_block_import_trigger.clone(),
 		ocall_api.clone(),
 	));
-	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(DummyMetadata::new()));
 	let block_composer = Arc::new(TestBlockComposer::new(
 		signer.clone(),
 		state_key_repo.clone(),

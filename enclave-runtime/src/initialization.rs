@@ -128,11 +128,15 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	let ocall_api = Arc::new(OcallApi);
 	GLOBAL_OCALL_API_COMPONENT.initialize(ocall_api.clone());
 
-	let stf_executor = Arc::new(EnclaveStfExecutor::new(ocall_api.clone(), state_handler.clone()));
-	GLOBAL_STF_EXECUTOR_COMPONENT.initialize(stf_executor);
-
 	let node_metadata_repository = Arc::new(NodeMetadataRepository::default());
-	GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.initialize(node_metadata_repository);
+	GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.initialize(node_metadata_repository.clone());
+
+	let stf_executor = Arc::new(EnclaveStfExecutor::new(
+		ocall_api.clone(),
+		state_handler.clone(),
+		node_metadata_repository,
+	));
+	GLOBAL_STF_EXECUTOR_COMPONENT.initialize(stf_executor);
 
 	// For debug purposes, list shards. no problem to panic if fails.
 	let shards = state_handler.list_shards().unwrap();

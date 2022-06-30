@@ -33,7 +33,7 @@ use ita_stf::{
 	TrustedCall, TrustedOperation,
 };
 use itc_parentchain::indirect_calls_executor::{ExecuteIndirectCalls, IndirectCallsExecutor};
-use itp_node_api_extensions::node_metadata_provider::{DummyMetadata, NodeMetadataRepository};
+use itp_node_api_extensions::node_metadata_provider::{NodeMetadata, NodeMetadataRepository};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_stf_executor::enclave_signer::StfEnclaveSigner;
@@ -119,7 +119,7 @@ pub fn submit_shielding_call_to_top_pool() {
 		shielding_key_repo.clone(),
 	));
 	let node_meta_data_repository = Arc::new(NodeMetadataRepository::default());
-	node_meta_data_repository.set_metadata(DummyMetadata::new());
+	node_meta_data_repository.set_metadata(NodeMetadata::new());
 	let indirect_calls_executor = IndirectCallsExecutor::new(
 		shielding_key_repo,
 		enclave_signer,
@@ -179,7 +179,7 @@ fn create_shielding_call_extrinsic<ShieldingKey: ShieldingCryptoEncrypt>(
 		ParentchainExtrinsicParamsBuilder::default(),
 	);
 
-	let dummy_node_metadata = DummyMetadata::new();
+	let dummy_node_metadata = NodeMetadata::new();
 
 	let opaque_extrinsic = OpaqueExtrinsic::from_bytes(
 		ParentchainUncheckedExtrinsic::<ShieldFundsFn>::new_signed(
