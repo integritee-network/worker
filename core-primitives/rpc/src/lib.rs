@@ -21,27 +21,11 @@
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
-#[macro_use]
 extern crate sgx_tstd as std;
-
-// re-export module to properly feature gate sgx and regular std environment
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-pub mod sgx_reexport_prelude {
-	pub use serde_json_sgx as serde_json;
-	pub use serde_sgx as serde;
-}
-
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-use crate::sgx_reexport_prelude::*;
-
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-use serde_derive::{Deserialize, Serialize};
-
-#[cfg(all(not(feature = "sgx"), feature = "std"))]
-use serde::{Deserialize, Serialize};
 
 use codec::{Decode, Encode};
 use itp_types::DirectRequestStatus;
+use serde::{Deserialize, Serialize};
 use std::{borrow::ToOwned, string::String, vec::Vec};
 
 #[derive(Encode, Decode, Debug)]

@@ -18,9 +18,10 @@
 use codec::Encode;
 use core::result::Result;
 use itp_primitives_cache::{GetPrimitives, GLOBAL_PRIMITIVES_CACHE};
+use itp_rpc::RpcReturnValue;
 use itp_sgx_crypto::Rsa3072Seal;
 use itp_top_pool_author::traits::AuthorApi;
-use itp_types::{DirectRequestStatus, RpcReturnValue, H256};
+use itp_types::{DirectRequestStatus, H256};
 use itp_utils::ToHexPrefixed;
 use its_sidechain::rpc_handler::{direct_top_pool_api, import_block_api};
 use jsonrpc_core::{serde_json::json, IoHandler, Params, Value};

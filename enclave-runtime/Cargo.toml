@@ -97,6 +97,7 @@ itp-nonce-cache = { path = "../core-primitives/nonce-cache", default-features = 
 itp-ocall-api = { path = "../core-primitives/ocall-api", default-features = false }
 itp-primitives-cache = { path = "../core-primitives/primitives-cache", default-features = false, features = ["sgx"] }
 itp-time-utils = { path = "../core-primitives/time-utils", default-features = false, features = ["sgx"] }
+itp-rpc = { path = "../core-primitives/rpc", default-features = false, features = ["sgx"] }
 itp-settings = { path = "../core-primitives/settings" }
 itp-sgx-io = { path = "../core-primitives/sgx/io", default-features = false, features = ["sgx"] }
 itp-storage = { path = "../core-primitives/storage", default-features = false, features = ["sgx"] }

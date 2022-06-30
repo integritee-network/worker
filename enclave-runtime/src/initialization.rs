@@ -49,7 +49,10 @@ use itc_parentchain::{
 	block_import_dispatcher::triggered_dispatcher::TriggeredDispatcher,
 	block_importer::ParentchainBlockImporter,
 	indirect_calls_executor::IndirectCallsExecutor,
-	light_client::{concurrent_access::ValidatorAccess, LightClientState},
+	light_client::{
+		concurrent_access::ValidatorAccess, light_client_init_params::LightClientInitParams,
+		LightClientState,
+	},
 };
 use itc_tls_websocket_server::{
 	certificate_generation::ed25519_self_signed_certificate, create_ws_server, ConnectionToken,
@@ -73,9 +76,7 @@ use itp_stf_state_handler::{
 };
 use itp_top_pool::pool::Options as PoolOptions;
 use itp_top_pool_author::author::AuthorTopFilter;
-use itp_types::{
-	light_client_init_params::LightClientInitParams, Block, Header, ShardIdentifier, SignedBlock,
-};
+use itp_types::{Block, Header, ShardIdentifier, SignedBlock};
 use its_sidechain::{
 	aura::block_importer::BlockImporter, block_composer::BlockComposer,
 	top_pool_executor::TopPoolOperationHandler,
