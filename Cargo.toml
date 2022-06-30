@@ -23,6 +23,7 @@ members = [
     "core-primitives/nonce-cache",
     "core-primitives/ocall-api",
     "core-primitives/primitives-cache",
+    "core-primitives/rpc",
     "core-primitives/settings",
     "core-primitives/sgx/crypto",
     "core-primitives/sgx/io",

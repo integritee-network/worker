@@ -5722,7 +5722,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.4.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=gk/types_and_utils#9051d1223f4acfac827185090f38be645e747796"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=gk/types_and_utils#390cbc31a9ff57cc807ffc3bdacb07bed4d0b693"
 dependencies = [
  "derive_more",
  "environmental",
@@ -5737,7 +5737,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=gk/types_and_utils#9051d1223f4acfac827185090f38be645e747796"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=gk/types_and_utils#390cbc31a9ff57cc807ffc3bdacb07bed4d0b693"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -6379,7 +6379,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "6.0.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=gk/types_and_utils#9051d1223f4acfac827185090f38be645e747796"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=gk/types_and_utils#390cbc31a9ff57cc807ffc3bdacb07bed4d0b693"
 dependencies = [
  "environmental",
  "futures 0.3.21",
