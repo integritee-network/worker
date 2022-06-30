@@ -13,8 +13,8 @@ rocksdb = "0.17.0"
 thiserror = "1.0"
 
 # integritee
-itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
-sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
+itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # Substrate dependencies
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }

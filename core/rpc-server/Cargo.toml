@@ -14,8 +14,8 @@ tokio = { version = "1.6.1", features = ["full"] }
 parity-scale-codec = "3.0.0"
 
 # integritee deps
-itp-utils = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
-sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
+itp-utils = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # local
 itp-enclave-api = { path = "../../core-primitives/enclave-api" }

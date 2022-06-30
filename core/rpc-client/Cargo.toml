@@ -19,8 +19,8 @@ url = { version = "2.0.0" }
 ws = { version = "0.9.1", features = ["ssl"] }
 
 # integritee
-itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
-itp-utils = { git = "https://github.com/integritee-network/pallets.git", branch = "gk/types_and_utils" }
+itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+itp-utils = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # local
 itp-rpc = { path = "../../core-primitives/rpc" }
