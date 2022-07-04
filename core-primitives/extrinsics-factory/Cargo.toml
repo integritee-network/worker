@@ -10,6 +10,7 @@ resolver = "2"
 [features]
 default = ["std"]
 std = [
+    "itp-node-api-extensions/std",
     "itp-nonce-cache/std",
     "itp-types/std",
     "log/std",
@@ -17,6 +18,7 @@ std = [
     "thiserror",
 ]
 sgx = [
+    "itp-node-api-extensions/sgx",
     "itp-nonce-cache/sgx",
     "sgx_tstd",
     "thiserror_sgx",
@@ -30,8 +32,8 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.24" }
 
 # local dependencies
+itp-node-api-extensions = { path = "../node-api-extensions", default-features = false }
 itp-nonce-cache = { path = "../nonce-cache", default-features = false }
-itp-settings = { path = "../settings" }
 
 # integritee
 itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }

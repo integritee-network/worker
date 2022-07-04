@@ -81,7 +81,7 @@ pub type EnclaveStfExecutor =
 	StfExecutor<EnclaveOCallApi, EnclaveStateHandler, NodeMetadataRepository>;
 pub type EnclaveStfEnclaveSigner =
 	StfEnclaveSigner<EnclaveOCallApi, EnclaveStateHandler, EnclaveShieldingKeyRepository>;
-pub type EnclaveExtrinsicsFactory = ExtrinsicsFactory<Pair, NonceCache>;
+pub type EnclaveExtrinsicsFactory = ExtrinsicsFactory<Pair, NonceCache, NodeMetadataRepository>;
 pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
 	EnclaveShieldingKeyRepository,
 	EnclaveStfEnclaveSigner,

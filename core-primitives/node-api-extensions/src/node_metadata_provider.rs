@@ -68,6 +68,9 @@ pub trait AccessNodeMetadata {
 		F: FnOnce(&Self::MetadataType) -> R;
 }
 
+/// Repository to manage the node metadata.
+///
+/// Provides simple means to set the metadata and read from it, guarded by a lock.
 #[derive(Default)]
 pub struct NodeMetadataRepository {
 	metadata_lock: RwLock<Option<NodeMetadata>>,

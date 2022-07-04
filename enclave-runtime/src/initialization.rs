@@ -256,8 +256,12 @@ pub(crate) fn init_light_client(params: LightClientInitParams<Header>) -> Enclav
 
 	let genesis_hash = validator_access.execute_on_validator(|v| v.genesis_hash(v.num_relays()))?;
 
-	let extrinsics_factory =
-		Arc::new(ExtrinsicsFactory::new(genesis_hash, signer, GLOBAL_NONCE_CACHE.clone()));
+	let extrinsics_factory = Arc::new(ExtrinsicsFactory::new(
+		genesis_hash,
+		signer,
+		GLOBAL_NONCE_CACHE.clone(),
+		node_metadata_repository.clone(),
+	));
 
 	GLOBAL_EXTRINSICS_FACTORY_COMPONENT.initialize(extrinsics_factory.clone());
 

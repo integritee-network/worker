@@ -2584,8 +2584,8 @@ dependencies = [
 name = "itp-extrinsics-factory"
 version = "0.8.0"
 dependencies = [
+ "itp-node-api-extensions",
  "itp-nonce-cache",
- "itp-settings",
  "itp-types",
  "log 0.4.17",
  "parity-scale-codec",
