@@ -21,14 +21,14 @@ use itp_time_utils::now_as_u64;
 use itp_types::H256;
 use its_block_composer::ComposeBlockAndConfirmation;
 use its_consensus_common::{Error as ConsensusError, Proposal, Proposer};
-use its_primitives::traits::{
-	Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor,
-	SignedBlock as SignedSidechainBlockTrait,
-};
 use its_state::{SidechainDB, SidechainState, SidechainSystemExt, StateHash};
 use its_top_pool_executor::call_operator::TopPoolCallOperator;
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
+use sidechain_primitives::traits::{
+	Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor,
+	SignedBlock as SignedSidechainBlockTrait,
+};
 use sp_runtime::{
 	traits::{Block, NumberFor},
 	MultiSignature,
@@ -99,18 +99,7 @@ impl<ParentchainBlock, SignedSidechainBlock, TopPoolExecutor, BlockComposer, Stf
 			.get_trusted_calls(&self.shard)
 			.map_err(|e| ConsensusError::Other(e.to_string().into()))?;
 
-		// TODO: remove when we have proper on-boarding of new workers #273.
-		if trusted_calls.is_empty() {
-			info!("No trusted calls in top for shard: {:?}", self.shard);
-		// We return here when we actually import sidechain blocks because we currently have no
-		// means of worker on-boarding. Without on-boarding we have can't get a working multi
-		// worker-setup.
-		//
-		// But if we use this trick (only produce a sidechain block if there are trusted_calls), we
-		// we can simply wait with the submission of trusted calls until all workers are ready. Then
-		// we don't need to exchange any state and can have a functional multi-worker setup.
-		// return Ok(Default::default())
-		} else {
+		if !trusted_calls.is_empty() {
 			debug!("Got following trusted calls from pool: {:?}", trusted_calls);
 		}
 
@@ -138,7 +127,7 @@ impl<ParentchainBlock, SignedSidechainBlock, TopPoolExecutor, BlockComposer, Stf
 		let mut parentchain_extrinsics = batch_execution_result.get_extrinsic_callbacks();
 
 		let executed_operation_hashes: Vec<_> =
-			batch_execution_result.get_executed_operation_hashes().iter().copied().collect();
+			batch_execution_result.get_executed_operation_hashes().to_vec();
 		let number_executed_transactions = executed_operation_hashes.len();
 
 		// Remove all not successfully executed operations from the top pool.

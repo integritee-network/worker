@@ -18,11 +18,11 @@
 use crate::ConsensusError;
 use itp_types::{Block as ParentchainBlock, Header};
 use its_consensus_common::{Proposal, Proposer};
-use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use its_test::{
 	sidechain_block_builder::SidechainBlockBuilder,
 	sidechain_block_data_builder::SidechainBlockDataBuilder,
 };
+use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use std::time::Duration;
 
 pub struct ProposerMock {

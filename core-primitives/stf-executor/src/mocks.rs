@@ -15,43 +15,44 @@
 
 */
 
-use crate::{
-	error::Result,
-	traits::{StatePostProcessing, StfExecuteShieldFunds, StfExecuteTrustedCall},
-};
-use ita_stf::{AccountId, ShardIdentifier, TrustedOperation};
-use itp_types::{Amount, OpaqueCall};
-use sp_core::H256;
-use sp_runtime::traits::Header as HeaderTrait;
-use std::vec::Vec;
+use crate::{error::Result, traits::StfEnclaveSigning};
+use ita_stf::{AccountId, KeyPair, ShardIdentifier, TrustedCall, TrustedCallSigned};
+use sp_core::Pair;
 
 /// Mock for the StfExecutor.
 #[derive(Default)]
 pub struct StfExecutorMock;
 
-impl StfExecuteTrustedCall for StfExecutorMock {
-	fn execute_trusted_call<PH>(
-		&self,
-		_calls: &mut Vec<OpaqueCall>,
-		_stf_call_signed: &TrustedOperation,
-		_header: &PH,
-		_shard: &ShardIdentifier,
-		_post_processing: StatePostProcessing,
-	) -> Result<Option<H256>>
-	where
-		PH: HeaderTrait<Hash = H256>,
-	{
-		todo!()
+pub struct StfEnclaveSignerMock {
+	mr_enclave: [u8; 32],
+	signer: sp_core::ed25519::Pair,
+}
+
+impl StfEnclaveSignerMock {
+	pub fn new(mr_enclave: [u8; 32]) -> Self {
+		type Seed = [u8; 32];
+		const TEST_SEED: Seed = *b"42345678901234567890123456789012";
+
+		Self { mr_enclave, signer: sp_core::ed25519::Pair::from_seed(&TEST_SEED) }
 	}
 }
 
-impl StfExecuteShieldFunds for StfExecutorMock {
-	fn execute_shield_funds(
+impl Default for StfEnclaveSignerMock {
+	fn default() -> Self {
+		Self::new([0u8; 32])
+	}
+}
+
+impl StfEnclaveSigning for StfEnclaveSignerMock {
+	fn get_enclave_account(&self) -> Result<AccountId> {
+		Ok(self.signer.public().into())
+	}
+
+	fn sign_call_with_self(
 		&self,
-		_account: AccountId,
-		_amount: Amount,
-		_shard: &ShardIdentifier,
-	) -> Result<H256> {
-		todo!()
+		trusted_call: &TrustedCall,
+		shard: &ShardIdentifier,
+	) -> Result<TrustedCallSigned> {
+		Ok(trusted_call.sign(&KeyPair::Ed25519(self.signer.clone()), 1, &self.mr_enclave, shard))
 	}
 }

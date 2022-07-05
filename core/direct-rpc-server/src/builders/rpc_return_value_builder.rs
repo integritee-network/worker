@@ -16,7 +16,8 @@
 */
 
 use codec::Encode;
-use itp_types::{DirectRequestStatus, RpcReturnValue};
+use itp_rpc::RpcReturnValue;
+use itp_types::DirectRequestStatus;
 use std::{string::String, vec::Vec};
 
 /// Builder pattern for a RpcReturnValue

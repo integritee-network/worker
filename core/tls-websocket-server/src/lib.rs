@@ -31,6 +31,7 @@ pub mod sgx_reexport_prelude {
 	pub use thiserror_sgx as thiserror;
 	pub use tungstenite_sgx as tungstenite;
 	pub use webpki_sgx as webpki;
+	pub use yasna_sgx as yasna;
 }
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
@@ -49,6 +50,7 @@ use std::{
 	sync::Arc,
 };
 
+pub mod certificate_generation;
 pub mod config_provider;
 mod connection;
 pub mod connection_id_generator;
@@ -159,13 +161,17 @@ pub(crate) trait WebSocketConnection: Send + Sync {
 
 pub fn create_ws_server<Handler>(
 	addr_plain: &str,
+	private_key_path: &str,
+	certificates_path: &str,
 	handler: Arc<Handler>,
 ) -> Arc<TungsteniteWsServer<Handler, FromFileConfigProvider>>
 where
 	Handler: WebSocketMessageHandler,
 {
-	let config_provider =
-		Arc::new(FromFileConfigProvider::new("end.rsa".to_string(), "end.fullchain".to_string()));
+	let config_provider = Arc::new(FromFileConfigProvider::new(
+		private_key_path.to_string(),
+		certificates_path.to_string(),
+	));
 
 	Arc::new(TungsteniteWsServer::new(addr_plain.to_string(), config_provider, handler))
 }

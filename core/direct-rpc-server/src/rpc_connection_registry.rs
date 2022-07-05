@@ -22,7 +22,7 @@ use std::sync::SgxRwLock as RwLock;
 use std::sync::RwLock;
 
 use crate::{RpcConnectionRegistry, RpcHash};
-use itp_types::RpcResponse;
+use itp_rpc::RpcResponse;
 use std::{collections::HashMap, fmt::Debug};
 
 type HashMapLock<K, V> = RwLock<HashMap<K, V>>;

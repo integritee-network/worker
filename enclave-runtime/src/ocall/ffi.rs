@@ -78,8 +78,10 @@ extern "C" {
 
 	pub fn ocall_fetch_sidechain_blocks_from_peer(
 		ret_val: *mut sgx_status_t,
-		last_known_block_hash: *const u8,
-		last_known_block_hash_size: u32,
+		last_imported_block_hash: *const u8,
+		last_imported_block_hash_size: u32,
+		maybe_until_block_hash: *const u8,
+		maybe_until_block_hash_encoded_size: u32,
 		shard_identifier: *const u8,
 		shard_identifier_size: u32,
 		sidechain_blocks: *mut u8,

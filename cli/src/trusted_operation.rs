@@ -25,10 +25,9 @@ use codec::{Decode, Encode};
 use ita_stf::{ShardIdentifier, TrustedOperation};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
 use itp_node_api_extensions::TEEREX;
+use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
-use itp_types::{
-	DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue, TrustedOperationStatus,
-};
+use itp_types::{DirectRequestStatus, TrustedOperationStatus};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use log::*;
 use my_node_runtime::{AccountId, Hash};
@@ -39,7 +38,7 @@ use std::{
 	thread,
 	time::{Duration, Instant},
 };
-use substrate_api_client::{compose_extrinsic, XtStatus};
+use substrate_api_client::{compose_extrinsic, ExtrinsicParams, XtStatus};
 use teerex_primitives::Request;
 
 pub fn perform_trusted_operation(
@@ -123,7 +122,7 @@ fn send_request(
 	let block_hash =
 		_chain_api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock).unwrap().unwrap();
 	info!(
-		"Trusted call extrinsic sent and sucessfully included in parentchain block with hash {:?}.",
+		"Trusted call extrinsic sent and successfully included in parentchain block with hash {:?}.",
 		block_hash
 	);
 	info!("Waiting for execution confirmation from enclave...");

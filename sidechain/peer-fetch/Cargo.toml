@@ -9,15 +9,19 @@ resolver = "2"
 # crates.io
 async-trait = { version = "0.1.50" }
 jsonrpsee = { version = "0.2.0", features = ["client", "ws-server", "macros"] }
-log = { version = "0.4.14" }
+log = { version = "0.4.17" }
 serde = "1.0"
 serde_json = "1.0"
 thiserror = { version = "1.0" }
 tokio = { version = "1.6.1", features = ["full"] }
+
+# scs / integritee
+sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+
 # local
 itc-rpc-client = { path = "../../core/rpc-client" }
 itp-node-api-extensions = { path = "../../core-primitives/node-api-extensions" }
-its-primitives = { path = "../primitives" }
+its-rpc-handler = { path = "../rpc-handler" }
 its-storage = { path = "../storage" }
 
 [dev-dependencies]

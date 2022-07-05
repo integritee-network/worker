@@ -38,6 +38,9 @@ pub mod files {
 
 	pub const RA_DUMP_CERT_DER_FILE: &str = "ra_dump_cert.der";
 
+	pub const ENCLAVE_CERTIFICATE_FILE_PATH: &str = "cert.pem";
+	pub const ENCLAVE_CERTIFICATE_PRIVATE_KEY_PATH: &str = "private_key.pem";
+
 	// used by worker and enclave
 	pub const SHARDS_PATH: &str = "shards";
 	pub const ENCRYPTED_STATE_FILE: &str = "state.bin";
@@ -74,7 +77,7 @@ pub mod worker {
 	// Factors to tune the initial amount of enclave funding:
 	// Should be set to a value that ensures that the enclave can register itself
 	// and the worker can run for a certain time. Only for development.
-	pub const EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS: u128 = 10_000;
+	pub const EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS: u128 = 200_000;
 	// Should be set to a value that ensures that the enclave can register itself
 	// and that the worker can start.
 	pub const REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS: u128 = 10;
@@ -111,6 +114,6 @@ pub mod node {
 	pub static SIDECHAIN_MODULE: u8 = 53u8;
 	pub static PROPOSED_SIDECHAIN_BLOCK: u8 = 0u8;
 	// bump this to be consistent with integritee-node runtime
-	pub static RUNTIME_SPEC_VERSION: u32 = 9;
-	pub static RUNTIME_TRANSACTION_VERSION: u32 = 2;
+	pub static RUNTIME_SPEC_VERSION: u32 = 24;
+	pub static RUNTIME_TRANSACTION_VERSION: u32 = 3;
 }

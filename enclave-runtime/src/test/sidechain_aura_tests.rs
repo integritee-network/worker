@@ -25,6 +25,7 @@ use crate::{
 			initialize_test_state::init_state,
 		},
 		mocks::{propose_to_import_call_mock::ProposeToImportOCallApi, types::*},
+		tests_main::enclave_call_signer,
 	},
 	top_pool_execution::{exec_aura_on_slot, send_blocks_and_extrinsics},
 };
@@ -48,14 +49,14 @@ use itp_top_pool_author::{author::AuthorTopFilter, traits::AuthorApi};
 use itp_types::{AccountId, Block as ParentchainBlock, ShardIdentifier};
 use its_sidechain::{
 	aura::proposer_factory::ProposerFactory,
-	primitives::{traits::Block, types::SignedBlock as SignedSidechainBlock},
-	slots::{slot_from_time_stamp_and_duration, SlotInfo},
+	slots::{slot_from_timestamp_and_duration, SlotInfo},
 	state::SidechainState,
 };
 use jsonrpc_core::futures::executor;
 use log::*;
 use primitive_types::H256;
 use sgx_crypto_helper::RsaKeyPair;
+use sidechain_primitives::{traits::Block, types::SignedBlock as SignedSidechainBlock};
 use sp_core::{ed25519, Pair};
 use std::{sync::Arc, vec, vec::Vec};
 
@@ -73,12 +74,14 @@ pub fn produce_sidechain_block_and_import_it() {
 	let state_key = TestStateKey::new([3u8; 16], [1u8; 16]);
 	let shielding_key_repo = Arc::new(TestShieldingKeyRepo::new(shielding_key));
 	let state_key_repo = Arc::new(TestStateKeyRepo::new(state_key));
+	let parentchain_header = ParentchainHeaderBuilder::default().build();
 
-	let ocall_api = create_ocall_api(&signer);
+	let ocall_api = create_ocall_api(&parentchain_header, &signer);
 
 	info!("Initializing state and shard..");
 	let state_handler = Arc::new(TestStateHandler::default());
-	let (_, shard_id) = init_state(state_handler.as_ref());
+	let enclave_call_signer = enclave_call_signer(&shielding_key);
+	let (_, shard_id) = init_state(state_handler.as_ref(), enclave_call_signer.public().into());
 	let shards = vec![shard_id];
 
 	let stf_executor = Arc::new(TestStfExecutor::new(ocall_api.clone(), state_handler.clone()));
@@ -137,10 +140,11 @@ pub fn produce_sidechain_block_and_import_it() {
 	assert!(top_pool_author.get_pending_tops_separated(shard_id).unwrap().1.is_empty());
 
 	info!("Setup AURA SlotInfo");
-	let parentchain_header = ParentchainHeaderBuilder::default().build();
 	let timestamp = duration_now();
-	let slot = slot_from_time_stamp_and_duration(duration_now(), SLOT_DURATION);
-	let slot_info = SlotInfo::new(slot, timestamp, SLOT_DURATION, parentchain_header.clone());
+	let slot = slot_from_timestamp_and_duration(duration_now(), SLOT_DURATION);
+	let ends_at = timestamp + SLOT_DURATION;
+	let slot_info =
+		SlotInfo::new(slot, timestamp, SLOT_DURATION, ends_at, parentchain_header.clone());
 
 	info!("Test setup is done.");
 
@@ -182,7 +186,7 @@ pub fn produce_sidechain_block_and_import_it() {
 	send_blocks_and_extrinsics::<ParentchainBlock, _, _, _, _>(
 		blocks,
 		opaque_calls,
-		propose_to_block_import_ocall_api,
+		&propose_to_block_import_ocall_api,
 		&validator_access,
 		&extrinsics_factory,
 	)

@@ -24,14 +24,13 @@ use crate::{config::Config, error::Error, TrackInitialization};
 use async_trait::async_trait;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use itp_node_api_extensions::{node_api_factory::CreateNodeApi, PalletTeerexApi};
-use its_primitives::{
-	constants::RPC_METHOD_NAME_IMPORT_BLOCKS, types::SignedBlock as SignedSidechainBlock,
-};
+use its_rpc_handler::constants::RPC_METHOD_NAME_IMPORT_BLOCKS;
 use jsonrpsee::{
 	types::{to_json_value, traits::Client},
 	ws_client::WsClientBuilder,
 };
 use log::*;
+use sidechain_primitives::types::SignedBlock as SignedSidechainBlock;
 use std::sync::{Arc, RwLock};
 
 pub type WorkerResult<T> = Result<T, Error>;
@@ -86,13 +85,17 @@ where
 		}
 
 		let blocks_json = vec![to_json_value(blocks)?];
-		let peers = self.peers.read().map_err(|e| {
-			Error::Custom(format!("Encountered poisoned lock for peers: {:?}", e).into())
-		})?;
+		let peers = self
+			.peers
+			.read()
+			.map_err(|e| {
+				Error::Custom(format!("Encountered poisoned lock for peers: {:?}", e).into())
+			})
+			.map(|l| l.clone())?;
 
 		self.initialization_handler.sidechain_block_produced();
 
-		for url in peers.iter().cloned() {
+		for url in peers {
 			let blocks = blocks_json.clone();
 
 			tokio::spawn(async move {
@@ -182,10 +185,10 @@ mod tests {
 	};
 	use frame_support::assert_ok;
 	use itp_node_api_extensions::node_api_factory::NodeApiFactory;
-	use its_primitives::types::SignedBlock as SignedSidechainBlock;
 	use its_test::sidechain_block_builder::SidechainBlockBuilder;
 	use jsonrpsee::{ws_server::WsServerBuilder, RpcModule};
 	use log::debug;
+	use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;
 	use sp_keyring::AccountKeyring;
 	use std::{net::SocketAddr, sync::Arc};
 	use tokio::net::ToSocketAddrs;

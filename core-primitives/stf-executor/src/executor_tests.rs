@@ -287,7 +287,7 @@ pub fn upon_false_signature_get_stf_state_errs() {
 
 // Helper Functions
 fn stf_executor(
-) -> (StfExecutor<OnchainMock, HandleStateMock, State>, Arc<OnchainMock>, Arc<HandleStateMock>) {
+) -> (StfExecutor<OnchainMock, HandleStateMock>, Arc<OnchainMock>, Arc<HandleStateMock>) {
 	let ocall_api = Arc::new(OnchainMock::default());
 	let state_handler = Arc::new(HandleStateMock::default());
 	let executor = StfExecutor::new(ocall_api.clone(), state_handler.clone());
@@ -301,7 +301,7 @@ fn test_state() -> State {
 }
 
 /// Returns a test setup initialized `State` with the corresponding `ShardIdentifier`.
-fn init_state_and_shard_with_state_handler<S: HandleState<StateT = State>>(
+pub(crate) fn init_state_and_shard_with_state_handler<S: HandleState<StateT = State>>(
 	state_handler: &S,
 ) -> (State, ShardIdentifier) {
 	let shard = ShardIdentifier::default();

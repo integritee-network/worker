@@ -28,7 +28,7 @@ use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use log::*;
 use my_node_runtime::{Balance, BalancesCall, Call, Event, Hash};
 use sp_application_crypto::{ed25519, sr25519};
-use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair, H256};
+use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
 use sp_keyring::AccountKeyring;
 use std::{
 	path::PathBuf,
@@ -36,8 +36,8 @@ use std::{
 	time::{Duration, UNIX_EPOCH},
 };
 use substrate_api_client::{
-	compose_extrinsic, compose_extrinsic_offline, utils::FromHexString, GenericAddress, Metadata,
-	UncheckedExtrinsicV4, XtStatus,
+	compose_extrinsic, compose_extrinsic_offline, utils::FromHexString, ExtrinsicParams,
+	GenericAddress, Metadata, UncheckedExtrinsicV4, XtStatus,
 };
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
 
@@ -178,18 +178,13 @@ fn faucet(cli: &Cli, accounts: &[String]) {
 	for account in accounts {
 		let to = get_accountid_from_str(account);
 		#[allow(clippy::redundant_clone)]
-		let xt: UncheckedExtrinsicV4<_> = compose_extrinsic_offline!(
+		let xt: UncheckedExtrinsicV4<_, _> = compose_extrinsic_offline!(
 			api.clone().signer.unwrap(),
 			Call::Balances(BalancesCall::transfer {
 				dest: GenericAddress::Id(to.clone()),
 				value: PREFUNDING_AMOUNT
 			}),
-			nonce,
-			Era::Immortal,
-			api.genesis_hash,
-			api.genesis_hash,
-			api.runtime_version.spec_version,
-			api.runtime_version.transaction_version
+			api.extrinsic_params(nonce)
 		);
 		// send and watch extrinsic until finalized
 		println!("Faucet drips to {} (Alice's nonce={})", to, nonce);
@@ -370,7 +365,7 @@ fn shield_funds(cli: &Cli, arg_from: &str, arg_to: &str, amount: &Balance, shard
 	let encrypted_recevier = encryption_key.encrypt(&to.encode()).unwrap();
 
 	// compose the extrinsic
-	let xt: UncheckedExtrinsicV4<([u8; 2], Vec<u8>, u128, H256)> =
+	let xt: UncheckedExtrinsicV4<_, _> =
 		compose_extrinsic!(chain_api, TEEREX, "shield_funds", encrypted_recevier, *amount, shard);
 
 	let tx_hash = chain_api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized).unwrap();

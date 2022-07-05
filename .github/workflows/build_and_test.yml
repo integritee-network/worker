@@ -29,42 +29,17 @@ jobs:
   build-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
         with:
           buildkitd-flags: --debug
 
-#      - name: Set up Actions Cache
-#        uses: actions/cache@v3
-#        with:
-#          path: /tmp/.buildx-cache
-#          key: ${{ runner.os }}-buildx-${{ github.sha }}
-#          restore-keys: |
-#            ${{ runner.os }}-buildx-
-
-#      - name: Build Worker Source
-#        run: docker buildx build --target=builder --tag integritee-worker-builder-${{ github.sha }} --cache-from=type=local,src=/tmp/.buildx-cache --cache-to=type=local,dest=/tmp/.buildx-cache-new -f build.Dockerfile .
-#        uses: docker/build-push-action@v2
-#        with:
-#          context: .
-#          file: build.Dockerfile
-#          target: builder
-#          load: true
-#          tags: integritee-worker-builder-${{ github.sha }}
-
       - name: Build Enclave Test Image
         env:
           DOCKER_BUILDKIT: 1
         run: docker build -t integritee-worker-enclave-test-${{ github.sha }} --target enclave-test -f build.Dockerfile .
-#        uses: docker/build-push-action@v2
-#        with:
-#          context: .
-#          file: build.Dockerfile
-#          target: enclave-test
-#          load: true
-#          tags: integritee-worker-enclave-test-${{ github.sha }}
 
       - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
         run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-enclave-test-${{ github.sha }}
@@ -73,13 +48,6 @@ jobs:
         env:
           DOCKER_BUILDKIT: 1
         run:  docker build -t integritee-worker-ctest-${{ github.sha }} --target cargo-test -f build.Dockerfile .
-#        uses: docker/build-push-action@v2
-#        with:
-#          context: .
-#          file: build.Dockerfile
-#          target: cargo-test
-#          load: true
-#          tags: integritee-worker-ctest-${{ github.sha }}
 
       - name: Run Cargo Test
         run: docker run --rm integritee-worker-ctest-${{ github.sha }}
@@ -88,13 +56,6 @@ jobs:
         env:
           DOCKER_BUILDKIT: 1
         run: docker build --output=type=tar,dest=/tmp/integritee-worker.tar --target=deployed-worker -f build.Dockerfile .
-#        uses: docker/build-push-action@v2
-#        with:
-#          context: .
-#          file: build.Dockerfile
-#          target: cargo-test
-#          tags: integritee-worker-${{ github.sha }}
-#          outputs: type=docker,dest=/tmp/integritee-worker.tar
       
       - name: Copy artifacts from container
         run: |
@@ -126,16 +87,11 @@ jobs:
           name: integritee-worker-image-${{ github.sha }}
           path: /tmp/integritee-worker.tar
 
-#      - name: Clean docker layer cache
-#        run: |
-#          rm -rf /tmp/.buildx-cache
-#          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
-
   clippy:
     runs-on: ubuntu-latest
     container: "integritee/integritee-dev:0.1.9"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: init rust
         # enclave is not in the same workspace
         run: rustup show && cd enclave-runtime && rustup show
@@ -152,7 +108,7 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: init rust
         run: rustup show
 
@@ -187,9 +143,9 @@ jobs:
     env:
       BIN_DIR: bin
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v3
         with:
           python-version: '3.7'
 
@@ -245,10 +201,10 @@ jobs:
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
           workflow: ci.yml
-          name: integritee-node-dev-ecc97eafd9db460b75df46a99ba8edc01d4180de
+          name: integritee-node-dev-704f7be535eca74e27584c30ccd42324927323a0
           # in fact this action should download the latest artifact, but sometimes fails. Then we need to
           # set the `run_id` to force a download of an updated binary.
-          run_id: 2307398354
+          run_id: 2547588625
           path: node
           repo: integritee-network/integritee-node
 
@@ -308,7 +264,7 @@ jobs:
       release_url: ${{ steps.create-release.outputs.html_url }}
       asset_upload_url: ${{ steps.create-release.outputs.upload_url }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Download Integritee Service
         uses: actions/download-artifact@v2

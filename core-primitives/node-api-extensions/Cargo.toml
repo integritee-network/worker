@@ -10,15 +10,15 @@ codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive
 thiserror = "1.0"
 
 # substrate
-sp-core = { version = "6.0.0",  git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
-sp-finality-grandpa = { version = "4.0.0-dev",  git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
-sp-runtime = { version = "6.0.0",  git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+sp-finality-grandpa = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 
 # scs
-substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.20" }
+substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.24" }
 
 # integritee
-itp-types = { path = "../types" }
+itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 [features]
 # used for unit testing only!

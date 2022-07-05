@@ -19,11 +19,11 @@
 use crate::{error::Error, Enclave, EnclaveResult};
 use codec::{Decode, Encode};
 use frame_support::ensure;
+use itc_parentchain_light_client::light_client_init_params::LightClientInitParams;
 use itp_enclave_api_ffi as ffi;
 use itp_settings::worker::{
 	HEADER_MAX_SIZE, MR_ENCLAVE_SIZE, SHIELDING_KEY_SIZE, SIGNING_KEY_SIZE, STATE_VALUE_MAX_SIZE,
 };
-use itp_types::light_client_init_params::LightClientInitParams;
 use log::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;

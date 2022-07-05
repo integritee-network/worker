@@ -32,7 +32,7 @@ pub enum Error {
 	#[error("JSON RPC error: {0}")]
 	JsonRpc(#[from] jsonrpsee::types::Error),
 	#[error("Could not find any peers on-chain for shard: {0:?}")]
-	NoPeerFoundForShard(its_primitives::types::ShardIdentifier),
+	NoPeerFoundForShard(sidechain_primitives::types::ShardIdentifier),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }

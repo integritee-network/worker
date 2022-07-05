@@ -25,9 +25,9 @@ use crate::{
 use codec::{Decode, Encode};
 use itp_types::{BlockHash, ShardIdentifier};
 use its_peer_fetch::FetchBlocksFromPeer;
-use its_primitives::{traits::Block, types::SignedBlock as SignedSidechainBlock};
 use its_storage::BlockStorage;
 use log::*;
+use sidechain_primitives::{traits::Block, types::SignedBlock as SignedSidechainBlock};
 use std::sync::Arc;
 
 pub struct SidechainOCall<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle> {
@@ -141,13 +141,21 @@ where
 
 	fn fetch_sidechain_blocks_from_peer(
 		&self,
-		last_known_block_hash_encoded: Vec<u8>,
+		last_imported_block_hash_encoded: Vec<u8>,
+		maybe_until_block_hash_encoded: Vec<u8>,
 		shard_identifier_encoded: Vec<u8>,
 	) -> OCallBridgeResult<Vec<u8>> {
-		let last_known_block_hash: BlockHash =
-			Decode::decode(&mut last_known_block_hash_encoded.as_slice()).map_err(|_| {
+		let last_imported_block_hash: BlockHash =
+			Decode::decode(&mut last_imported_block_hash_encoded.as_slice()).map_err(|_| {
 				OCallBridgeError::FetchSidechainBlocksFromPeer(
-					"Failed to decode last known block hash".to_string(),
+					"Failed to decode last imported block hash".to_string(),
+				)
+			})?;
+
+		let maybe_until_block_hash: Option<BlockHash> =
+			Decode::decode(&mut maybe_until_block_hash_encoded.as_slice()).map_err(|_| {
+				OCallBridgeError::FetchSidechainBlocksFromPeer(
+					"Failed to decode optional until block hash".to_string(),
 				)
 			})?;
 
@@ -163,10 +171,11 @@ where
 		let tokio_handle = self.tokio_handle.get_handle();
 
 		let signed_sidechain_blocks = tokio_handle
-			.block_on(
-				self.peer_block_fetcher
-					.fetch_blocks_from_peer(last_known_block_hash, shard_identifier),
-			)
+			.block_on(self.peer_block_fetcher.fetch_blocks_from_peer(
+				last_imported_block_hash,
+				maybe_until_block_hash,
+				shard_identifier,
+			))
 			.map_err(|e| {
 				OCallBridgeError::FetchSidechainBlocksFromPeer(format!(
 					"Failed to execute block fetching from peer: {:?}",
@@ -191,10 +200,10 @@ mod tests {
 	};
 	use codec::Decode;
 	use its_peer_fetch::mocks::fetch_blocks_from_peer_mock::FetchBlocksFromPeerMock;
-	use its_primitives::types::SignedBlock as SignedSidechainBlock;
 	use its_storage::{interface::BlockStorage, Result as StorageResult};
 	use its_test::sidechain_block_builder::SidechainBlockBuilder;
 	use primitive_types::H256;
+	use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;
 	use std::{collections::HashMap, vec::Vec};
 
 	struct BlockStorageMock;
@@ -214,7 +223,8 @@ mod tests {
 
 	#[test]
 	fn fetch_sidechain_blocks_from_peer_works() {
-		let last_known_block_hash = H256::random();
+		let last_imported_block_hash = H256::random();
+		let until_block_hash: Option<H256> = None;
 		let shard_identifier = H256::random();
 		let blocks = vec![
 			SidechainBlockBuilder::random().build_signed(),
@@ -225,7 +235,8 @@ mod tests {
 
 		let fetched_blocks_encoded = sidechain_ocall
 			.fetch_sidechain_blocks_from_peer(
-				last_known_block_hash.encode(),
+				last_imported_block_hash.encode(),
+				until_block_hash.encode(),
 				shard_identifier.encode(),
 			)
 			.unwrap();

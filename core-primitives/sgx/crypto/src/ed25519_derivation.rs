@@ -1,6 +1,5 @@
 /*
 	Copyright 2021 Integritee AG and Supercomputing Systems AG
-	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -16,20 +15,22 @@
 
 */
 
-use codec::{Decode, Encode};
-use sp_finality_grandpa::AuthorityList;
-use sp_std::vec::Vec;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
 
-// The variants will be chosen according to availability of grandpa authorities on the parent chain.
-#[derive(Encode, Decode)]
-pub enum LightClientInitParams<Header> {
-	Grandpa { genesis_header: Header, authorities: AuthorityList, authority_proof: Vec<Vec<u8>> },
+use crate::error::Result;
+use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
+use sp_core::{blake2_256, ed25519::Pair as Ed25519Pair, Pair};
+
+/// Trait to derive an Ed25519 key pair.
+pub trait DeriveEd25519 {
+	fn derive_ed25519(&self) -> Result<Ed25519Pair>;
 }
 
-impl<Header> LightClientInitParams<Header> {
-	pub fn get_genesis_header(&self) -> &Header {
-		match self {
-			LightClientInitParams::Grandpa { genesis_header, .. } => genesis_header,
-		}
+impl DeriveEd25519 for Rsa3072KeyPair {
+	fn derive_ed25519(&self) -> Result<Ed25519Pair> {
+		let encoded_key = serde_json::to_vec(self)?;
+		let seed = blake2_256(&encoded_key);
+		Ok(Ed25519Pair::from_seed(&seed))
 	}
 }

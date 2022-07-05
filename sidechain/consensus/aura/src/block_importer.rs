@@ -33,14 +33,14 @@ use itp_stf_executor::ExecutedOperation;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_types::H256;
 use its_consensus_common::Error as ConsensusError;
-use its_primitives::traits::{
-	BlockData, Header as HeaderTrait, ShardIdentifierFor, SignedBlock as SignedBlockTrait,
-};
 use its_state::SidechainDB;
 use its_top_pool_executor::TopPoolCallOperator;
 use its_validateer_fetch::ValidateerFetch;
 use log::*;
 use sgx_externalities::SgxExternalities;
+use sidechain_primitives::traits::{
+	BlockData, Header as HeaderTrait, ShardIdentifierFor, SignedBlock as SignedBlockTrait,
+};
 use sp_core::Pair;
 use sp_runtime::{
 	generic::SignedBlock as SignedParentchainBlock,
@@ -290,13 +290,12 @@ impl<
 		sidechain_block: &SignedSidechainBlock::Block,
 		last_imported_parentchain_header: &ParentchainBlock::Header,
 	) -> Result<ParentchainBlock::Header, ConsensusError> {
-		if sidechain_block.block_data().layer_one_head() == last_imported_parentchain_header.hash()
-		{
+		let parentchain_header_hash_to_peek = sidechain_block.block_data().layer_one_head();
+		if parentchain_header_hash_to_peek == last_imported_parentchain_header.hash() {
 			debug!("No queue peek necessary, sidechain block references latest imported parentchain block");
 			return Ok(last_imported_parentchain_header.clone())
 		}
 
-		let parentchain_header_hash_to_peek = sidechain_block.block_data().layer_one_head();
 		let maybe_signed_parentchain_block = self
 			.parentchain_block_importer
 			.peek(|parentchain_block| {
@@ -311,7 +310,7 @@ impl<
 					format!(
 						"Failed to find parentchain header in import queue (hash: {}) that is \
 			associated with the current sidechain block that is to be imported (number: {}, hash: {})",
-						sidechain_block.block_data().layer_one_head(),
+						parentchain_header_hash_to_peek,
 						sidechain_block.header().block_number(),
 						sidechain_block.hash()
 					)

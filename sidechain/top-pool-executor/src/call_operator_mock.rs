@@ -23,7 +23,7 @@ use crate::{
 };
 use core::marker::PhantomData;
 use ita_stf::TrustedOperation;
-use its_primitives::traits::{ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait};
+use sidechain_primitives::traits::{ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait};
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::{collections::HashMap, sync::RwLock};
 

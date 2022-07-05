@@ -17,7 +17,8 @@
 
 use crate::{DetermineWatch, DirectRpcError, DirectRpcResult, RpcHash};
 use codec::Decode;
-use itp_types::{DirectRequestStatus, RpcResponse, RpcReturnValue};
+use itp_rpc::{RpcResponse, RpcReturnValue};
+use itp_types::DirectRequestStatus;
 use itp_utils::FromHexPrefixed;
 use std::{boxed::Box, marker::PhantomData};
 

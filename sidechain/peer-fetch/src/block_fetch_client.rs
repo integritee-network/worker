@@ -17,17 +17,17 @@
 
 use crate::{error::Result, untrusted_peer_fetch::FetchUntrustedPeers, FetchBlocksFromPeer};
 use async_trait::async_trait;
-use its_primitives::{
-	constants::RPC_METHOD_NAME_FETCH_BLOCKS_FROM_PEER,
-	traits::SignedBlock as SignedBlockTrait,
-	types::{BlockHash, ShardIdentifier},
-};
+use its_rpc_handler::constants::RPC_METHOD_NAME_FETCH_BLOCKS_FROM_PEER;
 use jsonrpsee::{
 	types::to_json_value,
 	ws_client::{traits::Client, WsClientBuilder},
 };
 use log::info;
 use serde::de::DeserializeOwned;
+use sidechain_primitives::{
+	traits::SignedBlock as SignedBlockTrait,
+	types::{BlockHash, ShardIdentifier},
+};
 use std::marker::PhantomData;
 
 /// Sidechain block fetcher implementation.
@@ -58,13 +58,18 @@ where
 
 	async fn fetch_blocks_from_peer(
 		&self,
-		last_known_block_hash: BlockHash,
+		last_imported_block_hash: BlockHash,
+		maybe_until_block_hash: Option<BlockHash>,
 		shard_identifier: ShardIdentifier,
 	) -> Result<Vec<Self::SignedBlockType>> {
 		let sync_source_rpc_url =
 			self.peer_fetcher.get_untrusted_peer_url_of_shard(&shard_identifier)?;
 
-		let rpc_parameters = vec![to_json_value((last_known_block_hash, shard_identifier))?];
+		let rpc_parameters = vec![to_json_value((
+			last_imported_block_hash,
+			maybe_until_block_hash,
+			shard_identifier,
+		))?];
 
 		info!("Got untrusted url for peer block fetching: {}", sync_source_rpc_url);
 
@@ -90,16 +95,17 @@ mod tests {
 		block_fetch_server::BlockFetchServerModuleBuilder,
 		mocks::untrusted_peer_fetch_mock::UntrustedPeerFetcherMock,
 	};
-	use its_primitives::types::SignedBlock;
 	use its_storage::fetch_blocks_mock::FetchBlocksMock;
 	use its_test::sidechain_block_builder::SidechainBlockBuilder;
 	use jsonrpsee::ws_server::WsServerBuilder;
+	use sidechain_primitives::types::block::SignedBlock;
 	use std::{net::SocketAddr, sync::Arc};
 
-	const W1_URL: &str = "127.0.0.1:2233";
-
-	async fn run_server(blocks: Vec<SignedBlock>) -> anyhow::Result<SocketAddr> {
-		let mut server = WsServerBuilder::default().build(W1_URL).await?;
+	async fn run_server(
+		blocks: Vec<SignedBlock>,
+		web_socket_url: &str,
+	) -> anyhow::Result<SocketAddr> {
+		let mut server = WsServerBuilder::default().build(web_socket_url).await?;
 
 		let storage_block_fetcher = Arc::new(FetchBlocksMock::default().with_blocks(blocks));
 		let module = BlockFetchServerModuleBuilder::new(storage_block_fetcher).build().unwrap();
@@ -112,19 +118,21 @@ mod tests {
 	}
 
 	#[tokio::test]
-	async fn fetch_blocks_from_peer() {
+	async fn fetch_blocks_without_bounds_from_peer_works() {
+		const W1_URL: &str = "127.0.0.1:2233";
+
 		let blocks_to_fetch = vec![
 			SidechainBlockBuilder::random().build_signed(),
 			SidechainBlockBuilder::random().build_signed(),
 		];
-		run_server(blocks_to_fetch.clone()).await.unwrap();
+		run_server(blocks_to_fetch.clone(), W1_URL).await.unwrap();
 
 		let peer_fetch_mock = UntrustedPeerFetcherMock::new(format!("ws://{}", W1_URL));
 
 		let peer_fetcher_client = BlockFetcher::<SignedBlock, _>::new(peer_fetch_mock);
 
 		let blocks_fetched = peer_fetcher_client
-			.fetch_blocks_from_peer(BlockHash::default(), ShardIdentifier::default())
+			.fetch_blocks_from_peer(BlockHash::default(), None, ShardIdentifier::default())
 			.await
 			.unwrap();
 

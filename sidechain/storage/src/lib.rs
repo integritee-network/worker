@@ -17,7 +17,7 @@
 
 #![cfg_attr(test, feature(assert_matches))]
 
-use its_primitives::types::BlockNumber;
+use sidechain_primitives::types::BlockNumber;
 use std::{
 	sync::Arc,
 	thread,
@@ -31,6 +31,9 @@ mod storage;
 
 #[cfg(test)]
 mod storage_tests_get_blocks_after;
+
+#[cfg(test)]
+mod storage_tests_get_blocks_in_range;
 
 #[cfg(test)]
 mod test_utils;

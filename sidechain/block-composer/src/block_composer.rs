@@ -22,13 +22,13 @@ use itp_settings::node::{PROPOSED_SIDECHAIN_BLOCK, SIDECHAIN_MODULE};
 use itp_sgx_crypto::{key_repository::AccessKey, StateCrypto};
 use itp_time_utils::now_as_u64;
 use itp_types::{OpaqueCall, ShardIdentifier, H256};
-use its_primitives::traits::{
-	Block as SidechainBlockTrait, BlockData, Header as HeaderTrait, SignBlock,
-	SignedBlock as SignedSidechainBlockTrait,
-};
 use its_state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt, StateHash};
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
+use sidechain_primitives::traits::{
+	Block as SidechainBlockTrait, BlockData, Header as HeaderTrait, SignBlock,
+	SignedBlock as SignedSidechainBlockTrait,
+};
 use sp_core::Pair;
 use sp_runtime::{
 	traits::{Block as ParentchainBlockTrait, Header},
@@ -170,7 +170,7 @@ where
 }
 
 /// Creates a proposed_sidechain_block extrinsic for a given shard id and sidechain block hash.
-fn create_proposed_sidechain_block_call<T: its_primitives::traits::SignedBlock>(
+fn create_proposed_sidechain_block_call<T: sidechain_primitives::traits::SignedBlock>(
 	shard_id: ShardIdentifier,
 	header: HeaderTypeOf<T>,
 ) -> OpaqueCall {

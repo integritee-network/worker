@@ -18,7 +18,6 @@ itp-settings = { path = "../../../core-primitives/settings" }
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
 itp-stf-executor = { path = "../../../core-primitives/stf-executor", default-features = false }
 itp-top-pool-author = { path = "../../../core-primitives/top-pool-author", default-features = false }
-itp-types = { path = "../../../core-primitives/types", default-features = false }
 
 # sgx enabled external libraries
 thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
@@ -32,11 +31,12 @@ futures = { version = "0.3.8", optional = true }
 bs58 = { version = "0.4.0", default-features = false, features = ["alloc"] }
 codec  = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 log = { version = "0.4", default-features = false }
-sp-core = { version = "6.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
-sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 
 # scs/integritee
-substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.20", default-features = false }
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.24", default-features = false }
 
 [dev-dependencies]
 env_logger = "0.9.0"

@@ -40,6 +40,7 @@ use itp_settings::{
 };
 use itp_sgx_crypto::Ed25519Seal;
 use itp_sgx_io::StaticSealedIO;
+use itp_types::{ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use sgx_rand::*;
@@ -56,7 +57,7 @@ use std::{
 	sync::Arc,
 	vec::Vec,
 };
-use substrate_api_client::compose_extrinsic_offline;
+use substrate_api_client::{compose_extrinsic_offline, ExtrinsicParams};
 
 pub const DEV_HOSTNAME: &str = "api.trustedservices.intel.com";
 
@@ -139,22 +140,21 @@ fn parse_response_attn_report(resp: &[u8]) -> EnclaveResult<(String, String, Str
 }
 
 fn log_resp_code(resp_code: &mut Option<u16>) {
-	let msg: &'static str;
-	match resp_code {
-		Some(200) => msg = "OK Operation Successful",
-		Some(401) => msg = "Unauthorized Failed to authenticate or authorize request.",
-		Some(404) => msg = "Not Found GID does not refer to a valid EPID group ID.",
-		Some(500) => msg = "Internal error occurred",
+	let msg = match resp_code {
+		Some(200) => "OK Operation Successful",
+		Some(401) => "Unauthorized Failed to authenticate or authorize request.",
+		Some(404) => "Not Found GID does not refer to a valid EPID group ID.",
+		Some(500) => "Internal error occurred",
 		Some(503) =>
-			msg = "Service is currently not able to process the request (due to
+			"Service is currently not able to process the request (due to
 			a temporary overloading or maintenance). This is a
 			temporary state – the same request can be repeated after
 			some time. ",
 		_ => {
 			error!("DBG:{:?}", resp_code);
-			msg = "Unknown error occured"
+			"Unknown error occured"
 		},
-	}
+	};
 	debug!("    [Enclave] msg = {}", msg);
 }
 
@@ -531,15 +531,18 @@ pub unsafe extern "C" fn perform_ra(
 	debug!("worker url: {}", str::from_utf8(url_slice).unwrap());
 	let call = [TEEREX_MODULE, REGISTER_ENCLAVE];
 
+	let extrinsic_params = ParentchainExtrinsicParams::new(
+		RUNTIME_SPEC_VERSION,
+		RUNTIME_TRANSACTION_VERSION,
+		*nonce,
+		genesis_hash,
+		ParentchainExtrinsicParamsBuilder::default(),
+	);
+
 	let xt = compose_extrinsic_offline!(
 		signer,
 		(call, cert_der.to_vec(), url_slice.to_vec()),
-		*nonce,
-		Era::Immortal,
-		genesis_hash,
-		genesis_hash,
-		RUNTIME_SPEC_VERSION,
-		RUNTIME_TRANSACTION_VERSION
+		extrinsic_params
 	);
 
 	let xt_encoded = xt.encode();

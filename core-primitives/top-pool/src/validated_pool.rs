@@ -44,7 +44,6 @@ use ita_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
 use itc_direct_rpc_server::SendRpcResponse;
 use itp_types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::channel::mpsc::{channel, Sender};
-use retain_mut::RetainMut;
 use sp_runtime::{
 	generic::BlockId,
 	traits::{self, SaturatedConversion},
@@ -197,11 +196,14 @@ where
 	) -> Result<ExtrinsicHash<B>, B::Error> {
 		match tx {
 			ValidatedOperation::Valid(tx) => {
-				let imported = self.pool.write().unwrap().import(tx, shard)?;
+				let imported =
+					self.pool.write().map_err(|_| error::Error::UnlockError)?.import(tx, shard)?;
 
 				if let base::Imported::Ready { ref hash, .. } = imported {
-					self.import_notification_sinks.lock().unwrap().retain_mut(|sink| {
-						match sink.try_send(*hash) {
+					self.import_notification_sinks
+						.lock()
+						.map_err(|_| error::Error::UnlockError)?
+						.retain_mut(|sink| match sink.try_send(*hash) {
 							Ok(()) => true,
 							Err(e) =>
 								if e.is_full() {
@@ -210,11 +212,10 @@ where
 								} else {
 									false
 								},
-						}
-					});
+						});
 				}
 
-				let mut listener = self.listener.write().unwrap();
+				let mut listener = self.listener.write().map_err(|_| error::Error::UnlockError)?;
 				fire_events(&mut listener, &imported);
 				Ok(*imported.hash())
 			},

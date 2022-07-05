@@ -19,7 +19,8 @@
 
 use crate::ws_client::{WsClient, WsClientControl};
 use codec::Decode;
-use itp_types::{DirectRequestStatus, RpcRequest, RpcResponse, RpcReturnValue};
+use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
+use itp_types::DirectRequestStatus;
 use itp_utils::FromHexPrefixed;
 use log::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;

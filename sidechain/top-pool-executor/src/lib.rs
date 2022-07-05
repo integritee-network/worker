@@ -51,11 +51,11 @@ pub use getter_operator::TopPoolGetterOperator;
 use itp_stf_executor::traits::{StateUpdateProposer, StfExecuteTimedGettersBatch};
 use itp_top_pool_author::traits::{AuthorApi, OnBlockImported, SendState};
 use itp_types::H256;
-use its_primitives::traits::{
-	Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait,
-};
 use its_state::{SidechainState, SidechainSystemExt, StateHash};
 use sgx_externalities::SgxExternalitiesTrait;
+use sidechain_primitives::traits::{
+	Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait,
+};
 use sp_runtime::{traits::Block as ParentchainBlockTrait, MultiSignature};
 use std::{marker::PhantomData, sync::Arc};
 

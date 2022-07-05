@@ -160,18 +160,13 @@ class Worker:
         """
 
         # Todo: make this configurable
-        env = dict(os.environ, RUST_LOG='warn,'
-                                        'ws=warn,'
-                                        'sp_io=error,'
+        env = dict(os.environ, RUST_LOG='warn,ws=warn,sp_io=error,'
                                         'substrate_api_client=warn,'
                                         'jsonrpsee_ws_client=warn,'
                                         'jsonrpsee_ws_server=warn,'
                                         'enclave_runtime=warn,'
                                         'integritee_service=warn,'
-                                        'enclave_runtime::top_pool_execution=info,'
-                                        'its_consensus_common::block_import_queue_worker=debug,'
-                                        'its_consensus_common::block_import=info,'
-                                        'ita_stf=warn')
+                                        'ita_stf=debug')
 
         return Popen(
             self._assemble_cmd(flags=flags, subcommand_flags=subcommand_flags),

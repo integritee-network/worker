@@ -17,12 +17,12 @@
 
 use super::{db::SidechainDB, Error, Result};
 use codec::{Decode, Encode};
-use its_primitives::{
+use log::*;
+use rocksdb::WriteBatch;
+use sidechain_primitives::{
 	traits::{Block as BlockTrait, Header as HeaderTrait, SignedBlock as SignedBlockT},
 	types::{BlockHash, BlockNumber},
 };
-use log::*;
-use rocksdb::WriteBatch;
 use sp_core::H256;
 use std::{collections::HashMap, fmt::Debug, path::PathBuf};
 /// key value of sidechain db of last block
@@ -143,6 +143,22 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		blocks_to_return.reverse();
 
 		Ok(blocks_to_return)
+	}
+
+	/// Get blocks in a range, defined by 'from' and 'until' (result does NOT include the bound defining blocks).
+	pub fn get_blocks_in_range(
+		&self,
+		block_hash_from: &BlockHash,
+		block_hash_until: &BlockHash,
+		shard_identifier: &ShardIdentifierFor<SignedBlock>,
+	) -> Result<Vec<SignedBlock>> {
+		let all_blocks_from_lower_bound =
+			self.get_blocks_after(block_hash_from, shard_identifier)?;
+
+		Ok(all_blocks_from_lower_bound
+			.into_iter()
+			.take_while(|b| b.hash() != *block_hash_until)
+			.collect())
 	}
 
 	/// Update sidechain storage with blocks.
@@ -372,7 +388,7 @@ mod test {
 		create_signed_block_with_shard as create_signed_block, create_temp_dir, get_storage,
 	};
 	use itp_types::ShardIdentifier;
-	use its_primitives::{traits::SignedBlock as SignedBlockT, types::SignedBlock};
+	use sidechain_primitives::{traits::SignedBlock as SignedBlockT, types::SignedBlock};
 	use sp_core::H256;
 
 	#[test]

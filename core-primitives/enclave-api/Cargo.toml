@@ -14,14 +14,16 @@ sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-s
 sgx_urts = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
-frame-support = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
-sp-core = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
-sp-finality-grandpa = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
-sp-runtime = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
+frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+sp-finality-grandpa = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 
+itc-parentchain-light-client = { path = "../../core/parentchain/light-client" }
 itp-enclave-api-ffi = { path = "ffi" }
 itp-settings = { path = "../settings" }
-itp-types = { path = "../types" }
+
+itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 
 [dev-dependencies]

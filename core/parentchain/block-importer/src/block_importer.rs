@@ -25,7 +25,8 @@ use crate::{
 use ita_stf::ParentchainHeader;
 use itc_parentchain_indirect_calls_executor::ExecuteIndirectCalls;
 use itc_parentchain_light_client::{
-	concurrent_access::ValidatorAccess, BlockNumberOps, LightClientState, Validator,
+	concurrent_access::ValidatorAccess, BlockNumberOps, ExtrinsicSender, LightClientState,
+	Validator,
 };
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
@@ -50,18 +51,17 @@ pub struct ParentchainBlockImporter<
 > where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
-	ValidatorAccessor: ValidatorAccess<ParentchainBlock>,
+	ValidatorAccessor: ValidatorAccess<ParentchainBlock, OCallApi>,
 	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
 	StfExecutor: StfUpdateState,
 	ExtrinsicsFactory: CreateExtrinsics,
 	IndirectCallsExecutor: ExecuteIndirectCalls,
 {
 	validator_accessor: Arc<ValidatorAccessor>,
-	ocall_api: Arc<OCallApi>,
 	stf_executor: Arc<StfExecutor>,
 	extrinsics_factory: Arc<ExtrinsicsFactory>,
 	indirect_calls_executor: Arc<IndirectCallsExecutor>,
-	_phantom: PhantomData<ParentchainBlock>,
+	_phantom: PhantomData<(ParentchainBlock, OCallApi)>,
 }
 
 impl<
@@ -82,7 +82,7 @@ impl<
 	> where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256, Header = ParentchainHeader>,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
-	ValidatorAccessor: ValidatorAccess<ParentchainBlock>,
+	ValidatorAccessor: ValidatorAccess<ParentchainBlock, OCallApi>,
 	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
 	StfExecutor: StfUpdateState,
 	ExtrinsicsFactory: CreateExtrinsics,
@@ -90,14 +90,12 @@ impl<
 {
 	pub fn new(
 		validator_accessor: Arc<ValidatorAccessor>,
-		ocall_api: Arc<OCallApi>,
 		stf_executor: Arc<StfExecutor>,
 		extrinsics_factory: Arc<ExtrinsicsFactory>,
 		indirect_calls_executor: Arc<IndirectCallsExecutor>,
 	) -> Self {
 		ParentchainBlockImporter {
 			validator_accessor,
-			ocall_api,
 			stf_executor,
 			extrinsics_factory,
 			indirect_calls_executor,
@@ -124,7 +122,7 @@ impl<
 	> where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256, Header = ParentchainHeader>,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
-	ValidatorAccessor: ValidatorAccess<ParentchainBlock>,
+	ValidatorAccessor: ValidatorAccess<ParentchainBlock, OCallApi>,
 	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
 	StfExecutor: StfUpdateState,
 	ExtrinsicsFactory: CreateExtrinsics,
@@ -179,12 +177,12 @@ impl<
 		}
 
 		// Create extrinsics for all `unshielding` and `block processed` calls we've gathered.
-		let parentchain_extrinsics = self.extrinsics_factory.create_extrinsics(calls.as_slice())?;
+		let parentchain_extrinsics =
+			self.extrinsics_factory.create_extrinsics(calls.as_slice(), None)?;
 
 		// Sending the extrinsic requires mut access because the validator caches the sent extrinsics internally.
-		self.validator_accessor.execute_mut_on_validator(|v| {
-			v.send_extrinsics(self.ocall_api.as_ref(), parentchain_extrinsics)
-		})?;
+		self.validator_accessor
+			.execute_mut_on_validator(|v| v.send_extrinsics(parentchain_extrinsics))?;
 
 		Ok(())
 	}

@@ -27,16 +27,20 @@ use std::{slice, sync::Arc};
 /// FFI are always unsafe
 #[no_mangle]
 pub unsafe extern "C" fn ocall_fetch_sidechain_blocks_from_peer(
-	last_known_block_hash_ptr: *const u8,
-	last_known_block_hash_size: u32,
+	last_imported_block_hash_ptr: *const u8,
+	last_imported_block_hash_size: u32,
+	maybe_until_block_hash_ptr: *const u8,
+	maybe_until_block_hash_size: u32,
 	shard_identifier_ptr: *const u8,
 	shard_identifier_size: u32,
 	sidechain_blocks_ptr: *mut u8,
 	sidechain_blocks_size: u32,
 ) -> sgx_status_t {
 	fetch_sidechain_blocks_from_peer(
-		last_known_block_hash_ptr,
-		last_known_block_hash_size,
+		last_imported_block_hash_ptr,
+		last_imported_block_hash_size,
+		maybe_until_block_hash_ptr,
+		maybe_until_block_hash_size,
 		shard_identifier_ptr,
 		shard_identifier_size,
 		sidechain_blocks_ptr,
@@ -45,28 +49,39 @@ pub unsafe extern "C" fn ocall_fetch_sidechain_blocks_from_peer(
 	)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn fetch_sidechain_blocks_from_peer(
-	last_known_block_hash_ptr: *const u8,
-	last_known_block_hash_size: u32,
+	last_imported_block_hash_ptr: *const u8,
+	last_imported_block_hash_size: u32,
+	maybe_until_block_hash_ptr: *const u8,
+	maybe_until_block_hash_size: u32,
 	shard_identifier_ptr: *const u8,
 	shard_identifier_size: u32,
 	sidechain_blocks_ptr: *mut u8,
 	sidechain_blocks_size: u32,
 	sidechain_api: Arc<dyn SidechainBridge>,
 ) -> sgx_status_t {
-	let last_known_block_hash_encoded = unsafe {
+	let last_imported_block_hash_encoded = unsafe {
 		Vec::from(slice::from_raw_parts(
-			last_known_block_hash_ptr,
-			last_known_block_hash_size as usize,
+			last_imported_block_hash_ptr,
+			last_imported_block_hash_size as usize,
+		))
+	};
+	let maybe_until_block_hash = unsafe {
+		Vec::from(slice::from_raw_parts(
+			maybe_until_block_hash_ptr,
+			maybe_until_block_hash_size as usize,
 		))
 	};
 	let shard_identifier_encoded = unsafe {
 		Vec::from(slice::from_raw_parts(shard_identifier_ptr, shard_identifier_size as usize))
 	};
 
-	let sidechain_blocks_encoded = match sidechain_api
-		.fetch_sidechain_blocks_from_peer(last_known_block_hash_encoded, shard_identifier_encoded)
-	{
+	let sidechain_blocks_encoded = match sidechain_api.fetch_sidechain_blocks_from_peer(
+		last_imported_block_hash_encoded,
+		maybe_until_block_hash,
+		shard_identifier_encoded,
+	) {
 		Ok(r) => r,
 		Err(e) => {
 			error!("fetch sidechain blocks from peer failed: {:?}", e);
@@ -92,9 +107,9 @@ mod tests {
 	use super::*;
 	use crate::ocall_bridge::test::mocks::sidechain_bridge_mock::SidechainBridgeMock;
 	use codec::{Decode, Encode};
-	use its_primitives::types::SignedBlock;
 	use its_test::sidechain_block_builder::SidechainBlockBuilder;
 	use primitive_types::H256;
+	use sidechain_primitives::types::block::SignedBlock;
 
 	#[test]
 	fn fetch_sidechain_blocks_from_peer_works() {
@@ -112,6 +127,7 @@ mod tests {
 
 		let result = call_fetch_sidechain_blocks_from_peer(
 			last_known_block_hash,
+			None,
 			shard_identifier,
 			&mut block_buffer,
 			sidechain_bridge_mock,
@@ -142,6 +158,7 @@ mod tests {
 
 		let result = call_fetch_sidechain_blocks_from_peer(
 			last_known_block_hash,
+			None,
 			shard_identifier,
 			&mut block_buffer,
 			sidechain_bridge_mock,
@@ -151,17 +168,21 @@ mod tests {
 	}
 
 	fn call_fetch_sidechain_blocks_from_peer(
-		last_known_block_hash: H256,
+		last_imported_block_hash: H256,
+		maybe_until_block_hash: Option<H256>,
 		shard_identifier: H256,
 		buffer: &mut Vec<u8>,
 		sidechain_bridge: Arc<dyn SidechainBridge>,
 	) -> sgx_status_t {
-		let last_known_block_hash_encoded = last_known_block_hash.encode();
+		let last_imported_block_hash_encoded = last_imported_block_hash.encode();
+		let maybe_until_block_hash_encoded = maybe_until_block_hash.encode();
 		let shard_identifier_encoded = shard_identifier.encode();
 
 		fetch_sidechain_blocks_from_peer(
-			last_known_block_hash_encoded.as_ptr(),
-			last_known_block_hash_encoded.len() as u32,
+			last_imported_block_hash_encoded.as_ptr(),
+			last_imported_block_hash_encoded.len() as u32,
+			maybe_until_block_hash_encoded.as_ptr(),
+			maybe_until_block_hash_encoded.len() as u32,
 			shard_identifier_encoded.as_ptr(),
 			shard_identifier_encoded.len() as u32,
 			buffer.as_mut_ptr(),

@@ -31,10 +31,6 @@ use itp_test::{
 use itp_time_utils::{duration_now, now_as_u64};
 use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader, H256};
 use its_consensus_common::{BlockImport, Error as ConsensusError};
-use its_primitives::{
-	traits::{SignBlock, SignedBlock},
-	types::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
-};
 use its_state::{SidechainDB, SidechainState, StateUpdate};
 use its_test::{
 	sidechain_block_builder::SidechainBlockBuilder,
@@ -43,6 +39,10 @@ use its_test::{
 };
 use its_top_pool_executor::call_operator_mock::TopPoolCallOperatorMock;
 use sgx_externalities::{SgxExternalities, SgxExternalitiesDiffType};
+use sidechain_primitives::{
+	traits::{SignBlock, SignedBlock},
+	types::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
+};
 use sp_core::{blake2_256, ed25519::Pair};
 use sp_keyring::ed25519::Keyring;
 use sp_runtime::generic::SignedBlock as SignedParentchainBlock;
@@ -78,14 +78,15 @@ fn default_authority() -> Pair {
 }
 
 fn test_fixtures(
+	parentchain_header: &ParentchainHeader,
 	parentchain_block_import_trigger: Arc<TestParentchainBlockImportTrigger>,
 ) -> (TestBlockImporter, Arc<HandleStateMock>, Arc<TestTopPoolCallOperator>) {
 	let state_handler = Arc::new(HandleStateMock::from_shard(shard()).unwrap());
 	let top_pool_call_operator = Arc::new(TestTopPoolCallOperator::default());
-	let ocall_api = Arc::new(
-		OnchainMock::default()
-			.with_validateer_set(Some(vec![validateer(Keyring::Alice.public().into())])),
-	);
+	let ocall_api = Arc::new(OnchainMock::default().add_validateer_set(
+		parentchain_header,
+		Some(vec![validateer(Keyring::Alice.public().into())]),
+	));
 	let state_key_repository = Arc::new(TestStateKeyRepo::new(state_key()));
 
 	let block_importer = TestBlockImporter::new(
@@ -100,8 +101,9 @@ fn test_fixtures(
 }
 
 fn test_fixtures_with_default_import_trigger(
+	parentchain_header: &ParentchainHeader,
 ) -> (TestBlockImporter, Arc<HandleStateMock>, Arc<TestTopPoolCallOperator>) {
-	test_fixtures(Arc::new(TestParentchainBlockImportTrigger::default()))
+	test_fixtures(parentchain_header, Arc::new(TestParentchainBlockImportTrigger::default()))
 }
 
 fn empty_encrypted_state_update(state_handler: &HandleStateMock) -> Vec<u8> {
@@ -149,8 +151,9 @@ fn default_authority_signed_block(
 
 #[test]
 fn simple_block_import_works() {
-	let (block_importer, state_handler, _) = test_fixtures_with_default_import_trigger();
 	let parentchain_header = ParentchainHeaderBuilder::default().build();
+	let (block_importer, state_handler, _) =
+		test_fixtures_with_default_import_trigger(&parentchain_header);
 	let signed_sidechain_block =
 		default_authority_signed_block(&parentchain_header, state_handler.as_ref());
 
@@ -161,9 +164,10 @@ fn simple_block_import_works() {
 
 #[test]
 fn block_import_with_invalid_signature_fails() {
-	let (block_importer, state_handler, _) = test_fixtures_with_default_import_trigger();
-
 	let parentchain_header = ParentchainHeaderBuilder::default().build();
+	let (block_importer, state_handler, _) =
+		test_fixtures_with_default_import_trigger(&parentchain_header);
+
 	let state_update = empty_encrypted_state_update(state_handler.as_ref());
 
 	let header = SidechainHeaderBuilder::default()
@@ -194,10 +198,25 @@ fn block_import_with_invalid_signature_fails() {
 }
 
 #[test]
+fn block_import_with_invalid_parentchain_block_fails() {
+	let parentchain_header_invalid = ParentchainHeaderBuilder::default().with_number(2).build();
+	let parentchain_header = ParentchainHeaderBuilder::default().with_number(10).build();
+	let (block_importer, state_handler, _) =
+		test_fixtures_with_default_import_trigger(&parentchain_header);
+
+	let signed_sidechain_block =
+		default_authority_signed_block(&parentchain_header_invalid, state_handler.as_ref());
+
+	assert!(block_importer
+		.import_block(signed_sidechain_block, &parentchain_header)
+		.is_err());
+}
+
+#[test]
 fn cleanup_removes_tops_from_pool() {
-	let (block_importer, state_handler, top_pool_call_operator) =
-		test_fixtures_with_default_import_trigger();
 	let parentchain_header = ParentchainHeaderBuilder::default().build();
+	let (block_importer, state_handler, top_pool_call_operator) =
+		test_fixtures_with_default_import_trigger(&parentchain_header);
 	let signed_sidechain_block =
 		default_authority_signed_block(&parentchain_header, state_handler.as_ref());
 	let bob_signed_sidechain_block =
@@ -226,7 +245,7 @@ fn sidechain_block_import_triggers_parentchain_block_import() {
 			.with_latest_imported(Some(latest_parentchain_block)),
 	);
 	let (block_importer, state_handler, _) =
-		test_fixtures(parentchain_block_import_trigger.clone());
+		test_fixtures(&latest_parentchain_header, parentchain_block_import_trigger.clone());
 
 	let signed_sidechain_block =
 		default_authority_signed_block(&latest_parentchain_header, state_handler.as_ref());
@@ -255,7 +274,8 @@ fn peek_parentchain_block_finds_block_in_queue() {
 			.with_latest_imported(Some(latest_parentchain_block)),
 	);
 
-	let (block_importer, state_handler, _) = test_fixtures(parentchain_block_import_trigger);
+	let (block_importer, state_handler, _) =
+		test_fixtures(&latest_parentchain_header, parentchain_block_import_trigger);
 
 	let signed_sidechain_block =
 		default_authority_signed_block(&latest_parentchain_header, state_handler.as_ref());
@@ -279,7 +299,8 @@ fn peek_parentchain_block_returns_error_if_no_corresponding_block_can_be_found()
 		TestParentchainBlockImportTrigger::default(), // Parentchain block import queue is empty, so nothing will be found when peeked.
 	);
 
-	let (block_importer, state_handler, _) = test_fixtures(parentchain_block_import_trigger);
+	let (block_importer, state_handler, _) =
+		test_fixtures(&latest_parentchain_header, parentchain_block_import_trigger);
 
 	let signed_sidechain_block =
 		default_authority_signed_block(&latest_parentchain_header, state_handler.as_ref());

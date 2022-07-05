@@ -193,6 +193,7 @@ fn new_account(trusted_args: &TrustedArgs) {
 	let store = LocalKeystore::open(get_keystore_path(trusted_args), None).unwrap();
 	let key: sr25519::AppPair = store.generate().unwrap();
 	drop(store);
+	info!("new account {}", key.public().to_ss58check());
 	println!("{}", key.public().to_ss58check());
 }
 
@@ -222,6 +223,7 @@ fn transfer(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, arg_to: &str,
 		.sign(&KeyPair::Sr25519(from), nonce, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
 	let _ = perform_operation(cli, trusted_args, &top);
+	info!("trusted call transfer executed");
 }
 
 struct BenchmarkClient {

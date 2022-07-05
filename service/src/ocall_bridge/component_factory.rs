@@ -36,8 +36,8 @@ use crate::{
 use itp_enclave_api::remote_attestation::RemoteAttestationCallBacks;
 use itp_node_api_extensions::node_api_factory::CreateNodeApi;
 use its_peer_fetch::FetchBlocksFromPeer;
-use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use its_storage::BlockStorage;
+use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use std::sync::Arc;
 
 /// Concrete implementation, should be moved out of the OCall Bridge, into the worker

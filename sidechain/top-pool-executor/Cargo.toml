@@ -15,12 +15,12 @@ ita-stf = { path = "../../app-libs/stf", default-features = false }
 itp-stf-executor = { path = "../../core-primitives/stf-executor", default-features = false }
 itp-time-utils = { path = "../../core-primitives/time-utils", default-features = false }
 itp-top-pool-author = { path = "../../core-primitives/top-pool-author", default-features = false }
-itp-types = { path = "../../core-primitives/types", default-features = false }
-its-primitives = { path = "../primitives", default-features = false }
 its-state = { path = "../state", default-features = false }
 
 # integritee dependencies
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # sgx enabled external libraries
 thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
@@ -33,8 +33,8 @@ codec  = { package = "parity-scale-codec", version = "3.0.0", default-features =
 log = { version = "0.4", default-features = false }
 
 # substrate
-sp-core = { version = "6.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
-sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 
 
 [features]
@@ -46,7 +46,6 @@ std = [
     "itp-time-utils/std",
     "itp-top-pool-author/std",
     "itp-types/std",
-    "its-primitives/std",
     "its-state/std",
 
     # crate.io
@@ -58,6 +57,7 @@ std = [
     "sp-runtime/std",
     # integritee
     "sgx-externalities/std",
+    "sidechain-primitives/std",
 ]
 sgx = [
     "sgx_tstd",

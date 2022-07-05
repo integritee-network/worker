@@ -20,7 +20,7 @@
 
 use itp_time_utils;
 use itp_types::H256;
-use its_primitives::types::{
+use sidechain_primitives::types::{
 	block::{BlockHash, Timestamp},
 	block_data::BlockData,
 };

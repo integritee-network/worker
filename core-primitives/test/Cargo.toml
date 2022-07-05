@@ -18,9 +18,9 @@ jsonrpc-core_sgx = { package = "jsonrpc-core", git = "https://github.com/scs/jso
 jsonrpc-core = { version = "18", optional = true }
 
 # substrate deps
-sp-core = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
-sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
-sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
+sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 
 # local deps
 ita-stf = { path = "../../app-libs/stf", default-features = false }
@@ -28,9 +28,11 @@ itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
 itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
 itp-teerex-storage = { path = "../teerex-storage", default-features = false }
 itp-time-utils = { path = "../time-utils", default-features = false }
-itp-types = { path = "../types", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
-itp-storage = { path = "../storage", default-features = false, features = ["test"] }
+itp-storage = { path = "../storage", default-features = false }
+
+# integritee
+itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "master", default-features = false, features = ["test"] }
 
 [features]
 default = ["std"]

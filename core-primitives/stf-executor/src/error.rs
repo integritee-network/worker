@@ -38,6 +38,8 @@ pub enum Error {
 	Stf(ita_stf::StfError),
 	#[error("Ocall Api error: {0}")]
 	OcallApi(itp_ocall_api::Error),
+	#[error("Crypto error: {0}")]
+	Crypto(itp_sgx_crypto::error::Error),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }
@@ -63,5 +65,11 @@ impl From<ita_stf::StfError> for Error {
 impl From<itp_ocall_api::Error> for Error {
 	fn from(error: itp_ocall_api::Error) -> Self {
 		Self::OcallApi(error)
+	}
+}
+
+impl From<itp_sgx_crypto::error::Error> for Error {
+	fn from(error: itp_sgx_crypto::error::Error) -> Self {
+		Self::Crypto(error)
 	}
 }

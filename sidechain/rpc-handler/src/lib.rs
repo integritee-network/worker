@@ -31,5 +31,6 @@ pub mod sgx_reexport_prelude {
 	pub use rust_base58_sgx as base58;
 }
 
+pub mod constants;
 pub mod direct_top_pool_api;
 pub mod import_block_api;

@@ -16,16 +16,17 @@
 */
 
 use itp_enclave_api::direct_request::DirectRequest;
-use itp_types::RpcRequest;
+use itp_rpc::RpcRequest;
 use itp_utils::ToHexPrefixed;
 use its_peer_fetch::block_fetch_server::BlockFetchServerModuleBuilder;
-use its_primitives::{constants::RPC_METHOD_NAME_IMPORT_BLOCKS, types::SignedBlock};
+use its_rpc_handler::constants::RPC_METHOD_NAME_IMPORT_BLOCKS;
 use its_storage::interface::FetchBlocks;
 use jsonrpsee::{
 	types::error::CallError,
 	ws_server::{RpcModule, WsServerBuilder},
 };
 use log::debug;
+use sidechain_primitives::types::block::SignedBlock;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::net::ToSocketAddrs;
 

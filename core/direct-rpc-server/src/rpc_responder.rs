@@ -19,7 +19,8 @@ use crate::{
 	response_channel::ResponseChannel, DirectRpcError, DirectRpcResult, RpcConnectionRegistry,
 	RpcHash, SendRpcResponse,
 };
-use itp_types::{DirectRequestStatus, RpcResponse, RpcReturnValue, TrustedOperationStatus};
+use itp_rpc::{RpcResponse, RpcReturnValue};
+use itp_types::{DirectRequestStatus, TrustedOperationStatus};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use log::*;
 use std::{boxed::Box, sync::Arc, vec::Vec};

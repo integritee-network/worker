@@ -6,33 +6,36 @@ edition = "2018"
 
 
 [dependencies]
-log = { version = "0.4.14", default-features = false }
+log = { version = "0.4.17", default-features = false }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 derive_more = "0.99.16"
 lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
 
+# scs / integritee
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+
 # only for slot-stream
-futures = { version = "0.3.9", optional = true }
-futures-timer = { version = "3.0.1", optional = true }
+futures = { version = "0.3", optional = true }
+futures-timer = { version = "3.0", optional = true }
 
 # sgx deps
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["untrusted_time"] }
 
 # substrate deps
-sp-consensus-slots = { version = "0.10.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
-sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
+sp-consensus-slots = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 
 # local deps
 itp-settings = { path = "../../../core-primitives/settings" }
 itp-sgx-io = { path = "../../../core-primitives/sgx/io", default-features = false }
 itp-time-utils = { path = "../../../core-primitives/time-utils", default-features = false }
-itp-types = { path = "../../../core-primitives/types", default-features = false }
 its-consensus-common = { path = "../common", default-features = false }
-its-primitives = { path = "../../primitives", default-features = false }
 
 [dev-dependencies]
+itp-test = { path = "../../../core-primitives/test" }
 its-test = { path = "../../test" }
-sp-keyring = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
+sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 tokio = "*"
 
 
@@ -52,7 +55,7 @@ std = [
     "itp-time-utils/std",
     "itp-types/std",
     "its-consensus-common/std",
-    "its-primitives/std",
+    "sidechain-primitives/std",
 ]
 sgx = [
     "itp-sgx-io/sgx",

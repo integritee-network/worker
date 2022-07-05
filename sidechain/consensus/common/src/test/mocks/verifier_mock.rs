@@ -17,7 +17,7 @@
 
 use crate::{Result, Verifier};
 use itp_types::H256;
-use its_primitives::traits::SignedBlock as SignedSidechainBlockTrait;
+use sidechain_primitives::traits::SignedBlock as SignedSidechainBlockTrait;
 use sp_core::Pair;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::marker::PhantomData;

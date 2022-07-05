@@ -18,9 +18,9 @@ std = [
 
     # local crates
     "itp-storage/std",
-    "its-primitives/std",
 
     # scs crates
+    "sidechain-primitives/std",
     "sp-io/std",
     "sgx-externalities/std",
 
@@ -45,7 +45,7 @@ sgx = [
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive", "chain-error"] }
-frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
+frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 log = { version = "0.4", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 
@@ -60,16 +60,16 @@ thiserror_sgx = { package = "thiserror", version = "1.0.9", git = "https://githu
 
 # local deps
 itp-storage = { path = "../../core-primitives/storage", default-features = false}
-its-primitives = { path = "../primitives", default-features = false }
 
 # scs deps
 sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
 
 # substrate deps
-sp-core = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
-sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
+sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 
 # test deps
 [dev-dependencies]
-sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }

@@ -16,7 +16,7 @@
 
 */
 
-use ita_stf::{State, Stf};
+use ita_stf::{AccountId, State, Stf};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_types::ShardIdentifier;
 use sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
@@ -24,13 +24,14 @@ use sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 /// Returns an empty `State` with the corresponding `ShardIdentifier`.
 pub fn init_state<S: HandleState<StateT = SgxExternalities>>(
 	state_handler: &S,
+	enclave_account: AccountId,
 ) -> (State, ShardIdentifier) {
 	let shard = ShardIdentifier::default();
 
 	let _hash = state_handler.initialize_shard(shard).unwrap();
 	let (lock, _) = state_handler.load_for_mutation(&shard).unwrap();
 
-	let mut state = Stf::init_state();
+	let mut state = Stf::init_state(enclave_account);
 	state.prune_state_diff();
 
 	state_handler.write_after_mutation(state.clone(), lock, &shard).unwrap();

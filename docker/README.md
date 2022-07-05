@@ -2,7 +2,9 @@
 
 ## Prerequisite
 
-Make sure you have installed Docker with `docker-compose` (version > `1.25.0`). On Windows, this can be Docker Desktop with WSL 2 integration.
+* Make sure you have installed Docker with `docker-compose` (version > `1.25.0`). On Windows, this can be Docker Desktop with WSL 2 integration.
+* In case you also build the worker directly, without docker (e.g. on a dev machine, running `make`), you should run `make clean` before running the docker build. Otherwise, it can occasionally lead to build errors.
+* The node image version that is loaded in the `docker-compose.yml`, (e.g. `image: "integritee/integritee-node-dev:1.0.11"`) needs to be compatible with the worker you're trying to build.
 
 ## Building the Docker containers
 
@@ -14,12 +16,15 @@ in this folder to build the worker image. This will build the worker from source
 
 ## Running the docker setup
 
-`docker-compose up` will start all services (node and workers), using the `integritee-worker:dev` images you've built in the previous step.
+```
+docker-compose up
+``` 
+Starts all services (node and workers), using the `integritee-worker:dev` images you've built in the previous step.
 
 ## Run the integration tests
 Build with
 ```
-COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose -f docker-compose.yml -f integration-test.yml
+COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose -f docker-compose.yml -f integration-test.yml build
 ```
 and then run with
 ```
