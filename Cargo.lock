@@ -2260,7 +2260,6 @@ dependencies = [
 name = "ita-stf"
 version = "0.8.0"
 dependencies = [
- "derive_more",
  "frame-support",
  "frame-system",
  "integritee-node-runtime",
@@ -2283,6 +2282,8 @@ dependencies = [
  "sp-runtime",
  "substrate-api-client",
  "substrate-client-keystore",
+ "thiserror 1.0.31",
+ "thiserror 1.0.9",
 ]
 
 [[package]]
@@ -2771,7 +2772,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-state-machine",
- "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.24)",
+ "sp-storage",
  "sp-trie",
  "thiserror 1.0.31",
  "thiserror 1.0.9",

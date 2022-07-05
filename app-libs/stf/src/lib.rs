@@ -26,16 +26,24 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
+// re-export module to properly feature gate sgx and regular std environment
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+pub mod sgx_reexport_prelude {
+	pub use thiserror_sgx as thiserror;
+}
+
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
+
 #[cfg(feature = "std")]
 pub use my_node_runtime::{Balance, Index};
 #[cfg(feature = "sgx")]
 pub use sgx_runtime::{Balance, Index};
 
 use codec::{Compact, Decode, Encode};
-use derive_more::Display;
 use sp_core::{crypto::AccountId32, ed25519, sr25519, Pair, H256};
 use sp_runtime::{traits::Verify, MultiSignature};
-use std::string::String;
+use std::{boxed::Box, string::String};
 
 pub type Signature = MultiSignature;
 pub type AuthorityId = <Signature as Verify>::Signer;
@@ -47,22 +55,28 @@ pub type ShardIdentifier = H256;
 
 pub type StfResult<T> = Result<T, StfError>;
 
-#[derive(Debug, Display, PartialEq, Eq)]
+#[derive(Debug, thiserror::Error)]
 pub enum StfError {
-	#[display(fmt = "Insufficient privileges {:?}, are you sure you are root?", _0)]
+	#[error("Insufficient privileges {0}, are you sure you are root?")]
 	MissingPrivileges(AccountId),
-	#[display(fmt = "Valid enclave signer account is required")]
+	#[error("Valid enclave signer account is required")]
 	RequireEnclaveSignerAccount,
-	#[display(fmt = "Error dispatching runtime call. {:?}", _0)]
+	#[error("Error dispatching runtime call. {0}")]
 	Dispatch(String),
-	#[display(fmt = "Not enough funds to perform operation")]
+	#[error("Not enough funds to perform operation")]
 	MissingFunds,
-	#[display(fmt = "Account does not exist {:?}", _0)]
+	#[error("Account does not exist {0}")]
 	InexistentAccount(AccountId),
-	#[display(fmt = "Invalid Nonce {:?}", _0)]
+	#[error("Invalid nonce {0}")]
 	InvalidNonce(Index),
+	#[error("Storage error: {0}")]
+	Storage(#[from] itp_storage::error::Error),
+	#[error("Storage hash mismatch")]
 	StorageHashMismatch,
+	#[error("Invalid storage diff")]
 	InvalidStorageDiff,
+	#[error(transparent)]
+	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }
 
 #[derive(Clone)]

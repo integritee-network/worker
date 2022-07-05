@@ -14,11 +14,15 @@
 	limitations under the License.
 
 */
+
+#[cfg(feature = "test")]
+use sp_core::H256;
+
 use crate::{
-	stf_sgx_primitives::types::*, AccountId, Index, StfError, StfResult, ENCLAVE_ACCOUNT_KEY, H256,
+	stf_sgx_primitives::types::*, AccountId, Index, StfError, StfResult, ENCLAVE_ACCOUNT_KEY,
 };
 use codec::{Decode, Encode};
-use itp_storage::{storage_double_map_key, storage_map_key, storage_value_key, StorageHasher};
+use itp_storage::StorageKeyProvider;
 use itp_utils::stringify::account_id_to_string;
 use log::*;
 use std::prelude::v1::*;
@@ -26,38 +30,10 @@ use std::prelude::v1::*;
 pub fn get_storage_value<V: Decode>(
 	storage_prefix: &'static str,
 	storage_key_name: &'static str,
-) -> Option<V> {
-	let key = storage_value_key(storage_prefix, storage_key_name);
-	get_storage_by_key_hash(key)
-}
-
-pub fn get_storage_map<K: Encode, V: Decode + Clone>(
-	storage_prefix: &'static str,
-	storage_key_name: &'static str,
-	map_key: &K,
-	hasher: &StorageHasher,
-) -> Option<V> {
-	let key = storage_map_key::<K>(storage_prefix, storage_key_name, map_key, hasher);
-	get_storage_by_key_hash(key)
-}
-
-pub fn get_storage_double_map<K: Encode, Q: Encode, V: Decode + Clone>(
-	storage_prefix: &'static str,
-	storage_key_name: &'static str,
-	first: &K,
-	first_hasher: &StorageHasher,
-	second: &Q,
-	second_hasher: &StorageHasher,
-) -> Option<V> {
-	let key = storage_double_map_key::<K, Q>(
-		storage_prefix,
-		storage_key_name,
-		first,
-		first_hasher,
-		second,
-		second_hasher,
-	);
-	get_storage_by_key_hash(key)
+	storage_key_provider: &impl StorageKeyProvider,
+) -> StfResult<Option<V>> {
+	let key = storage_key_provider.storage_value_key(storage_prefix, storage_key_name)?;
+	Ok(get_storage_by_key_hash(key.0))
 }
 
 /// Get value in storage.
@@ -76,22 +52,38 @@ pub fn get_storage_by_key_hash<V: Decode>(key: Vec<u8>) -> Option<V> {
 }
 
 /// Get the AccountInfo key where the account is stored.
-pub fn account_key_hash(account: &AccountId) -> Vec<u8> {
-	storage_map_key("System", "Account", account, &StorageHasher::Blake2_128Concat)
+pub fn account_key_hash(
+	account: &AccountId,
+	storage_key_provider: &impl StorageKeyProvider,
+) -> StfResult<Vec<u8>> {
+	Ok(storage_key_provider.storage_map_key("System", "Account", account)?.0)
 }
 
-pub fn get_account_info(who: &AccountId) -> Option<AccountInfo> {
-	let maybe_storage_map =
-		get_storage_map("System", "Account", who, &StorageHasher::Blake2_128Concat);
+pub fn get_account_info(
+	who: &AccountId,
+	storage_key_provider: &impl StorageKeyProvider,
+) -> Option<AccountInfo> {
+	let storage_map_key = match storage_key_provider.storage_map_key("System", "Account", who) {
+		Ok(r) => r,
+		Err(e) => {
+			error!("Failed to get storage map key: {:?}", e);
+			return None
+		},
+	};
+	let maybe_storage_map = get_storage_by_key_hash(storage_map_key.0);
 	if maybe_storage_map.is_none() {
 		info!("Failed to get account info for account {}", account_id_to_string(who));
 	}
 	maybe_storage_map
 }
 
-pub fn validate_nonce(who: &AccountId, nonce: Index) -> StfResult<()> {
+pub fn validate_nonce(
+	who: &AccountId,
+	nonce: Index,
+	storage_key_provider: &impl StorageKeyProvider,
+) -> StfResult<()> {
 	// validate
-	let expected_nonce = match get_account_info(who) {
+	let expected_nonce = match get_account_info(who, storage_key_provider) {
 		None => {
 			info!(
 				"Attempted to validate account nonce of non-existent account: {}",
@@ -108,28 +100,29 @@ pub fn validate_nonce(who: &AccountId, nonce: Index) -> StfResult<()> {
 }
 
 /// increment nonce after a successful call execution
-pub fn increment_nonce(account: &AccountId) {
+pub fn increment_nonce(
+	account: &AccountId,
+	storage_key_provider: &impl StorageKeyProvider,
+) -> StfResult<()> {
 	//FIXME: Proper error handling - should be taken into
 	// consideration after implementing pay fee check
-	if let Some(mut acc_info) = get_account_info(account) {
+	if let Some(mut acc_info) = get_account_info(account, storage_key_provider) {
 		debug!("incrementing account nonce");
 		acc_info.nonce += 1;
-		sp_io::storage::set(&account_key_hash(account), &acc_info.encode());
-		debug!(
-			"updated account {} nonce: {:?}",
-			account_id_to_string(account),
-			get_account_info(account).unwrap().nonce
-		);
+		let account_key_hash = account_key_hash(account, storage_key_provider)?;
+		sp_io::storage::set(&account_key_hash, &acc_info.encode());
+		debug!("updated account {} nonce: {:?}", account_id_to_string(account), acc_info.nonce);
 	} else {
 		error!(
 			"tried to increment nonce of a non-existent account: {}",
 			account_id_to_string(account)
 		)
 	}
+	Ok(())
 }
 
-pub fn account_nonce(account: &AccountId) -> Index {
-	if let Some(info) = get_account_info(account) {
+pub fn account_nonce(account: &AccountId, storage_key_provider: &impl StorageKeyProvider) -> Index {
+	if let Some(info) = get_account_info(account, storage_key_provider) {
 		info.nonce
 	} else {
 		info!("Attempted to get nonce of non-existent account: {}", account_id_to_string(account));
@@ -137,8 +130,11 @@ pub fn account_nonce(account: &AccountId) -> Index {
 	}
 }
 
-pub fn account_data(account: &AccountId) -> Option<AccountData> {
-	if let Some(info) = get_account_info(account) {
+pub fn account_data(
+	account: &AccountId,
+	storage_key_provider: &impl StorageKeyProvider,
+) -> Option<AccountData> {
+	if let Some(info) = get_account_info(account, storage_key_provider) {
 		Some(info.data)
 	} else {
 		info!(
@@ -149,31 +145,48 @@ pub fn account_data(account: &AccountId) -> Option<AccountData> {
 	}
 }
 
-pub fn root() -> AccountId {
-	get_storage_value("Sudo", "Key").expect("No root account")
+pub fn root(storage_key_provider: &impl StorageKeyProvider) -> StfResult<AccountId> {
+	Ok(get_storage_value("Sudo", "Key", storage_key_provider)?.expect("No root account"))
 }
 
-pub fn enclave_signer_account() -> AccountId {
-	get_storage_value("Sudo", ENCLAVE_ACCOUNT_KEY).expect("No enclave account")
+pub fn enclave_signer_account(
+	storage_key_provider: &impl StorageKeyProvider,
+) -> StfResult<AccountId> {
+	Ok(get_storage_value("Sudo", ENCLAVE_ACCOUNT_KEY, storage_key_provider)?
+		.expect("No enclave account"))
 }
 
 // FIXME: Use Option<ParentchainHeader:Hash> as return type after fixing sgx-runtime issue #37
-pub fn get_parentchain_blockhash() -> Option<H256> {
-	get_storage_value("Parentchain", "BlockHash")
+#[cfg(feature = "test")]
+pub fn get_parentchain_blockhash(storage_key_provider: &impl StorageKeyProvider) -> Option<H256> {
+	get_storage_value("Parentchain", "BlockHash", storage_key_provider)
+		.unwrap()
+		.unwrap()
 }
 
 // FIXME: Use Option<ParentchainHeader:Hash> as return type after fixing sgx-runtime issue #37
-pub fn get_parentchain_parenthash() -> Option<H256> {
-	get_storage_value("Parentchain", "ParentHash")
+#[cfg(feature = "test")]
+pub fn get_parentchain_parenthash(storage_key_provider: &impl StorageKeyProvider) -> Option<H256> {
+	get_storage_value("Parentchain", "ParentHash", storage_key_provider)
+		.unwrap()
+		.unwrap()
 }
 
-pub fn get_parentchain_number() -> Option<BlockNumber> {
-	get_storage_value("Parentchain", "Number")
+#[cfg(feature = "test")]
+pub fn get_parentchain_number(
+	storage_key_provider: &impl StorageKeyProvider,
+) -> Option<BlockNumber> {
+	get_storage_value("Parentchain", "Number", storage_key_provider)
+		.unwrap()
+		.unwrap()
 }
 
 /// Ensures an account is a registered enclave account.
-pub fn ensure_enclave_signer_account(account: &AccountId) -> StfResult<()> {
-	let expected_enclave_account = enclave_signer_account();
+pub fn ensure_enclave_signer_account(
+	account: &AccountId,
+	storage_key_provider: &impl StorageKeyProvider,
+) -> StfResult<()> {
+	let expected_enclave_account = enclave_signer_account(storage_key_provider)?;
 	if &expected_enclave_account == account {
 		Ok(())
 	} else {
@@ -186,8 +199,11 @@ pub fn ensure_enclave_signer_account(account: &AccountId) -> StfResult<()> {
 	}
 }
 
-pub fn ensure_root(account: AccountId) -> StfResult<()> {
-	if root() == account {
+pub fn ensure_root(
+	account: AccountId,
+	storage_key_provider: &impl StorageKeyProvider,
+) -> StfResult<()> {
+	if root(storage_key_provider)? == account {
 		Ok(())
 	} else {
 		Err(StfError::MissingPrivileges(account))

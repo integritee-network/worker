@@ -19,8 +19,8 @@
 
 use crate::error::Error;
 use hash_db::{HashDB, Hasher, EMPTY_PREFIX};
-use sp_std::vec::Vec;
 use sp_trie::{trie_types::TrieDB, MemoryDB, Trie};
+use std::vec::Vec;
 
 pub type StorageProof = Vec<Vec<u8>>;
 

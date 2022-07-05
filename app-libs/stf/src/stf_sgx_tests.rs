@@ -16,6 +16,7 @@
 */
 
 use crate::{AccountId, Signature, Stf, TrustedCall, TrustedCallSigned};
+use itp_storage::key_provider_stub::StorageKeyProviderStub;
 use sp_core::{
 	ed25519::{Pair as Ed25519Pair, Signature as Ed25519Signature},
 	Pair,
@@ -24,21 +25,25 @@ use std::vec::Vec;
 
 pub fn enclave_account_initialization_works() {
 	let enclave_account = AccountId::new([2u8; 32]);
-	let mut state = Stf::init_state(enclave_account.clone());
-	let _root = Stf::get_root(&mut state);
+	let storage_key_provider = StorageKeyProviderStub;
 
-	let account_data = Stf::account_data(&mut state, &enclave_account).unwrap();
+	let mut state = Stf::init_state(enclave_account.clone(), &storage_key_provider);
+	let _root = Stf::get_root(&mut state, &storage_key_provider);
 
-	assert_eq!(0, Stf::account_nonce(&mut state, &enclave_account));
-	assert_eq!(enclave_account, Stf::get_enclave_account(&mut state));
+	let account_data =
+		Stf::account_data(&mut state, &enclave_account, &storage_key_provider).unwrap();
+
+	assert_eq!(0, Stf::account_nonce(&mut state, &enclave_account, &storage_key_provider));
+	assert_eq!(enclave_account, Stf::get_enclave_account(&mut state, &storage_key_provider));
 	assert_eq!(1000, account_data.free);
 }
 
 pub fn shield_funds_increments_signer_account_nonce() {
 	let enclave_call_signer = Ed25519Pair::from_seed(b"14672678901234567890123456789012");
 	let enclave_signer_account_id: AccountId = enclave_call_signer.public().into();
+	let storage_key_provider = StorageKeyProviderStub;
 
-	let mut state = Stf::init_state(enclave_signer_account_id.clone());
+	let mut state = Stf::init_state(enclave_signer_account_id.clone(), &storage_key_provider);
 
 	let shield_funds_call = TrustedCallSigned::new(
 		TrustedCall::balance_shield(
@@ -50,15 +55,20 @@ pub fn shield_funds_increments_signer_account_nonce() {
 		Signature::Ed25519(Ed25519Signature([0u8; 64])),
 	);
 
-	Stf::execute(&mut state, shield_funds_call, &mut Vec::new(), [0u8, 1u8]).unwrap();
-	assert_eq!(1, Stf::account_nonce(&mut state, &enclave_signer_account_id));
+	Stf::execute(&mut state, shield_funds_call, &mut Vec::new(), [0u8, 1u8], &storage_key_provider)
+		.unwrap();
+	assert_eq!(
+		1,
+		Stf::account_nonce(&mut state, &enclave_signer_account_id, &storage_key_provider)
+	);
 }
 
 pub fn test_root_account_exists_after_initialization() {
 	let enclave_account = AccountId::new([2u8; 32]);
+	let storage_key_provider = StorageKeyProviderStub;
 	let mut state = Stf::init_state(enclave_account.clone());
-	let root_account = Stf::get_root(&mut state);
+	let root_account = Stf::get_root(&mut state, &storage_key_provider);
 
-	let account_data = Stf::account_data(&mut state, &root_account).unwrap();
+	let account_data = Stf::account_data(&mut state, &root_account, &storage_key_provider).unwrap();
 	assert!(account_data.free > 0);
 }

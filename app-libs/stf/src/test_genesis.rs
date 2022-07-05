@@ -16,9 +16,9 @@
 */
 
 use crate::{helpers::get_account_info, StfError};
-use itp_storage::storage_value_key;
+use itp_storage::StorageKeyProvider;
 use log::*;
-use sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
+use sgx_externalities::SgxExternalitiesTrait;
 use sgx_runtime::{Balance, Runtime};
 use sgx_tstd as std;
 use sp_core::{crypto::AccountId32, ed25519, Pair};
@@ -52,9 +52,12 @@ pub fn unendowed_account() -> ed25519::Pair {
 	ed25519::Pair::from_seed(&UNENDOWED_SEED)
 }
 
-pub fn test_genesis_setup(state: &mut SgxExternalities) {
+pub(crate) fn test_genesis_setup(
+	state: &mut impl SgxExternalitiesTrait,
+	storage_key_provider: &impl StorageKeyProvider,
+) {
 	// set alice sudo account
-	set_sudo_account(state, &ALICE_ENCODED);
+	set_sudo_account(state, &ALICE_ENCODED, storage_key_provider);
 	trace!("Set new sudo account: {:?}", &ALICE_ENCODED);
 
 	let endowees: Vec<(AccountId32, Balance, Balance)> = vec![
@@ -67,18 +70,26 @@ pub fn test_genesis_setup(state: &mut SgxExternalities) {
 		(ALICE_ENCODED.into(), ALICE_FUNDS, ALICE_FUNDS),
 	];
 
-	endow(state, endowees);
+	endow(state, endowees, storage_key_provider);
 }
 
-fn set_sudo_account(state: &mut SgxExternalities, account_encoded: &[u8]) {
+fn set_sudo_account(
+	state: &mut impl SgxExternalitiesTrait,
+	account_encoded: &[u8],
+	storage_key_provider: &impl StorageKeyProvider,
+) {
 	state.execute_with(|| {
-		sp_io::storage::set(&storage_value_key("Sudo", "Key"), account_encoded);
+		sp_io::storage::set(
+			&storage_key_provider.storage_value_key("Sudo", "Key"),
+			account_encoded,
+		);
 	})
 }
 
 fn endow(
-	state: &mut SgxExternalities,
+	state: &mut impl SgxExternalitiesTrait,
 	endowees: impl IntoIterator<Item = (AccountId32, Balance, Balance)>,
+	storage_key_provider: &impl StorageKeyProvider,
 ) {
 	state.execute_with(|| {
 		for e in endowees.into_iter() {

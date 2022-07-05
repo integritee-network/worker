@@ -28,7 +28,7 @@ use crate::{
 	ENCLAVE_ACCOUNT_KEY,
 };
 use codec::Encode;
-use itp_storage::storage_value_key;
+use itp_storage::StorageKeyProvider;
 use itp_types::OpaqueCall;
 use itp_utils::stringify::account_id_to_string;
 use its_state::SidechainSystemExt;
@@ -41,54 +41,72 @@ use sp_runtime::MultiAddress;
 use std::{format, prelude::v1::*, vec};
 use support::traits::UnfilteredDispatchable;
 impl Stf {
-	pub fn init_state(enclave_account: AccountId) -> State {
+	pub fn init_state(
+		enclave_account: AccountId,
+		storage_key_provider: &impl StorageKeyProvider,
+	) -> StfResult<State> {
 		debug!("initializing stf state, account id {}", account_id_to_string(&enclave_account));
 		let mut ext = State::new();
 
-		ext.execute_with(|| {
+		ext.execute_with(|| -> StfResult<()> {
 			// do not set genesis for pallets that are meant to be on-chain
 			// use get_storage_hashes_to_update instead
 
-			sp_io::storage::set(&storage_value_key("Balances", "TotalIssuance"), &11u128.encode());
-			sp_io::storage::set(&storage_value_key("Balances", "CreationFee"), &1u128.encode());
-			sp_io::storage::set(&storage_value_key("Balances", "TransferFee"), &1u128.encode());
 			sp_io::storage::set(
-				&storage_value_key("Balances", "TransactionBaseFee"),
+				&storage_key_provider.storage_value_key("Balances", "TotalIssuance")?.0,
+				&11u128.encode(),
+			);
+			sp_io::storage::set(
+				&storage_key_provider.storage_value_key("Balances", "CreationFee")?.0,
 				&1u128.encode(),
 			);
 			sp_io::storage::set(
-				&storage_value_key("Balances", "TransactionByteFee"),
+				&storage_key_provider.storage_value_key("Balances", "TransferFee")?.0,
 				&1u128.encode(),
 			);
 			sp_io::storage::set(
-				&storage_value_key("Balances", "ExistentialDeposit"),
+				&storage_key_provider.storage_value_key("Balances", "TransactionBaseFee")?.0,
 				&1u128.encode(),
 			);
-		});
+			sp_io::storage::set(
+				&storage_key_provider.storage_value_key("Balances", "TransactionByteFee")?.0,
+				&1u128.encode(),
+			);
+			sp_io::storage::set(
+				&storage_key_provider.storage_value_key("Balances", "ExistentialDeposit")?.0,
+				&1u128.encode(),
+			);
+			Ok(())
+		})?;
 
 		#[cfg(feature = "test")]
-		test_genesis_setup(&mut ext);
+		test_genesis_setup(&mut ext, storage_key_provider);
 
-		ext.execute_with(|| {
+		ext.execute_with(|| -> StfResult<()> {
 			sp_io::storage::set(
-				&storage_value_key("Sudo", ENCLAVE_ACCOUNT_KEY),
+				&storage_key_provider.storage_value_key("Sudo", ENCLAVE_ACCOUNT_KEY)?.0,
 				&enclave_account.encode(),
 			);
 
 			if let Err(e) = Self::create_enclave_self_account(&enclave_account) {
 				error!("Failed to initialize the enclave signer account: {:?}", e);
 			}
-		});
+			Ok(())
+		})?;
 
 		trace!("Returning updated state: {:?}", ext);
-		ext
+		Ok(ext)
 	}
 
-	pub fn get_state(ext: &mut impl SgxExternalitiesTrait, getter: Getter) -> Option<Vec<u8>> {
+	pub fn get_state(
+		ext: &mut impl SgxExternalitiesTrait,
+		getter: Getter,
+		storage_key_provider: &impl StorageKeyProvider,
+	) -> Option<Vec<u8>> {
 		ext.execute_with(|| match getter {
 			Getter::trusted(g) => match g.getter {
 				TrustedGetter::free_balance(who) =>
-					if let Some(info) = get_account_info(&who) {
+					if let Some(info) = get_account_info(&who, storage_key_provider) {
 						debug!("TrustedGetter free_balance");
 						debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
 						debug!("Account free balance is {}", info.data.free);
@@ -97,7 +115,7 @@ impl Stf {
 						None
 					},
 				TrustedGetter::reserved_balance(who) =>
-					if let Some(info) = get_account_info(&who) {
+					if let Some(info) = get_account_info(&who, storage_key_provider) {
 						debug!("TrustedGetter reserved_balance");
 						debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
 						debug!("Account reserved balance is {}", info.data.reserved);
@@ -106,7 +124,7 @@ impl Stf {
 						None
 					},
 				TrustedGetter::nonce(who) =>
-					if let Some(info) = get_account_info(&who) {
+					if let Some(info) = get_account_info(&who, storage_key_provider) {
 						debug!("TrustedGetter nonce");
 						debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
 						debug!("Account nonce is {}", info.nonce);
@@ -126,14 +144,15 @@ impl Stf {
 		call: TrustedCallSigned,
 		calls: &mut Vec<OpaqueCall>,
 		unshield_funds_fn: [u8; 2],
+		storage_key_provider: &impl StorageKeyProvider,
 	) -> StfResult<()> {
 		let call_hash = blake2_256(&call.encode());
-		ext.execute_with(|| {
+		ext.execute_with(|| -> StfResult<()> {
 			let sender = call.call.account().clone();
-			validate_nonce(&sender, call.nonce)?;
+			validate_nonce(&sender, call.nonce, storage_key_provider)?;
 			match call.call {
 				TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
-					ensure_root(root)?;
+					ensure_root(root, storage_key_provider)?;
 					debug!(
 						"balance_set_balance({}, {}, {})",
 						account_id_to_string(&who),
@@ -149,7 +168,6 @@ impl Stf {
 					.map_err(|e| {
 						StfError::Dispatch(format!("Balance Set Balance error: {:?}", e.error))
 					})?;
-					Ok(())
 				},
 				TrustedCall::balance_transfer(from, to, value) => {
 					let origin = sgx_runtime::Origin::signed(from.clone());
@@ -159,7 +177,7 @@ impl Stf {
 						account_id_to_string(&to),
 						value
 					);
-					if let Some(info) = get_account_info(&from) {
+					if let Some(info) = get_account_info(&from, storage_key_provider) {
 						debug!("sender balance is {}", info.data.free);
 					} else {
 						debug!("sender balance is zero");
@@ -172,7 +190,6 @@ impl Stf {
 					.map_err(|e| {
 						StfError::Dispatch(format!("Balance Transfer error: {:?}", e.error))
 					})?;
-					Ok(())
 				},
 				TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
 					debug!(
@@ -183,7 +200,7 @@ impl Stf {
 						shard
 					);
 
-					Self::unshield_funds(account_incognito, value)?;
+					Self::unshield_funds(account_incognito, value, storage_key_provider)?;
 					calls.push(OpaqueCall::from_tuple(&(
 						unshield_funds_fn,
 						beneficiary,
@@ -191,16 +208,14 @@ impl Stf {
 						shard,
 						call_hash,
 					)));
-					Ok(())
 				},
 				TrustedCall::balance_shield(enclave_account, who, value) => {
-					ensure_enclave_signer_account(&enclave_account)?;
+					ensure_enclave_signer_account(&enclave_account, storage_key_provider)?;
 					debug!("balance_shield({}, {})", account_id_to_string(&who), value);
-					Self::shield_funds(who, value)?;
-					Ok(())
+					Self::shield_funds(who, value, storage_key_provider)?;
 				},
-			}?;
-			increment_nonce(&sender);
+			};
+			increment_nonce(&sender, storage_key_provider)?;
 			Ok(())
 		})
 	}
@@ -223,8 +238,12 @@ impl Stf {
 		.map(|_| ())
 	}
 
-	fn shield_funds(account: AccountId, amount: u128) -> StfResult<()> {
-		match get_account_info(&account) {
+	fn shield_funds(
+		account: AccountId,
+		amount: u128,
+		storage_key_provider: &impl StorageKeyProvider,
+	) -> StfResult<()> {
+		match get_account_info(&account, storage_key_provider) {
 			Some(account_info) => sgx_runtime::BalancesCall::<Runtime>::set_balance {
 				who: MultiAddress::Id(account),
 				new_free: account_info.data.free + amount,
@@ -250,8 +269,12 @@ impl Stf {
 		Ok(())
 	}
 
-	fn unshield_funds(account: AccountId, amount: u128) -> StfResult<()> {
-		match get_account_info(&account) {
+	fn unshield_funds(
+		account: AccountId,
+		amount: u128,
+		storage_key_provider: &impl StorageKeyProvider,
+	) -> StfResult<()> {
+		match get_account_info(&account, storage_key_provider) {
 			Some(account_info) => {
 				if account_info.data.free < amount {
 					return Err(StfError::MissingFunds)
@@ -323,17 +346,27 @@ impl Stf {
 		key_hashes
 	}
 
-	pub fn get_root(ext: &mut impl SgxExternalitiesTrait) -> AccountId {
-		ext.execute_with(|| root())
+	pub fn get_root(
+		ext: &mut impl SgxExternalitiesTrait,
+		storage_key_provider: &impl StorageKeyProvider,
+	) -> StfResult<AccountId> {
+		ext.execute_with(|| root(storage_key_provider))
 	}
 
-	pub fn get_enclave_account(ext: &mut impl SgxExternalitiesTrait) -> AccountId {
-		ext.execute_with(|| enclave_signer_account())
+	pub fn get_enclave_account(
+		ext: &mut impl SgxExternalitiesTrait,
+		storage_key_provider: &impl StorageKeyProvider,
+	) -> StfResult<AccountId> {
+		ext.execute_with(|| enclave_signer_account(storage_key_provider))
 	}
 
-	pub fn account_nonce(ext: &mut impl SgxExternalitiesTrait, account: &AccountId) -> Index {
+	pub fn account_nonce(
+		ext: &mut impl SgxExternalitiesTrait,
+		account: &AccountId,
+		storage_key_provider: &impl StorageKeyProvider,
+	) -> Index {
 		ext.execute_with(|| {
-			let nonce = account_nonce(account);
+			let nonce = account_nonce(account, storage_key_provider);
 			debug!("Account {} nonce is {}", account_id_to_string(&account), nonce);
 			nonce
 		})
@@ -342,8 +375,9 @@ impl Stf {
 	pub fn account_data(
 		ext: &mut impl SgxExternalitiesTrait,
 		account: &AccountId,
+		storage_key_provider: &impl StorageKeyProvider,
 	) -> Option<AccountData> {
-		ext.execute_with(|| account_data(account))
+		ext.execute_with(|| account_data(account, storage_key_provider))
 	}
 }
 

@@ -33,3 +33,6 @@ pub mod error;
 pub mod keys;
 pub mod proof;
 pub mod verify_storage_proof;
+
+#[cfg(feature = "test")]
+pub mod key_provider_stub;
