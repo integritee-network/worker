@@ -87,6 +87,7 @@ impl<T: SgxExternalitiesTrait + Clone + StateHash> SidechainState for T {
 	}
 
 	fn apply_state_update(&mut self, state_payload: &Self::StateUpdate) -> Result<(), Error> {
+		info!("Current state size: {}", self.ext().state().encoded_size());
 		ensure!(self.state_hash() == state_payload.state_hash_apriori(), Error::InvalidAprioriHash);
 		let mut state2 = self.clone();
 
