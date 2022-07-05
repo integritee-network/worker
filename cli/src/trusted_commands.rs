@@ -20,10 +20,7 @@ use crate::{
 	trusted_command_utils::{
 		get_accountid_from_str, get_identifiers, get_keystore_path, get_pair_from_str,
 	},
-	trusted_operation::{
-		create_connection, initialize_receiver_for_direct_request, perform_trusted_operation,
-		wait_until,
-	},
+	trusted_operation::{get_json_request, perform_trusted_operation, wait_until},
 	Cli,
 };
 use codec::Decode;
@@ -41,7 +38,12 @@ use rayon::prelude::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_application_crypto::{ed25519, sr25519};
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
-use std::{fs::OpenOptions, io::Write, sync::mpsc::Receiver, time::Instant};
+use std::{
+	fs::OpenOptions,
+	io::Write,
+	sync::mpsc::{channel, Receiver},
+	time::Instant,
+};
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
 
 macro_rules! get_layer_two_nonce {
@@ -233,6 +235,23 @@ struct BenchmarkClient {
 	receiver: Receiver<String>,
 }
 
+impl BenchmarkClient {
+	fn new(
+		account: sr25519_core::Pair,
+		initial_balance: u128,
+		initial_request: String,
+		cli: &Cli,
+	) -> Self {
+		debug!("get direct api");
+		let client_api = get_worker_api_direct(cli);
+
+		debug!("setup sender and receiver");
+		let (sender, receiver) = channel();
+		client_api.watch(initial_request, sender);
+		BenchmarkClient { account, current_balance: initial_balance, client_api, receiver }
+	}
+}
+
 /// Stores timing information about a specific transaction
 struct BenchmarkTransaction {
 	hash: H256,
@@ -273,15 +292,12 @@ fn transfer_benchmark(
 		// create new account to use
 		let a: sr25519::AppPair = store.generate().unwrap();
 		let account = get_pair_from_str(trusted_args, a.public().to_string().as_str());
-		let (client_api, receiver) = create_connection(&cli);
 		let initial_balance = 10000000;
-		let client =
-			BenchmarkClient { account, current_balance: initial_balance, client_api, receiver };
 
 		// transfer amount from Alice to new accounts
 		let top: TrustedOperation = TrustedCall::balance_transfer(
 			funding_account_keys.public().into(),
-			client.account.public().into(),
+			account.public().into(),
 			initial_balance,
 		)
 		.sign(&KeyPair::Sr25519(funding_account_keys.clone()), nonce, &mrenclave, &shard)
@@ -289,9 +305,10 @@ fn transfer_benchmark(
 
 		// For the last account we wait for confirmation in order to ensure all accounts were setup correctly
 		let wait_for_confirmation = i == number_clients - 1;
-		let result =
-			run_transaction(trusted_args, shielding_pubkey, top, wait_for_confirmation, &client);
+		let account_funding_request = get_json_request(trusted_args, top, shielding_pubkey);
 
+		let client = BenchmarkClient::new(account, initial_balance, account_funding_request, cli);
+		let result = wait_for_top_confirmation(wait_for_confirmation, &client);
 		accounts.push(client);
 	}
 
@@ -332,13 +349,10 @@ fn transfer_benchmark(
 				.into_trusted_operation(trusted_args.direct);
 
 				let last_iteration = i == number_iterations - 1;
-				let result = run_transaction(
-					trusted_args,
-					shielding_pubkey,
-					top,
-					wait_for_confirmation || last_iteration,
-					&client,
-				);
+				let jsonrpc_call = get_json_request(trusted_args, top, shielding_pubkey);
+				client.client_api.send(&jsonrpc_call).unwrap();
+				let result =
+					wait_for_top_confirmation(wait_for_confirmation || last_iteration, &client);
 
 				client.current_balance = client.current_balance - keep_alive_balance;
 				client.account = new_account;
@@ -403,23 +417,11 @@ fn transfer_benchmark(
 	}
 }
 
-fn run_transaction(
-	trusted_args: &TrustedArgs,
-	shielding_pubkey: Rsa3072PubKey,
-	top: TrustedOperation,
+fn wait_for_top_confirmation(
 	wait_for_sidechain_block: bool,
 	client: &BenchmarkClient,
 ) -> BenchmarkTransaction {
 	let started = Instant::now();
-	match top {
-		TrustedOperation::direct_call(call) => initialize_receiver_for_direct_request(
-			&client.client_api,
-			trusted_args,
-			TrustedOperation::direct_call(call),
-			shielding_pubkey,
-		),
-		_ => (),
-	};
 
 	let submitted = wait_until(&client.receiver, is_submitted);
 

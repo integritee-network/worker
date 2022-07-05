@@ -23,7 +23,7 @@ use crate::{
 use base58::FromBase58;
 use codec::{Decode, Encode};
 use ita_stf::{ShardIdentifier, TrustedOperation};
-use itc_rpc_client::direct_client::{DirectApi, DirectClient};
+use itc_rpc_client::direct_client::DirectApi;
 use itp_node_api_extensions::TEEREX;
 use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
@@ -35,8 +35,7 @@ use sp_core::{sr25519 as sr25519_core, Pair, H256};
 use std::{
 	result::Result as StdResult,
 	sync::mpsc::{channel, Receiver},
-	thread,
-	time::{Duration, Instant},
+	time::Instant,
 };
 use substrate_api_client::{compose_extrinsic, ExtrinsicParams, XtStatus};
 use teerex_primitives::Request;
@@ -232,36 +231,22 @@ fn send_direct_request(
 	}
 }
 
-pub fn create_connection(cli: &Cli) -> (DirectClient, Receiver<String>) {
-	debug!("get direct api");
-	let direct_api = get_worker_api_direct(cli);
-
-	debug!("setup sender and receiver");
-	let (sender, receiver) = channel();
-	direct_api.watch("".to_string(), sender);
-	thread::sleep(Duration::from_millis(200));
-	(direct_api, receiver)
-}
-
 /// sends a rpc watch request to the worker api server
-pub fn initialize_receiver_for_direct_request(
-	client_api: &DirectClient,
+pub fn get_json_request(
 	trusted_args: &TrustedArgs,
 	operation_call: TrustedOperation,
 	shielding_pubkey: sgx_crypto_helper::rsa3072::Rsa3072PubKey,
-) {
+) -> String {
 	let operation_call_encrypted = shielding_pubkey.encrypt(&operation_call.encode()).unwrap();
 	let shard = read_shard(trusted_args).unwrap();
 
 	// compose jsonrpc call
 	let request = Request { shard, cyphertext: operation_call_encrypted };
-	let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(
+	RpcRequest::compose_jsonrpc_call(
 		"author_submitAndWatchExtrinsic".to_string(),
 		vec![request.to_hex()],
 	)
-	.unwrap();
-
-	client_api.send(&jsonrpc_call).unwrap();
+	.unwrap()
 }
 
 pub fn wait_until(
