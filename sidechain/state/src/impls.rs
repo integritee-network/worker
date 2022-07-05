@@ -17,22 +17,24 @@
 
 //! Implement the sidechain state traits.
 
-use crate::{Error, SidechainDB, SidechainState, StateHash, StateUpdate};
+use crate::{Error, Result, SidechainDB, SidechainState, StateHash, StateUpdate};
 use codec::{Decode, Encode};
 use frame_support::ensure;
-use itp_storage::keys::storage_value_key;
+use itp_storage::keys::StorageKeyProvider;
 use log::error;
 use sgx_externalities::SgxExternalitiesTrait;
 use sp_core::{hashing::blake2_256, H256};
 use sp_io::storage;
 use std::vec::Vec;
 
-impl<SidechainBlock, T> SidechainState for SidechainDB<SidechainBlock, T>
+impl<SidechainBlock, ExternalitiesType, StorageKeys> SidechainState
+	for SidechainDB<SidechainBlock, ExternalitiesType, StorageKeys>
 where
-	T: SgxExternalitiesTrait + StateHash + Clone,
+	ExternalitiesType: SgxExternalitiesTrait + StateHash + Clone,
 	SidechainBlock: Clone,
+	StorageKeys: StorageKeyProvider + Clone,
 {
-	type Externalities = T;
+	type Externalities = ExternalitiesType;
 	type StateUpdate = StateUpdate;
 	type Hash = H256;
 
@@ -48,47 +50,9 @@ where
 		&mut self.ext
 	}
 
-	fn apply_state_update(&mut self, state_payload: &Self::StateUpdate) -> Result<(), Error> {
-		self.ext_mut().apply_state_update(state_payload)
-	}
-
-	fn get_with_name<V: Decode>(&self, module_prefix: &str, storage_prefix: &str) -> Option<V> {
-		self.ext().get_with_name(module_prefix, storage_prefix)
-	}
-
-	fn set_with_name<V: Encode>(&mut self, module_prefix: &str, storage_prefix: &str, value: V) {
-		self.ext_mut().set_with_name(module_prefix, storage_prefix, value)
-	}
-
-	fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
-		self.ext().get(key).cloned()
-	}
-
-	fn set(&mut self, key: &[u8], value: &[u8]) {
-		self.ext_mut().set(key, value)
-	}
-}
-
-impl<T: SgxExternalitiesTrait + Clone + StateHash> SidechainState for T {
-	type Externalities = Self;
-	type StateUpdate = StateUpdate;
-	type Hash = H256;
-
-	fn state_hash(&self) -> Self::Hash {
-		self.hash()
-	}
-
-	fn ext(&self) -> &Self::Externalities {
-		self
-	}
-
-	fn ext_mut(&mut self) -> &mut Self::Externalities {
-		self
-	}
-
-	fn apply_state_update(&mut self, state_payload: &Self::StateUpdate) -> Result<(), Error> {
+	fn apply_state_update(&mut self, state_payload: &Self::StateUpdate) -> Result<()> {
 		ensure!(self.state_hash() == state_payload.state_hash_apriori(), Error::InvalidAprioriHash);
-		let mut state2 = self.clone();
+		let mut state2 = self.ext.clone();
 
 		state2.execute_with(|| {
 			state_payload.state_update.iter().for_each(|(k, v)| {
@@ -100,41 +64,134 @@ impl<T: SgxExternalitiesTrait + Clone + StateHash> SidechainState for T {
 		});
 
 		ensure!(state2.hash() == state_payload.state_hash_aposteriori(), Error::InvalidStorageDiff);
-		*self = state2;
-		self.prune_state_diff();
+		self.ext = state2;
+		self.ext.prune_state_diff();
 		Ok(())
 	}
 
-	fn get_with_name<V: Decode>(&self, module_prefix: &str, storage_prefix: &str) -> Option<V> {
+	fn get_with_name<V: Decode>(
+		&self,
+		module_prefix: &'static str,
+		storage_prefix: &'static str,
+	) -> Result<Option<V>> {
+		let storage_value_key =
+			self.storage_key_provider.storage_value_key(module_prefix, storage_prefix)?;
+
 		let res = self
-			.get(&storage_value_key(module_prefix, storage_prefix))
+			.get(&storage_value_key.0)
 			.map(|v| Decode::decode(&mut v.as_slice()))
 			.transpose();
 
 		match res {
-			Ok(res) => res,
+			Ok(res) => Ok(res),
 			Err(e) => {
 				error!(
 					"Error decoding storage: {}, {}. Error: {:?}",
 					module_prefix, storage_prefix, e
 				);
-				None
+				Ok(None)
 			},
 		}
 	}
 
-	fn set_with_name<V: Encode>(&mut self, module_prefix: &str, storage_prefix: &str, value: V) {
-		self.set(&storage_value_key(module_prefix, storage_prefix), &value.encode())
+	fn set_with_name<V: Encode>(
+		&mut self,
+		module_prefix: &'static str,
+		storage_prefix: &'static str,
+		value: V,
+	) -> Result<()> {
+		let storage_value_key =
+			self.storage_key_provider.storage_value_key(module_prefix, storage_prefix)?;
+
+		self.set(&storage_value_key.0, &value.encode());
+		Ok(())
 	}
 
 	fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
-		self.get(key).cloned()
+		self.ext.get(key).cloned()
 	}
 
 	fn set(&mut self, key: &[u8], value: &[u8]) {
-		self.execute_with(|| sp_io::storage::set(key, value))
+		self.ext.execute_with(|| sp_io::storage::set(key, value))
 	}
 }
+
+// impl<T: SgxExternalitiesTrait + Clone + StateHash> SidechainState for T {
+// 	type Externalities = Self;
+// 	type StateUpdate = StateUpdate;
+// 	type Hash = H256;
+//
+// 	fn state_hash(&self) -> Self::Hash {
+// 		self.hash()
+// 	}
+//
+// 	fn ext(&self) -> &Self::Externalities {
+// 		self
+// 	}
+//
+// 	fn ext_mut(&mut self) -> &mut Self::Externalities {
+// 		self
+// 	}
+//
+// 	fn apply_state_update(&mut self, state_payload: &Self::StateUpdate) -> Result<(), Error> {
+// 		ensure!(self.state_hash() == state_payload.state_hash_apriori(), Error::InvalidAprioriHash);
+// 		let mut state2 = self.clone();
+//
+// 		state2.execute_with(|| {
+// 			state_payload.state_update.iter().for_each(|(k, v)| {
+// 				match v {
+// 					Some(value) => storage::set(k, value),
+// 					None => storage::clear(k),
+// 				};
+// 			})
+// 		});
+//
+// 		ensure!(state2.hash() == state_payload.state_hash_aposteriori(), Error::InvalidStorageDiff);
+// 		*self = state2;
+// 		self.prune_state_diff();
+// 		Ok(())
+// 	}
+//
+// 	fn get_with_name<V: Decode>(
+// 		&self,
+// 		module_prefix: &str,
+// 		storage_prefix: &str,
+// 	) -> Result<Option<V>> {
+// 		let res = self
+// 			.get(&storage_value_key(module_prefix, storage_prefix))
+// 			.map(|v| Decode::decode(&mut v.as_slice()))
+// 			.transpose();
+//
+// 		match res {
+// 			Ok(res) => Ok(res),
+// 			Err(e) => {
+// 				error!(
+// 					"Error decoding storage: {}, {}. Error: {:?}",
+// 					module_prefix, storage_prefix, e
+// 				);
+// 				Ok(None)
+// 			},
+// 		}
+// 	}
+//
+// 	fn set_with_name<V: Encode>(
+// 		&mut self,
+// 		module_prefix: &str,
+// 		storage_prefix: &str,
+// 		value: V,
+// 	) -> Result<()> {
+// 		self.set(&storage_value_key(module_prefix, storage_prefix), &value.encode());
+// 		Ok(())
+// 	}
+//
+// 	fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+// 		self.get(key).cloned()
+// 	}
+//
+// 	fn set(&mut self, key: &[u8], value: &[u8]) {
+// 		self.execute_with(|| sp_io::storage::set(key, value))
+// 	}
+// }
 
 impl<E: SgxExternalitiesTrait + Encode> StateHash for E {
 	fn hash(&self) -> H256 {

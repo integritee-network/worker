@@ -1484,6 +1484,7 @@ dependencies = [
 name = "itp-node-api-extensions"
 version = "0.8.0"
 dependencies = [
+ "itp-storage",
  "itp-types",
  "parity-scale-codec",
  "sgx_tstd",

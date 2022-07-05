@@ -15,12 +15,14 @@
 
 */
 
-use crate::StorageKeyProvider;
+use crate::{error::Result, StorageKeyProvider};
+use codec::{Decode, Encode};
 use frame_metadata::v14::StorageHasher;
 use sp_storage::StorageKey;
 use std::vec::Vec;
 
 /// Stub implementation of the key provider. Use only for testing.
+#[derive(Default, Clone, Encode, Decode, Debug)]
 pub struct StorageKeyProviderStub {}
 
 impl StorageKeyProvider for StorageKeyProviderStub {

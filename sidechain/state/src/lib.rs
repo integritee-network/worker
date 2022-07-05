@@ -33,6 +33,7 @@ mod sgx_reexports {
 	pub use thiserror_sgx as thiserror;
 }
 
+use crate::error::Result;
 use codec::{Decode, Encode};
 use sgx_externalities::{SgxExternalitiesDiffType, SgxExternalitiesTrait};
 use sidechain_primitives::{
@@ -41,22 +42,28 @@ use sidechain_primitives::{
 };
 use sp_core::H256;
 use sp_std::prelude::Vec;
-use std::marker::PhantomData;
+use std::{marker::PhantomData, sync::Arc};
 
 /// Sidechain wrapper and interface of the STF state.
 ///
 /// TODO: In the course of refactoring the STF (#269), verify if this struct is even needed.
 /// It might be that we could implement everything directly on `[SgxExternalities]`.
-#[derive(Clone, Debug, Default, Encode, Decode, PartialEq, Eq)]
-pub struct SidechainDB<Block, E> {
+#[derive(Clone, Debug)]
+pub struct SidechainDB<Block, Externalities, StorageKeyProvider> {
 	/// Externalities
-	pub ext: E,
+	ext: Externalities,
+	storage_key_provider: Arc<StorageKeyProvider>,
 	_phantom: PhantomData<Block>,
 }
 
-impl<Block, E> SidechainDB<Block, E> {
-	pub fn new(externalities: E) -> Self {
-		Self { ext: externalities, _phantom: Default::default() }
+impl<Block, Externalities, StorageKeyProvider>
+	SidechainDB<Block, Externalities, StorageKeyProvider>
+{
+	pub fn new(
+		externalities: Externalities,
+		storage_key_provider: Arc<StorageKeyProvider>,
+	) -> Self {
+		Self { ext: externalities, storage_key_provider, _phantom: Default::default() }
 	}
 }
 
@@ -119,13 +126,22 @@ pub trait SidechainState: Clone {
 	fn ext_mut(&mut self) -> &mut Self::Externalities;
 
 	/// apply the state update to the state
-	fn apply_state_update(&mut self, state_payload: &Self::StateUpdate) -> Result<(), Error>;
+	fn apply_state_update(&mut self, state_payload: &Self::StateUpdate) -> Result<()>;
 
 	/// get a storage value by its full name
-	fn get_with_name<V: Decode>(&self, module_prefix: &str, storage_prefix: &str) -> Option<V>;
+	fn get_with_name<V: Decode>(
+		&self,
+		module_prefix: &'static str,
+		storage_prefix: &'static str,
+	) -> Result<Option<V>>;
 
 	/// set a storage value by its full name
-	fn set_with_name<V: Encode>(&mut self, module_prefix: &str, storage_prefix: &str, value: V);
+	fn set_with_name<V: Encode>(
+		&mut self,
+		module_prefix: &'static str,
+		storage_prefix: &'static str,
+		value: V,
+	) -> Result<()>;
 
 	/// get a storage value by its storage hash
 	fn get(&self, key: &[u8]) -> Option<Vec<u8>>;
@@ -137,23 +153,23 @@ pub trait SidechainState: Clone {
 /// trait to set and get the last sidechain block of the sidechain state
 pub trait LastBlockExt<SidechainBlock: SidechainBlockTrait> {
 	/// get the last block of the sidechain state
-	fn get_last_block(&self) -> Option<SidechainBlock>;
+	fn get_last_block(&self) -> Result<Option<SidechainBlock>>;
 
 	/// set the last block of the sidechain state
-	fn set_last_block(&mut self, block: &SidechainBlock);
+	fn set_last_block(&mut self, block: &SidechainBlock) -> Result<()>;
 }
 
-impl<SidechainBlock: SidechainBlockTrait, E> LastBlockExt<SidechainBlock>
-	for SidechainDB<SidechainBlock, E>
+impl<SidechainBlock: SidechainBlockTrait, E, NodeMetadataProvider> LastBlockExt<SidechainBlock>
+	for SidechainDB<SidechainBlock, E, NodeMetadataProvider>
 where
-	SidechainDB<SidechainBlock, E>: SidechainState + SidechainSystemExt,
+	SidechainDB<SidechainBlock, E, NodeMetadataProvider>: SidechainState + SidechainSystemExt,
 {
-	fn get_last_block(&self) -> Option<SidechainBlock> {
+	fn get_last_block(&self) -> Result<Option<SidechainBlock>> {
 		self.get_with_name("System", "LastBlock")
 	}
 
-	fn set_last_block(&mut self, block: &SidechainBlock) {
-		self.set_last_block_hash(&block.hash());
+	fn set_last_block(&mut self, block: &SidechainBlock) -> Result<()> {
+		self.set_last_block_hash(&block.hash())?;
 		self.set_with_name("System", "LastBlock", block)
 	}
 }
@@ -161,46 +177,46 @@ where
 /// system extension for the `SidechainDB`
 pub trait SidechainSystemExt {
 	/// get the last block number of the sidechain state
-	fn get_block_number(&self) -> Option<BlockNumber>;
+	fn get_block_number(&self) -> Result<Option<BlockNumber>>;
 
 	/// set the last block number of the sidechain state
-	fn set_block_number(&mut self, number: &BlockNumber);
+	fn set_block_number(&mut self, number: &BlockNumber) -> Result<()>;
 
 	/// get the last block hash of the sidechain state
-	fn get_last_block_hash(&self) -> Option<BlockHash>;
+	fn get_last_block_hash(&self) -> Result<Option<BlockHash>>;
 
 	/// set the last block hash of the sidechain state
-	fn set_last_block_hash(&mut self, hash: &BlockHash);
+	fn set_last_block_hash(&mut self, hash: &BlockHash) -> Result<()>;
 
 	/// get the timestamp of the sidechain state
-	fn get_timestamp(&self) -> Option<Timestamp>;
+	fn get_timestamp(&self) -> Result<Option<Timestamp>>;
 
 	/// set the timestamp of the sidechain state
-	fn set_timestamp(&mut self, timestamp: &Timestamp);
+	fn set_timestamp(&mut self, timestamp: &Timestamp) -> Result<()>;
 }
 
 impl<T: SidechainState> SidechainSystemExt for T {
-	fn get_block_number(&self) -> Option<BlockNumber> {
+	fn get_block_number(&self) -> Result<Option<BlockNumber>> {
 		self.get_with_name("System", "Number")
 	}
 
-	fn set_block_number(&mut self, number: &BlockNumber) {
+	fn set_block_number(&mut self, number: &BlockNumber) -> Result<()> {
 		self.set_with_name("System", "Number", number)
 	}
 
-	fn get_last_block_hash(&self) -> Option<BlockHash> {
+	fn get_last_block_hash(&self) -> Result<Option<BlockHash>> {
 		self.get_with_name("System", "LastHash")
 	}
 
-	fn set_last_block_hash(&mut self, hash: &BlockHash) {
+	fn set_last_block_hash(&mut self, hash: &BlockHash) -> Result<()> {
 		self.set_with_name("System", "LastHash", hash)
 	}
 
-	fn get_timestamp(&self) -> Option<Timestamp> {
+	fn get_timestamp(&self) -> Result<Option<Timestamp>> {
 		self.get_with_name("System", "Timestamp")
 	}
 
-	fn set_timestamp(&mut self, timestamp: &Timestamp) {
+	fn set_timestamp(&mut self, timestamp: &Timestamp) -> Result<()> {
 		self.set_with_name("System", "Timestamp", timestamp)
 	}
 }

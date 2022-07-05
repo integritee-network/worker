@@ -29,6 +29,8 @@ pub enum Error {
 	MetadataNotSet,
 	#[error("Node API metadata error")]
 	NodeMetadata(substrate_api_client::MetadataError),
+	#[error("Storage error: {0}")]
+	Storage(#[from] itp_storage::Error),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }

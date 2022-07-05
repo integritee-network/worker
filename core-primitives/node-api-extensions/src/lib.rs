@@ -50,6 +50,7 @@ pub mod pallet_teerex;
 #[cfg(all(feature = "mocks", feature = "std"))]
 pub mod pallet_teerex_api_mock;
 
+pub mod dummy_metadata;
 pub mod error;
 pub mod metadata;
 

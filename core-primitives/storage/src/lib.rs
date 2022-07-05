@@ -34,5 +34,5 @@ pub mod keys;
 pub mod proof;
 pub mod verify_storage_proof;
 
-#[cfg(feature = "test")]
+//#[cfg(feature = "test")] // TODO: enable once we have a proper implementation from the metadata
 pub mod key_provider_stub;

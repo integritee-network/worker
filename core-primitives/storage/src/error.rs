@@ -18,10 +18,11 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use thiserror_sgx as thiserror;
 
+use std::boxed::Box;
+
 pub type Result<T> = core::result::Result<T, Error>;
 
-// error with std::error::Error implemented for std and sgx
-#[derive(Debug, PartialEq, Eq, thiserror::Error)]
+#[derive(Debug, thiserror::Error)]
 #[cfg(any(feature = "std", feature = "sgx"))]
 pub enum Error {
 	#[error("No storage proof supplied")]
@@ -41,6 +42,9 @@ pub enum Error {
 	#[error("Codec: {0}")]
 	#[cfg(not(feature = "std"))]
 	Codec(codec::Error),
+
+	#[error(transparent)]
+	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }
 
 // error for bare `no_std`, which does not implement `std::error::Error`

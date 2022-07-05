@@ -148,7 +148,9 @@ where
 
 			state.apply_state_update(&update).map_err(|e| Error::Other(e.into()))?;
 
-			state.set_last_block(block_import_params.block());
+			state
+				.set_last_block(block_import_params.block())
+				.map_err(|e| Error::Other(e.into()))?;
 
 			Ok(state)
 		})?;
