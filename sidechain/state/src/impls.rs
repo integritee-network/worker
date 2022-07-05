@@ -21,7 +21,7 @@ use crate::{Error, SidechainDB, SidechainState, StateHash, StateUpdate};
 use codec::{Decode, Encode};
 use frame_support::ensure;
 use itp_storage::keys::storage_value_key;
-use log::error;
+use log::{error, info};
 use sgx_externalities::SgxExternalitiesTrait;
 use sp_core::{hashing::blake2_256, H256};
 use sp_io::storage;
