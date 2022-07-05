@@ -38,7 +38,7 @@ sidechain-test = { git = "https://github.com/integritee-network/pallets.git", br
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 # integritee / scs
-sgx-externalities = { git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
+sgx-externalities = { git = "https://github.com/integritee-network/sgx-runtime", branch = "bh/evm-pallet" }
 
 [features]
 default = ["std"]

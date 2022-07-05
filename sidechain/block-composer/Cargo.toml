@@ -21,7 +21,7 @@ its-state = { path = "../state", default-features = false }
 
 # integritee dependencies
 itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
+sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "bh/evm-pallet" }
 sidechain-primitives = { default-features = false, features = ["full_crypto"], git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # sgx enabled external libraries
