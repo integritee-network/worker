@@ -47,6 +47,8 @@ pub enum Error {
 	LockPoisoning,
 	#[error("OsString conversion error")]
 	OsStringConversion,
+	#[error("STF error: {0}")]
+	StfError(#[from] ita_stf::StfError),
 	#[error("SGX crypto error: {0}")]
 	CryptoError(itp_sgx_crypto::Error),
 	#[error("SGX error, status: {0}")]

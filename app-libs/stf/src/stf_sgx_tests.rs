@@ -27,14 +27,17 @@ pub fn enclave_account_initialization_works() {
 	let enclave_account = AccountId::new([2u8; 32]);
 	let storage_key_provider = StorageKeyProviderStub {};
 
-	let mut state = Stf::init_state(enclave_account.clone(), &storage_key_provider);
+	let mut state = Stf::init_state(enclave_account.clone(), &storage_key_provider).unwrap();
 	let _root = Stf::get_root(&mut state, &storage_key_provider);
 
 	let account_data =
 		Stf::account_data(&mut state, &enclave_account, &storage_key_provider).unwrap();
 
 	assert_eq!(0, Stf::account_nonce(&mut state, &enclave_account, &storage_key_provider));
-	assert_eq!(enclave_account, Stf::get_enclave_account(&mut state, &storage_key_provider));
+	assert_eq!(
+		enclave_account,
+		Stf::get_enclave_account(&mut state, &storage_key_provider).unwrap()
+	);
 	assert_eq!(1000, account_data.free);
 }
 
@@ -43,7 +46,8 @@ pub fn shield_funds_increments_signer_account_nonce() {
 	let enclave_signer_account_id: AccountId = enclave_call_signer.public().into();
 	let storage_key_provider = StorageKeyProviderStub {};
 
-	let mut state = Stf::init_state(enclave_signer_account_id.clone(), &storage_key_provider);
+	let mut state =
+		Stf::init_state(enclave_signer_account_id.clone(), &storage_key_provider).unwrap();
 
 	let shield_funds_call = TrustedCallSigned::new(
 		TrustedCall::balance_shield(
@@ -66,8 +70,8 @@ pub fn shield_funds_increments_signer_account_nonce() {
 pub fn test_root_account_exists_after_initialization() {
 	let enclave_account = AccountId::new([2u8; 32]);
 	let storage_key_provider = StorageKeyProviderStub {};
-	let mut state = Stf::init_state(enclave_account.clone(), &storage_key_provider);
-	let root_account = Stf::get_root(&mut state, &storage_key_provider);
+	let mut state = Stf::init_state(enclave_account.clone(), &storage_key_provider).unwrap();
+	let root_account = Stf::get_root(&mut state, &storage_key_provider).unwrap();
 
 	let account_data = Stf::account_data(&mut state, &root_account, &storage_key_provider).unwrap();
 	assert!(account_data.free > 0);

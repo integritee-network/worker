@@ -1606,6 +1606,7 @@ dependencies = [
  "itp-settings",
  "itp-sgx-crypto",
  "itp-sgx-io",
+ "itp-storage",
  "itp-time-utils",
  "itp-types",
  "lazy_static",

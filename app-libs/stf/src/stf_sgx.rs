@@ -80,7 +80,7 @@ impl Stf {
 		})?;
 
 		#[cfg(feature = "test")]
-		test_genesis_setup(&mut ext, storage_key_provider);
+		test_genesis_setup(&mut ext, storage_key_provider)?;
 
 		ext.execute_with(|| -> StfResult<()> {
 			sp_io::storage::set(
@@ -396,52 +396,59 @@ pub fn shards_key_hash() -> Vec<u8> {
 /// This should be removed when the refactoring of the STF has been done: #269
 pub trait SidechainExt {
 	/// get the block number of the sidechain state
-	fn get_sidechain_block_number<S: SidechainSystemExt>(ext: &S) -> Option<SidechainBlockNumber>;
+	fn get_sidechain_block_number<S: SidechainSystemExt>(
+		ext: &S,
+	) -> StfResult<Option<SidechainBlockNumber>>;
 
 	/// set the block number of the sidechain state
 	fn set_sidechain_block_number<S: SidechainSystemExt>(
 		ext: &mut S,
 		number: &SidechainBlockNumber,
-	);
+	) -> StfResult<()>;
 
 	/// get the last block hash of the sidechain state
-	fn get_last_block_hash<S: SidechainSystemExt>(ext: &S) -> Option<BlockHash>;
+	fn get_last_block_hash<S: SidechainSystemExt>(ext: &S) -> StfResult<Option<BlockHash>>;
 
 	/// set the last block hash of the sidechain state
-	fn set_last_block_hash<S: SidechainSystemExt>(ext: &mut S, hash: &BlockHash);
+	fn set_last_block_hash<S: SidechainSystemExt>(ext: &mut S, hash: &BlockHash) -> StfResult<()>;
 
 	/// get the timestamp of the sidechain state
-	fn get_timestamp<S: SidechainSystemExt>(ext: &S) -> Option<Timestamp>;
+	fn get_timestamp<S: SidechainSystemExt>(ext: &S) -> StfResult<Option<Timestamp>>;
 
 	/// set the timestamp of the sidechain state
-	fn set_timestamp<S: SidechainSystemExt>(ext: &mut S, timestamp: &Timestamp);
+	fn set_timestamp<S: SidechainSystemExt>(ext: &mut S, timestamp: &Timestamp) -> StfResult<()>;
 }
 
 impl SidechainExt for Stf {
-	fn get_sidechain_block_number<S: SidechainSystemExt>(ext: &S) -> Option<SidechainBlockNumber> {
-		ext.get_block_number()
+	fn get_sidechain_block_number<S: SidechainSystemExt>(
+		ext: &S,
+	) -> StfResult<Option<SidechainBlockNumber>> {
+		Ok(ext.get_block_number()?)
 	}
 
 	fn set_sidechain_block_number<S: SidechainSystemExt>(
 		ext: &mut S,
 		number: &SidechainBlockNumber,
-	) {
-		ext.set_block_number(number)
+	) -> StfResult<()> {
+		ext.set_block_number(number)?;
+		Ok(())
 	}
 
-	fn get_last_block_hash<S: SidechainSystemExt>(ext: &S) -> Option<BlockHash> {
-		ext.get_last_block_hash()
+	fn get_last_block_hash<S: SidechainSystemExt>(ext: &S) -> StfResult<Option<BlockHash>> {
+		Ok(ext.get_last_block_hash()?)
 	}
 
-	fn set_last_block_hash<S: SidechainSystemExt>(ext: &mut S, hash: &BlockHash) {
-		ext.set_last_block_hash(hash)
+	fn set_last_block_hash<S: SidechainSystemExt>(ext: &mut S, hash: &BlockHash) -> StfResult<()> {
+		ext.set_last_block_hash(hash)?;
+		Ok(())
 	}
 
-	fn get_timestamp<S: SidechainSystemExt>(ext: &S) -> Option<Timestamp> {
-		ext.get_timestamp()
+	fn get_timestamp<S: SidechainSystemExt>(ext: &S) -> StfResult<Option<Timestamp>> {
+		Ok(ext.get_timestamp()?)
 	}
 
-	fn set_timestamp<S: SidechainSystemExt>(ext: &mut S, timestamp: &Timestamp) {
-		ext.set_timestamp(timestamp)
+	fn set_timestamp<S: SidechainSystemExt>(ext: &mut S, timestamp: &Timestamp) -> StfResult<()> {
+		ext.set_timestamp(timestamp)?;
+		Ok(())
 	}
 }

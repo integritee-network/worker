@@ -15,7 +15,7 @@
 
 */
 
-use crate::{helpers::get_account_info, StfError};
+use crate::{helpers::get_account_info, StfError, StfResult};
 use itp_storage::StorageKeyProvider;
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
@@ -55,9 +55,9 @@ pub fn unendowed_account() -> ed25519::Pair {
 pub(crate) fn test_genesis_setup(
 	state: &mut impl SgxExternalitiesTrait,
 	storage_key_provider: &impl StorageKeyProvider,
-) {
+) -> StfResult<()> {
 	// set alice sudo account
-	set_sudo_account(state, &ALICE_ENCODED, storage_key_provider);
+	set_sudo_account(state, &ALICE_ENCODED, storage_key_provider)?;
 	trace!("Set new sudo account: {:?}", &ALICE_ENCODED);
 
 	let endowees: Vec<(AccountId32, Balance, Balance)> = vec![
@@ -71,19 +71,20 @@ pub(crate) fn test_genesis_setup(
 	];
 
 	endow(state, endowees, storage_key_provider);
+	Ok(())
 }
 
 fn set_sudo_account(
 	state: &mut impl SgxExternalitiesTrait,
 	account_encoded: &[u8],
 	storage_key_provider: &impl StorageKeyProvider,
-) {
+) -> StfResult<()> {
+	let storage_value_key = storage_key_provider.storage_value_key("Sudo", "Key")?.0;
+
 	state.execute_with(|| {
-		sp_io::storage::set(
-			&storage_key_provider.storage_value_key("Sudo", "Key"),
-			account_encoded,
-		);
-	})
+		sp_io::storage::set(&storage_value_key, account_encoded);
+	});
+	Ok(())
 }
 
 fn endow(
@@ -105,7 +106,7 @@ fn endow(
 			.unwrap();
 
 			let print_public: [u8; 32] = account.clone().into();
-			if let Some(info) = get_account_info(&print_public.into()) {
+			if let Some(info) = get_account_info(&print_public.into(), storage_key_provider) {
 				debug!("{:?} balance is {}", print_public, info.data.free);
 			} else {
 				debug!("{:?} balance is zero", print_public);

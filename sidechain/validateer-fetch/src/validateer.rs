@@ -29,6 +29,7 @@ pub trait ValidateerFetch {
 		&self,
 		latest_header: &Header,
 	) -> Result<Vec<Enclave>>;
+
 	fn validateer_count<Header: HeaderT<Hash = H256>>(&self, latest_header: &Header)
 		-> Result<u64>;
 }

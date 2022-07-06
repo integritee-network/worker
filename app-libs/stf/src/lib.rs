@@ -57,7 +57,7 @@ pub type StfResult<T> = Result<T, StfError>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum StfError {
-	#[error("Insufficient privileges {0}, are you sure you are root?")]
+	#[error("Insufficient privileges for account {0:?}, are you sure you are root?")]
 	MissingPrivileges(AccountId),
 	#[error("Valid enclave signer account is required")]
 	RequireEnclaveSignerAccount,
@@ -65,12 +65,14 @@ pub enum StfError {
 	Dispatch(String),
 	#[error("Not enough funds to perform operation")]
 	MissingFunds,
-	#[error("Account does not exist {0}")]
+	#[error("Account does not exist {0:?}")]
 	InexistentAccount(AccountId),
 	#[error("Invalid nonce {0}")]
 	InvalidNonce(Index),
 	#[error("Storage error: {0}")]
 	Storage(#[from] itp_storage::error::Error),
+	#[error("Sidechain state error: {0}")]
+	SidechainState(#[from] its_state::Error),
 	#[error("Storage hash mismatch")]
 	StorageHashMismatch,
 	#[error("Invalid storage diff")]

@@ -16,6 +16,7 @@ ita-stf = { path = "../../app-libs/stf", default-features = false }
 itp-settings = { path = "../../core-primitives/settings" }
 itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", default-features = false }
 itp-sgx-io = { path = "../../core-primitives/sgx/io", default-features = false }
+itp-storage = { path = "../../core-primitives/storage", default-features = false }
 itp-time-utils = { path = "../../core-primitives/time-utils", default-features = false }
 
 # sgx enabled external libraries
@@ -47,6 +48,7 @@ std = [
     "ita-stf/std",
     "itp-sgx-crypto/std",
     "itp-sgx-io/std",
+    "itp-storage/std",
     "itp-time-utils/std",
     "itp-types/std",
     "sgx-externalities/std",
@@ -60,6 +62,7 @@ sgx = [
     "ita-stf/sgx",
     "itp-sgx-crypto/sgx",
     "itp-sgx-io/sgx",
+    "itp-storage/sgx",
     "itp-time-utils/sgx",
     "sgx-externalities/sgx",
     "thiserror_sgx",

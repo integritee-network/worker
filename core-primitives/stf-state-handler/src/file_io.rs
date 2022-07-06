@@ -94,27 +94,31 @@ pub mod sgx {
 	use ita_stf::{AccountId, State as StfState, StateType as StfStateType, Stf};
 	use itp_sgx_crypto::{key_repository::AccessKey, StateCrypto};
 	use itp_sgx_io::{read as io_read, write as io_write};
+	use itp_storage::StorageKeyProvider;
 	use itp_types::H256;
 	use log::*;
 	use sgx_tcrypto::rsgx_sha256_slice;
 	use std::{fs, path::Path, sync::Arc};
 
 	/// SGX state file I/O.
-	pub struct SgxStateFileIo<StateKeyRepository> {
+	pub struct SgxStateFileIo<StateKeyRepository, StorageKeys> {
 		state_key_repository: Arc<StateKeyRepository>,
+		storage_key_provider: Arc<StorageKeys>,
 		enclave_account: AccountId,
 	}
 
-	impl<StateKeyRepository> SgxStateFileIo<StateKeyRepository>
+	impl<StateKeyRepository, StorageKeys> SgxStateFileIo<StateKeyRepository, StorageKeys>
 	where
 		StateKeyRepository: AccessKey,
 		<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
+		StorageKeys: StorageKeyProvider,
 	{
 		pub fn new(
 			state_key_repository: Arc<StateKeyRepository>,
+			storage_key_provider: Arc<StorageKeys>,
 			enclave_account: AccountId,
 		) -> Self {
-			SgxStateFileIo { state_key_repository, enclave_account }
+			SgxStateFileIo { state_key_repository, storage_key_provider, enclave_account }
 		}
 
 		fn read(&self, path: &Path) -> Result<Vec<u8>> {
@@ -151,10 +155,12 @@ pub mod sgx {
 		}
 	}
 
-	impl<StateKeyRepository> StateFileIo for SgxStateFileIo<StateKeyRepository>
+	impl<StateKeyRepository, StorageKeys> StateFileIo
+		for SgxStateFileIo<StateKeyRepository, StorageKeys>
 	where
 		StateKeyRepository: AccessKey,
 		<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
+		StorageKeys: StorageKeyProvider,
 	{
 		type StateType = StfState;
 		type HashType = H256;
@@ -208,8 +214,9 @@ pub mod sgx {
 			state_id: StateId,
 		) -> Result<Self::HashType> {
 			init_shard(&shard_identifier)?;
-			let state = Stf::init_state(self.enclave_account.clone());
-			self.write(shard_identifier, state_id, state)
+			let state =
+				Stf::init_state(self.enclave_account.clone(), self.storage_key_provider.as_ref())?;
+			Ok(self.write(shard_identifier, state_id, state)?)
 		}
 
 		/// Writes the state (without the state diff) encrypted into the enclave storage.
