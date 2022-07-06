@@ -14,6 +14,10 @@ crate-type = ["staticlib"]
 
 [features]
 default = []
+evm = [
+    "ita-sgx-runtime/evm",
+    "ita-stf/evm",
+]
 production = ["itp-settings/production"]
 sidechain = ["itp-settings/sidechain", "itp-top-pool-author/sidechain"]
 offchain-worker = ["itp-settings/offchain-worker", "itp-top-pool-author/offchain-worker"]
