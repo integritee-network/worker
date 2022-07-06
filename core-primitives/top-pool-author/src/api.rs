@@ -56,7 +56,7 @@ impl<Block> SidechainApi<Block> {
 	}
 
 	fn validate_trusted_call(trusted_call_signed: TrustedCallSigned) -> ValidTransaction {
-		let from = trusted_call_signed.call.account();
+		let from = trusted_call_signed.call.sender_account();
 		let requires = vec![];
 		let provides = vec![(from, trusted_call_signed.nonce).encode()];
 
