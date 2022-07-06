@@ -223,16 +223,16 @@ pub enum TrustedCall {
 }
 
 impl TrustedCall {
-	pub fn account(&self) -> &AccountId {
+	pub fn sender_account(&self) -> &AccountId {
 		match self {
-			TrustedCall::balance_set_balance(account, ..) => account,
-			TrustedCall::balance_transfer(account, ..) => account,
-			TrustedCall::balance_unshield(account, ..) => account,
-			TrustedCall::balance_shield(account, ..) => account,
-			TrustedCall::evm_withdraw(account, ..) => account,
-			TrustedCall::evm_call(account, ..) => account,
-			TrustedCall::evm_create(account, ..) => account,
-			TrustedCall::evm_create2(account, ..) => account,
+			TrustedCall::balance_set_balance(sender_account, ..) => sender_account,
+			TrustedCall::balance_transfer(sender_account, ..) => sender_account,
+			TrustedCall::balance_unshield(sender_account, ..) => sender_account,
+			TrustedCall::balance_shield(sender_account, ..) => sender_account,
+			TrustedCall::evm_withdraw(sender_account, ..) => sender_account,
+			TrustedCall::evm_call(sender_account, ..) => sender_account,
+			TrustedCall::evm_create(sender_account, ..) => sender_account,
+			TrustedCall::evm_create2(sender_account, ..) => sender_account,
 		}
 	}
 
@@ -258,14 +258,18 @@ pub enum TrustedGetter {
 	free_balance(AccountId),
 	reserved_balance(AccountId),
 	nonce(AccountId),
+	evm_account_codes(AccountId, H160),
+	evm_account_storages(AccountId, H160, H256),
 }
 
 impl TrustedGetter {
-	pub fn account(&self) -> &AccountId {
+	pub fn sender_account(&self) -> &AccountId {
 		match self {
-			TrustedGetter::free_balance(account) => account,
-			TrustedGetter::reserved_balance(account) => account,
-			TrustedGetter::nonce(account) => account,
+			TrustedGetter::free_balance(sender_account) => sender_account,
+			TrustedGetter::reserved_balance(sender_account) => sender_account,
+			TrustedGetter::nonce(sender_account) => sender_account,
+			TrustedGetter::evm_account_codes(sender_account, _) => sender_account,
+			TrustedGetter::evm_account_storages(sender_account, ..) => sender_account,
 		}
 	}
 
@@ -287,7 +291,8 @@ impl TrustedGetterSigned {
 	}
 
 	pub fn verify_signature(&self) -> bool {
-		self.signature.verify(self.getter.encode().as_slice(), self.getter.account())
+		self.signature
+			.verify(self.getter.encode().as_slice(), self.getter.sender_account())
 	}
 }
 
@@ -308,7 +313,7 @@ impl TrustedCallSigned {
 		payload.append(&mut self.nonce.encode());
 		payload.append(&mut mrenclave.encode());
 		payload.append(&mut shard.encode());
-		self.signature.verify(payload.as_slice(), self.call.account())
+		self.signature.verify(payload.as_slice(), self.call.sender_account())
 	}
 
 	pub fn into_trusted_operation(self, direct: bool) -> TrustedOperation {

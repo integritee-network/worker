@@ -130,7 +130,7 @@ impl Stf {
 	) -> StfResult<()> {
 		let call_hash = blake2_256(&call.encode());
 		ext.execute_with(|| {
-			let sender = call.call.account().clone();
+			let sender = call.call.sender_account().clone();
 			validate_nonce(&sender, call.nonce)?;
 			match call.call {
 				TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
