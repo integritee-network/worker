@@ -5,8 +5,10 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 
 [dependencies]
-log = { version = "0.4.17", default-features = false }
 finality-grandpa = { version = "0.15.0", default-features = false, features = ["derive-codec"] }
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+itp-utils = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+log = { version = "0.4.17", default-features = false }
 sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
 sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
@@ -28,8 +30,6 @@ itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-feature
 itp-stf-executor = { path = "../../../core-primitives/stf-executor", default-features = false }
 itp-stf-state-handler = { path = "../../../core-primitives/stf-state-handler", default-features = false }
 itp-time-utils = { path = "../../../core-primitives/time-utils", default-features = false }
-itp-types = { path = "../../../core-primitives/types", default-features = false }
-itp-utils = { path = "../../../core-primitives/utils", default-features = false }
 its-block-composer = { path = "../../block-composer", default-features = false }
 its-consensus-common = { path = "../common", default-features = false }
 its-consensus-slots = { path = "../slots", default-features = false }

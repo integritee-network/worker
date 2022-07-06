@@ -17,7 +17,7 @@
 
 use super::*;
 use crate::mock::MockSidechainBlockFetcher;
-use itp_types::RpcResponse;
+use itp_rpc::RpcResponse;
 use its_rpc_handler::constants::RPC_METHOD_NAME_IMPORT_BLOCKS;
 use its_test::sidechain_block_builder::SidechainBlockBuilder;
 use jsonrpsee::{

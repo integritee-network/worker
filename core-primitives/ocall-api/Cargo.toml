@@ -19,7 +19,9 @@ sp-std = { default-features = false, git = "https://github.com/paritytech/substr
 
 # local deps
 itp-storage = { path = "../storage", default-features = false }
-itp-types = { path = "../types", default-features = false }
+
+# integritee
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 [features]
 default = ["std"]

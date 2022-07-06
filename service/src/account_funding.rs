@@ -91,7 +91,7 @@ pub fn setup_account_funding(
 fn ensure_account_has_funds(api: &ParentchainApi, accountid: &AccountId32) -> Result<(), Error> {
 	// check account balance
 	let free_balance = api.get_free_balance(accountid)?;
-	info!("TEE's free balance = {:?}", free_balance);
+	info!("TEE's free balance = {:?} (Account: {})", free_balance, accountid);
 
 	let existential_deposit = api.get_existential_deposit()?;
 	info!("Existential deposit is = {:?}", existential_deposit);
@@ -101,6 +101,7 @@ fn ensure_account_has_funds(api: &ParentchainApi, accountid: &AccountId32) -> Re
 	let missing_funds = min_required_funds.saturating_sub(free_balance);
 
 	if missing_funds > 0 {
+		info!("Transfer {:?} from Alice to {}", missing_funds, accountid);
 		bootstrap_funds_from_alice(api, accountid, missing_funds)?;
 	}
 	Ok(())

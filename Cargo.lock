@@ -599,7 +599,7 @@ dependencies = [
 [[package]]
 name = "claims-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#9b8084d5b97194ee22f2cacd1c8cbaf310ab9253"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#aa9f9b8754574d2fb86a4b387075d951aa39d64f"
 dependencies = [
  "parity-scale-codec",
  "rustc-hex",
@@ -694,7 +694,7 @@ dependencies = [
 [[package]]
 name = "common-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#9b8084d5b97194ee22f2cacd1c8cbaf310ab9253"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#aa9f9b8754574d2fb86a4b387075d951aa39d64f"
 dependencies = [
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.24)",
 ]
@@ -1690,8 +1690,8 @@ dependencies = [
 
 [[package]]
 name = "hashbrown_tstd"
-version = "0.11.2"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#565960cd7b4b36d1188459d75652619971c43f7e"
+version = "0.12.0"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"
 
 [[package]]
 name = "headers"
@@ -1952,7 +1952,7 @@ dependencies = [
 [[package]]
 name = "ias-verify"
 version = "0.1.4"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#9b8084d5b97194ee22f2cacd1c8cbaf310ab9253"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#aa9f9b8754574d2fb86a4b387075d951aa39d64f"
 dependencies = [
  "base64 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.19",
@@ -2071,6 +2071,7 @@ dependencies = [
  "ita-stf",
  "itc-rpc-client",
  "itp-node-api-extensions",
+ "itp-rpc",
  "itp-sgx-crypto",
  "itp-types",
  "itp-utils",
@@ -2156,6 +2157,7 @@ dependencies = [
  "integritee-node-runtime",
  "ipfs-api",
  "ita-stf",
+ "itc-parentchain-light-client",
  "itc-rpc-client",
  "itc-rpc-server",
  "itp-enclave-api",
@@ -2277,6 +2279,7 @@ name = "itc-direct-rpc-server"
 version = "0.8.0"
 dependencies = [
  "itc-tls-websocket-server",
+ "itp-rpc",
  "itp-types",
  "itp-utils",
  "jsonrpc-core 16.1.0",
@@ -2421,6 +2424,7 @@ version = "0.8.0"
 dependencies = [
  "env_logger",
  "itc-tls-websocket-server",
+ "itp-rpc",
  "itp-types",
  "itp-utils",
  "log 0.4.17",
@@ -2444,7 +2448,7 @@ dependencies = [
  "anyhow",
  "env_logger",
  "itp-enclave-api",
- "itp-types",
+ "itp-rpc",
  "itp-utils",
  "its-peer-fetch",
  "its-rpc-handler",
@@ -2544,6 +2548,7 @@ name = "itp-enclave-api"
 version = "0.8.0"
 dependencies = [
  "frame-support",
+ "itc-parentchain-light-client",
  "itp-enclave-api-ffi",
  "itp-settings",
  "itp-types",
@@ -2644,6 +2649,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "itp-rpc"
+version = "0.8.0"
+dependencies = [
+ "itp-types",
+ "parity-scale-codec",
+ "serde 1.0.137",
+ "serde_json 1.0.81",
+ "sgx_tstd",
+]
+
+[[package]]
 name = "itp-settings"
 version = "0.8.0"
 
@@ -2732,6 +2748,7 @@ dependencies = [
  "frame-metadata",
  "frame-support",
  "hash-db",
+ "itp-types",
  "parity-scale-codec",
  "sgx_tstd",
  "sp-core",
@@ -2799,7 +2816,6 @@ dependencies = [
  "log 0.4.17",
  "parity-scale-codec",
  "parity-util-mem",
- "retain_mut",
  "serde 1.0.137",
  "sgx_tstd",
  "sgx_types",
@@ -2845,9 +2861,9 @@ dependencies = [
 [[package]]
 name = "itp-types"
 version = "0.8.0"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#aa9f9b8754574d2fb86a4b387075d951aa39d64f"
 dependencies = [
  "chrono 0.4.19",
- "itp-storage",
  "parity-scale-codec",
  "primitive-types",
  "serde 1.0.137",
@@ -2855,7 +2871,6 @@ dependencies = [
  "sgx_tstd",
  "sp-core",
  "sp-finality-grandpa",
- "sp-keyring",
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.24)",
  "substrate-api-client",
@@ -2864,6 +2879,7 @@ dependencies = [
 [[package]]
 name = "itp-utils"
 version = "0.8.0"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#aa9f9b8754574d2fb86a4b387075d951aa39d64f"
 dependencies = [
  "frame-support",
  "hex",
@@ -3010,6 +3026,7 @@ dependencies = [
 name = "its-rpc-handler"
 version = "0.8.0"
 dependencies = [
+ "itp-rpc",
  "itp-top-pool-author",
  "itp-types",
  "itp-utils",
@@ -3070,7 +3087,7 @@ dependencies = [
  "log 0.4.17",
  "mockall",
  "parity-scale-codec",
- "parking_lot 0.11.2",
+ "parking_lot 0.12.1",
  "rocksdb",
  "sidechain-primitives",
  "sp-core",
@@ -4227,7 +4244,7 @@ dependencies = [
 [[package]]
 name = "pallet-claims"
 version = "0.9.12"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#9b8084d5b97194ee22f2cacd1c8cbaf310ab9253"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#aa9f9b8754574d2fb86a4b387075d951aa39d64f"
 dependencies = [
  "claims-primitives",
  "frame-support",
@@ -4282,7 +4299,7 @@ dependencies = [
 [[package]]
 name = "pallet-parentchain"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#9b8084d5b97194ee22f2cacd1c8cbaf310ab9253"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#aa9f9b8754574d2fb86a4b387075d951aa39d64f"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4363,7 +4380,7 @@ dependencies = [
 [[package]]
 name = "pallet-sidechain"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#9b8084d5b97194ee22f2cacd1c8cbaf310ab9253"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#aa9f9b8754574d2fb86a4b387075d951aa39d64f"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4398,7 +4415,7 @@ dependencies = [
 [[package]]
 name = "pallet-teeracle"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#9b8084d5b97194ee22f2cacd1c8cbaf310ab9253"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#aa9f9b8754574d2fb86a4b387075d951aa39d64f"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4417,7 +4434,7 @@ dependencies = [
 [[package]]
 name = "pallet-teerex"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#9b8084d5b97194ee22f2cacd1c8cbaf310ab9253"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#aa9f9b8754574d2fb86a4b387075d951aa39d64f"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5205,12 +5222,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "retain_mut"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "448296241d034b96c11173591deaa1302f2c17b56092106c1f92c1bc0183a8c9"
-
-[[package]]
 name = "rfc6979"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5712,7 +5723,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.4.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#fa5018bfea7b673f30ee8b871f1d18ebf850e99b"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#89ab809b3f1652297ec6fc77ed132f6c8749e080"
 dependencies = [
  "derive_more",
  "environmental",
@@ -5727,7 +5738,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#fa5018bfea7b673f30ee8b871f1d18ebf850e99b"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#89ab809b3f1652297ec6fc77ed132f6c8749e080"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -5759,13 +5770,13 @@ dependencies = [
 
 [[package]]
 name = "sgx_alloc"
-version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#565960cd7b4b36d1188459d75652619971c43f7e"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"
 
 [[package]]
 name = "sgx_backtrace_sys"
-version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#565960cd7b4b36d1188459d75652619971c43f7e"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"
 dependencies = [
  "cc",
  "sgx_build_helper",
@@ -5774,13 +5785,13 @@ dependencies = [
 
 [[package]]
 name = "sgx_build_helper"
-version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#565960cd7b4b36d1188459d75652619971c43f7e"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"
 
 [[package]]
 name = "sgx_crypto_helper"
-version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#565960cd7b4b36d1188459d75652619971c43f7e"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"
 dependencies = [
  "itertools",
  "libc",
@@ -5793,21 +5804,21 @@ dependencies = [
 
 [[package]]
 name = "sgx_demangle"
-version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#565960cd7b4b36d1188459d75652619971c43f7e"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"
 
 [[package]]
 name = "sgx_libc"
-version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#565960cd7b4b36d1188459d75652619971c43f7e"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"
 dependencies = [
  "sgx_types",
 ]
 
 [[package]]
 name = "sgx_rand"
-version = "1.1.4"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?branch=master#841c3000e6154704c926b3f310a4550f70f53f9c"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"
 dependencies = [
  "sgx_trts",
  "sgx_tstd",
@@ -5816,16 +5827,16 @@ dependencies = [
 
 [[package]]
 name = "sgx_tcrypto"
-version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#565960cd7b4b36d1188459d75652619971c43f7e"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"
 dependencies = [
  "sgx_types",
 ]
 
 [[package]]
 name = "sgx_tprotected_fs"
-version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#565960cd7b4b36d1188459d75652619971c43f7e"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"
 dependencies = [
  "sgx_trts",
  "sgx_types",
@@ -5833,8 +5844,8 @@ dependencies = [
 
 [[package]]
 name = "sgx_trts"
-version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#565960cd7b4b36d1188459d75652619971c43f7e"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"
 dependencies = [
  "sgx_libc",
  "sgx_types",
@@ -5842,8 +5853,8 @@ dependencies = [
 
 [[package]]
 name = "sgx_tstd"
-version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#565960cd7b4b36d1188459d75652619971c43f7e"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"
 dependencies = [
  "hashbrown_tstd",
  "sgx_alloc",
@@ -5858,13 +5869,13 @@ dependencies = [
 
 [[package]]
 name = "sgx_types"
-version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#565960cd7b4b36d1188459d75652619971c43f7e"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"
 
 [[package]]
 name = "sgx_ucrypto"
-version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#565960cd7b4b36d1188459d75652619971c43f7e"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"
 dependencies = [
  "libc",
  "rand_core 0.3.1",
@@ -5874,16 +5885,16 @@ dependencies = [
 
 [[package]]
 name = "sgx_unwind"
-version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#565960cd7b4b36d1188459d75652619971c43f7e"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"
 dependencies = [
  "sgx_build_helper",
 ]
 
 [[package]]
 name = "sgx_urts"
-version = "1.1.4"
-source = "git+https://github.com/apache/teaclave-sgx-sdk.git?branch=master#841c3000e6154704c926b3f310a4550f70f53f9c"
+version = "1.1.5"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"
 dependencies = [
  "libc",
  "sgx_types",
@@ -6015,7 +6026,7 @@ checksum = "43b2853a4d09f215c24cc5489c992ce46052d359b5109343cbafbf26bc62f8a3"
 [[package]]
 name = "sidechain-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#9b8084d5b97194ee22f2cacd1c8cbaf310ab9253"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#aa9f9b8754574d2fb86a4b387075d951aa39d64f"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -6369,7 +6380,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "6.0.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#fa5018bfea7b673f30ee8b871f1d18ebf850e99b"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#89ab809b3f1652297ec6fc77ed132f6c8749e080"
 dependencies = [
  "environmental",
  "futures 0.3.21",
@@ -6897,7 +6908,7 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 [[package]]
 name = "teeracle-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#9b8084d5b97194ee22f2cacd1c8cbaf310ab9253"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#aa9f9b8754574d2fb86a4b387075d951aa39d64f"
 dependencies = [
  "common-primitives",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.24)",
@@ -6907,7 +6918,7 @@ dependencies = [
 [[package]]
 name = "teerex-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#9b8084d5b97194ee22f2cacd1c8cbaf310ab9253"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#aa9f9b8754574d2fb86a4b387075d951aa39d64f"
 dependencies = [
  "ias-verify",
  "parity-scale-codec",
@@ -8040,23 +8051,3 @@ dependencies = [
  "cc",
  "libc",
 ]
-
-[[patch.unused]]
-name = "sgx_serialize"
-version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#565960cd7b4b36d1188459d75652619971c43f7e"
-
-[[patch.unused]]
-name = "sgx_serialize_derive"
-version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#565960cd7b4b36d1188459d75652619971c43f7e"
-
-[[patch.unused]]
-name = "sgx_serialize_derive_internals"
-version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#565960cd7b4b36d1188459d75652619971c43f7e"
-
-[[patch.unused]]
-name = "sgx_tcrypto_helper"
-version = "1.1.4"
-source = "git+https://github.com/haerdib/incubator-teaclave-sgx-sdk?branch=master#565960cd7b4b36d1188459d75652619971c43f7e"

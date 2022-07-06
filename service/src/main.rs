@@ -43,6 +43,7 @@ use enclave::{
 	tls_ra::{enclave_request_state_provisioning, enclave_run_state_provisioning_server},
 };
 use futures::executor::block_on;
+use itc_parentchain_light_client::light_client_init_params::LightClientInitParams;
 use itp_enclave_api::{
 	direct_request::DirectRequest,
 	enclave_base::EnclaveBase,
@@ -59,7 +60,6 @@ use itp_settings::{
 	files::{SIDECHAIN_PURGE_INTERVAL, SIDECHAIN_PURGE_LIMIT, SIDECHAIN_STORAGE_PATH},
 	sidechain::SLOT_DURATION,
 };
-use itp_types::light_client_init_params::LightClientInitParams;
 use its_consensus_slots::start_slot_worker;
 use its_peer_fetch::{
 	block_fetch_client::BlockFetcher, untrusted_peer_fetch::UntrustedPeerFetcher,

@@ -23,9 +23,10 @@ use alloc::vec::Vec;
 use codec::{Decode, Encode};
 use core::result::Result as StdResult;
 use derive_more::{Display, From};
-use itp_storage::{Error as StorageError, StorageEntryVerified};
+use itp_storage::Error as StorageError;
 use itp_types::{
-	BlockHash, ShardIdentifier, TrustedOperationStatus, WorkerRequest, WorkerResponse,
+	storage::StorageEntryVerified, BlockHash, ShardIdentifier, TrustedOperationStatus,
+	WorkerRequest, WorkerResponse,
 };
 use sgx_types::*;
 use sp_core::H256;

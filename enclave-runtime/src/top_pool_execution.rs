@@ -92,8 +92,7 @@ fn execute_top_pool_trusted_getters_on_all_shards() -> Result<()> {
 	// getters.
 	for shard in shards.into_iter() {
 		let shard_exec_time = match remaining_time(ends_at)
-			.map(|r| r.checked_div(remaining_shards))
-			.flatten()
+			.and_then(|r| r.checked_div(remaining_shards))
 		{
 			Some(t) => t,
 			None => {

@@ -228,7 +228,12 @@ pub mod sgx {
 
 			let state_hash = rsgx_sha256_slice(&cyphertext)?;
 
-			debug!("new encrypted state with hash={:?} written to {:?}", state_hash, state_path);
+			debug!(
+				"new encrypted state with hash={:?} and length={} written to {:?}",
+				state_hash,
+				cyphertext.len(),
+				state_path
+			);
 
 			io_write(&cyphertext, &state_path)?;
 			Ok(state_hash.into())

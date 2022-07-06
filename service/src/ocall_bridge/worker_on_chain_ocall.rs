@@ -73,7 +73,6 @@ where
 	fn send_to_parentchain(&self, extrinsics_encoded: Vec<u8>) -> OCallBridgeResult<()> {
 		// TODO: improve error handling, using a mut status is not good design?
 		let mut status: OCallBridgeResult<()> = Ok(());
-		let api = self.node_api_factory.create_api()?;
 
 		let extrinsics: Vec<OpaqueExtrinsic> =
 			match Decode::decode(&mut extrinsics_encoded.as_slice()) {
@@ -88,6 +87,7 @@ where
 
 		if !extrinsics.is_empty() {
 			debug!("Enclave wants to send {} extrinsics", extrinsics.len());
+			let api = self.node_api_factory.create_api()?;
 			for call in extrinsics.into_iter() {
 				if let Err(e) = api.send_extrinsic(call.to_hex(), XtStatus::Ready) {
 					error!("Could not send extrsinic to node: {:?}", e);

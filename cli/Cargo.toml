@@ -24,9 +24,11 @@ codec = { version = "3.0.0", package = "parity-scale-codec", features = ["derive
 sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # scs / integritee
+itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+itp-utils = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+my-node-runtime = { git = "https://github.com/integritee-network/integritee-node", branch = "master", package = "integritee-node-runtime" }
 substrate-api-client = { features = ["ws-client"], git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.24" }
 substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.24" }
-my-node-runtime = { git = "https://github.com/integritee-network/integritee-node", branch = "master", package = "integritee-node-runtime" }
 teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # substrate dependencies
@@ -40,8 +42,7 @@ sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polka
 
 # local dependencies
 itp-node-api-extensions = { path = "../core-primitives/node-api-extensions" }
+itp-rpc = { path = "../core-primitives/rpc" }
 itp-sgx-crypto = { path = "../core-primitives/sgx/crypto" }
-itp-types = { path = "../core-primitives/types" }
-itp-utils = { path = "../core-primitives/utils" }
 ita-stf = { path = "../app-libs/stf" }
 itc-rpc-client = { path = "../core/rpc-client" }

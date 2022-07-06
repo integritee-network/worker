@@ -23,8 +23,6 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(test, feature(assert_matches))]
-// Can be removed once rust version is above 1.60.0 (07.04.22).
-#![feature(int_abs_diff)]
 
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
@@ -325,8 +323,7 @@ impl<ParentchainBlock: ParentchainBlockTrait, T: SimpleSlotWorker<ParentchainBlo
 
 		for shard in shards.into_iter() {
 			let shard_remaining_duration = remaining_time(slot_info.ends_at)
-				.map(|time| time.checked_div(remaining_shards as u32))
-				.flatten()
+				.and_then(|time| time.checked_div(remaining_shards as u32))
 				.unwrap_or_default();
 
 			// important to check against millis here. We had the corner-case in production
@@ -340,10 +337,11 @@ impl<ParentchainBlock: ParentchainBlockTrait, T: SimpleSlotWorker<ParentchainBlo
 				return slot_results
 			}
 
-			let shard_slot_ends_at = duration_now() + shard_remaining_duration;
+			let now = duration_now();
+			let shard_slot_ends_at = now + shard_remaining_duration;
 			let shard_slot = SlotInfo::new(
 				slot_info.slot,
-				duration_now(),
+				now,
 				shard_remaining_duration,
 				shard_slot_ends_at,
 				slot_info.last_imported_parentchain_head.clone(),

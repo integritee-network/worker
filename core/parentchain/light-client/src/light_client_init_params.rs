@@ -18,7 +18,7 @@
 
 use codec::{Decode, Encode};
 use sp_finality_grandpa::AuthorityList;
-use sp_std::vec::Vec;
+use std::vec::Vec;
 
 // The variants will be chosen according to availability of grandpa authorities on the parent chain.
 #[derive(Encode, Decode)]

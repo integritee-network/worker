@@ -25,10 +25,9 @@ use rust_base58::base58::FromBase58;
 use base58::FromBase58;
 
 use codec::{Decode, Encode};
+use itp_rpc::RpcReturnValue;
 use itp_top_pool_author::traits::AuthorApi;
-use itp_types::{
-	DirectRequestStatus, Request, RpcReturnValue, ShardIdentifier, TrustedOperationStatus,
-};
+use itp_types::{DirectRequestStatus, Request, ShardIdentifier, TrustedOperationStatus};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use jsonrpc_core::{
 	futures::executor, serde_json::json, Error as RpcError, IoHandler, Params, Value,
