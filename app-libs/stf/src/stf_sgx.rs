@@ -39,7 +39,7 @@ use sgx_runtime::Runtime;
 use sidechain_primitives::types::{BlockHash, BlockNumber as SidechainBlockNumber, Timestamp};
 use sp_io::hashing::blake2_256;
 use sp_runtime::MultiAddress;
-use std::{prelude::v1::*, vec};
+use std::{format, prelude::v1::*, vec};
 use support::traits::UnfilteredDispatchable;
 
 impl Stf {
@@ -147,7 +147,9 @@ impl Stf {
 						new_reserved: reserved_balance,
 					}
 					.dispatch_bypass_filter(sgx_runtime::Origin::root())
-					.map_err(|_| StfError::Dispatch("balance_set_balance".to_string()))?;
+					.map_err(|e| {
+						StfError::Dispatch(format!("Balance Set Balance error: {:?}", e.error))
+					})?;
 					Ok(())
 				},
 				TrustedCall::balance_transfer(from, to, value) => {
@@ -168,7 +170,9 @@ impl Stf {
 						value,
 					}
 					.dispatch_bypass_filter(origin)
-					.map_err(|_| StfError::Dispatch("balance_transfer".to_string()))?;
+					.map_err(|e| {
+						StfError::Dispatch(format!("Balance Transfer error: {:?}", e.error))
+					})?;
 					Ok(())
 				},
 				TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
@@ -211,7 +215,12 @@ impl Stf {
 			new_reserved: 0,
 		}
 		.dispatch_bypass_filter(sgx_runtime::Origin::root())
-		.map_err(|_| StfError::Dispatch("set_balance for enclave signer account".to_string()))
+		.map_err(|e| {
+			StfError::Dispatch(format!(
+				"Set Balance for enclave signer account error: {:?}",
+				e.error
+			))
+		})
 		.map(|_| ())
 	}
 
@@ -223,7 +232,7 @@ impl Stf {
 				new_reserved: account_info.data.reserved,
 			}
 			.dispatch_bypass_filter(sgx_runtime::Origin::root())
-			.map_err(|_| StfError::Dispatch("shield_funds".to_string()))?,
+			.map_err(|e| StfError::Dispatch(format!("Shield funds error: {:?}", e.error)))?,
 			None => {
 				debug!(
 					"Account {} does not exist yet, initializing by setting free balance to {}",
@@ -236,7 +245,7 @@ impl Stf {
 					new_reserved: 0,
 				}
 				.dispatch_bypass_filter(sgx_runtime::Origin::root())
-				.map_err(|_| StfError::Dispatch("shield_funds::set_balance".to_string()))?
+				.map_err(|e| StfError::Dispatch(format!("Shield funds error: {:?}", e.error)))?
 			},
 		};
 		Ok(())
@@ -255,7 +264,7 @@ impl Stf {
 					new_reserved: account_info.data.reserved,
 				}
 				.dispatch_bypass_filter(sgx_runtime::Origin::root())
-				.map_err(|_| StfError::Dispatch("unshield_funds::set_balance".to_string()))?;
+				.map_err(|e| StfError::Dispatch(format!("Unshield funds error: {:?}", e.error)))?;
 				Ok(())
 			},
 			None => Err(StfError::InexistentAccount(account)),
@@ -281,7 +290,9 @@ impl Stf {
 		ext.execute_with(|| {
 			sgx_runtime::ParentchainCall::<Runtime>::set_block { header }
 				.dispatch_bypass_filter(sgx_runtime::Origin::root())
-				.map_err(|_| StfError::Dispatch("update_parentchain_block".to_string()))
+				.map_err(|e| {
+					StfError::Dispatch(format!("Update parentchain block error: {:?}", e.error))
+				})
 		})?;
 		Ok(())
 	}
