@@ -33,9 +33,9 @@ pub use sgx_runtime::{Balance, Index};
 
 use codec::{Compact, Decode, Encode};
 use derive_more::Display;
-use sp_core::{crypto::AccountId32, ed25519, sr25519, Pair, H256};
+use sp_core::{crypto::AccountId32, ed25519, sr25519, Pair, H160, H256, U256};
 use sp_runtime::{traits::Verify, MultiSignature};
-use std::string::String;
+use std::{string::String, vec::Vec};
 
 pub type Signature = MultiSignature;
 pub type AuthorityId = <Signature as Verify>::Signer;
@@ -181,15 +181,58 @@ pub enum TrustedCall {
 	balance_transfer(AccountId, AccountId, Balance),
 	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
 	balance_shield(AccountId, AccountId, Balance), // (Root, AccountIncognito, Amount)
+	evm_withdraw(AccountId, H160, Balance),        // (Origin, Address EVM Account, Value)
+	// (Origin, Source, Target, Input, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
+	evm_call(
+		AccountId,
+		H160,
+		H160,
+		Vec<u8>,
+		U256,
+		u64,
+		U256,
+		Option<U256>,
+		Option<U256>,
+		Vec<(H160, Vec<H256>)>,
+	),
+	// (Origin, Source, Init, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
+	evm_create(
+		AccountId,
+		H160,
+		Vec<u8>,
+		U256,
+		u64,
+		U256,
+		Option<U256>,
+		Option<U256>,
+		Vec<(H160, Vec<H256>)>,
+	),
+	// (Origin, Source, Init, Salt, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
+	evm_create2(
+		AccountId,
+		H160,
+		Vec<u8>,
+		H256,
+		U256,
+		u64,
+		U256,
+		Option<U256>,
+		Option<U256>,
+		Vec<(H160, Vec<H256>)>,
+	),
 }
 
 impl TrustedCall {
 	pub fn account(&self) -> &AccountId {
 		match self {
-			TrustedCall::balance_set_balance(account, _, _, _) => account,
-			TrustedCall::balance_transfer(account, _, _) => account,
-			TrustedCall::balance_unshield(account, _, _, _) => account,
-			TrustedCall::balance_shield(account, _, _) => account,
+			TrustedCall::balance_set_balance(account, ..) => account,
+			TrustedCall::balance_transfer(account, ..) => account,
+			TrustedCall::balance_unshield(account, ..) => account,
+			TrustedCall::balance_shield(account, ..) => account,
+			TrustedCall::evm_withdraw(account, ..) => account,
+			TrustedCall::evm_call(account, ..) => account,
+			TrustedCall::evm_create(account, ..) => account,
+			TrustedCall::evm_create2(account, ..) => account,
 		}
 	}
 
