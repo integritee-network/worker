@@ -183,13 +183,11 @@ mod tests {
 	use super::*;
 	use crate::test::mocks::block_importer_mock::BlockImportMock;
 	use core::assert_matches::assert_matches;
-	use itp_test::{
-		builders::parentchain_header_builder::ParentchainHeaderBuilder,
-		mock::sidechain_ocall_api_mock::SidechainOCallApiMock,
-	};
+	use itp_test::mock::sidechain_ocall_api_mock::SidechainOCallApiMock;
 	use itp_types::Block as ParentchainBlock;
-	use its_test::sidechain_block_builder::SidechainBlockBuilder;
+	use parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 	use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;
+	use sidechain_test::sidechain_block_builder::SidechainBlockBuilder;
 
 	#[test]
 	fn if_block_import_is_successful_no_peer_fetching_happens() {

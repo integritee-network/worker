@@ -35,3 +35,4 @@ std = [
 
 [dev-dependencies]
 itp-test = { path = "../../core-primitives/test" }
+parentchain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }

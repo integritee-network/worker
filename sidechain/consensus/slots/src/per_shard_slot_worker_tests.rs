@@ -20,9 +20,9 @@ use crate::{
 	SlotInfo,
 };
 use itp_settings::sidechain::SLOT_DURATION;
-use itp_test::builders::parentchain_header_builder::ParentchainHeaderBuilder;
 use itp_time_utils::duration_now;
 use itp_types::{Block as ParentchainBlock, ShardIdentifier};
+use parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 
 type TestSlotWorker = SimpleSlotWorkerMock<ParentchainBlock>;
 

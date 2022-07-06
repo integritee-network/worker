@@ -44,6 +44,7 @@ itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", features = ["mo
 itp-stf-executor = { path = "../../../core-primitives/stf-executor", features = ["mocks"] }
 itp-test = { path = "../../../core-primitives/test" }
 itp-top-pool-author = { path = "../../../core-primitives/top-pool-author", features = ["mocks"] }
+parentchain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 [features]
 default = ["std"]
@@ -72,6 +73,5 @@ sgx = [
     "itp-sgx-crypto/sgx",
     "itp-stf-executor/sgx",
     "itp-top-pool-author/sgx",
-    "itp-types/sgx",
     "thiserror_sgx",
 ]

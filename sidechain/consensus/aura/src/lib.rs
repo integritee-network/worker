@@ -294,18 +294,16 @@ mod tests {
 		mocks::environment_mock::EnvironmentMock,
 	};
 	use itc_parentchain_block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
-	use itp_test::{
-		builders::{
-			parentchain_block_builder::ParentchainBlockBuilder,
-			parentchain_header_builder::ParentchainHeaderBuilder,
-		},
-		mock::onchain_mock::OnchainMock,
-	};
+	use itp_test::mock::onchain_mock::OnchainMock;
 	use itp_types::{
 		Block as ParentchainBlock, Enclave, Header as ParentchainHeader,
 		SignedBlock as SignedParentchainBlock,
 	};
 	use its_consensus_slots::PerShardSlotWorkerScheduler;
+	use parentchain_test::{
+		parentchain_block_builder::ParentchainBlockBuilder,
+		parentchain_header_builder::ParentchainHeaderBuilder,
+	};
 	use sp_core::ed25519::Public;
 	use sp_keyring::ed25519::Keyring;
 

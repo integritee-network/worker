@@ -641,6 +641,7 @@ dependencies = [
  "log",
  "multibase",
  "num-bigint",
+ "parentchain-test",
  "parity-scale-codec",
  "primitive-types",
  "retain_mut",
@@ -662,6 +663,7 @@ dependencies = [
  "sgx_tstd",
  "sgx_tunittest",
  "sgx_types",
+ "sidechain-block-verification",
  "sidechain-primitives",
  "sp-application-crypto",
  "sp-core",
@@ -1533,6 +1535,7 @@ dependencies = [
  "itp-time-utils",
  "itp-types",
  "log",
+ "parentchain-test",
  "parity-scale-codec",
  "sgx-externalities",
  "sgx_crypto_helper",
@@ -1681,7 +1684,6 @@ dependencies = [
  "primitive-types",
  "serde 1.0.137",
  "serde_json 1.0.81",
- "sgx_tstd",
  "sp-core",
  "sp-finality-grandpa",
  "sp-runtime",
@@ -1751,6 +1753,7 @@ dependencies = [
  "log",
  "sgx-externalities",
  "sgx_tstd",
+ "sidechain-block-verification",
  "sidechain-primitives",
  "sp-core",
  "sp-runtime",
@@ -1769,6 +1772,7 @@ dependencies = [
  "parity-scale-codec",
  "sgx_tstd",
  "sgx_types",
+ "sidechain-block-verification",
  "sidechain-primitives",
  "sp-runtime",
  "thiserror 1.0.9",
@@ -1788,6 +1792,7 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "sgx_tstd",
+ "sidechain-block-verification",
  "sidechain-primitives",
  "sp-consensus-slots",
  "sp-runtime",
@@ -2407,6 +2412,23 @@ dependencies = [
  "parity-scale-codec",
  "sp-api",
  "sp-runtime",
+]
+
+[[package]]
+name = "parentchain-test"
+version = "0.8.0"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#0c9c4fc84cb5da4007dbf68fc18fb2b86dd602bb"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "itp-types",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.24)",
 ]
 
 [[package]]
@@ -3366,6 +3388,23 @@ checksum = "881bf8156c87b6301fc5ca6b27f11eeb2761224c7081e69b409d5a1951a70c86"
 dependencies = [
  "digest 0.10.3",
  "keccak",
+]
+
+[[package]]
+name = "sidechain-block-verification"
+version = "0.9.0"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#0c9c4fc84cb5da4007dbf68fc18fb2b86dd602bb"
+dependencies = [
+ "frame-support",
+ "itp-types",
+ "itp-utils",
+ "log",
+ "sgx_tstd",
+ "sidechain-primitives",
+ "sp-consensus-slots",
+ "sp-core",
+ "sp-runtime",
+ "thiserror 1.0.9",
 ]
 
 [[package]]

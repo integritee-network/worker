@@ -225,16 +225,14 @@ mod tests {
 	};
 	use core::assert_matches::assert_matches;
 	use frame_support::assert_ok;
-	use itp_test::{
-		builders::parentchain_header_builder::ParentchainHeaderBuilder,
-		mock::onchain_mock::OnchainMock,
-	};
-	use its_test::{
+	use itp_test::mock::onchain_mock::OnchainMock;
+	use parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
+	use sidechain_primitives::types::{block::SignedBlock, header::SidechainHeader as Header};
+	use sidechain_test::{
 		sidechain_block_builder::SidechainBlockBuilder,
 		sidechain_block_data_builder::SidechainBlockDataBuilder,
 		sidechain_header_builder::SidechainHeaderBuilder,
 	};
-	use sidechain_primitives::types::{block::SignedBlock, header::SidechainHeader as Header};
 	use sp_keyring::ed25519::Keyring;
 	use sp_runtime::testing::H256;
 

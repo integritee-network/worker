@@ -39,6 +39,7 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 
 # dev dependencies
 itp-test = { path = "../test", default-features = false, optional = true }
+parentchain-test = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master", optional = true }
 
 [features]
 default = ["std"]
@@ -74,5 +75,6 @@ sgx = [
 test = [
     "itp-test",
     "sgx-crypto-helper",
+    "parentchain-test",
 ]
 mocks = []

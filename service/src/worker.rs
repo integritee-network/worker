@@ -185,10 +185,10 @@ mod tests {
 	};
 	use frame_support::assert_ok;
 	use itp_node_api_extensions::node_api_factory::NodeApiFactory;
-	use its_test::sidechain_block_builder::SidechainBlockBuilder;
 	use jsonrpsee::{ws_server::WsServerBuilder, RpcModule};
 	use log::debug;
 	use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;
+	use sidechain_test::sidechain_block_builder::SidechainBlockBuilder;
 	use sp_keyring::AccountKeyring;
 	use std::{net::SocketAddr, sync::Arc};
 	use tokio::net::ToSocketAddrs;

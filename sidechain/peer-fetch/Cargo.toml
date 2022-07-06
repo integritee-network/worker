@@ -31,7 +31,7 @@ anyhow = "1.0.40"
 itp-node-api-extensions = { path = "../../core-primitives/node-api-extensions", features = ["mocks"] }
 itp-test = { path = "../../core-primitives/test" }
 its-storage = { path = "../storage", features = ["mocks"] }
-its-test = { path = "../test" }
+sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 [features]
 default = ["std"]

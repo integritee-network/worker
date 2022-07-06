@@ -48,7 +48,6 @@ sgx = [
     "sgx_tstd",
     "itp-rpc/sgx",
     "itp-top-pool-author/sgx",
-    "itp-types/sgx",
     "itp-utils/sgx",
     "jsonrpc-core_sgx",
     "rust-base58_sgx",
