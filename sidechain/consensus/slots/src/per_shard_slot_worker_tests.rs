@@ -44,7 +44,7 @@ fn slot_timings_are_correct_with_multiple_shards() {
 	let first_shard_slot_end_time = slot_worker.slot_infos.first().unwrap().ends_at.as_millis();
 	let expected_upper_bound = (slot_info.timestamp.as_millis()
 		+ SLOT_DURATION.as_millis().checked_div(shards.len() as u128).unwrap())
-		+ 1u128;
+		+ 2u128;
 	assert!(
 		first_shard_slot_end_time <= expected_upper_bound,
 		"First shard end time, expected: {}, actual: {}",
