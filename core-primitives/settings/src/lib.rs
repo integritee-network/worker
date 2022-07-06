@@ -99,6 +99,8 @@ pub mod enclave {
 	pub static TRUSTED_GETTERS_SLOT_DURATION: Duration = Duration::from_millis(400);
 }
 
+pub mod worker_mode {}
+
 /// Settings concerning the node
 pub mod node {
 	// you may have to update these indices upon new builds of the runtime

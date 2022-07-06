@@ -17,6 +17,11 @@
 
 #![cfg_attr(test, feature(assert_matches))]
 
+#[cfg(feature = "sidechain")]
+use crate::sidechain_setup::{
+	sidechain_init_block_production, sidechain_start_untrusted_rpc_server,
+};
+
 use crate::{
 	account_funding::{setup_account_funding, EnclaveAccountInfoProvider},
 	error::Error,
@@ -86,6 +91,7 @@ use std::{
 };
 use substrate_api_client::{utils::FromHexString, Header as HeaderTrait, XtStatus};
 use teerex_primitives::ShardIdentifier;
+use tokio::runtime::Handle;
 
 mod account_funding;
 mod config;
@@ -93,6 +99,7 @@ mod enclave;
 mod error;
 mod globals;
 mod initialized_service;
+mod interval_scheduling;
 mod ocall_bridge;
 mod parentchain_block_syncer;
 mod prometheus_metrics;
@@ -103,6 +110,9 @@ mod tests;
 mod utils;
 mod worker;
 mod worker_peers_updater;
+
+#[cfg(feature = "sidechain")]
+mod sidechain_setup;
 
 /// how many blocks will be synced before storing the chain db to disk
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -353,21 +363,14 @@ fn start_worker<E, T, D, InitializationHandler>(
 
 	// ------------------------------------------------------------------------
 	// Start untrusted worker rpc server.
-	// FIXME: this should be removed - this server should only handle untrusted things.
 	// i.e move sidechain block importing to trusted worker.
-	let enclave_for_block_gossip_rpc_server = enclave.clone();
-	let untrusted_url = config.untrusted_worker_url();
-	println!("[+] Untrusted RPC server listening on {}", &untrusted_url);
-	let sidechain_storage_for_rpc = sidechain_storage.clone();
-	let _untrusted_rpc_join_handle = tokio_handle.spawn(async move {
-		itc_rpc_server::run_server(
-			&untrusted_url,
-			enclave_for_block_gossip_rpc_server,
-			sidechain_storage_for_rpc,
-		)
-		.await
-		.unwrap();
-	});
+	#[cfg(feature = "sidechain")]
+	sidechain_start_untrusted_rpc_server(
+		&config,
+		enclave.clone(),
+		sidechain_storage.clone(),
+		tokio_handle,
+	);
 
 	// ------------------------------------------------------------------------
 	// Perform a remote attestation and get an unchecked extrinsic back.
@@ -404,6 +407,7 @@ fn start_worker<E, T, D, InitializationHandler>(
 
 	let register_enclave_xt_header =
 		node_api.get_header(register_enclave_xt_hash).unwrap().unwrap();
+
 	let we_are_primary_validateer =
 		we_are_primary_validateer(&node_api, &register_enclave_xt_header).unwrap();
 
@@ -423,36 +427,15 @@ fn start_worker<E, T, D, InitializationHandler>(
 		Arc::new(ParentchainBlockSyncer::new(node_api.clone(), enclave.clone()));
 	let mut last_synced_header = parentchain_block_syncer.sync_parentchain(last_synced_header);
 
-	// If we're the first validateer to register, also trigger parentchain block import.
-	if we_are_primary_validateer {
-		last_synced_header = import_parentchain_blocks_until_self_registry(
-			enclave.clone(),
-			parentchain_block_syncer,
-			&last_synced_header,
-			&register_enclave_xt_header,
-		)
-		.unwrap();
-	}
-
-	// ------------------------------------------------------------------------
-	// Initialize sidechain components (has to be AFTER init_light_client()
-	enclave.init_enclave_sidechain_components().unwrap();
-
-	// ------------------------------------------------------------------------
-	// Start interval sidechain block production (execution of trusted calls, sidechain block production).
-	let sidechain_enclave_api = enclave.clone();
-	println!("[+] Spawning thread for sidechain block production");
-	thread::Builder::new()
-		.name("interval_block_production_timer".to_owned())
-		.spawn(move || {
-			let future = start_slot_worker(
-				|| execute_trusted_calls(sidechain_enclave_api.as_ref()),
-				SLOT_DURATION,
-			);
-			block_on(future);
-			println!("[!] Sidechain block production loop has terminated");
-		})
-		.unwrap();
+	#[cfg(feature = "sidechain")]
+	last_synced_header = sidechain_init_block_production(
+		enclave.clone(),
+		&register_enclave_xt_header,
+		we_are_primary_validateer,
+		parentchain_block_syncer,
+		sidechain_storage,
+		&last_synced_header,
+	);
 
 	// ------------------------------------------------------------------------
 	// start parentchain syncing loop (subscribe to header updates)
@@ -479,19 +462,6 @@ fn start_worker<E, T, D, InitializationHandler>(
 		.name("trusted_getters_execution".to_owned())
 		.spawn(move || {
 			start_interval_trusted_getter_execution(trusted_getters_enclave_api.as_ref())
-		})
-		.unwrap();
-
-	// ------------------------------------------------------------------------
-	// start sidechain pruning loop
-	thread::Builder::new()
-		.name("sidechain_pruning_loop".to_owned())
-		.spawn(move || {
-			start_sidechain_pruning_loop(
-				&sidechain_storage,
-				SIDECHAIN_PURGE_INTERVAL,
-				SIDECHAIN_PURGE_LIMIT,
-			);
 		})
 		.unwrap();
 
@@ -562,31 +532,6 @@ fn start_interval_trusted_getter_execution<E: Sidechain>(enclave_api: &E) {
 		},
 		TRUSTED_GETTERS_SLOT_DURATION,
 	);
-}
-
-/// Schedules a task on perpetually looping intervals.
-///
-/// In case the task takes longer than is scheduled by the interval duration,
-/// the interval timing will drift. The task is responsible for
-/// ensuring it does not use up more time than is scheduled.
-fn schedule_on_repeating_intervals<T>(task: T, interval_duration: Duration)
-where
-	T: Fn(),
-{
-	let mut interval_start = Instant::now();
-	loop {
-		let elapsed = interval_start.elapsed();
-
-		if elapsed >= interval_duration {
-			// update interval time
-			interval_start = Instant::now();
-			task();
-		} else {
-			// sleep for the rest of the interval
-			let sleep_time = interval_duration - elapsed;
-			thread::sleep(sleep_time);
-		}
-	}
 }
 
 type Events = Vec<frame_system::EventRecord<Event, Hash>>;
@@ -731,43 +676,11 @@ fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 	}
 }
 
-/// Execute trusted operations in the enclave
-///
-///
-fn execute_trusted_calls<E: Sidechain>(enclave_api: &E) {
-	if let Err(e) = enclave_api.execute_trusted_calls() {
-		error!("{:?}", e);
-	};
-}
-
 /// Get the public signing key of the TEE.
 fn enclave_account<E: EnclaveBase>(enclave_api: &E) -> AccountId32 {
 	let tee_public = enclave_api.get_ecc_signing_pubkey().unwrap();
 	trace!("[+] Got ed25519 account of TEE = {}", tee_public.to_ss58check());
 	AccountId32::from(*tee_public.as_array_ref())
-}
-
-/// Ensure we're synced up until the parentchain block where we have registered ourselves.
-fn import_parentchain_blocks_until_self_registry<
-	E: EnclaveBase + TeerexApi + Sidechain,
-	ParentchainSyncer: SyncParentchainBlocks,
->(
-	enclave_api: Arc<E>,
-	parentchain_block_syncer: Arc<ParentchainSyncer>,
-	last_synced_header: &Header,
-	register_enclave_xt_header: &Header,
-) -> Result<Header, Error> {
-	info!(
-		"We're the first validateer to be registered, syncing parentchain blocks until the one we have registered ourselves on."
-	);
-	let mut last_synced_header = last_synced_header.clone();
-
-	while last_synced_header.number() < register_enclave_xt_header.number() {
-		last_synced_header = parentchain_block_syncer.sync_parentchain(last_synced_header);
-	}
-	enclave_api.trigger_parentchain_block_import()?;
-
-	Ok(last_synced_header)
 }
 
 /// Checks if we are the first validateer to register on the parentchain.

@@ -87,3 +87,26 @@ where
 		}
 	}
 }
+
+/// Ensure we're synced up until the parentchain block where we have registered ourselves.
+pub(crate) fn import_parentchain_blocks_until_self_registry<
+	E: EnclaveBase + TeerexApi + Sidechain,
+	ParentchainSyncer: SyncParentchainBlocks,
+>(
+	enclave_api: Arc<E>,
+	parentchain_block_syncer: Arc<ParentchainSyncer>,
+	last_synced_header: &Header,
+	register_enclave_xt_header: &Header,
+) -> Result<Header, Error> {
+	info!(
+		"We're the first validateer to be registered, syncing parentchain blocks until the one we have registered ourselves on."
+	);
+	let mut last_synced_header = last_synced_header.clone();
+
+	while last_synced_header.number() < register_enclave_xt_header.number() {
+		last_synced_header = parentchain_block_syncer.sync_parentchain(last_synced_header);
+	}
+	enclave_api.trigger_parentchain_block_import()?;
+
+	Ok(last_synced_header)
+}
