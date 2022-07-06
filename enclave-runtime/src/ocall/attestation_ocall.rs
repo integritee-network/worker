@@ -29,7 +29,7 @@ use std::{ptr, vec::Vec};
 
 const RET_QUOTE_BUF_LEN: usize = 2048;
 
-impl EnclaveAttestationOCallApi for OcallApi {
+impl<TeerexStorage> EnclaveAttestationOCallApi for OcallApi<TeerexStorage> {
 	fn sgx_init_quote(&self) -> SgxResult<(sgx_target_info_t, sgx_epid_group_id_t)> {
 		let mut ti: sgx_target_info_t = sgx_target_info_t::default();
 		let mut eg: sgx_epid_group_id_t = sgx_epid_group_id_t::default();

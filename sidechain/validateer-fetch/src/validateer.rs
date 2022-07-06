@@ -18,7 +18,7 @@
 use crate::error::{Error, Result};
 use frame_support::ensure;
 use itp_ocall_api::EnclaveOnChainOCallApi;
-use itp_teerex_storage::{TeeRexStorage, TeerexStorageKeys};
+use itp_teerex_storage::{TeeRexStorageAccess, TeeRexStorageKeys};
 use itp_types::Enclave;
 use sp_core::H256;
 use sp_runtime::traits::Header as HeaderT;
@@ -34,23 +34,24 @@ pub trait ValidateerFetch {
 		-> Result<u64>;
 }
 
-impl<OnchainStorage: EnclaveOnChainOCallApi> ValidateerFetch for OnchainStorage {
+impl<OnchainStorage: EnclaveOnChainOCallApi + TeeRexStorageAccess> ValidateerFetch
+	for OnchainStorage
+{
 	fn current_validateers<Header: HeaderT<Hash = H256>>(
 		&self,
 		header: &Header,
 	) -> Result<Vec<Enclave>> {
 		let count = self.validateer_count(header)?;
 
-		let mut hashes = Vec::with_capacity(count as usize);
-		for i in 1..=count {
-			hashes.push(TeeRexStorage::enclave(i))
-		}
+		let hashes: Vec<Vec<u8>> =
+			(1..=count).flat_map(|i| self.teerex_storage().enclave(i).ok()).collect();
 
 		let enclaves: Vec<Enclave> = self
 			.get_multiple_storages_verified(hashes, header)?
 			.into_iter()
 			.filter_map(|e| e.into_tuple().1)
 			.collect();
+
 		ensure!(
 			enclaves.len() == count as usize,
 			Error::Other("Found less validateers onchain than validateer count")
@@ -59,7 +60,9 @@ impl<OnchainStorage: EnclaveOnChainOCallApi> ValidateerFetch for OnchainStorage 
 	}
 
 	fn validateer_count<Header: HeaderT<Hash = H256>>(&self, header: &Header) -> Result<u64> {
-		self.get_storage_verified(TeeRexStorage::enclave_count(), header)?
+		let enclave_count_key =
+			self.teerex_storage().enclave_count().map_err(|e| Error::TeerexStorage(e))?;
+		self.get_storage_verified(enclave_count_key, header)?
 			.into_tuple()
 			.1
 			.ok_or(Error::Other("Could not get validateer count from chain"))

@@ -15,6 +15,9 @@
 
 */
 
+use itp_teerex_storage::{TeeRexStorageAccess, TeeRexStorageKeys};
+use std::sync::Arc;
+
 mod attestation_ocall;
 mod ffi;
 mod ipfs_ocall;
@@ -22,5 +25,24 @@ mod metrics_ocall;
 mod on_chain_ocall;
 mod sidechain_ocall;
 
-#[derive(Clone, Debug, Default)]
-pub struct OcallApi;
+#[derive(Clone, Debug)]
+pub struct OcallApi<TeerexStorage> {
+	teerex_storage: Arc<TeerexStorage>,
+}
+
+impl<TeerexStorage> OcallApi<TeerexStorage> {
+	pub fn new(teerex_storage: Arc<TeerexStorage>) -> Self {
+		Self { teerex_storage }
+	}
+}
+
+impl<TeerexStorage> TeeRexStorageAccess for OcallApi<TeerexStorage>
+where
+	TeerexStorage: TeeRexStorageKeys,
+{
+	type TeerexStorageType = TeerexStorage;
+
+	fn teerex_storage(&self) -> &Self::TeerexStorageType {
+		self.teerex_storage.as_ref()
+	}
+}

@@ -23,5 +23,6 @@ pub type Result<T> = core::result::Result<T, Error>;
 pub enum Error {
 	Codec(codec::Error),
 	Onchain(itp_ocall_api::Error),
+	TeerexStorage(itp_storage::error::Error),
 	Other(&'static str),
 }

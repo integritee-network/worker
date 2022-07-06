@@ -34,6 +34,8 @@ pub enum Error {
 	TopPoolAuthor(#[from] itp_top_pool_author::error::Error),
 	#[error("Node API error: {0}")]
 	NodeApi(#[from] itp_node_api_extensions::error::Error),
+	#[error("Sidechain state error: {0}")]
+	SidechainState(#[from] its_state::Error),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }

@@ -25,7 +25,7 @@ use log::*;
 use sgx_types::{sgx_status_t, SgxResult};
 use std::vec::Vec;
 
-impl EnclaveSidechainOCallApi for OcallApi {
+impl<TeerexStorage> EnclaveSidechainOCallApi for OcallApi<TeerexStorage> {
 	fn propose_sidechain_blocks<SignedSidechainBlock: Encode>(
 		&self,
 		signed_blocks: Vec<SignedSidechainBlock>,

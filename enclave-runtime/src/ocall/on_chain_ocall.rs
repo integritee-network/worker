@@ -27,7 +27,7 @@ use sgx_types::*;
 use sp_runtime::{traits::Header, OpaqueExtrinsic};
 use std::vec::Vec;
 
-impl EnclaveOnChainOCallApi for OcallApi {
+impl<TeerexStorage> EnclaveOnChainOCallApi for OcallApi<TeerexStorage> {
 	fn send_to_parentchain(&self, extrinsics: Vec<OpaqueExtrinsic>) -> SgxResult<()> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		let extrinsics_encoded = extrinsics.encode();

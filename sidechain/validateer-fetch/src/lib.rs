@@ -20,5 +20,5 @@
 mod error;
 mod validateer;
 
-pub use error::Error;
+pub use error::*;
 pub use validateer::*;

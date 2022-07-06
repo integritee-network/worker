@@ -20,38 +20,43 @@ use ita_stf::{AccountId, Index, KeyPair, Stf, TrustedCall, TrustedCallSigned};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{ed25519_derivation::DeriveEd25519, key_repository::AccessKey};
 use itp_stf_state_handler::handle_state::HandleState;
+use itp_storage::StorageKeyProvider;
 use itp_types::ShardIdentifier;
 use sgx_externalities::SgxExternalitiesTrait;
 use sp_core::{ed25519::Pair as Ed25519Pair, Pair, H256};
 use std::sync::Arc;
 
-pub struct StfEnclaveSigner<OCallApi, StateHandler, ShieldingKeyRepository> {
+pub struct StfEnclaveSigner<OCallApi, StateHandler, ShieldingKeyRepository, StorageKeys> {
 	state_handler: Arc<StateHandler>,
 	ocall_api: Arc<OCallApi>,
 	shielding_key_repo: Arc<ShieldingKeyRepository>,
+	storage_key_provider: Arc<StorageKeys>,
 }
 
-impl<OCallApi, StateHandler, ShieldingKeyRepository>
-	StfEnclaveSigner<OCallApi, StateHandler, ShieldingKeyRepository>
+impl<OCallApi, StateHandler, ShieldingKeyRepository, StorageKeys>
+	StfEnclaveSigner<OCallApi, StateHandler, ShieldingKeyRepository, StorageKeys>
 where
 	OCallApi: EnclaveAttestationOCallApi,
 	StateHandler: HandleState<HashType = H256>,
 	StateHandler::StateT: SgxExternalitiesTrait,
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: DeriveEd25519,
+	StorageKeys: StorageKeyProvider,
 {
 	pub fn new(
 		state_handler: Arc<StateHandler>,
 		ocall_api: Arc<OCallApi>,
 		shielding_key_repo: Arc<ShieldingKeyRepository>,
+		storage_key_provider: Arc<StorageKeys>,
 	) -> Self {
-		Self { state_handler, ocall_api, shielding_key_repo }
+		Self { state_handler, ocall_api, shielding_key_repo, storage_key_provider }
 	}
 
 	fn get_enclave_account_nonce(&self, shard: &ShardIdentifier) -> Result<Index> {
 		let enclave_account = self.get_enclave_account()?;
 		let mut state = self.state_handler.load(shard)?;
-		let nonce = Stf::account_nonce(&mut state, &enclave_account);
+		let nonce =
+			Stf::account_nonce(&mut state, &enclave_account, self.storage_key_provider.as_ref());
 		Ok(nonce)
 	}
 
@@ -61,14 +66,15 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler, ShieldingKeyRepository> StfEnclaveSigning
-	for StfEnclaveSigner<OCallApi, StateHandler, ShieldingKeyRepository>
+impl<OCallApi, StateHandler, ShieldingKeyRepository, StorageKeys> StfEnclaveSigning
+	for StfEnclaveSigner<OCallApi, StateHandler, ShieldingKeyRepository, StorageKeys>
 where
 	OCallApi: EnclaveAttestationOCallApi,
 	StateHandler: HandleState<HashType = H256>,
 	StateHandler::StateT: SgxExternalitiesTrait,
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: DeriveEd25519,
+	StorageKeys: StorageKeyProvider,
 {
 	fn get_enclave_account(&self) -> Result<AccountId> {
 		let enclave_call_signing_key = self.get_enclave_call_signing_key()?;

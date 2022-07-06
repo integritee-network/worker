@@ -22,6 +22,7 @@ use itp_node_api_extensions::metadata::{
 	node_metadata_provider::AccessNodeMetadata, pallet_sidechain::SidechainCallIndexes,
 };
 use itp_sgx_crypto::{key_repository::AccessKey, StateCrypto};
+use itp_storage::StorageKeyProvider;
 use itp_time_utils::now_as_u64;
 use itp_types::{OpaqueCall, ShardIdentifier, H256};
 use its_state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt, StateHash};
@@ -92,7 +93,7 @@ impl<
 	Signer::Public: Encode,
 	StateKeyRepository: AccessKey,
 	<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
-	NodeMetadataRepository: AccessNodeMetadata,
+	NodeMetadataRepository: AccessNodeMetadata + StorageKeyProvider,
 	NodeMetadataRepository::MetadataType: SidechainCallIndexes,
 {
 	pub fn new(
@@ -153,7 +154,7 @@ impl<
 	Signer::Public: Encode,
 	StateKeyRepository: AccessKey,
 	<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
-	NodeMetadataRepository: AccessNodeMetadata,
+	NodeMetadataRepository: AccessNodeMetadata + StorageKeyProvider,
 	NodeMetadataRepository::MetadataType: SidechainCallIndexes,
 {
 	type SignedSidechainBlock = SignedSidechainBlock;
@@ -168,10 +169,13 @@ impl<
 	) -> Result<(OpaqueCall, Self::SignedSidechainBlock)> {
 		let author_public = self.signer.public();
 
-		let db = SidechainDB::<SignedSidechainBlock::Block, Externalities>::new(aposteriori_state);
+		let db = SidechainDB::<SignedSidechainBlock::Block, Externalities, _>::new(
+			aposteriori_state,
+			self.node_metadata_repository.clone(),
+		);
 		let state_hash_new = db.state_hash();
 
-		let (block_number, parent_hash) = match db.get_last_block() {
+		let (block_number, parent_hash) = match db.get_last_block()? {
 			Some(block) => (block.header().block_number() + 1, block.hash()),
 			None => {
 				info!("Seems to be first sidechain block.");
@@ -179,7 +183,7 @@ impl<
 			},
 		};
 
-		if block_number != db.get_block_number().unwrap_or(0) {
+		if block_number != db.get_block_number()?.unwrap_or(0) {
 			return Err(Error::Other("[Sidechain] BlockNumber is not LastBlock's Number + 1".into()))
 		}
 

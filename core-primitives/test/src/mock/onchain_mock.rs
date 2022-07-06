@@ -23,7 +23,7 @@ use itp_ocall_api::{
 	EnclaveSidechainOCallApi,
 };
 use itp_storage::Error::StorageValueUnavailable;
-use itp_teerex_storage::{TeeRexStorage, TeerexStorageKeys};
+use itp_teerex_storage::{mock::TeeRexStorageKeysMock, TeeRexStorageAccess, TeeRexStorageKeys};
 use itp_types::{
 	storage::StorageEntryVerified, BlockHash, Enclave, ShardIdentifier, WorkerRequest,
 	WorkerResponse,
@@ -42,6 +42,7 @@ use std::collections::HashMap;
 pub struct OnchainMock {
 	inner: HashMap<Vec<u8>, Vec<u8>>,
 	mr_enclave: [u8; SGX_HASH_SIZE],
+	teerex_storage_keys: TeeRexStorageKeysMock,
 }
 
 impl OnchainMock {
@@ -62,8 +63,11 @@ impl OnchainMock {
 		set: Option<Vec<Enclave>>,
 	) -> Self {
 		let set = set.unwrap_or_else(validateer_set);
-		self.insert_at_header(header, TeeRexStorage::enclave_count(), (set.len() as u64).encode());
-		self.with_storage_entries_at_header(header, into_key_value_storage(set))
+		let set_len = set.len();
+		let enclave_key_hashes = self.into_key_value_storage(set);
+		let enclave_count_storage_key = self.teerex_storage_keys.enclave_count().unwrap();
+		self.insert_at_header(header, enclave_count_storage_key, (set_len as u64).encode());
+		self.with_storage_entries_at_header(header, enclave_key_hashes)
 	}
 
 	pub fn with_mr_enclave(mut self, mr_enclave: [u8; SGX_HASH_SIZE]) -> Self {
@@ -88,6 +92,14 @@ impl OnchainMock {
 	) -> Option<&Vec<u8>> {
 		let key_with_header = (header, key).encode();
 		self.inner.get(&key_with_header)
+	}
+
+	fn into_key_value_storage(&self, validateers: Vec<Enclave>) -> Vec<(Vec<u8>, Enclave)> {
+		validateers
+			.into_iter()
+			.enumerate()
+			.map(|(i, e)| (self.teerex_storage_keys.enclave(i as u64 + 1).unwrap(), e))
+			.collect()
 	}
 }
 
@@ -197,6 +209,14 @@ impl EnclaveOnChainOCallApi for OnchainMock {
 	}
 }
 
+impl TeeRexStorageAccess for OnchainMock {
+	type TeerexStorageType = TeeRexStorageKeysMock;
+
+	fn teerex_storage(&self) -> &Self::TeerexStorageType {
+		&self.teerex_storage_keys
+	}
+}
+
 pub fn validateer_set() -> Vec<Enclave> {
 	let default_enclave = Enclave::new(
 		AccountId32::from([0; 32]),
@@ -205,12 +225,4 @@ pub fn validateer_set() -> Vec<Enclave> {
 		Default::default(),
 	);
 	vec![default_enclave.clone(), default_enclave.clone(), default_enclave.clone(), default_enclave]
-}
-
-fn into_key_value_storage(validateers: Vec<Enclave>) -> Vec<(Vec<u8>, Enclave)> {
-	validateers
-		.into_iter()
-		.enumerate()
-		.map(|(i, e)| (TeeRexStorage::enclave(i as u64 + 1), e))
-		.collect()
 }

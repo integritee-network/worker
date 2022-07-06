@@ -22,6 +22,7 @@ use crate::{
 use ita_stf::{AccountId, TrustedCall};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{ed25519_derivation::DeriveEd25519, mocks::KeyRepositoryMock};
+use itp_storage::key_provider_stub::StorageKeyProviderStub;
 use itp_test::mock::{handle_state_mock::HandleStateMock, onchain_mock::OnchainMock};
 use sgx_crypto_helper::{rsa3072::Rsa3072KeyPair, RsaKeyPair};
 use sp_core::Pair;
@@ -43,8 +44,10 @@ pub fn enclave_signer_signatures_are_valid() {
 	let shielding_key_repo = Arc::new(ShieldingKeyRepositoryMock::default());
 	let (_, shard) = init_state_and_shard_with_state_handler(state_handler.as_ref());
 	let mr_enclave = ocall_api.get_mrenclave_of_self().unwrap();
+	let storage_key_provider = Arc::new(StorageKeyProviderStub {});
 
-	let enclave_signer = StfEnclaveSigner::new(state_handler, ocall_api, shielding_key_repo);
+	let enclave_signer =
+		StfEnclaveSigner::new(state_handler, ocall_api, shielding_key_repo, storage_key_provider);
 
 	let enclave_account = enclave_signer.get_enclave_account().unwrap();
 	let trusted_call =

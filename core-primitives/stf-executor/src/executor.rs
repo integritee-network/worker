@@ -34,6 +34,7 @@ use itp_node_api_extensions::metadata::{
 };
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
+use itp_storage::StorageKeyProvider;
 use itp_time_utils::duration_now;
 use itp_types::{storage::StorageEntryVerified, OpaqueCall, H256};
 use log::*;
@@ -56,7 +57,7 @@ where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
 	StateHandler: HandleState<HashType = H256>,
 	StateHandler::StateT: SgxExternalitiesTrait + Encode,
-	NodeMetadataRepository: AccessNodeMetadata,
+	NodeMetadataRepository: AccessNodeMetadata + StorageKeyProvider,
 	NodeMetadataRepository::MetadataType: TeerexCallIndexes,
 {
 	pub fn new(
@@ -120,9 +121,13 @@ where
 
 		debug!("execute STF, call with nonce {}", trusted_call.nonce);
 		let mut extrinsic_call_backs: Vec<OpaqueCall> = Vec::new();
-		if let Err(e) =
-			Stf::execute(state, trusted_call.clone(), &mut extrinsic_call_backs, unshield_funds_fn)
-		{
+		if let Err(e) = Stf::execute(
+			state,
+			trusted_call.clone(),
+			&mut extrinsic_call_backs,
+			unshield_funds_fn,
+			self.node_metadata_repo.as_ref(),
+		) {
 			error!("Stf::execute failed: {:?}", e);
 			return Ok(ExecutedOperation::failed(top_or_hash))
 		}
@@ -144,7 +149,7 @@ where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
 	StateHandler: HandleState<HashType = H256> + QueryShardState,
 	StateHandler::StateT: SgxExternalitiesTrait + Encode,
-	NodeMetadataRepository: AccessNodeMetadata,
+	NodeMetadataRepository: AccessNodeMetadata + StorageKeyProvider,
 {
 	fn update_states(&self, header: &ParentchainHeader) -> Result<()> {
 		debug!("Update STF storage upon block import!");
@@ -213,7 +218,7 @@ where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
 	StateHandler: HandleState<HashType = H256>,
 	StateHandler::StateT: SgxExternalitiesTrait + Encode,
-	NodeMetadataRepository: AccessNodeMetadata,
+	NodeMetadataRepository: AccessNodeMetadata + StorageKeyProvider,
 	NodeMetadataRepository::MetadataType: TeerexCallIndexes,
 {
 	type Externalities = StateHandler::StateT;
@@ -276,7 +281,7 @@ where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
 	StateHandler: HandleState<HashType = H256>,
 	StateHandler::StateT: SgxExternalitiesTrait + Encode,
-	NodeMetadataRepository: AccessNodeMetadata,
+	NodeMetadataRepository: AccessNodeMetadata + StorageKeyProvider,
 {
 	type Externalities = StateHandler::StateT;
 
@@ -302,7 +307,8 @@ where
 
 		for trusted_getter_signed in trusted_getters.into_iter() {
 			// get state
-			let getter_state = get_stf_state(trusted_getter_signed, &mut state);
+			let getter_state =
+				get_stf_state(trusted_getter_signed, self.node_metadata_repo.as_ref(), &mut state);
 
 			debug!("Executing trusted getter");
 
@@ -376,6 +382,7 @@ pub(crate) fn state_hash<ExternalitiesT: SgxExternalitiesTrait + Encode>(
 /// if it's invalid.
 pub(crate) fn get_stf_state<E: SgxExternalitiesTrait>(
 	trusted_getter_signed: &TrustedGetterSigned,
+	storage_key_provider: &impl StorageKeyProvider,
 	state: &mut E,
 ) -> Result<Option<Vec<u8>>> {
 	debug!("verifying signature of TrustedGetterSigned");
@@ -384,5 +391,5 @@ pub(crate) fn get_stf_state<E: SgxExternalitiesTrait>(
 	}
 
 	debug!("calling into STF to get state");
-	Ok(Stf::get_state(state, trusted_getter_signed.clone().into()))
+	Ok(Stf::get_state(state, trusted_getter_signed.clone().into(), storage_key_provider))
 }

@@ -21,7 +21,7 @@ use frame_support::ensure;
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use sgx_types::{sgx_status_t, SgxResult};
 
-impl EnclaveMetricsOCallApi for OcallApi {
+impl<TeerexStorage> EnclaveMetricsOCallApi for OcallApi<TeerexStorage> {
 	fn update_metric<Metric: Encode>(&self, metric: Metric) -> SgxResult<()> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		let metric_encoded = metric.encode();

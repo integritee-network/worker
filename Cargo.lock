@@ -2917,6 +2917,7 @@ dependencies = [
  "itp-node-api-extensions",
  "itp-sgx-crypto",
  "itp-stf-executor",
+ "itp-storage",
  "itp-time-utils",
  "itp-top-pool-author",
  "itp-types",

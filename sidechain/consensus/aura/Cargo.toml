@@ -30,6 +30,7 @@ itp-settings = { path = "../../../core-primitives/settings" }
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
 itp-stf-executor = { path = "../../../core-primitives/stf-executor", default-features = false }
 itp-stf-state-handler = { path = "../../../core-primitives/stf-state-handler", default-features = false }
+itp-storage = { path = "../../../core-primitives/storage", default-features = false }
 itp-time-utils = { path = "../../../core-primitives/time-utils", default-features = false }
 its-block-composer = { path = "../../block-composer", default-features = false }
 its-consensus-common = { path = "../common", default-features = false }
@@ -42,7 +43,6 @@ its-validateer-fetch = { path = "../../validateer-fetch", default-features = fal
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
 env_logger = "0.9.0"
 itc-parentchain-block-import-dispatcher = { path = "../../../core/parentchain/block-import-dispatcher", features = ["mocks"] }
-itp-storage = { path = "../../../core-primitives/storage" }
 itp-test = { path = "../../../core-primitives/test" }
 its-top-pool-executor = { path = "../../top-pool-executor", features = ["mocks"] }
 parentchain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
@@ -59,6 +59,7 @@ std = [
    "itp-sgx-crypto/std",
    "itp-stf-executor/std",
    "itp-stf-state-handler/std",
+   "itp-storage/std",
    "itp-time-utils/std",
    "itp-types/std",
    "itp-utils/std",
@@ -82,6 +83,7 @@ sgx = [
    "itp-sgx-crypto/sgx",
    "itp-stf-executor/sgx",
    "itp-stf-state-handler/sgx",
+   "itp-storage/sgx",
    "itp-time-utils/sgx",
    "itp-utils/sgx",
    "its-block-composer/sgx",

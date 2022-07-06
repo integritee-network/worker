@@ -31,9 +31,10 @@ use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::{key_repository::AccessKey, StateCrypto};
 use itp_stf_executor::ExecutedOperation;
 use itp_stf_state_handler::handle_state::HandleState;
+use itp_storage::StorageKeyProvider;
 use itp_types::H256;
 use its_consensus_common::Error as ConsensusError;
-use its_state::SidechainDB;
+use its_state::{SidechainDB, SidechainState};
 use its_top_pool_executor::TopPoolCallOperator;
 use its_validateer_fetch::ValidateerFetch;
 use log::*;
@@ -55,18 +56,19 @@ pub struct BlockImporter<
 	ParentchainBlock,
 	SignedSidechainBlock,
 	OCallApi,
-	SidechainState,
 	StateHandler,
 	StateKeyRepository,
 	TopPoolExecutor,
 	ParentchainBlockImporter,
+	StorageKeys,
 > {
 	state_handler: Arc<StateHandler>,
 	state_key_repository: Arc<StateKeyRepository>,
 	top_pool_executor: Arc<TopPoolExecutor>,
 	parentchain_block_importer: Arc<ParentchainBlockImporter>,
 	ocall_api: Arc<OCallApi>,
-	_phantom: PhantomData<(Authority, ParentchainBlock, SignedSidechainBlock, SidechainState)>,
+	storage_key_provider: Arc<StorageKeys>,
+	_phantom: PhantomData<(Authority, ParentchainBlock, SignedSidechainBlock)>,
 }
 
 impl<
@@ -74,22 +76,22 @@ impl<
 		ParentchainBlock,
 		SignedSidechainBlock,
 		OCallApi,
-		SidechainState,
 		StateHandler,
 		StateKeyRepository,
 		TopPoolExecutor,
 		ParentchainBlockImporter,
+		StorageKeys,
 	>
 	BlockImporter<
 		Authority,
 		ParentchainBlock,
 		SignedSidechainBlock,
 		OCallApi,
-		SidechainState,
 		StateHandler,
 		StateKeyRepository,
 		TopPoolExecutor,
 		ParentchainBlockImporter,
+		StorageKeys,
 	> where
 	Authority: Pair,
 	Authority::Public: std::fmt::Debug,
@@ -119,6 +121,7 @@ impl<
 		top_pool_executor: Arc<TopPoolExecutor>,
 		parentchain_block_importer: Arc<ParentchainBlockImporter>,
 		ocall_api: Arc<OCallApi>,
+		storage_key_provider: Arc<StorageKeys>,
 	) -> Self {
 		Self {
 			state_handler,
@@ -126,6 +129,7 @@ impl<
 			top_pool_executor,
 			parentchain_block_importer,
 			ocall_api,
+			storage_key_provider,
 			_phantom: Default::default(),
 		}
 	}
@@ -169,17 +173,18 @@ impl<
 		StateKeyRepository,
 		TopPoolExecutor,
 		ParentchainBlockImporter,
+		StorageKeys,
 	> BlockImport<ParentchainBlock, SignedSidechainBlock>
 	for BlockImporter<
 		Authority,
 		ParentchainBlock,
 		SignedSidechainBlock,
 		OCallApi,
-		SidechainDB<SignedSidechainBlock::Block, SgxExternalities>,
 		StateHandler,
 		StateKeyRepository,
 		TopPoolExecutor,
 		ParentchainBlockImporter,
+		StorageKeys,
 	> where
 	Authority: Pair,
 	Authority::Public: std::fmt::Debug,
@@ -202,15 +207,16 @@ impl<
 		+ PeekParentchainBlockImportQueue<SignedParentchainBlock<ParentchainBlock>>
 		+ Send
 		+ Sync,
+	StorageKeys: StorageKeyProvider + Clone + Send + Sync + 'static,
 {
 	type Verifier = AuraVerifier<
 		Authority,
 		ParentchainBlock,
 		SignedSidechainBlock,
-		SidechainDB<SignedSidechainBlock::Block, SgxExternalities>,
+		Self::SidechainState,
 		OCallApi,
 	>;
-	type SidechainState = SidechainDB<SignedSidechainBlock::Block, SgxExternalities>;
+	type SidechainState = SidechainDB<SignedSidechainBlock::Block, SgxExternalities, StorageKeys>;
 	type StateCrypto = <StateKeyRepository as AccessKey>::KeyType;
 	type Context = OCallApi;
 
@@ -231,10 +237,11 @@ impl<
 			.load_for_mutation(shard)
 			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
 
-		let updated_state = mutating_function(Self::SidechainState::new(state))?;
+		let updated_state =
+			mutating_function(Self::SidechainState::new(state, self.storage_key_provider.clone()))?;
 
 		self.state_handler
-			.write_after_mutation(updated_state.ext, write_lock, shard)
+			.write_after_mutation(updated_state.ext(), write_lock, shard)
 			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
 
 		Ok(())
@@ -252,7 +259,7 @@ impl<
 			.state_handler
 			.load(shard)
 			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
-		verifying_function(Self::SidechainState::new(state))
+		verifying_function(Self::SidechainState::new(state, self.storage_key_provider.clone()))
 	}
 
 	fn state_key(&self) -> Result<Self::StateCrypto, ConsensusError> {

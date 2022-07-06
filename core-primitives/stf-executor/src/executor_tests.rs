@@ -22,15 +22,20 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use ita_stf::{
-	test_genesis::{endowed_account, test_genesis_setup, ENDOWED_ACC_FUNDS},
-	AccountId, Balance, ShardIdentifier, State, TrustedCall, TrustedGetter, TrustedGetterSigned,
+	test_genesis::{endowed_account, ENDOWED_ACC_FUNDS},
+	AccountId, Balance, ShardIdentifier, State, Stf, TrustedCall, TrustedGetter,
+	TrustedGetterSigned,
 };
 use itp_node_api_extensions::metadata::{
 	metadata_mocks::NodeMetadataMock, node_metadata_provider::NodeMetadataRepository,
 };
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_stf_state_handler::handle_state::HandleState;
-use itp_test::mock::{handle_state_mock::HandleStateMock, onchain_mock::OnchainMock};
+use itp_storage::key_provider_stub::StorageKeyProviderStub;
+use itp_test::{
+	builders::parentchain_header_builder::ParentchainHeaderBuilder,
+	mock::{handle_state_mock::HandleStateMock, onchain_mock::OnchainMock},
+};
 use itp_types::H256;
 use parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 use sgx_externalities::SgxExternalitiesTrait;
@@ -268,9 +273,12 @@ pub fn execute_update_works() {
 pub fn get_stf_state_works() {
 	let sender = endowed_account();
 	let signed_getter = TrustedGetter::free_balance(sender.public().into()).sign(&sender.into());
+	let storage_key_provider = StorageKeyProviderStub {};
 	let mut state = test_state();
 
-	let encoded_balance = get_stf_state(&signed_getter, &mut state).unwrap().unwrap();
+	let encoded_balance = get_stf_state(&signed_getter, &storage_key_provider, &mut state)
+		.unwrap()
+		.unwrap();
 
 	let balance = Balance::decode(&mut encoded_balance.as_slice()).unwrap();
 
@@ -281,9 +289,10 @@ pub fn upon_false_signature_get_stf_state_errs() {
 	let sender = AccountId::from([0; 32]);
 	let wrong_signer = endowed_account();
 	let signed_getter = TrustedGetter::free_balance(sender).sign(&wrong_signer.into());
+	let storage_key_provider = StorageKeyProviderStub {};
 	let mut state = test_state();
 
-	assert!(get_stf_state(&signed_getter, &mut state).is_err());
+	assert!(get_stf_state(&signed_getter, &storage_key_provider, &mut state).is_err());
 }
 
 // Helper Functions
@@ -300,8 +309,8 @@ fn stf_executor() -> (
 }
 
 fn test_state() -> State {
-	let mut state = State::new();
-	test_genesis_setup(&mut state);
+	let storage_key_provider = StorageKeyProviderStub {};
+	let state = Stf::init_state(AccountId::new([1u8; 32]), &storage_key_provider).unwrap();
 	state
 }
 
@@ -312,10 +321,12 @@ pub(crate) fn init_state_and_shard_with_state_handler<S: HandleState<StateT = St
 	let shard = ShardIdentifier::default();
 	let _hash = state_handler.initialize_shard(shard).unwrap();
 
-	let (lock, mut state) = state_handler.load_for_mutation(&shard).unwrap();
-	test_genesis_setup(&mut state);
+	// let (lock, mut state) = state_handler.load_for_mutation(&shard).unwrap();
+	// test_genesis_setup(&mut state);
+	//
+	// state_handler.write_after_mutation(state.clone(), lock, &shard).unwrap();
 
-	state_handler.write_after_mutation(state.clone(), lock, &shard).unwrap();
+	let state = state_handler.load(&shard).unwrap();
 
 	(state, shard)
 }

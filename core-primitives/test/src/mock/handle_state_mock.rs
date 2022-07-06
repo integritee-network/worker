@@ -120,6 +120,7 @@ pub mod tests {
 	use super::*;
 	use codec::{Decode, Encode};
 	use ita_stf::Stf;
+	use itp_storage::key_provider_stub::StorageKeyProviderStub;
 	use itp_types::ShardIdentifier;
 	use sgx_externalities::{SgxExternalitiesTrait, SgxExternalitiesType};
 	use sp_core::{blake2_256, crypto::AccountId32};
@@ -169,11 +170,13 @@ pub mod tests {
 
 	pub fn ensure_subsequent_state_loads_have_same_hash() {
 		let state_handler = HandleStateMock::default();
+		let storage_key_provider = StorageKeyProviderStub {};
 		let shard = ShardIdentifier::default();
 		state_handler.initialize_shard(shard).unwrap();
 
 		let (lock, _) = state_handler.load_for_mutation(&shard).unwrap();
-		let initial_state = Stf::init_state(AccountId32::new([0u8; 32])).unwrap();
+		let initial_state =
+			Stf::init_state(AccountId32::new([0u8; 32]), &storage_key_provider).unwrap();
 		let state_hash_before_execution = hash_of(&initial_state.state);
 		state_handler.write_after_mutation(initial_state, lock, &shard).unwrap();
 
@@ -184,7 +187,9 @@ pub mod tests {
 	}
 
 	pub fn ensure_encode_and_encrypt_does_not_affect_state_hash() {
-		let state = Stf::init_state(AccountId32::new([0u8; 32])).unwrap();
+		let storage_key_provider = StorageKeyProviderStub {};
+
+		let state = Stf::init_state(AccountId32::new([0u8; 32]), &storage_key_provider).unwrap();
 		let state_hash_before_execution = hash_of(&state.state);
 
 		let encoded_state = state.state.encode();

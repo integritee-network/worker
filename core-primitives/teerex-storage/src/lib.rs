@@ -18,36 +18,55 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use itp_storage::{error::Result, StorageKeyProvider};
-use sp_std::prelude::Vec;
+use sp_std::{prelude::Vec, sync::Arc};
 
-pub struct TeeRexStorage;
+#[cfg(feature = "mocks")]
+pub mod mock;
+
+pub struct TeeRexStorage<StorageKeys> {
+	storage_key_provider: Arc<StorageKeys>,
+}
+
+impl<StorageKeys> TeeRexStorage<StorageKeys> {
+	pub fn new(storage_key_provider: Arc<StorageKeys>) -> Self {
+		Self { storage_key_provider }
+	}
+}
+
+pub trait TeeRexStorageAccess {
+	type TeerexStorageType: TeeRexStorageKeys;
+
+	fn teerex_storage(&self) -> &Self::TeerexStorageType;
+}
 
 // Separate the prefix from the rest because in our case we changed the storage prefix due to
-// the rebranding. With the below implementation of the `TeerexStorageKeys`, we could simply
-// define another struct `OtherStorage`, implement `StoragePrefix` for it, and get the
-// `TeerexStorageKeys` implementation for free.
+// the rebranding.
 pub trait StoragePrefix {
 	fn prefix() -> &'static str;
 }
 
-impl StoragePrefix for TeeRexStorage {
+impl<StorageKeys> StoragePrefix for TeeRexStorage<StorageKeys> {
 	fn prefix() -> &'static str {
 		"Teerex"
 	}
 }
 
-pub trait TeerexStorageKeys {
-	fn enclave_count(storage_key_provider: &impl StorageKeyProvider) -> Result<Vec<u8>>;
-	fn enclave(index: u64, storage_key_provider: &impl StorageKeyProvider) -> Result<Vec<u8>>;
+pub trait TeeRexStorageKeys {
+	fn enclave_count(&self) -> Result<Vec<u8>>;
+	fn enclave(&self, index: u64) -> Result<Vec<u8>>;
 }
 
-impl<S: StoragePrefix> TeerexStorageKeys for S {
-	fn enclave_count(storage_key_provider: &impl StorageKeyProvider) -> Result<Vec<u8>> {
-		Ok(storage_key_provider.storage_value_key(Self::prefix(), "EnclaveCount")?.0)
+impl<StorageKeys> TeeRexStorageKeys for TeeRexStorage<StorageKeys>
+where
+	StorageKeys: StorageKeyProvider,
+{
+	fn enclave_count(&self) -> Result<Vec<u8>> {
+		Ok(self.storage_key_provider.storage_value_key(Self::prefix(), "EnclaveCount")?.0)
 	}
 
-	fn enclave(index: u64, storage_key_provider: &impl StorageKeyProvider) -> Result<Vec<u8>> {
-		Ok(storage_key_provider
+	fn enclave(&self, index: u64) -> Result<Vec<u8>> {
+		Ok(self
+			.storage_key_provider
 			.storage_map_key(Self::prefix(), "EnclaveRegistry", &index)?
 			.0)
 	}
