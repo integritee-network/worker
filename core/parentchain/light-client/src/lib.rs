@@ -37,7 +37,7 @@ use sp_finality_grandpa::{AuthorityId, AuthorityWeight, ConsensusLog, GRANDPA_EN
 use sp_runtime::{
 	generic::{Digest, OpaqueDigestItemId, SignedBlock},
 	traits::{Block as ParentchainBlockTrait, Header as HeaderTrait},
-	Justifications, OpaqueExtrinsic,
+	OpaqueExtrinsic,
 };
 use std::vec::Vec;
 
@@ -89,26 +89,10 @@ where
 		validator_set: AuthorityList,
 	) -> Result<RelayId, Error>;
 
-	fn submit_finalized_headers(
-		&mut self,
-		relay_id: RelayId,
-		header: Block::Header,
-		ancestry_proof: Vec<Block::Header>,
-		validator_set: AuthorityList,
-		validator_set_id: SetId,
-		justifications: Option<Justifications>,
-	) -> Result<(), Error>;
-
 	fn submit_block(
 		&mut self,
 		relay_id: RelayId,
 		signed_block: &SignedBlock<Block>,
-	) -> Result<(), Error>;
-
-	fn submit_xt_to_be_included(
-		&mut self,
-		relay_id: RelayId,
-		extrinsic: OpaqueExtrinsic,
 	) -> Result<(), Error>;
 
 	fn check_xt_inclusion(&mut self, relay_id: RelayId, block: &Block) -> Result<(), Error>;
@@ -124,7 +108,7 @@ pub trait ExtrinsicSender {
 }
 
 pub trait LightClientState<Block: ParentchainBlockTrait> {
-	fn num_xt_to_be_included(&mut self, relay_id: RelayId) -> Result<usize, Error>;
+	fn num_xt_to_be_included(&self, relay_id: RelayId) -> Result<usize, Error>;
 
 	fn genesis_hash(&self, relay_id: RelayId) -> Result<HashFor<Block>, Error>;
 
