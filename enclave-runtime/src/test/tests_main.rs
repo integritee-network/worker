@@ -21,6 +21,7 @@ use crate::{
 	sync::tests::{enclave_rw_lock_works, sidechain_rw_lock_works},
 	test::{
 		cert_tests::*,
+		evm_pallet_tests,
 		fixtures::initialize_test_state::init_state,
 		mocks::{rpc_responder_mock::RpcResponderMock, types::TestStateKeyRepo},
 		sidechain_aura_tests, top_pool_tests,
@@ -122,6 +123,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		test_executing_call_updates_account_nonce,
 		test_call_set_update_parentchain_block,
 		test_invalid_nonce_call_is_not_executed,
+		test_signature_must_match_public_sender_in_call,
 		test_non_root_shielding_call_is_not_executed,
 		test_shielding_call_with_enclave_self_is_executed,
 		rpc::worker_api_direct::tests::test_given_io_handler_methods_then_retrieve_all_names_as_string,
@@ -165,6 +167,8 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		tls_ra::seal_handler::test::seal_state_fails_for_invalid_state,
 		tls_ra::seal_handler::test::unseal_seal_state_works,
 		tls_ra::tests::test_tls_ra_server_client_networking,
+		// evm pallet tests
+		evm_pallet_tests::test_evm_call,
 
 		// these unit test (?) need an ipfs node running..
 		// ipfs::test_creates_ipfs_content_struct_works,
@@ -476,6 +480,40 @@ fn test_call_set_update_parentchain_block() {
 	assert_eq!(header.hash(), state.execute_with(|| get_parentchain_blockhash().unwrap()));
 	assert_eq!(parent_hash, state.execute_with(|| get_parentchain_parenthash().unwrap()));
 	assert_eq!(block_number, state.execute_with(|| get_parentchain_number().unwrap()));
+}
+
+fn test_signature_must_match_public_sender_in_call() {
+	// given
+	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
+	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
+	let top_pool_operation_handler = TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(
+		top_pool_author.clone(),
+		stf_executor.clone(),
+	);
+
+	// create accounts
+	let sender = funded_pair();
+	let receiver = unfunded_public();
+
+	let trusted_operation =
+		TrustedCall::balance_transfer(receiver.into(), sender.public().into(), 1000)
+			.sign(&sender.clone().into(), 10, &mrenclave, &shard)
+			.into_trusted_operation(true);
+
+	submit_operation_to_top_pool(
+		top_pool_author.as_ref(),
+		&trusted_operation,
+		&shielding_key,
+		shard,
+	)
+	.unwrap();
+
+	// when
+	let executed_batch =
+		execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_operation_handler);
+
+	// then
+	assert!(!executed_batch.executed_operations[0].is_success());
 }
 
 fn test_invalid_nonce_call_is_not_executed() {

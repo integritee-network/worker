@@ -75,7 +75,7 @@ pub fn get_storage_by_key_hash<V: Decode>(key: Vec<u8>) -> Option<V> {
 	}
 }
 
-// get the AccountInfo key where the account is stored
+// Get the AccountInfo key where the account is stored.
 pub fn account_key_hash(account: &AccountId) -> Vec<u8> {
 	storage_map_key("System", "Account", account, &StorageHasher::Blake2_128Concat)
 }
@@ -105,7 +105,6 @@ pub fn get_account_info(who: &AccountId) -> Option<AccountInfo> {
 }
 
 pub fn validate_nonce(who: &AccountId, nonce: Index) -> StfResult<()> {
-	// validate
 	let expected_nonce = match get_account_info(who) {
 		None => {
 			info!(
