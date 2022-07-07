@@ -2300,6 +2300,7 @@ name = "itc-offchain-worker-executor"
 version = "0.8.0"
 dependencies = [
  "ita-stf",
+ "itc-parentchain-block-import-dispatcher",
  "itp-stf-executor",
  "itp-stf-state-handler",
  "itp-top-pool-author",

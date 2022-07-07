@@ -17,24 +17,55 @@
 
 use crate::error::Result;
 use ita_stf::hash::TrustedOperationOrHash;
+use itc_parentchain_block_import_dispatcher::import_event_listener::ListenToImportEvent;
 use itp_stf_executor::{traits::StateUpdateProposer, ExecutedOperation};
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_top_pool_author::traits::{AuthorApi, OnBlockImported, SendState};
 use itp_types::{OpaqueCall, ShardIdentifier, H256};
 use log::*;
-use sp_runtime::traits::Block;
+use sp_runtime::traits::{Block, Header};
 use std::{marker::PhantomData, sync::Arc, time::Duration};
 
-pub struct Executor<ParentchainBlock, TopPoolAuthor, StfExecutor, StateHandler> {
+/// Off-chain worker executor implementation.
+///
+/// Executes calls found in the top-pool and immediately applies the corresponding state diffs.
+/// - Sends confirmations for all executed calls (TODO)
+/// - Sends extrinsics for any parentchain effects (such as unshield calls).
+///
+/// The trigger to start executing calls is given when the parentchain block imported event is
+/// signaled (event listener).
+pub struct Executor<
+	ParentchainBlock,
+	TopPoolAuthor,
+	StfExecutor,
+	StateHandler,
+	ValidatorAccessor,
+	ExtrinsicsFactory,
+> {
 	top_pool_author: Arc<TopPoolAuthor>,
 	stf_executor: Arc<StfExecutor>,
 	state_handler: Arc<StateHandler>,
+	validator_accessor: Arc<ValidatorAccessor>,
+	extrinsics_factory: Arc<ExtrinsicsFactory>,
 	_phantom: PhantomData<ParentchainBlock>,
 }
 
-impl<ParentchainBlock, TopPoolAuthor, StfExecutor, StateHandler>
-	Executor<ParentchainBlock, TopPoolAuthor, StfExecutor, StateHandler>
-where
+impl<
+		ParentchainBlock,
+		TopPoolAuthor,
+		StfExecutor,
+		StateHandler,
+		ValidatorAccessor,
+		ExtrinsicsFactory,
+	>
+	Executor<
+		ParentchainBlock,
+		TopPoolAuthor,
+		StfExecutor,
+		StateHandler,
+		ValidatorAccessor,
+		ExtrinsicsFactory,
+	> where
 	ParentchainBlock: Block<Hash = H256>,
 	StfExecutor: StateUpdateProposer,
 	TopPoolAuthor: AuthorApi<H256, ParentchainBlock::Hash>
@@ -45,12 +76,16 @@ where
 	pub fn new(
 		top_pool_author: Arc<TopPoolAuthor>,
 		stf_executor: Arc<StfExecutor>,
-		shard_query: Arc<StateHandler>,
+		state_handler: Arc<StateHandler>,
+		validator_accessor: Arc<ValidatorAccessor>,
+		extrinsics_factory: Arc<ExtrinsicsFactory>,
 	) -> Self {
 		Self {
 			top_pool_author,
 			stf_executor,
-			state_handler: shard_query,
+			state_handler,
+			validator_accessor,
+			extrinsics_factory,
 			_phantom: Default::default(),
 		}
 	}
@@ -110,6 +145,8 @@ where
 		Ok(())
 	}
 
+	// TODO: this is duplicated code and should be removed, once we refactor the top pool author
+	// and integrate the top pool executor into it.
 	fn remove_calls_from_pool(
 		&self,
 		shard: &ShardIdentifier,
@@ -129,5 +166,38 @@ where
 			}
 		}
 		failed_to_remove
+	}
+}
+
+impl<
+		ParentchainBlock,
+		TopPoolAuthor,
+		StfExecutor,
+		StateHandler,
+		ValidatorAccessor,
+		ExtrinsicsFactory,
+	> ListenToImportEvent
+	for Executor<
+		ParentchainBlock,
+		TopPoolAuthor,
+		StfExecutor,
+		StateHandler,
+		ValidatorAccessor,
+		ExtrinsicsFactory,
+	> where
+	ParentchainBlock: Block<Hash = H256>,
+	StfExecutor: StateUpdateProposer,
+	TopPoolAuthor: AuthorApi<H256, ParentchainBlock::Hash>
+		+ OnBlockImported<Hash = ParentchainBlock::Hash>
+		+ SendState<Hash = ParentchainBlock::Hash>,
+	StateHandler: QueryShardState + HandleState<StateT = StfExecutor::Externalities>,
+{
+	/// We get notified about parentchain block import events.
+	/// This triggers executing calls from the TOP pool (synchronously).
+	fn notify(&self) {
+		// match self.execute(latest_parentchain_header) {
+		// 	Ok(parentchain_effects) => {},
+		// 	Err(e) => {},
+		// }
 	}
 }
