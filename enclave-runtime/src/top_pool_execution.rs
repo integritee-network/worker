@@ -288,8 +288,8 @@ pub(crate) fn send_blocks_and_extrinsics<
 where
 	ParentchainBlock: BlockTrait,
 	SignedSidechainBlock: SignedBlock + 'static,
-	OCallApi: EnclaveSidechainOCallApi + EnclaveOnChainOCallApi,
-	ValidatorAccessor: ValidatorAccess<ParentchainBlock, OCallApi> + Send + Sync + 'static,
+	OCallApi: EnclaveSidechainOCallApi,
+	ValidatorAccessor: ValidatorAccess<ParentchainBlock> + Send + Sync + 'static,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	ExtrinsicsFactory: CreateExtrinsics,
 {
