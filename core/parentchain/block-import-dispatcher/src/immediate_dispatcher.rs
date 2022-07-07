@@ -15,18 +15,26 @@
 
 */
 
-use crate::{error::Result, DispatchBlockImport};
+use crate::{error::Result, import_event_listener::ListenToImportEvent, DispatchBlockImport};
 use itc_parentchain_block_importer::ImportParentchainBlocks;
-use std::{sync::Arc, vec::Vec};
+use std::{boxed::Box, sync::Arc, vec::Vec};
 
 /// Block import dispatcher that immediately imports the blocks, without any processing or queueing.
 pub struct ImmediateDispatcher<BlockImporter> {
 	block_importer: Arc<BlockImporter>,
+	import_event_listeners: Vec<Arc<Box<dyn ListenToImportEvent>>>,
 }
 
 impl<BlockImporter> ImmediateDispatcher<BlockImporter> {
 	pub fn new(block_importer: Arc<BlockImporter>) -> Self {
-		ImmediateDispatcher { block_importer }
+		ImmediateDispatcher { block_importer, import_event_listeners: Vec::new() }
+	}
+
+	pub fn with_listeners(
+		block_importer: Arc<BlockImporter>,
+		import_event_listeners: Vec<Arc<Box<dyn ListenToImportEvent>>>,
+	) -> Self {
+		ImmediateDispatcher { block_importer, import_event_listeners }
 	}
 }
 
@@ -37,6 +45,8 @@ where
 	type SignedBlockType = BlockImporter::SignedBlockType;
 
 	fn dispatch_import(&self, blocks: Vec<Self::SignedBlockType>) -> Result<()> {
-		self.block_importer.import_parentchain_blocks(blocks).map_err(|e| e.into())
+		self.block_importer.import_parentchain_blocks(blocks)?;
+		self.import_event_listeners.iter().for_each(|l| l.notify());
+		Ok(())
 	}
 }

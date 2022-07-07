@@ -14,7 +14,6 @@
 	limitations under the License.
 
 */
-//! Dispatching of block imports.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -31,22 +30,4 @@ pub mod sgx_reexport_prelude {
 }
 
 pub mod error;
-pub mod immediate_dispatcher;
-pub mod import_event_listener;
-pub mod triggered_dispatcher;
-
-#[cfg(feature = "mocks")]
-pub mod trigger_parentchain_block_import_mock;
-
-use error::Result;
-use std::vec::Vec;
-
-/// Trait to dispatch blocks for import into the local light-client.
-pub trait DispatchBlockImport {
-	type SignedBlockType;
-
-	/// Dispatch blocks to be imported.
-	///
-	/// The blocks may be imported immediately, get queued, delayed or grouped.
-	fn dispatch_import(&self, blocks: Vec<Self::SignedBlockType>) -> Result<()>;
-}
+pub mod executor;

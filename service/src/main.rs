@@ -17,11 +17,6 @@
 
 #![cfg_attr(test, feature(assert_matches))]
 
-#[cfg(feature = "sidechain")]
-use crate::sidechain_setup::{
-	sidechain_init_block_production, sidechain_start_untrusted_rpc_server,
-};
-
 use crate::{
 	account_funding::{setup_account_funding, EnclaveAccountInfoProvider},
 	error::Error,
@@ -35,6 +30,7 @@ use crate::{
 	},
 	parentchain_block_syncer::{ParentchainBlockSyncer, SyncParentchainBlocks},
 	prometheus_metrics::{start_metrics_server, EnclaveMetricsReceiver, MetricsHandler},
+	sidechain_setup::{sidechain_init_block_production, sidechain_start_untrusted_rpc_server},
 	sync_block_gossiper::SyncBlockGossiper,
 	utils::{check_files, extract_shard},
 	worker::Worker,
@@ -100,15 +96,13 @@ mod ocall_bridge;
 mod parentchain_block_syncer;
 mod prometheus_metrics;
 mod setup;
+mod sidechain_setup;
 mod sync_block_gossiper;
 mod sync_state;
 mod tests;
 mod utils;
 mod worker;
 mod worker_peers_updater;
-
-#[cfg(feature = "sidechain")]
-mod sidechain_setup;
 
 /// how many blocks will be synced before storing the chain db to disk
 const VERSION: &str = env!("CARGO_PKG_VERSION");

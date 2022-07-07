@@ -4,6 +4,7 @@ members = [
     "app-libs/stf",
     "cli",
     "core/direct-rpc-server",
+    "core/offchain-worker-executor",
     "core/parentchain/block-import-dispatcher",
     "core/parentchain/block-importer",
     "core/parentchain/indirect-calls-executor",
