@@ -21,7 +21,8 @@ use crate::test_genesis::test_genesis_setup;
 use crate::{
 	helpers::{
 		account_data, account_nonce, enclave_signer_account, ensure_enclave_signer_account,
-		ensure_root, get_account_info, increment_nonce, root, validate_nonce,
+		ensure_root, get_account_info, get_evm_account_codes, get_evm_account_storages,
+		increment_nonce, root, validate_nonce,
 	},
 	AccountData, AccountId, Getter, Index, ParentchainHeader, PublicGetter, ShardIdentifier, State,
 	StateTypeDiff, Stf, StfError, StfResult, TrustedCall, TrustedCallSigned, TrustedGetter,
@@ -116,6 +117,24 @@ impl Stf {
 					} else {
 						None
 					},
+				TrustedGetter::evm_account_codes(_who, evm_account) =>
+				// TODO: This probably needs some security check if who == evm_account (or assosciated)
+					if let Some(info) = get_evm_account_codes(&evm_account) {
+						debug!("TrustedGetter Evm Account Codes");
+						debug!("AccountCodes for {} is {:?}", evm_account, info);
+						Some(info) // TOOD: encoded?
+					} else {
+						None
+					},
+				TrustedGetter::evm_account_storages(_who, evm_account, index) =>
+				// TODO: This probably needs some security check if who == evm_account (or assosciated)
+					if let Some(value) = get_evm_account_storages(&evm_account, &index) {
+						debug!("TrustedGetter Evm Account Storages");
+						debug!("AccountStorages for {} is {:?}", evm_account, value);
+						Some(value.encode())
+					} else {
+						None
+					},
 			},
 			Getter::public(g) => match g {
 				PublicGetter::some_value => Some(42u32.encode()),
@@ -198,6 +217,112 @@ impl Stf {
 					ensure_enclave_signer_account(&enclave_account)?;
 					debug!("balance_shield({}, {})", account_id_to_string(&who), value);
 					Self::shield_funds(who, value)?;
+					Ok(())
+				},
+				TrustedCall::evm_withdraw(from, address, value) => {
+					debug!("evm_withdraw({}, {}, {})", account_id_to_string(&from), address, value);
+					sgx_runtime::EvmCall::<Runtime>::withdraw { address, value }
+						.dispatch_bypass_filter(sgx_runtime::Origin::signed(from))
+						.map_err(|e| {
+							StfError::Dispatch(format!("Evm Withdraw error: {:?}", e.error))
+						})?;
+					Ok(())
+				},
+				TrustedCall::evm_call(
+					from,
+					source,
+					target,
+					input,
+					value,
+					gas_limit,
+					max_fee_per_gas,
+					max_priority_fee_per_gas,
+					nonce,
+					access_list,
+				) => {
+					debug!(
+						"evm_call(from: {}, source: {}, target: {})",
+						account_id_to_string(&from),
+						source,
+						target
+					);
+					sgx_runtime::EvmCall::<Runtime>::call {
+						source,
+						target,
+						input,
+						value,
+						gas_limit,
+						max_fee_per_gas,
+						max_priority_fee_per_gas,
+						nonce,
+						access_list,
+					}
+					.dispatch_bypass_filter(sgx_runtime::Origin::signed(from))
+					.map_err(|e| StfError::Dispatch(format!("Evm Call error: {:?}", e.error)))?;
+					Ok(())
+				},
+				TrustedCall::evm_create(
+					from,
+					source,
+					init,
+					value,
+					gas_limit,
+					max_fee_per_gas,
+					max_priority_fee_per_gas,
+					nonce,
+					access_list,
+				) => {
+					debug!(
+						"evm_create(from: {}, source: {}, value: {})",
+						account_id_to_string(&from),
+						source,
+						value
+					);
+					sgx_runtime::EvmCall::<Runtime>::create {
+						source,
+						init,
+						value,
+						gas_limit,
+						max_fee_per_gas,
+						max_priority_fee_per_gas,
+						nonce,
+						access_list,
+					}
+					.dispatch_bypass_filter(sgx_runtime::Origin::signed(from))
+					.map_err(|e| StfError::Dispatch(format!("Evm Create error: {:?}", e.error)))?;
+					Ok(())
+				},
+				TrustedCall::evm_create2(
+					from,
+					source,
+					init,
+					salt,
+					value,
+					gas_limit,
+					max_fee_per_gas,
+					max_priority_fee_per_gas,
+					nonce,
+					access_list,
+				) => {
+					debug!(
+						"evm_create2(from: {}, source: {}, value: {})",
+						account_id_to_string(&from),
+						source,
+						value
+					);
+					sgx_runtime::EvmCall::<Runtime>::create2 {
+						source,
+						init,
+						salt,
+						value,
+						gas_limit,
+						max_fee_per_gas,
+						max_priority_fee_per_gas,
+						nonce,
+						access_list,
+					}
+					.dispatch_bypass_filter(sgx_runtime::Origin::signed(from))
+					.map_err(|e| StfError::Dispatch(format!("Evm Create2 error: {:?}", e.error)))?;
 					Ok(())
 				},
 			}?;
@@ -304,6 +429,7 @@ impl Stf {
 			TrustedCall::balance_transfer(_, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_unshield(_, _, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_shield(_, _, _) => debug!("No storage updates needed..."),
+			_ => debug!("No storage updates needed..."),
 		};
 		key_hashes
 	}
