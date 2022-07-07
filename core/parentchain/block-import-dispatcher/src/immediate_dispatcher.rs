@@ -50,3 +50,28 @@ where
 		Ok(())
 	}
 }
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::import_event_listener::mock::{ListenToImportEventMock, NotificationCounter};
+	use itc_parentchain_block_importer::block_importer_mock::ParentchainBlockImporterMock;
+	use std::vec;
+
+	type SignedBlockType = u32;
+	type TestBlockImporter = ParentchainBlockImporterMock<SignedBlockType>;
+	type TestDispatcher = ImmediateDispatcher<TestBlockImporter>;
+
+	#[test]
+	fn listeners_get_notified_upon_import() {
+		let block_importer = Arc::new(TestBlockImporter::default());
+		let notification_counter = Arc::new(NotificationCounter::default());
+		let listener: Arc<Box<dyn ListenToImportEvent>> =
+			Arc::new(Box::new(ListenToImportEventMock::new(notification_counter.clone())));
+		let dispatcher = TestDispatcher::with_listeners(block_importer, vec![listener.clone()]);
+
+		dispatcher.dispatch_import(vec![1u32, 2u32]).unwrap();
+
+		assert_eq!(1, notification_counter.get_counter());
+	}
+}

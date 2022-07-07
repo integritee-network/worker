@@ -29,6 +29,10 @@ pub enum Error {
 	StfExecutor(#[from] itp_stf_executor::error::Error),
 	#[error("TOP pool author error: {0}")]
 	TopPoolAuthor(#[from] itp_top_pool_author::error::Error),
+	#[error("Light-client error: {0}")]
+	LightClient(#[from] itc_parentchain_light_client::error::Error),
+	#[error("Extrinsics factory error: {0}")]
+	ExtrinsicsFactory(#[from] itp_extrinsics_factory::error::Error),
 	#[error("{0}")]
 	Other(Box<dyn std::error::Error + Sync + Send + 'static>),
 }

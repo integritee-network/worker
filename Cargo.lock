@@ -2301,6 +2301,8 @@ version = "0.8.0"
 dependencies = [
  "ita-stf",
  "itc-parentchain-block-import-dispatcher",
+ "itc-parentchain-light-client",
+ "itp-extrinsics-factory",
  "itp-stf-executor",
  "itp-stf-state-handler",
  "itp-top-pool-author",

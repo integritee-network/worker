@@ -21,6 +21,8 @@ thiserror = { version = "1.0", optional = true }
 # local dependencies
 ita-stf = { path = "../../app-libs/stf", default-features = false }
 itc-parentchain-block-import-dispatcher = { path = "../../core/parentchain/block-import-dispatcher", default-features = false }
+itc-parentchain-light-client = { path = "../../core/parentchain/light-client", default-features = false}
+itp-extrinsics-factory = { path = "../../core-primitives/extrinsics-factory", default-features = false }
 itp-stf-executor = { path = "../../core-primitives/stf-executor", default-features = false }
 itp-stf-state-handler = { path = "../../core-primitives/stf-state-handler", default-features = false }
 itp-top-pool-author = { path = "../../core-primitives/top-pool-author", default-features = false }
@@ -40,6 +42,8 @@ default = ["std"]
 std = [
     "ita-stf/std",
     "itc-parentchain-block-import-dispatcher/std",
+    "itc-parentchain-light-client/std",
+    "itp-extrinsics-factory/std",
     "itp-stf-executor/std",
     "itp-stf-state-handler/std",
     "itp-top-pool-author/std",
@@ -50,6 +54,8 @@ std = [
 sgx = [
     "ita-stf/sgx",
     "itc-parentchain-block-import-dispatcher/sgx",
+    "itc-parentchain-light-client/sgx",
+    "itp-extrinsics-factory/sgx",
     "itp-stf-executor/sgx",
     "itp-stf-state-handler/sgx",
     "itp-top-pool-author/sgx",

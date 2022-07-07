@@ -15,6 +15,45 @@
 
 */
 
+/// Listener trait to get notified when parentchain blocks get imported.
 pub trait ListenToImportEvent {
 	fn notify(&self);
+}
+
+#[cfg(test)]
+pub(crate) mod mock {
+	use super::*;
+	use std::sync::{Arc, RwLock};
+
+	#[derive(Default)]
+	pub struct NotificationCounter {
+		counter: RwLock<usize>,
+	}
+
+	impl NotificationCounter {
+		fn increment(&self) {
+			*self.counter.write().unwrap() += 1;
+		}
+
+		pub fn get_counter(&self) -> usize {
+			*self.counter.read().unwrap()
+		}
+	}
+
+	#[derive(Default)]
+	pub(crate) struct ListenToImportEventMock {
+		counter: Arc<NotificationCounter>,
+	}
+
+	impl ListenToImportEventMock {
+		pub fn new(counter: Arc<NotificationCounter>) -> Self {
+			Self { counter }
+		}
+	}
+
+	impl ListenToImportEvent for ListenToImportEventMock {
+		fn notify(&self) {
+			self.counter.increment()
+		}
+	}
 }

@@ -18,12 +18,17 @@
 use crate::error::Result;
 use ita_stf::hash::TrustedOperationOrHash;
 use itc_parentchain_block_import_dispatcher::import_event_listener::ListenToImportEvent;
+use itc_parentchain_light_client::{
+	concurrent_access::ValidatorAccess, BlockNumberOps, ExtrinsicSender, LightClientState,
+	NumberFor,
+};
+use itp_extrinsics_factory::CreateExtrinsics;
 use itp_stf_executor::{traits::StateUpdateProposer, ExecutedOperation};
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_top_pool_author::traits::{AuthorApi, OnBlockImported, SendState};
 use itp_types::{OpaqueCall, ShardIdentifier, H256};
 use log::*;
-use sp_runtime::traits::{Block, Header};
+use sp_runtime::traits::Block;
 use std::{marker::PhantomData, sync::Arc, time::Duration};
 
 /// Off-chain worker executor implementation.
@@ -72,6 +77,9 @@ impl<
 		+ OnBlockImported<Hash = ParentchainBlock::Hash>
 		+ SendState<Hash = ParentchainBlock::Hash>,
 	StateHandler: QueryShardState + HandleState<StateT = StfExecutor::Externalities>,
+	ValidatorAccessor: ValidatorAccess<ParentchainBlock> + Send + Sync + 'static,
+	ExtrinsicsFactory: CreateExtrinsics,
+	NumberFor<ParentchainBlock>: BlockNumberOps,
 {
 	pub fn new(
 		top_pool_author: Arc<TopPoolAuthor>,
@@ -90,11 +98,9 @@ impl<
 		}
 	}
 
-	pub fn execute(
-		&self,
-		latest_parentchain_header: &ParentchainBlock::Header,
-	) -> Result<Vec<OpaqueCall>> {
+	pub fn execute(&self) -> Result<()> {
 		let max_duration = Duration::from_secs(5);
+		let latest_parentchain_header = self.get_latest_parentchain_header()?;
 
 		let mut parentchain_effects: Vec<OpaqueCall> = Vec::new();
 
@@ -105,7 +111,7 @@ impl<
 
 			let batch_execution_result = self.stf_executor.propose_state_update(
 				&trusted_calls,
-				latest_parentchain_header,
+				&latest_parentchain_header,
 				&shard,
 				max_duration,
 				|s| s,
@@ -130,10 +136,22 @@ impl<
 			// Remove successful operations from pool
 			self.remove_calls_from_pool(&shard, successful_operations);
 
-			// TODO: notify parentchain about executed operations?
+			// TODO: notify parentchain about executed operations? -> add to parentchain effects
 		}
 
-		Ok(parentchain_effects)
+		if !parentchain_effects.is_empty() {
+			self.send_parentchain_effects(parentchain_effects)?;
+		}
+
+		Ok(())
+	}
+
+	fn get_latest_parentchain_header(&self) -> Result<ParentchainBlock::Header> {
+		let header = self.validator_accessor.execute_on_validator(|v| {
+			let latest_parentchain_header = v.latest_finalized_header(v.num_relays())?;
+			Ok(latest_parentchain_header)
+		})?;
+		Ok(header)
 	}
 
 	fn apply_state_update(
@@ -142,6 +160,15 @@ impl<
 		updated_state: <StfExecutor as StateUpdateProposer>::Externalities,
 	) -> Result<()> {
 		self.state_handler.reset(updated_state, shard)?;
+		Ok(())
+	}
+
+	fn send_parentchain_effects(&self, parentchain_effects: Vec<OpaqueCall>) -> Result<()> {
+		let extrinsics = self
+			.extrinsics_factory
+			.create_extrinsics(parentchain_effects.as_slice(), None)?;
+		self.validator_accessor
+			.execute_mut_on_validator(|v| v.send_extrinsics(extrinsics))?;
 		Ok(())
 	}
 
@@ -191,13 +218,15 @@ impl<
 		+ OnBlockImported<Hash = ParentchainBlock::Hash>
 		+ SendState<Hash = ParentchainBlock::Hash>,
 	StateHandler: QueryShardState + HandleState<StateT = StfExecutor::Externalities>,
+	ValidatorAccessor: ValidatorAccess<ParentchainBlock> + Send + Sync + 'static,
+	ExtrinsicsFactory: CreateExtrinsics,
+	NumberFor<ParentchainBlock>: BlockNumberOps,
 {
 	/// We get notified about parentchain block import events.
 	/// This triggers executing calls from the TOP pool (synchronously).
 	fn notify(&self) {
-		// match self.execute(latest_parentchain_header) {
-		// 	Ok(parentchain_effects) => {},
-		// 	Err(e) => {},
-		// }
+		if let Err(e) = self.execute() {
+			error!("Failed to execute trusted calls: {:?}", e);
+		}
 	}
 }
