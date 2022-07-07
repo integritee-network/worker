@@ -5,24 +5,6 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 resolver = "2"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[features]
-default = ["std"]
-std = [
-    "itp-nonce-cache/std",
-    "itp-types/std",
-    "log/std",
-    "substrate-api-client/std",
-    "thiserror",
-]
-sgx = [
-    "itp-nonce-cache/sgx",
-    "sgx_tstd",
-    "thiserror_sgx",
-]
-mocks = []
-
 [dependencies]
 # sgx dependencies
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
@@ -47,3 +29,19 @@ log = { version = "0.4", default-features = false }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+
+[features]
+default = ["std"]
+std = [
+    "itp-nonce-cache/std",
+    "itp-types/std",
+    "log/std",
+    "substrate-api-client/std",
+    "thiserror",
+]
+sgx = [
+    "itp-nonce-cache/sgx",
+    "sgx_tstd",
+    "thiserror_sgx",
+]
+mocks = []

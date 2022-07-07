@@ -4,27 +4,7 @@ version = "0.8.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[features]
-default = ["std"]
-std = [
-    "http",
-    "http_req",
-    "thiserror",
-    "url",
-]
-sgx = [
-    "http-sgx",
-    "http_req-sgx",
-    "sgx_types",
-    "sgx_tstd",
-    "thiserror_sgx",
-    "url_sgx",
-]
-
 [dependencies]
-
 # std dependencies
 http_req = { version = "0.7", optional = true, default-features = false, features = ["rust-tls"] }
 http = { version = "0.2", optional = true }
@@ -44,3 +24,26 @@ base64 = { version = "0.13", default-features = false, features = ["alloc"] }
 serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 log = { version = "0.4", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    # std only
+    "http",
+    "http_req",
+    "thiserror",
+    "url",
+    # no_std
+    "base64/std",
+    "serde/std",
+    "serde_json/std",
+    "log/std",
+]
+sgx = [
+    "http-sgx",
+    "http_req-sgx",
+    "sgx_types",
+    "sgx_tstd",
+    "thiserror_sgx",
+    "url_sgx",
+]
