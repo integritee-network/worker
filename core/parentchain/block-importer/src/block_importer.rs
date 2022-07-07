@@ -29,7 +29,6 @@ use itc_parentchain_light_client::{
 	Validator,
 };
 use itp_extrinsics_factory::CreateExtrinsics;
-use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_settings::node::{PROCESSED_PARENTCHAIN_BLOCK, TEEREX_MODULE};
 use itp_stf_executor::traits::StfUpdateState;
 use itp_types::{OpaqueCall, H256};
@@ -44,15 +43,13 @@ use std::{marker::PhantomData, sync::Arc, vec::Vec};
 pub struct ParentchainBlockImporter<
 	ParentchainBlock,
 	ValidatorAccessor,
-	OCallApi,
 	StfExecutor,
 	ExtrinsicsFactory,
 	IndirectCallsExecutor,
 > where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
-	ValidatorAccessor: ValidatorAccess<ParentchainBlock, OCallApi>,
-	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
+	ValidatorAccessor: ValidatorAccess<ParentchainBlock>,
 	StfExecutor: StfUpdateState,
 	ExtrinsicsFactory: CreateExtrinsics,
 	IndirectCallsExecutor: ExecuteIndirectCalls,
@@ -61,13 +58,12 @@ pub struct ParentchainBlockImporter<
 	stf_executor: Arc<StfExecutor>,
 	extrinsics_factory: Arc<ExtrinsicsFactory>,
 	indirect_calls_executor: Arc<IndirectCallsExecutor>,
-	_phantom: PhantomData<(ParentchainBlock, OCallApi)>,
+	_phantom: PhantomData<ParentchainBlock>,
 }
 
 impl<
 		ParentchainBlock,
 		ValidatorAccessor,
-		OCallApi,
 		StfExecutor,
 		ExtrinsicsFactory,
 		IndirectCallsExecutor,
@@ -75,15 +71,13 @@ impl<
 	ParentchainBlockImporter<
 		ParentchainBlock,
 		ValidatorAccessor,
-		OCallApi,
 		StfExecutor,
 		ExtrinsicsFactory,
 		IndirectCallsExecutor,
 	> where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256, Header = ParentchainHeader>,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
-	ValidatorAccessor: ValidatorAccess<ParentchainBlock, OCallApi>,
-	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
+	ValidatorAccessor: ValidatorAccess<ParentchainBlock>,
 	StfExecutor: StfUpdateState,
 	ExtrinsicsFactory: CreateExtrinsics,
 	IndirectCallsExecutor: ExecuteIndirectCalls,
@@ -107,7 +101,6 @@ impl<
 impl<
 		ParentchainBlock,
 		ValidatorAccessor,
-		OCallApi,
 		StfExecutor,
 		ExtrinsicsFactory,
 		IndirectCallsExecutor,
@@ -115,15 +108,13 @@ impl<
 	for ParentchainBlockImporter<
 		ParentchainBlock,
 		ValidatorAccessor,
-		OCallApi,
 		StfExecutor,
 		ExtrinsicsFactory,
 		IndirectCallsExecutor,
 	> where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256, Header = ParentchainHeader>,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
-	ValidatorAccessor: ValidatorAccess<ParentchainBlock, OCallApi>,
-	OCallApi: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi,
+	ValidatorAccessor: ValidatorAccess<ParentchainBlock>,
 	StfExecutor: StfUpdateState,
 	ExtrinsicsFactory: CreateExtrinsics,
 	IndirectCallsExecutor: ExecuteIndirectCalls,

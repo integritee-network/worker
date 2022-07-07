@@ -89,12 +89,10 @@ pub type EnclaveValidatorAccessor = ValidatorAccessor<
 	LightValidation<ParentchainBlock, EnclaveOCallApi>,
 	ParentchainBlock,
 	LightClientStateSeal<ParentchainBlock, LightValidationState<ParentchainBlock>>,
-	EnclaveOCallApi,
 >;
 pub type EnclaveParentChainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
 	EnclaveValidatorAccessor,
-	EnclaveOCallApi,
 	EnclaveStfExecutor,
 	EnclaveExtrinsicsFactory,
 	EnclaveIndirectCallsExecutor,
