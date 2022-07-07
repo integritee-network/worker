@@ -124,7 +124,6 @@ env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx" }
 getrandom = { git = "https://github.com/integritee-network/getrandom-sgx", branch = "update-v2.3"}
 
 [patch."https://github.com/paritytech/substrate"]
-env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx" }
 sp-io = { git = "https://github.com/integritee-network/sgx-runtime", branch = "master"}
 #sp-io = { path = "../../sgx-runtime/substrate-sgx/sp-io"}
 
