@@ -124,9 +124,6 @@ env_logger = { git = "https://github.com/integritee-network/env_logger-sgx" }
 getrandom = { git = "https://github.com/integritee-network/getrandom-sgx", branch = "update-v2.3"}
 log = { git = "https://github.com/integritee-network/log-sgx" }
 
-[patch."https://github.com/mesalock-linux/env_logger-sgx"]
-env_logger = { git = "https://github.com/integritee-network/env_logger-sgx" }
-
 [patch."https://github.com/mesalock-linux/log-sgx"]
 log = { git = "https://github.com/integritee-network/log-sgx"}
 
