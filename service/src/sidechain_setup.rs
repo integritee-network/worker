@@ -22,6 +22,7 @@ use crate::{
 use futures::executor::block_on;
 use itp_enclave_api::{
 	direct_request::DirectRequest, enclave_base::EnclaveBase, sidechain::Sidechain,
+	teerex_api::TeerexApi,
 };
 use itp_node_api_extensions::ParentchainApi;
 use itp_settings::{
@@ -63,7 +64,7 @@ pub(crate) fn sidechain_init_block_production<Enclave, SidechainStorage>(
 	last_synced_header: &Header,
 ) -> Header
 where
-	Enclave: EnclaveBase + Sidechain,
+	Enclave: EnclaveBase + Sidechain + TeerexApi,
 	SidechainStorage: BlockPruner + FetchBlocks<SignedSidechainBlock> + Sync + Send + 'static,
 {
 	// If we're the first validateer to register, also trigger parentchain block import.

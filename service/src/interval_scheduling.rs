@@ -15,12 +15,17 @@
 
 */
 
+use std::{
+	thread,
+	time::{Duration, Instant},
+};
+
 /// Schedules a task on perpetually looping intervals.
 ///
 /// In case the task takes longer than is scheduled by the interval duration,
 /// the interval timing will drift. The task is responsible for
 /// ensuring it does not use up more time than is scheduled.
-fn schedule_on_repeating_intervals<T>(task: T, interval_duration: Duration)
+pub(crate) fn schedule_on_repeating_intervals<T>(task: T, interval_duration: Duration)
 where
 	T: Fn(),
 {

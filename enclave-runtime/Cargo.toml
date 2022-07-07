@@ -15,6 +15,7 @@ crate-type = ["staticlib"]
 [features]
 default = []
 production = ["itp-settings/production"]
+sidechain = ["itp-settings/sidechain"]
 test = [
     "ita-stf/test",
     "itc-parentchain/mocks",

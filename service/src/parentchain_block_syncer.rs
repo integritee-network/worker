@@ -16,11 +16,13 @@
 
 */
 
-use itp_enclave_api::sidechain::Sidechain;
+use crate::error::Error;
+use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain, teerex_api::TeerexApi};
 use itp_node_api_extensions::ChainApi;
 use itp_types::SignedBlock;
-use log::{error, trace};
+use log::*;
 use my_node_runtime::Header;
+use sp_runtime::traits::Header as HeaderTrait;
 use std::{cmp::min, sync::Arc};
 
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;

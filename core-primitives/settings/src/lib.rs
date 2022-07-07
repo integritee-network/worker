@@ -81,6 +81,20 @@ pub mod worker {
 	// Should be set to a value that ensures that the enclave can register itself
 	// and that the worker can start.
 	pub const REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS: u128 = 10;
+
+	#[derive(Eq, PartialEq, Debug, Clone)]
+	pub enum WorkerMode {
+		Unknown,
+		OffChainWorker,
+		Sidechain,
+		Oracle,
+	}
+
+	#[cfg(not(feature = "sidechain"))]
+	pub const WORKER_MODE: WorkerMode = WorkerMode::OffChainWorker;
+
+	#[cfg(feature = "sidechain")]
+	pub const WORKER_MODE: WorkerMode = WorkerMode::Sidechain;
 }
 
 pub mod sidechain {
@@ -98,8 +112,6 @@ pub mod enclave {
 	pub static MAX_TRUSTED_GETTERS_EXEC_DURATION: Duration = Duration::from_millis(150);
 	pub static TRUSTED_GETTERS_SLOT_DURATION: Duration = Duration::from_millis(400);
 }
-
-pub mod worker_mode {}
 
 /// Settings concerning the node
 pub mod node {

@@ -29,6 +29,7 @@ use crate::{
 	initialized_service::{
 		start_is_initialized_server, InitializationHandler, IsInitialized, TrackInitialization,
 	},
+	interval_scheduling::schedule_on_repeating_intervals,
 	ocall_bridge::{
 		bridge_api::Bridge as OCallBridge, component_factory::OCallBridgeComponentFactory,
 	},
@@ -47,7 +48,6 @@ use enclave::{
 	api::enclave_init,
 	tls_ra::{enclave_request_state_provisioning, enclave_run_state_provisioning_server},
 };
-use futures::executor::block_on;
 use itc_parentchain_light_client::light_client_init_params::LightClientInitParams;
 use itp_enclave_api::{
 	direct_request::DirectRequest,
@@ -62,16 +62,13 @@ use itp_node_api_extensions::{
 	AccountApi, ChainApi, PalletTeerexApi, ParentchainApi,
 };
 use itp_settings::{
-	files::{SIDECHAIN_PURGE_INTERVAL, SIDECHAIN_PURGE_LIMIT, SIDECHAIN_STORAGE_PATH},
-	sidechain::SLOT_DURATION,
+	files::SIDECHAIN_STORAGE_PATH,
+	worker::{WorkerMode, WORKER_MODE},
 };
-use its_consensus_slots::start_slot_worker;
 use its_peer_fetch::{
 	block_fetch_client::BlockFetcher, untrusted_peer_fetch::UntrustedPeerFetcher,
 };
-use its_storage::{
-	interface::FetchBlocks, start_sidechain_pruning_loop, BlockPruner, SidechainStorageLock,
-};
+use its_storage::{interface::FetchBlocks, BlockPruner, SidechainStorageLock};
 use log::*;
 use my_node_runtime::{Event, Hash, Header};
 use sgx_types::*;
@@ -87,11 +84,10 @@ use std::{
 		Arc,
 	},
 	thread,
-	time::{Duration, Instant},
+	time::Duration,
 };
 use substrate_api_client::{utils::FromHexString, Header as HeaderTrait, XtStatus};
 use teerex_primitives::ShardIdentifier;
-use tokio::runtime::Handle;
 
 mod account_funding;
 mod config;
@@ -364,13 +360,14 @@ fn start_worker<E, T, D, InitializationHandler>(
 	// ------------------------------------------------------------------------
 	// Start untrusted worker rpc server.
 	// i.e move sidechain block importing to trusted worker.
-	#[cfg(feature = "sidechain")]
-	sidechain_start_untrusted_rpc_server(
-		&config,
-		enclave.clone(),
-		sidechain_storage.clone(),
-		tokio_handle,
-	);
+	if WORKER_MODE == WorkerMode::Sidechain {
+		sidechain_start_untrusted_rpc_server(
+			&config,
+			enclave.clone(),
+			sidechain_storage.clone(),
+			tokio_handle,
+		);
+	}
 
 	// ------------------------------------------------------------------------
 	// Perform a remote attestation and get an unchecked extrinsic back.
@@ -427,15 +424,18 @@ fn start_worker<E, T, D, InitializationHandler>(
 		Arc::new(ParentchainBlockSyncer::new(node_api.clone(), enclave.clone()));
 	let mut last_synced_header = parentchain_block_syncer.sync_parentchain(last_synced_header);
 
-	#[cfg(feature = "sidechain")]
-	last_synced_header = sidechain_init_block_production(
-		enclave.clone(),
-		&register_enclave_xt_header,
-		we_are_primary_validateer,
-		parentchain_block_syncer,
-		sidechain_storage,
-		&last_synced_header,
-	);
+	// ------------------------------------------------------------------------
+	// initialize the sidechain
+	if WORKER_MODE == WorkerMode::Sidechain {
+		last_synced_header = sidechain_init_block_production(
+			enclave.clone(),
+			&register_enclave_xt_header,
+			we_are_primary_validateer,
+			parentchain_block_syncer,
+			sidechain_storage,
+			&last_synced_header,
+		);
+	}
 
 	// ------------------------------------------------------------------------
 	// start parentchain syncing loop (subscribe to header updates)
