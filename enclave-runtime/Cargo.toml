@@ -54,7 +54,7 @@ ipfs-unixfs = { default-features = false, git = "https://github.com/whalelephant
 # scs / integritee
 itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master", features = ["sgx"] }
 itp-utils = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master", features = ["sgx"] }
-jsonrpc-core = { default-features = false, git = "https://github.com/scs/jsonrpc", branch = "no_std" }
+jsonrpc-core = { default-features = false, git = "https://github.com/scs/jsonrpc", branch = "no_std_v18" }
 sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master", features = ["sgx"] }
 sgx-runtime = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master"}
 sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
