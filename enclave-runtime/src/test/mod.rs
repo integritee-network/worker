@@ -17,6 +17,8 @@
 */
 
 pub mod cert_tests;
+#[cfg(feature = "evm")]
+pub mod evm_pallet_tests;
 pub mod fixtures;
 pub mod ipfs_tests;
 pub mod mocks;
