@@ -76,7 +76,7 @@ fn set_sudo_account(state: &mut SgxExternalities, account_encoded: &[u8]) {
 	})
 }
 
-fn endow(
+pub fn endow(
 	state: &mut SgxExternalities,
 	endowees: impl IntoIterator<Item = (AccountId32, Balance, Balance)>,
 ) {

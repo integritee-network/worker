@@ -106,7 +106,6 @@ pub fn get_account_info(who: &AccountId) -> Option<AccountInfo> {
 }
 
 pub fn validate_nonce(who: &AccountId, nonce: Index) -> StfResult<()> {
-	// validate
 	let expected_nonce = match get_account_info(who) {
 		None => {
 			info!(
