@@ -397,8 +397,36 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		);
 		enclave.mock_register_xt(node_api.genesis_hash, nonce, &trusted_url).unwrap()
 	} else {
+		let mut quoting_enclave_target_info: sgx_target_info_t = sgx_target_info_t::default();
+		let _l = unsafe { libloading::Library::new("./libdcap_quoteprov.so.1").unwrap() };
+		println!("Step1: Call sgx_qe_get_target_info:");
+		let qe3_ret = unsafe { sgx_qe_get_target_info(&mut quoting_enclave_target_info as *mut _) };
+		if qe3_ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
+			panic!(
+				"Could not create attestation report: Error in sgx_qe_get_target_info. {:?}\n",
+				qe3_ret
+			);
+		}
+
+		// For debugging
+		let quote_size = std::mem::size_of::<sgx_target_info_t>();
+		let mut quote_vector: Vec<u8> = vec![0; quote_size];
+		unsafe {
+			std::ptr::copy_nonoverlapping(
+				&quoting_enclave_target_info as *const sgx_target_info_t as *const u8,
+				quote_vector.as_mut_ptr() as *mut u8,
+				quote_size,
+			);
+		}
+		println!("quote = {:?}", quote_vector);
+
 		enclave
-			.perform_dcap_ra(genesis_hash, nonce, trusted_url.as_bytes().to_vec())
+			.perform_dcap_ra(
+				genesis_hash,
+				nonce,
+				trusted_url.as_bytes().to_vec(),
+				&quoting_enclave_target_info,
+			)
 			.unwrap()
 	};
 
