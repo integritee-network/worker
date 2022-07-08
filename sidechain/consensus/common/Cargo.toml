@@ -4,34 +4,9 @@ version = "0.8.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 
-[features]
-default = ["std"]
-std = [
-    "codec/std",
-    "log/std",
-    "thiserror",
-    # local
-    "itp-block-import-queue/std",
-    "itp-ocall-api/std",
-    "itp-sgx-crypto/std",
-    "itp-types/std",
-    "sidechain-primitives/std",
-    "its-state/std",
-    # substrate
-    "sp-runtime/std",
-]
-sgx = [
-    "sgx_tstd",
-    "thiserror-sgx",
-    # local
-    "itp-block-import-queue/sgx",
-    "itp-sgx-crypto/sgx",
-    "its-state/sgx",
-]
-
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
-log = { version = "0.4.17", default-features = false }
+log = { version = "0.4", default-features = false }
 thiserror = { version = "1.0.26", optional = true }
 
 # local deps
@@ -62,3 +37,28 @@ sp-core = { default-features = false, features = ["full_crypto"], git = "https:/
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 # integritee / scs
 sgx-externalities = { git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "log/std",
+    "thiserror",
+    # local
+    "itp-block-import-queue/std",
+    "itp-ocall-api/std",
+    "itp-sgx-crypto/std",
+    "itp-types/std",
+    "sidechain-primitives/std",
+    "its-state/std",
+    # substrate
+    "sp-runtime/std",
+]
+sgx = [
+    "sgx_tstd",
+    "thiserror-sgx",
+    # local
+    "itp-block-import-queue/sgx",
+    "itp-sgx-crypto/sgx",
+    "its-state/sgx",
+]

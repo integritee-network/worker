@@ -2282,8 +2282,8 @@ dependencies = [
  "itp-rpc",
  "itp-types",
  "itp-utils",
- "jsonrpc-core 16.1.0",
- "jsonrpc-core 18.0.0",
+ "jsonrpc-core 18.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jsonrpc-core 18.0.0 (git+https://github.com/scs/jsonrpc?branch=no_std_v18)",
  "log 0.4.17",
  "parity-scale-codec",
  "serde_json 1.0.81",
@@ -2780,8 +2780,8 @@ dependencies = [
  "itp-teerex-storage",
  "itp-time-utils",
  "itp-types",
- "jsonrpc-core 16.1.0",
- "jsonrpc-core 18.0.0",
+ "jsonrpc-core 18.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jsonrpc-core 18.0.0 (git+https://github.com/scs/jsonrpc?branch=no_std_v18)",
  "parity-scale-codec",
  "sgx-externalities",
  "sgx_crypto_helper",
@@ -2808,8 +2808,8 @@ dependencies = [
  "ita-stf",
  "itc-direct-rpc-server",
  "itp-types",
- "jsonrpc-core 16.1.0",
- "jsonrpc-core 18.0.0",
+ "jsonrpc-core 18.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jsonrpc-core 18.0.0 (git+https://github.com/scs/jsonrpc?branch=no_std_v18)",
  "linked-hash-map 0.5.2",
  "linked-hash-map 0.5.4",
  "log 0.4.17",
@@ -2843,8 +2843,8 @@ dependencies = [
  "itp-top-pool",
  "itp-types",
  "itp-utils",
- "jsonrpc-core 16.1.0",
- "jsonrpc-core 18.0.0",
+ "jsonrpc-core 18.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jsonrpc-core 18.0.0 (git+https://github.com/scs/jsonrpc?branch=no_std_v18)",
  "log 0.4.17",
  "parity-scale-codec",
  "sgx_crypto_helper",
@@ -3029,8 +3029,8 @@ dependencies = [
  "itp-top-pool-author",
  "itp-types",
  "itp-utils",
- "jsonrpc-core 16.1.0",
- "jsonrpc-core 18.0.0",
+ "jsonrpc-core 18.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jsonrpc-core 18.0.0 (git+https://github.com/scs/jsonrpc?branch=no_std_v18)",
  "log 0.4.17",
  "parity-scale-codec",
  "rust-base58 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3173,19 +3173,6 @@ checksum = "078e285eafdfb6c4b434e0d31e8cfcb5115b651496faca5749b88fafd4f23bfd"
 
 [[package]]
 name = "jsonrpc-core"
-version = "16.1.0"
-source = "git+https://github.com/scs/jsonrpc?branch=no_std#694656d8153005de90c849fce2633586849846e4"
-dependencies = [
- "futures 0.3.8",
- "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
- "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx)",
- "serde_derive 1.0.118",
- "serde_json 1.0.60 (git+https://github.com/mesalock-linux/serde-json-sgx)",
- "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=master)",
-]
-
-[[package]]
-name = "jsonrpc-core"
 version = "18.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "14f7f76aef2d054868398427f6c54943cf3d1caa9a7ec7d0c38d69df97a965eb"
@@ -3197,6 +3184,19 @@ dependencies = [
  "serde 1.0.137",
  "serde_derive 1.0.137",
  "serde_json 1.0.81",
+]
+
+[[package]]
+name = "jsonrpc-core"
+version = "18.0.0"
+source = "git+https://github.com/scs/jsonrpc?branch=no_std_v18#eb7cdf49c0e5d35174f972743a7e3ff460aadedc"
+dependencies = [
+ "futures 0.3.8",
+ "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
+ "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx)",
+ "serde_derive 1.0.118",
+ "serde_json 1.0.60 (git+https://github.com/mesalock-linux/serde-json-sgx)",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=master)",
 ]
 
 [[package]]
@@ -6597,7 +6597,7 @@ dependencies = [
 [[package]]
 name = "sp-std"
 version = "4.0.0"
-source = "git+https://github.com/paritytech/substrate.git?branch=master#622f532e605270c9d4f932aea666073e409e02f9"
+source = "git+https://github.com/paritytech/substrate.git?branch=master#6c5ac3168d7ce4810648d667969c82b1db9950ac"
 
 [[package]]
 name = "sp-std"
