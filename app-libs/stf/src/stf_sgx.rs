@@ -18,9 +18,6 @@
 #[cfg(feature = "test")]
 use crate::test_genesis::test_genesis_setup;
 
-#[cfg(feature = "evm")]
-use crate::evm_helpers::{get_evm_account_codes, get_evm_account_storages};
-
 use crate::{
 	helpers::{
 		account_data, account_nonce, enclave_signer_account, ensure_enclave_signer_account,
@@ -43,6 +40,15 @@ use sp_io::hashing::blake2_256;
 use sp_runtime::MultiAddress;
 use std::{format, prelude::v1::*, vec};
 use support::traits::UnfilteredDispatchable;
+
+#[cfg(feature = "evm")]
+use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
+
+#[cfg(feature = "evm")]
+use crate::evm_helpers::{
+	create_code_hash, evm_create2_address, evm_create_address, get_evm_account,
+	get_evm_account_codes, get_evm_account_storages,
+};
 
 impl Stf {
 	pub fn init_state(enclave_account: AccountId) -> State {
@@ -118,6 +124,24 @@ impl Stf {
 					} else {
 						None
 					},
+				#[cfg(feature = "evm")]
+				TrustedGetter::evm_nonce(who) => {
+					let evm_account = get_evm_account(&who);
+					let evm_account = HashedAddressMapping::into_account_id(evm_account);
+					let maybe_nonce = if let Some(info) = get_account_info(&evm_account) {
+						debug!("TrustedGetter evm_nonce");
+						debug!(
+							"AccountInfo for {} is {:?}",
+							account_id_to_string(&evm_account),
+							info
+						);
+						debug!("Account nonce is {}", info.nonce);
+						Some(info.nonce.encode())
+					} else {
+						None
+					};
+					maybe_nonce
+				},
 				#[cfg(feature = "evm")]
 				TrustedGetter::evm_account_codes(_who, evm_account) =>
 				// TODO: This probably needs some security check if who == evm_account (or assosciated)
@@ -285,6 +309,8 @@ impl Stf {
 						source,
 						value
 					);
+					let nonce_evm_account =
+						account_nonce(&HashedAddressMapping::into_account_id(source));
 					ita_sgx_runtime::EvmCall::<Runtime>::create {
 						source,
 						init,
@@ -297,6 +323,8 @@ impl Stf {
 					}
 					.dispatch_bypass_filter(ita_sgx_runtime::Origin::signed(from))
 					.map_err(|e| StfError::Dispatch(format!("Evm Create error: {:?}", e.error)))?;
+					let contract_address = evm_create_address(source, nonce_evm_account);
+					info!("Trying to create evm contract with address {:?}", contract_address);
 					Ok(())
 				},
 				#[cfg(feature = "evm")]
@@ -318,6 +346,7 @@ impl Stf {
 						source,
 						value
 					);
+					let code_hash = create_code_hash(&init);
 					ita_sgx_runtime::EvmCall::<Runtime>::create2 {
 						source,
 						init,
@@ -331,6 +360,8 @@ impl Stf {
 					}
 					.dispatch_bypass_filter(ita_sgx_runtime::Origin::signed(from))
 					.map_err(|e| StfError::Dispatch(format!("Evm Create2 error: {:?}", e.error)))?;
+					let contract_address = evm_create2_address(source, salt, code_hash);
+					info!("Trying to create evm contract with address {:?}", contract_address);
 					Ok(())
 				},
 			}?;

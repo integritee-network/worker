@@ -26,6 +26,12 @@ use sp_runtime::MultiAddress;
 use std::{format, vec, vec::Vec};
 use support::traits::UnfilteredDispatchable;
 
+#[cfg(feature = "evm")]
+use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
+
+#[cfg(feature = "evm")]
+use crate::evm_helpers::get_evm_account;
+
 type Seed = [u8; 32];
 
 const ALICE_ENCODED: Seed = [
@@ -57,7 +63,7 @@ pub fn test_genesis_setup(state: &mut SgxExternalities) {
 	set_sudo_account(state, &ALICE_ENCODED);
 	trace!("Set new sudo account: {:?}", &ALICE_ENCODED);
 
-	let endowees: Vec<(AccountId32, Balance, Balance)> = vec![
+	let mut endowees: Vec<(AccountId32, Balance, Balance)> = vec![
 		(endowed_account().public().into(), ENDOWED_ACC_FUNDS, ENDOWED_ACC_FUNDS),
 		(
 			second_endowed_account().public().into(),
@@ -67,8 +73,22 @@ pub fn test_genesis_setup(state: &mut SgxExternalities) {
 		(ALICE_ENCODED.into(), ALICE_FUNDS, ALICE_FUNDS),
 	];
 
+	fund_alice_evm_account(&mut endowees);
+
 	endow(state, endowees);
 }
+
+#[cfg(feature = "evm")]
+fn fund_alice_evm_account(endowees: &mut Vec<(AccountId32, Balance, Balance)>) {
+	let alice_evm = get_evm_account(&ALICE_ENCODED.into());
+	let alice_evm_substrate_version = HashedAddressMapping::into_account_id(alice_evm);
+	let mut other: Vec<(AccountId32, Balance, Balance)> =
+		vec![(alice_evm_substrate_version, ALICE_FUNDS, ALICE_FUNDS)];
+	endowees.append(other.as_mut());
+}
+
+#[cfg(not(feature = "evm"))]
+fn fund_alice_evm_account(_: &mut Vec<(AccountId32, Balance, Balance)>) {}
 
 fn set_sudo_account(state: &mut SgxExternalities, account_encoded: &[u8]) {
 	state.execute_with(|| {

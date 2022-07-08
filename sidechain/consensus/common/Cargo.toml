@@ -51,6 +51,9 @@ std = [
     "itp-ocall-api/std",
     "itp-sgx-crypto/std",
     "itp-sgx-externalities/std",
+    "itp-types/std",
+    "sidechain-primitives/std",
+    "sidechain-block-verification/std",
     "its-state/std",
     # substrate
     "sp-runtime/std",
