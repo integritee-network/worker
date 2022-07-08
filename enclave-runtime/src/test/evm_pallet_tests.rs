@@ -17,10 +17,12 @@
 use crate::test::tests_main::test_setup;
 use core::str::FromStr;
 use ita_stf::{
+	helpers::account_data,
 	test_genesis::{endow, endowed_account as funded_pair},
 	Stf, TrustedCall,
 };
 use itp_types::AccountId;
+use sgx_externalities::SgxExternalitiesTrait;
 use sgx_runtime::AddressMapping;
 use sp_core::{crypto::Pair, H160, U256};
 use std::vec::Vec;
@@ -30,26 +32,33 @@ pub fn test_evm_call() {
 	let (_, mut state, shard, mrenclave, _, _) = test_setup();
 	let mut opaque_vec = Vec::new();
 
+	// Create the sender account.
 	let sender = funded_pair();
 	let sender_acc: AccountId = sender.public().into();
-
 	let mut sender_evm_acc_slice: [u8; 20] = [0; 20];
 	sender_evm_acc_slice
 		.copy_from_slice((<[u8; 32]>::from(sender_acc.clone())).get(0..20).unwrap());
 	let sender_evm_acc: H160 = sender_evm_acc_slice.into();
-
 	// Ensure the substrate version of the evm account has some money.
 	let sender_evm_substrate_addr =
 		sgx_runtime::HashedAddressMapping::into_account_id(sender_evm_acc);
-	endow(&mut state, vec![(sender_evm_substrate_addr, 21_777_000_000_000, 0)]);
+	endow(&mut state, vec![(sender_evm_substrate_addr, 51_777_000_000_000, 0)]);
+
+	// Create the receiver account.
+	let destination_evm_acc = H160::from_str("1000000000000000000000000000000000000001").unwrap();
+	let destination_evm_substrate_addr =
+		sgx_runtime::HashedAddressMapping::into_account_id(destination_evm_acc);
+	assert!(state.execute_with(|| account_data(&destination_evm_substrate_addr).is_none()));
+
+	let transfer_value: u128 = 1_000_000_000;
 
 	let trusted_call = TrustedCall::evm_call(
 		sender_acc,
 		sender_evm_acc,
-		H160::from_str("1000000000000000000000000000000000000001").unwrap(),
+		destination_evm_acc,
 		Vec::new(),
-		U256::from(1_000_000_000),
-		21776,
+		U256::from(transfer_value),
+		21776, // gas limit
 		U256::from(1_000_000_000),
 		None,
 		Some(U256::from(0)),
@@ -57,5 +66,12 @@ pub fn test_evm_call() {
 	)
 	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
 
-	let result = Stf::execute(&mut state, trusted_call, &mut opaque_vec).unwrap();
+	// when
+	Stf::execute(&mut state, trusted_call, &mut opaque_vec).unwrap();
+
+	// then
+	assert_eq!(
+		transfer_value,
+		state.execute_with(|| account_data(&destination_evm_substrate_addr).unwrap().free)
+	);
 }
