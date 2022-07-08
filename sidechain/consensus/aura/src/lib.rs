@@ -38,6 +38,7 @@ use itp_time_utils::duration_now;
 use its_consensus_common::{Environment, Error as ConsensusError, Proposer};
 use its_consensus_slots::{SimpleSlotWorker, Slot, SlotInfo};
 use its_validateer_fetch::ValidateerFetch;
+use sidechain_block_verification::slot::slot_author;
 use sidechain_primitives::{
 	traits::{Block as SidechainBlockTrait, Header as HeaderTrait, SignedBlock},
 	types::block::BlockHash,
@@ -264,26 +265,6 @@ where
 		.into_iter()
 		.filter_map(|e| AuthorityId::<P>::from_slice(e.pubkey.as_ref()).ok())
 		.collect())
-}
-
-/// Get slot author for given block along with authorities.
-fn slot_author<P: Pair>(slot: Slot, authorities: &[AuthorityId<P>]) -> Option<&AuthorityId<P>> {
-	if authorities.is_empty() {
-		log::warn!("Authorities list is empty, cannot determine slot author");
-		return None
-	}
-
-	let idx = *slot % (authorities.len() as u64);
-	assert!(
-		idx <= usize::MAX as u64,
-		"It is impossible to have a vector with length beyond the address space; qed",
-	);
-
-	let current_author = authorities.get(idx as usize).expect(
-		"authorities not empty; index constrained to list length;this is a valid index; qed",
-	);
-
-	Some(current_author)
 }
 
 #[cfg(test)]

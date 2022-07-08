@@ -70,8 +70,8 @@ std = [
    "its-validateer-fetch/std",
    "log/std",
    "sgx-externalities/std",
-   "sidechain-primitives/std",
    "sidechain-block-verification/std",
+   "sidechain-primitives/std",
 ]
 sgx = [
    "sgx_tstd",

@@ -25,6 +25,7 @@ use itp_sgx_io::StaticSealedIO;
 use itp_time_utils::duration_now;
 use its_consensus_common::Error as ConsensusError;
 use log::warn;
+use sidechain_block_verification::slot::slot_from_timestamp_and_duration;
 use sidechain_primitives::traits::{
 	Block as SidechainBlockTrait, BlockData, SignedBlock as SignedSidechainBlockTrait,
 };
@@ -111,10 +112,6 @@ pub(crate) fn timestamp_within_slot<
 	}
 
 	is_within_slot
-}
-
-pub fn slot_from_timestamp_and_duration(timestamp: Duration, duration: Duration) -> Slot {
-	((timestamp.as_millis() / duration.as_millis()) as u64).into()
 }
 
 pub fn yield_next_slot<SlotGetter, ParentchainBlock>(

@@ -56,6 +56,7 @@ std = [
     "itp-time-utils/std",
     "itp-types/std",
     "its-consensus-common/std",
+    "sidechain-block-verification/std",
     "sidechain-primitives/std",
 ]
 sgx = [

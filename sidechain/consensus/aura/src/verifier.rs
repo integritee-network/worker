@@ -20,10 +20,11 @@ use core::marker::PhantomData;
 use frame_support::ensure;
 use itp_utils::stringify::public_to_string;
 use its_consensus_common::{Error as ConsensusError, Verifier};
-use its_consensus_slots::{slot_from_timestamp_and_duration, Slot};
+use its_consensus_slots::Slot;
 use its_state::LastBlockExt;
 use its_validateer_fetch::ValidateerFetch;
 use log::*;
+use sidechain_block_verification::slot::slot_from_timestamp_and_duration;
 use sidechain_primitives::{
 	traits::{
 		Block as SidechainBlockTrait, BlockData, Header as HeaderTrait,
