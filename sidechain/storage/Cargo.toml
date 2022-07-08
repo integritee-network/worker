@@ -24,7 +24,7 @@ sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polka
 mockall = { version = "0.10.1" }
 temp-dir = "0.1"
 # local
-its-test = { path = "../test" }
+sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 itp-time-utils = { path = "../../core-primitives/time-utils" }
 
 [features]

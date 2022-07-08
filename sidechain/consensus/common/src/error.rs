@@ -63,6 +63,8 @@ pub enum Error {
 	BlockAlreadyImported(BlockNumber, BlockNumber),
 	#[error("Failed to pop from block import queue: {0}")]
 	FailedToPopBlockImportQueue(#[from] itp_block_import_queue::error::Error),
+	#[error("Verification Error: {0}")]
+	VerificationError(#[from] sidechain_block_verification::error::Error),
 }
 
 impl core::convert::From<std::io::Error> for Error {

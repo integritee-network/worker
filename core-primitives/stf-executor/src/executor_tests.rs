@@ -27,11 +27,9 @@ use ita_stf::{
 };
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_stf_state_handler::handle_state::HandleState;
-use itp_test::{
-	builders::parentchain_header_builder::ParentchainHeaderBuilder,
-	mock::{handle_state_mock::HandleStateMock, onchain_mock::OnchainMock},
-};
+use itp_test::mock::{handle_state_mock::HandleStateMock, onchain_mock::OnchainMock};
 use itp_types::H256;
+use parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 use sgx_externalities::SgxExternalitiesTrait;
 use sgx_tstd::panic;
 use sp_core::Pair;

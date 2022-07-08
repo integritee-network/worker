@@ -76,7 +76,6 @@ sgx = [
     "itp-sgx-crypto/sgx",
     "itp-stf-state-handler/sgx",
     "itp-top-pool/sgx",
-    "itp-types/sgx",
     "itp-utils/sgx",
     "thiserror_sgx",
 ]

@@ -201,15 +201,15 @@ mod tests {
 	use super::*;
 	use core::assert_matches::assert_matches;
 	use itp_sgx_io::StaticSealedIO;
-	use itp_test::builders::parentchain_header_builder::ParentchainHeaderBuilder;
 	use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader};
-	use its_test::{
-		sidechain_block_data_builder::SidechainBlockDataBuilder,
-		sidechain_header_builder::SidechainHeaderBuilder,
-	};
+	use parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 	use sidechain_primitives::{
 		traits::{Block as BlockT, SignBlock},
 		types::block::{Block, SignedBlock},
+	};
+	use sidechain_test::{
+		sidechain_block_data_builder::SidechainBlockDataBuilder,
+		sidechain_header_builder::SidechainHeaderBuilder,
 	};
 	use sp_keyring::ed25519::Keyring;
 	use std::{fmt::Debug, thread, time::SystemTime};

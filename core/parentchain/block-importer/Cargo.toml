@@ -61,7 +61,6 @@ sgx = [
     "itc-parentchain-light-client/sgx",
     "itp-extrinsics-factory/sgx",
     "itp-stf-executor/sgx",
-    "itp-types/sgx",
     # sgx enabled external libraries
     "thiserror_sgx",
 ]

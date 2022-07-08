@@ -68,6 +68,5 @@ sgx = [
     "thiserror-sgx",
     "itp-sgx-io/sgx",
     "itp-storage/sgx",
-    "itp-types/sgx",
 ]
 mocks = []

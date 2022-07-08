@@ -37,13 +37,7 @@ use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::node::{SHIELD_FUNDS, TEEREX_MODULE};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_stf_executor::enclave_signer::StfEnclaveSigner;
-use itp_test::{
-	builders::{
-		parentchain_block_builder::ParentchainBlockBuilder,
-		parentchain_header_builder::ParentchainHeaderBuilder,
-	},
-	mock::metrics_ocall_mock::MetricsOCallMock,
-};
+use itp_test::mock::metrics_ocall_mock::MetricsOCallMock;
 use itp_top_pool_author::{author::AuthorTopFilter, traits::AuthorApi};
 use itp_types::{
 	AccountId, Block, ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder,
@@ -51,6 +45,10 @@ use itp_types::{
 };
 use jsonrpc_core::futures::executor;
 use log::*;
+use parentchain_test::{
+	parentchain_block_builder::ParentchainBlockBuilder,
+	parentchain_header_builder::ParentchainHeaderBuilder,
+};
 use sgx_crypto_helper::RsaKeyPair;
 use sp_core::{ed25519, Pair};
 use sp_runtime::{MultiSignature, OpaqueExtrinsic};

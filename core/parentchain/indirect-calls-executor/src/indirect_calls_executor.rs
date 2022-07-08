@@ -174,14 +174,12 @@ mod test {
 	use super::*;
 	use itp_sgx_crypto::mocks::KeyRepositoryMock;
 	use itp_stf_executor::mocks::StfEnclaveSignerMock;
-	use itp_test::{
-		builders::parentchain_block_builder::ParentchainBlockBuilder,
-		mock::shielding_crypto_mock::ShieldingCryptoMock,
-	};
+	use itp_test::mock::shielding_crypto_mock::ShieldingCryptoMock;
 	use itp_top_pool_author::mocks::AuthorApiMock;
 	use itp_types::{
 		ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder, Request, ShardIdentifier,
 	};
+	use parentchain_test::parentchain_block_builder::ParentchainBlockBuilder;
 	use sp_core::{ed25519, Pair};
 	use sp_runtime::{MultiSignature, OpaqueExtrinsic};
 	use std::assert_matches::assert_matches;

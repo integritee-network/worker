@@ -65,7 +65,6 @@ sgx = [
     "itp-stf-executor/sgx",
     "itp-time-utils/sgx",
     "itp-top-pool-author/sgx",
-    "itp-types/sgx",
     "its-state/sgx",
     "thiserror_sgx",
 ]
