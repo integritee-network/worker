@@ -50,13 +50,13 @@ std = [
     "itp-block-import-queue/std",
     "itp-ocall-api/std",
     "itp-sgx-crypto/std",
-    "itp-types/std",
-    "sidechain-primitives/std",
     "its-state/std",
     # substrate
     "sp-runtime/std",
     # scs
+    "itp-types/std",
     "sidechain-block-verification/std",
+    "sidechain-primitives/std",
 ]
 sgx = [
     "sgx_tstd",
