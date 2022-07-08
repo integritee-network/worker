@@ -20,10 +20,9 @@ use core::marker::PhantomData;
 use its_consensus_common::{Error as ConsensusError, Verifier};
 use its_state::LastBlockExt;
 use its_validateer_fetch::ValidateerFetch;
-use log::*;
-use sidechain_block_verification::{error::Error as VerificationError, verify_sidechain_block};
+use sidechain_block_verification::verify_sidechain_block;
 use sidechain_primitives::{
-	traits::{Block as SidechainBlockTrait, Header, SignedBlock as SignedSidechainBlockTrait},
+	traits::{Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait},
 	types::block::BlockHash,
 };
 use sp_runtime::{app_crypto::Pair, traits::Block as ParentchainBlockTrait};
@@ -67,35 +66,15 @@ where
 		parentchain_header: &ParentchainBlock::Header,
 		ctx: &Self::Context,
 	) -> Result<Self::BlockImportParams, ConsensusError> {
-		let nr = signed_block.block().header().block_number();
-		if let Some(last_block) = self.sidechain_state.get_last_block() {
-			let last_block_nr = last_block.header().block_number();
-			error!("last block {:?} -> {:?}", last_block_nr, nr);
-		} else {
-			error!("first block -> {:?}", nr);
-		}
-
 		let authorities =
 			authorities::<_, AuthorityPair, ParentchainBlock::Header>(ctx, parentchain_header)?;
 
-		match verify_sidechain_block::<AuthorityPair, ParentchainBlock, SignedSidechainBlock>(
+		Ok(verify_sidechain_block::<AuthorityPair, ParentchainBlock, SignedSidechainBlock>(
 			signed_block,
 			self.slot_duration,
 			&self.sidechain_state.get_last_block(),
 			parentchain_header,
 			&authorities,
-		) {
-			Err(e) => match e {
-				VerificationError::BlockAncestryMismatch(a, b, c) =>
-					Err(ConsensusError::BlockAncestryMismatch(a, b, c)),
-				VerificationError::InvalidFirstBlock(a, b) =>
-					Err(ConsensusError::InvalidFirstBlock(a, b)),
-				VerificationError::BlockAlreadyImported(a, b) =>
-					Err(ConsensusError::BlockAlreadyImported(a, b)),
-
-				_ => Err(ConsensusError::VerificationError(e)),
-			},
-			Ok(juhuuu) => Ok(juhuuu),
-		}
+		)?)
 	}
 }
