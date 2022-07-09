@@ -17,7 +17,7 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use crate::{error::Error, exchange_rate_oracle::OracleSource, types::TradingPair, ExchangeRate};
+use crate::{error::Error, exchange_rate_oracle::OracleSource, types::{TradingPair, ExchangeRate}};
 use itc_rest_client::{
 	http_client::{HttpClient, SendWithCertificateVerification},
 	rest_client::RestClient,

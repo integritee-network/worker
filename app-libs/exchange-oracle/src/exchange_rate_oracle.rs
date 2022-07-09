@@ -18,13 +18,12 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use crate::{metrics_exporter::ExportMetrics, Error, GetExchangeRate, TradingPair};
+use crate::{metrics_exporter::ExportMetrics, Error, GetExchangeRate, types::{TradingPair, ExchangeRate}};
 use core::time::Duration;
 use itc_rest_client::{
 	http_client::{HttpClient, SendWithCertificateVerification},
 	rest_client::RestClient,
 };
-use itp_types::ExchangeRate;
 use std::{string::String, sync::Arc, time::Instant};
 use url::Url;
 
