@@ -103,6 +103,8 @@ where
 
 		let latest_imported_block = blocks_to_import.last().map(|b| (*b).clone());
 
+		debug!("Trigger import of all parentchain blocks in queue ({})", blocks_to_import.len());
+
 		self.block_importer
 			.import_parentchain_blocks(blocks_to_import)
 			.map_err(Error::BlockImport)?;
@@ -113,6 +115,11 @@ where
 	fn import_all_but_latest(&self) -> Result<()> {
 		let blocks_to_import =
 			self.import_queue.pop_all_but_last().map_err(Error::BlockImportQueue)?;
+
+		debug!(
+			"Trigger import of all parentchain blocks, except the latest, from queue ({})",
+			blocks_to_import.len()
+		);
 
 		self.block_importer
 			.import_parentchain_blocks(blocks_to_import)

@@ -18,15 +18,15 @@
 
 use crate::test::mocks::types::TestBlockImporter;
 use codec::{Decode, Encode};
-use itp_ocall_api::{EnclaveOnChainOCallApi, EnclaveSidechainOCallApi};
+use itp_ocall_api::{EnclaveOnChainOCallApi, EnclaveSidechainOCallApi, Result};
 use itp_types::{
-	BlockHash, Header as ParentchainHeader, ShardIdentifier, WorkerRequest, WorkerResponse,
+	storage::StorageEntryVerified, BlockHash, Header as ParentchainHeader, ShardIdentifier,
+	WorkerRequest, WorkerResponse, H256,
 };
-use its_sidechain::{
-	consensus_common::BlockImport, primitives::types::SignedBlock as SignedSidechainBlockType,
-};
+use its_sidechain::consensus_common::BlockImport;
 use sgx_types::SgxResult;
-use sp_runtime::OpaqueExtrinsic;
+use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlockType;
+use sp_runtime::{traits::Header as ParentchainHeaderTrait, OpaqueExtrinsic};
 use std::{sync::Arc, vec::Vec};
 
 /// OCallApi mock that routes the proposed sidechain blocks directly to the importer,
@@ -55,6 +55,22 @@ impl EnclaveOnChainOCallApi for ProposeToImportOCallApi {
 		&self,
 		_req: Vec<WorkerRequest>,
 	) -> SgxResult<Vec<WorkerResponse<V>>> {
+		todo!()
+	}
+
+	fn get_storage_verified<H: ParentchainHeaderTrait<Hash = H256>, V: Decode>(
+		&self,
+		_storage_hash: Vec<u8>,
+		_header: &H,
+	) -> Result<StorageEntryVerified<V>> {
+		todo!()
+	}
+
+	fn get_multiple_storages_verified<H: ParentchainHeaderTrait<Hash = H256>, V: Decode>(
+		&self,
+		_storage_hashes: Vec<Vec<u8>>,
+		_header: &H,
+	) -> Result<Vec<StorageEntryVerified<V>>> {
 		todo!()
 	}
 }
@@ -87,7 +103,8 @@ impl EnclaveSidechainOCallApi for ProposeToImportOCallApi {
 
 	fn fetch_sidechain_blocks_from_peer<SignedSidechainBlock: Decode>(
 		&self,
-		_last_known_block_hash: BlockHash,
+		_last_imported_block_hash: BlockHash,
+		_maybe_until_block_hash: Option<BlockHash>,
 		_shard_identifier: ShardIdentifier,
 	) -> SgxResult<Vec<SignedSidechainBlock>> {
 		Ok(Vec::new())

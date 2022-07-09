@@ -52,21 +52,21 @@ fn run_state_provisioning_server(seal_handler: SealHandlerMock) {
 pub fn test_tls_ra_server_client_networking() {
 	let shard = ShardIdentifier::default();
 	let shielding_key = vec![1, 2, 3];
-	let signing_key = vec![5, 2, 3];
+	let state_key = vec![5, 2, 3];
 	let state = vec![5, 2, 3, 10, 21, 0, 9, 1];
 
 	let server_seal_handler = SealHandlerMock::new(
 		Arc::new(RwLock::new(shielding_key.clone())),
-		Arc::new(RwLock::new(signing_key.clone())),
+		Arc::new(RwLock::new(state_key.clone())),
 		Arc::new(RwLock::new(state.clone())),
 	);
 	let client_shielding_key = Arc::new(RwLock::new(Vec::new()));
-	let client_signing_key = Arc::new(RwLock::new(Vec::new()));
+	let client_state_key = Arc::new(RwLock::new(Vec::new()));
 	let client_state = Arc::new(RwLock::new(Vec::new()));
 
 	let client_seal_handler = SealHandlerMock::new(
 		client_shielding_key.clone(),
-		client_signing_key.clone(),
+		client_state_key.clone(),
 		client_state.clone(),
 	);
 
@@ -91,6 +91,6 @@ pub fn test_tls_ra_server_client_networking() {
 
 	assert!(result.is_ok());
 	assert_eq!(*client_shielding_key.read().unwrap(), shielding_key);
-	assert_eq!(*client_signing_key.read().unwrap(), signing_key);
+	assert_eq!(*client_state_key.read().unwrap(), state_key);
 	assert_eq!(*client_state.read().unwrap(), state);
 }

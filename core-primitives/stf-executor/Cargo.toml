@@ -9,18 +9,19 @@ resolver = "2"
 # sgx dependencies
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["untrusted_time"] }
+sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_crypto_helper", default-features = false, optional = true }
 
 # integritee dependencies
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
 
 # local dependencies
 ita-stf = { path = "../../app-libs/stf", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
+itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
 itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
 itp-storage = { path = "../storage", default-features = false }
-itp-storage-verifier = { path = "../storage-verified", default-features = false }
 itp-time-utils = { path = "../time-utils", default-features = false }
-itp-types = { path = "../types", default-features = false }
 
 # sgx enabled external libraries
 thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
@@ -33,11 +34,12 @@ log = { version = "0.4", default-features = false }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 
 # substrate dependencies
-sp-core = { version = "6.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "master" }
-sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master"}
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 
 # dev dependencies
 itp-test = { path = "../test", default-features = false, optional = true }
+parentchain-test = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master", optional = true }
 
 [features]
 default = ["std"]
@@ -47,9 +49,9 @@ std = [
     # local
     "ita-stf/std",
     "itp-ocall-api/std",
+    "itp-sgx-crypto/std",
     "itp-stf-state-handler/std",
     "itp-storage/std",
-    "itp-storage-verifier/std",
     "itp-types/std",
     "itp-time-utils/std",
     # crates.io
@@ -63,6 +65,7 @@ std = [
 sgx = [
     "sgx_tstd",
     "ita-stf/sgx",
+    "itp-sgx-crypto/sgx",
     "itp-stf-state-handler/sgx",
     "itp-storage/sgx",
     "itp-time-utils/sgx",
@@ -71,4 +74,7 @@ sgx = [
 ]
 test = [
     "itp-test",
+    "sgx-crypto-helper",
+    "parentchain-test",
 ]
+mocks = []

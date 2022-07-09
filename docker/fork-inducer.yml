@@ -1,0 +1,27 @@
+version: "3.4"
+services:
+  worker-ping:
+    image: worker-ping:dev
+    build:
+      context: .
+      dockerfile: ping.Dockerfile
+    depends_on: [ 'integritee-node', 'integritee-worker-1', 'integritee-worker-2' ]
+    networks:
+      - integritee-test-network
+    #entrypoint: "ping integritee-worker-2 | while read pong; do echo \"$$(date): $$pong\"; done"
+    entrypoint: "ping integritee-worker-2"
+  pumba-network-delay:
+    image: integritee-fork-producer:dev
+    build:
+      context: .
+      dockerfile: fork.Dockerfile
+    depends_on: [ 'integritee-node', 'integritee-worker-1', 'integritee-worker-2' ]
+    networks:
+      - integritee-test-network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    entrypoint: "dockerize -wait http://integritee-worker-2:4646/is_initialized -timeout 250s
+     pumba --interval 3m netem --interface eth0 --duration 30s delay --time 1000 integritee-worker-2"
+networks:
+  integritee-test-network:
+    driver: bridge

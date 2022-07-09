@@ -16,12 +16,14 @@
 
 */
 
+use crate::ParentchainApi;
+use itp_types::ParentchainExtrinsicParams;
 use sp_core::sr25519;
 use substrate_api_client::{rpc::WsRpcClient, Api};
 
 /// Trait to create a node API, based on a node URL and signer.
 pub trait CreateNodeApi {
-	fn create_api(&self) -> Result<Api<sr25519::Pair, WsRpcClient>>;
+	fn create_api(&self) -> Result<ParentchainApi>;
 }
 
 /// Node API factory error.
@@ -48,9 +50,11 @@ impl NodeApiFactory {
 }
 
 impl CreateNodeApi for NodeApiFactory {
-	fn create_api(&self) -> Result<Api<sr25519::Pair, WsRpcClient>> {
-		Api::<sr25519::Pair, WsRpcClient>::new(WsRpcClient::new(self.node_url.as_str()))
-			.map_err(NodeApiFactoryError::FailedToCreateNodeApi)
-			.map(|a| a.set_signer(self.signer.clone()))
+	fn create_api(&self) -> Result<ParentchainApi> {
+		Api::<sr25519::Pair, WsRpcClient, ParentchainExtrinsicParams>::new(WsRpcClient::new(
+			self.node_url.as_str(),
+		))
+		.map_err(NodeApiFactoryError::FailedToCreateNodeApi)
+		.map(|a| a.set_signer(self.signer.clone()))
 	}
 }

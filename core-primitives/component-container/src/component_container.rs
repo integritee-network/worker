@@ -23,8 +23,16 @@ use std::sync::SgxMutex as Mutex;
 #[cfg(feature = "std")]
 use std::sync::Mutex;
 
-use crate::atomic_container::AtomicContainer;
-use std::{marker::PhantomData, sync::Arc};
+use crate::{
+	atomic_container::AtomicContainer,
+	error::{Error, Result},
+};
+use std::{
+	format,
+	marker::PhantomData,
+	string::{String, ToString},
+	sync::Arc,
+};
 
 /// Trait to initialize a generic component.
 pub trait ComponentInitializer {
@@ -38,7 +46,7 @@ pub trait ComponentGetter {
 	type ComponentType;
 
 	/// Try to get a specific component, returns `None` if component has not been initialized.
-	fn get(&self) -> Option<Arc<Self::ComponentType>>;
+	fn get(&self) -> Result<Arc<Self::ComponentType>>;
 }
 
 /// Workaround to make `new()` a `const fn`.
@@ -48,6 +56,7 @@ struct Invariant<T>(T);
 /// Component container implementation. Can be used in a global static context.
 pub struct ComponentContainer<Component> {
 	container: AtomicContainer,
+	component_name: &'static str,
 	_phantom: PhantomData<Invariant<Component>>,
 }
 
@@ -55,8 +64,12 @@ impl<Component> ComponentContainer<Component> {
 	/// Create a new container instance.
 	///
 	/// Has to be `const` in order to be used in a `static` context.
-	pub const fn new() -> Self {
-		ComponentContainer { container: AtomicContainer::new(), _phantom: PhantomData }
+	pub const fn new(component_name: &'static str) -> Self {
+		ComponentContainer {
+			container: AtomicContainer::new(),
+			component_name,
+			_phantom: PhantomData,
+		}
 	}
 }
 
@@ -68,11 +81,20 @@ impl<Component> ComponentInitializer for ComponentContainer<Component> {
 	}
 }
 
+impl<Component> ToString for ComponentContainer<Component> {
+	fn to_string(&self) -> String {
+		format!("{} component", self.component_name)
+	}
+}
+
 impl<Component> ComponentGetter for ComponentContainer<Component> {
 	type ComponentType = Component;
 
-	fn get(&self) -> Option<Arc<Self::ComponentType>> {
-		let component_mutex: &Mutex<Arc<Self::ComponentType>> = self.container.load()?;
-		Some(component_mutex.lock().unwrap().clone())
+	fn get(&self) -> Result<Arc<Self::ComponentType>> {
+		let component_mutex: &Mutex<Arc<Self::ComponentType>> = self
+			.container
+			.load()
+			.ok_or_else(|| Error::ComponentNotInitialized(self.to_string()))?;
+		Ok(component_mutex.lock().unwrap().clone())
 	}
 }

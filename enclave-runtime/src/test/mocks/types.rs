@@ -20,35 +20,35 @@
 
 use crate::test::mocks::rpc_responder_mock::RpcResponderMock;
 use itc_parentchain::block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
-use itp_sgx_crypto::Aes;
+use itp_sgx_crypto::{mocks::KeyRepositoryMock, Aes};
 use itp_stf_executor::executor::StfExecutor;
 use itp_test::mock::{
 	handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock,
 	onchain_mock::OnchainMock,
 };
+use itp_top_pool::basic_pool::BasicPool;
+use itp_top_pool_author::{
+	api::SidechainApi,
+	author::{Author, AuthorTopFilter},
+};
 use itp_types::{Block as ParentchainBlock, SignedBlock as SignedParentchainBlock};
 use its_sidechain::{
-	aura::block_importer::BlockImporter,
-	block_composer::BlockComposer,
-	primitives::types::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
-	state::SidechainDB,
-	top_pool::basic_pool::BasicPool,
+	aura::block_importer::BlockImporter, block_composer::BlockComposer, state::SidechainDB,
 	top_pool_executor::TopPoolOperationHandler,
-	top_pool_rpc_author::{
-		api::SidechainApi,
-		author::{Author, AuthorTopFilter},
-	},
 };
 use primitive_types::H256;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_externalities::SgxExternalities;
+use sidechain_primitives::types::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock};
 use sp_core::ed25519 as spEd25519;
 
 pub type TestSigner = spEd25519::Pair;
-
 pub type TestShieldingKey = Rsa3072KeyPair;
-
 pub type TestStateKey = Aes;
+
+pub type TestShieldingKeyRepo = KeyRepositoryMock<TestShieldingKey>;
+
+pub type TestStateKeyRepo = KeyRepositoryMock<TestStateKey>;
 
 pub type TestStateHandler = HandleStateMock;
 
@@ -59,21 +59,25 @@ pub type TestOCallApi = OnchainMock;
 pub type TestParentchainBlockImportTrigger =
 	TriggerParentchainBlockImportMock<SignedParentchainBlock>;
 
-pub type TestStfExecutor = StfExecutor<TestOCallApi, TestStateHandler, SgxExternalities>;
+pub type TestStfExecutor = StfExecutor<TestOCallApi, TestStateHandler>;
 
 pub type TestRpcResponder = RpcResponderMock<H256>;
 
 pub type TestTopPool =
 	BasicPool<SidechainApi<ParentchainBlock>, ParentchainBlock, TestRpcResponder>;
 
-pub type TestRpcAuthor =
-	Author<TestTopPool, AuthorTopFilter, TestStateHandler, TestShieldingKey, MetricsOCallMock>;
+pub type TestTopPoolAuthor =
+	Author<TestTopPool, AuthorTopFilter, TestStateHandler, TestShieldingKeyRepo, MetricsOCallMock>;
 
-pub type TestTopPoolExecutor =
-	TopPoolOperationHandler<ParentchainBlock, SignedSidechainBlock, TestRpcAuthor, TestStfExecutor>;
+pub type TestTopPoolExecutor = TopPoolOperationHandler<
+	ParentchainBlock,
+	SignedSidechainBlock,
+	TestTopPoolAuthor,
+	TestStfExecutor,
+>;
 
 pub type TestBlockComposer =
-	BlockComposer<ParentchainBlock, SignedSidechainBlock, TestSigner, TestStateKey>;
+	BlockComposer<ParentchainBlock, SignedSidechainBlock, TestSigner, TestStateKeyRepo>;
 
 pub type TestBlockImporter = BlockImporter<
 	TestSigner,
@@ -82,7 +86,7 @@ pub type TestBlockImporter = BlockImporter<
 	TestOCallApi,
 	TestSidechainDb,
 	HandleStateMock,
-	Aes,
+	TestStateKeyRepo,
 	TestTopPoolExecutor,
 	TestParentchainBlockImportTrigger,
 >;

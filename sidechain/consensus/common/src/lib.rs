@@ -28,7 +28,7 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 extern crate sgx_tstd as std;
 
 use itp_types::OpaqueCall;
-use its_primitives::traits::{ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait};
+use sidechain_primitives::traits::{ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait};
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::{time::Duration, vec::Vec};
 
@@ -58,7 +58,7 @@ where
 
 	/// Verify the given data and return the `BlockImportParams` if successful
 	fn verify(
-		&mut self,
+		&self,
 		block: SignedSidechainBlock,
 		parentchain_header: &ParentchainBlock::Header,
 		ctx: &Self::Context,

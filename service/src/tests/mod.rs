@@ -27,9 +27,6 @@ pub mod ecalls;
 pub mod mock;
 
 #[cfg(test)]
-pub mod worker;
-
-#[cfg(test)]
 pub mod mocks;
 
 #[cfg(test)]

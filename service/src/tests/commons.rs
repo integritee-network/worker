@@ -55,5 +55,6 @@ pub fn local_worker_config(
 		mu_ra_port,
 		false,
 		"8787".to_string(),
+		"4545".to_string(),
 	)
 }

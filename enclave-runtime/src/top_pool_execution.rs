@@ -16,14 +16,15 @@
 */
 
 use crate::{
-	error::{Error, Result},
+	error::Result,
 	global_components::{
-		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
-		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
+		GLOBAL_EXTRINSICS_FACTORY_COMPONENT, GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT,
+		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT,
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+		GLOBAL_STF_EXECUTOR_COMPONENT, GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
 	},
 	ocall::OcallApi,
 	sync::{EnclaveLock, EnclaveStateRWLock},
-	GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
 };
 use codec::Encode;
 use itc_parentchain::{
@@ -31,36 +32,34 @@ use itc_parentchain::{
 		PeekParentchainBlockImportQueue, TriggerParentchainBlockImport,
 	},
 	light_client::{
-		concurrent_access::ValidatorAccess, BlockNumberOps, LightClientState, NumberFor, Validator,
-		ValidatorAccessor,
+		concurrent_access::ValidatorAccess, BlockNumberOps, ExtrinsicSender, LightClientState,
+		NumberFor,
 	},
 };
 use itp_component_container::ComponentGetter;
-use itp_extrinsics_factory::{CreateExtrinsics, ExtrinsicsFactory};
-use itp_nonce_cache::GLOBAL_NONCE_CACHE;
+use itp_extrinsics_factory::CreateExtrinsics;
 use itp_ocall_api::{EnclaveOnChainOCallApi, EnclaveSidechainOCallApi};
 use itp_settings::sidechain::SLOT_DURATION;
-use itp_sgx_crypto::{AesSeal, Ed25519Seal};
-use itp_sgx_io::SealedIO;
-use itp_stf_executor::executor::StfExecutor;
-use itp_stf_state_handler::{query_shard_state::QueryShardState, GlobalFileStateHandler};
-use itp_storage_verifier::GetStorageVerified;
+use itp_sgx_crypto::Ed25519Seal;
+use itp_sgx_io::StaticSealedIO;
+use itp_stf_state_handler::query_shard_state::QueryShardState;
 use itp_time_utils::{duration_now, remaining_time};
 use itp_types::{Block, OpaqueCall, H256};
 use its_sidechain::{
 	aura::{proposer_factory::ProposerFactory, Aura, SlotClaimStrategy},
-	block_composer::BlockComposer,
 	consensus_common::{Environment, Error as ConsensusError, ProcessBlockImportQueue},
-	primitives::{
-		traits::{Block as SidechainBlockT, ShardIdentifierFor, SignedBlock},
-		types::block::SignedBlock as SignedSidechainBlock,
-	},
 	slots::{sgx::LastSlotSeal, yield_next_slot, PerShardSlotWorkerScheduler, SlotInfo},
 	top_pool_executor::TopPoolGetterOperator,
 	validateer_fetch::ValidateerFetch,
 };
 use log::*;
 use sgx_types::sgx_status_t;
+use sidechain_primitives::{
+	traits::{
+		Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor, SignedBlock,
+	},
+	types::block::SignedBlock as SignedSidechainBlock,
+};
 use sp_core::Pair;
 use sp_runtime::{
 	generic::SignedBlock as SignedParentchainBlock, traits::Block as BlockTrait, MultiSignature,
@@ -82,14 +81,10 @@ pub unsafe extern "C" fn execute_trusted_getters() -> sgx_status_t {
 fn execute_top_pool_trusted_getters_on_all_shards() -> Result<()> {
 	use itp_settings::enclave::MAX_TRUSTED_GETTERS_EXEC_DURATION;
 
-	let top_pool_executor =
-		GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.get().ok_or_else(|| {
-			error!("Failed to retrieve top pool operation handler component. It might not be initialized?");
-			Error::ComponentNotInitialized
-		})?;
-
-	let state_handler = Arc::new(GlobalFileStateHandler);
+	let top_pool_executor = GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.get()?;
+	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let shards = state_handler.list_shards()?;
+
 	let mut remaining_shards = shards.len() as u32;
 	let ends_at = duration_now() + MAX_TRUSTED_GETTERS_EXEC_DURATION;
 
@@ -97,8 +92,7 @@ fn execute_top_pool_trusted_getters_on_all_shards() -> Result<()> {
 	// getters.
 	for shard in shards.into_iter() {
 		let shard_exec_time = match remaining_time(ends_at)
-			.map(|r| r.checked_div(remaining_shards))
-			.flatten()
+			.and_then(|r| r.checked_div(remaining_shards))
 		{
 			Some(t) => t,
 			None => {
@@ -143,45 +137,39 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 
 	let slot_beginning_timestamp = duration_now();
 
-	let parentchain_import_dispatcher = GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
-		.get()
-		.ok_or(Error::ComponentNotInitialized)?;
+	let parentchain_import_dispatcher = GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get()?;
 
-	let validator_access = ValidatorAccessor::<Block>::default();
+	let validator_access = GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT.get()?;
 
 	// This gets the latest imported block. We accept that all of AURA, up until the block production
 	// itself, will  operate on a parentchain block that is potentially outdated by one block
 	// (in case we have a block in the queue, but not imported yet).
-	let (current_parentchain_header, genesis_hash) =
-		validator_access.execute_on_validator(|v| {
-			let latest_parentchain_header = v.latest_finalized_header(v.num_relays())?;
-			let genesis_hash = v.genesis_hash(v.num_relays())?;
-			Ok((latest_parentchain_header, genesis_hash))
-		})?;
+	let current_parentchain_header = validator_access.execute_on_validator(|v| {
+		let latest_parentchain_header = v.latest_finalized_header(v.num_relays())?;
+		Ok(latest_parentchain_header)
+	})?;
 
 	// Import any sidechain blocks that are in the import queue. In case we are missing blocks,
 	// a peer sync will happen. If that happens, the slot time might already be used up just by this import.
-	let sidechain_block_import_queue_worker = GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT
-		.get()
-		.ok_or(Error::ComponentNotInitialized)?;
+	let sidechain_block_import_queue_worker =
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT.get()?;
+
 	let latest_parentchain_header =
 		sidechain_block_import_queue_worker.process_queue(&current_parentchain_header)?;
 
-	let authority = Ed25519Seal::unseal()?;
-	let state_key = AesSeal::unseal()?;
+	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
 
-	let state_handler = Arc::new(GlobalFileStateHandler);
-	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
-	let extrinsics_factory =
-		ExtrinsicsFactory::new(genesis_hash, authority.clone(), GLOBAL_NONCE_CACHE.clone());
+	let top_pool_executor = GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.get()?;
 
-	let top_pool_executor =
-		GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.get().ok_or_else(|| {
-			error!("Failed to retrieve top pool operation handler component. Maybe it's not initialized?");
-			Error::ComponentNotInitialized
-		})?;
+	let block_composer = GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT.get()?;
 
-	let block_composer = Arc::new(BlockComposer::new(authority.clone(), state_key));
+	let extrinsics_factory = GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get()?;
+
+	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
+
+	let ocall_api = OcallApi {};
+
+	let authority = Ed25519Seal::unseal_from_static_file()?;
 
 	match yield_next_slot(
 		slot_beginning_timestamp,
@@ -200,11 +188,13 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 			let (blocks, opaque_calls) = exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _, _>(
 				slot,
 				authority,
-				OcallApi,
+				ocall_api.clone(),
 				parentchain_import_dispatcher,
 				env,
 				shards,
 			)?;
+
+			debug!("Aura executed successfully");
 
 			// Drop lock as soon as we don't need it anymore.
 			drop(_enclave_write_lock);
@@ -212,9 +202,9 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 			send_blocks_and_extrinsics::<Block, _, _, _, _>(
 				blocks,
 				opaque_calls,
-				OcallApi,
-				&validator_access,
-				&extrinsics_factory,
+				&ocall_api,
+				validator_access.as_ref(),
+				extrinsics_factory.as_ref(),
 			)?
 		},
 		None => {
@@ -223,6 +213,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 		},
 	};
 
+	debug!("End sidechain block production cycle");
 	Ok(())
 }
 
@@ -246,12 +237,13 @@ where
 	ParentchainBlock: BlockTrait<Hash = H256>,
 	SignedSidechainBlock:
 		SignedBlock<Public = Authority::Public, Signature = MultiSignature> + 'static, // Setting the public type is necessary due to some non-generic downstream code.
-	SignedSidechainBlock::Block:
-		SidechainBlockT<ShardIdentifier = H256, Public = Authority::Public>,
+	SignedSidechainBlock::Block: SidechainBlockTrait<Public = Authority::Public>,
+	<<SignedSidechainBlock as SignedBlock>::Block as SidechainBlockTrait>::HeaderType:
+		HeaderTrait<ShardIdentifier = H256>,
 	SignedSidechainBlock::Signature: From<Authority::Signature>,
 	Authority: Pair<Public = sp_core::ed25519::Public>,
 	Authority::Public: Encode,
-	OCallApi: ValidateerFetch + GetStorageVerified + Send + 'static,
+	OCallApi: ValidateerFetch + EnclaveOnChainOCallApi + Send + 'static,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	PEnvironment:
 		Environment<ParentchainBlock, SignedSidechainBlock, Error = ConsensusError> + Send + Sync,
@@ -267,7 +259,7 @@ where
 		proposer_environment,
 	)
 	.with_claim_strategy(SlotClaimStrategy::RoundRobin)
-	.with_allow_delayed_proposal(true);
+	.with_allow_delayed_proposal(false);
 
 	let (blocks, xts): (Vec<_>, Vec<_>) =
 		PerShardSlotWorkerScheduler::on_slot(&mut aura, slot, shards)
@@ -289,22 +281,25 @@ pub(crate) fn send_blocks_and_extrinsics<
 >(
 	blocks: Vec<SignedSidechainBlock>,
 	opaque_calls: Vec<OpaqueCall>,
-	ocall_api: OCallApi,
+	ocall_api: &OCallApi,
 	validator_access: &ValidatorAccessor,
 	extrinsics_factory: &ExtrinsicsFactory,
 ) -> Result<()>
 where
 	ParentchainBlock: BlockTrait,
 	SignedSidechainBlock: SignedBlock + 'static,
-	OCallApi: EnclaveSidechainOCallApi + EnclaveOnChainOCallApi,
+	OCallApi: EnclaveSidechainOCallApi,
 	ValidatorAccessor: ValidatorAccess<ParentchainBlock> + Send + Sync + 'static,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	ExtrinsicsFactory: CreateExtrinsics,
 {
+	debug!("Proposing {} sidechain block(s) (broadcasting to peers)", blocks.len());
 	ocall_api.propose_sidechain_blocks(blocks)?;
 
-	let xts = extrinsics_factory.create_extrinsics(opaque_calls.as_slice())?;
+	let xts = extrinsics_factory.create_extrinsics(opaque_calls.as_slice(), None)?;
 
-	validator_access.execute_mut_on_validator(|v| v.send_extrinsics(&ocall_api, xts))?;
+	debug!("Sending sidechain block(s) confirmation extrinsic.. ");
+	validator_access.execute_mut_on_validator(|v| v.send_extrinsics(xts))?;
+
 	Ok(())
 }

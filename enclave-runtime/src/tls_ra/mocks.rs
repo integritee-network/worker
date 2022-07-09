@@ -26,17 +26,17 @@ use std::{
 #[derive(Clone)]
 pub struct SealHandlerMock {
 	pub shielding_key: Arc<RwLock<Vec<u8>>>,
-	pub signing_key: Arc<RwLock<Vec<u8>>>,
+	pub state_key: Arc<RwLock<Vec<u8>>>,
 	pub state: Arc<RwLock<Vec<u8>>>,
 }
 
 impl SealHandlerMock {
 	pub fn new(
 		shielding_key: Arc<RwLock<Vec<u8>>>,
-		signing_key: Arc<RwLock<Vec<u8>>>,
+		state_key: Arc<RwLock<Vec<u8>>>,
 		state: Arc<RwLock<Vec<u8>>>,
 	) -> Self {
-		Self { shielding_key, signing_key, state }
+		Self { shielding_key, state_key, state }
 	}
 }
 
@@ -46,8 +46,8 @@ impl SealStateAndKeys for SealHandlerMock {
 		Ok(())
 	}
 
-	fn seal_signing_key(&self, bytes: &[u8]) -> EnclaveResult<()> {
-		*self.signing_key.write().unwrap() = bytes.to_vec();
+	fn seal_state_key(&self, bytes: &[u8]) -> EnclaveResult<()> {
+		*self.state_key.write().unwrap() = bytes.to_vec();
 		Ok(())
 	}
 
@@ -62,8 +62,8 @@ impl UnsealStateAndKeys for SealHandlerMock {
 		Ok(self.shielding_key.read().unwrap().clone())
 	}
 
-	fn unseal_signing_key(&self) -> EnclaveResult<Vec<u8>> {
-		Ok(self.signing_key.read().unwrap().clone())
+	fn unseal_state_key(&self) -> EnclaveResult<Vec<u8>> {
+		Ok(self.state_key.read().unwrap().clone())
 	}
 
 	fn unseal_state(&self, _shard: &ShardIdentifier) -> EnclaveResult<Vec<u8>> {

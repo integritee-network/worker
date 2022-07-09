@@ -1,0 +1,64 @@
+name: Publish Docker image for new releases
+
+on:
+  release:
+    types:
+      - published
+
+jobs:
+  main:
+    name: Push Integritee Services to Dockerhub
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        binary: ["integritee-demo-validateer", "integritee-client"]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Download ${{ matrix.binary }} from release
+        uses: dsaltares/fetch-gh-release-asset@master
+        with:
+          version: "tags/${{ github.event.release.tag_name }}"
+          file: "${{ matrix.binary }}"
+          target: "bin/${{ matrix.binary }}"
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download ${{ matrix.binary }} from release
+        uses: dsaltares/fetch-gh-release-asset@master
+        with:
+          version: "tags/${{ github.event.release.tag_name }}"
+          file: "enclave.signed.so"
+          target: "bin/enclave.signed.so"
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+         path: /tmp/.buildx-cache
+         key: ${{ runner.os }}-buildx-${{ github.sha }}
+         restore-keys: |
+           ${{ runner.os }}-buildx-
+
+      - name: Login to Dockerhub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Build and push
+        id:   docker_build
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          context: .
+          tags: |
+            integritee/${{ matrix.binary }}:${{ github.event.release.tag_name }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+          build-args: BINARY_FILE=${{ matrix.binary }}
+
+      - name: Image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}

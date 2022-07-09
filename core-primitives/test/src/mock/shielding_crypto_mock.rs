@@ -15,8 +15,11 @@
 
 */
 
-use itp_sgx_crypto::ShieldingCrypto;
+use itp_sgx_crypto::{
+	ed25519_derivation::DeriveEd25519, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt,
+};
 use sgx_crypto_helper::{rsa3072::Rsa3072KeyPair, RsaKeyPair};
+use sp_core::ed25519::Pair as Ed25519Pair;
 use std::vec::Vec;
 
 /// Crypto key mock
@@ -36,14 +39,24 @@ impl Default for ShieldingCryptoMock {
 	}
 }
 
-impl ShieldingCrypto for ShieldingCryptoMock {
+impl ShieldingCryptoEncrypt for ShieldingCryptoMock {
 	type Error = itp_sgx_crypto::Error;
 
 	fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error> {
 		self.key.encrypt(data)
 	}
+}
+
+impl ShieldingCryptoDecrypt for ShieldingCryptoMock {
+	type Error = itp_sgx_crypto::Error;
 
 	fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error> {
 		self.key.decrypt(data)
+	}
+}
+
+impl DeriveEd25519 for ShieldingCryptoMock {
+	fn derive_ed25519(&self) -> Result<Ed25519Pair, itp_sgx_crypto::error::Error> {
+		self.key.derive_ed25519()
 	}
 }

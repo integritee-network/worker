@@ -18,7 +18,7 @@
 //! Stores all primitives of the enclave that do need to be accessed often, but are
 //! not be frequently mutated, such as keys and server urls.
 //!
-//! TODO: For now only the mu-ra server and untrusted wokrer url is stored here. Keys and such could also be stored here.
+//! TODO: For now only the mu-ra server and untrusted worker url is stored here. Keys and such could also be stored here.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![feature(assert_matches)]
@@ -47,15 +47,12 @@ use std::sync::SgxRwLockWriteGuard as RwLockWriteGuard;
 
 use crate::error::Result;
 use lazy_static::lazy_static;
-use std::{
-	string::{String, ToString},
-	sync::Arc,
-};
+use std::{string::String, sync::Arc};
 
 pub use primitives_cache::PrimitivesCache;
 
 lazy_static! {
-	/// Global instance of the primitves cache.
+	/// Global instance of the primitives cache.
 	///
 	/// Concurrent access is managed internally, using RW locks.
 	pub static ref GLOBAL_PRIMITIVES_CACHE: Arc<PrimitivesCache> = Default::default();
@@ -71,11 +68,8 @@ pub struct Primitives {
 }
 
 impl Primitives {
-	pub fn new(mu_ra_url: &str, untrusted_worker_url: &str) -> Primitives {
-		Primitives {
-			mu_ra_url: mu_ra_url.to_string(),
-			untrusted_worker_url: untrusted_worker_url.to_string(),
-		}
+	pub fn new(mu_ra_url: String, untrusted_worker_url: String) -> Primitives {
+		Primitives { mu_ra_url, untrusted_worker_url }
 	}
 
 	pub fn mu_ra_url(&self) -> &str {
@@ -108,8 +102,8 @@ pub trait GetPrimitives {
 // Helper function to set primitives of a given cache.
 pub fn set_primitives<E: MutatePrimitives>(
 	cache: &E,
-	mu_ra_url: &str,
-	untrusted_worker_url: &str,
+	mu_ra_url: String,
+	untrusted_worker_url: String,
 ) -> Result<()> {
 	let primitives = Primitives::new(mu_ra_url, untrusted_worker_url);
 	let mut rw_lock = cache.load_for_mutation()?;

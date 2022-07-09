@@ -18,11 +18,12 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use codec::Decode;
-use its_primitives::{constants::RPC_METHOD_NAME_IMPORT_BLOCKS, types::SignedBlock};
+use crate::constants::RPC_METHOD_NAME_IMPORT_BLOCKS;
+use itp_utils::FromHexPrefixed;
 use jsonrpc_core::{IoHandler, Params, Value};
 use log::*;
-use std::{borrow::ToOwned, fmt::Debug, vec::Vec};
+use sidechain_primitives::types::SignedBlock;
+use std::{borrow::ToOwned, fmt::Debug, string::String, vec::Vec};
 
 pub fn add_import_block_rpc_method<ImportFn, Error>(
 	import_fn: ImportFn,
@@ -36,12 +37,12 @@ where
 	io_handler.add_sync_method(sidechain_import_import_name, move |sidechain_blocks: Params| {
 		debug!("{} rpc. Params: {:?}", RPC_METHOD_NAME_IMPORT_BLOCKS, sidechain_blocks);
 
-		let block_vec: Vec<u8> = sidechain_blocks.parse()?;
+		let hex_encoded_block_vec: Vec<String> = sidechain_blocks.parse()?;
 
-		let blocks: Vec<SignedBlock> = Decode::decode(&mut block_vec.as_slice()).map_err(|_| {
+		let blocks = Vec::<SignedBlock>::from_hex(&hex_encoded_block_vec[0]).map_err(|_| {
 			jsonrpc_core::error::Error::invalid_params_with_details(
 				"Could not decode Vec<SignedBlock>",
-				block_vec,
+				hex_encoded_block_vec,
 			)
 		})?;
 
@@ -80,7 +81,7 @@ pub mod tests {
 	#[test]
 	pub fn sidechain_import_block_is_ok() {
 		let io = io_handler();
-		let enclave_req = r#"{"jsonrpc":"2.0","method":"sidechain_importBlock","params":[4,0,0,0,0,0,0,0,0,228,0,145,188,97,251,138,131,108,29,6,107,10,152,67,29,148,190,114,167,223,169,197,163,93,228,76,169,171,80,15,209,101,11,211,96,0,0,0,0,83,52,167,255,37,229,185,231,38,66,122,3,55,139,5,190,125,85,94,177,190,99,22,149,92,97,154,30,142,89,24,144,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,136,220,52,23,213,5,142,196,180,80,62,12,18,234,26,10,137,190,32,15,233,137,34,66,61,67,52,1,79,166,176,238,0,0,0,175,124,84,84,32,238,162,224,130,203,26,66,7,121,44,59,196,200,100,31,173,226,165,106,187,135,223,149,30,46,191,95,116,203,205,102,100,85,82,74,158,197,166,218,181,130,119,127,162,134,227,129,118,85,123,76,21,113,90,1,160,77,110,15],"id":1}"#;
+		let enclave_req = r#"{"jsonrpc":"2.0","method":"sidechain_importBlock","params":["0x042aa533a21d26d94c29094a626ed08322d1f73fe95ff7b5d1edd129011441b5681a0000000000000096dbbe8c2ba45178c554d134096990f9f5dba477b008cbef4f1934a0bac306f84b9981cab5445b00773dc92d873850c6ee3bc48153af062aec2d1e1f549e5f801f72f2d180010000bc3070e3cc5beed3103c6d50b83dcb8888dc14d6baa4dc2f97543a61893a743329a5a289c17a355063e21136c9ebcad7d2228dcb2a2495a34e6e97ff1338f644005d023a6a5049e17c7358bc02cb474d65eb6f158b901009c2066ba8cc69c4da3e0195ee6ae9f3c7e38e7ed39830ade0015190a356173d275ffb18d229649e140b9f530a2ad74d70e3984267a78b568196c7433c9d1a88d0d18ea96d83c3b04c56e97af3d1eb1b7d134f79938218514ec2f9b485712a56d8d48f415dc952063fa0677dd7c1d5fda17d2883b363911da13dee66754693ff0ab8da0017a3670a93afdb90bf486bb884c134bb7503b9df4821738ce1e379d8f3b98fb03e48475581856b452a1eab1ea7a098473a74b9e08056523f8f2b522af65bc908"],"id":1}"#;
 
 		let response_string = io.handle_request_sync(enclave_req).unwrap();
 
@@ -90,23 +91,35 @@ pub mod tests {
 	#[test]
 	pub fn sidechain_import_block_returns_invalid_param_err() {
 		let io = io_handler();
-		let enclave_req = r#"{"jsonrpc":"2.0","method":"sidechain_importBlock","params":["SophisticatedInvalidParam"],"id":1}"#;
+		let enclave_req =
+			r#"{"jsonrpc":"2.0","method":"sidechain_importBlock","params":[4,214,133,100],"id":1}"#;
 
 		let response_string = io.handle_request_sync(enclave_req).unwrap();
 
-		let err_msg = r#"{"jsonrpc":"2.0","error":{"code":-32602,"message":"Invalid params: invalid type: string \"SophisticatedInvalidParam\", expected u8."},"id":1}"#;
+		let err_msg = r#"{"jsonrpc":"2.0","error":{"code":-32602,"message":"Invalid params: invalid type: integer `4`, expected a string."},"id":1}"#;
 		assert_eq!(response_string, err_msg);
 	}
 
 	#[test]
 	pub fn sidechain_import_block_returns_decode_err() {
 		let io = io_handler();
-		let enclave_req =
-			r#"{"jsonrpc":"2.0","method":"sidechain_importBlock","params":[2],"id":1}"#;
+		let enclave_req = r#"{"jsonrpc":"2.0","method":"sidechain_importBlock","params":["SophisticatedInvalidParam"],"id":1}"#;
 
 		let response_string = io.handle_request_sync(enclave_req).unwrap();
 
-		let err_msg = r#"{"jsonrpc":"2.0","error":{"code":-32602,"message":"Invalid parameters: Could not decode Vec<SignedBlock>","data":"[2]"},"id":1}"#;
+		let err_msg = r#"{"jsonrpc":"2.0","error":{"code":-32602,"message":"Invalid parameters: Could not decode Vec<SignedBlock>","data":"[\"SophisticatedInvalidParam\"]"},"id":1}"#;
+		assert_eq!(response_string, err_msg);
+	}
+
+	pub fn sidechain_import_block_returns_decode_err_for_valid_hex() {
+		let io = io_handler();
+
+		let enclave_req =
+			r#"{"jsonrpc":"2.0","method":"sidechain_importBlock","params": ["0x11"],"id":1}"#;
+
+		let response_string = io.handle_request_sync(enclave_req).unwrap();
+
+		let err_msg = r#"{"jsonrpc":"2.0","error":{"code":-32602,"message":"Invalid parameters: Could not decode Vec<SignedBlock>","data":"[17]"},"id":1}"#;
 		assert_eq!(response_string, err_msg);
 	}
 }

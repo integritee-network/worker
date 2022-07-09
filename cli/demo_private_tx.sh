@@ -32,19 +32,19 @@ read MRENCLAVE <<< $(cat ~/mrenclave.b58)
 # only for initial setup (actually should be done in genesis)
 # pre-fund //AliceIncognito, our ROOT key
 echo "issue funds on first (sender) account:"
-$CLIENT trusted set-balance //AliceIncognito 123456789 --mrenclave $MRENCLAVE
+$CLIENT trusted --mrenclave $MRENCLAVE set-balance //AliceIncognito 123456789
 echo -n "get balance: "
-$CLIENT trusted balance //AliceIncognito --mrenclave $MRENCLAVE
+$CLIENT trusted --mrenclave $MRENCLAVE balance //AliceIncognito
 
 # create incognito account for default shard (= MRENCLAVE)
-account1p=$($CLIENT trusted new-account --mrenclave $MRENCLAVE)
+account1p=$($CLIENT trusted --mrenclave $MRENCLAVE new-account)
 echo "created new incognito account: $account1p"
 
 #send 10M funds from AliceIncognito to new account
-$CLIENT trusted transfer //AliceIncognito $account1p 23456789 --mrenclave $MRENCLAVE
+$CLIENT trusted --mrenclave $MRENCLAVE transfer //AliceIncognito $account1p 23456789
 
 echo -n "receiver balance: "
-$CLIENT trusted balance $account1p --mrenclave $MRENCLAVE
+$CLIENT trusted --mrenclave $MRENCLAVE balance $account1p
 
 echo -n "sender balance:  "
-$CLIENT trusted balance //AliceIncognito --mrenclave $MRENCLAVE
+$CLIENT trusted --mrenclave $MRENCLAVE balance //AliceIncognito

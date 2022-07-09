@@ -15,11 +15,14 @@
 
 */
 
+use itc_parentchain_light_client::light_client_init_params::{
+	LightClientInitParams,
+	LightClientInitParams::{Grandpa, Parachain},
+};
 use itp_enclave_api::{enclave_base::EnclaveBase, EnclaveResult};
 use itp_settings::worker::MR_ENCLAVE_SIZE;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_core::ed25519;
-use sp_finality_grandpa::VersionedAuthorityList;
 use sp_runtime::traits::Header;
 
 /// mock for EnclaveBase - use in tests
@@ -30,17 +33,26 @@ impl EnclaveBase for EnclaveBaseMock {
 		Ok(())
 	}
 
+	fn init_enclave_sidechain_components(&self) -> EnclaveResult<()> {
+		Ok(())
+	}
+
 	fn init_direct_invocation_server(&self, _rpc_server_addr: String) -> EnclaveResult<()> {
 		unreachable!()
 	}
 
 	fn init_light_client<SpHeader: Header>(
 		&self,
-		genesis_header: SpHeader,
-		_authority_list: VersionedAuthorityList,
-		_authority_proof: Vec<Vec<u8>>,
+		params: LightClientInitParams<SpHeader>,
 	) -> EnclaveResult<SpHeader> {
-		Ok(genesis_header)
+		return match params {
+			Grandpa { genesis_header, .. } => Ok(genesis_header),
+			Parachain { genesis_header, .. } => Ok(genesis_header),
+		}
+	}
+
+	fn init_shard(&self, _shard: Vec<u8>) -> EnclaveResult<()> {
+		unimplemented!()
 	}
 
 	fn trigger_parentchain_block_import(&self) -> EnclaveResult<()> {

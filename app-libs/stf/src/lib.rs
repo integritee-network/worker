@@ -26,12 +26,10 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
-extern crate alloc;
-
 #[cfg(feature = "std")]
-use my_node_runtime::Balance;
-#[cfg(feature = "std")]
-pub use my_node_runtime::Index;
+pub use my_node_runtime::{Balance, Index};
+#[cfg(feature = "sgx")]
+pub use sgx_runtime::{Balance, Index};
 
 use codec::{Compact, Decode, Encode};
 use derive_more::Display;
@@ -53,6 +51,8 @@ pub type StfResult<T> = Result<T, StfError>;
 pub enum StfError {
 	#[display(fmt = "Insufficient privileges {:?}, are you sure you are root?", _0)]
 	MissingPrivileges(AccountId),
+	#[display(fmt = "Valid enclave signer account is required")]
+	RequireEnclaveSignerAccount,
 	#[display(fmt = "Error dispatching runtime call. {:?}", _0)]
 	Dispatch(String),
 	#[display(fmt = "Not enough funds to perform operation")]
@@ -93,21 +93,19 @@ impl From<sr25519::Pair> for KeyPair {
 }
 
 pub mod hash;
+pub mod helpers;
 pub mod stf_sgx_primitives;
 
 #[cfg(feature = "sgx")]
 pub mod stf_sgx;
-
-#[cfg(feature = "sgx")]
-pub mod helpers;
-
-#[cfg(feature = "std")]
-pub mod cli;
-
+#[cfg(all(feature = "test", feature = "sgx"))]
+pub mod stf_sgx_tests;
 #[cfg(all(feature = "test", feature = "sgx"))]
 pub mod test_genesis;
 
 pub use stf_sgx_primitives::types::*;
+
+pub(crate) const ENCLAVE_ACCOUNT_KEY: &str = "Enclave_Account_Key";
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
@@ -138,6 +136,16 @@ impl From<TrustedGetterSigned> for TrustedOperation {
 impl From<PublicGetter> for TrustedOperation {
 	fn from(item: PublicGetter) -> Self {
 		TrustedOperation::get(item.into())
+	}
+}
+
+impl TrustedOperation {
+	pub fn to_call(&self) -> Option<&TrustedCallSigned> {
+		match self {
+			TrustedOperation::direct_call(c) => Some(c),
+			TrustedOperation::indirect_call(c) => Some(c),
+			_ => None,
+		}
 	}
 }
 

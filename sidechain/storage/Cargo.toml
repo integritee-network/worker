@@ -8,23 +8,24 @@ edition = "2018"
 # crate.io
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
 log = "0.4"
-parking_lot = "0.11.1"
+parking_lot = "0.12.1"
 rocksdb = "0.17.0"
 thiserror = "1.0"
 
-# local
-its-primitives = { path = "../primitives" }
+# integritee
+itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # Substrate dependencies
-sp-core = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master" }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 
 [dev-dependencies]
 # crate.io
 mockall = { version = "0.10.1" }
 temp-dir = "0.1"
 # local
-itp-types = { path = "../../core-primitives/types" }
-its-test = { path = "../test" }
+sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+itp-time-utils = { path = "../../core-primitives/time-utils" }
 
 [features]
 mocks = []

@@ -16,22 +16,13 @@
 */
 use crate::Hash;
 use codec::{Decode, Error, Input};
-use std::{slice, vec::Vec};
+use std::slice;
 
 pub fn hash_from_slice(hash_slize: &[u8]) -> Hash {
 	let mut g = [0; 32];
 	g.copy_from_slice(hash_slize);
 	Hash::from(&mut g)
 }
-
-pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) {
-	assert!(!data.len() > writable.len(), "Not enough bytes in output buffer for return value");
-	let (left, right) = writable.split_at_mut(data.len());
-	left.clone_from_slice(&data);
-	// fill the right side with whitespace
-	right.iter_mut().for_each(|x| *x = 0x20);
-}
-
 /// Helper trait to transform the sgx-ffi pointers to any type that implements
 /// `parity-scale-codec::Decode`
 pub unsafe trait DecodeRaw {

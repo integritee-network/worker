@@ -16,18 +16,13 @@
 
 */
 
-use crate::{
-	error::Error,
-	globals::worker::GetMutWorker,
-	worker::{UpdatePeers, WorkerResult},
-};
-use log::*;
-use std::sync::Arc;
-
 #[cfg(test)]
 use mockall::predicate::*;
 #[cfg(test)]
 use mockall::*;
+
+use crate::worker::{UpdatePeers, WorkerResult};
+use std::sync::Arc;
 
 /// Updates the peers of the global worker.
 #[cfg_attr(test, automock)]
@@ -35,30 +30,21 @@ pub trait UpdateWorkerPeers {
 	fn update_peers(&self) -> WorkerResult<()>;
 }
 
-pub struct WorkerPeersUpdater<Worker> {
-	worker: Arc<Worker>,
+pub struct WorkerPeersUpdater<WorkerType> {
+	worker: Arc<WorkerType>,
 }
 
-impl<Worker> WorkerPeersUpdater<Worker> {
-	pub fn new(worker: Arc<Worker>) -> Self {
+impl<WorkerType> WorkerPeersUpdater<WorkerType> {
+	pub fn new(worker: Arc<WorkerType>) -> Self {
 		WorkerPeersUpdater { worker }
 	}
 }
 
-// FIXME: We should write unit tests for this one here - but with the global worker struct, which is not yet made to be mocked,
-// this would require a lot of changes.
-impl<Worker> UpdateWorkerPeers for WorkerPeersUpdater<Worker>
+impl<WorkerType> UpdateWorkerPeers for WorkerPeersUpdater<WorkerType>
 where
-	Worker: GetMutWorker,
+	WorkerType: UpdatePeers,
 {
 	fn update_peers(&self) -> WorkerResult<()> {
-		let maybe_worker = &mut *self.worker.get_mut_worker();
-		match maybe_worker {
-			Some(w) => w.update_peers(),
-			None => {
-				error!("Failed to get worker instance");
-				Err(Error::ApplicationSetup)
-			},
-		}
+		self.worker.update_peers()
 	}
 }

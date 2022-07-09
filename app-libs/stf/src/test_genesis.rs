@@ -23,7 +23,7 @@ use sgx_runtime::{Balance, Runtime};
 use sgx_tstd as std;
 use sp_core::{crypto::AccountId32, ed25519, Pair};
 use sp_runtime::MultiAddress;
-use std::{string::ToString, vec, vec::Vec};
+use std::{format, vec, vec::Vec};
 use support::traits::UnfilteredDispatchable;
 
 type Seed = [u8; 32];
@@ -90,7 +90,7 @@ fn endow(
 				new_reserved: e.2,
 			}
 			.dispatch_bypass_filter(sgx_runtime::Origin::root())
-			.map_err(|_| StfError::Dispatch("balance_set_balance".to_string()))
+			.map_err(|e| StfError::Dispatch(format!("Balance Set Balance error: {:?}", e.error)))
 			.unwrap();
 
 			let print_public: [u8; 32] = account.clone().into();

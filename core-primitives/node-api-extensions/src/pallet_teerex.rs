@@ -19,9 +19,10 @@ use crate::ApiResult;
 use itp_types::{Enclave, IpfsHash, ShardIdentifier};
 use sp_core::{Pair, H256 as Hash};
 use sp_runtime::MultiSignature;
-use substrate_api_client::{Api, RpcClient};
+use substrate_api_client::{Api, ExtrinsicParams, RpcClient};
 
 pub const TEEREX: &str = "Teerex";
+pub const SIDECHAIN: &str = "Sidechain";
 
 /// ApiClient extension that enables communication with the `teerex` pallet.
 pub trait PalletTeerexApi {
@@ -40,7 +41,7 @@ pub trait PalletTeerexApi {
 	) -> ApiResult<Option<IpfsHash>>;
 }
 
-impl<P: Pair, Client: RpcClient> PalletTeerexApi for Api<P, Client>
+impl<P: Pair, Client: RpcClient, Params: ExtrinsicParams> PalletTeerexApi for Api<P, Client, Params>
 where
 	MultiSignature: From<P::Signature>,
 {
@@ -66,7 +67,7 @@ where
 		shard: &ShardIdentifier,
 		at_block: Option<Hash>,
 	) -> ApiResult<Option<Enclave>> {
-		self.get_storage_map(TEEREX, "WorkerForShard", shard, at_block)?
+		self.get_storage_map(SIDECHAIN, "WorkerForShard", shard, at_block)?
 			.map_or_else(|| Ok(None), |w_index| self.enclave(w_index, at_block))
 	}
 
