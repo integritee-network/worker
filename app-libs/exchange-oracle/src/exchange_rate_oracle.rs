@@ -18,7 +18,11 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use crate::{metrics_exporter::ExportMetrics, Error, GetExchangeRate, types::{TradingPair, ExchangeRate}};
+use crate::{
+	metrics_exporter::ExportMetrics,
+	types::{ExchangeRate, TradingPair},
+	Error, GetExchangeRate,
+};
 use core::time::Duration;
 use itc_rest_client::{
 	http_client::{HttpClient, SendWithCertificateVerification},

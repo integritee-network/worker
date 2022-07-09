@@ -15,7 +15,7 @@
 
 */
 
-use crate::types::{TradingPair, ExchangeRate};
+use crate::types::{ExchangeRate, TradingPair};
 use itp_enclave_metrics::{EnclaveMetric, ExchangeRateOracleMetric};
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use log::error;

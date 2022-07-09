@@ -36,9 +36,12 @@ pub mod sgx_reexport_prelude {
 use crate::sgx_reexport_prelude::*;
 
 use crate::{
-	coin_gecko::CoinGeckoSource, coin_market_cap::CoinMarketCapSource, error::Error,
-	exchange_rate_oracle::ExchangeRateOracle, metrics_exporter::MetricsExporter,
-	types::{TradingPair, ExchangeRate},
+	coin_gecko::CoinGeckoSource,
+	coin_market_cap::CoinMarketCapSource,
+	error::Error,
+	exchange_rate_oracle::ExchangeRateOracle,
+	metrics_exporter::MetricsExporter,
+	types::{ExchangeRate, TradingPair},
 };
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use std::sync::Arc;
