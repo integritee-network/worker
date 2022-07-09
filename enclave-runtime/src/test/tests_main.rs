@@ -27,6 +27,10 @@ use crate::{
 			rpc_responder_mock::RpcResponderMock,
 			types::TestStateKeyRepo
 		},
+		oracle_tests::{
+			test_verify_get_exchange_rate_from_coin_gecko_works,
+			test_verify_get_exchange_rate_from_coin_market_cap_works,
+		},
 	},
 	tls_ra,
 };
