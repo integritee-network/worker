@@ -205,8 +205,8 @@ fn main() {
 			sidechain_blockstorage,
 			skip_ra,
 			dev,
-			interval,
 			node_api,
+			interval,
 			tokio_handle,
 			initialization_handler,
 		);
@@ -370,19 +370,19 @@ fn start_worker<E, T, D, InitializationHandler>(
 	// Start untrusted worker rpc server.
 	// FIXME: this should be removed - this server should only handle untrusted things.
 	// i.e move sidechain block importing to trusted worker.
-	let enclave_for_block_gossip_rpc_server = enclave.clone();
-	let untrusted_url = config.untrusted_worker_url();
-	println!("[+] Untrusted RPC server listening on {}", &untrusted_url);
-	let sidechain_storage_for_rpc = sidechain_storage.clone();
-	let _untrusted_rpc_join_handle = tokio_handle.spawn(async move {
-		itc_rpc_server::run_server(
-			&untrusted_url,
-			enclave_for_block_gossip_rpc_server,
-			sidechain_storage_for_rpc,
-		)
-		.await
-		.unwrap();
-	});
+	// let enclave_for_block_gossip_rpc_server = enclave.clone();
+	// let untrusted_url = config.untrusted_worker_url();
+	// println!("[+] Untrusted RPC server listening on {}", &untrusted_url);
+	// let sidechain_storage_for_rpc = sidechain_storage.clone();
+	// let _untrusted_rpc_join_handle = tokio_handle.spawn(async move {
+	// 	itc_rpc_server::run_server(
+	// 		&untrusted_url,
+	// 		enclave_for_block_gossip_rpc_server,
+	// 		sidechain_storage_for_rpc,
+	// 	)
+	// 	.await
+	// 	.unwrap();
+	// });
 
 	// ------------------------------------------------------------------------
 	// Perform a remote attestation and get an unchecked extrinsic back.
@@ -624,7 +624,7 @@ fn start_interval_trusted_getter_execution<E: Sidechain>(enclave_api: &E) {
 /// Send extrinsic to chain according to the market data update interval in the settings
 /// with the current market data (for now only exchange rate).
 fn start_interval_market_update<E: TeeracleApi>(
-	api: &Api<sr25519::Pair, WsRpcClient>,
+	api: &ParentchainApi,
 	interval: Duration,
 	enclave_api: &E,
 	tokio_handle: &Handle,
@@ -638,7 +638,7 @@ fn start_interval_market_update<E: TeeracleApi>(
 }
 
 fn execute_update_market<E: TeeracleApi>(
-	node_api: &Api<sr25519::Pair, WsRpcClient>,
+	node_api: &ParentchainApi,
 	enclave: &E,
 	tokio_handle: &Handle,
 ) {
@@ -818,19 +818,26 @@ fn print_events(events: Events, _sender: Sender<String>) {
 		}
 	}
 }
+*/
 
-pub fn init_light_client<E: EnclaveBase + Sidechain>(
-	api: &Api<sr25519::Pair, WsRpcClient>,
-	enclave_api: Arc<E>,
-) -> Result<Header, Error> {
-	let genesis_hash = api.get_genesis_hash().unwrap();
-	let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap().unwrap();
-	info!("Got genesis Header: \n {:?} \n", genesis_header);
-	let grandpas = api.grandpa_authorities(Some(genesis_hash)).unwrap();
-	let grandpa_proof = api.grandpa_authorities_proof(Some(genesis_hash)).unwrap();
-
-	debug!("Grandpa Authority List: \n {:?} \n ", grandpas);
-
+// pub fn init_light_client<E: EnclaveBase + Sidechain>(
+// 	api: &ParentchainApi,
+// 	enclave_api: Arc<E>,
+// ) -> Result<Header, Error> {
+// 	let genesis_hash = api.get_genesis_hash().unwrap();
+// 	let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap().unwrap();
+// 	info!("Got genesis Header: \n {:?} \n", genesis_header);
+// 	let grandpas = api.grandpa_authorities(Some(genesis_hash)).unwrap();
+// 	let grandpa_proof = api.grandpa_authorities_proof(Some(genesis_hash)).unwrap();
+//
+// 	debug!("Grandpa Authority List: \n {:?} \n ", grandpas);
+//
+// 	let authority_list = VersionedAuthorityList::from(grandpas);
+//
+// 	Ok(enclave_api
+// 		.init_light_client(genesis_header, authority_list, grandpa_proof)
+// 		.unwrap())
+// }
 /*
 /// Subscribe to the node API finalized heads stream and trigger a parent chain sync
 /// upon receiving a new header.
