@@ -73,48 +73,48 @@ fn main() {
 	commands::match_command(&cli);
 }
 
-pub fn count_exchange_rate_update_events<P: Pair, Client: 'static>(
-	api: Api<P, Client>,
-	duration: Duration,
-) -> u32
-where
-	MultiSignature: From<P::Signature>,
-	Client: RpcClient + Subscriber + Send,
-{
-	let stop = duration_now() + duration;
-
-	//subscribe to events
-	let (events_in, events_out) = channel();
-	api.subscribe_events(events_in).unwrap();
-	let mut count = 0;
-
-	while remaining_time(stop).unwrap_or_default() > Duration::ZERO {
-		let event_str = events_out.recv().unwrap();
-		let unhex = Vec::from_hex(event_str).unwrap();
-		let mut event_records_encoded = unhex.as_slice();
-		let events_result =
-			Vec::<frame_system::EventRecord<Event, Hash>>::decode(&mut event_records_encoded);
-		if let Ok(events) = events_result {
-			for event_record in &events {
-				info!("received event {:?}", event_record.event);
-				if let Event::Teeracle(event) = &event_record.event {
-					match &event {
-						my_node_runtime::pallet_teeracle::Event::ExchangeRateUpdated(
-							src,
-							trading_pair,
-							exchange_rate,
-						) => {
-							count += 1;
-							println!(
-								"ExchangeRateUpdated: TRADING_PAIR : {}, SRC : {}, VALUE :{:?}",
-								trading_pair, src, exchange_rate
-							);
-						},
-						_ => debug!("ignoring teeracle event: {:?}", event),
-					}
-				}
-			}
-		}
-	}
-	count
-}
+// pub fn count_exchange_rate_update_events<P: Pair, Client: 'static>(
+// 	api: Api<P, Client>,
+// 	duration: Duration,
+// ) -> u32
+// where
+// 	MultiSignature: From<P::Signature>,
+// 	Client: RpcClient + Subscriber + Send,
+// {
+// 	let stop = duration_now() + duration;
+//
+// 	//subscribe to events
+// 	let (events_in, events_out) = channel();
+// 	api.subscribe_events(events_in).unwrap();
+// 	let mut count = 0;
+//
+// 	while remaining_time(stop).unwrap_or_default() > Duration::ZERO {
+// 		let event_str = events_out.recv().unwrap();
+// 		let unhex = Vec::from_hex(event_str).unwrap();
+// 		let mut event_records_encoded = unhex.as_slice();
+// 		let events_result =
+// 			Vec::<frame_system::EventRecord<Event, Hash>>::decode(&mut event_records_encoded);
+// 		if let Ok(events) = events_result {
+// 			for event_record in &events {
+// 				info!("received event {:?}", event_record.event);
+// 				if let Event::Teeracle(event) = &event_record.event {
+// 					match &event {
+// 						my_node_runtime::pallet_teeracle::Event::ExchangeRateUpdated(
+// 							src,
+// 							trading_pair,
+// 							exchange_rate,
+// 						) => {
+// 							count += 1;
+// 							println!(
+// 								"ExchangeRateUpdated: TRADING_PAIR : {}, SRC : {}, VALUE :{:?}",
+// 								trading_pair, src, exchange_rate
+// 							);
+// 						},
+// 						_ => debug!("ignoring teeracle event: {:?}", event),
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
+// 	count
+// }
