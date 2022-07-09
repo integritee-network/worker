@@ -62,7 +62,7 @@ sp-io = { default-features = false, features = ["disable_oom", "disable_panic_ha
 substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.24" }
 parentchain-test = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 sidechain-block-verification = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master"}
-substrate-fixed = { package = "substrate-fixed", git = "https://github.com/encointer/substrate-fixed",tag = "v0.5.9"}
+substrate-fixed = { default-features = false, git = "https://github.com/encointer/substrate-fixed",tag = "v0.5.9"}
 
 # mesalock
 linked-hash-map = { git = "https://github.com/mesalock-linux/linked-hash-map-sgx" }
