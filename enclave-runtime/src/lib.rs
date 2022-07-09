@@ -67,17 +67,18 @@ use itp_settings::node::{
 };
 use itp_sgx_crypto::{ed25519, Ed25519Seal, Rsa3072Seal};
 use itp_sgx_io as io;
-use itp_sgx_io::StaticSealedIO;
+use itp_sgx_io::{StaticSealedIO};
 use itp_stf_state_handler::handle_state::HandleState;
-use itp_types::{
-	Header, ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder, SignedBlock,
-};
+use itp_types::{Header, OpaqueCall, ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder, SignedBlock};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
+use primitive_types::H256;
 use sgx_types::sgx_status_t;
 use sp_core::crypto::Pair;
-use std::{boxed::Box, slice, vec::Vec};
+use sp_runtime::OpaqueExtrinsic;
+use std::{boxed::Box, slice, vec::Vec, sync::Arc};
 use substrate_api_client::{compose_extrinsic_offline, ExtrinsicParams};
+use itp_extrinsics_factory::{CreateExtrinsics, ExtrinsicsFactory};
 
 mod attestation;
 mod global_components;
@@ -519,7 +520,10 @@ pub unsafe extern "C" fn update_market_data_xt(
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
 	// Save created extrinsic as slice in the return value unchecked_extrinsic.
-	write_slice_and_whitespace_pad(extrinsic_slice, extrinsics.encode());
+	if let Err(_) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsics.encode()) {
+		error!("update_market_data_xt: Extrinsic buffer was too small!");
+		return sgx_status_t::SGX_ERROR_UNEXPECTED;
+	}
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -529,7 +533,7 @@ fn update_market_data_internal(
 	crypto_currency: String,
 	fiat_currency: String,
 ) -> Result<Vec<OpaqueExtrinsic>> {
-	let signer = Ed25519Seal::unseal()?;
+	let signer = Ed25519Seal::unseal_from_static_file()?;
 
 	let extrinsics_factory =
 		ExtrinsicsFactory::new(genesis_hash, signer, GLOBAL_NONCE_CACHE.clone());
@@ -555,7 +559,7 @@ fn update_market_data_internal(
 		},
 	};
 
-	let extrinsics = extrinsics_factory.create_extrinsics(extrinsic_calls.as_slice())?;
+	let extrinsics = extrinsics_factory.create_extrinsics(extrinsic_calls.as_slice(), None)?;
 	Ok(extrinsics)
 }
 
