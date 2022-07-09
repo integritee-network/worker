@@ -13,6 +13,8 @@ chrono = { version = "0.4.19", default-features = false, features = ["alloc"]}
 # sgx dependencies
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["net", "thread"] }
+# Todo: should not be needed here: #848
+sgx_crypto_helper = { default-features = false, optional = true, features = ["mesalock_sgx"], version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5"}
 
 # sgx enabled external libraries
 mio-extras = { git = "https://github.com/integritee-network/mio-extras-sgx", rev = "963234b", default-features = false, optional = true }
@@ -59,6 +61,7 @@ sgx = [
     "rustls_sgx",
     "sgx_tstd",
     "sgx_types",
+    "sgx_crypto_helper",
     "thiserror_sgx",
     "tungstenite_sgx",
     "webpki_sgx",
