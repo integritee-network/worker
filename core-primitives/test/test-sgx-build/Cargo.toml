@@ -11,4 +11,5 @@ sp-io = { default-features = false, features = ["disable_oom", "disable_panic_ha
 
 #ita-stf = { default-features = false, features = ["sgx"], path = "../../../app-libs/stf" }
 #ita-exchange-oracle = { default-features = false, features = ["sgx"], path = "../../../app-libs/exchange-oracle" }
+itc-rest-client = { default-features = false, features = ["sgx"], path = "../../../core/rest-client" }
 itc-tls-websocket-server = { default-features = false, features = ["sgx"], path = "../../../core/tls-websocket-server" }
