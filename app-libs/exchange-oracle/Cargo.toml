@@ -20,7 +20,6 @@ std = [
 sgx = [
     "itc-rest-client/sgx",
     "itp-enclave-metrics/sgx",
-    "itp-types/sgx",
     "sgx_tstd",
     "thiserror_sgx",
     "url_sgx",
@@ -44,11 +43,13 @@ log = { version = "0.4", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 
+# integritee deps
+itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+
 # internal dependencies
 itc-rest-client = { path = "../../core/rest-client", default-features = false }
 itp-enclave-metrics = { path = "../../core-primitives/enclave-metrics", default-features = false }
 itp-ocall-api = { path = "../../core-primitives/ocall-api", default-features = false }
-itp-types = { path = "../../core-primitives/types", default-features = false }
 
 [dev-dependencies]
 itp-test = { path = "../../core-primitives/test" }
