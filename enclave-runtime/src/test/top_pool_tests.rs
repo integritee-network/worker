@@ -76,7 +76,7 @@ pub fn process_indirect_call_in_top_pool() {
 		AuthorTopFilter {},
 		state_handler.clone(),
 		shielding_key_repo,
-		Arc::new(MetricsOCallMock {}),
+		Arc::new(MetricsOCallMock::default()),
 	));
 
 	let encrypted_indirect_call =
@@ -108,7 +108,7 @@ pub fn submit_shielding_call_to_top_pool() {
 		AuthorTopFilter {},
 		state_handler.clone(),
 		shielding_key_repo.clone(),
-		Arc::new(MetricsOCallMock {}),
+		Arc::new(MetricsOCallMock::default()),
 	));
 
 	let enclave_signer = Arc::new(StfEnclaveSigner::new(

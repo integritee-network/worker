@@ -23,10 +23,9 @@ use crate::{
 		cert_tests::*,
 		fixtures::initialize_test_state::init_state,
 		sidechain_aura_tests, top_pool_tests,
-		mocks::rpc_responder_mock::RpcResponderMock,
-		oracle_tests::{
-			test_verify_get_exchange_rate_from_coin_gecko_works,
-			test_verify_get_exchange_rate_from_coin_market_cap_works,
+		mocks::{
+			rpc_responder_mock::RpcResponderMock,
+			types::TestStateKeyRepo
 		},
 	},
 	tls_ra,
@@ -655,7 +654,7 @@ pub fn test_setup() -> (
 			AllowAllTopsFilter,
 			state_handler.clone(),
 			shielding_key_repo,
-			Arc::new(MetricsOCallMock {}),
+			Arc::new(MetricsOCallMock::default()),
 		)),
 		state,
 		shard,

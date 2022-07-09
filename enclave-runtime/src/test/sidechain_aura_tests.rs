@@ -89,7 +89,7 @@ pub fn produce_sidechain_block_and_import_it() {
 		AuthorTopFilter {},
 		state_handler.clone(),
 		shielding_key_repo,
-		Arc::new(MetricsOCallMock {}),
+		Arc::new(MetricsOCallMock::default()),
 	));
 	let top_pool_operation_handler =
 		Arc::new(TestTopPoolExecutor::new(top_pool_author.clone(), stf_executor.clone()));
