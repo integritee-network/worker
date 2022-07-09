@@ -15,12 +15,12 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 
 # internal
-itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+substrate-fixed = { default-features = false, git = "https://github.com/encointer/substrate-fixed", tag = "v0.5.9" }
 
 [features]
 default = ["std"]
 std = [
-    "itp-types/std",
+    "substrate-fixed/std",
     "codec/std",
 ]
 sgx = [

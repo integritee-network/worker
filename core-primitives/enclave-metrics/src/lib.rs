@@ -24,8 +24,11 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 extern crate sgx_tstd as std;
 
 use codec::{Decode, Encode};
-use itp_types::ExchangeRate;
+use substrate_fixed::types::U32F32;
 use std::string::String;
+
+// copied from ita-exchange-oracle because of cyclic deps
+pub type ExchangeRate = U32F32;
 
 #[derive(Encode, Decode, Debug)]
 pub enum EnclaveMetric {
