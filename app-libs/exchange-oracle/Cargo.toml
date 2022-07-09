@@ -46,7 +46,7 @@ serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 substrate-fixed = { default-features = false, git = "https://github.com/encointer/substrate-fixed", tag = "v0.5.9" }
 
 # integritee deps
-itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # internal dependencies
 itc-rest-client = { path = "../../core/rest-client", default-features = false }
