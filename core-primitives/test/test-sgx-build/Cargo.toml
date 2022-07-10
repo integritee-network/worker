@@ -12,6 +12,6 @@ sp-io = { default-features = false, features = ["disable_oom", "disable_panic_ha
 #ita-stf = { default-features = false, features = ["sgx"], path = "../../../app-libs/stf" }
 #ita-exchange-oracle = { default-features = false, features = ["sgx"], path = "../../../app-libs/exchange-oracle" }
 itc-rest-client = { default-features = false, features = ["sgx"], path = "../../../core/rest-client" }
-rcgen = { path = "../../../../rcgen2", default-features = false, features = ["sgx", "pem_sgx"] }
+rcgen = { default-features = false, features = ["sgx", "pem_sgx"], git = 'https://github.com/integritee-network/rcgen' }
 #rcgen = { package = "rcgen", git = 'https://github.com/integritee-network/rcgen', default-features = false, features = ["pem", "sgx"] }
 #itc-tls-websocket-server = { default-features = false, features = ["sgx"], path = "../../../core/tls-websocket-server" }
