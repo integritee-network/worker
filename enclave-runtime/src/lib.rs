@@ -59,6 +59,7 @@ use itc_parentchain::{
 };
 use itp_block_import_queue::PushToBlockQueue;
 use itp_component_container::ComponentGetter;
+use itp_extrinsics_factory::{CreateExtrinsics, ExtrinsicsFactory};
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::node::{
@@ -67,18 +68,19 @@ use itp_settings::node::{
 };
 use itp_sgx_crypto::{ed25519, Ed25519Seal, Rsa3072Seal};
 use itp_sgx_io as io;
-use itp_sgx_io::{StaticSealedIO};
+use itp_sgx_io::StaticSealedIO;
 use itp_stf_state_handler::handle_state::HandleState;
-use itp_types::{Header, OpaqueCall, ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder, SignedBlock};
+use itp_types::{
+	Header, OpaqueCall, ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder, SignedBlock,
+};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use primitive_types::H256;
 use sgx_types::sgx_status_t;
 use sp_core::crypto::Pair;
 use sp_runtime::OpaqueExtrinsic;
-use std::{boxed::Box, slice, vec::Vec, sync::Arc};
+use std::{boxed::Box, slice, sync::Arc, vec::Vec};
 use substrate_api_client::{compose_extrinsic_offline, ExtrinsicParams};
-use itp_extrinsics_factory::{CreateExtrinsics, ExtrinsicsFactory};
 
 mod attestation;
 mod global_components;
@@ -522,7 +524,7 @@ pub unsafe extern "C" fn update_market_data_xt(
 	// Save created extrinsic as slice in the return value unchecked_extrinsic.
 	if let Err(_) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsics.encode()) {
 		error!("update_market_data_xt: Extrinsic buffer was too small!");
-		return sgx_status_t::SGX_ERROR_UNEXPECTED;
+		return sgx_status_t::SGX_ERROR_UNEXPECTED
 	}
 
 	sgx_status_t::SGX_SUCCESS

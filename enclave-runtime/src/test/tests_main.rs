@@ -22,15 +22,12 @@ use crate::{
 	test::{
 		cert_tests::*,
 		fixtures::initialize_test_state::init_state,
-		sidechain_aura_tests, top_pool_tests,
-		mocks::{
-			rpc_responder_mock::RpcResponderMock,
-			types::TestStateKeyRepo
-		},
+		mocks::{rpc_responder_mock::RpcResponderMock, types::TestStateKeyRepo},
 		oracle_tests::{
 			test_verify_get_exchange_rate_from_coin_gecko_works,
 			test_verify_get_exchange_rate_from_coin_market_cap_works,
 		},
+		sidechain_aura_tests, top_pool_tests,
 	},
 	tls_ra,
 };
