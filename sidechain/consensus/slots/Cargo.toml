@@ -6,13 +6,14 @@ edition = "2018"
 
 
 [dependencies]
-log = { version = "0.4.17", default-features = false }
+log = { version = "0.4", default-features = false }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 derive_more = "0.99.16"
 lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
 
 # scs / integritee
 itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-block-verification = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master"}
 sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # only for slot-stream
@@ -33,8 +34,8 @@ itp-time-utils = { path = "../../../core-primitives/time-utils", default-feature
 its-consensus-common = { path = "../common", default-features = false }
 
 [dev-dependencies]
-itp-test = { path = "../../../core-primitives/test" }
-its-test = { path = "../../test" }
+parentchain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 tokio = "*"
 
@@ -55,6 +56,7 @@ std = [
     "itp-time-utils/std",
     "itp-types/std",
     "its-consensus-common/std",
+    "sidechain-block-verification/std",
     "sidechain-primitives/std",
 ]
 sgx = [

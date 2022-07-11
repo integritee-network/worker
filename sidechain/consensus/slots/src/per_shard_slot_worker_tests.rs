@@ -15,14 +15,12 @@
 
 */
 
-use crate::{
-	mocks::SimpleSlotWorkerMock, slot_from_timestamp_and_duration, PerShardSlotWorkerScheduler,
-	SlotInfo,
-};
+use crate::{mocks::SimpleSlotWorkerMock, PerShardSlotWorkerScheduler, SlotInfo};
 use itp_settings::sidechain::SLOT_DURATION;
-use itp_test::builders::parentchain_header_builder::ParentchainHeaderBuilder;
 use itp_time_utils::duration_now;
 use itp_types::{Block as ParentchainBlock, ShardIdentifier};
+use parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
+use sidechain_block_verification::slot::slot_from_timestamp_and_duration;
 
 type TestSlotWorker = SimpleSlotWorkerMock<ParentchainBlock>;
 
@@ -44,7 +42,7 @@ fn slot_timings_are_correct_with_multiple_shards() {
 	let first_shard_slot_end_time = slot_worker.slot_infos.first().unwrap().ends_at.as_millis();
 	let expected_upper_bound = (slot_info.timestamp.as_millis()
 		+ SLOT_DURATION.as_millis().checked_div(shards.len() as u128).unwrap())
-		+ 1u128;
+		+ 2u128;
 	assert!(
 		first_shard_slot_end_time <= expected_upper_bound,
 		"First shard end time, expected: {}, actual: {}",

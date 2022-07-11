@@ -16,11 +16,11 @@
 */
 
 use itp_node_api_extensions::{ApiResult, ChainApi, StorageProof};
-use itp_test::builders::{
+use itp_types::{SignedBlock, H256};
+use parentchain_test::{
 	parentchain_block_builder::ParentchainBlockBuilder,
 	parentchain_header_builder::ParentchainHeaderBuilder,
 };
-use itp_types::{SignedBlock, H256};
 use sp_finality_grandpa::AuthorityList;
 
 pub struct ParentchainApiMock {

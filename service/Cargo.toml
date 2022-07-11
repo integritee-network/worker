@@ -82,4 +82,5 @@ mockall = "0.10.1"
 # local
 itp-test = { path = "../core-primitives/test" }
 its-peer-fetch = { path = "../sidechain/peer-fetch", features = ["mocks"] }
-its-test = { path = "../sidechain/test" }
+parentchain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }

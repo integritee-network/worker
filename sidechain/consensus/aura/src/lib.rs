@@ -38,6 +38,7 @@ use itp_time_utils::duration_now;
 use its_consensus_common::{Environment, Error as ConsensusError, Proposer};
 use its_consensus_slots::{SimpleSlotWorker, Slot, SlotInfo};
 use its_validateer_fetch::ValidateerFetch;
+use sidechain_block_verification::slot::slot_author;
 use sidechain_primitives::{
 	traits::{Block as SidechainBlockTrait, Header as HeaderTrait, SignedBlock},
 	types::block::BlockHash,
@@ -266,26 +267,6 @@ where
 		.collect())
 }
 
-/// Get slot author for given block along with authorities.
-fn slot_author<P: Pair>(slot: Slot, authorities: &[AuthorityId<P>]) -> Option<&AuthorityId<P>> {
-	if authorities.is_empty() {
-		log::warn!("Authorities list is empty, cannot determine slot author");
-		return None
-	}
-
-	let idx = *slot % (authorities.len() as u64);
-	assert!(
-		idx <= usize::MAX as u64,
-		"It is impossible to have a vector with length beyond the address space; qed",
-	);
-
-	let current_author = authorities.get(idx as usize).expect(
-		"authorities not empty; index constrained to list length;this is a valid index; qed",
-	);
-
-	Some(current_author)
-}
-
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -294,18 +275,16 @@ mod tests {
 		mocks::environment_mock::EnvironmentMock,
 	};
 	use itc_parentchain_block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
-	use itp_test::{
-		builders::{
-			parentchain_block_builder::ParentchainBlockBuilder,
-			parentchain_header_builder::ParentchainHeaderBuilder,
-		},
-		mock::onchain_mock::OnchainMock,
-	};
+	use itp_test::mock::onchain_mock::OnchainMock;
 	use itp_types::{
 		Block as ParentchainBlock, Enclave, Header as ParentchainHeader,
 		SignedBlock as SignedParentchainBlock,
 	};
 	use its_consensus_slots::PerShardSlotWorkerScheduler;
+	use parentchain_test::{
+		parentchain_block_builder::ParentchainBlockBuilder,
+		parentchain_header_builder::ParentchainHeaderBuilder,
+	};
 	use sp_core::ed25519::Public;
 	use sp_keyring::ed25519::Keyring;
 

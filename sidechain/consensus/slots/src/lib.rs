@@ -33,7 +33,7 @@ extern crate sgx_tstd as std;
 
 use codec::Encode;
 use derive_more::From;
-use itp_time_utils::{duration_now, remaining_time};
+use itp_time_utils::{duration_difference, duration_now};
 use itp_types::OpaqueCall;
 use its_consensus_common::{Error as ConsensusError, Proposer};
 use log::*;
@@ -322,7 +322,8 @@ impl<ParentchainBlock: ParentchainBlockTrait, T: SimpleSlotWorker<ParentchainBlo
 		let mut slot_results = Vec::with_capacity(remaining_shards);
 
 		for shard in shards.into_iter() {
-			let shard_remaining_duration = remaining_time(slot_info.ends_at)
+			let now = duration_now(); // It's important we have a common `now` for all following computations.
+			let shard_remaining_duration = duration_difference(now, slot_info.ends_at)
 				.and_then(|time| time.checked_div(remaining_shards as u32))
 				.unwrap_or_default();
 
@@ -337,7 +338,6 @@ impl<ParentchainBlock: ParentchainBlockTrait, T: SimpleSlotWorker<ParentchainBlo
 				return slot_results
 			}
 
-			let now = duration_now();
 			let shard_slot_ends_at = now + shard_remaining_duration;
 			let shard_slot = SlotInfo::new(
 				slot_info.slot,

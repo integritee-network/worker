@@ -8,9 +8,10 @@ edition = "2018"
 finality-grandpa = { version = "0.15.0", default-features = false, features = ["derive-codec"] }
 itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 itp-utils = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-log = { version = "0.4.17", default-features = false }
+log = { version = "0.4", default-features = false }
 sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
 sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-block-verification = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master", optional = true }
 
 # sgx deps
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
@@ -43,8 +44,9 @@ env_logger = "0.9.0"
 itc-parentchain-block-import-dispatcher = { path = "../../../core/parentchain/block-import-dispatcher", features = ["mocks"] }
 itp-storage = { path = "../../../core-primitives/storage" }
 itp-test = { path = "../../../core-primitives/test" }
-its-test = { path = "../../test" }
 its-top-pool-executor = { path = "../../top-pool-executor", features = ["mocks"] }
+parentchain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 
 [features]
@@ -68,7 +70,9 @@ std = [
    "its-validateer-fetch/std",
    "log/std",
    "sgx-externalities/std",
+   "sidechain-block-verification/std",
    "sidechain-primitives/std",
+   "sidechain-block-verification/std",
 ]
 sgx = [
    "sgx_tstd",
@@ -86,4 +90,5 @@ sgx = [
    "its-state/sgx",
    "its-top-pool-executor/sgx",
    "sgx-externalities/sgx",
+   "sidechain-block-verification/sgx",
 ]

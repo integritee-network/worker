@@ -5,35 +5,6 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 resolver = "2"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[features]
-default = ["std"]
-std = [
-    "rust-base58",
-    "ita-stf/std",
-    "itp-sgx-crypto/std",
-    "itp-sgx-io/std",
-    "itp-time-utils/std",
-    "itp-types/std",
-    "sgx-externalities/std",
-    "thiserror",
-]
-sgx = [
-    "sgx_tstd",
-    "sgx_tcrypto",
-    "rust-base58_sgx",
-    "ita-stf/sgx",
-    "itp-sgx-crypto/sgx",
-    "itp-sgx-io/sgx",
-    "itp-time-utils/sgx",
-    "sgx-externalities/sgx",
-    "thiserror_sgx",
-]
-test = [
-    "itp-sgx-crypto/mocks"
-]
-
 [dependencies]
 # sgx dependencies
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
@@ -67,3 +38,32 @@ sp-core = { default-features = false, features = ["full_crypto"], git = "https:/
 
 [dev-dependencies]
 itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", features = ["mocks"] }
+
+
+[features]
+default = ["std"]
+std = [
+    "rust-base58",
+    "ita-stf/std",
+    "itp-sgx-crypto/std",
+    "itp-sgx-io/std",
+    "itp-time-utils/std",
+    "itp-types/std",
+    "sgx-externalities/std",
+    "thiserror",
+    "log/std",
+]
+sgx = [
+    "sgx_tstd",
+    "sgx_tcrypto",
+    "rust-base58_sgx",
+    "ita-stf/sgx",
+    "itp-sgx-crypto/sgx",
+    "itp-sgx-io/sgx",
+    "itp-time-utils/sgx",
+    "sgx-externalities/sgx",
+    "thiserror_sgx",
+]
+test = [
+    "itp-sgx-crypto/mocks"
+]

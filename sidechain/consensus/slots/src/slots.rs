@@ -25,6 +25,7 @@ use itp_sgx_io::StaticSealedIO;
 use itp_time_utils::duration_now;
 use its_consensus_common::Error as ConsensusError;
 use log::warn;
+use sidechain_block_verification::slot::slot_from_timestamp_and_duration;
 use sidechain_primitives::traits::{
 	Block as SidechainBlockTrait, BlockData, SignedBlock as SignedSidechainBlockTrait,
 };
@@ -113,10 +114,6 @@ pub(crate) fn timestamp_within_slot<
 	is_within_slot
 }
 
-pub fn slot_from_timestamp_and_duration(timestamp: Duration, duration: Duration) -> Slot {
-	((timestamp.as_millis() / duration.as_millis()) as u64).into()
-}
-
 pub fn yield_next_slot<SlotGetter, ParentchainBlock>(
 	timestamp: Duration,
 	duration: Duration,
@@ -201,15 +198,15 @@ mod tests {
 	use super::*;
 	use core::assert_matches::assert_matches;
 	use itp_sgx_io::StaticSealedIO;
-	use itp_test::builders::parentchain_header_builder::ParentchainHeaderBuilder;
 	use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader};
-	use its_test::{
-		sidechain_block_data_builder::SidechainBlockDataBuilder,
-		sidechain_header_builder::SidechainHeaderBuilder,
-	};
+	use parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 	use sidechain_primitives::{
 		traits::{Block as BlockT, SignBlock},
 		types::block::{Block, SignedBlock},
+	};
+	use sidechain_test::{
+		sidechain_block_data_builder::SidechainBlockDataBuilder,
+		sidechain_header_builder::SidechainHeaderBuilder,
 	};
 	use sp_keyring::ed25519::Keyring;
 	use std::{fmt::Debug, thread, time::SystemTime};

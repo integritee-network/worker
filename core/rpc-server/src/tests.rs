@@ -19,7 +19,6 @@ use super::*;
 use crate::mock::MockSidechainBlockFetcher;
 use itp_rpc::RpcResponse;
 use its_rpc_handler::constants::RPC_METHOD_NAME_IMPORT_BLOCKS;
-use its_test::sidechain_block_builder::SidechainBlockBuilder;
 use jsonrpsee::{
 	types::{to_json_value, traits::Client},
 	ws_client::WsClientBuilder,
@@ -27,6 +26,7 @@ use jsonrpsee::{
 use log::info;
 use mock::TestEnclave;
 use parity_scale_codec::Decode;
+use sidechain_test::sidechain_block_builder::SidechainBlockBuilder;
 
 fn init() {
 	let _ = env_logger::builder().is_test(true).try_init();

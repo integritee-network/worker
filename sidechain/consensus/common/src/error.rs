@@ -19,6 +19,7 @@
 
 use itp_types::BlockHash as ParentchainBlockHash;
 use sgx_types::sgx_status_t;
+use sidechain_block_verification::error::Error as VerificationError;
 use sidechain_primitives::types::{block::BlockHash as SidechainBlockHash, BlockNumber};
 use std::{
 	boxed::Box,
@@ -63,6 +64,8 @@ pub enum Error {
 	BlockAlreadyImported(BlockNumber, BlockNumber),
 	#[error("Failed to pop from block import queue: {0}")]
 	FailedToPopBlockImportQueue(#[from] itp_block_import_queue::error::Error),
+	#[error("Verification Error: {0}")]
+	VerificationError(sidechain_block_verification::error::Error),
 }
 
 impl core::convert::From<std::io::Error> for Error {
@@ -80,5 +83,17 @@ impl core::convert::From<codec::Error> for Error {
 impl From<sgx_status_t> for Error {
 	fn from(sgx_status: sgx_status_t) -> Self {
 		Self::Sgx(sgx_status)
+	}
+}
+
+impl From<VerificationError> for Error {
+	fn from(e: VerificationError) -> Self {
+		match e {
+			VerificationError::BlockAncestryMismatch(a, b, c) =>
+				Error::BlockAncestryMismatch(a, b, c),
+			VerificationError::InvalidFirstBlock(a, b) => Error::InvalidFirstBlock(a, b),
+			VerificationError::BlockAlreadyImported(a, b) => Error::BlockAlreadyImported(a, b),
+			_ => Error::VerificationError(e),
+		}
 	}
 }

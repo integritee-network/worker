@@ -5,36 +5,6 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 resolver = "2"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[features]
-default = ["std"]
-sgx = [
-    "sgx_tstd",
-    "sgx_types",
-    "ita-stf/sgx",
-    "itc-direct-rpc-server/sgx",
-    "itp-types/sgx",
-    "jsonrpc-core_sgx",
-    "linked-hash-map_sgx",
-    "thiserror_sgx",
-]
-std = [
-    "ita-stf/std",
-    "itc-direct-rpc-server/std",
-    "itp-types/std",
-    "sidechain-primitives/std",
-    "jsonrpc-core",
-    "linked-hash-map",
-    "log/std",
-    "serde/std",
-    "sp-core/std",
-    "sp-runtime/std",
-    "sp-application-crypto/std",
-    "thiserror",
-]
-mocks = []
-
 [dependencies]
 # sgx dependencies
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
@@ -48,7 +18,7 @@ itc-direct-rpc-server = { path = "../../core/direct-rpc-server", default-feature
 itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # sgx enabled external libraries
-jsonrpc-core_sgx = { package = "jsonrpc-core", git = "https://github.com/scs/jsonrpc", branch = "no_std", default-features = false, optional = true }
+jsonrpc-core_sgx = { package = "jsonrpc-core", git = "https://github.com/scs/jsonrpc", branch = "no_std_v18", default-features = false, optional = true }
 linked-hash-map_sgx = { package = "linked-hash-map", git = "https://github.com/mesalock-linux/linked-hash-map-sgx", optional = true }
 thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
 
@@ -71,3 +41,30 @@ sidechain-primitives = { default-features = false, git = "https://github.com/int
 # dev dependencies (for tests)
 [dev-dependencies]
 parity-util-mem = { version = "0.11.0", default-features = false, features = ["primitive-types"] }
+
+[features]
+default = ["std"]
+sgx = [
+    "sgx_tstd",
+    "sgx_types",
+    "ita-stf/sgx",
+    "itc-direct-rpc-server/sgx",
+    "jsonrpc-core_sgx",
+    "linked-hash-map_sgx",
+    "thiserror_sgx",
+]
+std = [
+    "ita-stf/std",
+    "itc-direct-rpc-server/std",
+    "itp-types/std",
+    "sidechain-primitives/std",
+    "jsonrpc-core",
+    "linked-hash-map",
+    "log/std",
+    "serde/std",
+    "sp-core/std",
+    "sp-runtime/std",
+    "sp-application-crypto/std",
+    "thiserror",
+]
+mocks = []

@@ -36,9 +36,15 @@ pub fn now_as_nanos() -> u128 {
 	duration_now().as_nanos()
 }
 
-/// Calculates the remaining time `until`.
+/// Calculates the remaining time from now to `until`.
 pub fn remaining_time(until: Duration) -> Option<Duration> {
-	until.checked_sub(duration_now())
+	duration_difference(duration_now(), until)
+}
+
+/// Calculate the difference in duration between `from` and `to`.
+/// Returns `None` if `to` < `from`.
+pub fn duration_difference(from: Duration, to: Duration) -> Option<Duration> {
+	to.checked_sub(from)
 }
 
 /// Returns current duration since unix epoch.

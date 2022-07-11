@@ -4,45 +4,6 @@ version = "0.8.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[features]
-default = ["std"]
-std = [
-    "log/std",
-    "serde/std",
-
-    # substrate
-    "sp-std/std",
-    "sp-core/std",
-
-    # local crates
-    "itp-storage/std",
-
-    # scs crates
-    "sidechain-primitives/std",
-    "sp-io/std",
-    "sgx-externalities/std",
-
-    # optional std crates
-    "codec/std",
-    "thiserror",
-]
-sgx = [
-    # teaclave
-    "sgx_tstd",
-
-    # local crates
-    "itp-storage/sgx",
-
-    # scs crates
-    "sp-io/sgx",
-    "sgx-externalities/sgx",
-
-    # sgx versions of std crates
-    "thiserror_sgx",
-]
-
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive", "chain-error"] }
 frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
@@ -73,3 +34,33 @@ sp-std = { default-features = false, git = "https://github.com/paritytech/substr
 # test deps
 [dev-dependencies]
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+
+[features]
+default = ["std"]
+std = [
+    "log/std",
+    "serde/std",
+    # substrate
+    "sp-std/std",
+    "sp-core/std",
+    # local crates
+    "itp-storage/std",
+    # scs crates
+    "sidechain-primitives/std",
+    "sp-io/std",
+    "sgx-externalities/std",
+    # optional std crates
+    "codec/std",
+    "thiserror",
+]
+sgx = [
+    # teaclave
+    "sgx_tstd",
+    # local crates
+    "itp-storage/sgx",
+    # scs crates
+    "sp-io/sgx",
+    "sgx-externalities/sgx",
+    # sgx versions of std crates
+    "thiserror_sgx",
+]
