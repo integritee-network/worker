@@ -27,6 +27,7 @@ use crate::{
 	ocall_bridge::{
 		bridge_api::Bridge as OCallBridge, component_factory::OCallBridgeComponentFactory,
 	},
+	parentchain_block_syncer::{ParentchainBlockSyncer, SyncParentchainBlocks},
 	prometheus_metrics::{start_metrics_server, EnclaveMetricsReceiver, MetricsHandler},
 	sync_block_gossiper::SyncBlockGossiper,
 	utils::{check_files, extract_shard},
@@ -41,7 +42,6 @@ use enclave::{
 	api::enclave_init,
 	tls_ra::{enclave_request_state_provisioning, enclave_run_state_provisioning_server},
 };
-use futures::executor::block_on;
 use itc_parentchain_light_client::light_client_init_params::LightClientInitParams;
 use itp_enclave_api::{
 	direct_request::DirectRequest,
@@ -56,21 +56,13 @@ use itp_node_api_extensions::{
 	node_api_factory::{CreateNodeApi, NodeApiFactory},
 	AccountApi, ChainApi, PalletTeerexApi, ParentchainApi,
 };
-use itp_settings::{
-	files::{
-		ENCRYPTED_STATE_FILE, SHARDS_PATH, SHIELDING_KEY_FILE, SIDECHAIN_STORAGE_PATH,
-		SIGNING_KEY_FILE,
-	},
-	node::MARKET_DATA_UPDATE_INTERVAL,
-};
+use itp_settings::{files::SIDECHAIN_STORAGE_PATH, node::MARKET_DATA_UPDATE_INTERVAL};
 use its_peer_fetch::{
 	block_fetch_client::BlockFetcher, untrusted_peer_fetch::UntrustedPeerFetcher,
 };
-use its_storage::{
-	interface::FetchBlocks, start_sidechain_pruning_loop, BlockPruner, SidechainStorageLock,
-};
+use its_storage::{interface::FetchBlocks, BlockPruner, SidechainStorageLock};
 use log::*;
-use my_node_runtime::Header;
+use my_node_runtime::{Event, Hash, Header};
 use parse_duration::parse;
 use sgx_types::*;
 use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;
@@ -81,7 +73,10 @@ use sp_runtime::OpaqueExtrinsic;
 use std::{
 	path::PathBuf,
 	str,
-	sync::Arc,
+	sync::{
+		mpsc::{channel, Sender},
+		Arc,
+	},
 	thread,
 	time::{Duration, Instant},
 };
@@ -577,10 +572,10 @@ fn start_worker<E, T, D, InitializationHandler>(
 	*/
 }
 
-/*
 /// Start polling loop to wait until we have a worker for a shard registered on
 /// the parentchain (TEEREX WorkerForShard). This is the pre-requisite to be
 /// considered initialized and ready for the next worker to start.
+#[allow(unused)]
 fn spawn_worker_for_shard_polling<InitializationHandler>(
 	shard: &ShardIdentifier,
 	node_api: ParentchainApi,
@@ -608,6 +603,7 @@ fn spawn_worker_for_shard_polling<InitializationHandler>(
 /// Starts the execution of trusted getters in repeating intervals.
 ///
 /// The getters are executed in a pre-defined slot duration.
+#[allow(unused)]
 fn start_interval_trusted_getter_execution<E: Sidechain>(enclave_api: &E) {
 	use itp_settings::enclave::TRUSTED_GETTERS_SLOT_DURATION;
 
@@ -620,7 +616,7 @@ fn start_interval_trusted_getter_execution<E: Sidechain>(enclave_api: &E) {
 		TRUSTED_GETTERS_SLOT_DURATION,
 	);
 }
-*/
+
 /// Send extrinsic to chain according to the market data update interval in the settings
 /// with the current market data (for now only exchange rate).
 fn start_interval_market_update<E: TeeracleApi>(
@@ -715,15 +711,18 @@ where
 		}
 	}
 }
-/*
+
+#[allow(unused)]
 type Events = Vec<frame_system::EventRecord<Event, Hash>>;
 
+#[allow(unused)]
 fn parse_events(event: String) -> Result<Events, String> {
 	let _unhex = Vec::from_hex(event).map_err(|_| "Decoding Events Failed".to_string())?;
 	let mut _er_enc = _unhex.as_slice();
 	Events::decode(&mut _er_enc).map_err(|_| "Decoding Events Failed".to_string())
 }
 
+#[allow(unused)]
 fn print_events(events: Events, _sender: Sender<String>) {
 	for evr in &events {
 		debug!("Decoded: phase = {:?}, event = {:?}", evr.phase, evr.event);
@@ -818,29 +817,40 @@ fn print_events(events: Events, _sender: Sender<String>) {
 		}
 	}
 }
-*/
 
-// pub fn init_light_client<E: EnclaveBase + Sidechain>(
-// 	api: &ParentchainApi,
-// 	enclave_api: Arc<E>,
-// ) -> Result<Header, Error> {
-// 	let genesis_hash = api.get_genesis_hash().unwrap();
-// 	let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap().unwrap();
-// 	info!("Got genesis Header: \n {:?} \n", genesis_header);
-// 	let grandpas = api.grandpa_authorities(Some(genesis_hash)).unwrap();
-// 	let grandpa_proof = api.grandpa_authorities_proof(Some(genesis_hash)).unwrap();
-//
-// 	debug!("Grandpa Authority List: \n {:?} \n ", grandpas);
-//
-// 	let authority_list = VersionedAuthorityList::from(grandpas);
-//
-// 	Ok(enclave_api
-// 		.init_light_client(genesis_header, authority_list, grandpa_proof)
-// 		.unwrap())
-// }
-/*
+#[allow(unused)]
+pub fn init_light_client<E: EnclaveBase + Sidechain>(
+	api: &ParentchainApi,
+	enclave_api: Arc<E>,
+) -> Result<Header, Error> {
+	let genesis_hash = api.get_genesis_hash().unwrap();
+	let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap().unwrap();
+	info!("Got genesis Header: \n {:?} \n", genesis_header);
+	if api.is_grandpa_available()? {
+		let grandpas = api.grandpa_authorities(Some(genesis_hash)).unwrap();
+		let grandpa_proof = api.grandpa_authorities_proof(Some(genesis_hash)).unwrap();
+
+		debug!("Grandpa Authority List: \n {:?} \n ", grandpas);
+
+		let authority_list = VersionedAuthorityList::from(grandpas);
+
+		let params = LightClientInitParams::Grandpa {
+			genesis_header,
+			authorities: authority_list.into(),
+			authority_proof: grandpa_proof,
+		};
+
+		Ok(enclave_api.init_light_client(params).unwrap())
+	} else {
+		let params = LightClientInitParams::Parachain { genesis_header };
+
+		Ok(enclave_api.init_light_client(params).unwrap())
+	}
+}
+
 /// Subscribe to the node API finalized heads stream and trigger a parent chain sync
 /// upon receiving a new header.
+#[allow(unused)]
 fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 	enclave_api: Arc<E>,
 	api: &ParentchainApi,
@@ -868,12 +878,12 @@ fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 /// Execute trusted operations in the enclave
 ///
 ///
+#[allow(unused)]
 fn execute_trusted_calls<E: Sidechain>(enclave_api: &E) {
 	if let Err(e) = enclave_api.execute_trusted_calls() {
 		error!("{:?}", e);
 	};
 }
-*/
 
 /// Get the public signing key of the TEE.
 fn enclave_account<E: EnclaveBase>(enclave_api: &E) -> AccountId32 {
@@ -882,8 +892,8 @@ fn enclave_account<E: EnclaveBase>(enclave_api: &E) -> AccountId32 {
 	AccountId32::from(*tee_public.as_array_ref())
 }
 
-/*
 /// Ensure we're synced up until the parentchain block where we have registered ourselves.
+#[allow(unused)]
 fn import_parentchain_blocks_until_self_registry<
 	E: EnclaveBase + TeerexApi + Sidechain,
 	ParentchainSyncer: SyncParentchainBlocks,
@@ -905,7 +915,6 @@ fn import_parentchain_blocks_until_self_registry<
 
 	Ok(last_synced_header)
 }
-*/
 
 /// Checks if we are the first validateer to register on the parentchain.
 fn we_are_primary_validateer(
