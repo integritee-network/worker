@@ -116,6 +116,7 @@ pub type EnclaveSidechainApi = SidechainApi<ParentchainBlock>;
 pub type EnclaveSidechainState =
 	SidechainDB<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block, SgxExternalities>;
 pub type EnclaveTopPool = BasicPool<EnclaveSidechainApi, ParentchainBlock, EnclaveRpcResponder>;
+
 pub type EnclaveTopPoolAuthor = Author<
 	EnclaveTopPool,
 	AuthorTopFilter,
@@ -123,6 +124,7 @@ pub type EnclaveTopPoolAuthor = Author<
 	EnclaveShieldingKeyRepository,
 	EnclaveOCallApi,
 >;
+
 pub type EnclaveTopPoolOperationHandler = TopPoolOperationHandler<
 	ParentchainBlock,
 	SignedSidechainBlock,

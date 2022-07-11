@@ -81,3 +81,5 @@ sgx = [
 ]
 test = [ "itp-test/sgx", "itp-top-pool/mocks" ]
 mocks = []
+sidechain = []
+offchain-worker = []

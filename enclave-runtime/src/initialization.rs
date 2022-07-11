@@ -85,10 +85,7 @@ use itp_stf_state_handler::{
 use itp_top_pool::pool::Options as PoolOptions;
 use itp_top_pool_author::author::AuthorTopFilter;
 use itp_types::{Block, Header, ShardIdentifier, SignedBlock};
-use its_sidechain::{
-	aura::block_importer::BlockImporter, block_composer::BlockComposer,
-	top_pool_executor::TopPoolOperationHandler,
-};
+use its_sidechain::block_composer::BlockComposer;
 use log::*;
 use primitive_types::H256;
 use sp_core::crypto::Pair;
@@ -136,7 +133,7 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	GLOBAL_OCALL_API_COMPONENT.initialize(ocall_api.clone());
 
 	let stf_executor = Arc::new(EnclaveStfExecutor::new(ocall_api.clone(), state_handler.clone()));
-	GLOBAL_STF_EXECUTOR_COMPONENT.initialize(stf_executor);
+	GLOBAL_STF_EXECUTOR_COMPONENT.initialize(stf_executor.clone());
 
 	// For debug purposes, list shards. no problem to panic if fails.
 	let shards = state_handler.list_shards().unwrap();
@@ -171,6 +168,10 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	);
 	GLOBAL_TOP_POOL_AUTHOR_COMPONENT.initialize(top_pool_author.clone());
 
+	let top_pool_operation_handler =
+		Arc::new(EnclaveTopPoolOperationHandler::new(top_pool_author.clone(), stf_executor));
+	GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.initialize(top_pool_operation_handler);
+
 	let io_handler = public_api_rpc_handler(top_pool_author);
 	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));
 	GLOBAL_RPC_WS_HANDLER_COMPONENT.initialize(rpc_handler);
@@ -182,21 +183,9 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 }
 
 pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
-	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
-
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
-	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
-
-	let top_pool_operation_handler = Arc::new(EnclaveTopPoolOperationHandler::new(
-		top_pool_author.clone(),
-		stf_executor.clone(),
-	));
-	GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.initialize(top_pool_operation_handler);
-
-	let top_pool_executor = Arc::<EnclaveTopPoolOperationHandler>::new(
-		TopPoolOperationHandler::new(top_pool_author, stf_executor),
-	);
+	let top_pool_operation_handler = GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.get()?;
 
 	let parentchain_block_import_dispatcher =
 		GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get()?;
@@ -205,10 +194,10 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 
 	let signer = Ed25519Seal::unseal_from_static_file()?;
 
-	let sidechain_block_importer = Arc::<EnclaveSidechainBlockImporter>::new(BlockImporter::new(
+	let sidechain_block_importer = Arc::new(EnclaveSidechainBlockImporter::new(
 		state_handler,
 		state_key_repository.clone(),
-		top_pool_executor,
+		top_pool_operation_handler,
 		parentchain_block_import_dispatcher,
 		ocall_api.clone(),
 	));
@@ -253,12 +242,12 @@ pub(crate) fn init_light_client(params: LightClientInitParams<Header>) -> Enclav
 
 	GLOBAL_EXTRINSICS_FACTORY_COMPONENT.initialize(extrinsics_factory.clone());
 
-	initialize_parentchain_import_dispatcher(WORKER_MODE)?;
+	initialize_parentchain_import_dispatcher()?;
 
 	Ok(latest_header)
 }
 
-fn initialize_parentchain_import_dispatcher(worker_mode: WorkerMode) -> EnclaveResult<()> {
+fn initialize_parentchain_import_dispatcher() -> EnclaveResult<()> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
@@ -284,7 +273,9 @@ fn initialize_parentchain_import_dispatcher(worker_mode: WorkerMode) -> EnclaveR
 		indirect_calls_executor,
 	);
 
-	match worker_mode {
+	info!("Initializing parentchain import dispatcher for mode: {:?}", WORKER_MODE);
+
+	match WORKER_MODE {
 		WorkerMode::OffChainWorker | WorkerMode::Oracle => {
 			let offchain_worker_executor: Arc<
 				Box<dyn ListenToImportEvent + Send + Sync + 'static>,
@@ -314,7 +305,9 @@ fn initialize_parentchain_import_dispatcher(worker_mode: WorkerMode) -> EnclaveR
 			GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
 				.initialize(parentchain_block_import_dispatcher.clone());
 		},
-		_ => {},
+		_ => {
+			warn!("Worker mode '{:?}' has no parentchain import dispatcher instance", WORKER_MODE);
+		},
 	}
 
 	Ok(())

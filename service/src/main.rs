@@ -127,6 +127,8 @@ fn main() {
 	#[cfg(not(feature = "production"))]
 	info!("*** Starting service in SGX debug mode");
 
+	println!("*** Running worker in mode: {:?} \n", WORKER_MODE);
+
 	let clean_reset = matches.is_present("clean-reset");
 	if clean_reset {
 		setup::purge_files_from_cwd().unwrap();
@@ -184,7 +186,7 @@ fn main() {
 			node_api_factory.create_api().expect("Failed to create parentchain node API");
 
 		let request_state = smatches.is_present("request-state");
-		if request_state {
+		if request_state && WORKER_MODE == WorkerMode::Sidechain {
 			sync_state::sync_state(&node_api, &shard, enclave.as_ref(), skip_ra);
 		}
 

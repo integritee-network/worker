@@ -40,9 +40,9 @@ else
 endif
 
 ifeq ($(SGX_PRODUCTION), 1)
-	ENCLAVE_FEATURES = --features=production,sidechain
+	ENCLAVE_FEATURES = --features=production,$(ADDITIONAL_WORKER_FEATURES)
 else
-	ENCLAVE_FEATURES = --features=test,sidechain
+	ENCLAVE_FEATURES = --features=test,$(ADDITIONAL_WORKER_FEATURES)
 endif
 
 .PHONY: all

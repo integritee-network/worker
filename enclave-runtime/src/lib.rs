@@ -459,6 +459,7 @@ fn sync_parentchain_internal(blocks_to_sync: Vec<SignedBlock>) -> Result<()> {
 	} else if let Ok(block_import_dispatcher) =
 		GLOBAL_IMMEDIATE_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get()
 	{
+		info!("Syncing parentchain blocks ({}) with immediate dispatcher", blocks_to_sync.len());
 		block_import_dispatcher.dispatch_import(blocks_to_sync)?;
 	} else {
 		return Err(Error::Other(

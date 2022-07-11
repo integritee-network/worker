@@ -19,6 +19,11 @@
 
 #![no_std]
 
+#[cfg(all(feature = "sidechain", feature = "offchain-worker"))]
+compile_error!(
+	"feature \"sidechain\" and feature \"offchain-worker\" cannot be enabled at the same time"
+);
+
 pub mod files {
 	// used by worker
 	pub static ENCLAVE_TOKEN: &str = "enclave.token";
@@ -90,11 +95,14 @@ pub mod worker {
 		Oracle,
 	}
 
-	#[cfg(not(feature = "sidechain"))]
+	#[cfg(any(feature = "offchain-worker", feature = "oracle"))]
 	pub const WORKER_MODE: WorkerMode = WorkerMode::OffChainWorker;
 
 	#[cfg(feature = "sidechain")]
 	pub const WORKER_MODE: WorkerMode = WorkerMode::Sidechain;
+
+	#[cfg(not(any(feature = "sidechain", feature = "offchain-worker", feature = "oracle")))]
+	pub const WORKER_MODE: WorkerMode = WorkerMode::Unknown;
 }
 
 pub mod sidechain {

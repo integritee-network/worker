@@ -39,6 +39,7 @@ jobs:
       - name: Build Enclave Test Image
         env:
           DOCKER_BUILDKIT: 1
+          ADDITIONAL_WORKER_FEATURES: sidechain
         run: docker build -t integritee-worker-enclave-test-${{ github.sha }} --target enclave-test -f build.Dockerfile .
 
       - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232

@@ -24,6 +24,7 @@ use futures::executor;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use itp_enclave_api::remote_attestation::TlsRemoteAttestation;
 use itp_node_api_extensions::PalletTeerexApi;
+use itp_settings::worker::{WorkerMode, WORKER_MODE};
 use itp_types::ShardIdentifier;
 use sgx_types::sgx_quote_sign_type_t;
 use std::string::String;
@@ -35,9 +36,14 @@ pub(crate) fn sync_state<E: TlsRemoteAttestation, NodeApi: PalletTeerexApi>(
 	skip_ra: bool,
 ) {
 	// FIXME: we now assume that keys are equal for all shards.
-	let provider_url =
-		executor::block_on(get_author_url_of_last_finalized_sidechain_block(node_api, shard))
-			.expect("Author of last finalized sidechain block could not be found");
+	let provider_url = match WORKER_MODE {
+		WorkerMode::Sidechain =>
+			executor::block_on(get_author_url_of_last_finalized_sidechain_block(node_api, shard))
+				.expect("Author of last finalized sidechain block could not be found"),
+		_ => executor::block_on(get_enclave_url_of_first_registered(node_api))
+			.expect("Author of last finalized sidechain block could not be found"),
+	};
+
 	println!("Requesting state provisioning from worker at {}", &provider_url);
 
 	enclave_request_state_provisioning(
@@ -65,5 +71,18 @@ async fn get_author_url_of_last_finalized_sidechain_block<NodeApi: PalletTeerexA
 		.worker_for_shard(shard, None)?
 		.ok_or(Error::NoWorkerForShardFound(*shard))?;
 	let worker_api_direct = DirectWorkerApi::new(enclave.url);
+	Ok(worker_api_direct.get_mu_ra_url()?)
+}
+
+/// Returns the url of the first registered Enclave on the parentchain.
+async fn get_enclave_url_of_first_registered<NodeApi: PalletTeerexApi>(
+	node_api: &NodeApi,
+) -> Result<String> {
+	let first_enclave = node_api
+		.all_enclaves(None)?
+		.into_iter()
+		.next()
+		.ok_or(Error::NoPeerWorkerFound)?;
+	let worker_api_direct = DirectWorkerApi::new(first_enclave.url.clone());
 	Ok(worker_api_direct.get_mu_ra_url()?)
 }

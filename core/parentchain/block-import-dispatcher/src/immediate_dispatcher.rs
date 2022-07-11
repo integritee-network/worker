@@ -17,6 +17,7 @@
 
 use crate::{error::Result, import_event_listener::ListenToImportEvent, DispatchBlockImport};
 use itc_parentchain_block_importer::ImportParentchainBlocks;
+use log::*;
 use std::{boxed::Box, sync::Arc, vec::Vec};
 
 /// Block import dispatcher that immediately imports the blocks, without any processing or queueing.
@@ -45,7 +46,9 @@ where
 	type SignedBlockType = BlockImporter::SignedBlockType;
 
 	fn dispatch_import(&self, blocks: Vec<Self::SignedBlockType>) -> Result<()> {
+		debug!("Importing {} parentchain blocks", blocks.len());
 		self.block_importer.import_parentchain_blocks(blocks)?;
+		debug!("Notifying {} listeners of import", self.import_event_listeners.len());
 		self.import_event_listeners.iter().for_each(|l| l.notify());
 		Ok(())
 	}
@@ -64,9 +67,9 @@ mod tests {
 
 	#[test]
 	fn listeners_get_notified_upon_import() {
-		let block_importer = Arc::new(TestBlockImporter::default());
+		let block_importer = TestBlockImporter::default();
 		let notification_counter = Arc::new(NotificationCounter::default());
-		let listener: Arc<Box<dyn ListenToImportEvent>> =
+		let listener: Arc<Box<dyn ListenToImportEvent + Send + Sync + 'static>> =
 			Arc::new(Box::new(ListenToImportEventMock::new(notification_counter.clone())));
 		let dispatcher = TestDispatcher::with_listeners(block_importer, vec![listener.clone()]);
 

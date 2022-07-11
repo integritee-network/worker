@@ -73,12 +73,12 @@ ifeq ($(SGX_PRODUCTION), 1)
 	SGX_ENCLAVE_MODE = "Production Mode"
 	SGX_ENCLAVE_CONFIG = "enclave-runtime/Enclave.config.production.xml"
 	SGX_SIGN_KEY = $(SGX_COMMERCIAL_KEY)
-	WORKER_FEATURES = --features=production,sidechain
+	WORKER_FEATURES = --features=production,$(ADDITIONAL_WORKER_FEATURES)
 else
 	SGX_ENCLAVE_MODE = "Development Mode"
 	SGX_ENCLAVE_CONFIG = "enclave-runtime/Enclave.config.xml"
 	SGX_SIGN_KEY = "enclave-runtime/Enclave_private.pem"
-	WORKER_FEATURES = --features=default,sidechain
+	WORKER_FEATURES = --features=default,$(ADDITIONAL_WORKER_FEATURES)
 endif
 
 # check if running on Jenkins

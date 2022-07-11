@@ -74,6 +74,7 @@ frame-support = { git = "https://github.com/paritytech/substrate.git", branch = 
 [features]
 default = []
 sidechain = ["itp-settings/sidechain"]
+offchain-worker = ["itp-settings/offchain-worker"]
 production = ["itp-settings/production"]
 
 [dev-dependencies]
