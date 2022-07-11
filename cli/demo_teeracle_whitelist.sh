@@ -43,6 +43,8 @@ RPORT=${RPORT:-2000}
 DURATION=${DURATION:-48}
 INTERVAL=${INTERVAL:-86400}
 
+LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD="exchange-oracle listen-to-exchange-rate-events"
+
 echo "Using node-port ${NPORT}"
 echo "Using worker-rpc-port ${RPORT}"
 echo "Using worker market data update interval ${INTERVAL}"
@@ -71,10 +73,10 @@ echo "Reading MRENCLAVE from worker list: ${MRENCLAVE}"
 echo ""
 
 echo "Listen to ExchangeRateUpdated events for ${DURATION} seconds. There should be no trusted oracle service!"
-${CLIENT} exchange-rate-events ${DURATION}
+${CLIENT} ${LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD} ${DURATION}
 echo ""
 
-read NO_EVENTS <<< $($CLIENT exchange-rate-events ${DURATION} | awk '/  EVENTS_COUNT: / { print $2; exit }')
+read NO_EVENTS <<< $(${CLIENT} ${LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD} ${DURATION} | awk '/  EVENTS_COUNT: / { print $2; exit }')
 echo "Got ${NO_EVENTS} exchange rate updates when no trusted oracle service is in the whitelist"
 echo ""
 
@@ -84,10 +86,10 @@ echo "MRENCLAVE in Whitelist for ${COIN_GECKO}"
 echo ""
 
 echo "Listen to ExchangeRateUpdated events for ${DURATION} seconds, after a trusted oracle service has been added to the whitelist."
-${CLIENT} exchange-rate-events ${DURATION}
+${CLIENT} ${LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD} ${DURATION}
 echo ""
 
-read EVENTS_COUNT <<< $($CLIENT exchange-rate-events ${DURATION} | awk '/  EVENTS_COUNT: / { print $2; exit }')
+read EVENTS_COUNT <<< $($CLIENT ${LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD} ${DURATION} | awk '/  EVENTS_COUNT: / { print $2; exit }')
 echo "Got ${EVENTS_COUNT} exchange rate updates from the trusted oracle service in ${DURATION} second"
 echo ""
 
@@ -100,10 +102,10 @@ echo "MRENCLAVE in Whitelist for ${COIN_MARKET_CAP}"
 echo ""
 
 echo "Listen to ExchangeRateUpdated events for ${DURATION} seconds, after a second trusted oracle service has been added to the whitelist."
-${CLIENT} exchange-rate-events ${DURATION}
+${CLIENT} ${LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD} ${DURATION}
 echo ""
 
-read EVENTS_COUNT_2 <<< $($CLIENT exchange-rate-events ${DURATION} | awk '/  EVENTS_COUNT: / { print $2; exit }')
+read EVENTS_COUNT_2 <<< $($CLIENT ${LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD} ${DURATION} | awk '/  EVENTS_COUNT: / { print $2; exit }')
 echo "Got ${EVENTS_COUNT_2} exchange rate updates from 2 trusted oracle services in ${DURATION} second"
 echo ""
 
