@@ -7,7 +7,7 @@ resolver = "2"
 
 [dependencies]
 bit-vec = { version = "0.6", default-features = false }
-rcgen = { default-features = false, features = ["sgx", "pem_sgx"], git = 'https://github.com/integritee-network/rcgen' }
+rcgen = { default-features = false, git = 'https://github.com/integritee-network/rcgen' }
 chrono = { version = "0.4.19", default-features = false, features = ["alloc"]}
 
 # sgx dependencies
@@ -58,6 +58,7 @@ sgx = [
     "mio-extras/sgx",
     "mio_sgx",
     "rcgen/sgx",
+    "rcgen/pem_sgx",
     "rustls_sgx",
     "sgx_tstd",
     "sgx_types",
@@ -73,6 +74,7 @@ std = [
     "mio",
     "mio-extras/std",
     "rcgen/std",
+    "rcgen/pem",
     "rustls",
     "thiserror",
     "tungstenite",
