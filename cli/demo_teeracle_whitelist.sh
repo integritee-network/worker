@@ -10,10 +10,7 @@
 # run all on localhost:
 #   integritee-node purge-chain --dev
 #   integritee-node --dev -lpallet_teeracle=debug,parity_ws=error,aura=error,sc_basic_authorship=error
-#   integritee-service init_shard
-#   integritee-service shielding-key
-#   integritee-service signing-key
-#   integritee-service run
+#   integritee-service --clean-reset run (--skip-ra --dev)
 #
 # then run this script
 
