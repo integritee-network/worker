@@ -50,7 +50,7 @@ use std::{boxed::Box, sync::Arc, vec, vec::Vec};
 #[cfg(feature = "sidechain")]
 pub type AuthorTopFilter = crate::top_filter::AllowAllTopsFilter;
 #[cfg(feature = "offchain-worker")]
-pub type AuthorTopFilter = crate::top_filter::GettersOnlyFilter;
+pub type AuthorTopFilter = crate::top_filter::NoDirectCallsFilter;
 
 /// Currently we treat all RPC operations as externals.
 ///

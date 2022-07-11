@@ -48,6 +48,17 @@ impl Filter for GettersOnlyFilter {
 	}
 }
 
+/// Filter that allows no direct calls, only indirect and getters.
+pub struct NoDirectCallsFilter;
+
+impl Filter for NoDirectCallsFilter {
+	type Value = TrustedOperation;
+
+	fn filter(&self, value: &Self::Value) -> bool {
+		!matches!(value, TrustedOperation::direct_call(_))
+	}
+}
+
 #[cfg(test)]
 pub mod tests {
 

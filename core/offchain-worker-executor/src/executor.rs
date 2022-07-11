@@ -105,6 +105,8 @@ impl<
 		let mut parentchain_effects: Vec<OpaqueCall> = Vec::new();
 
 		let shards = self.state_handler.list_shards()?;
+		debug!("Executing calls on {} shard(s)", shards.len());
+
 		for shard in shards {
 			let trusted_calls = self.top_pool_author.get_pending_tops_separated(shard)?.0;
 			debug!("Executing {} trusted calls on shard {:?}", trusted_calls.len(), shard);
@@ -225,6 +227,7 @@ impl<
 	/// We get notified about parentchain block import events.
 	/// This triggers executing calls from the TOP pool (synchronously).
 	fn notify(&self) {
+		debug!("Got notification for parentchain block import, running execute now..");
 		if let Err(e) = self.execute() {
 			error!("Failed to execute trusted calls: {:?}", e);
 		}

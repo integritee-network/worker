@@ -35,6 +35,7 @@ impl<BlockImporter> ImmediateDispatcher<BlockImporter> {
 		block_importer: BlockImporter,
 		import_event_listeners: Vec<Arc<Box<dyn ListenToImportEvent + Send + Sync + 'static>>>,
 	) -> Self {
+		debug!("Creating immediate dispatcher with {} listeners", import_event_listeners.len());
 		ImmediateDispatcher { block_importer, import_event_listeners }
 	}
 }
