@@ -611,6 +611,7 @@ dependencies = [
  "ipfs-unixfs",
  "ita-stf",
  "itc-direct-rpc-server",
+ "itc-offchain-worker-executor",
  "itc-parentchain",
  "itc-tls-websocket-server",
  "itertools",
@@ -1258,6 +1259,26 @@ dependencies = [
  "serde_json 1.0.81",
  "sgx_tstd",
  "sgx_types",
+ "sp-runtime",
+ "thiserror 1.0.9",
+]
+
+[[package]]
+name = "itc-offchain-worker-executor"
+version = "0.8.0"
+dependencies = [
+ "ita-stf",
+ "itc-parentchain-block-import-dispatcher",
+ "itc-parentchain-light-client",
+ "itp-extrinsics-factory",
+ "itp-stf-executor",
+ "itp-stf-state-handler",
+ "itp-top-pool-author",
+ "itp-types",
+ "log",
+ "sgx_tstd",
+ "sgx_types",
+ "sp-core",
  "sp-runtime",
  "thiserror 1.0.9",
 ]

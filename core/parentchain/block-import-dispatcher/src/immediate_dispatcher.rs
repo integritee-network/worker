@@ -21,18 +21,18 @@ use std::{boxed::Box, sync::Arc, vec::Vec};
 
 /// Block import dispatcher that immediately imports the blocks, without any processing or queueing.
 pub struct ImmediateDispatcher<BlockImporter> {
-	block_importer: Arc<BlockImporter>,
-	import_event_listeners: Vec<Arc<Box<dyn ListenToImportEvent>>>,
+	block_importer: BlockImporter,
+	import_event_listeners: Vec<Arc<Box<dyn ListenToImportEvent + Send + Sync + 'static>>>,
 }
 
 impl<BlockImporter> ImmediateDispatcher<BlockImporter> {
-	pub fn new(block_importer: Arc<BlockImporter>) -> Self {
+	pub fn new(block_importer: BlockImporter) -> Self {
 		ImmediateDispatcher { block_importer, import_event_listeners: Vec::new() }
 	}
 
 	pub fn with_listeners(
-		block_importer: Arc<BlockImporter>,
-		import_event_listeners: Vec<Arc<Box<dyn ListenToImportEvent>>>,
+		block_importer: BlockImporter,
+		import_event_listeners: Vec<Arc<Box<dyn ListenToImportEvent + Send + Sync + 'static>>>,
 	) -> Self {
 		ImmediateDispatcher { block_importer, import_event_listeners }
 	}

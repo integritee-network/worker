@@ -29,7 +29,7 @@ use itp_top_pool_author::traits::{AuthorApi, OnBlockImported, SendState};
 use itp_types::{OpaqueCall, ShardIdentifier, H256};
 use log::*;
 use sp_runtime::traits::Block;
-use std::{marker::PhantomData, sync::Arc, time::Duration};
+use std::{marker::PhantomData, sync::Arc, time::Duration, vec, vec::Vec};
 
 /// Off-chain worker executor implementation.
 ///

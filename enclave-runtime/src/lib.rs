@@ -35,8 +35,9 @@ use sgx_types::size_t;
 use crate::{
 	error::{Error, Result},
 	global_components::{
-		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
-		GLOBAL_STATE_HANDLER_COMPONENT,
+		GLOBAL_IMMEDIATE_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+		GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
 	},
 	ocall::OcallApi,
 	rpc::worker_api_direct::sidechain_io_handler,
@@ -451,9 +452,25 @@ pub unsafe extern "C" fn sync_parentchain(
 /// * sends `confirm_call` xt's of the executed unshielding calls
 /// * sends `confirm_blocks` xt's for every synced parentchain block
 fn sync_parentchain_internal(blocks_to_sync: Vec<SignedBlock>) -> Result<()> {
-	let block_import_dispatcher = GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get()?;
-
-	block_import_dispatcher.dispatch_import(blocks_to_sync).map_err(|e| e.into())
+	if let Ok(block_import_dispatcher) =
+		GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get()
+	{
+		block_import_dispatcher.dispatch_import(blocks_to_sync)?;
+	} else if let Ok(block_import_dispatcher) =
+		GLOBAL_IMMEDIATE_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get()
+	{
+		block_import_dispatcher.dispatch_import(blocks_to_sync)?;
+	} else {
+		return Err(Error::Other(
+			format!(
+				"No parentchain block import dispatcher found, cannot import \
+			{} parentchain block(s)",
+				blocks_to_sync.len()
+			)
+			.into(),
+		))
+	}
+	Ok(())
 }
 
 /// Triggers the import of parentchain blocks when using a queue to sync parentchain block import
@@ -463,7 +480,7 @@ fn sync_parentchain_internal(blocks_to_sync: Vec<SignedBlock>) -> Result<()> {
 /// sidechain and the `ImmediateDispatcher` are used, this function is obsolete.
 #[no_mangle]
 pub unsafe extern "C" fn trigger_parentchain_block_import() -> sgx_status_t {
-	match GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get() {
+	match GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get() {
 		Ok(dispatcher) => match dispatcher.import_all() {
 			Ok(_) => sgx_status_t::SGX_SUCCESS,
 			Err(e) => {

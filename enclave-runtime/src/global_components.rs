@@ -27,7 +27,9 @@ use itc_direct_rpc_server::{
 	rpc_watch_extractor::RpcWatchExtractor, rpc_ws_handler::RpcWsHandler,
 };
 use itc_parentchain::{
-	block_import_dispatcher::triggered_dispatcher::TriggeredDispatcher,
+	block_import_dispatcher::{
+		immediate_dispatcher::ImmediateDispatcher, triggered_dispatcher::TriggeredDispatcher,
+	},
 	block_importer::ParentchainBlockImporter,
 	indirect_calls_executor::IndirectCallsExecutor,
 	light_client::{
@@ -90,7 +92,7 @@ pub type EnclaveValidatorAccessor = ValidatorAccessor<
 	ParentchainBlock,
 	LightClientStateSeal<ParentchainBlock, LightValidationState<ParentchainBlock>>,
 >;
-pub type EnclaveParentChainBlockImporter = ParentchainBlockImporter<
+pub type EnclaveParentchainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
 	EnclaveValidatorAccessor,
 	EnclaveStfExecutor,
@@ -98,8 +100,10 @@ pub type EnclaveParentChainBlockImporter = ParentchainBlockImporter<
 	EnclaveIndirectCallsExecutor,
 >;
 pub type EnclaveParentchainBlockImportQueue = BlockImportQueue<SignedParentchainBlock>;
-pub type EnclaveParentchainBlockImportDispatcher =
-	TriggeredDispatcher<EnclaveParentChainBlockImporter, EnclaveParentchainBlockImportQueue>;
+pub type EnclaveTriggeredParentchainBlockImportDispatcher =
+	TriggeredDispatcher<EnclaveParentchainBlockImporter, EnclaveParentchainBlockImportQueue>;
+pub type EnclaveImmediateParentchainBlockImportDispatcher =
+	ImmediateDispatcher<EnclaveParentchainBlockImporter>;
 
 pub type EnclaveRpcConnectionRegistry = ConnectionRegistry<Hash, ConnectionToken>;
 pub type EnclaveRpcWsHandler =
@@ -136,7 +140,7 @@ pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 	EnclaveStateHandler,
 	EnclaveStateKeyRepository,
 	EnclaveTopPoolOperationHandler,
-	EnclaveParentchainBlockImportDispatcher,
+	EnclaveTriggeredParentchainBlockImportDispatcher,
 >;
 pub type EnclaveSidechainBlockImportQueue = BlockImportQueue<SignedSidechainBlock>;
 pub type EnclaveSidechainBlockSyncer = PeerBlockSync<
@@ -187,10 +191,15 @@ pub static GLOBAL_TOP_POOL_AUTHOR_COMPONENT: ComponentContainer<EnclaveTopPoolAu
 /// Parentchain component instances
 ///-------------------------------------------------------------------------------------------------
 
-/// Parentchain import dispatcher.
-pub static GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT: ComponentContainer<
-	EnclaveParentchainBlockImportDispatcher,
-> = ComponentContainer::new("parentchain import dispatcher");
+/// Triggered parentchain block import dispatcher.
+pub static GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT: ComponentContainer<
+	EnclaveTriggeredParentchainBlockImportDispatcher,
+> = ComponentContainer::new("triggered parentchain import dispatcher");
+
+/// Immediate parentchain block import dispatcher.
+pub static GLOBAL_IMMEDIATE_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT: ComponentContainer<
+	EnclaveImmediateParentchainBlockImportDispatcher,
+> = ComponentContainer::new("immediate parentchain import dispatcher");
 
 /// Parentchain block validator accessor.
 pub static GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT: ComponentContainer<
