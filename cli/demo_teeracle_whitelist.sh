@@ -44,6 +44,7 @@ DURATION=${DURATION:-48}
 INTERVAL=${INTERVAL:-86400}
 
 LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD="exchange-oracle listen-to-exchange-rate-events"
+ADD_TO_WHITELIST_CMD="exchange-oracle add-whitelist"
 
 echo "Using node-port ${NPORT}"
 echo "Using worker-rpc-port ${RPORT}"
@@ -81,7 +82,7 @@ echo "Got ${NO_EVENTS} exchange rate updates when no trusted oracle service is i
 echo ""
 
 echo "Add MRENCLAVE as trusted oracle service for ${COIN_GECKO}"
-${CLIENT} add-whitelist //Alice ${COIN_GECKO} ${MRENCLAVE}
+${CLIENT} ${ADD_TO_WHITELIST_CMD} //Alice ${COIN_GECKO} ${MRENCLAVE}
 echo "MRENCLAVE in Whitelist for ${COIN_GECKO}"
 echo ""
 
@@ -97,7 +98,7 @@ echo ""
 
 
 echo "Add MRENCLAVE as trusted oracle service for ${COIN_MARKET_CAP}"
-${CLIENT} add-whitelist //Alice ${COIN_MARKET_CAP} ${MRENCLAVE}
+${CLIENT} ADD_TO_WHITELIST_CMD //Alice ${COIN_MARKET_CAP} ${MRENCLAVE}
 echo "MRENCLAVE in Whitelist for ${COIN_MARKET_CAP}"
 echo ""
 
