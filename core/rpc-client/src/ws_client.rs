@@ -82,7 +82,7 @@ impl WsClient {
 	}
 
 	/// Connects a web-socket client for a one-shot request.
-	pub fn connect_one_shot(url: &str, request: &str, result: &MpscSender<String>) -> Result<()> {
+	pub fn connect_one_shot(url: &str, request: &str, result: MpscSender<String>) -> Result<()> {
 		connect(url.to_string(), |out| {
 			WsClient::new(out, request.to_string(), result.clone(), false)
 		})
