@@ -32,7 +32,7 @@ thiserror = { version = "1.0", optional = true }
 tungstenite = { version = "0.15.0", optional = true, features = ["rustls-tls-webpki-roots"] }
 rustls = { version = "0.19", optional = true }
 webpki = { version = "0.21", optional = true }
-yasna = { version = "0.4", optional = true, features = ["bit-vec", "num-bigint", "chrono"] }
+yasna = { version = "0.4", optional = true, features = ["bit-vec", "num-bigint", "chrono", "std"] }
 
 # local deps
 itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", default-features = false}
