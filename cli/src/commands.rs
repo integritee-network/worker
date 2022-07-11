@@ -16,7 +16,10 @@
 */
 
 extern crate chrono;
-use crate::{command_utils::*, trusted_commands, trusted_commands::TrustedArgs, Cli};
+use crate::{
+	command_utils::*, exchange_oracle::ExchangeOracleSubCommand, trusted_commands,
+	trusted_commands::TrustedArgs, Cli,
+};
 use base58::{FromBase58, ToBase58};
 use chrono::{DateTime, Utc};
 use clap::Subcommand;
@@ -114,6 +117,10 @@ pub enum Commands {
 	/// trusted calls to worker enclave
 	#[clap(after_help = "stf subcommands depend on the stf crate this has been built against")]
 	Trusted(TrustedArgs),
+
+	/// Subcommands for the exchange oracle.
+	#[clap(subcommand)]
+	ExchangeOracle(ExchangeOracleSubCommand),
 }
 
 pub fn match_command(cli: &Cli) {
@@ -130,6 +137,7 @@ pub fn match_command(cli: &Cli) {
 		Commands::ShieldFunds { from, to, amount, shard } =>
 			shield_funds(cli, from, to, amount, shard),
 		Commands::Trusted(trusted) => trusted_commands::match_trusted_commands(cli, trusted),
+		Commands::ExchangeOracle(cmd) => cmd.run(cli),
 	};
 }
 

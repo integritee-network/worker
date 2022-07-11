@@ -2074,6 +2074,7 @@ dependencies = [
  "itp-node-api-extensions",
  "itp-rpc",
  "itp-sgx-crypto",
+ "itp-time-utils",
  "itp-types",
  "itp-utils",
  "json",
