@@ -12,17 +12,17 @@ mod commands;
 #[derive(Debug, clap::Subcommand)]
 pub enum ExchangeOracleSubCommand {
 	/// Add a market source to the teeracle's whitelist.
-	AddWhitelistCmd(AddWhitelistCmd),
+	AddWhitelist(AddWhitelistCmd),
 
 	/// Listen to exchange rate events
-	ListenToExchangeCmd(ListenToExchangeCmd),
+	ListenToExchangeRateEvents(ListenToExchangeCmd),
 }
 
 impl ExchangeOracleSubCommand {
 	pub fn run(&self, cli: &Cli) {
 		match self {
-			ExchangeOracleSubCommand::AddWhitelistCmd(cmd) => cmd.run(cli),
-			ExchangeOracleSubCommand::ListenToExchangeCmd(cmd) => cmd.run(cli),
+			ExchangeOracleSubCommand::AddWhitelist(cmd) => cmd.run(cli),
+			ExchangeOracleSubCommand::ListenToExchangeRateEvents(cmd) => cmd.run(cli),
 		}
 	}
 }
