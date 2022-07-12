@@ -8,6 +8,7 @@ pushd bin
 ./integritee-service mrenclave | tee ~/mrenclave.b58
 popd
 
+ulimit -S -n 4096
 
 python3 local-setup/launch.py local-setup/simple-config.json &
 PID=$!
