@@ -21,6 +21,7 @@ use super::{
 	mocks::SealHandlerMock, tls_ra_client::request_state_provisioning_internal,
 	tls_ra_server::run_state_provisioning_server_internal,
 };
+use itp_settings::worker::{WorkerMode, WORKER_MODE};
 use itp_types::ShardIdentifier;
 use sgx_types::sgx_quote_sign_type_t;
 use std::{
@@ -92,5 +93,10 @@ pub fn test_tls_ra_server_client_networking() {
 	assert!(result.is_ok());
 	assert_eq!(*client_shielding_key.read().unwrap(), shielding_key);
 	assert_eq!(*client_state_key.read().unwrap(), state_key);
-	assert_eq!(*client_state.read().unwrap(), state);
+
+	if WORKER_MODE == WorkerMode::Sidechain {
+		assert_eq!(*client_state.read().unwrap(), state);
+	} else {
+		assert!(client_state.read().unwrap().is_empty());
+	}
 }
