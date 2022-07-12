@@ -24,6 +24,10 @@ SGX_DEBUG ?= 0
 SGX_PRERELEASE ?= 0
 SGX_PRODUCTION ?= 0
 
+######## Worker Feature Settings ########
+# Set sidechain as default feature mode
+ADDITIONAL_WORKER_FEATURES ?= sidechain
+
 SKIP_WASM_BUILD = 1
 # include the build settings from rust-sgx-sdk
 include rust-sgx-sdk/buildenv.mk

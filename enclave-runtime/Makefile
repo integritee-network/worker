@@ -26,6 +26,10 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+######## Worker Feature Settings ########
+# Set sidechain as default feature mode
+ADDITIONAL_WORKER_FEATURES ?= sidechain
+
 Rust_Enclave_Name := libenclave.a
 Rust_Enclave_Files := $(wildcard src/*.rs) $(wildcard ../stf/src/*.rs)
 Rust_Target_Path := $(CURDIR)/../../../xargo
