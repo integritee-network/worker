@@ -37,7 +37,10 @@ use ita_stf::{
 use itc_parentchain::light_client::mocks::validator_access_mock::ValidatorAccessMock;
 use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
 use itp_ocall_api::EnclaveAttestationOCallApi;
-use itp_settings::sidechain::SLOT_DURATION;
+use itp_settings::{
+	sidechain::SLOT_DURATION,
+	worker::{WorkerMode, WORKER_MODE},
+};
 use itp_sgx_crypto::{Aes, ShieldingCryptoEncrypt, StateCrypto};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock};
@@ -58,11 +61,18 @@ use sp_core::{ed25519, Pair};
 use std::{sync::Arc, vec, vec::Vec};
 
 /// Integration test for sidechain block production and block import.
+/// (requires Sidechain mode)
 ///
 /// - Create trusted calls and add them to the TOP pool.
 /// - Run AURA on a valid and claimed slot, which executes the trusted operations and produces a new block.
 /// - Import the new sidechain block, which updates the state.
 pub fn produce_sidechain_block_and_import_it() {
+	// Test can only be run in Sidechain mode
+	if WORKER_MODE != WorkerMode::Sidechain {
+		info!("Ignoring sidechain block production test: Not in sidechain mode");
+		return
+	}
+
 	let _ = env_logger::builder().is_test(true).try_init();
 	info!("Setting up test.");
 
