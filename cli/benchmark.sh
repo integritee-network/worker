@@ -11,8 +11,8 @@ popd
 
 python3 local-setup/launch.py local-setup/simple-config.json &
 PID=$!
-echo $PID > ./demo_benchmark.pid
-echo "Demo-Benchmark PID: $PID"
+echo $PID > ./benchmark.pid
+echo "Benchmark PID: $PID"
 
 sleep 40s
 
@@ -22,10 +22,10 @@ popd
 
 sleep 10s
 
-if test -f "./demo_benchmark.pid"; then
-    echo "Killing demo_benchmark process"
-    kill -s SIGTERM $(cat ./demo_benchmark.pid)
-    rm demo_benchmark.pid
+if test -f "./benchmark.pid"; then
+    echo "Killing benchmark process"
+    kill -s SIGTERM $(cat ./benchmark.pid)
+    rm benchmark.pid
 fi
 
 popd
