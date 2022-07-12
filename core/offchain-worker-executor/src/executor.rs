@@ -17,7 +17,6 @@
 
 use crate::error::Result;
 use ita_stf::hash::TrustedOperationOrHash;
-use itc_parentchain_block_import_dispatcher::import_event_listener::ListenToImportEvent;
 use itc_parentchain_light_client::{
 	concurrent_access::ValidatorAccess, BlockNumberOps, ExtrinsicSender, LightClientState,
 	NumberFor,
@@ -195,41 +194,5 @@ impl<
 			}
 		}
 		failed_to_remove
-	}
-}
-
-impl<
-		ParentchainBlock,
-		TopPoolAuthor,
-		StfExecutor,
-		StateHandler,
-		ValidatorAccessor,
-		ExtrinsicsFactory,
-	> ListenToImportEvent
-	for Executor<
-		ParentchainBlock,
-		TopPoolAuthor,
-		StfExecutor,
-		StateHandler,
-		ValidatorAccessor,
-		ExtrinsicsFactory,
-	> where
-	ParentchainBlock: Block<Hash = H256>,
-	StfExecutor: StateUpdateProposer,
-	TopPoolAuthor: AuthorApi<H256, ParentchainBlock::Hash>
-		+ OnBlockImported<Hash = ParentchainBlock::Hash>
-		+ SendState<Hash = ParentchainBlock::Hash>,
-	StateHandler: QueryShardState + HandleState<StateT = StfExecutor::Externalities>,
-	ValidatorAccessor: ValidatorAccess<ParentchainBlock> + Send + Sync + 'static,
-	ExtrinsicsFactory: CreateExtrinsics,
-	NumberFor<ParentchainBlock>: BlockNumberOps,
-{
-	/// We get notified about parentchain block import events.
-	/// This triggers executing calls from the TOP pool (synchronously).
-	fn notify(&self) {
-		debug!("Got notification for parentchain block import, running execute now..");
-		if let Err(e) = self.execute() {
-			error!("Failed to execute trusted calls: {:?}", e);
-		}
 	}
 }

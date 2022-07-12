@@ -32,7 +32,6 @@ pub mod sgx_reexport_prelude {
 
 pub mod error;
 pub mod immediate_dispatcher;
-pub mod import_event_listener;
 pub mod triggered_dispatcher;
 
 #[cfg(feature = "mocks")]

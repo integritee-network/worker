@@ -48,8 +48,7 @@ use itc_direct_rpc_server::{
 };
 use itc_parentchain::{
 	block_import_dispatcher::{
-		immediate_dispatcher::ImmediateDispatcher, import_event_listener::ListenToImportEvent,
-		triggered_dispatcher::TriggeredDispatcher,
+		immediate_dispatcher::ImmediateDispatcher, triggered_dispatcher::TriggeredDispatcher,
 	},
 	block_importer::ParentchainBlockImporter,
 	indirect_calls_executor::IndirectCallsExecutor,
@@ -89,7 +88,7 @@ use its_sidechain::block_composer::BlockComposer;
 use log::*;
 use primitive_types::H256;
 use sp_core::crypto::Pair;
-use std::{boxed::Box, fs, string::String, sync::Arc, vec};
+use std::{fs, string::String, sync::Arc};
 
 pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> EnclaveResult<()> {
 	// Initialize the logging environment in the enclave.
@@ -276,20 +275,21 @@ fn initialize_parentchain_import_dispatcher() -> EnclaveResult<()> {
 
 	match WORKER_MODE {
 		WorkerMode::OffChainWorker | WorkerMode::Oracle => {
-			let offchain_worker_executor: Arc<
-				Box<dyn ListenToImportEvent + Send + Sync + 'static>,
-			> = Arc::new(Box::new(itc_offchain_worker_executor::executor::Executor::new(
-				top_pool_author,
-				stf_executor,
-				state_handler,
-				validator_access,
-				extrinsics_factory,
-			)));
-			let parentchain_block_import_dispatcher =
-				Arc::new(ImmediateDispatcher::with_listeners(
-					parentchain_block_importer,
-					vec![offchain_worker_executor],
+			let offchain_worker_executor =
+				Arc::new(itc_offchain_worker_executor::executor::Executor::new(
+					top_pool_author,
+					stf_executor,
+					state_handler,
+					validator_access,
+					extrinsics_factory,
 				));
+			let parentchain_block_import_dispatcher = Arc::new(
+				ImmediateDispatcher::new(parentchain_block_importer).with_observer(move || {
+					if let Err(e) = offchain_worker_executor.execute() {
+						error!("Failed to execute trusted calls: {:?}", e);
+					}
+				}),
+			);
 
 			GLOBAL_IMMEDIATE_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
 				.initialize(parentchain_block_import_dispatcher);
