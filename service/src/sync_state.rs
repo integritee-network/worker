@@ -22,14 +22,14 @@ use crate::{
 };
 use futures::executor;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
-use itp_enclave_api::remote_attestation::TlsRemoteAttestation;
+use itp_enclave_api::{enclave_base::EnclaveBase, remote_attestation::TlsRemoteAttestation};
 use itp_node_api_extensions::PalletTeerexApi;
 use itp_settings::worker::{WorkerMode, WORKER_MODE};
 use itp_types::ShardIdentifier;
 use sgx_types::sgx_quote_sign_type_t;
 use std::string::String;
 
-pub(crate) fn sync_state<E: TlsRemoteAttestation, NodeApi: PalletTeerexApi>(
+pub(crate) fn sync_state<E: TlsRemoteAttestation + EnclaveBase, NodeApi: PalletTeerexApi>(
 	node_api: &NodeApi,
 	shard: &ShardIdentifier,
 	enclave_api: &E,
@@ -40,7 +40,7 @@ pub(crate) fn sync_state<E: TlsRemoteAttestation, NodeApi: PalletTeerexApi>(
 		WorkerMode::Sidechain =>
 			executor::block_on(get_author_url_of_last_finalized_sidechain_block(node_api, shard))
 				.expect("Author of last finalized sidechain block could not be found"),
-		_ => executor::block_on(get_enclave_url_of_first_registered(node_api))
+		_ => executor::block_on(get_enclave_url_of_first_registered(node_api, enclave_api))
 			.expect("Author of last finalized sidechain block could not be found"),
 	};
 
@@ -74,14 +74,18 @@ async fn get_author_url_of_last_finalized_sidechain_block<NodeApi: PalletTeerexA
 	Ok(worker_api_direct.get_mu_ra_url()?)
 }
 
-/// Returns the url of the first registered Enclave on the parentchain.
-async fn get_enclave_url_of_first_registered<NodeApi: PalletTeerexApi>(
+/// Returns the url of the first Enclave that matches our own MRENCLAVE.
+///
+/// This should be run before we register ourselves as enclave, to ensure we don't get our own url.
+async fn get_enclave_url_of_first_registered<NodeApi: PalletTeerexApi, EnclaveApi: EnclaveBase>(
 	node_api: &NodeApi,
+	enclave_api: &EnclaveApi,
 ) -> Result<String> {
+	let self_mr_enclave = enclave_api.get_mrenclave()?;
 	let first_enclave = node_api
 		.all_enclaves(None)?
 		.into_iter()
-		.next()
+		.find(|e| e.mr_enclave == self_mr_enclave)
 		.ok_or(Error::NoPeerWorkerFound)?;
 	let worker_api_direct = DirectWorkerApi::new(first_enclave.url);
 	Ok(worker_api_direct.get_mu_ra_url()?)

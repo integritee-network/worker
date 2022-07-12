@@ -186,7 +186,7 @@ fn main() {
 			node_api_factory.create_api().expect("Failed to create parentchain node API");
 
 		let request_state = smatches.is_present("request-state");
-		if request_state && WORKER_MODE == WorkerMode::Sidechain {
+		if request_state {
 			sync_state::sync_state(&node_api, &shard, enclave.as_ref(), skip_ra);
 		}
 

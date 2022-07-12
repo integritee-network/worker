@@ -30,6 +30,7 @@ use crate::{
 };
 use itp_component_container::ComponentGetter;
 use itp_ocall_api::EnclaveAttestationOCallApi;
+use itp_settings::worker::{WorkerMode, WORKER_MODE};
 use itp_types::ShardIdentifier;
 use log::*;
 use rustls::{ServerConfig, ServerSession, Stream};
@@ -41,12 +42,30 @@ use std::{
 	sync::Arc,
 };
 
+#[derive(Clone, Eq, PartialEq, Debug)]
+enum ProvisioningPayload {
+	Everything,
+	KeysOnly,
+	Nothing,
+}
+
+impl From<WorkerMode> for ProvisioningPayload {
+	fn from(m: WorkerMode) -> Self {
+		match m {
+			WorkerMode::Unknown => ProvisioningPayload::Nothing,
+			WorkerMode::OffChainWorker | WorkerMode::Oracle => ProvisioningPayload::KeysOnly,
+			WorkerMode::Sidechain => ProvisioningPayload::Everything,
+		}
+	}
+}
+
 /// Server part of the TCP-level connection and the underlying TLS-level session.
 ///
 /// Includes a seal handler, which handles the reading part of the data to be sent.
 struct TlsServer<'a, StateAndKeyUnsealer> {
 	tls_stream: Stream<'a, ServerSession, TcpStream>,
 	seal_handler: StateAndKeyUnsealer,
+	provisioning_payload: ProvisioningPayload,
 }
 
 impl<'a, StateAndKeyUnsealer> TlsServer<'a, StateAndKeyUnsealer>
@@ -56,8 +75,9 @@ where
 	fn new(
 		tls_stream: Stream<'a, ServerSession, TcpStream>,
 		seal_handler: StateAndKeyUnsealer,
+		provisioning_payload: ProvisioningPayload,
 	) -> Self {
-		Self { tls_stream, seal_handler }
+		Self { tls_stream, seal_handler, provisioning_payload }
 	}
 
 	/// Sends all relevant data of the specific shard to the client.
@@ -76,11 +96,31 @@ where
 
 	/// Sends all relevant data to the client.
 	fn write_all(&mut self, shard: &ShardIdentifier) -> EnclaveResult<()> {
+		debug!("Provisioning is set to: {:?}", self.provisioning_payload);
+		match self.provisioning_payload {
+			ProvisioningPayload::Everything => {
+				self.write_keys()?;
+				self.write_state(shard)?;
+			},
+			ProvisioningPayload::KeysOnly => {
+				self.write_keys()?;
+			},
+			_ => {},
+		}
+
+		Ok(())
+	}
+
+	fn write_keys(&mut self) -> EnclaveResult<()> {
 		let shielding_key = self.seal_handler.unseal_shielding_key()?;
 		let state_key = self.seal_handler.unseal_state_key()?;
-		let state = self.seal_handler.unseal_state(shard)?;
 		self.write(Opcode::ShieldingKey, &shielding_key)?;
 		self.write(Opcode::StateKey, &state_key)?;
+		Ok(())
+	}
+
+	fn write_state(&mut self, shard: &ShardIdentifier) -> EnclaveResult<()> {
+		let state = self.seal_handler.unseal_state(shard)?;
 		self.write(Opcode::State, &state)?;
 		Ok(())
 	}
@@ -154,8 +194,13 @@ pub(crate) fn run_state_provisioning_server_internal<StateAndKeyUnsealer: Unseal
 ) -> EnclaveResult<()> {
 	let server_config = tls_server_config(sign_type, OcallApi, skip_ra == 1)?;
 	let (mut server_session, mut tcp_stream) = tls_server_session_stream(socket_fd, server_config)?;
-	let mut server =
-		TlsServer::new(rustls::Stream::new(&mut server_session, &mut tcp_stream), seal_handler);
+	let provisioning = ProvisioningPayload::from(WORKER_MODE);
+
+	let mut server = TlsServer::new(
+		rustls::Stream::new(&mut server_session, &mut tcp_stream),
+		seal_handler,
+		provisioning,
+	);
 
 	println!("    [Enclave] (MU-RA-Server) MU-RA successful sending keys");
 	server.write_shard()
