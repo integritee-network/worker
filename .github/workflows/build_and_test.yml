@@ -126,24 +126,30 @@ jobs:
         if: failure()
         uses: andymckay/cancel-action@0.2
 
-  integration-tests-sidechain:
+  integration-tests:
     runs-on: ubuntu-latest
     needs: build-test
     container: "integritee/integritee-dev:0.1.9"
     strategy:
       fail-fast: false
       matrix:
-        test: [M6, M8, Sidechain]
         include:
           - test: M6
+            mode: sidechain
             demo_name: m6_demo_shielding_unshielding
             demo_script: m6.sh
           - test: M8
+            mode: sidechain
             demo_name: m8_demo_direct_call
             demo_script: m8.sh
           - test: Sidechain
+            mode: sidechain
             demo_name: sidechain_demo
             demo_script: sidechain.sh
+          - test: M6
+            mode: offchain-worker
+            demo_name: m6_demo_shielding_unshielding
+            demo_script: m6.sh
 
     env:
       BIN_DIR: bin
@@ -157,19 +163,19 @@ jobs:
       - name: Download Worker
         uses: actions/download-artifact@v2
         with:
-          name: integritee-worker-sidechain-${{ github.sha }}
+          name: integritee-worker-${{ matrix.mode }}-${{ github.sha }}
           path: ${{ env.BIN_DIR }}
 
       - name: Download Client
         uses: actions/download-artifact@v2
         with:
-          name: integritee-client-sidechain-${{ github.sha }}
+          name: integritee-client-${{ matrix.mode }}-${{ github.sha }}
           path: ${{ env.BIN_DIR }}
 
       - name: Download Enclave
         uses: actions/download-artifact@v2
         with:
-          name: enclave-signed-sidechain-${{ github.sha }}
+          name: enclave-signed-${{ matrix.mode }}-${{ github.sha }}
           path: ${{ env.BIN_DIR }}
 
         # If you want to debug ci and you don't want to build the binaries, you can replace the downloads above with
@@ -245,7 +251,7 @@ jobs:
           ./local-setup/launch.py local-setup/github-action-config.json 2>&1 | tee -i ${{ env.LOG_DIR }}/local-setup.log &
           sleep 150
 
-      - name: ${{ matrix.demo_name }}
+      - name: ${{ matrix.demo_name }}-${{ matrix.mode }}
         # * the change the symbolic link which points to the target/release... folder.
         # * need overwrite default shell to bash to get access to the `source` cmd.
         shell: bash --noprofile --norc -eo pipefail {0}
@@ -257,14 +263,14 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ matrix.test }}_logs
+          name: ${{ matrix.test }}-${{ matrix.mode }}_logs
           path: ${{ env.LOG_DIR }}
 
   release:
     name: Draft Release
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
-    needs: [build-test, integration-tests-sidechain]
+    needs: [build-test, integration-tests]
     outputs:
       release_url: ${{ steps.create-release.outputs.html_url }}
       asset_upload_url: ${{ steps.create-release.outputs.upload_url }}
