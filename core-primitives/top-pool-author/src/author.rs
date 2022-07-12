@@ -52,6 +52,9 @@ pub type AuthorTopFilter = crate::top_filter::AllowAllTopsFilter;
 #[cfg(feature = "offchain-worker")]
 pub type AuthorTopFilter = crate::top_filter::NoDirectCallsFilter;
 
+#[cfg(not(any(feature = "sidechain", feature = "offchain-worker")))]
+pub type AuthorTopFilter = crate::top_filter::AllowAllTopsFilter;
+
 /// Currently we treat all RPC operations as externals.
 ///
 /// Possibly in the future we could allow opt-in for special treatment

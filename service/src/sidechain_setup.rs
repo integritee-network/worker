@@ -75,8 +75,8 @@ where
 			import_parentchain_blocks_until_self_registry(
 				enclave.clone(),
 				parentchain_block_syncer,
-				&last_synced_header,
-				&register_enclave_xt_header,
+				last_synced_header,
+				register_enclave_xt_header,
 			)
 			.unwrap(),
 		);
@@ -88,7 +88,7 @@ where
 
 	// ------------------------------------------------------------------------
 	// Start interval sidechain block production (execution of trusted calls, sidechain block production).
-	let sidechain_enclave_api = enclave.clone();
+	let sidechain_enclave_api = enclave;
 	println!("[+] Spawning thread for sidechain block production");
 	thread::Builder::new()
 		.name("interval_block_production_timer".to_owned())
@@ -115,7 +115,7 @@ where
 		})
 		.unwrap();
 
-	updated_header.unwrap_or(last_synced_header.clone())
+	updated_header.unwrap_or_else(|| last_synced_header.clone())
 }
 
 /// Execute trusted operations in the enclave.

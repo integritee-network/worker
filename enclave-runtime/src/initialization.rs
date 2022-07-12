@@ -224,8 +224,7 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 pub(crate) fn init_light_client(params: LightClientInitParams<Header>) -> EnclaveResult<Header> {
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 	let validator = itc_parentchain::light_client::io::read_or_init_validator::<Block, OcallApi>(
-		params,
-		ocall_api.clone(),
+		params, ocall_api,
 	)?;
 	let latest_header = validator.latest_finalized_header(validator.num_relays())?;
 
@@ -240,7 +239,7 @@ pub(crate) fn init_light_client(params: LightClientInitParams<Header>) -> Enclav
 	let extrinsics_factory =
 		Arc::new(ExtrinsicsFactory::new(genesis_hash, signer, GLOBAL_NONCE_CACHE.clone()));
 
-	GLOBAL_EXTRINSICS_FACTORY_COMPONENT.initialize(extrinsics_factory.clone());
+	GLOBAL_EXTRINSICS_FACTORY_COMPONENT.initialize(extrinsics_factory);
 
 	initialize_parentchain_import_dispatcher()?;
 
@@ -303,7 +302,7 @@ fn initialize_parentchain_import_dispatcher() -> EnclaveResult<()> {
 			));
 
 			GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
-				.initialize(parentchain_block_import_dispatcher.clone());
+				.initialize(parentchain_block_import_dispatcher);
 		},
 		_ => {
 			warn!("Worker mode '{:?}' has no parentchain import dispatcher instance", WORKER_MODE);
