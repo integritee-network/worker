@@ -66,7 +66,7 @@ impl DirectApi for DirectClient {
 		let (port_in, port_out) = channel();
 
 		info!("[WorkerApi Direct]: (get) Sending request: {:?}", request);
-		WsClient::connect_one_shot(&self.url, request, &port_in)?;
+		WsClient::connect_one_shot(&self.url, request, port_in)?;
 		port_out.recv().map_err(Error::MspcReceiver)
 	}
 
