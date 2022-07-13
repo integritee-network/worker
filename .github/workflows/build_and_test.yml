@@ -99,7 +99,7 @@ jobs:
         run: rustup show && cd enclave-runtime && rustup show
 
       - name: Worker & Client
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --all --exclude test-sgx-build -- -D warnings
       - name: Enclave # Enclave is separate as it's not in the workspace
         run: cd enclave-runtime && cargo clippy -- -D warnings
 
