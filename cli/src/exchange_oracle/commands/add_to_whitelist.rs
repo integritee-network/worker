@@ -11,7 +11,7 @@ use substrate_api_client::ExtrinsicParams;
 
 /// Add a trusted market data source to the on-chain whitelist.
 #[derive(Debug, Clone, Parser)]
-pub struct AddWhitelistCmd {
+pub struct AddToWhitelistCmd {
 	/// Sender's on-chain AccountId in ss58check format.
 	///
 	/// It has to be a sudo account.
@@ -24,7 +24,7 @@ pub struct AddWhitelistCmd {
 	mrenclave: String,
 }
 
-impl AddWhitelistCmd {
+impl AddToWhitelistCmd {
 	pub fn run(&self, cli: &Cli) {
 		let api = get_chain_api(cli);
 		let mrenclave = mrenclave_from_base58(&self.mrenclave);

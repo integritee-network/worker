@@ -4,7 +4,7 @@
 //! https://github.com/integritee-network/worker/issues/852
 
 use crate::Cli;
-use commands::{AddWhitelistCmd, ListenToExchangeCmd};
+use commands::{AddToWhitelistCmd, ListenToExchangeRateEventsCmd};
 
 mod commands;
 
@@ -12,16 +12,16 @@ mod commands;
 #[derive(Debug, clap::Subcommand)]
 pub enum ExchangeOracleSubCommand {
 	/// Add a market source to the teeracle's whitelist.
-	AddWhitelist(AddWhitelistCmd),
+	AddToWhitelist(AddToWhitelistCmd),
 
 	/// Listen to exchange rate events
-	ListenToExchangeRateEvents(ListenToExchangeCmd),
+	ListenToExchangeRateEvents(ListenToExchangeRateEventsCmd),
 }
 
 impl ExchangeOracleSubCommand {
 	pub fn run(&self, cli: &Cli) {
 		match self {
-			ExchangeOracleSubCommand::AddWhitelist(cmd) => cmd.run(cli),
+			ExchangeOracleSubCommand::AddToWhitelist(cmd) => cmd.run(cli),
 			ExchangeOracleSubCommand::ListenToExchangeRateEvents(cmd) => cmd.run(cli),
 		}
 	}

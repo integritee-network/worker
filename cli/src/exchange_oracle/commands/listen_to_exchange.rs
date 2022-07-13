@@ -9,12 +9,12 @@ use substrate_api_client::FromHexString;
 
 /// Listen to exchange rate events.
 #[derive(Debug, Clone, Parser)]
-pub struct ListenToExchangeCmd {
+pub struct ListenToExchangeRateEventsCmd {
 	/// Listen for `duration` in seconds.
 	duration: u64,
 }
 
-impl ListenToExchangeCmd {
+impl ListenToExchangeRateEventsCmd {
 	pub fn run(&self, cli: &Cli) {
 		let api = get_chain_api(cli);
 		let duration = Duration::from_secs(self.duration);

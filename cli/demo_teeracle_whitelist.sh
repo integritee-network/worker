@@ -41,7 +41,7 @@ DURATION=${DURATION:-48}
 INTERVAL=${INTERVAL:-86400}
 
 LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD="exchange-oracle listen-to-exchange-rate-events"
-ADD_TO_WHITELIST_CMD="exchange-oracle add-whitelist"
+ADD_TO_WHITELIST_CMD="exchange-oracle add-to-whitelist"
 
 echo "Using node-port ${NPORT}"
 echo "Using worker-rpc-port ${RPORT}"
