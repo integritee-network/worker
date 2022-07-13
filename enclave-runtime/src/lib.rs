@@ -486,7 +486,7 @@ pub unsafe extern "C" fn trigger_parentchain_block_import() -> sgx_status_t {
 	}
 }
 
-/// For now get the DOT/currency exchange rate from coingecko API.
+/// For now get the crypto/fiat currency exchange rate from coingecko and CoinMarketCap.
 #[no_mangle]
 pub unsafe extern "C" fn update_market_data_xt(
 	genesis_hash: *const u8,
