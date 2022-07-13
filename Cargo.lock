@@ -2159,6 +2159,7 @@ dependencies = [
  "pallet-balances",
  "parity-scale-codec",
  "primitive-types",
+ "rand 0.8.5",
  "rayon",
  "sc-keystore",
  "serde 1.0.137",

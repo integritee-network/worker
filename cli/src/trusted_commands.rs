@@ -38,13 +38,9 @@ use rayon::prelude::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_application_crypto::{ed25519, sr25519};
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
-use std::{
-	fs::OpenOptions,
-	io::Write,
-	sync::mpsc::{channel, Receiver},
-	time::Instant,
-};
+use std::{fs::OpenOptions, io::Write, sync::mpsc::{channel, Receiver}, thread, time, time::Instant};
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
+use rand::Rng;
 
 macro_rules! get_layer_two_nonce {
 	($signer_pair:ident, $cli: ident, $trusted_args:ident ) => {{
@@ -146,6 +142,14 @@ pub enum TrustedCommands {
 		#[clap(default_value_t = 30)]
 		number_iterations: u32,
 
+		/// Adds a random wait before each transaction. This is the lower bound for the interval in ms.
+		#[clap(default_value_t = 0)]
+		random_wait_before_transaction_min_ms: u32,
+
+		/// Adds a random wait before each transaction. This is the upper bound for the interval in ms.
+		#[clap(default_value_t = 0)]
+		random_wait_before_transaction_max_ms: u32,
+
 		/// Whether to wait for "InSidechainBlock" confirmation for each transaction
 		#[clap(short, long)]
 		wait_for_confirmation: bool,
@@ -170,6 +174,8 @@ pub fn match_trusted_commands(cli: &Cli, trusted_args: &TrustedArgs) {
 		TrustedCommands::Benchmark {
 			number_clients,
 			number_iterations,
+			random_wait_before_transaction_min_ms,
+			random_wait_before_transaction_max_ms,
 			wait_for_confirmation,
 			funding_account,
 		} => transfer_benchmark(
@@ -177,6 +183,7 @@ pub fn match_trusted_commands(cli: &Cli, trusted_args: &TrustedArgs) {
 			trusted_args,
 			*number_clients,
 			*number_iterations,
+			(*random_wait_before_transaction_min_ms, *random_wait_before_transaction_max_ms),
 			*wait_for_confirmation,
 			funding_account,
 		),
@@ -265,6 +272,7 @@ fn transfer_benchmark(
 	trusted_args: &TrustedArgs,
 	number_clients: u32,
 	number_iterations: u32,
+	random_wait_before_transaction_ms: (u32, u32),
 	wait_for_confirmation: bool,
 	funding_account: &str,
 ) {
@@ -327,6 +335,15 @@ fn transfer_benchmark(
 
 			for i in 0..number_iterations {
 				println!("Iteration: {}", i);
+
+				if random_wait_before_transaction_ms.1 > 0
+				{
+					let mut rng = rand::thread_rng();
+					let sleep_time = time::Duration::from_millis(rng.gen_range(random_wait_before_transaction_ms.0..=random_wait_before_transaction_ms.1).into());
+					println!("Sleep for: {}ms", sleep_time.as_millis());
+					thread::sleep(sleep_time);
+				}
+
 				let nonce = 0;
 
 				let account_keys: sr25519::AppPair = store.generate().unwrap();

@@ -24,6 +24,7 @@ codec = { version = "3.0.0", package = "parity-scale-codec", features = ["derive
 sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 rayon = "1.5.1"
 hdrhistogram = "7.5.0"
+rand = "0.8.5"
 
 # scs / integritee
 itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
