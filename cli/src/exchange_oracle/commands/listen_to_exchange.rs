@@ -2,10 +2,10 @@ use crate::{command_utils::get_chain_api, Cli};
 use codec::Decode;
 use itp_node_api_extensions::ParentchainApi;
 use itp_time_utils::{duration_now, remaining_time};
-use itp_utils::FromHexPrefixed;
 use log::{debug, info};
 use my_node_runtime::{Event, Hash};
 use std::{sync::mpsc::channel, time::Duration};
+use substrate_api_client::FromHexString;
 
 /// Listen to exchange rate events.
 #[derive(Debug, Clone, Parser)]
@@ -36,7 +36,7 @@ pub fn count_exchange_rate_update_events(api: &ParentchainApi, duration: Duratio
 
 	while remaining_time(stop).unwrap_or_default() > Duration::ZERO {
 		let event_str = events_out.recv().unwrap();
-		let unhex = Vec::from_hex(&event_str).unwrap();
+		let unhex = Vec::from_hex(event_str).unwrap();
 		let mut event_records_encoded = unhex.as_slice();
 		let events_result =
 			Vec::<frame_system::EventRecord<Event, Hash>>::decode(&mut event_records_encoded);

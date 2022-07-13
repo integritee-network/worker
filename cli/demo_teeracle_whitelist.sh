@@ -52,10 +52,10 @@ echo ""
 COIN_GECKO="https://api.coingecko.com/"
 COIN_MARKET_CAP="https://pro-api.coinmarketcap.com/"
 let "MIN_EXPECTED_NUM_OF_EVENTS=$DURATION/$INTERVAL-1"
-echo "MIN_EXPECTED_NUM_OF_EVENTS ${MIN_EXPECTED_NUM_OF_EVENTS}"
+echo "minimum expected number of events with an oracle: ${MIN_EXPECTED_NUM_OF_EVENTS}"
 
 let "MIN_EXPECTED_NUM_OF_EVENTS_2 = 2*$MIN_EXPECTED_NUM_OF_EVENTS"
-echo "MIN_EXPECTED_NUM_OF_EVENTS_2 ${MIN_EXPECTED_NUM_OF_EVENTS_2}"
+echo "minimum expected number of events with two oracles: ${MIN_EXPECTED_NUM_OF_EVENTS_2}"
 
 CLIENT="./../bin/integritee-cli -p ${NPORT} -P ${RPORT}"
 
@@ -95,7 +95,7 @@ echo ""
 
 
 echo "Add MRENCLAVE as trusted oracle service for ${COIN_MARKET_CAP}"
-${CLIENT} ADD_TO_WHITELIST_CMD //Alice ${COIN_MARKET_CAP} ${MRENCLAVE}
+${CLIENT} ${ADD_TO_WHITELIST_CMD} //Alice ${COIN_MARKET_CAP} ${MRENCLAVE}
 echo "MRENCLAVE in Whitelist for ${COIN_MARKET_CAP}"
 echo ""
 
@@ -107,12 +107,13 @@ read EVENTS_COUNT_2 <<< $($CLIENT ${LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD} ${DURATI
 echo "Got ${EVENTS_COUNT_2} exchange rate updates from 2 trusted oracle services in ${DURATION} second"
 echo ""
 
+echo "Results :"
 
 # the following test is for automated CI
 # it only works if the teeracle's whitelist is empty at the start (run it from genesis)
-if [ "$EVENTS_COUNT_2" > "$MIN_EXPECTED_NUM_OF_EVENTS_2" ]; then
-   if [ "$EVENTS_COUNT" > "$MIN_EXPECTED_NUM_OF_EVENTS" ]; then
-       if [ "0" = "$NO_EVENTS" ]; then
+if [ $EVENTS_COUNT_2 -gt $MIN_EXPECTED_NUM_OF_EVENTS_2 ]; then
+   if [ $EVENTS_COUNT -gt $MIN_EXPECTED_NUM_OF_EVENTS ]; then
+       if [ 0 -eq $NO_EVENTS ]; then
            echo "test passed"
            exit 0
        else
@@ -120,11 +121,11 @@ if [ "$EVENTS_COUNT_2" > "$MIN_EXPECTED_NUM_OF_EVENTS_2" ]; then
            exit 1
       fi
    else
-    echo "test failed: $MIN_EXPECTED_NUM_OF_EVENTS!< $EVENTS_COUNT"
+    echo "test failed: Not enough events received for the first oracle: $EVENTS_COUNT. Should be greater than $MIN_EXPECTED_NUM_OF_EVENTS"
     exit 1
    fi
 else
-    echo "test failed: $MIN_EXPECTED_NUM_OF_EVENTS_2 !< $EVENTS_COUNT_2 "
+    echo "test failed: Not enough events received for 2 oracles: $EVENTS_COUNT. Should be greater than $MIN_EXPECTED_NUM_OF_EVENTS_2"
     exit 1
 fi
 
