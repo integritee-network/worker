@@ -522,7 +522,7 @@ pub unsafe extern "C" fn update_market_data_xt(
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
 	// Save created extrinsic as slice in the return value unchecked_extrinsic.
-	if let Err(_) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsics.encode()) {
+	if write_slice_and_whitespace_pad(extrinsic_slice, extrinsics.encode()).is_err() {
 		error!("update_market_data_xt: Extrinsic buffer was too small!");
 		return sgx_status_t::SGX_ERROR_UNEXPECTED
 	}
