@@ -35,7 +35,7 @@ use core::default::Default;
 use itertools::Itertools;
 use itp_component_container::ComponentGetter;
 use itp_node_api_extensions::metadata::{
-	node_metadata_provider::AccessNodeMetadata, pallet_teerex::TeeracleCallIndexes,
+	node_metadata_provider::AccessNodeMetadata, pallet_teerex::TeerexCallIndexes,
 };
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::files::{RA_API_KEY_FILE, RA_DUMP_CERT_DER_FILE, RA_SPID_FILE};

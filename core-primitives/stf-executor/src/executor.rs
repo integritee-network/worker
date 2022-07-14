@@ -30,7 +30,7 @@ use ita_stf::{
 	ParentchainHeader, ShardIdentifier, StateTypeDiff, Stf, TrustedGetterSigned, TrustedOperation,
 };
 use itp_node_api_extensions::metadata::{
-	node_metadata_provider::AccessNodeMetadata, pallet_teerex::TeeracleCallIndexes,
+	node_metadata_provider::AccessNodeMetadata, pallet_teerex::TeerexCallIndexes,
 };
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
@@ -57,7 +57,7 @@ where
 	StateHandler: HandleState<HashType = H256>,
 	StateHandler::StateT: SgxExternalitiesTrait + Encode,
 	NodeMetadataRepository: AccessNodeMetadata,
-	NodeMetadataRepository::MetadataType: TeeracleCallIndexes,
+	NodeMetadataRepository::MetadataType: TeerexCallIndexes,
 {
 	pub fn new(
 		ocall_api: Arc<OCallApi>,
@@ -214,7 +214,7 @@ where
 	StateHandler: HandleState<HashType = H256>,
 	StateHandler::StateT: SgxExternalitiesTrait + Encode,
 	NodeMetadataRepository: AccessNodeMetadata,
-	NodeMetadataRepository::MetadataType: TeeracleCallIndexes,
+	NodeMetadataRepository::MetadataType: TeerexCallIndexes,
 {
 	type Externalities = StateHandler::StateT;
 

@@ -20,7 +20,7 @@ use sp_core::storage::StorageKey;
 /// Pallet' name:
 const TEEREX: &str = "Teerex";
 
-pub trait TeeracleCallIndexes {
+pub trait TeerexCallIndexes {
 	fn register_enclave_call_indexes(&self) -> Result<[u8; 2]>;
 
 	fn unregister_enclave_call_indexes(&self) -> Result<[u8; 2]>;
@@ -34,13 +34,13 @@ pub trait TeeracleCallIndexes {
 	fn unshield_funds_call_indexes(&self) -> Result<[u8; 2]>;
 }
 
-pub trait TeeracleStorageKey {
+pub trait TeerexStorageKey {
 	fn enclave_count_storage_key(&self) -> Result<StorageKey>;
 
 	fn enclave_registry_storage_map_key(&self, index: u64) -> Result<StorageKey>;
 }
 
-impl TeeracleCallIndexes for NodeMetadata {
+impl TeerexCallIndexes for NodeMetadata {
 	fn register_enclave_call_indexes(&self) -> Result<[u8; 2]> {
 		self.call_indexes(TEEREX, "register_enclave")
 	}
@@ -66,7 +66,7 @@ impl TeeracleCallIndexes for NodeMetadata {
 	}
 }
 
-impl TeeracleStorageKey for NodeMetadata {
+impl TeerexStorageKey for NodeMetadata {
 	fn enclave_count_storage_key(&self) -> Result<StorageKey> {
 		self.storage_value_key(TEEREX, "EnclaveCount")
 	}

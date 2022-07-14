@@ -23,13 +23,13 @@ use std::sync::RwLock;
 
 use crate::{
 	error::{Error, Result},
-	metadata::{pallet_sidechain::SidechainCallIndexes, pallet_teerex::TeeracleCallIndexes},
+	metadata::{pallet_sidechain::SidechainCallIndexes, pallet_teerex::TeerexCallIndexes},
 };
 use std::ops::Deref;
 
 /// Trait to get access to the node API metadata.
 pub trait AccessNodeMetadata {
-	type MetadataType: SidechainCallIndexes + TeeracleCallIndexes;
+	type MetadataType: SidechainCallIndexes + TeerexCallIndexes;
 
 	fn get_from_metadata<F, R>(&self, getter_function: F) -> Result<R>
 	where
@@ -46,7 +46,7 @@ pub struct NodeMetadataRepository<NodeMetadata> {
 
 impl<NodeMetadata> NodeMetadataRepository<NodeMetadata>
 where
-	NodeMetadata: SidechainCallIndexes + TeeracleCallIndexes + Default,
+	NodeMetadata: SidechainCallIndexes + TeerexCallIndexes + Default,
 {
 	pub fn new(metadata: NodeMetadata) -> Self {
 		NodeMetadataRepository { metadata_lock: RwLock::new(Some(metadata)) }
@@ -60,7 +60,7 @@ where
 
 impl<NodeMetadata> AccessNodeMetadata for NodeMetadataRepository<NodeMetadata>
 where
-	NodeMetadata: SidechainCallIndexes + TeeracleCallIndexes,
+	NodeMetadata: SidechainCallIndexes + TeerexCallIndexes,
 {
 	type MetadataType = NodeMetadata;
 
@@ -78,7 +78,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::metadata::{metadata_mocks::NodeMetadataMock, pallet_teerex::TeeracleCallIndexes};
+	use crate::metadata::{metadata_mocks::NodeMetadataMock, pallet_teerex::TeerexCallIndexes};
 	use std::assert_matches::assert_matches;
 
 	#[test]
