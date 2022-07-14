@@ -51,7 +51,7 @@ FROM builder AS cargo-test
 
 WORKDIR /root/work/worker
 
-CMD cargo test
+CMD cargo test --all --exclude test-sgx-build
 
 ### Base Runner Stage
 ##################################################

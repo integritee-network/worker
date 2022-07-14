@@ -1260,7 +1260,6 @@ dependencies = [
  "itc-rest-client",
  "itp-enclave-metrics",
  "itp-ocall-api",
- "itp-types",
  "lazy_static",
  "log",
  "parity-scale-codec",

@@ -2258,7 +2258,6 @@ dependencies = [
  "itp-enclave-metrics",
  "itp-ocall-api",
  "itp-test",
- "itp-types",
  "lazy_static",
  "log 0.4.17",
  "parity-scale-codec",
