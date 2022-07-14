@@ -38,9 +38,13 @@ pub mod files {
 
 	pub const RA_DUMP_CERT_DER_FILE: &str = "ra_dump_cert.der";
 
+	pub const ENCLAVE_CERTIFICATE_FILE_PATH: &str = "cert.pem";
+	pub const ENCLAVE_CERTIFICATE_PRIVATE_KEY_PATH: &str = "private_key.pem";
+
 	// used by worker and enclave
-	pub const SHARDS_PATH: &str = "./shards";
+	pub const SHARDS_PATH: &str = "shards";
 	pub const ENCRYPTED_STATE_FILE: &str = "state.bin";
+	pub const LAST_SLOT_BIN: &str = "last_slot.bin";
 
 	#[cfg(feature = "production")]
 	pub static RA_SPID_FILE: &str = "spid_production.txt";
@@ -53,6 +57,7 @@ pub mod files {
 	pub static RA_API_KEY_FILE: &str = "key.txt";
 
 	pub const SPID_MIN_LENGTH: usize = 32;
+	pub const STATE_SNAPSHOTS_CACHE_SIZE: usize = 120;
 }
 
 /// Settings concerning the worker
@@ -72,7 +77,7 @@ pub mod worker {
 	// Factors to tune the initial amount of enclave funding:
 	// Should be set to a value that ensures that the enclave can register itself
 	// and the worker can run for a certain time. Only for development.
-	pub const EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS: u128 = 10_000;
+	pub const EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS: u128 = 200_000;
 	// Should be set to a value that ensures that the enclave can register itself
 	// and that the worker can start.
 	pub const REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS: u128 = 10;
@@ -104,12 +109,14 @@ pub mod node {
 	//pub static UNREGISTER_ENCLAVE: u8 = 1u8;
 	pub static CALL_WORKER: u8 = 2u8;
 	pub static PROCESSED_PARENTCHAIN_BLOCK: u8 = 3u8;
-	pub static PROPOSED_SIDECHAIN_BLOCK: u8 = 4u8;
-	pub static SHIELD_FUNDS: u8 = 5u8;
+	pub static SHIELD_FUNDS: u8 = 4u8;
+	pub static UNSHIELD_FUNDS: u8 = 5u8;
+	// Sidechain module values
+	pub static SIDECHAIN_MODULE: u8 = 53u8;
+	pub static PROPOSED_SIDECHAIN_BLOCK: u8 = 0u8;
 	// bump this to be consistent with integritee-node runtime
-	pub static RUNTIME_SPEC_VERSION: u32 = 7;
-	pub static RUNTIME_TRANSACTION_VERSION: u32 = 2;
-	pub static UNSHIELD: u8 = 6u8;
+	pub static RUNTIME_SPEC_VERSION: u32 = 24;
+	pub static RUNTIME_TRANSACTION_VERSION: u32 = 3;
 
 	pub static TEERACLE_MODULE: u8 = 52u8;
 	pub static UPDATE_EXCHANGE_RATE: u8 = 2u8;

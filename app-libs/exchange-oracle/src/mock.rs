@@ -22,13 +22,13 @@ use std::sync::SgxRwLock as RwLock;
 use std::sync::RwLock;
 
 use crate::{
-	error::Error, exchange_rate_oracle::OracleSource, metrics_exporter::ExportMetrics, TradingPair,
+	error::Error, exchange_rate_oracle::OracleSource, metrics_exporter::ExportMetrics,
+	types::ExchangeRate, TradingPair,
 };
 use itc_rest_client::{
 	http_client::{HttpClient, SendWithCertificateVerification},
 	rest_client::RestClient,
 };
-use itp_types::ExchangeRate;
 use std::{
 	time::{Duration, Instant},
 	vec::Vec,

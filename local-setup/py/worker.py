@@ -49,11 +49,8 @@ class Worker:
         print('Copying source files to working directory')
         self.setup_cwd()
 
-        self.purge()
-        self.init()
-
     def init(self):
-        """ Initializes the environment such the the worker can be run. """
+        """ Initializes the environment such that the worker can be run. """
         print('Initializing worker')
         print(self.init_shard())
         print(self.write_signer_pub())
@@ -163,7 +160,7 @@ class Worker:
         """
 
         # Todo: make this configurable
-        env = dict(os.environ, RUST_LOG='warn,ws=warn,sp_io=warn,'
+        env = dict(os.environ, RUST_LOG='warn,ws=warn,sp_io=error,'
                                         'substrate_api_client=warn,'
                                         'jsonrpsee_ws_client=warn,'
                                         'jsonrpsee_ws_server=warn,'

@@ -16,7 +16,7 @@
 */
 
 use crate::{error::Result, untrusted_peer_fetch::FetchUntrustedPeers};
-use its_primitives::types::ShardIdentifier;
+use sidechain_primitives::types::ShardIdentifier;
 
 pub struct UntrustedPeerFetcherMock {
 	url: String,

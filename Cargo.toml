@@ -24,46 +24,43 @@ members = [
     "core-primitives/nonce-cache",
     "core-primitives/ocall-api",
     "core-primitives/primitives-cache",
+    "core-primitives/rpc",
     "core-primitives/settings",
     "core-primitives/sgx/crypto",
     "core-primitives/sgx/io",
     "core-primitives/stf-executor",
     "core-primitives/stf-state-handler",
     "core-primitives/storage",
-    "core-primitives/storage-verified",
     "core-primitives/teerex-storage",
     "core-primitives/test",
+    "core-primitives/test/test-sgx-build",
     "core-primitives/time-utils",
-    "core-primitives/types",
+    "core-primitives/top-pool",
+    "core-primitives/top-pool-author",
     "service",
     "sidechain/block-composer",
     "sidechain/consensus/aura",
     "sidechain/consensus/common",
     "sidechain/consensus/slots",
     "sidechain/peer-fetch",
-    "sidechain/primitives",
     "sidechain/rpc-handler",
     "sidechain/sidechain-crate",
     "sidechain/state",
-    "sidechain/top-pool",
     "sidechain/top-pool-executor",
-    "sidechain/top-pool-rpc-author",
     "sidechain/validateer-fetch",
 ]
 
 [patch."https://github.com/apache/teaclave-sgx-sdk.git"]
-sgx_tstd = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_alloc = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_libc = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_serialize = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_serialize_derive = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_serialize_derive_internals = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_trts = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_types = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_ucrypto = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_tcrypto = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_tcrypto_helper = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_crypto_helper = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_tstd = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5"}
+sgx_alloc = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5"}
+sgx_libc = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5"}
+sgx_trts = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5"}
+sgx_types = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5"}
+sgx_ucrypto = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5"}
+sgx_tcrypto = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5"}
+sgx_crypto_helper = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5"}
+sgx_rand = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5"}
+sgx_urts = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5"}
 
 #[patch."https://github.com/scs/substrate-api-client"]
 #substrate-api-client = { path = "../substrate-api-client" }
@@ -87,6 +84,8 @@ sgx_crypto_helper = { version = "1.1.4", git = "https://github.com/haerdib/incub
 #pallet-teeracle = { path = '../pallets/teeracle' }
 #teerex-primitives = {path = '../pallets/primitives/teerex'}
 #pallet-parentchain = { path = '../pallets/parentchain' }
+#itp-types = {  path = '../pallets/primitives/types'}
+#itp-utils = {  path = '../pallets/primitives/utils'}
 
 #[patch."https://github.com/integritee-network/http_req"]
 #http_req = {path = '..//http_req' }

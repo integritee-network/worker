@@ -18,40 +18,42 @@
 
 use crate::{
 	test::{
-		fixtures::initialize_test_state::init_state,
+		fixtures::{
+			components::{
+				create_ocall_api, create_top_pool, encrypt_trusted_operation, sign_trusted_call,
+			},
+			initialize_test_state::init_state,
+		},
 		mocks::{propose_to_import_call_mock::ProposeToImportOCallApi, types::*},
+		tests_main::enclave_call_signer,
 	},
 	top_pool_execution::{exec_aura_on_slot, send_blocks_and_extrinsics},
 };
-use codec::{Decode, Encode};
+use codec::Decode;
 use ita_stf::{
 	test_genesis::{endowed_account, second_endowed_account, unendowed_account},
-	Balance, KeyPair, StatePayload, Stf, TrustedCall, TrustedOperation,
+	Balance, StatePayload, Stf, TrustedCall, TrustedOperation,
 };
 use itc_parentchain::light_client::mocks::validator_access_mock::ValidatorAccessMock;
 use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::sidechain::SLOT_DURATION;
-use itp_sgx_crypto::{Aes, ShieldingCrypto, StateCrypto};
+use itp_sgx_crypto::{Aes, ShieldingCryptoEncrypt, StateCrypto};
 use itp_stf_state_handler::handle_state::HandleState;
-use itp_test::{
-	builders::parentchain_header_builder::ParentchainHeaderBuilder,
-	mock::{handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock},
-};
+use itp_test::mock::{handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock};
 use itp_time_utils::duration_now;
-use itp_types::{AccountId, Block as ParentchainBlock, Enclave, ShardIdentifier};
+use itp_top_pool_author::{author::AuthorTopFilter, traits::AuthorApi};
+use itp_types::{AccountId, Block as ParentchainBlock, ShardIdentifier};
 use its_sidechain::{
-	aura::proposer_factory::ProposerFactory,
-	primitives::types::SignedBlock as SignedSidechainBlock,
-	slots::{slot_from_time_stamp_and_duration, SlotInfo},
-	state::SidechainState,
-	top_pool::pool::Options as PoolOptions,
-	top_pool_rpc_author::{api::SidechainApi, author::AuthorTopFilter, traits::AuthorApi},
+	aura::proposer_factory::ProposerFactory, slots::SlotInfo, state::SidechainState,
 };
 use jsonrpc_core::futures::executor;
 use log::*;
+use parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 use primitive_types::H256;
 use sgx_crypto_helper::RsaKeyPair;
+use sidechain_block_verification::slot::slot_from_timestamp_and_duration;
+use sidechain_primitives::{traits::Block, types::SignedBlock as SignedSidechainBlock};
 use sp_core::{ed25519, Pair};
 use std::{sync::Arc, vec, vec::Vec};
 
@@ -67,36 +69,39 @@ pub fn produce_sidechain_block_and_import_it() {
 	let signer = TestSigner::from_seed(b"42315678901234567890123456789012");
 	let shielding_key = TestShieldingKey::new().unwrap();
 	let state_key = TestStateKey::new([3u8; 16], [1u8; 16]);
+	let shielding_key_repo = Arc::new(TestShieldingKeyRepo::new(shielding_key));
+	let state_key_repo = Arc::new(TestStateKeyRepo::new(state_key));
+	let parentchain_header = ParentchainHeaderBuilder::default().build();
 
-	let ocall_api = create_ocall_api(&signer);
+	let ocall_api = create_ocall_api(&parentchain_header, &signer);
 
 	info!("Initializing state and shard..");
 	let state_handler = Arc::new(TestStateHandler::default());
-	let (_, shard_id) = init_state(state_handler.as_ref());
+	let enclave_call_signer = enclave_call_signer(&shielding_key);
+	let (_, shard_id) = init_state(state_handler.as_ref(), enclave_call_signer.public().into());
 	let shards = vec![shard_id];
 
 	let stf_executor = Arc::new(TestStfExecutor::new(ocall_api.clone(), state_handler.clone()));
 	let top_pool = create_top_pool();
 
-	let rpc_author = Arc::new(TestRpcAuthor::new(
+	let top_pool_author = Arc::new(TestTopPoolAuthor::new(
 		top_pool,
 		AuthorTopFilter {},
 		state_handler.clone(),
-		shielding_key,
+		shielding_key_repo,
 		Arc::new(MetricsOCallMock::default()),
 	));
 	let top_pool_operation_handler =
-		Arc::new(TestTopPoolExecutor::new(rpc_author.clone(), stf_executor.clone()));
+		Arc::new(TestTopPoolExecutor::new(top_pool_author.clone(), stf_executor.clone()));
 	let parentchain_block_import_trigger = Arc::new(TestParentchainBlockImportTrigger::default());
 	let block_importer = Arc::new(TestBlockImporter::new(
 		state_handler.clone(),
-		state_key,
-		signer.clone(),
+		state_key_repo.clone(),
 		top_pool_operation_handler.clone(),
 		parentchain_block_import_trigger.clone(),
 		ocall_api.clone(),
 	));
-	let block_composer = Arc::new(TestBlockComposer::new(signer.clone(), state_key));
+	let block_composer = Arc::new(TestBlockComposer::new(signer.clone(), state_key_repo.clone()));
 	let proposer_environment =
 		ProposerFactory::new(top_pool_operation_handler, stf_executor.clone(), block_composer);
 	let extrinsics_factory = ExtrinsicsFactoryMock::default();
@@ -124,18 +129,19 @@ pub fn produce_sidechain_block_and_import_it() {
 		200000,
 	);
 	info!("Add trusted operations to TOP pool..");
-	executor::block_on(rpc_author.submit_top(trusted_operation, shard_id)).unwrap();
-	executor::block_on(rpc_author.submit_top(invalid_trusted_operation, shard_id)).unwrap();
+	executor::block_on(top_pool_author.submit_top(trusted_operation, shard_id)).unwrap();
+	executor::block_on(top_pool_author.submit_top(invalid_trusted_operation, shard_id)).unwrap();
 
 	// Ensure we have exactly two trusted calls in our TOP pool, and no getters.
-	assert_eq!(2, rpc_author.get_pending_tops_separated(shard_id).unwrap().0.len());
-	assert!(rpc_author.get_pending_tops_separated(shard_id).unwrap().1.is_empty());
+	assert_eq!(2, top_pool_author.get_pending_tops_separated(shard_id).unwrap().0.len());
+	assert!(top_pool_author.get_pending_tops_separated(shard_id).unwrap().1.is_empty());
 
 	info!("Setup AURA SlotInfo");
-	let parentchain_header = ParentchainHeaderBuilder::default().build();
 	let timestamp = duration_now();
-	let slot = slot_from_time_stamp_and_duration(duration_now(), SLOT_DURATION);
-	let slot_info = SlotInfo::new(slot, timestamp, SLOT_DURATION, parentchain_header.clone());
+	let slot = slot_from_timestamp_and_duration(duration_now(), SLOT_DURATION);
+	let ends_at = timestamp + SLOT_DURATION;
+	let slot_info =
+		SlotInfo::new(slot, timestamp, SLOT_DURATION, ends_at, parentchain_header.clone());
 
 	info!("Test setup is done.");
 
@@ -168,7 +174,7 @@ pub fn produce_sidechain_block_and_import_it() {
 	assert!(parentchain_block_import_trigger.has_import_been_called());
 
 	// Ensure that invalid calls are removed from pool. Valid calls should only be removed upon block import.
-	assert_eq!(1, rpc_author.get_pending_tops_separated(shard_id).unwrap().0.len());
+	assert_eq!(1, top_pool_author.get_pending_tops_separated(shard_id).unwrap().0.len());
 
 	info!("Executed AURA successfully. Sending blocks and extrinsics..");
 	let propose_to_block_import_ocall_api =
@@ -177,14 +183,14 @@ pub fn produce_sidechain_block_and_import_it() {
 	send_blocks_and_extrinsics::<ParentchainBlock, _, _, _, _>(
 		blocks,
 		opaque_calls,
-		propose_to_block_import_ocall_api,
+		&propose_to_block_import_ocall_api,
 		&validator_access,
 		&extrinsics_factory,
 	)
 	.unwrap();
 
 	// After importing the sidechain block, the trusted operation should be removed.
-	assert!(rpc_author.get_pending_tops_separated(shard_id).unwrap().0.is_empty());
+	assert!(top_pool_author.get_pending_tops_separated(shard_id).unwrap().0.is_empty());
 
 	// After importing the block, the state hash must be changed.
 	// We don't have a way to directly compare state hashes, because calculating the state hash
@@ -194,14 +200,14 @@ pub fn produce_sidechain_block_and_import_it() {
 		get_state_hash(state_handler.as_ref(), &shard_id)
 	);
 
-	let mut state = state_handler.load_initialized(&shard_id).unwrap();
+	let mut state = state_handler.load(&shard_id).unwrap();
 	let free_balance = Stf::account_data(&mut state, &receiver.public().into()).unwrap().free;
 	assert_eq!(free_balance, transfered_amount);
 }
 
 fn encrypted_trusted_operation_transfer_balance<
 	AttestationApi: EnclaveAttestationOCallApi,
-	ShieldingKey: ShieldingCrypto,
+	ShieldingKey: ShieldingCryptoEncrypt,
 >(
 	attestation_api: &AttestationApi,
 	shard_id: &ShardIdentifier,
@@ -210,49 +216,24 @@ fn encrypted_trusted_operation_transfer_balance<
 	to: AccountId,
 	amount: Balance,
 ) -> Vec<u8> {
-	let mr_enclave = attestation_api.get_mrenclave_of_self().unwrap();
-
-	let call = TrustedCall::balance_transfer(from.public().into(), to, amount).sign(
-		&KeyPair::Ed25519(from),
-		0,
-		&mr_enclave.m,
-		shard_id,
-	);
-
-	let trusted_operation = TrustedOperation::direct_call(call);
-	let encoded_operation = trusted_operation.encode();
-
-	shielding_key.encrypt(encoded_operation.as_slice()).unwrap()
+	let call = TrustedCall::balance_transfer(from.public().into(), to, amount);
+	let call_signed = sign_trusted_call(&call, attestation_api, shard_id, from);
+	let trusted_operation = TrustedOperation::direct_call(call_signed);
+	encrypt_trusted_operation(shielding_key, &trusted_operation)
 }
 
 fn get_state_hashes_from_block(
 	signed_block: &SignedSidechainBlock,
 	state_key: &Aes,
 ) -> (H256, H256) {
-	let mut state_payload = signed_block.block.state_payload.clone();
-	state_key.decrypt(&mut state_payload).unwrap();
-	let decoded_state = StatePayload::decode(&mut state_payload.as_slice()).unwrap();
+	let mut encrypted_state_diff = signed_block.block.block_data().encrypted_state_diff.clone();
+	state_key.decrypt(&mut encrypted_state_diff).unwrap();
+	let decoded_state = StatePayload::decode(&mut encrypted_state_diff.as_slice()).unwrap();
 	(decoded_state.state_hash_apriori(), decoded_state.state_hash_aposteriori())
 }
 
 fn get_state_hash(state_handler: &HandleStateMock, shard_id: &ShardIdentifier) -> H256 {
-	let state = state_handler.load_initialized(shard_id).unwrap();
+	let state = state_handler.load(shard_id).unwrap();
 	let sidechain_state = TestSidechainDb::new(state);
 	sidechain_state.state_hash()
-}
-
-fn create_top_pool() -> Arc<TestTopPool> {
-	let rpc_responder = Arc::new(TestRpcResponder::new());
-	let sidechain_api = Arc::new(SidechainApi::<ParentchainBlock>::new());
-	Arc::new(TestTopPool::create(PoolOptions::default(), sidechain_api, rpc_responder))
-}
-
-fn create_ocall_api(signer: &TestSigner) -> Arc<TestOCallApi> {
-	let enclave_validateer = Enclave::new(
-		signer.public().into(),
-		Default::default(),
-		Default::default(),
-		Default::default(),
-	);
-	Arc::new(TestOCallApi::default().with_validateer_set(Some(vec![enclave_validateer])))
 }

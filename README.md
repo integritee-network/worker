@@ -1,16 +1,27 @@
-# integritee-worker
+# integritee-teeracle
 
-Integritee worker for Integritee [node](https://github.com/integritee-network/integritee-node) or [parachain](https://github.com/integritee-network/parachain)
+Integritee teeracle for Integritee [node](https://github.com/integritee-network/integritee-node) or [parachain](https://github.com/integritee-network/parachain).
+Based on Integritee [worker](https://github.com/integritee-network/worker).
 
 This is part of [Integritee](https://integritee.network)
 
+The teeracle is a service that provides trustworthy exchange-rate oracles to the integritee node or parachain.
+
+By default, it provides the TEER/USD exchange rate from CoinGecko and CoinMarketCap once a day.
+
+
 ## Build and Run
-Please see our [Integritee Book](https://book.integritee.network/howto_worker.html) to learn how to build and run this.
+Similar to build and run a worker. Please see our [Integritee Book](https://book.integritee.network/howto_worker.html) to learn how to build and run a worker.
+
+To change the update rate, run with --interval *number*s (ex --interval 28s).
+
+To get the exchange rate from CoinMarketCap you need your own API Key. Please see [CoinMarketCap](https://coinmarketcap.com/api/documentation/v1/#). Set your API Key as environment variable COINMARKETCAP_KEY.
 
 To start multiple worker and a node with one simple command: Check out [this README](local-setup/README.md).
 
+
 ## Tests
-### environment
+### Environment
 Unit tests within the enclave can't be run by `cargo test`. All unit and integration tests can be run by the worker binary
 
 first, you should run ipfs daemon because it is needed for testing
@@ -27,10 +38,10 @@ worker/bin$ rm sealed_stf_state.bin
 worker/bin$ touch sealed_stf_state.bin
 ```
 
-### execute tests
+### Execute tests
 Run these with
 ```
-integritee-service/bin$ ./integritee-service test_enclave --all
+integritee-service/bin$ ./integritee-service test --all
 ```
 
 ### End-to-end test with benchmarking
@@ -47,8 +58,7 @@ run worker
 
 ```
 export RUST_LOG=debug,substrate_api_client=warn,sp_io=warn,ws=warn,integritee_service=info,enclave_runtime=info,sp_io::misc=debug,runtime=debug,enclave_runtime::state=warn,ita_stf::sgx=info,light_client=warn,rustls=warn
-rm -rf shards/ light_client_db.bin
-./integritee-service -r 2002 -p 9979 -w 2001 run 2>&1 | tee worker.log
+./integritee-service --clean-reset -r 2002 -p 9979 -w 2001 run 2>&1 | tee worker.log
 ```
 
 wait until you see the worker synching a few blocks. then check MRENCLAVE and update bot-community.py constants accordingly
@@ -65,3 +75,8 @@ now bootstrap a new bot community
 ```
 
 now you should see the community growing from 10 to hundreds, increasing with every ceremony
+
+## Direct calls scalability
+
+For direct calls, a worker runs a web-socket server inside the enclave. An important factor for scalability is the transaction throughput of a single worker instance, which is in part defined by the maximum number of concurrent socket connections possible. On Linux by default, a process can have a maximum of `1024` concurrent file descriptors (show by `ulimit -n`).
+If the web-socket server hits that limit, incoming connections will be declined until one of the established connections is closed. Permanently changing the `ulimit -n` value can be done in the `/etc/security/limits.conf` configuration file. See [this](https://linuxhint.com/permanently_set_ulimit_value/) guide for more information.

@@ -15,22 +15,23 @@
 
 */
 
-use crate::{error::Error, mocks::validator_mock::ValidatorMock};
-use itp_sgx_io::SealedIO;
+use crate::{error::Error, LightValidationState};
+use itp_sgx_io::StaticSealedIO;
+use itp_types::Block;
 
 /// A seal that returns a mock validator.
 #[derive(Clone)]
-pub struct ValidatorMockSeal;
+pub struct LightValidationStateSealMock;
 
-impl SealedIO for ValidatorMockSeal {
+impl StaticSealedIO for LightValidationStateSealMock {
 	type Error = Error;
-	type Unsealed = ValidatorMock;
+	type Unsealed = LightValidationState<Block>;
 
-	fn unseal() -> Result<Self::Unsealed, Self::Error> {
-		Ok(ValidatorMock)
+	fn unseal_from_static_file() -> Result<Self::Unsealed, Self::Error> {
+		Ok(LightValidationState::new())
 	}
 
-	fn seal(_unsealed: Self::Unsealed) -> Result<(), Self::Error> {
+	fn seal_to_static_file(_unsealed: &Self::Unsealed) -> Result<(), Self::Error> {
 		Ok(())
 	}
 }

@@ -16,14 +16,13 @@
 
 */
 
-use hex::FromHexError;
-use sgx_types::{sgx_measurement_t, sgx_status_t, SGX_HASH_SIZE};
-use std::vec::Vec;
-
 use crate::{
 	cert::{verify_attn_report, verify_mra_cert},
 	test::mocks::attestation_ocall_mock::AttestationOCallMock,
 };
+use hex::FromHexError;
+use sgx_types::{sgx_measurement_t, sgx_status_t, SGX_HASH_SIZE};
+use std::vec::Vec;
 
 // Test data and tests are mostly copied from:
 // https://github.com/integritee-network/pallet-teerex/blob/master/ias-verify/

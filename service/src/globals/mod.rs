@@ -17,4 +17,3 @@
 */
 
 pub mod tokio_handle;
-pub mod worker;

@@ -28,14 +28,18 @@ pub type Result<T> = core::result::Result<T, Error>;
 pub enum Error {
 	#[error("Trusted operation has invalid signature")]
 	OperationHasInvalidSignature,
+	#[error("Invalid or unsupported trusted call type")]
+	InvalidTrustedCallType,
 	#[error("SGX error, status: {0}")]
 	Sgx(sgx_status_t),
 	#[error("State handling error: {0}")]
 	StateHandler(#[from] itp_stf_state_handler::error::Error),
 	#[error("STF error: {0}")]
 	Stf(ita_stf::StfError),
-	#[error("Storage verified error: {0}")]
-	StorageVerified(itp_storage_verifier::Error),
+	#[error("Ocall Api error: {0}")]
+	OcallApi(itp_ocall_api::Error),
+	#[error("Crypto error: {0}")]
+	Crypto(itp_sgx_crypto::error::Error),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }
@@ -58,8 +62,14 @@ impl From<ita_stf::StfError> for Error {
 	}
 }
 
-impl From<itp_storage_verifier::Error> for Error {
-	fn from(error: itp_storage_verifier::Error) -> Self {
-		Self::StorageVerified(error)
+impl From<itp_ocall_api::Error> for Error {
+	fn from(error: itp_ocall_api::Error) -> Self {
+		Self::OcallApi(error)
+	}
+}
+
+impl From<itp_sgx_crypto::error::Error> for Error {
+	fn from(error: itp_sgx_crypto::error::Error) -> Self {
+		Self::Crypto(error)
 	}
 }

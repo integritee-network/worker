@@ -33,20 +33,27 @@ extern crate sgx_tstd as std;
 
 use codec::Encode;
 use derive_more::From;
-use itp_time_utils::{duration_now, remaining_time};
+use itp_time_utils::{duration_difference, duration_now};
 use itp_types::OpaqueCall;
 use its_consensus_common::{Error as ConsensusError, Proposer};
-use its_primitives::traits::{
-	Block as SidechainBlock, ShardIdentifierFor, SignedBlock as SignedSidechainBlock,
+use log::*;
+use sidechain_primitives::traits::{
+	Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor,
+	SignedBlock as SignedSidechainBlockTrait,
 };
-use log::{debug, info, warn};
 pub use slots::*;
-use sp_runtime::traits::{Block as ParentchainBlock, Header};
+use sp_runtime::traits::{Block as ParentchainBlockTrait, Header as ParentchainHeaderTrait};
 use std::{fmt::Debug, time::Duration, vec::Vec};
 
 #[cfg(feature = "std")]
 mod slot_stream;
 mod slots;
+
+#[cfg(test)]
+mod mocks;
+
+#[cfg(test)]
+mod per_shard_slot_worker_tests;
 
 #[cfg(feature = "std")]
 pub use slot_stream::*;
@@ -54,9 +61,9 @@ pub use slots::*;
 
 /// The result of [`SlotWorker::on_slot`].
 #[derive(Debug, Clone, Encode, From)]
-pub struct SlotResult<B: SignedSidechainBlock> {
+pub struct SlotResult<SignedSidechainBlock: SignedSidechainBlockTrait> {
 	/// The result of a slot operation.
-	pub block: B,
+	pub block: SignedSidechainBlock,
 	/// Parentchain state transitions triggered by sidechain state transitions.
 	///
 	/// Any sidechain stf that invokes a parentchain stf must not commit its state change
@@ -68,9 +75,9 @@ pub struct SlotResult<B: SignedSidechainBlock> {
 ///
 /// The implementation should not make any assumptions of the slot being bound to the time or
 /// similar. The only valid assumption is that the slot number is always increasing.
-pub trait SlotWorker<B: ParentchainBlock> {
+pub trait SlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 	/// Output generated after a slot
-	type Output: SignedSidechainBlock + Send + 'static;
+	type Output: SignedSidechainBlockTrait + Send + 'static;
 
 	/// Called when a new slot is triggered.
 	///
@@ -78,7 +85,7 @@ pub trait SlotWorker<B: ParentchainBlock> {
 	/// the slot. Otherwise `None` is returned.
 	fn on_slot(
 		&mut self,
-		slot_info: SlotInfo<B>,
+		slot_info: SlotInfo<ParentchainBlock>,
 		shard: ShardIdentifierFor<Self::Output>,
 	) -> Option<SlotResult<Self::Output>>;
 }
@@ -88,7 +95,7 @@ pub trait SlotWorker<B: ParentchainBlock> {
 /// It manages the timeslots of individual per shard `SlotWorker`s. It gives each shard an equal
 /// amount of time to produce it's result, equally distributing leftover time from a previous shard's
 /// slot share to all subsequent slots.
-pub trait PerShardSlotWorkerScheduler<B: ParentchainBlock> {
+pub trait PerShardSlotWorkerScheduler<ParentchainBlock: ParentchainBlockTrait> {
 	/// Output generated after a slot
 	type Output: Send + 'static;
 
@@ -101,7 +108,7 @@ pub trait PerShardSlotWorkerScheduler<B: ParentchainBlock> {
 	/// the slot. Otherwise `None` is returned.
 	fn on_slot(
 		&mut self,
-		slot_info: SlotInfo<B>,
+		slot_info: SlotInfo<ParentchainBlock>,
 		shard: Vec<Self::ShardIdentifier>,
 	) -> Self::Output;
 }
@@ -109,9 +116,9 @@ pub trait PerShardSlotWorkerScheduler<B: ParentchainBlock> {
 /// A skeleton implementation for `SlotWorker` which tries to claim a slot at
 /// its beginning and tries to produce a block if successfully claimed, timing
 /// out if block production takes too long.
-pub trait SimpleSlotWorker<B: ParentchainBlock> {
+pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 	/// The type of proposer to use to build blocks.
-	type Proposer: Proposer<B, Self::Output>;
+	type Proposer: Proposer<ParentchainBlock, Self::Output>;
 
 	/// Data associated with a slot claim.
 	type Claim: Send + 'static;
@@ -120,15 +127,18 @@ pub trait SimpleSlotWorker<B: ParentchainBlock> {
 	type EpochData: Send + 'static;
 
 	/// Output generated after a slot
-	type Output: SignedSidechainBlock + Send + 'static;
+	type Output: SignedSidechainBlockTrait + Send + 'static;
 
 	/// The logging target to use when logging messages.
 	fn logging_target(&self) -> &'static str;
 
 	/// Returns the epoch data necessary for authoring. For time-dependent epochs,
 	/// use the provided slot number as a canonical source of time.
-	fn epoch_data(&self, header: &B::Header, slot: Slot)
-		-> Result<Self::EpochData, ConsensusError>;
+	fn epoch_data(
+		&self,
+		header: &ParentchainBlock::Header,
+		slot: Slot,
+	) -> Result<Self::EpochData, ConsensusError>;
 
 	/// Returns the number of authorities given the epoch data.
 	/// None indicate that the authorities information is incomplete.
@@ -137,7 +147,7 @@ pub trait SimpleSlotWorker<B: ParentchainBlock> {
 	/// Tries to claim the given slot, returning an object with claim data if successful.
 	fn claim_slot(
 		&self,
-		header: &B::Header,
+		header: &ParentchainBlock::Header,
 		slot: Slot,
 		epoch_data: &Self::EpochData,
 	) -> Option<Self::Claim>;
@@ -145,26 +155,32 @@ pub trait SimpleSlotWorker<B: ParentchainBlock> {
 	/// Creates the proposer for the current slot
 	fn proposer(
 		&mut self,
-		header: B::Header,
+		header: ParentchainBlock::Header,
 		shard: ShardIdentifierFor<Self::Output>,
 	) -> Result<Self::Proposer, ConsensusError>;
 
 	/// Remaining duration for proposing.
-	fn proposing_remaining_duration(&self, slot_info: &SlotInfo<B>) -> Duration;
+	fn proposing_remaining_duration(&self, slot_info: &SlotInfo<ParentchainBlock>) -> Duration;
 
 	/// Check if should propose even if the timestamp of the proposal is no longer within the slot.
 	///
 	/// Remove when #447 is resolved.
 	fn allow_delayed_proposal(&self) -> bool;
 
-	/// Trigger the import of the latest parentchain block.
+	/// Trigger the import of the given parentchain block.
 	///
 	/// Returns the header of the latest imported block. In case no block was imported with this trigger,
 	/// the `current_latest_imported_header` is returned.
-	fn import_latest_parentchain_block(
+	fn import_parentchain_blocks_until(
 		&self,
-		current_latest_imported_header: &B::Header,
-	) -> Result<B::Header, ConsensusError>;
+		last_imported_parentchain_header: &<ParentchainBlock::Header as ParentchainHeaderTrait>::Hash,
+	) -> Result<Option<ParentchainBlock::Header>, ConsensusError>;
+
+	/// Peek the parentchain import queue for the latest block in queue.
+	/// Does not perform the import or mutate the queue.
+	fn peek_latest_parentchain_header(
+		&self,
+	) -> Result<Option<ParentchainBlock::Header>, ConsensusError>;
 
 	/// Implements [`SlotWorker::on_slot`]. This is an adaption from
 	/// substrate's sc-consensus-slots implementation. There, the slot worker handles all the
@@ -174,7 +190,7 @@ pub trait SimpleSlotWorker<B: ParentchainBlock> {
 	/// this function from the outside at each slot.
 	fn on_slot(
 		&mut self,
-		slot_info: SlotInfo<B>,
+		slot_info: SlotInfo<ParentchainBlock>,
 		shard: ShardIdentifierFor<Self::Output>,
 	) -> Option<SlotResult<Self::Output>> {
 		let (_timestamp, slot) = (slot_info.timestamp, slot_info.slot);
@@ -191,15 +207,25 @@ pub trait SimpleSlotWorker<B: ParentchainBlock> {
 			return None
 		}
 
-		// The parentchain block header we use here is potentially outdated by one block.
-		// Importing is triggered by the worker that claims the current slot.
-		let epoch_data = match self.epoch_data(&slot_info.last_imported_parentchain_head, slot) {
+		let latest_parentchain_header = match self.peek_latest_parentchain_header() {
+			Ok(Some(peeked_header)) => peeked_header,
+			Ok(None) => slot_info.last_imported_parentchain_head.clone(),
+			Err(e) => {
+				warn!(
+					target: logging_target,
+					"Failed to peek latest parentchain block header: {:?}", e
+				);
+				return None
+			},
+		};
+
+		let epoch_data = match self.epoch_data(&latest_parentchain_header, slot) {
 			Ok(epoch_data) => epoch_data,
 			Err(e) => {
 				warn!(
 					target: logging_target,
 					"Unable to fetch epoch data at block {:?}: {:?}",
-					slot_info.last_imported_parentchain_head.hash(),
+					latest_parentchain_header.hash(),
 					e,
 				);
 
@@ -216,23 +242,18 @@ pub trait SimpleSlotWorker<B: ParentchainBlock> {
 			);
 		}
 
-		let _claim =
-			self.claim_slot(&slot_info.last_imported_parentchain_head, slot, &epoch_data)?;
+		let _claim = self.claim_slot(&latest_parentchain_header, slot, &epoch_data)?;
 
-		// Import and retrieve the parentchain header on which the new sidechain block will be based on.
-		let latest_imported_parentchain_header =
-			match self.import_latest_parentchain_block(&slot_info.last_imported_parentchain_head) {
-				Ok(p) => p,
-				Err(e) => {
-					warn!(
-						target: logging_target,
-						"Failed to import and retrieve latest parentchain block header: {:?}", e
-					);
-					return None
-				},
-			};
+		// Import the peeked parentchain header(s).
+		if let Err(e) = self.import_parentchain_blocks_until(&latest_parentchain_header.hash()) {
+			warn!(
+				target: logging_target,
+				"Failed to import and retrieve parentchain block header: {:?}", e
+			);
+			return None
+		};
 
-		let proposer = match self.proposer(latest_imported_parentchain_header.clone(), shard) {
+		let proposer = match self.proposer(latest_parentchain_header.clone(), shard) {
 			Ok(p) => p,
 			Err(e) => {
 				warn!(target: logging_target, "Could not create proposer: {:?}", e);
@@ -258,8 +279,8 @@ pub trait SimpleSlotWorker<B: ParentchainBlock> {
 		}
 
 		info!("Proposing sidechain block (number: {}, hash: {}) based on parentchain block (number: {:?}, hash: {:?})",
-			proposing.block.block().block_number(), proposing.block.hash(),
-			latest_imported_parentchain_header.number(), latest_imported_parentchain_header.hash()
+			proposing.block.block().header().block_number(), proposing.block.hash(),
+			latest_parentchain_header.number(), latest_parentchain_header.hash()
 		);
 
 		Some(SlotResult {
@@ -269,26 +290,30 @@ pub trait SimpleSlotWorker<B: ParentchainBlock> {
 	}
 }
 
-impl<B: ParentchainBlock, T: SimpleSlotWorker<B> + Send> SlotWorker<B> for T {
+impl<ParentchainBlock: ParentchainBlockTrait, T: SimpleSlotWorker<ParentchainBlock> + Send>
+	SlotWorker<ParentchainBlock> for T
+{
 	type Output = T::Output;
 
 	fn on_slot(
 		&mut self,
-		slot_info: SlotInfo<B>,
+		slot_info: SlotInfo<ParentchainBlock>,
 		shard: ShardIdentifierFor<T::Output>,
 	) -> Option<SlotResult<Self::Output>> {
 		SimpleSlotWorker::on_slot(self, slot_info, shard)
 	}
 }
 
-impl<B: ParentchainBlock, T: SimpleSlotWorker<B>> PerShardSlotWorkerScheduler<B> for T {
+impl<ParentchainBlock: ParentchainBlockTrait, T: SimpleSlotWorker<ParentchainBlock>>
+	PerShardSlotWorkerScheduler<ParentchainBlock> for T
+{
 	type Output = Vec<SlotResult<T::Output>>;
 
 	type ShardIdentifier = ShardIdentifierFor<T::Output>;
 
 	fn on_slot(
 		&mut self,
-		slot_info: SlotInfo<B>,
+		slot_info: SlotInfo<ParentchainBlock>,
 		shards: Vec<Self::ShardIdentifier>,
 	) -> Self::Output {
 		let logging_target = SimpleSlotWorker::logging_target(self);
@@ -297,9 +322,9 @@ impl<B: ParentchainBlock, T: SimpleSlotWorker<B>> PerShardSlotWorkerScheduler<B>
 		let mut slot_results = Vec::with_capacity(remaining_shards);
 
 		for shard in shards.into_iter() {
-			let shard_remaining_duration = remaining_time(slot_info.ends_at)
-				.map(|time| time.checked_div(remaining_shards as u32))
-				.flatten()
+			let now = duration_now(); // It's important we have a common `now` for all following computations.
+			let shard_remaining_duration = duration_difference(now, slot_info.ends_at)
+				.and_then(|time| time.checked_div(remaining_shards as u32))
 				.unwrap_or_default();
 
 			// important to check against millis here. We had the corner-case in production
@@ -313,10 +338,12 @@ impl<B: ParentchainBlock, T: SimpleSlotWorker<B>> PerShardSlotWorkerScheduler<B>
 				return slot_results
 			}
 
+			let shard_slot_ends_at = now + shard_remaining_duration;
 			let shard_slot = SlotInfo::new(
 				slot_info.slot,
-				duration_now(),
+				now,
 				shard_remaining_duration,
+				shard_slot_ends_at,
 				slot_info.last_imported_parentchain_head.clone(),
 			);
 

@@ -10,17 +10,16 @@ std = [
     "itc-rest-client/std",
     "itp-enclave-metrics/std",
     "itp-ocall-api/std",
-    "itp-types/std",
     "log/std",
     "serde/std",
     "serde_json/std",
+    "substrate-fixed/std",
     "thiserror",
     "url",
 ]
 sgx = [
     "itc-rest-client/sgx",
     "itp-enclave-metrics/sgx",
-    "itp-types/sgx",
     "sgx_tstd",
     "thiserror_sgx",
     "url_sgx",
@@ -43,13 +42,12 @@ lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
 log = { version = "0.4", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
+substrate-fixed = { default-features = false, git = "https://github.com/encointer/substrate-fixed", tag = "v0.5.9" }
 
 # internal dependencies
 itc-rest-client = { path = "../../core/rest-client", default-features = false }
 itp-enclave-metrics = { path = "../../core-primitives/enclave-metrics", default-features = false }
 itp-ocall-api = { path = "../../core-primitives/ocall-api", default-features = false }
-itp-types = { path = "../../core-primitives/types", default-features = false }
 
 [dev-dependencies]
 itp-test = { path = "../../core-primitives/test" }
-substrate-fixed = { package = "substrate-fixed", git = "https://github.com/encointer/substrate-fixed", tag = "v0.5.9" }

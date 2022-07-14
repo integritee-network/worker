@@ -16,19 +16,20 @@
 */
 
 use itp_enclave_api::{direct_request::DirectRequest, EnclaveResult};
-use itp_types::RpcResponse;
-use its_primitives::{
+use itp_rpc::RpcResponse;
+use itp_utils::ToHexPrefixed;
+use its_storage::interface::FetchBlocks;
+use parity_scale_codec::Encode;
+use sidechain_primitives::{
 	traits::ShardIdentifierFor,
 	types::{BlockHash, SignedBlock, SignedBlock as SignedSidechainBlock},
 };
-use its_storage::interface::FetchBlocks;
-use parity_scale_codec::Encode;
 
 pub struct TestEnclave;
 
 impl DirectRequest for TestEnclave {
 	fn rpc(&self, _request: Vec<u8>) -> EnclaveResult<Vec<u8>> {
-		Ok(RpcResponse { jsonrpc: "mock_response".into(), result: "null".encode(), id: 1 }.encode())
+		Ok(RpcResponse { jsonrpc: "mock_response".into(), result: "null".to_hex(), id: 1 }.encode())
 	}
 }
 
@@ -38,6 +39,15 @@ impl FetchBlocks<SignedSidechainBlock> for MockSidechainBlockFetcher {
 	fn fetch_all_blocks_after(
 		&self,
 		_block_hash: &BlockHash,
+		_shard_identifier: &ShardIdentifierFor<SignedBlock>,
+	) -> its_storage::Result<Vec<SignedBlock>> {
+		Ok(Vec::new())
+	}
+
+	fn fetch_blocks_in_range(
+		&self,
+		_block_hash_from: &BlockHash,
+		_block_hash_until: &BlockHash,
 		_shard_identifier: &ShardIdentifierFor<SignedBlock>,
 	) -> its_storage::Result<Vec<SignedBlock>> {
 		Ok(Vec::new())

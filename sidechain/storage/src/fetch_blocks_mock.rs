@@ -16,7 +16,7 @@
 */
 
 use crate::{error::Result, interface::FetchBlocks};
-use its_primitives::{
+use sidechain_primitives::{
 	traits::ShardIdentifierFor,
 	types::{BlockHash, SignedBlock},
 };
@@ -37,6 +37,15 @@ impl FetchBlocks<SignedBlock> for FetchBlocksMock {
 	fn fetch_all_blocks_after(
 		&self,
 		_block_hash: &BlockHash,
+		_shard_identifier: &ShardIdentifierFor<SignedBlock>,
+	) -> Result<Vec<SignedBlock>> {
+		Ok(self.blocks_to_be_fetched.clone())
+	}
+
+	fn fetch_blocks_in_range(
+		&self,
+		_block_hash_from: &BlockHash,
+		_block_hash_until: &BlockHash,
 		_shard_identifier: &ShardIdentifierFor<SignedBlock>,
 	) -> Result<Vec<SignedBlock>> {
 		Ok(self.blocks_to_be_fetched.clone())

@@ -23,11 +23,11 @@ pub type Result<T> = StdResult<T, Error>;
 
 #[derive(Debug, Display, From)]
 pub enum Error {
-	Rpc(its_sidechain::top_pool_rpc_author::error::Error),
+	TopPoolAuthor(itp_top_pool_author::error::Error),
 	Codec(codec::Error),
-	ComponentNotInitialized,
+	ComponentContainer(itp_component_container::error::Error),
 	Crypto(itp_sgx_crypto::Error),
-	ChainStorage(itp_storage_verifier::Error),
+	ChainStorage(itp_ocall_api::Error),
 	ExtrinsicsFactory(itp_extrinsics_factory::error::Error),
 	IO(std::io::Error),
 	LightClient(itc_parentchain::light_client::error::Error),

@@ -65,7 +65,7 @@ args:
         required: false
     - enable-metrics:
         long: enable-metrics
-        help: Enable the metrics http server to serve metrics
+        help: Enable the metrics HTTP server to serve metrics
     - metrics-port:
         short: i
         long: metrics-port
@@ -73,6 +73,16 @@ args:
         takes_value: true
         default_value: "8787"
         required: false
+    - untrusted-http-port:
+        short: h
+        long: untrusted-http-port
+        help: Set the port for the untrusted HTTP server
+        takes_value: true
+        required: false
+    - clean-reset:
+          long: clean-reset
+          short: c
+          help: Cleans and purges any previous state and key files and generates them anew before starting.
 
 subcommands:
     - run:
@@ -90,6 +100,10 @@ subcommands:
                 long: dev
                 short: d
                 help: Set this flag if running in development mode to bootstrap enclave account on parentchain via //Alice.
+            - request-state:
+                long: request-state
+                short: r
+                help: Run the worker and request key and state provisioning from another worker.
             - interval:
                 long: interval
                 short: i

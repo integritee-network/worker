@@ -25,7 +25,7 @@ use std::vec::Vec;
 /// SGX exclusive data structures (feature sgx)
 pub trait QueryShardState {
 	/// Query whether a given shard exists
-	fn exists(&self, shard: &ShardIdentifier) -> bool;
+	fn shard_exists(&self, shard: &ShardIdentifier) -> Result<bool>;
 
 	/// List all available shards
 	fn list_shards(&self) -> Result<Vec<ShardIdentifier>>;

@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches: [ master ]
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
   pull_request:
     branches: [ master ]
 
@@ -13,6 +15,7 @@ env:
   CLIENT_BIN: integritee-cli
   ENCLAVE_BIN: enclave.signed.so
   LOG_DIR: log
+  BUILD_CONTAINER_NAME: integritee_worker_enclave_test
 
 jobs:
   cancel_previous_runs:
@@ -22,57 +25,83 @@ jobs:
       - uses: styfle/cancel-workflow-action@0.4.1
         with:
           access_token: ${{ secrets.GITHUB_TOKEN }}
-
+      
   build-test:
     runs-on: ubuntu-latest
-    container: "integritee/integritee-dev:0.1.7"
     steps:
-      - uses: actions/checkout@v2
-      - name: init rust
-        run: rustup show
+      - uses: actions/checkout@v3
 
-      - name: Build
-        run:  env "MITIGATION-CVE-2020-0551=LOAD" "SGX_MODE=SW" make
-      - name: Test Service & Client
-        run: cargo test
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          buildkitd-flags: --debug
+
+      - name: Build Enclave Test Image
         env:
-          COINMARKETCAP_KEY: ${{ secrets.COINMARKETCAP_KEY }}
+          DOCKER_BUILDKIT: 1
+        run: docker build -t integritee-worker-enclave-test-${{ github.sha }} --target enclave-test -f build.Dockerfile .
+
       - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
-        run: |
-          cd bin
-          ./integritee-service test -u -e
         env:
           COINMARKETCAP_KEY: ${{ secrets.COINMARKETCAP_KEY }}
+        run: docker run -e COINMARKETCAP_KEY=${{ env.COINMARKETCAP_KEY }} --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-enclave-test-${{ github.sha }}
+
+      - name: Build Cargo Test Image
+        env:
+          DOCKER_BUILDKIT: 1
+        run:  docker build -t integritee-worker-ctest-${{ github.sha }} --target cargo-test -f build.Dockerfile .
+
+      - name: Run Cargo Test
+        env:
+          COINMARKETCAP_KEY: ${{ secrets.COINMARKETCAP_KEY }}
+        run: docker run -e COINMARKETCAP_KEY=${{ env.COINMARKETCAP_KEY }} --rm integritee-worker-ctest-${{ github.sha }}
+
+      - name: Build Deployable Image
+        env:
+          DOCKER_BUILDKIT: 1
+        run: docker build --output=type=tar,dest=/tmp/integritee-worker.tar --target=deployed-worker -f build.Dockerfile .
+      
+      - name: Copy artifacts from container
+        run: |
+          docker cp ${{ env.BUILD_CONTAINER_NAME }}:/root/work/worker/bin/${{ env.WORKER_BIN }} .
+          docker cp ${{ env.BUILD_CONTAINER_NAME }}:/root/work/worker/bin/${{ env.CLIENT_BIN }} .
+          docker cp ${{ env.BUILD_CONTAINER_NAME }}:/root/work/worker/bin/${{ env.ENCLAVE_BIN }} .
 
       - name: Upload worker
         uses: actions/upload-artifact@v2
         with:
           name: integritee-worker-${{ github.sha }}
-          path: bin/${{ env.WORKER_BIN }}
+          path: ${{ env.WORKER_BIN }}
 
       - name: Upload client
         uses: actions/upload-artifact@v2
         with:
           name: integritee-client-${{ github.sha }}
-          path: bin/${{ env.CLIENT_BIN }}
+          path: ${{ env.CLIENT_BIN }}
 
       - name: Upload enclave
         uses: actions/upload-artifact@v2
         with:
           name: enclave-signed-${{ github.sha }}
-          path: bin/${{ env.ENCLAVE_BIN }}
+          path: ${{ env.ENCLAVE_BIN }}
+
+      - name: Upload deployable image
+        uses: actions/upload-artifact@v2
+        with:
+          name: integritee-worker-image-${{ github.sha }}
+          path: /tmp/integritee-worker.tar
 
   clippy:
     runs-on: ubuntu-latest
-    container: "integritee/integritee-dev:0.1.7"
+    container: "integritee/integritee-dev:0.1.9"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: init rust
         # enclave is not in the same workspace
         run: rustup show && cd enclave-runtime && rustup show
 
       - name: Worker & Client
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --all --exclude test-sgx-build -- -D warnings
       - name: Enclave # Enclave is separate as it's not in the workspace
         run: cd enclave-runtime && cargo clippy -- -D warnings
 
@@ -83,7 +112,7 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: init rust
         run: rustup show
 
@@ -99,7 +128,7 @@ jobs:
   integration-tests:
     runs-on: ubuntu-latest
     needs: build-test
-    container: "integritee/integritee-dev:0.1.7"
+    container: "integritee/integritee-dev:0.1.9"
     strategy:
       fail-fast: false
       matrix:
@@ -114,9 +143,9 @@ jobs:
       COINMARKETCAP_KEY: ${{ secrets.COINMARKETCAP_KEY }}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v3
         with:
           python-version: '3.7'
 
@@ -140,42 +169,42 @@ jobs:
 
         # If you want to debug ci and you don't want to build the binaries, you can replace the downloads above with
         # the actions below to download binaries from an earlier run.
-      #      - name: Download Worker
-      #        uses: dawidd6/action-download-artifact@v2
-      #        with:
-      #          github_token: ${{secrets.GITHUB_TOKEN}}
-      #          workflow: build_and_test.yml
-      #          run_id: 1033249727
-      #          name: integritee-worker-da8d4b442d3f2b09dbafb097d4d7a1bce409d518
-      #          path: ${{ env.BIN_DIR }}
-      #
-      #      - name: Download Client
-      #        uses: dawidd6/action-download-artifact@v2
-      #        with:
-      #          github_token: ${{secrets.GITHUB_TOKEN}}
-      #          workflow: build_and_test.yml
-      #          run_id: 1033249727
-      #          name: integritee-client-da8d4b442d3f2b09dbafb097d4d7a1bce409d518
-      #          path: ${{ env.BIN_DIR }}
-      #
-      #      - name: Download Enclave
-      #        uses: dawidd6/action-download-artifact@v2
-      #        with:
-      #          github_token: ${{secrets.GITHUB_TOKEN}}
-      #          workflow: build_and_test.yml
-      #          run_id: 1033249727
-      #          name: enclave-signed-da8d4b442d3f2b09dbafb097d4d7a1bce409d518
-      #          path: ${{ env.BIN_DIR }}
+#      - name: Download Worker
+#        uses: dawidd6/action-download-artifact@v2
+#        with:
+#          github_token: ${{secrets.GITHUB_TOKEN}}
+#          workflow: build_and_test.yml
+#          run_id: 1033249727
+#          name: integritee-worker-da8d4b442d3f2b09dbafb097d4d7a1bce409d518
+#          path: ${{ env.BIN_DIR }}
+#
+#      - name: Download Client
+#        uses: dawidd6/action-download-artifact@v2
+#        with:
+#          github_token: ${{secrets.GITHUB_TOKEN}}
+#          workflow: build_and_test.yml
+#          run_id: 1033249727
+#          name: integritee-client-da8d4b442d3f2b09dbafb097d4d7a1bce409d518
+#          path: ${{ env.BIN_DIR }}
+#
+#      - name: Download Enclave
+#        uses: dawidd6/action-download-artifact@v2
+#        with:
+#          github_token: ${{secrets.GITHUB_TOKEN}}
+#          workflow: build_and_test.yml
+#          run_id: 1033249727
+#          name: enclave-signed-da8d4b442d3f2b09dbafb097d4d7a1bce409d518
+#          path: ${{ env.BIN_DIR }}
 
       - name: Download integritee-node
         uses: dawidd6/action-download-artifact@v2
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
           workflow: ci.yml
-          name: integritee-node-dev-7cb4c1df36a86072753c016ff1fdab1588bc4446
+          name: integritee-node-dev-2d516d629404ea13ebab1498807467d2fe5e3816
           # in fact this action should download the latest artifact, but sometimes fails. Then we need to
           # set the `run_id` to force a download of an updated binary.
-          run_id: 1980987369
+          run_id: 2624145209
           path: node
           repo: integritee-network/integritee-node
 
@@ -207,8 +236,8 @@ jobs:
         # * `set -eo pipefail` is needed to return an error even if piped to `tee`.
         shell: bash --noprofile --norc -eo pipefail {0}
         run: |
-          touch ${{ env.LOG_DIR}}/local-setup.log
-          ./local-setup/launch.py local-setup/github-action-config.json 2>&1 | tee ${{ env.LOG_DIR}}/local-setup.log &
+          touch ${{ env.LOG_DIR }}/local-setup.log
+          ./local-setup/launch.py local-setup/github-action-config.json 2>&1 | tee -i ${{ env.LOG_DIR }}/local-setup.log &
           sleep 150
 
       - name: ${{ matrix.demo_name }}
@@ -225,3 +254,66 @@ jobs:
         with:
           name: ${{ matrix.test }}_logs
           path: ${{ env.LOG_DIR }}
+
+  release:
+    name: Draft Release
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    needs: [build-test, integration-tests]
+    outputs:
+      release_url: ${{ steps.create-release.outputs.html_url }}
+      asset_upload_url: ${{ steps.create-release.outputs.upload_url }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download Integritee Service
+        uses: actions/download-artifact@v2
+        with:
+          name: integritee-worker-${{ github.sha }}
+          path: integritee-worker-tmp
+
+      - name: Download Integritee Client
+        uses: actions/download-artifact@v2
+        with:
+          name: integritee-client-${{ github.sha }}
+          path: integritee-client-tmp
+
+      - name: Download Enclave Signed
+        uses: actions/download-artifact@v2
+        with:
+          name: enclave-signed-${{ github.sha }}
+          path: enclave-signed-tmp
+
+      - name: Move service binaries
+        run: mv integritee-worker-tmp/integritee-service ./integritee-demo-validateer
+
+      - name: Move service client binaries
+        run: mv integritee-client-tmp/integritee-cli ./integritee-client
+
+      - name: Move service client binaries
+        run: mv enclave-signed-tmp/enclave.signed.so ./enclave.signed.so
+
+      - name: Create required package.json
+        run: test -f package.json || echo '{}' >package.json
+
+      - name: Changelog
+        uses: scottbrenner/generate-changelog-action@master
+        id: Changelog
+
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: .
+
+      - name: Release
+        id: create-release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          body: |
+            ${{ steps.Changelog.outputs.changelog }}
+          draft: true
+          files: |
+            integritee-client
+            integritee-demo-validateer
+            enclave.signed.so

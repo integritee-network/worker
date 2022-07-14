@@ -24,6 +24,11 @@ extern "C" {
 		value_size: u32,
 	) -> sgx_status_t;
 
+	pub fn init_enclave_sidechain_components(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+	) -> sgx_status_t;
+
 	pub fn init_direct_invocation_server(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
@@ -34,14 +39,17 @@ extern "C" {
 	pub fn init_light_client(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
-		genesis_hash: *const u8,
-		genesis_hash_size: usize,
-		authority_list: *const u8,
-		authority_list_size: usize,
-		authority_proof: *const u8,
-		authority_proof_size: usize,
+		params: *const u8,
+		params_size: usize,
 		latest_header: *mut u8,
 		latest_header_size: usize,
+	) -> sgx_status_t;
+
+	pub fn init_shard(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		shard: *const u8,
+		shard_size: u32,
 	) -> sgx_status_t;
 
 	pub fn trigger_parentchain_block_import(

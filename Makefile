@@ -13,7 +13,8 @@
 # limitations under the License.
 
 ######## Update SGX SDK ########
-include UpdateRustSGXSDK.mk
+# use this manually to update sdk
+#include UpdateRustSGXSDK.mk
 
 ######## SGX SDK Settings ########
 SGX_SDK ?= /opt/intel/sgxsdk
@@ -26,8 +27,6 @@ SGX_PRODUCTION ?= 0
 SKIP_WASM_BUILD = 1
 # include the build settings from rust-sgx-sdk
 include rust-sgx-sdk/buildenv.mk
-# use this manually to update sdk
-#include UpdateRustSGXSDK.mk
 
 ifeq ($(shell getconf LONG_BIT), 32)
 	SGX_ARCH := x86
@@ -226,9 +225,9 @@ clean:
 
 .PHONY: pin-sgx
 pin-sgx:
-	@echo "Pin sgx dependencies to 565960cd7b4b36d1188459d75652619971c43f7e"
-	@cd enclave-runtime && cargo update -p sgx_tstd --precise 565960cd7b4b36d1188459d75652619971c43f7e
-	@cargo update -p sgx_tstd --precise 565960cd7b4b36d1188459d75652619971c43f7e
+	@echo "Pin sgx dependencies to d2d339cbb005f676bb700059bd51dc689c025f6b"
+	@cd enclave-runtime && cargo update -p sgx_tstd --precise d2d339cbb005f676bb700059bd51dc689c025f6b
+	@cargo update -p sgx_tstd --precise d2d339cbb005f676bb700059bd51dc689c025f6b
 
 mrenclave:
 	@$(SGX_ENCLAVE_SIGNER) dump -enclave ./bin/enclave.signed.so -dumpfile df.out && ./extract_identity < df.out && rm df.out

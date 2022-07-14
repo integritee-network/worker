@@ -21,10 +21,12 @@ use crate::{Error, Verifier};
 use codec::Decode;
 use itp_ocall_api::EnclaveSidechainOCallApi;
 use itp_sgx_crypto::StateCrypto;
-use its_primitives::traits::{
-	Block as SidechainBlockT, ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait,
-};
 use its_state::{LastBlockExt, SidechainState};
+use log::*;
+use sidechain_primitives::traits::{
+	Block as SidechainBlockTrait, BlockData, Header as HeaderTrait, ShardIdentifierFor,
+	SignedBlock as SignedSidechainBlockTrait,
+};
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::vec::Vec;
 
@@ -72,7 +74,7 @@ where
 		F: FnOnce(Self::SidechainState) -> Result<SignedSidechainBlock, Error>;
 
 	/// Key that is used for state encryption.
-	fn state_key(&self) -> Self::StateCrypto;
+	fn state_key(&self) -> Result<Self::StateCrypto, Error>;
 
 	/// Getter for the context.
 	fn get_context(&self) -> &Self::Context;
@@ -108,14 +110,24 @@ where
 		parentchain_header: &ParentchainBlock::Header,
 	) -> Result<ParentchainBlock::Header, Error> {
 		let sidechain_block = signed_sidechain_block.block().clone();
-		let shard = sidechain_block.shard_id();
+		let shard = sidechain_block.header().shard_id();
+
+		debug!(
+			"Attempting to import sidechain block (number: {}, hash: {:?}, parentchain hash: {:?})",
+			signed_sidechain_block.block().header().block_number(),
+			signed_sidechain_block.block().hash(),
+			signed_sidechain_block.block().block_data().layer_one_head()
+		);
 
 		let peeked_parentchain_header =
-			self.peek_parentchain_header(&sidechain_block, parentchain_header)?;
+			self.peek_parentchain_header(&sidechain_block, parentchain_header)
+				.unwrap_or_else(|e| {
+					warn!("Could not peek parentchain block, returning latest parentchain block ({:?})", e);
+					parentchain_header.clone()
+				});
 
 		let block_import_params = self.verify_import(&shard, |state| {
-			let mut verifier = self.verifier(state);
-
+			let verifier = self.verifier(state);
 			verifier.verify(
 				signed_sidechain_block.clone(),
 				&peeked_parentchain_header,
@@ -126,10 +138,12 @@ where
 		let latest_parentchain_header =
 			self.import_parentchain_block(&sidechain_block, parentchain_header)?;
 
+		let state_key = self.state_key()?;
+
 		self.apply_state_update(&shard, |mut state| {
 			let update = state_update_from_encrypted(
-				block_import_params.block().state_payload(),
-				self.state_key(),
+				block_import_params.block().block_data().encrypted_state_diff(),
+				state_key,
 			)?;
 
 			state.apply_state_update(&update).map_err(|e| Error::Other(e.into()))?;

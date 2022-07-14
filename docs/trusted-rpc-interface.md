@@ -46,8 +46,8 @@ The current implementation of the [`TrustedCall`](https://github.com/integritee-
 
 #### RPC Methods
 The following rpc calls are available:
-  - `author_submitAndWatchExtrinsic`, params: `Vec<u8>`(encoded `Request`). Sends an extrinsic (`Call` or `Getter`). The server will keep the wss connection open and send status updates.
-  - `author_submitExtrinsic`, params: `Vec<u8>` (encoded `Request`). Sends an extrinsic (`Call` or `Getter`). The server will close the connection immediately after the first response.
+  - `author_submitAndWatchExtrinsic`, params: `Vec<String>`(hex encoded `Request`). Sends an extrinsic (`Call` or `Getter`). The server will keep the wss connection open and send status updates.
+  - `author_submitExtrinsic`, params: `Vec<String>` (hex encoded `Request`). Sends an extrinsic (`Call` or `Getter`). The server will close the connection immediately after the first response.
    - `author_pendingExtrinsics`, params: `Vec<String>` (Vector of base58 shards as strings). Returns all pending operations of the listed shards in the top pool.
 ## Rpc Response
 The server response is a json rpc response containing a [substrate codec](https://docs.substrate.io/v3/advanced/scale-codec/) encoded [`RpcReturnValue`](https://github.com/integritee-network/worker/blob/17e9776cbf09d0a1dd765546f27fc4d3c7bfefc4/core-primitives/types/src/rpc.rs#L8-L14) as param. It has the following parameters:

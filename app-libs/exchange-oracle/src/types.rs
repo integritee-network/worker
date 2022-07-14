@@ -17,6 +17,7 @@
 
 use codec::{Decode, Encode};
 use std::string::String;
+use substrate_fixed::types::U32F32;
 
 /// Market identifier for order
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
@@ -30,3 +31,7 @@ impl TradingPair {
 		format!("{}/{}", self.crypto_currency, self.fiat_currency)
 	}
 }
+
+/// TODO Fix https://github.com/integritee-network/pallets/issues/71 and get it from https://github.com/integritee-network/pallets.git
+/// Teeracle types
+pub type ExchangeRate = U32F32;

@@ -15,25 +15,91 @@
 
 */
 
+#[cfg(feature = "sgx")]
+use std::sync::SgxRwLock as RwLock;
+
+#[cfg(feature = "std")]
+use std::sync::RwLock;
+
 use crate::{
+	aes::Aes,
 	error::{Error, Result},
-	Aes,
+	key_repository::{AccessKey, MutateKey},
 };
-use itp_sgx_io::SealedIO;
+use itp_sgx_io::{SealedIO, StaticSealedIO};
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 
 #[derive(Default)]
-pub struct AesSealMock {}
+pub struct KeyRepositoryMock<KeyType>
+where
+	KeyType: Clone + Default,
+{
+	key: RwLock<KeyType>,
+}
+
+impl<KeyType> KeyRepositoryMock<KeyType>
+where
+	KeyType: Clone + Default,
+{
+	pub fn new(key: KeyType) -> Self {
+		KeyRepositoryMock { key: RwLock::new(key) }
+	}
+}
+
+impl<KeyType> AccessKey for KeyRepositoryMock<KeyType>
+where
+	KeyType: Clone + Default,
+{
+	type KeyType = KeyType;
+
+	fn retrieve_key(&self) -> Result<Self::KeyType> {
+		Ok(self.key.read().unwrap().clone())
+	}
+}
+
+impl<KeyType> MutateKey<KeyType> for KeyRepositoryMock<KeyType>
+where
+	KeyType: Clone + Default,
+{
+	fn update_key(&self, key: KeyType) -> Result<()> {
+		let mut lock = self.key.write().unwrap();
+		*lock = key;
+		Ok(())
+	}
+}
+
+#[derive(Default)]
+pub struct AesSealMock {
+	aes: RwLock<Aes>,
+}
+
+impl StaticSealedIO for AesSealMock {
+	type Error = Error;
+	type Unsealed = Aes;
+
+	fn unseal_from_static_file() -> Result<Self::Unsealed> {
+		Ok(Aes::default())
+	}
+
+	fn seal_to_static_file(_unsealed: &Self::Unsealed) -> Result<()> {
+		Ok(())
+	}
+}
 
 impl SealedIO for AesSealMock {
 	type Error = Error;
 	type Unsealed = Aes;
 
-	fn unseal() -> Result<Self::Unsealed> {
-		Ok(Aes::default())
+	fn unseal(&self) -> std::result::Result<Self::Unsealed, Self::Error> {
+		self.aes
+			.read()
+			.map_err(|e| Error::Other(format!("{:?}", e).into()))
+			.map(|k| k.clone())
 	}
 
-	fn seal(_unsealed: Self::Unsealed) -> Result<()> {
+	fn seal(&self, unsealed: &Self::Unsealed) -> Result<()> {
+		let mut aes_lock = self.aes.write().map_err(|e| Error::Other(format!("{:?}", e).into()))?;
+		*aes_lock = *unsealed;
 		Ok(())
 	}
 }
@@ -41,15 +107,15 @@ impl SealedIO for AesSealMock {
 #[derive(Default)]
 pub struct Rsa3072SealMock {}
 
-impl SealedIO for Rsa3072SealMock {
+impl StaticSealedIO for Rsa3072SealMock {
 	type Error = Error;
 	type Unsealed = Rsa3072KeyPair;
 
-	fn unseal() -> Result<Self::Unsealed> {
+	fn unseal_from_static_file() -> Result<Self::Unsealed> {
 		Ok(Rsa3072KeyPair::default())
 	}
 
-	fn seal(_unsealed: Self::Unsealed) -> Result<()> {
+	fn seal_to_static_file(_unsealed: &Self::Unsealed) -> Result<()> {
 		Ok(())
 	}
 }

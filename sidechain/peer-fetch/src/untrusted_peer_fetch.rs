@@ -18,7 +18,7 @@
 use crate::error::{Error, Result};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use itp_node_api_extensions::{node_api_factory::CreateNodeApi, PalletTeerexApi};
-use its_primitives::types::ShardIdentifier;
+use sidechain_primitives::types::ShardIdentifier;
 use std::sync::Arc;
 
 /// Trait to fetch untrusted peer servers.

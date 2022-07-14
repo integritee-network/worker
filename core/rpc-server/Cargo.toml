@@ -7,17 +7,21 @@ resolver = "2"
 
 [dependencies]
 anyhow = "1.0.40"
-log = "0.4.14"
+log = "0.4"
 jsonrpsee = { version = "0.2.0-alpha.7", features = ["full"] }
 serde_json = "1.0.64"
 tokio = { version = "1.6.1", features = ["full"] }
 parity-scale-codec = "3.0.0"
 
+# integritee deps
+itp-utils = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+
 # local
 itp-enclave-api = { path = "../../core-primitives/enclave-api" }
-itp-types = { path = "../../core-primitives/types" }
+itp-rpc = { path = "../../core-primitives/rpc" }
 its-peer-fetch = { path = "../../sidechain/peer-fetch" }
-its-primitives = { path = "../../sidechain/primitives" }
+its-rpc-handler = { path = "../../sidechain/rpc-handler" }
 its-storage = { path = "../../sidechain/storage" }
 
 [features]
@@ -26,5 +30,5 @@ std = []
 
 [dev-dependencies]
 env_logger = { version = "*" }
-sp-core = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "master" }
-its-test = { path = "../../sidechain/test" }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }

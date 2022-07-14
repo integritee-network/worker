@@ -21,12 +21,15 @@ use super::{authentication::ClientAuth, Opcode, TcpHeader};
 use crate::{
 	attestation::create_ra_report_and_signature,
 	error::{Error as EnclaveError, Result as EnclaveResult},
+	global_components::{
+		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
+	},
 	ocall::OcallApi,
 	tls_ra::seal_handler::{SealHandler, UnsealStateAndKeys},
+	GLOBAL_STATE_HANDLER_COMPONENT,
 };
+use itp_component_container::ComponentGetter;
 use itp_ocall_api::EnclaveAttestationOCallApi;
-use itp_sgx_crypto::{AesSeal, Rsa3072Seal};
-use itp_stf_state_handler::GlobalFileStateHandler;
 use itp_types::ShardIdentifier;
 use log::*;
 use rustls::{ServerConfig, ServerSession, Stream};
@@ -37,6 +40,7 @@ use std::{
 	net::TcpStream,
 	sync::Arc,
 };
+
 /// Server part of the TCP-level connection and the underlying TLS-level session.
 ///
 /// Includes a seal handler, which handles the reading part of the data to be sent.
@@ -73,10 +77,10 @@ where
 	/// Sends all relevant data to the client.
 	fn write_all(&mut self, shard: &ShardIdentifier) -> EnclaveResult<()> {
 		let shielding_key = self.seal_handler.unseal_shielding_key()?;
-		let signing_key = self.seal_handler.unseal_signing_key()?;
+		let state_key = self.seal_handler.unseal_state_key()?;
 		let state = self.seal_handler.unseal_state(shard)?;
 		self.write(Opcode::ShieldingKey, &shielding_key)?;
-		self.write(Opcode::SigningKey, &signing_key)?;
+		self.write(Opcode::StateKey, &state_key)?;
 		self.write(Opcode::State, &state)?;
 		Ok(())
 	}
@@ -104,8 +108,32 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 ) -> sgx_status_t {
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 
-	let state_handler = Arc::new(GlobalFileStateHandler);
-	let seal_handler = SealHandler::<Rsa3072Seal, AesSeal, _>::new(state_handler);
+	let state_handler = match GLOBAL_STATE_HANDLER_COMPONENT.get() {
+		Ok(s) => s,
+		Err(e) => {
+			error!("{:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	let state_key_repository = match GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.get() {
+		Ok(s) => s,
+		Err(e) => {
+			error!("{:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	let shielding_key_repository = match GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.get() {
+		Ok(s) => s,
+		Err(e) => {
+			error!("{:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	let seal_handler =
+		SealHandler::new(state_handler, state_key_repository, shielding_key_repository);
 
 	if let Err(e) =
 		run_state_provisioning_server_internal(socket_fd, sign_type, skip_ra, seal_handler)

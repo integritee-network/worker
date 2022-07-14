@@ -17,7 +17,7 @@
 
 use crate::{FetchBlocksFromPeer, Result};
 use async_trait::async_trait;
-use its_primitives::{
+use sidechain_primitives::{
 	traits::SignedBlock as SignedBlockTrait,
 	types::{BlockHash, ShardIdentifier},
 };
@@ -52,7 +52,8 @@ where
 
 	async fn fetch_blocks_from_peer(
 		&self,
-		_last_known_block_hash: BlockHash,
+		_last_imported_block_hash: BlockHash,
+		_maybe_until_block_hash: Option<BlockHash>,
 		shard_identifier: ShardIdentifier,
 	) -> Result<Vec<Self::SignedBlockType>> {
 		Ok(self.signed_blocks_map.get(&shard_identifier).cloned().unwrap_or_default())

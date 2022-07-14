@@ -16,64 +16,68 @@
 */
 
 //! Abstraction of the reading (unseal) and storing (seal) part of the
-//! shielding key, signing key and state.
+//! shielding key, state key and state.
 
 use crate::error::{Error as EnclaveError, Result as EnclaveResult};
 use codec::{Decode, Encode};
 use ita_stf::{State as StfState, StateType as StfStateType};
-use itp_sgx_crypto::{Aes, AesSeal, Error as CryptoError};
-use itp_sgx_io::SealedIO;
+use itp_sgx_crypto::{
+	key_repository::{AccessKey, MutateKey},
+	Aes,
+};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_types::ShardIdentifier;
 use log::*;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
-use std::{marker::PhantomData, sync::Arc, vec::Vec};
+use std::{sync::Arc, vec::Vec};
 
-pub trait SealedIOForShieldingKey = SealedIO<Unsealed = Rsa3072KeyPair, Error = CryptoError>;
-pub trait SealedIOForSigningKey = SealedIO<Unsealed = Aes, Error = CryptoError>;
-
-/// Handles the sealing and unsealing of the shielding key, signing key and the state.
+/// Handles the sealing and unsealing of the shielding key, state key and the state.
 #[derive(Default)]
-pub struct SealHandler<ShieldingKeyHandler, SigningKeyHandler, StateHandler>
+pub struct SealHandler<ShieldingKeyRepository, StateKeyRepository, StateHandler>
 where
-	ShieldingKeyHandler: SealedIOForShieldingKey,
-	SigningKeyHandler: SealedIOForSigningKey,
+	ShieldingKeyRepository: AccessKey<KeyType = Rsa3072KeyPair> + MutateKey<Rsa3072KeyPair>,
+	StateKeyRepository: AccessKey<KeyType = Aes> + MutateKey<Aes>,
 	// Constraint StateT = StfState currently necessary because SgxExternalities Encode/Decode does not work.
 	// See https://github.com/integritee-network/sgx-runtime/issues/46.
 	StateHandler: HandleState<StateT = StfState>,
 {
 	state_handler: Arc<StateHandler>,
-	_phantom_key_handler: PhantomData<(ShieldingKeyHandler, SigningKeyHandler)>,
+	state_key_repository: Arc<StateKeyRepository>,
+	shielding_key_repository: Arc<ShieldingKeyRepository>,
 }
 
-impl<ShieldingKeyHandler, SigningKeyHandler, StateHandler>
-	SealHandler<ShieldingKeyHandler, SigningKeyHandler, StateHandler>
+impl<ShieldingKeyRepository, StateKeyRepository, StateHandler>
+	SealHandler<ShieldingKeyRepository, StateKeyRepository, StateHandler>
 where
-	ShieldingKeyHandler: SealedIOForShieldingKey,
-	SigningKeyHandler: SealedIOForSigningKey,
+	ShieldingKeyRepository: AccessKey<KeyType = Rsa3072KeyPair> + MutateKey<Rsa3072KeyPair>,
+	StateKeyRepository: AccessKey<KeyType = Aes> + MutateKey<Aes>,
 	StateHandler: HandleState<StateT = StfState>,
 {
-	pub fn new(state_handler: Arc<StateHandler>) -> Self {
-		Self { state_handler, _phantom_key_handler: Default::default() }
+	pub fn new(
+		state_handler: Arc<StateHandler>,
+		state_key_repository: Arc<StateKeyRepository>,
+		shielding_key_repository: Arc<ShieldingKeyRepository>,
+	) -> Self {
+		Self { state_handler, state_key_repository, shielding_key_repository }
 	}
 }
 pub trait SealStateAndKeys {
 	fn seal_shielding_key(&self, bytes: &[u8]) -> EnclaveResult<()>;
-	fn seal_signing_key(&self, bytes: &[u8]) -> EnclaveResult<()>;
+	fn seal_state_key(&self, bytes: &[u8]) -> EnclaveResult<()>;
 	fn seal_state(&self, bytes: &[u8], shard: &ShardIdentifier) -> EnclaveResult<()>;
 }
 
 pub trait UnsealStateAndKeys {
 	fn unseal_shielding_key(&self) -> EnclaveResult<Vec<u8>>;
-	fn unseal_signing_key(&self) -> EnclaveResult<Vec<u8>>;
-	fn unseal_state(&self, state: &ShardIdentifier) -> EnclaveResult<Vec<u8>>;
+	fn unseal_state_key(&self) -> EnclaveResult<Vec<u8>>;
+	fn unseal_state(&self, shard: &ShardIdentifier) -> EnclaveResult<Vec<u8>>;
 }
 
-impl<ShieldingKeyHandler, SigningKeyHandler, StateHandler> SealStateAndKeys
-	for SealHandler<ShieldingKeyHandler, SigningKeyHandler, StateHandler>
+impl<ShieldingKeyRepository, StateKeyRepository, StateHandler> SealStateAndKeys
+	for SealHandler<ShieldingKeyRepository, StateKeyRepository, StateHandler>
 where
-	ShieldingKeyHandler: SealedIOForShieldingKey,
-	SigningKeyHandler: SealedIOForSigningKey,
+	ShieldingKeyRepository: AccessKey<KeyType = Rsa3072KeyPair> + MutateKey<Rsa3072KeyPair>,
+	StateKeyRepository: AccessKey<KeyType = Aes> + MutateKey<Aes>,
 	StateHandler: HandleState<StateT = StfState>,
 {
 	fn seal_shielding_key(&self, bytes: &[u8]) -> EnclaveResult<()> {
@@ -81,47 +85,52 @@ where
 			error!("    [Enclave] Received Invalid RSA key");
 			EnclaveError::Other(e.into())
 		})?;
-		ShieldingKeyHandler::seal(key)?;
+		self.shielding_key_repository.update_key(key)?;
 		info!("Successfully stored a new shielding key");
 		Ok(())
 	}
 
-	fn seal_signing_key(&self, mut bytes: &[u8]) -> EnclaveResult<()> {
+	fn seal_state_key(&self, mut bytes: &[u8]) -> EnclaveResult<()> {
 		let aes = Aes::decode(&mut bytes)?;
-		AesSeal::seal(Aes::new(aes.key, aes.init_vec))?;
-		info!("Successfully stored a new signing key");
+		self.state_key_repository.update_key(aes)?;
+		info!("Successfully stored a new state key");
 		Ok(())
 	}
 
 	fn seal_state(&self, mut bytes: &[u8], shard: &ShardIdentifier) -> EnclaveResult<()> {
 		let state = StfStateType::decode(&mut bytes)?;
 		let state_with_empty_diff = StfState { state, state_diff: Default::default() };
-		let (state_lock, _) = self.state_handler.load_for_mutation(shard)?;
 
-		self.state_handler.write(state_with_empty_diff, state_lock, shard)?;
+		self.state_handler.reset(state_with_empty_diff, shard)?;
 		info!("Successfully updated shard {:?} with provisioned state", shard);
 		Ok(())
 	}
 }
 
-impl<ShieldingKeyHandler, SigningKeyHandler, StateHandler> UnsealStateAndKeys
-	for SealHandler<ShieldingKeyHandler, SigningKeyHandler, StateHandler>
+impl<ShieldingKeyRepository, StateKeyRepository, StateHandler> UnsealStateAndKeys
+	for SealHandler<ShieldingKeyRepository, StateKeyRepository, StateHandler>
 where
-	ShieldingKeyHandler: SealedIOForShieldingKey,
-	SigningKeyHandler: SealedIOForSigningKey,
+	ShieldingKeyRepository: AccessKey<KeyType = Rsa3072KeyPair> + MutateKey<Rsa3072KeyPair>,
+	StateKeyRepository: AccessKey<KeyType = Aes> + MutateKey<Aes>,
 	StateHandler: HandleState<StateT = StfState>,
 {
 	fn unseal_shielding_key(&self) -> EnclaveResult<Vec<u8>> {
-		let shielding_key = ShieldingKeyHandler::unseal()?;
+		let shielding_key = self
+			.shielding_key_repository
+			.retrieve_key()
+			.map_err(|e| EnclaveError::Other(format!("{:?}", e).into()))?;
 		serde_json::to_vec(&shielding_key).map_err(|e| EnclaveError::Other(e.into()))
 	}
 
-	fn unseal_signing_key(&self) -> EnclaveResult<Vec<u8>> {
-		Ok(AesSeal::unseal()?.encode())
+	fn unseal_state_key(&self) -> EnclaveResult<Vec<u8>> {
+		self.state_key_repository
+			.retrieve_key()
+			.map(|k| k.encode())
+			.map_err(|e| EnclaveError::Other(format!("{:?}", e).into()))
 	}
 
 	fn unseal_state(&self, shard: &ShardIdentifier) -> EnclaveResult<Vec<u8>> {
-		let state = self.state_handler.load_initialized(shard)?;
+		let state = self.state_handler.load(shard)?;
 		Ok(state.state.encode())
 	}
 }
@@ -129,11 +138,15 @@ where
 #[cfg(feature = "test")]
 pub mod test {
 	use super::*;
-	use itp_sgx_crypto::mocks::{AesSealMock, Rsa3072SealMock};
+	use itp_sgx_crypto::mocks::KeyRepositoryMock;
 	use itp_test::mock::handle_state_mock::HandleStateMock;
 	use sgx_externalities::SgxExternalitiesTrait;
 
-	type SealHandlerMock = SealHandler<Rsa3072SealMock, AesSealMock, HandleStateMock>;
+	type StateKeyRepositoryMock = KeyRepositoryMock<Aes>;
+	type ShieldingKeyRepositoryMock = KeyRepositoryMock<Rsa3072KeyPair>;
+
+	type SealHandlerMock =
+		SealHandler<ShieldingKeyRepositoryMock, StateKeyRepositoryMock, HandleStateMock>;
 
 	pub fn seal_shielding_key_works() {
 		let seal_handler = SealHandlerMock::default();
@@ -162,28 +175,28 @@ pub mod test {
 		assert!(result.is_ok());
 	}
 
-	pub fn seal_signing_key_works() {
+	pub fn seal_state_key_works() {
 		let seal_handler = SealHandlerMock::default();
 		let key_pair_in_bytes = Aes::default().encode();
 
-		let result = seal_handler.seal_signing_key(&key_pair_in_bytes);
+		let result = seal_handler.seal_state_key(&key_pair_in_bytes);
 
 		assert!(result.is_ok());
 	}
 
-	pub fn seal_signing_key_fails_for_invalid_key() {
+	pub fn seal_state_key_fails_for_invalid_key() {
 		let seal_handler = SealHandlerMock::default();
 
-		let result = seal_handler.seal_signing_key(&[1, 2, 3]);
+		let result = seal_handler.seal_state_key(&[1, 2, 3]);
 
 		assert!(result.is_err());
 	}
 
-	pub fn unseal_seal_signing_key_works() {
+	pub fn unseal_seal_state_key_works() {
 		let seal_handler = SealHandlerMock::default();
-		let key_pair_in_bytes = seal_handler.unseal_signing_key().unwrap();
+		let key_pair_in_bytes = seal_handler.unseal_state_key().unwrap();
 
-		let result = seal_handler.seal_signing_key(&key_pair_in_bytes);
+		let result = seal_handler.seal_state_key(&key_pair_in_bytes);
 
 		assert!(result.is_ok());
 	}
@@ -192,6 +205,7 @@ pub mod test {
 		let seal_handler = SealHandlerMock::default();
 		let state = <HandleStateMock as HandleState>::StateT::default();
 		let shard = ShardIdentifier::default();
+		let _init_hash = seal_handler.state_handler.initialize_shard(shard).unwrap();
 
 		let result = seal_handler.seal_state(&state.encode(), &shard);
 
@@ -210,11 +224,12 @@ pub mod test {
 	pub fn unseal_seal_state_works() {
 		let seal_handler = SealHandlerMock::default();
 		let shard = ShardIdentifier::default();
+		seal_handler.state_handler.initialize_shard(shard).unwrap();
 		// Fill our mock state:
 		let (lock, mut state) = seal_handler.state_handler.load_for_mutation(&shard).unwrap();
 		let (key, value) = ("my_key", "my_value");
 		state.insert(key.encode(), value.encode());
-		seal_handler.state_handler.write(state, lock, &shard).unwrap();
+		seal_handler.state_handler.write_after_mutation(state, lock, &shard).unwrap();
 
 		let state_in_bytes = seal_handler.unseal_state(&shard).unwrap();
 

@@ -15,8 +15,8 @@
 
 */
 
-use its_primitives::traits::Block as SidechainBlockTrait;
 use its_state::LastBlockExt;
+use sidechain_primitives::traits::Block as SidechainBlockTrait;
 
 pub struct StateMock<SidechainBlock: SidechainBlockTrait> {
 	pub last_block: Option<SidechainBlock>,

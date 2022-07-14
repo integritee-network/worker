@@ -18,13 +18,16 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use crate::{error::Error, exchange_rate_oracle::OracleSource, types::TradingPair};
+use crate::{
+	error::Error,
+	exchange_rate_oracle::OracleSource,
+	types::{ExchangeRate, TradingPair},
+};
 use itc_rest_client::{
 	http_client::{HttpClient, SendWithCertificateVerification},
 	rest_client::RestClient,
 	RestGet, RestPath,
 };
-use itp_types::ExchangeRate;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::{

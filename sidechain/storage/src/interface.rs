@@ -21,11 +21,11 @@ use mockall::predicate::*;
 use mockall::*;
 
 use super::{storage::SidechainStorage, Result};
-use its_primitives::{
+use parking_lot::RwLock;
+use sidechain_primitives::{
 	traits::{ShardIdentifierFor, SignedBlock as SignedBlockT},
 	types::{BlockHash, BlockNumber},
 };
-use parking_lot::RwLock;
 use std::path::PathBuf;
 
 /// Lock wrapper around sidechain storage
@@ -65,6 +65,18 @@ pub trait FetchBlocks<SignedBlock: SignedBlockT> {
 		block_hash: &BlockHash,
 		shard_identifier: &ShardIdentifierFor<SignedBlock>,
 	) -> Result<Vec<SignedBlock>>;
+
+	/// Fetch all blocks within a range, defined by a starting block (lower bound) and end block (upper bound) hash.
+	///
+	/// Does NOT include the bound defining blocks in the result. ]from..until[.
+	/// Returns an empty vector if 'from' cannot be found in storage.
+	/// Returns the same as 'fetch_all_blocks_after' if 'until' cannot be found in storage.
+	fn fetch_blocks_in_range(
+		&self,
+		block_hash_from: &BlockHash,
+		block_hash_until: &BlockHash,
+		shard_identifier: &ShardIdentifierFor<SignedBlock>,
+	) -> Result<Vec<SignedBlock>>;
 }
 
 impl<SignedBlock: SignedBlockT> BlockStorage<SignedBlock> for SidechainStorageLock<SignedBlock> {
@@ -86,5 +98,16 @@ impl<SignedBlock: SignedBlockT> FetchBlocks<SignedBlock> for SidechainStorageLoc
 		shard_identifier: &ShardIdentifierFor<SignedBlock>,
 	) -> Result<Vec<SignedBlock>> {
 		self.storage.read().get_blocks_after(block_hash, shard_identifier)
+	}
+
+	fn fetch_blocks_in_range(
+		&self,
+		block_hash_from: &BlockHash,
+		block_hash_until: &BlockHash,
+		shard_identifier: &ShardIdentifierFor<SignedBlock>,
+	) -> Result<Vec<SignedBlock>> {
+		self.storage
+			.read()
+			.get_blocks_in_range(block_hash_from, block_hash_until, shard_identifier)
 	}
 }
