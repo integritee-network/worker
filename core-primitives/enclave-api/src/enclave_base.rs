@@ -56,6 +56,8 @@ pub trait EnclaveBase: Send + Sync + 'static {
 
 	fn set_nonce(&self, nonce: u32) -> EnclaveResult<()>;
 
+	fn set_node_metadata(&self, metadata: Vec<u8>) -> EnclaveResult<()>;
+
 	fn get_state(&self, cyphertext: Vec<u8>, shard: Vec<u8>) -> EnclaveResult<Vec<u8>>;
 
 	fn get_rsa_shielding_pubkey(&self) -> EnclaveResult<Rsa3072PubKey>;
@@ -127,7 +129,8 @@ impl EnclaveBase for Enclave {
 	) -> EnclaveResult<SpHeader> {
 		let latest_header_encoded = init_light_client_ffi(self.eid, params.encode())?;
 
-		let latest: SpHeader = Decode::decode(&mut latest_header_encoded.as_slice()).unwrap();
+		let latest: SpHeader =
+			Decode::decode(&mut latest_header_encoded.as_slice()).expect("Invalid header");
 		info!("Latest Header {:?}", latest);
 
 		Ok(latest)
@@ -160,6 +163,19 @@ impl EnclaveBase for Enclave {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
 		let result = unsafe { ffi::set_nonce(self.eid, &mut retval, &nonce) };
+
+		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+
+		Ok(())
+	}
+
+	fn set_node_metadata(&self, metadata: Vec<u8>) -> EnclaveResult<()> {
+		let mut retval = sgx_status_t::SGX_SUCCESS;
+
+		let result = unsafe {
+			ffi::set_node_metadata(self.eid, &mut retval, metadata.as_ptr(), metadata.len() as u32)
+		};
 
 		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
@@ -210,7 +226,8 @@ impl EnclaveBase for Enclave {
 		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
 
-		let rsa_pubkey: Rsa3072PubKey = serde_json::from_slice(pubkey.as_slice()).unwrap();
+		let rsa_pubkey: Rsa3072PubKey =
+			serde_json::from_slice(pubkey.as_slice()).expect("Invalid public key");
 		debug!("got RSA pubkey {:?}", rsa_pubkey);
 		Ok(rsa_pubkey)
 	}

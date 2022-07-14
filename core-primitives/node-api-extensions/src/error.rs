@@ -18,36 +18,19 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use sgx_types::sgx_status_t;
 use std::{boxed::Box, format};
 
 pub type Result<T> = core::result::Result<T, Error>;
 
-/// Indirect calls execution error.
+/// extrinsics factory error
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-	#[error("SGX error, status: {0}")]
-	Sgx(sgx_status_t),
-	#[error("STF execution error: {0}")]
-	StfExecution(#[from] itp_stf_executor::error::Error),
-	#[error("Node API error: {0}")]
-	NodeApi(#[from] itp_node_api_extensions::error::Error),
-	#[error("Crypto error: {0}")]
-	Crypto(itp_sgx_crypto::Error),
+	#[error("Node API metadata has not been set")]
+	MetadataNotSet,
+	#[error("Node API metadata error")]
+	NodeMetadata(substrate_api_client::MetadataError),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
-}
-
-impl From<sgx_status_t> for Error {
-	fn from(sgx_status: sgx_status_t) -> Self {
-		Self::Sgx(sgx_status)
-	}
-}
-
-impl From<itp_sgx_crypto::Error> for Error {
-	fn from(e: itp_sgx_crypto::Error) -> Self {
-		Self::Crypto(e)
-	}
 }
 
 impl From<codec::Error> for Error {

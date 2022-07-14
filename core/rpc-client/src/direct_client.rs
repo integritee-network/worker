@@ -78,7 +78,7 @@ impl DirectApi for DirectClient {
 		// Unwrap is fine here, because JoinHandle can be used to handle a Thread panic.
 		thread::spawn(move || {
 			WsClient::connect_watch_with_control(&url, &request, &sender, web_socket_control)
-				.unwrap()
+				.expect("Connection failed")
 		})
 	}
 

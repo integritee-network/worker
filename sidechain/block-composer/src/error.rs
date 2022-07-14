@@ -32,6 +32,8 @@ pub enum Error {
 	StfExecution(#[from] itp_stf_executor::error::Error),
 	#[error("TOP pool RPC author error: {0}")]
 	TopPoolAuthor(#[from] itp_top_pool_author::error::Error),
+	#[error("Node API error: {0}")]
+	NodeApi(#[from] itp_node_api_extensions::error::Error),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }
