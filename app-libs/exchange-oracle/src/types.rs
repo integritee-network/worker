@@ -32,5 +32,6 @@ impl TradingPair {
 	}
 }
 
+/// TODO Fix https://github.com/integritee-network/pallets/issues/71 and get it from https://github.com/integritee-network/pallets.git
 /// Teeracle types
 pub type ExchangeRate = U32F32;
