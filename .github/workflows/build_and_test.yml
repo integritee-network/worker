@@ -44,7 +44,7 @@ jobs:
       - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
         env:
           COINMARKETCAP_KEY: ${{ secrets.COINMARKETCAP_KEY }}
-        run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-enclave-test-${{ github.sha }} -e COINMARKETCAP_KEY=${{ env.COINMARKETCAP_KEY }}
+        run: docker run -e COINMARKETCAP_KEY=${{ env.COINMARKETCAP_KEY }} --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-enclave-test-${{ github.sha }}
 
       - name: Build Cargo Test Image
         env:
@@ -54,7 +54,7 @@ jobs:
       - name: Run Cargo Test
         env:
           COINMARKETCAP_KEY: ${{ secrets.COINMARKETCAP_KEY }}
-        run: docker run --rm integritee-worker-ctest-${{ github.sha }} -e COINMARKETCAP_KEY=${{ env.COINMARKETCAP_KEY }}
+        run: docker run -e COINMARKETCAP_KEY=${{ env.COINMARKETCAP_KEY }} --rm integritee-worker-ctest-${{ github.sha }}
 
       - name: Build Deployable Image
         env:
