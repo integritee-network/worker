@@ -33,14 +33,19 @@ use itp_types::{
 };
 use log::*;
 use my_node_runtime::Balance;
-use primitive_types::H256;
+use rand::Rng;
 use rayon::prelude::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_application_crypto::{ed25519, sr25519};
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
-use std::{fs::OpenOptions, io::Write, sync::mpsc::{channel, Receiver}, thread, time, time::Instant};
+use std::{
+	fs::OpenOptions,
+	io::Write,
+	sync::mpsc::{channel, Receiver},
+	thread, time,
+	time::Instant,
+};
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
-use rand::Rng;
 
 macro_rules! get_layer_two_nonce {
 	($signer_pair:ident, $cli: ident, $trusted_args:ident ) => {{
@@ -261,7 +266,6 @@ impl BenchmarkClient {
 
 /// Stores timing information about a specific transaction
 struct BenchmarkTransaction {
-	hash: H256,
 	started: Instant,
 	submitted: Instant,
 	confirmed: Option<Instant>,
@@ -316,7 +320,7 @@ fn transfer_benchmark(
 		let account_funding_request = get_json_request(trusted_args, top, shielding_pubkey);
 
 		let client = BenchmarkClient::new(account, initial_balance, account_funding_request, cli);
-		let result = wait_for_top_confirmation(wait_for_confirmation, &client);
+		let _result = wait_for_top_confirmation(wait_for_confirmation, &client);
 		accounts.push(client);
 	}
 
@@ -336,10 +340,15 @@ fn transfer_benchmark(
 			for i in 0..number_iterations {
 				println!("Iteration: {}", i);
 
-				if random_wait_before_transaction_ms.1 > 0
-				{
+				if random_wait_before_transaction_ms.1 > 0 {
 					let mut rng = rand::thread_rng();
-					let sleep_time = time::Duration::from_millis(rng.gen_range(random_wait_before_transaction_ms.0..=random_wait_before_transaction_ms.1).into());
+					let sleep_time = time::Duration::from_millis(
+						rng.gen_range(
+							random_wait_before_transaction_ms.0
+								..=random_wait_before_transaction_ms.1,
+						)
+						.into(),
+					);
 					println!("Sleep for: {}ms", sleep_time.as_millis());
 					thread::sleep(sleep_time);
 				}
@@ -371,7 +380,7 @@ fn transfer_benchmark(
 				let result =
 					wait_for_top_confirmation(wait_for_confirmation || last_iteration, &client);
 
-				client.current_balance = client.current_balance - keep_alive_balance;
+				client.current_balance -= keep_alive_balance;
 				client.account = new_account;
 
 				output.push(result);
@@ -461,7 +470,6 @@ fn wait_for_top_confirmation(
 	}
 
 	BenchmarkTransaction {
-		hash: submitted.unwrap().0,
 		started,
 		submitted: submitted.unwrap().1,
 		confirmed: confirmed.map(|v| v.1),
