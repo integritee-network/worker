@@ -95,6 +95,6 @@ impl<Component> ComponentGetter for ComponentContainer<Component> {
 			.container
 			.load()
 			.ok_or_else(|| Error::ComponentNotInitialized(self.to_string()))?;
-		Ok(component_mutex.lock().unwrap().clone())
+		Ok(component_mutex.lock().expect("Lock poisoning").clone())
 	}
 }

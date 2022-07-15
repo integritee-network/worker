@@ -15,5 +15,16 @@
 
 */
 
-pub mod environment_mock;
-pub mod proposer_mock;
+use crate::{error::Result, metadata::NodeMetadata};
+/// Pallet' name:
+const SIDECHAIN: &str = "Sidechain";
+
+pub trait SidechainCallIndexes {
+	fn confirm_proposed_sidechain_block_indexes(&self) -> Result<[u8; 2]>;
+}
+
+impl SidechainCallIndexes for NodeMetadata {
+	fn confirm_proposed_sidechain_block_indexes(&self) -> Result<[u8; 2]> {
+		self.call_indexes(SIDECHAIN, "confirm_proposed_sidechain_block")
+	}
+}

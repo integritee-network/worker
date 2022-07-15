@@ -57,7 +57,7 @@ where
 		let count = self.enclave_count(at_block)?;
 		let mut enclaves = Vec::with_capacity(count as usize);
 		for n in 1..=count {
-			enclaves.push(self.enclave(n, at_block)?.unwrap())
+			enclaves.push(self.enclave(n, at_block)?.expect("None enclave"))
 		}
 		Ok(enclaves)
 	}

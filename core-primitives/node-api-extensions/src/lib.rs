@@ -17,23 +17,62 @@
 
 //! Some substrate-api-client extension traits.
 
+#![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(test, feature(assert_matches))]
+
+#[cfg(all(feature = "std", feature = "sgx"))]
+compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
+
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+extern crate sgx_tstd as std;
+
+// re-export module to properly feature gate sgx and regular std environment
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+pub mod sgx_reexport_prelude {
+	pub use thiserror_sgx as thiserror;
+}
+
+#[cfg(all(not(feature = "sgx"), feature = "std"))]
 pub use substrate_api_client::{rpc::WsRpcClient, Api, ApiClientError};
 
+#[cfg(all(not(feature = "sgx"), feature = "std"))]
 pub mod account;
+
+#[cfg(all(not(feature = "sgx"), feature = "std"))]
 pub mod chain;
+
+#[cfg(all(not(feature = "sgx"), feature = "std"))]
 pub mod node_api_factory;
+
+#[cfg(all(not(feature = "sgx"), feature = "std"))]
 pub mod pallet_teeracle;
+
+#[cfg(all(not(feature = "sgx"), feature = "std"))]
 pub mod pallet_teerex;
 
-#[cfg(feature = "mocks")]
+#[cfg(all(feature = "mocks", feature = "std"))]
 pub mod pallet_teerex_api_mock;
 
+pub mod error;
+pub mod metadata;
+
+#[cfg(all(not(feature = "sgx"), feature = "std"))]
 pub use account::*;
+#[cfg(all(not(feature = "sgx"), feature = "std"))]
 pub use chain::*;
-use itp_types::ParentchainExtrinsicParams;
+#[cfg(all(not(feature = "sgx"), feature = "std"))]
 pub use pallet_teeracle::*;
+#[cfg(all(not(feature = "sgx"), feature = "std"))]
 pub use pallet_teerex::*;
+
+#[cfg(all(not(feature = "sgx"), feature = "std"))]
+use itp_types::ParentchainExtrinsicParams;
+
+#[cfg(all(not(feature = "sgx"), feature = "std"))]
 use sp_core::sr25519;
 
+#[cfg(all(not(feature = "sgx"), feature = "std"))]
 pub type ApiResult<T> = Result<T, ApiClientError>;
+
+#[cfg(all(not(feature = "sgx"), feature = "std"))]
 pub type ParentchainApi = Api<sr25519::Pair, WsRpcClient, ParentchainExtrinsicParams>;

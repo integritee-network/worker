@@ -14,22 +14,24 @@
 	limitations under the License.
 
 */
+use crate::{error::Result, metadata::NodeMetadata};
+use sp_core::storage::StorageKey;
 
-use its_state::LastBlockExt;
-use sidechain_primitives::traits::Block as SidechainBlockTrait;
+/// Pallet' name:
+const SYSTEM: &str = "System";
 
-pub struct StateMock<SidechainBlock: SidechainBlockTrait> {
-	pub last_block: Option<SidechainBlock>,
+pub trait SystemStorageIndexes {
+	fn system_account_storage_key(&self) -> Result<StorageKey>;
+
+	fn system_account_storage_map_key(&self, index: u64) -> Result<StorageKey>;
 }
 
-impl<SidechainBlock: SidechainBlockTrait> LastBlockExt<SidechainBlock>
-	for StateMock<SidechainBlock>
-{
-	fn get_last_block(&self) -> Option<SidechainBlock> {
-		self.last_block.clone()
+impl SystemStorageIndexes for NodeMetadata {
+	fn system_account_storage_key(&self) -> Result<StorageKey> {
+		self.storage_value_key(SYSTEM, "Account")
 	}
 
-	fn set_last_block(&mut self, block: &SidechainBlock) {
-		self.last_block = Some(block.clone())
+	fn system_account_storage_map_key(&self, index: u64) -> Result<StorageKey> {
+		self.storage_map_key(SYSTEM, "Account", &index)
 	}
 }

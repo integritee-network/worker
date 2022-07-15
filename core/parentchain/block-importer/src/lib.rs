@@ -30,7 +30,6 @@ pub mod sgx_reexport_prelude {
 	pub use thiserror_sgx as thiserror;
 }
 
-mod beefy_merkle_tree;
 pub mod block_importer;
 pub mod error;
 
