@@ -661,8 +661,8 @@ where
 		},
 	};
 
-	let (update_exchange_call) = match node_metadata_repository
-		.get_from_metadata(|m| (m.update_exchange_rate_call_indexes(),))
+	let update_exchange_call = match node_metadata_repository
+		.get_from_metadata(|m| m.update_exchange_rate_call_indexes())
 	{
 		Ok(r) => r,
 		Err(e) => {
