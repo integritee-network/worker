@@ -602,7 +602,7 @@ fn update_market_data_internal(
 		genesis_hash,
 		signer,
 		GLOBAL_NONCE_CACHE.clone(),
-		node_metadata_repository.clone(),
+		node_metadata_repository,
 	);
 
 	let mut extrinsic_calls: Vec<OpaqueCall> = Vec::new();
