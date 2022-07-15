@@ -72,6 +72,7 @@ std = [
    "sgx-externalities/std",
    "sidechain-block-verification/std",
    "sidechain-primitives/std",
+   "sidechain-block-verification/std",
 ]
 sgx = [
    "sgx_tstd",

@@ -102,24 +102,6 @@ pub mod enclave {
 /// Settings concerning the node
 pub mod node {
 	use core::time::Duration;
-	// you may have to update these indices upon new builds of the runtime
-	// you can get the index from metadata, counting modules starting with zero
-	pub static TEEREX_MODULE: u8 = 50u8;
-	pub static REGISTER_ENCLAVE: u8 = 0u8;
-	//pub static UNREGISTER_ENCLAVE: u8 = 1u8;
-	pub static CALL_WORKER: u8 = 2u8;
-	pub static PROCESSED_PARENTCHAIN_BLOCK: u8 = 3u8;
-	pub static SHIELD_FUNDS: u8 = 4u8;
-	pub static UNSHIELD_FUNDS: u8 = 5u8;
-	// Sidechain module values
-	pub static SIDECHAIN_MODULE: u8 = 53u8;
-	pub static PROPOSED_SIDECHAIN_BLOCK: u8 = 0u8;
-	// bump this to be consistent with integritee-node runtime
-	pub static RUNTIME_SPEC_VERSION: u32 = 24;
-	pub static RUNTIME_TRANSACTION_VERSION: u32 = 3;
-
-	pub static TEERACLE_MODULE: u8 = 52u8;
-	pub static UPDATE_EXCHANGE_RATE: u8 = 2u8;
 	// Send extrinsic to update market exchange rate on the parentchain once per day
 	pub static MARKET_DATA_UPDATE_INTERVAL: Duration = Duration::from_secs(86400);
 }

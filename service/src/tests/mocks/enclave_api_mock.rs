@@ -63,6 +63,10 @@ impl EnclaveBase for EnclaveBaseMock {
 		unimplemented!()
 	}
 
+	fn set_node_metadata(&self, _metadata: Vec<u8>) -> EnclaveResult<()> {
+		todo!()
+	}
+
 	fn get_state(&self, _cyphertext: Vec<u8>, _shard: Vec<u8>) -> EnclaveResult<Vec<u8>> {
 		Ok(Vec::<u8>::new())
 	}

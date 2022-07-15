@@ -41,6 +41,9 @@ use itc_tls_websocket_server::{
 use itp_block_import_queue::BlockImportQueue;
 use itp_component_container::ComponentContainer;
 use itp_extrinsics_factory::ExtrinsicsFactory;
+use itp_node_api_extensions::metadata::{
+	node_metadata_provider::NodeMetadataRepository, NodeMetadata,
+};
 use itp_nonce_cache::NonceCache;
 use itp_sgx_crypto::{key_repository::KeyRepository, Aes, AesSeal, Rsa3072Seal};
 use itp_stf_executor::{enclave_signer::StfEnclaveSigner, executor::StfExecutor};
@@ -76,14 +79,18 @@ pub type EnclaveStateSnapshotRepository =
 	StateSnapshotRepository<EnclaveStateFileIo, StfState, H256>;
 pub type EnclaveStateHandler = StateHandler<EnclaveStateSnapshotRepository>;
 pub type EnclaveOCallApi = OcallApi;
-pub type EnclaveStfExecutor = StfExecutor<EnclaveOCallApi, EnclaveStateHandler>;
+pub type EnclaveNodeMetadataRepository = NodeMetadataRepository<NodeMetadata>;
+pub type EnclaveStfExecutor =
+	StfExecutor<EnclaveOCallApi, EnclaveStateHandler, EnclaveNodeMetadataRepository>;
 pub type EnclaveStfEnclaveSigner =
 	StfEnclaveSigner<EnclaveOCallApi, EnclaveStateHandler, EnclaveShieldingKeyRepository>;
-pub type EnclaveExtrinsicsFactory = ExtrinsicsFactory<Pair, NonceCache>;
+pub type EnclaveExtrinsicsFactory =
+	ExtrinsicsFactory<Pair, NonceCache, EnclaveNodeMetadataRepository>;
 pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
 	EnclaveShieldingKeyRepository,
 	EnclaveStfEnclaveSigner,
 	EnclaveTopPoolAuthor,
+	EnclaveNodeMetadataRepository,
 >;
 pub type EnclaveValidatorAccessor = ValidatorAccessor<
 	LightValidation<ParentchainBlock, EnclaveOCallApi>,
@@ -125,8 +132,13 @@ pub type EnclaveTopPoolOperationHandler = TopPoolOperationHandler<
 	EnclaveTopPoolAuthor,
 	EnclaveStfExecutor,
 >;
-pub type EnclaveSidechainBlockComposer =
-	BlockComposer<ParentchainBlock, SignedSidechainBlock, Pair, EnclaveStateKeyRepository>;
+pub type EnclaveSidechainBlockComposer = BlockComposer<
+	ParentchainBlock,
+	SignedSidechainBlock,
+	Pair,
+	EnclaveStateKeyRepository,
+	EnclaveNodeMetadataRepository,
+>;
 pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 	Pair,
 	ParentchainBlock,
@@ -200,6 +212,10 @@ pub static GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT: ComponentContain
 /// Extrinsics factory.
 pub static GLOBAL_EXTRINSICS_FACTORY_COMPONENT: ComponentContainer<EnclaveExtrinsicsFactory> =
 	ComponentContainer::new("extrinsics_factory");
+
+pub static GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT: ComponentContainer<
+	EnclaveNodeMetadataRepository,
+> = ComponentContainer::new("node metadata repository");
 
 /// Sidechain component instances
 ///-------------------------------------------------------------------------------------------------

@@ -53,6 +53,7 @@ use itp_enclave_api::{
 	Enclave,
 };
 use itp_node_api_extensions::{
+	metadata::NodeMetadata,
 	node_api_factory::{CreateNodeApi, NodeApiFactory},
 	AccountApi, ChainApi, PalletTeerexApi, ParentchainApi,
 };
@@ -386,6 +387,16 @@ fn start_worker<E, T, D, InitializationHandler>(
 	enclave
 		.set_nonce(nonce)
 		.expect("Could not set nonce of enclave. Returning here...");
+
+	let metadata = node_api.metadata.clone();
+	let runtime_spec_version = node_api.runtime_version.spec_version;
+	let runtime_transaction_version = node_api.runtime_version.transaction_version;
+	enclave
+		.set_node_metadata(
+			NodeMetadata::new(metadata, runtime_spec_version, runtime_transaction_version).encode(),
+		)
+		.expect("Could not set the node meta data in the enclave");
+
 	let trusted_url = config.trusted_worker_url_external();
 	let uxt = if skip_ra {
 		println!(

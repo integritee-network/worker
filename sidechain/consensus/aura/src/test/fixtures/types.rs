@@ -15,11 +15,7 @@
 
 */
 
-use crate::{
-	test::mocks::{environment_mock::EnvironmentMock, state_mock::StateMock},
-	verifier::AuraVerifier,
-	Aura,
-};
+use crate::{test::mocks::environment_mock::EnvironmentMock, Aura};
 use itc_parentchain_block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
 use itp_test::mock::onchain_mock::OnchainMock;
 use itp_types::Block as ParentchainBlock;
@@ -28,7 +24,7 @@ use sidechain_primitives::{
 		Block as SidechainBlockTrait, Header as SidechainHeaderTrait,
 		SignedBlock as SignedBlockTrait,
 	},
-	types::block::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
+	types::block::SignedBlock as SignedSidechainBlock,
 };
 use sp_runtime::{app_crypto::ed25519, generic::SignedBlock};
 
@@ -44,12 +40,4 @@ pub type TestAura = Aura<
 	EnvironmentMock,
 	OnchainMock,
 	TriggerParentchainBlockImportMock<SignedBlock<ParentchainBlock>>,
->;
-
-pub type TestAuraVerifier = AuraVerifier<
-	AuthorityPair,
-	ParentchainBlock,
-	SignedSidechainBlock,
-	StateMock<SidechainBlock>,
-	OnchainMock,
 >;

@@ -15,7 +15,7 @@ dependencies = [
 [[package]]
 name = "ac-compose-macros"
 version = "0.1.0"
-source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.24#081d98ec22bad60abf9373fabf5d2ee8270c1d5d"
+source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.24#d576bdc23caaf16b6e707fb756b3ab6279dba89a"
 dependencies = [
  "ac-primitives",
  "log",
@@ -25,9 +25,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "ac-node-api"
+version = "0.1.0"
+source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.24#d576bdc23caaf16b6e707fb756b3ab6279dba89a"
+dependencies = [
+ "ac-primitives",
+ "derive_more",
+ "frame-metadata 15.0.0 (git+https://github.com/integritee-network/frame-metadata)",
+ "frame-support",
+ "frame-system",
+ "hex",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "serde 1.0.137",
+ "serde_json 1.0.81",
+ "sp-application-crypto",
+ "sp-core",
+ "sp-runtime",
+ "sp-runtime-interface",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.24)",
+]
+
+[[package]]
 name = "ac-primitives"
 version = "0.1.0"
-source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.24#081d98ec22bad60abf9373fabf5d2ee8270c1d5d"
+source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.24#d576bdc23caaf16b6e707fb756b3ab6279dba89a"
 dependencies = [
  "hex",
  "parity-scale-codec",
@@ -626,6 +649,7 @@ dependencies = [
  "itp-block-import-queue",
  "itp-component-container",
  "itp-extrinsics-factory",
+ "itp-node-api-extensions",
  "itp-nonce-cache",
  "itp-ocall-api",
  "itp-primitives-cache",
@@ -780,12 +804,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "frame-metadata"
+version = "15.0.0"
+source = "git+https://github.com/integritee-network/frame-metadata#3b43da9821238681f9431276d55b92a079142083"
+dependencies = [
+ "cfg-if 1.0.0",
+ "parity-scale-codec",
+ "scale-info",
+ "serde 1.0.137",
+]
+
+[[package]]
 name = "frame-support"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.24#814752f60ab8cce7e2ece3ce0c1b10799b4eab28"
 dependencies = [
  "bitflags",
- "frame-metadata",
+ "frame-metadata 15.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support-procedural",
  "impl-trait-for-tuples",
  "k256",
@@ -1278,7 +1313,6 @@ dependencies = [
  "derive_more",
  "frame-support",
  "frame-system",
- "itp-settings",
  "itp-storage",
  "itp-types",
  "itp-utils",
@@ -1354,7 +1388,6 @@ dependencies = [
  "sgx_types",
  "sp-runtime",
  "thiserror 1.0.9",
- "tiny-keccak",
 ]
 
 [[package]]
@@ -1365,8 +1398,8 @@ dependencies = [
  "futures 0.3.8",
  "ita-stf",
  "itp-extrinsics-factory",
+ "itp-node-api-extensions",
  "itp-ocall-api",
- "itp-settings",
  "itp-sgx-crypto",
  "itp-stf-executor",
  "itp-top-pool-author",
@@ -1379,6 +1412,7 @@ dependencies = [
  "sp-runtime",
  "substrate-api-client",
  "thiserror 1.0.9",
+ "tiny-keccak",
 ]
 
 [[package]]
@@ -1503,14 +1537,29 @@ dependencies = [
 name = "itp-extrinsics-factory"
 version = "0.8.0"
 dependencies = [
+ "itp-node-api-extensions",
  "itp-nonce-cache",
- "itp-settings",
  "itp-types",
  "log",
  "parity-scale-codec",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
+ "sp-runtime",
+ "substrate-api-client",
+ "thiserror 1.0.9",
+]
+
+[[package]]
+name = "itp-node-api-extensions"
+version = "0.8.0"
+dependencies = [
+ "itp-types",
+ "parity-scale-codec",
+ "sgx_tstd",
+ "sgx_types",
+ "sp-core",
+ "sp-finality-grandpa",
  "sp-runtime",
  "substrate-api-client",
  "thiserror 1.0.9",
@@ -1597,6 +1646,7 @@ name = "itp-stf-executor"
 version = "0.8.0"
 dependencies = [
  "ita-stf",
+ "itp-node-api-extensions",
  "itp-ocall-api",
  "itp-sgx-crypto",
  "itp-stf-state-handler",
@@ -1613,6 +1663,7 @@ dependencies = [
  "sgx_types",
  "sp-core",
  "sp-runtime",
+ "substrate-api-client",
  "thiserror 1.0.9",
 ]
 
@@ -1643,7 +1694,7 @@ name = "itp-storage"
 version = "0.8.0"
 dependencies = [
  "derive_more",
- "frame-metadata",
+ "frame-metadata 15.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support",
  "hash-db",
  "itp-types",
@@ -1779,7 +1830,7 @@ name = "its-block-composer"
 version = "0.8.0"
 dependencies = [
  "ita-stf",
- "itp-settings",
+ "itp-node-api-extensions",
  "itp-sgx-crypto",
  "itp-stf-executor",
  "itp-time-utils",
@@ -2961,6 +3012,7 @@ dependencies = [
  "derive_more",
  "parity-scale-codec",
  "scale-info-derive",
+ "serde 1.0.137",
 ]
 
 [[package]]
@@ -3951,17 +4003,19 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 [[package]]
 name = "substrate-api-client"
 version = "0.6.0"
-source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.24#081d98ec22bad60abf9373fabf5d2ee8270c1d5d"
+source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.24#d576bdc23caaf16b6e707fb756b3ab6279dba89a"
 dependencies = [
  "ac-compose-macros",
+ "ac-node-api",
  "ac-primitives",
- "frame-metadata",
+ "frame-metadata 15.0.0 (git+https://github.com/integritee-network/frame-metadata)",
  "frame-support",
  "hex",
  "parity-scale-codec",
  "sp-application-crypto",
  "sp-core",
  "sp-runtime",
+ "sp-runtime-interface",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.24)",
 ]
 
