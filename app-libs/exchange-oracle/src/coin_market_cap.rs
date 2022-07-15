@@ -43,8 +43,7 @@ const FIAT_CURRENCY_PARAM: &str = "convert_id";
 const CRYPTO_CURRENCY_PARAM: &str = "id";
 const COINMARKETCAP_PATH: &str = "v2/cryptocurrency/quotes/latest"; // API endpoint to get the exchange rate with a basic API plan (free)
 const COINMARKETCAP_TIMEOUT: Duration = Duration::from_secs(3u64);
-const COINMARKETCAP_ROOT_CERTIFICATE: &str =
-	include_str!("certificates/baltimore_cyber_trust_root_v3.pem");
+const COINMARKETCAP_ROOT_CERTIFICATE: &str = include_str!("certificates/amazon_root_ca_a.pem");
 
 lazy_static! {
 	static ref CRYPTO_SYMBOL_ID_MAP: HashMap<&'static str, &'static str> =
