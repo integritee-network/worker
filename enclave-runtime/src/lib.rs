@@ -61,7 +61,8 @@ use itp_block_import_queue::PushToBlockQueue;
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::{CreateExtrinsics, ExtrinsicsFactory};
 use itp_node_api_extensions::metadata::{
-	node_metadata_provider::AccessNodeMetadata, pallet_teerex::TeerexCallIndexes, NodeMetadata,
+	node_metadata_provider::AccessNodeMetadata, pallet_teeracle::TeeracleCallIndexes,
+	pallet_teerex::TeerexCallIndexes, NodeMetadata,
 };
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_ocall_api::EnclaveAttestationOCallApi;
@@ -596,9 +597,14 @@ fn update_market_data_internal(
 	fiat_currency: String,
 ) -> Result<Vec<OpaqueExtrinsic>> {
 	let signer = Ed25519Seal::unseal_from_static_file()?;
+	let node_metadata_repository = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
+	let extrinsics_factory = ExtrinsicsFactory::new(
+		genesis_hash,
+		signer,
+		GLOBAL_NONCE_CACHE.clone(),
+		node_metadata_repository.clone(),
+	);
 
-	let extrinsics_factory =
-		ExtrinsicsFactory::new(genesis_hash, signer, GLOBAL_NONCE_CACHE.clone());
 	let mut extrinsic_calls: Vec<OpaqueCall> = Vec::new();
 
 	// Get the exchange rate
@@ -647,8 +653,35 @@ where
 		source_base_url,
 	);
 
+	let node_metadata_repository = match GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get() {
+		Ok(r) => r,
+		Err(e) => {
+			error!("Component get failure: {:?}", e);
+			return Err(Error::Other(e.into()))
+		},
+	};
+
+	let (update_exchange_call) = match node_metadata_repository
+		.get_from_metadata(|m| (m.update_exchange_rate_call_indexes(),))
+	{
+		Ok(r) => r,
+		Err(e) => {
+			error!("Failed to get node metadata: {:?}", e);
+			return Err(Error::Other(e.into()))
+		},
+	};
+
+	let call_ids =
+		match update_exchange_call {
+			Ok(c) => c,
+			Err(e) => {
+				error!("Failed to get the indexes for the register_enclave cal from the metadata: {:?}", e);
+				return Err(Error::Other(e.into()))
+			},
+		};
+
 	let call = OpaqueCall::from_tuple(&(
-		[TEERACLE_MODULE, UPDATE_EXCHANGE_RATE],
+		call_ids,
 		source_base_url.as_bytes().to_vec(),
 		trading_pair.key().as_bytes().to_vec(),
 		Some(rate),

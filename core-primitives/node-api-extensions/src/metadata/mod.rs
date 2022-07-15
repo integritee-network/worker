@@ -25,6 +25,7 @@ use substrate_api_client::{Metadata, MetadataError};
 pub mod node_metadata_provider;
 pub mod pallet_sidechain;
 pub mod pallet_system;
+pub mod pallet_teeracle;
 pub mod pallet_teerex;
 
 pub mod metadata_mocks;
