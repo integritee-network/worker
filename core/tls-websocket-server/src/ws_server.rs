@@ -54,6 +54,7 @@ pub struct TungsteniteWsServer<Handler, ConfigProvider> {
 	connection_handler: Arc<Handler>,
 	id_generator: ConnectionIdGenerator,
 	connections: RwLock<HashMap<mio::Token, TungsteniteWsConnection<Handler>>>,
+	is_running: RwLock<bool>,
 	signal_sender: Mutex<Option<Sender<ServerSignal>>>,
 }
 
@@ -73,6 +74,7 @@ where
 			connection_handler,
 			id_generator: ConnectionIdGenerator::default(),
 			connections: Default::default(),
+			is_running: Default::default(),
 			signal_sender: Default::default(),
 		}
 	}
@@ -239,6 +241,8 @@ where
 
 		let mut events = mio::Events::with_capacity(2048);
 
+		*self.is_running.write().map_err(|_| WebSocketError::LockPoisoning)? = true;
+
 		// Run the event loop.
 		'outer_event_loop: loop {
 			poll.poll(&mut events, None)?;
@@ -271,6 +275,10 @@ where
 
 		info!("Web-socket server has shut down");
 		Ok(())
+	}
+
+	fn is_running(&self) -> WebSocketResult<bool> {
+		Ok(*self.is_running.read().map_err(|_| WebSocketError::LockPoisoning)?)
 	}
 
 	fn shut_down(&self) -> WebSocketResult<()> {

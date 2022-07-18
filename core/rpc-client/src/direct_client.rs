@@ -186,7 +186,9 @@ mod tests {
 		});
 
 		// Wait until server is up.
-		thread::sleep(std::time::Duration::from_millis(50));
+		while !server.is_running().unwrap() {
+			thread::sleep(std::time::Duration::from_millis(50));
+		}
 
 		let client = DirectClient::new(format!("wss://localhost:{}", port));
 		let (message_sender, message_receiver) = channel::<String>();
@@ -237,7 +239,9 @@ mod tests {
 		});
 
 		// Wait until server is up.
-		thread::sleep(std::time::Duration::from_millis(50));
+		while !server.is_running().unwrap() {
+			thread::sleep(std::time::Duration::from_millis(50));
+		}
 
 		let client = DirectClient::new(format!("wss://localhost:{}", port));
 		let received_response = client.get("Request").unwrap();
