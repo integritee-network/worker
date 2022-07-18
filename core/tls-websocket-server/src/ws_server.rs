@@ -335,7 +335,9 @@ mod tests {
 		let server_join_handle = thread::spawn(move || server_clone.run());
 
 		// Wait until server is up.
-		thread::sleep(std::time::Duration::from_millis(50));
+		while !server.is_running().unwrap() {
+			thread::sleep(std::time::Duration::from_millis(50));
+		}
 
 		// Spawn multiple clients that connect to the server simultaneously and send a message.
 		let client_handles: Vec<_> = (0..NUMBER_OF_CONNECTIONS)
@@ -398,7 +400,9 @@ mod tests {
 		let server_join_handle = thread::spawn(move || server_clone.run());
 
 		// Wait until server is up.
-		thread::sleep(std::time::Duration::from_millis(50));
+		while !server.is_running().unwrap() {
+			thread::sleep(std::time::Duration::from_millis(50));
+		}
 
 		let client_join_handle = thread::spawn(move || {
 			let mut socket = connect_tls_client(get_server_addr(port).as_str());
@@ -431,7 +435,9 @@ mod tests {
 		let server_join_handle = thread::spawn(move || server_clone.run());
 
 		// Wait until server is up.
-		thread::sleep(std::time::Duration::from_millis(50));
+		while !server.is_running().unwrap() {
+			thread::sleep(std::time::Duration::from_millis(50));
+		}
 
 		let update_message = "Message update".to_string();
 		let update_message_clone = update_message.clone();
