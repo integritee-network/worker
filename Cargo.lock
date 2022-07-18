@@ -2435,6 +2435,7 @@ version = "0.8.0"
 dependencies = [
  "env_logger",
  "itc-tls-websocket-server",
+ "itp-networking-utils",
  "itp-rpc",
  "itp-types",
  "itp-utils",
@@ -2608,6 +2609,13 @@ dependencies = [
  "substrate-api-client",
  "thiserror 1.0.31",
  "thiserror 1.0.9",
+]
+
+[[package]]
+name = "itp-networking-utils"
+version = "0.8.0"
+dependencies = [
+ "sgx_tstd",
 ]
 
 [[package]]

@@ -19,6 +19,7 @@ members = [
     "core-primitives/enclave-api/ffi",
     "core-primitives/enclave-metrics",
     "core-primitives/extrinsics-factory",
+    "core-primitives/networking-utils",
     "core-primitives/node-api-extensions",
     "core-primitives/nonce-cache",
     "core-primitives/ocall-api",
