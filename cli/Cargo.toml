@@ -27,6 +27,7 @@ sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teacla
 itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 itp-utils = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 my-node-runtime = { git = "https://github.com/integritee-network/integritee-node", branch = "master", package = "integritee-node-runtime" }
+pallet-evm = { default-features = false, git = "https://github.com/integritee-network/frontier.git", branch = "polkadot-v0.9.24" }
 substrate-api-client = { features = ["ws-client"], git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.24" }
 substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.24" }
 teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
