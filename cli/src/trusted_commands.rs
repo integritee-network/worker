@@ -24,11 +24,12 @@ use crate::{
 	Cli,
 };
 use codec::Decode;
+use core::str::FromStr;
 use hdrhistogram::Histogram;
 use ita_stf::{Index, KeyPair, TrustedCall, TrustedGetter, TrustedOperation};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
 use itp_types::{
-	TrustedOperationStatus,
+	AccountId, TrustedOperationStatus,
 	TrustedOperationStatus::{InSidechainBlock, Submitted},
 };
 use log::*;
@@ -37,12 +38,15 @@ use rand::Rng;
 use rayon::prelude::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_application_crypto::{ed25519, sr25519};
-use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
+use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair, H160, U256};
 use std::{
+	string::ToString,
 	sync::mpsc::{channel, Receiver},
 	thread, time,
 	time::Instant,
+	vec::Vec,
 };
+use substrate_api_client::utils::FromHexString;
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
 
 macro_rules! get_layer_two_nonce {
@@ -135,6 +139,27 @@ pub enum TrustedCommands {
 		amount: Balance,
 	},
 
+	/// Create smart contract
+	EvmCreate {
+		/// Sender's incognito AccountId in ss58check format
+		from: String,
+
+		/// Smart Contract in Hex format
+		smart_contract: String,
+	},
+
+	/// Create smart contract
+	EvmCall {
+		/// Sender's incognito AccountId in ss58check format
+		from: String,
+
+		/// Recipient's parentchain AccountId in ss58check format
+		to: String,
+
+		/// amount to be transferred
+		amount: Balance,
+	},
+
 	/// Run Benchmark
 	Benchmark {
 		/// The number of clients (=threads) to be used in the benchmark
@@ -190,6 +215,10 @@ pub fn match_trusted_commands(cli: &Cli, trusted_args: &TrustedArgs) {
 			*wait_for_confirmation,
 			funding_account,
 		),
+		TrustedCommands::EvmCreate { from, smart_contract } =>
+			evm_create(cli, trusted_args, from, smart_contract),
+		TrustedCommands::EvmCall { from, to, amount } =>
+			evm_call(cli, trusted_args, from, to, amount),
 	}
 }
 
@@ -538,5 +567,69 @@ fn unshield_funds(
 		TrustedCall::balance_unshield(from.public().into(), to, *amount, shard)
 			.sign(&KeyPair::Sr25519(from), nonce, &mrenclave, &shard)
 			.into_trusted_operation(trusted_args.direct);
+	let _ = perform_operation(cli, trusted_args, &top);
+}
+
+fn evm_create(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, smart_contract: &str) {
+	let from = get_pair_from_str(trusted_args, arg_from);
+	let from_acc: AccountId = from.public().into();
+	println!("from ss58 is {}", from.public().to_ss58check());
+
+	let mut sender_evm_acc_slice: [u8; 20] = [0; 20];
+	sender_evm_acc_slice.copy_from_slice((<[u8; 32]>::from(from_acc.clone())).get(0..20).unwrap());
+	let sender_evm_acc: H160 = sender_evm_acc_slice.into();
+
+	let (mrenclave, shard) = get_identifiers(trusted_args);
+
+	let top = TrustedCall::evm_create(
+		from_acc,
+		sender_evm_acc,
+		Vec::from_hex(smart_contract.to_string()).unwrap(),
+		U256::from(0),
+		4294967295,    // gas limit
+		U256::from(1), // max_fee_per_gas !>= min_gas_price defined in runtime
+		None,
+		None,
+		Vec::new(),
+	)
+	.sign(&from.into(), 0, &mrenclave, &shard)
+	.into_trusted_operation(trusted_args.direct);
+
+	let _ = perform_operation(cli, trusted_args, &top);
+	info!("trusted call transfer executed");
+}
+
+fn evm_call(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, arg_to: &str, amount: &Balance) {
+	let from = get_pair_from_str(trusted_args, arg_from);
+	let from_acc: AccountId = from.public().into();
+
+	let mut sender_evm_acc_slice: [u8; 20] = [0; 20];
+	sender_evm_acc_slice.copy_from_slice((<[u8; 32]>::from(from_acc.clone())).get(0..20).unwrap());
+	let sender_evm_acc: H160 = sender_evm_acc_slice.into();
+
+	let to = get_accountid_from_str(arg_to);
+	println!("from ss58 is {}", from.public().to_ss58check());
+	println!("to   ss58 is {}", to.to_ss58check());
+
+	let destination_evm_acc = H160::from_str("1000000000000000000000000000000000000001").unwrap();
+
+	println!("call for transfer from {} to {}: {}", from.public(), to, amount);
+
+	let (mrenclave, shard) = get_identifiers(trusted_args);
+	let nonce = get_layer_two_nonce!(from, cli, trusted_args);
+	let top = TrustedCall::evm_call(
+		from_acc,
+		sender_evm_acc,
+		destination_evm_acc,
+		Vec::new(),
+		U256::from(*amount),
+		21776, // gas limit
+		U256::from(1_000_000_000),
+		None,
+		Some(U256::from(0)),
+		Vec::new(),
+	)
+	.sign(&KeyPair::Sr25519(from), nonce, &mrenclave, &shard)
+	.into_trusted_operation(trusted_args.direct);
 	let _ = perform_operation(cli, trusted_args, &top);
 }
