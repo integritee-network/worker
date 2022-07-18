@@ -25,10 +25,7 @@ pub fn get_available_port_in_range(mut port_range: Range<u16>) -> Option<u16> {
 }
 
 fn port_is_available(port: u16) -> bool {
-	match TcpListener::bind(("127.0.0.1", port)) {
-		Ok(_) => true,
-		Err(_) => false,
-	}
+	TcpListener::bind(("127.0.0.1", port)).is_ok()
 }
 
 #[cfg(test)]
