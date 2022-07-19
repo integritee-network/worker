@@ -317,7 +317,7 @@ fn transfer_benchmark(
 
 		// For the last account we wait for confirmation in order to ensure all accounts were setup correctly
 		let wait_for_confirmation = i == number_clients - 1;
-		let account_funding_request = get_json_request(trusted_args, top, shielding_pubkey);
+		let account_funding_request = get_json_request(trusted_args, &top, shielding_pubkey);
 
 		let client = BenchmarkClient::new(account, initial_balance, account_funding_request, cli);
 		let _result = wait_for_top_confirmation(wait_for_confirmation, &client);
@@ -375,7 +375,7 @@ fn transfer_benchmark(
 				.into_trusted_operation(trusted_args.direct);
 
 				let last_iteration = i == number_iterations - 1;
-				let jsonrpc_call = get_json_request(trusted_args, top, shielding_pubkey);
+				let jsonrpc_call = get_json_request(trusted_args, &top, shielding_pubkey);
 				client.client_api.send(&jsonrpc_call).unwrap();
 				let result =
 					wait_for_top_confirmation(wait_for_confirmation || last_iteration, &client);

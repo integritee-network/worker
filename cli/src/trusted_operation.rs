@@ -166,15 +166,7 @@ fn send_direct_request(
 	operation_call: &TrustedOperation,
 ) -> Option<Vec<u8>> {
 	let encryption_key = get_shielding_key(cli).unwrap();
-	let operation_call_encrypted = encryption_key.encrypt(&operation_call.encode()).unwrap();
-	let shard = read_shard(trusted_args).unwrap();
-	let request = Request { shard, cyphertext: operation_call_encrypted };
-
-	let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(
-		"author_submitAndWatchExtrinsic".to_string(),
-		vec![request.to_hex()],
-	)
-	.unwrap();
+	let jsonrpc_call: String = get_json_request(trusted_args, operation_call, encryption_key);
 
 	debug!("get direct api");
 	let direct_api = get_worker_api_direct(cli);
@@ -234,7 +226,7 @@ fn send_direct_request(
 /// sends a rpc watch request to the worker api server
 pub fn get_json_request(
 	trusted_args: &TrustedArgs,
-	operation_call: TrustedOperation,
+	operation_call: &TrustedOperation,
 	shielding_pubkey: sgx_crypto_helper::rsa3072::Rsa3072PubKey,
 ) -> String {
 	let operation_call_encrypted = shielding_pubkey.encrypt(&operation_call.encode()).unwrap();
