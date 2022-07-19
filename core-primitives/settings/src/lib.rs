@@ -98,22 +98,3 @@ pub mod enclave {
 	pub static MAX_TRUSTED_GETTERS_EXEC_DURATION: Duration = Duration::from_millis(150);
 	pub static TRUSTED_GETTERS_SLOT_DURATION: Duration = Duration::from_millis(400);
 }
-
-/// Settings concerning the node
-pub mod node {
-	// you may have to update these indices upon new builds of the runtime
-	// you can get the index from metadata, counting modules starting with zero
-	pub static TEEREX_MODULE: u8 = 50u8;
-	pub static REGISTER_ENCLAVE: u8 = 0u8;
-	//pub static UNREGISTER_ENCLAVE: u8 = 1u8;
-	pub static CALL_WORKER: u8 = 2u8;
-	pub static PROCESSED_PARENTCHAIN_BLOCK: u8 = 3u8;
-	pub static SHIELD_FUNDS: u8 = 4u8;
-	pub static UNSHIELD_FUNDS: u8 = 5u8;
-	// Sidechain module values
-	pub static SIDECHAIN_MODULE: u8 = 53u8;
-	pub static PROPOSED_SIDECHAIN_BLOCK: u8 = 0u8;
-	// bump this to be consistent with integritee-node runtime
-	pub static RUNTIME_SPEC_VERSION: u32 = 24;
-	pub static RUNTIME_TRANSACTION_VERSION: u32 = 3;
-}

@@ -67,7 +67,7 @@ impl DirectApi for DirectClient {
 		let (port_in, port_out) = channel();
 
 		info!("[WorkerApi Direct]: (get) Sending request: {:?}", request);
-		WsClient::connect_one_shot(&self.url, request, &port_in)?;
+		WsClient::connect_one_shot(&self.url, request, port_in)?;
 		port_out.recv().map_err(Error::MspcReceiver)
 	}
 
@@ -79,7 +79,7 @@ impl DirectApi for DirectClient {
 		// Unwrap is fine here, because JoinHandle can be used to handle a Thread panic.
 		thread::spawn(move || {
 			WsClient::connect_watch_with_control(&url, &request, &sender, web_socket_control)
-				.unwrap()
+				.expect("Connection failed")
 		})
 	}
 

@@ -289,7 +289,7 @@ where
 {
 	fn send_extrinsics(&mut self, extrinsics: Vec<OpaqueExtrinsic>) -> Result<(), Error> {
 		for xt in extrinsics.iter() {
-			self.submit_xt_to_be_included(self.num_relays(), xt.clone()).unwrap();
+			self.submit_xt_to_be_included(self.num_relays(), xt.clone()).expect("No Relays");
 		}
 
 		self.ocall_api

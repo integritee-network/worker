@@ -149,7 +149,8 @@ impl SendHttpRequest for HttpClient {
 				add_to_headers(
 					&mut request_headers,
 					CONTENT_TYPE,
-					HeaderValue::from_str("application/json").unwrap(),
+					HeaderValue::from_str("application/json")
+						.expect("Request Header: invalid characters"),
 				);
 
 				trace!("set request body: {}", body);
