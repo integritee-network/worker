@@ -4,13 +4,12 @@ set -e
 pushd ..
 
 pushd bin
-./integritee-service init-shard
 ./integritee-service mrenclave | tee ~/mrenclave.b58
 popd
 
 ulimit -S -n 4096
 
-python3 local-setup/launch.py local-setup/simple-config.json &
+python3 local-setup/launch.py local-setup/benchmark-config.json &
 PID=$!
 echo $PID > ./benchmark.pid
 echo "Benchmark PID: $PID"
@@ -18,7 +17,7 @@ echo "Benchmark PID: $PID"
 sleep 40s
 
 pushd bin
-./integritee-cli -p 9979 -P 2079 trusted --direct --mrenclave $(cat ~/mrenclave.b58) benchmark 20 1000 -w
+./integritee-cli -p 9930 -P 2030 trusted --direct --mrenclave $(cat ~/mrenclave.b58) benchmark 20 20 -w
 popd
 
 sleep 10s

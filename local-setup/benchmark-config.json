@@ -1,0 +1,38 @@
+{
+  "node": {
+    "bin": "../integritee-node/target/release/integritee-node",
+    "flags": [
+      "--tmp",
+      "--dev",
+      "-lruntime=info",
+      "--ws-port",
+      "9930",
+      "--port",
+      "30330",
+      "--rpc-port",
+      "8930"
+    ]
+  },
+  "workers": [
+    {
+      "source": "bin",
+      "flags": [
+        "--clean-reset",
+        "-P",
+        "2030",
+        "-p",
+        "9930",
+        "-r",
+        "3430",
+        "-w",
+        "2031",
+        "-h",
+        "4530"
+      ],
+      "subcommand_flags": [
+        "--skip-ra",
+        "--dev"
+      ]
+    }
+  ]
+}
