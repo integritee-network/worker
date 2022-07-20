@@ -223,7 +223,6 @@ fn send_direct_request(
 	}
 }
 
-/// sends a rpc watch request to the worker api server
 pub fn get_json_request(
 	trusted_args: &TrustedArgs,
 	operation_call: &TrustedOperation,
@@ -243,7 +242,7 @@ pub fn get_json_request(
 
 pub fn wait_until(
 	receiver: &Receiver<String>,
-	until: fn(TrustedOperationStatus) -> bool,
+	until: impl Fn(TrustedOperationStatus) -> bool,
 ) -> Option<(H256, Instant)> {
 	debug!("waiting for rpc response");
 	loop {
@@ -279,10 +278,6 @@ pub fn wait_until(
 								return None
 							},
 						}
-						/*if !return_value.do_watch {
-							debug!("do watch is false, closing connection");
-							return None
-						}*/
 					};
 				} else {
 					error!("Could not parse response");

@@ -283,7 +283,7 @@ fn transfer_benchmark(
 
 	let (mrenclave, shard) = get_identifiers(trusted_args);
 
-	// get shielding pubkey
+	// Get shielding pubkey.
 	let worker_api_direct = get_worker_api_direct(cli);
 	let shielding_pubkey: Rsa3072PubKey = match worker_api_direct.get_rsa_pubkey() {
 		Ok(key) => key,
@@ -295,16 +295,17 @@ fn transfer_benchmark(
 
 	let mut accounts = Vec::new();
 
+	// Setup new accounts and initialize them with money from Alice.
 	for i in 0..number_clients {
 		let nonce = i + nonce_start;
 		println!("Initializing account {}", i);
 
-		// create new account to use
+		// Create new account to use.
 		let a: sr25519::AppPair = store.generate().unwrap();
 		let account = get_pair_from_str(trusted_args, a.public().to_string().as_str());
 		let initial_balance = 10000000;
 
-		// transfer amount from Alice to new accounts
+		// Transfer amount from Alice to new account.
 		let top: TrustedOperation = TrustedCall::balance_transfer(
 			funding_account_keys.public().into(),
 			account.public().into(),
@@ -322,14 +323,14 @@ fn transfer_benchmark(
 		accounts.push(client);
 	}
 
-	let num_threads = number_clients;
 	rayon::ThreadPoolBuilder::new()
-		.num_threads(num_threads as usize)
+		.num_threads(number_clients as usize)
 		.build_global()
 		.unwrap();
 
 	let overall_start = Instant::now();
 
+	// Run actual benchmark logic, in parallel, for each account initialized above.
 	let outputs: Vec<Vec<BenchmarkTransaction>> = accounts
 		.into_par_iter()
 		.map(move |mut client| {
@@ -339,20 +340,12 @@ fn transfer_benchmark(
 				println!("Iteration: {}", i);
 
 				if random_wait_before_transaction_ms.1 > 0 {
-					let mut rng = rand::thread_rng();
-					let sleep_time = time::Duration::from_millis(
-						rng.gen_range(
-							random_wait_before_transaction_ms.0
-								..=random_wait_before_transaction_ms.1,
-						)
-						.into(),
-					);
-					println!("Sleep for: {}ms", sleep_time.as_millis());
-					thread::sleep(sleep_time);
+					random_wait(random_wait_before_transaction_ms);
 				}
 
 				let nonce = 0;
 
+				// Create new account.
 				let account_keys: sr25519::AppPair = store.generate().unwrap();
 				let new_account =
 					get_pair_from_str(trusted_args, account_keys.public().to_string().as_str());
@@ -361,9 +354,11 @@ fn transfer_benchmark(
 				println!("  From: {:?}", client.account.public());
 				println!("  To:   {:?}", new_account.public());
 
+				// The account from the last iteration keeps this much money.
+				// If this is 0, then all money is transferred and the state doesn't increase.
 				let keep_alive_balance = 1000;
 
-				//account -> new_account
+				// Transfer money from previous account to new account.
 				let top: TrustedOperation = TrustedCall::balance_transfer(
 					client.account.public().into(),
 					new_account.public().into(),
@@ -393,14 +388,17 @@ fn transfer_benchmark(
 		})
 		.collect();
 
-	let summary_string = format!(
+	println!(
 		"Finished benchmark with {} clients and {} transactions in {} ms",
 		number_clients,
 		number_iterations,
 		overall_start.elapsed().as_millis()
 	);
-	println!("{}", summary_string);
 
+	print_benchmark_statistic(outputs, wait_for_confirmation)
+}
+
+fn print_benchmark_statistic(outputs: Vec<Vec<BenchmarkTransaction>>, wait_for_confirmation: bool) {
 	let mut hist = Histogram::<u64>::new(1).unwrap();
 	for output in outputs {
 		for t in output {
@@ -422,6 +420,16 @@ fn transfer_benchmark(
 		);
 		println!("{}", text);
 	}
+}
+
+fn random_wait(random_wait_before_transaction_ms: (u32, u32)) {
+	let mut rng = rand::thread_rng();
+	let sleep_time = time::Duration::from_millis(
+		rng.gen_range(random_wait_before_transaction_ms.0..=random_wait_before_transaction_ms.1)
+			.into(),
+	);
+	println!("Sleep for: {}ms", sleep_time.as_millis());
+	thread::sleep(sleep_time);
 }
 
 fn wait_for_top_confirmation(
