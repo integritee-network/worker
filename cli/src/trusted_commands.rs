@@ -39,8 +39,6 @@ use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_application_crypto::{ed25519, sr25519};
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
 use std::{
-	fs::OpenOptions,
-	io::Write,
 	sync::mpsc::{channel, Receiver},
 	thread, time,
 	time::Instant,
@@ -415,23 +413,6 @@ fn transfer_benchmark(
 			}
 		}
 	}
-
-	let mut file = OpenOptions::new()
-		.write(true)
-		.append(true)
-		.create(true)
-		.open(format!("benchmark_summary_{}.txt", chrono::offset::Local::now().format("%Y-%m-%d")))
-		.expect("unable to create file");
-
-	writeln!(
-		file,
-		"{};{};{};{};",
-		number_clients,
-		number_iterations,
-		overall_start.elapsed().as_millis(),
-		hist.value_at_quantile(0.95)
-	)
-	.unwrap();
 
 	for i in (5..=100).step_by(5) {
 		let text = format!(
