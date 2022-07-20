@@ -44,7 +44,7 @@ def run_worker(config, i: int):
     w = setup_worker(f'tmp/w{i}', config["source"], log)
 
     print(f'Starting worker {i} in background')
-    w.run_in_background(log_file=log, flags=config["flags"], subcommand_flags=config["subcommand_flags"])
+    return w.run_in_background(log_file=log, flags=config["flags"], subcommand_flags=config["subcommand_flags"])
 
 
 def main(processes, config_path):

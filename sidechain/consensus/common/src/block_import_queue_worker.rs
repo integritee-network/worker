@@ -18,9 +18,10 @@
 use crate::{Error, Result, SyncBlockFromPeer};
 use core::marker::PhantomData;
 use itp_block_import_queue::PopFromBlockQueue;
+use log::debug;
 use sidechain_primitives::traits::{Block as BlockTrait, SignedBlock as SignedSidechainBlockTrait};
 use sp_runtime::traits::Block as ParentchainBlockTrait;
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 
 /// Trait to trigger working the sidechain block import queue.
 pub trait ProcessBlockImportQueue<ParentchainBlockHeader> {
@@ -61,6 +62,16 @@ where
 			_phantom: Default::default(),
 		}
 	}
+
+	fn record_timings(start_time: Instant, number_of_imported_blocks: usize) {
+		let elapsed_time_millis = start_time.elapsed().as_millis();
+		let time_millis_per_block =
+			(elapsed_time_millis as f64 / number_of_imported_blocks as f64).ceil();
+		debug!(
+			"Imported {} blocks in {} ms (average of {} ms per block)",
+			number_of_imported_blocks, elapsed_time_millis, time_millis_per_block
+		);
+	}
 }
 
 impl<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
@@ -82,6 +93,8 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
 		current_parentchain_header: &ParentchainBlock::Header,
 	) -> Result<ParentchainBlock::Header> {
 		let mut latest_imported_parentchain_header = current_parentchain_header.clone();
+		let mut number_of_imported_blocks = 0usize;
+		let start_time = Instant::now();
 
 		loop {
 			match self.block_import_queue.pop_front() {
@@ -90,10 +103,17 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
 						latest_imported_parentchain_header = self
 							.peer_block_syncer
 							.sync_block(block, &latest_imported_parentchain_header)?;
+						number_of_imported_blocks += 1;
 					},
-					None => return Ok(latest_imported_parentchain_header),
+					None => {
+						Self::record_timings(start_time, number_of_imported_blocks);
+						return Ok(latest_imported_parentchain_header)
+					},
 				},
-				Err(e) => return Err(Error::FailedToPopBlockImportQueue(e)),
+				Err(e) => {
+					Self::record_timings(start_time, number_of_imported_blocks);
+					return Err(Error::FailedToPopBlockImportQueue(e))
+				},
 			}
 		}
 	}
