@@ -28,7 +28,7 @@ use sidechain_primitives::traits::{
 	SignedBlock as SignedSidechainBlockTrait,
 };
 use sp_runtime::traits::Block as ParentchainBlockTrait;
-use std::vec::Vec;
+use std::{time::Instant, vec::Vec};
 
 pub trait BlockImport<ParentchainBlock, SignedSidechainBlock>
 where
@@ -109,12 +109,15 @@ where
 		signed_sidechain_block: SignedSidechainBlock,
 		parentchain_header: &ParentchainBlock::Header,
 	) -> Result<ParentchainBlock::Header, Error> {
+		let start_time = Instant::now();
+
 		let sidechain_block = signed_sidechain_block.block().clone();
 		let shard = sidechain_block.header().shard_id();
+		let block_number = signed_sidechain_block.block().header().block_number();
 
 		debug!(
 			"Attempting to import sidechain block (number: {}, hash: {:?}, parentchain hash: {:?})",
-			signed_sidechain_block.block().header().block_number(),
+			block_number,
 			signed_sidechain_block.block().hash(),
 			signed_sidechain_block.block().block_data().layer_one_head()
 		);
@@ -140,11 +143,18 @@ where
 
 		let state_key = self.state_key()?;
 
+		let state_update_start_time = Instant::now();
 		self.apply_state_update(&shard, |mut state| {
-			let update = state_update_from_encrypted(
-				block_import_params.block().block_data().encrypted_state_diff(),
-				state_key,
-			)?;
+			let encrypted_state_diff =
+				block_import_params.block().block_data().encrypted_state_diff();
+
+			info!(
+				"Applying state diff for block {} of size {} bytes",
+				block_number,
+				encrypted_state_diff.len()
+			);
+
+			let update = state_update_from_encrypted(encrypted_state_diff, state_key)?;
 
 			state.apply_state_update(&update).map_err(|e| Error::Other(e.into()))?;
 
@@ -152,11 +162,18 @@ where
 
 			Ok(state)
 		})?;
+		info!(
+			"Applying state update from block {} took {} ms",
+			block_number,
+			state_update_start_time.elapsed().as_millis()
+		);
 
 		self.cleanup(&signed_sidechain_block)?;
 
 		// Store block in storage.
 		self.get_context().store_sidechain_blocks(vec![signed_sidechain_block])?;
+
+		info!("Importing block {} took {} ms", block_number, start_time.elapsed().as_millis());
 
 		Ok(latest_parentchain_header)
 	}

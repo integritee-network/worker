@@ -64,7 +64,7 @@ use sp_core::Pair;
 use sp_runtime::{
 	generic::SignedBlock as SignedParentchainBlock, traits::Block as BlockTrait, MultiSignature,
 };
-use std::{sync::Arc, vec::Vec};
+use std::{sync::Arc, time::Instant, vec::Vec};
 
 #[no_mangle]
 pub unsafe extern "C" fn execute_trusted_getters() -> sgx_status_t {
@@ -131,6 +131,8 @@ pub unsafe extern "C" fn execute_trusted_calls() -> sgx_status_t {
 /// *   Sends sidechain `confirm_block` xt's with the produced sidechain blocks.
 /// *   Gossip produced sidechain blocks to peer validateers.
 fn execute_top_pool_trusted_calls_internal() -> Result<()> {
+	let start_time = Instant::now();
+
 	// We acquire lock explicitly (variable binding), since '_' will drop the lock after the statement.
 	// See https://medium.com/codechain/rust-underscore-does-not-bind-fec6a18115a8
 	let _enclave_write_lock = EnclaveLock::write_all()?;
@@ -154,8 +156,15 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	let sidechain_block_import_queue_worker =
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT.get()?;
 
+	let sidechain_block_queue_start = Instant::now();
+
 	let latest_parentchain_header =
 		sidechain_block_import_queue_worker.process_queue(&current_parentchain_header)?;
+
+	info!(
+		"Elapsed time to process sidechain block import queue: {} ms",
+		sidechain_block_queue_start.elapsed().as_millis()
+	);
 
 	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
 
@@ -171,6 +180,8 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 
 	let authority = Ed25519Seal::unseal_from_static_file()?;
 
+	info!("Elapsed time before AURA execution: {} ms", start_time.elapsed().as_millis());
+
 	match yield_next_slot(
 		slot_beginning_timestamp,
 		SLOT_DURATION,
@@ -178,6 +189,13 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 		&mut LastSlotSeal,
 	)? {
 		Some(slot) => {
+			let remaining_time = slot.ends_at - slot.timestamp;
+			info!(
+				"Remaining slot time for aura: {} ms, {}% of slot time",
+				remaining_time.as_millis(),
+				(remaining_time.as_millis() as f64 / slot.duration.as_millis() as f64) * 100f64
+			);
+
 			let shards = state_handler.list_shards()?;
 			let env = ProposerFactory::<Block, _, _, _>::new(
 				top_pool_executor,
@@ -250,7 +268,7 @@ where
 	BlockImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>>
 		+ PeekParentchainBlockImportQueue<SignedParentchainBlock<ParentchainBlock>>,
 {
-	log::info!("[Aura] Executing aura for slot: {:?}", slot);
+	debug!("[Aura] Executing aura for slot: {:?}", slot);
 
 	let mut aura = Aura::<_, ParentchainBlock, SignedSidechainBlock, PEnvironment, _, _>::new(
 		authority,

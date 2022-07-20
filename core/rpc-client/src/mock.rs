@@ -74,6 +74,10 @@ impl DirectApi for DirectClientMock {
 		unimplemented!()
 	}
 
+	fn send(&self, request: &str) -> Result<()> {
+		unimplemented!()
+	}
+
 	fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey> {
 		Ok(self.rsa_pubkey)
 	}

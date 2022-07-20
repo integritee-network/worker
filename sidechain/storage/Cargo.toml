@@ -21,7 +21,7 @@ sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polka
 
 [dev-dependencies]
 # crate.io
-mockall = { version = "0.10.1" }
+mockall = "0.11"
 temp-dir = "0.1"
 # local
 sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }

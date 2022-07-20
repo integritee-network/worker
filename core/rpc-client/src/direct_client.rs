@@ -51,6 +51,7 @@ pub trait DirectApi {
 	fn get_untrusted_worker_url(&self) -> Result<String>;
 	fn get_state_metadata(&self) -> Result<RuntimeMetadataPrefixed>;
 
+	fn send(&self, request: &str) -> Result<()>;
 	/// Close any open websocket connection.
 	fn close(&self) -> Result<()>;
 }
@@ -80,6 +81,10 @@ impl DirectApi for DirectClient {
 			WsClient::connect_watch_with_control(&url, &request, &sender, web_socket_control)
 				.expect("Connection failed")
 		})
+	}
+
+	fn send(&self, request: &str) -> Result<()> {
+		self.web_socket_control.send(request)
 	}
 
 	fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey> {
