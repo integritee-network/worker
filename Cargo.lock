@@ -5942,7 +5942,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.4.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=sp/polkadot-v0.9.26#b634d8aefb85cf3d5a74146b6caae5f79f07b799"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=sp/polkadot-v0.9.26#13e2020f54a72866f96a9b47be0d219c11a0e5ca"
 dependencies = [
  "derive_more",
  "environmental",
@@ -5957,7 +5957,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=sp/polkadot-v0.9.26#b634d8aefb85cf3d5a74146b6caae5f79f07b799"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=sp/polkadot-v0.9.26#13e2020f54a72866f96a9b47be0d219c11a0e5ca"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -6647,7 +6647,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "6.0.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=sp/polkadot-v0.9.26#b634d8aefb85cf3d5a74146b6caae5f79f07b799"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=sp/polkadot-v0.9.26#13e2020f54a72866f96a9b47be0d219c11a0e5ca"
 dependencies = [
  "environmental",
  "futures 0.3.21",

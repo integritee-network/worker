@@ -3173,7 +3173,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.4.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=sp/polkadot-v0.9.26#b634d8aefb85cf3d5a74146b6caae5f79f07b799"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=sp/polkadot-v0.9.26#b182cb64a2c2ba630cffd543636bcd6bb7ebfcbb"
 dependencies = [
  "derive_more",
  "environmental",
@@ -3188,7 +3188,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=sp/polkadot-v0.9.26#b634d8aefb85cf3d5a74146b6caae5f79f07b799"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=sp/polkadot-v0.9.26#b182cb64a2c2ba630cffd543636bcd6bb7ebfcbb"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -3750,7 +3750,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "6.0.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=sp/polkadot-v0.9.26#b634d8aefb85cf3d5a74146b6caae5f79f07b799"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=sp/polkadot-v0.9.26#b182cb64a2c2ba630cffd543636bcd6bb7ebfcbb"
 dependencies = [
  "environmental",
  "hash-db",
@@ -3761,6 +3761,7 @@ dependencies = [
  "sgx_tstd",
  "sgx_types",
  "sp-core",
+ "sp-externalities",
  "sp-runtime-interface",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.26)",
  "sp-tracing",
