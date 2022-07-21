@@ -9,9 +9,9 @@ finality-grandpa = { version = "0.15.0", default-features = false, features = ["
 itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 itp-utils = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 log = { version = "0.4", default-features = false }
-sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
+sgx-externalities = { optional = true, default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
 sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-sidechain-block-verification = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master", optional = true }
+sidechain-block-verification = { optional = true, default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # sgx deps
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }

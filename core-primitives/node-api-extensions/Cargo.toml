@@ -22,10 +22,10 @@ sp-finality-grandpa = { git = "https://github.com/paritytech/substrate.git", def
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", default-features = false, branch = "polkadot-v0.9.26" }
 
 # scs
-substrate-api-client = { git = "https://github.com/scs/substrate-api-client", default-features = false, branch = "polkadot-v0.9.24" }
+substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.24" }
 
 # integritee
-itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "master", default-features = false }
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 [features]
 default = ["std"]

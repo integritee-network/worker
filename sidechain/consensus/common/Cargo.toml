@@ -16,16 +16,16 @@ itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-feature
 its-state = { path = "../../state", default-features = false }
 
 # sgx deps
-sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
+sgx_tstd = { optional = true, git = "https://github.com/apache/teaclave-sgx-sdk.git", branch = "master" }
+sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", branch = "master" }
+thiserror-sgx = { package = "thiserror", optional = true, git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3" }
 
 # substrate deps
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
 
 # scs / integritee
 itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-sidechain-block-verification = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master", optional = true }
+sidechain-block-verification = { optional = true, default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 [dev-dependencies]
