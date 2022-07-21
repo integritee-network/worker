@@ -12,8 +12,8 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_crypto_helper", default-features = false, optional = true }
 
 # integritee dependencies
-itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-sgx-externalities = { optional = true, default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
+sgx-externalities = { optional = true, default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "sp/polkadot-v0.9.26" }
 
 # local dependencies
 ita-stf = { path = "../../app-libs/stf", default-features = false }
@@ -25,7 +25,7 @@ itp-storage = { path = "../storage", default-features = false }
 itp-time-utils = { path = "../time-utils", default-features = false }
 
 # scs
-substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.24" }
+substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.26" }
 
 # sgx enabled external libraries
 thiserror_sgx = { optional = true, package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3" }
@@ -43,7 +43,7 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 
 # dev dependencies
 itp-test = { path = "../test", default-features = false, optional = true }
-parentchain-test = { optional = true, default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+parentchain-test = { optional = true, default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
 
 [features]
 default = ["std"]

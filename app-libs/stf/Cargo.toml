@@ -28,15 +28,15 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 sc-keystore = { optional = true, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
 
 # scs / integritee
-my-node-runtime = { package = "integritee-node-runtime", optional = true, git = "https://github.com/integritee-network/integritee-node", branch = "master" }
-sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
-sgx-runtime = { optional = true, default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
-sp-io = { optional = true, default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
-substrate-api-client = { optional = true, git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.24" }
-substrate-client-keystore = { optional = true, git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.24" }
-sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-itp-utils = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+my-node-runtime = { package = "integritee-node-runtime", optional = true, git = "https://github.com/integritee-network/integritee-node", branch = "sp/polkadot-v0.9.26" }
+sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "sp/polkadot-v0.9.26" }
+sgx-runtime = { optional = true, default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "sp/polkadot-v0.9.26" }
+sp-io = { optional = true, default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], git = "https://github.com/integritee-network/sgx-runtime", branch = "sp/polkadot-v0.9.26" }
+substrate-api-client = { optional = true, git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.26" }
+substrate-client-keystore = { optional = true, git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.26" }
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
+itp-utils = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
 
 [dev-dependencies]
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
