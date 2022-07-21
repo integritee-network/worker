@@ -58,7 +58,7 @@ use itp_node_api_extensions::metadata::{
 };
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_ocall_api::EnclaveAttestationOCallApi;
-use itp_settings::worker_mode::WorkerModeProvider;
+use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
 use itp_sgx_crypto::{ed25519, Ed25519Seal, Rsa3072Seal};
 use itp_sgx_io as io;
 use itp_sgx_io::StaticSealedIO;
@@ -499,39 +499,31 @@ pub unsafe extern "C" fn sync_parentchain(
 		Err(e) => return Error::Codec(e).into(),
 	};
 
-	if let Err(e) = sync_parentchain_internal(blocks_to_sync) {
+	if let Err(e) = dispatch_parentchain_blocks_for_import::<WorkerModeProvider>(blocks_to_sync) {
 		return e.into()
 	}
 
 	sgx_status_t::SGX_SUCCESS
 }
 
-/// Internal [`sync_parentchain`] function to be able to use the handy `?` operator.
+/// Dispatch the parentchain blocks for import.
+/// Depending on the worker mode, a different dispatcher is used:
 ///
-/// Sync parentchain blocks to the light-client:
-/// * iterates over parentchain blocks and scans for relevant extrinsics
-/// * validates and execute those extrinsics (containing indirect calls), mutating state
-/// * sends `confirm_call` xt's of the executed unshielding calls
-/// * sends `confirm_blocks` xt's for every synced parentchain block
-fn sync_parentchain_internal(blocks_to_sync: Vec<SignedBlock>) -> Result<()> {
-	if let Ok(block_import_dispatcher) =
-		GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get()
-	{
-		block_import_dispatcher.dispatch_import(blocks_to_sync)?;
-	} else if let Ok(block_import_dispatcher) =
-		GLOBAL_IMMEDIATE_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get()
-	{
-		info!("Syncing parentchain blocks ({}) with immediate dispatcher", blocks_to_sync.len());
-		block_import_dispatcher.dispatch_import(blocks_to_sync)?;
-	} else {
-		return Err(Error::Other(
-			format!(
-				"No parentchain block import dispatcher found, cannot import \
-			{} parentchain block(s)",
-				blocks_to_sync.len()
-			)
-			.into(),
-		))
+/// * An immediate dispatcher will immediately import any parentchain blocks and execute
+///   the corresponding extrinsics (offchain-worker executor).
+/// * The sidechain uses a triggered dispatcher, where the import of a parentchain block is
+///   synchronized and triggered by the sidechain block production cycle.
+///
+fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>(
+	blocks_to_sync: Vec<SignedBlock>,
+) -> Result<()> {
+	match WorkerModeProvider::worker_mode() {
+		WorkerMode::Sidechain => GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
+			.get()?
+			.dispatch_import(blocks_to_sync)?,
+		_ => GLOBAL_IMMEDIATE_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
+			.get()?
+			.dispatch_import(blocks_to_sync)?,
 	}
 	Ok(())
 }
