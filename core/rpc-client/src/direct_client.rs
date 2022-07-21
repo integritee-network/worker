@@ -170,6 +170,7 @@ fn decode_from_rpc_response(json_rpc_response: &str) -> Result<String> {
 mod tests {
 	use super::*;
 	use itc_tls_websocket_server::{test::fixtures::test_server::create_server, WebSocketServer};
+	use itp_networking_utils::ports::get_available_port_in_range;
 	use std::vec;
 
 	#[test]
@@ -179,14 +180,20 @@ mod tests {
 		const END_MESSAGE: &str = "End of service.";
 		let responses = vec![END_MESSAGE.to_string()];
 
-		let port = 22334;
+		let port = get_available_port_in_range(21000..21500).unwrap();
 		let (server, handler) = create_server(responses, port);
 
 		let server_clone = server.clone();
-		let server_join_handle = thread::spawn(move || server_clone.run());
+		let server_join_handle = thread::spawn(move || {
+			if let Err(e) = server_clone.run() {
+				error!("Web-socket server failed: {:?}", e);
+			}
+		});
 
 		// Wait until server is up.
-		thread::sleep(std::time::Duration::from_millis(50));
+		while !server.is_running().unwrap() {
+			thread::sleep(std::time::Duration::from_millis(50));
+		}
 
 		let client = DirectClient::new(format!("wss://localhost:{}", port));
 		let (message_sender, message_receiver) = channel::<String>();
@@ -213,7 +220,7 @@ mod tests {
 
 		info!("Joining server thread");
 		server.shut_down().unwrap();
-		server_join_handle.join().unwrap().unwrap();
+		server_join_handle.join().unwrap();
 
 		assert_eq!(1, messages.len());
 		assert_eq!(1, handler.messages_handled.read().unwrap().len());
@@ -226,21 +233,27 @@ mod tests {
 		let server_response = "response 1".to_string();
 		let responses = vec![server_response.clone()];
 
-		let port = 22335;
+		let port = get_available_port_in_range(21501..22000).unwrap();
 		let (server, handler) = create_server(responses, port);
 
 		let server_clone = server.clone();
-		let server_join_handle = thread::spawn(move || server_clone.run());
+		let server_join_handle = thread::spawn(move || {
+			if let Err(e) = server_clone.run() {
+				error!("Web-socket server failed: {:?}", e);
+			}
+		});
 
 		// Wait until server is up.
-		thread::sleep(std::time::Duration::from_millis(50));
+		while !server.is_running().unwrap() {
+			thread::sleep(std::time::Duration::from_millis(50));
+		}
 
 		let client = DirectClient::new(format!("wss://localhost:{}", port));
 		let received_response = client.get("Request").unwrap();
 
 		info!("Joining server thread");
 		server.shut_down().unwrap();
-		server_join_handle.join().unwrap().unwrap();
+		server_join_handle.join().unwrap();
 
 		assert_eq!(server_response, received_response);
 		assert_eq!(1, handler.messages_handled.read().unwrap().len());

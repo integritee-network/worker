@@ -40,6 +40,7 @@ use sp_io::hashing::blake2_256;
 use sp_runtime::MultiAddress;
 use std::{format, prelude::v1::*, vec};
 use support::traits::UnfilteredDispatchable;
+
 impl Stf {
 	pub fn init_state(enclave_account: AccountId) -> State {
 		debug!("initializing stf state, account id {}", account_id_to_string(&enclave_account));
