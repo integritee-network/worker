@@ -52,7 +52,7 @@ while getopts ":m:p:A:B:t:u:W:V:C:" opt; do
     esac
 done
 
-# using default port if none given as arguments
+# Using default port if none given as arguments.
 NPORT=${NPORT:-9944}
 NODEURL=${NODEURL:-"ws://127.0.0.1"}
 
@@ -80,7 +80,7 @@ then
     read MRENCLAVE <<< $(cat ~/mrenclave.b58)
     echo "Reading MRENCLAVE from file: ${MRENCLAVE}"
 else
-    # this will always take the first MRENCLAVE found in the registry !!
+    # This will always take the first MRENCLAVE found in the registry !!
     read MRENCLAVE <<< $($CLIENTWORKER1 list-workers | awk '/  MRENCLAVE: / { print $2; exit }')
     echo "Reading MRENCLAVE from worker list: ${MRENCLAVE}"
 fi
@@ -105,12 +105,12 @@ echo "Get balance of Alice's incognito account (on worker 1)"
 ${CLIENTWORKER1} trusted --mrenclave ${MRENCLAVE} balance ${ICGACCOUNTALICE}
 echo ""
 
-# Send funds from Alice to Bobs account, on worker 1
+# Send funds from Alice to Bobs account, on worker 1.
 echo "* First transfer: Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account (on worker 1)"
 $CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} --direct transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER}
 echo ""
 
-# Send funds from Alice to Bobs account, on worker 2
+# Send funds from Alice to Bobs account, on worker 2.
 echo "* Second transfer: Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account (on worker 2)"
 $CLIENTWORKER2 trusted --mrenclave ${MRENCLAVE} --direct transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER}
 echo ""
