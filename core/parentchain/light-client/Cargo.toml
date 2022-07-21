@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive", "chain-error"] }
 derive_more = { version = "0.99.5" }
-finality-grandpa = { version = "0.15.0", default-features = false, features = ["derive-codec"] }
+finality-grandpa = { version = "0.16.0", default-features = false, features = ["derive-codec"] }
 hash-db = { version = "0.15.2", default-features = false }
 lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
 log = { version = "0.4", default-features = false }

@@ -5,7 +5,7 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 
 [dependencies]
-finality-grandpa = { version = "0.15.0", default-features = false, features = ["derive-codec"] }
+finality-grandpa = { version = "0.16.0", default-features = false, features = ["derive-codec"] }
 itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
 itp-utils = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
 log = { version = "0.4", default-features = false }
