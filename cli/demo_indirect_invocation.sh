@@ -44,7 +44,7 @@ CLIENT_BIN=${CLIENT_BIN:-"./../bin/integritee-cli"}
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
-"${SCRIPT_DIR}"/demo_shielding_unshielding.sh "-p ${NPORT} -u ${NODEURL} -V ${WORKER1URL} -P ${WORKER1PORT} -C ${CLIENT_BIN} -t first"
-"${SCRIPT_DIR}"/demo_shielding_unshielding.sh "-p ${NPORT} -u ${NODEURL} -V ${WORKER2URL} -P ${WORKER2PORT} -C ${CLIENT_BIN} -t second"
+"${SCRIPT_DIR}"/demo_shielding_unshielding.sh -p "${NPORT}" -u "${NODEURL}" -V "${WORKER1URL}" -P "${WORKER1PORT}" -C "${CLIENT_BIN}" -t first
+"${SCRIPT_DIR}"/demo_shielding_unshielding.sh -p "${NPORT}" -u "${NODEURL}" -V "${WORKER2URL}" -P "${WORKER2PORT}" -C "${CLIENT_BIN}" -t second
 
 exit 0
