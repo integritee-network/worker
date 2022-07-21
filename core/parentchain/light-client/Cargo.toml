@@ -36,6 +36,9 @@ sp-finality-grandpa = { default-features = false, git = "https://github.com/pari
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 sp-trie = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 
+# mocks dependencies
+parentchain-test = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master", optional = true }
+
 [dev-dependencies]
 itp-test = { path = "../../../core-primitives/test" }
 
@@ -69,4 +72,6 @@ sgx = [
     "itp-sgx-io/sgx",
     "itp-storage/sgx",
 ]
-mocks = []
+mocks = [
+    "parentchain-test"
+]

@@ -17,16 +17,28 @@
 
 use crate::{error::Result, DispatchBlockImport};
 use itc_parentchain_block_importer::ImportParentchainBlocks;
-use std::{sync::Arc, vec::Vec};
+use log::*;
+use std::{boxed::Box, vec::Vec};
 
 /// Block import dispatcher that immediately imports the blocks, without any processing or queueing.
 pub struct ImmediateDispatcher<BlockImporter> {
-	block_importer: Arc<BlockImporter>,
+	block_importer: BlockImporter,
+	import_event_observers: Vec<Box<dyn Fn() + Send + Sync + 'static>>,
 }
 
 impl<BlockImporter> ImmediateDispatcher<BlockImporter> {
-	pub fn new(block_importer: Arc<BlockImporter>) -> Self {
-		ImmediateDispatcher { block_importer }
+	pub fn new(block_importer: BlockImporter) -> Self {
+		ImmediateDispatcher { block_importer, import_event_observers: Vec::new() }
+	}
+
+	pub fn with_observer<F>(self, callback: F) -> Self
+	where
+		F: Fn() + Send + Sync + 'static,
+	{
+		let mut updated_observers = self.import_event_observers;
+		updated_observers.push(Box::new(callback));
+
+		Self { block_importer: self.block_importer, import_event_observers: updated_observers }
 	}
 }
 
@@ -37,6 +49,53 @@ where
 	type SignedBlockType = BlockImporter::SignedBlockType;
 
 	fn dispatch_import(&self, blocks: Vec<Self::SignedBlockType>) -> Result<()> {
-		self.block_importer.import_parentchain_blocks(blocks).map_err(|e| e.into())
+		debug!("Importing {} parentchain blocks", blocks.len());
+		self.block_importer.import_parentchain_blocks(blocks)?;
+		debug!("Notifying {} observers of import", self.import_event_observers.len());
+		self.import_event_observers.iter().for_each(|callback| callback());
+		Ok(())
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use itc_parentchain_block_importer::block_importer_mock::ParentchainBlockImporterMock;
+	use std::{
+		sync::{Arc, RwLock},
+		vec,
+	};
+
+	type SignedBlockType = u32;
+	type TestBlockImporter = ParentchainBlockImporterMock<SignedBlockType>;
+	type TestDispatcher = ImmediateDispatcher<TestBlockImporter>;
+
+	#[derive(Default)]
+	struct NotificationCounter {
+		counter: RwLock<usize>,
+	}
+
+	impl NotificationCounter {
+		fn increment(&self) {
+			*self.counter.write().unwrap() += 1;
+		}
+
+		pub fn get_counter(&self) -> usize {
+			*self.counter.read().unwrap()
+		}
+	}
+
+	#[test]
+	fn listeners_get_notified_upon_import() {
+		let block_importer = TestBlockImporter::default();
+		let notification_counter = Arc::new(NotificationCounter::default());
+		let counter_clone = notification_counter.clone();
+		let dispatcher = TestDispatcher::new(block_importer).with_observer(move || {
+			counter_clone.increment();
+		});
+
+		dispatcher.dispatch_import(vec![1u32, 2u32]).unwrap();
+
+		assert_eq!(1, notification_counter.get_counter());
 	}
 }

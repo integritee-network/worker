@@ -17,12 +17,15 @@
 
 use crate::{
 	author::Author,
+	test_fixtures::{
+		create_indirect_trusted_operation, shard_id, trusted_call_signed, trusted_getter_signed,
+	},
 	test_utils::submit_operation_to_top_pool,
 	top_filter::{AllowAllTopsFilter, Filter, GettersOnlyFilter},
 	traits::AuthorApi,
 };
 use codec::{Decode, Encode};
-use ita_stf::{Getter, KeyPair, TrustedCall, TrustedCallSigned, TrustedGetter, TrustedOperation};
+use ita_stf::TrustedOperation;
 use itp_sgx_crypto::{mocks::KeyRepositoryMock, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{
@@ -30,15 +33,9 @@ use itp_test::mock::{
 	shielding_crypto_mock::ShieldingCryptoMock,
 };
 use itp_top_pool::mocks::trusted_operation_pool_mock::TrustedOperationPoolMock;
-use itp_types::ShardIdentifier;
 use sgx_crypto_helper::{rsa3072::Rsa3072KeyPair, RsaKeyPair};
-use sp_core::{ed25519, Pair, H256};
-use sp_keyring::AccountKeyring;
-use sp_runtime::traits::{BlakeTwo256, Hash};
-use std::{sync::Arc, vec};
-
-type Seed = [u8; 32];
-const TEST_SEED: Seed = *b"12345678901234567890123456789012";
+use sp_core::H256;
+use std::sync::Arc;
 
 type TestAuthor<Filter> = Author<
 	TrustedOperationPoolMock,
@@ -151,36 +148,4 @@ fn create_author_with_filter<F: Filter<Value = TrustedOperation>>(
 		top_pool,
 		encryption_key,
 	)
-}
-
-fn trusted_call_signed() -> TrustedCallSigned {
-	let account = ed25519::Pair::from_seed(&TEST_SEED);
-	let call =
-		TrustedCall::balance_shield(account.public().into(), account.public().into(), 12u128);
-	call.sign(&KeyPair::Ed25519(account), 0, &mr_enclave(), &shard_id())
-}
-
-fn trusted_getter_signed() -> Getter {
-	let account = ed25519::Pair::from_seed(&TEST_SEED);
-	let getter = TrustedGetter::free_balance(account.public().into());
-	Getter::trusted(getter.sign(&KeyPair::Ed25519(account)))
-}
-
-fn create_indirect_trusted_operation() -> TrustedOperation {
-	let account = ed25519::Pair::from_seed(&TEST_SEED);
-	let trusted_call_signed = TrustedCall::balance_transfer(
-		AccountKeyring::Alice.public().into(),
-		AccountKeyring::Bob.public().into(),
-		1000u128,
-	)
-	.sign(&KeyPair::Ed25519(account), 1, &mr_enclave(), &shard_id());
-	TrustedOperation::indirect_call(trusted_call_signed)
-}
-
-fn mr_enclave() -> [u8; 32] {
-	[1u8; 32]
-}
-
-fn shard_id() -> ShardIdentifier {
-	BlakeTwo256::hash(vec![1u8, 2u8, 3u8].as_slice().encode().as_slice())
 }

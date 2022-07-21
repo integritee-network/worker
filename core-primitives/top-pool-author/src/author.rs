@@ -21,7 +21,7 @@ use crate::sgx_reexport_prelude::*;
 use crate::{
 	client_error::Error as ClientError,
 	error::{Error as StateRpcError, Result},
-	top_filter::{AllowAllTopsFilter, Filter},
+	top_filter::Filter,
 	traits::{AuthorApi, OnBlockImported, SendState},
 };
 use codec::{Decode, Encode};
@@ -47,7 +47,13 @@ use sp_runtime::generic;
 use std::{boxed::Box, sync::Arc, vec, vec::Vec};
 
 /// Define type of TOP filter that is used in the Author
-pub type AuthorTopFilter = AllowAllTopsFilter;
+#[cfg(feature = "sidechain")]
+pub type AuthorTopFilter = crate::top_filter::AllowAllTopsFilter;
+#[cfg(feature = "offchain-worker")]
+pub type AuthorTopFilter = crate::top_filter::NoDirectCallsFilter;
+
+#[cfg(not(any(feature = "sidechain", feature = "offchain-worker")))]
+pub type AuthorTopFilter = crate::top_filter::AllowAllTopsFilter;
 
 /// Currently we treat all RPC operations as externals.
 ///

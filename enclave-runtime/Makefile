@@ -26,6 +26,10 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+######## Worker Feature Settings ########
+# Set sidechain as default feature mode
+WORKER_MODE ?= sidechain
+
 Rust_Enclave_Name := libenclave.a
 Rust_Enclave_Files := $(wildcard src/*.rs) $(wildcard ../stf/src/*.rs)
 Rust_Target_Path := $(CURDIR)/../../../xargo
@@ -40,9 +44,9 @@ else
 endif
 
 ifeq ($(SGX_PRODUCTION), 1)
-	ENCLAVE_FEATURES = --features=production
+	ENCLAVE_FEATURES = --features=production,$(WORKER_MODE)
 else
-	ENCLAVE_FEATURES = --features=test
+	ENCLAVE_FEATURES = --features=test,$(WORKER_MODE)
 endif
 
 .PHONY: all

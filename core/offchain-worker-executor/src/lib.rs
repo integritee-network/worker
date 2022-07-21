@@ -15,8 +15,6 @@
 
 */
 
-#![feature(trait_alias)]
-#![cfg_attr(feature = "mocks", feature(drain_filter))]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(all(feature = "std", feature = "sgx"))]
@@ -28,25 +26,8 @@ extern crate sgx_tstd as std;
 // re-export module to properly feature gate sgx and regular std environment
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub mod sgx_reexport_prelude {
-	pub use jsonrpc_core_sgx as jsonrpc_core;
 	pub use thiserror_sgx as thiserror;
 }
 
-pub mod api;
-pub mod author;
-pub mod client_error;
 pub mod error;
-pub mod top_filter;
-pub mod traits;
-
-#[cfg(test)]
-mod author_tests;
-
-#[cfg(test)]
-mod test_fixtures;
-
-#[cfg(any(test, feature = "test"))]
-pub mod test_utils;
-
-#[cfg(feature = "mocks")]
-pub mod mocks;
+pub mod executor;

@@ -48,12 +48,23 @@ impl Filter for GettersOnlyFilter {
 	}
 }
 
+/// Filter that allows no direct calls, only indirect and getters.
+pub struct NoDirectCallsFilter;
+
+impl Filter for NoDirectCallsFilter {
+	type Value = TrustedOperation;
+
+	fn filter(&self, value: &Self::Value) -> bool {
+		!matches!(value, TrustedOperation::direct_call(_))
+	}
+}
+
 #[cfg(test)]
-pub mod tests {
+mod tests {
 
 	use super::*;
 	use codec::Encode;
-	use ita_stf::{Getter, KeyPair, TrustedCall, TrustedGetter};
+	use ita_stf::{Getter, KeyPair, TrustedCall, TrustedCallSigned, TrustedGetter};
 	use itp_types::ShardIdentifier;
 	use sp_core::{ed25519, Pair};
 	use sp_runtime::traits::{BlakeTwo256, Hash};
@@ -63,7 +74,7 @@ pub mod tests {
 	const TEST_SEED: Seed = *b"12345678901234567890123456789012";
 
 	#[test]
-	pub fn filter_returns_none_if_values_is_filtered_out() {
+	fn filter_returns_none_if_values_is_filtered_out() {
 		struct WorldFilter;
 		impl Filter for WorldFilter {
 			type Value = String;
@@ -83,29 +94,52 @@ pub mod tests {
 	}
 
 	#[test]
-	pub fn getters_only_filter_allows_trusted_getters() {
-		let account = test_account();
+	fn allow_all_tops_filter_works() {
+		let filter = AllowAllTopsFilter;
 
-		let getter = TrustedGetter::free_balance(account.public().into());
-		let trusted_getter_signed = Getter::trusted(getter.sign(&KeyPair::Ed25519(account)));
-		let trusted_operation = TrustedOperation::from(trusted_getter_signed);
-
-		let filter = GettersOnlyFilter;
-
-		assert!(filter.filter(&trusted_operation));
+		assert!(filter.filter(&trusted_getter()));
+		assert!(filter.filter(&trusted_indirect_call()));
+		assert!(filter.filter(&trusted_direct_call()));
 	}
 
 	#[test]
-	pub fn getters_only_filter_denies_trusted_calls() {
+	fn getters_only_filter_works() {
+		let filter = GettersOnlyFilter;
+
+		assert!(filter.filter(&trusted_getter()));
+		assert!(!filter.filter(&trusted_indirect_call()));
+		assert!(!filter.filter(&trusted_direct_call()));
+	}
+
+	#[test]
+	fn no_direct_calls_filter_works() {
+		let filter = NoDirectCallsFilter;
+
+		assert!(!filter.filter(&trusted_direct_call()));
+		assert!(filter.filter(&trusted_indirect_call()));
+		assert!(filter.filter(&trusted_getter()));
+	}
+
+	fn trusted_direct_call() -> TrustedOperation {
+		TrustedOperation::direct_call(trusted_call_signed())
+	}
+
+	fn trusted_indirect_call() -> TrustedOperation {
+		TrustedOperation::indirect_call(trusted_call_signed())
+	}
+
+	fn trusted_getter() -> TrustedOperation {
+		let account = test_account();
+		let getter = TrustedGetter::free_balance(account.public().into());
+		let trusted_getter_signed = Getter::trusted(getter.sign(&KeyPair::Ed25519(account)));
+		TrustedOperation::from(trusted_getter_signed)
+	}
+
+	fn trusted_call_signed() -> TrustedCallSigned {
 		let account = test_account();
 		let call =
 			TrustedCall::balance_shield(account.public().into(), account.public().into(), 12u128);
-		let call_signed = call.sign(&KeyPair::Ed25519(account), 0, &mr_enclave(), &shard_id());
-		let trusted_operation = TrustedOperation::from(call_signed);
-
-		let filter = GettersOnlyFilter;
-
-		assert!(!filter.filter(&trusted_operation));
+		call.sign(&KeyPair::Ed25519(account), 0, &mr_enclave(), &shard_id())
 	}
 
 	fn test_account() -> ed25519::Pair {
