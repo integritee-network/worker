@@ -74,10 +74,6 @@ impl DirectApi for DirectClientMock {
 		unimplemented!()
 	}
 
-	fn send(&self, request: &str) -> Result<()> {
-		unimplemented!()
-	}
-
 	fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey> {
 		Ok(self.rsa_pubkey)
 	}
@@ -97,6 +93,10 @@ impl DirectApi for DirectClientMock {
 				return Err(Error::Custom(format!("Decode metadata FromHexError: {:?}", e).into())),
 		};
 		RuntimeMetadataPrefixed::decode(&mut metadata.as_slice()).map_err(|e| e.into())
+	}
+
+	fn send(&self, _request: &str) -> Result<()> {
+		unimplemented!()
 	}
 
 	fn close(&self) -> Result<()> {
