@@ -21,6 +21,7 @@ use crate::{
 };
 use itp_storage::StorageProof;
 use itp_types::Block;
+use parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 use sp_runtime::{generic::SignedBlock, traits::Block as BlockT, OpaqueExtrinsic};
 use std::vec::Vec;
 
@@ -87,14 +88,14 @@ impl LightClientState<Block> for ValidatorMock {
 	}
 
 	fn latest_finalized_header(&self, _relay_id: RelayId) -> Result<Header> {
-		todo!()
+		Ok(ParentchainHeaderBuilder::default().build())
 	}
 
 	fn penultimate_finalized_block_header(&self, _relay_id: RelayId) -> Result<Header> {
-		todo!()
+		Ok(ParentchainHeaderBuilder::default().build())
 	}
 
 	fn num_relays(&self) -> RelayId {
-		todo!()
+		0
 	}
 }

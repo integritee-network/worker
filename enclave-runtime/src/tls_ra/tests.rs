@@ -21,6 +21,7 @@ use super::{
 	mocks::SealHandlerMock, tls_ra_client::request_state_provisioning_internal,
 	tls_ra_server::run_state_provisioning_server_internal,
 };
+use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
 use itp_types::ShardIdentifier;
 use sgx_types::sgx_quote_sign_type_t;
 use std::{
@@ -40,7 +41,7 @@ fn run_state_provisioning_server(seal_handler: SealHandlerMock) {
 	let listener = TcpListener::bind(SERVER_ADDR).unwrap();
 
 	let (socket, _addr) = listener.accept().unwrap();
-	run_state_provisioning_server_internal(
+	run_state_provisioning_server_internal::<_, WorkerModeProvider>(
 		socket.as_raw_fd(),
 		SIGN_TYPE,
 		SKIP_RA,
@@ -60,9 +61,11 @@ pub fn test_tls_ra_server_client_networking() {
 		Arc::new(RwLock::new(state_key.clone())),
 		Arc::new(RwLock::new(state.clone())),
 	);
+	let initial_client_state = vec![0, 0, 1];
+	let initial_client_state_key = vec![0, 0, 2];
 	let client_shielding_key = Arc::new(RwLock::new(Vec::new()));
-	let client_state_key = Arc::new(RwLock::new(Vec::new()));
-	let client_state = Arc::new(RwLock::new(Vec::new()));
+	let client_state_key = Arc::new(RwLock::new(initial_client_state_key.clone()));
+	let client_state = Arc::new(RwLock::new(initial_client_state.clone()));
 
 	let client_seal_handler = SealHandlerMock::new(
 		client_shielding_key.clone(),
@@ -91,6 +94,13 @@ pub fn test_tls_ra_server_client_networking() {
 
 	assert!(result.is_ok());
 	assert_eq!(*client_shielding_key.read().unwrap(), shielding_key);
-	assert_eq!(*client_state_key.read().unwrap(), state_key);
-	assert_eq!(*client_state.read().unwrap(), state);
+
+	// State and state-key are provisioned only in sidechain mode
+	if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain {
+		assert_eq!(*client_state.read().unwrap(), state);
+		assert_eq!(*client_state_key.read().unwrap(), state_key);
+	} else {
+		assert_eq!(*client_state.read().unwrap(), initial_client_state);
+		assert_eq!(*client_state_key.read().unwrap(), initial_client_state_key);
+	}
 }

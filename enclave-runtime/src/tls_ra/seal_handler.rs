@@ -20,8 +20,9 @@
 
 use crate::error::{Error as EnclaveError, Result as EnclaveResult};
 use codec::{Decode, Encode};
-use ita_stf::{State as StfState, StateType as StfStateType};
+use ita_stf::{State as StfState, StateType as StfStateType, Stf};
 use itp_sgx_crypto::{
+	ed25519_derivation::DeriveEd25519,
 	key_repository::{AccessKey, MutateKey},
 	Aes,
 };
@@ -29,6 +30,7 @@ use itp_stf_state_handler::handle_state::HandleState;
 use itp_types::ShardIdentifier;
 use log::*;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
+use sp_core::Pair;
 use std::{sync::Arc, vec::Vec};
 
 /// Handles the sealing and unsealing of the shielding key, state key and the state.
@@ -61,10 +63,12 @@ where
 		Self { state_handler, state_key_repository, shielding_key_repository }
 	}
 }
+
 pub trait SealStateAndKeys {
 	fn seal_shielding_key(&self, bytes: &[u8]) -> EnclaveResult<()>;
 	fn seal_state_key(&self, bytes: &[u8]) -> EnclaveResult<()>;
 	fn seal_state(&self, bytes: &[u8], shard: &ShardIdentifier) -> EnclaveResult<()>;
+	fn seal_new_empty_state(&self, shard: &ShardIdentifier) -> EnclaveResult<()>;
 }
 
 pub trait UnsealStateAndKeys {
@@ -103,6 +107,22 @@ where
 
 		self.state_handler.reset(state_with_empty_diff, shard)?;
 		info!("Successfully updated shard {:?} with provisioned state", shard);
+		Ok(())
+	}
+
+	/// Seal an empty, newly initialized state.
+	///
+	/// Requires the shielding key to be sealed and updated before calling this.
+	///
+	/// Call this function in case we don't provision the state itself, only the shielding key.
+	/// Since the enclave signing account is derived from the shielding key, we need to
+	/// newly initialize the state with the updated shielding key.
+	fn seal_new_empty_state(&self, shard: &ShardIdentifier) -> EnclaveResult<()> {
+		let enclave_account =
+			self.shielding_key_repository.retrieve_key()?.derive_ed25519()?.public();
+		let state = Stf::init_state(enclave_account.into());
+		self.state_handler.reset(state, shard)?;
+		info!("Successfully reset state with new enclave account, for shard {:?}", shard);
 		Ok(())
 	}
 }

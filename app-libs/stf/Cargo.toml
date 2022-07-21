@@ -14,6 +14,7 @@ log = { version = "0.4", default-features = false }
 sgx_tstd = { branch = "master", features = ["untrusted_fs","net","backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
 # local crates
+itp-hashing = { path = "../../core-primitives/hashing" }
 itp-storage = { default-features = false, path = "../../core-primitives/storage" }
 its-state = { default-features = false, optional = true, path = "../../sidechain/state" }
 

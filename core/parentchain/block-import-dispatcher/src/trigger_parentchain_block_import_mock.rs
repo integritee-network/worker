@@ -21,10 +21,7 @@ use std::sync::SgxRwLock as RwLock;
 #[cfg(feature = "std")]
 use std::sync::RwLock;
 
-use crate::{
-	error::Result,
-	triggered_dispatcher::{PeekParentchainBlockImportQueue, TriggerParentchainBlockImport},
-};
+use crate::{error::Result, triggered_dispatcher::TriggerParentchainBlockImport};
 
 /// Mock for `TriggerParentchainBlockImport`, to be used in unit tests.
 ///
@@ -73,25 +70,19 @@ where
 		Ok(())
 	}
 
-	fn import_until<MatchingF>(&self, _matching_func: MatchingF) -> Result<Option<SignedBlockType>>
-	where
-		MatchingF: Fn(&SignedBlockType) -> bool,
-	{
+	fn import_until(
+		&self,
+		_predicate: impl Fn(&SignedBlockType) -> bool,
+	) -> Result<Option<SignedBlockType>> {
 		let mut import_flag = self.import_has_been_called.write().unwrap();
 		*import_flag = true;
 		Ok(self.latest_imported.clone())
 	}
-}
 
-impl<SignedBlockType> PeekParentchainBlockImportQueue<SignedBlockType>
-	for TriggerParentchainBlockImportMock<SignedBlockType>
-where
-	SignedBlockType: Clone,
-{
-	fn peek<Predicate>(&self, predicate: Predicate) -> Result<Option<SignedBlockType>>
-	where
-		Predicate: Fn(&SignedBlockType) -> bool,
-	{
+	fn peek(
+		&self,
+		predicate: impl Fn(&SignedBlockType) -> bool,
+	) -> Result<Option<SignedBlockType>> {
 		return match &self.latest_imported {
 			None => Ok(None),
 			Some(block) => {

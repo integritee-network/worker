@@ -28,6 +28,10 @@ jobs:
       
   build-test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        mode: [ sidechain, offchain-worker ]
+
     steps:
       - uses: actions/checkout@v3
 
@@ -39,23 +43,23 @@ jobs:
       - name: Build Enclave Test Image
         env:
           DOCKER_BUILDKIT: 1
-        run: docker build -t integritee-worker-enclave-test-${{ github.sha }} --target enclave-test -f build.Dockerfile .
+        run: docker build -t integritee-worker-enclave-test-${{ matrix.mode }}-${{ github.sha }} --target enclave-test --build-arg WORKER_MODE_ARG=${{ matrix.mode }} -f build.Dockerfile .
 
       - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
-        run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-enclave-test-${{ github.sha }}
+        run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-enclave-test-${{ matrix.mode }}-${{ github.sha }}
 
       - name: Build Cargo Test Image
         env:
           DOCKER_BUILDKIT: 1
-        run:  docker build -t integritee-worker-ctest-${{ github.sha }} --target cargo-test -f build.Dockerfile .
+        run:  docker build -t integritee-worker-ctest-${{ matrix.mode }}-${{ github.sha }} --target cargo-test --build-arg WORKER_MODE_ARG=${{ matrix.mode }} -f build.Dockerfile .
 
       - name: Run Cargo Test
-        run: docker run --rm integritee-worker-ctest-${{ github.sha }}
+        run: docker run --rm integritee-worker-ctest-${{ matrix.mode }}-${{ github.sha }}
 
       - name: Build Deployable Image
         env:
           DOCKER_BUILDKIT: 1
-        run: docker build --output=type=tar,dest=/tmp/integritee-worker.tar --target=deployed-worker -f build.Dockerfile .
+        run: docker build --output=type=tar,dest=/tmp/integritee-worker.tar --target=deployed-worker --build-arg WORKER_MODE_ARG=${{ matrix.mode }} -f build.Dockerfile .
       
       - name: Copy artifacts from container
         run: |
@@ -66,25 +70,25 @@ jobs:
       - name: Upload worker
         uses: actions/upload-artifact@v2
         with:
-          name: integritee-worker-${{ github.sha }}
+          name: integritee-worker-${{ matrix.mode }}-${{ github.sha }}
           path: ${{ env.WORKER_BIN }}
 
       - name: Upload client
         uses: actions/upload-artifact@v2
         with:
-          name: integritee-client-${{ github.sha }}
+          name: integritee-client-${{ matrix.mode }}-${{ github.sha }}
           path: ${{ env.CLIENT_BIN }}
 
       - name: Upload enclave
         uses: actions/upload-artifact@v2
         with:
-          name: enclave-signed-${{ github.sha }}
+          name: enclave-signed-${{ matrix.mode }}-${{ github.sha }}
           path: ${{ env.ENCLAVE_BIN }}
 
       - name: Upload deployable image
         uses: actions/upload-artifact@v2
         with:
-          name: integritee-worker-image-${{ github.sha }}
+          name: integritee-worker-${{ matrix.mode }}-image-${{ github.sha }}
           path: /tmp/integritee-worker.tar
 
   clippy:
@@ -128,17 +132,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test: [M6, M8, Sidechain]
         include:
           - test: M6
+            mode: sidechain
             demo_name: m6_demo_shielding_unshielding
             demo_script: m6.sh
           - test: M8
+            mode: sidechain
             demo_name: m8_demo_direct_call
             demo_script: m8.sh
           - test: Sidechain
+            mode: sidechain
             demo_name: sidechain_demo
             demo_script: sidechain.sh
+          - test: M6
+            mode: offchain-worker
+            demo_name: m6_demo_shielding_unshielding
+            demo_script: m6.sh
 
     env:
       BIN_DIR: bin
@@ -152,19 +162,19 @@ jobs:
       - name: Download Worker
         uses: actions/download-artifact@v2
         with:
-          name: integritee-worker-${{ github.sha }}
+          name: integritee-worker-${{ matrix.mode }}-${{ github.sha }}
           path: ${{ env.BIN_DIR }}
 
       - name: Download Client
         uses: actions/download-artifact@v2
         with:
-          name: integritee-client-${{ github.sha }}
+          name: integritee-client-${{ matrix.mode }}-${{ github.sha }}
           path: ${{ env.BIN_DIR }}
 
       - name: Download Enclave
         uses: actions/download-artifact@v2
         with:
-          name: enclave-signed-${{ github.sha }}
+          name: enclave-signed-${{ matrix.mode }}-${{ github.sha }}
           path: ${{ env.BIN_DIR }}
 
         # If you want to debug ci and you don't want to build the binaries, you can replace the downloads above with
@@ -240,7 +250,7 @@ jobs:
           ./local-setup/launch.py local-setup/github-action-config.json 2>&1 | tee -i ${{ env.LOG_DIR }}/local-setup.log &
           sleep 150
 
-      - name: ${{ matrix.demo_name }}
+      - name: ${{ matrix.demo_name }}-${{ matrix.mode }}
         # * the change the symbolic link which points to the target/release... folder.
         # * need overwrite default shell to bash to get access to the `source` cmd.
         shell: bash --noprofile --norc -eo pipefail {0}
@@ -252,7 +262,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ matrix.test }}_logs
+          name: ${{ matrix.test }}-${{ matrix.mode }}_logs
           path: ${{ env.LOG_DIR }}
 
   release:
@@ -269,19 +279,19 @@ jobs:
       - name: Download Integritee Service
         uses: actions/download-artifact@v2
         with:
-          name: integritee-worker-${{ github.sha }}
+          name: integritee-worker-sidechain-${{ github.sha }}
           path: integritee-worker-tmp
 
       - name: Download Integritee Client
         uses: actions/download-artifact@v2
         with:
-          name: integritee-client-${{ github.sha }}
+          name: integritee-client-sidechain-${{ github.sha }}
           path: integritee-client-tmp
 
       - name: Download Enclave Signed
         uses: actions/download-artifact@v2
         with:
-          name: enclave-signed-${{ github.sha }}
+          name: enclave-signed-sidechain-${{ github.sha }}
           path: enclave-signed-tmp
 
       - name: Move service binaries

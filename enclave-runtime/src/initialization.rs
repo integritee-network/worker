@@ -24,14 +24,16 @@ use crate::{
 		EnclaveSidechainBlockSyncer, EnclaveStateFileIo, EnclaveStateHandler,
 		EnclaveStateKeyRepository, EnclaveStfEnclaveSigner, EnclaveStfExecutor, EnclaveTopPool,
 		EnclaveTopPoolAuthor, EnclaveTopPoolOperationHandler, EnclaveValidatorAccessor,
-		GLOBAL_EXTRINSICS_FACTORY_COMPONENT, GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT,
-		GLOBAL_OCALL_API_COMPONENT, GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT,
-		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT, GLOBAL_RPC_WS_HANDLER_COMPONENT,
+		GLOBAL_EXTRINSICS_FACTORY_COMPONENT,
+		GLOBAL_IMMEDIATE_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
+		GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
+		GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT, GLOBAL_RPC_WS_HANDLER_COMPONENT,
 		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT,
 		GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 		GLOBAL_STATE_KEY_REPOSITORY_COMPONENT, GLOBAL_STF_EXECUTOR_COMPONENT,
 		GLOBAL_TOP_POOL_AUTHOR_COMPONENT, GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
+		GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
 		GLOBAL_WEB_SOCKET_SERVER_COMPONENT,
 	},
 	ocall::OcallApi,
@@ -46,7 +48,9 @@ use itc_direct_rpc_server::{
 	rpc_ws_handler::RpcWsHandler,
 };
 use itc_parentchain::{
-	block_import_dispatcher::triggered_dispatcher::TriggeredDispatcher,
+	block_import_dispatcher::{
+		immediate_dispatcher::ImmediateDispatcher, triggered_dispatcher::TriggeredDispatcher,
+	},
 	block_importer::ParentchainBlockImporter,
 	indirect_calls_executor::IndirectCallsExecutor,
 	light_client::{
@@ -64,8 +68,12 @@ use itp_extrinsics_factory::ExtrinsicsFactory;
 use itp_node_api_extensions::metadata::node_metadata_provider::NodeMetadataRepository;
 use itp_nonce_cache::GLOBAL_NONCE_CACHE;
 use itp_primitives_cache::GLOBAL_PRIMITIVES_CACHE;
-use itp_settings::files::{
-	ENCLAVE_CERTIFICATE_FILE_PATH, ENCLAVE_CERTIFICATE_PRIVATE_KEY_PATH, STATE_SNAPSHOTS_CACHE_SIZE,
+use itp_settings::{
+	files::{
+		ENCLAVE_CERTIFICATE_FILE_PATH, ENCLAVE_CERTIFICATE_PRIVATE_KEY_PATH,
+		STATE_SNAPSHOTS_CACHE_SIZE,
+	},
+	worker_mode::{ProvideWorkerMode, WorkerMode},
 };
 use itp_sgx_crypto::{
 	aes, ed25519, ed25519_derivation::DeriveEd25519, rsa3072, AesSeal, Ed25519Seal, Rsa3072Seal,
@@ -78,10 +86,7 @@ use itp_stf_state_handler::{
 use itp_top_pool::pool::Options as PoolOptions;
 use itp_top_pool_author::author::AuthorTopFilter;
 use itp_types::{Block, Header, ShardIdentifier, SignedBlock};
-use its_sidechain::{
-	aura::block_importer::BlockImporter, block_composer::BlockComposer,
-	top_pool_executor::TopPoolOperationHandler,
-};
+use its_sidechain::block_composer::BlockComposer;
 use log::*;
 use primitive_types::H256;
 use sp_core::crypto::Pair;
@@ -136,7 +141,7 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 		state_handler.clone(),
 		node_metadata_repository,
 	));
-	GLOBAL_STF_EXECUTOR_COMPONENT.initialize(stf_executor);
+	GLOBAL_STF_EXECUTOR_COMPONENT.initialize(stf_executor.clone());
 
 	// For debug purposes, list shards. no problem to panic if fails.
 	let shards = state_handler.list_shards().unwrap();
@@ -171,6 +176,10 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	);
 	GLOBAL_TOP_POOL_AUTHOR_COMPONENT.initialize(top_pool_author.clone());
 
+	let top_pool_operation_handler =
+		Arc::new(EnclaveTopPoolOperationHandler::new(top_pool_author.clone(), stf_executor));
+	GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.initialize(top_pool_operation_handler);
+
 	let io_handler = public_api_rpc_handler(top_pool_author);
 	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));
 	GLOBAL_RPC_WS_HANDLER_COMPONENT.initialize(rpc_handler);
@@ -182,33 +191,21 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 }
 
 pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
-	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
-
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
-	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
-
-	let top_pool_operation_handler = Arc::new(EnclaveTopPoolOperationHandler::new(
-		top_pool_author.clone(),
-		stf_executor.clone(),
-	));
-	GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.initialize(top_pool_operation_handler);
-
-	let top_pool_executor = Arc::<EnclaveTopPoolOperationHandler>::new(
-		TopPoolOperationHandler::new(top_pool_author, stf_executor),
-	);
+	let top_pool_operation_handler = GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.get()?;
 
 	let parentchain_block_import_dispatcher =
-		GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get()?;
+		GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get()?;
 
 	let state_key_repository = GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.get()?;
 
 	let signer = Ed25519Seal::unseal_from_static_file()?;
 
-	let sidechain_block_importer = Arc::<EnclaveSidechainBlockImporter>::new(BlockImporter::new(
+	let sidechain_block_importer = Arc::new(EnclaveSidechainBlockImporter::new(
 		state_handler,
 		state_key_repository.clone(),
-		top_pool_executor,
+		top_pool_operation_handler,
 		parentchain_block_import_dispatcher,
 		ocall_api.clone(),
 	));
@@ -234,21 +231,17 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 	Ok(())
 }
 
-pub(crate) fn init_light_client(params: LightClientInitParams<Header>) -> EnclaveResult<Header> {
+pub(crate) fn init_light_client<WorkerModeProvider: ProvideWorkerMode>(
+	params: LightClientInitParams<Header>,
+) -> EnclaveResult<Header> {
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 	let validator = itc_parentchain::light_client::io::read_or_init_validator::<Block, OcallApi>(
-		params,
-		ocall_api.clone(),
+		params, ocall_api,
 	)?;
 	let latest_header = validator.latest_finalized_header(validator.num_relays())?;
 
 	// Initialize the global parentchain block import dispatcher instance.
 	let signer = Ed25519Seal::unseal_from_static_file()?;
-	let shielding_key_repository = GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.get()?;
-
-	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
-	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
-	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 	let node_metadata_repository = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
 
 	let validator_access = Arc::new(EnclaveValidatorAccessor::new(validator));
@@ -260,37 +253,84 @@ pub(crate) fn init_light_client(params: LightClientInitParams<Header>) -> Enclav
 		genesis_hash,
 		signer,
 		GLOBAL_NONCE_CACHE.clone(),
-		node_metadata_repository.clone(),
+		node_metadata_repository,
 	));
 
-	GLOBAL_EXTRINSICS_FACTORY_COMPONENT.initialize(extrinsics_factory.clone());
+	GLOBAL_EXTRINSICS_FACTORY_COMPONENT.initialize(extrinsics_factory);
+
+	initialize_parentchain_import_dispatcher::<WorkerModeProvider>()?;
+
+	Ok(latest_header)
+}
+
+fn initialize_parentchain_import_dispatcher<WorkerModeProvider: ProvideWorkerMode>(
+) -> EnclaveResult<()> {
+	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
+	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
+	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
+	let shielding_key_repository = GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.get()?;
+	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
+	let validator_access = GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT.get()?;
+	let extrinsics_factory = GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get()?;
+	let node_metadata_repository = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
 
 	let stf_enclave_signer = Arc::new(EnclaveStfEnclaveSigner::new(
-		state_handler,
+		state_handler.clone(),
 		ocall_api,
 		shielding_key_repository.clone(),
 	));
 	let indirect_calls_executor = Arc::new(IndirectCallsExecutor::new(
 		shielding_key_repository,
 		stf_enclave_signer,
-		top_pool_author,
+		top_pool_author.clone(),
 		node_metadata_repository,
 	));
 	let parentchain_block_importer = ParentchainBlockImporter::new(
-		validator_access,
-		stf_executor,
-		extrinsics_factory,
+		validator_access.clone(),
+		stf_executor.clone(),
+		extrinsics_factory.clone(),
 		indirect_calls_executor,
 	);
-	let parentchain_block_import_queue = BlockImportQueue::<SignedBlock>::default();
-	let parentchain_block_import_dispatcher = Arc::new(TriggeredDispatcher::new(
-		parentchain_block_importer,
-		parentchain_block_import_queue,
-	));
 
-	GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.initialize(parentchain_block_import_dispatcher);
+	info!(
+		"Initializing parentchain import dispatcher for mode: {:?}",
+		WorkerModeProvider::worker_mode()
+	);
 
-	Ok(latest_header)
+	match WorkerModeProvider::worker_mode() {
+		WorkerMode::OffChainWorker | WorkerMode::Oracle => {
+			let offchain_worker_executor =
+				Arc::new(itc_offchain_worker_executor::executor::Executor::new(
+					top_pool_author,
+					stf_executor,
+					state_handler,
+					validator_access,
+					extrinsics_factory,
+				));
+			let parentchain_block_import_dispatcher = Arc::new(
+				ImmediateDispatcher::new(parentchain_block_importer).with_observer(move || {
+					if let Err(e) = offchain_worker_executor.execute() {
+						error!("Failed to execute trusted calls: {:?}", e);
+					}
+				}),
+			);
+
+			GLOBAL_IMMEDIATE_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
+				.initialize(parentchain_block_import_dispatcher);
+		},
+		WorkerMode::Sidechain => {
+			let parentchain_block_import_queue = BlockImportQueue::<SignedBlock>::default();
+			let parentchain_block_import_dispatcher = Arc::new(TriggeredDispatcher::new(
+				parentchain_block_importer,
+				parentchain_block_import_queue,
+			));
+
+			GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
+				.initialize(parentchain_block_import_dispatcher);
+		},
+	}
+
+	Ok(())
 }
 
 pub(crate) fn init_direct_invocation_server(server_addr: String) -> EnclaveResult<()> {

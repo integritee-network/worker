@@ -15,6 +15,8 @@ crate-type = ["staticlib"]
 [features]
 default = []
 production = ["itp-settings/production"]
+sidechain = ["itp-settings/sidechain", "itp-top-pool-author/sidechain"]
+offchain-worker = ["itp-settings/offchain-worker", "itp-top-pool-author/offchain-worker"]
 test = [
     "ita-stf/test",
     "itc-parentchain/mocks",
@@ -91,6 +93,7 @@ multibase = { git = "https://github.com/whalelephant/rust-multibase", branch = "
 ita-stf = { path = "../app-libs/stf", default-features = false, features = ["sgx"] }
 itc-tls-websocket-server = { path = "../core/tls-websocket-server", default-features = false, features = ["sgx"] }
 itc-direct-rpc-server = { path = "../core/direct-rpc-server", default-features = false, features = ["sgx"]  }
+itc-offchain-worker-executor = { path = "../core/offchain-worker-executor", default-features = false, features = ["sgx"] }
 itc-parentchain = { path = "../core/parentchain/parentchain-crate", default-features = false, features = ["sgx"] }
 itp-block-import-queue = { path = "../core-primitives/block-import-queue", default-features = false, features = ["sgx"] }
 itp-component-container = { path = "../core-primitives/component-container", default-features = false, features = ["sgx"] }

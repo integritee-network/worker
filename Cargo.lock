@@ -2365,6 +2365,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "integritee-node-runtime",
+ "itp-hashing",
  "itp-storage",
  "itp-types",
  "itp-utils",
@@ -2401,6 +2402,28 @@ dependencies = [
  "serde_json 1.0.81",
  "sgx_tstd",
  "sgx_types",
+ "sp-runtime",
+ "thiserror 1.0.31",
+ "thiserror 1.0.9",
+]
+
+[[package]]
+name = "itc-offchain-worker-executor"
+version = "0.8.0"
+dependencies = [
+ "ita-stf",
+ "itc-parentchain-light-client",
+ "itp-extrinsics-factory",
+ "itp-stf-executor",
+ "itp-stf-state-handler",
+ "itp-test",
+ "itp-top-pool-author",
+ "itp-types",
+ "log 0.4.17",
+ "parity-scale-codec",
+ "sgx_tstd",
+ "sgx_types",
+ "sp-core",
  "sp-runtime",
  "thiserror 1.0.31",
  "thiserror 1.0.9",
@@ -2498,6 +2521,7 @@ dependencies = [
  "lazy_static",
  "log 0.4.17",
  "num-traits 0.2.15",
+ "parentchain-test",
  "parity-scale-codec",
  "sgx_tstd",
  "sgx_types",
@@ -2711,6 +2735,10 @@ dependencies = [
  "thiserror 1.0.31",
  "thiserror 1.0.9",
 ]
+
+[[package]]
+name = "itp-hashing"
+version = "0.8.0"
 
 [[package]]
 name = "itp-networking-utils"
