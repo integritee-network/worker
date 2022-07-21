@@ -1,8 +1,8 @@
 version: "3.4"
 services:
-  sidechain-integration-test:
+  demo-sidechain:
     image: integritee-cli:dev
-    container_name: integritee-integration-test
+    container_name: integritee-sidechain-demo
     build:
       context: ..
       dockerfile: build.Dockerfile

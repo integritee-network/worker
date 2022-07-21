@@ -14,13 +14,12 @@
 # then run this script
 
 # usage:
-#  export RUST_LOG_LOG=integritee-cli=info,ita_stf=info
 #  demo_shielding_unshielding.sh -p <NODEPORT> -P <WORKERPORT> -t <TEST_BALANCE_RUN> -m file
 #
 # TEST_BALANCE_RUN is either "first" or "second"
 # if -m file is set, the mrenclave will be read from file
 
-while getopts ":m:p:P:t:" opt; do
+while getopts ":m:p:P:t:u:V:C:" opt; do
     case $opt in
         t)
             TEST=$OPTARG
@@ -32,24 +31,39 @@ while getopts ":m:p:P:t:" opt; do
             NPORT=$OPTARG
             ;;
         P)
-            RPORT=$OPTARG
+            WORKER1PORT=$OPTARG
+            ;;
+        u)
+            NODEURL=$OPTARG
+            ;;
+        V)
+            WORKER1URL=$OPTARG
+            ;;
+        C)
+            CLIENT_BIN=$OPTARG
             ;;
     esac
 done
 
-# using default port if none given as arguments
+# Using default port if none given as arguments.
 NPORT=${NPORT:-9944}
-RPORT=${RPORT:-2000}
+NODEURL=${NODEURL:-"ws://127.0.0.1"}
 
-echo "Using node-port ${NPORT}"
-echo "Using trusted-worker-port ${RPORT}"
+WORKER1PORT=${WORKER1PORT:-2000}
+WORKER1URL=${WORKER1URL:-"wss://127.0.0.1"}
+
+CLIENT_BIN=${CLIENT_BIN:-"./../bin/integritee-cli"}
+
+echo "Using client binary ${CLIENT_BIN}"
+echo "Using node uri ${NODEURL}:${NPORT}"
+echo "Using trusted-worker uri ${WORKER1URL}:${WORKER1PORT}"
 echo ""
 
 AMOUNTSHIELD=50000000000
 AMOUNTTRANSFER=25000000000
 AMOUNTUNSHIELD=15000000000
 
-CLIENT="./../bin/integritee-cli -p ${NPORT} -P ${RPORT}"
+CLIENT="${CLIENT_BIN} -p ${NPORT} -P ${WORKER1PORT} -u ${NODEURL} -U ${WORKER1URL}"
 
 echo "* Query on-chain enclave registry:"
 ${CLIENT} list-workers
@@ -85,11 +99,11 @@ ICGACCOUNTBOB=$(${CLIENT} trusted --mrenclave ${MRENCLAVE} new-account )
 echo "  Bob's incognito account = ${ICGACCOUNTBOB}"
 echo ""
 
-# sometimes we get a nonce clash here, so let's wait a little bit to prevent that.
+# Sometimes we get a nonce clash here, so let's wait a little bit to prevent that.
 sleep 10
 
 echo "* Shield ${AMOUNTSHIELD} tokens to Alice's incognito account"
-${CLIENT} shield-funds //Alice ${ICGACCOUNTALICE} ${AMOUNTSHIELD} ${MRENCLAVE} ${WORKERPORT}
+${CLIENT} shield-funds //Alice ${ICGACCOUNTALICE} ${AMOUNTSHIELD} ${MRENCLAVE} ${WORKER1PORT}
 echo ""
 
 echo "* Waiting 10 seconds"
@@ -133,8 +147,8 @@ ${CLIENT} balance "//Alice"
 echo ""
 
 
-# the following tests are for automated CI
-# they only work if you're running from fresh genesis
+# The following tests are for automated CI.
+# They only work if you're running from fresh genesis.
 case $TEST in
     first)
         if [ "10000000000" = "$RESULT" ]; then
