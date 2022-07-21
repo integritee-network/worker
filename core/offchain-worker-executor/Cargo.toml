@@ -30,7 +30,7 @@ itp-top-pool-author = { path = "../../core-primitives/top-pool-author", default-
 itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "master", default-features = false }
 
 # Substrate dependencies
-sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24", features = ["full_crypto"] }
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 
 # no-std compatible libraries
