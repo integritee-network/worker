@@ -31,13 +31,13 @@ use itp_types::{DirectRequestStatus, TrustedOperationStatus};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use log::*;
 use my_node_runtime::{AccountId, Hash};
-use sp_core::{sr25519 as sr25519_core, Pair, H256};
+use sp_core::{sr25519 as sr25519_core, H256};
 use std::{
 	result::Result as StdResult,
 	sync::mpsc::{channel, Receiver},
 	time::Instant,
 };
-use substrate_api_client::{compose_extrinsic, ExtrinsicParams, XtStatus};
+use substrate_api_client::{compose_extrinsic, XtStatus};
 use teerex_primitives::Request;
 
 pub fn perform_trusted_operation(
