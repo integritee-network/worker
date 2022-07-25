@@ -15,6 +15,23 @@
 # This is a multi-stage docker file, where the first stage is used
 # for building and the second deploys the built application.
 
+### Cargo chef planner
+FROM integritee/integritee-dev:0.1.9 AS planner
+LABEL maintainer="zoltan@integritee.network"
+
+RUN cargo install cargo-chef
+
+WORKDIR /root/work/worker
+
+COPY . .
+
+RUN cargo chef prepare --recipe-path recipe-root.json
+
+WORKDIR /root/work/worker/enclave-runtime
+
+RUN cargo chef prepare --recipe-path recipe-enclave.json
+
+
 ### Builder Stage
 ##################################################
 FROM integritee/integritee-dev:0.1.9 AS builder
@@ -31,8 +48,24 @@ ENV SGX_MODE SW
 ARG WORKER_MODE_ARG
 ENV WORKER_MODE=$WORKER_MODE_ARG
 
-COPY . /root/work/worker/
 WORKDIR /root/work/worker
+
+RUN cargo install cargo-chef
+
+COPY --from=planner /root/work/worker/recipe-root.json recipe-root.json
+COPY --from=planner /root/work/worker/enclave-runtime/recipe-enclave.json enclave-runtime/recipe-enclave.json
+
+RUN rustup show
+RUN rustup target add wasm32-unknown-unknown
+RUN cargo chef cook --release --target wasm32-unknown-unknown --recipe-path recipe-root.json
+
+WORKDIR /root/work/worker/enclave-runtime
+RUN rustup show
+RUN rustup target add wasm32-unknown-unknown
+RUN cargo chef cook --release --target wasm32-unknown-unknown --recipe-path recipe-enclave.json
+
+WORKDIR /root/work/worker
+COPY . .
 
 #RUN --mount=type=cache,target=/usr/local/cargo/registry \
 #	--mount=type=cache,target=/root/work/worker/target \
