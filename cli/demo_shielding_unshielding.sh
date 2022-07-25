@@ -103,7 +103,7 @@ echo ""
 sleep 10
 
 echo "* Shield ${AMOUNTSHIELD} tokens to Alice's incognito account"
-${CLIENT} shield-funds //Alice ${ICGACCOUNTALICE} ${AMOUNTSHIELD} ${MRENCLAVE} ${WORKER1PORT}
+${CLIENT} shield-funds //Alice ${ICGACCOUNTALICE} ${AMOUNTSHIELD} ${MRENCLAVE}
 echo ""
 
 echo "* Waiting 10 seconds"
