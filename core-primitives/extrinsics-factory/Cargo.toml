@@ -16,7 +16,7 @@ itp-node-api-extensions = { path = "../node-api-extensions", default-features = 
 itp-nonce-cache = { path = "../nonce-cache", default-features = false }
 
 # integritee
-itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # sgx enabled external libraries
 thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }

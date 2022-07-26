@@ -24,21 +24,21 @@ thiserror-sgx = { package = "thiserror", optional = true, git = "https://github.
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
 
 # scs / integritee
-itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
-sidechain-block-verification = { optional = true, default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
-sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-block-verification = { optional = true, default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 [dev-dependencies]
 # local
 itp-test = { path = "../../../core-primitives/test" }
 its-consensus-aura = { path = "../aura" }
-parentchain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
-sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
+parentchain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 # substrate
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
 # integritee / scs
-sgx-externalities = { git = "https://github.com/integritee-network/sgx-runtime", branch = "sp/polkadot-v0.9.26" }
+sgx-externalities = { git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
 
 [features]
 default = ["std"]

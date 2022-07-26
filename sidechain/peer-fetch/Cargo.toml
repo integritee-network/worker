@@ -16,7 +16,7 @@ thiserror = { version = "1.0" }
 tokio = { version = "1.6.1", features = ["full"] }
 
 # scs / integritee
-sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
+sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # local
 itc-rpc-client = { path = "../../core/rpc-client" }
@@ -31,7 +31,7 @@ anyhow = "1.0.40"
 itp-node-api-extensions = { path = "../../core-primitives/node-api-extensions", features = ["mocks"] }
 itp-test = { path = "../../core-primitives/test" }
 its-storage = { path = "../storage", features = ["mocks"] }
-sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
+sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 [features]
 default = ["std"]

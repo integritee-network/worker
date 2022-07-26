@@ -23,7 +23,7 @@ itc-parentchain-light-client = { path = "../../core/parentchain/light-client" }
 itp-enclave-api-ffi = { path = "ffi" }
 itp-settings = { path = "../settings" }
 
-itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
+itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 
 [dev-dependencies]

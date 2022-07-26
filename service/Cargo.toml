@@ -53,12 +53,12 @@ its-rpc-handler = { path = "../sidechain/rpc-handler" }
 its-storage = { path = "../sidechain/storage" }
 
 # scs / integritee
-itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
-itp-utils = { git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
-my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node", branch = "sp/polkadot-v0.9.26" }
-sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
+itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+itp-utils = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node", branch = "master" }
+sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.26" }
-teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
+teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # Substrate dependencies
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
@@ -83,5 +83,5 @@ mockall = "0.11"
 # local
 itp-test = { path = "../core-primitives/test" }
 its-peer-fetch = { path = "../sidechain/peer-fetch", features = ["mocks"] }
-parentchain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
-sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
+parentchain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }

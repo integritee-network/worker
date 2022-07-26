@@ -11,7 +11,7 @@ sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teacla
 # sgx deps
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-sgx-externalities = { optional = true, default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "sp/polkadot-v0.9.26" }
+sgx-externalities = { optional = true, default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
 jsonrpc-core_sgx = { package = "jsonrpc-core", git = "https://github.com/scs/jsonrpc", branch = "no_std_v18", default-features = false, optional = true }
 
 # std-only deps
@@ -32,7 +32,7 @@ itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-storage = { path = "../storage", default-features = false }
 
 # integritee
-itp-types = { default-features = false, features = ["test"], git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
+itp-types = { default-features = false, features = ["test"], git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 [features]
 default = ["std"]

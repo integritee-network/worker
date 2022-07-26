@@ -12,8 +12,8 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_crypto_helper", default-features = false, optional = true }
 
 # integritee dependencies
-itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
-sgx-externalities = { optional = true, default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "sp/polkadot-v0.9.26" }
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sgx-externalities = { optional = true, default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
 
 # local dependencies
 ita-stf = { path = "../../app-libs/stf", default-features = false }
@@ -43,7 +43,7 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 
 # dev dependencies
 itp-test = { path = "../test", default-features = false, optional = true }
-parentchain-test = { optional = true, default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "cl/polkadot-v0.9.26" }
+parentchain-test = { optional = true, default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 [features]
 default = ["std"]
