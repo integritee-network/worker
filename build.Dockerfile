@@ -22,7 +22,6 @@ LABEL maintainer="zoltan@integritee.network"
 WORKDIR /root/work/worker
 
 RUN rustup default nightly-2022-03-10
-RUN rustup show
 RUN cargo install cargo-chef
 
 COPY . .
@@ -53,7 +52,6 @@ ENV WORKER_MODE=$WORKER_MODE_ARG
 WORKDIR /root/work/worker
 
 RUN rustup default nightly-2022-03-10
-RUN rustup show
 RUN cargo install cargo-chef
 
 COPY --from=planner /root/work/worker/recipe-root.json recipe-root.json
