@@ -50,7 +50,7 @@ jobs:
         run: >
           docker buildx build -t integritee-worker-enclave-test-${{ matrix.mode }}-${{ github.sha }}
           --target enclave-test --build-arg WORKER_MODE_ARG=${{ matrix.mode }}
-          --push --cache-from type=gha --cache-to type=gha,mode=max
+          --load --cache-from type=gha --cache-to type=gha,mode=max
           -f build.Dockerfile .
 
       - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
@@ -62,7 +62,7 @@ jobs:
         run: >
           docker buildx build -t integritee-worker-ctest-${{ matrix.mode }}-${{ github.sha }}
           --target cargo-test --build-arg WORKER_MODE_ARG=${{ matrix.mode }}
-          --push
+          --load
           -f build.Dockerfile .
 
       - name: Run Cargo Test
