@@ -49,7 +49,7 @@ jobs:
           cache-to: type=gha,mode=max
           context: .
           file: build.Dockerfile
-          push: true
+          load: true
           tags: integritee-worker-enclave-test-${{ matrix.mode }}-${{ github.sha }}
           target: enclave-test
 
@@ -67,7 +67,7 @@ jobs:
           cache-to: type=gha,mode=max
           context: .
           file: build.Dockerfile
-          push: true
+          load: true
           tags: integritee-worker-enclave-test-${{ matrix.mode }}-${{ github.sha }}
           target: cargo-test
 
