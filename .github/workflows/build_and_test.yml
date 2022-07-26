@@ -48,8 +48,11 @@ jobs:
         with:
           build-args: |
             WORKER_MODE_ARG=${{ matrix.mode }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           context: .
           file: build.Dockerfile
+          push: true
           tags: integritee-worker-enclave-test-${{ matrix.mode }}-${{ github.sha }}
           target: enclave-test
 
@@ -59,7 +62,17 @@ jobs:
       - name: Build Cargo Test Image
         env:
           DOCKER_BUILDKIT: 1
-        run: docker build -t integritee-worker-ctest-${{ matrix.mode }}-${{ github.sha }} --target cargo-test --build-arg WORKER_MODE_ARG=${{ matrix.mode }} -f build.Dockerfile .
+        uses: docker/build-push-action@v3
+        with:
+          build-args: |
+            WORKER_MODE_ARG=${{ matrix.mode }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          context: .
+          file: build.Dockerfile
+          push: true
+          tags: integritee-worker-enclave-test-${{ matrix.mode }}-${{ github.sha }}
+          target: cargo-test
 
       - name: Run Cargo Test
         run: docker run --rm integritee-worker-ctest-${{ matrix.mode }}-${{ github.sha }}
@@ -67,7 +80,17 @@ jobs:
       - name: Build Deployable Image
         env:
           DOCKER_BUILDKIT: 1
-        run: docker build --output=type=tar,dest=/tmp/integritee-worker.tar --target=deployed-worker --build-arg WORKER_MODE_ARG=${{ matrix.mode }} -f build.Dockerfile .
+        uses: docker/build-push-action@v3
+        with:
+          build-args: |
+            WORKER_MODE_ARG=${{ matrix.mode }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          context: .
+          file: build.Dockerfile
+          outputs: |
+            type=tar,dest=/tmp/integritee-worker.tar
+          target: deployed-worker
       
       - name: Copy artifacts from container
         run: |
