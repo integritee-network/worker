@@ -1,4 +1,4 @@
-name: Build, Test, Clippy
+name: Worker-Build-Test-Clippy
 
 on:
   workflow_dispatch:
