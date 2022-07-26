@@ -35,6 +35,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - uses: satackey/action-docker-layer-caching@v0.0.11
+        continue-on-error: true
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
         with:
@@ -51,7 +54,7 @@ jobs:
       - name: Build Cargo Test Image
         env:
           DOCKER_BUILDKIT: 1
-        run:  docker build -t integritee-worker-ctest-${{ matrix.mode }}-${{ github.sha }} --target cargo-test --build-arg WORKER_MODE_ARG=${{ matrix.mode }} -f build.Dockerfile .
+        run: docker build -t integritee-worker-ctest-${{ matrix.mode }}-${{ github.sha }} --target cargo-test --build-arg WORKER_MODE_ARG=${{ matrix.mode }} -f build.Dockerfile .
 
       - name: Run Cargo Test
         run: docker run --rm integritee-worker-ctest-${{ matrix.mode }}-${{ github.sha }}
