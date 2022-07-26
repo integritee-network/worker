@@ -44,9 +44,14 @@ jobs:
           buildkitd-flags: --debug
 
       - name: Build Enclave Test Image
-        env:
-          DOCKER_BUILDKIT: 1
-        run: docker build -t integritee-worker-enclave-test-${{ matrix.mode }}-${{ github.sha }} --target enclave-test --build-arg WORKER_MODE_ARG=${{ matrix.mode }} -f build.Dockerfile .
+        uses: docker/build-push-action@v3
+        with:
+          build-args: |
+            WORKER_MODE_ARG=${{ matrix.mode }}
+          context: .
+          file: build.Dockerfile
+          tags: integritee-worker-enclave-test-${{ matrix.mode }}-${{ github.sha }}
+          target: enclave-test
 
       - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
         run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-enclave-test-${{ matrix.mode }}-${{ github.sha }}
