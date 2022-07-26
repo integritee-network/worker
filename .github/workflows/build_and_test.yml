@@ -48,8 +48,8 @@ jobs:
         env:
           DOCKER_BUILDKIT: 1
         run: >
-          docker build -t integritee-worker-enclave-test-${{ matrix.mode }}-${{ github.sha }} 
-          --target enclave-test --build-arg WORKER_MODE_ARG=${{ matrix.mode }} 
+          docker buildx build -t integritee-worker-enclave-test-${{ matrix.mode }}-${{ github.sha }}
+          --target enclave-test --build-arg WORKER_MODE_ARG=${{ matrix.mode }}
           --cache-from type=gha --cache-to type=gha,mode=max
           -f build.Dockerfile .
 
@@ -60,8 +60,8 @@ jobs:
         env:
           DOCKER_BUILDKIT: 1
         run: >
-          docker build -t integritee-worker-ctest-${{ matrix.mode }}-${{ github.sha }} 
-          --target cargo-test --build-arg WORKER_MODE_ARG=${{ matrix.mode }} 
+          docker buildx build -t integritee-worker-ctest-${{ matrix.mode }}-${{ github.sha }}
+          --target cargo-test --build-arg WORKER_MODE_ARG=${{ matrix.mode }}
           -f build.Dockerfile .
 
       - name: Run Cargo Test
@@ -71,8 +71,8 @@ jobs:
         env:
           DOCKER_BUILDKIT: 1
         run: >
-          docker build --output=type=tar,dest=/tmp/integritee-worker.tar 
-          --target=deployed-worker --build-arg WORKER_MODE_ARG=${{ matrix.mode }} 
+          docker buildx build --output=type=tar,dest=/tmp/integritee-worker.tar
+          --target=deployed-worker --build-arg WORKER_MODE_ARG=${{ matrix.mode }}
           -f build.Dockerfile .
       
       - name: Copy artifacts from container
