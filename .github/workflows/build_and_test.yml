@@ -40,14 +40,18 @@ jobs:
         with:
           buildkitd-flags: --debug
 
-      - name: Set up docker layer caching
-        uses: satackey/action-docker-layer-caching@v0.0.11
-        continue-on-error: true
+#      - name: Set up docker layer caching
+#        uses: satackey/action-docker-layer-caching@v0.0.11
+#        continue-on-error: true
 
       - name: Build Enclave Test Image
         env:
           DOCKER_BUILDKIT: 1
-        run: docker build -t integritee-worker-enclave-test-${{ matrix.mode }}-${{ github.sha }} --target enclave-test --build-arg WORKER_MODE_ARG=${{ matrix.mode }} -f build.Dockerfile .
+        run: >
+          docker build -t integritee-worker-enclave-test-${{ matrix.mode }}-${{ github.sha }} 
+          --target enclave-test --build-arg WORKER_MODE_ARG=${{ matrix.mode }} 
+          --cache-from type=gha --cache-to type=gha,mode=max
+          -f build.Dockerfile .
 
       - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
         run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-enclave-test-${{ matrix.mode }}-${{ github.sha }}
@@ -55,7 +59,10 @@ jobs:
       - name: Build Cargo Test Image
         env:
           DOCKER_BUILDKIT: 1
-        run: docker build -t integritee-worker-ctest-${{ matrix.mode }}-${{ github.sha }} --target cargo-test --build-arg WORKER_MODE_ARG=${{ matrix.mode }} -f build.Dockerfile .
+        run: >
+          docker build -t integritee-worker-ctest-${{ matrix.mode }}-${{ github.sha }} 
+          --target cargo-test --build-arg WORKER_MODE_ARG=${{ matrix.mode }} 
+          -f build.Dockerfile .
 
       - name: Run Cargo Test
         run: docker run --rm integritee-worker-ctest-${{ matrix.mode }}-${{ github.sha }}
@@ -63,7 +70,10 @@ jobs:
       - name: Build Deployable Image
         env:
           DOCKER_BUILDKIT: 1
-        run: docker build --output=type=tar,dest=/tmp/integritee-worker.tar --target=deployed-worker --build-arg WORKER_MODE_ARG=${{ matrix.mode }} -f build.Dockerfile .
+        run: >
+          docker build --output=type=tar,dest=/tmp/integritee-worker.tar 
+          --target=deployed-worker --build-arg WORKER_MODE_ARG=${{ matrix.mode }} 
+          -f build.Dockerfile .
       
       - name: Copy artifacts from container
         run: |
