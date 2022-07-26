@@ -19,9 +19,11 @@
 FROM integritee/integritee-dev:0.1.9 AS planner
 LABEL maintainer="zoltan@integritee.network"
 
-RUN cargo install cargo-chef
-
 WORKDIR /root/work/worker
+
+RUN rustup default nightly-2022-03-10
+RUN rustup show
+RUN cargo install cargo-chef
 
 COPY . .
 
@@ -50,19 +52,19 @@ ENV WORKER_MODE=$WORKER_MODE_ARG
 
 WORKDIR /root/work/worker
 
+RUN rustup default nightly-2022-03-10
+RUN rustup show
 RUN cargo install cargo-chef
 
 COPY --from=planner /root/work/worker/recipe-root.json recipe-root.json
 COPY --from=planner /root/work/worker/enclave-runtime/recipe-enclave.json enclave-runtime/recipe-enclave.json
 
-RUN rustup show
 RUN rustup target add wasm32-unknown-unknown
-RUN cargo chef cook --release --target wasm32-unknown-unknown --recipe-path recipe-root.json
+RUN cargo chef cook --release --recipe-path recipe-root.json
 
 WORKDIR /root/work/worker/enclave-runtime
-RUN rustup show
 RUN rustup target add wasm32-unknown-unknown
-RUN cargo chef cook --release --target wasm32-unknown-unknown --recipe-path recipe-enclave.json
+RUN cargo chef cook --release --recipe-path recipe-enclave.json
 
 WORKDIR /root/work/worker
 COPY . .
