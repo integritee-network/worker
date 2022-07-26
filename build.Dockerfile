@@ -69,10 +69,8 @@ RUN cargo chef cook --release --recipe-path recipe-enclave.json
 WORKDIR /root/work/worker
 COPY . .
 
-#RUN --mount=type=cache,target=/usr/local/cargo/registry \
-#	--mount=type=cache,target=/root/work/worker/target \
-#	make
 RUN make
+
 
 ### Enclave Test Stage
 ##################################################
@@ -90,6 +88,7 @@ FROM builder AS cargo-test
 WORKDIR /root/work/worker
 
 CMD cargo test --release
+
 
 ### Base Runner Stage
 ##################################################
