@@ -41,7 +41,7 @@ jobs:
           buildkitd-flags: --debug
           driver: docker-container
 
-      - name: Build Complete Worker Image
+      - name: Build Worker & Run Cargo Test
         uses: docker/build-push-action@v3
         with:
           build-args: |
@@ -57,7 +57,7 @@ jobs:
       - run: docker images --all
 
       - name: Test Enclave # cargo test is not supported in the enclave, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
-        run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-${{ matrix.mode }}-${{ github.sha }}
+        run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-${{ matrix.mode }}-${{ github.sha }} test --all
 
 #      - name: Build Cargo Test Image
 #        uses: docker/build-push-action@v3
