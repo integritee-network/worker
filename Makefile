@@ -112,10 +112,12 @@ Worker_Name := bin/app
 ######## Integritee-cli settings ########
 Client_SRC_Path := cli
 STF_SRC_Path := app-libs/stf
+Client_Rust_Flags := $(CARGO_TARGET)
 Client_SRC_Files := $(shell find $(Client_SRC_Path)/ -type f -name '*.rs') $(shell find $(STF_SRC_Path)/ -type f -name '*.rs') $(shell find $(Client_SRC_Path)/ -type f -name 'Cargo.toml')
 Client_Include_Paths := -I ./$(Client_SRC_Path) -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
 Client_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(Client_Include_Paths)
 
+Client_Rust_Path := target/$(OUTPUT_PATH)
 Client_Path := bin
 Client_Binary := integritee-cli
 Client_Name := $(Client_Path)/$(Client_Binary)
@@ -149,8 +151,9 @@ Signed_RustEnclave_Name := bin/enclave.signed.so
 
 ######## Targets ########
 .PHONY: all
-all: $(Worker_Name) $(Signed_RustEnclave_Name)
+all: $(Worker_Name) $(Client_Name) $(Signed_RustEnclave_Name)
 service: $(Worker_Name)
+client: $(Client_Name)
 githooks: .git/hooks/pre-commit
 
 ######## EDL objects ########
@@ -168,13 +171,20 @@ $(Worker_Enclave_u_Object): service/Enclave_u.o
 	$(AR) rcsD $@ $^
 	cp $(Worker_Enclave_u_Object) ./lib
 
-$(Worker_Name): $(Worker_Enclave_u_Object) $(Worker_SRC_Files) $(Client_SRC_Files)
+$(Worker_Name): $(Worker_Enclave_u_Object) $(Worker_SRC_Files)
 	@echo
-	@echo "Building the integritee-service and integritee-cli"
-	@SGX_SDK=$(SGX_SDK) SGX_MODE=$(SGX_MODE) cargo build $(Worker_Rust_Flags)
+	@echo "Building the integritee-service"
+	@SGX_SDK=$(SGX_SDK) SGX_MODE=$(SGX_MODE) cargo build -p integritee-service $(Worker_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	cp $(Worker_Rust_Path)/integritee-service ./bin
-	cp $(Worker_Rust_Path)/$(Client_Binary) ./bin
+
+######## Integritee-client objects ########
+$(Client_Name): $(Client_SRC_Files)
+	@echo
+	@echo "Building the integritee-cli"
+	@cargo build -p integritee-cli $(Client_Rust_Flags)
+	@echo "Cargo  =>  $@"
+	cp $(Client_Rust_Path)/$(Client_Binary) ./bin
 
 ######## Enclave objects ########
 enclave-runtime/Enclave_t.o: $(Enclave_EDL_Files)
