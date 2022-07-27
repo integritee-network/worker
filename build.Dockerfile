@@ -15,14 +15,16 @@
 # This is a multi-stage docker file, where the first stage is used
 # for building and the second deploys the built application.
 
+FROM integritee/integritee-dev:0.1.9 AS base-dev
+
+RUN cargo install cargo-chef
+
+
 ### Cargo chef planner
-FROM integritee/integritee-dev:0.1.9 AS planner
+FROM base-dev AS planner
 LABEL maintainer="zoltan@integritee.network"
 
 WORKDIR /root/work/worker
-
-RUN rustup default nightly-2022-03-10
-RUN cargo install cargo-chef
 
 COPY . .
 
@@ -35,7 +37,7 @@ RUN cargo chef prepare --recipe-path recipe-enclave.json
 
 ### Builder Stage
 ##################################################
-FROM integritee/integritee-dev:0.1.9 AS builder
+FROM base-dev AS builder
 LABEL maintainer="zoltan@integritee.network"
 
 # set environment variables
@@ -51,17 +53,15 @@ ENV WORKER_MODE=$WORKER_MODE_ARG
 
 WORKDIR /root/work/worker
 
-RUN rustup default nightly-2022-03-10
-RUN cargo install cargo-chef
-
 COPY --from=planner /root/work/worker/recipe-root.json recipe-root.json
 COPY --from=planner /root/work/worker/enclave-runtime/recipe-enclave.json enclave-runtime/recipe-enclave.json
 
-RUN rustup target add wasm32-unknown-unknown
+COPY rust-toolchain.toml .
+COPY enclave-runtime/rust-toolchain.toml enclave-runtime/
+
 RUN cargo chef cook --release --recipe-path recipe-root.json
 
 WORKDIR /root/work/worker/enclave-runtime
-RUN rustup target add wasm32-unknown-unknown
 RUN cargo chef cook --release --recipe-path recipe-enclave.json
 
 WORKDIR /root/work/worker
