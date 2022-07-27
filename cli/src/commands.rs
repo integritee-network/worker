@@ -36,8 +36,8 @@ use std::{
 	time::{Duration, UNIX_EPOCH},
 };
 use substrate_api_client::{
-	compose_extrinsic, compose_extrinsic_offline, utils::FromHexString, ExtrinsicParams,
-	GenericAddress, Metadata, UncheckedExtrinsicV4, XtStatus,
+	compose_extrinsic, compose_extrinsic_offline, utils::FromHexString, GenericAddress, Metadata,
+	UncheckedExtrinsicV4, XtStatus,
 };
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
 

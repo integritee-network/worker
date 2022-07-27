@@ -27,11 +27,11 @@ itp-stf-state-handler = { path = "../../core-primitives/stf-state-handler", defa
 itp-top-pool-author = { path = "../../core-primitives/top-pool-author", default-features = false }
 
 # integritee
-itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "master", default-features = false }
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # Substrate dependencies
-sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24", features = ["full_crypto"] }
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
 
 # no-std compatible libraries
 log = { version = "0.4", default-features = false }

@@ -31,15 +31,15 @@ futures = { version = "0.3.8", optional = true }
 bs58 = { version = "0.4.0", default-features = false, features = ["alloc"] }
 codec  = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 log = { version = "0.4", default-features = false }
-sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
-#beefy-merkle-tree = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24", features = "keccak" }
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+#beefy-merkle-tree = { default-features = false, features = "keccak", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
 #remove as soon as we can import beefy-merkle-tree:
 tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 
 # scs/integritee
 itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.24", default-features = false }
+substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.26", default-features = false }
 
 [dev-dependencies]
 env_logger = "0.9.0"

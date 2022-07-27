@@ -17,7 +17,7 @@ itp-types = { git = "https://github.com/integritee-network/pallets.git", branch 
 sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # Substrate dependencies
-sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
 
 [dev-dependencies]
 # crate.io
