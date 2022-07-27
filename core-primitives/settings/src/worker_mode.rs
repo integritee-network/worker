@@ -26,7 +26,7 @@ pub trait ProvideWorkerMode {
 	fn worker_mode() -> WorkerMode;
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Copy, Clone)]
 pub struct WorkerModeProvider;
 
 #[cfg(feature = "offchain-worker")]
