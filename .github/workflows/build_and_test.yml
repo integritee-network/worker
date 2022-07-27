@@ -51,7 +51,7 @@ jobs:
           context: .
           file: build.Dockerfile
           load: true # Required in order to make the resulting image available in `docker images`, so we can use it in a subsequent `docker run`.
-          tags: integritee-worker-enclave-test-${{ matrix.mode }}-${{ github.sha }}
+          tags: integritee-worker-enclave-test-${{ matrix.mode }}-${{ github.sha }}:latest
           target: enclave-test
 
       - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
@@ -69,7 +69,7 @@ jobs:
           context: .
           file: build.Dockerfile
           load: true
-          tags: integritee-worker-enclave-test-${{ matrix.mode }}-${{ github.sha }}
+          tags: integritee-worker-enclave-test-${{ matrix.mode }}-${{ github.sha }}:latest
           target: cargo-test
 
       - name: Run Cargo Test
