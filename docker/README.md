@@ -31,6 +31,16 @@ and then run with
 docker-compose -f docker-compose.yml -f integration-test.yml up --exit-code-from sidechain-integration-test
 ```
 
+## Run the benchmarks
+Build with
+```
+COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose -f docker-compose.yml -f benchmark.yml build
+```
+and then run with
+```
+docker-compose -f docker-compose.yml -f benchmark.yml up --exit-code-from sidechain-benchmark
+```
+
 ## Run the fork simulator
 The fork simulation uses `pumba` which in turn uses the Linux traffic control (TC). This is only available on Linux hosts, not on Windows with WSL unfortunately.
 Build the docker-compose setup with
