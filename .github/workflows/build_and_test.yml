@@ -41,7 +41,7 @@ jobs:
           buildkitd-flags: --debug
           driver: docker-container
 
-      - name: Build Enclave Test Image
+      - name: Build Complete Worker Image
         uses: docker/build-push-action@v3
         with:
           build-args: |
@@ -51,54 +51,52 @@ jobs:
           context: .
           file: build.Dockerfile
           load: true # Required in order to make the resulting image available in `docker images`, so we can use it in a subsequent `docker run`.
-          tags: integritee-worker-enclave-test-${{ matrix.mode }}-${{ github.sha }}:latest
-          target: enclave-test
-
-      - run: docker images --all
-
-      - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
-        run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-enclave-test-${{ matrix.mode }}-${{ github.sha }}
-
-      - name: Build Cargo Test Image
-        env:
-          DOCKER_BUILDKIT: 1
-        uses: docker/build-push-action@v3
-        with:
-          build-args: |
-            WORKER_MODE_ARG=${{ matrix.mode }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          context: .
-          file: build.Dockerfile
-          load: true
-          tags: integritee-worker-ctest-${{ matrix.mode }}-${{ github.sha }}:latest
-          target: cargo-test
-
-      - run: docker images --all
-
-      - name: Run Cargo Test
-        run: docker run --rm integritee-worker-ctest-${{ matrix.mode }}-${{ github.sha }}
-
-      - name: Build Deployable Image
-        env:
-          DOCKER_BUILDKIT: 1
-        uses: docker/build-push-action@v3
-        with:
-          build-args: |
-            WORKER_MODE_ARG=${{ matrix.mode }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          context: .
-          file: build.Dockerfile
-          outputs: |
-            type=tar,dest=/tmp/integritee-worker.tar
+          tags: integritee-worker-${{ matrix.mode }}-${{ github.sha }}
           target: deployed-worker
+
+      - run: docker images --all
+
+      - name: Test Enclave # cargo test is not supported in the enclave, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
+        run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-${{ matrix.mode }}-${{ github.sha }}
+
+#      - name: Build Cargo Test Image
+#        uses: docker/build-push-action@v3
+#        with:
+#          build-args: |
+#            WORKER_MODE_ARG=${{ matrix.mode }}
+#          cache-from: type=gha
+#          cache-to: type=gha,mode=max
+#          context: .
+#          file: build.Dockerfile
+#          load: true
+#          tags: integritee-worker-ctest-${{ matrix.mode }}-${{ github.sha }}:latest
+#          target: cargo-test
+
+#      - run: docker images --all
+#
+#      - name: Run Cargo Test
+#        run: docker run --rm integritee-worker-ctest-${{ matrix.mode }}-${{ github.sha }}
+
+#      - name: Build Deployable Image
+#        env:
+#          DOCKER_BUILDKIT: 1
+#        uses: docker/build-push-action@v3
+#        with:
+#          build-args: |
+#            WORKER_MODE_ARG=${{ matrix.mode }}
+#          cache-from: type=gha
+#          cache-to: type=gha,mode=max
+#          context: .
+#          file: build.Dockerfile
+#          outputs: |
+#            type=tar,dest=/tmp/integritee-worker.tar
+#          target: deployed-worker
       
       - name: Copy artifacts from container
         run: |
-          docker cp ${{ env.BUILD_CONTAINER_NAME }}:/root/work/worker/bin/${{ env.WORKER_BIN }} .
-          docker cp ${{ env.BUILD_CONTAINER_NAME }}:/root/work/worker/bin/${{ env.CLIENT_BIN }} .
-          docker cp ${{ env.BUILD_CONTAINER_NAME }}:/root/work/worker/bin/${{ env.ENCLAVE_BIN }} .
+          docker cp ${{ env.BUILD_CONTAINER_NAME }}:/usr/local/bin/${{ env.WORKER_BIN }} .
+          docker cp ${{ env.BUILD_CONTAINER_NAME }}:/usr/local/bin/${{ env.CLIENT_BIN }} .
+          docker cp ${{ env.BUILD_CONTAINER_NAME }}:/usr/local/bin/${{ env.ENCLAVE_BIN }} .
 
       - name: Upload worker
         uses: actions/upload-artifact@v2
@@ -118,11 +116,11 @@ jobs:
           name: enclave-signed-${{ matrix.mode }}-${{ github.sha }}
           path: ${{ env.ENCLAVE_BIN }}
 
-      - name: Upload deployable image
-        uses: actions/upload-artifact@v2
-        with:
-          name: integritee-worker-${{ matrix.mode }}-image-${{ github.sha }}
-          path: /tmp/integritee-worker.tar
+#      - name: Upload deployable image
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: integritee-worker-${{ matrix.mode }}-image-${{ github.sha }}
+#          path: /tmp/integritee-worker.tar
 
   clippy:
     runs-on: ubuntu-latest

@@ -69,23 +69,25 @@ COPY . .
 
 RUN make
 
+RUN cargo test --release
 
-### Enclave Test Stage
-##################################################
-FROM builder AS enclave-test
 
-WORKDIR /root/work/worker/bin
-
-CMD ./integritee-service test --all
+#### Enclave Test Stage
+###################################################
+#FROM builder AS enclave-test
+#
+#WORKDIR /root/work/worker/bin
+#
+#CMD ./integritee-service test --all
 
 
 ### Cargo Test Stage
 ##################################################
-FROM builder AS cargo-test
-
-WORKDIR /root/work/worker
-
-CMD cargo test --release
+#FROM builder AS cargo-test
+#
+#WORKDIR /root/work/worker
+#
+#CMD cargo test --release
 
 
 ### Base Runner Stage
