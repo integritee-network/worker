@@ -37,4 +37,4 @@ its-state = { path = "../state", default-features = false }
 its-top-pool-executor = { path = "../top-pool-executor", default-features = false }
 its-validateer-fetch = { path = "../validateer-fetch", default-features = false }
 
-sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.9.0-polkadot-v0.9.26" }

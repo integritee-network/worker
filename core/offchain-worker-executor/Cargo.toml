@@ -27,7 +27,7 @@ itp-stf-state-handler = { path = "../../core-primitives/stf-state-handler", defa
 itp-top-pool-author = { path = "../../core-primitives/top-pool-author", default-features = false }
 
 # integritee
-itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.9.0-polkadot-v0.9.26" }
 
 # Substrate dependencies
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }

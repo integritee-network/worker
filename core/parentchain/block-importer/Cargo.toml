@@ -19,7 +19,7 @@ itp-settings = { path = "../../../core-primitives/settings" }
 itp-stf-executor = { path = "../../../core-primitives/stf-executor", default-features = false }
 
 # integritee
-itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.9.0-polkadot-v0.9.26" }
 
 # sgx enabled external libraries
 thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }

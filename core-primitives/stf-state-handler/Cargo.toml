@@ -27,8 +27,8 @@ rust-base58 = { package = "rust-base58", version = "0.0.4", optional = true }
 thiserror = { version = "1.0", optional = true }
 
 # scs / integritee
-itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-sgx-externalities = { optional = true, default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.9.0-polkadot-v0.9.26" }
+sgx-externalities = { optional = true, default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "sdk-v0.9.0-polkadot-v0.9.26" }
 
 # no-std dependencies
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }

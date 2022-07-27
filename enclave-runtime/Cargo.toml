@@ -54,16 +54,16 @@ hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 ipfs-unixfs = { default-features = false, git = "https://github.com/whalelephant/rust-ipfs", branch = "w-nstd" }
 
 # scs / integritee
-itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-itp-utils = { default-features = false, features = ["sgx"], git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.9.0-polkadot-v0.9.26" }
+itp-utils = { default-features = false, features = ["sgx"], git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.9.0-polkadot-v0.9.26" }
 jsonrpc-core = { default-features = false, git = "https://github.com/scs/jsonrpc", branch = "no_std_v18" }
-sgx-externalities = { default-features = false, features = ["sgx"], git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
-sgx-runtime = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master"}
-sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-sp-io = { optional = true, default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"], git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
+sgx-externalities = { default-features = false, features = ["sgx"], git = "https://github.com/integritee-network/sgx-runtime", branch = "sdk-v0.9.0-polkadot-v0.9.26" }
+sgx-runtime = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "sdk-v0.9.0-polkadot-v0.9.26"}
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.9.0-polkadot-v0.9.26" }
+sp-io = { optional = true, default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"], git = "https://github.com/integritee-network/sgx-runtime", branch = "sdk-v0.9.0-polkadot-v0.9.26" }
 substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.26" }
-parentchain-test = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-sidechain-block-verification = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master"}
+parentchain-test = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.9.0-polkadot-v0.9.26" }
+sidechain-block-verification = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.9.0-polkadot-v0.9.26"}
 
 # mesalock
 linked-hash-map = { git = "https://github.com/mesalock-linux/linked-hash-map-sgx" }
@@ -134,7 +134,7 @@ log = { git = "https://github.com/integritee-network/log-sgx" }
 log = { git = "https://github.com/integritee-network/log-sgx"}
 
 [patch."https://github.com/paritytech/substrate"]
-sp-io = { git = "https://github.com/integritee-network/sgx-runtime", branch = "master"}
+sp-io = { git = "https://github.com/integritee-network/sgx-runtime", branch = "sdk-v0.9.0-polkadot-v0.9.26"}
 #sp-io = { path = "../../sgx-runtime/substrate-sgx/sp-io"}
 
 #[patch."https://github.com/integritee-network/sgx-runtime"]

@@ -38,7 +38,7 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 
 # scs/integritee
-itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.9.0-polkadot-v0.9.26" }
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.26", default-features = false }
 
 [dev-dependencies]
@@ -47,7 +47,7 @@ itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", features = ["mo
 itp-stf-executor = { path = "../../../core-primitives/stf-executor", features = ["mocks"] }
 itp-test = { path = "../../../core-primitives/test" }
 itp-top-pool-author = { path = "../../../core-primitives/top-pool-author", features = ["mocks"] }
-parentchain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+parentchain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.9.0-polkadot-v0.9.26" }
 
 [features]
 default = ["std"]

@@ -14,8 +14,8 @@ tokio = { version = "1.6.1", features = ["full"] }
 parity-scale-codec = "3.0.0"
 
 # integritee deps
-itp-utils = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+itp-utils = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.9.0-polkadot-v0.9.26" }
+sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.9.0-polkadot-v0.9.26" }
 
 # local
 itp-enclave-api = { path = "../../core-primitives/enclave-api" }
@@ -31,4 +31,4 @@ std = []
 [dev-dependencies]
 env_logger = { version = "*" }
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
-sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.9.0-polkadot-v0.9.26" }

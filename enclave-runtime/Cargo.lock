@@ -1756,7 +1756,7 @@ dependencies = [
 [[package]]
 name = "itp-types"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#bd804ba63d4944952075b5fb8798066b8af87ab6"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.9.0-polkadot-v0.9.26#170582c91c79cd5e2489e3e958aa27e26fce8bbc"
 dependencies = [
  "chrono 0.4.19",
  "parity-scale-codec",
@@ -1773,7 +1773,7 @@ dependencies = [
 [[package]]
 name = "itp-utils"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#bd804ba63d4944952075b5fb8798066b8af87ab6"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.9.0-polkadot-v0.9.26#170582c91c79cd5e2489e3e958aa27e26fce8bbc"
 dependencies = [
  "frame-support",
  "hex",
@@ -2390,7 +2390,7 @@ dependencies = [
 [[package]]
 name = "pallet-parentchain"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#bd804ba63d4944952075b5fb8798066b8af87ab6"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.9.0-polkadot-v0.9.26#170582c91c79cd5e2489e3e958aa27e26fce8bbc"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -2496,7 +2496,7 @@ dependencies = [
 [[package]]
 name = "parentchain-test"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#bd804ba63d4944952075b5fb8798066b8af87ab6"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.9.0-polkadot-v0.9.26#170582c91c79cd5e2489e3e958aa27e26fce8bbc"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3172,8 +3172,8 @@ dependencies = [
 
 [[package]]
 name = "sgx-externalities"
-version = "0.4.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#400f4058675b94428e183f839518636faa72164e"
+version = "0.9.0"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=sdk-v0.9.0-polkadot-v0.9.26#b6ecea4605181422ad63f851385b045b85b07a7c"
 dependencies = [
  "derive_more",
  "environmental",
@@ -3187,8 +3187,8 @@ dependencies = [
 
 [[package]]
 name = "sgx-runtime"
-version = "0.8.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#400f4058675b94428e183f839518636faa72164e"
+version = "0.9.0"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=sdk-v0.9.0-polkadot-v0.9.26#b6ecea4605181422ad63f851385b045b85b07a7c"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -3473,7 +3473,7 @@ dependencies = [
 [[package]]
 name = "sidechain-block-verification"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#bd804ba63d4944952075b5fb8798066b8af87ab6"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.9.0-polkadot-v0.9.26#170582c91c79cd5e2489e3e958aa27e26fce8bbc"
 dependencies = [
  "frame-support",
  "itp-types",
@@ -3490,7 +3490,7 @@ dependencies = [
 [[package]]
 name = "sidechain-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#bd804ba63d4944952075b5fb8798066b8af87ab6"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.9.0-polkadot-v0.9.26#170582c91c79cd5e2489e3e958aa27e26fce8bbc"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -3750,7 +3750,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "6.0.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#400f4058675b94428e183f839518636faa72164e"
+source = "git+https://github.com/integritee-network/sgx-runtime?branch=sdk-v0.9.0-polkadot-v0.9.26#b6ecea4605181422ad63f851385b045b85b07a7c"
 dependencies = [
  "environmental",
  "hash-db",
