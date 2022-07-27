@@ -1,6 +1,6 @@
 [package]
 name = "its-top-pool-executor"
-version = "0.8.0"
+version = "0.9.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 resolver = "2"
