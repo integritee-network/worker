@@ -49,8 +49,7 @@ jobs:
           cache-to: type=gha,mode=max
           context: .
           file: build.Dockerfile
-          outputs: |
-            type=image
+          load: true
           tags: integritee-worker-enclave-test-${{ matrix.mode }}-${{ github.sha }}
           target: enclave-test
 
