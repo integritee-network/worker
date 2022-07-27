@@ -1,0 +1,19 @@
+version: "3.4"
+services:
+  demo-direct-call:
+    image: integritee-cli:dev
+    container_name: integritee-direct-call-demo
+    build:
+      context: ..
+      dockerfile: build.Dockerfile
+      target: deployed-client
+    depends_on: ['integritee-node', 'integritee-worker-1', 'integritee-worker-2']
+    networks:
+      - integritee-test-network
+    entrypoint: "dockerize -wait http://integritee-worker-2:4646/is_initialized -timeout 250s    
+      /usr/local/worker-cli/demo_direct_call_2_workers.sh -p 9912 -u ws://integritee-node 
+      -V wss://integritee-worker-1 -A 2011 -W wss://integritee-worker-2 -B 2012 -C /usr/local/bin/integritee-cli 2>&1"
+    restart: "no"
+networks:
+  integritee-test-network:
+    driver: bridge
