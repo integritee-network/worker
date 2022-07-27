@@ -54,6 +54,8 @@ jobs:
           tags: integritee-worker-enclave-test-${{ matrix.mode }}-${{ github.sha }}:latest
           target: enclave-test
 
+      - run: docker images --all
+
       - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
         run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-enclave-test-${{ matrix.mode }}-${{ github.sha }}
 
@@ -71,6 +73,8 @@ jobs:
           load: true
           tags: integritee-worker-ctest-${{ matrix.mode }}-${{ github.sha }}:latest
           target: cargo-test
+
+      - run: docker images --all
 
       - name: Run Cargo Test
         run: docker run --rm integritee-worker-ctest-${{ matrix.mode }}-${{ github.sha }}
