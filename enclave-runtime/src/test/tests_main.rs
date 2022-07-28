@@ -169,7 +169,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		tls_ra::tests::test_tls_ra_server_client_networking,
 		// evm pallet tests
 		evm_pallet_tests::test_evm_call,
-		evm_pallet_tests::test_evm_create,
+		evm_pallet_tests::test_evm_counter,
 
 		// these unit test (?) need an ipfs node running..
 		// ipfs::test_creates_ipfs_content_struct_works,
