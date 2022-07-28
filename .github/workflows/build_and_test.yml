@@ -144,17 +144,25 @@ jobs:
           name: integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar
           path: integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar
 
-      - name: Load Worker Image
+      - name: Download CLI client Image
+        uses: actions/download-artifact@v2
+        with:
+          name: integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar
+          path: integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar
+
+      - name: Load Worker & Client Images
         run: |
           docker load --input integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar
+          docker load --input integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar
           docker images --all
           docker tag integritee-worker:dev integritee-worker-${{ matrix.mode }}-${{ github.sha }}
+          docker tag integritee-cli:dev integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}
           docker images --all
 
       - name: Integration Test ${{ matrix.test }}-${{ matrix.mode }}
         run: |
           cd docker/
-          docker-compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml up --exit-code-from ${{ matrix.demo_name }}
+          docker-compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml up --no-build --exit-code-from ${{ matrix.demo_name }}
 
       - name: Upload logs
         continue-on-error: true
