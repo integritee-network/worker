@@ -108,7 +108,8 @@ mod worker_peers_updater;
 /// how many blocks will be synced before storing the chain db to disk
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub type EnclaveWorker = Worker<Config, NodeApiFactory, Enclave, InitializationHandler>;
+pub type EnclaveWorker =
+	Worker<Config, NodeApiFactory, Enclave, InitializationHandler<WorkerModeProvider>>;
 
 fn main() {
 	// Setup logging
@@ -128,7 +129,7 @@ fn main() {
 	#[cfg(not(feature = "production"))]
 	info!("*** Starting service in SGX debug mode");
 
-	println!("*** Running worker in mode: {:?} \n", WorkerModeProvider::worker_mode());
+	info!("*** Running worker in mode: {:?} \n", WorkerModeProvider::worker_mode());
 
 	let clean_reset = matches.is_present("clean-reset");
 	if clean_reset {
@@ -506,7 +507,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 /// Start polling loop to wait until we have a worker for a shard registered on
 /// the parentchain (TEEREX WorkerForShard). This is the pre-requisite to be
-/// considered initialized and ready for the next worker to start.
+/// considered initialized and ready for the next worker to start (in sidechain mode only).
 fn spawn_worker_for_shard_polling<InitializationHandler>(
 	shard: &ShardIdentifier,
 	node_api: ParentchainApi,

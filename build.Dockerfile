@@ -54,7 +54,7 @@ FROM builder AS cargo-test
 
 WORKDIR /root/work/worker
 
-CMD cargo test
+CMD cargo test --release
 
 ### Base Runner Stage
 ##################################################
