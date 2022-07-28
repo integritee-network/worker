@@ -46,6 +46,7 @@ jobs:
         with:
           build-args: |
             WORKER_MODE_ARG=${{ matrix.mode }}
+          cache-to: type=local,dest=/tmp/docker/cache,mode=max
           context: .
           file: build.Dockerfile
           load: true # Required in order to make the resulting image available in `docker images`, so we can use it in a subsequent `docker run`.
@@ -57,6 +58,7 @@ jobs:
         with:
           build-args: |
             WORKER_MODE_ARG=${{ matrix.mode }}
+          cache-from: type=local,src=/tmp/docker/cache
           context: .
           file: build.Dockerfile
           outputs: |
