@@ -129,7 +129,7 @@ fn main() {
 	#[cfg(not(feature = "production"))]
 	info!("*** Starting service in SGX debug mode");
 
-	println!("*** Running worker in mode: {:?} \n", WorkerModeProvider::worker_mode());
+	info!("*** Running worker in mode: {:?} \n", WorkerModeProvider::worker_mode());
 
 	let clean_reset = matches.is_present("clean-reset");
 	if clean_reset {
