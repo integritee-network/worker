@@ -1,6 +1,6 @@
 [package]
 name = "its-peer-fetch"
-version = "0.8.0"
+version = "0.9.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 resolver = "2"
@@ -16,7 +16,7 @@ thiserror = { version = "1.0" }
 tokio = { version = "1.6.1", features = ["full"] }
 
 # scs / integritee
-sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.9.0-polkadot-v0.9.26" }
 
 # local
 itc-rpc-client = { path = "../../core/rpc-client" }
@@ -31,7 +31,7 @@ anyhow = "1.0.40"
 itp-node-api-extensions = { path = "../../core-primitives/node-api-extensions", features = ["mocks"] }
 itp-test = { path = "../../core-primitives/test" }
 its-storage = { path = "../storage", features = ["mocks"] }
-sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.9.0-polkadot-v0.9.26" }
 
 [features]
 default = ["std"]

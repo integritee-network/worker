@@ -1,6 +1,6 @@
 [package]
 name = "itp-node-api-extensions"
-version = "0.8.0"
+version = "0.9.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 
@@ -25,7 +25,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", default-feat
 substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.26" }
 
 # integritee
-itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.9.0-polkadot-v0.9.26" }
 
 [features]
 default = ["std"]

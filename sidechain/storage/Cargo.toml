@@ -1,6 +1,6 @@
 [package]
 name = "its-storage"
-version = "0.8.0"
+version = "0.9.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 
@@ -13,8 +13,8 @@ rocksdb = "0.17.0"
 thiserror = "1.0"
 
 # integritee
-itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.9.0-polkadot-v0.9.26" }
+sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.9.0-polkadot-v0.9.26" }
 
 # Substrate dependencies
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
@@ -24,7 +24,7 @@ sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polka
 mockall = "0.11"
 temp-dir = "0.1"
 # local
-sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.9.0-polkadot-v0.9.26" }
 itp-time-utils = { path = "../../core-primitives/time-utils" }
 
 [features]

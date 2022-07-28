@@ -1,6 +1,6 @@
 [package]
 name = "itp-ocall-api"
-version = "0.8.0"
+version = "0.9.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 resolver = "2"
@@ -21,7 +21,7 @@ sp-std = { default-features = false, git = "https://github.com/paritytech/substr
 itp-storage = { path = "../storage", default-features = false }
 
 # integritee
-itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.9.0-polkadot-v0.9.26" }
 
 [features]
 default = ["std"]
