@@ -5,14 +5,22 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 
 [dependencies]
-# crates.io
-
-# scs
-substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.26" }
+itp-api-client-extensions = { optional = true, path = "api-client-extensions" }
+itp-api-client-types = { optional = true, path = "api-client-types" }
+itp-node-api-metadata = { default-features = false, path = "metadata" }
+itp-node-api-metadata-provider = { default-features = false, path = "metadata-provider" }
 
 [features]
 default = ["std"]
 std = [
-    "substrate-api-client/std",
-    "substrate-api-client/ws-client",
+    "itp-api-client-extensions",
+    "itp-api-client-types/std",
+    "itp-node-api-metadata/std",
+    "itp-node-api-metadata-provider/std",
+]
+sgx = [
+    "itp-node-api-metadata-provider/sgx",
+]
+mocks = [
+    "itp-node-api-metadata/mocks"
 ]
