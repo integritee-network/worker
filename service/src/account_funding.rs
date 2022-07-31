@@ -17,9 +17,7 @@
 
 use crate::error::{Error, ServiceResult};
 use codec::Encode;
-use itp_node_api_extensions::{
-	api_client_extensions::AccountApi, api_client_types::ParentchainApi,
-};
+use itp_node_api_extensions::api_client::{AccountApi, ParentchainApi};
 use itp_settings::worker::{
 	EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS, REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS,
 };

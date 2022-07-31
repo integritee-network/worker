@@ -30,7 +30,7 @@ use ita_stf::{
 	ParentchainHeader, ShardIdentifier, StateTypeDiff, Stf, TrustedGetterSigned, TrustedOperation,
 };
 use itp_node_api_extensions::metadata::{
-	node_metadata_provider::AccessNodeMetadata, pallet_teerex::TeerexCallIndexes,
+	pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata,
 };
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};

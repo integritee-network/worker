@@ -81,6 +81,7 @@ sgx = [
     "thiserror_sgx",
 ]
 test = [
+    "itp-node-api-extensions/mocks",
     "itp-test",
     "sgx-crypto-helper",
     "parentchain-test",

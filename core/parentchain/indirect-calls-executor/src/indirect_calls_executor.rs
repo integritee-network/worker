@@ -28,7 +28,7 @@ use codec::{Decode, Encode};
 use futures::executor;
 use ita_stf::{AccountId, TrustedCall, TrustedOperation};
 use itp_node_api_extensions::metadata::{
-	node_metadata_provider::AccessNodeMetadata, pallet_teerex::TeerexCallIndexes,
+	pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata,
 };
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
 use itp_stf_executor::traits::StfEnclaveSigning;

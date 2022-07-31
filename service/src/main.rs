@@ -54,8 +54,7 @@ use itp_enclave_api::{
 	Enclave,
 };
 use itp_node_api_extensions::{
-	api_client_extensions::{AccountApi, ChainApi, PalletTeerexApi},
-	api_client_types::ParentchainApi,
+	api_client::{AccountApi, ChainApi, PalletTeerexApi, ParentchainApi},
 	metadata::NodeMetadata,
 	node_api_factory::{CreateNodeApi, NodeApiFactory},
 };

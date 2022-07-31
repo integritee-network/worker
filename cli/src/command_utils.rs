@@ -17,7 +17,7 @@
 
 use crate::Cli;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
-use itp_node_api_extensions::api_client_types::ParentchainApi;
+use itp_node_api_extensions::api_client::ParentchainApi;
 use itp_types::ParentchainExtrinsicParams;
 use log::*;
 use my_node_runtime::{AccountId, Signature};
