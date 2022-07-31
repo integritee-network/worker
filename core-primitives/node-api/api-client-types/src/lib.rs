@@ -3,6 +3,8 @@
 //! For example, you need to update this if you have a signed extensions in your node that
 //! is different from the integritee-node, or if you use the `pallet_asset_tx_payment`.
 
+#![cfg_attr(not(feature = "std"), no_std)]
+
 use substrate_api_client::{
 	PlainTip, PlainTipExtrinsicParams, PlainTipExtrinsicParamsBuilder, SubstrateDefaultSignedExtra,
 	UncheckedExtrinsicV4,

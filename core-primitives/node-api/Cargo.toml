@@ -9,6 +9,7 @@ itp-api-client-extensions = { optional = true, path = "api-client-extensions" }
 itp-api-client-types = { default-features = false, path = "api-client-types" }
 itp-node-api-factory = { optional = true, path = "factory" }
 itp-node-api-metadata = { default-features = false, path = "metadata" }
+itp-node-api-metadata-error = { default-features = false, path = "metadata-error" }
 itp-node-api-metadata-provider = { default-features = false, path = "metadata-provider" }
 
 [features]
@@ -18,9 +19,11 @@ std = [
     "itp-api-client-types/std",
     "itp-node-api-factory",
     "itp-node-api-metadata/std",
+    "itp-node-api-metadata-error/std",
     "itp-node-api-metadata-provider/std",
 ]
 sgx = [
+    "itp-node-api-metadata-error/sgx",
     "itp-node-api-metadata-provider/sgx",
 ]
 mocks = [
