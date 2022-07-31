@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "app-libs/node-api-types",
     "app-libs/stf",
     "cli",
     "core/direct-rpc-server",
