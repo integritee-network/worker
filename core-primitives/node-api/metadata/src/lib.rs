@@ -19,10 +19,12 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use crate::error::{Error, Result};
+use crate::error::Result;
 use codec::{Decode, Encode};
 use sp_core::storage::StorageKey;
 use substrate_api_client::{Metadata, MetadataError};
+
+pub use crate::error::Error;
 
 pub mod error;
 pub mod pallet_sidechain;

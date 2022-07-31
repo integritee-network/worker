@@ -2819,6 +2819,8 @@ version = "0.8.0"
 dependencies = [
  "itp-node-api-metadata",
  "sgx_tstd",
+ "thiserror 1.0.31",
+ "thiserror 1.0.9",
 ]
 
 [[package]]

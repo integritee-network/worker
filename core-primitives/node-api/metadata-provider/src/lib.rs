@@ -32,7 +32,9 @@ use std::sync::SgxRwLock as RwLock;
 #[cfg(feature = "std")]
 use std::sync::RwLock;
 
-use crate::error::{Error, Result};
+pub use crate::error::Error;
+
+use crate::error::Result;
 use std::ops::Deref;
 
 pub mod error;

@@ -33,6 +33,5 @@ pub mod api_client {
 
 pub mod metadata {
 	pub use itp_node_api_metadata::*;
-	pub use itp_node_api_metadata_error::*;
 	pub use itp_node_api_metadata_provider as provider;
 }
