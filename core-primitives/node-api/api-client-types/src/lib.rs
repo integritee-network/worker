@@ -1,7 +1,8 @@
 //! Contains type definitions to talk to the node.
-///
-/// For example, you need to update this if you have a signed extensions in your node that
-/// is different from the integritee-node, or if you use the `pallet_asset_tx_payment`.
+//!
+//! For example, you need to update this if you have a signed extensions in your node that
+//! is different from the integritee-node, or if you use the `pallet_asset_tx_payment`.
+
 use substrate_api_client::{
 	PlainTip, PlainTipExtrinsicParams, PlainTipExtrinsicParamsBuilder, SubstrateDefaultSignedExtra,
 	UncheckedExtrinsicV4,
@@ -23,7 +24,7 @@ pub type ParentchainUncheckedExtrinsic<Call> =
 	UncheckedExtrinsicV4<Call, SubstrateDefaultSignedExtra<PlainTip>>;
 
 #[cfg(feature = "std")]
-pub use api::*;
+pub use api::ParentchainApi;
 
 #[cfg(feature = "std")]
 mod api {
