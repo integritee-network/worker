@@ -34,8 +34,8 @@ use ita_stf::{
 };
 use itc_parentchain::indirect_calls_executor::{ExecuteIndirectCalls, IndirectCallsExecutor};
 use itp_node_api_extensions::metadata::{
-	metadata_mocks::NodeMetadataMock, node_metadata_provider::NodeMetadataRepository,
-	pallet_teerex::TeerexCallIndexes,
+	metadata_mocks::NodeMetadataMock, pallet_teerex::TeerexCallIndexes,
+	provider::NodeMetadataRepository,
 };
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::ShieldingCryptoEncrypt;

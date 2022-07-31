@@ -65,7 +65,7 @@ use itc_tls_websocket_server::{
 use itp_block_import_queue::BlockImportQueue;
 use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_extrinsics_factory::ExtrinsicsFactory;
-use itp_node_api_extensions::metadata::node_metadata_provider::NodeMetadataRepository;
+use itp_node_api_extensions::metadata::provider::NodeMetadataRepository;
 use itp_nonce_cache::GLOBAL_NONCE_CACHE;
 use itp_primitives_cache::GLOBAL_PRIMITIVES_CACHE;
 use itp_settings::{

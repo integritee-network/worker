@@ -249,7 +249,7 @@ mod test {
 	use super::*;
 	use codec::Encode;
 	use itp_node_api_extensions::metadata::{
-		metadata_mocks::NodeMetadataMock, node_metadata_provider::NodeMetadataRepository,
+		metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository,
 	};
 	use itp_sgx_crypto::mocks::KeyRepositoryMock;
 	use itp_stf_executor::mocks::StfEnclaveSignerMock;
