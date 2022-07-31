@@ -2372,6 +2372,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "ita-node-api-types"
+version = "0.1.0"
+dependencies = [
+ "sp-core",
+ "substrate-api-client",
+]
+
+[[package]]
 name = "ita-stf"
 version = "0.8.0"
 dependencies = [
@@ -2674,6 +2682,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "112c678d4050afce233f4f2852bb2eb519230b3cf12f33585275537d7e41578d"
 
 [[package]]
+name = "itp-api-client-extensions"
+version = "0.8.0"
+dependencies = [
+ "itp-types",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-finality-grandpa",
+ "sp-runtime",
+ "substrate-api-client",
+ "thiserror 1.0.31",
+]
+
+[[package]]
 name = "itp-block-import-queue"
 version = "0.8.0"
 dependencies = [
@@ -2775,6 +2796,24 @@ dependencies = [
  "substrate-api-client",
  "thiserror 1.0.31",
  "thiserror 1.0.9",
+]
+
+[[package]]
+name = "itp-node-api-metadata"
+version = "0.8.0"
+dependencies = [
+ "itp-types",
+ "parity-scale-codec",
+ "sp-core",
+ "substrate-api-client",
+]
+
+[[package]]
+name = "itp-node-api-metadata-provider"
+version = "0.8.0"
+dependencies = [
+ "itp-node-api-metadata",
+ "sgx_tstd",
 ]
 
 [[package]]

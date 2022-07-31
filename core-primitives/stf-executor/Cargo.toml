@@ -17,7 +17,7 @@ sgx-externalities = { optional = true, default-features = false, git = "https://
 
 # local dependencies
 ita-stf = { path = "../../app-libs/stf", default-features = false }
-itp-node-api-extensions = { path = "../../core-primitives/node-api-extensions", default-features = false }
+itp-node-api-extensions = { path = "../node-api", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
 itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }

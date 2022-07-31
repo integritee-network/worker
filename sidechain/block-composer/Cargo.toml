@@ -12,7 +12,7 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 
 # local dependencies
 ita-stf = { path = "../../app-libs/stf", default-features = false }
-itp-node-api-extensions = { path = "../../core-primitives/node-api-extensions", default-features = false }
+itp-node-api-extensions = { path = "../../core-primitives/node-api", default-features = false }
 itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", default-features = false }
 itp-stf-executor = { path = "../../core-primitives/stf-executor", default-features = false }
 itp-time-utils = { path = "../../core-primitives/time-utils", default-features = false }

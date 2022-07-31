@@ -12,7 +12,7 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.26" }
 
 # local dependencies
-itp-node-api-extensions = { path = "../node-api-extensions", default-features = false }
+itp-node-api-extensions = { path = "../node-api", default-features = false }
 itp-nonce-cache = { path = "../nonce-cache", default-features = false }
 
 # integritee
