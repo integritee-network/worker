@@ -16,9 +16,8 @@
 
 */
 
-use itp_api_client_types::ParentchainApi;
+use itp_api_client_types::{ParentchainApi, WsRpcClient};
 use sp_core::sr25519;
-use substrate_api_client::rpc::WsRpcClient;
 
 /// Trait to create a node API, based on a node URL and signer.
 pub trait CreateNodeApi {
@@ -29,7 +28,7 @@ pub trait CreateNodeApi {
 #[derive(Debug, thiserror::Error)]
 pub enum NodeApiFactoryError {
 	#[error("Failed to create a node API: {0}")]
-	FailedToCreateNodeApi(#[from] substrate_api_client::ApiClientError),
+	FailedToCreateNodeApi(#[from] itp_api_client_types::ApiClientError),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }

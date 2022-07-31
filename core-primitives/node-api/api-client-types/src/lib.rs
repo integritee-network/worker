@@ -5,7 +5,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use substrate_api_client::{
+pub use substrate_api_client::{
 	PlainTip, PlainTipExtrinsicParams, PlainTipExtrinsicParamsBuilder, SubstrateDefaultSignedExtra,
 	UncheckedExtrinsicV4,
 };
@@ -26,12 +26,14 @@ pub type ParentchainUncheckedExtrinsic<Call> =
 	UncheckedExtrinsicV4<Call, SubstrateDefaultSignedExtra<PlainTip>>;
 
 #[cfg(feature = "std")]
-pub use api::ParentchainApi;
+pub use api::*;
 
 #[cfg(feature = "std")]
 mod api {
 	use super::ParentchainExtrinsicParams;
-	use substrate_api_client::{rpc::WsRpcClient, Api};
+	use substrate_api_client::Api;
+
+	pub use substrate_api_client::{rpc::WsRpcClient, ApiClientError};
 
 	pub type ParentchainApi = Api<sp_core::sr25519::Pair, WsRpcClient, ParentchainExtrinsicParams>;
 }
