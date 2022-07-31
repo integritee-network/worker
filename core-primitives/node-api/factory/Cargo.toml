@@ -1,0 +1,19 @@
+[package]
+name = "itp-node-api-factory"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+thiserror = { version = "1.0" }
+
+# scs
+substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.26" }
+
+
+# substrate
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+
+# local
+itp-api-client-types = { path = "../api-client-types" }

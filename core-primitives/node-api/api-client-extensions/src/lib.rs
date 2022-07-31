@@ -21,7 +21,6 @@ pub use substrate_api_client::{rpc::WsRpcClient, Api, ApiClientError};
 
 pub mod account;
 pub mod chain;
-pub mod node_api_factory;
 pub mod pallet_teerex;
 pub mod pallet_teerex_api_mock;
 
@@ -29,9 +28,4 @@ pub use account::*;
 pub use chain::*;
 pub use pallet_teerex::*;
 
-use itp_types::ParentchainExtrinsicParams;
-
-use sp_core::sr25519;
-
 pub type ApiResult<T> = Result<T, ApiClientError>;
-pub type ParentchainApi = Api<sr25519::Pair, WsRpcClient, ParentchainExtrinsicParams>;

@@ -6,7 +6,8 @@ edition = "2018"
 
 [dependencies]
 itp-api-client-extensions = { optional = true, path = "api-client-extensions" }
-itp-api-client-types = { optional = true, path = "api-client-types" }
+itp-api-client-types = { default-features = false, path = "api-client-types" }
+itp-node-api-factory = { optional = true, path = "factory" }
 itp-node-api-metadata = { default-features = false, path = "metadata" }
 itp-node-api-metadata-provider = { default-features = false, path = "metadata-provider" }
 
@@ -15,6 +16,7 @@ default = ["std"]
 std = [
     "itp-api-client-extensions",
     "itp-api-client-types/std",
+    "itp-node-api-factory",
     "itp-node-api-metadata/std",
     "itp-node-api-metadata-provider/std",
 ]

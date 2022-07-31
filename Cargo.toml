@@ -25,6 +25,7 @@ members = [
     "core-primitives/node-api",
     "core-primitives/node-api/api-client-extensions",
     "core-primitives/node-api/api-client-types",
+    "core-primitives/node-api/factory",
     "core-primitives/node-api/metadata",
     "core-primitives/node-api/metadata-provider",
     "core-primitives/nonce-cache",
