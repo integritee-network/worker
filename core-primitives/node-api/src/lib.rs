@@ -15,7 +15,7 @@
 
 */
 
-//! Re-export crate for all the node-api-stuff
+//! Re-export crate for all the node-api stuff to simplify downstream imports.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
