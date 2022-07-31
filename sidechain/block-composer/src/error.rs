@@ -33,9 +33,9 @@ pub enum Error {
 	#[error("TOP pool RPC author error: {0}")]
 	TopPoolAuthor(#[from] itp_top_pool_author::error::Error),
 	#[error("Node Metadata error: {0:?}")]
-	NodeMetadata(itp_node_api_extensions::metadata::Error),
+	NodeMetadata(itp_node_api::metadata::Error),
 	#[error("Node metadata provider error: {0:?}")]
-	NodeMetadataProvider(#[from] itp_node_api_extensions::metadata::provider::Error),
+	NodeMetadataProvider(#[from] itp_node_api::metadata::provider::Error),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }
@@ -52,8 +52,8 @@ impl From<codec::Error> for Error {
 	}
 }
 
-impl From<itp_node_api_extensions::metadata::Error> for Error {
-	fn from(e: itp_node_api_extensions::metadata::Error) -> Self {
+impl From<itp_node_api::metadata::Error> for Error {
+	fn from(e: itp_node_api::metadata::Error) -> Self {
 		Self::NodeMetadata(e)
 	}
 }

@@ -33,7 +33,7 @@ use ita_stf::{
 	TrustedCall, TrustedOperation,
 };
 use itc_parentchain::indirect_calls_executor::{ExecuteIndirectCalls, IndirectCallsExecutor};
-use itp_node_api_extensions::metadata::{
+use itp_node_api::metadata::{
 	metadata_mocks::NodeMetadataMock, pallet_teerex::TeerexCallIndexes,
 	provider::NodeMetadataRepository,
 };

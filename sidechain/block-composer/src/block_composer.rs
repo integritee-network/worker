@@ -18,7 +18,7 @@
 use crate::error::{Error, Result};
 use codec::Encode;
 use ita_stf::StatePayload;
-use itp_node_api_extensions::metadata::{
+use itp_node_api::metadata::{
 	pallet_sidechain::SidechainCallIndexes, provider::AccessNodeMetadata,
 };
 use itp_sgx_crypto::{key_repository::AccessKey, StateCrypto};

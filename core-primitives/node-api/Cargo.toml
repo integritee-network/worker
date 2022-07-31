@@ -1,5 +1,5 @@
 [package]
-name = "itp-node-api-extensions"
+name = "itp-node-api"
 version = "0.8.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"

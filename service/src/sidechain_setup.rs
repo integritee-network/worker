@@ -24,7 +24,7 @@ use itp_enclave_api::{
 	direct_request::DirectRequest, enclave_base::EnclaveBase, sidechain::Sidechain,
 	teerex_api::TeerexApi,
 };
-use itp_node_api_extensions::api_client::ParentchainApi;
+use itp_node_api::api_client::ParentchainApi;
 use itp_settings::{
 	files::{SIDECHAIN_PURGE_INTERVAL, SIDECHAIN_PURGE_LIMIT},
 	sidechain::SLOT_DURATION,

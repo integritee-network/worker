@@ -643,7 +643,7 @@ dependencies = [
  "itp-block-import-queue",
  "itp-component-container",
  "itp-extrinsics-factory",
- "itp-node-api-extensions",
+ "itp-node-api",
  "itp-nonce-cache",
  "itp-ocall-api",
  "itp-primitives-cache",
@@ -1369,7 +1369,7 @@ dependencies = [
  "futures 0.3.8",
  "ita-stf",
  "itp-extrinsics-factory",
- "itp-node-api-extensions",
+ "itp-node-api",
  "itp-ocall-api",
  "itp-sgx-crypto",
  "itp-stf-executor",
@@ -1498,7 +1498,7 @@ dependencies = [
 name = "itp-extrinsics-factory"
 version = "0.8.0"
 dependencies = [
- "itp-node-api-extensions",
+ "itp-node-api",
  "itp-nonce-cache",
  "itp-types",
  "log",
@@ -1516,7 +1516,7 @@ name = "itp-hashing"
 version = "0.8.0"
 
 [[package]]
-name = "itp-node-api-extensions"
+name = "itp-node-api"
 version = "0.8.0"
 dependencies = [
  "itp-api-client-types",
@@ -1624,7 +1624,7 @@ name = "itp-stf-executor"
 version = "0.8.0"
 dependencies = [
  "ita-stf",
- "itp-node-api-extensions",
+ "itp-node-api",
  "itp-ocall-api",
  "itp-sgx-crypto",
  "itp-stf-state-handler",
@@ -1808,7 +1808,7 @@ name = "its-block-composer"
 version = "0.8.0"
 dependencies = [
  "ita-stf",
- "itp-node-api-extensions",
+ "itp-node-api",
  "itp-sgx-crypto",
  "itp-stf-executor",
  "itp-time-utils",

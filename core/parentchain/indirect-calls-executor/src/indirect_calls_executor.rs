@@ -27,9 +27,7 @@ use crate::{
 use codec::{Decode, Encode};
 use futures::executor;
 use ita_stf::{AccountId, TrustedCall, TrustedOperation};
-use itp_node_api_extensions::metadata::{
-	pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata,
-};
+use itp_node_api::metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata};
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
 use itp_stf_executor::traits::StfEnclaveSigning;
 use itp_top_pool_author::traits::AuthorApi;
@@ -248,7 +246,7 @@ fn hash_of<T: Encode>(xt: &T) -> H256 {
 mod test {
 	use super::*;
 	use codec::Encode;
-	use itp_node_api_extensions::metadata::{
+	use itp_node_api::metadata::{
 		metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository,
 	};
 	use itp_sgx_crypto::mocks::KeyRepositoryMock;

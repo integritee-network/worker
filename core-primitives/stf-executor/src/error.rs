@@ -35,9 +35,9 @@ pub enum Error {
 	#[error("State handling error: {0}")]
 	StateHandler(#[from] itp_stf_state_handler::error::Error),
 	#[error("Node Metadata error: {0:?}")]
-	NodeMetadata(itp_node_api_extensions::metadata::Error),
+	NodeMetadata(itp_node_api::metadata::Error),
 	#[error("Node metadata provider error: {0:?}")]
-	NodeMetadataProvider(#[from] itp_node_api_extensions::metadata::provider::Error),
+	NodeMetadataProvider(#[from] itp_node_api::metadata::provider::Error),
 	#[error("STF error: {0}")]
 	Stf(ita_stf::StfError),
 	#[error("Ocall Api error: {0}")]
@@ -78,8 +78,8 @@ impl From<itp_sgx_crypto::error::Error> for Error {
 	}
 }
 
-impl From<itp_node_api_extensions::metadata::Error> for Error {
-	fn from(e: itp_node_api_extensions::metadata::Error) -> Self {
+impl From<itp_node_api::metadata::Error> for Error {
+	fn from(e: itp_node_api::metadata::Error) -> Self {
 		Self::NodeMetadata(e)
 	}
 }

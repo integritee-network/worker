@@ -23,7 +23,7 @@
 use crate::{config::Config, error::Error, TrackInitialization};
 use async_trait::async_trait;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
-use itp_node_api_extensions::{api_client::PalletTeerexApi, node_api_factory::CreateNodeApi};
+use itp_node_api::{api_client::PalletTeerexApi, node_api_factory::CreateNodeApi};
 use its_rpc_handler::constants::RPC_METHOD_NAME_IMPORT_BLOCKS;
 use jsonrpsee::{
 	types::{to_json_value, traits::Client},
@@ -184,7 +184,7 @@ mod tests {
 		worker::{AsyncBlockGossiper, Worker},
 	};
 	use frame_support::assert_ok;
-	use itp_node_api_extensions::node_api_factory::NodeApiFactory;
+	use itp_node_api::node_api_factory::NodeApiFactory;
 	use jsonrpsee::{ws_server::WsServerBuilder, RpcModule};
 	use log::debug;
 	use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;

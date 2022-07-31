@@ -22,7 +22,7 @@ use crate::{
 	},
 	ParentchainBlockSyncer,
 };
-use itp_node_api_extensions::ChainApi;
+use itp_node_api::ChainApi;
 use std::sync::Arc;
 
 #[test]

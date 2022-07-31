@@ -18,7 +18,7 @@
 
 use crate::ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, WorkerOnChainBridge};
 use codec::{Decode, Encode};
-use itp_node_api_extensions::node_api_factory::CreateNodeApi;
+use itp_node_api::node_api_factory::CreateNodeApi;
 use itp_types::{WorkerRequest, WorkerResponse};
 use itp_utils::ToHexPrefixed;
 use log::*;
@@ -103,7 +103,7 @@ where
 mod tests {
 
 	use super::*;
-	use itp_node_api_extensions::{
+	use itp_node_api::{
 		node_api_factory::{CreateNodeApi, Result as NodeApiResult},
 		ParentchainApi,
 	};

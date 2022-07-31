@@ -24,7 +24,7 @@ use base58::FromBase58;
 use codec::{Decode, Encode};
 use ita_stf::{ShardIdentifier, TrustedOperation};
 use itc_rpc_client::direct_client::DirectApi;
-use itp_node_api_extensions::api_client::TEEREX;
+use itp_node_api::api_client::TEEREX;
 use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_types::{DirectRequestStatus, TrustedOperationStatus};

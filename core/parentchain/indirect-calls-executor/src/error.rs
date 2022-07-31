@@ -31,9 +31,9 @@ pub enum Error {
 	#[error("STF execution error: {0}")]
 	StfExecution(#[from] itp_stf_executor::error::Error),
 	#[error("Node Metadata error: {0:?}")]
-	NodeMetadata(itp_node_api_extensions::metadata::Error),
+	NodeMetadata(itp_node_api::metadata::Error),
 	#[error("Node metadata provider error: {0:?}")]
-	NodeMetadataProvider(#[from] itp_node_api_extensions::metadata::provider::Error),
+	NodeMetadataProvider(#[from] itp_node_api::metadata::provider::Error),
 	#[error("Crypto error: {0}")]
 	Crypto(itp_sgx_crypto::Error),
 	#[error(transparent)]
@@ -58,8 +58,8 @@ impl From<codec::Error> for Error {
 	}
 }
 
-impl From<itp_node_api_extensions::metadata::Error> for Error {
-	fn from(e: itp_node_api_extensions::metadata::Error) -> Self {
+impl From<itp_node_api::metadata::Error> for Error {
+	fn from(e: itp_node_api::metadata::Error) -> Self {
 		Self::NodeMetadata(e)
 	}
 }

@@ -29,7 +29,7 @@ pub enum Error {
 	#[error("Nonce cache error: {0}")]
 	NonceCache(#[from] itp_nonce_cache::error::Error),
 	#[error("Node API error: {0:?}")]
-	NodeMetadataError(#[from] itp_node_api_extensions::metadata::provider::Error),
+	NodeMetadataError(#[from] itp_node_api::metadata::provider::Error),
 	#[error("SGX error, status: {0}")]
 	Sgx(sgx_status_t),
 	#[error(transparent)]
@@ -47,9 +47,3 @@ impl From<codec::Error> for Error {
 		Self::Other(format!("{:?}", e).into())
 	}
 }
-
-// impl From<itp_node_api_extensions::metadata::provider::error::Error> for Error {
-// 	fn from(e: itp_node_api_extensions::metadata::provider::error::Error) -> Self {
-// 		Self::NodeMetadataError(e)
-// 	}
-// }

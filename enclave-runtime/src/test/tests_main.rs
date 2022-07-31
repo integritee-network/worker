@@ -38,7 +38,7 @@ use ita_stf::{
 	AccountInfo, ShardIdentifier, State, StatePayload, StateTypeDiff, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetter, TrustedOperation,
 };
-use itp_node_api_extensions::metadata::{
+use itp_node_api::metadata::{
 	metadata_mocks::NodeMetadataMock, pallet_sidechain::SidechainCallIndexes,
 	provider::NodeMetadataRepository,
 };
