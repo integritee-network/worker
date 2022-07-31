@@ -1,0 +1,23 @@
+[package]
+name = "itp-node-api-metadata-provider"
+version = "0.8.0"
+authors = ["Integritee AG <hello@integritee.network>"]
+edition = "2021"
+
+[dependencies]
+# crates.io
+
+# sgx dependencies
+sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+
+# local dependencies
+itp-node-api-metadata = { default-features = false, path = "../metadata"}
+
+[features]
+default = ["std"]
+std = []
+sgx = [
+    "sgx_tstd",
+]
+# used for unit testing only!
+mocks = []
