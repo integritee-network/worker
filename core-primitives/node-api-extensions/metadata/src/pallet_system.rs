@@ -14,17 +14,24 @@
 	limitations under the License.
 
 */
+use crate::{error::Result, NodeMetadata};
+use sp_core::storage::StorageKey;
 
-use crate::{error::Result, metadata::NodeMetadata};
 /// Pallet' name:
-const SIDECHAIN: &str = "Sidechain";
+const SYSTEM: &str = "System";
 
-pub trait SidechainCallIndexes {
-	fn confirm_proposed_sidechain_block_indexes(&self) -> Result<[u8; 2]>;
+pub trait SystemStorageIndexes {
+	fn system_account_storage_key(&self) -> Result<StorageKey>;
+
+	fn system_account_storage_map_key(&self, index: u64) -> Result<StorageKey>;
 }
 
-impl SidechainCallIndexes for NodeMetadata {
-	fn confirm_proposed_sidechain_block_indexes(&self) -> Result<[u8; 2]> {
-		self.call_indexes(SIDECHAIN, "confirm_proposed_sidechain_block")
+impl SystemStorageIndexes for NodeMetadata {
+	fn system_account_storage_key(&self) -> Result<StorageKey> {
+		self.storage_value_key(SYSTEM, "Account")
+	}
+
+	fn system_account_storage_map_key(&self, index: u64) -> Result<StorageKey> {
+		self.storage_map_key(SYSTEM, "Account", &index)
 	}
 }
