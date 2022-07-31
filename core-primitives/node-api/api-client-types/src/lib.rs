@@ -1,7 +1,7 @@
 //! Contains type definitions to talk to the node.
 //!
-//! For example, you need to update this if you have a signed extensions in your node that
-//! is different from the integritee-node, or if you use the `pallet_asset_tx_payment`.
+//! You need to update this if you have a signed extension in your node that
+//! is different from the integritee-node, e.g., if you use the `pallet_asset_tx_payment`.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
