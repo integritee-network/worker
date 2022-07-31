@@ -1460,6 +1460,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "112c678d4050afce233f4f2852bb2eb519230b3cf12f33585275537d7e41578d"
 
 [[package]]
+name = "itp-api-client-types"
+version = "0.1.0"
+dependencies = [
+ "substrate-api-client",
+]
+
+[[package]]
 name = "itp-block-import-queue"
 version = "0.8.0"
 dependencies = [
@@ -1512,6 +1519,7 @@ version = "0.8.0"
 name = "itp-node-api-extensions"
 version = "0.8.0"
 dependencies = [
+ "itp-api-client-types",
  "itp-node-api-metadata",
  "itp-node-api-metadata-provider",
 ]

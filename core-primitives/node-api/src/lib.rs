@@ -21,9 +21,9 @@
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
 
 #[cfg(feature = "std")]
-pub use itp_api_client_extensions::*;
-pub use itp_api_client_types::*;
+pub use itp_api_client_extensions as api_client_extensions;
+pub use itp_api_client_types as api_client_types;
 #[cfg(feature = "std")]
-pub use itp_node_api_factory::*;
-pub use itp_node_api_metadata::*;
-pub use itp_node_api_metadata_provider::*;
+pub use itp_node_api_factory as node_api_factory;
+pub use itp_node_api_metadata as metadata;
+pub use itp_node_api_metadata_provider as metadata_provider;

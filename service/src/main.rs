@@ -54,9 +54,10 @@ use itp_enclave_api::{
 	Enclave,
 };
 use itp_node_api_extensions::{
+	api_client_extensions::{AccountApi, ChainApi, PalletTeerexApi},
+	api_client_types::ParentchainApi,
 	metadata::NodeMetadata,
 	node_api_factory::{CreateNodeApi, NodeApiFactory},
-	AccountApi, ChainApi, PalletTeerexApi, ParentchainApi,
 };
 use itp_settings::{
 	files::SIDECHAIN_STORAGE_PATH,

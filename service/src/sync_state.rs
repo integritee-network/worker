@@ -23,7 +23,7 @@ use crate::{
 use futures::executor;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use itp_enclave_api::{enclave_base::EnclaveBase, remote_attestation::TlsRemoteAttestation};
-use itp_node_api_extensions::PalletTeerexApi;
+use itp_node_api_extensions::api_client_extensions::PalletTeerexApi;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
 use itp_types::ShardIdentifier;
 use sgx_types::sgx_quote_sign_type_t;
