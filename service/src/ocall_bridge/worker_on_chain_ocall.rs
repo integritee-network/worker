@@ -104,8 +104,8 @@ mod tests {
 
 	use super::*;
 	use itp_node_api::{
+		api_client::ParentchainApi,
 		node_api_factory::{CreateNodeApi, Result as NodeApiResult},
-		ParentchainApi,
 	};
 	use mockall::mock;
 
