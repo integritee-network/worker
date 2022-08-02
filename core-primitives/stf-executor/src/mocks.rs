@@ -15,14 +15,63 @@
 
 */
 
-use crate::{error::Result, traits::StfEnclaveSigning};
-use ita_stf::{AccountId, KeyPair, ShardIdentifier, TrustedCall, TrustedCallSigned};
+use crate::{
+	error::Result,
+	traits::{StateUpdateProposer, StfEnclaveSigning},
+	BatchExecutionResult, ExecutedOperation,
+};
+use codec::Encode;
+use ita_stf::{
+	hash::{Hash, TrustedOperationOrHash},
+	AccountId, KeyPair, ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedOperation,
+};
+use itp_types::H256;
+use sgx_externalities::SgxExternalitiesTrait;
 use sp_core::Pair;
+use sp_runtime::traits::Header as HeaderTrait;
+use std::{marker::PhantomData, time::Duration};
 
 /// Mock for the StfExecutor.
 #[derive(Default)]
-pub struct StfExecutorMock;
+pub struct StfExecutorMock<StateType: SgxExternalitiesTrait + Encode> {
+	_phantom: PhantomData<StateType>,
+}
 
+impl<StateType> StateUpdateProposer for StfExecutorMock<StateType>
+where
+	StateType: SgxExternalitiesTrait + Encode,
+{
+	type Externalities = StateType;
+
+	fn propose_state_update<PH, F>(
+		&self,
+		trusted_calls: &[TrustedOperation],
+		_header: &PH,
+		_shard: &ShardIdentifier,
+		_max_exec_duration: Duration,
+		_prepare_state_function: F,
+	) -> Result<BatchExecutionResult<Self::Externalities>>
+	where
+		PH: HeaderTrait<Hash = H256>,
+		F: FnOnce(Self::Externalities) -> Self::Externalities,
+	{
+		let executed_operations: Vec<ExecutedOperation> = trusted_calls
+			.iter()
+			.map(|c| {
+				let operation_hash = c.hash();
+				let top_or_hash = TrustedOperationOrHash::from_top(c.clone());
+				ExecutedOperation::success(operation_hash, top_or_hash, Vec::new())
+			})
+			.collect();
+		Ok(BatchExecutionResult {
+			executed_operations,
+			state_hash_before_execution: H256::default(),
+			state_after_execution: Self::Externalities::new(),
+		})
+	}
+}
+
+/// Enclave signer mock.
 pub struct StfEnclaveSignerMock {
 	mr_enclave: [u8; 32],
 	signer: sp_core::ed25519::Pair,

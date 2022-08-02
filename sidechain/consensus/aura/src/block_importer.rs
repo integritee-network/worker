@@ -22,9 +22,7 @@ pub use its_consensus_common::BlockImport;
 
 use crate::{AuraVerifier, EnclaveOnChainOCallApi, SidechainBlockTrait};
 use ita_stf::hash::TrustedOperationOrHash;
-use itc_parentchain_block_import_dispatcher::triggered_dispatcher::{
-	PeekParentchainBlockImportQueue, TriggerParentchainBlockImport,
-};
+use itc_parentchain_block_import_dispatcher::triggered_dispatcher::TriggerParentchainBlockImport;
 use itp_enclave_metrics::EnclaveMetric;
 use itp_ocall_api::{EnclaveMetricsOCallApi, EnclaveSidechainOCallApi};
 use itp_settings::sidechain::SLOT_DURATION;
@@ -108,10 +106,8 @@ impl<
 	<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
 	TopPoolExecutor:
 		TopPoolCallOperator<ParentchainBlock, SignedSidechainBlock> + Send + Sync + 'static,
-	ParentchainBlockImporter: TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>>
-		+ PeekParentchainBlockImportQueue<SignedParentchainBlock<ParentchainBlock>>
-		+ Send
-		+ Sync,
+	ParentchainBlockImporter:
+		TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>> + Send + Sync,
 {
 	pub fn new(
 		state_handler: Arc<StateHandler>,
@@ -198,10 +194,8 @@ impl<
 	<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
 	TopPoolExecutor:
 		TopPoolCallOperator<ParentchainBlock, SignedSidechainBlock> + Send + Sync + 'static,
-	ParentchainBlockImporter: TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>>
-		+ PeekParentchainBlockImportQueue<SignedParentchainBlock<ParentchainBlock>>
-		+ Send
-		+ Sync,
+	ParentchainBlockImporter:
+		TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>> + Send + Sync,
 {
 	type Verifier = AuraVerifier<
 		Authority,

@@ -54,6 +54,7 @@ pub struct TungsteniteWsServer<Handler, ConfigProvider> {
 	connection_handler: Arc<Handler>,
 	id_generator: ConnectionIdGenerator,
 	connections: RwLock<HashMap<mio::Token, TungsteniteWsConnection<Handler>>>,
+	is_running: RwLock<bool>,
 	signal_sender: Mutex<Option<Sender<ServerSignal>>>,
 }
 
@@ -73,6 +74,7 @@ where
 			connection_handler,
 			id_generator: ConnectionIdGenerator::default(),
 			connections: Default::default(),
+			is_running: Default::default(),
 			signal_sender: Default::default(),
 		}
 	}
@@ -239,6 +241,8 @@ where
 
 		let mut events = mio::Events::with_capacity(2048);
 
+		*self.is_running.write().map_err(|_| WebSocketError::LockPoisoning)? = true;
+
 		// Run the event loop.
 		'outer_event_loop: loop {
 			poll.poll(&mut events, None)?;
@@ -271,6 +275,10 @@ where
 
 		info!("Web-socket server has shut down");
 		Ok(())
+	}
+
+	fn is_running(&self) -> WebSocketResult<bool> {
+		Ok(*self.is_running.read().map_err(|_| WebSocketError::LockPoisoning)?)
 	}
 
 	fn shut_down(&self) -> WebSocketResult<()> {
@@ -327,7 +335,9 @@ mod tests {
 		let server_join_handle = thread::spawn(move || server_clone.run());
 
 		// Wait until server is up.
-		thread::sleep(std::time::Duration::from_millis(50));
+		while !server.is_running().unwrap() {
+			thread::sleep(std::time::Duration::from_millis(50));
+		}
 
 		// Spawn multiple clients that connect to the server simultaneously and send a message.
 		let client_handles: Vec<_> = (0..NUMBER_OF_CONNECTIONS)
@@ -390,7 +400,9 @@ mod tests {
 		let server_join_handle = thread::spawn(move || server_clone.run());
 
 		// Wait until server is up.
-		thread::sleep(std::time::Duration::from_millis(50));
+		while !server.is_running().unwrap() {
+			thread::sleep(std::time::Duration::from_millis(50));
+		}
 
 		let client_join_handle = thread::spawn(move || {
 			let mut socket = connect_tls_client(get_server_addr(port).as_str());
@@ -423,7 +435,9 @@ mod tests {
 		let server_join_handle = thread::spawn(move || server_clone.run());
 
 		// Wait until server is up.
-		thread::sleep(std::time::Duration::from_millis(50));
+		while !server.is_running().unwrap() {
+			thread::sleep(std::time::Duration::from_millis(50));
+		}
 
 		let update_message = "Message update".to_string();
 		let update_message_clone = update_message.clone();

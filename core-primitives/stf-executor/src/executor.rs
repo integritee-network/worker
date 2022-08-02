@@ -25,7 +25,7 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use ita_stf::{
-	hash::TrustedOperationOrHash,
+	hash::{Hash, TrustedOperationOrHash},
 	stf_sgx::{shards_key_hash, storage_hashes_to_update_per_shard},
 	ParentchainHeader, ShardIdentifier, StateTypeDiff, Stf, TrustedGetterSigned, TrustedOperation,
 };
@@ -88,7 +88,7 @@ where
 		debug!("query mrenclave of self");
 		let mrenclave = self.ocall_api.get_mrenclave_of_self()?;
 
-		let top_or_hash = top_or_hash::<H256>(trusted_operation.clone());
+		let top_or_hash = TrustedOperationOrHash::from_top(trusted_operation.clone());
 
 		let trusted_call = match trusted_operation.to_call().ok_or(Error::InvalidTrustedCallType) {
 			Ok(c) => c,
@@ -127,7 +127,7 @@ where
 			return Ok(ExecutedOperation::failed(top_or_hash))
 		}
 
-		let operation_hash: H256 = blake2_256(&trusted_operation.encode()).into();
+		let operation_hash = trusted_operation.hash();
 		debug!("Operation hash {:?}", operation_hash);
 
 		if let StatePostProcessing::Prune = post_processing {
@@ -354,10 +354,6 @@ fn into_map(
 	storage_entries: Vec<StorageEntryVerified<Vec<u8>>>,
 ) -> BTreeMap<Vec<u8>, Option<Vec<u8>>> {
 	storage_entries.into_iter().map(|e| e.into_tuple()).collect()
-}
-
-fn top_or_hash<H>(tcs: TrustedOperation) -> TrustedOperationOrHash<H> {
-	TrustedOperationOrHash::<H>::Operation(tcs)
 }
 
 /// Compute the state hash.

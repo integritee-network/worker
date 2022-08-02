@@ -24,11 +24,13 @@ use crate::{
 	initialized_service::{
 		start_is_initialized_server, InitializationHandler, IsInitialized, TrackInitialization,
 	},
+	interval_scheduling::schedule_on_repeating_intervals,
 	ocall_bridge::{
 		bridge_api::Bridge as OCallBridge, component_factory::OCallBridgeComponentFactory,
 	},
 	parentchain_block_syncer::{ParentchainBlockSyncer, SyncParentchainBlocks},
 	prometheus_metrics::{start_metrics_server, EnclaveMetricsReceiver, MetricsHandler},
+	sidechain_setup::{sidechain_init_block_production, sidechain_start_untrusted_rpc_server},
 	sync_block_gossiper::SyncBlockGossiper,
 	utils::{check_files, extract_shard},
 	worker::Worker,
@@ -57,7 +59,11 @@ use itp_node_api_extensions::{
 	node_api_factory::{CreateNodeApi, NodeApiFactory},
 	AccountApi, ChainApi, PalletTeerexApi, ParentchainApi,
 };
-use itp_settings::{files::SIDECHAIN_STORAGE_PATH, node::MARKET_DATA_UPDATE_INTERVAL};
+use itp_settings::{
+	files::SIDECHAIN_STORAGE_PATH,
+	node::MARKET_DATA_UPDATE_INTERVAL,
+	worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider},
+};
 use its_peer_fetch::{
 	block_fetch_client::BlockFetcher, untrusted_peer_fetch::UntrustedPeerFetcher,
 };
@@ -79,7 +85,7 @@ use std::{
 		Arc,
 	},
 	thread,
-	time::{Duration, Instant},
+	time::Duration,
 };
 use substrate_api_client::{utils::FromHexString, Header as HeaderTrait, XtStatus};
 use teerex_primitives::ShardIdentifier;
@@ -91,10 +97,12 @@ mod enclave;
 mod error;
 mod globals;
 mod initialized_service;
+mod interval_scheduling;
 mod ocall_bridge;
 mod parentchain_block_syncer;
 mod prometheus_metrics;
 mod setup;
+mod sidechain_setup;
 mod sync_block_gossiper;
 mod sync_state;
 mod teeracle_metrics;
@@ -106,7 +114,8 @@ mod worker_peers_updater;
 /// how many blocks will be synced before storing the chain db to disk
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub type EnclaveWorker = Worker<Config, NodeApiFactory, Enclave, InitializationHandler>;
+pub type EnclaveWorker =
+	Worker<Config, NodeApiFactory, Enclave, InitializationHandler<WorkerModeProvider>>;
 
 fn main() {
 	// Setup logging
@@ -125,6 +134,8 @@ fn main() {
 	info!("*** Starting service in SGX production mode");
 	#[cfg(not(feature = "production"))]
 	info!("*** Starting service in SGX debug mode");
+
+	info!("*** Running worker in mode: {:?} \n", WorkerModeProvider::worker_mode());
 
 	let clean_reset = matches.is_present("clean-reset");
 	if clean_reset {
@@ -191,10 +202,15 @@ fn main() {
 
 		let request_state = smatches.is_present("request-state");
 		if request_state {
-			sync_state::sync_state(&node_api, &shard, enclave.as_ref(), skip_ra);
+			sync_state::sync_state::<_, _, WorkerModeProvider>(
+				&node_api,
+				&shard,
+				enclave.as_ref(),
+				skip_ra,
+			);
 		}
 
-		start_worker(
+		start_worker::<_, _, _, _, WorkerModeProvider>(
 			config,
 			&shard,
 			enclave,
@@ -210,7 +226,7 @@ fn main() {
 		println!("*** Requesting state from a registered worker \n");
 		let node_api =
 			node_api_factory.create_api().expect("Failed to create parentchain node API");
-		sync_state::sync_state(
+		sync_state::sync_state::<_, _, WorkerModeProvider>(
 			&node_api,
 			&extract_shard(smatches, enclave.as_ref()),
 			enclave.as_ref(),
@@ -259,7 +275,7 @@ fn main() {
 
 /// FIXME: needs some discussion (restructuring?)
 #[allow(clippy::too_many_arguments)]
-fn start_worker<E, T, D, InitializationHandler>(
+fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	config: Config,
 	shard: &ShardIdentifier,
 	enclave: Arc<E>,
@@ -282,6 +298,7 @@ fn start_worker<E, T, D, InitializationHandler>(
 		+ Clone,
 	D: BlockPruner + FetchBlocks<SignedSidechainBlock> + Sync + Send + 'static,
 	InitializationHandler: TrackInitialization + IsInitialized + Sync + Send + 'static,
+	WorkerModeProvider: ProvideWorkerMode,
 {
 	println!("IntegriTEE Worker v{}", VERSION);
 	info!("starting worker on shard {}", shard.encode().to_base58());
@@ -364,21 +381,15 @@ fn start_worker<E, T, D, InitializationHandler>(
 
 	// ------------------------------------------------------------------------
 	// Start untrusted worker rpc server.
-	// FIXME: this should be removed - this server should only handle untrusted things.
 	// i.e move sidechain block importing to trusted worker.
-	// let enclave_for_block_gossip_rpc_server = enclave.clone();
-	// let untrusted_url = config.untrusted_worker_url();
-	// println!("[+] Untrusted RPC server listening on {}", &untrusted_url);
-	// let sidechain_storage_for_rpc = sidechain_storage.clone();
-	// let _untrusted_rpc_join_handle = tokio_handle.spawn(async move {
-	// 	itc_rpc_server::run_server(
-	// 		&untrusted_url,
-	// 		enclave_for_block_gossip_rpc_server,
-	// 		sidechain_storage_for_rpc,
-	// 	)
-	// 	.await
-	// 	.unwrap();
-	// });
+	if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain {
+		sidechain_start_untrusted_rpc_server(
+			&config,
+			enclave.clone(),
+			sidechain_storage.clone(),
+			tokio_handle,
+		);
+	}
 
 	// ------------------------------------------------------------------------
 	// Perform a remote attestation and get an unchecked extrinsic back.
@@ -425,6 +436,7 @@ fn start_worker<E, T, D, InitializationHandler>(
 
 	let register_enclave_xt_header =
 		node_api.get_header(register_enclave_xt_hash).unwrap().unwrap();
+
 	let we_are_primary_validateer =
 		we_are_primary_validateer(&node_api, &register_enclave_xt_header).unwrap();
 
@@ -450,36 +462,18 @@ fn start_worker<E, T, D, InitializationHandler>(
 		Arc::new(ParentchainBlockSyncer::new(node_api.clone(), enclave.clone()));
 	let mut last_synced_header = parentchain_block_syncer.sync_parentchain(last_synced_header);
 
-	// If we're the first validateer to register, also trigger parentchain block import.
-	if we_are_primary_validateer {
-		last_synced_header = import_parentchain_blocks_until_self_registry(
+	// ------------------------------------------------------------------------
+	// initialize the sidechain
+	if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain {
+		last_synced_header = sidechain_init_block_production(
 			enclave.clone(),
-			parentchain_block_syncer,
-			&last_synced_header,
 			&register_enclave_xt_header,
-		)
-		.unwrap();
+			we_are_primary_validateer,
+			parentchain_block_syncer,
+			sidechain_storage,
+			&last_synced_header,
+		);
 	}
-
-	// ------------------------------------------------------------------------
-	// Initialize sidechain components (has to be AFTER init_light_client()
-	enclave.init_enclave_sidechain_components().unwrap();
-
-	// ------------------------------------------------------------------------
-	// Start interval sidechain block production (execution of trusted calls, sidechain block production).
-	let sidechain_enclave_api = enclave.clone();
-	println!("[+] Spawning thread for sidechain block production");
-	thread::Builder::new()
-		.name("interval_block_production_timer".to_owned())
-		.spawn(move || {
-			let future = start_slot_worker(
-				|| execute_trusted_calls(sidechain_enclave_api.as_ref()),
-				SLOT_DURATION,
-			);
-			block_on(future);
-			println!("[!] Sidechain block production loop has terminated");
-		})
-		.unwrap();
 
 	// ------------------------------------------------------------------------
 	// start parentchain syncing loop (subscribe to header updates)
@@ -499,60 +493,13 @@ fn start_worker<E, T, D, InitializationHandler>(
 		})
 		.unwrap();
 
-	   //-------------------------------------------------------------------------
-	   // start execution of trusted getters
-	   let trusted_getters_enclave_api = enclave.clone();
-	   thread::Builder::new()
-		   .name("trusted_getters_execution".to_owned())
-		   .spawn(move || {
-			   start_interval_trusted_getter_execution(trusted_getters_enclave_api.as_ref())
-		   })
-		   .unwrap();
-
-	   // ------------------------------------------------------------------------
-	   // start sidechain pruning loop
-	   thread::Builder::new()
-		   .name("sidechain_pruning_loop".to_owned())
-		   .spawn(move || {
-			   start_sidechain_pruning_loop(
-				   &sidechain_storage,
-				   SIDECHAIN_PURGE_INTERVAL,
-				   SIDECHAIN_PURGE_LIMIT,
-			   );
-		   })
-		   .unwrap();
-
-	   // ------------------------------------------------------------------------
-	   // start update exchange rate loop
-	   let api5 = node_api.clone();
-	   let market_enclave_api = enclave;
-	   thread::Builder::new()
-		   .name("update_market_data".to_owned())
-		   .spawn(move || {
-			   start_interval_market_update(&api5, interval, market_enclave_api.as_ref());
-		   })
-		   .unwrap();
-	   // ------------------------------------------------------------------------
-	   // subscribe to events and react on firing
-	   println!("*** Subscribing to events");
-	   let (sender, receiver) = channel();
-	   let sender2 = sender.clone();
-	   let _eventsubscriber = thread::Builder::new()
-		   .name("eventsubscriber".to_owned())
-		   .spawn(move || {
-			   node_api.subscribe_events(sender2).unwrap();
-		   })
-		   .unwrap();
-	// ------------------------------------------------------------------------
-	// start sidechain pruning loop
+	//-------------------------------------------------------------------------
+	// start execution of trusted getters
+	let trusted_getters_enclave_api = enclave;
 	thread::Builder::new()
-		.name("sidechain_pruning_loop".to_owned())
+		.name("trusted_getters_execution".to_owned())
 		.spawn(move || {
-			start_sidechain_pruning_loop(
-				&sidechain_storage,
-				SIDECHAIN_PURGE_INTERVAL,
-				SIDECHAIN_PURGE_LIMIT,
-			);
+			start_interval_trusted_getter_execution(trusted_getters_enclave_api.as_ref())
 		})
 		.unwrap();
 
@@ -571,20 +518,21 @@ fn start_worker<E, T, D, InitializationHandler>(
 		})
 		.unwrap();
 
-	   println!("[+] Subscribed to events. waiting...");
-	   let timeout = Duration::from_millis(10);
-	   loop {
-		   if let Ok(msg) = receiver.recv_timeout(timeout) {
-			   if let Ok(events) = parse_events(msg.clone()) {
-				   print_events(events, sender.clone())
-			   }
-		   }
-	   }
-	*/
+	println!("[+] Subscribed to events. waiting...");
+	let timeout = Duration::from_millis(10);
+	loop {
+		if let Ok(msg) = receiver.recv_timeout(timeout) {
+			if let Ok(events) = parse_events(msg.clone()) {
+				print_events(events, sender.clone())
+			}
+		}
+	}
+	 */
 }
 
 /// Start polling loop to wait until we have a worker for a shard registered on
 /// the parentchain (TEEREX WorkerForShard). This is the pre-requisite to be
+/// considered initialized and ready for the next worker to start (in sidechain mode only).
 /// considered initialized and ready for the next worker to start.
 #[allow(unused)]
 fn spawn_worker_for_shard_polling<InitializationHandler>(
@@ -886,45 +834,11 @@ fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 	}
 }
 
-/// Execute trusted operations in the enclave
-///
-///
-#[allow(unused)]
-fn execute_trusted_calls<E: Sidechain>(enclave_api: &E) {
-	if let Err(e) = enclave_api.execute_trusted_calls() {
-		error!("{:?}", e);
-	};
-}
-
 /// Get the public signing key of the TEE.
 fn enclave_account<E: EnclaveBase>(enclave_api: &E) -> AccountId32 {
 	let tee_public = enclave_api.get_ecc_signing_pubkey().unwrap();
 	trace!("[+] Got ed25519 account of TEE = {}", tee_public.to_ss58check());
 	AccountId32::from(*tee_public.as_array_ref())
-}
-
-/// Ensure we're synced up until the parentchain block where we have registered ourselves.
-#[allow(unused)]
-fn import_parentchain_blocks_until_self_registry<
-	E: EnclaveBase + TeerexApi + Sidechain,
-	ParentchainSyncer: SyncParentchainBlocks,
->(
-	enclave_api: Arc<E>,
-	parentchain_block_syncer: Arc<ParentchainSyncer>,
-	last_synced_header: &Header,
-	register_enclave_xt_header: &Header,
-) -> Result<Header, Error> {
-	info!(
-		"We're the first validateer to be registered, syncing parentchain blocks until the one we have registered ourselves on."
-	);
-	let mut last_synced_header = last_synced_header.clone();
-
-	while last_synced_header.number() < register_enclave_xt_header.number() {
-		last_synced_header = parentchain_block_syncer.sync_parentchain(last_synced_header);
-	}
-	enclave_api.trigger_parentchain_block_import()?;
-
-	Ok(last_synced_header)
 }
 
 /// Checks if we are the first validateer to register on the parentchain.

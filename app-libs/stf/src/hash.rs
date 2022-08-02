@@ -15,8 +15,12 @@
 
 */
 
+pub use itp_hashing::Hash;
+
 use crate::TrustedOperation;
 use codec::{Decode, Encode};
+use itp_types::H256;
+use sp_core::blake2_256;
 use std::vec::Vec;
 
 /// Trusted operation Or hash
@@ -30,4 +34,16 @@ pub enum TrustedOperationOrHash<Hash> {
 	OperationEncoded(Vec<u8>),
 	/// Raw extrinsic
 	Operation(TrustedOperation),
+}
+
+impl<Hash> TrustedOperationOrHash<Hash> {
+	pub fn from_top(top: TrustedOperation) -> Self {
+		TrustedOperationOrHash::Operation(top)
+	}
+}
+
+impl Hash<H256> for TrustedOperation {
+	fn hash(&self) -> H256 {
+		blake2_256(&self.encode()).into()
+	}
 }

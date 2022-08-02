@@ -1,0 +1,71 @@
+[package]
+name = "itc-offchain-worker-executor"
+version = "0.8.0"
+authors = ["Integritee AG <hello@integritee.network>"]
+edition = "2018"
+resolver = "2"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# sgx dependencies
+sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+
+# sgx enabled external libraries
+thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
+
+# std compatible external libraries (make sure these versions match with the sgx-enabled ones above)
+thiserror = { version = "1.0", optional = true }
+
+# local dependencies
+ita-stf = { path = "../../app-libs/stf", default-features = false }
+itc-parentchain-light-client = { path = "../../core/parentchain/light-client", default-features = false }
+itp-extrinsics-factory = { path = "../../core-primitives/extrinsics-factory", default-features = false }
+itp-stf-executor = { path = "../../core-primitives/stf-executor", default-features = false }
+itp-stf-state-handler = { path = "../../core-primitives/stf-state-handler", default-features = false }
+itp-top-pool-author = { path = "../../core-primitives/top-pool-author", default-features = false }
+
+# integritee
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+
+# Substrate dependencies
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+
+# no-std compatible libraries
+log = { version = "0.4", default-features = false }
+
+[dev-dependencies]
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+ita-stf = { path = "../../app-libs/stf" }
+itc-parentchain-light-client = { path = "../../core/parentchain/light-client", features = ["mocks"] }
+itp-extrinsics-factory = { path = "../../core-primitives/extrinsics-factory", features = ["mocks"] }
+itp-stf-executor = { path = "../../core-primitives/stf-executor", features = ["mocks"] }
+itp-test = { path = "../../core-primitives/test" }
+itp-top-pool-author = { path = "../../core-primitives/top-pool-author", features = ["mocks"] }
+
+
+[features]
+default = ["std"]
+std = [
+    "ita-stf/std",
+    "itc-parentchain-light-client/std",
+    "itp-extrinsics-factory/std",
+    "itp-stf-executor/std",
+    "itp-stf-state-handler/std",
+    "itp-top-pool-author/std",
+    "sp-core/std",
+    "sp-runtime/std",
+    "thiserror",
+]
+sgx = [
+    "ita-stf/sgx",
+    "itc-parentchain-light-client/sgx",
+    "itp-extrinsics-factory/sgx",
+    "itp-stf-executor/sgx",
+    "itp-stf-state-handler/sgx",
+    "itp-top-pool-author/sgx",
+    "sgx_tstd",
+    "thiserror_sgx",
+]

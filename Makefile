@@ -24,6 +24,10 @@ SGX_DEBUG ?= 0
 SGX_PRERELEASE ?= 0
 SGX_PRODUCTION ?= 0
 
+######## Worker Feature Settings ########
+# Set sidechain as default feature mode
+WORKER_MODE ?= sidechain
+
 SKIP_WASM_BUILD = 1
 # include the build settings from rust-sgx-sdk
 include rust-sgx-sdk/buildenv.mk
@@ -73,12 +77,12 @@ ifeq ($(SGX_PRODUCTION), 1)
 	SGX_ENCLAVE_MODE = "Production Mode"
 	SGX_ENCLAVE_CONFIG = "enclave-runtime/Enclave.config.production.xml"
 	SGX_SIGN_KEY = $(SGX_COMMERCIAL_KEY)
-	WORKER_FEATURES = --features=production
+	WORKER_FEATURES = --features=production,$(WORKER_MODE)
 else
 	SGX_ENCLAVE_MODE = "Development Mode"
 	SGX_ENCLAVE_CONFIG = "enclave-runtime/Enclave.config.xml"
 	SGX_SIGN_KEY = "enclave-runtime/Enclave_private.pem"
-	WORKER_FEATURES = --features=default
+	WORKER_FEATURES = --features=default,$(WORKER_MODE)
 endif
 
 # check if running on Jenkins
@@ -147,7 +151,7 @@ Signed_RustEnclave_Name := bin/enclave.signed.so
 
 ######## Targets ########
 .PHONY: all
-all: $(Client_Name) $(Worker_Name) $(Signed_RustEnclave_Name)
+all: $(Worker_Name) $(Client_Name) $(Signed_RustEnclave_Name)
 service: $(Worker_Name)
 client: $(Client_Name)
 githooks: .git/hooks/pre-commit
@@ -170,7 +174,7 @@ $(Worker_Enclave_u_Object): service/Enclave_u.o
 $(Worker_Name): $(Worker_Enclave_u_Object) $(Worker_SRC_Files)
 	@echo
 	@echo "Building the integritee-service"
-	@cd service && SGX_SDK=$(SGX_SDK) SGX_MODE=$(SGX_MODE) cargo build $(Worker_Rust_Flags)
+	@SGX_SDK=$(SGX_SDK) SGX_MODE=$(SGX_MODE) cargo build -p integritee-service $(Worker_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	cp $(Worker_Rust_Path)/integritee-service ./bin
 
@@ -178,7 +182,7 @@ $(Worker_Name): $(Worker_Enclave_u_Object) $(Worker_SRC_Files)
 $(Client_Name): $(Client_SRC_Files)
 	@echo
 	@echo "Building the integritee-cli"
-	@cd $(Client_SRC_Path) && cargo build $(Client_Rust_Flags)
+	@cargo build -p integritee-cli $(Client_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	cp $(Client_Rust_Path)/$(Client_Binary) ./bin
 

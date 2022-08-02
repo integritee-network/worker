@@ -6,7 +6,7 @@ edition = "2018"
 resolver = "2"
 
 [dependencies]
-sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
 
 #local deps
 itp-storage = { path = "../storage", default-features = false }

@@ -102,6 +102,8 @@ pub trait WebSocketServer {
 
 	fn run(&self) -> WebSocketResult<()>;
 
+	fn is_running(&self) -> WebSocketResult<bool>;
+
 	fn shut_down(&self) -> WebSocketResult<()>;
 }
 

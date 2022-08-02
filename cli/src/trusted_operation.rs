@@ -31,9 +31,13 @@ use itp_types::{DirectRequestStatus, TrustedOperationStatus};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use log::*;
 use my_node_runtime::{AccountId, Hash};
-use sp_core::{sr25519 as sr25519_core, Pair, H256};
-use std::{result::Result as StdResult, sync::mpsc::channel};
-use substrate_api_client::{compose_extrinsic, ExtrinsicParams, XtStatus};
+use sp_core::{sr25519 as sr25519_core, H256};
+use std::{
+	result::Result as StdResult,
+	sync::mpsc::{channel, Receiver},
+	time::Instant,
+};
+use substrate_api_client::{compose_extrinsic, XtStatus};
 use teerex_primitives::Request;
 
 pub fn perform_trusted_operation(
@@ -162,15 +166,7 @@ fn send_direct_request(
 	operation_call: &TrustedOperation,
 ) -> Option<Vec<u8>> {
 	let encryption_key = get_shielding_key(cli).unwrap();
-	let operation_call_encrypted = encryption_key.encrypt(&operation_call.encode()).unwrap();
-	let shard = read_shard(trusted_args).unwrap();
-	let request = Request { shard, cyphertext: operation_call_encrypted };
-
-	let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(
-		"author_submitAndWatchExtrinsic".to_string(),
-		vec![request.to_hex()],
-	)
-	.unwrap();
+	let jsonrpc_call: String = get_json_request(trusted_args, operation_call, encryption_key);
 
 	debug!("get direct api");
 	let direct_api = get_worker_api_direct(cli);
@@ -221,6 +217,74 @@ fn send_direct_request(
 			Err(e) => {
 				error!("failed to receive rpc response: {:?}", e);
 				direct_api.close().unwrap();
+				return None
+			},
+		};
+	}
+}
+
+pub fn get_json_request(
+	trusted_args: &TrustedArgs,
+	operation_call: &TrustedOperation,
+	shielding_pubkey: sgx_crypto_helper::rsa3072::Rsa3072PubKey,
+) -> String {
+	let operation_call_encrypted = shielding_pubkey.encrypt(&operation_call.encode()).unwrap();
+	let shard = read_shard(trusted_args).unwrap();
+
+	// compose jsonrpc call
+	let request = Request { shard, cyphertext: operation_call_encrypted };
+	RpcRequest::compose_jsonrpc_call(
+		"author_submitAndWatchExtrinsic".to_string(),
+		vec![request.to_hex()],
+	)
+	.unwrap()
+}
+
+pub fn wait_until(
+	receiver: &Receiver<String>,
+	until: impl Fn(TrustedOperationStatus) -> bool,
+) -> Option<(H256, Instant)> {
+	debug!("waiting for rpc response");
+	loop {
+		match receiver.recv() {
+			Ok(response) => {
+				debug!("received response: {}", response);
+				let parse_result: Result<RpcResponse, _> = serde_json::from_str(&response);
+				if let Ok(response) = parse_result {
+					if let Ok(return_value) = RpcReturnValue::from_hex(&response.result) {
+						debug!("successfully decoded rpc response");
+						match return_value.status {
+							DirectRequestStatus::Error => {
+								debug!("request status is error");
+								if let Ok(value) =
+									String::decode(&mut return_value.value.as_slice())
+								{
+									println!("[Error] {}", value);
+								}
+								return None
+							},
+							DirectRequestStatus::TrustedOperationStatus(status) => {
+								debug!("request status is: {:?}", status);
+								if let Ok(value) = Hash::decode(&mut return_value.value.as_slice())
+								{
+									println!("Trusted call {:?} is {:?}", value, status);
+									if until(status) {
+										return Some((value, Instant::now()))
+									}
+								}
+							},
+							_ => {
+								debug!("request status is ignored");
+								return None
+							},
+						}
+					};
+				} else {
+					error!("Could not parse response");
+				};
+			},
+			Err(e) => {
+				error!("failed to receive rpc response: {:?}", e);
 				return None
 			},
 		};

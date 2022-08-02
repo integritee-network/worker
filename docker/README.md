@@ -21,33 +21,65 @@ docker-compose up
 ``` 
 Starts all services (node and workers), using the `integritee-worker:dev` images you've built in the previous step.
 
-## Run the integration tests
+## Run the demos
+
+### Demo indirect invocation (M6)
+Build
+```
+COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose -f docker-compose.yml -f demo-indirect-invocation.yml build --build-arg WORKER_MODE_ARG=offchain-worker
+```
+Run 
+```
+docker-compose -f docker-compose.yml -f demo-indirect-invocation.yml up --exit-code-from demo-indirect-invocation
+```
+### Demo direct call (M8)
+
+Build
+```
+COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose -f docker-compose.yml -f demo-direct-call.yml build --build-arg WORKER_MODE_ARG=sidechain
+```
+Run
+```
+docker-compose -f docker-compose.yml -f integration-test.yml up --exit-code-from demo-direct-call
+```
+
+### Demo sidechain
+Build
+```
+COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose -f docker-compose.yml -f demo-sidechain.yml build --build-arg WORKER_MODE_ARG=sidechain
+```
+Run
+```
+docker-compose -f docker-compose.yml -f demo-sidechain.yml up --exit-code-from demo-sidechain
+```
+
+## Run the benchmarks
 Build with
 ```
-COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose -f docker-compose.yml -f integration-test.yml build
+COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose -f docker-compose.yml -f benchmark.yml build
 ```
 and then run with
 ```
-docker-compose -f docker-compose.yml -f integration-test.yml up --exit-code-from sidechain-integration-test
+docker-compose -f docker-compose.yml -f benchmark.yml up --exit-code-from sidechain-benchmark
 ```
 
 ## Run the fork simulator
 The fork simulation uses `pumba` which in turn uses the Linux traffic control (TC). This is only available on Linux hosts, not on Windows with WSL unfortunately.
 Build the docker-compose setup with
 ```
-COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose -f docker-compose.yml -f fork-inducer.yml -f integration-test.yml build
+COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose -f docker-compose.yml -f fork-inducer.yml -f demo-sidechain.yml build --build-arg WORKER_MODE_ARG=sidechain
 ```
 
 This requires the docker BuildKit (docker version >= 18.09) and support for it in docker-compose (version >= 1.25.0)
 
 Run the 2-worker setup with a fork inducer (pumba) that delays the traffic on worker 2
 ```
-docker-compose -f docker-compose.yml -f fork-inducer.yml -f integration-test.yml up --exit-code-from sidechain-integration-test
+docker-compose -f docker-compose.yml -f fork-inducer.yml -f integration-test.yml up --exit-code-from demo-sidechain
 ```
 
 This should show that the integration test fails, because we had an unhandled fork in the sidechain. Clean up the containers after each run with:
 ```
-docker-compose -f docker-compose.yml -f fork-inducer.yml -f integration-test.yml down
+docker-compose -f docker-compose.yml -f fork-inducer.yml -f demo-sidechain.yml down
 ```
 
 We need these different compose files to separate the services that we're using. E.g. we want the integration test and fork simulator to be optional. The same could be solved using `profiles` - but that requires a more up-to-date version of `docker-compose`.

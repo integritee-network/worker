@@ -40,18 +40,15 @@ pub trait TriggerParentchainBlockImport<SignedBlockType> {
 	///
 	/// If no block in the queue matches, then no blocks will be imported.
 	/// Returns the latest imported block (if any).
-	fn import_until<Predicate>(&self, predicate: Predicate) -> Result<Option<SignedBlockType>>
-	where
-		Predicate: Fn(&SignedBlockType) -> bool;
-}
+	fn import_until(
+		&self,
+		predicate: impl Fn(&SignedBlockType) -> bool,
+	) -> Result<Option<SignedBlockType>>;
 
-/// Trait to peek the queue, without mutating it.
-pub trait PeekParentchainBlockImportQueue<SignedBlockType> {
 	/// Search the import queue with a given predicate and return a reference
 	/// to the first element that matches the predicate.
-	fn peek<Predicate>(&self, predicate: Predicate) -> Result<Option<SignedBlockType>>
-	where
-		Predicate: Fn(&SignedBlockType) -> bool;
+	fn peek(&self, predicate: impl Fn(&SignedBlockType) -> bool)
+		-> Result<Option<SignedBlockType>>;
 
 	/// Peek the latest block in the import queue. Returns None if queue is empty.
 	fn peek_latest(&self) -> Result<Option<SignedBlockType>>;
@@ -96,7 +93,8 @@ impl<BlockImporter, BlockImportQueue> TriggerParentchainBlockImport<BlockImporte
 where
 	BlockImporter: ImportParentchainBlocks,
 	BlockImportQueue: PushToBlockQueue<BlockImporter::SignedBlockType>
-		+ PopFromBlockQueue<BlockType = BlockImporter::SignedBlockType>,
+		+ PopFromBlockQueue<BlockType = BlockImporter::SignedBlockType>
+		+ PeekBlockQueue<BlockType = BlockImporter::SignedBlockType>,
 {
 	fn import_all(&self) -> Result<Option<BlockImporter::SignedBlockType>> {
 		let blocks_to_import = self.import_queue.pop_all().map_err(Error::BlockImportQueue)?;
@@ -126,13 +124,10 @@ where
 			.map_err(Error::BlockImport)
 	}
 
-	fn import_until<Predicate>(
+	fn import_until(
 		&self,
-		predicate: Predicate,
-	) -> Result<Option<BlockImporter::SignedBlockType>>
-	where
-		Predicate: Fn(&BlockImporter::SignedBlockType) -> bool,
-	{
+		predicate: impl Fn(&BlockImporter::SignedBlockType) -> bool,
+	) -> Result<Option<BlockImporter::SignedBlockType>> {
 		let blocks_to_import =
 			self.import_queue.pop_until(predicate).map_err(Error::BlockImportQueue)?;
 
@@ -149,22 +144,11 @@ where
 
 		Ok(latest_imported_block)
 	}
-}
 
-impl<BlockImporter, BlockImportQueue>
-	PeekParentchainBlockImportQueue<BlockImporter::SignedBlockType>
-	for TriggeredDispatcher<BlockImporter, BlockImportQueue>
-where
-	BlockImporter: ImportParentchainBlocks,
-	BlockImportQueue: PeekBlockQueue<BlockType = BlockImporter::SignedBlockType>,
-{
-	fn peek<Predicate>(
+	fn peek(
 		&self,
-		predicate: Predicate,
-	) -> Result<Option<BlockImporter::SignedBlockType>>
-	where
-		Predicate: Fn(&BlockImporter::SignedBlockType) -> bool,
-	{
+		predicate: impl Fn(&BlockImporter::SignedBlockType) -> bool,
+	) -> Result<Option<BlockImporter::SignedBlockType>> {
 		debug!(
 			"Peek find parentchain import queue (currently has {} elements)",
 			self.import_queue.peek_queue_size().unwrap_or(0)

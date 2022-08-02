@@ -95,6 +95,10 @@ impl DirectApi for DirectClientMock {
 		RuntimeMetadataPrefixed::decode(&mut metadata.as_slice()).map_err(|e| e.into())
 	}
 
+	fn send(&self, _request: &str) -> Result<()> {
+		unimplemented!()
+	}
+
 	fn close(&self) -> Result<()> {
 		unimplemented!()
 	}

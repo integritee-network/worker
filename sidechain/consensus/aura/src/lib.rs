@@ -30,9 +30,7 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 extern crate sgx_tstd as std;
 
 use core::marker::PhantomData;
-use itc_parentchain_block_import_dispatcher::triggered_dispatcher::{
-	PeekParentchainBlockImportQueue, TriggerParentchainBlockImport,
-};
+use itc_parentchain_block_import_dispatcher::triggered_dispatcher::TriggerParentchainBlockImport;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_time_utils::duration_now;
 use its_consensus_common::{Environment, Error as ConsensusError, Proposer};
@@ -141,8 +139,7 @@ where
 	E::Proposer: Proposer<ParentchainBlock, SignedSidechainBlock>,
 	SignedSidechainBlock: SignedBlock + Send + 'static,
 	OcallApi: ValidateerFetch + EnclaveOnChainOCallApi + Send + 'static,
-	ImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>>
-		+ PeekParentchainBlockImportQueue<SignedParentchainBlock<ParentchainBlock>>,
+	ImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>>,
 {
 	type Proposer = E::Proposer;
 	type Claim = AuthorityPair::Public;
