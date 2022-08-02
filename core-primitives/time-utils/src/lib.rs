@@ -64,6 +64,6 @@ mod tests {
 		let before = duration_now();
 		let now = duration_now();
 
-		assert!(before < now);
+		assert!(before <= now);
 	}
 }
