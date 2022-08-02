@@ -93,14 +93,14 @@ jobs:
       - name: Upload worker image
         uses: actions/upload-artifact@v2
         with:
-          name: integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar
-          path: integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar
+          name: integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar.gz
+          path: integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar.gz
 
       - name: Upload CLI client image
         uses: actions/upload-artifact@v2
         with:
-          name: integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar
-          path: integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar
+          name: integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar.gz
+          path: integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar.gz
 
   clippy:
     runs-on: ubuntu-latest
