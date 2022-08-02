@@ -87,8 +87,8 @@ jobs:
 
       - name: Export worker image(s)
         run: |
-          docker export --output="integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar" integritee-worker-${{ matrix.mode }}-${{ github.sha }}
-          docker export --output="integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar" integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}
+          docker save --output="integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar" integritee-worker-${{ matrix.mode }}-${{ github.sha }}
+          docker save --output="integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar" integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}
 
       - name: Upload worker image
         uses: actions/upload-artifact@v2
