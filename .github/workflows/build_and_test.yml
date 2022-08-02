@@ -87,8 +87,8 @@ jobs:
 
       - name: Export worker image(s)
         run: |
-          docker save --output="integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar" integritee-worker-${{ matrix.mode }}-${{ github.sha }}
-          docker save --output="integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar" integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}
+          docker save integritee-worker-${{ matrix.mode }}-${{ github.sha }} | gzip > integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar.gz
+          docker save integritee-cli-client-${{ matrix.mode }}-${{ github.sha }} | gzip > integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar.gz
 
       - name: Upload worker image
         uses: actions/upload-artifact@v2
@@ -163,19 +163,21 @@ jobs:
       - name: Download Worker Image
         uses: actions/download-artifact@v2
         with:
-          name: integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar
+          name: integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar.gz
           path: .
 
       - name: Download CLI client Image
         uses: actions/download-artifact@v2
         with:
-          name: integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar
+          name: integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar.gz
           path: .
 
       - name: Load Worker & Client Images
+        env:
+          DOCKER_BUILDKIT: 1
         run: |
-          docker import --input integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar
-          docker import --input integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar
+          cat integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar.gz | docker import - integritee-worker-${{ matrix.mode }}-${{ github.sha }}
+          cat integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar.gz | docker import - integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}
           docker images --all
           docker tag ${{ env.WORKER_IMAGE_TAG }} integritee-worker-${{ matrix.mode }}-${{ github.sha }}
           docker tag ${{ env.CLIENT_IMAGE_TAG }} integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}
