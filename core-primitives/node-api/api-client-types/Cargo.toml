@@ -1,7 +1,7 @@
 [package]
 name = "itp-api-client-types"
 version = "0.8.0"
-edition = "2021"
+edition = "2018"
 
 [dependencies]
 

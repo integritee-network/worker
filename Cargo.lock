@@ -2688,7 +2688,7 @@ dependencies = [
 
 [[package]]
 name = "itp-api-client-types"
-version = "0.1.0"
+version = "0.8.0"
 dependencies = [
  "sp-core",
  "substrate-api-client",
@@ -2795,7 +2795,7 @@ dependencies = [
 
 [[package]]
 name = "itp-node-api-factory"
-version = "0.1.0"
+version = "0.8.0"
 dependencies = [
  "itp-api-client-types",
  "sp-core",
