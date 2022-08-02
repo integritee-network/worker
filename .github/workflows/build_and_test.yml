@@ -164,7 +164,6 @@ jobs:
           cat integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar.gz | docker import - integritee-worker-${{ matrix.mode }}-${{ github.sha }}
           cat integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar.gz | docker import - integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}
           docker images --all
-          
 
       - name: Re-name Image Tags
         run: |
