@@ -35,11 +35,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-#      - name: Set up Docker Buildx
-#        uses: docker/setup-buildx-action@v2
-#        with:
-#          buildkitd-flags: --debug
-#          driver: docker-container
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          buildkitd-flags: --debug
+          driver: docker-container
 
       - name: Build Worker & Run Cargo Test
         env:
@@ -67,7 +67,6 @@ jobs:
         run: >
           docker build -t integritee-cli-client-${{ matrix.mode }}-${{ github.sha }} 
           --target deployed-client --build-arg WORKER_MODE_ARG=${{ matrix.mode }} 
-          --output type=tar,dest=integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar
           -f build.Dockerfile .
 
 #        uses: docker/build-push-action@v3
@@ -86,8 +85,10 @@ jobs:
       - name: Test Enclave # cargo test is not supported in the enclave, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
         run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-${{ matrix.mode }}-${{ github.sha }} test --all
 
-      - name: Export worker image
-        run: docker save --output="integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar" integritee-worker-${{ matrix.mode }}-${{ github.sha }}
+      - name: Export worker image(s)
+        run: |
+          docker export --output="integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar" integritee-worker-${{ matrix.mode }}-${{ github.sha }}
+          docker export --output="integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar" integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}
 
       - name: Upload worker image
         uses: actions/upload-artifact@v2
@@ -173,8 +174,8 @@ jobs:
 
       - name: Load Worker & Client Images
         run: |
-          docker load --input integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar
-          docker load --input integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar
+          docker import --input integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar
+          docker import --input integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar
           docker images --all
           docker tag ${{ env.WORKER_IMAGE_TAG }} integritee-worker-${{ matrix.mode }}-${{ github.sha }}
           docker tag ${{ env.CLIENT_IMAGE_TAG }} integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}
