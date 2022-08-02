@@ -15,9 +15,29 @@
 # This is a multi-stage docker file, where the first stage is used
 # for building and the second deploys the built application.
 
+FROM integritee/integritee-dev:0.1.9 AS base-dev
+
+RUN cargo install cargo-chef
+
+
+### Cargo chef planner
+FROM base-dev AS planner
+LABEL maintainer="zoltan@integritee.network"
+
+WORKDIR /root/work/worker
+
+COPY . .
+
+RUN cargo chef prepare --recipe-path recipe-root.json
+
+WORKDIR /root/work/worker/enclave-runtime
+
+RUN cargo chef prepare --recipe-path recipe-enclave.json
+
+
 ### Builder Stage
 ##################################################
-FROM integritee/integritee-dev:0.1.9 AS builder
+FROM base-dev AS builder
 LABEL maintainer="zoltan@integritee.network"
 
 # set environment variables
@@ -30,6 +50,19 @@ ENV SGX_MODE SW
 
 ARG WORKER_MODE_ARG
 ENV WORKER_MODE=$WORKER_MODE_ARG
+
+WORKDIR /root/work/worker
+
+COPY --from=planner /root/work/worker/recipe-root.json recipe-root.json
+COPY --from=planner /root/work/worker/enclave-runtime/recipe-enclave.json enclave-runtime/recipe-enclave.json
+
+COPY rust-toolchain.toml .
+COPY enclave-runtime/rust-toolchain.toml enclave-runtime/
+
+RUN cargo chef cook --release --recipe-path recipe-root.json
+
+WORKDIR /root/work/worker/enclave-runtime
+RUN cargo chef cook --release --recipe-path recipe-enclave.json
 
 WORKDIR /root/work/worker
 COPY . .

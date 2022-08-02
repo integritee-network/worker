@@ -42,43 +42,28 @@ jobs:
           driver: docker-container
 
       - name: Build Worker & Run Cargo Test
-        env:
-          DOCKER_BUILDKIT: 1
-        run: >
-          docker build -t integritee-worker-${{ matrix.mode }}-${{ github.sha }} 
-          --target deployed-worker --build-arg WORKER_MODE_ARG=${{ matrix.mode }} 
-          -f build.Dockerfile .
-
-#      - name: Build Worker & Run Cargo Test
-#        uses: docker/build-push-action@v3
-#        with:
-#          build-args: |
-#            WORKER_MODE_ARG=${{ matrix.mode }}
-#          cache-to: type=local,dest=/tmp/docker/cache,mode=max
-#          context: .
-#          file: build.Dockerfile
-#          load: true # Required in order to make the resulting image available in `docker images`, so we can use it in a subsequent `docker run`.
-#          tags: integritee-worker-${{ matrix.mode }}-${{ github.sha }}
-#          target: deployed-worker
+        uses: docker/build-push-action@v3
+        with:
+          build-args: |
+            WORKER_MODE_ARG=${{ matrix.mode }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          context: .
+          file: build.Dockerfile
+          load: true # Required in order to make the resulting image available in `docker images`, so we can use it in a subsequent `docker run`.
+          tags: integritee-worker-${{ matrix.mode }}-${{ github.sha }}
+          target: deployed-worker
 
       - name: Build CLI client
-        env:
-          DOCKER_BUILDKIT: 1
-        run: >
-          docker build -t integritee-cli-client-${{ matrix.mode }}-${{ github.sha }} 
-          --target deployed-client --build-arg WORKER_MODE_ARG=${{ matrix.mode }} 
-          -f build.Dockerfile .
-
-#        uses: docker/build-push-action@v3
-#        with:
-#          build-args: |
-#            WORKER_MODE_ARG=${{ matrix.mode }}
-#          cache-from: type=local,src=/tmp/docker/cache
-#          context: .
-#          file: build.Dockerfile
-#          outputs: |
-#            type=tar,dest=integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar
-#          target: deployed-client
+        uses: docker/build-push-action@v3
+        with:
+          build-args: |
+            WORKER_MODE_ARG=${{ matrix.mode }}
+          cache-from: type=gha
+          context: .
+          file: build.Dockerfile
+          load: true
+          target: deployed-client
 
       - run: docker images --all
 
