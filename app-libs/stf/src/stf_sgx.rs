@@ -17,34 +17,34 @@
 
 #[cfg(feature = "test")]
 use crate::test_genesis::test_genesis_setup;
-use alloc::format;
 
 use crate::{
 	helpers::{
-		account_data, account_nonce, ensure_root, get_account_info, get_board_for, increment_nonce,
-		root, validate_nonce,
+		account_data, account_nonce, enclave_signer_account, ensure_enclave_signer_account,
+		ensure_root, get_account_info, get_board_for, increment_nonce, root, validate_nonce,
 	},
 	AccountData, AccountId, Getter, Index, ParentchainHeader, PublicGetter, ShardIdentifier, State,
 	StateTypeDiff, Stf, StfError, StfResult, TrustedCall, TrustedCallSigned, TrustedGetter,
+	ENCLAVE_ACCOUNT_KEY,
 };
 use codec::Encode;
 use itp_settings::node::{TEEREX_MODULE, UNSHIELD_FUNDS};
 use itp_storage::storage_value_key;
 use itp_types::OpaqueCall;
+use itp_utils::stringify::account_id_to_string;
 use its_primitives::types::{BlockHash, BlockNumber as SidechainBlockNumber, Timestamp};
 use its_state::SidechainSystemExt;
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
 use sgx_runtime::Runtime;
-use sgx_tstd as std;
 use sp_io::hashing::blake2_256;
 use sp_runtime::MultiAddress;
-use std::{prelude::v1::*, vec};
+use std::{format, prelude::v1::*, vec};
 use support::traits::UnfilteredDispatchable;
 
 impl Stf {
-	pub fn init_state() -> State {
-		debug!("initializing stf state");
+	pub fn init_state(enclave_account: AccountId) -> State {
+		debug!("initializing stf state, account id {}", account_id_to_string(&enclave_account));
 		let mut ext = State::new();
 
 		ext.execute_with(|| {
@@ -70,6 +70,17 @@ impl Stf {
 
 		#[cfg(feature = "test")]
 		test_genesis_setup(&mut ext);
+
+		ext.execute_with(|| {
+			sp_io::storage::set(
+				&storage_value_key("Sudo", ENCLAVE_ACCOUNT_KEY),
+				&enclave_account.encode(),
+			);
+
+			if let Err(e) = Self::create_enclave_self_account(&enclave_account) {
+				error!("Failed to initialize the enclave signer account: {:?}", e);
+			}
+		});
 
 		trace!("Returning updated state: {:?}", ext);
 		ext
@@ -177,8 +188,8 @@ impl Stf {
 					)));
 					Ok(())
 				},
-				TrustedCall::balance_shield(root, who, value) => {
-					ensure_root(root)?;
+				TrustedCall::balance_shield(enclave_account, who, value) => {
+					ensure_enclave_signer_account(&enclave_account)?;
 					debug!("balance_shield({:x?}, {})", who.encode(), value);
 					Self::shield_funds(who, value)?;
 					Ok(())
@@ -211,6 +222,19 @@ impl Stf {
 			increment_nonce(&sender);
 			Ok(())
 		})
+	}
+
+	/// Creates valid enclave account with a balance that is above the existential deposit.
+	/// !! Requires a root to be set.
+	fn create_enclave_self_account(enclave_account: &AccountId) -> StfResult<()> {
+		sgx_runtime::BalancesCall::<Runtime>::set_balance {
+			who: MultiAddress::Id(enclave_account.clone()),
+			new_free: 1000,
+			new_reserved: 0,
+		}
+		.dispatch_bypass_filter(sgx_runtime::Origin::root())
+		.map_err(|_| StfError::Dispatch("set_balance for enclave signer account".to_string()))
+		.map(|_| ())
 	}
 
 	fn shield_funds(account: AccountId, amount: u128) -> StfResult<()> {
@@ -309,6 +333,10 @@ impl Stf {
 
 	pub fn get_root(ext: &mut impl SgxExternalitiesTrait) -> AccountId {
 		ext.execute_with(|| root())
+	}
+
+	pub fn get_enclave_account(ext: &mut impl SgxExternalitiesTrait) -> AccountId {
+		ext.execute_with(|| enclave_signer_account())
 	}
 
 	pub fn account_nonce(ext: &mut impl SgxExternalitiesTrait, account: &AccountId) -> Index {

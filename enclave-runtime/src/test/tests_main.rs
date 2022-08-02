@@ -33,6 +33,7 @@ use ita_stf::{
 		account_key_hash, get_parentchain_blockhash, get_parentchain_number,
 		get_parentchain_parenthash,
 	},
+	stf_sgx_tests,
 	test_genesis::endowed_account as funded_pair,
 	AccountInfo, ShardIdentifier, State, StatePayload, StateTypeDiff, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetter, TrustedOperation,
@@ -42,10 +43,12 @@ use itp_settings::{
 	enclave::MAX_TRUSTED_OPS_EXEC_DURATION,
 	node::{PROPOSED_SIDECHAIN_BLOCK, SIDECHAIN_MODULE},
 };
-use itp_sgx_crypto::{mocks::KeyRepositoryMock, Aes, StateCrypto};
+use itp_sgx_crypto::{
+	ed25519_derivation::DeriveEd25519, mocks::KeyRepositoryMock, Aes, StateCrypto,
+};
 use itp_stf_executor::{
-	executor::StfExecutor, executor_tests as stf_executor_tests, traits::StateUpdateProposer,
-	BatchExecutionResult,
+	enclave_signer_tests as stf_enclave_signer_tests, executor::StfExecutor,
+	executor_tests as stf_executor_tests, traits::StateUpdateProposer, BatchExecutionResult,
 };
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{
@@ -80,7 +83,7 @@ use std::{string::String, sync::Arc, vec::Vec};
 type TestRpcResponder = RpcResponderMock<ExtrinsicHash<SidechainApi<Block>>>;
 type TestTopPool = BasicPool<SidechainApi<Block>, Block, TestRpcResponder>;
 type TestShieldingKeyRepo = KeyRepositoryMock<ShieldingCryptoMock>;
-type TestStfExecutor = StfExecutor<OcallApi, HandleStateMock, SgxExternalities>;
+type TestStfExecutor = StfExecutor<OcallApi, HandleStateMock>;
 type TestTopPoolAuthor = Author<
 	TestTopPool,
 	AllowAllTopsFilter,
@@ -95,6 +98,9 @@ type TestTopPoolOperationHandler =
 pub extern "C" fn test_main_entrance() -> size_t {
 	rsgx_unit_tests!(
 		attestation::tests::decode_spid_works,
+		stf_sgx_tests::enclave_account_initialization_works,
+		stf_sgx_tests::shield_funds_increments_signer_account_nonce,
+		stf_sgx_tests::test_root_account_exists_after_initialization,
 		itp_stf_state_handler::test::sgx_tests::test_write_and_load_state_works,
 		itp_stf_state_handler::test::sgx_tests::test_sgx_state_decode_encode_works,
 		itp_stf_state_handler::test::sgx_tests::test_encrypt_decrypt_state_type_works,
@@ -117,6 +123,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		test_call_set_update_parentchain_block,
 		test_invalid_nonce_call_is_not_executed,
 		test_non_root_shielding_call_is_not_executed,
+		test_shielding_call_with_enclave_self_is_executed,
 		rpc::worker_api_direct::tests::test_given_io_handler_methods_then_retrieve_all_names_as_string,
 		handle_state_mock::tests::initialized_shards_list_is_empty,
 		handle_state_mock::tests::shard_exists_after_inserting,
@@ -141,9 +148,12 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		stf_executor_tests::propose_state_update_always_executes_preprocessing_step,
 		stf_executor_tests::propose_state_update_executes_only_one_trusted_call_given_not_enough_time,
 		stf_executor_tests::propose_state_update_executes_all_calls_given_enough_time,
+		stf_enclave_signer_tests::enclave_signer_signatures_are_valid,
+		stf_enclave_signer_tests::derive_key_is_deterministic,
 		// sidechain integration tests
 		sidechain_aura_tests::produce_sidechain_block_and_import_it,
 		top_pool_tests::process_indirect_call_in_top_pool,
+		top_pool_tests::submit_shielding_call_to_top_pool,
 		// tls_ra unit tests
 		tls_ra::seal_handler::test::seal_shielding_key_works,
 		tls_ra::seal_handler::test::seal_shielding_key_fails_for_invalid_key,
@@ -533,6 +543,43 @@ fn test_non_root_shielding_call_is_not_executed() {
 	assert!(!executed_batch.executed_operations[0].is_success());
 }
 
+fn test_shielding_call_with_enclave_self_is_executed() {
+	let (top_pool_author, _state, shard, mrenclave, shielding_key, state_handler) = test_setup();
+	let stf_executor = Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone()));
+	let top_pool_operation_handler = TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(
+		top_pool_author.clone(),
+		stf_executor.clone(),
+	);
+
+	let sender = funded_pair();
+	let sender_account: AccountId = sender.public().into();
+	let enclave_call_signer = enclave_call_signer(&shielding_key);
+
+	let signed_call = TrustedCall::balance_shield(
+		enclave_call_signer.public().into(),
+		sender_account.clone(),
+		1000,
+	)
+	.sign(&enclave_call_signer.into(), 0, &mrenclave, &shard);
+	let trusted_operation = TrustedOperation::indirect_call(signed_call);
+
+	submit_operation_to_top_pool(
+		top_pool_author.as_ref(),
+		&trusted_operation,
+		&shielding_key,
+		shard,
+	)
+	.unwrap();
+
+	// when
+	let executed_batch =
+		execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_operation_handler);
+
+	// then
+	assert_eq!(1, executed_batch.executed_operations.len());
+	assert!(executed_batch.executed_operations[0].is_success());
+}
+
 fn execute_trusted_calls(
 	shard: &ShardIdentifier,
 	stf_executor: &TestStfExecutor,
@@ -587,13 +634,14 @@ pub fn test_setup() -> (
 	ShieldingCryptoMock,
 	Arc<HandleStateMock>,
 ) {
+	let shielding_key = ShieldingCryptoMock::default();
+	let shielding_key_repo = Arc::new(KeyRepositoryMock::new(shielding_key.clone()));
+
 	let state_handler = Arc::new(HandleStateMock::default());
-	let (state, shard) = init_state(state_handler.as_ref());
+	let (state, shard) =
+		init_state(state_handler.as_ref(), enclave_call_signer(&shielding_key).public().into());
 	let top_pool = test_top_pool();
 	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
-
-	let encryption_key = ShieldingCryptoMock::default();
-	let shielding_key_repo = Arc::new(KeyRepositoryMock::new(encryption_key.clone()));
 
 	(
 		Arc::new(TestTopPoolAuthor::new(
@@ -606,7 +654,7 @@ pub fn test_setup() -> (
 		state,
 		shard,
 		mrenclave,
-		encryption_key,
+		shielding_key,
 		state_handler,
 	)
 }
@@ -618,6 +666,10 @@ pub fn unfunded_public() -> spEd25519::Public {
 
 pub fn test_account() -> spEd25519::Pair {
 	spEd25519::Pair::from_seed(b"42315678901234567890123456789012")
+}
+
+pub fn enclave_call_signer<Source: DeriveEd25519>(key_source: &Source) -> spEd25519::Pair {
+	key_source.derive_ed25519().unwrap()
 }
 
 /// transforms `call` into `TrustedOperation::direct(call)`

@@ -81,7 +81,7 @@ impl StaticSealedIO for AesSealMock {
 		Ok(Aes::default())
 	}
 
-	fn seal_to_static_file(_unsealed: Self::Unsealed) -> Result<()> {
+	fn seal_to_static_file(_unsealed: &Self::Unsealed) -> Result<()> {
 		Ok(())
 	}
 }
@@ -97,9 +97,9 @@ impl SealedIO for AesSealMock {
 			.map(|k| k.clone())
 	}
 
-	fn seal(&self, unsealed: Self::Unsealed) -> std::result::Result<(), Self::Error> {
+	fn seal(&self, unsealed: &Self::Unsealed) -> Result<()> {
 		let mut aes_lock = self.aes.write().map_err(|e| Error::Other(format!("{:?}", e).into()))?;
-		*aes_lock = unsealed;
+		*aes_lock = *unsealed;
 		Ok(())
 	}
 }
@@ -115,7 +115,7 @@ impl StaticSealedIO for Rsa3072SealMock {
 		Ok(Rsa3072KeyPair::default())
 	}
 
-	fn seal_to_static_file(_unsealed: Self::Unsealed) -> Result<()> {
+	fn seal_to_static_file(_unsealed: &Self::Unsealed) -> Result<()> {
 		Ok(())
 	}
 }

@@ -33,11 +33,11 @@ use codec::Encode;
 use error::Result;
 use itp_nonce_cache::{MutateNonce, Nonce};
 use itp_settings::node::{RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION};
-use itp_types::OpaqueCall;
+use itp_types::{OpaqueCall, ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder};
 use sp_core::{Pair, H256};
-use sp_runtime::{MultiSignature, OpaqueExtrinsic};
+use sp_runtime::{generic::Era, MultiSignature, OpaqueExtrinsic};
 use std::{sync::Arc, vec::Vec};
-use substrate_api_client::compose_extrinsic_offline;
+use substrate_api_client::{compose_extrinsic_offline, ExtrinsicParams};
 
 pub mod error;
 
@@ -48,7 +48,11 @@ pub mod mock;
 ///
 /// Also increases the nonce counter for each extrinsic that is created.
 pub trait CreateExtrinsics {
-	fn create_extrinsics(&self, calls: &[OpaqueCall]) -> Result<Vec<OpaqueExtrinsic>>;
+	fn create_extrinsics(
+		&self,
+		calls: &[OpaqueCall],
+		extrinsics_params_builder: Option<ParentchainExtrinsicParamsBuilder>,
+	) -> Result<Vec<OpaqueExtrinsic>>;
 }
 
 /// Extrinsics factory
@@ -80,24 +84,32 @@ where
 	Signer::Signature: Into<MultiSignature>,
 	NonceCache: MutateNonce,
 {
-	fn create_extrinsics(&self, calls: &[OpaqueCall]) -> Result<Vec<OpaqueExtrinsic>> {
+	fn create_extrinsics(
+		&self,
+		calls: &[OpaqueCall],
+		extrinsics_params_builder: Option<ParentchainExtrinsicParamsBuilder>,
+	) -> Result<Vec<OpaqueExtrinsic>> {
 		let mut nonce_lock = self.nonce_cache.load_for_mutation()?;
 		let mut nonce_value = nonce_lock.0;
+
+		let params_builder = extrinsics_params_builder.unwrap_or_else(|| {
+			ParentchainExtrinsicParamsBuilder::new()
+				.era(Era::Immortal, self.genesis_hash)
+				.tip(0)
+		});
 
 		let extrinsics_buffer: Vec<OpaqueExtrinsic> = calls
 			.iter()
 			.map(|call| {
-				let xt = compose_extrinsic_offline!(
-					self.signer.clone(),
-					call,
-					nonce_value,
-					Era::Immortal,
-					self.genesis_hash,
-					self.genesis_hash,
+				let extrinsic_params = ParentchainExtrinsicParams::new(
 					RUNTIME_SPEC_VERSION,
-					RUNTIME_TRANSACTION_VERSION
-				)
-				.encode();
+					RUNTIME_TRANSACTION_VERSION,
+					nonce_value,
+					self.genesis_hash,
+					params_builder,
+				);
+				let xt = compose_extrinsic_offline!(self.signer.clone(), call, extrinsic_params)
+					.encode();
 				nonce_value += 1;
 				xt
 			})
@@ -128,7 +140,7 @@ pub mod tests {
 			ExtrinsicsFactory::new(test_genesis_hash(), test_account(), nonce_cache.clone());
 
 		let opaque_calls = [OpaqueCall(vec![3u8; 42]), OpaqueCall(vec![12u8, 78])];
-		let xts = extrinsics_factory.create_extrinsics(&opaque_calls).unwrap();
+		let xts = extrinsics_factory.create_extrinsics(&opaque_calls, None).unwrap();
 
 		assert_eq!(opaque_calls.len(), xts.len());
 		assert_eq!(nonce_cache.get_nonce().unwrap(), Nonce(opaque_calls.len() as NonceValue));

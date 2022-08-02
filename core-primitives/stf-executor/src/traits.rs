@@ -18,9 +18,10 @@
 use crate::{error::Result, BatchExecutionResult};
 use codec::Encode;
 use ita_stf::{
-	AccountId, ParentchainHeader, ShardIdentifier, TrustedGetterSigned, TrustedOperation,
+	AccountId, ParentchainHeader, ShardIdentifier, TrustedCall, TrustedCallSigned,
+	TrustedGetterSigned, TrustedOperation,
 };
-use itp_types::{Amount, GameId, OpaqueCall, H256};
+use itp_types::{GameId, H256};
 use sgx_externalities::SgxExternalitiesTrait;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header as HeaderTrait};
 use std::{fmt::Debug, result::Result as StdResult, time::Duration, vec::Vec};
@@ -31,16 +32,9 @@ pub enum StatePostProcessing {
 	Prune,
 }
 
-/// Execute shield funds on the STF
-pub trait StfExecuteShieldFunds {
-	fn execute_shield_funds(
-		&self,
-		account: AccountId,
-		amount: Amount,
-		shard: &ShardIdentifier,
-	) -> Result<H256>;
-
-	fn execute_new_game<ParentchainBlock>(
+/// Execute trusted calls for Ajuna games.
+pub trait StfExecuteGames {
+	fn new_game<ParentchainBlock>(
 		&self,
 		game_id: GameId,
 		shard: &ShardIdentifier,
@@ -49,28 +43,20 @@ pub trait StfExecuteShieldFunds {
 	where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>;
 
-	fn finish_game<ParentchainBlock>(
-		&self,
-		game_id: GameId,
-		shard: &ShardIdentifier,
-		block: &ParentchainBlock,
-	) -> Result<GameId>
-	where
-		ParentchainBlock: ParentchainBlockTrait<Hash = H256>;
+	fn finish_game(&self, game_id: GameId, shard: &ShardIdentifier) -> Result<GameId>;
 }
 
-/// Execute a trusted call on the STF
-pub trait StfExecuteTrustedCall {
-	fn execute_trusted_call<PH>(
+/// Allows signing of a trusted call with the enclave account that is registered in the STF.
+///
+/// The signing key is derived from the shielding key, which guarantees that all enclaves sign the same key.
+pub trait StfEnclaveSigning {
+	fn get_enclave_account(&self) -> Result<AccountId>;
+
+	fn sign_call_with_self(
 		&self,
-		calls: &mut Vec<OpaqueCall>,
-		stf_call_signed: &TrustedOperation,
-		header: &PH,
+		trusted_call: &TrustedCall,
 		shard: &ShardIdentifier,
-		post_processing: StatePostProcessing,
-	) -> Result<Option<H256>>
-	where
-		PH: HeaderTrait<Hash = H256>;
+	) -> Result<TrustedCallSigned>;
 }
 
 /// Proposes a state update to `Externalities`.

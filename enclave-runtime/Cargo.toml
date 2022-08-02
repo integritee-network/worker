@@ -53,10 +53,10 @@ ipfs-unixfs = { default-features = false, git = "https://github.com/whalelephant
 
 # scs / integritee
 jsonrpc-core = { default-features = false, git = "https://github.com/scs/jsonrpc", branch = "no_std" }
-sgx-externalities = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", rev = "polkadot-v0.9.20", features = ["sgx"] }
-sgx-runtime = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", rev = "polkadot-v0.9.20"}
-sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"], git = "https://github.com/ajuna-network/sgx-runtime", rev = "polkadot-v0.9.20", optional = true }
-substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.20" }
+sgx-externalities = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", rev = "polkadot-v0.9.20-dev", features = ["sgx"] }
+sgx-runtime = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", rev = "polkadot-v0.9.20-dev"}
+sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"], git = "https://github.com/ajuna-network/sgx-runtime", rev = "polkadot-v0.9.20-dev", optional = true }
+substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.20-asset" }
 
 # mesalock
 linked-hash-map = { git = "https://github.com/mesalock-linux/linked-hash-map-sgx" }
@@ -90,7 +90,7 @@ itc-parentchain = { path = "../core/parentchain/parentchain-crate", default-feat
 itc-parentchain-light-client = { path = "../core/parentchain/light-client", default-features = false }
 itp-block-import-queue = { path = "../core-primitives/block-import-queue", default-features = false, features = ["sgx"] }
 itp-component-container = { path = "../core-primitives/component-container", default-features = false, features = ["sgx"] }
-itp-extrinsics-factory = { path = "../core-primitives/extrinsics-factory", default-features = false, features = ["sgx"]}
+itp-extrinsics-factory = { path = "../core-primitives/extrinsics-factory", default-features = false, features = ["sgx"] }
 itp-nonce-cache = { path = "../core-primitives/nonce-cache", default-features = false, features = ["sgx"] }
 itp-ocall-api = { path = "../core-primitives/ocall-api", default-features = false }
 itp-primitives-cache = { path = "../core-primitives/primitives-cache", default-features = false, features = ["sgx"] }
@@ -126,7 +126,7 @@ getrandom = { git = "https://github.com/integritee-network/getrandom-sgx", branc
 [patch."https://github.com/paritytech/substrate"]
 log = { git = "https://github.com/mesalock-linux/log-sgx" }
 env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx" }
-sp-io = { git = "https://github.com/ajuna-network/sgx-runtime", rev = "polkadot-v0.9.20"}
+sp-io = { git = "https://github.com/ajuna-network/sgx-runtime", rev = "polkadot-v0.9.20-dev"}
 #sp-io = { path = "../../sgx-runtime/substrate-sgx/sp-io"}
 
 #[patch."https://github.com/ajuna-network/sgx-runtime"]

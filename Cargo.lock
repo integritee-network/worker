@@ -15,7 +15,7 @@ dependencies = [
 [[package]]
 name = "ac-compose-macros"
 version = "0.1.0"
-source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.20#2adb257ceefa8db387b61f26d4d41a5bbf5b31dc"
+source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.20-asset#5e183b979d5b036f6d086c8b846d13ab44eb2ee0"
 dependencies = [
  "ac-primitives",
  "log 0.4.17",
@@ -27,7 +27,7 @@ dependencies = [
 [[package]]
 name = "ac-node-api"
 version = "0.1.0"
-source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.20#2adb257ceefa8db387b61f26d4d41a5bbf5b31dc"
+source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.20-asset#5e183b979d5b036f6d086c8b846d13ab44eb2ee0"
 dependencies = [
  "ac-primitives",
  "frame-metadata",
@@ -47,7 +47,7 @@ dependencies = [
 [[package]]
 name = "ac-primitives"
 version = "0.1.0"
-source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.20#2adb257ceefa8db387b61f26d4d41a5bbf5b31dc"
+source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.20-asset#5e183b979d5b036f6d086c8b846d13ab44eb2ee0"
 dependencies = [
  "hex",
  "parity-scale-codec",
@@ -125,7 +125,7 @@ dependencies = [
 [[package]]
 name = "ajuna-common"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#fde27393de0c7af8a5a8d9df393e8c7c1bae9b8c"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20-dev#ffd8252caaaac889d6c2fa603ff76bf014c1dd4f"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -136,7 +136,7 @@ dependencies = [
 [[package]]
 name = "ajuna-primitives"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#dbc6a9fe50f6baa59250736a6dd436bc25c72169"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20-dev#ffd8252caaaac889d6c2fa603ff76bf014c1dd4f"
 dependencies = [
  "sp-core",
  "sp-runtime",
@@ -145,16 +145,18 @@ dependencies = [
 [[package]]
 name = "ajuna-solo-runtime"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#dbc6a9fe50f6baa59250736a6dd436bc25c72169"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20-dev#ffd8252caaaac889d6c2fa603ff76bf014c1dd4f"
 dependencies = [
  "ajuna-common",
  "ajuna-primitives",
+ "frame-benchmarking",
  "frame-executive",
  "frame-support",
  "frame-system",
  "frame-system-rpc-runtime-api",
  "log 0.4.17",
  "orml-vesting",
+ "pallet-ajuna-board",
  "pallet-ajuna-gameregistry",
  "pallet-ajuna-matchmaker",
  "pallet-ajuna-runner",
@@ -948,7 +950,7 @@ dependencies = [
 [[package]]
 name = "dot4gravity"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/ajuna-games?rev=polkadot-v0.9.20#159ae6d601374af2295fb17b0be89b344a1afaf0"
+source = "git+https://github.com/ajuna-network/ajuna-games?rev=polkadot-v0.9.20-dev#2151b20f59524cb025abbdcd303f0fe9cdbf60c8"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -1021,15 +1023,6 @@ name = "either"
 version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
-
-[[package]]
-name = "env_logger"
-version = "0.7.1"
-source = "git+https://github.com/mesalock-linux/env_logger-sgx#839ef5144497dd61e7a5dc99ace41c561b576f20"
-dependencies = [
- "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
- "sgx_tstd",
-]
 
 [[package]]
 name = "env_logger"
@@ -2099,7 +2092,7 @@ dependencies = [
  "blake2-rfc",
  "chrono",
  "clap 3.1.18",
- "env_logger 0.9.0",
+ "env_logger",
  "frame-system",
  "geojson",
  "hex",
@@ -2142,7 +2135,7 @@ dependencies = [
  "cid",
  "clap 2.34.0",
  "dirs",
- "env_logger 0.9.0",
+ "env_logger",
  "frame-support",
  "frame-system",
  "futures 0.3.21",
@@ -2239,15 +2232,13 @@ name = "ita-stf"
 version = "0.8.0"
 dependencies = [
  "ajuna-solo-runtime",
- "base58 0.1.0",
  "derive_more",
- "env_logger 0.7.1",
  "frame-support",
  "frame-system",
- "hex",
  "itp-settings",
  "itp-storage",
  "itp-types",
+ "itp-utils",
  "its-primitives",
  "its-state",
  "log 0.4.17",
@@ -2260,7 +2251,7 @@ dependencies = [
  "sgx_tstd",
  "sp-application-crypto",
  "sp-core",
- "sp-io 6.0.0 (git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20)",
+ "sp-io 6.0.0 (git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20-dev)",
  "sp-keyring",
  "sp-runtime",
  "substrate-api-client",
@@ -2341,7 +2332,7 @@ name = "itc-parentchain-indirect-calls-executor"
 version = "0.8.0"
 dependencies = [
  "bs58",
- "env_logger 0.9.0",
+ "env_logger",
  "futures 0.3.21",
  "futures 0.3.8",
  "ita-stf",
@@ -2376,6 +2367,7 @@ dependencies = [
  "itp-settings",
  "itp-sgx-io",
  "itp-storage",
+ "itp-test",
  "itp-types",
  "lazy_static",
  "log 0.4.17",
@@ -2416,7 +2408,7 @@ dependencies = [
 name = "itc-rpc-client"
 version = "0.8.0"
 dependencies = [
- "env_logger 0.9.0",
+ "env_logger",
  "itc-tls-websocket-server",
  "itp-types",
  "itp-utils",
@@ -2439,7 +2431,7 @@ name = "itc-rpc-server"
 version = "0.8.0"
 dependencies = [
  "anyhow",
- "env_logger 0.9.0",
+ "env_logger",
  "itp-enclave-api",
  "itp-types",
  "itp-utils",
@@ -2459,7 +2451,7 @@ dependencies = [
 name = "itc-tls-websocket-server"
 version = "0.8.0"
 dependencies = [
- "env_logger 0.9.0",
+ "env_logger",
  "log 0.4.17",
  "mio 0.6.21",
  "mio 0.6.23",
@@ -2683,6 +2675,7 @@ dependencies = [
  "ita-stf",
  "itp-ocall-api",
  "itp-registry-storage",
+ "itp-sgx-crypto",
  "itp-stf-state-handler",
  "itp-storage",
  "itp-test",
@@ -2692,6 +2685,7 @@ dependencies = [
  "pallet-ajuna-gameregistry",
  "parity-scale-codec",
  "sgx-externalities",
+ "sgx_crypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
@@ -2870,6 +2864,7 @@ dependencies = [
  "hex",
  "parity-scale-codec",
  "sgx_tstd",
+ "sp-core",
  "thiserror 1.0.31",
  "thiserror 1.0.9",
 ]
@@ -2902,7 +2897,7 @@ dependencies = [
 name = "its-consensus-aura"
 version = "0.8.0"
 dependencies = [
- "env_logger 0.9.0",
+ "env_logger",
  "finality-grandpa",
  "frame-support",
  "ita-stf",
@@ -2919,6 +2914,7 @@ dependencies = [
  "itp-test",
  "itp-time-utils",
  "itp-types",
+ "itp-utils",
  "its-block-composer",
  "its-consensus-common",
  "its-consensus-slots",
@@ -3064,7 +3060,7 @@ dependencies = [
  "sgx-externalities",
  "sgx_tstd",
  "sp-core",
- "sp-io 6.0.0 (git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20)",
+ "sp-io 6.0.0 (git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20-dev)",
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.20)",
  "thiserror 1.0.31",
@@ -4219,10 +4215,11 @@ checksum = "029d8d0b2f198229de29dca79676f2738ff952edf3fde542eb8bf94d8c21b435"
 [[package]]
 name = "pallet-ajuna-board"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#fde27393de0c7af8a5a8d9df393e8c7c1bae9b8c"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20-dev#ffd8252caaaac889d6c2fa603ff76bf014c1dd4f"
 dependencies = [
  "ajuna-common",
  "dot4gravity",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -4234,7 +4231,7 @@ dependencies = [
 [[package]]
 name = "pallet-ajuna-gameregistry"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#dbc6a9fe50f6baa59250736a6dd436bc25c72169"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20-dev#ffd8252caaaac889d6c2fa603ff76bf014c1dd4f"
 dependencies = [
  "ajuna-common",
  "frame-benchmarking",
@@ -4251,7 +4248,7 @@ dependencies = [
 [[package]]
 name = "pallet-ajuna-matchmaker"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#dbc6a9fe50f6baa59250736a6dd436bc25c72169"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20-dev#ffd8252caaaac889d6c2fa603ff76bf014c1dd4f"
 dependencies = [
  "ajuna-common",
  "frame-support",
@@ -4264,7 +4261,7 @@ dependencies = [
 [[package]]
 name = "pallet-ajuna-runner"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20#dbc6a9fe50f6baa59250736a6dd436bc25c72169"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20-dev#ffd8252caaaac889d6c2fa603ff76bf014c1dd4f"
 dependencies = [
  "ajuna-common",
  "frame-support",
@@ -5851,7 +5848,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.4.0"
-source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20#b37e1d8680e200b52db10d05c207b37206623c9e"
+source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20-dev#c181d4f75c25961e27a4b409b1172eaa24ceb4f3"
 dependencies = [
  "derive_more",
  "environmental",
@@ -5866,7 +5863,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20#b37e1d8680e200b52db10d05c207b37206623c9e"
+source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20-dev#c181d4f75c25961e27a4b409b1172eaa24ceb4f3"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -6539,7 +6536,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "6.0.0"
-source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20#b37e1d8680e200b52db10d05c207b37206623c9e"
+source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20-dev#c181d4f75c25961e27a4b409b1172eaa24ceb4f3"
 dependencies = [
  "environmental",
  "futures 0.3.21",
@@ -6922,7 +6919,7 @@ dependencies = [
 [[package]]
 name = "substrate-api-client"
 version = "0.6.0"
-source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.20#2adb257ceefa8db387b61f26d4d41a5bbf5b31dc"
+source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.20-asset#5e183b979d5b036f6d086c8b846d13ab44eb2ee0"
 dependencies = [
  "ac-compose-macros",
  "ac-node-api",
@@ -6964,7 +6961,7 @@ dependencies = [
 [[package]]
 name = "substrate-client-keystore"
 version = "0.6.0"
-source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.20#2adb257ceefa8db387b61f26d4d41a5bbf5b31dc"
+source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.20-asset#5e183b979d5b036f6d086c8b846d13ab44eb2ee0"
 dependencies = [
  "async-trait",
  "hex",

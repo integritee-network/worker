@@ -26,6 +26,7 @@ use crate::{
 	error::{Error, Result},
 	mocks::validator_mock::ValidatorMock,
 };
+use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_types::Block;
 
 /// Mock for the validator access.
@@ -36,7 +37,7 @@ pub struct ValidatorAccessMock {
 	validator: RwLock<ValidatorMock>,
 }
 
-impl ValidatorAccess<Block> for ValidatorAccessMock {
+impl<OCallApi: EnclaveOnChainOCallApi> ValidatorAccess<Block, OCallApi> for ValidatorAccessMock {
 	type ValidatorType = ValidatorMock;
 
 	fn execute_on_validator<F, R>(&self, getter_function: F) -> Result<R>

@@ -17,7 +17,10 @@
 
 use itp_enclave_api::{enclave_base::EnclaveBase, EnclaveResult};
 use itp_settings::worker::MR_ENCLAVE_SIZE;
-use itp_types::light_client_init_params::{LightClientInitParams, LightClientInitParams::Grandpa};
+use itp_types::light_client_init_params::{
+	LightClientInitParams,
+	LightClientInitParams::{Grandpa, Parachain},
+};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_core::ed25519;
 use sp_runtime::traits::Header;
@@ -43,11 +46,8 @@ impl EnclaveBase for EnclaveBaseMock {
 		params: LightClientInitParams<SpHeader>,
 	) -> EnclaveResult<SpHeader> {
 		return match params {
-			Grandpa {
-				genesis_header,
-				authorities: _authorities,
-				authority_proof: _authority_proof,
-			} => Ok(genesis_header),
+			Grandpa { genesis_header, .. } => Ok(genesis_header),
+			Parachain { genesis_header, .. } => Ok(genesis_header),
 		}
 	}
 

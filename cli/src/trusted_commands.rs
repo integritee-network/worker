@@ -186,7 +186,7 @@ pub fn match_trusted_commands(cli: &Cli, trusted_args: &TrustedArgs) {
 			SgxGameTurn::DropBomb(Coordinates { col: *col, row: *row }),
 		),
 		TrustedCommands::DropStone { player, side, n } =>
-			play_turn(cli, trusted_args, player, SgxGameTurn::DropStone(((*side).0.clone(), *n))),
+			play_turn(cli, trusted_args, player, SgxGameTurn::DropStone(((*side).0, *n))),
 		TrustedCommands::GetBoard { player } => get_board(cli, trusted_args, player),
 	}
 }

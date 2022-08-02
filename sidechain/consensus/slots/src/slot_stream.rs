@@ -79,7 +79,6 @@ impl SlotStream {
 mod tests {
 	use super::*;
 	use std::{thread, time::Instant};
-	use tokio;
 
 	const SLOT_DURATION: Duration = Duration::from_millis(300);
 	const SLOT_TOLERANCE: Duration = Duration::from_millis(10);

@@ -15,61 +15,69 @@
 
 */
 
-use crate::{
-	error::Result,
-	traits::{StatePostProcessing, StfExecuteShieldFunds, StfExecuteTrustedCall},
-};
-use ita_stf::{AccountId, ShardIdentifier, TrustedOperation};
-use itp_types::{Amount, GameId, OpaqueCall};
-use sp_core::H256;
-use sp_runtime::traits::Header as HeaderTrait;
-use std::vec::Vec;
+use crate::{error::Result, traits::StfEnclaveSigning};
+use ita_stf::{AccountId, KeyPair, ShardIdentifier, TrustedCall, TrustedCallSigned};
+use sp_core::Pair;
 
 /// Mock for the StfExecutor.
 #[derive(Default)]
 pub struct StfExecutorMock;
 
-impl StfExecuteTrustedCall for StfExecutorMock {
-	fn execute_trusted_call<PH>(
-		&self,
-		_calls: &mut Vec<OpaqueCall>,
-		_stf_call_signed: &TrustedOperation,
-		_header: &PH,
-		_shard: &ShardIdentifier,
-		_post_processing: StatePostProcessing,
-	) -> Result<Option<H256>>
-	where
-		PH: HeaderTrait<Hash = H256>,
-	{
-		todo!()
+pub struct StfEnclaveSignerMock {
+	mr_enclave: [u8; 32],
+	signer: sp_core::ed25519::Pair,
+}
+
+impl StfEnclaveSignerMock {
+	pub fn new(mr_enclave: [u8; 32]) -> Self {
+		type Seed = [u8; 32];
+		const TEST_SEED: Seed = *b"42345678901234567890123456789012";
+
+		Self { mr_enclave, signer: sp_core::ed25519::Pair::from_seed(&TEST_SEED) }
 	}
 }
 
-impl StfExecuteShieldFunds for StfExecutorMock {
-	fn execute_shield_funds(
-		&self,
-		_account: AccountId,
-		_amount: Amount,
-		_shard: &ShardIdentifier,
-	) -> Result<H256> {
-		todo!()
+impl Default for StfEnclaveSignerMock {
+	fn default() -> Self {
+		Self::new([0u8; 32])
+	}
+}
+
+impl StfEnclaveSigning for StfEnclaveSignerMock {
+	fn get_enclave_account(&self) -> Result<AccountId> {
+		Ok(self.signer.public().into())
 	}
 
-	fn execute_new_game<ParentchainBlock>(
+	fn sign_call_with_self(
 		&self,
-		_game_id: GameId,
+		trusted_call: &TrustedCall,
+		shard: &ShardIdentifier,
+	) -> Result<TrustedCallSigned> {
+		Ok(trusted_call.sign(&KeyPair::Ed25519(self.signer.clone()), 1, &self.mr_enclave, shard))
+	}
+}
+
+#[derive(Default)]
+pub struct StfGameExecutorMock;
+
+impl crate::traits::StfExecuteGames for StfGameExecutorMock {
+	fn new_game<ParentchainBlock>(
+		&self,
+		_game_id: itp_types::GameId,
 		_shard: &ShardIdentifier,
 		_block: &ParentchainBlock,
-	) -> Result<GameId> {
-		todo!()
+	) -> Result<itp_types::GameId>
+	where
+		ParentchainBlock: sp_runtime::traits::Block<Hash = itp_types::H256>,
+	{
+		Ok(itp_types::GameId::default())
 	}
 
-	fn finish_game<ParentchainBlock>(
+	fn finish_game(
 		&self,
-		_game_id: GameId,
+		_game_id: itp_types::GameId,
 		_shard: &ShardIdentifier,
-		_block: &ParentchainBlock,
-	) -> Result<GameId> {
-		todo!()
+	) -> Result<itp_types::GameId> {
+		Ok(itp_types::GameId::default())
 	}
 }

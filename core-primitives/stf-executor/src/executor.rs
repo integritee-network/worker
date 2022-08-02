@@ -15,63 +15,46 @@
 
 */
 
-use ajuna_common::RunnerState;
-use codec::{Decode, Encode};
-use log::*;
-use pallet_ajuna_gameregistry::Game;
-use sgx_externalities::SgxExternalitiesTrait;
-use sp_core::ed25519;
-use sp_runtime::{
-	app_crypto::sp_core::blake2_256,
-	traits::{Block as ParentchainBlockTrait, Header as HeaderTrait},
-};
-use std::{
-	collections::{BTreeMap, BTreeSet},
-	fmt::Debug,
-	format,
-	marker::PhantomData,
-	result::Result as StdResult,
-	sync::Arc,
-	time::Duration,
-	vec::Vec,
-};
-
-use ita_stf::{
-	hash::TrustedOperationOrHash,
-	stf_sgx::{shards_key_hash, storage_hashes_to_update_per_shard},
-	AccountId, ParentchainHeader, SgxBoardId, ShardIdentifier, StateTypeDiff, Stf, TrustedCall,
-	TrustedCallSigned, TrustedGetterSigned, TrustedOperation,
-};
-use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
-use itp_registry_storage::{RunnerStorage, RunnerStorageKeys};
-use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
-use itp_storage::StorageEntryVerified;
-use itp_time_utils::duration_now;
-use itp_types::{Amount, GameId, OpaqueCall, H256};
-
 use crate::{
 	error::{Error, Result},
 	traits::{
-		StatePostProcessing, StateUpdateProposer, StfExecuteGenericUpdate, StfExecuteShieldFunds,
-		StfExecuteTimedGettersBatch, StfExecuteTrustedCall, StfUpdateState,
+		StatePostProcessing, StateUpdateProposer, StfExecuteGenericUpdate,
+		StfExecuteTimedGettersBatch, StfUpdateState,
 	},
-	BatchExecutionResult, ExecutedOperation, ExecutionStatus,
+	BatchExecutionResult, ExecutedOperation,
+};
+use codec::{Decode, Encode};
+use ita_stf::{
+	hash::TrustedOperationOrHash,
+	stf_sgx::{shards_key_hash, storage_hashes_to_update_per_shard},
+	ParentchainHeader, ShardIdentifier, StateTypeDiff, Stf, TrustedGetterSigned, TrustedOperation,
+};
+use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
+use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
+use itp_storage::StorageEntryVerified;
+use itp_time_utils::duration_now;
+use itp_types::{OpaqueCall, H256};
+use log::*;
+use sgx_externalities::SgxExternalitiesTrait;
+use sp_runtime::{app_crypto::sp_core::blake2_256, traits::Header as HeaderTrait};
+use std::{
+	collections::BTreeMap, fmt::Debug, format, result::Result as StdResult, sync::Arc,
+	time::Duration, vec::Vec,
 };
 
-pub struct StfExecutor<OCallApi, StateHandler, ExternalitiesT> {
+pub struct StfExecutor<OCallApi, StateHandler> {
 	ocall_api: Arc<OCallApi>,
 	state_handler: Arc<StateHandler>,
-	_phantom_externalities: PhantomData<ExternalitiesT>,
 }
 
-impl<OCallApi, StateHandler, ExternalitiesT> StfExecutor<OCallApi, StateHandler, ExternalitiesT>
+impl<OCallApi, StateHandler> StfExecutor<OCallApi, StateHandler>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
-	StateHandler: HandleState<StateT = ExternalitiesT, HashType = H256>,
-	ExternalitiesT: SgxExternalitiesTrait + Encode,
+	StateHandler: HandleState<HashType = H256>,
+	StateHandler::StateT: SgxExternalitiesTrait + Encode,
 {
 	pub fn new(ocall_api: Arc<OCallApi>, state_handler: Arc<StateHandler>) -> Self {
-		StfExecutor { ocall_api, state_handler, _phantom_externalities: Default::default() }
+		StfExecutor { ocall_api, state_handler }
 	}
 
 	/// Execute a trusted call on the STF
@@ -139,184 +122,11 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler, ExternalitiesT> StfExecuteTrustedCall
-	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
+impl<OCallApi, StateHandler> StfUpdateState for StfExecutor<OCallApi, StateHandler>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
-	StateHandler: HandleState<StateT = ExternalitiesT, HashType = H256>,
-	ExternalitiesT: SgxExternalitiesTrait + Encode,
-{
-	fn execute_trusted_call<PH>(
-		&self,
-		calls: &mut Vec<OpaqueCall>,
-		stf_call_signed: &TrustedOperation,
-		header: &PH,
-		shard: &ShardIdentifier,
-		post_processing: StatePostProcessing,
-	) -> Result<Option<H256>>
-	where
-		PH: HeaderTrait<Hash = H256>,
-	{
-		// load state before executing any calls
-		let (state_lock, mut state) = self.state_handler.load_for_mutation(shard)?;
-
-		let executed_call = self.execute_trusted_call_on_stf(
-			&mut state,
-			stf_call_signed,
-			header,
-			shard,
-			post_processing,
-		)?;
-
-		let (maybe_call_hash, mut extrinsic_callbacks) = match executed_call.status {
-			ExecutionStatus::Success(call_hash, e) => (Some(call_hash), e),
-			ExecutionStatus::Failure => (None, Vec::new()),
-		};
-
-		calls.append(&mut extrinsic_callbacks);
-
-		trace!("Updating state of shard {:?}", shard);
-		self.state_handler.write_after_mutation(state, state_lock, shard)?;
-
-		Ok(maybe_call_hash)
-	}
-}
-
-impl<OCallApi, StateHandler, ExternalitiesT> StfExecuteShieldFunds
-	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
-where
-	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
-	StateHandler: HandleState<StateT = ExternalitiesT, HashType = H256>,
-	ExternalitiesT: SgxExternalitiesTrait + Encode,
-{
-	fn execute_shield_funds(
-		&self,
-		account: AccountId,
-		amount: Amount,
-		shard: &ShardIdentifier,
-	) -> Result<H256> {
-		let (state_lock, mut state) = self.state_handler.load_for_mutation(shard)?;
-
-		let root = Stf::get_root(&mut state);
-		let nonce = Stf::account_nonce(&mut state, &root);
-
-		let trusted_call = TrustedCallSigned::new(
-			TrustedCall::balance_shield(root, account, amount),
-			nonce,
-			ed25519::Signature::from_raw([0u8; 64]).into(), //don't care about signature here
-		);
-
-		debug!("Execute shield funds (nonce: {})", nonce);
-
-		Stf::execute(&mut state, trusted_call, &mut Vec::<OpaqueCall>::new())
-			.map_err::<Error, _>(|e| e.into())?;
-
-		self.state_handler
-			.write_after_mutation(state, state_lock, shard)
-			.map_err(|e| e.into())
-	}
-
-	fn execute_new_game<ParentchainBlock>(
-		&self,
-		game_id: GameId,
-		shard: &ShardIdentifier,
-		block: &ParentchainBlock,
-	) -> Result<GameId>
-	where
-		ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
-	{
-		let game_entry: Option<RunnerState> = self
-			.ocall_api
-			.get_storage_verified(RunnerStorage::runner(game_id), block.header())?
-			.into_tuple()
-			.1;
-
-		match game_entry {
-			Some(runner) => {
-				let (state_lock, mut state) = self.state_handler.load_for_mutation(shard)?;
-				let root = Stf::get_root(&mut state);
-				let nonce = Stf::account_nonce(&mut state, &root);
-
-				if let RunnerState::Accepted(mut runner_state) = runner {
-					if let Ok(game) = Game::<AccountId>::decode(&mut runner_state) {
-						if game.players.len() == 2 {
-							let player_one = game.players[0].clone();
-							let player_two = game.players[1].clone();
-
-							let trusted_call = TrustedCallSigned::new(
-								TrustedCall::board_new_game(
-									root,
-									game_id,
-									BTreeSet::from([player_one, player_two]),
-								),
-								nonce,
-								ed25519::Signature::from_raw([0u8; 64]).into(), //don't care about signature here
-							);
-
-							Stf::execute(&mut state, trusted_call, &mut Vec::<OpaqueCall>::new())
-								.map_err::<Error, _>(|e| e.into())?;
-
-							self.state_handler
-								.write_after_mutation(state, state_lock, shard)
-								.expect("write after mutation");
-							// .map_err(|e| e.into());
-
-							Ok(game_id)
-						} else {
-							error!("Game {} does not have 2 players", game_id);
-							Ok(game_id)
-						}
-					} else {
-						error!("Game {} failed decoding", game_id);
-						Ok(game_id)
-					}
-				} else {
-					error!("Game {} is not queued!", game_id);
-					Ok(game_id)
-				}
-			},
-			None => {
-				error!("No game entry found for game {}", game_id);
-				Ok(game_id)
-			},
-		}
-	}
-
-	fn finish_game<ParentchainBlock>(
-		&self,
-		game_id: GameId,
-		shard: &ShardIdentifier,
-		block: &ParentchainBlock,
-	) -> Result<GameId>
-	where
-		ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
-	{
-		let (state_lock, mut state) = self.state_handler.load_for_mutation(shard)?;
-		let root = Stf::get_root(&mut state);
-		let nonce = Stf::account_nonce(&mut state, &root);
-		let trusted_call = TrustedCallSigned::new(
-			TrustedCall::board_finish_game(root, game_id),
-			nonce,
-			ed25519::Signature::from_raw([0u8; 64]).into(), //don't care about signature here
-		);
-
-		Stf::execute(&mut state, trusted_call, &mut Vec::<OpaqueCall>::new())
-			.map_err::<Error, _>(|e| e.into())?;
-
-		self.state_handler
-			.write_after_mutation(state, state_lock, shard)
-			.expect("write after mutation");
-
-		Ok(game_id)
-	}
-}
-
-impl<OCallApi, StateHandler, ExternalitiesT> StfUpdateState
-	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
-where
-	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
-	StateHandler: HandleState<StateT = ExternalitiesT, HashType = H256> + QueryShardState,
-	ExternalitiesT: SgxExternalitiesTrait + Encode,
+	StateHandler: HandleState<HashType = H256> + QueryShardState,
+	StateHandler::StateT: SgxExternalitiesTrait + Encode,
 {
 	fn update_states(&self, header: &ParentchainHeader) -> Result<()> {
 		debug!("Update STF storage upon block import!");
@@ -379,14 +189,13 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler, ExternalitiesT> StateUpdateProposer
-	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
+impl<OCallApi, StateHandler> StateUpdateProposer for StfExecutor<OCallApi, StateHandler>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
-	StateHandler: HandleState<StateT = ExternalitiesT, HashType = H256>,
-	ExternalitiesT: SgxExternalitiesTrait + Encode,
+	StateHandler: HandleState<HashType = H256>,
+	StateHandler::StateT: SgxExternalitiesTrait + Encode,
 {
-	type Externalities = ExternalitiesT;
+	type Externalities = StateHandler::StateT;
 
 	fn propose_state_update<PH, F>(
 		&self,
@@ -440,14 +249,13 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler, ExternalitiesT> StfExecuteTimedGettersBatch
-	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
+impl<OCallApi, StateHandler> StfExecuteTimedGettersBatch for StfExecutor<OCallApi, StateHandler>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
-	StateHandler: HandleState<StateT = ExternalitiesT, HashType = H256>,
-	ExternalitiesT: SgxExternalitiesTrait + Encode,
+	StateHandler: HandleState<HashType = H256>,
+	StateHandler::StateT: SgxExternalitiesTrait + Encode,
 {
-	type Externalities = ExternalitiesT;
+	type Externalities = StateHandler::StateT;
 
 	fn execute_timed_getters_batch<F>(
 		&self,
@@ -487,13 +295,12 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler, ExternalitiesT> StfExecuteGenericUpdate
-	for StfExecutor<OCallApi, StateHandler, ExternalitiesT>
+impl<OCallApi, StateHandler> StfExecuteGenericUpdate for StfExecutor<OCallApi, StateHandler>
 where
-	StateHandler: HandleState<StateT = ExternalitiesT, HashType = H256>,
-	ExternalitiesT: SgxExternalitiesTrait + Encode,
+	StateHandler: HandleState<HashType = H256>,
+	StateHandler::StateT: SgxExternalitiesTrait + Encode,
 {
-	type Externalities = ExternalitiesT;
+	type Externalities = StateHandler::StateT;
 
 	fn execute_update<F, ResultT, ErrorT>(
 		&self,

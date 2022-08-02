@@ -15,23 +15,19 @@
 
 */
 
-//! Some substrate-api-client extension traits.
+//! Utility methods to stringify certain types that don't have a working
+//! `Debug` implementation on `sgx`.
 
-pub use substrate_api_client::{rpc::WsRpcClient, Api, ApiClientError};
+use codec::Encode;
+use sp_core::{crypto::AccountId32, hexdisplay::HexDisplay, Public};
+use std::{format, string::String};
 
-pub mod account;
-pub mod chain;
-pub mod node_api_factory;
-pub mod pallet_teerex;
+/// Convert a sp_core public type to string.
+pub fn public_to_string<T: Public>(t: &T) -> String {
+	let crypto_pair = t.to_public_crypto_pair();
+	format!("{}", HexDisplay::from(&crypto_pair.1))
+}
 
-#[cfg(feature = "mocks")]
-pub mod pallet_teerex_api_mock;
-
-pub use account::*;
-pub use chain::*;
-use itp_types::ParentchainExtrinsicParams;
-pub use pallet_teerex::*;
-use sp_core::sr25519;
-
-pub type ApiResult<T> = Result<T, ApiClientError>;
-pub type ParentchainApi = Api<sr25519::Pair, WsRpcClient, ParentchainExtrinsicParams>;
+pub fn account_id_to_string(account: &AccountId32) -> String {
+	format!("{}", HexDisplay::from(&account.encode()))
+}

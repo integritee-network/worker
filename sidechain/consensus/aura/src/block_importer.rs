@@ -28,7 +28,7 @@ use ita_stf::{
 use itc_parentchain_block_import_dispatcher::triggered_dispatcher::{
 	PeekParentchainBlockImportQueue, TriggerParentchainBlockImport,
 };
-use itc_parentchain_light_client::{concurrent_access::ValidatorAccess, Validator};
+use itc_parentchain_light_client::{concurrent_access::ValidatorAccess, ExtrinsicSender};
 use itp_enclave_metrics::EnclaveMetric;
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_ocall_api::{EnclaveMetricsOCallApi, EnclaveSidechainOCallApi};
@@ -128,7 +128,7 @@ impl<
 		+ Send
 		+ Sync,
 	ExtrinsicsFactory: CreateExtrinsics,
-	ValidatorAccessor: ValidatorAccess<ParentchainBlock>,
+	ValidatorAccessor: ValidatorAccess<ParentchainBlock, OCallApi>,
 {
 	pub fn new(
 		state_handler: Arc<StateHandler>,
@@ -243,14 +243,12 @@ impl<
 		// Create extrinsic for finish game.
 		let finish_game_extrinsic = self
 			.extrinsics_factory
-			.create_extrinsics(calls.as_slice())
+			.create_extrinsics(calls.as_slice(), None)
 			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
 
 		// Sending the extrinsic requires mut access because the validator caches the sent extrinsics internally.
 		self.validator_accessor
-			.execute_mut_on_validator(|v| {
-				v.send_extrinsics(self.ocall_api.as_ref(), finish_game_extrinsic)
-			})
+			.execute_mut_on_validator(|v| v.send_extrinsics(finish_game_extrinsic))
 			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
 		trace!("extrinsic finish game sent");
 		Ok(())
@@ -304,7 +302,7 @@ impl<
 		+ Send
 		+ Sync,
 	ExtrinsicsFactory: CreateExtrinsics,
-	ValidatorAccessor: ValidatorAccess<ParentchainBlock>,
+	ValidatorAccessor: ValidatorAccess<ParentchainBlock, OCallApi>,
 	SidechainDB<SignedSidechainBlock::Block, SgxExternalities>: SidechainState,
 {
 	type Verifier = AuraVerifier<

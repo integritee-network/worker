@@ -66,3 +66,7 @@ sp-application-crypto = { version = "6.0.0", default-features = false, features 
 sp-finality-grandpa = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
 sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
 sp-trie = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
+
+[dev-dependencies]
+itp-test = { path = "../../../core-primitives/test" }
+

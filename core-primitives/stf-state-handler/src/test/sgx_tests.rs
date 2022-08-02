@@ -29,7 +29,7 @@ use crate::{
 	state_snapshot_repository_loader::StateSnapshotRepositoryLoader,
 };
 use codec::{Decode, Encode};
-use ita_stf::{State as StfState, StateType as StfStateType};
+use ita_stf::{AccountId, State as StfState, StateType as StfStateType};
 use itp_sgx_crypto::{mocks::KeyRepositoryMock, Aes, AesSeal, StateCrypto};
 use itp_sgx_io::{write, StaticSealedIO};
 use itp_types::{ShardIdentifier, H256};
@@ -235,7 +235,7 @@ pub fn test_file_io_get_state_hash_works() {
 	let state_key_access =
 		Arc::new(StateKeyRepositoryMock::new(AesSeal::unseal_from_static_file().unwrap()));
 
-	let file_io = TestStateFileIo::new(state_key_access);
+	let file_io = TestStateFileIo::new(state_key_access, AccountId::new([1u8; 32]));
 
 	let state_id = 1234u128;
 	let state_hash = file_io.create_initialized(&shard, state_id).unwrap();
@@ -279,7 +279,7 @@ pub fn test_list_state_ids_ignores_files_not_matching_the_pattern() {
 	let state_key_access =
 		Arc::new(StateKeyRepositoryMock::new(AesSeal::unseal_from_static_file().unwrap()));
 
-	let file_io = TestStateFileIo::new(state_key_access);
+	let file_io = TestStateFileIo::new(state_key_access, AccountId::new([1u8; 32]));
 
 	let mut invalid_state_file_path = shard_path(&shard);
 	invalid_state_file_path.push("invalid-state.bin");
@@ -300,7 +300,7 @@ fn initialize_state_handler_with_directory_handle(
 fn initialize_state_handler() -> Arc<TestStateHandler> {
 	let state_key_access =
 		Arc::new(StateKeyRepositoryMock::new(AesSeal::unseal_from_static_file().unwrap()));
-	let file_io = Arc::new(TestStateFileIo::new(state_key_access));
+	let file_io = Arc::new(TestStateFileIo::new(state_key_access, AccountId::new([1u8; 32])));
 	let state_repository_loader = TestStateRepositoryLoader::new(file_io);
 	let state_snapshot_repository = state_repository_loader
 		.load_snapshot_repository(STATE_SNAPSHOTS_CACHE_SIZE)

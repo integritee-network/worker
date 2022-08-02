@@ -40,6 +40,7 @@ use itp_settings::{
 };
 use itp_sgx_crypto::Ed25519Seal;
 use itp_sgx_io::StaticSealedIO;
+use itp_types::{ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use sgx_rand::*;
@@ -56,7 +57,7 @@ use std::{
 	sync::Arc,
 	vec::Vec,
 };
-use substrate_api_client::compose_extrinsic_offline;
+use substrate_api_client::{compose_extrinsic_offline, ExtrinsicParams};
 
 pub const DEV_HOSTNAME: &str = "api.trustedservices.intel.com";
 
@@ -531,15 +532,18 @@ pub unsafe extern "C" fn perform_ra(
 	debug!("worker url: {}", str::from_utf8(url_slice).unwrap());
 	let call = [TEEREX_MODULE, REGISTER_ENCLAVE];
 
+	let extrinsic_params = ParentchainExtrinsicParams::new(
+		RUNTIME_SPEC_VERSION,
+		RUNTIME_TRANSACTION_VERSION,
+		*nonce,
+		genesis_hash,
+		ParentchainExtrinsicParamsBuilder::default(),
+	);
+
 	let xt = compose_extrinsic_offline!(
 		signer,
 		(call, cert_der.to_vec(), url_slice.to_vec()),
-		*nonce,
-		Era::Immortal,
-		genesis_hash,
-		genesis_hash,
-		RUNTIME_SPEC_VERSION,
-		RUNTIME_TRANSACTION_VERSION
+		extrinsic_params
 	);
 
 	let xt_encoded = xt.encode();

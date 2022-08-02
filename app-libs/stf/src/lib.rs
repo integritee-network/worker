@@ -26,9 +26,6 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
-extern crate alloc;
-
-use alloc::collections::BTreeSet;
 #[cfg(feature = "std")]
 pub use my_node_runtime::{Balance, Index};
 #[cfg(feature = "sgx")]
@@ -38,7 +35,7 @@ use codec::{Compact, Decode, Encode};
 use derive_more::Display;
 use sp_core::{crypto::AccountId32, ed25519, sr25519, Pair, H256};
 use sp_runtime::{traits::Verify, MultiSignature};
-use std::string::String;
+use std::{collections::BTreeSet, string::String};
 use support::{traits::Get, BoundedVec};
 
 pub type Signature = MultiSignature;
@@ -77,6 +74,8 @@ pub type StfResult<T> = Result<T, StfError>;
 pub enum StfError {
 	#[display(fmt = "Insufficient privileges {:?}, are you sure you are root?", _0)]
 	MissingPrivileges(AccountId),
+	#[display(fmt = "Valid enclave signer account is required")]
+	RequireEnclaveSignerAccount,
 	#[display(fmt = "Error dispatching runtime call. {:?}", _0)]
 	Dispatch(String),
 	#[display(fmt = "Not enough funds to perform operation")]
@@ -123,9 +122,13 @@ pub mod stf_sgx_primitives;
 #[cfg(feature = "sgx")]
 pub mod stf_sgx;
 #[cfg(all(feature = "test", feature = "sgx"))]
+pub mod stf_sgx_tests;
+#[cfg(all(feature = "test", feature = "sgx"))]
 pub mod test_genesis;
 
 pub use stf_sgx_primitives::types::*;
+
+pub(crate) const ENCLAVE_ACCOUNT_KEY: &str = "Enclave_Account_Key";
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]

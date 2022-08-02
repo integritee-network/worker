@@ -11,6 +11,7 @@ hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 
 # substrate
 frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
 
 # teaclave
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
@@ -24,8 +25,9 @@ thiserror = { version = "1.0", optional = true }
 default = ["std"]
 std = [
     "codec/std",
-    "hex/std",
     "frame-support/std",
+    "hex/std",
+    "sp-core/std",
     "thiserror",
 ]
 sgx = [

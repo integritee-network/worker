@@ -28,8 +28,12 @@ use itc_direct_rpc_server::{
 };
 use itc_parentchain::{
 	block_import_dispatcher::triggered_dispatcher::TriggeredDispatcher,
-	block_importer::ParentchainBlockImporter, indirect_calls_executor::IndirectCallsExecutor,
-	light_client::ValidatorAccessor,
+	block_importer::ParentchainBlockImporter,
+	indirect_calls_executor::IndirectCallsExecutor,
+	light_client::{
+		concurrent_access::ValidatorAccessor, io::LightClientStateSeal,
+		light_validation::LightValidation, light_validation_state::LightValidationState,
+	},
 };
 use itc_tls_websocket_server::{
 	config_provider::FromFileConfigProvider, ws_server::TungsteniteWsServer, ConnectionToken,
@@ -39,7 +43,9 @@ use itp_component_container::ComponentContainer;
 use itp_extrinsics_factory::ExtrinsicsFactory;
 use itp_nonce_cache::NonceCache;
 use itp_sgx_crypto::{key_repository::KeyRepository, Aes, AesSeal, Rsa3072Seal};
-use itp_stf_executor::executor::StfExecutor;
+use itp_stf_executor::{
+	enclave_signer::StfEnclaveSigner, executor::StfExecutor, game_executor::StfGameExecutor,
+};
 use itp_stf_state_handler::{
 	file_io::sgx::SgxStateFileIo, state_snapshot_repository::StateSnapshotRepository, StateHandler,
 };
@@ -72,11 +78,23 @@ pub type EnclaveStateSnapshotRepository =
 	StateSnapshotRepository<EnclaveStateFileIo, StfState, H256>;
 pub type EnclaveStateHandler = StateHandler<EnclaveStateSnapshotRepository>;
 pub type EnclaveOCallApi = OcallApi;
-pub type EnclaveStfExecutor = StfExecutor<EnclaveOCallApi, EnclaveStateHandler, SgxExternalities>;
+pub type EnclaveStfExecutor = StfExecutor<EnclaveOCallApi, EnclaveStateHandler>;
+pub type EnclaveStfEnclaveSigner =
+	StfEnclaveSigner<EnclaveOCallApi, EnclaveStateHandler, EnclaveShieldingKeyRepository>;
+pub type EnclaveStfGameExecutor = StfGameExecutor<EnclaveOCallApi, EnclaveStateHandler>;
 pub type EnclaveExtrinsicsFactory = ExtrinsicsFactory<Pair, NonceCache>;
-pub type EnclaveIndirectCallsExecutor =
-	IndirectCallsExecutor<EnclaveShieldingKeyRepository, EnclaveStfExecutor, EnclaveTopPoolAuthor>;
-pub type EnclaveValidatorAccessor = ValidatorAccessor<ParentchainBlock>;
+pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
+	EnclaveShieldingKeyRepository,
+	EnclaveStfEnclaveSigner,
+	EnclaveStfGameExecutor,
+	EnclaveTopPoolAuthor,
+>;
+pub type EnclaveValidatorAccessor = ValidatorAccessor<
+	LightValidation<ParentchainBlock, EnclaveOCallApi>,
+	ParentchainBlock,
+	LightClientStateSeal<ParentchainBlock, LightValidationState<ParentchainBlock>>,
+	EnclaveOCallApi,
+>;
 pub type EnclaveParentChainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
 	EnclaveValidatorAccessor,
@@ -127,7 +145,7 @@ pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 	EnclaveTopPoolOperationHandler,
 	EnclaveParentchainBlockImportDispatcher,
 	EnclaveExtrinsicsFactory,
-	ValidatorAccessor<ParentchainBlock>,
+	EnclaveValidatorAccessor,
 >;
 pub type EnclaveSidechainBlockImportQueue = BlockImportQueue<SignedSidechainBlock>;
 pub type EnclaveSidechainBlockSyncer = PeerBlockSync<
@@ -182,6 +200,11 @@ pub static GLOBAL_TOP_POOL_AUTHOR_COMPONENT: ComponentContainer<EnclaveTopPoolAu
 pub static GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT: ComponentContainer<
 	EnclaveParentchainBlockImportDispatcher,
 > = ComponentContainer::new("parentchain import dispatcher");
+
+/// Parentchain block validator accessor.
+pub static GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT: ComponentContainer<
+	EnclaveValidatorAccessor,
+> = ComponentContainer::new("parentchain block validator accessor");
 
 /// Extrinsics factory.
 pub static GLOBAL_EXTRINSICS_FACTORY_COMPONENT: ComponentContainer<EnclaveExtrinsicsFactory> =

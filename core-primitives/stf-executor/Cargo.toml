@@ -9,14 +9,16 @@ resolver = "2"
 # sgx dependencies
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["untrusted_time"] }
+sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_crypto_helper", default-features = false, optional = true }
 
 # integritee dependencies
-sgx-externalities = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", rev = "polkadot-v0.9.20", optional = true }
+sgx-externalities = { default-features = false, git = "https://github.com/ajuna-network/sgx-runtime", rev = "polkadot-v0.9.20-dev", optional = true }
 
 # local dependencies
 ita-stf = { path = "../../app-libs/stf", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-registry-storage = { path = "../registry-storage", default-features = false }
+itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
 itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
 itp-storage = { path = "../storage", default-features = false }
 itp-time-utils = { path = "../time-utils", default-features = false }
@@ -37,8 +39,8 @@ sp-core = { version = "6.0.0", default-features = false, features = ["full_crypt
 sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
 
 # node deps
-ajuna-common = { default-features = false, git = "https://github.com/ajuna-network/Ajuna", rev = "polkadot-v0.9.20" }
-pallet-ajuna-gameregistry = { default-features = false, git = "https://github.com/ajuna-network/Ajuna", rev = "polkadot-v0.9.20" }
+ajuna-common = { default-features = false, git = "https://github.com/ajuna-network/Ajuna", rev = "polkadot-v0.9.20-dev" }
+pallet-ajuna-gameregistry = { default-features = false, git = "https://github.com/ajuna-network/Ajuna", rev = "polkadot-v0.9.20-dev" }
 
 # dev dependencies
 itp-test = { path = "../test", default-features = false, optional = true }
@@ -51,6 +53,8 @@ std = [
     # local
     "ita-stf/std",
     "itp-ocall-api/std",
+    "itp-registry-storage/std",
+    "itp-sgx-crypto/std",
     "itp-stf-state-handler/std",
     "itp-storage/std",
     "itp-types/std",
@@ -66,6 +70,7 @@ std = [
 sgx = [
     "sgx_tstd",
     "ita-stf/sgx",
+    "itp-sgx-crypto/sgx",
     "itp-stf-state-handler/sgx",
     "itp-storage/sgx",
     "itp-time-utils/sgx",
@@ -74,5 +79,6 @@ sgx = [
 ]
 test = [
     "itp-test",
+    "sgx-crypto-helper",
 ]
 mocks = []
