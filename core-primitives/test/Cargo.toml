@@ -11,7 +11,6 @@ sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teacla
 # sgx deps
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-sgx-externalities = { optional = true, default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
 jsonrpc-core_sgx = { package = "jsonrpc-core", git = "https://github.com/scs/jsonrpc", branch = "no_std_v18", default-features = false, optional = true }
 
 # std-only deps
@@ -24,12 +23,13 @@ sp-std = { default-features = false, git = "https://github.com/paritytech/substr
 
 # local deps
 ita-stf = { path = "../../app-libs/stf", default-features = false }
+itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
+itp-sgx-externalities = { optional = true, default-features = false, path = "../substrate-sgx/externalities" }
 itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
+itp-storage = { path = "../storage", default-features = false }
 itp-teerex-storage = { path = "../teerex-storage", default-features = false }
 itp-time-utils = { path = "../time-utils", default-features = false }
-itp-ocall-api = { path = "../ocall-api", default-features = false }
-itp-storage = { path = "../storage", default-features = false }
 
 # integritee
 itp-types = { default-features = false, features = ["test"], git = "https://github.com/integritee-network/pallets.git", branch = "master" }
@@ -38,11 +38,8 @@ itp-types = { default-features = false, features = ["test"], git = "https://gith
 default = ["std"]
 std = [
     "codec/std",
-    "sgx-externalities/std",
-    "sp-core/std",
-    "sp-runtime/std",
-    "sp-std/std",
     "itp-sgx-crypto/std",
+    "itp-sgx-externalities/std",
     "itp-stf-state-handler/std",
     "itp-storage/std",
     "itp-teerex-storage/std",
@@ -50,13 +47,16 @@ std = [
     "itp-types/std",
     "itp-ocall-api/std",
     "jsonrpc-core",
+    "sp-core/std",
+    "sp-runtime/std",
+    "sp-std/std",
 ]
 sgx = [
-    "sgx_tstd",
     "ita-stf/sgx",
-    "itp-time-utils/sgx",
     "itp-sgx-crypto/sgx",
+    "itp-sgx-externalities/sgx",
     "itp-stf-state-handler/sgx",
+    "itp-time-utils/sgx",
     "jsonrpc-core_sgx",
-    "sgx-externalities/sgx",
+    "sgx_tstd",
 ]

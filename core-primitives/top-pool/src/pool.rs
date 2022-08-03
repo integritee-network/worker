@@ -253,8 +253,8 @@ where
 	///
 	/// Used to clear the pool from operations that were part of recently imported block.
 	/// To perform pruning we need the tags that each extrinsic provides and to avoid calling
-	/// into runtime too often we first lookup all extrinsics that are in the pool and get
-	/// their provided tags from there. Otherwise we query the runtime at the `parent` block.
+	/// into sgx-runtime too often we first lookup all extrinsics that are in the pool and get
+	/// their provided tags from there. Otherwise we query the sgx-runtime at the `parent` block.
 	pub async fn prune(
 		&self,
 		at: &BlockId<B::Block>,
@@ -281,7 +281,7 @@ where
 			match in_pool_tags {
 				// reuse the tags for extrinsics that were found in the pool
 				Some(tags) => future_tags.extend(tags),
-				// if it's not found in the pool query the runtime at parent block
+				// if it's not found in the pool query the sgx-runtime at parent block
 				// to get validity info and tags that the extrinsic provides.
 				None => {
 					let validity = self
@@ -319,7 +319,7 @@ where
 	///
 	/// By removing predecessor operations as well we might actually end up
 	/// pruning too much, so all removed operations are reverified against
-	/// the runtime (`validate_transaction`) to make sure they are invalid.
+	/// the sgx-runtime (`validate_transaction`) to make sure they are invalid.
 	///
 	/// However we avoid revalidating operations that are contained within
 	/// the second parameter of `known_imported_hashes`. These operations
@@ -424,7 +424,7 @@ where
 		}
 
 		//FIXME:
-		// no runtime validation check for now.
+		// no sgx-runtime validation check for now.
 		let validation_result =
 			self.validated_pool.api().validate_transaction(source, xt.clone(), shard).await;
 
@@ -528,7 +528,7 @@ pub mod tests {
 	pub type AccountId = <AccountSignature as Verify>::Signer;
 	/// The hashing algorithm used.
 	pub type Hashing = BlakeTwo256;
-	/// The block number type used in this runtime.
+	/// The block number type used in this sgx-runtime.
 	pub type BlockNumber = u64;
 	/// Index of a transaction.
 	//pub type Index = u64;

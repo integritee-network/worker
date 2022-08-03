@@ -53,12 +53,12 @@ impl NodeMetadata {
 			runtime_transaction_version,
 		}
 	}
-	/// Return the substrate chain runtime version.
+	/// Return the substrate chain sgx-runtime version.
 	pub fn get_runtime_version(&self) -> u32 {
 		self.runtime_spec_version
 	}
 
-	/// Return the substrate chain runtime transaction version.
+	/// Return the substrate chain sgx-runtime transaction version.
 	pub fn get_runtime_transaction_version(&self) -> u32 {
 		self.runtime_transaction_version
 	}

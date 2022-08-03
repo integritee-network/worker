@@ -13,13 +13,13 @@ sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teacla
 
 # integritee dependencies
 itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-sgx-externalities = { optional = true, default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
 
 # local dependencies
 ita-stf = { path = "../../app-libs/stf", default-features = false }
 itp-node-api = { path = "../node-api", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
+itp-sgx-externalities = { optional = true, default-features = false, path = "../substrate-sgx/externalities" }
 itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
 itp-storage = { path = "../storage", default-features = false }
 itp-time-utils = { path = "../time-utils", default-features = false }
@@ -48,13 +48,12 @@ parentchain-test = { optional = true, default-features = false, git = "https://g
 [features]
 default = ["std"]
 std = [
-    # integritee
-    "sgx-externalities/std",
     # local
     "ita-stf/std",
     "itp-node-api/std",
     "itp-ocall-api/std",
     "itp-sgx-crypto/std",
+    "itp-sgx-externalities/std",
     "itp-stf-state-handler/std",
     "itp-storage/std",
     "itp-types/std",
@@ -74,10 +73,10 @@ sgx = [
     "ita-stf/sgx",
     "itp-node-api/sgx",
     "itp-sgx-crypto/sgx",
+    "itp-sgx-externalities/std",
     "itp-stf-state-handler/sgx",
     "itp-storage/sgx",
     "itp-time-utils/sgx",
-    "sgx-externalities/sgx",
     "thiserror_sgx",
 ]
 test = [

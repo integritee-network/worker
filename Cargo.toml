@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "app-libs/sgx-runtime",
     "app-libs/stf",
     "cli",
     "core/direct-rpc-server",
@@ -38,6 +39,8 @@ members = [
     "core-primitives/stf-executor",
     "core-primitives/stf-state-handler",
     "core-primitives/storage",
+    "core-primitives/substrate-sgx/externalities",
+    "core-primitives/substrate-sgx/sp-io",
     "core-primitives/teerex-storage",
     "core-primitives/test",
     "core-primitives/time-utils",
@@ -69,12 +72,12 @@ sgx_rand = { version = "1.1.5", git = "https://github.com/apache/incubator-teacl
 sgx_urts = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5"}
 
 #[patch."https://github.com/integritee-network/sgx-runtime"]
-#sgx-runtime = { path = "../sgx-runtime/runtime"}
-#sp-io = { path = "../sgx-runtime/substrate-sgx/sp-io"}
-#sgx-externalities = { path = "../sgx-runtime/substrate-sgx/externalities"}
+#sgx-sgx-runtime = { path = "../sgx-sgx-runtime/sgx-runtime"}
+#sp-io = { path = "../sgx-sgx-runtime/substrate-sgx/sp-io"}
+#sgx-externalities = { path = "../sgx-sgx-runtime/substrate-sgx/externalities"}
 
 #[patch."https://github.com/integritee-network/integritee-node"]
-#my-node-runtime = { package = "integritee-node-runtime", path = "../integritee-node/runtime"}
+#my-node-sgx-runtime = { package = "integritee-node-sgx-runtime", path = "../integritee-node/sgx-runtime"}
 
 #[patch."https://github.com/scs/substrate-api-client"]
 #substrate-api-client = { path = "../../scs/substrate-api-client" }

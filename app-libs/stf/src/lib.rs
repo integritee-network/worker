@@ -53,7 +53,7 @@ pub enum StfError {
 	MissingPrivileges(AccountId),
 	#[display(fmt = "Valid enclave signer account is required")]
 	RequireEnclaveSignerAccount,
-	#[display(fmt = "Error dispatching runtime call. {:?}", _0)]
+	#[display(fmt = "Error dispatching sgx-runtime call. {:?}", _0)]
 	Dispatch(String),
 	#[display(fmt = "Not enough funds to perform operation")]
 	MissingFunds,

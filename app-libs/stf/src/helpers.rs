@@ -157,12 +157,12 @@ pub fn enclave_signer_account() -> AccountId {
 	get_storage_value("Sudo", ENCLAVE_ACCOUNT_KEY).expect("No enclave account")
 }
 
-// FIXME: Use Option<ParentchainHeader:Hash> as return type after fixing sgx-runtime issue #37
+// FIXME: Use Option<ParentchainHeader:Hash> as return type after fixing sgx-sgx-runtime issue #37
 pub fn get_parentchain_blockhash() -> Option<H256> {
 	get_storage_value("Parentchain", "BlockHash")
 }
 
-// FIXME: Use Option<ParentchainHeader:Hash> as return type after fixing sgx-runtime issue #37
+// FIXME: Use Option<ParentchainHeader:Hash> as return type after fixing sgx-sgx-runtime issue #37
 pub fn get_parentchain_parenthash() -> Option<H256> {
 	get_storage_value("Parentchain", "ParentHash")
 }
