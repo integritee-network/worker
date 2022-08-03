@@ -47,23 +47,12 @@ pub fn duration_difference(from: Duration, to: Duration) -> Option<Duration> {
 	to.checked_sub(from)
 }
 
-/// Returns current duration since unix epoch.
+/// Returns current duration since unix epoch with SystemTime::now().
+/// Note: subsequent calls are not guaranteed to be monotonic.
+/// (https://doc.rust-lang.org/std/time/struct.SystemTime.html)
 pub fn duration_now() -> Duration {
 	let now = SystemTime::now();
 	now.duration_since(SystemTime::UNIX_EPOCH).unwrap_or_else(|e| {
 		panic!("Current time {:?} is before unix epoch. Something is wrong: {:?}", now, e)
 	})
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	#[test]
-	fn subsequent_nows_are_increasing_in_time() {
-		let before = duration_now();
-		let now = duration_now();
-
-		assert!(before < now);
-	}
 }
