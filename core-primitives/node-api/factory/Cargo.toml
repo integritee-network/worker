@@ -1,0 +1,14 @@
+[package]
+name = "itp-node-api-factory"
+version = "0.8.0"
+authors = ["Integritee AG <hello@integritee.network>"]
+edition = "2018"
+
+[dependencies]
+thiserror = { version = "1.0" }
+
+# substrate
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+
+# local
+itp-api-client-types = { path = "../api-client-types" }

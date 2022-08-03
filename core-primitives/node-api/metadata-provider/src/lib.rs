@@ -15,21 +15,33 @@
 
 */
 
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
+//! Minimalistic crate for global metadata access withing the enclave.
+
+#![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(test, feature(assert_matches))]
+
+#[cfg(all(feature = "std", feature = "sgx"))]
+compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
+
+#[cfg(feature = "sgx")]
+extern crate sgx_tstd as std;
+
+#[cfg(feature = "sgx")]
 use std::sync::SgxRwLock as RwLock;
 
 #[cfg(feature = "std")]
 use std::sync::RwLock;
 
-use crate::{
-	error::{Error, Result},
-	metadata::{pallet_sidechain::SidechainCallIndexes, pallet_teerex::TeerexCallIndexes},
-};
+pub use crate::error::Error;
+
+use crate::error::Result;
 use std::ops::Deref;
+
+pub mod error;
 
 /// Trait to get access to the node API metadata.
 pub trait AccessNodeMetadata {
-	type MetadataType: SidechainCallIndexes + TeerexCallIndexes;
+	type MetadataType;
 
 	fn get_from_metadata<F, R>(&self, getter_function: F) -> Result<R>
 	where
@@ -46,7 +58,7 @@ pub struct NodeMetadataRepository<NodeMetadata> {
 
 impl<NodeMetadata> NodeMetadataRepository<NodeMetadata>
 where
-	NodeMetadata: SidechainCallIndexes + TeerexCallIndexes + Default,
+	NodeMetadata: Default,
 {
 	pub fn new(metadata: NodeMetadata) -> Self {
 		NodeMetadataRepository { metadata_lock: RwLock::new(Some(metadata)) }
@@ -60,7 +72,7 @@ where
 
 impl<NodeMetadata> AccessNodeMetadata for NodeMetadataRepository<NodeMetadata>
 where
-	NodeMetadata: SidechainCallIndexes + TeerexCallIndexes,
+	NodeMetadata:,
 {
 	type MetadataType = NodeMetadata;
 
@@ -78,28 +90,28 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::metadata::{metadata_mocks::NodeMetadataMock, pallet_teerex::TeerexCallIndexes};
 	use std::assert_matches::assert_matches;
 
+	#[derive(Default)]
+	struct NodeMetadataMock;
+
+	impl NodeMetadataMock {
+		fn get_one(&self) -> u32 {
+			1
+		}
+	}
 	#[test]
 	fn get_from_meta_data_returns_error_if_not_set() {
 		let repo = NodeMetadataRepository::<NodeMetadataMock>::default();
 
-		assert_matches!(
-			repo.get_from_metadata(|m| { m.register_enclave_call_indexes().unwrap() }),
-			Err(Error::MetadataNotSet)
-		);
+		assert_matches!(repo.get_from_metadata(|m| m.get_one()), Err(Error::MetadataNotSet));
 	}
 
 	#[test]
 	fn get_from_metadata_works() {
 		let repo = NodeMetadataRepository::<NodeMetadataMock>::default();
-		repo.set_metadata(NodeMetadataMock::new());
+		repo.set_metadata(NodeMetadataMock);
 
-		assert_eq!(
-			[50, 0],
-			repo.get_from_metadata(|m| { m.register_enclave_call_indexes().unwrap() })
-				.unwrap()
-		);
+		assert_eq!(1, repo.get_from_metadata(|m| m.get_one()).unwrap());
 	}
 }

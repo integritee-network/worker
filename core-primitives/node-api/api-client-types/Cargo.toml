@@ -1,0 +1,22 @@
+[package]
+name = "itp-api-client-types"
+version = "0.8.0"
+authors = ["Integritee AG <hello@integritee.network>"]
+edition = "2018"
+
+[dependencies]
+
+# scs
+substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.26" }
+
+# substrate
+sp-core = { optional = true, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+
+
+[features]
+default = ["std"]
+std = [
+    "substrate-api-client/std",
+    "substrate-api-client/ws-client",
+    "sp-core"
+]

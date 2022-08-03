@@ -17,7 +17,7 @@
 
 use crate::error::{Error, Result};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
-use itp_node_api_extensions::{node_api_factory::CreateNodeApi, PalletTeerexApi};
+use itp_node_api::{api_client::PalletTeerexApi, node_api_factory::CreateNodeApi};
 use sidechain_primitives::types::ShardIdentifier;
 use std::sync::Arc;
 

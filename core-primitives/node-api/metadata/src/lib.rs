@@ -17,16 +17,21 @@
 
 //! Handle SGX compatible substrate chain metadata.
 
-use crate::error::{Error, Result};
+#![cfg_attr(not(feature = "std"), no_std)]
+
+use crate::error::Result;
 use codec::{Decode, Encode};
 use sp_core::storage::StorageKey;
 use substrate_api_client::{Metadata, MetadataError};
 
-pub mod node_metadata_provider;
+pub use crate::error::Error;
+
+pub mod error;
 pub mod pallet_sidechain;
 pub mod pallet_system;
 pub mod pallet_teerex;
 
+#[cfg(feature = "mocks")]
 pub mod metadata_mocks;
 
 #[derive(Default, Encode, Decode, Debug, Clone)]

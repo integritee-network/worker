@@ -17,8 +17,7 @@
 
 use crate::Cli;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
-use itp_node_api_extensions::ParentchainApi;
-use itp_types::ParentchainExtrinsicParams;
+use itp_node_api::api_client::{ParentchainApi, WsRpcClient};
 use log::*;
 use my_node_runtime::{AccountId, Signature};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
@@ -26,7 +25,6 @@ use sp_application_crypto::sr25519;
 use sp_core::{crypto::Ss58Codec, Pair};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use std::path::PathBuf;
-use substrate_api_client::{rpc::WsRpcClient, Api};
 use substrate_client_keystore::LocalKeystore;
 
 type AccountPublic = <Signature as Verify>::Signer;
@@ -41,8 +39,7 @@ pub(crate) fn get_shielding_key(cli: &Cli) -> Result<Rsa3072PubKey, String> {
 pub(crate) fn get_chain_api(cli: &Cli) -> ParentchainApi {
 	let url = format!("{}:{}", cli.node_url, cli.node_port);
 	info!("connecting to {}", url);
-	Api::<sr25519::Pair, WsRpcClient, ParentchainExtrinsicParams>::new(WsRpcClient::new(&url))
-		.unwrap()
+	ParentchainApi::new(WsRpcClient::new(&url)).unwrap()
 }
 
 pub(crate) fn get_accountid_from_str(account: &str) -> AccountId {

@@ -42,7 +42,7 @@ ita-stf = { path = "../app-libs/stf" }
 itc-rpc-client = { path = "../core/rpc-client" }
 itc-rpc-server = { path = "../core/rpc-server" }
 itc-parentchain-light-client = { path = "../core/parentchain/light-client" }
-itp-node-api-extensions = { path = "../core-primitives/node-api-extensions" }
+itp-node-api = { path = "../core-primitives/node-api" }
 itp-enclave-api = { path = "../core-primitives/enclave-api" }
 itp-enclave-metrics = { path = "../core-primitives/enclave-metrics" }
 itp-settings = { path = "../core-primitives/settings" }

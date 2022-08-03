@@ -17,7 +17,7 @@ sgx-externalities = { optional = true, default-features = false, git = "https://
 
 # local dependencies
 ita-stf = { path = "../../app-libs/stf", default-features = false }
-itp-node-api-extensions = { path = "../../core-primitives/node-api-extensions", default-features = false }
+itp-node-api = { path = "../node-api", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
 itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
@@ -52,7 +52,7 @@ std = [
     "sgx-externalities/std",
     # local
     "ita-stf/std",
-    "itp-node-api-extensions/std",
+    "itp-node-api/std",
     "itp-ocall-api/std",
     "itp-sgx-crypto/std",
     "itp-stf-state-handler/std",
@@ -72,7 +72,7 @@ std = [
 sgx = [
     "sgx_tstd",
     "ita-stf/sgx",
-    "itp-node-api-extensions/sgx",
+    "itp-node-api/sgx",
     "itp-sgx-crypto/sgx",
     "itp-stf-state-handler/sgx",
     "itp-storage/sgx",
@@ -81,6 +81,7 @@ sgx = [
     "thiserror_sgx",
 ]
 test = [
+    "itp-node-api/mocks",
     "itp-test",
     "sgx-crypto-helper",
     "parentchain-test",

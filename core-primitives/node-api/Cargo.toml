@@ -1,0 +1,28 @@
+[package]
+name = "itp-node-api"
+version = "0.8.0"
+authors = ["Integritee AG <hello@integritee.network>"]
+edition = "2018"
+
+[dependencies]
+itp-api-client-extensions = { optional = true, path = "api-client-extensions" }
+itp-api-client-types = { default-features = false, path = "api-client-types" }
+itp-node-api-factory = { optional = true, path = "factory" }
+itp-node-api-metadata = { default-features = false, path = "metadata" }
+itp-node-api-metadata-provider = { default-features = false, path = "metadata-provider" }
+
+[features]
+default = ["std"]
+std = [
+    "itp-api-client-extensions",
+    "itp-api-client-types/std",
+    "itp-node-api-factory",
+    "itp-node-api-metadata/std",
+    "itp-node-api-metadata-provider/std",
+]
+sgx = [
+    "itp-node-api-metadata-provider/sgx",
+]
+mocks = [
+    "itp-node-api-metadata/mocks"
+]

@@ -24,9 +24,9 @@ pub enum Error {
 	#[error("RPC client error: {0}")]
 	RpcClient(#[from] itc_rpc_client::error::Error),
 	#[error("Node API extensions error: {0}")]
-	NodeApiExtensions(#[from] itp_node_api_extensions::ApiClientError),
+	NodeApiExtensions(#[from] itp_node_api::api_client::ApiClientError),
 	#[error("Node API factory error: {0}")]
-	NodeApiFactory(#[from] itp_node_api_extensions::node_api_factory::NodeApiFactoryError),
+	NodeApiFactory(#[from] itp_node_api::node_api_factory::NodeApiFactoryError),
 	#[error("Serialization error: {0}")]
 	Serialization(#[from] serde_json::Error),
 	#[error("JSON RPC error: {0}")]

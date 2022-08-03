@@ -53,10 +53,10 @@ use itp_enclave_api::{
 	teerex_api::TeerexApi,
 	Enclave,
 };
-use itp_node_api_extensions::{
+use itp_node_api::{
+	api_client::{AccountApi, ChainApi, PalletTeerexApi, ParentchainApi},
 	metadata::NodeMetadata,
 	node_api_factory::{CreateNodeApi, NodeApiFactory},
-	AccountApi, ChainApi, PalletTeerexApi, ParentchainApi,
 };
 use itp_settings::{
 	files::SIDECHAIN_STORAGE_PATH,

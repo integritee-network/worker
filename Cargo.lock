@@ -2198,7 +2198,7 @@ dependencies = [
  "integritee-node-runtime",
  "ita-stf",
  "itc-rpc-client",
- "itp-node-api-extensions",
+ "itp-node-api",
  "itp-rpc",
  "itp-sgx-crypto",
  "itp-types",
@@ -2289,7 +2289,7 @@ dependencies = [
  "itc-rpc-server",
  "itp-enclave-api",
  "itp-enclave-metrics",
- "itp-node-api-extensions",
+ "itp-node-api",
  "itp-settings",
  "itp-stf-state-handler",
  "itp-test",
@@ -2498,7 +2498,7 @@ dependencies = [
  "futures 0.3.8",
  "ita-stf",
  "itp-extrinsics-factory",
- "itp-node-api-extensions",
+ "itp-node-api",
  "itp-ocall-api",
  "itp-sgx-crypto",
  "itp-stf-executor",
@@ -2674,6 +2674,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "112c678d4050afce233f4f2852bb2eb519230b3cf12f33585275537d7e41578d"
 
 [[package]]
+name = "itp-api-client-extensions"
+version = "0.8.0"
+dependencies = [
+ "itp-types",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-finality-grandpa",
+ "sp-runtime",
+ "substrate-api-client",
+ "thiserror 1.0.31",
+]
+
+[[package]]
+name = "itp-api-client-types"
+version = "0.8.0"
+dependencies = [
+ "sp-core",
+ "substrate-api-client",
+]
+
+[[package]]
 name = "itp-block-import-queue"
 version = "0.8.0"
 dependencies = [
@@ -2736,7 +2757,7 @@ dependencies = [
 name = "itp-extrinsics-factory"
 version = "0.8.0"
 dependencies = [
- "itp-node-api-extensions",
+ "itp-node-api",
  "itp-nonce-cache",
  "itp-types",
  "log 0.4.17",
@@ -2762,17 +2783,41 @@ dependencies = [
 ]
 
 [[package]]
-name = "itp-node-api-extensions"
+name = "itp-node-api"
+version = "0.8.0"
+dependencies = [
+ "itp-api-client-extensions",
+ "itp-api-client-types",
+ "itp-node-api-factory",
+ "itp-node-api-metadata",
+ "itp-node-api-metadata-provider",
+]
+
+[[package]]
+name = "itp-node-api-factory"
+version = "0.8.0"
+dependencies = [
+ "itp-api-client-types",
+ "sp-core",
+ "thiserror 1.0.31",
+]
+
+[[package]]
+name = "itp-node-api-metadata"
 version = "0.8.0"
 dependencies = [
  "itp-types",
  "parity-scale-codec",
- "sgx_tstd",
- "sgx_types",
  "sp-core",
- "sp-finality-grandpa",
- "sp-runtime",
  "substrate-api-client",
+]
+
+[[package]]
+name = "itp-node-api-metadata-provider"
+version = "0.8.0"
+dependencies = [
+ "itp-node-api-metadata",
+ "sgx_tstd",
  "thiserror 1.0.31",
  "thiserror 1.0.9",
 ]
@@ -2862,7 +2907,7 @@ name = "itp-stf-executor"
 version = "0.8.0"
 dependencies = [
  "ita-stf",
- "itp-node-api-extensions",
+ "itp-node-api",
  "itp-ocall-api",
  "itp-sgx-crypto",
  "itp-stf-state-handler",
@@ -3062,7 +3107,7 @@ name = "its-block-composer"
 version = "0.8.0"
 dependencies = [
  "ita-stf",
- "itp-node-api-extensions",
+ "itp-node-api",
  "itp-sgx-crypto",
  "itp-stf-executor",
  "itp-time-utils",
@@ -3180,7 +3225,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "itc-rpc-client",
- "itp-node-api-extensions",
+ "itp-node-api",
  "itp-test",
  "its-rpc-handler",
  "its-storage",

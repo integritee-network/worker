@@ -25,9 +25,7 @@ use ita_stf::{
 	test_genesis::{endowed_account, test_genesis_setup, ENDOWED_ACC_FUNDS},
 	AccountId, Balance, ShardIdentifier, State, TrustedCall, TrustedGetter, TrustedGetterSigned,
 };
-use itp_node_api_extensions::metadata::{
-	metadata_mocks::NodeMetadataMock, node_metadata_provider::NodeMetadataRepository,
-};
+use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{handle_state_mock::HandleStateMock, onchain_mock::OnchainMock};

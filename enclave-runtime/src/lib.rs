@@ -53,8 +53,8 @@ use itc_parentchain::{
 };
 use itp_block_import_queue::PushToBlockQueue;
 use itp_component_container::ComponentGetter;
-use itp_node_api_extensions::metadata::{
-	node_metadata_provider::AccessNodeMetadata, pallet_teerex::TeerexCallIndexes, NodeMetadata,
+use itp_node_api::metadata::{
+	pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata, NodeMetadata,
 };
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_ocall_api::EnclaveAttestationOCallApi;

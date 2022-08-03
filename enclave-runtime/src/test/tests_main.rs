@@ -38,9 +38,9 @@ use ita_stf::{
 	AccountInfo, ShardIdentifier, State, StatePayload, StateTypeDiff, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetter, TrustedOperation,
 };
-use itp_node_api_extensions::metadata::{
-	metadata_mocks::NodeMetadataMock, node_metadata_provider::NodeMetadataRepository,
-	pallet_sidechain::SidechainCallIndexes,
+use itp_node_api::metadata::{
+	metadata_mocks::NodeMetadataMock, pallet_sidechain::SidechainCallIndexes,
+	provider::NodeMetadataRepository,
 };
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::enclave::MAX_TRUSTED_OPS_EXEC_DURATION;
