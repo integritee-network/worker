@@ -28,11 +28,11 @@ pub mod types {
 	pub type AccountInfo = system::AccountInfo<Index, AccountData>;
 	// FIXME after fixing sgx-runtime issue #37
 	#[cfg(all(not(feature = "std"), feature = "sgx"))]
-	pub type ParentchainHeader = sgx_runtime::Header;
+	pub type ParentchainHeader = ita_sgx_runtime::Header;
 	#[cfg(all(not(feature = "sgx"), feature = "std"))]
 	pub type BlockNumber = u32;
 	#[cfg(all(not(feature = "std"), feature = "sgx"))]
-	pub type BlockNumber = sgx_runtime::BlockNumber;
+	pub type BlockNumber = ita_sgx_runtime::BlockNumber;
 	#[cfg(all(not(feature = "sgx"), feature = "std"))]
 	pub type ParentchainHeader = sp_runtime::generic::Header<BlockNumber, BlakeTwo256>;
 

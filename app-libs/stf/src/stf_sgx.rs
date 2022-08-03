@@ -141,19 +141,19 @@ impl Stf {
 						free_balance,
 						reserved_balance
 					);
-					sgx_runtime::BalancesCall::<Runtime>::set_balance {
+					ita_sgx_runtime::BalancesCall::<Runtime>::set_balance {
 						who: MultiAddress::Id(who),
 						new_free: free_balance,
 						new_reserved: reserved_balance,
 					}
-					.dispatch_bypass_filter(sgx_runtime::Origin::root())
+					.dispatch_bypass_filter(ita_sgx_runtime::Origin::root())
 					.map_err(|e| {
 						StfError::Dispatch(format!("Balance Set Balance error: {:?}", e.error))
 					})?;
 					Ok(())
 				},
 				TrustedCall::balance_transfer(from, to, value) => {
-					let origin = sgx_runtime::Origin::signed(from.clone());
+					let origin = ita_sgx_runtime::Origin::signed(from.clone());
 					debug!(
 						"balance_transfer({}, {}, {})",
 						account_id_to_string(&from),
@@ -165,7 +165,7 @@ impl Stf {
 					} else {
 						debug!("sender balance is zero");
 					}
-					sgx_runtime::BalancesCall::<Runtime>::transfer {
+					ita_sgx_runtime::BalancesCall::<Runtime>::transfer {
 						dest: MultiAddress::Id(to),
 						value,
 					}
@@ -209,12 +209,12 @@ impl Stf {
 	/// Creates valid enclave account with a balance that is above the existential deposit.
 	/// !! Requires a root to be set.
 	fn create_enclave_self_account(enclave_account: &AccountId) -> StfResult<()> {
-		sgx_runtime::BalancesCall::<Runtime>::set_balance {
+		ita_sgx_runtime::BalancesCall::<Runtime>::set_balance {
 			who: MultiAddress::Id(enclave_account.clone()),
 			new_free: 1000,
 			new_reserved: 0,
 		}
-		.dispatch_bypass_filter(sgx_runtime::Origin::root())
+		.dispatch_bypass_filter(ita_sgx_runtime::Origin::root())
 		.map_err(|e| {
 			StfError::Dispatch(format!(
 				"Set Balance for enclave signer account error: {:?}",
@@ -226,12 +226,12 @@ impl Stf {
 
 	fn shield_funds(account: AccountId, amount: u128) -> StfResult<()> {
 		match get_account_info(&account) {
-			Some(account_info) => sgx_runtime::BalancesCall::<Runtime>::set_balance {
+			Some(account_info) => ita_sgx_runtime::BalancesCall::<Runtime>::set_balance {
 				who: MultiAddress::Id(account),
 				new_free: account_info.data.free + amount,
 				new_reserved: account_info.data.reserved,
 			}
-			.dispatch_bypass_filter(sgx_runtime::Origin::root())
+			.dispatch_bypass_filter(ita_sgx_runtime::Origin::root())
 			.map_err(|e| StfError::Dispatch(format!("Shield funds error: {:?}", e.error)))?,
 			None => {
 				debug!(
@@ -239,12 +239,12 @@ impl Stf {
 					account_id_to_string(&account),
 					amount
 				);
-				sgx_runtime::BalancesCall::<Runtime>::set_balance {
+				ita_sgx_runtime::BalancesCall::<Runtime>::set_balance {
 					who: MultiAddress::Id(account),
 					new_free: amount,
 					new_reserved: 0,
 				}
-				.dispatch_bypass_filter(sgx_runtime::Origin::root())
+				.dispatch_bypass_filter(ita_sgx_runtime::Origin::root())
 				.map_err(|e| StfError::Dispatch(format!("Shield funds error: {:?}", e.error)))?
 			},
 		};
@@ -258,12 +258,12 @@ impl Stf {
 					return Err(StfError::MissingFunds)
 				}
 
-				sgx_runtime::BalancesCall::<Runtime>::set_balance {
+				ita_sgx_runtime::BalancesCall::<Runtime>::set_balance {
 					who: MultiAddress::Id(account),
 					new_free: account_info.data.free - amount,
 					new_reserved: account_info.data.reserved,
 				}
-				.dispatch_bypass_filter(sgx_runtime::Origin::root())
+				.dispatch_bypass_filter(ita_sgx_runtime::Origin::root())
 				.map_err(|e| StfError::Dispatch(format!("Unshield funds error: {:?}", e.error)))?;
 				Ok(())
 			},
@@ -288,8 +288,8 @@ impl Stf {
 		header: ParentchainHeader,
 	) -> StfResult<()> {
 		ext.execute_with(|| {
-			sgx_runtime::ParentchainCall::<Runtime>::set_block { header }
-				.dispatch_bypass_filter(sgx_runtime::Origin::root())
+			ita_sgx_runtime::ParentchainCall::<Runtime>::set_block { header }
+				.dispatch_bypass_filter(ita_sgx_runtime::Origin::root())
 				.map_err(|e| {
 					StfError::Dispatch(format!("Update parentchain block error: {:?}", e.error))
 				})

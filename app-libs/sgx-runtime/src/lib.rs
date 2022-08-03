@@ -38,6 +38,7 @@ pub use evm::{
 	SubstrateBlockHashMapping, GAS_PER_SECOND, MAXIMUM_BLOCK_WEIGHT, WEIGHT_PER_GAS,
 };
 
+use core::convert::{TryFrom, TryInto};
 use frame_support::weights::ConstantMultiplier;
 use pallet_transaction_payment::CurrencyAdapter;
 use sp_api::impl_runtime_apis;
