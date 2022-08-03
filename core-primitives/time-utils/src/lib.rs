@@ -24,7 +24,10 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
-use std::time::{Duration, SystemTime};
+use std::{
+	thread,
+	time::{Duration, SystemTime},
+};
 
 /// Returns current duration since unix epoch in millis as u64.
 pub fn now_as_u64() -> u64 {
@@ -60,10 +63,19 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn subsequent_nows_are_increasing_in_time() {
+	fn subsequent_nows_with_sleep_inbetween_are_strictly_increasing_in_time() {
 		let before = duration_now();
+		thread::sleep(Duration::from_nanos(1));
 		let now = duration_now();
 
 		assert!(before < now);
+	}
+
+	#[test]
+	fn subsequent_nows_are_equal_or_increasing_in_time() {
+		let before = duration_now();
+		let now = duration_now();
+
+		assert!(before <= now);
 	}
 }
