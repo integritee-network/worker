@@ -100,11 +100,9 @@ impl Config {
 		}
 	}
 
-	/*
-		pub fn untrusted_worker_url(&self) -> String {
-			format!("{}:{}", self.worker_ip, self.untrusted_worker_port)
-		}
-	*/
+	pub fn untrusted_worker_url(&self) -> String {
+		format!("{}:{}", self.worker_ip, self.untrusted_worker_port)
+	}
 
 	/// Returns the untrusted worker url that should be addressed by external clients.
 	pub fn untrusted_worker_url_external(&self) -> String {

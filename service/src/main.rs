@@ -279,7 +279,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	config: Config,
 	shard: &ShardIdentifier,
 	enclave: Arc<E>,
-	_sidechain_storage: Arc<D>,
+	sidechain_storage: Arc<D>,
 	skip_ra: bool,
 	dev: bool,
 	node_api: ParentchainApi,
@@ -387,7 +387,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			&config,
 			enclave.clone(),
 			sidechain_storage.clone(),
-			tokio_handle,
+			tokio_handle.clone(),
 		);
 	}
 
@@ -449,11 +449,10 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	initialization_handler.registered_on_parentchain();
 
 	// start update exchange rate loop
-	let api5 = node_api;
-	let market_enclave_api = enclave;
+	let api5 = node_api.clone();
+	let market_enclave_api = enclave.clone();
 	start_interval_market_update(&api5, interval, market_enclave_api.as_ref(), &tokio_handle);
 
-	/*
 	let last_synced_header = init_light_client(&node_api, enclave.clone()).unwrap();
 	println!("*** [+] Finished syncing light client, syncing parentchain...");
 
@@ -527,7 +526,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			}
 		}
 	}
-	 */
 }
 
 /// Start polling loop to wait until we have a worker for a shard registered on
@@ -643,31 +641,6 @@ fn execute_update_market<E: TeeracleApi>(
 
 			println!("[<] Extrinsic got included into a block. Hash: {:?}\n", extrinsic_hash);
 		});
-	}
-}
-
-/// Schedules a task on perpetually looping intervals.
-///
-/// In case the task takes longer than is scheduled by the interval duration,
-/// the interval timing will drift. The task is responsible for
-/// ensuring it does not use up more time than is scheduled.
-fn schedule_on_repeating_intervals<T>(task: T, interval_duration: Duration)
-where
-	T: Fn(),
-{
-	let mut interval_start = Instant::now();
-	loop {
-		let elapsed = interval_start.elapsed();
-
-		if elapsed >= interval_duration {
-			// update interval time
-			interval_start = Instant::now();
-			task();
-		} else {
-			// sleep for the rest of the interval
-			let sleep_time = interval_duration - elapsed;
-			thread::sleep(sleep_time);
-		}
 	}
 }
 
