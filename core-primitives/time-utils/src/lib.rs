@@ -24,10 +24,7 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
-use std::{
-	thread,
-	time::{Duration, SystemTime},
-};
+use std::time::{Duration, SystemTime};
 
 /// Returns current duration since unix epoch in millis as u64.
 pub fn now_as_u64() -> u64 {
