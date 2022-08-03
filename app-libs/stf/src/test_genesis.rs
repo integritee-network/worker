@@ -16,9 +16,9 @@
 */
 
 use crate::{helpers::get_account_info, StfError};
+use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use itp_storage::storage_value_key;
 use log::*;
-use sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use sgx_runtime::{Balance, Runtime};
 use sgx_tstd as std;
 use sp_core::{crypto::AccountId32, ed25519, Pair};

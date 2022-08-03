@@ -15,7 +15,7 @@ sgx_tcrypto = { branch = "master", git = "https://github.com/apache/teaclave-sgx
 ita-stf = { path = "../../app-libs/stf", default-features = false }
 itp-settings = { path = "../../core-primitives/settings" }
 itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", default-features = false }
-itp-sgx-externalities = { optional = true, default-features = false, path = "../../core-primitives/substrate-sgx/externalities" }
+itp-sgx-externalities = { default-features = false, path = "../../core-primitives/substrate-sgx/externalities" }
 itp-sgx-io = { path = "../../core-primitives/sgx/io", default-features = false }
 itp-time-utils = { path = "../../core-primitives/time-utils", default-features = false }
 
@@ -38,7 +38,6 @@ sp-core = { default-features = false, features = ["full_crypto"], git = "https:/
 
 [dev-dependencies]
 itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", features = ["mocks"] }
-
 
 [features]
 default = ["std"]

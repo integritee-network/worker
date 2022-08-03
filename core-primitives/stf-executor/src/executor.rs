@@ -31,11 +31,11 @@ use ita_stf::{
 };
 use itp_node_api::metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata};
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
+use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_time_utils::duration_now;
 use itp_types::{storage::StorageEntryVerified, OpaqueCall, H256};
 use log::*;
-use sgx_externalities::SgxExternalitiesTrait;
 use sp_runtime::{app_crypto::sp_core::blake2_256, traits::Header as HeaderTrait};
 use std::{
 	collections::BTreeMap, fmt::Debug, format, result::Result as StdResult, sync::Arc,

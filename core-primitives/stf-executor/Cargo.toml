@@ -19,7 +19,7 @@ ita-stf = { path = "../../app-libs/stf", default-features = false }
 itp-node-api = { path = "../node-api", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
-itp-sgx-externalities = { optional = true, default-features = false, path = "../substrate-sgx/externalities" }
+itp-sgx-externalities = { default-features = false, path = "../substrate-sgx/externalities" }
 itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
 itp-storage = { path = "../storage", default-features = false }
 itp-time-utils = { path = "../time-utils", default-features = false }
@@ -73,7 +73,7 @@ sgx = [
     "ita-stf/sgx",
     "itp-node-api/sgx",
     "itp-sgx-crypto/sgx",
-    "itp-sgx-externalities/std",
+    "itp-sgx-externalities/sgx",
     "itp-stf-state-handler/sgx",
     "itp-storage/sgx",
     "itp-time-utils/sgx",

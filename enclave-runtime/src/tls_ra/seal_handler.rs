@@ -159,8 +159,8 @@ where
 pub mod test {
 	use super::*;
 	use itp_sgx_crypto::mocks::KeyRepositoryMock;
+	use itp_sgx_externalities::SgxExternalitiesTrait;
 	use itp_test::mock::handle_state_mock::HandleStateMock;
-	use sgx_externalities::SgxExternalitiesTrait;
 
 	type StateKeyRepositoryMock = KeyRepositoryMock<Aes>;
 	type ShieldingKeyRepositoryMock = KeyRepositoryMock<Rsa3072KeyPair>;

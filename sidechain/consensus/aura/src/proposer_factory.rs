@@ -17,13 +17,13 @@
 
 use crate::slot_proposer::{ExternalitiesFor, SlotProposer};
 use finality_grandpa::BlockNumberOps;
+use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_executor::traits::StateUpdateProposer;
 use itp_types::H256;
 use its_block_composer::ComposeBlockAndConfirmation;
 use its_consensus_common::{Environment, Error as ConsensusError};
 use its_state::{SidechainState, SidechainSystemExt, StateHash};
 use its_top_pool_executor::call_operator::TopPoolCallOperator;
-use sgx_externalities::SgxExternalitiesTrait;
 use sidechain_primitives::traits::{
 	Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor,
 	SignedBlock as SignedSidechainBlockTrait,

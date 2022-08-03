@@ -76,7 +76,7 @@ pub fn encode_hex(bytes: &[u8]) -> String {
 
 // Reexport here, such that the worker does not need to import other crate.
 // Not sure if this is a good Idea though.
-pub use sgx_externalities::{
+pub use itp_sgx_externalities::{
 	with_externalities, SgxExternalities, SgxExternalitiesTrait, SgxExternalitiesType,
 };
 
@@ -167,6 +167,7 @@ pub mod storage {
 	}
 
 	/// Clear the storage of each key-value pair where the key starts with the given `prefix`.
+	#[allow(unused)]
 	fn clear_prefix_version_1(prefix: &[u8]) {
 		warn!("storage::clear_prefix() unimplemented");
 	}
@@ -418,6 +419,7 @@ pub mod trie {
 	}
 
 	/// Verify trie proof
+	#[allow(unused)]
 	fn blake2_256_verify_proof_version_1(
 		root: H256,
 		proof: &[Vec<u8>],
@@ -429,6 +431,7 @@ pub mod trie {
 	}
 
 	/// Verify trie proof
+	#[allow(unused)]
 	fn blake2_256_verify_proof(
 		root: H256,
 		proof: &[Vec<u8>],
@@ -441,6 +444,7 @@ pub mod trie {
 	}
 
 	/// Verify trie proof
+	#[allow(unused)]
 	fn keccak_256_verify_proof_version_1(
 		root: H256,
 		proof: &[Vec<u8>],
@@ -452,6 +456,7 @@ pub mod trie {
 	}
 
 	/// Verify trie proof
+	#[allow(unused)]
 	fn keccak_256_verify_proof(
 		root: H256,
 		proof: &[Vec<u8>],
@@ -728,11 +733,13 @@ pub mod hashing {
 pub mod transaction_index {
 	use super::*;
 	/// Add transaction index. Returns indexed content hash.
+	#[allow(unused)]
 	fn index(extrinsic: u32, size: u32, context_hash: [u8; 32]) {
 		warn!("transaction_index::index unimplemented");
 	}
 
 	/// Conduct a 512-bit Keccak hash.
+	#[allow(unused)]
 	fn renew(extrinsic: u32, context_hash: [u8; 32]) {
 		warn!("transaction_index::renew unimplemented");
 	}

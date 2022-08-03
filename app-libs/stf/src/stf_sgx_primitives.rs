@@ -36,9 +36,9 @@ pub mod types {
 	#[cfg(all(not(feature = "sgx"), feature = "std"))]
 	pub type ParentchainHeader = sp_runtime::generic::Header<BlockNumber, BlakeTwo256>;
 
-	pub type StateType = sgx_externalities::SgxExternalitiesType;
-	pub type State = sgx_externalities::SgxExternalities;
-	pub type StateTypeDiff = sgx_externalities::SgxExternalitiesDiffType;
+	pub type StateType = itp_sgx_externalities::SgxExternalitiesType;
+	pub type State = itp_sgx_externalities::SgxExternalities;
+	pub type StateTypeDiff = itp_sgx_externalities::SgxExternalitiesDiffType;
 	pub use super::StatePayload;
 	pub struct Stf;
 }

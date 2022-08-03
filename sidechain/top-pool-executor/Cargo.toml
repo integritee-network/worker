@@ -62,6 +62,7 @@ std = [
 sgx = [
     "sgx_tstd",
     "ita-stf/sgx",
+    "itp-sgx-externalities/sgx",
     "itp-stf-executor/sgx",
     "itp-time-utils/sgx",
     "itp-top-pool-author/sgx",

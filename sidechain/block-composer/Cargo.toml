@@ -58,6 +58,7 @@ sgx = [
     "ita-stf/sgx",
     "itp-node-api/sgx",
     "itp-sgx-crypto/sgx",
+    "itp-sgx-externalities/sgx",
     "itp-stf-executor/sgx",
     "itp-time-utils/sgx",
     "itp-top-pool-author/sgx",
