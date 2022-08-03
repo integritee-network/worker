@@ -7,7 +7,7 @@ resolver = "2"
 
 [dependencies]
 bit-vec = { version = "0.6", default-features = false }
-rcgen = { package = "rcgen", default-features = false, features = ["pem"], git = 'https://github.com/integritee-network/rcgen' }
+rcgen = { package = "rcgen", default-features = false, features = ["pem"], git = "https://github.com/integritee-network/rcgen" }
 chrono = { version = "0.4.19", default-features = false, features = ["alloc"]}
 
 # sgx dependencies

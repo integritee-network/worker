@@ -12,6 +12,7 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 
 # local dependencies
 ita-stf = { path = "../../app-libs/stf", default-features = false }
+itp-sgx-externalities = { default-features = false, path = "../../core-primitives/substrate-sgx/externalities" }
 itp-stf-executor = { path = "../../core-primitives/stf-executor", default-features = false }
 itp-time-utils = { path = "../../core-primitives/time-utils", default-features = false }
 itp-top-pool-author = { path = "../../core-primitives/top-pool-author", default-features = false }
@@ -19,7 +20,6 @@ its-state = { path = "../state", default-features = false }
 
 # integritee dependencies
 itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
 sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # sgx enabled external libraries
@@ -42,6 +42,7 @@ default = ["std"]
 std = [
     # local
     "ita-stf/std",
+    "itp-sgx-externalities/std",
     "itp-stf-executor/std",
     "itp-time-utils/std",
     "itp-top-pool-author/std",
@@ -56,12 +57,12 @@ std = [
     "sp-core/std",
     "sp-runtime/std",
     # integritee
-    "sgx-externalities/std",
     "sidechain-primitives/std",
 ]
 sgx = [
     "sgx_tstd",
     "ita-stf/sgx",
+    "itp-sgx-externalities/sgx",
     "itp-stf-executor/sgx",
     "itp-time-utils/sgx",
     "itp-top-pool-author/sgx",

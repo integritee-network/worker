@@ -1,0 +1,70 @@
+[package]
+name = "sp-io"
+version = "6.0.0"
+authors = ["Integritee AG <hello@integritee.network> and Parity Technologies <admin@parity.io>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+codec = { version = "3.0.0", package = "parity-scale-codec", default-features = false }
+hash-db = { version = "0.15.2", default-features = false }
+libsecp256k1 = { version = "0.7.0", default-features = false, features = ["static-context"] }
+futures = { version = "0.3.1", optional = true, features = ["thread-pool"] }
+parking_lot = { version = "0.12.0", optional = true }
+tracing = { version = "0.1.25", default-features = false }
+tracing-core = { version = "0.1.17", default-features = false}
+log = { version = "0.4", default-features = false }
+
+environmental = { version = "1.1.3", default-features = false }
+sgx_tstd  = { optional = true, features = ["untrusted_fs","net","backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", branch = "master" }
+sgx_types = { optional = true, git = "https://github.com/apache/teaclave-sgx-sdk.git", branch = "master" }
+itp-sgx-externalities = { default-features = false, path = "../externalities" }
+
+# Substrate dependencies
+sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+sp-core = { default-features = false, features=["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+sp-state-machine = { optional = true, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+sp-runtime-interface = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+sp-wasm-interface = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+sp-tracing = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+sp-trie = { optional = true, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+sp-keystore = { optional = true, default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+sp-externalities = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+
+[dev-dependencies]
+hex-literal = { version = "0.3.4" }
+
+[features]
+default = ["std"]
+std = [
+	"environmental/std",
+	"log/std",
+	"sp-core/std",
+	"codec/std",
+	"sp-std/std",
+	"sp-keystore/std",
+	"hash-db/std",
+	"sp-trie",
+	"sp-state-machine",
+	"libsecp256k1/std",
+	"sp-runtime-interface/std",
+	"sp-externalities/std",
+	"sp-wasm-interface/std",
+	"futures",
+	"parking_lot",
+	"itp-sgx-externalities/std",
+]
+sgx = [
+	"sgx_tstd",
+	"sgx_types",
+	"itp-sgx-externalities/sgx",
+	"sp-runtime-interface/disable_target_static_assertions",
+]
+
+# These two features are used for `no_std` builds for the environments which already provides
+# `#[panic_handler]`, `#[alloc_error_handler]` and `#[global_allocator]`.
+#
+# For the regular wasm sgx-runtime builds those are not used.
+disable_panic_handler = []
+disable_oom = []
+disable_allocator = []

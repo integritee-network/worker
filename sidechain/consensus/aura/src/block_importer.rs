@@ -27,6 +27,7 @@ use itp_enclave_metrics::EnclaveMetric;
 use itp_ocall_api::{EnclaveMetricsOCallApi, EnclaveSidechainOCallApi};
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::{key_repository::AccessKey, StateCrypto};
+use itp_sgx_externalities::SgxExternalities;
 use itp_stf_executor::ExecutedOperation;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_types::H256;
@@ -35,7 +36,6 @@ use its_state::SidechainDB;
 use its_top_pool_executor::TopPoolCallOperator;
 use its_validateer_fetch::ValidateerFetch;
 use log::*;
-use sgx_externalities::SgxExternalities;
 use sidechain_primitives::traits::{
 	BlockData, Header as HeaderTrait, ShardIdentifierFor, SignedBlock as SignedBlockTrait,
 };

@@ -26,10 +26,10 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
+#[cfg(feature = "sgx")]
+pub use ita_sgx_runtime::{Balance, Index};
 #[cfg(feature = "std")]
 pub use my_node_runtime::{Balance, Index};
-#[cfg(feature = "sgx")]
-pub use sgx_runtime::{Balance, Index};
 
 use codec::{Compact, Decode, Encode};
 use derive_more::Display;

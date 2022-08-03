@@ -19,9 +19,9 @@ use crate::{error::Result, traits::StfEnclaveSigning};
 use ita_stf::{AccountId, Index, KeyPair, Stf, TrustedCall, TrustedCallSigned};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{ed25519_derivation::DeriveEd25519, key_repository::AccessKey};
+use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_types::ShardIdentifier;
-use sgx_externalities::SgxExternalitiesTrait;
 use sp_core::{ed25519::Pair as Ed25519Pair, Pair, H256};
 use std::sync::Arc;
 

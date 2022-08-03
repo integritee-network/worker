@@ -25,8 +25,8 @@ extern crate sgx_tstd as std;
 
 use codec::Encode;
 use ita_stf::hash::TrustedOperationOrHash;
+use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_types::{OpaqueCall, H256};
-use sgx_externalities::SgxExternalitiesTrait;
 use std::vec::Vec;
 
 // re-export module to properly feature gate sgx and regular std environment
@@ -156,7 +156,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use sgx_externalities::SgxExternalities;
+	use itp_sgx_externalities::SgxExternalities;
 
 	#[test]
 	fn is_success_works() {

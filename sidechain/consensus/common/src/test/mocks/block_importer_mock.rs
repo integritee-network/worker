@@ -18,10 +18,10 @@
 use crate::{test::mocks::verifier_mock::VerifierMock, BlockImport, Error, Result};
 use core::marker::PhantomData;
 use itp_sgx_crypto::aes::Aes;
+use itp_sgx_externalities::SgxExternalities;
 use itp_test::mock::onchain_mock::OnchainMock;
 use itp_types::H256;
 use its_state::SidechainDB;
-use sgx_externalities::SgxExternalities;
 use sidechain_primitives::traits::{ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait};
 use sp_core::Pair;
 use sp_runtime::traits::Block as ParentchainBlockTrait;

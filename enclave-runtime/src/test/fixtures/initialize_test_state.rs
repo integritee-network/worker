@@ -17,9 +17,9 @@
 */
 
 use ita_stf::{AccountId, State, Stf};
+use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_types::ShardIdentifier;
-use sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 
 /// Returns an empty `State` with the corresponding `ShardIdentifier`.
 pub fn init_state<S: HandleState<StateT = SgxExternalities>>(

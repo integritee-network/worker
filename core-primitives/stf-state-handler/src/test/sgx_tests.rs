@@ -31,9 +31,9 @@ use crate::{
 use codec::{Decode, Encode};
 use ita_stf::{AccountId, State as StfState, StateType as StfStateType};
 use itp_sgx_crypto::{mocks::KeyRepositoryMock, Aes, AesSeal, StateCrypto};
+use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_sgx_io::{write, StaticSealedIO};
 use itp_types::{ShardIdentifier, H256};
-use sgx_externalities::SgxExternalitiesTrait;
 use sp_core::hashing::blake2_256;
 use std::{sync::Arc, thread, vec::Vec};
 

@@ -120,8 +120,8 @@ pub mod tests {
 	use super::*;
 	use codec::{Decode, Encode};
 	use ita_stf::Stf;
+	use itp_sgx_externalities::{SgxExternalitiesTrait, SgxExternalitiesType};
 	use itp_types::ShardIdentifier;
-	use sgx_externalities::{SgxExternalitiesTrait, SgxExternalitiesType};
 	use sp_core::{blake2_256, crypto::AccountId32};
 
 	pub fn initialized_shards_list_is_empty() {
