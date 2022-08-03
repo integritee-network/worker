@@ -155,7 +155,7 @@ pub mod storage {
 
 	pub fn clear(key: &[u8]) {
 		with_externalities(|ext| {
-			if let None = ext.remove(key) {
+			if ext.remove(key).is_none() {
 				info!("Tried to clear storage that was not existing");
 			}
 		});
@@ -769,11 +769,13 @@ pub mod offchain {
 		false
 	}
 
+	#[allow(clippy::result_unit_err)]
 	pub fn submit_transaction(data: Vec<u8>) -> Result<(), ()> {
 		warn!("offchain::submit_transaction unimplemented");
 		Err(())
 	}
 
+	#[allow(clippy::result_unit_err)]
 	pub fn network_state() -> Result<OpaqueNetworkState, ()> {
 		warn!("offchain::network_state unimplemented");
 		Err(())
@@ -815,6 +817,7 @@ pub mod offchain {
 		None
 	}
 
+	#[allow(clippy::result_unit_err)]
 	pub fn http_request_start(
 		method: &str,
 		uri: &str,
@@ -824,6 +827,7 @@ pub mod offchain {
 		Err(())
 	}
 
+	#[allow(clippy::result_unit_err)]
 	pub fn http_request_add_header(
 		request_id: offchain::HttpRequestId,
 		name: &str,
