@@ -60,7 +60,7 @@ pub enum Commands {
 	/// query node metadata and print it as json to stdout
 	PrintMetadata,
 
-	/// query sgx-sgx-runtime metadata and print it as json to stdout
+	/// query sgx-runtime metadata and print it as json to stdout
 	PrintSgxMetadata,
 
 	/// send some bootstrapping funds to supplied account(s)

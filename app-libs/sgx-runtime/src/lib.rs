@@ -289,7 +289,7 @@ impl pallet_parentchain::Config for Runtime {
 	type WeightInfo = ();
 }
 
-// The plain sgx-sgx-runtime without the `evm-pallet`
+// The plain sgx-runtime without the `evm-pallet`
 #[cfg(not(feature = "evm"))]
 construct_runtime!(
 	pub enum Runtime where

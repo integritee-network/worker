@@ -47,9 +47,9 @@ pallet-evm = { default-features = false, optional = true, git = "https://github.
 
 [features]
 default = ['std']
-# Compile the sgx-sgx-runtime with evm-pallet support in `no_std`.
+# Compile the sgx-runtime with evm-pallet support in `no_std`.
 evm = ["pallet-evm"]
-# Compile the sgx-sgx-runtime with evm-pallet support in `std`.
+# Compile the sgx-runtime with evm-pallet support in `std`.
 evm_std = [
     'evm', # Activate the `feature = evm` for the compiler flags.
     'pallet-evm/std'

@@ -85,7 +85,7 @@ impl std::error::Error for Error {
 const BASE_ERROR: i64 = 1000;
 /// Extrinsic has an invalid format.
 const BAD_FORMAT: i64 = BASE_ERROR + 1;
-/// Error during operation verification in sgx-runtime.
+/// Error during operation verification in runtime.
 const VERIFICATION_ERROR: i64 = BASE_ERROR + 2;
 
 /// Pool rejected the operation as invalid

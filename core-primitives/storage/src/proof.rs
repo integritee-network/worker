@@ -99,7 +99,7 @@ mod tests {
 			.iter_nodes()
 			.collect();
 
-		// check proof in sgx-runtime
+		// check proof in runtime
 		let checker = <StorageProofChecker<Blake2Hasher>>::new(root, proof.clone()).unwrap();
 		assert_eq!(checker.read_value(b"key1"), Ok(Some(b"value1".to_vec())));
 		assert_eq!(checker.read_value(b"key2"), Ok(Some(b"value2".to_vec())));

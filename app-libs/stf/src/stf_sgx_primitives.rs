@@ -26,7 +26,7 @@ pub mod types {
 
 	pub type AccountData = balances::AccountData<Balance>;
 	pub type AccountInfo = system::AccountInfo<Index, AccountData>;
-	// FIXME after fixing sgx-sgx-runtime issue #37
+	// FIXME after fixing sgx-runtime issue #37
 	#[cfg(all(not(feature = "std"), feature = "sgx"))]
 	pub type ParentchainHeader = sgx_runtime::Header;
 	#[cfg(all(not(feature = "sgx"), feature = "std"))]

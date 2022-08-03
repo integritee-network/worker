@@ -64,7 +64,7 @@ impl Drop for ShardDirectoryHandle {
 	}
 }
 
-// Fixme: Move this test to sgx-sgx-runtime:
+// Fixme: Move this test to sgx-runtime:
 //
 // https://github.com/integritee-network/sgx-runtime/issues/23
 pub fn test_sgx_state_decode_encode_works() {
