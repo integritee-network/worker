@@ -80,6 +80,8 @@ RUN apt update && apt install -y libssl-dev iproute2
 
 COPY --from=powerman/dockerize /usr/local/bin/dockerize /usr/local/bin/dockerize
 
+ENV PATH "$PATH:/usr/local/bin"
+
 
 ### Deployed CLI client
 ##################################################
@@ -100,6 +102,8 @@ RUN mkdir ${LOG_DIR}
 
 RUN ldd /usr/local/bin/integritee-cli && \
 	/usr/local/bin/integritee-cli --version
+
+RUN more /etc/environment
 
 ENTRYPOINT ["/usr/local/bin/integritee-cli"]
 
@@ -124,5 +128,7 @@ RUN ls -al /usr/local/bin
 # checks
 RUN ldd /usr/local/bin/integritee-service && \
 	/usr/local/bin/integritee-service --version
+
+RUN more /etc/environment
 
 ENTRYPOINT ["/usr/local/bin/integritee-service"]
