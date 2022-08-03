@@ -1698,6 +1698,7 @@ dependencies = [
  "ita-stf",
  "itp-settings",
  "itp-sgx-crypto",
+ "itp-sgx-externalities",
  "itp-sgx-io",
  "itp-time-utils",
  "itp-types",
@@ -1705,7 +1706,6 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "rust-base58",
- "sgx-externalities",
  "sgx_tcrypto",
  "sgx_tstd",
  "sgx_types",
@@ -1856,6 +1856,7 @@ dependencies = [
  "ita-stf",
  "itp-node-api",
  "itp-sgx-crypto",
+ "itp-sgx-externalities",
  "itp-stf-executor",
  "itp-time-utils",
  "itp-top-pool-author",
@@ -1863,7 +1864,6 @@ dependencies = [
  "its-state",
  "log",
  "parity-scale-codec",
- "sgx-externalities",
  "sgx_tstd",
  "sgx_types",
  "sidechain-primitives",
@@ -1884,6 +1884,7 @@ dependencies = [
  "itp-ocall-api",
  "itp-settings",
  "itp-sgx-crypto",
+ "itp-sgx-externalities",
  "itp-stf-executor",
  "itp-stf-state-handler",
  "itp-time-utils",
@@ -1896,7 +1897,6 @@ dependencies = [
  "its-top-pool-executor",
  "its-validateer-fetch",
  "log",
- "sgx-externalities",
  "sgx_tstd",
  "sidechain-block-verification",
  "sidechain-primitives",
@@ -1999,6 +1999,7 @@ name = "its-top-pool-executor"
 version = "0.8.0"
 dependencies = [
  "ita-stf",
+ "itp-sgx-externalities",
  "itp-stf-executor",
  "itp-time-utils",
  "itp-top-pool-author",
@@ -2006,7 +2007,6 @@ dependencies = [
  "its-state",
  "log",
  "parity-scale-codec",
- "sgx-externalities",
  "sgx_tstd",
  "sgx_types",
  "sidechain-primitives",
@@ -3234,21 +3234,6 @@ dependencies = [
  "itoa 1.0.2",
  "ryu",
  "serde 1.0.137",
-]
-
-[[package]]
-name = "sgx-externalities"
-version = "0.4.0"
-source = "git+https://github.com/integritee-network/sgx-runtime?branch=master#400f4058675b94428e183f839518636faa72164e"
-dependencies = [
- "derive_more",
- "environmental",
- "log",
- "parity-scale-codec",
- "postcard",
- "serde 1.0.137",
- "sgx_tstd",
- "sgx_types",
 ]
 
 [[package]]

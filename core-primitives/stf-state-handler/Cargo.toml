@@ -15,6 +15,7 @@ sgx_tcrypto = { branch = "master", git = "https://github.com/apache/teaclave-sgx
 ita-stf = { path = "../../app-libs/stf", default-features = false }
 itp-settings = { path = "../../core-primitives/settings" }
 itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", default-features = false }
+itp-sgx-externalities = { optional = true, default-features = false, path = "../../core-primitives/substrate-sgx/externalities" }
 itp-sgx-io = { path = "../../core-primitives/sgx/io", default-features = false }
 itp-time-utils = { path = "../../core-primitives/time-utils", default-features = false }
 
@@ -28,7 +29,6 @@ thiserror = { version = "1.0", optional = true }
 
 # scs / integritee
 itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-sgx-externalities = { optional = true, default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
 
 # no-std dependencies
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
@@ -46,10 +46,10 @@ std = [
     "rust-base58",
     "ita-stf/std",
     "itp-sgx-crypto/std",
+    "itp-sgx-externalities/std",
     "itp-sgx-io/std",
     "itp-time-utils/std",
     "itp-types/std",
-    "sgx-externalities/std",
     "thiserror",
     "log/std",
 ]
@@ -59,9 +59,9 @@ sgx = [
     "rust-base58_sgx",
     "ita-stf/sgx",
     "itp-sgx-crypto/sgx",
+    "itp-sgx-externalities/sgx",
     "itp-sgx-io/sgx",
     "itp-time-utils/sgx",
-    "sgx-externalities/sgx",
     "thiserror_sgx",
 ]
 test = [
