@@ -28,6 +28,8 @@ jobs:
       
   build-test:
     runs-on: ubuntu-20.04
+    env:
+      DOCKER_LOCAL_CACHE: /tmp/docker_cache
     strategy:
       fail-fast: false
       matrix:
@@ -47,8 +49,8 @@ jobs:
         with:
           build-args: |
             WORKER_MODE_ARG=${{ matrix.mode }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=local,src=${{ env.DOCKER_LOCAL_CACHE }}
+          cache-to: type=local,dest=${{ env.DOCKER_LOCAL_CACHE }},mode=max
           context: .
           file: build.Dockerfile
           load: true # Required in order to make the resulting image available in `docker images`, so we can use it in a subsequent `docker run`.
@@ -60,7 +62,7 @@ jobs:
         with:
           build-args: |
             WORKER_MODE_ARG=${{ matrix.mode }}
-          cache-from: type=gha
+          cache-from: type=local,src=${{ env.DOCKER_LOCAL_CACHE }}
           context: .
           file: build.Dockerfile
           load: true
