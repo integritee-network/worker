@@ -57,25 +57,3 @@ pub fn duration_now() -> Duration {
 		panic!("Current time {:?} is before unix epoch. Something is wrong: {:?}", now, e)
 	})
 }
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	#[test]
-	fn subsequent_nows_with_sleep_inbetween_are_strictly_increasing_in_time() {
-		let before = duration_now();
-		thread::sleep(Duration::from_nanos(1));
-		let now = duration_now();
-
-		assert!(before < now);
-	}
-
-	#[test]
-	fn subsequent_nows_are_equal_or_increasing_in_time() {
-		let before = duration_now();
-		let now = duration_now();
-
-		assert!(before <= now);
-	}
-}
