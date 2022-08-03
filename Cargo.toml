@@ -84,10 +84,10 @@ sgx_urts = { version = "1.1.5", git = "https://github.com/apache/incubator-teacl
 #substrate-client-keystore = { path = "../../scs/substrate-api-client/client-keystore" }
 
 #[patch."https://github.com/integritee-network/pallets.git"]
-#pallet-claims = { path = '../pallets/claims' }
-#pallet-teerex = { path = '../pallets/teerex' }
-#pallet-teeracle = { path = '../pallets/teeracle' }
-#teerex-primitives = {path = '../pallets/primitives/teerex'}
-#pallet-parentchain = { path = '../pallets/parentchain' }
-#itp-types = {  path = '../pallets/primitives/types'}
-#itp-utils = {  path = '../pallets/primitives/utils'}
+#pallet-claims = { path = "../pallets/claims" }
+#pallet-teerex = { path = "../pallets/teerex" }
+#pallet-teeracle = { path = "../pallets/teeracle" }
+#teerex-primitives = {path = "../pallets/primitives/teerex"}
+#pallet-parentchain = { path = "../pallets/parentchain" }
+#itp-types = {  path = "../pallets/primitives/types"}
+#itp-utils = {  path = "../pallets/primitives/utils"}

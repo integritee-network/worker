@@ -5,13 +5,13 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 
 [package.metadata.docs.rs]
-targets = ['x86_64-unknown-linux-gnu']
+targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-hex-literal = { version = '0.3.4', optional = true }
-serde = { version = "1.0" , optional = true, features = ['derive'] }
+hex-literal = { version = "0.3.4", optional = true }
+serde = { version = "1.0" , optional = true, features = ["derive"] }
 # alias "parity-scale-code" to "codec"
-codec = { package = 'parity-scale-codec', version = "3.0.0", default-features = false,  features = ['derive']}
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false,  features = ["derive"]}
 scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
 
 # Substrate dependencies
@@ -46,50 +46,50 @@ pallet-parentchain = { default-features = false, git = "https://github.com/integ
 pallet-evm = { default-features = false, optional = true, git = "https://github.com/integritee-network/frontier.git", branch = "polkadot-v0.9.26" }
 
 [features]
-default = ['std']
+default = ["std"]
 # Compile the sgx-runtime with evm-pallet support in `no_std`.
 evm = ["pallet-evm"]
 # Compile the sgx-runtime with evm-pallet support in `std`.
 evm_std = [
-    'evm', # Activate the `feature = evm` for the compiler flags.
-    'pallet-evm/std'
+    "evm", # Activate the `feature = evm` for the compiler flags.
+    "pallet-evm/std"
 ]
 runtime-benchmarks = [
-    'hex-literal',
-    'frame-benchmarking',
-    'frame-support/runtime-benchmarks',
-    'frame-system-benchmarking',
-    'frame-system/runtime-benchmarks',
-    'pallet-balances/runtime-benchmarks',
-    'pallet-timestamp/runtime-benchmarks',
-    'sp-runtime/runtime-benchmarks',
+    "hex-literal",
+    "frame-benchmarking",
+    "frame-support/runtime-benchmarks",
+    "frame-system-benchmarking",
+    "frame-system/runtime-benchmarks",
+    "pallet-balances/runtime-benchmarks",
+    "pallet-timestamp/runtime-benchmarks",
+    "sp-runtime/runtime-benchmarks",
 ]
 std = [
-    'codec/std',
-    'scale-info/std',
-    'serde',
-    'frame-executive/std',
-    'frame-support/std',
-    'frame-system/std',
-    'frame-system-rpc-runtime-api/std',
-    'pallet-aura/std',
-    'pallet-balances/std',
-    'pallet-grandpa/std',
-    'pallet-randomness-collective-flip/std',
-    'pallet-sudo/std',
-    'pallet-timestamp/std',
-    'pallet-transaction-payment/std',
-    'pallet-transaction-payment-rpc-runtime-api/std',
-    'pallet-parentchain/std',
-    'sp-api/std',
-    'sp-block-builder/std',
-    'sp-consensus-aura/std',
-    'sp-core/std',
-    'sp-inherents/std',
-    'sp-offchain/std',
-    'sp-runtime/std',
-    'sp-session/std',
-    'sp-std/std',
-    'sp-transaction-pool/std',
-    'sp-version/std',
+    "codec/std",
+    "scale-info/std",
+    "serde",
+    "frame-executive/std",
+    "frame-support/std",
+    "frame-system/std",
+    "frame-system-rpc-runtime-api/std",
+    "pallet-aura/std",
+    "pallet-balances/std",
+    "pallet-grandpa/std",
+    "pallet-randomness-collective-flip/std",
+    "pallet-sudo/std",
+    "pallet-timestamp/std",
+    "pallet-transaction-payment/std",
+    "pallet-transaction-payment-rpc-runtime-api/std",
+    "pallet-parentchain/std",
+    "sp-api/std",
+    "sp-block-builder/std",
+    "sp-consensus-aura/std",
+    "sp-core/std",
+    "sp-inherents/std",
+    "sp-offchain/std",
+    "sp-runtime/std",
+    "sp-session/std",
+    "sp-std/std",
+    "sp-transaction-pool/std",
+    "sp-version/std",
 ]

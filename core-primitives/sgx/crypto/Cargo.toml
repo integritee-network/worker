@@ -36,8 +36,8 @@ std = [
     "log/std",
     "itp-sgx-io/std",
     "sp-core/std",
-    'serde/std',
-    'serde_json/std',
+    "serde/std",
+    "serde_json/std",
 ]
 sgx = [
     "sgx_tstd",
