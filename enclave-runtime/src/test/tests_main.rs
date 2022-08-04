@@ -42,15 +42,16 @@ use ita_stf::{
 	AccountInfo, ShardIdentifier, State, StatePayload, StateTypeDiff, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetter, TrustedOperation,
 };
-use itp_node_api_extensions::metadata::{
-	metadata_mocks::NodeMetadataMock, node_metadata_provider::NodeMetadataRepository,
-	pallet_sidechain::SidechainCallIndexes,
+use itp_node_api::metadata::{
+	metadata_mocks::NodeMetadataMock, pallet_sidechain::SidechainCallIndexes,
+	provider::NodeMetadataRepository,
 };
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::enclave::MAX_TRUSTED_OPS_EXEC_DURATION;
 use itp_sgx_crypto::{
 	ed25519_derivation::DeriveEd25519, mocks::KeyRepositoryMock, Aes, StateCrypto,
 };
+use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use itp_stf_executor::{
 	enclave_signer_tests as stf_enclave_signer_tests, executor::StfExecutor,
 	executor_tests as stf_executor_tests, traits::StateUpdateProposer, BatchExecutionResult,
@@ -71,7 +72,6 @@ use its_sidechain::{
 	state::{SidechainDB, SidechainState, SidechainSystemExt},
 	top_pool_executor::{TopPoolCallOperator, TopPoolOperationHandler},
 };
-use sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use sgx_tunittest::*;
 use sgx_types::size_t;
 use sidechain_primitives::{

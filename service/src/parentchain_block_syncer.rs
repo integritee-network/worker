@@ -18,7 +18,7 @@
 
 use crate::error::Error;
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain, teerex_api::TeerexApi};
-use itp_node_api_extensions::ChainApi;
+use itp_node_api::api_client::ChainApi;
 use itp_types::SignedBlock;
 use log::*;
 use my_node_runtime::Header;

@@ -36,9 +36,7 @@ use ita_stf::{
 };
 use itc_parentchain::light_client::mocks::validator_access_mock::ValidatorAccessMock;
 use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
-use itp_node_api_extensions::metadata::{
-	metadata_mocks::NodeMetadataMock, node_metadata_provider::NodeMetadataRepository,
-};
+use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::{
 	sidechain::SLOT_DURATION,

@@ -30,15 +30,15 @@ sidechain-primitives = { default-features = false, git = "https://github.com/int
 
 [dev-dependencies]
 # local
+itp-sgx-externalities = { default-features = false, path = "../../../core-primitives/substrate-sgx/externalities" }
 itp-test = { path = "../../../core-primitives/test" }
 its-consensus-aura = { path = "../aura" }
 parentchain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+
 # substrate
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
-# integritee / scs
-sgx-externalities = { git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
 
 [features]
 default = ["std"]
@@ -50,6 +50,7 @@ std = [
     "itp-block-import-queue/std",
     "itp-ocall-api/std",
     "itp-sgx-crypto/std",
+    "itp-sgx-externalities/std",
     "its-state/std",
     # substrate
     "sp-runtime/std",
@@ -64,6 +65,7 @@ sgx = [
     # local
     "itp-block-import-queue/sgx",
     "itp-sgx-crypto/sgx",
+    "itp-sgx-externalities/sgx",
     "its-state/sgx",
     # scs
     "sidechain-block-verification/sgx",

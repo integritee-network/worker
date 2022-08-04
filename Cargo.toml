@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "app-libs/exchange-oracle",
+    "app-libs/sgx-runtime",
     "app-libs/stf",
     "cli",
     "core/direct-rpc-server",
@@ -23,7 +24,12 @@ members = [
     "core-primitives/extrinsics-factory",
     "core-primitives/hashing",
     "core-primitives/networking-utils",
-    "core-primitives/node-api-extensions",
+    "core-primitives/node-api",
+    "core-primitives/node-api/api-client-extensions",
+    "core-primitives/node-api/api-client-types",
+    "core-primitives/node-api/factory",
+    "core-primitives/node-api/metadata",
+    "core-primitives/node-api/metadata-provider",
     "core-primitives/nonce-cache",
     "core-primitives/ocall-api",
     "core-primitives/primitives-cache",
@@ -34,6 +40,8 @@ members = [
     "core-primitives/stf-executor",
     "core-primitives/stf-state-handler",
     "core-primitives/storage",
+    "core-primitives/substrate-sgx/externalities",
+    "core-primitives/substrate-sgx/sp-io",
     "core-primitives/teerex-storage",
     "core-primitives/test",
     "core-primitives/test/test-sgx-build",
@@ -65,14 +73,10 @@ sgx_crypto_helper = { version = "1.1.5", git = "https://github.com/apache/incuba
 sgx_rand = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5"}
 sgx_urts = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5"}
 
-#[patch."https://github.com/scs/substrate-api-client"]
-#substrate-api-client = { path = "../substrate-api-client" }
-#substrate-client-keystore = { path = "../substrate-api-client/client-keystore" }
-
 #[patch."https://github.com/integritee-network/sgx-runtime"]
-#sgx-runtime = { path = "../sgx-runtime/runtime", default-features = false}
-#sp-io = { path = "../sgx-runtime/substrate-sgx/sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
-#sgx-externalities = { path = "../sgx-runtime/substrate-sgx/externalities" }
+#sgx-runtime = { path = "../sgx-runtime/runtime"}
+#sp-io = { path = "../sgx-runtime/substrate-sgx/sp-io"}
+#sgx-externalities = { path = "../sgx-runtime/substrate-sgx/externalities"}
 
 #[patch."https://github.com/integritee-network/integritee-node"]
 #my-node-runtime = { package = "integritee-node-runtime", path = "../integritee-node/runtime"}
@@ -82,13 +86,13 @@ sgx_urts = { version = "1.1.5", git = "https://github.com/apache/incubator-teacl
 #substrate-client-keystore = { path = "../../scs/substrate-api-client/client-keystore" }
 
 #[patch."https://github.com/integritee-network/pallets.git"]
-#pallet-claims = { path = '../pallets/claims' }
-#pallet-teerex = { path = '../pallets/teerex' }
-#pallet-teeracle = { path = '../pallets/teeracle' }
-#teerex-primitives = {path = '../pallets/primitives/teerex'}
-#pallet-parentchain = { path = '../pallets/parentchain' }
-#itp-types = {  path = '../pallets/primitives/types'}
-#itp-utils = {  path = '../pallets/primitives/utils'}
+#pallet-claims = { path = "../pallets/claims" }
+#pallet-teerex = { path = "../pallets/teerex" }
+#pallet-teeracle = { path = "../pallets/teeracle" }
+#teerex-primitives = {path = "../pallets/primitives/teerex"}
+#pallet-parentchain = { path = "../pallets/parentchain" }
+#itp-types = {  path = "../pallets/primitives/types"}
+#itp-utils = {  path = "../pallets/primitives/utils"}
 
 #[patch."https://github.com/integritee-network/http_req"]
 #http_req = {path = '..//http_req' }

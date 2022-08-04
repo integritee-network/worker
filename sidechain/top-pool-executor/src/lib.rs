@@ -48,11 +48,11 @@ pub mod call_operator_mock;
 pub use call_operator::TopPoolCallOperator;
 pub use getter_operator::TopPoolGetterOperator;
 
+use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_executor::traits::{StateUpdateProposer, StfExecuteTimedGettersBatch};
 use itp_top_pool_author::traits::{AuthorApi, OnBlockImported, SendState};
 use itp_types::H256;
 use its_state::{SidechainState, SidechainSystemExt, StateHash};
-use sgx_externalities::SgxExternalitiesTrait;
 use sidechain_primitives::traits::{
 	Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait,
 };

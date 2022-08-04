@@ -14,7 +14,7 @@
 	limitations under the License.
 
 */
-use crate::{error::Result, metadata::NodeMetadata};
+use crate::{error::Result, NodeMetadata};
 use sp_core::storage::StorageKey;
 
 /// Pallet' name:

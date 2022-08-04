@@ -28,17 +28,17 @@ pub mod types {
 	pub type AccountInfo = system::AccountInfo<Index, AccountData>;
 	// FIXME after fixing sgx-runtime issue #37
 	#[cfg(all(not(feature = "std"), feature = "sgx"))]
-	pub type ParentchainHeader = sgx_runtime::Header;
+	pub type ParentchainHeader = ita_sgx_runtime::Header;
 	#[cfg(all(not(feature = "sgx"), feature = "std"))]
 	pub type BlockNumber = u32;
 	#[cfg(all(not(feature = "std"), feature = "sgx"))]
-	pub type BlockNumber = sgx_runtime::BlockNumber;
+	pub type BlockNumber = ita_sgx_runtime::BlockNumber;
 	#[cfg(all(not(feature = "sgx"), feature = "std"))]
 	pub type ParentchainHeader = sp_runtime::generic::Header<BlockNumber, BlakeTwo256>;
 
-	pub type StateType = sgx_externalities::SgxExternalitiesType;
-	pub type State = sgx_externalities::SgxExternalities;
-	pub type StateTypeDiff = sgx_externalities::SgxExternalitiesDiffType;
+	pub type StateType = itp_sgx_externalities::SgxExternalitiesType;
+	pub type State = itp_sgx_externalities::SgxExternalities;
+	pub type StateTypeDiff = itp_sgx_externalities::SgxExternalitiesDiffType;
 	pub use super::StatePayload;
 	pub struct Stf;
 }

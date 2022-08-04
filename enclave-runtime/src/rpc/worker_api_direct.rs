@@ -17,6 +17,7 @@
 
 use codec::Encode;
 use core::result::Result;
+use ita_sgx_runtime::Runtime;
 use itp_primitives_cache::{GetPrimitives, GLOBAL_PRIMITIVES_CACHE};
 use itp_rpc::RpcReturnValue;
 use itp_sgx_crypto::Rsa3072Seal;
@@ -25,7 +26,6 @@ use itp_types::{DirectRequestStatus, H256};
 use itp_utils::ToHexPrefixed;
 use its_sidechain::rpc_handler::{direct_top_pool_api, import_block_api};
 use jsonrpc_core::{serde_json::json, IoHandler, Params, Value};
-use sgx_runtime::Runtime;
 use sidechain_primitives::types::block::SignedBlock;
 use std::{borrow::ToOwned, format, str, string::String, sync::Arc, vec::Vec};
 

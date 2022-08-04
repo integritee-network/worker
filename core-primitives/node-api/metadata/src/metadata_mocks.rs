@@ -16,8 +16,7 @@
 */
 
 use crate::{
-	error::Result,
-	metadata::{pallet_sidechain::SidechainCallIndexes, pallet_teerex::TeerexCallIndexes},
+	error::Result, pallet_sidechain::SidechainCallIndexes, pallet_teerex::TeerexCallIndexes,
 };
 use codec::{Decode, Encode};
 

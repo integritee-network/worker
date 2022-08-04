@@ -15,26 +15,12 @@
 
 */
 
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-use crate::sgx_reexport_prelude::*;
-
-use std::{boxed::Box, format};
+#[derive(Debug, PartialEq, Eq)]
+pub enum Error {
+	/// Metadata has not been set
+	MetadataNotSet,
+	/// Api-client metadata error
+	NodeMetadata(substrate_api_client::MetadataError),
+}
 
 pub type Result<T> = core::result::Result<T, Error>;
-
-/// extrinsics factory error
-#[derive(Debug, thiserror::Error)]
-pub enum Error {
-	#[error("Node API metadata has not been set")]
-	MetadataNotSet,
-	#[error("Node API metadata error")]
-	NodeMetadata(substrate_api_client::MetadataError),
-	#[error(transparent)]
-	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
-}
-
-impl From<codec::Error> for Error {
-	fn from(e: codec::Error) -> Self {
-		Self::Other(format!("{:?}", e).into())
-	}
-}

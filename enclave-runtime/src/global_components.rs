@@ -43,11 +43,10 @@ use itc_tls_websocket_server::{
 use itp_block_import_queue::BlockImportQueue;
 use itp_component_container::ComponentContainer;
 use itp_extrinsics_factory::ExtrinsicsFactory;
-use itp_node_api_extensions::metadata::{
-	node_metadata_provider::NodeMetadataRepository, NodeMetadata,
-};
+use itp_node_api::metadata::{provider::NodeMetadataRepository, NodeMetadata};
 use itp_nonce_cache::NonceCache;
 use itp_sgx_crypto::{key_repository::KeyRepository, Aes, AesSeal, Rsa3072Seal};
+use itp_sgx_externalities::SgxExternalities;
 use itp_stf_executor::{enclave_signer::StfEnclaveSigner, executor::StfExecutor};
 use itp_stf_state_handler::{
 	file_io::sgx::SgxStateFileIo, state_snapshot_repository::StateSnapshotRepository, StateHandler,
@@ -67,7 +66,6 @@ use its_sidechain::{
 };
 use primitive_types::H256;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
-use sgx_externalities::SgxExternalities;
 use sidechain_primitives::{
 	traits::SignedBlock as SignedSidechainBlockTrait,
 	types::block::SignedBlock as SignedSidechainBlock,

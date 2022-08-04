@@ -15,16 +15,17 @@
 
 */
 
-use crate::{error::Result, metadata::NodeMetadata};
-/// Pallet' name:
-const SIDECHAIN: &str = "Sidechain";
+//! Some substrate-api-client extension traits.
 
-pub trait SidechainCallIndexes {
-	fn confirm_proposed_sidechain_block_indexes(&self) -> Result<[u8; 2]>;
-}
+pub use substrate_api_client::{rpc::WsRpcClient, Api, ApiClientError};
 
-impl SidechainCallIndexes for NodeMetadata {
-	fn confirm_proposed_sidechain_block_indexes(&self) -> Result<[u8; 2]> {
-		self.call_indexes(SIDECHAIN, "confirm_proposed_sidechain_block")
-	}
-}
+pub mod account;
+pub mod chain;
+pub mod pallet_teerex;
+pub mod pallet_teerex_api_mock;
+
+pub use account::*;
+pub use chain::*;
+pub use pallet_teerex::*;
+
+pub type ApiResult<T> = Result<T, ApiClientError>;

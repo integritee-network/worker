@@ -15,7 +15,7 @@
 
 */
 
-use itp_node_api_extensions::{ApiResult, ChainApi, StorageProof};
+use itp_node_api::api_client::{ApiResult, ChainApi, StorageProof};
 use itp_types::{SignedBlock, H256};
 use parentchain_test::{
 	parentchain_block_builder::ParentchainBlockBuilder,

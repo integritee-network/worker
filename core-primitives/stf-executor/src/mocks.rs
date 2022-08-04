@@ -25,8 +25,8 @@ use ita_stf::{
 	hash::{Hash, TrustedOperationOrHash},
 	AccountId, KeyPair, ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedOperation,
 };
+use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_types::H256;
-use sgx_externalities::SgxExternalitiesTrait;
 use sp_core::Pair;
 use sp_runtime::traits::Header as HeaderTrait;
 use std::{marker::PhantomData, time::Duration};

@@ -18,15 +18,15 @@
 use crate::error::{Error, Result};
 use codec::Encode;
 use ita_stf::StatePayload;
-use itp_node_api_extensions::metadata::{
-	node_metadata_provider::AccessNodeMetadata, pallet_sidechain::SidechainCallIndexes,
+use itp_node_api::metadata::{
+	pallet_sidechain::SidechainCallIndexes, provider::AccessNodeMetadata,
 };
 use itp_sgx_crypto::{key_repository::AccessKey, StateCrypto};
+use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_time_utils::now_as_u64;
 use itp_types::{OpaqueCall, ShardIdentifier, H256};
 use its_state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt, StateHash};
 use log::*;
-use sgx_externalities::SgxExternalitiesTrait;
 use sidechain_primitives::traits::{
 	Block as SidechainBlockTrait, BlockData, Header as HeaderTrait, SignBlock,
 	SignedBlock as SignedSidechainBlockTrait,

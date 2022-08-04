@@ -31,7 +31,7 @@ pub mod sgx_reexport_prelude {
 
 use codec::Encode;
 use error::Result;
-use itp_node_api_extensions::metadata::{node_metadata_provider::AccessNodeMetadata, NodeMetadata};
+use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadata};
 use itp_nonce_cache::{MutateNonce, Nonce};
 use itp_types::{OpaqueCall, ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder};
 use sp_core::{Pair, H256};
@@ -145,7 +145,7 @@ where
 pub mod tests {
 
 	use super::*;
-	use itp_node_api_extensions::metadata::node_metadata_provider::NodeMetadataRepository;
+	use itp_node_api::metadata::provider::NodeMetadataRepository;
 	use itp_nonce_cache::{GetNonce, Nonce, NonceCache, NonceValue};
 	use sp_core::ed25519;
 	//use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;

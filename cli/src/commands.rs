@@ -26,7 +26,7 @@ use clap::Subcommand;
 use codec::{Decode, Encode};
 use ita_stf::ShardIdentifier;
 use itc_rpc_client::direct_client::DirectApi;
-use itp_node_api_extensions::{PalletTeerexApi, TEEREX};
+use itp_node_api::api_client::{PalletTeerexApi, TEEREX};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use log::*;
 use my_node_runtime::{Balance, BalancesCall, Call, Event, Hash};

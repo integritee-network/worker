@@ -20,6 +20,7 @@ use codec::Encode;
 use core::assert_matches::assert_matches;
 use itc_parentchain_block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
 use itp_sgx_crypto::{aes::Aes, mocks::KeyRepositoryMock, StateCrypto};
+use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesDiffType};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{handle_state_mock::HandleStateMock, onchain_mock::OnchainMock};
 use itp_time_utils::{duration_now, now_as_u64};
@@ -31,7 +32,6 @@ use parentchain_test::{
 	parentchain_block_builder::ParentchainBlockBuilder,
 	parentchain_header_builder::ParentchainHeaderBuilder,
 };
-use sgx_externalities::{SgxExternalities, SgxExternalitiesDiffType};
 use sidechain_primitives::{
 	traits::{SignBlock, SignedBlock},
 	types::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
