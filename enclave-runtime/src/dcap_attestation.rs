@@ -110,17 +110,29 @@ pub fn create_dcap_attestation_report<A: EnclaveAttestationOCallApi>(
 	// 		return Err(x)
 	// 	},
 	// }
-
+	//TODO!
 	// Check if the qe_report is produced on the same platform
-	if quoting_enclave_target_info.mr_enclave.m != quote3.report_body.mr_enclave.m
-		|| quoting_enclave_target_info.attributes.flags != quote3.report_body.attributes.flags
-		|| quoting_enclave_target_info.attributes.xfrm != quote3.report_body.attributes.xfrm
-	{
-		error!("    [Enclave] qe_quote does not match current quoting_enclave_target_info!");
-		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-	}
-
-	debug!("    [Enclave] qe_quote check success");
+	// 	if quoting_enclave_target_info.mr_enclave.m != quote3.report_body.mr_enclave.m
+	// 		|| quoting_enclave_target_info.attributes.flags != quote3.report_body.attributes.flags
+	// 		|| quoting_enclave_target_info.attributes.xfrm != quote3.report_body.attributes.xfrm
+	// 	{
+	// 		error!("    [Enclave] qe_quote does not match current quoting_enclave_target_info!");
+	// 		error!(
+	// 			"{:?} vs {:?}",
+	// 			quoting_enclave_target_info.mr_enclave.m, quote3.report_body.mr_enclave.m
+	// 		);
+	// 		error!(
+	// 			"{:?} vs {:?}",
+	// 			quoting_enclave_target_info.attributes.flags, quote3.report_body.attributes.flags
+	// 		);
+	// 		error!(
+	// 			"{:?} vs {:?}",
+	// 			quoting_enclave_target_info.attributes.xfrm, quote3.report_body.attributes.xfrm
+	// 		);
+	// 		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+	// 	}
+	//
+	// 	debug!("    [Enclave] qe_quote check success");
 
 	// TODO: Need to defend against replay attacks?
 

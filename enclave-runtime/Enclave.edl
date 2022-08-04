@@ -149,7 +149,6 @@ enclave {
 
 		sgx_status_t ocall_get_dcap_quote(
 			[in] sgx_report_t *report,
-			[out] sgx_report_t *p_qe_report,
 			[out, size = maxlen] sgx_quote_t *p_quote, uint32_t maxlen,
 			[out] uint32_t* p_quote_len
 		);

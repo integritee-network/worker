@@ -22,6 +22,7 @@ use frame_support::ensure;
 use itp_enclave_api_ffi as ffi;
 use itp_settings::worker::EXTRINSIC_MAX_SIZE;
 use itp_types::ShardIdentifier;
+use log::*;
 use sgx_types::*;
 
 /// general remote attestation methods
@@ -196,9 +197,8 @@ impl RemoteAttestationCallBacks for Enclave {
 	fn get_dcap_quote_size(&self) -> EnclaveResult<u32> {
 		let mut quote_size: u32 = 0;
 		let qe3_ret = unsafe { sgx_qe_get_quote_size(&mut quote_size as _) };
-
 		ensure!(qe3_ret == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(qe3_ret));
-
+		debug!("Successfully retrieved dcap quote size: {:?}", quote_size);
 		Ok(quote_size)
 	}
 
@@ -248,7 +248,7 @@ impl RemoteAttestationCallBacks for Enclave {
 			unsafe { sgx_qe_get_quote(&report, quote_length, quote_vec.as_mut_ptr() as _) };
 
 		ensure!(qe3_ret == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(qe3_ret));
-
+		debug!("Successfully retrieved dcap quote: {:?}", quote_vec);
 		Ok(quote_vec)
 	}
 

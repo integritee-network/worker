@@ -27,7 +27,7 @@ use sgx_types::{
 };
 use std::{ptr, vec::Vec};
 
-const RET_QUOTE_BUF_LEN: usize = 2048;
+const RET_QUOTE_BUF_LEN: usize = 5000;
 
 impl EnclaveAttestationOCallApi for OcallApi {
 	fn sgx_init_quote(&self) -> SgxResult<(sgx_target_info_t, sgx_epid_group_id_t)> {
@@ -134,12 +134,9 @@ impl EnclaveAttestationOCallApi for OcallApi {
 				p_quote_len,
 			)
 		};
-
 		ensure!(result == sgx_status_t::SGX_SUCCESS, result);
 		ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
-
 		let quote_vec: Vec<u8> = Vec::from(&return_quote_buf[..quote_len as usize]);
-
 		Ok(quote_vec)
 	}
 
