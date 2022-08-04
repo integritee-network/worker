@@ -19,9 +19,13 @@
 
 #![no_std]
 
-#[cfg(all(feature = "sidechain", feature = "offchain-worker"))]
+#[cfg(any(
+	all(feature = "sidechain", feature = "offchain-worker"),
+	all(feature = "sidechain", feature = "teeracle"),
+	all(feature = "teeracle", feature = "offchain-worker")
+))]
 compile_error!(
-	"feature \"sidechain\" and feature \"offchain-worker\" cannot be enabled at the same time"
+	"feature \"sidechain\" , \"offchain-worker\" or \"teeracle\" cannot be enabled at the same time"
 );
 
 pub mod worker_mode;

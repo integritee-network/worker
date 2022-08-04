@@ -448,10 +448,12 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	initialization_handler.registered_on_parentchain();
 
-	// start update exchange rate loop
-	let api5 = node_api.clone();
-	let market_enclave_api = enclave.clone();
-	start_interval_market_update(&api5, interval, market_enclave_api.as_ref(), &tokio_handle);
+	if WorkerModeProvider::worker_mode() == WorkerMode::Teeracle {
+		// start update exchange rate loop
+		let api5 = node_api.clone();
+		let market_enclave_api = enclave.clone();
+		start_interval_market_update(&api5, interval, market_enclave_api.as_ref(), &tokio_handle);
+	}
 
 	let last_synced_header = init_light_client(&node_api, enclave.clone()).unwrap();
 	println!("*** [+] Finished syncing light client, syncing parentchain...");

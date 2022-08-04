@@ -298,7 +298,7 @@ fn initialize_parentchain_import_dispatcher<WorkerModeProvider: ProvideWorkerMod
 	);
 
 	match WorkerModeProvider::worker_mode() {
-		WorkerMode::OffChainWorker | WorkerMode::Oracle => {
+		WorkerMode::OffChainWorker | WorkerMode::Teeracle => {
 			let offchain_worker_executor =
 				Arc::new(itc_offchain_worker_executor::executor::Executor::new(
 					top_pool_author,

@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mode: [ sidechain, offchain-worker, oracle ]
+        mode: [ sidechain, offchain-worker, teeracle ]
 
     steps:
       - uses: actions/checkout@v3
@@ -154,7 +154,7 @@ jobs:
             demo_name: m6_demo_shielding_unshielding
             demo_script: m6.sh
           - test: T1
-            mode: oracle
+            mode: teeracle
             demo_name: t1_demo_teeracle
             demo_script: teeracle1.sh
 

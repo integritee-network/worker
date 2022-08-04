@@ -17,6 +17,7 @@ default = []
 production = ["itp-settings/production"]
 sidechain = ["itp-settings/sidechain", "itp-top-pool-author/sidechain"]
 offchain-worker = ["itp-settings/offchain-worker", "itp-top-pool-author/offchain-worker"]
+teeracle = ["itp-settings/teeracle"]
 test = [
     "ita-stf/test",
     "itc-parentchain/mocks",
