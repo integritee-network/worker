@@ -1,24 +1,13 @@
-# integritee-teeracle
+# integritee-worker
 
-Integritee teeracle for Integritee [node](https://github.com/integritee-network/integritee-node) or [parachain](https://github.com/integritee-network/parachain).
-Based on Integritee [worker](https://github.com/integritee-network/worker).
+Integritee worker for Integritee [node](https://github.com/integritee-network/integritee-node) or [parachain](https://github.com/integritee-network/parachain)
 
 This is part of [Integritee](https://integritee.network)
 
-The teeracle is a service that provides trustworthy exchange-rate oracles to the integritee node or parachain.
-
-By default, it provides the TEER/USD exchange rate from CoinGecko and CoinMarketCap once a day.
-
-
 ## Build and Run
-Similar to build and run a worker. Please see our [Integritee Book](https://book.integritee.network/howto_worker.html) to learn how to build and run a worker.
-
-To change the update rate, run with --interval *number*s (ex --interval 28s).
-
-To get the exchange rate from CoinMarketCap you need your own API Key. Please see [CoinMarketCap](https://coinmarketcap.com/api/documentation/v1/#). Set your API Key as environment variable COINMARKETCAP_KEY.
+Please see our [Integritee Book](https://book.integritee.network/howto_worker.html) to learn how to build and run this.
 
 To start multiple worker and a node with one simple command: Check out [this README](local-setup/README.md).
-
 
 ## Tests
 ### Environment
