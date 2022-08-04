@@ -27,15 +27,16 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use crate::{
-	cert, ocall::OcallApi, utils::hash_from_slice, Error as EnclaveError, Result as EnclaveResult,
+	cert, ocall::OcallApi, utils::hash_from_slice, Error as EnclaveError,
+	ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder, Result as EnclaveResult,
+	GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT,
 };
 use codec::Encode;
 use core::default::Default;
 use itertools::Itertools;
+use itp_component_container::ComponentGetter;
+use itp_node_api::metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata};
 use itp_ocall_api::EnclaveAttestationOCallApi;
-use itp_settings::node::{
-	REGISTER_ENCLAVE, RUNTIME_SPEC_VERSION, RUNTIME_TRANSACTION_VERSION, TEEREX_MODULE,
-};
 use itp_sgx_crypto::Ed25519Seal;
 use itp_sgx_io::StaticSealedIO;
 use itp_utils::write_slice_and_whitespace_pad;
@@ -45,7 +46,7 @@ use sgx_tse::rsgx_create_report;
 use sgx_types::*;
 use sp_core::{blake2_256, Pair};
 use std::{prelude::v1::*, slice, str, vec::Vec};
-use substrate_api_client::compose_extrinsic_offline;
+use substrate_api_client::{compose_extrinsic_offline, ExtrinsicParams};
 
 #[allow(const_err)]
 pub fn create_dcap_attestation_report<A: EnclaveAttestationOCallApi>(
@@ -207,17 +208,50 @@ pub unsafe extern "C" fn perform_dcap_ra(
 	let genesis_hash = hash_from_slice(genesis_hash_slice);
 	debug!("decoded genesis_hash: {:?}", genesis_hash_slice);
 	debug!("worker url: {}", str::from_utf8(url_slice).unwrap());
-	let call = [TEEREX_MODULE, REGISTER_ENCLAVE];
+	let node_metadata_repository = match GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get() {
+		Ok(r) => r,
+		Err(e) => {
+			error!("Component get failure: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	let (register_enclave_call, runtime_spec_version, runtime_transaction_version) =
+		match node_metadata_repository.get_from_metadata(|m| {
+			(
+				m.register_enclave_call_indexes(),
+				m.get_runtime_version(),
+				m.get_runtime_transaction_version(),
+			)
+		}) {
+			Ok(r) => r,
+			Err(e) => {
+				error!("Failed to get node metadata: {:?}", e);
+				return sgx_status_t::SGX_ERROR_UNEXPECTED
+			},
+		};
+
+	let call =
+		match register_enclave_call {
+			Ok(c) => c,
+			Err(e) => {
+				error!("Failed to get the indexes for the register_enclave call from the metadata: {:?}", e);
+				return sgx_status_t::SGX_ERROR_UNEXPECTED
+			},
+		};
+
+	let extrinsic_params = ParentchainExtrinsicParams::new(
+		runtime_spec_version,
+		runtime_transaction_version,
+		*nonce,
+		genesis_hash,
+		ParentchainExtrinsicParamsBuilder::default(),
+	);
 
 	let xt = compose_extrinsic_offline!(
 		signer,
 		(call, cert_der.to_vec(), url_slice.to_vec()),
-		*nonce,
-		Era::Immortal,
-		genesis_hash,
-		genesis_hash,
-		RUNTIME_SPEC_VERSION,
-		RUNTIME_TRANSACTION_VERSION
+		extrinsic_params
 	);
 
 	let xt_encoded = xt.encode();
