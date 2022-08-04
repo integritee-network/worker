@@ -116,7 +116,6 @@ impl EnclaveAttestationOCallApi for OcallApi {
 	}
 
 	fn get_dcap_quote(&self, report: sgx_report_t) -> SgxResult<Vec<u8>> {
-		let mut qe_report = sgx_report_t::default();
 		let mut return_quote_buf = [0u8; RET_QUOTE_BUF_LEN];
 		let mut quote_len: u32 = 0;
 		let p_report = &report as *const sgx_report_t;
