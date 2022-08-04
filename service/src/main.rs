@@ -190,12 +190,15 @@ fn main() {
 			setup::initialize_shard_and_keys(enclave.as_ref(), &shard).unwrap();
 		}
 
+		let default_interval = match WorkerModeProvider::worker_mode() {
+			WorkerMode::Teeracle => MARKET_DATA_UPDATE_INTERVAL,
+			_ => Duration::ZERO,
+		};
 		let interval = smatches
 			.value_of("interval")
-			.map_or_else(|| Ok(MARKET_DATA_UPDATE_INTERVAL), parse)
+			.map_or_else(|| Ok(default_interval), parse)
 			.unwrap_or_else(|e| panic!("Interval parsing error {:?}", e));
-
-		println!("Update exchange rate interval is {:?}", interval);
+		info!("Update exchange rate interval is {:?}", interval);
 
 		let node_api =
 			node_api_factory.create_api().expect("Failed to create parentchain node API");

@@ -5,10 +5,6 @@ use crate::{
 use itp_node_api_extensions::{ADD_TO_WHITELIST, TEERACLE};
 use substrate_api_client::{compose_call, compose_extrinsic, UncheckedExtrinsicV4, XtStatus};
 
-// Fixme: Can be removed when merged: https://github.com/scs/substrate-api-client/pull/261
-use sp_core::crypto::Pair;
-use substrate_api_client::ExtrinsicParams;
-
 /// Add a trusted market data source to the on-chain whitelist.
 #[derive(Debug, Clone, Parser)]
 pub struct AddToWhitelistCmd {
