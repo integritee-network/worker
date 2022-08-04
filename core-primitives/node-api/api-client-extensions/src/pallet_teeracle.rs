@@ -15,19 +15,5 @@
 
 */
 
-//! Some substrate-api-client extension traits.
-
-pub use substrate_api_client::{rpc::WsRpcClient, Api, ApiClientError};
-
-pub mod account;
-pub mod chain;
-pub mod pallet_teeracle;
-pub mod pallet_teerex;
-pub mod pallet_teerex_api_mock;
-
-pub use account::*;
-pub use chain::*;
-pub use pallet_teeracle::*;
-pub use pallet_teerex::*;
-
-pub type ApiResult<T> = Result<T, ApiClientError>;
+pub const TEERACLE: &str = "Teeracle";
+pub const ADD_TO_WHITELIST: &str = "add_to_whitelist";

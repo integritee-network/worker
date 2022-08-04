@@ -1,6 +1,6 @@
 use crate::{command_utils::get_chain_api, Cli};
 use codec::Decode;
-use itp_node_api_extensions::ParentchainApi;
+use itp_node_api::api_client::ParentchainApi;
 use itp_time_utils::{duration_now, remaining_time};
 use log::{debug, info};
 use my_node_runtime::{Event, Hash};

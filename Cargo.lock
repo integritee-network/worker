@@ -2122,10 +2122,10 @@ dependencies = [
 
 [[package]]
 name = "http_req"
-version = "0.7.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1dab1fb99f5163b9b25805e4c191ea9425ae311442688bfe03c97e8a2ba66e9d"
+version = "0.8.1"
+source = "git+https://github.com/integritee-network/http_req?branch=master#3723e88235f2b29bc1a31835853b072ffd0455fd"
 dependencies = [
+ "log 0.4.17",
  "rustls 0.19.1",
  "unicase 2.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "webpki 0.21.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2134,9 +2134,10 @@ dependencies = [
 
 [[package]]
 name = "http_req"
-version = "0.7.2"
-source = "git+https://github.com/mesalock-linux/http_req-sgx?tag=sgx_1.1.3#5d0f7474c73b70d2dbdda69c1db2a2e31aee6eb8"
+version = "0.8.1"
+source = "git+https://github.com/integritee-network/http_req#3723e88235f2b29bc1a31835853b072ffd0455fd"
 dependencies = [
+ "log 0.4.17",
  "rustls 0.19.0 (git+https://github.com/mesalock-linux/rustls?branch=mesalock_sgx)",
  "sgx_tstd",
  "unicase 2.6.0 (git+https://github.com/mesalock-linux/unicase-sgx)",
@@ -2360,6 +2361,7 @@ dependencies = [
  "itp-node-api",
  "itp-rpc",
  "itp-sgx-crypto",
+ "itp-time-utils",
  "itp-types",
  "itp-utils",
  "log 0.4.17",
@@ -2466,6 +2468,7 @@ dependencies = [
  "parentchain-test",
  "parity-scale-codec",
  "parking_lot 0.12.1",
+ "parse_duration",
  "primitive-types",
  "prometheus",
  "serde 1.0.142",
@@ -2482,6 +2485,7 @@ dependencies = [
  "sp-keyring",
  "sp-runtime",
  "substrate-api-client",
+ "substrate-fixed",
  "teerex-primitives",
  "thiserror 1.0.31",
  "tokio",
@@ -2528,6 +2532,27 @@ dependencies = [
  "tracing",
  "typed-builder",
  "walkdir",
+]
+
+[[package]]
+name = "ita-exchange-oracle"
+version = "0.8.0"
+dependencies = [
+ "itc-rest-client",
+ "itp-enclave-metrics",
+ "itp-ocall-api",
+ "itp-test",
+ "lazy_static",
+ "log 0.4.17",
+ "parity-scale-codec",
+ "serde 1.0.142",
+ "serde_json 1.0.81",
+ "sgx_tstd",
+ "substrate-fixed",
+ "thiserror 1.0.31",
+ "thiserror 1.0.9",
+ "url 2.1.1",
+ "url 2.2.2",
 ]
 
 [[package]]
@@ -2751,8 +2776,8 @@ dependencies = [
  "base64 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "http 0.2.1 (git+https://github.com/mesalock-linux/http-sgx?tag=sgx_1.1.3)",
  "http 0.2.8",
- "http_req 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "http_req 0.7.2 (git+https://github.com/mesalock-linux/http_req-sgx?tag=sgx_1.1.3)",
+ "http_req 0.8.1 (git+https://github.com/integritee-network/http_req?branch=master)",
+ "http_req 0.8.1 (git+https://github.com/integritee-network/http_req)",
  "log 0.4.17",
  "serde 1.0.142",
  "serde_json 1.0.81",
@@ -2826,6 +2851,7 @@ dependencies = [
  "rcgen",
  "rustls 0.19.0 (git+https://github.com/mesalock-linux/rustls?branch=mesalock_sgx)",
  "rustls 0.19.1",
+ "sgx_crypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
@@ -2947,6 +2973,7 @@ dependencies = [
  "parity-scale-codec",
  "sgx_tstd",
  "sgx_types",
+ "substrate-fixed",
 ]
 
 [[package]]
@@ -3002,6 +3029,7 @@ dependencies = [
 name = "itp-node-api-metadata"
 version = "0.8.0"
 dependencies = [
+ "derive_more",
  "itp-types",
  "parity-scale-codec",
  "sp-core",
@@ -4360,6 +4388,20 @@ dependencies = [
 
 [[package]]
 name = "num"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b8536030f9fea7127f841b45bb6243b27255787fb4eb83958aa1ef9d2fdc0c36"
+dependencies = [
+ "num-bigint 0.2.6",
+ "num-complex 0.2.4",
+ "num-integer 0.1.45",
+ "num-iter 0.1.43",
+ "num-rational 0.2.4",
+ "num-traits 0.2.15",
+]
+
+[[package]]
+name = "num"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "43db66d1170d347f9a065114077f7dccb00c1b9478c89384490a3425279a4606"
@@ -4413,6 +4455,16 @@ dependencies = [
  "autocfg 0.1.8",
  "num-traits 0.2.10",
  "sgx_tstd",
+]
+
+[[package]]
+name = "num-complex"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6b19411a9719e753aff12e5187b74d60d3dc449ec3f4dc21e3989c3f554bc95"
+dependencies = [
+ "autocfg 1.1.0",
+ "num-traits 0.2.15",
 ]
 
 [[package]]
@@ -5155,6 +5207,17 @@ dependencies = [
  "redox_syscall",
  "smallvec 1.8.0",
  "windows-sys",
+]
+
+[[package]]
+name = "parse_duration"
+version = "2.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7037e5e93e0172a5a96874380bf73bc6ecef022e26fa25f2be26864d6b3ba95d"
+dependencies = [
+ "lazy_static",
+ "num 0.2.1",
+ "regex 1.5.6",
 ]
 
 [[package]]
@@ -6177,6 +6240,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde-big-array"
+version = "0.3.0"
+source = "git+https://github.com/mesalock-linux/serde-big-array-sgx#94122c5167aee38b39b09a620a60db2c28cf7428"
+dependencies = [
+ "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx)",
+ "serde_derive 1.0.118",
+]
+
+[[package]]
 name = "serde_derive"
 version = "1.0.118"
 source = "git+https://github.com/mesalock-linux/serde-sgx#db0226f1d5d70fca6b96af2c285851502204e21c"
@@ -6269,9 +6341,14 @@ source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2
 dependencies = [
  "itertools",
  "libc",
+ "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx)",
  "serde 1.0.142",
- "serde-big-array",
+ "serde-big-array 0.1.5",
+ "serde-big-array 0.3.0",
+ "serde_derive 1.0.118",
  "serde_derive 1.0.142",
+ "sgx_tcrypto",
+ "sgx_tstd",
  "sgx_types",
  "sgx_ucrypto",
 ]
@@ -7343,7 +7420,7 @@ dependencies = [
 [[package]]
 name = "substrate-fixed"
 version = "0.5.9"
-source = "git+https://github.com/encointer/substrate-fixed.git?tag=v0.5.9#a4fb461aae6205ffc55bed51254a40c52be04e5d"
+source = "git+https://github.com/encointer/substrate-fixed?tag=v0.5.9#a4fb461aae6205ffc55bed51254a40c52be04e5d"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -7461,6 +7538,17 @@ name = "termtree"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "507e9898683b6c43a9aa55b64259b721b52ba226e0f3779137e50ad114a4c90b"
+
+[[package]]
+name = "test-sgx-build"
+version = "0.1.0"
+dependencies = [
+ "itc-rest-client",
+ "libc",
+ "rcgen",
+ "sgx_tstd",
+ "sp-io 6.0.0",
+]
 
 [[package]]
 name = "textwrap"

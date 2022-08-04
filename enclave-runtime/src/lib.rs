@@ -62,7 +62,8 @@ use itp_block_import_queue::PushToBlockQueue;
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::{CreateExtrinsics, ExtrinsicsFactory};
 use itp_node_api::metadata::{
-		pallet_teeracle::TeeracleCallIndexes, pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata, NodeMetadata,
+	pallet_teeracle::TeeracleCallIndexes, pallet_teerex::TeerexCallIndexes,
+	provider::AccessNodeMetadata, NodeMetadata,
 };
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_ocall_api::EnclaveAttestationOCallApi;
@@ -667,7 +668,7 @@ where
 		Ok(r) => r,
 		Err(e) => {
 			error!("Component get failure: {:?}", e);
-			return Err(Error::Other(e.into()))
+			return Err(Error::ComponentContainer(e))
 		},
 	};
 
@@ -677,7 +678,7 @@ where
 		Ok(r) => r,
 		Err(e) => {
 			error!("Failed to get node metadata: {:?}", e);
-			return Err(Error::Other(e.into()))
+			return Err(Error::NodeMetadataProvider(e))
 		},
 	};
 
@@ -686,7 +687,7 @@ where
 			Ok(c) => c,
 			Err(e) => {
 				error!("Failed to get the indexes for the register_enclave cal from the metadata: {:?}", e);
-				return Err(Error::Other(e.into()))
+				return Err(Error::NodeMetadata)
 			},
 		};
 

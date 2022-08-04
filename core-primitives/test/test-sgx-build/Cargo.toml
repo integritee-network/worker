@@ -7,7 +7,7 @@ edition = "2021"
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["untrusted_fs", "net", "backtrace"] }
 
 libc = { version = "0.2", default-features = false }
-sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
+sp-io = { optional = true, default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], path = "../../../core-primitives/substrate-sgx/sp-io" }
 
 #ita-stf = { default-features = false, features = ["sgx"], path = "../../../app-libs/stf" }
 #ita-exchange-oracle = { default-features = false, features = ["sgx"], path = "../../../app-libs/exchange-oracle" }

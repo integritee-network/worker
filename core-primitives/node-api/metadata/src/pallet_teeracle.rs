@@ -15,7 +15,7 @@
 
 */
 
-use crate::{error::Result, metadata::NodeMetadata};
+use crate::{error::Result, NodeMetadata};
 
 /// Pallet' name:
 const TEERACLE: &str = "Teeracle";

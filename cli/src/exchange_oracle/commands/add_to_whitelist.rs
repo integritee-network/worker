@@ -2,7 +2,7 @@ use crate::{
 	command_utils::{get_chain_api, get_pair_from_str, mrenclave_from_base58},
 	Cli,
 };
-use itp_node_api_extensions::{ADD_TO_WHITELIST, TEERACLE};
+use itp_node_api::api_client::{ADD_TO_WHITELIST, TEERACLE};
 use substrate_api_client::{compose_call, compose_extrinsic, UncheckedExtrinsicV4, XtStatus};
 
 /// Add a trusted market data source to the on-chain whitelist.
