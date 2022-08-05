@@ -489,6 +489,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		}
 		println!("quote = {:?}", quote_vector);
 
+		// TODO: put let qe3_ret = unsafe { sgx_qe_get_quote_size(&mut quote_size as _) }; here instead of in ocall,
+		// then no buffer allocation with too many counts needs to be done
 		enclave
 			.perform_dcap_ra(
 				genesis_hash,
