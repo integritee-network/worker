@@ -68,11 +68,7 @@ use its_peer_fetch::{
 use its_storage::{interface::FetchBlocks, BlockPruner, SidechainStorageLock};
 use log::*;
 use my_node_runtime::{Event, Hash, Header};
-use sgx_types::{
-	sgx_ql_path_type_t::{SGX_QL_IDE_PATH, SGX_QL_PCE_PATH, SGX_QL_QE3_PATH, SGX_QL_QPL_PATH},
-	sgx_quote3_error_t::*,
-	*,
-};
+use sgx_types::*;
 use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_finality_grandpa::VersionedAuthorityList;
@@ -231,41 +227,41 @@ fn main() {
 		let mut quoting_enclave_target_info: sgx_target_info_t = sgx_target_info_t::default();
 		// let _l = unsafe { libloading::Library::new("./libdcap_quoteprov.so.1").unwrap() };
 		// Try to load PCE and QE3 from Ubuntu-like OS system path
-		if SGX_QL_SUCCESS
+		if sgx_quote3_error_t::SGX_QL_SUCCESS
 			!= unsafe {
 				let p_pointer =
 					"/usr/lib/x86_64-linux-gnu/libsgx_pce.signed.so.1\0".as_bytes().as_ptr() as _;
-				sgx_ql_set_path(SGX_QL_PCE_PATH, p_pointer)
-			} || SGX_QL_SUCCESS
+				sgx_ql_set_path(sgx_ql_path_type_t::SGX_QL_PCE_PATH, p_pointer)
+			} || sgx_quote3_error_t::SGX_QL_SUCCESS
 			!= unsafe {
 				sgx_ql_set_path(
-					SGX_QL_QE3_PATH,
+					sgx_ql_path_type_t::SGX_QL_QE3_PATH,
 					"/usr/lib/x86_64-linux-gnu/libsgx_qe3.signed.so.1\0".as_ptr() as _,
 				)
-			} || SGX_QL_SUCCESS
+			} || sgx_quote3_error_t::SGX_QL_SUCCESS
 			!= unsafe {
 				sgx_ql_set_path(
-					SGX_QL_IDE_PATH,
+					sgx_ql_path_type_t::SGX_QL_IDE_PATH,
 					"/usr/lib/x86_64-linux-gnu/libsgx_id_enclave.signed.so.1\0".as_ptr() as _,
 				)
 			} {
 			// Try to load PCE and QE3 from RHEL-like OS system path
-			if SGX_QL_SUCCESS
+			if sgx_quote3_error_t::SGX_QL_SUCCESS
 				!= unsafe {
 					sgx_ql_set_path(
-						SGX_QL_PCE_PATH,
+						sgx_ql_path_type_t::SGX_QL_PCE_PATH,
 						"/usr/lib64/libsgx_pce.signed.so.1\0".as_ptr() as _,
 					)
-				} || SGX_QL_SUCCESS
+				} || sgx_quote3_error_t::SGX_QL_SUCCESS
 				!= unsafe {
 					sgx_ql_set_path(
-						SGX_QL_QE3_PATH,
+						sgx_ql_path_type_t::SGX_QL_QE3_PATH,
 						"/usr/lib64/libsgx_qe3.signed.so.1\0".as_ptr() as _,
 					)
-				} || SGX_QL_SUCCESS
+				} || sgx_quote3_error_t::SGX_QL_SUCCESS
 				!= unsafe {
 					sgx_ql_set_path(
-						SGX_QL_IDE_PATH,
+						sgx_ql_path_type_t::SGX_QL_IDE_PATH,
 						"/usr/lib64/libsgx_id_enclave.signed.so.1\0".as_ptr() as _,
 					)
 				} {
@@ -275,21 +271,21 @@ fn main() {
 
 		let qe3_return_value = unsafe {
 			sgx_ql_set_path(
-				SGX_QL_QPL_PATH,
+				sgx_ql_path_type_t::SGX_QL_QPL_PATH,
 				"/usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.1\0"
 					.as_bytes()
 					.to_vec()
 					.as_ptr() as _,
 			)
 		};
-		if SGX_QL_SUCCESS != qe3_return_value {
+		if sgx_quote3_error_t::SGX_QL_SUCCESS != qe3_return_value {
 			let qe3_return_value_two = unsafe {
 				sgx_ql_set_path(
-					SGX_QL_QPL_PATH,
+					sgx_ql_path_type_t::SGX_QL_QPL_PATH,
 					"/usr/lib64/libdcap_quoteprov.so.1\0".as_ptr() as _,
 				)
 			};
-			if SGX_QL_SUCCESS != qe3_return_value_two {
+			if sgx_quote3_error_t::SGX_QL_SUCCESS != qe3_return_value_two {
 				// Ignore the error, because user may want to get cert type=3 quote
 				warn!("Cannot set QPL directory, you may get ECDSA quote with `Encrypted PPID` cert type.\n");
 			}
@@ -490,41 +486,41 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		let mut quoting_enclave_target_info: sgx_target_info_t = sgx_target_info_t::default();
 		// let _l = unsafe { libloading::Library::new("./libdcap_quoteprov.so.1").unwrap() };
 		// Try to load PCE and QE3 from Ubuntu-like OS system path
-		if SGX_QL_SUCCESS
+		if sgx_quote3_error_t::SGX_QL_SUCCESS
 			!= unsafe {
 				let p_pointer =
 					"/usr/lib/x86_64-linux-gnu/libsgx_pce.signed.so.1\0".as_bytes().as_ptr() as _;
-				sgx_ql_set_path(SGX_QL_PCE_PATH, p_pointer)
-			} || SGX_QL_SUCCESS
+				sgx_ql_set_path(sgx_ql_path_type_t::SGX_QL_PCE_PATH, p_pointer)
+			} || sgx_quote3_error_t::SGX_QL_SUCCESS
 			!= unsafe {
 				sgx_ql_set_path(
-					SGX_QL_QE3_PATH,
+					sgx_ql_path_type_t::SGX_QL_QE3_PATH,
 					"/usr/lib/x86_64-linux-gnu/libsgx_qe3.signed.so.1\0".as_ptr() as _,
 				)
-			} || SGX_QL_SUCCESS
+			} || sgx_quote3_error_t::SGX_QL_SUCCESS
 			!= unsafe {
 				sgx_ql_set_path(
-					SGX_QL_IDE_PATH,
+					sgx_ql_path_type_t::SGX_QL_IDE_PATH,
 					"/usr/lib/x86_64-linux-gnu/libsgx_id_enclave.signed.so.1\0".as_ptr() as _,
 				)
 			} {
 			// Try to load PCE and QE3 from RHEL-like OS system path
-			if SGX_QL_SUCCESS
+			if sgx_quote3_error_t::SGX_QL_SUCCESS
 				!= unsafe {
 					sgx_ql_set_path(
-						SGX_QL_PCE_PATH,
+						sgx_ql_path_type_t::SGX_QL_PCE_PATH,
 						"/usr/lib64/libsgx_pce.signed.so.1\0".as_ptr() as _,
 					)
-				} || SGX_QL_SUCCESS
+				} || sgx_quote3_error_t::SGX_QL_SUCCESS
 				!= unsafe {
 					sgx_ql_set_path(
-						SGX_QL_QE3_PATH,
+						sgx_ql_path_type_t::SGX_QL_QE3_PATH,
 						"/usr/lib64/libsgx_qe3.signed.so.1\0".as_ptr() as _,
 					)
-				} || SGX_QL_SUCCESS
+				} || sgx_quote3_error_t::SGX_QL_SUCCESS
 				!= unsafe {
 					sgx_ql_set_path(
-						SGX_QL_IDE_PATH,
+						sgx_ql_path_type_t::SGX_QL_IDE_PATH,
 						"/usr/lib64/libsgx_id_enclave.signed.so.1\0".as_ptr() as _,
 					)
 				} {
@@ -534,21 +530,21 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 		let qe3_return_value = unsafe {
 			sgx_ql_set_path(
-				SGX_QL_QPL_PATH,
+				sgx_ql_path_type_t::SGX_QL_QPL_PATH,
 				"/usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.1\0"
 					.as_bytes()
 					.to_vec()
 					.as_ptr() as _,
 			)
 		};
-		if SGX_QL_SUCCESS != qe3_return_value {
+		if sgx_quote3_error_t::SGX_QL_SUCCESS != qe3_return_value {
 			let qe3_return_value_two = unsafe {
 				sgx_ql_set_path(
-					SGX_QL_QPL_PATH,
+					sgx_ql_path_type_t::SGX_QL_QPL_PATH,
 					"/usr/lib64/libdcap_quoteprov.so.1\0".as_ptr() as _,
 				)
 			};
-			if SGX_QL_SUCCESS != qe3_return_value_two {
+			if sgx_quote3_error_t::SGX_QL_SUCCESS != qe3_return_value_two {
 				// Ignore the error, because user may want to get cert type=3 quote
 				warn!("Cannot set QPL directory, you may get ECDSA quote with `Encrypted PPID` cert type.\n");
 			}
@@ -574,8 +570,16 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		}
 		println!("quote = {:?}", quote_vector);
 
-		// TODO: put let qe3_ret = unsafe { sgx_qe_get_quote_size(&mut quote_size as _) }; here instead of in ocall,
-		// then no buffer allocation with too many counts needs to be done
+		let mut quote_size: u32 = 0;
+		let qe3_return_value = unsafe { sgx_qe_get_quote_size(&mut quote_size as _) };
+		if qe3_return_value != sgx_quote3_error_t::SGX_QL_SUCCESS {
+			panic!(
+				"Could not retrieve qe quote size: Error in sgx_qe_get_quote_size. {:?}\n",
+				qe3_return_value
+			);
+		}
+		debug!("Successfully retrieved dcap quote size: {:?}", quote_size);
+
 		enclave
 			.perform_dcap_ra(
 				genesis_hash,

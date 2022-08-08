@@ -58,7 +58,18 @@ impl EnclaveAttestationOCallApi for AttestationOCallMock {
 		unreachable!()
 	}
 
-	fn get_dcap_quote(&self, _report: sgx_report_t) -> SgxResult<Vec<u8>> {
+	fn get_dcap_quote(&self, _report: sgx_report_t, _quote_size: u32) -> SgxResult<Vec<u8>> {
+		unreachable!()
+	}
+
+	fn get_qve_report_on_quote(
+		&self,
+		_quote: Vec<u8>,
+		_current_time: i64,
+		_quote_collateral: sgx_ql_qve_collateral_t,
+		_qve_report_info: sgx_ql_qe_report_info_t,
+		_supplemental_data_size: u32,
+	) -> EnclaveResult<(u32, sgx_ql_qv_result_t, sgx_ql_qe_report_info_t, Vec<u8>)> {
 		unreachable!()
 	}
 

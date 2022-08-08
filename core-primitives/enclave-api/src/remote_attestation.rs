@@ -56,8 +56,6 @@ pub trait RemoteAttestationCallBacks {
 
 	fn calc_quote_size(&self, revocation_list: Vec<u8>) -> EnclaveResult<u32>;
 
-	fn get_dcap_quote_size(&self) -> EnclaveResult<u32>;
-
 	fn get_quote(
 		&self,
 		revocation_list: Vec<u8>,
@@ -68,7 +66,16 @@ pub trait RemoteAttestationCallBacks {
 		quote_length: u32,
 	) -> EnclaveResult<(sgx_report_t, Vec<u8>)>;
 
-	fn get_dcap_quote(&self, report: sgx_report_t, quote_length: u32) -> EnclaveResult<Vec<u8>>;
+	fn get_dcap_quote(&self, report: sgx_report_t, quote_size: u32) -> EnclaveResult<Vec<u8>>;
+
+	fn get_qve_report_on_quote(
+		&self,
+		quote: Vec<u8>,
+		current_time: i64,
+		quote_collateral: &sgx_ql_qve_collateral_t,
+		qve_report_info: sgx_ql_qe_report_info_t,
+		supplemental_data_size: u32,
+	) -> EnclaveResult<(u32, sgx_ql_qv_result_t, sgx_ql_qe_report_info_t, Vec<u8>)>;
 
 	fn get_update_info(
 		&self,
@@ -215,14 +222,6 @@ impl RemoteAttestationCallBacks for Enclave {
 		Ok(real_quote_len)
 	}
 
-	fn get_dcap_quote_size(&self) -> EnclaveResult<u32> {
-		let mut quote_size: u32 = 0;
-		let qe3_ret = unsafe { sgx_qe_get_quote_size(&mut quote_size as _) };
-		ensure!(qe3_ret == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(qe3_ret));
-		debug!("Successfully retrieved dcap quote size: {:?}", quote_size);
-		Ok(quote_size)
-	}
-
 	fn get_quote(
 		&self,
 		revocation_list: Vec<u8>,
@@ -262,15 +261,95 @@ impl RemoteAttestationCallBacks for Enclave {
 		Ok((qe_report, return_quote_buf))
 	}
 
-	fn get_dcap_quote(&self, report: sgx_report_t, quote_length: u32) -> EnclaveResult<Vec<u8>> {
-		let mut quote_vec: Vec<u8> = vec![0; quote_length as usize];
+	fn get_dcap_quote(&self, report: sgx_report_t, quote_size: u32) -> EnclaveResult<Vec<u8>> {
+		let mut quote_vec: Vec<u8> = vec![0; quote_size as usize];
 
-		let qe3_ret =
-			unsafe { sgx_qe_get_quote(&report, quote_length, quote_vec.as_mut_ptr() as _) };
+		let qe3_ret = unsafe { sgx_qe_get_quote(&report, quote_size, quote_vec.as_mut_ptr() as _) };
 
 		ensure!(qe3_ret == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(qe3_ret));
 		debug!("Successfully retrieved dcap quote: {:?}", quote_vec);
 		Ok(quote_vec)
+	}
+
+	fn get_qve_report_on_quote(
+		&self,
+		quote: Vec<u8>,
+		current_time: i64,
+		quote_collateral: &sgx_ql_qve_collateral_t,
+		qve_report_info: sgx_ql_qe_report_info_t,
+		supplemental_data_size: u32,
+	) -> EnclaveResult<(u32, sgx_ql_qv_result_t, sgx_ql_qe_report_info_t, Vec<u8>)> {
+		let (p_quote, quote_size) = utils::vec_to_c_pointer_with_len(quote);
+		let mut collateral_expiration_status = 1u32;
+		let mut quote_verification_result = sgx_ql_qv_result_t::SGX_QL_QV_RESULT_UNSPECIFIED;
+		let mut supplemental_data: Vec<u8> = vec![0; supplemental_data_size as usize];
+		let mut qve_report_info_return_value: sgx_ql_qe_report_info_t =
+			unsafe { std::mem::zeroed() };
+		qve_report_info_return_value = qve_report_info;
+
+		// Call DCAP quote verify library to set QvE loading policy.
+		// TODO: Check if Persistent makes sense.
+		let dcap_ret =
+			unsafe { sgx_qv_set_enclave_load_policy(sgx_ql_request_policy_t::SGX_QL_PERSISTENT) };
+		if sgx_quote3_error_t::SGX_QL_SUCCESS == dcap_ret {
+			println!("\tInfo: sgx_qv_set_enclave_load_policy successfully returned.");
+		} else {
+			println!("\tError: sgx_qv_set_enclave_load_policy failed: {:#04x}", dcap_ret as u32);
+		}
+
+		// Call DCAP quote verify library to get supplemental data size.
+		let mut qve_supplemental_data_size = 0u32;
+		let dcap_ret =
+			unsafe { sgx_qv_get_quote_supplemental_data_size(&mut qve_supplemental_data_size) };
+		if sgx_quote3_error_t::SGX_QL_SUCCESS == dcap_ret
+			&& supplemental_data_size == qve_supplemental_data_size
+		{
+			println!("\tInfo: sgx_qv_get_quote_supplemental_data_size successfully returned.");
+		} else {
+			if dcap_ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
+				println!(
+					"\tError: sgx_qv_get_quote_supplemental_data_size failed: {:#04x}",
+					dcap_ret as u32
+				);
+			}
+			if qve_supplemental_data_size != qve_supplemental_data_size {
+				println!("\tWarning: Quote supplemental data size is different between DCAP QVL and QvE, please make sure you installed DCAP QVL and QvE from same release.");
+			}
+		}
+
+		// call DCAP quote verify library for quote verification
+		// here you can choose 'trusted' or 'untrusted' quote verification by specifying parameter '&qve_report_info'
+		// if '&qve_report_info' is NOT NULL, this API will call Intel QvE to verify quote
+		// if '&qve_report_info' is NULL, this API will call 'untrusted quote verify lib' to verify quote,
+		// this mode doesn't rely on SGX capable system, but the results can not be cryptographically authenticated
+		let dcap_ret = unsafe {
+			sgx_qv_verify_quote(
+				p_quote,
+				quote_size,
+				quote_collateral as *const sgx_ql_qve_collateral_t,
+				current_time,
+				&mut collateral_expiration_status as *mut u32,
+				&mut quote_verification_result as *mut sgx_ql_qv_result_t,
+				&mut qve_report_info_return_value as *mut sgx_ql_qe_report_info_t,
+				supplemental_data_size,
+				supplemental_data.as_mut_ptr(),
+			)
+		};
+
+		if sgx_quote3_error_t::SGX_QL_SUCCESS == dcap_ret {
+			println!("\tInfo: App: sgx_qv_verify_quote successfully returned.");
+		} else {
+			println!("\tError: App: sgx_qv_verify_quote failed: {:#04x}", dcap_ret as u32);
+		}
+
+		ensure!(dcap_ret == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(dcap_ret));
+
+		Ok((
+			collateral_expiration_status,
+			quote_verification_result,
+			qve_report_info_return_value,
+			supplemental_data,
+		))
 	}
 
 	fn get_update_info(
