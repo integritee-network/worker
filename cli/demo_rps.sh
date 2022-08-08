@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # setup:
 # run all on localhost:
@@ -15,15 +16,9 @@
 
 # usage:
 #  demo_rps.sh -p <NODEPORT> -P <WORKERPORT> -m file
-#
-# TEST_BALANCE_RUN is either "first" or "second"
-# if -m file is set, the mrenclave will be read from file
 
-while getopts ":m:p:P:t:" opt; do
+while getopts ":m:p:P:u:V:C:" opt; do
     case $opt in
-        t)
-            TEST=$OPTARG
-            ;;
         m)
             READMRENCLAVE=$OPTARG
             ;;
@@ -31,19 +26,37 @@ while getopts ":m:p:P:t:" opt; do
             NPORT=$OPTARG
             ;;
         P)
-            RPORT=$OPTARG
+            WORKER1PORT=$OPTARG
+            ;;
+        u)
+            NODEURL=$OPTARG
+            ;;
+        V)
+            WORKER1URL=$OPTARG
+            ;;
+        C)
+            CLIENT_BIN=$OPTARG
             ;;
     esac
 done
 
-# using default port if none given as arguments
+# Using default port if none given as arguments.
 NPORT=${NPORT:-9944}
-RPORT=${RPORT:-2000}
+NODEURL=${NODEURL:-"ws://127.0.0.1"}
 
-echo "Using node-port ${NPORT}"
-echo "Using worker-rpc-port ${RPORT}"
+WORKER1PORT=${WORKER1PORT:-2000}
+WORKER1URL=${WORKER1URL:-"wss://127.0.0.1"}
 
-CLIENT="./../bin/integritee-cli -p ${NPORT} -P ${RPORT}"
+CLIENT_BIN=${CLIENT_BIN:-"./../bin/integritee-cli"}
+
+READMRENCLAVE=${READMRENCLAVE:-"onchain-registry"}
+
+echo "Using client binary ${CLIENT_BIN}"
+echo "Using node uri ${NODEURL}:${NPORT}"
+echo "Using trusted-worker uri ${WORKER1URL}:${WORKER1PORT}"
+echo "Reading MRENCLAVE from ${READMRENCLAVE}"
+
+CLIENT="${CLIENT_BIN} -p ${NPORT} -P ${WORKER1PORT} -u ${NODEURL} -U ${WORKER1URL}"
 
 if [ "$READMRENCLAVE" = "file" ]
 then
@@ -56,37 +69,37 @@ else
 fi
 [[ -z $MRENCLAVE ]] && { echo "MRENCLAVE is empty. cannot continue" ; exit 1; }
 
-PLAYER1=$($CLIENT trusted new-account --mrenclave $MRENCLAVE)
-PLAYER2=$($CLIENT trusted new-account --mrenclave $MRENCLAVE)
+PLAYER1=$($CLIENT trusted --mrenclave "$MRENCLAVE" new-account)
+PLAYER2=$($CLIENT trusted --mrenclave "$MRENCLAVE" new-account)
 
 echo "Alice (sudo) sets initial balances"
-${CLIENT} trusted set-balance $PLAYER1 1000 --mrenclave ${MRENCLAVE} --direct
-${CLIENT} trusted set-balance $PLAYER2 1000 --mrenclave ${MRENCLAVE} --direct
+${CLIENT} trusted --mrenclave "${MRENCLAVE}" --direct set-balance "${PLAYER1}" 1000
+${CLIENT} trusted --mrenclave "${MRENCLAVE}" --direct set-balance "${PLAYER2}" 1000
 echo ""
 
-
 echo "Alice starts new game against Bob"
-${CLIENT} trusted new-game $PLAYER1 $PLAYER2 --mrenclave ${MRENCLAVE} --direct
+# shellcheck disable=SC2086
+${CLIENT} trusted --mrenclave "${MRENCLAVE}" --direct new-game "${PLAYER1}" "${PLAYER2}"
 echo ""
 
 echo "Alice chooses her weapon"
-${CLIENT} trusted choose $PLAYER1 Rock --mrenclave ${MRENCLAVE} --direct
+${CLIENT} trusted --mrenclave "${MRENCLAVE}" --direct choose "${PLAYER1}" Rock
 echo ""
 
 echo "Bob chooses his weapon"
-${CLIENT} trusted choose $PLAYER2 Paper --mrenclave ${MRENCLAVE} --direct
+${CLIENT} trusted --mrenclave "${MRENCLAVE}" --direct choose "${PLAYER2}" Paper
 echo ""
 
 echo "Alice reveals"
-${CLIENT} trusted reveal $PLAYER1 Rock --mrenclave ${MRENCLAVE} --direct
+${CLIENT} trusted --mrenclave "${MRENCLAVE}" --direct reveal "${PLAYER1}" Rock
 echo ""
 
 echo "Bob reveals"
-${CLIENT} trusted reveal $PLAYER2 Paper --mrenclave ${MRENCLAVE} --direct
+${CLIENT} trusted --mrenclave "${MRENCLAVE}" --direct reveal "${PLAYER2}" Paper
 echo ""
 
 echo "Query result"
-${CLIENT} trusted get-game $PLAYER1 --mrenclave ${MRENCLAVE} --direct
+${CLIENT} trusted --mrenclave "${MRENCLAVE}" --direct get-game "${PLAYER1}"
 echo ""
 
 exit 0
