@@ -40,7 +40,7 @@ COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose -f docker-compose.ym
 ```
 Run
 ```
-docker-compose -f docker-compose.yml -f integration-test.yml up --exit-code-from demo-direct-call
+docker-compose -f docker-compose.yml -f demo-direct-call.yml up --exit-code-from demo-direct-call
 ```
 
 ### Demo sidechain
