@@ -16,15 +16,17 @@
 */
 
 use crate::{
+	get_layer_two_nonce,
 	trusted_command_utils::{get_accountid_from_str, get_identifiers, get_pair_from_str},
 	trusted_commands::TrustedArgs,
 	trusted_operation::perform_trusted_operation,
 	Cli,
 };
-use ita_stf::{AccountId, Hash, KeyPair, TrustedCall, TrustedGetter, TrustedOperation};
+use codec::Decode;
+use ita_stf::{AccountId, Hash, Index, KeyPair, TrustedCall, TrustedGetter, TrustedOperation};
 use log::*;
 use pallet_rps::WeaponType;
-use sp_core::Pair;
+use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
 
 /// Create a new RPS game.
 pub(crate) fn new_rps_game(
@@ -43,7 +45,7 @@ pub(crate) fn new_rps_game(
 	println!("send trusted call rps_new_game from {} with opponent {}", creator.public(), opponent);
 
 	let (mrenclave, shard) = get_identifiers(trusted_args);
-	let nonce = get_layer_two_nonce!(player_creator, cli, trusted_args);
+	let nonce = get_layer_two_nonce!(creator, cli, trusted_args);
 
 	let top: TrustedOperation = TrustedCall::rps_new_game(creator.public().into(), opponent)
 		.sign(&KeyPair::Sr25519(creator), nonce, &mrenclave, &shard)

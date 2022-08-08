@@ -21,29 +21,25 @@ use crate::test_genesis::test_genesis_setup;
 use crate::{
 	helpers::{
 		account_data, account_nonce, enclave_signer_account, ensure_enclave_signer_account,
-		ensure_root, get_account_info, get_game_for, get_storage_value, increment_nonce, root,
-		validate_nonce,
+		ensure_root, get_account_info, get_game_for, increment_nonce, root, validate_nonce,
 	},
 	AccountData, AccountId, Getter, Index, ParentchainHeader, PublicGetter, ShardIdentifier, State,
 	StateTypeDiff, Stf, StfError, StfResult, TrustedCall, TrustedCallSigned, TrustedGetter,
 	ENCLAVE_ACCOUNT_KEY,
 };
 use codec::Encode;
-use ita_sgx_runtime::{BlockNumber as L1BlockNumer, Hash, Runtime};
+use ita_sgx_runtime::Runtime;
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_storage::storage_value_key;
 use itp_types::OpaqueCall;
 use itp_utils::stringify::account_id_to_string;
 use its_state::SidechainSystemExt;
 use log::*;
-use pallet_rps::Game as GameT;
 use sidechain_primitives::types::{BlockHash, BlockNumber as SidechainBlockNumber, Timestamp};
 use sp_io::hashing::blake2_256;
 use sp_runtime::MultiAddress;
 use std::{format, prelude::v1::*, vec};
 use support::traits::UnfilteredDispatchable;
-
-pub type Game = GameT<Hash, AccountId>;
 
 impl Stf {
 	pub fn init_state(enclave_account: AccountId) -> State {
@@ -211,28 +207,31 @@ impl Stf {
 					Ok(())
 				},
 				TrustedCall::rps_new_game(sender, opponent) => {
-					let origin = sgx_runtime::Origin::signed(sender.clone());
+					let origin = ita_sgx_runtime::Origin::signed(sender.clone());
 					info!("rps new_game");
-					sgx_runtime::RpsCall::<Runtime>::new_game(opponent)
+					ita_sgx_runtime::RpsCall::<Runtime>::new_game { opponent }
 						.dispatch_bypass_filter(origin)
 						.map_err(|_| StfError::Dispatch("rps_new_game".to_string()))?;
 					Ok(())
 				},
 				TrustedCall::rps_choose(sender, weapon) => {
-					let origin = sgx_runtime::Origin::signed(sender.clone());
+					let origin = ita_sgx_runtime::Origin::signed(sender.clone());
 					info!("rps choose: {:?}", weapon);
-					sgx_runtime::RpsCall::<Runtime>::choose(weapon.clone(), [0u8; 32])
-						.dispatch_bypass_filter(origin.clone())
-						.map_err(|e| {
-							error!("dispatch error {:?}", e);
-							StfError::Dispatch("rps_choose".to_string())
-						})?;
+					ita_sgx_runtime::RpsCall::<Runtime>::choose {
+						choice: weapon.clone(),
+						salt: [0u8; 32],
+					}
+					.dispatch_bypass_filter(origin.clone())
+					.map_err(|e| {
+						error!("dispatch error {:?}", e);
+						StfError::Dispatch("rps_choose".to_string())
+					})?;
 					Ok(())
 				},
 				TrustedCall::rps_reveal(sender, weapon) => {
-					let origin = sgx_runtime::Origin::signed(sender.clone());
+					let origin = ita_sgx_runtime::Origin::signed(sender.clone());
 					info!("rps reveal");
-					sgx_runtime::RpsCall::<Runtime>::reveal(weapon, [0u8; 32])
+					ita_sgx_runtime::RpsCall::<Runtime>::reveal { choice: weapon, salt: [0u8; 32] }
 						.dispatch_bypass_filter(origin)
 						.map_err(|_| StfError::Dispatch("rps_reveal".to_string()))?;
 					get_game_for(sender);
@@ -397,34 +396,6 @@ pub fn shards_key_hash() -> Vec<u8> {
 	// here you have to point to a storage value containing a Vec of
 	// ShardIdentifiers the enclave uses this to autosubscribe to no shards
 	vec![]
-}
-
-pub fn get_game_id(who: &AccountId) -> Option<Hash> {
-	if let Some(infovec) =
-		sp_io::storage::get(&storage_map_key("Rps", "PlayerGame", who, &StorageHasher::Identity))
-	{
-		if let Ok(info) = Hash::decode(&mut infovec.as_slice()) {
-			Some(info)
-		} else {
-			None
-		}
-	} else {
-		None
-	}
-}
-
-pub fn get_game(game_id: Hash) -> Option<Game> {
-	if let Some(infovec) =
-		sp_io::storage::get(&storage_map_key("Rps", "Games", &game_id, &StorageHasher::Identity))
-	{
-		if let Ok(info) = Game::decode(&mut infovec.as_slice()) {
-			Some(info)
-		} else {
-			None
-		}
-	} else {
-		None
-	}
 }
 
 /// Trait extension to simplify sidechain data access from the STF.

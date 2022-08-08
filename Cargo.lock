@@ -2546,6 +2546,7 @@ dependencies = [
  "pallet-balances",
  "pallet-evm",
  "pallet-grandpa",
+ "pallet-jton_rps",
  "pallet-parentchain",
  "pallet-randomness-collective-flip",
  "pallet-sudo",
@@ -4751,11 +4752,12 @@ dependencies = [
 [[package]]
 name = "pallet-jton_rps"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallet-jton-rps.git?branch=integritee-demo#a0915e5ed64eae1064f53f34ce615b6819d36f25"
+source = "git+https://github.com/integritee-network/pallet-jton-rps.git?branch=integritee-demo#6a8e6dcc579c32d97d4383bc2b5222eaf1f24b88"
 dependencies = [
  "frame-support",
  "frame-system",
  "parity-scale-codec",
+ "scale-info",
  "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.26)",
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.26)",

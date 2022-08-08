@@ -33,6 +33,7 @@ pub use my_node_runtime::{Balance, Index};
 
 use codec::{Compact, Decode, Encode};
 use derive_more::Display;
+use pallet_rps::Game as GameT;
 use sp_core::{crypto::AccountId32, ed25519, sr25519, Pair, H256};
 use sp_runtime::{traits::Verify, MultiSignature};
 use std::string::String;
@@ -46,6 +47,8 @@ pub type BalanceTransferFn = ([u8; 2], AccountId, Compact<u128>);
 pub type ShardIdentifier = H256;
 
 pub type StfResult<T> = Result<T, StfError>;
+
+pub type Game = GameT<Hash, AccountId>;
 
 #[derive(Debug, Display, PartialEq, Eq)]
 pub enum StfError {

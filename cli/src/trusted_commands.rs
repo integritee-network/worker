@@ -46,13 +46,14 @@ use std::{
 };
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
 
+#[macro_export]
 macro_rules! get_layer_two_nonce {
 	($signer_pair:ident, $cli: ident, $trusted_args:ident ) => {{
 		let top: TrustedOperation =
 			TrustedGetter::nonce(sr25519_core::Public::from($signer_pair.public()).into())
 				.sign(&KeyPair::Sr25519($signer_pair.clone()))
 				.into();
-		let res = perform_operation($cli, $trusted_args, &top);
+		let res = perform_trusted_operation($cli, $trusted_args, &top);
 		let nonce: Index = if let Some(n) = res {
 			if let Ok(nonce) = Index::decode(&mut n.as_slice()) {
 				nonce
@@ -225,8 +226,8 @@ pub fn match_trusted_commands(cli: &Cli, trusted_args: &TrustedArgs) {
 			funding_account,
 		),
 
-		/// RPS Specific commands
-		///
+		// RPS Specific commands
+		// ------------------------------
 		TrustedCommands::NewGame { creator, opponent } =>
 			new_rps_game(cli, trusted_args, creator, opponent),
 		TrustedCommands::Choose { player, weapon } => rps_choose(cli, trusted_args, player, weapon),

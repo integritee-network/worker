@@ -15,13 +15,12 @@
 
 */
 use crate::{
-	stf_sgx::Game, stf_sgx_primitives::types::*, AccountId, Hash, Index, StfError, StfResult,
+	stf_sgx_primitives::types::*, AccountId, Game, Hash, Index, StfError, StfResult,
 	ENCLAVE_ACCOUNT_KEY, H256,
 };
 use codec::{Decode, Encode};
 use itp_storage::{storage_double_map_key, storage_map_key, storage_value_key, StorageHasher};
 use itp_utils::stringify::account_id_to_string;
-use its_primitives::types::BlockNumber;
 use log::*;
 use std::prelude::v1::*;
 

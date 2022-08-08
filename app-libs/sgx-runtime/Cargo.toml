@@ -41,6 +41,9 @@ sp-std = { default-features = false, git = "https://github.com/paritytech/substr
 sp-transaction-pool = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
 sp-version = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
 
+# use case specific
+pallet-rps = { package = "pallet-jton_rps", default-features = false, git = "https://github.com/integritee-network/pallet-jton-rps.git", branch = "integritee-demo" }
+
 # Integritee dependencies
 pallet-parentchain = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 pallet-evm = { default-features = false, optional = true, git = "https://github.com/integritee-network/frontier.git", branch = "polkadot-v0.9.26" }
@@ -76,6 +79,7 @@ std = [
     "pallet-balances/std",
     "pallet-grandpa/std",
     "pallet-randomness-collective-flip/std",
+    "pallet-rps/std",
     "pallet-sudo/std",
     "pallet-timestamp/std",
     "pallet-transaction-payment/std",

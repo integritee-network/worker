@@ -63,7 +63,9 @@ pub use frame_support::{
 };
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_parentchain::Call as ParentchainCall;
+pub use pallet_rps::Call as RpsCall;
 pub use pallet_timestamp::Call as TimestampCall;
+
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
@@ -290,6 +292,10 @@ impl pallet_parentchain::Config for Runtime {
 	type WeightInfo = ();
 }
 
+impl pallet_rps::Config for Runtime {
+	type Event = Event;
+}
+
 // The plain sgx-runtime without the `evm-pallet`
 #[cfg(not(feature = "evm"))]
 construct_runtime!(
@@ -304,6 +310,7 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
 		Parentchain: pallet_parentchain::{Pallet, Call, Storage},
+		Rps: pallet_rps::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
