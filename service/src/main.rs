@@ -228,7 +228,93 @@ fn main() {
 		setup::generate_signing_key_file(enclave.as_ref());
 	} else if matches.is_present("dump-ra") {
 		info!("*** Perform RA and dump cert to disk");
-		enclave.dump_ra_to_disk().unwrap();
+		let mut quoting_enclave_target_info: sgx_target_info_t = sgx_target_info_t::default();
+		// let _l = unsafe { libloading::Library::new("./libdcap_quoteprov.so.1").unwrap() };
+		// Try to load PCE and QE3 from Ubuntu-like OS system path
+		if SGX_QL_SUCCESS
+			!= unsafe {
+				let p_pointer =
+					"/usr/lib/x86_64-linux-gnu/libsgx_pce.signed.so.1\0".as_bytes().as_ptr() as _;
+				sgx_ql_set_path(SGX_QL_PCE_PATH, p_pointer)
+			} || SGX_QL_SUCCESS
+			!= unsafe {
+				sgx_ql_set_path(
+					SGX_QL_QE3_PATH,
+					"/usr/lib/x86_64-linux-gnu/libsgx_qe3.signed.so.1\0".as_ptr() as _,
+				)
+			} || SGX_QL_SUCCESS
+			!= unsafe {
+				sgx_ql_set_path(
+					SGX_QL_IDE_PATH,
+					"/usr/lib/x86_64-linux-gnu/libsgx_id_enclave.signed.so.1\0".as_ptr() as _,
+				)
+			} {
+			// Try to load PCE and QE3 from RHEL-like OS system path
+			if SGX_QL_SUCCESS
+				!= unsafe {
+					sgx_ql_set_path(
+						SGX_QL_PCE_PATH,
+						"/usr/lib64/libsgx_pce.signed.so.1\0".as_ptr() as _,
+					)
+				} || SGX_QL_SUCCESS
+				!= unsafe {
+					sgx_ql_set_path(
+						SGX_QL_QE3_PATH,
+						"/usr/lib64/libsgx_qe3.signed.so.1\0".as_ptr() as _,
+					)
+				} || SGX_QL_SUCCESS
+				!= unsafe {
+					sgx_ql_set_path(
+						SGX_QL_IDE_PATH,
+						"/usr/lib64/libsgx_id_enclave.signed.so.1\0".as_ptr() as _,
+					)
+				} {
+				panic!("Error in set PCE/QE3/IDE directory.\n");
+			}
+		}
+
+		let qe3_return_value = unsafe {
+			sgx_ql_set_path(
+				SGX_QL_QPL_PATH,
+				"/usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.1\0"
+					.as_bytes()
+					.to_vec()
+					.as_ptr() as _,
+			)
+		};
+		if SGX_QL_SUCCESS != qe3_return_value {
+			let qe3_return_value_two = unsafe {
+				sgx_ql_set_path(
+					SGX_QL_QPL_PATH,
+					"/usr/lib64/libdcap_quoteprov.so.1\0".as_ptr() as _,
+				)
+			};
+			if SGX_QL_SUCCESS != qe3_return_value_two {
+				// Ignore the error, because user may want to get cert type=3 quote
+				warn!("Cannot set QPL directory, you may get ECDSA quote with `Encrypted PPID` cert type.\n");
+			}
+		}
+		println!("Step1: Call sgx_qe_get_target_info:");
+		let qe3_ret = unsafe { sgx_qe_get_target_info(&mut quoting_enclave_target_info as *mut _) };
+		if qe3_ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
+			panic!(
+				"Could not create attestation report: Error in sgx_qe_get_target_info. {:?}\n",
+				qe3_ret
+			);
+		}
+		// For debugging
+		let quote_size = std::mem::size_of::<sgx_target_info_t>();
+		let mut quote_vector: Vec<u8> = vec![0; quote_size];
+		unsafe {
+			std::ptr::copy_nonoverlapping(
+				&quoting_enclave_target_info as *const sgx_target_info_t as *const u8,
+				quote_vector.as_mut_ptr() as *mut u8,
+				quote_size,
+			);
+		}
+		println!("quote = {:?}", quote_vector);
+
+		enclave.dump_dcap_ra_to_disk(&quoting_enclave_target_info).unwrap();
 	} else if matches.is_present("mrenclave") {
 		println!("{}", enclave.get_mrenclave().unwrap().encode().to_base58());
 	} else if let Some(sub_matches) = matches.subcommand_matches("init-shard") {
@@ -408,7 +494,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			!= unsafe {
 				let p_pointer =
 					"/usr/lib/x86_64-linux-gnu/libsgx_pce.signed.so.1\0".as_bytes().as_ptr() as _;
-				println!("Pointer: {:?}", p_pointer);
 				sgx_ql_set_path(SGX_QL_PCE_PATH, p_pointer)
 			} || SGX_QL_SUCCESS
 			!= unsafe {
