@@ -24,7 +24,6 @@ use itp_settings::worker::EXTRINSIC_MAX_SIZE;
 use itp_types::ShardIdentifier;
 use log::*;
 use sgx_types::*;
-use std::{convert::TryInto, time::SystemTime};
 
 /// general remote attestation methods
 pub trait RemoteAttestation {
@@ -323,17 +322,17 @@ impl RemoteAttestationCallBacks for Enclave {
 			}
 		}
 
-		// call DCAP quote verify library for quote verification
-		// here you can choose 'trusted' or 'untrusted' quote verification by specifying parameter '&qve_report_info'
-		// if '&qve_report_info' is NOT NULL, this API will call Intel QvE to verify quote
-		// if '&qve_report_info' is NULL, this API will call 'untrusted quote verify lib' to verify quote,
-		// this mode doesn't rely on SGX capable system, but the results can not be cryptographically authenticated
 		let p_quote_collateral: *const sgx_ql_qve_collateral_t = if quote_collateral.version == 0 {
 			std::ptr::null()
 		} else {
 			quote_collateral as *const sgx_ql_qve_collateral_t
 		};
 
+		// call DCAP quote verify library for quote verification
+		// here you can choose 'trusted' or 'untrusted' quote verification by specifying parameter '&qve_report_info'
+		// if '&qve_report_info' is NOT NULL, this API will call Intel QvE to verify quote
+		// if '&qve_report_info' is NULL, this API will call 'untrusted quote verify lib' to verify quote,
+		// this mode doesn't rely on SGX capable system, but the results can not be cryptographically authenticated
 		let dcap_ret = unsafe {
 			sgx_qv_verify_quote(
 				quote.as_ptr(),
@@ -348,14 +347,49 @@ impl RemoteAttestationCallBacks for Enclave {
 			)
 		};
 
-		if sgx_quote3_error_t::SGX_QL_SUCCESS == dcap_ret {
-			println!("\tInfo: App: sgx_qv_verify_quote successfully returned.");
-		} else {
-			println!("\tError: App: sgx_qv_verify_quote failed: {:?}", dcap_ret);
-			println!("\tError: quote_verification_result: {:?}", quote_verification_result);
+		if sgx_quote3_error_t::SGX_QL_SUCCESS != dcap_ret {
+			error!("sgx_qv_verify_quote failed: {:?}", dcap_ret);
+			error!("quote_verification_result: {:?}", quote_verification_result);
+			return Err(Error::SgxQuote(dcap_ret))
 		}
 
-		ensure!(dcap_ret == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(dcap_ret));
+		// Check and print verification result.
+		match quote_verification_result {
+			sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK => {
+				// check verification collateral expiration status
+				// this value should be considered in your own attestation/verification policy
+				if 0u32 == collateral_expiration_status {
+					info!("QvE verification completed successfully.");
+				} else {
+					warn!("QvE verification completed, but collateral is out of date based on 'expiration_check_date' you provided.");
+				}
+			},
+			sgx_ql_qv_result_t::SGX_QL_QV_RESULT_CONFIG_NEEDED
+			| sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OUT_OF_DATE
+			| sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OUT_OF_DATE_CONFIG_NEEDED
+			| sgx_ql_qv_result_t::SGX_QL_QV_RESULT_SW_HARDENING_NEEDED
+			| sgx_ql_qv_result_t::SGX_QL_QV_RESULT_CONFIG_AND_SW_HARDENING_NEEDED => {
+				warn!(
+					"QvE verification completed with Non-terminal result: {:?}",
+					quote_verification_result
+				);
+			},
+			_ => {
+				error!(
+					"QvE verification completed with Terminal result: {:?}",
+					quote_verification_result
+				);
+			},
+		}
+
+		// Check supplemental data if necessary
+		if supplemental_data_size > 0 {
+			// For now we simply print it, no checks done.
+			let p_supplemental_data: *const sgx_ql_qv_supplemental_t =
+				supplemental_data.as_ptr() as *const sgx_ql_qv_supplemental_t;
+			let qv_supplemental_data: sgx_ql_qv_supplemental_t = unsafe { *p_supplemental_data };
+			info!("QvE verification: Supplemental data version: {}", qv_supplemental_data.version);
+		}
 
 		Ok((
 			collateral_expiration_status,

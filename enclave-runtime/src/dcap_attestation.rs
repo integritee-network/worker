@@ -121,7 +121,11 @@ pub fn ecdsa_quote_verification<A: EnclaveAttestationOCallApi>(
 			qve_isvsvn_threshold,
 		)
 	};
-	debug!("sgx_tvl_verify_qve_report_and_identity returned: {:?}", ret_val);
+
+	if ret_val != sgx_quote3_error_t::SGX_QL_SUCCESS {
+		error!("sgx_tvl_verify_qve_report_and_identity returned: {:?}", ret_val);
+		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+	}
 
 	Ok(vec![])
 }
@@ -177,10 +181,6 @@ pub fn create_qe_dcap_quote<A: EnclaveAttestationOCallApi>(
 	//  }
 	debug!("Entering ocall_api.get_dcap_quote with quote size: {:?} ", quote_size);
 	let quote_vec = ocall_api.get_dcap_quote(app_report, quote_size)?;
-	if quote_vec.len() == 0 {
-		error!("    [Enclave] DCAP quote size is zero, can not continue");
-		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-	}
 	let p_quote3: *const sgx_quote3_t = quote_vec.as_ptr() as *const sgx_quote3_t;
 	let quote3: sgx_quote3_t = unsafe { *p_quote3 };
 
@@ -224,6 +224,7 @@ pub fn generate_dcap_ecc_cert<A: EnclaveAttestationOCallApi>(
 
 	// Verify the quote via qve enclave
 	let payload = ecdsa_quote_verification(qe_quote, ocall_api)?;
+
 	// generate an ECC certificate
 	info!("    [Enclave] Generate ECC Certificate");
 	let (key_der, cert_der) = match cert::gen_ecc_cert(&payload, &prv_k, &pub_k, &ecc_handle) {
