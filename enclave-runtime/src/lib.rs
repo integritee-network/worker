@@ -29,9 +29,6 @@
 #[macro_use]
 extern crate sgx_tstd as std;
 
-#[cfg(not(feature = "test"))]
-use sgx_types::size_t;
-
 use crate::{
 	error::{Error, Result},
 	global_components::{
@@ -44,13 +41,6 @@ use crate::{
 	utils::{hash_from_slice, utf8_str_from_raw, DecodeRaw},
 };
 use codec::{alloc::string::String, Decode, Encode};
-use ita_exchange_oracle::{
-	create_coin_gecko_oracle, create_coin_market_cap_oracle,
-	exchange_rate_oracle::{ExchangeRateOracle, OracleSource},
-	metrics_exporter::ExportMetrics,
-	types::TradingPair,
-	GetExchangeRate,
-};
 use ita_stf::{Getter, ShardIdentifier, Stf};
 use itc_parentchain::{
 	block_import_dispatcher::{
@@ -60,10 +50,8 @@ use itc_parentchain::{
 };
 use itp_block_import_queue::PushToBlockQueue;
 use itp_component_container::ComponentGetter;
-use itp_extrinsics_factory::{CreateExtrinsics, ExtrinsicsFactory};
 use itp_node_api::metadata::{
-	pallet_teeracle::TeeracleCallIndexes, pallet_teerex::TeerexCallIndexes,
-	provider::AccessNodeMetadata, NodeMetadata,
+	pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata, NodeMetadata,
 };
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_ocall_api::EnclaveAttestationOCallApi;
@@ -73,18 +61,17 @@ use itp_sgx_io as io;
 use itp_sgx_io::StaticSealedIO;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_types::{
-	Header, OpaqueCall, ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder, SignedBlock,
+	Header, ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder, SignedBlock,
 };
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
-use primitive_types::H256;
 use sgx_types::sgx_status_t;
 use sp_core::crypto::Pair;
-use sp_runtime::OpaqueExtrinsic;
-use std::{boxed::Box, slice, sync::Arc, vec::Vec};
+use std::{boxed::Box, slice, vec::Vec};
 use substrate_api_client::{compose_extrinsic_offline, ExtrinsicParams};
 
 mod attestation;
+mod empty_impls;
 mod global_components;
 mod initialization;
 mod ipfs;
@@ -98,15 +85,11 @@ mod sync;
 mod tls_ra;
 pub mod top_pool_execution;
 
+#[cfg(feature = "teeracle")]
+pub mod teeracle;
+
 #[cfg(feature = "test")]
 pub mod test;
-
-// this is a 'dummy' for production mode
-#[cfg(not(feature = "test"))]
-#[no_mangle]
-pub extern "C" fn test_main_entrance() -> size_t {
-	unreachable!("Tests are not available when compiled in production mode.")
-}
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
@@ -556,147 +539,4 @@ pub unsafe extern "C" fn trigger_parentchain_block_import() -> sgx_status_t {
 		},
 		Err(e) => Error::ComponentContainer(e).into(),
 	}
-}
-
-/// For now get the crypto/fiat currency exchange rate from coingecko and CoinMarketCap.
-#[no_mangle]
-pub unsafe extern "C" fn update_market_data_xt(
-	genesis_hash: *const u8,
-	genesis_hash_size: u32,
-	crypto_currency_ptr: *const u8,
-	crypto_currency_size: u32,
-	fiat_currency_ptr: *const u8,
-	fiat_currency_size: u32,
-	unchecked_extrinsic: *mut u8,
-	unchecked_extrinsic_size: u32,
-) -> sgx_status_t {
-	let genesis_hash_slice = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
-	let genesis_hash = hash_from_slice(genesis_hash_slice);
-
-	let mut crypto_currency_slice =
-		slice::from_raw_parts(crypto_currency_ptr, crypto_currency_size as usize);
-	let crypto_currency: String = Decode::decode(&mut crypto_currency_slice).unwrap();
-
-	let mut fiat_currency_slice =
-		slice::from_raw_parts(fiat_currency_ptr, fiat_currency_size as usize);
-	let fiat_currency: String = Decode::decode(&mut fiat_currency_slice).unwrap();
-
-	let extrinsics = match update_market_data_internal(genesis_hash, crypto_currency, fiat_currency)
-	{
-		Ok(xts) => xts,
-		Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
-	};
-
-	if extrinsics.is_empty() {
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
-	}
-	let extrinsic_slice =
-		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
-
-	// Save created extrinsic as slice in the return value unchecked_extrinsic.
-	if write_slice_and_whitespace_pad(extrinsic_slice, extrinsics.encode()).is_err() {
-		error!("update_market_data_xt: Extrinsic buffer was too small!");
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
-	}
-
-	sgx_status_t::SGX_SUCCESS
-}
-
-fn update_market_data_internal(
-	genesis_hash: H256,
-	crypto_currency: String,
-	fiat_currency: String,
-) -> Result<Vec<OpaqueExtrinsic>> {
-	let signer = Ed25519Seal::unseal_from_static_file()?;
-	let node_metadata_repository = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
-	let extrinsics_factory = ExtrinsicsFactory::new(
-		genesis_hash,
-		signer,
-		GLOBAL_NONCE_CACHE.clone(),
-		node_metadata_repository,
-	);
-
-	let mut extrinsic_calls: Vec<OpaqueCall> = Vec::new();
-
-	// Get the exchange rate
-	let trading_pair = TradingPair { crypto_currency, fiat_currency };
-
-	let coin_gecko_oracle = create_coin_gecko_oracle(Arc::new(OcallApi));
-
-	match get_exchange_rate(trading_pair.clone(), coin_gecko_oracle) {
-		Ok(opaque_call) => extrinsic_calls.push(opaque_call),
-		Err(e) => {
-			error!("[-] Failed to get the newest exchange rate from CoinGecko. {:?}", e);
-		},
-	};
-
-	let coin_market_cap_oracle = create_coin_market_cap_oracle(Arc::new(OcallApi));
-	match get_exchange_rate(trading_pair, coin_market_cap_oracle) {
-		Ok(oc) => extrinsic_calls.push(oc),
-		Err(e) => {
-			error!("[-] Failed to get the newest exchange rate from CoinMarketCap. {:?}", e);
-		},
-	};
-
-	let extrinsics = extrinsics_factory.create_extrinsics(extrinsic_calls.as_slice(), None)?;
-	Ok(extrinsics)
-}
-
-fn get_exchange_rate<OracleSourceType, MetricsExporter>(
-	trading_pair: TradingPair,
-	oracle: ExchangeRateOracle<OracleSourceType, MetricsExporter>,
-) -> Result<OpaqueCall>
-where
-	OracleSourceType: OracleSource,
-	MetricsExporter: ExportMetrics,
-{
-	let (rate, base_url) = match oracle.get_exchange_rate(trading_pair.clone()) {
-		Ok(result) => result,
-		Err(e) => return Err(Error::Other(e.into())),
-	};
-
-	let source_base_url = base_url.as_str();
-
-	println!(
-		"Update the exchange rate:  {} = {:?} for source {}",
-		trading_pair.clone().key(),
-		rate,
-		source_base_url,
-	);
-
-	let node_metadata_repository = match GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get() {
-		Ok(r) => r,
-		Err(e) => {
-			error!("Component get failure: {:?}", e);
-			return Err(Error::ComponentContainer(e))
-		},
-	};
-
-	let update_exchange_call = match node_metadata_repository
-		.get_from_metadata(|m| m.update_exchange_rate_call_indexes())
-	{
-		Ok(r) => r,
-		Err(e) => {
-			error!("Failed to get node metadata: {:?}", e);
-			return Err(Error::NodeMetadataProvider(e))
-		},
-	};
-
-	let call_ids =
-		match update_exchange_call {
-			Ok(c) => c,
-			Err(e) => {
-				error!("Failed to get the indexes for the register_enclave cal from the metadata: {:?}", e);
-				return Err(Error::NodeMetadata)
-			},
-		};
-
-	let call = OpaqueCall::from_tuple(&(
-		call_ids,
-		source_base_url.as_bytes().to_vec(),
-		trading_pair.key().as_bytes().to_vec(),
-		Some(rate),
-	));
-
-	Ok(call)
 }

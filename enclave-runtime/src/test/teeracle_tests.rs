@@ -23,7 +23,7 @@ use ita_exchange_oracle::{
 };
 use std::sync::Arc;
 
-pub fn test_verify_get_exchange_rate_from_coin_gecko_works() {
+pub(super) fn test_verify_get_exchange_rate_from_coin_gecko_works() {
 	// Get the exchange rate
 	let trading_pair =
 		TradingPair { crypto_currency: "DOT".to_string(), fiat_currency: "USD".to_string() };
@@ -34,7 +34,9 @@ pub fn test_verify_get_exchange_rate_from_coin_gecko_works() {
 	assert!(result.is_ok());
 }
 
-pub fn test_verify_get_exchange_rate_from_coin_market_cap_works() {
+/// Get exchange rate from coin market cap. Requires API key (therefore not suited for unit testing).
+#[allow(unused)]
+pub(super) fn test_verify_get_exchange_rate_from_coin_market_cap_works() {
 	// Get the exchange rate
 	let trading_pair =
 		TradingPair { crypto_currency: "DOT".to_string(), fiat_currency: "USD".to_string() };

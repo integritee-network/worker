@@ -17,6 +17,9 @@
 
 #![cfg_attr(test, feature(assert_matches))]
 
+#[cfg(feature = "teeracle")]
+use crate::teeracle::start_interval_market_update;
+
 use crate::{
 	account_funding::{setup_account_funding, EnclaveAccountInfoProvider},
 	error::Error,
@@ -61,7 +64,6 @@ use itp_node_api::{
 };
 use itp_settings::{
 	files::SIDECHAIN_STORAGE_PATH,
-	node::MARKET_DATA_UPDATE_INTERVAL,
 	worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider},
 };
 use its_peer_fetch::{
@@ -70,13 +72,11 @@ use its_peer_fetch::{
 use its_storage::{interface::FetchBlocks, BlockPruner, SidechainStorageLock};
 use log::*;
 use my_node_runtime::{Event, Hash, Header};
-use parse_duration::parse;
 use sgx_types::*;
 use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_finality_grandpa::VersionedAuthorityList;
 use sp_keyring::AccountKeyring;
-use sp_runtime::OpaqueExtrinsic;
 use std::{
 	path::PathBuf,
 	str,
@@ -89,7 +89,6 @@ use std::{
 };
 use substrate_api_client::{utils::FromHexString, Header as HeaderTrait, XtStatus};
 use teerex_primitives::ShardIdentifier;
-use tokio::runtime::Handle;
 
 mod account_funding;
 mod config;
@@ -105,11 +104,13 @@ mod setup;
 mod sidechain_setup;
 mod sync_block_gossiper;
 mod sync_state;
-mod teeracle_metrics;
 mod tests;
 mod utils;
 mod worker;
 mod worker_peers_updater;
+
+#[cfg(feature = "teeracle")]
+mod teeracle;
 
 /// how many blocks will be synced before storing the chain db to disk
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -190,16 +191,6 @@ fn main() {
 			setup::initialize_shard_and_keys(enclave.as_ref(), &shard).unwrap();
 		}
 
-		let default_interval = match WorkerModeProvider::worker_mode() {
-			WorkerMode::Teeracle => MARKET_DATA_UPDATE_INTERVAL,
-			_ => Duration::ZERO,
-		};
-		let interval = smatches
-			.value_of("interval")
-			.map_or_else(|| Ok(default_interval), parse)
-			.unwrap_or_else(|e| panic!("Interval parsing error {:?}", e));
-		info!("Update exchange rate interval is {:?}", interval);
-
 		let node_api =
 			node_api_factory.create_api().expect("Failed to create parentchain node API");
 
@@ -221,7 +212,6 @@ fn main() {
 			skip_ra,
 			dev,
 			node_api,
-			interval,
 			tokio_handle,
 			initialization_handler,
 		);
@@ -286,7 +276,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	skip_ra: bool,
 	dev: bool,
 	node_api: ParentchainApi,
-	interval: Duration,
 	tokio_handle_getter: Arc<T>,
 	initialization_handler: Arc<InitializationHandler>,
 ) where
@@ -330,6 +319,9 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	let tokio_handle = tokio_handle_getter.get_handle();
 
+	#[cfg(feature = "teeracle")]
+	let teeracle_tokio_handle = tokio_handle.clone();
+
 	// ------------------------------------------------------------------------
 	// Get the public key of our TEE.
 	let genesis_hash = node_api.genesis_hash.as_bytes().to_vec();
@@ -369,18 +361,22 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	// ------------------------------------------------------------------------
 	// Start trusted worker rpc server
-	let direct_invocation_server_addr = config.trusted_worker_url_internal();
-	let enclave_for_direct_invocation = enclave.clone();
-	thread::spawn(move || {
-		println!(
-			"[+] Trusted RPC direct invocation server listening on {}",
-			direct_invocation_server_addr
-		);
-		enclave_for_direct_invocation
-			.init_direct_invocation_server(direct_invocation_server_addr)
-			.unwrap();
-		println!("[+] RPC direct invocation server shut down");
-	});
+	if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain
+		|| WorkerModeProvider::worker_mode() == WorkerMode::OffChainWorker
+	{
+		let direct_invocation_server_addr = config.trusted_worker_url_internal();
+		let enclave_for_direct_invocation = enclave.clone();
+		thread::spawn(move || {
+			println!(
+				"[+] Trusted RPC direct invocation server listening on {}",
+				direct_invocation_server_addr
+			);
+			enclave_for_direct_invocation
+				.init_direct_invocation_server(direct_invocation_server_addr)
+				.unwrap();
+			println!("[+] RPC direct invocation server shut down");
+		});
+	}
 
 	// ------------------------------------------------------------------------
 	// Start untrusted worker rpc server.
@@ -390,7 +386,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			&config,
 			enclave.clone(),
 			sidechain_storage.clone(),
-			tokio_handle.clone(),
+			tokio_handle,
 		);
 	}
 
@@ -451,11 +447,14 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	initialization_handler.registered_on_parentchain();
 
+	#[cfg(feature = "teeracle")]
 	if WorkerModeProvider::worker_mode() == WorkerMode::Teeracle {
-		// start update exchange rate loop
-		let api5 = node_api.clone();
-		let market_enclave_api = enclave.clone();
-		start_interval_market_update(&api5, interval, market_enclave_api.as_ref(), &tokio_handle);
+		start_interval_market_update(
+			&node_api.clone(),
+			config.teeracle_update_interal,
+			enclave.clone().as_ref(),
+			&teeracle_tokio_handle,
+		);
 	}
 
 	let last_synced_header = init_light_client(&node_api, enclave.clone()).unwrap();
@@ -499,16 +498,22 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	//-------------------------------------------------------------------------
 	// start execution of trusted getters
-	let trusted_getters_enclave_api = enclave;
-	thread::Builder::new()
-		.name("trusted_getters_execution".to_owned())
-		.spawn(move || {
-			start_interval_trusted_getter_execution(trusted_getters_enclave_api.as_ref())
-		})
-		.unwrap();
+	if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain
+		|| WorkerModeProvider::worker_mode() == WorkerMode::OffChainWorker
+	{
+		let trusted_getters_enclave_api = enclave;
+		thread::Builder::new()
+			.name("trusted_getters_execution".to_owned())
+			.spawn(move || {
+				start_interval_trusted_getter_execution(trusted_getters_enclave_api.as_ref())
+			})
+			.unwrap();
+	}
 
 	// ------------------------------------------------------------------------
-	spawn_worker_for_shard_polling(shard, node_api.clone(), initialization_handler);
+	if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain {
+		spawn_worker_for_shard_polling(shard, node_api.clone(), initialization_handler);
+	}
 
 	// ------------------------------------------------------------------------
 	// subscribe to events and react on firing
@@ -577,76 +582,6 @@ fn start_interval_trusted_getter_execution<E: Sidechain>(enclave_api: &E) {
 		},
 		TRUSTED_GETTERS_SLOT_DURATION,
 	);
-}
-
-/// Send extrinsic to chain according to the market data update interval in the settings
-/// with the current market data (for now only exchange rate).
-fn start_interval_market_update<E: TeeracleApi>(
-	api: &ParentchainApi,
-	interval: Duration,
-	enclave_api: &E,
-	tokio_handle: &Handle,
-) {
-	schedule_on_repeating_intervals(
-		|| {
-			execute_update_market(api, enclave_api, tokio_handle);
-		},
-		interval,
-	);
-}
-
-fn execute_update_market<E: TeeracleApi>(
-	node_api: &ParentchainApi,
-	enclave: &E,
-	tokio_handle: &Handle,
-) {
-	use teeracle_metrics::{
-		increment_number_of_request_failures, set_extrinsics_inclusion_success,
-	};
-
-	// Get market data for usd (hardcoded)
-	let updated_extrinsic =
-		match enclave.update_market_data_xt(node_api.genesis_hash, "TEER", "USD") {
-			Err(e) => {
-				error!("{:?}", e);
-				increment_number_of_request_failures();
-				return
-			},
-			Ok(r) => r,
-		};
-
-	let extrinsics: Vec<OpaqueExtrinsic> = match Decode::decode(&mut updated_extrinsic.as_slice()) {
-		Ok(calls) => calls,
-		Err(e) => {
-			error!("{:?}: ", e);
-			return
-		},
-	};
-
-	// Send the extrinsics to the parentchain and wait for InBlock confirmation.
-	for call in extrinsics.into_iter() {
-		let node_api_clone = node_api.clone();
-		tokio_handle.spawn(async move {
-			let mut hex_encoded_extrinsic = hex::encode(call.encode());
-			hex_encoded_extrinsic.insert_str(0, "0x");
-
-			println!("[>] Update the exchange rate (send the extrinsic)");
-			let extrinsic_hash =
-				match node_api_clone.send_extrinsic(hex_encoded_extrinsic, XtStatus::InBlock) {
-					Err(e) => {
-						error!("{:?}: ", e);
-						set_extrinsics_inclusion_success(false);
-						return
-					},
-					Ok(hash) => {
-						set_extrinsics_inclusion_success(true);
-						hash
-					},
-				};
-
-			println!("[<] Extrinsic got included into a block. Hash: {:?}\n", extrinsic_hash);
-		});
-	}
 }
 
 #[allow(unused)]

@@ -44,7 +44,6 @@ members = [
     "core-primitives/substrate-sgx/sp-io",
     "core-primitives/teerex-storage",
     "core-primitives/test",
-    "core-primitives/test/test-sgx-build",
     "core-primitives/time-utils",
     "core-primitives/top-pool",
     "core-primitives/top-pool-author",

@@ -17,10 +17,12 @@
 
 //! Service for prometheus metrics, hosted on a http server.
 
+#[cfg(feature = "teeracle")]
+use crate::teeracle::teeracle_metrics::update_teeracle_metrics;
+
 use crate::{
 	account_funding::EnclaveAccountInfo,
 	error::{Error, ServiceResult},
-	teeracle_metrics::update_teeracle_metrics,
 };
 use async_trait::async_trait;
 use itp_enclave_metrics::EnclaveMetric;
@@ -158,7 +160,12 @@ impl ReceiveEnclaveMetrics for EnclaveMetricsReceiver {
 			EnclaveMetric::TopPoolSizeDecrement => {
 				ENCLAVE_SIDECHAIN_TOP_POOL_SIZE.dec();
 			},
+			#[cfg(feature = "teeracle")]
 			EnclaveMetric::ExchangeRateOracle(m) => update_teeracle_metrics(m)?,
+			#[cfg(not(feature = "teeracle"))]
+			EnclaveMetric::ExchangeRateOracle(_) => {
+				error!("Received Teeracle metric, but Teeracle feature is not enabled, ignoring metric item.")
+			},
 		}
 		Ok(())
 	}

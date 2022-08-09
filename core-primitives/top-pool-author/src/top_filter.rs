@@ -59,6 +59,17 @@ impl Filter for NoDirectCallsFilter {
 	}
 }
 
+/// Filter to deny all trusted operations.
+pub struct DenyAllFilter;
+
+impl Filter for DenyAllFilter {
+	type Value = TrustedOperation;
+
+	fn filter(&self, _value: &Self::Value) -> bool {
+		false
+	}
+}
+
 #[cfg(test)]
 mod tests {
 

@@ -23,10 +23,6 @@ use crate::{
 		cert_tests::*,
 		fixtures::initialize_test_state::init_state,
 		mocks::{rpc_responder_mock::RpcResponderMock, types::TestStateKeyRepo},
-		oracle_tests::{
-			test_verify_get_exchange_rate_from_coin_gecko_works,
-			test_verify_get_exchange_rate_from_coin_market_cap_works,
-		},
 		sidechain_aura_tests, top_pool_tests,
 	},
 	tls_ra,
@@ -177,10 +173,22 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		// ipfs::test_verification_ok_for_correct_content,
 		// ipfs::test_verification_fails_for_incorrect_content,
 		// test_ocall_read_write_ipfs,
-		test_verify_get_exchange_rate_from_coin_gecko_works,
-		test_verify_get_exchange_rate_from_coin_market_cap_works,
+
+		// Teeracle tests
+		run_teeracle_tests,
 	)
 }
+
+#[cfg(feature = "teeracle")]
+fn run_teeracle_tests() {
+	use super::teeracle_tests::*;
+	test_verify_get_exchange_rate_from_coin_gecko_works();
+	// Disabled - requires API key, cannot run locally
+	//test_verify_get_exchange_rate_from_coin_market_cap_works();
+}
+
+#[cfg(not(feature = "teeracle"))]
+fn run_teeracle_tests() {}
 
 fn test_compose_block_and_confirmation() {
 	// given

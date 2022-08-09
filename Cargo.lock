@@ -7540,17 +7540,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "507e9898683b6c43a9aa55b64259b721b52ba226e0f3779137e50ad114a4c90b"
 
 [[package]]
-name = "test-sgx-build"
-version = "0.1.0"
-dependencies = [
- "itc-rest-client",
- "libc",
- "rcgen",
- "sgx_tstd",
- "sp-io 6.0.0",
-]
-
-[[package]]
 name = "textwrap"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
