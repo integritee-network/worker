@@ -125,7 +125,7 @@ dependencies = [
 [[package]]
 name = "ajuna-common"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20-dev#ffd8252caaaac889d6c2fa603ff76bf014c1dd4f"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20-dev#028534df8156c49171b4119fac50cdf455f5b576"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -136,7 +136,7 @@ dependencies = [
 [[package]]
 name = "ajuna-primitives"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20-dev#ffd8252caaaac889d6c2fa603ff76bf014c1dd4f"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20-dev#028534df8156c49171b4119fac50cdf455f5b576"
 dependencies = [
  "sp-core",
  "sp-runtime",
@@ -145,7 +145,7 @@ dependencies = [
 [[package]]
 name = "ajuna-solo-runtime"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20-dev#ffd8252caaaac889d6c2fa603ff76bf014c1dd4f"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20-dev#028534df8156c49171b4119fac50cdf455f5b576"
 dependencies = [
  "ajuna-common",
  "ajuna-primitives",
@@ -950,7 +950,7 @@ dependencies = [
 [[package]]
 name = "dot4gravity"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/ajuna-games?rev=polkadot-v0.9.20-dev#2151b20f59524cb025abbdcd303f0fe9cdbf60c8"
+source = "git+https://github.com/ajuna-network/ajuna-games?rev=polkadot-v0.9.20-dev#fea4a210dae6f6f0c8bfb02cc144aac9b861ffe9"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -4215,7 +4215,7 @@ checksum = "029d8d0b2f198229de29dca79676f2738ff952edf3fde542eb8bf94d8c21b435"
 [[package]]
 name = "pallet-ajuna-board"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20-dev#ffd8252caaaac889d6c2fa603ff76bf014c1dd4f"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20-dev#028534df8156c49171b4119fac50cdf455f5b576"
 dependencies = [
  "ajuna-common",
  "dot4gravity",
@@ -4231,7 +4231,7 @@ dependencies = [
 [[package]]
 name = "pallet-ajuna-gameregistry"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20-dev#ffd8252caaaac889d6c2fa603ff76bf014c1dd4f"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20-dev#028534df8156c49171b4119fac50cdf455f5b576"
 dependencies = [
  "ajuna-common",
  "frame-benchmarking",
@@ -4248,7 +4248,7 @@ dependencies = [
 [[package]]
 name = "pallet-ajuna-matchmaker"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20-dev#ffd8252caaaac889d6c2fa603ff76bf014c1dd4f"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20-dev#028534df8156c49171b4119fac50cdf455f5b576"
 dependencies = [
  "ajuna-common",
  "frame-support",
@@ -4261,7 +4261,7 @@ dependencies = [
 [[package]]
 name = "pallet-ajuna-runner"
 version = "0.1.0"
-source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20-dev#ffd8252caaaac889d6c2fa603ff76bf014c1dd4f"
+source = "git+https://github.com/ajuna-network/Ajuna?rev=polkadot-v0.9.20-dev#028534df8156c49171b4119fac50cdf455f5b576"
 dependencies = [
  "ajuna-common",
  "frame-support",
@@ -5848,7 +5848,7 @@ dependencies = [
 [[package]]
 name = "sgx-externalities"
 version = "0.4.0"
-source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20-dev#c181d4f75c25961e27a4b409b1172eaa24ceb4f3"
+source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20-dev#d061243c60097e37139854b450aede9003cff1c3"
 dependencies = [
  "derive_more",
  "environmental",
@@ -5863,7 +5863,7 @@ dependencies = [
 [[package]]
 name = "sgx-runtime"
 version = "0.8.0"
-source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20-dev#c181d4f75c25961e27a4b409b1172eaa24ceb4f3"
+source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20-dev#d061243c60097e37139854b450aede9003cff1c3"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -6536,7 +6536,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "6.0.0"
-source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20-dev#c181d4f75c25961e27a4b409b1172eaa24ceb4f3"
+source = "git+https://github.com/ajuna-network/sgx-runtime?rev=polkadot-v0.9.20-dev#d061243c60097e37139854b450aede9003cff1c3"
 dependencies = [
  "environmental",
  "futures 0.3.21",
@@ -7541,9 +7541,9 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "digest 0.10.3",
- "rand 0.8.5",
+ "rand 0.6.5",
  "static_assertions",
 ]
 
