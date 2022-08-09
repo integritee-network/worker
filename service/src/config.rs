@@ -16,7 +16,9 @@
 */
 
 use clap::ArgMatches;
+use parse_duration::parse;
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 
 static DEFAULT_NODE_SERVER: &str = "ws://127.0.0.1";
 static DEFAULT_NODE_PORT: &str = "9944";
@@ -49,6 +51,8 @@ pub struct Config {
 	pub metrics_server_port: String,
 	/// Port for the untrusted HTTP server (e.g. for `is_initialized`)
 	pub untrusted_http_port: String,
+	/// Optional teeracle update interval
+	pub teeracle_update_interal: Option<Duration>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -66,6 +70,7 @@ impl Config {
 		enable_metrics_server: bool,
 		metrics_server_port: String,
 		untrusted_http_port: String,
+		teeracle_update_interal: Option<Duration>,
 	) -> Self {
 		Self {
 			node_ip,
@@ -80,6 +85,7 @@ impl Config {
 			enable_metrics_server,
 			metrics_server_port,
 			untrusted_http_port,
+			teeracle_update_interal,
 		}
 	}
 
@@ -142,6 +148,9 @@ impl From<&ArgMatches<'_>> for Config {
 		let metrics_server_port = m.value_of("metrics-port").unwrap_or(DEFAULT_METRICS_PORT);
 		let untrusted_http_port =
 			m.value_of("untrusted-http-port").unwrap_or(DEFAULT_UNTRUSTED_HTTP_PORT);
+		let teeracle_interval = m.value_of("teeracle-interval").map(|i| {
+			parse(i).unwrap_or_else(|e| panic!("teeracle-interval parsing error {:?}", e))
+		});
 
 		Self::new(
 			m.value_of("node-server").unwrap_or(DEFAULT_NODE_SERVER).into(),
@@ -159,6 +168,7 @@ impl From<&ArgMatches<'_>> for Config {
 			is_metrics_server_enabled,
 			metrics_server_port.to_string(),
 			untrusted_http_port.to_string(),
+			teeracle_interval,
 		)
 	}
 }
@@ -203,6 +213,7 @@ mod test {
 		assert!(config.mu_ra_external_address.is_none());
 		assert!(!config.enable_metrics_server);
 		assert_eq!(config.untrusted_http_port, DEFAULT_UNTRUSTED_HTTP_PORT);
+		assert!(config.teeracle_update_interal.is_none());
 	}
 
 	#[test]
@@ -227,6 +238,7 @@ mod test {
 		let mu_ra_ext_addr = "1.1.3.1:1000";
 		let mu_ra_port = "99";
 		let untrusted_http_port = "4321";
+		let teeracle_interval = "24s";
 
 		let mut args = ArgMatches::default();
 		args.args = HashMap::from([
@@ -240,6 +252,7 @@ mod test {
 			("untrusted-worker-port", Default::default()),
 			("trusted-worker-port", Default::default()),
 			("untrusted-http-port", Default::default()),
+			("teeracle-interval", Default::default()),
 		]);
 		// Workaround because MatchedArg is private.
 		args.args.get_mut("node-server").unwrap().vals = vec![node_ip.into()];
@@ -252,6 +265,7 @@ mod test {
 		args.args.get_mut("untrusted-worker-port").unwrap().vals = vec![untrusted_port.into()];
 		args.args.get_mut("trusted-worker-port").unwrap().vals = vec![trusted_port.into()];
 		args.args.get_mut("untrusted-http-port").unwrap().vals = vec![untrusted_http_port.into()];
+		args.args.get_mut("teeracle-interval").unwrap().vals = vec![teeracle_interval.into()];
 
 		let config = Config::from(&args);
 
@@ -264,6 +278,7 @@ mod test {
 		assert_eq!(config.untrusted_external_worker_address, Some(untrusted_ext_addr.to_string()));
 		assert_eq!(config.mu_ra_external_address, Some(mu_ra_ext_addr.to_string()));
 		assert_eq!(config.untrusted_http_port, untrusted_http_port.to_string());
+		assert_eq!(config.teeracle_update_interal.unwrap(), Duration::from_secs(24));
 	}
 
 	#[test]
@@ -295,6 +310,17 @@ mod test {
 			format!("ws://{}:{}", expected_worker_ip, untrusted_port)
 		);
 		assert_eq!(config.mu_ra_url_external(), format!("{}:{}", expected_worker_ip, mu_ra_port));
+	}
+
+	#[test]
+	fn teeracle_interval_parsing_panics_if_format_is_invalid() {
+		let teeracle_interval = "24s_invalid-format";
+		let mut args = ArgMatches::default();
+		args.args = HashMap::from([("teeracle-interval", Default::default())]);
+		args.args.get_mut("teeracle-interval").unwrap().vals = vec![teeracle_interval.into()];
+
+		let result = std::panic::catch_unwind(|| Config::from(&args));
+		assert!(result.is_err());
 	}
 
 	#[test]

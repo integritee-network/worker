@@ -17,15 +17,15 @@
 
 use crate::{error::Error, Enclave, EnclaveResult};
 use codec::Encode;
-use frame_support::{ensure, sp_runtime::app_crypto::sp_core::H256};
+use frame_support::ensure;
 use itp_enclave_api_ffi as ffi;
+use log::*;
 use sgx_types::*;
 
 pub trait TeeracleApi: Send + Sync + 'static {
 	/// update the currency market data for the token oracle.
 	fn update_market_data_xt(
 		&self,
-		genesis_hash: H256,
 		crypto_currency: &str,
 		fiat_currency: &str,
 	) -> EnclaveResult<Vec<u8>>;
@@ -34,11 +34,10 @@ pub trait TeeracleApi: Send + Sync + 'static {
 impl TeeracleApi for Enclave {
 	fn update_market_data_xt(
 		&self,
-		genesis_hash: H256,
 		crypto_currency: &str,
 		fiat_currency: &str,
 	) -> EnclaveResult<Vec<u8>> {
-		println!(
+		info!(
 			"TeeracleApi update_market_data_xt in with crypto {} and fiat {}",
 			crypto_currency, fiat_currency
 		);
@@ -48,14 +47,11 @@ impl TeeracleApi for Enclave {
 
 		let crypto_curr = crypto_currency.encode();
 		let fiat_curr = fiat_currency.encode();
-		let gen = genesis_hash.as_bytes().to_vec();
 
 		let res = unsafe {
 			ffi::update_market_data_xt(
 				self.eid,
 				&mut retval,
-				gen.as_ptr(),
-				gen.len() as u32,
 				crypto_curr.as_ptr(),
 				crypto_curr.len() as u32,
 				fiat_curr.as_ptr(),

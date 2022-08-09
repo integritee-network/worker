@@ -17,7 +17,7 @@ default = []
 production = ["itp-settings/production"]
 sidechain = ["itp-settings/sidechain", "itp-top-pool-author/sidechain"]
 offchain-worker = ["itp-settings/offchain-worker", "itp-top-pool-author/offchain-worker"]
-teeracle = ["itp-settings/teeracle"]
+teeracle = ["ita-exchange-oracle", "itp-settings/teeracle"]
 test = [
     "ita-stf/test",
     "itc-parentchain/mocks",
@@ -89,7 +89,7 @@ cid = { default-features = false, git = "https://github.com/whalelephant/rust-ci
 multibase = { default-features = false, git = "https://github.com/whalelephant/rust-multibase", branch = "nstd" }
 
 # local deps
-ita-exchange-oracle = { path = "../app-libs/exchange-oracle", default-features = false, features = ["sgx"] }
+ita-exchange-oracle = { path = "../app-libs/exchange-oracle", default-features = false, optional = true, features = ["sgx"] }
 ita-sgx-runtime = { path = "../app-libs/sgx-runtime", default-features = false }
 ita-stf = { path = "../app-libs/stf", default-features = false, features = ["sgx"] }
 itc-tls-websocket-server = { path = "../core/tls-websocket-server", default-features = false, features = ["sgx"] }

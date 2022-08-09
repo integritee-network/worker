@@ -56,5 +56,6 @@ pub fn local_worker_config(
 		false,
 		"8787".to_string(),
 		"4545".to_string(),
+		None,
 	)
 }

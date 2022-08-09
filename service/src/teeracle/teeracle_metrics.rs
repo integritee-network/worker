@@ -45,11 +45,11 @@ lazy_static! {
 			.unwrap();
 }
 
-pub fn increment_number_of_request_failures() {
+pub(super) fn increment_number_of_request_failures() {
 	NUMBER_OF_REQUEST_FAILURES.inc();
 }
 
-pub fn set_extrinsics_inclusion_success(is_successful: bool) {
+pub(super) fn set_extrinsics_inclusion_success(is_successful: bool) {
 	let success_values = if is_successful { 1 } else { 0 };
 	EXTRINSIC_INCLUSION_SUCCESS.set(success_values);
 }

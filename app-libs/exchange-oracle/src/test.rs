@@ -33,6 +33,7 @@ use substrate_fixed::transcendental::ZERO;
 type TestOracle<OracleSource> = ExchangeRateOracle<OracleSource, MetricsExporterMock>;
 
 #[test]
+#[ignore = "requires API key for CoinMarketCap"]
 fn get_exchange_rate_from_coin_market_cap_works() {
 	test_suite_exchange_rates::<CoinMarketCapSource>();
 }

@@ -110,9 +110,10 @@ pub mod enclave {
 	pub static TRUSTED_GETTERS_SLOT_DURATION: Duration = Duration::from_millis(400);
 }
 
-/// Settings concerning the node
-pub mod node {
+/// Settings for the Teeracle
+#[cfg(feature = "teeracle")]
+pub mod teeracle {
 	use core::time::Duration;
 	// Send extrinsic to update market exchange rate on the parentchain once per day
-	pub static MARKET_DATA_UPDATE_INTERVAL: Duration = Duration::from_secs(86400);
+	pub static DEFAULT_MARKET_DATA_UPDATE_INTERVAL: Duration = Duration::from_secs(86400);
 }
