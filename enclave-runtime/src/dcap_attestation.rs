@@ -184,42 +184,6 @@ pub fn create_qe_dcap_quote<A: EnclaveAttestationOCallApi>(
 	let p_quote3: *const sgx_quote3_t = quote_vec.as_ptr() as *const sgx_quote3_t;
 	let quote3: sgx_quote3_t = unsafe { *p_quote3 };
 
-	// TODO: Before signing the report, we should check the report ourselves
-	// Because blockchain verification does not go the trusted way. We can do this here.
-	// Perform a check on qe_report to verify if the qe_report is valid
-	// match rsgx_verify_report(&quote3) {
-	// 	Ok(()) => debug!("    [Enclave] rsgx_verify_report success!"),
-	// 	Err(x) => {
-	// 		error!("    [Enclave] rsgx_verify_report failed. {:?}", x);
-	// 		return Err(x)
-	// 	},
-	// }
-	//TODO!
-	// Check if the qe_report is produced on the same platform
-	// 	if quoting_enclave_target_info.mr_enclave.m != quote3.report_body.mr_enclave.m
-	// 		|| quoting_enclave_target_info.attributes.flags != quote3.report_body.attributes.flags
-	// 		|| quoting_enclave_target_info.attributes.xfrm != quote3.report_body.attributes.xfrm
-	// 	{
-	// 		error!("    [Enclave] qe_quote does not match current quoting_enclave_target_info!");
-	// 		error!(
-	// 			"{:?} vs {:?}",
-	// 			quoting_enclave_target_info.mr_enclave.m, quote3.report_body.mr_enclave.m
-	// 		);
-	// 		error!(
-	// 			"{:?} vs {:?}",
-	// 			quoting_enclave_target_info.attributes.flags, quote3.report_body.attributes.flags
-	// 		);
-	// 		error!(
-	// 			"{:?} vs {:?}",
-	// 			quoting_enclave_target_info.attributes.xfrm, quote3.report_body.attributes.xfrm
-	// 		);
-	// 		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-	// 	}
-	//
-	// 	debug!("    [Enclave] qe_quote check success");
-
-	// TODO: Need to defend against replay attacks?
-
 	Ok(quote_vec)
 }
 pub fn generate_dcap_ecc_cert<A: EnclaveAttestationOCallApi>(
