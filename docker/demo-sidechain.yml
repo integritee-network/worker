@@ -1,4 +1,3 @@
-version: "3.4"
 services:
   demo-sidechain:
     image: integritee-cli:dev

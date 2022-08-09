@@ -1,4 +1,3 @@
-version: "3.4"
 services:
   worker-ping:
     image: worker-ping:dev
