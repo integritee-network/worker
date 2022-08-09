@@ -294,9 +294,7 @@ impl RemoteAttestationCallBacks for Enclave {
 		let mut collateral_expiration_status = 1u32;
 		let mut quote_verification_result = sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK;
 		let mut supplemental_data: Vec<u8> = vec![0; supplemental_data_size as usize];
-		let mut qve_report_info_return_value: sgx_ql_qe_report_info_t =
-			unsafe { std::mem::zeroed() };
-		qve_report_info_return_value = qve_report_info;
+		let mut qve_report_info_return_value: sgx_ql_qe_report_info_t = qve_report_info;
 
 		// Call DCAP quote verify library to set QvE loading policy.
 		// TODO: Check if Persistent makes sense.
