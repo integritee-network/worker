@@ -32,7 +32,7 @@ use crate::{
 	GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT,
 };
 use codec::Encode;
-use core::default::Default;
+use core::{convert::TryInto, default::Default};
 use itertools::Itertools;
 use itp_component_container::ComponentGetter;
 use itp_node_api::metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata};
@@ -50,20 +50,23 @@ use std::{
 	io::{Read, Write},
 	prelude::v1::*,
 	slice, str,
+	time::SystemTime,
 	vec::Vec,
 };
 use substrate_api_client::{compose_extrinsic_offline, ExtrinsicParams};
 
 pub fn ecdsa_quote_verification<A: EnclaveAttestationOCallApi>(
-	quote: &[u8],
+	quote: Vec<u8>,
 	ocall_api: &A,
 ) -> SgxResult<Vec<u8>> {
 	let mut app_enclave_target_info: sgx_target_info_t = unsafe { std::mem::zeroed() };
+	let quote_collateral: sgx_ql_qve_collateral_t = unsafe { std::mem::zeroed() };
+	let mut qve_report_info: sgx_ql_qe_report_info_t = unsafe { std::mem::zeroed() };
+	let quote_verification_result = sgx_ql_qv_result_t::SGX_QL_QV_RESULT_UNSPECIFIED;
+	let supplemental_data_size = std::mem::size_of::<sgx_ql_qv_supplemental_t>() as u32;
 
 	// get target info of SampleISVEnclave. QvE will target the generated report to this enclave.
-	sgx_self_target(
-		&mut app_enclave_target_info as *mut qvl_sys::sgx_target_info_t,
-	);
+	unsafe { sgx_self_target(&mut app_enclave_target_info as *mut sgx_target_info_t) };
 
 	// set current time. This is only for sample purposes, in production mode a trusted time should be used.
 	//
@@ -81,27 +84,20 @@ pub fn ecdsa_quote_verification<A: EnclaveAttestationOCallApi>(
 	qve_report_info.nonce.rand.copy_from_slice(rand_nonce.as_bytes());
 	qve_report_info.app_enclave_target_info = app_enclave_target_info;
 
-
 	// Ocall call Quote verification Enclave (QvE) report
-	let mut quote_verification_result = qvl::sgx_ql_qv_result_t::SGX_QL_QV_RESULT_UNSPECIFIED;
-	let mut collateral_expiration_status = 1u32;
-	let (collateral_expiration_status, quote_verification_result) =
-		ocall_api.get_qve_report_on_quote(quote, current_time, qve_report_info, supplemental_data_size)?;
-
-	// 	pub fn ocall_get_qve_report_on_quote(
-	// 		ret_val: *mut sgx_status_t,
-	// 		quote: *const u8,
-	// 		quote_len: u32,
-	// 		current_time: i64,
-	// 		p_quote_collateral: *const sgx_ql_qve_collateral_t,
-	// 		collateral_expiration_status: *mut u32,
-	// 		quote_verification_result: *mut sgx_ql_qv_result_t,
-	// 		qve_report_info: *mut sgx_ql_qe_report_info_t,
-	// 		// p_supplemental_data: *const sgx_ql_qv_supplemental_t,
-	// 		p_supplemental_data: *mut u8,
-	// 		p_supplemental_data_size: u32,
-	// 	) -> sgx_status_t;
-	//
+	let (
+		collateral_expiration_status,
+		quote_verification_result,
+		qve_report_info_return_value,
+		supplemental_data,
+	) = ocall_api.get_qve_report_on_quote(
+		quote,
+		current_time,
+		quote_collateral,
+		qve_report_info,
+		supplemental_data_size,
+	)?;
+	Ok(vec![])
 }
 
 #[allow(const_err)]
@@ -198,7 +194,6 @@ pub fn create_qe_dcap_quote<A: EnclaveAttestationOCallApi>(
 pub fn generate_dcap_ecc_cert<A: EnclaveAttestationOCallApi>(
 	quoting_enclave_target_info: &sgx_target_info_t,
 	quote_size: u32,
-	quote_supplemental_data_size: u32,
 	ocall_api: &A,
 	skip_ra: bool,
 ) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
@@ -233,7 +228,7 @@ pub fn generate_dcap_ecc_cert<A: EnclaveAttestationOCallApi>(
 	};
 
 	// Verify the quote via qve enclave
-	qe_quote
+	let payload = ecdsa_quote_verification(qe_quote, ocall_api)?;
 	// generate an ECC certificate
 	info!("    [Enclave] Generate ECC Certificate");
 	let (key_der, cert_der) = match cert::gen_ecc_cert(&payload, &prv_k, &pub_k, &ecc_handle) {
@@ -260,18 +255,12 @@ pub unsafe extern "C" fn perform_dcap_ra(
 	unchecked_extrinsic_size: u32,
 	quoting_enclave_target_info: &sgx_target_info_t,
 	quote_size: u32,
-	quote_supplemental_data_size: u32,
 ) -> sgx_status_t {
-	let (_key_der, cert_der) = match generate_dcap_ecc_cert(
-		quoting_enclave_target_info,
-		quote_size,
-		quote_supplemental_data_size,
-		&OcallApi,
-		false,
-	) {
-		Ok(r) => r,
-		Err(e) => return e.into(),
-	};
+	let (_key_der, cert_der) =
+		match generate_dcap_ecc_cert(quoting_enclave_target_info, quote_size, &OcallApi, false) {
+			Ok(r) => r,
+			Err(e) => return e.into(),
+		};
 
 	if let Err(err) = io::write(&cert_der, RA_DUMP_CERT_DER_FILE) {
 		error!(
@@ -358,9 +347,10 @@ pub unsafe extern "C" fn perform_dcap_ra(
 #[no_mangle]
 pub unsafe extern "C" fn dump_dcap_ra_to_disk(
 	quoting_enclave_target_info: &sgx_target_info_t,
+	quote_size: u32,
 ) -> sgx_status_t {
 	let (_key_der, cert_der) =
-		match generate_dcap_ecc_cert(quoting_enclave_target_info, &OcallApi, false) {
+		match generate_dcap_ecc_cert(quoting_enclave_target_info, quote_size, &OcallApi, false) {
 			Ok(r) => r,
 			Err(e) => return e.into(),
 		};

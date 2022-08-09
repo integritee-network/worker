@@ -31,7 +31,6 @@ enclave {
 
 	include "sgx_quote.h"
 	include "sgx_report.h"
-	include "sgx_dcap_ql_wrapper.h"
 	include "sgx_ql_quote.h"
 	include "sgx_qve_header.h"
 
@@ -104,7 +103,8 @@ enclave {
 			[in] uint32_t* nonce,
 			[in, size=w_url_size] uint8_t* w_url, uint32_t w_url_size,
 			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size,
-			[in] const sgx_target_info_t* quoting_enclave_target_info
+			[in] const sgx_target_info_t* quoting_enclave_target_info,
+			[in] uint32_t* quote_size
 		);
 
 
@@ -117,7 +117,7 @@ enclave {
 
 		public sgx_status_t dump_ra_to_disk();
 
-		public sgx_status_t dump_dcap_ra_to_disk([in] const sgx_target_info_t* quoting_enclave_target_info);
+		public sgx_status_t dump_dcap_ra_to_disk([in] const sgx_target_info_t* quoting_enclave_target_info, [in] uint32_t* quote_size);
 
 		public sgx_status_t run_state_provisioning_server(int fd, sgx_quote_sign_type_t quote_type, int skip_ra);
         public sgx_status_t request_state_provisioning(

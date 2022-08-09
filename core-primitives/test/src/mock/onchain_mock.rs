@@ -28,11 +28,7 @@ use itp_types::{
 	storage::StorageEntryVerified, BlockHash, Enclave, ShardIdentifier, WorkerRequest,
 	WorkerResponse,
 };
-use sgx_types::{
-	sgx_epid_group_id_t, sgx_measurement_t, sgx_platform_info_t, sgx_quote_nonce_t,
-	sgx_quote_sign_type_t, sgx_report_t, sgx_spid_t, sgx_target_info_t, sgx_update_info_bit_t,
-	SgxResult, SGX_HASH_SIZE,
-};
+use sgx_types::*;
 use sp_core::H256;
 use sp_runtime::{traits::Header as HeaderTrait, AccountId32, OpaqueExtrinsic};
 use sp_std::prelude::*;

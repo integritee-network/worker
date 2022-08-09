@@ -290,6 +290,26 @@ fn main() {
 				warn!("Cannot set QPL directory, you may get ECDSA quote with `Encrypted PPID` cert type.\n");
 			}
 		}
+
+		// And same for QE:
+		if sgx_quote3_error_t::SGX_QL_SUCCESS
+			!= unsafe {
+				let p_pointer =
+					"/usr/lib/x86_64-linux-gnu/libsgx_qve.signed.so.1\0".as_bytes().as_ptr() as _;
+				sgx_qv_set_path(sgx_qv_path_type_t::SGX_QV_QVE_PATH, p_pointer)
+			} {
+			// Try to load PCE and QE3 from RHEL-like OS system path
+			if sgx_quote3_error_t::SGX_QL_SUCCESS
+				!= unsafe {
+					sgx_qv_set_path(
+						sgx_qv_path_type_t::SGX_QV_QVE_PATH,
+						"/usr/lib64/libsgx_qve.signed.so.1\0".as_ptr() as _,
+					)
+				} {
+				panic!("Error in set PCE/QE3/IDE directory.\n");
+			}
+		}
+
 		println!("Step1: Call sgx_qe_get_target_info:");
 		let qe3_ret = unsafe { sgx_qe_get_target_info(&mut quoting_enclave_target_info as *mut _) };
 		if qe3_ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
@@ -310,7 +330,9 @@ fn main() {
 		}
 		println!("quote = {:?}", quote_vector);
 
-		enclave.dump_dcap_ra_to_disk(&quoting_enclave_target_info).unwrap();
+		enclave
+			.dump_dcap_ra_to_disk(&quoting_enclave_target_info, quote_size as u32)
+			.unwrap();
 	} else if matches.is_present("mrenclave") {
 		println!("{}", enclave.get_mrenclave().unwrap().encode().to_base58());
 	} else if let Some(sub_matches) = matches.subcommand_matches("init-shard") {
@@ -586,6 +608,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 				nonce,
 				trusted_url.as_bytes().to_vec(),
 				&quoting_enclave_target_info,
+				quote_size,
 			)
 			.unwrap()
 	};

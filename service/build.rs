@@ -45,6 +45,7 @@ fn main() {
 	// just create a symlink by
 	// ln -s libsgx_dcap_ql.so.1 libsgx_dcap_ql.so
 	println!("cargo:rustc-link-lib=dylib=sgx_dcap_ql");
+	println!("cargo:rustc-link-lib=dylib=sgx_dcap_quoteverify");
 	match is_sim.as_ref() {
 		"SW" => {
 			println!("cargo:rustc-link-lib=dylib=sgx_urts_sim");

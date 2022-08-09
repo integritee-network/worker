@@ -40,6 +40,7 @@ pub trait RemoteAttestation {
 		nonce: u32,
 		w_url: Vec<u8>,
 		quoting_enclave_target_info: &sgx_target_info_t,
+		quote_size: u32,
 	) -> EnclaveResult<Vec<u8>>;
 
 	fn dump_ra_to_disk(&self) -> EnclaveResult<()>;
@@ -47,6 +48,7 @@ pub trait RemoteAttestation {
 	fn dump_dcap_ra_to_disk(
 		&self,
 		quoting_enclave_target_info: &sgx_target_info_t,
+		quote_size: u32,
 	) -> EnclaveResult<()>;
 }
 
@@ -140,6 +142,7 @@ impl RemoteAttestation for Enclave {
 		nonce: u32,
 		w_url: Vec<u8>,
 		quoting_enclave_target_info: &sgx_target_info_t,
+		quote_size: u32,
 	) -> EnclaveResult<Vec<u8>> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
@@ -158,6 +161,7 @@ impl RemoteAttestation for Enclave {
 				unchecked_extrinsic.as_mut_ptr(),
 				unchecked_extrinsic.len() as u32,
 				quoting_enclave_target_info,
+				quote_size,
 			)
 		};
 
@@ -181,11 +185,17 @@ impl RemoteAttestation for Enclave {
 	fn dump_dcap_ra_to_disk(
 		&self,
 		quoting_enclave_target_info: &sgx_target_info_t,
+		quote_size: u32,
 	) -> EnclaveResult<()> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
 		let result = unsafe {
-			ffi::dump_dcap_ra_to_disk(self.eid, &mut retval, quoting_enclave_target_info)
+			ffi::dump_dcap_ra_to_disk(
+				self.eid,
+				&mut retval,
+				quoting_enclave_target_info,
+				quote_size,
+			)
 		};
 
 		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));

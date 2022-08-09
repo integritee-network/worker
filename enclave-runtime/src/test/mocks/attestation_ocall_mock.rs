@@ -69,7 +69,7 @@ impl EnclaveAttestationOCallApi for AttestationOCallMock {
 		_quote_collateral: sgx_ql_qve_collateral_t,
 		_qve_report_info: sgx_ql_qe_report_info_t,
 		_supplemental_data_size: u32,
-	) -> EnclaveResult<(u32, sgx_ql_qv_result_t, sgx_ql_qe_report_info_t, Vec<u8>)> {
+	) -> SgxResult<(u32, sgx_ql_qv_result_t, sgx_ql_qe_report_info_t, Vec<u8>)> {
 		unreachable!()
 	}
 

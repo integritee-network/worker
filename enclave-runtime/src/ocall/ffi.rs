@@ -15,10 +15,7 @@
 
 */
 
-use sgx_types::{
-	sgx_epid_group_id_t, sgx_platform_info_t, sgx_quote_nonce_t, sgx_quote_sign_type_t,
-	sgx_report_t, sgx_spid_t, sgx_status_t, sgx_target_info_t, sgx_update_info_bit_t,
-};
+use sgx_types::*;
 
 extern "C" {
 	pub fn ocall_sgx_init_quote(
@@ -59,7 +56,6 @@ extern "C" {
 		p_collateral_expiration_status: *mut u32,
 		p_quote_verification_result: *mut sgx_ql_qv_result_t,
 		p_qve_report_info: *mut sgx_ql_qe_report_info_t,
-		// p_supplemental_data: *const sgx_ql_qv_supplemental_t,
 		p_supplemental_data: *mut u8,
 		supplemental_data_size: u32,
 	) -> sgx_status_t;
