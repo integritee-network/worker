@@ -318,6 +318,9 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	let tokio_handle = tokio_handle_getter.get_handle();
 
+	#[cfg(feature = "teeracle")]
+	let teeracle_tokio_handle = tokio_handle.clone();
+
 	// ------------------------------------------------------------------------
 	// Get the public key of our TEE.
 	let genesis_hash = node_api.genesis_hash.as_bytes().to_vec();
@@ -449,7 +452,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			&node_api.clone(),
 			config.teeracle_update_interal,
 			enclave.clone().as_ref(),
-			&tokio_handle,
+			&teeracle_tokio_handle,
 		);
 	}
 
