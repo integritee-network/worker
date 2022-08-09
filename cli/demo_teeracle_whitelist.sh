@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # Demo to show that an enclave can update the exchange rate only when
 #   1. it is a registered enclave
@@ -15,15 +16,15 @@
 # then run this script
 
 # usage:
-#   demo_teeracle_whitelist.sh -p <NODEPORT> -P <WORKERPORT> -d <DURATION> -i <WORKER_UPDATE_INTERVAL>
+#   demo_teeracle_whitelist.sh -p <NODEPORT> -P <WORKERPORT> -d <DURATION> -i <WORKER_UPDATE_INTERVAL> -u <NODE_URL> -V <WORKER_URL> -C <CLIENT_BINARY_PATH>
 
-while getopts ":p:P:d:i:" opt; do
+while getopts ":p:P:d:i:u:V:C:" opt; do
     case $opt in
         p)
             NPORT=$OPTARG
             ;;
         P)
-            RPORT=$OPTARG
+            WORKER1PORT=$OPTARG
             ;;
         d)
             DURATION=$OPTARG
@@ -31,20 +32,36 @@ while getopts ":p:P:d:i:" opt; do
         i)
             INTERVAL=$OPTARG
             ;;
+        u)
+            NODEURL=$OPTARG
+            ;;
+        V)
+            WORKER1URL=$OPTARG
+            ;;
+        C)
+            CLIENT_BIN=$OPTARG
+            ;;
     esac
 done
 
 # using default port if none given as arguments
 NPORT=${NPORT:-9944}
-RPORT=${RPORT:-2000}
+NODEURL=${NODEURL:-"ws://127.0.0.1"}
+
+WORKER1PORT=${WORKER1PORT:-2000}
+WORKER1URL=${WORKER1URL:-"wss://127.0.0.1"}
+
+CLIENT_BIN=${CLIENT_BIN:-"./../bin/integritee-cli"}
+
 DURATION=${DURATION:-48}
 INTERVAL=${INTERVAL:-86400}
 
 LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD="exchange-oracle listen-to-exchange-rate-events"
 ADD_TO_WHITELIST_CMD="exchange-oracle add-to-whitelist"
 
-echo "Using node-port ${NPORT}"
-echo "Using worker-rpc-port ${RPORT}"
+echo "Using client binary ${CLIENT_BIN}"
+echo "Using node uri ${NODEURL}:${NPORT}"
+echo "Using trusted-worker uri ${WORKER1URL}:${WORKER1PORT}"
 echo "Using worker market data update interval ${INTERVAL}"
 echo "Count the update events for ${DURATION}"
 echo ""
@@ -57,7 +74,7 @@ echo "minimum expected number of events with an oracle: ${MIN_EXPECTED_NUM_OF_EV
 let "MIN_EXPECTED_NUM_OF_EVENTS_2 = 2*$MIN_EXPECTED_NUM_OF_EVENTS"
 echo "minimum expected number of events with two oracles: ${MIN_EXPECTED_NUM_OF_EVENTS_2}"
 
-CLIENT="./../bin/integritee-cli -p ${NPORT} -P ${RPORT}"
+CLIENT="${CLIENT_BIN} -p ${NPORT} -P ${WORKER1PORT} -u ${NODEURL} -U ${WORKER1URL}"
 
 echo "* Query on-chain enclave registry:"
 ${CLIENT} list-workers
@@ -71,7 +88,7 @@ echo "Reading MRENCLAVE from worker list: ${MRENCLAVE}"
 echo ""
 
 echo "Listen to ExchangeRateUpdated events for ${DURATION} seconds. There should be no trusted oracle service!"
-${CLIENT} ${LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD} ${DURATION}
+${CLIENT} "${LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD}" "${DURATION}"
 echo ""
 
 read NO_EVENTS <<< $(${CLIENT} ${LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD} ${DURATION} | awk '/  EVENTS_COUNT: / { print $2; exit }')
@@ -79,20 +96,17 @@ echo "Got ${NO_EVENTS} exchange rate updates when no trusted oracle service is i
 echo ""
 
 echo "Add MRENCLAVE as trusted oracle service for ${COIN_GECKO}"
-${CLIENT} ${ADD_TO_WHITELIST_CMD} //Alice ${COIN_GECKO} ${MRENCLAVE}
+${CLIENT} "${ADD_TO_WHITELIST_CMD}" //Alice ${COIN_GECKO} "${MRENCLAVE}"
 echo "MRENCLAVE in Whitelist for ${COIN_GECKO}"
 echo ""
 
 echo "Listen to ExchangeRateUpdated events for ${DURATION} seconds, after a trusted oracle service has been added to the whitelist."
-${CLIENT} ${LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD} ${DURATION}
+${CLIENT} "${LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD}" "${DURATION}"
 echo ""
 
 read EVENTS_COUNT <<< $($CLIENT ${LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD} ${DURATION} | awk '/  EVENTS_COUNT: / { print $2; exit }')
 echo "Got ${EVENTS_COUNT} exchange rate updates from the trusted oracle service in ${DURATION} second"
 echo ""
-
-
-
 
 echo "Add MRENCLAVE as trusted oracle service for ${COIN_MARKET_CAP}"
 ${CLIENT} ${ADD_TO_WHITELIST_CMD} //Alice ${COIN_MARKET_CAP} ${MRENCLAVE}

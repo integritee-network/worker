@@ -1,0 +1,21 @@
+services:
+  demo-teeracle:
+    image: integritee-cli:dev
+    container_name: integritee-teeracle-demo
+    build:
+      context: ..
+      dockerfile: build.Dockerfile
+      target: deployed-client
+    depends_on: ['integritee-node', 'integritee-worker-1']
+    networks:
+      - integritee-test-network
+    entrypoint: "dockerize -wait http://integritee-worker-2:4646/is_initialized -timeout 250s    
+      /usr/local/worker-cli/demo_teeracle_whitelist.sh 
+      -u ws://integritee-node -p 9912
+      -V wss://integritee-worker-1 -P 2011
+      -d 120 -i 24
+      -C /usr/local/bin/integritee-cli 2>&1"
+    restart: "no"
+networks:
+  integritee-test-network:
+    driver: bridge

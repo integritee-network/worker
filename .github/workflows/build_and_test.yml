@@ -144,6 +144,7 @@ jobs:
           - test: Teeracle
             mode: teeracle
             demo_name: demo-teeracle
+            compose_profile: single-worker
 
     steps:
       - uses: actions/checkout@v3

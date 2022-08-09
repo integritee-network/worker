@@ -53,6 +53,16 @@ Run
 docker compose --profile double-worker -f docker-compose.yml -f demo-sidechain.yml up --exit-code-from demo-sidechain
 ```
 
+### Demo Teeracle
+Build
+```
+COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f docker-compose.yml -f demo-teeracle.yml build --build-arg WORKER_MODE_ARG=teeracle
+```
+Run
+```
+docker compose --profile single-worker -f docker-compose.yml -f demo-teeracle.yml up --exit-code-from demo-teeracle
+```
+
 ## Run the benchmarks
 Build with
 ```
