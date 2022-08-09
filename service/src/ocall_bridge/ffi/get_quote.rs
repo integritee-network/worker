@@ -104,6 +104,7 @@ pub extern "C" fn ocall_get_dcap_quote(
 	p_quote: *mut u8,
 	quote_size: u32,
 ) -> sgx_status_t {
+	debug!("Entering ocall_get_dcap_quote");
 	get_dcap_quote(
 		p_report,
 		p_quote,

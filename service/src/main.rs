@@ -580,27 +580,28 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			);
 		}
 
-		// For debugging
-		let quote_size = std::mem::size_of::<sgx_target_info_t>();
-		let mut quote_vector: Vec<u8> = vec![0; quote_size];
-		unsafe {
-			std::ptr::copy_nonoverlapping(
-				&quoting_enclave_target_info as *const sgx_target_info_t as *const u8,
-				quote_vector.as_mut_ptr() as *mut u8,
-				quote_size,
-			);
-		}
-		println!("quote = {:?}", quote_vector);
-
+		// Retrieve dcap quote size
 		let mut quote_size: u32 = 0;
-		let qe3_return_value = unsafe { sgx_qe_get_quote_size(&mut quote_size as _) };
+		let qe3_return_value = unsafe { sgx_qe_get_quote_size(&mut quote_size as *mut _) };
 		if qe3_return_value != sgx_quote3_error_t::SGX_QL_SUCCESS {
 			panic!(
 				"Could not retrieve qe quote size: Error in sgx_qe_get_quote_size. {:?}\n",
 				qe3_return_value
 			);
 		}
-		debug!("Successfully retrieved dcap quote size: {:?}", quote_size);
+		info!("Successfully retrieved dcap quote size: {:?}", quote_size);
+
+		// For debugging only
+		let quoting_enclave_target_info_size = std::mem::size_of::<sgx_target_info_t>();
+		let mut quote_vector: Vec<u8> = vec![0; quoting_enclave_target_info_size as usize];
+		unsafe {
+			std::ptr::copy_nonoverlapping(
+				&quoting_enclave_target_info as *const sgx_target_info_t as *const u8,
+				quote_vector.as_mut_ptr() as *mut u8,
+				quoting_enclave_target_info_size as usize,
+			);
+		}
+		println!("quote = {:?}", quote_vector);
 
 		enclave
 			.perform_dcap_ra(

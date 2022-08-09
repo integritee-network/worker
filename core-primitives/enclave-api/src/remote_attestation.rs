@@ -24,6 +24,7 @@ use itp_settings::worker::EXTRINSIC_MAX_SIZE;
 use itp_types::ShardIdentifier;
 use log::*;
 use sgx_types::*;
+use std::{convert::TryInto, time::SystemTime};
 
 /// general remote attestation methods
 pub trait RemoteAttestation {
@@ -161,7 +162,7 @@ impl RemoteAttestation for Enclave {
 				unchecked_extrinsic.as_mut_ptr(),
 				unchecked_extrinsic.len() as u32,
 				quoting_enclave_target_info,
-				quote_size,
+				&quote_size,
 			)
 		};
 
@@ -274,6 +275,7 @@ impl RemoteAttestationCallBacks for Enclave {
 	fn get_dcap_quote(&self, report: sgx_report_t, quote_size: u32) -> EnclaveResult<Vec<u8>> {
 		let mut quote_vec: Vec<u8> = vec![0; quote_size as usize];
 
+		debug!("Entering sgx_qe_get_quote");
 		let qe3_ret = unsafe { sgx_qe_get_quote(&report, quote_size, quote_vec.as_mut_ptr() as _) };
 
 		ensure!(qe3_ret == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(qe3_ret));
@@ -289,7 +291,7 @@ impl RemoteAttestationCallBacks for Enclave {
 		qve_report_info: sgx_ql_qe_report_info_t,
 		supplemental_data_size: u32,
 	) -> EnclaveResult<(u32, sgx_ql_qv_result_t, sgx_ql_qe_report_info_t, Vec<u8>)> {
-		let (p_quote, quote_size) = utils::vec_to_c_pointer_with_len(quote);
+		let (p_quote, quote_size) = utils::vec_to_c_pointer_with_len(quote.clone());
 		let mut collateral_expiration_status = 1u32;
 		let mut quote_verification_result = sgx_ql_qv_result_t::SGX_QL_QV_RESULT_UNSPECIFIED;
 		let mut supplemental_data: Vec<u8> = vec![0; supplemental_data_size as usize];
@@ -332,11 +334,31 @@ impl RemoteAttestationCallBacks for Enclave {
 		// if '&qve_report_info' is NOT NULL, this API will call Intel QvE to verify quote
 		// if '&qve_report_info' is NULL, this API will call 'untrusted quote verify lib' to verify quote,
 		// this mode doesn't rely on SGX capable system, but the results can not be cryptographically authenticated
+
+		// set current time. This is only for sample purposes, in production mode a trusted time should be used.
+		let current_time: i64 = SystemTime::now()
+			.duration_since(SystemTime::UNIX_EPOCH)
+			.unwrap()
+			.as_secs()
+			.try_into()
+			.unwrap();
+
+		println!("quote: {:?}", quote);
+		println!("quote_size: {:?}", quote_size);
+		println!("current_time: {:?}", current_time);
+		println!("supplemental_data_size: {:?}", supplemental_data_size);
+
+		let p_quote3: *const sgx_quote3_t = quote.as_ptr() as *const sgx_quote3_t;
+		let quote3: sgx_quote3_t = unsafe { *p_quote3 };
+		let quote_type = quote3.header.att_key_data_0;
+		println!("quote_type: {:?}", quote_type);
+
 		let dcap_ret = unsafe {
 			sgx_qv_verify_quote(
 				p_quote,
 				quote_size,
-				quote_collateral as *const sgx_ql_qve_collateral_t,
+				//quote_collateral as *const sgx_ql_qve_collateral_t,
+				std::ptr::null(),
 				current_time,
 				&mut collateral_expiration_status as *mut u32,
 				&mut quote_verification_result as *mut sgx_ql_qv_result_t,

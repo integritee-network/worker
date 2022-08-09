@@ -129,7 +129,7 @@ extern "C" {
 		unchecked_extrinsic: *mut u8,
 		unchecked_extrinsic_size: u32,
 		quoting_enclave_target_info: &sgx_target_info_t,
-		quote_size: u32,
+		quote_size: *const u32,
 	) -> sgx_status_t;
 
 	pub fn dump_ra_to_disk(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;

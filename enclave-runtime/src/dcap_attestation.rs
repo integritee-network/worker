@@ -77,7 +77,6 @@ pub fn ecdsa_quote_verification<A: EnclaveAttestationOCallApi>(
 		.try_into()
 		.unwrap();
 
-	let mut qve_report_info_input: sgx_ql_qe_report_info_t = unsafe { std::mem::zeroed() };
 	// FIXME: make nonce truly random
 	let rand_nonce = "59jslk201fgjmm;\0";
 	// set nonce
@@ -91,12 +90,143 @@ pub fn ecdsa_quote_verification<A: EnclaveAttestationOCallApi>(
 		qve_report_info_return_value,
 		supplemental_data,
 	) = ocall_api.get_qve_report_on_quote(
-		quote,
+		quote.clone(),
 		current_time,
 		quote_collateral,
 		qve_report_info,
 		supplemental_data_size,
 	)?;
+
+	// Verify qve report.
+
+	// Threshold of QvE ISV SVN. The ISV SVN of QvE used to verify quote must be greater or equal to this threshold
+	// e.g. You can check latest QvE ISVSVN from QvE configuration file on Github
+	// https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/master/QuoteVerification/QvE/Enclave/linux/config.xml#L4
+	// or you can get latest QvE ISVSVN in QvE Identity JSON file from
+	// https://api.trustedservices.intel.com/sgx/certification/v3/qve/identity
+	// Make sure you are using trusted & latest QvE ISV SVN as threshold
+	// Warning: The function may return erroneous result if QvE ISV SVN has been modified maliciously.
+	let qve_isvsvn_threshold: sgx_isv_svn_t = 6;
+
+	let ret_val = unsafe {
+		sgx_tvl_verify_qve_report_and_identity(
+			quote.as_ptr(),
+			quote.len() as u32,
+			&qve_report_info_return_value as *const sgx_ql_qe_report_info_t,
+			current_time,
+			collateral_expiration_status,
+			quote_verification_result,
+			supplemental_data.as_ptr(),
+			supplemental_data_size,
+			qve_isvsvn_threshold,
+		)
+	};
+	error!("Final check: {:?}", ret_val);
+	// 	let mut sha_handle: sgx_sha_state_handle_t = unsafe { std::mem::zeroed() };
+	// 	let mut report_data: sgx_report_data_t = 0;
+	//
+	// 	// Sanity checks.
+	// 	if std::mem::size_of(qve_report_info_return_value) == 0
+	// 		|| std::mem::size_of(qve_report_info_return_value)
+	// 			!= std::mem::size_of(sgx_ql_qe_report_info_t)
+	// 		|| !sgx_is_within_enclave(quote.as_ptr(), quote.len())
+	// 		|| !sgx_is_within_enclave(
+	// 			qve_report_info_return_value,
+	// 			std::mem::size_of(sgx_ql_qe_report_info_t),
+	// 		) || (supplemental_data.len() == 0 && supplemental_data_size != 0)
+	// 		|| (supplemental_data.len() != 0 && supplemental_data_size == 0)
+	// 	{
+	// 		error!("    [Enclave] Invalid quote verification return values.");
+	// 		return Err(sgx_status_t::SGX_INVALID_PARAMETER)
+	// 	}
+	//
+	// 	if (supplemental_data.len() && supplemental_data_size > 0) {
+	// 		if (!sgx_is_within_enclave(supplemental_data.as_ptr(), supplemental_data_size)) {
+	// 			error!("    [Enclave] Invalid quote verification return values.");
+	// 			return Err(sgx_status_t::SGX_INVALID_PARAMETER)
+	// 		}
+	// 	}
+	// 	let qve_report = qve_report_info_return_value.qe_report;
+	//
+	// 	// Verify QvE report.
+	// 	sgx_ret = sgx_verify_report(p_qve_report as *const sgx_report_t);
+	// 	if (sgx_ret != SGX_SUCCESS) {
+	// 		error!("    [Enclave] QvE report verification failed. {:?}", sgx_ret);
+	// 		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+	// 	}
+	//
+	// 	//Verify QvE report data
+	// 	//report_data = SHA256([nonce || quote || expiration_check_date || expiration_status || verification_result || supplemental_data]) || 32 - 0x00
+	// 	sgx_ret = sgx_sha256_init(&sha_handle as *mut sgx_sha_state_handle_t);
+	// 	if (sgx_ret != SGX_SUCCESS) {
+	// 		error!("    [Enclave] Sha handle initiation failed. {:?}", sgx_ret);
+	// 		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+	// 	}
+	// 	//nonce
+	// 	let qve_nonce = qve_report_info_return_value.nonce;
+	// 	sgx_ret = sgx_sha256_update(qve_nonce as const* u8, std::mem::size_of(qve_nonce), sha_handle);
+	// 	if (sgx_ret != SGX_SUCCESS) {
+	// 		error!("    [Enclave] Sha handle initiation failed. {:?}", sgx_ret);
+	// 		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+	// 	}
+	// 	//quote
+	// 	sgx_ret = sgx_sha256_update(quote.as_ptr(), quote_size, sha_handle);
+	// 	if (sgx_ret != SGX_SUCCESS) {
+	// 		error!("    [Enclave] Sha handle initiation failed. {:?}", sgx_ret);
+	// 		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+	// 	}
+	// 	//expiration_check_date
+	// 	sgx_ret = sgx_sha256_update(&expiration_check_date, std::mem::size_of(expiration_check_date), sha_handle);
+	// 	if (sgx_ret != SGX_SUCCESS) {
+	// 		error!("    [Enclave] Sha handle initiation failed. {:?}", sgx_ret);
+	// 		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+	// 	}
+	// 	sgx_ret = sgx_sha256_update(collateral_expiration_status, std::mem::size_of(collateral_expiration_status), sha_handle);
+	// 	if (sgx_ret != SGX_SUCCESS) {
+	// 		error!("    [Enclave] Sha handle initiation failed. {:?}", sgx_ret);
+	// 		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+	// 	}
+	// 	sgx_ret = sgx_sha256_update(quote_verification_result, std::mem::size_of(quote_verification_result), sha_handle);
+	// 	if (sgx_ret != SGX_SUCCESS) {
+	// 		error!("    [Enclave] Sha handle initiation failed. {:?}", sgx_ret);
+	// 		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+	// 	}
+	// 	if supplemental_data.len() != 0 {
+	// 		sgx_ret = sgx_sha256_update(supplemental_data.as_ptr(), supplemental_data_size, sha_handle);
+	// 		if (sgx_ret != SGX_SUCCESS) {
+	// 			error!("    [Enclave] Sha handle initiation failed. {:?}", sgx_ret);
+	// 			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+	// 		}
+	// 	}
+	//
+	// 	//get the hashed report_data
+	// 	sgx_ret = sgx_sha256_get_hash(sha_handle, mut report_data);
+	//
+	// 	if memcmp(qve_report.body.report_data, &report_data, std::mem::size_of(report_data)) != 0 {
+	// 		if (sgx_ret != SGX_SUCCESS) {
+	// 			error!("    [Enclave] Sha handle initiation failed. {:?}", sgx_ret);
+	// 			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+	// 		}
+	// 	}
+	//
+	// 	//Hardcode Intel signed QvE Identity below
+	// 	//You can get such info from QvE Identity JSON file
+	// 	//e.g. Get the QvE Identity JSON file from
+	// 	//https://api.trustedservices.intel.com/sgx/certification/v3/qve/identity
+	// 	const QVE_MISC_SELECT: &str = "00000000";
+	// 	const QVE_MISC_SELECT_MASK: &str = "FFFFFFFF";
+	//
+	// 	const QVE_ATTRIBUTE: &str = "01000000000000000000000000000000";
+	// 	const QVE_ATTRIBUTE_MASK: &str = "FBFFFFFFFFFFFFFF0000000000000000";
+	//
+	// 	//MRSIGNER of Intel signed QvE
+	// 	const std::string QVE_MRSIGNER = "8C4F5775D796503E96137F77C68A829A0056AC8DED70140B081B094490C57BFF";
+	//
+	// 	const sgx_prod_id_t QVE_PRODID = 2;
+	//
+	// 	//Defense in depth, QvE ISV SVN in report must be greater or equal to hardcode QvE ISV SVN
+	// 	const sgx_isv_svn_t LEAST_QVE_ISVSVN = 6;
+
 	Ok(vec![])
 }
 
@@ -149,7 +279,12 @@ pub fn create_qe_dcap_quote<A: EnclaveAttestationOCallApi>(
 	//         }
 	//     }
 	//  }
+	debug!("Entering ocall_api.get_dcap_quote with quote size: {:?} ", quote_size);
 	let quote_vec = ocall_api.get_dcap_quote(app_report, quote_size)?;
+	if quote_vec.len() == 0 {
+		error!("    [Enclave] DCAP quote size is zero, can not continue");
+		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+	}
 	let p_quote3: *const sgx_quote3_t = quote_vec.as_ptr() as *const sgx_quote3_t;
 	let quote3: sgx_quote3_t = unsafe { *p_quote3 };
 
@@ -254,10 +389,10 @@ pub unsafe extern "C" fn perform_dcap_ra(
 	unchecked_extrinsic: *mut u8,
 	unchecked_extrinsic_size: u32,
 	quoting_enclave_target_info: &sgx_target_info_t,
-	quote_size: u32,
+	quote_size: *const u32,
 ) -> sgx_status_t {
 	let (_key_der, cert_der) =
-		match generate_dcap_ecc_cert(quoting_enclave_target_info, quote_size, &OcallApi, false) {
+		match generate_dcap_ecc_cert(quoting_enclave_target_info, *quote_size, &OcallApi, false) {
 			Ok(r) => r,
 			Err(e) => return e.into(),
 		};

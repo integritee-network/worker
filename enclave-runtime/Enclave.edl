@@ -28,11 +28,14 @@ enclave {
 	from "sgx_thread.edl" import *;
 	from "sgx_pipe.edl" import *;
 	from "sgx_file.edl" import *;
+	from "sgx_dcap_tvl.edl" import *;
 
 	include "sgx_quote.h"
 	include "sgx_report.h"
 	include "sgx_ql_quote.h"
 	include "sgx_qve_header.h"
+
+
 
 	trusted {
 		/* define ECALLs here. */
