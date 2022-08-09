@@ -21,6 +21,9 @@ itp-storage = { default-features = false, path = "../../core-primitives/storage"
 its-state = { default-features = false, optional = true, path = "../../sidechain/state" }
 sp-io = { optional = true, default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], path = "../../core-primitives/substrate-sgx/sp-io" }
 
+# use case specific
+pallet-rps = { package = "pallet-jton_rps", default-features = false, git = "https://github.com/integritee-network/pallet-jton-rps.git", branch = "integritee-demo" }
+
 # Substrate dependencies
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
 balances = { package = "pallet-balances", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }

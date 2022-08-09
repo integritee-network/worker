@@ -142,6 +142,9 @@ jobs:
           - test: Benchmark
             mode: sidechain
             demo_name: sidechain-benchmark
+          - test: RPS
+            mode: sidechain
+            demo_name: demo-rps
 
     steps:
       - uses: actions/checkout@v3

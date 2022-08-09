@@ -21,7 +21,7 @@ use crate::test_genesis::test_genesis_setup;
 use crate::{
 	helpers::{
 		account_data, account_nonce, enclave_signer_account, ensure_enclave_signer_account,
-		ensure_root, get_account_info, increment_nonce, root, validate_nonce,
+		ensure_root, get_account_info, get_game_for, increment_nonce, root, validate_nonce,
 	},
 	AccountData, AccountId, Getter, Index, ParentchainHeader, PublicGetter, ShardIdentifier, State,
 	StateTypeDiff, Stf, StfError, StfResult, TrustedCall, TrustedCallSigned, TrustedGetter,
@@ -115,6 +115,12 @@ impl Stf {
 					} else {
 						None
 					},
+				TrustedGetter::game(who) =>
+					if let Some(game) = get_game_for(who) {
+						Some(game.encode())
+					} else {
+						None
+					},
 			},
 			Getter::public(g) => match g {
 				PublicGetter::some_value => Some(42u32.encode()),
@@ -198,6 +204,37 @@ impl Stf {
 					ensure_enclave_signer_account(&enclave_account)?;
 					debug!("balance_shield({}, {})", account_id_to_string(&who), value);
 					Self::shield_funds(who, value)?;
+					Ok(())
+				},
+				TrustedCall::rps_new_game(sender, opponent) => {
+					let origin = ita_sgx_runtime::Origin::signed(sender.clone());
+					info!("rps new_game");
+					ita_sgx_runtime::RpsCall::<Runtime>::new_game { opponent }
+						.dispatch_bypass_filter(origin)
+						.map_err(|_| StfError::Dispatch("rps_new_game".to_string()))?;
+					Ok(())
+				},
+				TrustedCall::rps_choose(sender, weapon) => {
+					let origin = ita_sgx_runtime::Origin::signed(sender.clone());
+					info!("rps choose: {:?}", weapon);
+					ita_sgx_runtime::RpsCall::<Runtime>::choose {
+						choice: weapon.clone(),
+						salt: [0u8; 32],
+					}
+					.dispatch_bypass_filter(origin.clone())
+					.map_err(|e| {
+						error!("dispatch error {:?}", e);
+						StfError::Dispatch("rps_choose".to_string())
+					})?;
+					Ok(())
+				},
+				TrustedCall::rps_reveal(sender, weapon) => {
+					let origin = ita_sgx_runtime::Origin::signed(sender.clone());
+					info!("rps reveal");
+					ita_sgx_runtime::RpsCall::<Runtime>::reveal { choice: weapon, salt: [0u8; 32] }
+						.dispatch_bypass_filter(origin)
+						.map_err(|_| StfError::Dispatch("rps_reveal".to_string()))?;
+					get_game_for(sender);
 					Ok(())
 				},
 			}?;
@@ -304,6 +341,9 @@ impl Stf {
 			TrustedCall::balance_transfer(_, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_unshield(_, _, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_shield(_, _, _) => debug!("No storage updates needed..."),
+			TrustedCall::rps_new_game(_, _) => debug!("No storage updates needed..."),
+			TrustedCall::rps_choose(_, _) => debug!("No storage updates needed..."),
+			TrustedCall::rps_reveal(_, _) => debug!("No storage updates needed..."),
 		};
 		key_hashes
 	}

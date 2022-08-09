@@ -17,6 +17,7 @@
 
 use crate::{
 	command_utils::get_worker_api_direct,
+	rps_commands::{new_rps_game, rps_choose, rps_get_game, rps_reveal},
 	trusted_command_utils::{
 		get_accountid_from_str, get_identifiers, get_keystore_path, get_pair_from_str,
 	},
@@ -45,13 +46,14 @@ use std::{
 };
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
 
+#[macro_export]
 macro_rules! get_layer_two_nonce {
 	($signer_pair:ident, $cli: ident, $trusted_args:ident ) => {{
 		let top: TrustedOperation =
 			TrustedGetter::nonce(sr25519_core::Public::from($signer_pair.public()).into())
 				.sign(&KeyPair::Sr25519($signer_pair.clone()))
 				.into();
-		let res = perform_operation($cli, $trusted_args, &top);
+		let res = perform_trusted_operation($cli, $trusted_args, &top);
 		let nonce: Index = if let Some(n) = res {
 			if let Ok(nonce) = Index::decode(&mut n.as_slice()) {
 				nonce
@@ -82,7 +84,7 @@ pub struct TrustedArgs {
 
 	/// insert if direct invocation call is desired
 	#[clap(short, long)]
-	direct: bool,
+	pub(crate) direct: bool,
 
 	#[clap(subcommand)]
 	command: TrustedCommands,
@@ -133,6 +135,39 @@ pub enum TrustedCommands {
 
 		/// amount to be transferred
 		amount: Balance,
+	},
+
+	/// New game, create new RPS game
+	NewGame {
+		/// Creator's AccountId in ss58check format
+		creator: String,
+
+		/// Opponent's AccountId in ss58check format
+		opponent: String,
+	},
+
+	/// Choose RPS weapon
+	Choose {
+		/// Player's AccountId in ss58check format
+		player: String,
+
+		/// Weapon choice. One of 'Rock', 'Paper' or 'Scissors'
+		weapon: String,
+	},
+
+	/// RPS reveal
+	Reveal {
+		/// Player's AccountId in ss58check format
+		player: String,
+
+		/// Weapon choice. One of 'Rock', 'Paper' or 'Scissors'
+		weapon: String,
+	},
+
+	/// Get Game - query game state for account in keystore
+	GetGame {
+		/// Player's AccountId in ss58check format
+		player: String,
 	},
 
 	/// Run Benchmark
@@ -190,6 +225,14 @@ pub fn match_trusted_commands(cli: &Cli, trusted_args: &TrustedArgs) {
 			*wait_for_confirmation,
 			funding_account,
 		),
+
+		// RPS Specific commands
+		// ------------------------------
+		TrustedCommands::NewGame { creator, opponent } =>
+			new_rps_game(cli, trusted_args, creator, opponent),
+		TrustedCommands::Choose { player, weapon } => rps_choose(cli, trusted_args, player, weapon),
+		TrustedCommands::Reveal { player, weapon } => rps_reveal(cli, trusted_args, player, weapon),
+		TrustedCommands::GetGame { player } => rps_get_game(cli, trusted_args, player),
 	}
 }
 

@@ -23,6 +23,16 @@ Starts all services (node and workers), using the `integritee-worker:dev` images
 
 ## Run the demos
 
+### Demo RPS (Rock-Paper-Scissors Game)
+Build
+```
+COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose -f docker-compose.yml -f demo-rps.yml build --build-arg WORKER_MODE_ARG=sidechain
+```
+Run
+```
+docker-compose -f docker-compose.yml -f demo-rps.yml up --exit-code-from demo-rps
+```
+
 ### Demo indirect invocation (M6)
 Build
 ```
@@ -32,6 +42,7 @@ Run
 ```
 docker compose -f docker-compose.yml -f demo-indirect-invocation.yml up demo-indirect-invocation --exit-code-from demo-indirect-invocation
 ```
+
 ### Demo direct call (M8)
 
 Build
