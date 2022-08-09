@@ -330,12 +330,17 @@ impl RemoteAttestationCallBacks for Enclave {
 		// if '&qve_report_info' is NOT NULL, this API will call Intel QvE to verify quote
 		// if '&qve_report_info' is NULL, this API will call 'untrusted quote verify lib' to verify quote,
 		// this mode doesn't rely on SGX capable system, but the results can not be cryptographically authenticated
+		let p_quote_collateral: *const sgx_ql_qve_collateral_t = if quote_collateral.version == 0 {
+			std::ptr::null()
+		} else {
+			quote_collateral as *const sgx_ql_qve_collateral_t
+		};
 
 		let dcap_ret = unsafe {
 			sgx_qv_verify_quote(
 				quote.as_ptr(),
 				quote.len() as u32,
-				std::ptr::null(),
+				p_quote_collateral,
 				current_time,
 				&mut collateral_expiration_status as *mut u32,
 				&mut quote_verification_result as *mut sgx_ql_qv_result_t,
