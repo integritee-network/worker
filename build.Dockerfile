@@ -31,30 +31,13 @@ ENV SGX_MODE SW
 ARG WORKER_MODE_ARG
 ENV WORKER_MODE=$WORKER_MODE_ARG
 
-COPY . /root/work/worker/
 WORKDIR /root/work/worker
+COPY . .
 
-#RUN --mount=type=cache,target=/usr/local/cargo/registry \
-#	--mount=type=cache,target=/root/work/worker/target \
-#	make
 RUN make
 
-### Enclave Test Stage
-##################################################
-FROM builder AS enclave-test
+RUN cargo test --release
 
-WORKDIR /root/work/worker/bin
-
-CMD ./integritee-service test --all
-
-
-### Cargo Test Stage
-##################################################
-FROM builder AS cargo-test
-
-WORKDIR /root/work/worker
-
-CMD cargo test --release
 
 ### Base Runner Stage
 ##################################################

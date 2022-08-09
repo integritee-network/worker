@@ -84,6 +84,7 @@ impl WsClient {
 		result: &MpscSender<String>,
 		control: Arc<WsClientControl>,
 	) -> Result<()> {
+		debug!("Connecting web-socket connection with watch");
 		connect(url.to_string(), |out| {
 			control.subscribe_sender(out.clone()).expect("Failed sender subscription");
 			WsClient::new(out, request.to_string(), result.clone(), true)
@@ -92,7 +93,9 @@ impl WsClient {
 
 	/// Connects a web-socket client for a one-shot request.
 	pub fn connect_one_shot(url: &str, request: &str, result: MpscSender<String>) -> Result<()> {
+		debug!("Connecting one-shot web-socket connection");
 		connect(url.to_string(), |out| {
+			debug!("Create new web-socket client");
 			WsClient::new(out, request.to_string(), result.clone(), false)
 		})
 	}

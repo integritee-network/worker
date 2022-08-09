@@ -6,8 +6,8 @@ services:
     networks:
       - integritee-test-network
     command: --dev --rpc-methods unsafe --ws-external --rpc-external --ws-port 9912
-    logging:
-      driver: none
+    #logging:
+      #driver: local
   integritee-worker-1:
     image: integritee-worker:dev
     container_name: integritee-worker-1

@@ -68,6 +68,7 @@ impl DirectApi for DirectClient {
 
 		info!("[WorkerApi Direct]: (get) Sending request: {:?}", request);
 		WsClient::connect_one_shot(&self.url, request, port_in)?;
+		debug!("Waiting for web-socket result..");
 		port_out.recv().map_err(Error::MspcReceiver)
 	}
 
