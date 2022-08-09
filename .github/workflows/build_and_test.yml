@@ -11,10 +11,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  WORKER_BIN: integritee-service
-  CLIENT_BIN: integritee-cli
-  ENCLAVE_BIN: enclave.signed.so
-  LOG_DIR: log
+  LOG_DIR: logs
   BUILD_CONTAINER_NAME: integritee_worker_enclave_test
 
 jobs:
@@ -178,18 +175,14 @@ jobs:
         with:
           #images: '${{ env.WORKER_IMAGE_TAG }},${{ env.CLIENT_IMAGE_TAG }}'
           tail: all
-          dest: './logs'
-
-      - name: Tar logs
-        if: always()
-        run: tar cvzf ./logs-${{ matrix.test }}-${{ matrix.mode }}.tgz ./logs
+          dest: ./${{ env.LOG_DIR }}
 
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: logs-${{ matrix.test }}-${{ matrix.mode }}.tgz
-          path: ./logs-${{ matrix.test }}-${{ matrix.mode }}.tgz
+          name: logs-${{ matrix.test }}-${{ matrix.mode }}
+          path: ./${{ env.LOG_DIR }}
 
   release:
     name: Draft Release
