@@ -134,7 +134,6 @@ pub fn ecdsa_quote_verification<A: EnclaveAttestationOCallApi>(
 	Ok(vec![])
 }
 
-#[allow(const_err)]
 pub fn retrieve_qe_dcap_quote<A: EnclaveAttestationOCallApi>(
 	pub_k: &[u8; 32],
 	ocall_api: &A,
@@ -189,18 +188,16 @@ pub fn generate_dcap_ecc_cert<A: EnclaveAttestationOCallApi>(
 	skip_ra: bool,
 ) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
 	let chain_signer = Ed25519Seal::unseal_from_static_file()?;
-	info!("[Enclave Attestation] Ed25519 pub raw : {:?}", chain_signer.public().0);
+	info!("[Enclave Attestation] Ed25519 signer pub key: {:?}", chain_signer.public().0);
 
-	info!("[Enclave] Generate keypair");
 	let ecc_handle = SgxEccHandle::new();
 	let _result = ecc_handle.open();
 	let (prv_k, pub_k) = ecc_handle.create_key_pair()?;
-	info!("Enclave] Generate ephemeral ECDSA keypair successful");
+	info!("Enclave Attestation] Generated ephemeral ECDSA keypair:");
 	debug!(" pubkey X is {:02x}", pub_k.gx.iter().format(""));
 	debug!(" pubkey Y is {:02x}", pub_k.gy.iter().format(""));
 
 	let qe_quote = if !skip_ra {
-		info!("    [Enclave] Create attestation report");
 		let qe_quote = match retrieve_qe_dcap_quote(
 			&chain_signer.public().0,
 			ocall_api,
@@ -243,8 +240,6 @@ fn compose_remote_attestation_extrinsic(
 	cert_der: &[u8],
 ) -> EnclaveResult<Vec<u8>> {
 	let signer = Ed25519Seal::unseal_from_static_file()?;
-	info!("Restored ECC signer pubkey: {:?}", signer.public());
-
 	let node_metadata_repository = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
 
 	let (register_enclave_call, runtime_spec_version, runtime_transaction_version) =
