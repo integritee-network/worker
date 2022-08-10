@@ -450,16 +450,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	initialization_handler.registered_on_parentchain();
 
-	#[cfg(feature = "teeracle")]
-	if WorkerModeProvider::worker_mode() == WorkerMode::Teeracle {
-		start_interval_market_update(
-			&node_api.clone(),
-			run_config.teeracle_update_interval,
-			enclave.clone().as_ref(),
-			&teeracle_tokio_handle,
-		);
-	}
-
 	let last_synced_header = init_light_client(&node_api, enclave.clone()).unwrap();
 	println!("*** [+] Finished syncing light client, syncing parentchain...");
 
@@ -478,6 +468,18 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			parentchain_block_syncer,
 			sidechain_storage,
 			&last_synced_header,
+		);
+	}
+
+	// ------------------------------------------------------------------------
+	// initialize teeracle interval
+	#[cfg(feature = "teeracle")]
+	if WorkerModeProvider::worker_mode() == WorkerMode::Teeracle {
+		start_interval_market_update(
+			&node_api.clone(),
+			run_config.teeracle_update_interval,
+			enclave.clone().as_ref(),
+			&teeracle_tokio_handle,
 		);
 	}
 
