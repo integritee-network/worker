@@ -225,8 +225,6 @@ fn main() {
 	} else if matches.is_present("dump-ra") {
 		info!("*** Perform RA and dump cert to disk");
 		let mut quoting_enclave_target_info: sgx_target_info_t = sgx_target_info_t::default();
-		// let _l = unsafe { libloading::Library::new("./libdcap_quoteprov.so.1").unwrap() };
-		// Try to load PCE and QE3 from Ubuntu-like OS system path
 		if sgx_quote3_error_t::SGX_QL_SUCCESS
 			!= unsafe {
 				let p_pointer =
@@ -506,8 +504,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		enclave.mock_register_xt(node_api.genesis_hash, nonce, &trusted_url).unwrap()
 	} else {
 		let mut quoting_enclave_target_info: sgx_target_info_t = sgx_target_info_t::default();
-		// let _l = unsafe { libloading::Library::new("./libdcap_quoteprov.so.1").unwrap() };
-		// Try to load PCE and QE3 from Ubuntu-like OS system path
 		if sgx_quote3_error_t::SGX_QL_SUCCESS
 			!= unsafe {
 				let p_pointer =

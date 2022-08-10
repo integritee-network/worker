@@ -2460,7 +2460,6 @@ dependencies = [
  "its-storage",
  "jsonrpsee",
  "lazy_static",
- "libloading",
  "log 0.4.17",
  "mockall",
  "pallet-balances",
