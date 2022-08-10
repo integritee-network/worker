@@ -25,6 +25,14 @@ use itp_types::ShardIdentifier;
 use log::*;
 use sgx_types::*;
 
+const OS_SYSTEM_PATH: &str = "/usr/lib/x86_64-linux-gnu/";
+const C_STRING_ENDING: &str = "\0";
+const PCE_ENCLAVE: &str = "libsgx_pce.signed.so.1";
+const QE3_ENCLAVE: &str = "libsgx_qe3.signed.so.1";
+const ID_ENCLAVE: &str = "libsgx_id_enclave.signed.so.1";
+const LIBDCAP_QUOTEPROV: &str = "libdcap_quoteprov.so.1";
+const QVE_ENCLAVE: &str = "libsgx_qve.signed.so.1";
+
 /// general remote attestation methods
 pub trait RemoteAttestation {
 	fn perform_ra(
@@ -39,17 +47,17 @@ pub trait RemoteAttestation {
 		genesis_hash: Vec<u8>,
 		nonce: u32,
 		w_url: Vec<u8>,
-		quoting_enclave_target_info: &sgx_target_info_t,
-		quote_size: u32,
 	) -> EnclaveResult<Vec<u8>>;
 
 	fn dump_ra_to_disk(&self) -> EnclaveResult<()>;
 
-	fn dump_dcap_ra_to_disk(
-		&self,
-		quoting_enclave_target_info: &sgx_target_info_t,
-		quote_size: u32,
-	) -> EnclaveResult<()>;
+	fn dump_dcap_ra_to_disk(&self) -> EnclaveResult<()>;
+
+	fn set_ql_qe_enclave_paths(&self) -> EnclaveResult<()>;
+
+	fn qe_get_target_info(&self) -> EnclaveResult<sgx_target_info_t>;
+
+	fn qe_get_quote_size(&self) -> EnclaveResult<u32>;
 }
 
 /// call-backs that are made from inside the enclave (using o-call), to e-calls again inside the enclave
@@ -141,10 +149,13 @@ impl RemoteAttestation for Enclave {
 		genesis_hash: Vec<u8>,
 		nonce: u32,
 		w_url: Vec<u8>,
-		quoting_enclave_target_info: &sgx_target_info_t,
-		quote_size: u32,
 	) -> EnclaveResult<Vec<u8>> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
+
+		self.set_ql_qe_enclave_paths()?;
+		let quoting_enclave_target_info = self.qe_get_target_info()?;
+		let quote_size = self.qe_get_quote_size()?;
+		info!("Retrieved quote size of {:?}", quote_size);
 
 		let unchecked_extrinsic_size = EXTRINSIC_MAX_SIZE;
 		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
@@ -160,7 +171,7 @@ impl RemoteAttestation for Enclave {
 				w_url.len() as u32,
 				unchecked_extrinsic.as_mut_ptr(),
 				unchecked_extrinsic.len() as u32,
-				quoting_enclave_target_info,
+				&quoting_enclave_target_info,
 				&quote_size,
 			)
 		};
@@ -182,18 +193,18 @@ impl RemoteAttestation for Enclave {
 		Ok(())
 	}
 
-	fn dump_dcap_ra_to_disk(
-		&self,
-		quoting_enclave_target_info: &sgx_target_info_t,
-		quote_size: u32,
-	) -> EnclaveResult<()> {
+	fn dump_dcap_ra_to_disk(&self) -> EnclaveResult<()> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
+
+		self.set_ql_qe_enclave_paths()?;
+		let quoting_enclave_target_info = self.qe_get_target_info()?;
+		let quote_size = self.qe_get_quote_size()?;
 
 		let result = unsafe {
 			ffi::dump_dcap_ra_to_disk(
 				self.eid,
 				&mut retval,
-				quoting_enclave_target_info,
+				&quoting_enclave_target_info,
 				&quote_size,
 			)
 		};
@@ -202,6 +213,80 @@ impl RemoteAttestation for Enclave {
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
 
 		Ok(())
+	}
+
+	fn set_ql_qe_enclave_paths(&self) -> EnclaveResult<()> {
+		let ret_val = unsafe {
+			sgx_ql_set_path(
+				sgx_ql_path_type_t::SGX_QL_PCE_PATH,
+				create_system_path(PCE_ENCLAVE).as_ptr() as _,
+			)
+		};
+		if ret_val != sgx_quote3_error_t::SGX_QL_SUCCESS {
+			error!("Could not set SGX_QL_PCE_PATH");
+			return Err(Error::SgxQuote(ret_val))
+		}
+
+		let ret_val = unsafe {
+			sgx_ql_set_path(
+				sgx_ql_path_type_t::SGX_QL_QE3_PATH,
+				create_system_path(QE3_ENCLAVE).as_ptr() as _,
+			)
+		};
+		if ret_val != sgx_quote3_error_t::SGX_QL_SUCCESS {
+			error!("Could not set SGX_QL_QE3_PATH");
+			return Err(Error::SgxQuote(ret_val))
+		}
+
+		let ret_val = unsafe {
+			sgx_ql_set_path(
+				sgx_ql_path_type_t::SGX_QL_IDE_PATH,
+				create_system_path(ID_ENCLAVE).as_ptr() as _,
+			)
+		};
+		if ret_val != sgx_quote3_error_t::SGX_QL_SUCCESS {
+			error!("Could not set SGX_QL_IDE_PATH");
+			return Err(Error::SgxQuote(ret_val))
+		}
+
+		let ret_val = unsafe {
+			sgx_ql_set_path(
+				sgx_ql_path_type_t::SGX_QL_QPL_PATH,
+				create_system_path(LIBDCAP_QUOTEPROV).as_ptr() as _,
+			)
+		};
+		if ret_val != sgx_quote3_error_t::SGX_QL_SUCCESS {
+			// Ignore the error, because user may want to get cert type=3 quote
+			warn!("Cannot set QPL directory, you may get ECDSA quote with `Encrypted PPID` cert type.\n");
+		}
+
+		let ret_val = unsafe {
+			sgx_qv_set_path(
+				sgx_qv_path_type_t::SGX_QV_QVE_PATH,
+				create_system_path(QVE_ENCLAVE).as_ptr() as _,
+			)
+		};
+		if ret_val != sgx_quote3_error_t::SGX_QL_SUCCESS {
+			error!("Could not set SGX_QV_QVE_PATH");
+			return Err(Error::SgxQuote(ret_val))
+		}
+		Ok(())
+	}
+
+	fn qe_get_target_info(&self) -> EnclaveResult<sgx_target_info_t> {
+		let mut quoting_enclave_target_info: sgx_target_info_t = sgx_target_info_t::default();
+		let qe3_ret = unsafe { sgx_qe_get_target_info(&mut quoting_enclave_target_info as *mut _) };
+		ensure!(qe3_ret == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(qe3_ret));
+
+		Ok(quoting_enclave_target_info)
+	}
+
+	fn qe_get_quote_size(&self) -> EnclaveResult<u32> {
+		let mut quote_size: u32 = 0;
+		let qe3_ret = unsafe { sgx_qe_get_quote_size(&mut quote_size as *mut _) };
+		ensure!(qe3_ret == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(qe3_ret));
+
+		Ok(quote_size)
 	}
 }
 
@@ -470,4 +555,8 @@ impl TlsRemoteAttestation for Enclave {
 
 		Ok(())
 	}
+}
+
+fn create_system_path(file_name: &str) -> String {
+	format!("{}{}{}", OS_SYSTEM_PATH, file_name, C_STRING_ENDING)
 }
