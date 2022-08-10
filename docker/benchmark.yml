@@ -1,4 +1,3 @@
-version: "3.4"
 services:
   sidechain-benchmark:
     image: integritee-cli:dev

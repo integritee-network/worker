@@ -1,4 +1,3 @@
-version: "3.4"
 services:
   demo-indirect-invocation:
     image: integritee-cli:dev
@@ -8,6 +7,8 @@ services:
       dockerfile: build.Dockerfile
       target: deployed-client
     depends_on: ['integritee-node', 'integritee-worker-1', 'integritee-worker-2']
+    environment:
+      - RUST_LOG=warn,ws=warn,itc_rpc_client=warn
     networks:
       - integritee-test-network
     entrypoint: "dockerize -wait http://integritee-worker-2:4646/is_initialized -timeout 250s    

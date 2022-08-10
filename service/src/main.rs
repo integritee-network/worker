@@ -105,7 +105,6 @@ mod utils;
 mod worker;
 mod worker_peers_updater;
 
-/// how many blocks will be synced before storing the chain db to disk
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub type EnclaveWorker =
