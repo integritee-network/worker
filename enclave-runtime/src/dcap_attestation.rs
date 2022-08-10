@@ -40,19 +40,14 @@ use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::files::RA_DUMP_CERT_DER_FILE;
 use itp_sgx_crypto::Ed25519Seal;
 use itp_sgx_io::StaticSealedIO;
+use itp_time_utils::now_as_secs;
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use sgx_tcrypto::*;
 use sgx_tse::rsgx_create_report;
 use sgx_types::*;
 use sp_core::{blake2_256, Pair};
-use std::{
-	io::{Read, Write},
-	prelude::v1::*,
-	slice, str,
-	time::SystemTime,
-	vec::Vec,
-};
+use std::{prelude::v1::*, slice, str, vec::Vec};
 use substrate_api_client::{compose_extrinsic_offline, ExtrinsicParams};
 
 pub fn ecdsa_quote_verification<A: EnclaveAttestationOCallApi>(
@@ -62,25 +57,30 @@ pub fn ecdsa_quote_verification<A: EnclaveAttestationOCallApi>(
 	let mut app_enclave_target_info: sgx_target_info_t = unsafe { std::mem::zeroed() };
 	let quote_collateral: sgx_ql_qve_collateral_t = unsafe { std::mem::zeroed() };
 	let mut qve_report_info: sgx_ql_qe_report_info_t = unsafe { std::mem::zeroed() };
-	let quote_verification_result = sgx_ql_qv_result_t::SGX_QL_QV_RESULT_UNSPECIFIED;
 	let supplemental_data_size = std::mem::size_of::<sgx_ql_qv_supplemental_t>() as u32;
 
-	// get target info of SampleISVEnclave. QvE will target the generated report to this enclave.
-	unsafe { sgx_self_target(&mut app_enclave_target_info as *mut sgx_target_info_t) };
+	// Get target info of SampleISVEnclave. QvE will target the generated report to this enclave.
+	let ret_val =
+		unsafe { sgx_self_target(&mut app_enclave_target_info as *mut sgx_target_info_t) };
+	if ret_val != sgx_status_t::SGX_SUCCESS {
+		error!("sgx_self_target returned: {:?}", ret_val);
+		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+	}
 
-	// set current time. This is only for sample purposes, in production mode a trusted time should be used.
-	//
-	let current_time: i64 = SystemTime::now()
-		.duration_since(SystemTime::UNIX_EPOCH)
-		.unwrap()
-		.as_secs()
-		.try_into()
-		.unwrap();
+	// Set current time, which is needed to check against the expiration date of the certificate.
+	let current_time: i64 = now_as_secs().try_into().unwrap_or_else(|e| {
+		panic!("Could not convert SystemTime from u64 into i64: {:?}", e);
+	});
 
-	// FIXME: make nonce truly random
-	let rand_nonce = "59jslk201fgjmm;\0";
-	// set nonce
-	qve_report_info.nonce.rand.copy_from_slice(rand_nonce.as_bytes());
+	// Set random nonce.
+	let mut rand_nonce = vec![0u8; 16];
+	let ret_val = unsafe { sgx_read_rand(rand_nonce.as_mut_ptr(), rand_nonce.len()) };
+	if ret_val != sgx_status_t::SGX_SUCCESS {
+		error!("sgx_read_rand returned: {:?}", ret_val);
+		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+	}
+	debug!("Retrieved random nonce {:?}", rand_nonce);
+	qve_report_info.nonce.rand.copy_from_slice(rand_nonce.as_slice());
 	qve_report_info.app_enclave_target_info = app_enclave_target_info;
 
 	// Ocall call Quote verification Enclave (QvE) report
@@ -127,6 +127,7 @@ pub fn ecdsa_quote_verification<A: EnclaveAttestationOCallApi>(
 		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
 	}
 
+	// TODO. What to send to our teerex pallet?
 	Ok(vec![])
 }
 
@@ -137,7 +138,7 @@ pub fn create_qe_dcap_quote<A: EnclaveAttestationOCallApi>(
 	quoting_enclave_target_info: &sgx_target_info_t,
 	quote_size: u32,
 ) -> SgxResult<Vec<u8>> {
-	// Generate app enclave report
+	// Generate app enclave report.
 	let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
 	report_data.d[..32].clone_from_slice(&pub_k[..]);
 
@@ -155,34 +156,14 @@ pub fn create_qe_dcap_quote<A: EnclaveAttestationOCallApi>(
 		},
 	};
 
-	// This quote has type `sgx_quote3_t` and is structured as:
-	// sgx_quote3_t {
-	//     header: sgx_quote_header_t,
-	//     report_body: sgx_report_body_t,
-	//     signature_data_len: uint32_t,  // 1116
-	//     signature_data {               // 1116 bytes payload
-	//         sig_data: sgx_ql_ecdsa_sig_data_t { // 576 = 64x3 +384 header
-	//             sig: [uint8_t; 64],
-	//             attest_pub_key: [uint8_t; 64],
-	//             qe3_report: sgx_report_body_t, //  384
-	//             qe3_report_sig: [uint8_t; 64],
-	//             auth_certification_data { // 2 + 32 = 34
-	//                 sgx_ql_auth_data_t: u16 // observed 32, size of following auth_data
-	//                 auth_data: [u8; sgx_ql_auth_data_t]
-	//             }
-	//             sgx_ql_certification_data_t {/ 2 + 4 + 500
-	//                 cert_key_type: uint16_t,
-	//                 size: uint32_t, // observed 500, size of following certificateion_data
-	//                 certification_data { // 500 bytes
-	//                 }
-	//             }
-	//         }
-	//     }
-	//  }
+	// Retrieve quote from pccs for our app enclave.
 	debug!("Entering ocall_api.get_dcap_quote with quote size: {:?} ", quote_size);
 	let quote_vec = ocall_api.get_dcap_quote(app_report, quote_size)?;
+	// Fore debug purposes:
 	let p_quote3: *const sgx_quote3_t = quote_vec.as_ptr() as *const sgx_quote3_t;
 	let quote3: sgx_quote3_t = unsafe { *p_quote3 };
+	info!("Got quote for our enclave: {:?}", quote3.report_body.mr_enclave.m);
+	info!("Got quote for our app_enclave: {:?}", app_report.body.mr_enclave.m);
 
 	Ok(quote_vec)
 }
