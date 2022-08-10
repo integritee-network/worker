@@ -30,7 +30,7 @@ COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f docker compose.ym
 ```
 Run 
 ```
-docker compose --profile single-worker -f docker-compose.yml -f demo-indirect-invocation.yml up --exit-code-from demo-indirect-invocation
+docker compose -f docker-compose.yml -f demo-indirect-invocation.yml up --exit-code-from demo-indirect-invocation
 ```
 ### Demo direct call (M8)
 
@@ -40,7 +40,7 @@ COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f docker-compose.ym
 ```
 Run
 ```
-docker compose --profile double-worker -f docker-compose.yml -f demo-direct-call.yml up --exit-code-from demo-direct-call
+docker compose -f docker-compose.yml -f demo-direct-call.yml up --exit-code-from demo-direct-call
 ```
 
 ### Demo sidechain
@@ -50,7 +50,7 @@ COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f docker-compose.ym
 ```
 Run
 ```
-docker compose --profile double-worker -f docker-compose.yml -f demo-sidechain.yml up --exit-code-from demo-sidechain
+docker compose -f docker-compose.yml -f demo-sidechain.yml up --exit-code-from demo-sidechain
 ```
 
 ## Run the benchmarks
@@ -60,7 +60,7 @@ COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f docker-compose.ym
 ```
 and then run with
 ```
-docker compose --profile double-worker -f docker-compose.yml -f benchmark.yml up --exit-code-from sidechain-benchmark
+docker compose -f docker-compose.yml -f benchmark.yml up --exit-code-from sidechain-benchmark
 ```
 
 ## Run the fork simulator

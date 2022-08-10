@@ -10,9 +10,6 @@ services:
   integritee-worker-1:
     image: integritee-worker:dev
     container_name: integritee-worker-1
-    profiles:
-      - single-worker
-      - double-worker
     build:
       context: ..
       dockerfile: build.Dockerfile
@@ -30,8 +27,6 @@ services:
   integritee-worker-2:
     image: integritee-worker:dev
     container_name: integritee-worker-2
-    profiles:
-      - double-worker
     build:
       context: ..
       dockerfile: build.Dockerfile
