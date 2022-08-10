@@ -23,7 +23,7 @@ use sgx_tse::rsgx_create_report;
 use sgx_types::*;
 use std::{ptr, vec::Vec};
 
-const RET_QUOTE_BUF_LEN: usize = 5000;
+const RET_QUOTE_BUF_LEN: usize = 2048;
 
 impl EnclaveAttestationOCallApi for OcallApi {
 	fn sgx_init_quote(&self) -> SgxResult<(sgx_target_info_t, sgx_epid_group_id_t)> {
