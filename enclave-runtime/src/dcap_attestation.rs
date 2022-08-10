@@ -1,30 +1,22 @@
-// Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions
-// are met:
-//
-//  * Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-//  * Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in
-//    the documentation and/or other materials provided with the
-//    distribution.
-//  * Neither the name of Baidu, Inc., nor the names of its
-//    contributors may be used to endorse or promote products derived
-//    from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+/*
+	Copyright 2022 Integritee AG and Supercomputing Systems AG
+
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+
+		http://www.apache.org/licenses/LICENSE-2.0
+
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+
+*/
+
+//! Perform DCAP remote attestation via PCCS server,
+//! including the verification of the retrieved quote.
 
 use crate::{
 	cert, io, ocall::OcallApi, utils::hash_from_slice, Error as EnclaveError,
@@ -43,6 +35,7 @@ use itp_sgx_io::StaticSealedIO;
 use itp_time_utils::now_as_secs;
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
+use primitive_types::H256;
 use sgx_tcrypto::*;
 use sgx_tse::rsgx_create_report;
 use sgx_types::*;
@@ -97,9 +90,8 @@ pub fn ecdsa_quote_verification<A: EnclaveAttestationOCallApi>(
 		supplemental_data_size,
 	)?;
 
-	// Verify qve report.
-
-	// Check nonce to protect agaisnt replay attacks
+	// Check nonce of qve report to protect against replay attacks, as the qve report
+	// is coming from the untrusted side.
 	if qve_report_info_return_value.nonce.rand != qve_report_info.nonce.rand {
 		error!(
 			"Nonce of input value and return value are not matching. Input: {:?}, Output: {:?}",
@@ -108,7 +100,7 @@ pub fn ecdsa_quote_verification<A: EnclaveAttestationOCallApi>(
 		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
 	}
 
-	// Threshold of QvE ISV SVN. The ISV SVN of QvE used to verify quote must be greater or equal to this threshold
+	// Set the threshold of QvE ISV SVN. The ISV SVN of QvE used to verify quote must be greater or equal to this threshold
 	// e.g. You can check latest QvE ISVSVN from QvE configuration file on Github
 	// https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/master/QuoteVerification/QvE/Enclave/linux/config.xml#L4
 	// or you can get latest QvE ISVSVN in QvE Identity JSON file from
@@ -117,6 +109,8 @@ pub fn ecdsa_quote_verification<A: EnclaveAttestationOCallApi>(
 	// Warning: The function may return erroneous result if QvE ISV SVN has been modified maliciously.
 	let qve_isvsvn_threshold: sgx_isv_svn_t = 6;
 
+	// Verify the qve report to validate that it is coming from a legit quoting verification enclave
+	// and has not been tampered with.
 	let ret_val = unsafe {
 		sgx_tvl_verify_qve_report_and_identity(
 			quote.as_ptr(),
@@ -148,6 +142,9 @@ pub fn retrieve_qe_dcap_quote<A: EnclaveAttestationOCallApi>(
 	quote_size: u32,
 ) -> SgxResult<Vec<u8>> {
 	// Generate app enclave report and include the enclave public key.
+	// The quote will be generated on top of this report and validate that the
+	// report as well as the public key inside it are coming from a legit
+	// intel sgx enclave.
 	let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
 	report_data.d[..32].clone_from_slice(&pub_k[..]);
 
@@ -169,7 +166,10 @@ pub fn retrieve_qe_dcap_quote<A: EnclaveAttestationOCallApi>(
 	debug!("Entering ocall_api.get_dcap_quote with quote size: {:?} ", quote_size);
 	let quote_vec = ocall_api.get_dcap_quote(app_report, quote_size)?;
 
-	// Check mrenclave of quote
+	// Check mrenclave of quote, to ensure the quote has not been tampered with
+	// while being on the untrusted side.
+	// This step is probably obsolete, as the QvE will check the quote as well on behalf
+	// of the target enclave.
 	let p_quote3: *const sgx_quote3_t = quote_vec.as_ptr() as *const sgx_quote3_t;
 	let quote3: sgx_quote3_t = unsafe { *p_quote3 };
 	if quote3.report_body.mr_enclave.m != app_report.body.mr_enclave.m {
@@ -191,13 +191,13 @@ pub fn generate_dcap_ecc_cert<A: EnclaveAttestationOCallApi>(
 	let chain_signer = Ed25519Seal::unseal_from_static_file()?;
 	info!("[Enclave Attestation] Ed25519 pub raw : {:?}", chain_signer.public().0);
 
-	info!("    [Enclave] Generate keypair");
+	info!("[Enclave] Generate keypair");
 	let ecc_handle = SgxEccHandle::new();
 	let _result = ecc_handle.open();
 	let (prv_k, pub_k) = ecc_handle.create_key_pair()?;
-	info!("    [Enclave] Generate ephemeral ECDSA keypair successful");
-	debug!("     pubkey X is {:02x}", pub_k.gx.iter().format(""));
-	debug!("     pubkey Y is {:02x}", pub_k.gy.iter().format(""));
+	info!("Enclave] Generate ephemeral ECDSA keypair successful");
+	debug!(" pubkey X is {:02x}", pub_k.gx.iter().format(""));
+	debug!(" pubkey Y is {:02x}", pub_k.gy.iter().format(""));
 
 	let qe_quote = if !skip_ra {
 		info!("    [Enclave] Create attestation report");
@@ -209,7 +209,7 @@ pub fn generate_dcap_ecc_cert<A: EnclaveAttestationOCallApi>(
 		) {
 			Ok(quote) => quote,
 			Err(e) => {
-				error!("    [Enclave] Error in create_dcap_attestation_report: {:?}", e);
+				error!("[Enclave] Error in create_dcap_attestation_report: {:?}", e);
 				return Err(e.into())
 			},
 		};
@@ -222,18 +222,59 @@ pub fn generate_dcap_ecc_cert<A: EnclaveAttestationOCallApi>(
 	let payload = ecdsa_quote_verification(qe_quote, ocall_api)?;
 
 	// generate an ECC certificate
-	info!("    [Enclave] Generate ECC Certificate");
+	debug!("[Enclave] Generate ECC Certificate");
 	let (key_der, cert_der) = match cert::gen_ecc_cert(&payload, &prv_k, &pub_k, &ecc_handle) {
 		Ok(r) => r,
 		Err(e) => {
-			error!("    [Enclave] gen_ecc_cert failed: {:?}", e);
+			error!("[Enclave] gen_ecc_cert failed: {:?}", e);
 			return Err(e.into())
 		},
 	};
 
 	let _ = ecc_handle.close();
-	info!("    [Enclave] Generate ECC Certificate successful");
+
 	Ok((key_der, cert_der))
+}
+
+fn compose_remote_attestation_extrinsic(
+	genesis_hash: H256,
+	nonce: u32,
+	url_slice: &[u8],
+	cert_der: &[u8],
+) -> EnclaveResult<Vec<u8>> {
+	let signer = Ed25519Seal::unseal_from_static_file()?;
+	info!("Restored ECC signer pubkey: {:?}", signer.public());
+
+	let node_metadata_repository = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
+
+	let (register_enclave_call, runtime_spec_version, runtime_transaction_version) =
+		node_metadata_repository
+			.get_from_metadata(|m| {
+				(
+					m.register_enclave_call_indexes(),
+					m.get_runtime_version(),
+					m.get_runtime_transaction_version(),
+				)
+			})
+			.map_err(|e| EnclaveError::Other(Box::new(e)))?;
+
+	let call = register_enclave_call?;
+
+	let extrinsic_params = ParentchainExtrinsicParams::new(
+		runtime_spec_version,
+		runtime_transaction_version,
+		nonce,
+		genesis_hash,
+		ParentchainExtrinsicParamsBuilder::default(),
+	);
+
+	let extrinsic = compose_extrinsic_offline!(
+		signer,
+		(call, cert_der.to_vec(), url_slice.to_vec()),
+		extrinsic_params
+	);
+
+	Ok(extrinsic.encode())
 }
 
 #[no_mangle]
@@ -248,88 +289,35 @@ pub unsafe extern "C" fn perform_dcap_ra(
 	quoting_enclave_target_info: &sgx_target_info_t,
 	quote_size: *const u32,
 ) -> sgx_status_t {
+	// Extract values from Ecall
+	let genesis_hash_slice = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
+	let url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
+	let extrinsic_slice =
+		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
+	let genesis_hash = hash_from_slice(genesis_hash_slice);
+
+	debug!("decoded nonce: {}", *nonce);
+	debug!("decoded genesis_hash: {:?}", genesis_hash_slice);
+	debug!("worker url: {}", str::from_utf8(url_slice).unwrap());
+
+	// Generate the ecc certificate which includes the quote and report of the qe and our app enclave.
 	let (_key_der, cert_der) =
 		match generate_dcap_ecc_cert(quoting_enclave_target_info, *quote_size, &OcallApi, false) {
 			Ok(r) => r,
 			Err(e) => return e.into(),
 		};
 
-	if let Err(err) = io::write(&cert_der, RA_DUMP_CERT_DER_FILE) {
-		error!(
-			"    [Enclave] failed to write RA file ({}), status: {:?}",
-			RA_DUMP_CERT_DER_FILE, err
-		);
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
-	}
-	info!("    [Enclave] dumped ra cert to {}", RA_DUMP_CERT_DER_FILE);
-
-	info!("    [Enclave] Compose extrinsic");
-	let genesis_hash_slice = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
-	//let mut nonce_slice     = slice::from_raw_parts(nonce, nonce_size as usize);
-	let url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
-	let extrinsic_slice =
-		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
-	let signer = match Ed25519Seal::unseal_from_static_file() {
-		Ok(pair) => pair,
-		Err(e) => return e.into(),
-	};
-	info!("[Enclave] Restored ECC pubkey: {:?}", signer.public());
-
-	debug!("decoded nonce: {}", *nonce);
-	let genesis_hash = hash_from_slice(genesis_hash_slice);
-	debug!("decoded genesis_hash: {:?}", genesis_hash_slice);
-	debug!("worker url: {}", str::from_utf8(url_slice).unwrap());
-	let node_metadata_repository = match GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get() {
-		Ok(r) => r,
-		Err(e) => {
-			error!("Component get failure: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
-	};
-
-	let (register_enclave_call, runtime_spec_version, runtime_transaction_version) =
-		match node_metadata_repository.get_from_metadata(|m| {
-			(
-				m.register_enclave_call_indexes(),
-				m.get_runtime_version(),
-				m.get_runtime_transaction_version(),
-			)
-		}) {
-			Ok(r) => r,
-			Err(e) => {
-				error!("Failed to get node metadata: {:?}", e);
-				return sgx_status_t::SGX_ERROR_UNEXPECTED
-			},
+	// Compose the extrinsic containing the certificate
+	let encoded_extrinsic =
+		match compose_remote_attestation_extrinsic(genesis_hash, *nonce, url_slice, &cert_der) {
+			Ok(xt) => xt,
+			Err(e) => return e.into(),
 		};
 
-	let call =
-		match register_enclave_call {
-			Ok(c) => c,
-			Err(e) => {
-				error!("Failed to get the indexes for the register_enclave call from the metadata: {:?}", e);
-				return sgx_status_t::SGX_ERROR_UNEXPECTED
-			},
-		};
+	let extrinsic_hash = blake2_256(&encoded_extrinsic);
+	info!("Created ra extrinsic (len = {} B), hash: {:?}", encoded_extrinsic.len(), extrinsic_hash);
 
-	let extrinsic_params = ParentchainExtrinsicParams::new(
-		runtime_spec_version,
-		runtime_transaction_version,
-		*nonce,
-		genesis_hash,
-		ParentchainExtrinsicParamsBuilder::default(),
-	);
-
-	let xt = compose_extrinsic_offline!(
-		signer,
-		(call, cert_der.to_vec(), url_slice.to_vec()),
-		extrinsic_params
-	);
-
-	let xt_encoded = xt.encode();
-	let xt_hash = blake2_256(&xt_encoded);
-	debug!("    [Enclave] Encoded extrinsic ( len = {} B), hash {:?}", xt_encoded.len(), xt_hash);
-
-	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, xt_encoded) {
+	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, encoded_extrinsic) {
 		return EnclaveError::Other(Box::new(e)).into()
 	};
 
@@ -339,22 +327,19 @@ pub unsafe extern "C" fn perform_dcap_ra(
 #[no_mangle]
 pub unsafe extern "C" fn dump_dcap_ra_to_disk(
 	quoting_enclave_target_info: &sgx_target_info_t,
-	quote_size: u32,
+	quote_size: *const u32,
 ) -> sgx_status_t {
 	let (_key_der, cert_der) =
-		match generate_dcap_ecc_cert(quoting_enclave_target_info, quote_size, &OcallApi, false) {
+		match generate_dcap_ecc_cert(quoting_enclave_target_info, *quote_size, &OcallApi, false) {
 			Ok(r) => r,
 			Err(e) => return e.into(),
 		};
 
 	if let Err(err) = io::write(&cert_der, RA_DUMP_CERT_DER_FILE) {
-		error!(
-			"    [Enclave] failed to write RA file ({}), status: {:?}",
-			RA_DUMP_CERT_DER_FILE, err
-		);
+		error!("[Enclave] failed to write RA file ({}), status: {:?}", RA_DUMP_CERT_DER_FILE, err);
 		return sgx_status_t::SGX_ERROR_UNEXPECTED
 	}
-	info!("    [Enclave] dumped ra cert to {}", RA_DUMP_CERT_DER_FILE);
+	info!("[Enclave] dumped ra cert to {}", RA_DUMP_CERT_DER_FILE);
 
 	sgx_status_t::SGX_SUCCESS
 }

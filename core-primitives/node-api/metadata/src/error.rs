@@ -15,7 +15,9 @@
 
 */
 
-#[derive(Debug, PartialEq, Eq)]
+use derive_more::From;
+
+#[derive(Debug, PartialEq, Eq, From)]
 pub enum Error {
 	/// Metadata has not been set
 	MetadataNotSet,
