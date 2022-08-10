@@ -42,9 +42,9 @@ ENV WORKER_MODE=$WORKER_MODE_ARG
 WORKDIR $HOME/worker
 COPY . .
 
-RUN --mount=type=cache,target=/root/work/.cache/sccache make && sccache --show-stats
+RUN --mount=type=cache,id=cargo,target=/root/work/.cache/sccache make && sccache --show-stats
 
-RUN cargo test --release
+RUN --mount=type=cache,id=cargo,target=/root/work/.cache/sccache cargo test --release && sccache --show-stats
 
 
 ### Base Runner Stage
