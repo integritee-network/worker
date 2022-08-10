@@ -138,7 +138,7 @@ extern "C" {
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
 		quoting_enclave_target_info: &sgx_target_info_t,
-		quote_size: u32,
+		quote_size: *const u32,
 	) -> sgx_status_t;
 
 	pub fn test_main_entrance(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;

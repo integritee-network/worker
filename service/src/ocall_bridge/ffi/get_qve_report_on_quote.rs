@@ -60,8 +60,7 @@ fn get_qve_report_on_quote(
 	supplemental_data_size: u32,
 	ra_api: Arc<dyn RemoteAttestationBridge>,
 ) -> sgx_status_t {
-	debug!("    Entering ocall_get_qve_report_on_quote");
-
+	debug!("Entering ocall_get_qve_report_on_quote");
 	let quote: Vec<u8> = unsafe { slice::from_raw_parts(p_quote, quote_len as usize).to_vec() };
 	let quote_collateral = unsafe { &*p_quote_collateral };
 	let qve_report_info = unsafe { *p_qve_report_info };
@@ -90,7 +89,7 @@ fn get_qve_report_on_quote(
 			supplemental_data,
 		),
 		Err(e) => {
-			error!("[-]  Failed to get quote: {:?}", e);
+			error!("Failed to get quote: {:?}", e);
 			return e.into()
 		},
 	};

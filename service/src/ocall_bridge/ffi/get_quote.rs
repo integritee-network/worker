@@ -123,7 +123,7 @@ fn get_dcap_quote(
 	let quote = match ra_api.get_dcap_quote(report, quote_size) {
 		Ok(r) => r,
 		Err(e) => {
-			error!("[-]  Failed to get dcap quote: {:?}", e);
+			error!("Failed to get dcap quote: {:?}", e);
 			return e.into()
 		},
 	};

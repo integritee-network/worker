@@ -194,7 +194,7 @@ impl RemoteAttestation for Enclave {
 				self.eid,
 				&mut retval,
 				quoting_enclave_target_info,
-				quote_size,
+				&quote_size,
 			)
 		};
 
