@@ -33,6 +33,7 @@ use crate::{
 };
 use codec::Encode;
 use core::{convert::TryInto, default::Default};
+use frame_support::ensure;
 use itertools::Itertools;
 use itp_component_container::ComponentGetter;
 use itp_node_api::metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata};
@@ -83,7 +84,7 @@ pub fn ecdsa_quote_verification<A: EnclaveAttestationOCallApi>(
 	qve_report_info.nonce.rand.copy_from_slice(rand_nonce.as_slice());
 	qve_report_info.app_enclave_target_info = app_enclave_target_info;
 
-	// Ocall call Quote verification Enclave (QvE) report
+	// Ocall to call Quote verification Enclave (QvE), which verifies the generated quote.
 	let (
 		collateral_expiration_status,
 		quote_verification_result,
@@ -98,6 +99,15 @@ pub fn ecdsa_quote_verification<A: EnclaveAttestationOCallApi>(
 	)?;
 
 	// Verify qve report.
+
+	// Check nonce to protect agaisnt replay attacks
+	if qve_report_info_return_value.nonce.rand != qve_report_info.nonce.rand {
+		error!(
+			"Nonce of input value and return value are not matching. Input: {:?}, Output: {:?}",
+			qve_report_info.nonce.rand, qve_report_info_return_value.nonce.rand
+		);
+		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+	}
 
 	// Threshold of QvE ISV SVN. The ISV SVN of QvE used to verify quote must be greater or equal to this threshold
 	// e.g. You can check latest QvE ISVSVN from QvE configuration file on Github
@@ -132,17 +142,17 @@ pub fn ecdsa_quote_verification<A: EnclaveAttestationOCallApi>(
 }
 
 #[allow(const_err)]
-pub fn create_qe_dcap_quote<A: EnclaveAttestationOCallApi>(
+pub fn retrieve_qe_dcap_quote<A: EnclaveAttestationOCallApi>(
 	pub_k: &[u8; 32],
 	ocall_api: &A,
 	quoting_enclave_target_info: &sgx_target_info_t,
 	quote_size: u32,
 ) -> SgxResult<Vec<u8>> {
-	// Generate app enclave report.
+	// Generate app enclave report and include the enclave public key.
 	let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
 	report_data.d[..32].clone_from_slice(&pub_k[..]);
 
-	let app_report = match rsgx_create_report(&quoting_enclave_target_info, &report_data) {
+	let app_report = match rsgx_create_report(quoting_enclave_target_info, &report_data) {
 		Ok(r) => {
 			debug!(
 				"    [Enclave] Report creation successful. mr_signer.m = {:x?}",
@@ -159,14 +169,20 @@ pub fn create_qe_dcap_quote<A: EnclaveAttestationOCallApi>(
 	// Retrieve quote from pccs for our app enclave.
 	debug!("Entering ocall_api.get_dcap_quote with quote size: {:?} ", quote_size);
 	let quote_vec = ocall_api.get_dcap_quote(app_report, quote_size)?;
-	// Fore debug purposes:
+
+	// Check mrenclave of quote
 	let p_quote3: *const sgx_quote3_t = quote_vec.as_ptr() as *const sgx_quote3_t;
 	let quote3: sgx_quote3_t = unsafe { *p_quote3 };
-	info!("Got quote for our enclave: {:?}", quote3.report_body.mr_enclave.m);
-	info!("Got quote for our app_enclave: {:?}", app_report.body.mr_enclave.m);
+	if quote3.report_body.mr_enclave.m != app_report.body.mr_enclave.m {
+		error!("mr_enclave of quote and app_report are not matching");
+		error!("mr_enclave of quote: {:?}", quote3.report_body.mr_enclave.m);
+		error!("mr_enclave of quote: {:?}", app_report.body.mr_enclave.m);
+		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+	}
 
 	Ok(quote_vec)
 }
+
 pub fn generate_dcap_ecc_cert<A: EnclaveAttestationOCallApi>(
 	quoting_enclave_target_info: &sgx_target_info_t,
 	quote_size: u32,
@@ -186,7 +202,7 @@ pub fn generate_dcap_ecc_cert<A: EnclaveAttestationOCallApi>(
 
 	let qe_quote = if !skip_ra {
 		info!("    [Enclave] Create attestation report");
-		let qe_quote = match create_qe_dcap_quote(
+		let qe_quote = match retrieve_qe_dcap_quote(
 			&chain_signer.public().0,
 			ocall_api,
 			quoting_enclave_target_info,
