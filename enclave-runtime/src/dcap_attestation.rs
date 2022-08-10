@@ -33,7 +33,6 @@ use crate::{
 };
 use codec::Encode;
 use core::{convert::TryInto, default::Default};
-use frame_support::ensure;
 use itertools::Itertools;
 use itp_component_container::ComponentGetter;
 use itp_node_api::metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata};

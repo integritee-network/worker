@@ -113,11 +113,11 @@ impl EnclaveAttestationOCallApi for OnchainMock {
 
 	fn get_qve_report_on_quote(
 		&self,
-		quote: Vec<u8>,
-		current_time: i64,
-		quote_collateral: sgx_ql_qve_collateral_t,
-		qve_report_info: sgx_ql_qe_report_info_t,
-		supplemental_data_size: u32,
+		_quote: Vec<u8>,
+		_current_time: i64,
+		_quote_collateral: sgx_ql_qve_collateral_t,
+		_qve_report_info: sgx_ql_qe_report_info_t,
+		_supplemental_data_size: u32,
 	) -> SgxResult<(u32, sgx_ql_qv_result_t, sgx_ql_qe_report_info_t, Vec<u8>)> {
 		todo!()
 	}

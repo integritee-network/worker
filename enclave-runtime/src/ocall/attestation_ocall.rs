@@ -134,17 +134,11 @@ impl EnclaveAttestationOCallApi for OcallApi {
 		qve_report_info: sgx_ql_qe_report_info_t,
 		supplemental_data_size: u32,
 	) -> SgxResult<(u32, sgx_ql_qv_result_t, sgx_ql_qe_report_info_t, Vec<u8>)> {
-		const supplemental_data_size: u32 = std::mem::size_of::<sgx_ql_qv_supplemental_t>() as u32;
-		let mut supplemental_data = [0u8; supplemental_data_size as usize];
-		let mut qve_report_info_return_value: sgx_ql_qe_report_info_t =
-			unsafe { std::mem::zeroed() };
-		qve_report_info_return_value = qve_report_info;
+		let mut supplemental_data = vec![0u8; supplemental_data_size as usize];
+		let mut qve_report_info_return_value: sgx_ql_qe_report_info_t = qve_report_info;
 		let mut quote_verification_result = sgx_ql_qv_result_t::SGX_QL_QV_RESULT_UNSPECIFIED;
 		let mut collateral_expiration_status = 1u32;
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-
-		// TODO: How to specify / check on nonce?
-		let rand_nonce = "59jslk201fgjmm;\0";
 
 		let result = unsafe {
 			ffi::ocall_get_qve_report_on_quote(
