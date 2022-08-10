@@ -96,6 +96,7 @@ pub const CERTEXPIRYDAYS: i64 = 90i64;
 pub type Hash = sp_core::H256;
 pub type AuthorityPair = sp_core::ed25519::Pair;
 
+/// Initialize the enclave.
 #[no_mangle]
 pub unsafe extern "C" fn init(
 	mu_ra_addr: *const u8,

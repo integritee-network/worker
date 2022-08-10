@@ -128,23 +128,18 @@ jobs:
           - test: M6
             mode: sidechain
             demo_name: demo-indirect-invocation
-            compose_profile: double-worker
           - test: M8
             mode: sidechain
             demo_name: demo-direct-call
-            compose_profile: double-worker
           - test: Sidechain
             mode: sidechain
             demo_name: demo-sidechain,
-            compose_profile: double-worker
           - test: M6
             mode: offchain-worker
             demo_name: demo-indirect-invocation
-            compose_profile: double-worker
           - test: Teeracle
             mode: teeracle
             demo_name: demo-teeracle
-            compose_profile: single-worker
 
     steps:
       - uses: actions/checkout@v3
@@ -178,7 +173,7 @@ jobs:
       - name: Integration Test ${{ matrix.test }}-${{ matrix.mode }}
         run: |
           cd docker
-          docker compose --profile ${{ matrix.compose_profile }} -f docker-compose.yml -f ${{ matrix.demo_name }}.yml up --no-build --exit-code-from ${{ matrix.demo_name }}
+          docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml up --no-build --exit-code-from ${{ matrix.demo_name }}
 
       - name: Collect Docker Logs
         continue-on-error: true

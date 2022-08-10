@@ -28,15 +28,23 @@ ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${SGX_SDK}/sdk_libs"
 ENV CARGO_NET_GIT_FETCH_WITH_CLI true
 ENV SGX_MODE SW
 
+ENV HOME=/root/work
+
+RUN rustup default stable && cargo install sccache --root /usr/local/cargo
+ENV PATH "$PATH:/usr/local/cargo/bin"
+ENV SCCACHE_CACHE_SIZE="3G"
+ENV SCCACHE_DIR=$HOME/.cache/sccache
+ENV RUSTC_WRAPPER="/usr/local/cargo/bin/sccache"
+
 ARG WORKER_MODE_ARG
 ENV WORKER_MODE=$WORKER_MODE_ARG
 
-WORKDIR /root/work/worker
+WORKDIR $HOME/worker
 COPY . .
 
-RUN make
+RUN --mount=type=cache,id=cargo,target=/root/work/.cache/sccache make && sccache --show-stats
 
-RUN cargo test --release
+RUN --mount=type=cache,id=cargo,target=/root/work/.cache/sccache cargo test --release && sccache --show-stats
 
 
 ### Base Runner Stage
