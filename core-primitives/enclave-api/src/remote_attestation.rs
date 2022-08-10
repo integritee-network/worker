@@ -216,60 +216,15 @@ impl RemoteAttestation for Enclave {
 	}
 
 	fn set_ql_qe_enclave_paths(&self) -> EnclaveResult<()> {
-		let ret_val = unsafe {
-			sgx_ql_set_path(
-				sgx_ql_path_type_t::SGX_QL_PCE_PATH,
-				create_system_path(PCE_ENCLAVE).as_ptr() as _,
-			)
-		};
-		if ret_val != sgx_quote3_error_t::SGX_QL_SUCCESS {
-			error!("Could not set SGX_QL_PCE_PATH");
-			return Err(Error::SgxQuote(ret_val))
-		}
-
-		let ret_val = unsafe {
-			sgx_ql_set_path(
-				sgx_ql_path_type_t::SGX_QL_QE3_PATH,
-				create_system_path(QE3_ENCLAVE).as_ptr() as _,
-			)
-		};
-		if ret_val != sgx_quote3_error_t::SGX_QL_SUCCESS {
-			error!("Could not set SGX_QL_QE3_PATH");
-			return Err(Error::SgxQuote(ret_val))
-		}
-
-		let ret_val = unsafe {
-			sgx_ql_set_path(
-				sgx_ql_path_type_t::SGX_QL_IDE_PATH,
-				create_system_path(ID_ENCLAVE).as_ptr() as _,
-			)
-		};
-		if ret_val != sgx_quote3_error_t::SGX_QL_SUCCESS {
-			error!("Could not set SGX_QL_IDE_PATH");
-			return Err(Error::SgxQuote(ret_val))
-		}
-
-		let ret_val = unsafe {
-			sgx_ql_set_path(
-				sgx_ql_path_type_t::SGX_QL_QPL_PATH,
-				create_system_path(LIBDCAP_QUOTEPROV).as_ptr() as _,
-			)
-		};
-		if ret_val != sgx_quote3_error_t::SGX_QL_SUCCESS {
-			// Ignore the error, because user may want to get cert type=3 quote
+		set_ql_path(sgx_ql_path_type_t::SGX_QL_PCE_PATH, PCE_ENCLAVE)?;
+		set_ql_path(sgx_ql_path_type_t::SGX_QL_QE3_PATH, QE3_ENCLAVE)?;
+		set_ql_path(sgx_ql_path_type_t::SGX_QL_IDE_PATH, ID_ENCLAVE)?;
+		if set_ql_path(sgx_ql_path_type_t::SGX_QL_QPL_PATH, LIBDCAP_QUOTEPROV).is_err() {
+			// Ignore the error, because user may want to get cert type=3 quote.
 			warn!("Cannot set QPL directory, you may get ECDSA quote with `Encrypted PPID` cert type.\n");
-		}
-
-		let ret_val = unsafe {
-			sgx_qv_set_path(
-				sgx_qv_path_type_t::SGX_QV_QVE_PATH,
-				create_system_path(QVE_ENCLAVE).as_ptr() as _,
-			)
 		};
-		if ret_val != sgx_quote3_error_t::SGX_QL_SUCCESS {
-			error!("Could not set SGX_QV_QVE_PATH");
-			return Err(Error::SgxQuote(ret_val))
-		}
+		set_qv_path(sgx_qv_path_type_t::SGX_QV_QVE_PATH, QVE_ENCLAVE)?;
+
 		Ok(())
 	}
 
@@ -559,4 +514,22 @@ impl TlsRemoteAttestation for Enclave {
 
 fn create_system_path(file_name: &str) -> String {
 	format!("{}{}{}", OS_SYSTEM_PATH, file_name, C_STRING_ENDING)
+}
+
+fn set_ql_path(path_type: sgx_ql_path_type_t, path: &str) -> EnclaveResult<()> {
+	let ret_val = unsafe { sgx_ql_set_path(path_type, create_system_path(path).as_ptr() as _) };
+	if ret_val != sgx_quote3_error_t::SGX_QL_SUCCESS {
+		error!("Could not set {:?}", path_type);
+		return Err(Error::SgxQuote(ret_val))
+	}
+	Ok(())
+}
+
+fn set_qv_path(path_type: sgx_qv_path_type_t, path: &str) -> EnclaveResult<()> {
+	let ret_val = unsafe { sgx_qv_set_path(path_type, create_system_path(path).as_ptr() as _) };
+	if ret_val != sgx_quote3_error_t::SGX_QL_SUCCESS {
+		error!("Could not set {:?}", path_type);
+		return Err(Error::SgxQuote(ret_val))
+	}
+	Ok(())
 }
