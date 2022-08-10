@@ -274,11 +274,10 @@ impl RemoteAttestationCallBacks for Enclave {
 	fn get_dcap_quote(&self, report: sgx_report_t, quote_size: u32) -> EnclaveResult<Vec<u8>> {
 		let mut quote_vec: Vec<u8> = vec![0; quote_size as usize];
 
-		debug!("Entering sgx_qe_get_quote");
 		let qe3_ret = unsafe { sgx_qe_get_quote(&report, quote_size, quote_vec.as_mut_ptr() as _) };
 
 		ensure!(qe3_ret == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(qe3_ret));
-		debug!("Successfully retrieved dcap quote: {:?}", quote_vec);
+
 		Ok(quote_vec)
 	}
 
@@ -295,40 +294,38 @@ impl RemoteAttestationCallBacks for Enclave {
 		let mut supplemental_data: Vec<u8> = vec![0; supplemental_data_size as usize];
 		let mut qve_report_info_return_value: sgx_ql_qe_report_info_t = qve_report_info;
 
-		// Call DCAP quote verify library to set QvE loading policy.
-		// TODO: Check if Persistent makes sense.
+		// Set QvE (Quote verification Enclave) loading policy.
 		let dcap_ret =
-			unsafe { sgx_qv_set_enclave_load_policy(sgx_ql_request_policy_t::SGX_QL_PERSISTENT) };
-		if sgx_quote3_error_t::SGX_QL_SUCCESS == dcap_ret {
-			println!("\tInfo: sgx_qv_set_enclave_load_policy successfully returned.");
-		} else {
-			println!("\tError: sgx_qv_set_enclave_load_policy failed: {:#04x}", dcap_ret as u32);
+			unsafe { sgx_qv_set_enclave_load_policy(sgx_ql_request_policy_t::SGX_QL_EPHEMERAL) };
+
+		if dcap_ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
+			error!("sgx_qv_set_enclave_load_policy failed: {:#04x}", dcap_ret as u32);
+			return Err(Error::SgxQuote(dcap_ret))
 		}
 
-		// Call DCAP quote verify library to get supplemental data size.
+		// Retrieve supplemental data size from QvE.
 		let mut qve_supplemental_data_size = 0u32;
 		let dcap_ret =
 			unsafe { sgx_qv_get_quote_supplemental_data_size(&mut qve_supplemental_data_size) };
-		if sgx_quote3_error_t::SGX_QL_SUCCESS == dcap_ret
-			&& supplemental_data_size == qve_supplemental_data_size
-		{
-			println!("\tInfo: sgx_qv_get_quote_supplemental_data_size successfully returned.");
-		} else {
-			if dcap_ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
-				println!("\tError: sgx_qv_get_quote_supplemental_data_size failed: {:?}", dcap_ret);
-			}
-			if qve_supplemental_data_size != qve_supplemental_data_size {
-				println!("\tWarning: Quote supplemental data size is different between DCAP QVL and QvE, please make sure you installed DCAP QVL and QvE from same release.");
-			}
+
+		if dcap_ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
+			error!("sgx_qv_get_quote_supplemental_data_size failed: {:?}", dcap_ret);
+			return Err(Error::SgxQuote(dcap_ret))
+		}
+		if qve_supplemental_data_size != supplemental_data_size {
+			warn!("Quote supplemental data size is different between DCAP QVL and QvE, please make sure you installed DCAP QVL and QvE from same release.");
 		}
 
+		// Check if a collateral has been given, or if it's a simple zero assignment.
+		// If it's zero, let the pointer point to null. The collateral will then be retrieved
+		// directly by the QvE in `sgx_qv_verify_quote`.
 		let p_quote_collateral: *const sgx_ql_qve_collateral_t = if quote_collateral.version == 0 {
 			std::ptr::null()
 		} else {
 			quote_collateral as *const sgx_ql_qve_collateral_t
 		};
 
-		// call DCAP quote verify library for quote verification
+		// Call the QvE for quote verification
 		// here you can choose 'trusted' or 'untrusted' quote verification by specifying parameter '&qve_report_info'
 		// if '&qve_report_info' is NOT NULL, this API will call Intel QvE to verify quote
 		// if '&qve_report_info' is NULL, this API will call 'untrusted quote verify lib' to verify quote,
@@ -356,8 +353,8 @@ impl RemoteAttestationCallBacks for Enclave {
 		// Check and print verification result.
 		match quote_verification_result {
 			sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK => {
-				// check verification collateral expiration status
-				// this value should be considered in your own attestation/verification policy
+				// Check verification collateral expiration status.
+				// This value should be considered in your own attestation/verification policy.
 				if 0u32 == collateral_expiration_status {
 					info!("QvE verification completed successfully.");
 				} else {
@@ -382,7 +379,7 @@ impl RemoteAttestationCallBacks for Enclave {
 			},
 		}
 
-		// Check supplemental data if necessary
+		// Check supplemental data.
 		if supplemental_data_size > 0 {
 			// For now we simply print it, no checks done.
 			let p_supplemental_data: *const sgx_ql_qv_supplemental_t =
