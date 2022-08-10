@@ -88,7 +88,7 @@ echo "Reading MRENCLAVE from worker list: ${MRENCLAVE}"
 echo ""
 
 echo "Listen to ExchangeRateUpdated events for ${DURATION} seconds. There should be no trusted oracle service!"
-${CLIENT} "${LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD}" "${DURATION}"
+${CLIENT} ${LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD} ${DURATION}
 echo ""
 
 read NO_EVENTS <<< $(${CLIENT} ${LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD} ${DURATION} | awk '/  EVENTS_COUNT: / { print $2; exit }')
@@ -96,12 +96,12 @@ echo "Got ${NO_EVENTS} exchange rate updates when no trusted oracle service is i
 echo ""
 
 echo "Add MRENCLAVE as trusted oracle service for ${COIN_GECKO}"
-${CLIENT} "${ADD_TO_WHITELIST_CMD}" //Alice ${COIN_GECKO} "${MRENCLAVE}"
+${CLIENT} ${ADD_TO_WHITELIST_CMD} //Alice ${COIN_GECKO} ${MRENCLAVE}
 echo "MRENCLAVE in Whitelist for ${COIN_GECKO}"
 echo ""
 
 echo "Listen to ExchangeRateUpdated events for ${DURATION} seconds, after a trusted oracle service has been added to the whitelist."
-${CLIENT} "${LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD}" "${DURATION}"
+${CLIENT} ${LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD} ${DURATION}
 echo ""
 
 read EVENTS_COUNT <<< $($CLIENT ${LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD} ${DURATION} | awk '/  EVENTS_COUNT: / { print $2; exit }')

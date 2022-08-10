@@ -20,7 +20,6 @@ services:
     depends_on: ['integritee-node']
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
-      - COINMARKETCAP_KEY
     networks:
       - integritee-test-network
     entrypoint: "dockerize -wait tcp://integritee-node:9912 -timeout 30s
@@ -40,7 +39,6 @@ services:
     depends_on: ['integritee-node', 'integritee-worker-1']
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
-      - COINMARKETCAP_KEY
     networks:
       - integritee-test-network
     entrypoint: "dockerize -wait http://integritee-worker-1:4645/is_initialized -timeout 150s 
@@ -48,6 +46,7 @@ services:
       -u ws://integritee-node -U ws://integritee-worker-2 -P 2012 -w 2102 -p 9912 -h 4646
       run --dev --skip-ra --request-state"
     restart: "no"
+
 networks:
   integritee-test-network:
     driver: bridge

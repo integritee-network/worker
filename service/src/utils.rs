@@ -17,14 +17,16 @@
 */
 
 use base58::{FromBase58, ToBase58};
-use clap::ArgMatches;
 use ita_stf::ShardIdentifier;
 use itp_enclave_api::enclave_base::EnclaveBase;
 use log::{debug, info};
 use std::path::Path;
 
-pub fn extract_shard<E: EnclaveBase>(m: &ArgMatches<'_>, enclave_api: &E) -> ShardIdentifier {
-	match m.value_of("shard") {
+pub fn extract_shard<E: EnclaveBase>(
+	maybe_shard_str: &Option<String>,
+	enclave_api: &E,
+) -> ShardIdentifier {
+	match maybe_shard_str {
 		Some(value) => {
 			let shard_vec = value.from_base58().expect("shard must be hex encoded");
 			let mut shard = [0u8; 32];

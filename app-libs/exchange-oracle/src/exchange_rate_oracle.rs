@@ -28,6 +28,7 @@ use itc_rest_client::{
 	http_client::{HttpClient, SendWithCertificateVerification},
 	rest_client::RestClient,
 };
+use log::*;
 use std::{string::String, sync::Arc, time::Instant};
 use url::Url;
 
@@ -77,6 +78,8 @@ where
 		let base_url = self.oracle_source.base_url()?;
 		let root_certificate = self.oracle_source.root_certificate_content();
 
+		debug!("Get exchange rate from URI: {}, trading pair: {:?}", base_url, trading_pair);
+
 		let http_client = HttpClient::new(
 			SendWithCertificateVerification::new(root_certificate),
 			true,
@@ -96,6 +99,8 @@ where
 				self.metrics_exporter.record_response_time(source_id.clone(), timer_start);
 				self.metrics_exporter
 					.update_exchange_rate(source_id, exchange_rate, trading_pair);
+
+				debug!("Successfully executed exchange rate request");
 				Ok((exchange_rate, base_url))
 			},
 			Err(e) => Err(e),

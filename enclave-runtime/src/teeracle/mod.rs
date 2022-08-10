@@ -61,10 +61,14 @@ pub unsafe extern "C" fn update_market_data_xt(
 
 	let extrinsics = match update_market_data_internal(crypto_currency, fiat_currency) {
 		Ok(xts) => xts,
-		Err(_) => return sgx_status_t::SGX_ERROR_UNEXPECTED,
+		Err(e) => {
+			error!("Update market data failed: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
 	};
 
 	if extrinsics.is_empty() {
+		error!("Updating market data resulted in no extrinsics");
 		return sgx_status_t::SGX_ERROR_UNEXPECTED
 	}
 	let extrinsic_slice =
@@ -134,13 +138,7 @@ where
 		source_base_url,
 	);
 
-	let node_metadata_repository = match GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get() {
-		Ok(r) => r,
-		Err(e) => {
-			error!("Component get failure: {:?}", e);
-			return Err(Error::ComponentContainer(e))
-		},
-	};
+	let node_metadata_repository = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
 
 	let update_exchange_call = match node_metadata_repository
 		.get_from_metadata(|m| m.update_exchange_rate_call_indexes())
