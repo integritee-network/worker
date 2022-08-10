@@ -149,15 +149,15 @@ pub fn retrieve_qe_dcap_quote<A: EnclaveAttestationOCallApi>(
 	report_data.d[..32].clone_from_slice(&pub_k[..]);
 
 	let app_report = match rsgx_create_report(quoting_enclave_target_info, &report_data) {
-		Ok(r) => {
+		Ok(report) => {
 			debug!(
-				"    [Enclave] Report creation successful. mr_signer.m = {:x?}",
-				r.body.mr_signer.m
+				"rsgx_create_report creation successful. mr_signer: {:?}",
+				report.body.mr_signer.m
 			);
-			r
+			report
 		},
 		Err(e) => {
-			error!("    [Enclave] Report creation failed. {:?}", e);
+			error!("rsgx_create_report creation failed. {:?}", e);
 			return Err(e)
 		},
 	};

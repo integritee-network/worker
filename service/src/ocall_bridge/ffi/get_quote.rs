@@ -104,7 +104,6 @@ pub extern "C" fn ocall_get_dcap_quote(
 	p_quote: *mut u8,
 	quote_size: u32,
 ) -> sgx_status_t {
-	debug!("Entering ocall_get_dcap_quote");
 	get_dcap_quote(
 		p_report,
 		p_quote,
@@ -119,7 +118,6 @@ fn get_dcap_quote(
 	quote_size: u32,
 	ra_api: Arc<dyn RemoteAttestationBridge>,
 ) -> sgx_status_t {
-	debug!("    Entering ocall_get_dcap_quote");
 	let report = unsafe { *p_report };
 
 	let quote = match ra_api.get_dcap_quote(report, quote_size) {
