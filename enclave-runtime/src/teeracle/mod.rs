@@ -124,10 +124,9 @@ where
 	OracleSourceType: OracleSource,
 	MetricsExporter: ExportMetrics,
 {
-	let (rate, base_url) = match oracle.get_exchange_rate(trading_pair.clone()) {
-		Ok(result) => result,
-		Err(e) => return Err(Error::Other(e.into())),
-	};
+	let (rate, base_url) = oracle
+		.get_exchange_rate(trading_pair.clone())
+		.map_err(|e| Error::Other(e.into()))?;
 
 	let source_base_url = base_url.as_str();
 
@@ -140,24 +139,10 @@ where
 
 	let node_metadata_repository = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
 
-	let update_exchange_call = match node_metadata_repository
+	let call_ids = node_metadata_repository
 		.get_from_metadata(|m| m.update_exchange_rate_call_indexes())
-	{
-		Ok(r) => r,
-		Err(e) => {
-			error!("Failed to get node metadata: {:?}", e);
-			return Err(Error::NodeMetadataProvider(e))
-		},
-	};
-
-	let call_ids =
-		match update_exchange_call {
-			Ok(c) => c,
-			Err(e) => {
-				error!("Failed to get the indexes for the register_enclave cal from the metadata: {:?}", e);
-				return Err(Error::NodeMetadata)
-			},
-		};
+		.map_err(|e| Error::NodeMetadataProvider(e))?
+		.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 
 	let call = OpaqueCall::from_tuple(&(
 		call_ids,
