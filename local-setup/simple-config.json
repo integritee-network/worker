@@ -31,9 +31,7 @@
       ],
       "subcommand_flags": [
         "--skip-ra",
-        "--dev",
-        "--interval",
-        "24s"
+        "--dev"
       ]
     },
     {
