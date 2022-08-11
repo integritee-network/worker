@@ -14,8 +14,10 @@
 	limitations under the License.
 
 */
+
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
+
 use crate::types::TradingPair;
 use std::{boxed::Box, string::String};
 
@@ -23,7 +25,7 @@ use std::{boxed::Box, string::String};
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
 	#[error("Rest client error")]
-	RestClient(itc_rest_client::error::Error),
+	RestClient(#[from] itc_rest_client::error::Error),
 	#[error("Could not retrieve any data from {0} for {1}")]
 	NoValidData(String, String),
 	#[error("Value for exchange rate is null")]
@@ -32,6 +34,6 @@ pub enum Error {
 	InvalidCryptoCurrencyId,
 	#[error("Invalid id for fiat currency")]
 	InvalidFiatCurrencyId,
-	#[error("Other error")]
-	Other(Box<dyn std::error::Error>),
+	#[error(transparent)]
+	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }
