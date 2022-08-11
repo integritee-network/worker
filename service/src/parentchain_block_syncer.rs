@@ -43,7 +43,6 @@ where
 	ParentchainApi: ChainApi,
 	EnclaveApi: Sidechain,
 {
-	#[allow(unused)]
 	pub fn new(parentchain_api: ParentchainApi, enclave_api: Arc<EnclaveApi>) -> Self {
 		ParentchainBlockSyncer { parentchain_api, enclave_api }
 	}

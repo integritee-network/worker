@@ -33,5 +33,5 @@ tmux kill-session -t integritee_logger
 ### Open a third terminal to run a demo
 ```bash
 cd <worker directory>/cli
-./demo_shielding_unshielding.sh -p 99xx -P 20xx -d 80 -i 24
+./demo_shielding_unshielding.sh -p 99xx -P 20xx
 ```

@@ -62,7 +62,6 @@ sidechain-primitives = { default-features = false, git = "https://github.com/int
 substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.26" }
 parentchain-test = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 sidechain-block-verification = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master"}
-substrate-fixed = { default-features = false, git = "https://github.com/encointer/substrate-fixed",tag = "v0.5.9"}
 
 # mesalock
 linked-hash-map = { git = "https://github.com/mesalock-linux/linked-hash-map-sgx" }

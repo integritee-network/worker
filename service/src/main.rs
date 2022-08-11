@@ -327,7 +327,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	// Get the public key of our TEE.
 	let genesis_hash = node_api.genesis_hash.as_bytes().to_vec();
 	let tee_accountid = enclave_account(enclave.as_ref());
-	println!("MRENCLAVE account {:} ", &tee_accountid.to_ss58check());
+	println!("Enclave account {:} ", &tee_accountid.to_ss58check());
 
 	// ------------------------------------------------------------------------
 	// Start `is_initialized` server.
@@ -547,7 +547,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 /// the parentchain (TEEREX WorkerForShard). This is the pre-requisite to be
 /// considered initialized and ready for the next worker to start (in sidechain mode only).
 /// considered initialized and ready for the next worker to start.
-#[allow(unused)]
 fn spawn_worker_for_shard_polling<InitializationHandler>(
 	shard: &ShardIdentifier,
 	node_api: ParentchainApi,
@@ -575,7 +574,6 @@ fn spawn_worker_for_shard_polling<InitializationHandler>(
 /// Starts the execution of trusted getters in repeating intervals.
 ///
 /// The getters are executed in a pre-defined slot duration.
-#[allow(unused)]
 fn start_interval_trusted_getter_execution<E: Sidechain>(enclave_api: &E) {
 	use itp_settings::enclave::TRUSTED_GETTERS_SLOT_DURATION;
 
@@ -589,17 +587,14 @@ fn start_interval_trusted_getter_execution<E: Sidechain>(enclave_api: &E) {
 	);
 }
 
-#[allow(unused)]
 type Events = Vec<frame_system::EventRecord<Event, Hash>>;
 
-#[allow(unused)]
 fn parse_events(event: String) -> Result<Events, String> {
 	let _unhex = Vec::from_hex(event).map_err(|_| "Decoding Events Failed".to_string())?;
 	let mut _er_enc = _unhex.as_slice();
 	Events::decode(&mut _er_enc).map_err(|_| "Decoding Events Failed".to_string())
 }
 
-#[allow(unused)]
 fn print_events(events: Events, _sender: Sender<String>) {
 	for evr in &events {
 		debug!("Decoded: phase = {:?}, event = {:?}", evr.phase, evr.event);
@@ -695,7 +690,6 @@ fn print_events(events: Events, _sender: Sender<String>) {
 	}
 }
 
-#[allow(unused)]
 pub fn init_light_client<E: EnclaveBase + Sidechain>(
 	api: &ParentchainApi,
 	enclave_api: Arc<E>,
@@ -727,7 +721,6 @@ pub fn init_light_client<E: EnclaveBase + Sidechain>(
 
 /// Subscribe to the node API finalized heads stream and trigger a parent chain sync
 /// upon receiving a new header.
-#[allow(unused)]
 fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 	enclave_api: Arc<E>,
 	api: &ParentchainApi,
