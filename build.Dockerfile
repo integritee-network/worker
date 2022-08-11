@@ -30,6 +30,35 @@ ENV SGX_MODE SW
 
 ENV HOME=/root/work
 
+ARG WORKER_MODE_ARG
+ENV WORKER_MODE=$WORKER_MODE_ARG
+
+WORKDIR $HOME/worker
+COPY . .
+
+RUN make
+
+RUN cargo test --release
+
+
+### Cached Builder Stage (WIP)
+##################################################
+# A builder stage that uses sccache to speed up local builds with docker
+# Installation and setup of sccache should be moved to the integritee-dev image, so we don't
+# always need to compile and install sccache on CI (where we have no caching so far).
+FROM integritee/integritee-dev:0.1.9 AS cached-builder
+LABEL maintainer="zoltan@integritee.network"
+
+# set environment variables
+ENV SGX_SDK /opt/sgxsdk
+ENV PATH "$PATH:${SGX_SDK}/bin:${SGX_SDK}/bin/x64:/root/.cargo/bin"
+ENV PKG_CONFIG_PATH "${PKG_CONFIG_PATH}:${SGX_SDK}/pkgconfig"
+ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${SGX_SDK}/sdk_libs"
+ENV CARGO_NET_GIT_FETCH_WITH_CLI true
+ENV SGX_MODE SW
+
+ENV HOME=/root/work
+
 RUN rustup default stable && cargo install sccache --root /usr/local/cargo
 ENV PATH "$PATH:/usr/local/cargo/bin"
 ENV SCCACHE_CACHE_SIZE="3G"

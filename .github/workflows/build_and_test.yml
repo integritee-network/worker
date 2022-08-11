@@ -58,8 +58,6 @@ jobs:
       - run: docker images --all
 
       - name: Test Enclave # cargo test is not supported in the enclave, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
-        env:
-          COINMARKETCAP_KEY: ${{ secrets.COINMARKETCAP_KEY }}
         run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-${{ matrix.mode }}-${{ github.sha }} test --all
 
       - name: Export worker image(s)
@@ -133,7 +131,7 @@ jobs:
             demo_name: demo-direct-call
           - test: Sidechain
             mode: sidechain
-            demo_name: demo-sidechain,
+            demo_name: demo-sidechain
           - test: M6
             mode: offchain-worker
             demo_name: demo-indirect-invocation
