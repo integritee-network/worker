@@ -66,7 +66,7 @@ fn execute_update_market<E: TeeracleApi>(
 	let extrinsics: Vec<OpaqueExtrinsic> = match Decode::decode(&mut updated_extrinsic.as_slice()) {
 		Ok(calls) => calls,
 		Err(e) => {
-			error!("{:?}: ", e);
+			error!("Failed to decode opaque extrinsic(s): {:?}: ", e);
 			return
 		},
 	};
@@ -77,12 +77,13 @@ fn execute_update_market<E: TeeracleApi>(
 		tokio_handle.spawn(async move {
 			let mut hex_encoded_extrinsic = hex::encode(call.encode());
 			hex_encoded_extrinsic.insert_str(0, "0x");
+			debug!("Hex encoded extrinsic to be sent: {}", hex_encoded_extrinsic);
 
 			println!("[>] Update the exchange rate (send the extrinsic)");
 			let extrinsic_hash =
 				match node_api_clone.send_extrinsic(hex_encoded_extrinsic, XtStatus::InBlock) {
 					Err(e) => {
-						error!("{:?}: ", e);
+						error!("Failed to send extrinsic: {:?}", e);
 						set_extrinsics_inclusion_success(false);
 						return
 					},

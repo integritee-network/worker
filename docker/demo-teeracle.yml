@@ -1,3 +1,9 @@
+# Teeracle Demo Setup
+#
+# The demo is parameterized with the interval that the teeracle uses to query its sources.
+# Set the `TEERACLE_INTERVAL_SECONDS` variable when invoking, e.g. `TEERACLE_INTERVAL_SECONDS=4 docker compose -f docker-compose.yml -f demo-teeracle.yml up --exit-code-from demo-teeracle`
+# This setup requires an API key for CoinMarketCap
+# Add the API key to the environment variable `COINMARKETCAP_KEY`, with `export COINMARKETCAP_KEY=<your_key>`
 services:
   integritee-teeracle-worker:
     image: integritee-worker:dev
@@ -8,7 +14,7 @@ services:
       target: deployed-worker
     depends_on: [ 'integritee-node' ]
     environment:
-      - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=info,ita_stf=warn,ita_exchange_oracle=debug
+      - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=info,integritee_service::teeracle=debug,ita_stf=warn,ita_exchange_oracle=debug
       - COINMARKETCAP_KEY
     networks:
       - integritee-test-network
@@ -25,13 +31,15 @@ services:
       dockerfile: build.Dockerfile
       target: deployed-client
     depends_on: ['integritee-node', 'integritee-teeracle-worker']
+    environment:
+      - RUST_LOG=warn,sp_io=warn,integritee_cli::exchange_oracle=debug
     networks:
       - integritee-test-network
     entrypoint: "dockerize -wait http://integritee-teeracle-worker:4645/is_initialized -timeout 250s    
       /usr/local/worker-cli/demo_teeracle_whitelist.sh 
       -u ws://integritee-node -p 9912
       -V wss://integritee-teeracle-worker -P 2011
-      -d 26 -i ${TEERACLE_INTERVAL_SECONDS}
+      -d 21 -i ${TEERACLE_INTERVAL_SECONDS}
       -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"
 networks:

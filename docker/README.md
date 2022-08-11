@@ -56,11 +56,11 @@ docker compose -f docker-compose.yml -f demo-sidechain.yml up --exit-code-from d
 ### Demo Teeracle
 Build
 ```
-COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 TEERACLE_INTERVAL_SECONDS=5 docker compose -f docker-compose.yml -f demo-teeracle.yml build --build-arg WORKER_MODE_ARG=teeracle
+COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 TEERACLE_INTERVAL_SECONDS=2 docker compose -f docker-compose.yml -f demo-teeracle.yml build --build-arg WORKER_MODE_ARG=teeracle
 ```
 Run
 ```
-TEERACLE_INTERVAL_SECONDS=5 docker compose -f docker-compose.yml -f demo-teeracle.yml up --exit-code-from demo-teeracle
+TEERACLE_INTERVAL_SECONDS=4 docker compose -f docker-compose.yml -f demo-teeracle.yml up --exit-code-from demo-teeracle
 ```
 
 
