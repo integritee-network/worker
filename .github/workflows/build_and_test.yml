@@ -171,7 +171,7 @@ jobs:
       - name: Integration Test ${{ matrix.test }}-${{ matrix.mode }}
         run: |
           cd docker
-          docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml up --no-build --abort-on-container-exit
+          docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml up --no-build --exit-code-from ${{ matrix.demo_name }}
 
       - name: Collect Docker Logs
         continue-on-error: true

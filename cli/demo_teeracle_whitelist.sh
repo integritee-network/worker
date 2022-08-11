@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+trap "echo The demo is terminated (SIGINT); exit 1" SIGINT
+trap "echo The demo is terminated (SIGTERM); exit 1" SIGTERM
+
 # Demo to show that an enclave can update the exchange rate only when
 #   1. it is a registered enclave
 #   2. and that the code used is reliable -> the enclave is in the teeracle whitelist.
@@ -143,4 +146,4 @@ else
     exit 1
 fi
 
-exit 0
+exit 1
