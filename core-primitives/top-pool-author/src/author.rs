@@ -51,8 +51,10 @@ use std::{boxed::Box, sync::Arc, vec, vec::Vec};
 pub type AuthorTopFilter = crate::top_filter::AllowAllTopsFilter;
 #[cfg(feature = "offchain-worker")]
 pub type AuthorTopFilter = crate::top_filter::NoDirectCallsFilter;
+#[cfg(feature = "teeracle")] // Teeracle currently does not process any trusted operations
+pub type AuthorTopFilter = crate::top_filter::DenyAllFilter;
 
-#[cfg(not(any(feature = "sidechain", feature = "offchain-worker")))]
+#[cfg(not(any(feature = "sidechain", feature = "offchain-worker", feature = "teeracle")))]
 pub type AuthorTopFilter = crate::top_filter::AllowAllTopsFilter;
 
 /// Currently we treat all RPC operations as externals.
