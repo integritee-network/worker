@@ -68,15 +68,15 @@ pub unsafe extern "C" fn update_market_data_xt(
 	};
 
 	if extrinsics.is_empty() {
-		error!("Updating market data resulted in no extrinsics");
+		error!("Updating market data yielded no extrinsics");
 		return sgx_status_t::SGX_ERROR_UNEXPECTED
 	}
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
 	// Save created extrinsic as slice in the return value unchecked_extrinsic.
-	if write_slice_and_whitespace_pad(extrinsic_slice, extrinsics.encode()).is_err() {
-		error!("update_market_data_xt: Extrinsic buffer was too small!");
+	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsics.encode()) {
+		error!("Copying encoded extrinsics into return slice failed: {:?}", e);
 		return sgx_status_t::SGX_ERROR_UNEXPECTED
 	}
 
