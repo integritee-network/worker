@@ -16,11 +16,11 @@
 
 */
 
-use crate::ocall::OcallApi;
 use codec::alloc::string::ToString;
 use ita_exchange_oracle::{
 	create_coin_gecko_oracle, create_coin_market_cap_oracle, types::TradingPair, GetExchangeRate,
 };
+use itp_test::mock::metrics_ocall_mock::MetricsOCallMock;
 use std::sync::Arc;
 
 pub(super) fn test_verify_get_exchange_rate_from_coin_gecko_works() {
@@ -28,7 +28,7 @@ pub(super) fn test_verify_get_exchange_rate_from_coin_gecko_works() {
 	let trading_pair =
 		TradingPair { crypto_currency: "DOT".to_string(), fiat_currency: "USD".to_string() };
 
-	let coin_gecko_oracle = create_coin_gecko_oracle(Arc::new(OcallApi));
+	let coin_gecko_oracle = create_coin_gecko_oracle(Arc::new(MetricsOCallMock::default()));
 
 	let result = coin_gecko_oracle.get_exchange_rate(trading_pair.clone());
 	assert!(result.is_ok());
@@ -41,7 +41,8 @@ pub(super) fn test_verify_get_exchange_rate_from_coin_market_cap_works() {
 	let trading_pair =
 		TradingPair { crypto_currency: "DOT".to_string(), fiat_currency: "USD".to_string() };
 
-	let coin_market_cap_oracle = create_coin_market_cap_oracle(Arc::new(OcallApi));
+	let coin_market_cap_oracle =
+		create_coin_market_cap_oracle(Arc::new(MetricsOCallMock::default()));
 
 	let result = coin_market_cap_oracle.get_exchange_rate(trading_pair.clone());
 	assert!(result.is_ok());
