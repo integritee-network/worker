@@ -35,6 +35,13 @@ pub mod types {
 	#[cfg(all(not(feature = "sgx"), feature = "std"))]
 	pub type ParentchainHeader = sp_runtime::generic::Header<BlockNumber, BlakeTwo256>;
 
+	#[cfg(all(not(feature = "std"), feature = "sgx"))]
+	pub type EventRecord = system::EventRecord<ita_sgx_runtime::Event, ita_sgx_runtime::Hash>;
+	#[cfg(all(not(feature = "sgx"), feature = "std"))]
+	pub type EventRecord = Vec<u8>; // Dummy EventRecord type. Event type is only available from runtime itself.
+
+	pub type EventIndex = u32;
+
 	pub type State = itp_sgx_externalities::SgxExternalities;
 	pub type StateType = itp_sgx_externalities::SgxExternalitiesType;
 	pub type StateDiffType = itp_sgx_externalities::SgxExternalitiesDiffType;

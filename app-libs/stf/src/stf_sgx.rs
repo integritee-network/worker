@@ -18,7 +18,12 @@
 #[cfg(feature = "test")]
 use crate::test_genesis::test_genesis_setup;
 
-use crate::{helpers::enclave_signer_account, ShardIdentifier, Stf, StfError, ENCLAVE_ACCOUNT_KEY};
+use crate::{
+	helpers::{enclave_signer_account, ensure_enclave_signer_account},
+	AccountData, AccountId, BlockNumber, EventIndex, EventRecord, Getter, Hash, Index,
+	ParentchainHeader, PublicGetter, ShardIdentifier, State, StateTypeDiff, Stf, StfError,
+	StfResult, TrustedCall, TrustedCallSigned, TrustedGetter, ENCLAVE_ACCOUNT_KEY,
+};
 use codec::Encode;
 use frame_support::traits::{OriginTrait, UnfilteredDispatchable};
 use itp_sgx_externalities::SgxExternalitiesTrait;
@@ -206,6 +211,25 @@ where
 		})?;
 		Ok(())
 	}
+}
+
+pub fn events(ext: &mut impl SgxExternalitiesTrait) -> Vec<Box<EventRecord>> {
+	ext.execute_with(|| System::read_events_no_consensus())
+}
+
+pub fn event_count(ext: &mut impl SgxExternalitiesTrait) -> EventIndex {
+	ext.execute_with(|| System::event_count())
+}
+
+pub fn reset_events(ext: &mut impl SgxExternalitiesTrait) {
+	ext.execute_with(|| System::reset_events())
+}
+
+pub fn event_topics(
+	ext: &mut impl SgxExternalitiesTrait,
+	topic: &Hash,
+) -> Vec<(BlockNumber, EventIndex)> {
+	ext.execute_with(|| System::event_topics(topic))
 }
 
 pub fn storage_hashes_to_update_per_shard(_shard: &ShardIdentifier) -> Vec<Vec<u8>> {

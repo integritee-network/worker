@@ -31,6 +31,7 @@ use crate::{
 };
 use codec::Decode;
 use ita_stf::{
+	helpers::set_event_topic,
 	test_genesis::{endowed_account, second_endowed_account, unendowed_account},
 	Balance, StatePayload, TrustedCall, TrustedOperation,
 };
@@ -44,7 +45,7 @@ use itp_settings::{
 	worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider},
 };
 use itp_sgx_crypto::{Aes, ShieldingCryptoEncrypt, StateCrypto};
-use itp_sgx_externalities::SgxExternalitiesDiffType;
+use itp_sgx_externalities::{SgxExternalitiesDiffType, SgxExternalitiesTrait};
 use itp_stf_interface::system_pallet::SystemPalletAccountInterface;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock};
@@ -119,7 +120,7 @@ pub fn produce_sidechain_block_and_import_it() {
 	));
 	let block_composer = Arc::new(TestBlockComposer::new(signer.clone(), state_key_repo.clone()));
 	let proposer_environment =
-		ProposerFactory::new(top_pool_author.clone(), stf_executor.clone(), block_composer);
+		ProposerFactory::new(top_pool_author.clone(), stf_executor.clone(), block_composer.clone());
 	let extrinsics_factory = ExtrinsicsFactoryMock::default();
 	let validator_access = ValidatorAccessMock::default();
 
@@ -166,12 +167,12 @@ pub fn produce_sidechain_block_and_import_it() {
 	info!("Executing AURA on slot..");
 	let (blocks, opaque_calls) =
 		exec_aura_on_slot::<_, ParentchainBlock, SignedSidechainBlock, _, _, _>(
-			slot_info,
-			signer,
+			slot_info.clone(),
+			signer.clone(),
 			ocall_api.clone(),
 			parentchain_block_import_trigger.clone(),
 			proposer_environment,
-			shards,
+			shards.clone(),
 		)
 		.unwrap();
 
@@ -199,7 +200,7 @@ pub fn produce_sidechain_block_and_import_it() {
 	send_blocks_and_extrinsics::<ParentchainBlock, _, _, _, _>(
 		blocks,
 		opaque_calls,
-		propose_to_block_import_ocall_api,
+		propose_to_block_import_ocall_api.clone(),
 		&validator_access,
 		&extrinsics_factory,
 	)
@@ -216,9 +217,52 @@ pub fn produce_sidechain_block_and_import_it() {
 		get_state_hash(state_handler.as_ref(), &shard_id)
 	);
 
+	// Add some Event Topic, currently not added by pallet Balance.
+	let (lock, mut state) = state_handler.load_for_mutation(&shard_id).unwrap();
+	state.execute_with(|| {
+		set_event_topic(&H256::from([7; 32]), vec![(1, 1)]);
+	});
+	state_handler.write_after_mutation(state.clone(), lock, &shard_id).unwrap();
+
+	// Test if state now really contains events and topics
 	let mut state = state_handler.load(&shard_id).unwrap();
 	let free_balance = TestStf::get_account_data(&mut state, &receiver.public().into()).free;
 	assert_eq!(free_balance, transfered_amount);
+	let event_count = Stf::event_count(&mut state);
+	assert!(event_count > 0);
+	let events = Stf::events(&mut state);
+	assert!(events.len() > 0);
+	let event_topics = Stf::event_topics(&mut state, &H256::from([7; 32]));
+	assert!(event_topics.len() > 0);
+
+	// Test if propose() actually resets events, otherwise we will have an ever growing event state.
+	// Top Pool should now be empty. Hence, no calls get executed, therefore no events generated, but reset nonetheless.
+	info!("Executing AURA on slot, second time..");
+	let proposer_environment =
+		ProposerFactory::new(top_pool_author.clone(), stf_executor.clone(), block_composer.clone());
+	let (blocks, opaque_calls) =
+		exec_aura_on_slot::<_, ParentchainBlock, SignedSidechainBlock, _, _, _>(
+			slot_info,
+			signer,
+			ocall_api,
+			parentchain_block_import_trigger.clone(),
+			proposer_environment,
+			shards,
+		)
+		.unwrap();
+	send_blocks_and_extrinsics::<ParentchainBlock, _, _, _, _>(
+		blocks,
+		opaque_calls,
+		propose_to_block_import_ocall_api,
+		&validator_access,
+		&extrinsics_factory,
+	)
+	.unwrap();
+
+	let mut state = state_handler.load(&shard_id).unwrap();
+	assert_eq!(Stf::event_count(&mut state), 0);
+	assert_eq!(Stf::event_topics(&mut state, &H256::from([7; 32])).len(), 0);
+	assert_eq!(Stf::events(&mut state).len(), 0);
 }
 
 fn encrypted_trusted_operation_transfer_balance<

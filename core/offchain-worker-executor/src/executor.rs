@@ -16,7 +16,7 @@
 */
 
 use crate::error::Result;
-use ita_stf::hash::TrustedOperationOrHash;
+use ita_stf::{hash::TrustedOperationOrHash, Stf};
 use itc_parentchain_light_client::{
 	concurrent_access::ValidatorAccess, BlockNumberOps, ExtrinsicSender, LightClientState,
 	NumberFor,
@@ -113,7 +113,10 @@ impl<
 				&latest_parentchain_header,
 				&shard,
 				max_duration,
-				|s| s,
+				|mut state| {
+					Stf::reset_events(&mut state);
+					state
+				},
 			)?;
 
 			parentchain_effects

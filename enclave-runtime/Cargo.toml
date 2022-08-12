@@ -152,6 +152,7 @@ log = { git = "https://github.com/integritee-network/log-sgx" }
 
 [patch."https://github.com/paritytech/substrate"]
 sp-io = { path = "../core-primitives/substrate-sgx/sp-io" }
+#frame-system = { path = "../../../substrate/frame/system" }
 
 #[patch."https://github.com/integritee-network/sgx-runtime"]
 #sgx-runtime = { path = "../../sgx-runtime/sgx-runtime", default-features = false}
