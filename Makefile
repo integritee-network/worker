@@ -85,6 +85,8 @@ else
 	WORKER_FEATURES = --features=default,$(WORKER_MODE),$(ADDITIONAL_FEATURES)
 endif
 
+CLIENT_FEATURES = --features=$(ADDITIONAL_FEATURES)
+
 # check if running on Jenkins
 ifdef BUILD_ID
 	CARGO_TARGET += --verbose
@@ -112,7 +114,7 @@ Worker_Name := bin/app
 ######## Integritee-cli settings ########
 Client_SRC_Path := cli
 STF_SRC_Path := app-libs/stf
-Client_Rust_Flags := $(CARGO_TARGET)
+Client_Rust_Flags := $(CARGO_TARGET) $(CLIENT_FEATURES)
 Client_SRC_Files := $(shell find $(Client_SRC_Path)/ -type f -name '*.rs') $(shell find $(STF_SRC_Path)/ -type f -name '*.rs') $(shell find $(Client_SRC_Path)/ -type f -name 'Cargo.toml')
 Client_Include_Paths := -I ./$(Client_SRC_Path) -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
 Client_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(Client_Include_Paths)

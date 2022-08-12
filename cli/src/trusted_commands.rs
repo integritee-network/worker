@@ -24,12 +24,11 @@ use crate::{
 	Cli,
 };
 use codec::Decode;
-use core::str::FromStr;
 use hdrhistogram::Histogram;
 use ita_stf::{Index, KeyPair, TrustedCall, TrustedGetter, TrustedOperation};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
 use itp_types::{
-	AccountId, TrustedOperationStatus,
+	TrustedOperationStatus,
 	TrustedOperationStatus::{InSidechainBlock, Submitted},
 };
 use log::*;
@@ -38,7 +37,7 @@ use rand::Rng;
 use rayon::prelude::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_application_crypto::{ed25519, sr25519};
-use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair, H160, U256};
+use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
 use std::{
 	string::ToString,
 	sync::mpsc::{channel, Receiver},
@@ -46,8 +45,19 @@ use std::{
 	time::Instant,
 	vec::Vec,
 };
-use substrate_api_client::utils::FromHexString;
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
+
+#[cfg(feature = "evm")]
+use core::str::FromStr;
+
+#[cfg(feature = "evm")]
+use itp_types::AccountId;
+
+#[cfg(feature = "evm")]
+use substrate_api_client::utils::FromHexString;
+
+#[cfg(feature = "evm")]
+use sp_core::{H160, U256};
 
 macro_rules! get_layer_two_nonce {
 	($signer_pair:ident, $cli: ident, $trusted_args:ident ) => {{
@@ -139,6 +149,7 @@ pub enum TrustedCommands {
 		amount: Balance,
 	},
 
+	#[cfg(feature = "evm")]
 	/// Create smart contract
 	EvmCreate {
 		/// Sender's incognito AccountId in ss58check format
@@ -148,6 +159,7 @@ pub enum TrustedCommands {
 		smart_contract: String,
 	},
 
+	#[cfg(feature = "evm")]
 	/// Create smart contract
 	EvmCall {
 		/// Sender's incognito AccountId in ss58check format
@@ -215,10 +227,11 @@ pub fn match_trusted_commands(cli: &Cli, trusted_args: &TrustedArgs) {
 			*wait_for_confirmation,
 			funding_account,
 		),
+		#[cfg(feature = "evm")]
 		TrustedCommands::EvmCreate { from, smart_contract } =>
 			evm_create(cli, trusted_args, from, smart_contract),
-		TrustedCommands::EvmCall { from, to, amount } =>
-			evm_call(cli, trusted_args, from, to, amount),
+		#[cfg(feature = "evm")]
+		TrustedCommands::EvmCall { from, to, amount } => evm_call(cli, trusted_args, from, to, amount),
 	}
 }
 
@@ -570,6 +583,7 @@ fn unshield_funds(
 	let _ = perform_operation(cli, trusted_args, &top);
 }
 
+#[cfg(feature = "evm")]
 fn evm_create(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, smart_contract: &str) {
 	let from = get_pair_from_str(trusted_args, arg_from);
 	let from_acc: AccountId = from.public().into();
@@ -599,6 +613,7 @@ fn evm_create(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, smart_contr
 	info!("trusted call transfer executed");
 }
 
+#[cfg(feature = "evm")]
 fn evm_call(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, arg_to: &str, amount: &Balance) {
 	let from = get_pair_from_str(trusted_args, arg_from);
 	let from_acc: AccountId = from.public().into();

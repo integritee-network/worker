@@ -52,5 +52,6 @@ itp-time-utils = { path = "../core-primitives/time-utils" }
 [features]
 default = []
 evm = [
+    "ita-stf/evm_std",
     "ita-stf/evm",
 ]
