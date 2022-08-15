@@ -139,6 +139,9 @@ jobs:
           - test: Teeracle
             mode: teeracle
             demo_name: demo-teeracle
+          - test: Benchmark
+            mode: sidechain
+            demo_name: sidechain-benchmark
 
     steps:
       - uses: actions/checkout@v3
@@ -173,70 +176,6 @@ jobs:
         run: |
           cd docker
           docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml up ${{ matrix.demo_name }} --no-build --exit-code-from ${{ matrix.demo_name }}
-
-      - name: Collect Docker Logs
-        continue-on-error: true
-        if: always()
-        uses: jwalton/gh-docker-logs@v2.2.0
-        with:
-          #images: '${{ env.WORKER_IMAGE_TAG }},${{ env.CLIENT_IMAGE_TAG }}'
-          tail: all
-          dest: ./${{ env.LOG_DIR }}
-
-      - name: Upload logs
-        if: always()
-        uses: actions/upload-artifact@v2
-        with:
-          name: logs-${{ matrix.test }}-${{ matrix.mode }}
-          path: ./${{ env.LOG_DIR }}
-
-  benchmarks:
-    runs-on: ubuntu-20.04
-    needs: build-test
-    env:
-      WORKER_IMAGE_TAG: integritee-worker:dev
-      CLIENT_IMAGE_TAG: integritee-cli:dev
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - test: Benchmark1
-            mode: sidechain
-            demo_name: benchmark
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Download Worker Image
-        uses: actions/download-artifact@v2
-        with:
-          name: integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar.gz
-          path: .
-
-      - name: Download CLI client Image
-        uses: actions/download-artifact@v2
-        with:
-          name: integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar.gz
-          path: .
-
-      - name: Load Worker & Client Images
-        env:
-          DOCKER_BUILDKIT: 1
-        run: |
-          docker image load --input integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar.gz
-          docker image load --input integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar.gz
-          docker images --all
-
-      - name: Re-name Image Tags
-        run: |
-          docker tag integritee-worker-${{ matrix.mode }}-${{ github.sha }} ${{ env.WORKER_IMAGE_TAG }}
-          docker tag integritee-cli-client-${{ matrix.mode }}-${{ github.sha }} ${{ env.CLIENT_IMAGE_TAG }} 
-          docker images --all
-
-      - name: Benchmark ${{ matrix.test }}-${{ matrix.mode }}
-        run: |
-          cd docker
-          docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml up --no-build --exit-code-from ${{ matrix.demo_name }}
 
       - name: Collect Docker Logs
         continue-on-error: true
