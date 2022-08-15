@@ -4,27 +4,6 @@ version = "0.8.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2018"
 
-[features]
-default = ["std"]
-std = [
-    "itc-rest-client/std",
-    "itp-enclave-metrics/std",
-    "itp-ocall-api/std",
-    "log/std",
-    "serde/std",
-    "serde_json/std",
-    "substrate-fixed/std",
-    "thiserror",
-    "url",
-]
-sgx = [
-    "itc-rest-client/sgx",
-    "itp-enclave-metrics/sgx",
-    "sgx_tstd",
-    "thiserror_sgx",
-    "url_sgx",
-]
-
 [dependencies]
 
 # std dependencies
@@ -51,3 +30,24 @@ itp-ocall-api = { path = "../../core-primitives/ocall-api", default-features = f
 
 [dev-dependencies]
 itp-test = { path = "../../core-primitives/test" }
+
+[features]
+default = ["std"]
+std = [
+    "itc-rest-client/std",
+    "itp-enclave-metrics/std",
+    "itp-ocall-api/std",
+    "log/std",
+    "serde/std",
+    "serde_json/std",
+    "substrate-fixed/std",
+    "thiserror",
+    "url",
+]
+sgx = [
+    "itc-rest-client/sgx",
+    "itp-enclave-metrics/sgx",
+    "sgx_tstd",
+    "thiserror_sgx",
+    "url_sgx",
+]
