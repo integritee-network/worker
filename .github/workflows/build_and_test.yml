@@ -28,7 +28,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mode: [ sidechain, offchain-worker, teeracle ]
+        mode:
+          - "sidechain"
+          - "offchain-worker"
+          - "teeracle"
+          - "sidechain,evm"
 
     steps:
       - uses: actions/checkout@v3
@@ -44,7 +48,7 @@ jobs:
           DOCKER_BUILDKIT: 1
         run: >
           docker build -t integritee-worker-${{ matrix.mode }}-${{ github.sha }} 
-          --target deployed-worker --build-arg WORKER_MODE_ARG=${{ matrix.mode }} 
+          --target deployed-worker --build-arg WORKER_MODE_ARG=${{ matrix.mode }}
           -f build.Dockerfile .
 
       - name: Build CLI client
@@ -52,7 +56,7 @@ jobs:
           DOCKER_BUILDKIT: 1
         run: >
           docker build -t integritee-cli-client-${{ matrix.mode }}-${{ github.sha }} 
-          --target deployed-client --build-arg WORKER_MODE_ARG=${{ matrix.mode }} 
+          --target deployed-client --build-arg WORKER_MODE_ARG=${{ matrix.mode }}
           -f build.Dockerfile .
 
       - run: docker images --all
@@ -86,10 +90,15 @@ jobs:
         # enclave is not in the same workspace
         run: rustup show && cd enclave-runtime && rustup show
 
-      - name: Worker & Client
+      - name: Clippy Worker & Client
         run: cargo clippy -- -D warnings
       - name: Enclave # Enclave is separate as it's not in the workspace
         run: cd enclave-runtime && cargo clippy -- -D warnings
+
+      - name: Clippy with EVM feature
+        run: | 
+          cargo clippy --features evm -- -D warnings
+          cd enclave-runtime && cargo clippy --features evm -- -d warnings
 
       - name: Fail-fast; cancel other jobs
         if: failure()
