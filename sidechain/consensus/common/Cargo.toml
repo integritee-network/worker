@@ -52,9 +52,14 @@ std = [
     "itp-sgx-crypto/std",
     "itp-types/std",
     "sidechain-primitives/std",
+    "sidechain-block-verification/std",
     "its-state/std",
     # substrate
     "sp-runtime/std",
+    # scs
+    "itp-types/std",
+    "sidechain-block-verification/std",
+    "sidechain-primitives/std",
 ]
 sgx = [
     "sgx_tstd",
@@ -63,4 +68,6 @@ sgx = [
     "itp-block-import-queue/sgx",
     "itp-sgx-crypto/sgx",
     "its-state/sgx",
+     # scs
+    "sidechain-block-verification/sgx",
 ]

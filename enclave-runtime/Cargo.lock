@@ -1912,6 +1912,7 @@ dependencies = [
  "parity-scale-codec",
  "sgx_tstd",
  "sgx_types",
+ "sidechain-block-verification",
  "sidechain-primitives",
  "sp-runtime",
  "thiserror 1.0.9",
