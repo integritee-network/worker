@@ -71,7 +71,7 @@ echo ""
 
 COIN_GECKO="https://api.coingecko.com/"
 COIN_MARKET_CAP="https://pro-api.coinmarketcap.com/"
-let "MIN_EXPECTED_NUM_OF_EVENTS=$DURATION/$INTERVAL-1"
+let "MIN_EXPECTED_NUM_OF_EVENTS=$DURATION/$INTERVAL-2"
 echo "Minimum expected number of events with a single oracle source: ${MIN_EXPECTED_NUM_OF_EVENTS}"
 
 let "MIN_EXPECTED_NUM_OF_EVENTS_2 = 2*$MIN_EXPECTED_NUM_OF_EVENTS"
