@@ -30,7 +30,7 @@ COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f docker compose.ym
 ```
 Run 
 ```
-docker compose -f docker-compose.yml -f demo-indirect-invocation.yml up --exit-code-from demo-indirect-invocation
+docker compose -f docker-compose.yml -f demo-indirect-invocation.yml up demo-indirect-invocation --exit-code-from demo-indirect-invocation
 ```
 ### Demo direct call (M8)
 
@@ -40,7 +40,7 @@ COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f docker-compose.ym
 ```
 Run
 ```
-docker compose -f docker-compose.yml -f demo-direct-call.yml up --exit-code-from demo-direct-call
+docker compose -f docker-compose.yml -f demo-direct-call.yml up demo-direct-call --exit-code-from demo-direct-call
 ```
 
 ### Demo sidechain
@@ -50,17 +50,17 @@ COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f docker-compose.ym
 ```
 Run
 ```
-docker compose -f docker-compose.yml -f demo-sidechain.yml up --exit-code-from demo-sidechain
+docker compose -f docker-compose.yml -f demo-sidechain.yml up demo-sidechain --exit-code-from demo-sidechain
 ```
 
 ### Demo Teeracle
 Build
 ```
-COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 TEERACLE_INTERVAL_SECONDS=2 docker compose -f docker-compose.yml -f demo-teeracle.yml build --build-arg WORKER_MODE_ARG=teeracle
+COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f docker-compose.yml -f demo-teeracle.yml build --build-arg WORKER_MODE_ARG=teeracle
 ```
 Run
 ```
-TEERACLE_INTERVAL_SECONDS=4 docker compose -f docker-compose.yml -f demo-teeracle.yml up --exit-code-from demo-teeracle
+docker compose -f docker-compose.yml -f demo-teeracle.yml up demo-teeracle --exit-code-from demo-teeracle
 ```
 
 
@@ -71,7 +71,7 @@ COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f docker-compose.ym
 ```
 and then run with
 ```
-docker compose -f docker-compose.yml -f benchmark.yml up --exit-code-from sidechain-benchmark
+docker compose -f docker-compose.yml -f benchmark.yml up sidechain-benchmark --exit-code-from sidechain-benchmark
 ```
 
 ## Run the fork simulator
