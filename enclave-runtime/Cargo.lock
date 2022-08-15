@@ -349,14 +349,6 @@ checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
 
 [[package]]
 name = "bytes"
-version = "0.5.4"
-source = "git+https://github.com/mesalock-linux/bytes-sgx#63d1951a35f2e888696aba3796aac45214e727ec"
-dependencies = [
- "sgx_tstd",
-]
-
-[[package]]
-name = "bytes"
 version = "1.0.1"
 source = "git+https://github.com/integritee-network/bytes-sgx?branch=sgx-experimental#62ed3082be2e23cb9bc8cc7ee9983a523de69292"
 dependencies = [
@@ -709,7 +701,6 @@ dependencies = [
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.26)",
  "sp-version",
  "substrate-api-client",
- "substrate-fixed",
  "webpki",
  "webpki-roots 0.21.0 (git+https://github.com/mesalock-linux/webpki-roots?branch=mesalock_sgx)",
  "yasna",
@@ -1173,20 +1164,9 @@ dependencies = [
 [[package]]
 name = "http"
 version = "0.2.1"
-source = "git+https://github.com/mesalock-linux/http-sgx?tag=sgx_1.1.3#62544a1833f98f1810a44877c5f1efe45f5327c0"
-dependencies = [
- "bytes 0.5.4",
- "fnv",
- "itoa 0.4.5",
- "sgx_tstd",
-]
-
-[[package]]
-name = "http"
-version = "0.2.1"
 source = "git+https://github.com/integritee-network/http-sgx?branch=sgx-experimental#307b5421fb7a489a114bede0dc05c8d32b804f49"
 dependencies = [
- "bytes 1.0.1",
+ "bytes",
  "fnv",
  "itoa 0.4.5",
  "sgx_tstd",
@@ -1503,7 +1483,7 @@ name = "itc-rest-client"
 version = "0.8.0"
 dependencies = [
  "base64 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "http 0.2.1 (git+https://github.com/mesalock-linux/http-sgx?tag=sgx_1.1.3)",
+ "http",
  "http_req",
  "log",
  "serde 1.0.137",
@@ -1630,7 +1610,6 @@ dependencies = [
 name = "itp-node-api-metadata"
 version = "0.8.0"
 dependencies = [
- "derive_more",
  "itp-types",
  "parity-scale-codec",
  "sp-core",
@@ -4267,8 +4246,8 @@ source = "git+https://github.com/integritee-network/tungstenite-rs-sgx?branch=sg
 dependencies = [
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?tag=sgx_1.1.3)",
  "byteorder 1.3.4",
- "bytes 1.0.1",
- "http 0.2.1 (git+https://github.com/integritee-network/http-sgx?branch=sgx-experimental)",
+ "bytes",
+ "http",
  "httparse",
  "log",
  "rand 0.7.3 (git+https://github.com/mesalock-linux/rand-sgx?tag=sgx_1.1.3)",
