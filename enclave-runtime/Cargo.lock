@@ -865,7 +865,6 @@ dependencies = [
 [[package]]
 name = "fp-evm"
 version = "3.0.0"
-source = "git+https://github.com/integritee-network/frontier.git?branch=polkadot-v0.9.24#93252bcd24b63c24cf8344bd261b8377314a7830"
 dependencies = [
  "evm",
  "parity-scale-codec",
@@ -1374,9 +1373,12 @@ dependencies = [
  "log",
  "pallet-balances",
  "parity-scale-codec",
+ "primitive-types",
+ "rlp",
  "sgx-externalities",
  "sgx-runtime",
  "sgx_tstd",
+ "sha3 0.10.1",
  "sidechain-primitives",
  "sp-application-crypto",
  "sp-core",
@@ -2429,7 +2431,6 @@ dependencies = [
 [[package]]
 name = "pallet-evm"
 version = "6.0.0-dev"
-source = "git+https://github.com/integritee-network/frontier.git?branch=polkadot-v0.9.24#93252bcd24b63c24cf8344bd261b8377314a7830"
 dependencies = [
  "evm",
  "fp-evm",

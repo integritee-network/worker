@@ -21,7 +21,8 @@ use codec::{Decode, Encode};
 use itp_storage::{storage_double_map_key, storage_map_key, storage_value_key, StorageHasher};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
-use sp_core::H160;
+use primitive_types::H160;
+use sha3::{Digest, Keccak256};
 use std::prelude::v1::*;
 
 pub fn get_storage_value<V: Decode>(
@@ -206,4 +207,38 @@ pub fn ensure_root(account: AccountId) -> StfResult<()> {
 	} else {
 		Err(StfError::MissingPrivileges(account))
 	}
+}
+
+// FIXME: Once events are available, these addresses should be read from events.
+pub fn evm_create_address(caller: &AccountId) -> H160 {
+	let nonce = account_nonce(caller);
+	let mut stream = rlp::RlpStream::new_list(2);
+
+	// Convert Caller into H160 (FIXME: maybe import from sgx-runtime)
+	let mut caller_evm_acc_slice: [u8; 20] = [0; 20];
+	caller_evm_acc_slice.copy_from_slice((<[u8; 32]>::from(caller.clone())).get(0..20).unwrap());
+	let caller_evm_acc: H160 = caller_evm_acc_slice.into();
+
+	stream.append(&caller_evm_acc);
+	stream.append(&nonce);
+	H256::from_slice(Keccak256::digest(&stream.out()).as_slice()).into()
+}
+
+// FIXME: Once events are available, these addresses should be read from events.
+pub fn evm_create2_address(caller: &AccountId, salt: H256, code_hash: H256) -> H160 {
+	// Convert Caller into H160 (FIXME: maybe import from sgx-runtime)
+	let mut caller_evm_acc_slice: [u8; 20] = [0; 20];
+	caller_evm_acc_slice.copy_from_slice((<[u8; 32]>::from(caller.clone())).get(0..20).unwrap());
+	let caller_evm_acc: H160 = caller_evm_acc_slice.into();
+
+	let mut hasher = Keccak256::new();
+	hasher.update(&[0xff]);
+	hasher.update(&caller_evm_acc[..]);
+	hasher.update(&salt[..]);
+	hasher.update(&code_hash[..]);
+	H256::from_slice(hasher.finalize().as_slice()).into()
+}
+
+pub fn create_code_hash(code: &[u8]) -> H256 {
+	H256::from_slice(Keccak256::digest(&code).as_slice())
 }

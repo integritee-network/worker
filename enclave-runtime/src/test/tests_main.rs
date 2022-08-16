@@ -170,6 +170,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		// evm pallet tests
 		evm_pallet_tests::test_evm_call,
 		evm_pallet_tests::test_evm_counter,
+		evm_pallet_tests::test_evm_create2,
 
 		// these unit test (?) need an ipfs node running..
 		// ipfs::test_creates_ipfs_content_struct_works,

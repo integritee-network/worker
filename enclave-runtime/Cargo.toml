@@ -138,8 +138,8 @@ sp-io = { git = "https://github.com/integritee-network/sgx-runtime", branch = "b
 #sp-io = { path = "../../sgx-runtime/substrate-sgx/sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
 #sgx-externalities = { path = "../../sgx-runtime/substrate-sgx/externalities"}
 
-#[patch."https://github.com/integritee-network/frontier"]
-#pallet-evm = { path = "../../frontier/frame/evm"}
+[patch."https://github.com/integritee-network/frontier"]
+pallet-evm = { path = "../../frontier/frame/evm"}
 
 [patch."https://github.com/apache/teaclave-sgx-sdk.git"]
 sgx_tstd = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5"}
