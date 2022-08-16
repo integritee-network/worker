@@ -21,7 +21,7 @@ use crate::test_genesis::test_genesis_setup;
 use crate::{
 	helpers::{
 		account_data, account_nonce, enclave_signer_account, ensure_enclave_signer_account,
-		ensure_root, get_account_info, get_evm_account_codes, get_evm_account_storages,
+		ensure_root, get_account_info, get_evm_account_codes, get_evm_account_storages, evm_create2_address, evm_create_address,
 		increment_nonce, root, validate_nonce,
 	},
 	AccountData, AccountId, Getter, Index, ParentchainHeader, PublicGetter, ShardIdentifier, State,
@@ -278,6 +278,7 @@ impl Stf {
 						source,
 						value
 					);
+					//let address = evm_create_address(from);
 					sgx_runtime::EvmCall::<Runtime>::create {
 						source,
 						init,

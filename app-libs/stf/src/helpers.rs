@@ -210,30 +210,18 @@ pub fn ensure_root(account: AccountId) -> StfResult<()> {
 }
 
 // FIXME: Once events are available, these addresses should be read from events.
-pub fn evm_create_address(caller: &AccountId) -> H160 {
-	let nonce = account_nonce(caller);
+pub fn evm_create_address(caller: H160, nonce: Index) -> H160 {
 	let mut stream = rlp::RlpStream::new_list(2);
-
-	// Convert Caller into H160 (FIXME: maybe import from sgx-runtime)
-	let mut caller_evm_acc_slice: [u8; 20] = [0; 20];
-	caller_evm_acc_slice.copy_from_slice((<[u8; 32]>::from(caller.clone())).get(0..20).unwrap());
-	let caller_evm_acc: H160 = caller_evm_acc_slice.into();
-
-	stream.append(&caller_evm_acc);
+	stream.append(&caller);
 	stream.append(&nonce);
 	H256::from_slice(Keccak256::digest(&stream.out()).as_slice()).into()
 }
 
 // FIXME: Once events are available, these addresses should be read from events.
-pub fn evm_create2_address(caller: &AccountId, salt: H256, code_hash: H256) -> H160 {
-	// Convert Caller into H160 (FIXME: maybe import from sgx-runtime)
-	let mut caller_evm_acc_slice: [u8; 20] = [0; 20];
-	caller_evm_acc_slice.copy_from_slice((<[u8; 32]>::from(caller.clone())).get(0..20).unwrap());
-	let caller_evm_acc: H160 = caller_evm_acc_slice.into();
-
+pub fn evm_create2_address(caller: H160, salt: H256, code_hash: H256) -> H160 {
 	let mut hasher = Keccak256::new();
 	hasher.update(&[0xff]);
-	hasher.update(&caller_evm_acc[..]);
+	hasher.update(&caller[..]);
 	hasher.update(&salt[..]);
 	hasher.update(&code_hash[..]);
 	H256::from_slice(hasher.finalize().as_slice()).into()
