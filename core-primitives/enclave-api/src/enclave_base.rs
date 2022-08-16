@@ -22,7 +22,7 @@ use frame_support::ensure;
 use itc_parentchain_light_client::light_client_init_params::LightClientInitParams;
 use itp_enclave_api_ffi as ffi;
 use itp_settings::worker::{
-	HEADER_MAX_SIZE, MR_ENCLAVE_SIZE, SHIELDING_KEY_SIZE, SIGNING_KEY_SIZE, STATE_VALUE_MAX_SIZE,
+	HEADER_MAX_SIZE, MR_ENCLAVE_SIZE, SHIELDING_KEY_SIZE, SIGNING_KEY_SIZE,
 };
 use log::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
@@ -57,8 +57,6 @@ pub trait EnclaveBase: Send + Sync + 'static {
 	fn set_nonce(&self, nonce: u32) -> EnclaveResult<()>;
 
 	fn set_node_metadata(&self, metadata: Vec<u8>) -> EnclaveResult<()>;
-
-	fn get_state(&self, cyphertext: Vec<u8>, shard: Vec<u8>) -> EnclaveResult<Vec<u8>>;
 
 	fn get_rsa_shielding_pubkey(&self) -> EnclaveResult<Rsa3072PubKey>;
 
@@ -181,31 +179,6 @@ impl EnclaveBase for Enclave {
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
 
 		Ok(())
-	}
-
-	fn get_state(&self, cyphertext: Vec<u8>, shard: Vec<u8>) -> EnclaveResult<Vec<u8>> {
-		let mut retval = sgx_status_t::SGX_SUCCESS;
-
-		let value_size = STATE_VALUE_MAX_SIZE;
-		let mut value = vec![0u8; value_size as usize];
-
-		let result = unsafe {
-			ffi::get_state(
-				self.eid,
-				&mut retval,
-				cyphertext.as_ptr(),
-				cyphertext.len() as u32,
-				shard.as_ptr(),
-				shard.len() as u32,
-				value.as_mut_ptr(),
-				value.len() as u32,
-			)
-		};
-
-		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
-		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
-
-		Ok(value)
 	}
 
 	fn get_rsa_shielding_pubkey(&self) -> EnclaveResult<Rsa3072PubKey> {
