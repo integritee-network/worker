@@ -17,8 +17,8 @@
 */
 
 use base58::{FromBase58, ToBase58};
-use ita_stf::ShardIdentifier;
 use itp_enclave_api::enclave_base::EnclaveBase;
+use itp_types::ShardIdentifier;
 use log::{debug, info};
 use std::path::Path;
 
