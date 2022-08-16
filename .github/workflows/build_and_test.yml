@@ -139,6 +139,9 @@ jobs:
           - test: Teeracle
             mode: teeracle
             demo_name: demo-teeracle
+          - test: Benchmark
+            mode: sidechain
+            demo_name: sidechain-benchmark
 
     steps:
       - uses: actions/checkout@v3
