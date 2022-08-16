@@ -18,8 +18,8 @@ use crate::test::tests_main::test_setup;
 use core::str::FromStr;
 use ita_stf::{
 	helpers::{
-		account_data, create_code_hash, evm_create2_address, evm_create_address,
-		get_evm_account_codes, get_evm_account_storages, account_nonce,
+		account_data, account_nonce, create_code_hash, evm_create2_address, evm_create_address,
+		get_evm_account_codes, get_evm_account_storages,
 	},
 	test_genesis::{endow, endowed_account as funded_pair},
 	Stf, TrustedCall,
@@ -117,7 +117,7 @@ pub fn test_evm_counter() {
 	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
 
 	// when
-	let execution_address = state.execute_with(|| evm_create_address(sender_evm_acc, 0));
+	let execution_address = evm_create_address(sender_evm_acc, 0);
 	Stf::execute(&mut state, trusted_call, &mut opaque_vec).unwrap();
 
 	// then
@@ -334,8 +334,7 @@ pub fn test_evm_create2() {
 
 	// when
 	let code_hash = create_code_hash(&smart_contract);
-	let execution_address =
-		state.execute_with(|| evm_create2_address(sender_evm_acc, salt, code_hash));
+	let execution_address = evm_create2_address(sender_evm_acc, salt, code_hash);
 	Stf::execute(&mut state, trusted_call, &mut opaque_vec).unwrap();
 
 	// then
