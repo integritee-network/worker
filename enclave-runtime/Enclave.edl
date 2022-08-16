@@ -100,6 +100,12 @@ enclave {
             [out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
 		);
 
+		public sgx_status_t update_market_data_xt(
+            [in, size=crypto_currency_size] uint8_t* crypto_currency, uint32_t crypto_currency_size,
+            [in, size=fiat_currency_size] uint8_t* fiat_currency, uint32_t fiat_currency_size,
+            [out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
+		);
+
 		public sgx_status_t dump_ra_to_disk();
 
 		public sgx_status_t run_state_provisioning_server(int fd, sgx_quote_sign_type_t quote_type, int skip_ra);

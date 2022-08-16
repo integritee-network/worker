@@ -29,6 +29,7 @@ pub use crate::error::Error;
 pub mod error;
 pub mod pallet_sidechain;
 pub mod pallet_system;
+pub mod pallet_teeracle;
 pub mod pallet_teerex;
 
 #[cfg(feature = "mocks")]

@@ -27,10 +27,10 @@ pub enum Error {
 // error for bare `no_std`, which does not implement `std::error::Error`
 
 #[cfg(all(not(feature = "std"), not(feature = "sgx")))]
-use derive_more::From;
+use derive_more::{Display, From};
 
 // Simple error enum for no_std without std::error::Error implemented
-#[derive(Debug, Debug, PartialEq, Eq From)]
+#[derive(Debug, Display, PartialEq, Eq, From)]
 #[cfg(all(not(feature = "std"), not(feature = "sgx")))]
 pub enum Error {
 	NoProofSupplied,

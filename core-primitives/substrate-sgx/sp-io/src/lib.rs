@@ -912,8 +912,7 @@ pub use tracing_setup::init_tracing;
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use hex_literal::hex;
-	use sp_core::{map, storage::well_known_keys::CODE, H256};
+	use sp_core::storage::well_known_keys::CODE;
 
 	#[test]
 	fn storage_set_and_retrieve_works() {

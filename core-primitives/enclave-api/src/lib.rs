@@ -22,6 +22,7 @@ pub mod enclave_test;
 pub mod error;
 pub mod remote_attestation;
 pub mod sidechain;
+pub mod teeracle_api;
 pub mod teerex_api;
 pub mod utils;
 

@@ -11,4 +11,4 @@ edition = "2018"
 production = []
 sidechain = []
 offchain-worker = []
-oracle = []
+teeracle = []

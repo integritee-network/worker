@@ -135,7 +135,7 @@ fn create_author_with_filter<F: Filter<Value = TrustedOperation>>(
 	let encryption_key = ShieldingCryptoMock::default();
 	let shielding_key_repo =
 		Arc::new(KeyRepositoryMock::<ShieldingCryptoMock>::new(encryption_key.clone()));
-	let ocall_mock = Arc::new(MetricsOCallMock {});
+	let ocall_mock = Arc::new(MetricsOCallMock::default());
 
 	(
 		Author::new(

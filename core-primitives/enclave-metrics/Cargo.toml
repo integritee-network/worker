@@ -12,11 +12,13 @@ sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-s
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
 # no-std dependencies
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive", "full"] }
+substrate-fixed = { default-features = false, git = "https://github.com/encointer/substrate-fixed", tag = "v0.5.9" }
 
 [features]
 default = ["std"]
 std = [
+    "substrate-fixed/std",
     "codec/std",
 ]
 sgx = [

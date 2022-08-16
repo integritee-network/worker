@@ -15,16 +15,40 @@
 
 */
 
+#[cfg(feature = "sgx")]
+use std::sync::SgxRwLock as RwLock;
+
+#[cfg(feature = "std")]
+use std::sync::RwLock;
+
 use codec::Encode;
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use sgx_types::SgxResult;
+use std::vec::Vec;
 
 /// Metrics o-call mock.
-#[derive(Clone)]
-pub struct MetricsOCallMock;
+#[derive(Default)]
+pub struct MetricsOCallMock {
+	metric_updates: RwLock<Vec<Vec<u8>>>,
+}
+
+impl Clone for MetricsOCallMock {
+	fn clone(&self) -> Self {
+		MetricsOCallMock {
+			metric_updates: RwLock::new(self.metric_updates.read().unwrap().clone()),
+		}
+	}
+}
+
+impl MetricsOCallMock {
+	pub fn get_metrics_updates(&self) -> Vec<Vec<u8>> {
+		self.metric_updates.read().unwrap().clone()
+	}
+}
 
 impl EnclaveMetricsOCallApi for MetricsOCallMock {
-	fn update_metric<Metric: Encode>(&self, _metric: Metric) -> SgxResult<()> {
+	fn update_metric<Metric: Encode>(&self, metric: Metric) -> SgxResult<()> {
+		self.metric_updates.write().unwrap().push(metric.encode());
 		Ok(())
 	}
 }

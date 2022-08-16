@@ -31,6 +31,7 @@ pub enum Error {
 	ExtrinsicsFactory(itp_extrinsics_factory::error::Error),
 	IO(std::io::Error),
 	LightClient(itc_parentchain::light_client::error::Error),
+	NodeMetadataProvider(itp_node_api::metadata::provider::Error),
 	Sgx(sgx_status_t),
 	Consensus(its_sidechain::consensus_common::Error),
 	Stf(String),

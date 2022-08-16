@@ -51,7 +51,7 @@ enum ProvisioningPayload {
 impl From<WorkerMode> for ProvisioningPayload {
 	fn from(m: WorkerMode) -> Self {
 		match m {
-			WorkerMode::OffChainWorker | WorkerMode::Oracle =>
+			WorkerMode::OffChainWorker | WorkerMode::Teeracle =>
 				ProvisioningPayload::ShieldingKeyOnly,
 			WorkerMode::Sidechain => ProvisioningPayload::Everything,
 		}

@@ -464,7 +464,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57952ca27b5e3606ff4dd79b0020231aaf9d6aa76dc05fd30137538c50bd3ce8"
 dependencies = [
  "generic-array 0.14.5",
- "typenum",
+ "typenum 1.15.0",
 ]
 
 [[package]]
@@ -634,6 +634,7 @@ dependencies = [
  "hex",
  "httparse",
  "ipfs-unixfs",
+ "ita-exchange-oracle",
  "ita-sgx-runtime",
  "ita-stf",
  "itc-direct-rpc-server",
@@ -1063,7 +1064,7 @@ version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ffdf9f34f1447443d37393cc6c2b8313aebddcd96906caf34e54c68d8e57d7bd"
 dependencies = [
- "typenum",
+ "typenum 1.15.0",
 ]
 
 [[package]]
@@ -1072,7 +1073,7 @@ version = "0.14.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd48d33ec7f05fbfa152300fdad764757cbded343c1aa1cff2fbaf4134851803"
 dependencies = [
- "typenum",
+ "typenum 1.15.0",
  "version_check",
 ]
 
@@ -1172,6 +1173,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "http_req"
+version = "0.8.1"
+source = "git+https://github.com/integritee-network/http_req#3723e88235f2b29bc1a31835853b072ffd0455fd"
+dependencies = [
+ "log",
+ "rustls 0.19.0 (git+https://github.com/mesalock-linux/rustls?branch=mesalock_sgx)",
+ "sgx_tstd",
+ "unicase",
+ "webpki",
+ "webpki-roots 0.21.0 (git+https://github.com/mesalock-linux/webpki-roots?branch=mesalock_sgx)",
+]
+
+[[package]]
 name = "httparse"
 version = "1.4.1"
 source = "git+https://github.com/integritee-network/httparse-sgx?branch=sgx-experimental#cc97e4b34d2c44a1e3df5bdebef446b9771f5cc3"
@@ -1255,6 +1269,24 @@ dependencies = [
  "multihash",
  "quick-protobuf",
  "sha2 0.9.9",
+]
+
+[[package]]
+name = "ita-exchange-oracle"
+version = "0.8.0"
+dependencies = [
+ "itc-rest-client",
+ "itp-enclave-metrics",
+ "itp-ocall-api",
+ "lazy_static",
+ "log",
+ "parity-scale-codec",
+ "serde 1.0.137",
+ "serde_json 1.0.81",
+ "sgx_tstd",
+ "substrate-fixed",
+ "thiserror 1.0.9",
+ "url",
 ]
 
 [[package]]
@@ -1447,6 +1479,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "itc-rest-client"
+version = "0.8.0"
+dependencies = [
+ "base64 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "http",
+ "http_req",
+ "log",
+ "serde 1.0.137",
+ "serde_json 1.0.81",
+ "sgx_tstd",
+ "sgx_types",
+ "thiserror 1.0.9",
+ "url",
+]
+
+[[package]]
 name = "itc-tls-websocket-server"
 version = "0.8.0"
 dependencies = [
@@ -1459,6 +1507,7 @@ dependencies = [
  "mio-extras",
  "rcgen",
  "rustls 0.19.0 (git+https://github.com/mesalock-linux/rustls?branch=mesalock_sgx)",
+ "sgx_crypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
@@ -1524,6 +1573,7 @@ dependencies = [
  "parity-scale-codec",
  "sgx_tstd",
  "sgx_types",
+ "substrate-fixed",
 ]
 
 [[package]]
@@ -2645,15 +2695,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pem"
-version = "1.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9a3b09a20e374558580a4914d3b7d89bd61b954a5a5e1dcbea98753addb1947"
-dependencies = [
- "base64 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "percent-encoding"
 version = "2.1.0"
 source = "git+https://github.com/mesalock-linux/rust-url-sgx?tag=sgx_1.1.3#23832f3191456c2d4a0faab10952e1747be58ca8"
@@ -2860,11 +2901,10 @@ dependencies = [
 [[package]]
 name = "rcgen"
 version = "0.9.2"
-source = "git+https://github.com/integritee-network/rcgen#deb300ea990abce3d105443ef85e4da8a5943c32"
+source = "git+https://github.com/integritee-network/rcgen#1852c8dbeb74de36a422d218254b659497daf717"
 dependencies = [
  "chrono 0.4.11",
- "pem 0.8.2",
- "pem 1.0.2",
+ "pem",
  "ring",
  "sgx_tstd",
  "yasna",
@@ -4017,6 +4057,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "substrate-fixed"
+version = "0.5.9"
+source = "git+https://github.com/encointer/substrate-fixed?tag=v0.5.9#a4fb461aae6205ffc55bed51254a40c52be04e5d"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "typenum 1.16.0",
+]
+
+[[package]]
 name = "subtle"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4229,6 +4279,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dcf81ac59edc17cc8697ff311e8f5ef2d99fcbd9817b34cec66f90b6c3dfd987"
 
 [[package]]
+name = "typenum"
+version = "1.16.0"
+source = "git+https://github.com/encointer/typenum?tag=v1.16.0#4c8dddaa8bdd13130149e43b4085ad14e960617f"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+]
+
+[[package]]
 name = "uint"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4238,6 +4297,15 @@ dependencies = [
  "crunchy",
  "hex",
  "static_assertions",
+]
+
+[[package]]
+name = "unicase"
+version = "2.6.0"
+source = "git+https://github.com/mesalock-linux/unicase-sgx#0b0519348572927118af47af3da4da9ffdca8ec6"
+dependencies = [
+ "sgx_tstd",
+ "version_check",
 ]
 
 [[package]]

@@ -41,7 +41,7 @@ use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_stf_executor::enclave_signer::StfEnclaveSigner;
 use itp_test::mock::metrics_ocall_mock::MetricsOCallMock;
-use itp_top_pool_author::{author::AuthorTopFilter, traits::AuthorApi};
+use itp_top_pool_author::{top_filter::AllowAllTopsFilter, traits::AuthorApi};
 use itp_types::{
 	AccountId, Block, ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder,
 	ParentchainUncheckedExtrinsic, ShardIdentifier, ShieldFundsFn, H256,
@@ -76,10 +76,10 @@ pub fn process_indirect_call_in_top_pool() {
 
 	let top_pool_author = Arc::new(TestTopPoolAuthor::new(
 		top_pool,
-		AuthorTopFilter {},
+		AllowAllTopsFilter {},
 		state_handler.clone(),
 		shielding_key_repo,
-		Arc::new(MetricsOCallMock {}),
+		Arc::new(MetricsOCallMock::default()),
 	));
 
 	let encrypted_indirect_call =
@@ -108,10 +108,10 @@ pub fn submit_shielding_call_to_top_pool() {
 
 	let top_pool_author = Arc::new(TestTopPoolAuthor::new(
 		top_pool,
-		AuthorTopFilter {},
+		AllowAllTopsFilter {},
 		state_handler.clone(),
 		shielding_key_repo.clone(),
-		Arc::new(MetricsOCallMock {}),
+		Arc::new(MetricsOCallMock::default()),
 	));
 
 	let enclave_signer = Arc::new(StfEnclaveSigner::new(

@@ -31,6 +31,7 @@ use http_req::{
 use log::*;
 use std::{
 	collections::HashMap,
+	convert::TryFrom,
 	str::FromStr,
 	string::{String, ToString},
 	time::Duration,
@@ -40,9 +41,7 @@ use url::Url;
 
 pub type EncodedBody = Vec<u8>;
 
-/// Simple trait to send HTTP request, based on `http_req`.
-///
-/// Automatically upgrades to TLS in case the base URL contains 'https'
+/// Simple trait to send HTTP request
 pub trait SendHttpRequest {
 	fn send_request<U, T>(
 		&self,
@@ -56,35 +55,80 @@ pub trait SendHttpRequest {
 		T: RestPath<U>;
 }
 
+/// Send trait used by the http client to send HTTP request, based on `http_req`.
+pub trait Send {
+	fn execute_send_request(
+		&self,
+		request: &mut Request,
+		writer: &mut Vec<u8>,
+	) -> Result<Response, Error>;
+}
+
 /// HTTP client implementation
 ///
 /// wrapper for the `http_req` library that adds the necessary headers and body to a request
-pub struct HttpClient {
+pub struct HttpClient<SendType> {
+	send: SendType,
 	send_null_body: bool,
 	timeout: Option<Duration>,
 	headers: Headers,
 	authorization: Option<String>,
 }
 
-impl Default for HttpClient {
-	fn default() -> Self {
-		HttpClient {
-			send_null_body: true,
-			timeout: None,
-			headers: Headers::new(),
-			authorization: None,
-		}
+/// Default send method.
+/// Automatically upgrades to TLS in case the base URL contains 'https'
+/// For https requests, the default trusted server's certificates
+/// are provided by the default tls configuration of the http_req lib
+pub struct DefaultSend;
+
+impl Send for DefaultSend {
+	fn execute_send_request(
+		&self,
+		request: &mut Request,
+		writer: &mut Vec<u8>,
+	) -> Result<Response, Error> {
+		request.send(writer).map_err(Error::HttpReqError)
 	}
 }
 
-impl HttpClient {
+/// Sends a HTTPs request with the server's root certificate.
+/// The connection will only be established if the supplied certificate
+/// matches the server's root certificate.
+pub struct SendWithCertificateVerification {
+	root_certificate: String,
+}
+
+impl SendWithCertificateVerification {
+	pub fn new(root_certificate: String) -> Self {
+		SendWithCertificateVerification { root_certificate }
+	}
+}
+
+impl Send for SendWithCertificateVerification {
+	fn execute_send_request(
+		&self,
+		request: &mut Request,
+		writer: &mut Vec<u8>,
+	) -> Result<Response, Error> {
+		request
+			.send_with_pem_certificate(writer, Some(self.root_certificate.to_string()))
+			.map_err(Error::HttpReqError)
+	}
+}
+
+impl<SendType> HttpClient<SendType>
+where
+	SendType: Send,
+{
 	pub fn new(
+		send: SendType,
 		send_null_body: bool,
 		timeout: Option<Duration>,
 		headers: Option<Headers>,
 		authorization: Option<String>,
 	) -> Self {
 		HttpClient {
+			send,
 			send_null_body,
 			timeout,
 			headers: headers.unwrap_or_else(Headers::new),
@@ -118,7 +162,10 @@ impl HttpClient {
 	}
 }
 
-impl SendHttpRequest for HttpClient {
+impl<SendType> SendHttpRequest for HttpClient<SendType>
+where
+	SendType: Send,
+{
 	fn send_request<U, T>(
 		&self,
 		base_url: Url,
@@ -131,7 +178,7 @@ impl SendHttpRequest for HttpClient {
 		T: RestPath<U>,
 	{
 		let url = join_url(base_url, T::get_path(params)?.as_str(), query)?;
-		let uri = Uri::from_str(url.as_str()).map_err(Error::HttpReqError)?;
+		let uri = Uri::try_from(url.as_str()).map_err(Error::HttpReqError)?;
 
 		trace!("uri: {:?}", uri);
 
@@ -194,7 +241,7 @@ impl SendHttpRequest for HttpClient {
 
 		let mut writer = Vec::new();
 
-		let response = request.send(&mut writer).map_err(Error::HttpReqError)?;
+		let response = self.send.execute_send_request(&mut request, &mut writer)?;
 
 		Ok((response, writer))
 	}
@@ -229,9 +276,14 @@ fn add_to_headers(headers: &mut Headers, key: HeaderName, value: HeaderValue) {
 mod tests {
 
 	use super::*;
+	use core::assert_matches::assert_matches;
 	use http::header::CONNECTION;
 	use serde::{Deserialize, Serialize};
 	use std::vec::Vec;
+
+	const HTTPBIN_ROOT_CERT: &str = include_str!("fixtures/amazon_root_ca_1_v3.pem");
+	const COINGECKO_ROOT_CERTIFICATE: &str =
+		include_str!("fixtures/baltimore_cyber_trust_root_v3.pem");
 
 	#[test]
 	fn join_url_adds_query_parameters() {
@@ -286,6 +338,7 @@ mod tests {
 		}
 
 		let http_client = HttpClient::new(
+			DefaultSend {},
 			true,
 			Some(Duration::from_secs(3u64)),
 			Some(headers_connection_close()),
@@ -328,6 +381,7 @@ mod tests {
 		}
 
 		let http_client = HttpClient::new(
+			DefaultSend {},
 			true,
 			Some(Duration::from_secs(3u64)),
 			Some(headers_connection_close()),
@@ -362,6 +416,7 @@ mod tests {
 		}
 
 		let http_client = HttpClient::new(
+			DefaultSend {},
 			false,
 			Some(Duration::from_secs(3u64)),
 			Some(headers_connection_close()),
@@ -405,7 +460,8 @@ mod tests {
 			}
 		}
 
-		let http_client = HttpClient::new(true, Some(Duration::from_secs(3u64)), None, None);
+		let http_client =
+			HttpClient::new(DefaultSend {}, true, Some(Duration::from_secs(3u64)), None, None);
 		let base_url = Url::parse("https://api.coingecko.com").unwrap();
 
 		let (response, encoded_body) = http_client
@@ -417,6 +473,74 @@ mod tests {
 
 		assert!(response.status_code().is_success());
 		assert!(!coins_list.is_empty());
+	}
+
+	#[test]
+	fn authenticated_get_works() {
+		#[derive(Serialize, Deserialize, Debug)]
+		struct HttpBinAnything {
+			pub method: String,
+			pub url: String,
+		}
+
+		impl RestPath<()> for HttpBinAnything {
+			fn get_path(_: ()) -> Result<String, Error> {
+				Ok(format!("anything"))
+			}
+		}
+		let base_url = Url::parse("https://httpbin.org").unwrap();
+		let root_certificate = HTTPBIN_ROOT_CERT.to_string();
+
+		let http_client = HttpClient::new(
+			SendWithCertificateVerification { root_certificate },
+			true,
+			Some(Duration::from_secs(3u64)),
+			Some(headers_connection_close()),
+			None,
+		);
+
+		let (response, encoded_body) = http_client
+			.send_request::<(), HttpBinAnything>(base_url, Method::GET, (), None, None)
+			.unwrap();
+
+		let response_body: HttpBinAnything =
+			deserialize_response_body(encoded_body.as_slice()).unwrap();
+
+		assert!(response.status_code().is_success());
+		assert!(!response_body.url.is_empty());
+		assert_eq!(response_body.method.as_str(), "GET");
+	}
+
+	#[test]
+	fn authenticated_get_with_wrong_root_certificate_fails() {
+		#[derive(Serialize, Deserialize, Debug)]
+		struct HttpBinAnything {
+			pub method: String,
+			pub url: String,
+		}
+
+		impl RestPath<()> for HttpBinAnything {
+			fn get_path(_: ()) -> Result<String, Error> {
+				Ok(format!("anything"))
+			}
+		}
+
+		let base_url = Url::parse("https://httpbin.org").unwrap();
+		let root_certificate = COINGECKO_ROOT_CERTIFICATE.to_string();
+
+		let http_client = HttpClient::new(
+			SendWithCertificateVerification { root_certificate },
+			true,
+			Some(Duration::from_secs(3u64)),
+			Some(headers_connection_close()),
+			None,
+		);
+
+		let result =
+			http_client.send_request::<(), HttpBinAnything>(base_url, Method::GET, (), None, None);
+		assert_matches!(result, Err(Error::HttpReqError(_)));
+		let msg = format!("error {:?}", result.err());
+		assert!(msg.contains("UnknownIssuer"));
 	}
 
 	fn headers_connection_close() -> Headers {

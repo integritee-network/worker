@@ -19,9 +19,13 @@
 
 #![no_std]
 
-#[cfg(all(feature = "sidechain", feature = "offchain-worker"))]
+#[cfg(any(
+	all(feature = "sidechain", feature = "offchain-worker"),
+	all(feature = "sidechain", feature = "teeracle"),
+	all(feature = "teeracle", feature = "offchain-worker")
+))]
 compile_error!(
-	"feature \"sidechain\" and feature \"offchain-worker\" cannot be enabled at the same time"
+	"feature \"sidechain\" , \"offchain-worker\" or \"teeracle\" cannot be enabled at the same time"
 );
 
 pub mod worker_mode;
@@ -104,4 +108,12 @@ pub mod enclave {
 
 	pub static MAX_TRUSTED_GETTERS_EXEC_DURATION: Duration = Duration::from_millis(150);
 	pub static TRUSTED_GETTERS_SLOT_DURATION: Duration = Duration::from_millis(400);
+}
+
+/// Settings for the Teeracle
+#[cfg(feature = "teeracle")]
+pub mod teeracle {
+	use core::time::Duration;
+	// Send extrinsic to update market exchange rate on the parentchain once per day
+	pub static DEFAULT_MARKET_DATA_UPDATE_INTERVAL: Duration = Duration::from_secs(86400);
 }

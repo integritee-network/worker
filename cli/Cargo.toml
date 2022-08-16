@@ -45,3 +45,5 @@ itp-rpc = { path = "../core-primitives/rpc" }
 itp-sgx-crypto = { path = "../core-primitives/sgx/crypto" }
 ita-stf = { path = "../app-libs/stf" }
 itc-rpc-client = { path = "../core/rpc-client" }
+itp-time-utils = { path = "../core-primitives/time-utils" }
+

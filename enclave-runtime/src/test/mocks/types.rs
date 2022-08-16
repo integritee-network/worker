@@ -29,10 +29,7 @@ use itp_test::mock::{
 	onchain_mock::OnchainMock,
 };
 use itp_top_pool::basic_pool::BasicPool;
-use itp_top_pool_author::{
-	api::SidechainApi,
-	author::{Author, AuthorTopFilter},
-};
+use itp_top_pool_author::{api::SidechainApi, author::Author, top_filter::AllowAllTopsFilter};
 use itp_types::{Block as ParentchainBlock, SignedBlock as SignedParentchainBlock};
 use its_sidechain::{
 	aura::block_importer::BlockImporter, block_composer::BlockComposer, state::SidechainDB,
@@ -69,8 +66,13 @@ pub type TestRpcResponder = RpcResponderMock<H256>;
 pub type TestTopPool =
 	BasicPool<SidechainApi<ParentchainBlock>, ParentchainBlock, TestRpcResponder>;
 
-pub type TestTopPoolAuthor =
-	Author<TestTopPool, AuthorTopFilter, TestStateHandler, TestShieldingKeyRepo, MetricsOCallMock>;
+pub type TestTopPoolAuthor = Author<
+	TestTopPool,
+	AllowAllTopsFilter,
+	TestStateHandler,
+	TestShieldingKeyRepo,
+	MetricsOCallMock,
+>;
 
 pub type TestTopPoolExecutor = TopPoolOperationHandler<
 	ParentchainBlock,

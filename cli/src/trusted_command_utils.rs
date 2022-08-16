@@ -15,7 +15,7 @@
 
 */
 
-use crate::trusted_commands::TrustedArgs;
+use crate::{command_utils::mrenclave_from_base58, trusted_commands::TrustedArgs};
 use base58::{FromBase58, ToBase58};
 use codec::Encode;
 use ita_stf::{AccountId, ShardIdentifier};
@@ -34,13 +34,7 @@ pub(crate) fn get_keystore_path(trusted_args: &TrustedArgs) -> PathBuf {
 }
 
 pub(crate) fn get_identifiers(trusted_args: &TrustedArgs) -> ([u8; 32], ShardIdentifier) {
-	let mut mrenclave = [0u8; 32];
-	mrenclave.copy_from_slice(
-		&trusted_args
-			.mrenclave
-			.from_base58()
-			.expect("mrenclave has to be base58 encoded"),
-	);
+	let mrenclave = mrenclave_from_base58(&trusted_args.mrenclave);
 	let shard = match &trusted_args.shard {
 		Some(val) =>
 			ShardIdentifier::from_slice(&val.from_base58().expect("shard has to be base58 encoded")),

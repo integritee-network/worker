@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mode: [ sidechain, offchain-worker ]
+        mode: [ sidechain, offchain-worker, teeracle ]
 
     steps:
       - uses: actions/checkout@v3
@@ -117,6 +117,9 @@ jobs:
     env:
       WORKER_IMAGE_TAG: integritee-worker:dev
       CLIENT_IMAGE_TAG: integritee-cli:dev
+      COINMARKETCAP_KEY: ${{ secrets.COINMARKETCAP_KEY }}
+      TEERACLE_INTERVAL_SECONDS: 4
+
     strategy:
       fail-fast: false
       matrix:
@@ -133,6 +136,9 @@ jobs:
           - test: M6
             mode: offchain-worker
             demo_name: demo-indirect-invocation
+          - test: Teeracle
+            mode: teeracle
+            demo_name: demo-teeracle
 
     steps:
       - uses: actions/checkout@v3
@@ -166,7 +172,7 @@ jobs:
       - name: Integration Test ${{ matrix.test }}-${{ matrix.mode }}
         run: |
           cd docker
-          docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml up --no-build --exit-code-from ${{ matrix.demo_name }}
+          docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml up ${{ matrix.demo_name }} --no-build --exit-code-from ${{ matrix.demo_name }}
 
       - name: Collect Docker Logs
         continue-on-error: true

@@ -29,9 +29,6 @@
 #[macro_use]
 extern crate sgx_tstd as std;
 
-#[cfg(not(feature = "test"))]
-use sgx_types::size_t;
-
 use crate::{
 	error::{Error, Result},
 	global_components::{
@@ -74,6 +71,7 @@ use std::{boxed::Box, slice, vec::Vec};
 use substrate_api_client::{compose_extrinsic_offline, ExtrinsicParams};
 
 mod attestation;
+mod empty_impls;
 mod global_components;
 mod initialization;
 mod ipfs;
@@ -87,21 +85,18 @@ mod sync;
 mod tls_ra;
 pub mod top_pool_execution;
 
+#[cfg(feature = "teeracle")]
+pub mod teeracle;
+
 #[cfg(feature = "test")]
 pub mod test;
-
-// this is a 'dummy' for production mode
-#[cfg(not(feature = "test"))]
-#[no_mangle]
-pub extern "C" fn test_main_entrance() -> size_t {
-	unreachable!("Tests are not available when compiled in production mode.")
-}
 
 pub const CERTEXPIRYDAYS: i64 = 90i64;
 
 pub type Hash = sp_core::H256;
 pub type AuthorityPair = sp_core::ed25519::Pair;
 
+/// Initialize the enclave.
 #[no_mangle]
 pub unsafe extern "C" fn init(
 	mu_ra_addr: *const u8,

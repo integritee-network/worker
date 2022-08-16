@@ -16,6 +16,7 @@
 */
 
 use crate::Cli;
+use base58::FromBase58;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use itp_node_api::api_client::{ParentchainApi, WsRpcClient};
 use log::*;
@@ -77,4 +78,10 @@ pub(crate) fn get_pair_from_str(account: &str) -> sr25519::AppPair {
 			_pair
 		},
 	}
+}
+
+pub(crate) fn mrenclave_from_base58(src: &str) -> [u8; 32] {
+	let mut mrenclave = [0u8; 32];
+	mrenclave.copy_from_slice(&src.from_base58().expect("mrenclave has to be base58 encoded"));
+	mrenclave
 }

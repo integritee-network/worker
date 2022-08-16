@@ -24,3 +24,6 @@ pub mod on_chain_ocall_tests;
 pub mod sidechain_aura_tests;
 pub mod tests_main;
 pub mod top_pool_tests;
+
+#[cfg(feature = "teeracle")]
+pub mod teeracle_tests;

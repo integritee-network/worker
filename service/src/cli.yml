@@ -104,6 +104,12 @@ subcommands:
                 long: request-state
                 short: r
                 help: Run the worker and request key and state provisioning from another worker.
+            - teeracle-interval:
+                required: false
+                long: teeracle-interval
+                short: i
+                help: Set the teeracle exchange rate update interval. Example of accepted syntax <5 seconds 15 minutes 2 hours 1 days> or short <5s15m2h1d>
+                takes_value: true
     - request-state:
         about: join a shard by requesting key provisioning from another worker
         args:

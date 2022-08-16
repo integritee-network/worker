@@ -46,7 +46,7 @@ use itp_sgx_crypto::{Aes, ShieldingCryptoEncrypt, StateCrypto};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock};
 use itp_time_utils::duration_now;
-use itp_top_pool_author::{author::AuthorTopFilter, traits::AuthorApi};
+use itp_top_pool_author::{top_filter::AllowAllTopsFilter, traits::AuthorApi};
 use itp_types::{AccountId, Block as ParentchainBlock, ShardIdentifier};
 use its_sidechain::{
 	aura::proposer_factory::ProposerFactory, slots::SlotInfo, state::SidechainState,
@@ -102,10 +102,10 @@ pub fn produce_sidechain_block_and_import_it() {
 
 	let top_pool_author = Arc::new(TestTopPoolAuthor::new(
 		top_pool,
-		AuthorTopFilter {},
+		AllowAllTopsFilter {},
 		state_handler.clone(),
 		shielding_key_repo,
-		Arc::new(MetricsOCallMock {}),
+		Arc::new(MetricsOCallMock::default()),
 	));
 	let top_pool_operation_handler =
 		Arc::new(TestTopPoolExecutor::new(top_pool_author.clone(), stf_executor.clone()));
