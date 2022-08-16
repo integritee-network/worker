@@ -20,9 +20,10 @@ use crate::test_genesis::test_genesis_setup;
 
 use crate::{
 	helpers::{
-		account_data, account_nonce, enclave_signer_account, ensure_enclave_signer_account,
-		ensure_root, get_account_info, get_evm_account_codes, get_evm_account_storages,
-		increment_nonce, root, validate_nonce,
+		account_data, account_nonce, create_code_hash, enclave_signer_account,
+		ensure_enclave_signer_account, ensure_root, evm_create2_address, evm_create_address,
+		get_account_info, get_evm_account_codes, get_evm_account_storages, increment_nonce, root,
+		validate_nonce,
 	},
 	AccountData, AccountId, Getter, Index, ParentchainHeader, PublicGetter, ShardIdentifier, State,
 	StateTypeDiff, Stf, StfError, StfResult, TrustedCall, TrustedCallSigned, TrustedGetter,
@@ -36,7 +37,7 @@ use itp_utils::stringify::account_id_to_string;
 use its_state::SidechainSystemExt;
 use log::*;
 use sgx_externalities::SgxExternalitiesTrait;
-use sgx_runtime::Runtime;
+use sgx_runtime::{AddressMapping, HashedAddressMapping, Runtime};
 use sidechain_primitives::types::{BlockHash, BlockNumber as SidechainBlockNumber, Timestamp};
 use sp_io::hashing::blake2_256;
 use sp_runtime::MultiAddress;
@@ -278,6 +279,8 @@ impl Stf {
 						source,
 						value
 					);
+					let nonce_evm_account =
+						account_nonce(&HashedAddressMapping::into_account_id(source));
 					sgx_runtime::EvmCall::<Runtime>::create {
 						source,
 						init,
@@ -290,6 +293,8 @@ impl Stf {
 					}
 					.dispatch_bypass_filter(sgx_runtime::Origin::signed(from))
 					.map_err(|e| StfError::Dispatch(format!("Evm Create error: {:?}", e.error)))?;
+					let contract_address = evm_create_address(source, nonce_evm_account);
+					info!("Trying to create evm contract with address {:?}", contract_address);
 					Ok(())
 				},
 				TrustedCall::evm_create2(
@@ -310,6 +315,7 @@ impl Stf {
 						source,
 						value
 					);
+					let code_hash = create_code_hash(&init);
 					sgx_runtime::EvmCall::<Runtime>::create2 {
 						source,
 						init,
@@ -323,6 +329,8 @@ impl Stf {
 					}
 					.dispatch_bypass_filter(sgx_runtime::Origin::signed(from))
 					.map_err(|e| StfError::Dispatch(format!("Evm Create2 error: {:?}", e.error)))?;
+					let contract_address = evm_create2_address(source, salt, code_hash);
+					info!("Trying to create evm contract with address {:?}", contract_address);
 					Ok(())
 				},
 			}?;
