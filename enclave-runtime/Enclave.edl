@@ -27,11 +27,19 @@ enclave {
 	from "sgx_env.edl" import *;
 	from "sgx_thread.edl" import *;
 	from "sgx_pipe.edl" import *;
+	from "sgx_file.edl" import *;
+	from "sgx_dcap_tvl.edl" import *;
 
 	include "sgx_quote.h"
+	include "sgx_report.h"
+	include "sgx_ql_quote.h"
+	include "sgx_qve_header.h"
+
+
 
 	trusted {
 		/* define ECALLs here. */
+
 		public sgx_status_t init(
 			[in, size=mu_ra_addr_size] uint8_t* mu_ra_addr, uint32_t mu_ra_addr_size,
 			[in, size=untrusted_worker_addr_size] uint8_t* untrusted_worker_addr, uint32_t untrusted_worker_addr_size
@@ -93,6 +101,16 @@ enclave {
 			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
 		);
 
+		public sgx_status_t perform_dcap_ra(
+			[in, size=genesis_hash_size] uint8_t* genesis_hash, uint32_t genesis_hash_size,
+			[in] uint32_t* nonce,
+			[in, size=w_url_size] uint8_t* w_url, uint32_t w_url_size,
+			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size,
+			[in] const sgx_target_info_t* quoting_enclave_target_info,
+			[in] uint32_t* quote_size
+		);
+
+
 		public sgx_status_t mock_register_enclave_xt(
             [in, size=genesis_hash_size] uint8_t* genesis_hash, uint32_t genesis_hash_size,
             [in] uint32_t* nonce,
@@ -107,6 +125,8 @@ enclave {
 		);
 
 		public sgx_status_t dump_ra_to_disk();
+
+		public sgx_status_t dump_dcap_ra_to_disk([in] const sgx_target_info_t* quoting_enclave_target_info, [in] uint32_t* quote_size);
 
 		public sgx_status_t run_state_provisioning_server(int fd, sgx_quote_sign_type_t quote_type, int skip_ra);
         public sgx_status_t request_state_provisioning(
@@ -140,6 +160,23 @@ enclave {
 			[out, size = maxlen] sgx_quote_t *p_quote, uint32_t maxlen,
 			[out] uint32_t* p_quote_len
 		);
+
+		sgx_status_t ocall_get_dcap_quote(
+			[in] sgx_report_t *report,
+			[out, size = quote_size] sgx_quote_t *p_quote, uint32_t quote_size
+		);
+
+		sgx_status_t ocall_get_qve_report_on_quote(
+			[in, size = quote_size] const uint8_t * quote, uint32_t quote_size,
+			time_t current_time,
+			[in] const sgx_ql_qve_collateral_t *p_quote_collateral,
+            [out] uint32_t *collateral_expiration_status,
+            [out] sgx_ql_qv_result_t *quote_verification_result,
+			[in, out] sgx_ql_qe_report_info_t *qve_report_info,
+            [out, size=supplemental_data_size] uint8_t *p_supplemental_data,
+            uint32_t supplemental_data_size
+		);
+
 
 		sgx_status_t ocall_get_update_info(
 			[in] sgx_platform_info_t * platformBlob, int32_t enclaveTrusted,

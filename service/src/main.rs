@@ -225,7 +225,7 @@ fn main() {
 		setup::generate_signing_key_file(enclave.as_ref());
 	} else if matches.is_present("dump-ra") {
 		info!("*** Perform RA and dump cert to disk");
-		enclave.dump_ra_to_disk().unwrap();
+		enclave.dump_dcap_ra_to_disk().unwrap();
 	} else if matches.is_present("mrenclave") {
 		println!("{}", enclave.get_mrenclave().unwrap().encode().to_base58());
 	} else if let Some(sub_matches) = matches.subcommand_matches("init-shard") {
@@ -416,7 +416,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		enclave.mock_register_xt(node_api.genesis_hash, nonce, &trusted_url).unwrap()
 	} else {
 		enclave
-			.perform_ra(genesis_hash, nonce, trusted_url.as_bytes().to_vec())
+			.perform_dcap_ra(genesis_hash, nonce, trusted_url.as_bytes().to_vec())
 			.unwrap()
 	};
 

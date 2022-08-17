@@ -28,11 +28,7 @@ use itp_types::{
 	storage::StorageEntryVerified, BlockHash, Enclave, ShardIdentifier, WorkerRequest,
 	WorkerResponse,
 };
-use sgx_types::{
-	sgx_epid_group_id_t, sgx_measurement_t, sgx_platform_info_t, sgx_quote_nonce_t,
-	sgx_quote_sign_type_t, sgx_report_t, sgx_spid_t, sgx_target_info_t, sgx_update_info_bit_t,
-	SgxResult, SGX_HASH_SIZE,
-};
+use sgx_types::*;
 use sp_core::H256;
 use sp_runtime::{traits::Header as HeaderTrait, AccountId32, OpaqueExtrinsic};
 use sp_std::prelude::*;
@@ -108,6 +104,21 @@ impl EnclaveAttestationOCallApi for OnchainMock {
 		_spid: sgx_spid_t,
 		_quote_nonce: sgx_quote_nonce_t,
 	) -> SgxResult<(sgx_report_t, Vec<u8>)> {
+		todo!()
+	}
+
+	fn get_dcap_quote(&self, _report: sgx_report_t, _quote_size: u32) -> SgxResult<Vec<u8>> {
+		todo!()
+	}
+
+	fn get_qve_report_on_quote(
+		&self,
+		_quote: Vec<u8>,
+		_current_time: i64,
+		_quote_collateral: sgx_ql_qve_collateral_t,
+		_qve_report_info: sgx_ql_qe_report_info_t,
+		_supplemental_data_size: u32,
+	) -> SgxResult<(u32, sgx_ql_qv_result_t, sgx_ql_qe_report_info_t, Vec<u8>)> {
 		todo!()
 	}
 

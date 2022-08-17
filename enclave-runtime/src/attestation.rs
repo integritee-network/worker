@@ -481,13 +481,14 @@ pub fn create_ra_report_and_signature<A: EnclaveAttestationOCallApi>(
 
 	// generate an ECC certificate
 	info!("    [Enclave] Generate ECC Certificate");
-	let (key_der, cert_der) = match cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle) {
-		Ok(r) => r,
-		Err(e) => {
-			error!("    [Enclave] gen_ecc_cert failed: {:?}", e);
-			return Err(e.into())
-		},
-	};
+	let (key_der, cert_der) =
+		match cert::gen_ecc_cert(&payload.into_bytes(), &prv_k, &pub_k, &ecc_handle) {
+			Ok(r) => r,
+			Err(e) => {
+				error!("    [Enclave] gen_ecc_cert failed: {:?}", e);
+				return Err(e.into())
+			},
+		};
 
 	let _ = ecc_handle.close();
 	info!("    [Enclave] Generate ECC Certificate successful");
