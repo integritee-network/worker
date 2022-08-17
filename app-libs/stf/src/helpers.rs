@@ -230,3 +230,9 @@ pub fn evm_create2_address(caller: H160, salt: H256, code_hash: H256) -> H160 {
 pub fn create_code_hash(code: &[u8]) -> H256 {
 	H256::from_slice(Keccak256::digest(&code).as_slice())
 }
+
+pub fn get_evm_account(account: &AccountId) -> H160 {
+	let mut evm_acc_slice: [u8; 20] = [0; 20];
+	evm_acc_slice.copy_from_slice((<[u8; 32]>::from(account.clone())).get(0..20).unwrap());
+	evm_acc_slice.into()
+}
