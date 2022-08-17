@@ -150,7 +150,8 @@ pub mod storage {
 
 	pub fn set(key: &[u8], value: &[u8]) {
 		debug!("set_storage('{}', {:x?})", encode_hex(key), value);
-		with_externalities(|ext| ext.insert(key.to_vec(), value.to_vec()));
+		with_externalities(|ext| ext.insert(key.to_vec(), value.to_vec()))
+			.expect("`set` cannot be called outside of an Externalities-provided environment.");
 	}
 
 	pub fn clear(key: &[u8]) {
@@ -940,5 +941,13 @@ mod tests {
 		ext.insert(CODE.to_vec(), code.clone());
 
 		assert_eq!(ext.get(CODE).unwrap(), &code);
+	}
+
+	#[test]
+	#[should_panic(
+		expected = "`set` cannot be called outside of an Externalities-provided environment."
+	)]
+	fn storage_set_without_externalities_panics() {
+		storage::set(b"hello", b"world");
 	}
 }

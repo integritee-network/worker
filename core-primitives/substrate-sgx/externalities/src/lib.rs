@@ -181,4 +181,51 @@ pub mod tests {
 		let ext = SgxExternalities::default();
 		assert!(ext.state.0.is_empty());
 	}
+
+	#[test]
+	#[should_panic(expected = "already borrowed: BorrowMutError")]
+	fn nested_with_externalities_panics() {
+		let mut ext = SgxExternalities::default();
+
+		ext.execute_with(|| {
+			with_externalities(|_| {
+				with_externalities(|e| {
+					e.insert(b"hello".to_vec(), b"world".to_vec());
+				})
+				.unwrap()
+			})
+			.unwrap()
+		});
+	}
+
+	#[test]
+	fn nesting_execute_with_works() {
+		let mut ext = SgxExternalities::default();
+		let mut ext2 = ext.clone();
+
+		let hello = b"hello".to_vec();
+		let world = b"world".to_vec();
+
+		ext.execute_with(|| {
+			with_externalities(|e| {
+				e.insert(hello.clone(), hello.clone());
+			})
+			.unwrap();
+
+			ext2.execute_with(|| {
+				// with externalities uses the latest set externalities defined by the last
+				// `set_and_run_with_externalities` call.
+				with_externalities(|e| {
+					e.insert(world.clone(), world.clone());
+				})
+				.unwrap();
+			});
+		});
+
+		assert_eq!(ext.get(&hello), Some(&hello));
+		assert_eq!(ext2.get(&world), Some(&world));
+
+		// ext1 and ext2 are unrelated.
+		assert_eq!(ext.get(&world), None);
+	}
 }
