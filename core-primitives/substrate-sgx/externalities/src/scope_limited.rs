@@ -32,7 +32,7 @@ pub fn set_and_run_with_externalities<F: FnOnce() -> R, R>(ext: &mut SgxExternal
 ///
 /// Returns `None` if no externalities are set or `Some(_)` with the result of the closure.
 ///
-/// Panics if calls to `with_externalities` are nested with `already borrowed: BorrowMutError`.
+/// Panics with `already borrowed: BorrowMutError` if calls to `with_externalities` are nested.
 pub fn with_externalities<F: FnOnce(&mut SgxExternalities) -> R, R>(f: F) -> Option<R> {
 	ext::with(f)
 }
