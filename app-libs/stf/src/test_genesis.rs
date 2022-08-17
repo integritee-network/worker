@@ -15,11 +15,14 @@
 
 */
 
-use crate::{helpers::get_account_info, StfError};
+use crate::{
+	helpers::{get_account_info, get_evm_account},
+	StfError,
+};
 use itp_storage::storage_value_key;
 use log::*;
 use sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
-use sgx_runtime::{Balance, Runtime};
+use sgx_runtime::{AddressMapping, Balance, Runtime};
 use sgx_tstd as std;
 use sp_core::{crypto::AccountId32, ed25519, Pair};
 use sp_runtime::MultiAddress;
@@ -57,6 +60,8 @@ pub fn test_genesis_setup(state: &mut SgxExternalities) {
 	set_sudo_account(state, &ALICE_ENCODED);
 	trace!("Set new sudo account: {:?}", &ALICE_ENCODED);
 
+	let alice_evm = get_evm_account(&ALICE_ENCODED.into());
+	let alice_evm_substrate_version = sgx_runtime::HashedAddressMapping::into_account_id(alice_evm);
 	let endowees: Vec<(AccountId32, Balance, Balance)> = vec![
 		(endowed_account().public().into(), ENDOWED_ACC_FUNDS, ENDOWED_ACC_FUNDS),
 		(
@@ -65,6 +70,7 @@ pub fn test_genesis_setup(state: &mut SgxExternalities) {
 			SECOND_ENDOWED_ACC_FUNDS,
 		),
 		(ALICE_ENCODED.into(), ALICE_FUNDS, ALICE_FUNDS),
+		(alice_evm_substrate_version, ALICE_FUNDS, ALICE_FUNDS),
 	];
 
 	endow(state, endowees);
