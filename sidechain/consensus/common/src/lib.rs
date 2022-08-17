@@ -33,6 +33,7 @@ use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::{time::Duration, vec::Vec};
 
 mod block_import;
+mod block_import_confirmation_handler;
 mod block_import_queue_worker;
 mod error;
 mod peer_block_sync;
@@ -41,6 +42,7 @@ mod peer_block_sync;
 mod test;
 
 pub use block_import::*;
+pub use block_import_confirmation_handler::*;
 pub use block_import_queue_worker::*;
 pub use error::*;
 pub use peer_block_sync::*;

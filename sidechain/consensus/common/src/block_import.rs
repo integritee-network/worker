@@ -99,7 +99,6 @@ where
 		sidechain_block: &SignedSidechainBlock::Block,
 		last_imported_parentchain_header: &ParentchainBlock::Header,
 	) -> Result<ParentchainBlock::Header, Error>;
-
 	/// Cleanup task after import is done.
 	fn cleanup(&self, signed_sidechain_block: &SignedSidechainBlock) -> Result<(), Error>;
 
