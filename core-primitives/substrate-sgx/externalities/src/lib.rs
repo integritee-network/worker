@@ -26,6 +26,8 @@ use derive_more::{Deref, DerefMut, From};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, vec::Vec};
 
+pub use scope_limited::{set_and_run_with_externalities, with_externalities};
+
 // Unfortunately we cannot use `serde_with::serde_as` to serialize our map (which would be very convenient)
 // because it has pulls in the serde and serde_json dependency with `std`, not `default-features=no`.
 // Instead we use https://github.com/DenisKolodin/vectorize which is very little code, copy-pasted
