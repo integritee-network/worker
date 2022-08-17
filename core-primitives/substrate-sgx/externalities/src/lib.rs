@@ -174,13 +174,8 @@ pub mod tests {
 		let mut ext = SgxExternalities::default();
 
 		ext.execute_with(|| {
-			with_externalities(|_| {
-				with_externalities(|e| {
-					e.insert(b"hello".to_vec(), b"world".to_vec());
-				})
-				.unwrap()
-			})
-			.unwrap()
+			with_externalities(|_| with_externalities(|_| unreachable!("panics before")).unwrap())
+				.unwrap();
 		});
 	}
 
