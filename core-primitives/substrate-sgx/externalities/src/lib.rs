@@ -194,7 +194,7 @@ pub mod tests {
 			.unwrap();
 
 			ext2.execute_with(|| {
-				// with externalities uses the latest set externalities defined by the last
+				// `with_externalities` uses the latest set externalities defined by the last
 				// `set_and_run_with_externalities` call.
 				with_externalities(|e| {
 					e.insert(world.clone(), world.clone());
