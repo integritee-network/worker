@@ -258,6 +258,7 @@ pub enum TrustedGetter {
 	free_balance(AccountId),
 	reserved_balance(AccountId),
 	nonce(AccountId),
+	evm_nonce(AccountId),
 	evm_account_codes(AccountId, H160),
 	evm_account_storages(AccountId, H160, H256),
 }
@@ -268,6 +269,7 @@ impl TrustedGetter {
 			TrustedGetter::free_balance(sender_account) => sender_account,
 			TrustedGetter::reserved_balance(sender_account) => sender_account,
 			TrustedGetter::nonce(sender_account) => sender_account,
+			TrustedGetter::evm_nonce(sender_account) => sender_account,
 			TrustedGetter::evm_account_codes(sender_account, _) => sender_account,
 			TrustedGetter::evm_account_storages(sender_account, ..) => sender_account,
 		}

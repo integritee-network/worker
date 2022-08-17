@@ -22,8 +22,8 @@ use crate::{
 	helpers::{
 		account_data, account_nonce, create_code_hash, enclave_signer_account,
 		ensure_enclave_signer_account, ensure_root, evm_create2_address, evm_create_address,
-		get_account_info, get_evm_account_codes, get_evm_account_storages, increment_nonce, root,
-		validate_nonce,
+		get_account_info, get_evm_account, get_evm_account_codes, get_evm_account_storages,
+		increment_nonce, root, validate_nonce,
 	},
 	AccountData, AccountId, Getter, Index, ParentchainHeader, PublicGetter, ShardIdentifier, State,
 	StateTypeDiff, Stf, StfError, StfResult, TrustedCall, TrustedCallSigned, TrustedGetter,
@@ -118,6 +118,24 @@ impl Stf {
 					} else {
 						None
 					},
+				TrustedGetter::evm_nonce(who) => {
+					let evm_account = get_evm_account(&who);
+					let evm_account =
+						sgx_runtime::HashedAddressMapping::into_account_id(evm_account);
+					let maybe_nonce = if let Some(info) = get_account_info(&evm_account) {
+						debug!("TrustedGetter evm_nonce");
+						debug!(
+							"AccountInfo for {} is {:?}",
+							account_id_to_string(&evm_account),
+							info
+						);
+						debug!("Account nonce is {}", info.nonce);
+						Some(info.nonce.encode())
+					} else {
+						None
+					};
+					maybe_nonce
+				},
 				TrustedGetter::evm_account_codes(_who, evm_account) =>
 				// TODO: This probably needs some security check if who == evm_account (or assosciated)
 					if let Some(info) = get_evm_account_codes(&evm_account) {

@@ -24,22 +24,45 @@ use crate::{
 };
 use codec::Decode;
 use core::str::FromStr;
-use ita_stf::{Index, KeyPair, TrustedCall, TrustedGetter, TrustedOperation};
+use ita_stf::{
+	helpers::evm_create_address, Index, KeyPair, TrustedCall, TrustedGetter, TrustedOperation,
+};
 use itp_types::AccountId;
 use log::*;
 use my_node_runtime::Balance;
+use pallet_evm::{AddressMapping, HashedAddressMapping};
 use sp_application_crypto::{ed25519, sr25519};
-use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair, H160, U256};
+use sp_core::{crypto::Ss58Codec, Pair, H160, U256};
+use sp_runtime::traits::BlakeTwo256;
 use std::{string::ToString, vec::Vec};
 use substrate_api_client::utils::FromHexString;
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
 
 macro_rules! get_layer_two_nonce {
 	($signer_pair:ident, $cli: ident, $trusted_args:ident ) => {{
-		let top: TrustedOperation =
-			TrustedGetter::nonce(sr25519_core::Public::from($signer_pair.public()).into())
-				.sign(&KeyPair::Sr25519($signer_pair.clone()))
-				.into();
+		let top: TrustedOperation = TrustedGetter::nonce($signer_pair.public().into())
+			.sign(&KeyPair::Sr25519($signer_pair.clone()))
+			.into();
+		let res = perform_operation($cli, $trusted_args, &top);
+		let nonce: Index = if let Some(n) = res {
+			if let Ok(nonce) = Index::decode(&mut n.as_slice()) {
+				nonce
+			} else {
+				0
+			}
+		} else {
+			0
+		};
+		debug!("got layer two nonce: {:?}", nonce);
+		nonce
+	}};
+}
+
+macro_rules! get_layer_two_evm_nonce {
+	($signer_pair:ident, $cli:ident, $trusted_args:ident ) => {{
+		let top: TrustedOperation = TrustedGetter::evm_nonce($signer_pair.public().into())
+			.sign(&KeyPair::Sr25519($signer_pair.clone()))
+			.into();
 		let res = perform_operation($cli, $trusted_args, &top);
 		let nonce: Index = if let Some(n) = res {
 			if let Ok(nonce) = Index::decode(&mut n.as_slice()) {
@@ -284,6 +307,13 @@ fn evm_create(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, smart_contr
 
 	let (mrenclave, shard) = get_identifiers(trusted_args);
 
+	let nonce = get_layer_two_nonce!(from, cli, trusted_args);
+
+	let sender_evm_substrate_addr =
+		HashedAddressMapping::<BlakeTwo256>::into_account_id(sender_evm_acc);
+	println!("Trying to get nonce of evm account {:?}", sender_evm_substrate_addr.to_ss58check());
+	let evm_account_nonce = get_layer_two_evm_nonce!(from, cli, trusted_args);
+
 	let top = TrustedCall::evm_create(
 		from_acc,
 		sender_evm_acc,
@@ -295,11 +325,14 @@ fn evm_create(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, smart_contr
 		None,
 		Vec::new(),
 	)
-	.sign(&from.into(), 0, &mrenclave, &shard)
+	.sign(&from.into(), nonce, &mrenclave, &shard)
 	.into_trusted_operation(trusted_args.direct);
 
 	let _ = perform_operation(cli, trusted_args, &top);
-	info!("trusted call transfer executed");
+
+	let execution_address = evm_create_address(sender_evm_acc, evm_account_nonce);
+	info!("trusted call evm_create executed");
+	println!("Hopefully created the smart contract with address {:?}", execution_address);
 }
 
 fn evm_call(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, arg_to: &str, amount: &Balance) {
