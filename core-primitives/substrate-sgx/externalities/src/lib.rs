@@ -183,7 +183,7 @@ pub mod tests {
 	}
 
 	#[test]
-	fn nesting_execute_with_works() {
+	fn nesting_execute_with_uses_the_latest_externalities() {
 		let mut ext = SgxExternalities::default();
 		let mut ext2 = ext.clone();
 
