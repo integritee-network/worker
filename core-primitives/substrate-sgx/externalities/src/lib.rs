@@ -23,7 +23,6 @@ extern crate sgx_tstd as std;
 
 use codec::{Decode, Encode};
 use derive_more::{Deref, DerefMut, From};
-use environmental::environmental;
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, vec::Vec};
 
@@ -34,6 +33,7 @@ use std::{collections::BTreeMap, vec::Vec};
 //use serde_with::serde_as;
 
 mod codec_impl;
+mod scope_limited;
 // These are used to serialize a map with keys that are not string.
 mod bypass;
 mod vectorize;
@@ -51,8 +51,6 @@ pub struct SgxExternalities {
 	pub state: SgxExternalitiesType,
 	pub state_diff: SgxExternalitiesDiffType,
 }
-
-environmental!(ext: SgxExternalities);
 
 pub trait SgxExternalitiesTrait {
 	fn new() -> Self;
@@ -113,20 +111,6 @@ impl SgxExternalitiesTrait for SgxExternalities {
 	fn execute_with<R>(&mut self, f: impl FnOnce() -> R) -> R {
 		set_and_run_with_externalities(self, f)
 	}
-}
-
-/// Set the given externalities while executing the given closure. To get access to the externalities
-/// while executing the given closure [`with_externalities`] grants access to them. The externalities
-/// are only set for the same thread this function was called from.
-pub fn set_and_run_with_externalities<F: FnOnce() -> R, R>(ext: &mut SgxExternalities, f: F) -> R {
-	ext::using(ext, f)
-}
-
-/// Execute the given closure with the currently set externalities.
-///
-/// Returns `None` if no externalities are set or `Some(_)` with the result of the closure.
-pub fn with_externalities<F: FnOnce(&mut SgxExternalities) -> R, R>(f: F) -> Option<R> {
-	ext::with(f)
 }
 
 /// Results concerning an operation to remove many keys.
