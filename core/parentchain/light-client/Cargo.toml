@@ -26,7 +26,7 @@ itp-settings = { path = "../../../core-primitives/settings" }
 itp-storage = { path = "../../../core-primitives/storage", default-features = false }
 
 # integritee
-itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "tn/polkadot-v0.9.27" }
 
 # substrate deps
 frame-system = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
@@ -37,7 +37,7 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 sp-trie = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 
 # mocks dependencies
-parentchain-test = { optional = true, default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+parentchain-test = { optional = true, default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "tn/polkadot-v0.9.27" }
 
 [dev-dependencies]
 itp-test = { path = "../../../core-primitives/test" }

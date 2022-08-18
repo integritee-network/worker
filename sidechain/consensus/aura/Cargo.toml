@@ -6,11 +6,11 @@ edition = "2018"
 
 [dependencies]
 finality-grandpa = { version = "0.16.0", default-features = false, features = ["derive-codec"] }
-itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-itp-utils = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "tn/polkadot-v0.9.27" }
+itp-utils = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "tn/polkadot-v0.9.27" }
 log = { version = "0.4", default-features = false }
-sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-sidechain-block-verification = { optional = true, default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "tn/polkadot-v0.9.27" }
+sidechain-block-verification = { optional = true, default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "tn/polkadot-v0.9.27" }
 
 # sgx deps
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
@@ -45,8 +45,8 @@ itc-parentchain-block-import-dispatcher = { path = "../../../core/parentchain/bl
 itp-storage = { path = "../../../core-primitives/storage" }
 itp-test = { path = "../../../core-primitives/test" }
 its-top-pool-executor = { path = "../../top-pool-executor", features = ["mocks"] }
-parentchain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+parentchain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "tn/polkadot-v0.9.27" }
+sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "tn/polkadot-v0.9.27" }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 
 [features]

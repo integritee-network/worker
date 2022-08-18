@@ -59,13 +59,13 @@ hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 ipfs-unixfs = { default-features = false, git = "https://github.com/whalelephant/rust-ipfs", branch = "w-nstd" }
 
 # scs / integritee
-itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-itp-utils = { default-features = false, features = ["sgx"], git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "tn/polkadot-v0.9.27" }
+itp-utils = { default-features = false, features = ["sgx"], git = "https://github.com/integritee-network/pallets.git", branch = "tn/polkadot-v0.9.27" }
 jsonrpc-core = { default-features = false, git = "https://github.com/scs/jsonrpc", branch = "no_std_v18" }
-sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.26" }
-parentchain-test = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-sidechain-block-verification = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master"}
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "tn/polkadot-v0.9.27" }
+substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client.git", branch = "tn/polkadot-v0.9.27" }
+parentchain-test = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "tn/polkadot-v0.9.27" }
+sidechain-block-verification = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "tn/polkadot-v0.9.27"}
 
 # mesalock
 linked-hash-map = { git = "https://github.com/mesalock-linux/linked-hash-map-sgx" }

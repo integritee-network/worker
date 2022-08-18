@@ -12,10 +12,10 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 sp-core = { git = "https://github.com/paritytech/substrate.git", default-features = false, branch = "polkadot-v0.9.27" }
 
 # scs
-substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.26" }
+substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client.git", branch = "tn/polkadot-v0.9.27" }
 
 # integritee
-itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "tn/polkadot-v0.9.27" }
 
 [features]
 default = ["std"]
