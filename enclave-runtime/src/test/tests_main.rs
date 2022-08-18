@@ -21,8 +21,11 @@ use crate::{
 	sync::tests::{enclave_rw_lock_works, sidechain_rw_lock_works},
 	test::{
 		cert_tests::*,
-		fixtures::initialize_test_state::init_state,
-		mocks::{rpc_responder_mock::RpcResponderMock, types::TestStateKeyRepo},
+		fixtures::{
+			initialize_test_state::init_state,
+			tests_setup::{enclave_call_signer, test_top_pool},
+		},
+		mocks::types::TestStateKeyRepo,
 		sidechain_aura_tests, top_pool_tests,
 	},
 	tls_ra,
@@ -44,9 +47,7 @@ use itp_node_api::metadata::{
 };
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::enclave::MAX_TRUSTED_OPS_EXEC_DURATION;
-use itp_sgx_crypto::{
-	ed25519_derivation::DeriveEd25519, mocks::KeyRepositoryMock, Aes, StateCrypto,
-};
+use itp_sgx_crypto::{mocks::KeyRepositoryMock, Aes, StateCrypto};
 use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use itp_stf_executor::{
 	enclave_signer_tests as stf_enclave_signer_tests, executor::StfExecutor,
@@ -57,10 +58,8 @@ use itp_test::mock::{
 	handle_state_mock, handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock,
 	shielding_crypto_mock::ShieldingCryptoMock,
 };
-use itp_top_pool::{basic_pool::BasicPool, pool::ExtrinsicHash};
 use itp_top_pool_author::{
-	api::SidechainApi, author::Author, test_utils::submit_operation_to_top_pool,
-	top_filter::AllowAllTopsFilter, traits::AuthorApi,
+	test_utils::submit_operation_to_top_pool, top_filter::AllowAllTopsFilter, traits::AuthorApi,
 };
 use itp_types::{AccountId, Block, Header, MrEnclave, OpaqueCall};
 use its_sidechain::{
@@ -83,19 +82,10 @@ use std::{string::String, sync::Arc, vec::Vec};
 
 #[cfg(feature = "evm")]
 use crate::test::evm_pallet_tests;
+use crate::test::fixtures::tests_setup::TestTopPoolAuthor;
 
-type TestRpcResponder = RpcResponderMock<ExtrinsicHash<SidechainApi<Block>>>;
-type TestTopPool = BasicPool<SidechainApi<Block>, Block, TestRpcResponder>;
-type TestShieldingKeyRepo = KeyRepositoryMock<ShieldingCryptoMock>;
 type TestStfExecutor =
 	StfExecutor<OcallApi, HandleStateMock, NodeMetadataRepository<NodeMetadataMock>>;
-type TestTopPoolAuthor = Author<
-	TestTopPool,
-	AllowAllTopsFilter,
-	HandleStateMock,
-	TestShieldingKeyRepo,
-	MetricsOCallMock,
->;
 type TestTopPoolOperationHandler =
 	TopPoolOperationHandler<Block, SignedBlock, TestTopPoolAuthor, TestStfExecutor>;
 
@@ -689,14 +679,6 @@ fn execute_trusted_calls(
 }
 
 // helper functions
-pub fn test_top_pool() -> TestTopPool {
-	let chain_api = Arc::new(SidechainApi::<Block>::new());
-	let top_pool =
-		BasicPool::create(Default::default(), chain_api, Arc::new(TestRpcResponder::new()));
-
-	top_pool
-}
-
 /// Decrypt `encrypted` and decode it into `StatePayload`
 pub fn encrypted_state_diff_from_encrypted(encrypted: &[u8]) -> StatePayload {
 	let mut encrypted_payload: Vec<u8> = encrypted.to_vec();
@@ -751,10 +733,6 @@ pub fn unfunded_public() -> spEd25519::Public {
 
 pub fn test_account() -> spEd25519::Pair {
 	spEd25519::Pair::from_seed(b"42315678901234567890123456789012")
-}
-
-pub fn enclave_call_signer<Source: DeriveEd25519>(key_source: &Source) -> spEd25519::Pair {
-	key_source.derive_ed25519().unwrap()
 }
 
 /// transforms `call` into `TrustedOperation::direct(call)`

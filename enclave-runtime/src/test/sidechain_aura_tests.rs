@@ -23,9 +23,9 @@ use crate::{
 				create_ocall_api, create_top_pool, encrypt_trusted_operation, sign_trusted_call,
 			},
 			initialize_test_state::init_state,
+			tests_setup::enclave_call_signer,
 		},
 		mocks::{propose_to_import_call_mock::ProposeToImportOCallApi, types::*},
-		tests_main::enclave_call_signer,
 	},
 	top_pool_execution::{exec_aura_on_slot, send_blocks_and_extrinsics},
 };

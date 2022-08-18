@@ -18,3 +18,4 @@
 
 pub mod components;
 pub mod initialize_test_state;
+pub mod tests_setup;
