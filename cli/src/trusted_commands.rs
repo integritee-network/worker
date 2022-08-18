@@ -565,9 +565,16 @@ fn transfer_benchmark_increasing_nonce(
 				println!("  From: {:?}", client.account.public());
 				println!("  To:   {:?}", new_account.public());
 
-				let start_time = Instant::now();
 				let account_pair = client.account.clone();
+				let start_time = Instant::now();
 				let nonce = get_layer_two_nonce!(account_pair, cli, trusted_args);
+				let elapsed_seconds = start_time.elapsed().as_secs();
+				if elapsed_seconds > 10 {
+					println!(
+						"!!!!! [Error]: Running Nonce getter took {} seconds",
+						elapsed_seconds
+					);
+				}
 
 				// Transfer money to new account.
 				let top: TrustedOperation = TrustedCall::balance_transfer(
@@ -581,17 +588,28 @@ fn transfer_benchmark_increasing_nonce(
 				let last_iteration = i == number_iterations - 1;
 				let jsonrpc_call = get_json_request(trusted_args, &top, shielding_pubkey);
 				client.client_api.send(&jsonrpc_call).unwrap();
+				let start_time = Instant::now();
 				let result =
 					wait_for_top_confirmation(wait_for_confirmation || last_iteration, &client);
+				let elapsed_seconds = start_time.elapsed().as_secs();
+				if elapsed_seconds > 10 {
+					println!(
+						"!!!!! [Error]: Running Transfer call took {} seconds",
+						elapsed_seconds
+					);
+				}
+
+				let start_time = Instant::now();
 
 				client.current_balance =
 					get_balance(cli, trusted_args, &client.account.public().to_string()).unwrap();
-
 				let elapsed_seconds = start_time.elapsed().as_secs();
-				if elapsed_seconds > 30 {
-					error!("Running Nonce getter, balance transfer call and balance getter took {} seconds" , elapsed_seconds);
+				if elapsed_seconds > 10 {
+					println!(
+						"!!!!! [Error]: Running balance getter took {} seconds",
+						elapsed_seconds
+					);
 				}
-
 
 				output.push(result);
 			}
