@@ -16,9 +16,9 @@ sidechain-block-verification = { optional = true, default-features = false, git 
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
 # substrate deps
-frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
-sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 
 # local deps
 ita-stf = { path = "../../../app-libs/stf", default-features = false }
@@ -47,7 +47,7 @@ itp-test = { path = "../../../core-primitives/test" }
 its-top-pool-executor = { path = "../../top-pool-executor", features = ["mocks"] }
 parentchain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 
 [features]
 default = ["std"]

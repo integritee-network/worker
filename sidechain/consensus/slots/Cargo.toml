@@ -24,8 +24,8 @@ futures-timer = { version = "3.0", optional = true }
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["untrusted_time"] }
 
 # substrate deps
-sp-consensus-slots = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+sp-consensus-slots = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 
 # local deps
 itp-settings = { path = "../../../core-primitives/settings" }
@@ -36,7 +36,7 @@ its-consensus-common = { path = "../common", default-features = false }
 [dev-dependencies]
 parentchain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 tokio = "*"
 
 

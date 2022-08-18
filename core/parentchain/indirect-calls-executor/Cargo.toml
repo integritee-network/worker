@@ -31,8 +31,8 @@ futures = { version = "0.3.8", optional = true }
 bs58 = { version = "0.4.0", default-features = false, features = ["alloc"] }
 codec  = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 log = { version = "0.4", default-features = false }
-sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 #beefy-merkle-tree = { default-features = false, features = "keccak", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
 #remove as soon as we can import beefy-merkle-tree:
 tiny-keccak = { version = "2.0.2", features = ["keccak"] }
