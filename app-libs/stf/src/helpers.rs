@@ -21,7 +21,6 @@ use codec::{Decode, Encode};
 use itp_storage::{storage_double_map_key, storage_map_key, storage_value_key, StorageHasher};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
-use sp_core::H160;
 use std::prelude::v1::*;
 
 pub fn get_storage_value<V: Decode>(
@@ -79,21 +78,6 @@ pub fn get_storage_by_key_hash<V: Decode>(key: Vec<u8>) -> Option<V> {
 /// Get the AccountInfo key where the account is stored.
 pub fn account_key_hash(account: &AccountId) -> Vec<u8> {
 	storage_map_key("System", "Account", account, &StorageHasher::Blake2_128Concat)
-}
-
-pub fn get_evm_account_codes(evm_account: &H160) -> Option<Vec<u8>> {
-	get_storage_map("Evm", "AccountCodes", evm_account, &StorageHasher::Blake2_128Concat)
-}
-
-pub fn get_evm_account_storages(evm_account: &H160, index: &H256) -> Option<H256> {
-	get_storage_double_map(
-		"Evm",
-		"AccountStorages",
-		evm_account,
-		&StorageHasher::Blake2_128Concat,
-		index,
-		&StorageHasher::Blake2_128Concat,
-	)
 }
 
 pub fn get_account_info(who: &AccountId) -> Option<AccountInfo> {

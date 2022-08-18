@@ -19,7 +19,7 @@
 use crate::test_genesis::test_genesis_setup;
 
 #[cfg(feature = "evm")]
-use crate::helpers::{get_evm_account_codes, get_evm_account_storages};
+use crate::evm_helpers::{get_evm_account_codes, get_evm_account_storages};
 
 use crate::{
 	helpers::{

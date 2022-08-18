@@ -102,6 +102,8 @@ pub mod hash;
 pub mod helpers;
 pub mod stf_sgx_primitives;
 
+#[cfg(feature = "evm")]
+pub mod evm_helpers;
 #[cfg(feature = "sgx")]
 pub mod stf_sgx;
 #[cfg(all(feature = "test", feature = "sgx"))]

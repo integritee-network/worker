@@ -23,7 +23,7 @@ use crate::{
 				create_ocall_api, create_top_pool, encrypt_trusted_operation, sign_trusted_call,
 			},
 			initialize_test_state::init_state,
-			tests_setup::enclave_call_signer,
+			test_setup::enclave_call_signer,
 		},
 		mocks::{propose_to_import_call_mock::ProposeToImportOCallApi, types::*},
 	},

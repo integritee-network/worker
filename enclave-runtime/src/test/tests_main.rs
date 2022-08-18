@@ -21,10 +21,7 @@ use crate::{
 	sync::tests::{enclave_rw_lock_works, sidechain_rw_lock_works},
 	test::{
 		cert_tests::*,
-		fixtures::{
-			initialize_test_state::init_state,
-			tests_setup::{enclave_call_signer, test_top_pool},
-		},
+		fixtures::test_setup::{enclave_call_signer, test_setup},
 		mocks::types::TestStateKeyRepo,
 		sidechain_aura_tests, top_pool_tests,
 	},
@@ -45,23 +42,17 @@ use itp_node_api::metadata::{
 	metadata_mocks::NodeMetadataMock, pallet_sidechain::SidechainCallIndexes,
 	provider::NodeMetadataRepository,
 };
-use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::enclave::MAX_TRUSTED_OPS_EXEC_DURATION;
-use itp_sgx_crypto::{mocks::KeyRepositoryMock, Aes, StateCrypto};
+use itp_sgx_crypto::{Aes, StateCrypto};
 use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use itp_stf_executor::{
 	enclave_signer_tests as stf_enclave_signer_tests, executor::StfExecutor,
 	executor_tests as stf_executor_tests, traits::StateUpdateProposer, BatchExecutionResult,
 };
 use itp_stf_state_handler::handle_state::HandleState;
-use itp_test::mock::{
-	handle_state_mock, handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock,
-	shielding_crypto_mock::ShieldingCryptoMock,
-};
-use itp_top_pool_author::{
-	test_utils::submit_operation_to_top_pool, top_filter::AllowAllTopsFilter, traits::AuthorApi,
-};
-use itp_types::{AccountId, Block, Header, MrEnclave, OpaqueCall};
+use itp_test::mock::{handle_state_mock, handle_state_mock::HandleStateMock};
+use itp_top_pool_author::{test_utils::submit_operation_to_top_pool, traits::AuthorApi};
+use itp_types::{AccountId, Block, Header, OpaqueCall};
 use its_sidechain::{
 	block_composer::{BlockComposer, ComposeBlockAndConfirmation},
 	state::{SidechainDB, SidechainState, SidechainSystemExt},
@@ -82,7 +73,7 @@ use std::{string::String, sync::Arc, vec::Vec};
 
 #[cfg(feature = "evm")]
 use crate::test::evm_pallet_tests;
-use crate::test::fixtures::tests_setup::TestTopPoolAuthor;
+use crate::test::fixtures::test_setup::TestTopPoolAuthor;
 
 type TestStfExecutor =
 	StfExecutor<OcallApi, HandleStateMock, NodeMetadataRepository<NodeMetadataMock>>;
@@ -689,41 +680,6 @@ pub fn encrypted_state_diff_from_encrypted(encrypted: &[u8]) -> StatePayload {
 
 pub fn state_key() -> Aes {
 	Aes::default()
-}
-
-/// Returns all the things that are commonly used in tests and runs
-/// `ensure_no_empty_shard_directory_exists`
-pub fn test_setup() -> (
-	Arc<TestTopPoolAuthor>,
-	State,
-	ShardIdentifier,
-	MrEnclave,
-	ShieldingCryptoMock,
-	Arc<HandleStateMock>,
-) {
-	let shielding_key = ShieldingCryptoMock::default();
-	let shielding_key_repo = Arc::new(KeyRepositoryMock::new(shielding_key.clone()));
-
-	let state_handler = Arc::new(HandleStateMock::default());
-	let (state, shard) =
-		init_state(state_handler.as_ref(), enclave_call_signer(&shielding_key).public().into());
-	let top_pool = test_top_pool();
-	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
-
-	(
-		Arc::new(TestTopPoolAuthor::new(
-			Arc::new(top_pool),
-			AllowAllTopsFilter,
-			state_handler.clone(),
-			shielding_key_repo,
-			Arc::new(MetricsOCallMock::default()),
-		)),
-		state,
-		shard,
-		mrenclave,
-		shielding_key,
-		state_handler,
-	)
 }
 
 /// Some random account that has no funds in the `Stf`'s `test_genesis` config.
