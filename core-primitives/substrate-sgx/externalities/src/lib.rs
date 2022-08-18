@@ -23,9 +23,10 @@ extern crate sgx_tstd as std;
 
 use codec::{Decode, Encode};
 use derive_more::{Deref, DerefMut, From};
-use environmental::environmental;
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, vec::Vec};
+
+pub use scope_limited::{set_and_run_with_externalities, with_externalities};
 
 // Unfortunately we cannot use `serde_with::serde_as` to serialize our map (which would be very convenient)
 // because it has pulls in the serde and serde_json dependency with `std`, not `default-features=no`.
@@ -34,6 +35,7 @@ use std::{collections::BTreeMap, vec::Vec};
 //use serde_with::serde_as;
 
 mod codec_impl;
+mod scope_limited;
 // These are used to serialize a map with keys that are not string.
 mod bypass;
 mod vectorize;
@@ -51,8 +53,6 @@ pub struct SgxExternalities {
 	pub state: SgxExternalitiesType,
 	pub state_diff: SgxExternalitiesDiffType,
 }
-
-environmental!(ext: SgxExternalities);
 
 pub trait SgxExternalitiesTrait {
 	fn new() -> Self;
@@ -115,20 +115,6 @@ impl SgxExternalitiesTrait for SgxExternalities {
 	}
 }
 
-/// Set the given externalities while executing the given closure. To get access to the externalities
-/// while executing the given closure [`with_externalities`] grants access to them. The externalities
-/// are only set for the same thread this function was called from.
-pub fn set_and_run_with_externalities<F: FnOnce() -> R, R>(ext: &mut SgxExternalities, f: F) -> R {
-	ext::using(ext, f)
-}
-
-/// Execute the given closure with the currently set externalities.
-///
-/// Returns `None` if no externalities are set or `Some(_)` with the result of the closure.
-pub fn with_externalities<F: FnOnce(&mut SgxExternalities) -> R, R>(f: F) -> Option<R> {
-	ext::with(f)
-}
-
 /// Results concerning an operation to remove many keys.
 #[derive(codec::Encode, codec::Decode)]
 #[must_use]
@@ -180,5 +166,47 @@ pub mod tests {
 	fn basic_externalities_is_empty() {
 		let ext = SgxExternalities::default();
 		assert!(ext.state.0.is_empty());
+	}
+
+	#[test]
+	#[should_panic(expected = "already borrowed: BorrowMutError")]
+	fn nested_with_externalities_panics() {
+		let mut ext = SgxExternalities::default();
+
+		ext.execute_with(|| {
+			with_externalities(|_| with_externalities(|_| unreachable!("panics before")).unwrap())
+				.unwrap();
+		});
+	}
+
+	#[test]
+	fn nesting_execute_with_uses_the_latest_externalities() {
+		let mut ext = SgxExternalities::default();
+		let mut ext2 = ext.clone();
+
+		let hello = b"hello".to_vec();
+		let world = b"world".to_vec();
+
+		ext.execute_with(|| {
+			with_externalities(|e| {
+				e.insert(hello.clone(), hello.clone());
+			})
+			.unwrap();
+
+			ext2.execute_with(|| {
+				// `with_externalities` uses the latest set externalities defined by the last
+				// `set_and_run_with_externalities` call.
+				with_externalities(|e| {
+					e.insert(world.clone(), world.clone());
+				})
+				.unwrap();
+			});
+		});
+
+		assert_eq!(ext.get(&hello), Some(&hello));
+		assert_eq!(ext2.get(&world), Some(&world));
+
+		// ext1 and ext2 are unrelated.
+		assert_eq!(ext.get(&world), None);
 	}
 }
