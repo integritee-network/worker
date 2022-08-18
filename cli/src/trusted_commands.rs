@@ -254,7 +254,7 @@ pub fn match_trusted_commands(cli: &Cli, trusted_args: &TrustedArgs) {
 			random_wait_before_transaction_max_ms,
 			wait_for_confirmation,
 			funding_account,
-		} => transfer_benchmark(
+		} => transfer_benchmark_increasing_nonce(
 			cli,
 			trusted_args,
 			*number_clients,
@@ -351,7 +351,7 @@ struct BenchmarkTransaction {
 	confirmed: Option<Instant>,
 }
 
-fn transfer_benchmark(
+fn transfer_benchmark_increasing_state(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
 	number_clients: u32,
@@ -457,6 +457,141 @@ fn transfer_benchmark(
 
 				client.current_balance -= keep_alive_balance;
 				client.account = new_account;
+
+				output.push(result);
+			}
+			client.client_api.close().unwrap();
+
+			let balance = get_balance(cli, trusted_args, &client.account.public().to_string());
+			println!("Balance: {}", balance.unwrap_or_default());
+			assert_eq!(client.current_balance, balance.unwrap());
+
+			output
+		})
+		.collect();
+
+	println!(
+		"Finished benchmark with {} clients and {} transactions in {} ms",
+		number_clients,
+		number_iterations,
+		overall_start.elapsed().as_millis()
+	);
+
+	print_benchmark_statistic(outputs, wait_for_confirmation)
+}
+
+fn transfer_benchmark_increasing_nonce(
+	cli: &Cli,
+	trusted_args: &TrustedArgs,
+	number_clients: u32,
+	number_iterations: u32,
+	random_wait_before_transaction_ms: (u32, u32),
+	wait_for_confirmation: bool,
+	funding_account: &str,
+) {
+	let store = LocalKeystore::open(get_keystore_path(trusted_args), None).unwrap();
+	let funding_account_keys = get_pair_from_str(trusted_args, funding_account);
+
+	let (mrenclave, shard) = get_identifiers(trusted_args);
+
+	// Get shielding pubkey.
+	let worker_api_direct = get_worker_api_direct(cli);
+	let shielding_pubkey: Rsa3072PubKey = match worker_api_direct.get_rsa_pubkey() {
+		Ok(key) => key,
+		Err(err_msg) => panic!("{}", err_msg.to_string()),
+	};
+
+	let nonce_start = get_layer_two_nonce!(funding_account_keys, cli, trusted_args);
+	println!("Nonce for account {}: {}", funding_account, nonce_start);
+
+	let mut accounts = Vec::new();
+
+	// Setup new accounts and initialize them with money from Alice.
+	for i in 0..number_clients {
+		let nonce = i + nonce_start;
+		println!("Initializing account {}", i);
+
+		// Create new account to use.
+		let a: sr25519::AppPair = store.generate().unwrap();
+		let account = get_pair_from_str(trusted_args, a.public().to_string().as_str());
+		let initial_balance = 10000000;
+
+		// Transfer amount from Alice to new account.
+		let top: TrustedOperation = TrustedCall::balance_transfer(
+			funding_account_keys.public().into(),
+			account.public().into(),
+			initial_balance,
+		)
+		.sign(&KeyPair::Sr25519(funding_account_keys.clone()), nonce, &mrenclave, &shard)
+		.into_trusted_operation(trusted_args.direct);
+
+		// For the last account we wait for confirmation in order to ensure all accounts were setup correctly
+		let wait_for_confirmation = i == number_clients - 1;
+		let account_funding_request = get_json_request(trusted_args, &top, shielding_pubkey);
+
+		let client = BenchmarkClient::new(account, initial_balance, account_funding_request, cli);
+		let _result = wait_for_top_confirmation(wait_for_confirmation, &client);
+		accounts.push(client);
+	}
+
+	rayon::ThreadPoolBuilder::new()
+		.num_threads(number_clients as usize)
+		.build_global()
+		.unwrap();
+
+	let overall_start = Instant::now();
+
+	// Run actual benchmark logic, in parallel, for each account initialized above.
+	let outputs: Vec<Vec<BenchmarkTransaction>> = accounts
+		.into_par_iter()
+		.map(move |mut client| {
+			let mut output: Vec<BenchmarkTransaction> = Vec::new();
+
+			for i in 0..number_iterations {
+				println!("Iteration: {}", i);
+
+				if random_wait_before_transaction_ms.1 > 0 {
+					random_wait(random_wait_before_transaction_ms);
+				}
+				// Create new account.
+				let account_keys: sr25519::AppPair = store.generate().unwrap();
+				let new_account =
+					get_pair_from_str(trusted_args, account_keys.public().to_string().as_str());
+
+				// The new account gets this amount of money. Needs to be above the
+				// existential deposit, otherwise the new account will not be generated.
+				let transfer_amount = 1000;
+				println!("  Transfer amount: {}", transfer_amount);
+				println!("  From: {:?}", client.account.public());
+				println!("  To:   {:?}", new_account.public());
+
+				let start_time = Instant::now();
+				let account_pair = client.account.clone();
+				let nonce = get_layer_two_nonce!(account_pair, cli, trusted_args);
+
+				// Transfer money to new account.
+				let top: TrustedOperation = TrustedCall::balance_transfer(
+					client.account.public().into(),
+					new_account.public().into(),
+					transfer_amount,
+				)
+				.sign(&KeyPair::Sr25519(client.account.clone()), nonce, &mrenclave, &shard)
+				.into_trusted_operation(trusted_args.direct);
+
+				let last_iteration = i == number_iterations - 1;
+				let jsonrpc_call = get_json_request(trusted_args, &top, shielding_pubkey);
+				client.client_api.send(&jsonrpc_call).unwrap();
+				let result =
+					wait_for_top_confirmation(wait_for_confirmation || last_iteration, &client);
+
+				client.current_balance =
+					get_balance(cli, trusted_args, &client.account.public().to_string()).unwrap();
+
+				let elapsed_seconds = start_time.elapsed().as_secs();
+				if elapsed_seconds > 30 {
+					error!("Running Nonce getter, balance transfer call and balance getter took {} seconds" , elapsed_seconds);
+				}
+
 
 				output.push(result);
 			}
