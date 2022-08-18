@@ -141,8 +141,13 @@ impl MultiRemovalResults {
 
 #[cfg(test)]
 pub mod tests {
-
 	use super::*;
+	use core::ops::Deref;
+	use std::{
+		sync::{Arc, RwLock},
+		thread,
+		time::Duration,
+	};
 
 	#[test]
 	fn mutating_externalities_through_environmental_variable_works() {
@@ -208,5 +213,44 @@ pub mod tests {
 
 		// ext1 and ext2 are unrelated.
 		assert_eq!(ext.get(&world), None);
+	}
+
+	#[test]
+	fn parallel_execute_of_two_externalities_does_not_panic() {
+		let ten_millis = Duration::from_millis(10);
+		let ext_pointer = Arc::new(RwLock::new(SgxExternalities::default()));
+
+		let hello = b"hello".to_vec();
+		let world = b"world".to_vec();
+
+		let ext_pointer2 = ext_pointer.clone();
+		let handle_one = thread::spawn(move || {
+			let read_lock = ext_pointer2.read().unwrap();
+			let mut readable_state = read_lock.clone();
+			readable_state.execute_with(|| {
+				with_externalities(|e| {
+					e.get(&hello);
+					thread::sleep(ten_millis)
+				})
+				.unwrap();
+			});
+		});
+
+		let handle_two = thread::spawn(move || {
+			let read_lock = ext_pointer.read().unwrap();
+			let mut readable_state = read_lock.clone();
+			readable_state.execute_with(|| {
+				// `with_externalities` uses the latest set externalities defined by the last
+				// `set_and_run_with_externalities` call.
+				with_externalities(|e| {
+					e.get(&world);
+					thread::sleep(ten_millis)
+				})
+				.unwrap();
+			});
+		});
+
+		handle_one.join().unwrap();
+		handle_two.join().unwrap();
 	}
 }
