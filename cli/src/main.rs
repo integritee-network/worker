@@ -30,6 +30,7 @@ extern crate log;
 mod command_utils;
 mod commands;
 mod exchange_oracle;
+mod rps_commands;
 mod trusted_command_utils;
 mod trusted_commands;
 mod trusted_operation;
