@@ -28,7 +28,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mode: [ sidechain, offchain-worker, teeracle ]
+        include:
+          - flavor_id: sidechain
+            mode: sidechain
+          - flavor_id: offchain-worker
+            mode: offchain-worker
+          - flavor_id: teeracle
+            mode: teeracle
+          - flavor_id: sidechain-evm
+            mode: sidechain
+            additional_features: evm
 
     steps:
       - uses: actions/checkout@v3
@@ -43,39 +52,41 @@ jobs:
         env:
           DOCKER_BUILDKIT: 1
         run: >
-          docker build -t integritee-worker-${{ matrix.mode }}-${{ github.sha }} 
-          --target deployed-worker --build-arg WORKER_MODE_ARG=${{ matrix.mode }} 
+          docker build -t integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} 
+          --target deployed-worker 
+          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }}
           -f build.Dockerfile .
 
       - name: Build CLI client
         env:
           DOCKER_BUILDKIT: 1
         run: >
-          docker build -t integritee-cli-client-${{ matrix.mode }}-${{ github.sha }} 
-          --target deployed-client --build-arg WORKER_MODE_ARG=${{ matrix.mode }} 
+          docker build -t integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} 
+          --target deployed-client 
+          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }}
           -f build.Dockerfile .
 
       - run: docker images --all
 
       - name: Test Enclave # cargo test is not supported in the enclave, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
-        run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-${{ matrix.mode }}-${{ github.sha }} test --all
+        run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} test --all
 
       - name: Export worker image(s)
         run: |
-          docker image save integritee-worker-${{ matrix.mode }}-${{ github.sha }} | gzip > integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar.gz
-          docker image save integritee-cli-client-${{ matrix.mode }}-${{ github.sha }} | gzip > integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar.gz
+          docker image save integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} | gzip > integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
+          docker image save integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} | gzip > integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
 
       - name: Upload worker image
         uses: actions/upload-artifact@v2
         with:
-          name: integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar.gz
-          path: integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar.gz
+          name: integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
+          path: integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
 
       - name: Upload CLI client image
         uses: actions/upload-artifact@v2
         with:
-          name: integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar.gz
-          path: integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar.gz
+          name: integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
+          path: integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
 
   clippy:
     runs-on: ubuntu-latest
@@ -86,10 +97,15 @@ jobs:
         # enclave is not in the same workspace
         run: rustup show && cd enclave-runtime && rustup show
 
-      - name: Worker & Client
+      - name: Clippy Worker & Client
         run: cargo clippy -- -D warnings
       - name: Enclave # Enclave is separate as it's not in the workspace
         run: cd enclave-runtime && cargo clippy -- -D warnings
+
+      - name: Clippy with EVM feature
+        run: | 
+          cargo clippy --features evm -- -D warnings
+          cd enclave-runtime && cargo clippy --features evm -- -D warnings
 
       - name: Fail-fast; cancel other jobs
         if: failure()
@@ -125,22 +141,22 @@ jobs:
       matrix:
         include:
           - test: M6
-            mode: sidechain
+            flavor_id: sidechain
             demo_name: demo-indirect-invocation
           - test: M8
-            mode: sidechain
+            flavor_id: sidechain
             demo_name: demo-direct-call
           - test: Sidechain
-            mode: sidechain
+            flavor_id: sidechain
             demo_name: demo-sidechain
           - test: M6
-            mode: offchain-worker
+            flavor_id: offchain-worker
             demo_name: demo-indirect-invocation
           - test: Teeracle
-            mode: teeracle
+            flavor_id: teeracle
             demo_name: demo-teeracle
           - test: Benchmark
-            mode: sidechain
+            flavor_id: sidechain
             demo_name: sidechain-benchmark
 
     steps:
@@ -149,30 +165,30 @@ jobs:
       - name: Download Worker Image
         uses: actions/download-artifact@v2
         with:
-          name: integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar.gz
+          name: integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
           path: .
 
       - name: Download CLI client Image
         uses: actions/download-artifact@v2
         with:
-          name: integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar.gz
+          name: integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
           path: .
 
       - name: Load Worker & Client Images
         env:
           DOCKER_BUILDKIT: 1
         run: |
-          docker image load --input integritee-worker-${{ matrix.mode }}-${{ github.sha }}.tar.gz
-          docker image load --input integritee-cli-client-${{ matrix.mode }}-${{ github.sha }}.tar.gz
+          docker image load --input integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
+          docker image load --input integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
           docker images --all
 
       - name: Re-name Image Tags
         run: |
-          docker tag integritee-worker-${{ matrix.mode }}-${{ github.sha }} ${{ env.WORKER_IMAGE_TAG }}
-          docker tag integritee-cli-client-${{ matrix.mode }}-${{ github.sha }} ${{ env.CLIENT_IMAGE_TAG }} 
+          docker tag integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.WORKER_IMAGE_TAG }}
+          docker tag integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.CLIENT_IMAGE_TAG }} 
           docker images --all
 
-      - name: Integration Test ${{ matrix.test }}-${{ matrix.mode }}
+      - name: Integration Test ${{ matrix.test }}-${{ matrix.flavor_id }}
         run: |
           cd docker
           docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml up ${{ matrix.demo_name }} --no-build --exit-code-from ${{ matrix.demo_name }}
@@ -190,7 +206,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: logs-${{ matrix.test }}-${{ matrix.mode }}
+          name: logs-${{ matrix.test }}-${{ matrix.flavor_id }}
           path: ./${{ env.LOG_DIR }}
 
   release:

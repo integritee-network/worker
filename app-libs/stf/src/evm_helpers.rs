@@ -1,6 +1,5 @@
 /*
 	Copyright 2021 Integritee AG and Supercomputing Systems AG
-	Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -15,17 +14,25 @@
 	limitations under the License.
 
 */
+use crate::{
+	helpers::{get_storage_double_map, get_storage_map},
+	H256,
+};
+use itp_storage::StorageHasher;
+use sp_core::H160;
+use std::prelude::v1::*;
 
-pub mod cert_tests;
-#[cfg(feature = "evm")]
-pub mod evm_pallet_tests;
-pub mod fixtures;
-pub mod ipfs_tests;
-pub mod mocks;
-pub mod on_chain_ocall_tests;
-pub mod sidechain_aura_tests;
-pub mod tests_main;
-pub mod top_pool_tests;
+pub fn get_evm_account_codes(evm_account: &H160) -> Option<Vec<u8>> {
+	get_storage_map("Evm", "AccountCodes", evm_account, &StorageHasher::Blake2_128Concat)
+}
 
-#[cfg(feature = "teeracle")]
-pub mod teeracle_tests;
+pub fn get_evm_account_storages(evm_account: &H160, index: &H256) -> Option<H256> {
+	get_storage_double_map(
+		"Evm",
+		"AccountStorages",
+		evm_account,
+		&StorageHasher::Blake2_128Concat,
+		index,
+		&StorageHasher::Blake2_128Concat,
+	)
+}

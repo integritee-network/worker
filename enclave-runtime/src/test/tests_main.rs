@@ -21,8 +21,8 @@ use crate::{
 	sync::tests::{enclave_rw_lock_works, sidechain_rw_lock_works},
 	test::{
 		cert_tests::*,
-		fixtures::initialize_test_state::init_state,
-		mocks::{rpc_responder_mock::RpcResponderMock, types::TestStateKeyRepo},
+		fixtures::test_setup::{enclave_call_signer, test_setup},
+		mocks::types::TestStateKeyRepo,
 		sidechain_aura_tests, top_pool_tests,
 	},
 	tls_ra,
@@ -42,27 +42,17 @@ use itp_node_api::metadata::{
 	metadata_mocks::NodeMetadataMock, pallet_sidechain::SidechainCallIndexes,
 	provider::NodeMetadataRepository,
 };
-use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::enclave::MAX_TRUSTED_OPS_EXEC_DURATION;
-use itp_sgx_crypto::{
-	ed25519_derivation::DeriveEd25519, mocks::KeyRepositoryMock, Aes, StateCrypto,
-};
+use itp_sgx_crypto::{Aes, StateCrypto};
 use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use itp_stf_executor::{
 	enclave_signer_tests as stf_enclave_signer_tests, executor::StfExecutor,
 	executor_tests as stf_executor_tests, traits::StateUpdateProposer, BatchExecutionResult,
 };
 use itp_stf_state_handler::handle_state::HandleState;
-use itp_test::mock::{
-	handle_state_mock, handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock,
-	shielding_crypto_mock::ShieldingCryptoMock,
-};
-use itp_top_pool::{basic_pool::BasicPool, pool::ExtrinsicHash};
-use itp_top_pool_author::{
-	api::SidechainApi, author::Author, test_utils::submit_operation_to_top_pool,
-	top_filter::AllowAllTopsFilter, traits::AuthorApi,
-};
-use itp_types::{AccountId, Block, Header, MrEnclave, OpaqueCall};
+use itp_test::mock::{handle_state_mock, handle_state_mock::HandleStateMock};
+use itp_top_pool_author::{test_utils::submit_operation_to_top_pool, traits::AuthorApi};
+use itp_types::{AccountId, Block, Header, OpaqueCall};
 use its_sidechain::{
 	block_composer::{BlockComposer, ComposeBlockAndConfirmation},
 	state::{SidechainDB, SidechainState, SidechainSystemExt},
@@ -81,18 +71,12 @@ use sp_core::{crypto::Pair, ed25519 as spEd25519, H256};
 use sp_runtime::traits::Header as HeaderT;
 use std::{string::String, sync::Arc, vec::Vec};
 
-type TestRpcResponder = RpcResponderMock<ExtrinsicHash<SidechainApi<Block>>>;
-type TestTopPool = BasicPool<SidechainApi<Block>, Block, TestRpcResponder>;
-type TestShieldingKeyRepo = KeyRepositoryMock<ShieldingCryptoMock>;
+#[cfg(feature = "evm")]
+use crate::test::evm_pallet_tests;
+use crate::test::fixtures::test_setup::TestTopPoolAuthor;
+
 type TestStfExecutor =
 	StfExecutor<OcallApi, HandleStateMock, NodeMetadataRepository<NodeMetadataMock>>;
-type TestTopPoolAuthor = Author<
-	TestTopPool,
-	AllowAllTopsFilter,
-	HandleStateMock,
-	TestShieldingKeyRepo,
-	MetricsOCallMock,
->;
 type TestTopPoolOperationHandler =
 	TopPoolOperationHandler<Block, SignedBlock, TestTopPoolAuthor, TestStfExecutor>;
 
@@ -124,6 +108,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		test_executing_call_updates_account_nonce,
 		test_call_set_update_parentchain_block,
 		test_invalid_nonce_call_is_not_executed,
+		test_signature_must_match_public_sender_in_call,
 		test_non_root_shielding_call_is_not_executed,
 		test_shielding_call_with_enclave_self_is_executed,
 		rpc::worker_api_direct::tests::test_given_io_handler_methods_then_retrieve_all_names_as_string,
@@ -167,6 +152,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		tls_ra::seal_handler::test::seal_state_fails_for_invalid_state,
 		tls_ra::seal_handler::test::unseal_seal_state_works,
 		tls_ra::tests::test_tls_ra_server_client_networking,
+		run_evm_tests,
 
 		// these unit test (?) need an ipfs node running..
 		// ipfs::test_creates_ipfs_content_struct_works,
@@ -189,6 +175,14 @@ fn run_teeracle_tests() {
 
 #[cfg(not(feature = "teeracle"))]
 fn run_teeracle_tests() {}
+
+#[cfg(feature = "evm")]
+fn run_evm_tests() {
+	evm_pallet_tests::test_evm_call();
+	evm_pallet_tests::test_evm_counter();
+}
+#[cfg(not(feature = "evm"))]
+fn run_evm_tests() {}
 
 fn test_compose_block_and_confirmation() {
 	// given
@@ -508,6 +502,42 @@ fn test_call_set_update_parentchain_block() {
 	assert_eq!(block_number, state.execute_with(|| get_parentchain_number().unwrap()));
 }
 
+fn test_signature_must_match_public_sender_in_call() {
+	// given
+	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
+	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
+	let stf_executor =
+		Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone(), node_metadata_repo));
+	let top_pool_operation_handler = TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(
+		top_pool_author.clone(),
+		stf_executor.clone(),
+	);
+
+	// create accounts
+	let sender = funded_pair();
+	let receiver = unfunded_public();
+
+	let trusted_operation =
+		TrustedCall::balance_transfer(receiver.into(), sender.public().into(), 1000)
+			.sign(&sender.clone().into(), 10, &mrenclave, &shard)
+			.into_trusted_operation(true);
+
+	submit_operation_to_top_pool(
+		top_pool_author.as_ref(),
+		&trusted_operation,
+		&shielding_key,
+		shard,
+	)
+	.unwrap();
+
+	// when
+	let executed_batch =
+		execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_operation_handler);
+
+	// then
+	assert!(!executed_batch.executed_operations[0].is_success());
+}
+
 fn test_invalid_nonce_call_is_not_executed() {
 	// given
 	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
@@ -640,14 +670,6 @@ fn execute_trusted_calls(
 }
 
 // helper functions
-pub fn test_top_pool() -> TestTopPool {
-	let chain_api = Arc::new(SidechainApi::<Block>::new());
-	let top_pool =
-		BasicPool::create(Default::default(), chain_api, Arc::new(TestRpcResponder::new()));
-
-	top_pool
-}
-
 /// Decrypt `encrypted` and decode it into `StatePayload`
 pub fn encrypted_state_diff_from_encrypted(encrypted: &[u8]) -> StatePayload {
 	let mut encrypted_payload: Vec<u8> = encrypted.to_vec();
@@ -660,41 +682,6 @@ pub fn state_key() -> Aes {
 	Aes::default()
 }
 
-/// Returns all the things that are commonly used in tests and runs
-/// `ensure_no_empty_shard_directory_exists`
-pub fn test_setup() -> (
-	Arc<TestTopPoolAuthor>,
-	State,
-	ShardIdentifier,
-	MrEnclave,
-	ShieldingCryptoMock,
-	Arc<HandleStateMock>,
-) {
-	let shielding_key = ShieldingCryptoMock::default();
-	let shielding_key_repo = Arc::new(KeyRepositoryMock::new(shielding_key.clone()));
-
-	let state_handler = Arc::new(HandleStateMock::default());
-	let (state, shard) =
-		init_state(state_handler.as_ref(), enclave_call_signer(&shielding_key).public().into());
-	let top_pool = test_top_pool();
-	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
-
-	(
-		Arc::new(TestTopPoolAuthor::new(
-			Arc::new(top_pool),
-			AllowAllTopsFilter,
-			state_handler.clone(),
-			shielding_key_repo,
-			Arc::new(MetricsOCallMock::default()),
-		)),
-		state,
-		shard,
-		mrenclave,
-		shielding_key,
-		state_handler,
-	)
-}
-
 /// Some random account that has no funds in the `Stf`'s `test_genesis` config.
 pub fn unfunded_public() -> spEd25519::Public {
 	spEd25519::Public::from_raw(*b"asdfasdfadsfasdfasfasdadfadfasdf")
@@ -702,10 +689,6 @@ pub fn unfunded_public() -> spEd25519::Public {
 
 pub fn test_account() -> spEd25519::Pair {
 	spEd25519::Pair::from_seed(b"42315678901234567890123456789012")
-}
-
-pub fn enclave_call_signer<Source: DeriveEd25519>(key_source: &Source) -> spEd25519::Pair {
-	key_source.derive_ed25519().unwrap()
 }
 
 /// transforms `call` into `TrustedOperation::direct(call)`
