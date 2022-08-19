@@ -66,7 +66,7 @@ use ita_stf::evm_helpers::evm_create_address;
 use substrate_api_client::utils::FromHexString;
 
 #[cfg(feature = "evm")]
-use sp_core::{H160, U256};
+use sp_core::{H160, H256, U256};
 
 macro_rules! get_layer_two_nonce {
 	($signer_pair:ident, $cli: ident, $trusted_args:ident ) => {{
@@ -189,16 +189,24 @@ pub enum TrustedCommands {
 	},
 
 	#[cfg(feature = "evm")]
+	/// Read smart contract storage
+	EvmRead {
+		/// Sender's incognito AccountId in ss58check format
+		from: String,
+
+		/// Execution address of the smart contract
+		execution_address: String,
+	},
+
+	#[cfg(feature = "evm")]
 	/// Create smart contract
 	EvmCall {
 		/// Sender's incognito AccountId in ss58check format
 		from: String,
 
-		/// Recipient's parentchain AccountId in ss58check format
-		to: String,
-
-		/// amount to be transferred
-		amount: Balance,
+		/// Execution address of the smart contract
+		execution_address: String,
+		//TODO: function hash
 	},
 
 	/// Run Benchmark
@@ -260,7 +268,11 @@ pub fn match_trusted_commands(cli: &Cli, trusted_args: &TrustedArgs) {
 		TrustedCommands::EvmCreate { from, smart_contract } =>
 			evm_create(cli, trusted_args, from, smart_contract),
 		#[cfg(feature = "evm")]
-		TrustedCommands::EvmCall { from, to, amount } => evm_call(cli, trusted_args, from, to, amount),
+		TrustedCommands::EvmRead { from, execution_address } =>
+			evm_read_storage(cli, trusted_args, from, execution_address),
+		#[cfg(feature = "evm")]
+		TrustedCommands::EvmCall { from, execution_address } =>
+			evm_call(cli, trusted_args, from, execution_address),
 	}
 }
 
@@ -636,7 +648,7 @@ fn evm_create(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, smart_contr
 		sender_evm_acc,
 		Vec::from_hex(smart_contract.to_string()).unwrap(),
 		U256::from(0),
-		4294967295,    // gas limit
+		967295,        // gas limit
 		U256::from(1), // max_fee_per_gas !>= min_gas_price defined in runtime
 		None,
 		None,
@@ -653,37 +665,86 @@ fn evm_create(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, smart_contr
 }
 
 #[cfg(feature = "evm")]
-fn evm_call(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, arg_to: &str, amount: &Balance) {
-	let from = get_pair_from_str(trusted_args, arg_from);
-	let from_acc: AccountId = from.public().into();
+fn evm_read_storage(
+	cli: &Cli,
+	trusted_args: &TrustedArgs,
+	arg_from: &str,
+	execution_address_str: &str,
+) {
+	let sender = get_pair_from_str(trusted_args, arg_from);
+	let sender_acc: AccountId = sender.public().into();
+
+	println!("senders ss58 is {}", sender.public().to_ss58check());
 
 	let mut sender_evm_acc_slice: [u8; 20] = [0; 20];
-	sender_evm_acc_slice.copy_from_slice((<[u8; 32]>::from(from_acc.clone())).get(0..20).unwrap());
+	sender_evm_acc_slice
+		.copy_from_slice((<[u8; 32]>::from(sender_acc.clone())).get(0..20).unwrap());
 	let sender_evm_acc: H160 = sender_evm_acc_slice.into();
 
-	let to = get_accountid_from_str(arg_to);
-	println!("from ss58 is {}", from.public().to_ss58check());
-	println!("to   ss58 is {}", to.to_ss58check());
+	println!("senders evm account is {}", sender_evm_acc);
 
-	let destination_evm_acc = H160::from_str("1000000000000000000000000000000000000001").unwrap();
+	let execution_address =
+		H160::from_slice(&Vec::from_hex(execution_address_str.to_string()).unwrap());
 
-	println!("call for transfer from {} to {}: {}", from.public(), to, amount);
+	let top: TrustedOperation =
+		TrustedGetter::evm_account_storages(sender_acc, execution_address, H256::zero())
+			.sign(&KeyPair::Sr25519(sender))
+			.into();
+	let res = perform_operation(cli, trusted_args, &top);
+
+	debug!("received result for balance");
+	let bal = if let Some(v) = res {
+		if let Ok(vd) = H256::decode(&mut v.as_slice()) {
+			vd
+		} else {
+			error!("could not decode value. maybe hasn't been set? {:x?}", v);
+			H256::zero()
+		}
+	} else {
+		error!("you are crazy");
+		H256::zero()
+	};
+
+	println!("{:?}", bal);
+}
+
+#[cfg(feature = "evm")]
+fn evm_call(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, execution_address_str: &str) {
+	let sender = get_pair_from_str(trusted_args, arg_from);
+	let sender_acc: AccountId = sender.public().into();
+
+	println!("senders ss58 is {}", sender.public().to_ss58check());
+
+	let mut sender_evm_acc_slice: [u8; 20] = [0; 20];
+	sender_evm_acc_slice
+		.copy_from_slice((<[u8; 32]>::from(sender_acc.clone())).get(0..20).unwrap());
+	let sender_evm_acc: H160 = sender_evm_acc_slice.into();
+
+	println!("senders evm account is {}", sender_evm_acc);
+
+	let execution_address =
+		H160::from_slice(&Vec::from_hex(execution_address_str.to_string()).unwrap());
+
+	let function_hash = Vec::from_hex("371303c0".to_string()).unwrap();
 
 	let (mrenclave, shard) = get_identifiers(trusted_args);
-	let nonce = get_layer_two_nonce!(from, cli, trusted_args);
-	let top = TrustedCall::evm_call(
-		from_acc,
+	let nonce = get_layer_two_nonce!(sender, cli, trusted_args);
+
+	println!("calling smart contract inc");
+
+	let inc_call = TrustedCall::evm_call(
+		sender_acc.clone(),
 		sender_evm_acc,
-		destination_evm_acc,
-		Vec::new(),
-		U256::from(*amount),
-		21776, // gas limit
-		U256::from(1_000_000_000),
+		execution_address,
+		function_hash,
+		U256::from(0),
+		10_000_000,    // gas limit
+		U256::from(1), // max_fee_per_gas !>= min_gas_price defined in runtime
 		None,
-		Some(U256::from(0)),
+		Some(U256::from(1)),
 		Vec::new(),
 	)
-	.sign(&KeyPair::Sr25519(from), nonce, &mrenclave, &shard)
+	.sign(&KeyPair::Sr25519(sender.clone()), nonce, &mrenclave, &shard)
 	.into_trusted_operation(trusted_args.direct);
-	let _ = perform_operation(cli, trusted_args, &top);
+	let _ = perform_operation(cli, trusted_args, &inc_call);
 }

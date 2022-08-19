@@ -324,6 +324,7 @@ impl Stf {
 					.dispatch_bypass_filter(ita_sgx_runtime::Origin::signed(from))
 					.map_err(|e| StfError::Dispatch(format!("Evm Create error: {:?}", e.error)))?;
 					let contract_address = evm_create_address(source, nonce_evm_account);
+					error!("contract address {}", contract_address);
 					info!("Trying to create evm contract with address {:?}", contract_address);
 					Ok(())
 				},
@@ -361,6 +362,7 @@ impl Stf {
 					.dispatch_bypass_filter(ita_sgx_runtime::Origin::signed(from))
 					.map_err(|e| StfError::Dispatch(format!("Evm Create2 error: {:?}", e.error)))?;
 					let contract_address = evm_create2_address(source, salt, code_hash);
+					error!("contract address {:?}", contract_address);
 					info!("Trying to create evm contract with address {:?}", contract_address);
 					Ok(())
 				},
