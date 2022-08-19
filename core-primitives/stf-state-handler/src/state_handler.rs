@@ -148,6 +148,22 @@ mod tests {
 	}
 
 	#[test]
+	fn load_does_not_blocks_concurrent_access() {
+		let shard_id = ShardIdentifier::random();
+		let state_handler = default_state_handler(&shard_id);
+
+		let latest_state_read_before = state_handler.load(&shard_id).unwrap();
+
+		let state_handler_clone = state_handler.clone();
+		let join_handle = thread::spawn(move || {
+			let latest_state = state_handler_clone.load(&shard_id).unwrap();
+			assert_eq!(latest_state_read_before, latest_state);
+		});
+
+		join_handle.join().unwrap();
+	}
+
+	#[test]
 	fn load_initialized_works() {
 		let shard_id = ShardIdentifier::random();
 		let state_handler = default_state_handler(&shard_id);
