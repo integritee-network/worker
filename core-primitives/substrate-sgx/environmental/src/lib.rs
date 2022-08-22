@@ -125,7 +125,12 @@ pub fn with<T: ?Sized, R, F: FnOnce(&mut T) -> R>(
 		// We always use the `last` element when we want to access the
 		// currently set global.
 		let last = r.borrow().last().cloned();
-		last.map(|ptr| unsafe { mutator(&mut **ptr.borrow_mut()) })
+		last.map(|ptr|
+			// safe because it's only non-zero when it's being called from using, which
+			// is holding on to the underlying reference (and not using it itself) safely.
+			unsafe {
+				mutator(&mut **ptr.borrow_mut())
+			})
 	})
 }
 
