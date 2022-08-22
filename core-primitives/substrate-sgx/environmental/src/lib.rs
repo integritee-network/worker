@@ -34,7 +34,7 @@
 //!   // call stuff, setting up our `counter` environment as a reference to our counter_value var.
 //!   counter::using(&mut counter_value, stuff);
 //!   println!("The answer is {:?}", counter_value); // will print 42!
-//!   stuff();	// safe! doesn't do anything.
+//!   stuff();  // safe! doesn't do anything.
 //! }
 //! ```
 //!
@@ -125,14 +125,7 @@ pub fn with<T: ?Sized, R, F: FnOnce(&mut T) -> R>(
 		// We always use the `last` element when we want to access the
 		// currently set global.
 		let last = r.borrow().last().cloned();
-		match last {
-			Some(ptr) => unsafe {
-				// safe because it's only non-zero when it's being called from using, which
-				// is holding on to the underlying reference (and not using it itself) safely.
-				Some(mutator(&mut **ptr.borrow_mut()))
-			},
-			None => None,
-		}
+		last.map(|ptr| unsafe { mutator(&mut **ptr.borrow_mut()) })
 	})
 }
 
@@ -163,7 +156,7 @@ pub fn with<T: ?Sized, R, F: FnOnce(&mut T) -> R>(
 ///         *value += 1; true
 ///       } else {
 ///         *value -= 3; false
-///       }).unwrap();	// safe because we're inside a counter::using
+///       }).unwrap(); // safe because we're inside a counter::using
 ///     println!("counter was {}", match odd { true => "odd", _ => "even" });
 ///   });
 ///
@@ -179,18 +172,18 @@ pub fn with<T: ?Sized, R, F: FnOnce(&mut T) -> R>(
 /// trait Increment { fn increment(&mut self); }
 ///
 /// impl Increment for i32 {
-///	fn increment(&mut self) { *self += 1 }
+///     fn increment(&mut self) { *self += 1 }
 /// }
 ///
 /// environmental!(val: Increment + 'static);
 ///
 /// fn main() {
-///	let mut local = 0i32;
-///	val::using(&mut local, || {
-///		val::with(|v| for _ in 0..5 { v.increment() });
-///	});
+///     let mut local = 0i32;
+///     val::using(&mut local, || {
+///     val::with(|v| for _ in 0..5 { v.increment() });
+/// });
 ///
-///	assert_eq!(local, 5);
+/// assert_eq!(local, 5);
 /// }
 /// ```
 #[macro_export]
