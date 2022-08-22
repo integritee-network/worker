@@ -73,13 +73,13 @@ pub fn test_genesis_setup(state: &mut SgxExternalities) {
 		(ALICE_ENCODED.into(), ALICE_FUNDS, ALICE_FUNDS),
 	];
 
-	fund_alice_evm_account(&mut endowees);
+	append_funded_alice_evm_account(&mut endowees);
 
 	endow(state, endowees);
 }
 
 #[cfg(feature = "evm")]
-fn fund_alice_evm_account(endowees: &mut Vec<(AccountId32, Balance, Balance)>) {
+fn append_funded_alice_evm_account(endowees: &mut Vec<(AccountId32, Balance, Balance)>) {
 	let alice_evm = get_evm_account(&ALICE_ENCODED.into());
 	let alice_evm_substrate_version = HashedAddressMapping::into_account_id(alice_evm);
 	let mut other: Vec<(AccountId32, Balance, Balance)> =
@@ -88,7 +88,7 @@ fn fund_alice_evm_account(endowees: &mut Vec<(AccountId32, Balance, Balance)>) {
 }
 
 #[cfg(not(feature = "evm"))]
-fn fund_alice_evm_account(_: &mut Vec<(AccountId32, Balance, Balance)>) {}
+fn append_funded_alice_evm_account(_: &mut Vec<(AccountId32, Balance, Balance)>) {}
 
 fn set_sudo_account(state: &mut SgxExternalities, account_encoded: &[u8]) {
 	state.execute_with(|| {

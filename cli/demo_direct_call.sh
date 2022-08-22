@@ -63,17 +63,7 @@ AMOUNTSHIELD=50000000000
 AMOUNTTRANSFER=40000000000
 
 CLIENT="${CLIENT_BIN} -p ${NPORT} -P ${WORKER1PORT} -u ${NODEURL} -U ${WORKER1URL}"
-
-if [ "$READMRENCLAVE" = "file" ]
-then
-    read MRENCLAVE <<< $(cat ~/mrenclave.b58)
-    echo "Reading MRENCLAVE from file: ${MRENCLAVE}"
-else
-    # This will always take the first MRENCLAVE found in the registry !!
-    read MRENCLAVE <<< $($CLIENT list-workers | awk '/  MRENCLAVE: / { print $2; exit }')
-    echo "Reading MRENCLAVE from worker list: ${MRENCLAVE}"
-fi
-[[ -z $MRENCLAVE ]] && { echo "MRENCLAVE is empty. cannot continue" ; exit 1; }
+read -r MRENCLAVE <<< "$($CLIENT list-workers | awk '/  MRENCLAVE: / { print $2; exit }')"
 
 echo ""
 echo "* Create a new incognito account for Alice"

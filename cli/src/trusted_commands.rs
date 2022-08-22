@@ -54,9 +54,6 @@ use sp_runtime::traits::BlakeTwo256;
 use pallet_evm::{AddressMapping, HashedAddressMapping};
 
 #[cfg(feature = "evm")]
-use core::str::FromStr;
-
-#[cfg(feature = "evm")]
 use itp_types::AccountId;
 
 #[cfg(feature = "evm")]
@@ -206,7 +203,9 @@ pub enum TrustedCommands {
 
 		/// Execution address of the smart contract
 		execution_address: String,
-		//TODO: function hash
+
+		/// Function hash
+		function: String,
 	},
 
 	/// Run Benchmark
@@ -271,8 +270,8 @@ pub fn match_trusted_commands(cli: &Cli, trusted_args: &TrustedArgs) {
 		TrustedCommands::EvmRead { from, execution_address } =>
 			evm_read_storage(cli, trusted_args, from, execution_address),
 		#[cfg(feature = "evm")]
-		TrustedCommands::EvmCall { from, execution_address } =>
-			evm_call(cli, trusted_args, from, execution_address),
+		TrustedCommands::EvmCall { from, execution_address, function } =>
+			evm_call(cli, trusted_args, from, execution_address, function),
 	}
 }
 
@@ -636,11 +635,11 @@ fn evm_create(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, smart_contr
 
 	let (mrenclave, shard) = get_identifiers(trusted_args);
 
-	let nonce = get_layer_two_nonce!(from, cli, trusted_args);
-
 	let sender_evm_substrate_addr =
 		HashedAddressMapping::<BlakeTwo256>::into_account_id(sender_evm_acc);
 	println!("Trying to get nonce of evm account {:?}", sender_evm_substrate_addr.to_ss58check());
+
+	let nonce = get_layer_two_nonce!(from, cli, trusted_args);
 	let evm_account_nonce = get_layer_two_evm_nonce!(from, cli, trusted_args);
 
 	let top = TrustedCall::evm_create(
@@ -661,7 +660,7 @@ fn evm_create(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, smart_contr
 
 	let execution_address = evm_create_address(sender_evm_acc, evm_account_nonce);
 	info!("trusted call evm_create executed");
-	println!("Hopefully created the smart contract with address {:?}", execution_address);
+	println!("Created the smart contract with address {:?}", execution_address);
 }
 
 #[cfg(feature = "evm")]
@@ -693,23 +692,29 @@ fn evm_read_storage(
 	let res = perform_operation(cli, trusted_args, &top);
 
 	debug!("received result for balance");
-	let bal = if let Some(v) = res {
+	let val = if let Some(v) = res {
 		if let Ok(vd) = H256::decode(&mut v.as_slice()) {
 			vd
 		} else {
-			error!("could not decode value. maybe hasn't been set? {:x?}", v);
+			error!("could not decode value. {:x?}", v);
 			H256::zero()
 		}
 	} else {
-		error!("you are crazy");
+		error!("Nothing in state!");
 		H256::zero()
 	};
 
-	println!("{:?}", bal);
+	println!("{:?}", val);
 }
 
 #[cfg(feature = "evm")]
-fn evm_call(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, execution_address_str: &str) {
+fn evm_call(
+	cli: &Cli,
+	trusted_args: &TrustedArgs,
+	arg_from: &str,
+	execution_address_str: &str,
+	function: &str,
+) {
 	let sender = get_pair_from_str(trusted_args, arg_from);
 	let sender_acc: AccountId = sender.public().into();
 
@@ -725,15 +730,15 @@ fn evm_call(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, execution_add
 	let execution_address =
 		H160::from_slice(&Vec::from_hex(execution_address_str.to_string()).unwrap());
 
-	let function_hash = Vec::from_hex("371303c0".to_string()).unwrap();
+	let function_hash = Vec::from_hex(function.to_string()).unwrap();
 
 	let (mrenclave, shard) = get_identifiers(trusted_args);
 	let nonce = get_layer_two_nonce!(sender, cli, trusted_args);
+	let evm_nonce = get_layer_two_evm_nonce!(sender, cli, trusted_args);
 
-	println!("calling smart contract inc");
-
-	let inc_call = TrustedCall::evm_call(
-		sender_acc.clone(),
+	println!("calling smart contract function");
+	let function_call = TrustedCall::evm_call(
+		sender_acc,
 		sender_evm_acc,
 		execution_address,
 		function_hash,
@@ -741,10 +746,10 @@ fn evm_call(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, execution_add
 		10_000_000,    // gas limit
 		U256::from(1), // max_fee_per_gas !>= min_gas_price defined in runtime
 		None,
-		Some(U256::from(1)),
+		Some(U256::from(evm_nonce)),
 		Vec::new(),
 	)
-	.sign(&KeyPair::Sr25519(sender.clone()), nonce, &mrenclave, &shard)
+	.sign(&KeyPair::Sr25519(sender), nonce, &mrenclave, &shard)
 	.into_trusted_operation(trusted_args.direct);
-	let _ = perform_operation(cli, trusted_args, &inc_call);
+	let _ = perform_operation(cli, trusted_args, &function_call);
 }

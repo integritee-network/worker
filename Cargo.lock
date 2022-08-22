@@ -2591,7 +2591,6 @@ dependencies = [
  "log 0.4.17",
  "pallet-balances",
  "parity-scale-codec",
- "primitive-types",
  "rlp",
  "sc-keystore",
  "sgx_tstd",
