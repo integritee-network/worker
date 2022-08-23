@@ -28,7 +28,6 @@ sp-wasm-interface = { default-features = false, git = "https://github.com/parity
 sp-tracing = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
 sp-trie = { optional = true, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
 sp-keystore = { optional = true, default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
-sp-externalities = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
 
 # local
 environmental = { path = "../environmental", default-features = false }
@@ -49,7 +48,6 @@ std = [
 	"sp-state-machine",
 	"libsecp256k1/std",
 	"sp-runtime-interface/std",
-	"sp-externalities/std",
 	"sp-wasm-interface/std",
 	"futures",
 	"parking_lot",

@@ -6956,7 +6956,6 @@ dependencies = [
  "sgx_tstd",
  "sgx_types",
  "sp-core",
- "sp-externalities",
  "sp-keystore",
  "sp-runtime-interface",
  "sp-state-machine",
