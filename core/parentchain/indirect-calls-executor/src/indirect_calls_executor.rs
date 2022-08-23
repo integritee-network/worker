@@ -247,8 +247,9 @@ fn hash_of<T: Encode>(xt: &T) -> H256 {
 mod test {
 	use super::*;
 	use codec::Encode;
-	use itp_node_api::metadata::{
-		metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository,
+	use itp_node_api::{
+		api_client::{ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder},
+		metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository},
 	};
 	use itp_sgx_crypto::mocks::KeyRepositoryMock;
 	use itp_stf_executor::mocks::StfEnclaveSignerMock;
