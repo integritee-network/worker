@@ -9,6 +9,8 @@ edition = "2018"
 codec = { version = "3.0.0", default-features = false, features = ["derive"], package = "parity-scale-codec" }
 derive_more = { version = "0.99.5" }
 log = { version = "0.4", default-features = false }
+rlp = { version = "0.5", default-features = false }
+sha3 = { version = "0.10", default-features = false }
 
 # sgx deps
 sgx_tstd = { branch = "master", features = ["untrusted_fs","net","backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
@@ -45,6 +47,7 @@ sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "po
 default = ["std"]
 evm = [ "ita-sgx-runtime/evm" ]
 evm_std = [
+    "evm",
     "ita-sgx-runtime/evm_std"
 ]
 sgx = [
@@ -59,6 +62,7 @@ std = [
     # crates.io
     "codec/std",
     "log/std",
+    "rlp/std",
     # local
     "itp-sgx-externalities/std",
     "itp-storage/std",

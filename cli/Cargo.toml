@@ -26,6 +26,7 @@ rand = "0.8.5"
 itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 itp-utils = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node", branch = "master" }
+pallet-evm = { optional = true, git = "https://github.com/integritee-network/frontier.git", branch = "polkadot-v0.9.26" }
 substrate-api-client = { features = ["ws-client"], git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.26" }
 substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.26" }
 teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
@@ -47,3 +48,10 @@ ita-stf = { path = "../app-libs/stf" }
 itc-rpc-client = { path = "../core/rpc-client" }
 itp-time-utils = { path = "../core-primitives/time-utils" }
 
+
+[features]
+default = []
+evm = [
+    "ita-stf/evm_std",
+    "pallet-evm"
+]
