@@ -50,8 +50,9 @@ use itc_parentchain::{
 };
 use itp_block_import_queue::PushToBlockQueue;
 use itp_component_container::ComponentGetter;
-use itp_node_api::metadata::{
-	pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata, NodeMetadata,
+use itp_node_api::{
+	api_client::{ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder},
+	metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata, NodeMetadata},
 };
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_ocall_api::EnclaveAttestationOCallApi;
@@ -60,9 +61,7 @@ use itp_sgx_crypto::{ed25519, Ed25519Seal, Rsa3072Seal};
 use itp_sgx_io as io;
 use itp_sgx_io::StaticSealedIO;
 use itp_stf_state_handler::handle_state::HandleState;
-use itp_types::{
-	Header, ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder, SignedBlock,
-};
+use itp_types::{Header, SignedBlock};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use sgx_types::sgx_status_t;

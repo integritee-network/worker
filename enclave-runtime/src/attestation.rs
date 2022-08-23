@@ -34,12 +34,14 @@ use codec::Encode;
 use core::default::Default;
 use itertools::Itertools;
 use itp_component_container::ComponentGetter;
-use itp_node_api::metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata};
+use itp_node_api::{
+	api_client::{ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder},
+	metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata},
+};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::files::{RA_API_KEY_FILE, RA_DUMP_CERT_DER_FILE, RA_SPID_FILE};
 use itp_sgx_crypto::Ed25519Seal;
 use itp_sgx_io::StaticSealedIO;
-use itp_types::{ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use sgx_rand::*;

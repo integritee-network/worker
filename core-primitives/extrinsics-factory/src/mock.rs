@@ -16,7 +16,8 @@
 */
 
 use crate::{error::Result, CreateExtrinsics};
-use itp_types::{OpaqueCall, ParentchainExtrinsicParamsBuilder};
+use itp_node_api::api_client::ParentchainExtrinsicParamsBuilder;
+use itp_types::OpaqueCall;
 use sp_runtime::OpaqueExtrinsic;
 use std::vec::Vec;
 

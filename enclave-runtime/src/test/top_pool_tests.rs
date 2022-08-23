@@ -33,19 +33,22 @@ use ita_stf::{
 	TrustedCall, TrustedOperation,
 };
 use itc_parentchain::indirect_calls_executor::{ExecuteIndirectCalls, IndirectCallsExecutor};
-use itp_node_api::metadata::{
-	metadata_mocks::NodeMetadataMock, pallet_teerex::TeerexCallIndexes,
-	provider::NodeMetadataRepository,
+use itp_node_api::{
+	api_client::{
+		ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder,
+		ParentchainUncheckedExtrinsic,
+	},
+	metadata::{
+		metadata_mocks::NodeMetadataMock, pallet_teerex::TeerexCallIndexes,
+		provider::NodeMetadataRepository,
+	},
 };
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_stf_executor::enclave_signer::StfEnclaveSigner;
 use itp_test::mock::metrics_ocall_mock::MetricsOCallMock;
 use itp_top_pool_author::{top_filter::AllowAllTopsFilter, traits::AuthorApi};
-use itp_types::{
-	AccountId, Block, ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder,
-	ParentchainUncheckedExtrinsic, ShardIdentifier, ShieldFundsFn, H256,
-};
+use itp_types::{AccountId, Block, ShardIdentifier, ShieldFundsFn, H256};
 use jsonrpc_core::futures::executor;
 use log::*;
 use parentchain_test::{
