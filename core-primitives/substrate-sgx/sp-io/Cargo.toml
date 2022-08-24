@@ -15,7 +15,6 @@ tracing = { version = "0.1.25", default-features = false }
 tracing-core = { version = "0.1.17", default-features = false}
 log = { version = "0.4", default-features = false }
 
-environmental = { version = "1.1.3", default-features = false }
 sgx_tstd  = { optional = true, features = ["untrusted_fs","net","backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", branch = "master" }
 sgx_types = { optional = true, git = "https://github.com/apache/teaclave-sgx-sdk.git", branch = "master" }
 itp-sgx-externalities = { default-features = false, path = "../externalities" }
@@ -29,7 +28,9 @@ sp-wasm-interface = { default-features = false, git = "https://github.com/parity
 sp-tracing = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
 sp-trie = { optional = true, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
 sp-keystore = { optional = true, default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
-sp-externalities = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+
+# local
+environmental = { path = "../environmental", default-features = false }
 
 [dev-dependencies]
 hex-literal = { version = "0.3.4" }
@@ -37,7 +38,6 @@ hex-literal = { version = "0.3.4" }
 [features]
 default = ["std"]
 std = [
-	"environmental/std",
 	"log/std",
 	"sp-core/std",
 	"codec/std",
@@ -48,17 +48,20 @@ std = [
 	"sp-state-machine",
 	"libsecp256k1/std",
 	"sp-runtime-interface/std",
-	"sp-externalities/std",
 	"sp-wasm-interface/std",
 	"futures",
 	"parking_lot",
 	"itp-sgx-externalities/std",
+	# local
+	"environmental/std",
 ]
 sgx = [
 	"sgx_tstd",
 	"sgx_types",
 	"itp-sgx-externalities/sgx",
 	"sp-runtime-interface/disable_target_static_assertions",
+	#local
+	"environmental/sgx",
 ]
 
 # These two features are used for `no_std` builds for the environments which already provides

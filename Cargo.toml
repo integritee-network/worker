@@ -40,6 +40,7 @@ members = [
     "core-primitives/stf-executor",
     "core-primitives/stf-state-handler",
     "core-primitives/storage",
+    "core-primitives/substrate-sgx/environmental",
     "core-primitives/substrate-sgx/externalities",
     "core-primitives/substrate-sgx/sp-io",
     "core-primitives/teerex-storage",

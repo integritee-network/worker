@@ -739,6 +739,13 @@ dependencies = [
 [[package]]
 name = "environmental"
 version = "1.1.3"
+dependencies = [
+ "sgx_tstd",
+]
+
+[[package]]
+name = "environmental"
+version = "1.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68b91989ae21441195d7d9b9993a2f9295c7e1a8c96255d8b729accddc124797"
 
@@ -1839,7 +1846,7 @@ name = "itp-sgx-externalities"
 version = "0.8.0"
 dependencies = [
  "derive_more",
- "environmental",
+ "environmental 1.1.3",
  "log",
  "parity-scale-codec",
  "postcard",
@@ -3987,7 +3994,7 @@ name = "sp-externalities"
 version = "0.12.0"
 source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.26#e8a7d161f39db70cb27fdad6c6e215cf493ebc3b"
 dependencies = [
- "environmental",
+ "environmental 1.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.26)",
  "sp-storage",
@@ -4023,7 +4030,7 @@ dependencies = [
 name = "sp-io"
 version = "6.0.0"
 dependencies = [
- "environmental",
+ "environmental 1.1.3",
  "hash-db",
  "itp-sgx-externalities",
  "libsecp256k1",
@@ -4032,7 +4039,6 @@ dependencies = [
  "sgx_tstd",
  "sgx_types",
  "sp-core",
- "sp-externalities",
  "sp-runtime-interface",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.26)",
  "sp-tracing",
