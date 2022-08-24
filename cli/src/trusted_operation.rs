@@ -146,7 +146,7 @@ fn send_request(
 	}
 }
 
-fn read_shard(trusted_args: &TrustedArgs) -> StdResult<ShardIdentifier, codec::Error> {
+pub fn read_shard(trusted_args: &TrustedArgs) -> StdResult<ShardIdentifier, codec::Error> {
 	match &trusted_args.shard {
 		Some(s) => match s.from_base58() {
 			Ok(s) => ShardIdentifier::decode(&mut &s[..]),
@@ -165,8 +165,9 @@ fn send_direct_request(
 	trusted_args: &TrustedArgs,
 	operation_call: &TrustedOperation,
 ) -> Option<Vec<u8>> {
+	let shard = read_shard(trusted_args).unwrap();
 	let encryption_key = get_shielding_key(cli).unwrap();
-	let jsonrpc_call: String = get_json_request(trusted_args, operation_call, encryption_key);
+	let jsonrpc_call: String = get_json_request(shard, operation_call, encryption_key);
 
 	debug!("get direct api");
 	let direct_api = get_worker_api_direct(cli);
@@ -224,13 +225,11 @@ fn send_direct_request(
 }
 
 pub fn get_json_request(
-	trusted_args: &TrustedArgs,
+	shard: ShardIdentifier,
 	operation_call: &TrustedOperation,
 	shielding_pubkey: sgx_crypto_helper::rsa3072::Rsa3072PubKey,
 ) -> String {
 	let operation_call_encrypted = shielding_pubkey.encrypt(&operation_call.encode()).unwrap();
-	let shard = read_shard(trusted_args).unwrap();
-
 	// compose jsonrpc call
 	let request = Request { shard, cyphertext: operation_call_encrypted };
 	RpcRequest::compose_jsonrpc_call(

@@ -20,7 +20,7 @@ use crate::{
 	trusted_command_utils::{
 		get_accountid_from_str, get_identifiers, get_keystore_path, get_pair_from_str,
 	},
-	trusted_operation::{get_json_request, perform_trusted_operation, wait_until},
+	trusted_operation::{get_json_request, perform_trusted_operation, read_shard, wait_until},
 	Cli,
 };
 use codec::Decode;
@@ -360,6 +360,7 @@ fn transfer_benchmark_increasing_state(
 	wait_for_confirmation: bool,
 	funding_account: &str,
 ) {
+	let shard = read_shard(trusted_args).unwrap();
 	let store = LocalKeystore::open(get_keystore_path(trusted_args), None).unwrap();
 	let funding_account_keys = get_pair_from_str(trusted_args, funding_account);
 
@@ -398,7 +399,7 @@ fn transfer_benchmark_increasing_state(
 
 		// For the last account we wait for confirmation in order to ensure all accounts were setup correctly
 		let wait_for_confirmation = i == number_clients - 1;
-		let account_funding_request = get_json_request(trusted_args, &top, shielding_pubkey);
+		let account_funding_request = get_json_request(shard, &top, shielding_pubkey);
 
 		let client = BenchmarkClient::new(account, initial_balance, account_funding_request, cli);
 		let _result = wait_for_top_confirmation(wait_for_confirmation, &client);
@@ -450,7 +451,7 @@ fn transfer_benchmark_increasing_state(
 				.into_trusted_operation(trusted_args.direct);
 
 				let last_iteration = i == number_iterations - 1;
-				let jsonrpc_call = get_json_request(trusted_args, &top, shielding_pubkey);
+				let jsonrpc_call = get_json_request(shard, &top, shielding_pubkey);
 				client.client_api.send(&jsonrpc_call).unwrap();
 				let result =
 					wait_for_top_confirmation(wait_for_confirmation || last_iteration, &client);
@@ -489,6 +490,7 @@ fn transfer_benchmark_increasing_nonce(
 	wait_for_confirmation: bool,
 	funding_account: &str,
 ) {
+	let shard = read_shard(trusted_args).unwrap();
 	let store = LocalKeystore::open(get_keystore_path(trusted_args), None).unwrap();
 	let funding_account_keys = get_pair_from_str(trusted_args, funding_account);
 
@@ -527,7 +529,7 @@ fn transfer_benchmark_increasing_nonce(
 
 		// For the last account we wait for confirmation in order to ensure all accounts were setup correctly
 		let wait_for_confirmation = i == number_clients - 1;
-		let account_funding_request = get_json_request(trusted_args, &top, shielding_pubkey);
+		let account_funding_request = get_json_request(shard.clone(), &top, shielding_pubkey);
 
 		let client = BenchmarkClient::new(account, initial_balance, account_funding_request, cli);
 		let _result = wait_for_top_confirmation(wait_for_confirmation, &client);
@@ -566,6 +568,14 @@ fn transfer_benchmark_increasing_nonce(
 				println!("  To:   {:?}", new_account.public());
 
 				let account_pair = client.account.clone();
+				// Get nonce of account
+				let nonce_top: TrustedOperation =
+					TrustedGetter::nonce(account_pair.public().into())
+						.sign(&KeyPair::Sr25519(account_pair.clone()))
+						.into();
+
+				let jsonrpc_call = get_json_request(shard, &nonce_top, shielding_pubkey);
+
 				let start_time = Instant::now();
 				let nonce = get_layer_two_nonce!(account_pair, cli, trusted_args);
 				let elapsed_seconds = start_time.elapsed().as_secs();
@@ -586,7 +596,7 @@ fn transfer_benchmark_increasing_nonce(
 				.into_trusted_operation(trusted_args.direct);
 
 				let last_iteration = i == number_iterations - 1;
-				let jsonrpc_call = get_json_request(trusted_args, &top, shielding_pubkey);
+				let jsonrpc_call = get_json_request(shard, &top, shielding_pubkey);
 				client.client_api.send(&jsonrpc_call).unwrap();
 				let start_time = Instant::now();
 				let result =
