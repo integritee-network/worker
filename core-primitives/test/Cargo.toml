@@ -32,7 +32,7 @@ itp-teerex-storage = { path = "../teerex-storage", default-features = false }
 itp-time-utils = { path = "../time-utils", default-features = false }
 
 # integritee
-itp-types = { default-features = false, features = ["test"], git = "https://github.com/integritee-network/pallets.git", branch = "tn/polkadot-v0.9.27" }
+itp-types = { default-features = false, features = ["test"], git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 [features]
 default = ["std"]
