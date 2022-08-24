@@ -48,3 +48,9 @@ ita-stf = { path = "../app-libs/stf" }
 itc-rpc-client = { path = "../core/rpc-client" }
 itp-time-utils = { path = "../core-primitives/time-utils" }
 
+[features]
+default = []
+evm = [
+    "ita-stf/evm_std",
+    "pallet-evm"
+]
