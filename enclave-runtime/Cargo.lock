@@ -15,7 +15,7 @@ dependencies = [
 [[package]]
 name = "ac-compose-macros"
 version = "0.1.0"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=tn/polkadot-v0.9.27#4f70e1e5779dcfc66a0f4e0836e0bc4dd52eb783"
+source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.27#4f70e1e5779dcfc66a0f4e0836e0bc4dd52eb783"
 dependencies = [
  "ac-primitives",
  "log",
@@ -29,7 +29,7 @@ dependencies = [
 [[package]]
 name = "ac-node-api"
 version = "0.1.0"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=tn/polkadot-v0.9.27#4f70e1e5779dcfc66a0f4e0836e0bc4dd52eb783"
+source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.27#4f70e1e5779dcfc66a0f4e0836e0bc4dd52eb783"
 dependencies = [
  "ac-primitives",
  "derive_more",
@@ -52,7 +52,7 @@ dependencies = [
 [[package]]
 name = "ac-primitives"
 version = "0.1.0"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=tn/polkadot-v0.9.27#4f70e1e5779dcfc66a0f4e0836e0bc4dd52eb783"
+source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.27#4f70e1e5779dcfc66a0f4e0836e0bc4dd52eb783"
 dependencies = [
  "hex",
  "parity-scale-codec",
@@ -2019,7 +2019,7 @@ dependencies = [
 [[package]]
 name = "itp-types"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=tn/polkadot-v0.9.27#fb6978fa96a71febff63a780b5f31db328c2b1e4"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
 dependencies = [
  "chrono 0.4.22",
  "parity-scale-codec",
@@ -2035,7 +2035,7 @@ dependencies = [
 [[package]]
 name = "itp-utils"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=tn/polkadot-v0.9.27#fb6978fa96a71febff63a780b5f31db328c2b1e4"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
 dependencies = [
  "frame-support",
  "hex",
@@ -2674,7 +2674,7 @@ dependencies = [
 [[package]]
 name = "pallet-parentchain"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=tn/polkadot-v0.9.27#fb6978fa96a71febff63a780b5f31db328c2b1e4"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -2780,7 +2780,7 @@ dependencies = [
 [[package]]
 name = "parentchain-test"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=tn/polkadot-v0.9.27#fb6978fa96a71febff63a780b5f31db328c2b1e4"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3752,7 +3752,7 @@ dependencies = [
 [[package]]
 name = "sidechain-block-verification"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=tn/polkadot-v0.9.27#fb6978fa96a71febff63a780b5f31db328c2b1e4"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
 dependencies = [
  "frame-support",
  "itp-types",
@@ -3769,7 +3769,7 @@ dependencies = [
 [[package]]
 name = "sidechain-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=tn/polkadot-v0.9.27#fb6978fa96a71febff63a780b5f31db328c2b1e4"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -4264,7 +4264,7 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 [[package]]
 name = "substrate-api-client"
 version = "0.6.0"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=tn/polkadot-v0.9.27#4f70e1e5779dcfc66a0f4e0836e0bc4dd52eb783"
+source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.27#4f70e1e5779dcfc66a0f4e0836e0bc4dd52eb783"
 dependencies = [
  "ac-compose-macros",
  "ac-node-api",
