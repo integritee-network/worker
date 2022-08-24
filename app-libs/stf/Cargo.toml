@@ -24,24 +24,24 @@ its-state = { default-features = false, optional = true, path = "../../sidechain
 sp-io = { optional = true, default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], path = "../../core-primitives/substrate-sgx/sp-io" }
 
 # Substrate dependencies
-sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
-balances = { package = "pallet-balances", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
-system = { package = "frame-system", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
-support = { package = "frame-support", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
-sp-application-crypto = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
-sc-keystore = { optional = true, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+balances = { package = "pallet-balances", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+system = { package = "frame-system", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+support = { package = "frame-support", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+sp-application-crypto = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+sc-keystore = { optional = true, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 
 # scs / integritee
-my-node-runtime = { package = "integritee-node-runtime", optional = true, git = "https://github.com/integritee-network/integritee-node", branch = "master" }
-substrate-api-client = { optional = true, git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.26" }
-substrate-client-keystore = { optional = true, git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.26" }
+my-node-runtime = { package = "integritee-node-runtime", optional = true, git = "https://github.com/integritee-network/integritee-node.git", branch = "master" }
+substrate-api-client = { optional = true, git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.27" }
+substrate-client-keystore = { optional = true, git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.27" }
 sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 itp-utils = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 [dev-dependencies]
-sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 
 [features]
 default = ["std"]

@@ -27,13 +27,14 @@ use crate::{
 use codec::{Decode, Encode};
 use futures::executor;
 use ita_stf::{AccountId, TrustedCall, TrustedOperation};
-use itp_node_api::metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata};
+use itp_node_api::{
+	api_client::ParentchainUncheckedExtrinsic,
+	metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata},
+};
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
 use itp_stf_executor::traits::StfEnclaveSigning;
 use itp_top_pool_author::traits::AuthorApi;
-use itp_types::{
-	CallWorkerFn, OpaqueCall, ParentchainUncheckedExtrinsic, ShardIdentifier, ShieldFundsFn, H256,
-};
+use itp_types::{CallWorkerFn, OpaqueCall, ShardIdentifier, ShieldFundsFn, H256};
 use log::*;
 use sp_core::blake2_256;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header};
@@ -246,16 +247,15 @@ fn hash_of<T: Encode>(xt: &T) -> H256 {
 mod test {
 	use super::*;
 	use codec::Encode;
-	use itp_node_api::metadata::{
-		metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository,
+	use itp_node_api::{
+		api_client::{ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder},
+		metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository},
 	};
 	use itp_sgx_crypto::mocks::KeyRepositoryMock;
 	use itp_stf_executor::mocks::StfEnclaveSignerMock;
 	use itp_test::mock::shielding_crypto_mock::ShieldingCryptoMock;
 	use itp_top_pool_author::mocks::AuthorApiMock;
-	use itp_types::{
-		ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder, Request, ShardIdentifier,
-	};
+	use itp_types::{Request, ShardIdentifier};
 	use parentchain_test::parentchain_block_builder::ParentchainBlockBuilder;
 	use sp_core::{ed25519, Pair};
 	use sp_runtime::{MultiSignature, OpaqueExtrinsic};

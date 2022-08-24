@@ -63,7 +63,7 @@ itp-types = { default-features = false, git = "https://github.com/integritee-net
 itp-utils = { default-features = false, features = ["sgx"], git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 jsonrpc-core = { default-features = false, git = "https://github.com/scs/jsonrpc", branch = "no_std_v18" }
 sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.26" }
+substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.27" }
 parentchain-test = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 sidechain-block-verification = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master"}
 
@@ -123,13 +123,13 @@ its-sidechain = { path = "../sidechain/sidechain-crate", default-features = fals
 sp-io = { optional = true, default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"], path = "../core-primitives/substrate-sgx/sp-io" }
 
 # substrate deps
-frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
-sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
-sp-finality-grandpa = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
-sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
-sp-version = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
-sp-application-crypto = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+sp-finality-grandpa = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+sp-version = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+sp-application-crypto = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 
 [patch.crates-io]
 env_logger = { git = "https://github.com/integritee-network/env_logger-sgx" }

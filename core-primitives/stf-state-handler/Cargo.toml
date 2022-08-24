@@ -34,7 +34,7 @@ itp-types = { default-features = false, git = "https://github.com/integritee-net
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 log = { version = "0.4", default-features = false }
 lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
-sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 
 [dev-dependencies]
 itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", features = ["mocks"] }
