@@ -41,12 +41,12 @@
 //! Original crate: https://github.com/paritytech/environmental/blob/master/src/lib.rs
 //! The original crate does not support multithreading in `no_std` mode, see https://github.com/integritee-network/worker/issues/803.
 //! Therefore, this crate introduces the sgx feature, which allows multithreading within an sgx enabled environment.
-//! It should be ensured, that all uses of the environmental crate within the enclave are making use of this crate, not the original one.
+//! It should be ensured that all uses of the environmental crate within the enclave are making use of this crate, not the original one.
 //!
-//! Attention: The `sp-runtime-interface` still points to the original environmental crate. It's not easily patchable due
+//! Attention: The `sp-runtime-interface` still points to the original environmental crate. It can't be easily patched due
 //! to this crate not being `no_std` compatible. (See https://github.com/integritee-network/worker/pull/938#discussion_r952412587).
 //! However, because `sp-runtime-interface` only uses environmental in `std` mode, it should be safe to leave as is.
-//! Nonetheless, it should be kept in mind, that this may cause a problem in the future.
+//! Nonetheless, it should be kept in mind that this may cause a problem in the future.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
