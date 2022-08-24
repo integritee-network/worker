@@ -20,10 +20,8 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use crate::{
-	beefy_merkle_tree::{merkle_root, Keccak256},
-	error::Result,
-};
+use crate::error::Result;
+use beefy_merkle_tree::{merkle_root, Keccak256};
 use codec::{Decode, Encode};
 use futures::executor;
 use ita_stf::{AccountId, TrustedCall, TrustedOperation};
