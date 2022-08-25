@@ -121,6 +121,6 @@ where
 		shard: &ShardIdentifier,
 		getter: TrustedOperationOrHash<H256>,
 	) -> Result<Vec<H256>> {
-		Ok(self.top_pool_author.remove_top(vec![getter], *shard, false)?)
+		Ok(self.top_pool_author.remove_top(vec![getter], *shard, true)?)
 	}
 }
