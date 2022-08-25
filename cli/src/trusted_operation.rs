@@ -251,7 +251,7 @@ pub fn wait_until(
 				let parse_result: Result<RpcResponse, _> = serde_json::from_str(&response);
 				if let Ok(response) = parse_result {
 					if let Ok(return_value) = RpcReturnValue::from_hex(&response.result) {
-						debug!("successfully decoded rpc response");
+						debug!("successfully decoded rpc response: {:?}", return_value);
 						match return_value.status {
 							DirectRequestStatus::Error => {
 								debug!("request status is error");
@@ -267,8 +267,11 @@ pub fn wait_until(
 								if let Ok(value) = Hash::decode(&mut return_value.value.as_slice())
 								{
 									println!("Trusted call {:?} is {:?}", value, status);
-									if until(status) {
+									if until(status.clone()) {
 										return Some((value, Instant::now()))
+									} else if status == TrustedOperationStatus::Invalid {
+										error!("Invalid request");
+										return None
 									}
 								}
 							},
@@ -276,6 +279,47 @@ pub fn wait_until(
 								debug!("request status is ignored");
 								return None
 							},
+						}
+					};
+				} else {
+					error!("Could not parse response");
+				};
+			},
+			Err(e) => {
+				error!("failed to receive rpc response: {:?}", e);
+				return None
+			},
+		};
+	}
+}
+
+pub fn wait_for_getter_response(receiver: &Receiver<String>) -> Option<Vec<u8>> {
+	debug!("waiting for getter response");
+	loop {
+		match receiver.recv() {
+			Ok(response) => {
+				debug!("received response: {}", response);
+				let parse_result: Result<RpcResponse, _> = serde_json::from_str(&response);
+				if let Ok(response) = parse_result {
+					if let Ok(return_value) = RpcReturnValue::from_hex(&response.result) {
+						debug!("successfully decoded rpc response: {:?}", return_value);
+						if return_value.status == DirectRequestStatus::Error {
+							debug!("request status is error");
+							if let Ok(value) = String::decode(&mut return_value.value.as_slice()) {
+								println!("[Error] {}", value);
+							}
+							return None
+						}
+						if !return_value.do_watch {
+							if let Ok(maybe_value) =
+								Option::decode(&mut return_value.value.as_slice())
+							{
+								return maybe_value
+							} else {
+								error!("Could not decode Option");
+							}
+						} else {
+							error!("request status is ignored");
 						}
 					};
 				} else {

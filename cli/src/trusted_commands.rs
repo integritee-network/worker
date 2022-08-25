@@ -20,7 +20,9 @@ use crate::{
 	trusted_command_utils::{
 		get_accountid_from_str, get_identifiers, get_keystore_path, get_pair_from_str,
 	},
-	trusted_operation::{get_json_request, perform_trusted_operation, read_shard, wait_until},
+	trusted_operation::{
+		get_json_request, perform_trusted_operation, wait_for_getter_response, wait_until,
+	},
 	Cli,
 };
 use codec::Decode;
@@ -42,7 +44,7 @@ use std::{
 	string::ToString,
 	sync::mpsc::{channel, Receiver},
 	thread, time,
-	time::Instant,
+	time::{Duration, Instant},
 	vec::Vec,
 };
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
@@ -360,7 +362,6 @@ fn transfer_benchmark_increasing_state(
 	wait_for_confirmation: bool,
 	funding_account: &str,
 ) {
-	let shard = read_shard(trusted_args).unwrap();
 	let store = LocalKeystore::open(get_keystore_path(trusted_args), None).unwrap();
 	let funding_account_keys = get_pair_from_str(trusted_args, funding_account);
 
@@ -490,7 +491,6 @@ fn transfer_benchmark_increasing_nonce(
 	wait_for_confirmation: bool,
 	funding_account: &str,
 ) {
-	let shard = read_shard(trusted_args).unwrap();
 	let store = LocalKeystore::open(get_keystore_path(trusted_args), None).unwrap();
 	let funding_account_keys = get_pair_from_str(trusted_args, funding_account);
 
@@ -529,10 +529,10 @@ fn transfer_benchmark_increasing_nonce(
 
 		// For the last account we wait for confirmation in order to ensure all accounts were setup correctly
 		let wait_for_confirmation = i == number_clients - 1;
-		let account_funding_request = get_json_request(shard.clone(), &top, shielding_pubkey);
+		let account_funding_request = get_json_request(shard, &top, shielding_pubkey);
 
 		let client = BenchmarkClient::new(account, initial_balance, account_funding_request, cli);
-		let _result = wait_for_top_confirmation(wait_for_confirmation, &client);
+		let _result = wait_for_top_confirmation(true, &client);
 		accounts.push(client);
 	}
 
@@ -568,16 +568,24 @@ fn transfer_benchmark_increasing_nonce(
 				println!("  To:   {:?}", new_account.public());
 
 				let account_pair = client.account.clone();
+
 				// Get nonce of account
+				let start_time = Instant::now();
 				let nonce_top: TrustedOperation =
 					TrustedGetter::nonce(account_pair.public().into())
 						.sign(&KeyPair::Sr25519(account_pair.clone()))
 						.into();
 
-				let jsonrpc_call = get_json_request(shard, &nonce_top, shielding_pubkey);
+				let nonce_jsonrpc_call = get_json_request(shard, &nonce_top, shielding_pubkey);
+				println!("  Getting Nonce for {:?}", account_pair.public());
+				client.client_api.send(&nonce_jsonrpc_call).unwrap();
 
-				let start_time = Instant::now();
-				let nonce = get_layer_two_nonce!(account_pair, cli, trusted_args);
+				let nonce = match wait_for_getter_response(&client.receiver) {
+					Some(encoded_nonce) => Index::decode(&mut encoded_nonce.as_slice()).unwrap(),
+					None => 0,
+				};
+				println!("Nonce for account {}: {}", client.account.public(), nonce);
+
 				let elapsed_seconds = start_time.elapsed().as_secs();
 				if elapsed_seconds > 10 {
 					println!(
@@ -597,10 +605,15 @@ fn transfer_benchmark_increasing_nonce(
 
 				let last_iteration = i == number_iterations - 1;
 				let jsonrpc_call = get_json_request(shard, &top, shielding_pubkey);
+				println!(
+					"Transferring money from {:?} to {:?}",
+					client.account.public(),
+					new_account.public(),
+				);
 				client.client_api.send(&jsonrpc_call).unwrap();
 				let start_time = Instant::now();
-				let result =
-					wait_for_top_confirmation(wait_for_confirmation || last_iteration, &client);
+				// We wait for InSidechainBlock Confirmation, otherwise it will mess up balance and nocne getter
+				let result = wait_for_top_confirmation(true, &client);
 				let elapsed_seconds = start_time.elapsed().as_secs();
 				if elapsed_seconds > 10 {
 					println!(
@@ -609,14 +622,28 @@ fn transfer_benchmark_increasing_nonce(
 					);
 				}
 
+				// Get Balance of account
 				let start_time = Instant::now();
+				let balance_top: TrustedOperation =
+					TrustedGetter::free_balance(account_pair.public().into())
+						.sign(&KeyPair::Sr25519(account_pair.clone()))
+						.into();
+				let balance_jsonrpc_call = get_json_request(shard, &balance_top, shielding_pubkey);
+				println!("  Getting Balance for {:?}", account_pair.public());
+				client.client_api.send(&balance_jsonrpc_call).unwrap();
 
-				client.current_balance =
-					get_balance(cli, trusted_args, &client.account.public().to_string()).unwrap();
+				client.current_balance = match wait_for_getter_response(&client.receiver) {
+					Some(encoded_balance) =>
+						Balance::decode(&mut encoded_balance.as_slice()).unwrap(),
+					None => 0,
+				};
+
+				println!("New balance of account: {:?}", client.current_balance);
+
 				let elapsed_seconds = start_time.elapsed().as_secs();
 				if elapsed_seconds > 10 {
 					println!(
-						"!!!!! [Error]: Running balance getter took {} seconds",
+						"!!!!! [Error]: Running Balance getter took {} seconds",
 						elapsed_seconds
 					);
 				}
