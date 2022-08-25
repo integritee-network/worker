@@ -24,8 +24,8 @@ use crate::{
 };
 use codec::Decode;
 use ita_stf::{
-	Coordinates, Index, KeyPair, SgxGameBoardStruct, SgxGameTurn, Side, TrustedCall, TrustedGetter,
-	TrustedOperation,
+	Coordinates, Index, KeyPair, SgxBoardId, SgxGameBoardStruct, SgxGameTurn, Side, TrustedCall,
+	TrustedGetter, TrustedOperation,
 };
 use log::*;
 use my_node_runtime::Balance;
@@ -144,6 +144,14 @@ pub enum TrustedCommands {
 		/// Player's incognito AccountId in ss58check format
 		player: String,
 	},
+
+	/// Dispute a board
+	Dispute {
+		/// Player's incognito AccountId in ss58check format
+		player: String,
+		/// The board id
+		board_id: ita_stf::SgxBoardId,
+	},
 }
 
 pub struct SideCommand(Side);
@@ -188,6 +196,8 @@ pub fn match_trusted_commands(cli: &Cli, trusted_args: &TrustedArgs) {
 		TrustedCommands::DropStone { player, side, n } =>
 			play_turn(cli, trusted_args, player, SgxGameTurn::DropStone(((*side).0, *n))),
 		TrustedCommands::GetBoard { player } => get_board(cli, trusted_args, player),
+		TrustedCommands::Dispute { player, board_id } =>
+			dispute_game(cli, trusted_args, player, board_id),
 	}
 }
 
@@ -328,4 +338,19 @@ fn get_board(cli: &Cli, trusted_args: &TrustedArgs, arg_player: &str) {
 	} else {
 		println!("could not fetch board");
 	};
+}
+
+fn dispute_game(cli: &Cli, trusted_args: &TrustedArgs, arg_player: &str, board_id: &SgxBoardId) {
+	let player = get_pair_from_str(trusted_args, arg_player);
+	println!("player ss58 is {}", player.public().to_ss58check());
+
+	println!("send trusted call dispute-game from {} for board {:?}", player.public(), board_id);
+	let (mrenclave, shard) = get_identifiers(trusted_args);
+	let nonce = get_layer_two_nonce!(player, cli, trusted_args);
+
+	let top: TrustedOperation = TrustedCall::board_dispute_game(player.public().into(), *board_id)
+		.sign(&KeyPair::Sr25519(player), nonce, &mrenclave, &shard)
+		.into_trusted_operation(trusted_args.direct);
+
+	let _ = perform_operation(cli, trusted_args, &top);
 }

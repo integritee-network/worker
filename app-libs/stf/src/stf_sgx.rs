@@ -218,6 +218,15 @@ impl Stf {
 						.map_err(|e| StfError::Dispatch(format!("{:?}", e.error)))?;
 					Ok(())
 				},
+				TrustedCall::board_dispute_game(sender, board_id) => {
+					let origin = sgx_runtime::Origin::signed(sender.clone());
+					debug!("board disputed ({:x?}, {:?})", sender.encode(), board_id);
+					// TODO Andy, waiting on PR on board https://github.com/ajuna-network/Ajuna/pull/60
+					// sgx_runtime::AjunaBoardCall::<Runtime>::dispute_game { board_id }
+					// 	.dispatch_bypass_filter(origin.clone())
+					// 	.map_err(|e| StfError::Dispatch(format!("{:?}", e.error)))?;
+					Ok(())
+				},
 			}?;
 			increment_nonce(&sender);
 			Ok(())
@@ -311,6 +320,7 @@ impl Stf {
 			TrustedCall::board_new_game(_, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::board_play_turn(_, _) => debug!("No storage updates needed..."),
 			TrustedCall::board_finish_game(_, _) => debug!("No storage updates needed..."),
+			TrustedCall::board_dispute_game(_, _) => debug!("No storage updates needed..."),
 		};
 		key_hashes
 	}

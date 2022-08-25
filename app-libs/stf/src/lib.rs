@@ -207,6 +207,7 @@ pub enum TrustedCall {
 	board_new_game(AccountId, SgxBoardId, BTreeSet<AccountId>),
 	board_play_turn(AccountId, SgxGameTurn),
 	board_finish_game(AccountId, SgxBoardId),
+	board_dispute_game(AccountId, SgxBoardId),
 }
 
 impl TrustedCall {
@@ -219,6 +220,7 @@ impl TrustedCall {
 			TrustedCall::board_new_game(account, _, _) => account,
 			TrustedCall::board_play_turn(account, _) => account,
 			TrustedCall::board_finish_game(account, _) => account,
+			TrustedCall::board_dispute_game(account, _) => account,
 		}
 	}
 
