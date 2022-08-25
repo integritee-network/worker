@@ -629,11 +629,6 @@ where
 			return vec![]
 		}
 
-		log::debug!(target: "txpool", "Removing invalid operations: {:?}", hashes);
-
-		// temporarily ban invalid operations
-		self.rotator.ban(&Instant::now(), hashes.iter().cloned());
-
 		let invalid = self.pool.write().unwrap().remove_subtree(hashes, shard);
 
 		log::debug!(target: "txpool", "Removed invalid operations: {:?}", invalid);
@@ -644,6 +639,8 @@ where
 				//listener.in_block(&tx.hash);
 			}
 		} else {
+			// temporarily ban invalid operations
+			self.rotator.ban(&Instant::now(), hashes.iter().cloned());
 			for tx in &invalid {
 				listener.invalid(&tx.hash);
 			}
