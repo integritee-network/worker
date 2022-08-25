@@ -16,36 +16,20 @@
 */
 
 use crate::{
-	command_utils::get_worker_api_direct,
+	benchmark::BenchmarkCommands,
 	get_layer_two_nonce,
 	trusted_command_utils::{
-		get_accountid_from_str, get_identifiers, get_keystore_path, get_pair_from_str,
+		get_accountid_from_str, get_balance, get_identifiers, get_keystore_path, get_pair_from_str,
 	},
-	trusted_operation::{get_json_request, perform_trusted_operation, wait_until},
+	trusted_operation::perform_trusted_operation,
 	Cli,
 };
 use codec::Decode;
-use hdrhistogram::Histogram;
 use ita_stf::{Index, KeyPair, TrustedCall, TrustedGetter, TrustedOperation};
-use itc_rpc_client::direct_client::{DirectApi, DirectClient};
-use itp_types::{
-	TrustedOperationStatus,
-	TrustedOperationStatus::{InSidechainBlock, Submitted},
-};
 use log::*;
 use my_node_runtime::Balance;
-use rand::Rng;
-use rayon::prelude::*;
-use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_application_crypto::{ed25519, sr25519};
-use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
-use std::{
-	string::ToString,
-	sync::mpsc::{channel, Receiver},
-	thread, time,
-	time::Instant,
-	vec::Vec,
-};
+use sp_core::{crypto::Ss58Codec, Pair};
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
 
 #[cfg(feature = "evm")]
@@ -125,31 +109,7 @@ pub enum TrustedCommands {
 	EvmCommands(EvmCommands),
 
 	/// Run Benchmark
-	Benchmark {
-		/// The number of clients (=threads) to be used in the benchmark
-		#[clap(default_value_t = 10)]
-		number_clients: u32,
-
-		/// The number of iterations to execute for each client
-		#[clap(default_value_t = 30)]
-		number_iterations: u32,
-
-		/// Adds a random wait before each transaction. This is the lower bound for the interval in ms.
-		#[clap(default_value_t = 0)]
-		random_wait_before_transaction_min_ms: u32,
-
-		/// Adds a random wait before each transaction. This is the upper bound for the interval in ms.
-		#[clap(default_value_t = 0)]
-		random_wait_before_transaction_max_ms: u32,
-
-		/// Whether to wait for "InSidechainBlock" confirmation for each transaction
-		#[clap(short, long)]
-		wait_for_confirmation: bool,
-
-		/// Account to be used for initial funding of generated accounts used in benchmark
-		#[clap(default_value_t = String::from("//Alice"))]
-		funding_account: String,
-	},
+	Benchmark(BenchmarkCommands),
 }
 
 pub fn match_trusted_commands(cli: &Cli, trusted_args: &TrustedArgs) {
@@ -163,22 +123,7 @@ pub fn match_trusted_commands(cli: &Cli, trusted_args: &TrustedArgs) {
 		TrustedCommands::Balance { account } => print_balance(cli, trusted_args, account),
 		TrustedCommands::UnshieldFunds { from, to, amount } =>
 			unshield_funds(cli, trusted_args, from, to, amount),
-		TrustedCommands::Benchmark {
-			number_clients,
-			number_iterations,
-			random_wait_before_transaction_min_ms,
-			random_wait_before_transaction_max_ms,
-			wait_for_confirmation,
-			funding_account,
-		} => transfer_benchmark(
-			cli,
-			trusted_args,
-			*number_clients,
-			*number_iterations,
-			(*random_wait_before_transaction_min_ms, *random_wait_before_transaction_max_ms),
-			*wait_for_confirmation,
-			funding_account,
-		),
+		TrustedCommands::Benchmark(benchmark_commands) => benchmark_commands.run(cli, trusted_args),
 		#[cfg(feature = "evm")]
 		TrustedCommands::EvmCommands(evm_commands) => evm_commands.run(cli, trusted_args),
 	}
@@ -221,241 +166,6 @@ fn transfer(cli: &Cli, trusted_args: &TrustedArgs, arg_from: &str, arg_to: &str,
 	info!("trusted call transfer executed");
 }
 
-struct BenchmarkClient {
-	account: sr25519_core::Pair,
-	current_balance: u128,
-	client_api: DirectClient,
-	receiver: Receiver<String>,
-}
-
-impl BenchmarkClient {
-	fn new(
-		account: sr25519_core::Pair,
-		initial_balance: u128,
-		initial_request: String,
-		cli: &Cli,
-	) -> Self {
-		debug!("get direct api");
-		let client_api = get_worker_api_direct(cli);
-
-		debug!("setup sender and receiver");
-		let (sender, receiver) = channel();
-		client_api.watch(initial_request, sender);
-		BenchmarkClient { account, current_balance: initial_balance, client_api, receiver }
-	}
-}
-
-/// Stores timing information about a specific transaction
-struct BenchmarkTransaction {
-	started: Instant,
-	submitted: Instant,
-	confirmed: Option<Instant>,
-}
-
-fn transfer_benchmark(
-	cli: &Cli,
-	trusted_args: &TrustedArgs,
-	number_clients: u32,
-	number_iterations: u32,
-	random_wait_before_transaction_ms: (u32, u32),
-	wait_for_confirmation: bool,
-	funding_account: &str,
-) {
-	let store = LocalKeystore::open(get_keystore_path(trusted_args), None).unwrap();
-	let funding_account_keys = get_pair_from_str(trusted_args, funding_account);
-
-	let (mrenclave, shard) = get_identifiers(trusted_args);
-
-	// Get shielding pubkey.
-	let worker_api_direct = get_worker_api_direct(cli);
-	let shielding_pubkey: Rsa3072PubKey = match worker_api_direct.get_rsa_pubkey() {
-		Ok(key) => key,
-		Err(err_msg) => panic!("{}", err_msg.to_string()),
-	};
-
-	let nonce_start = get_layer_two_nonce!(funding_account_keys, cli, trusted_args);
-	println!("Nonce for account {}: {}", funding_account, nonce_start);
-
-	let mut accounts = Vec::new();
-
-	// Setup new accounts and initialize them with money from Alice.
-	for i in 0..number_clients {
-		let nonce = i + nonce_start;
-		println!("Initializing account {}", i);
-
-		// Create new account to use.
-		let a: sr25519::AppPair = store.generate().unwrap();
-		let account = get_pair_from_str(trusted_args, a.public().to_string().as_str());
-		let initial_balance = 10000000;
-
-		// Transfer amount from Alice to new account.
-		let top: TrustedOperation = TrustedCall::balance_transfer(
-			funding_account_keys.public().into(),
-			account.public().into(),
-			initial_balance,
-		)
-		.sign(&KeyPair::Sr25519(funding_account_keys.clone()), nonce, &mrenclave, &shard)
-		.into_trusted_operation(trusted_args.direct);
-
-		// For the last account we wait for confirmation in order to ensure all accounts were setup correctly
-		let wait_for_confirmation = i == number_clients - 1;
-		let account_funding_request = get_json_request(trusted_args, &top, shielding_pubkey);
-
-		let client = BenchmarkClient::new(account, initial_balance, account_funding_request, cli);
-		let _result = wait_for_top_confirmation(wait_for_confirmation, &client);
-		accounts.push(client);
-	}
-
-	rayon::ThreadPoolBuilder::new()
-		.num_threads(number_clients as usize)
-		.build_global()
-		.unwrap();
-
-	let overall_start = Instant::now();
-
-	// Run actual benchmark logic, in parallel, for each account initialized above.
-	let outputs: Vec<Vec<BenchmarkTransaction>> = accounts
-		.into_par_iter()
-		.map(move |mut client| {
-			let mut output: Vec<BenchmarkTransaction> = Vec::new();
-
-			for i in 0..number_iterations {
-				println!("Iteration: {}", i);
-
-				if random_wait_before_transaction_ms.1 > 0 {
-					random_wait(random_wait_before_transaction_ms);
-				}
-
-				let nonce = 0;
-
-				// Create new account.
-				let account_keys: sr25519::AppPair = store.generate().unwrap();
-				let new_account =
-					get_pair_from_str(trusted_args, account_keys.public().to_string().as_str());
-
-				println!("  Transfer amount: {}", client.current_balance);
-				println!("  From: {:?}", client.account.public());
-				println!("  To:   {:?}", new_account.public());
-
-				// The account from the last iteration keeps this much money.
-				// If this is 0, then all money is transferred and the state doesn't increase.
-				let keep_alive_balance = 1000;
-
-				// Transfer money from previous account to new account.
-				let top: TrustedOperation = TrustedCall::balance_transfer(
-					client.account.public().into(),
-					new_account.public().into(),
-					client.current_balance - keep_alive_balance,
-				)
-				.sign(&KeyPair::Sr25519(client.account.clone()), nonce, &mrenclave, &shard)
-				.into_trusted_operation(trusted_args.direct);
-
-				let last_iteration = i == number_iterations - 1;
-				let jsonrpc_call = get_json_request(trusted_args, &top, shielding_pubkey);
-				client.client_api.send(&jsonrpc_call).unwrap();
-				let result =
-					wait_for_top_confirmation(wait_for_confirmation || last_iteration, &client);
-
-				client.current_balance -= keep_alive_balance;
-				client.account = new_account;
-
-				output.push(result);
-			}
-			client.client_api.close().unwrap();
-
-			let balance = get_balance(cli, trusted_args, &client.account.public().to_string());
-			println!("Balance: {}", balance.unwrap_or_default());
-			assert_eq!(client.current_balance, balance.unwrap());
-
-			output
-		})
-		.collect();
-
-	println!(
-		"Finished benchmark with {} clients and {} transactions in {} ms",
-		number_clients,
-		number_iterations,
-		overall_start.elapsed().as_millis()
-	);
-
-	print_benchmark_statistic(outputs, wait_for_confirmation)
-}
-
-fn print_benchmark_statistic(outputs: Vec<Vec<BenchmarkTransaction>>, wait_for_confirmation: bool) {
-	let mut hist = Histogram::<u64>::new(1).unwrap();
-	for output in outputs {
-		for t in output {
-			let benchmarked_timestamp =
-				if wait_for_confirmation { t.confirmed } else { Some(t.submitted) };
-			if let Some(confirmed) = benchmarked_timestamp {
-				hist += confirmed.duration_since(t.started).as_millis() as u64;
-			} else {
-				println!("Missing measurement data");
-			}
-		}
-	}
-
-	for i in (5..=100).step_by(5) {
-		let text = format!(
-			"{} percent are done within {} ms",
-			i,
-			hist.value_at_quantile(i as f64 / 100.0)
-		);
-		println!("{}", text);
-	}
-}
-
-fn random_wait(random_wait_before_transaction_ms: (u32, u32)) {
-	let mut rng = rand::thread_rng();
-	let sleep_time = time::Duration::from_millis(
-		rng.gen_range(random_wait_before_transaction_ms.0..=random_wait_before_transaction_ms.1)
-			.into(),
-	);
-	println!("Sleep for: {}ms", sleep_time.as_millis());
-	thread::sleep(sleep_time);
-}
-
-fn wait_for_top_confirmation(
-	wait_for_sidechain_block: bool,
-	client: &BenchmarkClient,
-) -> BenchmarkTransaction {
-	let started = Instant::now();
-
-	let submitted = wait_until(&client.receiver, is_submitted);
-
-	let confirmed = if wait_for_sidechain_block {
-		// We wait for the transaction hash that actually matches the submitted hash
-		loop {
-			let transaction_information = wait_until(&client.receiver, is_sidechain_block);
-			if let Some((hash, _)) = transaction_information {
-				if hash == submitted.unwrap().0 {
-					break transaction_information
-				}
-			}
-		}
-	} else {
-		None
-	};
-	if let (Some(s), Some(c)) = (submitted, confirmed) {
-		// Assert the two hashes are identical
-		assert_eq!(s.0, c.0);
-	}
-
-	BenchmarkTransaction {
-		started,
-		submitted: submitted.unwrap().1,
-		confirmed: confirmed.map(|v| v.1),
-	}
-}
-
-fn is_submitted(s: TrustedOperationStatus) -> bool {
-	matches!(s, Submitted)
-}
-
-fn is_sidechain_block(s: TrustedOperationStatus) -> bool {
-	matches!(s, InSidechainBlock(_))
-}
-
 fn set_balance(cli: &Cli, trusted_args: &TrustedArgs, arg_who: &str, amount: &Balance) {
 	let who = get_pair_from_str(trusted_args, arg_who);
 	let signer = get_pair_from_str(trusted_args, "//Alice");
@@ -478,27 +188,6 @@ fn set_balance(cli: &Cli, trusted_args: &TrustedArgs, arg_who: &str, amount: &Ba
 
 fn print_balance(cli: &Cli, trusted_args: &TrustedArgs, arg_who: &str) {
 	println!("{}", get_balance(cli, trusted_args, arg_who).unwrap_or_default());
-}
-
-fn get_balance(cli: &Cli, trusted_args: &TrustedArgs, arg_who: &str) -> Option<u128> {
-	debug!("arg_who = {:?}", arg_who);
-	let who = get_pair_from_str(trusted_args, arg_who);
-	let top: TrustedOperation = TrustedGetter::free_balance(who.public().into())
-		.sign(&KeyPair::Sr25519(who))
-		.into();
-	let res = perform_trusted_operation(cli, trusted_args, &top);
-	debug!("received result for balance");
-	let bal = if let Some(v) = res {
-		if let Ok(vd) = Balance::decode(&mut v.as_slice()) {
-			Some(vd)
-		} else {
-			info!("could not decode value. maybe hasn't been set? {:x?}", v);
-			None
-		}
-	} else {
-		None
-	};
-	bal
 }
 
 fn unshield_funds(

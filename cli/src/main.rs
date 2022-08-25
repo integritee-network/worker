@@ -27,6 +27,7 @@ extern crate chrono;
 extern crate env_logger;
 extern crate log;
 
+mod benchmark;
 mod command_utils;
 mod commands;
 #[cfg(feature = "evm")]
