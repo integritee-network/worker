@@ -49,7 +49,7 @@ use std::{
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
 
 #[cfg(feature = "evm")]
-use crate::{evm_commands, evm_commands::EvmCommands};
+use crate::evm::EvmCommands;
 
 #[derive(Args)]
 pub struct TrustedArgs {
@@ -180,9 +180,7 @@ pub fn match_trusted_commands(cli: &Cli, trusted_args: &TrustedArgs) {
 			funding_account,
 		),
 		#[cfg(feature = "evm")]
-		TrustedCommands::EvmCommands(evm_commands) => {
-			evm_commands::match_evm_commands(cli, trusted_args, evm_commands);
-		},
+		TrustedCommands::EvmCommands(evm_commands) => evm_commands.run(cli, trusted_args),
 	}
 }
 

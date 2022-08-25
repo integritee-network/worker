@@ -30,7 +30,7 @@ extern crate log;
 mod command_utils;
 mod commands;
 #[cfg(feature = "evm")]
-mod evm_commands;
+mod evm;
 mod exchange_oracle;
 mod trusted_command_utils;
 mod trusted_commands;
