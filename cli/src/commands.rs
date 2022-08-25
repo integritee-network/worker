@@ -17,8 +17,7 @@
 
 extern crate chrono;
 use crate::{
-	command_utils::*, exchange_oracle::ExchangeOracleSubCommand, trusted_commands,
-	trusted_commands::TrustedArgs, Cli,
+	command_utils::*, exchange_oracle::ExchangeOracleSubCommand, trusted_commands::TrustedArgs, Cli,
 };
 use base58::{FromBase58, ToBase58};
 use chrono::{DateTime, Utc};
@@ -136,7 +135,7 @@ pub fn match_command(cli: &Cli) {
 		Commands::Listen { events, blocks } => listen(cli, events, blocks),
 		Commands::ShieldFunds { from, to, amount, shard } =>
 			shield_funds(cli, from, to, amount, shard),
-		Commands::Trusted(trusted) => trusted_commands::match_trusted_commands(cli, trusted),
+		Commands::Trusted(cmd) => cmd.run(cli),
 		Commands::ExchangeOracle(cmd) => cmd.run(cli),
 	};
 }

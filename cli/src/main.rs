@@ -33,6 +33,7 @@ mod commands;
 #[cfg(feature = "evm")]
 mod evm;
 mod exchange_oracle;
+mod integritee_trusted;
 mod trusted_command_utils;
 mod trusted_commands;
 mod trusted_operation;
