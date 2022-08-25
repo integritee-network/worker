@@ -40,7 +40,7 @@ use std::{
 use substrate_api_client::{compose_extrinsic, XtStatus};
 use teerex_primitives::Request;
 
-pub fn perform_trusted_operation(
+pub(crate) fn perform_trusted_operation(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
 	top: &TrustedOperation,

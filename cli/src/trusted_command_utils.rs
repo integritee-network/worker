@@ -26,6 +26,27 @@ use sp_runtime::traits::IdentifyAccount;
 use std::path::PathBuf;
 use substrate_client_keystore::LocalKeystore;
 
+#[macro_export]
+macro_rules! get_layer_two_nonce {
+	($signer_pair:ident, $cli: ident, $trusted_args:ident ) => {{
+		let top: TrustedOperation = TrustedGetter::nonce($signer_pair.public().into())
+			.sign(&KeyPair::Sr25519($signer_pair.clone()))
+			.into();
+		let res = perform_trusted_operation($cli, $trusted_args, &top);
+		let nonce: Index = if let Some(n) = res {
+			if let Ok(nonce) = Index::decode(&mut n.as_slice()) {
+				nonce
+			} else {
+				0
+			}
+		} else {
+			0
+		};
+		debug!("got layer two nonce: {:?}", nonce);
+		nonce
+	}};
+}
+
 const TRUSTED_KEYSTORE_PATH: &str = "my_trusted_keystore";
 
 pub(crate) fn get_keystore_path(trusted_args: &TrustedArgs) -> PathBuf {
