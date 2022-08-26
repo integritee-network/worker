@@ -124,8 +124,6 @@ where
 
 		self.encode_and_send_response(connection_token, &response)?;
 
-		self.connection_registry.store(hash, connection_token, response);
-
 		debug!("sending state successful");
 		Ok(())
 	}
@@ -223,7 +221,7 @@ pub mod tests {
 	}
 
 	#[test]
-	fn sending_state_successfully_sends_update_and_keeps_connection_open() {
+	fn sending_state_successfully_sends_update_and_removes_connection_token() {
 		let connection_hash = String::from("conn_hash");
 		let connection_registry = create_registry_with_single_connection(connection_hash.clone());
 
@@ -234,27 +232,8 @@ pub mod tests {
 		let result = rpc_responder.send_state(connection_hash.clone(), "new_state".encode());
 		assert!(result.is_ok());
 
-		verify_open_connection(&connection_hash, connection_registry);
+		verify_closed_connection(&connection_hash, connection_registry);
 		assert_eq!(1, websocket_responder.number_of_updates());
-	}
-
-	#[test]
-	fn sending_state_twice_works() {
-		let connection_hash = String::from("conn_hash");
-		let connection_registry = create_registry_with_single_connection(connection_hash.clone());
-
-		let websocket_responder = Arc::new(TestResponseChannel::default());
-		let rpc_responder =
-			RpcResponder::new(connection_registry.clone(), websocket_responder.clone());
-
-		let first_result = rpc_responder.send_state(connection_hash.clone(), "new_state".encode());
-		assert!(first_result.is_ok());
-
-		let second_result =
-			rpc_responder.send_state(connection_hash.clone(), "new_state_2".encode());
-		assert!(second_result.is_ok());
-
-		assert_eq!(2, websocket_responder.number_of_updates());
 	}
 
 	#[test]
