@@ -17,15 +17,15 @@
 
 extern crate chrono;
 use crate::{
-	exchange_oracle::ExchangeOracleSubCommand, integritee::IntegriteeCommands,
-	trusted_commands::TrustedArgs, Cli,
+	base_cli::BaseCli, exchange_oracle::ExchangeOracleSubCommand, trusted_commands::TrustedArgs,
+	Cli,
 };
 use clap::Subcommand;
 
 #[derive(Subcommand)]
 pub enum Commands {
 	#[clap(flatten)]
-	Integritee(IntegriteeCommands),
+	Base(BaseCli),
 
 	/// trusted calls to worker enclave
 	#[clap(after_help = "stf subcommands depend on the stf crate this has been built against")]
@@ -38,7 +38,7 @@ pub enum Commands {
 
 pub fn match_command(cli: &Cli) {
 	match &cli.command {
-		Commands::Integritee(cmd) => cmd.run(cli),
+		Commands::Base(cmd) => cmd.run(cli),
 		Commands::Trusted(cmd) => cmd.run(cli),
 		Commands::ExchangeOracle(cmd) => cmd.run(cli),
 	};

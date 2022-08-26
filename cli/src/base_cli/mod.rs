@@ -16,11 +16,11 @@
 */
 
 use crate::{
-	command_utils::*,
-	integritee::commands::{
+	base_cli::commands::{
 		balance::BalanceCommand, faucet::FaucetCommand, listen::ListenCommand,
 		shield_funds::ShieldFundsCommand, transfer::TransferCommand,
 	},
+	command_utils::*,
 	Cli,
 };
 use base58::ToBase58;
@@ -40,7 +40,7 @@ use substrate_client_keystore::{KeystoreExt, LocalKeystore};
 mod commands;
 
 #[derive(Subcommand)]
-pub enum IntegriteeCommands {
+pub enum BaseCli {
 	/// query parentchain balance for AccountId
 	Balance(BalanceCommand),
 
@@ -72,19 +72,19 @@ pub enum IntegriteeCommands {
 	ShieldFunds(ShieldFundsCommand),
 }
 
-impl IntegriteeCommands {
+impl BaseCli {
 	pub fn run(&self, cli: &Cli) {
 		match self {
-			IntegriteeCommands::Balance(cmd) => cmd.run(cli),
-			IntegriteeCommands::NewAccount => new_account(),
-			IntegriteeCommands::ListAccounts => list_accounts(),
-			IntegriteeCommands::PrintMetadata => print_metadata(cli),
-			IntegriteeCommands::PrintSgxMetadata => print_sgx_metadata(cli),
-			IntegriteeCommands::Faucet(cmd) => cmd.run(cli),
-			IntegriteeCommands::Transfer(cmd) => cmd.run(cli),
-			IntegriteeCommands::ListWorkers => list_workers(cli),
-			IntegriteeCommands::Listen(cmd) => cmd.run(cli),
-			IntegriteeCommands::ShieldFunds(cmd) => cmd.run(cli),
+			BaseCli::Balance(cmd) => cmd.run(cli),
+			BaseCli::NewAccount => new_account(),
+			BaseCli::ListAccounts => list_accounts(),
+			BaseCli::PrintMetadata => print_metadata(cli),
+			BaseCli::PrintSgxMetadata => print_sgx_metadata(cli),
+			BaseCli::Faucet(cmd) => cmd.run(cli),
+			BaseCli::Transfer(cmd) => cmd.run(cli),
+			BaseCli::ListWorkers => list_workers(cli),
+			BaseCli::Listen(cmd) => cmd.run(cli),
+			BaseCli::ShieldFunds(cmd) => cmd.run(cli),
 		}
 	}
 }

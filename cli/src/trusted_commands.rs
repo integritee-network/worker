@@ -19,7 +19,7 @@ use crate::{benchmark::BenchmarkCommands, Cli};
 
 #[cfg(feature = "evm")]
 use crate::evm::EvmCommands;
-use crate::integritee_trusted::IntegriteeTrustedCommands;
+use crate::trusted_base_cli::TrustedBaseCli;
 
 #[derive(Args)]
 pub struct TrustedArgs {
@@ -46,7 +46,7 @@ pub struct TrustedArgs {
 #[derive(Subcommand)]
 pub enum TrustedCommands {
 	#[clap(flatten)]
-	IntegriteeTrusted(IntegriteeTrustedCommands),
+	BaseTrusted(TrustedBaseCli),
 
 	#[cfg(feature = "evm")]
 	#[clap(flatten)]
@@ -59,7 +59,7 @@ pub enum TrustedCommands {
 impl TrustedArgs {
 	pub(crate) fn run(&self, cli: &Cli) {
 		match &self.command {
-			TrustedCommands::IntegriteeTrusted(cmd) => cmd.run(cli, self),
+			TrustedCommands::BaseTrusted(cmd) => cmd.run(cli, self),
 			TrustedCommands::Benchmark(benchmark_commands) => benchmark_commands.run(cli, self),
 			#[cfg(feature = "evm")]
 			TrustedCommands::EvmCommands(evm_commands) => evm_commands.run(cli, self),

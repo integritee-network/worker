@@ -16,7 +16,7 @@
 */
 
 use crate::{
-	integritee_trusted::commands::{
+	trusted_base_cli::commands::{
 		balance::BalanceCommand, set_balance::SetBalanceCommand, transfer::TransferCommand,
 		unshield_funds::UnshieldFundsCommand,
 	},
@@ -32,7 +32,7 @@ use substrate_client_keystore::{KeystoreExt, LocalKeystore};
 mod commands;
 
 #[derive(Subcommand)]
-pub enum IntegriteeTrustedCommands {
+pub enum TrustedBaseCli {
 	/// generates a new incognito account for the given shard
 	NewAccount,
 
@@ -52,15 +52,15 @@ pub enum IntegriteeTrustedCommands {
 	UnshieldFunds(UnshieldFundsCommand),
 }
 
-impl IntegriteeTrustedCommands {
+impl TrustedBaseCli {
 	pub fn run(&self, cli: &Cli, trusted_args: &TrustedArgs) {
 		match self {
-			IntegriteeTrustedCommands::NewAccount => new_account(trusted_args),
-			IntegriteeTrustedCommands::ListAccounts => list_accounts(trusted_args),
-			IntegriteeTrustedCommands::Transfer(cmd) => cmd.run(cli, trusted_args),
-			IntegriteeTrustedCommands::SetBalance(cmd) => cmd.run(cli, trusted_args),
-			IntegriteeTrustedCommands::Balance(cmd) => cmd.run(cli, trusted_args),
-			IntegriteeTrustedCommands::UnshieldFunds(cmd) => cmd.run(cli, trusted_args),
+			TrustedBaseCli::NewAccount => new_account(trusted_args),
+			TrustedBaseCli::ListAccounts => list_accounts(trusted_args),
+			TrustedBaseCli::Transfer(cmd) => cmd.run(cli, trusted_args),
+			TrustedBaseCli::SetBalance(cmd) => cmd.run(cli, trusted_args),
+			TrustedBaseCli::Balance(cmd) => cmd.run(cli, trusted_args),
+			TrustedBaseCli::UnshieldFunds(cmd) => cmd.run(cli, trusted_args),
 		}
 	}
 }
