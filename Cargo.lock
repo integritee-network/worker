@@ -301,6 +301,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "beefy-merkle-tree"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.27#8eff668a42325aeb4433eace1604f4d286a6ec05"
+dependencies = [
+ "beefy-primitives",
+ "sp-api",
+ "tiny-keccak",
+]
+
+[[package]]
+name = "beefy-primitives"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.27#8eff668a42325aeb4433eace1604f4d286a6ec05"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api",
+ "sp-application-crypto",
+ "sp-core",
+ "sp-runtime",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.27)",
+]
+
+[[package]]
 name = "bindgen"
 version = "0.59.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2718,6 +2742,7 @@ dependencies = [
 name = "itc-parentchain-indirect-calls-executor"
 version = "0.8.0"
 dependencies = [
+ "beefy-merkle-tree",
  "bs58",
  "env_logger",
  "futures 0.3.23",
@@ -2741,7 +2766,6 @@ dependencies = [
  "substrate-api-client",
  "thiserror 1.0.32",
  "thiserror 1.0.9",
- "tiny-keccak",
 ]
 
 [[package]]
@@ -7178,7 +7202,7 @@ dependencies = [
 [[package]]
 name = "sp-std"
 version = "4.0.0"
-source = "git+https://github.com/paritytech/substrate.git?branch=master#40703f41167c718e13b491228efeafb4a6194448"
+source = "git+https://github.com/paritytech/substrate.git?branch=master#4262c63fecf5de9a459775d772329828bcb549c8"
 
 [[package]]
 name = "sp-std"
