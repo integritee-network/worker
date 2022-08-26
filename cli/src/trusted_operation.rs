@@ -319,7 +319,7 @@ pub fn wait_for_getter_response(receiver: &Receiver<String>) -> Option<Vec<u8>> 
 								error!("Could not decode Option");
 							}
 						} else {
-							error!("request status is ignored");
+							debug!("request status is ignored");
 						}
 					};
 				} else {

@@ -605,11 +605,6 @@ fn transfer_benchmark_increasing_nonce(
 
 				let last_iteration = i == number_iterations - 1;
 				let jsonrpc_call = get_json_request(shard, &top, shielding_pubkey);
-				println!(
-					"Transferring money from {:?} to {:?}",
-					client.account.public(),
-					new_account.public(),
-				);
 				client.client_api.send(&jsonrpc_call).unwrap();
 				let start_time = Instant::now();
 				// We wait for InSidechainBlock Confirmation, otherwise it will mess up balance and nocne getter
