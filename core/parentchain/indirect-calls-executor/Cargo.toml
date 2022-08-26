@@ -31,9 +31,11 @@ futures = { version = "0.3.8", optional = true }
 bs58 = { version = "0.4.0", default-features = false, features = ["alloc"] }
 codec  = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 log = { version = "0.4", default-features = false }
+
+# substrate dep
+beefy-merkle-tree = { default-features = false, features = ["keccak"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
-beefy-merkle-tree = { default-features = false, features = ["keccak"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 
 # scs/integritee
 itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
@@ -62,6 +64,8 @@ std = [
     "itp-top-pool-author/std",
     "itp-types/std",
     "log/std",
+    #substrate
+    "beefy-merkle-tree/std",
     "sp-core/std",
     "sp-runtime/std",
     "substrate-api-client/std",
