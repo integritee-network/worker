@@ -52,40 +52,27 @@ echo "Reading MRENCLAVE from worker list: ${MRENCLAVE}"
 ACCOUNTALICE=//Alice
 
 echo "Create smart contract"
-${CLIENT} trusted --mrenclave ${MRENCLAVE} evm-create ${ACCOUNTALICE} ${SMARTCONTRACT}
+${CLIENT} trusted --mrenclave ${MRENCLAVE} --direct evm-create ${ACCOUNTALICE} ${SMARTCONTRACT}
 echo ""
 
+echo "Get storage"
+${CLIENT} trusted --mrenclave ${MRENCLAVE} --direct evm-read ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f
+echo ""
 
 echo "Call inc function"
-${CLIENT} trusted --mrenclave ${MRENCLAVE} evm-call ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f ${INCFUNTION}
+${CLIENT} trusted --mrenclave ${MRENCLAVE} --direct evm-call ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f ${INCFUNTION}
 echo ""
 
 echo "Get storage"
-${CLIENT} trusted --mrenclave ${MRENCLAVE} evm-read ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f
-echo ""
-
-echo "Call default function"
-${CLIENT} trusted --mrenclave ${MRENCLAVE} evm-call ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f ${DEFAULTFUNCTION}
-echo ""
-
-echo "Get storage"
-${CLIENT} trusted --mrenclave ${MRENCLAVE} evm-read ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f
+${CLIENT} trusted --mrenclave ${MRENCLAVE} --direct evm-read ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f
 echo ""
 
 echo "Call add 3 function"
-${CLIENT} trusted --mrenclave ${MRENCLAVE} evm-call ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f ${ADDFUNCTION}
+${CLIENT} trusted --mrenclave ${MRENCLAVE} --direct evm-call ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f ${ADDFUNCTION}
 echo ""
 
 echo "Get storage"
-${CLIENT} trusted --mrenclave ${MRENCLAVE} evm-read ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f
-echo ""
-
-echo "Call inc function"
-${CLIENT} trusted --mrenclave ${MRENCLAVE} evm-call ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f ${INCFUNTION}
-echo ""
-
-echo "Get storage"
-${CLIENT} trusted --mrenclave ${MRENCLAVE} evm-read ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f
+${CLIENT} trusted --mrenclave ${MRENCLAVE} --direct evm-read ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f
 echo ""
 
 exit 0
