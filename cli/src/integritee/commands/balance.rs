@@ -21,12 +21,12 @@ use crate::{
 };
 
 #[derive(Parser)]
-pub struct BalanceCommands {
+pub struct BalanceCommand {
 	/// AccountId in ss58check format
 	account: String,
 }
 
-impl BalanceCommands {
+impl BalanceCommand {
 	pub(crate) fn run(&self, cli: &Cli) {
 		let api = get_chain_api(cli);
 		let accountid = get_accountid_from_str(&self.account);

@@ -25,7 +25,7 @@ use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
 use substrate_api_client::{GenericAddress, XtStatus};
 
 #[derive(Parser)]
-pub struct TransferCommands {
+pub struct TransferCommand {
 	/// sender's AccountId in ss58check format
 	from: String,
 
@@ -36,7 +36,7 @@ pub struct TransferCommands {
 	amount: Balance,
 }
 
-impl TransferCommands {
+impl TransferCommand {
 	pub(crate) fn run(&self, cli: &Cli) {
 		let from_account = get_pair_from_str(&self.from);
 		let to_account = get_accountid_from_str(&self.to);

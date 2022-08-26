@@ -18,8 +18,8 @@
 use crate::{
 	command_utils::*,
 	integritee::commands::{
-		balance::BalanceCommands, faucet::FaucetCommands, listen::ListenCommands,
-		shield_funds::ShieldFundsCommands, transfer::TransferCommands,
+		balance::BalanceCommand, faucet::FaucetCommand, listen::ListenCommand,
+		shield_funds::ShieldFundsCommand, transfer::TransferCommand,
 	},
 	Cli,
 };
@@ -42,7 +42,7 @@ mod commands;
 #[derive(Subcommand)]
 pub enum IntegriteeCommands {
 	/// query parentchain balance for AccountId
-	Balance(BalanceCommands),
+	Balance(BalanceCommand),
 
 	/// generates a new account for the integritee chain in your local keystore
 	NewAccount,
@@ -57,19 +57,19 @@ pub enum IntegriteeCommands {
 	PrintSgxMetadata,
 
 	/// send some bootstrapping funds to supplied account(s)
-	Faucet(FaucetCommands),
+	Faucet(FaucetCommand),
 
 	/// transfer funds from one parentchain account to another
-	Transfer(TransferCommands),
+	Transfer(TransferCommand),
 
 	/// query enclave registry and list all workers
 	ListWorkers,
 
 	/// listen to parentchain events
-	Listen(ListenCommands),
+	Listen(ListenCommand),
 
 	/// Transfer funds from an parentchain account to an incognito account
-	ShieldFunds(ShieldFundsCommands),
+	ShieldFunds(ShieldFundsCommand),
 }
 
 impl IntegriteeCommands {

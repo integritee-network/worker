@@ -17,8 +17,8 @@
 
 use crate::{
 	integritee_trusted::commands::{
-		balance::BalanceCommands, set_balance::SetBalanceCommands, transfer::TransferCommands,
-		unshield_funds::UnshieldFundsCommands,
+		balance::BalanceCommand, set_balance::SetBalanceCommand, transfer::TransferCommand,
+		unshield_funds::UnshieldFundsCommand,
 	},
 	trusted_command_utils::get_keystore_path,
 	trusted_commands::TrustedArgs,
@@ -40,16 +40,16 @@ pub enum IntegriteeTrustedCommands {
 	ListAccounts,
 
 	/// send funds from one incognito account to another
-	Transfer(TransferCommands),
+	Transfer(TransferCommand),
 
 	/// ROOT call to set some account balance to an arbitrary number
-	SetBalance(SetBalanceCommands),
+	SetBalance(SetBalanceCommand),
 
 	/// query balance for incognito account in keystore
-	Balance(BalanceCommands),
+	Balance(BalanceCommand),
 
 	/// Transfer funds from an incognito account to an parentchain account
-	UnshieldFunds(UnshieldFundsCommands),
+	UnshieldFunds(UnshieldFundsCommand),
 }
 
 impl IntegriteeTrustedCommands {

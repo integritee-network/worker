@@ -30,7 +30,7 @@ use sp_core::sr25519 as sr25519_core;
 use substrate_api_client::{compose_extrinsic, UncheckedExtrinsicV4, XtStatus};
 
 #[derive(Parser)]
-pub struct ShieldFundsCommands {
+pub struct ShieldFundsCommand {
 	/// Sender's parentchain AccountId in ss58check format
 	from: String,
 
@@ -44,7 +44,7 @@ pub struct ShieldFundsCommands {
 	shard: String,
 }
 
-impl ShieldFundsCommands {
+impl ShieldFundsCommand {
 	pub(crate) fn run(&self, cli: &Cli) {
 		let chain_api = get_chain_api(cli);
 

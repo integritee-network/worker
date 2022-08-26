@@ -18,12 +18,12 @@
 use crate::{trusted_command_utils::get_balance, trusted_commands::TrustedArgs, Cli};
 
 #[derive(Parser)]
-pub struct BalanceCommands {
+pub struct BalanceCommand {
 	/// AccountId in ss58check format
 	account: String,
 }
 
-impl BalanceCommands {
+impl BalanceCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedArgs) {
 		println!("{}", get_balance(cli, trusted_args, &self.account).unwrap_or_default());
 	}

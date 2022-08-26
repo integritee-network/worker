@@ -29,7 +29,7 @@ use my_node_runtime::Balance;
 use sp_core::{crypto::Ss58Codec, Pair};
 
 #[derive(Parser)]
-pub struct UnshieldFundsCommands {
+pub struct UnshieldFundsCommand {
 	/// Sender's incognito AccountId in ss58check format
 	from: String,
 
@@ -40,7 +40,7 @@ pub struct UnshieldFundsCommands {
 	amount: Balance,
 }
 
-impl UnshieldFundsCommands {
+impl UnshieldFundsCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedArgs) {
 		let from = get_pair_from_str(trusted_args, &self.from);
 		let to = get_accountid_from_str(&self.to);

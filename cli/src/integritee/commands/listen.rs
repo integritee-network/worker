@@ -24,7 +24,7 @@ use std::{sync::mpsc::channel, vec::Vec};
 use substrate_api_client::utils::FromHexString;
 
 #[derive(Parser)]
-pub struct ListenCommands {
+pub struct ListenCommand {
 	/// exit after given number of parentchain events
 	#[clap(short, long = "exit-after")]
 	events: Option<u32>,
@@ -34,7 +34,7 @@ pub struct ListenCommands {
 	blocks: Option<u32>,
 }
 
-impl ListenCommands {
+impl ListenCommand {
 	pub(crate) fn run(&self, cli: &Cli) {
 		println!("{:?} {:?}", self.events, self.blocks);
 		let api = get_chain_api(cli);

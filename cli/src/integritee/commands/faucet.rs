@@ -27,13 +27,13 @@ use substrate_api_client::{compose_extrinsic_offline, UncheckedExtrinsicV4, XtSt
 const PREFUNDING_AMOUNT: u128 = 1_000_000_000;
 
 #[derive(Parser)]
-pub struct FaucetCommands {
+pub struct FaucetCommand {
 	/// Account(s) to be funded, ss58check encoded
 	#[clap(min_values = 1, required = true)]
 	accounts: Vec<String>,
 }
 
-impl FaucetCommands {
+impl FaucetCommand {
 	pub(crate) fn run(&self, cli: &Cli) {
 		let api = get_chain_api(cli).set_signer(AccountKeyring::Alice.pair());
 		let mut nonce = api.get_nonce().unwrap();

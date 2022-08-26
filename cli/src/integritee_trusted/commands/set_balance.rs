@@ -29,7 +29,7 @@ use my_node_runtime::Balance;
 use sp_core::{crypto::Ss58Codec, Pair};
 
 #[derive(Parser)]
-pub struct SetBalanceCommands {
+pub struct SetBalanceCommand {
 	/// sender's AccountId in ss58check format
 	account: String,
 
@@ -37,7 +37,7 @@ pub struct SetBalanceCommands {
 	amount: Balance,
 }
 
-impl SetBalanceCommands {
+impl SetBalanceCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedArgs) {
 		let who = get_pair_from_str(trusted_args, &self.account);
 		let signer = get_pair_from_str(trusted_args, "//Alice");
