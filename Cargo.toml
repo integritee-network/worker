@@ -1,5 +1,5 @@
 [workspace]
-resolver = "2"
+
 members = [
     "app-libs/exchange-oracle",
     "app-libs/sgx-runtime",

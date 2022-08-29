@@ -2,7 +2,7 @@
 name = "itp-node-api"
 version = "0.8.0"
 authors = ["Integritee AG <hello@integritee.network>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 itp-api-client-extensions = { optional = true, path = "api-client-extensions" }

@@ -2,8 +2,7 @@
 name = "itp-component-container"
 version = "0.8.0"
 authors = ["Integritee AG <hello@integritee.network>"]
-edition = "2018"
-resolver = "2"
+edition = "2021"
 
 [dependencies]
 # sgx dependencies
