@@ -213,9 +213,13 @@ fn test_compose_block_and_confirmation() {
 		.unwrap();
 
 	// then
-	let call_indexes = node_metadata.confirm_proposed_sidechain_block_indexes().unwrap();
-	let expected_call =
-		OpaqueCall::from_tuple(&(call_indexes, shard, &signed_block.block().header()));
+	let call_indexes = node_metadata.confirm_imported_sidechain_block_indexes().unwrap();
+	let expected_call = OpaqueCall::from_tuple(&(
+		call_indexes,
+		shard,
+		&signed_block.block().header().block_number,
+		&signed_block.block().header().hash(),
+	));
 
 	assert!(signed_block.verify_signature());
 	assert_eq!(signed_block.block().header().block_number(), 1);
@@ -362,9 +366,13 @@ fn test_create_block_and_confirmation_works() {
 		.unwrap();
 
 	// then
-	let call_indexes = node_metadata.confirm_proposed_sidechain_block_indexes().unwrap();
-	let expected_call =
-		OpaqueCall::from_tuple(&(call_indexes, shard, &signed_block.block().header()));
+	let call_indexes = node_metadata.confirm_imported_sidechain_block_indexes().unwrap();
+	let expected_call = OpaqueCall::from_tuple(&(
+		call_indexes,
+		shard,
+		&signed_block.block().header().block_number,
+		&signed_block.block().header().hash(),
+	));
 
 	assert!(signed_block.verify_signature());
 	assert_eq!(signed_block.block().header().block_number(), 1);

@@ -80,7 +80,7 @@ impl TeerexCallIndexes for NodeMetadataMock {
 }
 
 impl SidechainCallIndexes for NodeMetadataMock {
-	fn confirm_proposed_sidechain_block_indexes(&self) -> Result<[u8; 2]> {
+	fn confirm_imported_sidechain_block_indexes(&self) -> Result<[u8; 2]> {
 		Ok([self.sidechain_module, self.proposed_sidechain_block])
 	}
 }

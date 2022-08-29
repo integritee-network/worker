@@ -108,17 +108,18 @@ impl<
 		}
 	}
 
-	/// Creates a proposed_sidechain_block extrinsic for a given shard id and sidechain block hash.
-	fn create_proposed_sidechain_block_call(
+	/// Creates a confirm_imported_sidechain_blockdechain_block extrinsic for a given shard id and sidechain block hash.
+	fn create_imported_sidechain_block_call(
 		&self,
 		shard_id: ShardIdentifier,
-		header: HeaderTypeOf<SignedSidechainBlock>,
+		block_number: u64,
+		block_header_hash: H256,
 	) -> Result<OpaqueCall> {
 		let call = self
 			.node_metadata_repository
-			.get_from_metadata(|m| m.confirm_proposed_sidechain_block_indexes())??;
+			.get_from_metadata(|m| m.confirm_imported_sidechain_block_indexes())??;
 
-		Ok(OpaqueCall::from_tuple(&(call, shard_id, header)))
+		Ok(OpaqueCall::from_tuple(&(call, shard_id, block_number, block_header_hash)))
 	}
 }
 
@@ -217,7 +218,8 @@ impl<
 		let block_hash = block.hash();
 		debug!("Block hash {}", block_hash);
 
-		let opaque_call = self.create_proposed_sidechain_block_call(shard, header)?;
+		let opaque_call =
+			self.create_imported_sidechain_block_call(shard, block_number, header.hash())?;
 
 		let signed_block = block.sign_block(&self.signer);
 
