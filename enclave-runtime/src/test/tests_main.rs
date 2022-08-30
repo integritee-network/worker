@@ -89,6 +89,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		itp_stf_state_handler::test::sgx_tests::test_state_files_from_handler_can_be_loaded_again,
 		itp_stf_state_handler::test::sgx_tests::test_file_io_get_state_hash_works,
 		itp_stf_state_handler::test::sgx_tests::test_list_state_ids_ignores_files_not_matching_the_pattern,
+		itp_stf_state_handler::test::sgx_tests::test_in_memory_state_initializes_from_shard_directory,
 		test_compose_block,
 		test_submit_trusted_call_to_top_pool,
 		test_submit_trusted_getter_to_top_pool,

@@ -23,9 +23,10 @@ use crate::{
 		shard_path, StateFileIo,
 	},
 	handle_state::HandleState,
+	in_memory_state_file_io::sgx::create_in_memory_state_io_from_shards_directories,
 	query_shard_state::QueryShardState,
 	state_handler::StateHandler,
-	state_snapshot_repository::StateSnapshotRepository,
+	state_snapshot_repository::{StateSnapshotRepository, VersionedStateAccess},
 	state_snapshot_repository_loader::StateSnapshotRepositoryLoader,
 };
 use codec::{Decode, Encode};
@@ -45,8 +46,8 @@ const STATE_SNAPSHOTS_CACHE_SIZE: usize = 3;
 type TestStf = Stf<CallExecutorMock, GetterExecutorMock, SgxExternalities, Runtime>;
 type StateKeyRepositoryMock = KeyRepositoryMock<Aes>;
 type TestStateFileIo = SgxStateFileIo<StateKeyRepositoryMock, TestStf, SgxExternalities>;
-type TestStateRepository = StateSnapshotRepository<TestStateFileIo, StfState, H256>;
-type TestStateRepositoryLoader = StateSnapshotRepositoryLoader<TestStateFileIo, StfState, H256>;
+type TestStateRepository = StateSnapshotRepository<TestStateFileIo>;
+type TestStateRepositoryLoader = StateSnapshotRepositoryLoader<TestStateFileIo>;
 type TestStateObserver = StateObserver<StfState>;
 type TestStateHandler = StateHandler<TestStateRepository, TestStateObserver>;
 
@@ -293,6 +294,20 @@ pub fn test_list_state_ids_ignores_files_not_matching_the_pattern() {
 	file_io.create_initialized(&shard, 1234).unwrap();
 
 	assert_eq!(1, file_io.list_state_ids_for_shard(&shard).unwrap().len());
+}
+
+pub fn test_in_memory_state_initializes_from_shard_directory() {
+	let shard: ShardIdentifier = [45u8; 32].into();
+	let _shard_dir_handle = ShardDirectoryHandle::new(shard).unwrap();
+
+	let file_io = create_in_memory_state_io_from_shards_directories().unwrap();
+	let state_repository_loader = StateSnapshotRepositoryLoader::new(file_io.clone());
+	let state_snapshot_repository = state_repository_loader
+		.load_snapshot_repository(STATE_SNAPSHOTS_CACHE_SIZE)
+		.unwrap();
+
+	assert_eq!(1, file_io.get_states_for_shard(&shard).unwrap().len());
+	assert!(state_snapshot_repository.shard_exists(&shard));
 }
 
 fn initialize_state_handler_with_directory_handle(
