@@ -85,7 +85,7 @@ where
 		&self,
 		shard: &ShardIdentifierFor<SignedSidechainBlock>,
 	) -> Result<Vec<TrustedOperation>> {
-		Ok(self.trusted_calls.get(shard).map(|v| v.clone()).unwrap_or_default())
+		Ok(self.trusted_calls.get(shard).cloned().unwrap_or_default())
 	}
 
 	fn remove_calls_from_pool(
