@@ -75,8 +75,6 @@ pub mod files {
 pub mod worker {
 	// the maximum size of any extrinsic that the enclave will ever generate in B
 	pub const EXTRINSIC_MAX_SIZE: usize = 4196;
-	// the maximum size of a value that will be queried from the state in B
-	pub const STATE_VALUE_MAX_SIZE: usize = 1024;
 	// the maximum size of the header
 	pub const HEADER_MAX_SIZE: usize = 200;
 	// maximum size of shielding key

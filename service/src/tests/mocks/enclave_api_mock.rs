@@ -67,10 +67,6 @@ impl EnclaveBase for EnclaveBaseMock {
 		todo!()
 	}
 
-	fn get_state(&self, _cyphertext: Vec<u8>, _shard: Vec<u8>) -> EnclaveResult<Vec<u8>> {
-		Ok(Vec::<u8>::new())
-	}
-
 	fn get_rsa_shielding_pubkey(&self) -> EnclaveResult<Rsa3072PubKey> {
 		unreachable!()
 	}
