@@ -134,8 +134,8 @@ impl<ParentchainBlock, SignedSidechainBlock, TopPoolExecutor, BlockComposer, Stf
 		let failed_operations = batch_execution_result.get_failed_operations();
 		self.top_pool_executor.remove_calls_from_pool(&self.shard, failed_operations);
 
-		// 3) Compose sidechain block and parentchain confirmation.
-		let (confirmation_extrinsic, sidechain_block) = self
+		// 3) Compose sidechain block.
+		let sidechain_block = self
 			.block_composer
 			.compose_block(
 				latest_parentchain_header,
@@ -145,8 +145,6 @@ impl<ParentchainBlock, SignedSidechainBlock, TopPoolExecutor, BlockComposer, Stf
 				batch_execution_result.state_after_execution,
 			)
 			.map_err(|e| ConsensusError::Other(e.to_string().into()))?;
-
-		parentchain_extrinsics.push(confirmation_extrinsic);
 
 		info!(
 			"Queue/Timeslot/Transactions: {:?};{};{}",

@@ -202,7 +202,7 @@ fn test_compose_block() {
 	state_handler.write_after_mutation(db.ext.clone(), lock, &shard).unwrap();
 
 	// when
-	let (opaque_call, signed_block) = block_composer
+	let signed_block = block_composer
 		.compose_block(
 			&latest_parentchain_header(),
 			signed_top_hashes,
@@ -213,17 +213,8 @@ fn test_compose_block() {
 		.unwrap();
 
 	// then
-	let call_indexes = node_metadata.confirm_imported_sidechain_block_indexes().unwrap();
-	let expected_call = OpaqueCall::from_tuple(&(
-		call_indexes,
-		shard,
-		&signed_block.block().header().block_number,
-		&signed_block.block().header().hash(),
-	));
-
 	assert!(signed_block.verify_signature());
 	assert_eq!(signed_block.block().header().block_number(), 1);
-	assert!(opaque_call.encode().starts_with(&expected_call.encode()));
 }
 
 fn test_submit_trusted_call_to_top_pool() {
@@ -355,7 +346,7 @@ fn test_create_block_and_confirmation_works() {
 	let executed_operation_hashes =
 		execution_result.get_executed_operation_hashes().iter().copied().collect();
 
-	let (opaque_call, signed_block) = block_composer
+	let signed_block = block_composer
 		.compose_block(
 			&latest_parentchain_header(),
 			executed_operation_hashes,
@@ -366,18 +357,9 @@ fn test_create_block_and_confirmation_works() {
 		.unwrap();
 
 	// then
-	let call_indexes = node_metadata.confirm_imported_sidechain_block_indexes().unwrap();
-	let expected_call = OpaqueCall::from_tuple(&(
-		call_indexes,
-		shard,
-		&signed_block.block().header().block_number,
-		&signed_block.block().header().hash(),
-	));
-
 	assert!(signed_block.verify_signature());
 	assert_eq!(signed_block.block().header().block_number(), 1);
 	assert_eq!(signed_block.block().block_data().signed_top_hashes()[0], top_hash);
-	assert!(opaque_call.encode().starts_with(&expected_call.encode()));
 }
 
 fn test_create_state_diff() {
@@ -421,7 +403,7 @@ fn test_create_state_diff() {
 	let executed_operation_hashes =
 		execution_result.get_executed_operation_hashes().iter().copied().collect();
 
-	let (_, signed_block) = block_composer
+	let signed_block = block_composer
 		.compose_block(
 			&latest_parentchain_header(),
 			executed_operation_hashes,

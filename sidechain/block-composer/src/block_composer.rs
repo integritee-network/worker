@@ -50,7 +50,7 @@ pub trait ComposeBlock<Externalities, ParentchainBlock: ParentchainBlockTrait> {
 		shard: ShardIdentifier,
 		state_hash_apriori: H256,
 		aposteriori_state: Externalities,
-	) -> Result<(OpaqueCall, Self::SignedSidechainBlock)>;
+	) -> Result<Self::SignedSidechainBlock>;
 }
 
 /// Block composer implementation for the sidechain
@@ -166,7 +166,7 @@ impl<
 		shard: ShardIdentifier,
 		state_hash_apriori: H256,
 		aposteriori_state: Externalities,
-	) -> Result<(OpaqueCall, Self::SignedSidechainBlock)> {
+	) -> Result<Self::SignedSidechainBlock> {
 		let author_public = self.signer.public();
 
 		let db = SidechainDB::<SignedSidechainBlock::Block, Externalities>::new(aposteriori_state);
@@ -215,14 +215,10 @@ impl<
 
 		let block = SignedSidechainBlock::Block::new(header.clone(), block_data);
 
-		let block_hash = block.hash();
-		debug!("Block hash {}", block_hash);
-
-		let opaque_call =
-			self.create_imported_sidechain_block_call(shard, block_number, header.hash())?;
+		debug!("Block header hash {}", header.hash());
 
 		let signed_block = block.sign_block(&self.signer);
 
-		Ok((opaque_call, signed_block))
+		Ok(signed_block)
 	}
 }
