@@ -2,8 +2,7 @@
 name = "itc-offchain-worker-executor"
 version = "0.8.0"
 authors = ["Integritee AG <hello@integritee.network>"]
-edition = "2018"
-resolver = "2"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

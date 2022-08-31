@@ -188,7 +188,7 @@ pub fn with<T: ?Sized, R, F: FnOnce(&mut T) -> R>(
 ///     fn increment(&mut self) { *self += 1 }
 /// }
 ///
-/// environmental!(val: Increment + 'static);
+/// environmental!(val: dyn Increment + 'static);
 ///
 /// fn main() {
 ///     let mut local = 0i32;
