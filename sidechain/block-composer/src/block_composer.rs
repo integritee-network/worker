@@ -40,10 +40,10 @@ use std::{format, marker::PhantomData, sync::Arc, vec::Vec};
 
 /// Compose a sidechain block and corresponding confirmation extrinsic for the parentchain
 ///
-pub trait ComposeBlockAndConfirmation<Externalities, ParentchainBlock: ParentchainBlockTrait> {
+pub trait ComposeBlock<Externalities, ParentchainBlock: ParentchainBlockTrait> {
 	type SignedSidechainBlock: SignedSidechainBlockTrait;
 
-	fn compose_block_and_confirmation(
+	fn compose_block(
 		&self,
 		latest_parentchain_header: &<ParentchainBlock as ParentchainBlockTrait>::Header,
 		top_call_hashes: Vec<H256>,
@@ -134,7 +134,7 @@ impl<
 		StateKeyRepository,
 		Externalities,
 		NodeMetadataRepository,
-	> ComposeBlockAndConfirmation<Externalities, ParentchainBlock>
+	> ComposeBlock<Externalities, ParentchainBlock>
 	for BlockComposer<
 		ParentchainBlock,
 		SignedSidechainBlock,
@@ -159,7 +159,7 @@ impl<
 {
 	type SignedSidechainBlock = SignedSidechainBlock;
 
-	fn compose_block_and_confirmation(
+	fn compose_block(
 		&self,
 		latest_parentchain_header: &ParentchainBlock::Header,
 		top_call_hashes: Vec<H256>,

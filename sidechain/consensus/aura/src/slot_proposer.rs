@@ -20,7 +20,7 @@ use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_executor::traits::StateUpdateProposer;
 use itp_time_utils::now_as_u64;
 use itp_types::H256;
-use its_block_composer::ComposeBlockAndConfirmation;
+use its_block_composer::ComposeBlock;
 use its_consensus_common::{Error as ConsensusError, Proposal, Proposer};
 use its_state::{SidechainDB, SidechainState, SidechainSystemExt, StateHash};
 use its_top_pool_executor::call_operator::TopPoolCallOperator;
@@ -73,7 +73,7 @@ impl<ParentchainBlock, SignedSidechainBlock, TopPoolExecutor, BlockComposer, Stf
 		SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash,
 	TopPoolExecutor:
 		TopPoolCallOperator<ParentchainBlock, SignedSidechainBlock> + Send + Sync + 'static,
-	BlockComposer: ComposeBlockAndConfirmation<
+	BlockComposer: ComposeBlock<
 			ExternalitiesFor<StfExecutor>,
 			ParentchainBlock,
 			SignedSidechainBlock = SignedSidechainBlock,
@@ -137,7 +137,7 @@ impl<ParentchainBlock, SignedSidechainBlock, TopPoolExecutor, BlockComposer, Stf
 		// 3) Compose sidechain block and parentchain confirmation.
 		let (confirmation_extrinsic, sidechain_block) = self
 			.block_composer
-			.compose_block_and_confirmation(
+			.compose_block(
 				latest_parentchain_header,
 				executed_operation_hashes,
 				self.shard,

@@ -50,7 +50,7 @@ use itp_test::mock::{handle_state_mock, handle_state_mock::HandleStateMock};
 use itp_top_pool_author::{test_utils::submit_operation_to_top_pool, traits::AuthorApi};
 use itp_types::{AccountId, Block, Header, OpaqueCall};
 use its_sidechain::{
-	block_composer::{BlockComposer, ComposeBlockAndConfirmation},
+	block_composer::{BlockComposer, ComposeBlock},
 	state::{SidechainDB, SidechainState, SidechainSystemExt},
 	top_pool_executor::{TopPoolCallOperator, TopPoolOperationHandler},
 };
@@ -93,7 +93,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		itp_stf_state_handler::test::sgx_tests::test_state_files_from_handler_can_be_loaded_again,
 		itp_stf_state_handler::test::sgx_tests::test_file_io_get_state_hash_works,
 		itp_stf_state_handler::test::sgx_tests::test_list_state_ids_ignores_files_not_matching_the_pattern,
-		test_compose_block_and_confirmation,
+		test_compose_block,
 		test_submit_trusted_call_to_top_pool,
 		test_submit_trusted_getter_to_top_pool,
 		test_differentiate_getter_and_call_works,
@@ -182,7 +182,7 @@ fn run_evm_tests() {
 #[cfg(not(feature = "evm"))]
 fn run_evm_tests() {}
 
-fn test_compose_block_and_confirmation() {
+fn test_compose_block() {
 	// given
 	let (_, _, shard, _, _, state_handler) = test_setup();
 	let node_metadata = NodeMetadataMock::new();
@@ -203,7 +203,7 @@ fn test_compose_block_and_confirmation() {
 
 	// when
 	let (opaque_call, signed_block) = block_composer
-		.compose_block_and_confirmation(
+		.compose_block(
 			&latest_parentchain_header(),
 			signed_top_hashes,
 			shard,
@@ -356,7 +356,7 @@ fn test_create_block_and_confirmation_works() {
 		execution_result.get_executed_operation_hashes().iter().copied().collect();
 
 	let (opaque_call, signed_block) = block_composer
-		.compose_block_and_confirmation(
+		.compose_block(
 			&latest_parentchain_header(),
 			executed_operation_hashes,
 			shard,
@@ -422,7 +422,7 @@ fn test_create_state_diff() {
 		execution_result.get_executed_operation_hashes().iter().copied().collect();
 
 	let (_, signed_block) = block_composer
-		.compose_block_and_confirmation(
+		.compose_block(
 			&latest_parentchain_header(),
 			executed_operation_hashes,
 			shard,
