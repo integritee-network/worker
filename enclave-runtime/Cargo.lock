@@ -2128,7 +2128,11 @@ dependencies = [
 name = "its-consensus-common"
 version = "0.8.0"
 dependencies = [
+ "itc-parentchain-light-client",
  "itp-block-import-queue",
+ "itp-extrinsics-factory",
+ "itp-node-api-metadata",
+ "itp-node-api-metadata-provider",
  "itp-ocall-api",
  "itp-sgx-crypto",
  "itp-types",
