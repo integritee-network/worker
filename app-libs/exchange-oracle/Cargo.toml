@@ -2,7 +2,7 @@
 name = "ita-exchange-oracle"
 version = "0.8.0"
 authors = ["Integritee AG <hello@integritee.network>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 

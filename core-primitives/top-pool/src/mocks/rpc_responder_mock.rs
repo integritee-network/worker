@@ -29,6 +29,12 @@ impl<Hash> RpcResponderMock<Hash> {
 	}
 }
 
+impl<Hash> Default for RpcResponderMock<Hash> {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 impl<Hash> SendRpcResponse for RpcResponderMock<Hash>
 where
 	Hash: RpcHash,

@@ -91,10 +91,7 @@ impl SealedIO for AesSealMock {
 	type Unsealed = Aes;
 
 	fn unseal(&self) -> std::result::Result<Self::Unsealed, Self::Error> {
-		self.aes
-			.read()
-			.map_err(|e| Error::Other(format!("{:?}", e).into()))
-			.map(|k| k.clone())
+		self.aes.read().map_err(|e| Error::Other(format!("{:?}", e).into())).map(|k| *k)
 	}
 
 	fn seal(&self, unsealed: &Self::Unsealed) -> Result<()> {

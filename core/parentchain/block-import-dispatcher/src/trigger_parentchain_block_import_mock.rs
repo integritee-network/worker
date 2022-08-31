@@ -83,7 +83,7 @@ where
 		&self,
 		predicate: impl Fn(&SignedBlockType) -> bool,
 	) -> Result<Option<SignedBlockType>> {
-		return match &self.latest_imported {
+		match &self.latest_imported {
 			None => Ok(None),
 			Some(block) => {
 				if predicate(block) {

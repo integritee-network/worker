@@ -2,7 +2,7 @@
 name = "itp-sgx-externalities"
 version = "0.8.0"
 authors = ["Integritee AG <hello@integritee.network> and Parity Technologies <admin@parity.io>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 # no_std
