@@ -39,7 +39,6 @@ sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-s
 sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # local
-ita-stf = { path = "../app-libs/stf" }
 itc-rpc-client = { path = "../core/rpc-client" }
 itc-rpc-server = { path = "../core/rpc-server" }
 itc-parentchain-light-client = { path = "../core/parentchain/light-client" }
@@ -47,7 +46,6 @@ itp-node-api = { path = "../core-primitives/node-api" }
 itp-enclave-api = { path = "../core-primitives/enclave-api" }
 itp-enclave-metrics = { path = "../core-primitives/enclave-metrics" }
 itp-settings = { path = "../core-primitives/settings" }
-itp-stf-state-handler = { path = "../core-primitives/stf-state-handler" }
 its-consensus-slots = { path = "../sidechain/consensus/slots" }
 its-peer-fetch = { path = "../sidechain/peer-fetch" }
 its-rpc-handler = { path = "../sidechain/rpc-handler" }
@@ -70,10 +68,9 @@ frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 
-
 [features]
 default = []
-evm = [ "ita-stf/evm_std" ]
+evm = []
 sidechain = ["itp-settings/sidechain"]
 offchain-worker = ["itp-settings/offchain-worker"]
 production = ["itp-settings/production"]

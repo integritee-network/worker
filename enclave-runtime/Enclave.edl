@@ -37,12 +37,6 @@ enclave {
 			[in, size=untrusted_worker_addr_size] uint8_t* untrusted_worker_addr, uint32_t untrusted_worker_addr_size
 		);
 
-		public sgx_status_t get_state(
-			[in, size=cyphertext_size] uint8_t* cyphertext, uint32_t cyphertext_size,
-			[in, size=shard_size] uint8_t* shard, uint32_t shard_size,
-			[out, size=value_size] uint8_t* value, uint32_t value_size
-		);
-
         public sgx_status_t init_enclave_sidechain_components();
 
         public sgx_status_t init_direct_invocation_server(

@@ -15,10 +15,8 @@
 
 */
 
-use ita_stf::{Getter, KeyPair, TrustedGetter};
 use serde_derive::{Deserialize, Serialize};
 use sgx_types::*;
-use sp_keyring::AccountKeyring;
 use std::str;
 
 #[cfg(test)]
@@ -29,11 +27,6 @@ pub struct Message {
 	pub account: String,
 	pub amount: u32,
 	pub sha256: sgx_sha256_hash_t,
-}
-
-pub fn test_trusted_getter_signed(who: AccountKeyring) -> Getter {
-	let getter = TrustedGetter::free_balance(who.public().into());
-	Getter::trusted(getter.sign(&KeyPair::Sr25519(who.pair())))
 }
 
 #[cfg(test)]

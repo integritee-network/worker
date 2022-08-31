@@ -13,17 +13,6 @@ extern "C" {
 		untrusted_worker_addr_size: u32,
 	) -> sgx_status_t;
 
-	pub fn get_state(
-		eid: sgx_enclave_id_t,
-		retval: *mut sgx_status_t,
-		cyphertext: *const u8,
-		cyphertext_size: u32,
-		shard: *const u8,
-		shard_size: u32,
-		value: *mut u8,
-		value_size: u32,
-	) -> sgx_status_t;
-
 	pub fn init_enclave_sidechain_components(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,

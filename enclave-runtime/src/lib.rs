@@ -41,7 +41,6 @@ use crate::{
 	utils::{hash_from_slice, utf8_str_from_raw, DecodeRaw},
 };
 use codec::{alloc::string::String, Decode, Encode};
-use ita_stf::{Getter, ShardIdentifier, Stf};
 use itc_parentchain::{
 	block_import_dispatcher::{
 		triggered_dispatcher::TriggerParentchainBlockImport, DispatchBlockImport,
@@ -60,8 +59,7 @@ use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvide
 use itp_sgx_crypto::{ed25519, Ed25519Seal, Rsa3072Seal};
 use itp_sgx_io as io;
 use itp_sgx_io::StaticSealedIO;
-use itp_stf_state_handler::handle_state::HandleState;
-use itp_types::{Header, SignedBlock};
+use itp_types::{Header, ShardIdentifier, SignedBlock};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use sgx_types::sgx_status_t;
@@ -343,58 +341,6 @@ fn sidechain_rpc_int(request: &str) -> Result<String> {
 	Ok(io
 		.handle_request_sync(request)
 		.unwrap_or_else(|| format!("Empty rpc response for request: {}", request)))
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn get_state(
-	trusted_op: *const u8,
-	trusted_op_size: u32,
-	shard: *const u8,
-	shard_size: u32,
-	value: *mut u8,
-	value_size: u32,
-) -> sgx_status_t {
-	let shard = ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
-	let mut trusted_op_slice = slice::from_raw_parts(trusted_op, trusted_op_size as usize);
-	let value_slice = slice::from_raw_parts_mut(value, value_size as usize);
-	let getter = match Getter::decode(&mut trusted_op_slice).map_err(Error::Codec) {
-		Err(e) => {
-			error!("Failed to decode getter: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
-		Ok(g) => g,
-	};
-
-	if let Getter::trusted(trusted_getter_signed) = getter.clone() {
-		debug!("verifying signature of TrustedGetterSigned");
-		if let false = trusted_getter_signed.verify_signature() {
-			error!("bad signature");
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		}
-	}
-
-	let state_handler = match GLOBAL_STATE_HANDLER_COMPONENT.get() {
-		Ok(a) => a,
-		Err(e) => {
-			error!("Failed to retrieve global state handler component: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
-	};
-
-	let mut state = match state_handler.load(&shard) {
-		Ok(s) => s,
-		Err(e) => return Error::StfStateHandler(e).into(),
-	};
-
-	debug!("calling into STF to get state");
-	let value_opt = Stf::get_state(&mut state, getter);
-
-	debug!("returning getter result");
-	if let Err(e) = write_slice_and_whitespace_pad(value_slice, value_opt.encode()) {
-		return Error::Other(Box::new(e)).into()
-	};
-
-	sgx_status_t::SGX_SUCCESS
 }
 
 /// Initialize sidechain enclave components.

@@ -19,11 +19,9 @@ use clap::ArgMatches;
 
 use crate::{config::Config, enclave::api::*};
 
-use self::ecalls::*;
 use itp_enclave_api::enclave_test::EnclaveTest;
 
 pub mod commons;
-pub mod ecalls;
 pub mod mock;
 
 #[cfg(test)]
@@ -41,13 +39,6 @@ pub fn run_enclave_tests(matches: &ArgMatches) {
 		println!("Running unit Tests");
 		enclave.test_main_entrance().unwrap();
 		println!("[+] unit_test ended!");
-	}
-
-	if matches.is_present("all") || matches.is_present("ecall") {
-		println!("Running ecall Tests");
-		println!("  testing get_state()");
-		get_state_works(&enclave).unwrap();
-		println!("[+] Ecall tests ended!");
 	}
 
 	println!("[+] All tests ended!");
