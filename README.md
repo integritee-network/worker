@@ -10,60 +10,29 @@ Please see our [Integritee Book](https://book.integritee.network/howto_worker.ht
 To start multiple worker and a node with one simple command: Check out [this README](local-setup/README.md).
 
 ## Tests
-### Environment
-Unit tests within the enclave can't be run by `cargo test`. All unit and integration tests can be run by the worker binary
 
-first, you should run ipfs daemon because it is needed for testing
+There are 3 types of tests:
+- cargo tests
+- enclave tests
+- integration tests
+
+### Cargo Tests
+Run 
 ```
-ipfs daemon
-```
-second, you'll need a integritee-node running
-```
-./target/release/integritee-node --dev --execution native
-```
-then you should make sure that the sealed_state is empty (but exists)
-```
-worker/bin$ rm sealed_stf_state.bin
-worker/bin$ touch sealed_stf_state.bin
+cargo test
 ```
 
-### Execute tests
-Run these with
-```
-integritee-service/bin$ ./integritee-service test --all
-```
-
-### End-to-end test with benchmarking
-
-Including cleanup between runs:
-
-run node
-```
-./target/release/integritee-node purge-chain --dev
-./target/release/integritee-node --dev --ws-port 9979
-```
-
-run worker
+### Enclave Tests
+Run
 
 ```
-export RUST_LOG=debug,substrate_api_client=warn,sp_io=warn,ws=warn,integritee_service=info,enclave_runtime=info,sp_io::misc=debug,runtime=debug,enclave_runtime::state=warn,ita_stf::sgx=info,light_client=warn,rustls=warn
-./integritee-service --clean-reset -r 2002 -p 9979 -w 2001 run 2>&1 | tee worker.log
+make
+./bin/integritee-service test --all
 ```
 
-wait until you see the worker synching a few blocks. then check MRENCLAVE and update bot-community.py constants accordingly
+### Integration Tests
+See [docker/README.md](docker/README.md)
 
-```
-./integritee-cli -p 9979 list-workers
-```
-
-now bootstrap a new bot community
-
-```
-./bot-community.py init
-./bot-community.py benchmark
-```
-
-now you should see the community growing from 10 to hundreds, increasing with every ceremony
 
 ## Direct calls scalability
 
