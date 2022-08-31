@@ -677,7 +677,7 @@ dependencies = [
 [[package]]
 name = "claims-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
 dependencies = [
  "parity-scale-codec",
  "rustc-hex",
@@ -772,7 +772,7 @@ dependencies = [
 [[package]]
 name = "common-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
 dependencies = [
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.27)",
 ]
@@ -2268,7 +2268,7 @@ dependencies = [
 [[package]]
 name = "ias-verify"
 version = "0.1.4"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
 dependencies = [
  "base64 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.22",
@@ -2415,7 +2415,7 @@ dependencies = [
 [[package]]
 name = "integritee-node-runtime"
 version = "1.0.9"
-source = "git+https://github.com/integritee-network/integritee-node.git?branch=master#9c3f0cf0bfbaa6ca4a387594526e9b664f45934a"
+source = "git+https://github.com/integritee-network/integritee-node.git?branch=master#d05f41d639396cd7212a6e655d3417fd1701656b"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -3338,7 +3338,7 @@ dependencies = [
 [[package]]
 name = "itp-types"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
 dependencies = [
  "chrono 0.4.22",
  "parity-scale-codec",
@@ -3354,7 +3354,7 @@ dependencies = [
 [[package]]
 name = "itp-utils"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
 dependencies = [
  "frame-support",
  "hex",
@@ -4765,7 +4765,7 @@ dependencies = [
 [[package]]
 name = "pallet-claims"
 version = "0.9.12"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
 dependencies = [
  "claims-primitives",
  "frame-support",
@@ -4844,7 +4844,7 @@ dependencies = [
 [[package]]
 name = "pallet-parentchain"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4926,7 +4926,7 @@ dependencies = [
 [[package]]
 name = "pallet-sidechain"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4961,7 +4961,7 @@ dependencies = [
 [[package]]
 name = "pallet-teeracle"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4980,7 +4980,7 @@ dependencies = [
 [[package]]
 name = "pallet-teerex"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5090,7 +5090,7 @@ dependencies = [
 [[package]]
 name = "parentchain-test"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -6601,7 +6601,7 @@ checksum = "43b2853a4d09f215c24cc5489c992ce46052d359b5109343cbafbf26bc62f8a3"
 [[package]]
 name = "sidechain-block-verification"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
 dependencies = [
  "frame-support",
  "itp-types",
@@ -6619,7 +6619,7 @@ dependencies = [
 [[package]]
 name = "sidechain-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -6633,7 +6633,7 @@ dependencies = [
 [[package]]
 name = "sidechain-test"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
 dependencies = [
  "itp-types",
  "parity-scale-codec",
@@ -7515,7 +7515,7 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 [[package]]
 name = "teeracle-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
 dependencies = [
  "common-primitives",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.27)",
@@ -7525,7 +7525,7 @@ dependencies = [
 [[package]]
 name = "teerex-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
 dependencies = [
  "ias-verify",
  "parity-scale-codec",

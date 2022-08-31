@@ -1,6 +1,6 @@
 services:
   integritee-node:
-    image: "integritee/integritee-node-dev:1.0.15"
+    image: "integritee/integritee-node-dev:1.0.16"
     container_name: integritee-node
     networks:
       - integritee-test-network
