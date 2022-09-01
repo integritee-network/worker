@@ -81,12 +81,8 @@ pub type TestTopPoolExecutor = TopPoolOperationHandler<
 	TestStfExecutor,
 >;
 
-pub type TestBlockComposer = BlockComposer<
-	ParentchainBlock,
-	SignedSidechainBlock,
-	TestSigner,
-	TestStateKeyRepo,
->;
+pub type TestBlockComposer =
+	BlockComposer<ParentchainBlock, SignedSidechainBlock, TestSigner, TestStateKeyRepo>;
 
 pub type TestBlockImporter = BlockImporter<
 	TestSigner,

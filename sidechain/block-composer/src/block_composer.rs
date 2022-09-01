@@ -51,29 +51,15 @@ pub trait ComposeBlock<Externalities, ParentchainBlock: ParentchainBlockTrait> {
 }
 
 /// Block composer implementation for the sidechain
-pub struct BlockComposer<
-	ParentchainBlock,
-	SignedSidechainBlock,
-	Signer,
-	StateKeyRepository,
-> {
+pub struct BlockComposer<ParentchainBlock, SignedSidechainBlock, Signer, StateKeyRepository> {
 	signer: Signer,
 	state_key_repository: Arc<StateKeyRepository>,
 	_phantom: PhantomData<(ParentchainBlock, SignedSidechainBlock)>,
 }
 
-impl<
-		ParentchainBlock,
-		SignedSidechainBlock,
-		Signer,
-		StateKeyRepository,
-	>
-	BlockComposer<
-		ParentchainBlock,
-		SignedSidechainBlock,
-		Signer,
-		StateKeyRepository,
-	> where
+impl<ParentchainBlock, SignedSidechainBlock, Signer, StateKeyRepository>
+	BlockComposer<ParentchainBlock, SignedSidechainBlock, Signer, StateKeyRepository>
+where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	SignedSidechainBlock:
 		SignedSidechainBlockTrait<Public = Signer::Public, Signature = MultiSignature>,
@@ -86,15 +72,8 @@ impl<
 	StateKeyRepository: AccessKey,
 	<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
 {
-	pub fn new(
-		signer: Signer,
-		state_key_repository: Arc<StateKeyRepository>,
-	) -> Self {
-		BlockComposer {
-			signer,
-			state_key_repository,
-			_phantom: Default::default(),
-		}
+	pub fn new(signer: Signer, state_key_repository: Arc<StateKeyRepository>) -> Self {
+		BlockComposer { signer, state_key_repository, _phantom: Default::default() }
 	}
 }
 
@@ -102,19 +81,10 @@ type HeaderTypeOf<T> = <<T as SignedSidechainBlockTrait>::Block as SidechainBloc
 type BlockDataTypeOf<T> =
 	<<T as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::BlockDataType;
 
-impl<
-		ParentchainBlock,
-		SignedSidechainBlock,
-		Signer,
-		StateKeyRepository,
-		Externalities,
-	> ComposeBlock<Externalities, ParentchainBlock>
-	for BlockComposer<
-		ParentchainBlock,
-		SignedSidechainBlock,
-		Signer,
-		StateKeyRepository,
-	> where
+impl<ParentchainBlock, SignedSidechainBlock, Signer, StateKeyRepository, Externalities>
+	ComposeBlock<Externalities, ParentchainBlock>
+	for BlockComposer<ParentchainBlock, SignedSidechainBlock, Signer, StateKeyRepository>
+where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	SignedSidechainBlock:
 		SignedSidechainBlockTrait<Public = Signer::Public, Signature = MultiSignature>,
