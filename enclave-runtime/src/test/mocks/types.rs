@@ -86,7 +86,6 @@ pub type TestBlockComposer = BlockComposer<
 	SignedSidechainBlock,
 	TestSigner,
 	TestStateKeyRepo,
-	TestNodeMetadataRepository,
 >;
 
 pub type TestBlockImporter = BlockImporter<

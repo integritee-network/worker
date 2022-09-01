@@ -124,7 +124,7 @@ impl<ParentchainBlock, SignedSidechainBlock, TopPoolExecutor, BlockComposer, Stf
 			)
 			.map_err(|e| ConsensusError::Other(e.to_string().into()))?;
 
-		let mut parentchain_extrinsics = batch_execution_result.get_extrinsic_callbacks();
+		let parentchain_extrinsics = batch_execution_result.get_extrinsic_callbacks();
 
 		let executed_operation_hashes: Vec<_> =
 			batch_execution_result.get_executed_operation_hashes().to_vec();

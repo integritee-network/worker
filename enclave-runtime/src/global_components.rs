@@ -141,7 +141,6 @@ pub type EnclaveSidechainBlockComposer = BlockComposer<
 	SignedSidechainBlock,
 	Pair,
 	EnclaveStateKeyRepository,
-	EnclaveNodeMetadataRepository,
 >;
 pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 	Pair,

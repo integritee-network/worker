@@ -236,9 +236,8 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 		));
 	GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT.initialize(sidechain_block_import_queue_worker);
 
-	let node_metadata_repo = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
 	let block_composer =
-		Arc::new(BlockComposer::new(signer, state_key_repository, node_metadata_repo));
+		Arc::new(BlockComposer::new(signer, state_key_repository));
 	GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT.initialize(block_composer);
 
 	Ok(())

@@ -18,13 +18,10 @@
 use crate::error::{Error, Result};
 use codec::Encode;
 use ita_stf::StatePayload;
-use itp_node_api::metadata::{
-	pallet_sidechain::SidechainCallIndexes, provider::AccessNodeMetadata,
-};
 use itp_sgx_crypto::{key_repository::AccessKey, StateCrypto};
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_time_utils::now_as_u64;
-use itp_types::{OpaqueCall, ShardIdentifier, H256};
+use itp_types::{ShardIdentifier, H256};
 use its_state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt, StateHash};
 use log::*;
 use sidechain_primitives::traits::{
@@ -59,11 +56,9 @@ pub struct BlockComposer<
 	SignedSidechainBlock,
 	Signer,
 	StateKeyRepository,
-	NodeMetadataRepository,
 > {
 	signer: Signer,
 	state_key_repository: Arc<StateKeyRepository>,
-	node_metadata_repository: Arc<NodeMetadataRepository>,
 	_phantom: PhantomData<(ParentchainBlock, SignedSidechainBlock)>,
 }
 
@@ -72,14 +67,12 @@ impl<
 		SignedSidechainBlock,
 		Signer,
 		StateKeyRepository,
-		NodeMetadataRepository,
 	>
 	BlockComposer<
 		ParentchainBlock,
 		SignedSidechainBlock,
 		Signer,
 		StateKeyRepository,
-		NodeMetadataRepository,
 	> where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	SignedSidechainBlock:
@@ -92,34 +85,16 @@ impl<
 	Signer::Public: Encode,
 	StateKeyRepository: AccessKey,
 	<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
-	NodeMetadataRepository: AccessNodeMetadata,
-	NodeMetadataRepository::MetadataType: SidechainCallIndexes,
 {
 	pub fn new(
 		signer: Signer,
 		state_key_repository: Arc<StateKeyRepository>,
-		node_metadata_repository: Arc<NodeMetadataRepository>,
 	) -> Self {
 		BlockComposer {
 			signer,
 			state_key_repository,
-			node_metadata_repository,
 			_phantom: Default::default(),
 		}
-	}
-
-	/// Creates a confirm_imported_sidechain_blockdechain_block extrinsic for a given shard id and sidechain block hash.
-	fn create_imported_sidechain_block_call(
-		&self,
-		shard_id: ShardIdentifier,
-		block_number: u64,
-		block_header_hash: H256,
-	) -> Result<OpaqueCall> {
-		let call = self
-			.node_metadata_repository
-			.get_from_metadata(|m| m.confirm_imported_sidechain_block_indexes())??;
-
-		Ok(OpaqueCall::from_tuple(&(call, shard_id, block_number, block_header_hash)))
 	}
 }
 
@@ -133,14 +108,12 @@ impl<
 		Signer,
 		StateKeyRepository,
 		Externalities,
-		NodeMetadataRepository,
 	> ComposeBlock<Externalities, ParentchainBlock>
 	for BlockComposer<
 		ParentchainBlock,
 		SignedSidechainBlock,
 		Signer,
 		StateKeyRepository,
-		NodeMetadataRepository,
 	> where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	SignedSidechainBlock:
@@ -154,8 +127,6 @@ impl<
 	Signer::Public: Encode,
 	StateKeyRepository: AccessKey,
 	<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
-	NodeMetadataRepository: AccessNodeMetadata,
-	NodeMetadataRepository::MetadataType: SidechainCallIndexes,
 {
 	type SignedSidechainBlock = SignedSidechainBlock;
 
