@@ -31,6 +31,7 @@ teeracle = [
 test = [
     "ita-stf/test",
     "itc-parentchain/mocks",
+    "itp-attestation-handler/test",
     "itp-extrinsics-factory/mocks",
     "itp-sgx-crypto/mocks",
     "itp-stf-executor/test",
@@ -98,6 +99,7 @@ cid = { default-features = false, git = "https://github.com/whalelephant/rust-ci
 multibase = { default-features = false, git = "https://github.com/whalelephant/rust-multibase", branch = "nstd" }
 
 # local deps
+itp-attestation-handler = { path = "../core-primitives/attestation-handler", default-features = false, features = ["sgx"] }
 ita-exchange-oracle = { path = "../app-libs/exchange-oracle", default-features = false, optional = true, features = ["sgx"] }
 ita-sgx-runtime = { path = "../app-libs/sgx-runtime", default-features = false }
 ita-stf = { path = "../app-libs/stf", default-features = false, features = ["sgx"] }

@@ -15,7 +15,6 @@
 
 */
 
-use super::CERTEXPIRYDAYS;
 use crate::{Error as EnclaveError, Result as EnclaveResult};
 use arrayvec::ArrayVec;
 use bit_vec::BitVec;
@@ -45,6 +44,7 @@ static SUPPORTED_SIG_ALGS: SignatureAlgorithms = &[
 	&webpki::RSA_PKCS1_3072_8192_SHA384,
 ];
 
+pub const CERTEXPIRYDAYS: i64 = 90i64;
 pub const IAS_REPORT_CA: &[u8] = include_bytes!("../AttestationReportSigningCACert.pem");
 
 const ISSUER: &str = "Integritee";

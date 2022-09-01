@@ -15,12 +15,9 @@
 	limitations under the License.
 
 */
-
-use crate::{
-	cert::{verify_attn_report, verify_mra_cert},
-	test::mocks::attestation_ocall_mock::AttestationOCallMock,
-};
+use crate::test::mocks::attestation_ocall_mock::AttestationOCallMock;
 use hex::FromHexError;
+use itp_attestation_handler::cert::{verify_attn_report, verify_mra_cert};
 use sgx_types::{sgx_measurement_t, sgx_status_t, SGX_HASH_SIZE};
 use std::vec::Vec;
 

@@ -41,6 +41,7 @@ pub enum Error {
 	PrimitivesAccess(itp_primitives_cache::error::Error),
 	MutexAccess,
 	Other(Box<dyn std::error::Error>),
+	Attestation(itp_attestation_handler::error::Error),
 }
 
 impl From<Error> for sgx_status_t {

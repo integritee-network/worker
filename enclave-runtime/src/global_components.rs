@@ -44,6 +44,7 @@ use itc_parentchain::{
 use itc_tls_websocket_server::{
 	config_provider::FromFileConfigProvider, ws_server::TungsteniteWsServer, ConnectionToken,
 };
+use itp_attestation_handler::AttestationHandler;
 use itp_block_import_queue::BlockImportQueue;
 use itp_component_container::ComponentContainer;
 use itp_extrinsics_factory::ExtrinsicsFactory;
@@ -125,6 +126,8 @@ pub type EnclaveTriggeredParentchainBlockImportDispatcher =
 	TriggeredDispatcher<EnclaveParentchainBlockImporter, EnclaveParentchainBlockImportQueue>;
 pub type EnclaveImmediateParentchainBlockImportDispatcher =
 	ImmediateDispatcher<EnclaveParentchainBlockImporter>;
+pub type EnclaveAttestationHandler =
+	AttestationHandler<EnclaveOCallApi, EnclaveNodeMetadataRepository>;
 
 pub type EnclaveRpcConnectionRegistry = ConnectionRegistry<Hash, ConnectionToken>;
 pub type EnclaveRpcWsHandler =
@@ -230,6 +233,10 @@ pub static GLOBAL_STATE_OBSERVER_COMPONENT: ComponentContainer<EnclaveStateObser
 /// TOP pool author.
 pub static GLOBAL_TOP_POOL_AUTHOR_COMPONENT: ComponentContainer<EnclaveTopPoolAuthor> =
 	ComponentContainer::new("top_pool_author");
+
+/// attestation handler
+pub static GLOBAL_ATTESTATION_HANDLER_COMPONENT: ComponentContainer<EnclaveAttestationHandler> =
+	ComponentContainer::new("Attestation handler");
 
 /// Parentchain component instances
 ///-------------------------------------------------------------------------------------------------

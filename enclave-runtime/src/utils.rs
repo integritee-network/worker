@@ -14,15 +14,9 @@
 	limitations under the License.
 
 */
-use crate::Hash;
 use codec::{Decode, Error, Input};
 use std::slice;
 
-pub fn hash_from_slice(hash_slize: &[u8]) -> Hash {
-	let mut g = [0; 32];
-	g.copy_from_slice(hash_slize);
-	Hash::from(&mut g)
-}
 /// Helper trait to transform the sgx-ffi pointers to any type that implements
 /// `parity-scale-codec::Decode`
 pub unsafe trait DecodeRaw {
