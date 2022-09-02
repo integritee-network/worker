@@ -32,6 +32,7 @@ SMARTCONTRACT="608060405234801561001057600080fd5b5060226000819055503360016000610
 INCFUNTION="371303c0"
 DEFAULTFUNCTION="371303c1"
 ADDFUNCTION="1003e2d20000000000000000000000000000000000000000000000000000000000000003"
+EXPECTED_RETURN_VALUE="0x000000000000000000000000000000047"
 
 # using default port if none given as arguments
 NPORT=${NPORT:-9944}
@@ -72,7 +73,18 @@ ${CLIENT} trusted --mrenclave ${MRENCLAVE} --direct evm-call ${ACCOUNTALICE} 0x8
 echo ""
 
 echo "Get storage"
-${CLIENT} trusted --mrenclave ${MRENCLAVE} --direct evm-read ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f
+RESULT=${CLIENT} trusted --mrenclave ${MRENCLAVE} --direct evm-read ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f
+echo $RESULT
+echo ""
+
+
+echo "* Verifying correct return value"
+if [ "$RESULT" -ne "$EXPECTED_RETURN_VALUE" ]; then
+  echo "Smart contract return value is wrong (expected: $EXPECTED_RETURN_VALUE, actual: $RESULT)"
+  exit 1
+else
+    echo "Smart contract return value is correct ($RESULT)"
+fi
 echo ""
 
 exit 0
