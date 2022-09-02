@@ -1,5 +1,5 @@
 services:
-  demo-ocw-smart-contract:
+  demo-smart-contract:
     image: integritee-cli:dev
     container_name: integritee-smart-contract-demo
     build:
