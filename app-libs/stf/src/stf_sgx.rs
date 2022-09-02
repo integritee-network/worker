@@ -19,7 +19,7 @@
 use crate::test_genesis::test_genesis_setup;
 
 use crate::{
-	helpers::{enclave_signer_account, ensure_enclave_signer_account, validate_nonce},
+	helpers::{enclave_signer_account, ensure_enclave_signer_account},
 	AccountData, AccountId, Getter, Index, ParentchainHeader, PublicGetter, ShardIdentifier, State,
 	StateTypeDiff, Stf, StfError, StfResult, TrustedCall, TrustedCallSigned, TrustedGetter,
 	ENCLAVE_ACCOUNT_KEY,
@@ -162,7 +162,10 @@ impl Stf {
 		let call_hash = blake2_256(&call.encode());
 		ext.execute_with(|| {
 			let sender = call.call.sender_account().clone();
-			validate_nonce(&sender, call.nonce)?;
+			ensure!(
+				call.nonce == System::account_nonce(&sender),
+				StfError::InvalidNonce(call.nonce)
+			);
 			match call.call {
 				TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
 					ensure!(is_root(&root), StfError::MissingPrivileges(root));

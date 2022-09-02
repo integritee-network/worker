@@ -14,9 +14,7 @@
 	limitations under the License.
 
 */
-use crate::{
-	stf_sgx_primitives::types::*, AccountId, Index, StfError, StfResult, ENCLAVE_ACCOUNT_KEY,
-};
+use crate::{AccountId, StfError, StfResult, ENCLAVE_ACCOUNT_KEY};
 use codec::{Decode, Encode};
 use itp_storage::{storage_double_map_key, storage_map_key, storage_value_key, StorageHasher};
 use itp_utils::stringify::account_id_to_string;
@@ -78,32 +76,6 @@ pub fn get_storage_by_key_hash<V: Decode>(key: Vec<u8>) -> Option<V> {
 /// Get the AccountInfo key where the account is stored.
 pub fn account_key_hash(account: &AccountId) -> Vec<u8> {
 	storage_map_key("System", "Account", account, &StorageHasher::Blake2_128Concat)
-}
-
-pub fn get_account_info(who: &AccountId) -> Option<AccountInfo> {
-	let maybe_storage_map =
-		get_storage_map("System", "Account", who, &StorageHasher::Blake2_128Concat);
-	if maybe_storage_map.is_none() {
-		info!("Failed to get account info for account {}", account_id_to_string(who));
-	}
-	maybe_storage_map
-}
-
-pub fn validate_nonce(who: &AccountId, nonce: Index) -> StfResult<()> {
-	let expected_nonce = match get_account_info(who) {
-		None => {
-			info!(
-				"Attempted to validate account nonce of non-existent account: {}",
-				account_id_to_string(who)
-			);
-			0
-		},
-		Some(account_info) => account_info.nonce,
-	};
-	if expected_nonce == nonce {
-		return Ok(())
-	}
-	Err(StfError::InvalidNonce(nonce))
 }
 
 pub fn enclave_signer_account() -> AccountId {
