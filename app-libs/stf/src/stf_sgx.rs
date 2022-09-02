@@ -181,10 +181,7 @@ impl Stf {
 			validate_nonce(&sender, call.nonce)?;
 			match call.call {
 				TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
-					ensure!(
-						Sudo::key().map_or(false, |k| root == k),
-						StfError::MissingPrivileges(sender)
-					);
+					ensure!(is_root(&root), StfError::MissingPrivileges(root));
 					debug!(
 						"balance_set_balance({}, {}, {})",
 						account_id_to_string(&who),
@@ -527,6 +524,9 @@ pub fn shards_key_hash() -> Vec<u8> {
 	vec![]
 }
 
+pub fn is_root(account: &AccountId) -> bool {
+	Sudo::key().map_or(false, |k| account == &k)
+}
 /// Trait extension to simplify sidechain data access from the STF.
 ///
 /// This should be removed when the refactoring of the STF has been done: #269

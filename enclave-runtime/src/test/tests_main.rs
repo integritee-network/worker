@@ -30,9 +30,7 @@ use crate::{
 use codec::{Decode, Encode};
 use ita_sgx_runtime::Parentchain;
 use ita_stf::{
-	helpers::{account_key_hash, get_account_info},
-	stf_sgx_tests,
-	test_genesis::{endowed_account as funded_pair, unendowed_account},
+	helpers::account_key_hash, stf_sgx_tests, test_genesis::endowed_account as funded_pair,
 	AccountInfo, ShardIdentifier, State, StatePayload, StateTypeDiff, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetter, TrustedOperation,
 };
