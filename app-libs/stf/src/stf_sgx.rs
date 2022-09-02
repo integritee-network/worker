@@ -110,21 +110,19 @@ impl Stf {
 					Some(info.data.reserved.encode())
 				},
 				TrustedGetter::nonce(who) => {
-					let info = System::account(&who);
+					let nonce = System::account_nonce(&who);
 					debug!("TrustedGetter nonce");
-					debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
-					debug!("Account nonce is {}", info.nonce);
-					Some(info.nonce.encode())
+					debug!("Account nonce is {}", nonce);
+					Some(nonce.encode())
 				},
 				#[cfg(feature = "evm")]
 				TrustedGetter::evm_nonce(who) => {
 					let evm_account = get_evm_account(&who);
 					let evm_account = HashedAddressMapping::into_account_id(evm_account);
-					let info = System::account(&who);
+					let nonce = System::account_nonce(&evm_account);
 					debug!("TrustedGetter evm_nonce");
-					debug!("AccountInfo for {} is {:?}", account_id_to_string(&evm_account), info);
-					debug!("Account nonce is {}", info.nonce);
-					Some(info.nonce.encode())
+					debug!("Account nonce is {}", nonce);
+					Some(nonce.encode())
 				},
 				#[cfg(feature = "evm")]
 				TrustedGetter::evm_account_codes(_who, evm_account) =>
