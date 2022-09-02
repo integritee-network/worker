@@ -16,13 +16,13 @@
 
 use crate::test::fixtures::test_setup::test_setup;
 use core::str::FromStr;
-use ita_sgx_runtime::{AddressMapping, HashedAddressMapping, Index};
+use ita_sgx_runtime::{AddressMapping, HashedAddressMapping, Index, System};
 use ita_stf::{
 	evm_helpers::{
 		create_code_hash, evm_create2_address, evm_create_address, get_evm_account_codes,
 		get_evm_account_storages,
 	},
-	helpers::{account_data, account_nonce},
+	helpers::account_data,
 	test_genesis::{endow, endowed_account as funded_pair},
 	KeyPair, State, Stf, TrustedCall,
 };
@@ -282,7 +282,7 @@ pub fn test_evm_create() {
 	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
 
 	// Should be the first call of the evm account
-	let nonce = state.execute_with(|| account_nonce(&sender_evm_substrate_addr));
+	let nonce = state.execute_with(|| System::account_nonce(&sender_evm_substrate_addr));
 	assert_eq!(nonce, 0);
 	let execution_address = evm_create_address(sender_evm_acc, nonce);
 	Stf::execute(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
@@ -297,7 +297,7 @@ pub fn test_evm_create() {
 
 	// Ensure the nonce of the evm account has been increased by one
 	// Should be the first call of the evm account
-	let nonce = state.execute_with(|| account_nonce(&sender_evm_substrate_addr));
+	let nonce = state.execute_with(|| System::account_nonce(&sender_evm_substrate_addr));
 	assert_eq!(nonce, 1);
 }
 

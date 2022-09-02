@@ -20,15 +20,15 @@ use crate::test_genesis::test_genesis_setup;
 
 use crate::{
 	helpers::{
-		account_data, account_nonce, enclave_signer_account, ensure_enclave_signer_account,
-		ensure_root, get_account_info, increment_nonce, root, validate_nonce,
+		account_data, enclave_signer_account, ensure_enclave_signer_account, ensure_root,
+		get_account_info, root, validate_nonce,
 	},
 	AccountData, AccountId, Getter, Index, ParentchainHeader, PublicGetter, ShardIdentifier, State,
 	StateTypeDiff, Stf, StfError, StfResult, TrustedCall, TrustedCallSigned, TrustedGetter,
 	ENCLAVE_ACCOUNT_KEY,
 };
 use codec::Encode;
-use ita_sgx_runtime::Runtime;
+use ita_sgx_runtime::{Runtime, System};
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_storage::storage_value_key;
 use itp_types::OpaqueCall;
@@ -310,7 +310,7 @@ impl Stf {
 						value
 					);
 					let nonce_evm_account =
-						account_nonce(&HashedAddressMapping::into_account_id(source));
+						System::account_nonce(&HashedAddressMapping::into_account_id(source));
 					ita_sgx_runtime::EvmCall::<Runtime>::create {
 						source,
 						init,
@@ -365,7 +365,7 @@ impl Stf {
 					Ok(())
 				},
 			}?;
-			increment_nonce(&sender);
+			System::inc_account_nonce(&sender);
 			Ok(())
 		})
 	}
@@ -500,7 +500,7 @@ impl Stf {
 
 	pub fn account_nonce(ext: &mut impl SgxExternalitiesTrait, account: &AccountId) -> Index {
 		ext.execute_with(|| {
-			let nonce = account_nonce(account);
+			let nonce = System::account_nonce(account);
 			debug!("Account {} nonce is {}", account_id_to_string(&account), nonce);
 			nonce
 		})

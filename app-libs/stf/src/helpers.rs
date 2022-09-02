@@ -106,36 +106,6 @@ pub fn validate_nonce(who: &AccountId, nonce: Index) -> StfResult<()> {
 	Err(StfError::InvalidNonce(nonce))
 }
 
-/// increment nonce after a successful call execution
-pub fn increment_nonce(account: &AccountId) {
-	//FIXME: Proper error handling - should be taken into
-	// consideration after implementing pay fee check
-	if let Some(mut acc_info) = get_account_info(account) {
-		debug!("incrementing account nonce");
-		acc_info.nonce += 1;
-		sp_io::storage::set(&account_key_hash(account), &acc_info.encode());
-		debug!(
-			"updated account {} nonce: {:?}",
-			account_id_to_string(account),
-			get_account_info(account).unwrap().nonce
-		);
-	} else {
-		error!(
-			"tried to increment nonce of a non-existent account: {}",
-			account_id_to_string(account)
-		)
-	}
-}
-
-pub fn account_nonce(account: &AccountId) -> Index {
-	if let Some(info) = get_account_info(account) {
-		info.nonce
-	} else {
-		info!("Attempted to get nonce of non-existent account: {}", account_id_to_string(account));
-		0_u32
-	}
-}
-
 pub fn account_data(account: &AccountId) -> Option<AccountData> {
 	if let Some(info) = get_account_info(account) {
 		Some(info.data)
