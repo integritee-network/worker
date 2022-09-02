@@ -439,7 +439,7 @@ fn test_create_state_diff() {
 
 	// state diff should consist of the following updates:
 	// (last_hash, sidechain block_number, sender_funds, receiver_funds, [no clear, after polkadot_v0.9.26 update], events)
-	assert_eq!(state_diff.len(), 6);
+	assert_eq!(state_diff.len(), 5);
 	assert_eq!(receiver_acc_info.data.free, 1000);
 	assert_eq!(sender_acc_info.data.free, 1000);
 }
