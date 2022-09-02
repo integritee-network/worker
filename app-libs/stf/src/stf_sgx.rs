@@ -20,15 +20,15 @@ use crate::test_genesis::test_genesis_setup;
 
 use crate::{
 	helpers::{
-		account_data, enclave_signer_account, ensure_enclave_signer_account, ensure_root,
-		get_account_info, root, validate_nonce,
+		account_data, enclave_signer_account, ensure_enclave_signer_account, get_account_info,
+		validate_nonce,
 	},
 	AccountData, AccountId, Getter, Index, ParentchainHeader, PublicGetter, ShardIdentifier, State,
 	StateTypeDiff, Stf, StfError, StfResult, TrustedCall, TrustedCallSigned, TrustedGetter,
 	ENCLAVE_ACCOUNT_KEY,
 };
 use codec::Encode;
-use ita_sgx_runtime::{Runtime, System};
+use ita_sgx_runtime::{Runtime, Sudo, System};
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_storage::storage_value_key;
 use itp_types::OpaqueCall;
@@ -39,7 +39,7 @@ use sidechain_primitives::types::{BlockHash, BlockNumber as SidechainBlockNumber
 use sp_io::hashing::blake2_256;
 use sp_runtime::MultiAddress;
 use std::{format, prelude::v1::*, vec};
-use support::traits::UnfilteredDispatchable;
+use support::{ensure, traits::UnfilteredDispatchable};
 
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
@@ -181,7 +181,10 @@ impl Stf {
 			validate_nonce(&sender, call.nonce)?;
 			match call.call {
 				TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
-					ensure_root(root)?;
+					ensure!(
+						Sudo::key().map_or(false, |k| root == k),
+						StfError::MissingPrivileges(sender)
+					);
 					debug!(
 						"balance_set_balance({}, {}, {})",
 						account_id_to_string(&who),
@@ -491,7 +494,7 @@ impl Stf {
 	}
 
 	pub fn get_root(ext: &mut impl SgxExternalitiesTrait) -> AccountId {
-		ext.execute_with(|| root())
+		ext.execute_with(|| Sudo::key().expect("No root account"))
 	}
 
 	pub fn get_enclave_account(ext: &mut impl SgxExternalitiesTrait) -> AccountId {

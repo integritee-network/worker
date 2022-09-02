@@ -118,10 +118,6 @@ pub fn account_data(account: &AccountId) -> Option<AccountData> {
 	}
 }
 
-pub fn root() -> AccountId {
-	get_storage_value("Sudo", "Key").expect("No root account")
-}
-
 pub fn enclave_signer_account() -> AccountId {
 	get_storage_value("Sudo", ENCLAVE_ACCOUNT_KEY).expect("No enclave account")
 }
@@ -152,13 +148,5 @@ pub fn ensure_enclave_signer_account(account: &AccountId) -> StfResult<()> {
 			account_id_to_string(account)
 		);
 		Err(StfError::RequireEnclaveSignerAccount)
-	}
-}
-
-pub fn ensure_root(account: AccountId) -> StfResult<()> {
-	if root() == account {
-		Ok(())
-	} else {
-		Err(StfError::MissingPrivileges(account))
 	}
 }
