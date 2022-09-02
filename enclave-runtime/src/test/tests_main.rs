@@ -28,13 +28,11 @@ use crate::{
 	tls_ra,
 };
 use codec::{Decode, Encode};
+use ita_sgx_runtime::Parentchain;
 use ita_stf::{
-	helpers::{
-		account_key_hash, get_parentchain_blockhash, get_parentchain_number,
-		get_parentchain_parenthash,
-	},
+	helpers::{account_key_hash, get_account_info},
 	stf_sgx_tests,
-	test_genesis::endowed_account as funded_pair,
+	test_genesis::{endowed_account as funded_pair, unendowed_account},
 	AccountInfo, ShardIdentifier, State, StatePayload, StateTypeDiff, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetter, TrustedOperation,
 };
@@ -440,8 +438,8 @@ fn test_create_state_diff() {
 		get_from_state_diff(&state_diff, &account_key_hash(&receiver.into()));
 
 	// state diff should consist of the following updates:
-	// (last_hash, sidechain block_number, sender_funds, receiver_funds, [no clear, after polkadot_v0.9.26 update])
-	assert_eq!(state_diff.len(), 5);
+	// (last_hash, sidechain block_number, sender_funds, receiver_funds, [no clear, after polkadot_v0.9.26 update], events)
+	assert_eq!(state_diff.len(), 6);
 	assert_eq!(receiver_acc_info.data.free, 1000);
 	assert_eq!(sender_acc_info.data.free, 1000);
 }
@@ -499,9 +497,9 @@ fn test_call_set_update_parentchain_block() {
 
 	Stf::update_parentchain_block(&mut state, header.clone()).unwrap();
 
-	assert_eq!(header.hash(), state.execute_with(|| get_parentchain_blockhash().unwrap()));
-	assert_eq!(parent_hash, state.execute_with(|| get_parentchain_parenthash().unwrap()));
-	assert_eq!(block_number, state.execute_with(|| get_parentchain_number().unwrap()));
+	assert_eq!(header.hash(), state.execute_with(|| Parentchain::block_hash()));
+	assert_eq!(parent_hash, state.execute_with(|| Parentchain::parent_hash()));
+	assert_eq!(block_number, state.execute_with(|| Parentchain::block_number()));
 }
 
 fn test_signature_must_match_public_sender_in_call() {

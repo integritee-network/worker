@@ -15,7 +15,7 @@
 
 */
 use crate::{
-	stf_sgx_primitives::types::*, AccountId, Index, StfError, StfResult, ENCLAVE_ACCOUNT_KEY, H256,
+	stf_sgx_primitives::types::*, AccountId, Index, StfError, StfResult, ENCLAVE_ACCOUNT_KEY,
 };
 use codec::{Decode, Encode};
 use itp_storage::{storage_double_map_key, storage_map_key, storage_value_key, StorageHasher};
@@ -120,20 +120,6 @@ pub fn account_data(account: &AccountId) -> Option<AccountData> {
 
 pub fn enclave_signer_account() -> AccountId {
 	get_storage_value("Sudo", ENCLAVE_ACCOUNT_KEY).expect("No enclave account")
-}
-
-// FIXME: Use Option<ParentchainHeader:Hash> as return type after fixing sgx-runtime issue #37
-pub fn get_parentchain_blockhash() -> Option<H256> {
-	get_storage_value("Parentchain", "BlockHash")
-}
-
-// FIXME: Use Option<ParentchainHeader:Hash> as return type after fixing sgx-runtime issue #37
-pub fn get_parentchain_parenthash() -> Option<H256> {
-	get_storage_value("Parentchain", "ParentHash")
-}
-
-pub fn get_parentchain_number() -> Option<BlockNumber> {
-	get_storage_value("Parentchain", "Number")
 }
 
 /// Ensures an account is a registered enclave account.
