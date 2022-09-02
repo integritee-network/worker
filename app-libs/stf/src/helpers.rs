@@ -106,18 +106,6 @@ pub fn validate_nonce(who: &AccountId, nonce: Index) -> StfResult<()> {
 	Err(StfError::InvalidNonce(nonce))
 }
 
-pub fn account_data(account: &AccountId) -> Option<AccountData> {
-	if let Some(info) = get_account_info(account) {
-		Some(info.data)
-	} else {
-		info!(
-			"Attempted to get account data of non-existent account: {}",
-			account_id_to_string(account)
-		);
-		None
-	}
-}
-
 pub fn enclave_signer_account() -> AccountId {
 	get_storage_value("Sudo", ENCLAVE_ACCOUNT_KEY).expect("No enclave account")
 }

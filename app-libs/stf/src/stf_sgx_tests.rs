@@ -27,7 +27,7 @@ pub fn enclave_account_initialization_works() {
 	let mut state = Stf::init_state(enclave_account.clone());
 	let _root = Stf::get_root(&mut state);
 
-	let account_data = Stf::account_data(&mut state, &enclave_account).unwrap();
+	let account_data = Stf::account_data(&mut state, &enclave_account);
 
 	assert_eq!(0, Stf::account_nonce(&mut state, &enclave_account));
 	assert_eq!(enclave_account, Stf::get_enclave_account(&mut state));
@@ -59,6 +59,6 @@ pub fn test_root_account_exists_after_initialization() {
 	let mut state = Stf::init_state(enclave_account.clone());
 	let root_account = Stf::get_root(&mut state);
 
-	let account_data = Stf::account_data(&mut state, &root_account).unwrap();
+	let account_data = Stf::account_data(&mut state, &root_account);
 	assert!(account_data.free > 0);
 }

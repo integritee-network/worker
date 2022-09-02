@@ -22,7 +22,6 @@ use ita_stf::{
 		create_code_hash, evm_create2_address, evm_create_address, get_evm_account_codes,
 		get_evm_account_storages,
 	},
-	helpers::account_data,
 	test_genesis::{endow, endowed_account as funded_pair},
 	KeyPair, State, Stf, TrustedCall,
 };
@@ -54,7 +53,10 @@ pub fn test_evm_call() {
 	let destination_evm_acc = H160::from_str("1000000000000000000000000000000000000001").unwrap();
 	let destination_evm_substrate_addr =
 		ita_sgx_runtime::HashedAddressMapping::into_account_id(destination_evm_acc);
-	assert!(state.execute_with(|| account_data(&destination_evm_substrate_addr).is_none()));
+	assert_eq!(
+		state.execute_with(|| System::account(&destination_evm_substrate_addr).data.free),
+		0
+	);
 
 	let transfer_value: u128 = 1_000_000_000;
 
@@ -78,7 +80,7 @@ pub fn test_evm_call() {
 	// then
 	assert_eq!(
 		transfer_value,
-		state.execute_with(|| account_data(&destination_evm_substrate_addr).unwrap().free)
+		state.execute_with(|| System::account(&destination_evm_substrate_addr).data.free)
 	);
 }
 
