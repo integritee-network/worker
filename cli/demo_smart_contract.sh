@@ -13,11 +13,8 @@
 #  export RUST_LOG_LOG=integritee-cli=info,ita_stf=info
 #  demo_smart_contract.sh -p <NODEPORT> -P <WORKERPORT>
 
-while getopts ":p:A:t:u:V:C:" opt; do
+while getopts ":p:A:u:V:C:" opt; do
     case $opt in
-       t)
-            TEST=$OPTARG
-            ;;
         p)
             NPORT=$OPTARG
             ;;
