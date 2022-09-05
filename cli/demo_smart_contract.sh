@@ -68,7 +68,7 @@ ${CLIENTWORKER} trusted --mrenclave ${MRENCLAVE} --direct evm-create ${ACCOUNTAL
 echo ""
 
 echo "Get storage"
-${CLIENTWORKER} trusted --mrenclave ${MRENCLAVE} --direct evm-read ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f
+${CLIENTWORKER} trusted --mrenclave ${MRENCLAVE} evm-read ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f
 echo ""
 
 echo "Call inc function"
@@ -76,7 +76,7 @@ ${CLIENTWORKER} trusted --mrenclave ${MRENCLAVE} --direct evm-call ${ACCOUNTALIC
 echo ""
 
 echo "Get storage"
-${CLIENTWORKER} trusted --mrenclave ${MRENCLAVE} --direct evm-read ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f
+${CLIENTWORKER} trusted --mrenclave ${MRENCLAVE} evm-read ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f
 echo ""
 
 echo "Call add 3 function"
@@ -84,7 +84,7 @@ ${CLIENTWORKER} trusted --mrenclave ${MRENCLAVE} --direct evm-call ${ACCOUNTALIC
 echo ""
 
 echo "Get storage"
-RESULT=${CLIENTWORKER} trusted --mrenclave ${MRENCLAVE} --direct evm-read ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f
+RESULT=$(${CLIENTWORKER} trusted --mrenclave ${MRENCLAVE} evm-read ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f | xargs)
 echo $RESULT
 echo ""
 
