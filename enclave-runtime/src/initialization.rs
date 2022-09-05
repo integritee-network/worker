@@ -31,8 +31,9 @@ use crate::{
 		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT,
 		GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
-		GLOBAL_STATE_KEY_REPOSITORY_COMPONENT, GLOBAL_STF_EXECUTOR_COMPONENT,
-		GLOBAL_TOP_POOL_AUTHOR_COMPONENT, GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
+		GLOBAL_STATE_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_OBSERVER_COMPONENT,
+		GLOBAL_STF_EXECUTOR_COMPONENT, GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
+		GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
 		GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
 		GLOBAL_WEB_SOCKET_SERVER_COMPONENT,
 	},
@@ -128,9 +129,11 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	let state_snapshot_repository =
 		state_snapshot_repository_loader.load_snapshot_repository(STATE_SNAPSHOTS_CACHE_SIZE)?;
 	let state_observer = initialize_state_observer(&state_snapshot_repository)?;
+	GLOBAL_STATE_OBSERVER_COMPONENT.initialize(state_observer.clone());
 
 	let state_handler =
 		Arc::new(StateHandler::new(state_snapshot_repository, state_observer.clone()));
+
 	GLOBAL_STATE_HANDLER_COMPONENT.initialize(state_handler.clone());
 
 	let ocall_api = Arc::new(OcallApi);
@@ -283,6 +286,7 @@ pub(crate) fn init_light_client<WorkerModeProvider: ProvideWorkerMode>(
 fn initialize_parentchain_import_dispatcher<WorkerModeProvider: ProvideWorkerMode>(
 ) -> EnclaveResult<()> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
+	let state_observer = GLOBAL_STATE_OBSERVER_COMPONENT.get()?;
 	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 	let shielding_key_repository = GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.get()?;
@@ -292,7 +296,7 @@ fn initialize_parentchain_import_dispatcher<WorkerModeProvider: ProvideWorkerMod
 	let node_metadata_repository = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
 
 	let stf_enclave_signer = Arc::new(EnclaveStfEnclaveSigner::new(
-		state_handler.clone(),
+		state_observer,
 		ocall_api,
 		shielding_key_repository.clone(),
 	));

@@ -89,7 +89,7 @@ pub type EnclaveNodeMetadataRepository = NodeMetadataRepository<NodeMetadata>;
 pub type EnclaveStfExecutor =
 	StfExecutor<EnclaveOCallApi, EnclaveStateHandler, EnclaveNodeMetadataRepository>;
 pub type EnclaveStfEnclaveSigner =
-	StfEnclaveSigner<EnclaveOCallApi, EnclaveStateHandler, EnclaveShieldingKeyRepository>;
+	StfEnclaveSigner<EnclaveOCallApi, EnclaveStateObserver, EnclaveShieldingKeyRepository>;
 pub type EnclaveExtrinsicsFactory =
 	ExtrinsicsFactory<Pair, NonceCache, EnclaveNodeMetadataRepository>;
 pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
@@ -201,6 +201,10 @@ pub static GLOBAL_WEB_SOCKET_SERVER_COMPONENT: ComponentContainer<EnclaveWebSock
 /// State handler.
 pub static GLOBAL_STATE_HANDLER_COMPONENT: ComponentContainer<EnclaveStateHandler> =
 	ComponentContainer::new("state handler");
+
+/// State observer.
+pub static GLOBAL_STATE_OBSERVER_COMPONENT: ComponentContainer<EnclaveStateObserver> =
+	ComponentContainer::new("state observer");
 
 /// TOP pool author.
 pub static GLOBAL_TOP_POOL_AUTHOR_COMPONENT: ComponentContainer<EnclaveTopPoolAuthor> =
