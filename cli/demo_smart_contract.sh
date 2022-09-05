@@ -88,10 +88,10 @@ RESULT=${CLIENTWORKER} trusted --mrenclave ${MRENCLAVE} --direct evm-read ${ACCO
 echo $RESULT
 echo ""
 
-EXPECTED_RETURN_VALUE=0x47
+EXPECTED_RETURN_VALUE="0x000000000000000000047"
 
 echo "* Verifying correct return value"
-if [ "$RESULT" -eq "$EXPECTED_RETURN_VALUE" ]; then
+if (("$RESULT" == "$EXPECTED_RETURN_VALUE")); then
     echo "Smart contract return value is correct ($RESULT)"
     exit 0
 else
