@@ -104,7 +104,8 @@ impl<
 			.map_err(|e| Error::Other(e.into()))?
 			.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 
-		let opaque_call = OpaqueCall::from_tuple(&(call, shard, header.block_number(), header.hash()));
+		let opaque_call =
+			OpaqueCall::from_tuple(&(call, shard, header.block_number(), header.hash()));
 
 		let xts = self
 			.extrinsics_factory
