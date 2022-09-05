@@ -27,13 +27,26 @@ extern crate sgx_tstd as std;
 // re-export module to properly feature gate sgx and regular std environment
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub mod sgx_reexport_prelude {
+	pub use serde_json_sgx as serde_json;
 	pub use thiserror_sgx as thiserror;
+	pub use yasna_sgx as yasna;
 }
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
+
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub mod attestation_handler;
+
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub mod cert;
+
 pub mod error;
+
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub mod utils;
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub use attestation_handler::{AttestationHandler, DEV_HOSTNAME};
-use error::{Error, Result};
+
+pub use error::{Error, Result};

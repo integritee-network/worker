@@ -17,9 +17,9 @@
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
-use sgx_tstd as std;
-use sgx_tstd::boxed::Box;
+
 use sgx_types::sgx_status_t;
+use std::boxed::Box;
 
 pub type Result<T> = core::result::Result<T, Error>;
 

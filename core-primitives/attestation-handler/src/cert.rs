@@ -15,6 +15,9 @@
 
 */
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
+
 use crate::{Error as EnclaveError, Result as EnclaveResult};
 use arrayvec::ArrayVec;
 use bit_vec::BitVec;
