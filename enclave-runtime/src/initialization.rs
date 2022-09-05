@@ -81,6 +81,7 @@ use itp_sgx_crypto::{
 use itp_sgx_io::StaticSealedIO;
 use itp_stf_state_handler::{
 	handle_state::HandleState, query_shard_state::QueryShardState,
+	state_snapshot_repository::VersionedStateAccess,
 	state_snapshot_repository_loader::StateSnapshotRepositoryLoader, StateHandler,
 };
 use itp_top_pool::pool::Options as PoolOptions;
@@ -90,7 +91,7 @@ use its_sidechain::block_composer::BlockComposer;
 use log::*;
 use primitive_types::H256;
 use sp_core::crypto::Pair;
-use std::{fs, string::String, sync::Arc};
+use std::{collections::HashMap, fs, string::String, sync::Arc};
 
 pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> EnclaveResult<()> {
 	// Initialize the logging environment in the enclave.
@@ -126,7 +127,7 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 		StateSnapshotRepositoryLoader::<EnclaveStateFileIo, StfState, H256>::new(state_file_io);
 	let state_snapshot_repository =
 		state_snapshot_repository_loader.load_snapshot_repository(STATE_SNAPSHOTS_CACHE_SIZE)?;
-	let state_observer = Arc::new(EnclaveStateObserver::new(None));
+	let state_observer = initialize_state_observer(&state_snapshot_repository)?;
 
 	let state_handler =
 		Arc::new(StateHandler::new(state_snapshot_repository, state_observer.clone()));
@@ -191,6 +192,19 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.initialize(sidechain_block_import_queue);
 
 	Ok(())
+}
+
+fn initialize_state_observer<S>(snapshot_repository: &S) -> EnclaveResult<Arc<EnclaveStateObserver>>
+where
+	S: VersionedStateAccess<StateType = StfState>,
+{
+	let shards = snapshot_repository.list_shards()?;
+	let mut states_map = HashMap::<ShardIdentifier, S::StateType>::new();
+	for shard in shards.into_iter() {
+		let state = snapshot_repository.load_latest(&shard)?;
+		states_map.insert(shard, state);
+	}
+	Ok(Arc::new(EnclaveStateObserver::from_map(states_map)))
 }
 
 pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {

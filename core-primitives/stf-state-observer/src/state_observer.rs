@@ -51,6 +51,10 @@ impl<StateType> StateObserver<StateType> {
 		}
 	}
 
+	pub fn from_map(states_map: HashMap<ShardIdentifier, StateType>) -> Self {
+		Self { queued_state_updates: Default::default(), current_state: RwLock::new(states_map) }
+	}
+
 	fn apply_pending_update(&self) -> Result<()> {
 		let mut update_queue_lock =
 			self.queued_state_updates.write().map_err(|_| Error::LockPoisoning)?;
