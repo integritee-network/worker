@@ -91,12 +91,10 @@ echo ""
 EXPECTED_RETURN_VALUE=0x47
 
 echo "* Verifying correct return value"
-if [ "$RESULT" -ne "$EXPECTED_RETURN_VALUE" ]; then
-  echo "Smart contract return value is wrong (expected: $EXPECTED_RETURN_VALUE, actual: $RESULT)"
-  exit 1
-else
+if [ "$RESULT" -eq "$EXPECTED_RETURN_VALUE" ]; then
     echo "Smart contract return value is correct ($RESULT)"
+    exit 0
+else
+    echo "Smart contract return value is wrong (expected: $EXPECTED_RETURN_VALUE, actual: $RESULT)"
+    exit 1
 fi
-echo ""
-
-exit 0
