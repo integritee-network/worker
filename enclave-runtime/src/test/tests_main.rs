@@ -27,17 +27,14 @@ use crate::{
 	},
 	tls_ra,
 };
-use codec::{Decode, Encode};
+use codec::Decode;
 use ita_sgx_runtime::Parentchain;
 use ita_stf::{
 	helpers::account_key_hash, stf_sgx_tests, test_genesis::endowed_account as funded_pair,
 	AccountInfo, ShardIdentifier, State, StatePayload, StateTypeDiff, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetter, TrustedOperation,
 };
-use itp_node_api::metadata::{
-	metadata_mocks::NodeMetadataMock, pallet_sidechain::SidechainCallIndexes,
-	provider::NodeMetadataRepository,
-};
+use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_settings::enclave::MAX_TRUSTED_OPS_EXEC_DURATION;
 use itp_sgx_crypto::{Aes, StateCrypto};
 use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
@@ -48,7 +45,7 @@ use itp_stf_executor::{
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{handle_state_mock, handle_state_mock::HandleStateMock};
 use itp_top_pool_author::{test_utils::submit_operation_to_top_pool, traits::AuthorApi};
-use itp_types::{AccountId, Block, Header, OpaqueCall};
+use itp_types::{AccountId, Block, Header};
 use its_sidechain::{
 	block_composer::{BlockComposer, ComposeBlock},
 	state::{SidechainDB, SidechainState, SidechainSystemExt},
@@ -185,12 +182,9 @@ fn run_evm_tests() {}
 fn test_compose_block() {
 	// given
 	let (_, _, shard, _, _, state_handler) = test_setup();
-	let node_metadata = NodeMetadataMock::new();
-	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(node_metadata.clone()));
-	let block_composer = BlockComposer::<Block, SignedBlock, _, _, _>::new(
+	let block_composer = BlockComposer::<Block, SignedBlock, _, _>::new(
 		test_account(),
 		Arc::new(TestStateKeyRepo::new(state_key())),
-		node_metadata_repo,
 	);
 
 	let signed_top_hashes: Vec<H256> = vec![[94; 32].into(), [1; 32].into()].to_vec();
@@ -318,10 +312,9 @@ fn test_create_block_and_confirmation_works() {
 		top_pool_author.clone(),
 		stf_executor.clone(),
 	);
-	let block_composer = BlockComposer::<Block, SignedBlock, _, _, _>::new(
+	let block_composer = BlockComposer::<Block, SignedBlock, _, _>::new(
 		test_account(),
 		Arc::new(TestStateKeyRepo::new(state_key())),
-		node_metadata_repo,
 	);
 
 	let sender = funded_pair();
@@ -375,10 +368,9 @@ fn test_create_state_diff() {
 		top_pool_author.clone(),
 		stf_executor.clone(),
 	);
-	let block_composer = BlockComposer::<Block, SignedBlock, _, _, _>::new(
+	let block_composer = BlockComposer::<Block, SignedBlock, _, _>::new(
 		test_account(),
 		Arc::new(TestStateKeyRepo::new(state_key())),
-		node_metadata_repo,
 	);
 
 	let sender = funded_pair();
