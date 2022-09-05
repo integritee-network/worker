@@ -58,7 +58,7 @@ CLIENTWORKER="${CLIENT_BIN} -p ${NPORT} -P ${WORKERPORT} -u ${NODEURL} -U ${WORK
 
 
 # this will always take the first MRENCLAVE found in the registry !!
-read -r MRENCLAVE <<< "$($CLIENT_BIN list-workers | awk '/  MRENCLAVE: / { print $2; exit }')"
+read -r MRENCLAVE <<< "$($CLIENTWORKER list-workers | awk '/  MRENCLAVE: / { print $2; exit }')"
 echo "Reading MRENCLAVE from worker list: ${MRENCLAVE}"
 
 ACCOUNTALICE=//Alice
@@ -88,7 +88,7 @@ RESULT=${CLIENTWORKER} trusted --mrenclave ${MRENCLAVE} --direct evm-read ${ACCO
 echo $RESULT
 echo ""
 
-EXPECTED_RETURN_VALUE="0x000000000000000000047"
+EXPECTED_RETURN_VALUE="0x0000000000000000000000000000000000000000000000000000000000000047"
 
 echo "* Verifying correct return value"
 if (("$RESULT" == "$EXPECTED_RETURN_VALUE")); then
