@@ -27,27 +27,33 @@ use crate::{
 	query_shard_state::QueryShardState,
 	state_snapshot_repository::VersionedStateAccess,
 };
+use itp_stf_state_observer::traits::UpdateState;
 use itp_types::ShardIdentifier;
-use std::vec::Vec;
+use std::{sync::Arc, vec::Vec};
 
 /// Implementation of the `HandleState` trait.
 ///
 /// It's a concurrency wrapper around a state snapshot repository, which handles
 /// access to any shards and state files. The state handler ensures we have thread-safe
 /// concurrent access to that repository.
-pub struct StateHandler<Repository> {
+pub struct StateHandler<Repository, StateObserver> {
 	state_snapshot_repository: RwLock<Repository>,
+	state_observer: Arc<StateObserver>,
 }
 
-impl<Repository> StateHandler<Repository> {
-	pub fn new(state_snapshot_repository: Repository) -> Self {
-		StateHandler { state_snapshot_repository: RwLock::new(state_snapshot_repository) }
+impl<Repository, StateObserver> StateHandler<Repository, StateObserver> {
+	pub fn new(state_snapshot_repository: Repository, state_observer: Arc<StateObserver>) -> Self {
+		StateHandler {
+			state_snapshot_repository: RwLock::new(state_snapshot_repository),
+			state_observer,
+		}
 	}
 }
 
-impl<Repository> HandleState for StateHandler<Repository>
+impl<Repository, StateObserver> HandleState for StateHandler<Repository, StateObserver>
 where
 	Repository: VersionedStateAccess,
+	StateObserver: UpdateState<Repository::StateType>,
 {
 	type WriteLockPayload = Repository;
 	type StateT = Repository::StateType;
@@ -82,18 +88,26 @@ where
 		mut state_lock: RwLockWriteGuard<'_, Self::WriteLockPayload>,
 		shard: &ShardIdentifier,
 	) -> Result<Self::HashType> {
-		state_lock.update(shard, state)
+		let state_hash = state_lock.update(shard, state.clone())?;
+		drop(state_lock);
+
+		self.state_observer.queue_state_update(*shard, state)?;
+		Ok(state_hash)
 	}
 
 	fn reset(&self, state: Self::StateT, shard: &ShardIdentifier) -> Result<Self::HashType> {
 		let mut state_write_lock =
 			self.state_snapshot_repository.write().map_err(|_| Error::LockPoisoning)?;
 
-		state_write_lock.update(shard, state)
+		let state_hash = state_write_lock.update(shard, state.clone())?;
+		drop(state_write_lock);
+
+		self.state_observer.queue_state_update(*shard, state)?;
+		Ok(state_hash)
 	}
 }
 
-impl<Repository> QueryShardState for StateHandler<Repository>
+impl<Repository, StateObserver> QueryShardState for StateHandler<Repository, StateObserver>
 where
 	Repository: VersionedStateAccess,
 {
@@ -117,6 +131,7 @@ mod tests {
 
 	use super::*;
 	use crate::test::mocks::versioned_state_access_mock::VersionedStateAccessMock;
+	use itp_stf_state_observer::mock::UpdateStateMock;
 	use std::{
 		collections::{HashMap, VecDeque},
 		sync::Arc,
@@ -126,7 +141,8 @@ mod tests {
 	type TestState = u64;
 	type TestHash = u64;
 	type TestStateRepository = VersionedStateAccessMock<TestState, TestHash>;
-	type TestStateHandler = StateHandler<TestStateRepository>;
+	type TestStateObserver = UpdateStateMock<TestState>;
+	type TestStateHandler = StateHandler<TestStateRepository, TestStateObserver>;
 
 	#[test]
 	fn load_for_mutation_blocks_any_concurrent_access() {
@@ -171,7 +187,8 @@ mod tests {
 	}
 
 	fn default_state_handler(shard: &ShardIdentifier) -> Arc<TestStateHandler> {
-		Arc::new(TestStateHandler::new(default_repository(shard)))
+		let state_observer = Arc::new(TestStateObserver::default());
+		Arc::new(TestStateHandler::new(default_repository(shard), state_observer))
 	}
 
 	fn default_repository(shard: &ShardIdentifier) -> TestStateRepository {

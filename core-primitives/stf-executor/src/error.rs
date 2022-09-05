@@ -34,6 +34,8 @@ pub enum Error {
 	Sgx(sgx_status_t),
 	#[error("State handling error: {0}")]
 	StateHandler(#[from] itp_stf_state_handler::error::Error),
+	#[error("State observer error: {0}")]
+	StateObserver(#[from] itp_stf_state_observer::error::Error),
 	#[error("Node metadata error: {0:?}")]
 	NodeMetadata(itp_node_api::metadata::Error),
 	#[error("Node metadata provider error: {0:?}")]

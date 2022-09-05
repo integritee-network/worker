@@ -15,6 +15,24 @@
 
 */
 
-pub mod determine_watch_mock;
-pub mod response_channel_mock;
-pub mod send_rpc_response_mock;
+#![cfg_attr(not(feature = "std"), no_std)]
+#![feature(assert_matches)]
+
+#[cfg(all(feature = "std", feature = "sgx"))]
+compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
+
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+extern crate sgx_tstd as std;
+
+// re-export module to properly feature gate sgx and regular std environment
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+pub mod sgx_reexport_prelude {
+	pub use thiserror_sgx as thiserror;
+}
+
+pub mod error;
+pub mod state_observer;
+pub mod traits;
+
+#[cfg(feature = "mocks")]
+pub mod mock;

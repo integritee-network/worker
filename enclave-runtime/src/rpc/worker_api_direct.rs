@@ -21,9 +21,10 @@ use ita_sgx_runtime::Runtime;
 use itp_primitives_cache::{GetPrimitives, GLOBAL_PRIMITIVES_CACHE};
 use itp_rpc::RpcReturnValue;
 use itp_sgx_crypto::Rsa3072Seal;
+use itp_stf_executor::getter_executor::ExecuteGetter;
 use itp_top_pool_author::traits::AuthorApi;
-use itp_types::{DirectRequestStatus, H256};
-use itp_utils::ToHexPrefixed;
+use itp_types::{DirectRequestStatus, Request, ShardIdentifier, H256};
+use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use its_sidechain::rpc_handler::{direct_top_pool_api, import_block_api};
 use jsonrpc_core::{serde_json::json, IoHandler, Params, Value};
 use sidechain_primitives::types::block::SignedBlock;
@@ -43,9 +44,10 @@ fn get_all_rpc_methods_string(io_handler: &IoHandler) -> String {
 	format!("methods: [{}]", method_string)
 }
 
-pub fn public_api_rpc_handler<R>(top_pool_author: Arc<R>) -> IoHandler
+pub fn public_api_rpc_handler<R, G>(top_pool_author: Arc<R>, getter_executor: Arc<G>) -> IoHandler
 where
 	R: AuthorApi<H256, H256> + Send + Sync + 'static,
+	G: ExecuteGetter + Send + Sync + 'static,
 {
 	let io = IoHandler::new();
 
@@ -128,9 +130,17 @@ where
 
 	// state_get
 	let state_get_name: &str = "state_get";
-	io.add_sync_method(state_get_name, |_: Params| {
-		let parsed = "world";
-		Ok(Value::String(format!("hello, {}", parsed)))
+	io.add_sync_method(state_get_name, move |params: Params| {
+		let json_value = match execute_getter_inner(getter_executor.as_ref(), params) {
+			Ok(state_getter_value) => RpcReturnValue {
+				do_watch: false,
+				value: state_getter_value.encode(),
+				status: DirectRequestStatus::Ok,
+			}
+			.to_hex(),
+			Err(error) => compute_hex_encoded_return_error(error.as_str()),
+		};
+		Ok(json!(json_value))
 	});
 
 	// system_health
@@ -161,6 +171,25 @@ where
 	});
 
 	io
+}
+
+fn execute_getter_inner<G: ExecuteGetter>(
+	getter_executor: &G,
+	params: Params,
+) -> Result<Option<Vec<u8>>, String> {
+	let hex_encoded_params = params.parse::<Vec<String>>().map_err(|e| format!("{:?}", e))?;
+
+	let request =
+		Request::from_hex(&hex_encoded_params[0].clone()).map_err(|e| format!("{:?}", e))?;
+
+	let shard: ShardIdentifier = request.shard;
+	let encoded_trusted_getter: Vec<u8> = request.cyphertext;
+
+	let getter_result = getter_executor
+		.execute_getter(&shard, encoded_trusted_getter)
+		.map_err(|e| format!("{:?}", e))?;
+
+	Ok(getter_result)
 }
 
 pub fn sidechain_io_handler<ImportFn, Error>(import_fn: ImportFn) -> IoHandler

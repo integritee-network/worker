@@ -62,6 +62,14 @@ impl DirectClient {
 	}
 }
 
+impl Drop for DirectClient {
+	fn drop(&mut self) {
+		if let Err(e) = self.close() {
+			error!("Failed to close web-socket connection: {:?}", e);
+		}
+	}
+}
+
 impl DirectApi for DirectClient {
 	fn get(&self, request: &str) -> Result<String> {
 		let (port_in, port_out) = channel();
@@ -82,10 +90,6 @@ impl DirectApi for DirectClient {
 			WsClient::connect_watch_with_control(&url, &request, &sender, web_socket_control)
 				.expect("Connection failed")
 		})
-	}
-
-	fn send(&self, request: &str) -> Result<()> {
-		self.web_socket_control.send(request)
 	}
 
 	fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey> {
@@ -149,6 +153,10 @@ impl DirectApi for DirectClient {
 
 		println!("[+] Got metadata of enclave runtime");
 		Ok(metadata)
+	}
+
+	fn send(&self, request: &str) -> Result<()> {
+		self.web_socket_control.send(request)
 	}
 
 	fn close(&self) -> Result<()> {

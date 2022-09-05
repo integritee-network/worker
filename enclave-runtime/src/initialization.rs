@@ -18,13 +18,13 @@
 use crate::{
 	error::{Error, Result as EnclaveResult},
 	global_components::{
-		EnclaveOCallApi, EnclaveRpcConnectionRegistry, EnclaveRpcResponder,
+		EnclaveGetterExecutor, EnclaveOCallApi, EnclaveRpcConnectionRegistry, EnclaveRpcResponder,
 		EnclaveShieldingKeyRepository, EnclaveSidechainApi, EnclaveSidechainBlockImportQueue,
 		EnclaveSidechainBlockImportQueueWorker, EnclaveSidechainBlockImporter,
 		EnclaveSidechainBlockSyncer, EnclaveStateFileIo, EnclaveStateHandler,
-		EnclaveStateKeyRepository, EnclaveStfEnclaveSigner, EnclaveStfExecutor, EnclaveTopPool,
-		EnclaveTopPoolAuthor, EnclaveTopPoolOperationHandler, EnclaveValidatorAccessor,
-		GLOBAL_EXTRINSICS_FACTORY_COMPONENT,
+		EnclaveStateKeyRepository, EnclaveStateObserver, EnclaveStfEnclaveSigner,
+		EnclaveStfExecutor, EnclaveTopPool, EnclaveTopPoolAuthor, EnclaveTopPoolOperationHandler,
+		EnclaveValidatorAccessor, GLOBAL_EXTRINSICS_FACTORY_COMPONENT,
 		GLOBAL_IMMEDIATE_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
 		GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
 		GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT, GLOBAL_RPC_WS_HANDLER_COMPONENT,
@@ -126,8 +126,10 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 		StateSnapshotRepositoryLoader::<EnclaveStateFileIo, StfState, H256>::new(state_file_io);
 	let state_snapshot_repository =
 		state_snapshot_repository_loader.load_snapshot_repository(STATE_SNAPSHOTS_CACHE_SIZE)?;
+	let state_observer = Arc::new(EnclaveStateObserver::new(None));
 
-	let state_handler = Arc::new(StateHandler::new(state_snapshot_repository));
+	let state_handler =
+		Arc::new(StateHandler::new(state_snapshot_repository, state_observer.clone()));
 	GLOBAL_STATE_HANDLER_COMPONENT.initialize(state_handler.clone());
 
 	let ocall_api = Arc::new(OcallApi);
@@ -180,7 +182,8 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 		Arc::new(EnclaveTopPoolOperationHandler::new(top_pool_author.clone(), stf_executor));
 	GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.initialize(top_pool_operation_handler);
 
-	let io_handler = public_api_rpc_handler(top_pool_author);
+	let getter_executor = Arc::new(EnclaveGetterExecutor::new(state_observer));
+	let io_handler = public_api_rpc_handler(top_pool_author, getter_executor);
 	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));
 	GLOBAL_RPC_WS_HANDLER_COMPONENT.initialize(rpc_handler);
 

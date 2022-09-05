@@ -15,6 +15,20 @@
 
 */
 
-pub mod determine_watch_mock;
-pub mod response_channel_mock;
-pub mod send_rpc_response_mock;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
+
+pub type Result<T> = core::result::Result<T, Error>;
+
+use std::boxed::Box;
+
+/// State Observer Error.
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+	#[error("Current state is empty (not set)")]
+	CurrentStateEmpty,
+	#[error("Could not acquire lock, lock is poisoned")]
+	LockPoisoning,
+	#[error(transparent)]
+	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
+}

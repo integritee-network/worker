@@ -3176,6 +3176,7 @@ dependencies = [
  "itp-sgx-crypto",
  "itp-sgx-externalities",
  "itp-stf-state-handler",
+ "itp-stf-state-observer",
  "itp-storage",
  "itp-test",
  "itp-time-utils",
@@ -3202,6 +3203,7 @@ dependencies = [
  "itp-sgx-crypto",
  "itp-sgx-externalities",
  "itp-sgx-io",
+ "itp-stf-state-observer",
  "itp-time-utils",
  "itp-types",
  "lazy_static",
@@ -3213,6 +3215,19 @@ dependencies = [
  "sgx_tstd",
  "sgx_types",
  "sp-core",
+ "thiserror 1.0.32",
+ "thiserror 1.0.9",
+]
+
+[[package]]
+name = "itp-stf-state-observer"
+version = "0.8.0"
+dependencies = [
+ "itp-types",
+ "log 0.4.17",
+ "parity-scale-codec",
+ "sgx_tstd",
+ "sgx_types",
  "thiserror 1.0.32",
  "thiserror 1.0.9",
 ]
