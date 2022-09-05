@@ -58,7 +58,7 @@ CLIENTWORKER="${CLIENT_BIN} -p ${NPORT} -P ${WORKERPORT} -u ${NODEURL} -U ${WORK
 
 
 # this will always take the first MRENCLAVE found in the registry !!
-read -r MRENCLAVE <<< "$($CLIENT list-workers | awk '/  MRENCLAVE: / { print $2; exit }')"
+read -r MRENCLAVE <<< "$($CLIENT_BIN list-workers | awk '/  MRENCLAVE: / { print $2; exit }')"
 echo "Reading MRENCLAVE from worker list: ${MRENCLAVE}"
 
 ACCOUNTALICE=//Alice
