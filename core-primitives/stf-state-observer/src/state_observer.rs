@@ -34,7 +34,7 @@ use std::{collections::HashMap, vec::Vec};
 /// It stores Arc<> of states to avoid any copies (state can get very large).
 #[derive(Default)]
 pub struct StateObserver<StateType> {
-	queued_state_updates: RwLock<Vec<(ShardIdentifier, StateType)>>,
+	queued_state_updates: RwLock<HashMap<ShardIdentifier, StateType>>,
 	current_state: RwLock<HashMap<ShardIdentifier, StateType>>,
 }
 
@@ -59,7 +59,7 @@ impl<StateType> StateObserver<StateType> {
 		let mut update_queue_lock =
 			self.queued_state_updates.write().map_err(|_| Error::LockPoisoning)?;
 
-		let state_updates: Vec<_> = update_queue_lock.drain(..).collect();
+		let state_updates: Vec<_> = update_queue_lock.drain().collect();
 		drop(update_queue_lock);
 
 		if !state_updates.is_empty() {
@@ -100,7 +100,7 @@ impl<StateType> UpdateState<StateType> for StateObserver<StateType> {
 	fn queue_state_update(&self, shard: ShardIdentifier, state: StateType) -> Result<()> {
 		let mut update_queue_lock =
 			self.queued_state_updates.write().map_err(|_| Error::LockPoisoning)?;
-		update_queue_lock.push((shard, state));
+		update_queue_lock.insert(shard, state);
 		Ok(())
 	}
 }
@@ -144,6 +144,7 @@ mod tests {
 		let state_observer = StateObserver::<TestState>::new(Some((shard(), 31)));
 		state_observer.queue_state_update(shard(), 42u64).unwrap();
 		state_observer.queue_state_update(shard(), 57u64).unwrap();
+		assert_eq!(1, state_observer.queued_state_updates.read().unwrap().len());
 		assert_eq!(state_observer.observe_state(&shard(), |s| *s).unwrap(), 57u64);
 	}
 
