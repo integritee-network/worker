@@ -61,7 +61,7 @@ pub fn create_ra_report_and_signature(
 		Ok(r) => Ok(r),
 		Err(e) => {
 			error!("create_ra_report_and_signature failure: {:?}", e);
-			return Err(e.into())
+			Err(e.into())
 		},
 	}
 }

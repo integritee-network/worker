@@ -15,9 +15,6 @@
 
 */
 
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-use crate::sgx_reexport_prelude::*;
-
 pub type Hash = sp_core::H256;
 
 pub fn hash_from_slice(hash_slize: &[u8]) -> Hash {

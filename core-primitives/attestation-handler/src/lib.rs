@@ -33,9 +33,6 @@ pub mod sgx_reexport_prelude {
 }
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
-use crate::sgx_reexport_prelude::*;
-
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub mod attestation_handler;
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
