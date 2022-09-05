@@ -98,3 +98,5 @@ else
     echo "Smart contract return value is wrong (expected: $EXPECTED_RETURN_VALUE, actual: $RESULT)"
     exit 1
 fi
+
+exit 0
