@@ -54,8 +54,6 @@ enclave {
 
         public sgx_status_t trigger_parentchain_block_import();
 
-        public sgx_status_t execute_trusted_getters();
-
         public sgx_status_t execute_trusted_calls();
 
         public sgx_status_t sync_parentchain(

@@ -27,7 +27,6 @@ use crate::{
 	initialized_service::{
 		start_is_initialized_server, InitializationHandler, IsInitialized, TrackInitialization,
 	},
-	interval_scheduling::schedule_on_repeating_intervals,
 	ocall_bridge::{
 		bridge_api::Bridge as OCallBridge, component_factory::OCallBridgeComponentFactory,
 	},
@@ -96,7 +95,6 @@ mod enclave;
 mod error;
 mod globals;
 mod initialized_service;
-mod interval_scheduling;
 mod ocall_bridge;
 mod parentchain_block_syncer;
 mod prometheus_metrics;
@@ -459,8 +457,9 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		let parentchain_block_syncer =
 			Arc::new(ParentchainBlockSyncer::new(node_api.clone(), enclave.clone()));
 		let mut last_synced_header = parentchain_block_syncer.sync_parentchain(last_synced_header);
+
 		// ------------------------------------------------------------------------
-		// initialize the sidechain
+		// Initialize the sidechain
 		if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain {
 			last_synced_header = sidechain_init_block_production(
 				enclave.clone(),
@@ -475,15 +474,12 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		// ------------------------------------------------------------------------
 		// start parentchain syncing loop (subscribe to header updates)
 		let api4 = node_api.clone();
-		let parentchain_sync_enclave_api = enclave.clone();
 		thread::Builder::new()
 			.name("parentchain_sync_loop".to_owned())
 			.spawn(move || {
-				if let Err(e) = subscribe_to_parentchain_new_headers(
-					parentchain_sync_enclave_api,
-					&api4,
-					last_synced_header,
-				) {
+				if let Err(e) =
+					subscribe_to_parentchain_new_headers(enclave, &api4, last_synced_header)
+				{
 					error!("Parentchain block syncing terminated with a failure: {:?}", e);
 				}
 				println!("[!] Parentchain block syncing has terminated");
@@ -501,19 +497,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			enclave.clone().as_ref(),
 			&teeracle_tokio_handle,
 		);
-	}
-	//-------------------------------------------------------------------------
-	// start execution of trusted getters
-	if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain
-		|| WorkerModeProvider::worker_mode() == WorkerMode::OffChainWorker
-	{
-		let trusted_getters_enclave_api = enclave;
-		thread::Builder::new()
-			.name("trusted_getters_execution".to_owned())
-			.spawn(move || {
-				start_interval_trusted_getter_execution(trusted_getters_enclave_api.as_ref())
-			})
-			.unwrap();
 	}
 
 	// ------------------------------------------------------------------------
@@ -570,22 +553,6 @@ fn spawn_worker_for_shard_polling<InitializationHandler>(
 			thread::sleep(Duration::from_secs(POLL_INTERVAL_SECS));
 		}
 	});
-}
-
-/// Starts the execution of trusted getters in repeating intervals.
-///
-/// The getters are executed in a pre-defined slot duration.
-fn start_interval_trusted_getter_execution<E: Sidechain>(enclave_api: &E) {
-	use itp_settings::enclave::TRUSTED_GETTERS_SLOT_DURATION;
-
-	schedule_on_repeating_intervals(
-		|| {
-			if let Err(e) = enclave_api.execute_trusted_getters() {
-				error!("Execution of trusted getters failed: {:?}", e);
-			}
-		},
-		TRUSTED_GETTERS_SLOT_DURATION,
-	);
 }
 
 type Events = Vec<frame_system::EventRecord<Event, Hash>>;

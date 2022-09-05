@@ -24,9 +24,10 @@ use crate::{
 	sync::tests::{enclave_rw_lock_works, sidechain_rw_lock_works},
 	test::{
 		cert_tests::*,
+		direct_rpc_tests,
 		fixtures::test_setup::{enclave_call_signer, test_setup, TestTopPoolAuthor},
 		mocks::types::TestStateKeyRepo,
-		sidechain_aura_tests, top_pool_tests, direct_rpc_tests,
+		sidechain_aura_tests, top_pool_tests,
 	},
 	tls_ra,
 };
@@ -41,7 +42,6 @@ use itp_node_api::metadata::{
 	metadata_mocks::NodeMetadataMock, pallet_sidechain::SidechainCallIndexes,
 	provider::NodeMetadataRepository,
 };
-use itp_settings::enclave::MAX_TRUSTED_OPS_EXEC_DURATION;
 use itp_sgx_crypto::{Aes, StateCrypto};
 use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use itp_stf_executor::{
@@ -68,7 +68,7 @@ use sidechain_primitives::{
 };
 use sp_core::{crypto::Pair, ed25519 as spEd25519, H256};
 use sp_runtime::traits::Header as HeaderT;
-use std::{string::String, sync::Arc, vec::Vec};
+use std::{string::String, sync::Arc, time::Duration, vec::Vec};
 
 type TestStfExecutor =
 	StfExecutor<OcallApi, HandleStateMock, NodeMetadataRepository<NodeMetadataMock>>;
@@ -658,7 +658,7 @@ fn execute_trusted_calls(
 			&top_pool_calls,
 			&latest_parentchain_header(),
 			&shard,
-			MAX_TRUSTED_OPS_EXEC_DURATION,
+			Duration::from_millis(600),
 			|s| {
 				let mut sidechain_db = SidechainDB::<SignedBlock, SgxExternalities>::new(s);
 				sidechain_db
