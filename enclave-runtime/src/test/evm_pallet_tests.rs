@@ -16,13 +16,12 @@
 
 use crate::test::fixtures::test_setup::test_setup;
 use core::str::FromStr;
-use ita_sgx_runtime::{AddressMapping, HashedAddressMapping, Index};
+use ita_sgx_runtime::{AddressMapping, HashedAddressMapping, Index, System};
 use ita_stf::{
 	evm_helpers::{
 		create_code_hash, evm_create2_address, evm_create_address, get_evm_account_codes,
 		get_evm_account_storages,
 	},
-	helpers::{account_data, account_nonce},
 	test_genesis::{endow, endowed_account as funded_pair},
 	KeyPair, State, Stf, TrustedCall,
 };
@@ -54,7 +53,10 @@ pub fn test_evm_call() {
 	let destination_evm_acc = H160::from_str("1000000000000000000000000000000000000001").unwrap();
 	let destination_evm_substrate_addr =
 		ita_sgx_runtime::HashedAddressMapping::into_account_id(destination_evm_acc);
-	assert!(state.execute_with(|| account_data(&destination_evm_substrate_addr).is_none()));
+	assert_eq!(
+		state.execute_with(|| System::account(&destination_evm_substrate_addr).data.free),
+		0
+	);
 
 	let transfer_value: u128 = 1_000_000_000;
 
@@ -78,7 +80,7 @@ pub fn test_evm_call() {
 	// then
 	assert_eq!(
 		transfer_value,
-		state.execute_with(|| account_data(&destination_evm_substrate_addr).unwrap().free)
+		state.execute_with(|| System::account(&destination_evm_substrate_addr).data.free)
 	);
 }
 
@@ -282,7 +284,7 @@ pub fn test_evm_create() {
 	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
 
 	// Should be the first call of the evm account
-	let nonce = state.execute_with(|| account_nonce(&sender_evm_substrate_addr));
+	let nonce = state.execute_with(|| System::account_nonce(&sender_evm_substrate_addr));
 	assert_eq!(nonce, 0);
 	let execution_address = evm_create_address(sender_evm_acc, nonce);
 	Stf::execute(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
@@ -297,7 +299,7 @@ pub fn test_evm_create() {
 
 	// Ensure the nonce of the evm account has been increased by one
 	// Should be the first call of the evm account
-	let nonce = state.execute_with(|| account_nonce(&sender_evm_substrate_addr));
+	let nonce = state.execute_with(|| System::account_nonce(&sender_evm_substrate_addr));
 	assert_eq!(nonce, 1);
 }
 

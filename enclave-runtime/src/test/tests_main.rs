@@ -28,13 +28,9 @@ use crate::{
 	tls_ra,
 };
 use codec::{Decode, Encode};
+use ita_sgx_runtime::Parentchain;
 use ita_stf::{
-	helpers::{
-		account_key_hash, get_parentchain_blockhash, get_parentchain_number,
-		get_parentchain_parenthash,
-	},
-	stf_sgx_tests,
-	test_genesis::endowed_account as funded_pair,
+	helpers::account_key_hash, stf_sgx_tests, test_genesis::endowed_account as funded_pair,
 	AccountInfo, ShardIdentifier, State, StatePayload, StateTypeDiff, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetter, TrustedOperation,
 };
@@ -499,9 +495,9 @@ fn test_call_set_update_parentchain_block() {
 
 	Stf::update_parentchain_block(&mut state, header.clone()).unwrap();
 
-	assert_eq!(header.hash(), state.execute_with(|| get_parentchain_blockhash().unwrap()));
-	assert_eq!(parent_hash, state.execute_with(|| get_parentchain_parenthash().unwrap()));
-	assert_eq!(block_number, state.execute_with(|| get_parentchain_number().unwrap()));
+	assert_eq!(header.hash(), state.execute_with(|| Parentchain::block_hash()));
+	assert_eq!(parent_hash, state.execute_with(|| Parentchain::parent_hash()));
+	assert_eq!(block_number, state.execute_with(|| Parentchain::block_number()));
 }
 
 fn test_signature_must_match_public_sender_in_call() {

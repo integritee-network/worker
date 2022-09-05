@@ -15,8 +15,8 @@
 
 */
 
-use crate::{helpers::get_account_info, StfError};
-use ita_sgx_runtime::{Balance, Runtime};
+use crate::StfError;
+use ita_sgx_runtime::{Balance, Runtime, System};
 use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use itp_storage::storage_value_key;
 use log::*;
@@ -114,11 +114,8 @@ pub fn endow(
 			.unwrap();
 
 			let print_public: [u8; 32] = account.clone().into();
-			if let Some(info) = get_account_info(&print_public.into()) {
-				debug!("{:?} balance is {}", print_public, info.data.free);
-			} else {
-				debug!("{:?} balance is zero", print_public);
-			}
+			let account_info = System::account(&&print_public.into());
+			debug!("{:?} balance is {}", print_public, account_info.data.free);
 		}
 	});
 }

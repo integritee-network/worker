@@ -19,16 +19,13 @@
 use crate::test_genesis::test_genesis_setup;
 
 use crate::{
-	helpers::{
-		account_data, account_nonce, enclave_signer_account, ensure_enclave_signer_account,
-		ensure_root, get_account_info, increment_nonce, root, validate_nonce,
-	},
+	helpers::{enclave_signer_account, ensure_enclave_signer_account},
 	AccountData, AccountId, Getter, Index, ParentchainHeader, PublicGetter, ShardIdentifier, State,
 	StateTypeDiff, Stf, StfError, StfResult, TrustedCall, TrustedCallSigned, TrustedGetter,
 	ENCLAVE_ACCOUNT_KEY,
 };
 use codec::Encode;
-use ita_sgx_runtime::Runtime;
+use ita_sgx_runtime::{Runtime, Sudo, System};
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_storage::storage_value_key;
 use itp_types::OpaqueCall;
@@ -39,7 +36,7 @@ use sidechain_primitives::types::{BlockHash, BlockNumber as SidechainBlockNumber
 use sp_io::hashing::blake2_256;
 use sp_runtime::MultiAddress;
 use std::{format, prelude::v1::*, vec};
-use support::traits::UnfilteredDispatchable;
+use support::{ensure, traits::UnfilteredDispatchable};
 
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
@@ -97,50 +94,35 @@ impl Stf {
 	pub fn get_state(ext: &mut impl SgxExternalitiesTrait, getter: Getter) -> Option<Vec<u8>> {
 		ext.execute_with(|| match getter {
 			Getter::trusted(g) => match g.getter {
-				TrustedGetter::free_balance(who) =>
-					if let Some(info) = get_account_info(&who) {
-						debug!("TrustedGetter free_balance");
-						debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
-						debug!("Account free balance is {}", info.data.free);
-						Some(info.data.free.encode())
-					} else {
-						None
-					},
-				TrustedGetter::reserved_balance(who) =>
-					if let Some(info) = get_account_info(&who) {
-						debug!("TrustedGetter reserved_balance");
-						debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
-						debug!("Account reserved balance is {}", info.data.reserved);
-						Some(info.data.reserved.encode())
-					} else {
-						None
-					},
-				TrustedGetter::nonce(who) =>
-					if let Some(info) = get_account_info(&who) {
-						debug!("TrustedGetter nonce");
-						debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
-						debug!("Account nonce is {}", info.nonce);
-						Some(info.nonce.encode())
-					} else {
-						None
-					},
+				TrustedGetter::free_balance(who) => {
+					let info = System::account(&who);
+					debug!("TrustedGetter free_balance");
+					debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
+					debug!("Account free balance is {}", info.data.free);
+					Some(info.data.free.encode())
+				},
+
+				TrustedGetter::reserved_balance(who) => {
+					let info = System::account(&who);
+					debug!("TrustedGetter reserved_balance");
+					debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
+					debug!("Account reserved balance is {}", info.data.reserved);
+					Some(info.data.reserved.encode())
+				},
+				TrustedGetter::nonce(who) => {
+					let nonce = System::account_nonce(&who);
+					debug!("TrustedGetter nonce");
+					debug!("Account nonce is {}", nonce);
+					Some(nonce.encode())
+				},
 				#[cfg(feature = "evm")]
 				TrustedGetter::evm_nonce(who) => {
 					let evm_account = get_evm_account(&who);
 					let evm_account = HashedAddressMapping::into_account_id(evm_account);
-					let maybe_nonce = if let Some(info) = get_account_info(&evm_account) {
-						debug!("TrustedGetter evm_nonce");
-						debug!(
-							"AccountInfo for {} is {:?}",
-							account_id_to_string(&evm_account),
-							info
-						);
-						debug!("Account nonce is {}", info.nonce);
-						Some(info.nonce.encode())
-					} else {
-						None
-					};
-					maybe_nonce
+					let nonce = System::account_nonce(&evm_account);
+					debug!("TrustedGetter evm_nonce");
+					debug!("Account nonce is {}", nonce);
+					Some(nonce.encode())
 				},
 				#[cfg(feature = "evm")]
 				TrustedGetter::evm_account_codes(_who, evm_account) =>
@@ -178,10 +160,13 @@ impl Stf {
 		let call_hash = blake2_256(&call.encode());
 		ext.execute_with(|| {
 			let sender = call.call.sender_account().clone();
-			validate_nonce(&sender, call.nonce)?;
+			ensure!(
+				call.nonce == System::account_nonce(&sender),
+				StfError::InvalidNonce(call.nonce)
+			);
 			match call.call {
 				TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
-					ensure_root(root)?;
+					ensure!(is_root(&root), StfError::MissingPrivileges(root));
 					debug!(
 						"balance_set_balance({}, {}, {})",
 						account_id_to_string(&who),
@@ -207,11 +192,6 @@ impl Stf {
 						account_id_to_string(&to),
 						value
 					);
-					if let Some(info) = get_account_info(&from) {
-						debug!("sender balance is {}", info.data.free);
-					} else {
-						debug!("sender balance is zero");
-					}
 					ita_sgx_runtime::BalancesCall::<Runtime>::transfer {
 						dest: MultiAddress::Id(to),
 						value,
@@ -310,7 +290,7 @@ impl Stf {
 						value
 					);
 					let nonce_evm_account =
-						account_nonce(&HashedAddressMapping::into_account_id(source));
+						System::account_nonce(&HashedAddressMapping::into_account_id(source));
 					ita_sgx_runtime::EvmCall::<Runtime>::create {
 						source,
 						init,
@@ -365,7 +345,7 @@ impl Stf {
 					Ok(())
 				},
 			}?;
-			increment_nonce(&sender);
+			System::inc_account_nonce(&sender);
 			Ok(())
 		})
 	}
@@ -389,50 +369,32 @@ impl Stf {
 	}
 
 	fn shield_funds(account: AccountId, amount: u128) -> StfResult<()> {
-		match get_account_info(&account) {
-			Some(account_info) => ita_sgx_runtime::BalancesCall::<Runtime>::set_balance {
-				who: MultiAddress::Id(account),
-				new_free: account_info.data.free + amount,
-				new_reserved: account_info.data.reserved,
-			}
-			.dispatch_bypass_filter(ita_sgx_runtime::Origin::root())
-			.map_err(|e| StfError::Dispatch(format!("Shield funds error: {:?}", e.error)))?,
-			None => {
-				debug!(
-					"Account {} does not exist yet, initializing by setting free balance to {}",
-					account_id_to_string(&account),
-					amount
-				);
-				ita_sgx_runtime::BalancesCall::<Runtime>::set_balance {
-					who: MultiAddress::Id(account),
-					new_free: amount,
-					new_reserved: 0,
-				}
-				.dispatch_bypass_filter(ita_sgx_runtime::Origin::root())
-				.map_err(|e| StfError::Dispatch(format!("Shield funds error: {:?}", e.error)))?
-			},
-		};
+		let account_info = System::account(&account);
+		ita_sgx_runtime::BalancesCall::<Runtime>::set_balance {
+			who: MultiAddress::Id(account),
+			new_free: account_info.data.free + amount,
+			new_reserved: account_info.data.reserved,
+		}
+		.dispatch_bypass_filter(ita_sgx_runtime::Origin::root())
+		.map_err(|e| StfError::Dispatch(format!("Shield funds error: {:?}", e.error)))?;
+
 		Ok(())
 	}
 
 	fn unshield_funds(account: AccountId, amount: u128) -> StfResult<()> {
-		match get_account_info(&account) {
-			Some(account_info) => {
-				if account_info.data.free < amount {
-					return Err(StfError::MissingFunds)
-				}
-
-				ita_sgx_runtime::BalancesCall::<Runtime>::set_balance {
-					who: MultiAddress::Id(account),
-					new_free: account_info.data.free - amount,
-					new_reserved: account_info.data.reserved,
-				}
-				.dispatch_bypass_filter(ita_sgx_runtime::Origin::root())
-				.map_err(|e| StfError::Dispatch(format!("Unshield funds error: {:?}", e.error)))?;
-				Ok(())
-			},
-			None => Err(StfError::InexistentAccount(account)),
+		let account_info = System::account(&account);
+		if account_info.data.free < amount {
+			return Err(StfError::MissingFunds)
 		}
+
+		ita_sgx_runtime::BalancesCall::<Runtime>::set_balance {
+			who: MultiAddress::Id(account),
+			new_free: account_info.data.free - amount,
+			new_reserved: account_info.data.reserved,
+		}
+		.dispatch_bypass_filter(ita_sgx_runtime::Origin::root())
+		.map_err(|e| StfError::Dispatch(format!("Unshield funds error: {:?}", e.error)))?;
+		Ok(())
 	}
 
 	pub fn update_storage(ext: &mut impl SgxExternalitiesTrait, map_update: &StateTypeDiff) {
@@ -491,7 +453,7 @@ impl Stf {
 	}
 
 	pub fn get_root(ext: &mut impl SgxExternalitiesTrait) -> AccountId {
-		ext.execute_with(|| root())
+		ext.execute_with(|| Sudo::key().expect("No root account"))
 	}
 
 	pub fn get_enclave_account(ext: &mut impl SgxExternalitiesTrait) -> AccountId {
@@ -500,17 +462,14 @@ impl Stf {
 
 	pub fn account_nonce(ext: &mut impl SgxExternalitiesTrait, account: &AccountId) -> Index {
 		ext.execute_with(|| {
-			let nonce = account_nonce(account);
+			let nonce = System::account_nonce(account);
 			debug!("Account {} nonce is {}", account_id_to_string(&account), nonce);
 			nonce
 		})
 	}
 
-	pub fn account_data(
-		ext: &mut impl SgxExternalitiesTrait,
-		account: &AccountId,
-	) -> Option<AccountData> {
-		ext.execute_with(|| account_data(account))
+	pub fn account_data(ext: &mut impl SgxExternalitiesTrait, account: &AccountId) -> AccountData {
+		ext.execute_with(|| System::account(account).data)
 	}
 }
 
@@ -524,6 +483,9 @@ pub fn shards_key_hash() -> Vec<u8> {
 	vec![]
 }
 
+pub fn is_root(account: &AccountId) -> bool {
+	Sudo::key().map_or(false, |k| account == &k)
+}
 /// Trait extension to simplify sidechain data access from the STF.
 ///
 /// This should be removed when the refactoring of the STF has been done: #269

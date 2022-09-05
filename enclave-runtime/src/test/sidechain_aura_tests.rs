@@ -221,7 +221,7 @@ pub fn produce_sidechain_block_and_import_it() {
 	);
 
 	let mut state = state_handler.load(&shard_id).unwrap();
-	let free_balance = Stf::account_data(&mut state, &receiver.public().into()).unwrap().free;
+	let free_balance = Stf::account_data(&mut state, &receiver.public().into()).free;
 	assert_eq!(free_balance, transfered_amount);
 }
 
