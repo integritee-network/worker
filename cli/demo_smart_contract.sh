@@ -13,16 +13,22 @@
 #  export RUST_LOG_LOG=integritee-cli=info,ita_stf=info
 #  demo_smart_contract.sh -p <NODEPORT> -P <WORKERPORT>
 
-while getopts ":m:p:P:" opt; do
+while getopts ":p:A:u:V:C:" opt; do
     case $opt in
-        m)
-            READMRENCLAVE=$OPTARG
-            ;;
         p)
             NPORT=$OPTARG
             ;;
-        P)
-            RPORT=$OPTARG
+        A)
+            WORKERPORT=$OPTARG
+            ;;
+        u)
+            NODEURL=$OPTARG
+            ;;
+        V)
+            WORKERURL=$OPTARG
+            ;;
+        C)
+            CLIENT_BIN=$OPTARG
             ;;
     esac
 done
@@ -33,46 +39,64 @@ INCFUNTION="371303c0"
 DEFAULTFUNCTION="371303c1"
 ADDFUNCTION="1003e2d20000000000000000000000000000000000000000000000000000000000000003"
 
+
 # using default port if none given as arguments
 NPORT=${NPORT:-9944}
-RPORT=${RPORT:-2000}
+NODEURL=${NODEURL:-"ws://127.0.0.1"}
 
-echo "Using node-port ${NPORT}"
-echo "Using trusted-worker-port ${RPORT}"
+WORKERPORT=${WORKERPORT:-2000}
+WORKERURL=${WORKERURL:-"wss://127.0.0.1"}
 
-AMOUNTSHIELD=50000000000
-AMOUNTTRANSFER=40000000000
 
-CLIENT="./../bin/integritee-cli -p ${NPORT} -P ${RPORT}"
+CLIENT_BIN=${CLIENT_BIN:-"./../bin/integritee-cli"}
+
+echo "Using client binary ${CLIENT_BIN}"
+echo "Using node uri ${NODEURL}:${NPORT}"
+echo "Using trusted-worker uri ${WORKERURL}:${WORKERPORT}"
+
+CLIENTWORKER="${CLIENT_BIN} -p ${NPORT} -P ${WORKERPORT} -u ${NODEURL} -U ${WORKERURL}"
+
 
 # this will always take the first MRENCLAVE found in the registry !!
-read -r MRENCLAVE <<< "$($CLIENT list-workers | awk '/  MRENCLAVE: / { print $2; exit }')"
+read -r MRENCLAVE <<< "$($CLIENTWORKER list-workers | awk '/  MRENCLAVE: / { print $2; exit }')"
 echo "Reading MRENCLAVE from worker list: ${MRENCLAVE}"
 
 ACCOUNTALICE=//Alice
 
 echo "Create smart contract"
-${CLIENT} trusted --mrenclave ${MRENCLAVE} --direct evm-create ${ACCOUNTALICE} ${SMARTCONTRACT}
+${CLIENTWORKER} trusted --mrenclave ${MRENCLAVE} --direct evm-create ${ACCOUNTALICE} ${SMARTCONTRACT}
 echo ""
 
 echo "Get storage"
-${CLIENT} trusted --mrenclave ${MRENCLAVE} --direct evm-read ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f
+${CLIENTWORKER} trusted --mrenclave ${MRENCLAVE} evm-read ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f
 echo ""
 
 echo "Call inc function"
-${CLIENT} trusted --mrenclave ${MRENCLAVE} --direct evm-call ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f ${INCFUNTION}
+${CLIENTWORKER} trusted --mrenclave ${MRENCLAVE} --direct evm-call ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f ${INCFUNTION}
 echo ""
 
 echo "Get storage"
-${CLIENT} trusted --mrenclave ${MRENCLAVE} --direct evm-read ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f
+${CLIENTWORKER} trusted --mrenclave ${MRENCLAVE} evm-read ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f
 echo ""
 
 echo "Call add 3 function"
-${CLIENT} trusted --mrenclave ${MRENCLAVE} --direct evm-call ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f ${ADDFUNCTION}
+${CLIENTWORKER} trusted --mrenclave ${MRENCLAVE} --direct evm-call ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f ${ADDFUNCTION}
 echo ""
 
 echo "Get storage"
-${CLIENT} trusted --mrenclave ${MRENCLAVE} --direct evm-read ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f
+RESULT=$(${CLIENTWORKER} trusted --mrenclave ${MRENCLAVE} evm-read ${ACCOUNTALICE} 0x8a50db1e0f9452cfd91be8dc004ceb11cb08832f | xargs)
+echo $RESULT
 echo ""
+
+EXPECTED_RETURN_VALUE="0x0000000000000000000000000000000000000000000000000000000000000026"
+
+echo "* Verifying correct return value"
+if (("$RESULT" == "$EXPECTED_RETURN_VALUE")); then
+    echo "Smart contract return value is correct ($RESULT)"
+    exit 0
+else
+    echo "Smart contract return value is wrong (expected: $EXPECTED_RETURN_VALUE, actual: $RESULT)"
+    exit 1
+fi
 
 exit 0

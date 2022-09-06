@@ -47,14 +47,14 @@ impl EvmCallCommands {
 		let sender = get_pair_from_str(trusted_args, &self.from);
 		let sender_acc: AccountId = sender.public().into();
 
-		println!("senders ss58 is {}", sender.public().to_ss58check());
+		info!("senders ss58 is {}", sender.public().to_ss58check());
 
 		let mut sender_evm_acc_slice: [u8; 20] = [0; 20];
 		sender_evm_acc_slice
 			.copy_from_slice((<[u8; 32]>::from(sender_acc.clone())).get(0..20).unwrap());
 		let sender_evm_acc: H160 = sender_evm_acc_slice.into();
 
-		println!("senders evm account is {}", sender_evm_acc);
+		info!("senders evm account is {}", sender_evm_acc);
 
 		let execution_address =
 			H160::from_slice(&Vec::from_hex(self.execution_address.to_string()).unwrap());
