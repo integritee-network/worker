@@ -5,7 +5,7 @@ Integritee worker for Integritee [node](https://github.com/integritee-network/in
 This is part of [Integritee](https://integritee.network)
 
 ## Build and Run
-Please see our [Integritee Book](https://book.integritee.network/howto_worker.html) to learn how to build and run this.
+Please see our [Integritee Book](https://docs.integritee.network/5-nodes-and-infrastructure/5.2-how-to-set-up-and-run-a-sidechain-validator-node) to learn how to build and run this.
 
 To start multiple worker and a node with one simple command: Check out [this README](local-setup/README.md).
 
@@ -50,7 +50,7 @@ export RUST_LOG=debug,substrate_api_client=warn,sp_io=warn,ws=warn,integritee_se
 ./integritee-service --clean-reset -r 2002 -p 9979 -w 2001 run 2>&1 | tee worker.log
 ```
 
-wait until you see the worker synching a few blocks. then check MRENCLAVE and update bot-community.py constants accordingly
+wait until you see the worker syncing a few blocks. then check MRENCLAVE and update bot-community.py constants accordingly
 
 ```
 ./integritee-cli -p 9979 list-workers

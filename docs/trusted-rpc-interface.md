@@ -1,7 +1,7 @@
 # Trusted Rpc Interface
 This document contains information about the trusted worker json-rpc interface. The trusted worker server is a tls websocket directly running in the enclave.
 
-The server expects an json-rpc call of the following format:
+The server expects a json-rpc call of the following format:
 
 `{"jsonrpc": "2.0", "method": "author_pendingExtrinsics", "params": ["5Ki5bf4dcY9eyrqBRe6Xbr5accvo42XZb86eXv5mkTJo"], "id": 1}`
 
@@ -10,17 +10,17 @@ The rpc method names of the worker are chosen such that they match the naming sc
 
 ### General
 - `rpc_methods` (no params): List all available (though maybe unimplemented) rpc methods. Example: `{"jsonrpc": "2.0", "method": "rpc_methods","id": 1}`
-- `author_getShieldingKey` (no params): Retrieves the public shielding key, which the client can use to encrypt it's messages before sending it to the worker.
+- `author_getShieldingKey` (no params): Retrieves the public shielding key, which the client can use to encrypt its messages before sending it to the worker.
 - `author_getMuRaUrl` (no params): Retrieves the mutual remote attestation url of the worker (Only needed by fellow validateers).
 - `author_getUntrustedUrl` (no params): Retrieves the untrusted ws url of the worker (Only needed by fellow validateers).
 
 ### Sidechain related
-A sidechain related call always enters our so called trusted operation pool. To provide as much privacy as possible, all calls are expected to be encrypted (with the shielding key that can be retrieved with `author_getShieldingKey`) and have the exact same structure, be it a getter or a call. This adds some complexity to the request structure but allows to expand calls and getters without having to change any networking and caching functionalities in our codebase (see the [Turtorial](https://book.integritee.network/howto_stf.html) on how to expand `Getters` and `Calls` according to the users need).
+A sidechain related call always enters our so called trusted operation pool. To provide as much privacy as possible, all calls are expected to be encrypted (with the shielding key that can be retrieved with `author_getShieldingKey`) and have the exact same structure, be it a getter or a call. This adds some complexity to the request structure but allows to expand calls and getters without having to change any networking and caching functionalities in our codebase (see the [Tutorial](https://docs.integritee.network/4-development/4.4-sdk/4.4.4-custom-business-logic-stf) on how to expand `Getters` and `Calls` according to the users need).
 
 #### Request
 All rpc params are expected to be a [substrate codec](https://docs.substrate.io/v3/advanced/scale-codec/) encoded [Request](https://github.com/integritee-network/worker/blob/17e9776cbf09d0a1dd765546f27fc4d3c7bfefc4/core-primitives/types/src/lib.rs#L64-L68), with the parameters:
 - shard :  `H256` : H256 of a state
-- cyphertext : `Vec<u8>` : with the shielding key encrypted `TrustedOperation`.
+- ciphertext : `Vec<u8>` : with the shielding key encrypted `TrustedOperation`.
 
 
 #### Trusted Operation
@@ -39,7 +39,7 @@ A [`TrustedCallSigned`](https://github.com/integritee-network/worker/blob/17e977
 - the `TrustedCall` itself
 
 The current implementation of the [`TrustedCall`](https://github.com/integritee-network/worker/blob/17e9776cbf09d0a1dd765546f27fc4d3c7bfefc4/app-libs/stf/src/lib.rs#L169-L176) supports the following calls:
-- `balance_set_balance` set the balance of an account (signer, beneficary, free balance, reserved balance)
+- `balance_set_balance` set the balance of an account (signer, beneficiary, free balance, reserved balance)
 - `balance_transfer` transfer balance from first account to second account
 - `balance_unshield` transfer balance from sidechain (incognito) account to parentchain (public) account.
 - `balance_shield` transfer balance from parentchain (public) account to sidechain (incognito) account.
