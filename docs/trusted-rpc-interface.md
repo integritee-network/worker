@@ -20,7 +20,7 @@ A sidechain related call always enters our so called trusted operation pool. To 
 #### Request
 All rpc params are expected to be a [substrate codec](https://docs.substrate.io/v3/advanced/scale-codec/) encoded [Request](https://github.com/integritee-network/worker/blob/17e9776cbf09d0a1dd765546f27fc4d3c7bfefc4/core-primitives/types/src/lib.rs#L64-L68), with the parameters:
 - shard :  `H256` : H256 of a state
-- ciphertext : `Vec<u8>` : with the shielding key encrypted `TrustedOperation`.
+- cyphertext : `Vec<u8>` : with the shielding key encrypted `TrustedOperation`.
 
 
 #### Trusted Operation
