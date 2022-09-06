@@ -451,7 +451,9 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	initialization_handler.registered_on_parentchain();
 
 	let last_synced_header = init_light_client(&node_api, enclave.clone()).unwrap();
-	println!("*** [+] Finished syncing light client, syncing parentchain...");
+
+	if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
+		println!("*** [+] Finished syncing light client, syncing parentchain...");
 
 	// Syncing all parentchain blocks, this might take a while..
 	let parentchain_block_syncer =
@@ -471,6 +473,25 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		);
 	}
 
+		// ------------------------------------------------------------------------
+		// start parentchain syncing loop (subscribe to header updates)
+		let api4 = node_api.clone();
+		let parentchain_sync_enclave_api = enclave.clone();
+		thread::Builder::new()
+			.name("parentchain_sync_loop".to_owned())
+			.spawn(move || {
+				if let Err(e) = subscribe_to_parentchain_new_headers(
+					parentchain_sync_enclave_api,
+					&api4,
+					last_synced_header,
+				) {
+					error!("Parentchain block syncing terminated with a failure: {:?}", e);
+				}
+				println!("[!] Parentchain block syncing has terminated");
+			})
+			.unwrap();
+	}
+
 	// ------------------------------------------------------------------------
 	// initialize teeracle interval
 	#[cfg(feature = "teeracle")]
@@ -482,25 +503,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			&teeracle_tokio_handle,
 		);
 	}
-
-	// ------------------------------------------------------------------------
-	// start parentchain syncing loop (subscribe to header updates)
-	let api4 = node_api.clone();
-	let parentchain_sync_enclave_api = enclave.clone();
-	thread::Builder::new()
-		.name("parentchain_sync_loop".to_owned())
-		.spawn(move || {
-			if let Err(e) = subscribe_to_parentchain_new_headers(
-				parentchain_sync_enclave_api,
-				&api4,
-				last_synced_header,
-			) {
-				error!("Parentchain block syncing terminated with a failure: {:?}", e);
-			}
-			println!("[!] Parentchain block syncing has terminated");
-		})
-		.unwrap();
-
 	//-------------------------------------------------------------------------
 	// start execution of trusted getters
 	if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain
