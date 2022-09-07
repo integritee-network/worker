@@ -31,7 +31,6 @@ use std::{collections::HashMap, vec::Vec};
 /// State observer implementation. Receives updates in a dedicated queue.
 /// These updates are applied every time an observation function is executed.
 ///
-/// It stores Arc<> of states to avoid any copies (state can get very large).
 #[derive(Default)]
 pub struct StateObserver<StateType> {
 	queued_state_updates: RwLock<HashMap<ShardIdentifier, StateType>>,

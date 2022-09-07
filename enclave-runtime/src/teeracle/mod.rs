@@ -141,7 +141,7 @@ where
 
 	let call_ids = node_metadata_repository
 		.get_from_metadata(|m| m.update_exchange_rate_call_indexes())
-		.map_err(|e| Error::NodeMetadataProvider(e))?
+		.map_err(Error::NodeMetadataProvider)?
 		.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 
 	let call = OpaqueCall::from_tuple(&(

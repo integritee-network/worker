@@ -22,9 +22,10 @@ use crate::{
 		EnclaveShieldingKeyRepository, EnclaveSidechainApi, EnclaveSidechainBlockImportQueue,
 		EnclaveSidechainBlockImportQueueWorker, EnclaveSidechainBlockImporter,
 		EnclaveSidechainBlockSyncer, EnclaveStateFileIo, EnclaveStateHandler,
-		EnclaveStateKeyRepository, EnclaveStateObserver, EnclaveStfEnclaveSigner,
-		EnclaveStfExecutor, EnclaveTopPool, EnclaveTopPoolAuthor, EnclaveTopPoolOperationHandler,
-		EnclaveValidatorAccessor, GLOBAL_EXTRINSICS_FACTORY_COMPONENT,
+		EnclaveStateKeyRepository, EnclaveStateObserver, EnclaveStateSnapshotRepository,
+		EnclaveStfEnclaveSigner, EnclaveStfExecutor, EnclaveTopPool, EnclaveTopPoolAuthor,
+		EnclaveTopPoolOperationHandler, EnclaveValidatorAccessor,
+		GLOBAL_EXTRINSICS_FACTORY_COMPONENT,
 		GLOBAL_IMMEDIATE_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
 		GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
 		GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT, GLOBAL_RPC_WS_HANDLER_COMPONENT,
@@ -197,12 +198,14 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	Ok(())
 }
 
-fn initialize_state_observer<S>(snapshot_repository: &S) -> EnclaveResult<Arc<EnclaveStateObserver>>
-where
-	S: VersionedStateAccess<StateType = StfState>,
-{
+fn initialize_state_observer(
+	snapshot_repository: &EnclaveStateSnapshotRepository,
+) -> EnclaveResult<Arc<EnclaveStateObserver>> {
 	let shards = snapshot_repository.list_shards()?;
-	let mut states_map = HashMap::<ShardIdentifier, S::StateType>::new();
+	let mut states_map = HashMap::<
+		ShardIdentifier,
+		<EnclaveStateSnapshotRepository as VersionedStateAccess>::StateType,
+	>::new();
 	for shard in shards.into_iter() {
 		let state = snapshot_repository.load_latest(&shard)?;
 		states_map.insert(shard, state);

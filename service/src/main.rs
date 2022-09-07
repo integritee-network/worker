@@ -450,6 +450,18 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	let last_synced_header = init_light_client(&node_api, enclave.clone()).unwrap();
 
+	// ------------------------------------------------------------------------
+	// initialize teeracle interval
+	#[cfg(feature = "teeracle")]
+	if WorkerModeProvider::worker_mode() == WorkerMode::Teeracle {
+		start_interval_market_update(
+			&node_api,
+			run_config.teeracle_update_interval,
+			enclave.as_ref(),
+			&teeracle_tokio_handle,
+		);
+	}
+
 	if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
 		println!("*** [+] Finished syncing light client, syncing parentchain...");
 
@@ -474,29 +486,20 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		// ------------------------------------------------------------------------
 		// start parentchain syncing loop (subscribe to header updates)
 		let api4 = node_api.clone();
+		let enclave_parentchain_sync = enclave;
 		thread::Builder::new()
 			.name("parentchain_sync_loop".to_owned())
 			.spawn(move || {
-				if let Err(e) =
-					subscribe_to_parentchain_new_headers(enclave, &api4, last_synced_header)
-				{
+				if let Err(e) = subscribe_to_parentchain_new_headers(
+					enclave_parentchain_sync,
+					&api4,
+					last_synced_header,
+				) {
 					error!("Parentchain block syncing terminated with a failure: {:?}", e);
 				}
 				println!("[!] Parentchain block syncing has terminated");
 			})
 			.unwrap();
-	}
-
-	// ------------------------------------------------------------------------
-	// initialize teeracle interval
-	#[cfg(feature = "teeracle")]
-	if WorkerModeProvider::worker_mode() == WorkerMode::Teeracle {
-		start_interval_market_update(
-			&node_api.clone(),
-			run_config.teeracle_update_interval,
-			enclave.clone().as_ref(),
-			&teeracle_tokio_handle,
-		);
 	}
 
 	// ------------------------------------------------------------------------
