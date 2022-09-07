@@ -18,13 +18,13 @@
 use crate::{
 	error::Result,
 	global_components::{
-		GLOBAL_EXTRINSICS_FACTORY_COMPONENT, GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT,
+		GLOBAL_EXTRINSICS_FACTORY_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
+		GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT,
 		GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
 		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STF_EXECUTOR_COMPONENT,
 		GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
 		GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
 	},
-	ocall::OcallApi,
 	sync::{EnclaveLock, EnclaveStateRWLock},
 };
 use codec::Encode;
@@ -176,7 +176,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 
-	let ocall_api = OcallApi {};
+	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 
 	let authority = Ed25519Seal::unseal_from_static_file()?;
 
@@ -220,7 +220,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 			send_blocks_and_extrinsics::<Block, _, _, _, _>(
 				blocks,
 				opaque_calls,
-				&ocall_api,
+				ocall_api,
 				validator_access.as_ref(),
 				extrinsics_factory.as_ref(),
 			)?
@@ -246,7 +246,7 @@ pub(crate) fn exec_aura_on_slot<
 >(
 	slot: SlotInfo<ParentchainBlock>,
 	authority: Authority,
-	ocall_api: OCallApi,
+	ocall_api: Arc<OCallApi>,
 	block_import_trigger: Arc<BlockImportTrigger>,
 	proposer_environment: PEnvironment,
 	shards: Vec<ShardIdentifierFor<SignedSidechainBlock>>,
@@ -271,7 +271,7 @@ where
 
 	let mut aura = Aura::<_, ParentchainBlock, SignedSidechainBlock, PEnvironment, _, _>::new(
 		authority,
-		ocall_api,
+		ocall_api.as_ref().clone(),
 		block_import_trigger,
 		proposer_environment,
 	)
@@ -298,7 +298,7 @@ pub(crate) fn send_blocks_and_extrinsics<
 >(
 	blocks: Vec<SignedSidechainBlock>,
 	opaque_calls: Vec<OpaqueCall>,
-	ocall_api: &OCallApi,
+	ocall_api: Arc<OCallApi>,
 	validator_access: &ValidatorAccessor,
 	extrinsics_factory: &ExtrinsicsFactory,
 ) -> Result<()>
