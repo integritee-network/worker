@@ -16,10 +16,7 @@
 */
 
 extern crate chrono;
-use crate::{
-	base_cli::BaseCli, trusted_commands::TrustedArgs,
-	Cli,
-};
+use crate::{base_cli::BaseCli, trusted_commands::TrustedArgs, Cli};
 use clap::Subcommand;
 
 #[derive(Subcommand)]
