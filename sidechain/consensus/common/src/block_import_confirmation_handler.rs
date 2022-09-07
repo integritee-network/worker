@@ -28,11 +28,12 @@ use sidechain_primitives::traits::Header as HeaderTrait;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::{marker::PhantomData, sync::Arc};
 
-/// Trait to confirm a sidechain block import. Typically this is sent to the parentchain.
+/// Trait to confirm a sidechain block import.
 pub trait ConfirmBlockImport<SidechainHeader> {
 	fn confirm_import(&self, header: &SidechainHeader, shard: &ShardIdentifier) -> Result<()>;
 }
 
+/// Creates and sends a sidechain block import confirmation extrsinic to the parentchain.
 pub struct BlockImportConfirmationHandler<
 	ParentchainBlock,
 	SidechainHeader,
