@@ -57,7 +57,7 @@ fn get_state(cli: &Cli, trusted_args: &TrustedArgs, getter: &Getter) -> Option<V
 
 	// Compose jsonrpc call.
 	let data = Request { shard, cyphertext: getter.encode() };
-	let rpc_method = "state_get".to_owned();
+	let rpc_method = "state_executeGetter".to_owned();
 	let jsonrpc_call: String =
 		RpcRequest::compose_jsonrpc_call(rpc_method, vec![data.to_hex()]).unwrap();
 

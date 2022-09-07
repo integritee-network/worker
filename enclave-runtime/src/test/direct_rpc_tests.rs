@@ -56,7 +56,8 @@ pub fn get_state_request_works() {
 	let request = Request { shard: ShardIdentifier::default(), cyphertext: getter.encode() };
 
 	let request_string =
-		RpcRequest::compose_jsonrpc_call("state_get".to_string(), vec![request.to_hex()]).unwrap();
+		RpcRequest::compose_jsonrpc_call("state_executeGetter".to_string(), vec![request.to_hex()])
+			.unwrap();
 
 	let response_string =
 		rpc_handler.handle_message(ConnectionToken(1), request_string).unwrap().unwrap();

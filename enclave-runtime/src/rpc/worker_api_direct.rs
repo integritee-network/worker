@@ -128,9 +128,9 @@ where
 		Ok(Value::String(format!("hello, {}", parsed)))
 	});
 
-	// state_get
-	let state_get_name: &str = "state_get";
-	io.add_sync_method(state_get_name, move |params: Params| {
+	// state_executeGetter
+	let state_execute_getter_name: &str = "state_executeGetter";
+	io.add_sync_method(state_execute_getter_name, move |params: Params| {
 		let json_value = match execute_getter_inner(getter_executor.as_ref(), params) {
 			Ok(state_getter_value) => RpcReturnValue {
 				do_watch: false,
