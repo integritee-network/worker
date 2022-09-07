@@ -19,11 +19,11 @@ use crate::slot_proposer::{ExternalitiesFor, SlotProposer};
 use finality_grandpa::BlockNumberOps;
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_executor::traits::StateUpdateProposer;
+use itp_top_pool_author::traits::AuthorApi;
 use itp_types::H256;
 use its_block_composer::ComposeBlock;
 use its_consensus_common::{Environment, Error as ConsensusError};
 use its_state::{SidechainState, SidechainSystemExt, StateHash};
-use its_top_pool_executor::call_operator::TopPoolCallOperator;
 use sidechain_primitives::traits::{
 	Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor,
 	SignedBlock as SignedSidechainBlockTrait,
@@ -36,33 +36,38 @@ use std::{marker::PhantomData, sync::Arc};
 
 ///! `ProposerFactory` instance containing all the data to create the `SlotProposer` for the
 /// next `Slot`.
-pub struct ProposerFactory<ParentchainBlock: Block, TopPoolExecutor, StfExecutor, BlockComposer> {
-	top_pool_executor: Arc<TopPoolExecutor>,
+pub struct ProposerFactory<ParentchainBlock: Block, TopPoolAuthor, StfExecutor, BlockComposer> {
+	top_pool_author: Arc<TopPoolAuthor>,
 	stf_executor: Arc<StfExecutor>,
 	block_composer: Arc<BlockComposer>,
 	_phantom: PhantomData<ParentchainBlock>,
 }
 
-impl<ParentchainBlock: Block, TopPoolExecutor, StfExecutor, BlockComposer>
-	ProposerFactory<ParentchainBlock, TopPoolExecutor, StfExecutor, BlockComposer>
+impl<ParentchainBlock: Block, TopPoolAuthor, StfExecutor, BlockComposer>
+	ProposerFactory<ParentchainBlock, TopPoolAuthor, StfExecutor, BlockComposer>
 {
 	pub fn new(
-		top_pool_executor: Arc<TopPoolExecutor>,
+		top_pool_executor: Arc<TopPoolAuthor>,
 		stf_executor: Arc<StfExecutor>,
 		block_composer: Arc<BlockComposer>,
 	) -> Self {
-		Self { top_pool_executor, stf_executor, block_composer, _phantom: Default::default() }
+		Self {
+			top_pool_author: top_pool_executor,
+			stf_executor,
+			block_composer,
+			_phantom: Default::default(),
+		}
 	}
 }
 
 impl<
 		ParentchainBlock: Block<Hash = H256>,
 		SignedSidechainBlock,
-		TopPoolExecutor,
+		TopPoolAuthor,
 		StfExecutor,
 		BlockComposer,
 	> Environment<ParentchainBlock, SignedSidechainBlock>
-	for ProposerFactory<ParentchainBlock, TopPoolExecutor, StfExecutor, BlockComposer>
+	for ProposerFactory<ParentchainBlock, TopPoolAuthor, StfExecutor, BlockComposer>
 where
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	SignedSidechainBlock: SignedSidechainBlockTrait<Public = sp_core::ed25519::Public, Signature = MultiSignature>
@@ -70,8 +75,7 @@ where
 	SignedSidechainBlock::Block: SidechainBlockTrait<Public = sp_core::ed25519::Public>,
 	<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType:
 		HeaderTrait<ShardIdentifier = H256>,
-	TopPoolExecutor:
-		TopPoolCallOperator<ParentchainBlock, SignedSidechainBlock> + Send + Sync + 'static,
+	TopPoolAuthor: AuthorApi<H256, ParentchainBlock::Hash> + Send + Sync + 'static,
 	StfExecutor: StateUpdateProposer + Send + Sync + 'static,
 	ExternalitiesFor<StfExecutor>:
 		SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash,
@@ -86,7 +90,7 @@ where
 	type Proposer = SlotProposer<
 		ParentchainBlock,
 		SignedSidechainBlock,
-		TopPoolExecutor,
+		TopPoolAuthor,
 		StfExecutor,
 		BlockComposer,
 	>;
@@ -98,7 +102,7 @@ where
 		shard: ShardIdentifierFor<SignedSidechainBlock>,
 	) -> Result<Self::Proposer, Self::Error> {
 		Ok(SlotProposer {
-			top_pool_executor: self.top_pool_executor.clone(),
+			top_pool_author: self.top_pool_author.clone(),
 			stf_executor: self.stf_executor.clone(),
 			block_composer: self.block_composer.clone(),
 			parentchain_header: parent_header,

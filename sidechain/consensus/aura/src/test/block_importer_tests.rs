@@ -24,10 +24,10 @@ use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesDiffType};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{handle_state_mock::HandleStateMock, onchain_mock::OnchainMock};
 use itp_time_utils::{duration_now, now_as_u64};
+use itp_top_pool_author::mocks::AuthorApiMock;
 use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader, H256};
 use its_consensus_common::{BlockImport, Error as ConsensusError};
 use its_state::{SidechainDB, SidechainState, StateUpdate};
-use its_top_pool_executor::call_operator_mock::TopPoolCallOperatorMock;
 use parentchain_test::{
 	parentchain_block_builder::ParentchainBlockBuilder,
 	parentchain_header_builder::ParentchainHeaderBuilder,
@@ -47,7 +47,7 @@ use sp_runtime::generic::SignedBlock as SignedParentchainBlock;
 use std::sync::Arc;
 
 type TestSidechainState = SidechainDB<SidechainBlock, SgxExternalities>;
-type TestTopPoolCallOperator = TopPoolCallOperatorMock<ParentchainBlock, SignedSidechainBlock>;
+type TestTopPoolAuthor = AuthorApiMock<H256, H256>;
 type TestParentchainBlockImportTrigger =
 	TriggerParentchainBlockImportMock<SignedParentchainBlock<ParentchainBlock>>;
 type TestStateKeyRepo = KeyRepositoryMock<Aes>;
@@ -59,7 +59,7 @@ type TestBlockImporter = BlockImporter<
 	TestSidechainState,
 	HandleStateMock,
 	TestStateKeyRepo,
-	TestTopPoolCallOperator,
+	TestTopPoolAuthor,
 	TestParentchainBlockImportTrigger,
 >;
 
@@ -78,9 +78,9 @@ fn default_authority() -> Pair {
 fn test_fixtures(
 	parentchain_header: &ParentchainHeader,
 	parentchain_block_import_trigger: Arc<TestParentchainBlockImportTrigger>,
-) -> (TestBlockImporter, Arc<HandleStateMock>, Arc<TestTopPoolCallOperator>) {
+) -> (TestBlockImporter, Arc<HandleStateMock>, Arc<TestTopPoolAuthor>) {
 	let state_handler = Arc::new(HandleStateMock::from_shard(shard()).unwrap());
-	let top_pool_call_operator = Arc::new(TestTopPoolCallOperator::default());
+	let top_pool_author = Arc::new(TestTopPoolAuthor::default());
 	let ocall_api = Arc::new(OnchainMock::default().add_validateer_set(
 		parentchain_header,
 		Some(vec![validateer(Keyring::Alice.public().into())]),
@@ -90,17 +90,17 @@ fn test_fixtures(
 	let block_importer = TestBlockImporter::new(
 		state_handler.clone(),
 		state_key_repository,
-		top_pool_call_operator.clone(),
+		top_pool_author.clone(),
 		parentchain_block_import_trigger,
 		ocall_api,
 	);
 
-	(block_importer, state_handler, top_pool_call_operator)
+	(block_importer, state_handler, top_pool_author)
 }
 
 fn test_fixtures_with_default_import_trigger(
 	parentchain_header: &ParentchainHeader,
-) -> (TestBlockImporter, Arc<HandleStateMock>, Arc<TestTopPoolCallOperator>) {
+) -> (TestBlockImporter, Arc<HandleStateMock>, Arc<TestTopPoolAuthor>) {
 	test_fixtures(parentchain_header, Arc::new(TestParentchainBlockImportTrigger::default()))
 }
 
@@ -213,7 +213,7 @@ fn block_import_with_invalid_parentchain_block_fails() {
 #[test]
 fn cleanup_removes_tops_from_pool() {
 	let parentchain_header = ParentchainHeaderBuilder::default().build();
-	let (block_importer, state_handler, top_pool_call_operator) =
+	let (block_importer, state_handler, top_pool_author) =
 		test_fixtures_with_default_import_trigger(&parentchain_header);
 	let signed_sidechain_block =
 		default_authority_signed_block(&parentchain_header, state_handler.as_ref());
@@ -223,7 +223,7 @@ fn cleanup_removes_tops_from_pool() {
 	block_importer.cleanup(&signed_sidechain_block).unwrap();
 	block_importer.cleanup(&bob_signed_sidechain_block).unwrap();
 
-	assert_eq!(2, top_pool_call_operator.remove_calls_invoked().len());
+	assert_eq!(2, *top_pool_author.remove_attempts.read().unwrap());
 }
 
 #[test]

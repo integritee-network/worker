@@ -33,7 +33,6 @@ use itp_top_pool_author::{api::SidechainApi, author::Author, top_filter::AllowAl
 use itp_types::{Block as ParentchainBlock, SignedBlock as SignedParentchainBlock};
 use its_sidechain::{
 	aura::block_importer::BlockImporter, block_composer::BlockComposer, state::SidechainDB,
-	top_pool_executor::TopPoolOperationHandler,
 };
 use primitive_types::H256;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
@@ -74,13 +73,6 @@ pub type TestTopPoolAuthor = Author<
 	MetricsOCallMock,
 >;
 
-pub type TestTopPoolExecutor = TopPoolOperationHandler<
-	ParentchainBlock,
-	SignedSidechainBlock,
-	TestTopPoolAuthor,
-	TestStfExecutor,
->;
-
 pub type TestBlockComposer =
 	BlockComposer<ParentchainBlock, SignedSidechainBlock, TestSigner, TestStateKeyRepo>;
 
@@ -92,6 +84,6 @@ pub type TestBlockImporter = BlockImporter<
 	TestSidechainDb,
 	HandleStateMock,
 	TestStateKeyRepo,
-	TestTopPoolExecutor,
+	TestTopPoolAuthor,
 	TestParentchainBlockImportTrigger,
 >;

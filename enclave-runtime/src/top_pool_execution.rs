@@ -22,8 +22,7 @@ use crate::{
 		GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT,
 		GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
 		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STF_EXECUTOR_COMPONENT,
-		GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
-		GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
+		GLOBAL_TOP_POOL_AUTHOR_COMPONENT, GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
 	},
 	sync::{EnclaveLock, EnclaveStateRWLock},
 };
@@ -121,7 +120,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 
 	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
 
-	let top_pool_executor = GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.get()?;
+	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 
 	let block_composer = GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT.get()?;
 
@@ -151,7 +150,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 
 			let shards = state_handler.list_shards()?;
 			let env = ProposerFactory::<Block, _, _, _>::new(
-				top_pool_executor,
+				top_pool_author,
 				stf_executor,
 				block_composer,
 			);

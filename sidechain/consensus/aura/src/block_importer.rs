@@ -28,12 +28,11 @@ use itp_ocall_api::{EnclaveMetricsOCallApi, EnclaveSidechainOCallApi};
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::{key_repository::AccessKey, StateCrypto};
 use itp_sgx_externalities::SgxExternalities;
-use itp_stf_executor::ExecutedOperation;
 use itp_stf_state_handler::handle_state::HandleState;
+use itp_top_pool_author::traits::{AuthorApi, OnBlockImported};
 use itp_types::H256;
 use its_consensus_common::Error as ConsensusError;
 use its_state::SidechainDB;
-use its_top_pool_executor::TopPoolCallOperator;
 use its_validateer_fetch::ValidateerFetch;
 use log::*;
 use sidechain_primitives::traits::{
@@ -44,7 +43,7 @@ use sp_runtime::{
 	generic::SignedBlock as SignedParentchainBlock,
 	traits::{Block as ParentchainBlockTrait, Header},
 };
-use std::{marker::PhantomData, sync::Arc, vec::Vec};
+use std::{marker::PhantomData, sync::Arc};
 
 /// Implements `BlockImport`.
 #[derive(Clone)]
@@ -56,12 +55,12 @@ pub struct BlockImporter<
 	SidechainState,
 	StateHandler,
 	StateKeyRepository,
-	TopPoolExecutor,
+	TopPoolAuthor,
 	ParentchainBlockImporter,
 > {
 	state_handler: Arc<StateHandler>,
 	state_key_repository: Arc<StateKeyRepository>,
-	top_pool_executor: Arc<TopPoolExecutor>,
+	top_pool_author: Arc<TopPoolAuthor>,
 	parentchain_block_importer: Arc<ParentchainBlockImporter>,
 	ocall_api: Arc<OCallApi>,
 	_phantom: PhantomData<(Authority, ParentchainBlock, SignedSidechainBlock, SidechainState)>,
@@ -75,7 +74,7 @@ impl<
 		SidechainState,
 		StateHandler,
 		StateKeyRepository,
-		TopPoolExecutor,
+		TopPoolAuthor,
 		ParentchainBlockImporter,
 	>
 	BlockImporter<
@@ -86,7 +85,7 @@ impl<
 		SidechainState,
 		StateHandler,
 		StateKeyRepository,
-		TopPoolExecutor,
+		TopPoolAuthor,
 		ParentchainBlockImporter,
 	> where
 	Authority: Pair,
@@ -104,22 +103,21 @@ impl<
 	StateHandler: HandleState<StateT = SgxExternalities>,
 	StateKeyRepository: AccessKey,
 	<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
-	TopPoolExecutor:
-		TopPoolCallOperator<ParentchainBlock, SignedSidechainBlock> + Send + Sync + 'static,
+	TopPoolAuthor: AuthorApi<H256, H256> + OnBlockImported<Hash = H256>,
 	ParentchainBlockImporter:
 		TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>> + Send + Sync,
 {
 	pub fn new(
 		state_handler: Arc<StateHandler>,
 		state_key_repository: Arc<StateKeyRepository>,
-		top_pool_executor: Arc<TopPoolExecutor>,
+		top_pool_author: Arc<TopPoolAuthor>,
 		parentchain_block_importer: Arc<ParentchainBlockImporter>,
 		ocall_api: Arc<OCallApi>,
 	) -> Self {
 		Self {
 			state_handler,
 			state_key_repository,
-			top_pool_executor,
+			top_pool_author,
 			parentchain_block_importer,
 			ocall_api,
 			_phantom: Default::default(),
@@ -127,31 +125,26 @@ impl<
 	}
 
 	fn update_top_pool(&self, sidechain_block: &SignedSidechainBlock::Block) {
-		// FIXME: we should take the rpc author here directly #547.
-
 		// Notify pool about imported block for status updates of the calls.
-		self.top_pool_executor.on_block_imported(sidechain_block);
+		self.top_pool_author.on_block_imported(
+			sidechain_block.block_data().signed_top_hashes(),
+			sidechain_block.hash(),
+		);
 
 		// Remove calls from pool.
 		let executed_operations = sidechain_block
 			.block_data()
 			.signed_top_hashes()
 			.iter()
-			.map(|hash| {
-				// Only successfully executed operations are included in a block.
-				ExecutedOperation::success(*hash, TrustedOperationOrHash::Hash(*hash), Vec::new())
-			})
+			.map(|hash| (TrustedOperationOrHash::Hash(*hash), true))
 			.collect();
 
 		let calls_failed_to_remove = self
-			.top_pool_executor
-			.remove_calls_from_pool(&sidechain_block.header().shard_id(), executed_operations);
+			.top_pool_author
+			.remove_calls_from_pool(sidechain_block.header().shard_id(), executed_operations);
 
 		for call_failed_to_remove in calls_failed_to_remove {
-			error!(
-				"Could not remove call {:?} from top pool",
-				call_failed_to_remove.trusted_operation_or_hash
-			);
+			error!("Could not remove call {:?} from top pool", call_failed_to_remove);
 		}
 	}
 }
@@ -163,7 +156,7 @@ impl<
 		OCallApi,
 		StateHandler,
 		StateKeyRepository,
-		TopPoolExecutor,
+		TopPoolAuthor,
 		ParentchainBlockImporter,
 	> BlockImport<ParentchainBlock, SignedSidechainBlock>
 	for BlockImporter<
@@ -174,7 +167,7 @@ impl<
 		SidechainDB<SignedSidechainBlock::Block, SgxExternalities>,
 		StateHandler,
 		StateKeyRepository,
-		TopPoolExecutor,
+		TopPoolAuthor,
 		ParentchainBlockImporter,
 	> where
 	Authority: Pair,
@@ -192,8 +185,7 @@ impl<
 	StateHandler: HandleState<StateT = SgxExternalities>,
 	StateKeyRepository: AccessKey,
 	<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
-	TopPoolExecutor:
-		TopPoolCallOperator<ParentchainBlock, SignedSidechainBlock> + Send + Sync + 'static,
+	TopPoolAuthor: AuthorApi<H256, H256> + OnBlockImported<Hash = H256>,
 	ParentchainBlockImporter:
 		TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>> + Send + Sync,
 {

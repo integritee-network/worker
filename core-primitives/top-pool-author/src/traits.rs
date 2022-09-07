@@ -19,19 +19,14 @@
 use crate::sgx_reexport_prelude::*;
 
 use crate::error::Result;
-use ita_stf::{hash, TrustedGetterSigned, TrustedOperation};
+use ita_stf::{hash, TrustedOperation};
 use itp_top_pool::primitives::PoolFuture;
 use itp_types::{BlockHash as SidechainBlockHash, ShardIdentifier, H256};
 use jsonrpc_core::Error as RpcError;
 use std::vec::Vec;
 
 /// Trait alias for a full STF author API
-pub trait FullAuthor = AuthorApi<H256, H256>
-	+ SendState<Hash = H256>
-	+ OnBlockImported<Hash = H256>
-	+ Send
-	+ Sync
-	+ 'static;
+pub trait FullAuthor = AuthorApi<H256, H256> + OnBlockImported<Hash = H256> + Send + Sync + 'static;
 
 /// Authoring RPC API
 pub trait AuthorApi<Hash, BlockHash> {
@@ -44,34 +39,27 @@ pub trait AuthorApi<Hash, BlockHash> {
 	/// Returns all pending operations, potentially grouped by sender.
 	fn pending_tops(&self, shard: ShardIdentifier) -> Result<Vec<Vec<u8>>>;
 
-	/// Returns all pending operations divided in calls and getters, potentially grouped by sender.
-	fn get_pending_tops_separated(
-		&self,
-		shard: ShardIdentifier,
-	) -> Result<(Vec<TrustedOperation>, Vec<TrustedGetterSigned>)>;
+	/// Returns all pending trusted getters.
+	fn get_pending_trusted_getters(&self, shard: ShardIdentifier) -> Vec<TrustedOperation>;
+
+	/// Returns all pending trusted calls.
+	fn get_pending_trusted_calls(&self, shard: ShardIdentifier) -> Vec<TrustedOperation>;
 
 	fn get_shards(&self) -> Vec<ShardIdentifier>;
 
-	/// Remove given call from the pool and temporarily ban it to prevent reimporting.
-	fn remove_top(
+	/// Remove a collection of trusted operations from the pool.
+	/// Return operations that were not successfully removed.
+	fn remove_calls_from_pool(
 		&self,
-		bytes_or_hash: Vec<hash::TrustedOperationOrHash<Hash>>,
 		shard: ShardIdentifier,
-		inblock: bool,
-	) -> Result<Vec<Hash>>;
+		executed_calls: Vec<(hash::TrustedOperationOrHash<Hash>, bool)>,
+	) -> Vec<hash::TrustedOperationOrHash<Hash>>;
 
 	/// Submit an extrinsic to watch.
 	///
 	/// See [`TrustedOperationStatus`](sp_transaction_pool::TrustedOperationStatus) for details on transaction
 	/// life cycle.
 	fn watch_top(&self, ext: Vec<u8>, shard: ShardIdentifier) -> PoolFuture<Hash, RpcError>;
-}
-
-/// Trait to send state of a trusted getter back to the client
-pub trait SendState {
-	type Hash;
-
-	fn send_state(&self, hash: Self::Hash, state_encoded: Vec<u8>) -> Result<()>;
 }
 
 /// Trait to notify listeners/observer of a newly created block

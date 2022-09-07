@@ -62,6 +62,9 @@ pub enum Error {
 
 	/// Wrapping of ClientError to RPC Error
 	ClientError(ClientError),
+
+	#[display(fmt = "Codec error: {}", _0)]
+	CodecError(codec::Error),
 }
 
 impl error::Error for Error {

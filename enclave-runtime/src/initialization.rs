@@ -25,8 +25,7 @@ use crate::{
 		EnclaveSidechainBlockSyncer, EnclaveStateFileIo, EnclaveStateHandler,
 		EnclaveStateKeyRepository, EnclaveStateObserver, EnclaveStateSnapshotRepository,
 		EnclaveStfEnclaveSigner, EnclaveStfExecutor, EnclaveTopPool, EnclaveTopPoolAuthor,
-		EnclaveTopPoolOperationHandler, EnclaveValidatorAccessor,
-		GLOBAL_EXTRINSICS_FACTORY_COMPONENT,
+		EnclaveValidatorAccessor, GLOBAL_EXTRINSICS_FACTORY_COMPONENT,
 		GLOBAL_IMMEDIATE_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
 		GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
 		GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT, GLOBAL_RPC_WS_HANDLER_COMPONENT,
@@ -35,7 +34,6 @@ use crate::{
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 		GLOBAL_STATE_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_OBSERVER_COMPONENT,
 		GLOBAL_STF_EXECUTOR_COMPONENT, GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
-		GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
 		GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
 		GLOBAL_WEB_SOCKET_SERVER_COMPONENT,
 	},
@@ -149,7 +147,7 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 		state_handler.clone(),
 		node_metadata_repository,
 	));
-	GLOBAL_STF_EXECUTOR_COMPONENT.initialize(stf_executor.clone());
+	GLOBAL_STF_EXECUTOR_COMPONENT.initialize(stf_executor);
 
 	// For debug purposes, list shards. no problem to panic if fails.
 	let shards = state_handler.list_shards().unwrap();
@@ -184,10 +182,6 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	);
 	GLOBAL_TOP_POOL_AUTHOR_COMPONENT.initialize(top_pool_author.clone());
 
-	let top_pool_operation_handler =
-		Arc::new(EnclaveTopPoolOperationHandler::new(top_pool_author.clone(), stf_executor));
-	GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.initialize(top_pool_operation_handler);
-
 	let getter_executor = Arc::new(EnclaveGetterExecutor::new(state_observer));
 	let io_handler = public_api_rpc_handler(top_pool_author, getter_executor);
 	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));
@@ -217,7 +211,7 @@ fn initialize_state_observer(
 pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
-	let top_pool_operation_handler = GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.get()?;
+	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 
 	let parentchain_block_import_dispatcher =
 		GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get()?;
@@ -229,7 +223,7 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 	let sidechain_block_importer = Arc::new(EnclaveSidechainBlockImporter::new(
 		state_handler,
 		state_key_repository.clone(),
-		top_pool_operation_handler,
+		top_pool_author,
 		parentchain_block_import_dispatcher,
 		ocall_api.clone(),
 	));
