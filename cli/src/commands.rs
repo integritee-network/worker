@@ -20,7 +20,7 @@ use crate::{base_cli::BaseCli, trusted_commands::TrustedArgs, Cli};
 use clap::Subcommand;
 
 #[cfg(feature = "teeracle")]
-crate::exchange_oracle::ExchangeOracleSubCommand;
+use crate::exchange_oracle::ExchangeOracleSubCommand;
 
 #[derive(Subcommand)]
 pub enum Commands {
