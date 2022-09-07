@@ -19,6 +19,9 @@ extern crate chrono;
 use crate::{base_cli::BaseCli, trusted_commands::TrustedArgs, Cli};
 use clap::Subcommand;
 
+#[cfg(feature = "teeracle")]
+crate::exchange_oracle::ExchangeOracleSubCommand;
+
 #[derive(Subcommand)]
 pub enum Commands {
 	#[clap(flatten)]
@@ -31,7 +34,7 @@ pub enum Commands {
 	/// Subcommands for the exchange oracle.
 	#[cfg(feature = "teeracle")]
 	#[clap(subcommand)]
-	ExchangeOracle(crate::exchange_oracle::ExchangeOracleSubCommand),
+	ExchangeOracle(ExchangeOracleSubCommand),
 }
 
 pub fn match_command(cli: &Cli) {
