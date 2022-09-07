@@ -1,3 +1,4 @@
+// Copyright 2022 Integritee AG and Supercomputing Systems AG
 // Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 //
 // Redistribution and use in source and binary forms, with or without
