@@ -304,7 +304,7 @@ fn initialize_state_handler() -> Arc<TestStateHandler> {
 		Arc::new(StateKeyRepositoryMock::new(AesSeal::unseal_from_static_file().unwrap()));
 	let file_io = Arc::new(TestStateFileIo::new(state_key_access, AccountId::new([1u8; 32])));
 	let state_repository_loader = TestStateRepositoryLoader::new(file_io);
-	let state_observer = Arc::new(TestStateObserver::new(None));
+	let state_observer = Arc::new(TestStateObserver::default());
 	let state_snapshot_repository = state_repository_loader
 		.load_snapshot_repository(STATE_SNAPSHOTS_CACHE_SIZE)
 		.unwrap();

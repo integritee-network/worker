@@ -16,7 +16,7 @@
 */
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![feature(assert_matches)]
+#![cfg_attr(test, feature(assert_matches))]
 
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");

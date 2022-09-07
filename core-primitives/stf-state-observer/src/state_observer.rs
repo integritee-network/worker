@@ -38,15 +38,10 @@ pub struct StateObserver<StateType> {
 }
 
 impl<StateType> StateObserver<StateType> {
-	pub fn new(maybe_state: Option<(ShardIdentifier, StateType)>) -> Self {
-		let initial_hash_map = match maybe_state {
-			None => HashMap::new(),
-			Some((shard, state)) => HashMap::from([(shard, state)]),
-		};
-
+	pub fn new(shard: ShardIdentifier, state: StateType) -> Self {
 		Self {
 			queued_state_updates: Default::default(),
-			current_state: RwLock::new(initial_hash_map),
+			current_state: RwLock::new(HashMap::from([(shard, state)])),
 		}
 	}
 
@@ -123,7 +118,7 @@ mod tests {
 
 	#[test]
 	fn initializing_state_with_some_works() {
-		let state_observer = StateObserver::<TestState>::new(Some((shard(), 31u64)));
+		let state_observer = StateObserver::<TestState>::new(shard(), 31u64);
 		assert_eq!(state_observer.observe_state(&shard(), |s| *s).unwrap(), 31u64);
 	}
 
@@ -140,7 +135,7 @@ mod tests {
 
 	#[test]
 	fn updating_multiple_times_before_observation_just_keeps_last_value() {
-		let state_observer = StateObserver::<TestState>::new(Some((shard(), 31)));
+		let state_observer = StateObserver::<TestState>::new(shard(), 31);
 		state_observer.queue_state_update(shard(), 42u64).unwrap();
 		state_observer.queue_state_update(shard(), 57u64).unwrap();
 		assert_eq!(1, state_observer.queued_state_updates.read().unwrap().len());

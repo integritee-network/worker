@@ -61,13 +61,13 @@ where
 	) -> Result<Option<Vec<u8>>> {
 		let getter: Getter = Decode::decode(&mut encoded_signed_getter.as_slice())?;
 
-		debug!("Successfully decoded trusted getter");
+		trace!("Successfully decoded trusted getter");
 		if let Getter::trusted(trusted_getter_signed) = getter {
 			let state_result = self.state_observer.observe_state(shard, |state| {
 				StateGetter::get_state(&trusted_getter_signed, state)
 			})??;
 
-			debug!("Successfully executed trusted getter");
+			trace!("Successfully executed trusted getter");
 
 			Ok(state_result)
 		} else {
