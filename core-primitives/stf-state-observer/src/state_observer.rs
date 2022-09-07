@@ -28,7 +28,7 @@ use crate::{
 use itp_types::ShardIdentifier;
 use std::{collections::HashMap, vec::Vec};
 
-/// State observer implementation. Receives updates in a separate queue.
+/// State observer implementation. Receives updates in a dedicated queue.
 /// These updates are applied every time an observation function is executed.
 ///
 /// It stores Arc<> of states to avoid any copies (state can get very large).

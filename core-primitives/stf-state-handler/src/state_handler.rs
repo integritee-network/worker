@@ -88,8 +88,10 @@ where
 		mut state_lock: RwLockWriteGuard<'_, Self::WriteLockPayload>,
 		shard: &ShardIdentifier,
 	) -> Result<Self::HashType> {
+		// We create a state copy here, in order to serve the state observer. This does not scale
+		// well and we will want a better solution in the future, maybe with #459.
 		let state_hash = state_lock.update(shard, state.clone())?;
-		drop(state_lock);
+		drop(state_lock); // Drop the write lock as early as possible.
 
 		self.state_observer.queue_state_update(*shard, state)?;
 		Ok(state_hash)
@@ -99,8 +101,10 @@ where
 		let mut state_write_lock =
 			self.state_snapshot_repository.write().map_err(|_| Error::LockPoisoning)?;
 
+		// We create a state copy here, in order to serve the state observer. This does not scale
+		// well and we will want a better solution in the future, maybe with #459.
 		let state_hash = state_write_lock.update(shard, state.clone())?;
-		drop(state_write_lock);
+		drop(state_write_lock); // Drop the write lock as early as possible.
 
 		self.state_observer.queue_state_update(*shard, state)?;
 		Ok(state_hash)
@@ -161,6 +165,26 @@ mod tests {
 		let _hash = state_handler.write_after_mutation(new_state, lock, &shard_id).unwrap();
 
 		join_handle.join().unwrap();
+	}
+
+	#[test]
+	fn write_and_reset_queue_observer_update() {
+		let shard_id = ShardIdentifier::default();
+		let state_observer = Arc::new(TestStateObserver::default());
+		let state_handler =
+			Arc::new(TestStateHandler::new(default_repository(&shard_id), state_observer.clone()));
+
+		let (lock, _s) = state_handler.load_for_mutation(&shard_id).unwrap();
+		let new_state = 4u64;
+		state_handler.write_after_mutation(new_state, lock, &shard_id).unwrap();
+
+		let reset_state = 5u64;
+		state_handler.reset(reset_state, &shard_id);
+
+		let observer_updates = state_observer.queued_updates.read().unwrap().clone();
+		assert_eq!(2, observer_updates.len());
+		assert_eq!((shard_id, new_state), observer_updates[0]);
+		assert_eq!((shard_id, reset_state), observer_updates[1]);
 	}
 
 	#[test]

@@ -67,7 +67,7 @@ fn get_state(cli: &Cli, trusted_args: &TrustedArgs, getter: &Getter) -> Option<V
 	// Decode RPC response.
 	let rpc_response: RpcResponse = serde_json::from_str(&rpc_response_str).ok()?;
 	let rpc_return_value = RpcReturnValue::from_hex(&rpc_response.result)
-		// replace with `inspect_err` once it's stable.
+		// Replace with `inspect_err` once it's stable.
 		.map_err(|e| {
 			error!("Failed to decode RpcReturnValue: {:?}", e);
 			e
@@ -80,7 +80,7 @@ fn get_state(cli: &Cli, trusted_args: &TrustedArgs, getter: &Getter) -> Option<V
 	}
 
 	let maybe_state = Option::decode(&mut rpc_return_value.value.as_slice())
-		// replace with `inspect_err` once it's stable.
+		// Replace with `inspect_err` once it's stable.
 		.map_err(|e| {
 			error!("Failed to decode return value: {:?}", e);
 			e

@@ -4,8 +4,6 @@ version = "0.8.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
@@ -26,6 +24,7 @@ log = { version = "0.4", default-features = false }
 [features]
 default = ["std"]
 std = [
+    "codec/std",
     "itp-types/std",
     "log/std",
     "thiserror",

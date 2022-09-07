@@ -15,6 +15,9 @@
 
 */
 
+//! Getter executor uses the state observer to get the most recent state and runs the getter on it.
+//! The getter is verified (signature verfification) inside the `GetState` implementation.
+
 use crate::{
 	error::{Error, Result},
 	state_getter::GetState,
