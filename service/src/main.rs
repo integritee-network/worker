@@ -455,23 +455,22 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
 		println!("*** [+] Finished syncing light client, syncing parentchain...");
 
-	// Syncing all parentchain blocks, this might take a while..
-	let parentchain_block_syncer =
-		Arc::new(ParentchainBlockSyncer::new(node_api.clone(), enclave.clone()));
-	let mut last_synced_header = parentchain_block_syncer.sync_parentchain(last_synced_header);
-
-	// ------------------------------------------------------------------------
-	// initialize the sidechain
-	if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain {
-		last_synced_header = sidechain_init_block_production(
-			enclave.clone(),
-			&register_enclave_xt_header,
-			we_are_primary_validateer,
-			parentchain_block_syncer,
-			sidechain_storage,
-			&last_synced_header,
-		);
-	}
+		// Syncing all parentchain blocks, this might take a while..
+		let parentchain_block_syncer =
+			Arc::new(ParentchainBlockSyncer::new(node_api.clone(), enclave.clone()));
+		let mut last_synced_header = parentchain_block_syncer.sync_parentchain(last_synced_header);
+		// ------------------------------------------------------------------------
+		// initialize the sidechain
+		if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain {
+			last_synced_header = sidechain_init_block_production(
+				enclave.clone(),
+				&register_enclave_xt_header,
+				we_are_primary_validateer,
+				parentchain_block_syncer,
+				sidechain_storage,
+				&last_synced_header,
+			);
+		}
 
 		// ------------------------------------------------------------------------
 		// start parentchain syncing loop (subscribe to header updates)
@@ -656,22 +655,48 @@ fn print_events(events: Events, _sender: Sender<String>) {
 					},
 				}
 			},
-			/*
-			/// FIXME: to add as soon as worker, node, and pallet are compatible (based on the same substrate version)
-						Event::Teeracle(re) => {
-							debug!("{:?}", re);
-							match &re {
-								my_node_runtime::pallet_teeracle::RawEvent::ExchangeRateUpdated(
-									currency,
-									new_value,
-								) => {
-									println!("[+] Received ExchangeRateUpdated event");
-									println!("    Currency:  {:?}", str::from_utf8(&currency).unwrap());
-									println!("    Exchange rate: {}", new_value.to_string());
-								},
-							}
-						},
-			*/
+			Event::Teeracle(re) => {
+				debug!("{:?}", re);
+				match &re {
+					my_node_runtime::pallet_teeracle::Event::ExchangeRateUpdated(
+						source,
+						currency,
+						new_value,
+					) => {
+						println!("[+] Received ExchangeRateUpdated event");
+						println!("    Data source:  {}", source);
+						println!("    Currency:  {}", currency);
+						println!("    Exchange rate: {:?}", new_value);
+					},
+					my_node_runtime::pallet_teeracle::Event::ExchangeRateDeleted(
+						source,
+						currency,
+					) => {
+						println!("[+] Received ExchangeRateDeleted event");
+						println!("    Data source:  {}", source);
+						println!("    Currency:  {}", currency);
+					},
+					my_node_runtime::pallet_teeracle::Event::AddedToWhitelist(
+						source,
+						mrenclave,
+					) => {
+						println!("[+] Received AddedToWhitelist event");
+						println!("    Data source:  {}", source);
+						println!("    Currency:  {:?}", mrenclave);
+					},
+					my_node_runtime::pallet_teeracle::Event::RemovedFromWhitelist(
+						source,
+						mrenclave,
+					) => {
+						println!("[+] Received RemovedFromWhitelist event");
+						println!("    Data source:  {}", source);
+						println!("    Currency:  {:?}", mrenclave);
+					},
+					_ => {
+						trace!("Ignoring unsupported pallet_teeracle event");
+					},
+				}
+			},
 			Event::Sidechain(re) => match &re {
 				my_node_runtime::pallet_sidechain::Event::ProposedSidechainBlock(
 					sender,
