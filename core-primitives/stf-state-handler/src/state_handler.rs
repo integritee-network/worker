@@ -179,7 +179,7 @@ mod tests {
 		state_handler.write_after_mutation(new_state, lock, &shard_id).unwrap();
 
 		let reset_state = 5u64;
-		state_handler.reset(reset_state, &shard_id);
+		state_handler.reset(reset_state, &shard_id).unwrap();
 
 		let observer_updates = state_observer.queued_updates.read().unwrap().clone();
 		assert_eq!(2, observer_updates.len());
