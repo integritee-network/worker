@@ -64,14 +64,14 @@ use itp_types::{Block as ParentchainBlock, SignedBlock as SignedParentchainBlock
 use its_sidechain::{
 	aura::block_importer::BlockImporter as SidechainBlockImporter,
 	block_composer::BlockComposer,
-	consensus_common::{BlockImportQueueWorker, PeerBlockSync},
+	consensus_common::{BlockImportConfirmationHandler, BlockImportQueueWorker, PeerBlockSync},
 	state::SidechainDB,
 	top_pool_executor::TopPoolOperationHandler,
 };
 use primitive_types::H256;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sidechain_primitives::{
-	traits::SignedBlock as SignedSidechainBlockTrait,
+	traits::{Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait},
 	types::block::SignedBlock as SignedSidechainBlock,
 };
 use sp_core::ed25519::Pair;
@@ -142,13 +142,8 @@ pub type EnclaveTopPoolOperationHandler = TopPoolOperationHandler<
 	EnclaveTopPoolAuthor,
 	EnclaveStfExecutor,
 >;
-pub type EnclaveSidechainBlockComposer = BlockComposer<
-	ParentchainBlock,
-	SignedSidechainBlock,
-	Pair,
-	EnclaveStateKeyRepository,
-	EnclaveNodeMetadataRepository,
->;
+pub type EnclaveSidechainBlockComposer =
+	BlockComposer<ParentchainBlock, SignedSidechainBlock, Pair, EnclaveStateKeyRepository>;
 pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 	Pair,
 	ParentchainBlock,
@@ -161,11 +156,19 @@ pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 	EnclaveTriggeredParentchainBlockImportDispatcher,
 >;
 pub type EnclaveSidechainBlockImportQueue = BlockImportQueue<SignedSidechainBlock>;
+pub type EnclaveBlockImportConfirmationHandler = BlockImportConfirmationHandler<
+	ParentchainBlock,
+	<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType,
+	EnclaveNodeMetadataRepository,
+	EnclaveExtrinsicsFactory,
+	EnclaveValidatorAccessor,
+>;
 pub type EnclaveSidechainBlockSyncer = PeerBlockSync<
 	ParentchainBlock,
 	SignedSidechainBlock,
 	EnclaveSidechainBlockImporter,
 	EnclaveOCallApi,
+	EnclaveBlockImportConfirmationHandler,
 >;
 pub type EnclaveSidechainBlockImportQueueWorker = BlockImportQueueWorker<
 	ParentchainBlock,

@@ -20,7 +20,7 @@ use finality_grandpa::BlockNumberOps;
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_executor::traits::StateUpdateProposer;
 use itp_types::H256;
-use its_block_composer::ComposeBlockAndConfirmation;
+use its_block_composer::ComposeBlock;
 use its_consensus_common::{Environment, Error as ConsensusError};
 use its_state::{SidechainState, SidechainSystemExt, StateHash};
 use its_top_pool_executor::call_operator::TopPoolCallOperator;
@@ -75,7 +75,7 @@ where
 	StfExecutor: StateUpdateProposer + Send + Sync + 'static,
 	ExternalitiesFor<StfExecutor>:
 		SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash,
-	BlockComposer: ComposeBlockAndConfirmation<
+	BlockComposer: ComposeBlock<
 			ExternalitiesFor<StfExecutor>,
 			ParentchainBlock,
 			SignedSidechainBlock = SignedSidechainBlock,

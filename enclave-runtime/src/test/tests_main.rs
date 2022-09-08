@@ -31,17 +31,14 @@ use crate::{
 	},
 	tls_ra,
 };
-use codec::{Decode, Encode};
+use codec::Decode;
 use ita_sgx_runtime::Parentchain;
 use ita_stf::{
 	helpers::account_key_hash, stf_sgx_tests, test_genesis::endowed_account as funded_pair,
 	AccountInfo, ShardIdentifier, State, StatePayload, StateTypeDiff, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetter, TrustedOperation,
 };
-use itp_node_api::metadata::{
-	metadata_mocks::NodeMetadataMock, pallet_sidechain::SidechainCallIndexes,
-	provider::NodeMetadataRepository,
-};
+use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_sgx_crypto::{Aes, StateCrypto};
 use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use itp_stf_executor::{
@@ -51,9 +48,9 @@ use itp_stf_executor::{
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{handle_state_mock, handle_state_mock::HandleStateMock};
 use itp_top_pool_author::{test_utils::submit_operation_to_top_pool, traits::AuthorApi};
-use itp_types::{AccountId, Block, Header, OpaqueCall};
+use itp_types::{AccountId, Block, Header};
 use its_sidechain::{
-	block_composer::{BlockComposer, ComposeBlockAndConfirmation},
+	block_composer::{BlockComposer, ComposeBlock},
 	state::{SidechainDB, SidechainState, SidechainSystemExt},
 	top_pool_executor::{TopPoolCallOperator, TopPoolOperationHandler},
 };
@@ -92,7 +89,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		itp_stf_state_handler::test::sgx_tests::test_state_files_from_handler_can_be_loaded_again,
 		itp_stf_state_handler::test::sgx_tests::test_file_io_get_state_hash_works,
 		itp_stf_state_handler::test::sgx_tests::test_list_state_ids_ignores_files_not_matching_the_pattern,
-		test_compose_block_and_confirmation,
+		test_compose_block,
 		test_submit_trusted_call_to_top_pool,
 		test_submit_trusted_getter_to_top_pool,
 		test_differentiate_getter_and_call_works,
@@ -185,15 +182,12 @@ fn run_evm_tests() {
 #[cfg(not(feature = "evm"))]
 fn run_evm_tests() {}
 
-fn test_compose_block_and_confirmation() {
+fn test_compose_block() {
 	// given
 	let (_, _, shard, _, _, state_handler) = test_setup();
-	let node_metadata = NodeMetadataMock::new();
-	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(node_metadata.clone()));
-	let block_composer = BlockComposer::<Block, SignedBlock, _, _, _>::new(
+	let block_composer = BlockComposer::<Block, SignedBlock, _, _>::new(
 		test_account(),
 		Arc::new(TestStateKeyRepo::new(state_key())),
-		node_metadata_repo,
 	);
 
 	let signed_top_hashes: Vec<H256> = vec![[94; 32].into(), [1; 32].into()].to_vec();
@@ -205,8 +199,8 @@ fn test_compose_block_and_confirmation() {
 	state_handler.write_after_mutation(db.ext.clone(), lock, &shard).unwrap();
 
 	// when
-	let (opaque_call, signed_block) = block_composer
-		.compose_block_and_confirmation(
+	let signed_block = block_composer
+		.compose_block(
 			&latest_parentchain_header(),
 			signed_top_hashes,
 			shard,
@@ -216,13 +210,8 @@ fn test_compose_block_and_confirmation() {
 		.unwrap();
 
 	// then
-	let call_indexes = node_metadata.confirm_proposed_sidechain_block_indexes().unwrap();
-	let expected_call =
-		OpaqueCall::from_tuple(&(call_indexes, shard, &signed_block.block().header()));
-
 	assert!(signed_block.verify_signature());
 	assert_eq!(signed_block.block().header().block_number(), 1);
-	assert!(opaque_call.encode().starts_with(&expected_call.encode()));
 }
 
 fn test_submit_trusted_call_to_top_pool() {
@@ -326,10 +315,9 @@ fn test_create_block_and_confirmation_works() {
 		top_pool_author.clone(),
 		stf_executor.clone(),
 	);
-	let block_composer = BlockComposer::<Block, SignedBlock, _, _, _>::new(
+	let block_composer = BlockComposer::<Block, SignedBlock, _, _>::new(
 		test_account(),
 		Arc::new(TestStateKeyRepo::new(state_key())),
-		node_metadata_repo,
 	);
 
 	let sender = funded_pair();
@@ -354,8 +342,8 @@ fn test_create_block_and_confirmation_works() {
 	let executed_operation_hashes =
 		execution_result.get_executed_operation_hashes().iter().copied().collect();
 
-	let (opaque_call, signed_block) = block_composer
-		.compose_block_and_confirmation(
+	let signed_block = block_composer
+		.compose_block(
 			&latest_parentchain_header(),
 			executed_operation_hashes,
 			shard,
@@ -365,14 +353,9 @@ fn test_create_block_and_confirmation_works() {
 		.unwrap();
 
 	// then
-	let call_indexes = node_metadata.confirm_proposed_sidechain_block_indexes().unwrap();
-	let expected_call =
-		OpaqueCall::from_tuple(&(call_indexes, shard, &signed_block.block().header()));
-
 	assert!(signed_block.verify_signature());
 	assert_eq!(signed_block.block().header().block_number(), 1);
 	assert_eq!(signed_block.block().block_data().signed_top_hashes()[0], top_hash);
-	assert!(opaque_call.encode().starts_with(&expected_call.encode()));
 }
 
 fn test_create_state_diff() {
@@ -388,10 +371,9 @@ fn test_create_state_diff() {
 		top_pool_author.clone(),
 		stf_executor.clone(),
 	);
-	let block_composer = BlockComposer::<Block, SignedBlock, _, _, _>::new(
+	let block_composer = BlockComposer::<Block, SignedBlock, _, _>::new(
 		test_account(),
 		Arc::new(TestStateKeyRepo::new(state_key())),
-		node_metadata_repo,
 	);
 
 	let sender = funded_pair();
@@ -416,8 +398,8 @@ fn test_create_state_diff() {
 	let executed_operation_hashes =
 		execution_result.get_executed_operation_hashes().iter().copied().collect();
 
-	let (_, signed_block) = block_composer
-		.compose_block_and_confirmation(
+	let signed_block = block_composer
+		.compose_block(
 			&latest_parentchain_header(),
 			executed_operation_hashes,
 			shard,

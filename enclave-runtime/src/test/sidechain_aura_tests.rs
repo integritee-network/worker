@@ -117,11 +117,7 @@ pub fn produce_sidechain_block_and_import_it() {
 		parentchain_block_import_trigger.clone(),
 		ocall_api.clone(),
 	));
-	let block_composer = Arc::new(TestBlockComposer::new(
-		signer.clone(),
-		state_key_repo.clone(),
-		node_metadata_repo,
-	));
+	let block_composer = Arc::new(TestBlockComposer::new(signer.clone(), state_key_repo.clone()));
 	let proposer_environment =
 		ProposerFactory::new(top_pool_operation_handler, stf_executor.clone(), block_composer);
 	let extrinsics_factory = ExtrinsicsFactoryMock::default();
@@ -172,7 +168,7 @@ pub fn produce_sidechain_block_and_import_it() {
 		exec_aura_on_slot::<_, ParentchainBlock, SignedSidechainBlock, _, _, _>(
 			slot_info,
 			signer,
-			ocall_api.as_ref().clone(),
+			ocall_api.clone(),
 			parentchain_block_import_trigger.clone(),
 			proposer_environment,
 			shards,
@@ -198,12 +194,12 @@ pub fn produce_sidechain_block_and_import_it() {
 
 	info!("Executed AURA successfully. Sending blocks and extrinsics..");
 	let propose_to_block_import_ocall_api =
-		ProposeToImportOCallApi::new(parentchain_header, block_importer);
+		Arc::new(ProposeToImportOCallApi::new(parentchain_header, block_importer));
 
 	send_blocks_and_extrinsics::<ParentchainBlock, _, _, _, _>(
 		blocks,
 		opaque_calls,
-		&propose_to_block_import_ocall_api,
+		propose_to_block_import_ocall_api,
 		&validator_access,
 		&extrinsics_factory,
 	)

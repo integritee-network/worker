@@ -18,8 +18,9 @@
 use crate::{
 	error::{Error, Result as EnclaveResult},
 	global_components::{
-		EnclaveGetterExecutor, EnclaveOCallApi, EnclaveRpcConnectionRegistry, EnclaveRpcResponder,
-		EnclaveShieldingKeyRepository, EnclaveSidechainApi, EnclaveSidechainBlockImportQueue,
+		EnclaveBlockImportConfirmationHandler, EnclaveGetterExecutor, EnclaveOCallApi,
+		EnclaveRpcConnectionRegistry, EnclaveRpcResponder, EnclaveShieldingKeyRepository,
+		EnclaveSidechainApi, EnclaveSidechainBlockImportQueue,
 		EnclaveSidechainBlockImportQueueWorker, EnclaveSidechainBlockImporter,
 		EnclaveSidechainBlockSyncer, EnclaveStateFileIo, EnclaveStateHandler,
 		EnclaveStateKeyRepository, EnclaveStateObserver, EnclaveStateSnapshotRepository,
@@ -234,9 +235,22 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 	));
 
 	let sidechain_block_import_queue = GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.get()?;
+	let metadata_repository = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
+	let extrinsics_factory = GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get()?;
+	let validator_accessor = GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT.get()?;
 
-	let sidechain_block_syncer =
-		Arc::new(EnclaveSidechainBlockSyncer::new(sidechain_block_importer, ocall_api));
+	let sidechain_block_import_confirmation_handler =
+		Arc::new(EnclaveBlockImportConfirmationHandler::new(
+			metadata_repository,
+			extrinsics_factory,
+			validator_accessor,
+		));
+
+	let sidechain_block_syncer = Arc::new(EnclaveSidechainBlockSyncer::new(
+		sidechain_block_importer,
+		ocall_api,
+		sidechain_block_import_confirmation_handler,
+	));
 	GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT.initialize(sidechain_block_syncer.clone());
 
 	let sidechain_block_import_queue_worker =
@@ -246,9 +260,7 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 		));
 	GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT.initialize(sidechain_block_import_queue_worker);
 
-	let node_metadata_repo = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
-	let block_composer =
-		Arc::new(BlockComposer::new(signer, state_key_repository, node_metadata_repo));
+	let block_composer = Arc::new(BlockComposer::new(signer, state_key_repository));
 	GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT.initialize(block_composer);
 
 	Ok(())

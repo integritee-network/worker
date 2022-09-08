@@ -15,6 +15,15 @@
 
 */
 
-pub mod block_importer_mock;
-pub mod confirm_block_import_mock;
-pub mod verifier_mock;
+use crate::{error::Result, ConfirmBlockImport};
+use itp_types::ShardIdentifier;
+use sidechain_primitives::types::header::SidechainHeader;
+
+/// Mock implementation of the `ConfirmBlockImport` trait.
+pub struct ConfirmBlockImportMock;
+
+impl ConfirmBlockImport<SidechainHeader> for ConfirmBlockImportMock {
+	fn confirm_import(&self, _header: &SidechainHeader, _shard: &ShardIdentifier) -> Result<()> {
+		Ok(())
+	}
+}

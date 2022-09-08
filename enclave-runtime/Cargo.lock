@@ -2058,7 +2058,7 @@ dependencies = [
 [[package]]
 name = "itp-types"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
 dependencies = [
  "chrono 0.4.22",
  "parity-scale-codec",
@@ -2074,7 +2074,7 @@ dependencies = [
 [[package]]
 name = "itp-utils"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
 dependencies = [
  "frame-support",
  "hex",
@@ -2143,7 +2143,11 @@ dependencies = [
 name = "its-consensus-common"
 version = "0.8.0"
 dependencies = [
+ "itc-parentchain-light-client",
  "itp-block-import-queue",
+ "itp-extrinsics-factory",
+ "itp-node-api-metadata",
+ "itp-node-api-metadata-provider",
  "itp-ocall-api",
  "itp-sgx-crypto",
  "itp-types",
@@ -2713,7 +2717,7 @@ dependencies = [
 [[package]]
 name = "pallet-parentchain"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -2819,7 +2823,7 @@ dependencies = [
 [[package]]
 name = "parentchain-test"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3791,7 +3795,7 @@ dependencies = [
 [[package]]
 name = "sidechain-block-verification"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
 dependencies = [
  "frame-support",
  "itp-types",
@@ -3808,7 +3812,7 @@ dependencies = [
 [[package]]
 name = "sidechain-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#8670ad862e7943b2366277a120f5869b5dfe6584"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
 dependencies = [
  "parity-scale-codec",
  "scale-info",

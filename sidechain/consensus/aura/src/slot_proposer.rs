@@ -20,7 +20,7 @@ use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_executor::traits::StateUpdateProposer;
 use itp_time_utils::now_as_u64;
 use itp_types::H256;
-use its_block_composer::ComposeBlockAndConfirmation;
+use its_block_composer::ComposeBlock;
 use its_consensus_common::{Error as ConsensusError, Proposal, Proposer};
 use its_state::{SidechainDB, SidechainState, SidechainSystemExt, StateHash};
 use its_top_pool_executor::call_operator::TopPoolCallOperator;
@@ -73,7 +73,7 @@ impl<ParentchainBlock, SignedSidechainBlock, TopPoolExecutor, BlockComposer, Stf
 		SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash,
 	TopPoolExecutor:
 		TopPoolCallOperator<ParentchainBlock, SignedSidechainBlock> + Send + Sync + 'static,
-	BlockComposer: ComposeBlockAndConfirmation<
+	BlockComposer: ComposeBlock<
 			ExternalitiesFor<StfExecutor>,
 			ParentchainBlock,
 			SignedSidechainBlock = SignedSidechainBlock,
@@ -124,7 +124,7 @@ impl<ParentchainBlock, SignedSidechainBlock, TopPoolExecutor, BlockComposer, Stf
 			)
 			.map_err(|e| ConsensusError::Other(e.to_string().into()))?;
 
-		let mut parentchain_extrinsics = batch_execution_result.get_extrinsic_callbacks();
+		let parentchain_extrinsics = batch_execution_result.get_extrinsic_callbacks();
 
 		let executed_operation_hashes: Vec<_> =
 			batch_execution_result.get_executed_operation_hashes().to_vec();
@@ -134,10 +134,10 @@ impl<ParentchainBlock, SignedSidechainBlock, TopPoolExecutor, BlockComposer, Stf
 		let failed_operations = batch_execution_result.get_failed_operations();
 		self.top_pool_executor.remove_calls_from_pool(&self.shard, failed_operations);
 
-		// 3) Compose sidechain block and parentchain confirmation.
-		let (confirmation_extrinsic, sidechain_block) = self
+		// 3) Compose sidechain block.
+		let sidechain_block = self
 			.block_composer
-			.compose_block_and_confirmation(
+			.compose_block(
 				latest_parentchain_header,
 				executed_operation_hashes,
 				self.shard,
@@ -145,8 +145,6 @@ impl<ParentchainBlock, SignedSidechainBlock, TopPoolExecutor, BlockComposer, Stf
 				batch_execution_result.state_after_execution,
 			)
 			.map_err(|e| ConsensusError::Other(e.to_string().into()))?;
-
-		parentchain_extrinsics.push(confirmation_extrinsic);
 
 		info!(
 			"Queue/Timeslot/Transactions: {:?};{};{}",
