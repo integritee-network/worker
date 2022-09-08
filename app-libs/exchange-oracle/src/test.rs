@@ -39,6 +39,7 @@ fn get_exchange_rate_from_coin_market_cap_works() {
 }
 
 #[test]
+#[ignore = "requires external coin gecko service, disabled temporarily"]
 fn get_exchange_rate_from_coin_gecko_works() {
 	test_suite_exchange_rates::<CoinGeckoSource>();
 }
