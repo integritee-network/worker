@@ -36,6 +36,8 @@ pub mod sgx_reexport_prelude {
 }
 
 pub mod error;
+pub mod getter_executor;
+pub mod state_getter;
 pub mod traits;
 
 #[cfg(feature = "sgx")]

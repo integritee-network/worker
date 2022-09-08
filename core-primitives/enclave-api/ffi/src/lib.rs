@@ -46,11 +46,6 @@ extern "C" {
 		retval: *mut sgx_status_t,
 	) -> sgx_status_t;
 
-	pub fn execute_trusted_getters(
-		eid: sgx_enclave_id_t,
-		retval: *mut sgx_status_t,
-	) -> sgx_status_t;
-
 	pub fn execute_trusted_calls(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
 
 	pub fn sync_parentchain(

@@ -47,10 +47,14 @@ use itp_node_api::metadata::{provider::NodeMetadataRepository, NodeMetadata};
 use itp_nonce_cache::NonceCache;
 use itp_sgx_crypto::{key_repository::KeyRepository, Aes, AesSeal, Rsa3072Seal};
 use itp_sgx_externalities::SgxExternalities;
-use itp_stf_executor::{enclave_signer::StfEnclaveSigner, executor::StfExecutor};
+use itp_stf_executor::{
+	enclave_signer::StfEnclaveSigner, executor::StfExecutor, getter_executor::GetterExecutor,
+	state_getter::StfStateGetter,
+};
 use itp_stf_state_handler::{
 	file_io::sgx::SgxStateFileIo, state_snapshot_repository::StateSnapshotRepository, StateHandler,
 };
+use itp_stf_state_observer::state_observer::StateObserver;
 use itp_top_pool::basic_pool::BasicPool;
 use itp_top_pool_author::{
 	api::SidechainApi,
@@ -77,13 +81,15 @@ pub type EnclaveShieldingKeyRepository = KeyRepository<Rsa3072KeyPair, Rsa3072Se
 pub type EnclaveStateFileIo = SgxStateFileIo<EnclaveStateKeyRepository>;
 pub type EnclaveStateSnapshotRepository =
 	StateSnapshotRepository<EnclaveStateFileIo, StfState, H256>;
-pub type EnclaveStateHandler = StateHandler<EnclaveStateSnapshotRepository>;
+pub type EnclaveStateObserver = StateObserver<StfState>;
+pub type EnclaveStateHandler = StateHandler<EnclaveStateSnapshotRepository, EnclaveStateObserver>;
+pub type EnclaveGetterExecutor = GetterExecutor<EnclaveStateObserver, StfStateGetter>;
 pub type EnclaveOCallApi = OcallApi;
 pub type EnclaveNodeMetadataRepository = NodeMetadataRepository<NodeMetadata>;
 pub type EnclaveStfExecutor =
 	StfExecutor<EnclaveOCallApi, EnclaveStateHandler, EnclaveNodeMetadataRepository>;
 pub type EnclaveStfEnclaveSigner =
-	StfEnclaveSigner<EnclaveOCallApi, EnclaveStateHandler, EnclaveShieldingKeyRepository>;
+	StfEnclaveSigner<EnclaveOCallApi, EnclaveStateObserver, EnclaveShieldingKeyRepository>;
 pub type EnclaveExtrinsicsFactory =
 	ExtrinsicsFactory<Pair, NonceCache, EnclaveNodeMetadataRepository>;
 pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
@@ -198,6 +204,10 @@ pub static GLOBAL_WEB_SOCKET_SERVER_COMPONENT: ComponentContainer<EnclaveWebSock
 /// State handler.
 pub static GLOBAL_STATE_HANDLER_COMPONENT: ComponentContainer<EnclaveStateHandler> =
 	ComponentContainer::new("state handler");
+
+/// State observer.
+pub static GLOBAL_STATE_OBSERVER_COMPONENT: ComponentContainer<EnclaveStateObserver> =
+	ComponentContainer::new("state observer");
 
 /// TOP pool author.
 pub static GLOBAL_TOP_POOL_AUTHOR_COMPONENT: ComponentContainer<EnclaveTopPoolAuthor> =

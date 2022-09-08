@@ -42,8 +42,8 @@ use serde_json::error::Error as SerdeJsonError;
 use sp_runtime::traits;
 use std::{boxed::Box, fmt::Debug, vec::Vec};
 
-#[cfg(test)]
-mod mocks;
+#[cfg(any(test, feature = "mocks"))]
+pub mod mocks;
 
 #[cfg(test)]
 mod builders;

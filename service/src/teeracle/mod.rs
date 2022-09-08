@@ -15,7 +15,7 @@
 
 */
 
-use crate::interval_scheduling::schedule_on_repeating_intervals;
+use crate::teeracle::interval_scheduling::schedule_on_repeating_intervals;
 use codec::{Decode, Encode};
 use itp_enclave_api::teeracle_api::TeeracleApi;
 use itp_node_api::api_client::ParentchainApi;
@@ -27,6 +27,7 @@ use substrate_api_client::XtStatus;
 use teeracle_metrics::{increment_number_of_request_failures, set_extrinsics_inclusion_success};
 use tokio::runtime::Handle;
 
+pub(crate) mod interval_scheduling;
 pub(crate) mod teeracle_metrics;
 
 /// Send extrinsic to chain according to the market data update interval in the settings

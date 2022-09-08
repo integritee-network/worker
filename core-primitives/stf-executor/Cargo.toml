@@ -20,6 +20,7 @@ itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
 itp-sgx-externalities = { default-features = false, path = "../substrate-sgx/externalities" }
 itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
+itp-stf-state-observer = { path = "../stf-state-observer", default-features = false }
 itp-storage = { path = "../storage", default-features = false }
 itp-time-utils = { path = "../time-utils", default-features = false }
 
@@ -44,6 +45,9 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 itp-test = { path = "../test", default-features = false, optional = true }
 parentchain-test = { optional = true, default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
+[dev-dependencies]
+itp-stf-state-observer = { path = "../stf-state-observer", features = ["mocks"] }
+
 [features]
 default = ["std"]
 std = [
@@ -54,6 +58,7 @@ std = [
     "itp-sgx-crypto/std",
     "itp-sgx-externalities/std",
     "itp-stf-state-handler/std",
+    "itp-stf-state-observer/std",
     "itp-storage/std",
     "itp-types/std",
     "itp-time-utils/std",
@@ -74,6 +79,7 @@ sgx = [
     "itp-sgx-crypto/sgx",
     "itp-sgx-externalities/sgx",
     "itp-stf-state-handler/sgx",
+    "itp-stf-state-observer/sgx",
     "itp-storage/sgx",
     "itp-time-utils/sgx",
     "thiserror_sgx",

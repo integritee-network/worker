@@ -39,6 +39,7 @@ members = [
     "core-primitives/sgx/io",
     "core-primitives/stf-executor",
     "core-primitives/stf-state-handler",
+    "core-primitives/stf-state-observer",
     "core-primitives/storage",
     "core-primitives/substrate-sgx/environmental",
     "core-primitives/substrate-sgx/externalities",

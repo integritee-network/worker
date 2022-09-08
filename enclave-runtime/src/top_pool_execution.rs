@@ -42,13 +42,12 @@ use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::Ed25519Seal;
 use itp_sgx_io::StaticSealedIO;
 use itp_stf_state_handler::query_shard_state::QueryShardState;
-use itp_time_utils::{duration_now, remaining_time};
+use itp_time_utils::duration_now;
 use itp_types::{Block, OpaqueCall, H256};
 use its_sidechain::{
 	aura::{proposer_factory::ProposerFactory, Aura, SlotClaimStrategy},
 	consensus_common::{Environment, Error as ConsensusError, ProcessBlockImportQueue},
 	slots::{sgx::LastSlotSeal, yield_next_slot, PerShardSlotWorkerScheduler, SlotInfo},
-	top_pool_executor::TopPoolGetterOperator,
 	validateer_fetch::ValidateerFetch,
 };
 use log::*;
@@ -64,52 +63,6 @@ use sp_runtime::{
 	generic::SignedBlock as SignedParentchainBlock, traits::Block as BlockTrait, MultiSignature,
 };
 use std::{sync::Arc, time::Instant, vec::Vec};
-
-#[no_mangle]
-pub unsafe extern "C" fn execute_trusted_getters() -> sgx_status_t {
-	if let Err(e) = execute_top_pool_trusted_getters_on_all_shards() {
-		return e.into()
-	}
-
-	sgx_status_t::SGX_SUCCESS
-}
-
-/// Internal [`execute_trusted_getters`] function to be able to use the `?` operator.
-///
-/// Executes trusted getters for a scheduled amount of time (defined by settings).
-fn execute_top_pool_trusted_getters_on_all_shards() -> Result<()> {
-	use itp_settings::enclave::MAX_TRUSTED_GETTERS_EXEC_DURATION;
-
-	let top_pool_executor = GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.get()?;
-	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
-	let shards = state_handler.list_shards()?;
-
-	let mut remaining_shards = shards.len() as u32;
-	let ends_at = duration_now() + MAX_TRUSTED_GETTERS_EXEC_DURATION;
-
-	// Execute trusted getters for each shard. Each shard gets equal amount of time to execute
-	// getters.
-	for shard in shards.into_iter() {
-		let shard_exec_time = match remaining_time(ends_at)
-			.and_then(|r| r.checked_div(remaining_shards))
-		{
-			Some(t) => t,
-			None => {
-				info!("[Enclave] Could not execute trusted operations for all shards. Remaining number of shards: {}.", remaining_shards);
-				break
-			},
-		};
-
-		match top_pool_executor.execute_trusted_getters_on_shard(&shard, shard_exec_time) {
-			Ok(()) => {},
-			Err(e) => error!("Error in trusted getter execution for shard {:?}: {:?}", shard, e),
-		}
-
-		remaining_shards -= 1;
-	}
-
-	Ok(())
-}
 
 #[no_mangle]
 pub unsafe extern "C" fn execute_trusted_calls() -> sgx_status_t {

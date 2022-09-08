@@ -20,38 +20,40 @@ use ita_stf::{AccountId, Index, KeyPair, Stf, TrustedCall, TrustedCallSigned};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{ed25519_derivation::DeriveEd25519, key_repository::AccessKey};
 use itp_sgx_externalities::SgxExternalitiesTrait;
-use itp_stf_state_handler::handle_state::HandleState;
+use itp_stf_state_observer::traits::ObserveState;
 use itp_types::ShardIdentifier;
-use sp_core::{ed25519::Pair as Ed25519Pair, Pair, H256};
+use sp_core::{ed25519::Pair as Ed25519Pair, Pair};
 use std::sync::Arc;
 
-pub struct StfEnclaveSigner<OCallApi, StateHandler, ShieldingKeyRepository> {
-	state_handler: Arc<StateHandler>,
+pub struct StfEnclaveSigner<OCallApi, StateObserver, ShieldingKeyRepository> {
+	state_observer: Arc<StateObserver>,
 	ocall_api: Arc<OCallApi>,
 	shielding_key_repo: Arc<ShieldingKeyRepository>,
 }
 
-impl<OCallApi, StateHandler, ShieldingKeyRepository>
-	StfEnclaveSigner<OCallApi, StateHandler, ShieldingKeyRepository>
+impl<OCallApi, StateObserver, ShieldingKeyRepository>
+	StfEnclaveSigner<OCallApi, StateObserver, ShieldingKeyRepository>
 where
 	OCallApi: EnclaveAttestationOCallApi,
-	StateHandler: HandleState<HashType = H256>,
-	StateHandler::StateT: SgxExternalitiesTrait,
+	StateObserver: ObserveState,
+	StateObserver::StateType: SgxExternalitiesTrait,
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: DeriveEd25519,
 {
 	pub fn new(
-		state_handler: Arc<StateHandler>,
+		state_observer: Arc<StateObserver>,
 		ocall_api: Arc<OCallApi>,
 		shielding_key_repo: Arc<ShieldingKeyRepository>,
 	) -> Self {
-		Self { state_handler, ocall_api, shielding_key_repo }
+		Self { state_observer, ocall_api, shielding_key_repo }
 	}
 
 	fn get_enclave_account_nonce(&self, shard: &ShardIdentifier) -> Result<Index> {
 		let enclave_account = self.get_enclave_account()?;
-		let mut state = self.state_handler.load(shard)?;
-		let nonce = Stf::account_nonce(&mut state, &enclave_account);
+		let nonce = self
+			.state_observer
+			.observe_state(shard, move |state| Stf::account_nonce(state, &enclave_account))?;
+
 		Ok(nonce)
 	}
 
@@ -61,12 +63,12 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler, ShieldingKeyRepository> StfEnclaveSigning
-	for StfEnclaveSigner<OCallApi, StateHandler, ShieldingKeyRepository>
+impl<OCallApi, StateObserver, ShieldingKeyRepository> StfEnclaveSigning
+	for StfEnclaveSigner<OCallApi, StateObserver, ShieldingKeyRepository>
 where
 	OCallApi: EnclaveAttestationOCallApi,
-	StateHandler: HandleState<HashType = H256>,
-	StateHandler::StateT: SgxExternalitiesTrait,
+	StateObserver: ObserveState,
+	StateObserver::StateType: SgxExternalitiesTrait,
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: DeriveEd25519,
 {

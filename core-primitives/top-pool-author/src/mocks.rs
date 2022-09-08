@@ -15,6 +15,9 @@
 
 */
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
+
 #[cfg(feature = "sgx")]
 use std::sync::SgxRwLock as RwLock;
 
@@ -29,9 +32,9 @@ use ita_stf::{
 };
 use itp_top_pool::primitives::PoolFuture;
 use itp_types::ShardIdentifier;
-use jsonrpc_core::{futures_util::future::ready, Error as RpcError};
+use jsonrpc_core::{futures::future::ready, Error as RpcError};
 use sp_core::{blake2_256, H256};
-use std::{collections::HashMap, marker::PhantomData, vec::Vec};
+use std::{boxed::Box, collections::HashMap, marker::PhantomData, vec::Vec};
 
 #[derive(Default)]
 pub struct AuthorApiMock<Hash, BlockHash> {

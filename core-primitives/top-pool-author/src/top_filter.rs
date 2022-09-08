@@ -26,6 +26,18 @@ pub trait Filter {
 	fn filter(&self, value: &Self::Value) -> bool;
 }
 
+/// Filter for calls only (no getters).
+pub struct CallsOnlyFilter;
+
+impl Filter for CallsOnlyFilter {
+	type Value = TrustedOperation;
+
+	fn filter(&self, value: &Self::Value) -> bool {
+		matches!(value, TrustedOperation::direct_call(_))
+			|| matches!(value, TrustedOperation::indirect_call(_))
+	}
+}
+
 /// Filter that allows all TOPs (i.e. not filter at all)
 pub struct AllowAllTopsFilter;
 
@@ -45,6 +57,17 @@ impl Filter for GettersOnlyFilter {
 
 	fn filter(&self, value: &Self::Value) -> bool {
 		matches!(value, TrustedOperation::get(_))
+	}
+}
+
+/// Filter for indirect calls only (no getters, no direct calls).
+pub struct IndirectCallsOnlyFilter;
+
+impl Filter for IndirectCallsOnlyFilter {
+	type Value = TrustedOperation;
+
+	fn filter(&self, value: &Self::Value) -> bool {
+		matches!(value, TrustedOperation::indirect_call(_))
 	}
 }
 
@@ -129,6 +152,24 @@ mod tests {
 		assert!(!filter.filter(&trusted_direct_call()));
 		assert!(filter.filter(&trusted_indirect_call()));
 		assert!(filter.filter(&trusted_getter()));
+	}
+
+	#[test]
+	fn indirect_calls_only_filter_works() {
+		let filter = IndirectCallsOnlyFilter;
+
+		assert!(!filter.filter(&trusted_direct_call()));
+		assert!(filter.filter(&trusted_indirect_call()));
+		assert!(!filter.filter(&trusted_getter()));
+	}
+
+	#[test]
+	fn calls_only_filter_works() {
+		let filter = CallsOnlyFilter;
+
+		assert!(filter.filter(&trusted_direct_call()));
+		assert!(filter.filter(&trusted_indirect_call()));
+		assert!(!filter.filter(&trusted_getter()));
 	}
 
 	fn trusted_direct_call() -> TrustedOperation {
