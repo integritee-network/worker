@@ -38,8 +38,10 @@ std = [
     "sp-core/std",
     "serde/std",
     "serde_json/std",
+    "sgx-crypto-helper/default",
 ]
 sgx = [
+    "sgx-crypto-helper/mesalock_sgx",
     "sgx_tstd",
     "sgx_rand",
     "itp-sgx-io/sgx",

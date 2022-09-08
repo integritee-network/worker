@@ -16,6 +16,7 @@ itp-settings = { path = "../../core-primitives/settings" }
 itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", default-features = false }
 itp-sgx-externalities = { default-features = false, path = "../../core-primitives/substrate-sgx/externalities" }
 itp-sgx-io = { path = "../../core-primitives/sgx/io", default-features = false }
+itp-stf-state-observer = { path = "../stf-state-observer", default-features = false }
 itp-time-utils = { path = "../../core-primitives/time-utils", default-features = false }
 
 # sgx enabled external libraries
@@ -37,6 +38,7 @@ sp-core = { default-features = false, features = ["full_crypto"], git = "https:/
 
 [dev-dependencies]
 itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", features = ["mocks"] }
+itp-stf-state-observer = { path = "../stf-state-observer", features = ["mocks"] }
 
 [features]
 default = ["std"]
@@ -46,6 +48,7 @@ std = [
     "itp-sgx-crypto/std",
     "itp-sgx-externalities/std",
     "itp-sgx-io/std",
+    "itp-stf-state-observer/std",
     "itp-time-utils/std",
     "itp-types/std",
     "thiserror",
@@ -59,6 +62,7 @@ sgx = [
     "itp-sgx-crypto/sgx",
     "itp-sgx-externalities/sgx",
     "itp-sgx-io/sgx",
+    "itp-stf-state-observer/sgx",
     "itp-time-utils/sgx",
     "thiserror_sgx",
 ]

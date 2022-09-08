@@ -46,6 +46,7 @@ use itp_node_api::{
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_stf_executor::enclave_signer::StfEnclaveSigner;
+use itp_stf_state_observer::mock::ObserveStateMock;
 use itp_test::mock::metrics_ocall_mock::MetricsOCallMock;
 use itp_top_pool_author::{top_filter::AllowAllTopsFilter, traits::AuthorApi};
 use itp_types::{AccountId, Block, ShardIdentifier, ShieldFundsFn, H256};
@@ -105,20 +106,21 @@ pub fn submit_shielding_call_to_top_pool() {
 	let mr_enclave = ocall_api.get_mrenclave_of_self().unwrap();
 
 	let state_handler = Arc::new(TestStateHandler::default());
-	let (_, shard_id) = init_state(state_handler.as_ref(), signer.public().into());
+	let (state, shard_id) = init_state(state_handler.as_ref(), signer.public().into());
+	let state_observer = Arc::new(ObserveStateMock::new(state));
 
 	let top_pool = create_top_pool();
 
 	let top_pool_author = Arc::new(TestTopPoolAuthor::new(
 		top_pool,
 		AllowAllTopsFilter {},
-		state_handler.clone(),
+		state_handler,
 		shielding_key_repo.clone(),
 		Arc::new(MetricsOCallMock::default()),
 	));
 
 	let enclave_signer = Arc::new(StfEnclaveSigner::new(
-		state_handler.clone(),
+		state_observer,
 		ocall_api.clone(),
 		shielding_key_repo.clone(),
 	));

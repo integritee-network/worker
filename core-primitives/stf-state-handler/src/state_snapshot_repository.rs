@@ -30,7 +30,7 @@ use std::{collections::VecDeque, fmt::Debug, format, marker::PhantomData, sync::
 
 /// Trait for versioned state access. Manages history of state snapshots.
 pub trait VersionedStateAccess {
-	type StateType;
+	type StateType: Clone;
 	type HashType;
 
 	/// Load the latest version of the state.
@@ -184,6 +184,7 @@ impl<FileIo, State, HashType> VersionedStateAccess
 where
 	FileIo: StateFileIo<StateType = State, HashType = HashType>,
 	HashType: Copy + Eq + Debug,
+	State: Clone,
 {
 	type StateType = State;
 	type HashType = HashType;

@@ -15,10 +15,8 @@
 
 */
 
+use crate::{config::Config, enclave::api::*, setup};
 use clap::ArgMatches;
-
-use crate::{config::Config, enclave::api::*};
-
 use itp_enclave_api::enclave_test::EnclaveTest;
 
 pub mod commons;
@@ -33,6 +31,7 @@ pub mod parentchain_block_syncer_test;
 pub fn run_enclave_tests(matches: &ArgMatches) {
 	println!("*** Starting Test enclave");
 	let config = Config::from(matches);
+	setup::purge_files_from_cwd().unwrap();
 	let enclave = enclave_init(&config).unwrap();
 
 	if matches.is_present("all") || matches.is_present("unit") {

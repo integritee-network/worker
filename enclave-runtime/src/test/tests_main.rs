@@ -14,6 +14,9 @@
 	limitations under the License.
 */
 
+#[cfg(feature = "evm")]
+use crate::test::evm_pallet_tests;
+
 use crate::{
 	attestation,
 	ocall::OcallApi,
@@ -21,7 +24,8 @@ use crate::{
 	sync::tests::{enclave_rw_lock_works, sidechain_rw_lock_works},
 	test::{
 		cert_tests::*,
-		fixtures::test_setup::{enclave_call_signer, test_setup},
+		direct_rpc_tests,
+		fixtures::test_setup::{enclave_call_signer, test_setup, TestTopPoolAuthor},
 		mocks::types::TestStateKeyRepo,
 		sidechain_aura_tests, top_pool_tests,
 	},
@@ -38,7 +42,6 @@ use itp_node_api::metadata::{
 	metadata_mocks::NodeMetadataMock, pallet_sidechain::SidechainCallIndexes,
 	provider::NodeMetadataRepository,
 };
-use itp_settings::enclave::MAX_TRUSTED_OPS_EXEC_DURATION;
 use itp_sgx_crypto::{Aes, StateCrypto};
 use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use itp_stf_executor::{
@@ -65,11 +68,7 @@ use sidechain_primitives::{
 };
 use sp_core::{crypto::Pair, ed25519 as spEd25519, H256};
 use sp_runtime::traits::Header as HeaderT;
-use std::{string::String, sync::Arc, vec::Vec};
-
-#[cfg(feature = "evm")]
-use crate::test::evm_pallet_tests;
-use crate::test::fixtures::test_setup::TestTopPoolAuthor;
+use std::{string::String, sync::Arc, time::Duration, vec::Vec};
 
 type TestStfExecutor =
 	StfExecutor<OcallApi, HandleStateMock, NodeMetadataRepository<NodeMetadataMock>>;
@@ -148,6 +147,10 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		tls_ra::seal_handler::test::seal_state_fails_for_invalid_state,
 		tls_ra::seal_handler::test::unseal_seal_state_works,
 		tls_ra::tests::test_tls_ra_server_client_networking,
+		// RPC tests
+		direct_rpc_tests::get_state_request_works,
+
+		// EVM tests
 		run_evm_tests,
 
 		// these unit test (?) need an ipfs node running..
@@ -655,7 +658,7 @@ fn execute_trusted_calls(
 			&top_pool_calls,
 			&latest_parentchain_header(),
 			&shard,
-			MAX_TRUSTED_OPS_EXEC_DURATION,
+			Duration::from_millis(600),
 			|s| {
 				let mut sidechain_db = SidechainDB::<SignedBlock, SgxExternalities>::new(s);
 				sidechain_db

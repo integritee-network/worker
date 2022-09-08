@@ -15,22 +15,24 @@
 
 */
 
-use frame_support::sp_runtime::traits::Block as ParentchainBlockTrait;
-use itp_enclave_api::{sidechain::Sidechain, EnclaveResult};
+#![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(test, feature(assert_matches))]
 
-/// Mock for Parentchain Api
-pub struct SidechainApiMock;
+#[cfg(all(feature = "std", feature = "sgx"))]
+compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
 
-impl Sidechain for SidechainApiMock {
-	fn sync_parentchain<ParentchainBlock: ParentchainBlockTrait>(
-		&self,
-		_blocks: &[sp_runtime::generic::SignedBlock<ParentchainBlock>],
-		_nonce: u32,
-	) -> EnclaveResult<()> {
-		Ok(())
-	}
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+extern crate sgx_tstd as std;
 
-	fn execute_trusted_calls(&self) -> EnclaveResult<()> {
-		todo!()
-	}
+// Re-export module to properly feature gate sgx and regular std environment.
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+pub mod sgx_reexport_prelude {
+	pub use thiserror_sgx as thiserror;
 }
+
+pub mod error;
+pub mod state_observer;
+pub mod traits;
+
+#[cfg(feature = "mocks")]
+pub mod mock;

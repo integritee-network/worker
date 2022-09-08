@@ -48,14 +48,14 @@ use std::{boxed::Box, sync::Arc, vec, vec::Vec};
 
 /// Define type of TOP filter that is used in the Author
 #[cfg(feature = "sidechain")]
-pub type AuthorTopFilter = crate::top_filter::AllowAllTopsFilter;
+pub type AuthorTopFilter = crate::top_filter::CallsOnlyFilter;
 #[cfg(feature = "offchain-worker")]
-pub type AuthorTopFilter = crate::top_filter::NoDirectCallsFilter;
+pub type AuthorTopFilter = crate::top_filter::IndirectCallsOnlyFilter;
 #[cfg(feature = "teeracle")] // Teeracle currently does not process any trusted operations
 pub type AuthorTopFilter = crate::top_filter::DenyAllFilter;
 
 #[cfg(not(any(feature = "sidechain", feature = "offchain-worker", feature = "teeracle")))]
-pub type AuthorTopFilter = crate::top_filter::AllowAllTopsFilter;
+pub type AuthorTopFilter = crate::top_filter::CallsOnlyFilter;
 
 /// Currently we treat all RPC operations as externals.
 ///

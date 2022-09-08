@@ -17,19 +17,21 @@
 
 use crate::{
 	error::Result,
+	state_getter::GetState,
 	traits::{StateUpdateProposer, StfEnclaveSigning},
 	BatchExecutionResult, ExecutedOperation,
 };
 use codec::Encode;
 use ita_stf::{
 	hash::{Hash, TrustedOperationOrHash},
-	AccountId, KeyPair, ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedOperation,
+	AccountId, KeyPair, ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedGetterSigned,
+	TrustedOperation,
 };
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_types::H256;
 use sp_core::Pair;
 use sp_runtime::traits::Header as HeaderTrait;
-use std::{marker::PhantomData, time::Duration};
+use std::{marker::PhantomData, time::Duration, vec::Vec};
 
 /// Mock for the StfExecutor.
 #[derive(Default)]
@@ -103,5 +105,20 @@ impl StfEnclaveSigning for StfEnclaveSignerMock {
 		shard: &ShardIdentifier,
 	) -> Result<TrustedCallSigned> {
 		Ok(trusted_call.sign(&KeyPair::Ed25519(self.signer.clone()), 1, &self.mr_enclave, shard))
+	}
+}
+
+/// GetState mock
+#[derive(Default)]
+pub struct GetStateMock<StateType> {
+	_phantom: PhantomData<StateType>,
+}
+
+impl<StateType> GetState<StateType> for GetStateMock<StateType>
+where
+	StateType: Encode,
+{
+	fn get_state(_getter: &TrustedGetterSigned, state: &mut StateType) -> Result<Option<Vec<u8>>> {
+		Ok(Some(state.encode()))
 	}
 }

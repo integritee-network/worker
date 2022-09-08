@@ -33,6 +33,7 @@ use ita_stf::{AccountId, State as StfState, StateType as StfStateType};
 use itp_sgx_crypto::{mocks::KeyRepositoryMock, Aes, AesSeal, StateCrypto};
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_sgx_io::{write, StaticSealedIO};
+use itp_stf_state_observer::state_observer::StateObserver;
 use itp_types::{ShardIdentifier, H256};
 use sp_core::hashing::blake2_256;
 use std::{sync::Arc, thread, vec::Vec};
@@ -43,7 +44,8 @@ type StateKeyRepositoryMock = KeyRepositoryMock<Aes>;
 type TestStateFileIo = SgxStateFileIo<StateKeyRepositoryMock>;
 type TestStateRepository = StateSnapshotRepository<TestStateFileIo, StfState, H256>;
 type TestStateRepositoryLoader = StateSnapshotRepositoryLoader<TestStateFileIo, StfState, H256>;
-type TestStateHandler = StateHandler<TestStateRepository>;
+type TestStateObserver = StateObserver<StfState>;
+type TestStateHandler = StateHandler<TestStateRepository, TestStateObserver>;
 
 /// Directory handle to automatically initialize a directory
 /// and upon dropping the reference, removing it again.
@@ -302,10 +304,11 @@ fn initialize_state_handler() -> Arc<TestStateHandler> {
 		Arc::new(StateKeyRepositoryMock::new(AesSeal::unseal_from_static_file().unwrap()));
 	let file_io = Arc::new(TestStateFileIo::new(state_key_access, AccountId::new([1u8; 32])));
 	let state_repository_loader = TestStateRepositoryLoader::new(file_io);
+	let state_observer = Arc::new(TestStateObserver::default());
 	let state_snapshot_repository = state_repository_loader
 		.load_snapshot_repository(STATE_SNAPSHOTS_CACHE_SIZE)
 		.unwrap();
-	Arc::new(TestStateHandler::new(state_snapshot_repository))
+	Arc::new(TestStateHandler::new(state_snapshot_repository, state_observer))
 }
 
 fn update_state(
