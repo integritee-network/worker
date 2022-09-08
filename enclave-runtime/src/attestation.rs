@@ -29,13 +29,18 @@
 
 use crate::{global_components::GLOBAL_ATTESTATION_HANDLER_COMPONENT, Result as EnclaveResult};
 use itp_component_container::ComponentGetter;
+use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 
+use itp_settings::worker::MR_ENCLAVE_SIZE;
 use sgx_types::*;
-use std::{prelude::v1::*, vec::Vec};
+use std::{prelude::v1::*, slice, vec::Vec};
 
 #[no_mangle]
-pub unsafe extern "C" fn get_mrenclave(mrenclave: *mut u8, mrenclave_size: u32) -> sgx_status_t {
+pub unsafe extern "C" fn get_mrenclave(mrenclave: *mut u8, mrenclave_size: usize) -> sgx_status_t {
+	if mrenclave.is_null() || mrenclave_size < MR_ENCLAVE_SIZE {
+		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+	}
 	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
 		Ok(r) => r,
 		Err(e) => {
@@ -43,7 +48,19 @@ pub unsafe extern "C" fn get_mrenclave(mrenclave: *mut u8, mrenclave_size: u32) 
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	};
-	attestation_handler.get_mrenclave(mrenclave, mrenclave_size)
+	match attestation_handler.get_mrenclave() {
+		Ok(mrenclave_value) => {
+			let mrenclave_slice = slice::from_raw_parts_mut(mrenclave, mrenclave_size);
+			if let Err(e) =
+				write_slice_and_whitespace_pad(mrenclave_slice, mrenclave_value.to_vec())
+			{
+				error!("Failed to transfer mrenclave to o-call buffer: {:?}", e);
+				return sgx_status_t::SGX_ERROR_UNEXPECTED
+			}
+			sgx_status_t::SGX_SUCCESS
+		},
+		Err(e) => e.into(),
+	}
 }
 
 pub fn create_ra_report_and_signature(
@@ -77,6 +94,10 @@ pub unsafe extern "C" fn perform_ra(
 	unchecked_extrinsic: *mut u8,
 	unchecked_extrinsic_size: u32,
 ) -> sgx_status_t {
+	if genesis_hash.is_null() || w_url.is_null() || unchecked_extrinsic.is_null() || nonce.is_null()
+	{
+		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+	}
 	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
 		Ok(r) => r,
 		Err(e) => {
@@ -84,19 +105,24 @@ pub unsafe extern "C" fn perform_ra(
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	};
-	attestation_handler.perform_ra(
-		genesis_hash,
-		genesis_hash_size,
-		nonce,
-		w_url,
-		w_url_size,
-		unchecked_extrinsic,
-		unchecked_extrinsic_size,
-	)
+	let genesis_slice = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
+	let w_url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
+	let extrinsics_slice =
+		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
+	match attestation_handler.perform_ra(genesis_slice, *nonce, w_url_slice) {
+		Ok(extrinsic) => {
+			if let Err(e) = write_slice_and_whitespace_pad(extrinsics_slice, extrinsic) {
+				error!("Failed to transfer extrinsic to o-call buffer: {:?}", e);
+				return sgx_status_t::SGX_ERROR_UNEXPECTED
+			}
+			sgx_status_t::SGX_SUCCESS
+		},
+		Err(e) => e.into(),
+	}
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn dump_ra_to_disk() -> sgx_status_t {
+pub extern "C" fn dump_ra_to_disk() -> sgx_status_t {
 	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
 		Ok(r) => r,
 		Err(e) => {
@@ -104,5 +130,8 @@ pub unsafe extern "C" fn dump_ra_to_disk() -> sgx_status_t {
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	};
-	attestation_handler.dump_ra_to_disk()
+	match attestation_handler.dump_ra_to_disk() {
+		Ok(_) => sgx_status_t::SGX_SUCCESS,
+		Err(e) => e.into(),
+	}
 }

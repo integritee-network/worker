@@ -51,7 +51,12 @@ impl From<itp_sgx_crypto::error::Error> for Error {
 impl From<Error> for sgx_status_t {
 	/// return sgx_status for top level enclave functions
 	fn from(error: Error) -> sgx_status_t {
-		log::warn!("Transform non-sgx-error into `SGX_ERROR_UNEXPECTED`: {:?}", error);
-		sgx_status_t::SGX_ERROR_UNEXPECTED
+		match error {
+			Error::Sgx(status) => status,
+			_ => {
+				log::error!("Returning error {:?} as sgx unexpected.", error);
+				sgx_status_t::SGX_ERROR_UNEXPECTED
+			},
+		}
 	}
 }

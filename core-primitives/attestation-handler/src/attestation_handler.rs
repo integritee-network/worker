@@ -27,7 +27,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use crate::{cert, utils::hash_from_slice, Error as EnclaveError, Result as EnclaveResult};
+use crate::{cert, utils::hash_from_slice, Error as EnclaveError, Error, Result as EnclaveResult};
 use codec::Encode;
 use core::default::Default;
 use itertools::Itertools;
@@ -36,11 +36,13 @@ use itp_node_api::{
 	metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata, NodeMetadata},
 };
 use itp_ocall_api::EnclaveAttestationOCallApi;
-use itp_settings::files::{RA_API_KEY_FILE, RA_DUMP_CERT_DER_FILE, RA_SPID_FILE};
+use itp_settings::{
+	files::{RA_API_KEY_FILE, RA_DUMP_CERT_DER_FILE, RA_SPID_FILE},
+	worker::MR_ENCLAVE_SIZE,
+};
 use itp_sgx_crypto::Ed25519Seal;
 use itp_sgx_io as io;
 use itp_sgx_io::StaticSealedIO;
-use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use sgx_rand::*;
 use sgx_tcrypto::*;
@@ -52,7 +54,7 @@ use std::{
 	io::{Read, Write},
 	net::TcpStream,
 	prelude::v1::*,
-	println, slice, str,
+	println, str,
 	string::String,
 	sync::Arc,
 	vec::Vec,
@@ -85,15 +87,10 @@ where
 		Self { ocall_api, node_metadata_repo }
 	}
 
-	pub unsafe fn get_mrenclave(&self, mrenclave: *mut u8, mrenclave_size: u32) -> sgx_status_t {
-		let mrenclave_slice = slice::from_raw_parts_mut(mrenclave, mrenclave_size as usize);
-
+	pub fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]> {
 		match self.ocall_api.get_mrenclave_of_self() {
-			Ok(m) => {
-				mrenclave_slice.copy_from_slice(&m.m[..]);
-				sgx_status_t::SGX_SUCCESS
-			},
-			Err(e) => e,
+			Ok(m) => Ok(m.m),
+			Err(e) => Err(EnclaveError::Sgx(e)),
 		}
 	}
 
@@ -494,37 +491,28 @@ where
 		Ok((key_der, cert_der))
 	}
 
-	pub unsafe fn perform_ra(
+	pub fn perform_ra(
 		&self,
-		genesis_hash: *const u8,
-		genesis_hash_size: u32,
-		nonce: *const u32,
-		w_url: *const u8,
-		w_url_size: u32,
-		unchecked_extrinsic: *mut u8,
-		unchecked_extrinsic_size: u32,
-	) -> sgx_status_t {
+		genesis_hash_slice: &[u8],
+		nonce: u32,
+		url_slice: &[u8],
+	) -> EnclaveResult<Vec<u8>> {
 		// our certificate is unlinkable
 		let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
 		let (_key_der, cert_der) = match self.create_ra_report_and_signature(sign_type, false) {
 			Ok(r) => r,
-			Err(e) => return e.into(),
+			Err(e) => return Err(e),
 		};
 
 		info!("    [Enclave] Compose extrinsic");
-		let genesis_hash_slice = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
-		//let mut nonce_slice     = slice::from_raw_parts(nonce, nonce_size as usize);
-		let url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
-		let extrinsic_slice =
-			slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 		let signer = match Ed25519Seal::unseal_from_static_file() {
 			Ok(pair) => pair,
-			Err(e) => return e.into(),
+			Err(e) => return Err(EnclaveError::Crypto(e)),
 		};
 		info!("[Enclave] Restored ECC pubkey: {:?}", signer.public());
 
-		debug!("decoded nonce: {}", *nonce);
+		debug!("decoded nonce: {}", nonce);
 		let genesis_hash = hash_from_slice(genesis_hash_slice);
 		debug!("decoded genesis_hash: {:?}", genesis_hash_slice);
 		debug!("worker url: {}", str::from_utf8(url_slice).unwrap());
@@ -540,7 +528,7 @@ where
 				Ok(r) => r,
 				Err(e) => {
 					error!("Failed to get node metadata: {:?}", e);
-					return sgx_status_t::SGX_ERROR_UNEXPECTED
+					return Err(EnclaveError::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))
 				},
 			};
 
@@ -548,14 +536,14 @@ where
 			Ok(c) => c,
 			Err(e) => {
 				error!("Failed to get the indexes for the register_enclave call from the metadata: {:?}", e);
-				return sgx_status_t::SGX_ERROR_UNEXPECTED
+				return Err(EnclaveError::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))
 			},
 		};
 
 		let extrinsic_params = ParentchainExtrinsicParams::new(
 			runtime_spec_version,
 			runtime_transaction_version,
-			*nonce,
+			nonce,
 			genesis_hash,
 			ParentchainExtrinsicParamsBuilder::default(),
 		);
@@ -573,21 +561,16 @@ where
 			xt_encoded.len(),
 			xt_hash
 		);
-
-		if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, xt_encoded) {
-			return EnclaveError::Other(Box::new(e)).into()
-		};
-
-		sgx_status_t::SGX_SUCCESS
+		Ok(xt_encoded)
 	}
 
-	pub fn dump_ra_to_disk(&self) -> sgx_status_t {
+	pub fn dump_ra_to_disk(&self) -> EnclaveResult<()> {
 		// our certificate is unlinkable
 		let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
 		let (_key_der, cert_der) = match self.create_ra_report_and_signature(sign_type, false) {
 			Ok(r) => r,
-			Err(e) => return e.into(),
+			Err(e) => return Err(e),
 		};
 
 		if let Err(err) = io::write(&cert_der, RA_DUMP_CERT_DER_FILE) {
@@ -595,11 +578,10 @@ where
 				"    [Enclave] failed to write RA file ({}), status: {:?}",
 				RA_DUMP_CERT_DER_FILE, err
 			);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return Err(Error::IoError(err))
 		}
 		info!("    [Enclave] dumped ra cert to {}", RA_DUMP_CERT_DER_FILE);
-
-		sgx_status_t::SGX_SUCCESS
+		Ok(())
 	}
 }
 
