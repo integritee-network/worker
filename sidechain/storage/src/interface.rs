@@ -44,7 +44,7 @@ impl<SignedBlock: SignedBlockT> SidechainStorageLock<SignedBlock> {
 /// Storage interface Trait
 #[cfg_attr(test, automock)]
 pub trait BlockStorage<SignedBlock: SignedBlockT> {
-	// type not working because gossiper needs to work with the same block type,
+	// Type is not working because broadcaster needs to work with the same block type,
 	// so it needs to be defined somewhere more global.
 	// type SignedBlock: SignedBlockT;
 	fn store_blocks(&self, blocks: Vec<SignedBlock>) -> Result<()>;

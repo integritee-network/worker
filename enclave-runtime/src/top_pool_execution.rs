@@ -81,7 +81,7 @@ pub unsafe extern "C" fn execute_trusted_calls() -> sgx_status_t {
 ///
 /// *   Import all pending parentchain blocks.
 /// *   Sends sidechain `confirm_block` xt's with the produced sidechain blocks.
-/// *   Gossip produced sidechain blocks to peer validateers.
+/// *   Broadcast produced sidechain blocks to peer validateers.
 fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	let start_time = Instant::now();
 
@@ -241,7 +241,7 @@ where
 	Ok((blocks, opaque_calls))
 }
 
-/// Gossips sidechain blocks to fellow peers and sends opaque calls as extrinsic to the parentchain.
+/// Broadcasts sidechain blocks to fellow peers and sends opaque calls as extrinsic to the parentchain.
 pub(crate) fn send_blocks_and_extrinsics<
 	ParentchainBlock,
 	SignedSidechainBlock,

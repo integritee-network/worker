@@ -33,7 +33,7 @@ use crate::{
 	parentchain_block_syncer::{ParentchainBlockSyncer, SyncParentchainBlocks},
 	prometheus_metrics::{start_metrics_server, EnclaveMetricsReceiver, MetricsHandler},
 	sidechain_setup::{sidechain_init_block_production, sidechain_start_untrusted_rpc_server},
-	sync_block_gossiper::SyncBlockGossiper,
+	sync_block_broadcaster::SyncBlockBroadcaster,
 	utils::{check_files, extract_shard},
 	worker::Worker,
 	worker_peers_updater::WorkerPeersUpdater,
@@ -100,7 +100,7 @@ mod parentchain_block_syncer;
 mod prometheus_metrics;
 mod setup;
 mod sidechain_setup;
-mod sync_block_gossiper;
+mod sync_block_broadcaster;
 mod sync_state;
 mod tests;
 mod utils;
@@ -157,8 +157,8 @@ fn main() {
 		initialization_handler.clone(),
 		Vec::new(),
 	));
-	let sync_block_gossiper =
-		Arc::new(SyncBlockGossiper::new(tokio_handle.clone(), worker.clone()));
+	let sync_block_broadcaster =
+		Arc::new(SyncBlockBroadcaster::new(tokio_handle.clone(), worker.clone()));
 	let peer_updater = Arc::new(WorkerPeersUpdater::new(worker));
 	let untrusted_peer_fetcher = UntrustedPeerFetcher::new(node_api_factory.clone());
 	let peer_sidechain_block_fetcher =
@@ -168,7 +168,7 @@ fn main() {
 	// initialize o-call bridge with a concrete factory implementation
 	OCallBridge::initialize(Arc::new(OCallBridgeComponentFactory::new(
 		node_api_factory.clone(),
-		sync_block_gossiper,
+		sync_block_broadcaster,
 		enclave.clone(),
 		sidechain_blockstorage.clone(),
 		peer_updater,

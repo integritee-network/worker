@@ -15,14 +15,14 @@
 
 */
 
-use crate::{sync_block_gossiper::GossipBlocks, worker::WorkerResult};
+use crate::{sync_block_broadcaster::BroadcastBlocks, worker::WorkerResult};
 use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use std::vec::Vec;
 
-pub struct GossipBlocksMock;
+pub struct BroadcastBlocksMock;
 
-impl GossipBlocks for GossipBlocksMock {
-	fn gossip_blocks(&self, _blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()> {
+impl BroadcastBlocks for BroadcastBlocksMock {
+	fn broadcast_blocks(&self, _blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()> {
 		Ok(())
 	}
 }

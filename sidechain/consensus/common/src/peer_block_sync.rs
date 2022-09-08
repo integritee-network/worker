@@ -201,7 +201,7 @@ where
 				_ => Err(e),
 			},
 			Ok(latest_parentchain_header) => {
-				info!("Successfully imported gossiped sidechain block (number: {}), based on parentchain block {:?}", 
+				info!("Successfully imported broadcast sidechain block (number: {}), based on parentchain block {:?}", 
 					sidechain_block_number, latest_parentchain_header.number());
 
 				// We confirm the successful block import. Only in this case, not when we're in
