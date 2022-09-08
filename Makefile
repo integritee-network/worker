@@ -85,7 +85,7 @@ else
 	WORKER_FEATURES = --features=default,$(WORKER_MODE),$(ADDITIONAL_FEATURES)
 endif
 
-CLIENT_FEATURES = --features=$(ADDITIONAL_FEATURES)
+CLIENT_FEATURES = --features=$(WORKER_MODE),$(ADDITIONAL_FEATURES)
 
 # check if running on Jenkins
 ifdef BUILD_ID
