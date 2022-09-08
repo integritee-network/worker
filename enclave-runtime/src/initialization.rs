@@ -18,10 +18,10 @@
 use crate::{
 	error::{Error, Result as EnclaveResult},
 	global_components::{
-		EnclaveBlockImportConfirmationHandler, EnclaveGetterExecutor, EnclaveOCallApi, 
-    EnclaveRpcConnectionRegistry, EnclaveRpcResponder, EnclaveShieldingKeyRepository, 
-    EnclaveSidechainApi, EnclaveSidechainBlockImportQueue, 
-    EnclaveSidechainBlockImportQueueWorker, EnclaveSidechainBlockImporter,
+		EnclaveBlockImportConfirmationHandler, EnclaveGetterExecutor, EnclaveOCallApi,
+		EnclaveRpcConnectionRegistry, EnclaveRpcResponder, EnclaveShieldingKeyRepository,
+		EnclaveSidechainApi, EnclaveSidechainBlockImportQueue,
+		EnclaveSidechainBlockImportQueueWorker, EnclaveSidechainBlockImporter,
 		EnclaveSidechainBlockSyncer, EnclaveStateFileIo, EnclaveStateHandler,
 		EnclaveStateKeyRepository, EnclaveStateObserver, EnclaveStateSnapshotRepository,
 		EnclaveStfEnclaveSigner, EnclaveStfExecutor, EnclaveTopPool, EnclaveTopPoolAuthor,
