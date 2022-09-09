@@ -125,6 +125,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		stf_executor_tests::execute_timed_getters_does_not_execute_more_than_once_if_not_enough_time,
 		stf_executor_tests::execute_timed_getters_batch_returns_early_when_no_getter,
 		stf_executor_tests::propose_state_update_always_executes_preprocessing_step,
+        stf_executor_tests::propose_state_update_executes_no_trusted_calls_given_no_time,
 		stf_executor_tests::propose_state_update_executes_only_one_trusted_call_given_not_enough_time,
 		stf_executor_tests::propose_state_update_executes_all_calls_given_enough_time,
 		stf_enclave_signer_tests::enclave_signer_signatures_are_valid,
