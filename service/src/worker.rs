@@ -65,22 +65,22 @@ impl<Config, NodeApiFactory, Enclave, InitializationHandler>
 }
 
 #[async_trait]
-/// Gossip Sidechain blocks to peers.
-pub trait AsyncBlockGossiper {
-	async fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()>;
+/// Broadcast Sidechain blocks to peers.
+pub trait AsyncBlockBroadcaster {
+	async fn broadcast_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()>;
 }
 
 #[async_trait]
-impl<NodeApiFactory, Enclave, InitializationHandler> AsyncBlockGossiper
+impl<NodeApiFactory, Enclave, InitializationHandler> AsyncBlockBroadcaster
 	for Worker<Config, NodeApiFactory, Enclave, InitializationHandler>
 where
 	NodeApiFactory: CreateNodeApi + Send + Sync,
 	Enclave: Send + Sync,
 	InitializationHandler: TrackInitialization + Send + Sync,
 {
-	async fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()> {
+	async fn broadcast_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()> {
 		if blocks.is_empty() {
-			debug!("No blocks to gossip, returning");
+			debug!("No blocks to broadcast, returning");
 			return Ok(())
 		}
 
@@ -99,12 +99,12 @@ where
 			let blocks = blocks_json.clone();
 
 			tokio::spawn(async move {
-				debug!("Gossiping block to peer with address: {:?}", url);
+				debug!("Broadcasting block to peer with address: {:?}", url);
 				// FIXME: Websocket connection to a worker should stay, once established.
 				let client = match WsClientBuilder::default().build(&url).await {
 					Ok(c) => c,
 					Err(e) => {
-						error!("Failed to create websocket client for block gossiping (target url: {}): {:?}", url, e);
+						error!("Failed to create websocket client for block broadcasting (target url: {}): {:?}", url, e);
 						return
 					},
 				};
@@ -113,7 +113,7 @@ where
 					client.request::<Vec<u8>>(RPC_METHOD_NAME_IMPORT_BLOCKS, blocks.into()).await
 				{
 					error!(
-						"Gossip block request ({}) to {} failed: {:?}",
+						"Broadcast block request ({}) to {} failed: {:?}",
 						RPC_METHOD_NAME_IMPORT_BLOCKS, url, e
 					);
 				}
@@ -148,7 +148,7 @@ where
 		let enclaves = node_api.all_enclaves(None)?;
 		let mut peer_urls = Vec::<String>::new();
 		for enclave in enclaves {
-			// FIXME: This is temporary only, as block gossiping should be moved to trusted ws server.
+			// FIXME: This is temporary only, as block broadcasting should be moved to trusted ws server.
 			let enclave_url = enclave.url.clone();
 			let worker_api_direct = DirectWorkerApi::new(enclave.url);
 			let untrusted_worker_url =
@@ -181,7 +181,7 @@ mod tests {
 			mock::{W1_URL, W2_URL},
 			mocks::initialization_handler_mock::TrackInitializationMock,
 		},
-		worker::{AsyncBlockGossiper, Worker},
+		worker::{AsyncBlockBroadcaster, Worker},
 	};
 	use frame_support::assert_ok;
 	use itp_node_api::node_api_factory::NodeApiFactory;
@@ -215,7 +215,7 @@ mod tests {
 	}
 
 	#[tokio::test]
-	async fn gossip_blocks_works() {
+	async fn broadcast_blocks_works() {
 		init();
 		run_server(W1_URL).await.unwrap();
 		run_server(W2_URL).await.unwrap();
@@ -234,7 +234,7 @@ mod tests {
 		);
 
 		let resp = worker
-			.gossip_blocks(vec![SidechainBlockBuilder::default().build_signed()])
+			.broadcast_blocks(vec![SidechainBlockBuilder::default().build_signed()])
 			.await;
 		assert_ok!(resp);
 	}

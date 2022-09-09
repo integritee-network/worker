@@ -18,7 +18,7 @@
 
 use crate::{
 	ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, SidechainBridge},
-	sync_block_gossiper::GossipBlocks,
+	sync_block_broadcaster::BroadcastBlocks,
 	worker_peers_updater::UpdateWorkerPeers,
 	GetTokioHandle,
 };
@@ -30,26 +30,26 @@ use log::*;
 use sidechain_primitives::{traits::Block, types::SignedBlock as SignedSidechainBlock};
 use std::sync::Arc;
 
-pub struct SidechainOCall<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle> {
-	block_gossiper: Arc<BlockGossiper>,
+pub struct SidechainOCall<BlockBroadcaster, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle> {
+	block_broadcaster: Arc<BlockBroadcaster>,
 	block_storage: Arc<Storage>,
 	peer_updater: Arc<PeerUpdater>,
 	peer_block_fetcher: Arc<PeerBlockFetcher>,
 	tokio_handle: Arc<TokioHandle>,
 }
 
-impl<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle>
-	SidechainOCall<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle>
+impl<BlockBroadcaster, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle>
+	SidechainOCall<BlockBroadcaster, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle>
 {
 	pub fn new(
-		block_gossiper: Arc<BlockGossiper>,
+		block_broadcaster: Arc<BlockBroadcaster>,
 		block_storage: Arc<Storage>,
 		peer_updater: Arc<PeerUpdater>,
 		peer_block_fetcher: Arc<PeerBlockFetcher>,
 		tokio_handle: Arc<TokioHandle>,
 	) -> Self {
 		SidechainOCall {
-			block_gossiper,
+			block_broadcaster,
 			block_storage,
 			peer_updater,
 			peer_block_fetcher,
@@ -58,10 +58,10 @@ impl<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle>
 	}
 }
 
-impl<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle> SidechainBridge
-	for SidechainOCall<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle>
+impl<BlockBroadcaster, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle> SidechainBridge
+	for SidechainOCall<BlockBroadcaster, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle>
 where
-	BlockGossiper: GossipBlocks,
+	BlockBroadcaster: BroadcastBlocks,
 	Storage: BlockStorage<SignedSidechainBlock>,
 	PeerUpdater: UpdateWorkerPeers,
 	PeerBlockFetcher: FetchBlocksFromPeer<SignedBlockType = SignedSidechainBlock>,
@@ -105,13 +105,13 @@ where
 			info!("Successfully updated peers");
 		}
 
-		debug!("Gossiping sidechain blocks..");
-		if let Err(e) = self.block_gossiper.gossip_blocks(signed_blocks) {
-			error!("Error gossiping blocks: {:?}", e);
+		debug!("Broadcasting sidechain blocks ...");
+		if let Err(e) = self.block_broadcaster.broadcast_blocks(signed_blocks) {
+			error!("Error broadcasting blocks: {:?}", e);
 		// Fixme: returning an error here results in a `HeaderAncestryMismatch` error.
 		// status = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		} else {
-			info!("Successfully gossiped blocks");
+			info!("Successfully broadcast blocks");
 		}
 
 		status
@@ -195,7 +195,8 @@ mod tests {
 	use crate::{
 		globals::tokio_handle::ScopedTokioHandle,
 		tests::mocks::{
-			gossip_blocks_mock::GossipBlocksMock, update_worker_peers_mock::UpdateWorkerPeersMock,
+			broadcast_blocks_mock::BroadcastBlocksMock,
+			update_worker_peers_mock::UpdateWorkerPeersMock,
 		},
 	};
 	use codec::Decode;
@@ -214,7 +215,7 @@ mod tests {
 	}
 
 	type TestSidechainOCall = SidechainOCall<
-		GossipBlocksMock,
+		BroadcastBlocksMock,
 		BlockStorageMock,
 		UpdateWorkerPeersMock,
 		FetchBlocksFromPeerMock<SignedSidechainBlock>,
@@ -250,7 +251,7 @@ mod tests {
 	fn setup_sidechain_ocall_with_peer_blocks(
 		peer_blocks_map: HashMap<ShardIdentifier, Vec<SignedSidechainBlock>>,
 	) -> TestSidechainOCall {
-		let block_gossiper_mock = Arc::new(GossipBlocksMock {});
+		let block_broadcaster_mock = Arc::new(BroadcastBlocksMock {});
 		let block_storage_mock = Arc::new(BlockStorageMock {});
 		let peer_updater_mock = Arc::new(UpdateWorkerPeersMock {});
 		let peer_block_fetcher_mock = Arc::new(
@@ -260,7 +261,7 @@ mod tests {
 		let scoped_tokio_handle = Arc::new(ScopedTokioHandle::default());
 
 		SidechainOCall::new(
-			block_gossiper_mock,
+			block_broadcaster_mock,
 			block_storage_mock,
 			peer_updater_mock,
 			peer_block_fetcher_mock,

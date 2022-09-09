@@ -23,35 +23,35 @@ use mockall::*;
 
 use crate::{
 	globals::tokio_handle::GetTokioHandle,
-	worker::{AsyncBlockGossiper, WorkerResult},
+	worker::{AsyncBlockBroadcaster, WorkerResult},
 };
 use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use std::sync::Arc;
 
-/// Allows to gossip blocks, does it in a synchronous (i.e. blocking) manner
+/// Allows to broadcast blocks, does it in a synchronous (i.e. blocking) manner
 #[cfg_attr(test, automock)]
-pub trait GossipBlocks {
-	fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()>;
+pub trait BroadcastBlocks {
+	fn broadcast_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()>;
 }
 
-pub struct SyncBlockGossiper<T, W> {
+pub struct SyncBlockBroadcaster<T, W> {
 	tokio_handle: Arc<T>,
 	worker: Arc<W>,
 }
 
-impl<T, W> SyncBlockGossiper<T, W> {
+impl<T, W> SyncBlockBroadcaster<T, W> {
 	pub fn new(tokio_handle: Arc<T>, worker: Arc<W>) -> Self {
-		SyncBlockGossiper { tokio_handle, worker }
+		SyncBlockBroadcaster { tokio_handle, worker }
 	}
 }
 
-impl<T, W> GossipBlocks for SyncBlockGossiper<T, W>
+impl<T, W> BroadcastBlocks for SyncBlockBroadcaster<T, W>
 where
 	T: GetTokioHandle,
-	W: AsyncBlockGossiper,
+	W: AsyncBlockBroadcaster,
 {
-	fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()> {
+	fn broadcast_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()> {
 		let handle = self.tokio_handle.get_handle();
-		handle.block_on(self.worker.gossip_blocks(blocks))
+		handle.block_on(self.worker.broadcast_blocks(blocks))
 	}
 }
