@@ -239,6 +239,11 @@ where
 
 		// Iterate through all calls until time is over.
 		for trusted_call_signed in trusted_calls.into_iter() {
+			// Break if allowed time window is over.
+			if ends_at < duration_now() {
+				break
+			}
+
 			match self.execute_trusted_call_on_stf(
 				&mut state,
 				&trusted_call_signed,
@@ -253,11 +258,6 @@ where
 					error!("Fatal Error. Failed to attempt call execution: {:?}", e);
 				},
 			};
-
-			// Break if allowed time window is over.
-			if ends_at < duration_now() {
-				break
-			}
 		}
 
 		Ok(BatchExecutionResult {
