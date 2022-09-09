@@ -27,8 +27,11 @@ use itp_ocall_api::EnclaveAttestationOCallApi;
 use log::*;
 use num_bigint::BigUint;
 use serde_json::Value;
-use sgx_tcrypto::*;
-use sgx_types::*;
+use sgx_tcrypto::SgxEccHandle;
+use sgx_types::{
+	sgx_ec256_private_t, sgx_ec256_public_t, sgx_platform_info_t, sgx_quote_t, sgx_status_t,
+	SgxResult, SGX_PLATFORM_INFO_SIZE,
+};
 use std::{io::BufReader, prelude::v1::*, ptr, str, time::*};
 use yasna::models::ObjectIdentifier;
 
