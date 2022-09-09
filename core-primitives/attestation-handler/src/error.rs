@@ -28,12 +28,12 @@ pub type Result<T> = core::result::Result<T, Error>;
 pub enum Error {
 	#[error("SGX error, status: {0}")]
 	Sgx(sgx_status_t),
-	#[error(transparent)]
-	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 	#[error("{0}")]
 	IoError(#[from] std::io::Error),
 	#[error("Crypto error: {0}")]
 	Crypto(itp_sgx_crypto::Error),
+	#[error(transparent)]
+	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }
 
 impl From<sgx_status_t> for Error {

@@ -40,8 +40,8 @@ pub enum Error {
 	ParentchainBlockImportDispatch(itc_parentchain::block_import_dispatcher::error::Error),
 	PrimitivesAccess(itp_primitives_cache::error::Error),
 	MutexAccess,
-	Other(Box<dyn std::error::Error>),
 	Attestation(itp_attestation_handler::error::Error),
+	Other(Box<dyn std::error::Error>),
 }
 
 impl From<Error> for sgx_status_t {
