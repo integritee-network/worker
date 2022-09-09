@@ -31,9 +31,9 @@ use itp_settings::{
 };
 use itp_types::Header;
 use its_consensus_slots::start_slot_worker;
+use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use its_storage::{interface::FetchBlocks, start_sidechain_pruning_loop, BlockPruner};
 use log::*;
-use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use std::{sync::Arc, thread};
 use tokio::runtime::Handle;
 

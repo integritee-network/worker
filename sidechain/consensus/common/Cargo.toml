@@ -12,11 +12,14 @@ thiserror = { version = "1.0.26", optional = true }
 # local deps
 itc-parentchain-light-client = { path = "../../../core/parentchain/light-client", default-features = false }
 itp-block-import-queue = { path = "../../../core-primitives/block-import-queue", default-features = false }
+its-block-verification = { path = "../../block-verification", optional = true, default-features = false }
 itp-extrinsics-factory = { path = "../../../core-primitives/extrinsics-factory", default-features = false }
 itp-node-api-metadata = { path = "../../../core-primitives/node-api/metadata", default-features = false }
 itp-node-api-metadata-provider = { path = "../../../core-primitives/node-api/metadata-provider", default-features = false }
 itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
+itp-types = { path = "../../../core-primitives/types", default-features = false }
+its-primitives = { path = "../../primitives", default-features = false }
 its-state = { path = "../../state", default-features = false }
 
 # sgx deps
@@ -27,18 +30,13 @@ thiserror-sgx = { package = "thiserror", optional = true, git = "https://github.
 # substrate deps
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 
-# scs / integritee
-itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-sidechain-block-verification = { optional = true, default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-
 [dev-dependencies]
 # local
+itc-parentchain-test = { path = "../../../core/parentchain/test" }
 itp-sgx-externalities = { default-features = false, path = "../../../core-primitives/substrate-sgx/externalities" }
 itp-test = { path = "../../../core-primitives/test" }
 its-consensus-aura = { path = "../aura" }
-parentchain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+its-test = { path = "../../test" }
 
 # substrate
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
@@ -60,15 +58,13 @@ std = [
     "itp-sgx-crypto/std",
     "itp-sgx-externalities/std",
     "itp-types/std",
-    "sidechain-primitives/std",
-    "sidechain-block-verification/std",
+    "its-primitives/std",
+    "its-block-verification/std",
     "its-state/std",
     # substrate
     "sp-runtime/std",
     # scs
     "itp-types/std",
-    "sidechain-block-verification/std",
-    "sidechain-primitives/std",
 ]
 sgx = [
     "sgx_tstd",
@@ -82,5 +78,5 @@ sgx = [
     "itp-sgx-externalities/sgx",
     "its-state/sgx",
     # scs
-    "sidechain-block-verification/sgx",
+    "its-block-verification/sgx",
 ]

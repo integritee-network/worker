@@ -16,11 +16,11 @@
 */
 
 use crate::error::Result;
+use its_primitives::types::{BlockHash, ShardIdentifier, SignedBlock};
 use its_rpc_handler::constants::RPC_METHOD_NAME_FETCH_BLOCKS_FROM_PEER;
 use its_storage::interface::FetchBlocks;
 use jsonrpsee::{types::error::CallError, RpcModule};
 use log::*;
-use sidechain_primitives::types::{BlockHash, ShardIdentifier, SignedBlock};
 use std::sync::Arc;
 
 /// RPC server module builder for fetching sidechain blocks from peers.

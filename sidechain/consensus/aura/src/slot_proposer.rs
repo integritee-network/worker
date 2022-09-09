@@ -23,12 +23,12 @@ use itp_top_pool_author::traits::AuthorApi;
 use itp_types::H256;
 use its_block_composer::ComposeBlock;
 use its_consensus_common::{Error as ConsensusError, Proposal, Proposer};
-use its_state::{SidechainDB, SidechainState, SidechainSystemExt, StateHash};
-use log::*;
-use sidechain_primitives::traits::{
+use its_primitives::traits::{
 	Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor,
 	SignedBlock as SignedSidechainBlockTrait,
 };
+use its_state::{SidechainDB, SidechainState, SidechainSystemExt, StateHash};
+use log::*;
 use sp_runtime::{
 	traits::{Block, NumberFor},
 	MultiSignature,

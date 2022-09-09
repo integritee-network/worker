@@ -21,7 +21,7 @@ use crate::{
 };
 use itp_types::{Block as ParentchainBlock, Header};
 use its_consensus_common::Environment;
-use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;
+use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 
 /// Mock proposer environment.
 pub struct EnvironmentMock;

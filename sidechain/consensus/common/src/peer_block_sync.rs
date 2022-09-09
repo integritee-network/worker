@@ -19,14 +19,14 @@ use crate::{BlockImport, ConfirmBlockImport, Error, Result};
 use core::marker::PhantomData;
 use itp_ocall_api::EnclaveSidechainOCallApi;
 use itp_types::H256;
-use log::*;
-use sidechain_primitives::{
+use its_primitives::{
 	traits::{
 		Block as BlockTrait, Header as HeaderTrait, ShardIdentifierFor,
 		SignedBlock as SignedSidechainBlockTrait,
 	},
 	types::BlockHash,
 };
+use log::*;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header as ParentchainHeaderTrait};
 use std::{sync::Arc, vec::Vec};
 
@@ -151,7 +151,7 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImporter, SidechainOCallApi, I
 where
 	ParentchainBlock: ParentchainBlockTrait,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
-	<<SignedSidechainBlock as sidechain_primitives::traits::SignedBlock>::Block as BlockTrait>::HeaderType:
+	<<SignedSidechainBlock as its_primitives::traits::SignedBlock>::Block as BlockTrait>::HeaderType:
 	HeaderTrait<ShardIdentifier = H256>,
 	BlockImporter: BlockImport<ParentchainBlock, SignedSidechainBlock>,
 	SidechainOCallApi: EnclaveSidechainOCallApi,
@@ -223,11 +223,11 @@ mod tests {
 		block_importer_mock::BlockImportMock, confirm_block_import_mock::ConfirmBlockImportMock,
 	};
 	use core::assert_matches::assert_matches;
+	use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 	use itp_test::mock::sidechain_ocall_api_mock::SidechainOCallApiMock;
 	use itp_types::Block as ParentchainBlock;
-	use parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
-	use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;
-	use sidechain_test::sidechain_block_builder::SidechainBlockBuilder;
+	use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
+	use its_test::sidechain_block_builder::SidechainBlockBuilder;
 
 	type TestBlockImport = BlockImportMock<ParentchainBlock, SignedSidechainBlock>;
 	type TestOCallApi = SidechainOCallApiMock<SignedSidechainBlock>;

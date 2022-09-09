@@ -46,16 +46,16 @@ itp-node-api = { path = "../core-primitives/node-api" }
 itp-enclave-api = { path = "../core-primitives/enclave-api" }
 itp-enclave-metrics = { path = "../core-primitives/enclave-metrics" }
 itp-settings = { path = "../core-primitives/settings" }
+itp-types = { path = "../core-primitives/types" }
+itp-utils = { path = "../core-primitives/utils" }
 its-consensus-slots = { path = "../sidechain/consensus/slots" }
 its-peer-fetch = { path = "../sidechain/peer-fetch" }
+its-primitives = { path = "../sidechain/primitives" }
 its-rpc-handler = { path = "../sidechain/rpc-handler" }
 its-storage = { path = "../sidechain/storage" }
 
 # scs / integritee
-itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-itp-utils = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node.git", branch = "master" }
-sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.27" }
 teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
@@ -81,7 +81,7 @@ teeracle = ["itp-settings/teeracle"]
 anyhow = "1.0.40"
 mockall = "0.11"
 # local
+itc-parentchain-test = { path = "../core/parentchain/test" }
 itp-test = { path = "../core-primitives/test" }
 its-peer-fetch = { path = "../sidechain/peer-fetch", features = ["mocks"] }
-parentchain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+its-test = { path = "../sidechain/test" }

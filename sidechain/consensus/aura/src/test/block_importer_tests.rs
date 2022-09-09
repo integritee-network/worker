@@ -19,6 +19,10 @@ use crate::{block_importer::BlockImporter, test::fixtures::validateer, ShardIden
 use codec::Encode;
 use core::assert_matches::assert_matches;
 use itc_parentchain_block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
+use itc_parentchain_test::{
+	parentchain_block_builder::ParentchainBlockBuilder,
+	parentchain_header_builder::ParentchainHeaderBuilder,
+};
 use itp_sgx_crypto::{aes::Aes, mocks::KeyRepositoryMock, StateCrypto};
 use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesDiffType};
 use itp_stf_state_handler::handle_state::HandleState;
@@ -27,16 +31,12 @@ use itp_time_utils::{duration_now, now_as_u64};
 use itp_top_pool_author::mocks::AuthorApiMock;
 use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader, H256};
 use its_consensus_common::{BlockImport, Error as ConsensusError};
-use its_state::{SidechainDB, SidechainState, StateUpdate};
-use parentchain_test::{
-	parentchain_block_builder::ParentchainBlockBuilder,
-	parentchain_header_builder::ParentchainHeaderBuilder,
-};
-use sidechain_primitives::{
+use its_primitives::{
 	traits::{SignBlock, SignedBlock},
 	types::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
 };
-use sidechain_test::{
+use its_state::{SidechainDB, SidechainState, StateUpdate};
+use its_test::{
 	sidechain_block_builder::SidechainBlockBuilder,
 	sidechain_block_data_builder::SidechainBlockDataBuilder,
 	sidechain_header_builder::SidechainHeaderBuilder,

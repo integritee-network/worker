@@ -18,8 +18,8 @@
 use crate::{Error, Result, SyncBlockFromPeer};
 use core::marker::PhantomData;
 use itp_block_import_queue::PopFromBlockQueue;
+use its_primitives::traits::{Block as BlockTrait, SignedBlock as SignedSidechainBlockTrait};
 use log::debug;
-use sidechain_primitives::traits::{Block as BlockTrait, SignedBlock as SignedSidechainBlockTrait};
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::{sync::Arc, time::Instant};
 

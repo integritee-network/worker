@@ -25,9 +25,9 @@ use itp_stf_executor::getter_executor::ExecuteGetter;
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{DirectRequestStatus, Request, ShardIdentifier, H256};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
+use its_primitives::types::block::SignedBlock;
 use its_sidechain::rpc_handler::{direct_top_pool_api, import_block_api};
 use jsonrpc_core::{serde_json::json, IoHandler, Params, Value};
-use sidechain_primitives::types::block::SignedBlock;
 use std::{borrow::ToOwned, format, str, string::String, sync::Arc, vec::Vec};
 
 fn compute_hex_encoded_return_error(error_msg: &str) -> String {

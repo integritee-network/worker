@@ -49,19 +49,19 @@ use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{handle_state_mock, handle_state_mock::HandleStateMock};
 use itp_top_pool_author::{test_utils::submit_operation_to_top_pool, traits::AuthorApi};
 use itp_types::{AccountId, Block, Header};
-use its_sidechain::{
-	block_composer::{BlockComposer, ComposeBlock},
-	state::{SidechainDB, SidechainState, SidechainSystemExt},
-};
-use sgx_tunittest::*;
-use sgx_types::size_t;
-use sidechain_primitives::{
+use its_primitives::{
 	traits::{
 		Block as BlockTrait, BlockData, Header as SidechainHeaderTrait,
 		SignedBlock as SignedBlockTrait,
 	},
 	types::block::SignedBlock,
 };
+use its_sidechain::{
+	block_composer::{BlockComposer, ComposeBlock},
+	state::{SidechainDB, SidechainState, SidechainSystemExt},
+};
+use sgx_tunittest::*;
+use sgx_types::size_t;
 use sp_core::{crypto::Pair, ed25519 as spEd25519, H256};
 use sp_runtime::traits::Header as HeaderT;
 use std::{string::String, sync::Arc, time::Duration, vec::Vec};

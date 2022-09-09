@@ -69,8 +69,8 @@ impl<OnchainStorage: EnclaveOnChainOCallApi> ValidateerFetch for OnchainStorage 
 mod tests {
 	use super::*;
 	use codec::Encode;
+	use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 	use itp_test::mock::onchain_mock::{validateer_set, OnchainMock};
-	use parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 	use std::string::ToString;
 
 	#[test]

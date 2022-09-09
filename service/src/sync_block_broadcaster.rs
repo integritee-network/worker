@@ -25,7 +25,7 @@ use crate::{
 	globals::tokio_handle::GetTokioHandle,
 	worker::{AsyncBlockBroadcaster, WorkerResult},
 };
-use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;
+use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use std::sync::Arc;
 
 /// Allows to broadcast blocks, does it in a synchronous (i.e. blocking) manner

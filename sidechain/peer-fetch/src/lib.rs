@@ -27,7 +27,7 @@ pub mod mocks;
 
 use crate::error::Result;
 use async_trait::async_trait;
-use sidechain_primitives::{
+use its_primitives::{
 	traits::SignedBlock,
 	types::{BlockHash, ShardIdentifier},
 };

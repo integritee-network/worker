@@ -61,6 +61,10 @@ use itp_top_pool_author::{
 	author::{Author, AuthorTopFilter},
 };
 use itp_types::{Block as ParentchainBlock, SignedBlock as SignedParentchainBlock};
+use its_primitives::{
+	traits::{Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait},
+	types::block::SignedBlock as SignedSidechainBlock,
+};
 use its_sidechain::{
 	aura::block_importer::BlockImporter as SidechainBlockImporter,
 	block_composer::BlockComposer,
@@ -69,10 +73,6 @@ use its_sidechain::{
 };
 use primitive_types::H256;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
-use sidechain_primitives::{
-	traits::{Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait},
-	types::block::SignedBlock as SignedSidechainBlock,
-};
 use sp_core::ed25519::Pair;
 
 pub type EnclaveStateKeyRepository = KeyRepository<Aes, AesSeal>;

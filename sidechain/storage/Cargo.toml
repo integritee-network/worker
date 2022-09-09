@@ -13,8 +13,8 @@ rocksdb = "0.17.0"
 thiserror = "1.0"
 
 # integritee
-itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+itp-types = { path = "../../core-primitives/types" }
+its-primitives = { path = "../primitives" }
 
 # Substrate dependencies
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
@@ -24,8 +24,8 @@ sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polka
 mockall = "0.11"
 temp-dir = "0.1"
 # local
-sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 itp-time-utils = { path = "../../core-primitives/time-utils" }
+its-test = { path = "../test" }
 
 [features]
 mocks = []

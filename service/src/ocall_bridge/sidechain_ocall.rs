@@ -25,9 +25,9 @@ use crate::{
 use codec::{Decode, Encode};
 use itp_types::{BlockHash, ShardIdentifier};
 use its_peer_fetch::FetchBlocksFromPeer;
+use its_primitives::{traits::Block, types::SignedBlock as SignedSidechainBlock};
 use its_storage::BlockStorage;
 use log::*;
-use sidechain_primitives::{traits::Block, types::SignedBlock as SignedSidechainBlock};
 use std::sync::Arc;
 
 pub struct SidechainOCall<BlockBroadcaster, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle> {
@@ -201,10 +201,10 @@ mod tests {
 	};
 	use codec::Decode;
 	use its_peer_fetch::mocks::fetch_blocks_from_peer_mock::FetchBlocksFromPeerMock;
+	use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 	use its_storage::{interface::BlockStorage, Result as StorageResult};
+	use its_test::sidechain_block_builder::SidechainBlockBuilder;
 	use primitive_types::H256;
-	use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;
-	use sidechain_test::sidechain_block_builder::SidechainBlockBuilder;
 	use std::{collections::HashMap, vec::Vec};
 
 	struct BlockStorageMock;

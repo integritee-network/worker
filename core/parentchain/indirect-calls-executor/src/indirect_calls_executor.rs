@@ -245,6 +245,7 @@ fn hash_of<T: Encode>(xt: &T) -> H256 {
 mod test {
 	use super::*;
 	use codec::Encode;
+	use itc_parentchain_test::parentchain_block_builder::ParentchainBlockBuilder;
 	use itp_node_api::{
 		api_client::{ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder},
 		metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository},
@@ -254,7 +255,6 @@ mod test {
 	use itp_test::mock::shielding_crypto_mock::ShieldingCryptoMock;
 	use itp_top_pool_author::mocks::AuthorApiMock;
 	use itp_types::{Request, ShardIdentifier};
-	use parentchain_test::parentchain_block_builder::ParentchainBlockBuilder;
 	use sp_core::{ed25519, Pair};
 	use sp_runtime::{MultiSignature, OpaqueExtrinsic};
 	use std::assert_matches::assert_matches;

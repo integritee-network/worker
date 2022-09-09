@@ -18,8 +18,8 @@
 use crate::ConsensusError;
 use itp_types::{Block as ParentchainBlock, Header};
 use its_consensus_common::{Proposal, Proposer};
-use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;
-use sidechain_test::{
+use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
+use its_test::{
 	sidechain_block_builder::SidechainBlockBuilder,
 	sidechain_block_data_builder::SidechainBlockDataBuilder,
 };

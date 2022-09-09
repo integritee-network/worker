@@ -19,10 +19,8 @@ itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
 itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
 itp-test = { path = "../test", default-features = false, optional = true }
 itp-top-pool = { path = "../top-pool", default-features = false }
-
-# integritee
-itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-itp-utils = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+itp-types = { path = "../types", default-features = false }
+itp-utils = { path = "../utils", default-features = false }
 
 # sgx enabled external libraries
 jsonrpc-core_sgx = { package = "jsonrpc-core", git = "https://github.com/scs/jsonrpc", branch = "no_std_v18", default-features = false, optional = true }

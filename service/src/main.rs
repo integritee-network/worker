@@ -68,11 +68,11 @@ use itp_settings::{
 use its_peer_fetch::{
 	block_fetch_client::BlockFetcher, untrusted_peer_fetch::UntrustedPeerFetcher,
 };
+use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use its_storage::{interface::FetchBlocks, BlockPruner, SidechainStorageLock};
 use log::*;
 use my_node_runtime::{Event, Hash, Header};
 use sgx_types::*;
-use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_finality_grandpa::VersionedAuthorityList;
 use sp_keyring::AccountKeyring;

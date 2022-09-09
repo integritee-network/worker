@@ -20,7 +20,7 @@ use crate::test_utils::{
 	fill_storage_with_blocks, get_storage,
 };
 use itp_types::BlockHash;
-use sidechain_primitives::traits::SignedBlock;
+use its_primitives::traits::SignedBlock;
 
 #[test]
 fn get_blocks_in_range_works_for_regular_case() {

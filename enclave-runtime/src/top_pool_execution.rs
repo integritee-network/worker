@@ -43,6 +43,12 @@ use itp_sgx_io::StaticSealedIO;
 use itp_stf_state_handler::query_shard_state::QueryShardState;
 use itp_time_utils::duration_now;
 use itp_types::{Block, OpaqueCall, H256};
+use its_primitives::{
+	traits::{
+		Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor, SignedBlock,
+	},
+	types::block::SignedBlock as SignedSidechainBlock,
+};
 use its_sidechain::{
 	aura::{proposer_factory::ProposerFactory, Aura, SlotClaimStrategy},
 	consensus_common::{Environment, Error as ConsensusError, ProcessBlockImportQueue},
@@ -51,12 +57,6 @@ use its_sidechain::{
 };
 use log::*;
 use sgx_types::sgx_status_t;
-use sidechain_primitives::{
-	traits::{
-		Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor, SignedBlock,
-	},
-	types::block::SignedBlock as SignedSidechainBlock,
-};
 use sp_core::Pair;
 use sp_runtime::{
 	generic::SignedBlock as SignedParentchainBlock, traits::Block as BlockTrait, MultiSignature,

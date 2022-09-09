@@ -16,7 +16,7 @@
 */
 
 use crate::{sync_block_broadcaster::BroadcastBlocks, worker::WorkerResult};
-use sidechain_primitives::types::block::SignedBlock as SignedSidechainBlock;
+use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use std::vec::Vec;
 
 pub struct BroadcastBlocksMock;

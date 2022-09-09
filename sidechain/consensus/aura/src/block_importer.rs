@@ -32,12 +32,12 @@ use itp_stf_state_handler::handle_state::HandleState;
 use itp_top_pool_author::traits::{AuthorApi, OnBlockImported};
 use itp_types::H256;
 use its_consensus_common::Error as ConsensusError;
+use its_primitives::traits::{
+	BlockData, Header as HeaderTrait, ShardIdentifierFor, SignedBlock as SignedBlockTrait,
+};
 use its_state::SidechainDB;
 use its_validateer_fetch::ValidateerFetch;
 use log::*;
-use sidechain_primitives::traits::{
-	BlockData, Header as HeaderTrait, ShardIdentifierFor, SignedBlock as SignedBlockTrait,
-};
 use sp_core::Pair;
 use sp_runtime::{
 	generic::SignedBlock as SignedParentchainBlock,

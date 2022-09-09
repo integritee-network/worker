@@ -19,7 +19,7 @@ use crate::{test::mocks::environment_mock::EnvironmentMock, Aura};
 use itc_parentchain_block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
 use itp_test::mock::onchain_mock::OnchainMock;
 use itp_types::Block as ParentchainBlock;
-use sidechain_primitives::{
+use its_primitives::{
 	traits::{
 		Block as SidechainBlockTrait, Header as SidechainHeaderTrait,
 		SignedBlock as SignedBlockTrait,

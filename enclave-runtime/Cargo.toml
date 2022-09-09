@@ -61,13 +61,8 @@ hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 ipfs-unixfs = { default-features = false, git = "https://github.com/whalelephant/rust-ipfs", branch = "w-nstd" }
 
 # scs / integritee
-itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-itp-utils = { default-features = false, features = ["sgx"], git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 jsonrpc-core = { default-features = false, git = "https://github.com/scs/jsonrpc", branch = "no_std_v18" }
-sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.27" }
-parentchain-test = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-sidechain-block-verification = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master"}
 
 # mesalock
 linked-hash-map = { git = "https://github.com/mesalock-linux/linked-hash-map-sgx" }
@@ -101,6 +96,7 @@ itc-tls-websocket-server = { path = "../core/tls-websocket-server", default-feat
 itc-direct-rpc-server = { path = "../core/direct-rpc-server", default-features = false, features = ["sgx"]  }
 itc-offchain-worker-executor = { path = "../core/offchain-worker-executor", default-features = false, features = ["sgx"] }
 itc-parentchain = { path = "../core/parentchain/parentchain-crate", default-features = false, features = ["sgx"] }
+itc-parentchain-test = { path = "../core/parentchain/test", default-features = false }
 itp-block-import-queue = { path = "../core-primitives/block-import-queue", default-features = false, features = ["sgx"] }
 itp-component-container = { path = "../core-primitives/component-container", default-features = false, features = ["sgx"] }
 itp-extrinsics-factory = { path = "../core-primitives/extrinsics-factory", default-features = false, features = ["sgx"] }
@@ -120,8 +116,12 @@ itp-stf-state-handler = { path = "../core-primitives/stf-state-handler", default
 itp-stf-state-observer = { path = "../core-primitives/stf-state-observer", default-features = false, features = ["sgx"] }
 itp-teerex-storage = { path = "../core-primitives/teerex-storage", default-features = false }
 itp-test = { path = "../core-primitives/test", default-features = false, optional = true }
+itp-types = { path = "../core-primitives/types", default-features = false }
+itp-utils = { path = "../core-primitives/utils", default-features = false, features = ["sgx"] }
 itp-top-pool = { path = "../core-primitives/top-pool", default-features = false, features = ["sgx"] }
 itp-top-pool-author = { path = "../core-primitives/top-pool-author", default-features = false, features = ["sgx"] }
+its-block-verification = { path = "../sidechain/block-verification", default-features = false}
+its-primitives = { path = "../sidechain/primitives", default-features = false }
 its-sidechain = { path = "../sidechain/sidechain-crate", default-features = false, features = ["sgx"] }
 sp-io = { optional = true, default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"], path = "../core-primitives/substrate-sgx/sp-io" }
 

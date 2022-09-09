@@ -2473,6 +2473,7 @@ dependencies = [
  "integritee-node-runtime",
  "ipfs-api",
  "itc-parentchain-light-client",
+ "itc-parentchain-test",
  "itc-rpc-client",
  "itc-rpc-server",
  "itp-enclave-api",
@@ -2484,14 +2485,15 @@ dependencies = [
  "itp-utils",
  "its-consensus-slots",
  "its-peer-fetch",
+ "its-primitives",
  "its-rpc-handler",
  "its-storage",
+ "its-test",
  "jsonrpsee",
  "lazy_static",
  "log 0.4.17",
  "mockall",
  "pallet-balances",
- "parentchain-test",
  "parity-scale-codec",
  "parking_lot 0.12.1",
  "parse_duration",
@@ -2504,8 +2506,6 @@ dependencies = [
  "sgx_types",
  "sgx_urts",
  "sha2 0.7.1",
- "sidechain-primitives",
- "sidechain-test",
  "sp-core",
  "sp-finality-grandpa",
  "sp-keyring",
@@ -2631,6 +2631,7 @@ dependencies = [
  "itp-storage",
  "itp-types",
  "itp-utils",
+ "its-primitives",
  "its-state",
  "log 0.4.17",
  "pallet-balances",
@@ -2639,7 +2640,6 @@ dependencies = [
  "sc-keystore",
  "sgx_tstd",
  "sha3",
- "sidechain-primitives",
  "sp-application-crypto",
  "sp-core",
  "sp-io 6.0.0",
@@ -2746,6 +2746,7 @@ dependencies = [
  "futures 0.3.23",
  "futures 0.3.8",
  "ita-stf",
+ "itc-parentchain-test",
  "itp-extrinsics-factory",
  "itp-node-api",
  "itp-ocall-api",
@@ -2755,7 +2756,6 @@ dependencies = [
  "itp-top-pool-author",
  "itp-types",
  "log 0.4.17",
- "parentchain-test",
  "parity-scale-codec",
  "sgx_tstd",
  "sgx_types",
@@ -2774,6 +2774,7 @@ dependencies = [
  "finality-grandpa",
  "frame-system",
  "hash-db",
+ "itc-parentchain-test",
  "itp-ocall-api",
  "itp-settings",
  "itp-sgx-io",
@@ -2783,7 +2784,6 @@ dependencies = [
  "lazy_static",
  "log 0.4.17",
  "num-traits 0.2.15",
- "parentchain-test",
  "parity-scale-codec",
  "sgx_tstd",
  "sgx_types",
@@ -2794,6 +2794,25 @@ dependencies = [
  "sp-trie",
  "thiserror 1.0.32",
  "thiserror 1.0.9",
+]
+
+[[package]]
+name = "itc-parentchain-test"
+version = "0.8.0"
+dependencies = [
+ "env_logger",
+ "frame-support",
+ "frame-system",
+ "itp-types",
+ "log 0.4.17",
+ "parity-scale-codec",
+ "scale-info",
+ "serde 1.0.144",
+ "sp-core",
+ "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.27)",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.27)",
 ]
 
 [[package]]
@@ -2850,14 +2869,14 @@ dependencies = [
  "itp-rpc",
  "itp-utils",
  "its-peer-fetch",
+ "its-primitives",
  "its-rpc-handler",
  "its-storage",
+ "its-test",
  "jsonrpsee",
  "log 0.4.17",
  "parity-scale-codec",
  "serde_json 1.0.85",
- "sidechain-primitives",
- "sidechain-test",
  "sp-core",
  "tokio",
 ]
@@ -3171,6 +3190,7 @@ name = "itp-stf-executor"
 version = "0.8.0"
 dependencies = [
  "ita-stf",
+ "itc-parentchain-test",
  "itp-node-api",
  "itp-ocall-api",
  "itp-sgx-crypto",
@@ -3182,7 +3202,6 @@ dependencies = [
  "itp-time-utils",
  "itp-types",
  "log 0.4.17",
- "parentchain-test",
  "parity-scale-codec",
  "sgx_crypto_helper",
  "sgx_tstd",
@@ -3301,6 +3320,7 @@ dependencies = [
  "ita-stf",
  "itc-direct-rpc-server",
  "itp-types",
+ "its-primitives",
  "jsonrpc-core 18.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-core 18.0.0 (git+https://github.com/scs/jsonrpc?branch=no_std_v18)",
  "linked-hash-map 0.5.2",
@@ -3311,7 +3331,6 @@ dependencies = [
  "serde 1.0.144",
  "sgx_tstd",
  "sgx_types",
- "sidechain-primitives",
  "sp-application-crypto",
  "sp-core",
  "sp-runtime",
@@ -3353,7 +3372,6 @@ dependencies = [
 [[package]]
 name = "itp-types"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
 dependencies = [
  "chrono 0.4.22",
  "parity-scale-codec",
@@ -3362,6 +3380,7 @@ dependencies = [
  "serde_json 1.0.85",
  "sp-core",
  "sp-finality-grandpa",
+ "sp-keyring",
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.27)",
 ]
@@ -3369,7 +3388,6 @@ dependencies = [
 [[package]]
 name = "itp-utils"
 version = "0.8.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
 dependencies = [
  "frame-support",
  "hex",
@@ -3392,13 +3410,33 @@ dependencies = [
  "itp-time-utils",
  "itp-top-pool-author",
  "itp-types",
+ "its-primitives",
  "its-state",
  "log 0.4.17",
  "parity-scale-codec",
  "sgx_tstd",
  "sgx_types",
- "sidechain-primitives",
  "sp-core",
+ "sp-runtime",
+ "thiserror 1.0.32",
+ "thiserror 1.0.9",
+]
+
+[[package]]
+name = "its-block-verification"
+version = "0.9.0"
+dependencies = [
+ "frame-support",
+ "itc-parentchain-test",
+ "itp-types",
+ "itp-utils",
+ "its-primitives",
+ "its-test",
+ "log 0.4.17",
+ "sgx_tstd",
+ "sp-consensus-slots",
+ "sp-core",
+ "sp-keyring",
  "sp-runtime",
  "thiserror 1.0.32",
  "thiserror 1.0.9",
@@ -3413,6 +3451,7 @@ dependencies = [
  "frame-support",
  "ita-stf",
  "itc-parentchain-block-import-dispatcher",
+ "itc-parentchain-test",
  "itp-enclave-metrics",
  "itp-ocall-api",
  "itp-settings",
@@ -3427,17 +3466,16 @@ dependencies = [
  "itp-types",
  "itp-utils",
  "its-block-composer",
+ "its-block-verification",
  "its-consensus-common",
  "its-consensus-slots",
+ "its-primitives",
  "its-state",
+ "its-test",
  "its-validateer-fetch",
  "log 0.4.17",
- "parentchain-test",
  "parity-scale-codec",
  "sgx_tstd",
- "sidechain-block-verification",
- "sidechain-primitives",
- "sidechain-test",
  "sp-core",
  "sp-keyring",
  "sp-runtime",
@@ -3448,6 +3486,7 @@ name = "its-consensus-common"
 version = "0.8.0"
 dependencies = [
  "itc-parentchain-light-client",
+ "itc-parentchain-test",
  "itp-block-import-queue",
  "itp-extrinsics-factory",
  "itp-node-api-metadata",
@@ -3457,16 +3496,15 @@ dependencies = [
  "itp-sgx-externalities",
  "itp-test",
  "itp-types",
+ "its-block-verification",
  "its-consensus-aura",
+ "its-primitives",
  "its-state",
+ "its-test",
  "log 0.4.17",
- "parentchain-test",
  "parity-scale-codec",
  "sgx_tstd",
  "sgx_types",
- "sidechain-block-verification",
- "sidechain-primitives",
- "sidechain-test",
  "sp-core",
  "sp-keyring",
  "sp-runtime",
@@ -3481,19 +3519,19 @@ dependencies = [
  "derive_more",
  "futures 0.3.23",
  "futures-timer",
+ "itc-parentchain-test",
  "itp-settings",
  "itp-sgx-io",
  "itp-time-utils",
  "itp-types",
+ "its-block-verification",
  "its-consensus-common",
+ "its-primitives",
+ "its-test",
  "lazy_static",
  "log 0.4.17",
- "parentchain-test",
  "parity-scale-codec",
  "sgx_tstd",
- "sidechain-block-verification",
- "sidechain-primitives",
- "sidechain-test",
  "sp-consensus-slots",
  "sp-keyring",
  "sp-runtime",
@@ -3509,16 +3547,29 @@ dependencies = [
  "itc-rpc-client",
  "itp-node-api",
  "itp-test",
+ "its-primitives",
  "its-rpc-handler",
  "its-storage",
+ "its-test",
  "jsonrpsee",
  "log 0.4.17",
  "serde 1.0.144",
  "serde_json 1.0.85",
- "sidechain-primitives",
- "sidechain-test",
  "thiserror 1.0.32",
  "tokio",
+]
+
+[[package]]
+name = "its-primitives"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde 1.0.144",
+ "sp-core",
+ "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.27)",
+ "sp-runtime",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.27)",
 ]
 
 [[package]]
@@ -3529,6 +3580,7 @@ dependencies = [
  "itp-top-pool-author",
  "itp-types",
  "itp-utils",
+ "its-primitives",
  "jsonrpc-core 18.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-core 18.0.0 (git+https://github.com/scs/jsonrpc?branch=no_std_v18)",
  "log 0.4.17",
@@ -3537,7 +3589,6 @@ dependencies = [
  "rust-base58 0.0.4 (git+https://github.com/mesalock-linux/rust-base58-sgx?rev=sgx_1.1.3)",
  "sgx_tstd",
  "sgx_types",
- "sidechain-primitives",
  "sp-core",
 ]
 
@@ -3549,10 +3600,10 @@ dependencies = [
  "its-consensus-aura",
  "its-consensus-common",
  "its-consensus-slots",
+ "its-primitives",
  "its-rpc-handler",
  "its-state",
  "its-validateer-fetch",
- "sidechain-primitives",
 ]
 
 [[package]]
@@ -3562,11 +3613,11 @@ dependencies = [
  "frame-support",
  "itp-sgx-externalities",
  "itp-storage",
+ "its-primitives",
  "log 0.4.17",
  "parity-scale-codec",
  "serde 1.0.144",
  "sgx_tstd",
- "sidechain-primitives",
  "sp-core",
  "sp-io 6.0.0",
  "sp-runtime",
@@ -3581,16 +3632,27 @@ version = "0.8.0"
 dependencies = [
  "itp-time-utils",
  "itp-types",
+ "its-primitives",
+ "its-test",
  "log 0.4.17",
  "mockall",
  "parity-scale-codec",
  "parking_lot 0.12.1",
  "rocksdb",
- "sidechain-primitives",
- "sidechain-test",
  "sp-core",
  "temp-dir",
  "thiserror 1.0.32",
+]
+
+[[package]]
+name = "its-test"
+version = "0.8.0"
+dependencies = [
+ "itp-types",
+ "its-primitives",
+ "parity-scale-codec",
+ "sgx_tstd",
+ "sp-core",
 ]
 
 [[package]]
@@ -3599,12 +3661,12 @@ version = "0.8.0"
 dependencies = [
  "derive_more",
  "frame-support",
+ "itc-parentchain-test",
  "itp-ocall-api",
  "itp-storage",
  "itp-teerex-storage",
  "itp-test",
  "itp-types",
- "parentchain-test",
  "parity-scale-codec",
  "sp-core",
  "sp-runtime",
@@ -5075,24 +5137,6 @@ dependencies = [
  "log 0.4.17",
  "parity-scale-codec",
  "scale-info",
- "sp-runtime",
- "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.27)",
-]
-
-[[package]]
-name = "parentchain-test"
-version = "0.8.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
-dependencies = [
- "frame-support",
- "frame-system",
- "itp-types",
- "log 0.4.17",
- "parity-scale-codec",
- "scale-info",
- "serde 1.0.144",
- "sp-core",
- "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.27)",
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.27)",
 ]
@@ -6591,24 +6635,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "43b2853a4d09f215c24cc5489c992ce46052d359b5109343cbafbf26bc62f8a3"
 
 [[package]]
-name = "sidechain-block-verification"
-version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
-dependencies = [
- "frame-support",
- "itp-types",
- "itp-utils",
- "log 0.4.17",
- "sgx_tstd",
- "sidechain-primitives",
- "sp-consensus-slots",
- "sp-core",
- "sp-runtime",
- "thiserror 1.0.32",
- "thiserror 1.0.9",
-]
-
-[[package]]
 name = "sidechain-primitives"
 version = "0.1.0"
 source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
@@ -6620,17 +6646,6 @@ dependencies = [
  "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.27)",
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.27)",
-]
-
-[[package]]
-name = "sidechain-test"
-version = "0.8.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#3a8cd4c48b3218e645aee30b9027afd42b13759e"
-dependencies = [
- "itp-types",
- "parity-scale-codec",
- "sidechain-primitives",
- "sp-core",
 ]
 
 [[package]]

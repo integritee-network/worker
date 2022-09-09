@@ -35,6 +35,7 @@ use ita_stf::{
 	Balance, StatePayload, Stf, TrustedCall, TrustedOperation,
 };
 use itc_parentchain::light_client::mocks::validator_access_mock::ValidatorAccessMock;
+use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
 use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_ocall_api::EnclaveAttestationOCallApi;
@@ -48,16 +49,15 @@ use itp_test::mock::{handle_state_mock::HandleStateMock, metrics_ocall_mock::Met
 use itp_time_utils::duration_now;
 use itp_top_pool_author::{top_filter::AllowAllTopsFilter, traits::AuthorApi};
 use itp_types::{AccountId, Block as ParentchainBlock, ShardIdentifier};
+use its_block_verification::slot::slot_from_timestamp_and_duration;
+use its_primitives::{traits::Block, types::SignedBlock as SignedSidechainBlock};
 use its_sidechain::{
 	aura::proposer_factory::ProposerFactory, slots::SlotInfo, state::SidechainState,
 };
 use jsonrpc_core::futures::executor;
 use log::*;
-use parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 use primitive_types::H256;
 use sgx_crypto_helper::RsaKeyPair;
-use sidechain_block_verification::slot::slot_from_timestamp_and_duration;
-use sidechain_primitives::{traits::Block, types::SignedBlock as SignedSidechainBlock};
 use sp_core::{ed25519, Pair};
 use std::{sync::Arc, vec, vec::Vec};
 

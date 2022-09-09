@@ -17,9 +17,7 @@
 
 use crate::{slots::Slot, SimpleSlotWorker, SlotInfo, SlotResult};
 use its_consensus_common::{Proposal, Proposer, Result};
-use sidechain_primitives::{
-	traits::ShardIdentifierFor, types::SignedBlock as SignedSidechainBlock,
-};
+use its_primitives::{traits::ShardIdentifierFor, types::SignedBlock as SignedSidechainBlock};
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header as ParentchainHeaderTrait};
 use std::{marker::PhantomData, thread, time::Duration};
 
