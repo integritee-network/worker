@@ -53,12 +53,12 @@ use sgx_types::{
 };
 use sp_core::{blake2_256, Pair};
 use std::{
+	borrow::ToOwned,
 	format,
 	io::{Read, Write},
 	net::TcpStream,
-	prelude::v1::*,
 	println, str,
-	string::String,
+	string::{String, ToString},
 	sync::Arc,
 	vec::Vec,
 };

@@ -21,7 +21,7 @@ use crate::sgx_reexport_prelude::*;
 use crate::{Error as EnclaveError, Result as EnclaveResult};
 use arrayvec::ArrayVec;
 use bit_vec::BitVec;
-use chrono::{prelude::*, Duration, TimeZone, Utc as TzUtc};
+use chrono::{DateTime, Duration, TimeZone, Utc as TzUtc};
 use itertools::Itertools;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use log::*;
@@ -32,7 +32,13 @@ use sgx_types::{
 	sgx_ec256_private_t, sgx_ec256_public_t, sgx_platform_info_t, sgx_quote_t, sgx_status_t,
 	SgxResult, SGX_PLATFORM_INFO_SIZE,
 };
-use std::{io::BufReader, prelude::v1::*, ptr, str, time::*};
+use std::{
+	io::BufReader,
+	ptr, str,
+	string::String,
+	time::{SystemTime, UNIX_EPOCH},
+	vec::Vec,
+};
 use yasna::models::ObjectIdentifier;
 
 type SignatureAlgorithms = &'static [&'static webpki::SignatureAlgorithm];
