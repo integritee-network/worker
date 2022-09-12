@@ -66,7 +66,6 @@ use its_sidechain::{
 	block_composer::BlockComposer,
 	consensus_common::{BlockImportConfirmationHandler, BlockImportQueueWorker, PeerBlockSync},
 	state::SidechainDB,
-	top_pool_executor::TopPoolOperationHandler,
 };
 use primitive_types::H256;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
@@ -135,13 +134,6 @@ pub type EnclaveTopPoolAuthor = Author<
 	EnclaveShieldingKeyRepository,
 	EnclaveOCallApi,
 >;
-
-pub type EnclaveTopPoolOperationHandler = TopPoolOperationHandler<
-	ParentchainBlock,
-	SignedSidechainBlock,
-	EnclaveTopPoolAuthor,
-	EnclaveStfExecutor,
->;
 pub type EnclaveSidechainBlockComposer =
 	BlockComposer<ParentchainBlock, SignedSidechainBlock, Pair, EnclaveStateKeyRepository>;
 pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
@@ -152,7 +144,7 @@ pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 	EnclaveSidechainState,
 	EnclaveStateHandler,
 	EnclaveStateKeyRepository,
-	EnclaveTopPoolOperationHandler,
+	EnclaveTopPoolAuthor,
 	EnclaveTriggeredParentchainBlockImportDispatcher,
 >;
 pub type EnclaveSidechainBlockImportQueue = BlockImportQueue<SignedSidechainBlock>;
@@ -265,8 +257,3 @@ pub static GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT: ComponentContainer<
 pub static GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT: ComponentContainer<
 	EnclaveSidechainBlockSyncer,
 > = ComponentContainer::new("sidechain_block_syncer");
-
-/// Sidechain top pool operation handler.
-pub static GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT: ComponentContainer<
-	EnclaveTopPoolOperationHandler,
-> = ComponentContainer::new("top_pool_operation_handler");

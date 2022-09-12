@@ -108,7 +108,7 @@ fn submitting_direct_call_works() {
 		.unwrap();
 
 	assert_eq!(1, top_pool.get_last_submitted_transactions().len());
-	assert_eq!(1, author.get_pending_tops_separated(shard_id()).unwrap().0.len());
+	assert_eq!(1, author.get_pending_trusted_calls(shard_id()).len());
 }
 
 #[test]
@@ -120,7 +120,7 @@ fn submitting_indirect_call_works() {
 		.unwrap();
 
 	assert_eq!(1, top_pool.get_last_submitted_transactions().len());
-	assert_eq!(1, author.get_pending_tops_separated(shard_id()).unwrap().0.len());
+	assert_eq!(1, author.get_pending_trusted_calls(shard_id()).len());
 }
 
 fn create_author_with_filter<F: Filter<Value = TrustedOperation>>(

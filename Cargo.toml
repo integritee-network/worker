@@ -58,7 +58,6 @@ members = [
     "sidechain/rpc-handler",
     "sidechain/sidechain-crate",
     "sidechain/state",
-    "sidechain/top-pool-executor",
     "sidechain/validateer-fetch",
 ]
 

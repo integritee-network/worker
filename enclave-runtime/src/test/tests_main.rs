@@ -35,7 +35,7 @@ use codec::Decode;
 use ita_sgx_runtime::Parentchain;
 use ita_stf::{
 	helpers::account_key_hash, stf_sgx_tests, test_genesis::endowed_account as funded_pair,
-	AccountInfo, ShardIdentifier, State, StatePayload, StateTypeDiff, Stf, TrustedCall,
+	AccountInfo, Getter, ShardIdentifier, State, StatePayload, StateTypeDiff, Stf, TrustedCall,
 	TrustedCallSigned, TrustedGetter, TrustedOperation,
 };
 use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
@@ -52,7 +52,6 @@ use itp_types::{AccountId, Block, Header};
 use its_sidechain::{
 	block_composer::{BlockComposer, ComposeBlock},
 	state::{SidechainDB, SidechainState, SidechainSystemExt},
-	top_pool_executor::{TopPoolCallOperator, TopPoolOperationHandler},
 };
 use sgx_tunittest::*;
 use sgx_types::size_t;
@@ -69,8 +68,6 @@ use std::{string::String, sync::Arc, time::Duration, vec::Vec};
 
 type TestStfExecutor =
 	StfExecutor<OcallApi, HandleStateMock, NodeMetadataRepository<NodeMetadataMock>>;
-type TestTopPoolOperationHandler =
-	TopPoolOperationHandler<Block, SignedBlock, TestTopPoolAuthor, TestStfExecutor>;
 
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
@@ -235,12 +232,17 @@ fn test_submit_trusted_call_to_top_pool() {
 	)
 	.unwrap();
 
-	let (calls, _) = top_pool_author.get_pending_tops_separated(shard).unwrap();
+	let calls = top_pool_author.get_pending_trusted_calls(shard);
 
 	// then
 	assert_eq!(calls[0], trusted_operation);
 }
 
+// The TOP pool can hold any TrustedOperation, which at the moment also includes Getters.
+// However, in reality we don't submit getters to the TOP pool anymore, they are executed immediately.
+// The filter set in the TOP pool author prevents getters from being submitted.
+// In this test however, we set the filter to `AllowAllTops`, so getters can be submitted.
+// We want to keep this back door open, in case we would want to submit getter into the TOP pool again in the future.
 fn test_submit_trusted_getter_to_top_pool() {
 	// given
 	let (top_pool_author, _, shard, _, shielding_key, _) = test_setup();
@@ -258,10 +260,10 @@ fn test_submit_trusted_getter_to_top_pool() {
 	)
 	.unwrap();
 
-	let (_, getters) = top_pool_author.get_pending_tops_separated(shard).unwrap();
+	let getters = top_pool_author.get_pending_trusted_getters(shard);
 
 	// then
-	assert_eq!(getters[0], signed_getter);
+	assert_eq!(getters[0], TrustedOperation::get(Getter::trusted(signed_getter)));
 }
 
 fn test_differentiate_getter_and_call_works() {
@@ -295,11 +297,12 @@ fn test_differentiate_getter_and_call_works() {
 	)
 	.unwrap();
 
-	let (calls, getters) = top_pool_author.get_pending_tops_separated(shard).unwrap();
+	let calls = top_pool_author.get_pending_trusted_calls(shard);
+	let getters = top_pool_author.get_pending_trusted_getters(shard);
 
 	// then
 	assert_eq!(calls[0], trusted_operation);
-	assert_eq!(getters[0], signed_getter);
+	assert_eq!(getters[0], TrustedOperation::get(Getter::trusted(signed_getter)));
 }
 
 fn test_create_block_and_confirmation_works() {
@@ -312,10 +315,6 @@ fn test_create_block_and_confirmation_works() {
 		state_handler.clone(),
 		node_metadata_repo.clone(),
 	));
-	let top_pool_operation_handler = TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(
-		top_pool_author.clone(),
-		stf_executor.clone(),
-	);
 	let block_composer = BlockComposer::<Block, SignedBlock, _, _>::new(
 		test_account(),
 		Arc::new(TestStateKeyRepo::new(state_key())),
@@ -337,8 +336,7 @@ fn test_create_block_and_confirmation_works() {
 	.unwrap();
 
 	// when
-	let execution_result =
-		execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_operation_handler);
+	let execution_result = execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_author);
 
 	let executed_operation_hashes =
 		execution_result.get_executed_operation_hashes().iter().copied().collect();
@@ -368,10 +366,6 @@ fn test_create_state_diff() {
 		state_handler.clone(),
 		node_metadata_repo.clone(),
 	));
-	let top_pool_operation_handler = TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(
-		top_pool_author.clone(),
-		stf_executor.clone(),
-	);
 	let block_composer = BlockComposer::<Block, SignedBlock, _, _>::new(
 		test_account(),
 		Arc::new(TestStateKeyRepo::new(state_key())),
@@ -393,8 +387,7 @@ fn test_create_state_diff() {
 	.unwrap();
 
 	// when
-	let execution_result =
-		execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_operation_handler);
+	let execution_result = execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_author);
 
 	let executed_operation_hashes =
 		execution_result.get_executed_operation_hashes().iter().copied().collect();
@@ -434,10 +427,6 @@ fn test_executing_call_updates_account_nonce() {
 	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
 	let stf_executor =
 		Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone(), node_metadata_repo));
-	let top_pool_operation_handler = TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(
-		top_pool_author.clone(),
-		stf_executor.clone(),
-	);
 
 	let sender = funded_pair();
 	let receiver = unfunded_public();
@@ -457,7 +446,7 @@ fn test_executing_call_updates_account_nonce() {
 
 	// when
 	let mut execution_result =
-		execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_operation_handler);
+		execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_author);
 
 	let nonce =
 		Stf::account_nonce(&mut execution_result.state_after_execution, &sender.public().into());
@@ -492,10 +481,6 @@ fn test_signature_must_match_public_sender_in_call() {
 	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
 	let stf_executor =
 		Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone(), node_metadata_repo));
-	let top_pool_operation_handler = TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(
-		top_pool_author.clone(),
-		stf_executor.clone(),
-	);
 
 	// create accounts
 	let sender = funded_pair();
@@ -515,8 +500,7 @@ fn test_signature_must_match_public_sender_in_call() {
 	.unwrap();
 
 	// when
-	let executed_batch =
-		execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_operation_handler);
+	let executed_batch = execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_author);
 
 	// then
 	assert!(!executed_batch.executed_operations[0].is_success());
@@ -528,10 +512,6 @@ fn test_invalid_nonce_call_is_not_executed() {
 	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
 	let stf_executor =
 		Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone(), node_metadata_repo));
-	let top_pool_operation_handler = TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(
-		top_pool_author.clone(),
-		stf_executor.clone(),
-	);
 
 	// create accounts
 	let sender = funded_pair();
@@ -551,8 +531,7 @@ fn test_invalid_nonce_call_is_not_executed() {
 	.unwrap();
 
 	// when
-	let executed_batch =
-		execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_operation_handler);
+	let executed_batch = execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_author);
 
 	// then
 	assert!(!executed_batch.executed_operations[0].is_success());
@@ -564,10 +543,6 @@ fn test_non_root_shielding_call_is_not_executed() {
 	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
 	let stf_executor =
 		Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone(), node_metadata_repo));
-	let top_pool_operation_handler = TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(
-		top_pool_author.clone(),
-		stf_executor.clone(),
-	);
 
 	let sender = funded_pair();
 	let sender_acc: AccountId = sender.public().into();
@@ -584,8 +559,7 @@ fn test_non_root_shielding_call_is_not_executed() {
 	.unwrap();
 
 	// when
-	let executed_batch =
-		execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_operation_handler);
+	let executed_batch = execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_author);
 
 	// then
 	assert!(!executed_batch.executed_operations[0].is_success());
@@ -596,10 +570,6 @@ fn test_shielding_call_with_enclave_self_is_executed() {
 	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
 	let stf_executor =
 		Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone(), node_metadata_repo));
-	let top_pool_operation_handler = TopPoolOperationHandler::<Block, SignedBlock, _, _>::new(
-		top_pool_author.clone(),
-		stf_executor.clone(),
-	);
 
 	let sender = funded_pair();
 	let sender_account: AccountId = sender.public().into();
@@ -623,7 +593,7 @@ fn test_shielding_call_with_enclave_self_is_executed() {
 
 	// when
 	let executed_batch =
-		execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_operation_handler);
+		execute_trusted_calls(&shard, stf_executor.as_ref(), top_pool_author.as_ref());
 
 	// then
 	assert_eq!(1, executed_batch.executed_operations.len());
@@ -633,9 +603,9 @@ fn test_shielding_call_with_enclave_self_is_executed() {
 fn execute_trusted_calls(
 	shard: &ShardIdentifier,
 	stf_executor: &TestStfExecutor,
-	top_pool_executor: &TestTopPoolOperationHandler,
+	top_pool_author: &TestTopPoolAuthor,
 ) -> BatchExecutionResult<State> {
-	let top_pool_calls = top_pool_executor.get_trusted_calls(&shard).unwrap();
+	let top_pool_calls = top_pool_author.get_pending_trusted_calls(*shard);
 	let execution_result = stf_executor
 		.propose_state_update(
 			&top_pool_calls,

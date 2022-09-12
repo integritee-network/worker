@@ -91,7 +91,7 @@ pub fn process_indirect_call_in_top_pool() {
 
 	executor::block_on(top_pool_author.submit_top(encrypted_indirect_call, shard_id)).unwrap();
 
-	assert_eq!(1, top_pool_author.get_pending_tops_separated(shard_id).unwrap().0.len());
+	assert_eq!(1, top_pool_author.get_pending_trusted_calls(shard_id).len());
 }
 
 pub fn submit_shielding_call_to_top_pool() {
@@ -139,14 +139,9 @@ pub fn submit_shielding_call_to_top_pool() {
 		.execute_indirect_calls_in_extrinsics(&block_with_shielding_call)
 		.unwrap();
 
-	assert_eq!(1, top_pool_author.get_pending_tops_separated(shard_id).unwrap().0.len());
-	let trusted_operation = top_pool_author
-		.get_pending_tops_separated(shard_id)
-		.unwrap()
-		.0
-		.first()
-		.cloned()
-		.unwrap();
+	assert_eq!(1, top_pool_author.get_pending_trusted_calls(shard_id).len());
+	let trusted_operation =
+		top_pool_author.get_pending_trusted_calls(shard_id).first().cloned().unwrap();
 	let trusted_call = trusted_operation.to_call().unwrap();
 	assert!(trusted_call.verify_signature(&mr_enclave.m, &shard_id));
 }

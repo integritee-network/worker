@@ -212,10 +212,6 @@ impl TrustedOperationPool for TrustedOperationPoolMock {
 	}
 
 	fn on_block_imported(&self, _hashes: &[Self::Hash], _block_hash: SidechainBlockHash) {}
-
-	fn rpc_send_state(&self, _hash: Self::Hash, _state_encoded: Vec<u8>) -> Result<(), Error> {
-		Ok(())
-	}
 }
 
 fn default_pool_status() -> PoolStatus {

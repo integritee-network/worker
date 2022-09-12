@@ -22,10 +22,10 @@ use crate::{
 	client_error::Error as ClientError,
 	error::{Error as StateRpcError, Result},
 	top_filter::Filter,
-	traits::{AuthorApi, OnBlockImported, SendState},
+	traits::{AuthorApi, OnBlockImported},
 };
 use codec::{Decode, Encode};
-use ita_stf::{hash, Getter, TrustedGetterSigned, TrustedOperation};
+use ita_stf::{hash, Getter, TrustedOperation};
 use itp_enclave_metrics::EnclaveMetric;
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt};
@@ -44,7 +44,7 @@ use jsonrpc_core::{
 };
 use log::*;
 use sp_runtime::generic;
-use std::{boxed::Box, sync::Arc, vec, vec::Vec};
+use std::{boxed::Box, sync::Arc, vec::Vec};
 
 /// Define type of TOP filter that is used in the Author
 #[cfg(feature = "sidechain")]
@@ -204,6 +204,44 @@ where
 			),
 		}
 	}
+
+	fn remove_top(
+		&self,
+		bytes_or_hash: hash::TrustedOperationOrHash<TxHash<TopPool>>,
+		shard: ShardIdentifier,
+		inblock: bool,
+	) -> Result<TxHash<TopPool>> {
+		let hash = match bytes_or_hash {
+			hash::TrustedOperationOrHash::Hash(h) => Ok(h),
+			hash::TrustedOperationOrHash::OperationEncoded(bytes) => {
+				match Decode::decode(&mut bytes.as_slice()) {
+					Ok(op) => Ok(self.top_pool.hash_of(&op)),
+					Err(e) => {
+						error!("Failed to decode trusted operation: {:?}, operation will not be removed from pool", e);
+						Err(StateRpcError::CodecError(e))
+					},
+				}
+			},
+			hash::TrustedOperationOrHash::Operation(op) => Ok(self.top_pool.hash_of(&op)),
+		}?;
+
+		debug!("removing {:?} from top pool", hash);
+
+		// Update metric
+		if let Err(e) = self.ocall_api.update_metric(EnclaveMetric::TopPoolSizeDecrement) {
+			warn!("Failed to update metric for top pool size: {:?}", e);
+		}
+
+		let removed_op_hash = self
+			.top_pool
+			.remove_invalid(&[hash], shard, inblock)
+			// Only remove a single element, so first should return Ok().
+			.first()
+			.map(|o| o.hash().clone())
+			.ok_or(PoolError::InvalidTrustedOperation)?;
+
+		Ok(removed_op_hash)
+	}
 }
 
 fn map_top_error<P: TrustedOperationPool>(error: P::Error) -> RpcError {
@@ -244,62 +282,46 @@ where
 		Ok(self.top_pool.ready(shard).map(|top| top.data().encode()).collect())
 	}
 
-	fn get_pending_tops_separated(
-		&self,
-		shard: ShardIdentifier,
-	) -> Result<(Vec<TrustedOperation>, Vec<TrustedGetterSigned>)> {
-		let mut calls: Vec<TrustedOperation> = vec![];
-		let mut getters: Vec<TrustedGetterSigned> = vec![];
-		for operation in self.top_pool.ready(shard) {
-			match operation.data() {
-				TrustedOperation::direct_call(_) => calls.push(operation.data().clone()),
-				TrustedOperation::indirect_call(_) => calls.push(operation.data().clone()),
-				TrustedOperation::get(getter) => match getter {
-					Getter::trusted(trusted_getter_signed) =>
-						getters.push(trusted_getter_signed.clone()),
-					_ => error!("Found invalid trusted getter in top pool"),
-				},
-			}
-		}
+	fn get_pending_trusted_getters(&self, shard: ShardIdentifier) -> Vec<TrustedOperation> {
+		self.top_pool
+			.ready(shard)
+			.map(|o| o.data().clone())
+			.into_iter()
+			.filter(|o| matches!(o, TrustedOperation::get(Getter::trusted(_))))
+			.collect()
+	}
 
-		Ok((calls, getters))
+	fn get_pending_trusted_calls(&self, shard: ShardIdentifier) -> Vec<TrustedOperation> {
+		self.top_pool
+			.ready(shard)
+			.map(|o| o.data().clone())
+			.into_iter()
+			.filter(|o| {
+				matches!(o, TrustedOperation::direct_call(_))
+					|| matches!(o, TrustedOperation::indirect_call(_))
+			})
+			.collect()
 	}
 
 	fn get_shards(&self) -> Vec<ShardIdentifier> {
 		self.top_pool.shards()
 	}
 
-	// FIXME: Fix the "inblock" variable such that multiple inputs are allowed (& rename to remove_tops?)
-	fn remove_top(
+	fn remove_calls_from_pool(
 		&self,
-		bytes_or_hash: Vec<hash::TrustedOperationOrHash<TxHash<TopPool>>>,
 		shard: ShardIdentifier,
-		inblock: bool,
-	) -> Result<Vec<TxHash<TopPool>>> {
-		let hashes = bytes_or_hash
-			.into_iter()
-			.map(|x| match x {
-				hash::TrustedOperationOrHash::Hash(h) => Ok(h),
-				hash::TrustedOperationOrHash::OperationEncoded(bytes) => {
-					let op = Decode::decode(&mut &bytes[..]).unwrap();
-					Ok(self.top_pool.hash_of(&op))
-				},
-				hash::TrustedOperationOrHash::Operation(op) => Ok(self.top_pool.hash_of(&op)),
-			})
-			.collect::<Result<Vec<_>>>()?;
-		debug!("removing {:?} from top pool", hashes);
-
-		// Update metric
-		if let Err(e) = self.ocall_api.update_metric(EnclaveMetric::TopPoolSizeDecrement) {
-			warn!("Failed to update metric for top pool size: {:?}", e);
+		executed_calls: Vec<(hash::TrustedOperationOrHash<TxHash<TopPool>>, bool)>,
+	) -> Vec<hash::TrustedOperationOrHash<TxHash<TopPool>>> {
+		let mut failed_to_remove = Vec::new();
+		for (executed_call, inblock) in executed_calls {
+			if let Err(e) = self.remove_top(executed_call.clone(), shard, inblock) {
+				// We don't want to return here before all calls have been iterated through,
+				// hence only throwing an error log and push to `failed_to_remove` vec.
+				error!("Error removing trusted call from top pool: {:?}", e);
+				failed_to_remove.push(executed_call);
+			}
 		}
-
-		Ok(self
-			.top_pool
-			.remove_invalid(&hashes, shard, inblock)
-			.into_iter()
-			.map(|op| op.hash().clone())
-			.collect())
+		failed_to_remove
 	}
 
 	fn watch_top(
@@ -325,22 +347,5 @@ where
 
 	fn on_block_imported(&self, hashes: &[Self::Hash], block_hash: SidechainBlockHash) {
 		self.top_pool.on_block_imported(hashes, block_hash)
-	}
-}
-
-impl<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi> SendState
-	for Author<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi>
-where
-	TopPool: TrustedOperationPool + Sync + Send + 'static,
-	TopFilter: Filter<Value = TrustedOperation>,
-	StateFacade: QueryShardState,
-	ShieldingKeyRepository: AccessKey,
-	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
-	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
-{
-	type Hash = <TopPool as TrustedOperationPool>::Hash;
-
-	fn send_state(&self, hash: Self::Hash, state_encoded: Vec<u8>) -> Result<()> {
-		self.top_pool.rpc_send_state(hash, state_encoded).map_err(|e| e.into())
 	}
 }

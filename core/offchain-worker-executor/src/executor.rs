@@ -28,7 +28,7 @@ use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{OpaqueCall, ShardIdentifier, H256};
 use log::*;
 use sp_runtime::traits::Block;
-use std::{marker::PhantomData, sync::Arc, time::Duration, vec, vec::Vec};
+use std::{marker::PhantomData, sync::Arc, time::Duration, vec::Vec};
 
 /// Off-chain worker executor implementation.
 ///
@@ -105,7 +105,7 @@ impl<
 		debug!("Executing calls on {} shard(s)", shards.len());
 
 		for shard in shards {
-			let trusted_calls = self.top_pool_author.get_pending_tops_separated(shard)?.0;
+			let trusted_calls = self.top_pool_author.get_pending_trusted_calls(shard);
 			debug!("Executing {} trusted calls on shard {:?}", trusted_calls.len(), shard);
 
 			let batch_execution_result = self.stf_executor.propose_state_update(
@@ -171,27 +171,24 @@ impl<
 		Ok(())
 	}
 
-	// TODO: this is duplicated code and should be removed, once we refactor the top pool author
-	// and integrate the top pool executor into it.
 	fn remove_calls_from_pool(
 		&self,
 		shard: &ShardIdentifier,
 		executed_calls: Vec<ExecutedOperation>,
 	) -> Vec<ExecutedOperation> {
-		let mut failed_to_remove = Vec::new();
-		for executed_call in executed_calls {
-			if let Err(e) = self.top_pool_author.remove_top(
-				vec![executed_call.trusted_operation_or_hash.clone()],
-				*shard,
-				executed_call.is_success(),
-			) {
-				// We don't want to return here before all calls have been iterated through,
-				// hence only throwing an error log and push to `failed_to_remove` vec.
-				error!("Error removing trusted call from top pool: Error: {:?}", e);
-				failed_to_remove.push(executed_call);
-			}
-		}
-		failed_to_remove
+		let executed_calls_tuple: Vec<_> = executed_calls
+			.iter()
+			.map(|e| (e.trusted_operation_or_hash.clone(), e.is_success()))
+			.collect();
+		let failed_to_remove_hashes =
+			self.top_pool_author.remove_calls_from_pool(*shard, executed_calls_tuple);
+
+		let failed_executed_calls: Vec<_> = executed_calls
+			.into_iter()
+			.filter(|e| failed_to_remove_hashes.contains(&e.trusted_operation_or_hash))
+			.collect();
+
+		failed_executed_calls
 	}
 }
 
