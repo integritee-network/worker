@@ -625,6 +625,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
 					},
 				}
 			},
+			#[cfg(feature = "teeracle")]
 			Event::Teeracle(re) => {
 				debug!("{:?}", re);
 				match &re {
@@ -667,6 +668,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
 					},
 				}
 			},
+			#[cfg(feature = "sidechain")]
 			Event::Sidechain(re) => match &re {
 				my_node_runtime::pallet_sidechain::Event::ProposedSidechainBlock(
 					sender,
