@@ -3423,13 +3423,13 @@ dependencies = [
  "itp-storage",
  "itp-test",
  "itp-time-utils",
+ "itp-top-pool-author",
  "itp-types",
  "itp-utils",
  "its-block-composer",
  "its-consensus-common",
  "its-consensus-slots",
  "its-state",
- "its-top-pool-executor",
  "its-validateer-fetch",
  "log 0.4.17",
  "parentchain-test",
@@ -3551,7 +3551,6 @@ dependencies = [
  "its-consensus-slots",
  "its-rpc-handler",
  "its-state",
- "its-top-pool-executor",
  "its-validateer-fetch",
  "sidechain-primitives",
 ]
@@ -3592,28 +3591,6 @@ dependencies = [
  "sp-core",
  "temp-dir",
  "thiserror 1.0.32",
-]
-
-[[package]]
-name = "its-top-pool-executor"
-version = "0.8.0"
-dependencies = [
- "ita-stf",
- "itp-sgx-externalities",
- "itp-stf-executor",
- "itp-time-utils",
- "itp-top-pool-author",
- "itp-types",
- "its-state",
- "log 0.4.17",
- "parity-scale-codec",
- "sgx_tstd",
- "sgx_types",
- "sidechain-primitives",
- "sp-core",
- "sp-runtime",
- "thiserror 1.0.32",
- "thiserror 1.0.9",
 ]
 
 [[package]]
