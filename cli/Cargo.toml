@@ -54,3 +54,7 @@ evm = [
     "ita-stf/evm_std",
     "pallet-evm"
 ]
+teeracle = []
+sidechain = []
+offchain-worker = []
+production = []

@@ -33,6 +33,7 @@ mod command_utils;
 mod commands;
 #[cfg(feature = "evm")]
 mod evm;
+#[cfg(feature = "teeracle")]
 mod exchange_oracle;
 mod trusted_base_cli;
 mod trusted_command_utils;
