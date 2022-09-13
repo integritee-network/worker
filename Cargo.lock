@@ -3230,6 +3230,7 @@ dependencies = [
  "itp-sgx-crypto",
  "itp-sgx-externalities",
  "itp-stf-state-handler",
+ "itp-stf-state-observer",
  "itp-storage",
  "itp-test",
  "itp-time-utils",
@@ -3256,6 +3257,7 @@ dependencies = [
  "itp-sgx-crypto",
  "itp-sgx-externalities",
  "itp-sgx-io",
+ "itp-stf-state-observer",
  "itp-time-utils",
  "itp-types",
  "lazy_static",
@@ -3267,6 +3269,19 @@ dependencies = [
  "sgx_tstd",
  "sgx_types",
  "sp-core",
+ "thiserror 1.0.32",
+ "thiserror 1.0.9",
+]
+
+[[package]]
+name = "itp-stf-state-observer"
+version = "0.8.0"
+dependencies = [
+ "itp-types",
+ "log 0.4.17",
+ "parity-scale-codec",
+ "sgx_tstd",
+ "sgx_types",
  "thiserror 1.0.32",
  "thiserror 1.0.9",
 ]
@@ -3462,13 +3477,13 @@ dependencies = [
  "itp-storage",
  "itp-test",
  "itp-time-utils",
+ "itp-top-pool-author",
  "itp-types",
  "itp-utils",
  "its-block-composer",
  "its-consensus-common",
  "its-consensus-slots",
  "its-state",
- "its-top-pool-executor",
  "its-validateer-fetch",
  "log 0.4.17",
  "parentchain-test",
@@ -3486,7 +3501,11 @@ dependencies = [
 name = "its-consensus-common"
 version = "0.8.0"
 dependencies = [
+ "itc-parentchain-light-client",
  "itp-block-import-queue",
+ "itp-extrinsics-factory",
+ "itp-node-api-metadata",
+ "itp-node-api-metadata-provider",
  "itp-ocall-api",
  "itp-sgx-crypto",
  "itp-sgx-externalities",
@@ -3586,7 +3605,6 @@ dependencies = [
  "its-consensus-slots",
  "its-rpc-handler",
  "its-state",
- "its-top-pool-executor",
  "its-validateer-fetch",
  "sidechain-primitives",
 ]
@@ -3627,28 +3645,6 @@ dependencies = [
  "sp-core",
  "temp-dir",
  "thiserror 1.0.32",
-]
-
-[[package]]
-name = "its-top-pool-executor"
-version = "0.8.0"
-dependencies = [
- "ita-stf",
- "itp-sgx-externalities",
- "itp-stf-executor",
- "itp-time-utils",
- "itp-top-pool-author",
- "itp-types",
- "its-state",
- "log 0.4.17",
- "parity-scale-codec",
- "sgx_tstd",
- "sgx_types",
- "sidechain-primitives",
- "sp-core",
- "sp-runtime",
- "thiserror 1.0.32",
- "thiserror 1.0.9",
 ]
 
 [[package]]
