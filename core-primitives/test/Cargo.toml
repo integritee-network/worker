@@ -30,9 +30,7 @@ itp-stf-state-handler = { path = "../stf-state-handler", default-features = fals
 itp-storage = { path = "../storage", default-features = false }
 itp-teerex-storage = { path = "../teerex-storage", default-features = false }
 itp-time-utils = { path = "../time-utils", default-features = false }
-
-# integritee
-itp-types = { default-features = false, features = ["test"], git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+itp-types = { path = "../types", default-features = false, features = ["test"] }
 
 [features]
 default = ["std"]

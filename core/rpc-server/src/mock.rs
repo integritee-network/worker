@@ -18,12 +18,12 @@
 use itp_enclave_api::{direct_request::DirectRequest, EnclaveResult};
 use itp_rpc::RpcResponse;
 use itp_utils::ToHexPrefixed;
-use its_storage::interface::FetchBlocks;
-use parity_scale_codec::Encode;
-use sidechain_primitives::{
+use its_primitives::{
 	traits::ShardIdentifierFor,
 	types::{BlockHash, SignedBlock, SignedBlock as SignedSidechainBlock},
 };
+use its_storage::interface::FetchBlocks;
+use parity_scale_codec::Encode;
 
 pub struct TestEnclave;
 

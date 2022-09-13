@@ -10,9 +10,6 @@ sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-s
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["untrusted_time"] }
 sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_crypto_helper", default-features = false, optional = true }
 
-# integritee dependencies
-itp-types = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-
 # local dependencies
 ita-stf = { path = "../../app-libs/stf", default-features = false }
 itp-node-api = { path = "../node-api", default-features = false }
@@ -23,6 +20,7 @@ itp-stf-state-handler = { path = "../stf-state-handler", default-features = fals
 itp-stf-state-observer = { path = "../stf-state-observer", default-features = false }
 itp-storage = { path = "../storage", default-features = false }
 itp-time-utils = { path = "../time-utils", default-features = false }
+itp-types = { path = "../types", default-features = false }
 
 # scs
 substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.27" }
@@ -42,8 +40,8 @@ sp-core = { default-features = false, features = ["full_crypto"], git = "https:/
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 
 # dev dependencies
+itc-parentchain-test = { path = "../../core/parentchain/test", optional = true, default-features = false }
 itp-test = { path = "../test", default-features = false, optional = true }
-parentchain-test = { optional = true, default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 [dev-dependencies]
 itp-stf-state-observer = { path = "../stf-state-observer", features = ["mocks"] }
@@ -85,9 +83,9 @@ sgx = [
     "thiserror_sgx",
 ]
 test = [
+    "itc-parentchain-test",
     "itp-node-api/mocks",
     "itp-test",
     "sgx-crypto-helper",
-    "parentchain-test",
 ]
 mocks = []

@@ -17,14 +17,14 @@
 
 use crate::{authorities, EnclaveOnChainOCallApi};
 use core::marker::PhantomData;
+use its_block_verification::verify_sidechain_block;
 use its_consensus_common::{Error as ConsensusError, Verifier};
-use its_state::LastBlockExt;
-use its_validateer_fetch::ValidateerFetch;
-use sidechain_block_verification::verify_sidechain_block;
-use sidechain_primitives::{
+use its_primitives::{
 	traits::{Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait},
 	types::block::BlockHash,
 };
+use its_state::LastBlockExt;
+use its_validateer_fetch::ValidateerFetch;
 use sp_runtime::{app_crypto::Pair, traits::Block as ParentchainBlockTrait};
 use std::{fmt::Debug, time::Duration};
 

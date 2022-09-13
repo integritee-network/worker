@@ -22,12 +22,12 @@ use itp_sgx_crypto::{key_repository::AccessKey, StateCrypto};
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_time_utils::now_as_u64;
 use itp_types::{ShardIdentifier, H256};
-use its_state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt, StateHash};
-use log::*;
-use sidechain_primitives::traits::{
+use its_primitives::traits::{
 	Block as SidechainBlockTrait, BlockData, Header as HeaderTrait, SignBlock,
 	SignedBlock as SignedSidechainBlockTrait,
 };
+use its_state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt, StateHash};
+use log::*;
 use sp_core::Pair;
 use sp_runtime::{
 	traits::{Block as ParentchainBlockTrait, Header},

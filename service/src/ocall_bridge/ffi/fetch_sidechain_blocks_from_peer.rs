@@ -107,9 +107,9 @@ mod tests {
 	use super::*;
 	use crate::ocall_bridge::test::mocks::sidechain_bridge_mock::SidechainBridgeMock;
 	use codec::{Decode, Encode};
+	use its_primitives::types::block::SignedBlock;
+	use its_test::sidechain_block_builder::SidechainBlockBuilder;
 	use primitive_types::H256;
-	use sidechain_primitives::types::block::SignedBlock;
-	use sidechain_test::sidechain_block_builder::SidechainBlockBuilder;
 
 	#[test]
 	fn fetch_sidechain_blocks_from_peer_works() {

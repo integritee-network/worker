@@ -17,12 +17,12 @@
 
 use super::{db::SidechainDB, Error, Result};
 use codec::{Decode, Encode};
-use log::*;
-use rocksdb::WriteBatch;
-use sidechain_primitives::{
+use its_primitives::{
 	traits::{Block as BlockTrait, Header as HeaderTrait, SignedBlock as SignedBlockT},
 	types::{BlockHash, BlockNumber},
 };
+use log::*;
+use rocksdb::WriteBatch;
 use sp_core::H256;
 use std::{collections::HashMap, fmt::Debug, path::PathBuf};
 /// key value of sidechain db of last block
@@ -388,7 +388,7 @@ mod test {
 		create_signed_block_with_shard as create_signed_block, create_temp_dir, get_storage,
 	};
 	use itp_types::ShardIdentifier;
-	use sidechain_primitives::{traits::SignedBlock as SignedBlockT, types::SignedBlock};
+	use its_primitives::{traits::SignedBlock as SignedBlockT, types::SignedBlock};
 	use sp_core::H256;
 
 	#[test]

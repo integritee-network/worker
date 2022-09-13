@@ -35,7 +35,7 @@ mod sgx_reexports {
 
 use codec::{Decode, Encode};
 use itp_sgx_externalities::{SgxExternalitiesDiffType, SgxExternalitiesTrait};
-use sidechain_primitives::{
+use its_primitives::{
 	traits::Block as SidechainBlockTrait,
 	types::{BlockHash, BlockNumber, Timestamp},
 };

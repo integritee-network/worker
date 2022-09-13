@@ -23,8 +23,8 @@ use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api_metadata::pallet_sidechain::SidechainCallIndexes;
 use itp_node_api_metadata_provider::AccessNodeMetadata;
 use itp_types::{OpaqueCall, ShardIdentifier};
+use its_primitives::traits::Header as HeaderTrait;
 use log::*;
-use sidechain_primitives::traits::Header as HeaderTrait;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::{marker::PhantomData, sync::Arc};
 

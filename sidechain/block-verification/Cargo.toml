@@ -1,0 +1,54 @@
+[package]
+name = "its-block-verification"
+description = "Verification logic for sidechain blocks"
+version = "0.9.0"
+authors = ["Integritee AG <hello@integritee.network>"]
+homepage = "https://integritee.network/"
+repository = "https://github.com/integritee-network/pallets/"
+license = "Apache-2.0"
+edition = "2021"
+
+[dependencies]
+log = { version = "0.4.17", default-features = false }
+thiserror = { version = "1.0.26", optional = true }
+
+# local deps
+itp-types = { default-features = false, path = "../../core-primitives/types" }
+itp-utils = { default-features = false, path = "../../core-primitives/utils" }
+its-primitives = { default-features = false, path = "../primitives" }
+
+# substrate deps
+frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+sp-consensus-slots = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+
+# sgx deps
+thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
+sgx_tstd = { branch = "master", features = ["untrusted_fs", "net", "backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+
+[features]
+default = ["std"]
+std = [
+    "log/std",
+    "thiserror",
+    # local
+    "itp-types/std",
+    "itp-utils/std",
+    "its-primitives/std",
+    # substrate
+    "frame-support/std",
+    "sp-consensus-slots/std",
+    "sp-core/std",
+    "sp-runtime/std",
+]
+sgx = [
+    "itp-utils/sgx",
+    "sgx_tstd",
+    "thiserror-sgx",
+]
+
+[dev-dependencies]
+itc-parentchain-test = { path = "../../core/parentchain/test" }
+its-test = { path = "../../sidechain/test" }
+sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }

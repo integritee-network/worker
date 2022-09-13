@@ -18,13 +18,10 @@ thiserror = { version = "1.0" }
 url = { version = "2.0.0" }
 ws = { version = "0.9.1", features = ["ssl"] }
 
-# integritee
-itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-itp-utils = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-
 # local
 itp-rpc = { path = "../../core-primitives/rpc" }
-
+itp-types = { path = "../../core-primitives/types" }
+itp-utils = { path = "../../core-primitives/utils" }
 
 [dev-dependencies]
 env_logger = "0.9.0"

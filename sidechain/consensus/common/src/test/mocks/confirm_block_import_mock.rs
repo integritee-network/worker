@@ -17,7 +17,7 @@
 
 use crate::{error::Result, ConfirmBlockImport};
 use itp_types::ShardIdentifier;
-use sidechain_primitives::types::header::SidechainHeader;
+use its_primitives::types::header::SidechainHeader;
 
 /// Mock implementation of the `ConfirmBlockImport` trait.
 pub struct ConfirmBlockImportMock;

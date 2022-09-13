@@ -17,7 +17,7 @@
 
 #![cfg_attr(test, feature(assert_matches))]
 
-use sidechain_primitives::types::BlockNumber;
+use its_primitives::types::BlockNumber;
 use std::{
 	sync::Arc,
 	thread,

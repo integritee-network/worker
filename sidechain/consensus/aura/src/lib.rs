@@ -33,14 +33,14 @@ use core::marker::PhantomData;
 use itc_parentchain_block_import_dispatcher::triggered_dispatcher::TriggerParentchainBlockImport;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_time_utils::duration_now;
+use its_block_verification::slot::slot_author;
 use its_consensus_common::{Environment, Error as ConsensusError, Proposer};
 use its_consensus_slots::{SimpleSlotWorker, Slot, SlotInfo};
-use its_validateer_fetch::ValidateerFetch;
-use sidechain_block_verification::slot::slot_author;
-use sidechain_primitives::{
+use its_primitives::{
 	traits::{Block as SidechainBlockTrait, Header as HeaderTrait, SignedBlock},
 	types::block::BlockHash,
 };
+use its_validateer_fetch::ValidateerFetch;
 use sp_core::ByteArray;
 use sp_runtime::{
 	app_crypto::{sp_core::H256, Pair},
@@ -272,16 +272,16 @@ mod tests {
 		mocks::environment_mock::EnvironmentMock,
 	};
 	use itc_parentchain_block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
+	use itc_parentchain_test::{
+		parentchain_block_builder::ParentchainBlockBuilder,
+		parentchain_header_builder::ParentchainHeaderBuilder,
+	};
 	use itp_test::mock::onchain_mock::OnchainMock;
 	use itp_types::{
 		Block as ParentchainBlock, Enclave, Header as ParentchainHeader,
 		SignedBlock as SignedParentchainBlock,
 	};
 	use its_consensus_slots::PerShardSlotWorkerScheduler;
-	use parentchain_test::{
-		parentchain_block_builder::ParentchainBlockBuilder,
-		parentchain_header_builder::ParentchainHeaderBuilder,
-	};
 	use sp_core::ed25519::Public;
 	use sp_keyring::ed25519::Keyring;
 

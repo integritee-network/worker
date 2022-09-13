@@ -17,6 +17,10 @@
 
 use crate::{error::Result, untrusted_peer_fetch::FetchUntrustedPeers, FetchBlocksFromPeer};
 use async_trait::async_trait;
+use its_primitives::{
+	traits::SignedBlock as SignedBlockTrait,
+	types::{BlockHash, ShardIdentifier},
+};
 use its_rpc_handler::constants::RPC_METHOD_NAME_FETCH_BLOCKS_FROM_PEER;
 use jsonrpsee::{
 	types::to_json_value,
@@ -24,10 +28,6 @@ use jsonrpsee::{
 };
 use log::info;
 use serde::de::DeserializeOwned;
-use sidechain_primitives::{
-	traits::SignedBlock as SignedBlockTrait,
-	types::{BlockHash, ShardIdentifier},
-};
 use std::marker::PhantomData;
 
 /// Sidechain block fetcher implementation.
@@ -95,10 +95,10 @@ mod tests {
 		block_fetch_server::BlockFetchServerModuleBuilder,
 		mocks::untrusted_peer_fetch_mock::UntrustedPeerFetcherMock,
 	};
+	use its_primitives::types::block::SignedBlock;
 	use its_storage::fetch_blocks_mock::FetchBlocksMock;
+	use its_test::sidechain_block_builder::SidechainBlockBuilder;
 	use jsonrpsee::ws_server::WsServerBuilder;
-	use sidechain_primitives::types::block::SignedBlock;
-	use sidechain_test::sidechain_block_builder::SidechainBlockBuilder;
 	use std::{net::SocketAddr, sync::Arc};
 
 	async fn run_server(

@@ -19,9 +19,9 @@ use crate::{
 	error::Result, AuthorityList, ExtrinsicSender, HashFor, LightClientState, LightValidationState,
 	RelayId, Validator,
 };
+use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 use itp_storage::StorageProof;
 use itp_types::Block;
-use parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 use sp_runtime::{generic::SignedBlock, traits::Block as BlockT, OpaqueExtrinsic};
 use std::vec::Vec;
 

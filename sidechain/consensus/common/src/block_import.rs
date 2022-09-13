@@ -21,12 +21,12 @@ use crate::{Error, Verifier};
 use codec::Decode;
 use itp_ocall_api::EnclaveSidechainOCallApi;
 use itp_sgx_crypto::StateCrypto;
-use its_state::{LastBlockExt, SidechainState};
-use log::*;
-use sidechain_primitives::traits::{
+use its_primitives::traits::{
 	Block as SidechainBlockTrait, BlockData, Header as HeaderTrait, ShardIdentifierFor,
 	SignedBlock as SignedSidechainBlockTrait,
 };
+use its_state::{LastBlockExt, SidechainState};
+use log::*;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::{time::Instant, vec::Vec};
 

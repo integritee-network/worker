@@ -23,12 +23,12 @@ pub use sp_consensus_slots::Slot;
 
 use itp_sgx_io::StaticSealedIO;
 use itp_time_utils::duration_now;
+use its_block_verification::slot::slot_from_timestamp_and_duration;
 use its_consensus_common::Error as ConsensusError;
-use log::warn;
-use sidechain_block_verification::slot::slot_from_timestamp_and_duration;
-use sidechain_primitives::traits::{
+use its_primitives::traits::{
 	Block as SidechainBlockTrait, BlockData, SignedBlock as SignedSidechainBlockTrait,
 };
+use log::warn;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::time::Duration;
 
@@ -197,14 +197,14 @@ pub mod sgx {
 mod tests {
 	use super::*;
 	use core::assert_matches::assert_matches;
+	use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 	use itp_sgx_io::StaticSealedIO;
 	use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader};
-	use parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
-	use sidechain_primitives::{
+	use its_primitives::{
 		traits::{Block as BlockT, SignBlock},
 		types::block::{Block, SignedBlock},
 	};
-	use sidechain_test::{
+	use its_test::{
 		sidechain_block_data_builder::SidechainBlockDataBuilder,
 		sidechain_header_builder::SidechainHeaderBuilder,
 	};

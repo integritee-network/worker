@@ -22,7 +22,7 @@ use crate::{
 		fill_storage_with_blocks, get_storage,
 	},
 };
-use sidechain_primitives::{traits::SignedBlock, types::BlockHash};
+use its_primitives::{traits::SignedBlock, types::BlockHash};
 use std::assert_matches::assert_matches;
 
 #[test]

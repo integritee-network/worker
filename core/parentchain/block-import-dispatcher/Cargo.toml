@@ -24,8 +24,8 @@ log = { version = "0.4", default-features = false }
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 
 [dev-dependencies]
-itp-types = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 itc-parentchain-block-importer = { path = "../block-importer", features = ["mocks"] }
+itp-types = { path = "../../../core-primitives/types" }
 
 [features]
 default = ["std"]

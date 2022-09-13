@@ -14,13 +14,11 @@ serde_json = "1.0"
 thiserror = { version = "1.0" }
 tokio = { version = "1.6.1", features = ["full"] }
 
-# scs / integritee
-sidechain-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-
 # local
 itc-rpc-client = { path = "../../core/rpc-client" }
 itp-node-api = { path = "../../core-primitives/node-api" }
 its-rpc-handler = { path = "../rpc-handler" }
+its-primitives = { path = "../primitives" }
 its-storage = { path = "../storage" }
 
 [dev-dependencies]
@@ -30,7 +28,7 @@ anyhow = "1.0.40"
 itp-node-api = { path = "../../core-primitives/node-api", features = ["mocks"] }
 itp-test = { path = "../../core-primitives/test" }
 its-storage = { path = "../storage", features = ["mocks"] }
-sidechain-test = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+its-test = { path = "../test" }
 
 [features]
 default = ["std"]

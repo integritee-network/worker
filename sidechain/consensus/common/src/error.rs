@@ -18,9 +18,9 @@
 //! Error types in sidechain consensus
 
 use itp_types::BlockHash as ParentchainBlockHash;
+use its_block_verification::error::Error as VerificationError;
+use its_primitives::types::{block::BlockHash as SidechainBlockHash, BlockNumber};
 use sgx_types::sgx_status_t;
-use sidechain_block_verification::error::Error as VerificationError;
-use sidechain_primitives::types::{block::BlockHash as SidechainBlockHash, BlockNumber};
 use std::{
 	boxed::Box,
 	error,
@@ -65,7 +65,7 @@ pub enum Error {
 	#[error("Failed to pop from block import queue: {0}")]
 	FailedToPopBlockImportQueue(#[from] itp_block_import_queue::error::Error),
 	#[error("Verification Error: {0}")]
-	VerificationError(sidechain_block_verification::error::Error),
+	VerificationError(its_block_verification::error::Error),
 }
 
 impl core::convert::From<std::io::Error> for Error {

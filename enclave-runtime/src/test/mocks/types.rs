@@ -31,12 +31,12 @@ use itp_test::mock::{
 use itp_top_pool::basic_pool::BasicPool;
 use itp_top_pool_author::{api::SidechainApi, author::Author, top_filter::AllowAllTopsFilter};
 use itp_types::{Block as ParentchainBlock, SignedBlock as SignedParentchainBlock};
+use its_primitives::types::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock};
 use its_sidechain::{
 	aura::block_importer::BlockImporter, block_composer::BlockComposer, state::SidechainDB,
 };
 use primitive_types::H256;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
-use sidechain_primitives::types::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock};
 use sp_core::ed25519 as spEd25519;
 
 pub type TestSigner = spEd25519::Pair;

@@ -18,8 +18,8 @@
 use crate::storage::SidechainStorage;
 use itp_time_utils::now_as_u64;
 use itp_types::ShardIdentifier;
-use sidechain_primitives::types::{BlockHash, SignedBlock as SignedSidechainBlock};
-use sidechain_test::{
+use its_primitives::types::{BlockHash, SignedBlock as SignedSidechainBlock};
+use its_test::{
 	sidechain_block_builder::SidechainBlockBuilder,
 	sidechain_block_data_builder::SidechainBlockDataBuilder,
 	sidechain_header_builder::SidechainHeaderBuilder,
