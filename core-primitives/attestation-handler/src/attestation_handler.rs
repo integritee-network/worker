@@ -27,6 +27,9 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
+
 use crate::{cert, utils::hash_from_slice, Error as EnclaveError, Error, Result as EnclaveResult};
 use codec::Encode;
 use core::default::Default;
@@ -76,9 +79,129 @@ pub const SIGRL_SUFFIX: &str = "/sgx/dev/attestation/v4/sigrl/";
 #[cfg(not(feature = "production"))]
 pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
 
+pub trait AttestationHandlerTrait {
+	fn perform_ra(
+		&self,
+		genesis_hash_slice: &[u8],
+		nonce: u32,
+		url_slice: &[u8],
+	) -> EnclaveResult<Vec<u8>>;
+
+	fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]>;
+
+	fn dump_ra_to_disk(&self) -> EnclaveResult<()>;
+}
+
 pub struct AttestationHandler<OCallApi, NodeMetadataRepository> {
 	ocall_api: Arc<OCallApi>,
 	node_metadata_repo: Arc<NodeMetadataRepository>,
+}
+
+impl<OCallApi, NodeMetadataRepository> AttestationHandlerTrait
+	for AttestationHandler<OCallApi, NodeMetadataRepository>
+where
+	OCallApi: EnclaveAttestationOCallApi,
+	NodeMetadataRepository: AccessNodeMetadata<MetadataType = NodeMetadata>,
+{
+	fn perform_ra(
+		&self,
+		genesis_hash_slice: &[u8],
+		nonce: u32,
+		url_slice: &[u8],
+	) -> EnclaveResult<Vec<u8>> {
+		// our certificate is unlinkable
+		let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
+
+		let (_key_der, cert_der) = match self.create_ra_report_and_signature(sign_type, false) {
+			Ok(r) => r,
+			Err(e) => return Err(e),
+		};
+
+		info!("    [Enclave] Compose extrinsic");
+		let signer = match Ed25519Seal::unseal_from_static_file() {
+			Ok(pair) => pair,
+			Err(e) => return Err(EnclaveError::Crypto(e)),
+		};
+		info!("[Enclave] Restored ECC pubkey: {:?}", signer.public());
+
+		debug!("decoded nonce: {}", nonce);
+		let genesis_hash = hash_from_slice(genesis_hash_slice);
+		debug!("decoded genesis_hash: {:?}", genesis_hash_slice);
+		debug!("worker url: {}", str::from_utf8(url_slice).unwrap());
+
+		let (register_enclave_call, runtime_spec_version, runtime_transaction_version) =
+			match self.node_metadata_repo.get_from_metadata(|m| {
+				(
+					m.register_enclave_call_indexes(),
+					m.get_runtime_version(),
+					m.get_runtime_transaction_version(),
+				)
+			}) {
+				Ok(r) => r,
+				Err(e) => {
+					error!("Failed to get node metadata: {:?}", e);
+					return Err(EnclaveError::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))
+				},
+			};
+
+		let call = match register_enclave_call {
+			Ok(c) => c,
+			Err(e) => {
+				error!("Failed to get the indexes for the register_enclave call from the metadata: {:?}", e);
+				return Err(EnclaveError::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))
+			},
+		};
+
+		let extrinsic_params = ParentchainExtrinsicParams::new(
+			runtime_spec_version,
+			runtime_transaction_version,
+			nonce,
+			genesis_hash,
+			ParentchainExtrinsicParamsBuilder::default(),
+		);
+
+		let xt = compose_extrinsic_offline!(
+			signer,
+			(call, cert_der.to_vec(), url_slice.to_vec()),
+			extrinsic_params
+		);
+
+		let xt_encoded = xt.encode();
+		let xt_hash = blake2_256(&xt_encoded);
+		debug!(
+			"    [Enclave] Encoded extrinsic ( len = {} B), hash {:?}",
+			xt_encoded.len(),
+			xt_hash
+		);
+		Ok(xt_encoded)
+	}
+
+	fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]> {
+		match self.ocall_api.get_mrenclave_of_self() {
+			Ok(m) => Ok(m.m),
+			Err(e) => Err(EnclaveError::Sgx(e)),
+		}
+	}
+
+	fn dump_ra_to_disk(&self) -> EnclaveResult<()> {
+		// our certificate is unlinkable
+		let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
+
+		let (_key_der, cert_der) = match self.create_ra_report_and_signature(sign_type, false) {
+			Ok(r) => r,
+			Err(e) => return Err(e),
+		};
+
+		if let Err(err) = io::write(&cert_der, RA_DUMP_CERT_DER_FILE) {
+			error!(
+				"    [Enclave] failed to write RA file ({}), status: {:?}",
+				RA_DUMP_CERT_DER_FILE, err
+			);
+			return Err(Error::IoError(err))
+		}
+		info!("    [Enclave] dumped ra cert to {}", RA_DUMP_CERT_DER_FILE);
+		Ok(())
+	}
 }
 
 impl<OCallApi, NodeMetadataRepository> AttestationHandler<OCallApi, NodeMetadataRepository>
@@ -88,13 +211,6 @@ where
 {
 	pub fn new(ocall_api: Arc<OCallApi>, node_metadata_repo: Arc<NodeMetadataRepository>) -> Self {
 		Self { ocall_api, node_metadata_repo }
-	}
-
-	pub fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]> {
-		match self.ocall_api.get_mrenclave_of_self() {
-			Ok(m) => Ok(m.m),
-			Err(e) => Err(EnclaveError::Sgx(e)),
-		}
 	}
 
 	fn parse_response_attn_report(&self, resp: &[u8]) -> EnclaveResult<(String, String, String)> {
@@ -492,99 +608,6 @@ where
 		let _ = ecc_handle.close();
 		info!("    [Enclave] Generate ECC Certificate successful");
 		Ok((key_der, cert_der))
-	}
-
-	pub fn perform_ra(
-		&self,
-		genesis_hash_slice: &[u8],
-		nonce: u32,
-		url_slice: &[u8],
-	) -> EnclaveResult<Vec<u8>> {
-		// our certificate is unlinkable
-		let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
-
-		let (_key_der, cert_der) = match self.create_ra_report_and_signature(sign_type, false) {
-			Ok(r) => r,
-			Err(e) => return Err(e),
-		};
-
-		info!("    [Enclave] Compose extrinsic");
-		let signer = match Ed25519Seal::unseal_from_static_file() {
-			Ok(pair) => pair,
-			Err(e) => return Err(EnclaveError::Crypto(e)),
-		};
-		info!("[Enclave] Restored ECC pubkey: {:?}", signer.public());
-
-		debug!("decoded nonce: {}", nonce);
-		let genesis_hash = hash_from_slice(genesis_hash_slice);
-		debug!("decoded genesis_hash: {:?}", genesis_hash_slice);
-		debug!("worker url: {}", str::from_utf8(url_slice).unwrap());
-
-		let (register_enclave_call, runtime_spec_version, runtime_transaction_version) =
-			match self.node_metadata_repo.get_from_metadata(|m| {
-				(
-					m.register_enclave_call_indexes(),
-					m.get_runtime_version(),
-					m.get_runtime_transaction_version(),
-				)
-			}) {
-				Ok(r) => r,
-				Err(e) => {
-					error!("Failed to get node metadata: {:?}", e);
-					return Err(EnclaveError::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))
-				},
-			};
-
-		let call = match register_enclave_call {
-			Ok(c) => c,
-			Err(e) => {
-				error!("Failed to get the indexes for the register_enclave call from the metadata: {:?}", e);
-				return Err(EnclaveError::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))
-			},
-		};
-
-		let extrinsic_params = ParentchainExtrinsicParams::new(
-			runtime_spec_version,
-			runtime_transaction_version,
-			nonce,
-			genesis_hash,
-			ParentchainExtrinsicParamsBuilder::default(),
-		);
-
-		let xt = compose_extrinsic_offline!(
-			signer,
-			(call, cert_der.to_vec(), url_slice.to_vec()),
-			extrinsic_params
-		);
-
-		let xt_encoded = xt.encode();
-		let xt_hash = blake2_256(&xt_encoded);
-		debug!(
-			"    [Enclave] Encoded extrinsic ( len = {} B), hash {:?}",
-			xt_encoded.len(),
-			xt_hash
-		);
-		Ok(xt_encoded)
-	}
-
-	pub fn dump_ra_to_disk(&self) -> EnclaveResult<()> {
-		// our certificate is unlinkable
-		let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
-
-		let (_key_der, cert_der) = match self.create_ra_report_and_signature(sign_type, false) {
-			Ok(r) => r,
-			Err(e) => return Err(e),
-		};
-
-		if let Err(err) = io::write(&cert_der, RA_DUMP_CERT_DER_FILE) {
-			error!(
-				"    [Enclave] failed to write RA file ({}), status: {:?}",
-				RA_DUMP_CERT_DER_FILE, err
-			);
-			return Err(Error::IoError(err))
-		}
-		info!("    [Enclave] dumped ra cert to {}", RA_DUMP_CERT_DER_FILE);
-		Ok(())
 	}
 }
 

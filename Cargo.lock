@@ -2959,9 +2959,11 @@ name = "itp-attestation-handler"
 version = "0.8.0"
 dependencies = [
  "arrayvec 0.7.2",
+ "base64 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx?rev=sgx_1.1.3)",
  "bit-vec",
  "chrono 0.4.11",
+ "chrono 0.4.22",
  "hex",
  "httparse 1.4.1",
  "itertools",
@@ -2976,6 +2978,7 @@ dependencies = [
  "num-bigint 0.2.5",
  "parity-scale-codec",
  "rustls 0.19.0 (git+https://github.com/mesalock-linux/rustls?rev=sgx_1.1.3)",
+ "rustls 0.19.1",
  "serde_json 1.0.60 (git+https://github.com/mesalock-linux/serde-json-sgx?tag=sgx_1.1.3)",
  "serde_json 1.0.85",
  "sgx_rand",
@@ -2987,6 +2990,7 @@ dependencies = [
  "substrate-api-client",
  "thiserror 1.0.32",
  "thiserror 1.0.9",
+ "webpki 0.21.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "webpki 0.21.4 (git+https://github.com/mesalock-linux/webpki?branch=mesalock_sgx)",
  "webpki-roots 0.21.0 (git+https://github.com/mesalock-linux/webpki-roots?branch=mesalock_sgx)",
  "yasna 0.3.1",

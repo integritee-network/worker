@@ -28,11 +28,11 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use crate::{global_components::GLOBAL_ATTESTATION_HANDLER_COMPONENT, Result as EnclaveResult};
+use itp_attestation_handler::AttestationHandlerTrait;
 use itp_component_container::ComponentGetter;
+use itp_settings::worker::MR_ENCLAVE_SIZE;
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
-
-use itp_settings::worker::MR_ENCLAVE_SIZE;
 use sgx_types::*;
 use std::{prelude::v1::*, slice, vec::Vec};
 

@@ -32,6 +32,8 @@ pub enum Error {
 	IoError(#[from] std::io::Error),
 	#[error("Crypto error: {0}")]
 	Crypto(itp_sgx_crypto::Error),
+	#[error("Error specifying time")]
+	Time,
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }
