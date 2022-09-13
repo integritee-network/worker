@@ -47,8 +47,8 @@ impl NodeMetadataMock {
 			unshield_funds: 5u8,
 			sidechain_module: 53u8,
 			imported_sidechain_block: 0u8,
-			runtime_spec_version: 24,
-			runtime_transaction_version: 3,
+			runtime_spec_version: 25,
+			runtime_transaction_version: 4,
 		}
 	}
 }
