@@ -677,7 +677,7 @@ dependencies = [
 [[package]]
 name = "claims-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#fbcfbc4f231d0e9368be419bbe06b96e443436fb"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.10.0-polkadot-v0.9.27#5211955c9bb3e2dfa86f30a782f13ccfda97daf9"
 dependencies = [
  "parity-scale-codec",
  "rustc-hex",
@@ -772,7 +772,7 @@ dependencies = [
 [[package]]
 name = "common-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#fbcfbc4f231d0e9368be419bbe06b96e443436fb"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.10.0-polkadot-v0.9.27#5211955c9bb3e2dfa86f30a782f13ccfda97daf9"
 dependencies = [
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.27)",
 ]
@@ -2268,7 +2268,7 @@ dependencies = [
 [[package]]
 name = "ias-verify"
 version = "0.1.4"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#fbcfbc4f231d0e9368be419bbe06b96e443436fb"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.10.0-polkadot-v0.9.27#5211955c9bb3e2dfa86f30a782f13ccfda97daf9"
 dependencies = [
  "base64 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.22",
@@ -2372,7 +2372,7 @@ dependencies = [
 
 [[package]]
 name = "integritee-cli"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "base58",
  "blake2-rfc",
@@ -2415,7 +2415,7 @@ dependencies = [
 [[package]]
 name = "integritee-node-runtime"
 version = "1.0.9"
-source = "git+https://github.com/integritee-network/integritee-node.git?branch=master#cc441cb52e66754a71cee6a058ab2943fd3077fe"
+source = "git+https://github.com/integritee-network/integritee-node.git?branch=ec_sdk-v0.10.0#956072540d042de273fc69517718392d4c8d4035"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -2457,7 +2457,7 @@ dependencies = [
 
 [[package]]
 name = "integritee-service"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2619,7 +2619,7 @@ dependencies = [
 
 [[package]]
 name = "ita-stf"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "derive_more",
  "frame-support",
@@ -2651,7 +2651,7 @@ dependencies = [
 
 [[package]]
 name = "itc-direct-rpc-server"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "itc-tls-websocket-server",
  "itp-rpc",
@@ -2693,7 +2693,7 @@ dependencies = [
 
 [[package]]
 name = "itc-parentchain"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "itc-parentchain-block-import-dispatcher",
  "itc-parentchain-block-importer",
@@ -2703,7 +2703,7 @@ dependencies = [
 
 [[package]]
 name = "itc-parentchain-block-import-dispatcher"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "itc-parentchain-block-importer",
  "itp-block-import-queue",
@@ -2718,7 +2718,7 @@ dependencies = [
 
 [[package]]
 name = "itc-parentchain-block-importer"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "ita-stf",
  "itc-parentchain-indirect-calls-executor",
@@ -2738,7 +2738,7 @@ dependencies = [
 
 [[package]]
 name = "itc-parentchain-indirect-calls-executor"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "beefy-merkle-tree",
  "bs58",
@@ -2768,7 +2768,7 @@ dependencies = [
 
 [[package]]
 name = "itc-parentchain-light-client"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "derive_more",
  "finality-grandpa",
@@ -2817,7 +2817,7 @@ dependencies = [
 
 [[package]]
 name = "itc-rest-client"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "base64 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "http 0.2.1",
@@ -2837,7 +2837,7 @@ dependencies = [
 
 [[package]]
 name = "itc-rpc-client"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "env_logger",
  "itc-tls-websocket-server",
@@ -2861,7 +2861,7 @@ dependencies = [
 
 [[package]]
 name = "itc-rpc-server"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "env_logger",
@@ -2883,7 +2883,7 @@ dependencies = [
 
 [[package]]
 name = "itc-tls-websocket-server"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "bit-vec",
  "chrono 0.4.22",
@@ -2964,7 +2964,7 @@ dependencies = [
 
 [[package]]
 name = "itp-block-import-queue"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "log 0.4.17",
  "sgx_tstd",
@@ -2976,7 +2976,7 @@ dependencies = [
 
 [[package]]
 name = "itp-component-container"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "sgx_tstd",
  "thiserror 1.0.32",
@@ -2985,7 +2985,7 @@ dependencies = [
 
 [[package]]
 name = "itp-enclave-api"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "frame-support",
  "itc-parentchain-light-client",
@@ -3007,14 +3007,14 @@ dependencies = [
 
 [[package]]
 name = "itp-enclave-api-ffi"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "sgx_types",
 ]
 
 [[package]]
 name = "itp-enclave-metrics"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "parity-scale-codec",
  "sgx_tstd",
@@ -3093,7 +3093,7 @@ dependencies = [
 
 [[package]]
 name = "itp-nonce-cache"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "lazy_static",
  "log 0.4.17",
@@ -3118,7 +3118,7 @@ dependencies = [
 
 [[package]]
 name = "itp-primitives-cache"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "lazy_static",
  "log 0.4.17",
@@ -3140,7 +3140,7 @@ dependencies = [
 
 [[package]]
 name = "itp-settings"
-version = "0.8.0"
+version = "0.10.0"
 
 [[package]]
 name = "itp-sgx-crypto"
@@ -3187,7 +3187,7 @@ dependencies = [
 
 [[package]]
 name = "itp-stf-executor"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "ita-stf",
  "itc-parentchain-test",
@@ -3215,7 +3215,7 @@ dependencies = [
 
 [[package]]
 name = "itp-stf-state-handler"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "ita-stf",
  "itp-settings",
@@ -3240,7 +3240,7 @@ dependencies = [
 
 [[package]]
 name = "itp-stf-state-observer"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "itp-types",
  "log 0.4.17",
@@ -3253,7 +3253,7 @@ dependencies = [
 
 [[package]]
 name = "itp-storage"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "derive_more",
  "frame-metadata 15.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3306,14 +3306,14 @@ dependencies = [
 
 [[package]]
 name = "itp-time-utils"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "sgx_tstd",
 ]
 
 [[package]]
 name = "itp-top-pool"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "byteorder 1.4.3",
  "derive_more",
@@ -3340,7 +3340,7 @@ dependencies = [
 
 [[package]]
 name = "itp-top-pool-author"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "derive_more",
  "futures 0.3.23",
@@ -3444,7 +3444,7 @@ dependencies = [
 
 [[package]]
 name = "its-consensus-aura"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "env_logger",
  "finality-grandpa",
@@ -3483,7 +3483,7 @@ dependencies = [
 
 [[package]]
 name = "its-consensus-common"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "itc-parentchain-light-client",
  "itc-parentchain-test",
@@ -3514,7 +3514,7 @@ dependencies = [
 
 [[package]]
 name = "its-consensus-slots"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "derive_more",
  "futures 0.3.23",
@@ -3540,7 +3540,7 @@ dependencies = [
 
 [[package]]
 name = "its-peer-fetch"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3608,7 +3608,7 @@ dependencies = [
 
 [[package]]
 name = "its-state"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "frame-support",
  "itp-sgx-externalities",
@@ -3628,7 +3628,7 @@ dependencies = [
 
 [[package]]
 name = "its-storage"
-version = "0.8.0"
+version = "0.10.0"
 dependencies = [
  "itp-time-utils",
  "itp-types",
@@ -4819,7 +4819,7 @@ dependencies = [
 [[package]]
 name = "pallet-claims"
 version = "0.9.12"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#fbcfbc4f231d0e9368be419bbe06b96e443436fb"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.10.0-polkadot-v0.9.27#5211955c9bb3e2dfa86f30a782f13ccfda97daf9"
 dependencies = [
  "claims-primitives",
  "frame-support",
@@ -4898,7 +4898,7 @@ dependencies = [
 [[package]]
 name = "pallet-parentchain"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#fbcfbc4f231d0e9368be419bbe06b96e443436fb"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.10.0-polkadot-v0.9.27#5211955c9bb3e2dfa86f30a782f13ccfda97daf9"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4980,7 +4980,7 @@ dependencies = [
 [[package]]
 name = "pallet-sidechain"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#fbcfbc4f231d0e9368be419bbe06b96e443436fb"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.10.0-polkadot-v0.9.27#5211955c9bb3e2dfa86f30a782f13ccfda97daf9"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5015,7 +5015,7 @@ dependencies = [
 [[package]]
 name = "pallet-teeracle"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#fbcfbc4f231d0e9368be419bbe06b96e443436fb"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.10.0-polkadot-v0.9.27#5211955c9bb3e2dfa86f30a782f13ccfda97daf9"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5034,7 +5034,7 @@ dependencies = [
 [[package]]
 name = "pallet-teerex"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#fbcfbc4f231d0e9368be419bbe06b96e443436fb"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.10.0-polkadot-v0.9.27#5211955c9bb3e2dfa86f30a782f13ccfda97daf9"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -6637,7 +6637,7 @@ checksum = "43b2853a4d09f215c24cc5489c992ce46052d359b5109343cbafbf26bc62f8a3"
 [[package]]
 name = "sidechain-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#fbcfbc4f231d0e9368be419bbe06b96e443436fb"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.10.0-polkadot-v0.9.27#5211955c9bb3e2dfa86f30a782f13ccfda97daf9"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -7522,7 +7522,7 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 [[package]]
 name = "teeracle-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#fbcfbc4f231d0e9368be419bbe06b96e443436fb"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.10.0-polkadot-v0.9.27#5211955c9bb3e2dfa86f30a782f13ccfda97daf9"
 dependencies = [
  "common-primitives",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.27)",
@@ -7532,7 +7532,7 @@ dependencies = [
 [[package]]
 name = "teerex-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=master#fbcfbc4f231d0e9368be419bbe06b96e443436fb"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.10.0-polkadot-v0.9.27#5211955c9bb3e2dfa86f30a782f13ccfda97daf9"
 dependencies = [
  "ias-verify",
  "parity-scale-codec",

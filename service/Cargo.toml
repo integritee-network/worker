@@ -1,6 +1,6 @@
 [package]
 name = "integritee-service"
-version = "0.8.0"
+version = "0.10.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 build = "build.rs"
 edition = "2021"
@@ -55,9 +55,9 @@ its-rpc-handler = { path = "../sidechain/rpc-handler" }
 its-storage = { path = "../sidechain/storage" }
 
 # scs / integritee
-my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node.git", branch = "master" }
+my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node.git", branch = "ec_sdk-v0.10.0" }
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.27" }
-teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
+teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.10.0-polkadot-v0.9.27" }
 
 # Substrate dependencies
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
