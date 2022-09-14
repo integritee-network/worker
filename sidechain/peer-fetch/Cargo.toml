@@ -17,8 +17,8 @@ tokio = { version = "1.6.1", features = ["full"] }
 # local
 itc-rpc-client = { path = "../../core/rpc-client" }
 itp-node-api = { path = "../../core-primitives/node-api" }
-its-rpc-handler = { path = "../rpc-handler" }
 its-primitives = { path = "../primitives" }
+its-rpc-handler = { path = "../rpc-handler" }
 its-storage = { path = "../storage" }
 
 [dev-dependencies]

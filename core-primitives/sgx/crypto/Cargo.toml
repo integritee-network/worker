@@ -7,20 +7,20 @@ edition = "2021"
 
 [dependencies]
 aes = { version = "0.6.0" }
-ofb = { version = "0.4.0" }
-codec  = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 derive_more = { version = "0.99.5" }
 log = { version = "0.4", default-features = false }
+ofb = { version = "0.4.0" }
 serde = { version = "1.0", default-features = false, features = ["alloc"], optional = true }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"], optional = true }
 
 # sgx deps
-sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-sgx_rand = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+serde-sgx = { package = "serde", tag = "sgx_1.1.3", git = "https://github.com/mesalock-linux/serde-sgx", optional = true }
+serde_json-sgx = { package = "serde_json", tag = "sgx_1.1.3", git = "https://github.com/mesalock-linux/serde-json-sgx", optional = true }
 sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_crypto_helper", default-features = false }
-serde-sgx = { package = "serde", tag = "sgx_1.1.3", git = "https://github.com/mesalock-linux/serde-sgx", optional = true  }
-serde_json-sgx = { package = "serde_json", tag = "sgx_1.1.3", git = "https://github.com/mesalock-linux/serde-json-sgx", optional = true  }
+sgx_rand = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # substrate deps
 sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
@@ -46,6 +46,6 @@ sgx = [
     "sgx_rand",
     "itp-sgx-io/sgx",
     "serde_json-sgx",
-    "serde-sgx"
+    "serde-sgx",
 ]
 mocks = []

@@ -24,5 +24,5 @@ sgx = [
     "itp-node-api-metadata-provider/sgx",
 ]
 mocks = [
-    "itp-node-api-metadata/mocks"
+    "itp-node-api-metadata/mocks",
 ]

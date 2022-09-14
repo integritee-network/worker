@@ -17,7 +17,7 @@ thiserror_sgx = { optional = true, package = "thiserror", git = "https://github.
 thiserror = { version = "1.0", optional = true }
 
 # local dependencies
-itp-node-api-metadata = { default-features = false, path = "../metadata"}
+itp-node-api-metadata = { default-features = false, path = "../metadata" }
 
 [features]
 default = ["std"]

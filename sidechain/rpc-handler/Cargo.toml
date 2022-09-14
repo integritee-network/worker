@@ -6,26 +6,26 @@ edition = "2021"
 
 [dependencies]
 # sgx dependencies
-sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # local dependencies
-itp-top-pool-author = { path = "../../core-primitives/top-pool-author", default-features = false }
 itp-rpc = { path = "../../core-primitives/rpc", default-features = false }
+itp-top-pool-author = { path = "../../core-primitives/top-pool-author", default-features = false }
 itp-types = { path = "../../core-primitives/types", default-features = false }
 itp-utils = { path = "../../core-primitives/utils", default-features = false }
 its-primitives = { path = "../primitives", default-features = false }
 
 # sgx enabled external libraries
-rust-base58_sgx = { package = "rust-base58", rev = "sgx_1.1.3", git = "https://github.com/mesalock-linux/rust-base58-sgx", optional = true, default-features = false, features = ["mesalock_sgx"] }
 jsonrpc-core_sgx = { package = "jsonrpc-core", git = "https://github.com/scs/jsonrpc", branch = "no_std_v18", default-features = false, optional = true }
+rust-base58_sgx = { package = "rust-base58", rev = "sgx_1.1.3", git = "https://github.com/mesalock-linux/rust-base58-sgx", optional = true, default-features = false, features = ["mesalock_sgx"] }
 
 # std compatible external libraries (make sure these versions match with the sgx-enabled ones above)
-rust-base58 = { package = "rust-base58", version = "0.0.4", optional = true }
 jsonrpc-core = { version = "18", optional = true }
+rust-base58 = { package = "rust-base58", version = "0.0.4", optional = true }
 
 # no-std compatible libraries
-codec  = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 log = { version = "0.4", default-features = false }
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 
