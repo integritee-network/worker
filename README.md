@@ -4,6 +4,11 @@ Integritee worker for Integritee [node](https://github.com/integritee-network/in
 
 This is part of [Integritee](https://integritee.network)
 
+## Build and Run
+Please see our [Integritee Book](https://docs.integritee.network/4-development/4.4-sdk) to learn how to build and run this.
+
+To start multiple worker and a node with one simple command: Check out [this README](local-setup/README.md).
+
 ## Docker
 See [docker/README.md](docker/README.md).
 
@@ -15,7 +20,7 @@ There are 3 types of tests:
 - integration tests
 
 ### Cargo Tests
-Run 
+Run
 ```
 cargo test
 ```
@@ -30,7 +35,6 @@ make
 
 ### Integration Tests
 See [docker/README.md](docker/README.md)
-
 
 ## Direct calls scalability
 
