@@ -51,7 +51,7 @@ default = ["std"]
 evm = ["pallet-evm"]
 # Compile the sgx-runtime with evm-pallet support in `std`.
 evm_std = [
-    "evm", # Activate the `feature = evm` for the compiler flags.
+    "evm",            # Activate the `feature = evm` for the compiler flags.
     "std",
     "pallet-evm/std"
 ]
