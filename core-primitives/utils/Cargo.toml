@@ -1,6 +1,6 @@
 [package]
 name = "itp-utils"
-version = "0.8.0"
+version = "0.9.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 homepage = "https://integritee.network/"
 repository = "https://github.com/integritee-network/pallets/"
