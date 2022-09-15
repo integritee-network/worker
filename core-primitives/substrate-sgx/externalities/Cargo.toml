@@ -1,6 +1,6 @@
 [package]
 name = "itp-sgx-externalities"
-version = "0.8.0"
+version = "0.9.0"
 authors = ["Integritee AG <hello@integritee.network> and Parity Technologies <admin@parity.io>"]
 edition = "2021"
 
