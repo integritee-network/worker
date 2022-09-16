@@ -2739,7 +2739,7 @@ dependencies = [
 [[package]]
 name = "pallet-parentchain"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.28#a99f77d7cf390a4249d32f7524449cbea5159d2b"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#1caee9e9657852e79923386b2a9f55d277096605"
 dependencies = [
  "frame-support",
  "frame-system",
