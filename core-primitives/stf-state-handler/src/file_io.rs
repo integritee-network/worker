@@ -91,30 +91,38 @@ pub mod sgx {
 	use crate::error::Error;
 	use base58::FromBase58;
 	use codec::Decode;
-	use ita_stf::{AccountId, State as StfState, StateType as StfStateType, Stf};
+	use core::fmt::Debug;
+	use ita_stf::AccountId;
 	use itp_sgx_crypto::{key_repository::AccessKey, StateCrypto};
+	use itp_sgx_externalities::SgxExternalitiesTrait;
 	use itp_sgx_io::{read as io_read, write as io_write};
+	use itp_stf_interface::StateInterface;
 	use itp_types::H256;
 	use log::*;
 	use sgx_tcrypto::rsgx_sha256_slice;
-	use std::{fs, path::Path, sync::Arc};
+	use std::{fs, marker::PhantomData, path::Path, sync::Arc};
 
 	/// SGX state file I/O.
-	pub struct SgxStateFileIo<StateKeyRepository> {
+	pub struct SgxStateFileIo<StateKeyRepository, Stf, State> {
 		state_key_repository: Arc<StateKeyRepository>,
 		enclave_account: AccountId,
+		stf: Arc<Stf>,
+		_phantom: PhantomData<State>,
 	}
 
-	impl<StateKeyRepository> SgxStateFileIo<StateKeyRepository>
+	impl<StateKeyRepository, Stf, State> SgxStateFileIo<StateKeyRepository, Stf, State>
 	where
 		StateKeyRepository: AccessKey,
 		<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
+		Stf: StateInterface<State, <State as SgxExternalitiesTrait>::SgxExternalitiesDiffType>,
+		State: SgxExternalitiesTrait,
 	{
 		pub fn new(
 			state_key_repository: Arc<StateKeyRepository>,
 			enclave_account: AccountId,
+			stf: Arc<Stf>,
 		) -> Self {
-			SgxStateFileIo { state_key_repository, enclave_account }
+			SgxStateFileIo { state_key_repository, enclave_account, stf, _phantom: PhantomData }
 		}
 
 		fn read(&self, path: &Path) -> Result<Vec<u8>> {
@@ -151,12 +159,15 @@ pub mod sgx {
 		}
 	}
 
-	impl<StateKeyRepository> StateFileIo for SgxStateFileIo<StateKeyRepository>
+	impl<StateKeyRepository, Stf, State> StateFileIo for SgxStateFileIo<StateKeyRepository, Stf, State>
 	where
 		StateKeyRepository: AccessKey,
 		<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
+		Stf: StateInterface<State, <State as SgxExternalitiesTrait>::SgxExternalitiesDiffType>,
+		State: SgxExternalitiesTrait + Debug,
+		<State as SgxExternalitiesTrait>::SgxExternalitiesType: Encode + Decode,
 	{
-		type StateType = StfState;
+		type StateType = State;
 		type HashType = H256;
 
 		fn load(
@@ -178,11 +189,13 @@ pub mod sgx {
 				state_path,
 				state_encoded.len()
 			);
-			let state = StfStateType::decode(&mut state_encoded.as_slice())?;
+			let state = <State as SgxExternalitiesTrait>::SgxExternalitiesType::decode(
+				&mut state_encoded.as_slice(),
+			)?;
 
 			trace!("state decoded successfully");
 			// Add empty state-diff.
-			let state_with_diff = StfState { state, state_diff: Default::default() };
+			let state_with_diff = State::new(state);
 			trace!("New state created: {:?}", state_with_diff);
 			Ok(state_with_diff)
 		}
@@ -208,7 +221,7 @@ pub mod sgx {
 			state_id: StateId,
 		) -> Result<Self::HashType> {
 			init_shard(&shard_identifier)?;
-			let state = Stf::init_state(self.enclave_account.clone());
+			let state = self.stf.init_state(self.enclave_account.encode());
 			self.write(shard_identifier, state_id, state)
 		}
 
@@ -224,7 +237,7 @@ pub mod sgx {
 			trace!("writing state to: {:?}", state_path);
 
 			// Only save the state, the state diff is pruned.
-			let cyphertext = self.encrypt(state.state.encode())?;
+			let cyphertext = self.encrypt(state.state().encode())?;
 
 			let state_hash = rsgx_sha256_slice(&cyphertext)?;
 

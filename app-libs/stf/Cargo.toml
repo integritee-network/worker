@@ -19,6 +19,7 @@ sgx_tstd = { branch = "master", features = ["untrusted_fs", "net", "backtrace"],
 ita-sgx-runtime = { optional = true, default-features = false, path = "../sgx-runtime" }
 itp-hashing = { path = "../../core-primitives/hashing" }
 itp-sgx-externalities = { default-features = false, path = "../../core-primitives/substrate-sgx/externalities" }
+itp-stf-interface = { default-features = false, path = "../../core-primitives/stf-interface" }
 itp-storage = { default-features = false, path = "../../core-primitives/storage" }
 itp-types = { default-features = false, path = "../../core-primitives/types" }
 itp-utils = { default-features = false, path = "../../core-primitives/utils" }
@@ -65,6 +66,7 @@ std = [
     "rlp/std",
     # local
     "itp-sgx-externalities/std",
+    "itp-stf-interface/std",
     "itp-storage/std",
     "itp-types/std",
     "itp-utils/std",

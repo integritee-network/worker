@@ -42,13 +42,23 @@ pub type PalletString = String;
 
 pub use sp_core::{crypto::AccountId32 as AccountId, H256};
 
+// FIXME: Consolidate type definiton with #905.
+pub type Balance = u128;
+pub type AccountData = pallet_balances::AccountData<Balance>;
+pub type AccountInfo = frame_system::AccountInfo<Index, AccountData>;
+
 pub type ShardIdentifier = H256;
 pub type BlockNumber = u32;
 pub type Amount = u128;
+pub type Index = u32;
 pub type Header = HeaderG<BlockNumber, BlakeTwo256>;
 pub type Block = BlockG<Header, OpaqueExtrinsic>;
 pub type SignedBlock = SignedBlockG<Block>;
 pub type BlockHash = H256;
+
+// FIXME: define somewhere else with #905.
+pub type SidechainBlockNumber = u64;
+pub type SidechainTimestamp = u64;
 
 pub type IpfsHash = [u8; 46];
 pub type MrEnclave = [u8; 32];

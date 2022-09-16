@@ -21,7 +21,7 @@
 //! and ensures that the global instances are initialized once.
 
 use crate::{ocall::OcallApi, rpc::rpc_response_channel::RpcResponseChannel};
-use ita_stf::{Hash, State as StfState};
+use ita_stf::{Getter, Hash, State as StfState, Stf, TrustedCallSigned};
 use itc_direct_rpc_server::{
 	rpc_connection_registry::ConnectionRegistry, rpc_responder::RpcResponder,
 	rpc_watch_extractor::RpcWatchExtractor, rpc_ws_handler::RpcWsHandler,
@@ -75,9 +75,12 @@ use primitive_types::H256;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sp_core::ed25519::Pair;
 
+pub type EnclaveGetter = Getter;
+pub type EnclaveTrustedCallSigned = TrustedCallSigned;
+pub type EnclaveStf = Stf<EnclaveTrustedCallSigned, EnclaveGetter, StfState>;
 pub type EnclaveStateKeyRepository = KeyRepository<Aes, AesSeal>;
 pub type EnclaveShieldingKeyRepository = KeyRepository<Rsa3072KeyPair, Rsa3072Seal>;
-pub type EnclaveStateFileIo = SgxStateFileIo<EnclaveStateKeyRepository>;
+pub type EnclaveStateFileIo = SgxStateFileIo<EnclaveStateKeyRepository, EnclaveStf, StfState>;
 pub type EnclaveStateSnapshotRepository =
 	StateSnapshotRepository<EnclaveStateFileIo, StfState, H256>;
 pub type EnclaveStateObserver = StateObserver<StfState>;
@@ -85,10 +88,20 @@ pub type EnclaveStateHandler = StateHandler<EnclaveStateSnapshotRepository, Encl
 pub type EnclaveGetterExecutor = GetterExecutor<EnclaveStateObserver, StfStateGetter>;
 pub type EnclaveOCallApi = OcallApi;
 pub type EnclaveNodeMetadataRepository = NodeMetadataRepository<NodeMetadata>;
-pub type EnclaveStfExecutor =
-	StfExecutor<EnclaveOCallApi, EnclaveStateHandler, EnclaveNodeMetadataRepository>;
-pub type EnclaveStfEnclaveSigner =
-	StfEnclaveSigner<EnclaveOCallApi, EnclaveStateObserver, EnclaveShieldingKeyRepository>;
+pub type EnclaveStfExecutor = StfExecutor<
+	EnclaveOCallApi,
+	EnclaveStateHandler,
+	EnclaveNodeMetadataRepository,
+	EnclaveStf,
+	EnclaveTrustedCallSigned,
+	EnclaveGetter,
+>;
+pub type EnclaveStfEnclaveSigner = StfEnclaveSigner<
+	EnclaveOCallApi,
+	EnclaveStateObserver,
+	EnclaveShieldingKeyRepository,
+	EnclaveStf,
+>;
 pub type EnclaveExtrinsicsFactory =
 	ExtrinsicsFactory<Pair, NonceCache, EnclaveNodeMetadataRepository>;
 pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
@@ -200,6 +213,9 @@ pub static GLOBAL_STATE_HANDLER_COMPONENT: ComponentContainer<EnclaveStateHandle
 /// State observer.
 pub static GLOBAL_STATE_OBSERVER_COMPONENT: ComponentContainer<EnclaveStateObserver> =
 	ComponentContainer::new("state observer");
+
+/// Stf Interface
+pub static GLOBAL_STF_COMPONENT: ComponentContainer<EnclaveStf> = ComponentContainer::new("Stf");
 
 /// TOP pool author.
 pub static GLOBAL_TOP_POOL_AUTHOR_COMPONENT: ComponentContainer<EnclaveTopPoolAuthor> =

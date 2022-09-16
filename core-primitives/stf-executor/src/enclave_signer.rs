@@ -16,43 +16,47 @@
 */
 
 use crate::{error::Result, traits::StfEnclaveSigning};
-use ita_stf::{AccountId, Index, KeyPair, Stf, TrustedCall, TrustedCallSigned};
+use ita_stf::{AccountId, Index, KeyPair, TrustedCall, TrustedCallSigned};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{ed25519_derivation::DeriveEd25519, key_repository::AccessKey};
 use itp_sgx_externalities::SgxExternalitiesTrait;
+use itp_stf_interface::system_pallet::SystemPalletAccountInterface;
 use itp_stf_state_observer::traits::ObserveState;
 use itp_types::ShardIdentifier;
 use sp_core::{ed25519::Pair as Ed25519Pair, Pair};
 use std::sync::Arc;
 
-pub struct StfEnclaveSigner<OCallApi, StateObserver, ShieldingKeyRepository> {
+pub struct StfEnclaveSigner<OCallApi, StateObserver, ShieldingKeyRepository, Stf> {
 	state_observer: Arc<StateObserver>,
 	ocall_api: Arc<OCallApi>,
 	shielding_key_repo: Arc<ShieldingKeyRepository>,
+	stf: Arc<Stf>,
 }
 
-impl<OCallApi, StateObserver, ShieldingKeyRepository>
-	StfEnclaveSigner<OCallApi, StateObserver, ShieldingKeyRepository>
+impl<OCallApi, StateObserver, ShieldingKeyRepository, Stf>
+	StfEnclaveSigner<OCallApi, StateObserver, ShieldingKeyRepository, Stf>
 where
 	OCallApi: EnclaveAttestationOCallApi,
 	StateObserver: ObserveState,
 	StateObserver::StateType: SgxExternalitiesTrait,
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: DeriveEd25519,
+	Stf: SystemPalletAccountInterface<StateObserver::StateType>,
 {
 	pub fn new(
 		state_observer: Arc<StateObserver>,
 		ocall_api: Arc<OCallApi>,
 		shielding_key_repo: Arc<ShieldingKeyRepository>,
+		stf: Arc<Stf>,
 	) -> Self {
-		Self { state_observer, ocall_api, shielding_key_repo }
+		Self { state_observer, ocall_api, shielding_key_repo, stf }
 	}
 
 	fn get_enclave_account_nonce(&self, shard: &ShardIdentifier) -> Result<Index> {
 		let enclave_account = self.get_enclave_account()?;
-		let nonce = self
-			.state_observer
-			.observe_state(shard, move |state| Stf::account_nonce(state, &enclave_account))?;
+		let nonce = self.state_observer.observe_state(shard, move |state| {
+			self.stf.get_account_nonce(state, &enclave_account)
+		})?;
 
 		Ok(nonce)
 	}
@@ -63,14 +67,15 @@ where
 	}
 }
 
-impl<OCallApi, StateObserver, ShieldingKeyRepository> StfEnclaveSigning
-	for StfEnclaveSigner<OCallApi, StateObserver, ShieldingKeyRepository>
+impl<OCallApi, StateObserver, ShieldingKeyRepository, Stf> StfEnclaveSigning
+	for StfEnclaveSigner<OCallApi, StateObserver, ShieldingKeyRepository, Stf>
 where
 	OCallApi: EnclaveAttestationOCallApi,
 	StateObserver: ObserveState,
 	StateObserver::StateType: SgxExternalitiesTrait,
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: DeriveEd25519,
+	Stf: SystemPalletAccountInterface<StateObserver::StateType>,
 {
 	fn get_enclave_account(&self) -> Result<AccountId> {
 		let enclave_call_signing_key = self.get_enclave_call_signing_key()?;

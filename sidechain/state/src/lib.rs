@@ -16,6 +16,7 @@
 */
 
 #![cfg_attr(not(feature = "std"), no_std)]
+
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
 
@@ -34,7 +35,7 @@ mod sgx_reexports {
 }
 
 use codec::{Decode, Encode};
-use itp_sgx_externalities::{SgxExternalitiesDiffType, SgxExternalitiesTrait};
+use itp_sgx_externalities::{SgxExternalitiesDiffType, SgxExternalitiesTrait, StateHash};
 use its_primitives::{
 	traits::Block as SidechainBlockTrait,
 	types::{BlockHash, BlockNumber, Timestamp},
@@ -95,12 +96,6 @@ impl StateUpdate {
 		}
 	}
 }
-
-/// state hash abstraction
-pub trait StateHash {
-	fn hash(&self) -> H256;
-}
-
 /// Abstraction around the sidechain state.
 pub trait SidechainState: Clone {
 	type Externalities: SgxExternalitiesTrait + StateHash;

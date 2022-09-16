@@ -20,9 +20,10 @@ use crate::{
 		fixtures::initialize_test_state::init_state, mocks::rpc_responder_mock::RpcResponderMock,
 	},
 };
-use ita_stf::{ShardIdentifier, State};
+use ita_stf::{Getter, ShardIdentifier, State, Stf, TrustedCallSigned};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{ed25519_derivation::DeriveEd25519, mocks::KeyRepositoryMock};
+use itp_sgx_externalities::SgxExternalities;
 use itp_test::mock::{
 	handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock,
 	shielding_crypto_mock::ShieldingCryptoMock,
@@ -43,6 +44,7 @@ pub type TestTopPoolAuthor = Author<
 	TestShieldingKeyRepo,
 	MetricsOCallMock,
 >;
+pub type TestStf = Stf<TrustedCallSigned, Getter, SgxExternalities>;
 
 /// Returns all the things that are commonly used in tests and runs
 /// `ensure_no_empty_shard_directory_exists`

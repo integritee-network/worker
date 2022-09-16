@@ -19,14 +19,14 @@ use crate::error::{Error, Result};
 use codec::Encode;
 use ita_stf::StatePayload;
 use itp_sgx_crypto::{key_repository::AccessKey, StateCrypto};
-use itp_sgx_externalities::SgxExternalitiesTrait;
+use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_time_utils::now_as_u64;
 use itp_types::{ShardIdentifier, H256};
 use its_primitives::traits::{
 	Block as SidechainBlockTrait, BlockData, Header as HeaderTrait, SignBlock,
 	SignedBlock as SignedSidechainBlockTrait,
 };
-use its_state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt, StateHash};
+use its_state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt};
 use log::*;
 use sp_core::Pair;
 use sp_runtime::{
@@ -93,6 +93,8 @@ where
 		HeaderTrait<ShardIdentifier = H256>,
 	SignedSidechainBlock::Signature: From<Signer::Signature>,
 	Externalities: SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash + Encode,
+	<Externalities as SgxExternalitiesTrait>::SgxExternalitiesType: Encode,
+	<Externalities as SgxExternalitiesTrait>::SgxExternalitiesDiffType: Encode,
 	Signer: Pair<Public = sp_core::ed25519::Public>,
 	Signer::Public: Encode,
 	StateKeyRepository: AccessKey,
@@ -110,8 +112,8 @@ where
 	) -> Result<Self::SignedSidechainBlock> {
 		let author_public = self.signer.public();
 
+		let state_hash_new = aposteriori_state.hash();
 		let db = SidechainDB::<SignedSidechainBlock::Block, Externalities>::new(aposteriori_state);
-		let state_hash_new = db.state_hash();
 
 		let (block_number, parent_hash) = match db.get_last_block() {
 			Some(block) => (block.header().block_number() + 1, block.hash()),
@@ -127,8 +129,7 @@ where
 
 		// create encrypted payload
 		let mut payload: Vec<u8> =
-			StatePayload::new(state_hash_apriori, state_hash_new, db.ext().state_diff().clone())
-				.encode();
+			StatePayload::new(state_hash_apriori, state_hash_new, db.ext().state_diff()).encode();
 
 		let state_key = self
 			.state_key_repository

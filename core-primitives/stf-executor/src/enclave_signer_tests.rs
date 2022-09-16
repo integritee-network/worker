@@ -16,10 +16,16 @@
 */
 
 use crate::{enclave_signer::StfEnclaveSigner, traits::StfEnclaveSigning};
+use codec::Encode;
 use ita_stf::{AccountId, ShardIdentifier, Stf, TrustedCall};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{
 	ed25519_derivation::DeriveEd25519, key_repository::AccessKey, mocks::KeyRepositoryMock,
+};
+use itp_sgx_externalities::SgxExternalities;
+use itp_stf_interface::{
+	mocks::{CallExecutorMock, GetterExecutorMock},
+	StateInterface,
 };
 use itp_stf_state_observer::mock::ObserveStateMock;
 use itp_test::mock::onchain_mock::OnchainMock;
@@ -28,6 +34,7 @@ use sp_core::Pair;
 use std::sync::Arc;
 
 type ShieldingKeyRepositoryMock = KeyRepositoryMock<Rsa3072KeyPair>;
+type TestStf = Stf<CallExecutorMock, GetterExecutorMock, SgxExternalities>;
 
 pub fn derive_key_is_deterministic() {
 	let rsa_key = Rsa3072KeyPair::new().unwrap();
@@ -39,6 +46,7 @@ pub fn derive_key_is_deterministic() {
 
 pub fn enclave_signer_signatures_are_valid() {
 	let ocall_api = Arc::new(OnchainMock::default());
+	let stf = Arc::new(TestStf::new());
 	let shielding_key_repo = Arc::new(ShieldingKeyRepositoryMock::default());
 	let enclave_account: AccountId = shielding_key_repo
 		.retrieve_key()
@@ -48,10 +56,11 @@ pub fn enclave_signer_signatures_are_valid() {
 		.public()
 		.into();
 
-	let state_observer = Arc::new(ObserveStateMock::new(Stf::init_state(enclave_account.clone())));
+	let state_observer: Arc<ObserveStateMock<SgxExternalities>> =
+		Arc::new(ObserveStateMock::new(stf.init_state(enclave_account.encode())));
 	let shard = ShardIdentifier::default();
 	let mr_enclave = ocall_api.get_mrenclave_of_self().unwrap();
-	let enclave_signer = StfEnclaveSigner::new(state_observer, ocall_api, shielding_key_repo);
+	let enclave_signer = StfEnclaveSigner::new(state_observer, ocall_api, shielding_key_repo, stf);
 	let trusted_call =
 		TrustedCall::balance_shield(enclave_account, AccountId::new([3u8; 32]), 200u128);
 

@@ -16,6 +16,7 @@ itp-settings = { path = "../../core-primitives/settings" }
 itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", default-features = false }
 itp-sgx-externalities = { default-features = false, path = "../../core-primitives/substrate-sgx/externalities" }
 itp-sgx-io = { path = "../../core-primitives/sgx/io", default-features = false }
+itp-stf-interface = { default-features = false, path = "../../core-primitives/stf-interface" }
 itp-stf-state-observer = { path = "../stf-state-observer", default-features = false }
 itp-time-utils = { path = "../../core-primitives/time-utils", default-features = false }
 itp-types = { path = "../types", default-features = false }
@@ -46,6 +47,7 @@ std = [
     "itp-sgx-crypto/std",
     "itp-sgx-externalities/std",
     "itp-sgx-io/std",
+    "itp-stf-interface/std",
     "itp-stf-state-observer/std",
     "itp-time-utils/std",
     "itp-types/std",
@@ -66,4 +68,5 @@ sgx = [
 ]
 test = [
     "itp-sgx-crypto/mocks",
+    "itp-stf-interface/mocks",
 ]

@@ -5,6 +5,7 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
 [dependencies]
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive", "chain-error"] }
 finality-grandpa = { version = "0.16.0", default-features = false, features = ["derive-codec"] }
 log = { version = "0.4", default-features = false }
 
@@ -51,6 +52,15 @@ sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "po
 [features]
 default = ["std"]
 std = [
+    #crates.io
+    "codec/std",
+    "finality-grandpa/std",
+    "log/std",
+    #substrate
+    "frame-support/std",
+    "sp-core/std",
+    "sp-runtime/std",
+    #local
     "ita-stf/std",
     "itc-parentchain-block-import-dispatcher/std",
     "itp-enclave-metrics/std",
@@ -69,7 +79,6 @@ std = [
     "its-state/std",
     "its-validateer-fetch/std",
     "its-primitives/std",
-    "log/std",
 ]
 sgx = [
     "sgx_tstd",

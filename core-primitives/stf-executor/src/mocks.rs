@@ -41,7 +41,7 @@ pub struct StfExecutorMock<StateType: SgxExternalitiesTrait + Encode> {
 
 impl<StateType> StateUpdateProposer for StfExecutorMock<StateType>
 where
-	StateType: SgxExternalitiesTrait + Encode,
+	StateType: SgxExternalitiesTrait + Encode + Default,
 {
 	type Externalities = StateType;
 
@@ -68,7 +68,7 @@ where
 		Ok(BatchExecutionResult {
 			executed_operations,
 			state_hash_before_execution: H256::default(),
-			state_after_execution: Self::Externalities::new(),
+			state_after_execution: Self::Externalities::default(),
 		})
 	}
 }

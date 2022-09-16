@@ -23,6 +23,7 @@ use crate::{
 	error::{Error as EnclaveError, Result as EnclaveResult},
 	global_components::{
 		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
+		GLOBAL_STF_COMPONENT,
 	},
 	ocall::OcallApi,
 	tls_ra::seal_handler::{SealHandler, UnsealStateAndKeys},
@@ -175,8 +176,16 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 		},
 	};
 
+	let stf = match GLOBAL_STF_COMPONENT.get() {
+		Ok(s) => s,
+		Err(e) => {
+			error!("{:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
 	let seal_handler =
-		SealHandler::new(state_handler, state_key_repository, shielding_key_repository);
+		SealHandler::new(state_handler, state_key_repository, shielding_key_repository, stf);
 
 	if let Err(e) = run_state_provisioning_server_internal::<_, WorkerModeProvider>(
 		socket_fd,

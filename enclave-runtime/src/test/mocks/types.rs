@@ -19,6 +19,7 @@
 //! Type definitions for testing. Includes various mocks.
 
 use crate::test::mocks::rpc_responder_mock::RpcResponderMock;
+use ita_stf::{Getter, Stf, TrustedCallSigned};
 use itc_parentchain::block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
 use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_sgx_crypto::{mocks::KeyRepositoryMock, Aes};
@@ -43,6 +44,10 @@ pub type TestSigner = spEd25519::Pair;
 pub type TestShieldingKey = Rsa3072KeyPair;
 pub type TestStateKey = Aes;
 
+pub type TestGetter = Getter;
+pub type TestCall = TrustedCallSigned;
+pub type TestStf = Stf<TestCall, TestGetter, SgxExternalities>;
+
 pub type TestShieldingKeyRepo = KeyRepositoryMock<TestShieldingKey>;
 
 pub type TestStateKeyRepo = KeyRepositoryMock<TestStateKey>;
@@ -58,7 +63,14 @@ pub type TestParentchainBlockImportTrigger =
 
 pub type TestNodeMetadataRepository = NodeMetadataRepository<NodeMetadataMock>;
 
-pub type TestStfExecutor = StfExecutor<TestOCallApi, TestStateHandler, TestNodeMetadataRepository>;
+pub type TestStfExecutor = StfExecutor<
+	TestOCallApi,
+	TestStateHandler,
+	TestNodeMetadataRepository,
+	TestStf,
+	TestCall,
+	TestGetter,
+>;
 
 pub type TestRpcResponder = RpcResponderMock<H256>;
 

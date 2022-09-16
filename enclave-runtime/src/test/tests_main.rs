@@ -25,7 +25,7 @@ use crate::{
 	test::{
 		cert_tests::*,
 		direct_rpc_tests,
-		fixtures::test_setup::{enclave_call_signer, test_setup, TestTopPoolAuthor},
+		fixtures::test_setup::{enclave_call_signer, test_setup, TestStf, TestTopPoolAuthor},
 		mocks::types::TestStateKeyRepo,
 		sidechain_aura_tests, top_pool_tests,
 	},
@@ -35,15 +35,18 @@ use codec::Decode;
 use ita_sgx_runtime::Parentchain;
 use ita_stf::{
 	helpers::account_key_hash, stf_sgx_tests, test_genesis::endowed_account as funded_pair,
-	AccountInfo, Getter, ShardIdentifier, State, StatePayload, StateTypeDiff, Stf, TrustedCall,
-	TrustedCallSigned, TrustedGetter, TrustedOperation,
+	AccountInfo, Getter, ShardIdentifier, State, StatePayload, TrustedCall, TrustedCallSigned,
+	TrustedGetter, TrustedOperation,
 };
 use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_sgx_crypto::{Aes, StateCrypto};
-use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
+use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesDiffType, SgxExternalitiesTrait};
 use itp_stf_executor::{
 	enclave_signer_tests as stf_enclave_signer_tests, executor::StfExecutor,
 	executor_tests as stf_executor_tests, traits::StateUpdateProposer, BatchExecutionResult,
+};
+use itp_stf_interface::{
+	parentchain_pallet::ParentchainPalletInterface, system_pallet::SystemPalletAccountInterface,
 };
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{handle_state_mock, handle_state_mock::HandleStateMock};
@@ -66,8 +69,14 @@ use sp_core::{crypto::Pair, ed25519 as spEd25519, H256};
 use sp_runtime::traits::Header as HeaderT;
 use std::{string::String, sync::Arc, time::Duration, vec::Vec};
 
-type TestStfExecutor =
-	StfExecutor<OcallApi, HandleStateMock, NodeMetadataRepository<NodeMetadataMock>>;
+type TestStfExecutor = StfExecutor<
+	OcallApi,
+	HandleStateMock,
+	NodeMetadataRepository<NodeMetadataMock>,
+	TestStf,
+	TrustedCallSigned,
+	Getter,
+>;
 
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
@@ -310,10 +319,12 @@ fn test_create_block_and_confirmation_works() {
 	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
 	let node_metadata = NodeMetadataMock::new();
 	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(node_metadata.clone()));
+	let stf = Arc::new(TestStf::new());
 	let stf_executor = Arc::new(StfExecutor::new(
 		Arc::new(OcallApi),
 		state_handler.clone(),
 		node_metadata_repo.clone(),
+		stf,
 	));
 	let block_composer = BlockComposer::<Block, SignedBlock, _, _>::new(
 		test_account(),
@@ -361,10 +372,12 @@ fn test_create_state_diff() {
 	// given
 	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
 	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
+	let stf = Arc::new(TestStf::new());
 	let stf_executor = Arc::new(StfExecutor::new(
 		Arc::new(OcallApi),
 		state_handler.clone(),
 		node_metadata_repo.clone(),
+		stf,
 	));
 	let block_composer = BlockComposer::<Block, SignedBlock, _, _>::new(
 		test_account(),
@@ -425,8 +438,13 @@ fn test_executing_call_updates_account_nonce() {
 	// given
 	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
 	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
-	let stf_executor =
-		Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone(), node_metadata_repo));
+	let stf = Arc::new(TestStf::new());
+	let stf_executor = Arc::new(StfExecutor::new(
+		Arc::new(OcallApi),
+		state_handler.clone(),
+		node_metadata_repo,
+		stf.clone(),
+	));
 
 	let sender = funded_pair();
 	let receiver = unfunded_public();
@@ -449,13 +467,14 @@ fn test_executing_call_updates_account_nonce() {
 		execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_author);
 
 	let nonce =
-		Stf::account_nonce(&mut execution_result.state_after_execution, &sender.public().into());
+		stf.get_account_nonce(&mut execution_result.state_after_execution, &sender.public().into());
 	assert_eq!(nonce, 1);
 }
 
 fn test_call_set_update_parentchain_block() {
 	let (_, _, shard, _, _, state_handler) = test_setup();
 	let mut state = state_handler.load(&shard).unwrap();
+	let stf = Arc::new(TestStf::new());
 
 	let block_number = 3;
 	let parent_hash = H256::from([1; 32]);
@@ -468,7 +487,7 @@ fn test_call_set_update_parentchain_block() {
 		Default::default(),
 	);
 
-	Stf::update_parentchain_block(&mut state, header.clone()).unwrap();
+	stf.update_parentchain_block(&mut state, header.clone()).unwrap();
 
 	assert_eq!(header.hash(), state.execute_with(|| Parentchain::block_hash()));
 	assert_eq!(parent_hash, state.execute_with(|| Parentchain::parent_hash()));
@@ -479,8 +498,13 @@ fn test_signature_must_match_public_sender_in_call() {
 	// given
 	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
 	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
-	let stf_executor =
-		Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone(), node_metadata_repo));
+	let stf = Arc::new(TestStf::new());
+	let stf_executor = Arc::new(StfExecutor::new(
+		Arc::new(OcallApi),
+		state_handler.clone(),
+		node_metadata_repo,
+		stf,
+	));
 
 	// create accounts
 	let sender = funded_pair();
@@ -510,8 +534,13 @@ fn test_invalid_nonce_call_is_not_executed() {
 	// given
 	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
 	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
-	let stf_executor =
-		Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone(), node_metadata_repo));
+	let stf = Arc::new(TestStf::new());
+	let stf_executor = Arc::new(StfExecutor::new(
+		Arc::new(OcallApi),
+		state_handler.clone(),
+		node_metadata_repo,
+		stf,
+	));
 
 	// create accounts
 	let sender = funded_pair();
@@ -541,8 +570,13 @@ fn test_non_root_shielding_call_is_not_executed() {
 	// given
 	let (top_pool_author, _state, shard, mrenclave, shielding_key, state_handler) = test_setup();
 	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
-	let stf_executor =
-		Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone(), node_metadata_repo));
+	let stf = Arc::new(TestStf::new());
+	let stf_executor = Arc::new(StfExecutor::new(
+		Arc::new(OcallApi),
+		state_handler.clone(),
+		node_metadata_repo,
+		stf,
+	));
 
 	let sender = funded_pair();
 	let sender_acc: AccountId = sender.public().into();
@@ -568,8 +602,13 @@ fn test_non_root_shielding_call_is_not_executed() {
 fn test_shielding_call_with_enclave_self_is_executed() {
 	let (top_pool_author, _state, shard, mrenclave, shielding_key, state_handler) = test_setup();
 	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
-	let stf_executor =
-		Arc::new(StfExecutor::new(Arc::new(OcallApi), state_handler.clone(), node_metadata_repo));
+	let stf = Arc::new(TestStf::new());
+	let stf_executor = Arc::new(StfExecutor::new(
+		Arc::new(OcallApi),
+		state_handler.clone(),
+		node_metadata_repo,
+		stf,
+	));
 
 	let sender = funded_pair();
 	let sender_account: AccountId = sender.public().into();
@@ -625,7 +664,9 @@ fn execute_trusted_calls(
 
 // helper functions
 /// Decrypt `encrypted` and decode it into `StatePayload`
-pub fn encrypted_state_diff_from_encrypted(encrypted: &[u8]) -> StatePayload {
+pub fn encrypted_state_diff_from_encrypted(
+	encrypted: &[u8],
+) -> StatePayload<SgxExternalitiesDiffType> {
 	let mut encrypted_payload: Vec<u8> = encrypted.to_vec();
 	let state_key = state_key();
 	state_key.decrypt(&mut encrypted_payload).unwrap();
@@ -656,7 +697,7 @@ pub fn latest_parentchain_header() -> Header {
 }
 
 /// Reads the value at `key_hash` from `state_diff` and decodes it into `D`
-pub fn get_from_state_diff<D: Decode>(state_diff: &StateTypeDiff, key_hash: &[u8]) -> D {
+pub fn get_from_state_diff<D: Decode>(state_diff: &SgxExternalitiesDiffType, key_hash: &[u8]) -> D {
 	// fixme: what's up here with the wrapping??
 	state_diff
 		.get(key_hash)

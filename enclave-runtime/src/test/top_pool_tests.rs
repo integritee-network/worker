@@ -22,6 +22,7 @@ use crate::test::{
 			create_ocall_api, create_top_pool, encrypt_trusted_operation, sign_trusted_call,
 		},
 		initialize_test_state::init_state,
+		test_setup::TestStf,
 	},
 	mocks::types::{
 		TestShieldingKey, TestShieldingKeyRepo, TestSigner, TestStateHandler, TestTopPoolAuthor,
@@ -101,6 +102,7 @@ pub fn submit_shielding_call_to_top_pool() {
 	let shielding_key = TestShieldingKey::new().unwrap();
 	let shielding_key_repo = Arc::new(TestShieldingKeyRepo::new(shielding_key.clone()));
 	let header = ParentchainHeaderBuilder::default().build();
+	let stf = Arc::new(TestStf::new());
 
 	let ocall_api = create_ocall_api(&header, &signer);
 	let mr_enclave = ocall_api.get_mrenclave_of_self().unwrap();
@@ -123,6 +125,7 @@ pub fn submit_shielding_call_to_top_pool() {
 		state_observer,
 		ocall_api.clone(),
 		shielding_key_repo.clone(),
+		stf,
 	));
 	let node_meta_data_repository = Arc::new(NodeMetadataRepository::default());
 	node_meta_data_repository.set_metadata(NodeMetadataMock::new());

@@ -15,8 +15,9 @@
 
 */
 
+use codec::Encode;
 use finality_grandpa::BlockNumberOps;
-use itp_sgx_externalities::SgxExternalitiesTrait;
+use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_stf_executor::traits::StateUpdateProposer;
 use itp_time_utils::now_as_u64;
 use itp_top_pool_author::traits::AuthorApi;
@@ -27,7 +28,7 @@ use its_primitives::traits::{
 	Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor,
 	SignedBlock as SignedSidechainBlockTrait,
 };
-use its_state::{SidechainDB, SidechainState, SidechainSystemExt, StateHash};
+use its_state::{SidechainDB, SidechainState, SidechainSystemExt};
 use log::*;
 use sp_runtime::{
 	traits::{Block, NumberFor},
@@ -66,6 +67,7 @@ where
 	StfExecutor: StateUpdateProposer,
 	ExternalitiesFor<StfExecutor>:
 		SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash,
+	<ExternalitiesFor<StfExecutor> as SgxExternalitiesTrait>::SgxExternalitiesType: Encode,
 	TopPoolAuthor: AuthorApi<H256, ParentchainBlock::Hash> + Send + Sync + 'static,
 	BlockComposer: ComposeBlock<
 			ExternalitiesFor<StfExecutor>,
