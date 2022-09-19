@@ -7,7 +7,7 @@ jobs:
     if: github.base_ref == 'master'
     runs-on: ubuntu-latest
     steps:
-      - uses: danielchabr/pr-labels-checker@v3
+      - uses: danielchabr/pr-labels-checker@v3.1.11
         id: checkLabel
         with:
           hasSome: A0-core,A1-cli,A2-applibs,A3-sidechain,A4-offchain,A5-teeracle,A6-evm,A7-somethingelse
@@ -16,7 +16,7 @@ jobs:
     if: github.base_ref == 'master'
     runs-on: ubuntu-latest
     steps:
-      - uses: danielchabr/pr-labels-checker@v3
+      - uses: danielchabr/pr-labels-checker@v3.1.11
         id: checkLabel
         with:
           hasSome: B0-silent,B1-releasenotes
@@ -25,7 +25,7 @@ jobs:
     if: github.base_ref == 'master'
     runs-on: ubuntu-latest
     steps:
-      - uses: danielchabr/pr-labels-checker@v3
+      - uses: danielchabr/pr-labels-checker@v3.1.11
         id: checkLabel
         with:
           hasSome: C1-low 📌,C3-medium 📣,C7-high ❗️,C9-critical ‼️
@@ -34,7 +34,7 @@ jobs:
     if: github.base_ref == 'master'
     runs-on: ubuntu-latest
     steps:
-      - uses: danielchabr/pr-labels-checker@v3
+      - uses: danielchabr/pr-labels-checker@v3.1.11
         id: checkLabel
         with:
           hasSome: E0-breaksnothing,E3-dependencies,E5-publicapi,E6-parentchain,E8-breakseverything
