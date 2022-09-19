@@ -27,7 +27,7 @@ use itc_rpc_client::direct_client::DirectApi;
 use itp_node_api::api_client::TEEREX;
 use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
-use itp_types::{DirectRequestStatus, TrustedOperationStatus};
+use itp_types::{BlockNumber, DirectRequestStatus, Header, TrustedOperationStatus};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use log::*;
 use my_node_runtime::{AccountId, Hash};
@@ -111,6 +111,7 @@ fn send_request(
 	// send and watch extrinsic until block is executed
 	let block_hash =
 		_chain_api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock).unwrap().unwrap();
+
 	info!(
 		"Trusted call extrinsic sent and successfully included in parentchain block with hash {:?}.",
 		block_hash
@@ -131,6 +132,35 @@ fn send_request(
 		info!("Confirmation of ProcessedParentchainBlock received");
 		debug!("Expected block Hash: {:?}", block_hash);
 		debug!("Confirmed stf block Hash: {:?}", ret.block_hash);
+		match _chain_api.get_header::<Header>(Some(block_hash)) {
+			Ok(option) => {
+				match option {
+					None => {
+						error!("Could not get Block Header");
+						return None
+					},
+					Some(header) => {
+						let block_number: BlockNumber = header.number;
+						info!("Expected block Number: {:?}", block_number);
+						info!("Confirmed block Number: {:?}", ret.block_number);
+						// The returned block number belongs to a subsequent event. We missed our event and can break the loop.
+						if ret.block_number > block_number {
+							warn!("Did not get expected event! Going on ...");
+							return None
+						}
+						// The block number is correct, but the block hash does not fit.
+						if block_number == ret.block_number && block_hash != ret.block_hash {
+							error!("Block hash for event does not match expected hash. Expected: {:?}, returned: {:?}", block_hash, ret.block_hash);
+							return None
+						}
+					},
+				}
+			},
+			Err(err) => {
+				error!("Could not get Block Header, due to error: {:?}", err);
+				return None
+			},
+		}
 		if ret.block_hash == block_hash {
 			return Some(ret.block_hash.encode())
 		}
@@ -298,4 +328,5 @@ struct ProcessedParentchainBlockArgs {
 	signer: AccountId,
 	block_hash: H256,
 	merkle_root: H256,
+	block_number: BlockNumber,
 }
