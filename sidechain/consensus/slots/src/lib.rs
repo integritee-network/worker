@@ -162,11 +162,6 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 	/// Remaining duration for proposing.
 	fn proposing_remaining_duration(&self, slot_info: &SlotInfo<ParentchainBlock>) -> Duration;
 
-	/// Check if should propose even if the timestamp of the proposal is no longer within the slot.
-	///
-	/// Remove when #447 is resolved.
-	fn allow_delayed_proposal(&self) -> bool;
-
 	/// Trigger the import of the given parentchain block.
 	///
 	/// Returns the header of the latest imported block. In case no block was imported with this trigger,
@@ -273,7 +268,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 			},
 		};
 
-		if !timestamp_within_slot(&slot_info, &proposing.block) && !self.allow_delayed_proposal() {
+		if !timestamp_within_slot(&slot_info, &proposing.block) {
 			warn!(
 				target: logging_target,
 				"⌛️ Discarding proposal for slot {}; block production took too long", *slot,
