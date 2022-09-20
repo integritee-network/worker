@@ -73,8 +73,6 @@ pub struct Aura<
 	parentchain_import_trigger: Arc<ImportTrigger>,
 	environment: Environment,
 	claim_strategy: SlotClaimStrategy,
-	/// Remove when #447 is resolved.
-	allow_delayed_proposal: bool,
 	_phantom: PhantomData<(AuthorityPair, ParentchainBlock, SidechainBlock)>,
 }
 
@@ -93,19 +91,12 @@ impl<AuthorityPair, ParentchainBlock, SidechainBlock, Environment, OcallApi, Imp
 			parentchain_import_trigger,
 			environment,
 			claim_strategy: SlotClaimStrategy::RoundRobin,
-			allow_delayed_proposal: false,
 			_phantom: Default::default(),
 		}
 	}
 
 	pub fn with_claim_strategy(mut self, claim_strategy: SlotClaimStrategy) -> Self {
 		self.claim_strategy = claim_strategy;
-
-		self
-	}
-
-	pub fn with_allow_delayed_proposal(mut self, allow_delayed: bool) -> Self {
-		self.allow_delayed_proposal = allow_delayed;
 
 		self
 	}
@@ -197,10 +188,6 @@ where
 
 	fn proposing_remaining_duration(&self, slot_info: &SlotInfo<ParentchainBlock>) -> Duration {
 		proposing_remaining_duration(slot_info, duration_now())
-	}
-
-	fn allow_delayed_proposal(&self) -> bool {
-		self.allow_delayed_proposal
 	}
 
 	fn import_parentchain_blocks_until(

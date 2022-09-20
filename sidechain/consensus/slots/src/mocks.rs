@@ -89,10 +89,6 @@ where
 		todo!()
 	}
 
-	fn allow_delayed_proposal(&self) -> bool {
-		todo!()
-	}
-
 	fn import_parentchain_blocks_until(
 		&self,
 		_last_imported_parentchain_header: &<B::Header as ParentchainHeaderTrait>::Hash,
