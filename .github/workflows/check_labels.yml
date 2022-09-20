@@ -1,0 +1,41 @@
+name: Labels Check
+on:
+  pull_request:
+    types: [opened, labeled, unlabeled, synchronize]
+jobs:
+  A-label-check:
+    if: github.base_ref == 'master'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: danielchabr/pr-labels-checker@master
+        id: checkLabel
+        with:
+          hasSome: A0-core,A1-cli,A2-applibs,A3-sidechain,A4-offchain,A5-teeracle,A6-evm,A7-somethingelse
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+  B-label-check:
+    if: github.base_ref == 'master'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: danielchabr/pr-labels-checker@master
+        id: checkLabel
+        with:
+          hasSome: B0-silent,B1-releasenotes
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+  C-label-check:
+    if: github.base_ref == 'master'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: danielchabr/pr-labels-checker@master
+        id: checkLabel
+        with:
+          hasSome: C1-low 📌,C3-medium 📣,C7-high ❗️,C9-critical ‼️
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+  E-label-check:
+    if: github.base_ref == 'master'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: danielchabr/pr-labels-checker@master
+        id: checkLabel
+        with:
+          hasSome: E0-breaksnothing,E3-dependencies,E5-publicapi,E6-parentchain,E8-breakseverything
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
