@@ -48,8 +48,6 @@ impl<K, V> Default for TrackedMap<K, V> {
 	}
 }
 
-// FIXME: obey clippy
-#[allow(clippy::should_implement_trait)]
 impl<K: Clone, V: Clone> TrackedMap<K, V> {
 	/// Current tracked length of the content.
 	pub fn len(&self) -> usize {
@@ -67,7 +65,7 @@ impl<K: Clone, V: Clone> TrackedMap<K, V> {
 	}
 
 	/// Read-only clone of the interior.
-	pub fn clone(&self) -> ReadOnlyTrackedMap<K, V> {
+	pub fn get_read_only_clone(&self) -> ReadOnlyTrackedMap<K, V> {
 		ReadOnlyTrackedMap(self.index.clone())
 	}
 
