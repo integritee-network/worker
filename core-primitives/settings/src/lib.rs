@@ -87,6 +87,9 @@ pub mod worker {
 	// Should be set to a value that ensures that the enclave can register itself
 	// and that the worker can start.
 	pub const REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS: u128 = 10;
+	// Should be set to a value that ensures that at least 2 sidechain blocks are finalized per
+	// parentchain block.
+	pub const BLOCK_NUMBER_FINALIZATION_DIFF: u64 = 20;
 }
 
 pub mod sidechain {

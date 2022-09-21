@@ -16,6 +16,7 @@ itp-extrinsics-factory = { path = "../../../core-primitives/extrinsics-factory",
 itp-node-api-metadata = { path = "../../../core-primitives/node-api/metadata", default-features = false }
 itp-node-api-metadata-provider = { path = "../../../core-primitives/node-api/metadata-provider", default-features = false }
 itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
+itp-settings = { path = "../../../core-primitives/settings" }
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
 itp-types = { path = "../../../core-primitives/types", default-features = false }
 its-block-verification = { path = "../../block-verification", optional = true, default-features = false }

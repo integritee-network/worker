@@ -22,6 +22,7 @@ use itc_parentchain_light_client::{
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api_metadata::pallet_sidechain::SidechainCallIndexes;
 use itp_node_api_metadata_provider::AccessNodeMetadata;
+use itp_settings::worker::BLOCK_NUMBER_FINALIZATION_DIFF;
 use itp_types::{OpaqueCall, ShardIdentifier};
 use its_primitives::traits::Header as HeaderTrait;
 use log::*;
@@ -105,8 +106,13 @@ impl<
 			.map_err(|e| Error::Other(e.into()))?
 			.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 
-		let opaque_call =
-			OpaqueCall::from_tuple(&(call, shard, header.block_number(), header.hash()));
+		let opaque_call = OpaqueCall::from_tuple(&(
+			call,
+			shard,
+			header.block_number(),
+			BLOCK_NUMBER_FINALIZATION_DIFF,
+			header.hash(),
+		));
 
 		let xts = self
 			.extrinsics_factory
