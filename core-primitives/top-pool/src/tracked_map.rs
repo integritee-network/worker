@@ -49,7 +49,6 @@ impl<K, V> Default for TrackedMap<K, V> {
 }
 
 // FIXME: obey clippy
-#[allow(clippy::type_complexity)]
 #[allow(clippy::should_implement_trait)]
 impl<K: Clone, V: Clone> TrackedMap<K, V> {
 	/// Current tracked length of the content.
