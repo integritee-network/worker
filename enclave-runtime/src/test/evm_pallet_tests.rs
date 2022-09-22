@@ -14,7 +14,7 @@
 	limitations under the License.
 */
 
-use crate::test::fixtures::test_setup::test_setup;
+use crate::test::fixtures::test_setup::{test_setup, TestStf};
 use core::str::FromStr;
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping, Index, System};
 use ita_stf::{
@@ -23,18 +23,20 @@ use ita_stf::{
 		get_evm_account_storages,
 	},
 	test_genesis::{endow, endowed_account as funded_pair},
-	KeyPair, State, Stf, TrustedCall,
+	KeyPair, State, TrustedCall,
 };
 use itp_sgx_externalities::SgxExternalitiesTrait;
+use itp_stf_interface::StateCallInterface;
 use itp_types::{AccountId, OpaqueCall, ShardIdentifier};
 use primitive_types::H256;
+use sgx_tstd::sync::Arc;
 use sp_core::{crypto::Pair, H160, U256};
 use std::{string::ToString, vec::Vec};
 use substrate_api_client::utils::FromHexString;
 
 pub fn test_evm_call() {
 	// given
-	let (_, mut state, shard, mrenclave, _, _) = test_setup();
+	let (_, mut state, shard, mrenclave, _, _, stf) = test_setup();
 	let mut opaque_vec = Vec::new();
 
 	// Create the sender account.
@@ -75,7 +77,7 @@ pub fn test_evm_call() {
 	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
 
 	// when
-	Stf::execute(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
+	stf.execute_call(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
 
 	// then
 	assert_eq!(
@@ -86,7 +88,7 @@ pub fn test_evm_call() {
 
 pub fn test_evm_counter() {
 	// given
-	let (_, mut state, shard, mrenclave, _, _) = test_setup();
+	let (_, mut state, shard, mrenclave, _, _, stf) = test_setup();
 	let mut opaque_vec = Vec::new();
 
 	// Create the sender account.
@@ -119,7 +121,7 @@ pub fn test_evm_counter() {
 
 	// when
 	let execution_address = evm_create_address(sender_evm_acc, 0);
-	Stf::execute(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
+	stf.execute_call(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
 
 	// then
 	assert_eq!(
@@ -157,6 +159,7 @@ pub fn test_evm_counter() {
 		&mut state,
 		&mut opaque_vec,
 		2,
+		stf.clone(),
 	);
 
 	// Call the fallback function
@@ -173,6 +176,7 @@ pub fn test_evm_counter() {
 		&mut state,
 		&mut opaque_vec,
 		5,
+		stf.clone(),
 	);
 
 	// Call to inc() function
@@ -190,6 +194,7 @@ pub fn test_evm_counter() {
 		&mut state,
 		&mut opaque_vec,
 		6,
+		stf.clone(),
 	);
 
 	// Call to add() function
@@ -212,6 +217,7 @@ pub fn test_evm_counter() {
 		&mut state,
 		&mut opaque_vec,
 		8,
+		stf,
 	);
 }
 
@@ -228,6 +234,7 @@ fn execute_and_verify_evm_call(
 	state: &mut State,
 	calls: &mut Vec<OpaqueCall>,
 	counter_expected: u64,
+	stf: Arc<TestStf>,
 ) {
 	let inc_call = TrustedCall::evm_call(
 		sender_acc,
@@ -242,7 +249,7 @@ fn execute_and_verify_evm_call(
 		Vec::new(),
 	)
 	.sign(&pair, nonce, &mrenclave, &shard);
-	Stf::execute(state, inc_call, calls, [0u8, 1u8]).unwrap();
+	stf.execute_call(state, inc_call, calls, [0u8, 1u8]).unwrap();
 
 	let counter_value = state
 		.execute_with(|| get_evm_account_storages(&execution_address, &H256::zero()))
@@ -252,7 +259,7 @@ fn execute_and_verify_evm_call(
 
 pub fn test_evm_create() {
 	// given
-	let (_, mut state, shard, mrenclave, _, _) = test_setup();
+	let (_, mut state, shard, mrenclave, _, _, stf) = test_setup();
 	let mut opaque_vec = Vec::new();
 
 	// Create the sender account.
@@ -287,7 +294,7 @@ pub fn test_evm_create() {
 	let nonce = state.execute_with(|| System::account_nonce(&sender_evm_substrate_addr));
 	assert_eq!(nonce, 0);
 	let execution_address = evm_create_address(sender_evm_acc, nonce);
-	Stf::execute(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
+	stf.execute_call(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
 
 	assert_eq!(
 		execution_address,
@@ -305,7 +312,7 @@ pub fn test_evm_create() {
 
 pub fn test_evm_create2() {
 	// given
-	let (_, mut state, shard, mrenclave, _, _) = test_setup();
+	let (_, mut state, shard, mrenclave, _, _, stf) = test_setup();
 	let mut opaque_vec = Vec::new();
 
 	// Create the sender account.
@@ -341,7 +348,7 @@ pub fn test_evm_create2() {
 	// when
 	let code_hash = create_code_hash(&smart_contract);
 	let execution_address = evm_create2_address(sender_evm_acc, salt, code_hash);
-	Stf::execute(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
+	stf.execute_call(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
 
 	// then
 	assert_eq!(

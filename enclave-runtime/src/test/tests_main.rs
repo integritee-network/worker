@@ -191,7 +191,7 @@ fn run_evm_tests() {}
 
 fn test_compose_block() {
 	// given
-	let (_, _, shard, _, _, state_handler) = test_setup();
+	let (_, _, shard, _, _, state_handler, _) = test_setup();
 	let block_composer = BlockComposer::<Block, SignedBlock, _, _>::new(
 		test_account(),
 		Arc::new(TestStateKeyRepo::new(state_key())),
@@ -223,7 +223,7 @@ fn test_compose_block() {
 
 fn test_submit_trusted_call_to_top_pool() {
 	// given
-	let (top_pool_author, _, shard, mrenclave, shielding_key, _) = test_setup();
+	let (top_pool_author, _, shard, mrenclave, shielding_key, _, _) = test_setup();
 
 	let sender = funded_pair();
 
@@ -254,7 +254,7 @@ fn test_submit_trusted_call_to_top_pool() {
 // We want to keep this back door open, in case we would want to submit getter into the TOP pool again in the future.
 fn test_submit_trusted_getter_to_top_pool() {
 	// given
-	let (top_pool_author, _, shard, _, shielding_key, _) = test_setup();
+	let (top_pool_author, _, shard, _, shielding_key, _, _) = test_setup();
 
 	let sender = funded_pair();
 
@@ -277,7 +277,7 @@ fn test_submit_trusted_getter_to_top_pool() {
 
 fn test_differentiate_getter_and_call_works() {
 	// given
-	let (top_pool_author, _, shard, mrenclave, shielding_key, _) = test_setup();
+	let (top_pool_author, _, shard, mrenclave, shielding_key, ..) = test_setup();
 
 	// create accounts
 	let sender = funded_pair();
@@ -316,10 +316,9 @@ fn test_differentiate_getter_and_call_works() {
 
 fn test_create_block_and_confirmation_works() {
 	// given
-	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
+	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler, stf) = test_setup();
 	let node_metadata = NodeMetadataMock::new();
 	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(node_metadata.clone()));
-	let stf = Arc::new(TestStf::new());
 	let stf_executor = Arc::new(StfExecutor::new(
 		Arc::new(OcallApi),
 		state_handler.clone(),
@@ -370,9 +369,8 @@ fn test_create_block_and_confirmation_works() {
 
 fn test_create_state_diff() {
 	// given
-	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
+	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler, stf) = test_setup();
 	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
-	let stf = Arc::new(TestStf::new());
 	let stf_executor = Arc::new(StfExecutor::new(
 		Arc::new(OcallApi),
 		state_handler.clone(),
@@ -436,9 +434,8 @@ fn test_create_state_diff() {
 
 fn test_executing_call_updates_account_nonce() {
 	// given
-	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
+	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler, stf) = test_setup();
 	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
-	let stf = Arc::new(TestStf::new());
 	let stf_executor = Arc::new(StfExecutor::new(
 		Arc::new(OcallApi),
 		state_handler.clone(),
@@ -472,9 +469,8 @@ fn test_executing_call_updates_account_nonce() {
 }
 
 fn test_call_set_update_parentchain_block() {
-	let (_, _, shard, _, _, state_handler) = test_setup();
+	let (_, _, shard, _, _, state_handler, stf) = test_setup();
 	let mut state = state_handler.load(&shard).unwrap();
-	let stf = Arc::new(TestStf::new());
 
 	let block_number = 3;
 	let parent_hash = H256::from([1; 32]);
@@ -496,9 +492,8 @@ fn test_call_set_update_parentchain_block() {
 
 fn test_signature_must_match_public_sender_in_call() {
 	// given
-	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
+	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler, stf) = test_setup();
 	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
-	let stf = Arc::new(TestStf::new());
 	let stf_executor = Arc::new(StfExecutor::new(
 		Arc::new(OcallApi),
 		state_handler.clone(),
@@ -532,9 +527,8 @@ fn test_signature_must_match_public_sender_in_call() {
 
 fn test_invalid_nonce_call_is_not_executed() {
 	// given
-	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler) = test_setup();
+	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler, stf) = test_setup();
 	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
-	let stf = Arc::new(TestStf::new());
 	let stf_executor = Arc::new(StfExecutor::new(
 		Arc::new(OcallApi),
 		state_handler.clone(),
@@ -568,9 +562,9 @@ fn test_invalid_nonce_call_is_not_executed() {
 
 fn test_non_root_shielding_call_is_not_executed() {
 	// given
-	let (top_pool_author, _state, shard, mrenclave, shielding_key, state_handler) = test_setup();
+	let (top_pool_author, _state, shard, mrenclave, shielding_key, state_handler, stf) =
+		test_setup();
 	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
-	let stf = Arc::new(TestStf::new());
 	let stf_executor = Arc::new(StfExecutor::new(
 		Arc::new(OcallApi),
 		state_handler.clone(),
@@ -600,9 +594,9 @@ fn test_non_root_shielding_call_is_not_executed() {
 }
 
 fn test_shielding_call_with_enclave_self_is_executed() {
-	let (top_pool_author, _state, shard, mrenclave, shielding_key, state_handler) = test_setup();
+	let (top_pool_author, _state, shard, mrenclave, shielding_key, state_handler, stf) =
+		test_setup();
 	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
-	let stf = Arc::new(TestStf::new());
 	let stf_executor = Arc::new(StfExecutor::new(
 		Arc::new(OcallApi),
 		state_handler.clone(),

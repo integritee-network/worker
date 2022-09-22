@@ -38,15 +38,6 @@ use sp_runtime::MultiAddress;
 use std::{fmt::Debug, format, prelude::v1::*, vec};
 use support::traits::UnfilteredDispatchable;
 
-#[cfg(feature = "evm")]
-use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
-
-#[cfg(feature = "evm")]
-use crate::evm_helpers::{
-	create_code_hash, evm_create2_address, evm_create_address, get_evm_account,
-	get_evm_account_codes, get_evm_account_storages,
-};
-
 impl<Call, Getter, State>
 	StateInterface<State, <State as SgxExternalitiesTrait>::SgxExternalitiesDiffType>
 	for Stf<Call, Getter, State>

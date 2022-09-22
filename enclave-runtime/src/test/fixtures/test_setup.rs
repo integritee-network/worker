@@ -55,9 +55,11 @@ pub fn test_setup() -> (
 	MrEnclave,
 	ShieldingCryptoMock,
 	Arc<HandleStateMock>,
+	Arc<TestStf>,
 ) {
 	let shielding_key = ShieldingCryptoMock::default();
 	let shielding_key_repo = Arc::new(KeyRepositoryMock::new(shielding_key.clone()));
+	let stf = Arc::new(TestStf::new());
 
 	let state_handler = Arc::new(HandleStateMock::default());
 	let (state, shard) =
@@ -78,6 +80,7 @@ pub fn test_setup() -> (
 		mrenclave,
 		shielding_key,
 		state_handler,
+		stf,
 	)
 }
 
