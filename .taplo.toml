@@ -1,22 +1,9 @@
 include = ["**/Cargo.toml"]
 
 [formatting]
-align_entries = false
-align_comments = false
-array_trailing_comma = true
 array_auto_expand = false
 array_auto_collapse = false
-compact_arrays = true
-compact_inline_tables = false
-compact_entries = false
-column_width = 80
-indent_tables = false
-indent_entries = false
 indent_string = "    "
-trailing_newline = true
-reorder_keys = false
-allowed_blank_lines = 2
-crlf = false
 inline_table_expand = false
 
 [[rule]]

@@ -6,9 +6,9 @@ edition = "2021"
 
 [dependencies]
 # sgx dependencies
-sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 sgx_tcrypto = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # local dependencies
 ita-stf = { path = "../../app-libs/stf", default-features = false }
@@ -30,8 +30,8 @@ thiserror = { version = "1.0", optional = true }
 
 # no-std dependencies
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-log = { version = "0.4", default-features = false }
 lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
+log = { version = "0.4", default-features = false }
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 
 [dev-dependencies]
@@ -65,5 +65,5 @@ sgx = [
     "thiserror_sgx",
 ]
 test = [
-    "itp-sgx-crypto/mocks"
+    "itp-sgx-crypto/mocks",
 ]
