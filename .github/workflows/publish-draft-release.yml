@@ -3,20 +3,19 @@ name: Create draft release
 on:
   push:
     branches:
-      - 'sdk-v[0-9]+.[0-9]+.[0-9]+-*'
+      - 'sdk-v[0-9]+.[0-9]+.[0-9]+*'
     tags:
-      - '[0-9]+.[0-9]+.[0-9]+'
+      - 'sdk-v[0-9]+.[0-9]+.[0-9]+*'
 
 jobs:
   build:
     name: Publish Draft Release
     runs-on: ubuntu-latest
     steps:
-      - name: Get the tags by date
-        id: tags
+      - name: Get the latest tag
+        id: latest-tag
         run: |
-          echo "::set-output name=new::$(date +'monthly-%Y-%m')"
-          echo "::set-output name=old::$(date -d'1 month ago' +'monthly-%Y-%m')"
+          echo "::set-output name=latest::$( git tag | sort -V | tail -1)"
       - name: Checkout branch "master"
         uses: actions/checkout@v3
         with:
@@ -27,19 +26,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "# Automatic snapshot pre-release ${{ steps.tags.outputs.new }}" > Changelog.md
-          echo "" >> Changelog.md
-          echo "## Changes since last snapshot (${{ steps.tags.outputs.old }})" >> Changelog.md
-          echo "" >> Changelog.md
-          ./scripts/ci/github/generate_changelog.sh ${{ steps.tags.outputs.old }} >>  Changelog.md
-      - name: Release snapshot
-        id: release-snapshot
-        uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e # v1.1.4 latest version, repo archived
+          ./scripts/ci/github/generate-changelog.sh ${{ steps.tags.outputs.latest-tag }} >>  Changelog.md
+      - name: Create draft release
+        id: create-draft-release
+        uses: actions/create-release@latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.tags.outputs.new }}
-          release_name: ${{ steps.tags.outputs.new }}
-          draft: false
-          prerelease: true
-          body_path: Changelog.md
+          tag_name: ${{ github.ref }}
+          release_name: SDK ${{ github.ref }}
+          draft: true
+          body_path: ./worker/scripts/changelog/release-notes.md

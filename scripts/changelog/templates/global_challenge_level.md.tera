@@ -1,0 +1,26 @@
+{% import "challenge_level.md.tera" as m_p -%}
+## Upgrade Challenge Level
+
+{%- set worker_prio = 0 -%}
+{%- set pallet_prio = 0 -%}
+
+{# We fetch the various levels #}
+{%- if worker.meta.E -%}
+{%- set worker_level = worker.meta.E.max -%}
+{%- else -%}
+{%- set worker_level = 0 -%}
+{%- endif -%}
+{%- if pallet.meta.E -%}
+{%- set pallet_level = pallet.meta.E.max -%}
+{%- else -%}
+{%- set pallet_level = 0 -%}
+{%- endif -%}
+
+{# We compute the global level #}
+{%- set global_level = worker_level -%}
+{%- if pallet_level > global_level -%}
+{%- set global_level = pallet_level -%}
+{%- endif -%}
+
+{#- We show the result #}
+{{ m_p::challenge_level(e=global_level, changes=changes) }}

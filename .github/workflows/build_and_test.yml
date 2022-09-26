@@ -4,7 +4,6 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - master
       - 'sdk-v[0-9]+.[0-9]+.[0-9]+-*'
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
