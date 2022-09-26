@@ -1,0 +1,21 @@
+name: Label checker
+on:
+  workflow_call:
+    inputs:
+      predefined_labels:
+        required: true
+        type: string
+
+jobs:
+    check_for_matching_labels:
+      runs-on: ubuntu-latest
+      if: github.base_ref == 'master' && github.event.pull_request.draft == false
+      steps:
+        - name: Label check
+          run: |
+            MATCH=$(jq -cn '${{ toJSON(github.event.pull_request.labels.*.name) }} as $USER_LABELS |
+            ${{ toJSON(inputs.predefined_labels)  }} | split(",") as $LABELS |
+            $USER_LABELS - ($USER_LABELS - $LABELS)')
+            if [[  "$MATCH" == '[]' ]]; then
+                exit 1
+            fi
