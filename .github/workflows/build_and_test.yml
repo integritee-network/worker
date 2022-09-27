@@ -142,20 +142,9 @@ jobs:
       - name: Enclave # Enclave is separate as it's not in the workspace
         run: cd enclave-runtime && cargo fmt --all -- --check
 
-      - name: Fail-fast; cancel other jobs
-        if: failure()
-        uses: andymckay/cancel-action@0.2
-
-  cargo-fmt:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: init rust
-        run: rustup show
-
-      - name: install taplo
+      - name: Install taplo
         run: cargo install taplo-cli --locked
-      - name: Cargo.toml
+      - name: Cargo.toml fmt
         run: taplo fmt --check
 
       - name: Fail-fast; cancel other jobs
