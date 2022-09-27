@@ -31,6 +31,3 @@ replace(from="refs/tags/", to="") }}`.
 {# --------------------------------- #}
 
 {% include "changes.md.tera" -%}
-
-{# Probably makes sense to include our docker images here #}
-{# {% include "docker_image.md.tera" -%} #}
