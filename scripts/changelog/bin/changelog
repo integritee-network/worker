@@ -19,7 +19,7 @@ logger = Logger.new($stdout)
 logger.level = Logger::DEBUG
 logger.debug('Starting')
 
-owner = 'haerdib'
+owner = 'integritee-network'
 repo = 'worker'
 
 gh_worker = SubRef.new(format('%<owner>s/%<repo>s', { owner: owner, repo: repo }))
