@@ -6,11 +6,11 @@ edition = "2021"
 
 [dependencies]
 # crates.io
-sha3 = { version = "0.10", default-features = false }
 codec = { version = "3.0.0", default-features = false, features = ["derive"], package = "parity-scale-codec" }
 derive_more = { version = "0.99.5" }
 log = { version = "0.4", default-features = false }
 rlp = { version = "0.5", default-features = false }
+sha3 = { version = "0.10", default-features = false }
 
 # sgx deps
 sgx_tstd = { branch = "master", features = ["untrusted_fs", "net", "backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
