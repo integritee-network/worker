@@ -158,14 +158,14 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 		// check if shard tx pool exists
 		if let Some(ready_map) = self.ready.get(&shard) {
 			return BestIterator {
-				all: ready_map.clone(),
+				all: ready_map.get_read_only_clone(),
 				best: self.best.get(&shard).unwrap().clone(),
 				awaiting: Default::default(),
 			}
 		}
 		let tracked_map: TrackedMap<Hash, ReadyTx<Hash, Ex>> = Default::default();
 		BestIterator {
-			all: tracked_map.clone(),
+			all: tracked_map.get_read_only_clone(),
 			best: Default::default(),
 			awaiting: Default::default(),
 		}
