@@ -145,12 +145,17 @@ fn send_request(
 						info!("Confirmed block Number: {:?}", ret.block_number);
 						// The returned block number belongs to a subsequent event. We missed our event and can break the loop.
 						if ret.block_number > block_number {
-							warn!("Did not get expected event! Going on ...");
+							warn!(
+								"Received block number ({:?}) exceeds expected one ({:?}) ",
+								ret.block_number, block_number
+							);
 							return None
 						}
 						// The block number is correct, but the block hash does not fit.
 						if block_number == ret.block_number && block_hash != ret.block_hash {
-							error!("Block hash for event does not match expected hash. Expected: {:?}, returned: {:?}", block_hash, ret.block_hash);
+							error!(
+								"Block hash for event does not match expected hash. Expected: {:?}, returned: {:?}", 
+								block_hash, ret.block_hash);
 							return None
 						}
 					},
