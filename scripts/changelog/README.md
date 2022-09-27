@@ -1,4 +1,3 @@
 ## License
 
-Everything in this folder is unter GLP v3.0 license. It has been modyfied, but the original author is parity and can be found here:
-https://github.com/paritytech/polkadot/tree/master/scripts/ci/changelog
+Everything in this folder is GPL 3.0 licensed. The original has been authored by parity and was taken from here: https://github.com/paritytech/polkadot/tree/master/scripts/ci/changelog. 
