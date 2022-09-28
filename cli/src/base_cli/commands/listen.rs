@@ -107,10 +107,11 @@ impl ListenCommand {
 										accountid,
 										block_hash,
 										merkle_root,
+										block_number,
 									) => {
 										println!(
-											"ProcessedParentchainBlock from {} with hash {:?} and merkle root {:?}",
-											accountid, block_hash, merkle_root
+											"ProcessedParentchainBlock from {} with hash {:?}, number {} and merkle root {:?}",
+											accountid, block_hash, merkle_root, block_number
 										);
 									},
 									my_node_runtime::pallet_teerex::Event::ShieldFunds(

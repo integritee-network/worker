@@ -606,11 +606,13 @@ fn print_events(events: Events, _sender: Sender<String>) {
 						sender,
 						block_hash,
 						merkle_root,
+						block_number,
 					) => {
 						info!("[+] Received ProcessedParentchainBlock event");
 						debug!("    From:    {:?}", sender);
 						debug!("    Block Hash: {:?}", hex::encode(block_hash));
 						debug!("    Merkle Root: {:?}", hex::encode(merkle_root));
+						debug!("    Block Number: {:?}", block_number);
 					},
 					my_node_runtime::pallet_teerex::Event::ShieldFunds(incognito_account) => {
 						info!("[+] Received ShieldFunds event");
