@@ -5,22 +5,22 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
 [dependencies]
-log = "0.4"
-env_logger = "0.9"
-hex = "0.4.2"
-serde_json = "1.0"
-clap = { version = "3.1.6", features = ["derive"]}
-primitive-types = { version = "0.11.1", features = ["codec"] }
 base58 = "0.2"
-chrono = "*"
 blake2-rfc = { version = "0.2.18" }
-ws = { version = "0.9.1", features = ["ssl"] }
-serde = { version = "1.0", features = ["derive"] }
+chrono = "*"
+clap = { version = "3.1.6", features = ["derive"] }
 codec = { version = "3.0.0", package = "parity-scale-codec", features = ["derive"] }
-sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-rayon = "1.5.1"
+env_logger = "0.9"
 hdrhistogram = "7.5.0"
+hex = "0.4.2"
+log = "0.4"
+primitive-types = { version = "0.11.1", features = ["codec"] }
 rand = "0.8.5"
+rayon = "1.5.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+ws = { version = "0.9.1", features = ["ssl"] }
 
 # scs / integritee
 my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node.git", branch = "master" }
@@ -30,20 +30,20 @@ substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client
 teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # substrate dependencies
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
-sc-keystore = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
-pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
-sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+sc-keystore = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 sp-application-crypto = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 
 # local dependencies
+ita-stf = { path = "../app-libs/stf" }
+itc-rpc-client = { path = "../core/rpc-client" }
 itp-node-api = { path = "../core-primitives/node-api" }
 itp-rpc = { path = "../core-primitives/rpc" }
 itp-sgx-crypto = { path = "../core-primitives/sgx/crypto" }
-ita-stf = { path = "../app-libs/stf" }
-itc-rpc-client = { path = "../core/rpc-client" }
 itp-time-utils = { path = "../core-primitives/time-utils" }
 itp-types = { path = "../core-primitives/types" }
 itp-utils = { path = "../core-primitives/utils" }
@@ -52,7 +52,7 @@ itp-utils = { path = "../core-primitives/utils" }
 default = []
 evm = [
     "ita-stf/evm_std",
-    "pallet-evm"
+    "pallet-evm",
 ]
 teeracle = []
 sidechain = []

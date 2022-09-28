@@ -6,14 +6,14 @@ edition = "2021"
 
 [dependencies]
 # no_std
-codec = { version = "3.0.0", package = "parity-scale-codec", default-features = false, features = ["derive", "chain-error"]}
+codec = { version = "3.0.0", package = "parity-scale-codec", default-features = false, features = ["derive", "chain-error"] }
 derive_more = "0.99.16"
 log = { version = "0.4", default-features = false }
-serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
 postcard = { version = "0.7.2", default-features = false, features = ["alloc"] }
+serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
 
 # sgx dependencies
-sgx_tstd = { optional = true, features = ["untrusted_fs","net","backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", branch = "master" }
+sgx_tstd = { optional = true, features = ["untrusted_fs", "net", "backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", branch = "master" }
 sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", branch = "master" }
 
 # local

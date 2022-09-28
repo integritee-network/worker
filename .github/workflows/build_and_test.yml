@@ -142,6 +142,11 @@ jobs:
       - name: Enclave # Enclave is separate as it's not in the workspace
         run: cd enclave-runtime && cargo fmt --all -- --check
 
+      - name: Install taplo
+        run: cargo install taplo-cli --locked
+      - name: Cargo.toml fmt
+        run: taplo fmt --check
+
       - name: Fail-fast; cancel other jobs
         if: failure()
         uses: andymckay/cancel-action@0.2

@@ -6,14 +6,14 @@ edition = "2021"
 
 [dependencies]
 bit-vec = { version = "0.6", default-features = false }
+chrono = { version = "0.4.19", default-features = false, features = ["alloc"] }
 rcgen = { package = "rcgen", default-features = false, git = "https://github.com/integritee-network/rcgen" }
-chrono = { version = "0.4.19", default-features = false, features = ["alloc"]}
 
 # sgx dependencies
-sgx_types = { optional = true, git = "https://github.com/apache/teaclave-sgx-sdk.git", branch = "master" }
 sgx_tstd = { optional = true, features = ["net", "thread"], git = "https://github.com/apache/teaclave-sgx-sdk.git", branch = "master" }
+sgx_types = { optional = true, git = "https://github.com/apache/teaclave-sgx-sdk.git", branch = "master" }
 # Todo: should not be needed here: #848
-sgx_crypto_helper = { default-features = false, optional = true, features = ["mesalock_sgx"], version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5"}
+sgx_crypto_helper = { default-features = false, optional = true, features = ["mesalock_sgx"], version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
 
 # sgx enabled external libraries
 mio-extras = { optional = true, default-features = false, git = "https://github.com/integritee-network/mio-extras-sgx", rev = "963234b" }
@@ -27,14 +27,14 @@ yasna_sgx = { package = "yasna", optional = true, default-features = false, feat
 
 # std compatible external libraries (make sure these versions match with the sgx-enabled ones above)
 mio = { version = "0.6.14", optional = true }
+rustls = { version = "0.19", optional = true }
 thiserror = { version = "1.0", optional = true }
 tungstenite = { version = "0.15.0", optional = true, features = ["rustls-tls-webpki-roots"] }
-rustls = { version = "0.19", optional = true }
 webpki = { version = "0.21", optional = true }
 yasna = { version = "0.4", optional = true, features = ["bit-vec", "num-bigint", "chrono", "std"] }
 
 # local deps
-itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", default-features = false}
+itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", default-features = false }
 itp-sgx-io = { path = "../../core-primitives/sgx/io", default-features = false }
 
 # Substrate dependencies
