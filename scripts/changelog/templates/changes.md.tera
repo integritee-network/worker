@@ -1,0 +1,24 @@
+{# This include generates the section showing the changes #}
+## Changes
+
+{# for not now printed until pallet is actually included #}
+{#  ### Legend #}
+
+{# - {{ WOR }} Worker #}
+{# - {{ PAL }} Pallet #}
+
+{% include "changes_applibs.md.tera" %}
+
+{% include "changes_client.md.tera" %}
+
+{% include "changes_core.md.tera" %}
+
+{% include "changes_evm.md.tera" %}
+
+{% include "changes_offchain.md.tera" %}
+
+{% include "changes_sidechain.md.tera" %}
+
+{% include "changes_teeracle.md.tera" %}
+
+{% include "changes_misc.md.tera" %}
