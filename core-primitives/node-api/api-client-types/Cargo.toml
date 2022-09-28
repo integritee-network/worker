@@ -18,5 +18,5 @@ default = ["std"]
 std = [
     "substrate-api-client/std",
     "substrate-api-client/ws-client",
-    "sp-core"
+    "sp-core",
 ]

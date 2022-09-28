@@ -6,8 +6,8 @@ edition = "2021"
 
 [dependencies]
 # sgx dependencies
-sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # local dependencies
 ita-stf = { path = "../../../app-libs/stf", default-features = false }
@@ -25,7 +25,7 @@ thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linu
 thiserror = { version = "1.0", optional = true }
 
 # crates.io no-std compatible libraries
-codec  = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 log = { version = "0.4", default-features = false }
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 

@@ -12,13 +12,13 @@ thiserror = { version = "1.0.26", optional = true }
 # local deps
 itc-parentchain-light-client = { path = "../../../core/parentchain/light-client", default-features = false }
 itp-block-import-queue = { path = "../../../core-primitives/block-import-queue", default-features = false }
-its-block-verification = { path = "../../block-verification", optional = true, default-features = false }
 itp-extrinsics-factory = { path = "../../../core-primitives/extrinsics-factory", default-features = false }
 itp-node-api-metadata = { path = "../../../core-primitives/node-api/metadata", default-features = false }
 itp-node-api-metadata-provider = { path = "../../../core-primitives/node-api/metadata-provider", default-features = false }
 itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
 itp-types = { path = "../../../core-primitives/types", default-features = false }
+its-block-verification = { path = "../../block-verification", optional = true, default-features = false }
 its-primitives = { path = "../../primitives", default-features = false }
 its-state = { path = "../../state", default-features = false }
 

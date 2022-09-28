@@ -19,8 +19,15 @@ evm = [
 ]
 production = ["itp-settings/production"]
 sidechain = ["itp-settings/sidechain", "itp-top-pool-author/sidechain"]
-offchain-worker = ["itp-settings/offchain-worker", "itp-top-pool-author/offchain-worker"]
-teeracle = ["ita-exchange-oracle", "itp-settings/teeracle", "itp-top-pool-author/teeracle"]
+offchain-worker = [
+    "itp-settings/offchain-worker",
+    "itp-top-pool-author/offchain-worker",
+]
+teeracle = [
+    "ita-exchange-oracle",
+    "itp-settings/teeracle",
+    "itp-top-pool-author/teeracle",
+]
 test = [
     "ita-stf/test",
     "itc-parentchain/mocks",
@@ -37,53 +44,53 @@ test = [
 ]
 
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
-sgx_tse = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["untrusted_fs","net","backtrace"] }
+sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_tcrypto_helper" }
 sgx_rand = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_trts = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tseal = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tcrypto = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_serialize = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_serialize_derive = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tcrypto = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_trts = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tse = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tseal = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["untrusted_fs", "net", "backtrace"] }
 sgx_tunittest = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_tcrypto_helper" }
+sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 [dependencies]
-codec  = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-primitive-types  = { version = "0.11.1", default-features = false, features = ["codec", "serde_no_std"] }
-lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
-retain_mut = { version = "0.1.2"}
-derive_more = { version = "0.99.5" }
-byteorder = { version = "1.4.2", default-features = false }
 arrayvec = { version = "0.7.1", default-features = false }
+byteorder = { version = "1.4.2", default-features = false }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+derive_more = { version = "0.99.5" }
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 ipfs-unixfs = { default-features = false, git = "https://github.com/whalelephant/rust-ipfs", branch = "w-nstd" }
+lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
+primitive-types = { version = "0.11.1", default-features = false, features = ["codec", "serde_no_std"] }
+retain_mut = { version = "0.1.2" }
 
 # scs / integritee
 jsonrpc-core = { default-features = false, git = "https://github.com/scs/jsonrpc", branch = "no_std_v18" }
 substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.28" }
 
 # mesalock
-linked-hash-map = { git = "https://github.com/mesalock-linux/linked-hash-map-sgx" }
-webpki = { git = "https://github.com/mesalock-linux/webpki", branch = "mesalock_sgx" }
-webpki-roots = { git = "https://github.com/mesalock-linux/webpki-roots", branch = "mesalock_sgx" }
-log = { git = "https://github.com/integritee-network/log-sgx" }
 env_logger = { git = "https://github.com/integritee-network/env_logger-sgx" }
+linked-hash-map = { git = "https://github.com/mesalock-linux/linked-hash-map-sgx" }
+log = { git = "https://github.com/integritee-network/log-sgx" }
+rustls = { rev = "sgx_1.1.3", features = ["dangerous_configuration"], git = "https://github.com/mesalock-linux/rustls" }
 serde = { tag = "sgx_1.1.3", git = "https://github.com/mesalock-linux/serde-sgx", features = ["alloc", "mesalock_sgx"] }
 serde_derive = { git = "https://github.com/mesalock-linux/serde-sgx" }
 serde_json = { tag = "sgx_1.1.3", git = "https://github.com/mesalock-linux/serde-json-sgx" }
+webpki = { git = "https://github.com/mesalock-linux/webpki", branch = "mesalock_sgx" }
+webpki-roots = { git = "https://github.com/mesalock-linux/webpki-roots", branch = "mesalock_sgx" }
 yasna = { rev = "sgx_1.1.3", default-features = false, features = ["bit-vec", "num-bigint", "chrono", "mesalock_sgx"], git = "https://github.com/mesalock-linux/yasna.rs-sgx" }
-rustls = { rev = "sgx_1.1.3", features = ["dangerous_configuration"], git = "https://github.com/mesalock-linux/rustls" }
 
 # for attestation
-chrono = { git = "https://github.com/mesalock-linux/chrono-sgx" }
+base58 = { rev = "sgx_1.1.3", package = "rust-base58", default-features = false, features = ["mesalock_sgx"], git = "https://github.com/mesalock-linux/rust-base58-sgx" }
 base64 = { rev = "sgx_1.1.3", git = "https://github.com/mesalock-linux/rust-base64-sgx" }
-num-bigint = { git = "https://github.com/mesalock-linux/num-bigint-sgx" }
+bit-vec = { version = "0.6", default-features = false }
+chrono = { git = "https://github.com/mesalock-linux/chrono-sgx" }
 httparse = { default-features = false, features = ["mesalock_sgx"], git = "https://github.com/integritee-network/httparse-sgx", branch = "sgx-experimental" }
-itertools = { version = "0.10.1",  default-features = false, features = []}
-bit-vec = { version = "0.6",    default-features = false }
-base58 = { rev = "sgx_1.1.3", package="rust-base58", default-features = false, features=["mesalock_sgx"], git = "https://github.com/mesalock-linux/rust-base58-sgx" }
+itertools = { version = "0.10.1", default-features = false, features = [] }
+num-bigint = { git = "https://github.com/mesalock-linux/num-bigint-sgx" }
 
 cid = { default-features = false, git = "https://github.com/whalelephant/rust-cid", branch = "nstd" }
 multibase = { default-features = false, git = "https://github.com/whalelephant/rust-multibase", branch = "nstd" }
@@ -92,11 +99,11 @@ multibase = { default-features = false, git = "https://github.com/whalelephant/r
 ita-exchange-oracle = { path = "../app-libs/exchange-oracle", default-features = false, optional = true, features = ["sgx"] }
 ita-sgx-runtime = { path = "../app-libs/sgx-runtime", default-features = false }
 ita-stf = { path = "../app-libs/stf", default-features = false, features = ["sgx"] }
-itc-tls-websocket-server = { path = "../core/tls-websocket-server", default-features = false, features = ["sgx"] }
-itc-direct-rpc-server = { path = "../core/direct-rpc-server", default-features = false, features = ["sgx"]  }
+itc-direct-rpc-server = { path = "../core/direct-rpc-server", default-features = false, features = ["sgx"] }
 itc-offchain-worker-executor = { path = "../core/offchain-worker-executor", default-features = false, features = ["sgx"] }
 itc-parentchain = { path = "../core/parentchain/parentchain-crate", default-features = false, features = ["sgx"] }
 itc-parentchain-test = { path = "../core/parentchain/test", default-features = false }
+itc-tls-websocket-server = { path = "../core/tls-websocket-server", default-features = false, features = ["sgx"] }
 itp-block-import-queue = { path = "../core-primitives/block-import-queue", default-features = false, features = ["sgx"] }
 itp-component-container = { path = "../core-primitives/component-container", default-features = false, features = ["sgx"] }
 itp-extrinsics-factory = { path = "../core-primitives/extrinsics-factory", default-features = false, features = ["sgx"] }
@@ -104,35 +111,35 @@ itp-node-api = { path = "../core-primitives/node-api", default-features = false,
 itp-nonce-cache = { path = "../core-primitives/nonce-cache", default-features = false, features = ["sgx"] }
 itp-ocall-api = { path = "../core-primitives/ocall-api", default-features = false }
 itp-primitives-cache = { path = "../core-primitives/primitives-cache", default-features = false, features = ["sgx"] }
-itp-time-utils = { path = "../core-primitives/time-utils", default-features = false, features = ["sgx"] }
 itp-rpc = { path = "../core-primitives/rpc", default-features = false, features = ["sgx"] }
 itp-settings = { path = "../core-primitives/settings" }
+itp-sgx-crypto = { path = "../core-primitives/sgx/crypto", default-features = false, features = ["sgx"] }
 itp-sgx-externalities = { path = "../core-primitives/substrate-sgx/externalities", default-features = false, features = ["sgx"] }
 itp-sgx-io = { path = "../core-primitives/sgx/io", default-features = false, features = ["sgx"] }
-itp-storage = { path = "../core-primitives/storage", default-features = false, features = ["sgx"] }
-itp-sgx-crypto = { path = "../core-primitives/sgx/crypto", default-features = false, features = ["sgx"] }
 itp-stf-executor = { path = "../core-primitives/stf-executor", default-features = false, features = ["sgx"] }
 itp-stf-state-handler = { path = "../core-primitives/stf-state-handler", default-features = false, features = ["sgx"] }
 itp-stf-state-observer = { path = "../core-primitives/stf-state-observer", default-features = false, features = ["sgx"] }
+itp-storage = { path = "../core-primitives/storage", default-features = false, features = ["sgx"] }
 itp-teerex-storage = { path = "../core-primitives/teerex-storage", default-features = false }
 itp-test = { path = "../core-primitives/test", default-features = false, optional = true }
-itp-types = { path = "../core-primitives/types", default-features = false }
-itp-utils = { path = "../core-primitives/utils", default-features = false, features = ["sgx"] }
+itp-time-utils = { path = "../core-primitives/time-utils", default-features = false, features = ["sgx"] }
 itp-top-pool = { path = "../core-primitives/top-pool", default-features = false, features = ["sgx"] }
 itp-top-pool-author = { path = "../core-primitives/top-pool-author", default-features = false, features = ["sgx"] }
-its-block-verification = { path = "../sidechain/block-verification", default-features = false}
+itp-types = { path = "../core-primitives/types", default-features = false }
+itp-utils = { path = "../core-primitives/utils", default-features = false, features = ["sgx"] }
+its-block-verification = { path = "../sidechain/block-verification", default-features = false }
 its-primitives = { path = "../sidechain/primitives", default-features = false }
 its-sidechain = { path = "../sidechain/sidechain-crate", default-features = false, features = ["sgx"] }
 sp-io = { optional = true, default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"], path = "../core-primitives/substrate-sgx/sp-io" }
 
 # substrate deps
 frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+sp-application-crypto = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 sp-finality-grandpa = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 sp-version = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
-sp-application-crypto = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 
 [patch.crates-io]
 env_logger = { git = "https://github.com/integritee-network/env_logger-sgx" }
@@ -154,21 +161,21 @@ sp-io = { path = "../core-primitives/substrate-sgx/sp-io" }
 #pallet-evm = { path = "../../frontier/frame/evm"}
 
 [patch."https://github.com/apache/teaclave-sgx-sdk.git"]
-sgx_tstd = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
 sgx_alloc = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
+sgx_crypto_helper = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
 sgx_libc = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
+sgx_rand = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
 sgx_serialize = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
 sgx_serialize_derive = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
 sgx_serialize_derive_internals = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
-sgx_trts = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
-sgx_types = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
 sgx_tcrypto = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
 sgx_tcrypto_helper = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
-sgx_crypto_helper = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
-sgx_rand = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
+sgx_trts = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
 sgx_tse = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
 sgx_tseal = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
+sgx_tstd = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
 sgx_tunittest = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
+sgx_types = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
 
 #[patch."https://github.com/scs/substrate-api-client"]
 #substrate-api-client = { path = "../../../scs/substrate-api-client" }

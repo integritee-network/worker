@@ -7,27 +7,27 @@ license = "Apache-2.0"
 
 [dependencies]
 codec = { version = "3.0.0", package = "parity-scale-codec", default-features = false }
+futures = { version = "0.3.1", optional = true, features = ["thread-pool"] }
 hash-db = { version = "0.15.2", default-features = false }
 libsecp256k1 = { version = "0.7.0", default-features = false, features = ["static-context"] }
-futures = { version = "0.3.1", optional = true, features = ["thread-pool"] }
+log = { version = "0.4", default-features = false }
 parking_lot = { version = "0.12.0", optional = true }
 tracing = { version = "0.1.25", default-features = false }
-tracing-core = { version = "0.1.17", default-features = false}
-log = { version = "0.4", default-features = false }
+tracing-core = { version = "0.1.17", default-features = false }
 
-sgx_tstd  = { optional = true, features = ["untrusted_fs","net","backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", branch = "master" }
-sgx_types = { optional = true, git = "https://github.com/apache/teaclave-sgx-sdk.git", branch = "master" }
 itp-sgx-externalities = { default-features = false, path = "../externalities" }
+sgx_tstd = { optional = true, features = ["untrusted_fs", "net", "backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", branch = "master" }
+sgx_types = { optional = true, git = "https://github.com/apache/teaclave-sgx-sdk.git", branch = "master" }
 
 # Substrate dependencies
-sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
-sp-core = { default-features = false, features=["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
-sp-state-machine = { optional = true, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+sp-keystore = { optional = true, default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 sp-runtime-interface = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
-sp-wasm-interface = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+sp-state-machine = { optional = true, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 sp-tracing = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 sp-trie = { optional = true, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
-sp-keystore = { optional = true, default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+sp-wasm-interface = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 
 # local
 environmental = { path = "../environmental", default-features = false }
@@ -38,30 +38,30 @@ hex-literal = { version = "0.3.4" }
 [features]
 default = ["std"]
 std = [
-	"log/std",
-	"sp-core/std",
-	"codec/std",
-	"sp-std/std",
-	"sp-keystore/std",
-	"hash-db/std",
-	"sp-trie",
-	"sp-state-machine",
-	"libsecp256k1/std",
-	"sp-runtime-interface/std",
-	"sp-wasm-interface/std",
-	"futures",
-	"parking_lot",
-	"itp-sgx-externalities/std",
-	# local
-	"environmental/std",
+    "log/std",
+    "sp-core/std",
+    "codec/std",
+    "sp-std/std",
+    "sp-keystore/std",
+    "hash-db/std",
+    "sp-trie",
+    "sp-state-machine",
+    "libsecp256k1/std",
+    "sp-runtime-interface/std",
+    "sp-wasm-interface/std",
+    "futures",
+    "parking_lot",
+    "itp-sgx-externalities/std",
+    # local
+    "environmental/std",
 ]
 sgx = [
-	"sgx_tstd",
-	"sgx_types",
-	"itp-sgx-externalities/sgx",
-	"sp-runtime-interface/disable_target_static_assertions",
-	#local
-	"environmental/sgx",
+    "sgx_tstd",
+    "sgx_types",
+    "itp-sgx-externalities/sgx",
+    "sp-runtime-interface/disable_target_static_assertions",
+    #local
+    "environmental/sgx",
 ]
 
 # These two features are used for `no_std` builds for the environments which already provides
