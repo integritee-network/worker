@@ -4,7 +4,7 @@ LABEL maintainer="zoltan@integritee.network"
 # By default we warp the service
 ARG BINARY_FILE=integritee-service
 
-COPY bin/enclave.signed.so bin/end.rsa bin/end.fullchain /usr/local/bin/
+COPY bin/enclave.signed.so /usr/local/bin/
 COPY bin/${BINARY_FILE} /usr/local/bin/integritee
 
 RUN chmod +x /usr/local/bin/integritee
