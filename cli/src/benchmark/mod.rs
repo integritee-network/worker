@@ -213,7 +213,7 @@ impl BenchmarkCommands {
 							.sign(&KeyPair::Sr25519(new_account.clone())),
 					);
 					let getter_start_timer = Instant::now();
-					if get_state(&client.client_api, shard.clone(), &getter) == None {
+					if get_state(&client.client_api, shard, &getter) == None {
 						warn!("Getter returned None");
 					}
 					info!("Getter execution took {} ms", getter_start_timer.elapsed().as_millis());
