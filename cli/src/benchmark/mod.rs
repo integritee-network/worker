@@ -20,12 +20,12 @@ use crate::{
 	get_layer_two_nonce,
 	trusted_command_utils::{get_balance, get_identifiers, get_keystore_path, get_pair_from_str},
 	trusted_commands::TrustedArgs,
-	trusted_operation::{get_json_request, perform_trusted_operation, wait_until},
+	trusted_operation::{get_json_request, get_state, perform_trusted_operation, wait_until},
 	Cli,
 };
 use codec::Decode;
 use hdrhistogram::Histogram;
-use ita_stf::{Index, KeyPair, TrustedCall, TrustedGetter, TrustedOperation};
+use ita_stf::{Getter, Index, KeyPair, TrustedCall, TrustedGetter, TrustedOperation};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
 use itp_types::{
 	TrustedOperationStatus,
@@ -207,6 +207,16 @@ impl BenchmarkCommands {
 						self.wait_for_confirmation || last_iteration,
 						&client,
 					);
+
+					let getter = Getter::trusted(
+						TrustedGetter::free_balance(new_account.public().into())
+							.sign(&KeyPair::Sr25519(new_account.clone())),
+					);
+					let getter_start_timer = Instant::now();
+					if get_state(&client.client_api, shard.clone(), &getter) == None {
+						warn!("Getter returned None");
+					}
+					info!("Getter execution took {} ms", getter_start_timer.elapsed().as_millis());
 
 					client.current_balance -= keep_alive_balance;
 					client.account = new_account;

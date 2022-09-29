@@ -23,7 +23,7 @@ use crate::{
 use base58::FromBase58;
 use codec::{Decode, Encode};
 use ita_stf::{Getter, ShardIdentifier, TrustedOperation};
-use itc_rpc_client::direct_client::DirectApi;
+use itc_rpc_client::direct_client::{DirectApi, DirectClient};
 use itp_node_api::api_client::TEEREX;
 use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
@@ -48,20 +48,31 @@ pub(crate) fn perform_trusted_operation(
 	match top {
 		TrustedOperation::indirect_call(_) => send_request(cli, trusted_args, top),
 		TrustedOperation::direct_call(_) => send_direct_request(cli, trusted_args, top),
-		TrustedOperation::get(getter) => get_state(cli, trusted_args, getter),
+		TrustedOperation::get(getter) => get_state_with_new_worker_api(cli, trusted_args, getter),
 	}
 }
 
-fn get_state(cli: &Cli, trusted_args: &TrustedArgs, getter: &Getter) -> Option<Vec<u8>> {
+fn get_state_with_new_worker_api(
+	cli: &Cli,
+	trusted_args: &TrustedArgs,
+	getter: &Getter,
+) -> Option<Vec<u8>> {
 	let shard = read_shard(trusted_args).unwrap();
+	let direct_api = get_worker_api_direct(cli);
+	get_state(&direct_api, shard, getter)
+}
 
+pub(crate) fn get_state(
+	direct_api: &DirectClient,
+	shard: ShardIdentifier,
+	getter: &Getter,
+) -> Option<Vec<u8>> {
 	// Compose jsonrpc call.
 	let data = Request { shard, cyphertext: getter.encode() };
 	let rpc_method = "state_executeGetter".to_owned();
 	let jsonrpc_call: String =
 		RpcRequest::compose_jsonrpc_call(rpc_method, vec![data.to_hex()]).unwrap();
 
-	let direct_api = get_worker_api_direct(cli);
 	let rpc_response_str = direct_api.get(&jsonrpc_call).unwrap();
 
 	// Decode RPC response.
@@ -249,7 +260,7 @@ fn send_direct_request(
 	}
 }
 
-pub fn get_json_request(
+pub(crate) fn get_json_request(
 	trusted_args: &TrustedArgs,
 	operation_call: &TrustedOperation,
 	shielding_pubkey: sgx_crypto_helper::rsa3072::Rsa3072PubKey,
@@ -266,7 +277,7 @@ pub fn get_json_request(
 	.unwrap()
 }
 
-pub fn wait_until(
+pub(crate) fn wait_until(
 	receiver: &Receiver<String>,
 	until: impl Fn(TrustedOperationStatus) -> bool,
 ) -> Option<(H256, Instant)> {
