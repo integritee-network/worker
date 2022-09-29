@@ -154,7 +154,7 @@ fn send_request(
 						// The block number is correct, but the block hash does not fit.
 						if block_number == ret.block_number && block_hash != ret.block_hash {
 							error!(
-								"Block hash for event does not match expected hash. Expected: {:?}, returned: {:?}", 
+								"Block hash for event does not match expected hash. Expected: {:?}, returned: {:?}",
 								block_hash, ret.block_hash);
 							return None
 						}
@@ -185,6 +185,8 @@ fn read_shard(trusted_args: &TrustedArgs) -> StdResult<ShardIdentifier, codec::E
 	}
 }
 
+use rsa::PublicKey;
+
 /// sends a rpc watch request to the worker api server
 fn send_direct_request(
 	cli: &Cli,
@@ -192,7 +194,38 @@ fn send_direct_request(
 	operation_call: &TrustedOperation,
 ) -> Option<Vec<u8>> {
 	let encryption_key = get_shielding_key(cli).unwrap();
-	let jsonrpc_call: String = get_json_request(trusted_args, operation_call, encryption_key);
+	let encoded_call = operation_call.encode();
+
+	// Create normal rsa key. Because the n & e components are not directly available
+	// via the RsaPubKey struct, serialize it to extract n and e values.
+	let serialized_pub_key = serde_json::to_string(&encryption_key).unwrap();
+	error!("serialized_pub_key{:?}", serialized_pub_key);
+	let json_value: serde_json::Value = serde_json::from_str(&serialized_pub_key).unwrap();
+	let n: Vec<u8> = serde_json::from_value(json_value["n"].clone()).unwrap();
+	let e: Vec<u8> = serde_json::from_value(json_value["e"].clone()).unwrap();
+	error!("n: {:?}", n);
+	error!("e: {:?}", e);
+
+	let mut rng = rand::thread_rng();
+	// be doesn't work. Needs to be le
+	// 	let padding = rsa::padding::PaddingScheme::new_oaep::<sha2::Sha256>();
+	//
+	// 	let rsa_pub_key_be =
+	// 		rsa::RsaPublicKey::new(rsa::BigUint::from_bytes_be(&n), rsa::BigUint::from_bytes_be(&e))
+	// 			.unwrap();
+	// 	error!("rsa_pub_key_be {:?}", rsa_pub_key_be);
+	// 	let encrypted_data_be = rsa_pub_key_be.encrypt(&mut rng, padding, &encoded_call).unwrap();
+
+	let rsa_pub_key_le =
+		rsa::RsaPublicKey::new(rsa::BigUint::from_bytes_le(&n), rsa::BigUint::from_bytes_le(&e))
+			.unwrap();
+	error!("rsa_pub_key_le {:?}", rsa_pub_key_le);
+
+	let padding = rsa::padding::PaddingScheme::new_oaep::<sha2::Sha256>();
+	let encrypted_data_le = rsa_pub_key_le.encrypt(&mut rng, padding, &encoded_call).unwrap();
+
+	//let operation_call_encrypted = shielding_pubkey.encrypt(&operation_call.encode()).unwrap();
+	let jsonrpc_call: String = get_json_request_two(trusted_args, encrypted_data_le);
 
 	debug!("get direct api");
 	let direct_api = get_worker_api_direct(cli);
@@ -247,6 +280,21 @@ fn send_direct_request(
 			},
 		};
 	}
+}
+
+pub fn get_json_request_two(
+	trusted_args: &TrustedArgs,
+	operation_call_encrypted: Vec<u8>,
+) -> String {
+	let shard = read_shard(trusted_args).unwrap();
+
+	// compose jsonrpc call
+	let request = Request { shard, cyphertext: operation_call_encrypted };
+	RpcRequest::compose_jsonrpc_call(
+		"author_submitAndWatchExtrinsic".to_string(),
+		vec![request.to_hex()],
+	)
+	.unwrap()
 }
 
 pub fn get_json_request(
