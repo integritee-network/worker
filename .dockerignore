@@ -8,5 +8,6 @@ docs/
 local-setup/
 scripts/
 target/
+tmp/
 *.Dockerfile
 Dockerfile
