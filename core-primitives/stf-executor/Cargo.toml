@@ -11,8 +11,8 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # local dependencies
-ita-stf = { path = "../../app-libs/stf", default-features = false }
 ita-sgx-runtime = { path = "../../app-libs/sgx-runtime", default-features = false }
+ita-stf = { path = "../../app-libs/stf", default-features = false }
 itp-node-api = { path = "../node-api", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
