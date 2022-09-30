@@ -29,7 +29,6 @@ use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_interface::StateCallInterface;
 use itp_types::{AccountId, OpaqueCall, ShardIdentifier};
 use primitive_types::H256;
-use sgx_tstd::sync::Arc;
 use sp_core::{crypto::Pair, H160, U256};
 use std::{string::ToString, vec::Vec};
 use substrate_api_client::utils::FromHexString;
