@@ -58,7 +58,7 @@ pub fn unendowed_account() -> ed25519::Pair {
 	ed25519::Pair::from_seed(&UNENDOWED_SEED)
 }
 
-pub fn test_genesis_setup<State: SgxExternalitiesTrait>(state: &mut State) {
+pub fn test_genesis_setup(state: &mut impl SgxExternalitiesTrait) {
 	// set alice sudo account
 	set_sudo_account(state, &ALICE_ENCODED);
 	trace!("Set new sudo account: {:?}", &ALICE_ENCODED);
@@ -90,14 +90,14 @@ fn append_funded_alice_evm_account(endowees: &mut Vec<(AccountId32, Balance, Bal
 #[cfg(not(feature = "evm"))]
 fn append_funded_alice_evm_account(_: &mut Vec<(AccountId32, Balance, Balance)>) {}
 
-fn set_sudo_account<State: SgxExternalitiesTrait>(state: &mut State, account_encoded: &[u8]) {
+fn set_sudo_account(state: &mut impl SgxExternalitiesTrait, account_encoded: &[u8]) {
 	state.execute_with(|| {
 		sp_io::storage::set(&storage_value_key("Sudo", "Key"), account_encoded);
 	})
 }
 
-pub fn endow<State: SgxExternalitiesTrait>(
-	state: &mut State,
+pub fn endow(
+	state: &mut impl SgxExternalitiesTrait,
 	endowees: impl IntoIterator<Item = (AccountId32, Balance, Balance)>,
 ) {
 	state.execute_with(|| {
