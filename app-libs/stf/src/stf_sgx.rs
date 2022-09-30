@@ -19,11 +19,11 @@
 use crate::test_genesis::test_genesis_setup;
 
 use crate::{
-	helpers::enclave_signer_account, AccountData, AccountId, Index, ParentchainHeader,
-	ShardIdentifier, Stf, StfError, ENCLAVE_ACCOUNT_KEY,
+	helpers::enclave_signer_account, AccountId, ShardIdentifier, Stf, StfError, ENCLAVE_ACCOUNT_KEY,
 };
 use codec::{Decode, Encode};
-use ita_sgx_runtime::{Runtime, Sudo, System};
+use frame_support::traits::{OriginTrait, UnfilteredDispatchable};
+use ita_sgx_runtime::{Runtime, Sudo};
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_interface::{
 	parentchain_pallet::ParentchainPalletInterface, sudo_pallet::SudoPalletInterface,
@@ -36,11 +36,10 @@ use itp_utils::stringify::account_id_to_string;
 use log::*;
 use sp_runtime::MultiAddress;
 use std::{fmt::Debug, format, prelude::v1::*, vec};
-use support::traits::UnfilteredDispatchable;
 
-impl<Call, Getter, State>
+impl<Call, Getter, State, Runtime>
 	StateInterface<State, <State as SgxExternalitiesTrait>::SgxExternalitiesDiffType>
-	for Stf<Call, Getter, State>
+	for Stf<Call, Getter, State, Runtime>
 where
 	State: SgxExternalitiesTrait + Debug,
 	<State as SgxExternalitiesTrait>::SgxExternalitiesType: core::default::Default,
@@ -114,7 +113,8 @@ where
 	}
 }
 
-impl<Call, Getter, State> StateCallInterface<Call, State> for Stf<Call, Getter, State>
+impl<Call, Getter, State, Runtime> StateCallInterface<Call, State>
+	for Stf<Call, Getter, State, Runtime>
 where
 	Call: ExecuteCall,
 	State: SgxExternalitiesTrait + Debug,
@@ -131,7 +131,8 @@ where
 	}
 }
 
-impl<Call, Getter, State> StateGetterInterface<Getter, State> for Stf<Call, Getter, State>
+impl<Call, Getter, State, Runtime> StateGetterInterface<Getter, State>
+	for Stf<Call, Getter, State, Runtime>
 where
 	Getter: ExecuteGetter,
 	State: SgxExternalitiesTrait + Debug,
@@ -141,38 +142,48 @@ where
 	}
 }
 
-impl<Call, Getter, State> SudoPalletInterface<State> for Stf<Call, Getter, State>
+impl<Call, Getter, State, Runtime> SudoPalletInterface<State> for Stf<Call, Getter, State, Runtime>
 where
 	State: SgxExternalitiesTrait,
+	Runtime: frame_system::Config + pallet_sudo::Config,
 {
-	fn get_root(state: &mut State) -> AccountId {
-		state.execute_with(|| Sudo::key().expect("No root account"))
+	type AccountId = Runtime::AccountId;
+
+	fn get_root(state: &mut State) -> Self::AccountId {
+		state.execute_with(|| pallet_sudo::Pallet::<Runtime>::key().expect("No root account"))
 	}
-	fn get_enclave_account(state: &mut State) -> AccountId {
-		state.execute_with(|| enclave_signer_account())
+	fn get_enclave_account(state: &mut State) -> Self::AccountId {
+		state.execute_with(|| enclave_signer_account::<Self::AccountId>())
 	}
 }
 
-impl<Call, Getter, State> SystemPalletAccountInterface<State> for Stf<Call, Getter, State>
+impl<Call, Getter, State, Runtime, AccountId> SystemPalletAccountInterface<State, AccountId>
+	for Stf<Call, Getter, State, Runtime>
 where
 	State: SgxExternalitiesTrait,
+	Runtime: frame_system::Config<AccountId = AccountId>,
+	AccountId: Encode,
 {
-	fn get_account_nonce(state: &mut State, account: &AccountId) -> Index {
+	type Index = Runtime::Index;
+	type AccountData = Runtime::AccountData;
+
+	fn get_account_nonce(state: &mut State, account: &AccountId) -> Self::Index {
 		state.execute_with(|| {
-			let nonce = System::account_nonce(account);
-			debug!("Account {} nonce is {}", account_id_to_string(&account), nonce);
+			let nonce = frame_system::Pallet::<Runtime>::account_nonce(account);
+			debug!("Account {} nonce is {:?}", account_id_to_string(account), nonce);
 			nonce
 		})
 	}
-	fn get_account_data(state: &mut State, account: &AccountId) -> AccountData {
-		state.execute_with(|| System::account(account).data)
+	fn get_account_data(state: &mut State, account: &AccountId) -> Self::AccountData {
+		state.execute_with(|| frame_system::Pallet::<Runtime>::account(account).data)
 	}
 }
 
-impl<Call, Getter, State> ParentchainPalletInterface<State, ParentchainHeader>
-	for Stf<Call, Getter, State>
+impl<Call, Getter, State, Runtime, ParentchainHeader>
+	ParentchainPalletInterface<State, ParentchainHeader> for Stf<Call, Getter, State, Runtime>
 where
 	State: SgxExternalitiesTrait,
+	Runtime: frame_system::Config<Header = ParentchainHeader> + pallet_parentchain::Config,
 {
 	type Error = StfError;
 
@@ -181,8 +192,8 @@ where
 		header: ParentchainHeader,
 	) -> Result<(), Self::Error> {
 		state.execute_with(|| {
-			ita_sgx_runtime::ParentchainCall::<Runtime>::set_block { header }
-				.dispatch_bypass_filter(ita_sgx_runtime::Origin::root())
+			pallet_parentchain::Call::<Runtime>::set_block { header }
+				.dispatch_bypass_filter(Runtime::Origin::root())
 				.map_err(|e| {
 					Self::Error::Dispatch(format!("Update parentchain block error: {:?}", e.error))
 				})

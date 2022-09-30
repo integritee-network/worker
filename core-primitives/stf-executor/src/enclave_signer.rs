@@ -17,7 +17,7 @@
 
 use crate::{error::Result, traits::StfEnclaveSigning};
 use core::marker::PhantomData;
-use ita_stf::{AccountId, Index, KeyPair, TrustedCall, TrustedCallSigned};
+use ita_stf::{AccountId, KeyPair, TrustedCall, TrustedCallSigned};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{ed25519_derivation::DeriveEd25519, key_repository::AccessKey};
 use itp_sgx_externalities::SgxExternalitiesTrait;
@@ -42,7 +42,9 @@ where
 	StateObserver::StateType: SgxExternalitiesTrait,
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: DeriveEd25519,
-	Stf: SystemPalletAccountInterface<StateObserver::StateType>,
+	Stf: SystemPalletAccountInterface<StateObserver::StateType, AccountId>,
+	// FIXME: We have some discrepancies between Hardcoded Calls and Getter.
+	Stf::Index: Into<u32>,
 {
 	pub fn new(
 		state_observer: Arc<StateObserver>,
@@ -52,7 +54,7 @@ where
 		Self { state_observer, ocall_api, shielding_key_repo, _phantom: Default::default() }
 	}
 
-	fn get_enclave_account_nonce(&self, shard: &ShardIdentifier) -> Result<Index> {
+	fn get_enclave_account_nonce(&self, shard: &ShardIdentifier) -> Result<Stf::Index> {
 		let enclave_account = self.get_enclave_account()?;
 		let nonce = self
 			.state_observer
@@ -75,7 +77,9 @@ where
 	StateObserver::StateType: SgxExternalitiesTrait,
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: DeriveEd25519,
-	Stf: SystemPalletAccountInterface<StateObserver::StateType>,
+	Stf: SystemPalletAccountInterface<StateObserver::StateType, AccountId>,
+	// FIXME
+	Stf::Index: Into<u32>,
 {
 	fn get_enclave_account(&self) -> Result<AccountId> {
 		let enclave_call_signing_key = self.get_enclave_call_signing_key()?;
@@ -93,7 +97,7 @@ where
 
 		Ok(trusted_call.sign(
 			&KeyPair::Ed25519(enclave_call_signing_key),
-			enclave_account_nonce,
+			enclave_account_nonce.into(),
 			&mr_enclave.m,
 			shard,
 		))

@@ -17,6 +17,7 @@
 
 use crate::{enclave_signer::StfEnclaveSigner, traits::StfEnclaveSigning};
 use codec::Encode;
+use ita_sgx_runtime::Runtime;
 use ita_stf::{AccountId, ShardIdentifier, Stf, TrustedCall};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{
@@ -34,7 +35,7 @@ use sp_core::Pair;
 use std::sync::Arc;
 
 type ShieldingKeyRepositoryMock = KeyRepositoryMock<Rsa3072KeyPair>;
-type TestStf = Stf<CallExecutorMock, GetterExecutorMock, SgxExternalities>;
+type TestStf = Stf<CallExecutorMock, GetterExecutorMock, SgxExternalities, Runtime>;
 
 pub fn derive_key_is_deterministic() {
 	let rsa_key = Rsa3072KeyPair::new().unwrap();

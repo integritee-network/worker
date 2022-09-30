@@ -17,6 +17,7 @@
 
 use crate::{AccountId, Getter, Signature, State, Stf, TrustedCall, TrustedCallSigned};
 use codec::Encode;
+use ita_sgx_runtime::Runtime;
 use itp_stf_interface::{
 	sudo_pallet::SudoPalletInterface, system_pallet::SystemPalletAccountInterface,
 	StateCallInterface, StateInterface,
@@ -27,7 +28,7 @@ use sp_core::{
 };
 use std::vec::Vec;
 
-pub type StfState = Stf<TrustedCallSigned, Getter, State>;
+pub type StfState = Stf<TrustedCallSigned, Getter, State, Runtime>;
 
 pub fn enclave_account_initialization_works() {
 	let enclave_account = AccountId::new([2u8; 32]);

@@ -42,21 +42,10 @@ pub mod types {
 	pub use super::StatePayload;
 }
 
-pub struct Stf<Call, Getter, State> {
-	phantom_data: PhantomData<(Call, Getter, State)>,
+pub struct Stf<Call, Getter, State, Runtime> {
+	phantom_data: PhantomData<(Call, Getter, State, Runtime)>,
 }
 
-impl<Call, Getter, State> Stf<Call, Getter, State> {
-	pub fn new() -> Self {
-		Self::default()
-	}
-}
-
-impl<Call, Getter, State> Default for Stf<Call, Getter, State> {
-	fn default() -> Self {
-		Stf { phantom_data: PhantomData }
-	}
-}
 
 /// Payload to be sent to peers for a state update.
 #[derive(PartialEq, Eq, Clone, Debug, Encode, Decode)]

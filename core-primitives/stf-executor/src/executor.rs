@@ -24,6 +24,7 @@ use crate::{
 	BatchExecutionResult, ExecutedOperation,
 };
 use codec::{Decode, Encode};
+use ita_sgx_runtime::Runtime;
 use ita_stf::{
 	hash::{Hash, TrustedOperationOrHash},
 	stf_sgx::{shards_key_hash, storage_hashes_to_update_per_shard},
@@ -420,7 +421,7 @@ pub(crate) fn get_stf_state<E: SgxExternalitiesTrait + Debug>(
 	}
 	// FIXME: stf should be introduced via function parameter.
 	debug!("calling into STF to get state");
-	Ok(Stf::<TrustedCallSigned, Getter, E>::execute_getter(
+	Ok(Stf::<TrustedCallSigned, Getter, E, Runtime>::execute_getter(
 		state,
 		trusted_getter_signed.clone().into(),
 	))

@@ -397,10 +397,10 @@ fn test_create_state_diff() {
 
 	// then
 	let sender_acc_info: AccountInfo =
-		get_from_state_diff(&state_diff, &account_key_hash(&sender.public().into()));
+		get_from_state_diff(&state_diff, &account_key_hash::<AccountId>(&sender.public().into()));
 
 	let receiver_acc_info: AccountInfo =
-		get_from_state_diff(&state_diff, &account_key_hash(&receiver.into()));
+		get_from_state_diff(&state_diff, &account_key_hash::<AccountId>(&receiver.into()));
 
 	// state diff should consist of the following updates:
 	// (last_hash, sidechain block_number, sender_funds, receiver_funds, [no clear, after polkadot_v0.9.26 update])

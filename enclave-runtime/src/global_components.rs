@@ -24,6 +24,7 @@ use crate::{
 	ocall::OcallApi, rpc::rpc_response_channel::RpcResponseChannel,
 	tls_ra::seal_handler::SealHandler,
 };
+use ita_sgx_runtime::Runtime;
 use ita_stf::{Getter, Hash, State as StfState, Stf, TrustedCallSigned};
 use itc_direct_rpc_server::{
 	rpc_connection_registry::ConnectionRegistry, rpc_responder::RpcResponder,
@@ -80,7 +81,7 @@ use sp_core::ed25519::Pair;
 
 pub type EnclaveGetter = Getter;
 pub type EnclaveTrustedCallSigned = TrustedCallSigned;
-pub type EnclaveStf = Stf<EnclaveTrustedCallSigned, EnclaveGetter, StfState>;
+pub type EnclaveStf = Stf<EnclaveTrustedCallSigned, EnclaveGetter, StfState, Runtime>;
 pub type EnclaveStateKeyRepository = KeyRepository<Aes, AesSeal>;
 pub type EnclaveShieldingKeyRepository = KeyRepository<Rsa3072KeyPair, Rsa3072Seal>;
 pub type EnclaveStateFileIo = SgxStateFileIo<EnclaveStateKeyRepository, EnclaveStf, StfState>;

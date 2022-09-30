@@ -41,7 +41,7 @@ use std::{sync::Arc, thread, vec::Vec};
 
 const STATE_SNAPSHOTS_CACHE_SIZE: usize = 3;
 
-type TestStf = Stf<CallExecutorMock, GetterExecutorMock, SgxExternalities>;
+type TestStf = Stf<CallExecutorMock, GetterExecutorMock, SgxExternalities, u32>;
 type StateKeyRepositoryMock = KeyRepositoryMock<Aes>;
 type TestStateFileIo = SgxStateFileIo<StateKeyRepositoryMock, TestStf, SgxExternalities>;
 type TestStateRepository = StateSnapshotRepository<TestStateFileIo, StfState, H256>;

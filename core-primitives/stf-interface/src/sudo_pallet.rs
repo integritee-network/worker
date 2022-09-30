@@ -14,8 +14,10 @@
 	limitations under the License.
 
 */
-use itp_types::AccountId;
+
 pub trait SudoPalletInterface<State> {
-	fn get_root(state: &mut State) -> AccountId;
-	fn get_enclave_account(state: &mut State) -> AccountId;
+	type AccountId;
+
+	fn get_root(state: &mut State) -> Self::AccountId;
+	fn get_enclave_account(state: &mut State) -> Self::AccountId;
 }

@@ -20,6 +20,7 @@ use crate::{
 		fixtures::initialize_test_state::init_state, mocks::rpc_responder_mock::RpcResponderMock,
 	},
 };
+use ita_sgx_runtime::Runtime;
 use ita_stf::{Getter, ShardIdentifier, State, Stf, TrustedCallSigned};
 use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_ocall_api::EnclaveAttestationOCallApi;
@@ -46,7 +47,7 @@ pub type TestTopPoolAuthor = Author<
 	TestShieldingKeyRepo,
 	MetricsOCallMock,
 >;
-pub type TestStf = Stf<TrustedCallSigned, Getter, SgxExternalities>;
+pub type TestStf = Stf<TrustedCallSigned, Getter, SgxExternalities, Runtime>;
 
 pub type TestStfExecutor = StfExecutor<
 	OcallApi,
