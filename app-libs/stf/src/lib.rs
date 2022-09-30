@@ -41,24 +41,19 @@ pub use getter::*;
 pub use stf_sgx_primitives::{types::*, Stf};
 pub use trusted_call::*;
 
+#[cfg(feature = "evm")]
+pub mod evm_helpers;
 pub mod getter;
 pub mod hash;
 pub mod helpers;
-pub mod stf_sgx_primitives;
-pub mod trusted_call;
-
-// FIXME: introduce sidechain feature?
-#[cfg(feature = "sgx")]
-pub mod stf_sgx_sidechain;
-
-#[cfg(feature = "evm")]
-pub mod evm_helpers;
 #[cfg(feature = "sgx")]
 pub mod stf_sgx;
+pub mod stf_sgx_primitives;
 #[cfg(all(feature = "test", feature = "sgx"))]
 pub mod stf_sgx_tests;
 #[cfg(all(feature = "test", feature = "sgx"))]
 pub mod test_genesis;
+pub mod trusted_call;
 
 pub(crate) const ENCLAVE_ACCOUNT_KEY: &str = "Enclave_Account_Key";
 
