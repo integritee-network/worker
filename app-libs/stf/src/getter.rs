@@ -17,16 +17,21 @@
 
 use crate::{AccountId, KeyPair, Signature};
 use codec::{Decode, Encode};
+use ita_sgx_runtime::System;
 use itp_stf_interface::ExecuteGetter;
+use itp_utils::stringify::account_id_to_string;
 use log::*;
 use sp_runtime::traits::Verify;
 use std::prelude::v1::*;
 
 #[cfg(feature = "evm")]
-use sp_core::{H160, H256};
+use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 
-#[cfg(feature = "sgx")]
-pub use sgx::*;
+#[cfg(feature = "evm")]
+use crate::evm_helpers::{get_evm_account, get_evm_account_codes, get_evm_account_storages};
+
+#[cfg(feature = "evm")]
+use sp_core::{H160, H256};
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
@@ -105,94 +110,68 @@ impl TrustedGetterSigned {
 	}
 }
 
-#[cfg(feature = "sgx")]
-pub mod sgx {
-	use super::*;
-	use ita_sgx_runtime::System;
-	use itp_utils::stringify::account_id_to_string;
-
-	#[cfg(feature = "evm")]
-	use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
-
-	#[cfg(feature = "evm")]
-	use crate::evm_helpers::{get_evm_account, get_evm_account_codes, get_evm_account_storages};
-
-	impl ExecuteGetter for Getter {
-		fn execute(self) -> Option<Vec<u8>> {
-			match self {
-				Getter::trusted(g) => match &g.getter {
-					TrustedGetter::free_balance(who) => {
-						let info = System::account(&who);
-						debug!("TrustedGetter free_balance");
-						debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
-						debug!("Account free balance is {}", info.data.free);
-						Some(info.data.free.encode())
-					},
-
-					TrustedGetter::reserved_balance(who) => {
-						let info = System::account(&who);
-						debug!("TrustedGetter reserved_balance");
-						debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
-						debug!("Account reserved balance is {}", info.data.reserved);
-						Some(info.data.reserved.encode())
-					},
-					TrustedGetter::nonce(who) => {
-						let nonce = System::account_nonce(&who);
-						debug!("TrustedGetter nonce");
-						debug!("Account nonce is {}", nonce);
-						Some(nonce.encode())
-					},
-					#[cfg(feature = "evm")]
-					TrustedGetter::evm_nonce(who) => {
-						let evm_account = get_evm_account(&who);
-						let evm_account = HashedAddressMapping::into_account_id(evm_account);
-						let nonce = System::account_nonce(&evm_account);
-						debug!("TrustedGetter evm_nonce");
-						debug!("Account nonce is {}", nonce);
-						Some(nonce.encode())
-					},
-					#[cfg(feature = "evm")]
-					TrustedGetter::evm_account_codes(_who, evm_account) =>
-					// TODO: This probably needs some security check if who == evm_account (or assosciated)
-						if let Some(info) = get_evm_account_codes(&evm_account) {
-							debug!("TrustedGetter Evm Account Codes");
-							debug!("AccountCodes for {} is {:?}", evm_account, info);
-							Some(info) // TOOD: encoded?
-						} else {
-							None
-						},
-					#[cfg(feature = "evm")]
-					TrustedGetter::evm_account_storages(_who, evm_account, index) =>
-					// TODO: This probably needs some security check if who == evm_account (or assosciated)
-						if let Some(value) = get_evm_account_storages(&evm_account, &index) {
-							debug!("TrustedGetter Evm Account Storages");
-							debug!("AccountStorages for {} is {:?}", evm_account, value);
-							Some(value.encode())
-						} else {
-							None
-						},
-				},
-				Getter::public(g) => match g {
-					PublicGetter::some_value => Some(42u32.encode()),
-				},
-			}
-		}
-
-		fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
-			Vec::new()
-		}
-	}
-}
-
-#[cfg(not(feature = "sgx"))]
 impl ExecuteGetter for Getter {
 	fn execute(self) -> Option<Vec<u8>> {
-		warn!("Getter execution currently only available in sgx mode");
-		unimplemented!()
+		match self {
+			Getter::trusted(g) => match &g.getter {
+				TrustedGetter::free_balance(who) => {
+					let info = System::account(&who);
+					debug!("TrustedGetter free_balance");
+					debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
+					debug!("Account free balance is {}", info.data.free);
+					Some(info.data.free.encode())
+				},
+
+				TrustedGetter::reserved_balance(who) => {
+					let info = System::account(&who);
+					debug!("TrustedGetter reserved_balance");
+					debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
+					debug!("Account reserved balance is {}", info.data.reserved);
+					Some(info.data.reserved.encode())
+				},
+				TrustedGetter::nonce(who) => {
+					let nonce = System::account_nonce(&who);
+					debug!("TrustedGetter nonce");
+					debug!("Account nonce is {}", nonce);
+					Some(nonce.encode())
+				},
+				#[cfg(feature = "evm")]
+				TrustedGetter::evm_nonce(who) => {
+					let evm_account = get_evm_account(&who);
+					let evm_account = HashedAddressMapping::into_account_id(evm_account);
+					let nonce = System::account_nonce(&evm_account);
+					debug!("TrustedGetter evm_nonce");
+					debug!("Account nonce is {}", nonce);
+					Some(nonce.encode())
+				},
+				#[cfg(feature = "evm")]
+				TrustedGetter::evm_account_codes(_who, evm_account) =>
+				// TODO: This probably needs some security check if who == evm_account (or assosciated)
+					if let Some(info) = get_evm_account_codes(&evm_account) {
+						debug!("TrustedGetter Evm Account Codes");
+						debug!("AccountCodes for {} is {:?}", evm_account, info);
+						Some(info) // TOOD: encoded?
+					} else {
+						None
+					},
+				#[cfg(feature = "evm")]
+				TrustedGetter::evm_account_storages(_who, evm_account, index) =>
+				// TODO: This probably needs some security check if who == evm_account (or assosciated)
+					if let Some(value) = get_evm_account_storages(&evm_account, &index) {
+						debug!("TrustedGetter Evm Account Storages");
+						debug!("AccountStorages for {} is {:?}", evm_account, value);
+						Some(value.encode())
+					} else {
+						None
+					},
+			},
+			Getter::public(g) => match g {
+				PublicGetter::some_value => Some(42u32.encode()),
+			},
+		}
 	}
 
 	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
-		warn!("Getter get_storage_hashes_to_update currently only available in sgx mode");
-		unimplemented!()
+		Vec::new()
 	}
 }

@@ -16,7 +16,7 @@ sha3 = { version = "0.10", default-features = false }
 sgx_tstd = { branch = "master", features = ["untrusted_fs", "net", "backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
 # local crates
-ita-sgx-runtime = { optional = true, default-features = false, path = "../sgx-runtime" }
+ita-sgx-runtime = { default-features = false, path = "../sgx-runtime" }
 itp-hashing = { path = "../../core-primitives/hashing" }
 itp-sgx-externalities = { default-features = false, path = "../../core-primitives/substrate-sgx/externalities" }
 itp-stf-interface = { default-features = false, path = "../../core-primitives/stf-interface" }
@@ -25,7 +25,7 @@ itp-types = { default-features = false, path = "../../core-primitives/types" }
 itp-utils = { default-features = false, path = "../../core-primitives/utils" }
 its-primitives = { default-features = false, path = "../../sidechain/primitives" }
 its-state = { default-features = false, optional = true, path = "../../sidechain/state" }
-sp-io = { optional = true, default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], path = "../../core-primitives/substrate-sgx/sp-io" }
+sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], path = "../../core-primitives/substrate-sgx/sp-io" }
 
 # Substrate dependencies
 pallet-balances = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
@@ -56,7 +56,6 @@ evm_std = [
 ]
 sgx = [
     "sgx_tstd",
-    "ita-sgx-runtime",
     "itp-sgx-externalities/sgx",
     "its-state/sgx",
     "itp-utils/sgx",
@@ -68,6 +67,7 @@ std = [
     "log/std",
     "rlp/std",
     # local
+    "ita-sgx-runtime/std",
     "itp-sgx-externalities/std",
     "itp-stf-interface/std",
     "itp-storage/std",
