@@ -51,8 +51,7 @@ pub struct StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf, Call
 	ocall_api: Arc<OCallApi>,
 	state_handler: Arc<StateHandler>,
 	node_metadata_repo: Arc<NodeMetadataRepository>,
-	stf: Arc<Stf>,
-	_phantom: PhantomData<(Call, Getter)>,
+	_phantom: PhantomData<(Call, Getter, Stf)>,
 }
 
 impl<OCallApi, StateHandler, NodeMetadataRepository, Stf, Call, Getter>
@@ -75,9 +74,8 @@ where
 		ocall_api: Arc<OCallApi>,
 		state_handler: Arc<StateHandler>,
 		node_metadata_repo: Arc<NodeMetadataRepository>,
-		stf: Arc<Stf>,
 	) -> Self {
-		StfExecutor { ocall_api, state_handler, node_metadata_repo, stf, _phantom: PhantomData }
+		StfExecutor { ocall_api, state_handler, node_metadata_repo, _phantom: PhantomData }
 	}
 
 	/// Execute a trusted call on the STF
@@ -129,11 +127,11 @@ where
 			.get_multiple_storages_verified(storage_hashes, header)
 			.map(into_map)?;
 
-		self.stf.apply_state_diff(state, update_map.into());
+		Stf::apply_state_diff(state, update_map.into());
 
 		debug!("execute STF, call with nonce {}", trusted_call.nonce);
 		let mut extrinsic_call_backs: Vec<OpaqueCall> = Vec::new();
-		if let Err(e) = self.stf.execute_call(
+		if let Err(e) = Stf::execute_call(
 			state,
 			trusted_call.clone(),
 			&mut extrinsic_call_backs,
@@ -173,7 +171,7 @@ where
 {
 	fn update_states(&self, header: &ParentchainHeader) -> Result<()> {
 		debug!("Update STF storage upon block import!");
-		let storage_hashes = self.stf.storage_hashes_to_update_on_block();
+		let storage_hashes = Stf::storage_hashes_to_update_on_block();
 
 		if storage_hashes.is_empty() {
 			return Ok(())
@@ -189,7 +187,7 @@ where
 		let shards = self.state_handler.list_shards()?;
 		for shard_id in shards {
 			let (state_lock, mut state) = self.state_handler.load_for_mutation(&shard_id)?;
-			match self.stf.update_parentchain_block(&mut state, header.clone()) {
+			match Stf::update_parentchain_block(&mut state, header.clone()) {
 				Ok(_) => {
 					self.state_handler.write_after_mutation(state, state_lock, &shard_id)?;
 				},
@@ -215,11 +213,9 @@ where
 							.get_multiple_storages_verified(per_shard_hashes, header)
 							.map(into_map)?;
 
-						self.stf.apply_state_diff(&mut state, per_shard_update.into());
-						self.stf.apply_state_diff(&mut state, state_diff_update.clone().into());
-						if let Err(e) =
-							self.stf.update_parentchain_block(&mut state, header.clone())
-						{
+						Stf::apply_state_diff(&mut state, per_shard_update.into());
+						Stf::apply_state_diff(&mut state, state_diff_update.clone().into());
+						if let Err(e) = Stf::update_parentchain_block(&mut state, header.clone()) {
 							error!("Could not update parentchain block. {:?}: {:?}", shard_id, e)
 						}
 
@@ -423,7 +419,9 @@ pub(crate) fn get_stf_state<E: SgxExternalitiesTrait + Debug>(
 		return Err(Error::OperationHasInvalidSignature)
 	}
 	// FIXME: stf should be introduced via function parameter.
-	let stf = Stf::<TrustedCallSigned, Getter, E>::new();
 	debug!("calling into STF to get state");
-	Ok(stf.execute_getter(state, trusted_getter_signed.clone().into()))
+	Ok(Stf::<TrustedCallSigned, Getter, E>::execute_getter(
+		state,
+		trusted_getter_signed.clone().into(),
+	))
 }

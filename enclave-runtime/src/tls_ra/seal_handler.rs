@@ -20,6 +20,7 @@
 
 use crate::error::{Error as EnclaveError, Result as EnclaveResult};
 use codec::{Decode, Encode};
+use core::marker::PhantomData;
 use ita_stf::{State as StfState, StateDiffType as StfStateDiffType, StateType as StfStateType};
 use itp_sgx_crypto::{
 	ed25519_derivation::DeriveEd25519,
@@ -48,7 +49,7 @@ where
 	state_handler: Arc<StateHandler>,
 	state_key_repository: Arc<StateKeyRepository>,
 	shielding_key_repository: Arc<ShieldingKeyRepository>,
-	stf: Arc<Stf>,
+	_phantom: PhantomData<Stf>,
 }
 
 impl<ShieldingKeyRepository, StateKeyRepository, StateHandler, Stf>
@@ -63,9 +64,13 @@ where
 		state_handler: Arc<StateHandler>,
 		state_key_repository: Arc<StateKeyRepository>,
 		shielding_key_repository: Arc<ShieldingKeyRepository>,
-		stf: Arc<Stf>,
 	) -> Self {
-		Self { state_handler, state_key_repository, shielding_key_repository, stf }
+		Self {
+			state_handler,
+			state_key_repository,
+			shielding_key_repository,
+			_phantom: PhantomData,
+		}
 	}
 }
 
@@ -126,7 +131,7 @@ where
 	fn seal_new_empty_state(&self, shard: &ShardIdentifier) -> EnclaveResult<()> {
 		let enclave_account: AccountId =
 			self.shielding_key_repository.retrieve_key()?.derive_ed25519()?.public().into();
-		let state = self.stf.init_state(enclave_account.encode());
+		let state = Stf::init_state(enclave_account.encode());
 		self.state_handler.reset(state, shard)?;
 		info!("Successfully reset state with new enclave account, for shard {:?}", shard);
 		Ok(())

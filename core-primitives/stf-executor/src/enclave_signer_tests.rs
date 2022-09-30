@@ -46,7 +46,6 @@ pub fn derive_key_is_deterministic() {
 
 pub fn enclave_signer_signatures_are_valid() {
 	let ocall_api = Arc::new(OnchainMock::default());
-	let stf = Arc::new(TestStf::new());
 	let shielding_key_repo = Arc::new(ShieldingKeyRepositoryMock::default());
 	let enclave_account: AccountId = shielding_key_repo
 		.retrieve_key()
@@ -57,10 +56,11 @@ pub fn enclave_signer_signatures_are_valid() {
 		.into();
 
 	let state_observer: Arc<ObserveStateMock<SgxExternalities>> =
-		Arc::new(ObserveStateMock::new(stf.init_state(enclave_account.encode())));
+		Arc::new(ObserveStateMock::new(TestStf::init_state(enclave_account.encode())));
 	let shard = ShardIdentifier::default();
 	let mr_enclave = ocall_api.get_mrenclave_of_self().unwrap();
-	let enclave_signer = StfEnclaveSigner::new(state_observer, ocall_api, shielding_key_repo, stf);
+	let enclave_signer =
+		StfEnclaveSigner::<_, _, _, TestStf>::new(state_observer, ocall_api, shielding_key_repo);
 	let trusted_call =
 		TrustedCall::balance_shield(enclave_account, AccountId::new([3u8; 32]), 200u128);
 

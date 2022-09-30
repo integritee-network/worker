@@ -20,7 +20,10 @@
 //! This allows the crates themselves to stay as generic as possible
 //! and ensures that the global instances are initialized once.
 
-use crate::{ocall::OcallApi, rpc::rpc_response_channel::RpcResponseChannel};
+use crate::{
+	ocall::OcallApi, rpc::rpc_response_channel::RpcResponseChannel,
+	tls_ra::seal_handler::SealHandler,
+};
 use ita_stf::{Getter, Hash, State as StfState, Stf, TrustedCallSigned};
 use itc_direct_rpc_server::{
 	rpc_connection_registry::ConnectionRegistry, rpc_responder::RpcResponder,
@@ -181,7 +184,12 @@ pub type EnclaveSidechainBlockImportQueueWorker = BlockImportQueueWorker<
 	EnclaveSidechainBlockImportQueue,
 	EnclaveSidechainBlockSyncer,
 >;
-
+pub type EnclaveSealHandler = SealHandler<
+	EnclaveShieldingKeyRepository,
+	EnclaveStateKeyRepository,
+	EnclaveStateHandler,
+	EnclaveStf,
+>;
 /// Base component instances
 ///-------------------------------------------------------------------------------------------------
 
@@ -213,9 +221,6 @@ pub static GLOBAL_STATE_HANDLER_COMPONENT: ComponentContainer<EnclaveStateHandle
 /// State observer.
 pub static GLOBAL_STATE_OBSERVER_COMPONENT: ComponentContainer<EnclaveStateObserver> =
 	ComponentContainer::new("state observer");
-
-/// Stf Interface
-pub static GLOBAL_STF_COMPONENT: ComponentContainer<EnclaveStf> = ComponentContainer::new("Stf");
 
 /// TOP pool author.
 pub static GLOBAL_TOP_POOL_AUTHOR_COMPONENT: ComponentContainer<EnclaveTopPoolAuthor> =

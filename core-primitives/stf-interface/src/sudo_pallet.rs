@@ -16,6 +16,6 @@
 */
 use itp_types::AccountId;
 pub trait SudoPalletInterface<State> {
-	fn get_root(&self, state: &mut State) -> AccountId;
-	fn get_enclave_account(&self, state: &mut State) -> AccountId;
+	fn get_root(state: &mut State) -> AccountId;
+	fn get_enclave_account(state: &mut State) -> AccountId;
 }

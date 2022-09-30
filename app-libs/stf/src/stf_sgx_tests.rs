@@ -31,21 +31,19 @@ pub type StfState = Stf<TrustedCallSigned, Getter, State>;
 
 pub fn enclave_account_initialization_works() {
 	let enclave_account = AccountId::new([2u8; 32]);
-	let stf = StfState::new();
-	let mut state = stf.init_state(enclave_account.encode());
-	let _root = stf.get_root(&mut state);
-	let account_data = stf.get_account_data(&mut state, &enclave_account);
+	let mut state = StfState::init_state(enclave_account.encode());
+	let _root = StfState::get_root(&mut state);
+	let account_data = StfState::get_account_data(&mut state, &enclave_account);
 
-	assert_eq!(0, stf.get_account_nonce(&mut state, &enclave_account));
-	assert_eq!(enclave_account, stf.get_enclave_account(&mut state));
+	assert_eq!(0, StfState::get_account_nonce(&mut state, &enclave_account));
+	assert_eq!(enclave_account, StfState::get_enclave_account(&mut state));
 	assert_eq!(1000, account_data.free);
 }
 
 pub fn shield_funds_increments_signer_account_nonce() {
 	let enclave_call_signer = Ed25519Pair::from_seed(b"14672678901234567890123456789012");
 	let enclave_signer_account_id: AccountId = enclave_call_signer.public().into();
-	let stf = StfState::new();
-	let mut state = stf.init_state(enclave_signer_account_id.encode());
+	let mut state = StfState::init_state(enclave_signer_account_id.encode());
 
 	let shield_funds_call = TrustedCallSigned::new(
 		TrustedCall::balance_shield(
@@ -57,17 +55,15 @@ pub fn shield_funds_increments_signer_account_nonce() {
 		Signature::Ed25519(Ed25519Signature([0u8; 64])),
 	);
 
-	stf.execute_call(&mut state, shield_funds_call, &mut Vec::new(), [0u8, 1u8])
-		.unwrap();
-	assert_eq!(1, stf.get_account_nonce(&mut state, &enclave_signer_account_id));
+	StfState::execute_call(&mut state, shield_funds_call, &mut Vec::new(), [0u8, 1u8]).unwrap();
+	assert_eq!(1, StfState::get_account_nonce(&mut state, &enclave_signer_account_id));
 }
 
 pub fn test_root_account_exists_after_initialization() {
 	let enclave_account = AccountId::new([2u8; 32]);
-	let stf = StfState::new();
-	let mut state = stf.init_state(enclave_account.encode());
-	let root_account = stf.get_root(&mut state);
+	let mut state = StfState::init_state(enclave_account.encode());
+	let root_account = StfState::get_root(&mut state);
 
-	let account_data = stf.get_account_data(&mut state, &root_account);
+	let account_data = StfState::get_account_data(&mut state, &root_account);
 	assert!(account_data.free > 0);
 }

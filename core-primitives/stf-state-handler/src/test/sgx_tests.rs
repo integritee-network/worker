@@ -238,9 +238,8 @@ pub fn test_file_io_get_state_hash_works() {
 	let _shard_dir_handle = ShardDirectoryHandle::new(shard).unwrap();
 	let state_key_access =
 		Arc::new(StateKeyRepositoryMock::new(AesSeal::unseal_from_static_file().unwrap()));
-	let stf = Arc::new(TestStf::new());
 
-	let file_io = TestStateFileIo::new(state_key_access, AccountId::new([1u8; 32]), stf);
+	let file_io = TestStateFileIo::new(state_key_access, AccountId::new([1u8; 32]));
 
 	let state_id = 1234u128;
 	let state_hash = file_io.create_initialized(&shard, state_id).unwrap();
@@ -283,9 +282,8 @@ pub fn test_list_state_ids_ignores_files_not_matching_the_pattern() {
 	let _shard_dir_handle = ShardDirectoryHandle::new(shard).unwrap();
 	let state_key_access =
 		Arc::new(StateKeyRepositoryMock::new(AesSeal::unseal_from_static_file().unwrap()));
-	let stf = Arc::new(TestStf::new());
 
-	let file_io = TestStateFileIo::new(state_key_access, AccountId::new([1u8; 32]), stf);
+	let file_io = TestStateFileIo::new(state_key_access, AccountId::new([1u8; 32]));
 
 	let mut invalid_state_file_path = shard_path(&shard);
 	invalid_state_file_path.push("invalid-state.bin");
@@ -306,8 +304,7 @@ fn initialize_state_handler_with_directory_handle(
 fn initialize_state_handler() -> Arc<TestStateHandler> {
 	let state_key_access =
 		Arc::new(StateKeyRepositoryMock::new(AesSeal::unseal_from_static_file().unwrap()));
-	let stf = Arc::new(TestStf::new());
-	let file_io = Arc::new(TestStateFileIo::new(state_key_access, AccountId::new([1u8; 32]), stf));
+	let file_io = Arc::new(TestStateFileIo::new(state_key_access, AccountId::new([1u8; 32])));
 	let state_repository_loader = TestStateRepositoryLoader::new(file_io);
 	let state_observer = Arc::new(TestStateObserver::default());
 	let state_snapshot_repository = state_repository_loader

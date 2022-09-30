@@ -106,8 +106,7 @@ pub mod sgx {
 	pub struct SgxStateFileIo<StateKeyRepository, Stf, State> {
 		state_key_repository: Arc<StateKeyRepository>,
 		enclave_account: AccountId,
-		stf: Arc<Stf>,
-		_phantom: PhantomData<State>,
+		_phantom: PhantomData<(State, Stf)>,
 	}
 
 	impl<StateKeyRepository, Stf, State> SgxStateFileIo<StateKeyRepository, Stf, State>
@@ -120,9 +119,8 @@ pub mod sgx {
 		pub fn new(
 			state_key_repository: Arc<StateKeyRepository>,
 			enclave_account: AccountId,
-			stf: Arc<Stf>,
 		) -> Self {
-			SgxStateFileIo { state_key_repository, enclave_account, stf, _phantom: PhantomData }
+			SgxStateFileIo { state_key_repository, enclave_account, _phantom: PhantomData }
 		}
 
 		fn read(&self, path: &Path) -> Result<Vec<u8>> {
@@ -221,7 +219,7 @@ pub mod sgx {
 			state_id: StateId,
 		) -> Result<Self::HashType> {
 			init_shard(&shard_identifier)?;
-			let state = self.stf.init_state(self.enclave_account.encode());
+			let state = Stf::init_state(self.enclave_account.encode());
 			self.write(shard_identifier, state_id, state)
 		}
 

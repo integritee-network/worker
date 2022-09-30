@@ -20,7 +20,6 @@ pub trait ParentchainPalletInterface<State, ParentchainHeader> {
 
 	/// Updates the block number, block hash and parent hash of the parentchain block.
 	fn update_parentchain_block(
-		&self,
 		state: &mut State,
 		header: ParentchainHeader,
 	) -> Result<(), Self::Error>;

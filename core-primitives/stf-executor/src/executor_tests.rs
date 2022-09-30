@@ -343,9 +343,7 @@ fn stf_executor() -> (
 	let ocall_api = Arc::new(OnchainMock::default());
 	let state_handler = Arc::new(HandleStateMock::default());
 	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
-	let stf = Arc::new(StfState::new());
-	let executor =
-		StfExecutor::new(ocall_api.clone(), state_handler.clone(), node_metadata_repo, stf);
+	let executor = StfExecutor::new(ocall_api.clone(), state_handler.clone(), node_metadata_repo);
 	(executor, ocall_api, state_handler)
 }
 

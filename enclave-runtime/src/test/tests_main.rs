@@ -18,14 +18,14 @@
 use crate::test::evm_pallet_tests;
 
 use crate::{
-	attestation,
-	ocall::OcallApi,
-	rpc,
+	attestation, rpc,
 	sync::tests::{enclave_rw_lock_works, sidechain_rw_lock_works},
 	test::{
 		cert_tests::*,
 		direct_rpc_tests,
-		fixtures::test_setup::{enclave_call_signer, test_setup, TestStf, TestTopPoolAuthor},
+		fixtures::test_setup::{
+			enclave_call_signer, test_setup, TestStf, TestStfExecutor, TestTopPoolAuthor,
+		},
 		mocks::types::TestStateKeyRepo,
 		sidechain_aura_tests, top_pool_tests,
 	},
@@ -38,18 +38,17 @@ use ita_stf::{
 	AccountInfo, Getter, ShardIdentifier, State, StatePayload, TrustedCall, TrustedCallSigned,
 	TrustedGetter, TrustedOperation,
 };
-use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_sgx_crypto::{Aes, StateCrypto};
 use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesDiffType, SgxExternalitiesTrait};
 use itp_stf_executor::{
-	enclave_signer_tests as stf_enclave_signer_tests, executor::StfExecutor,
-	executor_tests as stf_executor_tests, traits::StateUpdateProposer, BatchExecutionResult,
+	enclave_signer_tests as stf_enclave_signer_tests, executor_tests as stf_executor_tests,
+	traits::StateUpdateProposer, BatchExecutionResult,
 };
 use itp_stf_interface::{
 	parentchain_pallet::ParentchainPalletInterface, system_pallet::SystemPalletAccountInterface,
 };
 use itp_stf_state_handler::handle_state::HandleState;
-use itp_test::mock::{handle_state_mock, handle_state_mock::HandleStateMock};
+use itp_test::mock::handle_state_mock;
 use itp_top_pool_author::{test_utils::submit_operation_to_top_pool, traits::AuthorApi};
 use itp_types::{AccountId, Block, Header};
 use its_primitives::{
@@ -68,15 +67,6 @@ use sgx_types::size_t;
 use sp_core::{crypto::Pair, ed25519 as spEd25519, H256};
 use sp_runtime::traits::Header as HeaderT;
 use std::{string::String, sync::Arc, time::Duration, vec::Vec};
-
-type TestStfExecutor = StfExecutor<
-	OcallApi,
-	HandleStateMock,
-	NodeMetadataRepository<NodeMetadataMock>,
-	TestStf,
-	TrustedCallSigned,
-	Getter,
->;
 
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
@@ -223,7 +213,7 @@ fn test_compose_block() {
 
 fn test_submit_trusted_call_to_top_pool() {
 	// given
-	let (top_pool_author, _, shard, mrenclave, shielding_key, _, _) = test_setup();
+	let (top_pool_author, _, shard, mrenclave, shielding_key, ..) = test_setup();
 
 	let sender = funded_pair();
 
@@ -254,7 +244,7 @@ fn test_submit_trusted_call_to_top_pool() {
 // We want to keep this back door open, in case we would want to submit getter into the TOP pool again in the future.
 fn test_submit_trusted_getter_to_top_pool() {
 	// given
-	let (top_pool_author, _, shard, _, shielding_key, _, _) = test_setup();
+	let (top_pool_author, _, shard, _, shielding_key, ..) = test_setup();
 
 	let sender = funded_pair();
 
@@ -316,15 +306,8 @@ fn test_differentiate_getter_and_call_works() {
 
 fn test_create_block_and_confirmation_works() {
 	// given
-	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler, stf) = test_setup();
-	let node_metadata = NodeMetadataMock::new();
-	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(node_metadata.clone()));
-	let stf_executor = Arc::new(StfExecutor::new(
-		Arc::new(OcallApi),
-		state_handler.clone(),
-		node_metadata_repo.clone(),
-		stf,
-	));
+	let (top_pool_author, _, shard, mrenclave, shielding_key, _, stf_executor) = test_setup();
+
 	let block_composer = BlockComposer::<Block, SignedBlock, _, _>::new(
 		test_account(),
 		Arc::new(TestStateKeyRepo::new(state_key())),
@@ -369,14 +352,8 @@ fn test_create_block_and_confirmation_works() {
 
 fn test_create_state_diff() {
 	// given
-	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler, stf) = test_setup();
-	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
-	let stf_executor = Arc::new(StfExecutor::new(
-		Arc::new(OcallApi),
-		state_handler.clone(),
-		node_metadata_repo.clone(),
-		stf,
-	));
+	let (top_pool_author, _, shard, mrenclave, shielding_key, _, stf_executor) = test_setup();
+
 	let block_composer = BlockComposer::<Block, SignedBlock, _, _>::new(
 		test_account(),
 		Arc::new(TestStateKeyRepo::new(state_key())),
@@ -434,14 +411,7 @@ fn test_create_state_diff() {
 
 fn test_executing_call_updates_account_nonce() {
 	// given
-	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler, stf) = test_setup();
-	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
-	let stf_executor = Arc::new(StfExecutor::new(
-		Arc::new(OcallApi),
-		state_handler.clone(),
-		node_metadata_repo,
-		stf.clone(),
-	));
+	let (top_pool_author, _, shard, mrenclave, shielding_key, _, stf_executor) = test_setup();
 
 	let sender = funded_pair();
 	let receiver = unfunded_public();
@@ -463,13 +433,15 @@ fn test_executing_call_updates_account_nonce() {
 	let mut execution_result =
 		execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_author);
 
-	let nonce =
-		stf.get_account_nonce(&mut execution_result.state_after_execution, &sender.public().into());
+	let nonce = TestStf::get_account_nonce(
+		&mut execution_result.state_after_execution,
+		&sender.public().into(),
+	);
 	assert_eq!(nonce, 1);
 }
 
 fn test_call_set_update_parentchain_block() {
-	let (_, _, shard, _, _, state_handler, stf) = test_setup();
+	let (_, _, shard, _, _, state_handler, _) = test_setup();
 	let mut state = state_handler.load(&shard).unwrap();
 
 	let block_number = 3;
@@ -483,7 +455,7 @@ fn test_call_set_update_parentchain_block() {
 		Default::default(),
 	);
 
-	stf.update_parentchain_block(&mut state, header.clone()).unwrap();
+	TestStf::update_parentchain_block(&mut state, header.clone()).unwrap();
 
 	assert_eq!(header.hash(), state.execute_with(|| Parentchain::block_hash()));
 	assert_eq!(parent_hash, state.execute_with(|| Parentchain::parent_hash()));
@@ -492,14 +464,7 @@ fn test_call_set_update_parentchain_block() {
 
 fn test_signature_must_match_public_sender_in_call() {
 	// given
-	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler, stf) = test_setup();
-	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
-	let stf_executor = Arc::new(StfExecutor::new(
-		Arc::new(OcallApi),
-		state_handler.clone(),
-		node_metadata_repo,
-		stf,
-	));
+	let (top_pool_author, _, shard, mrenclave, shielding_key, _, stf_executor) = test_setup();
 
 	// create accounts
 	let sender = funded_pair();
@@ -527,14 +492,7 @@ fn test_signature_must_match_public_sender_in_call() {
 
 fn test_invalid_nonce_call_is_not_executed() {
 	// given
-	let (top_pool_author, _, shard, mrenclave, shielding_key, state_handler, stf) = test_setup();
-	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
-	let stf_executor = Arc::new(StfExecutor::new(
-		Arc::new(OcallApi),
-		state_handler.clone(),
-		node_metadata_repo,
-		stf,
-	));
+	let (top_pool_author, _, shard, mrenclave, shielding_key, _, stf_executor) = test_setup();
 
 	// create accounts
 	let sender = funded_pair();
@@ -562,15 +520,7 @@ fn test_invalid_nonce_call_is_not_executed() {
 
 fn test_non_root_shielding_call_is_not_executed() {
 	// given
-	let (top_pool_author, _state, shard, mrenclave, shielding_key, state_handler, stf) =
-		test_setup();
-	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
-	let stf_executor = Arc::new(StfExecutor::new(
-		Arc::new(OcallApi),
-		state_handler.clone(),
-		node_metadata_repo,
-		stf,
-	));
+	let (top_pool_author, _state, shard, mrenclave, shielding_key, _, stf_executor) = test_setup();
 
 	let sender = funded_pair();
 	let sender_acc: AccountId = sender.public().into();
@@ -594,15 +544,7 @@ fn test_non_root_shielding_call_is_not_executed() {
 }
 
 fn test_shielding_call_with_enclave_self_is_executed() {
-	let (top_pool_author, _state, shard, mrenclave, shielding_key, state_handler, stf) =
-		test_setup();
-	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
-	let stf_executor = Arc::new(StfExecutor::new(
-		Arc::new(OcallApi),
-		state_handler.clone(),
-		node_metadata_repo,
-		stf,
-	));
+	let (top_pool_author, _state, shard, mrenclave, shielding_key, _, stf_executor) = test_setup();
 
 	let sender = funded_pair();
 	let sender_account: AccountId = sender.public().into();

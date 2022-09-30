@@ -32,16 +32,15 @@ pub mod sudo_pallet;
 pub mod system_pallet;
 
 pub trait StateInterface<State, StateDiff> {
-	fn init_state(&self, initial_input: Vec<u8>) -> State;
-	fn apply_state_diff(&self, state: &mut State, state_diff: StateDiff);
-	fn storage_hashes_to_update_on_block(&self) -> Vec<Vec<u8>>;
+	fn init_state(initial_input: Vec<u8>) -> State;
+	fn apply_state_diff(state: &mut State, state_diff: StateDiff);
+	fn storage_hashes_to_update_on_block() -> Vec<Vec<u8>>;
 }
 
 pub trait StateCallInterface<Call, State> {
 	type Error;
 
 	fn execute_call(
-		&self,
 		state: &mut State,
 		call: Call,
 		calls: &mut Vec<OpaqueCall>,
@@ -50,7 +49,7 @@ pub trait StateCallInterface<Call, State> {
 }
 
 pub trait StateGetterInterface<Getter, State> {
-	fn execute_getter(&self, state: &mut State, getter: Getter) -> Option<Vec<u8>>;
+	fn execute_getter(state: &mut State, getter: Getter) -> Option<Vec<u8>>;
 }
 
 pub trait ExecuteCall {

@@ -16,6 +16,7 @@
 */
 
 use crate::{error::Result, traits::StfEnclaveSigning};
+use core::marker::PhantomData;
 use ita_stf::{AccountId, Index, KeyPair, TrustedCall, TrustedCallSigned};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{ed25519_derivation::DeriveEd25519, key_repository::AccessKey};
@@ -30,7 +31,7 @@ pub struct StfEnclaveSigner<OCallApi, StateObserver, ShieldingKeyRepository, Stf
 	state_observer: Arc<StateObserver>,
 	ocall_api: Arc<OCallApi>,
 	shielding_key_repo: Arc<ShieldingKeyRepository>,
-	stf: Arc<Stf>,
+	_phantom: PhantomData<Stf>,
 }
 
 impl<OCallApi, StateObserver, ShieldingKeyRepository, Stf>
@@ -47,16 +48,15 @@ where
 		state_observer: Arc<StateObserver>,
 		ocall_api: Arc<OCallApi>,
 		shielding_key_repo: Arc<ShieldingKeyRepository>,
-		stf: Arc<Stf>,
 	) -> Self {
-		Self { state_observer, ocall_api, shielding_key_repo, stf }
+		Self { state_observer, ocall_api, shielding_key_repo, _phantom: Default::default() }
 	}
 
 	fn get_enclave_account_nonce(&self, shard: &ShardIdentifier) -> Result<Index> {
 		let enclave_account = self.get_enclave_account()?;
-		let nonce = self.state_observer.observe_state(shard, move |state| {
-			self.stf.get_account_nonce(state, &enclave_account)
-		})?;
+		let nonce = self
+			.state_observer
+			.observe_state(shard, move |state| Stf::get_account_nonce(state, &enclave_account))?;
 
 		Ok(nonce)
 	}

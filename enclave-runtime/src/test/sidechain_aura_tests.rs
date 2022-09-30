@@ -23,7 +23,7 @@ use crate::{
 				create_ocall_api, create_top_pool, encrypt_trusted_operation, sign_trusted_call,
 			},
 			initialize_test_state::init_state,
-			test_setup::enclave_call_signer,
+			test_setup::{enclave_call_signer, TestStf},
 		},
 		mocks::{propose_to_import_call_mock::ProposeToImportOCallApi, types::*},
 	},
@@ -85,7 +85,6 @@ pub fn produce_sidechain_block_and_import_it() {
 	let shielding_key_repo = Arc::new(TestShieldingKeyRepo::new(shielding_key));
 	let state_key_repo = Arc::new(TestStateKeyRepo::new(state_key));
 	let parentchain_header = ParentchainHeaderBuilder::default().build();
-	let stf = Arc::new(TestStf::new());
 
 	let ocall_api = create_ocall_api(&parentchain_header, &signer);
 
@@ -100,7 +99,6 @@ pub fn produce_sidechain_block_and_import_it() {
 		ocall_api.clone(),
 		state_handler.clone(),
 		node_metadata_repo.clone(),
-		stf.clone(),
 	));
 	let top_pool = create_top_pool();
 
@@ -219,7 +217,7 @@ pub fn produce_sidechain_block_and_import_it() {
 	);
 
 	let mut state = state_handler.load(&shard_id).unwrap();
-	let free_balance = stf.get_account_data(&mut state, &receiver.public().into()).free;
+	let free_balance = TestStf::get_account_data(&mut state, &receiver.public().into()).free;
 	assert_eq!(free_balance, transfered_amount);
 }
 

@@ -18,17 +18,17 @@ use itp_types::{
 	AccountData, AccountId, BlockHash, Index, SidechainBlockNumber, SidechainTimestamp as Timestamp,
 };
 pub trait SystemPalletAccountInterface<State> {
-	fn get_account_nonce(&self, state: &mut State, account_id: &AccountId) -> Index;
-	fn get_account_data(&self, state: &mut State, account: &AccountId) -> AccountData;
+	fn get_account_nonce(state: &mut State, account_id: &AccountId) -> Index;
+	fn get_account_data(state: &mut State, account: &AccountId) -> AccountData;
 }
 
 pub trait SystemPalletSidechainInterface<State, SidechainBlock> {
-	fn set_timestamp(&self, state: &mut State, timestamp: &Timestamp);
-	fn get_timestamp(&self, state: &mut State) -> Timestamp;
-	fn set_last_block_hash(&self, state: &mut State, hash: &BlockHash);
-	fn get_last_block_hash(&self, state: &mut State) -> BlockHash;
-	fn set_block_number(&self, state: &mut State, number: &SidechainBlockNumber);
-	fn get_block_number(&self, state: &mut State) -> SidechainBlockNumber;
-	fn set_last_block(&self, state: &mut State, block: &SidechainBlock);
-	fn get_last_block(&self, state: &mut State) -> Option<SidechainBlock>;
+	fn set_timestamp(state: &mut State, timestamp: &Timestamp);
+	fn get_timestamp(state: &mut State) -> Timestamp;
+	fn set_last_block_hash(state: &mut State, hash: &BlockHash);
+	fn get_last_block_hash(state: &mut State) -> BlockHash;
+	fn set_block_number(state: &mut State, number: &SidechainBlockNumber);
+	fn get_block_number(state: &mut State) -> SidechainBlockNumber;
+	fn set_last_block(state: &mut State, block: &SidechainBlock);
+	fn get_last_block(state: &mut State) -> Option<SidechainBlock>;
 }

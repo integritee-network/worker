@@ -39,15 +39,15 @@ impl<State, StateDiff> StateInterfaceMock<State, StateDiff> {
 }
 
 impl<State, StateDiff> StateInterface<State, StateDiff> for StateInterfaceMock<State, StateDiff> {
-	fn init_state(&self, _initial_input: Vec<u8>) -> State {
+	fn init_state(_initial_input: Vec<u8>) -> State {
 		unimplemented!()
 	}
 
-	fn apply_state_diff(&self, _state: &mut State, _state_diff: StateDiff) {
+	fn apply_state_diff(_state: &mut State, _state_diff: StateDiff) {
 		unimplemented!()
 	}
 
-	fn storage_hashes_to_update_on_block(&self) -> Vec<Vec<u8>> {
+	fn storage_hashes_to_update_on_block() -> Vec<Vec<u8>> {
 		unimplemented!()
 	}
 }
@@ -58,7 +58,6 @@ impl<Call, State, StateDiff> StateCallInterface<Call, State>
 	type Error = String;
 
 	fn execute_call(
-		&self,
 		_state: &mut State,
 		_call: Call,
 		_calls: &mut Vec<OpaqueCall>,
@@ -71,7 +70,7 @@ impl<Call, State, StateDiff> StateCallInterface<Call, State>
 impl<Getter, State, StateDiff> StateGetterInterface<Getter, State>
 	for StateInterfaceMock<State, StateDiff>
 {
-	fn execute_getter(&self, _state: &mut State, _getter: Getter) -> Option<Vec<u8>> {
+	fn execute_getter(_state: &mut State, _getter: Getter) -> Option<Vec<u8>> {
 		unimplemented!()
 	}
 }
@@ -79,10 +78,10 @@ impl<Getter, State, StateDiff> StateGetterInterface<Getter, State>
 impl<State, StateDiff> SystemPalletAccountInterface<State>
 	for StateInterfaceMock<State, StateDiff>
 {
-	fn get_account_nonce(&self, _state: &mut State, _account_id: &AccountId) -> Index {
+	fn get_account_nonce(_state: &mut State, _account_id: &AccountId) -> Index {
 		unimplemented!()
 	}
-	fn get_account_data(&self, _state: &mut State, _account_id: &AccountId) -> AccountData {
+	fn get_account_data(_state: &mut State, _account_id: &AccountId) -> AccountData {
 		unimplemented!()
 	}
 }

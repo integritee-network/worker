@@ -30,47 +30,47 @@ where
 	State: SgxExternalitiesTrait,
 	SidechainBlock: SidechainBlockTrait,
 {
-	fn set_timestamp(&self, state: &mut State, timestamp: &Timestamp) {
+	fn set_timestamp(state: &mut State, timestamp: &Timestamp) {
 		state.execute_with(|| {
 			sp_io::storage::set(&storage_value_key("System", "Timestamp"), &timestamp.encode())
 		});
 	}
 
-	fn get_timestamp(&self, state: &mut State) -> Timestamp {
+	fn get_timestamp(state: &mut State) -> Timestamp {
 		state
 			.execute_with(|| get_storage_value("System", "Timestamp"))
 			.unwrap_or_default()
 	}
 
-	fn set_last_block_hash(&self, state: &mut State, hash: &BlockHash) {
+	fn set_last_block_hash(state: &mut State, hash: &BlockHash) {
 		state.execute_with(|| {
 			sp_io::storage::set(&storage_value_key("System", "LastHash"), &hash.encode())
 		})
 	}
 
-	fn get_last_block_hash(&self, state: &mut State) -> BlockHash {
+	fn get_last_block_hash(state: &mut State) -> BlockHash {
 		state
 			.execute_with(|| get_storage_value("System", "LastHash"))
 			.unwrap_or_default()
 	}
 
-	fn set_block_number(&self, state: &mut State, number: &SidechainBlockNumber) {
+	fn set_block_number(state: &mut State, number: &SidechainBlockNumber) {
 		state.execute_with(|| {
 			sp_io::storage::set(&storage_value_key("System", "Number"), &number.encode())
 		})
 	}
 
-	fn get_block_number(&self, state: &mut State) -> SidechainBlockNumber {
+	fn get_block_number(state: &mut State) -> SidechainBlockNumber {
 		state.execute_with(|| get_storage_value("System", "Number")).unwrap_or_default()
 	}
 
-	fn set_last_block(&self, state: &mut State, block: &SidechainBlock) {
+	fn set_last_block(state: &mut State, block: &SidechainBlock) {
 		state.execute_with(|| {
 			sp_io::storage::set(&storage_value_key("System", "LastBlock"), &block.encode())
 		})
 	}
 
-	fn get_last_block(&self, state: &mut State) -> Option<SidechainBlock> {
+	fn get_last_block(state: &mut State) -> Option<SidechainBlock> {
 		state.execute_with(|| get_storage_value("System", "LastBlock"))
 	}
 }

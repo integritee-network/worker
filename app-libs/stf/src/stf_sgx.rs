@@ -47,7 +47,7 @@ where
 	<State as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
 		IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>,
 {
-	fn init_state(&self, initial_input: Vec<u8>) -> State {
+	fn init_state(initial_input: Vec<u8>) -> State {
 		let enclave_account = AccountId::decode(&mut initial_input.as_slice()).unwrap();
 		debug!("initializing stf state, account id {}", account_id_to_string(&enclave_account));
 		let mut state = State::new(Default::default());
@@ -92,7 +92,6 @@ where
 	}
 
 	fn apply_state_diff(
-		&self,
 		state: &mut State,
 		map_update: <State as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
 	) {
@@ -106,7 +105,7 @@ where
 		});
 	}
 
-	fn storage_hashes_to_update_on_block(&self) -> Vec<Vec<u8>> {
+	fn storage_hashes_to_update_on_block() -> Vec<Vec<u8>> {
 		let mut key_hashes = Vec::new();
 
 		// get all shards that are currently registered
@@ -123,7 +122,6 @@ where
 	type Error = Call::Error;
 
 	fn execute_call(
-		&self,
 		state: &mut State,
 		call: Call,
 		calls: &mut Vec<OpaqueCall>,
@@ -138,7 +136,7 @@ where
 	Getter: ExecuteGetter,
 	State: SgxExternalitiesTrait + Debug,
 {
-	fn execute_getter(&self, state: &mut State, getter: Getter) -> Option<Vec<u8>> {
+	fn execute_getter(state: &mut State, getter: Getter) -> Option<Vec<u8>> {
 		state.execute_with(|| getter.execute())
 	}
 }
@@ -147,10 +145,10 @@ impl<Call, Getter, State> SudoPalletInterface<State> for Stf<Call, Getter, State
 where
 	State: SgxExternalitiesTrait,
 {
-	fn get_root(&self, state: &mut State) -> AccountId {
+	fn get_root(state: &mut State) -> AccountId {
 		state.execute_with(|| Sudo::key().expect("No root account"))
 	}
-	fn get_enclave_account(&self, state: &mut State) -> AccountId {
+	fn get_enclave_account(state: &mut State) -> AccountId {
 		state.execute_with(|| enclave_signer_account())
 	}
 }
@@ -159,14 +157,14 @@ impl<Call, Getter, State> SystemPalletAccountInterface<State> for Stf<Call, Gett
 where
 	State: SgxExternalitiesTrait,
 {
-	fn get_account_nonce(&self, state: &mut State, account: &AccountId) -> Index {
+	fn get_account_nonce(state: &mut State, account: &AccountId) -> Index {
 		state.execute_with(|| {
 			let nonce = System::account_nonce(account);
 			debug!("Account {} nonce is {}", account_id_to_string(&account), nonce);
 			nonce
 		})
 	}
-	fn get_account_data(&self, state: &mut State, account: &AccountId) -> AccountData {
+	fn get_account_data(state: &mut State, account: &AccountId) -> AccountData {
 		state.execute_with(|| System::account(account).data)
 	}
 }
@@ -179,7 +177,6 @@ where
 	type Error = StfError;
 
 	fn update_parentchain_block(
-		&self,
 		state: &mut State,
 		header: ParentchainHeader,
 	) -> Result<(), Self::Error> {

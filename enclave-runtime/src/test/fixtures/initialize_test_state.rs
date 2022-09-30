@@ -33,8 +33,7 @@ pub fn init_state<S: HandleState<StateT = SgxExternalities>>(
 
 	let _hash = state_handler.initialize_shard(shard).unwrap();
 	let (lock, _) = state_handler.load_for_mutation(&shard).unwrap();
-	let stf = TestStf::new();
-	let mut state = stf.init_state(enclave_account.encode());
+	let mut state = TestStf::init_state(enclave_account.encode());
 	state.prune_state_diff();
 
 	state_handler.write_after_mutation(state.clone(), lock, &shard).unwrap();
