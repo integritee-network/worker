@@ -32,12 +32,6 @@ pub struct StateInterfaceMock<State, StateDiff> {
 	_phantom: PhantomData<(State, StateDiff)>,
 }
 
-impl<State, StateDiff> StateInterfaceMock<State, StateDiff> {
-	pub fn new() -> Self {
-		StateInterfaceMock { _phantom: Default::default() }
-	}
-}
-
 impl<State, StateDiff> StateInterface<State, StateDiff> for StateInterfaceMock<State, StateDiff> {
 	fn init_state(_initial_input: Vec<u8>) -> State {
 		unimplemented!()

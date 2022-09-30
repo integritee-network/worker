@@ -159,7 +159,6 @@ pub fn test_evm_counter() {
 		&mut state,
 		&mut opaque_vec,
 		2,
-		stf.clone(),
 	);
 
 	// Call the fallback function
@@ -176,7 +175,6 @@ pub fn test_evm_counter() {
 		&mut state,
 		&mut opaque_vec,
 		5,
-		stf.clone(),
 	);
 
 	// Call to inc() function
@@ -194,7 +192,6 @@ pub fn test_evm_counter() {
 		&mut state,
 		&mut opaque_vec,
 		6,
-		stf.clone(),
 	);
 
 	// Call to add() function
@@ -217,7 +214,6 @@ pub fn test_evm_counter() {
 		&mut state,
 		&mut opaque_vec,
 		8,
-		stf,
 	);
 }
 
@@ -234,7 +230,6 @@ fn execute_and_verify_evm_call(
 	state: &mut State,
 	calls: &mut Vec<OpaqueCall>,
 	counter_expected: u64,
-	stf: Arc<TestStf>,
 ) {
 	let inc_call = TrustedCall::evm_call(
 		sender_acc,
@@ -249,7 +244,7 @@ fn execute_and_verify_evm_call(
 		Vec::new(),
 	)
 	.sign(&pair, nonce, &mrenclave, &shard);
-	stf.execute_call(state, inc_call, calls, [0u8, 1u8]).unwrap();
+	TestStf::execute_call(state, inc_call, calls, [0u8, 1u8]).unwrap();
 
 	let counter_value = state
 		.execute_with(|| get_evm_account_storages(&execution_address, &H256::zero()))
