@@ -62,6 +62,7 @@ pub trait SgxExternalitiesTrait {
 	fn remove(&mut self, k: &[u8]) -> Option<Vec<u8>>;
 	fn get(&self, k: &[u8]) -> Option<&Vec<u8>>;
 	fn contains_key(&self, k: &[u8]) -> bool;
+	fn next_storage_key(&self, key: &[u8]) -> Option<Vec<u8>>;
 	fn prune_state_diff(&mut self);
 	fn execute_with<R>(&mut self, f: impl FnOnce() -> R) -> R;
 }
@@ -100,6 +101,16 @@ impl SgxExternalitiesTrait for SgxExternalities {
 	/// check if state contains key
 	fn contains_key(&self, k: &[u8]) -> bool {
 		self.state.contains_key(k)
+	}
+
+	/// get the next key in state after the given one (excluded) in lexicographic order
+	fn next_storage_key(&self, key: &[u8]) -> Option<Vec<u8>> {
+		use std::ops::Bound;
+		let range = (Bound::Excluded(key), Bound::Unbounded);
+		self.state
+			.range::<[u8], _>(range)
+			.map(|(k, v)| (k.as_slice(), v))
+			.find_map(|(k, _v)| Some(k.to_vec())) // directly return k as _v is never None in our case
 	}
 
 	/// prunes the state diff
