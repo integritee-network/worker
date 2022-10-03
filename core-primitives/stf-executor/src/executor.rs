@@ -419,7 +419,7 @@ pub(crate) fn get_stf_state<E: SgxExternalitiesTrait + Debug>(
 	if let false = trusted_getter_signed.verify_signature() {
 		return Err(Error::OperationHasInvalidSignature)
 	}
-	// FIXME: stf should be introduced via function parameter.
+	// FIXME: stf type should be defined by the implement struct or function.
 	debug!("calling into STF to get state");
 	Ok(Stf::<TrustedCallSigned, Getter, E, Runtime>::execute_getter(
 		state,
