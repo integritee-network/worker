@@ -42,8 +42,8 @@ sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-s
 sgx_tcrypto = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true  }
 
 # scs / integritee
-itp-utils = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
-substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.27" }
+itp-utils = { default-features = false, path = "../../core-primitives/utils" }
+substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.28" }
 
 # local deps
 itp-node-api = { path = "../node-api", default-features = false }
@@ -54,7 +54,7 @@ itp-sgx-io = { path = "../sgx/io", default-features = false }
 itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
 
 # substrate deps
-sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 
 [features]
 default = ["std"]
