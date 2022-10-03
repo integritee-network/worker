@@ -17,6 +17,7 @@
 
 use crate::{error::Result, traits::StfEnclaveSigning};
 use core::marker::PhantomData;
+use ita_sgx_runtime::Index;
 use ita_stf::{AccountId, KeyPair, TrustedCall, TrustedCallSigned};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{ed25519_derivation::DeriveEd25519, key_repository::AccessKey};
@@ -43,8 +44,7 @@ where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: DeriveEd25519,
 	Stf: SystemPalletAccountInterface<StateObserver::StateType, AccountId>,
-	// FIXME: We have some discrepancies between Hardcoded Calls and Getter.
-	Stf::Index: Into<u32>,
+	Stf::Index: Into<Index>,
 {
 	pub fn new(
 		state_observer: Arc<StateObserver>,
@@ -78,8 +78,7 @@ where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: DeriveEd25519,
 	Stf: SystemPalletAccountInterface<StateObserver::StateType, AccountId>,
-	// FIXME
-	Stf::Index: Into<u32>,
+	Stf::Index: Into<Index>,
 {
 	fn get_enclave_account(&self) -> Result<AccountId> {
 		let enclave_call_signing_key = self.get_enclave_call_signing_key()?;
