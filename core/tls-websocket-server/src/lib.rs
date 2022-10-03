@@ -163,17 +163,15 @@ pub(crate) trait WebSocketConnection: Send + Sync {
 
 pub fn create_ws_server<Handler>(
 	addr_plain: &str,
-	private_key_path: &str,
-	certificates_path: &str,
+	private_key: &str,
+	certificate: &str,
 	handler: Arc<Handler>,
 ) -> Arc<TungsteniteWsServer<Handler, FromFileConfigProvider>>
 where
 	Handler: WebSocketMessageHandler,
 {
-	let config_provider = Arc::new(FromFileConfigProvider::new(
-		private_key_path.to_string(),
-		certificates_path.to_string(),
-	));
+	let config_provider =
+		Arc::new(FromFileConfigProvider::new(private_key.to_string(), certificate.to_string()));
 
 	Arc::new(TungsteniteWsServer::new(addr_plain.to_string(), config_provider, handler))
 }
