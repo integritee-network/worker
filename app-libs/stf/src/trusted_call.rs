@@ -183,10 +183,7 @@ impl ExecuteCall for TrustedCallSigned {
 		);
 		match self.call {
 			TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
-				ensure!(
-					crate::stf_sgx::is_root(&root),
-					Self::Error::MissingPrivileges(root.clone())
-				);
+				ensure!(crate::stf_sgx::is_root(&root), Self::Error::MissingPrivileges(root));
 				debug!(
 					"balance_set_balance({}, {}, {})",
 					account_id_to_string(&who),
@@ -194,7 +191,7 @@ impl ExecuteCall for TrustedCallSigned {
 					reserved_balance
 				);
 				ita_sgx_runtime::BalancesCall::<Runtime>::set_balance {
-					who: MultiAddress::Id(who.clone()),
+					who: MultiAddress::Id(who),
 					new_free: free_balance,
 					new_reserved: reserved_balance,
 				}

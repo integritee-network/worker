@@ -105,11 +105,8 @@ where
 	}
 
 	fn storage_hashes_to_update_on_block() -> Vec<Vec<u8>> {
-		let mut key_hashes = Vec::new();
-
-		// get all shards that are currently registered
-		key_hashes.push(shards_key_hash());
-		key_hashes
+		// Get all shards that are currently registered.
+		vec![shards_key_hash()]
 	}
 }
 
@@ -153,7 +150,7 @@ where
 		state.execute_with(|| pallet_sudo::Pallet::<Runtime>::key().expect("No root account"))
 	}
 	fn get_enclave_account(state: &mut State) -> Self::AccountId {
-		state.execute_with(|| enclave_signer_account::<Self::AccountId>())
+		state.execute_with(|| enclave_signer_account::<Self::AccountId>)()
 	}
 }
 
