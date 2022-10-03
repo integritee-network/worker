@@ -14,10 +14,14 @@
 	limitations under the License.
 
 */
+
+/// Interface trait of the system pallet.
 pub trait SystemPalletAccountInterface<State, AccountId> {
 	type Index;
 	type AccountData;
 
+	/// Get the nonce for a given account and state.
 	fn get_account_nonce(state: &mut State, account_id: &AccountId) -> Self::Index;
+	/// Get the account date for a given account and state.
 	fn get_account_data(state: &mut State, account: &AccountId) -> Self::AccountData;
 }

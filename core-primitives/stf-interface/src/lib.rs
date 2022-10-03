@@ -31,18 +31,25 @@ pub mod parentchain_pallet;
 pub mod sudo_pallet;
 pub mod system_pallet;
 
+/// Interface to initialize a new state.
 pub trait InitState<State, AccountId> {
+	/// Initialize a new state for a given enclave account.
 	fn init_state(enclave_account: AccountId) -> State;
 }
 
+/// Interface for all functions calls necessary to update an already
+/// initialized state.
 pub trait UpdateState<State, StateDiff> {
+	/// Updates a given state for
 	fn apply_state_diff(state: &mut State, state_diff: StateDiff);
 	fn storage_hashes_to_update_on_block() -> Vec<Vec<u8>>;
 }
 
+/// Interface to execute state mutating calls on a state.
 pub trait StateCallInterface<Call, State> {
 	type Error;
 
+	/// Execute a call on a specific state. Callbacks are added as an `OpaqueCall`.
 	fn execute_call(
 		state: &mut State,
 		call: Call,
@@ -51,23 +58,31 @@ pub trait StateCallInterface<Call, State> {
 	) -> Result<(), Self::Error>;
 }
 
+/// Interface to execute state reading getters on a state.
 pub trait StateGetterInterface<Getter, State> {
+	/// Execute a getter on a specific state.
 	fn execute_getter(state: &mut State, getter: Getter) -> Option<Vec<u8>>;
 }
 
+/// Trait used to abstract the call execution.
 pub trait ExecuteCall {
 	type Error;
 
+	/// Execute a call. Callbacks are added as an `OpaqueCall`.
 	fn execute(
 		self,
 		calls: &mut Vec<OpaqueCall>,
 		unshield_funds_fn: [u8; 2],
 	) -> Result<(), Self::Error>;
 
+	/// Get storages hashes that should be updated for a specific call.
 	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>>;
 }
 
+/// Trait used to abstract the getter execution.
 pub trait ExecuteGetter {
+	/// Execute a getter.
 	fn execute(self) -> Option<Vec<u8>>;
+	/// Get storages hashes that should be updated for a specific getter.
 	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>>;
 }

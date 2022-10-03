@@ -15,8 +15,7 @@
 
 */
 
-//! Provides a state interface.
-//! This allow to easily mock the stf and exchange it with another storage.
+//! Provides a mock which implements all traits within this crate.
 
 extern crate alloc;
 use crate::{

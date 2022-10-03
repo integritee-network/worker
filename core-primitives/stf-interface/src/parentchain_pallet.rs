@@ -15,6 +15,7 @@
 
 */
 
+/// Interface trait of the parentchain pallet.
 pub trait ParentchainPalletInterface<State, ParentchainHeader> {
 	type Error;
 

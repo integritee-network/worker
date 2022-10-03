@@ -15,9 +15,12 @@
 
 */
 
+/// Interface trait of the sudo pallet.
 pub trait SudoPalletInterface<State> {
 	type AccountId;
 
+	/// Get the root account for a given state.
 	fn get_root(state: &mut State) -> Self::AccountId;
+	/// Get the enclave account for a given state.
 	fn get_enclave_account(state: &mut State) -> Self::AccountId;
 }
