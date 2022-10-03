@@ -49,14 +49,8 @@ pub type TestTopPoolAuthor = Author<
 >;
 pub type TestStf = Stf<TrustedCallSigned, Getter, SgxExternalities, Runtime>;
 
-pub type TestStfExecutor = StfExecutor<
-	OcallApi,
-	HandleStateMock,
-	NodeMetadataRepository<NodeMetadataMock>,
-	TestStf,
-	TrustedCallSigned,
-	Getter,
->;
+pub type TestStfExecutor =
+	StfExecutor<OcallApi, HandleStateMock, NodeMetadataRepository<NodeMetadataMock>, TestStf>;
 
 /// Returns all the things that are commonly used in tests and runs
 /// `ensure_no_empty_shard_directory_exists`

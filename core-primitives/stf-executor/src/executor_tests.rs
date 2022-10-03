@@ -30,7 +30,6 @@ use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
-use itp_stf_interface::mocks::{CallExecutorMock, GetterExecutorMock};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{handle_state_mock::HandleStateMock, onchain_mock::OnchainMock};
 use itp_types::H256;
@@ -329,14 +328,7 @@ pub fn upon_false_signature_get_stf_state_errs() {
 
 // Helper Functions
 fn stf_executor() -> (
-	StfExecutor<
-		OnchainMock,
-		HandleStateMock,
-		NodeMetadataRepository<NodeMetadataMock>,
-		StfState,
-		CallExecutorMock,
-		GetterExecutorMock,
-	>,
+	StfExecutor<OnchainMock, HandleStateMock, NodeMetadataRepository<NodeMetadataMock>, StfState>,
 	Arc<OnchainMock>,
 	Arc<HandleStateMock>,
 ) {

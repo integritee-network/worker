@@ -92,14 +92,8 @@ pub type EnclaveStateHandler = StateHandler<EnclaveStateSnapshotRepository, Encl
 pub type EnclaveGetterExecutor = GetterExecutor<EnclaveStateObserver, StfStateGetter>;
 pub type EnclaveOCallApi = OcallApi;
 pub type EnclaveNodeMetadataRepository = NodeMetadataRepository<NodeMetadata>;
-pub type EnclaveStfExecutor = StfExecutor<
-	EnclaveOCallApi,
-	EnclaveStateHandler,
-	EnclaveNodeMetadataRepository,
-	EnclaveStf,
-	EnclaveTrustedCallSigned,
-	EnclaveGetter,
->;
+pub type EnclaveStfExecutor =
+	StfExecutor<EnclaveOCallApi, EnclaveStateHandler, EnclaveNodeMetadataRepository, EnclaveStf>;
 pub type EnclaveStfEnclaveSigner = StfEnclaveSigner<
 	EnclaveOCallApi,
 	EnclaveStateObserver,

@@ -64,14 +64,8 @@ pub type TestParentchainBlockImportTrigger =
 
 pub type TestNodeMetadataRepository = NodeMetadataRepository<NodeMetadataMock>;
 
-pub type TestStfExecutor = StfExecutor<
-	TestOCallApi,
-	TestStateHandler,
-	TestNodeMetadataRepository,
-	TestStf,
-	TestCall,
-	TestGetter,
->;
+pub type TestStfExecutor =
+	StfExecutor<TestOCallApi, TestStateHandler, TestNodeMetadataRepository, TestStf>;
 
 pub type TestRpcResponder = RpcResponderMock<H256>;
 

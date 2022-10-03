@@ -35,7 +35,7 @@ use itp_node_api::metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessN
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_stf_interface::{
-	parentchain_pallet::ParentchainPalletInterface, ExecuteCall, ExecuteGetter, StateCallInterface,
+	parentchain_pallet::ParentchainPalletInterface, ExecuteCall, StateCallInterface,
 	StateGetterInterface, UpdateState,
 };
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
@@ -48,15 +48,15 @@ use std::{
 	sync::Arc, time::Duration, vec::Vec,
 };
 
-pub struct StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf, Call, Getter> {
+pub struct StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf> {
 	ocall_api: Arc<OCallApi>,
 	state_handler: Arc<StateHandler>,
 	node_metadata_repo: Arc<NodeMetadataRepository>,
-	_phantom: PhantomData<(Call, Getter, Stf)>,
+	_phantom: PhantomData<Stf>,
 }
 
-impl<OCallApi, StateHandler, NodeMetadataRepository, Stf, Call, Getter>
-	StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf, Call, Getter>
+impl<OCallApi, StateHandler, NodeMetadataRepository, Stf>
+	StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
 	StateHandler: HandleState<HashType = H256>,
@@ -153,8 +153,8 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler, NodeMetadataRepository, Stf, Call, Getter> StfUpdateState
-	for StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf, Call, Getter>
+impl<OCallApi, StateHandler, NodeMetadataRepository, Stf> StfUpdateState
+	for StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
 	StateHandler: HandleState<HashType = H256> + QueryShardState,
@@ -230,8 +230,8 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler, NodeMetadataRepository, Stf, Call, Getter> StateUpdateProposer
-	for StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf, Call, Getter>
+impl<OCallApi, StateHandler, NodeMetadataRepository, Stf> StateUpdateProposer
+	for StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
 	StateHandler: HandleState<HashType = H256>,
@@ -303,8 +303,8 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler, NodeMetadataRepository, Stf, Call, Getter> StfExecuteTimedGettersBatch
-	for StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf, Call, Getter>
+impl<OCallApi, StateHandler, NodeMetadataRepository, Stf> StfExecuteTimedGettersBatch
+	for StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
 	StateHandler: HandleState<HashType = H256>,
@@ -314,8 +314,6 @@ where
 		StateHandler::StateT,
 		<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
 	>,
-	Call: ExecuteCall,
-	Getter: ExecuteGetter,
 	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
 		IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>,
 {
@@ -359,8 +357,8 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler, NodeMetadataRepository, Stf, Call, Getter> StfExecuteGenericUpdate
-	for StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf, Call, Getter>
+impl<OCallApi, StateHandler, NodeMetadataRepository, Stf> StfExecuteGenericUpdate
+	for StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf>
 where
 	StateHandler: HandleState<HashType = H256>,
 	StateHandler::StateT: SgxExternalitiesTrait + Encode,
@@ -369,8 +367,6 @@ where
 		StateHandler::StateT,
 		<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
 	>,
-	Call: ExecuteCall,
-	Getter: ExecuteGetter,
 	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
 		IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>,
 {
