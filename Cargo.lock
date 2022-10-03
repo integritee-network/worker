@@ -3230,6 +3230,7 @@ dependencies = [
 name = "itp-stf-state-handler"
 version = "0.9.0"
 dependencies = [
+ "ita-sgx-runtime",
  "ita-stf",
  "itp-settings",
  "itp-sgx-crypto",

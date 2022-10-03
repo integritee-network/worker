@@ -31,8 +31,11 @@ pub mod parentchain_pallet;
 pub mod sudo_pallet;
 pub mod system_pallet;
 
-pub trait StateInterface<State, StateDiff> {
-	fn init_state(initial_input: Vec<u8>) -> State;
+pub trait InitState<State, AccountId> {
+	fn init_state(enclave_account: AccountId) -> State;
+}
+
+pub trait UpdateState<State, StateDiff> {
 	fn apply_state_diff(state: &mut State, state_diff: StateDiff);
 	fn storage_hashes_to_update_on_block() -> Vec<Vec<u8>>;
 }

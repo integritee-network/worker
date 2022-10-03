@@ -18,36 +18,33 @@
 #[cfg(feature = "test")]
 use crate::test_genesis::test_genesis_setup;
 
-use crate::{
-	helpers::enclave_signer_account, AccountId, ShardIdentifier, Stf, StfError, ENCLAVE_ACCOUNT_KEY,
-};
-use codec::{Decode, Encode};
+use crate::{helpers::enclave_signer_account, ShardIdentifier, Stf, StfError, ENCLAVE_ACCOUNT_KEY};
+use codec::Encode;
 use frame_support::traits::{OriginTrait, UnfilteredDispatchable};
-use ita_sgx_runtime::{Runtime, Sudo};
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_interface::{
 	parentchain_pallet::ParentchainPalletInterface, sudo_pallet::SudoPalletInterface,
-	system_pallet::SystemPalletAccountInterface, ExecuteCall, ExecuteGetter, StateCallInterface,
-	StateGetterInterface, StateInterface,
+	system_pallet::SystemPalletAccountInterface, ExecuteCall, ExecuteGetter, InitState,
+	StateCallInterface, StateGetterInterface, UpdateState,
 };
 use itp_storage::storage_value_key;
 use itp_types::OpaqueCall;
 use itp_utils::stringify::account_id_to_string;
 use log::*;
-use sp_runtime::MultiAddress;
+use sp_runtime::traits::StaticLookup;
 use std::{fmt::Debug, format, prelude::v1::*, vec};
 
-impl<Call, Getter, State, Runtime>
-	StateInterface<State, <State as SgxExternalitiesTrait>::SgxExternalitiesDiffType>
+impl<Call, Getter, State, Runtime, AccountId> InitState<State, AccountId>
 	for Stf<Call, Getter, State, Runtime>
 where
 	State: SgxExternalitiesTrait + Debug,
 	<State as SgxExternalitiesTrait>::SgxExternalitiesType: core::default::Default,
-	<State as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
-		IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>,
+	Runtime: frame_system::Config<AccountId = AccountId> + pallet_balances::Config,
+	<<Runtime as frame_system::Config>::Lookup as StaticLookup>::Source:
+		std::convert::From<AccountId>,
+	AccountId: Encode,
 {
-	fn init_state(initial_input: Vec<u8>) -> State {
-		let enclave_account = AccountId::decode(&mut initial_input.as_slice()).unwrap();
+	fn init_state(enclave_account: AccountId) -> State {
 		debug!("initializing stf state, account id {}", account_id_to_string(&enclave_account));
 		let mut state = State::new(Default::default());
 
@@ -81,7 +78,7 @@ where
 				&enclave_account.encode(),
 			);
 
-			if let Err(e) = create_enclave_self_account(&enclave_account) {
+			if let Err(e) = create_enclave_self_account::<Runtime, AccountId>(enclave_account) {
 				error!("Failed to initialize the enclave signer account: {:?}", e);
 			}
 		});
@@ -89,7 +86,17 @@ where
 		trace!("Returning updated state: {:?}", state);
 		state
 	}
+}
 
+impl<Call, Getter, State, Runtime>
+	UpdateState<State, <State as SgxExternalitiesTrait>::SgxExternalitiesDiffType>
+	for Stf<Call, Getter, State, Runtime>
+where
+	State: SgxExternalitiesTrait + Debug,
+	<State as SgxExternalitiesTrait>::SgxExternalitiesType: core::default::Default,
+	<State as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
+		IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>,
+{
 	fn apply_state_diff(
 		state: &mut State,
 		map_update: <State as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
@@ -149,8 +156,9 @@ where
 	fn get_root(state: &mut State) -> Self::AccountId {
 		state.execute_with(|| pallet_sudo::Pallet::<Runtime>::key().expect("No root account"))
 	}
+
 	fn get_enclave_account(state: &mut State) -> Self::AccountId {
-		state.execute_with(|| enclave_signer_account::<Self::AccountId>)()
+		state.execute_with(|| enclave_signer_account::<Self::AccountId>())
 	}
 }
 
@@ -171,6 +179,7 @@ where
 			nonce
 		})
 	}
+
 	fn get_account_data(state: &mut State, account: &AccountId) -> Self::AccountData {
 		state.execute_with(|| frame_system::Pallet::<Runtime>::account(account).data)
 	}
@@ -209,19 +218,22 @@ pub fn shards_key_hash() -> Vec<u8> {
 	vec![]
 }
 
-pub fn is_root(account: &AccountId) -> bool {
-	Sudo::key().map_or(false, |k| account == &k)
-}
-
 /// Creates valid enclave account with a balance that is above the existential deposit.
 /// !! Requires a root to be set.
-fn create_enclave_self_account(enclave_account: &AccountId) -> Result<(), StfError> {
-	ita_sgx_runtime::BalancesCall::<Runtime>::set_balance {
-		who: MultiAddress::Id(enclave_account.clone()),
-		new_free: 1000,
-		new_reserved: 0,
+fn create_enclave_self_account<Runtime, AccountId>(
+	enclave_account: AccountId,
+) -> Result<(), StfError>
+where
+	Runtime: frame_system::Config<AccountId = AccountId> + pallet_balances::Config,
+	<<Runtime as frame_system::Config>::Lookup as StaticLookup>::Source: From<AccountId>,
+	Runtime::Balance: From<u32>,
+{
+	pallet_balances::Call::<Runtime>::set_balance {
+		who: enclave_account.into(),
+		new_free: 1000.into(),
+		new_reserved: 0.into(),
 	}
-	.dispatch_bypass_filter(ita_sgx_runtime::Origin::root())
+	.dispatch_bypass_filter(Runtime::Origin::root())
 	.map_err(|e| {
 		StfError::Dispatch(format!("Set Balance for enclave signer account error: {:?}", e.error))
 	})

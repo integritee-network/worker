@@ -16,11 +16,10 @@
 */
 
 use crate::{AccountId, Getter, Signature, State, Stf, TrustedCall, TrustedCallSigned};
-use codec::Encode;
 use ita_sgx_runtime::Runtime;
 use itp_stf_interface::{
-	sudo_pallet::SudoPalletInterface, system_pallet::SystemPalletAccountInterface,
-	StateCallInterface, StateInterface,
+	sudo_pallet::SudoPalletInterface, system_pallet::SystemPalletAccountInterface, InitState,
+	StateCallInterface,
 };
 use sp_core::{
 	ed25519::{Pair as Ed25519Pair, Signature as Ed25519Signature},
@@ -32,7 +31,7 @@ pub type StfState = Stf<TrustedCallSigned, Getter, State, Runtime>;
 
 pub fn enclave_account_initialization_works() {
 	let enclave_account = AccountId::new([2u8; 32]);
-	let mut state = StfState::init_state(enclave_account.encode());
+	let mut state = StfState::init_state(enclave_account.clone());
 	let _root = StfState::get_root(&mut state);
 	let account_data = StfState::get_account_data(&mut state, &enclave_account);
 
@@ -44,7 +43,7 @@ pub fn enclave_account_initialization_works() {
 pub fn shield_funds_increments_signer_account_nonce() {
 	let enclave_call_signer = Ed25519Pair::from_seed(b"14672678901234567890123456789012");
 	let enclave_signer_account_id: AccountId = enclave_call_signer.public().into();
-	let mut state = StfState::init_state(enclave_signer_account_id.encode());
+	let mut state = StfState::init_state(enclave_signer_account_id.clone());
 
 	let shield_funds_call = TrustedCallSigned::new(
 		TrustedCall::balance_shield(
@@ -62,7 +61,7 @@ pub fn shield_funds_increments_signer_account_nonce() {
 
 pub fn test_root_account_exists_after_initialization() {
 	let enclave_account = AccountId::new([2u8; 32]);
-	let mut state = StfState::init_state(enclave_account.encode());
+	let mut state = StfState::init_state(enclave_account);
 	let root_account = StfState::get_root(&mut state);
 
 	let account_data = StfState::get_account_data(&mut state, &root_account);

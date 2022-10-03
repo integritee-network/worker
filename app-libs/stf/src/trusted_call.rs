@@ -183,7 +183,7 @@ impl ExecuteCall for TrustedCallSigned {
 		);
 		match self.call {
 			TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
-				ensure!(crate::stf_sgx::is_root(&root), Self::Error::MissingPrivileges(root));
+				ensure!(is_root::<Runtime, AccountId>(&root), Self::Error::MissingPrivileges(root));
 				debug!(
 					"balance_set_balance({}, {}, {})",
 					account_id_to_string(&who),
@@ -406,6 +406,14 @@ fn shield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
 	.map_err(|e| StfError::Dispatch(format!("Shield funds error: {:?}", e.error)))?;
 
 	Ok(())
+}
+
+fn is_root<Runtime, AccountId>(account: &AccountId) -> bool
+where
+	Runtime: frame_system::Config<AccountId = AccountId> + pallet_sudo::Config,
+	AccountId: PartialEq,
+{
+	pallet_sudo::Pallet::<Runtime>::key().map_or(false, |k| account == &k)
 }
 
 #[cfg(test)]

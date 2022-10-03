@@ -20,8 +20,8 @@
 
 extern crate alloc;
 use crate::{
-	system_pallet::SystemPalletAccountInterface, ExecuteCall, ExecuteGetter, StateCallInterface,
-	StateGetterInterface, StateInterface,
+	system_pallet::SystemPalletAccountInterface, ExecuteCall, ExecuteGetter, InitState,
+	StateCallInterface, StateGetterInterface, UpdateState,
 };
 use alloc::{string::String, vec::Vec};
 use core::marker::PhantomData;
@@ -32,11 +32,15 @@ pub struct StateInterfaceMock<State, StateDiff> {
 	_phantom: PhantomData<(State, StateDiff)>,
 }
 
-impl<State, StateDiff> StateInterface<State, StateDiff> for StateInterfaceMock<State, StateDiff> {
-	fn init_state(_initial_input: Vec<u8>) -> State {
+impl<State, StateDiff, AccountId> InitState<State, AccountId>
+	for StateInterfaceMock<State, StateDiff>
+{
+	fn init_state(_enclave_account: AccountId) -> State {
 		unimplemented!()
 	}
+}
 
+impl<State, StateDiff> UpdateState<State, StateDiff> for StateInterfaceMock<State, StateDiff> {
 	fn apply_state_diff(_state: &mut State, _state_diff: StateDiff) {
 		unimplemented!()
 	}

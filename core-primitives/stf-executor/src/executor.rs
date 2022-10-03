@@ -36,7 +36,7 @@ use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_stf_interface::{
 	parentchain_pallet::ParentchainPalletInterface, ExecuteCall, ExecuteGetter, StateCallInterface,
-	StateGetterInterface, StateInterface,
+	StateGetterInterface, UpdateState,
 };
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_time_utils::duration_now;
@@ -63,7 +63,7 @@ where
 	StateHandler::StateT: SgxExternalitiesTrait + Encode,
 	NodeMetadataRepository: AccessNodeMetadata,
 	NodeMetadataRepository::MetadataType: TeerexCallIndexes,
-	Stf: StateInterface<
+	Stf: UpdateState<
 			StateHandler::StateT,
 			<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
 		> + StateCallInterface<TrustedCallSigned, StateHandler::StateT>,
@@ -160,7 +160,7 @@ where
 	StateHandler: HandleState<HashType = H256> + QueryShardState,
 	StateHandler::StateT: SgxExternalitiesTrait + Encode,
 	NodeMetadataRepository: AccessNodeMetadata,
-	Stf: StateInterface<
+	Stf: UpdateState<
 			StateHandler::StateT,
 			<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
 		> + ParentchainPalletInterface<StateHandler::StateT, ParentchainHeader>,
@@ -239,7 +239,7 @@ where
 	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesType: Encode,
 	NodeMetadataRepository: AccessNodeMetadata,
 	NodeMetadataRepository::MetadataType: TeerexCallIndexes,
-	Stf: StateInterface<
+	Stf: UpdateState<
 			StateHandler::StateT,
 			<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
 		> + StateCallInterface<TrustedCallSigned, StateHandler::StateT>,
@@ -310,7 +310,7 @@ where
 	StateHandler: HandleState<HashType = H256>,
 	StateHandler::StateT: SgxExternalitiesTrait + Encode + Debug,
 	NodeMetadataRepository: AccessNodeMetadata,
-	Stf: StateInterface<
+	Stf: UpdateState<
 		StateHandler::StateT,
 		<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
 	>,
@@ -365,7 +365,7 @@ where
 	StateHandler: HandleState<HashType = H256>,
 	StateHandler::StateT: SgxExternalitiesTrait + Encode,
 	NodeMetadataRepository: AccessNodeMetadata,
-	Stf: StateInterface<
+	Stf: UpdateState<
 		StateHandler::StateT,
 		<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
 	>,

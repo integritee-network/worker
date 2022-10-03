@@ -96,7 +96,7 @@ pub mod sgx {
 	use itp_sgx_crypto::{key_repository::AccessKey, StateCrypto};
 	use itp_sgx_externalities::SgxExternalitiesTrait;
 	use itp_sgx_io::{read as io_read, write as io_write};
-	use itp_stf_interface::StateInterface;
+	use itp_stf_interface::InitState;
 	use itp_types::H256;
 	use log::*;
 	use sgx_tcrypto::rsgx_sha256_slice;
@@ -113,7 +113,7 @@ pub mod sgx {
 	where
 		StateKeyRepository: AccessKey,
 		<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
-		Stf: StateInterface<State, <State as SgxExternalitiesTrait>::SgxExternalitiesDiffType>,
+		Stf: InitState<State, AccountId>,
 		State: SgxExternalitiesTrait,
 	{
 		pub fn new(
@@ -161,7 +161,7 @@ pub mod sgx {
 	where
 		StateKeyRepository: AccessKey,
 		<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
-		Stf: StateInterface<State, <State as SgxExternalitiesTrait>::SgxExternalitiesDiffType>,
+		Stf: InitState<State, AccountId>,
 		State: SgxExternalitiesTrait + Debug,
 		<State as SgxExternalitiesTrait>::SgxExternalitiesType: Encode + Decode,
 	{
@@ -219,7 +219,7 @@ pub mod sgx {
 			state_id: StateId,
 		) -> Result<Self::HashType> {
 			init_shard(&shard_identifier)?;
-			let state = Stf::init_state(self.enclave_account.encode());
+			let state = Stf::init_state(self.enclave_account.clone());
 			self.write(shard_identifier, state_id, state)
 		}
 

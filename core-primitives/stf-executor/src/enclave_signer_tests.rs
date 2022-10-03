@@ -16,7 +16,6 @@
 */
 
 use crate::{enclave_signer::StfEnclaveSigner, traits::StfEnclaveSigning};
-use codec::Encode;
 use ita_sgx_runtime::Runtime;
 use ita_stf::{AccountId, ShardIdentifier, Stf, TrustedCall};
 use itp_ocall_api::EnclaveAttestationOCallApi;
@@ -26,7 +25,7 @@ use itp_sgx_crypto::{
 use itp_sgx_externalities::SgxExternalities;
 use itp_stf_interface::{
 	mocks::{CallExecutorMock, GetterExecutorMock},
-	StateInterface,
+	InitState,
 };
 use itp_stf_state_observer::mock::ObserveStateMock;
 use itp_test::mock::onchain_mock::OnchainMock;
@@ -57,7 +56,7 @@ pub fn enclave_signer_signatures_are_valid() {
 		.into();
 
 	let state_observer: Arc<ObserveStateMock<SgxExternalities>> =
-		Arc::new(ObserveStateMock::new(TestStf::init_state(enclave_account.encode())));
+		Arc::new(ObserveStateMock::new(TestStf::init_state(enclave_account.clone())));
 	let shard = ShardIdentifier::default();
 	let mr_enclave = ocall_api.get_mrenclave_of_self().unwrap();
 	let enclave_signer =
