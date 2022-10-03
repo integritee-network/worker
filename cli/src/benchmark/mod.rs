@@ -243,8 +243,7 @@ fn get_balance(
 	direct_client: &DirectClient,
 ) -> Option<u128> {
 	let getter = Getter::trusted(
-		TrustedGetter::free_balance(account.public().into())
-			.sign(&KeyPair::Sr25519(account.clone())),
+		TrustedGetter::free_balance(account.public().into()).sign(&KeyPair::Sr25519(account)),
 	);
 
 	let getter_start_timer = Instant::now();
