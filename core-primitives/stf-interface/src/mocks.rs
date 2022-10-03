@@ -89,18 +89,6 @@ impl<State, StateDiff, AccountId> SystemPalletAccountInterface<State, AccountId>
 
 pub struct CallExecutorMock {}
 
-impl CallExecutorMock {
-	pub fn new() -> Self {
-		Self::default()
-	}
-}
-
-impl CallExecutorMock {
-	fn default() -> Self {
-		Self {}
-	}
-}
-
 impl ExecuteCall for CallExecutorMock {
 	type Error = String;
 
@@ -118,18 +106,6 @@ impl ExecuteCall for CallExecutorMock {
 }
 
 pub struct GetterExecutorMock {}
-
-impl GetterExecutorMock {
-	pub fn new() -> Self {
-		Self::default()
-	}
-}
-
-impl GetterExecutorMock {
-	fn default() -> Self {
-		Self {}
-	}
-}
 
 impl ExecuteGetter for GetterExecutorMock {
 	fn execute(self) -> Option<Vec<u8>> {
