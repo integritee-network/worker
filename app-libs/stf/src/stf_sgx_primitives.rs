@@ -17,7 +17,6 @@
 
 use codec::{Decode, Encode};
 use itp_types::H256;
-
 use std::marker::PhantomData;
 
 pub mod types {
