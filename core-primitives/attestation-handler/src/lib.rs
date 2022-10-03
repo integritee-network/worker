@@ -43,7 +43,6 @@ pub mod cert;
 
 pub mod error;
 
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub mod utils;
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
