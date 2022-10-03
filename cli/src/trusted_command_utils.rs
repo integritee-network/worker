@@ -61,17 +61,21 @@ pub(crate) fn get_balance(cli: &Cli, trusted_args: &TrustedArgs, arg_who: &str) 
 		.into();
 	let res = perform_trusted_operation(cli, trusted_args, &top);
 	debug!("received result for balance");
-	let bal = if let Some(v) = res {
-		if let Ok(vd) = Balance::decode(&mut v.as_slice()) {
-			Some(vd)
-		} else {
-			info!("could not decode value. maybe hasn't been set? {:x?}", v);
-			None
-		}
-	} else {
-		None
-	};
-	bal
+	decode_balance(res)
+}
+
+pub(crate) fn decode_balance(maybe_encoded_balance: Option<Vec<u8>>) -> Option<Balance> {
+	let balance = maybe_encoded_balance
+		.map(|encoded_balance| {
+			if let Ok(vd) = Balance::decode(&mut encoded_balance.as_slice()) {
+				Some(vd)
+			} else {
+				warn!("Could not decode balance. maybe hasn't been set? {:x?}", encoded_balance);
+				None
+			}
+		})
+		.flatten();
+	balance
 }
 
 pub(crate) fn get_keystore_path(trusted_args: &TrustedArgs) -> PathBuf {

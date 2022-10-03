@@ -18,7 +18,9 @@
 use crate::{
 	command_utils::get_worker_api_direct,
 	get_layer_two_nonce,
-	trusted_command_utils::{get_balance, get_identifiers, get_keystore_path, get_pair_from_str},
+	trusted_command_utils::{
+		decode_balance, get_identifiers, get_keystore_path, get_pair_from_str,
+	},
 	trusted_commands::TrustedArgs,
 	trusted_operation::{get_json_request, get_state, perform_trusted_operation, wait_until},
 	Cli,
@@ -28,7 +30,7 @@ use hdrhistogram::Histogram;
 use ita_stf::{Getter, Index, KeyPair, TrustedCall, TrustedGetter, TrustedOperation};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
 use itp_types::{
-	TrustedOperationStatus,
+	ShardIdentifier, TrustedOperationStatus,
 	TrustedOperationStatus::{InSidechainBlock, Submitted},
 };
 use log::*;
@@ -208,26 +210,17 @@ impl BenchmarkCommands {
 						&client,
 					);
 
-					let getter = Getter::trusted(
-						TrustedGetter::free_balance(new_account.public().into())
-							.sign(&KeyPair::Sr25519(new_account.clone())),
-					);
-					let getter_start_timer = Instant::now();
-					if get_state(&client.client_api, shard, &getter) == None {
-						warn!("Getter returned None");
-					}
-					info!("Getter execution took {} ms", getter_start_timer.elapsed().as_millis());
-
 					client.current_balance -= keep_alive_balance;
 					client.account = new_account;
 
 					output.push(result);
 				}
-				client.client_api.close().unwrap();
 
-				let balance = get_balance(cli, trusted_args, &client.account.public().to_string());
+				let balance = get_balance(client.account, shard, &client.client_api);
 				println!("Balance: {}", balance.unwrap_or_default());
 				assert_eq!(client.current_balance, balance.unwrap());
+
+				client.client_api.close().unwrap();
 
 				output
 			})
@@ -242,6 +235,23 @@ impl BenchmarkCommands {
 
 		print_benchmark_statistic(outputs, self.wait_for_confirmation)
 	}
+}
+
+fn get_balance(
+	account: sr25519::Pair,
+	shard: ShardIdentifier,
+	direct_client: &DirectClient,
+) -> Option<u128> {
+	let getter = Getter::trusted(
+		TrustedGetter::free_balance(account.public().into())
+			.sign(&KeyPair::Sr25519(account.clone())),
+	);
+
+	let getter_start_timer = Instant::now();
+	let getter_result = get_state(direct_client, shard, &getter);
+	info!("Getter execution took {} ms", getter_start_timer.elapsed().as_millis());
+
+	decode_balance(getter_result)
 }
 
 fn print_benchmark_statistic(outputs: Vec<Vec<BenchmarkTransaction>>, wait_for_confirmation: bool) {
