@@ -158,7 +158,7 @@ where
 	}
 
 	fn get_enclave_account(state: &mut State) -> Self::AccountId {
-		state.execute_with(|| enclave_signer_account::<Self::AccountId>())
+		state.execute_with(enclave_signer_account::<Self::AccountId>)
 	}
 }
 
