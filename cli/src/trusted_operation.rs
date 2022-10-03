@@ -48,11 +48,11 @@ pub(crate) fn perform_trusted_operation(
 	match top {
 		TrustedOperation::indirect_call(_) => send_request(cli, trusted_args, top),
 		TrustedOperation::direct_call(_) => send_direct_request(cli, trusted_args, top),
-		TrustedOperation::get(getter) => get_state_with_new_worker_api(cli, trusted_args, getter),
+		TrustedOperation::get(getter) => execute_getter_from_cli_args(cli, trusted_args, getter),
 	}
 }
 
-fn get_state_with_new_worker_api(
+fn execute_getter_from_cli_args(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
 	getter: &Getter,

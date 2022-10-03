@@ -145,7 +145,7 @@ impl<
 
 		// In case the executed call did not originate in our own TOP pool, we will not be able to remove it from our TOP pool.
 		// So this error will occur frequently, without it meaning that something really went wrong.
-		// (This might change once we have TOP pool gossiping)
+		// TODO: Once the TOP pools are synchronized, we will want this check again!
 		// for call_failed_to_remove in _calls_failed_to_remove {
 		// 	error!("Could not remove call {:?} from top pool", call_failed_to_remove);
 		// }

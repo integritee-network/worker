@@ -68,7 +68,6 @@ where
 				StateGetter::get_state(&trusted_getter_signed, state)
 			})??;
 
-			trace!("Successfully executed trusted getter");
 			debug!("Getter executed in {} ms", getter_timer_start.elapsed().as_millis());
 
 			Ok(state_result)
