@@ -963,7 +963,7 @@ mod tests {
 	}
 
 	#[test]
-	fn storage_next_key_works() {
+	fn storage_set_and_next_key_works() {
 		let mut ext = SgxExternalities::default();
 
 		ext.execute_with(|| {
@@ -973,6 +973,7 @@ mod tests {
 		});
 
 		ext.execute_with(|| {
+			assert_eq!(storage::next_key(&[]), Some(b"doe".to_vec()));
 			assert_eq!(storage::next_key(b"d".to_vec().as_slice()), Some(b"doe".to_vec()));
 			assert_eq!(
 				storage::next_key(b"dog".to_vec().as_slice()),
@@ -985,5 +986,22 @@ mod tests {
 			assert_eq!(storage::next_key(b"dogglesworth".to_vec().as_slice()), None);
 			assert_eq!(storage::next_key(b"e".to_vec().as_slice()), None);
 		});
+	}
+
+	#[test]
+	fn storage_next_key_in_empty_externatility_works() {
+		let mut ext = SgxExternalities::default();
+		ext.execute_with(|| {
+			assert_eq!(storage::next_key(&[]), None);
+			assert_eq!(storage::next_key(b"dog".to_vec().as_slice()), None);
+		});
+	}
+
+	#[test]
+	#[should_panic(
+		expected = "`next_key` cannot be called outside of an Externalities-provided environment."
+	)]
+	fn storage_next_key_without_externalities_panics() {
+		storage::next_key(b"d".to_vec().as_slice());
 	}
 }

@@ -24,7 +24,7 @@ extern crate sgx_tstd as std;
 use codec::{Decode, Encode};
 use derive_more::{Deref, DerefMut, From};
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, vec::Vec};
+use std::{collections::BTreeMap, ops::Bound, vec::Vec};
 
 pub use scope_limited::{set_and_run_with_externalities, with_externalities};
 
@@ -105,12 +105,8 @@ impl SgxExternalitiesTrait for SgxExternalities {
 
 	/// get the next key in state after the given one (excluded) in lexicographic order
 	fn next_storage_key(&self, key: &[u8]) -> Option<Vec<u8>> {
-		use std::ops::Bound;
 		let range = (Bound::Excluded(key), Bound::Unbounded);
-		self.state
-			.range::<[u8], _>(range)
-			.map(|(k, v)| (k.as_slice(), v))
-			.find_map(|(k, _v)| Some(k.to_vec())) // directly return k as _v is never None in our case
+		self.state.range::<[u8], _>(range).next().map(|(k, _v)| k.to_vec()) // directly return k as _v is never None in our case
 	}
 
 	/// prunes the state diff
