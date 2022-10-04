@@ -176,6 +176,10 @@ where
 {
 	type Index = Runtime::Index;
 	type AccountData = Runtime::AccountData;
+	type EventRecord = frame_system::EventRecord<Runtime::Event, Runtime::Hash>;
+	type EventIndex = u32; // For some reason this is not a pub type in frame_system
+	type BlockNumber = Runtime::BlockNumber;
+	type Hash = Runtime::Hash;
 
 	fn get_account_nonce(state: &mut State, account: &AccountId) -> Self::Index {
 		state.execute_with(|| {
@@ -187,6 +191,25 @@ where
 
 	fn get_account_data(state: &mut State, account: &AccountId) -> Self::AccountData {
 		state.execute_with(|| frame_system::Pallet::<Runtime>::account(account).data)
+	}
+
+	fn get_events(state: &mut State) -> Vec<Box<Self::EventRecord>> {
+		state.execute_with(|| frame_system::Pallet::<Runtime>::read_events_no_consensus())
+	}
+
+	fn get_event_count(state: &mut State) -> Self::EventIndex {
+		state.execute_with(|| frame_system::Pallet::<Runtime>::event_count())
+	}
+
+	fn get_event_topics(
+		state: &mut State,
+		topic: &Self::Hash,
+	) -> Vec<(Self::BlockNumber, Self::EventIndex)> {
+		state.execute_with(|| frame_system::Pallet::<Runtime>::event_topics(topic))
+	}
+
+	fn reset_events(state: &mut State) {
+		state.execute_with(|| frame_system::Pallet::<Runtime>::reset_events())
 	}
 }
 

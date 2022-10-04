@@ -582,7 +582,7 @@ fn test_shielding_call_with_enclave_self_is_executed() {
 
 pub fn test_retrieve_events() {
 	// given
-	let (_, mut state, shard, mrenclave, _, _) = test_setup();
+	let (_, mut state, shard, mrenclave, ..) = test_setup();
 	let mut opaque_vec = Vec::new();
 	let sender = funded_pair();
 	let receiver = unendowed_account();
@@ -597,13 +597,13 @@ pub fn test_retrieve_events() {
 		transfer_value,
 	)
 	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
-	Stf::execute(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
+	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
 
-	assert_eq!(Stf::events(&mut state).len(), 3);
+	assert_eq!(TestStf::get_events(&mut state).len(), 3);
 }
 
 pub fn test_retrieve_event_count() {
-	let (_, mut state, shard, mrenclave, _, _) = test_setup();
+	let (_, mut state, shard, mrenclave, ..) = test_setup();
 	let mut opaque_vec = Vec::new();
 	let sender = funded_pair();
 	let receiver = unendowed_account();
@@ -620,14 +620,14 @@ pub fn test_retrieve_event_count() {
 	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
 
 	// when
-	Stf::execute(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
+	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
 
-	let event_count = Stf::event_count(&mut state);
+	let event_count = TestStf::get_event_count(&mut state);
 	assert_eq!(event_count, 3);
 }
 
 pub fn test_reset_events() {
-	let (_, mut state, shard, mrenclave, _, _) = test_setup();
+	let (_, mut state, shard, mrenclave, ..) = test_setup();
 	let mut opaque_vec = Vec::new();
 	let sender = funded_pair();
 	let receiver = unendowed_account();
@@ -641,17 +641,17 @@ pub fn test_reset_events() {
 		transfer_value,
 	)
 	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
-	Stf::execute(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
+	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
 	let receiver_acc_info = Stf::account_data(&mut state, &receiver.public().into());
 	assert_eq!(receiver_acc_info.free, transfer_value);
 	// Ensure that there really have been events generated.
-	assert_eq!(Stf::events(&mut state).len(), 3);
+	assert_eq!(TestStf::get_events(&mut state).len(), 3);
 
 	// Remove the events.
-	Stf::reset_events(&mut state);
+	TestStf::reset_events(&mut state);
 
 	// Ensure that the events storage has been cleared.
-	assert_eq!(Stf::events(&mut state).len(), 0);
+	assert_eq!(TestStf::get_events(&mut state).len(), 0);
 }
 
 fn execute_trusted_calls(

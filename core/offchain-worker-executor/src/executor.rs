@@ -25,7 +25,7 @@ use itp_extrinsics_factory::CreateExtrinsics;
 use itp_stf_executor::{traits::StateUpdateProposer, ExecutedOperation};
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_top_pool_author::traits::AuthorApi;
-use itp_types::{OpaqueCall, ShardIdentifier, H256};
+use itp_types::{AccountId, OpaqueCall, ShardIdentifier, H256};
 use log::*;
 use sp_runtime::traits::Block;
 use std::{marker::PhantomData, sync::Arc, time::Duration, vec::Vec};
@@ -45,13 +45,14 @@ pub struct Executor<
 	StateHandler,
 	ValidatorAccessor,
 	ExtrinsicsFactory,
+	Stf,
 > {
 	top_pool_author: Arc<TopPoolAuthor>,
 	stf_executor: Arc<StfExecutor>,
 	state_handler: Arc<StateHandler>,
 	validator_accessor: Arc<ValidatorAccessor>,
 	extrinsics_factory: Arc<ExtrinsicsFactory>,
-	_phantom: PhantomData<ParentchainBlock>,
+	_phantom: PhantomData<(ParentchainBlock, Stf)>,
 }
 
 impl<
@@ -61,6 +62,7 @@ impl<
 		StateHandler,
 		ValidatorAccessor,
 		ExtrinsicsFactory,
+		Stf,
 	>
 	Executor<
 		ParentchainBlock,
@@ -69,6 +71,7 @@ impl<
 		StateHandler,
 		ValidatorAccessor,
 		ExtrinsicsFactory,
+		Stf,
 	> where
 	ParentchainBlock: Block<Hash = H256>,
 	StfExecutor: StateUpdateProposer,
@@ -77,6 +80,7 @@ impl<
 	ValidatorAccessor: ValidatorAccess<ParentchainBlock> + Send + Sync + 'static,
 	ExtrinsicsFactory: CreateExtrinsics,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
+	Stf: SystemPalletAccountInterface<StfExecutor::Externalities, AccountId>,
 {
 	pub fn new(
 		top_pool_author: Arc<TopPoolAuthor>,
