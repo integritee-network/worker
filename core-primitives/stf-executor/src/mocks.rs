@@ -51,12 +51,13 @@ where
 		_header: &PH,
 		_shard: &ShardIdentifier,
 		_max_exec_duration: Duration,
-		_prepare_state_function: F,
+		prepare_state_function: F,
 	) -> Result<BatchExecutionResult<Self::Externalities>>
 	where
 		PH: HeaderTrait<Hash = H256>,
 		F: FnOnce(Self::Externalities) -> Self::Externalities,
 	{
+		let _state = prepare_state_function(Self::Externalities::default());
 		let executed_operations: Vec<ExecutedOperation> = trusted_calls
 			.iter()
 			.map(|c| {
@@ -68,7 +69,7 @@ where
 		Ok(BatchExecutionResult {
 			executed_operations,
 			state_hash_before_execution: H256::default(),
-			state_after_execution: Self::Externalities::default(),
+			state_after_execution: _state,
 		})
 	}
 }
