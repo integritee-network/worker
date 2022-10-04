@@ -77,6 +77,10 @@ impl<State, StateDiff, AccountId> SystemPalletAccountInterface<State, AccountId>
 {
 	type AccountData = String;
 	type Index = u32;
+	type EventRecord = String;
+	type EventIndex = u32;
+	type BlockNumber= u32;
+	type Hash = String;
 
 	fn get_account_nonce(_state: &mut State, _account_id: &AccountId) -> Self::Index {
 		unimplemented!()
@@ -84,7 +88,24 @@ impl<State, StateDiff, AccountId> SystemPalletAccountInterface<State, AccountId>
 	fn get_account_data(_state: &mut State, _account_id: &AccountId) -> Self::AccountData {
 		unimplemented!()
 	}
-}
+	fn get_events(state: &mut State) -> Vec<Box<Self::EventRecord>>{
+		unimplemented!()
+	}
+
+	fn get_event_count(state: &mut State) -> Self::EventIndex{
+		unimplemented!()
+	}
+
+	fn get_event_topics(
+		state: &mut State,
+		topic: &Self::Hash,
+	) -> Vec<(Self::BlockNumber, Self::EventIndex)>{
+		unimplemented!()
+	}
+
+	fn reset_events(state: &mut State){
+		unimplemented!()
+	}
 
 pub struct CallExecutorMock {}
 
