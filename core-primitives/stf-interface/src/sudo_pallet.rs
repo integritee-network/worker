@@ -15,19 +15,12 @@
 
 */
 
-//! Utility methods to stringify certain types that don't have a working
-//! `Debug` implementation on `sgx`.
+/// Interface trait of the sudo pallet.
+pub trait SudoPalletInterface<State> {
+	type AccountId;
 
-use codec::Encode;
-use sp_core::{hexdisplay::HexDisplay, Public};
-use std::{format, string::String};
-
-/// Convert a sp_core public type to string.
-pub fn public_to_string<T: Public>(t: &T) -> String {
-	let crypto_pair = t.to_public_crypto_pair();
-	format!("{}", HexDisplay::from(&crypto_pair.1))
-}
-
-pub fn account_id_to_string<AccountId: Encode>(account: &AccountId) -> String {
-	format!("{}", HexDisplay::from(&account.encode()))
+	/// Get the root account for a given state.
+	fn get_root(state: &mut State) -> Self::AccountId;
+	/// Get the enclave account for a given state.
+	fn get_enclave_account(state: &mut State) -> Self::AccountId;
 }

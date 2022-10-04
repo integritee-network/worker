@@ -16,8 +16,10 @@
 
 */
 
-use ita_stf::{AccountId, State, Stf};
+use super::test_setup::TestStf;
+use ita_stf::{AccountId, State};
 use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
+use itp_stf_interface::InitState;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_types::ShardIdentifier;
 
@@ -30,8 +32,7 @@ pub fn init_state<S: HandleState<StateT = SgxExternalities>>(
 
 	let _hash = state_handler.initialize_shard(shard).unwrap();
 	let (lock, _) = state_handler.load_for_mutation(&shard).unwrap();
-
-	let mut state = Stf::init_state(enclave_account);
+	let mut state = TestStf::init_state(enclave_account);
 	state.prune_state_diff();
 
 	state_handler.write_after_mutation(state.clone(), lock, &shard).unwrap();

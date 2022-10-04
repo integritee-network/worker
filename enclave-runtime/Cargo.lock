@@ -698,6 +698,7 @@ dependencies = [
  "itp-sgx-externalities",
  "itp-sgx-io",
  "itp-stf-executor",
+ "itp-stf-interface",
  "itp-stf-state-handler",
  "itp-stf-state-observer",
  "itp-storage",
@@ -1502,6 +1503,7 @@ dependencies = [
  "ita-sgx-runtime",
  "itp-hashing",
  "itp-sgx-externalities",
+ "itp-stf-interface",
  "itp-storage",
  "itp-types",
  "itp-utils",
@@ -1509,6 +1511,8 @@ dependencies = [
  "its-state",
  "log",
  "pallet-balances",
+ "pallet-parentchain",
+ "pallet-sudo",
  "parity-scale-codec",
  "rlp",
  "sgx_tstd",
@@ -1895,6 +1899,7 @@ dependencies = [
  "serde 1.0.144",
  "sgx_tstd",
  "sgx_types",
+ "sp-core",
 ]
 
 [[package]]
@@ -1908,12 +1913,14 @@ dependencies = [
 name = "itp-stf-executor"
 version = "0.9.0"
 dependencies = [
+ "ita-sgx-runtime",
  "ita-stf",
  "itc-parentchain-test",
  "itp-node-api",
  "itp-ocall-api",
  "itp-sgx-crypto",
  "itp-sgx-externalities",
+ "itp-stf-interface",
  "itp-stf-state-handler",
  "itp-stf-state-observer",
  "itp-storage",
@@ -1932,14 +1939,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "itp-stf-interface"
+version = "0.8.0"
+dependencies = [
+ "itp-types",
+]
+
+[[package]]
 name = "itp-stf-state-handler"
 version = "0.9.0"
 dependencies = [
+ "ita-sgx-runtime",
  "ita-stf",
  "itp-settings",
  "itp-sgx-crypto",
  "itp-sgx-externalities",
  "itp-sgx-io",
+ "itp-stf-interface",
  "itp-stf-state-observer",
  "itp-time-utils",
  "itp-types",
@@ -2001,6 +2017,7 @@ dependencies = [
  "itp-ocall-api",
  "itp-sgx-crypto",
  "itp-sgx-externalities",
+ "itp-stf-interface",
  "itp-stf-state-handler",
  "itp-storage",
  "itp-teerex-storage",
@@ -2077,6 +2094,8 @@ name = "itp-types"
 version = "0.9.0"
 dependencies = [
  "chrono 0.4.22",
+ "frame-system",
+ "pallet-balances",
  "parity-scale-codec",
  "primitive-types",
  "serde 1.0.144",
@@ -2108,6 +2127,7 @@ dependencies = [
  "itp-sgx-crypto",
  "itp-sgx-externalities",
  "itp-stf-executor",
+ "itp-stf-interface",
  "itp-time-utils",
  "itp-top-pool-author",
  "itp-types",
@@ -2165,6 +2185,7 @@ dependencies = [
  "its-state",
  "its-validateer-fetch",
  "log",
+ "parity-scale-codec",
  "sgx_tstd",
  "sp-core",
  "sp-runtime",
@@ -2264,6 +2285,7 @@ version = "0.9.0"
 dependencies = [
  "frame-support",
  "itp-sgx-externalities",
+ "itp-stf-interface",
  "itp-storage",
  "its-primitives",
  "log",
