@@ -152,12 +152,6 @@ log = { git = "https://github.com/integritee-network/log-sgx" }
 
 [patch."https://github.com/paritytech/substrate"]
 sp-io = { path = "../core-primitives/substrate-sgx/sp-io" }
-#frame-system = { path = "../../../substrate/frame/system" }
-
-#[patch."https://github.com/integritee-network/sgx-runtime"]
-#sgx-runtime = { path = "../../sgx-runtime/sgx-runtime", default-features = false}
-#sp-io = { path = "../../sgx-runtime/substrate-sgx/sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
-#sgx-externalities = { path = "../../sgx-runtime/substrate-sgx/externalities"}
 
 #[patch."https://github.com/integritee-network/frontier"]
 #pallet-evm = { path = "../../frontier/frame/evm"}
