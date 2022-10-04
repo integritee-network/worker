@@ -17,6 +17,7 @@
 
 //! Provides a mock which implements all traits within this crate.
 
+
 extern crate alloc;
 use crate::{
 	system_pallet::SystemPalletAccountInterface, ExecuteCall, ExecuteGetter, InitState,
@@ -25,6 +26,40 @@ use crate::{
 use alloc::{string::String, vec::Vec};
 use core::marker::PhantomData;
 use itp_types::OpaqueCall;
+
+
+
+lazy_static! {
+	/// Global counter for event access.
+	pub static ref EVENT_HANDLER: RwLock<<EventCounter> = RwLock::new(EventCounter::new(0))
+}
+
+pub struct EventCounter {
+	counter: u32;
+}
+
+impl EventCounter {
+	pub fn new(counter: u32) -> Self {
+		Self { counter }
+	}
+
+	fn set_counter(&mut self, counter: u32) {
+		*self.counter = counter;
+	}
+
+	fn reset_counter(&mut self) {
+		*self.counter = 0;
+	}
+
+	fn get_counter(&self) -> u32 {
+		self.counter
+	}
+}
+
+pub fn set_event_counter(counter: u32) {
+	let mut rw_lock = cache.write().unwrap();
+	rw_lock.set_counter(counter);
+}
 
 #[derive(Default)]
 pub struct StateInterfaceMock<State, StateDiff> {
@@ -79,7 +114,7 @@ impl<State, StateDiff, AccountId> SystemPalletAccountInterface<State, AccountId>
 	type Index = u32;
 	type EventRecord = String;
 	type EventIndex = u32;
-	type BlockNumber= u32;
+	type BlockNumber = u32;
 	type Hash = String;
 
 	fn get_account_nonce(_state: &mut State, _account_id: &AccountId) -> Self::Index {
@@ -88,23 +123,25 @@ impl<State, StateDiff, AccountId> SystemPalletAccountInterface<State, AccountId>
 	fn get_account_data(_state: &mut State, _account_id: &AccountId) -> Self::AccountData {
 		unimplemented!()
 	}
-	fn get_events(state: &mut State) -> Vec<Box<Self::EventRecord>>{
+	fn get_events(_state: &mut State) -> Vec<Box<Self::EventRecord>>{
 		unimplemented!()
 	}
 
-	fn get_event_count(state: &mut State) -> Self::EventIndex{
-		unimplemented!()
+	fn get_event_count(_state: &mut State) -> Self::EventIndex{
+		let lock = EVENT_HANDLER.read().unwrap();
+		lock.get_counter();
 	}
 
 	fn get_event_topics(
-		state: &mut State,
-		topic: &Self::Hash,
+		_state: &mut State,
+		_topic: &Self::Hash,
 	) -> Vec<(Self::BlockNumber, Self::EventIndex)>{
 		unimplemented!()
 	}
 
 	fn reset_events(state: &mut State){
-		unimplemented!()
+		let mut lock = EVENT_HANDLER.write().unwrap();
+		lock.reset_counter();
 	}
 
 pub struct CallExecutorMock {}
