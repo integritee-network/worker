@@ -15,6 +15,7 @@ itp-node-api = { path = "../../core-primitives/node-api", default-features = fal
 itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", default-features = false }
 itp-sgx-externalities = { default-features = false, path = "../../core-primitives/substrate-sgx/externalities" }
 itp-stf-executor = { path = "../../core-primitives/stf-executor", default-features = false }
+itp-stf-interface = { path = "../../core-primitives/stf-interface", default-features = false }
 itp-time-utils = { path = "../../core-primitives/time-utils", default-features = false }
 itp-top-pool-author = { path = "../../core-primitives/top-pool-author", default-features = false }
 itp-types = { path = "../../core-primitives/types", default-features = false }
@@ -42,6 +43,7 @@ std = [
     "itp-sgx-crypto/std",
     "itp-sgx-externalities/std",
     "itp-stf-executor/std",
+    "itp-stf-interface/std",
     "itp-time-utils/std",
     "itp-top-pool-author/std",
     "itp-types/std",

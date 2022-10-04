@@ -21,4 +21,4 @@ jobs:
   E-label-check:
     uses: ./.github/workflows/label-checker.yml
     with:
-        predefined_labels: "E0-breaksnothing,E3-dependencies,E5-publicapi,E6-parentchain,E8-breakseverything"
+        predefined_labels: "E0-breaksnothing,E3-hardmerge,E5-publicapi,E6-parentchain,E8-breakseverything"

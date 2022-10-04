@@ -29,10 +29,12 @@ use crate::{
 	state_snapshot_repository_loader::StateSnapshotRepositoryLoader,
 };
 use codec::{Decode, Encode};
-use ita_stf::{AccountId, State as StfState, StateType as StfStateType};
+use ita_sgx_runtime::Runtime;
+use ita_stf::{AccountId, State as StfState, StateType as StfStateType, Stf};
 use itp_sgx_crypto::{mocks::KeyRepositoryMock, Aes, AesSeal, StateCrypto};
-use itp_sgx_externalities::SgxExternalitiesTrait;
+use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use itp_sgx_io::{write, StaticSealedIO};
+use itp_stf_interface::mocks::{CallExecutorMock, GetterExecutorMock};
 use itp_stf_state_observer::state_observer::StateObserver;
 use itp_types::{ShardIdentifier, H256};
 use sp_core::hashing::blake2_256;
@@ -40,8 +42,9 @@ use std::{sync::Arc, thread, vec::Vec};
 
 const STATE_SNAPSHOTS_CACHE_SIZE: usize = 3;
 
+type TestStf = Stf<CallExecutorMock, GetterExecutorMock, SgxExternalities, Runtime>;
 type StateKeyRepositoryMock = KeyRepositoryMock<Aes>;
-type TestStateFileIo = SgxStateFileIo<StateKeyRepositoryMock>;
+type TestStateFileIo = SgxStateFileIo<StateKeyRepositoryMock, TestStf, SgxExternalities>;
 type TestStateRepository = StateSnapshotRepository<TestStateFileIo, StfState, H256>;
 type TestStateRepositoryLoader = StateSnapshotRepositoryLoader<TestStateFileIo, StfState, H256>;
 type TestStateObserver = StateObserver<StfState>;
@@ -324,7 +327,7 @@ fn update_state(
 fn given_hello_world_state() -> StfState {
 	let key: Vec<u8> = "hello".encode();
 	let value: Vec<u8> = "world".encode();
-	let mut state = StfState::new();
+	let mut state = StfState::new(Default::default());
 	state.insert(key, value);
 	state
 }

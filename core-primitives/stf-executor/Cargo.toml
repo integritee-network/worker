@@ -11,11 +11,13 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # local dependencies
+ita-sgx-runtime = { path = "../../app-libs/sgx-runtime", default-features = false }
 ita-stf = { path = "../../app-libs/stf", default-features = false }
 itp-node-api = { path = "../node-api", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
 itp-sgx-externalities = { default-features = false, path = "../substrate-sgx/externalities" }
+itp-stf-interface = { path = "../stf-interface", default-features = false }
 itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
 itp-stf-state-observer = { path = "../stf-state-observer", default-features = false }
 itp-storage = { path = "../storage", default-features = false }
@@ -51,10 +53,12 @@ default = ["std"]
 std = [
     # local
     "ita-stf/std",
+    "ita-sgx-runtime/std",
     "itp-node-api/std",
     "itp-ocall-api/std",
     "itp-sgx-crypto/std",
     "itp-sgx-externalities/std",
+    "itp-stf-interface/std",
     "itp-stf-state-handler/std",
     "itp-stf-state-observer/std",
     "itp-storage/std",

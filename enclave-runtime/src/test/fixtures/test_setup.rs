@@ -20,9 +20,13 @@ use crate::{
 		fixtures::initialize_test_state::init_state, mocks::rpc_responder_mock::RpcResponderMock,
 	},
 };
-use ita_stf::{ShardIdentifier, State};
+use ita_sgx_runtime::Runtime;
+use ita_stf::{Getter, ShardIdentifier, State, Stf, TrustedCallSigned};
+use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{ed25519_derivation::DeriveEd25519, mocks::KeyRepositoryMock};
+use itp_sgx_externalities::SgxExternalities;
+use itp_stf_executor::executor::StfExecutor;
 use itp_test::mock::{
 	handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock,
 	shielding_crypto_mock::ShieldingCryptoMock,
@@ -43,6 +47,10 @@ pub type TestTopPoolAuthor = Author<
 	TestShieldingKeyRepo,
 	MetricsOCallMock,
 >;
+pub type TestStf = Stf<TrustedCallSigned, Getter, SgxExternalities, Runtime>;
+
+pub type TestStfExecutor =
+	StfExecutor<OcallApi, HandleStateMock, NodeMetadataRepository<NodeMetadataMock>, TestStf>;
 
 /// Returns all the things that are commonly used in tests and runs
 /// `ensure_no_empty_shard_directory_exists`
@@ -53,6 +61,7 @@ pub fn test_setup() -> (
 	MrEnclave,
 	ShieldingCryptoMock,
 	Arc<HandleStateMock>,
+	Arc<TestStfExecutor>,
 ) {
 	let shielding_key = ShieldingCryptoMock::default();
 	let shielding_key_repo = Arc::new(KeyRepositoryMock::new(shielding_key.clone()));
@@ -62,6 +71,13 @@ pub fn test_setup() -> (
 		init_state(state_handler.as_ref(), enclave_call_signer(&shielding_key).public().into());
 	let top_pool = test_top_pool();
 	let mrenclave = OcallApi.get_mrenclave_of_self().unwrap().m;
+
+	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
+	let stf_executor = Arc::new(TestStfExecutor::new(
+		Arc::new(OcallApi),
+		state_handler.clone(),
+		node_metadata_repo,
+	));
 
 	(
 		Arc::new(TestTopPoolAuthor::new(
@@ -76,6 +92,7 @@ pub fn test_setup() -> (
 		mrenclave,
 		shielding_key,
 		state_handler,
+		stf_executor,
 	)
 }
 

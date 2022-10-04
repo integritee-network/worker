@@ -22,10 +22,11 @@ use crate::{
 	attestation::create_ra_report_and_signature,
 	error::{Error as EnclaveError, Result as EnclaveResult},
 	global_components::{
-		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
+		EnclaveSealHandler, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
+		GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
 	},
 	ocall::OcallApi,
-	tls_ra::seal_handler::{SealHandler, UnsealStateAndKeys},
+	tls_ra::seal_handler::UnsealStateAndKeys,
 	GLOBAL_STATE_HANDLER_COMPONENT,
 };
 use itp_component_container::ComponentGetter;
@@ -176,7 +177,7 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 	};
 
 	let seal_handler =
-		SealHandler::new(state_handler, state_key_repository, shielding_key_repository);
+		EnclaveSealHandler::new(state_handler, state_key_repository, shielding_key_repository);
 
 	if let Err(e) = run_state_provisioning_server_internal::<_, WorkerModeProvider>(
 		socket_fd,

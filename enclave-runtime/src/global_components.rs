@@ -20,8 +20,12 @@
 //! This allows the crates themselves to stay as generic as possible
 //! and ensures that the global instances are initialized once.
 
-use crate::{ocall::OcallApi, rpc::rpc_response_channel::RpcResponseChannel};
-use ita_stf::{Hash, State as StfState};
+use crate::{
+	ocall::OcallApi, rpc::rpc_response_channel::RpcResponseChannel,
+	tls_ra::seal_handler::SealHandler,
+};
+use ita_sgx_runtime::Runtime;
+use ita_stf::{Getter, Hash, State as StfState, Stf, TrustedCallSigned};
 use itc_direct_rpc_server::{
 	rpc_connection_registry::ConnectionRegistry, rpc_responder::RpcResponder,
 	rpc_watch_extractor::RpcWatchExtractor, rpc_ws_handler::RpcWsHandler,
@@ -75,9 +79,12 @@ use primitive_types::H256;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sp_core::ed25519::Pair;
 
+pub type EnclaveGetter = Getter;
+pub type EnclaveTrustedCallSigned = TrustedCallSigned;
+pub type EnclaveStf = Stf<EnclaveTrustedCallSigned, EnclaveGetter, StfState, Runtime>;
 pub type EnclaveStateKeyRepository = KeyRepository<Aes, AesSeal>;
 pub type EnclaveShieldingKeyRepository = KeyRepository<Rsa3072KeyPair, Rsa3072Seal>;
-pub type EnclaveStateFileIo = SgxStateFileIo<EnclaveStateKeyRepository>;
+pub type EnclaveStateFileIo = SgxStateFileIo<EnclaveStateKeyRepository, EnclaveStf, StfState>;
 pub type EnclaveStateSnapshotRepository =
 	StateSnapshotRepository<EnclaveStateFileIo, StfState, H256>;
 pub type EnclaveStateObserver = StateObserver<StfState>;
@@ -86,9 +93,13 @@ pub type EnclaveGetterExecutor = GetterExecutor<EnclaveStateObserver, StfStateGe
 pub type EnclaveOCallApi = OcallApi;
 pub type EnclaveNodeMetadataRepository = NodeMetadataRepository<NodeMetadata>;
 pub type EnclaveStfExecutor =
-	StfExecutor<EnclaveOCallApi, EnclaveStateHandler, EnclaveNodeMetadataRepository>;
-pub type EnclaveStfEnclaveSigner =
-	StfEnclaveSigner<EnclaveOCallApi, EnclaveStateObserver, EnclaveShieldingKeyRepository>;
+	StfExecutor<EnclaveOCallApi, EnclaveStateHandler, EnclaveNodeMetadataRepository, EnclaveStf>;
+pub type EnclaveStfEnclaveSigner = StfEnclaveSigner<
+	EnclaveOCallApi,
+	EnclaveStateObserver,
+	EnclaveShieldingKeyRepository,
+	EnclaveStf,
+>;
 pub type EnclaveExtrinsicsFactory =
 	ExtrinsicsFactory<Pair, NonceCache, EnclaveNodeMetadataRepository>;
 pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
@@ -168,7 +179,12 @@ pub type EnclaveSidechainBlockImportQueueWorker = BlockImportQueueWorker<
 	EnclaveSidechainBlockImportQueue,
 	EnclaveSidechainBlockSyncer,
 >;
-
+pub type EnclaveSealHandler = SealHandler<
+	EnclaveShieldingKeyRepository,
+	EnclaveStateKeyRepository,
+	EnclaveStateHandler,
+	EnclaveStf,
+>;
 /// Base component instances
 ///-------------------------------------------------------------------------------------------------
 

@@ -15,19 +15,13 @@
 
 */
 
-//! Utility methods to stringify certain types that don't have a working
-//! `Debug` implementation on `sgx`.
+/// Interface trait of the system pallet.
+pub trait SystemPalletAccountInterface<State, AccountId> {
+	type Index;
+	type AccountData;
 
-use codec::Encode;
-use sp_core::{hexdisplay::HexDisplay, Public};
-use std::{format, string::String};
-
-/// Convert a sp_core public type to string.
-pub fn public_to_string<T: Public>(t: &T) -> String {
-	let crypto_pair = t.to_public_crypto_pair();
-	format!("{}", HexDisplay::from(&crypto_pair.1))
-}
-
-pub fn account_id_to_string<AccountId: Encode>(account: &AccountId) -> String {
-	format!("{}", HexDisplay::from(&account.encode()))
+	/// Get the nonce for a given account and state.
+	fn get_account_nonce(state: &mut State, account_id: &AccountId) -> Self::Index;
+	/// Get the account date for a given account and state.
+	fn get_account_data(state: &mut State, account: &AccountId) -> Self::AccountData;
 }

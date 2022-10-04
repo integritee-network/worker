@@ -22,13 +22,14 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use ita_stf::{
+	stf_sgx_tests::StfState,
 	test_genesis::{endowed_account, test_genesis_setup, ENDOWED_ACC_FUNDS},
 	AccountId, Balance, ShardIdentifier, State, TrustedCall, TrustedGetter, TrustedGetterSigned,
 };
 use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_ocall_api::EnclaveAttestationOCallApi;
-use itp_sgx_externalities::SgxExternalitiesTrait;
+use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{handle_state_mock::HandleStateMock, onchain_mock::OnchainMock};
 use itp_types::H256;
@@ -62,7 +63,7 @@ pub fn propose_state_update_executes_all_calls_given_enough_time() {
 	let trusted_operation_2 = signed_call_2.into_trusted_operation(true);
 	let call_operation_hash_2: H256 = blake2_256(&trusted_operation_2.encode()).into();
 
-	let old_state_hash = state_hash(&state_handler.load(&shard).unwrap());
+	let old_state_hash = &state_handler.load(&shard).unwrap().hash();
 
 	// when
 	let batch_execution_result = stf_executor
@@ -76,7 +77,7 @@ pub fn propose_state_update_executes_all_calls_given_enough_time() {
 		.unwrap();
 
 	// then
-	assert_eq!(old_state_hash, batch_execution_result.state_hash_before_execution);
+	assert_eq!(*old_state_hash, batch_execution_result.state_hash_before_execution);
 	assert_eq!(batch_execution_result.executed_operations.len(), 2);
 	assert_eq!(
 		batch_execution_result.get_executed_operation_hashes(),
@@ -109,7 +110,7 @@ pub fn propose_state_update_executes_only_one_trusted_call_given_not_enough_time
 	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
 	let trusted_operation_2 = signed_call_2.into_trusted_operation(true);
 
-	let old_state_hash = state_hash(&state_handler.load(&shard).unwrap());
+	let old_state_hash = &state_handler.load(&shard).unwrap().hash();
 
 	// when
 	let batch_execution_result = stf_executor
@@ -123,7 +124,7 @@ pub fn propose_state_update_executes_only_one_trusted_call_given_not_enough_time
 		.unwrap();
 
 	// then
-	assert_eq!(old_state_hash, batch_execution_result.state_hash_before_execution);
+	assert_eq!(*old_state_hash, batch_execution_result.state_hash_before_execution);
 	assert_eq!(batch_execution_result.executed_operations.len(), 1);
 	assert_eq!(batch_execution_result.get_executed_operation_hashes(), vec![call_operation_hash_1]);
 	// Ensure that state has been updated and not actually written.
@@ -152,7 +153,7 @@ pub fn propose_state_update_executes_no_trusted_calls_given_no_time() {
 	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
 	let trusted_operation_2 = signed_call_2.into_trusted_operation(true);
 
-	let old_state_hash = state_hash(&state_handler.load(&shard).unwrap());
+	let old_state_hash = &state_handler.load(&shard).unwrap().hash();
 
 	// when
 	let batch_execution_result = stf_executor
@@ -166,7 +167,7 @@ pub fn propose_state_update_executes_no_trusted_calls_given_no_time() {
 		.unwrap();
 
 	// then
-	assert_eq!(old_state_hash, batch_execution_result.state_hash_before_execution);
+	assert_eq!(*old_state_hash, batch_execution_result.state_hash_before_execution);
 	assert_eq!(batch_execution_result.executed_operations.len(), 0);
 	assert_eq!(batch_execution_result.get_executed_operation_hashes(), vec![]);
 }
@@ -178,7 +179,7 @@ pub fn propose_state_update_always_executes_preprocessing_step() {
 	let _init_hash = state_handler.initialize_shard(shard).unwrap();
 	let key = "my_key".encode();
 	let value = "my_value".encode();
-	let old_state_hash = state_hash(&state_handler.load(&shard).unwrap());
+	let old_state_hash = state_handler.load(&shard).unwrap().hash();
 
 	// when
 	let batch_execution_result = stf_executor
@@ -284,7 +285,7 @@ pub fn execute_update_works() {
 	let _init_hash = state_handler.initialize_shard(shard).unwrap();
 	let key = "my_key".encode();
 	let value = "my_value".encode();
-	let old_state_hash = state_hash(&state_handler.load(&shard).unwrap());
+	let old_state_hash = state_handler.load(&shard).unwrap().hash();
 
 	// when
 	let (result, updated_state_hash) = stf_executor
@@ -327,7 +328,7 @@ pub fn upon_false_signature_get_stf_state_errs() {
 
 // Helper Functions
 fn stf_executor() -> (
-	StfExecutor<OnchainMock, HandleStateMock, NodeMetadataRepository<NodeMetadataMock>>,
+	StfExecutor<OnchainMock, HandleStateMock, NodeMetadataRepository<NodeMetadataMock>, StfState>,
 	Arc<OnchainMock>,
 	Arc<HandleStateMock>,
 ) {
@@ -339,7 +340,7 @@ fn stf_executor() -> (
 }
 
 fn test_state() -> State {
-	let mut state = State::new();
+	let mut state = State::default();
 	test_genesis_setup(&mut state);
 	state
 }

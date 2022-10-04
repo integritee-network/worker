@@ -16,15 +16,15 @@
 */
 
 use crate::StfError;
+use frame_support::traits::UnfilteredDispatchable;
 use ita_sgx_runtime::{Balance, Runtime, System};
-use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
+use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_storage::storage_value_key;
 use log::*;
 use sgx_tstd as std;
 use sp_core::{crypto::AccountId32, ed25519, Pair};
 use sp_runtime::MultiAddress;
 use std::{format, vec, vec::Vec};
-use support::traits::UnfilteredDispatchable;
 
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
@@ -58,7 +58,7 @@ pub fn unendowed_account() -> ed25519::Pair {
 	ed25519::Pair::from_seed(&UNENDOWED_SEED)
 }
 
-pub fn test_genesis_setup(state: &mut SgxExternalities) {
+pub fn test_genesis_setup(state: &mut impl SgxExternalitiesTrait) {
 	// set alice sudo account
 	set_sudo_account(state, &ALICE_ENCODED);
 	trace!("Set new sudo account: {:?}", &ALICE_ENCODED);
@@ -90,14 +90,14 @@ fn append_funded_alice_evm_account(endowees: &mut Vec<(AccountId32, Balance, Bal
 #[cfg(not(feature = "evm"))]
 fn append_funded_alice_evm_account(_: &mut Vec<(AccountId32, Balance, Balance)>) {}
 
-fn set_sudo_account(state: &mut SgxExternalities, account_encoded: &[u8]) {
+fn set_sudo_account(state: &mut impl SgxExternalitiesTrait, account_encoded: &[u8]) {
 	state.execute_with(|| {
 		sp_io::storage::set(&storage_value_key("Sudo", "Key"), account_encoded);
 	})
 }
 
 pub fn endow(
-	state: &mut SgxExternalities,
+	state: &mut impl SgxExternalitiesTrait,
 	endowees: impl IntoIterator<Item = (AccountId32, Balance, Balance)>,
 ) {
 	state.execute_with(|| {
