@@ -45,7 +45,6 @@ itp-top-pool-author = { path = "../../core-primitives/top-pool-author", features
 itp-stf-interface = { path = "../../core-primitives/stf-interface", features = ["mocks"] }
 
 
-
 [features]
 default = ["std"]
 std = [
