@@ -209,12 +209,13 @@ mod tests {
 	use itc_parentchain_light_client::mocks::validator_access_mock::ValidatorAccessMock;
 	use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
 	use itp_stf_executor::mocks::StfExecutorMock;
-	use itp_stf_interface::mocks::{set_event_counter, EventCounter, StateInterfaceMock};
+	use itp_stf_interface::mocks::{set_event_counter, StateInterfaceMock};
 	use itp_test::mock::handle_state_mock::HandleStateMock;
 	use itp_top_pool_author::mocks::AuthorApiMock;
 	use itp_types::Block as ParentchainBlock;
 	use sp_core::{ed25519, Pair};
 
+	type TestStateInterface = StateInterfaceMock<<TestStateHandler as HandleState>::StateT, u32>;
 	type TestTopPoolAuthor = AuthorApiMock<H256, H256>;
 	type TestStateHandler = HandleStateMock;
 	type TestStfExecutor = StfExecutorMock<<TestStateHandler as HandleState>::StateT>;
@@ -227,7 +228,7 @@ mod tests {
 		TestStateHandler,
 		TestValidatorAccess,
 		TestExtrinsicsFactory,
-		StateInterfaceMock,
+		TestStateInterface,
 	>;
 
 	#[test]
@@ -245,16 +246,17 @@ mod tests {
 
 	#[test]
 	fn reset_events_is_called() {
+		let mut dummy_state = <TestStateHandler as HandleState>::StateT::default();
 		let event_count = 5;
 		set_event_counter(event_count);
-		assert_eq!(StateInterfaceMock::get_event_count(), event_count);
+		assert_eq!(TestStateInterface::get_event_count(&mut dummy_state), event_count);
 		let top_pool_author = Arc::new(TestTopPoolAuthor::default());
 		top_pool_author.submit_top(create_trusted_operation().encode(), shard());
-		let executor = create_executor(top_pool_author.clone());
+		let executor = create_executor(top_pool_author);
 
 		executor.execute().unwrap();
 
-		assert_eq!(StateInterfaceMock::get_event_count(), 0);
+		assert_eq!(TestStateInterface::get_event_count(&mut dummy_state), 0);
 	}
 
 	fn create_executor(top_pool_author: Arc<TestTopPoolAuthor>) -> TestExecutor {

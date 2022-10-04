@@ -172,9 +172,7 @@ where
 pub mod test {
 	use super::*;
 	use itp_sgx_crypto::mocks::KeyRepositoryMock;
-	use itp_sgx_externalities::{
-		SgxExternalities, SgxExternalitiesDiffType, SgxExternalitiesTrait,
-	};
+	use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesDiffType};
 	use itp_stf_interface::mocks::StateInterfaceMock;
 	use itp_test::mock::handle_state_mock::HandleStateMock;
 

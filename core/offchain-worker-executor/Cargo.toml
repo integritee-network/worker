@@ -42,6 +42,8 @@ itp-extrinsics-factory = { path = "../../core-primitives/extrinsics-factory", fe
 itp-stf-executor = { path = "../../core-primitives/stf-executor", features = ["mocks"] }
 itp-test = { path = "../../core-primitives/test" }
 itp-top-pool-author = { path = "../../core-primitives/top-pool-author", features = ["mocks"] }
+itp-stf-interface = { path = "../../core-primitives/stf-interface", features = ["mocks"] }
+
 
 
 [features]

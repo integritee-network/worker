@@ -24,7 +24,7 @@ use crate::{
 };
 use alloc::{boxed::Box, string::String, vec::Vec};
 use core::marker::PhantomData;
-use itp_types::OpaqueCall;
+use itp_types::{AccountId, OpaqueCall};
 
 #[cfg(feature = "std")]
 pub use std_only::*;
@@ -45,12 +45,12 @@ mod std_only {
 		rw_lock._set_counter(counter);
 	}
 
-	fn reset_events() {
+	pub fn reset_events() {
 		let mut rw_lock = EVENT_HANDLER.write().unwrap();
 		rw_lock._set_counter(0);
 	}
 
-	fn read_events() -> u32 {
+	pub fn read_events() -> u32 {
 		let rw_lock = EVENT_HANDLER.read().unwrap();
 		rw_lock._get_counter()
 	}
@@ -130,7 +130,7 @@ impl<Getter, State, StateDiff> StateGetterInterface<Getter, State>
 	}
 }
 
-impl<State, StateDiff, AccountId> SystemPalletAccountInterface<State, AccountId>
+impl<State, StateDiff> SystemPalletAccountInterface<State, AccountId>
 	for StateInterfaceMock<State, StateDiff>
 {
 	type AccountData = String;
