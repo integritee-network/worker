@@ -234,25 +234,6 @@ where
 	}
 }
 
-pub fn events(ext: &mut impl SgxExternalitiesTrait) -> Vec<Box<EventRecord>> {
-	ext.execute_with(|| System::read_events_no_consensus())
-}
-
-pub fn event_count(ext: &mut impl SgxExternalitiesTrait) -> EventIndex {
-	ext.execute_with(|| System::event_count())
-}
-
-pub fn reset_events(ext: &mut impl SgxExternalitiesTrait) {
-	ext.execute_with(|| System::reset_events())
-}
-
-pub fn event_topics(
-	ext: &mut impl SgxExternalitiesTrait,
-	topic: &Hash,
-) -> Vec<(BlockNumber, EventIndex)> {
-	ext.execute_with(|| System::event_topics(topic))
-}
-
 pub fn storage_hashes_to_update_per_shard(_shard: &ShardIdentifier) -> Vec<Vec<u8>> {
 	Vec::new()
 }
