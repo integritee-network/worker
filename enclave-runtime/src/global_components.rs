@@ -44,7 +44,7 @@ use itc_parentchain::{
 use itc_tls_websocket_server::{
 	config_provider::FromFileConfigProvider, ws_server::TungsteniteWsServer, ConnectionToken,
 };
-use itp_attestation_handler::AttestationHandler;
+use itp_attestation_handler::IasAttestationHandler;
 use itp_block_import_queue::BlockImportQueue;
 use itp_component_container::ComponentContainer;
 use itp_extrinsics_factory::ExtrinsicsFactory;
@@ -127,7 +127,7 @@ pub type EnclaveTriggeredParentchainBlockImportDispatcher =
 pub type EnclaveImmediateParentchainBlockImportDispatcher =
 	ImmediateDispatcher<EnclaveParentchainBlockImporter>;
 pub type EnclaveAttestationHandler =
-	AttestationHandler<EnclaveOCallApi, EnclaveNodeMetadataRepository>;
+	IasAttestationHandler<EnclaveOCallApi, EnclaveNodeMetadataRepository>;
 
 pub type EnclaveRpcConnectionRegistry = ConnectionRegistry<Hash, ConnectionToken>;
 pub type EnclaveRpcWsHandler =

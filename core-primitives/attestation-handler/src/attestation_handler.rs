@@ -30,7 +30,7 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use crate::{cert, utils::hash_from_slice, Error as EnclaveError, Error, Result as EnclaveResult};
+use crate::{cert, Error as EnclaveError, Error, Result as EnclaveResult};
 use codec::Encode;
 use core::default::Default;
 use itertools::Itertools;
@@ -46,6 +46,7 @@ use itp_settings::{
 use itp_sgx_crypto::Ed25519Seal;
 use itp_sgx_io as io;
 use itp_sgx_io::StaticSealedIO;
+use itp_utils::hash::hash_from_slice;
 use log::*;
 use sgx_rand::{os, Rng};
 use sgx_tcrypto::{rsgx_sha256_slice, SgxEccHandle};
@@ -79,7 +80,7 @@ pub const SIGRL_SUFFIX: &str = "/sgx/dev/attestation/v4/sigrl/";
 #[cfg(not(feature = "production"))]
 pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
 
-pub trait AttestationHandlerTrait {
+pub trait AttestationHandler {
 	fn perform_ra(
 		&self,
 		genesis_hash_slice: &[u8],
@@ -92,13 +93,13 @@ pub trait AttestationHandlerTrait {
 	fn dump_ra_to_disk(&self) -> EnclaveResult<()>;
 }
 
-pub struct AttestationHandler<OCallApi, NodeMetadataRepository> {
+pub struct IasAttestationHandler<OCallApi, NodeMetadataRepository> {
 	ocall_api: Arc<OCallApi>,
 	node_metadata_repo: Arc<NodeMetadataRepository>,
 }
 
-impl<OCallApi, NodeMetadataRepository> AttestationHandlerTrait
-	for AttestationHandler<OCallApi, NodeMetadataRepository>
+impl<OCallApi, NodeMetadataRepository> AttestationHandler
+	for IasAttestationHandler<OCallApi, NodeMetadataRepository>
 where
 	OCallApi: EnclaveAttestationOCallApi,
 	NodeMetadataRepository: AccessNodeMetadata<MetadataType = NodeMetadata>,
@@ -204,7 +205,7 @@ where
 	}
 }
 
-impl<OCallApi, NodeMetadataRepository> AttestationHandler<OCallApi, NodeMetadataRepository>
+impl<OCallApi, NodeMetadataRepository> IasAttestationHandler<OCallApi, NodeMetadataRepository>
 where
 	OCallApi: EnclaveAttestationOCallApi,
 	NodeMetadataRepository: AccessNodeMetadata<MetadataType = NodeMetadata>,
