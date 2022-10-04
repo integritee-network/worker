@@ -13,17 +13,6 @@ extern "C" {
 		untrusted_worker_addr_size: u32,
 	) -> sgx_status_t;
 
-	pub fn get_state(
-		eid: sgx_enclave_id_t,
-		retval: *mut sgx_status_t,
-		cyphertext: *const u8,
-		cyphertext_size: u32,
-		shard: *const u8,
-		shard_size: u32,
-		value: *mut u8,
-		value_size: u32,
-	) -> sgx_status_t;
-
 	pub fn init_enclave_sidechain_components(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
@@ -39,12 +28,8 @@ extern "C" {
 	pub fn init_light_client(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
-		genesis_hash: *const u8,
-		genesis_hash_size: usize,
-		authority_list: *const u8,
-		authority_list_size: usize,
-		authority_proof: *const u8,
-		authority_proof_size: usize,
+		params: *const u8,
+		params_size: usize,
 		latest_header: *mut u8,
 		latest_header_size: usize,
 	) -> sgx_status_t;
@@ -57,11 +42,6 @@ extern "C" {
 	) -> sgx_status_t;
 
 	pub fn trigger_parentchain_block_import(
-		eid: sgx_enclave_id_t,
-		retval: *mut sgx_status_t,
-	) -> sgx_status_t;
-
-	pub fn execute_trusted_getters(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
 	) -> sgx_status_t;
@@ -80,6 +60,13 @@ extern "C" {
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
 		nonce: *const u32,
+	) -> sgx_status_t;
+
+	pub fn set_node_metadata(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		node_metadata: *const u8,
+		node_metadata_size: u32,
 	) -> sgx_status_t;
 
 	pub fn get_rsa_encryption_pubkey(
@@ -136,6 +123,17 @@ extern "C" {
 		nonce: *const u32,
 		w_url: *const u8,
 		w_url_size: u32,
+		unchecked_extrinsic: *mut u8,
+		unchecked_extrinsic_size: u32,
+	) -> sgx_status_t;
+
+	pub fn update_market_data_xt(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		crypto_currency: *const u8,
+		crypto_currency_size: u32,
+		fiat_currency: *const u8,
+		fiat_currency_size: u32,
 		unchecked_extrinsic: *mut u8,
 		unchecked_extrinsic_size: u32,
 	) -> sgx_status_t;

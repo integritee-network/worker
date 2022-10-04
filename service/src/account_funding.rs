@@ -17,17 +17,17 @@
 
 use crate::error::{Error, ServiceResult};
 use codec::Encode;
-use itp_node_api_extensions::AccountApi;
+use itp_node_api::api_client::{AccountApi, ParentchainApi};
 use itp_settings::worker::{
 	EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS, REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS,
 };
 use log::*;
 use sp_core::{
 	crypto::{AccountId32, Ss58Codec},
-	sr25519, Pair,
+	Pair,
 };
 use sp_keyring::AccountKeyring;
-use substrate_api_client::{rpc::WsRpcClient, Api, Balance, GenericAddress, XtStatus};
+use substrate_api_client::{Balance, GenericAddress, XtStatus};
 
 /// Information about the enclave on-chain account.
 pub trait EnclaveAccountInfo {
@@ -35,7 +35,7 @@ pub trait EnclaveAccountInfo {
 }
 
 pub struct EnclaveAccountInfoProvider {
-	node_api: Api<sr25519::Pair, WsRpcClient>,
+	node_api: ParentchainApi,
 	account_id: AccountId32,
 }
 
@@ -46,13 +46,13 @@ impl EnclaveAccountInfo for EnclaveAccountInfoProvider {
 }
 
 impl EnclaveAccountInfoProvider {
-	pub fn new(node_api: Api<sr25519::Pair, WsRpcClient>, account_id: AccountId32) -> Self {
+	pub fn new(node_api: ParentchainApi, account_id: AccountId32) -> Self {
 		EnclaveAccountInfoProvider { node_api, account_id }
 	}
 }
 
 pub fn setup_account_funding(
-	api: &Api<sr25519::Pair, WsRpcClient>,
+	api: &ParentchainApi,
 	accountid: &AccountId32,
 	extrinsic_prefix: String,
 	is_development_mode: bool,
@@ -88,13 +88,10 @@ pub fn setup_account_funding(
 }
 
 // Alice plays the faucet and sends some funds to the account if balance is low
-fn ensure_account_has_funds(
-	api: &Api<sr25519::Pair, WsRpcClient>,
-	accountid: &AccountId32,
-) -> Result<(), Error> {
+fn ensure_account_has_funds(api: &ParentchainApi, accountid: &AccountId32) -> Result<(), Error> {
 	// check account balance
 	let free_balance = api.get_free_balance(accountid)?;
-	info!("TEE's free balance = {:?}", free_balance);
+	info!("TEE's free balance = {:?} (Account: {})", free_balance, accountid);
 
 	let existential_deposit = api.get_existential_deposit()?;
 	info!("Existential deposit is = {:?}", existential_deposit);
@@ -104,15 +101,13 @@ fn ensure_account_has_funds(
 	let missing_funds = min_required_funds.saturating_sub(free_balance);
 
 	if missing_funds > 0 {
+		info!("Transfer {:?} from Alice to {}", missing_funds, accountid);
 		bootstrap_funds_from_alice(api, accountid, missing_funds)?;
 	}
 	Ok(())
 }
 
-fn enclave_registration_fees(
-	api: &Api<sr25519::Pair, WsRpcClient>,
-	xthex_prefixed: &str,
-) -> Result<u128, Error> {
+fn enclave_registration_fees(api: &ParentchainApi, xthex_prefixed: &str) -> Result<u128, Error> {
 	let reg_fee_details = api.get_fee_details(xthex_prefixed, None)?;
 	match reg_fee_details {
 		Some(details) => match details.inclusion_fee {
@@ -128,7 +123,7 @@ fn enclave_registration_fees(
 
 // Alice sends some funds to the account
 fn bootstrap_funds_from_alice(
-	api: &Api<sr25519::Pair, WsRpcClient>,
+	api: &ParentchainApi,
 	accountid: &AccountId32,
 	funding_amount: u128,
 ) -> Result<(), Error> {
@@ -144,7 +139,7 @@ fn bootstrap_funds_from_alice(
 
 	if funding_amount > alice_free {
 		println!(
-            "funding amount is to high: please change EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS ({:?})",
+            "funding amount is too high: please change EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS ({:?})",
             funding_amount
         );
 		return Err(Error::ApplicationSetup)

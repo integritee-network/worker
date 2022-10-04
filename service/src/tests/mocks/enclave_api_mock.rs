@@ -15,11 +15,14 @@
 
 */
 
+use itc_parentchain_light_client::light_client_init_params::{
+	LightClientInitParams,
+	LightClientInitParams::{Grandpa, Parachain},
+};
 use itp_enclave_api::{enclave_base::EnclaveBase, EnclaveResult};
 use itp_settings::worker::MR_ENCLAVE_SIZE;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_core::ed25519;
-use sp_finality_grandpa::VersionedAuthorityList;
 use sp_runtime::traits::Header;
 
 /// mock for EnclaveBase - use in tests
@@ -40,11 +43,12 @@ impl EnclaveBase for EnclaveBaseMock {
 
 	fn init_light_client<SpHeader: Header>(
 		&self,
-		genesis_header: SpHeader,
-		_authority_list: VersionedAuthorityList,
-		_authority_proof: Vec<Vec<u8>>,
+		params: LightClientInitParams<SpHeader>,
 	) -> EnclaveResult<SpHeader> {
-		Ok(genesis_header)
+		return match params {
+			Grandpa { genesis_header, .. } => Ok(genesis_header),
+			Parachain { genesis_header, .. } => Ok(genesis_header),
+		}
 	}
 
 	fn init_shard(&self, _shard: Vec<u8>) -> EnclaveResult<()> {
@@ -59,8 +63,8 @@ impl EnclaveBase for EnclaveBaseMock {
 		unimplemented!()
 	}
 
-	fn get_state(&self, _cyphertext: Vec<u8>, _shard: Vec<u8>) -> EnclaveResult<Vec<u8>> {
-		Ok(Vec::<u8>::new())
+	fn set_node_metadata(&self, _metadata: Vec<u8>) -> EnclaveResult<()> {
+		todo!()
 	}
 
 	fn get_rsa_shielding_pubkey(&self) -> EnclaveResult<Rsa3072PubKey> {

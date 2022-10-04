@@ -48,14 +48,15 @@ impl<K, V> Default for TrackedMap<K, V> {
 	}
 }
 
-// FIXME: obey clippy
-#[allow(clippy::type_complexity)]
-#[allow(clippy::len_without_is_empty)]
-#[allow(clippy::should_implement_trait)]
 impl<K: Clone, V: Clone> TrackedMap<K, V> {
 	/// Current tracked length of the content.
 	pub fn len(&self) -> usize {
 		cmp::max(self.length.load(AtomicOrdering::Relaxed), 0) as usize
+	}
+
+	/// Returns true if Map is empty
+	pub fn is_empty(&self) -> bool {
+		self.length.load(AtomicOrdering::Relaxed) == 0
 	}
 
 	/// Current sum of content length.
@@ -64,7 +65,7 @@ impl<K: Clone, V: Clone> TrackedMap<K, V> {
 	}
 
 	/// Read-only clone of the interior.
-	pub fn clone(&self) -> ReadOnlyTrackedMap<K, V> {
+	pub fn get_read_only_clone(&self) -> ReadOnlyTrackedMap<K, V> {
 		ReadOnlyTrackedMap(self.index.clone())
 	}
 
@@ -176,6 +177,9 @@ pub mod tests {
 	#[test]
 	pub fn test_basic() {
 		let mut map = TrackedMap::default();
+
+		assert!(map.is_empty());
+
 		map.write().insert(5, 10);
 		map.write().insert(6, 20);
 

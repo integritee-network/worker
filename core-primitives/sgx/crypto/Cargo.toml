@@ -1,29 +1,29 @@
 [package]
 name = "itp-sgx-crypto"
-version = "0.8.0"
-edition = "2018"
+version = "0.9.0"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 aes = { version = "0.6.0" }
-ofb = { version = "0.4.0" }
-codec  = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 derive_more = { version = "0.99.5" }
-log = { version = "0.4.14", default-features = false }
+log = { version = "0.4", default-features = false }
+ofb = { version = "0.4.0" }
 serde = { version = "1.0", default-features = false, features = ["alloc"], optional = true }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"], optional = true }
 
 # sgx deps
-sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+serde-sgx = { package = "serde", tag = "sgx_1.1.3", git = "https://github.com/mesalock-linux/serde-sgx", optional = true }
+serde_json-sgx = { package = "serde_json", tag = "sgx_1.1.3", git = "https://github.com/mesalock-linux/serde-json-sgx", optional = true }
+sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_crypto_helper", default-features = false }
 sgx_rand = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_crypto_helper", default-features = false, optional = true }
-serde-sgx = { package = "serde", tag = "sgx_1.1.3", git = "https://github.com/mesalock-linux/serde-sgx", optional = true  }
-serde_json-sgx = { package = "serde_json", tag = "sgx_1.1.3", git = "https://github.com/mesalock-linux/serde-json-sgx", optional = true  }
+sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # substrate deps
-sp-core = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
+sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 
 # local deps
 itp-settings = { path = "../../settings" }
@@ -36,15 +36,16 @@ std = [
     "log/std",
     "itp-sgx-io/std",
     "sp-core/std",
-    'serde/std',
-    'serde_json/std',
+    "serde/std",
+    "serde_json/std",
+    "sgx-crypto-helper/default",
 ]
 sgx = [
+    "sgx-crypto-helper/mesalock_sgx",
     "sgx_tstd",
     "sgx_rand",
     "itp-sgx-io/sgx",
-    "sgx-crypto-helper",
     "serde_json-sgx",
-    "serde-sgx"
+    "serde-sgx",
 ]
 mocks = []

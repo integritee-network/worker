@@ -1,9 +1,8 @@
 [package]
 name = "itc-parentchain"
-version = "0.8.0"
+version = "0.9.0"
 authors = ["Integritee AG <hello@integritee.network>"]
-edition = "2018"
-resolver = "2"
+edition = "2021"
 
 [dependencies]
 itc-parentchain-block-import-dispatcher = { path = "../block-import-dispatcher", default-features = false }

@@ -1,0 +1,37 @@
+{%- import "change.md.tera" as m_c -%}
+
+{# This macro convert a merge challenge level into readable output #}
+{%- macro challenge_level(e, changes) -%}
+
+{%- if e >= 5 -%}
+    {%- set level = "‼️ Breaking Changes" -%}
+    {%- set text = "This release contains **breaking changes**. Be sure to upgrade the affected interfaces." -%}
+{%- elif e >= 3 -%}
+    {%- set level = "❗️ Attention" -%}
+    {%- set text = "This release contains some non-trivial updates. Be mindful when upgrading." -%}
+{%- else -%}
+    {%- set level = "Trivial" -%}
+    {%- set text = "This release contains relatively small updates." -%}
+{%- endif %}
+
+
+<!-- detected max level is: {{e}} -->
+
+{%- if level %}
+{{level}}: {{text}}
+
+{% if e >= 3 %}
+The changes motivating this challenge level are:
+{% for pr in changes | sort(attribute="merged_at") -%}
+    {%- if pr.meta.E -%}
+        {%- if pr.meta.E.value == e %}
+- {{ m_c::change(c=pr) }}
+        {%- endif -%}
+    {%- endif -%}
+{%- endfor -%}
+{%- else -%}
+<!-- No relevant Level label as been detected for e={{ e }} -->
+{%- endif -%}
+{%- endif -%}
+
+{%- endmacro level -%}

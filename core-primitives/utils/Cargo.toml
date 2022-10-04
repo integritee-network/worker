@@ -1,0 +1,38 @@
+[package]
+name = "itp-utils"
+version = "0.9.0"
+authors = ["Integritee AG <hello@integritee.network>"]
+homepage = "https://integritee.network/"
+repository = "https://github.com/integritee-network/pallets/"
+license = "Apache-2.0"
+edition = "2021"
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
+
+# substrate
+frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+
+# teaclave
+sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+
+# sgx enabled external libraries
+thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
+# std compatible external libraries (make sure these versions match with the sgx-enabled ones above)
+thiserror = { version = "1.0", optional = true }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "frame-support/std",
+    "hex/std",
+    "sp-core/std",
+    "thiserror",
+]
+sgx = [
+    "sgx_tstd",
+    "thiserror_sgx",
+]

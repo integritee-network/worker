@@ -16,6 +16,7 @@
 */
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![feature(vec_retain_mut)]
 
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
@@ -44,8 +45,5 @@ pub mod tracked_map;
 pub mod validated_pool;
 pub mod watcher;
 
-#[cfg(test)]
-mod mocks;
-
-#[cfg(feature = "mocks")]
+#[cfg(any(test, feature = "mocks"))]
 pub mod mocks;

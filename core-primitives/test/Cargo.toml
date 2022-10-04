@@ -1,46 +1,43 @@
 [package]
 name = "itp-test"
-version = "0.8.0"
-edition = "2018"
+version = "0.9.0"
+edition = "2021"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 derive_more = { version = "0.99.5" }
+sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_crypto_helper", default-features = false }
 
 # sgx deps
-sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+jsonrpc-core_sgx = { package = "jsonrpc-core", git = "https://github.com/scs/jsonrpc", branch = "no_std_v18", default-features = false, optional = true }
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_tcrypto_helper", optional = true }
-sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
-jsonrpc-core_sgx = { package = "jsonrpc-core", git = "https://github.com/scs/jsonrpc", branch = "no_std", default-features = false, optional = true }
+sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # std-only deps
 jsonrpc-core = { version = "18", optional = true }
 
 # substrate deps
-sp-core = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
-sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
-sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
+sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 
 # local deps
 ita-stf = { path = "../../app-libs/stf", default-features = false }
+itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
+itp-sgx-externalities = { default-features = false, path = "../substrate-sgx/externalities" }
 itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
+itp-storage = { path = "../storage", default-features = false }
 itp-teerex-storage = { path = "../teerex-storage", default-features = false }
 itp-time-utils = { path = "../time-utils", default-features = false }
-itp-types = { path = "../types", default-features = false }
-itp-ocall-api = { path = "../ocall-api", default-features = false }
-itp-storage = { path = "../storage", default-features = false, features = ["test"] }
+itp-types = { path = "../types", default-features = false, features = ["test"] }
 
 [features]
 default = ["std"]
 std = [
     "codec/std",
-    "sgx-externalities/std",
-    "sp-core/std",
-    "sp-runtime/std",
-    "sp-std/std",
     "itp-sgx-crypto/std",
+    "itp-sgx-externalities/std",
     "itp-stf-state-handler/std",
     "itp-storage/std",
     "itp-teerex-storage/std",
@@ -48,14 +45,16 @@ std = [
     "itp-types/std",
     "itp-ocall-api/std",
     "jsonrpc-core",
+    "sp-core/std",
+    "sp-runtime/std",
+    "sp-std/std",
 ]
 sgx = [
-    "sgx_tstd",
-    "sgx-crypto-helper",
     "ita-stf/sgx",
-    "itp-time-utils/sgx",
     "itp-sgx-crypto/sgx",
+    "itp-sgx-externalities/sgx",
     "itp-stf-state-handler/sgx",
+    "itp-time-utils/sgx",
     "jsonrpc-core_sgx",
-    "sgx-externalities/sgx",
+    "sgx_tstd",
 ]

@@ -1,6 +1,24 @@
+/*
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
+
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+
+		http://www.apache.org/licenses/LICENSE-2.0
+
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+
+*/
+
 #![cfg_attr(all(not(target_env = "sgx"), not(feature = "std")), no_std)]
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
+use crate::storage::StorageEntry;
 use codec::{Decode, Encode};
 #[cfg(feature = "sgx")]
 use sgx_tstd as std;
@@ -9,11 +27,9 @@ use sp_runtime::{
 	traits::BlakeTwo256,
 	OpaqueExtrinsic,
 };
-use std::vec::Vec;
+use sp_std::vec::Vec;
 
-use itp_storage::storage_entry::StorageEntry;
-pub use rpc::*;
-pub mod rpc;
+pub mod storage;
 
 /// Substrate runtimes provide no string type. Hence, for arbitrary data of varying length the
 /// `Vec<u8>` is used. In the polkadot-js the typedef `Text` is used to automatically
@@ -25,7 +41,6 @@ pub type PalletString = Vec<u8>;
 pub type PalletString = String;
 
 pub use sp_core::{crypto::AccountId32 as AccountId, H256};
-pub use substrate_api_client::{AccountData, AccountInfo};
 
 pub type ShardIdentifier = H256;
 pub type BlockNumber = u32;
@@ -43,6 +58,7 @@ pub type ShieldFundsFn = ([u8; 2], Vec<u8>, Amount, ShardIdentifier);
 pub type CallWorkerFn = ([u8; 2], Request);
 
 pub type Enclave = EnclaveGen<AccountId>;
+
 /// Simple blob to hold an encoded call
 #[derive(Debug, PartialEq, Eq, Clone, Default)]
 pub struct OpaqueCall(pub Vec<u8>);

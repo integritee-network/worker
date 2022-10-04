@@ -145,6 +145,22 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		Ok(blocks_to_return)
 	}
 
+	/// Get blocks in a range, defined by 'from' and 'until' (result does NOT include the bound defining blocks).
+	pub fn get_blocks_in_range(
+		&self,
+		block_hash_from: &BlockHash,
+		block_hash_until: &BlockHash,
+		shard_identifier: &ShardIdentifierFor<SignedBlock>,
+	) -> Result<Vec<SignedBlock>> {
+		let all_blocks_from_lower_bound =
+			self.get_blocks_after(block_hash_from, shard_identifier)?;
+
+		Ok(all_blocks_from_lower_bound
+			.into_iter()
+			.take_while(|b| b.hash() != *block_hash_until)
+			.collect())
+	}
+
 	/// Update sidechain storage with blocks.
 	///
 	/// Blocks are iterated through one by one. In case more than one block per shard is included,

@@ -1,0 +1,42 @@
+{# This macro shows ONE change #}
+{%- macro change(c, cml="[C]", pal="[P]", wor="[W]") -%}
+
+{%- if c.meta.C and c.meta.C.value >= 7 -%}
+{%- set prio = " ‼️ HIGH" -%}
+{%- elif c.meta.C and c.meta.C.value >= 3 -%}
+{%- set prio = " ❗️ Medium" -%}
+{%- elif c.meta.C and c.meta.C.value < 3 -%}
+{%- set prio = " Low" -%}
+{%- else -%}
+{%- set prio = "" -%}
+{%- endif -%}
+
+
+{%- if c.html_url is containing("worker") -%}
+{%- set repo = wor -%}
+{%- elif c.html_url is containing("pallets") -%}
+{%- set repo = pal -%}
+{%- else -%}
+{%- set repo = " " -%}
+{%- endif -%}
+
+{# For now don't show pallets or worker #}
+{%- set repo = " " -%}
+
+{%- if c.meta.E and c.meta.E.value >= 7 -%}
+{%- set challenge = " 💥 breaking changes " -%}
+{%- elif c.meta.E and c.meta.E.value == 6 -%}
+{%- set challenge = " ⚡ breaks parentchain interface " -%}
+{%- elif c.meta.E and c.meta.E.value == 5 -%}
+{%- set challenge = " 🔥 breaks public rpc api " -%}
+{%- elif c.meta.E and c.meta.E.value >= 3 -%}
+{%- set challenge = " 📢 attention required " -%}
+{%- elif c.meta.E and c.meta.E.value < 3 -%}
+{%- set challenge = " ✅ easy merge " -%}
+{%- else -%}
+{%- set challenge = "" -%}
+{%- endif -%}
+
+
+{{- repo }} {{ challenge }}[`#{{c.number}}`]({{c.html_url}}) {{- prio }} - {{ c.title | capitalize | truncate(length=120, end="…") }}
+{%- endmacro change -%}

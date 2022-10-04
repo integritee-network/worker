@@ -20,9 +20,9 @@
 use crate::{Error, SidechainDB, SidechainState, StateHash, StateUpdate};
 use codec::{Decode, Encode};
 use frame_support::ensure;
+use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_storage::keys::storage_value_key;
-use log::error;
-use sgx_externalities::SgxExternalitiesTrait;
+use log::{error, info};
 use sp_core::{hashing::blake2_256, H256};
 use sp_io::storage;
 use std::vec::Vec;
@@ -87,6 +87,7 @@ impl<T: SgxExternalitiesTrait + Clone + StateHash> SidechainState for T {
 	}
 
 	fn apply_state_update(&mut self, state_payload: &Self::StateUpdate) -> Result<(), Error> {
+		info!("Current state size: {}", self.ext().state().encoded_size());
 		ensure!(self.state_hash() == state_payload.state_hash_apriori(), Error::InvalidAprioriHash);
 		let mut state2 = self.clone();
 
@@ -147,7 +148,7 @@ pub mod tests {
 	use super::*;
 	use crate::{SidechainDB, StateUpdate};
 	use frame_support::{assert_err, assert_ok};
-	use sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
+	use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 	use sp_core::H256;
 
 	pub fn default_db() -> SidechainDB<(), SgxExternalities> {

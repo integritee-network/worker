@@ -18,22 +18,20 @@
 use crate::{
 	error::Result,
 	global_components::{
-		GLOBAL_EXTRINSICS_FACTORY_COMPONENT, GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
+		GLOBAL_EXTRINSICS_FACTORY_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
+		GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT,
 		GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
 		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STF_EXECUTOR_COMPONENT,
-		GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT,
+		GLOBAL_TOP_POOL_AUTHOR_COMPONENT, GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
 	},
-	ocall::OcallApi,
 	sync::{EnclaveLock, EnclaveStateRWLock},
 };
 use codec::Encode;
 use itc_parentchain::{
-	block_import_dispatcher::triggered_dispatcher::{
-		PeekParentchainBlockImportQueue, TriggerParentchainBlockImport,
-	},
+	block_import_dispatcher::triggered_dispatcher::TriggerParentchainBlockImport,
 	light_client::{
-		concurrent_access::ValidatorAccess, BlockNumberOps, LightClientState, NumberFor, Validator,
-		ValidatorAccessor,
+		concurrent_access::ValidatorAccess, BlockNumberOps, ExtrinsicSender, LightClientState,
+		NumberFor,
 	},
 };
 use itp_component_container::ComponentGetter;
@@ -43,19 +41,18 @@ use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::Ed25519Seal;
 use itp_sgx_io::StaticSealedIO;
 use itp_stf_state_handler::query_shard_state::QueryShardState;
-use itp_time_utils::{duration_now, remaining_time};
+use itp_time_utils::duration_now;
 use itp_types::{Block, OpaqueCall, H256};
+use its_primitives::{
+	traits::{
+		Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor, SignedBlock,
+	},
+	types::block::SignedBlock as SignedSidechainBlock,
+};
 use its_sidechain::{
 	aura::{proposer_factory::ProposerFactory, Aura, SlotClaimStrategy},
 	consensus_common::{Environment, Error as ConsensusError, ProcessBlockImportQueue},
-	primitives::{
-		traits::{
-			Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor, SignedBlock,
-		},
-		types::block::SignedBlock as SignedSidechainBlock,
-	},
 	slots::{sgx::LastSlotSeal, yield_next_slot, PerShardSlotWorkerScheduler, SlotInfo},
-	top_pool_executor::TopPoolGetterOperator,
 	validateer_fetch::ValidateerFetch,
 };
 use log::*;
@@ -64,54 +61,7 @@ use sp_core::Pair;
 use sp_runtime::{
 	generic::SignedBlock as SignedParentchainBlock, traits::Block as BlockTrait, MultiSignature,
 };
-use std::{sync::Arc, vec::Vec};
-
-#[no_mangle]
-pub unsafe extern "C" fn execute_trusted_getters() -> sgx_status_t {
-	if let Err(e) = execute_top_pool_trusted_getters_on_all_shards() {
-		return e.into()
-	}
-
-	sgx_status_t::SGX_SUCCESS
-}
-
-/// Internal [`execute_trusted_getters`] function to be able to use the `?` operator.
-///
-/// Executes trusted getters for a scheduled amount of time (defined by settings).
-fn execute_top_pool_trusted_getters_on_all_shards() -> Result<()> {
-	use itp_settings::enclave::MAX_TRUSTED_GETTERS_EXEC_DURATION;
-
-	let top_pool_executor = GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.get()?;
-	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
-	let shards = state_handler.list_shards()?;
-
-	let mut remaining_shards = shards.len() as u32;
-	let ends_at = duration_now() + MAX_TRUSTED_GETTERS_EXEC_DURATION;
-
-	// Execute trusted getters for each shard. Each shard gets equal amount of time to execute
-	// getters.
-	for shard in shards.into_iter() {
-		let shard_exec_time = match remaining_time(ends_at)
-			.map(|r| r.checked_div(remaining_shards))
-			.flatten()
-		{
-			Some(t) => t,
-			None => {
-				info!("[Enclave] Could not execute trusted operations for all shards. Remaining number of shards: {}.", remaining_shards);
-				break
-			},
-		};
-
-		match top_pool_executor.execute_trusted_getters_on_shard(&shard, shard_exec_time) {
-			Ok(()) => {},
-			Err(e) => error!("Error in trusted getter execution for shard {:?}: {:?}", shard, e),
-		}
-
-		remaining_shards -= 1;
-	}
-
-	Ok(())
-}
+use std::{sync::Arc, time::Instant, vec::Vec};
 
 #[no_mangle]
 pub unsafe extern "C" fn execute_trusted_calls() -> sgx_status_t {
@@ -130,17 +80,20 @@ pub unsafe extern "C" fn execute_trusted_calls() -> sgx_status_t {
 ///
 /// *   Import all pending parentchain blocks.
 /// *   Sends sidechain `confirm_block` xt's with the produced sidechain blocks.
-/// *   Gossip produced sidechain blocks to peer validateers.
+/// *   Broadcast produced sidechain blocks to peer validateers.
 fn execute_top_pool_trusted_calls_internal() -> Result<()> {
+	let start_time = Instant::now();
+
 	// We acquire lock explicitly (variable binding), since '_' will drop the lock after the statement.
 	// See https://medium.com/codechain/rust-underscore-does-not-bind-fec6a18115a8
 	let _enclave_write_lock = EnclaveLock::write_all()?;
 
 	let slot_beginning_timestamp = duration_now();
 
-	let parentchain_import_dispatcher = GLOBAL_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get()?;
+	let parentchain_import_dispatcher =
+		GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get()?;
 
-	let validator_access = ValidatorAccessor::<Block>::default();
+	let validator_access = GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT.get()?;
 
 	// This gets the latest imported block. We accept that all of AURA, up until the block production
 	// itself, will  operate on a parentchain block that is potentially outdated by one block
@@ -155,19 +108,31 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	let sidechain_block_import_queue_worker =
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT.get()?;
 
+	let sidechain_block_queue_start = Instant::now();
+
 	let latest_parentchain_header =
 		sidechain_block_import_queue_worker.process_queue(&current_parentchain_header)?;
 
+	info!(
+		"Elapsed time to process sidechain block import queue: {} ms",
+		sidechain_block_queue_start.elapsed().as_millis()
+	);
+
 	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
 
-	let top_pool_executor = GLOBAL_TOP_POOL_OPERATION_HANDLER_COMPONENT.get()?;
+	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 
 	let block_composer = GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT.get()?;
 
 	let extrinsics_factory = GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get()?;
+
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 
+	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
+
 	let authority = Ed25519Seal::unseal_from_static_file()?;
+
+	info!("Elapsed time before AURA execution: {} ms", start_time.elapsed().as_millis());
 
 	match yield_next_slot(
 		slot_beginning_timestamp,
@@ -176,9 +141,16 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 		&mut LastSlotSeal,
 	)? {
 		Some(slot) => {
+			let remaining_time = slot.ends_at - slot.timestamp;
+			info!(
+				"Remaining slot time for aura: {} ms, {}% of slot time",
+				remaining_time.as_millis(),
+				(remaining_time.as_millis() as f64 / slot.duration.as_millis() as f64) * 100f64
+			);
+
 			let shards = state_handler.list_shards()?;
 			let env = ProposerFactory::<Block, _, _, _>::new(
-				top_pool_executor,
+				top_pool_author,
 				stf_executor,
 				block_composer,
 			);
@@ -186,7 +158,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 			let (blocks, opaque_calls) = exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _, _>(
 				slot,
 				authority,
-				OcallApi,
+				ocall_api.clone(),
 				parentchain_import_dispatcher,
 				env,
 				shards,
@@ -200,8 +172,8 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 			send_blocks_and_extrinsics::<Block, _, _, _, _>(
 				blocks,
 				opaque_calls,
-				OcallApi,
-				&validator_access,
+				ocall_api,
+				validator_access.as_ref(),
 				extrinsics_factory.as_ref(),
 			)?
 		},
@@ -226,7 +198,7 @@ pub(crate) fn exec_aura_on_slot<
 >(
 	slot: SlotInfo<ParentchainBlock>,
 	authority: Authority,
-	ocall_api: OCallApi,
+	ocall_api: Arc<OCallApi>,
 	block_import_trigger: Arc<BlockImportTrigger>,
 	proposer_environment: PEnvironment,
 	shards: Vec<ShardIdentifierFor<SignedSidechainBlock>>,
@@ -245,19 +217,17 @@ where
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	PEnvironment:
 		Environment<ParentchainBlock, SignedSidechainBlock, Error = ConsensusError> + Send + Sync,
-	BlockImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>>
-		+ PeekParentchainBlockImportQueue<SignedParentchainBlock<ParentchainBlock>>,
+	BlockImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>>,
 {
-	log::info!("[Aura] Executing aura for slot: {:?}", slot);
+	debug!("[Aura] Executing aura for slot: {:?}", slot);
 
 	let mut aura = Aura::<_, ParentchainBlock, SignedSidechainBlock, PEnvironment, _, _>::new(
 		authority,
-		ocall_api,
+		ocall_api.as_ref().clone(),
 		block_import_trigger,
 		proposer_environment,
 	)
-	.with_claim_strategy(SlotClaimStrategy::RoundRobin)
-	.with_allow_delayed_proposal(true);
+	.with_claim_strategy(SlotClaimStrategy::RoundRobin);
 
 	let (blocks, xts): (Vec<_>, Vec<_>) =
 		PerShardSlotWorkerScheduler::on_slot(&mut aura, slot, shards)
@@ -269,7 +239,7 @@ where
 	Ok((blocks, opaque_calls))
 }
 
-/// Gossips sidechain blocks to fellow peers and sends opaque calls as extrinsic to the parentchain.
+/// Broadcasts sidechain blocks to fellow peers and sends opaque calls as extrinsic to the parentchain.
 pub(crate) fn send_blocks_and_extrinsics<
 	ParentchainBlock,
 	SignedSidechainBlock,
@@ -279,14 +249,14 @@ pub(crate) fn send_blocks_and_extrinsics<
 >(
 	blocks: Vec<SignedSidechainBlock>,
 	opaque_calls: Vec<OpaqueCall>,
-	ocall_api: OCallApi,
+	ocall_api: Arc<OCallApi>,
 	validator_access: &ValidatorAccessor,
 	extrinsics_factory: &ExtrinsicsFactory,
 ) -> Result<()>
 where
 	ParentchainBlock: BlockTrait,
 	SignedSidechainBlock: SignedBlock + 'static,
-	OCallApi: EnclaveSidechainOCallApi + EnclaveOnChainOCallApi,
+	OCallApi: EnclaveSidechainOCallApi,
 	ValidatorAccessor: ValidatorAccess<ParentchainBlock> + Send + Sync + 'static,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	ExtrinsicsFactory: CreateExtrinsics,
@@ -294,9 +264,10 @@ where
 	debug!("Proposing {} sidechain block(s) (broadcasting to peers)", blocks.len());
 	ocall_api.propose_sidechain_blocks(blocks)?;
 
-	let xts = extrinsics_factory.create_extrinsics(opaque_calls.as_slice())?;
+	let xts = extrinsics_factory.create_extrinsics(opaque_calls.as_slice(), None)?;
 
 	debug!("Sending sidechain block(s) confirmation extrinsic.. ");
-	validator_access.execute_mut_on_validator(|v| v.send_extrinsics(&ocall_api, xts))?;
+	validator_access.execute_mut_on_validator(|v| v.send_extrinsics(xts))?;
+
 	Ok(())
 }

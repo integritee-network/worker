@@ -44,7 +44,7 @@ impl<SignedBlock: SignedBlockT> SidechainStorageLock<SignedBlock> {
 /// Storage interface Trait
 #[cfg_attr(test, automock)]
 pub trait BlockStorage<SignedBlock: SignedBlockT> {
-	// type not working because gossiper needs to work with the same block type,
+	// Type is not working because broadcaster needs to work with the same block type,
 	// so it needs to be defined somewhere more global.
 	// type SignedBlock: SignedBlockT;
 	fn store_blocks(&self, blocks: Vec<SignedBlock>) -> Result<()>;
@@ -63,6 +63,18 @@ pub trait FetchBlocks<SignedBlock: SignedBlockT> {
 	fn fetch_all_blocks_after(
 		&self,
 		block_hash: &BlockHash,
+		shard_identifier: &ShardIdentifierFor<SignedBlock>,
+	) -> Result<Vec<SignedBlock>>;
+
+	/// Fetch all blocks within a range, defined by a starting block (lower bound) and end block (upper bound) hash.
+	///
+	/// Does NOT include the bound defining blocks in the result. ]from..until[.
+	/// Returns an empty vector if 'from' cannot be found in storage.
+	/// Returns the same as 'fetch_all_blocks_after' if 'until' cannot be found in storage.
+	fn fetch_blocks_in_range(
+		&self,
+		block_hash_from: &BlockHash,
+		block_hash_until: &BlockHash,
 		shard_identifier: &ShardIdentifierFor<SignedBlock>,
 	) -> Result<Vec<SignedBlock>>;
 }
@@ -86,5 +98,16 @@ impl<SignedBlock: SignedBlockT> FetchBlocks<SignedBlock> for SidechainStorageLoc
 		shard_identifier: &ShardIdentifierFor<SignedBlock>,
 	) -> Result<Vec<SignedBlock>> {
 		self.storage.read().get_blocks_after(block_hash, shard_identifier)
+	}
+
+	fn fetch_blocks_in_range(
+		&self,
+		block_hash_from: &BlockHash,
+		block_hash_until: &BlockHash,
+		shard_identifier: &ShardIdentifierFor<SignedBlock>,
+	) -> Result<Vec<SignedBlock>> {
+		self.storage
+			.read()
+			.get_blocks_in_range(block_hash_from, block_hash_until, shard_identifier)
 	}
 }

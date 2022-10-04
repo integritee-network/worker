@@ -1,0 +1,24 @@
+name: Labels Check
+on:
+  pull_request:
+    types: [opened, labeled, unlabeled, synchronize, ready_for_review]
+jobs:
+  A-label-check:
+    uses: ./.github/workflows/label-checker.yml
+    with:
+        predefined_labels: "A0-core,A1-cli,A2-applibs,A3-sidechain,A4-offchain,A5-teeracle,A6-evm,A7-somethingelse"
+
+  B-label-check:
+    uses: ./.github/workflows/label-checker.yml
+    with:
+        predefined_labels: "B0-silent,B1-releasenotes"
+
+  C-label-check:
+    uses: ./.github/workflows/label-checker.yml
+    with:
+      predefined_labels: "C1-low 📌,C3-medium 📣,C7-high ❗️,C9-critical ‼️"
+
+  E-label-check:
+    uses: ./.github/workflows/label-checker.yml
+    with:
+        predefined_labels: "E0-breaksnothing,E3-hardmerge,E5-publicapi,E6-parentchain,E8-breakseverything"

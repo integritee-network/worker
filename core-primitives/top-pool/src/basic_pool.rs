@@ -1,3 +1,20 @@
+/*
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
+
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+
+		http://www.apache.org/licenses/LICENSE-2.0
+
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+
+*/
+
 pub extern crate alloc;
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
@@ -11,7 +28,7 @@ use std::sync::Mutex;
 
 use crate::{
 	base_pool::TrustedOperation,
-	error::{Error, IntoPoolError},
+	error::IntoPoolError,
 	pool::{ChainApi, ExtrinsicHash, Options as PoolOptions, Pool},
 	primitives::{
 		ImportNotificationStream, PoolFuture, PoolStatus, TrustedOperationPool,
@@ -31,7 +48,7 @@ use sp_runtime::{
 	generic::BlockId,
 	traits::{Block as BlockT, NumberFor, Zero},
 };
-use std::{collections::HashMap, format, vec, vec::Vec};
+use std::{collections::HashMap, vec, vec::Vec};
 
 type BoxedReadyIterator<Hash, Data> =
 	Box<dyn Iterator<Item = Arc<TrustedOperation<Hash, Data>>> + Send>;
@@ -87,7 +104,6 @@ where
 {
 	pool: Arc<Pool<PoolApi, RpcResponse>>,
 	_api: Arc<PoolApi>,
-	rpc_responder: Arc<RpcResponse>,
 	ready_poll: Arc<Mutex<ReadyPoll<ReadyIteratorFor<PoolApi>, Block>>>,
 }
 
@@ -110,13 +126,8 @@ where
 	where
 		<PoolApi as ChainApi>::Error: IntoPoolError,
 	{
-		let pool = Arc::new(Pool::new(options, pool_api.clone(), rpc_response_sender.clone()));
-		BasicPool {
-			_api: pool_api,
-			pool,
-			rpc_responder: rpc_response_sender,
-			ready_poll: Default::default(),
-		}
+		let pool = Arc::new(Pool::new(options, pool_api.clone(), rpc_response_sender));
+		BasicPool { _api: pool_api, pool, ready_poll: Default::default() }
 	}
 }
 
@@ -232,11 +243,5 @@ where
 
 	fn on_block_imported(&self, hashes: &[Self::Hash], block_hash: SidechainBlockHash) {
 		self.pool.validated_pool().on_block_imported(hashes, block_hash);
-	}
-
-	fn rpc_send_state(&self, hash: Self::Hash, state_encoded: Vec<u8>) -> Result<(), Error> {
-		self.rpc_responder
-			.send_state(hash, state_encoded)
-			.map_err(|e| Error::FailedToSendUpdateToRpcClient(format!("{:?}", e)))
 	}
 }

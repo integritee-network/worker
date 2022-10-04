@@ -42,7 +42,8 @@ pub trait FetchBlocksFromPeer {
 
 	async fn fetch_blocks_from_peer(
 		&self,
-		last_known_block_hash: BlockHash,
+		last_imported_block_hash: BlockHash,
+		maybe_until_block_hash: Option<BlockHash>,
 		shard_identifier: ShardIdentifier,
 	) -> Result<Vec<Self::SignedBlockType>>;
 }

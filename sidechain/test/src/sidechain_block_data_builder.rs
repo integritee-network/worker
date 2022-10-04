@@ -18,13 +18,13 @@
 
 //! Builder pattern for sidechain block data.
 
-use itp_time_utils;
 use itp_types::H256;
 use its_primitives::types::{
 	block::{BlockHash, Timestamp},
 	block_data::BlockData,
 };
 use sp_core::{ed25519, Pair};
+use std::{time::SystemTime, vec};
 
 type Seed = [u8; 32];
 const ENCLAVE_SEED: Seed = *b"12345678901234567890123456789012";
@@ -52,7 +52,7 @@ impl Default for SidechainBlockDataBuilder {
 impl SidechainBlockDataBuilder {
 	pub fn random() -> Self {
 		SidechainBlockDataBuilder {
-			timestamp: itp_time_utils::now_as_u64(),
+			timestamp: now_as_u64(),
 			layer_one_head: BlockHash::random(),
 			signer: Pair::from_seed(&ENCLAVE_SEED),
 			signed_top_hashes: vec![H256::random(), H256::random()],
@@ -94,4 +94,9 @@ impl SidechainBlockDataBuilder {
 			encrypted_state_diff: self.encrypted_state_diff,
 		}
 	}
+}
+
+/// gets the timestamp of the block as seconds since unix epoch
+fn now_as_u64() -> u64 {
+	SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64
 }

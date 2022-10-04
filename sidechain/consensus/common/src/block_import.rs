@@ -28,7 +28,7 @@ use its_primitives::traits::{
 use its_state::{LastBlockExt, SidechainState};
 use log::*;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
-use std::vec::Vec;
+use std::{time::Instant, vec::Vec};
 
 pub trait BlockImport<ParentchainBlock, SignedSidechainBlock>
 where
@@ -74,7 +74,7 @@ where
 		F: FnOnce(Self::SidechainState) -> Result<SignedSidechainBlock, Error>;
 
 	/// Key that is used for state encryption.
-	fn state_key(&self) -> Self::StateCrypto;
+	fn state_key(&self) -> Result<Self::StateCrypto, Error>;
 
 	/// Getter for the context.
 	fn get_context(&self) -> &Self::Context;
@@ -99,7 +99,6 @@ where
 		sidechain_block: &SignedSidechainBlock::Block,
 		last_imported_parentchain_header: &ParentchainBlock::Header,
 	) -> Result<ParentchainBlock::Header, Error>;
-
 	/// Cleanup task after import is done.
 	fn cleanup(&self, signed_sidechain_block: &SignedSidechainBlock) -> Result<(), Error>;
 
@@ -109,12 +108,16 @@ where
 		signed_sidechain_block: SignedSidechainBlock,
 		parentchain_header: &ParentchainBlock::Header,
 	) -> Result<ParentchainBlock::Header, Error> {
+		let start_time = Instant::now();
+
 		let sidechain_block = signed_sidechain_block.block().clone();
 		let shard = sidechain_block.header().shard_id();
+		let block_number = signed_sidechain_block.block().header().block_number();
 
 		debug!(
-			"Attempting to import sidechain block (number: {}, parentchain hash: {:?})",
-			signed_sidechain_block.block().header().block_number(),
+			"Attempting to import sidechain block (number: {}, hash: {:?}, parentchain hash: {:?})",
+			block_number,
+			signed_sidechain_block.block().hash(),
 			signed_sidechain_block.block().block_data().layer_one_head()
 		);
 
@@ -127,7 +130,6 @@ where
 
 		let block_import_params = self.verify_import(&shard, |state| {
 			let verifier = self.verifier(state);
-
 			verifier.verify(
 				signed_sidechain_block.clone(),
 				&peeked_parentchain_header,
@@ -138,11 +140,20 @@ where
 		let latest_parentchain_header =
 			self.import_parentchain_block(&sidechain_block, parentchain_header)?;
 
+		let state_key = self.state_key()?;
+
+		let state_update_start_time = Instant::now();
 		self.apply_state_update(&shard, |mut state| {
-			let update = state_update_from_encrypted(
-				block_import_params.block().block_data().encrypted_state_diff(),
-				self.state_key(),
-			)?;
+			let encrypted_state_diff =
+				block_import_params.block().block_data().encrypted_state_diff();
+
+			info!(
+				"Applying state diff for block {} of size {} bytes",
+				block_number,
+				encrypted_state_diff.len()
+			);
+
+			let update = state_update_from_encrypted(encrypted_state_diff, state_key)?;
 
 			state.apply_state_update(&update).map_err(|e| Error::Other(e.into()))?;
 
@@ -150,11 +161,18 @@ where
 
 			Ok(state)
 		})?;
+		info!(
+			"Applying state update from block {} took {} ms",
+			block_number,
+			state_update_start_time.elapsed().as_millis()
+		);
 
 		self.cleanup(&signed_sidechain_block)?;
 
 		// Store block in storage.
 		self.get_context().store_sidechain_blocks(vec![signed_sidechain_block])?;
+
+		info!("Importing block {} took {} ms", block_number, start_time.elapsed().as_millis());
 
 		Ok(latest_parentchain_header)
 	}

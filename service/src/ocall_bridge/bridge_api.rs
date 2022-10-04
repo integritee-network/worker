@@ -140,7 +140,7 @@ pub enum OCallBridgeError {
 	#[error("DirectInvocation Error: {0}")]
 	DirectInvocationError(String),
 	#[error("Node API factory error: {0}")]
-	NodeApiFactory(#[from] itp_node_api_extensions::node_api_factory::NodeApiFactoryError),
+	NodeApiFactory(#[from] itp_node_api::node_api_factory::NodeApiFactoryError),
 }
 
 impl From<OCallBridgeError> for sgx_status_t {
@@ -206,7 +206,8 @@ pub trait SidechainBridge {
 
 	fn fetch_sidechain_blocks_from_peer(
 		&self,
-		last_known_block_hash_encoded: Vec<u8>,
+		last_imported_block_hash_encoded: Vec<u8>,
+		maybe_until_block_hash_encoded: Vec<u8>,
 		shard_identifier_encoded: Vec<u8>,
 	) -> OCallBridgeResult<Vec<u8>>;
 }

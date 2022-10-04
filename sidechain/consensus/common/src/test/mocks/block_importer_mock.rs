@@ -18,11 +18,11 @@
 use crate::{test::mocks::verifier_mock::VerifierMock, BlockImport, Error, Result};
 use core::marker::PhantomData;
 use itp_sgx_crypto::aes::Aes;
+use itp_sgx_externalities::SgxExternalities;
 use itp_test::mock::onchain_mock::OnchainMock;
 use itp_types::H256;
 use its_primitives::traits::{ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait};
 use its_state::SidechainDB;
-use sgx_externalities::SgxExternalities;
 use sp_core::Pair;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::{collections::VecDeque, sync::RwLock};
@@ -123,7 +123,7 @@ where
 		todo!()
 	}
 
-	fn state_key(&self) -> Self::StateCrypto {
+	fn state_key(&self) -> Result<Self::StateCrypto> {
 		todo!()
 	}
 

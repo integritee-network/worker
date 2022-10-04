@@ -20,13 +20,12 @@
 /// This should serve as a proof of concept for a potential refactoring design. Ultimately, everything
 /// from the main.rs should be covered by the worker struct here - hidden and split across
 /// multiple traits.
-use crate::{config::Config, error::Error};
+use crate::{config::Config, error::Error, TrackInitialization};
 use async_trait::async_trait;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
-use itp_node_api_extensions::{node_api_factory::CreateNodeApi, PalletTeerexApi};
-use its_primitives::{
-	constants::RPC_METHOD_NAME_IMPORT_BLOCKS, types::SignedBlock as SignedSidechainBlock,
-};
+use itp_node_api::{api_client::PalletTeerexApi, node_api_factory::CreateNodeApi};
+use its_primitives::types::SignedBlock as SignedSidechainBlock;
+use its_rpc_handler::constants::RPC_METHOD_NAME_IMPORT_BLOCKS;
 use jsonrpsee::{
 	types::{to_json_value, traits::Client},
 	ws_client::WsClientBuilder,
@@ -36,63 +35,76 @@ use std::sync::{Arc, RwLock};
 
 pub type WorkerResult<T> = Result<T, Error>;
 pub type Url = String;
-pub struct Worker<Config, NodeApiFactory, Enclave> {
+pub struct Worker<Config, NodeApiFactory, Enclave, InitializationHandler> {
 	_config: Config,
 	// unused yet, but will be used when more methods are migrated to the worker
 	_enclave_api: Arc<Enclave>,
 	node_api_factory: Arc<NodeApiFactory>,
+	initialization_handler: Arc<InitializationHandler>,
 	peers: RwLock<Vec<Url>>,
 }
 
-impl<Config, NodeApiFactory, Enclave> Worker<Config, NodeApiFactory, Enclave> {
+impl<Config, NodeApiFactory, Enclave, InitializationHandler>
+	Worker<Config, NodeApiFactory, Enclave, InitializationHandler>
+{
 	pub fn new(
 		config: Config,
 		enclave_api: Arc<Enclave>,
 		node_api_factory: Arc<NodeApiFactory>,
+		initialization_handler: Arc<InitializationHandler>,
 		peers: Vec<Url>,
 	) -> Self {
 		Self {
 			_config: config,
 			_enclave_api: enclave_api,
 			node_api_factory,
+			initialization_handler,
 			peers: RwLock::new(peers),
 		}
 	}
 }
 
 #[async_trait]
-/// Gossip Sidechain blocks to peers.
-pub trait AsyncBlockGossiper {
-	async fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()>;
+/// Broadcast Sidechain blocks to peers.
+pub trait AsyncBlockBroadcaster {
+	async fn broadcast_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()>;
 }
 
 #[async_trait]
-impl<NodeApiFactory, Enclave> AsyncBlockGossiper for Worker<Config, NodeApiFactory, Enclave>
+impl<NodeApiFactory, Enclave, InitializationHandler> AsyncBlockBroadcaster
+	for Worker<Config, NodeApiFactory, Enclave, InitializationHandler>
 where
 	NodeApiFactory: CreateNodeApi + Send + Sync,
 	Enclave: Send + Sync,
+	InitializationHandler: TrackInitialization + Send + Sync,
 {
-	async fn gossip_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()> {
+	async fn broadcast_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()> {
 		if blocks.is_empty() {
-			debug!("No blocks to gossip, returning");
+			debug!("No blocks to broadcast, returning");
 			return Ok(())
 		}
 
 		let blocks_json = vec![to_json_value(blocks)?];
-		let peers = self.peers.read().map_err(|e| {
-			Error::Custom(format!("Encountered poisoned lock for peers: {:?}", e).into())
-		})?;
+		let peers = self
+			.peers
+			.read()
+			.map_err(|e| {
+				Error::Custom(format!("Encountered poisoned lock for peers: {:?}", e).into())
+			})
+			.map(|l| l.clone())?;
 
-		for url in peers.iter().cloned() {
+		self.initialization_handler.sidechain_block_produced();
+
+		for url in peers {
 			let blocks = blocks_json.clone();
 
 			tokio::spawn(async move {
-				debug!("Gossiping block to peer with address: {:?}", url);
+				debug!("Broadcasting block to peer with address: {:?}", url);
 				// FIXME: Websocket connection to a worker should stay, once established.
 				let client = match WsClientBuilder::default().build(&url).await {
 					Ok(c) => c,
 					Err(e) => {
-						error!("Failed to create websocket client for block gossiping (target url: {}): {:?}", url, e);
+						error!("Failed to create websocket client for block broadcasting (target url: {}): {:?}", url, e);
 						return
 					},
 				};
@@ -101,7 +113,7 @@ where
 					client.request::<Vec<u8>>(RPC_METHOD_NAME_IMPORT_BLOCKS, blocks.into()).await
 				{
 					error!(
-						"Gossip block request ({}) to {} failed: {:?}",
+						"Broadcast block request ({}) to {} failed: {:?}",
 						RPC_METHOD_NAME_IMPORT_BLOCKS, url, e
 					);
 				}
@@ -123,7 +135,8 @@ pub trait UpdatePeers {
 	}
 }
 
-impl<NodeApiFactory, Enclave> UpdatePeers for Worker<Config, NodeApiFactory, Enclave>
+impl<NodeApiFactory, Enclave, InitializationHandler> UpdatePeers
+	for Worker<Config, NodeApiFactory, Enclave, InitializationHandler>
 where
 	NodeApiFactory: CreateNodeApi + Send + Sync,
 {
@@ -135,7 +148,7 @@ where
 		let enclaves = node_api.all_enclaves(None)?;
 		let mut peer_urls = Vec::<String>::new();
 		for enclave in enclaves {
-			// FIXME: This is temporary only, as block gossiping should be moved to trusted ws server.
+			// FIXME: This is temporary only, as block broadcasting should be moved to trusted ws server.
 			let enclave_url = enclave.url.clone();
 			let worker_api_direct = DirectWorkerApi::new(enclave.url);
 			let untrusted_worker_url =
@@ -166,12 +179,13 @@ mod tests {
 		tests::{
 			commons::local_worker_config,
 			mock::{W1_URL, W2_URL},
+			mocks::initialization_handler_mock::TrackInitializationMock,
 		},
-		worker::{AsyncBlockGossiper, Worker},
+		worker::{AsyncBlockBroadcaster, Worker},
 	};
 	use frame_support::assert_ok;
-	use itp_node_api_extensions::node_api_factory::NodeApiFactory;
-	use its_primitives::types::SignedBlock as SignedSidechainBlock;
+	use itp_node_api::node_api_factory::NodeApiFactory;
+	use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 	use its_test::sidechain_block_builder::SidechainBlockBuilder;
 	use jsonrpsee::{ws_server::WsServerBuilder, RpcModule};
 	use log::debug;
@@ -201,7 +215,7 @@ mod tests {
 	}
 
 	#[tokio::test]
-	async fn gossip_blocks_works() {
+	async fn broadcast_blocks_works() {
 		init();
 		run_server(W1_URL).await.unwrap();
 		run_server(W2_URL).await.unwrap();
@@ -215,11 +229,12 @@ mod tests {
 				"ws://invalid.url".to_string(),
 				AccountKeyring::Alice.pair(),
 			)),
+			Arc::new(TrackInitializationMock {}),
 			peers,
 		);
 
 		let resp = worker
-			.gossip_blocks(vec![SidechainBlockBuilder::default().build_signed()])
+			.broadcast_blocks(vec![SidechainBlockBuilder::default().build_signed()])
 			.await;
 		assert_ok!(resp);
 	}

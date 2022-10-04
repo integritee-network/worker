@@ -55,6 +55,10 @@ impl SealStateAndKeys for SealHandlerMock {
 		*self.state.write().unwrap() = bytes.to_vec();
 		Ok(())
 	}
+
+	fn seal_new_empty_state(&self, _shard: &ShardIdentifier) -> EnclaveResult<()> {
+		Ok(())
+	}
 }
 
 impl UnsealStateAndKeys for SealHandlerMock {

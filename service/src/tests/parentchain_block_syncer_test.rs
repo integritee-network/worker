@@ -16,13 +16,12 @@
 */
 
 use crate::{
-	parentchain_block_syncer::SyncParentchainBlocks,
+	parentchain_block_syncer::{ParentchainBlockSyncer, SyncParentchainBlocks},
 	tests::mocks::{
 		parentchain_api_mock::ParentchainApiMock, sidechain_api_mock::SidechainApiMock,
 	},
-	ParentchainBlockSyncer,
 };
-use itp_node_api_extensions::ChainApi;
+use itp_node_api::api_client::ChainApi;
 use std::sync::Arc;
 
 #[test]
@@ -35,9 +34,9 @@ fn test_number_of_synced_blocks() {
 
 	let enclave_api_mock = SidechainApiMock;
 
-	let parentchainc_block_syncer =
+	let parentchain_block_syncer =
 		ParentchainBlockSyncer::new(parentchain_api_mock, Arc::new(enclave_api_mock));
 
-	let header = parentchainc_block_syncer.sync_parentchain(last_synced_block.block.header);
+	let header = parentchain_block_syncer.sync_parentchain(last_synced_block.block.header);
 	assert_eq!(header.number, number_of_blocks);
 }

@@ -36,28 +36,23 @@ pub fn now_as_nanos() -> u128 {
 	duration_now().as_nanos()
 }
 
-/// Calculates the remaining time `until`.
+/// Calculates the remaining time from now to `until`.
 pub fn remaining_time(until: Duration) -> Option<Duration> {
-	until.checked_sub(duration_now())
+	duration_difference(duration_now(), until)
 }
 
-/// Returns current duration since unix epoch.
+/// Calculate the difference in duration between `from` and `to`.
+/// Returns `None` if `to` < `from`.
+pub fn duration_difference(from: Duration, to: Duration) -> Option<Duration> {
+	to.checked_sub(from)
+}
+
+/// Returns current duration since unix epoch with SystemTime::now().
+/// Note: subsequent calls are not guaranteed to be monotonic.
+/// (https://doc.rust-lang.org/std/time/struct.SystemTime.html)
 pub fn duration_now() -> Duration {
 	let now = SystemTime::now();
 	now.duration_since(SystemTime::UNIX_EPOCH).unwrap_or_else(|e| {
 		panic!("Current time {:?} is before unix epoch. Something is wrong: {:?}", now, e)
 	})
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	#[test]
-	fn subsequent_nows_are_increasing_in_time() {
-		let before = duration_now();
-		let now = duration_now();
-
-		assert!(before < now);
-	}
 }

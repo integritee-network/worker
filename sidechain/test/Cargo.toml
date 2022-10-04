@@ -1,38 +1,34 @@
 [package]
 name = "its-test"
-version = "0.8.0"
+version = "0.9.0"
 authors = ["Integritee AG <hello@integritee.network>"]
-edition = "2018"
+homepage = "https://integritee.network/"
+repository = "https://github.com/integritee-network/pallets/"
+license = "Apache-2.0"
+edition = "2021"
 
 [dependencies]
-codec  = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
 
 # sgx dependencies
-sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-
-# local dependencies
-itp-time-utils = { path = "../../core-primitives/time-utils", default-features = false }
-itp-types = { path = "../../core-primitives/types", default-features = false }
-its-primitives = { path = "../primitives", default-features = false }
+sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["untrusted_time"], optional = true }
 
 # Substrate dependencies
-sp-core = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20", default_features = false }
-sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
+sp-core = { default_features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 
+# local
+itp-types = { path = "../../core-primitives/types", default_features = false }
+its-primitives = { path = "../primitives", default_features = false }
 
 [features]
 default = ["std"]
 std = [
     "codec/std",
-    "itp-time-utils/std",
     "itp-types/std",
     "its-primitives/std",
     # substrate
     "sp-core/std",
-    "sp-runtime/std",
 ]
 sgx = [
-    "itp-time-utils/sgx",
-    "itp-types/sgx",
     "sgx_tstd",
 ]

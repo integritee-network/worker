@@ -84,21 +84,37 @@ where
 
 	/// Read and seal all relevant data sent by the server.
 	fn read_and_seal_all(&mut self) -> EnclaveResult<()> {
-		let mut continue_reading = true;
-		while continue_reading {
-			continue_reading = self.read_and_seal()?;
+		let mut received_payloads: Vec<Opcode> = Vec::new();
+
+		loop {
+			let maybe_opcode = self.read_and_seal()?;
+			match maybe_opcode {
+				None => break,
+				Some(o) => {
+					received_payloads.push(o);
+				},
+			}
 		}
 		info!("Successfully read and sealed all data sent by the state provisioning server.");
+
+		// In case we receive a shielding key, but no state, we need to reset our state
+		// to update the enclave account.
+		if received_payloads.contains(&Opcode::ShieldingKey)
+			&& !received_payloads.contains(&Opcode::State)
+		{
+			self.seal_handler.seal_new_empty_state(&self.shard)?;
+		}
+
 		Ok(())
 	}
 
 	/// Read a server header / payload pair and directly seal the received data.
-	fn read_and_seal(&mut self) -> EnclaveResult<bool> {
+	fn read_and_seal(&mut self) -> EnclaveResult<Option<Opcode>> {
 		let mut start_byte = [0u8; 1];
 		let read_size = self.tls_stream.read(&mut start_byte)?;
 		// If we're reading but there's no data: EOF.
 		if read_size == 0 {
-			return Ok(false)
+			return Ok(None)
 		}
 		let header = self.read_header(start_byte.to_vec())?;
 		let bytes = self.read_until(header.payload_length as usize)?;
@@ -107,7 +123,7 @@ where
 			Opcode::StateKey => self.seal_handler.seal_state_key(&bytes)?,
 			Opcode::State => self.seal_handler.seal_state(&bytes, &self.shard)?,
 		};
-		Ok(true)
+		Ok(Some(header.opcode))
 	}
 
 	/// Reads the payload header, indicating the sent payload length and type.

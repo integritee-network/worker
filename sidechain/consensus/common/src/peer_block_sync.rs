@@ -15,7 +15,7 @@
 
 */
 
-use crate::{BlockImport, Error, Result};
+use crate::{BlockImport, ConfirmBlockImport, Error, Result};
 use core::marker::PhantomData;
 use itp_ocall_api::EnclaveSidechainOCallApi;
 use itp_types::H256;
@@ -47,37 +47,72 @@ where
 }
 
 /// Sidechain peer block sync implementation.
-pub struct PeerBlockSync<ParentchainBlock, SignedSidechainBlock, BlockImporter, SidechainOCallApi> {
+pub struct PeerBlockSync<
+	ParentchainBlock,
+	SignedSidechainBlock,
+	BlockImporter,
+	SidechainOCallApi,
+	ImportConfirmationHandler,
+> {
 	importer: Arc<BlockImporter>,
 	sidechain_ocall_api: Arc<SidechainOCallApi>,
+	import_confirmation_handler: Arc<ImportConfirmationHandler>,
 	_phantom: PhantomData<(ParentchainBlock, SignedSidechainBlock)>,
 }
 
-impl<ParentchainBlock, SignedSidechainBlock, BlockImporter, SidechainOCallApi>
-	PeerBlockSync<ParentchainBlock, SignedSidechainBlock, BlockImporter, SidechainOCallApi>
-where
+impl<
+		ParentchainBlock,
+		SignedSidechainBlock,
+		BlockImporter,
+		SidechainOCallApi,
+		ImportConfirmationHandler,
+	>
+	PeerBlockSync<
+		ParentchainBlock,
+		SignedSidechainBlock,
+		BlockImporter,
+		SidechainOCallApi,
+		ImportConfirmationHandler,
+	> where
 	ParentchainBlock: ParentchainBlockTrait,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
 	<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as BlockTrait>::HeaderType:
 		HeaderTrait<ShardIdentifier = H256>,
 	BlockImporter: BlockImport<ParentchainBlock, SignedSidechainBlock>,
 	SidechainOCallApi: EnclaveSidechainOCallApi,
+	ImportConfirmationHandler: ConfirmBlockImport<
+		<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as BlockTrait>::HeaderType,
+	>,
 {
-	pub fn new(importer: Arc<BlockImporter>, sidechain_ocall_api: Arc<SidechainOCallApi>) -> Self {
-		PeerBlockSync { importer, sidechain_ocall_api, _phantom: Default::default() }
+	pub fn new(
+		importer: Arc<BlockImporter>,
+		sidechain_ocall_api: Arc<SidechainOCallApi>,
+		import_confirmation_handler: Arc<ImportConfirmationHandler>,
+	) -> Self {
+		PeerBlockSync {
+			importer,
+			sidechain_ocall_api,
+			import_confirmation_handler,
+			_phantom: Default::default(),
+		}
 	}
 
 	fn fetch_and_import_blocks_from_peer(
 		&self,
 		last_imported_sidechain_block_hash: BlockHash,
+		import_until_block_hash: BlockHash,
 		current_parentchain_header: &ParentchainBlock::Header,
 		shard_identifier: ShardIdentifierFor<SignedSidechainBlock>,
 	) -> Result<ParentchainBlock::Header> {
-		info!("Initiating fetch blocks from peer");
+		info!(
+			"Initiating fetch blocks from peer, last imported block hash: {:?}, until block hash: {:?}",
+			last_imported_sidechain_block_hash, import_until_block_hash
+		);
 
 		let blocks_to_import: Vec<SignedSidechainBlock> =
 			self.sidechain_ocall_api.fetch_sidechain_blocks_from_peer(
 				last_imported_sidechain_block_hash,
+				Some(import_until_block_hash),
 				shard_identifier,
 			)?;
 
@@ -110,9 +145,9 @@ where
 	}
 }
 
-impl<ParentchainBlock, SignedSidechainBlock, BlockImporter, SidechainOCallApi>
+impl<ParentchainBlock, SignedSidechainBlock, BlockImporter, SidechainOCallApi, ImportConfirmationHandler>
 	SyncBlockFromPeer<ParentchainBlock::Header, SignedSidechainBlock>
-	for PeerBlockSync<ParentchainBlock, SignedSidechainBlock, BlockImporter, SidechainOCallApi>
+	for PeerBlockSync<ParentchainBlock, SignedSidechainBlock, BlockImporter, SidechainOCallApi, ImportConfirmationHandler>
 where
 	ParentchainBlock: ParentchainBlockTrait,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
@@ -120,6 +155,7 @@ where
 	HeaderTrait<ShardIdentifier = H256>,
 	BlockImporter: BlockImport<ParentchainBlock, SignedSidechainBlock>,
 	SidechainOCallApi: EnclaveSidechainOCallApi,
+	ImportConfirmationHandler: ConfirmBlockImport<<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as BlockTrait>::HeaderType>,
 {
 	fn sync_block(
 		&self,
@@ -128,27 +164,34 @@ where
 	) -> Result<ParentchainBlock::Header> {
 		let shard_identifier = sidechain_block.block().header().shard_id();
 		let sidechain_block_number = sidechain_block.block().header().block_number();
+		let sidechain_block_hash = sidechain_block.hash();
 
 		// Attempt to import the block - in case we encounter an ancestry error, we go into
 		// peer fetching mode to fetch sidechain blocks from a peer and import those first.
-		match self.importer.import_block(sidechain_block, current_parentchain_header) {
+		match self.importer.import_block(sidechain_block.clone(), current_parentchain_header) {
 			Err(e) => match e {
 				Error::BlockAncestryMismatch(_block_number, block_hash, _) => {
 					warn!("Got ancestry mismatch error upon block import. Attempting to fetch missing blocks from peer");
-					self.fetch_and_import_blocks_from_peer(
+					let updated_parentchain_header = self.fetch_and_import_blocks_from_peer(
 						block_hash,
+						sidechain_block_hash,
 						current_parentchain_header,
 						shard_identifier,
-					)
+					)?;
+
+					self.importer.import_block(sidechain_block, &updated_parentchain_header)
 				},
 				Error::InvalidFirstBlock(block_number, _) => {
 					warn!("Got invalid first block error upon block import (expected first block, but got block with number {}). \
 							Attempting to fetch missing blocks from peer", block_number);
-					self.fetch_and_import_blocks_from_peer(
+					let updated_parentchain_header = self.fetch_and_import_blocks_from_peer(
 						Default::default(), // This is the parent hash of the first block. So we import everything.
+						sidechain_block_hash,
 						current_parentchain_header,
 						shard_identifier,
-					)
+					)?;
+
+					self.importer.import_block(sidechain_block, &updated_parentchain_header)
 				},
 				Error::BlockAlreadyImported(to_import_block_number, last_known_block_number) => {
 					warn!("Sidechain block from queue (number: {}) was already imported (current block number: {}). Block will be ignored.", 
@@ -158,8 +201,15 @@ where
 				_ => Err(e),
 			},
 			Ok(latest_parentchain_header) => {
-				info!("Successfully imported gossiped sidechain block (number: {}), based on parentchain block {:?}", 
+				info!("Successfully imported broadcast sidechain block (number: {}), based on parentchain block {:?}", 
 					sidechain_block_number, latest_parentchain_header.number());
+
+				// We confirm the successful block import. Only in this case, not when we're in
+				// on-boarding and importing blocks that were fetched from a peer.
+				if let Err(e) = self.import_confirmation_handler.confirm_import(sidechain_block.block().header(), &shard_identifier) {
+					error!("Failed to confirm sidechain block import: {:?}", e);
+				}
+
 				Ok(latest_parentchain_header)
 			},
 		}
@@ -169,15 +219,25 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::test::mocks::block_importer_mock::BlockImportMock;
-	use core::assert_matches::assert_matches;
-	use itp_test::{
-		builders::parentchain_header_builder::ParentchainHeaderBuilder,
-		mock::sidechain_ocall_api_mock::SidechainOCallApiMock,
+	use crate::test::mocks::{
+		block_importer_mock::BlockImportMock, confirm_block_import_mock::ConfirmBlockImportMock,
 	};
+	use core::assert_matches::assert_matches;
+	use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
+	use itp_test::mock::sidechain_ocall_api_mock::SidechainOCallApiMock;
 	use itp_types::Block as ParentchainBlock;
-	use its_primitives::types::SignedBlock as SignedSidechainBlock;
+	use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 	use its_test::sidechain_block_builder::SidechainBlockBuilder;
+
+	type TestBlockImport = BlockImportMock<ParentchainBlock, SignedSidechainBlock>;
+	type TestOCallApi = SidechainOCallApiMock<SignedSidechainBlock>;
+	type TestPeerBlockSync = PeerBlockSync<
+		ParentchainBlock,
+		SignedSidechainBlock,
+		TestBlockImport,
+		TestOCallApi,
+		ConfirmBlockImportMock,
+	>;
 
 	#[test]
 	fn if_block_import_is_successful_no_peer_fetching_happens() {
@@ -193,7 +253,7 @@ mod tests {
 			Arc::new(SidechainOCallApiMock::<SignedSidechainBlock>::default());
 
 		let peer_syncer =
-			PeerBlockSync::new(block_importer_mock.clone(), sidechain_ocall_api.clone());
+			create_peer_syncer(block_importer_mock.clone(), sidechain_ocall_api.clone());
 
 		peer_syncer.sync_block(signed_sidechain_block, &parentchain_header).unwrap();
 
@@ -212,7 +272,7 @@ mod tests {
 			Arc::new(SidechainOCallApiMock::<SignedSidechainBlock>::default());
 
 		let peer_syncer =
-			PeerBlockSync::new(block_importer_mock.clone(), sidechain_ocall_api.clone());
+			create_peer_syncer(block_importer_mock.clone(), sidechain_ocall_api.clone());
 
 		let parentchain_header = ParentchainHeaderBuilder::default().build();
 		let signed_sidechain_block = SidechainBlockBuilder::default().build_signed();
@@ -239,14 +299,22 @@ mod tests {
 		);
 
 		let peer_syncer =
-			PeerBlockSync::new(block_importer_mock.clone(), sidechain_ocall_api.clone());
+			create_peer_syncer(block_importer_mock.clone(), sidechain_ocall_api.clone());
 
 		let parentchain_header = ParentchainHeaderBuilder::default().build();
 		let signed_sidechain_block = SidechainBlockBuilder::default().build_signed();
 
 		peer_syncer.sync_block(signed_sidechain_block, &parentchain_header).unwrap();
 
-		assert_eq!(3, block_importer_mock.get_imported_blocks().len());
+		assert_eq!(4, block_importer_mock.get_imported_blocks().len());
 		assert_eq!(1, sidechain_ocall_api.number_of_fetch_calls());
+	}
+
+	fn create_peer_syncer(
+		block_importer: Arc<TestBlockImport>,
+		ocall_api: Arc<TestOCallApi>,
+	) -> TestPeerBlockSync {
+		let import_confirmation_handler = Arc::new(ConfirmBlockImportMock {});
+		TestPeerBlockSync::new(block_importer, ocall_api, import_confirmation_handler)
 	}
 }

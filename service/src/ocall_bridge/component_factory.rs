@@ -29,14 +29,14 @@ use crate::{
 		worker_on_chain_ocall::WorkerOnChainOCall,
 	},
 	prometheus_metrics::ReceiveEnclaveMetrics,
-	sync_block_gossiper::GossipBlocks,
+	sync_block_broadcaster::BroadcastBlocks,
 	worker_peers_updater::UpdateWorkerPeers,
 	GetTokioHandle,
 };
 use itp_enclave_api::remote_attestation::RemoteAttestationCallBacks;
-use itp_node_api_extensions::node_api_factory::CreateNodeApi;
+use itp_node_api::node_api_factory::CreateNodeApi;
 use its_peer_fetch::FetchBlocksFromPeer;
-use its_primitives::types::SignedBlock as SignedSidechainBlock;
+use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use its_storage::BlockStorage;
 use std::sync::Arc;
 
@@ -45,7 +45,7 @@ use std::sync::Arc;
 /// our dependency graph is worker -> ocall bridge
 pub struct OCallBridgeComponentFactory<
 	NodeApi,
-	Gossiper,
+	Broadcaster,
 	EnclaveApi,
 	Storage,
 	PeerUpdater,
@@ -54,7 +54,7 @@ pub struct OCallBridgeComponentFactory<
 	MetricsReceiver,
 > {
 	node_api_factory: Arc<NodeApi>,
-	block_gossiper: Arc<Gossiper>,
+	block_broadcaster: Arc<Broadcaster>,
 	enclave_api: Arc<EnclaveApi>,
 	block_storage: Arc<Storage>,
 	peer_updater: Arc<PeerUpdater>,
@@ -65,7 +65,7 @@ pub struct OCallBridgeComponentFactory<
 
 impl<
 		NodeApi,
-		Gossiper,
+		Broadcaster,
 		EnclaveApi,
 		Storage,
 		PeerUpdater,
@@ -75,7 +75,7 @@ impl<
 	>
 	OCallBridgeComponentFactory<
 		NodeApi,
-		Gossiper,
+		Broadcaster,
 		EnclaveApi,
 		Storage,
 		PeerUpdater,
@@ -87,7 +87,7 @@ impl<
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
 		node_api_factory: Arc<NodeApi>,
-		block_gossiper: Arc<Gossiper>,
+		block_broadcaster: Arc<Broadcaster>,
 		enclave_api: Arc<EnclaveApi>,
 		block_storage: Arc<Storage>,
 		peer_updater: Arc<PeerUpdater>,
@@ -97,7 +97,7 @@ impl<
 	) -> Self {
 		OCallBridgeComponentFactory {
 			node_api_factory,
-			block_gossiper,
+			block_broadcaster,
 			enclave_api,
 			block_storage,
 			peer_updater,
@@ -110,7 +110,7 @@ impl<
 
 impl<
 		NodeApi,
-		Gossiper,
+		Broadcaster,
 		EnclaveApi,
 		Storage,
 		PeerUpdater,
@@ -120,7 +120,7 @@ impl<
 	> GetOCallBridgeComponents
 	for OCallBridgeComponentFactory<
 		NodeApi,
-		Gossiper,
+		Broadcaster,
 		EnclaveApi,
 		Storage,
 		PeerUpdater,
@@ -129,7 +129,7 @@ impl<
 		MetricsReceiver,
 	> where
 	NodeApi: CreateNodeApi + 'static,
-	Gossiper: GossipBlocks + 'static,
+	Broadcaster: BroadcastBlocks + 'static,
 	EnclaveApi: RemoteAttestationCallBacks + 'static,
 	Storage: BlockStorage<SignedSidechainBlock> + 'static,
 	PeerUpdater: UpdateWorkerPeers + 'static,
@@ -143,7 +143,7 @@ impl<
 
 	fn get_sidechain_api(&self) -> Arc<dyn SidechainBridge> {
 		Arc::new(SidechainOCall::new(
-			self.block_gossiper.clone(),
+			self.block_broadcaster.clone(),
 			self.block_storage.clone(),
 			self.peer_updater.clone(),
 			self.peer_block_fetcher.clone(),

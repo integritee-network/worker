@@ -17,7 +17,7 @@
 
 use crate::{
 	traits::{Block as BlockTrait, SignedBlock as SignedBlockTrait},
-	types::{block_data::BlockData, header::Header},
+	types::{block_data::BlockData, header::SidechainHeader as Header},
 };
 use codec::{Decode, Encode};
 use sp_core::{ed25519, H256};

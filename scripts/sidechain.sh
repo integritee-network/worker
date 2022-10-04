@@ -14,4 +14,4 @@ echo "        $LOG"
 
 touch "$LOG"
 
-./demo_sidechain.sh -p 9944 -A 2000 -B 3000 2>&1 | tee "$LOG"
+./demo_sidechain.sh -p 9944 -A 2000 -B 3000 -C ./../bin/integritee-cli 2>&1 | tee "$LOG"

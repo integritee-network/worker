@@ -30,7 +30,7 @@ use std::{collections::VecDeque, fmt::Debug, format, marker::PhantomData, sync::
 
 /// Trait for versioned state access. Manages history of state snapshots.
 pub trait VersionedStateAccess {
-	type StateType;
+	type StateType: Clone;
 	type HashType;
 
 	/// Load the latest version of the state.
@@ -109,7 +109,7 @@ where
 	) -> Result<&mut VecDeque<StateSnapshotMetaData<HashType>>> {
 		self.snapshot_history
 			.get_mut(shard_identifier)
-			.ok_or_else(|| Error::InvalidShard(*shard_identifier))
+			.ok_or(Error::InvalidShard(*shard_identifier))
 	}
 
 	fn get_snapshot_history(
@@ -118,7 +118,7 @@ where
 	) -> Result<&VecDeque<StateSnapshotMetaData<HashType>>> {
 		self.snapshot_history
 			.get(shard_identifier)
-			.ok_or_else(|| Error::InvalidShard(*shard_identifier))
+			.ok_or(Error::InvalidShard(*shard_identifier))
 	}
 
 	fn get_latest_snapshot_metadata(
@@ -184,6 +184,7 @@ impl<FileIo, State, HashType> VersionedStateAccess
 where
 	FileIo: StateFileIo<StateType = State, HashType = HashType>,
 	HashType: Copy + Eq + Debug,
+	State: Clone,
 {
 	type StateType = State;
 	type HashType = HashType;

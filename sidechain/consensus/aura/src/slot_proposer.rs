@@ -16,35 +16,35 @@
 */
 
 use finality_grandpa::BlockNumberOps;
+use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_executor::traits::StateUpdateProposer;
 use itp_time_utils::now_as_u64;
+use itp_top_pool_author::traits::AuthorApi;
 use itp_types::H256;
-use its_block_composer::ComposeBlockAndConfirmation;
+use its_block_composer::ComposeBlock;
 use its_consensus_common::{Error as ConsensusError, Proposal, Proposer};
 use its_primitives::traits::{
 	Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor,
 	SignedBlock as SignedSidechainBlockTrait,
 };
 use its_state::{SidechainDB, SidechainState, SidechainSystemExt, StateHash};
-use its_top_pool_executor::call_operator::TopPoolCallOperator;
 use log::*;
-use sgx_externalities::SgxExternalitiesTrait;
 use sp_runtime::{
 	traits::{Block, NumberFor},
 	MultiSignature,
 };
-use std::{marker::PhantomData, string::ToString, sync::Arc, time::Duration};
+use std::{marker::PhantomData, string::ToString, sync::Arc, time::Duration, vec::Vec};
 
 pub type ExternalitiesFor<T> = <T as StateUpdateProposer>::Externalities;
 ///! `SlotProposer` instance that has access to everything needed to propose a sidechain block.
 pub struct SlotProposer<
 	ParentchainBlock: Block,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
-	TopPoolExecutor,
+	TopPoolAuthor,
 	StfExecutor,
 	BlockComposer,
 > {
-	pub(crate) top_pool_executor: Arc<TopPoolExecutor>,
+	pub(crate) top_pool_author: Arc<TopPoolAuthor>,
 	pub(crate) stf_executor: Arc<StfExecutor>,
 	pub(crate) block_composer: Arc<BlockComposer>,
 	pub(crate) parentchain_header: ParentchainBlock::Header,
@@ -52,15 +52,10 @@ pub struct SlotProposer<
 	pub(crate) _phantom: PhantomData<ParentchainBlock>,
 }
 
-impl<ParentchainBlock, SignedSidechainBlock, TopPoolExecutor, BlockComposer, StfExecutor>
+impl<ParentchainBlock, SignedSidechainBlock, TopPoolAuthor, BlockComposer, StfExecutor>
 	Proposer<ParentchainBlock, SignedSidechainBlock>
-	for SlotProposer<
-		ParentchainBlock,
-		SignedSidechainBlock,
-		TopPoolExecutor,
-		StfExecutor,
-		BlockComposer,
-	> where
+	for SlotProposer<ParentchainBlock, SignedSidechainBlock, TopPoolAuthor, StfExecutor, BlockComposer>
+where
 	ParentchainBlock: Block<Hash = H256>,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	SignedSidechainBlock: SignedSidechainBlockTrait<Public = sp_core::ed25519::Public, Signature = MultiSignature>
@@ -71,9 +66,8 @@ impl<ParentchainBlock, SignedSidechainBlock, TopPoolExecutor, BlockComposer, Stf
 	StfExecutor: StateUpdateProposer,
 	ExternalitiesFor<StfExecutor>:
 		SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash,
-	TopPoolExecutor:
-		TopPoolCallOperator<ParentchainBlock, SignedSidechainBlock> + Send + Sync + 'static,
-	BlockComposer: ComposeBlockAndConfirmation<
+	TopPoolAuthor: AuthorApi<H256, ParentchainBlock::Hash> + Send + Sync + 'static,
+	BlockComposer: ComposeBlock<
 			ExternalitiesFor<StfExecutor>,
 			ParentchainBlock,
 			SignedSidechainBlock = SignedSidechainBlock,
@@ -94,23 +88,9 @@ impl<ParentchainBlock, SignedSidechainBlock, TopPoolExecutor, BlockComposer, Stf
 		let latest_parentchain_header = &self.parentchain_header;
 
 		// 1) Retrieve trusted calls from top pool.
-		let trusted_calls = self
-			.top_pool_executor
-			.get_trusted_calls(&self.shard)
-			.map_err(|e| ConsensusError::Other(e.to_string().into()))?;
+		let trusted_calls = self.top_pool_author.get_pending_trusted_calls(self.shard);
 
-		// TODO: remove when we have proper on-boarding of new workers #273.
-		if trusted_calls.is_empty() {
-			info!("No trusted calls in top for shard: {:?}", self.shard);
-		// We return here when we actually import sidechain blocks because we currently have no
-		// means of worker on-boarding. Without on-boarding we have can't get a working multi
-		// worker-setup.
-		//
-		// But if we use this trick (only produce a sidechain block if there are trusted_calls), we
-		// we can simply wait with the submission of trusted calls until all workers are ready. Then
-		// we don't need to exchange any state and can have a functional multi-worker setup.
-		// return Ok(Default::default())
-		} else {
+		if !trusted_calls.is_empty() {
 			debug!("Got following trusted calls from pool: {:?}", trusted_calls);
 		}
 
@@ -135,19 +115,29 @@ impl<ParentchainBlock, SignedSidechainBlock, TopPoolExecutor, BlockComposer, Stf
 			)
 			.map_err(|e| ConsensusError::Other(e.to_string().into()))?;
 
-		let mut parentchain_extrinsics = batch_execution_result.get_extrinsic_callbacks();
+		let parentchain_extrinsics = batch_execution_result.get_extrinsic_callbacks();
 
-		let executed_operation_hashes =
-			batch_execution_result.get_executed_operation_hashes().iter().copied().collect();
+		let executed_operation_hashes: Vec<_> =
+			batch_execution_result.get_executed_operation_hashes().to_vec();
+		let number_executed_transactions = executed_operation_hashes.len();
 
 		// Remove all not successfully executed operations from the top pool.
 		let failed_operations = batch_execution_result.get_failed_operations();
-		self.top_pool_executor.remove_calls_from_pool(&self.shard, failed_operations);
+		self.top_pool_author.remove_calls_from_pool(
+			self.shard,
+			failed_operations
+				.into_iter()
+				.map(|e| {
+					let is_success = e.is_success();
+					(e.trusted_operation_or_hash, is_success)
+				})
+				.collect(),
+		);
 
-		// 3) Compose sidechain block and parentchain confirmation.
-		let (confirmation_extrinsic, sidechain_block) = self
+		// 3) Compose sidechain block.
+		let sidechain_block = self
 			.block_composer
-			.compose_block_and_confirmation(
+			.compose_block(
 				latest_parentchain_header,
 				executed_operation_hashes,
 				self.shard,
@@ -156,7 +146,12 @@ impl<ParentchainBlock, SignedSidechainBlock, TopPoolExecutor, BlockComposer, Stf
 			)
 			.map_err(|e| ConsensusError::Other(e.to_string().into()))?;
 
-		parentchain_extrinsics.push(confirmation_extrinsic);
+		info!(
+			"Queue/Timeslot/Transactions: {:?};{};{}",
+			trusted_calls.len(),
+			max_duration.as_millis(),
+			number_executed_transactions
+		);
 
 		Ok(Proposal { block: sidechain_block, parentchain_effects: parentchain_extrinsics })
 	}

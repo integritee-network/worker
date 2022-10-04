@@ -34,11 +34,11 @@ mod sgx_reexports {
 }
 
 use codec::{Decode, Encode};
+use itp_sgx_externalities::{SgxExternalitiesDiffType, SgxExternalitiesTrait};
 use its_primitives::{
 	traits::Block as SidechainBlockTrait,
 	types::{BlockHash, BlockNumber, Timestamp},
 };
-use sgx_externalities::{SgxExternalitiesDiffType, SgxExternalitiesTrait};
 use sp_core::H256;
 use sp_std::prelude::Vec;
 use std::marker::PhantomData;

@@ -15,7 +15,7 @@
 
 */
 
-use crate::error::Result as RpcClientResult;
+use crate::error::{Error, Result as RpcClientResult};
 ///! Websocket client implementation to access the direct-rpc-server running inside an enclave.
 ///
 /// This should be replaced with the `jsonrpsee::WsClient`as soon as available in no-std:
@@ -54,6 +54,15 @@ impl WsClientControl {
 		*subscriber_lock = Some(sender);
 		Ok(())
 	}
+
+	pub fn send(&self, request: &str) -> RpcClientResult<()> {
+		if let Some(s) = self.subscriber.lock().as_ref() {
+			s.send(request)?;
+			Ok(())
+		} else {
+			Err(Error::Custom("Sender not initialized".into()))
+		}
+	}
 }
 
 #[derive(Clone)]
@@ -75,15 +84,18 @@ impl WsClient {
 		result: &MpscSender<String>,
 		control: Arc<WsClientControl>,
 	) -> Result<()> {
+		debug!("Connecting web-socket connection with watch");
 		connect(url.to_string(), |out| {
-			control.subscribe_sender(out.clone()).unwrap();
+			control.subscribe_sender(out.clone()).expect("Failed sender subscription");
 			WsClient::new(out, request.to_string(), result.clone(), true)
 		})
 	}
 
 	/// Connects a web-socket client for a one-shot request.
-	pub fn connect_one_shot(url: &str, request: &str, result: &MpscSender<String>) -> Result<()> {
+	pub fn connect_one_shot(url: &str, request: &str, result: MpscSender<String>) -> Result<()> {
+		debug!("Connecting one-shot web-socket connection");
 		connect(url.to_string(), |out| {
+			debug!("Create new web-socket client");
 			WsClient::new(out, request.to_string(), result.clone(), false)
 		})
 	}
@@ -111,10 +123,10 @@ impl Handler for WsClient {
 		trace!("got message");
 		trace!("{}", msg);
 		trace!("sending result to MpscSender..");
-		self.result.send(msg.to_string()).unwrap();
+		self.result.send(msg.to_string()).expect("Failed to send");
 		if !self.do_watch {
 			debug!("do_watch is false, closing connection");
-			self.web_socket.close(CloseCode::Normal).unwrap();
+			self.web_socket.close(CloseCode::Normal).expect("Failed to close connection");
 			debug!("Connection close requested");
 		}
 		debug!("on_message successful, returning");
@@ -123,7 +135,7 @@ impl Handler for WsClient {
 
 	fn on_close(&mut self, _code: CloseCode, _reason: &str) {
 		debug!("Web-socket close");
-		self.web_socket.shutdown().unwrap()
+		self.web_socket.shutdown().expect("Failed to shutdown")
 	}
 
 	/// we are overriding the `upgrade_ssl_client` method in order to disable hostname verification
@@ -145,7 +157,7 @@ impl Handler for WsClient {
 		let connector = builder.build();
 		connector
 			.configure()
-			.unwrap()
+			.expect("Invalid connection config")
 			.use_server_name_indication(false)
 			.verify_hostname(false)
 			.connect("", sock)

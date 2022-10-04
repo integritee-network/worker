@@ -1,5 +1,24 @@
+/*
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
+
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+
+		http://www.apache.org/licenses/LICENSE-2.0
+
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+
+*/
+
 use clap::ArgMatches;
+use parse_duration::parse;
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 
 static DEFAULT_NODE_SERVER: &str = "ws://127.0.0.1";
 static DEFAULT_NODE_PORT: &str = "9944";
@@ -32,6 +51,8 @@ pub struct Config {
 	pub metrics_server_port: String,
 	/// Port for the untrusted HTTP server (e.g. for `is_initialized`)
 	pub untrusted_http_port: String,
+	/// Config of the 'run' subcommand
+	pub run_config: Option<RunConfig>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -49,6 +70,7 @@ impl Config {
 		enable_metrics_server: bool,
 		metrics_server_port: String,
 		untrusted_http_port: String,
+		run_config: Option<RunConfig>,
 	) -> Self {
 		Self {
 			node_ip,
@@ -63,6 +85,7 @@ impl Config {
 			enable_metrics_server,
 			metrics_server_port,
 			untrusted_http_port,
+			run_config,
 		}
 	}
 
@@ -125,6 +148,7 @@ impl From<&ArgMatches<'_>> for Config {
 		let metrics_server_port = m.value_of("metrics-port").unwrap_or(DEFAULT_METRICS_PORT);
 		let untrusted_http_port =
 			m.value_of("untrusted-http-port").unwrap_or(DEFAULT_UNTRUSTED_HTTP_PORT);
+		let run_config = m.subcommand_matches("run").map(RunConfig::from);
 
 		Self::new(
 			m.value_of("node-server").unwrap_or(DEFAULT_NODE_SERVER).into(),
@@ -142,7 +166,36 @@ impl From<&ArgMatches<'_>> for Config {
 			is_metrics_server_enabled,
 			metrics_server_port.to_string(),
 			untrusted_http_port.to_string(),
+			run_config,
 		)
+	}
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct RunConfig {
+	/// Skip remote attestation. Set this flag if running enclave in SW mode
+	pub skip_ra: bool,
+	/// Set this flag if running in development mode to bootstrap enclave account on parentchain via //Alice.
+	pub dev: bool,
+	/// Request key and state provisioning from a peer worker.
+	pub request_state: bool,
+	/// Shard identifier base58 encoded. Defines the shard that this worker operates on. Default is mrenclave.
+	pub shard: Option<String>,
+	/// Optional teeracle update interval
+	pub teeracle_update_interval: Option<Duration>,
+}
+
+impl From<&ArgMatches<'_>> for RunConfig {
+	fn from(m: &ArgMatches<'_>) -> Self {
+		let skip_ra = m.is_present("skip-ra");
+		let dev = m.is_present("dev");
+		let request_state = m.is_present("request-state");
+		let shard = m.value_of("shard").map(|s| s.to_string());
+		let teeracle_update_interval = m.value_of("teeracle-interval").map(|i| {
+			parse(i).unwrap_or_else(|e| panic!("teeracle-interval parsing error {:?}", e))
+		});
+
+		Self { skip_ra, dev, request_state, shard, teeracle_update_interval }
 	}
 }
 
@@ -186,6 +239,7 @@ mod test {
 		assert!(config.mu_ra_external_address.is_none());
 		assert!(!config.enable_metrics_server);
 		assert_eq!(config.untrusted_http_port, DEFAULT_UNTRUSTED_HTTP_PORT);
+		assert!(config.run_config.is_none());
 	}
 
 	#[test]
@@ -250,6 +304,43 @@ mod test {
 	}
 
 	#[test]
+	fn default_run_config_is_correct() {
+		let empty_args = ArgMatches::default();
+		let run_config = RunConfig::from(&empty_args);
+
+		assert_eq!(run_config.request_state, false);
+		assert_eq!(run_config.dev, false);
+		assert_eq!(run_config.skip_ra, false);
+		assert!(run_config.shard.is_none());
+		assert!(run_config.teeracle_update_interval.is_none());
+	}
+
+	#[test]
+	fn run_config_parsing_works() {
+		let shard_identifier = "shard-identifier";
+
+		let mut args = ArgMatches::default();
+		args.args = HashMap::from([
+			("request-state", Default::default()),
+			("dev", Default::default()),
+			("skip-ra", Default::default()),
+			("shard", Default::default()),
+			("teeracle-interval", Default::default()),
+		]);
+		// Workaround because MatchedArg is private.
+		args.args.get_mut("shard").unwrap().vals = vec![shard_identifier.into()];
+		args.args.get_mut("teeracle-interval").unwrap().vals = vec!["42s".into()];
+
+		let run_config = RunConfig::from(&args);
+
+		assert_eq!(run_config.request_state, true);
+		assert_eq!(run_config.dev, true);
+		assert_eq!(run_config.skip_ra, true);
+		assert_eq!(run_config.shard.unwrap(), shard_identifier.to_string());
+		assert_eq!(run_config.teeracle_update_interval.unwrap(), Duration::from_secs(42));
+	}
+
+	#[test]
 	fn external_addresses_are_returned_correctly_if_not_set() {
 		let trusted_port = "7119";
 		let untrusted_port = "9119";
@@ -278,6 +369,17 @@ mod test {
 			format!("ws://{}:{}", expected_worker_ip, untrusted_port)
 		);
 		assert_eq!(config.mu_ra_url_external(), format!("{}:{}", expected_worker_ip, mu_ra_port));
+	}
+
+	#[test]
+	fn teeracle_interval_parsing_panics_if_format_is_invalid() {
+		let teeracle_interval = "24s_invalid-format";
+		let mut args = ArgMatches::default();
+		args.args = HashMap::from([("teeracle-interval", Default::default())]);
+		args.args.get_mut("teeracle-interval").unwrap().vals = vec![teeracle_interval.into()];
+
+		let result = std::panic::catch_unwind(|| RunConfig::from(&args));
+		assert!(result.is_err());
 	}
 
 	#[test]

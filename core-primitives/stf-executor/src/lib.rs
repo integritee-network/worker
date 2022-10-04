@@ -25,9 +25,10 @@ extern crate sgx_tstd as std;
 
 use codec::Encode;
 use ita_stf::hash::TrustedOperationOrHash;
+use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_types::{OpaqueCall, H256};
-use sgx_externalities::SgxExternalitiesTrait;
 use std::vec::Vec;
+
 // re-export module to properly feature gate sgx and regular std environment
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub mod sgx_reexport_prelude {
@@ -35,13 +36,24 @@ pub mod sgx_reexport_prelude {
 }
 
 pub mod error;
+pub mod getter_executor;
+pub mod state_getter;
 pub mod traits;
 
 #[cfg(feature = "sgx")]
 pub mod executor;
 
+#[cfg(feature = "sgx")]
+pub mod enclave_signer;
+
 #[cfg(all(feature = "sgx", feature = "test"))]
 pub mod executor_tests;
+
+#[cfg(all(feature = "sgx", feature = "test"))]
+pub mod enclave_signer_tests;
+
+#[cfg(feature = "mocks")]
+pub mod mocks;
 
 /// Execution status of a trusted operation
 ///
@@ -146,7 +158,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use sgx_externalities::SgxExternalities;
+	use itp_sgx_externalities::SgxExternalities;
 
 	#[test]
 	fn is_success_works() {

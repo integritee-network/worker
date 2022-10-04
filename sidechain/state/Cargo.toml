@@ -1,51 +1,12 @@
 [package]
 name = "its-state"
-version = "0.8.0"
+version = "0.9.0"
 authors = ["Integritee AG <hello@integritee.network>"]
-edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[features]
-default = ["std"]
-std = [
-    "log/std",
-    "serde/std",
-
-    # substrate
-    "sp-std/std",
-    "sp-core/std",
-
-    # local crates
-    "itp-storage/std",
-    "its-primitives/std",
-
-    # scs crates
-    "sp-io/std",
-    "sgx-externalities/std",
-
-    # optional std crates
-    "codec/std",
-    "thiserror",
-]
-sgx = [
-    # teaclave
-    "sgx_tstd",
-
-    # local crates
-    "itp-storage/sgx",
-
-    # scs crates
-    "sp-io/sgx",
-    "sgx-externalities/sgx",
-
-    # sgx versions of std crates
-    "thiserror_sgx",
-]
+edition = "2021"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive", "chain-error"] }
-frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
+frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 log = { version = "0.4", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 
@@ -59,17 +20,43 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 thiserror_sgx = { package = "thiserror", version = "1.0.9", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
 
 # local deps
-itp-storage = { path = "../../core-primitives/storage", default-features = false}
+itp-sgx-externalities = { default-features = false, path = "../../core-primitives/substrate-sgx/externalities" }
+itp-storage = { path = "../../core-primitives/storage", default-features = false }
 its-primitives = { path = "../primitives", default-features = false }
-
-# scs deps
-sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
-sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
+sp-io = { optional = true, default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], path = "../../core-primitives/substrate-sgx/sp-io" }
 
 # substrate deps
-sp-core = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
-sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
+sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 
 # test deps
 [dev-dependencies]
-sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+
+[features]
+default = ["std"]
+std = [
+    "log/std",
+    "serde/std",
+    # substrate
+    "sp-std/std",
+    "sp-core/std",
+    # local crates
+    "itp-sgx-externalities/std",
+    "itp-storage/std",
+    "its-primitives/std",
+    "sp-io/std",
+    # optional std crates
+    "codec/std",
+    "thiserror",
+]
+sgx = [
+    # teaclave
+    "sgx_tstd",
+    # local crates
+    "itp-sgx-externalities/sgx",
+    "itp-storage/sgx",
+    "sp-io/sgx",
+    # sgx versions of std crates
+    "thiserror_sgx",
+]

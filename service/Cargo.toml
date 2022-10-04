@@ -1,85 +1,87 @@
 [package]
 name = "integritee-service"
-version = "0.8.0"
+version = "0.9.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 build = "build.rs"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
-ws = "0.9.1"
-hex = "0.4.3"
-log = "0.4"
-env_logger = "0.7"
-base58 = "0.1"
-rust-crypto = "0.2"
-clap = { version = "2.33", features = ["yaml"] }
-lazy_static = "1.4.0"
-parking_lot = "0.11.1"
-thiserror = "1.0"
-dashmap = "4.0.2"
-dirs = "1.0.2"
-serde = "1.0"
-serde_json = "1.0"
-serde_derive = "1.0"
-jsonrpsee = { version = "0.2.0", features = ["client", "ws-server", "macros"] }
 async-trait = "0.1.50"
-tokio = { version = "1.6.1", features = ["full"] }
-prometheus = { version = "0.13.0", features = ["process"] }
-warp = "0.3"
+base58 = "0.2"
+clap = { version = "2.33", features = ["yaml"] }
+dirs = "3.0.2"
+env_logger = "0.9"
 futures = "0.3"
+hex = "0.4.3"
+jsonrpsee = { version = "0.2.0", features = ["client", "ws-server", "macros"] }
+lazy_static = "1.4.0"
+log = "0.4"
+parking_lot = "0.12.1"
+parse_duration = "2.1.1"
+prometheus = { version = "0.13.0", features = ["process"] }
+serde = "1.0"
+serde_derive = "1.0"
+serde_json = "1.0"
+thiserror = "1.0"
+tokio = { version = "1.6.1", features = ["full"] }
+warp = "0.3"
 
 # ipfs
+cid = "0.8"
 ipfs-api = "0.11.0"
-multihash = "0.8"
-cid = "<0.3.1"
 sha2 = { version = "0.7", default-features = false }
 
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 primitive-types = { version = "0.11.1", default-features = false, features = ["codec"] }
 
-sgx_urts = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_urts = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # local
-ita-stf = { path = "../app-libs/stf" }
+itc-parentchain-light-client = { path = "../core/parentchain/light-client" }
 itc-rpc-client = { path = "../core/rpc-client" }
 itc-rpc-server = { path = "../core/rpc-server" }
-itp-node-api-extensions = { path = "../core-primitives/node-api-extensions" }
 itp-enclave-api = { path = "../core-primitives/enclave-api" }
 itp-enclave-metrics = { path = "../core-primitives/enclave-metrics" }
+itp-node-api = { path = "../core-primitives/node-api" }
 itp-settings = { path = "../core-primitives/settings" }
-itp-stf-state-handler = { path = "../core-primitives/stf-state-handler" }
-itp-test = { path = "../core-primitives/test" }
 itp-types = { path = "../core-primitives/types" }
+itp-utils = { path = "../core-primitives/utils" }
 its-consensus-slots = { path = "../sidechain/consensus/slots" }
 its-peer-fetch = { path = "../sidechain/peer-fetch" }
-its-primitives = { path = "../sidechain/primitives"}
+its-primitives = { path = "../sidechain/primitives" }
+its-rpc-handler = { path = "../sidechain/rpc-handler" }
 its-storage = { path = "../sidechain/storage" }
 
 # scs / integritee
-substrate-api-client = { git = "https://github.com/scs/substrate-api-client", branch = "polkadot-v0.9.20" }
-my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node", branch = "master" }
+my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node.git", branch = "master" }
+substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.28" }
 teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # Substrate dependencies
-sp-runtime = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
-pallet-balances = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
-sp-core = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
-sp-keyring = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
-frame-system = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
-sp-finality-grandpa = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
-frame-support = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
-
+frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+sp-finality-grandpa = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 
 [features]
 default = []
-production = ['itp-settings/production']
+evm = []
+sidechain = ["itp-settings/sidechain"]
+offchain-worker = ["itp-settings/offchain-worker"]
+production = ["itp-settings/production"]
+teeracle = ["itp-settings/teeracle"]
 
 [dev-dependencies]
 # crates.io
 anyhow = "1.0.40"
-mockall = "0.10.1"
+mockall = "0.11"
 # local
+itc-parentchain-test = { path = "../core/parentchain/test" }
+itp-test = { path = "../core-primitives/test" }
 its-peer-fetch = { path = "../sidechain/peer-fetch", features = ["mocks"] }
 its-test = { path = "../sidechain/test" }

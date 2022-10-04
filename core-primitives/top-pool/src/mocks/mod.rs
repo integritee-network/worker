@@ -15,7 +15,7 @@
 
 */
 
-#[cfg(test)]
+#[cfg(any(test, feature = "mocks"))]
 pub mod rpc_responder_mock;
 
 #[cfg(feature = "mocks")]

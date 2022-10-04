@@ -15,18 +15,22 @@
 
 */
 
+//!Primitives for the sidechain
 use crate::traits::Header as HeaderTrait;
 use codec::{Decode, Encode};
+use scale_info::TypeInfo;
 use sp_core::H256;
+use sp_runtime::traits::{BlakeTwo256, Hash};
+use sp_std::prelude::*;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
 pub type ShardIdentifier = H256;
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Debug, Copy)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Debug, Copy, Default, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct Header {
+pub struct SidechainHeader {
 	/// The parent hash.
 	pub parent_hash: H256,
 
@@ -40,7 +44,14 @@ pub struct Header {
 	pub block_data_hash: H256,
 }
 
-impl HeaderTrait for Header {
+impl SidechainHeader {
+	/// get the `blake2_256` hash of the header.
+	pub fn hash(&self) -> H256 {
+		self.using_encoded(BlakeTwo256::hash)
+	}
+}
+
+impl HeaderTrait for SidechainHeader {
 	type ShardIdentifier = H256;
 
 	fn block_number(&self) -> u64 {
@@ -61,7 +72,7 @@ impl HeaderTrait for Header {
 		parent_hash: H256,
 		shard: Self::ShardIdentifier,
 		block_data_hash: H256,
-	) -> Header {
-		Header { block_number, parent_hash, shard_id: shard, block_data_hash }
+	) -> SidechainHeader {
+		SidechainHeader { block_number, parent_hash, shard_id: shard, block_data_hash }
 	}
 }

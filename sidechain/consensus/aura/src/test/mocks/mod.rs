@@ -17,4 +17,3 @@
 
 pub mod environment_mock;
 pub mod proposer_mock;
-pub mod state_mock;

@@ -24,7 +24,7 @@ use crate::{
 };
 use its_primitives::{
 	traits::SignBlock,
-	types::{block_data::BlockData, header::Header, Block, SignedBlock},
+	types::{block_data::BlockData, header::SidechainHeader as Header, Block, SignedBlock},
 };
 use sp_core::{ed25519, Pair};
 

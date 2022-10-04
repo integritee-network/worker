@@ -51,6 +51,8 @@ pub enum Error {
 	HeaderAncestryMismatch,
 	#[error("Poisoned validator lock")]
 	PoisonedLock,
+	#[error("No Justification found")]
+	NoJustificationFound,
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }

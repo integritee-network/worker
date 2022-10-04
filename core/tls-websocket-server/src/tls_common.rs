@@ -36,7 +36,7 @@ pub fn make_config(cert: &str, key: &str) -> WebSocketResult<Arc<rustls::ServerC
 
 	config
 		.set_single_cert_with_ocsp_and_sct(certs, privkey, vec![], vec![])
-		.unwrap();
+		.expect("Invalid key der");
 
 	Ok(Arc::new(config))
 }

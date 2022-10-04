@@ -44,7 +44,7 @@ impl TcpHeader {
 }
 
 /// Indicates the payload content type.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Opcode {
 	ShieldingKey = 0,
 	StateKey = 1,

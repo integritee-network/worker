@@ -1,0 +1,20 @@
+services:
+  demo-smart-contract:
+    image: integritee-cli:dev
+    container_name: integritee-smart-contract-demo
+    build:
+      context: ..
+      dockerfile: build.Dockerfile
+      target: deployed-client
+    depends_on: ['integritee-node', 'integritee-worker-1', 'integritee-worker-2']
+    environment:
+      - RUST_LOG=warn,ws=warn,itc_rpc_client=warn
+    networks:
+      - integritee-test-network
+    entrypoint: "dockerize -wait http://integritee-worker-2:4646/is_initialized -timeout 250s
+      /usr/local/worker-cli/demo_smart_contract.sh -p 9912 -u ws://integritee-node
+      -V wss://integritee-worker-1 -A 2011 -C /usr/local/bin/integritee-cli 2>&1"
+    restart: "no"
+networks:
+  integritee-test-network:
+    driver: bridge

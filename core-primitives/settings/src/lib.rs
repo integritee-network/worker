@@ -19,6 +19,17 @@
 
 #![no_std]
 
+#[cfg(any(
+	all(feature = "sidechain", feature = "offchain-worker"),
+	all(feature = "sidechain", feature = "teeracle"),
+	all(feature = "teeracle", feature = "offchain-worker")
+))]
+compile_error!(
+	"feature \"sidechain\" , \"offchain-worker\" or \"teeracle\" cannot be enabled at the same time"
+);
+
+pub mod worker_mode;
+
 pub mod files {
 	// used by worker
 	pub static ENCLAVE_TOKEN: &str = "enclave.token";
@@ -37,6 +48,9 @@ pub mod files {
 	pub const LIGHT_CLIENT_DB: &str = "light_client_db.bin";
 
 	pub const RA_DUMP_CERT_DER_FILE: &str = "ra_dump_cert.der";
+
+	pub const ENCLAVE_CERTIFICATE_FILE_PATH: &str = "cert.pem";
+	pub const ENCLAVE_CERTIFICATE_PRIVATE_KEY_PATH: &str = "private_key.pem";
 
 	// used by worker and enclave
 	pub const SHARDS_PATH: &str = "shards";
@@ -61,8 +75,6 @@ pub mod files {
 pub mod worker {
 	// the maximum size of any extrinsic that the enclave will ever generate in B
 	pub const EXTRINSIC_MAX_SIZE: usize = 4196;
-	// the maximum size of a value that will be queried from the state in B
-	pub const STATE_VALUE_MAX_SIZE: usize = 1024;
 	// the maximum size of the header
 	pub const HEADER_MAX_SIZE: usize = 200;
 	// maximum size of shielding key
@@ -74,7 +86,7 @@ pub mod worker {
 	// Factors to tune the initial amount of enclave funding:
 	// Should be set to a value that ensures that the enclave can register itself
 	// and the worker can run for a certain time. Only for development.
-	pub const EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS: u128 = 10_000;
+	pub const EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS: u128 = 200_000;
 	// Should be set to a value that ensures that the enclave can register itself
 	// and that the worker can start.
 	pub const REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS: u128 = 10;
@@ -87,30 +99,12 @@ pub mod sidechain {
 }
 
 /// Settings concerning the enclave
-pub mod enclave {
+pub mod enclave {}
+
+/// Settings for the Teeracle
+#[cfg(feature = "teeracle")]
+pub mod teeracle {
 	use core::time::Duration;
-
-	pub static MAX_TRUSTED_OPS_EXEC_DURATION: Duration = Duration::from_millis(600);
-
-	pub static MAX_TRUSTED_GETTERS_EXEC_DURATION: Duration = Duration::from_millis(150);
-	pub static TRUSTED_GETTERS_SLOT_DURATION: Duration = Duration::from_millis(400);
-}
-
-/// Settings concerning the node
-pub mod node {
-	// you may have to update these indices upon new builds of the runtime
-	// you can get the index from metadata, counting modules starting with zero
-	pub static TEEREX_MODULE: u8 = 50u8;
-	pub static REGISTER_ENCLAVE: u8 = 0u8;
-	//pub static UNREGISTER_ENCLAVE: u8 = 1u8;
-	pub static CALL_WORKER: u8 = 2u8;
-	pub static PROCESSED_PARENTCHAIN_BLOCK: u8 = 3u8;
-	pub static SHIELD_FUNDS: u8 = 4u8;
-	pub static UNSHIELD_FUNDS: u8 = 5u8;
-	// Sidechain module values
-	pub static SIDECHAIN_MODULE: u8 = 53u8;
-	pub static PROPOSED_SIDECHAIN_BLOCK: u8 = 0u8;
-	// bump this to be consistent with integritee-node runtime
-	pub static RUNTIME_SPEC_VERSION: u32 = 9;
-	pub static RUNTIME_TRANSACTION_VERSION: u32 = 2;
+	// Send extrinsic to update market exchange rate on the parentchain once per day
+	pub static DEFAULT_MARKET_DATA_UPDATE_INTERVAL: Duration = Duration::from_secs(86400);
 }

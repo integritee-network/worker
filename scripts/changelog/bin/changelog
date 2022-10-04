@@ -1,0 +1,84 @@
+#!/usr/bin/env ruby
+
+# frozen_string_literal: true
+
+# call for instance as:
+# ./bin/changelog <to> [<from>] [<output_file>]
+# for instance, for the release notes of v1.2.3:
+# ./bin/changelog v1.2.3
+# or
+# ./bin/changelog v1.2.3 v1.2.2
+#
+# You may set the ENV NO_CACHE to force fetching from Github
+# You should also ensure you set the ENV: GITHUB_TOKEN
+
+require_relative '../lib/changelog'
+require 'logger'
+
+logger = Logger.new($stdout)
+logger.level = Logger::DEBUG
+logger.debug('Starting')
+
+owner = 'integritee-network'
+repo = 'worker'
+
+gh_worker = SubRef.new(format('%<owner>s/%<repo>s', { owner: owner, repo: repo }))
+last_release_ref = gh_worker.get_last_ref()
+
+worker_ref2 = ARGV[0] || 'HEAD'
+worker_ref1 = ARGV[1] || last_release_ref
+
+output = ARGV[2] || 'release-notes.md'
+
+ENV['REF1'] = worker_ref1
+ENV['REF2'] = worker_ref2
+
+pallets_ref1 = gh_worker.get_dependency_reference(worker_ref1, 'pallet-teerex')
+pallets_ref2 = gh_worker.get_dependency_reference(worker_ref2, 'pallet-teerex')
+
+logger.debug("Worker from:   #{worker_ref1}")
+logger.debug("Worker to:     #{worker_ref2}")
+
+logger.debug("Pallets from:  #{pallets_ref1}")
+logger.debug("Pallets to:    #{pallets_ref2}")
+
+pallets_data = 'pallets.json'
+worker_data = 'worker.json'
+
+logger.debug("Using PALLETS: #{pallets_data}")
+logger.debug("Using WORKER:  #{worker_data}")
+
+logger.warn('NO_CACHE set') if ENV['NO_CACHE']
+
+if ENV['NO_CACHE'] || !File.file?(worker_data)
+  logger.debug(format('Fetching data for Worker into %s', worker_data))
+  cmd = format('changelogerator %<owner>s/%<repo>s -f %<from>s -t %<to>s > %<output>s',
+               { owner: owner, repo: 'worker', from: worker_ref1, to: worker_ref2, output: worker_data })
+  system(cmd)
+else
+  logger.debug("Re-using:#{worker_data}")
+end
+
+if ENV['NO_CACHE'] || !File.file?(pallets_data)
+  logger.debug(format('Fetching data for Pallets into %s', pallets_data))
+  cmd = format('changelogerator %<owner>s/%<repo>s -f %<from>s -t %<to>s > %<output>s',
+               { owner: owner, repo: 'pallets', from: pallets_ref1, to: pallets_ref2, output: pallets_data })
+  system(cmd)
+else
+  logger.debug("Re-using:#{pallets_data}")
+end
+
+# Here we compose all the pieces together into one
+# single big json file.
+cmd = format('jq \
+    --slurpfile pallets %s \
+    --slurpfile worker %s \
+    -n \'{
+            pallets: $pallets[0],
+            worker: $worker[0],
+    }\' > context.json', pallets_data, worker_data)
+system(cmd)
+
+cmd = format('tera --env --env-key env --include-path templates \
+        --template templates/template.md.tera context.json > %s', output)
+system(cmd)

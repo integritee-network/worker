@@ -24,8 +24,12 @@ pub trait StateCrypto {
 	fn decrypt(&self, data: &mut [u8]) -> Result<(), Self::Error>;
 }
 
-pub trait ShieldingCrypto {
+pub trait ShieldingCryptoEncrypt {
 	type Error: Debug;
 	fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error>;
+}
+
+pub trait ShieldingCryptoDecrypt {
+	type Error: Debug;
 	fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error>;
 }

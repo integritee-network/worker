@@ -36,6 +36,4 @@ pub use its_rpc_handler as rpc_handler;
 
 pub use its_state as state;
 
-pub use its_top_pool_executor as top_pool_executor;
-
 pub use its_validateer_fetch as validateer_fetch;

@@ -17,3 +17,4 @@
 
 pub mod determine_watch_mock;
 pub mod response_channel_mock;
+pub mod send_rpc_response_mock;

@@ -18,7 +18,7 @@
 
 use crate::{
 	ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, SidechainBridge},
-	sync_block_gossiper::GossipBlocks,
+	sync_block_broadcaster::BroadcastBlocks,
 	worker_peers_updater::UpdateWorkerPeers,
 	GetTokioHandle,
 };
@@ -30,26 +30,26 @@ use its_storage::BlockStorage;
 use log::*;
 use std::sync::Arc;
 
-pub struct SidechainOCall<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle> {
-	block_gossiper: Arc<BlockGossiper>,
+pub struct SidechainOCall<BlockBroadcaster, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle> {
+	block_broadcaster: Arc<BlockBroadcaster>,
 	block_storage: Arc<Storage>,
 	peer_updater: Arc<PeerUpdater>,
 	peer_block_fetcher: Arc<PeerBlockFetcher>,
 	tokio_handle: Arc<TokioHandle>,
 }
 
-impl<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle>
-	SidechainOCall<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle>
+impl<BlockBroadcaster, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle>
+	SidechainOCall<BlockBroadcaster, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle>
 {
 	pub fn new(
-		block_gossiper: Arc<BlockGossiper>,
+		block_broadcaster: Arc<BlockBroadcaster>,
 		block_storage: Arc<Storage>,
 		peer_updater: Arc<PeerUpdater>,
 		peer_block_fetcher: Arc<PeerBlockFetcher>,
 		tokio_handle: Arc<TokioHandle>,
 	) -> Self {
 		SidechainOCall {
-			block_gossiper,
+			block_broadcaster,
 			block_storage,
 			peer_updater,
 			peer_block_fetcher,
@@ -58,10 +58,10 @@ impl<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle>
 	}
 }
 
-impl<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle> SidechainBridge
-	for SidechainOCall<BlockGossiper, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle>
+impl<BlockBroadcaster, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle> SidechainBridge
+	for SidechainOCall<BlockBroadcaster, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle>
 where
-	BlockGossiper: GossipBlocks,
+	BlockBroadcaster: BroadcastBlocks,
 	Storage: BlockStorage<SignedSidechainBlock>,
 	PeerUpdater: UpdateWorkerPeers,
 	PeerBlockFetcher: FetchBlocksFromPeer<SignedBlockType = SignedSidechainBlock>,
@@ -105,13 +105,13 @@ where
 			info!("Successfully updated peers");
 		}
 
-		debug!("Gossiping sidechain blocks..");
-		if let Err(e) = self.block_gossiper.gossip_blocks(signed_blocks) {
-			error!("Error gossiping blocks: {:?}", e);
+		debug!("Broadcasting sidechain blocks ...");
+		if let Err(e) = self.block_broadcaster.broadcast_blocks(signed_blocks) {
+			error!("Error broadcasting blocks: {:?}", e);
 		// Fixme: returning an error here results in a `HeaderAncestryMismatch` error.
 		// status = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		} else {
-			info!("Successfully gossiped blocks");
+			info!("Successfully broadcast blocks");
 		}
 
 		status
@@ -141,13 +141,21 @@ where
 
 	fn fetch_sidechain_blocks_from_peer(
 		&self,
-		last_known_block_hash_encoded: Vec<u8>,
+		last_imported_block_hash_encoded: Vec<u8>,
+		maybe_until_block_hash_encoded: Vec<u8>,
 		shard_identifier_encoded: Vec<u8>,
 	) -> OCallBridgeResult<Vec<u8>> {
-		let last_known_block_hash: BlockHash =
-			Decode::decode(&mut last_known_block_hash_encoded.as_slice()).map_err(|_| {
+		let last_imported_block_hash: BlockHash =
+			Decode::decode(&mut last_imported_block_hash_encoded.as_slice()).map_err(|_| {
 				OCallBridgeError::FetchSidechainBlocksFromPeer(
-					"Failed to decode last known block hash".to_string(),
+					"Failed to decode last imported block hash".to_string(),
+				)
+			})?;
+
+		let maybe_until_block_hash: Option<BlockHash> =
+			Decode::decode(&mut maybe_until_block_hash_encoded.as_slice()).map_err(|_| {
+				OCallBridgeError::FetchSidechainBlocksFromPeer(
+					"Failed to decode optional until block hash".to_string(),
 				)
 			})?;
 
@@ -163,10 +171,11 @@ where
 		let tokio_handle = self.tokio_handle.get_handle();
 
 		let signed_sidechain_blocks = tokio_handle
-			.block_on(
-				self.peer_block_fetcher
-					.fetch_blocks_from_peer(last_known_block_hash, shard_identifier),
-			)
+			.block_on(self.peer_block_fetcher.fetch_blocks_from_peer(
+				last_imported_block_hash,
+				maybe_until_block_hash,
+				shard_identifier,
+			))
 			.map_err(|e| {
 				OCallBridgeError::FetchSidechainBlocksFromPeer(format!(
 					"Failed to execute block fetching from peer: {:?}",
@@ -186,12 +195,13 @@ mod tests {
 	use crate::{
 		globals::tokio_handle::ScopedTokioHandle,
 		tests::mocks::{
-			gossip_blocks_mock::GossipBlocksMock, update_worker_peers_mock::UpdateWorkerPeersMock,
+			broadcast_blocks_mock::BroadcastBlocksMock,
+			update_worker_peers_mock::UpdateWorkerPeersMock,
 		},
 	};
 	use codec::Decode;
 	use its_peer_fetch::mocks::fetch_blocks_from_peer_mock::FetchBlocksFromPeerMock;
-	use its_primitives::types::SignedBlock as SignedSidechainBlock;
+	use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 	use its_storage::{interface::BlockStorage, Result as StorageResult};
 	use its_test::sidechain_block_builder::SidechainBlockBuilder;
 	use primitive_types::H256;
@@ -205,7 +215,7 @@ mod tests {
 	}
 
 	type TestSidechainOCall = SidechainOCall<
-		GossipBlocksMock,
+		BroadcastBlocksMock,
 		BlockStorageMock,
 		UpdateWorkerPeersMock,
 		FetchBlocksFromPeerMock<SignedSidechainBlock>,
@@ -214,7 +224,8 @@ mod tests {
 
 	#[test]
 	fn fetch_sidechain_blocks_from_peer_works() {
-		let last_known_block_hash = H256::random();
+		let last_imported_block_hash = H256::random();
+		let until_block_hash: Option<H256> = None;
 		let shard_identifier = H256::random();
 		let blocks = vec![
 			SidechainBlockBuilder::random().build_signed(),
@@ -225,7 +236,8 @@ mod tests {
 
 		let fetched_blocks_encoded = sidechain_ocall
 			.fetch_sidechain_blocks_from_peer(
-				last_known_block_hash.encode(),
+				last_imported_block_hash.encode(),
+				until_block_hash.encode(),
 				shard_identifier.encode(),
 			)
 			.unwrap();
@@ -239,7 +251,7 @@ mod tests {
 	fn setup_sidechain_ocall_with_peer_blocks(
 		peer_blocks_map: HashMap<ShardIdentifier, Vec<SignedSidechainBlock>>,
 	) -> TestSidechainOCall {
-		let block_gossiper_mock = Arc::new(GossipBlocksMock {});
+		let block_broadcaster_mock = Arc::new(BroadcastBlocksMock {});
 		let block_storage_mock = Arc::new(BlockStorageMock {});
 		let peer_updater_mock = Arc::new(UpdateWorkerPeersMock {});
 		let peer_block_fetcher_mock = Arc::new(
@@ -249,7 +261,7 @@ mod tests {
 		let scoped_tokio_handle = Arc::new(ScopedTokioHandle::default());
 
 		SidechainOCall::new(
-			block_gossiper_mock,
+			block_broadcaster_mock,
 			block_storage_mock,
 			peer_updater_mock,
 			peer_block_fetcher_mock,

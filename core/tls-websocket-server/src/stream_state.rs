@@ -91,7 +91,7 @@ impl StreamState {
 			Err(e) => match e {
 				// I/O would block our handshake attempt. Need to re-try.
 				HandshakeError::Interrupted(mhs) => {
-					warn!("Web-socket handshake interrupted");
+					info!("Web-socket handshake interrupted");
 					Self::WebSocketHandshake(mhs)
 				},
 				HandshakeError::Failure(e) => {

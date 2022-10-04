@@ -1,9 +1,12 @@
 [workspace]
-resolver = "2"
+
 members = [
+    "app-libs/exchange-oracle",
+    "app-libs/sgx-runtime",
     "app-libs/stf",
     "cli",
     "core/direct-rpc-server",
+    "core/offchain-worker-executor",
     "core/parentchain/block-import-dispatcher",
     "core/parentchain/block-importer",
     "core/parentchain/indirect-calls-executor",
@@ -19,24 +22,38 @@ members = [
     "core-primitives/enclave-api/ffi",
     "core-primitives/enclave-metrics",
     "core-primitives/extrinsics-factory",
-    "core-primitives/node-api-extensions",
+    "core-primitives/hashing",
+    "core-primitives/networking-utils",
+    "core-primitives/node-api",
+    "core-primitives/node-api/api-client-extensions",
+    "core-primitives/node-api/api-client-types",
+    "core-primitives/node-api/factory",
+    "core-primitives/node-api/metadata",
+    "core-primitives/node-api/metadata-provider",
     "core-primitives/nonce-cache",
     "core-primitives/ocall-api",
     "core-primitives/primitives-cache",
+    "core-primitives/rpc",
     "core-primitives/settings",
     "core-primitives/sgx/crypto",
     "core-primitives/sgx/io",
     "core-primitives/stf-executor",
     "core-primitives/stf-state-handler",
+    "core-primitives/stf-state-observer",
     "core-primitives/storage",
+    "core-primitives/substrate-sgx/environmental",
+    "core-primitives/substrate-sgx/externalities",
+    "core-primitives/substrate-sgx/sp-io",
     "core-primitives/teerex-storage",
     "core-primitives/test",
     "core-primitives/time-utils",
     "core-primitives/top-pool",
     "core-primitives/top-pool-author",
     "core-primitives/types",
+    "core-primitives/utils",
     "service",
     "sidechain/block-composer",
+    "sidechain/block-verification",
     "sidechain/consensus/aura",
     "sidechain/consensus/common",
     "sidechain/consensus/slots",
@@ -45,23 +62,20 @@ members = [
     "sidechain/rpc-handler",
     "sidechain/sidechain-crate",
     "sidechain/state",
-    "sidechain/top-pool-executor",
     "sidechain/validateer-fetch",
 ]
 
 [patch."https://github.com/apache/teaclave-sgx-sdk.git"]
-sgx_tstd = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_alloc = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_libc = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_serialize = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_serialize_derive = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_serialize_derive_internals = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_trts = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_types = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_ucrypto = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_tcrypto = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_tcrypto_helper = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
-sgx_crypto_helper = { version = "1.1.4", git = "https://github.com/haerdib/incubator-teaclave-sgx-sdk", branch = "master"}
+sgx_alloc = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
+sgx_crypto_helper = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
+sgx_libc = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
+sgx_rand = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
+sgx_tcrypto = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
+sgx_trts = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
+sgx_tstd = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
+sgx_types = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
+sgx_ucrypto = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
+sgx_urts = { version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
 
 #[patch."https://github.com/integritee-network/sgx-runtime"]
 #sgx-runtime = { path = "../sgx-runtime/runtime"}
@@ -76,8 +90,13 @@ sgx_crypto_helper = { version = "1.1.4", git = "https://github.com/haerdib/incub
 #substrate-client-keystore = { path = "../../scs/substrate-api-client/client-keystore" }
 
 #[patch."https://github.com/integritee-network/pallets.git"]
-#pallet-claims = { path = '../pallets/claims' }
-#pallet-teerex = { path = '../pallets/teerex' }
-#pallet-teeracle = { path = '../pallets/teeracle' }
-#teerex-primitives = {path = '../pallets/primitives/teerex'}
-#pallet-parentchain = { path = '../pallets/parentchain' }
+#pallet-claims = { path = "../pallets/claims" }
+#pallet-teerex = { path = "../pallets/teerex" }
+#pallet-teeracle = { path = "../pallets/teeracle" }
+#teerex-primitives = {path = "../pallets/primitives/teerex"}
+#pallet-parentchain = { path = "../pallets/parentchain" }
+#itp-types = {  path = "../pallets/primitives/types"}
+#itp-utils = {  path = "../pallets/primitives/utils"}
+
+#[patch."https://github.com/integritee-network/http_req"]
+#http_req = {path = '..//http_req' }

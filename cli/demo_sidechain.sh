@@ -20,7 +20,7 @@
 # TEST_BALANCE_RUN is either "first" or "second"
 # if -m file is set, the mrenclave will be read from file
 
-while getopts ":m:p:A:B:t:" opt; do
+while getopts ":m:p:A:B:t:u:W:V:C:" opt; do
     case $opt in
         t)
             TEST=$OPTARG
@@ -37,30 +37,50 @@ while getopts ":m:p:A:B:t:" opt; do
         B)
             WORKER2PORT=$OPTARG
             ;;
+        u)
+            NODEURL=$OPTARG
+            ;;
+        V)
+            WORKER1URL=$OPTARG
+            ;;
+        W)
+            WORKER2URL=$OPTARG
+            ;;
+        C)
+            CLIENT_BIN=$OPTARG
+            ;;
     esac
 done
 
-# using default port if none given as arguments
+# Using default port if none given as arguments.
 NPORT=${NPORT:-9944}
-WORKER1PORT=${WORKER1PORT:-2000}
-WORKER2PORT=${WORKER2PORT:-3000}
+NODEURL=${NODEURL:-"ws://127.0.0.1"}
 
-echo "Using node-port ${NPORT}"
-echo "Using trusted-worker-1-port ${WORKER1PORT}"
-echo "Using trusted-worker-2-port ${WORKER2PORT}"
+WORKER1PORT=${WORKER1PORT:-2000}
+WORKER1URL=${WORKER1URL:-"wss://127.0.0.1"}
+
+WORKER2PORT=${WORKER2PORT:-3000}
+WORKER2URL=${WORKER2URL:-"wss://127.0.0.1"}
+
+CLIENT_BIN=${CLIENT_BIN:-"./../bin/integritee-cli"}
+
+echo "Using client binary ${CLIENT_BIN}"
+echo "Using node uri ${NODEURL}:${NPORT}"
+echo "Using trusted-worker uri ${WORKER1URL}:${WORKER1PORT}"
+echo "Using trusted-worker-2 uri ${WORKER2URL}:${WORKER2PORT}"
 
 INITIALFUNDS=50000000000
 AMOUNTTRANSFER=20000000000
 
-CLIENTWORKER1="./../bin/integritee-cli -p ${NPORT} -P ${WORKER1PORT}"
-CLIENTWORKER2="./../bin/integritee-cli -p ${NPORT} -P ${WORKER2PORT}"
+CLIENTWORKER1="${CLIENT_BIN} -p ${NPORT} -P ${WORKER1PORT} -u ${NODEURL} -U ${WORKER1URL}"
+CLIENTWORKER2="${CLIENT_BIN} -p ${NPORT} -P ${WORKER2PORT} -u ${NODEURL} -U ${WORKER2URL}"
 
 if [ "$READMRENCLAVE" = "file" ]
 then
     read MRENCLAVE <<< $(cat ~/mrenclave.b58)
     echo "Reading MRENCLAVE from file: ${MRENCLAVE}"
 else
-    # this will always take the first MRENCLAVE found in the registry !!
+    # This will always take the first MRENCLAVE found in the registry !!
     read MRENCLAVE <<< $($CLIENTWORKER1 list-workers | awk '/  MRENCLAVE: / { print $2; exit }')
     echo "Reading MRENCLAVE from worker list: ${MRENCLAVE}"
 fi
@@ -85,18 +105,18 @@ echo "Get balance of Alice's incognito account (on worker 1)"
 ${CLIENTWORKER1} trusted --mrenclave ${MRENCLAVE} balance ${ICGACCOUNTALICE}
 echo ""
 
-# Send funds from Alice to Bobs account, on worker 1
+# Send funds from Alice to Bobs account, on worker 1.
 echo "* First transfer: Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account (on worker 1)"
 $CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} --direct transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER}
 echo ""
 
-# Send funds from Alice to Bobs account, on worker 2
+# Send funds from Alice to Bobs account, on worker 2.
 echo "* Second transfer: Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account (on worker 2)"
 $CLIENTWORKER2 trusted --mrenclave ${MRENCLAVE} --direct transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER}
 echo ""
 
-echo "* Get balance of Alice's incognito account (on worker 2)"
-ALICE_BALANCE=$(${CLIENTWORKER2} trusted --mrenclave ${MRENCLAVE} balance ${ICGACCOUNTALICE} | xargs)
+echo "* Get balance of Alice's incognito account (on worker 1)"
+ALICE_BALANCE=$(${CLIENTWORKER1} trusted --mrenclave ${MRENCLAVE} balance ${ICGACCOUNTALICE} | xargs)
 echo "$ALICE_BALANCE"
 echo ""
 

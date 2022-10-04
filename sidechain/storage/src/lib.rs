@@ -33,6 +33,9 @@ mod storage;
 mod storage_tests_get_blocks_after;
 
 #[cfg(test)]
+mod storage_tests_get_blocks_in_range;
+
+#[cfg(test)]
 mod test_utils;
 
 #[cfg(feature = "mocks")]

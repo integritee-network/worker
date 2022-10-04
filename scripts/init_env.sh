@@ -7,7 +7,7 @@ export PROJ_ROOT="$(dirname "$SCRIPT_DIR")"
 export CLIENT_DIR="$PROJ_ROOT/cli"
 export LOG_DIR="$PROJ_ROOT/log"
 export CI_DIR="$PROJ_ROOT/ci"
-
+export RUST_LOG=info,ws=warn,substrate_api_client=warn,ac_node_api=warn
 
 echo "Set environment variables:"
 echo "  BASH_SCRIPT_DIR: $SCRIPT_DIR"

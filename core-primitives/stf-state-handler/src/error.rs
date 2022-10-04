@@ -41,6 +41,8 @@ pub enum Error {
 	InvalidShard(ShardIdentifier),
 	#[error("State with hash {0} could not be found in the state repository")]
 	StateNotFoundInRepository(String),
+	#[error("State observer error: {0}")]
+	StateObserver(#[from] itp_stf_state_observer::error::Error),
 	#[error("Cache size for registry is zero")]
 	ZeroCacheSize,
 	#[error("Could not acquire lock, lock is poisoned")]

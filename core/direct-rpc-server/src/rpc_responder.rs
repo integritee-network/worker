@@ -19,10 +19,11 @@ use crate::{
 	response_channel::ResponseChannel, DirectRpcError, DirectRpcResult, RpcConnectionRegistry,
 	RpcHash, SendRpcResponse,
 };
-use codec::{Decode, Encode};
-use itp_types::{DirectRequestStatus, RpcResponse, RpcReturnValue, TrustedOperationStatus};
+use itp_rpc::{RpcResponse, RpcReturnValue};
+use itp_types::{DirectRequestStatus, TrustedOperationStatus};
+use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use log::*;
-use std::{sync::Arc, vec::Vec};
+use std::{boxed::Box, sync::Arc, vec::Vec};
 
 pub struct RpcResponder<Registry, Hash, ResponseChannelType>
 where
@@ -83,15 +84,15 @@ where
 
 		let mut new_response = rpc_response.clone();
 
-		let mut result = RpcReturnValue::decode(&mut rpc_response.result.as_slice())
-			.map_err(DirectRpcError::EncodingError)?;
+		let mut result = RpcReturnValue::from_hex(&rpc_response.result)
+			.map_err(|e| DirectRpcError::Other(Box::new(e)))?;
 
 		let do_watch = continue_watching(&status_update);
 
 		// update response
 		result.do_watch = do_watch;
 		result.status = DirectRequestStatus::TrustedOperationStatus(status_update);
-		new_response.result = result.encode();
+		new_response.result = result.to_hex();
 
 		self.encode_and_send_response(connection_token, &new_response)?;
 
@@ -119,11 +120,9 @@ where
 		let result = RpcReturnValue::new(state_encoded, false, submitted);
 
 		// update response
-		response.result = result.encode();
+		response.result = result.to_hex();
 
 		self.encode_and_send_response(connection_token, &response)?;
-
-		self.connection_registry.store(hash, connection_token, response);
 
 		debug!("sending state successful");
 		Ok(())
@@ -149,6 +148,7 @@ pub mod tests {
 		mocks::response_channel_mock::ResponseChannelMock,
 		rpc_connection_registry::ConnectionRegistry,
 	};
+	use codec::Encode;
 	use std::assert_matches::assert_matches;
 
 	type TestConnectionToken = u64;
@@ -221,7 +221,7 @@ pub mod tests {
 	}
 
 	#[test]
-	fn sending_state_successfully_sends_update_and_keeps_connection_open() {
+	fn sending_state_successfully_sends_update_and_removes_connection_token() {
 		let connection_hash = String::from("conn_hash");
 		let connection_registry = create_registry_with_single_connection(connection_hash.clone());
 
@@ -232,27 +232,8 @@ pub mod tests {
 		let result = rpc_responder.send_state(connection_hash.clone(), "new_state".encode());
 		assert!(result.is_ok());
 
-		verify_open_connection(&connection_hash, connection_registry);
+		verify_closed_connection(&connection_hash, connection_registry);
 		assert_eq!(1, websocket_responder.number_of_updates());
-	}
-
-	#[test]
-	fn sending_state_twice_works() {
-		let connection_hash = String::from("conn_hash");
-		let connection_registry = create_registry_with_single_connection(connection_hash.clone());
-
-		let websocket_responder = Arc::new(TestResponseChannel::default());
-		let rpc_responder =
-			RpcResponder::new(connection_registry.clone(), websocket_responder.clone());
-
-		let first_result = rpc_responder.send_state(connection_hash.clone(), "new_state".encode());
-		assert!(first_result.is_ok());
-
-		let second_result =
-			rpc_responder.send_state(connection_hash.clone(), "new_state_2".encode());
-		assert!(second_result.is_ok());
-
-		assert_eq!(2, websocket_responder.number_of_updates());
 	}
 
 	#[test]

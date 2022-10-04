@@ -36,13 +36,14 @@ use crate::sgx_reexport_prelude::*;
 use crate::rpc_watch_extractor::RpcWatchExtractor;
 use codec::{Encode, Error as CodecError};
 use itc_tls_websocket_server::error::WebSocketError;
-use itp_types::{RpcResponse, TrustedOperationStatus};
+use itp_rpc::RpcResponse;
+use itp_types::TrustedOperationStatus;
 use serde_json::error::Error as SerdeJsonError;
 use sp_runtime::traits;
 use std::{boxed::Box, fmt::Debug, vec::Vec};
 
-#[cfg(test)]
-mod mocks;
+#[cfg(any(test, feature = "mocks"))]
+pub mod mocks;
 
 #[cfg(test)]
 mod builders;
@@ -77,7 +78,7 @@ impl<T: std::hash::Hash + traits::Member + Encode> RpcHash for T {}
 /// Registry for RPC connections (i.e. connections that are kept alive to send updates).
 pub trait RpcConnectionRegistry: Send + Sync {
 	type Hash: RpcHash;
-	type Connection: Copy;
+	type Connection: Copy + Debug;
 
 	fn store(&self, hash: Self::Hash, connection: Self::Connection, rpc_response: RpcResponse);
 

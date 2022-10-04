@@ -23,10 +23,12 @@ pub use sp_consensus_slots::Slot;
 
 use itp_sgx_io::StaticSealedIO;
 use itp_time_utils::duration_now;
+use its_block_verification::slot::slot_from_timestamp_and_duration;
 use its_consensus_common::Error as ConsensusError;
 use its_primitives::traits::{
 	Block as SidechainBlockTrait, BlockData, SignedBlock as SignedSidechainBlockTrait,
 };
+use log::warn;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::time::Duration;
 
@@ -45,7 +47,7 @@ pub fn time_until_next_slot(slot_duration: Duration) -> Duration {
 }
 
 /// Information about a slot.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SlotInfo<ParentchainBlock: ParentchainBlockTrait> {
 	/// The slot number as found in the inherent data.
 	pub slot: Slot,
@@ -62,21 +64,30 @@ pub struct SlotInfo<ParentchainBlock: ParentchainBlockTrait> {
 impl<ParentchainBlock: ParentchainBlockTrait> SlotInfo<ParentchainBlock> {
 	/// Create a new [`SlotInfo`].
 	///
-	/// `ends_at` is calculated using `timestamp` and `duration`.
+	/// `ends_at` is calculated using `now` and `time_until_next_slot`.
 	pub fn new(
 		slot: Slot,
 		timestamp: Duration,
 		duration: Duration,
+		ends_at: Duration,
 		parentchain_head: ParentchainBlock::Header,
 	) -> Self {
 		Self {
 			slot,
 			timestamp,
 			duration,
-			ends_at: timestamp + time_until_next_slot(duration),
+			ends_at,
 			last_imported_parentchain_head: parentchain_head,
 		}
 	}
+}
+
+/// The time at which the slot ends.
+///
+/// !! Slot duration needs to be the 'global' slot duration that is used for the sidechain.
+/// Do not use this with 'custom' slot durations, as used e.g. for the shard slots.  
+pub fn slot_ends_at(slot: Slot, slot_duration: Duration) -> Duration {
+	Duration::from_millis(*slot.saturating_add(1u64) * (slot_duration.as_millis() as u64))
 }
 
 pub(crate) fn timestamp_within_slot<
@@ -88,12 +99,19 @@ pub(crate) fn timestamp_within_slot<
 ) -> bool {
 	let proposal_stamp = proposal.block().block_data().timestamp();
 
-	slot.timestamp.as_millis() as u64 <= proposal_stamp
-		&& slot.ends_at.as_millis() as u64 >= proposal_stamp
-}
+	let is_within_slot = slot.timestamp.as_millis() as u64 <= proposal_stamp
+		&& slot.ends_at.as_millis() as u64 >= proposal_stamp;
 
-pub fn slot_from_time_stamp_and_duration(timestamp: Duration, duration: Duration) -> Slot {
-	((timestamp.as_millis() / duration.as_millis()) as u64).into()
+	if !is_within_slot {
+		warn!(
+			"Proposed block slot time: {} ms, slot start: {} ms , slot end: {} ms",
+			proposal_stamp,
+			slot.timestamp.as_millis(),
+			slot.ends_at.as_millis()
+		);
+	}
+
+	is_within_slot
 }
 
 pub fn yield_next_slot<SlotGetter, ParentchainBlock>(
@@ -111,7 +129,7 @@ where
 	}
 
 	let last_slot = last_slot_getter.get_last_slot()?;
-	let slot = slot_from_time_stamp_and_duration(timestamp, duration);
+	let slot = slot_from_timestamp_and_duration(timestamp, duration);
 
 	if slot <= last_slot {
 		return Ok(None)
@@ -119,7 +137,8 @@ where
 
 	last_slot_getter.set_last_slot(slot)?;
 
-	Ok(Some(SlotInfo::new(slot, timestamp, duration, header)))
+	let slot_ends_time = slot_ends_at(slot, duration);
+	Ok(Some(SlotInfo::new(slot, timestamp, duration, slot_ends_time, header)))
 }
 
 pub trait GetLastSlot {
@@ -132,7 +151,7 @@ impl<T: StaticSealedIO<Unsealed = Slot, Error = ConsensusError>> GetLastSlot for
 		T::unseal_from_static_file()
 	}
 	fn set_last_slot(&mut self, slot: Slot) -> Result<(), ConsensusError> {
-		T::seal_to_static_file(slot)
+		T::seal_to_static_file(&slot)
 	}
 }
 
@@ -167,7 +186,7 @@ pub mod sgx {
 			}
 		}
 
-		fn seal_to_static_file(unsealed: Self::Unsealed) -> Result<(), Self::Error> {
+		fn seal_to_static_file(unsealed: &Self::Unsealed) -> Result<(), Self::Error> {
 			let _ = FILE_LOCK.write().map_err(|e| Self::Error::Other(format!("{:?}", e).into()))?;
 			Ok(unsealed.using_encoded(|bytes| seal(bytes, LAST_SLOT_BIN))?)
 		}
@@ -178,6 +197,7 @@ pub mod sgx {
 mod tests {
 	use super::*;
 	use core::assert_matches::assert_matches;
+	use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 	use itp_sgx_io::StaticSealedIO;
 	use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader};
 	use its_primitives::{
@@ -189,10 +209,10 @@ mod tests {
 		sidechain_header_builder::SidechainHeaderBuilder,
 	};
 	use sp_keyring::ed25519::Keyring;
-	use sp_runtime::traits::Header as HeaderT;
-	use std::{fmt::Debug, time::SystemTime};
+	use std::{fmt::Debug, thread, time::SystemTime};
 
 	const SLOT_DURATION: Duration = Duration::from_millis(1000);
+	const ALLOWED_THRESHOLD: Duration = Duration::from_millis(1);
 
 	struct LastSlotSealMock;
 
@@ -201,10 +221,10 @@ mod tests {
 		type Unsealed = Slot;
 
 		fn unseal_from_static_file() -> Result<Self::Unsealed, Self::Error> {
-			Ok(slot_from_time_stamp_and_duration(duration_now(), SLOT_DURATION))
+			Ok(slot_from_timestamp_and_duration(duration_now(), SLOT_DURATION))
 		}
 
-		fn seal_to_static_file(_unsealed: Self::Unsealed) -> Result<(), Self::Error> {
+		fn seal_to_static_file(_unsealed: &Self::Unsealed) -> Result<(), Self::Error> {
 			println!("Seal method stub called.");
 			Ok(())
 		}
@@ -234,16 +254,6 @@ mod tests {
 		}
 	}
 
-	pub fn default_header() -> ParentchainHeader {
-		ParentchainHeader::new(
-			Default::default(),
-			Default::default(),
-			Default::default(),
-			Default::default(),
-			Default::default(),
-		)
-	}
-
 	fn timestamp_in_the_future(later: Duration) -> u64 {
 		let moment = SystemTime::now() + later;
 		let dur = moment.duration_since(SystemTime::UNIX_EPOCH).unwrap_or_else(|e| {
@@ -263,13 +273,51 @@ mod tests {
 	fn assert_consensus_other_err<T: Debug>(result: Result<T, ConsensusError>, msg: &str) {
 		assert_matches!(result.unwrap_err(), ConsensusError::Other(
 			m,
-		) if &m.to_string() == msg)
+		) if m.to_string() == msg)
 	}
 
 	#[test]
 	fn time_until_next_slot_returns_default_on_nano_duration() {
 		// prevent panic: https://github.com/integritee-network/worker/issues/439
 		assert_eq!(time_until_next_slot(Duration::from_nanos(999)), Default::default())
+	}
+
+	#[test]
+	fn slot_info_ends_at_does_not_change_after_second_calculation() {
+		let timestamp = duration_now();
+		let pc_header = ParentchainHeaderBuilder::default().build();
+		let slot: Slot = 1000.into();
+
+		let slot_end_time = slot_ends_at(slot, SLOT_DURATION);
+		let slot_one: SlotInfo<ParentchainBlock> =
+			SlotInfo::new(slot, timestamp, SLOT_DURATION, slot_end_time, pc_header.clone());
+		thread::sleep(Duration::from_millis(200));
+		let slot_two: SlotInfo<ParentchainBlock> =
+			SlotInfo::new(slot, timestamp, SLOT_DURATION, slot_end_time, pc_header);
+
+		let difference_of_ends_at =
+			(slot_one.ends_at.as_millis()).abs_diff(slot_two.ends_at.as_millis());
+
+		assert!(
+			difference_of_ends_at < ALLOWED_THRESHOLD.as_millis(),
+			"Diff in ends at timestamp: {} ms, tolerance: {} ms",
+			difference_of_ends_at,
+			ALLOWED_THRESHOLD.as_millis()
+		);
+	}
+
+	#[test]
+	fn slot_info_ends_at_does_is_correct_even_if_delay_is_more_than_slot_duration() {
+		let timestamp = duration_now();
+		let pc_header = ParentchainHeaderBuilder::default().build();
+		let slot: Slot = 1000.into();
+		let slot_end_time = slot_ends_at(slot, SLOT_DURATION);
+
+		thread::sleep(SLOT_DURATION * 2);
+		let slot: SlotInfo<ParentchainBlock> =
+			SlotInfo::new(slot, timestamp, SLOT_DURATION, slot_end_time, pc_header);
+
+		assert!(slot.ends_at < duration_now());
 	}
 
 	#[test]
@@ -286,7 +334,7 @@ mod tests {
 	fn timestamp_within_slot_returns_false_if_timestamp_after_slot() {
 		let slot = slot(1);
 		let time_stamp_after_slot =
-			timestamp_in_the_future(SLOT_DURATION + Duration::from_millis(1));
+			timestamp_in_the_future(SLOT_DURATION + Duration::from_millis(10));
 
 		let block_too_late = test_block_with_time_stamp(time_stamp_after_slot);
 
@@ -296,7 +344,7 @@ mod tests {
 	#[test]
 	fn timestamp_within_slot_returns_false_if_timestamp_before_slot() {
 		let slot = slot(1);
-		let time_stamp_before_slot = timestamp_in_the_past(Duration::from_millis(1));
+		let time_stamp_before_slot = timestamp_in_the_past(Duration::from_millis(10));
 
 		let block_too_early = test_block_with_time_stamp(time_stamp_before_slot);
 
@@ -308,7 +356,7 @@ mod tests {
 		assert!(yield_next_slot::<_, ParentchainBlock>(
 			duration_now(),
 			SLOT_DURATION,
-			default_header(),
+			ParentchainHeaderBuilder::default().build(),
 			&mut LastSlotSealMock,
 		)
 		.unwrap()
@@ -320,7 +368,7 @@ mod tests {
 		assert!(yield_next_slot::<_, ParentchainBlock>(
 			duration_now() + SLOT_DURATION,
 			SLOT_DURATION,
-			default_header(),
+			ParentchainHeaderBuilder::default().build(),
 			&mut LastSlotSealMock
 		)
 		.unwrap()
@@ -333,7 +381,7 @@ mod tests {
 			yield_next_slot::<_, ParentchainBlock>(
 				duration_now(),
 				Default::default(),
-				default_header(),
+				ParentchainHeaderBuilder::default().build(),
 				&mut LastSlotSealMock,
 			),
 			"Tried to yield next slot with 0 duration",

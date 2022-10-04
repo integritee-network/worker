@@ -22,7 +22,9 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::error;
 use codec::Encode;
-use ita_stf::{Getter, ShardIdentifier, TrustedOperation as StfTrustedOperation};
+use ita_stf::{
+	Getter, ShardIdentifier, TrustedCallSigned, TrustedOperation as StfTrustedOperation,
+};
 use itp_top_pool::{
 	pool::{ChainApi, ExtrinsicHash, NumberFor},
 	primitives::TrustedOperationSource,
@@ -52,6 +54,14 @@ impl<Block> SidechainApi<Block> {
 	pub fn new() -> Self {
 		SidechainApi { _marker: Default::default() }
 	}
+
+	fn validate_trusted_call(trusted_call_signed: TrustedCallSigned) -> ValidTransaction {
+		let from = trusted_call_signed.call.sender_account();
+		let requires = vec![];
+		let provides = vec![(from, trusted_call_signed.nonce).encode()];
+
+		ValidTransaction { priority: 1 << 20, requires, provides, longevity: 64, propagate: true }
+	}
 }
 
 impl<Block> Default for SidechainApi<Block> {
@@ -77,19 +87,10 @@ where
 		_shard: ShardIdentifier,
 	) -> Self::ValidationFuture {
 		let operation = match uxt {
-			StfTrustedOperation::direct_call(signed_call) => {
-				let from = signed_call.call.account();
-				let requires = vec![];
-				let provides = vec![from.encode()];
-
-				ValidTransaction {
-					priority: 1 << 20,
-					requires,
-					provides,
-					longevity: 64,
-					propagate: true,
-				}
-			},
+			StfTrustedOperation::direct_call(signed_call) =>
+				Self::validate_trusted_call(signed_call),
+			StfTrustedOperation::indirect_call(signed_call) =>
+				Self::validate_trusted_call(signed_call),
 			StfTrustedOperation::get(getter) => match getter {
 				Getter::public(_) =>
 					return Box::pin(ready(Ok(Err(TransactionValidityError::Unknown(
@@ -103,10 +104,6 @@ where
 					propagate: true,
 				},
 			},
-			_ =>
-				return Box::pin(ready(Ok(Err(TransactionValidityError::Unknown(
-					UnknownTransaction::CannotLookup,
-				))))),
 		};
 		Box::pin(ready(Ok(Ok(operation))))
 	}
@@ -140,5 +137,64 @@ where
 
 	fn block_body(&self, _id: &BlockId<Self::Block>) -> Self::BodyFuture {
 		ready(Ok(None))
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use futures::executor;
+	use ita_stf::{KeyPair, PublicGetter, TrustedCall, TrustedOperation};
+	use itp_types::Block as ParentchainBlock;
+	use sp_core::{ed25519, Pair};
+	use sp_keyring::AccountKeyring;
+
+	type TestChainApi = SidechainApi<ParentchainBlock>;
+
+	type Seed = [u8; 32];
+	const TEST_SEED: Seed = *b"12345678901234567890123456789012";
+
+	#[test]
+	fn indirect_calls_are_valid() {
+		let chain_api = TestChainApi::default();
+		let operation = create_indirect_trusted_operation();
+
+		let validation = executor::block_on(chain_api.validate_transaction(
+			TrustedOperationSource::Local,
+			operation,
+			ShardIdentifier::default(),
+		))
+		.unwrap();
+
+		assert!(validation.is_ok());
+	}
+
+	#[test]
+	fn public_getters_are_not_valid() {
+		let chain_api = TestChainApi::default();
+		let public_getter = TrustedOperation::get(Getter::public(PublicGetter::some_value));
+
+		let validation = executor::block_on(chain_api.validate_transaction(
+			TrustedOperationSource::Local,
+			public_getter,
+			ShardIdentifier::default(),
+		))
+		.unwrap();
+
+		assert!(validation.is_err());
+	}
+
+	fn create_indirect_trusted_operation() -> TrustedOperation {
+		let trusted_call_signed = TrustedCall::balance_transfer(
+			AccountKeyring::Alice.public().into(),
+			AccountKeyring::Bob.public().into(),
+			1000u128,
+		)
+		.sign(&KeyPair::Ed25519(signer()), 1, &[1u8; 32], &ShardIdentifier::default());
+		TrustedOperation::indirect_call(trusted_call_signed)
+	}
+
+	fn signer() -> ed25519::Pair {
+		ed25519::Pair::from_seed(&TEST_SEED)
 	}
 }

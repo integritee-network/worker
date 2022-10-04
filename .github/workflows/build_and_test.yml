@@ -3,18 +3,20 @@ name: Build, Test, Clippy
 on:
   workflow_dispatch:
   push:
-    branches: [ master ]
+    branches:
+      - master
+      - 'sdk-v[0-9]+.[0-9]+.[0-9]+-*'
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
   pull_request:
-    branches: [ master ]
+    branches:
+      - master
+      - 'sdk-v[0-9]+.[0-9]+.[0-9]+-*'
 
 env:
   CARGO_TERM_COLOR: always
-  WORKER_BIN: integritee-service
-  CLIENT_BIN: integritee-cli
-  ENCLAVE_BIN: enclave.signed.so
-  LOG_DIR: log
+  LOG_DIR: logs
+  BUILD_CONTAINER_NAME: integritee_worker_enclave_test
 
 jobs:
   cancel_previous_runs:
@@ -26,53 +28,103 @@ jobs:
           access_token: ${{ secrets.GITHUB_TOKEN }}
 
   build-test:
-    runs-on: ubuntu-latest
-    container: "integritee/integritee-dev:0.1.9"
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - flavor_id: sidechain
+            mode: sidechain
+          - flavor_id: offchain-worker
+            mode: offchain-worker
+          - flavor_id: teeracle
+            mode: teeracle
+          - flavor_id: sidechain-evm
+            mode: sidechain
+            additional_features: evm
+
     steps:
-      - uses: actions/checkout@v2
-      - name: init rust
-        run: rustup show
+      - uses: actions/checkout@v3
 
-      - name: Build
-        run:  env "MITIGATION-CVE-2020-0551=LOAD" "SGX_MODE=SW" make
-      - name: Test Service & Client
-        run: cargo test
-      - name: Test Enclave # cargo test is not supported, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          buildkitd-flags: --debug
+          driver: docker-container
+
+      - name: Build Worker & Run Cargo Test
+        env:
+          DOCKER_BUILDKIT: 1
+        run: >
+          docker build -t integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}
+          --target deployed-worker
+          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }}
+          -f build.Dockerfile .
+
+      - name: Build CLI client
+        env:
+          DOCKER_BUILDKIT: 1
+        run: >
+          docker build -t integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}
+          --target deployed-client
+          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }}
+          -f build.Dockerfile .
+
+      - run: docker images --all
+
+      - name: Test Enclave # cargo test is not supported in the enclave, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
+        run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} test --all
+
+      - name: Export worker image(s)
         run: |
-          cd bin
-          ./integritee-service test -u -e
+          docker image save integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} | gzip > integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
+          docker image save integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} | gzip > integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
 
-      - name: Upload worker
+      - name: Upload worker image
         uses: actions/upload-artifact@v2
         with:
-          name: integritee-worker-${{ github.sha }}
-          path: bin/${{ env.WORKER_BIN }}
+          name: integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
+          path: integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
 
-      - name: Upload client
+      - name: Upload CLI client image
         uses: actions/upload-artifact@v2
         with:
-          name: integritee-client-${{ github.sha }}
-          path: bin/${{ env.CLIENT_BIN }}
-
-      - name: Upload enclave
-        uses: actions/upload-artifact@v2
-        with:
-          name: enclave-signed-${{ github.sha }}
-          path: bin/${{ env.ENCLAVE_BIN }}
+          name: integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
+          path: integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
 
   clippy:
     runs-on: ubuntu-latest
     container: "integritee/integritee-dev:0.1.9"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: init rust
         # enclave is not in the same workspace
         run: rustup show && cd enclave-runtime && rustup show
 
-      - name: Worker & Client
+      - name: Clippy default features
         run: cargo clippy -- -D warnings
       - name: Enclave # Enclave is separate as it's not in the workspace
         run: cd enclave-runtime && cargo clippy -- -D warnings
+
+      - name: Clippy with EVM feature
+        run: |
+          cargo clippy --features evm -- -D warnings
+          cd enclave-runtime && cargo clippy --features evm -- -D warnings
+
+      - name: Clippy with Sidechain feature
+        run: |
+          cargo clippy --features sidechain -- -D warnings
+          cd enclave-runtime && cargo clippy --features sidechain -- -D warnings
+
+      - name: Clippy with Teeracle feature
+        run: |
+          cargo clippy --features teeracle -- -D warnings
+          cd enclave-runtime && cargo clippy --features teeracle -- -D warnings
+
+      - name: Clippy with Offchain-worker feature
+        run: |
+          cargo clippy --features offchain-worker -- -D warnings
+          cd enclave-runtime && cargo clippy --features offchain-worker -- -D warnings
 
       - name: Fail-fast; cancel other jobs
         if: failure()
@@ -81,7 +133,7 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: init rust
         run: rustup show
 
@@ -90,143 +142,99 @@ jobs:
       - name: Enclave # Enclave is separate as it's not in the workspace
         run: cd enclave-runtime && cargo fmt --all -- --check
 
+      - name: Install taplo
+        run: cargo install taplo-cli --locked
+      - name: Cargo.toml fmt
+        run: taplo fmt --check
+
       - name: Fail-fast; cancel other jobs
         if: failure()
         uses: andymckay/cancel-action@0.2
 
   integration-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     needs: build-test
-    container: "integritee/integritee-dev:0.1.9"
+    env:
+      WORKER_IMAGE_TAG: integritee-worker:dev
+      CLIENT_IMAGE_TAG: integritee-cli:dev
+      COINMARKETCAP_KEY: ${{ secrets.COINMARKETCAP_KEY }}
+      TEERACLE_INTERVAL_SECONDS: 4
+
     strategy:
       fail-fast: false
       matrix:
-        test: [M6, M8, Sidechain]
         include:
           - test: M6
-            demo_name: m6_demo_shielding_unshielding
-            demo_script: m6.sh
+            flavor_id: sidechain
+            demo_name: demo-indirect-invocation
           - test: M8
-            demo_name: m8_demo_direct_call
-            demo_script: m8.sh
+            flavor_id: sidechain
+            demo_name: demo-direct-call
           - test: Sidechain
-            demo_name: sidechain_demo
-            demo_script: sidechain.sh
+            flavor_id: sidechain
+            demo_name: demo-sidechain
+          - test: M6
+            flavor_id: offchain-worker
+            demo_name: demo-indirect-invocation
+          - test: Teeracle
+            flavor_id: teeracle
+            demo_name: demo-teeracle
+          - test: Benchmark
+            flavor_id: sidechain
+            demo_name: sidechain-benchmark
+          - test: EVM
+            flavor_id: sidechain-evm
+            demo_name: demo-smart-contract
 
-    env:
-      BIN_DIR: bin
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - uses: actions/setup-python@v2
-        with:
-          python-version: '3.7'
-
-      - name: Download Worker
+      - name: Download Worker Image
         uses: actions/download-artifact@v2
         with:
-          name: integritee-worker-${{ github.sha }}
-          path: ${{ env.BIN_DIR }}
+          name: integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
+          path: .
 
-      - name: Download Client
+      - name: Download CLI client Image
         uses: actions/download-artifact@v2
         with:
-          name: integritee-client-${{ github.sha }}
-          path: ${{ env.BIN_DIR }}
+          name: integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
+          path: .
 
-      - name: Download Enclave
-        uses: actions/download-artifact@v2
-        with:
-          name: enclave-signed-${{ github.sha }}
-          path: ${{ env.BIN_DIR }}
-
-        # If you want to debug ci and you don't want to build the binaries, you can replace the downloads above with
-        # the actions below to download binaries from an earlier run.
-#      - name: Download Worker
-#        uses: dawidd6/action-download-artifact@v2
-#        with:
-#          github_token: ${{secrets.GITHUB_TOKEN}}
-#          workflow: build_and_test.yml
-#          run_id: 1033249727
-#          name: integritee-worker-da8d4b442d3f2b09dbafb097d4d7a1bce409d518
-#          path: ${{ env.BIN_DIR }}
-#
-#      - name: Download Client
-#        uses: dawidd6/action-download-artifact@v2
-#        with:
-#          github_token: ${{secrets.GITHUB_TOKEN}}
-#          workflow: build_and_test.yml
-#          run_id: 1033249727
-#          name: integritee-client-da8d4b442d3f2b09dbafb097d4d7a1bce409d518
-#          path: ${{ env.BIN_DIR }}
-#
-#      - name: Download Enclave
-#        uses: dawidd6/action-download-artifact@v2
-#        with:
-#          github_token: ${{secrets.GITHUB_TOKEN}}
-#          workflow: build_and_test.yml
-#          run_id: 1033249727
-#          name: enclave-signed-da8d4b442d3f2b09dbafb097d4d7a1bce409d518
-#          path: ${{ env.BIN_DIR }}
-
-      - name: Download integritee-node
-        uses: dawidd6/action-download-artifact@v2
-        with:
-          github_token: ${{secrets.GITHUB_TOKEN}}
-          workflow: ci.yml
-          name: integritee-node-dev-ecc97eafd9db460b75df46a99ba8edc01d4180de
-          # in fact this action should download the latest artifact, but sometimes fails. Then we need to
-          # set the `run_id` to force a download of an updated binary.
-          run_id: 2307398354
-          path: node
-          repo: integritee-network/integritee-node
-
-      - name: Prepare working directory
-        run: |
-          mkdir -p ${{ env.LOG_DIR}}
-          chmod +x node/integritee-node
-          cd ${{ env.BIN_DIR }}
-          chmod +x ${{ env.WORKER_BIN }}
-          chmod +x ${{ env.CLIENT_BIN }}
-          chmod +x ${{ env.ENCLAVE_BIN }}
-
-      - name: "Setup Keys"
+      - name: Load Worker & Client Images
         env:
-          KEY: ${{ secrets.IAS_PRIMARY_KEY }}
-          SPID: ${{ secrets.IAS_SPID }}
-          TLS_CERTIFICATE: ${{ secrets.TLS_WS_SERVER_CERTIFICATE }}
-          TLS_PRIVATE_KEY: ${{ secrets.TLS_WS_SERVER_PRIVATE_KEY }}
+          DOCKER_BUILDKIT: 1
         run: |
-          cd ${{ env.BIN_DIR }}
-          echo "${{ env.KEY }}" > key.txt
-          echo "${{ env.SPID }}" > spid.txt
-          echo "${{ env.TLS_CERTIFICATE }}" > end.fullchain
-          echo "${{ env.TLS_PRIVATE_KEY }}" > end.rsa
-          chmod 644 end.fullchain
-          chmod 644 end.rsa
+          docker image load --input integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
+          docker image load --input integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
+          docker images --all
 
-      - name: Run local setup
-        # * `set -eo pipefail` is needed to return an error even if piped to `tee`.
-        shell: bash --noprofile --norc -eo pipefail {0}
+      - name: Re-name Image Tags
         run: |
-          touch ${{ env.LOG_DIR }}/local-setup.log
-          ./local-setup/launch.py local-setup/github-action-config.json 2>&1 | tee -i ${{ env.LOG_DIR }}/local-setup.log &
-          sleep 150
+          docker tag integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.WORKER_IMAGE_TAG }}
+          docker tag integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.CLIENT_IMAGE_TAG }}
+          docker images --all
 
-      - name: ${{ matrix.demo_name }}
-        # * the change the symbolic link which points to the target/release... folder.
-        # * need overwrite default shell to bash to get access to the `source` cmd.
-        shell: bash --noprofile --norc -eo pipefail {0}
+      - name: Integration Test ${{ matrix.test }}-${{ matrix.flavor_id }}
         run: |
-          source ./scripts/init_env.sh && ./scripts/${{ matrix.demo_script }}
+          cd docker
+          docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml up ${{ matrix.demo_name }} --no-build --exit-code-from ${{ matrix.demo_name }}
+
+      - name: Collect Docker Logs
+        continue-on-error: true
+        if: always()
+        uses: jwalton/gh-docker-logs@v2.2.0
+        with:
+          #images: '${{ env.WORKER_IMAGE_TAG }},${{ env.CLIENT_IMAGE_TAG }}'
+          tail: all
+          dest: ./${{ env.LOG_DIR }}
 
       - name: Upload logs
-        continue-on-error: true
         if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ matrix.test }}_logs
-          path: ${{ env.LOG_DIR }}
+          name: logs-${{ matrix.test }}-${{ matrix.flavor_id }}
+          path: ./${{ env.LOG_DIR }}
 
   release:
     name: Draft Release
@@ -237,24 +245,24 @@ jobs:
       release_url: ${{ steps.create-release.outputs.html_url }}
       asset_upload_url: ${{ steps.create-release.outputs.upload_url }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Download Integritee Service
         uses: actions/download-artifact@v2
         with:
-          name: integritee-worker-${{ github.sha }}
+          name: integritee-worker-sidechain-${{ github.sha }}
           path: integritee-worker-tmp
 
       - name: Download Integritee Client
         uses: actions/download-artifact@v2
         with:
-          name: integritee-client-${{ github.sha }}
+          name: integritee-client-sidechain-${{ github.sha }}
           path: integritee-client-tmp
 
       - name: Download Enclave Signed
         uses: actions/download-artifact@v2
         with:
-          name: enclave-signed-${{ github.sha }}
+          name: enclave-signed-sidechain-${{ github.sha }}
           path: enclave-signed-tmp
 
       - name: Move service binaries

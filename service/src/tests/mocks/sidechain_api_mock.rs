@@ -30,10 +30,6 @@ impl Sidechain for SidechainApiMock {
 		Ok(())
 	}
 
-	fn execute_trusted_getters(&self) -> EnclaveResult<()> {
-		todo!()
-	}
-
 	fn execute_trusted_calls(&self) -> EnclaveResult<()> {
 		todo!()
 	}

@@ -15,18 +15,64 @@
 
 */
 
-use crate::trusted_commands::TrustedArgs;
+use crate::{
+	command_utils::mrenclave_from_base58, trusted_commands::TrustedArgs,
+	trusted_operation::perform_trusted_operation, Cli,
+};
 use base58::{FromBase58, ToBase58};
-use codec::Encode;
-use ita_stf::{AccountId, ShardIdentifier};
+use codec::{Decode, Encode};
+use ita_stf::{AccountId, KeyPair, ShardIdentifier, TrustedGetter, TrustedOperation};
 use log::*;
+use my_node_runtime::Balance;
 use sp_application_crypto::sr25519;
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
 use sp_runtime::traits::IdentifyAccount;
 use std::path::PathBuf;
 use substrate_client_keystore::LocalKeystore;
 
+#[macro_export]
+macro_rules! get_layer_two_nonce {
+	($signer_pair:ident, $cli: ident, $trusted_args:ident ) => {{
+		let top: TrustedOperation = TrustedGetter::nonce($signer_pair.public().into())
+			.sign(&KeyPair::Sr25519($signer_pair.clone()))
+			.into();
+		let res = perform_trusted_operation($cli, $trusted_args, &top);
+		let nonce: Index = if let Some(n) = res {
+			if let Ok(nonce) = Index::decode(&mut n.as_slice()) {
+				nonce
+			} else {
+				0
+			}
+		} else {
+			0
+		};
+		debug!("got layer two nonce: {:?}", nonce);
+		nonce
+	}};
+}
+
 const TRUSTED_KEYSTORE_PATH: &str = "my_trusted_keystore";
+
+pub(crate) fn get_balance(cli: &Cli, trusted_args: &TrustedArgs, arg_who: &str) -> Option<u128> {
+	debug!("arg_who = {:?}", arg_who);
+	let who = get_pair_from_str(trusted_args, arg_who);
+	let top: TrustedOperation = TrustedGetter::free_balance(who.public().into())
+		.sign(&KeyPair::Sr25519(who))
+		.into();
+	let res = perform_trusted_operation(cli, trusted_args, &top);
+	debug!("received result for balance");
+	let bal = if let Some(v) = res {
+		if let Ok(vd) = Balance::decode(&mut v.as_slice()) {
+			Some(vd)
+		} else {
+			info!("could not decode value. maybe hasn't been set? {:x?}", v);
+			None
+		}
+	} else {
+		None
+	};
+	bal
+}
 
 pub(crate) fn get_keystore_path(trusted_args: &TrustedArgs) -> PathBuf {
 	let (_mrenclave, shard) = get_identifiers(trusted_args);
@@ -34,13 +80,7 @@ pub(crate) fn get_keystore_path(trusted_args: &TrustedArgs) -> PathBuf {
 }
 
 pub(crate) fn get_identifiers(trusted_args: &TrustedArgs) -> ([u8; 32], ShardIdentifier) {
-	let mut mrenclave = [0u8; 32];
-	mrenclave.copy_from_slice(
-		&trusted_args
-			.mrenclave
-			.from_base58()
-			.expect("mrenclave has to be base58 encoded"),
-	);
+	let mrenclave = mrenclave_from_base58(&trusted_args.mrenclave);
 	let shard = match &trusted_args.shard {
 		Some(val) =>
 			ShardIdentifier::from_slice(&val.from_base58().expect("shard has to be base58 encoded")),

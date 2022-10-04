@@ -24,11 +24,27 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 extern crate sgx_tstd as std;
 
 use codec::{Decode, Encode};
+use std::string::String;
+use substrate_fixed::types::U32F32;
 
-#[derive(Encode, Decode)]
+// FIXME: Copied from ita-exchange-oracle because of cyclic deps. Should be removed after integritee-network/pallets#71
+pub type ExchangeRate = U32F32;
+
+#[derive(Encode, Decode, Debug)]
 pub enum EnclaveMetric {
 	SetSidechainBlockHeight(u64),
 	TopPoolSizeSet(u64),
 	TopPoolSizeIncrement,
 	TopPoolSizeDecrement,
+	ExchangeRateOracle(ExchangeRateOracleMetric),
+}
+
+#[derive(Encode, Decode, Debug)]
+pub enum ExchangeRateOracleMetric {
+	/// Exchange Rate from CoinGecko - (Source, TradingPair, ExchangeRate)
+	ExchangeRate(String, String, ExchangeRate),
+	/// Response time of the request in [ms]. (Source, ResponseTime)
+	ResponseTime(String, u128),
+	/// Increment the number of requests (Source)
+	NumberRequestsIncrement(String),
 }

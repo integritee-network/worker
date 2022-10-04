@@ -21,14 +21,13 @@
 //! some generic structs.
 
 use codec::{Decode, Encode};
-use core::hash::Hash;
-use sp_core::{blake2_256, Pair, Public, H256};
-use sp_runtime::traits::Member;
+use sp_core::{crypto::Public, H256};
+use sp_runtime::traits::{BlakeTwo256, Hash, Member};
 use sp_std::{fmt::Debug, prelude::*};
 
 pub trait Header: Encode + Decode + Clone {
 	/// Identifier for the shards.
-	type ShardIdentifier: Encode + Decode + Hash + Copy + Member;
+	type ShardIdentifier: Encode + Decode + sp_std::hash::Hash + Copy + Member;
 
 	/// Get block number.
 	fn block_number(&self) -> u64;
@@ -41,7 +40,7 @@ pub trait Header: Encode + Decode + Clone {
 
 	/// get the `blake2_256` hash of the header.
 	fn hash(&self) -> H256 {
-		self.using_encoded(blake2_256).into()
+		self.using_encoded(BlakeTwo256::hash)
 	}
 
 	fn new(
@@ -68,7 +67,7 @@ pub trait BlockData: Encode + Decode + Send + Sync + Debug + Clone {
 	fn encrypted_state_diff(&self) -> &Vec<u8>;
 	/// get the `blake2_256` hash of the block
 	fn hash(&self) -> H256 {
-		self.using_encoded(blake2_256).into()
+		self.using_encoded(BlakeTwo256::hash)
 	}
 
 	fn new(
@@ -138,28 +137,37 @@ pub trait SignedBlock: Encode + Decode + Send + Sync + Debug + Clone {
 	fn verify_signature(&self) -> bool;
 }
 
-/// Provide signing logic blanket implementations for all block types satisfying the trait bounds.
-pub trait SignBlock<
-	SidechainBlock: Block,
-	SignedSidechainBlock: SignedBlock<Block = SidechainBlock>,
->
-{
-	fn sign_block<P: Pair>(self, signer: &P) -> SignedSidechainBlock
-	where
-		<SignedSidechainBlock as SignedBlock>::Signature: From<<P as sp_core::Pair>::Signature>;
-}
+#[cfg(feature = "full_crypto")]
+pub use crypto::*;
 
-impl<SidechainBlock, SignedSidechainBlock> SignBlock<SidechainBlock, SignedSidechainBlock>
-	for SidechainBlock
-where
-	SidechainBlock: Block,
-	SignedSidechainBlock: SignedBlock<Block = SidechainBlock>,
-{
-	fn sign_block<P: Pair>(self, signer: &P) -> SignedSidechainBlock
-	where
-		<SignedSidechainBlock as SignedBlock>::Signature: From<<P as sp_core::Pair>::Signature>,
+#[cfg(feature = "full_crypto")]
+mod crypto {
+	use super::*;
+	use sp_core::Pair;
+
+	/// Provide signing logic blanket implementations for all block types satisfying the trait bounds.
+	pub trait SignBlock<
+		SidechainBlock: Block,
+		SignedSidechainBlock: SignedBlock<Block = SidechainBlock>,
+	>
 	{
-		let signature = self.using_encoded(|b| signer.sign(b)).into();
-		SignedSidechainBlock::new(self, signature)
+		fn sign_block<P: Pair>(self, signer: &P) -> SignedSidechainBlock
+		where
+			<SignedSidechainBlock as SignedBlock>::Signature: From<<P as sp_core::Pair>::Signature>;
+	}
+
+	impl<SidechainBlock, SignedSidechainBlock> SignBlock<SidechainBlock, SignedSidechainBlock>
+		for SidechainBlock
+	where
+		SidechainBlock: Block,
+		SignedSidechainBlock: SignedBlock<Block = SidechainBlock>,
+	{
+		fn sign_block<P: Pair>(self, signer: &P) -> SignedSidechainBlock
+		where
+			<SignedSidechainBlock as SignedBlock>::Signature: From<<P as sp_core::Pair>::Signature>,
+		{
+			let signature = self.using_encoded(|b| signer.sign(b)).into();
+			SignedSidechainBlock::new(self, signature)
+		}
 	}
 }

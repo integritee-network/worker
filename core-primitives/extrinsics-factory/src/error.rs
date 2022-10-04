@@ -28,6 +28,8 @@ pub type Result<T> = core::result::Result<T, Error>;
 pub enum Error {
 	#[error("Nonce cache error: {0}")]
 	NonceCache(#[from] itp_nonce_cache::error::Error),
+	#[error("Node API error: {0:?}")]
+	NodeMetadataProvider(#[from] itp_node_api::metadata::provider::Error),
 	#[error("SGX error, status: {0}")]
 	Sgx(sgx_status_t),
 	#[error(transparent)]

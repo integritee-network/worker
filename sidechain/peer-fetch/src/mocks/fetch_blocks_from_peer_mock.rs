@@ -52,7 +52,8 @@ where
 
 	async fn fetch_blocks_from_peer(
 		&self,
-		_last_known_block_hash: BlockHash,
+		_last_imported_block_hash: BlockHash,
+		_maybe_until_block_hash: Option<BlockHash>,
 		shard_identifier: ShardIdentifier,
 	) -> Result<Vec<Self::SignedBlockType>> {
 		Ok(self.signed_blocks_map.get(&shard_identifier).cloned().unwrap_or_default())

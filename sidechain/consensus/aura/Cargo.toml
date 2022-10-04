@@ -1,21 +1,20 @@
 [package]
 name = "its-consensus-aura"
-version = "0.8.0"
+version = "0.9.0"
 authors = ["Integritee AG <hello@integritee.network>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
-log = { version = "0.4.14", default-features = false }
-finality-grandpa = { version = "0.15.0", default-features = false, features = ["derive-codec"] }
-sgx-externalities = { default-features = false, git = "https://github.com/integritee-network/sgx-runtime", branch = "master", optional = true }
+finality-grandpa = { version = "0.16.0", default-features = false, features = ["derive-codec"] }
+log = { version = "0.4", default-features = false }
 
 # sgx deps
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
 # substrate deps
-frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
-sp-core = { version = "6.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
-sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
+frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 
 # local deps
 ita-stf = { path = "../../../app-libs/stf", default-features = false }
@@ -24,63 +23,68 @@ itp-enclave-metrics = { path = "../../../core-primitives/enclave-metrics", defau
 itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
 itp-settings = { path = "../../../core-primitives/settings" }
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
+itp-sgx-externalities = { path = "../../../core-primitives/substrate-sgx/externalities", default-features = false }
 itp-stf-executor = { path = "../../../core-primitives/stf-executor", default-features = false }
 itp-stf-state-handler = { path = "../../../core-primitives/stf-state-handler", default-features = false }
 itp-time-utils = { path = "../../../core-primitives/time-utils", default-features = false }
+itp-top-pool-author = { path = "../../../core-primitives/top-pool-author", default-features = false }
 itp-types = { path = "../../../core-primitives/types", default-features = false }
+itp-utils = { path = "../../../core-primitives/utils", default-features = false }
 its-block-composer = { path = "../../block-composer", default-features = false }
+its-block-verification = { path = "../../block-verification", optional = true, default-features = false }
 its-consensus-common = { path = "../common", default-features = false }
 its-consensus-slots = { path = "../slots", default-features = false }
 its-primitives = { path = "../../primitives", default-features = false }
 its-state = { path = "../../state", default-features = false }
-its-top-pool-executor = { path = "../../top-pool-executor", default-features = false }
 its-validateer-fetch = { path = "../../validateer-fetch", default-features = false }
 
 [dev-dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
 env_logger = "0.9.0"
 itc-parentchain-block-import-dispatcher = { path = "../../../core/parentchain/block-import-dispatcher", features = ["mocks"] }
+itc-parentchain-test = { path = "../../../core/parentchain/test" }
 itp-storage = { path = "../../../core-primitives/storage" }
 itp-test = { path = "../../../core-primitives/test" }
-its-test = { path = "../../test" }
-its-top-pool-executor = { path = "../../top-pool-executor", features = ["mocks"] }
-sp-keyring = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
+its-test = { path = "../../../sidechain/test" }
+sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 
 [features]
 default = ["std"]
 std = [
-   "ita-stf/std",
-   "itc-parentchain-block-import-dispatcher/std",
-   "itp-enclave-metrics/std",
-   "itp-ocall-api/std",
-   "itp-sgx-crypto/std",
-   "itp-stf-executor/std",
-   "itp-stf-state-handler/std",
-   "itp-time-utils/std",
-   "itp-types/std",
-   "its-block-composer/std",
-   "its-consensus-common/std",
-   "its-consensus-slots/std",
-   "its-primitives/std",
-   "its-state/std",
-   "its-top-pool-executor/std",
-   "its-validateer-fetch/std",
-   "log/std",
-   "sgx-externalities/std",
+    "ita-stf/std",
+    "itc-parentchain-block-import-dispatcher/std",
+    "itp-enclave-metrics/std",
+    "itp-ocall-api/std",
+    "itp-sgx-crypto/std",
+    "itp-sgx-externalities/std",
+    "itp-stf-executor/std",
+    "itp-stf-state-handler/std",
+    "itp-time-utils/std",
+    "itp-types/std",
+    "itp-utils/std",
+    "its-block-composer/std",
+    "its-block-verification/std",
+    "its-consensus-common/std",
+    "its-consensus-slots/std",
+    "its-state/std",
+    "its-validateer-fetch/std",
+    "its-primitives/std",
+    "log/std",
 ]
 sgx = [
-   "sgx_tstd",
-   "ita-stf/sgx",
-   "itc-parentchain-block-import-dispatcher/sgx",
-   "itp-enclave-metrics/sgx",
-   "itp-sgx-crypto/sgx",
-   "itp-stf-executor/sgx",
-   "itp-stf-state-handler/sgx",
-   "itp-time-utils/sgx",
-   "its-block-composer/sgx",
-   "its-consensus-common/sgx",
-   "its-consensus-slots/sgx",
-   "its-state/sgx",
-   "its-top-pool-executor/sgx",
-   "sgx-externalities/sgx",
+    "sgx_tstd",
+    "ita-stf/sgx",
+    "itc-parentchain-block-import-dispatcher/sgx",
+    "itp-enclave-metrics/sgx",
+    "itp-sgx-crypto/sgx",
+    "itp-sgx-externalities/sgx",
+    "itp-stf-executor/sgx",
+    "itp-stf-state-handler/sgx",
+    "itp-time-utils/sgx",
+    "itp-utils/sgx",
+    "its-block-composer/sgx",
+    "its-consensus-common/sgx",
+    "its-consensus-slots/sgx",
+    "its-state/sgx",
+    "its-block-verification/sgx",
 ]

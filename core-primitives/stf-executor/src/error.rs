@@ -28,14 +28,24 @@ pub type Result<T> = core::result::Result<T, Error>;
 pub enum Error {
 	#[error("Trusted operation has invalid signature")]
 	OperationHasInvalidSignature,
+	#[error("Invalid or unsupported trusted call type")]
+	InvalidTrustedCallType,
 	#[error("SGX error, status: {0}")]
 	Sgx(sgx_status_t),
 	#[error("State handling error: {0}")]
 	StateHandler(#[from] itp_stf_state_handler::error::Error),
+	#[error("State observer error: {0}")]
+	StateObserver(#[from] itp_stf_state_observer::error::Error),
+	#[error("Node metadata error: {0:?}")]
+	NodeMetadata(itp_node_api::metadata::Error),
+	#[error("Node metadata provider error: {0:?}")]
+	NodeMetadataProvider(#[from] itp_node_api::metadata::provider::Error),
 	#[error("STF error: {0}")]
 	Stf(ita_stf::StfError),
 	#[error("Ocall Api error: {0}")]
 	OcallApi(itp_ocall_api::Error),
+	#[error("Crypto error: {0}")]
+	Crypto(itp_sgx_crypto::error::Error),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }
@@ -61,5 +71,17 @@ impl From<ita_stf::StfError> for Error {
 impl From<itp_ocall_api::Error> for Error {
 	fn from(error: itp_ocall_api::Error) -> Self {
 		Self::OcallApi(error)
+	}
+}
+
+impl From<itp_sgx_crypto::error::Error> for Error {
+	fn from(error: itp_sgx_crypto::error::Error) -> Self {
+		Self::Crypto(error)
+	}
+}
+
+impl From<itp_node_api::metadata::Error> for Error {
+	fn from(e: itp_node_api::metadata::Error) -> Self {
+		Self::NodeMetadata(e)
 	}
 }

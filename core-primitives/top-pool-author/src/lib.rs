@@ -16,6 +16,7 @@
 */
 
 #![feature(trait_alias)]
+#![cfg_attr(feature = "mocks", feature(drain_filter))]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(all(feature = "std", feature = "sgx"))]
@@ -38,8 +39,14 @@ pub mod error;
 pub mod top_filter;
 pub mod traits;
 
-#[cfg(all(feature = "sgx", feature = "test"))]
-pub mod author_tests;
+#[cfg(test)]
+mod author_tests;
 
-#[cfg(feature = "test")]
+#[cfg(test)]
+mod test_fixtures;
+
+#[cfg(any(test, feature = "test"))]
 pub mod test_utils;
+
+#[cfg(feature = "mocks")]
+pub mod mocks;

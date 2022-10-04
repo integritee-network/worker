@@ -16,17 +16,17 @@
 
 */
 
-use crate::error::Error;
 use base58::{FromBase58, ToBase58};
-use clap::ArgMatches;
-use frame_support::ensure;
-use ita_stf::ShardIdentifier;
 use itp_enclave_api::enclave_base::EnclaveBase;
+use itp_types::ShardIdentifier;
 use log::{debug, info};
 use std::path::Path;
 
-pub fn extract_shard<E: EnclaveBase>(m: &ArgMatches<'_>, enclave_api: &E) -> ShardIdentifier {
-	match m.value_of("shard") {
+pub fn extract_shard<E: EnclaveBase>(
+	maybe_shard_str: &Option<String>,
+	enclave_api: &E,
+) -> ShardIdentifier {
+	match maybe_shard_str {
 		Some(value) => {
 			let shard_vec = value.from_base58().expect("shard must be hex encoded");
 			let mut shard = [0u8; 32];
@@ -41,46 +41,11 @@ pub fn extract_shard<E: EnclaveBase>(m: &ArgMatches<'_>, enclave_api: &E) -> Sha
 	}
 }
 
-pub fn hex_encode(data: Vec<u8>) -> String {
-	let mut hex_str = hex::encode(data);
-	hex_str.insert_str(0, "0x");
-	hex_str
-}
-
-pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) -> Result<(), Error> {
-	ensure!(
-		data.len() <= writable.len(),
-		Error::InsufficientBufferSize(writable.len(), data.len())
-	);
-	let (left, right) = writable.split_at_mut(data.len());
-	left.clone_from_slice(&data);
-	// fill the right side with whitespace
-	right.iter_mut().for_each(|x| *x = 0x20);
-	Ok(())
-}
-
 pub fn check_files() {
 	use itp_settings::files::{ENCLAVE_FILE, RA_API_KEY_FILE, RA_SPID_FILE};
 	debug!("*** Check files");
 	let files = vec![ENCLAVE_FILE, RA_SPID_FILE, RA_API_KEY_FILE];
 	for f in files.iter() {
 		assert!(Path::new(f).exists(), "File doesn't exist: {}", f);
-	}
-}
-
-#[cfg(test)]
-mod tests {
-
-	use super::*;
-	use std::assert_matches::assert_matches;
-
-	#[test]
-	fn write_slice_and_whitespace_pad_returns_error_if_buffer_too_small() {
-		let mut writable = vec![0; 32];
-		let data = vec![1; 33];
-		assert_matches!(
-			write_slice_and_whitespace_pad(&mut writable, data),
-			Err(Error::InsufficientBufferSize(_, _))
-		);
 	}
 }

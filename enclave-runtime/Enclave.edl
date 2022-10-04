@@ -37,12 +37,6 @@ enclave {
 			[in, size=untrusted_worker_addr_size] uint8_t* untrusted_worker_addr, uint32_t untrusted_worker_addr_size
 		);
 
-		public sgx_status_t get_state(
-			[in, size=cyphertext_size] uint8_t* cyphertext, uint32_t cyphertext_size,
-			[in, size=shard_size] uint8_t* shard, uint32_t shard_size,
-			[out, size=value_size] uint8_t* value, uint32_t value_size
-		);
-
         public sgx_status_t init_enclave_sidechain_components();
 
         public sgx_status_t init_direct_invocation_server(
@@ -50,9 +44,7 @@ enclave {
         );
 
 		public sgx_status_t init_light_client(
-			[in, size=genesis_hash_size] uint8_t* genesis_hash, size_t genesis_hash_size,
-            [in, size=authority_list_size] uint8_t* authority_list, size_t authority_list_size,
-            [in, size=authority_proof_size] uint8_t* authority_proof, size_t authority_proof_size,
+			[in, size=params_size] uint8_t* params, size_t params_size,
             [out, size=latest_header_size] uint8_t* latest_header, size_t latest_header_size
         );
 
@@ -61,8 +53,6 @@ enclave {
         );
 
         public sgx_status_t trigger_parentchain_block_import();
-
-        public sgx_status_t execute_trusted_getters();
 
         public sgx_status_t execute_trusted_calls();
 
@@ -73,6 +63,10 @@ enclave {
 
         public sgx_status_t set_nonce(
             [in] uint32_t* nonce
+        );
+
+        public sgx_status_t set_node_metadata(
+            [in, size=node_metadata_size] uint8_t* node_metadata, uint32_t node_metadata_size
         );
 
 		public sgx_status_t get_rsa_encryption_pubkey(
@@ -95,6 +89,12 @@ enclave {
             [in, size=genesis_hash_size] uint8_t* genesis_hash, uint32_t genesis_hash_size,
             [in] uint32_t* nonce,
             [in, size=w_url_size] uint8_t* w_url, uint32_t w_url_size,
+            [out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
+		);
+
+		public sgx_status_t update_market_data_xt(
+            [in, size=crypto_currency_size] uint8_t* crypto_currency, uint32_t crypto_currency_size,
+            [in, size=fiat_currency_size] uint8_t* fiat_currency, uint32_t fiat_currency_size,
             [out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
 		);
 
@@ -165,7 +165,8 @@ enclave {
 	    );
 
 	    sgx_status_t ocall_fetch_sidechain_blocks_from_peer(
-	        [in, size = last_known_block_hash_size] uint8_t * last_known_block_hash, uint32_t last_known_block_hash_size,
+	        [in, size = last_imported_block_hash_size] uint8_t * last_imported_block_hash, uint32_t last_imported_block_hash_size,
+	        [in, size = maybe_until_block_hash_size] uint8_t * maybe_until_block_hash, uint32_t maybe_until_block_hash_size,
 	        [in, size = shard_identifier_size] uint8_t * shard_identifier, uint32_t shard_identifier_size,
 	        [out, size = sidechain_blocks_size] uint8_t * sidechain_blocks, uint32_t sidechain_blocks_size
 	    );

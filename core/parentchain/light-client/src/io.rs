@@ -15,31 +15,39 @@
 
 */
 
-use crate::{error::Result, Error, LightClientState, LightValidation, NumberFor, Validator};
+use crate::{
+	error::Result,
+	finality::{Finality, GrandpaFinality, ParachainFinality},
+	light_client_init_params::LightClientInitParams,
+	light_validation::LightValidation,
+	Error, LightValidationState, NumberFor, Validator,
+};
 use codec::{Decode, Encode};
-use derive_more::Display;
+use core::fmt::Debug;
+use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_settings::files::LIGHT_CLIENT_DB;
 use itp_sgx_io::{seal, unseal, StaticSealedIO};
-use itp_storage::StorageProof;
 use log::*;
-use sp_finality_grandpa::VersionedAuthorityList;
+use sp_finality_grandpa::AuthorityList;
 use sp_runtime::traits::{Block, Header};
-use std::{fs, sgxfs::SgxFile};
+use std::{boxed::Box, fs, sgxfs::SgxFile, sync::Arc};
 
-#[derive(Copy, Clone, Debug, Display)]
-pub struct LightClientSeal<B> {
-	_phantom: B,
+#[derive(Copy, Clone, Debug)]
+pub struct LightClientStateSeal<B, LightClientState> {
+	_phantom: (B, LightClientState),
 }
 
-impl<B: Block> StaticSealedIO for LightClientSeal<B> {
+impl<B: Block, LightClientState: Decode + Encode + Debug> StaticSealedIO
+	for LightClientStateSeal<B, LightClientState>
+{
 	type Error = Error;
-	type Unsealed = LightValidation<B>;
+	type Unsealed = LightClientState;
 
 	fn unseal_from_static_file() -> Result<Self::Unsealed> {
 		Ok(unseal(LIGHT_CLIENT_DB).map(|b| Decode::decode(&mut b.as_slice()))??)
 	}
 
-	fn seal_to_static_file(unsealed: Self::Unsealed) -> Result<()> {
+	fn seal_to_static_file(unsealed: &Self::Unsealed) -> Result<()> {
 		debug!("backup light client state");
 		if fs::copy(LIGHT_CLIENT_DB, format!("{}.1", LIGHT_CLIENT_DB)).is_err() {
 			warn!("could not backup previous light client state");
@@ -49,43 +57,68 @@ impl<B: Block> StaticSealedIO for LightClientSeal<B> {
 	}
 }
 
-pub fn read_or_init_validator<B: Block>(
-	header: B::Header,
-	auth: VersionedAuthorityList,
-	proof: StorageProof,
-) -> Result<B::Header>
+pub fn read_or_init_validator<B, OCallApi>(
+	params: LightClientInitParams<B::Header>,
+	ocall_api: Arc<OCallApi>,
+) -> Result<LightValidation<B, OCallApi>>
 where
+	B: Block,
 	NumberFor<B>: finality_grandpa::BlockNumberOps,
+	OCallApi: EnclaveOnChainOCallApi,
 {
 	if SgxFile::open(LIGHT_CLIENT_DB).is_err() {
 		info!("[Enclave] ChainRelay DB not found, creating new! {}", LIGHT_CLIENT_DB);
-		return init_validator::<B>(header, auth, proof)
+		return init_validator::<B, OCallApi>(params, ocall_api)
 	}
 
-	let validator = LightClientSeal::<B>::unseal_from_static_file()?;
+	let validation_state =
+		LightClientStateSeal::<B, LightValidationState<B>>::unseal_from_static_file()?;
 
-	let genesis = validator.genesis_hash(validator.num_relays()).unwrap();
-	if genesis == header.hash() {
+	let relay = validation_state
+		.tracked_relays
+		.get(&validation_state.num_relays)
+		.ok_or(Error::NoSuchRelayExists)?;
+
+	let genesis = relay.header_hashes[0];
+
+	if genesis == params.get_genesis_header().hash() {
+		let mut validator = init_validator::<B, OCallApi>(params, ocall_api)?;
+		validator.set_state(validation_state);
 		info!("Found already initialized light client with Genesis Hash: {:?}", genesis);
 		info!("light client state: {:?}", validator);
-		Ok(validator.latest_finalized_header(validator.num_relays()).unwrap())
+		Ok(validator)
 	} else {
-		init_validator::<B>(header, auth, proof)
+		init_validator::<B, OCallApi>(params, ocall_api)
 	}
 }
 
-fn init_validator<B: Block>(
-	header: B::Header,
-	auth: VersionedAuthorityList,
-	proof: StorageProof,
-) -> Result<B::Header>
+fn init_validator<B, OCallApi>(
+	params: LightClientInitParams<B::Header>,
+	ocall_api: Arc<OCallApi>,
+) -> Result<LightValidation<B, OCallApi>>
 where
+	B: Block,
 	NumberFor<B>: finality_grandpa::BlockNumberOps,
+	OCallApi: EnclaveOnChainOCallApi,
 {
-	let mut validator = LightValidation::<B>::new();
+	// TODO: initialize relay will be more generic, so there will be changes here with issue #776
+	let validator: LightValidation<B, OCallApi> = match params {
+		LightClientInitParams::Grandpa { genesis_header, authorities, authority_proof } => {
+			let finality: Arc<Box<dyn Finality<B> + Sync + Send + 'static>> =
+				Arc::new(Box::new(GrandpaFinality {}));
+			let mut validator = LightValidation::<B, OCallApi>::new(ocall_api, finality);
+			validator.initialize_grandpa_relay(genesis_header, authorities, authority_proof)?;
+			validator
+		},
+		LightClientInitParams::Parachain { genesis_header } => {
+			let finality: Arc<Box<dyn Finality<B> + Sync + Send + 'static>> =
+				Arc::new(Box::new(ParachainFinality {}));
+			let mut validator = LightValidation::<B, OCallApi>::new(ocall_api, finality);
+			validator.initialize_parachain_relay(genesis_header, AuthorityList::default())?;
+			validator
+		},
+	};
 
-	validator.initialize_relay(header, auth.into(), proof)?;
-	LightClientSeal::<B>::seal_to_static_file(validator.clone())?;
-
-	Ok(validator.latest_finalized_header(validator.num_relays()).unwrap())
+	LightClientStateSeal::<B, LightValidationState<B>>::seal_to_static_file(validator.get_state())?;
+	return Ok(validator)
 }

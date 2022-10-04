@@ -1,8 +1,46 @@
 [package]
 name = "its-consensus-common"
-version = "0.8.0"
+version = "0.9.0"
 authors = ["Integritee AG <hello@integritee.network>"]
-edition = "2018"
+edition = "2021"
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
+log = { version = "0.4", default-features = false }
+thiserror = { version = "1.0.26", optional = true }
+
+# local deps
+itc-parentchain-light-client = { path = "../../../core/parentchain/light-client", default-features = false }
+itp-block-import-queue = { path = "../../../core-primitives/block-import-queue", default-features = false }
+itp-extrinsics-factory = { path = "../../../core-primitives/extrinsics-factory", default-features = false }
+itp-node-api-metadata = { path = "../../../core-primitives/node-api/metadata", default-features = false }
+itp-node-api-metadata-provider = { path = "../../../core-primitives/node-api/metadata-provider", default-features = false }
+itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
+itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
+itp-types = { path = "../../../core-primitives/types", default-features = false }
+its-block-verification = { path = "../../block-verification", optional = true, default-features = false }
+its-primitives = { path = "../../primitives", default-features = false }
+its-state = { path = "../../state", default-features = false }
+
+# sgx deps
+sgx_tstd = { optional = true, git = "https://github.com/apache/teaclave-sgx-sdk.git", branch = "master" }
+sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", branch = "master" }
+thiserror-sgx = { package = "thiserror", optional = true, git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3" }
+
+# substrate deps
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+
+[dev-dependencies]
+# local
+itc-parentchain-test = { path = "../../../core/parentchain/test" }
+itp-sgx-externalities = { default-features = false, path = "../../../core-primitives/substrate-sgx/externalities" }
+itp-test = { path = "../../../core-primitives/test" }
+its-consensus-aura = { path = "../aura" }
+its-test = { path = "../../test" }
+
+# substrate
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 
 [features]
 default = ["std"]
@@ -11,52 +49,34 @@ std = [
     "log/std",
     "thiserror",
     # local
+    "itc-parentchain-light-client/std",
     "itp-block-import-queue/std",
+    "itp-extrinsics-factory/std",
+    "itp-node-api-metadata/std",
+    "itp-node-api-metadata-provider/std",
     "itp-ocall-api/std",
     "itp-sgx-crypto/std",
+    "itp-sgx-externalities/std",
     "itp-types/std",
     "its-primitives/std",
+    "its-block-verification/std",
     "its-state/std",
     # substrate
     "sp-runtime/std",
+    # scs
+    "itp-types/std",
 ]
 sgx = [
     "sgx_tstd",
     "thiserror-sgx",
     # local
+    "itc-parentchain-light-client/sgx",
     "itp-block-import-queue/sgx",
+    "itp-extrinsics-factory/sgx",
+    "itp-node-api-metadata-provider/sgx",
     "itp-sgx-crypto/sgx",
+    "itp-sgx-externalities/sgx",
     "its-state/sgx",
+    # scs
+    "its-block-verification/sgx",
 ]
-
-[dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
-log = { version = "0.4.14", default-features = false }
-thiserror = { version = "1.0.26", optional = true }
-
-# local deps
-itp-block-import-queue = { path = "../../../core-primitives/block-import-queue", default-features = false }
-itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
-itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
-itp-types = { path = "../../../core-primitives/types", default-features = false }
-its-primitives = { path = "../../primitives", default-features = false }
-its-state = { path = "../../state", default-features = false }
-
-# sgx deps
-sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
-
-# substrate deps
-sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
-
-[dev-dependencies]
-# local
-itp-test = { path = "../../../core-primitives/test" }
-its-consensus-aura = { path = "../aura" }
-its-test = { path = "../../test" }
-# substrate
-sp-core = { version = "6.0.0", default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20" }
-sp-keyring = { version = "6.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"}
-# integritee / scs
-sgx-externalities = { git = "https://github.com/integritee-network/sgx-runtime", branch = "master" }
