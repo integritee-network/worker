@@ -19,8 +19,8 @@ use crate::{
 	error::{Error, Result as EnclaveResult},
 	global_components::{
 		EnclaveBlockImportConfirmationHandler, EnclaveGetterExecutor, EnclaveOCallApi,
-		EnclaveRpcConnectionRegistry, EnclaveRpcResponder, EnclaveShieldingKeyRepository,
-		EnclaveSidechainApi, EnclaveSidechainBlockImportQueue,
+		EnclaveOffchainWorkerExecutor, EnclaveRpcConnectionRegistry, EnclaveRpcResponder,
+		EnclaveShieldingKeyRepository, EnclaveSidechainApi, EnclaveSidechainBlockImportQueue,
 		EnclaveSidechainBlockImportQueueWorker, EnclaveSidechainBlockImporter,
 		EnclaveSidechainBlockSyncer, EnclaveStateFileIo, EnclaveStateHandler,
 		EnclaveStateKeyRepository, EnclaveStateObserver, EnclaveStateSnapshotRepository,
@@ -326,14 +326,13 @@ fn initialize_parentchain_import_dispatcher<WorkerModeProvider: ProvideWorkerMod
 
 	match WorkerModeProvider::worker_mode() {
 		WorkerMode::OffChainWorker | WorkerMode::Teeracle => {
-			let offchain_worker_executor =
-				Arc::new(itc_offchain_worker_executor::executor::Executor::new(
-					top_pool_author,
-					stf_executor,
-					state_handler,
-					validator_access,
-					extrinsics_factory,
-				));
+			let offchain_worker_executor = Arc::new(EnclaveOffchainWorkerExecutor::new(
+				top_pool_author,
+				stf_executor,
+				state_handler,
+				validator_access,
+				extrinsics_factory,
+			));
 			let parentchain_block_import_dispatcher = Arc::new(
 				ImmediateDispatcher::new(parentchain_block_importer).with_observer(move || {
 					if let Err(e) = offchain_worker_executor.execute() {

@@ -3225,6 +3225,7 @@ name = "itp-stf-interface"
 version = "0.8.0"
 dependencies = [
  "itp-types",
+ "lazy_static",
 ]
 
 [[package]]

@@ -185,6 +185,16 @@ pub type EnclaveSealHandler = SealHandler<
 	EnclaveStateHandler,
 	EnclaveStf,
 >;
+pub type EnclaveOffchainWorkerExecutor = itc_offchain_worker_executor::executor::Executor<
+	ParentchainBlock,
+	EnclaveTopPoolAuthor,
+	EnclaveStfExecutor,
+	EnclaveStateHandler,
+	EnclaveValidatorAccessor,
+	EnclaveExtrinsicsFactory,
+	EnclaveStf,
+>;
+
 /// Base component instances
 ///-------------------------------------------------------------------------------------------------
 

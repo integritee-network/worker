@@ -18,10 +18,7 @@
 #[cfg(feature = "test")]
 use crate::test_genesis::test_genesis_setup;
 
-use crate::{
-	helpers::enclave_signer_account, BlockNumber, Hash, ShardIdentifier, Stf, StfError,
-	ENCLAVE_ACCOUNT_KEY,
-};
+use crate::{helpers::enclave_signer_account, ShardIdentifier, Stf, StfError, ENCLAVE_ACCOUNT_KEY};
 use codec::Encode;
 use frame_support::traits::{OriginTrait, UnfilteredDispatchable};
 use itp_sgx_externalities::SgxExternalitiesTrait;

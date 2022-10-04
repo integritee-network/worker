@@ -14,6 +14,8 @@
 	limitations under the License.
 
 */
+extern crate alloc;
+use alloc::{boxed::Box, vec::Vec};
 
 /// Interface trait of the system pallet.
 pub trait SystemPalletAccountInterface<State, AccountId> {

@@ -14,10 +14,7 @@
 	limitations under the License.
 
 */
-use crate::{
-	stf_sgx_primitives::types::*, AccountId, EventIndex, StfError, StfResult, ENCLAVE_ACCOUNT_KEY,
-	H256,
-};
+use crate::{StfError, StfResult, ENCLAVE_ACCOUNT_KEY};
 use codec::{Decode, Encode};
 use itp_storage::{storage_double_map_key, storage_map_key, storage_value_key, StorageHasher};
 use itp_utils::stringify::account_id_to_string;
@@ -80,7 +77,10 @@ pub fn get_storage_by_key_hash<V: Decode>(key: Vec<u8>) -> Option<V> {
 pub fn account_key_hash<AccountId: Encode>(account: &AccountId) -> Vec<u8> {
 	storage_map_key("System", "Account", account, &StorageHasher::Blake2_128Concat)
 }
-pub fn set_event_topic(topic: &H256, value: Vec<(BlockNumber, EventIndex)>) {
+pub fn set_event_topic<Hash: Encode, BlockNumber: Encode, EventIndex: Encode>(
+	topic: &Hash,
+	value: Vec<(BlockNumber, EventIndex)>,
+) {
 	sp_io::storage::set(
 		&storage_map_key("System", "EventTopics", topic, &StorageHasher::Blake2_128Concat),
 		&value.encode(),

@@ -220,7 +220,7 @@ pub fn produce_sidechain_block_and_import_it() {
 	// Add some Event Topic, currently not added by pallet Balance.
 	let (lock, mut state) = state_handler.load_for_mutation(&shard_id).unwrap();
 	state.execute_with(|| {
-		set_event_topic(&H256::from([7; 32]), vec![(1, 1)]);
+		set_event_topic::<H256, u32, u32>(&H256::from([7; 32]), vec![(1, 1)]);
 	});
 	state_handler.write_after_mutation(state.clone(), lock, &shard_id).unwrap();
 
@@ -228,11 +228,11 @@ pub fn produce_sidechain_block_and_import_it() {
 	let mut state = state_handler.load(&shard_id).unwrap();
 	let free_balance = TestStf::get_account_data(&mut state, &receiver.public().into()).free;
 	assert_eq!(free_balance, transfered_amount);
-	let event_count = Stf::event_count(&mut state);
+	let event_count = TestStf::get_event_count(&mut state);
 	assert!(event_count > 0);
-	let events = Stf::events(&mut state);
+	let events = TestStf::get_events(&mut state);
 	assert!(events.len() > 0);
-	let event_topics = Stf::event_topics(&mut state, &H256::from([7; 32]));
+	let event_topics = TestStf::get_event_topics(&mut state, &H256::from([7; 32]));
 	assert!(event_topics.len() > 0);
 
 	// Test if propose() actually resets events, otherwise we will have an ever growing event state.
@@ -260,9 +260,9 @@ pub fn produce_sidechain_block_and_import_it() {
 	.unwrap();
 
 	let mut state = state_handler.load(&shard_id).unwrap();
-	assert_eq!(Stf::event_count(&mut state), 0);
-	assert_eq!(Stf::event_topics(&mut state, &H256::from([7; 32])).len(), 0);
-	assert_eq!(Stf::events(&mut state).len(), 0);
+	assert_eq!(TestStf::get_event_count(&mut state), 0);
+	assert_eq!(TestStf::get_event_topics(&mut state, &H256::from([7; 32])).len(), 0);
+	assert_eq!(TestStf::get_events(&mut state).len(), 0);
 }
 
 fn encrypted_trusted_operation_transfer_balance<

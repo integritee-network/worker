@@ -37,8 +37,8 @@ use ita_stf::{
 	helpers::{account_key_hash, set_block_number},
 	stf_sgx_tests,
 	test_genesis::{endowed_account as funded_pair, unendowed_account},
-	AccountInfo, Getter, ShardIdentifier, State, StatePayload, StateTypeDiff, Stf, TrustedCall,
-	TrustedCallSigned, TrustedGetter, TrustedOperation,
+	AccountInfo, Getter, ShardIdentifier, State, StatePayload, TrustedCall, TrustedCallSigned,
+	TrustedGetter, TrustedOperation,
 };
 use itp_sgx_crypto::{Aes, StateCrypto};
 use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesDiffType, SgxExternalitiesTrait};
@@ -48,6 +48,7 @@ use itp_stf_executor::{
 };
 use itp_stf_interface::{
 	parentchain_pallet::ParentchainPalletInterface, system_pallet::SystemPalletAccountInterface,
+	StateCallInterface,
 };
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::handle_state_mock;
@@ -642,7 +643,7 @@ pub fn test_reset_events() {
 	)
 	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
 	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
-	let receiver_acc_info = Stf::account_data(&mut state, &receiver.public().into());
+	let receiver_acc_info = TestStf::get_account_data(&mut state, &receiver.public().into());
 	assert_eq!(receiver_acc_info.free, transfer_value);
 	// Ensure that there really have been events generated.
 	assert_eq!(TestStf::get_events(&mut state).len(), 3);
