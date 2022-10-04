@@ -101,7 +101,7 @@ where
 			self.connection_handler.clone(),
 		)?;
 
-		debug!("Web-socket connection created");
+		trace!("Web-socket connection created");
 		web_socket_connection.register(poll)?;
 
 		let mut connections_lock =
@@ -122,9 +122,9 @@ where
 			connection.on_ready(poll, event)?;
 
 			if connection.is_closed() {
-				debug!("Connection {:?} is closed, removing", token);
+				trace!("Connection {:?} is closed, removing", token);
 				connections_lock.remove(&token);
-				debug!(
+				trace!(
 					"Closed {:?}, {} active connections remaining",
 					token,
 					connections_lock.len()
@@ -245,7 +245,8 @@ where
 
 		// Run the event loop.
 		'outer_event_loop: loop {
-			poll.poll(&mut events, None)?;
+			let num_events = poll.poll(&mut events, None)?;
+			debug!("Number of readiness events: {}", num_events);
 
 			for event in events.iter() {
 				match event.token() {

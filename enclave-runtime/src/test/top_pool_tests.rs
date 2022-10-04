@@ -22,6 +22,7 @@ use crate::test::{
 			create_ocall_api, create_top_pool, encrypt_trusted_operation, sign_trusted_call,
 		},
 		initialize_test_state::init_state,
+		test_setup::TestStf,
 	},
 	mocks::types::{
 		TestShieldingKey, TestShieldingKeyRepo, TestSigner, TestStateHandler, TestTopPoolAuthor,
@@ -119,7 +120,7 @@ pub fn submit_shielding_call_to_top_pool() {
 		Arc::new(MetricsOCallMock::default()),
 	));
 
-	let enclave_signer = Arc::new(StfEnclaveSigner::new(
+	let enclave_signer = Arc::new(StfEnclaveSigner::<_, _, _, TestStf>::new(
 		state_observer,
 		ocall_api.clone(),
 		shielding_key_repo.clone(),

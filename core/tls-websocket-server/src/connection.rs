@@ -29,6 +29,7 @@ use std::{
 	format,
 	string::{String, ToString},
 	sync::Arc,
+	time::Instant,
 };
 use tungstenite::Message;
 
@@ -127,7 +128,7 @@ where
 	/// Returns a boolean 'connection should be closed'.
 	fn read_or_initialize_websocket(&mut self) -> WebSocketResult<bool> {
 		if let StreamState::EstablishedWebsocket(web_socket) = &mut self.stream_state {
-			debug!(
+			trace!(
 				"Read is possible for connection {}: {}",
 				self.connection_token.0,
 				web_socket.can_read()
@@ -149,9 +150,9 @@ where
 					),
 				},
 			}
-			debug!("Read successful for connection {}", self.connection_token.0);
+			trace!("Read successful for connection {}", self.connection_token.0);
 		} else {
-			debug!("Initialize connection {}", self.connection_token.0);
+			trace!("Initialize connection {}", self.connection_token.0);
 			self.stream_state = std::mem::take(&mut self.stream_state).attempt_handshake();
 			if self.stream_state.is_invalid() {
 				warn!("Web-socket connection ({:?}) failed, closing", self.connection_token);
@@ -166,21 +167,26 @@ where
 	fn handle_message(&mut self, message: Message) -> WebSocketResult<()> {
 		match message {
 			Message::Text(string_message) => {
-				debug!(
+				trace!(
 					"Got Message::Text on web-socket (connection {}), calling handler..",
 					self.connection_token.0
 				);
+				let message_handled_timer = Instant::now();
 				if let Some(reply) = self
 					.connection_handler
 					.handle_message(self.connection_token.into(), string_message)?
 				{
-					debug!(
+					trace!(
 						"Handling message yielded a reply, sending it now to connection {}..",
 						self.connection_token.0
 					);
 					self.write_message(reply)?;
-					debug!("Reply sent successfully to connection {}", self.connection_token.0);
+					trace!("Reply sent successfully to connection {}", self.connection_token.0);
 				}
+				debug!(
+					"Handled web-socket message in {} ms",
+					message_handled_timer.elapsed().as_millis()
+				);
 			},
 			Message::Binary(_) => {
 				warn!("received binary message, don't have a handler for this format");

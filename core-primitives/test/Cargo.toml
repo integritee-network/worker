@@ -26,11 +26,13 @@ ita-stf = { path = "../../app-libs/stf", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
 itp-sgx-externalities = { default-features = false, path = "../substrate-sgx/externalities" }
+itp-stf-interface = { path = "../stf-interface", default-features = false }
 itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
 itp-storage = { path = "../storage", default-features = false }
 itp-teerex-storage = { path = "../teerex-storage", default-features = false }
 itp-time-utils = { path = "../time-utils", default-features = false }
 itp-types = { path = "../types", default-features = false, features = ["test"] }
+
 
 [features]
 default = ["std"]
@@ -38,6 +40,7 @@ std = [
     "codec/std",
     "itp-sgx-crypto/std",
     "itp-sgx-externalities/std",
+    "itp-stf-interface/std",
     "itp-stf-state-handler/std",
     "itp-storage/std",
     "itp-teerex-storage/std",

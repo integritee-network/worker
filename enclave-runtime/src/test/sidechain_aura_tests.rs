@@ -23,7 +23,7 @@ use crate::{
 				create_ocall_api, create_top_pool, encrypt_trusted_operation, sign_trusted_call,
 			},
 			initialize_test_state::init_state,
-			test_setup::enclave_call_signer,
+			test_setup::{enclave_call_signer, TestStf},
 		},
 		mocks::{propose_to_import_call_mock::ProposeToImportOCallApi, types::*},
 	},
@@ -32,7 +32,7 @@ use crate::{
 use codec::Decode;
 use ita_stf::{
 	test_genesis::{endowed_account, second_endowed_account, unendowed_account},
-	Balance, StatePayload, Stf, TrustedCall, TrustedOperation,
+	Balance, StatePayload, TrustedCall, TrustedOperation,
 };
 use itc_parentchain::light_client::mocks::validator_access_mock::ValidatorAccessMock;
 use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
@@ -44,6 +44,8 @@ use itp_settings::{
 	worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider},
 };
 use itp_sgx_crypto::{Aes, ShieldingCryptoEncrypt, StateCrypto};
+use itp_sgx_externalities::SgxExternalitiesDiffType;
+use itp_stf_interface::system_pallet::SystemPalletAccountInterface;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock};
 use itp_time_utils::duration_now;
@@ -215,7 +217,7 @@ pub fn produce_sidechain_block_and_import_it() {
 	);
 
 	let mut state = state_handler.load(&shard_id).unwrap();
-	let free_balance = Stf::account_data(&mut state, &receiver.public().into()).free;
+	let free_balance = TestStf::get_account_data(&mut state, &receiver.public().into()).free;
 	assert_eq!(free_balance, transfered_amount);
 }
 
@@ -242,7 +244,9 @@ fn get_state_hashes_from_block(
 ) -> (H256, H256) {
 	let mut encrypted_state_diff = signed_block.block.block_data().encrypted_state_diff.clone();
 	state_key.decrypt(&mut encrypted_state_diff).unwrap();
-	let decoded_state = StatePayload::decode(&mut encrypted_state_diff.as_slice()).unwrap();
+	let decoded_state =
+		StatePayload::<SgxExternalitiesDiffType>::decode(&mut encrypted_state_diff.as_slice())
+			.unwrap();
 	(decoded_state.state_hash_apriori(), decoded_state.state_hash_aposteriori())
 }
 

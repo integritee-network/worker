@@ -22,9 +22,10 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 extern crate sgx_tstd as std;
 
 use codec::{Decode, Encode};
-use derive_more::{Deref, DerefMut, From};
+use derive_more::{Deref, DerefMut, From, IntoIterator};
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, vec::Vec};
+use sp_core::{hashing::blake2_256, H256};
+use std::{collections::BTreeMap, ops::Bound, vec::Vec};
 
 pub use scope_limited::{set_and_run_with_externalities, with_externalities};
 
@@ -45,7 +46,19 @@ type InternalMap<V> = BTreeMap<Vec<u8>, V>;
 #[derive(From, Deref, DerefMut, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SgxExternalitiesType(#[serde(with = "vectorize")] InternalMap<Vec<u8>>);
 
-#[derive(From, Deref, DerefMut, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+	From,
+	Deref,
+	DerefMut,
+	Clone,
+	Debug,
+	Default,
+	PartialEq,
+	Eq,
+	Serialize,
+	Deserialize,
+	IntoIterator,
+)]
 pub struct SgxExternalitiesDiffType(#[serde(with = "vectorize")] InternalMap<Option<Vec<u8>>>);
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Encode, Decode, Serialize, Deserialize)]
@@ -54,29 +67,50 @@ pub struct SgxExternalities {
 	pub state_diff: SgxExternalitiesDiffType,
 }
 
+pub trait StateHash {
+	fn hash(&self) -> H256;
+}
+
+impl StateHash for SgxExternalities {
+	fn hash(&self) -> H256 {
+		self.state.using_encoded(blake2_256).into()
+	}
+}
+
 pub trait SgxExternalitiesTrait {
-	fn new() -> Self;
-	fn state(&self) -> &SgxExternalitiesType;
-	fn state_diff(&self) -> &SgxExternalitiesDiffType;
+	type SgxExternalitiesType;
+	type SgxExternalitiesDiffType;
+
+	// Create new Externaltiies with empty diff.
+	fn new(state: Self::SgxExternalitiesType) -> Self;
+	fn state(&self) -> &Self::SgxExternalitiesType;
+	fn state_diff(&self) -> &Self::SgxExternalitiesDiffType;
 	fn insert(&mut self, k: Vec<u8>, v: Vec<u8>) -> Option<Vec<u8>>;
 	fn remove(&mut self, k: &[u8]) -> Option<Vec<u8>>;
 	fn get(&self, k: &[u8]) -> Option<&Vec<u8>>;
 	fn contains_key(&self, k: &[u8]) -> bool;
+	fn next_storage_key(&self, key: &[u8]) -> Option<Vec<u8>>;
 	fn prune_state_diff(&mut self);
 	fn execute_with<R>(&mut self, f: impl FnOnce() -> R) -> R;
 }
 
-impl SgxExternalitiesTrait for SgxExternalities {
-	/// Create a new instance of `BasicExternalities`
-	fn new() -> Self {
-		Default::default()
+impl SgxExternalitiesTrait for SgxExternalities
+where
+	SgxExternalitiesType: Encode + Decode,
+	SgxExternalitiesDiffType: Encode + Decode,
+{
+	type SgxExternalitiesType = SgxExternalitiesType;
+	type SgxExternalitiesDiffType = SgxExternalitiesDiffType;
+
+	fn new(state: Self::SgxExternalitiesType) -> Self {
+		Self { state, state_diff: Default::default() }
 	}
 
-	fn state(&self) -> &SgxExternalitiesType {
+	fn state(&self) -> &Self::SgxExternalitiesType {
 		&self.state
 	}
 
-	fn state_diff(&self) -> &SgxExternalitiesDiffType {
+	fn state_diff(&self) -> &Self::SgxExternalitiesDiffType {
 		&self.state_diff
 	}
 
@@ -100,6 +134,12 @@ impl SgxExternalitiesTrait for SgxExternalities {
 	/// check if state contains key
 	fn contains_key(&self, k: &[u8]) -> bool {
 		self.state.contains_key(k)
+	}
+
+	/// get the next key in state after the given one (excluded) in lexicographic order
+	fn next_storage_key(&self, key: &[u8]) -> Option<Vec<u8>> {
+		let range = (Bound::Excluded(key), Bound::Unbounded);
+		self.state.range::<[u8], _>(range).next().map(|(k, _v)| k.to_vec()) // directly return k as _v is never None in our case
 	}
 
 	/// prunes the state diff

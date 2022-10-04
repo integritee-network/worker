@@ -252,8 +252,9 @@ pub mod storage {
 
 	/// Get the next key in storage after the given one in lexicographic order.
 	pub fn next_key(key: &[u8]) -> Option<Vec<u8>> {
-		warn!("storage::next_key unimplemented");
-		Some([0u8; 32].to_vec())
+		debug!("next_key('{}')", encode_hex(key));
+		with_externalities(|ext| ext.next_storage_key(key))
+			.expect("`next_key` cannot be called outside of an Externalities-provided environment.")
 	}
 
 	/// Start a new nested transaction.
@@ -959,5 +960,48 @@ mod tests {
 	)]
 	fn storage_set_without_externalities_panics() {
 		storage::set(b"hello", b"world");
+	}
+
+	#[test]
+	fn storage_set_and_next_key_works() {
+		let mut ext = SgxExternalities::default();
+
+		ext.execute_with(|| {
+			storage::set(b"doe".to_vec().as_slice(), b"reindeer".to_vec().as_slice());
+			storage::set(b"dog".to_vec().as_slice(), b"puppy".to_vec().as_slice());
+			storage::set(b"dogglesworth".to_vec().as_slice(), b"cat".to_vec().as_slice());
+		});
+
+		ext.execute_with(|| {
+			assert_eq!(storage::next_key(&[]), Some(b"doe".to_vec()));
+			assert_eq!(storage::next_key(b"d".to_vec().as_slice()), Some(b"doe".to_vec()));
+			assert_eq!(
+				storage::next_key(b"dog".to_vec().as_slice()),
+				Some(b"dogglesworth".to_vec())
+			);
+			assert_eq!(
+				storage::next_key(b"doga".to_vec().as_slice()),
+				Some(b"dogglesworth".to_vec())
+			);
+			assert_eq!(storage::next_key(b"dogglesworth".to_vec().as_slice()), None);
+			assert_eq!(storage::next_key(b"e".to_vec().as_slice()), None);
+		});
+	}
+
+	#[test]
+	fn storage_next_key_in_empty_externatility_works() {
+		let mut ext = SgxExternalities::default();
+		ext.execute_with(|| {
+			assert_eq!(storage::next_key(&[]), None);
+			assert_eq!(storage::next_key(b"dog".to_vec().as_slice()), None);
+		});
+	}
+
+	#[test]
+	#[should_panic(
+		expected = "`next_key` cannot be called outside of an Externalities-provided environment."
+	)]
+	fn storage_next_key_without_externalities_panics() {
+		storage::next_key(b"d".to_vec().as_slice());
 	}
 }
