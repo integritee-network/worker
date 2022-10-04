@@ -316,8 +316,8 @@ where
 		for (executed_call, inblock) in executed_calls {
 			if let Err(e) = self.remove_top(executed_call.clone(), shard, inblock) {
 				// We don't want to return here before all calls have been iterated through,
-				// hence only throwing an error log and push to `failed_to_remove` vec.
-				error!("Error removing trusted call from top pool: {:?}", e);
+				// hence log message and collect failed calls in vec.
+				debug!("Error removing trusted call from top pool: {:?}", e);
 				failed_to_remove.push(executed_call);
 			}
 		}

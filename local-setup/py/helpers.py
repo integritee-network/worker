@@ -23,7 +23,7 @@ def setup_working_dir(source_dir: str, target_dir: str):
          target_dir: the working directory of the worker to be run.
      """
 
-    files_to_copy = ['enclave.signed.so', 'key.txt', 'spid.txt', 'integritee-service', 'end.rsa', 'end.fullchain']
+    files_to_copy = ['enclave.signed.so', 'key.txt', 'spid.txt', 'integritee-service']
     [shutil.copy(f'{source_dir}/{f}', f'{target_dir}/{f}') for f in files_to_copy]
 
 

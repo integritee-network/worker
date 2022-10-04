@@ -220,6 +220,11 @@ jobs:
           cd docker
           docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml up ${{ matrix.demo_name }} --no-build --exit-code-from ${{ matrix.demo_name }}
 
+      - name: Stop docker containers
+        run: |
+          cd docker
+          docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml stop
+
       - name: Collect Docker Logs
         continue-on-error: true
         if: always()

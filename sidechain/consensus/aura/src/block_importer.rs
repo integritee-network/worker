@@ -139,13 +139,16 @@ impl<
 			.map(|hash| (TrustedOperationOrHash::Hash(*hash), true))
 			.collect();
 
-		let calls_failed_to_remove = self
+		let _calls_failed_to_remove = self
 			.top_pool_author
 			.remove_calls_from_pool(sidechain_block.header().shard_id(), executed_operations);
 
-		for call_failed_to_remove in calls_failed_to_remove {
-			error!("Could not remove call {:?} from top pool", call_failed_to_remove);
-		}
+		// In case the executed call did not originate in our own TOP pool, we will not be able to remove it from our TOP pool.
+		// So this error will occur frequently, without it meaning that something really went wrong.
+		// TODO: Once the TOP pools are synchronized, we will want this check again!
+		// for call_failed_to_remove in _calls_failed_to_remove {
+		// 	error!("Could not remove call {:?} from top pool", call_failed_to_remove);
+		// }
 	}
 }
 

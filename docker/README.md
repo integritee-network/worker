@@ -67,11 +67,11 @@ docker compose -f docker-compose.yml -f demo-teeracle.yml up demo-teeracle --exi
 ## Run the benchmarks
 Build with
 ```
-COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f docker-compose.yml -f benchmark.yml build
+COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f docker-compose.yml -f sidechain-benchmark.yml build
 ```
 and then run with
 ```
-docker compose -f docker-compose.yml -f benchmark.yml up sidechain-benchmark --exit-code-from sidechain-benchmark
+docker compose -f docker-compose.yml -f sidechain-benchmark.yml up sidechain-benchmark --exit-code-from sidechain-benchmark
 ```
 
 ## Run the fork simulator
