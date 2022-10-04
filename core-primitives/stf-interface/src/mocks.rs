@@ -19,8 +19,8 @@
 
 extern crate alloc;
 use crate::{
-	system_pallet::SystemPalletAccountInterface, ExecuteCall, ExecuteGetter, InitState,
-	StateCallInterface, StateGetterInterface, UpdateState,
+	system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface},
+	ExecuteCall, ExecuteGetter, InitState, StateCallInterface, StateGetterInterface, UpdateState,
 };
 use alloc::{boxed::Box, string::String, vec::Vec};
 use core::marker::PhantomData;
@@ -135,10 +135,6 @@ impl<State, StateDiff> SystemPalletAccountInterface<State, AccountId>
 {
 	type AccountData = String;
 	type Index = u32;
-	type EventRecord = String;
-	type EventIndex = u32;
-	type BlockNumber = u32;
-	type Hash = String;
 
 	fn get_account_nonce(_state: &mut State, _account_id: &AccountId) -> Self::Index {
 		unimplemented!()
@@ -146,6 +142,14 @@ impl<State, StateDiff> SystemPalletAccountInterface<State, AccountId>
 	fn get_account_data(_state: &mut State, _account_id: &AccountId) -> Self::AccountData {
 		unimplemented!()
 	}
+}
+
+impl<State, StateDiff> SystemPalletEventInterface<State> for StateInterfaceMock<State, StateDiff> {
+	type EventRecord = String;
+	type EventIndex = u32;
+	type BlockNumber = u32;
+	type Hash = String;
+
 	fn get_events(_state: &mut State) -> Vec<Box<Self::EventRecord>> {
 		unimplemented!()
 	}

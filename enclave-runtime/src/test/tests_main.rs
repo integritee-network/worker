@@ -47,7 +47,8 @@ use itp_stf_executor::{
 	traits::StateUpdateProposer, BatchExecutionResult,
 };
 use itp_stf_interface::{
-	parentchain_pallet::ParentchainPalletInterface, system_pallet::SystemPalletAccountInterface,
+	parentchain_pallet::ParentchainPalletInterface,
+	system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface},
 	StateCallInterface,
 };
 use itp_stf_state_handler::handle_state::HandleState;

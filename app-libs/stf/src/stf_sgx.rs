@@ -23,9 +23,10 @@ use codec::Encode;
 use frame_support::traits::{OriginTrait, UnfilteredDispatchable};
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_interface::{
-	parentchain_pallet::ParentchainPalletInterface, sudo_pallet::SudoPalletInterface,
-	system_pallet::SystemPalletAccountInterface, ExecuteCall, ExecuteGetter, InitState,
-	StateCallInterface, StateGetterInterface, UpdateState,
+	parentchain_pallet::ParentchainPalletInterface,
+	sudo_pallet::SudoPalletInterface,
+	system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface},
+	ExecuteCall, ExecuteGetter, InitState, StateCallInterface, StateGetterInterface, UpdateState,
 };
 use itp_storage::storage_value_key;
 use itp_types::OpaqueCall;
@@ -171,10 +172,6 @@ where
 {
 	type Index = Runtime::Index;
 	type AccountData = Runtime::AccountData;
-	type EventRecord = frame_system::EventRecord<Runtime::Event, Runtime::Hash>;
-	type EventIndex = u32; // For some reason this is not a pub type in frame_system
-	type BlockNumber = Runtime::BlockNumber;
-	type Hash = Runtime::Hash;
 
 	fn get_account_nonce(state: &mut State, account: &AccountId) -> Self::Index {
 		state.execute_with(|| {
@@ -187,6 +184,18 @@ where
 	fn get_account_data(state: &mut State, account: &AccountId) -> Self::AccountData {
 		state.execute_with(|| frame_system::Pallet::<Runtime>::account(account).data)
 	}
+}
+
+impl<Call, Getter, State, Runtime> SystemPalletEventInterface<State>
+	for Stf<Call, Getter, State, Runtime>
+where
+	State: SgxExternalitiesTrait,
+	Runtime: frame_system::Config,
+{
+	type EventRecord = frame_system::EventRecord<Runtime::Event, Runtime::Hash>;
+	type EventIndex = u32; // For some reason this is not a pub type in frame_system
+	type BlockNumber = Runtime::BlockNumber;
+	type Hash = Runtime::Hash;
 
 	fn get_events(state: &mut State) -> Vec<Box<Self::EventRecord>> {
 		state.execute_with(|| frame_system::Pallet::<Runtime>::read_events_no_consensus())

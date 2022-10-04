@@ -46,7 +46,7 @@ use itp_settings::{
 };
 use itp_sgx_crypto::{Aes, ShieldingCryptoEncrypt, StateCrypto};
 use itp_sgx_externalities::{SgxExternalitiesDiffType, SgxExternalitiesTrait};
-use itp_stf_interface::system_pallet::SystemPalletAccountInterface;
+use itp_stf_interface::system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock};
 use itp_time_utils::duration_now;

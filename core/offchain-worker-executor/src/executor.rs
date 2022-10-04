@@ -23,10 +23,10 @@ use itc_parentchain_light_client::{
 };
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_stf_executor::{traits::StateUpdateProposer, ExecutedOperation};
-use itp_stf_interface::system_pallet::SystemPalletAccountInterface;
+use itp_stf_interface::system_pallet::SystemPalletEventInterface;
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_top_pool_author::traits::AuthorApi;
-use itp_types::{AccountId, OpaqueCall, ShardIdentifier, H256};
+use itp_types::{OpaqueCall, ShardIdentifier, H256};
 use log::*;
 use sp_runtime::traits::Block;
 use std::{marker::PhantomData, sync::Arc, time::Duration, vec::Vec};
@@ -81,7 +81,7 @@ impl<
 	ValidatorAccessor: ValidatorAccess<ParentchainBlock> + Send + Sync + 'static,
 	ExtrinsicsFactory: CreateExtrinsics,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
-	Stf: SystemPalletAccountInterface<StfExecutor::Externalities, AccountId>,
+	Stf: SystemPalletEventInterface<StfExecutor::Externalities>,
 {
 	pub fn new(
 		top_pool_author: Arc<TopPoolAuthor>,
