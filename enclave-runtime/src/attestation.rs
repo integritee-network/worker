@@ -38,6 +38,7 @@ use itp_node_api::{
 	api_client::{ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder},
 	metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata},
 };
+use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::files::{RA_API_KEY_FILE, RA_DUMP_CERT_DER_FILE, RA_SPID_FILE};
 use itp_sgx_crypto::Ed25519Seal;
@@ -563,6 +564,10 @@ pub unsafe extern "C" fn perform_ra(
 			},
 		};
 
+	let nonce_cache = GLOBAL_NONCE_CACHE.clone();
+	let mut nonce_lock = nonce_cache.load_for_mutation().expect("Nonce lock poisoning");
+	let nonce_value = nonce_lock.0;
+
 	let extrinsic_params = ParentchainExtrinsicParams::new(
 		runtime_spec_version,
 		runtime_transaction_version,
@@ -576,6 +581,9 @@ pub unsafe extern "C" fn perform_ra(
 		(call, cert_der.to_vec(), url_slice.to_vec()),
 		extrinsic_params
 	);
+
+	*nonce_lock = Nonce(nonce_value + 1);
+	std::mem::drop(nonce_lock);
 
 	let xt_encoded = xt.encode();
 	let xt_hash = blake2_256(&xt_encoded);
