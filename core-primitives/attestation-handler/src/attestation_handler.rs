@@ -92,6 +92,12 @@ pub trait AttestationHandler {
 	fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]>;
 
 	fn dump_ra_to_disk(&self) -> EnclaveResult<()>;
+
+	fn create_ra_report_and_signature(
+		&self,
+		sign_type: sgx_quote_sign_type_t,
+		skip_ra: bool,
+	) -> EnclaveResult<(Vec<u8>, Vec<u8>)>;
 }
 
 pub struct IasAttestationHandler<OCallApi, NodeMetadataRepository> {
@@ -209,6 +215,58 @@ where
 		}
 		info!("    [Enclave] dumped ra cert to {}", RA_DUMP_CERT_DER_FILE);
 		Ok(())
+	}
+
+	fn create_ra_report_and_signature(
+		&self,
+		sign_type: sgx_quote_sign_type_t,
+		skip_ra: bool,
+	) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
+		let chain_signer = Ed25519Seal::unseal_from_static_file()?;
+		info!("[Enclave Attestation] Ed25519 pub raw : {:?}", chain_signer.public().0);
+
+		info!("    [Enclave] Generate keypair");
+		let ecc_handle = SgxEccHandle::new();
+		let _result = ecc_handle.open();
+		let (prv_k, pub_k) = ecc_handle.create_key_pair()?;
+		info!("    [Enclave] Generate ephemeral ECDSA keypair successful");
+		debug!("     pubkey X is {:02x}", pub_k.gx.iter().format(""));
+		debug!("     pubkey Y is {:02x}", pub_k.gy.iter().format(""));
+
+		let payload = if !skip_ra {
+			info!("    [Enclave] Create attestation report");
+			let (attn_report, sig, cert) =
+				match self.create_attestation_report(&chain_signer.public().0, sign_type) {
+					Ok(r) => r,
+					Err(e) => {
+						error!("    [Enclave] Error in create_attestation_report: {:?}", e);
+						return Err(e.into())
+					},
+				};
+			println!("    [Enclave] Create attestation report successful");
+			debug!("              attn_report = {:?}", attn_report);
+			debug!("              sig         = {:?}", sig);
+			debug!("              cert        = {:?}", cert);
+
+			// concat the information
+			attn_report + "|" + &sig + "|" + &cert
+		} else {
+			Default::default()
+		};
+
+		// generate an ECC certificate
+		info!("    [Enclave] Generate ECC Certificate");
+		let (key_der, cert_der) = match cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle) {
+			Ok(r) => r,
+			Err(e) => {
+				error!("    [Enclave] gen_ecc_cert failed: {:?}", e);
+				return Err(e.into())
+			},
+		};
+
+		let _ = ecc_handle.close();
+		info!("    [Enclave] Generate ECC Certificate successful");
+		Ok((key_der, cert_der))
 	}
 }
 
@@ -564,58 +622,6 @@ where
 		io::read_to_string(RA_API_KEY_FILE)
 			.map(|key| key.trim_end().to_owned())
 			.map_err(|e| EnclaveError::Other(e.into()))
-	}
-
-	pub fn create_ra_report_and_signature(
-		&self,
-		sign_type: sgx_quote_sign_type_t,
-		skip_ra: bool,
-	) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
-		let chain_signer = Ed25519Seal::unseal_from_static_file()?;
-		info!("[Enclave Attestation] Ed25519 pub raw : {:?}", chain_signer.public().0);
-
-		info!("    [Enclave] Generate keypair");
-		let ecc_handle = SgxEccHandle::new();
-		let _result = ecc_handle.open();
-		let (prv_k, pub_k) = ecc_handle.create_key_pair()?;
-		info!("    [Enclave] Generate ephemeral ECDSA keypair successful");
-		debug!("     pubkey X is {:02x}", pub_k.gx.iter().format(""));
-		debug!("     pubkey Y is {:02x}", pub_k.gy.iter().format(""));
-
-		let payload = if !skip_ra {
-			info!("    [Enclave] Create attestation report");
-			let (attn_report, sig, cert) =
-				match self.create_attestation_report(&chain_signer.public().0, sign_type) {
-					Ok(r) => r,
-					Err(e) => {
-						error!("    [Enclave] Error in create_attestation_report: {:?}", e);
-						return Err(e.into())
-					},
-				};
-			println!("    [Enclave] Create attestation report successful");
-			debug!("              attn_report = {:?}", attn_report);
-			debug!("              sig         = {:?}", sig);
-			debug!("              cert        = {:?}", cert);
-
-			// concat the information
-			attn_report + "|" + &sig + "|" + &cert
-		} else {
-			Default::default()
-		};
-
-		// generate an ECC certificate
-		info!("    [Enclave] Generate ECC Certificate");
-		let (key_der, cert_der) = match cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle) {
-			Ok(r) => r,
-			Err(e) => {
-				error!("    [Enclave] gen_ecc_cert failed: {:?}", e);
-				return Err(e.into())
-			},
-		};
-
-		let _ = ecc_handle.close();
-		info!("    [Enclave] Generate ECC Certificate successful");
-		Ok((key_der, cert_der))
 	}
 }
 
