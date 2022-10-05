@@ -12,6 +12,4 @@ default = ["std"]
 std = [
     "itp-types/std",
 ]
-mocks = [
-    "lazy_static",
-]
+mocks = []
