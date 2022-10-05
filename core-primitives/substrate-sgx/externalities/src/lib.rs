@@ -84,18 +84,31 @@ pub trait SgxExternalitiesTrait {
 
 	// Create new Externaltiies with empty diff.
 	fn new(state: Self::SgxExternalitiesType) -> Self;
+
 	fn state(&self) -> &Self::SgxExternalitiesType;
+
 	fn state_diff(&self) -> &Self::SgxExternalitiesDiffType;
+
 	fn insert(&mut self, k: Vec<u8>, v: Vec<u8>) -> Option<Vec<u8>>;
+
 	/// Append a value to an existing key.
 	fn append(&mut self, k: Vec<u8>, v: Vec<u8>);
+
 	fn remove(&mut self, k: &[u8]) -> Option<Vec<u8>>;
+
 	fn get(&self, k: &[u8]) -> Option<&Vec<u8>>;
+
 	fn contains_key(&self, k: &[u8]) -> bool;
+
+	/// Get the next key in state after the given one (excluded) in lexicographic order.
 	fn next_storage_key(&self, key: &[u8]) -> Option<Vec<u8>>;
+
 	/// Clears all values that match the given key prefix.
 	fn clear_prefix(&mut self, key_prefix: &[u8], maybe_limit: Option<u32>) -> u32;
+
+	/// Prunes the state diff.
 	fn prune_state_diff(&mut self);
+
 	/// Execute the given closure while `self` is set as externalities.
 	///
 	/// Returns the result of the given closure.
@@ -146,18 +159,17 @@ where
 		self.state.contains_key(key)
 	}
 
-	/// get the next key in state after the given one (excluded) in lexicographic order
 	fn next_storage_key(&self, key: &[u8]) -> Option<Vec<u8>> {
 		let range = (Bound::Excluded(key), Bound::Unbounded);
 		self.state.range::<[u8], _>(range).next().map(|(k, _v)| k.to_vec()) // directly return k as _v is never None in our case
 	}
 
-	/// prunes the state diff
 	fn prune_state_diff(&mut self) {
 		self.state_diff.clear();
 	}
 
 	fn clear_prefix(&mut self, key_prefix: &[u8], _maybe_limit: Option<u32>) -> u32 {
+		// Inspired by Substrate https://github.com/paritytech/substrate/blob/c8653447fc8ef8d95a92fe164c96dffb37919e85/primitives/state-machine/src/basic.rs#L242-L254
 		let to_remove = self
 			.state
 			.range::<[u8], _>((Bound::Included(key_prefix), Bound::Unbounded))
