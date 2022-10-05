@@ -34,7 +34,6 @@ use crate::{cert, Error as EnclaveError, Error, Result as EnclaveResult};
 use codec::Encode;
 use core::default::Default;
 use itertools::Itertools;
-use itp_hashing::hash_from_slice;
 use itp_node_api::{
 	api_client::{ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder},
 	metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata, NodeMetadata},
