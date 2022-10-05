@@ -38,6 +38,7 @@ use itp_node_api::{
 	api_client::{ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder},
 	metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata, NodeMetadata},
 };
+use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::{
 	files::{RA_API_KEY_FILE, RA_DUMP_CERT_DER_FILE, RA_SPID_FILE},
@@ -153,6 +154,10 @@ where
 			},
 		};
 
+		let nonce_cache = GLOBAL_NONCE_CACHE.clone();
+		let mut nonce_lock = nonce_cache.load_for_mutation().expect("Nonce lock poisoning");
+		let nonce_value = nonce_lock.0;
+
 		let extrinsic_params = ParentchainExtrinsicParams::new(
 			runtime_spec_version,
 			runtime_transaction_version,
@@ -160,6 +165,8 @@ where
 			genesis_hash,
 			ParentchainExtrinsicParamsBuilder::default(),
 		);
+		*nonce_lock = Nonce(nonce_value + 1);
+		std::mem::drop(nonce_lock);
 
 		let xt = compose_extrinsic_offline!(
 			signer,
