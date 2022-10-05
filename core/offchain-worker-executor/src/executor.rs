@@ -232,7 +232,7 @@ mod tests {
 		TestStfInterface,
 	>;
 
-	static EVENT_COUNT_KEY: &[u8] = b"event_count";
+	const EVENT_COUNT_KEY: &[u8] = b"event_count";
 
 	struct SystemPalletEventInterfaceMock;
 
