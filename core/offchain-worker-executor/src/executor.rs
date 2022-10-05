@@ -214,7 +214,6 @@ mod tests {
 	use itp_top_pool_author::mocks::AuthorApiMock;
 	use itp_types::Block as ParentchainBlock;
 	use sp_core::{ed25519, Pair};
-	use sp_io;
 
 	type TestStateHandler = HandleStateMock;
 	type TestStfInterface = SystemPalletEventInterfaceMock;
@@ -260,8 +259,7 @@ mod tests {
 		}
 
 		fn reset_events(state: &mut State) {
-			let zero: u32 = 0;
-			state.insert(EVENT_COUNT_KEY.to_vec(), zero.encode());
+			state.insert(EVENT_COUNT_KEY.to_vec(), 0u32.encode());
 		}
 	}
 
