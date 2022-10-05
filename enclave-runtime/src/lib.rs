@@ -49,6 +49,7 @@ use itc_parentchain::{
 };
 use itp_block_import_queue::PushToBlockQueue;
 use itp_component_container::ComponentGetter;
+use itp_hashing::hash_from_slice;
 use itp_node_api::{
 	api_client::{ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder},
 	metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata, NodeMetadata},
@@ -59,7 +60,7 @@ use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvide
 use itp_sgx_crypto::{ed25519, Ed25519Seal, Rsa3072Seal};
 use itp_sgx_io::StaticSealedIO;
 use itp_types::{Header, ShardIdentifier, SignedBlock};
-use itp_utils::{hash::hash_from_slice, write_slice_and_whitespace_pad};
+use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use sgx_types::sgx_status_t;
 use sp_core::crypto::Pair;

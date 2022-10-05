@@ -20,11 +20,10 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::{Error as EnclaveError, Result as EnclaveResult};
 use arrayvec::ArrayVec;
+use chrono::DateTime;
 use itertools::Itertools;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use log::*;
-
-use chrono::DateTime;
 use serde_json::Value;
 use sgx_types::{
 	sgx_platform_info_t, sgx_quote_t, sgx_status_t, SgxResult, SGX_PLATFORM_INFO_SIZE,

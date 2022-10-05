@@ -682,6 +682,7 @@ dependencies = [
  "itp-block-import-queue",
  "itp-component-container",
  "itp-extrinsics-factory",
+ "itp-hashing",
  "itp-node-api",
  "itp-nonce-cache",
  "itp-ocall-api",
@@ -1732,13 +1733,13 @@ dependencies = [
  "hex",
  "httparse",
  "itertools",
+ "itp-hashing",
  "itp-node-api",
  "itp-ocall-api",
  "itp-settings",
  "itp-sgx-crypto",
  "itp-sgx-externalities",
  "itp-sgx-io",
- "itp-utils",
  "log",
  "num-bigint",
  "parity-scale-codec",
@@ -1806,6 +1807,9 @@ dependencies = [
 [[package]]
 name = "itp-hashing"
 version = "0.9.0"
+dependencies = [
+ "sp-core",
+]
 
 [[package]]
 name = "itp-node-api"

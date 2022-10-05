@@ -42,7 +42,7 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # scs / integritee
-itp-utils = { default-features = false, path = "../../core-primitives/utils" }
+itp-hashing = { default-features = false, path = "../../core-primitives/hashing" }
 substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.28" }
 
 # local deps
@@ -70,7 +70,6 @@ std = [
     "itp-sgx-externalities/std",
     "itp-sgx-io/std",
     "itp-sgx-crypto/std",
-    "itp-utils/std",
 ]
 
 sgx = [
@@ -89,6 +88,5 @@ sgx = [
     "itp-sgx-externalities/sgx",
     "itp-sgx-io/sgx",
     "itp-sgx-crypto/sgx",
-    "itp-utils/sgx",
 ]
 test = []

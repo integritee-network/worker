@@ -2983,13 +2983,13 @@ dependencies = [
  "hex",
  "httparse 1.4.1",
  "itertools",
+ "itp-hashing",
  "itp-node-api",
  "itp-ocall-api",
  "itp-settings",
  "itp-sgx-crypto",
  "itp-sgx-externalities",
  "itp-sgx-io",
- "itp-utils",
  "log 0.4.17",
  "num-bigint 0.2.5",
  "parity-scale-codec",
@@ -3094,6 +3094,9 @@ dependencies = [
 [[package]]
 name = "itp-hashing"
 version = "0.9.0"
+dependencies = [
+ "sp-core",
+]
 
 [[package]]
 name = "itp-networking-utils"
