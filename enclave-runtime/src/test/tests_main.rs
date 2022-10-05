@@ -109,6 +109,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		rpc::worker_api_direct::tests::test_given_io_handler_methods_then_retrieve_all_names_as_string,
 		handle_state_mock::tests::initialized_shards_list_is_empty,
 		handle_state_mock::tests::shard_exists_after_inserting,
+		handle_state_mock::tests::from_shard_works,
 		handle_state_mock::tests::initialize_creates_default_state,
 		handle_state_mock::tests::load_mutate_and_write_works,
 		handle_state_mock::tests::ensure_subsequent_state_loads_have_same_hash,

@@ -139,6 +139,14 @@ pub mod tests {
 		assert!(state_handler.shard_exists(&shard).unwrap());
 	}
 
+	pub fn from_shard_works() {
+		let shard = ShardIdentifier::default();
+		let state_handler = HandleStateMock::from_shard(shard).unwrap();
+
+		assert!(state_handler.load(&shard).is_ok());
+		assert!(state_handler.shard_exists(&shard).unwrap());
+	}
+
 	pub fn initialize_creates_default_state() {
 		let state_handler = HandleStateMock::default();
 		let shard = ShardIdentifier::default();
