@@ -24,6 +24,7 @@ pub trait SystemPalletAccountInterface<State, AccountId> {
 
 	/// Get the nonce for a given account and state.
 	fn get_account_nonce(state: &mut State, account_id: &AccountId) -> Self::Index;
+
 	/// Get the account date for a given account and state.
 	fn get_account_data(state: &mut State, account: &AccountId) -> Self::AccountData;
 }
@@ -37,13 +38,16 @@ pub trait SystemPalletEventInterface<State> {
 
 	/// Get a Vec of bounded events.
 	fn get_events(state: &mut State) -> Vec<Box<Self::EventRecord>>;
+
 	/// Get the count of the currently stored events.
 	fn get_event_count(state: &mut State) -> Self::EventIndex;
+
 	/// Get the event topics
 	fn get_event_topics(
 		state: &mut State,
 		topic: &Self::Hash,
 	) -> Vec<(Self::BlockNumber, Self::EventIndex)>;
+
 	/// Reset everything event related.
 	fn reset_events(state: &mut State);
 }
