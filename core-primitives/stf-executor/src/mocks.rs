@@ -28,28 +28,36 @@ use ita_stf::{
 	TrustedOperation,
 };
 use itp_sgx_externalities::SgxExternalitiesTrait;
+use itp_stf_state_handler::handle_state::HandleState;
 use itp_types::H256;
 use sp_core::Pair;
 use sp_runtime::traits::Header as HeaderTrait;
-use std::{marker::PhantomData, time::Duration, vec::Vec};
+use std::{marker::PhantomData, sync::Arc, time::Duration, vec::Vec};
 
 /// Mock for the StfExecutor.
 #[derive(Default)]
-pub struct StfExecutorMock<StateType: SgxExternalitiesTrait + Encode> {
-	_phantom: PhantomData<StateType>,
+pub struct StfExecutorMock<StateHandler> {
+	state_handler: Arc<StateHandler>,
 }
 
-impl<StateType> StateUpdateProposer for StfExecutorMock<StateType>
+impl<StateHandler> StfExecutorMock<StateHandler> {
+	pub fn new(state_handler: Arc<StateHandler>) -> Self {
+		Self { state_handler }
+	}
+}
+
+impl<StateHandler> StateUpdateProposer for StfExecutorMock<StateHandler>
 where
-	StateType: SgxExternalitiesTrait + Encode + Default,
+	StateHandler: HandleState<HashType = H256>,
+	StateHandler::StateT: SgxExternalitiesTrait + Encode,
 {
-	type Externalities = StateType;
+	type Externalities = StateHandler::StateT;
 
 	fn propose_state_update<PH, F>(
 		&self,
 		trusted_calls: &[TrustedOperation],
 		_header: &PH,
-		_shard: &ShardIdentifier,
+		shard: &ShardIdentifier,
 		_max_exec_duration: Duration,
 		prepare_state_function: F,
 	) -> Result<BatchExecutionResult<Self::Externalities>>
@@ -57,7 +65,8 @@ where
 		PH: HeaderTrait<Hash = H256>,
 		F: FnOnce(Self::Externalities) -> Self::Externalities,
 	{
-		let _state = prepare_state_function(Self::Externalities::default());
+		let state = self.state_handler.load(shard)?;
+		let updated_state = prepare_state_function(state);
 		let executed_operations: Vec<ExecutedOperation> = trusted_calls
 			.iter()
 			.map(|c| {
@@ -69,7 +78,7 @@ where
 		Ok(BatchExecutionResult {
 			executed_operations,
 			state_hash_before_execution: H256::default(),
-			state_after_execution: _state,
+			state_after_execution: updated_state,
 		})
 	}
 }

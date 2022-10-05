@@ -204,21 +204,23 @@ impl<
 mod tests {
 
 	use super::*;
-	use codec::Encode;
+	use codec::{Decode, Encode};
 	use ita_stf::{KeyPair, TrustedCall, TrustedOperation};
 	use itc_parentchain_light_client::mocks::validator_access_mock::ValidatorAccessMock;
 	use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
+	use itp_sgx_externalities::SgxExternalitiesTrait;
 	use itp_stf_executor::mocks::StfExecutorMock;
-	use itp_stf_interface::mocks::{set_event_counter, StateInterfaceMock};
 	use itp_test::mock::handle_state_mock::HandleStateMock;
 	use itp_top_pool_author::mocks::AuthorApiMock;
 	use itp_types::Block as ParentchainBlock;
 	use sp_core::{ed25519, Pair};
+	use sp_io;
 
-	type TestStateInterface = StateInterfaceMock<<TestStateHandler as HandleState>::StateT, u32>;
-	type TestTopPoolAuthor = AuthorApiMock<H256, H256>;
 	type TestStateHandler = HandleStateMock;
-	type TestStfExecutor = StfExecutorMock<<TestStateHandler as HandleState>::StateT>;
+	type TestStfInterface = SystemPalletEventInterfaceMock;
+	type State = <TestStateHandler as HandleState>::StateT;
+	type TestTopPoolAuthor = AuthorApiMock<H256, H256>;
+	type TestStfExecutor = StfExecutorMock<TestStateHandler>;
 	type TestValidatorAccess = ValidatorAccessMock;
 	type TestExtrinsicsFactory = ExtrinsicsFactoryMock;
 	type TestExecutor = Executor<
@@ -228,17 +230,54 @@ mod tests {
 		TestStateHandler,
 		TestValidatorAccess,
 		TestExtrinsicsFactory,
-		TestStateInterface,
+		TestStfInterface,
 	>;
+
+	static EVENT_COUNT_KEY: &[u8] = b"event_count";
+
+	struct SystemPalletEventInterfaceMock;
+
+	impl SystemPalletEventInterface<State> for SystemPalletEventInterfaceMock {
+		type EventRecord = String;
+		type EventIndex = u32;
+		type BlockNumber = u32;
+		type Hash = String;
+
+		fn get_events(_state: &mut State) -> Vec<Box<Self::EventRecord>> {
+			unimplemented!();
+		}
+
+		fn get_event_count(state: &mut State) -> Self::EventIndex {
+			//let encoded_value = state.get(EVENT_COUNT_KEY).unwrap();
+
+			let encoded_value =
+				state.execute_with(|| sp_io::storage::get(EVENT_COUNT_KEY)).unwrap();
+			Self::EventIndex::decode(&mut encoded_value.as_slice()).unwrap()
+		}
+
+		fn get_event_topics(
+			_state: &mut State,
+			_topic: &Self::Hash,
+		) -> Vec<(Self::BlockNumber, Self::EventIndex)> {
+			unimplemented!()
+		}
+
+		fn reset_events(state: &mut State) {
+			let zero: u32 = 0;
+			//state.insert(EVENT_COUNT_KEY.to_vec(), zero.encode());
+			state.execute_with(|| sp_io::storage::set(EVENT_COUNT_KEY, &zero.encode()));
+		}
+	}
 
 	#[test]
 	fn executing_tops_from_pool_works() {
+		let state_handler = Arc::new(TestStateHandler::from_shard(shard()).unwrap());
 		let top_pool_author = Arc::new(TestTopPoolAuthor::default());
 		top_pool_author.submit_top(create_trusted_operation().encode(), shard());
 
 		assert_eq!(1, top_pool_author.pending_tops(shard()).unwrap().len());
 
-		let executor = create_executor(top_pool_author.clone());
+		let executor = create_executor(top_pool_author.clone(), state_handler);
 		executor.execute().unwrap();
 
 		assert!(top_pool_author.pending_tops(shard()).unwrap().is_empty());
@@ -246,22 +285,33 @@ mod tests {
 
 	#[test]
 	fn reset_events_is_called() {
-		let mut dummy_state = <TestStateHandler as HandleState>::StateT::default();
-		let event_count = 5;
-		set_event_counter(event_count);
-		assert_eq!(TestStateInterface::get_event_count(&mut dummy_state), event_count);
+		// Initialization.
+		let state_handler = Arc::new(TestStateHandler::from_shard(shard()).unwrap());
 		let top_pool_author = Arc::new(TestTopPoolAuthor::default());
 		top_pool_author.submit_top(create_trusted_operation().encode(), shard());
-		let executor = create_executor(top_pool_author);
+		let executor = create_executor(top_pool_author, state_handler.clone());
+
+		// Fill state.
+		let event_count = 5;
+		let (lock, mut state) = state_handler.load_for_mutation(&shard()).unwrap();
+		//state.insert(EVENT_COUNT_KEY.to_vec(), event_count.encode());
+		state.execute_with(|| sp_io::storage::set(EVENT_COUNT_KEY, &event_count.encode()));
+		state_handler.write_after_mutation(state, lock, &shard()).unwrap();
+
+		let mut state = state_handler.load(&shard()).unwrap();
+		assert_eq!(TestStfInterface::get_event_count(&mut state), event_count);
 
 		executor.execute().unwrap();
 
-		assert_eq!(TestStateInterface::get_event_count(&mut dummy_state), 0);
+		let mut state = state_handler.load(&shard()).unwrap();
+		assert_eq!(TestStfInterface::get_event_count(&mut state), 0);
 	}
 
-	fn create_executor(top_pool_author: Arc<TestTopPoolAuthor>) -> TestExecutor {
-		let stf_executor = Arc::new(TestStfExecutor::default());
-		let state_handler = Arc::new(TestStateHandler::from_shard(shard()).unwrap());
+	fn create_executor(
+		top_pool_author: Arc<TestTopPoolAuthor>,
+		state_handler: Arc<TestStateHandler>,
+	) -> TestExecutor {
+		let stf_executor = Arc::new(TestStfExecutor::new(state_handler.clone()));
 		let validator_access = Arc::new(TestValidatorAccess::default());
 		let extrinsics_factory = Arc::new(TestExtrinsicsFactory::default());
 

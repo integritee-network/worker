@@ -19,70 +19,12 @@
 
 extern crate alloc;
 use crate::{
-	system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface},
-	ExecuteCall, ExecuteGetter, InitState, StateCallInterface, StateGetterInterface, UpdateState,
+	system_pallet::SystemPalletAccountInterface, ExecuteCall, ExecuteGetter, InitState,
+	StateCallInterface, StateGetterInterface, UpdateState,
 };
-use alloc::{boxed::Box, string::String, vec::Vec};
+use alloc::{string::String, vec::Vec};
 use core::marker::PhantomData;
 use itp_types::{AccountId, OpaqueCall};
-
-#[cfg(feature = "std")]
-pub use std_only::*;
-
-#[cfg(feature = "std")]
-mod std_only {
-	use super::*;
-	use lazy_static::lazy_static;
-	use std::sync::RwLock;
-
-	lazy_static! {
-		/// Global counter for event access.
-		pub static ref EVENT_HANDLER: RwLock<EventCounter> = RwLock::new(EventCounter::default());
-	}
-
-	pub fn set_event_counter(counter: u32) {
-		let mut rw_lock = EVENT_HANDLER.write().unwrap();
-		rw_lock._set_counter(counter);
-	}
-
-	pub fn reset_events() {
-		let mut rw_lock = EVENT_HANDLER.write().unwrap();
-		rw_lock._set_counter(0);
-	}
-
-	pub fn read_events() -> u32 {
-		let rw_lock = EVENT_HANDLER.read().unwrap();
-		rw_lock._get_counter()
-	}
-}
-#[cfg(not(feature = "std"))]
-fn reset_events() {
-	unimplemented!()
-}
-
-#[cfg(not(feature = "std"))]
-fn read_events() -> u32 {
-	unimplemented!()
-}
-
-#[derive(Default)]
-pub struct EventCounter {
-	_counter: u32,
-}
-
-impl EventCounter {
-	pub fn new(_counter: u32) -> Self {
-		Self { _counter }
-	}
-
-	fn _set_counter(&mut self, counter: u32) {
-		self._counter = counter;
-	}
-
-	fn _get_counter(&self) -> u32 {
-		self._counter
-	}
-}
 
 #[derive(Default)]
 pub struct StateInterfaceMock<State, StateDiff> {
@@ -141,32 +83,6 @@ impl<State, StateDiff> SystemPalletAccountInterface<State, AccountId>
 	}
 	fn get_account_data(_state: &mut State, _account_id: &AccountId) -> Self::AccountData {
 		unimplemented!()
-	}
-}
-
-impl<State, StateDiff> SystemPalletEventInterface<State> for StateInterfaceMock<State, StateDiff> {
-	type EventRecord = String;
-	type EventIndex = u32;
-	type BlockNumber = u32;
-	type Hash = String;
-
-	fn get_events(_state: &mut State) -> Vec<Box<Self::EventRecord>> {
-		unimplemented!()
-	}
-
-	fn get_event_count(_state: &mut State) -> Self::EventIndex {
-		read_events()
-	}
-
-	fn get_event_topics(
-		_state: &mut State,
-		_topic: &Self::Hash,
-	) -> Vec<(Self::BlockNumber, Self::EventIndex)> {
-		unimplemented!()
-	}
-
-	fn reset_events(_state: &mut State) {
-		reset_events()
 	}
 }
 
