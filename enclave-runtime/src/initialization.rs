@@ -367,7 +367,8 @@ pub(crate) fn init_direct_invocation_server(server_addr: String) -> EnclaveResul
 	let cert =
 		ed25519_self_signed_certificate(signing, "Enclave").map_err(|e| Error::Other(e.into()))?;
 
-	// Serialize certificate and private key pem.
+	// Serialize certificate(s) and private key to PEM.
+	// PEM format is needed as a certificate chain can only be serialized into PEM.
 	let pem_serialized = cert.serialize_pem().map_err(|e| Error::Other(e.into()))?;
 	let private_key = cert.serialize_private_key_pem();
 
