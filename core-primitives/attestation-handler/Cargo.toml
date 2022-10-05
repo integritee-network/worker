@@ -42,11 +42,12 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # scs / integritee
-itp-hashing = { default-features = false, path = "../../core-primitives/hashing" }
 substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.28" }
 
 # local deps
+itp-hashing = { default-features = false, path = "../hashing" }
 itp-node-api = { path = "../node-api", default-features = false }
+itp-nonce-cache = { path = "../nonce-cache", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-settings = { path = "../settings" }
 itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
@@ -67,6 +68,7 @@ std = [
     "webpki",
     "yasna",
     "itp-node-api/std",
+    "itp-nonce-cache/std",
     "itp-sgx-externalities/std",
     "itp-sgx-io/std",
     "itp-sgx-crypto/std",
@@ -85,6 +87,7 @@ sgx = [
     "sgx_rand",
     "sgx_tcrypto",
     "itp-node-api/sgx",
+    "itp-nonce-cache/sgx",
     "itp-sgx-externalities/sgx",
     "itp-sgx-io/sgx",
     "itp-sgx-crypto/sgx",

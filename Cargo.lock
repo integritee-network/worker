@@ -2988,6 +2988,7 @@ dependencies = [
  "itertools",
  "itp-hashing",
  "itp-node-api",
+ "itp-nonce-cache",
  "itp-ocall-api",
  "itp-settings",
  "itp-sgx-crypto",
