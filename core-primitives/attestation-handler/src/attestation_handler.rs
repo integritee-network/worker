@@ -81,7 +81,11 @@ pub const SIGRL_SUFFIX: &str = "/sgx/dev/attestation/v4/sigrl/";
 #[cfg(not(feature = "production"))]
 pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
 
+/// Trait to provide an abstraction to the attestation logic
 pub trait AttestationHandler {
+	/// Perform the remote attestation (see create_ra_report_and_signature) and compose an
+	/// extrinsic that registers the enclave on the blockchain.
+	/// Returns the extrinsic that can be sent to the blockchain
 	fn perform_ra(
 		&self,
 		genesis_hash_slice: &[u8],
@@ -89,10 +93,14 @@ pub trait AttestationHandler {
 		url_slice: &[u8],
 	) -> EnclaveResult<Vec<u8>>;
 
+	/// Get the measurement register value of the enclave
 	fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]>;
 
+	/// Write the remote attestation report to the disk
 	fn dump_ra_to_disk(&self) -> EnclaveResult<()>;
 
+	/// Create the remote attestation report and encapsulate it in a DER certificate
+	/// Returns a pair consisting of (private key DER, certificate DER)
 	fn create_ra_report_and_signature(
 		&self,
 		sign_type: sgx_quote_sign_type_t,
