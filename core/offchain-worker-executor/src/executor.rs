@@ -248,10 +248,7 @@ mod tests {
 		}
 
 		fn get_event_count(state: &mut State) -> Self::EventIndex {
-			//let encoded_value = state.get(EVENT_COUNT_KEY).unwrap();
-
-			let encoded_value =
-				state.execute_with(|| sp_io::storage::get(EVENT_COUNT_KEY)).unwrap();
+			let encoded_value = state.get(EVENT_COUNT_KEY).unwrap();
 			Self::EventIndex::decode(&mut encoded_value.as_slice()).unwrap()
 		}
 
@@ -264,8 +261,7 @@ mod tests {
 
 		fn reset_events(state: &mut State) {
 			let zero: u32 = 0;
-			//state.insert(EVENT_COUNT_KEY.to_vec(), zero.encode());
-			state.execute_with(|| sp_io::storage::set(EVENT_COUNT_KEY, &zero.encode()));
+			state.insert(EVENT_COUNT_KEY.to_vec(), zero.encode());
 		}
 	}
 
@@ -294,8 +290,7 @@ mod tests {
 		// Fill state.
 		let event_count = 5;
 		let (lock, mut state) = state_handler.load_for_mutation(&shard()).unwrap();
-		//state.insert(EVENT_COUNT_KEY.to_vec(), event_count.encode());
-		state.execute_with(|| sp_io::storage::set(EVENT_COUNT_KEY, &event_count.encode()));
+		state.insert(EVENT_COUNT_KEY.to_vec(), event_count.encode());
 		state_handler.write_after_mutation(state, lock, &shard()).unwrap();
 
 		let mut state = state_handler.load(&shard()).unwrap();
