@@ -40,15 +40,13 @@ use itp_settings::{
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_interface::system_pallet::SystemPalletEventInterface;
 use itp_stf_state_handler::handle_state::HandleState;
-use itp_test::mock::{handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock};
+use itp_test::mock::metrics_ocall_mock::MetricsOCallMock;
 use itp_time_utils::duration_now;
 use itp_top_pool_author::top_filter::AllowAllTopsFilter;
-use itp_types::{Block as ParentchainBlock, ShardIdentifier};
+use itp_types::Block as ParentchainBlock;
 use its_block_verification::slot::slot_from_timestamp_and_duration;
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
-use its_sidechain::{
-	aura::proposer_factory::ProposerFactory, slots::SlotInfo, state::SidechainState,
-};
+use its_sidechain::{aura::proposer_factory::ProposerFactory, slots::SlotInfo};
 use log::*;
 use primitive_types::H256;
 use sgx_crypto_helper::RsaKeyPair;
@@ -114,12 +112,8 @@ pub fn ensure_events_get_reset_upon_block_proposal() {
 
 	// Add some events to the state.
 	let topic_hash = H256::from([7; 32]);
-	//let event = frame_system::Event::<Runtime>::CodeUpdated;
 	let event = frame_system::Event::<Runtime>::CodeUpdated;
 	let (lock, mut state) = state_handler.load_for_mutation(&shard_id).unwrap();
-	// state.execute_with(|| {
-	// 	set_event_topic::<H256, u32, u32>(&H256::from([7; 32]), vec![(1, 1)]);
-	// });
 	state.execute_with(|| {
 		set_block_number(10);
 		frame_system::Pallet::<Runtime>::deposit_event_indexed(
@@ -129,7 +123,7 @@ pub fn ensure_events_get_reset_upon_block_proposal() {
 	});
 	state_handler.write_after_mutation(state.clone(), lock, &shard_id).unwrap();
 
-	// Test if state now really contains events and topics
+	// Check if state now really contains events and topics.
 	let mut state = state_handler.load(&shard_id).unwrap();
 	assert_eq!(TestStf::get_event_count(&mut state), 1);
 	assert_eq!(TestStf::get_events(&mut state).len(), 1);
@@ -142,10 +136,6 @@ pub fn ensure_events_get_reset_upon_block_proposal() {
 	let slot_info =
 		SlotInfo::new(slot, timestamp, SLOT_DURATION, ends_at, parentchain_header.clone());
 
-	info!("Test setup is done.");
-
-	let state_hash_before_block_production = get_state_hash(state_handler.as_ref(), &shard_id);
-
 	info!("Executing AURA on slot..");
 	let (blocks, opaque_calls) =
 		exec_aura_on_slot::<_, ParentchainBlock, SignedSidechainBlock, _, _, _>(
@@ -157,12 +147,6 @@ pub fn ensure_events_get_reset_upon_block_proposal() {
 			shards,
 		)
 		.unwrap();
-
-	assert_eq!(1, blocks.len());
-	assert_eq!(
-		state_hash_before_block_production,
-		get_state_hash(state_handler.as_ref(), &shard_id)
-	);
 
 	info!("Executed AURA successfully. Sending blocks and extrinsics..");
 	let propose_to_block_import_ocall_api =
@@ -177,15 +161,9 @@ pub fn ensure_events_get_reset_upon_block_proposal() {
 	)
 	.unwrap();
 
-	// Ensure all events have been reset.
+	// Ensure events have been reset.
 	let mut state = state_handler.load(&shard_id).unwrap();
 	assert_eq!(TestStf::get_event_count(&mut state), 0);
 	assert_eq!(TestStf::get_event_topics(&mut state, &topic_hash).len(), 0);
 	assert_eq!(TestStf::get_events(&mut state).len(), 0);
-}
-
-fn get_state_hash(state_handler: &HandleStateMock, shard_id: &ShardIdentifier) -> H256 {
-	let state = state_handler.load(shard_id).unwrap();
-	let sidechain_state = TestSidechainDb::new(state);
-	sidechain_state.state_hash()
 }
