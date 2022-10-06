@@ -149,12 +149,12 @@ pub fn ensure_events_get_reset_upon_block_proposal() {
 	info!("Executing AURA on slot..");
 	let (blocks, opaque_calls) =
 		exec_aura_on_slot::<_, ParentchainBlock, SignedSidechainBlock, _, _, _>(
-			slot_info.clone(),
-			signer.clone(),
+			slot_info,
+			signer,
 			ocall_api.clone(),
 			parentchain_block_import_trigger.clone(),
 			proposer_environment,
-			shards.clone(),
+			shards,
 		)
 		.unwrap();
 
@@ -171,7 +171,7 @@ pub fn ensure_events_get_reset_upon_block_proposal() {
 	send_blocks_and_extrinsics::<ParentchainBlock, _, _, _, _>(
 		blocks,
 		opaque_calls,
-		propose_to_block_import_ocall_api.clone(),
+		propose_to_block_import_ocall_api,
 		&validator_access,
 		&extrinsics_factory,
 	)

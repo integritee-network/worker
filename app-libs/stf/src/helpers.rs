@@ -77,15 +77,6 @@ pub fn get_storage_by_key_hash<V: Decode>(key: Vec<u8>) -> Option<V> {
 pub fn account_key_hash<AccountId: Encode>(account: &AccountId) -> Vec<u8> {
 	storage_map_key("System", "Account", account, &StorageHasher::Blake2_128Concat)
 }
-pub fn set_event_topic<Hash: Encode, BlockNumber: Encode, EventIndex: Encode>(
-	topic: &Hash,
-	value: Vec<(BlockNumber, EventIndex)>,
-) {
-	sp_io::storage::set(
-		&storage_map_key("System", "EventTopics", topic, &StorageHasher::Blake2_128Concat),
-		&value.encode(),
-	);
-}
 
 pub fn enclave_signer_account<AccountId: Decode>() -> AccountId {
 	get_storage_value("Sudo", ENCLAVE_ACCOUNT_KEY).expect("No enclave account")

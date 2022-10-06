@@ -31,7 +31,6 @@ use crate::{
 };
 use codec::Decode;
 use ita_stf::{
-	helpers::set_event_topic,
 	test_genesis::{endowed_account, second_endowed_account, unendowed_account},
 	Balance, StatePayload, TrustedCall, TrustedOperation,
 };
@@ -45,7 +44,7 @@ use itp_settings::{
 	worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider},
 };
 use itp_sgx_crypto::{Aes, ShieldingCryptoEncrypt, StateCrypto};
-use itp_sgx_externalities::{SgxExternalitiesDiffType, SgxExternalitiesTrait};
+use itp_sgx_externalities::SgxExternalitiesDiffType;
 use itp_stf_interface::system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock};
@@ -167,12 +166,12 @@ pub fn produce_sidechain_block_and_import_it() {
 	info!("Executing AURA on slot..");
 	let (blocks, opaque_calls) =
 		exec_aura_on_slot::<_, ParentchainBlock, SignedSidechainBlock, _, _, _>(
-			slot_info.clone(),
-			signer.clone(),
+			slot_info,
+			signer,
 			ocall_api.clone(),
 			parentchain_block_import_trigger.clone(),
 			proposer_environment,
-			shards.clone(),
+			shards,
 		)
 		.unwrap();
 
@@ -200,7 +199,7 @@ pub fn produce_sidechain_block_and_import_it() {
 	send_blocks_and_extrinsics::<ParentchainBlock, _, _, _, _>(
 		blocks,
 		opaque_calls,
-		propose_to_block_import_ocall_api.clone(),
+		propose_to_block_import_ocall_api,
 		&validator_access,
 		&extrinsics_factory,
 	)
