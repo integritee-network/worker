@@ -28,36 +28,44 @@ use ita_stf::{
 	TrustedOperation,
 };
 use itp_sgx_externalities::SgxExternalitiesTrait;
-use itp_stf_state_handler::handle_state::HandleState;
 use itp_types::H256;
 use sp_core::Pair;
 use sp_runtime::traits::Header as HeaderTrait;
-use std::{marker::PhantomData, sync::Arc, time::Duration, vec::Vec};
+use std::{marker::PhantomData, ops::Deref, time::Duration, vec::Vec};
+
+#[cfg(feature = "std")]
+use std::sync::RwLock;
+
+#[cfg(feature = "sgx")]
+use std::sync::SgxRwLock as RwLock;
 
 /// Mock for the StfExecutor.
 #[derive(Default)]
-pub struct StfExecutorMock<StateHandler> {
-	state_handler: Arc<StateHandler>,
+pub struct StfExecutorMock<State> {
+	pub state: RwLock<State>,
 }
 
-impl<StateHandler> StfExecutorMock<StateHandler> {
-	pub fn new(state_handler: Arc<StateHandler>) -> Self {
-		Self { state_handler }
+impl<State: Clone> StfExecutorMock<State> {
+	pub fn new(state: State) -> Self {
+		Self { state: RwLock::new(state) }
+	}
+
+	pub fn get_state(&self) -> State {
+		(*self.state.read().unwrap().deref()).clone()
 	}
 }
 
-impl<StateHandler> StateUpdateProposer for StfExecutorMock<StateHandler>
+impl<State> StateUpdateProposer for StfExecutorMock<State>
 where
-	StateHandler: HandleState<HashType = H256>,
-	StateHandler::StateT: SgxExternalitiesTrait + Encode,
+	State: SgxExternalitiesTrait + Encode + Clone,
 {
-	type Externalities = StateHandler::StateT;
+	type Externalities = State;
 
 	fn propose_state_update<PH, F>(
 		&self,
 		trusted_calls: &[TrustedOperation],
 		_header: &PH,
-		shard: &ShardIdentifier,
+		_shard: &ShardIdentifier,
 		_max_exec_duration: Duration,
 		prepare_state_function: F,
 	) -> Result<BatchExecutionResult<Self::Externalities>>
@@ -65,8 +73,12 @@ where
 		PH: HeaderTrait<Hash = H256>,
 		F: FnOnce(Self::Externalities) -> Self::Externalities,
 	{
-		let state = self.state_handler.load(shard)?;
-		let updated_state = prepare_state_function(state);
+		let mut lock = self.state.write().unwrap();
+
+		let updated_state = prepare_state_function((*lock.deref()).clone());
+
+		*lock = updated_state.clone();
+
 		let executed_operations: Vec<ExecutedOperation> = trusted_calls
 			.iter()
 			.map(|c| {
@@ -75,6 +87,7 @@ where
 				ExecutedOperation::success(operation_hash, top_or_hash, Vec::new())
 			})
 			.collect();
+
 		Ok(BatchExecutionResult {
 			executed_operations,
 			state_hash_before_execution: H256::default(),
