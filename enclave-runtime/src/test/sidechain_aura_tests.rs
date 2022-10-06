@@ -217,20 +217,11 @@ pub fn produce_sidechain_block_and_import_it() {
 		get_state_hash(state_handler.as_ref(), &shard_id)
 	);
 
-	// Add some Event Topic, currently not added by pallet Balance.
-	let (lock, mut state) = state_handler.load_for_mutation(&shard_id).unwrap();
-	state.execute_with(|| {
-		set_event_topic::<H256, u32, u32>(&H256::from([7; 32]), vec![(1, 1)]);
-	});
-	state_handler.write_after_mutation(state.clone(), lock, &shard_id).unwrap();
-
-	// Test call has generated some events.
 	let mut state = state_handler.load(&shard_id).unwrap();
 	let free_balance = TestStf::get_account_data(&mut state, &receiver.public().into()).free;
 	assert_eq!(free_balance, transfered_amount);
 	assert!(TestStf::get_event_count(&mut state) > 0);
 	assert!(TestStf::get_events(&mut state).len() > 0);
-	assert!(TestStf::get_event_topics(&mut state, &H256::from([7; 32])).len() > 0);
 }
 
 fn encrypted_trusted_operation_transfer_balance<
