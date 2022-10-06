@@ -106,7 +106,7 @@ pub fn ensure_events_get_reset_upon_block_proposal() {
 	));
 	let block_composer = Arc::new(TestBlockComposer::new(signer.clone(), state_key_repo.clone()));
 	let proposer_environment =
-		ProposerFactory::new(top_pool_author.clone(), stf_executor.clone(), block_composer.clone());
+		ProposerFactory::new(top_pool_author.clone(), stf_executor.clone(), block_composer);
 	let extrinsics_factory = ExtrinsicsFactoryMock::default();
 	let validator_access = ValidatorAccessMock::default();
 
