@@ -27,7 +27,7 @@ use crate::{
 			enclave_call_signer, test_setup, TestStf, TestStfExecutor, TestTopPoolAuthor,
 		},
 		mocks::types::TestStateKeyRepo,
-		sidechain_aura_tests, top_pool_tests,
+		sidechain_aura_tests, sidechain_event_tests, top_pool_tests,
 	},
 	tls_ra,
 };
@@ -136,6 +136,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		stf_enclave_signer_tests::derive_key_is_deterministic,
 		// sidechain integration tests
 		sidechain_aura_tests::produce_sidechain_block_and_import_it,
+		sidechain_event_tests::ensure_events_get_reset_upon_block_proposal,
 		top_pool_tests::process_indirect_call_in_top_pool,
 		top_pool_tests::submit_shielding_call_to_top_pool,
 		// tls_ra unit tests

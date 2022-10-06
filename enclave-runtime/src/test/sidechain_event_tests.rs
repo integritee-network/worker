@@ -19,9 +19,7 @@
 use crate::{
 	test::{
 		fixtures::{
-			components::{
-				create_ocall_api, create_top_pool, encrypt_trusted_operation, sign_trusted_call,
-			},
+			components::{create_ocall_api, create_top_pool},
 			initialize_test_state::init_state,
 			test_setup::{enclave_call_signer, TestStf},
 		},
@@ -29,48 +27,38 @@ use crate::{
 	},
 	top_pool_execution::{exec_aura_on_slot, send_blocks_and_extrinsics},
 };
-use codec::Decode;
-use ita_stf::{
-	helpers::set_event_topic,
-	test_genesis::{endowed_account, second_endowed_account, unendowed_account},
-	Balance, StatePayload, TrustedCall, TrustedOperation,
-};
+use ita_sgx_runtime::Runtime;
+use ita_stf::helpers::set_block_number;
 use itc_parentchain::light_client::mocks::validator_access_mock::ValidatorAccessMock;
 use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
 use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
-use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::{
 	sidechain::SLOT_DURATION,
 	worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider},
 };
-use itp_sgx_crypto::{Aes, ShieldingCryptoEncrypt, StateCrypto};
-use itp_sgx_externalities::{SgxExternalitiesDiffType, SgxExternalitiesTrait};
-use itp_stf_interface::system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface};
+use itp_sgx_externalities::SgxExternalitiesTrait;
+use itp_stf_interface::system_pallet::SystemPalletEventInterface;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock};
 use itp_time_utils::duration_now;
-use itp_top_pool_author::{top_filter::AllowAllTopsFilter, traits::AuthorApi};
-use itp_types::{AccountId, Block as ParentchainBlock, ShardIdentifier};
+use itp_top_pool_author::top_filter::AllowAllTopsFilter;
+use itp_types::{Block as ParentchainBlock, ShardIdentifier};
 use its_block_verification::slot::slot_from_timestamp_and_duration;
-use its_primitives::{traits::Block, types::SignedBlock as SignedSidechainBlock};
+use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use its_sidechain::{
 	aura::proposer_factory::ProposerFactory, slots::SlotInfo, state::SidechainState,
 };
-use jsonrpc_core::futures::executor;
 use log::*;
 use primitive_types::H256;
 use sgx_crypto_helper::RsaKeyPair;
-use sp_core::{ed25519, Pair};
-use std::{sync::Arc, vec, vec::Vec};
+use sp_core::Pair;
+use std::{sync::Arc, vec};
 
-/// Integration test for sidechain block production and block import.
+/// Integration test to ensure the events are reset upon block import.
+/// Otherwise we will have an ever growing state.
 /// (requires Sidechain mode)
-///
-/// - Create trusted calls and add them to the TOP pool.
-/// - Run AURA on a valid and claimed slot, which executes the trusted operations and produces a new block.
-/// - Import the new sidechain block, which updates the state.
-pub fn produce_sidechain_block_and_import_it() {
+pub fn ensure_events_get_reset_upon_block_proposal() {
 	// Test can only be run in Sidechain mode
 	if WorkerModeProvider::worker_mode() != WorkerMode::Sidechain {
 		info!("Ignoring sidechain block production test: Not in sidechain mode");
@@ -124,34 +112,28 @@ pub fn produce_sidechain_block_and_import_it() {
 	let extrinsics_factory = ExtrinsicsFactoryMock::default();
 	let validator_access = ValidatorAccessMock::default();
 
-	info!("Create trusted operations..");
-	let sender = endowed_account();
-	let sender_with_low_balance = second_endowed_account();
-	let receiver = unendowed_account();
-	let transfered_amount: Balance = 1000;
-	let trusted_operation = encrypted_trusted_operation_transfer_balance(
-		ocall_api.as_ref(),
-		&shard_id,
-		&shielding_key,
-		sender,
-		receiver.public().into(),
-		transfered_amount,
-	);
-	let invalid_trusted_operation = encrypted_trusted_operation_transfer_balance(
-		ocall_api.as_ref(),
-		&shard_id,
-		&shielding_key,
-		sender_with_low_balance,
-		receiver.public().into(),
-		200000,
-	);
-	info!("Add trusted operations to TOP pool..");
-	executor::block_on(top_pool_author.submit_top(trusted_operation, shard_id)).unwrap();
-	executor::block_on(top_pool_author.submit_top(invalid_trusted_operation, shard_id)).unwrap();
+	// Add some events to the state.
+	let topic_hash = H256::from([7; 32]);
+	//let event = frame_system::Event::<Runtime>::CodeUpdated;
+	let event = frame_system::Event::<Runtime>::CodeUpdated;
+	let (lock, mut state) = state_handler.load_for_mutation(&shard_id).unwrap();
+	// state.execute_with(|| {
+	// 	set_event_topic::<H256, u32, u32>(&H256::from([7; 32]), vec![(1, 1)]);
+	// });
+	state.execute_with(|| {
+		set_block_number(10);
+		frame_system::Pallet::<Runtime>::deposit_event_indexed(
+			&[topic_hash],
+			ita_sgx_runtime::Event::System(event),
+		)
+	});
+	state_handler.write_after_mutation(state.clone(), lock, &shard_id).unwrap();
 
-	// Ensure we have exactly two trusted calls in our TOP pool, and no getters.
-	assert_eq!(2, top_pool_author.get_pending_trusted_calls(shard_id).len());
-	assert!(top_pool_author.get_pending_trusted_getters(shard_id).is_empty());
+	// Test if state now really contains events and topics
+	let mut state = state_handler.load(&shard_id).unwrap();
+	assert_eq!(TestStf::get_event_count(&mut state), 1);
+	assert_eq!(TestStf::get_events(&mut state).len(), 1);
+	assert_eq!(TestStf::get_event_topics(&mut state, &topic_hash).len(), 1);
 
 	info!("Setup AURA SlotInfo");
 	let timestamp = duration_now();
@@ -182,17 +164,6 @@ pub fn produce_sidechain_block_and_import_it() {
 		get_state_hash(state_handler.as_ref(), &shard_id)
 	);
 
-	let (apriori_state_hash_in_block, aposteriori_state_hash_in_block) =
-		get_state_hashes_from_block(blocks.first().unwrap(), &state_key);
-	assert_ne!(state_hash_before_block_production, aposteriori_state_hash_in_block);
-	assert_eq!(state_hash_before_block_production, apriori_state_hash_in_block);
-
-	// Ensure we have triggered the parentchain block import, because we claimed the slot.
-	assert!(parentchain_block_import_trigger.has_import_been_called());
-
-	// Ensure that invalid calls are removed from pool. Valid calls should only be removed upon block import.
-	assert_eq!(1, top_pool_author.get_pending_trusted_calls(shard_id).len());
-
 	info!("Executed AURA successfully. Sending blocks and extrinsics..");
 	let propose_to_block_import_ocall_api =
 		Arc::new(ProposeToImportOCallApi::new(parentchain_header, block_importer));
@@ -206,60 +177,11 @@ pub fn produce_sidechain_block_and_import_it() {
 	)
 	.unwrap();
 
-	// After importing the sidechain block, the trusted operation should be removed.
-	assert!(top_pool_author.get_pending_trusted_calls(shard_id).is_empty());
-
-	// After importing the block, the state hash must be changed.
-	// We don't have a way to directly compare state hashes, because calculating the state hash
-	// would also involve applying set_last_block action, which updates the state upon import.
-	assert_ne!(
-		state_hash_before_block_production,
-		get_state_hash(state_handler.as_ref(), &shard_id)
-	);
-
-	// Add some Event Topic, currently not added by pallet Balance.
-	let (lock, mut state) = state_handler.load_for_mutation(&shard_id).unwrap();
-	state.execute_with(|| {
-		set_event_topic::<H256, u32, u32>(&H256::from([7; 32]), vec![(1, 1)]);
-	});
-	state_handler.write_after_mutation(state.clone(), lock, &shard_id).unwrap();
-
-	// Test call has generated some events.
+	// Ensure all events have been reset.
 	let mut state = state_handler.load(&shard_id).unwrap();
-	let free_balance = TestStf::get_account_data(&mut state, &receiver.public().into()).free;
-	assert_eq!(free_balance, transfered_amount);
-	assert!(TestStf::get_event_count(&mut state) > 0);
-	assert!(TestStf::get_events(&mut state).len() > 0);
-	assert!(TestStf::get_event_topics(&mut state, &H256::from([7; 32])).len() > 0);
-}
-
-fn encrypted_trusted_operation_transfer_balance<
-	AttestationApi: EnclaveAttestationOCallApi,
-	ShieldingKey: ShieldingCryptoEncrypt,
->(
-	attestation_api: &AttestationApi,
-	shard_id: &ShardIdentifier,
-	shielding_key: &ShieldingKey,
-	from: ed25519::Pair,
-	to: AccountId,
-	amount: Balance,
-) -> Vec<u8> {
-	let call = TrustedCall::balance_transfer(from.public().into(), to, amount);
-	let call_signed = sign_trusted_call(&call, attestation_api, shard_id, from);
-	let trusted_operation = TrustedOperation::direct_call(call_signed);
-	encrypt_trusted_operation(shielding_key, &trusted_operation)
-}
-
-fn get_state_hashes_from_block(
-	signed_block: &SignedSidechainBlock,
-	state_key: &Aes,
-) -> (H256, H256) {
-	let mut encrypted_state_diff = signed_block.block.block_data().encrypted_state_diff.clone();
-	state_key.decrypt(&mut encrypted_state_diff).unwrap();
-	let decoded_state =
-		StatePayload::<SgxExternalitiesDiffType>::decode(&mut encrypted_state_diff.as_slice())
-			.unwrap();
-	(decoded_state.state_hash_apriori(), decoded_state.state_hash_aposteriori())
+	assert_eq!(TestStf::get_event_count(&mut state), 0);
+	assert_eq!(TestStf::get_event_topics(&mut state, &topic_hash).len(), 0);
+	assert_eq!(TestStf::get_events(&mut state).len(), 0);
 }
 
 fn get_state_hash(state_handler: &HandleStateMock, shard_id: &ShardIdentifier) -> H256 {
