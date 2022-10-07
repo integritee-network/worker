@@ -41,6 +41,8 @@ test = [
     "itp-test/sgx",
     "itp-top-pool-author/test",
     "itp-top-pool-author/mocks",
+    # substrate
+    "frame-system",
 ]
 
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
@@ -135,6 +137,7 @@ sp-io = { optional = true, default-features = false, features = ["disable_oom", 
 
 # substrate deps
 frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+frame-system = { optional = true, default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 sp-application-crypto = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 sp-finality-grandpa = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
@@ -152,11 +155,6 @@ log = { git = "https://github.com/integritee-network/log-sgx" }
 
 [patch."https://github.com/paritytech/substrate"]
 sp-io = { path = "../core-primitives/substrate-sgx/sp-io" }
-
-#[patch."https://github.com/integritee-network/sgx-runtime"]
-#sgx-runtime = { path = "../../sgx-runtime/sgx-runtime", default-features = false}
-#sp-io = { path = "../../sgx-runtime/substrate-sgx/sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator", "sgx"]}
-#sgx-externalities = { path = "../../sgx-runtime/substrate-sgx/externalities"}
 
 #[patch."https://github.com/integritee-network/frontier"]
 #pallet-evm = { path = "../../frontier/frame/evm"}

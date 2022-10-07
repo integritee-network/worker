@@ -22,6 +22,7 @@ ita-stf = { path = "../../app-libs/stf", default-features = false }
 itc-parentchain-light-client = { path = "../../core/parentchain/light-client", default-features = false }
 itp-extrinsics-factory = { path = "../../core-primitives/extrinsics-factory", default-features = false }
 itp-stf-executor = { path = "../../core-primitives/stf-executor", default-features = false }
+itp-stf-interface = { path = "../../core-primitives/stf-interface", default-features = false }
 itp-stf-state-handler = { path = "../../core-primitives/stf-state-handler", default-features = false }
 itp-top-pool-author = { path = "../../core-primitives/top-pool-author", default-features = false }
 itp-types = { path = "../../core-primitives/types", default-features = false }
@@ -34,14 +35,16 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 log = { version = "0.4", default-features = false }
 
 [dev-dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
 ita-stf = { path = "../../app-libs/stf" }
 itc-parentchain-light-client = { path = "../../core/parentchain/light-client", features = ["mocks"] }
 itp-extrinsics-factory = { path = "../../core-primitives/extrinsics-factory", features = ["mocks"] }
 itp-stf-executor = { path = "../../core-primitives/stf-executor", features = ["mocks"] }
 itp-test = { path = "../../core-primitives/test" }
 itp-top-pool-author = { path = "../../core-primitives/top-pool-author", features = ["mocks"] }
-
+itp-stf-interface = { path = "../../core-primitives/stf-interface", features = ["mocks"] }
+itp-sgx-externalities = { path = "../../core-primitives/substrate-sgx/externalities" }
+sp-io = { path = "../../core-primitives/substrate-sgx/sp-io" }
 
 [features]
 default = ["std"]
@@ -50,6 +53,7 @@ std = [
     "itc-parentchain-light-client/std",
     "itp-extrinsics-factory/std",
     "itp-stf-executor/std",
+    "itp-stf-interface/std",
     "itp-stf-state-handler/std",
     "itp-top-pool-author/std",
     "sp-core/std",

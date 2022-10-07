@@ -21,11 +21,12 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 #[cfg(feature = "sgx")]
 extern crate sgx_tstd as std;
 
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, EncodeAppend};
+use core::ops::Bound;
 use derive_more::{Deref, DerefMut, From, IntoIterator};
 use serde::{Deserialize, Serialize};
 use sp_core::{hashing::blake2_256, H256};
-use std::{collections::BTreeMap, ops::Bound, vec::Vec};
+use std::{collections::BTreeMap, vec, vec::Vec};
 
 pub use scope_limited::{set_and_run_with_externalities, with_externalities};
 
@@ -83,14 +84,34 @@ pub trait SgxExternalitiesTrait {
 
 	// Create new Externaltiies with empty diff.
 	fn new(state: Self::SgxExternalitiesType) -> Self;
+
 	fn state(&self) -> &Self::SgxExternalitiesType;
+
 	fn state_diff(&self) -> &Self::SgxExternalitiesDiffType;
+
 	fn insert(&mut self, k: Vec<u8>, v: Vec<u8>) -> Option<Vec<u8>>;
+
+	/// Append a value to an existing key.
+	fn append(&mut self, k: Vec<u8>, v: Vec<u8>);
+
 	fn remove(&mut self, k: &[u8]) -> Option<Vec<u8>>;
+
 	fn get(&self, k: &[u8]) -> Option<&Vec<u8>>;
+
 	fn contains_key(&self, k: &[u8]) -> bool;
+
+	/// Get the next key in state after the given one (excluded) in lexicographic order.
 	fn next_storage_key(&self, key: &[u8]) -> Option<Vec<u8>>;
+
+	/// Clears all values that match the given key prefix.
+	fn clear_prefix(&mut self, key_prefix: &[u8], maybe_limit: Option<u32>) -> u32;
+
+	/// Prunes the state diff.
 	fn prune_state_diff(&mut self);
+
+	/// Execute the given closure while `self` is set as externalities.
+	///
+	/// Returns the result of the given closure.
 	fn execute_with<R>(&mut self, f: impl FnOnce() -> R) -> R;
 }
 
@@ -114,42 +135,56 @@ where
 		&self.state_diff
 	}
 
-	/// Insert key/value
-	fn insert(&mut self, k: Vec<u8>, v: Vec<u8>) -> Option<Vec<u8>> {
-		self.state_diff.insert(k.clone(), Some(v.clone()));
-		self.state.insert(k, v)
+	fn insert(&mut self, key: Vec<u8>, value: Vec<u8>) -> Option<Vec<u8>> {
+		self.state_diff.insert(key.clone(), Some(value.clone()));
+		self.state.insert(key, value)
 	}
 
-	/// remove key
-	fn remove(&mut self, k: &[u8]) -> Option<Vec<u8>> {
-		self.state_diff.insert(k.to_vec(), None);
-		self.state.remove(k)
+	fn append(&mut self, key: Vec<u8>, value: Vec<u8>) {
+		let current = self.state.entry(key.clone()).or_default();
+		let updated_value = StorageAppend::new(current).append(value);
+		self.state_diff.insert(key, Some(updated_value));
 	}
 
-	/// get value from state of key
-	fn get(&self, k: &[u8]) -> Option<&Vec<u8>> {
-		self.state.get(k)
+	fn remove(&mut self, key: &[u8]) -> Option<Vec<u8>> {
+		self.state_diff.insert(key.to_vec(), None);
+		self.state.remove(key)
 	}
 
-	/// check if state contains key
-	fn contains_key(&self, k: &[u8]) -> bool {
-		self.state.contains_key(k)
+	fn get(&self, key: &[u8]) -> Option<&Vec<u8>> {
+		self.state.get(key)
 	}
 
-	/// get the next key in state after the given one (excluded) in lexicographic order
+	fn contains_key(&self, key: &[u8]) -> bool {
+		self.state.contains_key(key)
+	}
+
 	fn next_storage_key(&self, key: &[u8]) -> Option<Vec<u8>> {
 		let range = (Bound::Excluded(key), Bound::Unbounded);
 		self.state.range::<[u8], _>(range).next().map(|(k, _v)| k.to_vec()) // directly return k as _v is never None in our case
 	}
 
-	/// prunes the state diff
 	fn prune_state_diff(&mut self) {
 		self.state_diff.clear();
 	}
 
-	/// Execute the given closure while `self` is set as externalities.
-	///
-	/// Returns the result of the given closure.
+	fn clear_prefix(&mut self, key_prefix: &[u8], _maybe_limit: Option<u32>) -> u32 {
+		// Inspired by Substrate https://github.com/paritytech/substrate/blob/c8653447fc8ef8d95a92fe164c96dffb37919e85/primitives/state-machine/src/basic.rs#L242-L254
+		let to_remove = self
+			.state
+			.range::<[u8], _>((Bound::Included(key_prefix), Bound::Unbounded))
+			.map(|(k, _)| k)
+			.take_while(|k| k.starts_with(key_prefix))
+			.cloned()
+			.collect::<Vec<_>>();
+
+		let count = to_remove.len() as u32;
+		for key in to_remove {
+			self.remove(&key);
+		}
+		count
+	}
+
 	fn execute_with<R>(&mut self, f: impl FnOnce() -> R) -> R {
 		set_and_run_with_externalities(self, f)
 	}
@@ -176,6 +211,44 @@ impl MultiRemovalResults {
 	/// Returns `(maybe_cursor, backend, unique, loops)`.
 	pub fn deconstruct(self) -> (Option<Vec<u8>>, u32, u32, u32) {
 		(self.maybe_cursor, self.backend, self.unique, self.loops)
+	}
+}
+
+/// Auxialiary structure for appending a value to a storage item.
+/// Taken from https://github.com/paritytech/substrate/blob/master/primitives/state-machine/src/ext.rs
+pub(crate) struct StorageAppend<'a>(&'a mut Vec<u8>);
+
+impl<'a> StorageAppend<'a> {
+	/// Create a new instance using the given `storage` reference.
+	pub fn new(storage: &'a mut Vec<u8>) -> Self {
+		Self(storage)
+	}
+
+	/// Append the given `value` to the storage item.
+	///
+	/// If appending fails, `[value]` is stored in the storage item.
+	pub fn append(&mut self, value: Vec<u8>) -> Vec<u8> {
+		let value = vec![EncodeOpaqueValue(value)];
+
+		let item = core::mem::take(self.0);
+
+		*self.0 = match Vec::<EncodeOpaqueValue>::append_or_new(item, &value) {
+			Ok(item) => item,
+			Err(_) => {
+				log::error!("Failed to append value, resetting storage item to input value.");
+				value.encode()
+			},
+		};
+		(*self.0).to_vec()
+	}
+}
+
+/// Implement `Encode` by forwarding the stored raw vec.
+struct EncodeOpaqueValue(Vec<u8>);
+
+impl Encode for EncodeOpaqueValue {
+	fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
+		f(&self.0)
 	}
 }
 
@@ -206,6 +279,27 @@ pub mod tests {
 	fn basic_externalities_is_empty() {
 		let ext = SgxExternalities::default();
 		assert!(ext.state.0.is_empty());
+	}
+
+	#[test]
+	fn storage_append_works() {
+		let mut data = Vec::new();
+		let mut append = StorageAppend::new(&mut data);
+		append.append(1u32.encode());
+		let updated_data = append.append(2u32.encode());
+		drop(append);
+
+		assert_eq!(Vec::<u32>::decode(&mut &data[..]).unwrap(), vec![1, 2]);
+		assert_eq!(updated_data, data);
+
+		// Initialize with some invalid data
+		let mut data = vec![1];
+		let mut append = StorageAppend::new(&mut data);
+		append.append(1u32.encode());
+		append.append(2u32.encode());
+		drop(append);
+
+		assert_eq!(Vec::<u32>::decode(&mut &data[..]).unwrap(), vec![1, 2]);
 	}
 
 	#[test]
@@ -248,5 +342,39 @@ pub mod tests {
 
 		// ext1 and ext2 are unrelated.
 		assert_eq!(ext.get(&world), None);
+	}
+
+	#[test]
+	fn clear_prefix_works() {
+		let mut externalities = SgxExternalities::default();
+		let non_house_key = b"window house".to_vec();
+		let non_house_value = b"test_string".to_vec();
+		// Fill state.
+		externalities.execute_with(|| {
+			with_externalities(|e| {
+				e.insert(b"house_building".to_vec(), b"empire_state".to_vec());
+				e.insert(b"house".to_vec(), b"ginger_bread".to_vec());
+				e.insert(b"house door".to_vec(), b"right".to_vec());
+				e.insert(non_house_key.clone(), non_house_value.clone());
+			})
+			.unwrap()
+		});
+		let state_len =
+			externalities.execute_with(|| with_externalities(|e| e.state.0.len()).unwrap());
+		assert_eq!(state_len, 4);
+
+		let number_of_removed_items = externalities
+			.execute_with(|| with_externalities(|e| e.clear_prefix(b"house", None)).unwrap());
+		assert_eq!(number_of_removed_items, 3);
+
+		let state_len =
+			externalities.execute_with(|| with_externalities(|e| e.state.0.len()).unwrap());
+		assert_eq!(state_len, 1);
+		let stored_value = externalities.execute_with(|| {
+			with_externalities(|e| {
+				assert_eq!(e.get(&non_house_key).unwrap().clone(), non_house_value)
+			})
+		});
+		assert!(stored_value.is_some());
 	}
 }

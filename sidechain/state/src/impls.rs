@@ -24,7 +24,7 @@ use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_storage::keys::storage_value_key;
 use log::{error, info};
 use sp_core::H256;
-use sp_io::storage;
+use sp_io::{storage, KillStorageResult};
 use std::vec::Vec;
 
 impl<SidechainBlock, T> SidechainState for SidechainDB<SidechainBlock, T>
@@ -61,12 +61,32 @@ where
 		self.ext_mut().set_with_name(module_prefix, storage_prefix, value)
 	}
 
+	fn clear_with_name(&mut self, module_prefix: &str, storage_prefix: &str) {
+		self.ext_mut().clear_with_name(module_prefix, storage_prefix)
+	}
+
+	fn clear_prefix_with_name(
+		&mut self,
+		module_prefix: &str,
+		storage_prefix: &str,
+	) -> KillStorageResult {
+		self.ext_mut().clear_prefix_with_name(module_prefix, storage_prefix)
+	}
+
 	fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
 		self.ext().get(key).cloned()
 	}
 
 	fn set(&mut self, key: &[u8], value: &[u8]) {
 		self.ext_mut().set(key, value)
+	}
+
+	fn clear(&mut self, key: &[u8]) {
+		self.ext_mut().clear(key)
+	}
+
+	fn clear_sidechain_prefix(&mut self, prefix: &[u8]) -> KillStorageResult {
+		self.ext_mut().clear_sidechain_prefix(prefix)
 	}
 }
 
@@ -132,12 +152,32 @@ where
 		self.set(&storage_value_key(module_prefix, storage_prefix), &value.encode())
 	}
 
+	fn clear_with_name(&mut self, module_prefix: &str, storage_prefix: &str) {
+		self.clear(&storage_value_key(module_prefix, storage_prefix))
+	}
+
+	fn clear_prefix_with_name(
+		&mut self,
+		module_prefix: &str,
+		storage_prefix: &str,
+	) -> KillStorageResult {
+		self.clear_sidechain_prefix(&storage_value_key(module_prefix, storage_prefix))
+	}
+
 	fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
 		self.get(key).cloned()
 	}
 
 	fn set(&mut self, key: &[u8], value: &[u8]) {
 		self.execute_with(|| sp_io::storage::set(key, value))
+	}
+
+	fn clear(&mut self, key: &[u8]) {
+		self.execute_with(|| sp_io::storage::clear(key))
+	}
+
+	fn clear_sidechain_prefix(&mut self, prefix: &[u8]) -> KillStorageResult {
+		self.execute_with(|| sp_io::storage::clear_prefix(prefix, None))
 	}
 }
 

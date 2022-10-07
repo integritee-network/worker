@@ -178,9 +178,8 @@ pub mod storage {
 	}
 
 	/// Clear the storage of each key-value pair where the key starts with the given `prefix`.
-	#[allow(unused)]
-	fn clear_prefix_version_1(prefix: &[u8]) {
-		warn!("storage::clear_prefix() unimplemented");
+	pub fn clear_prefix_version_1(prefix: &[u8]) {
+		clear_prefix(prefix, None);
 	}
 
 	/// Clear the storage of each key-value pair where the key starts with the given `prefix`.
@@ -208,9 +207,10 @@ pub mod storage {
 	/// not make much sense because it is not cumulative when called inside the same block.
 	/// Use this function to distribute the deletion of a single child trie across multiple
 	/// blocks.
-	pub fn clear_prefix(prefix: &[u8], limit: Option<u32>) -> KillStorageResult {
-		warn!("storage::clear_prefix() unimplemented");
-		KillStorageResult::AllRemoved(0)
+	pub fn clear_prefix(prefix: &[u8], maybe_limit: Option<u32>) -> KillStorageResult {
+		let number_of_removed_values =
+			with_externalities(|ext| ext.clear_prefix(prefix, maybe_limit)).unwrap_or_default();
+		KillStorageResult::AllRemoved(number_of_removed_values)
 	}
 
 	/// Append the encoded `value` to the storage item at `key`.
@@ -222,7 +222,7 @@ pub mod storage {
 	/// If the storage item does not support [`EncodeAppend`](codec::EncodeAppend) or
 	/// something else fails at appending, the storage item will be set to `[value]`.
 	pub fn append(key: &[u8], value: Vec<u8>) {
-		warn!("storage::append() unimplemented");
+		with_externalities(|ext| ext.append(key.to_vec(), value.to_vec()));
 	}
 
 	/// "Commit" all existing operations and compute the resulting storage root.

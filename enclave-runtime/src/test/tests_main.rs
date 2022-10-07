@@ -27,14 +27,16 @@ use crate::{
 			enclave_call_signer, test_setup, TestStf, TestStfExecutor, TestTopPoolAuthor,
 		},
 		mocks::types::TestStateKeyRepo,
-		sidechain_aura_tests, top_pool_tests,
+		sidechain_aura_tests, sidechain_event_tests, top_pool_tests,
 	},
 	tls_ra,
 };
 use codec::Decode;
 use ita_sgx_runtime::Parentchain;
 use ita_stf::{
-	helpers::account_key_hash, stf_sgx_tests, test_genesis::endowed_account as funded_pair,
+	helpers::{account_key_hash, set_block_number},
+	stf_sgx_tests,
+	test_genesis::{endowed_account as funded_pair, unendowed_account},
 	AccountInfo, Getter, ShardIdentifier, State, StatePayload, TrustedCall, TrustedCallSigned,
 	TrustedGetter, TrustedOperation,
 };
@@ -45,7 +47,9 @@ use itp_stf_executor::{
 	traits::StateUpdateProposer, BatchExecutionResult,
 };
 use itp_stf_interface::{
-	parentchain_pallet::ParentchainPalletInterface, system_pallet::SystemPalletAccountInterface,
+	parentchain_pallet::ParentchainPalletInterface,
+	system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface},
+	StateCallInterface,
 };
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::handle_state_mock;
@@ -99,9 +103,13 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		test_signature_must_match_public_sender_in_call,
 		test_non_root_shielding_call_is_not_executed,
 		test_shielding_call_with_enclave_self_is_executed,
+		test_retrieve_events,
+		test_retrieve_event_count,
+		test_reset_events,
 		rpc::worker_api_direct::tests::test_given_io_handler_methods_then_retrieve_all_names_as_string,
 		handle_state_mock::tests::initialized_shards_list_is_empty,
 		handle_state_mock::tests::shard_exists_after_inserting,
+		handle_state_mock::tests::from_shard_works,
 		handle_state_mock::tests::initialize_creates_default_state,
 		handle_state_mock::tests::load_mutate_and_write_works,
 		handle_state_mock::tests::ensure_subsequent_state_loads_have_same_hash,
@@ -128,6 +136,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		stf_enclave_signer_tests::derive_key_is_deterministic,
 		// sidechain integration tests
 		sidechain_aura_tests::produce_sidechain_block_and_import_it,
+		sidechain_event_tests::ensure_events_get_reset_upon_block_proposal,
 		top_pool_tests::process_indirect_call_in_top_pool,
 		top_pool_tests::submit_shielding_call_to_top_pool,
 		// tls_ra unit tests
@@ -403,8 +412,8 @@ fn test_create_state_diff() {
 		get_from_state_diff(&state_diff, &account_key_hash::<AccountId>(&receiver.into()));
 
 	// state diff should consist of the following updates:
-	// (last_hash, sidechain block_number, sender_funds, receiver_funds, [no clear, after polkadot_v0.9.26 update])
-	assert_eq!(state_diff.len(), 5);
+	// (last_hash, sidechain block_number, sender_funds, receiver_funds, [no clear, after polkadot_v0.9.26 update], events)
+	assert_eq!(state_diff.len(), 6);
 	assert_eq!(receiver_acc_info.data.free, 1000);
 	assert_eq!(sender_acc_info.data.free, 1000);
 }
@@ -573,6 +582,80 @@ fn test_shielding_call_with_enclave_self_is_executed() {
 	// then
 	assert_eq!(1, executed_batch.executed_operations.len());
 	assert!(executed_batch.executed_operations[0].is_success());
+}
+
+pub fn test_retrieve_events() {
+	// given
+	let (_, mut state, shard, mrenclave, ..) = test_setup();
+	let mut opaque_vec = Vec::new();
+	let sender = funded_pair();
+	let receiver = unendowed_account();
+	let transfer_value: u128 = 1_000;
+	// Events will only get executed after genesis.
+	state.execute_with(|| set_block_number(100));
+
+	// Execute a transfer extrinsic to generate events via the Balance pallet.
+	let trusted_call = TrustedCall::balance_transfer(
+		sender.public().into(),
+		receiver.public().into(),
+		transfer_value,
+	)
+	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
+	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
+
+	assert_eq!(TestStf::get_events(&mut state).len(), 3);
+}
+
+pub fn test_retrieve_event_count() {
+	let (_, mut state, shard, mrenclave, ..) = test_setup();
+	let mut opaque_vec = Vec::new();
+	let sender = funded_pair();
+	let receiver = unendowed_account();
+	let transfer_value: u128 = 1_000;
+	// Events will only get executed after genesis.
+	state.execute_with(|| set_block_number(100));
+
+	// Execute a transfer extrinsic to generate events via the Balance pallet.
+	let trusted_call = TrustedCall::balance_transfer(
+		sender.public().into(),
+		receiver.public().into(),
+		transfer_value,
+	)
+	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
+
+	// when
+	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
+
+	let event_count = TestStf::get_event_count(&mut state);
+	assert_eq!(event_count, 3);
+}
+
+pub fn test_reset_events() {
+	let (_, mut state, shard, mrenclave, ..) = test_setup();
+	let mut opaque_vec = Vec::new();
+	let sender = funded_pair();
+	let receiver = unendowed_account();
+	let transfer_value: u128 = 1_000;
+	// Events will only get executed after genesis.
+	state.execute_with(|| set_block_number(100));
+	// Execute a transfer extrinsic to generate events via the Balance pallet.
+	let trusted_call = TrustedCall::balance_transfer(
+		sender.public().into(),
+		receiver.public().into(),
+		transfer_value,
+	)
+	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
+	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
+	let receiver_acc_info = TestStf::get_account_data(&mut state, &receiver.public().into());
+	assert_eq!(receiver_acc_info.free, transfer_value);
+	// Ensure that there really have been events generated.
+	assert_eq!(TestStf::get_events(&mut state).len(), 3);
+
+	// Remove the events.
+	TestStf::reset_events(&mut state);
+
+	// Ensure that the events storage has been cleared.
+	assert_eq!(TestStf::get_events(&mut state).len(), 0);
 }
 
 fn execute_trusted_calls(
