@@ -267,8 +267,7 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 ) -> EnclaveResult<Header> {
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 	let validator = itc_parentchain::light_client::io::read_or_init_validator::<Block, OcallApi>(
-		params,
-		ocall_api.clone(),
+		params, ocall_api,
 	)?;
 	let latest_header = validator.latest_finalized_header(validator.num_relays())?;
 
