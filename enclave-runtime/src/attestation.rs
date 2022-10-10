@@ -27,7 +27,12 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use crate::{global_components::GLOBAL_ATTESTATION_HANDLER_COMPONENT, Result as EnclaveResult};
+use crate::{
+	global_components::{
+		GLOBAL_ATTESTATION_HANDLER_COMPONENT, GLOBAL_EXTRINSICS_FACTORY_COMPONENT,
+	},
+	Result as EnclaveResult,
+};
 use codec::Decode;
 use itp_attestation_handler::AttestationHandler;
 use itp_component_container::ComponentGetter;
@@ -108,7 +113,15 @@ pub unsafe extern "C" fn perform_ra(
 		},
 	};
 
-	match attestation_handler.perform_ra(url, true) {
+	let extrinsics_factory = match GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get() {
+		Ok(r) => r,
+		Err(e) => {
+			error!("Component get failure: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	match attestation_handler.perform_ra(url, extrinsics_factory, true) {
 		Ok(extrinsic) => {
 			if let Err(e) = write_slice_and_whitespace_pad(extrinsics_slice, extrinsic) {
 				error!("Failed to transfer extrinsic to o-call buffer: {:?}", e);
@@ -140,7 +153,15 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
 		},
 	};
 
-	match attestation_handler.perform_ra(url, true) {
+	let extrinsics_factory = match GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get() {
+		Ok(r) => r,
+		Err(e) => {
+			error!("Component get failure: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	match attestation_handler.perform_ra(url, extrinsics_factory, true) {
 		Ok(extrinsic) => {
 			if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic) {
 				error!("Failed to transfer extrinsic to o-call buffer: {:?}", e);

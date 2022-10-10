@@ -86,7 +86,12 @@ pub trait AttestationHandler {
 	/// Composes an extrinsic to register the enclave on the parentchain.
 	/// If skip_ra is set, it will perform remote attestation, otherwise a
 	/// mock register extrinsic is created.
-	fn perform_ra(&self, url: String, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
+	fn perform_ra<ExtrinsicsFactory: CreateExtrinsics>(
+		&self,
+		url: String,
+		extrinsics_factory: Arc<ExtrinsicsFactory>,
+		skip_ra: bool,
+	) -> EnclaveResult<Vec<u8>>;
 
 	/// Get the measurement register value of the enclave
 	fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]>;
@@ -103,20 +108,23 @@ pub trait AttestationHandler {
 	) -> EnclaveResult<(Vec<u8>, Vec<u8>)>;
 }
 
-pub struct IasAttestationHandler<OCallApi, NodeMetadataRepository, ExtrinsicsFactory> {
+pub struct IasAttestationHandler<OCallApi, NodeMetadataRepository> {
 	ocall_api: Arc<OCallApi>,
 	node_metadata_repo: Arc<NodeMetadataRepository>,
-	extrinsics_factory: Arc<ExtrinsicsFactory>,
 }
 
-impl<OCallApi, NodeMetadataRepository, ExtrinsicsFactory> AttestationHandler
-	for IasAttestationHandler<OCallApi, NodeMetadataRepository, ExtrinsicsFactory>
+impl<OCallApi, NodeMetadataRepository> AttestationHandler
+	for IasAttestationHandler<OCallApi, NodeMetadataRepository>
 where
 	OCallApi: EnclaveAttestationOCallApi,
 	NodeMetadataRepository: AccessNodeMetadata<MetadataType = NodeMetadata>,
-	ExtrinsicsFactory: CreateExtrinsics,
 {
-	fn perform_ra(&self, url: String, skip_ra: bool) -> EnclaveResult<Vec<u8>> {
+	fn perform_ra<ExtrinsicsFactory: CreateExtrinsics>(
+		&self,
+		url: String,
+		extrinsics_factory: Arc<ExtrinsicsFactory>,
+		skip_ra: bool,
+	) -> EnclaveResult<Vec<u8>> {
 		// Our certificate is unlinkable.
 		let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
@@ -139,7 +147,7 @@ where
 
 		let call = OpaqueCall::from_tuple(&(call_ids, cert_der, url));
 
-		let extrinsics = self.extrinsics_factory.create_extrinsics(&[call], None)?;
+		let extrinsics = extrinsics_factory.create_extrinsics(&[call], None)?;
 
 		Ok(extrinsics[0].encode())
 	}
@@ -224,19 +232,13 @@ where
 	}
 }
 
-impl<OCallApi, NodeMetadataRepository, ExtrinsicsFactory>
-	IasAttestationHandler<OCallApi, NodeMetadataRepository, ExtrinsicsFactory>
+impl<OCallApi, NodeMetadataRepository> IasAttestationHandler<OCallApi, NodeMetadataRepository>
 where
 	OCallApi: EnclaveAttestationOCallApi,
 	NodeMetadataRepository: AccessNodeMetadata<MetadataType = NodeMetadata>,
-	ExtrinsicsFactory: CreateExtrinsics,
 {
-	pub fn new(
-		ocall_api: Arc<OCallApi>,
-		node_metadata_repo: Arc<NodeMetadataRepository>,
-		extrinsics_factory: Arc<ExtrinsicsFactory>,
-	) -> Self {
-		Self { ocall_api, node_metadata_repo, extrinsics_factory }
+	pub fn new(ocall_api: Arc<OCallApi>, node_metadata_repo: Arc<NodeMetadataRepository>) -> Self {
+		Self { ocall_api, node_metadata_repo }
 	}
 
 	fn parse_response_attn_report(&self, resp: &[u8]) -> EnclaveResult<(String, String, String)> {
