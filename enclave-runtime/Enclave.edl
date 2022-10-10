@@ -43,7 +43,7 @@ enclave {
             [in, size=server_addr_size] uint8_t* server_addr, uint32_t server_addr_size
         );
 
-		public sgx_status_t init_light_client(
+		public sgx_status_t init_parentchain_components(
 			[in, size=params_size] uint8_t* params, size_t params_size,
             [out, size=latest_header_size] uint8_t* latest_header, size_t latest_header_size
         );
