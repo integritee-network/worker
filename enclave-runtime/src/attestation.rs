@@ -86,9 +86,6 @@ pub fn create_ra_report_and_signature(
 
 #[no_mangle]
 pub unsafe extern "C" fn perform_ra(
-	genesis_hash: *const u8,
-	genesis_hash_size: u32,
-	nonce: *const u32,
 	w_url: *const u8,
 	w_url_size: u32,
 	unchecked_extrinsic: *mut u8,
@@ -119,6 +116,71 @@ pub unsafe extern "C" fn perform_ra(
 		},
 		Err(e) => e.into(),
 	}
+	// our certificate is unlinkable
+	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
+
+	let (_key_der, cert_der) = match create_ra_report_and_signature(sign_type, &OcallApi, false) {
+		Ok(r) => r,
+		Err(e) => return e.into(),
+	};
+
+	info!("    [Enclave] Compose extrinsic");
+	let mut url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
+	let url = String::decode(&mut url_slice).unwrap();
+	let extrinsic_slice =
+		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
+
+	let xt = match create_attestation_extrinsic(url, cert_der) {
+		Ok(xt) => xt,
+		Err(e) => return e.into(),
+	};
+
+	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, xt.encode()) {
+		return EnclaveError::Other(Box::new(e)).into()
+	};
+
+	sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn mock_register_enclave_xt(
+	w_url: *const u8,
+	w_url_size: u32,
+	unchecked_extrinsic: *mut u8,
+	unchecked_extrinsic_size: u32,
+) -> sgx_status_t {
+	let mut url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
+	let url: String = Decode::decode(&mut url_slice).unwrap();
+	let extrinsic_slice =
+		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
+
+	let mre = OcallApi
+		.get_mrenclave_of_self()
+		.map_or_else(|_| Vec::<u8>::new(), |m| m.m.encode());
+
+	let xt = match create_attestation_extrinsic(url, mre) {
+		Ok(xt) => xt,
+		Err(e) => return e.into(),
+	};
+
+	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, xt.encode()) {
+		return EnclaveError::Other(Box::new(e)).into()
+	};
+	sgx_status_t::SGX_SUCCESS
+}
+
+fn create_attestation_extrinsic(url: String, cert_der: Vec<u8>) -> EnclaveResult<OpaqueExtrinsic> {
+	let node_metadata_repository = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
+	let extrinsics_factory = GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get()?;
+
+	let call_ids =
+		node_metadata_repository.get_from_metadata(|m| m.register_enclave_call_indexes())??;
+
+	let call = OpaqueCall::from_tuple(&(call_ids, cert_der, url));
+
+	let extrinsics = extrinsics_factory.create_extrinsics(&[call], None)?;
+
+	Ok(extrinsics[0].clone())
 }
 
 #[no_mangle]

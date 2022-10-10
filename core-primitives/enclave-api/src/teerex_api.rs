@@ -18,41 +18,27 @@
 
 use crate::{error::Error, Enclave, EnclaveResult};
 use codec::Encode;
-use frame_support::{ensure, sp_runtime::app_crypto::sp_core::H256};
+use frame_support::ensure;
 use itp_enclave_api_ffi as ffi;
 use sgx_types::*;
 
 pub trait TeerexApi: Send + Sync + 'static {
 	/// Register enclave xt with an empty attestation report.
-	fn mock_register_xt(
-		&self,
-		genesis_hash: H256,
-		nonce: u32,
-		w_url: &str,
-	) -> EnclaveResult<Vec<u8>>;
+	fn mock_register_xt(&self, w_url: &str) -> EnclaveResult<Vec<u8>>;
 }
 
 impl TeerexApi for Enclave {
-	fn mock_register_xt(
-		&self,
-		genesis_hash: H256,
-		nonce: u32,
-		w_url: &str,
-	) -> EnclaveResult<Vec<u8>> {
+	fn mock_register_xt(&self, w_url: &str) -> EnclaveResult<Vec<u8>> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 		let response_len = 8192;
 		let mut response: Vec<u8> = vec![0u8; response_len as usize];
 
 		let url = w_url.encode();
-		let gen = genesis_hash.as_bytes().to_vec();
 
 		let res = unsafe {
 			ffi::mock_register_enclave_xt(
 				self.eid,
 				&mut retval,
-				gen.as_ptr(),
-				gen.len() as u32,
-				&nonce,
 				url.as_ptr(),
 				url.len() as u32,
 				response.as_mut_ptr(),

@@ -323,7 +323,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	// ------------------------------------------------------------------------
 	// Get the public key of our TEE.
-	let genesis_hash = node_api.genesis_hash.as_bytes().to_vec();
 	let tee_accountid = enclave_account(enclave.as_ref());
 	println!("Enclave account {:} ", &tee_accountid.to_ss58check());
 
@@ -390,7 +389,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	}
 
 	// ------------------------------------------------------------------------
-	// Perform a remote attestation and get an unchecked extrinsic back.
+	// Init parentchain specific stuff. Needed for parentchain communication.
+	let last_synced_header = init_light_client(&node_api, enclave.clone()).unwrap();
 	let nonce = node_api.get_nonce_of(&tee_accountid).unwrap();
 	info!("Enclave nonce = {:?}", nonce);
 	enclave
@@ -404,18 +404,18 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		.set_node_metadata(
 			NodeMetadata::new(metadata, runtime_spec_version, runtime_transaction_version).encode(),
 		)
-		.expect("Could not set the node meta data in the enclave");
+		.expect("Could not set the node metadata in the enclave");
 
+	// ------------------------------------------------------------------------
+	// Perform a remote attestation and get an unchecked extrinsic back.
 	let trusted_url = config.trusted_worker_url_external();
 	let uxt = if skip_ra {
 		println!(
 			"[!] skipping remote attestation. Registering enclave without attestation report."
 		);
-		enclave.mock_register_xt(node_api.genesis_hash, nonce, &trusted_url).unwrap()
+		enclave.mock_register_xt(&trusted_url).unwrap()
 	} else {
-		enclave
-			.perform_ra(genesis_hash, nonce, trusted_url.as_bytes().to_vec())
-			.unwrap()
+		enclave.perform_ra(&trusted_url).unwrap()
 	};
 
 	let mut xthex = hex::encode(uxt);
@@ -447,8 +447,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	}
 
 	initialization_handler.registered_on_parentchain();
-
-	let last_synced_header = init_light_client(&node_api, enclave.clone()).unwrap();
 
 	// ------------------------------------------------------------------------
 	// initialize teeracle interval
