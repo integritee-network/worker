@@ -28,6 +28,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use crate::{global_components::GLOBAL_ATTESTATION_HANDLER_COMPONENT, Result as EnclaveResult};
+use codec::Decode;
 use itp_attestation_handler::AttestationHandler;
 use itp_component_container::ComponentGetter;
 use itp_settings::worker::MR_ENCLAVE_SIZE;
@@ -91,10 +92,14 @@ pub unsafe extern "C" fn perform_ra(
 	unchecked_extrinsic: *mut u8,
 	unchecked_extrinsic_size: u32,
 ) -> sgx_status_t {
-	if genesis_hash.is_null() || w_url.is_null() || unchecked_extrinsic.is_null() || nonce.is_null()
-	{
+	if w_url.is_null() || unchecked_extrinsic.is_null() {
 		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
 	}
+	let mut url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
+	let url = String::decode(&mut url_slice).expect("Could not decode url slice to a valid String");
+	let extrinsics_slice =
+		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
+
 	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
 		Ok(r) => r,
 		Err(e) => {
@@ -102,11 +107,8 @@ pub unsafe extern "C" fn perform_ra(
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	};
-	let genesis_slice = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
-	let w_url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
-	let extrinsics_slice =
-		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
-	match attestation_handler.perform_ra(genesis_slice, *nonce, w_url_slice) {
+
+	match attestation_handler.perform_ra(url) {
 		Ok(extrinsic) => {
 			if let Err(e) = write_slice_and_whitespace_pad(extrinsics_slice, extrinsic) {
 				error!("Failed to transfer extrinsic to o-call buffer: {:?}", e);
@@ -116,30 +118,6 @@ pub unsafe extern "C" fn perform_ra(
 		},
 		Err(e) => e.into(),
 	}
-	// our certificate is unlinkable
-	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
-
-	let (_key_der, cert_der) = match create_ra_report_and_signature(sign_type, &OcallApi, false) {
-		Ok(r) => r,
-		Err(e) => return e.into(),
-	};
-
-	info!("    [Enclave] Compose extrinsic");
-	let mut url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
-	let url = String::decode(&mut url_slice).unwrap();
-	let extrinsic_slice =
-		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
-
-	let xt = match create_attestation_extrinsic(url, cert_der) {
-		Ok(xt) => xt,
-		Err(e) => return e.into(),
-	};
-
-	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, xt.encode()) {
-		return EnclaveError::Other(Box::new(e)).into()
-	};
-
-	sgx_status_t::SGX_SUCCESS
 }
 
 #[no_mangle]
@@ -154,33 +132,24 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
-	let mre = OcallApi
-		.get_mrenclave_of_self()
-		.map_or_else(|_| Vec::<u8>::new(), |m| m.m.encode());
-
-	let xt = match create_attestation_extrinsic(url, mre) {
-		Ok(xt) => xt,
-		Err(e) => return e.into(),
+	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
+		Ok(r) => r,
+		Err(e) => {
+			error!("Component get failure: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
 	};
 
-	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, xt.encode()) {
-		return EnclaveError::Other(Box::new(e)).into()
-	};
-	sgx_status_t::SGX_SUCCESS
-}
-
-fn create_attestation_extrinsic(url: String, cert_der: Vec<u8>) -> EnclaveResult<OpaqueExtrinsic> {
-	let node_metadata_repository = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
-	let extrinsics_factory = GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get()?;
-
-	let call_ids =
-		node_metadata_repository.get_from_metadata(|m| m.register_enclave_call_indexes())??;
-
-	let call = OpaqueCall::from_tuple(&(call_ids, cert_der, url));
-
-	let extrinsics = extrinsics_factory.create_extrinsics(&[call], None)?;
-
-	Ok(extrinsics[0].clone())
+	match attestation_handler.mock_register_xt(url) {
+		Ok(extrinsic) => {
+			if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic) {
+				error!("Failed to transfer extrinsic to o-call buffer: {:?}", e);
+				return sgx_status_t::SGX_ERROR_UNEXPECTED
+			}
+			sgx_status_t::SGX_SUCCESS
+		},
+		Err(e) => e.into(),
+	}
 }
 
 #[no_mangle]
