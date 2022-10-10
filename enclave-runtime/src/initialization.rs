@@ -285,10 +285,10 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 		genesis_hash,
 		signer,
 		GLOBAL_NONCE_CACHE.clone(),
-		node_metadata_repository.clone(),
+		node_metadata_repository,
 	));
 
-	GLOBAL_EXTRINSICS_FACTORY_COMPONENT.initialize(extrinsics_factory.clone());
+	GLOBAL_EXTRINSICS_FACTORY_COMPONENT.initialize(extrinsics_factory));
 
 	initialize_parentchain_import_dispatcher::<WorkerModeProvider>()?;
 
