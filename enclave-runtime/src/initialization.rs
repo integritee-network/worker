@@ -258,7 +258,7 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 	Ok(())
 }
 
-pub(crate) fn init_light_client<WorkerModeProvider: ProvideWorkerMode>(
+pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>(
 	params: LightClientInitParams<Header>,
 ) -> EnclaveResult<Header> {
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;

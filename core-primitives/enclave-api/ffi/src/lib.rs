@@ -25,7 +25,7 @@ extern "C" {
 		server_addr_size: u32,
 	) -> sgx_status_t;
 
-	pub fn init_light_client(
+	pub fn init_parentchain_components(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
 		params: *const u8,

@@ -83,7 +83,7 @@ where
 	}
 
 	// ------------------------------------------------------------------------
-	// Initialize sidechain components (has to be AFTER init_light_client()
+	// Initialize sidechain components (has to be AFTER init_parentchain_components()
 	enclave.init_enclave_sidechain_components().unwrap();
 
 	// ------------------------------------------------------------------------

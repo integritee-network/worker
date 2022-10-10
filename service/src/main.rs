@@ -390,7 +390,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	// ------------------------------------------------------------------------
 	// Init parentchain specific stuff. Needed for parentchain communication.
-	let last_synced_header = init_light_client(&node_api, enclave.clone()).unwrap();
+	let last_synced_header = init_parentchain_components(&node_api, enclave.clone()).unwrap();
 	let nonce = node_api.get_nonce_of(&tee_accountid).unwrap();
 	info!("Enclave nonce = {:?}", nonce);
 	enclave
@@ -689,7 +689,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
 	}
 }
 
-pub fn init_light_client<E: EnclaveBase + Sidechain>(
+pub fn init_parentchain_components<E: EnclaveBase + Sidechain>(
 	api: &ParentchainApi,
 	enclave_api: Arc<E>,
 ) -> Result<Header, Error> {
@@ -710,11 +710,11 @@ pub fn init_light_client<E: EnclaveBase + Sidechain>(
 			authority_proof: grandpa_proof,
 		};
 
-		Ok(enclave_api.init_light_client(params).unwrap())
+		Ok(enclave_api.init_parentchain_components(params).unwrap())
 	} else {
 		let params = LightClientInitParams::Parachain { genesis_header };
 
-		Ok(enclave_api.init_light_client(params).unwrap())
+		Ok(enclave_api.init_parentchain_components(params).unwrap())
 	}
 }
 

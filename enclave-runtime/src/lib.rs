@@ -297,7 +297,7 @@ pub unsafe extern "C" fn init_direct_invocation_server(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn init_light_client(
+pub unsafe extern "C" fn init_parentchain_components(
 	params: *const u8,
 	params_size: usize,
 	latest_header: *mut u8,
@@ -313,10 +313,11 @@ pub unsafe extern "C" fn init_light_client(
 		Err(e) => return Error::Codec(e).into(),
 	};
 
-	let latest_header = match initialization::init_light_client::<WorkerModeProvider>(params) {
-		Ok(h) => h,
-		Err(e) => return e.into(),
-	};
+	let latest_header =
+		match initialization::init_parentchain_components::<WorkerModeProvider>(params) {
+			Ok(h) => h,
+			Err(e) => return e.into(),
+		};
 
 	if let Err(e) = write_slice_and_whitespace_pad(latest_header_slice, latest_header.encode()) {
 		return Error::Other(Box::new(e)).into()
