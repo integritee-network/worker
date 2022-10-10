@@ -15,20 +15,26 @@
 
 */
 
-use super::CERTEXPIRYDAYS;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
+
 use crate::{Error as EnclaveError, Result as EnclaveResult};
 use arrayvec::ArrayVec;
-use bit_vec::BitVec;
-use chrono::{prelude::*, Duration, TimeZone, Utc as TzUtc};
+use chrono::DateTime;
 use itertools::Itertools;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use log::*;
-use num_bigint::BigUint;
 use serde_json::Value;
-use sgx_tcrypto::*;
-use sgx_types::*;
-use std::{io::BufReader, prelude::v1::*, ptr, str, time::*};
-use yasna::models::ObjectIdentifier;
+use sgx_types::{
+	sgx_platform_info_t, sgx_quote_t, sgx_status_t, SgxResult, SGX_PLATFORM_INFO_SIZE,
+};
+use std::{
+	io::BufReader,
+	ptr, str,
+	string::String,
+	time::{SystemTime, UNIX_EPOCH},
+	vec::Vec,
+};
 
 type SignatureAlgorithms = &'static [&'static webpki::SignatureAlgorithm];
 static SUPPORTED_SIG_ALGS: SignatureAlgorithms = &[
@@ -45,149 +51,172 @@ static SUPPORTED_SIG_ALGS: SignatureAlgorithms = &[
 	&webpki::RSA_PKCS1_3072_8192_SHA384,
 ];
 
+pub const CERTEXPIRYDAYS: i64 = 90i64;
 pub const IAS_REPORT_CA: &[u8] = include_bytes!("../AttestationReportSigningCACert.pem");
 
-const ISSUER: &str = "Integritee";
-const SUBJECT: &str = "Integritee ephemeral";
+#[cfg(feature = "sgx")]
+pub use sgx::*;
 
-pub fn gen_ecc_cert(
-	payload: String,
-	prv_k: &sgx_ec256_private_t,
-	pub_k: &sgx_ec256_public_t,
-	ecc_handle: &SgxEccHandle,
-) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
-	// Generate public key bytes since both DER will use it
-	let mut pub_key_bytes: Vec<u8> = vec![4];
-	let mut pk_gx = pub_k.gx;
-	pk_gx.reverse();
-	let mut pk_gy = pub_k.gy;
-	pk_gy.reverse();
-	pub_key_bytes.extend_from_slice(&pk_gx);
-	pub_key_bytes.extend_from_slice(&pk_gy);
+#[cfg(feature = "sgx")]
+pub mod sgx {
+	use super::*;
+	use bit_vec::BitVec;
+	use chrono::{Duration, TimeZone, Utc as TzUtc};
+	use num_bigint::BigUint;
+	use sgx_tcrypto::SgxEccHandle;
+	use sgx_types::{sgx_ec256_private_t, sgx_ec256_public_t};
+	use yasna::models::ObjectIdentifier;
 
-	// Generate Certificate DER
-	let cert_der = yasna::construct_der(|writer| {
-		writer.write_sequence(|writer| {
-			writer.next().write_sequence(|writer| {
-				// Certificate Version
-				writer.next().write_tagged(yasna::Tag::context(0), |writer| {
-					writer.write_i8(2);
+	const ISSUER: &str = "Integritee";
+	const SUBJECT: &str = "Integritee ephemeral";
+
+	pub fn gen_ecc_cert(
+		payload: String,
+		prv_k: &sgx_ec256_private_t,
+		pub_k: &sgx_ec256_public_t,
+		ecc_handle: &SgxEccHandle,
+	) -> Result<(Vec<u8>, Vec<u8>), sgx_status_t> {
+		// Generate public key bytes since both DER will use it
+		let mut pub_key_bytes: Vec<u8> = vec![4];
+		let mut pk_gx = pub_k.gx;
+		pk_gx.reverse();
+		let mut pk_gy = pub_k.gy;
+		pk_gy.reverse();
+		pub_key_bytes.extend_from_slice(&pk_gx);
+		pub_key_bytes.extend_from_slice(&pk_gy);
+
+		// Generate Certificate DER
+		let cert_der = yasna::construct_der(|writer| {
+			writer.write_sequence(|writer| {
+				writer.next().write_sequence(|writer| {
+					// Certificate Version
+					writer.next().write_tagged(yasna::Tag::context(0), |writer| {
+						writer.write_i8(2);
+					});
+					// Certificate Serial Number (unused but required)
+					writer.next().write_u8(1);
+					// Signature Algorithm: ecdsa-with-SHA256
+					writer.next().write_sequence(|writer| {
+						writer
+							.next()
+							.write_oid(&ObjectIdentifier::from_slice(&[1, 2, 840, 10045, 4, 3, 2]));
+					});
+					// Issuer: CN=MesaTEE (unused but required)
+					writer.next().write_sequence(|writer| {
+						writer.next().write_set(|writer| {
+							writer.next().write_sequence(|writer| {
+								writer
+									.next()
+									.write_oid(&ObjectIdentifier::from_slice(&[2, 5, 4, 3]));
+								writer.next().write_utf8_string(ISSUER);
+							});
+						});
+					});
+					// Validity: Issuing/Expiring Time (unused but required)
+					let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+					let issue_ts = TzUtc.timestamp(now.as_secs() as i64, 0);
+					let expire = now + Duration::days(CERTEXPIRYDAYS).to_std().unwrap();
+					let expire_ts = TzUtc.timestamp(expire.as_secs() as i64, 0);
+					writer.next().write_sequence(|writer| {
+						writer
+							.next()
+							.write_utctime(&yasna::models::UTCTime::from_datetime(&issue_ts));
+						writer
+							.next()
+							.write_utctime(&yasna::models::UTCTime::from_datetime(&expire_ts));
+					});
+					// Subject: CN=MesaTEE (unused but required)
+					writer.next().write_sequence(|writer| {
+						writer.next().write_set(|writer| {
+							writer.next().write_sequence(|writer| {
+								writer
+									.next()
+									.write_oid(&ObjectIdentifier::from_slice(&[2, 5, 4, 3]));
+								writer.next().write_utf8_string(SUBJECT);
+							});
+						});
+					});
+					writer.next().write_sequence(|writer| {
+						// Public Key Algorithm
+						writer.next().write_sequence(|writer| {
+							// id-ecPublicKey
+							writer.next().write_oid(&ObjectIdentifier::from_slice(&[
+								1, 2, 840, 10045, 2, 1,
+							]));
+							// prime256v1
+							writer.next().write_oid(&ObjectIdentifier::from_slice(&[
+								1, 2, 840, 10045, 3, 1, 7,
+							]));
+						});
+						// Public Key
+						writer.next().write_bitvec(&BitVec::from_bytes(&pub_key_bytes));
+					});
+					// Certificate V3 Extension
+					writer.next().write_tagged(yasna::Tag::context(3), |writer| {
+						writer.write_sequence(|writer| {
+							writer.next().write_sequence(|writer| {
+								writer.next().write_oid(&ObjectIdentifier::from_slice(&[
+									2, 16, 840, 1, 113_730, 1, 13,
+								]));
+								writer.next().write_bytes(&payload.into_bytes());
+							});
+						});
+					});
 				});
-				// Certificate Serial Number (unused but required)
-				writer.next().write_u8(1);
 				// Signature Algorithm: ecdsa-with-SHA256
 				writer.next().write_sequence(|writer| {
 					writer
 						.next()
 						.write_oid(&ObjectIdentifier::from_slice(&[1, 2, 840, 10045, 4, 3, 2]));
 				});
-				// Issuer: CN=MesaTEE (unused but required)
-				writer.next().write_sequence(|writer| {
-					writer.next().write_set(|writer| {
-						writer.next().write_sequence(|writer| {
-							writer.next().write_oid(&ObjectIdentifier::from_slice(&[2, 5, 4, 3]));
-							writer.next().write_utf8_string(ISSUER);
-						});
-					});
-				});
-				// Validity: Issuing/Expiring Time (unused but required)
-				let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-				let issue_ts = TzUtc.timestamp(now.as_secs() as i64, 0);
-				let expire = now + Duration::days(CERTEXPIRYDAYS).to_std().unwrap();
-				let expire_ts = TzUtc.timestamp(expire.as_secs() as i64, 0);
-				writer.next().write_sequence(|writer| {
-					writer.next().write_utctime(&yasna::models::UTCTime::from_datetime(&issue_ts));
-					writer.next().write_utctime(&yasna::models::UTCTime::from_datetime(&expire_ts));
-				});
-				// Subject: CN=MesaTEE (unused but required)
-				writer.next().write_sequence(|writer| {
-					writer.next().write_set(|writer| {
-						writer.next().write_sequence(|writer| {
-							writer.next().write_oid(&ObjectIdentifier::from_slice(&[2, 5, 4, 3]));
-							writer.next().write_utf8_string(SUBJECT);
-						});
-					});
-				});
-				writer.next().write_sequence(|writer| {
-					// Public Key Algorithm
-					writer.next().write_sequence(|writer| {
-						// id-ecPublicKey
-						writer
-							.next()
-							.write_oid(&ObjectIdentifier::from_slice(&[1, 2, 840, 10045, 2, 1]));
-						// prime256v1
-						writer
-							.next()
-							.write_oid(&ObjectIdentifier::from_slice(&[1, 2, 840, 10045, 3, 1, 7]));
-					});
-					// Public Key
-					writer.next().write_bitvec(&BitVec::from_bytes(&pub_key_bytes));
-				});
-				// Certificate V3 Extension
-				writer.next().write_tagged(yasna::Tag::context(3), |writer| {
+				// Signature
+				let sig = {
+					let tbs = &writer.buf[4..];
+					ecc_handle.ecdsa_sign_slice(tbs, prv_k).unwrap()
+				};
+				let sig_der = yasna::construct_der(|writer| {
 					writer.write_sequence(|writer| {
-						writer.next().write_sequence(|writer| {
-							writer.next().write_oid(&ObjectIdentifier::from_slice(&[
-								2, 16, 840, 1, 113_730, 1, 13,
-							]));
-							writer.next().write_bytes(&payload.into_bytes());
+						let mut sig_x = sig.x;
+						sig_x.reverse();
+						let mut sig_y = sig.y;
+						sig_y.reverse();
+						writer.next().write_biguint(&BigUint::from_slice(&sig_x));
+						writer.next().write_biguint(&BigUint::from_slice(&sig_y));
+					});
+				});
+				writer.next().write_bitvec(&BitVec::from_bytes(&sig_der));
+			});
+		});
+
+		// Generate Private Key DER
+		let key_der = yasna::construct_der(|writer| {
+			writer.write_sequence(|writer| {
+				writer.next().write_u8(0);
+				writer.next().write_sequence(|writer| {
+					writer
+						.next()
+						.write_oid(&ObjectIdentifier::from_slice(&[1, 2, 840, 10045, 2, 1]));
+					writer
+						.next()
+						.write_oid(&ObjectIdentifier::from_slice(&[1, 2, 840, 10045, 3, 1, 7]));
+				});
+				let inner_key_der = yasna::construct_der(|writer| {
+					writer.write_sequence(|writer| {
+						writer.next().write_u8(1);
+						let mut prv_k_r = prv_k.r;
+						prv_k_r.reverse();
+						writer.next().write_bytes(&prv_k_r);
+						writer.next().write_tagged(yasna::Tag::context(1), |writer| {
+							writer.write_bitvec(&BitVec::from_bytes(&pub_key_bytes));
 						});
 					});
 				});
+				writer.next().write_bytes(&inner_key_der);
 			});
-			// Signature Algorithm: ecdsa-with-SHA256
-			writer.next().write_sequence(|writer| {
-				writer
-					.next()
-					.write_oid(&ObjectIdentifier::from_slice(&[1, 2, 840, 10045, 4, 3, 2]));
-			});
-			// Signature
-			let sig = {
-				let tbs = &writer.buf[4..];
-				ecc_handle.ecdsa_sign_slice(tbs, prv_k).unwrap()
-			};
-			let sig_der = yasna::construct_der(|writer| {
-				writer.write_sequence(|writer| {
-					let mut sig_x = sig.x;
-					sig_x.reverse();
-					let mut sig_y = sig.y;
-					sig_y.reverse();
-					writer.next().write_biguint(&BigUint::from_slice(&sig_x));
-					writer.next().write_biguint(&BigUint::from_slice(&sig_y));
-				});
-			});
-			writer.next().write_bitvec(&BitVec::from_bytes(&sig_der));
 		});
-	});
 
-	// Generate Private Key DER
-	let key_der = yasna::construct_der(|writer| {
-		writer.write_sequence(|writer| {
-			writer.next().write_u8(0);
-			writer.next().write_sequence(|writer| {
-				writer
-					.next()
-					.write_oid(&ObjectIdentifier::from_slice(&[1, 2, 840, 10045, 2, 1]));
-				writer
-					.next()
-					.write_oid(&ObjectIdentifier::from_slice(&[1, 2, 840, 10045, 3, 1, 7]));
-			});
-			let inner_key_der = yasna::construct_der(|writer| {
-				writer.write_sequence(|writer| {
-					writer.next().write_u8(1);
-					let mut prv_k_r = prv_k.r;
-					prv_k_r.reverse();
-					writer.next().write_bytes(&prv_k_r);
-					writer.next().write_tagged(yasna::Tag::context(1), |writer| {
-						writer.write_bitvec(&BitVec::from_bytes(&pub_key_bytes));
-					});
-				});
-			});
-			writer.next().write_bytes(&inner_key_der);
-		});
-	});
-
-	Ok((key_der, cert_der))
+		Ok((key_der, cert_der))
+	}
 }
 
 pub fn percent_decode(orig: String) -> EnclaveResult<String> {
@@ -284,7 +313,7 @@ where
 		SUPPORTED_SIG_ALGS,
 		&webpki::TLSServerTrustAnchors(&trust_anchors),
 		&[ias_cert_dec.as_slice()],
-		now_func.map_err(|e| EnclaveError::Other(e.into()))?,
+		now_func.map_err(|_e| EnclaveError::Time)?,
 	) {
 		Ok(_) => info!("Cert is good"),
 		Err(e) => {

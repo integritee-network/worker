@@ -17,7 +17,7 @@
 
 //! Remote attestation certificate authentication of server and client
 
-use crate::cert;
+use itp_attestation_handler::cert;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use log::*;
 use sgx_types::*;

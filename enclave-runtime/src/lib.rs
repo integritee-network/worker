@@ -38,7 +38,7 @@ use crate::{
 	},
 	ocall::OcallApi,
 	rpc::worker_api_direct::sidechain_io_handler,
-	utils::{hash_from_slice, utf8_str_from_raw, DecodeRaw},
+	utils::{utf8_str_from_raw, DecodeRaw},
 };
 use codec::{alloc::string::String, Decode, Encode};
 use itc_parentchain::{
@@ -49,6 +49,7 @@ use itc_parentchain::{
 };
 use itp_block_import_queue::PushToBlockQueue;
 use itp_component_container::ComponentGetter;
+use itp_hashing::hash_from_slice;
 use itp_node_api::{
 	api_client::{ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder},
 	metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata, NodeMetadata},
@@ -57,7 +58,6 @@ use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
 use itp_sgx_crypto::{ed25519, Ed25519Seal, Rsa3072Seal};
-use itp_sgx_io as io;
 use itp_sgx_io::StaticSealedIO;
 use itp_types::{Header, ShardIdentifier, SignedBlock};
 use itp_utils::write_slice_and_whitespace_pad;
@@ -75,7 +75,6 @@ mod ipfs;
 mod ocall;
 mod utils;
 
-pub mod cert;
 pub mod error;
 pub mod rpc;
 mod sync;
@@ -87,8 +86,6 @@ pub mod teeracle;
 
 #[cfg(feature = "test")]
 pub mod test;
-
-pub const CERTEXPIRYDAYS: i64 = 90i64;
 
 pub type Hash = sp_core::H256;
 pub type AuthorityPair = sp_core::ed25519::Pair;

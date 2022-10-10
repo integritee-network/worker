@@ -14,7 +14,6 @@
 	limitations under the License.
 
 */
-
 use crate::{
 	error::{Error, Result as EnclaveResult},
 	global_components::{
@@ -25,7 +24,8 @@ use crate::{
 		EnclaveSidechainBlockSyncer, EnclaveStateFileIo, EnclaveStateHandler,
 		EnclaveStateKeyRepository, EnclaveStateObserver, EnclaveStateSnapshotRepository,
 		EnclaveStfEnclaveSigner, EnclaveStfExecutor, EnclaveTopPool, EnclaveTopPoolAuthor,
-		EnclaveValidatorAccessor, GLOBAL_EXTRINSICS_FACTORY_COMPONENT,
+		EnclaveValidatorAccessor, GLOBAL_ATTESTATION_HANDLER_COMPONENT,
+		GLOBAL_EXTRINSICS_FACTORY_COMPONENT,
 		GLOBAL_IMMEDIATE_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
 		GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
 		GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT, GLOBAL_RPC_WS_HANDLER_COMPONENT,
@@ -63,6 +63,7 @@ use itc_tls_websocket_server::{
 	certificate_generation::ed25519_self_signed_certificate, create_ws_server, ConnectionToken,
 	WebSocketServer,
 };
+use itp_attestation_handler::IasAttestationHandler;
 use itp_block_import_queue::BlockImportQueue;
 use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_extrinsics_factory::ExtrinsicsFactory;
@@ -142,7 +143,7 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	let stf_executor = Arc::new(EnclaveStfExecutor::new(
 		ocall_api.clone(),
 		state_handler.clone(),
-		node_metadata_repository,
+		node_metadata_repository.clone(),
 	));
 	GLOBAL_STF_EXECUTOR_COMPONENT.initialize(stf_executor);
 
@@ -174,7 +175,7 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	let top_pool_author = create_top_pool_author(
 		connection_registry.clone(),
 		state_handler,
-		ocall_api,
+		ocall_api.clone(),
 		shielding_key_repository,
 	);
 	GLOBAL_TOP_POOL_AUTHOR_COMPONENT.initialize(top_pool_author.clone());
@@ -186,6 +187,10 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 
 	let sidechain_block_import_queue = Arc::new(EnclaveSidechainBlockImportQueue::default());
 	GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.initialize(sidechain_block_import_queue);
+
+	let attestation_handler =
+		Arc::new(IasAttestationHandler::new(ocall_api, node_metadata_repository));
+	GLOBAL_ATTESTATION_HANDLER_COMPONENT.initialize(attestation_handler);
 
 	Ok(())
 }

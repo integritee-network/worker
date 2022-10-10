@@ -16,6 +16,7 @@ members = [
     "core/rpc-client",
     "core/rpc-server",
     "core/tls-websocket-server",
+    "core-primitives/attestation-handler",
     "core-primitives/block-import-queue",
     "core-primitives/component-container",
     "core-primitives/enclave-api",

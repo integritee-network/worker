@@ -22,3 +22,9 @@
 pub trait Hash<Output> {
 	fn hash(&self) -> Output;
 }
+
+pub fn hash_from_slice(hash_slize: &[u8]) -> sp_core::H256 {
+	let mut g = [0; 32];
+	g.copy_from_slice(hash_slize);
+	sp_core::H256::from(&mut g)
+}
