@@ -288,7 +288,7 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 		node_metadata_repository,
 	));
 
-	GLOBAL_EXTRINSICS_FACTORY_COMPONENT.initialize(extrinsics_factory));
+	GLOBAL_EXTRINSICS_FACTORY_COMPONENT.initialize(extrinsics_factory);
 
 	initialize_parentchain_import_dispatcher::<WorkerModeProvider>()?;
 
