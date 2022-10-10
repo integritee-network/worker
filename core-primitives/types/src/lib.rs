@@ -23,8 +23,7 @@ use codec::{Decode, Encode};
 #[cfg(feature = "sgx")]
 use sgx_tstd as std;
 use sp_runtime::{
-	generic::{Block as BlockG, Header as HeaderG, SignedBlock as SignedBlockG},
-	traits::BlakeTwo256,
+	generic::{Block as BlockG, SignedBlock as SignedBlockG},
 	OpaqueExtrinsic,
 };
 use sp_std::vec::Vec;
@@ -42,16 +41,14 @@ pub type PalletString = String;
 
 pub use sp_core::{crypto::AccountId32 as AccountId, H256};
 
+pub use itp_sgx_primitives::types::*;
+
 // FIXME: Consolidate type definiton with #905.
-pub type Balance = u128;
 pub type AccountData = pallet_balances::AccountData<Balance>;
 pub type AccountInfo = frame_system::AccountInfo<Index, AccountData>;
 
 pub type ShardIdentifier = H256;
-pub type BlockNumber = u32;
 pub type Amount = u128;
-pub type Index = u32;
-pub type Header = HeaderG<BlockNumber, BlakeTwo256>;
 pub type Block = BlockG<Header, OpaqueExtrinsic>;
 pub type SignedBlock = SignedBlockG<Block>;
 pub type BlockHash = H256;
