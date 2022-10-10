@@ -58,7 +58,6 @@ use sgx_types::{
 	sgx_spid_t, sgx_status_t, sgx_target_info_t, SgxResult,
 };
 use sp_core::Pair;
-use sp_runtime::OpaqueExtrinsic;
 use std::{
 	borrow::ToOwned,
 	format,
@@ -84,16 +83,10 @@ pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
 
 /// Trait to provide an abstraction to the attestation logic
 pub trait AttestationHandler {
-	/// Perform the remote attestation (see create_ra_report_and_signature) and compose an
-	/// extrinsic that registers the enclave on the blockchain.
-	/// Returns the extrinsic that can be sent to the blockchain.
-	fn perform_ra(&self, url: String) -> EnclaveResult<Vec<u8>>;
-
-	/// Compose an extrinsic that registers the enclave on the blockchain,
-	/// without a valid remote attestation. To be used for development
-	/// purposes only.
-	/// Returns the extrinsic that can be sent to the blockchain.
-	fn mock_register_xt(&self, url: String) -> EnclaveResult<Vec<u8>>;
+	/// Composes an extrinsic to register the enclave on the parentchain.
+	/// If skip_ra is set, it will perform remote attestation, otherwise a
+	/// mock register extrinsic is created.
+	fn perform_ra(&self, url: String, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
 
 	/// Get the measurement register value of the enclave
 	fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]>;
@@ -123,28 +116,32 @@ where
 	NodeMetadataRepository: AccessNodeMetadata<MetadataType = NodeMetadata>,
 	ExtrinsicsFactory: CreateExtrinsics,
 {
-	fn perform_ra(&self, url: String) -> EnclaveResult<Vec<u8>> {
+	fn perform_ra(&self, url: String, skip_ra: bool) -> EnclaveResult<Vec<u8>> {
 		// Our certificate is unlinkable.
 		let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
-		let (_key_der, cert_der) = match self.create_ra_report_and_signature(sign_type, false) {
-			Ok(r) => r,
-			Err(e) => return Err(e),
+		// FIXME: actually call `create_ra_report_and_signature` in skip_ra mode as well:
+		// https://github.com/integritee-network/worker/issues/321.
+		let cert_der = if !skip_ra {
+			match self.create_ra_report_and_signature(sign_type, skip_ra) {
+				Ok((_key_der, cert_der)) => cert_der,
+				Err(e) => return Err(e),
+			}
+		} else {
+			self.get_mrenclave()?.encode()
 		};
 
 		info!("    [Enclave] Compose extrinsic");
-		let xt = self.create_attestation_extrinsic(url, cert_der)?;
+		let call_ids = self
+			.node_metadata_repo
+			.get_from_metadata(|m| m.register_enclave_call_indexes())?
+			.map_err(|e| NodeMetadataProviderError::MetadataError(e))?;
 
-		Ok(xt.encode())
-	}
+		let call = OpaqueCall::from_tuple(&(call_ids, cert_der, url));
 
-	fn mock_register_xt(&self, url: String) -> EnclaveResult<Vec<u8>> {
-		let mrenclave = self.get_mrenclave()?;
+		let extrinsics = self.extrinsics_factory.create_extrinsics(&[call], None)?;
 
-		info!("    [Enclave] Compose extrinsic");
-		let xt = self.create_attestation_extrinsic(url, mrenclave.encode())?;
-
-		Ok(xt.encode())
+		Ok(extrinsics[0].encode())
 	}
 
 	fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]> {
@@ -585,23 +582,6 @@ where
 		io::read_to_string(RA_API_KEY_FILE)
 			.map(|key| key.trim_end().to_owned())
 			.map_err(|e| EnclaveError::Other(e.into()))
-	}
-
-	fn create_attestation_extrinsic(
-		&self,
-		url: String,
-		cert_der: Vec<u8>,
-	) -> EnclaveResult<OpaqueExtrinsic> {
-		let call_ids = self
-			.node_metadata_repo
-			.get_from_metadata(|m| m.register_enclave_call_indexes())?
-			.map_err(|e| NodeMetadataProviderError::MetadataError(e))?;
-
-		let call = OpaqueCall::from_tuple(&(call_ids, cert_der, url));
-
-		let extrinsics = self.extrinsics_factory.create_extrinsics(&[call], None)?;
-
-		Ok(extrinsics[0].clone())
 	}
 }
 

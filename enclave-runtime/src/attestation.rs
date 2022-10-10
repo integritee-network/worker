@@ -108,7 +108,7 @@ pub unsafe extern "C" fn perform_ra(
 		},
 	};
 
-	match attestation_handler.perform_ra(url) {
+	match attestation_handler.perform_ra(url, true) {
 		Ok(extrinsic) => {
 			if let Err(e) = write_slice_and_whitespace_pad(extrinsics_slice, extrinsic) {
 				error!("Failed to transfer extrinsic to o-call buffer: {:?}", e);
@@ -140,7 +140,7 @@ pub unsafe extern "C" fn mock_register_enclave_xt(
 		},
 	};
 
-	match attestation_handler.mock_register_xt(url) {
+	match attestation_handler.perform_ra(url, true) {
 		Ok(extrinsic) => {
 			if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic) {
 				error!("Failed to transfer extrinsic to o-call buffer: {:?}", e);
