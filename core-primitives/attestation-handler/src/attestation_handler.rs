@@ -128,7 +128,7 @@ where
 		// Our certificate is unlinkable.
 		let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
-		// FIXME: actually call `create_ra_report_and_signature` in skip_ra mode as well:
+		// FIXME: should call `create_ra_report_and_signature` in skip_ra mode as well:
 		// https://github.com/integritee-network/worker/issues/321.
 		let cert_der = if !skip_ra {
 			match self.create_ra_report_and_signature(sign_type, skip_ra) {

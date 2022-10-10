@@ -121,7 +121,7 @@ pub unsafe extern "C" fn perform_ra(
 		},
 	};
 
-	match attestation_handler.perform_ra(url, extrinsics_factory, true) {
+	match attestation_handler.perform_ra(url, extrinsics_factory, false) {
 		Ok(extrinsic) => {
 			if let Err(e) = write_slice_and_whitespace_pad(extrinsics_slice, extrinsic) {
 				error!("Failed to transfer extrinsic to o-call buffer: {:?}", e);
