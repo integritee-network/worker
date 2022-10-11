@@ -2986,8 +2986,6 @@ dependencies = [
  "hex",
  "httparse 1.4.1",
  "itertools",
- "itp-extrinsics-factory",
- "itp-node-api",
  "itp-ocall-api",
  "itp-settings",
  "itp-sgx-crypto",

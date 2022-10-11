@@ -97,6 +97,7 @@ extern "C" {
 		w_url_size: u32,
 		unchecked_extrinsic: *mut u8,
 		unchecked_extrinsic_size: u32,
+		skip_ra: c_int,
 	) -> sgx_status_t;
 
 	pub fn dump_ra_to_disk(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
@@ -110,15 +111,6 @@ extern "C" {
 		request_len: u32,
 		response: *mut u8,
 		response_len: u32,
-	) -> sgx_status_t;
-
-	pub fn mock_register_enclave_xt(
-		eid: sgx_enclave_id_t,
-		retval: *mut sgx_status_t,
-		w_url: *const u8,
-		w_url_size: u32,
-		unchecked_extrinsic: *mut u8,
-		unchecked_extrinsic_size: u32,
 	) -> sgx_status_t;
 
 	pub fn update_market_data_xt(

@@ -34,12 +34,6 @@ use crate::{cert, Error as EnclaveError, Error, Result as EnclaveResult};
 use codec::Encode;
 use core::default::Default;
 use itertools::Itertools;
-use itp_extrinsics_factory::CreateExtrinsics;
-use itp_node_api::metadata::{
-	pallet_teerex::TeerexCallIndexes,
-	provider::{error::Error as NodeMetadataProviderError, AccessNodeMetadata},
-	NodeMetadata,
-};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::{
 	files::{RA_API_KEY_FILE, RA_DUMP_CERT_DER_FILE, RA_SPID_FILE},
@@ -48,7 +42,7 @@ use itp_settings::{
 use itp_sgx_crypto::Ed25519Seal;
 use itp_sgx_io as io;
 use itp_sgx_io::StaticSealedIO;
-use itp_types::OpaqueCall;
+
 use log::*;
 use sgx_rand::{os, Rng};
 use sgx_tcrypto::{rsgx_sha256_slice, SgxEccHandle};
@@ -83,15 +77,10 @@ pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
 
 /// Trait to provide an abstraction to the attestation logic
 pub trait AttestationHandler {
-	/// Composes an extrinsic to register the enclave on the parentchain.
-	/// If skip_ra is set, it will perform remote attestation, otherwise a
-	/// mock register extrinsic is created.
-	fn perform_ra<ExtrinsicsFactory: CreateExtrinsics>(
-		&self,
-		url: String,
-		extrinsics_factory: Arc<ExtrinsicsFactory>,
-		skip_ra: bool,
-	) -> EnclaveResult<Vec<u8>>;
+	/// Generates an encoded remote attestation certificate.
+	/// If skip_ra is set, it will not perform a remote attestation via IAS
+	/// but instead generate a mock certificate.
+	fn perform_ra(&self, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
 
 	/// Get the measurement register value of the enclave
 	fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]>;
@@ -108,23 +97,15 @@ pub trait AttestationHandler {
 	) -> EnclaveResult<(Vec<u8>, Vec<u8>)>;
 }
 
-pub struct IasAttestationHandler<OCallApi, NodeMetadataRepository> {
+pub struct IasAttestationHandler<OCallApi> {
 	ocall_api: Arc<OCallApi>,
-	node_metadata_repo: Arc<NodeMetadataRepository>,
 }
 
-impl<OCallApi, NodeMetadataRepository> AttestationHandler
-	for IasAttestationHandler<OCallApi, NodeMetadataRepository>
+impl<OCallApi> AttestationHandler for IasAttestationHandler<OCallApi>
 where
 	OCallApi: EnclaveAttestationOCallApi,
-	NodeMetadataRepository: AccessNodeMetadata<MetadataType = NodeMetadata>,
 {
-	fn perform_ra<ExtrinsicsFactory: CreateExtrinsics>(
-		&self,
-		url: String,
-		extrinsics_factory: Arc<ExtrinsicsFactory>,
-		skip_ra: bool,
-	) -> EnclaveResult<Vec<u8>> {
+	fn perform_ra(&self, skip_ra: bool) -> EnclaveResult<Vec<u8>> {
 		// Our certificate is unlinkable.
 		let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
@@ -139,17 +120,7 @@ where
 			self.get_mrenclave()?.encode()
 		};
 
-		info!("    [Enclave] Compose extrinsic");
-		let call_ids = self
-			.node_metadata_repo
-			.get_from_metadata(|m| m.register_enclave_call_indexes())?
-			.map_err(|e| NodeMetadataProviderError::MetadataError(e))?;
-
-		let call = OpaqueCall::from_tuple(&(call_ids, cert_der, url));
-
-		let extrinsics = extrinsics_factory.create_extrinsics(&[call], None)?;
-
-		Ok(extrinsics[0].encode())
+		Ok(cert_der)
 	}
 
 	fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]> {
@@ -232,13 +203,12 @@ where
 	}
 }
 
-impl<OCallApi, NodeMetadataRepository> IasAttestationHandler<OCallApi, NodeMetadataRepository>
+impl<OCallApi> IasAttestationHandler<OCallApi>
 where
 	OCallApi: EnclaveAttestationOCallApi,
-	NodeMetadataRepository: AccessNodeMetadata<MetadataType = NodeMetadata>,
 {
-	pub fn new(ocall_api: Arc<OCallApi>, node_metadata_repo: Arc<NodeMetadataRepository>) -> Self {
-		Self { ocall_api, node_metadata_repo }
+	pub fn new(ocall_api: Arc<OCallApi>) -> Self {
+		Self { ocall_api }
 	}
 
 	fn parse_response_attn_report(&self, resp: &[u8]) -> EnclaveResult<(String, String, String)> {

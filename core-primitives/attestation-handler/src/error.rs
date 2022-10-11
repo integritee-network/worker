@@ -34,10 +34,6 @@ pub enum Error {
 	Crypto(itp_sgx_crypto::Error),
 	#[error("Error specifying time")]
 	Time,
-	#[error("{0}")]
-	ExtrinsicsFactory(#[from] itp_extrinsics_factory::error::Error),
-	#[error("{0}")]
-	NodeMetadataProvider(#[from] itp_node_api::metadata::provider::Error),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }

@@ -53,7 +53,6 @@ use itp_enclave_api::{
 	remote_attestation::{RemoteAttestation, TlsRemoteAttestation},
 	sidechain::Sidechain,
 	teeracle_api::TeeracleApi,
-	teerex_api::TeerexApi,
 	Enclave,
 };
 use itp_node_api::{
@@ -281,7 +280,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		+ Sidechain
 		+ RemoteAttestation
 		+ TlsRemoteAttestation
-		+ TeerexApi
 		+ TeeracleApi
 		+ Clone,
 	D: BlockPruner + FetchBlocks<SignedSidechainBlock> + Sync + Send + 'static,
@@ -409,14 +407,14 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	// ------------------------------------------------------------------------
 	// Perform a remote attestation and get an unchecked extrinsic back.
 	let trusted_url = config.trusted_worker_url_external();
-	let uxt = if skip_ra {
+	if skip_ra {
 		println!(
 			"[!] skipping remote attestation. Registering enclave without attestation report."
 		);
-		enclave.mock_register_xt(&trusted_url).unwrap()
 	} else {
-		enclave.perform_ra(&trusted_url).unwrap()
+		println!("[!] creating remote attestation report and create enclave register extrinsic.");
 	};
+	let uxt = enclave.perform_ra(&trusted_url, skip_ra).unwrap();
 
 	let mut xthex = hex::encode(uxt);
 	xthex.insert_str(0, "0x");

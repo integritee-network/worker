@@ -41,8 +41,6 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # local deps
-itp-extrinsics-factory = { path = "../extrinsics-factory", default-features = false }
-itp-node-api = { path = "../node-api", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-settings = { path = "../settings" }
 itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
@@ -76,8 +74,6 @@ std = [
     "webpki",
     "yasna",
     # local
-    "itp-extrinsics-factory/std",
-    "itp-node-api/std",
     "itp-ocall-api/std",
     "itp-sgx-externalities/std",
     "itp-sgx-io/std",
@@ -105,8 +101,6 @@ sgx = [
     "sgx_tcrypto",
     "num-bigint",
     # local
-    "itp-extrinsics-factory/sgx",
-    "itp-node-api/sgx",
     "itp-sgx-externalities/sgx",
     "itp-sgx-io/sgx",
     "itp-sgx-crypto/sgx",

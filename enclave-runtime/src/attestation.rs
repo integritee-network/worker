@@ -30,16 +30,24 @@
 use crate::{
 	global_components::{
 		GLOBAL_ATTESTATION_HANDLER_COMPONENT, GLOBAL_EXTRINSICS_FACTORY_COMPONENT,
+		GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT,
 	},
-	Result as EnclaveResult,
+	Error as EnclaveError, Result as EnclaveResult,
 };
-use codec::Decode;
+use codec::{Decode, Encode};
 use itp_attestation_handler::AttestationHandler;
 use itp_component_container::ComponentGetter;
+use itp_extrinsics_factory::CreateExtrinsics;
+use itp_node_api::metadata::{
+	pallet_teerex::TeerexCallIndexes,
+	provider::{AccessNodeMetadata, Error as MetadataProviderError},
+};
 use itp_settings::worker::MR_ENCLAVE_SIZE;
+use itp_types::OpaqueCall;
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use sgx_types::*;
+use sp_runtime::OpaqueExtrinsic;
 use std::{prelude::v1::*, slice, vec::Vec};
 
 #[no_mangle]
@@ -96,81 +104,45 @@ pub unsafe extern "C" fn perform_ra(
 	w_url_size: u32,
 	unchecked_extrinsic: *mut u8,
 	unchecked_extrinsic_size: u32,
+	skip_ra: c_int,
 ) -> sgx_status_t {
 	if w_url.is_null() || unchecked_extrinsic.is_null() {
 		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
 	}
 	let mut url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
 	let url = String::decode(&mut url_slice).expect("Could not decode url slice to a valid String");
-	let extrinsics_slice =
-		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
-
-	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
-		Ok(r) => r,
-		Err(e) => {
-			error!("Component get failure: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
-	};
-
-	let extrinsics_factory = match GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get() {
-		Ok(r) => r,
-		Err(e) => {
-			error!("Component get failure: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
-	};
-
-	match attestation_handler.perform_ra(url, extrinsics_factory, false) {
-		Ok(extrinsic) => {
-			if let Err(e) = write_slice_and_whitespace_pad(extrinsics_slice, extrinsic) {
-				error!("Failed to transfer extrinsic to o-call buffer: {:?}", e);
-				return sgx_status_t::SGX_ERROR_UNEXPECTED
-			}
-			sgx_status_t::SGX_SUCCESS
-		},
-		Err(e) => e.into(),
-	}
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn mock_register_enclave_xt(
-	w_url: *const u8,
-	w_url_size: u32,
-	unchecked_extrinsic: *mut u8,
-	unchecked_extrinsic_size: u32,
-) -> sgx_status_t {
-	let mut url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
-	let url: String = Decode::decode(&mut url_slice).unwrap();
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
-	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
-		Ok(r) => r,
-		Err(e) => {
-			error!("Component get failure: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
+	let extrinsic = match perform_ra_internal(url, skip_ra == 1) {
+		Ok(xt) => xt,
+		Err(e) => return e.into(),
 	};
 
-	let extrinsics_factory = match GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get() {
-		Ok(r) => r,
-		Err(e) => {
-			error!("Component get failure: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
+	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
+		return EnclaveError::Other(Box::new(e)).into()
 	};
 
-	match attestation_handler.perform_ra(url, extrinsics_factory, true) {
-		Ok(extrinsic) => {
-			if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic) {
-				error!("Failed to transfer extrinsic to o-call buffer: {:?}", e);
-				return sgx_status_t::SGX_ERROR_UNEXPECTED
-			}
-			sgx_status_t::SGX_SUCCESS
-		},
-		Err(e) => e.into(),
-	}
+	sgx_status_t::SGX_SUCCESS
+}
+
+fn perform_ra_internal(url: String, skip_ra: bool) -> EnclaveResult<OpaqueExtrinsic> {
+	let attestation_handler = GLOBAL_ATTESTATION_HANDLER_COMPONENT.get()?;
+	let extrinsics_factory = GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get()?;
+	let node_metadata_repo = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
+
+	let cert_der = attestation_handler.perform_ra(skip_ra)?;
+
+	info!("    [Enclave] Compose register enclave call");
+	let call_ids = node_metadata_repo
+		.get_from_metadata(|m| m.register_enclave_call_indexes())?
+		.map_err(|e| MetadataProviderError::MetadataError(e))?;
+
+	let call = OpaqueCall::from_tuple(&(call_ids, cert_der, url));
+
+	let extrinsics = extrinsics_factory.create_extrinsics(&[call], None)?;
+
+	Ok(extrinsics[0].clone())
 }
 
 #[no_mangle]

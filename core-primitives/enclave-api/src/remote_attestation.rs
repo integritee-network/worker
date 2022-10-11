@@ -26,7 +26,7 @@ use sgx_types::*;
 
 /// general remote attestation methods
 pub trait RemoteAttestation {
-	fn perform_ra(&self, w_url: &str) -> EnclaveResult<Vec<u8>>;
+	fn perform_ra(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
 
 	fn dump_ra_to_disk(&self) -> EnclaveResult<()>;
 }
@@ -73,7 +73,7 @@ pub trait TlsRemoteAttestation {
 }
 
 impl RemoteAttestation for Enclave {
-	fn perform_ra(&self, w_url: &str) -> EnclaveResult<Vec<u8>> {
+	fn perform_ra(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
 		let unchecked_extrinsic_size = EXTRINSIC_MAX_SIZE;
@@ -89,6 +89,7 @@ impl RemoteAttestation for Enclave {
 				url.len() as u32,
 				unchecked_extrinsic.as_mut_ptr(),
 				unchecked_extrinsic.len() as u32,
+				skip_ra.into(),
 			)
 		};
 
