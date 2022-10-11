@@ -143,7 +143,7 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	let stf_executor = Arc::new(EnclaveStfExecutor::new(
 		ocall_api.clone(),
 		state_handler.clone(),
-		node_metadata_repository.clone(),
+		node_metadata_repository,
 	));
 	GLOBAL_STF_EXECUTOR_COMPONENT.initialize(stf_executor);
 
