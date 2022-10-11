@@ -188,8 +188,7 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	let sidechain_block_import_queue = Arc::new(EnclaveSidechainBlockImportQueue::default());
 	GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.initialize(sidechain_block_import_queue);
 
-	let attestation_handler =
-		Arc::new(IasAttestationHandler::new(ocall_api));
+	let attestation_handler = Arc::new(IasAttestationHandler::new(ocall_api));
 	GLOBAL_ATTESTATION_HANDLER_COMPONENT.initialize(attestation_handler);
 
 	Ok(())
