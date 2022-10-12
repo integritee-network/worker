@@ -173,8 +173,6 @@ impl BenchmarkCommands {
 
 				// Needs to be above the existential deposit minimum, otherwise the account will not
 				// be created and the state is not increased.
-				let transfer_amount = 1000;
-
 				let keep_alive_balance = 1000;
 
 				for i in 0..self.number_iterations {
@@ -190,7 +188,7 @@ impl BenchmarkCommands {
 						get_pair_from_str(trusted_args, account_keys.public().to_string().as_str());
 
 
-					println!("  Transfer amount: {}", transfer_amount);
+					println!("  Transfer amount: {}", keep_alive_balance);
 					println!("  From: {:?}", client.account.public());
 					println!("  To:   {:?}", new_account.public());
 
@@ -201,7 +199,7 @@ impl BenchmarkCommands {
 					let top: TrustedOperation = TrustedCall::balance_transfer(
 						client.account.public().into(),
 						new_account.public().into(),
-						transfer_amount,
+						keep_alive_balance,
 					)
 					.sign(&KeyPair::Sr25519(client.account.clone()), nonce, &mrenclave, &shard)
 					.into_trusted_operation(trusted_args.direct);
@@ -214,7 +212,11 @@ impl BenchmarkCommands {
 						&client,
 					);
 
-					client.current_balance -= transfer_amount;
+					client.current_balance -= keep_alive_balance;
+
+					let balance = get_balance(client.account.clone(), shard, &client.client_api);
+					println!("Balance: {}", balance.unwrap_or_default());
+					assert_eq!(client.current_balance, balance.unwrap());
 
 					output.push(result);
 
@@ -224,10 +226,6 @@ impl BenchmarkCommands {
 						break;
 					}
 				}
-
-				let balance = get_balance(client.account, shard, &client.client_api);
-				println!("Balance: {}", balance.unwrap_or_default());
-				assert_eq!(client.current_balance, balance.unwrap());
 
 				client.client_api.close().unwrap();
 
