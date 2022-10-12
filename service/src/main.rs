@@ -30,7 +30,7 @@ use crate::{
 	ocall_bridge::{
 		bridge_api::Bridge as OCallBridge, component_factory::OCallBridgeComponentFactory,
 	},
-	parentchain_block_syncer::{ParentchainBlockSyncer, SyncParentchainBlocks},
+	parentchain_handler::{HandleParentchain, ParentchainHandler},
 	prometheus_metrics::{start_metrics_server, EnclaveMetricsReceiver, MetricsHandler},
 	sidechain_setup::{sidechain_init_block_production, sidechain_start_untrusted_rpc_server},
 	sync_block_broadcaster::SyncBlockBroadcaster,
@@ -46,7 +46,6 @@ use enclave::{
 	api::enclave_init,
 	tls_ra::{enclave_request_state_provisioning, enclave_run_state_provisioning_server},
 };
-use itc_parentchain_light_client::light_client_init_params::LightClientInitParams;
 use itp_enclave_api::{
 	direct_request::DirectRequest,
 	enclave_base::EnclaveBase,
@@ -56,7 +55,7 @@ use itp_enclave_api::{
 	Enclave,
 };
 use itp_node_api::{
-	api_client::{AccountApi, ChainApi, PalletTeerexApi, ParentchainApi},
+	api_client::{AccountApi, PalletTeerexApi, ParentchainApi},
 	metadata::NodeMetadata,
 	node_api_factory::{CreateNodeApi, NodeApiFactory},
 };
@@ -73,7 +72,6 @@ use log::*;
 use my_node_runtime::{Event, Hash, Header};
 use sgx_types::*;
 use sp_core::crypto::{AccountId32, Ss58Codec};
-use sp_finality_grandpa::VersionedAuthorityList;
 use sp_keyring::AccountKeyring;
 use std::{
 	path::PathBuf,
@@ -95,19 +93,18 @@ mod error;
 mod globals;
 mod initialized_service;
 mod ocall_bridge;
-mod parentchain_block_syncer;
+mod parentchain_handler;
 mod prometheus_metrics;
 mod setup;
 mod sidechain_setup;
 mod sync_block_broadcaster;
 mod sync_state;
+#[cfg(feature = "teeracle")]
+mod teeracle;
 mod tests;
 mod utils;
 mod worker;
 mod worker_peers_updater;
-
-#[cfg(feature = "teeracle")]
-mod teeracle;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -286,7 +283,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	InitializationHandler: TrackInitialization + IsInitialized + Sync + Send + 'static,
 	WorkerModeProvider: ProvideWorkerMode,
 {
-	println!("IntegriTEE Worker v{}", VERSION);
+	println!("Integritee Worker v{}", VERSION);
 	info!("starting worker on shard {}", shard.encode().to_base58());
 	// ------------------------------------------------------------------------
 	// check for required files
@@ -388,7 +385,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	// ------------------------------------------------------------------------
 	// Init parentchain specific stuff. Needed for parentchain communication.
-	let last_synced_header = init_parentchain_components(&node_api, enclave.clone()).unwrap();
+	let parentchain_handler = Arc::new(ParentchainHandler::new(node_api.clone(), enclave.clone()));
+	let last_synced_header = parentchain_handler.init_parentchain_components().unwrap();
 	let nonce = node_api.get_nonce_of(&tee_accountid).unwrap();
 	info!("Enclave nonce = {:?}", nonce);
 	enclave
@@ -462,9 +460,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		println!("*** [+] Finished syncing light client, syncing parentchain...");
 
 		// Syncing all parentchain blocks, this might take a while..
-		let parentchain_block_syncer =
-			Arc::new(ParentchainBlockSyncer::new(node_api.clone(), enclave.clone()));
-		let mut last_synced_header = parentchain_block_syncer.sync_parentchain(last_synced_header);
+		let mut last_synced_header =
+			parentchain_handler.sync_parentchain(last_synced_header).unwrap();
 
 		// ------------------------------------------------------------------------
 		// Initialize the sidechain
@@ -473,10 +470,11 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 				enclave.clone(),
 				&register_enclave_xt_header,
 				we_are_primary_validateer,
-				parentchain_block_syncer,
+				parentchain_handler,
 				sidechain_storage,
 				&last_synced_header,
-			);
+			)
+			.unwrap();
 		}
 
 		// ------------------------------------------------------------------------
@@ -486,11 +484,9 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		thread::Builder::new()
 			.name("parentchain_sync_loop".to_owned())
 			.spawn(move || {
-				if let Err(e) = subscribe_to_parentchain_new_headers(
-					enclave_parentchain_sync,
-					&api4,
-					last_synced_header,
-				) {
+				if let Err(e) =
+					subscribe_to_parentchain_new_headers(parentchain_handler, last_synced_header)
+				{
 					error!("Parentchain block syncing terminated with a failure: {:?}", e);
 				}
 				println!("[!] Parentchain block syncing has terminated");
@@ -687,46 +683,18 @@ fn print_events(events: Events, _sender: Sender<String>) {
 	}
 }
 
-pub fn init_parentchain_components<E: EnclaveBase + Sidechain>(
-	api: &ParentchainApi,
-	enclave_api: Arc<E>,
-) -> Result<Header, Error> {
-	let genesis_hash = api.get_genesis_hash().unwrap();
-	let genesis_header: Header = api.get_header(Some(genesis_hash)).unwrap().unwrap();
-	info!("Got genesis Header: \n {:?} \n", genesis_header);
-	if api.is_grandpa_available()? {
-		let grandpas = api.grandpa_authorities(Some(genesis_hash)).unwrap();
-		let grandpa_proof = api.grandpa_authorities_proof(Some(genesis_hash)).unwrap();
-
-		debug!("Grandpa Authority List: \n {:?} \n ", grandpas);
-
-		let authority_list = VersionedAuthorityList::from(grandpas);
-
-		let params = LightClientInitParams::Grandpa {
-			genesis_header,
-			authorities: authority_list.into(),
-			authority_proof: grandpa_proof,
-		};
-
-		Ok(enclave_api.init_parentchain_components(params).unwrap())
-	} else {
-		let params = LightClientInitParams::Parachain { genesis_header };
-
-		Ok(enclave_api.init_parentchain_components(params).unwrap())
-	}
-}
-
 /// Subscribe to the node API finalized heads stream and trigger a parent chain sync
 /// upon receiving a new header.
 fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
-	enclave_api: Arc<E>,
-	api: &ParentchainApi,
+	parentchain_handler: Arc<ParentchainHandler<ParentchainApi, E>>,
 	mut last_synced_header: Header,
 ) -> Result<(), Error> {
 	let (sender, receiver) = channel();
-	api.subscribe_finalized_heads(sender).map_err(Error::ApiClient)?;
+	parentchain_handler
+		.parentchain_api()
+		.subscribe_finalized_heads(sender)
+		.map_err(Error::ApiClient)?;
 
-	let parentchain_block_syncer = ParentchainBlockSyncer::new(api.clone(), enclave_api);
 	loop {
 		let new_header: Header = match receiver.recv() {
 			Ok(header_str) => serde_json::from_str(&header_str).map_err(Error::Serialization),
@@ -738,7 +706,7 @@ fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 			new_header.number
 		);
 
-		last_synced_header = parentchain_block_syncer.sync_parentchain(last_synced_header);
+		last_synced_header = parentchain_handler.sync_parentchain(last_synced_header)?;
 	}
 }
 
