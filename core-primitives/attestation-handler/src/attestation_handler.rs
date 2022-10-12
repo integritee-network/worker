@@ -34,12 +34,6 @@ use crate::{cert, Error as EnclaveError, Error, Result as EnclaveResult};
 use codec::Encode;
 use core::default::Default;
 use itertools::Itertools;
-use itp_hashing::hash_from_slice;
-use itp_node_api::{
-	api_client::{ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder},
-	metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata, NodeMetadata},
-};
-use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::{
 	files::{RA_API_KEY_FILE, RA_DUMP_CERT_DER_FILE, RA_SPID_FILE},
@@ -48,6 +42,7 @@ use itp_settings::{
 use itp_sgx_crypto::Ed25519Seal;
 use itp_sgx_io as io;
 use itp_sgx_io::StaticSealedIO;
+
 use log::*;
 use sgx_rand::{os, Rng};
 use sgx_tcrypto::{rsgx_sha256_slice, SgxEccHandle};
@@ -56,7 +51,7 @@ use sgx_types::{
 	c_int, sgx_epid_group_id_t, sgx_quote_nonce_t, sgx_quote_sign_type_t, sgx_report_data_t,
 	sgx_spid_t, sgx_status_t, sgx_target_info_t, SgxResult,
 };
-use sp_core::{blake2_256, Pair};
+use sp_core::Pair;
 use std::{
 	borrow::ToOwned,
 	format,
@@ -67,7 +62,6 @@ use std::{
 	sync::Arc,
 	vec::Vec,
 };
-use substrate_api_client::{compose_extrinsic_offline, ExtrinsicParams};
 
 pub const DEV_HOSTNAME: &str = "api.trustedservices.intel.com";
 
@@ -83,15 +77,10 @@ pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
 
 /// Trait to provide an abstraction to the attestation logic
 pub trait AttestationHandler {
-	/// Perform the remote attestation (see create_ra_report_and_signature) and compose an
-	/// extrinsic that registers the enclave on the blockchain.
-	/// Returns the extrinsic that can be sent to the blockchain
-	fn perform_ra(
-		&self,
-		genesis_hash_slice: &[u8],
-		nonce: u32,
-		url_slice: &[u8],
-	) -> EnclaveResult<Vec<u8>>;
+	/// Generates an encoded remote attestation certificate.
+	/// If skip_ra is set, it will not perform a remote attestation via IAS
+	/// but instead generate a mock certificate.
+	fn perform_ra(&self, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
 
 	/// Get the measurement register value of the enclave
 	fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]>;
@@ -108,94 +97,30 @@ pub trait AttestationHandler {
 	) -> EnclaveResult<(Vec<u8>, Vec<u8>)>;
 }
 
-pub struct IasAttestationHandler<OCallApi, NodeMetadataRepository> {
+pub struct IasAttestationHandler<OCallApi> {
 	ocall_api: Arc<OCallApi>,
-	node_metadata_repo: Arc<NodeMetadataRepository>,
 }
 
-impl<OCallApi, NodeMetadataRepository> AttestationHandler
-	for IasAttestationHandler<OCallApi, NodeMetadataRepository>
+impl<OCallApi> AttestationHandler for IasAttestationHandler<OCallApi>
 where
 	OCallApi: EnclaveAttestationOCallApi,
-	NodeMetadataRepository: AccessNodeMetadata<MetadataType = NodeMetadata>,
 {
-	fn perform_ra(
-		&self,
-		genesis_hash_slice: &[u8],
-		nonce: u32,
-		url_slice: &[u8],
-	) -> EnclaveResult<Vec<u8>> {
-		// our certificate is unlinkable
+	fn perform_ra(&self, skip_ra: bool) -> EnclaveResult<Vec<u8>> {
+		// Our certificate is unlinkable.
 		let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
-		let (_key_der, cert_der) = match self.create_ra_report_and_signature(sign_type, false) {
-			Ok(r) => r,
-			Err(e) => return Err(e),
+		// FIXME: should call `create_ra_report_and_signature` in skip_ra mode as well:
+		// https://github.com/integritee-network/worker/issues/321.
+		let cert_der = if !skip_ra {
+			match self.create_ra_report_and_signature(sign_type, skip_ra) {
+				Ok((_key_der, cert_der)) => cert_der,
+				Err(e) => return Err(e),
+			}
+		} else {
+			self.get_mrenclave()?.encode()
 		};
 
-		info!("    [Enclave] Compose extrinsic");
-		let signer = match Ed25519Seal::unseal_from_static_file() {
-			Ok(pair) => pair,
-			Err(e) => return Err(EnclaveError::Crypto(e)),
-		};
-		info!("[Enclave] Restored ECC pubkey: {:?}", signer.public());
-
-		debug!("decoded nonce: {}", nonce);
-		let genesis_hash = hash_from_slice(genesis_hash_slice);
-		debug!("decoded genesis_hash: {:?}", genesis_hash_slice);
-		debug!("worker url: {}", str::from_utf8(url_slice).unwrap());
-
-		let (register_enclave_call, runtime_spec_version, runtime_transaction_version) =
-			match self.node_metadata_repo.get_from_metadata(|m| {
-				(
-					m.register_enclave_call_indexes(),
-					m.get_runtime_version(),
-					m.get_runtime_transaction_version(),
-				)
-			}) {
-				Ok(r) => r,
-				Err(e) => {
-					error!("Failed to get node metadata: {:?}", e);
-					return Err(EnclaveError::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))
-				},
-			};
-
-		let call = match register_enclave_call {
-			Ok(c) => c,
-			Err(e) => {
-				error!("Failed to get the indexes for the register_enclave call from the metadata: {:?}", e);
-				return Err(EnclaveError::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))
-			},
-		};
-
-		let nonce_cache = GLOBAL_NONCE_CACHE.clone();
-		let mut nonce_lock = nonce_cache.load_for_mutation().expect("Nonce lock poisoning");
-		let nonce_value = nonce_lock.0;
-
-		let extrinsic_params = ParentchainExtrinsicParams::new(
-			runtime_spec_version,
-			runtime_transaction_version,
-			nonce,
-			genesis_hash,
-			ParentchainExtrinsicParamsBuilder::default(),
-		);
-		*nonce_lock = Nonce(nonce_value + 1);
-		std::mem::drop(nonce_lock);
-
-		let xt = compose_extrinsic_offline!(
-			signer,
-			(call, cert_der.to_vec(), url_slice.to_vec()),
-			extrinsic_params
-		);
-
-		let xt_encoded = xt.encode();
-		let xt_hash = blake2_256(&xt_encoded);
-		debug!(
-			"    [Enclave] Encoded extrinsic ( len = {} B), hash {:?}",
-			xt_encoded.len(),
-			xt_hash
-		);
-		Ok(xt_encoded)
+		Ok(cert_der)
 	}
 
 	fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]> {
@@ -278,13 +203,12 @@ where
 	}
 }
 
-impl<OCallApi, NodeMetadataRepository> IasAttestationHandler<OCallApi, NodeMetadataRepository>
+impl<OCallApi> IasAttestationHandler<OCallApi>
 where
 	OCallApi: EnclaveAttestationOCallApi,
-	NodeMetadataRepository: AccessNodeMetadata<MetadataType = NodeMetadata>,
 {
-	pub fn new(ocall_api: Arc<OCallApi>, node_metadata_repo: Arc<NodeMetadataRepository>) -> Self {
-		Self { ocall_api, node_metadata_repo }
+	pub fn new(ocall_api: Arc<OCallApi>) -> Self {
+		Self { ocall_api }
 	}
 
 	fn parse_response_attn_report(&self, resp: &[u8]) -> EnclaveResult<(String, String, String)> {

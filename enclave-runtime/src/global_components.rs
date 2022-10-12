@@ -126,8 +126,7 @@ pub type EnclaveTriggeredParentchainBlockImportDispatcher =
 	TriggeredDispatcher<EnclaveParentchainBlockImporter, EnclaveParentchainBlockImportQueue>;
 pub type EnclaveImmediateParentchainBlockImportDispatcher =
 	ImmediateDispatcher<EnclaveParentchainBlockImporter>;
-pub type EnclaveAttestationHandler =
-	IasAttestationHandler<EnclaveOCallApi, EnclaveNodeMetadataRepository>;
+pub type EnclaveAttestationHandler = IasAttestationHandler<EnclaveOCallApi>;
 
 pub type EnclaveRpcConnectionRegistry = ConnectionRegistry<Hash, ConnectionToken>;
 pub type EnclaveRpcWsHandler =

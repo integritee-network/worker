@@ -41,7 +41,7 @@ impl EnclaveBase for EnclaveBaseMock {
 		unreachable!()
 	}
 
-	fn init_light_client<SpHeader: Header>(
+	fn init_parentchain_components<SpHeader: Header>(
 		&self,
 		params: LightClientInitParams<SpHeader>,
 	) -> EnclaveResult<SpHeader> {

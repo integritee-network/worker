@@ -36,7 +36,6 @@ use crate::{
 		GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
 		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
 	},
-	ocall::OcallApi,
 	rpc::worker_api_direct::sidechain_io_handler,
 	utils::{utf8_str_from_raw, DecodeRaw},
 };
@@ -49,13 +48,8 @@ use itc_parentchain::{
 };
 use itp_block_import_queue::PushToBlockQueue;
 use itp_component_container::ComponentGetter;
-use itp_hashing::hash_from_slice;
-use itp_node_api::{
-	api_client::{ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder},
-	metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata, NodeMetadata},
-};
+use itp_node_api::metadata::NodeMetadata;
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
-use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
 use itp_sgx_crypto::{ed25519, Ed25519Seal, Rsa3072Seal};
 use itp_sgx_io::StaticSealedIO;
@@ -65,7 +59,6 @@ use log::*;
 use sgx_types::sgx_status_t;
 use sp_core::crypto::Pair;
 use std::{boxed::Box, slice, vec::Vec};
-use substrate_api_client::{compose_extrinsic_offline, ExtrinsicParams};
 
 mod attestation;
 mod empty_impls;
@@ -214,86 +207,6 @@ pub unsafe extern "C" fn set_node_metadata(
 	sgx_status_t::SGX_SUCCESS
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn mock_register_enclave_xt(
-	genesis_hash: *const u8,
-	genesis_hash_size: u32,
-	_nonce: *const u32,
-	w_url: *const u8,
-	w_url_size: u32,
-	unchecked_extrinsic: *mut u8,
-	unchecked_extrinsic_size: u32,
-) -> sgx_status_t {
-	let genesis_hash_slice = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
-	let genesis_hash = hash_from_slice(genesis_hash_slice);
-
-	let mut url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
-	let url: String = Decode::decode(&mut url_slice).unwrap();
-	let extrinsic_slice =
-		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
-
-	let mre = OcallApi
-		.get_mrenclave_of_self()
-		.map_or_else(|_| Vec::<u8>::new(), |m| m.m.encode());
-
-	let signer = Ed25519Seal::unseal_from_static_file().unwrap();
-
-	let node_metadata_repository = match GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get() {
-		Ok(r) => r,
-		Err(e) => {
-			error!("Component get failure: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
-	};
-
-	let (register_enclave_call, runtime_spec_version, runtime_transaction_version) =
-		match node_metadata_repository.get_from_metadata(|m| {
-			(
-				m.register_enclave_call_indexes(),
-				m.get_runtime_version(),
-				m.get_runtime_transaction_version(),
-			)
-		}) {
-			Ok(r) => r,
-			Err(e) => {
-				error!("Failed to get node metadata: {:?}", e);
-				return sgx_status_t::SGX_ERROR_UNEXPECTED
-			},
-		};
-
-	let call_ids =
-		match register_enclave_call {
-			Ok(c) => c,
-			Err(e) => {
-				error!("Failed to get the indexes for the register_enclave cal from the metadata: {:?}", e);
-				return sgx_status_t::SGX_ERROR_UNEXPECTED
-			},
-		};
-
-	let call = (call_ids, mre, url);
-
-	let nonce_cache = GLOBAL_NONCE_CACHE.clone();
-	let mut nonce_lock = nonce_cache.load_for_mutation().expect("Nonce lock poisoning");
-	let nonce_value = nonce_lock.0;
-
-	let extrinsic_params = ParentchainExtrinsicParams::new(
-		runtime_spec_version,
-		runtime_transaction_version,
-		nonce_value,
-		genesis_hash,
-		ParentchainExtrinsicParamsBuilder::default(),
-	);
-	let xt = compose_extrinsic_offline!(signer, call, extrinsic_params).encode();
-
-	*nonce_lock = Nonce(nonce_value + 1);
-	std::mem::drop(nonce_lock);
-
-	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, xt) {
-		return Error::Other(Box::new(e)).into()
-	};
-	sgx_status_t::SGX_SUCCESS
-}
-
 /// This is reduced to the sidechain block import RPC interface (i.e. worker-worker communication).
 /// The entire rest of the RPC server is run inside the enclave and does not use this e-call function anymore.
 #[no_mangle]
@@ -384,7 +297,7 @@ pub unsafe extern "C" fn init_direct_invocation_server(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn init_light_client(
+pub unsafe extern "C" fn init_parentchain_components(
 	params: *const u8,
 	params_size: usize,
 	latest_header: *mut u8,
@@ -400,10 +313,11 @@ pub unsafe extern "C" fn init_light_client(
 		Err(e) => return Error::Codec(e).into(),
 	};
 
-	let latest_header = match initialization::init_light_client::<WorkerModeProvider>(params) {
-		Ok(h) => h,
-		Err(e) => return e.into(),
-	};
+	let latest_header =
+		match initialization::init_parentchain_components::<WorkerModeProvider>(params) {
+			Ok(h) => h,
+			Err(e) => return e.into(),
+		};
 
 	if let Err(e) = write_slice_and_whitespace_pad(latest_header_slice, latest_header.encode()) {
 		return Error::Other(Box::new(e)).into()
