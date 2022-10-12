@@ -150,7 +150,7 @@ impl BenchmarkCommands {
 
 			// For the last account we wait for confirmation in order to ensure all accounts were setup correctly
 			let wait_for_confirmation = i == self.number_clients - 1;
-			let account_funding_request = get_json_request(trusted_args, &top, shielding_pubkey);
+			let account_funding_request = get_json_request(shard, &top, shielding_pubkey);
 
 			let client =
 				BenchmarkClient::new(account, initial_balance, account_funding_request, cli);
@@ -171,6 +171,12 @@ impl BenchmarkCommands {
 			.map(move |mut client| {
 				let mut output: Vec<BenchmarkTransaction> = Vec::new();
 
+				// Needs to be above the existential deposit minimum, otherwise the account will not
+				// be created and the state is not increased.
+				let transfer_amount = 1000;
+
+				let keep_alive_balance = 1000;
+
 				for i in 0..self.number_iterations {
 					println!("Iteration: {}", i);
 
@@ -178,42 +184,45 @@ impl BenchmarkCommands {
 						random_wait(random_wait_before_transaction_ms);
 					}
 
-					let nonce = 0;
-
 					// Create new account.
 					let account_keys: sr25519::AppPair = store.generate().unwrap();
 					let new_account =
 						get_pair_from_str(trusted_args, account_keys.public().to_string().as_str());
 
-					println!("  Transfer amount: {}", client.current_balance);
+
+					println!("  Transfer amount: {}", transfer_amount);
 					println!("  From: {:?}", client.account.public());
 					println!("  To:   {:?}", new_account.public());
 
-					// The account from the last iteration keeps this much money.
-					// If this is 0, then all money is transferred and the state doesn't increase.
-					let keep_alive_balance = 1000;
+					// Get nonce of account.
+					let nonce = get_nonce(client.account.clone(), shard, &client.client_api);
 
-					// Transfer money from previous account to new account.
+					// Transfer money from client account to new account.
 					let top: TrustedOperation = TrustedCall::balance_transfer(
 						client.account.public().into(),
 						new_account.public().into(),
-						client.current_balance - keep_alive_balance,
+						transfer_amount,
 					)
 					.sign(&KeyPair::Sr25519(client.account.clone()), nonce, &mrenclave, &shard)
 					.into_trusted_operation(trusted_args.direct);
 
 					let last_iteration = i == self.number_iterations - 1;
-					let jsonrpc_call = get_json_request(trusted_args, &top, shielding_pubkey);
+					let jsonrpc_call = get_json_request(shard, &top, shielding_pubkey);
 					client.client_api.send(&jsonrpc_call).unwrap();
 					let result = wait_for_top_confirmation(
 						self.wait_for_confirmation || last_iteration,
 						&client,
 					);
 
-					client.current_balance -= keep_alive_balance;
-					client.account = new_account;
+					client.current_balance -= transfer_amount;
 
 					output.push(result);
+
+					// FIXME: We probably should re-fund the account in this case.
+					if client.current_balance <= keep_alive_balance {
+						error!("Account {:?} does not have enough balance anymore. Finishing benchmark early", client.account.public());
+						break;
+					}
 				}
 
 				let balance = get_balance(client.account, shard, &client.client_api);
@@ -243,14 +252,40 @@ fn get_balance(
 	direct_client: &DirectClient,
 ) -> Option<u128> {
 	let getter = Getter::trusted(
-		TrustedGetter::free_balance(account.public().into()).sign(&KeyPair::Sr25519(account)),
+		TrustedGetter::free_balance(account.public().into())
+			.sign(&KeyPair::Sr25519(account.clone())),
 	);
 
 	let getter_start_timer = Instant::now();
 	let getter_result = get_state(direct_client, shard, &getter);
-	info!("Getter execution took {} ms", getter_start_timer.elapsed().as_millis());
+	let getter_execution_time = getter_start_timer.elapsed().as_millis();
 
-	decode_balance(getter_result)
+	let balance = decode_balance(getter_result);
+	info!("Balance getter execution took {} ms", getter_execution_time,);
+	debug!("Retrieved {:?} Balance for {:?}", balance.unwrap_or_default(), account.public());
+	balance
+}
+
+fn get_nonce(
+	account: sr25519::Pair,
+	shard: ShardIdentifier,
+	direct_client: &DirectClient,
+) -> Index {
+	let getter = Getter::trusted(
+		TrustedGetter::nonce(account.public().into()).sign(&KeyPair::Sr25519(account.clone())),
+	);
+
+	let getter_start_timer = Instant::now();
+	let getter_result = get_state(direct_client, shard, &getter);
+	let getter_execution_time = getter_start_timer.elapsed().as_millis();
+
+	let nonce = match getter_result {
+		Some(encoded_nonce) => Index::decode(&mut encoded_nonce.as_slice()).unwrap(),
+		None => Default::default(),
+	};
+	info!("Nonce getter execution took {} ms", getter_execution_time,);
+	debug!("Retrieved {:?} nonce for {:?}", nonce, account.public());
+	nonce
 }
 
 fn print_benchmark_statistic(outputs: Vec<Vec<BenchmarkTransaction>>, wait_for_confirmation: bool) {
