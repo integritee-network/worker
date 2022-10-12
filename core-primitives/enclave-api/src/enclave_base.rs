@@ -42,7 +42,7 @@ pub trait EnclaveBase: Send + Sync + 'static {
 	fn init_direct_invocation_server(&self, rpc_server_addr: String) -> EnclaveResult<()>;
 
 	/// Initialize the light client (needs to be called once at application startup).
-	fn init_light_client<SpHeader: Header>(
+	fn init_parentchain_components<SpHeader: Header>(
 		&self,
 		params: LightClientInitParams<SpHeader>,
 	) -> EnclaveResult<SpHeader>;
@@ -121,11 +121,11 @@ impl EnclaveBase for Enclave {
 		Ok(())
 	}
 
-	fn init_light_client<SpHeader: Header>(
+	fn init_parentchain_components<SpHeader: Header>(
 		&self,
 		params: LightClientInitParams<SpHeader>,
 	) -> EnclaveResult<SpHeader> {
-		let latest_header_encoded = init_light_client_ffi(self.eid, params.encode())?;
+		let latest_header_encoded = init_parentchain_components_ffi(self.eid, params.encode())?;
 
 		let latest: SpHeader =
 			Decode::decode(&mut latest_header_encoded.as_slice()).expect("Invalid header");
@@ -244,14 +244,17 @@ impl EnclaveBase for Enclave {
 	}
 }
 
-fn init_light_client_ffi(enclave_id: sgx_enclave_id_t, params: Vec<u8>) -> EnclaveResult<Vec<u8>> {
+fn init_parentchain_components_ffi(
+	enclave_id: sgx_enclave_id_t,
+	params: Vec<u8>,
+) -> EnclaveResult<Vec<u8>> {
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 
 	let latest_header_size = HEADER_MAX_SIZE;
 	let mut latest_header = vec![0u8; latest_header_size as usize];
 
 	let result = unsafe {
-		ffi::init_light_client(
+		ffi::init_parentchain_components(
 			enclave_id,
 			&mut retval,
 			params.as_ptr(),

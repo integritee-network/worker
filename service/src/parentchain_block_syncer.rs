@@ -17,7 +17,7 @@
 */
 
 use crate::error::Error;
-use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain, teerex_api::TeerexApi};
+use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
 use itp_node_api::api_client::ChainApi;
 use itp_types::SignedBlock;
 use log::*;
@@ -92,7 +92,7 @@ where
 
 /// Ensure we're synced up until the parentchain block where we have registered ourselves.
 pub(crate) fn import_parentchain_blocks_until_self_registry<
-	E: EnclaveBase + TeerexApi + Sidechain,
+	E: EnclaveBase + Sidechain,
 	ParentchainSyncer: SyncParentchainBlocks,
 >(
 	enclave_api: Arc<E>,

@@ -53,7 +53,6 @@ use itp_enclave_api::{
 	remote_attestation::{RemoteAttestation, TlsRemoteAttestation},
 	sidechain::Sidechain,
 	teeracle_api::TeeracleApi,
-	teerex_api::TeerexApi,
 	Enclave,
 };
 use itp_node_api::{
@@ -281,7 +280,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		+ Sidechain
 		+ RemoteAttestation
 		+ TlsRemoteAttestation
-		+ TeerexApi
 		+ TeeracleApi
 		+ Clone,
 	D: BlockPruner + FetchBlocks<SignedSidechainBlock> + Sync + Send + 'static,
@@ -323,7 +321,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	// ------------------------------------------------------------------------
 	// Get the public key of our TEE.
-	let genesis_hash = node_api.genesis_hash.as_bytes().to_vec();
 	let tee_accountid = enclave_account(enclave.as_ref());
 	println!("Enclave account {:} ", &tee_accountid.to_ss58check());
 
@@ -390,7 +387,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	}
 
 	// ------------------------------------------------------------------------
-	// Perform a remote attestation and get an unchecked extrinsic back.
+	// Init parentchain specific stuff. Needed for parentchain communication.
+	let last_synced_header = init_parentchain_components(&node_api, enclave.clone()).unwrap();
 	let nonce = node_api.get_nonce_of(&tee_accountid).unwrap();
 	info!("Enclave nonce = {:?}", nonce);
 	enclave
@@ -404,19 +402,19 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		.set_node_metadata(
 			NodeMetadata::new(metadata, runtime_spec_version, runtime_transaction_version).encode(),
 		)
-		.expect("Could not set the node meta data in the enclave");
+		.expect("Could not set the node metadata in the enclave");
 
+	// ------------------------------------------------------------------------
+	// Perform a remote attestation and get an unchecked extrinsic back.
 	let trusted_url = config.trusted_worker_url_external();
-	let uxt = if skip_ra {
+	if skip_ra {
 		println!(
 			"[!] skipping remote attestation. Registering enclave without attestation report."
 		);
-		enclave.mock_register_xt(node_api.genesis_hash, nonce, &trusted_url).unwrap()
 	} else {
-		enclave
-			.perform_ra(genesis_hash, nonce, trusted_url.as_bytes().to_vec())
-			.unwrap()
+		println!("[!] creating remote attestation report and create enclave register extrinsic.");
 	};
+	let uxt = enclave.perform_ra(&trusted_url, skip_ra).unwrap();
 
 	let mut xthex = hex::encode(uxt);
 	xthex.insert_str(0, "0x");
@@ -447,8 +445,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	}
 
 	initialization_handler.registered_on_parentchain();
-
-	let last_synced_header = init_light_client(&node_api, enclave.clone()).unwrap();
 
 	// ------------------------------------------------------------------------
 	// initialize teeracle interval
@@ -691,7 +687,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
 	}
 }
 
-pub fn init_light_client<E: EnclaveBase + Sidechain>(
+pub fn init_parentchain_components<E: EnclaveBase + Sidechain>(
 	api: &ParentchainApi,
 	enclave_api: Arc<E>,
 ) -> Result<Header, Error> {
@@ -712,11 +708,11 @@ pub fn init_light_client<E: EnclaveBase + Sidechain>(
 			authority_proof: grandpa_proof,
 		};
 
-		Ok(enclave_api.init_light_client(params).unwrap())
+		Ok(enclave_api.init_parentchain_components(params).unwrap())
 	} else {
 		let params = LightClientInitParams::Parachain { genesis_header };
 
-		Ok(enclave_api.init_light_client(params).unwrap())
+		Ok(enclave_api.init_parentchain_components(params).unwrap())
 	}
 }
 

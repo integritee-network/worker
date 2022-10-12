@@ -143,7 +143,7 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	let stf_executor = Arc::new(EnclaveStfExecutor::new(
 		ocall_api.clone(),
 		state_handler.clone(),
-		node_metadata_repository.clone(),
+		node_metadata_repository,
 	));
 	GLOBAL_STF_EXECUTOR_COMPONENT.initialize(stf_executor);
 
@@ -188,8 +188,7 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	let sidechain_block_import_queue = Arc::new(EnclaveSidechainBlockImportQueue::default());
 	GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.initialize(sidechain_block_import_queue);
 
-	let attestation_handler =
-		Arc::new(IasAttestationHandler::new(ocall_api, node_metadata_repository));
+	let attestation_handler = Arc::new(IasAttestationHandler::new(ocall_api));
 	GLOBAL_ATTESTATION_HANDLER_COMPONENT.initialize(attestation_handler);
 
 	Ok(())
@@ -262,7 +261,7 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 	Ok(())
 }
 
-pub(crate) fn init_light_client<WorkerModeProvider: ProvideWorkerMode>(
+pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>(
 	params: LightClientInitParams<Header>,
 ) -> EnclaveResult<Header> {
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
