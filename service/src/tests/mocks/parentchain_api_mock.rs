@@ -53,6 +53,14 @@ impl ChainApi for ParentchainApiMock {
 		todo!()
 	}
 
+	fn get_genesis_hash(&self) -> ApiResult<H256> {
+		todo!()
+	}
+
+	fn get_header(&self, header_hash: Option<H256>) -> ApiResult<Option<Header>> {
+		todo!()
+	}
+
 	fn get_blocks(&self, from: u32, to: u32) -> ApiResult<Vec<SignedBlock>> {
 		let num_elements = to.checked_sub(from).map(|n| n + 1).unwrap_or(0);
 		let blocks = self
