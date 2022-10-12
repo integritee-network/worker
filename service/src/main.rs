@@ -470,7 +470,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 				enclave.clone(),
 				&register_enclave_xt_header,
 				we_are_primary_validateer,
-				parentchain_handler,
+				parentchain_handler.clone(),
 				sidechain_storage,
 				&last_synced_header,
 			)
@@ -479,8 +479,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 		// ------------------------------------------------------------------------
 		// start parentchain syncing loop (subscribe to header updates)
-		let api4 = node_api.clone();
-		let enclave_parentchain_sync = enclave;
 		thread::Builder::new()
 			.name("parentchain_sync_loop".to_owned())
 			.spawn(move || {
