@@ -66,10 +66,6 @@ where
 	pub fn parentchain_api(&self) -> &ParentchainApi {
 		&self.parentchain_api
 	}
-
-	pub fn enclave_api(&self) -> &EnclaveApi {
-		&self.enclave_api
-	}
 }
 
 impl<ParentchainApi, EnclaveApi> HandleParentchain
