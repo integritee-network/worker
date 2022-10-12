@@ -22,6 +22,7 @@ use itc_parentchain_test::{
 use itp_node_api::api_client::{ApiResult, ChainApi, StorageProof};
 use itp_types::{SignedBlock, H256};
 use sp_finality_grandpa::AuthorityList;
+use itp_types::Header;
 
 pub struct ParentchainApiMock {
 	parentchain: Vec<SignedBlock>,
