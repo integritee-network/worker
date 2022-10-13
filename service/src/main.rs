@@ -688,6 +688,8 @@ fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 	mut last_synced_header: Header,
 ) -> Result<(), Error> {
 	let (sender, receiver) = channel();
+	//TODO: this should be implemented by parentchain_handler directly, and not via
+	// exposed parentchain_api. Blocked by https://github.com/scs/substrate-api-client/issues/267.
 	parentchain_handler
 		.parentchain_api()
 		.subscribe_finalized_heads(sender)
