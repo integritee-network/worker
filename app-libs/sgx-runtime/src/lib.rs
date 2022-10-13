@@ -40,10 +40,6 @@ pub use evm::{
 
 use core::convert::{TryFrom, TryInto};
 use frame_support::weights::ConstantMultiplier;
-pub use itp_sgx_runtime_primitives::{
-	constants::SLOT_DURATION,
-	types::{AccountId, Address, Balance, BlockNumber, Hash, Header, Index, Signature},
-};
 use pallet_transaction_payment::CurrencyAdapter;
 use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
@@ -53,6 +49,12 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 use sp_version::RuntimeVersion;
+
+// Re-exports from itp-sgx-runtime-primitives.
+pub use itp_sgx_runtime_primitives::{
+	constants::SLOT_DURATION,
+	types::{AccountId, Address, Balance, BlockNumber, Hash, Header, Index, Signature},
+};
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
