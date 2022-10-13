@@ -165,7 +165,7 @@ fn send_request(
 						// The block number is correct, but the block hash does not fit.
 						if block_number == ret.block_number && block_hash != ret.block_hash {
 							error!(
-								"Block hash for event does not match expected hash. Expected: {:?}, returned: {:?}", 
+								"Block hash for event does not match expected hash. Expected: {:?}, returned: {:?}",
 								block_hash, ret.block_hash);
 							return None
 						}
@@ -203,7 +203,8 @@ fn send_direct_request(
 	operation_call: &TrustedOperation,
 ) -> Option<Vec<u8>> {
 	let encryption_key = get_shielding_key(cli).unwrap();
-	let jsonrpc_call: String = get_json_request(trusted_args, operation_call, encryption_key);
+	let shard = read_shard(trusted_args).unwrap();
+	let jsonrpc_call: String = get_json_request(shard, operation_call, encryption_key);
 
 	debug!("get direct api");
 	let direct_api = get_worker_api_direct(cli);
@@ -219,7 +220,7 @@ fn send_direct_request(
 				debug!("received response");
 				let response: RpcResponse = serde_json::from_str(&response).unwrap();
 				if let Ok(return_value) = RpcReturnValue::from_hex(&response.result) {
-					debug!("successfully decoded rpc response");
+					debug!("successfully decoded rpc response: {:?}", return_value);
 					match return_value.status {
 						DirectRequestStatus::Error => {
 							debug!("request status is error");
@@ -261,12 +262,11 @@ fn send_direct_request(
 }
 
 pub(crate) fn get_json_request(
-	trusted_args: &TrustedArgs,
+	shard: ShardIdentifier,
 	operation_call: &TrustedOperation,
 	shielding_pubkey: sgx_crypto_helper::rsa3072::Rsa3072PubKey,
 ) -> String {
 	let operation_call_encrypted = shielding_pubkey.encrypt(&operation_call.encode()).unwrap();
-	let shard = read_shard(trusted_args).unwrap();
 
 	// compose jsonrpc call
 	let request = Request { shard, cyphertext: operation_call_encrypted };
@@ -289,7 +289,7 @@ pub(crate) fn wait_until(
 				let parse_result: Result<RpcResponse, _> = serde_json::from_str(&response);
 				if let Ok(response) = parse_result {
 					if let Ok(return_value) = RpcReturnValue::from_hex(&response.result) {
-						debug!("successfully decoded rpc response");
+						debug!("successfully decoded rpc response: {:?}", return_value);
 						match return_value.status {
 							DirectRequestStatus::Error => {
 								debug!("request status is error");
@@ -305,8 +305,11 @@ pub(crate) fn wait_until(
 								if let Ok(value) = Hash::decode(&mut return_value.value.as_slice())
 								{
 									println!("Trusted call {:?} is {:?}", value, status);
-									if until(status) {
+									if until(status.clone()) {
 										return Some((value, Instant::now()))
+									} else if status == TrustedOperationStatus::Invalid {
+										error!("Invalid request");
+										return None
 									}
 								}
 							},
