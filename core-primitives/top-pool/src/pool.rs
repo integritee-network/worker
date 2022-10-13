@@ -529,8 +529,6 @@ pub mod tests {
 	pub type AccountId = <AccountSignature as Verify>::Signer;
 	/// The hashing algorithm used.
 	pub type Hashing = BlakeTwo256;
-	/// The block number type used in this runtime.
-	pub type BlockNumber = u64;
 	/// The item of a block digest.
 	pub type DigestItem = sp_runtime::generic::DigestItem;
 	/// The digest of a block.

@@ -20,13 +20,7 @@ use itp_types::H256;
 use std::marker::PhantomData;
 
 pub mod types {
-	pub use itp_types::{AccountData, AccountInfo, Header as ParentchainHeader};
-
-	// FIXME after fixing sgx-runtime issue #37
-	#[cfg(all(not(feature = "sgx"), feature = "std"))]
-	pub type BlockNumber = u32;
-	#[cfg(all(not(feature = "std"), feature = "sgx"))]
-	pub type BlockNumber = ita_sgx_runtime::BlockNumber;
+	pub use itp_types::{AccountData, AccountInfo, BlockNumber, Header as ParentchainHeader};
 
 	pub type State = itp_sgx_externalities::SgxExternalities;
 	pub type StateType = itp_sgx_externalities::SgxExternalitiesType;
