@@ -11,8 +11,6 @@ sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-s
 
 # local dependencies
 ita-stf = { path = "../../app-libs/stf", default-features = false }
-itc-direct-rpc-server = { path = "../../core/direct-rpc-server", default-features = false }
-itc-tls-websocket-server = { path = "../../core/tls-websocket-server", default-features = false }
 itp-enclave-metrics = { path = "../enclave-metrics", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
@@ -50,8 +48,6 @@ default = ["std"]
 std = [
     "ita-stf/std",
     "itp-sgx-crypto/std",
-    "itc-direct-rpc-server/std",
-    "itc-tls-websocket-server/std",
     "itp-enclave-metrics/std",
     "itp-ocall-api/std",
     "itp-stf-state-handler/std",
@@ -66,8 +62,6 @@ sgx = [
     "sgx_tstd",
     "jsonrpc-core_sgx",
     "ita-stf/sgx",
-    "itc-direct-rpc-server/sgx",
-    "itc-tls-websocket-server/sgx",
     "itp-enclave-metrics/sgx",
     "itp-sgx-crypto/sgx",
     "itp-stf-state-handler/sgx",
