@@ -30,7 +30,7 @@ use hdrhistogram::Histogram;
 use ita_stf::{Getter, Index, KeyPair, TrustedCall, TrustedGetter, TrustedOperation};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
 use itp_types::{
-	ShardIdentifier, TrustedOperationStatus,
+	Balance, ShardIdentifier, TrustedOperationStatus,
 	TrustedOperationStatus::{InSidechainBlock, Submitted},
 };
 use log::*;
@@ -47,6 +47,10 @@ use std::{
 	vec::Vec,
 };
 use substrate_client_keystore::{KeystoreExt, LocalKeystore};
+
+// Needs to be above the existential deposit minimum, otherwise an account will not
+// be created and the state is not increased.
+const EXISTENTIAL_DEPOSIT: Balance = 1000;
 
 #[derive(Parser)]
 pub struct BenchmarkCommands {
@@ -171,10 +175,6 @@ impl BenchmarkCommands {
 			.map(move |mut client| {
 				let mut output: Vec<BenchmarkTransaction> = Vec::new();
 
-				// Needs to be above the existential deposit minimum, otherwise the account will not
-				// be created and the state is not increased.
-				let keep_alive_balance = 1000;
-
 				for i in 0..self.number_iterations {
 					println!("Iteration: {}", i);
 
@@ -188,7 +188,7 @@ impl BenchmarkCommands {
 						get_pair_from_str(trusted_args, account_keys.public().to_string().as_str());
 
 
-					println!("  Transfer amount: {}", keep_alive_balance);
+					println!("  Transfer amount: {}", EXISTENTIAL_DEPOSIT);
 					println!("  From: {:?}", client.account.public());
 					println!("  To:   {:?}", new_account.public());
 
@@ -199,7 +199,7 @@ impl BenchmarkCommands {
 					let top: TrustedOperation = TrustedCall::balance_transfer(
 						client.account.public().into(),
 						new_account.public().into(),
-						keep_alive_balance,
+						EXISTENTIAL_DEPOSIT,
 					)
 					.sign(&KeyPair::Sr25519(client.account.clone()), nonce, &mrenclave, &shard)
 					.into_trusted_operation(trusted_args.direct);
@@ -212,7 +212,7 @@ impl BenchmarkCommands {
 						&client,
 					);
 
-					client.current_balance -= keep_alive_balance;
+					client.current_balance -= EXISTENTIAL_DEPOSIT;
 
 					let balance = get_balance(client.account.clone(), shard, &client.client_api);
 					println!("Balance: {}", balance.unwrap_or_default());
@@ -221,7 +221,7 @@ impl BenchmarkCommands {
 					output.push(result);
 
 					// FIXME: We probably should re-fund the account in this case.
-					if client.current_balance <= keep_alive_balance {
+					if client.current_balance <= EXISTENTIAL_DEPOSIT {
 						error!("Account {:?} does not have enough balance anymore. Finishing benchmark early", client.account.public());
 						break;
 					}
