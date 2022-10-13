@@ -482,6 +482,7 @@ pub mod tests {
 	};
 	use codec::{Decode, Encode};
 	use ita_stf::{Index, TrustedCall, TrustedCallSigned, TrustedOperation};
+	use itp_types::Header;
 	use jsonrpc_core::{futures, futures::executor::block_on};
 	use parity_util_mem::MallocSizeOf;
 	use serde::Serialize;
@@ -534,8 +535,6 @@ pub mod tests {
 	pub type DigestItem = sp_runtime::generic::DigestItem;
 	/// The digest of a block.
 	pub type Digest = sp_runtime::generic::Digest;
-	/// A test block's header.
-	pub type Header = sp_runtime::generic::Header<BlockNumber, BlakeTwo256>;
 	/// A test block.
 	pub type Block = sp_runtime::generic::Block<Header, Extrinsic>;
 	/// Test RPC responder
