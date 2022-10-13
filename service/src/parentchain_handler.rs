@@ -38,17 +38,18 @@ pub trait HandleParentchain {
 	/// Returns the latest synced block header.
 	fn sync_parentchain(&self, last_synced_header: Header) -> ServiceResult<Header>;
 
-	/// Trigger the import of the blocks inside the enclave that have been synced up until now.
+	/// Triggers the import of the synced parentchain blocks inside the enclave.
 	fn trigger_parentchain_block_import(&self) -> ServiceResult<()>;
 
-	/// Ensure the enclave is synced up until the parentchain block where the enclave has registered itself.
+	/// Ensures the enclave is synced up until the parentchain block where the enclave has registered itself.
 	fn import_parentchain_blocks_until_self_registry(
 		&self,
 		last_synced_header: &Header,
 		register_enclave_xt_header: &Header,
 	) -> ServiceResult<Header>;
 }
-/// Supplies functionality to sync parentchain blocks.
+
+/// Handles the interaction between parentchain and enclave.
 pub(crate) struct ParentchainHandler<ParentchainApi: ChainApi, EnclaveApi: Sidechain> {
 	parentchain_api: ParentchainApi,
 	enclave_api: Arc<EnclaveApi>,
