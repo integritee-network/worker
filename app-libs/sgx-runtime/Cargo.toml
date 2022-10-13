@@ -15,7 +15,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
 
 # local dependencies
-itp-sgx-primitives = { path = "../../core-primitives/sgx-runtime-primitives", default-features = false }
+itp-sgx-runtime-primitives = { path = "../../core-primitives/sgx-runtime-primitives", default-features = false }
 
 # Substrate dependencies
 frame-benchmarking = { optional = true, default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }

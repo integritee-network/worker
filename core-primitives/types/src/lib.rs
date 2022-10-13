@@ -41,7 +41,7 @@ pub type PalletString = String;
 
 pub use sp_core::{crypto::AccountId32 as AccountId, H256};
 
-pub use itp_sgx_primitives::types::*;
+pub use itp_sgx_runtime_primitives::types::*;
 
 // FIXME: Consolidate type definiton with #905.
 pub type AccountData = pallet_balances::AccountData<Balance>;

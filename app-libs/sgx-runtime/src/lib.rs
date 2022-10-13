@@ -40,7 +40,7 @@ pub use evm::{
 
 use core::convert::{TryFrom, TryInto};
 use frame_support::weights::ConstantMultiplier;
-pub use itp_sgx_primitives::{
+pub use itp_sgx_runtime_primitives::{
 	constants::SLOT_DURATION,
 	types::{AccountId, Address, Balance, BlockNumber, Hash, Header, Index, Signature},
 };
@@ -112,7 +112,7 @@ pub mod opaque {
 	pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
 
 	/// Opaque block header type.
-	pub type Header = itp_sgx_primitives::types::Header;
+	pub type Header = itp_sgx_runtime_primitives::types::Header;
 	/// Opaque block type.
 	pub type Block = super::Block;
 	/// Opaque block identifier type.
