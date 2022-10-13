@@ -467,7 +467,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		// Initialize the sidechain
 		if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain {
 			last_synced_header = sidechain_init_block_production(
-				enclave.clone(),
+				enclave,
 				&register_enclave_xt_header,
 				we_are_primary_validateer,
 				parentchain_handler.clone(),

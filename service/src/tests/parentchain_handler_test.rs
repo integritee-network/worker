@@ -35,6 +35,6 @@ fn test_number_of_synced_blocks() {
 	let parentchain_handler =
 		ParentchainHandler::new(parentchain_api_mock, Arc::new(enclave_api_mock));
 
-	let header = parentchain_handler.sync_parentchain(last_synced_block.block.header);
+	let header = parentchain_handler.sync_parentchain(last_synced_block.block.header).unwrap();
 	assert_eq!(header.number, number_of_blocks);
 }

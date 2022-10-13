@@ -71,10 +71,14 @@ where
 	let mut updated_header: Option<Header> = None;
 
 	if we_are_primary_validateer {
-		updated_header = Some(parentchain_handler.import_parentchain_blocks_until_self_registry(
-			last_synced_header,
-			register_enclave_xt_header,
-		)?);
+		info!(
+			"We're the first validateer to be registered, syncing parentchain blocks until the one we have registered ourselves on."
+		);
+		updated_header =
+			Some(parentchain_handler.sync_and_import_parentchain_until(
+				last_synced_header,
+				register_enclave_xt_header,
+			)?);
 	}
 
 	// ------------------------------------------------------------------------

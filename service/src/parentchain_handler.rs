@@ -42,7 +42,7 @@ pub trait HandleParentchain {
 	fn trigger_parentchain_block_import(&self) -> ServiceResult<()>;
 
 	/// Ensures the enclave is synced up until the parentchain block where the enclave has registered itself.
-	fn import_parentchain_blocks_until_self_registry(
+	fn sync_and_import_parentchain_until(
 		&self,
 		last_synced_header: &Header,
 		register_enclave_xt_header: &Header,
@@ -141,17 +141,14 @@ where
 		Ok(self.enclave_api.trigger_parentchain_block_import()?)
 	}
 
-	fn import_parentchain_blocks_until_self_registry(
+	fn sync_and_import_parentchain_until(
 		&self,
 		last_synced_header: &Header,
-		register_enclave_xt_header: &Header,
+		until_header: &Header,
 	) -> ServiceResult<Header> {
-		info!(
-					"We're the first validateer to be registered, syncing parentchain blocks until the one we have registered ourselves on."
-				);
 		let mut last_synced_header = last_synced_header.clone();
 
-		while last_synced_header.number() < register_enclave_xt_header.number() {
+		while last_synced_header.number() < until_header.number() {
 			last_synced_header = self.sync_parentchain(last_synced_header)?;
 		}
 		self.trigger_parentchain_block_import()?;

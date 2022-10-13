@@ -57,7 +57,7 @@ impl ChainApi for ParentchainApiMock {
 		todo!()
 	}
 
-	fn get_header(&self, header_hash: Option<H256>) -> ApiResult<Option<Header>> {
+	fn get_header(&self, _header_hash: Option<H256>) -> ApiResult<Option<Header>> {
 		todo!()
 	}
 
