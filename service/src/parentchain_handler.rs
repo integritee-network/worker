@@ -41,11 +41,11 @@ pub trait HandleParentchain {
 	/// Triggers the import of the synced parentchain blocks inside the enclave.
 	fn trigger_parentchain_block_import(&self) -> ServiceResult<()>;
 
-	/// Ensures the enclave is synced up until the parentchain block where the enclave has registered itself.
+	/// Snycs and directly imports parentchain block until specified header.
 	fn sync_and_import_parentchain_until(
 		&self,
 		last_synced_header: &Header,
-		register_enclave_xt_header: &Header,
+		until_header: &Header,
 	) -> ServiceResult<Header>;
 }
 
