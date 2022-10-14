@@ -44,6 +44,12 @@ pub enum Error {
 	NoPeerWorkerFound,
 	#[error("No worker for shard {0} found on parentchain")]
 	NoWorkerForShardFound(ShardIdentifier),
-	#[error("Custom Error: {0}")]
+	#[error("Returned empty parentchain block vec after sync, even though there have been blocks given as input")]
+	EmptyChunk,
+	#[error("Could not find genesis header of the parentchain")]
+	MissingGenesisHeader,
+	#[error("Could not find last finalized block of the parentchain")]
+	MissingLastFinalizedBlock,
+	#[error("{0}")]
 	Custom(Box<dyn std::error::Error + Sync + Send + 'static>),
 }
