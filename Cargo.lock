@@ -2750,7 +2750,6 @@ dependencies = [
  "futures 0.3.8",
  "ita-stf",
  "itc-parentchain-test",
- "itp-extrinsics-factory",
  "itp-node-api",
  "itp-ocall-api",
  "itp-sgx-crypto",
@@ -2803,7 +2802,6 @@ dependencies = [
 name = "itc-parentchain-test"
 version = "0.9.0"
 dependencies = [
- "env_logger",
  "frame-support",
  "frame-system",
  "itp-types",
@@ -2813,7 +2811,6 @@ dependencies = [
  "serde 1.0.147",
  "sp-core",
  "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.28)",
- "sp-keyring",
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.28)",
 ]
@@ -2973,7 +2970,6 @@ dependencies = [
  "itp-ocall-api",
  "itp-settings",
  "itp-sgx-crypto",
- "itp-sgx-externalities",
  "itp-sgx-io",
  "itp-types",
  "log 0.4.17",
@@ -2996,7 +2992,6 @@ dependencies = [
  "webpki 0.21.4 (git+https://github.com/mesalock-linux/webpki?branch=mesalock_sgx)",
  "webpki-roots 0.21.0 (git+https://github.com/mesalock-linux/webpki-roots?branch=mesalock_sgx)",
  "yasna 0.3.1",
- "yasna 0.4.0",
 ]
 
 [[package]]
