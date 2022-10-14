@@ -44,7 +44,7 @@ pub enum Error {
 	NoPeerWorkerFound,
 	#[error("No worker for shard {0} found on parentchain")]
 	NoWorkerForShardFound(ShardIdentifier),
-	#[error("Parentchains synced by enclave are returned empty, even though there have been blocks given as input")]
+	#[error("Returned empty parentchain block vec after sync, even though there have been blocks given as input")]
 	EmptyChunk,
 	#[error("Could not find genesis header of the parentchain")]
 	MissingGenesisHeader,
