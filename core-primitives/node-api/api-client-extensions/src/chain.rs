@@ -16,7 +16,7 @@
 */
 
 use crate::ApiResult;
-use itp_types::SignedBlock;
+use itp_types::{Header, SignedBlock};
 use sp_core::{storage::StorageKey, Pair, H256};
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use sp_runtime::MultiSignature;
@@ -28,7 +28,8 @@ pub type StorageProof = Vec<Vec<u8>>;
 pub trait ChainApi {
 	fn last_finalized_block(&self) -> ApiResult<Option<SignedBlock>>;
 	fn signed_block(&self, hash: Option<H256>) -> ApiResult<Option<SignedBlock>>;
-
+	fn get_genesis_hash(&self) -> ApiResult<H256>;
+	fn get_header(&self, header_hash: Option<H256>) -> ApiResult<Option<Header>>;
 	/// Fetch blocks from parentchain with blocknumber from until to, including both boundaries.
 	/// Returns a vector with one element if from equals to.
 	/// Returns an empty vector if from is greater than to.
@@ -52,6 +53,14 @@ where
 		// to be able to be generic over the trait and mock the `signed_block` method
 		// in tests.
 		self.get_signed_block(hash)
+	}
+
+	fn get_genesis_hash(&self) -> ApiResult<H256> {
+		self.get_genesis_hash()
+	}
+
+	fn get_header(&self, header_hash: Option<H256>) -> ApiResult<Option<Header>> {
+		self.get_header(header_hash)
 	}
 
 	fn get_blocks(&self, from: u32, to: u32) -> ApiResult<Vec<SignedBlock>> {
