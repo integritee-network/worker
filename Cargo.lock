@@ -2634,15 +2634,12 @@ dependencies = [
  "itp-storage",
  "itp-types",
  "itp-utils",
- "its-primitives",
- "its-state",
  "log 0.4.17",
  "pallet-balances",
  "pallet-parentchain",
  "pallet-sudo",
  "parity-scale-codec",
  "rlp",
- "sc-keystore",
  "sgx_tstd",
  "sha3",
  "sp-application-crypto",
@@ -2650,8 +2647,6 @@ dependencies = [
  "sp-io 6.0.0",
  "sp-keyring",
  "sp-runtime",
- "substrate-api-client",
- "substrate-client-keystore",
 ]
 
 [[package]]
