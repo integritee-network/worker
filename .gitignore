@@ -31,6 +31,9 @@ bin/ecc_pubkey.txt
 
 *.log
 
+# vim
+*.swp
+
 # keystores
 my_keystore/*
 my_trusted_keystore/*
