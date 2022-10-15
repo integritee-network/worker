@@ -3296,7 +3296,6 @@ dependencies = [
  "log 0.4.17",
  "parity-scale-codec",
  "sgx_tstd",
- "sgx_types",
  "thiserror 1.0.37",
  "thiserror 1.0.9",
 ]
@@ -3344,7 +3343,6 @@ dependencies = [
  "itp-teerex-storage",
  "itp-time-utils",
  "itp-types",
- "jsonrpc-core 18.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-core 18.0.0 (git+https://github.com/scs/jsonrpc?branch=no_std_v18)",
  "parity-scale-codec",
  "sgx_crypto_helper",
@@ -3431,8 +3429,6 @@ dependencies = [
  "serde 1.0.147",
  "serde_json 1.0.87",
  "sp-core",
- "sp-finality-grandpa",
- "sp-keyring",
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.28)",
 ]
