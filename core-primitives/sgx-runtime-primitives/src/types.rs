@@ -16,9 +16,9 @@
 */
 
 use sp_runtime::{
-	generic,
+	generic::{self, Block as BlockG, SignedBlock as SignedBlockG},
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
-	MultiSignature,
+	MultiSignature, OpaqueExtrinsic,
 };
 
 /// The address format for describing accounts.
@@ -59,3 +59,8 @@ pub type DigestItem = generic::DigestItem;
 
 /// A type to hold UTC unix epoch [ms]
 pub type Moment = u64;
+
+pub type Block = BlockG<Header, OpaqueExtrinsic>;
+pub type SignedBlock = SignedBlockG<Block>;
+pub type BlockHash = sp_core::H256;
+pub type ShardIdentifier = sp_core::H256;

@@ -53,7 +53,7 @@ use sp_version::RuntimeVersion;
 // Re-exports from itp-sgx-runtime-primitives.
 pub use itp_sgx_runtime_primitives::{
 	constants::SLOT_DURATION,
-	types::{AccountId, Address, Balance, BlockNumber, Hash, Header, Index, Signature},
+	types::{AccountId, AccountData, Address, Balance, BlockNumber, Hash, Header, Index, Signature},
 };
 
 // A few exports that help ease life for downstream crates.
@@ -189,7 +189,7 @@ impl frame_system::Config for Runtime {
 	/// What to do if an account is fully reaped from the system.
 	type OnKilledAccount = ();
 	/// The data to be stored in an account.
-	type AccountData = pallet_balances::AccountData<Balance>;
+	type AccountData = AccountData;
 	/// Weight information for the extrinsics of this pallet.
 	type SystemWeightInfo = ();
 	/// This is used as an identifier of the chain. 42 is the generic substrate prefix.
