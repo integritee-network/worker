@@ -72,7 +72,7 @@ std = [
     "codec/std",
     "scale-info/std",
     "serde",
-      "itp-sgx-runtime-primitives/std",
+    "itp-sgx-runtime-primitives/std",
     "frame-executive/std",
     "frame-support/std",
     "frame-system/std",

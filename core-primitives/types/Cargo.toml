@@ -33,7 +33,7 @@ std = [
     "serde/std",
     "serde_json/std",
     "primitive-types/std",
-      "itp-sgx-runtime-primitives/std",
+    "itp-sgx-runtime-primitives/std",
     # substrate
     "frame-system/std",
     "pallet-balances/std",
