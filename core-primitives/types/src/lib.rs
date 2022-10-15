@@ -43,10 +43,6 @@ pub use sp_core::{crypto::AccountId32 as AccountId, H256};
 
 pub use itp_sgx_runtime_primitives::types::*;
 
-// FIXME: Consolidate type definiton with #905.
-pub type AccountData = pallet_balances::AccountData<Balance>;
-pub type AccountInfo = frame_system::AccountInfo<Index, AccountData>;
-
 pub type ShardIdentifier = H256;
 pub type Amount = u128;
 pub type Block = BlockG<Header, OpaqueExtrinsic>;

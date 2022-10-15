@@ -3245,6 +3245,8 @@ dependencies = [
 name = "itp-sgx-runtime-primitives"
 version = "0.9.0"
 dependencies = [
+ "frame-system",
+ "pallet-balances",
  "sp-core",
  "sp-runtime",
 ]
