@@ -53,7 +53,9 @@ use sp_version::RuntimeVersion;
 // Re-exports from itp-sgx-runtime-primitives.
 pub use itp_sgx_runtime_primitives::{
 	constants::SLOT_DURATION,
-	types::{AccountId, AccountData, Address, Balance, BlockNumber, Hash, Header, Index, Signature},
+	types::{
+		AccountData, AccountId, Address, Balance, BlockNumber, Hash, Header, Index, Signature,
+	},
 };
 
 // A few exports that help ease life for downstream crates.
