@@ -39,8 +39,6 @@ pub use sp_core::{crypto::AccountId32 as AccountId, H256};
 
 pub use itp_sgx_runtime_primitives::types::*;
 
-pub type Amount = u128;
-
 pub type IpfsHash = [u8; 46];
 pub type MrEnclave = [u8; 32];
 
