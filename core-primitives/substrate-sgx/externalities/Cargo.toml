@@ -21,6 +21,7 @@ sp-core = { default-features = false, git = "https://github.com/paritytech/subst
 
 # local
 environmental = { path = "../environmental", default-features = false }
+itp-hashing = { path = "../../hashing" }
 
 [features]
 default = ["std"]

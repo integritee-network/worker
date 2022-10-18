@@ -34,7 +34,7 @@ pub mod sgx_reexport_prelude {
 pub mod error;
 pub mod file_io;
 pub mod handle_state;
-mod in_memory_state_file_io;
+pub mod in_memory_state_file_io;
 pub mod query_shard_state;
 pub mod state_handler;
 mod state_snapshot_primitives;

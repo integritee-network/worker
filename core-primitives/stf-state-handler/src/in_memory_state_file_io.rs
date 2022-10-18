@@ -27,42 +27,58 @@ use crate::{
 	state_snapshot_primitives::StateId,
 };
 use codec::Encode;
-use itp_types::ShardIdentifier;
-use std::{collections::HashMap, hash::Hasher as HasherTrait, vec::Vec};
+use ita_sgx_runtime::Runtime;
+use ita_stf::{Getter, Stf, TrustedCallSigned};
+use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesType};
+use itp_stf_interface::InitState;
+use itp_types::{AccountId, ShardIdentifier, H256};
+use sp_core::blake2_256;
+use std::{boxed::Box, collections::HashMap, sync::Arc, vec::Vec};
 
-type StateHash = u64;
+type StateHash = H256;
 type ShardDirectory<State> = HashMap<StateId, (StateHash, State)>;
 type ShardsRootDirectory<State> = HashMap<ShardIdentifier, ShardDirectory<State>>;
+type InnerStateSelector<State, ExternalState> =
+	Box<dyn Fn(ExternalState) -> State + Send + Sync + 'static>;
+type ExternalStateGenerator<State, ExternalState> =
+	Box<dyn Fn(State) -> ExternalState + Send + Sync + 'static>;
+type InnerStateInitializer<State> = Box<dyn Fn() -> State + Send + Sync + 'static>;
 
 /// State file I/O using (unencrypted) in-memory representation of the state files.
-/// Uses u64 hash type. Can be used as mock for testing.
-#[derive(Default)]
-pub struct InMemoryStateFileIo<State, Hasher>
+/// Can be used as mock for testing.
+pub struct InMemoryStateFileIo<State, ExternalState>
 where
 	State: Clone + Default + Encode,
-	Hasher: HasherTrait + Clone + Default,
 {
 	emulated_shard_directory: RwLock<ShardsRootDirectory<State>>,
-	hasher: Hasher,
+	state_selector: InnerStateSelector<State, ExternalState>,
+	state_initializer: InnerStateInitializer<State>,
+	external_state_generator: ExternalStateGenerator<State, ExternalState>,
 }
 
-impl<State, Hasher> InMemoryStateFileIo<State, Hasher>
+impl<State, ExternalState> InMemoryStateFileIo<State, ExternalState>
 where
 	State: Clone + Default + Encode,
-	Hasher: HasherTrait + Clone + Default,
 {
 	#[allow(unused)]
-	pub fn new(hash_function: Hasher, shards: &[ShardIdentifier]) -> Self {
+	pub fn new(
+		shards: &[ShardIdentifier],
+		state_selector: InnerStateSelector<State, ExternalState>,
+		state_initializer: InnerStateInitializer<State>,
+		external_state_generator: ExternalStateGenerator<State, ExternalState>,
+	) -> Self {
 		let shard_hash_map: HashMap<_, _> =
 			shards.iter().map(|s| (*s, ShardDirectory::<State>::default())).collect();
 
 		InMemoryStateFileIo {
 			emulated_shard_directory: RwLock::new(shard_hash_map),
-			hasher: hash_function,
+			state_selector,
+			state_initializer,
+			external_state_generator,
 		}
 	}
 
-	#[cfg(test)]
+	#[cfg(any(test, feature = "test"))]
 	pub fn get_states_for_shard(
 		&self,
 		shard_identifier: &ShardIdentifier,
@@ -76,21 +92,7 @@ where
 
 	fn compute_state_hash(&self, state: &State) -> StateHash {
 		let encoded_state = state.encode();
-		let mut hasher = self.hasher.clone();
-		hasher.write(encoded_state.as_slice());
-		hasher.finish()
-	}
-
-	fn default_states_map(&self, state_id: StateId) -> ShardDirectory<State> {
-		self.initialize_states_map(state_id, State::default())
-	}
-
-	fn initialize_states_map(&self, state_id: StateId, state: State) -> ShardDirectory<State> {
-		HashMap::from([(state_id, self.generate_state_entry(state))])
-	}
-
-	fn generate_default_state_entry(&self) -> (StateHash, State) {
-		self.generate_state_entry(State::default())
+		blake2_256(&encoded_state).into()
 	}
 
 	fn generate_state_entry(&self, state: State) -> (StateHash, State) {
@@ -99,12 +101,11 @@ where
 	}
 }
 
-impl<State, Hasher> StateFileIo for InMemoryStateFileIo<State, Hasher>
+impl<State, ExternalState> StateFileIo for InMemoryStateFileIo<State, ExternalState>
 where
 	State: Clone + Default + Encode,
-	Hasher: HasherTrait + Clone + Default,
 {
-	type StateType = State;
+	type StateType = ExternalState;
 	type HashType = StateHash;
 
 	fn load(
@@ -117,10 +118,12 @@ where
 		let states_for_shard = directory_lock
 			.get(shard_identifier)
 			.ok_or(Error::InvalidShard(*shard_identifier))?;
-		states_for_shard
+		let inner_state = states_for_shard
 			.get(&state_id)
 			.map(|(_, s)| -> State { s.clone() })
-			.ok_or(Error::InvalidStateId(state_id))
+			.ok_or(Error::InvalidStateId(state_id))?;
+
+		Ok((self.external_state_generator)(inner_state))
 	}
 
 	fn compute_hash(
@@ -129,7 +132,7 @@ where
 		state_id: StateId,
 	) -> Result<Self::HashType> {
 		let state = self.load(shard_identifier, state_id)?;
-		Ok(self.compute_state_hash(&state))
+		Ok(self.compute_state_hash(&(self.state_selector)(state)))
 	}
 
 	fn create_initialized(
@@ -139,12 +142,11 @@ where
 	) -> Result<Self::HashType> {
 		let mut directory_lock =
 			self.emulated_shard_directory.write().map_err(|_| Error::LockPoisoning)?;
-		let states_for_shard = directory_lock
-			.entry(*shard_identifier)
-			.or_insert_with(|| self.default_states_map(state_id));
+
+		let states_for_shard = directory_lock.entry(*shard_identifier).or_default();
 		let state_entry = states_for_shard
 			.entry(state_id)
-			.or_insert_with(|| self.generate_state_entry(State::default()));
+			.or_insert_with(|| self.generate_state_entry((self.state_initializer)()));
 		Ok(state_entry.0)
 	}
 
@@ -152,19 +154,17 @@ where
 		&self,
 		shard_identifier: &ShardIdentifier,
 		state_id: StateId,
-		state: Self::StateType,
+		external_state: Self::StateType,
 	) -> Result<Self::HashType> {
 		let mut directory_lock =
 			self.emulated_shard_directory.write().map_err(|_| Error::LockPoisoning)?;
 
-		let states_for_shard = directory_lock
-			.entry(*shard_identifier)
-			.or_insert_with(|| self.default_states_map(state_id));
+		let states_for_shard = directory_lock.entry(*shard_identifier).or_default();
 
-		let state_hash = self.compute_state_hash(&state);
-		*states_for_shard
-			.entry(state_id)
-			.or_insert_with(|| self.generate_default_state_entry()) = (state_hash, state);
+		let inner_state = (self.state_selector)(external_state);
+		let state_hash = self.compute_state_hash(&inner_state);
+
+		*states_for_shard.entry(state_id).or_default() = (state_hash, inner_state);
 
 		Ok(state_hash)
 	}
@@ -204,13 +204,54 @@ where
 	}
 }
 
+type EnclaveStf = Stf<TrustedCallSigned, Getter, SgxExternalities, Runtime>;
+
+pub fn create_sgx_externalities_in_memory_state_io(
+) -> Arc<InMemoryStateFileIo<SgxExternalitiesType, SgxExternalities>> {
+	create_in_memory_externalities_state_io::<EnclaveStf>(&[])
+}
+
+fn create_in_memory_externalities_state_io<Stf>(
+	shards: &[ShardIdentifier],
+) -> Arc<InMemoryStateFileIo<SgxExternalitiesType, SgxExternalities>>
+where
+	Stf: InitState<SgxExternalities, AccountId>,
+{
+	Arc::new(InMemoryStateFileIo::new(
+		shards,
+		sgx_externalities_selector(),
+		Box::new(|| Stf::init_state(AccountId::new([1u8; 32])).state),
+		sgx_externalities_wrapper(),
+	))
+}
+
+fn sgx_externalities_selector() -> InnerStateSelector<SgxExternalitiesType, SgxExternalities> {
+	Box::new(|s| s.state)
+}
+
+fn sgx_externalities_wrapper() -> ExternalStateGenerator<SgxExternalitiesType, SgxExternalities> {
+	Box::new(|s| SgxExternalities { state: s, state_diff: Default::default() })
+}
+
+#[cfg(feature = "sgx")]
+pub mod sgx {
+	use super::*;
+	use crate::file_io::sgx::list_shards;
+
+	pub fn create_in_memory_state_io_from_shards_directories(
+	) -> Result<Arc<InMemoryStateFileIo<SgxExternalitiesType, SgxExternalities>>> {
+		let shards = list_shards()?;
+		Ok(create_in_memory_externalities_state_io::<EnclaveStf>(&shards))
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use std::{assert_matches::assert_matches, collections::hash_map::DefaultHasher};
+	use std::assert_matches::assert_matches;
 
 	type TestState = u64;
-	type TestStateFileIo = InMemoryStateFileIo<TestState, DefaultHasher>;
+	type TestStateFileIo = InMemoryStateFileIo<TestState, TestState>;
 
 	#[test]
 	fn shard_directory_is_empty_after_initialization() {
@@ -267,7 +308,7 @@ mod tests {
 		assert_eq!(TestState::default(), state_file_io.load(&shard_id, state_id).unwrap());
 		assert_eq!(1, state_file_io.list_state_ids_for_shard(&shard_id).unwrap().len());
 
-		assert_entry(&state_file_io, &shard_id, state_id, &StateHash::default(), &state_hash);
+		assert_entry(&state_file_io, &shard_id, state_id, &TestState::default(), &state_hash);
 	}
 
 	#[test]
@@ -371,7 +412,12 @@ mod tests {
 	}
 
 	fn create_in_memory_state_file_io(shards: &[ShardIdentifier]) -> TestStateFileIo {
-		InMemoryStateFileIo::new(DefaultHasher::default(), shards)
+		InMemoryStateFileIo::new(
+			shards,
+			Box::new(|x| x),
+			Box::new(|| TestState::default()),
+			Box::new(|x| x),
+		)
 	}
 
 	fn create_empty_in_memory_state_file_io() -> TestStateFileIo {
