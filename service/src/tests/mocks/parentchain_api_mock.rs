@@ -20,7 +20,7 @@ use itc_parentchain_test::{
 	parentchain_header_builder::ParentchainHeaderBuilder,
 };
 use itp_node_api::api_client::{ApiResult, ChainApi, StorageProof};
-use itp_types::{SignedBlock, H256};
+use itp_types::{Header, SignedBlock, H256};
 use sp_finality_grandpa::AuthorityList;
 
 pub struct ParentchainApiMock {
@@ -50,6 +50,14 @@ impl ChainApi for ParentchainApiMock {
 	}
 
 	fn signed_block(&self, _hash: Option<H256>) -> ApiResult<Option<SignedBlock>> {
+		todo!()
+	}
+
+	fn get_genesis_hash(&self) -> ApiResult<H256> {
+		todo!()
+	}
+
+	fn get_header(&self, _header_hash: Option<H256>) -> ApiResult<Option<Header>> {
 		todo!()
 	}
 
