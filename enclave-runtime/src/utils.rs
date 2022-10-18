@@ -51,3 +51,35 @@ pub unsafe fn utf8_str_from_raw<'a>(
 
 	std::str::from_utf8(bytes)
 }
+
+pub(crate) fn get_triggered_dispatcher_from_solo_or_parachain(
+) -> Result<EnclaveTriggeredParentchainBlockImportDispatcher> {
+	if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
+		get_triggered_dispatcher(solochain_handler.import_dispatcher)
+	} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
+		get_triggered_dispatcher(parachain_handler.import_dispatcher)
+	} else {
+		return Err(Error::NoParentchainAssigned)
+	};
+}
+
+pub(crate) fn get_triggered_dispatcher(
+	dispatcher: Option<Arc<EnclaveParentchainBlockImportDispatcher>>,
+) -> Result<EnclaveTriggeredParentchainBlockImportDispatcher> {
+	let triggered_dispatcher = dispatcher
+		.ok_or(Error::ExpectedTriggeredImportDispatcher)?
+		.triggered_dispatcher()
+		.ok_or(Error::ExpectedTriggeredImportDispatcher)?;
+	Ok(triggered_dispatcher)
+}
+
+pub(crate) fn get_validator_accessor_from_solo_or_parachain(
+) -> Result<Arc<EnclaveValidatorAccessor>> {
+	if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
+		solochain_handler.validator_accessor
+	} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
+		parachain_handler.validator_accessor
+	} else {
+		return Err(Error::NoParentchainAssigned)
+	};
+}

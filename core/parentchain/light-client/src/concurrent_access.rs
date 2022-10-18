@@ -40,14 +40,8 @@ use std::marker::PhantomData;
 /// either a mutating, or a non-mutating function on the validator.
 /// The reason we have this additional wrapper around `SealedIO`, is that we need
 /// to guard against concurrent access by using RWLocks (which `SealedIO` does not do).
-pub trait ValidatorAccess<ParentchainBlock>
-where
-	ParentchainBlock: ParentchainBlockTrait,
-	NumberFor<ParentchainBlock>: BlockNumberOps,
-{
-	type ValidatorType: ValidatorTrait<ParentchainBlock>
-		+ LightClientState<ParentchainBlock>
-		+ ExtrinsicSenderTrait;
+pub trait ValidatorAccess {
+	type ValidatorType;
 
 	/// Execute a non-mutating function on the validator.
 	fn execute_on_validator<F, R>(&self, getter_function: F) -> Result<R>
@@ -89,7 +83,7 @@ where
 	}
 }
 
-impl<Validator, ParentchainBlock, Seal> ValidatorAccess<ParentchainBlock>
+impl<Validator, ParentchainBlock, Seal> ValidatorAccess
 	for ValidatorAccessor<Validator, ParentchainBlock, Seal>
 where
 	Validator: ValidatorTrait<ParentchainBlock>

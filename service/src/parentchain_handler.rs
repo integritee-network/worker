@@ -54,6 +54,7 @@ pub trait HandleParentchain {
 pub(crate) struct ParentchainHandler<ParentchainApi: ChainApi, EnclaveApi: Sidechain> {
 	parentchain_api: ParentchainApi,
 	enclave_api: Arc<EnclaveApi>,
+	light_client_type: LightClientInitParams<Header>,
 }
 
 impl<ParentchainApi, EnclaveApi> ParentchainHandler<ParentchainApi, EnclaveApi>
@@ -61,8 +62,41 @@ where
 	ParentchainApi: ChainApi,
 	EnclaveApi: Sidechain + EnclaveBase,
 {
-	pub fn new(parentchain_api: ParentchainApi, enclave_api: Arc<EnclaveApi>) -> Self {
-		Self { parentchain_api, enclave_api }
+	pub fn new(
+		parentchain_api: ParentchainApi,
+		enclave_api: Arc<EnclaveApi>,
+		light_client_type: LightClientInitParams<Header>,
+	) -> Self {
+		Self { parentchain_api, enclave_api, light_client_type }
+	}
+
+	pub fn new_with_automatic_light_client_allocation(
+		parentchain_api: ParentchainApi,
+		enclave_api: Arc<EnclaveApi>,
+	) -> ServiceResult<Self> {
+		let genesis_hash = parentchain_api.get_genesis_hash()?;
+		let genesis_header: Header = parentchain_api
+			.get_header(Some(genesis_hash))?
+			.ok_or(Error::MissingGenesisHeader)?;
+
+		let light_client_type = if parentchain_api.is_grandpa_available()? {
+			let grandpas = parentchain_api.grandpa_authorities(Some(genesis_hash))?;
+			let grandpa_proof = parentchain_api.grandpa_authorities_proof(Some(genesis_hash))?;
+
+			debug!("Grandpa Authority List: \n {:?} \n ", grandpas);
+
+			let authority_list = VersionedAuthorityList::from(grandpas);
+
+			LightClientInitParams::Grandpa {
+				genesis_header,
+				authorities: authority_list.into(),
+				authority_proof: grandpa_proof,
+			}
+		} else {
+			LightClientInitParams::Parachain { genesis_header }
+		};
+
+		Ok(Self::new(parentchain_api, enclave_api, light_client_type))
 	}
 
 	pub fn parentchain_api(&self) -> &ParentchainApi {
@@ -77,33 +111,7 @@ where
 	EnclaveApi: Sidechain + EnclaveBase,
 {
 	fn init_parentchain_components(&self) -> ServiceResult<Header> {
-		let genesis_hash = self.parentchain_api.get_genesis_hash()?;
-		let genesis_header: Header = self
-			.parentchain_api
-			.get_header(Some(genesis_hash))?
-			.ok_or(Error::MissingGenesisHeader)?;
-		info!("Got genesis Header: \n {:?} \n", genesis_header);
-		if self.parentchain_api.is_grandpa_available()? {
-			let grandpas = self.parentchain_api.grandpa_authorities(Some(genesis_hash))?;
-			let grandpa_proof =
-				self.parentchain_api.grandpa_authorities_proof(Some(genesis_hash))?;
-
-			debug!("Grandpa Authority List: \n {:?} \n ", grandpas);
-
-			let authority_list = VersionedAuthorityList::from(grandpas);
-
-			let params = LightClientInitParams::Grandpa {
-				genesis_header,
-				authorities: authority_list.into(),
-				authority_proof: grandpa_proof,
-			};
-
-			Ok(self.enclave_api.init_parentchain_components(params)?)
-		} else {
-			let params = LightClientInitParams::Parachain { genesis_header };
-
-			Ok(self.enclave_api.init_parentchain_components(params)?)
-		}
+		Ok(self.enclave_api.init_parentchain_components(self.light_client_type.clone())?)
 	}
 
 	fn sync_parentchain(&self, last_synced_header: Header) -> ServiceResult<Header> {

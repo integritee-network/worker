@@ -21,7 +21,7 @@ use sp_finality_grandpa::AuthorityList;
 use std::vec::Vec;
 
 // The variants will be chosen according to availability of grandpa authorities on the parent chain.
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode, Clone)]
 pub enum LightClientInitParams<Header> {
 	Grandpa { genesis_header: Header, authorities: AuthorityList, authority_proof: Vec<Vec<u8>> },
 	Parachain { genesis_header: Header },

@@ -38,6 +38,8 @@ pub enum Error {
 	StfStateHandler(itp_stf_state_handler::error::Error),
 	StfExecution(itp_stf_executor::error::Error),
 	ParentchainBlockImportDispatch(itc_parentchain::block_import_dispatcher::error::Error),
+	ExpectedTriggeredImportDispatcher,
+	NoParentchainAssigned,
 	PrimitivesAccess(itp_primitives_cache::error::Error),
 	MutexAccess,
 	Attestation(itp_attestation_handler::error::Error),

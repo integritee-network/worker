@@ -32,14 +32,17 @@ extern crate sgx_tstd as std;
 use crate::{
 	error::{Error, Result},
 	global_components::{
-		GLOBAL_IMMEDIATE_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
+		GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT, GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT,
 		GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
-		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
+		GLOBAL_STATE_HANDLER_COMPONENT,
 	},
 	rpc::worker_api_direct::sidechain_io_handler,
 	utils::{utf8_str_from_raw, DecodeRaw},
 };
 use codec::{alloc::string::String, Decode, Encode};
+use initialization::global_components::{
+	EnclaveTriggeredParentchainBlockImportDispatcher, GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT,
+};
 use itc_parentchain::{
 	block_import_dispatcher::{
 		triggered_dispatcher::TriggerParentchainBlockImport, DispatchBlockImport,
@@ -62,7 +65,6 @@ use std::{boxed::Box, slice, vec::Vec};
 
 mod attestation;
 mod empty_impls;
-mod global_components;
 mod initialization;
 mod ipfs;
 mod ocall;
@@ -368,14 +370,12 @@ pub unsafe extern "C" fn sync_parentchain(
 fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>(
 	blocks_to_sync: Vec<SignedBlock>,
 ) -> Result<()> {
-	match WorkerModeProvider::worker_mode() {
-		WorkerMode::Sidechain => GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
-			.get()?
-			.dispatch_import(blocks_to_sync)?,
-		_ => GLOBAL_IMMEDIATE_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
-			.get()?
-			.dispatch_import(blocks_to_sync)?,
+	if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
+		if let Some(import_dispatcher) = solochain_handler.import_dispatcher {
+			import_dispatcher.dispatch_import(blocks_to_sync)?;
+		}
 	}
+
 	Ok(())
 }
 
@@ -386,14 +386,17 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 /// sidechain and the `ImmediateDispatcher` are used, this function is obsolete.
 #[no_mangle]
 pub unsafe extern "C" fn trigger_parentchain_block_import() -> sgx_status_t {
-	match GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get() {
-		Ok(dispatcher) => match dispatcher.import_all() {
-			Ok(_) => sgx_status_t::SGX_SUCCESS,
-			Err(e) => {
-				error!("Failed to trigger import of parentchain blocks: {:?}", e);
-				sgx_status_t::SGX_ERROR_UNEXPECTED
-			},
+	match internal_trigger_parentchain_block_import {
+		Ok(_) => sgx_status_t::SGX_SUCCESS,
+		Err(e) => {
+			error!("Failed to trigger import of parentchain blocks: {:?}", e);
+			sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
-		Err(e) => Error::ComponentContainer(e).into(),
 	}
+}
+
+fn internal_trigger_parentchain_block_import() -> Result<()> {
+	let triggered_import_dispatcher = get_triggered_dispatcher_from_solo_or_parachain()?;
+	triggered_import_dispatcher.import_all()?;
+	Ok(())
 }

@@ -16,7 +16,7 @@
 */
 use crate::{
 	error::{Error, Result as EnclaveResult},
-	global_components::{
+	initialization::global_components::{
 		EnclaveBlockImportConfirmationHandler, EnclaveGetterExecutor, EnclaveOCallApi,
 		EnclaveOffchainWorkerExecutor, EnclaveRpcConnectionRegistry, EnclaveRpcResponder,
 		EnclaveShieldingKeyRepository, EnclaveSidechainApi, EnclaveSidechainBlockImportQueue,
@@ -34,11 +34,11 @@ use crate::{
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 		GLOBAL_STATE_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_OBSERVER_COMPONENT,
 		GLOBAL_STF_EXECUTOR_COMPONENT, GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
-		GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
 		GLOBAL_WEB_SOCKET_SERVER_COMPONENT,
 	},
 	ocall::OcallApi,
 	rpc::{rpc_response_channel::RpcResponseChannel, worker_api_direct::public_api_rpc_handler},
+	utils::get_validator_accessor_from_solo_or_parachain,
 	Hash,
 };
 use base58::ToBase58;
@@ -215,7 +215,7 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 
 	let parentchain_block_import_dispatcher =
-		GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get()?;
+		utils::get_triggered_dispatcher_from_solo_or_parachain()?;
 
 	let state_key_repository = GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.get()?;
 
@@ -232,7 +232,7 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 	let sidechain_block_import_queue = GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.get()?;
 	let metadata_repository = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
 	let extrinsics_factory = GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get()?;
-	let validator_accessor = GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT.get()?;
+	let validator_accessor = get_validator_accessor_from_solo_or_parachain()?;
 
 	let sidechain_block_import_confirmation_handler =
 		Arc::new(EnclaveBlockImportConfirmationHandler::new(
@@ -257,108 +257,6 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 
 	let block_composer = Arc::new(BlockComposer::new(signer, state_key_repository));
 	GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT.initialize(block_composer);
-
-	Ok(())
-}
-
-pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>(
-	params: LightClientInitParams<Header>,
-) -> EnclaveResult<Header> {
-	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
-	let validator = itc_parentchain::light_client::io::read_or_init_validator::<Block, OcallApi>(
-		params, ocall_api,
-	)?;
-	let latest_header = validator.latest_finalized_header(validator.num_relays())?;
-
-	// Initialize the global parentchain block import dispatcher instance.
-	let signer = Ed25519Seal::unseal_from_static_file()?;
-	let node_metadata_repository = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
-
-	let validator_access = Arc::new(EnclaveValidatorAccessor::new(validator));
-	GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT.initialize(validator_access.clone());
-
-	let genesis_hash = validator_access.execute_on_validator(|v| v.genesis_hash(v.num_relays()))?;
-
-	let extrinsics_factory = Arc::new(ExtrinsicsFactory::new(
-		genesis_hash,
-		signer,
-		GLOBAL_NONCE_CACHE.clone(),
-		node_metadata_repository,
-	));
-
-	GLOBAL_EXTRINSICS_FACTORY_COMPONENT.initialize(extrinsics_factory);
-
-	initialize_parentchain_import_dispatcher::<WorkerModeProvider>()?;
-
-	Ok(latest_header)
-}
-
-fn initialize_parentchain_import_dispatcher<WorkerModeProvider: ProvideWorkerMode>(
-) -> EnclaveResult<()> {
-	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
-	let state_observer = GLOBAL_STATE_OBSERVER_COMPONENT.get()?;
-	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
-	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
-	let shielding_key_repository = GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.get()?;
-	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
-	let validator_access = GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT.get()?;
-	let extrinsics_factory = GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get()?;
-	let node_metadata_repository = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
-
-	let stf_enclave_signer = Arc::new(EnclaveStfEnclaveSigner::new(
-		state_observer,
-		ocall_api,
-		shielding_key_repository.clone(),
-	));
-	let indirect_calls_executor = Arc::new(IndirectCallsExecutor::new(
-		shielding_key_repository,
-		stf_enclave_signer,
-		top_pool_author.clone(),
-		node_metadata_repository,
-	));
-	let parentchain_block_importer = ParentchainBlockImporter::new(
-		validator_access.clone(),
-		stf_executor.clone(),
-		extrinsics_factory.clone(),
-		indirect_calls_executor,
-	);
-
-	info!(
-		"Initializing parentchain import dispatcher for mode: {:?}",
-		WorkerModeProvider::worker_mode()
-	);
-
-	match WorkerModeProvider::worker_mode() {
-		WorkerMode::OffChainWorker | WorkerMode::Teeracle => {
-			let offchain_worker_executor = Arc::new(EnclaveOffchainWorkerExecutor::new(
-				top_pool_author,
-				stf_executor,
-				state_handler,
-				validator_access,
-				extrinsics_factory,
-			));
-			let parentchain_block_import_dispatcher = Arc::new(
-				ImmediateDispatcher::new(parentchain_block_importer).with_observer(move || {
-					if let Err(e) = offchain_worker_executor.execute() {
-						error!("Failed to execute trusted calls: {:?}", e);
-					}
-				}),
-			);
-
-			GLOBAL_IMMEDIATE_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
-				.initialize(parentchain_block_import_dispatcher);
-		},
-		WorkerMode::Sidechain => {
-			let parentchain_block_import_queue = BlockImportQueue::<SignedBlock>::default();
-			let parentchain_block_import_dispatcher = Arc::new(TriggeredDispatcher::new(
-				parentchain_block_importer,
-				parentchain_block_import_queue,
-			));
-
-			GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT
-				.initialize(parentchain_block_import_dispatcher);
-		},
-	}
 
 	Ok(())
 }

@@ -33,6 +33,7 @@ use itc_direct_rpc_server::{
 use itc_parentchain::{
 	block_import_dispatcher::{
 		immediate_dispatcher::ImmediateDispatcher, triggered_dispatcher::TriggeredDispatcher,
+		BlockImportDispatcher,
 	},
 	block_importer::ParentchainBlockImporter,
 	indirect_calls_executor::IndirectCallsExecutor,
@@ -66,7 +67,9 @@ use itp_top_pool_author::{
 	api::SidechainApi,
 	author::{Author, AuthorTopFilter},
 };
-use itp_types::{Block as ParentchainBlock, SignedBlock as SignedParentchainBlock};
+use itp_types::{
+	Block as ParentchainBlock, Header as ParentchainHeader, SignedBlock as SignedParentchainBlock,
+};
 use its_primitives::{
 	traits::{Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait},
 	types::block::SignedBlock as SignedSidechainBlock,
@@ -103,6 +106,16 @@ pub type EnclaveStfEnclaveSigner = StfEnclaveSigner<
 	EnclaveShieldingKeyRepository,
 	EnclaveStf,
 >;
+pub type EnclaveAttestationHandler = IasAttestationHandler<EnclaveOCallApi>;
+
+pub type EnclaveRpcConnectionRegistry = ConnectionRegistry<Hash, ConnectionToken>;
+pub type EnclaveRpcWsHandler =
+	RpcWsHandler<RpcWatchExtractor<Hash>, EnclaveRpcConnectionRegistry, Hash>;
+pub type EnclaveWebSocketServer = TungsteniteWsServer<EnclaveRpcWsHandler, FromFileConfigProvider>;
+pub type EnclaveRpcResponder = RpcResponder<EnclaveRpcConnectionRegistry, Hash, RpcResponseChannel>;
+pub type EnclaveSidechainApi = SidechainApi<ParentchainBlock>;
+
+// Parentchain types
 pub type EnclaveExtrinsicsFactory =
 	ExtrinsicsFactory<Pair, NonceCache, EnclaveNodeMetadataRepository>;
 pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
@@ -126,16 +139,22 @@ pub type EnclaveParentchainBlockImporter = ParentchainBlockImporter<
 pub type EnclaveParentchainBlockImportQueue = BlockImportQueue<SignedParentchainBlock>;
 pub type EnclaveTriggeredParentchainBlockImportDispatcher =
 	TriggeredDispatcher<EnclaveParentchainBlockImporter, EnclaveParentchainBlockImportQueue>;
+
 pub type EnclaveImmediateParentchainBlockImportDispatcher =
 	ImmediateDispatcher<EnclaveParentchainBlockImporter>;
-pub type EnclaveAttestationHandler = IasAttestationHandler<EnclaveOCallApi>;
 
-pub type EnclaveRpcConnectionRegistry = ConnectionRegistry<Hash, ConnectionToken>;
-pub type EnclaveRpcWsHandler =
-	RpcWsHandler<RpcWatchExtractor<Hash>, EnclaveRpcConnectionRegistry, Hash>;
-pub type EnclaveWebSocketServer = TungsteniteWsServer<EnclaveRpcWsHandler, FromFileConfigProvider>;
-pub type EnclaveRpcResponder = RpcResponder<EnclaveRpcConnectionRegistry, Hash, RpcResponseChannel>;
-pub type EnclaveSidechainApi = SidechainApi<ParentchainBlock>;
+pub type EncalveParentchainBlockImportDispatcher = BlockImportDispatcher<
+	EnclaveTriggeredParentchainBlockImportDispatcher,
+	EnclaveImmediateParentchainBlockImportDispatcher,
+>;
+
+pub type EnclaveFullSolochainHandler = FullSolochainHandler<
+	ParentchainHeader,
+	EnclaveNodeMetadataRepository,
+	EnclaveValidatorAccessor,
+	EnclaveExtrinsicsFactory,
+	EncalveParentchainBlockImportDispatcher,
+>;
 
 /// Sidechain types
 pub type EnclaveSidechainState =
@@ -238,20 +257,10 @@ pub static GLOBAL_ATTESTATION_HANDLER_COMPONENT: ComponentContainer<EnclaveAttes
 /// Parentchain component instances
 ///-------------------------------------------------------------------------------------------------
 
-/// Triggered parentchain block import dispatcher.
-pub static GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT: ComponentContainer<
-	EnclaveTriggeredParentchainBlockImportDispatcher,
-> = ComponentContainer::new("triggered parentchain import dispatcher");
-
-/// Immediate parentchain block import dispatcher.
-pub static GLOBAL_IMMEDIATE_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT: ComponentContainer<
-	EnclaveImmediateParentchainBlockImportDispatcher,
-> = ComponentContainer::new("immediate parentchain import dispatcher");
-
-/// Parentchain block validator accessor.
-pub static GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT: ComponentContainer<
-	EnclaveValidatorAccessor,
-> = ComponentContainer::new("parentchain block validator accessor");
+/// Solochain Handler.
+pub static GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT: ComponentContainer<
+	EnclaveFullSolochainHandler,
+> = ComponentContainer::new("full solochain handler");
 
 /// Extrinsics factory.
 pub static GLOBAL_EXTRINSICS_FACTORY_COMPONENT: ComponentContainer<EnclaveExtrinsicsFactory> =
