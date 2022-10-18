@@ -20,9 +20,12 @@ use super::common::{
 	create_sidechain_triggered_import_dispatcher, GLOBAL_OCALL_API_COMPONENT,
 	GLOBAL_STATE_HANDLER_COMPONENT,
 };
-use crate::initialization::global_components::{
-	error::Result, EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository,
-	EnclaveParentchainBlockImportDispatcher, EnclaveStfExecutor, EnclaveValidatorAccessor,
+use crate::{
+	error::Result,
+	initialization::global_components::{
+		EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository,
+		EnclaveParentchainBlockImportDispatcher, EnclaveStfExecutor, EnclaveValidatorAccessor,
+	},
 };
 use itc_parentchain::block_import_dispatcher::DispatchBlockImport;
 use itp_node_api::metadata::provider::AccessNodeMetadata;
@@ -30,7 +33,7 @@ use itp_types::Header as ParentchainHeader;
 use sp_runtime::traits::Header as HeaderTrait;
 use std::sync::Arc;
 
-pub struct FullSolochainHandler {
+pub struct FullParachainHandler {
 	pub genesis_header: ParentchainHeader,
 	pub node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
 	pub stf_executor: Arc<EnclaveStfExecutor>,
@@ -39,7 +42,7 @@ pub struct FullSolochainHandler {
 	pub import_dispatcher: Option<Arc<EnclaveParentchainBlockImportDispatcher>>,
 }
 
-impl FullSolochainHandler {
+impl FullParachainHandler {
 	pub fn init<WorkerModeProvider: ProvideWorkerMode>(
 		params: LightClientInitParams<ParentchainHeader>,
 	) -> Result<ParentchainHeader> {
@@ -80,7 +83,7 @@ impl FullSolochainHandler {
 			WorkerMode::Teeracle => None,
 		};
 
-		let solochain_handler = Arc::new(Self {
+		let parachain_handler = Arc::new(Self {
 			genesis_header,
 			node_metadata_repository,
 			stf_executor,
@@ -89,7 +92,7 @@ impl FullSolochainHandler {
 			import_dispatcher,
 		});
 
-		GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.initialize(solochain_handler);
+		GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.initialize(parachain_handler);
 
 		Ok(latest_header)
 	}

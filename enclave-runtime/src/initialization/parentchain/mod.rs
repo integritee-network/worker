@@ -16,6 +16,7 @@
 */
 
 mod common;
+mod parachain;
 mod solochain;
 
 use sp_runtime::traits::Header as HeaderTrait;
@@ -26,9 +27,11 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 	params: LightClientInitParams<Header>,
 ) -> EnclaveResult<Header> {
 	let latest_header = match LightClientInitParams {
-		LightClientInitParams::Grandpa(..) => SolochainHandler::init(params),
-		LightClientInitParams::Parachain(..) => ParachainHandler::init(params),
-	}?;
+		LightClientInitParams::Grandpa(..) =>
+			solochain::FullSolochainHandler::init::<WorkerModeProvider>(params)?,
+		LightClientInitParams::Parachain(..) =>
+			parachain::FullParachainHandler::init::<WorkerModeProvider>(params)?,
+	};
 
 	Ok(latest_header)
 }

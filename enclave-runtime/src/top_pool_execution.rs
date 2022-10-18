@@ -18,13 +18,13 @@
 use crate::{
 	error::Result,
 	global_components::{
-		GLOBAL_EXTRINSICS_FACTORY_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
-		GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
-		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STF_EXECUTOR_COMPONENT,
+		GLOBAL_OCALL_API_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT,
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 		GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
 	},
 	sync::{EnclaveLock, EnclaveStateRWLock},
 	utils::{
+		get_extrinsic_factory_from_solo_or_parachain,
 		get_triggered_dispatcher_from_solo_or_parachain,
 		get_validator_accessor_from_solo_or_parachain,
 	},
@@ -118,13 +118,13 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 		start_time.elapsed().as_millis()
 	);
 
-	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
+	let stf_executor = get_stf_executor_from_solo_or_parachain()?;
 
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 
 	let block_composer = GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT.get()?;
 
-	let extrinsics_factory = GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get()?;
+	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
 
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 

@@ -15,15 +15,29 @@
 
 */
 
+use crate::{
+	error::Result,
+	initialization::global_components::{
+		EnclaveExtrinsicsFactory, EnclaveImmediateParentchainBlockImportDispatcher,
+		EnclaveNodeMetadataRepository, EnclaveOffchainWorkerExecutor,
+		EnclaveParentchainBlockImportDispatcher, EnclaveParentchainBlockImporter,
+		EnclaveStfExecutor, EnclaveTriggeredParentchainBlockImportDispatcher,
+		EnclaveValidatorAccessor, GLOBAL_NONCE_CACHE, GLOBAL_OCALL_API_COMPONENT,
+		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+		GLOBAL_STATE_OBSERVER_COMPONENT, GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
+	},
+};
 use itc_parentchain::block_import_dispatcher::BlockImportDispatcher;
+use itp_sgx_crypto::Ed25519Seal;
+use sp_core::H256;
 
-use crate::initialization::global_components::{EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository};
-
-pub(crate) fn create_parentchain_block_importer(validator_access: Arc<EnclaveValidatorAccessor>, extrinsics_factory: Arc<EnclaveExtrinsicsFactory>, node_metadata_repository: Arc<EnclaveNodeMetadataRepository>)
--> EnclaveResult<Arc<ParentchainBlockImporter>> {
-	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
+pub(crate) fn create_parentchain_block_importer(
+	validator_access: Arc<EnclaveValidatorAccessor>,
+	stf_executor: Arc<EnclaveStfExecutor>,
+	extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
+	node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
+) -> EnclaveResult<Arc<EnclaveParentchainBlockImporter>> {
 	let state_observer = GLOBAL_STATE_OBSERVER_COMPONENT.get()?;
-	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 	let shielding_key_repository = GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.get()?;
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
@@ -39,7 +53,7 @@ pub(crate) fn create_parentchain_block_importer(validator_access: Arc<EnclaveVal
 		top_pool_author.clone(),
 		node_metadata_repository,
 	));
-	Ok(Arc::new(ParentchainBlockImporter::new(
+	Ok(Arc::new(EnclaveParentchainBlockImporter::new(
 		validator_access.clone(),
 		stf_executor.clone(),
 		extrinsics_factory.clone(),
@@ -47,22 +61,28 @@ pub(crate) fn create_parentchain_block_importer(validator_access: Arc<EnclaveVal
 	)))
 }
 
-
-pub (crate) fn create_extrinsic_factory(genesis_hash: H256) -> Result<Arc<ExtrinsicsFactory>> {
+pub(crate) fn create_extrinsics_factory(
+	genesis_hash: H256,
+	node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
+) -> Result<Arc<EnclaveExtrinsicsFactory>> {
 	let signer = Ed25519Seal::unseal_from_static_file()?;
-	GLOBAL_NONCE_CACHE.clone(),
-	let node_metadata_repository = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
 
-	Ok(Arc::new(ExtrinsicsFactory::new(
+	Ok(Arc::new(EnclaveExtrinsicsFactory::new(
 		genesis_hash,
 		signer,
-		GLOBAL_NONCE_CACHE.clone(),
+		GLOBAL_NONCE_CACHE,
 		node_metadata_repository,
 	)))
-
 }
 
-fn create_offchain_immediate_import_dispatcher(block_importer: Arc<ParentchainBlockImporter>) -> Arc<BlockImportDispatcher> {
+fn create_offchain_immediate_import_dispatcher(
+	stf_executor: Arc<EnclaveStfExecutor>,
+	block_importer: Arc<ParentchainBlockImporter>,
+) -> Arc<EnclaveParentchainBlockImportDispatcher> {
+	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
+	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
+	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
+
 	let offchain_worker_executor = Arc::new(EnclaveOffchainWorkerExecutor::new(
 		top_pool_author,
 		stf_executor,
@@ -71,21 +91,27 @@ fn create_offchain_immediate_import_dispatcher(block_importer: Arc<ParentchainBl
 		extrinsics_factory,
 	));
 	let immediate_dispatcher =
-		ImmediateDispatcher::new(parentchain_block_importer).with_observer(move || {
-			if let Err(e) = offchain_worker_executor.execute() {
-				error!("Failed to execute trusted calls: {:?}", e);
-			}
-		});
+		EnclaveImmediateParentchainBlockImportDispatcher::new(parentchain_block_importer)
+			.with_observer(move || {
+				if let Err(e) = offchain_worker_executor.execute() {
+					error!("Failed to execute trusted calls: {:?}", e);
+				}
+			});
 
-	Arc::new(BlockImportDispatcher::new_immediate_dispatcher(immediate_dispatcher))
+	Arc::new(EnclaveParentchainBlockImportDispatcher::new_immediate_dispatcher(
+		immediate_dispatcher,
+	))
 }
 
-fn create_sidechain_triggered_import_dispatcher(block_importer: Arc<ParentchainBlockImporter>) -> Arc<BlockImportDispatcher> {
+fn create_sidechain_triggered_import_dispatcher(
+	block_importer: Arc<ParentchainBlockImporter>,
+) -> Arc<EnclaveParentchainBlockImportDispatcher> {
 	let parentchain_block_import_queue = BlockImportQueue::<SignedBlock>::default();
-	let triggered_dispatcher = TriggeredDispatcher::new(
-		parentchain_block_importer,
+	let triggered_dispatcher = EnclaveTriggeredParentchainBlockImportDispatcher::new(
+		block_importer,
 		parentchain_block_import_queue,
 	);
-	Arc::new(BlockImportDispatcher::new_triggered_dispatcher(triggered_dispatcher))
-
+	Arc::new(EnclaveParentchainBlockImportDispatcher::new_triggered_dispatcher(
+		triggered_dispatcher,
+	))
 }

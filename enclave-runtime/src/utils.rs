@@ -14,7 +14,16 @@
 	limitations under the License.
 
 */
-use codec::{Decode, Error, Input};
+use crate::{
+	error::{Error, Result},
+	initialization::global_components::{
+		EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository,
+		EnclaveParentchainBlockImportDispatcher, EnclaveStfExecutor,
+		EnclaveTriggeredParentchainBlockImportDispatcher, EnclaveValidatorAccessor,
+		GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT, GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT,
+	},
+};
+use codec::{Decode, Input};
 use std::slice;
 
 /// Helper trait to transform the sgx-ffi pointers to any type that implements
@@ -32,7 +41,7 @@ pub unsafe trait DecodeRaw {
 unsafe impl<D: Decode> DecodeRaw for D {
 	type Decoded = D;
 
-	unsafe fn decode_raw<'a, T>(data: *const T, len: usize) -> Result<Self::Decoded, Error>
+	unsafe fn decode_raw<'a, T>(data: *const T, len: usize) -> Result<Self::Decoded, codec::Error>
 	where
 		T: 'a,
 		&'a [T]: Input,
@@ -54,13 +63,14 @@ pub unsafe fn utf8_str_from_raw<'a>(
 
 pub(crate) fn get_triggered_dispatcher_from_solo_or_parachain(
 ) -> Result<EnclaveTriggeredParentchainBlockImportDispatcher> {
-	if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
-		get_triggered_dispatcher(solochain_handler.import_dispatcher)
+	let dispatcher = if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
+		get_triggered_dispatcher(solochain_handler.import_dispatcher)?
 	} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
-		get_triggered_dispatcher(parachain_handler.import_dispatcher)
+		get_triggered_dispatcher(parachain_handler.import_dispatcher)?
 	} else {
 		return Err(Error::NoParentchainAssigned)
 	};
+	Ok(dispatcher)
 }
 
 pub(crate) fn get_triggered_dispatcher(
@@ -75,11 +85,51 @@ pub(crate) fn get_triggered_dispatcher(
 
 pub(crate) fn get_validator_accessor_from_solo_or_parachain(
 ) -> Result<Arc<EnclaveValidatorAccessor>> {
-	if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
-		solochain_handler.validator_accessor
+	let validator_accessor =
+		if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
+			solochain_handler.validator_accessor
+		} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
+			parachain_handler.validator_accessor
+		} else {
+			return Err(Error::NoParentchainAssigned)
+		};
+	Ok(validator_accessor)
+}
+
+pub(crate) fn get_node_metadata_repository_from_solo_or_parachain(
+) -> Result<Arc<EnclaveNodeMetadataRepository>> {
+	let metadata_repository =
+		if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
+			solochain_handler.node_metadata_repository
+		} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
+			parachain_handler.node_metadata_repository
+		} else {
+			return Err(Error::NoParentchainAssigned)
+		};
+	Ok(metadata_repository)
+}
+
+pub(crate) fn get_extrinsic_factory_from_solo_or_parachain() -> Result<Arc<EnclaveExtrinsicsFactory>>
+{
+	let extrinsics_factory =
+		if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
+			solochain_handler.extrinsics_factory
+		} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
+			parachain_handler.extrinsics_factory
+		} else {
+			return Err(Error::NoParentchainAssigned)
+		};
+	Ok(extrinsics_factory)
+}
+
+pub(crate) fn get_stf_executor_from_solo_or_parachain() -> Result<Arc<EnclaveStfExecutor>> {
+	let stf_executor = if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get()
+	{
+		solochain_handler.stf_executor
 	} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
-		parachain_handler.validator_accessor
+		parachain_handler.stf_executor
 	} else {
 		return Err(Error::NoParentchainAssigned)
 	};
+	Ok(stf_executor)
 }

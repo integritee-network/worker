@@ -33,8 +33,7 @@ use crate::{
 	error::{Error, Result},
 	global_components::{
 		GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT, GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT,
-		GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
-		GLOBAL_STATE_HANDLER_COMPONENT,
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 	},
 	rpc::worker_api_direct::sidechain_io_handler,
 	utils::{utf8_str_from_raw, DecodeRaw},
@@ -195,7 +194,7 @@ pub unsafe extern "C" fn set_node_metadata(
 		Ok(m) => m,
 	};
 
-	let node_metadata_repository = match GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get() {
+	let node_metadata_repository = match get_extrinsic_factory_from_solo_or_parachain() {
 		Ok(r) => r,
 		Err(e) => {
 			error!("Component get failure: {:?}", e);

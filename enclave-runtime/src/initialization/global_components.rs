@@ -143,17 +143,9 @@ pub type EnclaveTriggeredParentchainBlockImportDispatcher =
 pub type EnclaveImmediateParentchainBlockImportDispatcher =
 	ImmediateDispatcher<EnclaveParentchainBlockImporter>;
 
-pub type EncalveParentchainBlockImportDispatcher = BlockImportDispatcher<
+pub type EnclaveParentchainBlockImportDispatcher = BlockImportDispatcher<
 	EnclaveTriggeredParentchainBlockImportDispatcher,
 	EnclaveImmediateParentchainBlockImportDispatcher,
->;
-
-pub type EnclaveFullSolochainHandler = FullSolochainHandler<
-	ParentchainHeader,
-	EnclaveNodeMetadataRepository,
-	EnclaveValidatorAccessor,
-	EnclaveExtrinsicsFactory,
-	EncalveParentchainBlockImportDispatcher,
 >;
 
 /// Sidechain types
@@ -226,10 +218,6 @@ pub static GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT: ComponentContainer<
 	EnclaveShieldingKeyRepository,
 > = ComponentContainer::new("Shielding key repository");
 
-/// STF executor.
-pub static GLOBAL_STF_EXECUTOR_COMPONENT: ComponentContainer<EnclaveStfExecutor> =
-	ComponentContainer::new("STF executor");
-
 /// O-Call API
 pub static GLOBAL_OCALL_API_COMPONENT: ComponentContainer<EnclaveOCallApi> =
 	ComponentContainer::new("O-call API");
@@ -258,17 +246,11 @@ pub static GLOBAL_ATTESTATION_HANDLER_COMPONENT: ComponentContainer<EnclaveAttes
 ///-------------------------------------------------------------------------------------------------
 
 /// Solochain Handler.
-pub static GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT: ComponentContainer<
-	EnclaveFullSolochainHandler,
-> = ComponentContainer::new("full solochain handler");
+pub static GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT: ComponentContainer<FullSolochainHandler> =
+	ComponentContainer::new("full solochain handler");
 
-/// Extrinsics factory.
-pub static GLOBAL_EXTRINSICS_FACTORY_COMPONENT: ComponentContainer<EnclaveExtrinsicsFactory> =
-	ComponentContainer::new("extrinsics_factory");
-
-pub static GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT: ComponentContainer<
-	EnclaveNodeMetadataRepository,
-> = ComponentContainer::new("node metadata repository");
+pub static GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT: ComponentContainer<FullParachainHandler> =
+	ComponentContainer::new("full parachain handler");
 
 /// Sidechain component instances
 ///-------------------------------------------------------------------------------------------------
