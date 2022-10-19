@@ -28,7 +28,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use crate::{
-	global_components::GLOBAL_ATTESTATION_HANDLER_COMPONENT, Error as EnclaveError,
+	initialization::global_components::GLOBAL_ATTESTATION_HANDLER_COMPONENT, Error as EnclaveError,
 	Result as EnclaveResult,
 };
 use codec::{Decode, Encode};

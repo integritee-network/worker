@@ -24,7 +24,7 @@ use crate::{
 	},
 };
 use codec::{Decode, Input};
-use std::slice;
+use std::{result::Result as StdResult, slice, sync::Arc};
 
 /// Helper trait to transform the sgx-ffi pointers to any type that implements
 /// `parity-scale-codec::Decode`
@@ -32,7 +32,10 @@ pub unsafe trait DecodeRaw {
 	/// the type to decode into
 	type Decoded: Decode;
 
-	unsafe fn decode_raw<'a, T>(data: *const T, len: usize) -> Result<Self::Decoded, codec::Error>
+	unsafe fn decode_raw<'a, T>(
+		data: *const T,
+		len: usize,
+	) -> StdResult<Self::Decoded, codec::Error>
 	where
 		T: 'a,
 		&'a [T]: Input;
@@ -41,7 +44,10 @@ pub unsafe trait DecodeRaw {
 unsafe impl<D: Decode> DecodeRaw for D {
 	type Decoded = D;
 
-	unsafe fn decode_raw<'a, T>(data: *const T, len: usize) -> Result<Self::Decoded, codec::Error>
+	unsafe fn decode_raw<'a, T>(
+		data: *const T,
+		len: usize,
+	) -> StdResult<Self::Decoded, codec::Error>
 	where
 		T: 'a,
 		&'a [T]: Input,
@@ -55,14 +61,14 @@ unsafe impl<D: Decode> DecodeRaw for D {
 pub unsafe fn utf8_str_from_raw<'a>(
 	data: *const u8,
 	len: usize,
-) -> Result<&'a str, std::str::Utf8Error> {
+) -> StdResult<&'a str, std::str::Utf8Error> {
 	let bytes = slice::from_raw_parts(data, len);
 
 	std::str::from_utf8(bytes)
 }
 
 pub(crate) fn get_triggered_dispatcher_from_solo_or_parachain(
-) -> Result<EnclaveTriggeredParentchainBlockImportDispatcher> {
+) -> Result<Arc<EnclaveTriggeredParentchainBlockImportDispatcher>> {
 	let dispatcher = if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
 		get_triggered_dispatcher(solochain_handler.import_dispatcher)?
 	} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
@@ -75,7 +81,7 @@ pub(crate) fn get_triggered_dispatcher_from_solo_or_parachain(
 
 pub(crate) fn get_triggered_dispatcher(
 	dispatcher: Option<Arc<EnclaveParentchainBlockImportDispatcher>>,
-) -> Result<EnclaveTriggeredParentchainBlockImportDispatcher> {
+) -> Result<Arc<EnclaveTriggeredParentchainBlockImportDispatcher>> {
 	let triggered_dispatcher = dispatcher
 		.ok_or(Error::ExpectedTriggeredImportDispatcher)?
 		.triggered_dispatcher()

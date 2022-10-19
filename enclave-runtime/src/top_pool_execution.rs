@@ -17,14 +17,14 @@
 
 use crate::{
 	error::Result,
-	global_components::{
+	initialization::global_components::{
 		GLOBAL_OCALL_API_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT,
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 		GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
 	},
 	sync::{EnclaveLock, EnclaveStateRWLock},
 	utils::{
-		get_extrinsic_factory_from_solo_or_parachain,
+		get_extrinsic_factory_from_solo_or_parachain, get_stf_executor_from_solo_or_parachain,
 		get_triggered_dispatcher_from_solo_or_parachain,
 		get_validator_accessor_from_solo_or_parachain,
 	},

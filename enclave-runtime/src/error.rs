@@ -39,6 +39,7 @@ pub enum Error {
 	StfExecution(itp_stf_executor::error::Error),
 	ParentchainBlockImportDispatch(itc_parentchain::block_import_dispatcher::error::Error),
 	ExpectedTriggeredImportDispatcher,
+	CouldNotDispatchBlockImport,
 	NoParentchainAssigned,
 	PrimitivesAccess(itp_primitives_cache::error::Error),
 	MutexAccess,

@@ -21,7 +21,9 @@
 //! and ensures that the global instances are initialized once.
 
 use crate::{
-	ocall::OcallApi, rpc::rpc_response_channel::RpcResponseChannel,
+	ocall::OcallApi,
+	parentchain::{parachain::FullParachainHandler, solochain::FullSolochainHandler},
+	rpc::rpc_response_channel::RpcResponseChannel,
 	tls_ra::seal_handler::SealHandler,
 };
 use ita_sgx_runtime::Runtime;
@@ -146,6 +148,7 @@ pub type EnclaveImmediateParentchainBlockImportDispatcher =
 pub type EnclaveParentchainBlockImportDispatcher = BlockImportDispatcher<
 	EnclaveTriggeredParentchainBlockImportDispatcher,
 	EnclaveImmediateParentchainBlockImportDispatcher,
+	SignedParentchainBlock,
 >;
 
 /// Sidechain types
