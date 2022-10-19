@@ -18,6 +18,7 @@
 use crate::error::{Error, Result};
 use codec::Encode;
 use ita_stf::StatePayload;
+use itp_settings::worker::BLOCK_NUMBER_FINALIZATION_DIFF;
 use itp_sgx_crypto::{key_repository::AccessKey, StateCrypto};
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_time_utils::now_as_u64;
@@ -115,11 +116,15 @@ where
 		let state_hash_new = aposteriori_state.hash();
 		let db = SidechainDB::<SignedSidechainBlock::Block, Externalities>::new(aposteriori_state);
 
-		let (block_number, parent_hash) = match db.get_last_block() {
-			Some(block) => (block.header().block_number() + 1, block.hash()),
+		let (block_number, parent_hash, last_finalized_block) = match db.get_last_block() {
+			Some(block) => (
+				block.header().block_number() + 1,
+				block.hash(),
+				block.header().last_finalized_block_number(),
+			),
 			None => {
 				info!("Seems to be first sidechain block.");
-				(1, Default::default())
+				(1, Default::default(), 0)
 			},
 		};
 
@@ -148,11 +153,17 @@ where
 			now_as_u64(),
 		);
 
+		let mut finalized_block = last_finalized_block;
+		if finalized_block + BLOCK_NUMBER_FINALIZATION_DIFF == block_number {
+			finalized_block = block_number;
+		}
+
 		let header = HeaderTypeOf::<SignedSidechainBlock>::new(
 			block_number,
 			parent_hash,
 			shard,
 			block_data.hash(),
+			finalized_block,
 		);
 
 		let block = SignedSidechainBlock::Block::new(header.clone(), block_data);

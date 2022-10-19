@@ -106,24 +106,26 @@ impl<
 			.map_err(|e| Error::Other(e.into()))?
 			.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 
-		let opaque_call = OpaqueCall::from_tuple(&(
-			call,
-			shard,
-			header.block_number(),
-			BLOCK_NUMBER_FINALIZATION_DIFF,
-			header.hash(),
-		));
+		if header.block_number() == header.last_finalized_block_number() {
+			let opaque_call = OpaqueCall::from_tuple(&(
+				call,
+				shard,
+				header.block_number(),
+				BLOCK_NUMBER_FINALIZATION_DIFF,
+				header.hash(),
+			));
 
-		let xts = self
-			.extrinsics_factory
-			.create_extrinsics(&[opaque_call], None)
-			.map_err(|e| Error::Other(e.into()))?;
+			let xts = self
+				.extrinsics_factory
+				.create_extrinsics(&[opaque_call], None)
+				.map_err(|e| Error::Other(e.into()))?;
 
-		debug!("Sending sidechain block import confirmation extrinsic..");
-		self.validator_accessor
-			.execute_mut_on_validator(|v| v.send_extrinsics(xts))
-			.map_err(|e| Error::Other(e.into()))?;
-
+			debug!("Sending sidechain block import confirmation extrinsic..");
+			self.validator_accessor
+				.execute_mut_on_validator(|v| v.send_extrinsics(xts))
+				.map_err(|e| Error::Other(e.into()))?;
+			error!("block number: {}", header.block_number());
+		}
 		Ok(())
 	}
 }

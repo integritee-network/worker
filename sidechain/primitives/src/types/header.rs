@@ -42,6 +42,9 @@ pub struct SidechainHeader {
 
 	/// The payload hash.
 	pub block_data_hash: H256,
+
+	/// The latest finalized block number
+	pub last_finalized_block_number: u64,
 }
 
 impl SidechainHeader {
@@ -66,13 +69,23 @@ impl HeaderTrait for SidechainHeader {
 	fn block_data_hash(&self) -> H256 {
 		self.block_data_hash
 	}
+	fn last_finalized_block_number(&self) -> u64 {
+		self.last_finalized_block_number
+	}
 
 	fn new(
 		block_number: u64,
 		parent_hash: H256,
 		shard: Self::ShardIdentifier,
 		block_data_hash: H256,
+		last_finalized_block_number: u64,
 	) -> SidechainHeader {
-		SidechainHeader { block_number, parent_hash, shard_id: shard, block_data_hash }
+		SidechainHeader {
+			block_number,
+			parent_hash,
+			shard_id: shard,
+			block_data_hash,
+			last_finalized_block_number,
+		}
 	}
 }
