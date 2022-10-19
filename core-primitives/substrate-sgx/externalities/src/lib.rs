@@ -24,6 +24,7 @@ extern crate sgx_tstd as std;
 use codec::{Decode, Encode, EncodeAppend};
 use core::ops::Bound;
 use derive_more::{Deref, DerefMut, From, IntoIterator};
+use itp_hashing::Hash;
 use serde::{Deserialize, Serialize};
 use sp_core::{hashing::blake2_256, H256};
 use std::{collections::BTreeMap, vec, vec::Vec};
@@ -75,6 +76,12 @@ pub trait StateHash {
 impl StateHash for SgxExternalities {
 	fn hash(&self) -> H256 {
 		self.state.using_encoded(blake2_256).into()
+	}
+}
+
+impl Hash<H256> for SgxExternalities {
+	fn hash(&self) -> H256 {
+		<Self as StateHash>::hash(self)
 	}
 }
 
