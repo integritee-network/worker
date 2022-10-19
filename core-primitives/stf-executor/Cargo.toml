@@ -11,7 +11,6 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # local dependencies
-ita-sgx-runtime = { path = "../../app-libs/sgx-runtime", default-features = false }
 ita-stf = { path = "../../app-libs/stf", default-features = false }
 itp-node-api = { path = "../node-api", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
@@ -47,13 +46,13 @@ itp-test = { path = "../test", default-features = false, optional = true }
 
 [dev-dependencies]
 itp-stf-state-observer = { path = "../stf-state-observer", features = ["mocks"] }
+itp-stf-interface = { path = "../stf-interface", features = ["mocks"] }
 
 [features]
 default = ["std"]
 std = [
     # local
     "ita-stf/std",
-    "ita-sgx-runtime/std",
     "itp-node-api/std",
     "itp-ocall-api/std",
     "itp-sgx-crypto/std",

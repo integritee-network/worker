@@ -17,26 +17,20 @@
 
 use crate::{
 	error::{Error, Result},
-	traits::{
-		StatePostProcessing, StateUpdateProposer, StfExecuteGenericUpdate,
-		StfExecuteTimedGettersBatch, StfUpdateState,
-	},
+	traits::{StatePostProcessing, StateUpdateProposer, StfExecuteGenericUpdate, StfUpdateState},
 	BatchExecutionResult, ExecutedOperation,
 };
 use codec::{Decode, Encode};
-use ita_sgx_runtime::Runtime;
 use ita_stf::{
 	hash::{Hash, TrustedOperationOrHash},
 	stf_sgx::{shards_key_hash, storage_hashes_to_update_per_shard},
-	Getter, ParentchainHeader, ShardIdentifier, Stf, TrustedCallSigned, TrustedGetterSigned,
-	TrustedOperation,
+	ParentchainHeader, ShardIdentifier, TrustedCallSigned, TrustedOperation,
 };
 use itp_node_api::metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata};
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_stf_interface::{
-	parentchain_pallet::ParentchainPalletInterface, ExecuteCall, StateCallInterface,
-	StateGetterInterface, UpdateState,
+	parentchain_pallet::ParentchainPalletInterface, ExecuteCall, StateCallInterface, UpdateState,
 };
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_time_utils::duration_now;
@@ -303,60 +297,6 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler, NodeMetadataRepository, Stf> StfExecuteTimedGettersBatch
-	for StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf>
-where
-	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
-	StateHandler: HandleState<HashType = H256>,
-	StateHandler::StateT: SgxExternalitiesTrait + Encode + Debug,
-	NodeMetadataRepository: AccessNodeMetadata,
-	Stf: UpdateState<
-		StateHandler::StateT,
-		<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
-	>,
-	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
-		IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>,
-{
-	type Externalities = StateHandler::StateT;
-
-	fn execute_timed_getters_batch<F>(
-		&self,
-		trusted_getters: &[TrustedGetterSigned],
-		shard: &ShardIdentifier,
-		max_exec_duration: Duration,
-		getter_callback: F,
-	) -> Result<()>
-	where
-		F: Fn(&TrustedGetterSigned, Result<Option<Vec<u8>>>),
-	{
-		let ends_at = duration_now() + max_exec_duration;
-
-		// return early if we have no trusted getters, so we don't decrypt the state unnecessarily
-		if trusted_getters.is_empty() {
-			return Ok(())
-		}
-
-		// load state once per shard
-		let mut state = self.state_handler.load(&shard)?;
-
-		for trusted_getter_signed in trusted_getters.into_iter() {
-			// get state
-			let getter_state = get_stf_state(trusted_getter_signed, &mut state);
-
-			debug!("Executing trusted getter");
-
-			getter_callback(trusted_getter_signed, getter_state);
-
-			// Check time
-			if ends_at < duration_now() {
-				return Ok(())
-			}
-		}
-
-		Ok(())
-	}
-}
-
 impl<OCallApi, StateHandler, NodeMetadataRepository, Stf> StfExecuteGenericUpdate
 	for StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf>
 where
@@ -399,26 +339,4 @@ fn into_map(
 	storage_entries: Vec<StorageEntryVerified<Vec<u8>>>,
 ) -> BTreeMap<Vec<u8>, Option<Vec<u8>>> {
 	storage_entries.into_iter().map(|e| e.into_tuple()).collect()
-}
-
-/// Execute a trusted getter on a state and return its value, if available.
-///
-/// Also verifies the signature of the trusted getter and returns an error
-/// if it's invalid.
-pub(crate) fn get_stf_state<E: SgxExternalitiesTrait + Debug>(
-	trusted_getter_signed: &TrustedGetterSigned,
-	state: &mut E,
-) -> Result<Option<Vec<u8>>> {
-	debug!("verifying signature of TrustedGetterSigned");
-	// FIXME: Trusted Getter should not be hardcoded. But
-	// verify_signature is currently not available as a Trait.
-	if let false = trusted_getter_signed.verify_signature() {
-		return Err(Error::OperationHasInvalidSignature)
-	}
-	// FIXME: stf type should be defined by the implement struct or function.
-	debug!("calling into STF to get state");
-	Ok(Stf::<TrustedCallSigned, Getter, E, Runtime>::execute_getter(
-		state,
-		trusted_getter_signed.clone().into(),
-	))
 }

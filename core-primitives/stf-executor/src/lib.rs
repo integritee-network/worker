@@ -16,6 +16,7 @@
 */
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(test, feature(assert_matches))]
 
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
@@ -48,9 +49,6 @@ pub mod enclave_signer;
 
 #[cfg(all(feature = "sgx", feature = "test"))]
 pub mod executor_tests;
-
-#[cfg(all(feature = "sgx", feature = "test"))]
-pub mod enclave_signer_tests;
 
 #[cfg(feature = "mocks")]
 pub mod mocks;

@@ -68,7 +68,7 @@ impl<Getter, State, StateDiff> StateGetterInterface<Getter, State>
 	for StateInterfaceMock<State, StateDiff>
 {
 	fn execute_getter(_state: &mut State, _getter: Getter) -> Option<Vec<u8>> {
-		unimplemented!()
+		None
 	}
 }
 
