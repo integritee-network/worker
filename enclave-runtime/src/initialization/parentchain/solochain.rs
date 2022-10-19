@@ -15,20 +15,31 @@
 
 */
 
-use super::common::{
-	create_extrinsics_factory, create_offchain_immediate_import_dispatcher,
-	create_sidechain_triggered_import_dispatcher, GLOBAL_OCALL_API_COMPONENT,
-	GLOBAL_STATE_HANDLER_COMPONENT,
+use crate::{
+	error::Result,
+	initialization::{
+		global_components::{
+			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOCallApi,
+			EnclaveParentchainBlockImportDispatcher, EnclaveStfExecutor, EnclaveValidatorAccessor,
+			GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
+			GLOBAL_STATE_HANDLER_COMPONENT,
+		},
+		parentchain::common::{
+			create_extrinsics_factory, create_offchain_immediate_import_dispatcher,
+			create_parentchain_block_importer, create_sidechain_triggered_import_dispatcher,
+		},
+	},
 };
-use crate::initialization::global_components::{
-	error::Result, EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository,
-	EnclaveParentchainBlockImportDispatcher, EnclaveStfExecutor, EnclaveValidatorAccessor,
+use codec::Encode;
+use itc_parentchain::light_client::{
+	concurrent_access::ValidatorAccess, light_client_init_params::LightClientInitParams,
+	LightClientState,
 };
-use itc_parentchain::block_import_dispatcher::DispatchBlockImport;
-use itp_node_api::metadata::provider::AccessNodeMetadata;
-use itp_types::Header as ParentchainHeader;
+use itp_component_container::ComponentGetter;
+use itp_settings::worker_mode::ProvideWorkerMode;
+use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader};
 use sp_runtime::traits::Header as HeaderTrait;
-use std::sync::Arc;
+use std::{sync::Arc, vec::Vec};
 
 pub struct FullSolochainHandler {
 	pub genesis_header: ParentchainHeader,
@@ -41,16 +52,16 @@ pub struct FullSolochainHandler {
 
 impl FullSolochainHandler {
 	pub fn init<WorkerModeProvider: ProvideWorkerMode>(
-		params: LightClientInitParams<ParentchainHeader>,
-	) -> Result<ParentchainHeader> {
+		params: LightClientInitParams,
+	) -> Result<Vec<u8>> {
 		let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 		let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
-		let node_metadata_repository = Arc::new(NodeMetadataRepository::default());
+		let node_metadata_repository = Arc::new(EnclaveNodeMetadataRepository::default());
 
-		let validator = itc_parentchain::light_client::io::read_or_init_validator::<Block, OcallApi>(
-			params,
-			ocall_api.clone(),
-		)?;
+		let validator = itc_parentchain::light_client::io::read_or_init_validator::<
+			ParentchainBlock,
+			EnclaveOCallApi,
+		>(params, ocall_api.clone())?;
 		let latest_header = validator.latest_finalized_header(validator.num_relays())?;
 		let validator_access = Arc::new(EnclaveValidatorAccessor::new(validator));
 		let genesis_header = params.get_genesis_header();
@@ -73,15 +84,19 @@ impl FullSolochainHandler {
 			Arc::new(EnclaveStfExecutor::new(ocall_api, state_handler, node_metadata_repository));
 
 		let import_dispatcher = match WorkerModeProvider::worker_mode() {
-			WorkerMode::OffChainWorker =>
-				Some(create_offchain_immediate_import_dispatcher(stf_executor, block_importer)),
+			WorkerMode::OffChainWorker => Some(create_offchain_immediate_import_dispatcher(
+				stf_executor,
+				block_importer,
+				validator_access,
+				extrinsics_factory,
+			)),
 			WorkerMode::Sidechain =>
 				Some(create_sidechain_triggered_import_dispatcher(block_importer)),
 			WorkerMode::Teeracle => None,
 		};
 
 		let solochain_handler = Arc::new(Self {
-			genesis_header,
+			genesis_header.clone(),
 			node_metadata_repository,
 			stf_executor,
 			validator_accessor,
@@ -91,6 +106,6 @@ impl FullSolochainHandler {
 
 		GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.initialize(solochain_handler);
 
-		Ok(latest_header)
+		Ok(latest_header.encode())
 	}
 }

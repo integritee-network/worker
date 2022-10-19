@@ -42,13 +42,12 @@ impl<BlockImporter> ImmediateDispatcher<BlockImporter> {
 	}
 }
 
-impl<BlockImporter> DispatchBlockImport for ImmediateDispatcher<BlockImporter>
+impl<BlockImporter, SignedBlockType> DispatchBlockImport<SignedBlockType>
+	for ImmediateDispatcher<BlockImporter>
 where
-	BlockImporter: ImportParentchainBlocks,
+	BlockImporter: ImportParentchainBlocks<SignedBlockType = SignedBlockType>,
 {
-	type SignedBlockType = BlockImporter::SignedBlockType;
-
-	fn dispatch_import(&self, blocks: Vec<Self::SignedBlockType>) -> Result<()> {
+	fn dispatch_import(&self, blocks: Vec<SignedBlockType>) -> Result<()> {
 		debug!("Importing {} parentchain blocks", blocks.len());
 		self.block_importer.import_parentchain_blocks(blocks)?;
 		debug!("Notifying {} observers of import", self.import_event_observers.len());

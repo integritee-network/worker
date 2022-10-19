@@ -37,63 +37,71 @@ pub mod triggered_dispatcher;
 #[cfg(feature = "mocks")]
 pub mod trigger_parentchain_block_import_mock;
 
+use crate::triggered_dispatcher::TriggerParentchainBlockImport;
+use core::marker::PhantomData;
 use error::{Error, Result};
-use std::vec::Vec;
+use std::{sync::Arc, vec::Vec};
 
 /// Trait to dispatch blocks for import into the local light-client.
-pub trait DispatchBlockImport {
-	type SignedBlockType;
-
+pub trait DispatchBlockImport<SignedBlockType> {
 	/// Dispatch blocks to be imported.
 	///
 	/// The blocks may be imported immediately, get queued, delayed or grouped.
-	fn dispatch_import(&self, blocks: Vec<Self::SignedBlockType>) -> Result<()>;
+	fn dispatch_import(&self, blocks: Vec<SignedBlockType>) -> Result<()>;
 }
 
 /// Wrapper struct for the actual dispatchers. Allows to define one global type for
 ///  a dispatcher even though only one dispatcher is used.
-pub struct BlockImportDispatcher<TriggeredDispatcher, ImmediateDispatcher> {
-	triggered_dispatcher: Option<TriggeredDispatcher>,
-	immediate_dispatcher: Option<ImmediateDispatcher>,
+pub struct BlockImportDispatcher<TriggeredDispatcher, ImmediateDispatcher, SignedBlockType> {
+	triggered_dispatcher: Option<Arc<TriggeredDispatcher>>,
+	immediate_dispatcher: Option<Arc<ImmediateDispatcher>>,
+	_phantom: PhantomData<SignedBlockType>,
 }
 
-impl<TriggeredDispatcher, ImmediateDispatcher>
-	BlockImportDispatcher<TriggeredDispatcher, ImmediateDispatcher>
+impl<TriggeredDispatcher, ImmediateDispatcher, SignedBlockType>
+	BlockImportDispatcher<TriggeredDispatcher, ImmediateDispatcher, SignedBlockType>
 where
-	TriggeredDispatcher: DispatchBlockImport + TriggerParentchainBlockImport,
-	ImmediateDispatcher: DispatchBlockImport,
+	TriggeredDispatcher: TriggerParentchainBlockImport<SignedBlockType>,
 {
-	pub fn new_triggered_dispatcher(triggered_dispatcher: TriggeredDispatcher) -> Self {
-		Self { triggered_dispatcher: Some(triggered_dispatcher), immediate_dispatcher: None }
+	pub fn new_triggered_dispatcher(triggered_dispatcher: Arc<TriggeredDispatcher>) -> Self {
+		Self {
+			triggered_dispatcher: Some(triggered_dispatcher),
+			immediate_dispatcher: None,
+			_phantom: Default::default(),
+		}
 	}
 
-	pub fn new_immediate_dispatcher(immediate_dispatcher: ImmediateDispatcher) -> Self {
-		Self { triggered_dispatcher: None, immediate_dispatcher: Some(immediate_dispatcher) }
+	pub fn new_immediate_dispatcher(immediate_dispatcher: Arc<ImmediateDispatcher>) -> Self {
+		Self {
+			triggered_dispatcher: None,
+			immediate_dispatcher: Some(immediate_dispatcher),
+			_phantom: Default::default(),
+		}
 	}
 
-	pub fn triggered_dispatcher(self) -> Option<TriggeredDispatcher> {
-		self.triggered_dispatcher
+	pub fn triggered_dispatcher(&self) -> Option<Arc<TriggeredDispatcher>> {
+		self.triggered_dispatcher.clone()
 	}
 
-	pub fn immediate_dispatcher(self) -> Option<ImmediateDispatcher> {
-		self.immediate_dispatcher
+	pub fn immediate_dispatcher(&self) -> Option<Arc<ImmediateDispatcher>> {
+		self.immediate_dispatcher.clone()
 	}
 }
 
-impl<TriggeredDispatcher, ImmediateDispatcher> DispatchBlockImport
-	for BlockImportDispatcher<TriggeredDispatcher, ImmediateDispatcher>
+impl<TriggeredDispatcher, ImmediateDispatcher, SignedBlockType> DispatchBlockImport<SignedBlockType>
+	for BlockImportDispatcher<TriggeredDispatcher, ImmediateDispatcher, SignedBlockType>
 where
-	TriggeredDispatcher: DispatchBlockImport,
-	ImmediateDispatcher: DispatchBlockImport,
+	TriggeredDispatcher: DispatchBlockImport<SignedBlockType>,
+	ImmediateDispatcher: DispatchBlockImport<SignedBlockType>,
 {
-	fn dispatch_import(&self, blocks: Vec<Self::SignedBlockType>) -> Result<()> {
+	fn dispatch_import(&self, blocks: Vec<SignedBlockType>) -> Result<()> {
 		if self.triggered_dispatcher.is_some() && self.immediate_dispatcher.is_some() {
 			return Err(Error::CanNotAssignTwoDispatcher)
 		}
 
-		if let Some(triggered_dispatcher) = self.triggered_dispatcher {
+		if let Some(triggered_dispatcher) = &self.triggered_dispatcher {
 			triggered_dispatcher.dispatch_import(blocks)
-		} else if let Some(immediate_dispatcher) = self.immediate_dispatcher {
+		} else if let Some(immediate_dispatcher) = &self.immediate_dispatcher {
 			immediate_dispatcher.dispatch_import(blocks)
 		} else {
 			return Err(Error::NoDispatcherAssigned)

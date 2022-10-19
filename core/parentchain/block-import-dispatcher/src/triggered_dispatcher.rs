@@ -72,16 +72,14 @@ where
 	}
 }
 
-impl<BlockImporter, BlockImportQueue> DispatchBlockImport
+impl<BlockImporter, BlockImportQueue, SignedBlockType> DispatchBlockImport<SignedBlockType>
 	for TriggeredDispatcher<BlockImporter, BlockImportQueue>
 where
-	BlockImporter: ImportParentchainBlocks,
-	BlockImportQueue: PushToBlockQueue<BlockImporter::SignedBlockType>
-		+ PopFromBlockQueue<BlockType = BlockImporter::SignedBlockType>,
+	BlockImporter: ImportParentchainBlocks<SignedBlockType = SignedBlockType>,
+	BlockImportQueue:
+		PushToBlockQueue<SignedBlockType> + PopFromBlockQueue<BlockType = SignedBlockType>,
 {
-	type SignedBlockType = BlockImporter::SignedBlockType;
-
-	fn dispatch_import(&self, blocks: Vec<Self::SignedBlockType>) -> Result<()> {
+	fn dispatch_import(&self, blocks: Vec<SignedBlockType>) -> Result<()> {
 		debug!("Pushing parentchain block(s) ({}) to import queue", blocks.len());
 		// Push all the blocks to be dispatched into the queue.
 		self.import_queue.push_multiple(blocks).map_err(Error::BlockImportQueue)
