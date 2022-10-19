@@ -26,6 +26,7 @@ pub struct SidechainHeaderBuilder {
 	block_number: u64,
 	shard_id: ShardIdentifier,
 	block_data_hash: H256,
+	last_finalized_block_number: u64,
 }
 
 impl Default for SidechainHeaderBuilder {
@@ -35,6 +36,7 @@ impl Default for SidechainHeaderBuilder {
 			block_number: 1,
 			shard_id: Default::default(),
 			block_data_hash: Default::default(),
+			last_finalized_block_number: 0,
 		}
 	}
 }
@@ -46,6 +48,7 @@ impl SidechainHeaderBuilder {
 			block_number: 42,
 			shard_id: ShardIdentifier::random(),
 			block_data_hash: H256::random(),
+			last_finalized_block_number: 0,
 		}
 	}
 
@@ -69,12 +72,18 @@ impl SidechainHeaderBuilder {
 		self
 	}
 
+	pub fn with_last_finalized_block_number(mut self, last_finalized_block_number: u64) -> Self {
+		self.last_finalized_block_number = last_finalized_block_number;
+		self
+	}
+
 	pub fn build(self) -> Header {
 		Header {
 			parent_hash: self.parent_hash,
 			block_number: self.block_number,
 			shard_id: self.shard_id,
 			block_data_hash: self.block_data_hash,
+			last_finalized_block_number: self.last_finalized_block_number,
 		}
 	}
 }
