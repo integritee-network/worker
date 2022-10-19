@@ -21,8 +21,10 @@
 //! and ensures that the global instances are initialized once.
 
 use crate::{
+	initialization::parentchain::{
+		parachain::FullParachainHandler, solochain::FullSolochainHandler,
+	},
 	ocall::OcallApi,
-	parentchain::{parachain::FullParachainHandler, solochain::FullSolochainHandler},
 	rpc::rpc_response_channel::RpcResponseChannel,
 	tls_ra::seal_handler::SealHandler,
 };
@@ -119,7 +121,7 @@ pub type EnclaveSidechainApi = SidechainApi<ParentchainBlock>;
 
 // Parentchain types
 pub type EnclaveExtrinsicsFactory =
-	ExtrinsicsFactory<Pair, NonceCache, EnclaveNodeMetadataRepository>;
+	ExtrinsicsFactory<Pair, Arc<NonceCache>, EnclaveNodeMetadataRepository>;
 pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
 	EnclaveShieldingKeyRepository,
 	EnclaveStfEnclaveSigner,
@@ -144,6 +146,9 @@ pub type EnclaveTriggeredParentchainBlockImportDispatcher =
 
 pub type EnclaveImmediateParentchainBlockImportDispatcher =
 	ImmediateDispatcher<EnclaveParentchainBlockImporter>;
+
+pub type EnclaveFullSolochainHandler = FullSolochainHandler<ParentchainBlock>;
+pub type EnclaveFullParachainHandler = FullParachainHandler<ParentchainBlock>;
 
 pub type EnclaveParentchainBlockImportDispatcher = BlockImportDispatcher<
 	EnclaveTriggeredParentchainBlockImportDispatcher,
@@ -249,10 +254,10 @@ pub static GLOBAL_ATTESTATION_HANDLER_COMPONENT: ComponentContainer<EnclaveAttes
 ///-------------------------------------------------------------------------------------------------
 
 /// Solochain Handler.
-pub static GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT: ComponentContainer<FullSolochainHandler> =
+pub static GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT: ComponentContainer<EnclaveFullSolochainHandler> =
 	ComponentContainer::new("full solochain handler");
 
-pub static GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT: ComponentContainer<FullParachainHandler> =
+pub static GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT: ComponentContainer<EnclaveFullParachainHandler> =
 	ComponentContainer::new("full parachain handler");
 
 /// Sidechain component instances

@@ -60,6 +60,7 @@ use itc_tls_websocket_server::{
 use itp_attestation_handler::IasAttestationHandler;
 use itp_block_import_queue::BlockImportQueue;
 use itp_component_container::{ComponentGetter, ComponentInitializer};
+use itp_primitives_cache::GLOBAL_PRIMITIVES_CACHE;
 use itp_settings::{
 	files::STATE_SNAPSHOTS_CACHE_SIZE,
 	worker_mode::{ProvideWorkerMode, WorkerMode},

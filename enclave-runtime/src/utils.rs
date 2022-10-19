@@ -24,6 +24,7 @@ use crate::{
 	},
 };
 use codec::{Decode, Input};
+use itp_component_container::ComponentGetter;
 use std::{result::Result as StdResult, slice, sync::Arc};
 
 /// Helper trait to transform the sgx-ffi pointers to any type that implements

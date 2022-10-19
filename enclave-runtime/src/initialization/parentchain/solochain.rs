@@ -31,18 +31,21 @@ use crate::{
 	},
 };
 use codec::Encode;
-use itc_parentchain::light_client::{
-	concurrent_access::ValidatorAccess, light_client_init_params::LightClientInitParams,
-	LightClientState,
+use itc_parentchain::{
+	block_import_dispatcher::DispatchBlockImport,
+	light_client::{
+		concurrent_access::ValidatorAccess, light_client_init_params::LightClientInitParams,
+		LightClientState,
+	},
 };
-use itp_component_container::ComponentGetter;
+use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_settings::worker_mode::ProvideWorkerMode;
 use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader};
-use sp_runtime::traits::Header as HeaderTrait;
+use sp_runtime::traits::{Block as BlockTrait, Header as HeaderTrait};
 use std::{sync::Arc, vec::Vec};
 
-pub struct FullSolochainHandler {
-	pub genesis_header: ParentchainHeader,
+pub struct FullSolochainHandler<Block: BlockTrait> {
+	pub genesis_header: Block::Header,
 	pub node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
 	pub stf_executor: Arc<EnclaveStfExecutor>,
 	pub validator_accessor: Arc<EnclaveValidatorAccessor>,
@@ -50,9 +53,9 @@ pub struct FullSolochainHandler {
 	pub import_dispatcher: Option<Arc<EnclaveParentchainBlockImportDispatcher>>,
 }
 
-impl FullSolochainHandler {
+impl<Block: BlockTrait> FullSolochainHandler<Block> {
 	pub fn init<WorkerModeProvider: ProvideWorkerMode>(
-		params: LightClientInitParams,
+		params: LightClientInitParams<Block::Header>,
 	) -> Result<Vec<u8>> {
 		let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 		let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
@@ -63,31 +66,31 @@ impl FullSolochainHandler {
 			EnclaveOCallApi,
 		>(params, ocall_api.clone())?;
 		let latest_header = validator.latest_finalized_header(validator.num_relays())?;
-		let validator_access = Arc::new(EnclaveValidatorAccessor::new(validator));
+		let validator_accessor = Arc::new(EnclaveValidatorAccessor::new(validator));
 		let genesis_header = params.get_genesis_header();
 
 		let genesis_hash =
-			validator_access.execute_on_validator(|v| v.genesis_hash(v.num_relays()))?;
+			validator_accessor.execute_on_validator(|v| v.genesis_hash(v.num_relays()))?;
 
 		let extrinsics_factory =
 			create_extrinsics_factory(genesis_hash, node_metadata_repository.clone())?;
-
-		let block_importer = create_parentchain_block_importer(
-			validator_access,
-			stf_executor,
-			extrinsics_factory,
-			node_metadata_repository,
-		)?;
 
 		// FIXME: Probably should be split up into a parentchain dependent executor and one independent.
 		let stf_executor =
 			Arc::new(EnclaveStfExecutor::new(ocall_api, state_handler, node_metadata_repository));
 
+		let block_importer = create_parentchain_block_importer(
+			validator_accessor,
+			stf_executor,
+			extrinsics_factory,
+			node_metadata_repository,
+		)?;
+
 		let import_dispatcher = match WorkerModeProvider::worker_mode() {
 			WorkerMode::OffChainWorker => Some(create_offchain_immediate_import_dispatcher(
 				stf_executor,
 				block_importer,
-				validator_access,
+				validator_accessor,
 				extrinsics_factory,
 			)),
 			WorkerMode::Sidechain =>
@@ -96,7 +99,7 @@ impl FullSolochainHandler {
 		};
 
 		let solochain_handler = Arc::new(Self {
-			genesis_header.clone(),
+			genesis_header: *genesis_header,
 			node_metadata_repository,
 			stf_executor,
 			validator_accessor,

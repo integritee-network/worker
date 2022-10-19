@@ -15,23 +15,28 @@
 
 */
 
+use crate::{
+	error::Result,
+	initialization::global_components::{EnclaveFullParachainHandler, EnclaveFullSolochainHandler},
+	LightClientInitParams,
+};
+use itp_settings::worker_mode::ProvideWorkerMode;
+use sp_runtime::traits::Block as BlockTrait;
+use std::vec::Vec;
+
 mod common;
-mod parachain;
-mod solochain;
-
-use sp_runtime::traits::Header as HeaderTrait;
-
-use crate::initialization::global_components::GLOBAL_SOLOCHAIN_HANDLER_COMPONENT;
+pub mod parachain;
+pub mod solochain;
 
 pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>(
-	params: LightClientInitParams<Header>,
-) -> EnclaveResult<Header> {
-	let latest_header = match LightClientInitParams {
-		LightClientInitParams::Grandpa(..) =>
-			solochain::FullSolochainHandler::init::<WorkerModeProvider>(params)?,
-		LightClientInitParams::Parachain(..) =>
-			parachain::FullParachainHandler::init::<WorkerModeProvider>(params)?,
+	params: LightClientInitParams<Block::Header>,
+) -> Result<Vec<u8>> {
+	let encoded_latest_header = match params {
+		LightClientInitParams::Grandpa { .. } =>
+			EnclaveFullSolochainHandler::init::<WorkerModeProvider>(params)?,
+		LightClientInitParams::Parachain { .. } =>
+			EnclaveFullParachainHandler::init::<WorkerModeProvider>(params)?,
 	};
 
-	Ok(latest_header)
+	Ok(encoded_latest_header)
 }

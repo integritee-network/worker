@@ -17,20 +17,24 @@
 
 use crate::{
 	error::Result,
-	initialization::global_components::{
-		EnclaveExtrinsicsFactory, EnclaveImmediateParentchainBlockImportDispatcher,
-		EnclaveNodeMetadataRepository, EnclaveOffchainWorkerExecutor,
-		EnclaveParentchainBlockImportDispatcher, EnclaveParentchainBlockImportQueue,
-		EnclaveParentchainBlockImporter, EnclaveStfExecutor,
-		EnclaveTriggeredParentchainBlockImportDispatcher, EnclaveValidatorAccessor,
-		GLOBAL_OCALL_API_COMPONENT, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
-		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STATE_OBSERVER_COMPONENT,
-		GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
+	initialization::{
+		global_components::{
+			EnclaveExtrinsicsFactory, EnclaveImmediateParentchainBlockImportDispatcher,
+			EnclaveIndirectCallsExecutor, EnclaveNodeMetadataRepository,
+			EnclaveOffchainWorkerExecutor, EnclaveParentchainBlockImportDispatcher,
+			EnclaveParentchainBlockImportQueue, EnclaveParentchainBlockImporter,
+			EnclaveStfExecutor, EnclaveTriggeredParentchainBlockImportDispatcher,
+			EnclaveValidatorAccessor, GLOBAL_OCALL_API_COMPONENT,
+			GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+			GLOBAL_STATE_OBSERVER_COMPONENT, GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
+		},
+		EnclaveStfEnclaveSigner,
 	},
 };
 use itp_component_container::ComponentGetter;
 use itp_nonce_cache::GLOBAL_NONCE_CACHE;
 use itp_sgx_crypto::Ed25519Seal;
+use itp_sgx_io::StaticSealedIO;
 use log::*;
 use sp_core::H256;
 use std::sync::Arc;
@@ -51,7 +55,7 @@ pub(crate) fn create_parentchain_block_importer(
 		ocall_api,
 		shielding_key_repository.clone(),
 	));
-	let indirect_calls_executor = Arc::new(IndirectCallsExecutor::new(
+	let indirect_calls_executor = Arc::new(EnclaveIndirectCallsExecutor::new(
 		shielding_key_repository,
 		stf_enclave_signer,
 		top_pool_author.clone(),
@@ -74,7 +78,7 @@ pub(crate) fn create_extrinsics_factory(
 	Ok(Arc::new(EnclaveExtrinsicsFactory::new(
 		genesis_hash,
 		signer,
-		GLOBAL_NONCE_CACHE,
+		GLOBAL_NONCE_CACHE.clone(),
 		node_metadata_repository,
 	)))
 }
@@ -84,7 +88,7 @@ pub(crate) fn create_offchain_immediate_import_dispatcher(
 	block_importer: EnclaveParentchainBlockImporter,
 	validator_access: Arc<EnclaveValidatorAccessor>,
 	extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
-) -> Arc<EnclaveParentchainBlockImportDispatcher> {
+) -> Result<Arc<EnclaveParentchainBlockImportDispatcher>> {
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
@@ -105,9 +109,9 @@ pub(crate) fn create_offchain_immediate_import_dispatcher(
 		}
 	});
 
-	Arc::new(EnclaveParentchainBlockImportDispatcher::new_immediate_dispatcher(Arc::new(
+	Ok(Arc::new(EnclaveParentchainBlockImportDispatcher::new_immediate_dispatcher(Arc::new(
 		immediate_dispatcher,
-	)))
+	))))
 }
 
 pub(crate) fn create_sidechain_triggered_import_dispatcher(

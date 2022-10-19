@@ -28,8 +28,12 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use crate::{
-	initialization::global_components::GLOBAL_ATTESTATION_HANDLER_COMPONENT, Error as EnclaveError,
-	Result as EnclaveResult,
+	initialization::global_components::GLOBAL_ATTESTATION_HANDLER_COMPONENT,
+	utils::{
+		get_extrinsic_factory_from_solo_or_parachain,
+		get_node_metadata_repository_from_solo_or_parachain,
+	},
+	Error as EnclaveError, Result as EnclaveResult,
 };
 use codec::{Decode, Encode};
 use itp_attestation_handler::AttestationHandler;

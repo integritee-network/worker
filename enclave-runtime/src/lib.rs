@@ -31,21 +31,21 @@ extern crate sgx_tstd as std;
 
 use crate::{
 	error::{Error, Result},
-	global_components::{
+	initialization::global_components::{
 		GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT, GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT,
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 	},
 	rpc::worker_api_direct::sidechain_io_handler,
-	utils::{utf8_str_from_raw, DecodeRaw},
-};
-use codec::{alloc::string::String, Decode, Encode};
-use initialization::global_components::{
-	EnclaveTriggeredParentchainBlockImportDispatcher, GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT,
-};
-use itc_parentchain::{
-	block_import_dispatcher::{
-		triggered_dispatcher::TriggerParentchainBlockImport, DispatchBlockImport,
+	utils::{
+		get_node_metadata_repository_from_solo_or_parachain,
+		get_stf_executor_from_solo_or_parachain, get_triggered_dispatcher_from_solo_or_parachain,
+		utf8_str_from_raw, DecodeRaw,
 	},
+};
+use itc_parentchain::block_import_dispatcher::DispatchBlockImport;
+use codec::{alloc::string::String, Decode};
+use itc_parentchain::{
+	block_import_dispatcher::triggered_dispatcher::TriggerParentchainBlockImport,
 	light_client::light_client_init_params::LightClientInitParams,
 };
 use itp_block_import_queue::PushToBlockQueue;
@@ -194,7 +194,7 @@ pub unsafe extern "C" fn set_node_metadata(
 		Ok(m) => m,
 	};
 
-	let node_metadata_repository = match get_extrinsic_factory_from_solo_or_parachain() {
+	let node_metadata_repository = match get_node_metadata_repository_from_solo_or_parachain() {
 		Ok(r) => r,
 		Err(e) => {
 			error!("Component get failure: {:?}", e);
@@ -309,18 +309,20 @@ pub unsafe extern "C" fn init_parentchain_components(
 	let mut params = slice::from_raw_parts(params, params_size);
 	let latest_header_slice = slice::from_raw_parts_mut(latest_header, latest_header_size);
 
-	let params = match LightClientInitParams::<Header>::decode(&mut params) {
+	let params = match LightClientInitParams:::<Header>::decode(&mut params) {
 		Ok(p) => p,
 		Err(e) => return Error::Codec(e).into(),
 	};
 
-	let latest_header =
-		match initialization::init_parentchain_components::<WorkerModeProvider>(params) {
-			Ok(h) => h,
-			Err(e) => return e.into(),
-		};
+	let encoded_latest_header = match initialization::parentchain::init_parentchain_components::<
+		WorkerModeProvider,
+	>(params)
+	{
+		Ok(h) => h,
+		Err(e) => return e.into(),
+	};
 
-	if let Err(e) = write_slice_and_whitespace_pad(latest_header_slice, latest_header.encode()) {
+	if let Err(e) = write_slice_and_whitespace_pad(latest_header_slice, encoded_latest_header) {
 		return Error::Other(Box::new(e)).into()
 	};
 
@@ -369,11 +371,22 @@ pub unsafe extern "C" fn sync_parentchain(
 fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>(
 	blocks_to_sync: Vec<SignedBlock>,
 ) -> Result<()> {
-	if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
-		if let Some(import_dispatcher) = solochain_handler.import_dispatcher {
-			import_dispatcher.dispatch_import(blocks_to_sync)?;
-		}
-	}
+	let import_dispatcher =
+		if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
+			solochain_handler.import_dispatcher
+		} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
+			parachain_handler.import_dispatcher
+		} else {
+			return Err(Error::NoParentchainAssigned)
+		};
+
+	match import_dispatcher {
+		Some(dispatcher) => dispatcher.dispatch_import(blocks_to_sync)?,
+		None => match WorkerModeProvider::worker_mode() {
+			WorkerMode::Teeracle => trace!("Not importing any parentchain blocks"),
+			_ => return Err(Error::CouldNotDispatchBlockImport),
+		},
+	};
 
 	Ok(())
 }
@@ -385,8 +398,8 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 /// sidechain and the `ImmediateDispatcher` are used, this function is obsolete.
 #[no_mangle]
 pub unsafe extern "C" fn trigger_parentchain_block_import() -> sgx_status_t {
-	match internal_trigger_parentchain_block_import {
-		Ok(_) => sgx_status_t::SGX_SUCCESS,
+	match internal_trigger_parentchain_block_import() {
+		Ok(()) => sgx_status_t::SGX_SUCCESS,
 		Err(e) => {
 			error!("Failed to trigger import of parentchain blocks: {:?}", e);
 			sgx_status_t::SGX_ERROR_UNEXPECTED
