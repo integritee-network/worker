@@ -42,10 +42,11 @@ use crate::{
 		utf8_str_from_raw, DecodeRaw,
 	},
 };
-use itc_parentchain::block_import_dispatcher::DispatchBlockImport;
 use codec::{alloc::string::String, Decode};
 use itc_parentchain::{
-	block_import_dispatcher::triggered_dispatcher::TriggerParentchainBlockImport,
+	block_import_dispatcher::{
+		triggered_dispatcher::TriggerParentchainBlockImport, DispatchBlockImport,
+	},
 	light_client::light_client_init_params::LightClientInitParams,
 };
 use itp_block_import_queue::PushToBlockQueue;
@@ -309,7 +310,7 @@ pub unsafe extern "C" fn init_parentchain_components(
 	let mut params = slice::from_raw_parts(params, params_size);
 	let latest_header_slice = slice::from_raw_parts_mut(latest_header, latest_header_size);
 
-	let params = match LightClientInitParams:::<Header>::decode(&mut params) {
+	let params = match LightClientInitParams::<Header>::decode(&mut params) {
 		Ok(p) => p,
 		Err(e) => return Error::Codec(e).into(),
 	};

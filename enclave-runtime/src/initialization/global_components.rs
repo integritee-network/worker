@@ -86,6 +86,7 @@ use its_sidechain::{
 };
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sp_core::ed25519::Pair;
+use std::sync::Arc;
 
 pub type EnclaveGetter = Getter;
 pub type EnclaveTrustedCallSigned = TrustedCallSigned;
@@ -121,7 +122,7 @@ pub type EnclaveSidechainApi = SidechainApi<ParentchainBlock>;
 
 // Parentchain types
 pub type EnclaveExtrinsicsFactory =
-	ExtrinsicsFactory<Pair, Arc<NonceCache>, EnclaveNodeMetadataRepository>;
+	ExtrinsicsFactory<Pair, NonceCache, EnclaveNodeMetadataRepository>;
 pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
 	EnclaveShieldingKeyRepository,
 	EnclaveStfEnclaveSigner,
@@ -146,9 +147,6 @@ pub type EnclaveTriggeredParentchainBlockImportDispatcher =
 
 pub type EnclaveImmediateParentchainBlockImportDispatcher =
 	ImmediateDispatcher<EnclaveParentchainBlockImporter>;
-
-pub type EnclaveFullSolochainHandler = FullSolochainHandler<ParentchainBlock>;
-pub type EnclaveFullParachainHandler = FullParachainHandler<ParentchainBlock>;
 
 pub type EnclaveParentchainBlockImportDispatcher = BlockImportDispatcher<
 	EnclaveTriggeredParentchainBlockImportDispatcher,
@@ -254,10 +252,10 @@ pub static GLOBAL_ATTESTATION_HANDLER_COMPONENT: ComponentContainer<EnclaveAttes
 ///-------------------------------------------------------------------------------------------------
 
 /// Solochain Handler.
-pub static GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT: ComponentContainer<EnclaveFullSolochainHandler> =
+pub static GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT: ComponentContainer<FullSolochainHandler> =
 	ComponentContainer::new("full solochain handler");
 
-pub static GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT: ComponentContainer<EnclaveFullParachainHandler> =
+pub static GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT: ComponentContainer<FullParachainHandler> =
 	ComponentContainer::new("full parachain handler");
 
 /// Sidechain component instances

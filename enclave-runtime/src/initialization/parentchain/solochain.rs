@@ -31,21 +31,18 @@ use crate::{
 	},
 };
 use codec::Encode;
-use itc_parentchain::{
-	block_import_dispatcher::DispatchBlockImport,
-	light_client::{
-		concurrent_access::ValidatorAccess, light_client_init_params::LightClientInitParams,
-		LightClientState,
-	},
+use itc_parentchain::light_client::{
+	concurrent_access::ValidatorAccess, light_client_init_params::LightClientInitParams,
+	LightClientState,
 };
 use itp_component_container::{ComponentGetter, ComponentInitializer};
-use itp_settings::worker_mode::ProvideWorkerMode;
+use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
 use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader};
 use sp_runtime::traits::{Block as BlockTrait, Header as HeaderTrait};
 use std::{sync::Arc, vec::Vec};
 
-pub struct FullSolochainHandler<Block: BlockTrait> {
-	pub genesis_header: Block::Header,
+pub struct FullSolochainHandler {
+	pub genesis_header: ParentchainHeader,
 	pub node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
 	pub stf_executor: Arc<EnclaveStfExecutor>,
 	pub validator_accessor: Arc<EnclaveValidatorAccessor>,
@@ -53,9 +50,9 @@ pub struct FullSolochainHandler<Block: BlockTrait> {
 	pub import_dispatcher: Option<Arc<EnclaveParentchainBlockImportDispatcher>>,
 }
 
-impl<Block: BlockTrait> FullSolochainHandler<Block> {
+impl FullSolochainHandler {
 	pub fn init<WorkerModeProvider: ProvideWorkerMode>(
-		params: LightClientInitParams<Block::Header>,
+		params: LightClientInitParams<ParentchainHeader>,
 	) -> Result<Vec<u8>> {
 		let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 		let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
@@ -92,7 +89,7 @@ impl<Block: BlockTrait> FullSolochainHandler<Block> {
 				block_importer,
 				validator_accessor,
 				extrinsics_factory,
-			)),
+			)?),
 			WorkerMode::Sidechain =>
 				Some(create_sidechain_triggered_import_dispatcher(block_importer)),
 			WorkerMode::Teeracle => None,

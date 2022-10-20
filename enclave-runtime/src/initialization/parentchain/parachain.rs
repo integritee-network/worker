@@ -39,13 +39,13 @@ use itc_parentchain::{
 	},
 };
 use itp_component_container::{ComponentGetter, ComponentInitializer};
-use itp_settings::worker_mode::ProvideWorkerMode;
+use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
 use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader};
 use sp_runtime::traits::{Block as BlockTrait, Header as HeaderTrait};
 use std::{sync::Arc, vec::Vec};
 
-pub struct FullParachainHandler<Block: BlockTrait> {
-	pub genesis_header: Block::Header,
+pub struct FullParachainHandler {
+	pub genesis_header: ParentchainHeader,
 	pub node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
 	pub stf_executor: Arc<EnclaveStfExecutor>,
 	pub validator_accessor: Arc<EnclaveValidatorAccessor>,
@@ -53,19 +53,16 @@ pub struct FullParachainHandler<Block: BlockTrait> {
 	pub import_dispatcher: Option<Arc<EnclaveParentchainBlockImportDispatcher>>,
 }
 
-impl<Block: BlockTrait> FullParachainHandler<Block>
-where
-	<Block::Header as sp_runtime::traits::Header>::Number: num_traits::cast::AsPrimitive<usize>,
-{
+impl FullParachainHandler {
 	pub fn init<WorkerModeProvider: ProvideWorkerMode>(
-		params: LightClientInitParams<Block::Header>,
+		params: LightClientInitParams<ParentchainHeader>,
 	) -> Result<Vec<u8>> {
 		let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 		let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 		let node_metadata_repository = Arc::new(EnclaveNodeMetadataRepository::default());
 
 		let validator = itc_parentchain::light_client::io::read_or_init_validator::<
-			Block,
+			ParentchainBlock,
 			EnclaveOCallApi,
 		>(params, ocall_api.clone())?;
 		let latest_header = validator.latest_finalized_header(validator.num_relays())?;
@@ -95,7 +92,7 @@ where
 				block_importer,
 				validator_accessor,
 				extrinsics_factory,
-			)),
+			)?),
 			WorkerMode::Sidechain =>
 				Some(create_sidechain_triggered_import_dispatcher(block_importer)),
 			WorkerMode::Teeracle => None,
