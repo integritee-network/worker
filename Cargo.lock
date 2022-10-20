@@ -2596,6 +2596,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "hex-literal",
+ "itp-sgx-runtime-primitives",
  "pallet-aura",
  "pallet-balances",
  "pallet-evm",
@@ -3242,6 +3243,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "itp-sgx-runtime-primitives"
+version = "0.9.0"
+dependencies = [
+ "frame-system",
+ "pallet-balances",
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
 name = "itp-stf-executor"
 version = "0.9.0"
 dependencies = [
@@ -3440,6 +3451,7 @@ version = "0.9.0"
 dependencies = [
  "chrono 0.4.22",
  "frame-system",
+ "itp-sgx-runtime-primitives",
  "pallet-balances",
  "parity-scale-codec",
  "primitive-types",

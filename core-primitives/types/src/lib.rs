@@ -22,11 +22,6 @@ use crate::storage::StorageEntry;
 use codec::{Decode, Encode};
 #[cfg(feature = "sgx")]
 use sgx_tstd as std;
-use sp_runtime::{
-	generic::{Block as BlockG, Header as HeaderG, SignedBlock as SignedBlockG},
-	traits::BlakeTwo256,
-	OpaqueExtrinsic,
-};
 use sp_std::vec::Vec;
 
 pub mod storage;
@@ -42,29 +37,13 @@ pub type PalletString = String;
 
 pub use sp_core::{crypto::AccountId32 as AccountId, H256};
 
-// FIXME: Consolidate type definiton with #905.
-pub type Balance = u128;
-pub type AccountData = pallet_balances::AccountData<Balance>;
-pub type AccountInfo = frame_system::AccountInfo<Index, AccountData>;
-
-pub type ShardIdentifier = H256;
-pub type BlockNumber = u32;
-pub type Amount = u128;
-pub type Index = u32;
-pub type Header = HeaderG<BlockNumber, BlakeTwo256>;
-pub type Block = BlockG<Header, OpaqueExtrinsic>;
-pub type SignedBlock = SignedBlockG<Block>;
-pub type BlockHash = H256;
-
-// FIXME: define somewhere else with #905.
-pub type SidechainBlockNumber = u64;
-pub type SidechainTimestamp = u64;
+pub use itp_sgx_runtime_primitives::types::*;
 
 pub type IpfsHash = [u8; 46];
 pub type MrEnclave = [u8; 32];
 
 pub type ConfirmCallFn = ([u8; 2], ShardIdentifier, H256, Vec<u8>);
-pub type ShieldFundsFn = ([u8; 2], Vec<u8>, Amount, ShardIdentifier);
+pub type ShieldFundsFn = ([u8; 2], Vec<u8>, Balance, ShardIdentifier);
 pub type CallWorkerFn = ([u8; 2], Request);
 
 pub type Enclave = EnclaveGen<AccountId>;

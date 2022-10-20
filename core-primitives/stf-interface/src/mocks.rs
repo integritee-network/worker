@@ -24,7 +24,7 @@ use crate::{
 };
 use alloc::{string::String, vec::Vec};
 use core::marker::PhantomData;
-use itp_types::{AccountId, OpaqueCall};
+use itp_types::{AccountId, Index, OpaqueCall};
 
 #[derive(Default)]
 pub struct StateInterfaceMock<State, StateDiff> {
@@ -76,7 +76,7 @@ impl<State, StateDiff> SystemPalletAccountInterface<State, AccountId>
 	for StateInterfaceMock<State, StateDiff>
 {
 	type AccountData = String;
-	type Index = u32;
+	type Index = Index;
 
 	fn get_account_nonce(_state: &mut State, _account_id: &AccountId) -> Self::Index {
 		unimplemented!()

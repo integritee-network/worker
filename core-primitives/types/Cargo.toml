@@ -14,6 +14,9 @@ primitive-types = { version = "0.11.1", default-features = false, features = ["c
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 
+# local dependencies
+itp-sgx-runtime-primitives = { path = "../../core-primitives/sgx-runtime-primitives", default-features = false }
+
 # substrate-deps
 frame-system = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 pallet-balances = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
@@ -30,6 +33,7 @@ std = [
     "serde/std",
     "serde_json/std",
     "primitive-types/std",
+    "itp-sgx-runtime-primitives/std",
     # substrate
     "frame-system/std",
     "pallet-balances/std",

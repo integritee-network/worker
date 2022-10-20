@@ -482,6 +482,7 @@ pub mod tests {
 	};
 	use codec::{Decode, Encode};
 	use ita_stf::{Index, TrustedCall, TrustedCallSigned, TrustedOperation};
+	use itp_types::Header;
 	use jsonrpc_core::{futures, futures::executor::block_on};
 	use parity_util_mem::MallocSizeOf;
 	use serde::Serialize;
@@ -528,16 +529,10 @@ pub mod tests {
 	pub type AccountId = <AccountSignature as Verify>::Signer;
 	/// The hashing algorithm used.
 	pub type Hashing = BlakeTwo256;
-	/// The block number type used in this runtime.
-	pub type BlockNumber = u64;
-	/// Index of a transaction.
-	//pub type Index = u64;
 	/// The item of a block digest.
 	pub type DigestItem = sp_runtime::generic::DigestItem;
 	/// The digest of a block.
 	pub type Digest = sp_runtime::generic::Digest;
-	/// A test block's header.
-	pub type Header = sp_runtime::generic::Header<BlockNumber, BlakeTwo256>;
 	/// A test block.
 	pub type Block = sp_runtime::generic::Block<Header, Extrinsic>;
 	/// Test RPC responder
@@ -627,7 +622,7 @@ pub mod tests {
 			at: &BlockId<Self::Block>,
 		) -> Result<Option<SidechainBlockHash>, Self::Error> {
 			Ok(match at {
-				BlockId::Number(num) => Some(from_low_u64_to_be_h256(*num)),
+				BlockId::Number(num) => Some(from_low_u64_to_be_h256((*num).into())),
 				BlockId::Hash(_) => None,
 			})
 		}
