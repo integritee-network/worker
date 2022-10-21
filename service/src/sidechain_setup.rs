@@ -16,15 +16,14 @@
 */
 
 use crate::{
-	parentchain_block_syncer::import_parentchain_blocks_until_self_registry, Config,
-	ParentchainBlockSyncer,
+	error::{Error, ServiceResult},
+	parentchain_handler::HandleParentchain,
+	Config,
 };
 use futures::executor::block_on;
 use itp_enclave_api::{
 	direct_request::DirectRequest, enclave_base::EnclaveBase, sidechain::Sidechain,
-	teerex_api::TeerexApi,
 };
-use itp_node_api::api_client::ParentchainApi;
 use itp_settings::{
 	files::{SIDECHAIN_PURGE_INTERVAL, SIDECHAIN_PURGE_LIMIT},
 	sidechain::SLOT_DURATION,
@@ -55,35 +54,35 @@ pub(crate) fn sidechain_start_untrusted_rpc_server<Enclave, SidechainStorage>(
 	});
 }
 
-pub(crate) fn sidechain_init_block_production<Enclave, SidechainStorage>(
+pub(crate) fn sidechain_init_block_production<Enclave, SidechainStorage, ParentchainHandler>(
 	enclave: Arc<Enclave>,
 	register_enclave_xt_header: &Header,
 	we_are_primary_validateer: bool,
-	parentchain_block_syncer: Arc<ParentchainBlockSyncer<ParentchainApi, Enclave>>,
+	parentchain_handler: Arc<ParentchainHandler>,
 	sidechain_storage: Arc<SidechainStorage>,
 	last_synced_header: &Header,
-) -> Header
+) -> ServiceResult<Header>
 where
-	Enclave: EnclaveBase + Sidechain + TeerexApi,
+	Enclave: EnclaveBase + Sidechain,
 	SidechainStorage: BlockPruner + FetchBlocks<SignedSidechainBlock> + Sync + Send + 'static,
+	ParentchainHandler: HandleParentchain,
 {
 	// If we're the first validateer to register, also trigger parentchain block import.
 	let mut updated_header: Option<Header> = None;
 
 	if we_are_primary_validateer {
-		updated_header = Some(
-			import_parentchain_blocks_until_self_registry(
-				enclave.clone(),
-				parentchain_block_syncer,
+		info!(
+			"We're the first validateer to be registered, syncing parentchain blocks until the one we have registered ourselves on."
+		);
+		updated_header =
+			Some(parentchain_handler.sync_and_import_parentchain_until(
 				last_synced_header,
 				register_enclave_xt_header,
-			)
-			.unwrap(),
-		);
+			)?);
 	}
 
 	// ------------------------------------------------------------------------
-	// Initialize sidechain components (has to be AFTER init_light_client()
+	// Initialize sidechain components (has to be AFTER init_parentchain_components()
 	enclave.init_enclave_sidechain_components().unwrap();
 
 	// ------------------------------------------------------------------------
@@ -100,7 +99,7 @@ where
 			block_on(future);
 			println!("[!] Sidechain block production loop has terminated");
 		})
-		.unwrap();
+		.map_err(|e| Error::Custom(Box::new(e)))?;
 
 	// ------------------------------------------------------------------------
 	// start sidechain pruning loop
@@ -113,9 +112,9 @@ where
 				SIDECHAIN_PURGE_LIMIT,
 			);
 		})
-		.unwrap();
+		.map_err(|e| Error::Custom(Box::new(e)))?;
 
-	updated_header.unwrap_or_else(|| last_synced_header.clone())
+	Ok(updated_header.unwrap_or_else(|| last_synced_header.clone()))
 }
 
 /// Execute trusted operations in the enclave.

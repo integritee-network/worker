@@ -109,6 +109,7 @@ where
 						SignedSidechainBlock::Block,
 						ExternalitiesFor<StfExecutor>,
 					>::new(s);
+					sidechain_db.reset_events();
 					sidechain_db
 						.set_block_number(&sidechain_db.get_block_number().map_or(1, |n| n + 1));
 					sidechain_db.set_timestamp(&now_as_u64());

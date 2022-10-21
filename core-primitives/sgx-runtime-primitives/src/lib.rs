@@ -15,22 +15,7 @@
 
 */
 
-use frame_support::sp_runtime::traits::Block as ParentchainBlockTrait;
-use itp_enclave_api::{sidechain::Sidechain, EnclaveResult};
+#![cfg_attr(not(feature = "std"), no_std)]
 
-/// Mock for Parentchain Api
-pub struct SidechainApiMock;
-
-impl Sidechain for SidechainApiMock {
-	fn sync_parentchain<ParentchainBlock: ParentchainBlockTrait>(
-		&self,
-		_blocks: &[sp_runtime::generic::SignedBlock<ParentchainBlock>],
-		_nonce: u32,
-	) -> EnclaveResult<()> {
-		Ok(())
-	}
-
-	fn execute_trusted_calls(&self) -> EnclaveResult<()> {
-		todo!()
-	}
-}
+pub mod constants;
+pub mod types;

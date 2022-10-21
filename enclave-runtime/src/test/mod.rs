@@ -18,6 +18,7 @@
 
 pub mod cert_tests;
 pub mod direct_rpc_tests;
+pub mod enclave_signer_tests;
 #[cfg(feature = "evm")]
 pub mod evm_pallet_tests;
 pub mod fixtures;
@@ -25,6 +26,8 @@ pub mod ipfs_tests;
 pub mod mocks;
 pub mod on_chain_ocall_tests;
 pub mod sidechain_aura_tests;
+pub mod sidechain_event_tests;
+mod state_getter_tests;
 pub mod tests_main;
 pub mod top_pool_tests;
 

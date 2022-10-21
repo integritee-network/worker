@@ -44,6 +44,7 @@ use itc_parentchain::{
 use itc_tls_websocket_server::{
 	config_provider::FromFileConfigProvider, ws_server::TungsteniteWsServer, ConnectionToken,
 };
+use itp_attestation_handler::IasAttestationHandler;
 use itp_block_import_queue::BlockImportQueue;
 use itp_component_container::ComponentContainer;
 use itp_extrinsics_factory::ExtrinsicsFactory;
@@ -75,7 +76,6 @@ use its_sidechain::{
 	consensus_common::{BlockImportConfirmationHandler, BlockImportQueueWorker, PeerBlockSync},
 	state::SidechainDB,
 };
-use primitive_types::H256;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sp_core::ed25519::Pair;
 
@@ -85,11 +85,10 @@ pub type EnclaveStf = Stf<EnclaveTrustedCallSigned, EnclaveGetter, StfState, Run
 pub type EnclaveStateKeyRepository = KeyRepository<Aes, AesSeal>;
 pub type EnclaveShieldingKeyRepository = KeyRepository<Rsa3072KeyPair, Rsa3072Seal>;
 pub type EnclaveStateFileIo = SgxStateFileIo<EnclaveStateKeyRepository, EnclaveStf, StfState>;
-pub type EnclaveStateSnapshotRepository =
-	StateSnapshotRepository<EnclaveStateFileIo, StfState, H256>;
+pub type EnclaveStateSnapshotRepository = StateSnapshotRepository<EnclaveStateFileIo>;
 pub type EnclaveStateObserver = StateObserver<StfState>;
 pub type EnclaveStateHandler = StateHandler<EnclaveStateSnapshotRepository, EnclaveStateObserver>;
-pub type EnclaveGetterExecutor = GetterExecutor<EnclaveStateObserver, StfStateGetter>;
+pub type EnclaveGetterExecutor = GetterExecutor<EnclaveStateObserver, StfStateGetter<EnclaveStf>>;
 pub type EnclaveOCallApi = OcallApi;
 pub type EnclaveNodeMetadataRepository = NodeMetadataRepository<NodeMetadata>;
 pub type EnclaveStfExecutor =
@@ -125,6 +124,7 @@ pub type EnclaveTriggeredParentchainBlockImportDispatcher =
 	TriggeredDispatcher<EnclaveParentchainBlockImporter, EnclaveParentchainBlockImportQueue>;
 pub type EnclaveImmediateParentchainBlockImportDispatcher =
 	ImmediateDispatcher<EnclaveParentchainBlockImporter>;
+pub type EnclaveAttestationHandler = IasAttestationHandler<EnclaveOCallApi>;
 
 pub type EnclaveRpcConnectionRegistry = ConnectionRegistry<Hash, ConnectionToken>;
 pub type EnclaveRpcWsHandler =
@@ -185,6 +185,16 @@ pub type EnclaveSealHandler = SealHandler<
 	EnclaveStateHandler,
 	EnclaveStf,
 >;
+pub type EnclaveOffchainWorkerExecutor = itc_offchain_worker_executor::executor::Executor<
+	ParentchainBlock,
+	EnclaveTopPoolAuthor,
+	EnclaveStfExecutor,
+	EnclaveStateHandler,
+	EnclaveValidatorAccessor,
+	EnclaveExtrinsicsFactory,
+	EnclaveStf,
+>;
+
 /// Base component instances
 ///-------------------------------------------------------------------------------------------------
 
@@ -220,6 +230,10 @@ pub static GLOBAL_STATE_OBSERVER_COMPONENT: ComponentContainer<EnclaveStateObser
 /// TOP pool author.
 pub static GLOBAL_TOP_POOL_AUTHOR_COMPONENT: ComponentContainer<EnclaveTopPoolAuthor> =
 	ComponentContainer::new("top_pool_author");
+
+/// attestation handler
+pub static GLOBAL_ATTESTATION_HANDLER_COMPONENT: ComponentContainer<EnclaveAttestationHandler> =
+	ComponentContainer::new("Attestation handler");
 
 /// Parentchain component instances
 ///-------------------------------------------------------------------------------------------------

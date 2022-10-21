@@ -98,3 +98,7 @@ pub fn ensure_enclave_signer_account<AccountId: Encode + Decode + PartialEq>(
 		Err(StfError::RequireEnclaveSignerAccount)
 	}
 }
+
+pub fn set_block_number(block_number: u32) {
+	sp_io::storage::set(&storage_value_key("System", "Number"), &block_number.encode());
+}

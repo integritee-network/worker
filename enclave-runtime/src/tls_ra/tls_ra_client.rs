@@ -19,7 +19,7 @@
 
 use super::{authentication::ServerAuth, Opcode, TcpHeader};
 use crate::{
-	attestation::{create_ra_report_and_signature, DEV_HOSTNAME},
+	attestation::create_ra_report_and_signature,
 	error::{Error as EnclaveError, Result as EnclaveResult},
 	global_components::{
 		EnclaveSealHandler, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
@@ -29,6 +29,7 @@ use crate::{
 	tls_ra::seal_handler::SealStateAndKeys,
 	GLOBAL_STATE_HANDLER_COMPONENT,
 };
+use itp_attestation_handler::DEV_HOSTNAME;
 use itp_component_container::ComponentGetter;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_types::ShardIdentifier;
@@ -222,7 +223,7 @@ fn tls_client_config<A: EnclaveAttestationOCallApi + 'static>(
 	ocall_api: A,
 	skip_ra: bool,
 ) -> EnclaveResult<ClientConfig> {
-	let (key_der, cert_der) = create_ra_report_and_signature(sign_type, &ocall_api, skip_ra)?;
+	let (key_der, cert_der) = create_ra_report_and_signature(sign_type, skip_ra)?;
 
 	let mut cfg = rustls::ClientConfig::new();
 	let certs = vec![rustls::Certificate(cert_der)];

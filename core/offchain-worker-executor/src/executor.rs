@@ -23,6 +23,7 @@ use itc_parentchain_light_client::{
 };
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_stf_executor::{traits::StateUpdateProposer, ExecutedOperation};
+use itp_stf_interface::system_pallet::SystemPalletEventInterface;
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{OpaqueCall, ShardIdentifier, H256};
@@ -45,13 +46,14 @@ pub struct Executor<
 	StateHandler,
 	ValidatorAccessor,
 	ExtrinsicsFactory,
+	Stf,
 > {
 	top_pool_author: Arc<TopPoolAuthor>,
 	stf_executor: Arc<StfExecutor>,
 	state_handler: Arc<StateHandler>,
 	validator_accessor: Arc<ValidatorAccessor>,
 	extrinsics_factory: Arc<ExtrinsicsFactory>,
-	_phantom: PhantomData<ParentchainBlock>,
+	_phantom: PhantomData<(ParentchainBlock, Stf)>,
 }
 
 impl<
@@ -61,6 +63,7 @@ impl<
 		StateHandler,
 		ValidatorAccessor,
 		ExtrinsicsFactory,
+		Stf,
 	>
 	Executor<
 		ParentchainBlock,
@@ -69,6 +72,7 @@ impl<
 		StateHandler,
 		ValidatorAccessor,
 		ExtrinsicsFactory,
+		Stf,
 	> where
 	ParentchainBlock: Block<Hash = H256>,
 	StfExecutor: StateUpdateProposer,
@@ -77,6 +81,7 @@ impl<
 	ValidatorAccessor: ValidatorAccess<ParentchainBlock> + Send + Sync + 'static,
 	ExtrinsicsFactory: CreateExtrinsics,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
+	Stf: SystemPalletEventInterface<StfExecutor::Externalities>,
 {
 	pub fn new(
 		top_pool_author: Arc<TopPoolAuthor>,
@@ -113,7 +118,10 @@ impl<
 				&latest_parentchain_header,
 				&shard,
 				max_duration,
-				|s| s,
+				|mut state| {
+					Stf::reset_events(&mut state);
+					state
+				},
 			)?;
 
 			parentchain_effects
@@ -196,19 +204,22 @@ impl<
 mod tests {
 
 	use super::*;
-	use codec::Encode;
+	use codec::{Decode, Encode};
 	use ita_stf::{KeyPair, TrustedCall, TrustedOperation};
 	use itc_parentchain_light_client::mocks::validator_access_mock::ValidatorAccessMock;
 	use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
+	use itp_sgx_externalities::SgxExternalitiesTrait;
 	use itp_stf_executor::mocks::StfExecutorMock;
 	use itp_test::mock::handle_state_mock::HandleStateMock;
 	use itp_top_pool_author::mocks::AuthorApiMock;
 	use itp_types::Block as ParentchainBlock;
 	use sp_core::{ed25519, Pair};
 
-	type TestTopPoolAuthor = AuthorApiMock<H256, H256>;
 	type TestStateHandler = HandleStateMock;
-	type TestStfExecutor = StfExecutorMock<<TestStateHandler as HandleState>::StateT>;
+	type TestStfInterface = SystemPalletEventInterfaceMock;
+	type State = <TestStateHandler as HandleState>::StateT;
+	type TestTopPoolAuthor = AuthorApiMock<H256, H256>;
+	type TestStfExecutor = StfExecutorMock<State>;
 	type TestValidatorAccess = ValidatorAccessMock;
 	type TestExtrinsicsFactory = ExtrinsicsFactoryMock;
 	type TestExecutor = Executor<
@@ -218,23 +229,76 @@ mod tests {
 		TestStateHandler,
 		TestValidatorAccess,
 		TestExtrinsicsFactory,
+		TestStfInterface,
 	>;
+
+	const EVENT_COUNT_KEY: &[u8] = b"event_count";
+
+	struct SystemPalletEventInterfaceMock;
+
+	impl SystemPalletEventInterface<State> for SystemPalletEventInterfaceMock {
+		type EventRecord = String;
+		type EventIndex = u32;
+		type BlockNumber = u32;
+		type Hash = String;
+
+		fn get_events(_state: &mut State) -> Vec<Box<Self::EventRecord>> {
+			unimplemented!();
+		}
+
+		fn get_event_count(state: &mut State) -> Self::EventIndex {
+			let encoded_value = state.get(EVENT_COUNT_KEY).unwrap();
+			Self::EventIndex::decode(&mut encoded_value.as_slice()).unwrap()
+		}
+
+		fn get_event_topics(
+			_state: &mut State,
+			_topic: &Self::Hash,
+		) -> Vec<(Self::BlockNumber, Self::EventIndex)> {
+			unimplemented!()
+		}
+
+		fn reset_events(state: &mut State) {
+			state.insert(EVENT_COUNT_KEY.to_vec(), 0u32.encode());
+		}
+	}
 
 	#[test]
 	fn executing_tops_from_pool_works() {
+		let stf_executor = Arc::new(TestStfExecutor::new(State::default()));
 		let top_pool_author = Arc::new(TestTopPoolAuthor::default());
 		top_pool_author.submit_top(create_trusted_operation().encode(), shard());
 
 		assert_eq!(1, top_pool_author.pending_tops(shard()).unwrap().len());
 
-		let executor = create_executor(top_pool_author.clone());
+		let executor = create_executor(top_pool_author.clone(), stf_executor);
 		executor.execute().unwrap();
 
 		assert!(top_pool_author.pending_tops(shard()).unwrap().is_empty());
 	}
 
-	fn create_executor(top_pool_author: Arc<TestTopPoolAuthor>) -> TestExecutor {
-		let stf_executor = Arc::new(TestStfExecutor::default());
+	#[test]
+	fn reset_events_is_called() {
+		let mut state = State::default();
+		let event_count = 5;
+		state.insert(EVENT_COUNT_KEY.to_vec(), event_count.encode());
+
+		let stf_executor = Arc::new(TestStfExecutor::new(state));
+		assert_eq!(TestStfInterface::get_event_count(&mut stf_executor.get_state()), event_count);
+
+		let top_pool_author = Arc::new(TestTopPoolAuthor::default());
+
+		let executor = create_executor(top_pool_author, stf_executor.clone());
+
+		executor.execute().unwrap();
+
+		assert_eq!(TestStfInterface::get_event_count(&mut stf_executor.get_state()), 0);
+	}
+
+	fn create_executor(
+		top_pool_author: Arc<TestTopPoolAuthor>,
+		stf_executor: Arc<TestStfExecutor>,
+	) -> TestExecutor {
 		let state_handler = Arc::new(TestStateHandler::from_shard(shard()).unwrap());
 		let validator_access = Arc::new(TestValidatorAccess::default());
 		let extrinsics_factory = Arc::new(TestExtrinsicsFactory::default());

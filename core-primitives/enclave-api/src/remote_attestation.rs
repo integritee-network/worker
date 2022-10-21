@@ -26,12 +26,7 @@ use sgx_types::*;
 
 /// general remote attestation methods
 pub trait RemoteAttestation {
-	fn perform_ra(
-		&self,
-		genesis_hash: Vec<u8>,
-		nonce: u32,
-		w_url: Vec<u8>,
-	) -> EnclaveResult<Vec<u8>>;
+	fn perform_ra(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
 
 	fn dump_ra_to_disk(&self) -> EnclaveResult<()>;
 }
@@ -78,28 +73,23 @@ pub trait TlsRemoteAttestation {
 }
 
 impl RemoteAttestation for Enclave {
-	fn perform_ra(
-		&self,
-		genesis_hash: Vec<u8>,
-		nonce: u32,
-		w_url: Vec<u8>,
-	) -> EnclaveResult<Vec<u8>> {
+	fn perform_ra(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
 		let unchecked_extrinsic_size = EXTRINSIC_MAX_SIZE;
 		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
 
+		let url = w_url.encode();
+
 		let result = unsafe {
 			ffi::perform_ra(
 				self.eid,
 				&mut retval,
-				genesis_hash.as_ptr(),
-				genesis_hash.len() as u32,
-				&nonce,
-				w_url.as_ptr(),
-				w_url.len() as u32,
+				url.as_ptr(),
+				url.len() as u32,
 				unchecked_extrinsic.as_mut_ptr(),
 				unchecked_extrinsic.len() as u32,
+				skip_ra.into(),
 			)
 		};
 

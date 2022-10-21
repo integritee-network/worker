@@ -24,7 +24,7 @@ use crate::{
 };
 use alloc::{string::String, vec::Vec};
 use core::marker::PhantomData;
-use itp_types::OpaqueCall;
+use itp_types::{AccountId, Index, OpaqueCall};
 
 #[derive(Default)]
 pub struct StateInterfaceMock<State, StateDiff> {
@@ -68,15 +68,15 @@ impl<Getter, State, StateDiff> StateGetterInterface<Getter, State>
 	for StateInterfaceMock<State, StateDiff>
 {
 	fn execute_getter(_state: &mut State, _getter: Getter) -> Option<Vec<u8>> {
-		unimplemented!()
+		None
 	}
 }
 
-impl<State, StateDiff, AccountId> SystemPalletAccountInterface<State, AccountId>
+impl<State, StateDiff> SystemPalletAccountInterface<State, AccountId>
 	for StateInterfaceMock<State, StateDiff>
 {
 	type AccountData = String;
-	type Index = u32;
+	type Index = Index;
 
 	fn get_account_nonce(_state: &mut State, _account_id: &AccountId) -> Self::Index {
 		unimplemented!()
@@ -86,7 +86,7 @@ impl<State, StateDiff, AccountId> SystemPalletAccountInterface<State, AccountId>
 	}
 }
 
-pub struct CallExecutorMock {}
+pub struct CallExecutorMock;
 
 impl ExecuteCall for CallExecutorMock {
 	type Error = String;
@@ -104,7 +104,7 @@ impl ExecuteCall for CallExecutorMock {
 	}
 }
 
-pub struct GetterExecutorMock {}
+pub struct GetterExecutorMock;
 
 impl ExecuteGetter for GetterExecutorMock {
 	fn execute(self) -> Option<Vec<u8>> {

@@ -43,7 +43,7 @@ enclave {
             [in, size=server_addr_size] uint8_t* server_addr, uint32_t server_addr_size
         );
 
-		public sgx_status_t init_light_client(
+		public sgx_status_t init_parentchain_components(
 			[in, size=params_size] uint8_t* params, size_t params_size,
             [out, size=latest_header_size] uint8_t* latest_header, size_t latest_header_size
         );
@@ -79,17 +79,9 @@ enclave {
 			[out, size=mrenclave_size] uint8_t* mrenclave, uint32_t mrenclave_size);
 
 		public sgx_status_t perform_ra(
-			[in, size=genesis_hash_size] uint8_t* genesis_hash, uint32_t genesis_hash_size,
-			[in] uint32_t* nonce,
 			[in, size=w_url_size] uint8_t* w_url, uint32_t w_url_size,
-			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
-		);
-
-		public sgx_status_t mock_register_enclave_xt(
-            [in, size=genesis_hash_size] uint8_t* genesis_hash, uint32_t genesis_hash_size,
-            [in] uint32_t* nonce,
-            [in, size=w_url_size] uint8_t* w_url, uint32_t w_url_size,
-            [out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
+			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size,
+			int skip_ra
 		);
 
 		public sgx_status_t update_market_data_xt(

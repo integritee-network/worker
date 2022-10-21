@@ -31,19 +31,35 @@ use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_types::H256;
 use sp_core::Pair;
 use sp_runtime::traits::Header as HeaderTrait;
-use std::{marker::PhantomData, time::Duration, vec::Vec};
+use std::{marker::PhantomData, ops::Deref, time::Duration, vec::Vec};
+
+#[cfg(feature = "std")]
+use std::sync::RwLock;
+
+#[cfg(feature = "sgx")]
+use std::sync::SgxRwLock as RwLock;
 
 /// Mock for the StfExecutor.
 #[derive(Default)]
-pub struct StfExecutorMock<StateType: SgxExternalitiesTrait + Encode> {
-	_phantom: PhantomData<StateType>,
+pub struct StfExecutorMock<State> {
+	pub state: RwLock<State>,
 }
 
-impl<StateType> StateUpdateProposer for StfExecutorMock<StateType>
+impl<State: Clone> StfExecutorMock<State> {
+	pub fn new(state: State) -> Self {
+		Self { state: RwLock::new(state) }
+	}
+
+	pub fn get_state(&self) -> State {
+		(*self.state.read().unwrap().deref()).clone()
+	}
+}
+
+impl<State> StateUpdateProposer for StfExecutorMock<State>
 where
-	StateType: SgxExternalitiesTrait + Encode + Default,
+	State: SgxExternalitiesTrait + Encode + Clone,
 {
-	type Externalities = StateType;
+	type Externalities = State;
 
 	fn propose_state_update<PH, F>(
 		&self,
@@ -51,12 +67,18 @@ where
 		_header: &PH,
 		_shard: &ShardIdentifier,
 		_max_exec_duration: Duration,
-		_prepare_state_function: F,
+		prepare_state_function: F,
 	) -> Result<BatchExecutionResult<Self::Externalities>>
 	where
 		PH: HeaderTrait<Hash = H256>,
 		F: FnOnce(Self::Externalities) -> Self::Externalities,
 	{
+		let mut lock = self.state.write().unwrap();
+
+		let updated_state = prepare_state_function((*lock.deref()).clone());
+
+		*lock = updated_state.clone();
+
 		let executed_operations: Vec<ExecutedOperation> = trusted_calls
 			.iter()
 			.map(|c| {
@@ -65,10 +87,11 @@ where
 				ExecutedOperation::success(operation_hash, top_or_hash, Vec::new())
 			})
 			.collect();
+
 		Ok(BatchExecutionResult {
 			executed_operations,
 			state_hash_before_execution: H256::default(),
-			state_after_execution: Self::Externalities::default(),
+			state_after_execution: updated_state,
 		})
 	}
 }

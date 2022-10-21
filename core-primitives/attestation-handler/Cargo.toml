@@ -1,0 +1,110 @@
+[package]
+name = "itp-attestation-handler"
+version = "0.8.0"
+authors = ["Integritee AG <hello@integritee.network>"]
+edition = "2021"
+
+[dependencies]
+# crates-io no_std deps
+arrayvec = { version = "0.7.1", default-features = false }
+bit-vec = { version = "0.6", default-features = false }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
+itertools = { default-features = false, version = "0.10.1" }
+log = { version = "0.4", default-features = false }
+
+# std only deps
+base64 = { version = "0.13", features = ["alloc"], optional = true }
+chrono = { version = "0.4.19", features = ["alloc"], optional = true }
+rustls = { version = "0.19", optional = true }
+serde_json = { version = "1.0", optional = true }
+thiserror = { version = "1.0", optional = true }
+webpki = { version = "0.21", optional = true }
+yasna = { version = "0.4", optional = true, features = ["bit-vec", "num-bigint", "chrono", "std"] }
+
+# mesalock
+base64_sgx = { package = "base64", rev = "sgx_1.1.3", git = "https://github.com/mesalock-linux/rust-base64-sgx", optional = true }
+chrono_sgx = { package = "chrono", git = "https://github.com/mesalock-linux/chrono-sgx", optional = true }
+num-bigint = { optional = true, git = "https://github.com/mesalock-linux/num-bigint-sgx" }
+rustls_sgx = { package = "rustls", rev = "sgx_1.1.3", features = ["dangerous_configuration"], git = "https://github.com/mesalock-linux/rustls", optional = true }
+serde_json_sgx = { package = "serde_json", tag = "sgx_1.1.3", git = "https://github.com/mesalock-linux/serde-json-sgx", optional = true }
+thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
+webpki-roots = { git = "https://github.com/mesalock-linux/webpki-roots", branch = "mesalock_sgx" }
+webpki_sgx = { package = "webpki", git = "https://github.com/mesalock-linux/webpki", branch = "mesalock_sgx", optional = true }
+yasna_sgx = { package = "yasna", optional = true, default-features = false, features = ["bit-vec", "num-bigint", "chrono", "mesalock_sgx"], git = "https://github.com/mesalock-linux/yasna.rs-sgx", rev = "sgx_1.1.3" }
+
+# sgx
+sgx_rand = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_tcrypto = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_tse = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["untrusted_fs", "net", "backtrace"], optional = true }
+sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+
+# local deps
+itp-ocall-api = { path = "../ocall-api", default-features = false }
+itp-settings = { path = "../settings" }
+itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
+itp-sgx-externalities = { path = "../substrate-sgx/externalities", default-features = false }
+itp-sgx-io = { path = "../sgx/io", default-features = false }
+itp-types = { path = "../types", default-features = false }
+
+# integritee
+httparse = { default-features = false, git = "https://github.com/integritee-network/httparse-sgx", branch = "sgx-experimental" }
+
+
+# substrate deps
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+
+[features]
+default = ["std"]
+std = [
+    # crates-io no_std
+    "arrayvec/std",
+    "codec/std",
+    "hex/std",
+    "log/std",
+    "itertools/use_std",
+    # optional std only
+    "base64",
+    "chrono",
+    "rustls",
+    "serde_json",
+    "thiserror",
+    "webpki",
+    "yasna",
+    # local
+    "itp-ocall-api/std",
+    "itp-sgx-externalities/std",
+    "itp-sgx-io/std",
+    "itp-sgx-crypto/std",
+    "itp-types/std",
+    # substrate
+    "sp-core/std",
+    "sp-runtime/std",
+    # integritee
+    "httparse/std",
+]
+
+sgx = [
+    # sgx-only
+    "base64_sgx",
+    "chrono_sgx",
+    "rustls_sgx",
+    "serde_json_sgx",
+    "thiserror_sgx",
+    "webpki_sgx",
+    "yasna_sgx",
+    "sgx_tse",
+    "sgx_tstd",
+    "sgx_rand",
+    "sgx_tcrypto",
+    "num-bigint",
+    # local
+    "itp-sgx-externalities/sgx",
+    "itp-sgx-io/sgx",
+    "itp-sgx-crypto/sgx",
+    # integritee
+    "httparse/mesalock_sgx",
+]
+test = []

@@ -18,15 +18,9 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-#[cfg(feature = "std")]
-use std::fs;
-
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-use std::untrusted::fs;
-
 use crate::{error::WebSocketError, WebSocketResult};
 use rustls::NoClientAuth;
-use std::{format, io::BufReader, string::ToString, sync::Arc, vec, vec::Vec};
+use std::{io::BufReader, string::ToString, sync::Arc, vec, vec::Vec};
 
 pub fn make_config(cert: &str, key: &str) -> WebSocketResult<Arc<rustls::ServerConfig>> {
 	let mut config = rustls::ServerConfig::new(NoClientAuth::new());
@@ -41,42 +35,26 @@ pub fn make_config(cert: &str, key: &str) -> WebSocketResult<Arc<rustls::ServerC
 	Ok(Arc::new(config))
 }
 
-fn load_certs(filename: &str) -> WebSocketResult<Vec<rustls::Certificate>> {
-	let certfile = fs::File::open(filename).map_err(|e| {
-		WebSocketError::InvalidCertificate(format!(
-			"Failed to load certificate from file ({}): {:?}",
-			filename, e
-		))
-	})?;
-	let mut reader = BufReader::new(certfile);
-	rustls::internal::pemfile::certs(&mut reader).map_err(|_| {
-		WebSocketError::InvalidCertificate("Failed to parse certificate file".to_string())
-	})
+fn load_certs(pem_content: &str) -> WebSocketResult<Vec<rustls::Certificate>> {
+	let mut reader = BufReader::new(pem_content.as_bytes());
+	rustls::internal::pemfile::certs(&mut reader)
+		.map_err(|_| WebSocketError::InvalidCertificate("Failed to parse certificate".to_string()))
 }
 
-fn load_private_key(filename: &str) -> WebSocketResult<rustls::PrivateKey> {
+fn load_private_key(pem_content: &str) -> WebSocketResult<rustls::PrivateKey> {
 	let rsa_keys = {
-		let keyfile = fs::File::open(filename).map_err(|e| {
-			WebSocketError::InvalidPrivateKey(format!(
-				"Failed to load private key from file ({}): {:?}",
-				filename, e
-			))
-		})?;
-		let mut reader = BufReader::new(keyfile);
+		let mut reader = BufReader::new(pem_content.as_bytes());
 
 		rustls::internal::pemfile::rsa_private_keys(&mut reader).map_err(|_| {
-			WebSocketError::InvalidPrivateKey("file contains invalid rsa private key".to_string())
+			WebSocketError::InvalidPrivateKey("Failed to parse RSA private key".to_string())
 		})?
 	};
 
 	let pkcs8_keys = {
-		let keyfile = fs::File::open(filename)
-			.map_err(|e| WebSocketError::InvalidPrivateKey(format!("{:?}", e)))?;
-		let mut reader = BufReader::new(keyfile);
+		let mut reader = BufReader::new(pem_content.as_bytes());
 		rustls::internal::pemfile::pkcs8_private_keys(&mut reader).map_err(|_| {
 			WebSocketError::InvalidPrivateKey(
-				"file contains invalid pkcs8 private key (encrypted keys not supported)"
-					.to_string(),
+				"Invalid PKCS8 private key (encrypted keys are not supported)".to_string(),
 			)
 		})?
 	};
@@ -87,9 +65,6 @@ fn load_private_key(filename: &str) -> WebSocketResult<rustls::PrivateKey> {
 	} else if !rsa_keys.is_empty() {
 		Ok(rsa_keys[0].clone())
 	} else {
-		Err(WebSocketError::InvalidPrivateKey(format!(
-			"No viable private keys were found in file '{}'",
-			filename
-		)))
+		Err(WebSocketError::InvalidPrivateKey("No viable private keys were given".to_string()))
 	}
 }

@@ -41,6 +41,7 @@ use its_primitives::{
 	types::{BlockHash, BlockNumber, Timestamp},
 };
 use sp_core::H256;
+use sp_io::KillStorageResult;
 use sp_std::prelude::Vec;
 use std::marker::PhantomData;
 
@@ -122,11 +123,27 @@ pub trait SidechainState: Clone {
 	/// set a storage value by its full name
 	fn set_with_name<V: Encode>(&mut self, module_prefix: &str, storage_prefix: &str, value: V);
 
+	/// Clear a storage value by its full name
+	fn clear_with_name(&mut self, module_prefix: &str, storage_prefix: &str);
+
+	/// Clear all storage values for the given prefix.
+	fn clear_prefix_with_name(
+		&mut self,
+		module_prefix: &str,
+		storage_prefix: &str,
+	) -> KillStorageResult;
+
 	/// get a storage value by its storage hash
 	fn get(&self, key: &[u8]) -> Option<Vec<u8>>;
 
 	/// set a storage value by its storage hash
 	fn set(&mut self, key: &[u8], value: &[u8]);
+
+	/// Clear a storage value by its storage hash.
+	fn clear(&mut self, key: &[u8]);
+
+	/// Clear a all storage values starting the given prefix.
+	fn clear_sidechain_prefix(&mut self, prefix: &[u8]) -> KillStorageResult;
 }
 
 /// trait to set and get the last sidechain block of the sidechain state
@@ -153,25 +170,28 @@ where
 	}
 }
 
-/// system extension for the `SidechainDB`
+/// System extension for the `SidechainDB`.
 pub trait SidechainSystemExt {
-	/// get the last block number of the sidechain state
+	/// Get the last block number.
 	fn get_block_number(&self) -> Option<BlockNumber>;
 
-	/// set the last block number of the sidechain state
+	/// Set the last block number.
 	fn set_block_number(&mut self, number: &BlockNumber);
 
-	/// get the last block hash of the sidechain state
+	/// Get the last block hash.
 	fn get_last_block_hash(&self) -> Option<BlockHash>;
 
-	/// set the last block hash of the sidechain state
+	/// Set the last block hash.
 	fn set_last_block_hash(&mut self, hash: &BlockHash);
 
-	/// get the timestamp of the sidechain state
+	/// Get the timestamp of.
 	fn get_timestamp(&self) -> Option<Timestamp>;
 
-	/// set the timestamp of the sidechain state
+	/// Set the timestamp.
 	fn set_timestamp(&mut self, timestamp: &Timestamp);
+
+	/// Resets the events.
+	fn reset_events(&mut self);
 }
 
 impl<T: SidechainState> SidechainSystemExt for T {
@@ -197,5 +217,11 @@ impl<T: SidechainState> SidechainSystemExt for T {
 
 	fn set_timestamp(&mut self, timestamp: &Timestamp) {
 		self.set_with_name("System", "Timestamp", timestamp)
+	}
+
+	fn reset_events(&mut self) {
+		self.clear_with_name("System", "Events");
+		self.clear_with_name("System", "EventCount");
+		self.clear_prefix_with_name("System", "EventTopics");
 	}
 }

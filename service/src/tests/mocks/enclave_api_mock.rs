@@ -15,20 +15,21 @@
 
 */
 
+use frame_support::sp_runtime::traits::Block as ParentchainBlockTrait;
 use itc_parentchain_light_client::light_client_init_params::{
 	LightClientInitParams,
 	LightClientInitParams::{Grandpa, Parachain},
 };
-use itp_enclave_api::{enclave_base::EnclaveBase, EnclaveResult};
+use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain, EnclaveResult};
 use itp_settings::worker::MR_ENCLAVE_SIZE;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_core::ed25519;
 use sp_runtime::traits::Header;
 
 /// mock for EnclaveBase - use in tests
-pub struct EnclaveBaseMock;
+pub struct EnclaveMock;
 
-impl EnclaveBase for EnclaveBaseMock {
+impl EnclaveBase for EnclaveMock {
 	fn init(&self, _mu_ra_url: &str, _untrusted_url: &str) -> EnclaveResult<()> {
 		Ok(())
 	}
@@ -41,7 +42,7 @@ impl EnclaveBase for EnclaveBaseMock {
 		unreachable!()
 	}
 
-	fn init_light_client<SpHeader: Header>(
+	fn init_parentchain_components<SpHeader: Header>(
 		&self,
 		params: LightClientInitParams<SpHeader>,
 	) -> EnclaveResult<SpHeader> {
@@ -77,5 +78,19 @@ impl EnclaveBase for EnclaveBaseMock {
 
 	fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]> {
 		Ok([1u8; MR_ENCLAVE_SIZE])
+	}
+}
+
+impl Sidechain for EnclaveMock {
+	fn sync_parentchain<ParentchainBlock: ParentchainBlockTrait>(
+		&self,
+		_blocks: &[sp_runtime::generic::SignedBlock<ParentchainBlock>],
+		_nonce: u32,
+	) -> EnclaveResult<()> {
+		Ok(())
+	}
+
+	fn execute_trusted_calls(&self) -> EnclaveResult<()> {
+		todo!()
 	}
 }

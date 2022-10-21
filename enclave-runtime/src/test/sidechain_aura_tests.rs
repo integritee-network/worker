@@ -45,7 +45,7 @@ use itp_settings::{
 };
 use itp_sgx_crypto::{Aes, ShieldingCryptoEncrypt, StateCrypto};
 use itp_sgx_externalities::SgxExternalitiesDiffType;
-use itp_stf_interface::system_pallet::SystemPalletAccountInterface;
+use itp_stf_interface::system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock};
 use itp_time_utils::duration_now;
@@ -219,6 +219,8 @@ pub fn produce_sidechain_block_and_import_it() {
 	let mut state = state_handler.load(&shard_id).unwrap();
 	let free_balance = TestStf::get_account_data(&mut state, &receiver.public().into()).free;
 	assert_eq!(free_balance, transfered_amount);
+	assert!(TestStf::get_event_count(&mut state) > 0);
+	assert!(TestStf::get_events(&mut state).len() > 0);
 }
 
 fn encrypted_trusted_operation_transfer_balance<

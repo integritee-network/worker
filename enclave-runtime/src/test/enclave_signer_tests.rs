@@ -15,7 +15,6 @@
 
 */
 
-use crate::{enclave_signer::StfEnclaveSigner, traits::StfEnclaveSigning};
 use ita_sgx_runtime::Runtime;
 use ita_stf::{AccountId, ShardIdentifier, Stf, TrustedCall};
 use itp_ocall_api::EnclaveAttestationOCallApi;
@@ -23,6 +22,7 @@ use itp_sgx_crypto::{
 	ed25519_derivation::DeriveEd25519, key_repository::AccessKey, mocks::KeyRepositoryMock,
 };
 use itp_sgx_externalities::SgxExternalities;
+use itp_stf_executor::{enclave_signer::StfEnclaveSigner, traits::StfEnclaveSigning};
 use itp_stf_interface::{
 	mocks::{CallExecutorMock, GetterExecutorMock},
 	InitState,

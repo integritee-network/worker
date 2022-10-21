@@ -28,18 +28,18 @@ pub trait ProvideServerConfig: Send + Sync {
 }
 
 pub struct FromFileConfigProvider {
-	private_key_path: String,
-	certificates_path: String,
+	private_key: String,
+	certificate: String,
 }
 
 impl FromFileConfigProvider {
-	pub fn new(private_key_path: String, certificates_path: String) -> Self {
-		Self { private_key_path, certificates_path }
+	pub fn new(private_key: String, certificate: String) -> Self {
+		Self { private_key, certificate }
 	}
 }
 
 impl ProvideServerConfig for FromFileConfigProvider {
 	fn get_config(&self) -> WebSocketResult<Arc<ServerConfig>> {
-		make_config(self.certificates_path.as_str(), self.private_key_path.as_str())
+		make_config(&self.certificate, &self.private_key)
 	}
 }

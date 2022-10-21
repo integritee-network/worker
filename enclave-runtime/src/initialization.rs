@@ -14,18 +14,18 @@
 	limitations under the License.
 
 */
-
 use crate::{
 	error::{Error, Result as EnclaveResult},
 	global_components::{
 		EnclaveBlockImportConfirmationHandler, EnclaveGetterExecutor, EnclaveOCallApi,
-		EnclaveRpcConnectionRegistry, EnclaveRpcResponder, EnclaveShieldingKeyRepository,
-		EnclaveSidechainApi, EnclaveSidechainBlockImportQueue,
+		EnclaveOffchainWorkerExecutor, EnclaveRpcConnectionRegistry, EnclaveRpcResponder,
+		EnclaveShieldingKeyRepository, EnclaveSidechainApi, EnclaveSidechainBlockImportQueue,
 		EnclaveSidechainBlockImportQueueWorker, EnclaveSidechainBlockImporter,
 		EnclaveSidechainBlockSyncer, EnclaveStateFileIo, EnclaveStateHandler,
 		EnclaveStateKeyRepository, EnclaveStateObserver, EnclaveStateSnapshotRepository,
 		EnclaveStfEnclaveSigner, EnclaveStfExecutor, EnclaveTopPool, EnclaveTopPoolAuthor,
-		EnclaveValidatorAccessor, GLOBAL_EXTRINSICS_FACTORY_COMPONENT,
+		EnclaveValidatorAccessor, GLOBAL_ATTESTATION_HANDLER_COMPONENT,
+		GLOBAL_EXTRINSICS_FACTORY_COMPONENT,
 		GLOBAL_IMMEDIATE_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
 		GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
 		GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT, GLOBAL_RPC_WS_HANDLER_COMPONENT,
@@ -43,7 +43,6 @@ use crate::{
 };
 use base58::ToBase58;
 use codec::Encode;
-use ita_stf::State as StfState;
 use itc_direct_rpc_server::{
 	create_determine_watch, rpc_connection_registry::ConnectionRegistry,
 	rpc_ws_handler::RpcWsHandler,
@@ -63,6 +62,7 @@ use itc_tls_websocket_server::{
 	certificate_generation::ed25519_self_signed_certificate, create_ws_server, ConnectionToken,
 	WebSocketServer,
 };
+use itp_attestation_handler::IasAttestationHandler;
 use itp_block_import_queue::BlockImportQueue;
 use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_extrinsics_factory::ExtrinsicsFactory;
@@ -70,10 +70,7 @@ use itp_node_api::metadata::provider::NodeMetadataRepository;
 use itp_nonce_cache::GLOBAL_NONCE_CACHE;
 use itp_primitives_cache::GLOBAL_PRIMITIVES_CACHE;
 use itp_settings::{
-	files::{
-		ENCLAVE_CERTIFICATE_FILE_PATH, ENCLAVE_CERTIFICATE_PRIVATE_KEY_PATH,
-		STATE_SNAPSHOTS_CACHE_SIZE,
-	},
+	files::STATE_SNAPSHOTS_CACHE_SIZE,
 	worker_mode::{ProvideWorkerMode, WorkerMode},
 };
 use itp_sgx_crypto::{
@@ -90,9 +87,8 @@ use itp_top_pool_author::author::AuthorTopFilter;
 use itp_types::{Block, Header, ShardIdentifier, SignedBlock};
 use its_sidechain::block_composer::BlockComposer;
 use log::*;
-use primitive_types::H256;
 use sp_core::crypto::Pair;
-use std::{collections::HashMap, fs, string::String, sync::Arc};
+use std::{collections::HashMap, string::String, sync::Arc};
 
 pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> EnclaveResult<()> {
 	// Initialize the logging environment in the enclave.
@@ -125,7 +121,7 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 		enclave_call_signer_key.public().into(),
 	));
 	let state_snapshot_repository_loader =
-		StateSnapshotRepositoryLoader::<EnclaveStateFileIo, StfState, H256>::new(state_file_io);
+		StateSnapshotRepositoryLoader::<EnclaveStateFileIo>::new(state_file_io);
 	let state_snapshot_repository =
 		state_snapshot_repository_loader.load_snapshot_repository(STATE_SNAPSHOTS_CACHE_SIZE)?;
 	let state_observer = initialize_state_observer(&state_snapshot_repository)?;
@@ -177,7 +173,7 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	let top_pool_author = create_top_pool_author(
 		connection_registry.clone(),
 		state_handler,
-		ocall_api,
+		ocall_api.clone(),
 		shielding_key_repository,
 	);
 	GLOBAL_TOP_POOL_AUTHOR_COMPONENT.initialize(top_pool_author.clone());
@@ -189,6 +185,9 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 
 	let sidechain_block_import_queue = Arc::new(EnclaveSidechainBlockImportQueue::default());
 	GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.initialize(sidechain_block_import_queue);
+
+	let attestation_handler = Arc::new(IasAttestationHandler::new(ocall_api));
+	GLOBAL_ATTESTATION_HANDLER_COMPONENT.initialize(attestation_handler);
 
 	Ok(())
 }
@@ -260,7 +259,7 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 	Ok(())
 }
 
-pub(crate) fn init_light_client<WorkerModeProvider: ProvideWorkerMode>(
+pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>(
 	params: LightClientInitParams<Header>,
 ) -> EnclaveResult<Header> {
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
@@ -329,14 +328,13 @@ fn initialize_parentchain_import_dispatcher<WorkerModeProvider: ProvideWorkerMod
 
 	match WorkerModeProvider::worker_mode() {
 		WorkerMode::OffChainWorker | WorkerMode::Teeracle => {
-			let offchain_worker_executor =
-				Arc::new(itc_offchain_worker_executor::executor::Executor::new(
-					top_pool_author,
-					stf_executor,
-					state_handler,
-					validator_access,
-					extrinsics_factory,
-				));
+			let offchain_worker_executor = Arc::new(EnclaveOffchainWorkerExecutor::new(
+				top_pool_author,
+				stf_executor,
+				state_handler,
+				validator_access,
+				extrinsics_factory,
+			));
 			let parentchain_block_import_dispatcher = Arc::new(
 				ImmediateDispatcher::new(parentchain_block_importer).with_observer(move || {
 					if let Err(e) = offchain_worker_executor.execute() {
@@ -370,20 +368,13 @@ pub(crate) fn init_direct_invocation_server(server_addr: String) -> EnclaveResul
 	let cert =
 		ed25519_self_signed_certificate(signing, "Enclave").map_err(|e| Error::Other(e.into()))?;
 
-	//write certificate and private key pem file
+	// Serialize certificate(s) and private key to PEM.
+	// PEM format is needed as a certificate chain can only be serialized into PEM.
 	let pem_serialized = cert.serialize_pem().map_err(|e| Error::Other(e.into()))?;
 	let private_key = cert.serialize_private_key_pem();
-	fs::write(ENCLAVE_CERTIFICATE_FILE_PATH, &pem_serialized.as_bytes())
-		.map_err(|e| Error::Other(e.into()))?;
-	fs::write(ENCLAVE_CERTIFICATE_PRIVATE_KEY_PATH, &private_key.as_bytes())
-		.map_err(|e| Error::Other(e.into()))?;
 
-	let web_socket_server = create_ws_server(
-		server_addr.as_str(),
-		ENCLAVE_CERTIFICATE_PRIVATE_KEY_PATH,
-		ENCLAVE_CERTIFICATE_FILE_PATH,
-		rpc_handler,
-	);
+	let web_socket_server =
+		create_ws_server(server_addr.as_str(), &private_key, &pem_serialized, rpc_handler);
 
 	GLOBAL_WEB_SOCKET_SERVER_COMPONENT.initialize(web_socket_server.clone());
 

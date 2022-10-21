@@ -1,3 +1,4 @@
+// Copyright 2022 Integritee AG and Supercomputing Systems AG
 // Copyright (C) 2017-2019 Baidu, Inc. All Rights Reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -27,609 +28,134 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use crate::{
-	cert, io, ocall::OcallApi, utils::hash_from_slice, Error as EnclaveError,
-	Result as EnclaveResult, GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT,
+	global_components::{
+		GLOBAL_ATTESTATION_HANDLER_COMPONENT, GLOBAL_EXTRINSICS_FACTORY_COMPONENT,
+		GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT,
+	},
+	Error as EnclaveError, Result as EnclaveResult,
 };
-use codec::Encode;
-use core::default::Default;
-use itertools::Itertools;
+use codec::{Decode, Encode};
+use itp_attestation_handler::AttestationHandler;
 use itp_component_container::ComponentGetter;
-use itp_node_api::{
-	api_client::{ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder},
-	metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata},
+use itp_extrinsics_factory::CreateExtrinsics;
+use itp_node_api::metadata::{
+	pallet_teerex::TeerexCallIndexes,
+	provider::{AccessNodeMetadata, Error as MetadataProviderError},
 };
-use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
-use itp_ocall_api::EnclaveAttestationOCallApi;
-use itp_settings::files::{RA_API_KEY_FILE, RA_DUMP_CERT_DER_FILE, RA_SPID_FILE};
-use itp_sgx_crypto::Ed25519Seal;
-use itp_sgx_io::StaticSealedIO;
+use itp_settings::worker::MR_ENCLAVE_SIZE;
+use itp_types::OpaqueCall;
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
-use sgx_rand::*;
-use sgx_tcrypto::*;
-use sgx_tse::*;
 use sgx_types::*;
-use sp_core::{blake2_256, Pair};
-use std::{
-	io::{Read, Write},
-	net::TcpStream,
-	prelude::v1::*,
-	slice, str,
-	string::String,
-	sync::Arc,
-	vec::Vec,
-};
-use substrate_api_client::{compose_extrinsic_offline, ExtrinsicParams};
-
-pub const DEV_HOSTNAME: &str = "api.trustedservices.intel.com";
-
-#[cfg(feature = "production")]
-pub const SIGRL_SUFFIX: &str = "/sgx/attestation/v4/sigrl/";
-#[cfg(feature = "production")]
-pub const REPORT_SUFFIX: &str = "/sgx/attestation/v4/report";
-
-#[cfg(not(feature = "production"))]
-pub const SIGRL_SUFFIX: &str = "/sgx/dev/attestation/v4/sigrl/";
-#[cfg(not(feature = "production"))]
-pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
+use sp_runtime::OpaqueExtrinsic;
+use std::{prelude::v1::*, slice, vec::Vec};
 
 #[no_mangle]
-pub unsafe extern "C" fn get_mrenclave(mrenclave: *mut u8, mrenclave_size: u32) -> sgx_status_t {
-	let mrenclave_slice = slice::from_raw_parts_mut(mrenclave, mrenclave_size as usize);
-
-	match OcallApi.get_mrenclave_of_self() {
-		Ok(m) => {
-			mrenclave_slice.copy_from_slice(&m.m[..]);
-			sgx_status_t::SGX_SUCCESS
-		},
-		Err(e) => e,
+pub unsafe extern "C" fn get_mrenclave(mrenclave: *mut u8, mrenclave_size: usize) -> sgx_status_t {
+	if mrenclave.is_null() || mrenclave_size < MR_ENCLAVE_SIZE {
+		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
 	}
-}
-
-fn parse_response_attn_report(resp: &[u8]) -> EnclaveResult<(String, String, String)> {
-	debug!("    [Enclave] Entering parse_response_attn_report");
-	let mut headers = [httparse::EMPTY_HEADER; 16];
-	let mut respp = httparse::Response::new(&mut headers);
-	let result = respp.parse(resp);
-	debug!("    [Enclave] respp.parse result {:?}", result);
-
-	log_resp_code(&mut respp.code);
-
-	let mut len_num: u32 = 0;
-
-	let mut sig = String::new();
-	let mut cert = String::new();
-	let mut attn_report = String::new();
-
-	for i in 0..respp.headers.len() {
-		let h = respp.headers[i];
-		//println!("{} : {}", h.name, str::from_utf8(h.value).unwrap());
-		match h.name {
-			"Content-Length" => {
-				let len_str = String::from_utf8(h.value.to_vec())
-					.map_err(|e| EnclaveError::Other(e.into()))?;
-				len_num = len_str.parse::<u32>().map_err(|e| EnclaveError::Other(e.into()))?;
-				debug!("    [Enclave] Content length = {}", len_num);
-			},
-			"X-IASReport-Signature" =>
-				sig = String::from_utf8(h.value.to_vec())
-					.map_err(|e| EnclaveError::Other(e.into()))?,
-			"X-IASReport-Signing-Certificate" =>
-				cert = String::from_utf8(h.value.to_vec())
-					.map_err(|e| EnclaveError::Other(e.into()))?,
-			_ => (),
-		}
-	}
-
-	// Remove %0A from cert, and only obtain the signing cert
-	cert = cert.replace("%0A", "");
-	cert = cert::percent_decode(cert)?;
-	let v: Vec<&str> = cert.split("-----").collect();
-	let sig_cert = v[2].to_string();
-
-	if len_num != 0 {
-		// The unwrap is safe. It resolves to the https::Status' unwrap function which only panics
-		// if the the response is not complete, which cannot happen if the result is Ok().
-		let header_len = result.map_err(|e| EnclaveError::Other(e.into()))?.unwrap();
-		let resp_body = &resp[header_len..];
-		attn_report =
-			String::from_utf8(resp_body.to_vec()).map_err(|e| EnclaveError::Other(e.into()))?;
-		debug!("    [Enclave] Attestation report = {}", attn_report);
-	}
-
-	// len_num == 0
-	Ok((attn_report, sig, sig_cert))
-}
-
-fn log_resp_code(resp_code: &mut Option<u16>) {
-	let msg = match resp_code {
-		Some(200) => "OK Operation Successful",
-		Some(401) => "Unauthorized Failed to authenticate or authorize request.",
-		Some(404) => "Not Found GID does not refer to a valid EPID group ID.",
-		Some(500) => "Internal error occurred",
-		Some(503) =>
-			"Service is currently not able to process the request (due to
-			a temporary overloading or maintenance). This is a
-			temporary state – the same request can be repeated after
-			some time. ",
-		_ => {
-			error!("DBG:{:?}", resp_code);
-			"Unknown error occured"
-		},
-	};
-	debug!("    [Enclave] msg = {}", msg);
-}
-
-fn parse_response_sigrl(resp: &[u8]) -> EnclaveResult<Vec<u8>> {
-	debug!("    [Enclave] Entering parse_response_sigrl");
-	let mut headers = [httparse::EMPTY_HEADER; 16];
-	let mut respp = httparse::Response::new(&mut headers);
-	let result = respp.parse(resp);
-	debug!("    [Enclave] Parse result   {:?}", result);
-	debug!("    [Enclave] Parse response {:?}", respp);
-
-	log_resp_code(&mut respp.code);
-
-	let mut len_num: u32 = 0;
-
-	for i in 0..respp.headers.len() {
-		let h = respp.headers[i];
-		if h.name == "content-length" {
-			let len_str =
-				String::from_utf8(h.value.to_vec()).map_err(|e| EnclaveError::Other(e.into()))?;
-			len_num = len_str.parse::<u32>().map_err(|e| EnclaveError::Other(e.into()))?;
-			debug!("    [Enclave] Content length = {}", len_num);
-		}
-	}
-
-	if len_num != 0 {
-		// The unwrap is safe. It resolves to the https::Status' unwrap function which only panics
-		// if the the response is not complete, which cannot happen if the result is Ok().
-		let header_len = result.map_err(|e| EnclaveError::Other(e.into()))?.unwrap();
-		let resp_body = &resp[header_len..];
-		debug!("    [Enclave] Base64-encoded SigRL: {:?}", resp_body);
-
-		let resp_str = str::from_utf8(resp_body).map_err(|e| EnclaveError::Other(e.into()))?;
-		return base64::decode(resp_str).map_err(|e| EnclaveError::Other(e.into()))
-	}
-
-	// len_num == 0
-	Ok(Vec::new())
-}
-
-pub fn make_ias_client_config() -> rustls::ClientConfig {
-	let mut config = rustls::ClientConfig::new();
-
-	config.root_store.add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
-	config
-}
-
-pub fn get_sigrl_from_intel(fd: c_int, gid: u32) -> EnclaveResult<Vec<u8>> {
-	debug!("    [Enclave] Entering get_sigrl_from_intel. fd = {:?}", fd);
-	let config = make_ias_client_config();
-	//let sigrl_arg = SigRLArg { group_id : gid };
-	//let sigrl_req = sigrl_arg.to_httpreq();
-	let ias_key = get_ias_api_key()?;
-
-	let req = format!("GET {}{:08x} HTTP/1.1\r\nHOST: {}\r\nOcp-Apim-Subscription-Key: {}\r\nConnection: Close\r\n\r\n",
-					  SIGRL_SUFFIX,
-					  gid,
-					  DEV_HOSTNAME,
-					  ias_key);
-	debug!("    [Enclave]  request = {}", req);
-
-	let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME)
-		.map_err(|e| EnclaveError::Other(e.into()))?;
-	let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
-	let mut sock = TcpStream::new(fd)?;
-	let mut tls = rustls::Stream::new(&mut sess, &mut sock);
-
-	let _result = tls.write(req.as_bytes());
-	let mut plaintext = Vec::new();
-
-	debug!("    [Enclave] tls.write complete");
-
-	tls.read_to_end(&mut plaintext)?;
-
-	debug!("    [Enclave] tls.read_to_end complete");
-	let resp_string =
-		String::from_utf8(plaintext.clone()).map_err(|e| EnclaveError::Other(e.into()))?;
-
-	debug!("    [Enclave] resp_string = {}", resp_string);
-
-	parse_response_sigrl(&plaintext)
-}
-
-// TODO: support pse
-pub fn get_report_from_intel(fd: c_int, quote: Vec<u8>) -> EnclaveResult<(String, String, String)> {
-	debug!("    [Enclave] Entering get_report_from_intel. fd = {:?}", fd);
-	let config = make_ias_client_config();
-	let encoded_quote = base64::encode(&quote[..]);
-	let encoded_json = format!("{{\"isvEnclaveQuote\":\"{}\"}}\r\n", encoded_quote);
-
-	let ias_key = get_ias_api_key()?;
-
-	let req = format!("POST {} HTTP/1.1\r\nHOST: {}\r\nOcp-Apim-Subscription-Key:{}\r\nContent-Length:{}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{}",
-					  REPORT_SUFFIX,
-					  DEV_HOSTNAME,
-					  ias_key,
-					  encoded_json.len(),
-					  encoded_json);
-	debug!("    [Enclave] Req = {}", req);
-	let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME).map_err(|e| {
-		error!("Invalid DEV_HOSTNAME");
-		EnclaveError::Other(e.into())
-	})?;
-	let mut sess = rustls::ClientSession::new(&Arc::new(config), dns_name);
-	let mut sock = TcpStream::new(fd)?;
-	let mut tls = rustls::Stream::new(&mut sess, &mut sock);
-
-	let _result = tls.write(req.as_bytes());
-	let mut plaintext = Vec::new();
-
-	debug!("    [Enclave] tls.write complete");
-
-	tls.read_to_end(&mut plaintext)?;
-	debug!("    [Enclave] tls.read_to_end complete");
-	let resp_string = String::from_utf8(plaintext.clone()).map_err(|e| {
-		error!("    [Enclave] error decoding tls answer to string");
-		EnclaveError::Other(e.into())
-	})?;
-
-	debug!("    [Enclave] resp_string = {}", resp_string);
-
-	parse_response_attn_report(&plaintext)
-}
-
-fn as_u32_le(array: [u8; 4]) -> u32 {
-	u32::from(array[0])
-		+ (u32::from(array[1]) << 8)
-		+ (u32::from(array[2]) << 16)
-		+ (u32::from(array[3]) << 24)
-}
-
-#[allow(const_err)]
-pub fn create_attestation_report<A: EnclaveAttestationOCallApi>(
-	pub_k: &[u8; 32],
-	sign_type: sgx_quote_sign_type_t,
-	ocall_api: &A,
-) -> SgxResult<(String, String, String)> {
-	// Workflow:
-	// (1) ocall to get the target_info structure (ti) and epid group id (eg)
-	// (1.5) get sigrl
-	// (2) call sgx_create_report with ti+data, produce an sgx_report_t
-	// (3) ocall to sgx_get_quote to generate (*mut sgx-quote_t, uint32_t)
-
-	// (1) get ti + eg
-	let init_quote = ocall_api.sgx_init_quote()?;
-
-	let epid_group_id: sgx_epid_group_id_t = init_quote.1;
-	let target_info: sgx_target_info_t = init_quote.0;
-
-	debug!("    [Enclave] EPID group id = {:?}", epid_group_id);
-
-	let eg_num = as_u32_le(epid_group_id);
-
-	// (1.5) get sigrl
-	let ias_socket = ocall_api.get_ias_socket()?;
-
-	info!("    [Enclave] ias_sock = {}", ias_socket);
-
-	// Now sigrl_vec is the revocation list, a vec<u8>
-	let sigrl_vec: Vec<u8> = get_sigrl_from_intel(ias_socket, eg_num)?;
-
-	// (2) Generate the report
-	let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
-	report_data.d[..32].clone_from_slice(&pub_k[..]);
-
-	let report = match rsgx_create_report(&target_info, &report_data) {
-		Ok(r) => {
-			debug!(
-				"    [Enclave] Report creation successful. mr_signer.m = {:x?}",
-				r.body.mr_signer.m
-			);
-			r
-		},
-		Err(e) => {
-			error!("    [Enclave] Report creation failed. {:?}", e);
-			return Err(e)
-		},
-	};
-
-	let mut quote_nonce = sgx_quote_nonce_t { rand: [0; 16] };
-	let mut os_rng = os::SgxRng::new().map_err(|e| EnclaveError::Other(e.into()))?;
-	os_rng.fill_bytes(&mut quote_nonce.rand);
-
-	// (3) Generate the quote
-	// Args:
-	//       1. sigrl: ptr + len
-	//       2. report: ptr 432bytes
-	//       3. linkable: u32, unlinkable=0, linkable=1
-	//       4. spid: sgx_spid_t ptr 16bytes
-	//       5. sgx_quote_nonce_t ptr 16bytes
-	//       6. p_sig_rl + sigrl size ( same to sigrl)
-	//       7. [out]p_qe_report need further check
-	//       8. [out]p_quote
-	//       9. quote_size
-
-	let spid: sgx_spid_t = load_spid(RA_SPID_FILE)?;
-
-	let quote_result = ocall_api.get_quote(sigrl_vec, report, sign_type, spid, quote_nonce)?;
-
-	let qe_report = quote_result.0;
-	let quote_content = quote_result.1;
-
-	// Added 09-28-2018
-	// Perform a check on qe_report to verify if the qe_report is valid
-	match rsgx_verify_report(&qe_report) {
-		Ok(()) => debug!("    [Enclave] rsgx_verify_report success!"),
-		Err(x) => {
-			error!("    [Enclave] rsgx_verify_report failed. {:?}", x);
-			return Err(x)
-		},
-	}
-
-	// Check if the qe_report is produced on the same platform
-	if target_info.mr_enclave.m != qe_report.body.mr_enclave.m
-		|| target_info.attributes.flags != qe_report.body.attributes.flags
-		|| target_info.attributes.xfrm != qe_report.body.attributes.xfrm
-	{
-		error!("    [Enclave] qe_report does not match current target_info!");
-		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-	}
-
-	debug!("    [Enclave] qe_report check success");
-
-	// Check qe_report to defend against replay attack
-	// The purpose of p_qe_report is for the ISV enclave to confirm the QUOTE
-	// it received is not modified by the untrusted SW stack, and not a replay.
-	// The implementation in QE is to generate a REPORT targeting the ISV
-	// enclave (target info from p_report) , with the lower 32Bytes in
-	// report.data = SHA256(p_nonce||p_quote). The ISV enclave can verify the
-	// p_qe_report and report.data to confirm the QUOTE has not be modified and
-	// is not a replay. It is optional.
-
-	// need to call this a second time (first time is when we get the sigrl revocation list)
-	// (has some internal state that needs to be reset)!
-	let ias_socket = ocall_api.get_ias_socket()?;
-
-	let mut rhs_vec: Vec<u8> = quote_nonce.rand.to_vec();
-	rhs_vec.extend(&quote_content);
-	let rhs_hash = rsgx_sha256_slice(&rhs_vec[..])?;
-	let lhs_hash = &qe_report.body.report_data.d[..32];
-
-	debug!("    [Enclave] rhs hash = {:02X}", rhs_hash.iter().format(""));
-	debug!("    [Enclave] lhs hash = {:02X}", lhs_hash.iter().format(""));
-
-	if rhs_hash != lhs_hash {
-		error!("    [Enclave] Quote is tampered!");
-		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-	}
-
-	let (attn_report, sig, cert) = get_report_from_intel(ias_socket, quote_content)?;
-	Ok((attn_report, sig, cert))
-}
-
-fn load_spid(filename: &str) -> SgxResult<sgx_spid_t> {
-	match io::read_to_string(filename).map(|contents| decode_spid(&contents)) {
-		Ok(r) => r,
-		Err(e) => {
-			error!("Failed to load SPID: {:?}", e);
-			Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-		},
-	}
-}
-
-fn decode_spid(hex_encoded_string: &str) -> SgxResult<sgx_spid_t> {
-	let mut spid = sgx_spid_t::default();
-	let hex = hex_encoded_string.trim();
-
-	if hex.len() < itp_settings::files::SPID_MIN_LENGTH {
-		error!(
-			"Input spid length ({}) is incorrect, minimum length required is {}",
-			hex.len(),
-			itp_settings::files::SPID_MIN_LENGTH
-		);
-		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-	}
-
-	let decoded_vec = hex::decode(hex).map_err(|_| sgx_status_t::SGX_ERROR_UNEXPECTED)?;
-
-	spid.id.copy_from_slice(&decoded_vec[..16]);
-	Ok(spid)
-}
-
-fn get_ias_api_key() -> EnclaveResult<String> {
-	io::read_to_string(RA_API_KEY_FILE)
-		.map(|key| key.trim_end().to_owned())
-		.map_err(|e| EnclaveError::Other(e.into()))
-}
-
-pub fn create_ra_report_and_signature<A: EnclaveAttestationOCallApi>(
-	sign_type: sgx_quote_sign_type_t,
-	ocall_api: &A,
-	skip_ra: bool,
-) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
-	let chain_signer = Ed25519Seal::unseal_from_static_file()?;
-	info!("[Enclave Attestation] Ed25519 pub raw : {:?}", chain_signer.public().0);
-
-	info!("    [Enclave] Generate keypair");
-	let ecc_handle = SgxEccHandle::new();
-	let _result = ecc_handle.open();
-	let (prv_k, pub_k) = ecc_handle.create_key_pair()?;
-	info!("    [Enclave] Generate ephemeral ECDSA keypair successful");
-	debug!("     pubkey X is {:02x}", pub_k.gx.iter().format(""));
-	debug!("     pubkey Y is {:02x}", pub_k.gy.iter().format(""));
-
-	let payload = if !skip_ra {
-		info!("    [Enclave] Create attestation report");
-		let (attn_report, sig, cert) =
-			match create_attestation_report(&chain_signer.public().0, sign_type, ocall_api) {
-				Ok(r) => r,
-				Err(e) => {
-					error!("    [Enclave] Error in create_attestation_report: {:?}", e);
-					return Err(e.into())
-				},
-			};
-		println!("    [Enclave] Create attestation report successful");
-		debug!("              attn_report = {:?}", attn_report);
-		debug!("              sig         = {:?}", sig);
-		debug!("              cert        = {:?}", cert);
-
-		// concat the information
-		attn_report + "|" + &sig + "|" + &cert
-	} else {
-		Default::default()
-	};
-
-	// generate an ECC certificate
-	info!("    [Enclave] Generate ECC Certificate");
-	let (key_der, cert_der) = match cert::gen_ecc_cert(payload, &prv_k, &pub_k, &ecc_handle) {
-		Ok(r) => r,
-		Err(e) => {
-			error!("    [Enclave] gen_ecc_cert failed: {:?}", e);
-			return Err(e.into())
-		},
-	};
-
-	let _ = ecc_handle.close();
-	info!("    [Enclave] Generate ECC Certificate successful");
-	Ok((key_der, cert_der))
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn perform_ra(
-	genesis_hash: *const u8,
-	genesis_hash_size: u32,
-	nonce: *const u32,
-	w_url: *const u8,
-	w_url_size: u32,
-	unchecked_extrinsic: *mut u8,
-	unchecked_extrinsic_size: u32,
-) -> sgx_status_t {
-	// our certificate is unlinkable
-	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
-
-	let (_key_der, cert_der) = match create_ra_report_and_signature(sign_type, &OcallApi, false) {
-		Ok(r) => r,
-		Err(e) => return e.into(),
-	};
-
-	info!("    [Enclave] Compose extrinsic");
-	let genesis_hash_slice = slice::from_raw_parts(genesis_hash, genesis_hash_size as usize);
-	//let mut nonce_slice     = slice::from_raw_parts(nonce, nonce_size as usize);
-	let url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
-	let extrinsic_slice =
-		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
-	let signer = match Ed25519Seal::unseal_from_static_file() {
-		Ok(pair) => pair,
-		Err(e) => return e.into(),
-	};
-	info!("[Enclave] Restored ECC pubkey: {:?}", signer.public());
-
-	debug!("decoded nonce: {}", *nonce);
-	let genesis_hash = hash_from_slice(genesis_hash_slice);
-	debug!("decoded genesis_hash: {:?}", genesis_hash_slice);
-	debug!("worker url: {}", str::from_utf8(url_slice).unwrap());
-
-	let node_metadata_repository = match GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get() {
+	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
 		Ok(r) => r,
 		Err(e) => {
 			error!("Component get failure: {:?}", e);
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	};
-
-	let (register_enclave_call, runtime_spec_version, runtime_transaction_version) =
-		match node_metadata_repository.get_from_metadata(|m| {
-			(
-				m.register_enclave_call_indexes(),
-				m.get_runtime_version(),
-				m.get_runtime_transaction_version(),
-			)
-		}) {
-			Ok(r) => r,
-			Err(e) => {
-				error!("Failed to get node metadata: {:?}", e);
+	match attestation_handler.get_mrenclave() {
+		Ok(mrenclave_value) => {
+			let mrenclave_slice = slice::from_raw_parts_mut(mrenclave, mrenclave_size);
+			if let Err(e) =
+				write_slice_and_whitespace_pad(mrenclave_slice, mrenclave_value.to_vec())
+			{
+				error!("Failed to transfer mrenclave to o-call buffer: {:?}", e);
 				return sgx_status_t::SGX_ERROR_UNEXPECTED
-			},
-		};
+			}
+			sgx_status_t::SGX_SUCCESS
+		},
+		Err(e) => e.into(),
+	}
+}
 
-	let call =
-		match register_enclave_call {
-			Ok(c) => c,
-			Err(e) => {
-				error!("Failed to get the indexes for the register_enclave call from the metadata: {:?}", e);
-				return sgx_status_t::SGX_ERROR_UNEXPECTED
-			},
-		};
+pub fn create_ra_report_and_signature(
+	sign_type: sgx_quote_sign_type_t,
+	skip_ra: bool,
+) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
+	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
+		Ok(r) => r,
+		Err(e) => {
+			error!("Component get failure: {:?}", e);
+			return Err(e.into())
+		},
+	};
 
-	let nonce_cache = GLOBAL_NONCE_CACHE.clone();
-	let mut nonce_lock = nonce_cache.load_for_mutation().expect("Nonce lock poisoning");
-	let nonce_value = nonce_lock.0;
+	match attestation_handler.create_ra_report_and_signature(sign_type, skip_ra) {
+		Ok(r) => Ok(r),
+		Err(e) => {
+			error!("create_ra_report_and_signature failure: {:?}", e);
+			Err(e.into())
+		},
+	}
+}
 
-	let extrinsic_params = ParentchainExtrinsicParams::new(
-		runtime_spec_version,
-		runtime_transaction_version,
-		*nonce,
-		genesis_hash,
-		ParentchainExtrinsicParamsBuilder::default(),
-	);
+#[no_mangle]
+pub unsafe extern "C" fn perform_ra(
+	w_url: *const u8,
+	w_url_size: u32,
+	unchecked_extrinsic: *mut u8,
+	unchecked_extrinsic_size: u32,
+	skip_ra: c_int,
+) -> sgx_status_t {
+	if w_url.is_null() || unchecked_extrinsic.is_null() {
+		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+	}
+	let mut url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
+	let url = String::decode(&mut url_slice).expect("Could not decode url slice to a valid String");
+	let extrinsic_slice =
+		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
-	let xt = compose_extrinsic_offline!(
-		signer,
-		(call, cert_der.to_vec(), url_slice.to_vec()),
-		extrinsic_params
-	);
+	let extrinsic = match perform_ra_internal(url, skip_ra == 1) {
+		Ok(xt) => xt,
+		Err(e) => return e.into(),
+	};
 
-	*nonce_lock = Nonce(nonce_value + 1);
-	std::mem::drop(nonce_lock);
-
-	let xt_encoded = xt.encode();
-	let xt_hash = blake2_256(&xt_encoded);
-	debug!("    [Enclave] Encoded extrinsic ( len = {} B), hash {:?}", xt_encoded.len(), xt_hash);
-
-	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, xt_encoded) {
+	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
 		return EnclaveError::Other(Box::new(e)).into()
 	};
 
 	sgx_status_t::SGX_SUCCESS
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn dump_ra_to_disk() -> sgx_status_t {
-	// our certificate is unlinkable
-	let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
+fn perform_ra_internal(url: String, skip_ra: bool) -> EnclaveResult<OpaqueExtrinsic> {
+	let attestation_handler = GLOBAL_ATTESTATION_HANDLER_COMPONENT.get()?;
+	let extrinsics_factory = GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get()?;
+	let node_metadata_repo = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
 
-	let (_key_der, cert_der) = match create_ra_report_and_signature(sign_type, &OcallApi, false) {
-		Ok(r) => r,
-		Err(e) => return e.into(),
-	};
+	let cert_der = attestation_handler.perform_ra(skip_ra)?;
 
-	if let Err(err) = io::write(&cert_der, RA_DUMP_CERT_DER_FILE) {
-		error!(
-			"    [Enclave] failed to write RA file ({}), status: {:?}",
-			RA_DUMP_CERT_DER_FILE, err
-		);
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
-	}
-	info!("    [Enclave] dumped ra cert to {}", RA_DUMP_CERT_DER_FILE);
+	info!("    [Enclave] Compose register enclave call");
+	let call_ids = node_metadata_repo
+		.get_from_metadata(|m| m.register_enclave_call_indexes())?
+		.map_err(MetadataProviderError::MetadataError)?;
 
-	sgx_status_t::SGX_SUCCESS
+	let call = OpaqueCall::from_tuple(&(call_ids, cert_der, url));
+
+	let extrinsics = extrinsics_factory.create_extrinsics(&[call], None)?;
+
+	Ok(extrinsics[0].clone())
 }
 
-#[cfg(feature = "test")]
-pub mod tests {
-
-	use super::*;
-
-	pub fn decode_spid_works() {
-		let spid_encoded = "F39ABCF95015A5BF6C7D360EF5035E12";
-		let expected_spid = sgx_spid_t {
-			id: [243, 154, 188, 249, 80, 21, 165, 191, 108, 125, 54, 14, 245, 3, 94, 18],
-		};
-
-		let decoded_spid = decode_spid(spid_encoded).unwrap();
-		assert_eq!(decoded_spid.id, expected_spid.id);
+#[no_mangle]
+pub extern "C" fn dump_ra_to_disk() -> sgx_status_t {
+	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
+		Ok(r) => r,
+		Err(e) => {
+			error!("Component get failure: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+	match attestation_handler.dump_ra_to_disk() {
+		Ok(_) => sgx_status_t::SGX_SUCCESS,
+		Err(e) => e.into(),
 	}
 }
