@@ -19,6 +19,12 @@ use codec::{Decode, Encode};
 use std::string::String;
 use substrate_fixed::types::U32F32;
 
+#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
+pub struct OracleInfo<Info>(pub Info);
+
+#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
+pub struct MetricsInfo<Info>(pub Info);
+
 /// Market identifier for order
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub struct TradingPair {

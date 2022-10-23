@@ -33,7 +33,10 @@ use std::{string::String, sync::Arc, time::Instant};
 use url::Url;
 
 /// Oracle source trait used by the `ExchangeRateOracle` (strategy pattern).
-pub trait OracleSource: Default {
+pub trait OracleSource<OracleSourceInfo>: Default {
+
+	type OracleRequestResult;
+
 	fn metrics_id(&self) -> String;
 
 	fn request_timeout(&self) -> Option<Duration>;
@@ -48,8 +51,16 @@ pub trait OracleSource: Default {
 		rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
 		trading_pair: TradingPair,
 	) -> Result<ExchangeRate, Error>;
+
+	fn execute_request(
+		&self,
+		rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
+		source_info: OracleSourceInfo
+	) -> Self::OracleRequestResult;
 }
 
+
+// TODO: Change this to just Oracle perhaps remove Arc?
 pub struct ExchangeRateOracle<OracleSourceType, MetricsExporter> {
 	oracle_source: OracleSourceType,
 	metrics_exporter: Arc<MetricsExporter>,

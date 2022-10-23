@@ -22,7 +22,7 @@ use log::error;
 use std::{string::String, sync::Arc, time::Instant};
 
 /// Trait to export metrics for any Teeracle.
-pub trait ExportMetrics {
+pub trait ExportMetrics<MetricsInfo> {
 	fn increment_number_requests(&self, source: String);
 
 	fn record_response_time(&self, source: String, timer: Instant);
@@ -32,6 +32,12 @@ pub trait ExportMetrics {
 		source: String,
 		exchange_rate: ExchangeRate,
 		trading_pair: TradingPair,
+	);
+
+	fn update(
+		&self,
+		source: String,
+		metrics_info: MetricsInfo,
 	);
 }
 
@@ -55,7 +61,7 @@ where
 	}
 }
 
-impl<OCallApi> ExportMetrics for MetricsExporter<OCallApi>
+impl<OCallApi, MetricsInfo> ExportMetrics<MetricsInfo> for MetricsExporter<OCallApi>
 where
 	OCallApi: EnclaveMetricsOCallApi,
 {
@@ -82,4 +88,10 @@ where
 			exchange_rate,
 		));
 	}
+
+	fn update(
+		&self,
+		source: String,
+		metrics_info: MetricsInfo
+	) {}
 }

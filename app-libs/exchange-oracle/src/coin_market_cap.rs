@@ -75,7 +75,11 @@ impl CoinMarketCapSource {
 	}
 }
 
-impl OracleSource for CoinMarketCapSource {
+impl<OracleInfo> OracleSource<OracleInfo> for CoinMarketCapSource {
+
+	// TODO Change this to return something useful?
+	type OracleRequestResult = Result<(), Error>;
+
 	fn metrics_id(&self) -> String {
 		"coin_market_cap".to_string()
 	}
@@ -90,6 +94,15 @@ impl OracleSource for CoinMarketCapSource {
 
 	fn root_certificate_content(&self) -> String {
 		COINMARKETCAP_ROOT_CERTIFICATE.to_string()
+	}
+
+	fn execute_request(
+		&self,
+		rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
+		source_info: OracleSourceInfo,
+	) -> Self::OracleRequestResult {
+		// TODO Implement me
+		Ok(())
 	}
 
 	fn execute_exchange_rate_request(

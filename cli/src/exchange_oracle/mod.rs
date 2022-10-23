@@ -26,6 +26,7 @@ use commands::{AddToWhitelistCmd, ListenToExchangeRateEventsCmd};
 mod commands;
 
 /// Exchange oracle subcommands for the cli.
+/// Todo: Make this just Oracle SubCommand
 #[derive(Debug, clap::Subcommand)]
 pub enum ExchangeOracleSubCommand {
 	/// Add a market source to the teeracle's whitelist.

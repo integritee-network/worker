@@ -71,6 +71,9 @@ impl CoinGeckoSource {
 }
 
 impl OracleSource for CoinGeckoSource {
+
+	type OracleRequestResult = Result<(), Error>;
+
 	fn metrics_id(&self) -> String {
 		"coin_gecko".to_string()
 	}
@@ -85,6 +88,15 @@ impl OracleSource for CoinGeckoSource {
 
 	fn root_certificate_content(&self) -> String {
 		COINGECKO_ROOT_CERTIFICATE.to_string()
+	}
+
+	fn execute_request(
+		&self,
+		rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
+		source_info: OracleSourceInfo,
+	) -> Self::OracleRequestResult {
+		// TODO Implement me
+		Ok(())
 	}
 
 	fn execute_exchange_rate_request(
