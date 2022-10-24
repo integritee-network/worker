@@ -90,7 +90,7 @@ where
 	fn read_shard(&mut self) -> EnclaveResult<ShardIdentifier> {
 		let mut shard_holder = ShardIdentifier::default();
 		let shard = shard_holder.as_fixed_bytes_mut();
-		self.tls_stream.read(shard)?;
+		self.tls_stream.read_exact(shard)?;
 		Ok(shard.into())
 	}
 

@@ -80,7 +80,7 @@ where
 
 	/// Send the shard of the state we want to receive to the provisioning server.
 	fn write_shard(&mut self) -> EnclaveResult<()> {
-		self.tls_stream.write(self.shard.as_bytes())?;
+		self.tls_stream.write_all(self.shard.as_bytes())?;
 		Ok(())
 	}
 
