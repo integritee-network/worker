@@ -50,7 +50,7 @@ pub(super) fn increment_number_of_request_failures() {
 }
 
 pub(super) fn set_extrinsics_inclusion_success(is_successful: bool) {
-	let success_values = if is_successful { 1 } else { 0 };
+	let success_values = i64::from(is_successful);
 	EXTRINSIC_INCLUSION_SUCCESS.set(success_values);
 }
 
