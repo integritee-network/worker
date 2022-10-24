@@ -66,6 +66,10 @@ pub type CoinGeckoExchangeRateOracle<OCallApi> =
 pub type CoinMarketCapExchangeRateOracle<OCallApi> =
 	ExchangeRateOracle<CoinMarketCapSource, MetricsExporter<OCallApi>>;
 
+// Question is this correct?
+pub type WeatherOracle<OCallApi> =
+	Oracle<WeatherOracleSource, MetricsExporter<OCallApi>>;
+
 pub fn create_coin_gecko_oracle<OCallApi: EnclaveMetricsOCallApi>(
 	ocall_api: Arc<OCallApi>,
 ) -> CoinGeckoExchangeRateOracle<OCallApi> {
@@ -76,6 +80,12 @@ pub fn create_coin_market_cap_oracle<OCallApi: EnclaveMetricsOCallApi>(
 	ocall_api: Arc<OCallApi>,
 ) -> CoinMarketCapExchangeRateOracle<OCallApi> {
 	ExchangeRateOracle::new(CoinMarketCapSource {}, Arc::new(MetricsExporter::new(ocall_api)))
+}
+
+pub fn create_weather_oracle<OCallApi: EnclaveMetricsOCallApi>(
+	ocall_api: Arc<OCallApi>,
+) -> WeatherOracle<OCallApi> {
+	Oracle::new(WeatherOracleSource {}, Arc::new(MetricsExporter::new(ocall_api)))
 }
 
 pub trait GetExchangeRate {

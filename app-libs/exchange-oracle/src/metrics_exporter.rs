@@ -16,7 +16,7 @@
 */
 
 use crate::types::{ExchangeRate, TradingPair};
-use itp_enclave_metrics::{EnclaveMetric, ExchangeRateOracleMetric};
+use itp_enclave_metrics::{EnclaveMetric, ExchangeRateOracleMetric, OracleMetric};
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use log::error;
 use std::{string::String, sync::Arc, time::Instant};
@@ -41,9 +41,22 @@ pub trait ExportMetrics<MetricsInfo> {
 	);
 }
 
+pub trait UpdateMetric<MetricInfo> {
+	fn update_metric(&self, metric: OracleMetric<MetricInfo>);
+}
+
 /// Metrics exporter implementation.
 pub struct MetricsExporter<OCallApi> {
 	ocall_api: Arc<OCallApi>,
+}
+
+impl<OCallApi, MetricInfo> UpdateMetric<MetricInfo> for MetricsExporter<OCallApi>
+where
+	OCallApi: EnclaveMetricsOCallApi
+{
+	fn update_metric(&self, metric: OracleMetric<MetricInfo>) {
+		// Implement me
+	}
 }
 
 impl<OCallApi> MetricsExporter<OCallApi>
@@ -93,5 +106,7 @@ where
 		&self,
 		source: String,
 		metrics_info: MetricsInfo
-	) {}
+	) {
+		//TODO: Implement me
+	}
 }

@@ -41,6 +41,16 @@ use sgx_types::sgx_status_t;
 use sp_runtime::OpaqueExtrinsic;
 use std::{string::String, vec::Vec};
 
+#[no_mangle]
+pub unsafe extern "C" fn update_data_xt(
+	generic_data_ptr: *const u8,
+	generic_data_size: u32,
+	unchecked_extrinsic: *mut u8,
+	unchecked_extrinsic_size: u32,
+) -> sgx_status_t {
+	sgx_status_t::SGX_SUCCESS
+}
+
 /// For now get the crypto/fiat currency exchange rate from coingecko and CoinMarketCap.
 #[no_mangle]
 pub unsafe extern "C" fn update_market_data_xt(

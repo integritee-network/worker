@@ -37,6 +37,7 @@ pub enum EnclaveMetric {
 	TopPoolSizeIncrement,
 	TopPoolSizeDecrement,
 	ExchangeRateOracle(ExchangeRateOracleMetric),
+	// OracleMetric(OracleMetric<MetricsInfo>),
 }
 
 #[derive(Encode, Decode, Debug)]
@@ -46,5 +47,12 @@ pub enum ExchangeRateOracleMetric {
 	/// Response time of the request in [ms]. (Source, ResponseTime)
 	ResponseTime(String, u128),
 	/// Increment the number of requests (Source)
+	NumberRequestsIncrement(String),
+}
+
+#[derive(Encode, Decode, Debug)]
+pub enum OracleMetric<MetricsInfo> {
+	OracleSpecificMetric(MetricsInfo),
+	ResponseTime(String, u128),
 	NumberRequestsIncrement(String),
 }
