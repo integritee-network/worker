@@ -78,6 +78,7 @@ impl WsClient {
 	///
 	/// Control over the connection is done using the provided client control.
 	/// (e.g. shutdown has to be initiated explicitly).
+	#[allow(clippy::result_large_err)]
 	pub fn connect_watch_with_control(
 		url: &str,
 		request: &str,
@@ -92,6 +93,7 @@ impl WsClient {
 	}
 
 	/// Connects a web-socket client for a one-shot request.
+	#[allow(clippy::result_large_err)]
 	pub fn connect_one_shot(url: &str, request: &str, result: MpscSender<String>) -> Result<()> {
 		debug!("Connecting one-shot web-socket connection");
 		connect(url.to_string(), |out| {
