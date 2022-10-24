@@ -228,7 +228,7 @@ jobs:
       - name: Collect Docker Logs
         continue-on-error: true
         if: always()
-        uses: jwalton/gh-docker-logs@v2.2.0
+        uses: jwalton/gh-docker-logs@v2
         with:
           #images: '${{ env.WORKER_IMAGE_TAG }},${{ env.CLIENT_IMAGE_TAG }}'
           tail: all
