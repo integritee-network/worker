@@ -132,7 +132,7 @@ fn list_workers(cli: &Cli) {
 		};
 		let enclave = enclave.unwrap();
 		let timestamp =
-			DateTime::<Utc>::from(UNIX_EPOCH + Duration::from_millis(enclave.timestamp as u64));
+			DateTime::<Utc>::from(UNIX_EPOCH + Duration::from_millis(enclave.timestamp));
 		println!("Enclave {}", w);
 		println!("   AccountId: {}", enclave.pubkey.to_ss58check());
 		println!("   MRENCLAVE: {}", enclave.mr_enclave.to_base58());

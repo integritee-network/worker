@@ -54,7 +54,7 @@ where
 
 		let addr = lookup_ipv4(hostname, port).map_err(OCallBridgeError::GetIasSocket)?;
 
-		let sock = TcpStream::connect(&addr).map_err(|_| {
+		let sock = TcpStream::connect(addr).map_err(|_| {
 			OCallBridgeError::GetIasSocket("[-] Connect tls server failed!".to_string())
 		})?;
 

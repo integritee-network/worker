@@ -72,6 +72,6 @@ impl TeerexStorageKey for NodeMetadata {
 	}
 
 	fn enclave_registry_storage_map_key(&self, index: u64) -> Result<StorageKey> {
-		self.storage_map_key(TEEREX, "EnclaveRegistry", &index)
+		self.storage_map_key(TEEREX, "EnclaveRegistry", index)
 	}
 }

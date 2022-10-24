@@ -282,10 +282,10 @@ where
 	let mut iter = payload.split(|x| *x == 0x7C);
 	let attn_report_raw = iter.next().ok_or(sgx_status_t::SGX_ERROR_UNEXPECTED)?;
 	let sig_raw = iter.next().ok_or(sgx_status_t::SGX_ERROR_UNEXPECTED)?;
-	let sig = base64::decode(&sig_raw).map_err(|e| EnclaveError::Other(e.into()))?;
+	let sig = base64::decode(sig_raw).map_err(|e| EnclaveError::Other(e.into()))?;
 
 	let sig_cert_raw = iter.next().ok_or(sgx_status_t::SGX_ERROR_UNEXPECTED)?;
-	let sig_cert_dec = base64::decode_config(&sig_cert_raw, base64::STANDARD)
+	let sig_cert_dec = base64::decode_config(sig_cert_raw, base64::STANDARD)
 		.map_err(|e| EnclaveError::Other(e.into()))?;
 	let sig_cert = webpki::EndEntityCert::from(&sig_cert_dec).expect("Bad DER");
 
@@ -406,7 +406,7 @@ where
 
 	// 3. Verify quote body
 	if let Value::String(quote_raw) = &attn_report["isvEnclaveQuoteBody"] {
-		let quote = base64::decode(&quote_raw).map_err(|e| EnclaveError::Other(e.into()))?;
+		let quote = base64::decode(quote_raw).map_err(|e| EnclaveError::Other(e.into()))?;
 		debug!("Quote = {:?}", quote);
 		// TODO: lack security check here
 		let sgx_quote: sgx_quote_t = unsafe { ptr::read(quote.as_ptr() as *const _) };

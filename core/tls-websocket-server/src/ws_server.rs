@@ -146,7 +146,7 @@ where
 			self.connections.write().map_err(|_| WebSocketError::LockPoisoning)?;
 		let connection = connections_lock
 			.get_mut(&connection_token.into())
-			.ok_or(WebSocketError::InvalidConnection(connection_token.0))?;
+			.ok_or_else(|| WebSocketError::InvalidConnection(connection_token.0))?;
 		connection.write_message(message)
 	}
 

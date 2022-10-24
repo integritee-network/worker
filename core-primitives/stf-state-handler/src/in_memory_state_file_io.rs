@@ -117,11 +117,11 @@ where
 			self.emulated_shard_directory.read().map_err(|_| Error::LockPoisoning)?;
 		let states_for_shard = directory_lock
 			.get(shard_identifier)
-			.ok_or(Error::InvalidShard(*shard_identifier))?;
+			.ok_or_else(|| Error::InvalidShard(*shard_identifier))?;
 		let inner_state = states_for_shard
 			.get(&state_id)
 			.map(|(_, s)| -> State { s.clone() })
-			.ok_or(Error::InvalidStateId(state_id))?;
+			.ok_or_else(|| Error::InvalidStateId(state_id))?;
 
 		Ok((self.external_state_generator)(inner_state))
 	}
@@ -175,11 +175,11 @@ where
 
 		let states_for_shard = directory_lock
 			.get_mut(shard_identifier)
-			.ok_or(Error::InvalidShard(*shard_identifier))?;
+			.ok_or_else(|| Error::InvalidShard(*shard_identifier))?;
 
 		states_for_shard
 			.remove(&state_id)
-			.ok_or(Error::InvalidStateId(state_id))
+			.ok_or_else(|| Error::InvalidStateId(state_id))
 			.map(|_| {})
 	}
 
@@ -199,7 +199,7 @@ where
 			self.emulated_shard_directory.read().map_err(|_| Error::LockPoisoning)?;
 		let shard_directory = directory_lock
 			.get(shard_identifier)
-			.ok_or(Error::InvalidShard(*shard_identifier))?;
+			.ok_or_else(|| Error::InvalidShard(*shard_identifier))?;
 		Ok(shard_directory.keys().cloned().collect())
 	}
 }
