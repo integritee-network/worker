@@ -48,6 +48,7 @@ where
 	type ValidatorType: ValidatorTrait<ParentchainBlock>
 		+ LightClientState<ParentchainBlock>
 		+ ExtrinsicSenderTrait;
+
 	/// Execute a non-mutating function on the validator.
 	fn execute_on_validator<F, R>(&self, getter_function: F) -> Result<R>
 	where
