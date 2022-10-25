@@ -21,6 +21,7 @@ use crate::sgx_reexport_prelude::*;
 use log::*;
 use mio::net::TcpStream;
 use rustls::ServerSession;
+use std::boxed::Box;
 use tungstenite::{
 	accept,
 	handshake::{server::NoCallback, MidHandshake},
@@ -35,9 +36,9 @@ pub(crate) type RustlsWebSocket = WebSocket<RustlsStream>;
 /// Internal TLS stream state. From pure TLS stream, to web-socket handshake and established WS.
 pub(crate) enum StreamState {
 	Invalid,
-	TlsStream(RustlsStream),
+	TlsStream(Box<RustlsStream>),
 	WebSocketHandshake(RustlsMidHandshake),
-	EstablishedWebsocket(RustlsWebSocket),
+	EstablishedWebsocket(Box<RustlsWebSocket>),
 }
 
 impl Default for StreamState {
@@ -48,7 +49,7 @@ impl Default for StreamState {
 
 impl StreamState {
 	pub(crate) fn from_stream(stream: RustlsStream) -> Self {
-		StreamState::TlsStream(stream)
+		StreamState::TlsStream(Box::new(stream))
 	}
 
 	pub(crate) fn is_invalid(&self) -> bool {
@@ -76,7 +77,7 @@ impl StreamState {
 	pub(crate) fn attempt_handshake(self) -> Self {
 		match self {
 			// We have the bare TLS stream only, attempt to do a web-socket handshake.
-			StreamState::TlsStream(tls_stream) => Self::from_handshake_result(accept(tls_stream)),
+			StreamState::TlsStream(tls_stream) => Self::from_handshake_result(accept(*tls_stream)),
 			// We already have an on-going handshake, attempt another try.
 			StreamState::WebSocketHandshake(hs) => Self::from_handshake_result(hs.handshake()),
 			_ => self,
@@ -87,7 +88,7 @@ impl StreamState {
 		handshake_result: Result<RustlsWebSocket, HandshakeError<RustlsServerHandshake>>,
 	) -> Self {
 		match handshake_result {
-			Ok(ws) => Self::EstablishedWebsocket(ws),
+			Ok(ws) => Self::EstablishedWebsocket(Box::new(ws)),
 			Err(e) => match e {
 				// I/O would block our handshake attempt. Need to re-try.
 				HandshakeError::Interrupted(mhs) => {
