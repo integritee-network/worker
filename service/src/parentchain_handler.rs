@@ -73,6 +73,7 @@ where
 		Self { parentchain_api, enclave_api, parentchain_init_params }
 	}
 
+	// FIXME: Necessary in the future? Fix with #1080
 	pub fn new_with_automatic_light_client_allocation(
 		parentchain_api: ParentchainApi,
 		enclave_api: Arc<EnclaveApi>,

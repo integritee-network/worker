@@ -138,7 +138,7 @@ where
 		source_base_url,
 	);
 
-	let node_metadata_repository = GLOget_node_metadata_repository_from_solo_or_parachain()?;
+	let node_metadata_repository = get_node_metadata_repository_from_solo_or_parachain()?;
 
 	let call_ids = node_metadata_repository
 		.get_from_metadata(|m| m.update_exchange_rate_call_indexes())
