@@ -22,13 +22,13 @@ use crate::{
 	error::{Error, Result as EnclaveResult},
 	initialization::global_components::{
 		EnclaveBlockImportConfirmationHandler, EnclaveGetterExecutor, EnclaveOCallApi,
-		EnclaveOffchainWorkerExecutor, EnclaveRpcConnectionRegistry, EnclaveRpcResponder,
-		EnclaveShieldingKeyRepository, EnclaveSidechainApi, EnclaveSidechainBlockImportQueue,
+		EnclaveRpcConnectionRegistry, EnclaveRpcResponder, EnclaveShieldingKeyRepository,
+		EnclaveSidechainApi, EnclaveSidechainBlockImportQueue,
 		EnclaveSidechainBlockImportQueueWorker, EnclaveSidechainBlockImporter,
 		EnclaveSidechainBlockSyncer, EnclaveStateFileIo, EnclaveStateHandler,
 		EnclaveStateKeyRepository, EnclaveStateObserver, EnclaveStateSnapshotRepository,
-		EnclaveStfEnclaveSigner, EnclaveStfExecutor, EnclaveTopPool, EnclaveTopPoolAuthor,
-		EnclaveValidatorAccessor, GLOBAL_ATTESTATION_HANDLER_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
+		EnclaveStfEnclaveSigner, EnclaveTopPool, EnclaveTopPoolAuthor,
+		GLOBAL_ATTESTATION_HANDLER_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
 		GLOBAL_RPC_WS_HANDLER_COMPONENT, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
 		GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT,
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
@@ -58,13 +58,9 @@ use itc_tls_websocket_server::{
 	WebSocketServer,
 };
 use itp_attestation_handler::IasAttestationHandler;
-use itp_block_import_queue::BlockImportQueue;
 use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_primitives_cache::GLOBAL_PRIMITIVES_CACHE;
-use itp_settings::{
-	files::STATE_SNAPSHOTS_CACHE_SIZE,
-	worker_mode::{ProvideWorkerMode, WorkerMode},
-};
+use itp_settings::files::STATE_SNAPSHOTS_CACHE_SIZE;
 use itp_sgx_crypto::{
 	aes, ed25519, ed25519_derivation::DeriveEd25519, rsa3072, AesSeal, Ed25519Seal, Rsa3072Seal,
 };

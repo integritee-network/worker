@@ -38,7 +38,6 @@ use itc_parentchain::light_client::{
 use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
 use itp_types::Block as ParentchainBlock;
-use sp_runtime::traits::{Block as BlockTrait, Header as HeaderTrait};
 use std::{sync::Arc, vec::Vec};
 
 pub struct FullSolochainHandler {

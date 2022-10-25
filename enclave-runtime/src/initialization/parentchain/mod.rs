@@ -18,7 +18,6 @@
 use crate::error::Result;
 use itc_parentchain::primitives::ParentchainInitParams;
 use itp_settings::worker_mode::ProvideWorkerMode;
-use sp_runtime::traits::Header as HeaderTrait;
 use std::vec::Vec;
 
 mod common;

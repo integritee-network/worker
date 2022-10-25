@@ -32,17 +32,12 @@ use crate::{
 	},
 };
 use codec::{Decode, Encode};
-use itc_parentchain::{
-	block_import_dispatcher::DispatchBlockImport,
-	light_client::{
-		concurrent_access::ValidatorAccess, light_client_init_params::ParachainParams,
-		LightClientState,
-	},
+use itc_parentchain::light_client::{
+	concurrent_access::ValidatorAccess, light_client_init_params::ParachainParams, LightClientState,
 };
 use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
-use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader};
-use sp_runtime::traits::{Block as BlockTrait, Header as HeaderTrait};
+use itp_types::Block as ParentchainBlock;
 use std::{sync::Arc, vec::Vec};
 
 #[derive(Clone)]

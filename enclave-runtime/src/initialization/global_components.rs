@@ -71,9 +71,7 @@ use itp_top_pool_author::{
 	api::SidechainApi,
 	author::{Author, AuthorTopFilter},
 };
-use itp_types::{
-	Block as ParentchainBlock, Header as ParentchainHeader, SignedBlock as SignedParentchainBlock,
-};
+use itp_types::{Block as ParentchainBlock, SignedBlock as SignedParentchainBlock};
 use its_primitives::{
 	traits::{Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait},
 	types::block::SignedBlock as SignedSidechainBlock,
@@ -86,7 +84,6 @@ use its_sidechain::{
 };
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sp_core::ed25519::Pair;
-use std::sync::Arc;
 
 pub type EnclaveGetter = Getter;
 pub type EnclaveTrustedCallSigned = TrustedCallSigned;

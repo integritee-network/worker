@@ -92,7 +92,6 @@ pub(crate) fn create_offchain_immediate_import_dispatcher(
 	validator_access: Arc<EnclaveValidatorAccessor>,
 	extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
 ) -> Result<Arc<EnclaveParentchainBlockImportDispatcher>> {
-	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 

@@ -38,8 +38,7 @@ use crate::{
 	rpc::worker_api_direct::sidechain_io_handler,
 	utils::{
 		get_node_metadata_repository_from_solo_or_parachain,
-		get_stf_executor_from_solo_or_parachain, get_triggered_dispatcher_from_solo_or_parachain,
-		utf8_str_from_raw, DecodeRaw,
+		get_triggered_dispatcher_from_solo_or_parachain, utf8_str_from_raw, DecodeRaw,
 	},
 };
 use codec::{alloc::string::String, Decode};
@@ -56,7 +55,7 @@ use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
 use itp_sgx_crypto::{ed25519, Ed25519Seal, Rsa3072Seal};
 use itp_sgx_io::StaticSealedIO;
-use itp_types::{Header, ShardIdentifier, SignedBlock};
+use itp_types::{ShardIdentifier, SignedBlock};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use sgx_types::sgx_status_t;

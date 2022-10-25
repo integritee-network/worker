@@ -104,7 +104,7 @@ where
 		} else if let Some(immediate_dispatcher) = &self.immediate_dispatcher {
 			immediate_dispatcher.dispatch_import(blocks)
 		} else {
-			return Err(Error::NoDispatcherAssigned)
+			Err(Error::NoDispatcherAssigned)
 		}
 	}
 }
