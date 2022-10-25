@@ -17,7 +17,10 @@
 */
 
 use crate::error::{Error, ServiceResult};
-use itc_parentchain_light_client::light_client_init_params::LightClientInitParams;
+use itc_parentchain::{
+	light_client::light_client_init_params::{GrandpaParams, ParachainParams},
+	primitives::ParentchainInitParams,
+};
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
 use itp_node_api::api_client::ChainApi;
 use itp_types::SignedBlock;
@@ -54,7 +57,7 @@ pub trait HandleParentchain {
 pub(crate) struct ParentchainHandler<ParentchainApi: ChainApi, EnclaveApi: Sidechain> {
 	parentchain_api: ParentchainApi,
 	enclave_api: Arc<EnclaveApi>,
-	light_client_type: LightClientInitParams<Header>,
+	parentchain_init_params: ParentchainInitParams,
 }
 
 impl<ParentchainApi, EnclaveApi> ParentchainHandler<ParentchainApi, EnclaveApi>
@@ -65,9 +68,9 @@ where
 	pub fn new(
 		parentchain_api: ParentchainApi,
 		enclave_api: Arc<EnclaveApi>,
-		light_client_type: LightClientInitParams<Header>,
+		parentchain_init_params: ParentchainInitParams,
 	) -> Self {
-		Self { parentchain_api, enclave_api, light_client_type }
+		Self { parentchain_api, enclave_api, parentchain_init_params }
 	}
 
 	pub fn new_with_automatic_light_client_allocation(
@@ -79,7 +82,9 @@ where
 			.get_header(Some(genesis_hash))?
 			.ok_or(Error::MissingGenesisHeader)?;
 
-		let light_client_type = if parentchain_api.is_grandpa_available()? {
+		let parentchain_init_params: ParentchainInitParams = if parentchain_api
+			.is_grandpa_available()?
+		{
 			let grandpas = parentchain_api.grandpa_authorities(Some(genesis_hash))?;
 			let grandpa_proof = parentchain_api.grandpa_authorities_proof(Some(genesis_hash))?;
 
@@ -87,16 +92,17 @@ where
 
 			let authority_list = VersionedAuthorityList::from(grandpas);
 
-			LightClientInitParams::Grandpa {
+			GrandpaParams {
 				genesis_header,
 				authorities: authority_list.into(),
 				authority_proof: grandpa_proof,
 			}
+			.into()
 		} else {
-			LightClientInitParams::Parachain { genesis_header }
+			ParachainParams { genesis_header }.into()
 		};
 
-		Ok(Self::new(parentchain_api, enclave_api, light_client_type))
+		Ok(Self::new(parentchain_api, enclave_api, parentchain_init_params))
 	}
 
 	pub fn parentchain_api(&self) -> &ParentchainApi {
@@ -111,7 +117,9 @@ where
 	EnclaveApi: Sidechain + EnclaveBase,
 {
 	fn init_parentchain_components(&self) -> ServiceResult<Header> {
-		Ok(self.enclave_api.init_parentchain_components(self.light_client_type.clone())?)
+		Ok(self
+			.enclave_api
+			.init_parentchain_components(self.parentchain_init_params.clone())?)
 	}
 
 	fn sync_parentchain(&self, last_synced_header: Header) -> ServiceResult<Header> {

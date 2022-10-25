@@ -37,7 +37,10 @@ use itp_sgx_crypto::Ed25519Seal;
 use itp_sgx_io::StaticSealedIO;
 use log::*;
 use sp_core::H256;
+use sp_runtime::traits::Block;
 use std::sync::Arc;
+
+pub type HeaderFor<B> = <B as Block>::Header;
 
 pub(crate) fn create_parentchain_block_importer(
 	validator_access: Arc<EnclaveValidatorAccessor>,

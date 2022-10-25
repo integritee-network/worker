@@ -38,7 +38,7 @@ sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-s
 sgx_urts = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # local
-itc-parentchain-light-client = { path = "../core/parentchain/light-client" }
+itc-parentchain = { path = "../core/parentchain/parentchain-crate" }
 itc-rpc-client = { path = "../core/rpc-client" }
 itc-rpc-server = { path = "../core/rpc-server" }
 itp-enclave-api = { path = "../core-primitives/enclave-api" }

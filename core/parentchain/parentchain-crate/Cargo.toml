@@ -5,6 +5,9 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
 [dependencies]
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive", "chain-error"] }
+
+
 itc-parentchain-block-import-dispatcher = { path = "../block-import-dispatcher", default-features = false }
 itc-parentchain-block-importer = { path = "../block-importer", default-features = false }
 itc-parentchain-indirect-calls-executor = { path = "../indirect-calls-executor", default-features = false }
@@ -13,6 +16,7 @@ itc-parentchain-light-client = { path = "../light-client", default-features = fa
 [features]
 default = ["std"]
 std = [
+    "codec/std",
     "itc-parentchain-block-import-dispatcher/std",
     "itc-parentchain-block-importer/std",
     "itc-parentchain-indirect-calls-executor/std",

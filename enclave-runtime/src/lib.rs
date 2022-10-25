@@ -47,7 +47,7 @@ use itc_parentchain::{
 	block_import_dispatcher::{
 		triggered_dispatcher::TriggerParentchainBlockImport, DispatchBlockImport,
 	},
-	light_client::light_client_init_params::LightClientInitParams,
+	primitives::ParentchainInitParams,
 };
 use itp_block_import_queue::PushToBlockQueue;
 use itp_component_container::ComponentGetter;
@@ -310,7 +310,7 @@ pub unsafe extern "C" fn init_parentchain_components(
 	let mut params = slice::from_raw_parts(params, params_size);
 	let latest_header_slice = slice::from_raw_parts_mut(latest_header, latest_header_size);
 
-	let params = match LightClientInitParams::<Header>::decode(&mut params) {
+	let params = match ParentchainInitParams::decode(&mut params) {
 		Ok(p) => p,
 		Err(e) => return Error::Codec(e).into(),
 	};
@@ -374,9 +374,9 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 ) -> Result<()> {
 	let import_dispatcher =
 		if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
-			solochain_handler.import_dispatcher
+			solochain_handler.import_dispatcher.clone()
 		} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
-			parachain_handler.import_dispatcher
+			parachain_handler.import_dispatcher.clone()
 		} else {
 			return Err(Error::NoParentchainAssigned)
 		};

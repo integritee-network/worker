@@ -15,7 +15,8 @@
 
 */
 
-use crate::{error::Result, LightClientInitParams};
+use crate::error::Result;
+use itc_parentchain::primitives::ParentchainInitParams;
 use itp_settings::worker_mode::ProvideWorkerMode;
 use sp_runtime::traits::Header as HeaderTrait;
 use std::vec::Vec;
@@ -24,17 +25,14 @@ mod common;
 pub mod parachain;
 pub mod solochain;
 
-pub(crate) fn init_parentchain_components<
-	Header: HeaderTrait,
-	WorkerModeProvider: ProvideWorkerMode,
->(
-	params: LightClientInitParams<Header>,
+pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>(
+	params: ParentchainInitParams,
 ) -> Result<Vec<u8>> {
 	let encoded_latest_header = match params {
-		LightClientInitParams::Grandpa { .. } =>
-			solochain::FullSolochainHandler::init::<WorkerModeProvider>(params)?,
-		LightClientInitParams::Parachain { .. } =>
-			parachain::FullParachainHandler::init::<WorkerModeProvider>(params)?,
+		ParentchainInitParams::Grandpa { encoded_params } =>
+			solochain::FullSolochainHandler::init::<WorkerModeProvider>(encoded_params)?,
+		ParentchainInitParams::Parachain { encoded_params } =>
+			parachain::FullParachainHandler::init::<WorkerModeProvider>(encoded_params)?,
 	};
 
 	Ok(encoded_latest_header)
