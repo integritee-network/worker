@@ -17,7 +17,7 @@
 
 use crate::{
 	error::{Error, Result},
-	global_components::GLOBAL_OCALL_API_COMPONENT,
+	initialization::global_components::GLOBAL_OCALL_API_COMPONENT,
 	utils::{
 		get_extrinsic_factory_from_solo_or_parachain,
 		get_node_metadata_repository_from_solo_or_parachain,
