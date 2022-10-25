@@ -61,13 +61,13 @@ pub(crate) fn create_parentchain_block_importer(
 	let indirect_calls_executor = Arc::new(EnclaveIndirectCallsExecutor::new(
 		shielding_key_repository,
 		stf_enclave_signer,
-		top_pool_author.clone(),
+		top_pool_author,
 		node_metadata_repository,
 	));
 	Ok(EnclaveParentchainBlockImporter::new(
-		validator_access.clone(),
+		validator_access,
 		stf_executor.clone(),
-		extrinsics_factory.clone(),
+		extrinsics_factory,
 		indirect_calls_executor,
 	))
 }
