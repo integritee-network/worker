@@ -68,6 +68,8 @@ pub unsafe fn utf8_str_from_raw<'a>(
 	std::str::from_utf8(bytes)
 }
 
+// FIXME: When solving #1080, these helper functions should be obsolete, because no dynamic allocation
+// is necessary anymore.
 pub(crate) fn get_triggered_dispatcher_from_solo_or_parachain(
 ) -> Result<Arc<EnclaveTriggeredParentchainBlockImportDispatcher>> {
 	let dispatcher = if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
