@@ -36,7 +36,7 @@ impl Default for SidechainHeaderBuilder {
 			block_number: 1,
 			shard_id: Default::default(),
 			block_data_hash: Default::default(),
-			last_finalized_block_number: 0,
+			last_finalized_block_number: 1,
 		}
 	}
 }
@@ -48,7 +48,7 @@ impl SidechainHeaderBuilder {
 			block_number: 42,
 			shard_id: ShardIdentifier::random(),
 			block_data_hash: H256::random(),
-			last_finalized_block_number: 0,
+			last_finalized_block_number: 1,
 		}
 	}
 

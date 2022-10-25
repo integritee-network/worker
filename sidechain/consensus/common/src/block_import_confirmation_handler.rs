@@ -106,12 +106,14 @@ impl<
 			.map_err(|e| Error::Other(e.into()))?
 			.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 
-		if header.block_number() == header.last_finalized_block_number() {
+		if header.block_number()
+			== header.last_finalized_block_number() + BLOCK_NUMBER_FINALIZATION_DIFF
+		{
 			let opaque_call = OpaqueCall::from_tuple(&(
 				call,
 				shard,
 				header.block_number(),
-				BLOCK_NUMBER_FINALIZATION_DIFF,
+				header.block_number() + BLOCK_NUMBER_FINALIZATION_DIFF,
 				header.hash(),
 			));
 
