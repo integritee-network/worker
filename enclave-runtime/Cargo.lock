@@ -2797,7 +2797,7 @@ dependencies = [
 [[package]]
 name = "pallet-parentchain"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=gk/propose_nth_block#e2254c5ff6584ee488b7440fec21aacf9b63533c"
+source = "git+https://github.com/integritee-network/pallets.git?branch=gk/propose_nth_block#0f44389cbf95c6d149b104c5ce9071f34680331b"
 dependencies = [
  "frame-support",
  "frame-system",
