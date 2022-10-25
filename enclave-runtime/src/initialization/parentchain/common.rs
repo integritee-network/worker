@@ -66,7 +66,7 @@ pub(crate) fn create_parentchain_block_importer(
 	));
 	Ok(EnclaveParentchainBlockImporter::new(
 		validator_access,
-		stf_executor.clone(),
+		stf_executor,
 		extrinsics_factory,
 		indirect_calls_executor,
 	))
