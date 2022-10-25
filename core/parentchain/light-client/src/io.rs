@@ -57,6 +57,8 @@ impl<B: Block, LightClientState: Decode + Encode + Debug> StaticSealedIO
 	}
 }
 
+// FIXME: This is a lot of duplicate code for the initialization of two
+// different but sameish light clients. Should be tackled with #1081
 pub fn read_or_init_grandpa_validator<B, OCallApi>(
 	params: GrandpaParams<B::Header>,
 	ocall_api: Arc<OCallApi>,
