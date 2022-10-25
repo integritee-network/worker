@@ -127,8 +127,7 @@ impl EnclaveBase for Enclave {
 	) -> EnclaveResult<Header> {
 		let latest_header_encoded = init_parentchain_components_ffi(self.eid, params.encode())?;
 
-		let latest: Header =
-			Decode::decode(&mut latest_header_encoded.as_slice()).expect("Invalid header");
+		let latest = Header::decode(&mut latest_header_encoded.as_slice())?;
 		info!("Latest Header {:?}", latest);
 
 		Ok(latest)
