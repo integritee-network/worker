@@ -116,11 +116,12 @@ where
 		let state_hash_new = aposteriori_state.hash();
 		let db = SidechainDB::<SignedSidechainBlock::Block, Externalities>::new(aposteriori_state);
 
-		let (block_number, parent_hash, last_finalized_block) = match db.get_last_block() {
+		let (block_number, parent_hash, next_finalization_block_number) = match db.get_last_block()
+		{
 			Some(block) => (
 				block.header().block_number() + 1,
 				block.hash(),
-				block.header().last_finalized_block_number(),
+				block.header().next_finalization_block_number(),
 			),
 			None => {
 				info!("Seems to be first sidechain block.");
@@ -153,9 +154,11 @@ where
 			now_as_u64(),
 		);
 
-		let mut finalized_block = last_finalized_block;
-		if finalized_block + BLOCK_NUMBER_FINALIZATION_DIFF == block_number {
-			finalized_block = block_number;
+		let mut finalization_candidate = next_finalization_block_number;
+		if block_number == 1 {
+			finalization_candidate = 1;
+		} else if block_number > finalization_candidate {
+			finalization_candidate = finalization_candidate + BLOCK_NUMBER_FINALIZATION_DIFF;
 		}
 
 		let header = HeaderTypeOf::<SignedSidechainBlock>::new(
@@ -163,7 +166,7 @@ where
 			parent_hash,
 			shard,
 			block_data.hash(),
-			finalized_block,
+			finalization_candidate,
 		);
 
 		let block = SignedSidechainBlock::Block::new(header.clone(), block_data);
@@ -175,3 +178,8 @@ where
 		Ok(signed_block)
 	}
 }
+//20 -> 40
+//21 -> 40
+//
+//39 -> 40
+//40 -> 60

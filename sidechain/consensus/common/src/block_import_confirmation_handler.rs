@@ -106,14 +106,12 @@ impl<
 			.map_err(|e| Error::Other(e.into()))?
 			.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 
-		if header.block_number()
-			== header.last_finalized_block_number() + BLOCK_NUMBER_FINALIZATION_DIFF
-		{
+		if header.block_number() == header.next_finalization_block_number() {
 			let opaque_call = OpaqueCall::from_tuple(&(
 				call,
 				shard,
 				header.block_number(),
-				header.block_number() + BLOCK_NUMBER_FINALIZATION_DIFF,
+				header.next_finalization_block_number() + BLOCK_NUMBER_FINALIZATION_DIFF,
 				header.hash(),
 			));
 
@@ -126,7 +124,6 @@ impl<
 			self.validator_accessor
 				.execute_mut_on_validator(|v| v.send_extrinsics(xts))
 				.map_err(|e| Error::Other(e.into()))?;
-			error!("block number: {}", header.block_number());
 		}
 		Ok(())
 	}
