@@ -84,7 +84,8 @@ pub type EnclaveTrustedCallSigned = TrustedCallSigned;
 pub type EnclaveStf = Stf<EnclaveTrustedCallSigned, EnclaveGetter, StfState, Runtime>;
 pub type EnclaveStateKeyRepository = KeyRepository<Aes, AesSeal>;
 pub type EnclaveShieldingKeyRepository = KeyRepository<Rsa3072KeyPair, Rsa3072Seal>;
-pub type EnclaveStateFileIo = SgxStateFileIo<EnclaveStateKeyRepository, EnclaveStf, StfState>;
+pub type EnclaveStateFileIo =
+	SgxStateFileIo<EnclaveStateKeyRepository, EnclaveShieldingKeyRepository, EnclaveStf, StfState>;
 pub type EnclaveStateSnapshotRepository = StateSnapshotRepository<EnclaveStateFileIo>;
 pub type EnclaveStateObserver = StateObserver<StfState>;
 pub type EnclaveStateHandler = StateHandler<EnclaveStateSnapshotRepository, EnclaveStateObserver>;
