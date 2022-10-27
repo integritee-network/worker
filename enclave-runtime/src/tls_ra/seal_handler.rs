@@ -20,58 +20,46 @@
 
 use crate::error::{Error as EnclaveError, Result as EnclaveResult};
 use codec::{Decode, Encode};
-use core::marker::PhantomData;
 use ita_stf::{State as StfState, StateType as StfStateType};
 use itp_sgx_crypto::{
-	ed25519_derivation::DeriveEd25519,
 	key_repository::{AccessKey, MutateKey},
 	Aes,
 };
 use itp_sgx_externalities::SgxExternalitiesTrait;
-use itp_stf_interface::InitState;
 use itp_stf_state_handler::handle_state::HandleState;
-use itp_types::{AccountId, ShardIdentifier};
+use itp_types::ShardIdentifier;
 use log::*;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
-use sp_core::Pair;
 use std::{sync::Arc, vec::Vec};
 
 /// Handles the sealing and unsealing of the shielding key, state key and the state.
 #[derive(Default)]
-pub struct SealHandler<ShieldingKeyRepository, StateKeyRepository, StateHandler, Stf>
+pub struct SealHandler<ShieldingKeyRepository, StateKeyRepository, StateHandler>
 where
 	ShieldingKeyRepository: AccessKey<KeyType = Rsa3072KeyPair> + MutateKey<Rsa3072KeyPair>,
 	StateKeyRepository: AccessKey<KeyType = Aes> + MutateKey<Aes>,
 	// Constraint StateT = StfState currently necessary because SgxExternalities Encode/Decode does not work.
 	// See https://github.com/integritee-network/sgx-runtime/issues/46.
 	StateHandler: HandleState<StateT = StfState>,
-	Stf: InitState<StfState, AccountId>,
 {
 	state_handler: Arc<StateHandler>,
 	state_key_repository: Arc<StateKeyRepository>,
 	shielding_key_repository: Arc<ShieldingKeyRepository>,
-	_phantom: PhantomData<Stf>,
 }
 
-impl<ShieldingKeyRepository, StateKeyRepository, StateHandler, Stf>
-	SealHandler<ShieldingKeyRepository, StateKeyRepository, StateHandler, Stf>
+impl<ShieldingKeyRepository, StateKeyRepository, StateHandler>
+	SealHandler<ShieldingKeyRepository, StateKeyRepository, StateHandler>
 where
 	ShieldingKeyRepository: AccessKey<KeyType = Rsa3072KeyPair> + MutateKey<Rsa3072KeyPair>,
 	StateKeyRepository: AccessKey<KeyType = Aes> + MutateKey<Aes>,
 	StateHandler: HandleState<StateT = StfState>,
-	Stf: InitState<StfState, AccountId>,
 {
 	pub fn new(
 		state_handler: Arc<StateHandler>,
 		state_key_repository: Arc<StateKeyRepository>,
 		shielding_key_repository: Arc<ShieldingKeyRepository>,
 	) -> Self {
-		Self {
-			state_handler,
-			state_key_repository,
-			shielding_key_repository,
-			_phantom: PhantomData,
-		}
+		Self { state_handler, state_key_repository, shielding_key_repository }
 	}
 }
 
@@ -88,13 +76,12 @@ pub trait UnsealStateAndKeys {
 	fn unseal_state(&self, shard: &ShardIdentifier) -> EnclaveResult<Vec<u8>>;
 }
 
-impl<ShieldingKeyRepository, StateKeyRepository, StateHandler, Stf> SealStateAndKeys
-	for SealHandler<ShieldingKeyRepository, StateKeyRepository, StateHandler, Stf>
+impl<ShieldingKeyRepository, StateKeyRepository, StateHandler> SealStateAndKeys
+	for SealHandler<ShieldingKeyRepository, StateKeyRepository, StateHandler>
 where
 	ShieldingKeyRepository: AccessKey<KeyType = Rsa3072KeyPair> + MutateKey<Rsa3072KeyPair>,
 	StateKeyRepository: AccessKey<KeyType = Aes> + MutateKey<Aes>,
 	StateHandler: HandleState<StateT = StfState>,
-	Stf: InitState<StfState, AccountId>,
 {
 	fn seal_shielding_key(&self, bytes: &[u8]) -> EnclaveResult<()> {
 		let key: Rsa3072KeyPair = serde_json::from_slice(bytes).map_err(|e| {
@@ -130,22 +117,18 @@ where
 	/// Since the enclave signing account is derived from the shielding key, we need to
 	/// newly initialize the state with the updated shielding key.
 	fn seal_new_empty_state(&self, shard: &ShardIdentifier) -> EnclaveResult<()> {
-		let enclave_account: AccountId =
-			self.shielding_key_repository.retrieve_key()?.derive_ed25519()?.public().into();
-		let state = Stf::init_state(enclave_account);
-		self.state_handler.reset(state, shard)?;
+		self.state_handler.initialize_shard(*shard)?;
 		info!("Successfully reset state with new enclave account, for shard {:?}", shard);
 		Ok(())
 	}
 }
 
-impl<ShieldingKeyRepository, StateKeyRepository, StateHandler, Stf> UnsealStateAndKeys
-	for SealHandler<ShieldingKeyRepository, StateKeyRepository, StateHandler, Stf>
+impl<ShieldingKeyRepository, StateKeyRepository, StateHandler> UnsealStateAndKeys
+	for SealHandler<ShieldingKeyRepository, StateKeyRepository, StateHandler>
 where
 	ShieldingKeyRepository: AccessKey<KeyType = Rsa3072KeyPair> + MutateKey<Rsa3072KeyPair>,
 	StateKeyRepository: AccessKey<KeyType = Aes> + MutateKey<Aes>,
 	StateHandler: HandleState<StateT = StfState>,
-	Stf: InitState<StfState, AccountId>,
 {
 	fn unseal_shielding_key(&self) -> EnclaveResult<Vec<u8>> {
 		let shielding_key = self
@@ -172,19 +155,13 @@ where
 pub mod test {
 	use super::*;
 	use itp_sgx_crypto::mocks::KeyRepositoryMock;
-	use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesDiffType};
-	use itp_stf_interface::mocks::StateInterfaceMock;
 	use itp_test::mock::handle_state_mock::HandleStateMock;
 
 	type StateKeyRepositoryMock = KeyRepositoryMock<Aes>;
 	type ShieldingKeyRepositoryMock = KeyRepositoryMock<Rsa3072KeyPair>;
 
-	type SealHandlerMock = SealHandler<
-		ShieldingKeyRepositoryMock,
-		StateKeyRepositoryMock,
-		HandleStateMock,
-		StateInterfaceMock<SgxExternalities, SgxExternalitiesDiffType>,
-	>;
+	type SealHandlerMock =
+		SealHandler<ShieldingKeyRepositoryMock, StateKeyRepositoryMock, HandleStateMock>;
 
 	pub fn seal_shielding_key_works() {
 		let seal_handler = SealHandlerMock::default();

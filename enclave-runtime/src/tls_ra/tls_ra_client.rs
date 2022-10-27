@@ -118,7 +118,8 @@ where
 		if read_size == 0 {
 			return Ok(None)
 		}
-		let header = self.read_header(start_byte.to_vec())?;
+		debug!("Read {} start byte from TLS stream", read_size);
+		let header = self.read_header(start_byte[0])?;
 		let bytes = self.read_until(header.payload_length as usize)?;
 		match header.opcode {
 			Opcode::ShieldingKey => self.seal_handler.seal_shielding_key(&bytes)?,
@@ -129,13 +130,19 @@ where
 	}
 
 	/// Reads the payload header, indicating the sent payload length and type.
-	fn read_header(&mut self, start_bytes: Vec<u8>) -> EnclaveResult<TcpHeader> {
+	fn read_header(&mut self, start_byte: u8) -> EnclaveResult<TcpHeader> {
+		const PAYLOAD_SIZE_LENGTH: usize = 8; // u64 indicating the payload size is 8 bytes
+
+		debug!("Read first byte: {:?}", start_byte);
 		// The first sent byte indicates the payload type.
-		let opcode: Opcode = start_bytes[0].into();
+		let opcode: Opcode = start_byte.into();
+		debug!("Read header opcode: {:?}", opcode);
 		// The 8 bytes following afterwards indicate the payload length.
-		let mut length_buffer = [0u8; 8];
-		self.tls_stream.read(&mut length_buffer)?;
-		let payload_length = u64::from_be_bytes(length_buffer);
+		let payload_length_buffer: [u8; PAYLOAD_SIZE_LENGTH] = self
+			.read_until(PAYLOAD_SIZE_LENGTH)?
+			.try_into()
+			.map_err(|_| EnclaveError::Other("Failed to read payload length variable".into()))?;
+		let payload_length = u64::from_be_bytes(payload_length_buffer);
 		debug!("Payload length of {:?}: {}", opcode, payload_length);
 
 		Ok(TcpHeader::new(opcode, payload_length))
@@ -144,7 +151,21 @@ where
 	/// Read all bytes into a buffer of given length.
 	fn read_until(&mut self, length: usize) -> EnclaveResult<Vec<u8>> {
 		let mut bytes = vec![0u8; length];
-		self.tls_stream.read(&mut bytes)?;
+		let mut read_index = 0usize;
+		debug!("Attempting to read {} bytes from stream", length);
+
+		// tls_stream.read() does not guarantee to read as many bytes as the buffer is large!
+		// Always check the returned amount of actual bytes read.
+		// Especially for large quantity of bytes, multiple calls to read() have to be done, to fill the buffer!
+		while read_index < length {
+			let read_chunk_size = self.tls_stream.read(&mut bytes[read_index..])?;
+			debug!("Read a chunk of {} bytes from stream", read_chunk_size);
+			if read_chunk_size == 0usize {
+				return Err(EnclaveError::Other("Unexpected end of stream".into()))
+			}
+			read_index += read_chunk_size;
+		}
+		debug!("Read {} bytes in total (expected {})", read_index, length);
 		Ok(bytes)
 	}
 }
