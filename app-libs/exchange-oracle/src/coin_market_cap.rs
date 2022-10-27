@@ -75,7 +75,7 @@ impl CoinMarketCapSource {
 	}
 }
 
-impl<OracleInfo> OracleSource<OracleInfo> for CoinMarketCapSource {
+impl<OracleSourceInfo> OracleSource<OracleSourceInfo> for CoinMarketCapSource {
 
 	// TODO Change this to return something useful?
 	type OracleRequestResult = Result<(), Error>;

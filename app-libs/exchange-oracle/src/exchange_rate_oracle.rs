@@ -20,7 +20,7 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::{
 	metrics_exporter::ExportMetrics,
-	types::{ExchangeRate, TradingPair},
+	types::{ExchangeRate, TradingPair, TradingInfo},
 	Error, GetExchangeRate,
 };
 use core::time::Duration;
@@ -59,17 +59,24 @@ pub trait OracleSource<OracleSourceInfo>: Default {
 	) -> Self::OracleRequestResult;
 }
 
-
-// TODO: Change this to just Oracle perhaps remove Arc?
 pub struct ExchangeRateOracle<OracleSourceType, MetricsExporter> {
 	oracle_source: OracleSourceType,
 	metrics_exporter: Arc<MetricsExporter>,
 }
 
+pub struct Oracle<OracleSourceType, MetricsExporter> {
+	oracle_source: OracleSourceType,
+	metrics_exporter: Arc<MetricsExporter>,
+}
+
+impl<OracleSourceType, MetricsExporter> Oracle<OracleSourceType, MetricsExporter>
+{
+	pub fn new(oracle_source: OracleSourceType, metrics_exporter: Arc<MetricsExporter>) -> Self {
+		Oracle { oracle_source, metrics_exporter }
+	}
+}
+
 impl<OracleSourceType, MetricsExporter> ExchangeRateOracle<OracleSourceType, MetricsExporter>
-where
-	OracleSourceType: OracleSource,
-	MetricsExporter: ExportMetrics,
 {
 	pub fn new(oracle_source: OracleSourceType, metrics_exporter: Arc<MetricsExporter>) -> Self {
 		ExchangeRateOracle { oracle_source, metrics_exporter }
@@ -79,8 +86,8 @@ where
 impl<OracleSourceType, MetricsExporter> GetExchangeRate
 	for ExchangeRateOracle<OracleSourceType, MetricsExporter>
 where
-	OracleSourceType: OracleSource,
-	MetricsExporter: ExportMetrics,
+	OracleSourceType: OracleSource<TradingPair>,
+	MetricsExporter: ExportMetrics<TradingInfo>,
 {
 	fn get_exchange_rate(&self, trading_pair: TradingPair) -> Result<(ExchangeRate, Url), Error> {
 		let source_id = self.oracle_source.metrics_id();

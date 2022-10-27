@@ -45,12 +45,12 @@ const WEATHER_PARAM_HUMIDITY: &str = " ";
 const WEATHER_PATH: &str = " ";
 const WEATHER_TIMEOUT: Duration = Duration::from_secs(3u64);
 const WEATHER_ROOT_CERTIFICATE: &str =
-	include_str!("certificates/.. Insert certificate here"); // Todo: Get certificate
+	include_str!("certificates/open_meteo_root.pem"); // Todo: Get certificate
 
 #[derive(Default)]
 pub struct WeatherOracleSource;
 
-impl OracleSource<OracleSourceInfo> for WeatherOracleSource {
+impl<OracleSourceInfo> OracleSource<OracleSourceInfo> for WeatherOracleSource {
     type OracleRequestResult = Result<(), Error>; //TODO: Need to return some Data
 
 	fn metrics_id(&self) -> String {
@@ -75,7 +75,7 @@ impl OracleSource<OracleSourceInfo> for WeatherOracleSource {
 		rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
 		trading_pair: TradingPair,
 	) -> Result<ExchangeRate, Error> {
-        Error::default()
+        Err(Error::NoValidData("None".into(), "None".into()))
     }
 
 	fn execute_request(

@@ -22,9 +22,22 @@ use substrate_fixed::types::U32F32;
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub struct OracleInfo<Info>(pub Info);
 
+// impl<TradingInfo> TradingOracle for Oracle<TradingInfo> {
+
+// }
+
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub struct MetricsInfo<Info>(pub Info);
 
+// impl<TradingInfo> TradingMetrics for MetricsInfo<TradingInfo> {
+
+// }
+
+#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
+pub struct TradingInfo {
+	trading_pair: TradingPair,
+	exchange_rate: ExchangeRate
+}
 /// Market identifier for order
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub struct TradingPair {

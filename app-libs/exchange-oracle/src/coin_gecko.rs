@@ -70,7 +70,7 @@ impl CoinGeckoSource {
 	}
 }
 
-impl OracleSource for CoinGeckoSource {
+impl<OracleSourceInfo> OracleSource<OracleSourceInfo> for CoinGeckoSource {
 
 	type OracleRequestResult = Result<(), Error>;
 
