@@ -55,6 +55,7 @@ pub mod error;
 pub mod exchange_rate_oracle;
 pub mod metrics_exporter;
 pub mod types;
+pub mod traits;
 
 #[cfg(test)]
 mod mock;

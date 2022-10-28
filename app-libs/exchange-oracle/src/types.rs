@@ -19,24 +19,21 @@ use codec::{Decode, Encode};
 use std::string::String;
 use substrate_fixed::types::U32F32;
 
-#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
-pub struct OracleInfo<Info>(pub Info);
 
-// impl<TradingInfo> TradingOracle for Oracle<TradingInfo> {
+pub struct WeatherInfo {
+	pub weather_query: WeatherQuery,
+}
 
-// }
-
-#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
-pub struct MetricsInfo<Info>(pub Info);
-
-// impl<TradingInfo> TradingMetrics for MetricsInfo<TradingInfo> {
-
-// }
+pub struct WeatherQuery {
+	pub longtitude: String,
+	pub latitude: String,
+	pub hourly: String,
+}
 
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub struct TradingInfo {
-	trading_pair: TradingPair,
-	exchange_rate: ExchangeRate
+	pub trading_pair: TradingPair,
+	pub exchange_rate: ExchangeRate
 }
 /// Market identifier for order
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]

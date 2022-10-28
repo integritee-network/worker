@@ -33,9 +33,10 @@ use std::{string::String, sync::Arc, time::Instant};
 use url::Url;
 
 /// Oracle source trait used by the `ExchangeRateOracle` (strategy pattern).
-pub trait OracleSource<OracleSourceInfo>: Default {
+pub trait OracleSource: Default {
 
 	type OracleRequestResult;
+	type OracleSourceInfo;
 
 	fn metrics_id(&self) -> String;
 
@@ -55,7 +56,7 @@ pub trait OracleSource<OracleSourceInfo>: Default {
 	fn execute_request(
 		&self,
 		rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
-		source_info: OracleSourceInfo
+		source_info: Self::OracleSourceInfo
 	) -> Self::OracleRequestResult;
 }
 
@@ -86,7 +87,7 @@ impl<OracleSourceType, MetricsExporter> ExchangeRateOracle<OracleSourceType, Met
 impl<OracleSourceType, MetricsExporter> GetExchangeRate
 	for ExchangeRateOracle<OracleSourceType, MetricsExporter>
 where
-	OracleSourceType: OracleSource<TradingPair>,
+	OracleSourceType: OracleSource,
 	MetricsExporter: ExportMetrics<TradingInfo>,
 {
 	fn get_exchange_rate(&self, trading_pair: TradingPair) -> Result<(ExchangeRate, Url), Error> {

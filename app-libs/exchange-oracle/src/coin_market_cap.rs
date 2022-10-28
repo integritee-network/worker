@@ -20,7 +20,7 @@ use crate::sgx_reexport_prelude::*;
 use crate::{
 	error::Error,
 	exchange_rate_oracle::OracleSource,
-	types::{ExchangeRate, TradingPair},
+	types::{ExchangeRate, TradingPair, TradingInfo},
 };
 use itc_rest_client::{
 	http_client::{HttpClient, SendWithCertificateVerification},
@@ -33,7 +33,7 @@ use std::{
 	collections::{BTreeMap, HashMap},
 	env,
 	string::{String, ToString},
-	time::Duration,
+	time::Duration, marker::PhantomData,
 };
 use url::Url;
 
@@ -75,10 +75,10 @@ impl CoinMarketCapSource {
 	}
 }
 
-impl<OracleSourceInfo> OracleSource<OracleSourceInfo> for CoinMarketCapSource {
-
+impl OracleSource for CoinMarketCapSource {
 	// TODO Change this to return something useful?
 	type OracleRequestResult = Result<(), Error>;
+	type OracleSourceInfo = TradingInfo;
 
 	fn metrics_id(&self) -> String {
 		"coin_market_cap".to_string()
@@ -99,8 +99,10 @@ impl<OracleSourceInfo> OracleSource<OracleSourceInfo> for CoinMarketCapSource {
 	fn execute_request(
 		&self,
 		rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
-		source_info: OracleSourceInfo,
+		source_info: Self::OracleSourceInfo,
 	) -> Self::OracleRequestResult {
+		let fiat_currency = source_info.trading_pair.fiat_currency;
+		let crypto_currency = source_info.trading_pair.crypto_currency;
 		// TODO Implement me
 		Ok(())
 	}

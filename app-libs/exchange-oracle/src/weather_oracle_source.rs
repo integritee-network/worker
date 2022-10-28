@@ -21,7 +21,7 @@ use crate::sgx_reexport_prelude::*;
 use crate::{
 	error::Error,
 	exchange_rate_oracle::OracleSource,
-	types::{ExchangeRate, TradingPair},
+	types::{ExchangeRate, TradingPair, TradingInfo, WeatherInfo, WeatherQuery},
 };
 use itc_rest_client::{
 	http_client::{HttpClient, SendWithCertificateVerification},
@@ -39,19 +39,21 @@ use std::{
 use url::Url;
 
 
-const WEATHER_URL: &str = " "; // URL of oracle source
-const WEATHER_PARAM_TEMPERATURE: &str = " ";
-const WEATHER_PARAM_HUMIDITY: &str = " ";
-const WEATHER_PATH: &str = " ";
+const WEATHER_URL: &str = "https://api.open-meteo.com";
+const WEATHER_PARAM_LONGTITUDE: &str = "longitude";
+const WEATHER_PARAM_LATITUDE: &str = "latitude";
+const WEATHER_PARAM_HOURLY: &str = "temperature_2m";
+const WEATHER_PATH: &str = "v1/forecast";
 const WEATHER_TIMEOUT: Duration = Duration::from_secs(3u64);
 const WEATHER_ROOT_CERTIFICATE: &str =
-	include_str!("certificates/open_meteo_root.pem"); // Todo: Get certificate
+	include_str!("certificates/open_meteo_root.pem");
 
 #[derive(Default)]
 pub struct WeatherOracleSource;
 
-impl<OracleSourceInfo> OracleSource<OracleSourceInfo> for WeatherOracleSource {
+impl OracleSource for WeatherOracleSource {
     type OracleRequestResult = Result<(), Error>; //TODO: Need to return some Data
+	type OracleSourceInfo = WeatherInfo;
 
 	fn metrics_id(&self) -> String {
         "weather".to_string() // TODO: Fix
@@ -81,8 +83,16 @@ impl<OracleSourceInfo> OracleSource<OracleSourceInfo> for WeatherOracleSource {
 	fn execute_request(
 		&self,
 		rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
-		source_info: OracleSourceInfo
+		source_info: Self::OracleSourceInfo
 	) -> Self::OracleRequestResult {
+		let query = source_info.weather_query;
+
         Ok(())
     }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct OpenMeteoWeatherStruct {
+	latitude: f32,
+	longitude: f32,
 }
