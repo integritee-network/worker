@@ -43,11 +43,14 @@ pub trait Header: Encode + Decode + Clone {
 		self.using_encoded(BlakeTwo256::hash)
 	}
 
+	fn next_finalization_block_number(&self) -> u64;
+
 	fn new(
 		block_number: u64,
 		parent_hash: H256,
 		shard: Self::ShardIdentifier,
 		block_data_hash: H256,
+		next_finalization_block_number: u64,
 	) -> Self;
 }
 

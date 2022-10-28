@@ -121,7 +121,7 @@ mod tests {
 	}
 
 	fn test_block() -> Block {
-		let header = Header::new(0, H256::random(), H256::random(), Default::default());
+		let header = Header::new(0, H256::random(), H256::random(), Default::default(), 1);
 		let block_data = BlockData::new(
 			ed25519::Pair::from_string("//Alice", None).unwrap().public().into(),
 			H256::random(),
