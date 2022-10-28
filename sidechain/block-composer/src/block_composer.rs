@@ -158,7 +158,7 @@ where
 		if block_number == 1 {
 			finalization_candidate = 1;
 		} else if block_number > finalization_candidate {
-			finalization_candidate = finalization_candidate + BLOCK_NUMBER_FINALIZATION_DIFF;
+			finalization_candidate += BLOCK_NUMBER_FINALIZATION_DIFF;
 		}
 
 		let header = HeaderTypeOf::<SignedSidechainBlock>::new(
