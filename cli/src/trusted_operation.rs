@@ -131,10 +131,7 @@ fn send_request(
 	let (events_in, events_out) = channel();
 	_chain_api.subscribe_events(events_in).unwrap();
 
-	error!("Wee loooop right round");
-
 	loop {
-		error!("Wait for it");
 		let ret: ProcessedParentchainBlockArgs = _chain_api
 			.wait_for_event::<ProcessedParentchainBlockArgs>(
 				TEEREX,
@@ -155,8 +152,8 @@ fn send_request(
 					},
 					Some(header) => {
 						let block_number: BlockNumber = header.number;
-						error!("Expected block Number: {:?}", block_number);
-						error!("Confirmed block Number: {:?}", ret.block_number);
+						info!("Expected block Number: {:?}", block_number);
+						info!("Confirmed block Number: {:?}", ret.block_number);
 						// The returned block number belongs to a subsequent event. We missed our event and can break the loop.
 						if ret.block_number > block_number {
 							warn!(

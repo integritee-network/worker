@@ -125,7 +125,7 @@ where
 			),
 			None => {
 				info!("Seems to be first sidechain block.");
-				(1, Default::default(), 0)
+				(1, Default::default(), 1)
 			},
 		};
 
@@ -178,8 +178,3 @@ where
 		Ok(signed_block)
 	}
 }
-//20 -> 40
-//21 -> 40
-//
-//39 -> 40
-//40 -> 60
