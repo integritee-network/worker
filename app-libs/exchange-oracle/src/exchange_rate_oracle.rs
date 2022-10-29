@@ -20,8 +20,8 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::{
 	metrics_exporter::ExportMetrics,
-	types::{ExchangeRate, TradingPair, TradingInfo},
-	Error, GetExchangeRate,
+	types::{ExchangeRate, TradingPair, TradingInfo, WeatherInfo},
+	Error, GetExchangeRate, GetLongitude,
 };
 use core::time::Duration;
 use itc_rest_client::{
@@ -74,6 +74,20 @@ impl<OracleSourceType, MetricsExporter> Oracle<OracleSourceType, MetricsExporter
 {
 	pub fn new(oracle_source: OracleSourceType, metrics_exporter: Arc<MetricsExporter>) -> Self {
 		Oracle { oracle_source, metrics_exporter }
+	}
+}
+
+impl<OracleSourceType, MetricsExporter> GetLongitude
+	for Oracle<OracleSourceType, MetricsExporter>
+where
+	OracleSourceType: OracleSource,
+	MetricsExporter: ExportMetrics<WeatherInfo>,
+{
+	type Longitude = f32;
+	type QueryInfo = WeatherInfo;
+	fn get_longitude(&self, query_info: Self::QueryInfo) -> Self::Longitude {
+		// TODO: Top level query logic Implement
+		0.0
 	}
 }
 

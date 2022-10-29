@@ -69,7 +69,6 @@ pub type CoinGeckoExchangeRateOracle<OCallApi> =
 pub type CoinMarketCapExchangeRateOracle<OCallApi> =
 	ExchangeRateOracle<CoinMarketCapSource, MetricsExporter<OCallApi>>;
 
-// Question is this correct?
 pub type WeatherOracle<OCallApi> =
 	Oracle<WeatherOracleSource, MetricsExporter<OCallApi>>;
 
@@ -94,4 +93,10 @@ pub fn create_weather_oracle<OCallApi: EnclaveMetricsOCallApi>(
 pub trait GetExchangeRate {
 	/// Get the cryptocurrency/fiat_currency exchange rate
 	fn get_exchange_rate(&self, trading_pair: TradingPair) -> Result<(ExchangeRate, Url), Error>;
+}
+
+pub trait GetLongitude {
+	type Longitude;
+	type QueryInfo;
+	fn get_longitude(&self, query: Self::QueryInfo) -> Self::Longitude;
 }

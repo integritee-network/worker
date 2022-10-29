@@ -40,9 +40,9 @@ use url::Url;
 
 
 const WEATHER_URL: &str = "https://api.open-meteo.com";
-const WEATHER_PARAM_LONGTITUDE: &str = "longitude";
+const WEATHER_PARAM_LONGITUDE: &str = "longitude";
 const WEATHER_PARAM_LATITUDE: &str = "latitude";
-const WEATHER_PARAM_HOURLY: &str = "temperature_2m";
+const WEATHER_PARAM_HOURLY: &str = "hourly";
 const WEATHER_PATH: &str = "v1/forecast";
 const WEATHER_TIMEOUT: Duration = Duration::from_secs(3u64);
 const WEATHER_ROOT_CERTIFICATE: &str =
@@ -52,7 +52,7 @@ const WEATHER_ROOT_CERTIFICATE: &str =
 pub struct WeatherOracleSource;
 
 impl OracleSource for WeatherOracleSource {
-    type OracleRequestResult = Result<(), Error>; //TODO: Need to return some Data
+    type OracleRequestResult = Result<f32, Error>; //TODO: Need to return some Data
 	type OracleSourceInfo = WeatherInfo;
 
 	fn metrics_id(&self) -> String {
@@ -87,7 +87,19 @@ impl OracleSource for WeatherOracleSource {
 	) -> Self::OracleRequestResult {
 		let query = source_info.weather_query;
 
-        Ok(())
+		let response = rest_client
+			.get_with::<String, OpenMeteo>(
+				WEATHER_PATH.into(),
+				&[
+					(WEATHER_PARAM_LATITUDE, &query.latitude),
+					(WEATHER_PARAM_LONGITUDE, &query.longtitude),
+				],
+			)
+			.map_err(Error::RestClient)?;
+
+		let open_meteo_weather_struct = response.0;
+
+        Ok(open_meteo_weather_struct.longitude)
     }
 }
 
@@ -95,4 +107,13 @@ impl OracleSource for WeatherOracleSource {
 struct OpenMeteoWeatherStruct {
 	latitude: f32,
 	longitude: f32,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct OpenMeteo(pub OpenMeteoWeatherStruct);
+
+impl RestPath<String> for OpenMeteo {
+	fn get_path(path: String) -> Result<String, itc_rest_client::error::Error> {
+		Ok(path)
+	}
 }

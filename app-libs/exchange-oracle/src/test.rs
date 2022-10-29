@@ -24,7 +24,7 @@ use crate::{
 	error::Error,
 	exchange_rate_oracle::{ExchangeRateOracle, OracleSource},
 	mock::MetricsExporterMock,
-	GetExchangeRate, TradingPair,
+	GetExchangeRate, TradingPair, GetLongitude
 };
 use core::assert_matches::assert_matches;
 use std::sync::Arc;
@@ -42,6 +42,15 @@ fn get_exchange_rate_from_coin_market_cap_works() {
 #[ignore = "requires external coin gecko service, disabled temporarily"]
 fn get_exchange_rate_from_coin_gecko_works() {
 	test_suite_exchange_rates::<CoinGeckoSource>();
+}
+
+#[test]
+fn get_longitude_from_open_meteo_works() {
+	let oracle = create_weather_oracle::<WeatherOracleSource>();
+	let weather_query = WeatherQuery{ latitude: "54.37".into(), longitude: "34.73".into(), hourly: "none".into() };
+	let weather_info = WeatherInfo{ weather_info };
+	let longitude = oracle.get_longitude(weather_info);
+	assert_eq!(longitude, 34.73f32);
 }
 
 #[test]

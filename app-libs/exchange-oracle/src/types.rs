@@ -19,11 +19,12 @@ use codec::{Decode, Encode};
 use std::string::String;
 use substrate_fixed::types::U32F32;
 
-
+#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub struct WeatherInfo {
 	pub weather_query: WeatherQuery,
 }
 
+#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub struct WeatherQuery {
 	pub longtitude: String,
 	pub latitude: String,
