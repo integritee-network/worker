@@ -37,7 +37,6 @@ use ita_stf::{
 use itc_parentchain::light_client::mocks::validator_access_mock::ValidatorAccessMock;
 use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
-use itp_hashing::Hash;
 use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::{
@@ -215,7 +214,7 @@ pub fn produce_sidechain_block_and_import_it() {
 		get_state_hash(state_handler.as_ref(), &shard_id)
 	);
 
-	let mut state = state_handler.load(&shard_id).unwrap();
+	let (mut state, _) = state_handler.load_clone(&shard_id).unwrap();
 	let free_balance = TestStf::get_account_data(&mut state, &receiver.public().into()).free;
 	assert_eq!(free_balance, transfered_amount);
 	assert!(TestStf::get_event_count(&mut state) > 0);
@@ -252,6 +251,6 @@ fn get_state_hashes_from_block(
 }
 
 fn get_state_hash(state_handler: &HandleStateMock, shard_id: &ShardIdentifier) -> H256 {
-	let state = state_handler.load(shard_id).unwrap();
-	state.hash()
+	let (_, state_hash) = state_handler.load_clone(shard_id).unwrap();
+	state_hash
 }

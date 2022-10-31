@@ -260,8 +260,7 @@ where
 	{
 		let ends_at = duration_now() + max_exec_duration;
 
-		let state = self.state_handler.load(shard)?;
-		let state_hash_before_execution = state.hash();
+		let (state, state_hash_before_execution) = self.state_handler.load_clone(shard)?;
 
 		// Execute any pre-processing steps.
 		let mut state = prepare_state_function(state);
@@ -271,6 +270,7 @@ where
 		for trusted_call_signed in trusted_calls.into_iter() {
 			// Break if allowed time window is over.
 			if ends_at < duration_now() {
+				info!("Aborting execution of trusted calls because slot time is up");
 				break
 			}
 

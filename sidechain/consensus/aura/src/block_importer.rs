@@ -234,11 +234,15 @@ impl<
 	where
 		F: FnOnce(&Self::SidechainState) -> Result<SignedSidechainBlock, ConsensusError>,
 	{
-		let state = self
-			.state_handler
-			.load(shard)
-			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
-		verifying_function(&state)
+		self.state_handler
+			.execute_on_current(shard, |state, _| verifying_function(&state))
+			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?
+
+		// let (state, _) = self
+		// 	.state_handler
+		// 	.load_clone(shard)
+		// 	.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
+		// verifying_function(&state)
 	}
 
 	fn state_key(&self) -> Result<Self::StateCrypto, ConsensusError> {
