@@ -130,14 +130,12 @@ where
 
 	/// Reads the payload header, indicating the sent payload length and type.
 	fn read_header(&mut self, start_byte: u8) -> EnclaveResult<TcpHeader> {
-		const PAYLOAD_SIZE_LENGTH: usize = 8; // u64 indicating the payload size is 8 bytes
-
 		debug!("Read first byte: {:?}", start_byte);
 		// The first sent byte indicates the payload type.
 		let opcode: Opcode = start_byte.into();
 		debug!("Read header opcode: {:?}", opcode);
-		// The 8 bytes following afterwards indicate the payload length.
-		let mut payload_length_buffer = [0u8; PAYLOAD_SIZE_LENGTH];
+		// The following bytes contain the payload length, which is a u64.
+		let mut payload_length_buffer = [0u8; std::mem::size_of::<u64>()];
 		self.tls_stream.read_exact(&mut payload_length_buffer)?;
 		let payload_length = u64::from_be_bytes(payload_length_buffer);
 		debug!("Payload length of {:?}: {}", opcode, payload_length);
