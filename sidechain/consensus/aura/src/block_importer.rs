@@ -52,7 +52,6 @@ pub struct BlockImporter<
 	ParentchainBlock,
 	SignedSidechainBlock,
 	OCallApi,
-	SidechainState,
 	StateHandler,
 	StateKeyRepository,
 	TopPoolAuthor,
@@ -63,7 +62,7 @@ pub struct BlockImporter<
 	top_pool_author: Arc<TopPoolAuthor>,
 	parentchain_block_importer: Arc<ParentchainBlockImporter>,
 	ocall_api: Arc<OCallApi>,
-	_phantom: PhantomData<(Authority, ParentchainBlock, SignedSidechainBlock, SidechainState)>,
+	_phantom: PhantomData<(Authority, ParentchainBlock, SignedSidechainBlock)>,
 }
 
 impl<
@@ -71,7 +70,6 @@ impl<
 		ParentchainBlock,
 		SignedSidechainBlock,
 		OCallApi,
-		SidechainState,
 		StateHandler,
 		StateKeyRepository,
 		TopPoolAuthor,
@@ -82,7 +80,6 @@ impl<
 		ParentchainBlock,
 		SignedSidechainBlock,
 		OCallApi,
-		SidechainState,
 		StateHandler,
 		StateKeyRepository,
 		TopPoolAuthor,
@@ -168,7 +165,6 @@ impl<
 		ParentchainBlock,
 		SignedSidechainBlock,
 		OCallApi,
-		SidechainDB<SignedSidechainBlock::Block, SgxExternalities>,
 		StateHandler,
 		StateKeyRepository,
 		TopPoolAuthor,

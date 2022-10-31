@@ -88,7 +88,6 @@ pub type TestBlockImporter = BlockImporter<
 	ParentchainBlock,
 	SignedSidechainBlock,
 	TestOCallApi,
-	TestSidechainDb,
 	HandleStateMock,
 	TestStateKeyRepo,
 	TestTopPoolAuthor,

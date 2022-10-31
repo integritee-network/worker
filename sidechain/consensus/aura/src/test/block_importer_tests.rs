@@ -56,7 +56,6 @@ type TestBlockImporter = BlockImporter<
 	ParentchainBlock,
 	SignedSidechainBlock,
 	OnchainMock,
-	TestSidechainState,
 	HandleStateMock,
 	TestStateKeyRepo,
 	TestTopPoolAuthor,
