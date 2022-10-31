@@ -40,9 +40,9 @@ use crate::{
 	coin_market_cap::CoinMarketCapSource,
 	weather_oracle_source::WeatherOracleSource,
 	error::Error,
-	exchange_rate_oracle::{ExchangeRateOracle, Oracle},
+	exchange_rate_oracle::{ExchangeRateOracle, WeatherOracle, OracleSource},
 	metrics_exporter::MetricsExporter,
-	types::{ExchangeRate, TradingPair},
+	types::{ExchangeRate, TradingPair, WeatherInfo},
 };
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use std::sync::Arc;
@@ -69,8 +69,8 @@ pub type CoinGeckoExchangeRateOracle<OCallApi> =
 pub type CoinMarketCapExchangeRateOracle<OCallApi> =
 	ExchangeRateOracle<CoinMarketCapSource, MetricsExporter<OCallApi>>;
 
-pub type WeatherOracle<OCallApi> =
-	Oracle<WeatherOracleSource, MetricsExporter<OCallApi>>;
+pub type OpenMeteoWeatherOracle<OCallApi> =
+	WeatherOracle<WeatherOracleSource, MetricsExporter<OCallApi>>;
 
 pub fn create_coin_gecko_oracle<OCallApi: EnclaveMetricsOCallApi>(
 	ocall_api: Arc<OCallApi>,
@@ -84,10 +84,10 @@ pub fn create_coin_market_cap_oracle<OCallApi: EnclaveMetricsOCallApi>(
 	ExchangeRateOracle::new(CoinMarketCapSource {}, Arc::new(MetricsExporter::new(ocall_api)))
 }
 
-pub fn create_weather_oracle<OCallApi: EnclaveMetricsOCallApi>(
+pub fn create_open_meteo_weather_oracle<OCallApi: EnclaveMetricsOCallApi>(
 	ocall_api: Arc<OCallApi>,
-) -> WeatherOracle<OCallApi> {
-	Oracle::new(WeatherOracleSource {}, Arc::new(MetricsExporter::new(ocall_api)))
+) -> OpenMeteoWeatherOracle<OCallApi> {
+	WeatherOracle::new(WeatherOracleSource {}, Arc::new(MetricsExporter::new(ocall_api)))
 }
 
 pub trait GetExchangeRate {
@@ -96,7 +96,6 @@ pub trait GetExchangeRate {
 }
 
 pub trait GetLongitude {
-	type Longitude;
-	type QueryInfo;
-	fn get_longitude(&self, query: Self::QueryInfo) -> Self::Longitude;
+	type LongitudeResult;
+	fn get_longitude(&self, weather_info: WeatherInfo) -> Self::LongitudeResult;
 }

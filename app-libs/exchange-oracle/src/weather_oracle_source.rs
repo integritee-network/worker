@@ -51,9 +51,8 @@ const WEATHER_ROOT_CERTIFICATE: &str =
 #[derive(Default)]
 pub struct WeatherOracleSource;
 
-impl OracleSource for WeatherOracleSource {
-    type OracleRequestResult = Result<f32, Error>; //TODO: Need to return some Data
-	type OracleSourceInfo = WeatherInfo;
+impl<OracleSourceInfo: Into<WeatherInfo>> OracleSource<OracleSourceInfo> for WeatherOracleSource {
+    type OracleRequestResult = Result<f32, Error>;
 
 	fn metrics_id(&self) -> String {
         "weather".to_string() // TODO: Fix
@@ -64,7 +63,7 @@ impl OracleSource for WeatherOracleSource {
     }
 
 	fn base_url(&self) -> Result<Url, Error> {
-        Url::parse(WEATHER_URL).map_err(|e| Error::Other(format!("{:?}", e).into()))
+		Url::parse(WEATHER_URL).map_err(|e| Error::Other(format!("{:?}", e).into()))
     }
 
 	/// The server's root certificate. A valid certificate is required to open a tls connection
@@ -81,12 +80,14 @@ impl OracleSource for WeatherOracleSource {
     }
 
 	fn execute_request(
-		&self,
 		rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
-		source_info: Self::OracleSourceInfo
+		source_info: OracleSourceInfo
 	) -> Self::OracleRequestResult {
-		let query = source_info.weather_query;
+		let weather_info: WeatherInfo = source_info.into();
+		let query = weather_info.weather_query;
 
+		// TODO:
+		// This part is opinionated towards a hard coded query need to make more generic
 		let response = rest_client
 			.get_with::<String, OpenMeteo>(
 				WEATHER_PATH.into(),

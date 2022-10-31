@@ -75,10 +75,9 @@ impl CoinMarketCapSource {
 	}
 }
 
-impl OracleSource for CoinMarketCapSource {
+impl<OracleSourceInfo: Into<TradingInfo>> OracleSource<OracleSourceInfo> for CoinMarketCapSource {
 	// TODO Change this to return something useful?
 	type OracleRequestResult = Result<(), Error>;
-	type OracleSourceInfo = TradingInfo;
 
 	fn metrics_id(&self) -> String {
 		"coin_market_cap".to_string()
@@ -97,12 +96,12 @@ impl OracleSource for CoinMarketCapSource {
 	}
 
 	fn execute_request(
-		&self,
 		rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
-		source_info: Self::OracleSourceInfo,
+		source_info: OracleSourceInfo,
 	) -> Self::OracleRequestResult {
-		let fiat_currency = source_info.trading_pair.fiat_currency;
-		let crypto_currency = source_info.trading_pair.crypto_currency;
+		let trading_info: TradingInfo = source_info.into();
+		let fiat_currency = trading_info.trading_pair.fiat_currency;
+		let crypto_currency = trading_info.trading_pair.crypto_currency;
 		// TODO Implement me
 		Ok(())
 	}

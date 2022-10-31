@@ -33,10 +33,9 @@ use std::{string::String, sync::Arc, time::Instant};
 use url::Url;
 
 /// Oracle source trait used by the `ExchangeRateOracle` (strategy pattern).
-pub trait OracleSource: Default {
+pub trait OracleSource<OracleSourceInfo>: Default {
 
 	type OracleRequestResult;
-	type OracleSourceInfo;
 
 	fn metrics_id(&self) -> String;
 
@@ -54,9 +53,8 @@ pub trait OracleSource: Default {
 	) -> Result<ExchangeRate, Error>;
 
 	fn execute_request(
-		&self,
 		rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
-		source_info: Self::OracleSourceInfo
+		source_info: OracleSourceInfo
 	) -> Self::OracleRequestResult;
 }
 
@@ -65,29 +63,43 @@ pub struct ExchangeRateOracle<OracleSourceType, MetricsExporter> {
 	metrics_exporter: Arc<MetricsExporter>,
 }
 
-pub struct Oracle<OracleSourceType, MetricsExporter> {
+pub struct WeatherOracle<OracleSourceType, MetricsExporter> {
 	oracle_source: OracleSourceType,
 	metrics_exporter: Arc<MetricsExporter>,
 }
 
-impl<OracleSourceType, MetricsExporter> Oracle<OracleSourceType, MetricsExporter>
+impl<OracleSourceType, MetricsExporter> WeatherOracle<OracleSourceType, MetricsExporter>
 {
 	pub fn new(oracle_source: OracleSourceType, metrics_exporter: Arc<MetricsExporter>) -> Self {
-		Oracle { oracle_source, metrics_exporter }
+		WeatherOracle { oracle_source, metrics_exporter }
 	}
 }
 
 impl<OracleSourceType, MetricsExporter> GetLongitude
-	for Oracle<OracleSourceType, MetricsExporter>
+	for WeatherOracle<OracleSourceType, MetricsExporter>
 where
-	OracleSourceType: OracleSource,
+	OracleSourceType: OracleSource<WeatherInfo, OracleRequestResult = Result<f32, Error>>,
 	MetricsExporter: ExportMetrics<WeatherInfo>,
 {
-	type Longitude = f32;
-	type QueryInfo = WeatherInfo;
-	fn get_longitude(&self, query_info: Self::QueryInfo) -> Self::Longitude {
+	type LongitudeResult = Result<f32, Error>;
+	fn get_longitude(&self, weather_info: WeatherInfo) -> Self::LongitudeResult {
 		// TODO: Top level query logic Implement
-		0.0
+		let query = weather_info.weather_query.clone();
+
+		let base_url = self.oracle_source.base_url()?;
+		let root_certificate = self.oracle_source.root_certificate_content();
+
+		debug!("Get longitude from URI: {}, query: {:?}", base_url, query);
+
+		let http_client = HttpClient::new(
+			SendWithCertificateVerification::new(root_certificate),
+			true,
+			self.oracle_source.request_timeout(),
+			None,
+			None,
+		);
+		let mut rest_client = RestClient::new(http_client, base_url);
+		<OracleSourceType as OracleSource<WeatherInfo>>::execute_request(&mut rest_client, weather_info).into()
 	}
 }
 
@@ -101,7 +113,7 @@ impl<OracleSourceType, MetricsExporter> ExchangeRateOracle<OracleSourceType, Met
 impl<OracleSourceType, MetricsExporter> GetExchangeRate
 	for ExchangeRateOracle<OracleSourceType, MetricsExporter>
 where
-	OracleSourceType: OracleSource,
+	OracleSourceType: OracleSource<TradingInfo>,
 	MetricsExporter: ExportMetrics<TradingInfo>,
 {
 	fn get_exchange_rate(&self, trading_pair: TradingPair) -> Result<(ExchangeRate, Url), Error> {

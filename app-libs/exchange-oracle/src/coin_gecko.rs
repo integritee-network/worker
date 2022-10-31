@@ -70,10 +70,9 @@ impl CoinGeckoSource {
 	}
 }
 
-impl OracleSource for CoinGeckoSource {
+impl<OracleSourceInfo: Into<TradingInfo>> OracleSource<OracleSourceInfo> for CoinGeckoSource {
 
 	type OracleRequestResult = Result<(), Error>;
-	type OracleSourceInfo = TradingInfo;
 
 	fn metrics_id(&self) -> String {
 		"coin_gecko".to_string()
@@ -92,10 +91,10 @@ impl OracleSource for CoinGeckoSource {
 	}
 
 	fn execute_request(
-		&self,
 		rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
-		source_info: Self::OracleSourceInfo,
+		source_info: OracleSourceInfo,
 	) -> Self::OracleRequestResult {
+		let trading_info: TradingInfo = source_info.into();
 		// TODO Implement me
 		Ok(())
 	}

@@ -46,11 +46,11 @@ fn get_exchange_rate_from_coin_gecko_works() {
 
 #[test]
 fn get_longitude_from_open_meteo_works() {
-	let oracle = create_weather_oracle::<WeatherOracleSource>();
+	let oracle = create_open_meteo_weather_oracle::<WeatherOracleSource>();
 	let weather_query = WeatherQuery{ latitude: "54.37".into(), longitude: "34.73".into(), hourly: "none".into() };
 	let weather_info = WeatherInfo{ weather_info };
 	let longitude = oracle.get_longitude(weather_info);
-	assert_eq!(longitude, 34.73f32);
+	assert_eq!(longitude, Ok(34.73f32));
 }
 
 #[test]
