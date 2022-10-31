@@ -108,14 +108,12 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	let sidechain_block_import_queue_worker =
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT.get()?;
 
-	let sidechain_block_queue_start = Instant::now();
-
 	let latest_parentchain_header =
 		sidechain_block_import_queue_worker.process_queue(&current_parentchain_header)?;
 
 	info!(
 		"Elapsed time to process sidechain block import queue: {} ms",
-		sidechain_block_queue_start.elapsed().as_millis()
+		start_time.elapsed().as_millis()
 	);
 
 	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
@@ -132,8 +130,6 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 
 	let authority = Ed25519Seal::unseal_from_static_file()?;
 
-	info!("Elapsed time before AURA execution: {} ms", start_time.elapsed().as_millis());
-
 	match yield_next_slot(
 		slot_beginning_timestamp,
 		SLOT_DURATION,
@@ -141,7 +137,13 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 		&mut LastSlotSeal,
 	)? {
 		Some(slot) => {
-			let remaining_time = slot.ends_at - slot.timestamp;
+			let duration_now = duration_now();
+			if duration_now >= slot.ends_at {
+				warn!("No time remaining in slot, skipping AURA execution");
+				return Ok(())
+			}
+
+			let remaining_time = slot.ends_at - duration_now;
 			info!(
 				"Remaining slot time for aura: {} ms, {}% of slot time",
 				remaining_time.as_millis(),
