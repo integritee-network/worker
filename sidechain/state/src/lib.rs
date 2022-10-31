@@ -42,25 +42,6 @@ use its_primitives::{
 };
 use sp_core::H256;
 use sp_io::KillStorageResult;
-use sp_std::prelude::Vec;
-use std::marker::PhantomData;
-
-/// Sidechain wrapper and interface of the STF state.
-///
-/// TODO: In the course of refactoring the STF (#269), verify if this struct is even needed.
-/// It might be that we could implement everything directly on `[SgxExternalities]`.
-#[derive(Clone, Debug, Default, Encode, Decode, PartialEq, Eq)]
-pub struct SidechainDB<Block, E> {
-	/// Externalities
-	pub ext: E,
-	_phantom: PhantomData<Block>,
-}
-
-impl<Block, E> SidechainDB<Block, E> {
-	pub fn new(externalities: E) -> Self {
-		Self { ext: externalities, _phantom: Default::default() }
-	}
-}
 
 /// Contains the necessary data to update the `SidechainDB` when importing a `SidechainBlock`.
 #[derive(PartialEq, Eq, Clone, Debug, Encode, Decode)]
@@ -133,9 +114,6 @@ pub trait SidechainState: Clone {
 		storage_prefix: &str,
 	) -> KillStorageResult;
 
-	/// get a storage value by its storage hash
-	fn get(&self, key: &[u8]) -> Option<Vec<u8>>;
-
 	/// set a storage value by its storage hash
 	fn set(&mut self, key: &[u8], value: &[u8]);
 
@@ -155,10 +133,8 @@ pub trait LastBlockExt<SidechainBlock: SidechainBlockTrait> {
 	fn set_last_block(&mut self, block: &SidechainBlock);
 }
 
-impl<SidechainBlock: SidechainBlockTrait, E> LastBlockExt<SidechainBlock>
-	for SidechainDB<SidechainBlock, E>
-where
-	SidechainDB<SidechainBlock, E>: SidechainState + SidechainSystemExt,
+impl<SidechainBlock: SidechainBlockTrait, E: SidechainState + SidechainSystemExt>
+	LastBlockExt<SidechainBlock> for E
 {
 	fn get_last_block(&self) -> Option<SidechainBlock> {
 		self.get_with_name("System", "LastBlock")

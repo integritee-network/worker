@@ -27,7 +27,7 @@ use its_primitives::traits::{
 	Block as SidechainBlockTrait, BlockData, Header as HeaderTrait, SignBlock,
 	SignedBlock as SignedSidechainBlockTrait,
 };
-use its_state::{LastBlockExt, SidechainDB, SidechainState, SidechainSystemExt};
+use its_state::{LastBlockExt, SidechainState, SidechainSystemExt};
 use log::*;
 use sp_core::Pair;
 use sp_runtime::{
@@ -47,7 +47,7 @@ pub trait ComposeBlock<Externalities, ParentchainBlock: ParentchainBlockTrait> {
 		top_call_hashes: Vec<H256>,
 		shard: ShardIdentifier,
 		state_hash_apriori: H256,
-		aposteriori_state: Externalities,
+		aposteriori_state: &Externalities,
 	) -> Result<Self::SignedSidechainBlock>;
 }
 
@@ -93,7 +93,12 @@ where
 	<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType:
 		HeaderTrait<ShardIdentifier = H256>,
 	SignedSidechainBlock::Signature: From<Signer::Signature>,
-	Externalities: SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash + Encode,
+	Externalities: SgxExternalitiesTrait
+		+ SidechainState
+		+ SidechainSystemExt
+		+ StateHash
+		+ LastBlockExt<SignedSidechainBlock::Block>
+		+ Encode,
 	<Externalities as SgxExternalitiesTrait>::SgxExternalitiesType: Encode,
 	<Externalities as SgxExternalitiesTrait>::SgxExternalitiesDiffType: Encode,
 	Signer: Pair<Public = sp_core::ed25519::Public>,
@@ -109,33 +114,36 @@ where
 		top_call_hashes: Vec<H256>,
 		shard: ShardIdentifier,
 		state_hash_apriori: H256,
-		aposteriori_state: Externalities,
+		aposteriori_state: &Externalities,
 	) -> Result<Self::SignedSidechainBlock> {
 		let author_public = self.signer.public();
 
 		let state_hash_new = aposteriori_state.hash();
-		let db = SidechainDB::<SignedSidechainBlock::Block, Externalities>::new(aposteriori_state);
 
-		let (block_number, parent_hash, next_finalization_block_number) = match db.get_last_block()
-		{
-			Some(block) => (
-				block.header().block_number() + 1,
-				block.hash(),
-				block.header().next_finalization_block_number(),
-			),
-			None => {
-				info!("Seems to be first sidechain block.");
-				(1, Default::default(), 1)
-			},
-		};
+		let (block_number, parent_hash, next_finalization_block_number) =
+			match aposteriori_state.get_last_block() {
+				Some(block) => (
+					block.header().block_number() + 1,
+					block.hash(),
+					block.header().next_finalization_block_number(),
+				),
+				None => {
+					info!("Seems to be first sidechain block.");
+					(1, Default::default(), 1)
+				},
+			};
 
-		if block_number != db.get_block_number().unwrap_or(0) {
+		if block_number != aposteriori_state.get_block_number().unwrap_or(0) {
 			return Err(Error::Other("[Sidechain] BlockNumber is not LastBlock's Number + 1".into()))
 		}
 
 		// create encrypted payload
-		let mut payload: Vec<u8> =
-			StatePayload::new(state_hash_apriori, state_hash_new, db.ext().state_diff()).encode();
+		let mut payload: Vec<u8> = StatePayload::new(
+			state_hash_apriori,
+			state_hash_new,
+			aposteriori_state.state_diff().clone(),
+		)
+		.encode();
 
 		let state_key = self
 			.state_key_repository

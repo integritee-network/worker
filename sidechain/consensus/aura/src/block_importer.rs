@@ -35,7 +35,6 @@ use its_consensus_common::Error as ConsensusError;
 use its_primitives::traits::{
 	BlockData, Header as HeaderTrait, ShardIdentifierFor, SignedBlock as SignedBlockTrait,
 };
-use its_state::SidechainDB;
 use its_validateer_fetch::ValidateerFetch;
 use log::*;
 use sp_core::Pair;
@@ -190,19 +189,19 @@ impl<
 		+ Send
 		+ Sync,
 {
-	type Verifier = AuraVerifier<
-		Authority,
-		ParentchainBlock,
-		SignedSidechainBlock,
-		SidechainDB<SignedSidechainBlock::Block, SgxExternalities>,
-		OCallApi,
-	>;
-	type SidechainState = SidechainDB<SignedSidechainBlock::Block, SgxExternalities>;
+	type Verifier = AuraVerifier<Authority, ParentchainBlock, SignedSidechainBlock, OCallApi>;
+	type SidechainState = SgxExternalities;
 	type StateCrypto = <StateKeyRepository as AccessKey>::KeyType;
 	type Context = OCallApi;
 
-	fn verifier(&self, state: Self::SidechainState) -> Self::Verifier {
-		AuraVerifier::<Authority, ParentchainBlock, _, _, _>::new(SLOT_DURATION, state)
+	fn verifier(
+		&self,
+		maybe_last_sidechain_block: Option<SignedSidechainBlock::Block>,
+	) -> Self::Verifier {
+		AuraVerifier::<Authority, ParentchainBlock, _, _>::new(
+			SLOT_DURATION,
+			maybe_last_sidechain_block,
+		)
 	}
 
 	fn apply_state_update<F>(
@@ -218,10 +217,10 @@ impl<
 			.load_for_mutation(shard)
 			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
 
-		let updated_state = mutating_function(Self::SidechainState::new(state))?;
+		let updated_state = mutating_function(state)?;
 
 		self.state_handler
-			.write_after_mutation(updated_state.ext, write_lock, shard)
+			.write_after_mutation(updated_state, write_lock, shard)
 			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
 
 		Ok(())
@@ -233,13 +232,13 @@ impl<
 		verifying_function: F,
 	) -> Result<SignedSidechainBlock, ConsensusError>
 	where
-		F: FnOnce(Self::SidechainState) -> Result<SignedSidechainBlock, ConsensusError>,
+		F: FnOnce(&Self::SidechainState) -> Result<SignedSidechainBlock, ConsensusError>,
 	{
 		let state = self
 			.state_handler
 			.load(shard)
 			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
-		verifying_function(Self::SidechainState::new(state))
+		verifying_function(&state)
 	}
 
 	fn state_key(&self) -> Result<Self::StateCrypto, ConsensusError> {

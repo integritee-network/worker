@@ -37,6 +37,7 @@ use ita_stf::{
 use itc_parentchain::light_client::mocks::validator_access_mock::ValidatorAccessMock;
 use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
+use itp_hashing::Hash;
 use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::{
@@ -53,9 +54,7 @@ use itp_top_pool_author::{top_filter::AllowAllTopsFilter, traits::AuthorApi};
 use itp_types::{AccountId, Block as ParentchainBlock, ShardIdentifier};
 use its_block_verification::slot::slot_from_timestamp_and_duration;
 use its_primitives::{traits::Block, types::SignedBlock as SignedSidechainBlock};
-use its_sidechain::{
-	aura::proposer_factory::ProposerFactory, slots::SlotInfo, state::SidechainState,
-};
+use its_sidechain::{aura::proposer_factory::ProposerFactory, slots::SlotInfo};
 use jsonrpc_core::futures::executor;
 use log::*;
 use primitive_types::H256;
@@ -254,6 +253,5 @@ fn get_state_hashes_from_block(
 
 fn get_state_hash(state_handler: &HandleStateMock, shard_id: &ShardIdentifier) -> H256 {
 	let state = state_handler.load(shard_id).unwrap();
-	let sidechain_state = TestSidechainDb::new(state);
-	sidechain_state.state_hash()
+	state.hash()
 }

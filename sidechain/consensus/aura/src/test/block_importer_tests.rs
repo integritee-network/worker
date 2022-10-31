@@ -18,13 +18,14 @@
 use crate::{block_importer::BlockImporter, test::fixtures::validateer, ShardIdentifierFor};
 use codec::Encode;
 use core::assert_matches::assert_matches;
+use ita_stf::hash::Hash;
 use itc_parentchain_block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
 use itc_parentchain_test::{
 	parentchain_block_builder::ParentchainBlockBuilder,
 	parentchain_header_builder::ParentchainHeaderBuilder,
 };
 use itp_sgx_crypto::{aes::Aes, mocks::KeyRepositoryMock, StateCrypto};
-use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesDiffType};
+use itp_sgx_externalities::SgxExternalitiesDiffType;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{handle_state_mock::HandleStateMock, onchain_mock::OnchainMock};
 use itp_time_utils::{duration_now, now_as_u64};
@@ -33,9 +34,9 @@ use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader, H256};
 use its_consensus_common::{BlockImport, Error as ConsensusError};
 use its_primitives::{
 	traits::{SignBlock, SignedBlock},
-	types::{Block as SidechainBlock, SignedBlock as SignedSidechainBlock},
+	types::SignedBlock as SignedSidechainBlock,
 };
-use its_state::{SidechainDB, SidechainState, StateUpdate};
+use its_state::StateUpdate;
 use its_test::{
 	sidechain_block_builder::SidechainBlockBuilder,
 	sidechain_block_data_builder::SidechainBlockDataBuilder,
@@ -46,7 +47,6 @@ use sp_keyring::ed25519::Keyring;
 use sp_runtime::generic::SignedBlock as SignedParentchainBlock;
 use std::sync::Arc;
 
-type TestSidechainState = SidechainDB<SidechainBlock, SgxExternalities>;
 type TestTopPoolAuthor = AuthorApiMock<H256, H256>;
 type TestParentchainBlockImportTrigger =
 	TriggerParentchainBlockImportMock<SignedParentchainBlock<ParentchainBlock>>;
@@ -104,8 +104,7 @@ fn test_fixtures_with_default_import_trigger(
 }
 
 fn empty_encrypted_state_update(state_handler: &HandleStateMock) -> Vec<u8> {
-	let apriori_state_hash =
-		TestSidechainState::new(state_handler.load(&shard()).unwrap()).state_hash();
+	let apriori_state_hash = state_handler.load(&shard()).unwrap().hash();
 	let empty_state_diff = SgxExternalitiesDiffType::default();
 	let mut state_update =
 		StateUpdate::new(apriori_state_hash, apriori_state_hash, empty_state_diff).encode();
