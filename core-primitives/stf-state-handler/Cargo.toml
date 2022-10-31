@@ -72,5 +72,5 @@ sgx = [
 test = [
     "itp-sgx-crypto/mocks",
     "itp-stf-interface/mocks",
-    "sgx_crypto_helper/mesalock_sgx"
+    "sgx_crypto_helper/mesalock_sgx",
 ]
