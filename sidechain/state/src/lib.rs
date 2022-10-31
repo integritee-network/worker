@@ -84,27 +84,19 @@ pub trait SidechainState: Clone {
 
 	type StateUpdate: Encode + Decode;
 
-	type Hash;
-
-	/// get the hash of the state
-	fn state_hash(&self) -> Self::Hash;
-
-	/// get a reference to the underlying externalities of the state
-	fn ext(&self) -> &Self::Externalities;
-
-	/// get a mutable reference to the underlying externalities of the state
-	fn ext_mut(&mut self) -> &mut Self::Externalities;
-
-	/// apply the state update to the state
+	/// Apply the state update to the state.
+	///
+	/// Does not guarantee state consistency in case of a failure.
+	/// Caller is responsible for discarding corrupt/inconsistent state.
 	fn apply_state_update(&mut self, state_payload: &Self::StateUpdate) -> Result<(), Error>;
 
-	/// get a storage value by its full name
+	/// Get a storage value by its full name.
 	fn get_with_name<V: Decode>(&self, module_prefix: &str, storage_prefix: &str) -> Option<V>;
 
-	/// set a storage value by its full name
+	/// Set a storage value by its full name.
 	fn set_with_name<V: Encode>(&mut self, module_prefix: &str, storage_prefix: &str, value: V);
 
-	/// Clear a storage value by its full name
+	/// Clear a storage value by its full name.
 	fn clear_with_name(&mut self, module_prefix: &str, storage_prefix: &str);
 
 	/// Clear all storage values for the given prefix.
@@ -114,7 +106,7 @@ pub trait SidechainState: Clone {
 		storage_prefix: &str,
 	) -> KillStorageResult;
 
-	/// set a storage value by its storage hash
+	/// Set a storage value by its storage hash.
 	fn set(&mut self, key: &[u8], value: &[u8]);
 
 	/// Clear a storage value by its storage hash.

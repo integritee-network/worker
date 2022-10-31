@@ -180,6 +180,8 @@ where
 			.map(into_map)?;
 
 		// Update parentchain block on all states.
+		// TODO: Investigate if this is still necessary. We load and clone the entire state here,
+		// which scales badly for increasing state size.
 		let shards = self.state_handler.list_shards()?;
 		for shard_id in shards {
 			let (state_lock, mut state) = self.state_handler.load_for_mutation(&shard_id)?;

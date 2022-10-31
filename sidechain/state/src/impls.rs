@@ -23,7 +23,6 @@ use frame_support::ensure;
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_storage::keys::storage_value_key;
 use log::{error, info};
-use sp_core::H256;
 use sp_io::{storage, KillStorageResult};
 
 impl<T: SgxExternalitiesTrait + Clone + StateHash> SidechainState for T
@@ -32,26 +31,12 @@ where
 {
 	type Externalities = Self;
 	type StateUpdate = StateUpdate;
-	type Hash = H256;
-
-	fn state_hash(&self) -> Self::Hash {
-		self.hash()
-	}
-
-	fn ext(&self) -> &Self::Externalities {
-		self
-	}
-
-	fn ext_mut(&mut self) -> &mut Self::Externalities {
-		self
-	}
 
 	fn apply_state_update(&mut self, state_payload: &Self::StateUpdate) -> Result<(), Error> {
-		info!("Current state size: {}", self.ext().state().encoded_size());
-		ensure!(self.state_hash() == state_payload.state_hash_apriori(), Error::InvalidAprioriHash);
-		let mut state2 = self.clone();
+		info!("Current state size: {}", self.state().encoded_size());
+		ensure!(self.hash() == state_payload.state_hash_apriori(), Error::InvalidAprioriHash);
 
-		state2.execute_with(|| {
+		self.execute_with(|| {
 			state_payload.state_update.iter().for_each(|(k, v)| {
 				match v {
 					Some(value) => storage::set(k, value),
@@ -60,8 +45,7 @@ where
 			})
 		});
 
-		ensure!(state2.hash() == state_payload.state_hash_aposteriori(), Error::InvalidStorageDiff);
-		*self = state2;
+		ensure!(self.hash() == state_payload.state_hash_aposteriori(), Error::InvalidStorageDiff);
 		self.prune_state_diff();
 		Ok(())
 	}
@@ -130,14 +114,14 @@ pub mod tests {
 		let mut state1 = default_db();
 		let mut state2 = default_db();
 
-		let apriori = state1.state_hash();
+		let apriori = state1.hash();
 		state1.set(b"Hello", b"World");
-		let aposteriori = state1.state_hash();
+		let aposteriori = state1.hash();
 
 		let mut state_update = StateUpdate::new(apriori, aposteriori, state1.state_diff().clone());
 
 		assert_ok!(state2.apply_state_update(&mut state_update));
-		assert_eq!(state2.state_hash(), aposteriori);
+		assert_eq!(state2.hash(), aposteriori);
 		assert_eq!(state2.get(b"Hello").unwrap(), b"World");
 		assert!(state2.state_diff().is_empty());
 	}
@@ -149,7 +133,7 @@ pub mod tests {
 
 		let apriori = H256::from([1; 32]);
 		state1.set(b"Hello", b"World");
-		let aposteriori = state1.state_hash();
+		let aposteriori = state1.hash();
 
 		let mut state_update = StateUpdate::new(apriori, aposteriori, state1.state_diff().clone());
 
@@ -162,14 +146,15 @@ pub mod tests {
 		let mut state1 = default_db();
 		let mut state2 = default_db();
 
-		let apriori = state1.state_hash();
+		let apriori = state1.hash();
 		state1.set(b"Hello", b"World");
 		let aposteriori = H256::from([1; 32]);
 
 		let mut state_update = StateUpdate::new(apriori, aposteriori, state1.state_diff().clone());
 
 		assert_err!(state2.apply_state_update(&mut state_update), Error::InvalidStorageDiff);
-		assert_eq!(state2, default_db());
+		// After an error, the state is not guaranteed to be reverted and is potentially corrupted!
+		assert_ne!(state2, default_db());
 	}
 
 	#[test]

@@ -217,6 +217,8 @@ impl<
 			.load_for_mutation(shard)
 			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
 
+		// We load a copy of the state and apply the update. In case the update fails, we don't write
+		// the state back to the state handler, and thus guaranteeing state integrity.
 		let updated_state = mutating_function(state)?;
 
 		self.state_handler
@@ -237,12 +239,6 @@ impl<
 		self.state_handler
 			.execute_on_current(shard, |state, _| verifying_function(&state))
 			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?
-
-		// let (state, _) = self
-		// 	.state_handler
-		// 	.load_clone(shard)
-		// 	.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
-		// verifying_function(&state)
 	}
 
 	fn state_key(&self) -> Result<Self::StateCrypto, ConsensusError> {
