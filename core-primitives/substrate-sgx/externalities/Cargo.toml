@@ -19,14 +19,15 @@ sgx_tstd = { optional = true, features = ["untrusted_fs", "net", "backtrace"], g
 sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
 
 # local
-environmental = { path = "../environmental", default-features = false }
-itp-hashing = { path = "../../hashing" }
+environmental = { default-features = false, path = "../environmental" }
+itp-hashing = { default-features = false, path = "../../hashing" }
 
 [features]
 default = ["std"]
 std = [
     "codec/std",
     "environmental/std",
+    "itp-hashing/std",
     "log/std",
     "postcard/use-std",
     "serde/std",

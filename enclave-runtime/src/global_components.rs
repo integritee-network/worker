@@ -57,7 +57,8 @@ use itp_stf_executor::{
 	state_getter::StfStateGetter,
 };
 use itp_stf_state_handler::{
-	file_io::sgx::SgxStateFileIo, state_snapshot_repository::StateSnapshotRepository, StateHandler,
+	file_io::sgx::SgxStateFileIo, state_initializer::StateInitializer,
+	state_snapshot_repository::StateSnapshotRepository, StateHandler,
 };
 use itp_stf_state_observer::state_observer::StateObserver;
 use itp_top_pool::basic_pool::BasicPool;
@@ -84,11 +85,13 @@ pub type EnclaveTrustedCallSigned = TrustedCallSigned;
 pub type EnclaveStf = Stf<EnclaveTrustedCallSigned, EnclaveGetter, StfState, Runtime>;
 pub type EnclaveStateKeyRepository = KeyRepository<Aes, AesSeal>;
 pub type EnclaveShieldingKeyRepository = KeyRepository<Rsa3072KeyPair, Rsa3072Seal>;
-pub type EnclaveStateFileIo =
-	SgxStateFileIo<EnclaveStateKeyRepository, EnclaveShieldingKeyRepository, EnclaveStf, StfState>;
+pub type EnclaveStateFileIo = SgxStateFileIo<EnclaveStateKeyRepository, StfState>;
 pub type EnclaveStateSnapshotRepository = StateSnapshotRepository<EnclaveStateFileIo>;
 pub type EnclaveStateObserver = StateObserver<StfState>;
-pub type EnclaveStateHandler = StateHandler<EnclaveStateSnapshotRepository, EnclaveStateObserver>;
+pub type EnclaveStateInitializer =
+	StateInitializer<StfState, EnclaveStf, EnclaveShieldingKeyRepository>;
+pub type EnclaveStateHandler =
+	StateHandler<EnclaveStateSnapshotRepository, EnclaveStateObserver, EnclaveStateInitializer>;
 pub type EnclaveGetterExecutor = GetterExecutor<EnclaveStateObserver, StfStateGetter<EnclaveStf>>;
 pub type EnclaveOCallApi = OcallApi;
 pub type EnclaveNodeMetadataRepository = NodeMetadataRepository<NodeMetadata>;

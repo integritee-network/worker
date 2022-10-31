@@ -37,6 +37,7 @@ pub mod handle_state;
 pub mod in_memory_state_file_io;
 pub mod query_shard_state;
 pub mod state_handler;
+pub mod state_initializer;
 mod state_snapshot_primitives;
 pub mod state_snapshot_repository;
 pub mod state_snapshot_repository_loader;

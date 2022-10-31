@@ -43,7 +43,7 @@ fn store_sidechain_blocks(
 	match sidechain_api.store_sidechain_blocks(signed_blocks_vec) {
 		Ok(_) => sgx_status_t::SGX_SUCCESS,
 		Err(e) => {
-			error!("send sidechain blocks failed: {:?}", e);
+			error!("store sidechain blocks failed: {:?}", e);
 			sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	}

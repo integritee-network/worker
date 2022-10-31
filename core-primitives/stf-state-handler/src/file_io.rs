@@ -50,17 +50,22 @@ pub trait StateFileIo {
 	) -> Result<Self::StateType>;
 
 	/// Compute the state hash of a specific state (returns error if it does not exist).
+	///
+	/// Requires loading and decoding of the state. Use only when loading the state repository on
+	/// initialization of the worker. Computing the state hash in other cases is the
+	/// StateHandler's responsibility.
 	fn compute_hash(
 		&self,
 		shard_identifier: &ShardIdentifier,
 		state_id: StateId,
 	) -> Result<Self::HashType>;
 
-	/// Create an empty (default initialized) state.
-	fn create_initialized(
+	/// Initialize a new shard with a given state.
+	fn initialize_shard(
 		&self,
 		shard_identifier: &ShardIdentifier,
 		state_id: StateId,
+		state: &Self::StateType,
 	) -> Result<Self::HashType>;
 
 	/// Write the state.
@@ -68,7 +73,7 @@ pub trait StateFileIo {
 		&self,
 		shard_identifier: &ShardIdentifier,
 		state_id: StateId,
-		state: Self::StateType,
+		state: &Self::StateType,
 	) -> Result<Self::HashType>;
 
 	/// Remove a state.
@@ -92,41 +97,28 @@ pub mod sgx {
 	use base58::FromBase58;
 	use codec::Decode;
 	use core::fmt::Debug;
-	use ita_stf::AccountId;
-	use itp_sgx_crypto::{
-		ed25519_derivation::DeriveEd25519, key_repository::AccessKey, StateCrypto,
-	};
+	use itp_hashing::Hash;
+	use itp_sgx_crypto::{key_repository::AccessKey, StateCrypto};
 	use itp_sgx_externalities::SgxExternalitiesTrait;
 	use itp_sgx_io::{read as io_read, write as io_write};
-	use itp_stf_interface::InitState;
 	use itp_types::H256;
 	use log::*;
-	use sgx_tcrypto::rsgx_sha256_slice;
-	use sp_core::Pair;
 	use std::{fs, marker::PhantomData, path::Path, sync::Arc};
 
 	/// SGX state file I/O.
-	pub struct SgxStateFileIo<StateKeyRepository, ShieldingKeyRepository, Stf, State> {
+	pub struct SgxStateFileIo<StateKeyRepository, State> {
 		state_key_repository: Arc<StateKeyRepository>,
-		shielding_key_repository: Arc<ShieldingKeyRepository>,
-		_phantom: PhantomData<(State, Stf)>,
+		_phantom: PhantomData<State>,
 	}
 
-	impl<StateKeyRepository, ShieldingKeyRepository, Stf, State>
-		SgxStateFileIo<StateKeyRepository, ShieldingKeyRepository, Stf, State>
+	impl<StateKeyRepository, State> SgxStateFileIo<StateKeyRepository, State>
 	where
 		StateKeyRepository: AccessKey,
 		<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
-		ShieldingKeyRepository: AccessKey,
-		<ShieldingKeyRepository as AccessKey>::KeyType: DeriveEd25519,
-		Stf: InitState<State, AccountId>,
 		State: SgxExternalitiesTrait,
 	{
-		pub fn new(
-			state_key_repository: Arc<StateKeyRepository>,
-			shielding_key_repository: Arc<ShieldingKeyRepository>,
-		) -> Self {
-			SgxStateFileIo { state_key_repository, shielding_key_repository, _phantom: PhantomData }
+		pub fn new(state_key_repository: Arc<StateKeyRepository>) -> Self {
+			SgxStateFileIo { state_key_repository, _phantom: PhantomData }
 		}
 
 		fn read(&self, path: &Path) -> Result<Vec<u8>> {
@@ -135,13 +127,6 @@ pub mod sgx {
 			if bytes.is_empty() {
 				return Ok(bytes)
 			}
-
-			let state_hash = rsgx_sha256_slice(&bytes)?;
-			debug!(
-				"read encrypted state with hash {:?} from {:?}",
-				H256::from_slice(state_hash.as_ref()),
-				path
-			);
 
 			let state_key = self.state_key_repository.retrieve_key()?;
 
@@ -163,15 +148,11 @@ pub mod sgx {
 		}
 	}
 
-	impl<StateKeyRepository, ShieldingKeyRepository, Stf, State> StateFileIo
-		for SgxStateFileIo<StateKeyRepository, ShieldingKeyRepository, Stf, State>
+	impl<StateKeyRepository, State> StateFileIo for SgxStateFileIo<StateKeyRepository, State>
 	where
 		StateKeyRepository: AccessKey,
 		<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
-		ShieldingKeyRepository: AccessKey,
-		<ShieldingKeyRepository as AccessKey>::KeyType: DeriveEd25519,
-		Stf: InitState<State, AccountId>,
-		State: SgxExternalitiesTrait + Debug,
+		State: SgxExternalitiesTrait + Hash<H256> + Debug,
 		<State as SgxExternalitiesTrait>::SgxExternalitiesType: Encode + Decode,
 	{
 		type StateType = State;
@@ -212,24 +193,17 @@ pub mod sgx {
 			shard_identifier: &ShardIdentifier,
 			state_id: StateId,
 		) -> Result<Self::HashType> {
-			if !file_for_state_exists(shard_identifier, state_id) {
-				return Err(Error::InvalidStateId(state_id))
-			}
-
-			let state_file_path = state_file_path(shard_identifier, state_id);
-			let bytes = io_read(state_file_path)?;
-			let state_hash = rsgx_sha256_slice(&bytes)?;
-			Ok(H256::from_slice(state_hash.as_ref()))
+			let state = self.load(shard_identifier, state_id)?;
+			Ok(state.hash())
 		}
 
-		fn create_initialized(
+		fn initialize_shard(
 			&self,
 			shard_identifier: &ShardIdentifier,
 			state_id: StateId,
+			state: &Self::StateType,
 		) -> Result<Self::HashType> {
 			init_shard(&shard_identifier)?;
-			let enclave_account = self.shielding_key_repository.retrieve_key()?.derive_ed25519()?;
-			let state = Stf::init_state(enclave_account.public().into());
 			self.write(shard_identifier, state_id, state)
 		}
 
@@ -239,7 +213,7 @@ pub mod sgx {
 			&self,
 			shard_identifier: &ShardIdentifier,
 			state_id: StateId,
-			state: Self::StateType,
+			state: &Self::StateType,
 		) -> Result<Self::HashType> {
 			let state_path = state_file_path(shard_identifier, state_id);
 			trace!("writing state to: {:?}", state_path);
@@ -247,17 +221,11 @@ pub mod sgx {
 			// Only save the state, the state diff is pruned.
 			let cyphertext = self.encrypt(state.state().encode())?;
 
-			let state_hash = rsgx_sha256_slice(&cyphertext)?;
-
-			debug!(
-				"new encrypted state with hash={:?} and length={} written to {:?}",
-				state_hash,
-				cyphertext.len(),
-				state_path
-			);
+			let state_hash = state.hash();
 
 			io_write(&cyphertext, &state_path)?;
-			Ok(state_hash.into())
+
+			Ok(state_hash)
 		}
 
 		fn remove(&self, shard_identifier: &ShardIdentifier, state_id: StateId) -> Result<()> {

@@ -18,13 +18,29 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use sp_core::H256;
+
+#[cfg(feature = "std")]
+pub mod std_hash;
+
 /// Trait to compute a hash of self.
 pub trait Hash<Output> {
 	fn hash(&self) -> Output;
 }
 
-pub fn hash_from_slice(hash_slize: &[u8]) -> sp_core::H256 {
+// Cannot use the implementation below unfortunately, because our externalities
+// have their own hash implementation which ignores the state diff.
+// /// Implement Hash<H256> for any types that implement encode.
+// ///
+// ///
+// impl<T: Encode> Hash<H256> for T {
+// 	fn hash(&self) -> H256 {
+// 		blake2_256(&self.encode()).into()
+// 	}
+// }
+
+pub fn hash_from_slice(hash_slize: &[u8]) -> H256 {
 	let mut g = [0; 32];
 	g.copy_from_slice(hash_slize);
-	sp_core::H256::from(&mut g)
+	H256::from(&mut g)
 }
