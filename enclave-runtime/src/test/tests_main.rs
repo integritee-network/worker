@@ -146,6 +146,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		tls_ra::seal_handler::test::seal_state_fails_for_invalid_state,
 		tls_ra::seal_handler::test::unseal_seal_state_works,
 		tls_ra::tests::test_tls_ra_server_client_networking,
+		tls_ra::tests::test_state_and_key_provisioning,
 		// RPC tests
 		direct_rpc_tests::get_state_request_works,
 

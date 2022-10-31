@@ -54,18 +54,7 @@ impl HandleState for HandleStateMock {
 	type HashType = H256;
 
 	fn initialize_shard(&self, shard: ShardIdentifier) -> Result<Self::HashType> {
-		let maybe_state = self.state_map.read().unwrap().get(&shard).cloned();
-
-		return match maybe_state {
-			// Initialize with default state, if it doesn't exist yet.
-			None => {
-				let state = StfState::default();
-				let state_hash = state.using_encoded(blake2_256).into();
-				self.state_map.write().unwrap().insert(shard, state);
-				Ok(state_hash)
-			},
-			Some(s) => Ok(s.using_encoded(blake2_256).into()),
-		}
+		self.reset(StfState::default(), &shard)
 	}
 
 	fn load(&self, shard: &ShardIdentifier) -> Result<StfState> {

@@ -1998,6 +1998,7 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "rust-base58",
+ "sgx_crypto_helper",
  "sgx_tcrypto",
  "sgx_tstd",
  "sgx_types",

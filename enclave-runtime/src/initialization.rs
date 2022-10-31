@@ -73,9 +73,7 @@ use itp_settings::{
 	files::STATE_SNAPSHOTS_CACHE_SIZE,
 	worker_mode::{ProvideWorkerMode, WorkerMode},
 };
-use itp_sgx_crypto::{
-	aes, ed25519, ed25519_derivation::DeriveEd25519, rsa3072, AesSeal, Ed25519Seal, Rsa3072Seal,
-};
+use itp_sgx_crypto::{aes, ed25519, rsa3072, AesSeal, Ed25519Seal, Rsa3072Seal};
 use itp_sgx_io::StaticSealedIO;
 use itp_stf_state_handler::{
 	handle_state::HandleState, query_shard_state::QueryShardState,
@@ -115,11 +113,8 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 		Arc::new(EnclaveStateKeyRepository::new(state_key, Arc::new(AesSeal)));
 	GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.initialize(state_key_repository.clone());
 
-	let enclave_call_signer_key = shielding_key.derive_ed25519()?;
-	let state_file_io = Arc::new(EnclaveStateFileIo::new(
-		state_key_repository,
-		enclave_call_signer_key.public().into(),
-	));
+	let state_file_io =
+		Arc::new(EnclaveStateFileIo::new(state_key_repository, shielding_key_repository.clone()));
 	let state_snapshot_repository_loader =
 		StateSnapshotRepositoryLoader::<EnclaveStateFileIo>::new(state_file_io);
 	let state_snapshot_repository =

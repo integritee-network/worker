@@ -93,34 +93,40 @@ pub mod sgx {
 	use codec::Decode;
 	use core::fmt::Debug;
 	use ita_stf::AccountId;
-	use itp_sgx_crypto::{key_repository::AccessKey, StateCrypto};
+	use itp_sgx_crypto::{
+		ed25519_derivation::DeriveEd25519, key_repository::AccessKey, StateCrypto,
+	};
 	use itp_sgx_externalities::SgxExternalitiesTrait;
 	use itp_sgx_io::{read as io_read, write as io_write};
 	use itp_stf_interface::InitState;
 	use itp_types::H256;
 	use log::*;
 	use sgx_tcrypto::rsgx_sha256_slice;
+	use sp_core::Pair;
 	use std::{fs, marker::PhantomData, path::Path, sync::Arc};
 
 	/// SGX state file I/O.
-	pub struct SgxStateFileIo<StateKeyRepository, Stf, State> {
+	pub struct SgxStateFileIo<StateKeyRepository, ShieldingKeyRepository, Stf, State> {
 		state_key_repository: Arc<StateKeyRepository>,
-		enclave_account: AccountId,
+		shielding_key_repository: Arc<ShieldingKeyRepository>,
 		_phantom: PhantomData<(State, Stf)>,
 	}
 
-	impl<StateKeyRepository, Stf, State> SgxStateFileIo<StateKeyRepository, Stf, State>
+	impl<StateKeyRepository, ShieldingKeyRepository, Stf, State>
+		SgxStateFileIo<StateKeyRepository, ShieldingKeyRepository, Stf, State>
 	where
 		StateKeyRepository: AccessKey,
 		<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
+		ShieldingKeyRepository: AccessKey,
+		<ShieldingKeyRepository as AccessKey>::KeyType: DeriveEd25519,
 		Stf: InitState<State, AccountId>,
 		State: SgxExternalitiesTrait,
 	{
 		pub fn new(
 			state_key_repository: Arc<StateKeyRepository>,
-			enclave_account: AccountId,
+			shielding_key_repository: Arc<ShieldingKeyRepository>,
 		) -> Self {
-			SgxStateFileIo { state_key_repository, enclave_account, _phantom: PhantomData }
+			SgxStateFileIo { state_key_repository, shielding_key_repository, _phantom: PhantomData }
 		}
 
 		fn read(&self, path: &Path) -> Result<Vec<u8>> {
@@ -157,10 +163,13 @@ pub mod sgx {
 		}
 	}
 
-	impl<StateKeyRepository, Stf, State> StateFileIo for SgxStateFileIo<StateKeyRepository, Stf, State>
+	impl<StateKeyRepository, ShieldingKeyRepository, Stf, State> StateFileIo
+		for SgxStateFileIo<StateKeyRepository, ShieldingKeyRepository, Stf, State>
 	where
 		StateKeyRepository: AccessKey,
 		<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
+		ShieldingKeyRepository: AccessKey,
+		<ShieldingKeyRepository as AccessKey>::KeyType: DeriveEd25519,
 		Stf: InitState<State, AccountId>,
 		State: SgxExternalitiesTrait + Debug,
 		<State as SgxExternalitiesTrait>::SgxExternalitiesType: Encode + Decode,
@@ -219,7 +228,8 @@ pub mod sgx {
 			state_id: StateId,
 		) -> Result<Self::HashType> {
 			init_shard(&shard_identifier)?;
-			let state = Stf::init_state(self.enclave_account.clone());
+			let enclave_account = self.shielding_key_repository.retrieve_key()?.derive_ed25519()?;
+			let state = Stf::init_state(enclave_account.public().into());
 			self.write(shard_identifier, state_id, state)
 		}
 

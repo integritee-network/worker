@@ -57,7 +57,7 @@ impl From<u8> for Opcode {
 			0 => Opcode::ShieldingKey,
 			1 => Opcode::StateKey,
 			2 => Opcode::State,
-			_ => unimplemented!(),
+			_ => unimplemented!("Unsupported/unknown Opcode for MU-RA exchange"),
 		}
 	}
 }
