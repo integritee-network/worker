@@ -49,6 +49,51 @@ pub(crate) fn start_interval_market_update<E: TeeracleApi>(
 	);
 }
 
+fn execute_update<E: TeeracleApi>(
+	node_api: &ParentchainApi,
+	enclave: &E,
+	tokio_handle: &Handle,
+) {
+	// let updated_extrinsic = match enclave.update_data_xt(/*..*/) {
+	// 	Err(e) => {
+	// 		error!("{:?}", e);
+	// 		incrementnumber_of_request_failures();
+	// 		return
+	// 	},
+	// 	Ok(r) => r
+	// };
+
+	// let extrinsics = match <Vec<OpaqueExtrinsic>>::decode(&mut updated_extrinsic.as_slice()) {
+	// 	Ok(calls) => calls,
+	// 	Err(e) => {
+	// 		error!("Failed to decode opaque extrinsics(s): {:?}: ", e);
+	// 		return
+	// 	},
+	// };
+
+	// extrinsics.into_iter().for_each(|call| {
+	// 	let node_api_clone = node_api.clone();
+	// 	tokio_handle.spawn(async move {
+	// 		let mut hex_encoded_extrinsic = hex::encode(call.encode());
+	// 		hex_encoded_extrinsic.insert_str(0, "0x");
+	// 		debug!("Hex encoded extrinsic to be sent: {}", hex_encoded_extrinsic);
+	// 		println!("[>] Update oracle (send the extrinsic)");
+	// 		let extrinsic_hash =
+	// 			match node_api_clone.send_extrinsic(hex_encoded_extrinsic, XtStatus::InBlock) {
+	// 				Err(e) => {
+	// 					error!("Failed to send extrinsic: {:?}", e);
+	// 					set_extrinsics_inclusion_success(false);
+	// 					return
+	// 				},
+	// 				Ok(hash) => {
+	// 					set_extrinsics_inclusion_success(true);
+	// 					hash
+	// 				},
+	// 			};
+	// 	});
+	// });
+}
+
 fn execute_update_market<E: TeeracleApi>(
 	node_api: &ParentchainApi,
 	enclave: &E,

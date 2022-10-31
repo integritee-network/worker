@@ -82,8 +82,8 @@ where
 	MetricsExporter: ExportMetrics<WeatherInfo>,
 {
 	type LongitudeResult = Result<f32, Error>;
+
 	fn get_longitude(&self, weather_info: WeatherInfo) -> Self::LongitudeResult {
-		// TODO: Top level query logic Implement
 		let query = weather_info.weather_query.clone();
 
 		let base_url = self.oracle_source.base_url()?;

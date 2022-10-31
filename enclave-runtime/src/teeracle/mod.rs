@@ -25,11 +25,11 @@ use crate::{
 use codec::{Decode, Encode};
 use core::slice;
 use ita_exchange_oracle::{
-	create_coin_gecko_oracle, create_coin_market_cap_oracle,
-	exchange_rate_oracle::{ExchangeRateOracle, OracleSource},
+	create_coin_gecko_oracle, create_coin_market_cap_oracle, create_open_meteo_weather_oracle,
+	exchange_rate_oracle::{ExchangeRateOracle, OracleSource, WeatherOracle},
 	metrics_exporter::ExportMetrics,
-	types::TradingPair,
-	GetExchangeRate,
+	types::{TradingPair, WeatherQuery},
+	GetExchangeRate, GetLongitude
 };
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
@@ -48,7 +48,48 @@ pub unsafe extern "C" fn update_data_xt(
 	unchecked_extrinsic: *mut u8,
 	unchecked_extrinsic_size: u32,
 ) -> sgx_status_t {
+	// TODO: Implement and call `update_data_internal()`
+	// let extrinsics = match update_data_internal() {
+	// 	..
+	// }
 	sgx_status_t::SGX_SUCCESS
+}
+
+fn update_data_internal(
+	longitude: String,
+	latitude: String,
+	hourly: String,
+) -> Result<Vec<OpaqueExtrinsic>> {
+	let extrinsics_factory = GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get()?;
+	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
+
+	let mut extrinsic_calls: Vec<OpaqueCall> = Vec::new();
+
+	let open_meteo_weather_oracle = create_open_meteo_weather_oracle(ocall_api.clone());
+	let weather_query = WeatherQuery{ latitude, longitude, hourly };
+	let weather_info = WeatherInfo{ weather_query };
+
+	match get_longitude(weather_info, open_meteo_weather_oracle) {
+		Ok(opaque_call) => extrinsic_calls.push(call),
+		Err(e) => {
+			error!("[-] Failed to get the newest longitude from OpenMeteo. {:?}", e);
+		},
+	};
+	Ok(extrinsic_calls)
+}
+
+fn get_longitude<OracleSourceType, MetricsExporter>(
+	weather_info: WeatherInfo,
+	oracle: WeatherOracle<OracleSourceType, MetricsExporter>,
+) -> Result<OpaqueCall>
+where
+	OracleSourceType: OracleSource,
+	MetricsExporter: ExportMetrics,
+{
+	// TODO Implement here getting the longitude from the oracle and
+	// returning OpaqueCall?
+	// let longitude = oracle.get_longitude(weather_info);
+	Ok(OpaqueCall::default())
 }
 
 /// For now get the crypto/fiat currency exchange rate from coingecko and CoinMarketCap.
