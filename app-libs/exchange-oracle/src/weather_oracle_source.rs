@@ -93,7 +93,7 @@ impl<OracleSourceInfo: Into<WeatherInfo>> OracleSource<OracleSourceInfo> for Wea
 				WEATHER_PATH.into(),
 				&[
 					(WEATHER_PARAM_LATITUDE, &query.latitude),
-					(WEATHER_PARAM_LONGITUDE, &query.longtitude),
+					(WEATHER_PARAM_LONGITUDE, &query.longitude),
 				],
 			)
 			.map_err(Error::RestClient)?;

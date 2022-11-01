@@ -57,7 +57,7 @@ impl MetricsExporterMock {
 	}
 }
 
-impl ExportMetrics for MetricsExporterMock {
+impl<MetricsInfo> ExportMetrics<MetricsInfo> for MetricsExporterMock {
 	fn increment_number_requests(&self, _source: String) {
 		(*self.number_requests.write().unwrap()) += 1;
 	}
@@ -74,13 +74,22 @@ impl ExportMetrics for MetricsExporterMock {
 	) {
 		self.exchange_rates.write().unwrap().push((trading_pair, exchange_rate));
 	}
+
+	fn update(
+		&self,
+		_source: String,
+		_metrics_info: MetricsInfo,
+	) {}
 }
 
 /// Mock oracle source.
 #[derive(Default)]
 pub(crate) struct OracleSourceMock;
 
-impl OracleSource for OracleSourceMock {
+impl<OracleSourceInfo> OracleSource<OracleSourceInfo> for OracleSourceMock {
+
+	type OracleRequestResult = Result<f32, Error>;
+
 	fn metrics_id(&self) -> String {
 		"source_mock".to_string()
 	}
@@ -102,5 +111,12 @@ impl OracleSource for OracleSourceMock {
 		_trading_pair: TradingPair,
 	) -> Result<ExchangeRate, Error> {
 		Ok(ExchangeRate::from_num(42.3f32))
+	}
+
+	fn execute_request(
+		_rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
+		_source_info: OracleSourceInfo,
+	) -> Self::OracleRequestResult {
+		Ok(42.3f32)
 	}
 }

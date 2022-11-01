@@ -26,7 +26,7 @@ pub struct WeatherInfo {
 
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub struct WeatherQuery {
-	pub longtitude: String,
+	pub longitude: String,
 	pub latitude: String,
 	pub hourly: String,
 }
