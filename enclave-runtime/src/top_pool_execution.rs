@@ -137,7 +137,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 		&mut LastSlotSeal,
 	)? {
 		Some(slot) => {
-			if let None = slot.duration_remaining() {
+			if slot.duration_remaining().is_none() {
 				warn!("No time remaining in slot, skipping AURA execution");
 				return Ok(())
 			}
