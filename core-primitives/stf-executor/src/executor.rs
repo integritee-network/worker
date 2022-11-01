@@ -17,7 +17,7 @@
 
 use crate::{
 	error::{Error, Result},
-	traits::{StatePostProcessing, StateUpdateProposer, StfExecuteGenericUpdate, StfUpdateState},
+	traits::{StatePostProcessing, StateUpdateProposer, StfUpdateState},
 	BatchExecutionResult, ExecutedOperation,
 };
 use codec::{Decode, Encode};
@@ -38,8 +38,7 @@ use itp_types::{storage::StorageEntryVerified, OpaqueCall, H256};
 use log::*;
 use sp_runtime::traits::Header as HeaderTrait;
 use std::{
-	collections::BTreeMap, fmt::Debug, format, marker::PhantomData, result::Result as StdResult,
-	sync::Arc, time::Duration, vec::Vec,
+	collections::BTreeMap, fmt::Debug, marker::PhantomData, sync::Arc, time::Duration, vec::Vec,
 };
 
 pub struct StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf> {
@@ -297,44 +296,6 @@ where
 			state_hash_before_execution,
 			state_after_execution: state,
 		})
-	}
-}
-
-impl<OCallApi, StateHandler, NodeMetadataRepository, Stf> StfExecuteGenericUpdate
-	for StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf>
-where
-	StateHandler: HandleState<HashType = H256>,
-	StateHandler::StateT: SgxExternalitiesTrait + Encode,
-	NodeMetadataRepository: AccessNodeMetadata,
-	Stf: UpdateState<
-		StateHandler::StateT,
-		<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
-	>,
-	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
-		IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>,
-{
-	type Externalities = StateHandler::StateT;
-
-	fn execute_update<F, ResultT, ErrorT>(
-		&self,
-		shard: &ShardIdentifier,
-		update_function: F,
-	) -> Result<(ResultT, H256)>
-	where
-		F: FnOnce(Self::Externalities) -> StdResult<(Self::Externalities, ResultT), ErrorT>,
-		ErrorT: Debug,
-	{
-		let (state_lock, state) = self.state_handler.load_for_mutation(&shard)?;
-
-		let (new_state, result) = update_function(state).map_err(|e| {
-			Error::Other(format!("Failed to run update function on STF state: {:?}", e).into())
-		})?;
-
-		let new_state_hash = self
-			.state_handler
-			.write_after_mutation(new_state, state_lock, shard)
-			.map_err(|e| Error::StateHandler(e))?;
-		Ok((result, new_state_hash))
 	}
 }
 

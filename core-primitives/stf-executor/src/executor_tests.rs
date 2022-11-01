@@ -15,11 +15,7 @@
 
 */
 
-use crate::{
-	error::Error,
-	executor::*,
-	traits::{StateUpdateProposer, StfExecuteGenericUpdate},
-};
+use crate::{executor::StfExecutor, traits::StateUpdateProposer};
 use codec::Encode;
 use ita_stf::{
 	stf_sgx_tests::StfState,
@@ -208,33 +204,6 @@ pub fn propose_state_update_always_executes_preprocessing_step() {
 	assert_eq!(*retrieved_value, value);
 	// Ensure that state has not been actually written.
 	assert_ne!(old_state, batch_execution_result.state_after_execution);
-}
-
-pub fn execute_update_works() {
-	// given
-	let shard = ShardIdentifier::default();
-	let (stf_executor, _ocall_api, state_handler) = stf_executor();
-	let _init_hash = state_handler.initialize_shard(shard).unwrap();
-	let key = "my_key".encode();
-	let value = "my_value".encode();
-	let (_, old_state_hash) = state_handler.load_clone(&shard).unwrap();
-
-	// when
-	let (result, updated_state_hash) = stf_executor
-		.execute_update::<_, _, Error>(&shard, |mut state| {
-			state.insert(key.clone(), value.clone());
-			Ok((state, 0))
-		})
-		.unwrap();
-
-	// then
-	assert_eq!(result, 0);
-	assert_ne!(updated_state_hash, old_state_hash);
-
-	// Ensure that state has been written.
-	let (updated_state, _) = state_handler.load_clone(&shard).unwrap();
-	let retrieved_value = updated_state.get(key.as_slice()).unwrap();
-	assert_eq!(*retrieved_value, value);
 }
 
 // Helper Functions

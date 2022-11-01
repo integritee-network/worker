@@ -122,7 +122,6 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		sidechain_rw_lock_works,
 		enclave_rw_lock_works,
 		// unit tests of stf_executor
-		stf_executor_tests::execute_update_works,
 		stf_executor_tests::propose_state_update_always_executes_preprocessing_step,
         stf_executor_tests::propose_state_update_executes_no_trusted_calls_given_no_time,
 		stf_executor_tests::propose_state_update_executes_only_one_trusted_call_given_not_enough_time,
