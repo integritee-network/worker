@@ -214,7 +214,7 @@ impl<
 	{
 		let (write_lock, state) = self
 			.state_handler
-			.load_for_mutation(shard)
+			.load_tentative_for_mutation(shard)
 			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
 
 		// We load a copy of the state and apply the update. In case the update fails, we don't write
@@ -222,7 +222,7 @@ impl<
 		let updated_state = mutating_function(state)?;
 
 		self.state_handler
-			.write_after_mutation(updated_state, write_lock, shard)
+			.write_tentative_after_mutation(updated_state, write_lock, shard)
 			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
 
 		Ok(())
@@ -237,7 +237,7 @@ impl<
 		F: FnOnce(&Self::SidechainState) -> Result<SignedSidechainBlock, ConsensusError>,
 	{
 		self.state_handler
-			.execute_on_current(shard, |state, _| verifying_function(state))
+			.execute_on_tentative(shard, |state, _| verifying_function(state))
 			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?
 	}
 

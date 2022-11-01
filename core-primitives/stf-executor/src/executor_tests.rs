@@ -58,7 +58,7 @@ pub fn propose_state_update_executes_all_calls_given_enough_time() {
 	let trusted_operation_2 = signed_call_2.into_trusted_operation(true);
 	let call_operation_hash_2: H256 = blake2_256(&trusted_operation_2.encode()).into();
 
-	let (_, old_state_hash) = state_handler.load_cloned(&shard).unwrap();
+	let (_, old_state_hash) = state_handler.load_tentative_cloned(&shard).unwrap();
 
 	// when
 	let batch_execution_result = stf_executor
@@ -80,7 +80,7 @@ pub fn propose_state_update_executes_all_calls_given_enough_time() {
 	);
 	// Ensure that state has been updated and not actually written.
 	assert_ne!(
-		state_handler.load_cloned(&shard).unwrap().0,
+		state_handler.load_tentative_cloned(&shard).unwrap().0,
 		batch_execution_result.state_after_execution
 	);
 }
@@ -108,7 +108,7 @@ pub fn propose_state_update_executes_only_one_trusted_call_given_not_enough_time
 	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
 	let trusted_operation_2 = signed_call_2.into_trusted_operation(true);
 
-	let (_, old_state_hash) = state_handler.load_cloned(&shard).unwrap();
+	let (_, old_state_hash) = state_handler.load_tentative_cloned(&shard).unwrap();
 
 	// when
 	let batch_execution_result = stf_executor
@@ -127,7 +127,7 @@ pub fn propose_state_update_executes_only_one_trusted_call_given_not_enough_time
 	assert_eq!(batch_execution_result.get_executed_operation_hashes(), vec![call_operation_hash_1]);
 	// Ensure that state has been updated and not actually written.
 	assert_ne!(
-		state_handler.load_cloned(&shard).unwrap().0,
+		state_handler.load_tentative_cloned(&shard).unwrap().0,
 		batch_execution_result.state_after_execution
 	);
 }
@@ -154,7 +154,7 @@ pub fn propose_state_update_executes_no_trusted_calls_given_no_time() {
 	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
 	let trusted_operation_2 = signed_call_2.into_trusted_operation(true);
 
-	let (_, old_state_hash) = state_handler.load_cloned(&shard).unwrap();
+	let (_, old_state_hash) = state_handler.load_tentative_cloned(&shard).unwrap();
 
 	// when
 	let batch_execution_result = stf_executor
@@ -180,7 +180,7 @@ pub fn propose_state_update_always_executes_preprocessing_step() {
 	let _init_hash = state_handler.initialize_shard(shard).unwrap();
 	let key = "my_key".encode();
 	let value = "my_value".encode();
-	let (old_state, old_state_hash) = state_handler.load_cloned(&shard).unwrap();
+	let (old_state, old_state_hash) = state_handler.load_tentative_cloned(&shard).unwrap();
 
 	// when
 	let batch_execution_result = stf_executor
@@ -226,10 +226,12 @@ pub(crate) fn init_state_and_shard_with_state_handler<S: HandleState<StateT = St
 	let shard = ShardIdentifier::default();
 	let _hash = state_handler.initialize_shard(shard).unwrap();
 
-	let (lock, mut state) = state_handler.load_for_mutation(&shard).unwrap();
+	let (lock, mut state) = state_handler.load_tentative_for_mutation(&shard).unwrap();
 	test_genesis_setup(&mut state);
 
-	state_handler.write_after_mutation(state.clone(), lock, &shard).unwrap();
+	state_handler
+		.write_tentative_after_mutation(state.clone(), lock, &shard)
+		.unwrap();
 
 	(state, shard)
 }

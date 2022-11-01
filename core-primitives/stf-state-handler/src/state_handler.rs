@@ -23,7 +23,7 @@ use std::sync::{RwLock, RwLockWriteGuard};
 
 use crate::{
 	error::{Error, Result},
-	handle_state::HandleState,
+	handle_state::{FinalizeState, HandleState, ResetState},
 	query_shard_state::QueryShardState,
 	state_initializer::InitializeState,
 	state_snapshot_repository::VersionedStateAccess,
@@ -45,7 +45,8 @@ where
 	Repository: VersionedStateAccess,
 {
 	state_snapshot_repository: RwLock<Repository>,
-	states_map_lock: RwLock<StatesMap<Repository::StateType, Repository::HashType>>,
+	tentative_states_map_lock: RwLock<StatesMap<Repository::StateType, Repository::HashType>>,
+	finalized_states_map_lock: RwLock<StatesMap<Repository::StateType, Repository::HashType>>,
 	state_observer: Arc<StateObserver>,
 	state_initializer: Arc<StateInitializer>,
 }
@@ -75,6 +76,9 @@ where
 
 	/// Create a new state handler and initialize its state map with the
 	/// states that are available in the snapshot repository.
+	///
+	/// The snapshots loaded are considered to be finalized state.
+	/// It will populate both tentative and finalized states.
 	pub fn load_from_repository(
 		state_snapshot_repository: Repository,
 		state_observer: Arc<StateObserver>,
@@ -97,7 +101,8 @@ where
 	) -> Self {
 		StateHandler {
 			state_snapshot_repository: RwLock::new(state_snapshot_repository),
-			states_map_lock: RwLock::new(states_map),
+			tentative_states_map_lock: RwLock::new(states_map.clone()),
+			finalized_states_map_lock: RwLock::new(states_map),
 			state_observer,
 			state_initializer,
 		}
@@ -157,14 +162,19 @@ where
 
 	fn initialize_shard(&self, shard: ShardIdentifier) -> Result<Self::HashType> {
 		let initialized_state = self.state_initializer.initialize()?;
-		self.reset(initialized_state, &shard)
+		self.reset_tentative(initialized_state.clone(), &shard)?;
+		self.reset_finalized(initialized_state, &shard)
 	}
 
-	fn execute_on_current<E, R>(&self, shard: &ShardIdentifier, executing_function: E) -> Result<R>
+	fn execute_on_tentative<E, R>(
+		&self,
+		shard: &ShardIdentifier,
+		executing_function: E,
+	) -> Result<R>
 	where
 		E: FnOnce(&Self::StateT, Self::HashType) -> R,
 	{
-		self.states_map_lock
+		self.tentative_states_map_lock
 			.read()
 			.map_err(|_| Error::LockPoisoning)?
 			.get(shard)
@@ -172,23 +182,19 @@ where
 			.ok_or_else(|| Error::InvalidShard(*shard))
 	}
 
-	fn load_cloned(&self, shard: &ShardIdentifier) -> Result<(Self::StateT, Self::HashType)> {
-		let state = self
-			.states_map_lock
-			.read()
-			.map_err(|_| Error::LockPoisoning)?
-			.get(shard)
-			.ok_or_else(|| Error::InvalidShard(*shard))?
-			.clone();
-
-		Ok(state)
+	fn load_tentative_cloned(
+		&self,
+		shard: &ShardIdentifier,
+	) -> Result<(Self::StateT, Self::HashType)> {
+		self.execute_on_tentative(|state, hash| (state.clone(), hash))
 	}
 
-	fn load_for_mutation(
+	fn load_tentative_for_mutation(
 		&self,
 		shard: &ShardIdentifier,
 	) -> Result<(RwLockWriteGuard<'_, Self::WriteLockPayload>, Self::StateT)> {
-		let state_write_lock = self.states_map_lock.write().map_err(|_| Error::LockPoisoning)?;
+		let state_write_lock =
+			self.tentative_states_map_lock.write().map_err(|_| Error::LockPoisoning)?;
 		let state_clone = state_write_lock
 			.get(shard)
 			.ok_or_else(|| Error::InvalidShard(*shard))?
@@ -198,7 +204,7 @@ where
 		Ok((state_write_lock, state_clone))
 	}
 
-	fn write_after_mutation(
+	fn write_tentative_after_mutation(
 		&self,
 		mut state: Self::StateT,
 		mut state_lock: RwLockWriteGuard<'_, Self::WriteLockPayload>,
@@ -216,11 +222,50 @@ where
 		self.state_observer.queue_state_update(*shard, state)?;
 		Ok(state_hash)
 	}
+}
 
-	fn reset(&self, state: Self::StateT, shard: &ShardIdentifier) -> Result<Self::HashType> {
-		let state_write_lock = self.states_map_lock.write().map_err(|_| Error::LockPoisoning)?;
-		self.write_after_mutation(state, state_write_lock, shard)
+impl<Repository, StateObserver, StateInitializer> ResetState
+	for StateHandler<Repository, StateObserver, StateInitializer>
+where
+	Repository: VersionedStateAccess,
+	Repository::StateType: SgxExternalitiesTrait + Hash<Repository::HashType>,
+	Repository::HashType: Copy,
+	StateObserver: UpdateState<Repository::StateType>,
+	StateInitializer: InitializeState<StateType = Repository::StateType>,
+{
+	type StateT = Repository::StateType;
+	type HashType = Repository::HashType;
+
+	fn reset_tentative(
+		&self,
+		state: Self::StateT,
+		shard: &ShardIdentifier,
+	) -> Result<Self::HashType> {
+		let state_write_lock =
+			self.tentative_states_map_lock.write().map_err(|_| Error::LockPoisoning)?;
+		self.write_tentative_after_mutation(state, state_write_lock, shard)
 	}
+
+	fn reset_finalized(
+		&self,
+		state: Self::StateT,
+		shard: &ShardIdentifier,
+	) -> Result<Self::HashType> {
+	}
+}
+
+impl<Repository, StateObserver, StateInitializer> FinalizeState
+	for StateHandler<Repository, StateObserver, StateInitializer>
+where
+	Repository: VersionedStateAccess,
+	Repository::StateType: SgxExternalitiesTrait + Hash<Repository::HashType>,
+	Repository::HashType: Copy,
+	StateObserver: UpdateState<Repository::StateType>,
+	StateInitializer: InitializeState<StateType = Repository::StateType>,
+{
+	fn finalize(&self) -> Result<()> {}
+
+	fn revert_tentative(&self) -> Result<()> {}
 }
 
 impl<Repository, StateObserver, StateInitializer> QueryShardState
@@ -232,12 +277,14 @@ where
 	StateInitializer: InitializeState<StateType = Repository::StateType>,
 {
 	fn shard_exists(&self, shard: &ShardIdentifier) -> Result<bool> {
-		let states_map_lock = self.states_map_lock.read().map_err(|_| Error::LockPoisoning)?;
+		let states_map_lock =
+			self.tentative_states_map_lock.read().map_err(|_| Error::LockPoisoning)?;
 		Ok(states_map_lock.contains_key(shard))
 	}
 
 	fn list_shards(&self) -> Result<Vec<ShardIdentifier>> {
-		let states_map_lock = self.states_map_lock.read().map_err(|_| Error::LockPoisoning)?;
+		let states_map_lock =
+			self.tentative_states_map_lock.read().map_err(|_| Error::LockPoisoning)?;
 		Ok(states_map_lock.keys().cloned().collect())
 	}
 }
@@ -285,16 +332,17 @@ mod tests {
 		let state_handler = default_state_handler();
 		state_handler.initialize_shard(shard_id).unwrap();
 
-		let (lock, _s) = state_handler.load_for_mutation(&shard_id).unwrap();
+		let (lock, _s) = state_handler.load_tentative_for_mutation(&shard_id).unwrap();
 
 		let state_handler_clone = state_handler.clone();
 		let join_handle = thread::spawn(move || {
-			let (latest_state, _) = state_handler_clone.load_cloned(&shard_id).unwrap();
+			let (latest_state, _) = state_handler_clone.load_tentative_cloned(&shard_id).unwrap();
 			assert_eq!(create_state_without_diff(4u64), latest_state);
 		});
 
-		let _hash =
-			state_handler.write_after_mutation(create_state(4u64), lock, &shard_id).unwrap();
+		let _hash = state_handler
+			.write_tentative_after_mutation(create_state(4u64), lock, &shard_id)
+			.unwrap();
 
 		join_handle.join().unwrap();
 	}
@@ -311,9 +359,11 @@ mod tests {
 		));
 		state_handler.initialize_shard(shard_id).unwrap();
 
-		let (lock, _s) = state_handler.load_for_mutation(&shard_id).unwrap();
+		let (lock, _s) = state_handler.load_tentative_for_mutation(&shard_id).unwrap();
 		let new_state = create_state(4u64);
-		state_handler.write_after_mutation(new_state.clone(), lock, &shard_id).unwrap();
+		state_handler
+			.write_tentative_after_mutation(new_state.clone(), lock, &shard_id)
+			.unwrap();
 
 		let reset_state = create_state(5u64);
 		state_handler.reset(reset_state.clone(), &shard_id).unwrap();
@@ -329,8 +379,8 @@ mod tests {
 		let shard_id = ShardIdentifier::random();
 		let state_handler = default_state_handler();
 		state_handler.initialize_shard(shard_id).unwrap();
-		assert!(state_handler.load_cloned(&shard_id).is_ok());
-		assert!(state_handler.load_cloned(&ShardIdentifier::random()).is_err());
+		assert!(state_handler.load_tentative_cloned(&shard_id).is_ok());
+		assert!(state_handler.load_tentative_cloned(&ShardIdentifier::random()).is_err());
 	}
 
 	#[test]
@@ -391,7 +441,7 @@ mod tests {
 		};
 
 		state_handler.reset(state, &shard_id).unwrap();
-		let (loaded_state, _) = state_handler.load_cloned(&shard_id).unwrap();
+		let (loaded_state, _) = state_handler.load_tentative_cloned(&shard_id).unwrap();
 
 		assert_eq!(state_without_diff, loaded_state);
 	}

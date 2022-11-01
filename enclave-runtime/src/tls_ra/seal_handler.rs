@@ -146,7 +146,9 @@ where
 	}
 
 	fn unseal_state(&self, shard: &ShardIdentifier) -> EnclaveResult<Vec<u8>> {
-		Ok(self.state_handler.execute_on_current(shard, |state, _| state.state.encode())?)
+		Ok(self
+			.state_handler
+			.execute_on_tentative(shard, |state, _| state.state.encode())?)
 	}
 }
 
@@ -240,10 +242,14 @@ pub mod test {
 		let shard = ShardIdentifier::default();
 		seal_handler.state_handler.initialize_shard(shard).unwrap();
 		// Fill our mock state:
-		let (lock, mut state) = seal_handler.state_handler.load_for_mutation(&shard).unwrap();
+		let (lock, mut state) =
+			seal_handler.state_handler.load_tentative_for_mutation(&shard).unwrap();
 		let (key, value) = ("my_key", "my_value");
 		state.insert(key.encode(), value.encode());
-		seal_handler.state_handler.write_after_mutation(state, lock, &shard).unwrap();
+		seal_handler
+			.state_handler
+			.write_tentative_after_mutation(state, lock, &shard)
+			.unwrap();
 
 		let state_in_bytes = seal_handler.unseal_state(&shard).unwrap();
 

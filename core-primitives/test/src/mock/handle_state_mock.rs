@@ -55,7 +55,11 @@ impl HandleState for HandleStateMock {
 		self.reset(StfState::default(), &shard)
 	}
 
-	fn execute_on_current<E, R>(&self, shard: &ShardIdentifier, executing_function: E) -> Result<R>
+	fn execute_on_tentative<E, R>(
+		&self,
+		shard: &ShardIdentifier,
+		executing_function: E,
+	) -> Result<R>
 	where
 		E: FnOnce(&Self::StateT, Self::HashType) -> R,
 	{
@@ -67,7 +71,10 @@ impl HandleState for HandleStateMock {
 			.ok_or_else(|| Error::Other(format!("shard is not initialized {:?}", shard).into()))
 	}
 
-	fn load_cloned(&self, shard: &ShardIdentifier) -> Result<(Self::StateT, Self::HashType)> {
+	fn load_tentative_cloned(
+		&self,
+		shard: &ShardIdentifier,
+	) -> Result<(Self::StateT, Self::HashType)> {
 		self.state_map
 			.read()
 			.unwrap()
@@ -80,16 +87,16 @@ impl HandleState for HandleStateMock {
 			.ok_or_else(|| Error::Other(format!("shard is not initialized {:?}", shard).into()))
 	}
 
-	fn load_for_mutation(
+	fn load_tentative_for_mutation(
 		&self,
 		shard: &ShardIdentifier,
 	) -> Result<(RwLockWriteGuard<'_, Self::WriteLockPayload>, StfState)> {
-		let (initialized_state, _) = self.load_cloned(shard)?;
+		let (initialized_state, _) = self.load_tentative_cloned(shard)?;
 		let write_lock = self.state_map.write().unwrap();
 		Ok((write_lock, initialized_state))
 	}
 
-	fn write_after_mutation(
+	fn write_tentative_after_mutation(
 		&self,
 		state: StfState,
 		mut state_lock: RwLockWriteGuard<'_, Self::WriteLockPayload>,
@@ -101,7 +108,7 @@ impl HandleState for HandleStateMock {
 
 	fn reset(&self, state: Self::StateT, shard: &ShardIdentifier) -> Result<Self::HashType> {
 		let write_lock = self.state_map.write().unwrap();
-		self.write_after_mutation(state, write_lock, shard)
+		self.write_tentative_after_mutation(state, write_lock, shard)
 	}
 }
 
@@ -138,7 +145,7 @@ pub mod tests {
 		let shard = ShardIdentifier::default();
 		state_handler.initialize_shard(shard).unwrap();
 
-		assert!(state_handler.load_cloned(&shard).is_ok());
+		assert!(state_handler.load_tentative_cloned(&shard).is_ok());
 		assert!(state_handler.shard_exists(&shard).unwrap());
 	}
 
@@ -146,7 +153,7 @@ pub mod tests {
 		let shard = ShardIdentifier::default();
 		let state_handler = HandleStateMock::from_shard(shard).unwrap();
 
-		assert!(state_handler.load_cloned(&shard).is_ok());
+		assert!(state_handler.load_tentative_cloned(&shard).is_ok());
 		assert!(state_handler.shard_exists(&shard).unwrap());
 	}
 
@@ -155,7 +162,7 @@ pub mod tests {
 		let shard = ShardIdentifier::default();
 		state_handler.initialize_shard(shard).unwrap();
 
-		let loaded_state_result = state_handler.load_cloned(&shard);
+		let loaded_state_result = state_handler.load_tentative_cloned(&shard);
 
 		assert!(loaded_state_result.is_ok());
 	}
@@ -165,14 +172,14 @@ pub mod tests {
 		let shard = ShardIdentifier::default();
 		state_handler.initialize_shard(shard).unwrap();
 
-		let (lock, mut state) = state_handler.load_for_mutation(&shard).unwrap();
+		let (lock, mut state) = state_handler.load_tentative_for_mutation(&shard).unwrap();
 
 		let (key, value) = ("my_key", "my_value");
 		state.insert(key.encode(), value.encode());
 
-		state_handler.write_after_mutation(state, lock, &shard).unwrap();
+		state_handler.write_tentative_after_mutation(state, lock, &shard).unwrap();
 
-		let (updated_state, _) = state_handler.load_cloned(&shard).unwrap();
+		let (updated_state, _) = state_handler.load_tentative_cloned(&shard).unwrap();
 
 		let inserted_value =
 			updated_state.get(key.encode().as_slice()).expect("value for key should exist");
@@ -184,12 +191,15 @@ pub mod tests {
 		let shard = ShardIdentifier::default();
 		state_handler.initialize_shard(shard).unwrap();
 
-		let (lock, _) = state_handler.load_for_mutation(&shard).unwrap();
+		let (lock, _) = state_handler.load_tentative_for_mutation(&shard).unwrap();
 		let initial_state = StfState::init_state(AccountId32::new([0u8; 32]));
 		let state_hash_before_execution = initial_state.hash();
-		state_handler.write_after_mutation(initial_state, lock, &shard).unwrap();
+		state_handler
+			.write_tentative_after_mutation(initial_state, lock, &shard)
+			.unwrap();
 
-		let (_, loaded_state_hash) = state_handler.load_cloned(&shard).unwrap();
+		let (_state_loaded, loaded_state_hash) =
+			state_handler.load_tentative_cloned(&shard).unwrap();
 
 		assert_eq!(state_hash_before_execution, loaded_state_hash);
 	}

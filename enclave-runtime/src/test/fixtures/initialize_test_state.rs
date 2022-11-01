@@ -31,11 +31,13 @@ pub fn init_state<S: HandleState<StateT = SgxExternalities>>(
 	let shard = ShardIdentifier::default();
 
 	let _hash = state_handler.initialize_shard(shard).unwrap();
-	let (lock, _) = state_handler.load_for_mutation(&shard).unwrap();
+	let (lock, _) = state_handler.load_tentative_for_mutation(&shard).unwrap();
 	let mut state = TestStf::init_state(enclave_account);
 	state.prune_state_diff();
 
-	state_handler.write_after_mutation(state.clone(), lock, &shard).unwrap();
+	state_handler
+		.write_tentative_after_mutation(state.clone(), lock, &shard)
+		.unwrap();
 
 	(state, shard)
 }

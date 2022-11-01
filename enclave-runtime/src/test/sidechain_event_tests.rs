@@ -113,7 +113,7 @@ pub fn ensure_events_get_reset_upon_block_proposal() {
 	// Add some events to the state.
 	let topic_hash = H256::from([7; 32]);
 	let event = frame_system::Event::<Runtime>::CodeUpdated;
-	let (lock, mut state) = state_handler.load_for_mutation(&shard_id).unwrap();
+	let (lock, mut state) = state_handler.load_tentative_for_mutation(&shard_id).unwrap();
 	state.execute_with(|| {
 		set_block_number(10);
 		frame_system::Pallet::<Runtime>::deposit_event_indexed(
@@ -121,10 +121,12 @@ pub fn ensure_events_get_reset_upon_block_proposal() {
 			ita_sgx_runtime::Event::System(event),
 		)
 	});
-	state_handler.write_after_mutation(state.clone(), lock, &shard_id).unwrap();
+	state_handler
+		.write_tentative_after_mutation(state.clone(), lock, &shard_id)
+		.unwrap();
 
 	// Check if state now really contains events and topics.
-	let (mut state, _) = state_handler.load_cloned(&shard_id).unwrap();
+	let (mut state, _) = state_handler.load_tentative_cloned(&shard_id).unwrap();
 	assert_eq!(TestStf::get_event_count(&mut state), 1);
 	assert_eq!(TestStf::get_events(&mut state).len(), 1);
 	assert_eq!(TestStf::get_event_topics(&mut state, &topic_hash).len(), 1);
@@ -162,7 +164,7 @@ pub fn ensure_events_get_reset_upon_block_proposal() {
 	.unwrap();
 
 	// Ensure events have been reset.
-	let (mut state, _) = state_handler.load_cloned(&shard_id).unwrap();
+	let (mut state, _) = state_handler.load_tentative_cloned(&shard_id).unwrap();
 	assert_eq!(TestStf::get_event_count(&mut state), 0);
 	assert_eq!(TestStf::get_event_topics(&mut state, &topic_hash).len(), 0);
 	assert_eq!(TestStf::get_events(&mut state).len(), 0);

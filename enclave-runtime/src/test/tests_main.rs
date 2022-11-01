@@ -194,7 +194,7 @@ fn test_compose_block() {
 
 	let signed_top_hashes: Vec<H256> = vec![[94; 32].into(), [1; 32].into()].to_vec();
 
-	let (mut state, _) = state_handler.load_cloned(&shard).unwrap();
+	let (mut state, _) = state_handler.load_tentative_cloned(&shard).unwrap();
 	state.set_block_number(&1);
 	let state_hash_before_execution = state.hash();
 
@@ -445,7 +445,7 @@ fn test_executing_call_updates_account_nonce() {
 
 fn test_call_set_update_parentchain_block() {
 	let (_, _, shard, _, _, state_handler, _) = test_setup();
-	let (mut state, _) = state_handler.load_cloned(&shard).unwrap();
+	let (mut state, _) = state_handler.load_tentative_cloned(&shard).unwrap();
 
 	let block_number = 3;
 	let parent_hash = H256::from([1; 32]);

@@ -183,10 +183,12 @@ where
 		// which scales badly for increasing state size.
 		let shards = self.state_handler.list_shards()?;
 		for shard_id in shards {
-			let (state_lock, mut state) = self.state_handler.load_for_mutation(&shard_id)?;
+			let (state_lock, mut state) =
+				self.state_handler.load_tentative_for_mutation(&shard_id)?;
 			match Stf::update_parentchain_block(&mut state, header.clone()) {
 				Ok(_) => {
-					self.state_handler.write_after_mutation(state, state_lock, &shard_id)?;
+					self.state_handler
+						.write_tentative_after_mutation(state, state_lock, &shard_id)?;
 				},
 				Err(e) => error!("Could not update parentchain block. {:?}: {:?}", shard_id, e),
 			}
@@ -200,7 +202,7 @@ where
 
 					for shard_id in shards {
 						let (state_lock, mut state) =
-							self.state_handler.load_for_mutation(&shard_id)?;
+							self.state_handler.load_tentative_for_mutation(&shard_id)?;
 						trace!("Successfully loaded state, updating states ...");
 
 						// per shard (cid) requests
@@ -216,7 +218,8 @@ where
 							error!("Could not update parentchain block. {:?}: {:?}", shard_id, e)
 						}
 
-						self.state_handler.write_after_mutation(state, state_lock, &shard_id)?;
+						self.state_handler
+							.write_tentative_after_mutation(state, state_lock, &shard_id)?;
 					}
 				},
 				None => debug!("No shards are on the chain yet"),
@@ -261,7 +264,8 @@ where
 	{
 		let ends_at = duration_now() + max_exec_duration;
 
-		let (state, state_hash_before_execution) = self.state_handler.load_cloned(shard)?;
+		let (state, state_hash_before_execution) =
+			self.state_handler.load_tentative_cloned(shard)?;
 
 		// Execute any pre-processing steps.
 		let mut state = prepare_state_function(state);

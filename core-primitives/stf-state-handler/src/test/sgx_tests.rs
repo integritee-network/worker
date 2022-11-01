@@ -109,10 +109,12 @@ pub fn test_write_and_load_state_works() {
 	let state = given_hello_world_state();
 
 	// when
-	let (lock, _s) = state_handler.load_for_mutation(&shard).unwrap();
-	let _hash = state_handler.write_after_mutation(state.clone(), lock, &shard).unwrap();
+	let (lock, _s) = state_handler.load_tentative_for_mutation(&shard).unwrap();
+	let _hash = state_handler
+		.write_tentative_after_mutation(state.clone(), lock, &shard)
+		.unwrap();
 
-	let (result_state, _) = state_handler.load_cloned(&shard).unwrap();
+	let (result_state, _) = state_handler.load_tentative_cloned(&shard).unwrap();
 
 	// then
 	assert_eq!(state.state, result_state.state);
@@ -126,10 +128,12 @@ pub fn test_ensure_subsequent_state_loads_have_same_hash() {
 	let shard: ShardIdentifier = [49u8; 32].into();
 	let (state_handler, shard_dir_handle) = initialize_state_handler_with_directory_handle(&shard);
 
-	let (lock, initial_state) = state_handler.load_for_mutation(&shard).unwrap();
-	state_handler.write_after_mutation(initial_state.clone(), lock, &shard).unwrap();
+	let (lock, initial_state) = state_handler.load_tentative_for_mutation(&shard).unwrap();
+	state_handler
+		.write_tentative_after_mutation(initial_state.clone(), lock, &shard)
+		.unwrap();
 
-	let (_, loaded_state_hash) = state_handler.load_cloned(&shard).unwrap();
+	let (_state_loaded, loaded_state_hash) = state_handler.load_tentative_cloned(&shard).unwrap();
 
 	assert_eq!(initial_state.hash(), loaded_state_hash);
 
@@ -146,7 +150,7 @@ pub fn test_write_access_locks_read_until_finished() {
 	let (state_handler, shard_dir_handle) = initialize_state_handler_with_directory_handle(&shard);
 
 	let new_state_key = "my_new_state".encode();
-	let (lock, mut state_to_mutate) = state_handler.load_for_mutation(&shard).unwrap();
+	let (lock, mut state_to_mutate) = state_handler.load_tentative_for_mutation(&shard).unwrap();
 
 	// spawn a new thread that reads state
 	// this thread should be blocked until the write lock is released, i.e. until
@@ -156,14 +160,17 @@ pub fn test_write_access_locks_read_until_finished() {
 	let state_handler_clone = state_handler.clone();
 	let shard_for_read = shard.clone();
 	let join_handle = thread::spawn(move || {
-		let (state_to_read, _) = state_handler_clone.load_cloned(&shard_for_read).unwrap();
+		let (state_to_read, _) =
+			state_handler_clone.load_tentative_cloned(&shard_for_read).unwrap();
 		assert!(state_to_read.get(new_state_key_for_read.as_slice()).is_some());
 	});
 
 	assert!(state_to_mutate.get(new_state_key.clone().as_slice()).is_none());
 	state_to_mutate.insert(new_state_key, "mega_secret_value".encode());
 
-	let _hash = state_handler.write_after_mutation(state_to_mutate, lock, &shard).unwrap();
+	let _hash = state_handler
+		.write_tentative_after_mutation(state_to_mutate, lock, &shard)
+		.unwrap();
 
 	join_handle.join().unwrap();
 
@@ -179,7 +186,7 @@ pub fn test_state_handler_file_backend_is_initialized() {
 	assert!(1 <= state_handler.list_shards().unwrap().len()); // only greater equal, because there might be other (non-test) shards present
 	assert_eq!(1, number_of_files_in_shard_dir(&shard).unwrap()); // creates a first initialized file
 
-	let _state = state_handler.load_cloned(&shard).unwrap();
+	let _state = state_handler.load_tentative_cloned(&shard).unwrap();
 
 	assert_eq!(1, number_of_files_in_shard_dir(&shard).unwrap());
 
@@ -269,7 +276,7 @@ pub fn test_state_files_from_handler_can_be_loaded_again() {
 	assert_eq!(
 		&"value3".encode(),
 		updated_state_handler
-			.load_cloned(&shard)
+			.load_tentative_cloned(&shard)
 			.unwrap()
 			.0
 			.state()
@@ -346,9 +353,11 @@ fn update_state(
 	shard: &ShardIdentifier,
 	kv_pair: (Vec<u8>, Vec<u8>),
 ) -> H256 {
-	let (lock, mut state_to_mutate) = state_handler.load_for_mutation(shard).unwrap();
+	let (lock, mut state_to_mutate) = state_handler.load_tentative_for_mutation(shard).unwrap();
 	state_to_mutate.insert(kv_pair.0, kv_pair.1);
-	state_handler.write_after_mutation(state_to_mutate, lock, shard).unwrap()
+	state_handler
+		.write_tentative_after_mutation(state_to_mutate, lock, shard)
+		.unwrap()
 }
 
 fn given_hello_world_state() -> StfState {

@@ -38,7 +38,11 @@ pub trait HandleState {
 	/// Execute a function that acts (immutably) on the current state.
 	///
 	/// This allows access to the state, without any cloning.
-	fn execute_on_current<E, R>(&self, shard: &ShardIdentifier, executing_function: E) -> Result<R>
+	fn execute_on_tentative<E, R>(
+		&self,
+		shard: &ShardIdentifier,
+		executing_function: E,
+	) -> Result<R>
 	where
 		E: FnOnce(&Self::StateT, Self::HashType) -> R;
 
@@ -46,14 +50,17 @@ pub trait HandleState {
 	///
 	/// Requires the shard to exist and be initialized, otherwise returns an error.
 	/// Because it results in a clone, prefer using `execute_on_current` whenever possible.
-	fn load_cloned(&self, shard: &ShardIdentifier) -> Result<(Self::StateT, Self::HashType)>;
+	fn load_tentative_cloned(
+		&self,
+		shard: &ShardIdentifier,
+	) -> Result<(Self::StateT, Self::HashType)>;
 
 	/// Load the state in order to mutate it.
 	///
 	/// Returns a write lock to protect against any concurrent access as long as
-	/// the lock is held. Finalize the operation by calling `write` and returning
-	/// the lock again.
-	fn load_for_mutation(
+	/// the lock is held. Finalize the operation by calling `write_tentative_after_mutation`
+	/// and thus returning the lock again.
+	fn load_tentative_for_mutation(
 		&self,
 		shard: &ShardIdentifier,
 	) -> Result<(RwLockWriteGuard<'_, Self::WriteLockPayload>, Self::StateT)>;
@@ -61,15 +68,43 @@ pub trait HandleState {
 	/// Writes the state (without the state diff) encrypted into the enclave.
 	///
 	/// Returns the hash of the saved state (independent of the diff!).
-	fn write_after_mutation(
+	fn write_tentative_after_mutation(
 		&self,
 		state: Self::StateT,
 		state_lock: RwLockWriteGuard<'_, Self::WriteLockPayload>,
 		shard: &ShardIdentifier,
 	) -> Result<Self::HashType>;
 
-	/// Reset (or override) a state.
-	///
-	/// Use in cases where the previous state is of no interest. Otherwise use `load_for_mutation` and `write_after_mutation`.
-	fn reset(&self, state: Self::StateT, shard: &ShardIdentifier) -> Result<Self::HashType>;
+	// /// Reset (or override) a state.
+	// ///
+	// /// Use in cases where the previous state is of no interest. Otherwise use `load_for_mutation` and `write_after_mutation`.
+	// fn reset(&self, state: Self::StateT, shard: &ShardIdentifier) -> Result<Self::HashType>;
+}
+
+pub trait ResetState {
+	type StateT;
+	type HashType;
+
+	/// Reset (or override) the tentative state.
+	fn reset_tentative(
+		&self,
+		state: Self::StateT,
+		shard: &ShardIdentifier,
+	) -> Result<Self::HashType>;
+
+	/// Reset (or override) the finalized state.
+	fn reset_finalized(
+		&self,
+		state: Self::StateT,
+		shard: &ShardIdentifier,
+	) -> Result<Self::HashType>;
+}
+
+/// Trait to handle finalization or roll-back of the tentative state.
+pub trait FinalizeState {
+	/// Finalize the current tentative state (last finalized becomes the tentative state).
+	fn finalize(&self) -> Result<()>;
+
+	/// Revert the current tentative state to the last finalized state (tentative becomes last finalized).
+	fn revert_tentative(&self) -> Result<()>;
 }
