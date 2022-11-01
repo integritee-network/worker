@@ -34,7 +34,13 @@ use sp_runtime::{
 	traits::{Block, NumberFor},
 	MultiSignature,
 };
-use std::{marker::PhantomData, string::ToString, sync::Arc, time::Duration, vec::Vec};
+use std::{
+	marker::PhantomData,
+	string::ToString,
+	sync::Arc,
+	time::{Duration, Instant},
+	vec::Vec,
+};
 
 pub type ExternalitiesFor<T> = <T as StateUpdateProposer>::Externalities;
 ///! `SlotProposer` instance that has access to everything needed to propose a sidechain block.
@@ -88,6 +94,7 @@ where
 		max_duration: Duration,
 	) -> Result<Proposal<SignedSidechainBlock>, ConsensusError> {
 		let latest_parentchain_header = &self.parentchain_header;
+		let mut timer = Instant::now();
 
 		// 1) Retrieve trusted calls from top pool.
 		let trusted_calls = self.top_pool_author.get_pending_trusted_calls(self.shard);
@@ -95,6 +102,9 @@ where
 		if !trusted_calls.is_empty() {
 			debug!("Got following trusted calls from pool: {:?}", trusted_calls);
 		}
+
+		info!("Retrieving calls from TOP pool took {} ms", timer.elapsed().as_millis());
+		timer = Instant::now();
 
 		// 2) Execute trusted calls.
 		let batch_execution_result = self
@@ -124,8 +134,16 @@ where
 			batch_execution_result.get_executed_operation_hashes().to_vec();
 		let number_executed_transactions = executed_operation_hashes.len();
 
+		info!(
+			"STF execution took {} ms for {} calls",
+			timer.elapsed().as_millis(),
+			trusted_calls.len()
+		);
+		timer = Instant::now();
+
 		// Remove all not successfully executed operations from the top pool.
 		let failed_operations = batch_execution_result.get_failed_operations();
+		info!("Removing {} failed operations from TOP pool", failed_operations.len());
 		self.top_pool_author.remove_calls_from_pool(
 			self.shard,
 			failed_operations
@@ -155,6 +173,8 @@ where
 			max_duration.as_millis(),
 			number_executed_transactions
 		);
+
+		info!("Proposing block took {} ms", timer.elapsed().as_millis());
 
 		Ok(Proposal { block: sidechain_block, parentchain_effects: parentchain_extrinsics })
 	}
