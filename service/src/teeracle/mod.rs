@@ -49,7 +49,18 @@ pub(crate) fn start_interval_market_update<E: TeeracleApi>(
 	);
 }
 
-fn execute_update<E: TeeracleApi>(
+pub(crate) fn start_interval_weather_update<E: TeeracleApi>(
+	api: &ParentchainApi,
+	maybe_interval: Option<Duration>,
+	enclave_api: &E,
+	tokio_handle: &Handle,
+) {
+	// TODO: Similar to start_interval_market_update but make call for
+	// Maybe just need to call execute_weather_update above?
+	// TODO: Check in main.rs how start_interval_market_update is called..
+}
+
+fn execute_weather_update<E: TeeracleApi>(
 	node_api: &ParentchainApi,
 	enclave: &E,
 	tokio_handle: &Handle,

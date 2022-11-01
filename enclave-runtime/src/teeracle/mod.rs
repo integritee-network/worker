@@ -41,24 +41,8 @@ use sgx_types::sgx_status_t;
 use sp_runtime::OpaqueExtrinsic;
 use std::{string::String, vec::Vec};
 
-#[no_mangle]
-pub unsafe extern "C" fn update_data_xt(
-	generic_data_ptr: *const u8,
-	generic_data_size: u32,
-	unchecked_extrinsic: *mut u8,
-	unchecked_extrinsic_size: u32,
-) -> sgx_status_t {
-	// TODO: Implement and call `update_data_internal()`
-	// let extrinsics = match update_data_internal() {
-	// 	..
-	// }
-	sgx_status_t::SGX_SUCCESS
-}
-
-fn update_data_internal(
-	longitude: String,
-	latitude: String,
-	hourly: String,
+fn update_weather_data_internal(
+	weather_info: WeatherInfo
 ) -> Result<Vec<OpaqueExtrinsic>> {
 	let extrinsics_factory = GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get()?;
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
@@ -66,8 +50,6 @@ fn update_data_internal(
 	let mut extrinsic_calls: Vec<OpaqueCall> = Vec::new();
 
 	let open_meteo_weather_oracle = create_open_meteo_weather_oracle(ocall_api.clone());
-	let weather_query = WeatherQuery{ latitude, longitude, hourly };
-	let weather_info = WeatherInfo{ weather_query };
 
 	match get_longitude(weather_info, open_meteo_weather_oracle) {
 		Ok(opaque_call) => extrinsic_calls.push(call),
@@ -75,7 +57,8 @@ fn update_data_internal(
 			error!("[-] Failed to get the newest longitude from OpenMeteo. {:?}", e);
 		},
 	};
-	Ok(extrinsic_calls)
+	let extrinsics = extrinsics_factory.create_extrinsics(extrinsic_calls.as_slice(), None)?;
+	Ok(extrinsic)
 }
 
 fn get_longitude<OracleSourceType, MetricsExporter>(
@@ -90,6 +73,38 @@ where
 	// returning OpaqueCall?
 	// let longitude = oracle.get_longitude(weather_info);
 	Ok(OpaqueCall::default())
+}
+
+// TODO: What can be fed to this function? Can a struct be passed? if so how?
+#[no_mangle]
+pub unsafe extern "C" fn update_weather_data_xt(
+	weather_info_ptr: *const u8,
+	weather_info_size: u32,
+	unchecked_extrinsic: *mut u8,
+	unchecked_extrinsic_size: u32,
+) -> sgx_status_t {
+	let mut weather_info_slice =
+		slice::from_raw_parts(weather_info_ptr, weather_info_size as usize);
+	let weather_info = WeatherInfo::decode(&mut weather_info_slice).expect("Can unwrap into WeatherInfo");
+
+	let extrinsics = match update_data_internal(weather_info) {
+		Ok(xts) => xts,
+		Err(e) => {
+			error!("Updating weather info failed: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	let extrinsic_slice =
+		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
+
+	// Save created extrinsic as slice in the return value unchecked_extrinsic.
+	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsics.encode()) {
+		error!("Copying encoded extrinsics into return slice failed: {:?}", e);
+		return sgx_status_t::SGX_ERROR_UNEXPECTED
+	}
+
+	sgx_status_t::SGX_SUCCESS
 }
 
 /// For now get the crypto/fiat currency exchange rate from coingecko and CoinMarketCap.
@@ -190,6 +205,7 @@ where
 
 	let node_metadata_repository = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
 
+	// TODO: Ask Felix or Bigna how to get the extrinsic call index for my new extrinsic
 	let call_ids = node_metadata_repository
 		.get_from_metadata(|m| m.update_exchange_rate_call_indexes())
 		.map_err(Error::NodeMetadataProvider)?
