@@ -535,9 +535,8 @@ mod tests {
 
 		// hard to compare actual numbers but we can at least ensure that the general concept works
 		assert!(
-			proposing_remaining_duration(&slot_info, duration_now()) > SLOT_DURATION / 2
-				&& proposing_remaining_duration(&slot_info, duration_now())
-					< SLOT_DURATION.mul_f32(BLOCK_PROPOSAL_SLOT_PORTION + 0.01)
+			proposing_remaining_duration(&slot_info, duration_now())
+				< SLOT_DURATION.mul_f32(BLOCK_PROPOSAL_SLOT_PORTION + 0.01)
 		);
 	}
 
@@ -546,9 +545,8 @@ mod tests {
 		let slot_info = now_slot_with_default_header(0.into());
 
 		assert!(
-			proposing_remaining_duration(&slot_info, Duration::from_millis(0)) > SLOT_DURATION / 2
-				&& proposing_remaining_duration(&slot_info, Duration::from_millis(0))
-					< SLOT_DURATION.mul_f32(BLOCK_PROPOSAL_SLOT_PORTION + 0.01)
+			proposing_remaining_duration(&slot_info, Duration::from_millis(0))
+				< SLOT_DURATION.mul_f32(BLOCK_PROPOSAL_SLOT_PORTION + 0.01)
 		);
 	}
 

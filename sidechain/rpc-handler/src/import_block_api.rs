@@ -46,9 +46,10 @@ where
 			)
 		})?;
 
-		info!("{}. Blocks: {:?}", RPC_METHOD_NAME_IMPORT_BLOCKS, blocks);
+		debug!("{}. Blocks: {:?}", RPC_METHOD_NAME_IMPORT_BLOCKS, blocks);
 
 		for block in blocks {
+			info!("Add block {} to import queue", block.block.header.block_number);
 			let _ = import_fn(block).map_err(|e| {
 				let error = jsonrpc_core::error::Error::invalid_params_with_details(
 					"Failed to import Block.",

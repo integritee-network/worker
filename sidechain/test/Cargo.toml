@@ -18,7 +18,7 @@ sp-core = { default_features = false, git = "https://github.com/paritytech/subst
 
 # local
 itp-types = { path = "../../core-primitives/types", default_features = false }
-its-primitives = { path = "../primitives", default_features = false }
+its-primitives = { path = "../primitives", default_features = false, features = ["full_crypto"] }
 
 [features]
 default = ["std"]
