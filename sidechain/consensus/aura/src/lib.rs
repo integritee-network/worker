@@ -104,7 +104,7 @@ impl<AuthorityPair, ParentchainBlock, SidechainBlock, Environment, OcallApi, Imp
 
 /// The fraction of total block time we are allowed to be producing the block. So that we have
 /// enough time send create and send the block to fellow validateers.
-pub const BLOCK_PROPOSAL_SLOT_PORTION: f32 = 0.4;
+pub const BLOCK_PROPOSAL_SLOT_PORTION: f32 = 0.7;
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum SlotClaimStrategy {
