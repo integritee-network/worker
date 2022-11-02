@@ -110,9 +110,17 @@ echo "* First transfer: Send ${AMOUNTTRANSFER} funds from Alice's incognito acco
 $CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} --direct transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER}
 echo ""
 
+echo "* Waiting 2 seconds"
+sleep 2
+echo ""
+
 # Send funds from Alice to Bobs account, on worker 2.
 echo "* Second transfer: Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account (on worker 2)"
 $CLIENTWORKER2 trusted --mrenclave ${MRENCLAVE} --direct transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER}
+echo ""
+
+echo "* Waiting 2 seconds"
+sleep 2
 echo ""
 
 echo "* Get balance of Alice's incognito account (on worker 1)"
