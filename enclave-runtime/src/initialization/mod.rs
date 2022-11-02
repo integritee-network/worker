@@ -102,11 +102,8 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 		Arc::new(EnclaveStateKeyRepository::new(state_key, Arc::new(AesSeal)));
 	GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.initialize(state_key_repository.clone());
 
-	let enclave_call_signer_key = shielding_key.derive_ed25519()?;
-	let state_file_io = Arc::new(EnclaveStateFileIo::new(
-		state_key_repository,
-		enclave_call_signer_key.public().into(),
-	));
+	let state_file_io =
+		Arc::new(EnclaveStateFileIo::new(state_key_repository, shielding_key_repository.clone()));
 	let state_snapshot_repository_loader =
 		StateSnapshotRepositoryLoader::<EnclaveStateFileIo>::new(state_file_io);
 	let state_snapshot_repository =
