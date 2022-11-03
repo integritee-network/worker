@@ -89,6 +89,7 @@ echo "* Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's inc
 $CLIENT trusted --mrenclave ${MRENCLAVE} --direct transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER}
 echo ""
 
+# Prevent getter being executed too early and returning an outdated result, before the transfer was made.
 echo "* Waiting 2 seconds"
 sleep 2
 echo ""

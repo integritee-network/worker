@@ -110,6 +110,7 @@ echo "* First transfer: Send ${AMOUNTTRANSFER} funds from Alice's incognito acco
 $CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} --direct transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER}
 echo ""
 
+# Prevent nonce clash when sending direct trusted calls to different workers.
 echo "* Waiting 2 seconds"
 sleep 2
 echo ""
@@ -119,6 +120,7 @@ echo "* Second transfer: Send ${AMOUNTTRANSFER} funds from Alice's incognito acc
 $CLIENTWORKER2 trusted --mrenclave ${MRENCLAVE} --direct transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER}
 echo ""
 
+# Prevent getter being executed too early and returning an outdated result, before the transfer was made.
 echo "* Waiting 2 seconds"
 sleep 2
 echo ""
