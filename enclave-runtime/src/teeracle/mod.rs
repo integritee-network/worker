@@ -28,8 +28,8 @@ use ita_exchange_oracle::{
 	create_coin_gecko_oracle, create_coin_market_cap_oracle, create_open_meteo_weather_oracle,
 	exchange_rate_oracle::{ExchangeRateOracle, OracleSource, WeatherOracle},
 	metrics_exporter::ExportMetrics,
-	types::{TradingPair, WeatherQuery},
-	GetExchangeRate, GetLongitude
+	types::{TradingPair, TradingInfo, WeatherQuery, WeatherInfo},
+	GetExchangeRate, GetLongitude, error::Error,
 };
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
@@ -52,13 +52,13 @@ fn update_weather_data_internal(
 	let open_meteo_weather_oracle = create_open_meteo_weather_oracle(ocall_api.clone());
 
 	match get_longitude(weather_info, open_meteo_weather_oracle) {
-		Ok(opaque_call) => extrinsic_calls.push(call),
+		Ok(opaque_call) => extrinsic_calls.push(opaque_call),
 		Err(e) => {
 			error!("[-] Failed to get the newest longitude from OpenMeteo. {:?}", e);
 		},
 	};
 	let extrinsics = extrinsics_factory.create_extrinsics(extrinsic_calls.as_slice(), None)?;
-	Ok(extrinsic)
+	Ok(extrinsics)
 }
 
 fn get_longitude<OracleSourceType, MetricsExporter>(
@@ -66,16 +66,42 @@ fn get_longitude<OracleSourceType, MetricsExporter>(
 	oracle: WeatherOracle<OracleSourceType, MetricsExporter>,
 ) -> Result<OpaqueCall>
 where
-	OracleSourceType: OracleSource,
-	MetricsExporter: ExportMetrics,
+	OracleSourceType: OracleSource<WeatherInfo, OracleRequestResult = std::result::Result<f32, Error>>,
+	MetricsExporter: ExportMetrics<WeatherInfo>,
 {
-	// TODO Implement here getting the longitude from the oracle and
-	// returning OpaqueCall?
-	// let longitude = oracle.get_longitude(weather_info);
+	let longitude = oracle
+		.get_longitude(weather_info.clone())
+		.map_err(|e| Error::Other(e.into()))?;
+
+	let base_url = oracle.base_url()?;
+	let source_base_url = base_url.as_str();
+
+	println!(
+		"Update the longitude:  {}, for source {}",
+		longitude,
+		source_base_url
+	);
+
+	let node_metadata_repository = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
+
+	// TODO: Ask Felix or Bigna how to get the extrinsic call index for my new extrinsic
+	// let call_ids = node_metadata_repository
+	// 	.get_from_metadata(|m| m.update_exchange_rate_call_indexes())
+	// 	.map_err(Error::NodeMetadataProvider)?
+	// 	.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
+
+	// let call = OpaqueCall::from_tuple(&(
+	// 	call_ids,
+	// 	source_base_url.as_bytes().to_vec(),
+	// 	weather_info.weather_query.key().as_bytes().to_vec(),
+	// 	Some(longitude),
+	// ));
+
+	// Ok(call)
 	Ok(OpaqueCall::default())
 }
 
-// TODO: What can be fed to this function? Can a struct be passed? if so how?
+// TODO Question: What can be fed to this function? Can a struct be passed? if so how?
 #[no_mangle]
 pub unsafe extern "C" fn update_weather_data_xt(
 	weather_info_ptr: *const u8,
@@ -87,7 +113,7 @@ pub unsafe extern "C" fn update_weather_data_xt(
 		slice::from_raw_parts(weather_info_ptr, weather_info_size as usize);
 	let weather_info = WeatherInfo::decode(&mut weather_info_slice).expect("Can unwrap into WeatherInfo");
 
-	let extrinsics = match update_data_internal(weather_info) {
+	let extrinsics = match update_weather_data_internal(weather_info) {
 		Ok(xts) => xts,
 		Err(e) => {
 			error!("Updating weather info failed: {:?}", e);
@@ -187,8 +213,8 @@ fn get_exchange_rate<OracleSourceType, MetricsExporter>(
 	oracle: ExchangeRateOracle<OracleSourceType, MetricsExporter>,
 ) -> Result<OpaqueCall>
 where
-	OracleSourceType: OracleSource,
-	MetricsExporter: ExportMetrics,
+	OracleSourceType: OracleSource<TradingInfo>,
+	MetricsExporter: ExportMetrics<TradingInfo>,
 {
 	let (rate, base_url) = oracle
 		.get_exchange_rate(trading_pair.clone())

@@ -31,6 +31,12 @@ pub struct WeatherQuery {
 	pub hourly: String,
 }
 
+impl WeatherQuery {
+	pub fn key(self) -> String {
+		format!("{}/{}", self.longitude, self.latitude)
+	}
+}
+
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub struct TradingInfo {
 	pub trading_pair: TradingPair,

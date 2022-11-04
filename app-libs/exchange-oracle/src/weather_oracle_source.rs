@@ -48,6 +48,8 @@ const WEATHER_TIMEOUT: Duration = Duration::from_secs(3u64);
 const WEATHER_ROOT_CERTIFICATE: &str =
 	include_str!("certificates/open_meteo_root.pem");
 
+
+// TODO: Change f32 types to appropriate Substrate Fixed Type
 #[derive(Default)]
 pub struct WeatherOracleSource;
 
@@ -55,7 +57,7 @@ impl<OracleSourceInfo: Into<WeatherInfo>> OracleSource<OracleSourceInfo> for Wea
     type OracleRequestResult = Result<f32, Error>;
 
 	fn metrics_id(&self) -> String {
-        "weather".to_string() // TODO: Fix
+        "weather".to_string()
     }
 
 	fn request_timeout(&self) -> Option<Duration> {

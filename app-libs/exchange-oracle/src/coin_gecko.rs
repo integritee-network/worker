@@ -46,7 +46,6 @@ const COINGECKO_TIMEOUT: Duration = Duration::from_secs(3u64);
 const COINGECKO_ROOT_CERTIFICATE: &str =
 	include_str!("certificates/baltimore_cyber_trust_root_v3.pem");
 
-//TODO: Get CoinGecko coins' id from coingecko API ? For now add here the mapping symbol to id
 lazy_static! {
 	static ref SYMBOL_ID_MAP: HashMap<&'static str, &'static str> = HashMap::from([
 		("DOT", "polkadot"),
