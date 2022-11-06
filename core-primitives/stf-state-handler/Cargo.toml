@@ -6,7 +6,7 @@ edition = "2021"
 
 [dependencies]
 # sgx dependencies
-sgx_crypto_helper = { default-features = false, optional = true, features = ["mesalock_sgx"], version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
+sgx_crypto_helper = { default-features = false, optional = true, features = ["mesalock_sgx"], version = "1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "v1.1.6-testing" }
 sgx_tcrypto = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
