@@ -223,7 +223,7 @@ where
 		let (server_signal_sender, mut signal_receiver) = channel::<ServerSignal>();
 		self.register_server_signal_sender(server_signal_sender)?;
 
-		let tcp_listener = net::TcpListener::bind(&socket_addr).expect("Could not listen on port");
+		let tcp_listener = net::TcpListener::bind(socket_addr).expect("Could not listen on port");
 		let tcp_listener =
 			mio::net::TcpListener::from_std(tcp_listener).map_err(WebSocketError::TcpBindError)?;
 		let mut poll = Poll::new()?;
