@@ -29,7 +29,7 @@ use ita_exchange_oracle::{
 	exchange_rate_oracle::{ExchangeRateOracle, OracleSource, WeatherOracle},
 	metrics_exporter::ExportMetrics,
 	types::{TradingPair, TradingInfo, WeatherQuery, WeatherInfo},
-	GetExchangeRate, GetLongitude, error::Error,
+	GetExchangeRate, GetLongitude,
 };
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
@@ -66,14 +66,14 @@ fn get_longitude<OracleSourceType, MetricsExporter>(
 	oracle: WeatherOracle<OracleSourceType, MetricsExporter>,
 ) -> Result<OpaqueCall>
 where
-	OracleSourceType: OracleSource<WeatherInfo, OracleRequestResult = std::result::Result<f32, Error>>,
+	OracleSourceType: OracleSource<WeatherInfo, OracleRequestResult = std::result::Result<f32, ita_exchange_oracle::error::Error>>,
 	MetricsExporter: ExportMetrics<WeatherInfo>,
 {
 	let longitude = oracle
 		.get_longitude(weather_info.clone())
 		.map_err(|e| Error::Other(e.into()))?;
 
-	let base_url = oracle.base_url()?;
+	let base_url = oracle.get_base_url().map_err(|e| Error::Other(e.into()))?;
 	let source_base_url = base_url.as_str();
 
 	println!(
@@ -84,21 +84,20 @@ where
 
 	let node_metadata_repository = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
 
-	// TODO: Ask Felix or Bigna how to get the extrinsic call index for my new extrinsic
-	// let call_ids = node_metadata_repository
-	// 	.get_from_metadata(|m| m.update_exchange_rate_call_indexes())
-	// 	.map_err(Error::NodeMetadataProvider)?
-	// 	.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
+	let call_ids = node_metadata_repository
+		.get_from_metadata(|m| m.update_oracle_call_indexes())
+		.map_err(Error::NodeMetadataProvider)?
+		.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 
-	// let call = OpaqueCall::from_tuple(&(
-	// 	call_ids,
-	// 	source_base_url.as_bytes().to_vec(),
-	// 	weather_info.weather_query.key().as_bytes().to_vec(),
-	// 	Some(longitude),
-	// ));
+	let call = OpaqueCall::from_tuple(&(
+		call_ids,
+		weather_info.weather_query.key().as_bytes().to_vec(),
+		source_base_url.as_bytes().to_vec(),
+		// TODO: Does this work? the type the extrinsic is expecting is BoundedVec<u8, 4096>
+		Some(longitude.encode()),
+	));
 
-	// Ok(call)
-	Ok(OpaqueCall::default())
+	Ok(call)
 }
 
 // TODO Question: What can be fed to this function? Can a struct be passed? if so how?

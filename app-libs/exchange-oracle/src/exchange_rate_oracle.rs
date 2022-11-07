@@ -69,9 +69,15 @@ pub struct WeatherOracle<OracleSourceType, MetricsExporter> {
 }
 
 impl<OracleSourceType, MetricsExporter> WeatherOracle<OracleSourceType, MetricsExporter>
+where
+	OracleSourceType: OracleSource<WeatherInfo>
 {
 	pub fn new(oracle_source: OracleSourceType, metrics_exporter: Arc<MetricsExporter>) -> Self {
 		WeatherOracle { oracle_source, metrics_exporter }
+	}
+
+	pub fn get_base_url(&self) -> Result<Url, Error> {
+		self.oracle_source.base_url()
 	}
 }
 

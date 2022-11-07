@@ -33,7 +33,7 @@ pub struct WeatherQuery {
 
 impl WeatherQuery {
 	pub fn key(self) -> String {
-		format!("{}/{}", self.longitude, self.latitude)
+		format!("{}/{}", self.latitude, self.longitude)
 	}
 }
 
