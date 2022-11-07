@@ -44,6 +44,7 @@ use std::{sync::Arc, vec::Vec};
 pub struct FullParachainHandler {
 	pub genesis_header: HeaderFor<ParentchainBlock>,
 	pub node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
+	// FIXME: Probably should be split up into a parentchain dependent executor and one independent.
 	pub stf_executor: Arc<EnclaveStfExecutor>,
 	pub validator_accessor: Arc<EnclaveValidatorAccessor>,
 	pub extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
@@ -73,7 +74,6 @@ impl FullParachainHandler {
 		let extrinsics_factory =
 			create_extrinsics_factory(genesis_hash, node_metadata_repository.clone())?;
 
-		// FIXME: Probably should be split up into a parentchain dependent executor and one independent.
 		let stf_executor = Arc::new(EnclaveStfExecutor::new(
 			ocall_api,
 			state_handler,
