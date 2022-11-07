@@ -46,7 +46,7 @@ pub struct FullSolochainHandler {
 	pub stf_executor: Arc<EnclaveStfExecutor>,
 	pub validator_accessor: Arc<EnclaveValidatorAccessor>,
 	pub extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
-	pub import_dispatcher: Option<Arc<EnclaveParentchainBlockImportDispatcher>>,
+	pub import_dispatcher: Arc<EnclaveParentchainBlockImportDispatcher>,
 }
 
 impl FullSolochainHandler {
@@ -87,15 +87,15 @@ impl FullSolochainHandler {
 		)?;
 
 		let import_dispatcher = match WorkerModeProvider::worker_mode() {
-			WorkerMode::OffChainWorker => Some(create_offchain_immediate_import_dispatcher(
+			WorkerMode::OffChainWorker => create_offchain_immediate_import_dispatcher(
 				stf_executor.clone(),
 				block_importer,
 				validator_accessor.clone(),
 				extrinsics_factory.clone(),
-			)?),
-			WorkerMode::Sidechain =>
-				Some(create_sidechain_triggered_import_dispatcher(block_importer)),
-			WorkerMode::Teeracle => None,
+			)?,
+			WorkerMode::Sidechain => create_sidechain_triggered_import_dispatcher(block_importer),
+			WorkerMode::Teeracle =>
+				Arc::new(EnclaveParentchainBlockImportDispatcher::new_empty_dispatcher()),
 		};
 
 		let solochain_handler = Arc::new(Self {

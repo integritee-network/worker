@@ -81,6 +81,14 @@ where
 		}
 	}
 
+	pub fn new_empty_dispatcher() -> Self {
+		Self {
+			triggered_dispatcher: None,
+			immediate_dispatcher: None,
+			_phantom: Default::default(),
+		}
+	}
+
 	pub fn triggered_dispatcher(&self) -> Option<Arc<TriggeredDispatcher>> {
 		self.triggered_dispatcher.clone()
 	}
@@ -97,14 +105,10 @@ where
 	ImmediateDispatcher: DispatchBlockImport<SignedBlockType>,
 {
 	fn dispatch_import(&self, blocks: Vec<SignedBlockType>) -> Result<()> {
-		if self.triggered_dispatcher.is_some() && self.immediate_dispatcher.is_some() {
-			return Err(Error::CanNotAssignTwoDispatcher)
-		}
-
-		if let Some(triggered_dispatcher) = &self.triggered_dispatcher {
-			triggered_dispatcher.dispatch_import(blocks)
-		} else if let Some(immediate_dispatcher) = &self.immediate_dispatcher {
+		if let Some(immediate_dispatcher) = &self.immediate_dispatcher {
 			immediate_dispatcher.dispatch_import(blocks)
+		} else if let Some(triggered_dispatcher) = &self.triggered_dispatcher {
+			triggered_dispatcher.dispatch_import(blocks)
 		} else {
 			Err(Error::NoDispatcherAssigned)
 		}

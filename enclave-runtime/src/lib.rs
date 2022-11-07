@@ -371,6 +371,11 @@ pub unsafe extern "C" fn sync_parentchain(
 fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>(
 	blocks_to_sync: Vec<SignedBlock>,
 ) -> Result<()> {
+	if WorkerModeProvider::worker_mode() == WorkerMode::Teeracle {
+		trace!("Not importing any parentchain blocks");
+		return Ok(())
+	}
+
 	let import_dispatcher =
 		if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
 			solochain_handler.import_dispatcher.clone()
@@ -380,14 +385,7 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 			return Err(Error::NoParentchainAssigned)
 		};
 
-	match import_dispatcher {
-		Some(dispatcher) => dispatcher.dispatch_import(blocks_to_sync)?,
-		None => match WorkerModeProvider::worker_mode() {
-			WorkerMode::Teeracle => trace!("Not importing any parentchain blocks"),
-			_ => return Err(Error::CouldNotDispatchBlockImport),
-		},
-	};
-
+	import_dispatcher.dispatch_import(blocks_to_sync)?;
 	Ok(())
 }
 

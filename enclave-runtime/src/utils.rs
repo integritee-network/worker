@@ -83,10 +83,9 @@ pub(crate) fn get_triggered_dispatcher_from_solo_or_parachain(
 }
 
 pub(crate) fn get_triggered_dispatcher(
-	dispatcher: Option<Arc<EnclaveParentchainBlockImportDispatcher>>,
+	dispatcher: Arc<EnclaveParentchainBlockImportDispatcher>,
 ) -> Result<Arc<EnclaveTriggeredParentchainBlockImportDispatcher>> {
 	let triggered_dispatcher = dispatcher
-		.ok_or(Error::ExpectedTriggeredImportDispatcher)?
 		.triggered_dispatcher()
 		.ok_or(Error::ExpectedTriggeredImportDispatcher)?;
 	Ok(triggered_dispatcher)
