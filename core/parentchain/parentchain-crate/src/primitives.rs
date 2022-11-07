@@ -22,7 +22,7 @@ use alloc::vec::Vec;
 use codec::{Decode, Encode};
 
 /// Initialization primitives, used by both service and enclave.
-/// Allows to use one E-call for the initialization of different parentchain types.
+/// Allows to use a single E-call for the initialization of different parentchain types.
 #[derive(Encode, Decode, Clone)]
 pub enum ParentchainInitParams {
 	Grandpa { encoded_params: Vec<u8> },
