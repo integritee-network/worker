@@ -21,7 +21,7 @@ use crate::light_client::light_client_init_params::{GrandpaParams, ParachainPara
 use alloc::vec::Vec;
 use codec::{Decode, Encode};
 
-/// Initialization primitives, used to by both service and enclave.
+/// Initialization primitives, used by both service and enclave.
 /// Allows to use one E-call for the initialization of different parentchain types.
 #[derive(Encode, Decode, Clone)]
 pub enum ParentchainInitParams {
