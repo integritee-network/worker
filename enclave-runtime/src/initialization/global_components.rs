@@ -148,7 +148,6 @@ pub type EnclaveImmediateParentchainBlockImportDispatcher =
 pub type EnclaveParentchainBlockImportDispatcher = BlockImportDispatcher<
 	EnclaveTriggeredParentchainBlockImportDispatcher,
 	EnclaveImmediateParentchainBlockImportDispatcher,
-	SignedParentchainBlock,
 >;
 
 /// Sidechain types

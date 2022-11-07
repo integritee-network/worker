@@ -219,7 +219,8 @@ where
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	PEnvironment:
 		Environment<ParentchainBlock, SignedSidechainBlock, Error = ConsensusError> + Send + Sync,
-	BlockImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>>,
+	BlockImportTrigger:
+		TriggerParentchainBlockImport<SignedBlockType = SignedParentchainBlock<ParentchainBlock>>,
 {
 	debug!("[Aura] Executing aura for slot: {:?}", slot);
 
