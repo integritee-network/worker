@@ -51,7 +51,7 @@ pub trait DispatchBlockImport<SignedBlockType> {
 }
 
 /// Wrapper struct for the actual dispatchers. Allows to define one global type for
-/// both dispatcher without the need to change the global variable when switching
+/// both dispatchers without changing the global variable when switching
 /// the dispatcher type. It also allows for empty dispatchers, for use cases that
 /// do not need block syncing for a specific parentchain type.
 pub struct BlockImportDispatcher<TriggeredDispatcher, ImmediateDispatcher, SignedBlockType> {
