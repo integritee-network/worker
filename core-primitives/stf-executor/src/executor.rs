@@ -122,9 +122,10 @@ where
 			.get_multiple_storages_verified(storage_hashes, header)
 			.map(into_map)?;
 
+		debug!("Apply state diff with {} entries from parentchain block", update_map.len());
 		Stf::apply_state_diff(state, update_map.into());
 
-		debug!("execute STF, call with nonce {}", trusted_call.nonce);
+		debug!("execute on STF, call with nonce {}", trusted_call.nonce);
 		let mut extrinsic_call_backs: Vec<OpaqueCall> = Vec::new();
 		if let Err(e) = Stf::execute_call(
 			state,

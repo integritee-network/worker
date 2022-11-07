@@ -37,7 +37,7 @@ its-consensus-common = { path = "../common", default-features = false }
 itc-parentchain-test = { path = "../../../core/parentchain/test" }
 its-test = { path = "../../test" }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
-tokio = "*"
+tokio = { version = "1.6.1", features = ["full"] }
 
 
 [features]

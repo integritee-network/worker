@@ -80,6 +80,14 @@ impl<ParentchainBlock: ParentchainBlockTrait> SlotInfo<ParentchainBlock> {
 			last_imported_parentchain_head: parentchain_head,
 		}
 	}
+
+	pub fn duration_remaining(&self) -> Option<Duration> {
+		let duration_now = duration_now();
+		if self.ends_at <= duration_now {
+			return None
+		}
+		Some(self.ends_at - duration_now)
+	}
 }
 
 /// The time at which the slot ends.
@@ -199,7 +207,7 @@ mod tests {
 	use core::assert_matches::assert_matches;
 	use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 	use itp_sgx_io::StaticSealedIO;
-	use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader};
+	use itp_types::Block as ParentchainBlock;
 	use its_primitives::{
 		traits::{Block as BlockT, SignBlock},
 		types::block::{Block, SignedBlock},
@@ -244,13 +252,7 @@ mod tests {
 			timestamp: duration_now(),
 			duration: SLOT_DURATION,
 			ends_at: duration_now() + SLOT_DURATION,
-			last_imported_parentchain_head: ParentchainHeader {
-				parent_hash: Default::default(),
-				number: 1,
-				state_root: Default::default(),
-				extrinsics_root: Default::default(),
-				digest: Default::default(),
-			},
+			last_imported_parentchain_head: ParentchainHeaderBuilder::default().build(),
 		}
 	}
 
@@ -304,6 +306,32 @@ mod tests {
 			difference_of_ends_at,
 			ALLOWED_THRESHOLD.as_millis()
 		);
+	}
+
+	#[test]
+	fn duration_remaing_returns_none_if_ends_at_is_in_the_past() {
+		let slot: SlotInfo<ParentchainBlock> = SlotInfo {
+			slot: 1.into(),
+			timestamp: duration_now() - Duration::from_secs(5),
+			duration: SLOT_DURATION,
+			ends_at: duration_now() + SLOT_DURATION - Duration::from_secs(5),
+			last_imported_parentchain_head: ParentchainHeaderBuilder::default().build(),
+		};
+		assert!(slot.duration_remaining().is_none());
+	}
+
+	#[test]
+	fn duration_remaining_returns_some_if_ends_at_is_in_the_future() {
+		let slot: SlotInfo<ParentchainBlock> = SlotInfo {
+			slot: 1.into(),
+			timestamp: duration_now() - Duration::from_secs(5),
+			duration: SLOT_DURATION,
+			ends_at: duration_now() + Duration::from_secs(60),
+			last_imported_parentchain_head: ParentchainHeaderBuilder::default().build(),
+		};
+		let maybe_duration_remaining = slot.duration_remaining();
+		assert!(maybe_duration_remaining.is_some());
+		assert!(maybe_duration_remaining.unwrap() > Duration::from_secs(30));
 	}
 
 	#[test]

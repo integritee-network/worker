@@ -271,7 +271,8 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 		if !timestamp_within_slot(&slot_info, &proposing.block) {
 			warn!(
 				target: logging_target,
-				"⌛️ Discarding proposal for slot {}; block production took too long", *slot,
+				"⌛️ Discarding proposal for slot {}, block number {}; block production took too long", 
+				*slot, proposing.block.block().header().block_number(),
 			);
 
 			return None
