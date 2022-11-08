@@ -21,7 +21,7 @@ use crate::sgx_reexport_prelude::*;
 use crate::{
 	error::Error,
 	exchange_rate_oracle::OracleSource,
-	types::{ExchangeRate, TradingPair, TradingInfo},
+	types::{ExchangeRate, TradingInfo, TradingPair},
 };
 use itc_rest_client::{
 	http_client::{HttpClient, SendWithCertificateVerification},
@@ -70,7 +70,6 @@ impl CoinGeckoSource {
 }
 
 impl<OracleSourceInfo: Into<TradingInfo>> OracleSource<OracleSourceInfo> for CoinGeckoSource {
-
 	type OracleRequestResult = Result<(), Error>;
 
 	fn metrics_id(&self) -> String {

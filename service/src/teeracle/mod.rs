@@ -49,9 +49,7 @@ pub(crate) fn start_interval_market_update<E: TeeracleApi>(
 	);
 
 	schedule_on_repeating_intervals(
-		|| {
-			execute_weather_update(api, enclave_api, tokio_handle)
-		},
+		|| execute_weather_update(api, enclave_api, tokio_handle),
 		interval,
 	);
 }
@@ -78,7 +76,7 @@ fn execute_weather_update<E: TeeracleApi>(
 			increment_number_of_request_failures();
 			return
 		},
-		Ok(r) => r
+		Ok(r) => r,
 	};
 
 	let extrinsics = match <Vec<OpaqueExtrinsic>>::decode(&mut updated_extrinsic.as_slice()) {

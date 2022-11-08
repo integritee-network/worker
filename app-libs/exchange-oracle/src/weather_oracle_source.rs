@@ -21,7 +21,7 @@ use crate::sgx_reexport_prelude::*;
 use crate::{
 	error::Error,
 	exchange_rate_oracle::OracleSource,
-	types::{ExchangeRate, TradingPair, TradingInfo, WeatherInfo, WeatherQuery},
+	types::{ExchangeRate, TradingInfo, TradingPair, WeatherInfo, WeatherQuery},
 };
 use itc_rest_client::{
 	http_client::{HttpClient, SendWithCertificateVerification},
@@ -38,52 +38,49 @@ use std::{
 };
 use url::Url;
 
-
 const WEATHER_URL: &str = "https://api.open-meteo.com";
 const WEATHER_PARAM_LONGITUDE: &str = "longitude";
 const WEATHER_PARAM_LATITUDE: &str = "latitude";
 const WEATHER_PARAM_HOURLY: &str = "hourly";
 const WEATHER_PATH: &str = "v1/forecast";
 const WEATHER_TIMEOUT: Duration = Duration::from_secs(3u64);
-const WEATHER_ROOT_CERTIFICATE: &str =
-	include_str!("certificates/open_meteo_root.pem");
-
+const WEATHER_ROOT_CERTIFICATE: &str = include_str!("certificates/open_meteo_root.pem");
 
 // TODO: Change f32 types to appropriate Substrate Fixed Type
 #[derive(Default)]
 pub struct WeatherOracleSource;
 
 impl<OracleSourceInfo: Into<WeatherInfo>> OracleSource<OracleSourceInfo> for WeatherOracleSource {
-    type OracleRequestResult = Result<f32, Error>;
+	type OracleRequestResult = Result<f32, Error>;
 
 	fn metrics_id(&self) -> String {
-        "weather".to_string()
-    }
+		"weather".to_string()
+	}
 
 	fn request_timeout(&self) -> Option<Duration> {
-        Some(WEATHER_TIMEOUT)
-    }
+		Some(WEATHER_TIMEOUT)
+	}
 
 	fn base_url(&self) -> Result<Url, Error> {
 		Url::parse(WEATHER_URL).map_err(|e| Error::Other(format!("{:?}", e).into()))
-    }
+	}
 
 	/// The server's root certificate. A valid certificate is required to open a tls connection
 	fn root_certificate_content(&self) -> String {
-        WEATHER_ROOT_CERTIFICATE.to_string()
-    }
+		WEATHER_ROOT_CERTIFICATE.to_string()
+	}
 
 	fn execute_exchange_rate_request(
 		&self,
 		rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
 		trading_pair: TradingPair,
 	) -> Result<ExchangeRate, Error> {
-        Err(Error::NoValidData("None".into(), "None".into()))
-    }
+		Err(Error::NoValidData("None".into(), "None".into()))
+	}
 
 	fn execute_request(
 		rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
-		source_info: OracleSourceInfo
+		source_info: OracleSourceInfo,
 	) -> Self::OracleRequestResult {
 		let weather_info: WeatherInfo = source_info.into();
 		let query = weather_info.weather_query;
@@ -102,8 +99,8 @@ impl<OracleSourceInfo: Into<WeatherInfo>> OracleSource<OracleSourceInfo> for Wea
 
 		let open_meteo_weather_struct = response.0;
 
-        Ok(open_meteo_weather_struct.longitude)
-    }
+		Ok(open_meteo_weather_struct.longitude)
+	}
 }
 
 #[derive(Serialize, Deserialize, Debug)]

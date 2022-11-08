@@ -40,7 +40,7 @@ impl WeatherQuery {
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub struct TradingInfo {
 	pub trading_pair: TradingPair,
-	pub exchange_rate: ExchangeRate
+	pub exchange_rate: ExchangeRate,
 }
 /// Market identifier for order
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]

@@ -1,6 +1,4 @@
-
-
 pub trait TradingInfo {
-    type TradingPair;
-    type ExchangeRate;
+	type TradingPair;
+	type ExchangeRate;
 }

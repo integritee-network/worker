@@ -20,7 +20,7 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::{
 	metrics_exporter::ExportMetrics,
-	types::{ExchangeRate, TradingPair, TradingInfo, WeatherInfo},
+	types::{ExchangeRate, TradingInfo, TradingPair, WeatherInfo},
 	Error, GetExchangeRate, GetLongitude,
 };
 use core::time::Duration;
@@ -34,7 +34,6 @@ use url::Url;
 
 /// Oracle source trait used by the `ExchangeRateOracle` (strategy pattern).
 pub trait OracleSource<OracleSourceInfo>: Default {
-
 	type OracleRequestResult;
 
 	fn metrics_id(&self) -> String;
@@ -54,7 +53,7 @@ pub trait OracleSource<OracleSourceInfo>: Default {
 
 	fn execute_request(
 		rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
-		source_info: OracleSourceInfo
+		source_info: OracleSourceInfo,
 	) -> Self::OracleRequestResult;
 }
 
@@ -70,7 +69,7 @@ pub struct WeatherOracle<OracleSourceType, MetricsExporter> {
 
 impl<OracleSourceType, MetricsExporter> WeatherOracle<OracleSourceType, MetricsExporter>
 where
-	OracleSourceType: OracleSource<WeatherInfo>
+	OracleSourceType: OracleSource<WeatherInfo>,
 {
 	pub fn new(oracle_source: OracleSourceType, metrics_exporter: Arc<MetricsExporter>) -> Self {
 		WeatherOracle { oracle_source, metrics_exporter }
@@ -105,12 +104,15 @@ where
 			None,
 		);
 		let mut rest_client = RestClient::new(http_client, base_url);
-		<OracleSourceType as OracleSource<WeatherInfo>>::execute_request(&mut rest_client, weather_info).into()
+		<OracleSourceType as OracleSource<WeatherInfo>>::execute_request(
+			&mut rest_client,
+			weather_info,
+		)
+		.into()
 	}
 }
 
-impl<OracleSourceType, MetricsExporter> ExchangeRateOracle<OracleSourceType, MetricsExporter>
-{
+impl<OracleSourceType, MetricsExporter> ExchangeRateOracle<OracleSourceType, MetricsExporter> {
 	pub fn new(oracle_source: OracleSourceType, metrics_exporter: Arc<MetricsExporter>) -> Self {
 		ExchangeRateOracle { oracle_source, metrics_exporter }
 	}

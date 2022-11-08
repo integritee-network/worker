@@ -20,7 +20,7 @@ use crate::sgx_reexport_prelude::*;
 use crate::{
 	error::Error,
 	exchange_rate_oracle::OracleSource,
-	types::{ExchangeRate, TradingPair, TradingInfo},
+	types::{ExchangeRate, TradingInfo, TradingPair},
 };
 use itc_rest_client::{
 	http_client::{HttpClient, SendWithCertificateVerification},
@@ -32,8 +32,9 @@ use serde::{Deserialize, Serialize};
 use std::{
 	collections::{BTreeMap, HashMap},
 	env,
+	marker::PhantomData,
 	string::{String, ToString},
-	time::Duration, marker::PhantomData,
+	time::Duration,
 };
 use url::Url;
 

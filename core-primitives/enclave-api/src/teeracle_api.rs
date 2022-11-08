@@ -31,11 +31,7 @@ pub trait TeeracleApi: Send + Sync + 'static {
 	) -> EnclaveResult<Vec<u8>>;
 
 	/// update weather data for the corresponding coordinates.
-	fn update_weather_data_xt(
-		&self,
-		longitude: &str,
-		latitude: &str,
-	) -> EnclaveResult<Vec<u8>>;
+	fn update_weather_data_xt(&self, longitude: &str, latitude: &str) -> EnclaveResult<Vec<u8>>;
 }
 
 impl TeeracleApi for Enclave {
@@ -73,11 +69,7 @@ impl TeeracleApi for Enclave {
 
 		Ok(response)
 	}
-	fn update_weather_data_xt(
-		&self,
-		longitude: &str,
-		latitude: &str,
-	) -> EnclaveResult<Vec<u8>> {
+	fn update_weather_data_xt(&self, longitude: &str, latitude: &str) -> EnclaveResult<Vec<u8>> {
 		info!(
 			"TeeracleApi update_weather_data_xt in with latitude: {}, longitude: {}",
 			latitude, longitude

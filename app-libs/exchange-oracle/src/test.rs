@@ -21,12 +21,12 @@
 use crate::{
 	coin_gecko::CoinGeckoSource,
 	coin_market_cap::CoinMarketCapSource,
-	weather_oracle_source::WeatherOracleSource,
 	error::Error,
 	exchange_rate_oracle::{ExchangeRateOracle, OracleSource, WeatherOracle},
 	mock::MetricsExporterMock,
-	GetExchangeRate, TradingPair, GetLongitude,
-	WeatherInfo, types::{WeatherQuery, TradingInfo},
+	types::{TradingInfo, WeatherQuery},
+	weather_oracle_source::WeatherOracleSource,
+	GetExchangeRate, GetLongitude, TradingPair, WeatherInfo,
 };
 use core::assert_matches::assert_matches;
 use std::sync::Arc;
@@ -53,8 +53,9 @@ fn get_longitude_from_open_meteo_works() {
 	let latitude: String = "52.52".into();
 	let hourly: String = "none".into();
 	let oracle = create_weather_oracle::<WeatherOracleSource>();
-	let weather_query = WeatherQuery{ latitude: "52.52".into(), longitude: "13.41".into(), hourly: "none".into() };
-	let weather_info = WeatherInfo{ weather_query };
+	let weather_query =
+		WeatherQuery { latitude: "52.52".into(), longitude: "13.41".into(), hourly: "none".into() };
+	let weather_info = WeatherInfo { weather_query };
 	let expected_longitude = 13.41f32;
 	let response_longitude =
 		oracle.get_longitude(weather_info).expect("Can grab longitude from oracle");
@@ -71,17 +72,21 @@ fn get_exchange_rate_for_undefined_coin_gecko_crypto_currency_fails() {
 	get_exchange_rate_for_undefined_crypto_currency_fails::<CoinGeckoSource>();
 }
 
-fn create_weather_oracle<OracleSourceType: OracleSource<WeatherInfo>>() -> TestWeatherOracle<OracleSourceType> {
+fn create_weather_oracle<OracleSourceType: OracleSource<WeatherInfo>>(
+) -> TestWeatherOracle<OracleSourceType> {
 	let oracle_source = OracleSourceType::default();
 	WeatherOracle::new(oracle_source, Arc::new(MetricsExporterMock::default()))
 }
 
-fn create_exchange_rate_oracle<OracleSourceType: OracleSource<TradingInfo>>() -> TestOracle<OracleSourceType> {
+fn create_exchange_rate_oracle<OracleSourceType: OracleSource<TradingInfo>>(
+) -> TestOracle<OracleSourceType> {
 	let oracle_source = OracleSourceType::default();
 	ExchangeRateOracle::new(oracle_source, Arc::new(MetricsExporterMock::default()))
 }
 
-fn get_exchange_rate_for_undefined_crypto_currency_fails<OracleSourceType: OracleSource<TradingInfo>>() {
+fn get_exchange_rate_for_undefined_crypto_currency_fails<
+	OracleSourceType: OracleSource<TradingInfo>,
+>() {
 	let oracle = create_exchange_rate_oracle::<OracleSourceType>();
 	let trading_pair = TradingPair {
 		crypto_currency: "invalid_coin".to_string(),

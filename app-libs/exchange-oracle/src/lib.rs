@@ -38,11 +38,11 @@ use crate::sgx_reexport_prelude::*;
 use crate::{
 	coin_gecko::CoinGeckoSource,
 	coin_market_cap::CoinMarketCapSource,
-	weather_oracle_source::WeatherOracleSource,
 	error::Error,
-	exchange_rate_oracle::{ExchangeRateOracle, WeatherOracle, OracleSource},
+	exchange_rate_oracle::{ExchangeRateOracle, OracleSource, WeatherOracle},
 	metrics_exporter::MetricsExporter,
 	types::{ExchangeRate, TradingPair, WeatherInfo},
+	weather_oracle_source::WeatherOracleSource,
 };
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use std::sync::Arc;
@@ -50,12 +50,12 @@ use url::Url;
 
 pub mod coin_gecko;
 pub mod coin_market_cap;
-pub mod weather_oracle_source;
 pub mod error;
 pub mod exchange_rate_oracle;
 pub mod metrics_exporter;
-pub mod types;
 pub mod traits;
+pub mod types;
+pub mod weather_oracle_source;
 
 #[cfg(test)]
 mod mock;
