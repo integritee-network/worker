@@ -2409,7 +2409,7 @@ dependencies = [
  "sc-keystore",
  "serde 1.0.147",
  "serde_json 1.0.87",
- "sgx_crypto_helper 1.1.6",
+ "sgx_crypto_helper",
  "sp-application-crypto",
  "sp-core",
  "sp-keyring",
@@ -2508,7 +2508,7 @@ dependencies = [
  "serde 1.0.147",
  "serde_derive 1.0.147",
  "serde_json 1.0.87",
- "sgx_crypto_helper 1.1.6",
+ "sgx_crypto_helper",
  "sgx_types",
  "sgx_urts",
  "sha2 0.7.1",
@@ -2852,7 +2852,7 @@ dependencies = [
  "rustls 0.19.1",
  "serde_derive 1.0.147",
  "serde_json 1.0.87",
- "sgx_crypto_helper 1.1.6",
+ "sgx_crypto_helper",
  "substrate-api-client",
  "thiserror 1.0.37",
  "url 2.3.1",
@@ -2895,7 +2895,7 @@ dependencies = [
  "rcgen",
  "rustls 0.19.0 (git+https://github.com/mesalock-linux/rustls?branch=mesalock_sgx)",
  "rustls 0.19.1",
- "sgx_crypto_helper 1.1.5",
+ "sgx_crypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
@@ -3025,7 +3025,7 @@ dependencies = [
  "log 0.4.17",
  "parity-scale-codec",
  "serde_json 1.0.87",
- "sgx_crypto_helper 1.1.6",
+ "sgx_crypto_helper",
  "sgx_types",
  "sgx_urts",
  "sp-core",
@@ -3185,7 +3185,7 @@ dependencies = [
  "serde 1.0.147",
  "serde_json 1.0.60 (git+https://github.com/mesalock-linux/serde-json-sgx?tag=sgx_1.1.3)",
  "serde_json 1.0.87",
- "sgx_crypto_helper 1.1.6",
+ "sgx_crypto_helper",
  "sgx_rand",
  "sgx_tstd",
  "sgx_types",
@@ -3243,7 +3243,7 @@ dependencies = [
  "itp-types",
  "log 0.4.17",
  "parity-scale-codec",
- "sgx_crypto_helper 1.1.6",
+ "sgx_crypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
@@ -3279,7 +3279,7 @@ dependencies = [
  "parity-scale-codec",
  "rust-base58 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rust-base58 0.0.4 (git+https://github.com/mesalock-linux/rust-base58-sgx?rev=sgx_1.1.3)",
- "sgx_crypto_helper 1.1.6",
+ "sgx_crypto_helper",
  "sgx_tcrypto",
  "sgx_tstd",
  "sgx_types",
@@ -3345,7 +3345,7 @@ dependencies = [
  "itp-types",
  "jsonrpc-core 18.0.0 (git+https://github.com/scs/jsonrpc?branch=no_std_v18)",
  "parity-scale-codec",
- "sgx_crypto_helper 1.1.6",
+ "sgx_crypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
@@ -3406,7 +3406,7 @@ dependencies = [
  "jsonrpc-core 18.0.0 (git+https://github.com/scs/jsonrpc?branch=no_std_v18)",
  "log 0.4.17",
  "parity-scale-codec",
- "sgx_crypto_helper 1.1.6",
+ "sgx_crypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
@@ -6461,20 +6461,6 @@ source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=v1.1.6
 
 [[package]]
 name = "sgx_crypto_helper"
-version = "1.1.5"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?tag=v1.1.5#d2d339cbb005f676bb700059bd51dc689c025f6b"
-dependencies = [
- "itertools",
- "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx)",
- "serde-big-array 0.3.0",
- "serde_derive 1.0.118",
- "sgx_tcrypto",
- "sgx_tstd",
- "sgx_types",
-]
-
-[[package]]
-name = "sgx_crypto_helper"
 version = "1.1.6"
 source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=v1.1.6-testing#9c1bbd52f188f600a212b57c916124245da1b7fd"
 dependencies = [
@@ -7301,7 +7287,7 @@ dependencies = [
 [[package]]
 name = "sp-std"
 version = "4.0.0"
-source = "git+https://github.com/paritytech/substrate.git?branch=master#eae25c901ccd4ef5c3ceb082e3f2c66753879062"
+source = "git+https://github.com/paritytech/substrate.git?branch=master#14f9fb2e5ec839ae554efb898ab966fa4bb4e14d"
 
 [[package]]
 name = "sp-std"
