@@ -21,7 +21,6 @@ thiserror_sgx = { package = "thiserror", version = "1.0.9", git = "https://githu
 
 # local deps
 itp-sgx-externalities = { default-features = false, path = "../../core-primitives/substrate-sgx/externalities" }
-itp-stf-interface = { path = "../../core-primitives/stf-interface", default-features = false }
 itp-storage = { path = "../../core-primitives/storage", default-features = false }
 its-primitives = { path = "../primitives", default-features = false }
 sp-io = { optional = true, default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], path = "../../core-primitives/substrate-sgx/sp-io" }
@@ -44,7 +43,6 @@ std = [
     "sp-core/std",
     # local crates
     "itp-sgx-externalities/std",
-    "itp-stf-interface/std",
     "itp-storage/std",
     "its-primitives/std",
     "sp-io/std",

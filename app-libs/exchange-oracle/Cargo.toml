@@ -28,9 +28,6 @@ itc-rest-client = { path = "../../core/rest-client", default-features = false }
 itp-enclave-metrics = { path = "../../core-primitives/enclave-metrics", default-features = false }
 itp-ocall-api = { path = "../../core-primitives/ocall-api", default-features = false }
 
-[dev-dependencies]
-itp-test = { path = "../../core-primitives/test" }
-
 [features]
 default = ["std"]
 std = [
