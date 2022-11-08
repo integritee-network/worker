@@ -28,7 +28,7 @@ use ita_exchange_oracle::{
 	create_coin_gecko_oracle, create_coin_market_cap_oracle, create_open_meteo_weather_oracle,
 	exchange_rate_oracle::{ExchangeRateOracle, OracleSource, WeatherOracle},
 	metrics_exporter::ExportMetrics,
-	types::{TradingPair, TradingInfo, WeatherQuery, WeatherInfo},
+	types::{TradingInfo, TradingPair, WeatherInfo, WeatherQuery},
 	GetExchangeRate, GetLongitude,
 };
 use itp_component_container::ComponentGetter;
@@ -41,9 +41,7 @@ use sgx_types::sgx_status_t;
 use sp_runtime::OpaqueExtrinsic;
 use std::{string::String, vec::Vec};
 
-fn update_weather_data_internal(
-	weather_info: WeatherInfo
-) -> Result<Vec<OpaqueExtrinsic>> {
+fn update_weather_data_internal(weather_info: WeatherInfo) -> Result<Vec<OpaqueExtrinsic>> {
 	let extrinsics_factory = GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get()?;
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 
@@ -66,21 +64,19 @@ fn get_longitude<OracleSourceType, MetricsExporter>(
 	oracle: WeatherOracle<OracleSourceType, MetricsExporter>,
 ) -> Result<OpaqueCall>
 where
-	OracleSourceType: OracleSource<WeatherInfo, OracleRequestResult = std::result::Result<f32, ita_exchange_oracle::error::Error>>,
+	OracleSourceType: OracleSource<
+		WeatherInfo,
+		OracleRequestResult = std::result::Result<f32, ita_exchange_oracle::error::Error>,
+	>,
 	MetricsExporter: ExportMetrics<WeatherInfo>,
 {
-	let longitude = oracle
-		.get_longitude(weather_info.clone())
-		.map_err(|e| Error::Other(e.into()))?;
+	let longitude =
+		oracle.get_longitude(weather_info.clone()).map_err(|e| Error::Other(e.into()))?;
 
 	let base_url = oracle.get_base_url().map_err(|e| Error::Other(e.into()))?;
 	let source_base_url = base_url.as_str();
 
-	println!(
-		"Update the longitude:  {}, for source {}",
-		longitude,
-		source_base_url
-	);
+	println!("Update the longitude:  {}, for source {}", longitude, source_base_url);
 
 	let node_metadata_repository = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
 
@@ -112,11 +108,13 @@ pub unsafe extern "C" fn update_weather_data_xt(
 ) -> sgx_status_t {
 	let mut weather_info_longitude_slice =
 		slice::from_raw_parts(weather_info_longitude, weather_info_longitude_size as usize);
-	let longitude = String::decode(&mut weather_info_longitude_slice).expect("Can unwrap into WeatherInfo");
+	let longitude =
+		String::decode(&mut weather_info_longitude_slice).expect("Can unwrap into WeatherInfo");
 
 	let mut weather_info_latitude_slice =
 		slice::from_raw_parts(weather_info_latitude, weather_info_latitude_size as usize);
-	let latitude = String::decode(&mut weather_info_latitude_slice).expect("Can unwrap into WeatherInfo");
+	let latitude =
+		String::decode(&mut weather_info_latitude_slice).expect("Can unwrap into WeatherInfo");
 
 	let weather_query = WeatherQuery { longitude, latitude, hourly: " ".into() };
 	let weather_info = WeatherInfo { weather_query };
