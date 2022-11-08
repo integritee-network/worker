@@ -103,14 +103,23 @@ where
 // TODO Question: What can be fed to this function? Can a struct be passed? if so how?
 #[no_mangle]
 pub unsafe extern "C" fn update_weather_data_xt(
-	weather_info_ptr: *const u8,
-	weather_info_size: u32,
+	weather_info_longitude: *const u8,
+	weather_info_longitude_size: u32,
+	weather_info_latitude: *const u8,
+	weather_info_latitude_size: u32,
 	unchecked_extrinsic: *mut u8,
 	unchecked_extrinsic_size: u32,
 ) -> sgx_status_t {
-	let mut weather_info_slice =
-		slice::from_raw_parts(weather_info_ptr, weather_info_size as usize);
-	let weather_info = WeatherInfo::decode(&mut weather_info_slice).expect("Can unwrap into WeatherInfo");
+	let mut weather_info_longitude_slice =
+		slice::from_raw_parts(weather_info_longitude, weather_info_longitude_size as usize);
+	let longitude = String::decode(&mut weather_info_longitude_slice).expect("Can unwrap into WeatherInfo");
+
+	let mut weather_info_latitude_slice =
+		slice::from_raw_parts(weather_info_latitude, weather_info_latitude_size as usize);
+	let latitude = String::decode(&mut weather_info_latitude_slice).expect("Can unwrap into WeatherInfo");
+
+	let weather_query = WeatherQuery { longitude, latitude, hourly: " ".into() };
+	let weather_info = WeatherInfo { weather_query };
 
 	let extrinsics = match update_weather_data_internal(weather_info) {
 		Ok(xts) => xts,
