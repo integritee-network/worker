@@ -14,15 +14,11 @@ sp-core = { git = "https://github.com/paritytech/substrate.git", default-feature
 # scs
 substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.28" }
 
-# integritee
-itp-types = { default-features = false, path = "../../types" }
-
 [features]
 default = ["std"]
 std = [
     "codec/std",
     "sp-core/std",
-    "itp-types/std",
     "substrate-api-client/std",
 ]
 

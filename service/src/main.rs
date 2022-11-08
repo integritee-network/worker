@@ -308,7 +308,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
 			&ra_url,
 			skip_ra,
-		)
+		);
+		info!("State provisioning server stopped.");
 	});
 
 	let tokio_handle = tokio_handle_getter.get_handle();

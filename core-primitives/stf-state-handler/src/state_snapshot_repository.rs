@@ -51,6 +51,8 @@ pub trait VersionedStateAccess {
 	) -> Result<Self::StateType>;
 
 	/// Initialize a new shard.
+	///
+	/// If the shard already exists, it will re-initialize it.
 	fn initialize_new_shard(&mut self, shard_identifier: ShardIdentifier)
 		-> Result<Self::HashType>;
 
@@ -248,11 +250,6 @@ where
 		&mut self,
 		shard_identifier: ShardIdentifier,
 	) -> Result<Self::HashType> {
-		if let Some(state_snapshots) = self.snapshot_history.get(&shard_identifier) {
-			warn!("Shard ({:?}) already exists, will not initialize again", shard_identifier);
-			return state_snapshots.front().map(|s| s.state_hash).ok_or(Error::EmptyRepository)
-		}
-
 		let snapshot_metadata =
 			initialize_shard_with_snapshot(&shard_identifier, self.file_io.as_ref())?;
 

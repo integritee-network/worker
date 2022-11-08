@@ -23,7 +23,3 @@ itc-parentchain-light-client = { path = "../../core/parentchain/light-client" }
 itp-enclave-api-ffi = { path = "ffi" }
 itp-settings = { path = "../settings" }
 itp-types = { path = "../types" }
-
-
-[dev-dependencies]
-mockall = "0.11"

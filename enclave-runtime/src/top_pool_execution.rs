@@ -108,14 +108,12 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	let sidechain_block_import_queue_worker =
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT.get()?;
 
-	let sidechain_block_queue_start = Instant::now();
-
 	let latest_parentchain_header =
 		sidechain_block_import_queue_worker.process_queue(&current_parentchain_header)?;
 
 	info!(
 		"Elapsed time to process sidechain block import queue: {} ms",
-		sidechain_block_queue_start.elapsed().as_millis()
+		start_time.elapsed().as_millis()
 	);
 
 	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
@@ -132,8 +130,6 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 
 	let authority = Ed25519Seal::unseal_from_static_file()?;
 
-	info!("Elapsed time before AURA execution: {} ms", start_time.elapsed().as_millis());
-
 	match yield_next_slot(
 		slot_beginning_timestamp,
 		SLOT_DURATION,
@@ -141,12 +137,12 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 		&mut LastSlotSeal,
 	)? {
 		Some(slot) => {
-			let remaining_time = slot.ends_at - slot.timestamp;
-			info!(
-				"Remaining slot time for aura: {} ms, {}% of slot time",
-				remaining_time.as_millis(),
-				(remaining_time.as_millis() as f64 / slot.duration.as_millis() as f64) * 100f64
-			);
+			if slot.duration_remaining().is_none() {
+				warn!("No time remaining in slot, skipping AURA execution");
+				return Ok(())
+			}
+
+			log_remaining_slot_duration(&slot, "Before AURA");
 
 			let shards = state_handler.list_shards()?;
 			let env = ProposerFactory::<Block, _, _, _>::new(
@@ -156,7 +152,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 			);
 
 			let (blocks, opaque_calls) = exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _, _>(
-				slot,
+				slot.clone(),
 				authority,
 				ocall_api.clone(),
 				parentchain_import_dispatcher,
@@ -169,13 +165,17 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 			// Drop lock as soon as we don't need it anymore.
 			drop(_enclave_write_lock);
 
+			log_remaining_slot_duration(&slot, "After AURA");
+
 			send_blocks_and_extrinsics::<Block, _, _, _, _>(
 				blocks,
 				opaque_calls,
 				ocall_api,
 				validator_access.as_ref(),
 				extrinsics_factory.as_ref(),
-			)?
+			)?;
+
+			log_remaining_slot_duration(&slot, "After broadcasting and sending extrinsic");
 		},
 		None => {
 			debug!("No slot yielded. Skipping block production.");
@@ -270,4 +270,24 @@ where
 	validator_access.execute_mut_on_validator(|v| v.send_extrinsics(xts))?;
 
 	Ok(())
+}
+
+fn log_remaining_slot_duration<B: BlockTrait<Hash = H256>>(
+	slot_info: &SlotInfo<B>,
+	stage_name: &str,
+) {
+	match slot_info.duration_remaining() {
+		None => {
+			info!("No time remaining in slot (id: {:?}, stage: {})", slot_info.slot, stage_name);
+		},
+		Some(remainder) => {
+			info!(
+				"Remaining time in slot (id: {:?}, stage {}): {} ms, {}% of slot time",
+				slot_info.slot,
+				stage_name,
+				remainder.as_millis(),
+				(remainder.as_millis() as f64 / slot_info.duration.as_millis() as f64) * 100f64
+			);
+		},
+	};
 }
