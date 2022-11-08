@@ -24,9 +24,9 @@ ws = { version = "0.9.1", features = ["ssl"] }
 
 # scs / integritee
 my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node.git", branch = "szp/polkadot-v0.9.29" }
-pallet-evm = { optional = true, git = "https://github.com/integritee-network/frontier.git", branch = "polkadot-v0.9.28" }
-substrate-api-client = { features = ["ws-client"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.28" }
-substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.28" }
+pallet-evm = { optional = true, git = "https://github.com/integritee-network/frontier.git", branch = "polkadot-v0.9.29" }
+substrate-api-client = { features = ["ws-client"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.29" }
+substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.29" }
 teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "szp/polkadot-v0.9.29" }
 
 # substrate dependencies
