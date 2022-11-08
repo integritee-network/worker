@@ -19,7 +19,7 @@ use itp_types::ShardIdentifier;
 use log::*;
 use sgx_types::*;
 use std::{
-	net::TcpListener,
+	net::{TcpListener, TcpStream},
 	os::unix::io::AsRawFd,
 };
 
