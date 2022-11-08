@@ -89,10 +89,10 @@ impl<OracleSourceInfo: Into<TradingInfo>> OracleSource<OracleSourceInfo> for Coi
 	}
 
 	fn execute_request(
-		rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
+		_rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
 		source_info: OracleSourceInfo,
 	) -> Self::OracleRequestResult {
-		let trading_info: TradingInfo = source_info.into();
+		let _trading_info: TradingInfo = source_info.into();
 		// TODO Implement me
 		Ok(())
 	}

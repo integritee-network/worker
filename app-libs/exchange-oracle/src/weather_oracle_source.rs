@@ -21,27 +21,24 @@ use crate::sgx_reexport_prelude::*;
 use crate::{
 	error::Error,
 	exchange_rate_oracle::OracleSource,
-	types::{ExchangeRate, TradingInfo, TradingPair, WeatherInfo, WeatherQuery},
+	types::{ExchangeRate, TradingPair, WeatherInfo},
 };
 use itc_rest_client::{
 	http_client::{HttpClient, SendWithCertificateVerification},
 	rest_client::RestClient,
 	RestGet, RestPath,
 };
-use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::{
-	collections::HashMap,
 	string::{String, ToString},
 	time::Duration,
-	vec::Vec,
 };
 use url::Url;
 
 const WEATHER_URL: &str = "https://api.open-meteo.com";
 const WEATHER_PARAM_LONGITUDE: &str = "longitude";
 const WEATHER_PARAM_LATITUDE: &str = "latitude";
-const WEATHER_PARAM_HOURLY: &str = "hourly";
+// const WEATHER_PARAM_HOURLY: &str = "hourly"; // TODO: Add to Query
 const WEATHER_PATH: &str = "v1/forecast";
 const WEATHER_TIMEOUT: Duration = Duration::from_secs(3u64);
 const WEATHER_ROOT_CERTIFICATE: &str = include_str!("certificates/open_meteo_root.pem");
@@ -51,7 +48,7 @@ const WEATHER_ROOT_CERTIFICATE: &str = include_str!("certificates/open_meteo_roo
 pub struct WeatherOracleSource;
 
 impl<OracleSourceInfo: Into<WeatherInfo>> OracleSource<OracleSourceInfo> for WeatherOracleSource {
-	type OracleRequestResult = Result<f32, Error>;
+	type OracleRequestResult = Result<f32, Error>; // TODO: Change from f32 type
 
 	fn metrics_id(&self) -> String {
 		"weather".to_string()
@@ -72,8 +69,8 @@ impl<OracleSourceInfo: Into<WeatherInfo>> OracleSource<OracleSourceInfo> for Wea
 
 	fn execute_exchange_rate_request(
 		&self,
-		rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
-		trading_pair: TradingPair,
+		_rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
+		_trading_pair: TradingPair,
 	) -> Result<ExchangeRate, Error> {
 		Err(Error::NoValidData("None".into(), "None".into()))
 	}

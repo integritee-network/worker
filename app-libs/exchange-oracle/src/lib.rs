@@ -39,7 +39,7 @@ use crate::{
 	coin_gecko::CoinGeckoSource,
 	coin_market_cap::CoinMarketCapSource,
 	error::Error,
-	exchange_rate_oracle::{ExchangeRateOracle, OracleSource, WeatherOracle},
+	exchange_rate_oracle::{ExchangeRateOracle, WeatherOracle},
 	metrics_exporter::MetricsExporter,
 	types::{ExchangeRate, TradingPair, WeatherInfo},
 	weather_oracle_source::WeatherOracleSource,

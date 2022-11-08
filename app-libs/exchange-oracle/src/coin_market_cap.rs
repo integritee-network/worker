@@ -32,7 +32,6 @@ use serde::{Deserialize, Serialize};
 use std::{
 	collections::{BTreeMap, HashMap},
 	env,
-	marker::PhantomData,
 	string::{String, ToString},
 	time::Duration,
 };
@@ -97,12 +96,12 @@ impl<OracleSourceInfo: Into<TradingInfo>> OracleSource<OracleSourceInfo> for Coi
 	}
 
 	fn execute_request(
-		rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
+		_rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
 		source_info: OracleSourceInfo,
 	) -> Self::OracleRequestResult {
 		let trading_info: TradingInfo = source_info.into();
-		let fiat_currency = trading_info.trading_pair.fiat_currency;
-		let crypto_currency = trading_info.trading_pair.crypto_currency;
+		let _fiat_currency = trading_info.trading_pair.fiat_currency;
+		let _crypto_currency = trading_info.trading_pair.crypto_currency;
 		// TODO Implement me
 		Ok(())
 	}

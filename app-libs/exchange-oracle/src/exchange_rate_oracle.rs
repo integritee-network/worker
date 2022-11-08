@@ -62,6 +62,7 @@ pub struct ExchangeRateOracle<OracleSourceType, MetricsExporter> {
 	metrics_exporter: Arc<MetricsExporter>,
 }
 
+#[allow(unused)]
 pub struct WeatherOracle<OracleSourceType, MetricsExporter> {
 	oracle_source: OracleSourceType,
 	metrics_exporter: Arc<MetricsExporter>,
@@ -108,7 +109,6 @@ where
 			&mut rest_client,
 			weather_info,
 		)
-		.into()
 	}
 }
 

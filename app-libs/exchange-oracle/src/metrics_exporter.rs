@@ -34,7 +34,7 @@ pub trait ExportMetrics<MetricsInfo> {
 		trading_pair: TradingPair,
 	);
 
-	fn update(&self, source: String, metrics_info: MetricsInfo);
+	fn update_weather(&self, source: String, metrics_info: MetricsInfo);
 }
 
 pub trait UpdateMetric<MetricInfo> {
@@ -50,8 +50,8 @@ impl<OCallApi, MetricInfo> UpdateMetric<MetricInfo> for MetricsExporter<OCallApi
 where
 	OCallApi: EnclaveMetricsOCallApi,
 {
-	fn update_metric(&self, metric: OracleMetric<MetricInfo>) {
-		// Implement me
+	fn update_metric(&self, _metric: OracleMetric<MetricInfo>) {
+		// TODO: Implement me
 	}
 }
 
@@ -98,7 +98,7 @@ where
 		));
 	}
 
-	fn update(&self, source: String, metrics_info: MetricsInfo) {
-		//TODO: Implement me
+	fn update_weather(&self, _source: String, _metrics_info: MetricsInfo) {
+		// TODO: Implement me
 	}
 }
