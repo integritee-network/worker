@@ -27,6 +27,7 @@ use ita_stf::{Index, KeyPair, TrustedCall, TrustedGetter, TrustedOperation};
 use log::*;
 use my_node_runtime::Balance;
 use sp_core::{crypto::Ss58Codec, Pair};
+use std::boxed::Box;
 
 #[derive(Parser)]
 pub struct SetBalanceCommand {
@@ -53,7 +54,7 @@ impl SetBalanceCommand {
 			self.amount,
 			self.amount,
 		)
-		.sign(&KeyPair::Sr25519(signer), nonce, &mrenclave, &shard)
+		.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
 		let _ = perform_trusted_operation(cli, trusted_args, &top);
 	}

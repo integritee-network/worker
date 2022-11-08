@@ -40,6 +40,7 @@ use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_application_crypto::sr25519;
 use sp_core::{sr25519 as sr25519_core, Pair};
 use std::{
+	boxed::Box,
 	string::ToString,
 	sync::mpsc::{channel, Receiver},
 	thread, time,
@@ -149,7 +150,12 @@ impl BenchmarkCommands {
 				account.public().into(),
 				initial_balance,
 			)
-			.sign(&KeyPair::Sr25519(funding_account_keys.clone()), nonce, &mrenclave, &shard)
+			.sign(
+				&KeyPair::Sr25519(Box::new(funding_account_keys.clone())),
+				nonce,
+				&mrenclave,
+				&shard,
+			)
 			.into_trusted_operation(trusted_args.direct);
 
 			// For the last account we wait for confirmation in order to ensure all accounts were setup correctly
@@ -201,7 +207,7 @@ impl BenchmarkCommands {
 						new_account.public().into(),
 						EXISTENTIAL_DEPOSIT,
 					)
-					.sign(&KeyPair::Sr25519(client.account.clone()), nonce, &mrenclave, &shard)
+					.sign(&KeyPair::Sr25519(Box::new(client.account.clone())), nonce, &mrenclave, &shard)
 					.into_trusted_operation(trusted_args.direct);
 
 					let last_iteration = i == self.number_iterations - 1;
@@ -251,7 +257,7 @@ fn get_balance(
 ) -> Option<u128> {
 	let getter = Getter::trusted(
 		TrustedGetter::free_balance(account.public().into())
-			.sign(&KeyPair::Sr25519(account.clone())),
+			.sign(&KeyPair::Sr25519(Box::new(account.clone()))),
 	);
 
 	let getter_start_timer = Instant::now();
@@ -270,7 +276,8 @@ fn get_nonce(
 	direct_client: &DirectClient,
 ) -> Index {
 	let getter = Getter::trusted(
-		TrustedGetter::nonce(account.public().into()).sign(&KeyPair::Sr25519(account.clone())),
+		TrustedGetter::nonce(account.public().into())
+			.sign(&KeyPair::Sr25519(Box::new(account.clone()))),
 	);
 
 	let getter_start_timer = Instant::now();

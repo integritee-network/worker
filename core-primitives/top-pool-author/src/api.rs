@@ -190,7 +190,7 @@ mod tests {
 			AccountKeyring::Bob.public().into(),
 			1000u128,
 		)
-		.sign(&KeyPair::Ed25519(signer()), 1, &[1u8; 32], &ShardIdentifier::default());
+		.sign(&KeyPair::Ed25519(Box::new(signer())), 1, &[1u8; 32], &ShardIdentifier::default());
 		TrustedOperation::indirect_call(trusted_call_signed)
 	}
 
