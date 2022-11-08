@@ -116,6 +116,7 @@ where
 	}
 
 	/// TrustedOperation was pruned from the pool.
+	#[allow(clippy::or_fun_call)]
 	pub fn pruned(&mut self, block_hash: SidechainBlockHash, tx: &H) {
 		debug!(target: "txpool", "[{:?}] Pruned at {:?}", tx, block_hash);
 		self.fire(tx, |s| s.in_block(block_hash));

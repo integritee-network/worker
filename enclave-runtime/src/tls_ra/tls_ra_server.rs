@@ -90,7 +90,7 @@ where
 	fn read_shard(&mut self) -> EnclaveResult<ShardIdentifier> {
 		let mut shard_holder = ShardIdentifier::default();
 		let shard = shard_holder.as_fixed_bytes_mut();
-		self.tls_stream.read(shard)?;
+		self.tls_stream.read_exact(shard)?;
 		Ok(shard.into())
 	}
 
@@ -135,14 +135,14 @@ where
 		let payload_length = bytes.len() as u64;
 		self.write_header(TcpHeader::new(opcode, payload_length))?;
 		debug!("Write payload - opcode: {:?}, payload_length: {}", opcode, payload_length);
-		self.tls_stream.write(bytes)?;
+		self.tls_stream.write_all(bytes)?;
 		Ok(())
 	}
 
 	/// Sends the header which includes the payload length and the Opcode indicating the payload type.
 	fn write_header(&mut self, tcp_header: TcpHeader) -> EnclaveResult<()> {
-		self.tls_stream.write(&tcp_header.opcode.to_bytes())?;
-		self.tls_stream.write(&tcp_header.payload_length.to_be_bytes())?;
+		self.tls_stream.write_all(&tcp_header.opcode.to_bytes())?;
+		self.tls_stream.write_all(&tcp_header.payload_length.to_be_bytes())?;
 		debug!(
 			"Write header - opcode: {:?}, payload length: {}",
 			tcp_header.opcode, tcp_header.payload_length

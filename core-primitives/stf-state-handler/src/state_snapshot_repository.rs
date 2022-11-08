@@ -111,7 +111,7 @@ where
 	) -> Result<&mut VecDeque<StateSnapshotMetaData<FileIo::HashType>>> {
 		self.snapshot_history
 			.get_mut(shard_identifier)
-			.ok_or(Error::InvalidShard(*shard_identifier))
+			.ok_or_else(|| Error::InvalidShard(*shard_identifier))
 	}
 
 	fn get_snapshot_history(
@@ -120,7 +120,7 @@ where
 	) -> Result<&VecDeque<StateSnapshotMetaData<FileIo::HashType>>> {
 		self.snapshot_history
 			.get(shard_identifier)
-			.ok_or(Error::InvalidShard(*shard_identifier))
+			.ok_or_else(|| Error::InvalidShard(*shard_identifier))
 	}
 
 	fn get_latest_snapshot_metadata(

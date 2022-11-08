@@ -73,7 +73,7 @@ async fn get_author_url_of_last_finalized_sidechain_block<NodeApi: PalletTeerexA
 ) -> Result<String> {
 	let enclave = node_api
 		.worker_for_shard(shard, None)?
-		.ok_or(Error::NoWorkerForShardFound(*shard))?;
+		.ok_or_else(|| Error::NoWorkerForShardFound(*shard))?;
 	let worker_api_direct = DirectWorkerApi::new(enclave.url);
 	Ok(worker_api_direct.get_mu_ra_url()?)
 }

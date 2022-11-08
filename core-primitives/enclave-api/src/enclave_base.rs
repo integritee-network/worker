@@ -185,7 +185,7 @@ impl EnclaveBase for Enclave {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
 		let pubkey_size = SHIELDING_KEY_SIZE;
-		let mut pubkey = vec![0u8; pubkey_size as usize];
+		let mut pubkey = vec![0u8; pubkey_size];
 
 		let result = unsafe {
 			ffi::get_rsa_encryption_pubkey(
@@ -207,7 +207,7 @@ impl EnclaveBase for Enclave {
 
 	fn get_ecc_signing_pubkey(&self) -> EnclaveResult<ed25519::Public> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
-		let mut pubkey = [0u8; SIGNING_KEY_SIZE as usize];
+		let mut pubkey = [0u8; SIGNING_KEY_SIZE];
 
 		let result = unsafe {
 			ffi::get_ecc_signing_pubkey(
@@ -226,7 +226,7 @@ impl EnclaveBase for Enclave {
 
 	fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
-		let mut mr_enclave = [0u8; MR_ENCLAVE_SIZE as usize];
+		let mut mr_enclave = [0u8; MR_ENCLAVE_SIZE];
 
 		let result = unsafe {
 			ffi::get_mrenclave(
@@ -251,7 +251,7 @@ fn init_parentchain_components_ffi(
 	let mut retval = sgx_status_t::SGX_SUCCESS;
 
 	let latest_header_size = HEADER_MAX_SIZE;
-	let mut latest_header = vec![0u8; latest_header_size as usize];
+	let mut latest_header = vec![0u8; latest_header_size];
 
 	let result = unsafe {
 		ffi::init_parentchain_components(

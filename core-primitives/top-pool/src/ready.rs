@@ -301,7 +301,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 				.map(|hash| ready.get(hash).map(|x| x.operation.operation.clone()))
 				.collect()
 		}
-		return vec![]
+		vec![]
 	}
 
 	/// Removes a subtree of operations from the ready pool.
