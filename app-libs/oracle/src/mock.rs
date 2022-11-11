@@ -22,8 +22,8 @@ use std::sync::SgxRwLock as RwLock;
 use std::sync::RwLock;
 
 use crate::{
-	error::Error, traits::OracleSource, metrics_exporter::ExportMetrics,
-	types::ExchangeRate, TradingPair,
+	error::Error, metrics_exporter::ExportMetrics, traits::OracleSource, types::ExchangeRate,
+	TradingPair,
 };
 use itc_rest_client::{
 	http_client::{HttpClient, SendWithCertificateVerification},

@@ -180,7 +180,8 @@ impl RestPath<String> for CoinMarketCapMarket {
 mod tests {
 	use super::*;
 	use crate::{
-		oracles::exchange_rate_oracle::ExchangeRateOracle, mock::MetricsExporterMock, GetExchangeRate,
+		mock::MetricsExporterMock, oracles::exchange_rate_oracle::ExchangeRateOracle,
+		GetExchangeRate,
 	};
 	use core::assert_matches::assert_matches;
 	use std::sync::Arc;

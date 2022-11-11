@@ -18,12 +18,7 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use crate::{
-	metrics_exporter::ExportMetrics,
-	types::WeatherInfo,
-	traits::OracleSource,
-	Error,
-};
+use crate::{metrics_exporter::ExportMetrics, traits::OracleSource, types::WeatherInfo, Error};
 use itc_rest_client::{
 	http_client::{HttpClient, SendWithCertificateVerification},
 	rest_client::RestClient,

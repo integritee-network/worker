@@ -28,17 +28,17 @@ pub mod sgx_reexport_prelude {
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use core::time::Duration;
-use url::Url;
-use std::string::String;
 use crate::{
-	Error,
 	types::{ExchangeRate, TradingPair},
+	Error,
 };
+use core::time::Duration;
 use itc_rest_client::{
 	http_client::{HttpClient, SendWithCertificateVerification},
 	rest_client::RestClient,
 };
+use std::string::String;
+use url::Url;
 
 pub trait OracleSource<OracleSourceInfo>: Default {
 	type OracleRequestResult;

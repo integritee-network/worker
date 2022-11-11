@@ -20,8 +20,8 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::{
 	metrics_exporter::ExportMetrics,
-	types::{ExchangeRate, TradingPair, TradingInfo},
 	traits::OracleSource,
+	types::{ExchangeRate, TradingInfo, TradingPair},
 	Error,
 };
 use itc_rest_client::{

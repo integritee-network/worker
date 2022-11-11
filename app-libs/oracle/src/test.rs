@@ -20,15 +20,14 @@
 
 use crate::{
 	error::Error,
-	oracles::exchange_rate_oracle::{ExchangeRateOracle, WeatherOracle},
 	mock::MetricsExporterMock,
-	types::{TradingInfo, WeatherQuery},
-	traits::OracleSource,
 	oracle_sources::{
+		coin_gecko::CoinGeckoSource, coin_market_cap::CoinMarketCapSource,
 		weather_oracle_source::WeatherOracleSource,
-		coin_gecko::CoinGeckoSource,
-		coin_market_cap::CoinMarketCapSource
 	},
+	oracles::exchange_rate_oracle::{ExchangeRateOracle, WeatherOracle},
+	traits::OracleSource,
+	types::{TradingInfo, WeatherQuery},
 	GetExchangeRate, GetLongitude, TradingPair, WeatherInfo,
 };
 use core::assert_matches::assert_matches;

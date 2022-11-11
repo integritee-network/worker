@@ -32,10 +32,7 @@ pub mod sgx_reexport_prelude {
 	pub use url_sgx as url;
 }
 
-use crate::{
-	error::Error,
-	metrics_exporter::MetricsExporter,
-};
+use crate::{error::Error, metrics_exporter::MetricsExporter};
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use std::sync::Arc;
 
@@ -45,16 +42,12 @@ pub mod traits;
 pub mod types;
 
 pub mod oracles;
-pub use oracles::{
-	exchange_rate_oracle::ExchangeRateOracle,
-	weather_oracle::WeatherOracle,
-};
+pub use oracles::{exchange_rate_oracle::ExchangeRateOracle, weather_oracle::WeatherOracle};
 
 pub mod oracle_sources;
 pub use oracle_sources::{
-	coin_market_cap::CoinMarketCapSource,
-	coin_gecko::CoinGeckoSource,
-	weather_oracle_source::WeatherOracleSource
+	coin_gecko::CoinGeckoSource, coin_market_cap::CoinMarketCapSource,
+	weather_oracle_source::WeatherOracleSource,
 };
 
 #[cfg(test)]
