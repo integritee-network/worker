@@ -26,13 +26,13 @@ use codec::{Decode, Encode};
 use core::slice;
 use ita_oracle::{
 	create_coin_gecko_oracle, create_coin_market_cap_oracle, create_open_meteo_weather_oracle,
+	metrics_exporter::ExportMetrics,
 	oracles::{
 		exchange_rate_oracle::{ExchangeRateOracle, GetExchangeRate},
-		weather_oracle::{WeatherOracle, GetLongitude},
+		weather_oracle::{GetLongitude, WeatherOracle},
 	},
-	metrics_exporter::ExportMetrics,
-	types::{TradingInfo, TradingPair, WeatherInfo, WeatherQuery},
 	traits::OracleSource,
+	types::{TradingInfo, TradingPair, WeatherInfo, WeatherQuery},
 };
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
