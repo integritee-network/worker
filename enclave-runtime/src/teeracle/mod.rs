@@ -47,7 +47,7 @@ fn update_weather_data_internal(weather_info: WeatherInfo) -> Result<Vec<OpaqueE
 
 	let mut extrinsic_calls: Vec<OpaqueCall> = Vec::new();
 
-	let open_meteo_weather_oracle = create_open_meteo_weather_oracle(ocall_api.clone());
+	let open_meteo_weather_oracle = create_open_meteo_weather_oracle(ocall_api);
 
 	match get_longitude(weather_info, open_meteo_weather_oracle) {
 		Ok(opaque_call) => extrinsic_calls.push(opaque_call),
