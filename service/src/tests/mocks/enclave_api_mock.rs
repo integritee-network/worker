@@ -15,12 +15,12 @@
 
 */
 
-use codec::Decode;
+use codec::{Decode, Encode};
 use core::fmt::Debug;
 use frame_support::sp_runtime::traits::Block as ParentchainBlockTrait;
 use itc_parentchain::primitives::{
 	ParentchainInitParams,
-	ParentchainInitParams::{Grandpa, Parachain},
+	ParentchainInitParams::{Parachain, Solochain},
 };
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain, EnclaveResult};
 use itp_settings::worker::MR_ENCLAVE_SIZE;
@@ -48,8 +48,8 @@ impl EnclaveBase for EnclaveMock {
 		params: ParentchainInitParams,
 	) -> EnclaveResult<Header> {
 		let genesis_header_encoded = match params {
-			Grandpa { params } => params,
-			Parachain { params } => params,
+			Solochain { params } => params.genesis_header.encode(),
+			Parachain { params } => params.genesis_header.encode(),
 		};
 		let header = Header::decode(&mut genesis_header_encoded.as_slice())?;
 		Ok(header)

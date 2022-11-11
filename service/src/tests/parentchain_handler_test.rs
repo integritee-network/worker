@@ -22,8 +22,9 @@ use crate::{
 use itc_parentchain::{
 	light_client::light_client_init_params::SimpleParams, primitives::ParentchainInitParams,
 };
+use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 use itp_node_api::api_client::ChainApi;
-use std::{sync::Arc, vec::Vec};
+use std::sync::Arc;
 
 #[test]
 fn test_number_of_synced_blocks() {
@@ -35,7 +36,7 @@ fn test_number_of_synced_blocks() {
 
 	let enclave_api_mock = EnclaveMock;
 	let parentchain_params: ParentchainInitParams =
-		SimpleParams { genesis_header: Default::default() }.into();
+		SimpleParams { genesis_header: ParentchainHeaderBuilder::default().build() }.into();
 
 	let parentchain_handler = ParentchainHandler::new(
 		parentchain_api_mock,
