@@ -20,102 +20,33 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::{
 	metrics_exporter::ExportMetrics,
-	types::{ExchangeRate, TradingInfo, TradingPair, WeatherInfo},
-	Error, GetExchangeRate, GetLongitude,
+	types::{ExchangeRate, TradingPair, TradingInfo},
+	traits::OracleSource,
+	Error,
 };
-use core::time::Duration;
 use itc_rest_client::{
 	http_client::{HttpClient, SendWithCertificateVerification},
 	rest_client::RestClient,
 };
 use log::*;
-use std::{string::String, sync::Arc, time::Instant};
+use std::{sync::Arc, time::Instant};
 use url::Url;
 
-/// Oracle source trait used by the `ExchangeRateOracle` (strategy pattern).
-pub trait OracleSource<OracleSourceInfo>: Default {
-	type OracleRequestResult;
-
-	fn metrics_id(&self) -> String;
-
-	fn request_timeout(&self) -> Option<Duration>;
-
-	fn base_url(&self) -> Result<Url, Error>;
-
-	/// The server's root certificate. A valid certificate is required to open a tls connection
-	fn root_certificate_content(&self) -> String;
-
-	fn execute_exchange_rate_request(
-		&self,
-		rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
-		trading_pair: TradingPair,
-	) -> Result<ExchangeRate, Error>;
-
-	fn execute_request(
-		rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
-		source_info: OracleSourceInfo,
-	) -> Self::OracleRequestResult;
-}
-
+#[allow(unused)]
 pub struct ExchangeRateOracle<OracleSourceType, MetricsExporter> {
 	oracle_source: OracleSourceType,
 	metrics_exporter: Arc<MetricsExporter>,
-}
-
-#[allow(unused)]
-pub struct WeatherOracle<OracleSourceType, MetricsExporter> {
-	oracle_source: OracleSourceType,
-	metrics_exporter: Arc<MetricsExporter>,
-}
-
-impl<OracleSourceType, MetricsExporter> WeatherOracle<OracleSourceType, MetricsExporter>
-where
-	OracleSourceType: OracleSource<WeatherInfo>,
-{
-	pub fn new(oracle_source: OracleSourceType, metrics_exporter: Arc<MetricsExporter>) -> Self {
-		WeatherOracle { oracle_source, metrics_exporter }
-	}
-
-	pub fn get_base_url(&self) -> Result<Url, Error> {
-		self.oracle_source.base_url()
-	}
-}
-
-impl<OracleSourceType, MetricsExporter> GetLongitude
-	for WeatherOracle<OracleSourceType, MetricsExporter>
-where
-	OracleSourceType: OracleSource<WeatherInfo, OracleRequestResult = Result<f32, Error>>,
-	MetricsExporter: ExportMetrics<WeatherInfo>,
-{
-	type LongitudeResult = Result<f32, Error>;
-
-	fn get_longitude(&self, weather_info: WeatherInfo) -> Self::LongitudeResult {
-		let query = weather_info.weather_query.clone();
-
-		let base_url = self.oracle_source.base_url()?;
-		let root_certificate = self.oracle_source.root_certificate_content();
-
-		debug!("Get longitude from URI: {}, query: {:?}", base_url, query);
-
-		let http_client = HttpClient::new(
-			SendWithCertificateVerification::new(root_certificate),
-			true,
-			self.oracle_source.request_timeout(),
-			None,
-			None,
-		);
-		let mut rest_client = RestClient::new(http_client, base_url);
-		<OracleSourceType as OracleSource<WeatherInfo>>::execute_request(
-			&mut rest_client,
-			weather_info,
-		)
-	}
 }
 
 impl<OracleSourceType, MetricsExporter> ExchangeRateOracle<OracleSourceType, MetricsExporter> {
 	pub fn new(oracle_source: OracleSourceType, metrics_exporter: Arc<MetricsExporter>) -> Self {
 		ExchangeRateOracle { oracle_source, metrics_exporter }
 	}
+}
+
+pub trait GetExchangeRate {
+	/// Get the cryptocurrency/fiat_currency exchange rate
+	fn get_exchange_rate(&self, trading_pair: TradingPair) -> Result<(ExchangeRate, Url), Error>;
 }
 
 impl<OracleSourceType, MetricsExporter> GetExchangeRate

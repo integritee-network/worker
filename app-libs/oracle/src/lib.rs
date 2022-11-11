@@ -32,30 +32,30 @@ pub mod sgx_reexport_prelude {
 	pub use url_sgx as url;
 }
 
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-use crate::sgx_reexport_prelude::*;
-
 use crate::{
-	coin_gecko::CoinGeckoSource,
-	coin_market_cap::CoinMarketCapSource,
 	error::Error,
-	exchange_rate_oracle::{ExchangeRateOracle, WeatherOracle},
 	metrics_exporter::MetricsExporter,
-	types::{ExchangeRate, TradingPair, WeatherInfo},
-	weather_oracle_source::WeatherOracleSource,
 };
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use std::sync::Arc;
-use url::Url;
 
-pub mod coin_gecko;
-pub mod coin_market_cap;
 pub mod error;
-pub mod exchange_rate_oracle;
 pub mod metrics_exporter;
 pub mod traits;
 pub mod types;
-pub mod weather_oracle_source;
+
+pub mod oracles;
+pub use oracles::{
+	exchange_rate_oracle::ExchangeRateOracle,
+	weather_oracle::WeatherOracle,
+};
+
+pub mod oracle_sources;
+pub use oracle_sources::{
+	coin_market_cap::CoinMarketCapSource,
+	coin_gecko::CoinGeckoSource,
+	weather_oracle_source::WeatherOracleSource
+};
 
 #[cfg(test)]
 mod mock;
@@ -88,14 +88,4 @@ pub fn create_open_meteo_weather_oracle<OCallApi: EnclaveMetricsOCallApi>(
 	ocall_api: Arc<OCallApi>,
 ) -> OpenMeteoWeatherOracle<OCallApi> {
 	WeatherOracle::new(WeatherOracleSource {}, Arc::new(MetricsExporter::new(ocall_api)))
-}
-
-pub trait GetExchangeRate {
-	/// Get the cryptocurrency/fiat_currency exchange rate
-	fn get_exchange_rate(&self, trading_pair: TradingPair) -> Result<(ExchangeRate, Url), Error>;
-}
-
-pub trait GetLongitude {
-	type LongitudeResult;
-	fn get_longitude(&self, weather_info: WeatherInfo) -> Self::LongitudeResult;
 }

@@ -20,7 +20,7 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::{
 	error::Error,
-	exchange_rate_oracle::OracleSource,
+	traits::OracleSource,
 	types::{ExchangeRate, TradingInfo, TradingPair},
 };
 use itc_rest_client::{
@@ -44,7 +44,7 @@ const COINGECKO_PARAM_COIN: &str = "ids";
 const COINGECKO_PATH: &str = "api/v3/coins/markets";
 const COINGECKO_TIMEOUT: Duration = Duration::from_secs(3u64);
 const COINGECKO_ROOT_CERTIFICATE: &str =
-	include_str!("certificates/baltimore_cyber_trust_root_v3.pem");
+	include_str!("../certificates/baltimore_cyber_trust_root_v3.pem");
 
 lazy_static! {
 	static ref SYMBOL_ID_MAP: HashMap<&'static str, &'static str> = HashMap::from([
@@ -146,7 +146,7 @@ impl RestPath<String> for CoinGeckoMarket {
 mod tests {
 	use super::*;
 	use crate::{
-		exchange_rate_oracle::ExchangeRateOracle, mock::MetricsExporterMock, GetExchangeRate,
+		oracles::exchange_rate_oracle::ExchangeRateOracle, mock::MetricsExporterMock, GetExchangeRate,
 	};
 	use core::assert_matches::assert_matches;
 	use std::sync::Arc;

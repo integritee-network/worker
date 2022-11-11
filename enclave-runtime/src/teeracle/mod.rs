@@ -24,12 +24,15 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use core::slice;
-use ita_exchange_oracle::{
+use ita_oracle::{
 	create_coin_gecko_oracle, create_coin_market_cap_oracle, create_open_meteo_weather_oracle,
-	exchange_rate_oracle::{ExchangeRateOracle, OracleSource, WeatherOracle},
+	oracles::{
+		exchange_rate_oracle::{ExchangeRateOracle, GetExchangeRate},
+		weather_oracle::{WeatherOracle, GetLongitude},
+	},
 	metrics_exporter::ExportMetrics,
 	types::{TradingInfo, TradingPair, WeatherInfo, WeatherQuery},
-	GetExchangeRate, GetLongitude,
+	traits::OracleSource,
 };
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
@@ -66,7 +69,7 @@ fn get_longitude<OracleSourceType, MetricsExporter>(
 where
 	OracleSourceType: OracleSource<
 		WeatherInfo,
-		OracleRequestResult = std::result::Result<f32, ita_exchange_oracle::error::Error>,
+		OracleRequestResult = std::result::Result<f32, ita_oracle::error::Error>,
 	>,
 	MetricsExporter: ExportMetrics<WeatherInfo>,
 {

@@ -19,13 +19,16 @@
 //! Uses real HTTP requests, so the sites must be available for these tests.
 
 use crate::{
-	coin_gecko::CoinGeckoSource,
-	coin_market_cap::CoinMarketCapSource,
 	error::Error,
-	exchange_rate_oracle::{ExchangeRateOracle, OracleSource, WeatherOracle},
+	oracles::exchange_rate_oracle::{ExchangeRateOracle, WeatherOracle},
 	mock::MetricsExporterMock,
 	types::{TradingInfo, WeatherQuery},
-	weather_oracle_source::WeatherOracleSource,
+	traits::OracleSource,
+	oracle_sources::{
+		weather_oracle_source::WeatherOracleSource,
+		coin_gecko::CoinGeckoSource,
+		coin_market_cap::CoinMarketCapSource
+	},
 	GetExchangeRate, GetLongitude, TradingPair, WeatherInfo,
 };
 use core::assert_matches::assert_matches;
@@ -49,12 +52,10 @@ fn get_exchange_rate_from_coin_gecko_works() {
 
 #[test]
 fn get_longitude_from_open_meteo_works() {
-	let longitude: String = "13.41".into();
-	let latitude: String = "52.52".into();
-	let hourly: String = "none".into();
 	let oracle = create_weather_oracle::<WeatherOracleSource>();
 	let weather_query =
 		WeatherQuery { latitude: "52.52".into(), longitude: "13.41".into(), hourly: "none".into() };
+	// Todo: hourly param is temperature_2m to get temp or relativehumidity_2m to get humidity
 	let weather_info = WeatherInfo { weather_query };
 	let expected_longitude = 13.41f32;
 	let response_longitude =

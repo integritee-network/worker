@@ -27,7 +27,7 @@ use codec::{Decode, Encode};
 use std::string::String;
 use substrate_fixed::types::U32F32;
 
-// FIXME: Copied from ita-exchange-oracle because of cyclic deps. Should be removed after integritee-network/pallets#71
+// FIXME: Copied from ita-oracle because of cyclic deps. Should be removed after integritee-network/pallets#71
 pub type ExchangeRate = U32F32;
 
 #[derive(Encode, Decode, Debug)]

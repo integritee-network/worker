@@ -19,7 +19,7 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::{
 	error::Error,
-	exchange_rate_oracle::OracleSource,
+	traits::OracleSource,
 	types::{ExchangeRate, TradingInfo, TradingPair},
 };
 use itc_rest_client::{
@@ -43,7 +43,7 @@ const FIAT_CURRENCY_PARAM: &str = "convert_id";
 const CRYPTO_CURRENCY_PARAM: &str = "id";
 const COINMARKETCAP_PATH: &str = "v2/cryptocurrency/quotes/latest"; // API endpoint to get the exchange rate with a basic API plan (free)
 const COINMARKETCAP_TIMEOUT: Duration = Duration::from_secs(3u64);
-const COINMARKETCAP_ROOT_CERTIFICATE: &str = include_str!("certificates/amazon_root_ca_a.pem");
+const COINMARKETCAP_ROOT_CERTIFICATE: &str = include_str!("../certificates/amazon_root_ca_a.pem");
 
 lazy_static! {
 	static ref CRYPTO_SYMBOL_ID_MAP: HashMap<&'static str, &'static str> =
@@ -180,7 +180,7 @@ impl RestPath<String> for CoinMarketCapMarket {
 mod tests {
 	use super::*;
 	use crate::{
-		exchange_rate_oracle::ExchangeRateOracle, mock::MetricsExporterMock, GetExchangeRate,
+		oracles::exchange_rate_oracle::ExchangeRateOracle, mock::MetricsExporterMock, GetExchangeRate,
 	};
 	use core::assert_matches::assert_matches;
 	use std::sync::Arc;

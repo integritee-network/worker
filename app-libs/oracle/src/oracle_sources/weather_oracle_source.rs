@@ -20,7 +20,7 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::{
 	error::Error,
-	exchange_rate_oracle::OracleSource,
+	traits::OracleSource,
 	types::{ExchangeRate, TradingPair, WeatherInfo},
 };
 use itc_rest_client::{
@@ -41,7 +41,7 @@ const WEATHER_PARAM_LATITUDE: &str = "latitude";
 // const WEATHER_PARAM_HOURLY: &str = "hourly"; // TODO: Add to Query
 const WEATHER_PATH: &str = "v1/forecast";
 const WEATHER_TIMEOUT: Duration = Duration::from_secs(3u64);
-const WEATHER_ROOT_CERTIFICATE: &str = include_str!("certificates/open_meteo_root.pem");
+const WEATHER_ROOT_CERTIFICATE: &str = include_str!("../certificates/open_meteo_root.pem");
 
 // TODO: Change f32 types to appropriate Substrate Fixed Type
 #[derive(Default)]
@@ -75,6 +75,7 @@ impl<OracleSourceInfo: Into<WeatherInfo>> OracleSource<OracleSourceInfo> for Wea
 		Err(Error::NoValidData("None".into(), "None".into()))
 	}
 
+	// TODO: Make this take a variant perhaps or a Closure so that it is more generic
 	fn execute_request(
 		rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
 		source_info: OracleSourceInfo,
@@ -90,6 +91,7 @@ impl<OracleSourceInfo: Into<WeatherInfo>> OracleSource<OracleSourceInfo> for Wea
 				&[
 					(WEATHER_PARAM_LATITUDE, &query.latitude),
 					(WEATHER_PARAM_LONGITUDE, &query.longitude),
+					//(WEATHER_PARAM_HOURLY), &query.hourly),
 				],
 			)
 			.map_err(Error::RestClient)?;
@@ -104,6 +106,7 @@ impl<OracleSourceInfo: Into<WeatherInfo>> OracleSource<OracleSourceInfo> for Wea
 struct OpenMeteoWeatherStruct {
 	latitude: f32,
 	longitude: f32,
+	//hourly: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

@@ -22,7 +22,7 @@ use std::sync::SgxRwLock as RwLock;
 use std::sync::RwLock;
 
 use crate::{
-	error::Error, exchange_rate_oracle::OracleSource, metrics_exporter::ExportMetrics,
+	error::Error, traits::OracleSource, metrics_exporter::ExportMetrics,
 	types::ExchangeRate, TradingPair,
 };
 use itc_rest_client::{
@@ -75,7 +75,7 @@ impl<MetricsInfo> ExportMetrics<MetricsInfo> for MetricsExporterMock {
 		self.exchange_rates.write().unwrap().push((trading_pair, exchange_rate));
 	}
 
-	fn update(&self, _source: String, _metrics_info: MetricsInfo) {}
+	fn update_weather(&self, _source: String, _metrics_info: MetricsInfo) {}
 }
 
 /// Mock oracle source.
