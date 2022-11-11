@@ -27,21 +27,19 @@ use crate::{
 		parentchain::common::{
 			create_extrinsics_factory, create_offchain_immediate_import_dispatcher,
 			create_parentchain_block_importer, create_sidechain_triggered_import_dispatcher,
-			HeaderFor,
 		},
 	},
 };
-use codec::{Decode, Encode};
-use itc_parentchain::light_client::{
-	concurrent_access::ValidatorAccess, light_client_init_params::GrandpaParams, LightClientState,
-};
+use codec::Encode;
+use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, LightClientState};
 use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
-use itp_types::Block as ParentchainBlock;
 use std::{sync::Arc, vec::Vec};
 
+pub use itc_parentchain::primitives::{SolochainBlock, SolochainHeader, SolochainParams};
+
 pub struct FullSolochainHandler {
-	pub genesis_header: HeaderFor<ParentchainBlock>,
+	pub genesis_header: SolochainHeader,
 	pub node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
 	// FIXME: Probably should be split up into a parentchain dependent executor and one independent.
 	pub stf_executor: Arc<EnclaveStfExecutor>,
@@ -51,17 +49,15 @@ pub struct FullSolochainHandler {
 }
 
 impl FullSolochainHandler {
-	pub fn init<WorkerModeProvider: ProvideWorkerMode>(encoded_params: Vec<u8>) -> Result<Vec<u8>> {
+	pub fn init<WorkerModeProvider: ProvideWorkerMode>(params: SolochainParams) -> Result<Vec<u8>> {
 		let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 		let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 		let node_metadata_repository = Arc::new(EnclaveNodeMetadataRepository::default());
 
-		let params =
-			GrandpaParams::<HeaderFor<ParentchainBlock>>::decode(&mut encoded_params.as_slice())?;
 		let genesis_header = params.genesis_header.clone();
 
 		let validator = itc_parentchain::light_client::io::read_or_init_grandpa_validator::<
-			ParentchainBlock,
+			SolochainBlock,
 			EnclaveOCallApi,
 		>(params, ocall_api.clone())?;
 		let latest_header = validator.latest_finalized_header(validator.num_relays())?;

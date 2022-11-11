@@ -27,6 +27,6 @@ pub struct GrandpaParams<Header> {
 	pub authority_proof: Vec<Vec<u8>>,
 }
 #[derive(Encode, Decode, Clone)]
-pub struct ParachainParams<Header> {
+pub struct SimpleParams<Header> {
 	pub genesis_header: Header,
 }

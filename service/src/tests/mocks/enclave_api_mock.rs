@@ -48,8 +48,8 @@ impl EnclaveBase for EnclaveMock {
 		params: ParentchainInitParams,
 	) -> EnclaveResult<Header> {
 		let genesis_header_encoded = match params {
-			Grandpa { encoded_params } => encoded_params,
-			Parachain { encoded_params } => encoded_params,
+			Grandpa { params } => params,
+			Parachain { params } => params,
 		};
 		let header = Header::decode(&mut genesis_header_encoded.as_slice())?;
 		Ok(header)

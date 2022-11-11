@@ -16,8 +16,11 @@
 */
 
 use crate::error::Result;
+use codec::Decode;
 use itc_parentchain::primitives::ParentchainInitParams;
 use itp_settings::worker_mode::ProvideWorkerMode;
+use parachain::FullParachainHandler;
+use solochain::FullSolochainHandler;
 use std::vec::Vec;
 
 mod common;
@@ -25,14 +28,12 @@ pub mod parachain;
 pub mod solochain;
 
 pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>(
-	params: ParentchainInitParams,
+	encoded_params: Vec<u8>,
 ) -> Result<Vec<u8>> {
-	let encoded_latest_header = match params {
-		ParentchainInitParams::Grandpa { encoded_params } =>
-			solochain::FullSolochainHandler::init::<WorkerModeProvider>(encoded_params)?,
-		ParentchainInitParams::Parachain { encoded_params } =>
-			parachain::FullParachainHandler::init::<WorkerModeProvider>(encoded_params)?,
-	};
-
-	Ok(encoded_latest_header)
+	match ParentchainInitParams::decode(&mut encoded_params.as_slice())? {
+		ParentchainInitParams::Parachain { params } =>
+			FullParachainHandler::init::<WorkerModeProvider>(params),
+		ParentchainInitParams::Solochain { params } =>
+			FullSolochainHandler::init::<WorkerModeProvider>(params),
+	}
 }

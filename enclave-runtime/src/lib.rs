@@ -42,11 +42,8 @@ use crate::{
 	},
 };
 use codec::{alloc::string::String, Decode};
-use itc_parentchain::{
-	block_import_dispatcher::{
-		triggered_dispatcher::TriggerParentchainBlockImport, DispatchBlockImport,
-	},
-	primitives::ParentchainInitParams,
+use itc_parentchain::block_import_dispatcher::{
+	triggered_dispatcher::TriggerParentchainBlockImport, DispatchBlockImport,
 };
 use itp_block_import_queue::PushToBlockQueue;
 use itp_component_container::ComponentGetter;
@@ -306,17 +303,12 @@ pub unsafe extern "C" fn init_parentchain_components(
 ) -> sgx_status_t {
 	info!("Initializing light client!");
 
-	let mut params = slice::from_raw_parts(params, params_size);
+	let encoded_params = slice::from_raw_parts(params, params_size);
 	let latest_header_slice = slice::from_raw_parts_mut(latest_header, latest_header_size);
-
-	let params = match ParentchainInitParams::decode(&mut params) {
-		Ok(p) => p,
-		Err(e) => return Error::Codec(e).into(),
-	};
 
 	let encoded_latest_header = match initialization::parentchain::init_parentchain_components::<
 		WorkerModeProvider,
-	>(params)
+	>(encoded_params.to_vec())
 	{
 		Ok(h) => h,
 		Err(e) => return e.into(),

@@ -17,26 +17,34 @@
 
 extern crate alloc;
 
-use crate::light_client::light_client_init_params::{GrandpaParams, ParachainParams};
-use alloc::vec::Vec;
+use crate::light_client::light_client_init_params::{GrandpaParams, SimpleParams};
 use codec::{Decode, Encode};
+
+use sp_runtime::traits::Block;
+
+pub use itp_types::{Block as ParachainBlock, Block as SolochainBlock};
+pub type HeaderFor<B> = <B as Block>::Header;
+pub type SolochainHeader = HeaderFor<SolochainBlock>;
+pub type ParachainHeader = HeaderFor<ParachainBlock>;
+pub type SolochainParams = GrandpaParams<SolochainHeader>;
+pub type ParachainParams = SimpleParams<ParachainHeader>;
 
 /// Initialization primitives, used by both service and enclave.
 /// Allows to use a single E-call for the initialization of different parentchain types.
 #[derive(Encode, Decode, Clone)]
 pub enum ParentchainInitParams {
-	Grandpa { encoded_params: Vec<u8> },
-	Parachain { encoded_params: Vec<u8> },
+	Solochain { params: SolochainParams },
+	Parachain { params: ParachainParams },
 }
 
-impl<Header: Encode> From<GrandpaParams<Header>> for ParentchainInitParams {
-	fn from(item: GrandpaParams<Header>) -> Self {
-		ParentchainInitParams::Grandpa { encoded_params: item.encode() }
+impl From<SolochainParams> for ParentchainInitParams {
+	fn from(params: SolochainParams) -> Self {
+		ParentchainInitParams::Solochain { params }
 	}
 }
 
-impl<Header: Encode> From<ParachainParams<Header>> for ParentchainInitParams {
-	fn from(item: ParachainParams<Header>) -> Self {
-		ParentchainInitParams::Parachain { encoded_params: item.encode() }
+impl From<ParachainParams> for ParentchainInitParams {
+	fn from(params: ParachainParams) -> Self {
+		ParentchainInitParams::Parachain { params }
 	}
 }

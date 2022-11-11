@@ -18,7 +18,7 @@
 
 use crate::error::{Error, ServiceResult};
 use itc_parentchain::{
-	light_client::light_client_init_params::{GrandpaParams, ParachainParams},
+	light_client::light_client_init_params::{GrandpaParams, SimpleParams},
 	primitives::ParentchainInitParams,
 };
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
@@ -100,7 +100,7 @@ where
 			}
 			.into()
 		} else {
-			ParachainParams { genesis_header }.into()
+			SimpleParams { genesis_header }.into()
 		};
 
 		Ok(Self::new(parentchain_api, enclave_api, parentchain_init_params))

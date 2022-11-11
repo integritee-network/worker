@@ -18,7 +18,7 @@
 use crate::{
 	error::Result,
 	finality::{Finality, GrandpaFinality, ParachainFinality},
-	light_client_init_params::{GrandpaParams, ParachainParams},
+	light_client_init_params::{GrandpaParams, SimpleParams},
 	light_validation::LightValidation,
 	Error, LightValidationState, NumberFor, Validator,
 };
@@ -87,7 +87,7 @@ where
 }
 
 pub fn read_or_init_parachain_validator<B, OCallApi>(
-	params: ParachainParams<B::Header>,
+	params: SimpleParams<B::Header>,
 	ocall_api: Arc<OCallApi>,
 ) -> Result<LightValidation<B, OCallApi>>
 where
@@ -152,7 +152,7 @@ where
 }
 
 fn init_parachain_validator<B, OCallApi>(
-	params: ParachainParams<B::Header>,
+	params: SimpleParams<B::Header>,
 	ocall_api: Arc<OCallApi>,
 ) -> Result<LightValidation<B, OCallApi>>
 where
