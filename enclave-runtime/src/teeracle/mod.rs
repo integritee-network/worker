@@ -99,7 +99,6 @@ where
 	Ok(call)
 }
 
-// TODO Question: What can be fed to this function? Can a struct be passed? if so how?
 #[no_mangle]
 pub unsafe extern "C" fn update_weather_data_xt(
 	weather_info_longitude: *const u8,
