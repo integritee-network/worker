@@ -32,6 +32,6 @@ impl SystemStorageIndexes for NodeMetadata {
 	}
 
 	fn system_account_storage_map_key(&self, index: u64) -> Result<StorageKey> {
-		self.storage_map_key(SYSTEM, "Account", &index)
+		self.storage_map_key(SYSTEM, "Account", index)
 	}
 }

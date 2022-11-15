@@ -61,7 +61,7 @@ impl<OnchainStorage: EnclaveOnChainOCallApi> ValidateerFetch for OnchainStorage 
 		self.get_storage_verified(TeeRexStorage::enclave_count(), header)?
 			.into_tuple()
 			.1
-			.ok_or(Error::Other("Could not get validateer count from chain"))
+			.ok_or_else(|| Error::Other("Could not get validateer count from chain"))
 	}
 }
 

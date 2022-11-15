@@ -13,7 +13,7 @@ rcgen = { package = "rcgen", default-features = false, git = "https://github.com
 sgx_tstd = { optional = true, features = ["net", "thread"], git = "https://github.com/apache/teaclave-sgx-sdk.git", branch = "master" }
 sgx_types = { optional = true, git = "https://github.com/apache/teaclave-sgx-sdk.git", branch = "master" }
 # Todo: should not be needed here: #848
-sgx_crypto_helper = { default-features = false, optional = true, features = ["mesalock_sgx"], version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
+sgx_crypto_helper = { default-features = false, optional = true, features = ["mesalock_sgx"], version = "1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "v1.1.6-testing" }
 
 # sgx enabled external libraries
 mio-extras = { optional = true, default-features = false, git = "https://github.com/integritee-network/mio-extras-sgx", rev = "963234b" }

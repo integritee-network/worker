@@ -153,9 +153,7 @@ where
 		let xts = xts.into_iter().map(|xt| (source, xt));
 		let validated_transactions =
 			self.verify(at, xts, CheckBannedBeforeVerify::Yes, shard).await?;
-		Ok(self
-			.validated_pool
-			.submit(validated_transactions.into_iter().map(|(_, tx)| tx), shard))
+		Ok(self.validated_pool.submit(validated_transactions.into_values(), shard))
 	}
 
 	/// Resubmit the given extrinsics to the pool.
@@ -171,9 +169,7 @@ where
 		let xts = xts.into_iter().map(|xt| (source, xt));
 		let validated_transactions =
 			self.verify(at, xts, CheckBannedBeforeVerify::No, shard).await?;
-		Ok(self
-			.validated_pool
-			.submit(validated_transactions.into_iter().map(|(_, tx)| tx), shard))
+		Ok(self.validated_pool.submit(validated_transactions.into_values(), shard))
 	}
 
 	/// Imports one unverified extrinsic to the pool
@@ -362,7 +358,7 @@ where
 			at,
 			known_imported_hashes,
 			pruned_hashes,
-			reverified_transactions.into_iter().map(|(_, xt)| xt).collect(),
+			reverified_transactions.into_values().collect(),
 			shard,
 		)
 	}

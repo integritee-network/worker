@@ -15,6 +15,28 @@
 
 */
 
-pub mod initialize_state_mock;
-pub mod state_key_repository_mock;
-pub mod versioned_state_access_mock;
+use crate::{error::Result, state_initializer::InitializeState};
+use std::marker::PhantomData;
+
+/// Initialize state mock.
+pub struct InitializeStateMock<State> {
+	init_state: State,
+	_phantom: PhantomData<State>,
+}
+
+impl<State> InitializeStateMock<State> {
+	pub fn new(init_state: State) -> Self {
+		Self { init_state, _phantom: Default::default() }
+	}
+}
+
+impl<State> InitializeState for InitializeStateMock<State>
+where
+	State: Clone,
+{
+	type StateType = State;
+
+	fn initialize(&self) -> Result<Self::StateType> {
+		Ok(self.init_state.clone())
+	}
+}

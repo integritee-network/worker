@@ -6,14 +6,13 @@ edition = "2021"
 
 [dependencies]
 # sgx dependencies
-sgx_crypto_helper = { default-features = false, optional = true, features = ["mesalock_sgx"], version = "1.1.5", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", tag = "v1.1.5" }
 sgx_tcrypto = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # local dependencies
-ita-sgx-runtime = { path = "../../app-libs/sgx-runtime", default-features = false }
 ita-stf = { path = "../../app-libs/stf", default-features = false }
+itp-hashing = { path = "../../core-primitives/hashing", default-features = false }
 itp-settings = { path = "../../core-primitives/settings" }
 itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", default-features = false }
 itp-sgx-externalities = { default-features = false, path = "../../core-primitives/substrate-sgx/externalities" }
@@ -40,12 +39,12 @@ sp-core = { default-features = false, features = ["full_crypto"], git = "https:/
 [dev-dependencies]
 itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", features = ["mocks"] }
 itp-stf-state-observer = { path = "../stf-state-observer", features = ["mocks"] }
+itp-hashing = { path = "../../core-primitives/hashing", features = ["std"] }
 
 [features]
 default = ["std"]
 std = [
     "rust-base58",
-    "ita-sgx-runtime/std",
     "ita-stf/std",
     "itp-sgx-crypto/std",
     "itp-sgx-externalities/std",
@@ -72,5 +71,4 @@ sgx = [
 test = [
     "itp-sgx-crypto/mocks",
     "itp-stf-interface/mocks",
-    "sgx_crypto_helper",
 ]

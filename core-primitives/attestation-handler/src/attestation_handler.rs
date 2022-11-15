@@ -417,7 +417,6 @@ where
 			+ (u32::from(array[3]) << 24)
 	}
 
-	#[allow(const_err)]
 	fn create_attestation_report(
 		&self,
 		pub_k: &[u8; 32],

@@ -41,12 +41,13 @@ impl<HashType> StateSnapshotMetaData<HashType> {
 pub(crate) fn initialize_shard_with_snapshot<HashType, FileIo>(
 	shard_identifier: &ShardIdentifier,
 	file_io: &FileIo,
+	state: &FileIo::StateType,
 ) -> Result<StateSnapshotMetaData<HashType>>
 where
 	FileIo: StateFileIo<HashType = HashType>,
 {
 	let state_id = generate_current_timestamp_state_id();
-	let state_hash = file_io.create_initialized(shard_identifier, state_id)?;
+	let state_hash = file_io.initialize_shard(shard_identifier, state_id, state)?;
 	Ok(StateSnapshotMetaData::new(state_hash, state_id))
 }
 

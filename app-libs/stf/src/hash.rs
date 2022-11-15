@@ -21,7 +21,7 @@ use crate::{TrustedGetter, TrustedOperation};
 use codec::{Decode, Encode};
 use itp_types::H256;
 use sp_core::blake2_256;
-use std::vec::Vec;
+use std::{boxed::Box, vec::Vec};
 
 /// Trusted operation Or hash
 ///
@@ -33,12 +33,12 @@ pub enum TrustedOperationOrHash<Hash> {
 	/// Raw extrinsic bytes.
 	OperationEncoded(Vec<u8>),
 	/// Raw extrinsic
-	Operation(TrustedOperation),
+	Operation(Box<TrustedOperation>),
 }
 
 impl<Hash> TrustedOperationOrHash<Hash> {
 	pub fn from_top(top: TrustedOperation) -> Self {
-		TrustedOperationOrHash::Operation(top)
+		TrustedOperationOrHash::Operation(Box::new(top))
 	}
 }
 

@@ -74,13 +74,15 @@ impl EnclaveSidechainOCallApi for OcallApi {
 		maybe_until_block_hash: Option<BlockHash>,
 		shard_identifier: ShardIdentifier,
 	) -> SgxResult<Vec<SignedSidechainBlock>> {
+		const BLOCK_BUFFER_SIZE: usize = 262144; // Buffer size for sidechain blocks in bytes (256KB).
+
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		let last_imported_block_hash_encoded = last_imported_block_hash.encode();
 		let maybe_until_block_hash_encoded = maybe_until_block_hash.encode();
 		let shard_identifier_encoded = shard_identifier.encode();
 
-		// We have to pre-allocate the vector and hope it's large enough
-		let mut signed_blocks_encoded: Vec<u8> = vec![0; 4096 * 32];
+		// We have to pre-allocate the vector and hope it's large enough (see GitHub issue #621).
+		let mut signed_blocks_encoded: Vec<u8> = vec![0; BLOCK_BUFFER_SIZE];
 
 		let res = unsafe {
 			ffi::ocall_fetch_sidechain_blocks_from_peer(

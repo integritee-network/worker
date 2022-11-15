@@ -175,7 +175,7 @@ impl EnclaveOnChainOCallApi for OnchainMock {
 		self.get_multiple_storages_verified(vec![storage_hash], header)?
 			.into_iter()
 			.next()
-			.ok_or(itp_ocall_api::Error::Storage(StorageValueUnavailable))
+			.ok_or_else(|| itp_ocall_api::Error::Storage(StorageValueUnavailable))
 	}
 
 	fn get_multiple_storages_verified<Header: HeaderTrait<Hash = H256>, V: Decode>(

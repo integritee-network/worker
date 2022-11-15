@@ -77,7 +77,7 @@ impl RemoteAttestation for Enclave {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
 		let unchecked_extrinsic_size = EXTRINSIC_MAX_SIZE;
-		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
+		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; unchecked_extrinsic_size];
 
 		let url = w_url.encode();
 

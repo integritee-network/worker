@@ -146,7 +146,7 @@ where
 			self.connections.write().map_err(|_| WebSocketError::LockPoisoning)?;
 		let connection = connections_lock
 			.get_mut(&connection_token.into())
-			.ok_or(WebSocketError::InvalidConnection(connection_token.0))?;
+			.ok_or_else(|| WebSocketError::InvalidConnection(connection_token.0))?;
 		connection.write_message(message)
 	}
 
@@ -223,7 +223,9 @@ where
 		let (server_signal_sender, mut signal_receiver) = channel::<ServerSignal>();
 		self.register_server_signal_sender(server_signal_sender)?;
 
-		let tcp_listener = TcpListener::bind(&socket_addr).map_err(WebSocketError::TcpBindError)?;
+		let tcp_listener = net::TcpListener::bind(socket_addr).expect("Could not listen on port");
+		let tcp_listener =
+			mio::net::TcpListener::from_std(tcp_listener).map_err(WebSocketError::TcpBindError)?;
 		let mut poll = Poll::new()?;
 		poll.register(
 			&tcp_listener,
