@@ -27,10 +27,10 @@ use crate::{
 	},
 	oracles::{
 		exchange_rate_oracle::{ExchangeRateOracle, GetExchangeRate},
-		weather_oracle::{WeatherOracle, GetLongitude},
+		weather_oracle::{GetLongitude, WeatherOracle},
 	},
 	traits::OracleSource,
-	types::{TradingInfo, TradingPair, WeatherQuery, WeatherInfo,},
+	types::{TradingInfo, TradingPair, WeatherInfo, WeatherQuery},
 };
 use core::assert_matches::assert_matches;
 use std::sync::Arc;

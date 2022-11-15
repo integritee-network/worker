@@ -146,7 +146,8 @@ impl RestPath<String> for CoinGeckoMarket {
 mod tests {
 	use super::*;
 	use crate::{
-		mock::MetricsExporterMock, oracles::exchange_rate_oracle::{ExchangeRateOracle, GetExchangeRate}
+		mock::MetricsExporterMock,
+		oracles::exchange_rate_oracle::{ExchangeRateOracle, GetExchangeRate},
 	};
 	use core::assert_matches::assert_matches;
 	use std::sync::Arc;
