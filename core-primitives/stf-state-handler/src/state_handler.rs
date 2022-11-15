@@ -166,7 +166,7 @@ where
 			.read()
 			.map_err(|_| Error::LockPoisoning)?
 			.get(shard)
-			.ok_or(Error::InvalidShard(*shard))?
+			.ok_or_else(|| Error::InvalidShard(*shard))?
 			.0
 			.clone();
 
@@ -178,7 +178,11 @@ where
 		shard: &ShardIdentifier,
 	) -> Result<(RwLockWriteGuard<'_, Self::WriteLockPayload>, Self::StateT)> {
 		let state_write_lock = self.states_map_lock.write().map_err(|_| Error::LockPoisoning)?;
-		let state_clone = state_write_lock.get(shard).ok_or(Error::InvalidShard(*shard))?.0.clone();
+		let state_clone = state_write_lock
+			.get(shard)
+			.ok_or_else(|| Error::InvalidShard(*shard))?
+			.0
+			.clone();
 
 		Ok((state_write_lock, state_clone))
 	}
