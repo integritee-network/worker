@@ -60,14 +60,15 @@ where
 	fn update(
 		&mut self,
 		shard_identifier: &ShardIdentifier,
-		state: Self::StateType,
-	) -> Result<Self::HashType> {
+		state: &Self::StateType,
+		_state_hash: Self::HashType,
+	) -> Result<()> {
 		let state_history = self
 			.state_history
 			.entry(*shard_identifier)
 			.or_insert_with(|| VecDeque::default());
-		state_history.push_front(state);
-		Ok(Hash::default())
+		state_history.push_front(state.clone());
+		Ok(())
 	}
 
 	fn revert_to(
@@ -85,8 +86,9 @@ where
 	fn initialize_new_shard(
 		&mut self,
 		shard_identifier: ShardIdentifier,
+		state: &Self::StateType,
 	) -> Result<Self::HashType> {
-		self.state_history.insert(shard_identifier, VecDeque::from([State::default()]));
+		self.state_history.insert(shard_identifier, VecDeque::from([state.clone()]));
 		Ok(Hash::default())
 	}
 

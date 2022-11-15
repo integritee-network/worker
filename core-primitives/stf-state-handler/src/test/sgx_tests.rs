@@ -28,34 +28,28 @@ use crate::{
 	state_handler::StateHandler,
 	state_snapshot_repository::{StateSnapshotRepository, VersionedStateAccess},
 	state_snapshot_repository_loader::StateSnapshotRepositoryLoader,
+	test::mocks::initialize_state_mock::InitializeStateMock,
 };
 use codec::{Decode, Encode};
-use ita_sgx_runtime::Runtime;
-use ita_stf::{State as StfState, StateType as StfStateType, Stf};
+use ita_stf::{State as StfState, StateType as StfStateType};
 use itp_sgx_crypto::{mocks::KeyRepositoryMock, Aes, AesSeal, StateCrypto};
 use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use itp_sgx_io::{write, StaticSealedIO};
-use itp_stf_interface::mocks::{CallExecutorMock, GetterExecutorMock};
 use itp_stf_state_observer::state_observer::StateObserver;
 use itp_types::{ShardIdentifier, H256};
-use sgx_crypto_helper::{rsa3072::Rsa3072KeyPair, RsaKeyPair};
 use sp_core::hashing::blake2_256;
 use std::{sync::Arc, thread, vec::Vec};
 
 const STATE_SNAPSHOTS_CACHE_SIZE: usize = 3;
 
-type TestStf = Stf<CallExecutorMock, GetterExecutorMock, SgxExternalities, Runtime>;
 type StateKeyRepositoryMock = KeyRepositoryMock<Aes>;
-type TestStateFileIo = SgxStateFileIo<
-	StateKeyRepositoryMock,
-	KeyRepositoryMock<Rsa3072KeyPair>,
-	TestStf,
-	SgxExternalities,
->;
+type TestStateInitializer = InitializeStateMock<StfState>;
+type TestStateFileIo = SgxStateFileIo<StateKeyRepositoryMock, SgxExternalities>;
 type TestStateRepository = StateSnapshotRepository<TestStateFileIo>;
-type TestStateRepositoryLoader = StateSnapshotRepositoryLoader<TestStateFileIo>;
+type TestStateRepositoryLoader =
+	StateSnapshotRepositoryLoader<TestStateFileIo, TestStateInitializer>;
 type TestStateObserver = StateObserver<StfState>;
-type TestStateHandler = StateHandler<TestStateRepository, TestStateObserver>;
+type TestStateHandler = StateHandler<TestStateRepository, TestStateObserver, TestStateInitializer>;
 
 /// Directory handle to automatically initialize a directory
 /// and upon dropping the reference, removing it again.
@@ -246,16 +240,16 @@ pub fn test_file_io_get_state_hash_works() {
 	let _shard_dir_handle = ShardDirectoryHandle::new(shard).unwrap();
 	let state_key_access =
 		Arc::new(StateKeyRepositoryMock::new(AesSeal::unseal_from_static_file().unwrap()));
-	let shielding_key_repository =
-		Arc::new(KeyRepositoryMock::<Rsa3072KeyPair>::new(Rsa3072KeyPair::new().unwrap()));
 
-	let file_io = TestStateFileIo::new(state_key_access, shielding_key_repository);
+	let file_io = TestStateFileIo::new(state_key_access);
 
 	let state_id = 1234u128;
-	let state_hash = file_io.create_initialized(&shard, state_id).unwrap();
+	let state_hash = file_io
+		.initialize_shard(&shard, state_id, &StfState::new(Default::default()))
+		.unwrap();
 	assert_eq!(state_hash, file_io.compute_hash(&shard, state_id).unwrap());
 
-	let state_hash = file_io.write(&shard, state_id, given_hello_world_state()).unwrap();
+	let state_hash = file_io.write(&shard, state_id, &given_hello_world_state()).unwrap();
 	assert_eq!(state_hash, file_io.compute_hash(&shard, state_id).unwrap());
 }
 
@@ -292,16 +286,16 @@ pub fn test_list_state_ids_ignores_files_not_matching_the_pattern() {
 	let _shard_dir_handle = ShardDirectoryHandle::new(shard).unwrap();
 	let state_key_access =
 		Arc::new(StateKeyRepositoryMock::new(AesSeal::unseal_from_static_file().unwrap()));
-	let shielding_key_repository =
-		Arc::new(KeyRepositoryMock::<Rsa3072KeyPair>::new(Rsa3072KeyPair::new().unwrap()));
 
-	let file_io = TestStateFileIo::new(state_key_access, shielding_key_repository);
+	let file_io = TestStateFileIo::new(state_key_access);
 
 	let mut invalid_state_file_path = shard_path(&shard);
 	invalid_state_file_path.push("invalid-state.bin");
 	write(&[0, 1, 2, 3, 4, 5], invalid_state_file_path).unwrap();
 
-	file_io.create_initialized(&shard, 1234).unwrap();
+	file_io
+		.initialize_shard(&shard, 1234, &StfState::new(Default::default()))
+		.unwrap();
 
 	assert_eq!(1, file_io.list_state_ids_for_shard(&shard).unwrap().len());
 }
@@ -311,7 +305,9 @@ pub fn test_in_memory_state_initializes_from_shard_directory() {
 	let _shard_dir_handle = ShardDirectoryHandle::new(shard).unwrap();
 
 	let file_io = create_in_memory_state_io_from_shards_directories().unwrap();
-	let state_repository_loader = StateSnapshotRepositoryLoader::new(file_io.clone());
+	let state_initializer = Arc::new(TestStateInitializer::new(StfState::new(Default::default())));
+	let state_repository_loader =
+		StateSnapshotRepositoryLoader::new(file_io.clone(), state_initializer);
 	let state_snapshot_repository = state_repository_loader
 		.load_snapshot_repository(STATE_SNAPSHOTS_CACHE_SIZE)
 		.unwrap();
@@ -330,16 +326,22 @@ fn initialize_state_handler_with_directory_handle(
 fn initialize_state_handler() -> Arc<TestStateHandler> {
 	let state_key_access =
 		Arc::new(StateKeyRepositoryMock::new(AesSeal::unseal_from_static_file().unwrap()));
-	let shielding_key_repository =
-		Arc::new(KeyRepositoryMock::<Rsa3072KeyPair>::new(Rsa3072KeyPair::new().unwrap()));
-
-	let file_io = Arc::new(TestStateFileIo::new(state_key_access, shielding_key_repository));
-	let state_repository_loader = TestStateRepositoryLoader::new(file_io);
+	let file_io = Arc::new(TestStateFileIo::new(state_key_access));
+	let state_initializer = Arc::new(TestStateInitializer::new(StfState::new(Default::default())));
+	let state_repository_loader =
+		TestStateRepositoryLoader::new(file_io, state_initializer.clone());
 	let state_observer = Arc::new(TestStateObserver::default());
 	let state_snapshot_repository = state_repository_loader
 		.load_snapshot_repository(STATE_SNAPSHOTS_CACHE_SIZE)
 		.unwrap();
-	Arc::new(TestStateHandler::new(state_snapshot_repository, state_observer))
+	Arc::new(
+		TestStateHandler::load_from_repository(
+			state_snapshot_repository,
+			state_observer,
+			state_initializer,
+		)
+		.unwrap(),
+	)
 }
 
 fn update_state(

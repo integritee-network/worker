@@ -18,28 +18,32 @@
 use crate::{
 	error::Result,
 	file_io::StateFileIo,
+	state_initializer::InitializeState,
 	state_snapshot_primitives::{
 		initialize_shard_with_snapshot, SnapshotHistory, StateId, StateSnapshotMetaData,
 	},
 	state_snapshot_repository::StateSnapshotRepository,
 };
+use itp_hashing::Hash;
 use itp_types::ShardIdentifier;
 use log::*;
 use std::{collections::VecDeque, fmt::Debug, iter::FromIterator, sync::Arc, vec::Vec};
 
 /// Loads a state snapshot repository from existing shards directory with state files.
-pub struct StateSnapshotRepositoryLoader<FileIo> {
+pub struct StateSnapshotRepositoryLoader<FileIo, StateInitializer> {
 	file_io: Arc<FileIo>,
+	state_initializer: Arc<StateInitializer>,
 }
 
-impl<FileIo> StateSnapshotRepositoryLoader<FileIo>
+impl<FileIo, StateInitializer> StateSnapshotRepositoryLoader<FileIo, StateInitializer>
 where
 	FileIo: StateFileIo,
 	<FileIo as StateFileIo>::HashType: Copy + Eq + Debug,
-	<FileIo as StateFileIo>::StateType: Clone,
+	<FileIo as StateFileIo>::StateType: Clone + Hash<FileIo::HashType>,
+	StateInitializer: InitializeState<StateType = FileIo::StateType>,
 {
-	pub fn new(file_io: Arc<FileIo>) -> Self {
-		StateSnapshotRepositoryLoader { file_io }
+	pub fn new(file_io: Arc<FileIo>, state_initializer: Arc<StateInitializer>) -> Self {
+		Self { file_io, state_initializer }
 	}
 
 	/// Load a state snapshot repository from an existing set of files and directories.
@@ -77,8 +81,9 @@ where
 					"No (valid) states found for shard {:?}, initializing empty shard state",
 					shard
 				);
+				let initial_state = self.state_initializer.initialize()?;
 				let initial_snapshot_metadata =
-					initialize_shard_with_snapshot(&shard, self.file_io.as_ref())?;
+					initialize_shard_with_snapshot(&shard, self.file_io.as_ref(), &initial_state)?;
 				snapshot_metadata.push(initial_snapshot_metadata);
 			} else {
 				debug!(
@@ -119,15 +124,28 @@ where
 
 #[cfg(test)]
 mod tests {
-
 	use super::*;
-	use crate::in_memory_state_file_io::InMemoryStateFileIo;
+	use crate::{
+		in_memory_state_file_io::InMemoryStateFileIo,
+		test::mocks::initialize_state_mock::InitializeStateMock,
+	};
+	use codec::Encode;
 	use itp_types::H256;
+	use sp_core::blake2_256;
+
+	#[derive(Encode, Clone, Default, Copy)]
+	struct TestState(pub u64);
 
 	type TestStateHash = H256;
-	type TestState = u64;
 	type TestFileIo = InMemoryStateFileIo<TestState, TestState>;
-	type TestLoader = StateSnapshotRepositoryLoader<TestFileIo>;
+	type TestStateInitializer = InitializeStateMock<TestState>;
+	type TestLoader = StateSnapshotRepositoryLoader<TestFileIo, TestStateInitializer>;
+
+	impl Hash<TestStateHash> for TestState {
+		fn hash(&self) -> TestStateHash {
+			blake2_256(&self.encode()).into()
+		}
+	}
 
 	#[test]
 	fn loading_from_empty_shard_directories_initializes_files() {
@@ -183,7 +201,7 @@ mod tests {
 		shard: &ShardIdentifier,
 		state_id: StateId,
 	) {
-		file_io.create_initialized(shard, state_id).unwrap();
+		file_io.initialize_shard(shard, state_id, &Default::default()).unwrap();
 	}
 
 	fn assert_latest_state_id(
@@ -195,13 +213,9 @@ mod tests {
 	}
 
 	fn create_test_fixtures(shards: &[ShardIdentifier]) -> (Arc<TestFileIo>, TestLoader) {
-		let file_io = Arc::new(TestFileIo::new(
-			shards,
-			Box::new(|x| x),
-			Box::new(|| TestState::default()),
-			Box::new(|x| x),
-		));
-		let loader = StateSnapshotRepositoryLoader::new(file_io.clone());
+		let file_io = Arc::new(TestFileIo::new(shards, Box::new(|x| *x), Box::new(|x| x)));
+		let state_initializer = Arc::new(TestStateInitializer::new(Default::default()));
+		let loader = StateSnapshotRepositoryLoader::new(file_io.clone(), state_initializer);
 		(file_io, loader)
 	}
 }

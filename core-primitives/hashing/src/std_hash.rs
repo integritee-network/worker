@@ -15,6 +15,17 @@
 
 */
 
-pub mod initialize_state_mock;
-pub mod state_key_repository_mock;
-pub mod versioned_state_access_mock;
+use crate::Hash;
+use std::{
+	collections::hash_map::DefaultHasher,
+	hash::{Hash as StdHash, Hasher},
+};
+
+/// Implement Hash<u64> for all types implementing core::hash::Hash.
+impl<T: StdHash> Hash<u64> for T {
+	fn hash(&self) -> u64 {
+		let mut hasher = DefaultHasher::new();
+		self.hash(&mut hasher);
+		hasher.finish()
+	}
+}
