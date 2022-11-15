@@ -2280,23 +2280,6 @@ dependencies = [
 [[package]]
 name = "ias-verify"
 version = "0.1.4"
-source = "git+https://github.com/integritee-network/pallets.git?branch=develop-polkadot-v0.9.29#2ac380ce82bc1fd8da3bf7419480d04f700c1d08"
-dependencies = [
- "base64 0.13.1",
- "chrono 0.4.23",
- "frame-support",
- "parity-scale-codec",
- "scale-info",
- "serde_json 1.0.87",
- "sp-core",
- "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
- "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
- "webpki 0.21.0",
-]
-
-[[package]]
-name = "ias-verify"
-version = "0.1.4"
 source = "git+https://github.com/integritee-network/pallets.git?branch=master#2e55172af5249b1569617eaa080dfcd8fd9e54aa"
 dependencies = [
  "base64 0.13.1",
@@ -2436,7 +2419,7 @@ dependencies = [
  "sp-runtime",
  "substrate-api-client",
  "substrate-client-keystore",
- "teerex-primitives 0.1.0 (git+https://github.com/integritee-network/pallets.git?branch=develop-polkadot-v0.9.29)",
+ "teerex-primitives",
  "ws",
 ]
 
@@ -2537,7 +2520,7 @@ dependencies = [
  "sp-keyring",
  "sp-runtime",
  "substrate-api-client",
- "teerex-primitives 0.1.0 (git+https://github.com/integritee-network/pallets.git?branch=develop-polkadot-v0.9.29)",
+ "teerex-primitives",
  "thiserror 1.0.37",
  "tokio",
  "warp",
@@ -4961,7 +4944,7 @@ dependencies = [
 [[package]]
 name = "pallet-parentchain"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=develop-polkadot-v0.9.29#2ac380ce82bc1fd8da3bf7419480d04f700c1d08"
+source = "git+https://github.com/integritee-network/pallets.git?branch=master#2e55172af5249b1569617eaa080dfcd8fd9e54aa"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5058,7 +5041,7 @@ dependencies = [
  "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
- "teerex-primitives 0.1.0 (git+https://github.com/integritee-network/pallets.git?branch=master)",
+ "teerex-primitives",
 ]
 
 [[package]]
@@ -5101,7 +5084,7 @@ source = "git+https://github.com/integritee-network/pallets.git?branch=master#2e
 dependencies = [
  "frame-support",
  "frame-system",
- "ias-verify 0.1.4 (git+https://github.com/integritee-network/pallets.git?branch=master)",
+ "ias-verify",
  "log 0.4.17",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -5111,7 +5094,7 @@ dependencies = [
  "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
  "sp-runtime",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
- "teerex-primitives 0.1.0 (git+https://github.com/integritee-network/pallets.git?branch=master)",
+ "teerex-primitives",
 ]
 
 [[package]]
@@ -7663,23 +7646,9 @@ dependencies = [
 [[package]]
 name = "teerex-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=develop-polkadot-v0.9.29#2ac380ce82bc1fd8da3bf7419480d04f700c1d08"
-dependencies = [
- "ias-verify 0.1.4 (git+https://github.com/integritee-network/pallets.git?branch=develop-polkadot-v0.9.29)",
- "parity-scale-codec",
- "scale-info",
- "serde 1.0.147",
- "sp-core",
- "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
- "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
-]
-
-[[package]]
-name = "teerex-primitives"
-version = "0.1.0"
 source = "git+https://github.com/integritee-network/pallets.git?branch=master#2e55172af5249b1569617eaa080dfcd8fd9e54aa"
 dependencies = [
- "ias-verify 0.1.4 (git+https://github.com/integritee-network/pallets.git?branch=master)",
+ "ias-verify",
  "parity-scale-codec",
  "scale-info",
  "serde 1.0.147",
