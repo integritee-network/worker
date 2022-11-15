@@ -25,10 +25,12 @@ use crate::{
 		coin_gecko::CoinGeckoSource, coin_market_cap::CoinMarketCapSource,
 		weather_oracle_source::WeatherOracleSource,
 	},
-	oracles::exchange_rate_oracle::{ExchangeRateOracle, WeatherOracle},
+	oracles::{
+		exchange_rate_oracle::{ExchangeRateOracle, GetExchangeRate},
+		weather_oracle::{WeatherOracle, GetLongitude},
+	},
 	traits::OracleSource,
-	types::{TradingInfo, WeatherQuery},
-	GetExchangeRate, GetLongitude, TradingPair, WeatherInfo,
+	types::{TradingInfo, TradingPair, WeatherQuery, WeatherInfo,},
 };
 use core::assert_matches::assert_matches;
 use std::sync::Arc;
