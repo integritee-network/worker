@@ -20,7 +20,7 @@
 use crate::error::Error;
 use hash_db::{HashDB, Hasher, EMPTY_PREFIX};
 use sp_std::vec::Vec;
-use sp_trie::{trie_types::TrieDB, MemoryDB, Trie};
+use sp_trie::{trie_types::TrieDB, MemoryDB, Trie, TrieDBBuilder};
 
 pub type StorageProof = Vec<Vec<u8>>;
 
@@ -57,7 +57,11 @@ impl<H: Hasher> StorageProofChecker<H> {
 	}
 
 	fn trie(&self) -> Result<TrieDB<H>, Error> {
-		TrieDB::new(&self.db, &self.root).map_err(|_| Error::StorageRootMismatch)
+		if !self.db.contains(&self.root, EMPTY_PREFIX) {
+			Err(Error::StorageRootMismatch)
+		} else {
+			Ok(TrieDBBuilder::new(&self.db, &self.root).build())
+		}
 	}
 
 	pub fn check_proof(

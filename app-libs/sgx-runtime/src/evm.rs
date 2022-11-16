@@ -16,13 +16,13 @@ pub use pallet_evm::{
 pub type HashedAddressMapping = GenericHashedAddressMapping<BlakeTwo256>;
 
 /// Maximum weight per block
-pub const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
+pub const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND.saturating_div(2);
 
 // FIXME: For now just a random value.
 pub struct FixedGasPrice;
 impl FeeCalculator for FixedGasPrice {
-	fn min_gas_price() -> (U256, u64) {
-		(1.into(), 1)
+	fn min_gas_price() -> (U256, Weight) {
+		(1.into(), Weight::from_ref_time(1))
 	}
 }
 
@@ -34,16 +34,16 @@ pub const GAS_PER_SECOND: u64 = 40_000_000;
 
 /// Approximate ratio of the amount of Weight per Gas.
 /// u64 works for approximations because Weight is a very small unit compared to gas.
-pub const WEIGHT_PER_GAS: u64 = WEIGHT_PER_SECOND / GAS_PER_SECOND;
+pub const WEIGHT_PER_GAS: u64 = WEIGHT_PER_SECOND.ref_time() / GAS_PER_SECOND;
 
 pub struct FixedGasWeightMapping;
 
 impl GasWeightMapping for FixedGasWeightMapping {
 	fn gas_to_weight(gas: u64) -> Weight {
-		gas.saturating_mul(WEIGHT_PER_GAS)
+		Weight::from_ref_time(gas.saturating_mul(WEIGHT_PER_GAS))
 	}
 	fn weight_to_gas(weight: Weight) -> u64 {
-		weight.wrapping_div(WEIGHT_PER_GAS)
+		weight.ref_time().wrapping_div(WEIGHT_PER_GAS)
 	}
 }
 
@@ -60,7 +60,7 @@ impl<T: From<H160>> AddressMapping<T> for IntoAddressMapping {
 
 parameter_types! {
 	pub const ChainId: u64 = 42;
-	pub BlockGasLimit: U256 = U256::from(NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT / WEIGHT_PER_GAS);
+	pub BlockGasLimit: U256 = U256::from(NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT.ref_time() / WEIGHT_PER_GAS);
 	//pub PrecompilesValue: FrontierPrecompiles<Runtime> = FrontierPrecompiles::<_>::new();
 }
 

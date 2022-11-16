@@ -67,7 +67,10 @@ pub fn ed25519_self_signed_certificate(
 ) -> WebSocketResult<Certificate> {
 	let mut params = CertificateParams::new(vec![common_name.to_string()]);
 	let now = SystemTime::now().duration_since(UNIX_EPOCH).expect("Error: UNIX_EPOCH");
-	let issue_ts = TzUtc.timestamp(now.as_secs() as i64, 0);
+	let issue_ts = TzUtc
+		.timestamp_opt(now.as_secs() as i64, 0)
+		.single()
+		.expect("Error: this should not fail as long as secs fit into i64");
 	let year = issue_ts.year();
 	let month = issue_ts.month();
 	let day = issue_ts.day();
@@ -93,7 +96,8 @@ pub fn ed25519_self_signed_certificate(
 ///
 /// [RFC 5958]: https://tools.ietf.org/html/rfc5958.
 fn ed25519_private_key_pkcs8_der(key_pair: ed25519::Pair) -> WebSocketResult<Vec<u8>> {
-	let private_key = key_pair.seed().as_slice();
+	let seed = key_pair.seed();
+	let private_key = seed.as_slice();
 	let pk = key_pair.public().0;
 	let public_key = pk.as_slice();
 	let key_der = yasna::construct_der(|writer| {

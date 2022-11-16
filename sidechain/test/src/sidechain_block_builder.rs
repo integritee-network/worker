@@ -76,7 +76,7 @@ impl SidechainBlockBuilder {
 	}
 
 	pub fn build_signed(self) -> SignedBlock {
-		let signer = self.signer.clone();
+		let signer = self.signer;
 		self.build().sign_block(&signer)
 	}
 }

@@ -27,14 +27,14 @@ use my_node_runtime::Balance;
 use sp_application_crypto::sr25519;
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
 use sp_runtime::traits::IdentifyAccount;
-use std::path::PathBuf;
+use std::{boxed::Box, path::PathBuf};
 use substrate_client_keystore::LocalKeystore;
 
 #[macro_export]
 macro_rules! get_layer_two_nonce {
 	($signer_pair:ident, $cli: ident, $trusted_args:ident ) => {{
 		let top: TrustedOperation = TrustedGetter::nonce($signer_pair.public().into())
-			.sign(&KeyPair::Sr25519($signer_pair.clone()))
+			.sign(&KeyPair::Sr25519(Box::new($signer_pair.clone())))
 			.into();
 		let res = perform_trusted_operation($cli, $trusted_args, &top);
 		let nonce: Index = if let Some(n) = res {
@@ -57,7 +57,7 @@ pub(crate) fn get_balance(cli: &Cli, trusted_args: &TrustedArgs, arg_who: &str) 
 	debug!("arg_who = {:?}", arg_who);
 	let who = get_pair_from_str(trusted_args, arg_who);
 	let top: TrustedOperation = TrustedGetter::free_balance(who.public().into())
-		.sign(&KeyPair::Sr25519(who))
+		.sign(&KeyPair::Sr25519(Box::new(who)))
 		.into();
 	let res = perform_trusted_operation(cli, trusted_args, &top);
 	debug!("received result for balance");

@@ -25,7 +25,7 @@ use itp_stf_interface::system_pallet::SystemPalletAccountInterface;
 use itp_stf_state_observer::traits::ObserveState;
 use itp_types::{Index, ShardIdentifier};
 use sp_core::{ed25519::Pair as Ed25519Pair, Pair};
-use std::sync::Arc;
+use std::{boxed::Box, sync::Arc};
 
 pub struct StfEnclaveSigner<OCallApi, StateObserver, ShieldingKeyRepository, Stf> {
 	state_observer: Arc<StateObserver>,
@@ -94,7 +94,7 @@ where
 		let enclave_call_signing_key = self.get_enclave_call_signing_key()?;
 
 		Ok(trusted_call.sign(
-			&KeyPair::Ed25519(enclave_call_signing_key),
+			&KeyPair::Ed25519(Box::new(enclave_call_signing_key)),
 			enclave_account_nonce.into(),
 			&mr_enclave.m,
 			shard,
