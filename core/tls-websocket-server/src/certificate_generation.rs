@@ -69,6 +69,7 @@ pub fn ed25519_self_signed_certificate(
 	let now = SystemTime::now().duration_since(UNIX_EPOCH).expect("Error: UNIX_EPOCH");
 	let issue_ts = TzUtc
 		.timestamp_opt(now.as_secs() as i64, 0)
+		.single()
 		.expect("Error: this should not fail as long as secs fit into i64");
 	let year = issue_ts.year();
 	let month = issue_ts.month();
