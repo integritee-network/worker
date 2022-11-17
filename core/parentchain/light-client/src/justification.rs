@@ -188,7 +188,7 @@ where
 		base: Block::Hash,
 		block: Block::Hash,
 	) -> Result<Vec<Block::Hash>, GrandpaError> {
-		let mut route = Vec::new();
+		let mut ancestors = Vec::new();
 		let mut current_hash = block;
 		loop {
 			if current_hash == base {
@@ -197,13 +197,13 @@ where
 			match self.ancestry.get(&current_hash) {
 				Some(current_header) => {
 					current_hash = *current_header.parent_hash();
-					route.push(current_hash);
+					ancestors.push(current_hash);
 				},
 				_ => return Err(GrandpaError::NotDescendent),
 			}
 		}
-		route.pop(); // remove the base
+		ancestors.pop(); // remove the base
 
-		Ok(route)
+		Ok(ancestors)
 	}
 }
