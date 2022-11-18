@@ -105,7 +105,7 @@ where
 					// FIXME: Printing error upon invalid justification, but this will need a better fix
 					// see issue #353
 					error!("Block {:?} contained invalid justification: {:?}", block_num, err);
-					relay.unjustified_headers.push(header.hash());
+					relay.unjustified_headers.push(block_hash);
 					relay.set_last_finalized_block_header(header);
 					return Err(err)
 				}
@@ -114,7 +114,7 @@ where
 				Ok(())
 			},
 			None => {
-				relay.unjustified_headers.push(header.hash());
+				relay.unjustified_headers.push(block_hash);
 				relay.set_last_finalized_block_header(header);
 
 				debug!(
