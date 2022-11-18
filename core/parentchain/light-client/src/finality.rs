@@ -31,7 +31,7 @@ use sp_finality_grandpa::{AuthorityId, ScheduledChange, GRANDPA_ENGINE_ID};
 use sp_runtime::{
 	generic::Digest,
 	traits::{Block as ParentchainBlockTrait, Header as HeaderTrait},
-	Justification, Justifications,
+	EncodedJustification, Justifications,
 };
 
 #[derive(Default)]
@@ -96,7 +96,7 @@ where
 		match grandpa_justification {
 			Some(justification) => {
 				if let Err(err) = Self::verify_grandpa_proof::<Block>(
-					(GRANDPA_ENGINE_ID, justification),
+					justification,
 					block_hash,
 					block_num,
 					validator_set_id,
@@ -159,7 +159,7 @@ impl GrandpaFinality {
 	}
 
 	fn verify_grandpa_proof<Block: ParentchainBlockTrait>(
-		justification: Justification,
+		encoded_justification: EncodedJustification,
 		hash: Block::Hash,
 		number: NumberFor<Block>,
 		set_id: u64,
@@ -170,7 +170,7 @@ impl GrandpaFinality {
 	{
 		// We don't really care about the justification, as long as it's valid
 		let _ = GrandpaJustification::<Block>::decode_and_verify_finalizes(
-			&justification.1,
+			&encoded_justification,
 			(hash, number),
 			set_id,
 			voters,
