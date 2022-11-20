@@ -23,14 +23,14 @@ use log::*;
 use sgx_types::*;
 
 pub trait TeeracleApi: Send + Sync + 'static {
-	/// update the currency market data for the token oracle.
+	/// Update the currency market data for the token oracle.
 	fn update_market_data_xt(
 		&self,
 		crypto_currency: &str,
 		fiat_currency: &str,
 	) -> EnclaveResult<Vec<u8>>;
 
-	/// update weather data for the corresponding coordinates.
+	/// Update weather data for the corresponding coordinates.
 	fn update_weather_data_xt(&self, longitude: &str, latitude: &str) -> EnclaveResult<Vec<u8>>;
 }
 

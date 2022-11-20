@@ -92,7 +92,7 @@ where
 		call_ids,
 		weather_info.weather_query.key().as_bytes().to_vec(),
 		source_base_url.as_bytes().to_vec(),
-		// TODO: Does this work? the type the extrinsic is expecting is BoundedVec<u8, 4096>
+
 		Some(longitude.encode()),
 	));
 
@@ -239,7 +239,6 @@ where
 
 	let node_metadata_repository = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
 
-	// TODO: Ask Felix or Bigna how to get the extrinsic call index for my new extrinsic
 	let call_ids = node_metadata_repository
 		.get_from_metadata(|m| m.update_exchange_rate_call_indexes())
 		.map_err(Error::NodeMetadataProvider)?
