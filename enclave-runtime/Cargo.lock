@@ -1558,7 +1558,9 @@ dependencies = [
  "itc-parentchain-block-importer",
  "itc-parentchain-indirect-calls-executor",
  "itc-parentchain-light-client",
+ "itp-types",
  "parity-scale-codec",
+ "sp-runtime",
 ]
 
 [[package]]

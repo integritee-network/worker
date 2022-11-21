@@ -26,9 +26,9 @@ use crate::{
 		EnclaveSidechainApi, EnclaveSidechainBlockImportQueue,
 		EnclaveSidechainBlockImportQueueWorker, EnclaveSidechainBlockImporter,
 		EnclaveSidechainBlockSyncer, EnclaveStateFileIo, EnclaveStateHandler,
-		EnclaveStateKeyRepository, EnclaveStateObserver, EnclaveStateSnapshotRepository,
-		EnclaveStfEnclaveSigner, EnclaveTopPool, EnclaveTopPoolAuthor,
-		GLOBAL_ATTESTATION_HANDLER_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
+		EnclaveStateInitializer, EnclaveStateKeyRepository, EnclaveStateObserver,
+		EnclaveStateSnapshotRepository, EnclaveStfEnclaveSigner, EnclaveTopPool,
+		EnclaveTopPoolAuthor, GLOBAL_ATTESTATION_HANDLER_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
 		GLOBAL_RPC_WS_HANDLER_COMPONENT, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
 		GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT,
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
@@ -100,17 +100,24 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 		Arc::new(EnclaveStateKeyRepository::new(state_key, Arc::new(AesSeal)));
 	GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.initialize(state_key_repository.clone());
 
-	let state_file_io =
-		Arc::new(EnclaveStateFileIo::new(state_key_repository, shielding_key_repository.clone()));
-	let state_snapshot_repository_loader =
-		StateSnapshotRepositoryLoader::<EnclaveStateFileIo>::new(state_file_io);
+	let state_file_io = Arc::new(EnclaveStateFileIo::new(state_key_repository));
+	let state_initializer =
+		Arc::new(EnclaveStateInitializer::new(shielding_key_repository.clone()));
+	let state_snapshot_repository_loader = StateSnapshotRepositoryLoader::<
+		EnclaveStateFileIo,
+		EnclaveStateInitializer,
+	>::new(state_file_io, state_initializer.clone());
+
 	let state_snapshot_repository =
 		state_snapshot_repository_loader.load_snapshot_repository(STATE_SNAPSHOTS_CACHE_SIZE)?;
 	let state_observer = initialize_state_observer(&state_snapshot_repository)?;
 	GLOBAL_STATE_OBSERVER_COMPONENT.initialize(state_observer.clone());
 
-	let state_handler =
-		Arc::new(StateHandler::new(state_snapshot_repository, state_observer.clone()));
+	let state_handler = Arc::new(StateHandler::load_from_repository(
+		state_snapshot_repository,
+		state_observer.clone(),
+		state_initializer,
+	)?);
 
 	GLOBAL_STATE_HANDLER_COMPONENT.initialize(state_handler.clone());
 
