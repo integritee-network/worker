@@ -98,25 +98,19 @@ impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi>
 		ancestor_hash: HashFor<Block>,
 		child: &Block::Header,
 	) -> Result<(), Error> {
-		let mut parent_hash = child.parent_hash();
+		let parent_hash = child.parent_hash();
 		if *parent_hash == ancestor_hash {
 			return Ok(())
 		}
 
-		// If we find that the header's parent hash matches our ancestor's hash we're done
-		for header in proof.iter() {
-			// Need to check that blocks are actually related
-			if header.hash() != *parent_hash {
-				break
-			}
-
-			parent_hash = header.parent_hash();
-			if *parent_hash == ancestor_hash {
-				return Ok(())
-			}
+		// Find the header's parent hash that matches our ancestor's hash
+		match proof
+			.iter()
+			.find(|header| header.hash() == *parent_hash && *header.parent_hash() == ancestor_hash)
+		{
+			Some(_) => Ok(()),
+			None => Err(Error::InvalidAncestryProof),
 		}
-
-		Err(Error::InvalidAncestryProof)
 	}
 
 	fn submit_finalized_headers(
