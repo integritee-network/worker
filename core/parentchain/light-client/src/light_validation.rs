@@ -230,9 +230,8 @@ where
 		if relay.last_finalized_block_header.hash() != *header.parent_hash() {
 			return Err(Error::HeaderAncestryMismatch)
 		}
-		let ancestry_proof = vec![];
 
-		self.submit_finalized_headers(relay_id, header.clone(), ancestry_proof, justifications)
+		self.submit_finalized_headers(relay_id, header.clone(), vec![], justifications)
 	}
 
 	fn check_xt_inclusion(&mut self, relay_id: RelayId, block: &Block) -> Result<(), Error> {
