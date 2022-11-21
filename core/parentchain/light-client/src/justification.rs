@@ -130,16 +130,16 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 				continue
 			}
 
-			match ancestry_chain.ancestry(self.commit.target_hash, signed.precommit.target_hash) {
-				Ok(route) => {
-					// ancestry starts from parent hash but the precommit target hash has been visited
-					visited_hashes.insert(signed.precommit.target_hash);
-					visited_hashes.extend(route.iter());
-				},
-				_ =>
-					return Err(ClientError::BadJustification(
-						"invalid precommit ancestry proof in grandpa justification".to_string(),
-					)),
+			if let Ok(route) =
+				ancestry_chain.ancestry(self.commit.target_hash, signed.precommit.target_hash)
+			{
+				// ancestry starts from parent hash but the precommit target hash has been visited
+				visited_hashes.insert(signed.precommit.target_hash);
+				visited_hashes.extend(route.iter());
+			} else {
+				return Err(ClientError::BadJustification(
+					"invalid precommit ancestry proof in grandpa justification".to_string(),
+				))
 			}
 		}
 
