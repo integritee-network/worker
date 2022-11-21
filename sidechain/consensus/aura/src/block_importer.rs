@@ -237,7 +237,7 @@ impl<
 		F: FnOnce(&Self::SidechainState) -> Result<SignedSidechainBlock, ConsensusError>,
 	{
 		self.state_handler
-			.execute_on_current(shard, |state, _| verifying_function(&state))
+			.execute_on_current(shard, |state, _| verifying_function(state))
 			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?
 	}
 

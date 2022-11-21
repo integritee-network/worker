@@ -169,7 +169,7 @@ where
 			.map_err(|_| Error::LockPoisoning)?
 			.get(shard)
 			.map(|(state, state_hash)| executing_function(state, *state_hash))
-			.ok_or(Error::InvalidShard(*shard))
+			.ok_or_else(|| Error::InvalidShard(*shard))
 	}
 
 	fn load_clone(&self, shard: &ShardIdentifier) -> Result<(Self::StateT, Self::HashType)> {

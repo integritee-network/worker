@@ -138,12 +138,9 @@ where
 		}
 
 		// create encrypted payload
-		let mut payload: Vec<u8> = StatePayload::new(
-			state_hash_apriori,
-			state_hash_new,
-			aposteriori_state.state_diff().clone(),
-		)
-		.encode();
+		let mut payload: Vec<u8> =
+			StatePayload::new(state_hash_apriori, state_hash_new, aposteriori_state.state_diff())
+				.encode();
 
 		let state_key = self
 			.state_key_repository
