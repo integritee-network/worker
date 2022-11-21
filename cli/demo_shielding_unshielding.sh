@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Demonstrates how to shield tokens from the parentchain into the sidechain.
+#
 # setup:
 # run all on localhost:
 #   integritee-node purge-chain --dev
