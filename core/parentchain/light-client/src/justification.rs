@@ -134,9 +134,7 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 				Ok(route) => {
 					// ancestry starts from parent hash but the precommit target hash has been visited
 					visited_hashes.insert(signed.precommit.target_hash);
-					for hash in route {
-						visited_hashes.insert(hash);
-					}
+					visited_hashes.extend(route.iter());
 				},
 				_ =>
 					return Err(ClientError::BadJustification(
