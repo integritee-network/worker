@@ -28,9 +28,10 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use crate::{
-	global_components::{
-		GLOBAL_ATTESTATION_HANDLER_COMPONENT, GLOBAL_EXTRINSICS_FACTORY_COMPONENT,
-		GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT,
+	initialization::global_components::GLOBAL_ATTESTATION_HANDLER_COMPONENT,
+	utils::{
+		get_extrinsic_factory_from_solo_or_parachain,
+		get_node_metadata_repository_from_solo_or_parachain,
 	},
 	Error as EnclaveError, Result as EnclaveResult,
 };
@@ -128,8 +129,8 @@ pub unsafe extern "C" fn perform_ra(
 
 fn perform_ra_internal(url: String, skip_ra: bool) -> EnclaveResult<OpaqueExtrinsic> {
 	let attestation_handler = GLOBAL_ATTESTATION_HANDLER_COMPONENT.get()?;
-	let extrinsics_factory = GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get()?;
-	let node_metadata_repo = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
+	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
+	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain()?;
 
 	let cert_der = attestation_handler.perform_ra(skip_ra)?;
 

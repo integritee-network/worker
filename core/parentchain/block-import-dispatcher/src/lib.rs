@@ -37,15 +37,75 @@ pub mod triggered_dispatcher;
 #[cfg(feature = "mocks")]
 pub mod trigger_parentchain_block_import_mock;
 
-use error::Result;
-use std::vec::Vec;
+use crate::triggered_dispatcher::TriggerParentchainBlockImport;
+use error::{Error, Result};
+use std::{sync::Arc, vec::Vec};
 
 /// Trait to dispatch blocks for import into the local light-client.
-pub trait DispatchBlockImport {
-	type SignedBlockType;
-
+pub trait DispatchBlockImport<SignedBlockType> {
 	/// Dispatch blocks to be imported.
 	///
 	/// The blocks may be imported immediately, get queued, delayed or grouped.
-	fn dispatch_import(&self, blocks: Vec<Self::SignedBlockType>) -> Result<()>;
+	fn dispatch_import(&self, blocks: Vec<SignedBlockType>) -> Result<()>;
+}
+
+/// Wrapper for the actual dispatchers. Allows to define one global type for
+/// both dispatchers without changing the global variable when switching
+/// the dispatcher type. It also allows for empty dispatchers, for use cases that
+/// do not need block syncing for a specific parentchain type.
+pub enum BlockImportDispatcher<TriggeredDispatcher, ImmediateDispatcher> {
+	TriggeredDispatcher(Arc<TriggeredDispatcher>),
+	ImmediateDispatcher(Arc<ImmediateDispatcher>),
+	EmptyDispatcher,
+}
+
+impl<TriggeredDispatcher, ImmediateDispatcher>
+	BlockImportDispatcher<TriggeredDispatcher, ImmediateDispatcher>
+where
+	TriggeredDispatcher: TriggerParentchainBlockImport,
+{
+	pub fn new_triggered_dispatcher(triggered_dispatcher: Arc<TriggeredDispatcher>) -> Self {
+		BlockImportDispatcher::TriggeredDispatcher(triggered_dispatcher)
+	}
+
+	pub fn new_immediate_dispatcher(immediate_dispatcher: Arc<ImmediateDispatcher>) -> Self {
+		BlockImportDispatcher::ImmediateDispatcher(immediate_dispatcher)
+	}
+
+	pub fn new_empty_dispatcher() -> Self {
+		BlockImportDispatcher::EmptyDispatcher
+	}
+
+	pub fn triggered_dispatcher(&self) -> Option<Arc<TriggeredDispatcher>> {
+		match self {
+			BlockImportDispatcher::TriggeredDispatcher(triggered_dispatcher) =>
+				Some(triggered_dispatcher.clone()),
+			_ => None,
+		}
+	}
+
+	pub fn immediate_dispatcher(&self) -> Option<Arc<ImmediateDispatcher>> {
+		match self {
+			BlockImportDispatcher::ImmediateDispatcher(immediate_dispatcher) =>
+				Some(immediate_dispatcher.clone()),
+			_ => None,
+		}
+	}
+}
+
+impl<TriggeredDispatcher, ImmediateDispatcher, SignedBlockType> DispatchBlockImport<SignedBlockType>
+	for BlockImportDispatcher<TriggeredDispatcher, ImmediateDispatcher>
+where
+	TriggeredDispatcher: DispatchBlockImport<SignedBlockType>,
+	ImmediateDispatcher: DispatchBlockImport<SignedBlockType>,
+{
+	fn dispatch_import(&self, blocks: Vec<SignedBlockType>) -> Result<()> {
+		match self {
+			BlockImportDispatcher::TriggeredDispatcher(dispatcher) =>
+				dispatcher.dispatch_import(blocks),
+			BlockImportDispatcher::ImmediateDispatcher(dispatcher) =>
+				dispatcher.dispatch_import(blocks),
+			BlockImportDispatcher::EmptyDispatcher => Err(Error::NoDispatcherAssigned),
+		}
+	}
 }

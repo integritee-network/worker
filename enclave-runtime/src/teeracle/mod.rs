@@ -17,9 +17,10 @@
 
 use crate::{
 	error::{Error, Result},
-	global_components::{
-		GLOBAL_EXTRINSICS_FACTORY_COMPONENT, GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT,
-		GLOBAL_OCALL_API_COMPONENT,
+	initialization::global_components::GLOBAL_OCALL_API_COMPONENT,
+	utils::{
+		get_extrinsic_factory_from_solo_or_parachain,
+		get_node_metadata_repository_from_solo_or_parachain,
 	},
 };
 use codec::{Decode, Encode};
@@ -87,7 +88,7 @@ fn update_market_data_internal(
 	crypto_currency: String,
 	fiat_currency: String,
 ) -> Result<Vec<OpaqueExtrinsic>> {
-	let extrinsics_factory = GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get()?;
+	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 
 	let mut extrinsic_calls: Vec<OpaqueCall> = Vec::new();
@@ -137,7 +138,7 @@ where
 		source_base_url,
 	);
 
-	let node_metadata_repository = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
+	let node_metadata_repository = get_node_metadata_repository_from_solo_or_parachain()?;
 
 	let call_ids = node_metadata_repository
 		.get_from_metadata(|m| m.update_exchange_rate_call_indexes())

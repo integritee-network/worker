@@ -27,11 +27,12 @@ use log::debug;
 use std::vec::Vec;
 
 /// Trait to specifically trigger the import of parentchain blocks.
-pub trait TriggerParentchainBlockImport<SignedBlockType> {
+pub trait TriggerParentchainBlockImport {
+	type SignedBlockType;
 	/// Trigger the import of all queued block, **including** the latest one.
 	///
 	/// Returns the latest imported block (if any).
-	fn import_all(&self) -> Result<Option<SignedBlockType>>;
+	fn import_all(&self) -> Result<Option<Self::SignedBlockType>>;
 
 	/// Trigger import of all queued blocks, **except** the latest one.
 	fn import_all_but_latest(&self) -> Result<()>;
@@ -42,16 +43,18 @@ pub trait TriggerParentchainBlockImport<SignedBlockType> {
 	/// Returns the latest imported block (if any).
 	fn import_until(
 		&self,
-		predicate: impl Fn(&SignedBlockType) -> bool,
-	) -> Result<Option<SignedBlockType>>;
+		predicate: impl Fn(&Self::SignedBlockType) -> bool,
+	) -> Result<Option<Self::SignedBlockType>>;
 
 	/// Search the import queue with a given predicate and return a reference
 	/// to the first element that matches the predicate.
-	fn peek(&self, predicate: impl Fn(&SignedBlockType) -> bool)
-		-> Result<Option<SignedBlockType>>;
+	fn peek(
+		&self,
+		predicate: impl Fn(&Self::SignedBlockType) -> bool,
+	) -> Result<Option<Self::SignedBlockType>>;
 
 	/// Peek the latest block in the import queue. Returns None if queue is empty.
-	fn peek_latest(&self) -> Result<Option<SignedBlockType>>;
+	fn peek_latest(&self) -> Result<Option<Self::SignedBlockType>>;
 }
 
 /// Dispatcher for block imports that retains blocks until the import is triggered, using the
@@ -72,23 +75,21 @@ where
 	}
 }
 
-impl<BlockImporter, BlockImportQueue> DispatchBlockImport
+impl<BlockImporter, BlockImportQueue, SignedBlockType> DispatchBlockImport<SignedBlockType>
 	for TriggeredDispatcher<BlockImporter, BlockImportQueue>
 where
-	BlockImporter: ImportParentchainBlocks,
-	BlockImportQueue: PushToBlockQueue<BlockImporter::SignedBlockType>
-		+ PopFromBlockQueue<BlockType = BlockImporter::SignedBlockType>,
+	BlockImporter: ImportParentchainBlocks<SignedBlockType = SignedBlockType>,
+	BlockImportQueue:
+		PushToBlockQueue<SignedBlockType> + PopFromBlockQueue<BlockType = SignedBlockType>,
 {
-	type SignedBlockType = BlockImporter::SignedBlockType;
-
-	fn dispatch_import(&self, blocks: Vec<Self::SignedBlockType>) -> Result<()> {
+	fn dispatch_import(&self, blocks: Vec<SignedBlockType>) -> Result<()> {
 		debug!("Pushing parentchain block(s) ({}) to import queue", blocks.len());
 		// Push all the blocks to be dispatched into the queue.
 		self.import_queue.push_multiple(blocks).map_err(Error::BlockImportQueue)
 	}
 }
 
-impl<BlockImporter, BlockImportQueue> TriggerParentchainBlockImport<BlockImporter::SignedBlockType>
+impl<BlockImporter, BlockImportQueue> TriggerParentchainBlockImport
 	for TriggeredDispatcher<BlockImporter, BlockImportQueue>
 where
 	BlockImporter: ImportParentchainBlocks,
@@ -96,6 +97,8 @@ where
 		+ PopFromBlockQueue<BlockType = BlockImporter::SignedBlockType>
 		+ PeekBlockQueue<BlockType = BlockImporter::SignedBlockType>,
 {
+	type SignedBlockType = BlockImporter::SignedBlockType;
+
 	fn import_all(&self) -> Result<Option<BlockImporter::SignedBlockType>> {
 		let blocks_to_import = self.import_queue.pop_all().map_err(Error::BlockImportQueue)?;
 

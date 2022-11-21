@@ -21,7 +21,7 @@ use super::{authentication::ServerAuth, Opcode, TcpHeader};
 use crate::{
 	attestation::create_ra_report_and_signature,
 	error::{Error as EnclaveError, Result as EnclaveResult},
-	global_components::{
+	initialization::global_components::{
 		EnclaveSealHandler, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
 		GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
 	},

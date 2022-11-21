@@ -5,18 +5,28 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
 [dependencies]
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive", "chain-error"] }
+
+# Parity
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
+
+# local
 itc-parentchain-block-import-dispatcher = { path = "../block-import-dispatcher", default-features = false }
 itc-parentchain-block-importer = { path = "../block-importer", default-features = false }
 itc-parentchain-indirect-calls-executor = { path = "../indirect-calls-executor", default-features = false }
 itc-parentchain-light-client = { path = "../light-client", default-features = false }
+itp-types = { default-features = false, path = "../../../core-primitives/types" }
 
 [features]
 default = ["std"]
 std = [
+    "codec/std",
+    "sp-runtime/std",
     "itc-parentchain-block-import-dispatcher/std",
     "itc-parentchain-block-importer/std",
     "itc-parentchain-indirect-calls-executor/std",
     "itc-parentchain-light-client/std",
+    "itp-types/std",
 ]
 sgx = [
     "itc-parentchain-block-import-dispatcher/sgx",

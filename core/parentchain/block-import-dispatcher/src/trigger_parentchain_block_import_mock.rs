@@ -53,11 +53,13 @@ impl<SignedBlockType> Default for TriggerParentchainBlockImportMock<SignedBlockT
 	}
 }
 
-impl<SignedBlockType> TriggerParentchainBlockImport<SignedBlockType>
+impl<SignedBlockType> TriggerParentchainBlockImport
 	for TriggerParentchainBlockImportMock<SignedBlockType>
 where
 	SignedBlockType: Clone,
 {
+	type SignedBlockType = SignedBlockType;
+
 	fn import_all(&self) -> Result<Option<SignedBlockType>> {
 		let mut import_flag = self.import_has_been_called.write().unwrap();
 		*import_flag = true;

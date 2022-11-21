@@ -15,16 +15,17 @@
 
 */
 
+use codec::{Decode, Encode};
+use core::fmt::Debug;
 use frame_support::sp_runtime::traits::Block as ParentchainBlockTrait;
-use itc_parentchain_light_client::light_client_init_params::{
-	LightClientInitParams,
-	LightClientInitParams::{Grandpa, Parachain},
+use itc_parentchain::primitives::{
+	ParentchainInitParams,
+	ParentchainInitParams::{Parachain, Solochain},
 };
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain, EnclaveResult};
 use itp_settings::worker::MR_ENCLAVE_SIZE;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_core::ed25519;
-use sp_runtime::traits::Header;
 
 /// mock for EnclaveBase - use in tests
 pub struct EnclaveMock;
@@ -42,14 +43,16 @@ impl EnclaveBase for EnclaveMock {
 		unreachable!()
 	}
 
-	fn init_parentchain_components<SpHeader: Header>(
+	fn init_parentchain_components<Header: Debug + Decode>(
 		&self,
-		params: LightClientInitParams<SpHeader>,
-	) -> EnclaveResult<SpHeader> {
-		return match params {
-			Grandpa { genesis_header, .. } => Ok(genesis_header),
-			Parachain { genesis_header, .. } => Ok(genesis_header),
-		}
+		params: ParentchainInitParams,
+	) -> EnclaveResult<Header> {
+		let genesis_header_encoded = match params {
+			Solochain { params } => params.genesis_header.encode(),
+			Parachain { params } => params.genesis_header.encode(),
+		};
+		let header = Header::decode(&mut genesis_header_encoded.as_slice())?;
+		Ok(header)
 	}
 
 	fn init_shard(&self, _shard: Vec<u8>) -> EnclaveResult<()> {

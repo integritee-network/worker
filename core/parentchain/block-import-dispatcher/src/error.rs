@@ -28,6 +28,10 @@ pub type Result<T> = core::result::Result<T, Error>;
 pub enum Error {
 	#[error("SGX error, status: {0}")]
 	Sgx(sgx_status_t),
+	#[error("Two Dispatcher types assigned. Please double check the initialization process.")]
+	CanNotAssignTwoDispatcher,
+	#[error("Even though there is no dispatcher assigned, the dispatch function is called.")]
+	NoDispatcherAssigned,
 	#[error("Block import queue error: {0}")]
 	BlockImportQueue(#[from] itp_block_import_queue::error::Error),
 	#[error("Block import error: {0}")]
