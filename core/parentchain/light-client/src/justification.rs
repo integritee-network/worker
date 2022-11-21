@@ -70,8 +70,9 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 			(justification.commit.target_hash, justification.commit.target_number);
 
 		if justificated_commit != finalized_target {
-			let msg = "invalid commit target in grandpa justification".to_string();
-			Err(ClientError::BadJustification(msg))
+			Err(ClientError::BadJustification(
+				"invalid commit target in grandpa justification".to_string(),
+			))
 		} else {
 			justification.verify_with_voter_set(set_id, voters).map(|_| justification)
 		}
@@ -103,10 +104,10 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 
 		match finality_grandpa::validate_commit(&self.commit, voters, &ancestry_chain) {
 			Ok(ref result) if result.is_valid() => {},
-			_ => {
-				let msg = "invalid commit in grandpa justification".to_string();
-				return Err(ClientError::BadJustification(msg))
-			},
+			_ =>
+				return Err(ClientError::BadJustification(
+					"invalid commit in grandpa justification".to_string(),
+				)),
 		}
 
 		let mut buf = Vec::new();
