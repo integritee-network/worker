@@ -191,10 +191,7 @@ where
 	) -> Result<Vec<Block::Hash>, GrandpaError> {
 		let mut ancestors = Vec::new();
 		let mut current_hash = block;
-		loop {
-			if current_hash == base {
-				break
-			}
+		while current_hash != base {
 			match self.ancestry.get(&current_hash) {
 				Some(current_header) => {
 					current_hash = *current_header.parent_hash();
