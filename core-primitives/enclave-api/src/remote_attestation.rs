@@ -111,8 +111,7 @@ impl RemoteAttestation for Enclave {
 	fn perform_ra(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
-		let unchecked_extrinsic_size = EXTRINSIC_MAX_SIZE;
-		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; unchecked_extrinsic_size];
+		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
 
 		let url = w_url.encode();
 
@@ -147,8 +146,7 @@ impl RemoteAttestation for Enclave {
 		let quote_size = self.qe_get_quote_size()?;
 		info!("Retrieved quote size of {:?}", quote_size);
 
-		let unchecked_extrinsic_size = EXTRINSIC_MAX_SIZE;
-		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; unchecked_extrinsic_size as usize];
+		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
 
 		let result = unsafe {
 			ffi::perform_dcap_ra(
