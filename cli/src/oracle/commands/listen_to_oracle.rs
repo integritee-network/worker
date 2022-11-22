@@ -44,5 +44,44 @@ impl ListenToOracleEventsCmd {
 }
 
 fn count_oracle_update_events(api: &ParentchainApi, duration: Duration) -> EventCount {
-	0u32
+	let stop = duration_now() + duration;
+
+	//subscribe to events
+	let (events_in, events_out) = channel();
+	api.subscribe_events(events_in).unwrap();
+	let mut count = 0;
+
+	while remaining_time(stop).unwrap_or_default() > Duration::ZERO {
+		let events_str = events_out.recv().unwrap();
+		let events_vec_bytes = Vec::from_hex(events_str).unwrap();
+		count += report_event_count(&events_vec_bytes);
+	}
+	debug!("Received {} ExchangeRateUpdated event(s) in total", count);
+	count
+}
+
+fn report_event_count(events_bytes: &[u8]) -> EventCount {
+	let event_records =
+		Vec::<frame_system::EventRecord<Event, Hash>>::decode(&mut &events_bytes[..]);
+	if event_records.is_err() {
+		// Return no count if cant successfully decode event
+		return 0
+	}
+
+	let mut count = 0;
+	event_records.unwrap().iter().for_each(|event_record| {
+		info!("received event {:?}", event_record.event);
+		if let Event::Teeracle(event) = &event_record.event {
+			match &event {
+				my_node_runtime::pallet_teeracle::Event::OracleUpdated(oracle_name, src) => {
+					count += 1;
+					debug!("Received OracleUpdated event");
+					println!("OracleUpdated: ORACLE_NAME : {}, SRC : {}", oracle_name, src);
+				},
+				// Can just remove this and ignore handling this case
+				_ => debug!("ignoring teeracle event: {:?}", event),
+			}
+		}
+	});
+	count
 }

@@ -43,24 +43,6 @@ impl ListenToExchangeRateEventsCmd {
 	}
 }
 
-// fn report_event_count(event_bytes: &[u8]) -> u32 {
-// 	let events_records =
-// 		Vec::<frame_system::EventRecord<Event, Hash>>::decode(&mut &event_bytes.as_slice()).map_err(|| 0u32)?;
-// 	events_records.iter()
-// 	.for_each(|&event_record| info!("received event {:?}", event_record.event))
-// 	.filter(|&event_record| {
-// 		get_teeracle_event::<my_node_runtime::pallet_teeracle::Event>(event_record.event).is_some()
-// 	})
-// }
-
-// // Event::Teeracle(data) what is the type of data?
-// fn node_event_into_option<T>(teeracle_event: my_node_runtime::Event) -> Option<T> {
-// 	match teeracle_event {
-// 		Event::Teeracle(event) => Some(event),
-// 		_ => None
-// 	}
-// }
-
 pub fn count_exchange_rate_update_events(api: &ParentchainApi, duration: Duration) -> u32 {
 	let stop = duration_now() + duration;
 
@@ -68,12 +50,6 @@ pub fn count_exchange_rate_update_events(api: &ParentchainApi, duration: Duratio
 	let (events_in, events_out) = channel();
 	api.subscribe_events(events_in).unwrap();
 	let mut count = 0;
-
-	// while remaining_time(stop).unwrap_or_default() > Duration::ZERO {
-	// 	let events_str = events_out.recv().unwrap();
-	// 	let events_bytes = Vec::from_hex(event_str).unwrap();
-	// 	// if let events_counted = report_events(&events_decoded)
-	// }
 
 	while remaining_time(stop).unwrap_or_default() > Duration::ZERO {
 		let event_str = events_out.recv().unwrap();
