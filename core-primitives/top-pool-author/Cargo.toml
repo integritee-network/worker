@@ -15,6 +15,7 @@ itp-enclave-metrics = { path = "../enclave-metrics", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
 itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
+itp-stf-primitives = { default-features = false, path = "../../core-primitives/stf-primitives" }
 itp-test = { path = "../test", default-features = false, optional = true }
 itp-top-pool = { path = "../top-pool", default-features = false }
 itp-types = { path = "../types", default-features = false }

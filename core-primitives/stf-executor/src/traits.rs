@@ -17,10 +17,13 @@
 
 use crate::{error::Result, BatchExecutionResult};
 use codec::Encode;
-use ita_stf::{
-	AccountId, ParentchainHeader, ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedOperation,
-};
+use ita_stf::ParentchainHeader;
 use itp_sgx_externalities::SgxExternalitiesTrait;
+use itp_stf_primitives::{
+	trusted_call::{TrustedCall, TrustedCallSigned},
+	types::{AccountId, ShardIdentifier},
+	TrustedOperation,
+};
 use itp_types::H256;
 use sp_runtime::traits::Header as HeaderTrait;
 use std::{fmt::Debug, result::Result as StdResult, time::Duration};

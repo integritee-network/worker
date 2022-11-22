@@ -25,10 +25,10 @@ use crate::{
 	traits::{AuthorApi, OnBlockImported},
 };
 use codec::{Decode, Encode};
-use ita_stf::{hash, Getter, TrustedOperation};
 use itp_enclave_metrics::EnclaveMetric;
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt};
+use itp_stf_primitives::{getter::Getter, hash, TrustedOperation};
 use itp_stf_state_handler::query_shard_state::QueryShardState;
 use itp_top_pool::{
 	error::{Error as PoolError, IntoPoolError},

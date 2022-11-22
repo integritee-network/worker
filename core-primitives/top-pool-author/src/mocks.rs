@@ -29,9 +29,10 @@ use crate::{
 	traits::{AuthorApi, OnBlockImported},
 };
 use codec::Decode;
-use ita_stf::{
+use itp_stf_primitives::{
+	getter::{Getter, TrustedGetterSigned},
 	hash::{Hash, TrustedOperationOrHash},
-	Getter, TrustedGetterSigned, TrustedOperation,
+	TrustedOperation,
 };
 use itp_top_pool::primitives::PoolFuture;
 use itp_types::ShardIdentifier;

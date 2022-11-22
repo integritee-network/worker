@@ -28,6 +28,7 @@ extern crate sgx_tstd as std;
 
 #[cfg(feature = "sgx")]
 pub use ita_sgx_runtime::{Balance, Index};
+pub use itp_stf_primitives::*;
 #[cfg(feature = "std")]
 pub use my_node_runtime::{Balance, Index};
 
@@ -37,14 +38,11 @@ use sp_core::{crypto::AccountId32, ed25519, sr25519, Pair, H256};
 use sp_runtime::{traits::Verify, MultiSignature};
 use std::{boxed::Box, string::String};
 
-pub use getter::*;
 pub use stf_sgx_primitives::{types::*, Stf};
 pub use trusted_call::*;
 
 #[cfg(feature = "evm")]
 pub mod evm_helpers;
-pub mod getter;
-pub mod hash;
 pub mod helpers;
 pub mod stf_sgx;
 pub mod stf_sgx_primitives;

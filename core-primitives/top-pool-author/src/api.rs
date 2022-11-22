@@ -22,9 +22,8 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::error;
 use codec::Encode;
-use ita_stf::{
-	Getter, ShardIdentifier, TrustedCallSigned, TrustedOperation as StfTrustedOperation,
-};
+use ita_stf::{ShardIdentifier, TrustedCallSigned, TrustedOperation as StfTrustedOperation};
+use itp_stf_primitives::Getter;
 use itp_top_pool::{
 	pool::{ChainApi, ExtrinsicHash, NumberFor},
 	primitives::TrustedOperationSource,

@@ -27,7 +27,7 @@ use crate::{
 };
 use codec::Decode;
 use hdrhistogram::Histogram;
-use ita_stf::{Getter, Index, KeyPair, TrustedCall, TrustedGetter, TrustedOperation};
+use ita_stf::{Getter, Index, KeyPair, TrustedCall, TrustedOperation};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
 use itp_types::{
 	Balance, ShardIdentifier, TrustedOperationStatus,

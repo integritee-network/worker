@@ -22,6 +22,7 @@ use sp_core::{crypto::AccountId32, ed25519, sr25519, H256};
 use sp_runtime::MultiSignature;
 
 use crate::Index;
+pub use itp_types::{AccountData, AccountInfo, BlockNumber, Header as ParentchainHeader};
 
 pub type AccountId = AccountId32;
 

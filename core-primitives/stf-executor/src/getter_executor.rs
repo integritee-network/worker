@@ -23,7 +23,7 @@ use crate::{
 	state_getter::GetState,
 };
 use codec::Decode;
-use ita_stf::Getter;
+use itp_stf_primitives::getter::Getter;
 use itp_stf_state_observer::traits::ObserveState;
 use itp_types::ShardIdentifier;
 use log::*;
