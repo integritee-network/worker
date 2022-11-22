@@ -89,6 +89,44 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 		self.verify_with_voter_set(set_id, &voters)
 	}
 
+	fn validate_commit(
+		&self,
+		voters: &VoterSet<AuthorityId>,
+		ancestry_chain: &AncestryChain<Block>,
+	) -> Result<(), ClientError>
+	where
+		NumberFor<Block>: finality_grandpa::BlockNumberOps,
+	{
+		match finality_grandpa::validate_commit(&self.commit, voters, ancestry_chain) {
+			Ok(ref result) if result.is_valid() => Ok(()),
+			_ => Err(ClientError::BadJustification(
+				"invalid commit in grandpa justification".to_string(),
+			)),
+		}
+	}
+
+	fn fill_visited_hashes(
+		&self,
+		ancestry_chain: &AncestryChain<Block>,
+		precommit_target_hash: Block::Hash,
+		visited_hashes: &mut HashSet<Block::Hash>,
+	) -> Result<(), ClientError>
+	where
+		NumberFor<Block>: finality_grandpa::BlockNumberOps,
+	{
+		use finality_grandpa::Chain;
+		if let Ok(route) = ancestry_chain.ancestry(self.commit.target_hash, precommit_target_hash) {
+			// ancestry starts from parent hash but the precommit target hash has been visited
+			visited_hashes.insert(precommit_target_hash);
+			visited_hashes.extend(route.iter());
+			Ok(())
+		} else {
+			Err(ClientError::BadJustification(
+				"invalid precommit ancestry proof in grandpa justification".to_string(),
+			))
+		}
+	}
+
 	/// Validate the commit and the votes' ancestry proofs.
 	pub(crate) fn verify_with_voter_set(
 		&self,
@@ -98,17 +136,9 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 	where
 		NumberFor<Block>: finality_grandpa::BlockNumberOps,
 	{
-		use finality_grandpa::Chain;
-
 		let ancestry_chain = AncestryChain::<Block>::new(&self.votes_ancestries);
 
-		match finality_grandpa::validate_commit(&self.commit, voters, &ancestry_chain) {
-			Ok(ref result) if result.is_valid() => {},
-			_ =>
-				return Err(ClientError::BadJustification(
-					"invalid commit in grandpa justification".to_string(),
-				)),
-		}
+		self.validate_commit(voters, &ancestry_chain)?;
 
 		let mut buf = Vec::new();
 		let mut visited_hashes = HashSet::new();
@@ -131,17 +161,11 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 				continue
 			}
 
-			if let Ok(route) =
-				ancestry_chain.ancestry(self.commit.target_hash, signed.precommit.target_hash)
-			{
-				// ancestry starts from parent hash but the precommit target hash has been visited
-				visited_hashes.insert(signed.precommit.target_hash);
-				visited_hashes.extend(route.iter());
-			} else {
-				return Err(ClientError::BadJustification(
-					"invalid precommit ancestry proof in grandpa justification".to_string(),
-				))
-			}
+			self.fill_visited_hashes(
+				&ancestry_chain,
+				signed.precommit.target_hash,
+				&mut visited_hashes,
+			)?;
 		}
 
 		let ancestry_hashes =
