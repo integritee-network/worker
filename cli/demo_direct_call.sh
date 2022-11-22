@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Executes a direct call on a worker and checks the balance afterwards.
+#
 # setup:
 # run all on localhost:
 #   integritee-node purge-chain --dev

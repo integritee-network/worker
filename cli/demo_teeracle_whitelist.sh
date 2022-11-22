@@ -4,12 +4,16 @@ set -euo pipefail
 trap "echo The demo is terminated (SIGINT); exit 1" SIGINT
 trap "echo The demo is terminated (SIGTERM); exit 1" SIGTERM
 
+# Registers a teeracle with the parentchain, and publish some oracle data.
+#
 # Demo to show that an enclave can update the exchange rate only when
-#   1. it is a registered enclave
-#   2. and that the code used is reliable -> the enclave is in the teeracle whitelist.
-# The teeracle's whitelist has to be empty at the start. So run it with a clean node state
+#   1. the enclave is registered at the pallet-teerex.
+#   2. and that the code used is reliable -> the enclave has been put the teeracle whitelist via a governance or sudo
+#   call.
+#
+# The teeracle's whitelist has to be empty at the start. So the script needs to run with a clean node state.
 # A registered mrenclave will be added in the whitelist by a sudo account. Here //Alice
-
+#
 # setup:
 # run all on localhost:
 #   integritee-node purge-chain --dev
@@ -17,7 +21,7 @@ trap "echo The demo is terminated (SIGTERM); exit 1" SIGTERM
 #   integritee-service --clean-reset run (--skip-ra --dev)
 #
 # then run this script
-
+#
 # usage:
 #   demo_teeracle_whitelist.sh -p <NODEPORT> -P <WORKERPORT> -d <DURATION> -i <WORKER_UPDATE_INTERVAL> -u <NODE_URL> -V <WORKER_URL> -C <CLIENT_BINARY_PATH>
 

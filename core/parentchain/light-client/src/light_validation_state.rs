@@ -17,7 +17,7 @@
 
 //! State of the light-client validation.
 
-use crate::{state::RelayState, RelayId};
+use crate::{state::RelayState, Error, RelayId};
 use codec::{Decode, Encode};
 pub use sp_finality_grandpa::SetId;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
@@ -32,6 +32,19 @@ pub struct LightValidationState<Block: ParentchainBlockTrait> {
 impl<Block: ParentchainBlockTrait> LightValidationState<Block> {
 	pub fn new() -> Self {
 		Self { num_relays: Default::default(), tracked_relays: Default::default() }
+	}
+
+	pub(crate) fn get_tracked_relay(&self, relay_id: RelayId) -> Result<&RelayState<Block>, Error> {
+		let relay = self.tracked_relays.get(&relay_id).ok_or(Error::NoSuchRelayExists)?;
+		Ok(relay)
+	}
+
+	pub(crate) fn get_tracked_relay_mut(
+		&mut self,
+		relay_id: RelayId,
+	) -> Result<&mut RelayState<Block>, Error> {
+		let relay = self.tracked_relays.get_mut(&relay_id).ok_or(Error::NoSuchRelayExists)?;
+		Ok(relay)
 	}
 }
 

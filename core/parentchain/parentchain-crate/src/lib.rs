@@ -29,3 +29,5 @@ pub use itc_parentchain_block_importer as block_importer;
 pub use itc_parentchain_indirect_calls_executor as indirect_calls_executor;
 
 pub use itc_parentchain_light_client as light_client;
+
+pub mod primitives;

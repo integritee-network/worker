@@ -57,8 +57,8 @@ impl<Block: BlockT> RelayState<Block> {
 	}
 
 	pub fn set_last_finalized_block_header(&mut self, header: Block::Header) {
-		self.penultimate_finalized_block_header = self.last_finalized_block_header.clone();
-		self.last_finalized_block_header = header;
+		self.penultimate_finalized_block_header =
+			std::mem::replace(&mut self.last_finalized_block_header, header);
 	}
 }
 

@@ -17,14 +17,17 @@
 
 use crate::{
 	error::Result,
-	global_components::{
-		GLOBAL_EXTRINSICS_FACTORY_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
-		GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT,
-		GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
-		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STF_EXECUTOR_COMPONENT,
-		GLOBAL_TOP_POOL_AUTHOR_COMPONENT, GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT,
+	initialization::global_components::{
+		GLOBAL_OCALL_API_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT,
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+		GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
 	},
 	sync::{EnclaveLock, EnclaveStateRWLock},
+	utils::{
+		get_extrinsic_factory_from_solo_or_parachain, get_stf_executor_from_solo_or_parachain,
+		get_triggered_dispatcher_from_solo_or_parachain,
+		get_validator_accessor_from_solo_or_parachain,
+	},
 };
 use codec::Encode;
 use itc_parentchain::{
@@ -90,10 +93,9 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 
 	let slot_beginning_timestamp = duration_now();
 
-	let parentchain_import_dispatcher =
-		GLOBAL_TRIGGERED_PARENTCHAIN_IMPORT_DISPATCHER_COMPONENT.get()?;
+	let parentchain_import_dispatcher = get_triggered_dispatcher_from_solo_or_parachain()?;
 
-	let validator_access = GLOBAL_PARENTCHAIN_BLOCK_VALIDATOR_ACCESS_COMPONENT.get()?;
+	let validator_access = get_validator_accessor_from_solo_or_parachain()?;
 
 	// This gets the latest imported block. We accept that all of AURA, up until the block production
 	// itself, will  operate on a parentchain block that is potentially outdated by one block
@@ -116,13 +118,13 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 		start_time.elapsed().as_millis()
 	);
 
-	let stf_executor = GLOBAL_STF_EXECUTOR_COMPONENT.get()?;
+	let stf_executor = get_stf_executor_from_solo_or_parachain()?;
 
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 
 	let block_composer = GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT.get()?;
 
-	let extrinsics_factory = GLOBAL_EXTRINSICS_FACTORY_COMPONENT.get()?;
+	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
 
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 
@@ -217,7 +219,8 @@ where
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	PEnvironment:
 		Environment<ParentchainBlock, SignedSidechainBlock, Error = ConsensusError> + Send + Sync,
-	BlockImportTrigger: TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>>,
+	BlockImportTrigger:
+		TriggerParentchainBlockImport<SignedBlockType = SignedParentchainBlock<ParentchainBlock>>,
 {
 	debug!("[Aura] Executing aura for slot: {:?}", slot);
 

@@ -1,8 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
-# Runs the direct call demo twice, with worker 1 and worker 2.
-# Requires 2 workers to be running. This is mainly used for the docker setup.
+# Runs the `demo_direct_call.sh` twice once with worker1 and worker2.
+# This verifies that the two workers are successfully sharing state updates
+# by broadcasting sidechain blocks.
+#
+# It does the same as `scripts/m8.sh`, but is mainly used in the docker tests.
 
 while getopts ":p:A:B:u:W:V:C:" opt; do
     case $opt in

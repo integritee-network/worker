@@ -31,7 +31,7 @@ use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_types::H256;
 use sp_core::Pair;
 use sp_runtime::traits::Header as HeaderTrait;
-use std::{marker::PhantomData, ops::Deref, time::Duration, vec::Vec};
+use std::{boxed::Box, marker::PhantomData, ops::Deref, time::Duration, vec::Vec};
 
 #[cfg(feature = "std")]
 use std::sync::RwLock;
@@ -127,7 +127,7 @@ impl StfEnclaveSigning for StfEnclaveSignerMock {
 		trusted_call: &TrustedCall,
 		shard: &ShardIdentifier,
 	) -> Result<TrustedCallSigned> {
-		Ok(trusted_call.sign(&KeyPair::Ed25519(self.signer.clone()), 1, &self.mr_enclave, shard))
+		Ok(trusted_call.sign(&KeyPair::Ed25519(Box::new(self.signer)), 1, &self.mr_enclave, shard))
 	}
 }
 

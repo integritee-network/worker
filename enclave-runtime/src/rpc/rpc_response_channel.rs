@@ -15,7 +15,7 @@
 
 */
 
-use crate::global_components::GLOBAL_WEB_SOCKET_SERVER_COMPONENT;
+use crate::initialization::global_components::GLOBAL_WEB_SOCKET_SERVER_COMPONENT;
 use itc_direct_rpc_server::{response_channel::ResponseChannel, DirectRpcError};
 use itc_tls_websocket_server::{ConnectionToken, WebSocketResponder};
 use itp_component_container::ComponentGetter;

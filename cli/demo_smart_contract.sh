@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Deploys a simple counter smart contract on our EVM sidechain and increments the value.
+#
 # setup:
 # run all on localhost:
 #   integritee-node purge-chain --dev

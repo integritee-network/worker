@@ -104,8 +104,9 @@ impl<
 	StateKeyRepository: AccessKey,
 	<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
 	TopPoolAuthor: AuthorApi<H256, H256> + OnBlockImported<Hash = H256>,
-	ParentchainBlockImporter:
-		TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>> + Send + Sync,
+	ParentchainBlockImporter: TriggerParentchainBlockImport<SignedBlockType = SignedParentchainBlock<ParentchainBlock>>
+		+ Send
+		+ Sync,
 {
 	pub fn new(
 		state_handler: Arc<StateHandler>,
@@ -189,8 +190,9 @@ impl<
 	StateKeyRepository: AccessKey,
 	<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
 	TopPoolAuthor: AuthorApi<H256, H256> + OnBlockImported<Hash = H256>,
-	ParentchainBlockImporter:
-		TriggerParentchainBlockImport<SignedParentchainBlock<ParentchainBlock>> + Send + Sync,
+	ParentchainBlockImporter: TriggerParentchainBlockImport<SignedBlockType = SignedParentchainBlock<ParentchainBlock>>
+		+ Send
+		+ Sync,
 {
 	type Verifier = AuraVerifier<
 		Authority,

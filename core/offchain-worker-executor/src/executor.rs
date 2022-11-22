@@ -214,6 +214,7 @@ mod tests {
 	use itp_top_pool_author::mocks::AuthorApiMock;
 	use itp_types::Block as ParentchainBlock;
 	use sp_core::{ed25519, Pair};
+	use std::boxed::Box;
 
 	type TestStateHandler = HandleStateMock;
 	type TestStfInterface = SystemPalletEventInterfaceMock;
@@ -321,7 +322,8 @@ mod tests {
 			receiver.public().into(),
 			10000u128,
 		);
-		let call_signed = trusted_call.sign(&KeyPair::Ed25519(sender), 0, &mr_enclave(), &shard());
+		let call_signed =
+			trusted_call.sign(&KeyPair::Ed25519(Box::new(sender)), 0, &mr_enclave(), &shard());
 		TrustedOperation::indirect_call(call_signed)
 	}
 

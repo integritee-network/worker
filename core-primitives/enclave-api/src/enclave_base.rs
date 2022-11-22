@@ -18,8 +18,9 @@
 
 use crate::{error::Error, Enclave, EnclaveResult};
 use codec::{Decode, Encode};
+use core::fmt::Debug;
 use frame_support::ensure;
-use itc_parentchain_light_client::light_client_init_params::LightClientInitParams;
+use itc_parentchain::primitives::ParentchainInitParams;
 use itp_enclave_api_ffi as ffi;
 use itp_settings::worker::{
 	HEADER_MAX_SIZE, MR_ENCLAVE_SIZE, SHIELDING_KEY_SIZE, SIGNING_KEY_SIZE,
@@ -28,7 +29,6 @@ use log::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;
 use sp_core::ed25519;
-use sp_runtime::traits::Header;
 
 /// Trait for base/common Enclave API functions
 pub trait EnclaveBase: Send + Sync + 'static {
@@ -42,10 +42,10 @@ pub trait EnclaveBase: Send + Sync + 'static {
 	fn init_direct_invocation_server(&self, rpc_server_addr: String) -> EnclaveResult<()>;
 
 	/// Initialize the light client (needs to be called once at application startup).
-	fn init_parentchain_components<SpHeader: Header>(
+	fn init_parentchain_components<Header: Decode + Debug>(
 		&self,
-		params: LightClientInitParams<SpHeader>,
-	) -> EnclaveResult<SpHeader>;
+		params: ParentchainInitParams,
+	) -> EnclaveResult<Header>;
 
 	/// Initialize a new shard.
 	fn init_shard(&self, shard: Vec<u8>) -> EnclaveResult<()>;
@@ -121,14 +121,13 @@ impl EnclaveBase for Enclave {
 		Ok(())
 	}
 
-	fn init_parentchain_components<SpHeader: Header>(
+	fn init_parentchain_components<Header: Decode + Debug>(
 		&self,
-		params: LightClientInitParams<SpHeader>,
-	) -> EnclaveResult<SpHeader> {
+		params: ParentchainInitParams,
+	) -> EnclaveResult<Header> {
 		let latest_header_encoded = init_parentchain_components_ffi(self.eid, params.encode())?;
 
-		let latest: SpHeader =
-			Decode::decode(&mut latest_header_encoded.as_slice()).expect("Invalid header");
+		let latest = Header::decode(&mut latest_header_encoded.as_slice())?;
 		info!("Latest Header {:?}", latest);
 
 		Ok(latest)

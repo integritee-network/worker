@@ -102,7 +102,10 @@ mod tests {
 	use itp_types::ShardIdentifier;
 	use sp_core::{ed25519, Pair};
 	use sp_runtime::traits::{BlakeTwo256, Hash};
-	use std::string::{String, ToString};
+	use std::{
+		boxed::Box,
+		string::{String, ToString},
+	};
 
 	type Seed = [u8; 32];
 	const TEST_SEED: Seed = *b"12345678901234567890123456789012";
@@ -183,7 +186,8 @@ mod tests {
 	fn trusted_getter() -> TrustedOperation {
 		let account = test_account();
 		let getter = TrustedGetter::free_balance(account.public().into());
-		let trusted_getter_signed = Getter::trusted(getter.sign(&KeyPair::Ed25519(account)));
+		let trusted_getter_signed =
+			Getter::trusted(getter.sign(&KeyPair::Ed25519(Box::new(account))));
 		TrustedOperation::from(trusted_getter_signed)
 	}
 
@@ -191,7 +195,7 @@ mod tests {
 		let account = test_account();
 		let call =
 			TrustedCall::balance_shield(account.public().into(), account.public().into(), 12u128);
-		call.sign(&KeyPair::Ed25519(account), 0, &mr_enclave(), &shard_id())
+		call.sign(&KeyPair::Ed25519(Box::new(account)), 0, &mr_enclave(), &shard_id())
 	}
 
 	fn test_account() -> ed25519::Pair {

@@ -20,32 +20,13 @@ use codec::{Decode, Encode};
 use sp_finality_grandpa::AuthorityList;
 use std::vec::Vec;
 
-// The variants will be chosen according to availability of grandpa authorities on the parent chain.
-#[derive(Encode, Decode)]
-pub enum LightClientInitParams<Header> {
-	Grandpa { genesis_header: Header, authorities: AuthorityList, authority_proof: Vec<Vec<u8>> },
-	Parachain { genesis_header: Header },
+#[derive(Encode, Decode, Clone)]
+pub struct GrandpaParams<Header> {
+	pub genesis_header: Header,
+	pub authorities: AuthorityList,
+	pub authority_proof: Vec<Vec<u8>>,
 }
-
-impl<Header> LightClientInitParams<Header> {
-	pub fn get_genesis_header(&self) -> &Header {
-		match self {
-			LightClientInitParams::Grandpa { genesis_header, .. } => genesis_header,
-			LightClientInitParams::Parachain { genesis_header } => genesis_header,
-		}
-	}
-
-	pub fn get_authorities(&self) -> Option<&AuthorityList> {
-		match self {
-			LightClientInitParams::Grandpa { authorities, .. } => Some(authorities),
-			LightClientInitParams::Parachain { .. } => None,
-		}
-	}
-
-	pub fn get_authority_proof(&self) -> Option<&Vec<Vec<u8>>> {
-		match self {
-			LightClientInitParams::Grandpa { authority_proof, .. } => Some(authority_proof),
-			LightClientInitParams::Parachain { .. } => None,
-		}
-	}
+#[derive(Encode, Decode, Clone)]
+pub struct SimpleParams<Header> {
+	pub genesis_header: Header,
 }

@@ -2,7 +2,8 @@
 set -euo pipefail
 
 # Runs the direct call demo twice, with worker 1 and worker 2.
-# Requires 2 workers to be running. This is mainly used for the docker setup.
+#
+# It does the same as `./scripts/m6.sh`, but is mainly used in the docker tests.
 
 while getopts ":p:A:B:u:W:V:C:" opt; do
     case $opt in

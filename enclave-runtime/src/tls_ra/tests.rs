@@ -22,7 +22,7 @@ use super::{
 	tls_ra_server::run_state_provisioning_server_internal,
 };
 use crate::{
-	global_components::EnclaveStf,
+	initialization::global_components::EnclaveStf,
 	tls_ra::seal_handler::{SealHandler, SealStateAndKeys, UnsealStateAndKeys},
 };
 use ita_stf::{AccountId, State};
