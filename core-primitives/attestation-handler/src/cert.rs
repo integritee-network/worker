@@ -71,7 +71,7 @@ pub mod sgx {
 	const SUBJECT: &str = "Integritee ephemeral";
 
 	pub fn gen_ecc_cert(
-		payload: String,
+		payload: &[u8],
 		prv_k: &sgx_ec256_private_t,
 		pub_k: &sgx_ec256_public_t,
 		ecc_handle: &SgxEccHandle,
@@ -158,7 +158,7 @@ pub mod sgx {
 								writer.next().write_oid(&ObjectIdentifier::from_slice(&[
 									2, 16, 840, 1, 113_730, 1, 13,
 								]));
-								writer.next().write_bytes(&payload.into_bytes());
+								writer.next().write_bytes(payload);
 							});
 						});
 					});

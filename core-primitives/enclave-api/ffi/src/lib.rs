@@ -1,6 +1,6 @@
 ///! FFI's that call into the enclave. These functions need to be added to the
 /// enclave edl file and be implemented within the enclave.
-use sgx_types::{c_int, sgx_enclave_id_t, sgx_quote_sign_type_t, sgx_status_t};
+use sgx_types::{c_int, sgx_enclave_id_t, sgx_quote_sign_type_t, sgx_status_t, sgx_target_info_t};
 
 extern "C" {
 
@@ -100,7 +100,28 @@ extern "C" {
 		skip_ra: c_int,
 	) -> sgx_status_t;
 
+	pub fn perform_dcap_ra(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		genesis_hash: *const u8,
+		genesis_hash_size: u32,
+		nonce: *const u32,
+		w_url: *const u8,
+		w_url_size: u32,
+		unchecked_extrinsic: *mut u8,
+		unchecked_extrinsic_size: u32,
+		quoting_enclave_target_info: &sgx_target_info_t,
+		quote_size: *const u32,
+	) -> sgx_status_t;
+
 	pub fn dump_ra_to_disk(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
+
+	pub fn dump_dcap_ra_to_disk(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		quoting_enclave_target_info: &sgx_target_info_t,
+		quote_size: *const u32,
+	) -> sgx_status_t;
 
 	pub fn test_main_entrance(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
 

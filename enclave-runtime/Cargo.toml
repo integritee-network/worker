@@ -101,6 +101,7 @@ itp-component-container = { path = "../core-primitives/component-container", def
 itp-extrinsics-factory = { path = "../core-primitives/extrinsics-factory", default-features = false, features = ["sgx"] }
 itp-hashing = { path = "../core-primitives/hashing", default-features = false }
 itp-node-api = { path = "../core-primitives/node-api", default-features = false, features = ["sgx"] }
+itp-node-api-metadata = { path = "../core-primitives/node-api/metadata", default-features = false }
 itp-nonce-cache = { path = "../core-primitives/nonce-cache", default-features = false, features = ["sgx"] }
 itp-ocall-api = { path = "../core-primitives/ocall-api", default-features = false }
 itp-primitives-cache = { path = "../core-primitives/primitives-cache", default-features = false, features = ["sgx"] }
