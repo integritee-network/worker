@@ -20,11 +20,7 @@ use frame_support::ensure;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use log::*;
 use sgx_tse::rsgx_create_report;
-use sgx_types::{
-	sgx_epid_group_id_t, sgx_measurement_t, sgx_platform_info_t, sgx_quote_nonce_t,
-	sgx_quote_sign_type_t, sgx_report_body_t, sgx_report_data_t, sgx_report_t, sgx_spid_t,
-	sgx_status_t, sgx_target_info_t, sgx_update_info_bit_t, SgxResult,
-};
+use sgx_types::*;
 use std::{ptr, vec::Vec};
 
 const RET_QUOTE_BUF_LEN: usize = 2048;

@@ -15,18 +15,21 @@
 //! including the verification of the retrieved quote.
 
 use crate::{
-	cert, io, ocall::OcallApi, utils::hash_from_slice, Error as EnclaveError,
-	ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder, Result as EnclaveResult,
-	GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT,
+	ocall::OcallApi, utils::get_node_metadata_repository_from_solo_or_parachain,
+	Error as EnclaveError, Result as EnclaveResult,
 };
 use codec::Encode;
 use core::{convert::TryInto, default::Default};
-use itertools::Itertools;
-use itp_component_container::ComponentGetter;
-use itp_node_api::metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata};
+use itp_attestation_handler::cert;
+use itp_hashing::hash_from_slice;
+use itp_node_api::{
+	api_client::{ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder},
+	metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata},
+};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::files::RA_DUMP_CERT_DER_FILE;
 use itp_sgx_crypto::Ed25519Seal;
+use itp_sgx_io as io;
 use itp_sgx_io::StaticSealedIO;
 use itp_time_utils::now_as_secs;
 use itp_utils::write_slice_and_whitespace_pad;
@@ -190,8 +193,6 @@ pub fn generate_dcap_ecc_cert<A: EnclaveAttestationOCallApi>(
 	let _result = ecc_handle.open();
 	let (prv_k, pub_k) = ecc_handle.create_key_pair()?;
 	info!("Enclave Attestation] Generated ephemeral ECDSA keypair:");
-	debug!(" pubkey X is {:02x}", pub_k.gx.iter().format(""));
-	debug!(" pubkey Y is {:02x}", pub_k.gy.iter().format(""));
 
 	let qe_quote = if !skip_ra {
 		let qe_quote = match retrieve_qe_dcap_quote(
@@ -236,7 +237,7 @@ fn compose_remote_attestation_extrinsic(
 	cert_der: &[u8],
 ) -> EnclaveResult<Vec<u8>> {
 	let signer = Ed25519Seal::unseal_from_static_file()?;
-	let node_metadata_repository = GLOBAL_NODE_METADATA_REPOSITORY_COMPONENT.get()?;
+	let node_metadata_repository = get_node_metadata_repository_from_solo_or_parachain()?;
 
 	let (register_enclave_call, runtime_spec_version, runtime_transaction_version) =
 		node_metadata_repository

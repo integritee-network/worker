@@ -220,8 +220,8 @@ fn main() {
 	} else if matches.is_present("dump-ra") {
 		info!("*** Perform RA and dump cert to disk");
 		enclave.dump_ra_to_disk().unwrap();
-		// TODO: Switch over to DCAP
-		//enclave.dump_dcap_ra_to_disk().unwrap();
+	// TODO: Switch over to DCAP
+	//enclave.dump_dcap_ra_to_disk().unwrap();
 	} else if matches.is_present("mrenclave") {
 		println!("{}", enclave.get_mrenclave().unwrap().encode().to_base58());
 	} else if let Some(sub_matches) = matches.subcommand_matches("init-shard") {
