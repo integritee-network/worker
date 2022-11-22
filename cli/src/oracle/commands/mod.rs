@@ -21,5 +21,5 @@ mod listen_to_oracle;
 
 pub use self::{
 	add_to_whitelist::AddToWhitelistCmd, listen_to_exchange::ListenToExchangeRateEventsCmd,
-	listen_to_oracle::ListenToOracleEventsCmd
+	listen_to_oracle::ListenToOracleEventsCmd,
 };

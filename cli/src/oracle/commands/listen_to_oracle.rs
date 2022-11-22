@@ -20,7 +20,7 @@ use codec::Decode;
 use itp_node_api::api_client::ParentchainApi;
 use itp_time_utils::{duration_now, remaining_time};
 use log::{debug, info};
-use my_node_runtime::{Event, Hash, pallet_teeracle};
+use my_node_runtime::{pallet_teeracle, Event, Hash};
 use std::{sync::mpsc::channel, time::Duration};
 use substrate_api_client::FromHexString;
 
@@ -34,15 +34,15 @@ pub struct ListenToOracleEventsCmd {
 type EventCount = u32;
 
 impl ListenToOracleEventsCmd {
-    pub fn run(&self, cli: &Cli) {
-        let api = get_chain_api(cli);
-        let duration = Duration::from_secs(self.duration);
-        let count = count_oracle_update_events(&api, duration);
-        println!("Number of Oracle events received : ");
+	pub fn run(&self, cli: &Cli) {
+		let api = get_chain_api(cli);
+		let duration = Duration::from_secs(self.duration);
+		let count = count_oracle_update_events(&api, duration);
+		println!("Number of Oracle events received : ");
 		println!("   EVENTS_COUNT: {}", count);
-    }
+	}
 }
 
 fn count_oracle_update_events(api: &ParentchainApi, duration: Duration) -> EventCount {
-    0u32
+	0u32
 }

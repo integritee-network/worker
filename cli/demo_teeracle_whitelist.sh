@@ -59,8 +59,8 @@ CLIENT_BIN=${CLIENT_BIN:-"./../bin/integritee-cli"}
 DURATION=${DURATION:-48}
 INTERVAL=${INTERVAL:-86400}
 
-LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD="exchange-oracle listen-to-exchange-rate-events"
-ADD_TO_WHITELIST_CMD="exchange-oracle add-to-whitelist"
+LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD="oracle listen-to-exchange-rate-events"
+ADD_TO_WHITELIST_CMD="oracle add-to-whitelist"
 
 echo "Using client binary ${CLIENT_BIN}"
 echo "Using node uri ${NODEURL}:${NPORT}"

@@ -21,7 +21,7 @@
 //! https://github.com/integritee-network/worker/issues/852
 
 use crate::Cli;
-use commands::{AddToWhitelistCmd, ListenToExchangeRateEventsCmd, ListenToOracleEventsCmd,};
+use commands::{AddToWhitelistCmd, ListenToExchangeRateEventsCmd, ListenToOracleEventsCmd};
 
 mod commands;
 
