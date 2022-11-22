@@ -3279,6 +3279,26 @@ dependencies = [
 [[package]]
 name = "itp-stf-primitives"
 version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "frame-support",
+ "frame-system",
+ "integritee-node-runtime",
+ "ita-sgx-runtime",
+ "itp-sgx-externalities",
+ "itp-stf-interface",
+ "itp-storage",
+ "itp-types",
+ "itp-utils",
+ "log 0.4.17",
+ "pallet-sudo",
+ "parity-scale-codec",
+ "sgx_tstd",
+ "sp-application-crypto",
+ "sp-core",
+ "sp-io 6.0.0",
+ "sp-runtime",
+]
 
 [[package]]
 name = "itp-stf-state-handler"
