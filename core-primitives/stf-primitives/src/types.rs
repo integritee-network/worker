@@ -21,7 +21,7 @@ use sp_application_crypto::Pair;
 use sp_core::{crypto::AccountId32, ed25519, sr25519, H256};
 use sp_runtime::MultiSignature;
 
-use crate::{trusted_call::TrustedCallSigned, Index};
+use crate::Index;
 
 pub type AccountId = AccountId32;
 
