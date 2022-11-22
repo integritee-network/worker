@@ -215,12 +215,11 @@ where
 		let mut ancestors = Vec::new();
 		let mut current_hash = block;
 		while current_hash != base {
-			match self.ancestry.get(&current_hash) {
-				Some(current_header) => {
-					current_hash = *current_header.parent_hash();
-					ancestors.push(current_hash);
-				},
-				_ => return Err(GrandpaError::NotDescendent),
+			if let Some(current_header) = self.ancestry.get(&current_hash) {
+				current_hash = *current_header.parent_hash();
+				ancestors.push(current_hash);
+			} else {
+				return Err(GrandpaError::NotDescendent)
 			}
 		}
 		ancestors.pop(); // remove the base
