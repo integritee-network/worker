@@ -14,18 +14,68 @@
 	limitations under the License.
 
 */
+#![cfg_attr(all(not(target_env = "sgx"), not(feature = "std")), no_std)]
+#![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
-pub fn add(left: usize, right: usize) -> usize {
-	left + right
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+extern crate sgx_tstd as std;
+
+use codec::{Compact, Decode, Encode};
+
+use getter::{Getter, PublicGetter, TrustedGetterSigned};
+#[cfg(feature = "sgx")]
+pub use ita_sgx_runtime::{Balance, Index};
+#[cfg(feature = "std")]
+pub use my_node_runtime::{Balance, Index};
+
+use std::{boxed::Box, string::String};
+
+pub mod getter;
+pub mod helpers;
+pub mod trusted_call;
+pub mod types;
+
+pub(crate) const ENCLAVE_ACCOUNT_KEY: &str = "Enclave_Account_Key";
+
+use crate::trusted_call::TrustedCallSigned;
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+#[allow(non_camel_case_types)]
+pub enum TrustedOperation {
+	indirect_call(TrustedCallSigned),
+	direct_call(TrustedCallSigned),
+	get(Getter),
 }
 
-#[cfg(test)]
-mod tests {
-	use super::*;
+impl From<TrustedCallSigned> for TrustedOperation {
+	fn from(item: TrustedCallSigned) -> Self {
+		TrustedOperation::indirect_call(item)
+	}
+}
 
-	#[test]
-	fn it_works() {
-		let result = add(2, 2);
-		assert_eq!(result, 4);
+impl From<Getter> for TrustedOperation {
+	fn from(item: Getter) -> Self {
+		TrustedOperation::get(item)
+	}
+}
+
+impl From<TrustedGetterSigned> for TrustedOperation {
+	fn from(item: TrustedGetterSigned) -> Self {
+		TrustedOperation::get(item.into())
+	}
+}
+
+impl From<PublicGetter> for TrustedOperation {
+	fn from(item: PublicGetter) -> Self {
+		TrustedOperation::get(item.into())
+	}
+}
+
+impl TrustedOperation {
+	pub fn to_call(&self) -> Option<&TrustedCallSigned> {
+		match self {
+			TrustedOperation::direct_call(c) => Some(c),
+			TrustedOperation::indirect_call(c) => Some(c),
+			_ => None,
+		}
 	}
 }
