@@ -1,4 +1,4 @@
-FROM integritee/integritee-dev:0.1.9
+FROM niederb/integritee-worker-dev
 LABEL maintainer="zoltan@integritee.network"
 
 # By default we warp the service

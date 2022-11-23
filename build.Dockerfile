@@ -17,7 +17,7 @@
 
 ### Builder Stage
 ##################################################
-FROM integritee/integritee-dev:0.1.9 AS builder
+FROM niederb/integritee-worker-dev AS builder
 LABEL maintainer="zoltan@integritee.network"
 
 # set environment variables
@@ -49,7 +49,7 @@ RUN cargo test --release
 # A builder stage that uses sccache to speed up local builds with docker
 # Installation and setup of sccache should be moved to the integritee-dev image, so we don't
 # always need to compile and install sccache on CI (where we have no caching so far).
-FROM integritee/integritee-dev:0.1.9 AS cached-builder
+FROM niederb/integritee-worker-dev AS cached-builder
 LABEL maintainer="zoltan@integritee.network"
 
 # set environment variables
