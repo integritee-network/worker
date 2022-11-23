@@ -261,7 +261,7 @@ where
 	{
 		let ends_at = duration_now() + max_exec_duration;
 
-		let (state, state_hash_before_execution) = self.state_handler.load_clone(shard)?;
+		let (state, state_hash_before_execution) = self.state_handler.load_cloned(shard)?;
 
 		// Execute any pre-processing steps.
 		let mut state = prepare_state_function(state);

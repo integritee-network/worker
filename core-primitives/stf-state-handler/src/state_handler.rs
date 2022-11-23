@@ -172,7 +172,7 @@ where
 			.ok_or_else(|| Error::InvalidShard(*shard))
 	}
 
-	fn load_clone(&self, shard: &ShardIdentifier) -> Result<(Self::StateT, Self::HashType)> {
+	fn load_cloned(&self, shard: &ShardIdentifier) -> Result<(Self::StateT, Self::HashType)> {
 		let state = self
 			.states_map_lock
 			.read()
@@ -289,7 +289,7 @@ mod tests {
 
 		let state_handler_clone = state_handler.clone();
 		let join_handle = thread::spawn(move || {
-			let (latest_state, _) = state_handler_clone.load_clone(&shard_id).unwrap();
+			let (latest_state, _) = state_handler_clone.load_cloned(&shard_id).unwrap();
 			assert_eq!(create_state_without_diff(4u64), latest_state);
 		});
 
@@ -329,8 +329,8 @@ mod tests {
 		let shard_id = ShardIdentifier::random();
 		let state_handler = default_state_handler();
 		state_handler.initialize_shard(shard_id).unwrap();
-		assert!(state_handler.load_clone(&shard_id).is_ok());
-		assert!(state_handler.load_clone(&ShardIdentifier::random()).is_err());
+		assert!(state_handler.load_cloned(&shard_id).is_ok());
+		assert!(state_handler.load_cloned(&ShardIdentifier::random()).is_err());
 	}
 
 	#[test]
@@ -391,7 +391,7 @@ mod tests {
 		};
 
 		state_handler.reset(state, &shard_id).unwrap();
-		let (loaded_state, _) = state_handler.load_clone(&shard_id).unwrap();
+		let (loaded_state, _) = state_handler.load_cloned(&shard_id).unwrap();
 
 		assert_eq!(state_without_diff, loaded_state);
 	}

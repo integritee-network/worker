@@ -46,7 +46,7 @@ pub trait HandleState {
 	///
 	/// Requires the shard to exist and be initialized, otherwise returns an error.
 	/// Because it results in a clone, prefer using `execute_on_current` whenever possible.
-	fn load_clone(&self, shard: &ShardIdentifier) -> Result<(Self::StateT, Self::HashType)>;
+	fn load_cloned(&self, shard: &ShardIdentifier) -> Result<(Self::StateT, Self::HashType)>;
 
 	/// Load the state in order to mutate it.
 	///

@@ -103,7 +103,7 @@ fn test_fixtures_with_default_import_trigger(
 }
 
 fn empty_encrypted_state_update(state_handler: &HandleStateMock) -> Vec<u8> {
-	let (_, apriori_state_hash) = state_handler.load_clone(&shard()).unwrap();
+	let (_, apriori_state_hash) = state_handler.load_cloned(&shard()).unwrap();
 	let empty_state_diff = SgxExternalitiesDiffType::default();
 	let mut state_update =
 		StateUpdate::new(apriori_state_hash, apriori_state_hash, empty_state_diff).encode();
