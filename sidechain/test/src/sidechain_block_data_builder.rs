@@ -52,7 +52,7 @@ impl Default for SidechainBlockDataBuilder {
 impl SidechainBlockDataBuilder {
 	pub fn random() -> Self {
 		SidechainBlockDataBuilder {
-			timestamp: now_as_u64(),
+			timestamp: now_as_millis(),
 			layer_one_head: BlockHash::random(),
 			signer: Pair::from_seed(&ENCLAVE_SEED),
 			signed_top_hashes: vec![H256::random(), H256::random()],
@@ -97,6 +97,6 @@ impl SidechainBlockDataBuilder {
 }
 
 /// gets the timestamp of the block as seconds since unix epoch
-fn now_as_u64() -> u64 {
+fn now_as_millis() -> u64 {
 	SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64
 }

@@ -27,7 +27,7 @@ use itp_sgx_crypto::{aes::Aes, mocks::KeyRepositoryMock, StateCrypto};
 use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesDiffType};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{handle_state_mock::HandleStateMock, onchain_mock::OnchainMock};
-use itp_time_utils::{duration_now, now_as_u64};
+use itp_time_utils::{duration_now, now_as_millis};
 use itp_top_pool_author::mocks::AuthorApiMock;
 use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader, H256};
 use its_consensus_common::{BlockImport, Error as ConsensusError};
@@ -127,7 +127,7 @@ fn signed_block(
 		.build();
 
 	let block_data = SidechainBlockDataBuilder::default()
-		.with_timestamp(now_as_u64())
+		.with_timestamp(now_as_millis())
 		.with_layer_one_head(parentchain_header.hash())
 		.with_signer(signer.clone())
 		.with_payload(state_update)
