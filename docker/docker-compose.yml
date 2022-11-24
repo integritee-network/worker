@@ -16,7 +16,7 @@ services:
       target: deployed-worker
     depends_on: ['integritee-node']
     environment:
-      - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn,enclave_runtime::top_pool_execution=info
+      - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
     networks:
       - integritee-test-network
     entrypoint: "dockerize -wait tcp://integritee-node:9912 -timeout 30s

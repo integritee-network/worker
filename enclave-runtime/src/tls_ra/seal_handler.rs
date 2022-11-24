@@ -146,8 +146,7 @@ where
 	}
 
 	fn unseal_state(&self, shard: &ShardIdentifier) -> EnclaveResult<Vec<u8>> {
-		let state = self.state_handler.load(shard)?;
-		Ok(state.state.encode())
+		Ok(self.state_handler.execute_on_current(shard, |state, _| state.state.encode())?)
 	}
 }
 

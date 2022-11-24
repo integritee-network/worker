@@ -53,7 +53,10 @@ where
 	type Context: EnclaveSidechainOCallApi;
 
 	/// Get a verifier instance.
-	fn verifier(&self, state: Self::SidechainState) -> Self::Verifier;
+	fn verifier(
+		&self,
+		maybe_last_sidechain_block: Option<SignedSidechainBlock::Block>,
+	) -> Self::Verifier;
 
 	/// Apply a state update by providing a mutating function.
 	fn apply_state_update<F>(
@@ -71,7 +74,7 @@ where
 		verifying_function: F,
 	) -> Result<SignedSidechainBlock, Error>
 	where
-		F: FnOnce(Self::SidechainState) -> Result<SignedSidechainBlock, Error>;
+		F: FnOnce(&Self::SidechainState) -> Result<SignedSidechainBlock, Error>;
 
 	/// Key that is used for state encryption.
 	fn state_key(&self) -> Result<Self::StateCrypto, Error>;
@@ -129,7 +132,7 @@ where
 				});
 
 		let block_import_params = self.verify_import(&shard, |state| {
-			let verifier = self.verifier(state);
+			let verifier = self.verifier(state.get_last_block());
 			verifier.verify(
 				signed_sidechain_block.clone(),
 				&peeked_parentchain_header,
