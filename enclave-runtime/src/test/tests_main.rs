@@ -41,7 +41,7 @@ use ita_stf::{
 	TrustedGetter, TrustedOperation,
 };
 use itp_sgx_crypto::{Aes, StateCrypto};
-use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesDiffType, SgxExternalitiesTrait};
+use itp_sgx_externalities::{SgxExternalitiesDiffType, SgxExternalitiesTrait, StateHash};
 use itp_stf_executor::{
 	executor_tests as stf_executor_tests, traits::StateUpdateProposer, BatchExecutionResult,
 };
@@ -63,7 +63,7 @@ use its_primitives::{
 };
 use its_sidechain::{
 	block_composer::{BlockComposer, ComposeBlock},
-	state::{SidechainDB, SidechainState, SidechainSystemExt},
+	state::SidechainSystemExt,
 };
 use sgx_tunittest::*;
 use sgx_types::size_t;
@@ -122,7 +122,6 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		sidechain_rw_lock_works,
 		enclave_rw_lock_works,
 		// unit tests of stf_executor
-		stf_executor_tests::execute_update_works,
 		stf_executor_tests::propose_state_update_always_executes_preprocessing_step,
         stf_executor_tests::propose_state_update_executes_no_trusted_calls_given_no_time,
 		stf_executor_tests::propose_state_update_executes_only_one_trusted_call_given_not_enough_time,
@@ -195,11 +194,9 @@ fn test_compose_block() {
 
 	let signed_top_hashes: Vec<H256> = vec![[94; 32].into(), [1; 32].into()].to_vec();
 
-	let (lock, state) = state_handler.load_for_mutation(&shard).unwrap();
-	let mut db = SidechainDB::<SignedBlock, _>::new(state.clone());
-	db.set_block_number(&1);
-	let state_hash_before_execution = db.state_hash();
-	state_handler.write_after_mutation(db.ext.clone(), lock, &shard).unwrap();
+	let (mut state, _) = state_handler.load_cloned(&shard).unwrap();
+	state.set_block_number(&1);
+	let state_hash_before_execution = state.hash();
 
 	// when
 	let signed_block = block_composer
@@ -208,7 +205,7 @@ fn test_compose_block() {
 			signed_top_hashes,
 			shard,
 			state_hash_before_execution,
-			db.ext,
+			&state,
 		)
 		.unwrap();
 
@@ -346,7 +343,7 @@ fn test_create_block_and_confirmation_works() {
 			executed_operation_hashes,
 			shard,
 			execution_result.state_hash_before_execution,
-			execution_result.state_after_execution,
+			&execution_result.state_after_execution,
 		)
 		.unwrap();
 
@@ -392,7 +389,7 @@ fn test_create_state_diff() {
 			executed_operation_hashes,
 			shard,
 			execution_result.state_hash_before_execution,
-			execution_result.state_after_execution,
+			&execution_result.state_after_execution,
 		)
 		.unwrap();
 
@@ -448,7 +445,7 @@ fn test_executing_call_updates_account_nonce() {
 
 fn test_call_set_update_parentchain_block() {
 	let (_, _, shard, _, _, state_handler, _) = test_setup();
-	let mut state = state_handler.load(&shard).unwrap();
+	let (mut state, _) = state_handler.load_cloned(&shard).unwrap();
 
 	let block_number = 3;
 	let parent_hash = H256::from([1; 32]);
@@ -667,11 +664,9 @@ fn execute_trusted_calls(
 			&latest_parentchain_header(),
 			&shard,
 			Duration::from_millis(600),
-			|s| {
-				let mut sidechain_db = SidechainDB::<SignedBlock, SgxExternalities>::new(s);
-				sidechain_db
-					.set_block_number(&sidechain_db.get_block_number().map_or(1, |n| n + 1));
-				sidechain_db.ext
+			|mut s| {
+				s.set_block_number(&s.get_block_number().map_or(1, |n| n + 1));
+				s
 			},
 		)
 		.unwrap();

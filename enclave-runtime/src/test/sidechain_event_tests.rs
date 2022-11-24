@@ -124,7 +124,7 @@ pub fn ensure_events_get_reset_upon_block_proposal() {
 	state_handler.write_after_mutation(state.clone(), lock, &shard_id).unwrap();
 
 	// Check if state now really contains events and topics.
-	let mut state = state_handler.load(&shard_id).unwrap();
+	let (mut state, _) = state_handler.load_cloned(&shard_id).unwrap();
 	assert_eq!(TestStf::get_event_count(&mut state), 1);
 	assert_eq!(TestStf::get_events(&mut state).len(), 1);
 	assert_eq!(TestStf::get_event_topics(&mut state, &topic_hash).len(), 1);
@@ -162,7 +162,7 @@ pub fn ensure_events_get_reset_upon_block_proposal() {
 	.unwrap();
 
 	// Ensure events have been reset.
-	let mut state = state_handler.load(&shard_id).unwrap();
+	let (mut state, _) = state_handler.load_cloned(&shard_id).unwrap();
 	assert_eq!(TestStf::get_event_count(&mut state), 0);
 	assert_eq!(TestStf::get_event_topics(&mut state, &topic_hash).len(), 0);
 	assert_eq!(TestStf::get_events(&mut state).len(), 0);

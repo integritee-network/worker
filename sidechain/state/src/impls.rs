@@ -17,78 +17,13 @@
 
 //! Implement the sidechain state traits.
 
-use crate::{Error, SidechainDB, SidechainState, StateUpdate};
+use crate::{Error, SidechainState, StateUpdate};
 use codec::{Decode, Encode};
 use frame_support::ensure;
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_storage::keys::storage_value_key;
 use log::{error, info};
-use sp_core::H256;
 use sp_io::{storage, KillStorageResult};
-use std::vec::Vec;
-
-impl<SidechainBlock, T> SidechainState for SidechainDB<SidechainBlock, T>
-where
-	T: SgxExternalitiesTrait + StateHash + Clone,
-	<T as SgxExternalitiesTrait>::SgxExternalitiesType: Encode,
-	SidechainBlock: Clone,
-{
-	type Externalities = T;
-	type StateUpdate = StateUpdate;
-	type Hash = H256;
-
-	fn state_hash(&self) -> Self::Hash {
-		self.ext.hash()
-	}
-
-	fn ext(&self) -> &Self::Externalities {
-		&self.ext
-	}
-
-	fn ext_mut(&mut self) -> &mut Self::Externalities {
-		&mut self.ext
-	}
-
-	fn apply_state_update(&mut self, state_payload: &Self::StateUpdate) -> Result<(), Error> {
-		self.ext_mut().apply_state_update(state_payload)
-	}
-
-	fn get_with_name<V: Decode>(&self, module_prefix: &str, storage_prefix: &str) -> Option<V> {
-		self.ext().get_with_name(module_prefix, storage_prefix)
-	}
-
-	fn set_with_name<V: Encode>(&mut self, module_prefix: &str, storage_prefix: &str, value: V) {
-		self.ext_mut().set_with_name(module_prefix, storage_prefix, value)
-	}
-
-	fn clear_with_name(&mut self, module_prefix: &str, storage_prefix: &str) {
-		self.ext_mut().clear_with_name(module_prefix, storage_prefix)
-	}
-
-	fn clear_prefix_with_name(
-		&mut self,
-		module_prefix: &str,
-		storage_prefix: &str,
-	) -> KillStorageResult {
-		self.ext_mut().clear_prefix_with_name(module_prefix, storage_prefix)
-	}
-
-	fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
-		self.ext().get(key).cloned()
-	}
-
-	fn set(&mut self, key: &[u8], value: &[u8]) {
-		self.ext_mut().set(key, value)
-	}
-
-	fn clear(&mut self, key: &[u8]) {
-		self.ext_mut().clear(key)
-	}
-
-	fn clear_sidechain_prefix(&mut self, prefix: &[u8]) -> KillStorageResult {
-		self.ext_mut().clear_sidechain_prefix(prefix)
-	}
-}
 
 impl<T: SgxExternalitiesTrait + Clone + StateHash> SidechainState for T
 where
@@ -96,26 +31,12 @@ where
 {
 	type Externalities = Self;
 	type StateUpdate = StateUpdate;
-	type Hash = H256;
-
-	fn state_hash(&self) -> Self::Hash {
-		self.hash()
-	}
-
-	fn ext(&self) -> &Self::Externalities {
-		self
-	}
-
-	fn ext_mut(&mut self) -> &mut Self::Externalities {
-		self
-	}
 
 	fn apply_state_update(&mut self, state_payload: &Self::StateUpdate) -> Result<(), Error> {
-		info!("Current state size: {}", self.ext().state().encoded_size());
-		ensure!(self.state_hash() == state_payload.state_hash_apriori(), Error::InvalidAprioriHash);
-		let mut state2 = self.clone();
+		info!("Current state size: {}", self.state().encoded_size());
+		ensure!(self.hash() == state_payload.state_hash_apriori(), Error::InvalidAprioriHash);
 
-		state2.execute_with(|| {
+		self.execute_with(|| {
 			state_payload.state_update.iter().for_each(|(k, v)| {
 				match v {
 					Some(value) => storage::set(k, value),
@@ -124,8 +45,7 @@ where
 			})
 		});
 
-		ensure!(state2.hash() == state_payload.state_hash_aposteriori(), Error::InvalidStorageDiff);
-		*self = state2;
+		ensure!(self.hash() == state_payload.state_hash_aposteriori(), Error::InvalidStorageDiff);
 		self.prune_state_diff();
 		Ok(())
 	}
@@ -164,10 +84,6 @@ where
 		self.clear_sidechain_prefix(&storage_value_key(module_prefix, storage_prefix))
 	}
 
-	fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
-		self.get(key).cloned()
-	}
-
 	fn set(&mut self, key: &[u8], value: &[u8]) {
 		self.execute_with(|| sp_io::storage::set(key, value))
 	}
@@ -184,13 +100,13 @@ where
 #[cfg(test)]
 pub mod tests {
 	use super::*;
-	use crate::{SidechainDB, StateUpdate};
+	use crate::StateUpdate;
 	use frame_support::{assert_err, assert_ok};
 	use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 	use sp_core::H256;
 
-	pub fn default_db() -> SidechainDB<(), SgxExternalities> {
-		SidechainDB::<(), SgxExternalities>::default()
+	pub fn default_db() -> SgxExternalities {
+		SgxExternalities::default()
 	}
 
 	#[test]
@@ -198,17 +114,16 @@ pub mod tests {
 		let mut state1 = default_db();
 		let mut state2 = default_db();
 
-		let apriori = state1.state_hash();
+		let apriori = state1.hash();
 		state1.set(b"Hello", b"World");
-		let aposteriori = state1.state_hash();
+		let aposteriori = state1.hash();
 
-		let mut state_update =
-			StateUpdate::new(apriori, aposteriori, state1.ext.state_diff.clone());
+		let mut state_update = StateUpdate::new(apriori, aposteriori, state1.state_diff().clone());
 
 		assert_ok!(state2.apply_state_update(&mut state_update));
-		assert_eq!(state2.state_hash(), aposteriori);
+		assert_eq!(state2.hash(), aposteriori);
 		assert_eq!(state2.get(b"Hello").unwrap(), b"World");
-		assert!(state2.ext.state_diff.is_empty());
+		assert!(state2.state_diff().is_empty());
 	}
 
 	#[test]
@@ -218,10 +133,9 @@ pub mod tests {
 
 		let apriori = H256::from([1; 32]);
 		state1.set(b"Hello", b"World");
-		let aposteriori = state1.state_hash();
+		let aposteriori = state1.hash();
 
-		let mut state_update =
-			StateUpdate::new(apriori, aposteriori, state1.ext.state_diff.clone());
+		let mut state_update = StateUpdate::new(apriori, aposteriori, state1.state_diff().clone());
 
 		assert_err!(state2.apply_state_update(&mut state_update), Error::InvalidAprioriHash);
 		assert_eq!(state2, default_db());
@@ -232,26 +146,26 @@ pub mod tests {
 		let mut state1 = default_db();
 		let mut state2 = default_db();
 
-		let apriori = state1.state_hash();
+		let apriori = state1.hash();
 		state1.set(b"Hello", b"World");
 		let aposteriori = H256::from([1; 32]);
 
-		let mut state_update =
-			StateUpdate::new(apriori, aposteriori, state1.ext.state_diff.clone());
+		let mut state_update = StateUpdate::new(apriori, aposteriori, state1.state_diff().clone());
 
 		assert_err!(state2.apply_state_update(&mut state_update), Error::InvalidStorageDiff);
-		assert_eq!(state2, default_db());
+		// After an error, the state is not guaranteed to be reverted and is potentially corrupted!
+		assert_ne!(state2, default_db());
 	}
 
 	#[test]
 	pub fn sp_io_storage_set_creates_storage_diff() {
 		let mut state1 = default_db();
 
-		state1.ext.execute_with(|| {
+		state1.execute_with(|| {
 			storage::set(b"hello", b"world");
 		});
 
-		assert_eq!(state1.ext.state_diff.get(&b"hello"[..]).unwrap(), &Some(b"world".encode()));
+		assert_eq!(state1.state_diff().get(&b"hello"[..]).unwrap(), &Some(b"world".encode()));
 	}
 
 	#[test]
@@ -260,6 +174,6 @@ pub mod tests {
 
 		state1.set(b"hello", b"world");
 
-		assert_eq!(state1.ext.state_diff.get(&b"hello"[..]).unwrap(), &Some(b"world".encode()));
+		assert_eq!(state1.state_diff().get(&b"hello"[..]).unwrap(), &Some(b"world".encode()));
 	}
 }
