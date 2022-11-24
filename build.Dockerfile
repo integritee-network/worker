@@ -24,7 +24,7 @@ LABEL maintainer="zoltan@integritee.network"
 ENV SGX_SDK /opt/sgxsdk
 ENV PATH "$PATH:${SGX_SDK}/bin:${SGX_SDK}/bin/x64:/root/.cargo/bin"
 ENV PKG_CONFIG_PATH "${PKG_CONFIG_PATH}:${SGX_SDK}/pkgconfig"
-ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${SGX_SDK}/sdk_libs"
+ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${SGX_SDK}/sdk_libs:/lib/x86_64-linux-gnu"
 ENV CARGO_NET_GIT_FETCH_WITH_CLI true
 ENV SGX_MODE SW
 
@@ -56,7 +56,7 @@ LABEL maintainer="zoltan@integritee.network"
 ENV SGX_SDK /opt/sgxsdk
 ENV PATH "$PATH:${SGX_SDK}/bin:${SGX_SDK}/bin/x64:/root/.cargo/bin"
 ENV PKG_CONFIG_PATH "${PKG_CONFIG_PATH}:${SGX_SDK}/pkgconfig"
-ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${SGX_SDK}/sdk_libs"
+ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${SGX_SDK}/sdk_libs:/lib/x86_64-linux-gnu"
 ENV CARGO_NET_GIT_FETCH_WITH_CLI true
 ENV SGX_MODE SW
 
