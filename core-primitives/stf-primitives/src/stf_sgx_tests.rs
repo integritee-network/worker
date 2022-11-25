@@ -15,7 +15,12 @@
 
 */
 
-use crate::{AccountId, Getter, Signature, State, Stf, TrustedCall, TrustedCallSigned};
+use crate::{
+	getter::Getter,
+	trusted_call::TrustedCall,
+	types::{types::State, AccountId, Signature},
+	TrustedCallSigned,
+};
 use ita_sgx_runtime::Runtime;
 use itp_stf_interface::{
 	sudo_pallet::SudoPalletInterface, system_pallet::SystemPalletAccountInterface, InitState,
