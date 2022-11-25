@@ -25,8 +25,8 @@ use crate::{
 	traits::AuthorApi,
 };
 use codec::{Decode, Encode};
-use ita_stf::TrustedOperation;
 use itp_sgx_crypto::{mocks::KeyRepositoryMock, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
+use itp_stf_primitives::TrustedOperation;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{
 	handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock,

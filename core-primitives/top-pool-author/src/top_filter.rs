@@ -15,7 +15,7 @@
 
 */
 
-use ita_stf::TrustedOperation;
+use itp_stf_primitives::TrustedOperation;
 
 /// Trait for filtering values
 ///
@@ -98,7 +98,9 @@ mod tests {
 
 	use super::*;
 	use codec::Encode;
-	use ita_stf::{Getter, KeyPair, TrustedCall, TrustedCallSigned, TrustedGetter};
+	use itp_stf_primitives::{
+		getter::Getter, types::KeyPair, TrustedCall, TrustedCallSigned, TrustedGetter,
+	};
 	use itp_types::ShardIdentifier;
 	use sp_core::{ed25519, Pair};
 	use sp_runtime::traits::{BlakeTwo256, Hash};

@@ -16,8 +16,8 @@
 */
 
 use codec::Encode;
-use ita_stf::{
-	Getter, KeyPair, ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedGetter,
+use itp_stf_primitives::{
+	getter::Getter, types::KeyPair, ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedGetter,
 	TrustedOperation,
 };
 use sp_core::{ed25519, Pair};
