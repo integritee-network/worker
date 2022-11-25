@@ -22,13 +22,14 @@ extern crate sgx_tstd as std;
 
 use codec::{Decode, Encode};
 
-use getter::{Getter, PublicGetter, TrustedGetterSigned};
+pub use getter::{Getter, PublicGetter, TrustedGetterSigned};
 #[cfg(feature = "sgx")]
 pub use ita_sgx_runtime::{Balance, Index};
 #[cfg(feature = "std")]
 pub use my_node_runtime::{Balance, Index};
 
 pub mod getter;
+pub mod hash;
 pub mod helpers;
 pub mod trusted_call;
 pub mod types;
