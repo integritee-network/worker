@@ -54,7 +54,6 @@ std = [
     "bs58/std",
     "codec/std",
     "futures",
-    "ita-stf/std",
     "itp-node-api/std",
     "itp-ocall-api/std",
     "itp-sgx-crypto/std",
@@ -73,7 +72,6 @@ std = [
 sgx = [
     "sgx_tstd",
     "futures_sgx",
-    "ita-stf/sgx",
     "itp-node-api/sgx",
     "itp-sgx-crypto/sgx",
     "itp-stf-executor/sgx",

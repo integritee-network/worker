@@ -24,14 +24,13 @@ use crate::error::Result;
 use beefy_merkle_tree::{merkle_root, Keccak256};
 use codec::{Decode, Encode};
 use futures::executor;
-use ita_stf::AccountId;
 use itp_node_api::{
 	api_client::ParentchainUncheckedExtrinsic,
 	metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata},
 };
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
 use itp_stf_executor::traits::StfEnclaveSigning;
-use itp_stf_primitives::{trusted_call::TrustedCall, TrustedOperation};
+use itp_stf_primitives::{trusted_call::TrustedCall, types::AccountId, TrustedOperation};
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{CallWorkerFn, OpaqueCall, ShardIdentifier, ShieldFundsFn, H256};
 use log::*;
