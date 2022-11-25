@@ -1,7 +1,8 @@
 [package]
 name = "itp-stf-primitives"
-version = "0.1.0"
+version = "0.9.0"
 edition = "2021"
+authors = ["Integritee AG <hello@integritee.network>"]
 
 [dependencies]
 # crates.io
@@ -49,6 +50,8 @@ std = [
     "log/std",
     # local
     "ita-sgx-runtime/std",
+    "itp-hashing/std",
+    "itp-sgx-externalities/std",
     "itp-stf-interface/std",
     "itp-storage/std",
     "itp-types/std",
