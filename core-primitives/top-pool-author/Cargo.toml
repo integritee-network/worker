@@ -14,6 +14,7 @@ ita-stf = { path = "../../app-libs/stf", default-features = false }
 itp-enclave-metrics = { path = "../enclave-metrics", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
+itp-stf-primitives = { default-features = false, path = "../../core-primitives/stf-primitives" }
 itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
 itp-test = { path = "../test", default-features = false, optional = true }
 itp-top-pool = { path = "../top-pool", default-features = false }
@@ -51,6 +52,7 @@ std = [
     "itp-enclave-metrics/std",
     "itp-ocall-api/std",
     "itp-stf-state-handler/std",
+    "itp-stf-primitives/std",
     "itp-top-pool/std",
     "itp-types/std",
     "itp-utils/std",
@@ -65,6 +67,7 @@ sgx = [
     "itp-enclave-metrics/sgx",
     "itp-sgx-crypto/sgx",
     "itp-stf-state-handler/sgx",
+    "itp-stf-primitives/sgx",
     "itp-top-pool/sgx",
     "itp-utils/sgx",
     "thiserror_sgx",

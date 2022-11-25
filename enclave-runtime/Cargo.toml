@@ -111,6 +111,7 @@ itp-sgx-externalities = { path = "../core-primitives/substrate-sgx/externalities
 itp-sgx-io = { path = "../core-primitives/sgx/io", default-features = false, features = ["sgx"] }
 itp-stf-executor = { path = "../core-primitives/stf-executor", default-features = false, features = ["sgx"] }
 itp-stf-interface = { path = "../core-primitives/stf-interface", default-features = false }
+itp-stf-primitives = { path = "../core-primitives/stf-primitives", default-features = false, features = ["sgx"] }
 itp-stf-state-handler = { path = "../core-primitives/stf-state-handler", default-features = false, features = ["sgx"] }
 itp-stf-state-observer = { path = "../core-primitives/stf-state-observer", default-features = false, features = ["sgx"] }
 itp-storage = { path = "../core-primitives/storage", default-features = false, features = ["sgx"] }

@@ -20,8 +20,10 @@ use derive_more::Display;
 use sp_application_crypto::Pair;
 use sp_core::{crypto::AccountId32, ed25519, sr25519, H256};
 use sp_runtime::MultiSignature;
+use std::{boxed::Box, string::String};
 
-use crate::Index;
+use crate::trusted_call::Index;
+pub use itp_types::{AccountData, AccountInfo, BlockNumber, Header as ParentchainHeader};
 
 pub type AccountId = AccountId32;
 

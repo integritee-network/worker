@@ -17,9 +17,9 @@
 
 use crate::error::{Error, Result};
 use core::marker::PhantomData;
-use ita_stf::{Getter, TrustedGetterSigned};
 use itp_sgx_externalities::SgxExternalities;
 use itp_stf_interface::StateGetterInterface;
+use itp_stf_primitives::getter::{Getter, TrustedGetterSigned};
 use log::debug;
 use std::vec::Vec;
 

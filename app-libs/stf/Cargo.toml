@@ -6,32 +6,47 @@ edition = "2021"
 
 [dependencies]
 # crates.io
-codec = { version = "3.0.0", default-features = false, features = ["derive"], package = "parity-scale-codec" }
+codec = { version = "3.0.0", default-features = false, features = [
+    "derive",
+], package = "parity-scale-codec" }
 derive_more = { version = "0.99.5" }
 log = { version = "0.4", default-features = false }
 rlp = { version = "0.5", default-features = false }
 sha3 = { version = "0.10", default-features = false }
 
 # sgx deps
-sgx_tstd = { branch = "master", features = ["untrusted_fs", "net", "backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_tstd = { branch = "master", features = [
+    "untrusted_fs",
+    "net",
+    "backtrace",
+], git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
 # local crates
 ita-sgx-runtime = { default-features = false, path = "../sgx-runtime" }
 itp-hashing = { default-features = false, path = "../../core-primitives/hashing" }
 itp-sgx-externalities = { default-features = false, path = "../../core-primitives/substrate-sgx/externalities" }
 itp-stf-interface = { default-features = false, path = "../../core-primitives/stf-interface" }
+itp-stf-primitives = { default-features = false, path = "../../core-primitives/stf-primitives" }
 itp-storage = { default-features = false, path = "../../core-primitives/storage" }
 itp-types = { default-features = false, path = "../../core-primitives/types" }
 itp-utils = { default-features = false, path = "../../core-primitives/utils" }
-sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], path = "../../core-primitives/substrate-sgx/sp-io" }
+sp-io = { default-features = false, features = [
+    "disable_oom",
+    "disable_panic_handler",
+    "disable_allocator",
+], path = "../../core-primitives/substrate-sgx/sp-io" }
 
 # Substrate dependencies
 frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
 frame-system = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
 pallet-balances = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
 pallet-sudo = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
-sp-application-crypto = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
-sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
+sp-application-crypto = { default-features = false, features = [
+    "full_crypto",
+], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
+sp-core = { default-features = false, features = [
+    "full_crypto",
+], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
 
 # scs / integritee
@@ -45,15 +60,13 @@ sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "po
 [features]
 default = ["std"]
 evm = ["ita-sgx-runtime/evm"]
-evm_std = [
-    "evm",
-    "ita-sgx-runtime/evm_std",
-]
+evm_std = ["evm", "ita-sgx-runtime/evm_std"]
 sgx = [
     "sgx_tstd",
     "itp-sgx-externalities/sgx",
     "itp-utils/sgx",
     "sp-io/sgx",
+    "itp-stf-primitives/sgx",
 ]
 std = [
     # crates.io
@@ -66,6 +79,7 @@ std = [
     "itp-sgx-externalities/std",
     "itp-stf-interface/std",
     "itp-storage/std",
+    "itp-stf-primitives/std",
     "itp-types/std",
     "itp-utils/std",
     # substrate

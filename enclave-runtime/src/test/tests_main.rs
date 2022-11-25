@@ -38,8 +38,9 @@ use ita_stf::{
 	stf_sgx_tests,
 	test_genesis::{endowed_account as funded_pair, unendowed_account},
 	AccountInfo, Getter, ShardIdentifier, State, StatePayload, TrustedCall, TrustedCallSigned,
-	TrustedGetter, TrustedOperation,
+	TrustedOperation,
 };
+use ita_stf::getter::TrustedGetter;
 use itp_sgx_crypto::{Aes, StateCrypto};
 use itp_sgx_externalities::{SgxExternalitiesDiffType, SgxExternalitiesTrait, StateHash};
 use itp_stf_executor::{

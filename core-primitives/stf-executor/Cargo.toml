@@ -17,6 +17,7 @@ itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
 itp-sgx-externalities = { default-features = false, path = "../substrate-sgx/externalities" }
 itp-stf-interface = { path = "../stf-interface", default-features = false }
+itp-stf-primitives = { default-features = false, path = "../../core-primitives/stf-primitives" }
 itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
 itp-stf-state-observer = { path = "../stf-state-observer", default-features = false }
 itp-storage = { path = "../storage", default-features = false }
@@ -59,6 +60,7 @@ std = [
     "itp-sgx-externalities/std",
     "itp-stf-interface/std",
     "itp-stf-state-handler/std",
+    "itp-stf-primitives/std",
     "itp-stf-state-observer/std",
     "itp-storage/std",
     "itp-types/std",
@@ -80,6 +82,7 @@ sgx = [
     "itp-sgx-crypto/sgx",
     "itp-sgx-externalities/sgx",
     "itp-stf-state-handler/sgx",
+    "itp-stf-primitives/sgx",
     "itp-stf-state-observer/sgx",
     "itp-storage/sgx",
     "itp-time-utils/sgx",

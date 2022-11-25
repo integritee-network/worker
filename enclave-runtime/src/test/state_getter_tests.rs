@@ -20,8 +20,9 @@ use codec::Decode;
 use ita_sgx_runtime::Runtime;
 use ita_stf::{
 	test_genesis::{endowed_account, test_genesis_setup, ENDOWED_ACC_FUNDS},
-	Balance, Getter, Stf, TrustedCallSigned, TrustedGetter,
+	Balance, Getter, Stf, TrustedCallSigned,
 };
+use ita_stf::getter::TrustedGetter;
 use itp_sgx_externalities::SgxExternalities;
 use itp_stf_executor::state_getter::{GetState, StfStateGetter};
 use sp_core::Pair;

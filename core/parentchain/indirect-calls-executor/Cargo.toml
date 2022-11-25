@@ -15,6 +15,7 @@ itp-node-api = { path = "../../../core-primitives/node-api", default-features = 
 itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
 itp-stf-executor = { path = "../../../core-primitives/stf-executor", default-features = false }
+itp-stf-primitives = { path = "../../../core-primitives/stf-primitives", default-features = false }
 itp-top-pool-author = { path = "../../../core-primitives/top-pool-author", default-features = false }
 itp-types = { path = "../../../core-primitives/types", default-features = false }
 
@@ -60,6 +61,7 @@ std = [
     "itp-stf-executor/std",
     "itp-top-pool-author/std",
     "itp-types/std",
+    "itp-stf-primitives/std",
     "log/std",
     #substrate
     "beefy-merkle-tree/std",
@@ -75,6 +77,7 @@ sgx = [
     "itp-node-api/sgx",
     "itp-sgx-crypto/sgx",
     "itp-stf-executor/sgx",
+    "itp-stf-primitives/sgx",
     "itp-top-pool-author/sgx",
     "thiserror_sgx",
 ]

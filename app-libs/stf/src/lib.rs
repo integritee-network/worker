@@ -31,20 +31,19 @@ pub use ita_sgx_runtime::{Balance, Index};
 #[cfg(feature = "std")]
 pub use my_node_runtime::{Balance, Index};
 
-use codec::{Compact, Decode, Encode};
-use derive_more::Display;
-use sp_core::{crypto::AccountId32, ed25519, sr25519, Pair, H256};
-use sp_runtime::{traits::Verify, MultiSignature};
-use std::{boxed::Box, string::String};
+pub use itp_stf_primitives::*;
 
-pub use getter::*;
+use codec::Compact;
+use derive_more::Display;
+use sp_core::{crypto::AccountId32, H256};
+use sp_runtime::{traits::Verify, MultiSignature};
+use std::string::String;
+
 pub use stf_sgx_primitives::{types::*, Stf};
 pub use trusted_call::*;
 
 #[cfg(feature = "evm")]
 pub mod evm_helpers;
-pub mod getter;
-pub mod hash;
 pub mod helpers;
 pub mod stf_sgx;
 pub mod stf_sgx_primitives;
@@ -52,7 +51,6 @@ pub mod stf_sgx_primitives;
 pub mod stf_sgx_tests;
 #[cfg(all(feature = "test", feature = "sgx"))]
 pub mod test_genesis;
-pub mod trusted_call;
 
 pub(crate) const ENCLAVE_ACCOUNT_KEY: &str = "Enclave_Account_Key";
 
@@ -81,71 +79,6 @@ pub enum StfError {
 	StorageHashMismatch,
 	InvalidStorageDiff,
 }
-#[derive(Clone)]
-pub enum KeyPair {
-	Sr25519(Box<sr25519::Pair>),
-	Ed25519(Box<ed25519::Pair>),
-}
+pub use itp_stf_primitives::types::KeyPair;
 
-impl KeyPair {
-	fn sign(&self, payload: &[u8]) -> Signature {
-		match self {
-			Self::Sr25519(pair) => pair.sign(payload).into(),
-			Self::Ed25519(pair) => pair.sign(payload).into(),
-		}
-	}
-}
-
-impl From<ed25519::Pair> for KeyPair {
-	fn from(x: ed25519::Pair) -> Self {
-		KeyPair::Ed25519(Box::new(x))
-	}
-}
-
-impl From<sr25519::Pair> for KeyPair {
-	fn from(x: sr25519::Pair) -> Self {
-		KeyPair::Sr25519(Box::new(x))
-	}
-}
-
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
-#[allow(non_camel_case_types)]
-pub enum TrustedOperation {
-	indirect_call(TrustedCallSigned),
-	direct_call(TrustedCallSigned),
-	get(Getter),
-}
-
-impl From<TrustedCallSigned> for TrustedOperation {
-	fn from(item: TrustedCallSigned) -> Self {
-		TrustedOperation::indirect_call(item)
-	}
-}
-
-impl From<Getter> for TrustedOperation {
-	fn from(item: Getter) -> Self {
-		TrustedOperation::get(item)
-	}
-}
-
-impl From<TrustedGetterSigned> for TrustedOperation {
-	fn from(item: TrustedGetterSigned) -> Self {
-		TrustedOperation::get(item.into())
-	}
-}
-
-impl From<PublicGetter> for TrustedOperation {
-	fn from(item: PublicGetter) -> Self {
-		TrustedOperation::get(item.into())
-	}
-}
-
-impl TrustedOperation {
-	pub fn to_call(&self) -> Option<&TrustedCallSigned> {
-		match self {
-			TrustedOperation::direct_call(c) => Some(c),
-			TrustedOperation::indirect_call(c) => Some(c),
-			_ => None,
-		}
-	}
-}
+pub use itp_stf_primitives::TrustedOperation;

@@ -21,7 +21,7 @@ use crate::{
 };
 use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode};
-use ita_stf::{AccountId, KeyPair, ShardIdentifier, TrustedGetter, TrustedOperation};
+use ita_stf::{getter::TrustedGetter, AccountId, KeyPair, ShardIdentifier, TrustedOperation};
 use log::*;
 use my_node_runtime::Balance;
 use sp_application_crypto::sr25519;
@@ -33,9 +33,10 @@ use substrate_client_keystore::LocalKeystore;
 #[macro_export]
 macro_rules! get_layer_two_nonce {
 	($signer_pair:ident, $cli: ident, $trusted_args:ident ) => {{
-		let top: TrustedOperation = TrustedGetter::nonce($signer_pair.public().into())
-			.sign(&KeyPair::Sr25519(Box::new($signer_pair.clone())))
-			.into();
+		let top: TrustedOperation =
+			ita_stf::getter::TrustedGetter::nonce($signer_pair.public().into())
+				.sign(&KeyPair::Sr25519(Box::new($signer_pair.clone())))
+				.into();
 		let res = perform_trusted_operation($cli, $trusted_args, &top);
 		let nonce: Index = if let Some(n) = res {
 			if let Ok(nonce) = Index::decode(&mut n.as_slice()) {

@@ -22,12 +22,13 @@ use crate::{
 	BatchExecutionResult, ExecutedOperation,
 };
 use codec::Encode;
-use ita_stf::{
-	hash::{Hash, TrustedOperationOrHash},
-	AccountId, KeyPair, ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedGetterSigned,
-	TrustedOperation,
-};
 use itp_sgx_externalities::SgxExternalitiesTrait;
+use itp_stf_primitives::{
+	hash::{Hash, TrustedOperationOrHash},
+	trusted_call::{TrustedCall, TrustedCallSigned},
+	types::{AccountId, KeyPair, ShardIdentifier},
+	TrustedGetterSigned, TrustedOperation,
+};
 use itp_types::H256;
 use sp_core::Pair;
 use sp_runtime::traits::Header as HeaderTrait;

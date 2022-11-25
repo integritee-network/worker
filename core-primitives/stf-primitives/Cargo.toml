@@ -4,6 +4,9 @@ version = "0.9.0"
 edition = "2021"
 authors = ["Integritee AG <hello@integritee.network>"]
 
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
 [dependencies]
 # crates.io
 codec = { version = "3.0.0", default-features = false, features = ["derive"], package = "parity-scale-codec" }
