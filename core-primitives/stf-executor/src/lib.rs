@@ -25,8 +25,8 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 extern crate sgx_tstd as std;
 
 use codec::Encode;
-use ita_stf::hash::TrustedOperationOrHash;
 use itp_sgx_externalities::SgxExternalitiesTrait;
+use itp_stf_primitives::hash::TrustedOperationOrHash;
 use itp_types::{OpaqueCall, H256};
 use std::vec::Vec;
 
