@@ -25,9 +25,8 @@ use crate::{
 	validated_pool::{ValidatedOperation, ValidatedPool},
 };
 use core::matches;
-use ita_stf::ShardIdentifier;
 use itc_direct_rpc_server::SendRpcResponse;
-use itp_stf_primitives::TrustedOperation as StfTrustedOperation;
+use itp_stf_primitives::{types::ShardIdentifier, TrustedOperation as StfTrustedOperation};
 use itp_types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::{channel::mpsc::Receiver, future, Future};
 use sp_runtime::{

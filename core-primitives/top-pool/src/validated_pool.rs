@@ -40,9 +40,8 @@ use crate::{
 };
 use codec::Encode;
 use core::{hash, result::Result};
-use ita_stf::ShardIdentifier;
 use itc_direct_rpc_server::SendRpcResponse;
-use itp_stf_primitives::TrustedOperation as StfTrustedOperation;
+use itp_stf_primitives::{types::ShardIdentifier, TrustedOperation as StfTrustedOperation};
 use itp_types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::channel::mpsc::{channel, Sender};
 use sp_runtime::{
