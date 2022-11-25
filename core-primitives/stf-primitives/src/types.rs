@@ -14,7 +14,6 @@
 	limitations under the License.
 
 */
-// use ita_stf::{AccountId, KeyPair, TrustedCall, TrustedCallSigned};
 
 use derive_more::Display;
 use sp_application_crypto::Pair;
