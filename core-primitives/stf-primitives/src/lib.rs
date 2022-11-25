@@ -35,7 +35,7 @@ pub mod helpers;
 pub mod trusted_call;
 pub mod types;
 
-pub(crate) const ENCLAVE_ACCOUNT_KEY: &str = "Enclave_Account_Key";
+pub const ENCLAVE_ACCOUNT_KEY: &str = "Enclave_Account_Key";
 
 use crate::trusted_call::TrustedCallSigned;
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]

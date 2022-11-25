@@ -52,8 +52,6 @@ pub mod stf_sgx_tests;
 #[cfg(all(feature = "test", feature = "sgx"))]
 pub mod test_genesis;
 
-pub(crate) const ENCLAVE_ACCOUNT_KEY: &str = "Enclave_Account_Key";
-
 pub type Signature = MultiSignature;
 pub type AuthorityId = <Signature as Verify>::Signer;
 pub type AccountId = AccountId32;
