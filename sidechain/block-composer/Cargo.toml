@@ -10,7 +10,6 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # local dependencies
-ita-stf = { path = "../../app-libs/stf", default-features = false }
 itp-node-api = { path = "../../core-primitives/node-api", default-features = false }
 itp-settings = { path = "../../core-primitives/settings", default-features = false }
 itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", default-features = false }
@@ -39,7 +38,6 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 [features]
 default = ["std"]
 std = [
-    "ita-stf/std",
     "itp-node-api/std",
     "itp-sgx-crypto/std",
     "itp-sgx-externalities/std",
@@ -55,7 +53,6 @@ std = [
 ]
 sgx = [
     "sgx_tstd",
-    "ita-stf/sgx",
     "itp-node-api/sgx",
     "itp-sgx-crypto/sgx",
     "itp-sgx-externalities/sgx",

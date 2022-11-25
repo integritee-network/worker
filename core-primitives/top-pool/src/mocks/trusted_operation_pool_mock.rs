@@ -35,7 +35,7 @@ use crate::{
 };
 use codec::Encode;
 use core::{future::Future, pin::Pin};
-use ita_stf::TrustedOperation as StfTrustedOperation;
+use itp_stf_primitives::TrustedOperation as StfTrustedOperation;
 use itp_types::{Block, BlockHash as SidechainBlockHash, ShardIdentifier, H256};
 use jsonrpc_core::futures::future::ready;
 use sp_runtime::{

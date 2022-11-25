@@ -36,6 +36,7 @@ use itp_hashing::Hash;
 use itp_sgx_crypto::{mocks::KeyRepositoryMock, Aes, AesSeal, StateCrypto};
 use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use itp_sgx_io::{write, StaticSealedIO};
+use itp_stf_primitives::stf_sgx_primitives::types::{State as StfState, StateType as StfStateType};
 use itp_stf_state_observer::state_observer::StateObserver;
 use itp_types::{ShardIdentifier, H256};
 use std::{sync::Arc, thread, vec::Vec};

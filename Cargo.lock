@@ -2687,7 +2687,6 @@ dependencies = [
 name = "itc-offchain-worker-executor"
 version = "0.9.0"
 dependencies = [
- "ita-stf",
  "itc-parentchain-light-client",
  "itp-extrinsics-factory",
  "itp-sgx-externalities",
@@ -2766,7 +2765,6 @@ dependencies = [
  "env_logger",
  "futures 0.3.25",
  "futures 0.3.8",
- "ita-stf",
  "itc-parentchain-test",
  "itp-node-api",
  "itp-ocall-api",
@@ -3247,7 +3245,6 @@ dependencies = [
 name = "itp-stf-executor"
 version = "0.9.0"
 dependencies = [
- "ita-stf",
  "itc-parentchain-test",
  "itp-node-api",
  "itp-ocall-api",
@@ -3296,6 +3293,7 @@ dependencies = [
  "itp-types",
  "itp-utils",
  "log 0.4.17",
+ "pallet-balances",
  "pallet-sudo",
  "parity-scale-codec",
  "sgx_tstd",
@@ -3309,13 +3307,13 @@ dependencies = [
 name = "itp-stf-state-handler"
 version = "0.9.0"
 dependencies = [
- "ita-stf",
  "itp-hashing",
  "itp-settings",
  "itp-sgx-crypto",
  "itp-sgx-externalities",
  "itp-sgx-io",
  "itp-stf-interface",
+ "itp-stf-primitives",
  "itp-stf-state-observer",
  "itp-time-utils",
  "itp-types",
@@ -3377,11 +3375,11 @@ name = "itp-test"
 version = "0.9.0"
 dependencies = [
  "derive_more",
- "ita-stf",
  "itp-ocall-api",
  "itp-sgx-crypto",
  "itp-sgx-externalities",
  "itp-stf-interface",
+ "itp-stf-primitives",
  "itp-stf-state-handler",
  "itp-storage",
  "itp-teerex-storage",
@@ -3410,7 +3408,6 @@ version = "0.9.0"
 dependencies = [
  "byteorder 1.4.3",
  "derive_more",
- "ita-stf",
  "itc-direct-rpc-server",
  "itp-stf-primitives",
  "itp-types",
@@ -3438,7 +3435,6 @@ version = "0.9.0"
 dependencies = [
  "derive_more",
  "futures 0.3.25",
- "ita-stf",
  "itp-enclave-metrics",
  "itp-ocall-api",
  "itp-sgx-crypto",
@@ -3496,7 +3492,6 @@ dependencies = [
 name = "its-block-composer"
 version = "0.9.0"
 dependencies = [
- "ita-stf",
  "itp-node-api",
  "itp-settings",
  "itp-sgx-crypto",
@@ -3545,7 +3540,6 @@ dependencies = [
  "env_logger",
  "finality-grandpa",
  "frame-support",
- "ita-stf",
  "itc-parentchain-block-import-dispatcher",
  "itc-parentchain-test",
  "itp-enclave-metrics",

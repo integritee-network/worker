@@ -11,13 +11,13 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # local dependencies
-ita-stf = { path = "../../app-libs/stf", default-features = false }
 itp-hashing = { path = "../../core-primitives/hashing", default-features = false }
 itp-settings = { path = "../../core-primitives/settings" }
 itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", default-features = false }
 itp-sgx-externalities = { default-features = false, path = "../../core-primitives/substrate-sgx/externalities" }
 itp-sgx-io = { path = "../../core-primitives/sgx/io", default-features = false }
 itp-stf-interface = { default-features = false, path = "../../core-primitives/stf-interface" }
+itp-stf-primitives = { default-features = false, path = "../../core-primitives/stf-primitives" }
 itp-stf-state-observer = { path = "../stf-state-observer", default-features = false }
 itp-time-utils = { path = "../../core-primitives/time-utils", default-features = false }
 itp-types = { path = "../types", default-features = false }
@@ -45,11 +45,11 @@ itp-hashing = { path = "../../core-primitives/hashing", features = ["std"] }
 default = ["std"]
 std = [
     "rust-base58",
-    "ita-stf/std",
     "itp-sgx-crypto/std",
     "itp-sgx-externalities/std",
     "itp-sgx-io/std",
     "itp-stf-interface/std",
+	"itp-stf-primitives/std",
     "itp-stf-state-observer/std",
     "itp-time-utils/std",
     "itp-types/std",
@@ -60,11 +60,11 @@ sgx = [
     "sgx_tstd",
     "sgx_tcrypto",
     "rust-base58_sgx",
-    "ita-stf/sgx",
     "itp-sgx-crypto/sgx",
     "itp-sgx-externalities/sgx",
     "itp-sgx-io/sgx",
     "itp-stf-state-observer/sgx",
+	"itp-stf-primitives/sgx",
     "itp-time-utils/sgx",
     "thiserror_sgx",
 ]

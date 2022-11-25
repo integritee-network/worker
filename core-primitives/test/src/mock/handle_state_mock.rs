@@ -21,7 +21,7 @@ use std::sync::{SgxRwLock as RwLock, SgxRwLockWriteGuard as RwLockWriteGuard};
 #[cfg(feature = "std")]
 use std::sync::{RwLock, RwLockWriteGuard};
 
-use ita_stf::{hash::Hash, State as StfState};
+use itp_stf_primitives::{hash::Hash, stf_sgx_primitives::types::State as StfState};
 use itp_stf_state_handler::{
 	error::{Error, Result},
 	handle_state::HandleState,
@@ -122,7 +122,6 @@ pub mod tests {
 
 	use super::*;
 	use codec::{Decode, Encode};
-	use ita_stf::stf_sgx_tests::StfState;
 	use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait, SgxExternalitiesType};
 	use itp_stf_interface::InitState;
 	use itp_types::ShardIdentifier;

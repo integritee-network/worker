@@ -32,6 +32,10 @@ pub use getter::{Getter, PublicGetter, TrustedGetterSigned};
 pub mod getter;
 pub mod hash;
 pub mod helpers;
+pub mod stf_sgx;
+pub mod stf_sgx_primitives;
+#[cfg(all(feature = "test", feature = "sgx"))]
+pub mod stf_sgx_tests;
 pub mod trusted_call;
 pub mod types;
 

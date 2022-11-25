@@ -19,11 +19,11 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
 
 # local deps
-ita-stf = { path = "../../app-libs/stf", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
 itp-sgx-externalities = { default-features = false, path = "../substrate-sgx/externalities" }
 itp-stf-interface = { path = "../stf-interface", default-features = false }
+itp-stf-primitives = { path = "../stf-primitives", default-features = false }
 itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
 itp-storage = { path = "../storage", default-features = false }
 itp-teerex-storage = { path = "../teerex-storage", default-features = false }
@@ -38,6 +38,7 @@ std = [
     "itp-sgx-crypto/std",
     "itp-sgx-externalities/std",
     "itp-stf-interface/std",
+	"itp-stf-primitives/std",
     "itp-stf-state-handler/std",
     "itp-storage/std",
     "itp-teerex-storage/std",
@@ -49,10 +50,10 @@ std = [
     "sp-std/std",
 ]
 sgx = [
-    "ita-stf/sgx",
     "itp-sgx-crypto/sgx",
     "itp-sgx-externalities/sgx",
     "itp-stf-state-handler/sgx",
+	"itp-stf-primitives/sgx",
     "itp-time-utils/sgx",
     "jsonrpc-core_sgx",
     "sgx_tstd",

@@ -30,6 +30,7 @@ sp-io = { default-features = false, features = ["disable_oom", "disable_panic_ha
 # Substrate dependencies
 frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
 frame-system = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
+pallet-balances = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
 pallet-sudo = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
 sp-application-crypto = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
@@ -61,6 +62,7 @@ std = [
     "itp-utils/std",
     # substrate
     "sp-core/std",
+	"pallet-balances/std",
     "sp-runtime/std",
     "pallet-sudo/std",
     "frame-system/std",
@@ -70,3 +72,4 @@ std = [
     "my-node-runtime",
     "sp-io/std",
 ]
+test = []

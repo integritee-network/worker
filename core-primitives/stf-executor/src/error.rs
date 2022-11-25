@@ -41,7 +41,7 @@ pub enum Error {
 	#[error("Node metadata provider error: {0:?}")]
 	NodeMetadataProvider(#[from] itp_node_api::metadata::provider::Error),
 	#[error("STF error: {0}")]
-	Stf(ita_stf::StfError),
+	Stf(itp_stf_primitives::types::StfError),
 	#[error("Ocall Api error: {0}")]
 	OcallApi(itp_ocall_api::Error),
 	#[error("Crypto error: {0}")]
@@ -62,8 +62,8 @@ impl From<codec::Error> for Error {
 	}
 }
 
-impl From<ita_stf::StfError> for Error {
-	fn from(error: ita_stf::StfError) -> Self {
+impl From<itp_stf_primitives::types::StfError> for Error {
+	fn from(error: itp_stf_primitives::types::StfError) -> Self {
 		Self::Stf(error)
 	}
 }

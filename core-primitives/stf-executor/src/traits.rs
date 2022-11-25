@@ -17,11 +17,10 @@
 
 use crate::{error::Result, BatchExecutionResult};
 use codec::Encode;
-use ita_stf::ParentchainHeader;
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_primitives::{
 	trusted_call::{TrustedCall, TrustedCallSigned},
-	types::{AccountId, ShardIdentifier},
+	types::{AccountId, ParentchainHeader, ShardIdentifier},
 	TrustedOperation,
 };
 use itp_types::H256;
