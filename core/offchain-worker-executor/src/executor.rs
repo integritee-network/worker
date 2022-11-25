@@ -16,7 +16,6 @@
 */
 
 use crate::error::Result;
-use ita_stf::hash::TrustedOperationOrHash;
 use itc_parentchain_light_client::{
 	concurrent_access::ValidatorAccess, BlockNumberOps, ExtrinsicSender, LightClientState,
 	NumberFor,
@@ -24,6 +23,7 @@ use itc_parentchain_light_client::{
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_stf_executor::{traits::StateUpdateProposer, ExecutedOperation};
 use itp_stf_interface::system_pallet::SystemPalletEventInterface;
+use itp_stf_primitives::hash::TrustedOperationOrHash;
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{OpaqueCall, ShardIdentifier, H256};

@@ -1541,6 +1541,7 @@ dependencies = [
  "itp-extrinsics-factory",
  "itp-stf-executor",
  "itp-stf-interface",
+ "itp-stf-primitives",
  "itp-stf-state-handler",
  "itp-top-pool-author",
  "itp-types",
