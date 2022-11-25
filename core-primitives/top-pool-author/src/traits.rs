@@ -19,7 +19,7 @@
 use crate::sgx_reexport_prelude::*;
 
 use crate::error::Result;
-use ita_stf::{hash, TrustedOperation};
+use itp_stf_primitives::{hash, TrustedOperation};
 use itp_top_pool::primitives::PoolFuture;
 use itp_types::{BlockHash as SidechainBlockHash, ShardIdentifier, H256};
 use jsonrpc_core::Error as RpcError;
