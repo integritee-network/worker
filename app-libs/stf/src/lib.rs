@@ -39,12 +39,12 @@ use sp_core::{crypto::AccountId32, H256};
 use sp_runtime::{traits::Verify, MultiSignature};
 use std::string::String;
 
+pub use itp_stf_primitives::helpers;
 pub use stf_sgx_primitives::{types::*, Stf};
 pub use trusted_call::*;
 
 #[cfg(feature = "evm")]
 pub mod evm_helpers;
-pub mod helpers;
 pub mod stf_sgx;
 pub mod stf_sgx_primitives;
 #[cfg(all(feature = "test", feature = "sgx"))]
