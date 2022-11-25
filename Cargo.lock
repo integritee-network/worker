@@ -2741,12 +2741,12 @@ dependencies = [
 name = "itc-parentchain-block-importer"
 version = "0.9.0"
 dependencies = [
- "ita-stf",
  "itc-parentchain-indirect-calls-executor",
  "itc-parentchain-light-client",
  "itp-extrinsics-factory",
  "itp-settings",
  "itp-stf-executor",
+ "itp-stf-primitives",
  "itp-types",
  "log 0.4.17",
  "parity-scale-codec",
