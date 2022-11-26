@@ -1946,6 +1946,7 @@ dependencies = [
 name = "itp-stf-executor"
 version = "0.9.0"
 dependencies = [
+ "ita-stf",
  "itc-parentchain-test",
  "itp-node-api",
  "itp-ocall-api",
@@ -2183,6 +2184,7 @@ dependencies = [
  "itp-sgx-externalities",
  "itp-stf-executor",
  "itp-stf-interface",
+ "itp-stf-primitives",
  "itp-time-utils",
  "itp-top-pool-author",
  "itp-types",
@@ -2226,6 +2228,7 @@ dependencies = [
  "itp-sgx-crypto",
  "itp-sgx-externalities",
  "itp-stf-executor",
+ "itp-stf-primitives",
  "itp-stf-state-handler",
  "itp-time-utils",
  "itp-top-pool-author",

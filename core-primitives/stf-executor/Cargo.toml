@@ -43,6 +43,7 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 # dev dependencies
 itc-parentchain-test = { path = "../../core/parentchain/test", optional = true, default-features = false }
 itp-test = { path = "../test", default-features = false, optional = true }
+ita-stf = { path = "../../app-libs/stf", optional = true, default-features = false }
 
 [dev-dependencies]
 itp-stf-state-observer = { path = "../stf-state-observer", features = ["mocks"] }
@@ -52,6 +53,7 @@ itp-stf-interface = { path = "../stf-interface", features = ["mocks"] }
 default = ["std"]
 std = [
     # local
+    # "ita-stf/std",
     "itp-node-api/std",
     "itp-ocall-api/std",
     "itp-sgx-crypto/std",
@@ -75,6 +77,7 @@ std = [
 ]
 sgx = [
     "sgx_tstd",
+    # "ita-stf/sx",
     "itp-node-api/sgx",
     "itp-sgx-crypto/sgx",
     "itp-sgx-externalities/sgx",
@@ -86,6 +89,7 @@ sgx = [
     "thiserror_sgx",
 ]
 test = [
+    "ita-stf",
     "itc-parentchain-test",
     "itp-node-api/mocks",
     "itp-test",

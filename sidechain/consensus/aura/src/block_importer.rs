@@ -21,13 +21,13 @@
 pub use its_consensus_common::BlockImport;
 
 use crate::{AuraVerifier, EnclaveOnChainOCallApi, SidechainBlockTrait};
-use ita_stf::hash::TrustedOperationOrHash;
 use itc_parentchain_block_import_dispatcher::triggered_dispatcher::TriggerParentchainBlockImport;
 use itp_enclave_metrics::EnclaveMetric;
 use itp_ocall_api::{EnclaveMetricsOCallApi, EnclaveSidechainOCallApi};
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::{key_repository::AccessKey, StateCrypto};
 use itp_sgx_externalities::SgxExternalities;
+use itp_stf_primitives::hash::TrustedOperationOrHash;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_top_pool_author::traits::{AuthorApi, OnBlockImported};
 use itp_types::H256;

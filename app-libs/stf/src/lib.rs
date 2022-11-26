@@ -33,6 +33,9 @@ pub use my_node_runtime::{Balance, Index};
 
 pub use itp_stf_primitives::*;
 
+//#[cfg(all(feature = "test", feature = "sgx"))]
+pub mod stf_sgx_tests;
+
 //use crate::test_genesis_setup;
 use codec::{Compact, Encode};
 use derive_more::Display;

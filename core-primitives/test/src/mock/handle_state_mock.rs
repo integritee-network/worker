@@ -14,7 +14,6 @@
 	limitations under the License.
 
 */
-
 #[cfg(feature = "sgx")]
 use std::sync::{SgxRwLock as RwLock, SgxRwLockWriteGuard as RwLockWriteGuard};
 
