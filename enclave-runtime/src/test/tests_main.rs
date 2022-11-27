@@ -46,12 +46,6 @@ use itp_stf_primitives::helpers::account_key_hash;
 use itp_stf_primitives::helpers::set_block_number;
 use ita_stf::test_genesis::unendowed_account;
 use ita_stf::test_genesis::endowed_account as funded_pair;
-// use itp_stf_primitives::{
-//	helpers::{account_key_hash, set_block_number},
-//	test_genesis::{endowed_account as funded_pair, unendowed_account},
-//	AccountInfo, Getter, ShardIdentifier, State, StatePayload, TrustedCall, TrustedCallSigned,
-//	TrustedOperation,
-//};
 use ita_stf::getter::TrustedGetter;
 use itp_sgx_crypto::{Aes, StateCrypto};
 use itp_sgx_externalities::{SgxExternalitiesDiffType, SgxExternalitiesTrait, StateHash};
