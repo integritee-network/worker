@@ -37,7 +37,7 @@ std = [
     "itc-parentchain-light-client/std",
     "itp-extrinsics-factory/std",
     "itp-stf-executor/std",
-	"itp-stf-primitives/std",
+    "itp-stf-primitives/std",
     "itp-types/std",
     # no-std compatible libraries
     "codec/std",
@@ -54,7 +54,7 @@ sgx = [
     "itc-parentchain-light-client/sgx",
     "itp-extrinsics-factory/sgx",
     "itp-stf-executor/sgx",
-	"itp-stf-primitives/sgx",
+    "itp-stf-primitives/sgx",
     # sgx enabled external libraries
     "thiserror_sgx",
 ]

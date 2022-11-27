@@ -33,13 +33,25 @@ use crate::{
 };
 use codec::Decode;
 use ita_sgx_runtime::Parentchain;
-use itp_stf_primitives::{
-	helpers::{account_key_hash, set_block_number},
-	stf_sgx_tests,
-	test_genesis::{endowed_account as funded_pair, unendowed_account},
-	AccountInfo, Getter, ShardIdentifier, State, StatePayload, TrustedCall, TrustedCallSigned,
-	TrustedOperation,
-};
+use ita_stf::stf_sgx_tests;
+use itp_stf_primitives::types::AccountInfo;
+use itp_stf_primitives::types::ShardIdentifier;
+use ita_stf::State;
+use itp_stf_primitives::types::StatePayload;
+use itp_stf_primitives::trusted_call::TrustedCall;
+use itp_stf_primitives::trusted_call::TrustedCallSigned;
+use itp_stf_primitives::TrustedOperation;
+use itp_stf_primitives::Getter;
+use itp_stf_primitives::helpers::account_key_hash;
+use itp_stf_primitives::helpers::set_block_number;
+use ita_stf::test_genesis::unendowed_account;
+use ita_stf::test_genesis::endowed_account as funded_pair;
+// use itp_stf_primitives::{
+//	helpers::{account_key_hash, set_block_number},
+//	test_genesis::{endowed_account as funded_pair, unendowed_account},
+//	AccountInfo, Getter, ShardIdentifier, State, StatePayload, TrustedCall, TrustedCallSigned,
+//	TrustedOperation,
+//};
 use ita_stf::getter::TrustedGetter;
 use itp_sgx_crypto::{Aes, StateCrypto};
 use itp_sgx_externalities::{SgxExternalitiesDiffType, SgxExternalitiesTrait, StateHash};

@@ -41,9 +41,9 @@ sp-core = { default-features = false, features = ["full_crypto"], git = "https:/
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
 
 # dev dependencies
+ita-stf = { path = "../../app-libs/stf", optional = true, default-features = false }
 itc-parentchain-test = { path = "../../core/parentchain/test", optional = true, default-features = false }
 itp-test = { path = "../test", default-features = false, optional = true }
-ita-stf = { path = "../../app-libs/stf", optional = true, default-features = false }
 
 [dev-dependencies]
 itp-stf-state-observer = { path = "../stf-state-observer", features = ["mocks"] }

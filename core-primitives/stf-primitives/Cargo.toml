@@ -62,7 +62,7 @@ std = [
     "itp-utils/std",
     # substrate
     "sp-core/std",
-	"pallet-balances/std",
+    "pallet-balances/std",
     "sp-runtime/std",
     "pallet-sudo/std",
     "frame-system/std",
