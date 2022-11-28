@@ -85,10 +85,10 @@ pub trait AttestationHandler {
 	fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]>;
 
 	/// Write the remote attestation report to the disk
-	fn dump_ra_to_disk(&self) -> EnclaveResult<()>;
+	fn dump_ias_ra_cert_to_disk(&self) -> EnclaveResult<()>;
 
 	/// Write the remote attestation report to the disk
-	fn dump_dcap_ra_to_disk(
+	fn dump_dcap_ra_cert_to_disk(
 		&self,
 		quoting_enclave_target_info: &sgx_target_info_t,
 		quote_size: u32,
@@ -136,7 +136,7 @@ where
 		}
 	}
 
-	fn dump_ra_to_disk(&self) -> EnclaveResult<()> {
+	fn dump_ias_ra_cert_to_disk(&self) -> EnclaveResult<()> {
 		// our certificate is unlinkable
 		let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
@@ -156,7 +156,7 @@ where
 		Ok(())
 	}
 
-	fn dump_dcap_ra_to_disk(
+	fn dump_dcap_ra_cert_to_disk(
 		&self,
 		quoting_enclave_target_info: &sgx_target_info_t,
 		quote_size: u32,

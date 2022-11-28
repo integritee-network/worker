@@ -112,9 +112,12 @@ extern "C" {
 		quote_size: u32,
 	) -> sgx_status_t;
 
-	pub fn dump_ra_to_disk(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
+	pub fn dump_ias_ra_cert_to_disk(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+	) -> sgx_status_t;
 
-	pub fn dump_dcap_ra_to_disk(
+	pub fn dump_dcap_ra_cert_to_disk(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
 		quoting_enclave_target_info: &sgx_target_info_t,

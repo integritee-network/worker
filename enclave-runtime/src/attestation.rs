@@ -179,7 +179,7 @@ fn perform_ra_internal(url: String, skip_ra: bool) -> EnclaveResult<OpaqueExtrin
 }
 
 #[no_mangle]
-pub extern "C" fn dump_ra_to_disk() -> sgx_status_t {
+pub extern "C" fn dump_ias_ra_cert_to_disk() -> sgx_status_t {
 	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
 		Ok(r) => r,
 		Err(e) => {
@@ -187,14 +187,14 @@ pub extern "C" fn dump_ra_to_disk() -> sgx_status_t {
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	};
-	match attestation_handler.dump_ra_to_disk() {
+	match attestation_handler.dump_ias_ra_cert_to_disk() {
 		Ok(_) => sgx_status_t::SGX_SUCCESS,
 		Err(e) => e.into(),
 	}
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn dump_dcap_ra_to_disk(
+pub unsafe extern "C" fn dump_dcap_ra_cert_to_disk(
 	quoting_enclave_target_info: &sgx_target_info_t,
 	quote_size: u32,
 ) -> sgx_status_t {
@@ -205,7 +205,7 @@ pub unsafe extern "C" fn dump_dcap_ra_to_disk(
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	};
-	match attestation_handler.dump_dcap_ra_to_disk(quoting_enclave_target_info, quote_size) {
+	match attestation_handler.dump_dcap_ra_cert_to_disk(quoting_enclave_target_info, quote_size) {
 		Ok(_) => sgx_status_t::SGX_SUCCESS,
 		Err(e) => e.into(),
 	}
