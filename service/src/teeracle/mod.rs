@@ -39,17 +39,13 @@ pub(crate) fn start_interval_market_update<E: TeeracleApi>(
 	tokio_handle: &Handle,
 ) {
 	let interval = maybe_interval.unwrap_or(DEFAULT_MARKET_DATA_UPDATE_INTERVAL);
-	info!("Starting teeracle interval market data update, interval of {:?}", interval);
+	info!("Starting teeracle interval for oracle update, interval of {:?}", interval);
 
 	schedule_on_repeating_intervals(
 		|| {
 			execute_update_market(api, enclave_api, tokio_handle);
+			execute_weather_update(api, enclave_api, tokio_handle);
 		},
-		interval,
-	);
-
-	schedule_on_repeating_intervals(
-		|| execute_weather_update(api, enclave_api, tokio_handle),
 		interval,
 	);
 }

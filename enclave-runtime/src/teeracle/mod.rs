@@ -93,7 +93,7 @@ where
 		call_ids,
 		weather_info.weather_query.key().as_bytes().to_vec(),
 		source_base_url.as_bytes().to_vec(),
-		Some(longitude.encode()),
+		longitude.encode(),
 	));
 
 	Ok(call)
