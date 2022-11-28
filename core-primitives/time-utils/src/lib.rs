@@ -32,7 +32,7 @@ pub fn now_as_secs() -> u64 {
 }
 
 /// Returns current duration since unix epoch in millis as u64.
-pub fn now_as_u64() -> u64 {
+pub fn now_as_millis() -> u64 {
 	duration_now().as_millis() as u64
 }
 

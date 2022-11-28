@@ -24,7 +24,7 @@ LABEL maintainer="zoltan@integritee.network"
 ENV SGX_SDK /opt/sgxsdk
 ENV PATH "$PATH:${SGX_SDK}/bin:${SGX_SDK}/bin/x64:/root/.cargo/bin"
 ENV PKG_CONFIG_PATH "${PKG_CONFIG_PATH}:${SGX_SDK}/pkgconfig"
-ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${SGX_SDK}/sdk_libs:/lib/x86_64-linux-gnu"
+ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${SGX_SDK}/sdk_libs"
 ENV CARGO_NET_GIT_FETCH_WITH_CLI true
 ENV SGX_MODE SW
 
@@ -56,7 +56,7 @@ LABEL maintainer="zoltan@integritee.network"
 ENV SGX_SDK /opt/sgxsdk
 ENV PATH "$PATH:${SGX_SDK}/bin:${SGX_SDK}/bin/x64:/root/.cargo/bin"
 ENV PKG_CONFIG_PATH "${PKG_CONFIG_PATH}:${SGX_SDK}/pkgconfig"
-ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${SGX_SDK}/sdk_libs:/lib/x86_64-linux-gnu"
+ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${SGX_SDK}/sdk_libs"
 ENV CARGO_NET_GIT_FETCH_WITH_CLI true
 ENV SGX_MODE SW
 
@@ -123,6 +123,7 @@ WORKDIR /usr/local/bin
 
 COPY --from=builder /opt/sgxsdk/lib64 /opt/sgxsdk/lib64
 COPY --from=builder /root/work/worker/bin/* ./
+COPY --from=builder /lib/x86_64-linux-gnu /lib/x86_64-linux-gnu
 
 RUN touch spid.txt key.txt
 RUN chmod +x /usr/local/bin/integritee-service

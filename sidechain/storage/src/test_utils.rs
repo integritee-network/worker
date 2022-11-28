@@ -16,7 +16,7 @@
 */
 
 use crate::storage::SidechainStorage;
-use itp_time_utils::now_as_u64;
+use itp_time_utils::now_as_millis;
 use itp_types::ShardIdentifier;
 use its_primitives::types::{BlockHash, SignedBlock as SignedSidechainBlock};
 use its_test::{
@@ -90,7 +90,7 @@ fn default_header_builder() -> SidechainHeaderBuilder {
 
 fn default_block_data_builder() -> SidechainBlockDataBuilder {
 	SidechainBlockDataBuilder::default()
-		.with_timestamp(now_as_u64())
+		.with_timestamp(now_as_millis())
 		.with_layer_one_head(H256::random())
 		.with_signer(ed25519::Pair::from_string("//Alice", None).unwrap())
 }
