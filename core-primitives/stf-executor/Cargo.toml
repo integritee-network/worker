@@ -53,7 +53,7 @@ itp-stf-interface = { path = "../stf-interface", features = ["mocks"] }
 default = ["std"]
 std = [
     # local
-    # "ita-stf/std",
+    "ita-stf/std",
     "itp-node-api/std",
     "itp-ocall-api/std",
     "itp-sgx-crypto/std",
@@ -77,7 +77,7 @@ std = [
 ]
 sgx = [
     "sgx_tstd",
-    # "ita-stf/sx",
+    "ita-stf/sgx",
     "itp-node-api/sgx",
     "itp-sgx-crypto/sgx",
     "itp-sgx-externalities/sgx",
