@@ -23,7 +23,7 @@ use crate::{
 	Cli,
 };
 use codec::Decode;
-use ita_stf::{
+use itp_stf_primitives::{
 	evm_helpers::evm_create_address, Index, KeyPair, TrustedCall, TrustedGetter, TrustedOperation,
 };
 use itp_types::AccountId;
