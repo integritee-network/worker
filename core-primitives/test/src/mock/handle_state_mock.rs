@@ -122,7 +122,7 @@ pub mod tests {
 
 	use super::*;
 	use codec::{Decode, Encode};
-	use ita_stf::State as StfState;
+	use ita_stf::stf_sgx_tests::StfState;
 	use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait, SgxExternalitiesType};
 	use itp_stf_interface::InitState;
 	use itp_types::ShardIdentifier;
