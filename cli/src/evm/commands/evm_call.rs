@@ -23,7 +23,8 @@ use crate::{
 	Cli,
 };
 use codec::Decode;
-use ita_stf::{Index, KeyPair, TrustedCall, TrustedGetter, TrustedOperation};
+use ita_stf::{Index, KeyPair, TrustedCall, TrustedOperation};
+use itp_stf_primitives::getter::TrustedGetter;
 use itp_types::AccountId;
 use log::*;
 use sp_core::{crypto::Ss58Codec, Pair, H160, U256};

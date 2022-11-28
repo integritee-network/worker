@@ -37,6 +37,9 @@ pub mod stf_sgx_primitives;
 pub mod trusted_call;
 pub mod types;
 
+#[cfg(feature = "evm")]
+pub mod evm_helpers;
+
 pub const ENCLAVE_ACCOUNT_KEY: &str = "Enclave_Account_Key";
 
 use crate::trusted_call::TrustedCallSigned;

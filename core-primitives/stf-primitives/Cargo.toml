@@ -12,6 +12,8 @@ targets = ["x86_64-unknown-linux-gnu"]
 codec = { version = "3.0.0", default-features = false, features = ["derive"], package = "parity-scale-codec" }
 derive_more = { version = "0.99.5" }
 log = { version = "0.4", default-features = false }
+rlp = { version = "0.5", default-features = false }
+sha3 = { version = "0.10", default-features = false }
 
 # sgx deps
 sgx_tstd = { branch = "master", features = ["untrusted_fs", "net", "backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
@@ -42,6 +44,8 @@ my-node-runtime = { package = "integritee-node-runtime", optional = true, git = 
 
 [features]
 default = ["std"]
+evm = ["ita-sgx-runtime/evm"]
+evm_std = ["evm", "ita-sgx-runtime/evm_std"]
 sgx = [
     "sgx_tstd",
     "itp-sgx-externalities/sgx",

@@ -31,7 +31,7 @@ pub use ita_sgx_runtime::{Balance, Index};
 #[cfg(feature = "std")]
 pub use my_node_runtime::{Balance, Index};
 
-pub use itp_stf_primitives::*;
+pub use itp_stf_primitives::{getter::*, *};
 
 //#[cfg(all(feature = "test", feature = "sgx"))]
 pub mod stf_sgx_tests;
@@ -62,9 +62,6 @@ use sp_runtime::{
 };
 use std::{fmt::Debug, format, marker::PhantomData, prelude::v1::*, string::String, vec};
 pub use trusted_call::*;
-
-#[cfg(feature = "evm")]
-pub mod evm_helpers;
 
 #[cfg(all(feature = "test", feature = "sgx"))]
 pub mod test_genesis;

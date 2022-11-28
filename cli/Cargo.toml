@@ -40,6 +40,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "po
 
 # local dependencies
 ita-stf = { path = "../app-libs/stf" }
+itp-stf-primitives = { path = "../core-primitives/stf-primitives" }
 itc-rpc-client = { path = "../core/rpc-client" }
 itp-node-api = { path = "../core-primitives/node-api" }
 itp-rpc = { path = "../core-primitives/rpc" }
