@@ -31,7 +31,6 @@ use crate::{
 	test::mocks::initialize_state_mock::InitializeStateMock,
 };
 use codec::{Decode, Encode};
-use ita_stf::{State as StfState, StateType as StfStateType};
 use itp_hashing::Hash;
 use itp_sgx_crypto::{mocks::KeyRepositoryMock, Aes, AesSeal, StateCrypto};
 use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
