@@ -74,6 +74,7 @@ sidechain = ["itp-settings/sidechain"]
 offchain-worker = ["itp-settings/offchain-worker"]
 production = ["itp-settings/production"]
 teeracle = ["itp-settings/teeracle"]
+dcap = []
 
 [dev-dependencies]
 # crates.io

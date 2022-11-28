@@ -131,6 +131,11 @@ pub unsafe extern "C" fn perform_ra(
 
 #[no_mangle]
 pub unsafe extern "C" fn perform_dcap_ra(
+	_w_url: *const u8,
+	_w_url_size: u32,
+	_unchecked_extrinsic: *mut u8,
+	_unchecked_extrinsic_size: u32,
+	_skip_ra: c_int,
 	quoting_enclave_target_info: &sgx_target_info_t,
 	quote_size: *const u32,
 ) -> sgx_status_t {

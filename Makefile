@@ -82,7 +82,7 @@ else
 	SGX_ENCLAVE_MODE = "Development Mode"
 	SGX_ENCLAVE_CONFIG = "enclave-runtime/Enclave.config.xml"
 	SGX_SIGN_KEY = "enclave-runtime/Enclave_private.pem"
-	WORKER_FEATURES = --features=default,$(WORKER_MODE),$(ADDITIONAL_FEATURES)
+	WORKER_FEATURES = --features=default,dcap,$(WORKER_MODE),$(ADDITIONAL_FEATURES)
 endif
 
 CLIENT_FEATURES = --features=$(WORKER_MODE),$(ADDITIONAL_FEATURES)

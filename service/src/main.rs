@@ -219,9 +219,10 @@ fn main() {
 		setup::generate_signing_key_file(enclave.as_ref());
 	} else if matches.is_present("dump-ra") {
 		info!("*** Perform RA and dump cert to disk");
+		#[cfg(not(feature = "dcap"))]
 		enclave.dump_ra_to_disk().unwrap();
-	// TODO: Switch over to DCAP
-	//enclave.dump_dcap_ra_to_disk().unwrap();
+		#[cfg(feature = "dcap")]
+		enclave.dump_dcap_ra_to_disk().unwrap();
 	} else if matches.is_present("mrenclave") {
 		println!("{}", enclave.get_mrenclave().unwrap().encode().to_base58());
 	} else if let Some(sub_matches) = matches.subcommand_matches("init-shard") {
@@ -421,9 +422,10 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	} else {
 		println!("[!] creating remote attestation report and create enclave register extrinsic.");
 	};
+	#[cfg(not(feature = "dcap"))]
 	let uxt = enclave.perform_ra(&trusted_url, skip_ra).unwrap();
-	// TODO: Switch over to DCAP
-	//let uxt = enclave.perform_dcap_ra(&trusted_url, skip_ra).unwrap();
+	#[cfg(feature = "dcap")]
+	let uxt = enclave.perform_dcap_ra(&trusted_url, skip_ra).unwrap();
 
 	let mut xthex = hex::encode(uxt);
 	xthex.insert_str(0, "0x");

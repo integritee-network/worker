@@ -37,12 +37,7 @@ const QVE_ENCLAVE: &str = "libsgx_qve.signed.so.1";
 pub trait RemoteAttestation {
 	fn perform_ra(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
 
-	fn perform_dcap_ra(
-		&self,
-		genesis_hash: Vec<u8>,
-		nonce: u32,
-		w_url: Vec<u8>,
-	) -> EnclaveResult<Vec<u8>>;
+	fn perform_dcap_ra(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
 
 	fn dump_ra_to_disk(&self) -> EnclaveResult<()>;
 
@@ -133,12 +128,7 @@ impl RemoteAttestation for Enclave {
 		Ok(unchecked_extrinsic)
 	}
 
-	fn perform_dcap_ra(
-		&self,
-		genesis_hash: Vec<u8>,
-		nonce: u32,
-		w_url: Vec<u8>,
-	) -> EnclaveResult<Vec<u8>> {
+	fn perform_dcap_ra(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
 		self.set_ql_qe_enclave_paths()?;
@@ -152,13 +142,11 @@ impl RemoteAttestation for Enclave {
 			ffi::perform_dcap_ra(
 				self.eid,
 				&mut retval,
-				genesis_hash.as_ptr(),
-				genesis_hash.len() as u32,
-				&nonce,
 				w_url.as_ptr(),
 				w_url.len() as u32,
 				unchecked_extrinsic.as_mut_ptr(),
 				unchecked_extrinsic.len() as u32,
+				skip_ra.into(),
 				&quoting_enclave_target_info,
 				&quote_size,
 			)
