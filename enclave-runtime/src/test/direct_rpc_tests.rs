@@ -18,8 +18,7 @@
 
 use crate::{rpc::worker_api_direct::public_api_rpc_handler, Hash};
 use codec::{Decode, Encode};
-use ita_stf::{Getter, TrustedGetterSigned};
-use ita_stf::getter::TrustedGetter;
+use ita_stf::{getter::TrustedGetter, Getter, TrustedGetterSigned};
 use itc_direct_rpc_server::{
 	create_determine_watch, rpc_connection_registry::ConnectionRegistry,
 	rpc_ws_handler::RpcWsHandler,
