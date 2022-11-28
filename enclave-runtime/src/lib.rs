@@ -60,7 +60,6 @@ use sp_core::crypto::Pair;
 use std::{boxed::Box, slice, vec::Vec};
 
 mod attestation;
-mod dcap_attestation;
 mod empty_impls;
 mod initialization;
 mod ipfs;

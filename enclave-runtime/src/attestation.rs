@@ -29,6 +29,7 @@
 
 use crate::{
 	initialization::global_components::GLOBAL_ATTESTATION_HANDLER_COMPONENT,
+	ocall::OcallApi,
 	utils::{
 		get_extrinsic_factory_from_solo_or_parachain,
 		get_node_metadata_repository_from_solo_or_parachain,
@@ -36,14 +37,15 @@ use crate::{
 	Error as EnclaveError, Result as EnclaveResult,
 };
 use codec::{Decode, Encode};
-use itp_attestation_handler::AttestationHandler;
+use itp_attestation_handler::{dcap_attestation::generate_dcap_ecc_cert, AttestationHandler};
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::metadata::{
 	pallet_teerex::TeerexCallIndexes,
 	provider::{AccessNodeMetadata, Error as MetadataProviderError},
 };
-use itp_settings::worker::MR_ENCLAVE_SIZE;
+use itp_settings::{files::RA_DUMP_CERT_DER_FILE, worker::MR_ENCLAVE_SIZE};
+use itp_sgx_io as io;
 use itp_types::OpaqueCall;
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
@@ -127,6 +129,21 @@ pub unsafe extern "C" fn perform_ra(
 	sgx_status_t::SGX_SUCCESS
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn perform_dcap_ra(
+	quoting_enclave_target_info: &sgx_target_info_t,
+	quote_size: *const u32,
+) -> sgx_status_t {
+	// Generate the ecc certificate which includes the quote and report of the qe and our app enclave.
+	let (_key_der, cert_der) =
+		match generate_dcap_ecc_cert(quoting_enclave_target_info, *quote_size, &OcallApi, false) {
+			Ok(r) => r,
+			Err(e) => return e.into(),
+		};
+	//Ok(cert_der)
+	sgx_status_t::SGX_SUCCESS
+}
+
 fn perform_ra_internal(url: String, skip_ra: bool) -> EnclaveResult<OpaqueExtrinsic> {
 	let attestation_handler = GLOBAL_ATTESTATION_HANDLER_COMPONENT.get()?;
 	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
@@ -159,4 +176,24 @@ pub extern "C" fn dump_ra_to_disk() -> sgx_status_t {
 		Ok(_) => sgx_status_t::SGX_SUCCESS,
 		Err(e) => e.into(),
 	}
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn dump_dcap_ra_to_disk(
+	quoting_enclave_target_info: &sgx_target_info_t,
+	quote_size: *const u32,
+) -> sgx_status_t {
+	let (_key_der, cert_der) =
+		match generate_dcap_ecc_cert(quoting_enclave_target_info, *quote_size, &OcallApi, false) {
+			Ok(r) => r,
+			Err(e) => return e.into(),
+		};
+
+	if let Err(err) = io::write(&cert_der, RA_DUMP_CERT_DER_FILE) {
+		error!("[Enclave] failed to write RA file ({}), status: {:?}", RA_DUMP_CERT_DER_FILE, err);
+		return sgx_status_t::SGX_ERROR_UNEXPECTED
+	}
+	info!("[Enclave] dumped ra cert to {}", RA_DUMP_CERT_DER_FILE);
+
+	sgx_status_t::SGX_SUCCESS
 }
