@@ -17,8 +17,10 @@
 
 use codec::Encode;
 use itp_stf_primitives::{
-	getter::Getter, types::KeyPair, ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedGetter,
-	TrustedOperation,
+	getter::Getter,
+	trusted_call::{TrustedCall, TrustedCallSigned},
+	types::{KeyPair, ShardIdentifier},
+	TrustedGetter, TrustedOperation,
 };
 use sp_core::{ed25519, Pair};
 use sp_runtime::traits::{BlakeTwo256, Hash};

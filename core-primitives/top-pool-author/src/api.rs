@@ -145,7 +145,9 @@ where
 mod tests {
 	use super::*;
 	use futures::executor;
-	use itp_stf_primitives::{types::KeyPair, PublicGetter, TrustedCall, TrustedOperation};
+	use itp_stf_primitives::{
+		trusted_call::TrustedCall, types::KeyPair, PublicGetter, TrustedOperation,
+	};
 	use itp_types::Block as ParentchainBlock;
 	use sp_core::{ed25519, Pair};
 	use sp_keyring::AccountKeyring;

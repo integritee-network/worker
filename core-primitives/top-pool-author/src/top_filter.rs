@@ -99,7 +99,10 @@ mod tests {
 	use super::*;
 	use codec::Encode;
 	use itp_stf_primitives::{
-		getter::Getter, types::KeyPair, TrustedCall, TrustedCallSigned, TrustedGetter,
+		getter::Getter,
+		trusted_call::{TrustedCall, TrustedCallSigned},
+		types::KeyPair,
+		TrustedGetter,
 	};
 	use itp_types::ShardIdentifier;
 	use sp_core::{ed25519, Pair};
