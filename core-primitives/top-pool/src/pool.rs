@@ -477,7 +477,10 @@ pub mod tests {
 		primitives::from_low_u64_to_be_h256,
 	};
 	use codec::{Decode, Encode};
-	use ita_stf::{Index, TrustedCall, TrustedCallSigned, TrustedOperation};
+	use itp_stf_primitives::{
+		trusted_call::{Index, TrustedCall, TrustedCallSigned},
+		TrustedOperation,
+	};
 	use itp_types::Header;
 	use jsonrpc_core::{futures, futures::executor::block_on};
 	use parity_util_mem::MallocSizeOf;
