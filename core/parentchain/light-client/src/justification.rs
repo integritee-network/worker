@@ -66,11 +66,13 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 		let justification = GrandpaJustification::<Block>::decode(&mut &*encoded)
 			.map_err(|_| ClientError::JustificationDecode)?;
 
-		if (justification.commit.target_hash, justification.commit.target_number)
-			!= finalized_target
-		{
-			let msg = "invalid commit target in grandpa justification".to_string();
-			Err(ClientError::BadJustification(msg))
+		let justificated_commit =
+			(justification.commit.target_hash, justification.commit.target_number);
+
+		if justificated_commit != finalized_target {
+			Err(ClientError::BadJustification(
+				"invalid commit target in grandpa justification".to_string(),
+			))
 		} else {
 			justification.verify_with_voter_set(set_id, voters).map(|_| justification)
 		}
@@ -87,6 +89,44 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 		self.verify_with_voter_set(set_id, &voters)
 	}
 
+	fn validate_commit(
+		&self,
+		voters: &VoterSet<AuthorityId>,
+		ancestry_chain: &AncestryChain<Block>,
+	) -> Result<(), ClientError>
+	where
+		NumberFor<Block>: finality_grandpa::BlockNumberOps,
+	{
+		match finality_grandpa::validate_commit(&self.commit, voters, ancestry_chain) {
+			Ok(ref result) if result.is_valid() => Ok(()),
+			_ => Err(ClientError::BadJustification(
+				"invalid commit in grandpa justification".to_string(),
+			)),
+		}
+	}
+
+	fn fill_visited_hashes(
+		&self,
+		ancestry_chain: &AncestryChain<Block>,
+		precommit_target_hash: Block::Hash,
+		visited_hashes: &mut HashSet<Block::Hash>,
+	) -> Result<(), ClientError>
+	where
+		NumberFor<Block>: finality_grandpa::BlockNumberOps,
+	{
+		use finality_grandpa::Chain;
+		if let Ok(route) = ancestry_chain.ancestry(self.commit.target_hash, precommit_target_hash) {
+			// ancestry starts from parent hash but the precommit target hash has been visited
+			visited_hashes.insert(precommit_target_hash);
+			visited_hashes.extend(route.iter());
+			Ok(())
+		} else {
+			Err(ClientError::BadJustification(
+				"invalid precommit ancestry proof in grandpa justification".to_string(),
+			))
+		}
+	}
+
 	/// Validate the commit and the votes' ancestry proofs.
 	pub(crate) fn verify_with_voter_set(
 		&self,
@@ -96,17 +136,9 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 	where
 		NumberFor<Block>: finality_grandpa::BlockNumberOps,
 	{
-		use finality_grandpa::Chain;
-
 		let ancestry_chain = AncestryChain::<Block>::new(&self.votes_ancestries);
 
-		match finality_grandpa::validate_commit(&self.commit, voters, &ancestry_chain) {
-			Ok(ref result) if result.is_valid() => {},
-			_ => {
-				let msg = "invalid commit in grandpa justification".to_string();
-				return Err(ClientError::BadJustification(msg))
-			},
-		}
+		self.validate_commit(voters, &ancestry_chain)?;
 
 		let mut buf = Vec::new();
 		let mut visited_hashes = HashSet::new();
@@ -129,19 +161,11 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 				continue
 			}
 
-			match ancestry_chain.ancestry(self.commit.target_hash, signed.precommit.target_hash) {
-				Ok(route) => {
-					// ancestry starts from parent hash but the precommit target hash has been visited
-					visited_hashes.insert(signed.precommit.target_hash);
-					for hash in route {
-						visited_hashes.insert(hash);
-					}
-				},
-				_ =>
-					return Err(ClientError::BadJustification(
-						"invalid precommit ancestry proof in grandpa justification".to_string(),
-					)),
-			}
+			self.fill_visited_hashes(
+				&ancestry_chain,
+				signed.precommit.target_hash,
+				&mut visited_hashes,
+			)?;
 		}
 
 		let ancestry_hashes =
@@ -188,22 +212,18 @@ where
 		base: Block::Hash,
 		block: Block::Hash,
 	) -> Result<Vec<Block::Hash>, GrandpaError> {
-		let mut route = Vec::new();
+		let mut ancestors = Vec::new();
 		let mut current_hash = block;
-		loop {
-			if current_hash == base {
-				break
-			}
-			match self.ancestry.get(&current_hash) {
-				Some(current_header) => {
-					current_hash = *current_header.parent_hash();
-					route.push(current_hash);
-				},
-				_ => return Err(GrandpaError::NotDescendent),
+		while current_hash != base {
+			if let Some(current_header) = self.ancestry.get(&current_hash) {
+				current_hash = *current_header.parent_hash();
+				ancestors.push(current_hash);
+			} else {
+				return Err(GrandpaError::NotDescendent)
 			}
 		}
-		route.pop(); // remove the base
+		ancestors.pop(); // remove the base
 
-		Ok(route)
+		Ok(ancestors)
 	}
 }

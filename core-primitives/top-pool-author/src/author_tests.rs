@@ -130,7 +130,7 @@ fn create_author_with_filter<F: Filter<Value = TrustedOperation>>(
 
 	let shard_id = shard_id();
 	let state_facade = HandleStateMock::from_shard(shard_id).unwrap();
-	let _ = state_facade.load(&shard_id).unwrap();
+	state_facade.load_cloned(&shard_id).unwrap();
 
 	let encryption_key = ShieldingCryptoMock::default();
 	let shielding_key_repo =

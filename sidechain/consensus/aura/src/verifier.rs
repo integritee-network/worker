@@ -23,29 +23,38 @@ use its_primitives::{
 	traits::{Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait},
 	types::block::BlockHash,
 };
-use its_state::LastBlockExt;
 use its_validateer_fetch::ValidateerFetch;
 use sp_runtime::{app_crypto::Pair, traits::Block as ParentchainBlockTrait};
 use std::{fmt::Debug, time::Duration};
 
 #[derive(Default)]
-pub struct AuraVerifier<AuthorityPair, ParentchainBlock, SidechainBlock, SidechainState, Context> {
+pub struct AuraVerifier<AuthorityPair, ParentchainBlock, SignedSidechainBlock, Context>
+where
+	SignedSidechainBlock: SignedSidechainBlockTrait + 'static,
+	SignedSidechainBlock::Block: SidechainBlockTrait,
+{
 	slot_duration: Duration,
-	sidechain_state: SidechainState,
-	_phantom: PhantomData<(AuthorityPair, ParentchainBlock, SidechainBlock, Context)>,
+	last_sidechain_block: Option<SignedSidechainBlock::Block>,
+	_phantom: PhantomData<(AuthorityPair, ParentchainBlock, Context)>,
 }
 
-impl<AuthorityPair, ParentchainBlock, SidechainBlock, SidechainState, Context>
-	AuraVerifier<AuthorityPair, ParentchainBlock, SidechainBlock, SidechainState, Context>
+impl<AuthorityPair, ParentchainBlock, SignedSidechainBlock, Context>
+	AuraVerifier<AuthorityPair, ParentchainBlock, SignedSidechainBlock, Context>
+where
+	SignedSidechainBlock: SignedSidechainBlockTrait + 'static,
+	SignedSidechainBlock::Block: SidechainBlockTrait,
 {
-	pub fn new(slot_duration: Duration, sidechain_state: SidechainState) -> Self {
-		Self { slot_duration, sidechain_state, _phantom: Default::default() }
+	pub fn new(
+		slot_duration: Duration,
+		last_sidechain_block: Option<SignedSidechainBlock::Block>,
+	) -> Self {
+		Self { slot_duration, last_sidechain_block, _phantom: Default::default() }
 	}
 }
 
-impl<AuthorityPair, ParentchainBlock, SignedSidechainBlock, SidechainState, Context>
+impl<AuthorityPair, ParentchainBlock, SignedSidechainBlock, Context>
 	Verifier<ParentchainBlock, SignedSidechainBlock>
-	for AuraVerifier<AuthorityPair, ParentchainBlock, SignedSidechainBlock, SidechainState, Context>
+	for AuraVerifier<AuthorityPair, ParentchainBlock, SignedSidechainBlock, Context>
 where
 	AuthorityPair: Pair,
 	AuthorityPair::Public: Debug,
@@ -53,7 +62,6 @@ where
 	ParentchainBlock: ParentchainBlockTrait<Hash = BlockHash>,
 	SignedSidechainBlock: SignedSidechainBlockTrait<Public = AuthorityPair::Public> + 'static,
 	SignedSidechainBlock::Block: SidechainBlockTrait,
-	SidechainState: LastBlockExt<SignedSidechainBlock::Block> + Send + Sync,
 	Context: ValidateerFetch + EnclaveOnChainOCallApi + Send + Sync,
 {
 	type BlockImportParams = SignedSidechainBlock;
@@ -72,7 +80,7 @@ where
 		Ok(verify_sidechain_block::<AuthorityPair, ParentchainBlock, SignedSidechainBlock>(
 			signed_block,
 			self.slot_duration,
-			&self.sidechain_state.get_last_block(),
+			&self.last_sidechain_block,
 			parentchain_header,
 			&authorities,
 		)?)

@@ -22,7 +22,6 @@ use itp_sgx_externalities::SgxExternalities;
 use itp_test::mock::onchain_mock::OnchainMock;
 use itp_types::H256;
 use its_primitives::traits::{ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait};
-use its_state::SidechainDB;
 use sp_core::Pair;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::{collections::VecDeque, sync::RwLock};
@@ -93,11 +92,14 @@ where
 {
 	type Verifier =
 		VerifierMock<ParentchainBlock, SignedSidechainBlock, SignedSidechainBlock, OnchainMock>;
-	type SidechainState = SidechainDB<SignedSidechainBlock::Block, SgxExternalities>;
+	type SidechainState = SgxExternalities;
 	type StateCrypto = Aes;
 	type Context = OnchainMock;
 
-	fn verifier(&self, _state: Self::SidechainState) -> Self::Verifier {
+	fn verifier(
+		&self,
+		_maybe_last_sidechain_block: Option<SignedSidechainBlock::Block>,
+	) -> Self::Verifier {
 		todo!()
 	}
 
@@ -118,7 +120,7 @@ where
 		_verifying_function: F,
 	) -> core::result::Result<SignedSidechainBlock, Error>
 	where
-		F: FnOnce(Self::SidechainState) -> core::result::Result<SignedSidechainBlock, Error>,
+		F: FnOnce(&Self::SidechainState) -> core::result::Result<SignedSidechainBlock, Error>,
 	{
 		todo!()
 	}

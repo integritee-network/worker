@@ -32,12 +32,12 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use ita_stf::{State as StfState, StateType as StfStateType};
+use itp_hashing::Hash;
 use itp_sgx_crypto::{mocks::KeyRepositoryMock, Aes, AesSeal, StateCrypto};
 use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use itp_sgx_io::{write, StaticSealedIO};
 use itp_stf_state_observer::state_observer::StateObserver;
 use itp_types::{ShardIdentifier, H256};
-use sp_core::hashing::blake2_256;
 use std::{sync::Arc, thread, vec::Vec};
 
 const STATE_SNAPSHOTS_CACHE_SIZE: usize = 3;
@@ -112,10 +112,10 @@ pub fn test_write_and_load_state_works() {
 	let (lock, _s) = state_handler.load_for_mutation(&shard).unwrap();
 	let _hash = state_handler.write_after_mutation(state.clone(), lock, &shard).unwrap();
 
-	let result = state_handler.load(&shard).unwrap();
+	let (result_state, _) = state_handler.load_cloned(&shard).unwrap();
 
 	// then
-	assert_eq!(state.state, result.state);
+	assert_eq!(state.state, result_state.state);
 
 	// clean up
 	std::mem::drop(shard_dir_handle);
@@ -129,16 +129,12 @@ pub fn test_ensure_subsequent_state_loads_have_same_hash() {
 	let (lock, initial_state) = state_handler.load_for_mutation(&shard).unwrap();
 	state_handler.write_after_mutation(initial_state.clone(), lock, &shard).unwrap();
 
-	let state_loaded = state_handler.load(&shard).unwrap();
+	let (_, loaded_state_hash) = state_handler.load_cloned(&shard).unwrap();
 
-	assert_eq!(hash_of(&initial_state.state), hash_of(&state_loaded.state));
+	assert_eq!(initial_state.hash(), loaded_state_hash);
 
 	// clean up
 	std::mem::drop(shard_dir_handle);
-}
-
-fn hash_of<T: Encode>(encodable: &T) -> H256 {
-	encodable.using_encoded(blake2_256).into()
 }
 
 pub fn test_write_access_locks_read_until_finished() {
@@ -160,7 +156,7 @@ pub fn test_write_access_locks_read_until_finished() {
 	let state_handler_clone = state_handler.clone();
 	let shard_for_read = shard.clone();
 	let join_handle = thread::spawn(move || {
-		let state_to_read = state_handler_clone.load(&shard_for_read).unwrap();
+		let (state_to_read, _) = state_handler_clone.load_cloned(&shard_for_read).unwrap();
 		assert!(state_to_read.get(new_state_key_for_read.as_slice()).is_some());
 	});
 
@@ -183,7 +179,7 @@ pub fn test_state_handler_file_backend_is_initialized() {
 	assert!(1 <= state_handler.list_shards().unwrap().len()); // only greater equal, because there might be other (non-test) shards present
 	assert_eq!(1, number_of_files_in_shard_dir(&shard).unwrap()); // creates a first initialized file
 
-	let _state = state_handler.load(&shard).unwrap();
+	let _state = state_handler.load_cloned(&shard).unwrap();
 
 	assert_eq!(1, number_of_files_in_shard_dir(&shard).unwrap());
 
@@ -273,8 +269,9 @@ pub fn test_state_files_from_handler_can_be_loaded_again() {
 	assert_eq!(
 		&"value3".encode(),
 		updated_state_handler
-			.load(&shard)
+			.load_cloned(&shard)
 			.unwrap()
+			.0
 			.state()
 			.get("test_key_3".encode().as_slice())
 			.unwrap()
