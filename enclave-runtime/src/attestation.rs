@@ -137,7 +137,7 @@ pub unsafe extern "C" fn perform_dcap_ra(
 	_unchecked_extrinsic_size: u32,
 	_skip_ra: c_int,
 	quoting_enclave_target_info: &sgx_target_info_t,
-	quote_size: *const u32,
+	quote_size: u32,
 ) -> sgx_status_t {
 	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
 		Ok(r) => r,
@@ -149,7 +149,7 @@ pub unsafe extern "C" fn perform_dcap_ra(
 	// Generate the ecc certificate which includes the quote and report of the qe and our app enclave.
 	let (_key_der, _cert_der) = match attestation_handler.generate_dcap_ecc_cert(
 		quoting_enclave_target_info,
-		*quote_size,
+		quote_size,
 		false,
 	) {
 		Ok(r) => r,
@@ -196,7 +196,7 @@ pub extern "C" fn dump_ra_to_disk() -> sgx_status_t {
 #[no_mangle]
 pub unsafe extern "C" fn dump_dcap_ra_to_disk(
 	quoting_enclave_target_info: &sgx_target_info_t,
-	quote_size: *const u32,
+	quote_size: u32,
 ) -> sgx_status_t {
 	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
 		Ok(r) => r,
@@ -205,19 +205,8 @@ pub unsafe extern "C" fn dump_dcap_ra_to_disk(
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	};
-	let (_key_der, cert_der) = match attestation_handler.generate_dcap_ecc_cert(
-		quoting_enclave_target_info,
-		*quote_size,
-		false,
-	) {
-		Ok(r) => r,
-		Err(e) => return e.into(),
-	};
-	if let Err(err) = io::write(&cert_der, RA_DUMP_CERT_DER_FILE) {
-		error!("[Enclave] failed to write RA file ({}), status: {:?}", RA_DUMP_CERT_DER_FILE, err);
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
+	match attestation_handler.dump_dcap_ra_to_disk(quoting_enclave_target_info, quote_size) {
+		Ok(_) => sgx_status_t::SGX_SUCCESS,
+		Err(e) => e.into(),
 	}
-	info!("[Enclave] dumped ra cert to {}", RA_DUMP_CERT_DER_FILE);
-
-	sgx_status_t::SGX_SUCCESS
 }

@@ -148,7 +148,7 @@ impl RemoteAttestation for Enclave {
 				unchecked_extrinsic.len() as u32,
 				skip_ra.into(),
 				&quoting_enclave_target_info,
-				&quote_size,
+				quote_size,
 			)
 		};
 
@@ -181,7 +181,7 @@ impl RemoteAttestation for Enclave {
 				self.eid,
 				&mut retval,
 				&quoting_enclave_target_info,
-				&quote_size,
+				quote_size,
 			)
 		};
 

@@ -87,6 +87,13 @@ pub trait AttestationHandler {
 	/// Write the remote attestation report to the disk
 	fn dump_ra_to_disk(&self) -> EnclaveResult<()>;
 
+	/// Write the remote attestation report to the disk
+	fn dump_dcap_ra_to_disk(
+		&self,
+		quoting_enclave_target_info: &sgx_target_info_t,
+		quote_size: u32,
+	) -> EnclaveResult<()>;
+
 	/// Create the remote attestation report and encapsulate it in a DER certificate
 	/// Returns a pair consisting of (private key DER, certificate DER)
 	fn create_ra_report_and_signature(
@@ -137,6 +144,31 @@ where
 			Ok(r) => r,
 			Err(e) => return Err(e),
 		};
+
+		if let Err(err) = io::write(&cert_der, RA_DUMP_CERT_DER_FILE) {
+			error!(
+				"    [Enclave] failed to write RA file ({}), status: {:?}",
+				RA_DUMP_CERT_DER_FILE, err
+			);
+			return Err(Error::IoError(err))
+		}
+		info!("    [Enclave] dumped ra cert to {}", RA_DUMP_CERT_DER_FILE);
+		Ok(())
+	}
+
+	fn dump_dcap_ra_to_disk(
+		&self,
+		quoting_enclave_target_info: &sgx_target_info_t,
+		quote_size: u32,
+	) -> EnclaveResult<()> {
+		// our certificate is unlinkable
+		let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
+
+		let (_key_der, cert_der) =
+			match self.generate_dcap_ecc_cert(quoting_enclave_target_info, quote_size, false) {
+				Ok(r) => r,
+				Err(e) => return Err(e),
+			};
 
 		if let Err(err) = io::write(&cert_der, RA_DUMP_CERT_DER_FILE) {
 			error!(
