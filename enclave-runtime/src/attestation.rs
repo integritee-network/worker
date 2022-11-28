@@ -37,7 +37,7 @@ use crate::{
 	Error as EnclaveError, Result as EnclaveResult,
 };
 use codec::{Decode, Encode};
-use itp_attestation_handler::{dcap_attestation::generate_dcap_ecc_cert, AttestationHandler};
+use itp_attestation_handler::AttestationHandler;
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::metadata::{
@@ -139,13 +139,23 @@ pub unsafe extern "C" fn perform_dcap_ra(
 	quoting_enclave_target_info: &sgx_target_info_t,
 	quote_size: *const u32,
 ) -> sgx_status_t {
+	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
+		Ok(r) => r,
+		Err(e) => {
+			error!("Component get failure: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
 	// Generate the ecc certificate which includes the quote and report of the qe and our app enclave.
-	let (_key_der, _cert_der) =
-		match generate_dcap_ecc_cert(quoting_enclave_target_info, *quote_size, &OcallApi, false) {
-			Ok(r) => r,
-			Err(e) => return e.into(),
-		};
-	//Ok(cert_der)
+	let (_key_der, _cert_der) = match attestation_handler.generate_dcap_ecc_cert(
+		quoting_enclave_target_info,
+		*quote_size,
+		false,
+	) {
+		Ok(r) => r,
+		Err(e) => return e.into(),
+	};
+	// TODO Need to send this to the teerex pallet (something similar to perform_ra_internal)
 	sgx_status_t::SGX_SUCCESS
 }
 
@@ -188,12 +198,21 @@ pub unsafe extern "C" fn dump_dcap_ra_to_disk(
 	quoting_enclave_target_info: &sgx_target_info_t,
 	quote_size: *const u32,
 ) -> sgx_status_t {
-	let (_key_der, cert_der) =
-		match generate_dcap_ecc_cert(quoting_enclave_target_info, *quote_size, &OcallApi, false) {
-			Ok(r) => r,
-			Err(e) => return e.into(),
-		};
-
+	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
+		Ok(r) => r,
+		Err(e) => {
+			error!("Component get failure: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+	let (_key_der, cert_der) = match attestation_handler.generate_dcap_ecc_cert(
+		quoting_enclave_target_info,
+		*quote_size,
+		false,
+	) {
+		Ok(r) => r,
+		Err(e) => return e.into(),
+	};
 	if let Err(err) = io::write(&cert_der, RA_DUMP_CERT_DER_FILE) {
 		error!("[Enclave] failed to write RA file ({}), status: {:?}", RA_DUMP_CERT_DER_FILE, err);
 		return sgx_status_t::SGX_ERROR_UNEXPECTED

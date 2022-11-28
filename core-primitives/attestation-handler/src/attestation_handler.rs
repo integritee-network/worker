@@ -97,7 +97,7 @@ pub trait AttestationHandler {
 }
 
 pub struct IasAttestationHandler<OCallApi> {
-	ocall_api: Arc<OCallApi>,
+	pub(crate) ocall_api: Arc<OCallApi>,
 }
 
 impl<OCallApi> AttestationHandler for IasAttestationHandler<OCallApi>
