@@ -135,7 +135,7 @@ pub unsafe extern "C" fn perform_dcap_ra(
 	quote_size: *const u32,
 ) -> sgx_status_t {
 	// Generate the ecc certificate which includes the quote and report of the qe and our app enclave.
-	let (_key_der, cert_der) =
+	let (_key_der, _cert_der) =
 		match generate_dcap_ecc_cert(quoting_enclave_target_info, *quote_size, &OcallApi, false) {
 			Ok(r) => r,
 			Err(e) => return e.into(),
