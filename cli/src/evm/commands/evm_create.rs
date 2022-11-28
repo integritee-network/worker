@@ -24,7 +24,8 @@ use crate::{
 };
 use codec::Decode;
 use itp_stf_primitives::{
-	evm_helpers::evm_create_address, Index, KeyPair, TrustedCall, TrustedGetter, TrustedOperation,
+	evm_helpers::evm_create_address, getter::TrustedGetter, trusted_call::TrustedCall,
+	types::KeyPair, Index, TrustedOperation,
 };
 use itp_types::AccountId;
 use log::*;

@@ -30,7 +30,7 @@ use std::{format, vec, vec::Vec};
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 
 #[cfg(feature = "evm")]
-use crate::evm_helpers::get_evm_account;
+use itp_stf_primitives::evm_helpers::get_evm_account;
 
 type Seed = [u8; 32];
 

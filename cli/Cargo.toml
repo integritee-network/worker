@@ -54,6 +54,7 @@ default = []
 evm = [
     "ita-stf/evm_std",
     "pallet-evm",
+    "itp-stf-primitives/evm_std",
 ]
 teeracle = []
 sidechain = []
