@@ -42,6 +42,9 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 my-node-runtime = { package = "integritee-node-runtime", optional = true, git = "https://github.com/integritee-network/integritee-node.git", branch = "master" }
 
 
+[dev-dependencies]
+sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
+
 [features]
 default = ["std"]
 evm = ["ita-sgx-runtime/evm"]

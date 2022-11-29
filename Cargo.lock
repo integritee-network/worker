@@ -3304,6 +3304,7 @@ dependencies = [
  "sp-application-crypto",
  "sp-core",
  "sp-io 6.0.0",
+ "sp-keyring",
  "sp-runtime",
 ]
 
