@@ -29,7 +29,6 @@
 
 use crate::{
 	initialization::global_components::GLOBAL_ATTESTATION_HANDLER_COMPONENT,
-	ocall::OcallApi,
 	utils::{
 		get_extrinsic_factory_from_solo_or_parachain,
 		get_node_metadata_repository_from_solo_or_parachain,
@@ -44,8 +43,7 @@ use itp_node_api::metadata::{
 	pallet_teerex::TeerexCallIndexes,
 	provider::{AccessNodeMetadata, Error as MetadataProviderError},
 };
-use itp_settings::{files::RA_DUMP_CERT_DER_FILE, worker::MR_ENCLAVE_SIZE};
-use itp_sgx_io as io;
+use itp_settings::worker::MR_ENCLAVE_SIZE;
 use itp_types::OpaqueCall;
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
