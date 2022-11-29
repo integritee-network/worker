@@ -332,6 +332,7 @@ impl RemoteAttestationCallBacks for Enclave {
 		}
 		if qve_supplemental_data_size != supplemental_data_size {
 			warn!("Quote supplemental data size is different between DCAP QVL and QvE, please make sure you installed DCAP QVL and QvE from same release.");
+			return Err(Error::Sgx(sgx_status_t::SGX_ERROR_INVALID_PARAMETER))
 		}
 
 		// Check if a collateral has been given, or if it's a simple zero assignment.
