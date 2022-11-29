@@ -57,6 +57,17 @@ fn get_qve_report_on_quote(
 	ra_api: Arc<dyn RemoteAttestationBridge>,
 ) -> sgx_status_t {
 	debug!("Entering ocall_get_qve_report_on_quote");
+	if p_quote.is_null()
+		|| quote_len == 0
+		|| p_quote_collateral.is_null()
+		|| p_collateral_expiration_status.is_null()
+		|| p_quote_verification_result.is_null()
+		|| p_qve_report_info.is_null()
+		|| p_supplemental_data.is_null()
+		|| supplemental_data_size == 0
+	{
+		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+	}
 	let quote: Vec<u8> = unsafe { slice::from_raw_parts(p_quote, quote_len as usize).to_vec() };
 	let quote_collateral = unsafe { &*p_quote_collateral };
 	let qve_report_info = unsafe { *p_qve_report_info };
