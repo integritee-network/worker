@@ -161,9 +161,6 @@ where
 		quoting_enclave_target_info: &sgx_target_info_t,
 		quote_size: u32,
 	) -> EnclaveResult<()> {
-		// our certificate is unlinkable
-		let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
-
 		let (_key_der, cert_der) =
 			match self.generate_dcap_ecc_cert(quoting_enclave_target_info, quote_size, false) {
 				Ok(r) => r,

@@ -138,12 +138,14 @@ impl RemoteAttestation for Enclave {
 
 		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
 
+		let url = w_url.encode();
+
 		let result = unsafe {
 			ffi::perform_dcap_ra(
 				self.eid,
 				&mut retval,
-				w_url.as_ptr(),
-				w_url.len() as u32,
+				url.as_ptr(),
+				url.len() as u32,
 				unchecked_extrinsic.as_mut_ptr(),
 				unchecked_extrinsic.len() as u32,
 				skip_ra.into(),
