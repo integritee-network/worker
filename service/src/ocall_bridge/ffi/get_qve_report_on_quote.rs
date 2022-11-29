@@ -73,17 +73,7 @@ fn get_qve_report_on_quote(
 		qve_report_info,
 		supplemental_data_size,
 	) {
-		Ok((
-			collateral_expiration_status,
-			quote_verification_result,
-			qve_report_info_return_value,
-			supplemental_data,
-		)) => (
-			collateral_expiration_status,
-			quote_verification_result,
-			qve_report_info_return_value,
-			supplemental_data,
-		),
+		Ok(return_values) => return_values,
 		Err(e) => {
 			error!("Failed to get quote: {:?}", e);
 			return e.into()
