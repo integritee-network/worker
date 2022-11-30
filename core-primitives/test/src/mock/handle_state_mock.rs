@@ -21,15 +21,13 @@ use std::sync::{SgxRwLock as RwLock, SgxRwLockWriteGuard as RwLockWriteGuard};
 #[cfg(feature = "std")]
 use std::sync::{RwLock, RwLockWriteGuard};
 
-use codec::Encode;
-use ita_stf::State as StfState;
+use ita_stf::{hash::Hash, State as StfState};
 use itp_stf_state_handler::{
 	error::{Error, Result},
 	handle_state::HandleState,
 	query_shard_state::QueryShardState,
 };
 use itp_types::{ShardIdentifier, H256};
-use sp_core::blake2_256;
 use std::{collections::HashMap, format, vec::Vec};
 
 /// Mock implementation for the `HandleState` trait.
@@ -57,12 +55,28 @@ impl HandleState for HandleStateMock {
 		self.reset(StfState::default(), &shard)
 	}
 
-	fn load(&self, shard: &ShardIdentifier) -> Result<StfState> {
+	fn execute_on_current<E, R>(&self, shard: &ShardIdentifier, executing_function: E) -> Result<R>
+	where
+		E: FnOnce(&Self::StateT, Self::HashType) -> R,
+	{
+		self.state_map
+			.read()
+			.unwrap()
+			.get(shard)
+			.map(|state| executing_function(state, state.hash()))
+			.ok_or_else(|| Error::Other(format!("shard is not initialized {:?}", shard).into()))
+	}
+
+	fn load_cloned(&self, shard: &ShardIdentifier) -> Result<(Self::StateT, Self::HashType)> {
 		self.state_map
 			.read()
 			.unwrap()
 			.get(shard)
 			.cloned()
+			.map(|s| {
+				let state_hash = s.hash();
+				(s, state_hash)
+			})
 			.ok_or_else(|| Error::Other(format!("shard is not initialized {:?}", shard).into()))
 	}
 
@@ -70,7 +84,7 @@ impl HandleState for HandleStateMock {
 		&self,
 		shard: &ShardIdentifier,
 	) -> Result<(RwLockWriteGuard<'_, Self::WriteLockPayload>, StfState)> {
-		let initialized_state = self.load(shard)?;
+		let (initialized_state, _) = self.load_cloned(shard)?;
 		let write_lock = self.state_map.write().unwrap();
 		Ok((write_lock, initialized_state))
 	}
@@ -82,7 +96,7 @@ impl HandleState for HandleStateMock {
 		shard: &ShardIdentifier,
 	) -> Result<Self::HashType> {
 		state_lock.insert(*shard, state.clone());
-		Ok(state.using_encoded(blake2_256).into())
+		Ok(state.hash())
 	}
 
 	fn reset(&self, state: Self::StateT, shard: &ShardIdentifier) -> Result<Self::HashType> {
@@ -109,10 +123,10 @@ pub mod tests {
 	use super::*;
 	use codec::{Decode, Encode};
 	use ita_stf::stf_sgx_tests::StfState;
-	use itp_sgx_externalities::{SgxExternalitiesTrait, SgxExternalitiesType};
+	use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait, SgxExternalitiesType};
 	use itp_stf_interface::InitState;
 	use itp_types::ShardIdentifier;
-	use sp_core::{blake2_256, crypto::AccountId32};
+	use sp_core::crypto::AccountId32;
 
 	pub fn initialized_shards_list_is_empty() {
 		let state_handler = HandleStateMock::default();
@@ -124,7 +138,7 @@ pub mod tests {
 		let shard = ShardIdentifier::default();
 		state_handler.initialize_shard(shard).unwrap();
 
-		assert!(state_handler.load(&shard).is_ok());
+		assert!(state_handler.load_cloned(&shard).is_ok());
 		assert!(state_handler.shard_exists(&shard).unwrap());
 	}
 
@@ -132,7 +146,7 @@ pub mod tests {
 		let shard = ShardIdentifier::default();
 		let state_handler = HandleStateMock::from_shard(shard).unwrap();
 
-		assert!(state_handler.load(&shard).is_ok());
+		assert!(state_handler.load_cloned(&shard).is_ok());
 		assert!(state_handler.shard_exists(&shard).unwrap());
 	}
 
@@ -141,7 +155,7 @@ pub mod tests {
 		let shard = ShardIdentifier::default();
 		state_handler.initialize_shard(shard).unwrap();
 
-		let loaded_state_result = state_handler.load(&shard);
+		let loaded_state_result = state_handler.load_cloned(&shard);
 
 		assert!(loaded_state_result.is_ok());
 	}
@@ -158,7 +172,7 @@ pub mod tests {
 
 		state_handler.write_after_mutation(state, lock, &shard).unwrap();
 
-		let updated_state = state_handler.load(&shard).unwrap();
+		let (updated_state, _) = state_handler.load_cloned(&shard).unwrap();
 
 		let inserted_value =
 			updated_state.get(key.encode().as_slice()).expect("value for key should exist");
@@ -172,29 +186,23 @@ pub mod tests {
 
 		let (lock, _) = state_handler.load_for_mutation(&shard).unwrap();
 		let initial_state = StfState::init_state(AccountId32::new([0u8; 32]));
-		let state_hash_before_execution = hash_of(&initial_state.state);
+		let state_hash_before_execution = initial_state.hash();
 		state_handler.write_after_mutation(initial_state, lock, &shard).unwrap();
 
-		let state_loaded = state_handler.load(&shard).unwrap();
-		let loaded_state_hash = hash_of(&state_loaded.state);
+		let (_, loaded_state_hash) = state_handler.load_cloned(&shard).unwrap();
 
 		assert_eq!(state_hash_before_execution, loaded_state_hash);
 	}
 
 	pub fn ensure_encode_and_encrypt_does_not_affect_state_hash() {
 		let state = StfState::init_state(AccountId32::new([0u8; 32]));
-		let state_hash_before_execution = hash_of(&state.state);
+		let state_hash_before_execution = state.hash();
 
 		let encoded_state = state.state.encode();
 		let decoded_state: SgxExternalitiesType = decode(encoded_state);
-
-		let decoded_state_hash = hash_of(&decoded_state);
+		let decoded_state_hash = SgxExternalities::new(decoded_state).hash();
 
 		assert_eq!(state_hash_before_execution, decoded_state_hash);
-	}
-
-	fn hash_of<T: Encode>(encodable: &T) -> H256 {
-		encodable.using_encoded(blake2_256).into()
 	}
 
 	fn decode<T: Decode>(encoded: Vec<u8>) -> T {

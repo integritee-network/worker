@@ -53,9 +53,7 @@ use itp_top_pool_author::{top_filter::AllowAllTopsFilter, traits::AuthorApi};
 use itp_types::{AccountId, Block as ParentchainBlock, ShardIdentifier};
 use its_block_verification::slot::slot_from_timestamp_and_duration;
 use its_primitives::{traits::Block, types::SignedBlock as SignedSidechainBlock};
-use its_sidechain::{
-	aura::proposer_factory::ProposerFactory, slots::SlotInfo, state::SidechainState,
-};
+use its_sidechain::{aura::proposer_factory::ProposerFactory, slots::SlotInfo};
 use jsonrpc_core::futures::executor;
 use log::*;
 use primitive_types::H256;
@@ -216,7 +214,7 @@ pub fn produce_sidechain_block_and_import_it() {
 		get_state_hash(state_handler.as_ref(), &shard_id)
 	);
 
-	let mut state = state_handler.load(&shard_id).unwrap();
+	let (mut state, _) = state_handler.load_cloned(&shard_id).unwrap();
 	let free_balance = TestStf::get_account_data(&mut state, &receiver.public().into()).free;
 	assert_eq!(free_balance, transfered_amount);
 	assert!(TestStf::get_event_count(&mut state) > 0);
@@ -253,7 +251,6 @@ fn get_state_hashes_from_block(
 }
 
 fn get_state_hash(state_handler: &HandleStateMock, shard_id: &ShardIdentifier) -> H256 {
-	let state = state_handler.load(shard_id).unwrap();
-	let sidechain_state = TestSidechainDb::new(state);
-	sidechain_state.state_hash()
+	let (_, state_hash) = state_handler.load_cloned(shard_id).unwrap();
+	state_hash
 }

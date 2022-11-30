@@ -35,10 +35,18 @@ pub trait HandleState {
 	/// Initializes a default state for the shard and returns its hash.
 	fn initialize_shard(&self, shard: ShardIdentifier) -> Result<Self::HashType>;
 
-	/// Load the state for a given shard.
+	/// Execute a function that acts (immutably) on the current state.
+	///
+	/// This allows access to the state, without any cloning.
+	fn execute_on_current<E, R>(&self, shard: &ShardIdentifier, executing_function: E) -> Result<R>
+	where
+		E: FnOnce(&Self::StateT, Self::HashType) -> R;
+
+	/// Load a clone of the current state for a given shard.
 	///
 	/// Requires the shard to exist and be initialized, otherwise returns an error.
-	fn load(&self, shard: &ShardIdentifier) -> Result<Self::StateT>;
+	/// Because it results in a clone, prefer using `execute_on_current` whenever possible.
+	fn load_cloned(&self, shard: &ShardIdentifier) -> Result<(Self::StateT, Self::HashType)>;
 
 	/// Load the state in order to mutate it.
 	///
