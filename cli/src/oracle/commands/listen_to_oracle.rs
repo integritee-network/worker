@@ -20,7 +20,7 @@ use codec::Decode;
 use itp_node_api::api_client::ParentchainApi;
 use itp_time_utils::{duration_now, remaining_time};
 use log::{debug, info};
-use my_node_runtime::{pallet_teeracle, Event, Hash};
+use my_node_runtime::{Event, Hash};
 use std::{sync::mpsc::channel, time::Duration};
 use substrate_api_client::FromHexString;
 
