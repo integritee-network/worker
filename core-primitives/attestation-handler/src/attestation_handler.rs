@@ -105,11 +105,11 @@ pub trait AttestationHandler {
 	) -> EnclaveResult<(Vec<u8>, Vec<u8>)>;
 }
 
-pub struct IasAttestationHandler<OCallApi> {
+pub struct IntelAttestationHandler<OCallApi> {
 	pub(crate) ocall_api: Arc<OCallApi>,
 }
 
-impl<OCallApi> AttestationHandler for IasAttestationHandler<OCallApi>
+impl<OCallApi> AttestationHandler for IntelAttestationHandler<OCallApi>
 where
 	OCallApi: EnclaveAttestationOCallApi,
 {
@@ -234,7 +234,7 @@ where
 	}
 }
 
-impl<OCallApi> IasAttestationHandler<OCallApi>
+impl<OCallApi> IntelAttestationHandler<OCallApi>
 where
 	OCallApi: EnclaveAttestationOCallApi,
 {
@@ -587,7 +587,7 @@ where
 	}
 }
 
-impl<OCallApi> IasAttestationHandler<OCallApi>
+impl<OCallApi> IntelAttestationHandler<OCallApi>
 where
 	OCallApi: EnclaveAttestationOCallApi,
 {
