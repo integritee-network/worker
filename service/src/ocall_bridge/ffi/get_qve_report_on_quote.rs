@@ -18,7 +18,7 @@ use sgx_types::*;
 use std::{slice, sync::Arc};
 
 #[no_mangle]
-pub extern "C" fn ocall_get_qve_report_on_quote(
+pub unsafe extern "C" fn ocall_get_qve_report_on_quote(
 	p_quote: *const u8,
 	quote_len: u32,
 	current_time: i64,

@@ -22,7 +22,7 @@ use sgx_types::{sgx_epid_group_id_t, sgx_status_t, sgx_target_info_t};
 use std::sync::Arc;
 
 #[no_mangle]
-pub extern "C" fn ocall_sgx_init_quote(
+pub unsafe extern "C" fn ocall_sgx_init_quote(
 	ret_ti: *mut sgx_target_info_t,
 	ret_gid: *mut sgx_epid_group_id_t,
 ) -> sgx_status_t {

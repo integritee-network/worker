@@ -21,8 +21,9 @@ use log::*;
 use sgx_types::{sgx_quote_nonce_t, sgx_quote_sign_type_t, sgx_report_t, sgx_spid_t, sgx_status_t};
 use std::{slice, sync::Arc};
 
+/// p_quote must be a pre-allocated memory region of size `maxlen`
 #[no_mangle]
-pub extern "C" fn ocall_get_quote(
+pub unsafe extern "C" fn ocall_get_quote(
 	p_sigrl: *const u8,
 	sigrl_len: u32,
 	p_report: *const sgx_report_t,
@@ -99,7 +100,7 @@ fn get_quote(
 }
 
 #[no_mangle]
-pub extern "C" fn ocall_get_dcap_quote(
+pub unsafe extern "C" fn ocall_get_dcap_quote(
 	p_report: *const sgx_report_t,
 	p_quote: *mut u8,
 	quote_size: u32,
