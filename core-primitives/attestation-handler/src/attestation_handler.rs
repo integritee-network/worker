@@ -83,6 +83,13 @@ pub trait AttestationHandler {
 	/// but instead generate a mock certificate.
 	fn perform_ra(&self, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
 
+	fn generate_dcap_ecc_cert(
+		&self,
+		quoting_enclave_target_info: &sgx_target_info_t,
+		quote_size: u32,
+		skip_ra: bool,
+	) -> EnclaveResult<(Vec<u8>, Vec<u8>)>;
+
 	/// Get the measurement register value of the enclave
 	fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]>;
 
@@ -230,6 +237,53 @@ where
 
 		let _ = ecc_handle.close();
 		info!("    [Enclave] Generate ECC Certificate successful");
+		Ok((key_der, cert_der))
+	}
+
+	fn generate_dcap_ecc_cert(
+		&self,
+		quoting_enclave_target_info: &sgx_target_info_t,
+		quote_size: u32,
+		skip_ra: bool,
+	) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
+		let chain_signer = Ed25519Seal::unseal_from_static_file()?;
+		info!("[Enclave Attestation] Ed25519 signer pub key: {:?}", chain_signer.public().0);
+
+		let ecc_handle = SgxEccHandle::new();
+		let _result = ecc_handle.open();
+		let (prv_k, pub_k) = ecc_handle.create_key_pair()?;
+		info!("Enclave Attestation] Generated ephemeral ECDSA keypair:");
+
+		let payload = if !skip_ra {
+			let qe_quote = match self.retrieve_qe_dcap_quote(
+				&chain_signer.public().0,
+				quoting_enclave_target_info,
+				quote_size,
+			) {
+				Ok(quote) => quote,
+				Err(e) => {
+					error!("[Enclave] Error in create_dcap_attestation_report: {:?}", e);
+					return Err(e.into())
+				},
+			};
+			// Verify the quote via qve enclave
+			self.ecdsa_quote_verification(qe_quote)?
+		} else {
+			Default::default()
+		};
+
+		// generate an ECC certificate
+		debug!("[Enclave] Generate ECC Certificate");
+		let (key_der, cert_der) = match cert::gen_ecc_cert(&payload, &prv_k, &pub_k, &ecc_handle) {
+			Ok(r) => r,
+			Err(e) => {
+				error!("[Enclave] gen_ecc_cert failed: {:?}", e);
+				return Err(e.into())
+			},
+		};
+
+		let _ = ecc_handle.close();
+
 		Ok((key_der, cert_der))
 	}
 }
@@ -585,12 +639,7 @@ where
 			.map(|key| key.trim_end().to_owned())
 			.map_err(|e| EnclaveError::Other(e.into()))
 	}
-}
 
-impl<OCallApi> IntelAttestationHandler<OCallApi>
-where
-	OCallApi: EnclaveAttestationOCallApi,
-{
 	pub fn ecdsa_quote_verification(&self, quote: Vec<u8>) -> SgxResult<Vec<u8>> {
 		let mut app_enclave_target_info: sgx_target_info_t = unsafe { std::mem::zeroed() };
 		let quote_collateral: sgx_ql_qve_collateral_t = unsafe { std::mem::zeroed() };
@@ -724,53 +773,6 @@ where
 		}
 
 		Ok(quote_vec)
-	}
-
-	pub fn generate_dcap_ecc_cert(
-		&self,
-		quoting_enclave_target_info: &sgx_target_info_t,
-		quote_size: u32,
-		skip_ra: bool,
-	) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
-		let chain_signer = Ed25519Seal::unseal_from_static_file()?;
-		info!("[Enclave Attestation] Ed25519 signer pub key: {:?}", chain_signer.public().0);
-
-		let ecc_handle = SgxEccHandle::new();
-		let _result = ecc_handle.open();
-		let (prv_k, pub_k) = ecc_handle.create_key_pair()?;
-		info!("Enclave Attestation] Generated ephemeral ECDSA keypair:");
-
-		let payload = if !skip_ra {
-			let qe_quote = match self.retrieve_qe_dcap_quote(
-				&chain_signer.public().0,
-				quoting_enclave_target_info,
-				quote_size,
-			) {
-				Ok(quote) => quote,
-				Err(e) => {
-					error!("[Enclave] Error in create_dcap_attestation_report: {:?}", e);
-					return Err(e.into())
-				},
-			};
-			// Verify the quote via qve enclave
-			self.ecdsa_quote_verification(qe_quote)?
-		} else {
-			Default::default()
-		};
-
-		// generate an ECC certificate
-		debug!("[Enclave] Generate ECC Certificate");
-		let (key_der, cert_der) = match cert::gen_ecc_cert(&payload, &prv_k, &pub_k, &ecc_handle) {
-			Ok(r) => r,
-			Err(e) => {
-				error!("[Enclave] gen_ecc_cert failed: {:?}", e);
-				return Err(e.into())
-			},
-		};
-
-		let _ = ecc_handle.close();
-
-		Ok((key_der, cert_der))
 	}
 }
 
