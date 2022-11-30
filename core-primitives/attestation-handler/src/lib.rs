@@ -38,8 +38,6 @@ pub mod sgx_reexport_prelude {
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub mod attestation_handler;
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-pub mod dcap_attestation;
 
 pub mod cert;
 
