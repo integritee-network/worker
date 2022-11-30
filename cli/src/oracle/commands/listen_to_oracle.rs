@@ -65,6 +65,7 @@ fn report_event_count(events_bytes: &[u8]) -> EventCount {
 		Vec::<frame_system::EventRecord<Event, Hash>>::decode(&mut &events_bytes[..]);
 	if event_records.is_err() {
 		// Return no count if cant successfully decode event
+		debug!("Could not successfully decode event_bytes {:?}", event_records);
 		return 0
 	}
 
