@@ -100,7 +100,7 @@ pub fn create_ra_report_and_signature(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn perform_ra(
+pub unsafe extern "C" fn generate_ias_ra_extrinsic(
 	w_url: *const u8,
 	w_url_size: u32,
 	unchecked_extrinsic: *mut u8,
@@ -115,7 +115,7 @@ pub unsafe extern "C" fn perform_ra(
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
-	let extrinsic = match perform_ra_internal(url, skip_ra == 1) {
+	let extrinsic = match generate_ias_ra_extrinsic_internal(url, skip_ra == 1) {
 		Ok(xt) => xt,
 		Err(e) => return e.into(),
 	};
@@ -128,7 +128,7 @@ pub unsafe extern "C" fn perform_ra(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn perform_dcap_ra(
+pub unsafe extern "C" fn generate_dcap_ra_extrinsic(
 	_w_url: *const u8,
 	_w_url_size: u32,
 	_unchecked_extrinsic: *mut u8,
@@ -144,8 +144,8 @@ pub unsafe extern "C" fn perform_dcap_ra(
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	};
-	// Generate the ecc certificate which includes the quote and report of the qe and our app enclave.
-	let (_key_der, _cert_der) = match attestation_handler.generate_dcap_ecc_cert(
+
+	let (_key_der, _cert_der) = match attestation_handler.generate_dcap_ra_cert(
 		quoting_enclave_target_info,
 		quote_size,
 		false,
@@ -157,12 +157,15 @@ pub unsafe extern "C" fn perform_dcap_ra(
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn perform_ra_internal(url: String, skip_ra: bool) -> EnclaveResult<OpaqueExtrinsic> {
+fn generate_ias_ra_extrinsic_internal(
+	url: String,
+	skip_ra: bool,
+) -> EnclaveResult<OpaqueExtrinsic> {
 	let attestation_handler = GLOBAL_ATTESTATION_HANDLER_COMPONENT.get()?;
 	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
 	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain()?;
 
-	let cert_der = attestation_handler.perform_ra(skip_ra)?;
+	let cert_der = attestation_handler.generate_ias_ra_cert(skip_ra)?;
 
 	info!("    [Enclave] Compose register enclave call");
 	let call_ids = node_metadata_repo

@@ -35,9 +35,9 @@ const QVE_ENCLAVE: &str = "libsgx_qve.signed.so.1";
 
 /// general remote attestation methods
 pub trait RemoteAttestation {
-	fn perform_ra(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
+	fn generate_ias_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
 
-	fn perform_dcap_ra(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
+	fn generate_dcap_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
 
 	fn dump_ias_ra_cert_to_disk(&self) -> EnclaveResult<()>;
 
@@ -103,7 +103,7 @@ pub trait TlsRemoteAttestation {
 }
 
 impl RemoteAttestation for Enclave {
-	fn perform_ra(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>> {
+	fn generate_ias_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
 		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
@@ -111,7 +111,7 @@ impl RemoteAttestation for Enclave {
 		let url = w_url.encode();
 
 		let result = unsafe {
-			ffi::perform_ra(
+			ffi::generate_ias_ra_extrinsic(
 				self.eid,
 				&mut retval,
 				url.as_ptr(),
@@ -128,7 +128,7 @@ impl RemoteAttestation for Enclave {
 		Ok(unchecked_extrinsic)
 	}
 
-	fn perform_dcap_ra(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>> {
+	fn generate_dcap_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
 		self.set_ql_qe_enclave_paths()?;
@@ -141,7 +141,7 @@ impl RemoteAttestation for Enclave {
 		let url = w_url.encode();
 
 		let result = unsafe {
-			ffi::perform_dcap_ra(
+			ffi::generate_dcap_ra_extrinsic(
 				self.eid,
 				&mut retval,
 				url.as_ptr(),

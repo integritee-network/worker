@@ -90,7 +90,7 @@ extern "C" {
 		mrenclave_size: u32,
 	) -> sgx_status_t;
 
-	pub fn perform_ra(
+	pub fn generate_ias_ra_extrinsic(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
 		w_url: *const u8,
@@ -100,7 +100,7 @@ extern "C" {
 		skip_ra: c_int,
 	) -> sgx_status_t;
 
-	pub fn perform_dcap_ra(
+	pub fn generate_dcap_ra_extrinsic(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
 		w_url: *const u8,

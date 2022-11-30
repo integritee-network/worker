@@ -81,9 +81,9 @@ pub trait AttestationHandler {
 	/// Generates an encoded remote attestation certificate.
 	/// If skip_ra is set, it will not perform a remote attestation via IAS
 	/// but instead generate a mock certificate.
-	fn perform_ra(&self, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
+	fn generate_ias_ra_cert(&self, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
 
-	fn generate_dcap_ecc_cert(
+	fn generate_dcap_ra_cert(
 		&self,
 		quoting_enclave_target_info: &sgx_target_info_t,
 		quote_size: u32,
@@ -120,7 +120,7 @@ impl<OCallApi> AttestationHandler for IntelAttestationHandler<OCallApi>
 where
 	OCallApi: EnclaveAttestationOCallApi,
 {
-	fn perform_ra(&self, skip_ra: bool) -> EnclaveResult<Vec<u8>> {
+	fn generate_ias_ra_cert(&self, skip_ra: bool) -> EnclaveResult<Vec<u8>> {
 		// Our certificate is unlinkable.
 		let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
@@ -171,7 +171,7 @@ where
 		quote_size: u32,
 	) -> EnclaveResult<()> {
 		let (_key_der, cert_der) =
-			match self.generate_dcap_ecc_cert(quoting_enclave_target_info, quote_size, false) {
+			match self.generate_dcap_ra_cert(quoting_enclave_target_info, quote_size, false) {
 				Ok(r) => r,
 				Err(e) => return Err(e),
 			};
@@ -240,7 +240,7 @@ where
 		Ok((key_der, cert_der))
 	}
 
-	fn generate_dcap_ecc_cert(
+	fn generate_dcap_ra_cert(
 		&self,
 		quoting_enclave_target_info: &sgx_target_info_t,
 		quote_size: u32,
