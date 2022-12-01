@@ -145,6 +145,7 @@ impl From<TrustedGetterSigned<TrustedGetterEvm>> for TrustedOperation<TrustedGet
 }
 // Bookmark
 
+#[allow(non_camel_case_types)]
 pub enum TrustedCallEvm {
 	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance), // (Origin, Address EVM Account, Value)
