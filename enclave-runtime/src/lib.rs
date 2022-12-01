@@ -257,7 +257,7 @@ fn sidechain_rpc_int(request: &str) -> Result<String> {
 /// (parentchain components) have been initialized (because we need the parentchain
 /// block import dispatcher).
 #[no_mangle]
-pub unsafe extern "C" fn init_enclave_sidechain_components() -> sgx_status_t {
+pub extern "C" fn init_enclave_sidechain_components() -> sgx_status_t {
 	if let Err(e) = initialization::init_enclave_sidechain_components() {
 		error!("Failed to initialize sidechain components: {:?}", e);
 		return sgx_status_t::SGX_ERROR_UNEXPECTED
@@ -387,7 +387,7 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 /// This trigger is only useful in combination with a `TriggeredDispatcher` and sidechain. In case no
 /// sidechain and the `ImmediateDispatcher` are used, this function is obsolete.
 #[no_mangle]
-pub unsafe extern "C" fn trigger_parentchain_block_import() -> sgx_status_t {
+pub extern "C" fn trigger_parentchain_block_import() -> sgx_status_t {
 	match internal_trigger_parentchain_block_import() {
 		Ok(()) => sgx_status_t::SGX_SUCCESS,
 		Err(e) => {

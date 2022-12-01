@@ -22,7 +22,7 @@ use sgx_types::{c_int, sgx_status_t};
 use std::sync::Arc;
 
 #[no_mangle]
-pub extern "C" fn ocall_get_ias_socket(ret_fd: *mut c_int) -> sgx_status_t {
+pub unsafe extern "C" fn ocall_get_ias_socket(ret_fd: *mut c_int) -> sgx_status_t {
 	get_ias_socket(ret_fd, Bridge::get_ra_api()) // inject the RA API (global state)
 }
 
