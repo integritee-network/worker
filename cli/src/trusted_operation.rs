@@ -22,7 +22,7 @@ use crate::{
 };
 use base58::FromBase58;
 use codec::{Decode, Encode};
-use ita_stf::{Getter, ShardIdentifier, TrustedGetter, TrustedOperation};
+use ita_stf::{ShardIdentifier, TrustedOperation};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
 use itp_node_api::api_client::TEEREX;
 use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
@@ -40,10 +40,10 @@ use std::{
 use substrate_api_client::{compose_extrinsic, XtStatus};
 use teerex_primitives::Request;
 
-pub(crate) fn perform_trusted_operation<TG: Encode>(
+pub(crate) fn perform_trusted_operation<TG: Encode, TC: Encode>(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
-	top: &TrustedOperation<TG>,
+	top: &TrustedOperation<TG, TC>,
 ) -> Option<Vec<u8>> {
 	match top {
 		TrustedOperation::indirect_call(_) => send_request(cli, trusted_args, top),
@@ -102,10 +102,10 @@ pub(crate) fn get_state(
 	maybe_state
 }
 
-fn send_request<TG: Encode>(
+fn send_request<TG: Encode, TC: Encode>(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
-	trusted_operation: &TrustedOperation<TG>,
+	trusted_operation: &TrustedOperation<TC, TG>,
 ) -> Option<Vec<u8>> {
 	let chain_api = get_chain_api(cli);
 	let encryption_key = get_shielding_key(cli).unwrap();
@@ -198,10 +198,10 @@ fn read_shard(trusted_args: &TrustedArgs) -> StdResult<ShardIdentifier, codec::E
 }
 
 /// sends a rpc watch request to the worker api server
-fn send_direct_request<TG: Encode>(
+fn send_direct_request<TG: Encode, TC: Encode>(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
-	operation_call: &TrustedOperation<TG>,
+	operation_call: &TrustedOperation<TG, TC>,
 ) -> Option<Vec<u8>> {
 	let encryption_key = get_shielding_key(cli).unwrap();
 	let shard = read_shard(trusted_args).unwrap();
@@ -262,9 +262,9 @@ fn send_direct_request<TG: Encode>(
 	}
 }
 
-pub(crate) fn get_json_request<TG: Encode>(
+pub(crate) fn get_json_request<TG: Encode, TC: Encode>(
 	shard: ShardIdentifier,
-	operation_call: &TrustedOperation<TG>,
+	operation_call: &TrustedOperation<TG, TC>,
 	shielding_pubkey: sgx_crypto_helper::rsa3072::Rsa3072PubKey,
 ) -> String {
 	let operation_call_encrypted = shielding_pubkey.encrypt(&operation_call.encode()).unwrap();

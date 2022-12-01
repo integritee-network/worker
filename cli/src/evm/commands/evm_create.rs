@@ -24,8 +24,7 @@ use crate::{
 };
 use codec::Decode;
 use itp_stf_primitives::{
-	evm_helpers::{evm_create_address, TrustedGetterEvm},
-	trusted_call::TrustedCall,
+	evm_helpers::{evm_create_address, TrustedCallEvm, TrustedGetterEvm},
 	types::KeyPair,
 	Index, TrustedOperation,
 };
@@ -69,7 +68,7 @@ impl EvmCreateCommands {
 		let nonce = get_layer_two_nonce!(from, cli, trusted_args);
 		let evm_account_nonce = get_layer_two_evm_nonce!(from, cli, trusted_args);
 
-		let top = TrustedCall::evm_create(
+		let top = TrustedCallEvm::evm_create(
 			from_acc,
 			sender_evm_acc,
 			Vec::from_hex(self.smart_contract.to_string()).unwrap(),

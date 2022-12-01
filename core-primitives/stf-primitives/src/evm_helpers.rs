@@ -14,14 +14,21 @@
 	limitations under the License.
 
 */
+use crate::types::StfError;
 use crate::{
 	getter::TrustedGetterTrait,
 	helpers::{get_storage_double_map, get_storage_map},
+	//trusted_call::TrustedCallTrait,
 	types::{AccountId, KeyPair, ShardIdentifier},
-	Getter, Index, TrustedCallSigned, TrustedGetterSigned, TrustedOperation,
+	Getter,
+	Index,
+	TrustedCallSigned,
+	TrustedGetterSigned,
+	TrustedOperation,
 };
 use codec::{Decode, Encode};
-use ita_sgx_runtime::{AddressMapping, HashedAddressMapping, System};
+use frame_support::{dispatch::UnfilteredDispatchable, ensure};
+use ita_sgx_runtime::{AddressMapping, Balance, HashedAddressMapping, Runtime, System};
 use itp_stf_interface::{ExecuteCall, ExecuteGetter};
 use itp_storage::StorageHasher;
 use itp_types::OpaqueCall;
@@ -29,8 +36,7 @@ use itp_utils::stringify::account_id_to_string;
 use log::*;
 use sha3::{Digest, Keccak256};
 use sp_core::{H160, H256, U256};
-use sp_io::hashing::blake2_256;
-use std::{prelude::v1::*, vec::Vec};
+use std::{format, prelude::v1::*, vec::Vec};
 
 pub fn get_evm_account_codes(evm_account: &H160) -> Option<Vec<u8>> {
 	get_storage_map("Evm", "AccountCodes", evm_account, &StorageHasher::Blake2_128Concat)
@@ -148,9 +154,9 @@ impl From<TrustedGetterSigned<TrustedGetterEvm>> for TrustedOperation<TrustedGet
 }
 // Bookmark
 
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum TrustedCallEvm {
-	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance), // (Origin, Address EVM Account, Value)
 	// (Origin, Source, Target, Input, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
 	#[cfg(feature = "evm")]
@@ -167,7 +173,6 @@ pub enum TrustedCallEvm {
 		Vec<(H160, Vec<H256>)>,
 	),
 	// (Origin, Source, Init, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
-	#[cfg(feature = "evm")]
 	evm_create(
 		AccountId,
 		H160,
@@ -180,7 +185,6 @@ pub enum TrustedCallEvm {
 		Vec<(H160, Vec<H256>)>,
 	),
 	// (Origin, Source, Init, Salt, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
-	#[cfg(feature = "evm")]
 	evm_create2(
 		AccountId,
 		H160,
@@ -195,8 +199,9 @@ pub enum TrustedCallEvm {
 	),
 }
 
-impl TrustedCallTrait for TrustedCallEvm {
-	fn sender_account(&self) -> &AccountId {
+//impl TrustedCallTrait for TrustedCallEvm {
+impl TrustedCallEvm {
+	pub fn sender_account(&self) -> &AccountId {
 		match self {
 			TrustedCallEvm::evm_withdraw(sender_account, ..) => sender_account,
 			TrustedCallEvm::evm_call(sender_account, ..) => sender_account,
@@ -204,30 +209,46 @@ impl TrustedCallTrait for TrustedCallEvm {
 			TrustedCallEvm::evm_create2(sender_account, ..) => sender_account,
 		}
 	}
-	fn sign(
+	pub fn sign(
 		&self,
 		pair: &KeyPair,
 		nonce: Index,
 		mrenclave: &[u8; 32],
 		shard: &ShardIdentifier,
-	) -> TrustedCallSigned {
+	) -> TrustedCallSigned<TrustedCallEvm> {
 		let mut payload = self.encode();
 		payload.append(&mut nonce.encode());
 		payload.append(&mut mrenclave.encode());
 		payload.append(&mut shard.encode());
 
-		TrustedCallSigned { call: self.clone(), nonce, signature: pair.sign(payload.as_slice()) }
+		TrustedCallSigned::<TrustedCallEvm> {
+			call: self.clone(),
+			nonce,
+			signature: pair.sign(payload.as_slice()),
+		}
 	}
 }
 
-impl ExecuteCall for TrustedCallEvm {
+impl TrustedCallSigned<TrustedCallEvm> {
+	pub fn into_trusted_operation(
+		self,
+		direct: bool,
+	) -> TrustedOperation<TrustedGetterEvm, TrustedCallEvm> {
+		match direct {
+			true => TrustedOperation::<TrustedGetterEvm, TrustedCallEvm>::direct_call(self),
+			false => TrustedOperation::<TrustedGetterEvm, TrustedCallEvm>::indirect_call(self),
+		}
+	}
+}
+
+impl ExecuteCall for TrustedCallSigned<TrustedCallEvm> {
+	type Error = StfError;
 	fn execute(
 		self,
-		calls: &mut Vec<OpaqueCall>,
-		unshield_funds_fn: [u8; 2],
+		_calls: &mut Vec<OpaqueCall>,
+		_unshield_funds_fn: [u8; 2],
 	) -> Result<(), Self::Error> {
 		let sender = self.call.sender_account().clone();
-		let call_hash = blake2_256(&self.call.encode());
 		ensure!(
 			self.nonce == System::account_nonce(&sender),
 			Self::Error::InvalidNonce(self.nonce)

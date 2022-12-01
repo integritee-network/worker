@@ -23,8 +23,8 @@ use crate::{
 	Cli,
 };
 use codec::Decode;
-use ita_stf::{Index, KeyPair, TrustedCall, TrustedOperation};
-use itp_stf_primitives::evm_helpers::TrustedGetterEvm;
+use ita_stf::{Index, KeyPair, TrustedOperation};
+use itp_stf_primitives::evm_helpers::{TrustedCallEvm, TrustedGetterEvm};
 use itp_types::AccountId;
 use log::*;
 use sp_core::{crypto::Ss58Codec, Pair, H160, U256};
@@ -67,7 +67,7 @@ impl EvmCallCommands {
 		let evm_nonce = get_layer_two_evm_nonce!(sender, cli, trusted_args);
 
 		println!("calling smart contract function");
-		let function_call = TrustedCall::evm_call(
+		let function_call = TrustedCallEvm::evm_call(
 			sender_acc,
 			sender_evm_acc,
 			execution_address,
