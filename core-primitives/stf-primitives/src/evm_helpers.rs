@@ -140,8 +140,8 @@ impl From<TrustedGetterSigned<TrustedGetterEvm>> for Getter<TrustedGetterEvm> {
 		Getter::<TrustedGetterEvm>::trusted(item)
 	}
 }
-impl From<TrustedGetterSigned<TrustedGetterEvm>> for TrustedOperation {
+impl From<TrustedGetterSigned<TrustedGetterEvm>> for TrustedOperation<TrustedGetterEvm> {
 	fn from(item: TrustedGetterSigned<TrustedGetterEvm>) -> Self {
-		TrustedOperation::get(item.into())
+		TrustedOperation::<TrustedGetterEvm>::get(item.into())
 	}
 }

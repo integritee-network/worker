@@ -22,7 +22,7 @@ use crate::{
 };
 use base58::FromBase58;
 use codec::{Decode, Encode};
-use ita_stf::{Getter, ShardIdentifier, TrustedOperation};
+use ita_stf::{Getter, ShardIdentifier, TrustedGetter, TrustedOperation};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
 use itp_node_api::api_client::TEEREX;
 use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
@@ -40,10 +40,10 @@ use std::{
 use substrate_api_client::{compose_extrinsic, XtStatus};
 use teerex_primitives::Request;
 
-pub(crate) fn perform_trusted_operation(
+pub(crate) fn perform_trusted_operation<TG: Encode>(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
-	top: &TrustedOperation,
+	top: &TrustedOperation<TG>,
 ) -> Option<Vec<u8>> {
 	match top {
 		TrustedOperation::indirect_call(_) => send_request(cli, trusted_args, top),
@@ -52,20 +52,20 @@ pub(crate) fn perform_trusted_operation(
 	}
 }
 
-fn execute_getter_from_cli_args(
+fn execute_getter_from_cli_args<T: Encode>(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
-	getter: &Getter,
+	getter: &Getter<T>,
 ) -> Option<Vec<u8>> {
 	let shard = read_shard(trusted_args).unwrap();
 	let direct_api = get_worker_api_direct(cli);
 	get_state(&direct_api, shard, getter)
 }
 
-pub(crate) fn get_state(
+pub(crate) fn get_state<T: Encode>(
 	direct_api: &DirectClient,
 	shard: ShardIdentifier,
-	getter: &Getter,
+	getter: &Getter<T>,
 ) -> Option<Vec<u8>> {
 	// Compose jsonrpc call.
 	let data = Request { shard, cyphertext: getter.encode() };
@@ -101,10 +101,10 @@ pub(crate) fn get_state(
 	maybe_state
 }
 
-fn send_request(
+fn send_request<TG: Encode>(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
-	trusted_operation: &TrustedOperation,
+	trusted_operation: &TrustedOperation<TG>,
 ) -> Option<Vec<u8>> {
 	let chain_api = get_chain_api(cli);
 	let encryption_key = get_shielding_key(cli).unwrap();
@@ -197,10 +197,10 @@ fn read_shard(trusted_args: &TrustedArgs) -> StdResult<ShardIdentifier, codec::E
 }
 
 /// sends a rpc watch request to the worker api server
-fn send_direct_request(
+fn send_direct_request<TG: Encode>(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
-	operation_call: &TrustedOperation,
+	operation_call: &TrustedOperation<TG>,
 ) -> Option<Vec<u8>> {
 	let encryption_key = get_shielding_key(cli).unwrap();
 	let shard = read_shard(trusted_args).unwrap();
@@ -261,9 +261,9 @@ fn send_direct_request(
 	}
 }
 
-pub(crate) fn get_json_request(
+pub(crate) fn get_json_request<TG: Encode>(
 	shard: ShardIdentifier,
-	operation_call: &TrustedOperation,
+	operation_call: &TrustedOperation<TG>,
 	shielding_pubkey: sgx_crypto_helper::rsa3072::Rsa3072PubKey,
 ) -> String {
 	let operation_call_encrypted = shielding_pubkey.encrypt(&operation_call.encode()).unwrap();

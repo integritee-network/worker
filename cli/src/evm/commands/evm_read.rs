@@ -54,7 +54,7 @@ impl EvmReadCommands {
 		let execution_address =
 			H160::from_slice(&Vec::from_hex(self.execution_address.to_string()).unwrap());
 
-		let top: TrustedOperation =
+		let top: TrustedOperation<TrustedGetterEvm> =
 			TrustedGetterEvm::evm_account_storages(sender_acc, execution_address, H256::zero())
 				.sign(&KeyPair::Sr25519(Box::new(sender)))
 				.into();

@@ -107,7 +107,8 @@ where
 		let trusted_call = TrustedCall::balance_shield(enclave_account_id, account, amount);
 		let signed_trusted_call =
 			self.stf_enclave_signer.sign_call_with_self(&trusted_call, &shard)?;
-		let trusted_operation = TrustedOperation::indirect_call(signed_trusted_call);
+		let trusted_operation: TrustedOperation =
+			TrustedOperation::indirect_call(signed_trusted_call);
 
 		let encrypted_trusted_call = shielding_key.encrypt(&trusted_operation.encode())?;
 		self.submit_trusted_call(shard, encrypted_trusted_call);

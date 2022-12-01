@@ -17,9 +17,10 @@
 #[macro_export]
 macro_rules! get_layer_two_evm_nonce {
 	($signer_pair:ident, $cli:ident, $trusted_args:ident ) => {{
-		let top: TrustedOperation = TrustedGetterEvm::evm_nonce($signer_pair.public().into())
-			.sign(&KeyPair::Sr25519(Box::new($signer_pair.clone())))
-			.into();
+		let top: TrustedOperation<TrustedGetterEvm> =
+			TrustedGetterEvm::evm_nonce($signer_pair.public().into())
+				.sign(&KeyPair::Sr25519(Box::new($signer_pair.clone())))
+				.into();
 		let res = perform_trusted_operation($cli, $trusted_args, &top);
 		let nonce: Index = if let Some(n) = res {
 			if let Ok(nonce) = Index::decode(&mut n.as_slice()) {
