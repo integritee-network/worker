@@ -1,9 +1,7 @@
 # Teeracle Demo Setup
 #
 # The demo is parameterized with the interval that the teeracle uses to query its sources.
-# Set the `TEERACLE_INTERVAL_SECONDS` variable when invoking, e.g. `TEERACLE_INTERVAL_SECONDS=4 docker compose -f docker-compose.yml -f demo-teeracle.yml up --exit-code-from demo-teeracle`
-# This setup requires an API key for CoinMarketCap
-# Add the API key to the environment variable `OPENMETEO_KEY`, with `export OPENMETEO_KEY=<your_key>`
+# Set the `TEERACLE_INTERVAL_SECONDS` variable when invoking, e.g. `TEERACLE_INTERVAL_SECONDS=4 docker compose -f docker-compose.yml -f demo-teeracle-generic.yml up --exit-code-from demo-teeracle-generic`
 services:
   integritee-teeracle-worker:
     image: integritee-worker:dev
@@ -15,7 +13,6 @@ services:
     depends_on: [ 'integritee-node' ]
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=info,integritee_service::teeracle=debug,ita_stf=warn,ita_oracle=debug
-      - OPENMETEO_KEY
     networks:
       - integritee-test-network
     entrypoint: "dockerize -wait tcp://integritee-node:9912 -timeout 30s
@@ -23,7 +20,7 @@ services:
         -u ws://integritee-node -U ws://integritee-teeracle-worker -P 2011 -w 2101 -p 9912 -h 4645
         run --dev --skip-ra --teeracle-interval ${TEERACLE_INTERVAL_SECONDS}s"
     restart: always
-  demo-teeracle:
+  demo-teeracle-generic:
     image: integritee-cli:dev
     container_name: integritee-teeracle-demo
     build:
