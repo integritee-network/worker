@@ -48,27 +48,28 @@ pub(crate) fn perform_trusted_operation<TG: Encode>(
 	match top {
 		TrustedOperation::indirect_call(_) => send_request(cli, trusted_args, top),
 		TrustedOperation::direct_call(_) => send_direct_request(cli, trusted_args, top),
-		TrustedOperation::get(getter) => execute_getter_from_cli_args(cli, trusted_args, getter),
+		TrustedOperation::get(getter) =>
+			execute_getter_from_cli_args(cli, trusted_args, getter.encode()),
 	}
 }
 
-fn execute_getter_from_cli_args<T: Encode>(
+fn execute_getter_from_cli_args(
 	cli: &Cli,
 	trusted_args: &TrustedArgs,
-	getter: &Getter<T>,
+	getter_encoded: Vec<u8>,
 ) -> Option<Vec<u8>> {
 	let shard = read_shard(trusted_args).unwrap();
 	let direct_api = get_worker_api_direct(cli);
-	get_state(&direct_api, shard, getter)
+	get_state(&direct_api, shard, getter_encoded)
 }
 
-pub(crate) fn get_state<T: Encode>(
+pub(crate) fn get_state(
 	direct_api: &DirectClient,
 	shard: ShardIdentifier,
-	getter: &Getter<T>,
+	getter_encoded: Vec<u8>,
 ) -> Option<Vec<u8>> {
 	// Compose jsonrpc call.
-	let data = Request { shard, cyphertext: getter.encode() };
+	let data = Request { shard, cyphertext: getter_encoded };
 	let rpc_method = "state_executeGetter".to_owned();
 	let jsonrpc_call: String =
 		RpcRequest::compose_jsonrpc_call(rpc_method, vec![data.to_hex()]).unwrap();

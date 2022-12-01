@@ -25,7 +25,7 @@ use crate::{
 	trusted_operation::{get_json_request, get_state, perform_trusted_operation, wait_until},
 	Cli,
 };
-use codec::Decode;
+use codec::{Decode, Encode};
 use hdrhistogram::Histogram;
 use ita_stf::{getter::TrustedGetter, Getter, Index, KeyPair, TrustedCall, TrustedOperation};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
@@ -258,10 +258,11 @@ fn get_balance(
 	let getter = Getter::trusted(
 		TrustedGetter::free_balance(account.public().into())
 			.sign(&KeyPair::Sr25519(Box::new(account.clone()))),
-	);
+	)
+	.encode();
 
 	let getter_start_timer = Instant::now();
-	let getter_result = get_state(direct_client, shard, &getter);
+	let getter_result = get_state(direct_client, shard, getter);
 	let getter_execution_time = getter_start_timer.elapsed().as_millis();
 
 	let balance = decode_balance(getter_result);
@@ -278,10 +279,11 @@ fn get_nonce(
 	let getter = Getter::trusted(
 		TrustedGetter::nonce(account.public().into())
 			.sign(&KeyPair::Sr25519(Box::new(account.clone()))),
-	);
+	)
+	.encode();
 
 	let getter_start_timer = Instant::now();
-	let getter_result = get_state(direct_client, shard, &getter);
+	let getter_result = get_state(direct_client, shard, getter);
 	let getter_execution_time = getter_start_timer.elapsed().as_millis();
 
 	let nonce = match getter_result {
