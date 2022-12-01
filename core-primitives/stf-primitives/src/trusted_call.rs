@@ -15,12 +15,6 @@
 
 */
 
-#[cfg(feature = "evm")]
-use sp_core::{H160, H256, U256};
-
-#[cfg(feature = "evm")]
-use std::vec::Vec;
-
 use crate::{
 	helpers::ensure_enclave_signer_account,
 	types::{AccountId, KeyPair, ShardIdentifier, Signature, StfError},
@@ -38,12 +32,6 @@ use sp_io::hashing::blake2_256;
 use sp_runtime::{traits::Verify, MultiAddress};
 use std::{format, prelude::v1::*};
 
-#[cfg(feature = "evm")]
-use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
-
-#[cfg(feature = "evm")]
-use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_address};
-
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum TrustedCall {
@@ -51,50 +39,18 @@ pub enum TrustedCall {
 	balance_transfer(AccountId, AccountId, Balance),
 	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
 	balance_shield(AccountId, AccountId, Balance), // (Root, AccountIncognito, Amount)
-	#[cfg(feature = "evm")]
-	evm_withdraw(AccountId, H160, Balance), // (Origin, Address EVM Account, Value)
-	// (Origin, Source, Target, Input, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
-	#[cfg(feature = "evm")]
-	evm_call(
-		AccountId,
-		H160,
-		H160,
-		Vec<u8>,
-		U256,
-		u64,
-		U256,
-		Option<U256>,
-		Option<U256>,
-		Vec<(H160, Vec<H256>)>,
-	),
-	// (Origin, Source, Init, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
-	#[cfg(feature = "evm")]
-	evm_create(
-		AccountId,
-		H160,
-		Vec<u8>,
-		U256,
-		u64,
-		U256,
-		Option<U256>,
-		Option<U256>,
-		Vec<(H160, Vec<H256>)>,
-	),
-	// (Origin, Source, Init, Salt, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
-	#[cfg(feature = "evm")]
-	evm_create2(
-		AccountId,
-		H160,
-		Vec<u8>,
-		H256,
-		U256,
-		u64,
-		U256,
-		Option<U256>,
-		Option<U256>,
-		Vec<(H160, Vec<H256>)>,
-	),
 }
+
+// pub trait TrustedCallTrait {
+// 	fn sender_account(&self) -> &AccountId;
+// 	fn sign(
+// 		&self,
+// 		pair: &KeyPair,
+// 		nonce: Index,
+// 		mrenclave: &[u8; 32],
+// 		shard: &ShardIdentifier,
+// 	) -> TrustedCallSigned;
+// }
 
 impl TrustedCall {
 	pub fn sender_account(&self) -> &AccountId {
@@ -103,14 +59,6 @@ impl TrustedCall {
 			TrustedCall::balance_transfer(sender_account, ..) => sender_account,
 			TrustedCall::balance_unshield(sender_account, ..) => sender_account,
 			TrustedCall::balance_shield(sender_account, ..) => sender_account,
-			#[cfg(feature = "evm")]
-			TrustedCall::evm_withdraw(sender_account, ..) => sender_account,
-			#[cfg(feature = "evm")]
-			TrustedCall::evm_call(sender_account, ..) => sender_account,
-			#[cfg(feature = "evm")]
-			TrustedCall::evm_create(sender_account, ..) => sender_account,
-			#[cfg(feature = "evm")]
-			TrustedCall::evm_create2(sender_account, ..) => sender_account,
 		}
 	}
 
@@ -131,8 +79,8 @@ impl TrustedCall {
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
-pub struct TrustedCallSigned {
-	pub call: TrustedCall,
+pub struct TrustedCallSigned<TC = TrustedCall> {
+	pub call: TC,
 	pub nonce: Index,
 	pub signature: Signature,
 }
@@ -244,123 +192,6 @@ impl ExecuteCall for TrustedCallSigned {
 				shield_funds(who, value)?;
 				Ok(())
 			},
-			#[cfg(feature = "evm")]
-			TrustedCall::evm_withdraw(from, address, value) => {
-				debug!("evm_withdraw({}, {}, {})", account_id_to_string(&from), address, value);
-				ita_sgx_runtime::EvmCall::<Runtime>::withdraw { address, value }
-					.dispatch_bypass_filter(ita_sgx_runtime::Origin::signed(from))
-					.map_err(|e| {
-						Self::Error::Dispatch(format!("Evm Withdraw error: {:?}", e.error))
-					})?;
-				Ok(())
-			},
-			#[cfg(feature = "evm")]
-			TrustedCall::evm_call(
-				from,
-				source,
-				target,
-				input,
-				value,
-				gas_limit,
-				max_fee_per_gas,
-				max_priority_fee_per_gas,
-				nonce,
-				access_list,
-			) => {
-				debug!(
-					"evm_call(from: {}, source: {}, target: {})",
-					account_id_to_string(&from),
-					source,
-					target
-				);
-				ita_sgx_runtime::EvmCall::<Runtime>::call {
-					source,
-					target,
-					input,
-					value,
-					gas_limit,
-					max_fee_per_gas,
-					max_priority_fee_per_gas,
-					nonce,
-					access_list,
-				}
-				.dispatch_bypass_filter(ita_sgx_runtime::Origin::signed(from))
-				.map_err(|e| Self::Error::Dispatch(format!("Evm Call error: {:?}", e.error)))?;
-				Ok(())
-			},
-			#[cfg(feature = "evm")]
-			TrustedCall::evm_create(
-				from,
-				source,
-				init,
-				value,
-				gas_limit,
-				max_fee_per_gas,
-				max_priority_fee_per_gas,
-				nonce,
-				access_list,
-			) => {
-				debug!(
-					"evm_create(from: {}, source: {}, value: {})",
-					account_id_to_string(&from),
-					source,
-					value
-				);
-				let nonce_evm_account =
-					System::account_nonce(&HashedAddressMapping::into_account_id(source));
-				ita_sgx_runtime::EvmCall::<Runtime>::create {
-					source,
-					init,
-					value,
-					gas_limit,
-					max_fee_per_gas,
-					max_priority_fee_per_gas,
-					nonce,
-					access_list,
-				}
-				.dispatch_bypass_filter(ita_sgx_runtime::Origin::signed(from))
-				.map_err(|e| Self::Error::Dispatch(format!("Evm Create error: {:?}", e.error)))?;
-				let contract_address = evm_create_address(source, nonce_evm_account);
-				info!("Trying to create evm contract with address {:?}", contract_address);
-				Ok(())
-			},
-			#[cfg(feature = "evm")]
-			TrustedCall::evm_create2(
-				from,
-				source,
-				init,
-				salt,
-				value,
-				gas_limit,
-				max_fee_per_gas,
-				max_priority_fee_per_gas,
-				nonce,
-				access_list,
-			) => {
-				debug!(
-					"evm_create2(from: {}, source: {}, value: {})",
-					account_id_to_string(&from),
-					source,
-					value
-				);
-				let code_hash = create_code_hash(&init);
-				ita_sgx_runtime::EvmCall::<Runtime>::create2 {
-					source,
-					init,
-					salt,
-					value,
-					gas_limit,
-					max_fee_per_gas,
-					max_priority_fee_per_gas,
-					nonce,
-					access_list,
-				}
-				.dispatch_bypass_filter(ita_sgx_runtime::Origin::signed(from))
-				.map_err(|e| Self::Error::Dispatch(format!("Evm Create2 error: {:?}", e.error)))?;
-				let contract_address = evm_create2_address(source, salt, code_hash);
-				info!("Trying to create evm contract with address {:?}", contract_address);
-				Ok(())
-			},
 		}?;
 		System::inc_account_nonce(&sender);
 		Ok(())
@@ -373,8 +204,6 @@ impl ExecuteCall for TrustedCallSigned {
 			TrustedCall::balance_transfer(_, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_unshield(_, _, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_shield(_, _, _) => debug!("No storage updates needed..."),
-			#[cfg(feature = "evm")]
-			_ => debug!("No storage updates needed..."),
 		};
 		key_hashes
 	}
