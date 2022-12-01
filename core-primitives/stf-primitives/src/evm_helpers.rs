@@ -143,3 +143,4 @@ impl From<TrustedGetterSigned<TrustedGetterEvm>> for TrustedOperation<TrustedGet
 		TrustedOperation::<TrustedGetterEvm>::get(item.into())
 	}
 }
+// Bookmark
