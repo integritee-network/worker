@@ -15,13 +15,20 @@
 
 */
 use crate::{
+	getter::TrustedGetterTrait,
 	helpers::{get_storage_double_map, get_storage_map},
-	types::AccountId,
-	Index,
+	types::{AccountId, KeyPair, Signature},
+	Getter, Index, TrustedGetterSigned, TrustedOperation,
 };
+use codec::{Decode, Encode};
+use ita_sgx_runtime::{AddressMapping, HashedAddressMapping, System};
+use itp_stf_interface::ExecuteGetter;
 use itp_storage::StorageHasher;
+use itp_utils::stringify::account_id_to_string;
+use log::*;
 use sha3::{Digest, Keccak256};
 use sp_core::{H160, H256};
+use sp_runtime::traits::Verify;
 use std::prelude::v1::*;
 
 pub fn get_evm_account_codes(evm_account: &H160) -> Option<Vec<u8>> {
@@ -65,4 +72,76 @@ pub fn get_evm_account(account: &AccountId) -> H160 {
 	let mut evm_acc_slice: [u8; 20] = [0; 20];
 	evm_acc_slice.copy_from_slice((<[u8; 32]>::from(account.clone())).get(0..20).unwrap());
 	evm_acc_slice.into()
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+#[allow(non_camel_case_types)]
+pub enum TrustedGetterEvm {
+	evm_nonce(AccountId),
+	evm_account_codes(AccountId, H160),
+	evm_account_storages(AccountId, H160, H256),
+}
+
+impl TrustedGetterEvm {
+	pub fn sign(&self, pair: &KeyPair) -> TrustedGetterSigned<TrustedGetterEvm> {
+		let signature = pair.sign(self.encode().as_slice());
+		TrustedGetterSigned::<TrustedGetterEvm>::new(self.clone(), signature)
+	}
+}
+
+impl TrustedGetterTrait for TrustedGetterEvm {
+	fn sender_account(&self) -> &AccountId {
+		match self {
+			TrustedGetterEvm::evm_nonce(sender_account) => sender_account,
+			TrustedGetterEvm::evm_account_codes(sender_account, _) => sender_account,
+			TrustedGetterEvm::evm_account_storages(sender_account, ..) => sender_account,
+		}
+	}
+}
+impl ExecuteGetter for TrustedGetterEvm {
+	fn execute(self) -> Option<Vec<u8>> {
+		match self {
+			TrustedGetterEvm::evm_nonce(who) => {
+				let evm_account = get_evm_account(&who);
+				let evm_account = HashedAddressMapping::into_account_id(evm_account);
+				let nonce = System::account_nonce(&evm_account);
+				debug!("TrustedGetter evm_nonce");
+				debug!("Account nonce is {}", nonce);
+				Some(nonce.encode())
+			},
+			#[cfg(feature = "evm")]
+			TrustedGetterEvm::evm_account_codes(_who, evm_account) =>
+			// TODO: This probably needs some security check if who == evm_account (or assosciated)
+				if let Some(info) = get_evm_account_codes(&evm_account) {
+					debug!("TrustedGetter Evm Account Codes");
+					debug!("AccountCodes for {} is {:?}", evm_account, info);
+					Some(info) // TOOD: encoded?
+				} else {
+					None
+				},
+			#[cfg(feature = "evm")]
+			TrustedGetterEvm::evm_account_storages(_who, evm_account, index) =>
+			// TODO: This probably needs some security check if who == evm_account (or assosciated)
+				if let Some(value) = get_evm_account_storages(&evm_account, &index) {
+					debug!("TrustedGetter Evm Account Storages");
+					debug!("AccountStorages for {} is {:?}", evm_account, value);
+					Some(value.encode())
+				} else {
+					None
+				},
+		}
+	}
+	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
+		Vec::new()
+	}
+}
+impl From<TrustedGetterSigned<TrustedGetterEvm>> for Getter<TrustedGetterEvm> {
+	fn from(item: TrustedGetterSigned<TrustedGetterEvm>) -> Self {
+		Getter::<TrustedGetterEvm>::trusted(item)
+	}
+}
+impl From<TrustedGetterSigned<TrustedGetterEvm>> for TrustedOperation {
+	fn from(item: TrustedGetterSigned<TrustedGetterEvm>) -> Self {
+		TrustedOperation::get(item.into())
+	}
 }

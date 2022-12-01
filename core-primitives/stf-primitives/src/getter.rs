@@ -35,9 +35,9 @@ use sp_core::{H160, H256};
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
-pub enum Getter {
+pub enum Getter<TG = TrustedGetter> {
 	public(PublicGetter),
-	trusted(TrustedGetterSigned),
+	trusted(TrustedGetterSigned<TG>),
 }
 
 impl From<PublicGetter> for Getter {
@@ -64,43 +64,40 @@ pub enum TrustedGetter {
 	free_balance(AccountId),
 	reserved_balance(AccountId),
 	nonce(AccountId),
-	#[cfg(feature = "evm")]
-	evm_nonce(AccountId),
-	#[cfg(feature = "evm")]
-	evm_account_codes(AccountId, H160),
-	#[cfg(feature = "evm")]
-	evm_account_storages(AccountId, H160, H256),
+}
+
+pub trait TrustedGetterTrait {
+	fn sender_account(&self) -> &AccountId;
 }
 
 impl TrustedGetter {
-	pub fn sender_account(&self) -> &AccountId {
-		match self {
-			TrustedGetter::free_balance(sender_account) => sender_account,
-			TrustedGetter::reserved_balance(sender_account) => sender_account,
-			TrustedGetter::nonce(sender_account) => sender_account,
-			#[cfg(feature = "evm")]
-			TrustedGetter::evm_nonce(sender_account) => sender_account,
-			#[cfg(feature = "evm")]
-			TrustedGetter::evm_account_codes(sender_account, _) => sender_account,
-			#[cfg(feature = "evm")]
-			TrustedGetter::evm_account_storages(sender_account, ..) => sender_account,
-		}
-	}
-
 	pub fn sign(&self, pair: &KeyPair) -> TrustedGetterSigned {
 		let signature = pair.sign(self.encode().as_slice());
 		TrustedGetterSigned { getter: self.clone(), signature }
 	}
 }
 
+impl TrustedGetterTrait for TrustedGetter {
+	fn sender_account(&self) -> &AccountId {
+		match self {
+			TrustedGetter::free_balance(sender_account) => sender_account,
+			TrustedGetter::reserved_balance(sender_account) => sender_account,
+			TrustedGetter::nonce(sender_account) => sender_account,
+		}
+	}
+}
+
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
-pub struct TrustedGetterSigned {
-	pub getter: TrustedGetter,
+pub struct TrustedGetterSigned<TG = TrustedGetter> {
+	pub getter: TG,
 	pub signature: Signature,
 }
 
-impl TrustedGetterSigned {
-	pub fn new(getter: TrustedGetter, signature: Signature) -> Self {
+impl<TG> TrustedGetterSigned<TG>
+where
+	TG: Encode + TrustedGetterTrait,
+{
+	pub fn new(getter: TG, signature: Signature) -> Self {
 		TrustedGetterSigned { getter, signature }
 	}
 
@@ -135,35 +132,6 @@ impl ExecuteGetter for Getter {
 					debug!("Account nonce is {}", nonce);
 					Some(nonce.encode())
 				},
-				#[cfg(feature = "evm")]
-				TrustedGetter::evm_nonce(who) => {
-					let evm_account = get_evm_account(who);
-					let evm_account = HashedAddressMapping::into_account_id(evm_account);
-					let nonce = System::account_nonce(&evm_account);
-					debug!("TrustedGetter evm_nonce");
-					debug!("Account nonce is {}", nonce);
-					Some(nonce.encode())
-				},
-				#[cfg(feature = "evm")]
-				TrustedGetter::evm_account_codes(_who, evm_account) =>
-				// TODO: This probably needs some security check if who == evm_account (or assosciated)
-					if let Some(info) = get_evm_account_codes(evm_account) {
-						debug!("TrustedGetter Evm Account Codes");
-						debug!("AccountCodes for {} is {:?}", evm_account, info);
-						Some(info) // TOOD: encoded?
-					} else {
-						None
-					},
-				#[cfg(feature = "evm")]
-				TrustedGetter::evm_account_storages(_who, evm_account, index) =>
-				// TODO: This probably needs some security check if who == evm_account (or assosciated)
-					if let Some(value) = get_evm_account_storages(evm_account, index) {
-						debug!("TrustedGetter Evm Account Storages");
-						debug!("AccountStorages for {} is {:?}", evm_account, value);
-						Some(value.encode())
-					} else {
-						None
-					},
 			},
 			Getter::public(g) => match g {
 				PublicGetter::some_value => Some(42u32.encode()),

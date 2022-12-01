@@ -17,7 +17,7 @@
 #[macro_export]
 macro_rules! get_layer_two_evm_nonce {
 	($signer_pair:ident, $cli:ident, $trusted_args:ident ) => {{
-		let top: TrustedOperation = TrustedGetter::evm_nonce($signer_pair.public().into())
+		let top: TrustedOperation = TrustedGetterEvm::evm_nonce($signer_pair.public().into())
 			.sign(&KeyPair::Sr25519(Box::new($signer_pair.clone())))
 			.into();
 		let res = perform_trusted_operation($cli, $trusted_args, &top);

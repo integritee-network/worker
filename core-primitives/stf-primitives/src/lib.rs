@@ -27,7 +27,7 @@ pub use my_node_runtime::{Balance, Index};
 
 use codec::{Decode, Encode};
 
-pub use getter::{Getter, PublicGetter, TrustedGetterSigned};
+pub use getter::{Getter, PublicGetter, TrustedGetter, TrustedGetterSigned};
 
 pub mod getter;
 pub mod hash;
@@ -45,10 +45,10 @@ pub const ENCLAVE_ACCOUNT_KEY: &str = "Enclave_Account_Key";
 use crate::trusted_call::TrustedCallSigned;
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
-pub enum TrustedOperation {
+pub enum TrustedOperation<TG = TrustedGetter> {
 	indirect_call(TrustedCallSigned),
 	direct_call(TrustedCallSigned),
-	get(Getter),
+	get(Getter<TG>),
 }
 
 impl From<TrustedCallSigned> for TrustedOperation {

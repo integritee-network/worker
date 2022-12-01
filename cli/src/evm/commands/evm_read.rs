@@ -21,7 +21,7 @@ use crate::{
 };
 use codec::Decode;
 use ita_stf::{KeyPair, TrustedOperation};
-use itp_stf_primitives::getter::TrustedGetter;
+use itp_stf_primitives::evm_helpers::TrustedGetterEvm;
 use itp_types::AccountId;
 use log::*;
 use sp_core::{crypto::Ss58Codec, Pair, H160, H256};
@@ -55,7 +55,7 @@ impl EvmReadCommands {
 			H160::from_slice(&Vec::from_hex(self.execution_address.to_string()).unwrap());
 
 		let top: TrustedOperation =
-			TrustedGetter::evm_account_storages(sender_acc, execution_address, H256::zero())
+			TrustedGetterEvm::evm_account_storages(sender_acc, execution_address, H256::zero())
 				.sign(&KeyPair::Sr25519(Box::new(sender)))
 				.into();
 		let res = perform_trusted_operation(cli, trusted_args, &top);
