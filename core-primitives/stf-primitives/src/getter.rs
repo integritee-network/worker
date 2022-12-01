@@ -24,15 +24,6 @@ use log::*;
 use sp_runtime::traits::Verify;
 use std::prelude::v1::*;
 
-#[cfg(feature = "evm")]
-use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
-
-#[cfg(feature = "evm")]
-use crate::evm_helpers::{get_evm_account, get_evm_account_codes, get_evm_account_storages};
-
-#[cfg(feature = "evm")]
-use sp_core::{H160, H256};
-
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum Getter<TG = TrustedGetter> {
