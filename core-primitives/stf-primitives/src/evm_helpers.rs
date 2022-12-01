@@ -17,16 +17,19 @@
 use crate::{
 	getter::TrustedGetterTrait,
 	helpers::{get_storage_double_map, get_storage_map},
-	types::{AccountId, KeyPair},
-	Getter, Index, TrustedGetterSigned, TrustedOperation,
+	types::{AccountId, KeyPair, ShardIdentifier},
+	Getter, Index, TrustedCallSigned, TrustedGetterSigned, TrustedOperation,
 };
 use codec::{Decode, Encode};
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping, System};
-use itp_stf_interface::ExecuteGetter;
+use itp_stf_interface::{ExecuteCall, ExecuteGetter};
 use itp_storage::StorageHasher;
+use itp_types::OpaqueCall;
+use itp_utils::stringify::account_id_to_string;
 use log::*;
 use sha3::{Digest, Keccak256};
 use sp_core::{H160, H256, U256};
+use sp_io::hashing::blake2_256;
 use std::{prelude::v1::*, vec::Vec};
 
 pub fn get_evm_account_codes(evm_account: &H160) -> Option<Vec<u8>> {
