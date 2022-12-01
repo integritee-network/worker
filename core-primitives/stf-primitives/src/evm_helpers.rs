@@ -15,7 +15,6 @@
 
 */
 use crate::{
-	evm_helpers::{create_code_hash, evm_create2_address, evm_create_address},
 	getter::TrustedGetterTrait,
 	helpers::{get_storage_double_map, get_storage_map},
 	types::{AccountId, KeyPair},
