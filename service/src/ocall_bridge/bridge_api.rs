@@ -200,7 +200,7 @@ pub trait MetricsBridge {
 /// Trait for all the OCalls related to sidechain operations
 #[cfg_attr(test, automock)]
 pub trait SidechainBridge {
-	fn propose_sidechain_blocks(&self, signed_blocks_encoded: Vec<u8>) -> OCallBridgeResult<()>;
+	fn propose_sidechain_blocks(&self, signed_blocks_encoded: &[u8]) -> OCallBridgeResult<()>;
 
 	fn store_sidechain_blocks(&self, signed_blocks_encoded: Vec<u8>) -> OCallBridgeResult<()>;
 
