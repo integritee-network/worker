@@ -15,6 +15,7 @@
 
 */
 use crate::{
+	evm_helpers::{create_code_hash, evm_create2_address, evm_create_address},
 	getter::TrustedGetterTrait,
 	helpers::{get_storage_double_map, get_storage_map},
 	types::{AccountId, KeyPair},
@@ -26,13 +27,8 @@ use itp_stf_interface::ExecuteGetter;
 use itp_storage::StorageHasher;
 use log::*;
 use sha3::{Digest, Keccak256};
-use sp_core::{H160, H256};
-use std::prelude::v1::*;
-
-use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_address};
-use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 use sp_core::{H160, H256, U256};
-use std::vec::Vec;
+use std::{prelude::v1::*, vec::Vec};
 
 pub fn get_evm_account_codes(evm_account: &H160) -> Option<Vec<u8>> {
 	get_storage_map("Evm", "AccountCodes", evm_account, &StorageHasher::Blake2_128Concat)
