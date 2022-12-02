@@ -114,18 +114,18 @@ pub unsafe extern "C" fn update_weather_data_xt(
 		Ok(val) => val,
 		Err(e) => {
 			error!("Could not decode longitude: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED;
-		}
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
 	};
-	
+
 	let mut weather_info_latitude_slice =
 		slice::from_raw_parts(weather_info_latitude, weather_info_latitude_size as usize);
 	let latitude = match String::decode(&mut weather_info_latitude_slice) {
 		Ok(val) => val,
 		Err(e) => {
 			error!("Could not decode latitude: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED;
-		}
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
 	};
 
 	let weather_query = WeatherQuery { longitude, latitude, hourly: " ".into() };
