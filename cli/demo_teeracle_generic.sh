@@ -73,7 +73,7 @@ echo "Using worker market data update interval ${INTERVAL}"
 echo "Count the update events for ${DURATION}"
 echo ""
 
-OPEN_METEO="https://api.open-meteo.com"
+OPEN_METEO="https://api.open-meteo.com/"
 let "MIN_EXPECTED_NUM_OF_EVENTS=$DURATION/$INTERVAL-2"
 echo "Minimum expected number of events with a single oracle source: ${MIN_EXPECTED_NUM_OF_EVENTS}"
 
