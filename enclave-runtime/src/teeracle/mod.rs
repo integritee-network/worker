@@ -110,13 +110,24 @@ pub unsafe extern "C" fn update_weather_data_xt(
 ) -> sgx_status_t {
 	let mut weather_info_longitude_slice =
 		slice::from_raw_parts(weather_info_longitude, weather_info_longitude_size as usize);
-	let longitude =
-		String::decode(&mut weather_info_longitude_slice).expect("Can unwrap into WeatherInfo");
-
+	let longitude = match String::decode(&mut weather_info_longitude_slice) {
+		Ok(val) => val,
+		Err(e) => {
+			error!("Could not decode longitude: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
+		}
+	};
+	
 	let mut weather_info_latitude_slice =
 		slice::from_raw_parts(weather_info_latitude, weather_info_latitude_size as usize);
-	let latitude =
-		String::decode(&mut weather_info_latitude_slice).expect("Can unwrap into WeatherInfo");
+	let latitude = match String::decode(&mut weather_info_latitude_slice) {
+		Ok(val) => val,
+		Err(e) => {
+			error!("Could not decode latitude: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
+		}
+	};
+	
 
 	let weather_query = WeatherQuery { longitude, latitude, hourly: " ".into() };
 	let weather_info = WeatherInfo { weather_query };
