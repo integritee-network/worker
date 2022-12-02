@@ -397,7 +397,10 @@ where
 					return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
 				}
 			},
-			_ => return Err(sgx_status_t::SGX_ERROR_UNEXPECTED),
+			status => {
+				error!("Unexpected status in attestation report: {}", status);
+				return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+			},
 		}
 	} else {
 		error!("Failed to fetch isvEnclaveQuoteStatus from attestation report");
