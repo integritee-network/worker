@@ -19,7 +19,7 @@ use crate::{command_utils::get_chain_api, Cli};
 use codec::Decode;
 use itp_node_api::api_client::ParentchainApi;
 use itp_time_utils::{duration_now, remaining_time};
-use log::{debug, info};
+use log::{debug, info, trace};
 use my_node_runtime::{Event, Hash};
 use std::{sync::mpsc::channel, time::Duration};
 use substrate_api_client::FromHexString;
@@ -75,7 +75,7 @@ pub fn count_exchange_rate_update_events(api: &ParentchainApi, duration: Duratio
 							);
 						},
 						// Can just remove this and ignore handling this case
-						_ => debug!("ignoring teeracle event: {:?}", event),
+						_ => trace!("ignoring teeracle event: {:?}", event),
 					}
 				}
 			}
