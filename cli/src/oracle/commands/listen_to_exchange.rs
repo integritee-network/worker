@@ -74,7 +74,6 @@ pub fn count_exchange_rate_update_events(api: &ParentchainApi, duration: Duratio
 								trading_pair, src, exchange_rate
 							);
 						},
-						// Can just remove this and ignore handling this case
 						_ => trace!("ignoring teeracle event: {:?}", event),
 					}
 				}
