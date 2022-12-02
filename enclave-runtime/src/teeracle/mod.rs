@@ -127,7 +127,6 @@ pub unsafe extern "C" fn update_weather_data_xt(
 			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		}
 	};
-	
 
 	let weather_query = WeatherQuery { longitude, latitude, hourly: " ".into() };
 	let weather_info = WeatherInfo { weather_query };
