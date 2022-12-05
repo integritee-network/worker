@@ -336,7 +336,9 @@ where
 		//let sigrl_req = sigrl_arg.to_httpreq();
 		let ias_key = Self::get_ias_api_key()?;
 
-		let req = format!("GET {}{:08x} HTTP/1.1\r\nHOST: {}\r\nOcp-Apim-Subscription-Key: {}\r\nConnection: Close\r\n\r\n",
+		// {gid}: Base 16-encoded representation of the EPID group ID provided by the platform, encoded as a Big Endian integer.
+		let gid = hex::encode(gid.to_be_bytes());
+		let req = format!("GET {}{} HTTP/1.1\r\nHOST: {}\r\nOcp-Apim-Subscription-Key: {}\r\nConnection: Close\r\n\r\n",
 						  SIGRL_SUFFIX,
 						  gid,
 						  DEV_HOSTNAME,
