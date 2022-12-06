@@ -10,6 +10,7 @@ arrayvec = { version = "0.7.1", default-features = false }
 bit-vec = { version = "0.6", default-features = false }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
+hex-literal = { version = "0.3.2" }
 itertools = { default-features = false, version = "0.10.1" }
 log = { version = "0.4", default-features = false }
 

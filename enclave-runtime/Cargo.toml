@@ -62,7 +62,6 @@ sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-s
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 derive_more = { version = "0.99.5" }
-hex-literal = { version = "0.3.2" }
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 ipfs-unixfs = { default-features = false, git = "https://github.com/whalelephant/rust-ipfs", branch = "w-nstd" }
 lazy_static = { version = "1.1.0", features = ["spin_no_std"] }

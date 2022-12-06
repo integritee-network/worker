@@ -23,7 +23,6 @@ use itp_enclave_api_ffi as ffi;
 use itp_settings::worker::EXTRINSIC_MAX_SIZE;
 use itp_types::ShardIdentifier;
 use log::*;
-use serde_json::Value;
 use sgx_types::*;
 use std::io::prelude::*;
 
