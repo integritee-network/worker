@@ -135,6 +135,9 @@ extern "C" {
 		quote_size: u32,
 	) -> sgx_status_t;
 
+	pub fn dump_dcap_collateral_to_disk(collateral: *const sgx_ql_qve_collateral_t)
+		-> sgx_status_t;
+
 	pub fn test_main_entrance(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
 
 	pub fn call_rpc_methods(

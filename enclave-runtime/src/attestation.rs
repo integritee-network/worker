@@ -36,7 +36,7 @@ use crate::{
 	Error as EnclaveError, Result as EnclaveResult,
 };
 use codec::{Decode, Encode};
-use itp_attestation_handler::AttestationHandler;
+use itp_attestation_handler::{AttestationHandler, SgxQlQveCollateral};
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::metadata::{
@@ -207,11 +207,12 @@ pub unsafe extern "C" fn generate_qe_extrinsic(
 	unchecked_extrinsic: *mut u8,
 	unchecked_extrinsic_size: u32,
 ) -> sgx_status_t {
-	if unchecked_extrinsic.is_null() {
+	if unchecked_extrinsic.is_null() || collateral.is_null() {
 		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
 	}
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
+	let collateral = SgxQlQveCollateral::from_c_type(&*collateral);
 	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
 		Ok(r) => r,
 		Err(e) => {
@@ -219,7 +220,7 @@ pub unsafe extern "C" fn generate_qe_extrinsic(
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	};
-	let (data, signature, certs) = attestation_handler.get_quoting_enclave_collateral();
+	let (data, signature) = collateral.get_quoting_enclave_split().unwrap();
 
 	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain().unwrap();
 	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain().unwrap();
@@ -230,7 +231,8 @@ pub unsafe extern "C" fn generate_qe_extrinsic(
 		.map_err(MetadataProviderError::MetadataError)
 		.unwrap();
 	info!("    [Enclave] Compose register quoting enclave call: {:?}", call_ids);
-	let call = OpaqueCall::from_tuple(&(call_ids, data, signature, certs));
+	let call =
+		OpaqueCall::from_tuple(&(call_ids, data, signature, collateral.qe_identity_issuer_chain));
 
 	let extrinsic = extrinsics_factory.create_extrinsics(&[call], None).unwrap()[0].clone();
 	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
@@ -270,4 +272,20 @@ pub unsafe extern "C" fn dump_dcap_ra_cert_to_disk(
 		Ok(_) => sgx_status_t::SGX_SUCCESS,
 		Err(e) => e.into(),
 	}
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn dump_dcap_collateral_to_disk(
+	collateral: *const sgx_ql_qve_collateral_t,
+) -> sgx_status_t {
+	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
+		Ok(r) => r,
+		Err(e) => {
+			error!("Component get failure: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+	let collateral = SgxQlQveCollateral::from_c_type(&*collateral);
+	collateral.dump_to_disk();
+	sgx_status_t::SGX_SUCCESS
 }

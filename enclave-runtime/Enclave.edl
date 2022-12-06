@@ -118,6 +118,8 @@ enclave {
 
 		public sgx_status_t dump_dcap_ra_cert_to_disk([in] const sgx_target_info_t* quoting_enclave_target_info, uint32_t quote_size);
 
+		public sgx_status_t dump_dcap_collateral_to_disk([in] const sgx_ql_qve_collateral_t *p_quote_collateral);
+
 		public sgx_status_t run_state_provisioning_server(int fd, sgx_quote_sign_type_t quote_type, int skip_ra);
 		public sgx_status_t request_state_provisioning(
 			int fd,

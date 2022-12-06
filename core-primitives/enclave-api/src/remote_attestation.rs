@@ -24,7 +24,6 @@ use itp_settings::worker::EXTRINSIC_MAX_SIZE;
 use itp_types::ShardIdentifier;
 use log::*;
 use sgx_types::*;
-use std::io::prelude::*;
 
 const OS_SYSTEM_PATH: &str = "/usr/lib/x86_64-linux-gnu/";
 const C_STRING_ENDING: &str = "\0";
@@ -53,10 +52,6 @@ pub trait RemoteAttestation {
 	fn dump_ias_ra_cert_to_disk(&self) -> EnclaveResult<()>;
 
 	fn dump_dcap_ra_cert_to_disk(&self) -> EnclaveResult<()>;
-
-	fn get_collateral(&self, fmspc: [u8; 6]) -> EnclaveResult<SgxQlQveCollateral>;
-
-	fn get_tcb_info(&self, fmspc: [u8; 6]) -> EnclaveResult<(String, String)>;
 
 	fn dump_dcap_collateral_to_disk(&self, fmspc: [u8; 6]) -> EnclaveResult<()>;
 
@@ -119,95 +114,24 @@ pub trait TlsRemoteAttestation {
 	) -> EnclaveResult<()>;
 }
 
-// This is a rust-ified version of the type sgx_ql_qve_collateral_t
-pub struct SgxQlQveCollateral {
-	pub version: u32, // version = 1.  PCK Cert chain is in the Quote.
-	/* intel DCAP 1.13 */
-	pub tee_type: u32, // 0x00000000: SGX or 0x00000081: TDX
-	pub pck_crl_issuer_chain: Vec<u8>,
-	pub root_ca_crl: Vec<u8>,
-	pub pck_crl: Vec<u8>,
-	pub tcb_info_issuer_chain: Vec<u8>,
-	pub tcb_info: Vec<u8>,
-	pub qe_identity_issuer_chain: Vec<u8>,
-	pub qe_identity: Vec<u8>,
-}
+impl Enclave {
+	unsafe fn get_collateral(
+		&self,
+		fmspc: [u8; 6],
+	) -> EnclaveResult<*const sgx_ql_qve_collateral_t> {
+		let pck_ra = b"processor\x00";
 
-impl SgxQlQveCollateral {
-	unsafe fn from_c_version(q: &sgx_ql_qve_collateral_t) -> Self {
-		let pck_crl_issuer_chain = std::slice::from_raw_parts(
-			q.pck_crl_issuer_chain as *const u8,
-			q.pck_crl_issuer_chain_size as usize,
-		)
-		.to_vec();
-		let root_ca_crl =
-			std::slice::from_raw_parts(q.root_ca_crl as *const u8, q.root_ca_crl_size as usize)
-				.to_vec();
-		let pck_crl =
-			std::slice::from_raw_parts(q.pck_crl as *const u8, q.pck_crl_size as usize).to_vec();
-		let tcb_info_issuer_chain = std::slice::from_raw_parts(
-			q.tcb_info_issuer_chain as *const u8,
-			q.tcb_info_issuer_chain_size as usize,
-		)
-		.to_vec();
-		let tcb_info =
-			std::slice::from_raw_parts(q.tcb_info as *const u8, q.tcb_info_size as usize).to_vec();
-		let qe_identity_issuer_chain = std::slice::from_raw_parts(
-			q.qe_identity_issuer_chain as *const u8,
-			q.qe_identity_issuer_chain_size as usize,
-		)
-		.to_vec();
-		let qe_identity =
-			std::slice::from_raw_parts(q.qe_identity as *const u8, q.qe_identity_size as usize)
-				.to_vec();
-		SgxQlQveCollateral {
-			version: q.version,
-			tee_type: q.tee_type,
-			pck_crl_issuer_chain,
-			root_ca_crl,
-			pck_crl,
-			tcb_info_issuer_chain,
-			tcb_info,
-			qe_identity_issuer_chain,
-			qe_identity,
-		}
-	}
-
-	fn dump_to_disk(&self) {
-		Self::write_data_to_disk("pck_crl_issuer_chain", &self.pck_crl_issuer_chain);
-		Self::write_data_to_disk("root_ca_crl", &self.root_ca_crl);
-		Self::write_data_to_disk("pck_crl", &self.pck_crl);
-		Self::write_data_to_disk("tcb_info_issuer_chain", &self.tcb_info_issuer_chain);
-		Self::write_data_to_disk("tcb_info", &self.tcb_info);
-		Self::write_data_to_disk("qe_identity_issuer_chain", &self.qe_identity_issuer_chain);
-		Self::write_data_to_disk("qe_identity", &self.qe_identity);
-	}
-
-	/// Returns the tcb_info split into two parts: tcb_info and signature
-	fn get_tcb_info_split(&self) -> Option<(String, String)> {
-		Self::separate_json_data_and_signature("enclaveIdentity", &self.qe_identity)
-	}
-
-	/// Separates the actual data part from the signature for an Intel collateral in JSON format
-	/// Returns the data part and signature as a pair
-	fn separate_json_data_and_signature(data_name: &str, data: &[u8]) -> Option<(String, String)> {
-		let json = String::from_utf8_lossy(data);
-		// search pattern is something like `{"tcbInfo":`. Should be at the very beginning
-		let search_pattern = format!("{{\"{}\":", data_name);
-		let json = json.replace(&search_pattern, "");
-
-		let parts = json.split(r#","signature":""#).collect::<Vec<&str>>();
-		if parts.len() != 2 || parts[1].len() < 2 {
-			return None
-		}
-		let data = &parts[0];
-		let signature = &parts[1][0..parts[1].len() - 2]; // Remove the two last chars that 'close' the json
-		Some((data.to_string(), signature.to_string()))
-	}
-
-	fn write_data_to_disk(filename: &str, contents: &[u8]) {
-		let mut file = std::fs::File::create(filename).unwrap();
-		file.write_all(contents).unwrap();
+		let mut collateral_ptr: *mut sgx_ql_qve_collateral_t = std::mem::zeroed();
+		let collateral_ptr_ptr: *mut *mut sgx_ql_qve_collateral_t = &mut collateral_ptr;
+		let sgx_status = sgx_ql_get_quote_verification_collateral(
+			fmspc.as_ptr(),
+			fmspc.len() as uint16_t, //fmspc len is fixed in the function signature
+			pck_ra.as_ptr() as _,
+			collateral_ptr_ptr,
+		);
+		ensure!(sgx_status == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(sgx_status));
+		println!("Collateral version: {}", (*collateral_ptr).version);
+		Ok(collateral_ptr)
 	}
 }
 
@@ -273,19 +197,7 @@ impl RemoteAttestation for Enclave {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
 
-		let pck_ra = b"processor\x00";
-		let collateral_ptr = unsafe {
-			let mut collateral_ptr: *mut sgx_ql_qve_collateral_t = std::mem::zeroed();
-			let collateral_ptr_ptr: *mut *mut sgx_ql_qve_collateral_t = &mut collateral_ptr;
-			let sgx_status = sgx_ql_get_quote_verification_collateral(
-				fmspc.as_ptr(),
-				fmspc.len() as uint16_t, //fmspc len is fixed in the function signature
-				pck_ra.as_ptr() as _,
-				collateral_ptr_ptr,
-			);
-			ensure!(sgx_status == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(sgx_status));
-			collateral_ptr
-		};
+		let collateral_ptr = unsafe { self.get_collateral(fmspc)? };
 
 		let result = unsafe {
 			ffi::generate_qe_extrinsic(
@@ -369,40 +281,10 @@ impl RemoteAttestation for Enclave {
 		Ok(quote_size)
 	}
 
-	fn get_tcb_info(&self, fmspc: [u8; 6]) -> EnclaveResult<(String, String)> {
-		let collateral = self.get_collateral(fmspc)?;
-		Ok(collateral.get_tcb_info_split().unwrap())
-	}
-
-	fn get_collateral(&self, fmspc: [u8; 6]) -> EnclaveResult<SgxQlQveCollateral> {
-		let pck_ra = b"processor\x00";
-		unsafe {
-			let mut collateral_prt: *mut sgx_ql_qve_collateral_t = std::mem::zeroed();
-			let collateral_prt_ptr: *mut *mut sgx_ql_qve_collateral_t = &mut collateral_prt;
-			let sgx_status = sgx_ql_get_quote_verification_collateral(
-				fmspc.as_ptr(),
-				fmspc.len() as uint16_t, //fmspc len is fixed in the function signature
-				pck_ra.as_ptr() as _,
-				collateral_prt_ptr,
-			);
-
-			println!("SGX status: {}", sgx_status);
-			ensure!(sgx_status == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(sgx_status));
-
-			println!("Collateral size: {}", std::mem::size_of::<sgx_ql_qve_collateral_t>());
-			let quote_collateral = &(**collateral_prt_ptr);
-			let collateral = SgxQlQveCollateral::from_c_version(quote_collateral);
-			let sgx_status = sgx_ql_free_quote_verification_collateral(quote_collateral);
-			println!("SGX status: {}", sgx_status);
-			Ok(collateral)
-		}
-	}
-
 	fn dump_dcap_collateral_to_disk(&self, fmspc: [u8; 6]) -> EnclaveResult<()> {
-		let collateral = self.get_collateral(fmspc)?;
-		collateral.dump_to_disk();
-		println!("Collateral version: {}", collateral.version);
-
+		let collateral = unsafe { self.get_collateral(fmspc)? };
+		let result = unsafe { ffi::dump_dcap_collateral_to_disk(collateral) };
+		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 		Ok(())
 	}
 }
