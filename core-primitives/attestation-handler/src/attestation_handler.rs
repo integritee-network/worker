@@ -254,7 +254,7 @@ where
 		let (prv_k, pub_k) = ecc_handle.create_key_pair()?;
 		info!("Enclave Attestation] Generated ephemeral ECDSA keypair:");
 
-		let payload = if !skip_ra {
+		let qe_quote = if !skip_ra {
 			let qe_quote = match self.retrieve_qe_dcap_quote(
 				&chain_signer.public().0,
 				quoting_enclave_target_info,
@@ -267,24 +267,26 @@ where
 				},
 			};
 			// Verify the quote via qve enclave
-			self.ecdsa_quote_verification(qe_quote)?
+			//self.ecdsa_quote_verification(qe_quote)?
+			qe_quote
 		} else {
 			Default::default()
 		};
 
 		// generate an ECC certificate
 		debug!("[Enclave] Generate ECC Certificate");
-		let (key_der, cert_der) = match cert::gen_ecc_cert(&payload, &prv_k, &pub_k, &ecc_handle) {
+		/*let (key_der, cert_der) = match cert::gen_ecc_cert(&payload, &prv_k, &pub_k, &ecc_handle) {
 			Ok(r) => r,
 			Err(e) => {
 				error!("[Enclave] gen_ecc_cert failed: {:?}", e);
 				return Err(e.into())
 			},
-		};
+		};*/
 
 		let _ = ecc_handle.close();
 
-		Ok((key_der, cert_der))
+		//Ok((key_der, cert_der))
+		Ok((vec![], qe_quote))
 	}
 }
 

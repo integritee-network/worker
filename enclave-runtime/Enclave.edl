@@ -97,6 +97,10 @@ enclave {
 			uint32_t quote_size
 		);
 
+		public sgx_status_t generate_qe_extrinsic(
+			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
+		);
+
 		public sgx_status_t update_market_data_xt(
 			[in, size=crypto_currency_size] uint8_t* crypto_currency, uint32_t crypto_currency_size,
 			[in, size=fiat_currency_size] uint8_t* fiat_currency, uint32_t fiat_currency_size,

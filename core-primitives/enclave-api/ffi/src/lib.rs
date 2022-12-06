@@ -112,6 +112,13 @@ extern "C" {
 		quote_size: u32,
 	) -> sgx_status_t;
 
+	pub fn generate_qe_extrinsic(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		unchecked_extrinsic: *mut u8,
+		unchecked_extrinsic_size: u32,
+	) -> sgx_status_t;
+
 	pub fn dump_ias_ra_cert_to_disk(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,

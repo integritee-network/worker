@@ -58,6 +58,14 @@ impl TeerexCallIndexes for NodeMetadataMock {
 		Ok([self.teerex_module, self.register_enclave])
 	}
 
+	fn register_dcap_enclave_call_indexes(&self) -> Result<[u8; 2]> {
+		Ok([self.teerex_module, self.register_enclave])
+	}
+
+	fn register_quoting_enclave_call_indexes(&self) -> Result<[u8; 2]> {
+		Ok([self.teerex_module, self.register_enclave])
+	}
+
 	fn unregister_enclave_call_indexes(&self) -> Result<[u8; 2]> {
 		Ok([self.teerex_module, self.unregister_enclave])
 	}

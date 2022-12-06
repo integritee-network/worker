@@ -222,7 +222,11 @@ fn main() {
 		#[cfg(not(feature = "dcap"))]
 		enclave.dump_ias_ra_cert_to_disk().unwrap();
 		#[cfg(feature = "dcap")]
-		enclave.dump_dcap_ra_cert_to_disk().unwrap();
+		{
+			let fmspc = [00u8, 0x90, 0x6E, 0xA1, 00, 00];
+			enclave.dump_dcap_collateral_to_disk(fmspc).unwrap();
+			enclave.dump_dcap_ra_cert_to_disk().unwrap();
+		}
 	} else if matches.is_present("mrenclave") {
 		println!("{}", enclave.get_mrenclave().unwrap().encode().to_base58());
 	} else if let Some(sub_matches) = matches.subcommand_matches("init-shard") {
@@ -414,6 +418,26 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			NodeMetadata::new(metadata, runtime_spec_version, runtime_transaction_version).encode(),
 		)
 		.expect("Could not set the node metadata in the enclave");
+
+	{
+		let uxt = enclave.generate_qe_extrinsic().unwrap();
+
+		let mut xthex = hex::encode(uxt);
+		xthex.insert_str(0, "0x");
+
+		// Account funds
+		if let Err(x) =
+			setup_account_funding(&node_api, &tee_accountid, xthex.clone(), is_development_mode)
+		{
+			error!("Starting worker failed: {:?}", x);
+			// Return without registering the enclave. This will fail and the transaction will be banned for 30min.
+			return
+		}
+
+		println!("[>] Register the quoting enclave (send the extrinsic)");
+		let register_qe_xt_hash = node_api.send_extrinsic(xthex, XtStatus::Finalized).unwrap();
+		println!("[<] Extrinsic got finalized. Hash: {:?}\n", register_qe_xt_hash);
+	}
 
 	// ------------------------------------------------------------------------
 	// Perform a remote attestation and get an unchecked extrinsic back.
