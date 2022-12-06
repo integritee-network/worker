@@ -203,6 +203,7 @@ fn generate_ias_ra_extrinsic_internal(
 
 #[no_mangle]
 pub unsafe extern "C" fn generate_qe_extrinsic(
+	collateral: *const sgx_ql_qve_collateral_t,
 	unchecked_extrinsic: *mut u8,
 	unchecked_extrinsic_size: u32,
 ) -> sgx_status_t {

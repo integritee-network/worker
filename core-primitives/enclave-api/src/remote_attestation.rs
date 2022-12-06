@@ -48,7 +48,7 @@ pub trait RemoteAttestation {
 
 	fn generate_dcap_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
 
-	fn generate_qe_extrinsic(&self) -> EnclaveResult<Vec<u8>>;
+	fn generate_qe_extrinsic(&self, fmspc: [u8; 6]) -> EnclaveResult<Vec<u8>>;
 
 	fn dump_ias_ra_cert_to_disk(&self) -> EnclaveResult<()>;
 
@@ -269,20 +269,38 @@ impl RemoteAttestation for Enclave {
 		Ok(unchecked_extrinsic)
 	}
 
-	fn generate_qe_extrinsic(&self) -> EnclaveResult<Vec<u8>> {
+	fn generate_qe_extrinsic(&self, fmspc: [u8; 6]) -> EnclaveResult<Vec<u8>> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
-
 		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
+
+		let pck_ra = b"processor\x00";
+		let collateral_ptr = unsafe {
+			let mut collateral_ptr: *mut sgx_ql_qve_collateral_t = std::mem::zeroed();
+			let collateral_ptr_ptr: *mut *mut sgx_ql_qve_collateral_t = &mut collateral_ptr;
+			let sgx_status = sgx_ql_get_quote_verification_collateral(
+				fmspc.as_ptr(),
+				fmspc.len() as uint16_t, //fmspc len is fixed in the function signature
+				pck_ra.as_ptr() as _,
+				collateral_ptr_ptr,
+			);
+			ensure!(sgx_status == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(sgx_status));
+			collateral_ptr
+		};
 
 		let result = unsafe {
 			ffi::generate_qe_extrinsic(
 				self.eid,
 				&mut retval,
+				collateral_ptr,
 				unchecked_extrinsic.as_mut_ptr(),
 				unchecked_extrinsic.len() as u32,
 			)
 		};
+		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
 
+		let sgx_status = unsafe { sgx_ql_free_quote_verification_collateral(collateral_ptr) };
+		println!("SGX status: {}", sgx_status);
 		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
 

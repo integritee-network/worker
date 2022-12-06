@@ -420,7 +420,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		.expect("Could not set the node metadata in the enclave");
 
 	{
-		let uxt = enclave.generate_qe_extrinsic().unwrap();
+		let fmspc = [00u8, 0x90, 0x6E, 0xA1, 00, 00];
+		let uxt = enclave.generate_qe_extrinsic(fmspc).unwrap();
 
 		let mut xthex = hex::encode(uxt);
 		xthex.insert_str(0, "0x");

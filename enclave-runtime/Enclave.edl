@@ -98,6 +98,7 @@ enclave {
 		);
 
 		public sgx_status_t generate_qe_extrinsic(
+		    [in] const sgx_ql_qve_collateral_t *p_quote_collateral,
 			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
 		);
 
