@@ -16,7 +16,10 @@
 */
 
 use ita_sgx_runtime::Runtime;
-use ita_stf::{AccountId, ShardIdentifier, Stf, TrustedCall};
+use ita_stf::{
+	modname::{AccountId, ShardIdentifier},
+	Stf, TrustedCall,
+};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{
 	ed25519_derivation::DeriveEd25519, key_repository::AccessKey, mocks::KeyRepositoryMock,

@@ -17,7 +17,7 @@
 */
 
 use super::test_setup::TestStf;
-use ita_stf::{AccountId, State};
+use ita_stf::{modname::AccountId, State};
 use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
 use itp_stf_interface::InitState;
 use itp_stf_state_handler::handle_state::HandleState;

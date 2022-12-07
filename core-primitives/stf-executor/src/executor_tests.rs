@@ -18,9 +18,10 @@
 use crate::{executor::StfExecutor, traits::StateUpdateProposer};
 use codec::Encode;
 use ita_stf::{
+	modname::ShardIdentifier,
 	stf_sgx_tests::StfState,
 	test_genesis::{endowed_account, test_genesis_setup},
-	ShardIdentifier, State, TrustedCall,
+	State, TrustedCall,
 };
 use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};

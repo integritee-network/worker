@@ -23,8 +23,8 @@ use std::vec::Vec;
 
 use crate::{
 	helpers::ensure_enclave_signer_account,
-	modname::{AccountId, KeyPair, ShardIdentifier, Signature, StfError},
-	TrustedOperation,
+	modname::{AccountId, KeyPair, ShardIdentifier, Signature},
+	StfError, TrustedOperation,
 };
 use codec::{Decode, Encode};
 use frame_support::{ensure, traits::UnfilteredDispatchable};
@@ -47,9 +47,9 @@ use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_addre
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum TrustedCall {
-	balance_set_balance(modname::AccountId, modname::AccountId, Balance, Balance),
-	balance_transfer(modname::AccountId, modname::AccountId, Balance),
-	balance_unshield(modname::AccountId, modname::AccountId, Balance, modname::ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
+	balance_set_balance(AccountId, AccountId, Balance, Balance),
+	balance_transfer(AccountId, AccountId, Balance),
+	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
 	balance_shield(AccountId, AccountId, Balance), // (Root, AccountIncognito, Amount)
 	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance), // (Origin, Address EVM Account, Value)
@@ -116,10 +116,10 @@ impl TrustedCall {
 
 	pub fn sign(
 		&self,
-		pair: &modname::KeyPair,
+		pair: &KeyPair,
 		nonce: Index,
 		mrenclave: &[u8; 32],
-		shard: &modname::ShardIdentifier,
+		shard: &ShardIdentifier,
 	) -> TrustedCallSigned {
 		let mut payload = self.encode();
 		payload.append(&mut nonce.encode());
@@ -134,15 +134,15 @@ impl TrustedCall {
 pub struct TrustedCallSigned {
 	pub call: TrustedCall,
 	pub nonce: Index,
-	pub signature: modname::Signature,
+	pub signature: Signature,
 }
 
 impl TrustedCallSigned {
-	pub fn new(call: TrustedCall, nonce: Index, signature: modname::Signature) -> Self {
+	pub fn new(call: TrustedCall, nonce: Index, signature: Signature) -> Self {
 		TrustedCallSigned { call, nonce, signature }
 	}
 
-	pub fn verify_signature(&self, mrenclave: &[u8; 32], shard: &modname::ShardIdentifier) -> bool {
+	pub fn verify_signature(&self, mrenclave: &[u8; 32], shard: &ShardIdentifier) -> bool {
 		let mut payload = self.call.encode();
 		payload.append(&mut self.nonce.encode());
 		payload.append(&mut mrenclave.encode());
@@ -169,7 +169,7 @@ impl TrustedReturnValue
 */
 
 impl ExecuteCall for TrustedCallSigned {
-	type Error = modname::StfError;
+	type Error = StfError;
 
 	fn execute(
 		self,
@@ -380,10 +380,10 @@ impl ExecuteCall for TrustedCallSigned {
 	}
 }
 
-fn unshield_funds(account: modname::AccountId, amount: u128) -> Result<(), modname::StfError> {
+fn unshield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
 	let account_info = System::account(&account);
 	if account_info.data.free < amount {
-		return Err(modname::StfError::MissingFunds)
+		return Err(StfError::MissingFunds)
 	}
 
 	ita_sgx_runtime::BalancesCall::<Runtime>::set_balance {
@@ -392,11 +392,11 @@ fn unshield_funds(account: modname::AccountId, amount: u128) -> Result<(), modna
 		new_reserved: account_info.data.reserved,
 	}
 	.dispatch_bypass_filter(ita_sgx_runtime::Origin::root())
-	.map_err(|e| modname::StfError::Dispatch(format!("Unshield funds error: {:?}", e.error)))?;
+	.map_err(|e| StfError::Dispatch(format!("Unshield funds error: {:?}", e.error)))?;
 	Ok(())
 }
 
-fn shield_funds(account: modname::AccountId, amount: u128) -> Result<(), modname::StfError> {
+fn shield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
 	let account_info = System::account(&account);
 	ita_sgx_runtime::BalancesCall::<Runtime>::set_balance {
 		who: MultiAddress::Id(account),
@@ -404,7 +404,7 @@ fn shield_funds(account: modname::AccountId, amount: u128) -> Result<(), modname
 		new_reserved: account_info.data.reserved,
 	}
 	.dispatch_bypass_filter(ita_sgx_runtime::Origin::root())
-	.map_err(|e| modname::StfError::Dispatch(format!("Shield funds error: {:?}", e.error)))?;
+	.map_err(|e| StfError::Dispatch(format!("Shield funds error: {:?}", e.error)))?;
 
 	Ok(())
 }
@@ -426,7 +426,7 @@ mod tests {
 	fn verify_signature_works() {
 		let nonce = 21;
 		let mrenclave = [0u8; 32];
-		let shard = modname::ShardIdentifier::default();
+		let shard = ShardIdentifier::default();
 
 		let call = TrustedCall::balance_set_balance(
 			AccountKeyring::Alice.public().into(),

@@ -36,12 +36,12 @@ pub enum StatePostProcessing {
 ///
 /// The signing key is derived from the shielding key, which guarantees that all enclaves sign the same key.
 pub trait StfEnclaveSigning {
-	fn get_enclave_account(&self) -> Result<modname::AccountId>;
+	fn get_enclave_account(&self) -> Result<AccountId>;
 
 	fn sign_call_with_self(
 		&self,
 		trusted_call: &TrustedCall,
-		shard: &modname::ShardIdentifier,
+		shard: &ShardIdentifier,
 	) -> Result<TrustedCallSigned>;
 }
 

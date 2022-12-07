@@ -29,13 +29,13 @@ extern crate sgx_tstd as std;
 #[cfg(feature = "sgx")]
 pub use ita_sgx_runtime::{Balance, Index};
 #[cfg(feature = "std")]
-pub use my_node_runtime::Balance;
+pub use my_node_runtime::{Balance, Index};
 
 use codec::{Decode, Encode};
 use derive_more::Display;
-use sp_core::{crypto::AccountId32, Pair};
-use sp_runtime::traits::Verify;
-use std::{boxed::Box, string::String};
+use std::string::String;
+
+use crate::modname::AccountId;
 
 pub use getter::*;
 pub use stf_sgx_primitives::{types::*, Stf};
@@ -56,16 +56,14 @@ pub mod trusted_call;
 
 pub(crate) const ENCLAVE_ACCOUNT_KEY: &str = "Enclave_Account_Key";
 
-mod modname {
+pub mod modname {
 	use sp_core::ed25519;
+
+	use sp_core::Pair;
 
 	use sp_core::sr25519;
 
 	use std::boxed::Box;
-
-	use my_node_runtime::Index;
-
-	use std::string::String;
 
 	use codec::Compact;
 
@@ -88,24 +86,6 @@ mod modname {
 	pub type BalanceTransferFn = ([u8; 2], AccountId, Compact<u128>);
 
 	pub type ShardIdentifier = H256;
-
-	pub type StfResult<T> = Result<T, StfError>;
-
-	#[derive(Debug, Display, PartialEq, Eq)]
-	pub enum StfError {
-		#[display(fmt = "Insufficient privileges {:?}, are you sure you are root?", _0)]
-		MissingPrivileges(AccountId),
-		#[display(fmt = "Valid enclave signer account is required")]
-		RequireEnclaveSignerAccount,
-		#[display(fmt = "Error dispatching runtime call. {:?}", _0)]
-		Dispatch(String),
-		#[display(fmt = "Not enough funds to perform operation")]
-		MissingFunds,
-		#[display(fmt = "Invalid Nonce {:?}", _0)]
-		InvalidNonce(Index),
-		StorageHashMismatch,
-		InvalidStorageDiff,
-	}
 
 	#[derive(Clone)]
 	pub enum KeyPair {
@@ -133,6 +113,24 @@ mod modname {
 			KeyPair::Sr25519(Box::new(x))
 		}
 	}
+}
+
+pub type StfResult<T> = Result<T, StfError>;
+
+#[derive(Debug, Display, PartialEq, Eq)]
+pub enum StfError {
+	#[display(fmt = "Insufficient privileges {:?}, are you sure you are root?", _0)]
+	MissingPrivileges(AccountId),
+	#[display(fmt = "Valid enclave signer account is required")]
+	RequireEnclaveSignerAccount,
+	#[display(fmt = "Error dispatching runtime call. {:?}", _0)]
+	Dispatch(String),
+	#[display(fmt = "Not enough funds to perform operation")]
+	MissingFunds,
+	#[display(fmt = "Invalid Nonce {:?}", _0)]
+	InvalidNonce(Index),
+	StorageHashMismatch,
+	InvalidStorageDiff,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]

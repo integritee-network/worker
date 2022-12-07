@@ -94,7 +94,7 @@ pub(crate) fn get_identifiers(trusted_args: &TrustedArgs) -> ([u8; 32], ShardIde
 }
 
 // TODO this function is redundant with client::main
-pub(crate) fn get_accountid_from_str(account: &str) -> modname::AccountId {
+pub(crate) fn get_accountid_from_str(account: &str) -> AccountId {
 	match &account[..2] {
 		"//" => sr25519::Pair::from_string(account, None)
 			.unwrap()

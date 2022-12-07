@@ -101,7 +101,7 @@ where
 		let shielding_key = self.shielding_key_repo.retrieve_key()?;
 		let account_vec = shielding_key.decrypt(&account_encrypted)?;
 
-		let account = modname::AccountId::decode(&mut account_vec.as_slice())?;
+		let account = AccountId::decode(&mut account_vec.as_slice())?;
 
 		let enclave_account_id = self.stf_enclave_signer.get_enclave_account()?;
 		let trusted_call = TrustedCall::balance_shield(enclave_account_id, account, amount);

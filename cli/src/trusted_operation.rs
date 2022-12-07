@@ -183,14 +183,14 @@ fn send_request(
 	}
 }
 
-fn read_shard(trusted_args: &TrustedArgs) -> StdResult<modname::ShardIdentifier, codec::Error> {
+fn read_shard(trusted_args: &TrustedArgs) -> StdResult<ShardIdentifier, codec::Error> {
 	match &trusted_args.shard {
 		Some(s) => match s.from_base58() {
-			Ok(s) => modname::ShardIdentifier::decode(&mut &s[..]),
+			Ok(s) => ShardIdentifier::decode(&mut &s[..]),
 			_ => panic!("shard argument must be base58 encoded"),
 		},
 		None => match trusted_args.mrenclave.from_base58() {
-			Ok(s) => modname::ShardIdentifier::decode(&mut &s[..]),
+			Ok(s) => ShardIdentifier::decode(&mut &s[..]),
 			_ => panic!("mrenclave argument must be base58 encoded"),
 		},
 	}
@@ -262,7 +262,7 @@ fn send_direct_request(
 }
 
 pub(crate) fn get_json_request(
-	shard: modname::ShardIdentifier,
+	shard: ShardIdentifier,
 	operation_call: &TrustedOperation,
 	shielding_pubkey: sgx_crypto_helper::rsa3072::Rsa3072PubKey,
 ) -> String {

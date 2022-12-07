@@ -54,7 +54,7 @@ impl SetBalanceCommand {
 			self.amount,
 			self.amount,
 		)
-		.sign(&modname::KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
+		.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
 		let _ = perform_trusted_operation(cli, trusted_args, &top);
 	}

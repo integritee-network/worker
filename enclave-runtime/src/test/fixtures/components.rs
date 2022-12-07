@@ -18,7 +18,7 @@
 
 use crate::test::mocks::types::{TestOCallApi, TestRpcResponder, TestSigner, TestTopPool};
 use codec::Encode;
-use ita_stf::{KeyPair, TrustedCall, TrustedCallSigned, TrustedOperation};
+use ita_stf::{modname::KeyPair, TrustedCall, TrustedCallSigned, TrustedOperation};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_top_pool::pool::Options as PoolOptions;

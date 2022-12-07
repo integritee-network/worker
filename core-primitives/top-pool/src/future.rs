@@ -121,9 +121,9 @@ impl<Hash, Ex> WaitingTrustedOperations<Hash, Ex> {
 #[derive(Debug)]
 pub struct FutureTrustedOperations<Hash: hash::Hash + Eq, Ex> {
 	/// tags that are not yet provided by any operation and we await for them
-	wanted_tags: HashMap<modname::ShardIdentifier, HashMap<Tag, HashSet<Hash>>>,
+	wanted_tags: HashMap<ShardIdentifier, HashMap<Tag, HashSet<Hash>>>,
 	/// Transactions waiting for a particular other operation
-	waiting: HashMap<modname::ShardIdentifier, HashMap<Hash, WaitingTrustedOperations<Hash, Ex>>>,
+	waiting: HashMap<ShardIdentifier, HashMap<Hash, WaitingTrustedOperations<Hash, Ex>>>,
 }
 
 impl<Hash: hash::Hash + Eq, Ex> Default for FutureTrustedOperations<Hash, Ex> {
@@ -147,11 +147,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
 	/// the Future queue.
 	/// As soon as required tags are provided by some other operations that are ready
 	/// we should remove the operations from here and move them to the Ready queue.
-	pub fn import(
-		&mut self,
-		tx: WaitingTrustedOperations<Hash, Ex>,
-		shard: modname::ShardIdentifier,
-	) {
+	pub fn import(&mut self, tx: WaitingTrustedOperations<Hash, Ex>, shard: ShardIdentifier) {
 		assert!(!tx.is_ready(), "TrustedOperation is ready.");
 		if let Some(tx_pool_waiting) = self.waiting.get(&shard) {
 			assert!(
@@ -173,7 +169,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
 	}
 
 	/// Returns true if given hash is part of the queue.
-	pub fn contains(&self, hash: &Hash, shard: modname::ShardIdentifier) -> bool {
+	pub fn contains(&self, hash: &Hash, shard: ShardIdentifier) -> bool {
 		if let Some(tx_pool_waiting) = self.waiting.get(&shard) {
 			return tx_pool_waiting.contains_key(hash)
 		}
@@ -184,7 +180,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
 	pub fn by_hashes(
 		&self,
 		hashes: &[Hash],
-		shard: modname::ShardIdentifier,
+		shard: ShardIdentifier,
 	) -> Vec<Option<Arc<TrustedOperation<Hash, Ex>>>> {
 		if let Some(tx_pool_waiting) = self.waiting.get(&shard) {
 			return hashes
@@ -202,7 +198,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
 	pub fn satisfy_tags<T: AsRef<Tag>>(
 		&mut self,
 		tags: impl IntoIterator<Item = T>,
-		shard: modname::ShardIdentifier,
+		shard: ShardIdentifier,
 	) -> Vec<WaitingTrustedOperations<Hash, Ex>> {
 		let mut became_ready = vec![];
 
@@ -236,7 +232,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
 	pub fn remove(
 		&mut self,
 		hashes: &[Hash],
-		shard: modname::ShardIdentifier,
+		shard: ShardIdentifier,
 	) -> Vec<Arc<TrustedOperation<Hash, Ex>>> {
 		let mut removed = vec![];
 		if let Some(tx_pool_waiting) = self.waiting.get_mut(&shard) {
@@ -268,7 +264,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
 	pub fn fold<R, F: FnMut(Option<R>, &WaitingTrustedOperations<Hash, Ex>) -> Option<R>>(
 		&mut self,
 		f: F,
-		shard: modname::ShardIdentifier,
+		shard: ShardIdentifier,
 	) -> Option<R> {
 		if let Some(tx_pool) = self.waiting.get(&shard) {
 			return tx_pool.values().fold(None, f)
@@ -279,7 +275,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
 	/// Returns iterator over all future operations
 	pub fn all(
 		&self,
-		shard: modname::ShardIdentifier,
+		shard: ShardIdentifier,
 	) -> Box<dyn Iterator<Item = &TrustedOperation<Hash, Ex>> + '_> {
 		if let Some(tx_pool) = self.waiting.get(&shard) {
 			return Box::new(tx_pool.values().map(|waiting| &*waiting.operation))
@@ -288,10 +284,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
 	}
 
 	/// Removes and returns all future operations.
-	pub fn clear(
-		&mut self,
-		shard: modname::ShardIdentifier,
-	) -> Vec<Arc<TrustedOperation<Hash, Ex>>> {
+	pub fn clear(&mut self, shard: ShardIdentifier) -> Vec<Arc<TrustedOperation<Hash, Ex>>> {
 		if let Some(wanted_tx_pool) = self.wanted_tags.get_mut(&shard) {
 			wanted_tx_pool.clear();
 			return self
@@ -306,7 +299,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
 	}
 
 	/// Returns number of operations in the Future queue.
-	pub fn len(&self, shard: modname::ShardIdentifier) -> usize {
+	pub fn len(&self, shard: ShardIdentifier) -> usize {
 		if let Some(tx_pool) = self.waiting.get(&shard) {
 			return tx_pool.len()
 		}
@@ -314,7 +307,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
 	}
 
 	/// Returns sum of encoding lengths of all operations in this queue.
-	pub fn bytes(&self, shard: modname::ShardIdentifier) -> usize {
+	pub fn bytes(&self, shard: ShardIdentifier) -> usize {
 		if let Some(tx_pool) = self.waiting.get(&shard) {
 			return tx_pool.values().fold(0, |acc, tx| acc + tx.operation.bytes)
 		}

@@ -61,9 +61,9 @@ pub enum PublicGetter {
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum TrustedGetter {
-	free_balance(modname::AccountId),
-	reserved_balance(modname::AccountId),
-	nonce(modname::AccountId),
+	free_balance(AccountId),
+	reserved_balance(AccountId),
+	nonce(AccountId),
 	#[cfg(feature = "evm")]
 	evm_nonce(AccountId),
 	#[cfg(feature = "evm")]

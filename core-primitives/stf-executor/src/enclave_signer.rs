@@ -17,7 +17,10 @@
 
 use crate::{error::Result, traits::StfEnclaveSigning};
 use core::marker::PhantomData;
-use ita_stf::{AccountId, KeyPair, TrustedCall, TrustedCallSigned};
+use ita_stf::{
+	modname::{AccountId, KeyPair},
+	TrustedCall, TrustedCallSigned,
+};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{ed25519_derivation::DeriveEd25519, key_repository::AccessKey};
 use itp_sgx_externalities::SgxExternalitiesTrait;

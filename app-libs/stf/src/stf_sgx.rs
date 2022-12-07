@@ -19,9 +19,7 @@
 use crate::test_genesis::test_genesis_setup;
 
 use crate::{
-	helpers::enclave_signer_account,
-	modname::{ShardIdentifier, StfError},
-	Stf, ENCLAVE_ACCOUNT_KEY,
+	helpers::enclave_signer_account, modname::ShardIdentifier, Stf, StfError, ENCLAVE_ACCOUNT_KEY,
 };
 use codec::Encode;
 use frame_support::traits::{OriginTrait, UnfilteredDispatchable};
@@ -227,7 +225,7 @@ where
 	State: SgxExternalitiesTrait,
 	Runtime: frame_system::Config<Header = ParentchainHeader> + pallet_parentchain::Config,
 {
-	type Error = modname::StfError;
+	type Error = StfError;
 
 	fn update_parentchain_block(
 		state: &mut State,
@@ -244,7 +242,7 @@ where
 	}
 }
 
-pub fn storage_hashes_to_update_per_shard(_shard: &modname::ShardIdentifier) -> Vec<Vec<u8>> {
+pub fn storage_hashes_to_update_per_shard(_shard: &ShardIdentifier) -> Vec<Vec<u8>> {
 	Vec::new()
 }
 
@@ -258,7 +256,7 @@ pub fn shards_key_hash() -> Vec<u8> {
 /// !! Requires a root to be set.
 fn create_enclave_self_account<Runtime, AccountId>(
 	enclave_account: AccountId,
-) -> Result<(), modname::StfError>
+) -> Result<(), StfError>
 where
 	Runtime: frame_system::Config<AccountId = AccountId> + pallet_balances::Config,
 	<<Runtime as frame_system::Config>::Lookup as StaticLookup>::Source: From<AccountId>,
@@ -271,10 +269,7 @@ where
 	}
 	.dispatch_bypass_filter(Runtime::Origin::root())
 	.map_err(|e| {
-		modname::StfError::Dispatch(format!(
-			"Set Balance for enclave signer account error: {:?}",
-			e.error
-		))
+		StfError::Dispatch(format!("Set Balance for enclave signer account error: {:?}", e.error))
 	})
 	.map(|_| ())
 }

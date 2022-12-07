@@ -31,7 +31,7 @@ pub fn submit_operation_to_top_pool<R, S>(
 	author: &R,
 	top: &TrustedOperation,
 	shielding_key: &S,
-	shard: modname::ShardIdentifier,
+	shard: ShardIdentifier,
 ) -> Result<H256, jsonrpc_core::Error>
 where
 	R: AuthorApi<H256, H256>,

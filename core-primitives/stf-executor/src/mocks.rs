@@ -118,21 +118,16 @@ impl Default for StfEnclaveSignerMock {
 }
 
 impl StfEnclaveSigning for StfEnclaveSignerMock {
-	fn get_enclave_account(&self) -> Result<modname::AccountId> {
+	fn get_enclave_account(&self) -> Result<AccountId> {
 		Ok(self.signer.public().into())
 	}
 
 	fn sign_call_with_self(
 		&self,
 		trusted_call: &TrustedCall,
-		shard: &modname::ShardIdentifier,
+		shard: &ShardIdentifier,
 	) -> Result<TrustedCallSigned> {
-		Ok(trusted_call.sign(
-			&modname::KeyPair::Ed25519(Box::new(self.signer)),
-			1,
-			&self.mr_enclave,
-			shard,
-		))
+		Ok(trusted_call.sign(&KeyPair::Ed25519(Box::new(self.signer)), 1, &self.mr_enclave, shard))
 	}
 }
 

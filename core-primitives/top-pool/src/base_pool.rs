@@ -262,7 +262,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	}
 
 	/// Returns if the operation for the given hash is already imported.
-	pub fn is_imported(&self, tx_hash: &Hash, shard: modname::ShardIdentifier) -> bool {
+	pub fn is_imported(&self, tx_hash: &Hash, shard: ShardIdentifier) -> bool {
 		self.future.contains(tx_hash, shard) || self.ready.contains(tx_hash, shard)
 	}
 
@@ -276,7 +276,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	pub fn import(
 		&mut self,
 		tx: TrustedOperation<Hash, Ex>,
-		shard: modname::ShardIdentifier,
+		shard: ShardIdentifier,
 	) -> error::Result<Imported<Hash, Ex>> {
 		if self.is_imported(&tx.hash, shard) {
 			return Err(error::Error::AlreadyImported)
@@ -315,7 +315,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	fn import_to_ready(
 		&mut self,
 		tx: WaitingTrustedOperations<Hash, Ex>,
-		shard: modname::ShardIdentifier,
+		shard: ShardIdentifier,
 	) -> error::Result<Imported<Hash, Ex>> {
 		let hash = tx.operation.hash.clone();
 		let mut promoted = vec![];
@@ -371,20 +371,20 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	/// Returns an iterator over ready operations in the pool.
 	pub fn ready(
 		&self,
-		shard: modname::ShardIdentifier,
+		shard: ShardIdentifier,
 	) -> impl Iterator<Item = Arc<TrustedOperation<Hash, Ex>>> {
 		self.ready.get(shard)
 	}
 
 	/// Returns an iterator over all shards in the pool.
-	pub fn get_shards(&self) -> impl Iterator<Item = &modname::ShardIdentifier> {
+	pub fn get_shards(&self) -> impl Iterator<Item = &ShardIdentifier> {
 		self.ready.get_shards()
 	}
 
 	/// Returns an iterator over future operations in the pool.
 	pub fn futures(
 		&self,
-		shard: modname::ShardIdentifier,
+		shard: ShardIdentifier,
 	) -> impl Iterator<Item = &TrustedOperation<Hash, Ex>> {
 		self.future.all(shard)
 	}
@@ -396,7 +396,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	pub fn by_hashes(
 		&self,
 		hashes: &[Hash],
-		shard: modname::ShardIdentifier,
+		shard: ShardIdentifier,
 	) -> Vec<Option<Arc<TrustedOperation<Hash, Ex>>>> {
 		let ready = self.ready.by_hashes(hashes, shard);
 		let future = self.future.by_hashes(hashes, shard);
@@ -408,7 +408,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	pub fn ready_by_hash(
 		&self,
 		hash: &Hash,
-		shard: modname::ShardIdentifier,
+		shard: ShardIdentifier,
 	) -> Option<Arc<TrustedOperation<Hash, Ex>>> {
 		self.ready.by_hash(hash, shard)
 	}
@@ -422,7 +422,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 		&mut self,
 		ready: &Limit,
 		future: &Limit,
-		shard: modname::ShardIdentifier,
+		shard: ShardIdentifier,
 	) -> Vec<Arc<TrustedOperation<Hash, Ex>>> {
 		let mut removed = vec![];
 
@@ -484,7 +484,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	pub fn remove_subtree(
 		&mut self,
 		hashes: &[Hash],
-		shard: modname::ShardIdentifier,
+		shard: ShardIdentifier,
 	) -> Vec<Arc<TrustedOperation<Hash, Ex>>> {
 		let mut removed = self.ready.remove_subtree(hashes, shard);
 		removed.extend(self.future.remove(hashes, shard));
@@ -492,10 +492,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	}
 
 	/// Removes and returns all operations from the future queue.
-	pub fn clear_future(
-		&mut self,
-		shard: modname::ShardIdentifier,
-	) -> Vec<Arc<TrustedOperation<Hash, Ex>>> {
+	pub fn clear_future(&mut self, shard: ShardIdentifier) -> Vec<Arc<TrustedOperation<Hash, Ex>>> {
 		self.future.clear(shard)
 	}
 
@@ -508,7 +505,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	pub fn prune_tags(
 		&mut self,
 		tags: impl IntoIterator<Item = Tag>,
-		shard: modname::ShardIdentifier,
+		shard: ShardIdentifier,
 	) -> PruneStatus<Hash, Ex> {
 		let mut to_import = vec![];
 		let mut pruned = vec![];
@@ -542,7 +539,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	}
 
 	/// Get pool status.
-	pub fn status(&self, shard: modname::ShardIdentifier) -> PoolStatus {
+	pub fn status(&self, shard: ShardIdentifier) -> PoolStatus {
 		PoolStatus {
 			ready: self.ready.len(shard),
 			ready_bytes: self.ready.bytes(shard),
@@ -584,7 +581,7 @@ pub mod tests {
 	pub fn test_should_import_transaction_to_ready() {
 		// given
 		let mut pool = test_pool();
-		let shard = modname::ShardIdentifier::default();
+		let shard = ShardIdentifier::default();
 
 		// when
 		pool.import(
@@ -612,7 +609,7 @@ pub mod tests {
 	pub fn test_should_not_import_same_transaction_twice() {
 		// given
 		let mut pool = test_pool();
-		let shard = modname::ShardIdentifier::default();
+		let shard = ShardIdentifier::default();
 
 		// when
 		pool.import(
@@ -655,7 +652,7 @@ pub mod tests {
 	pub fn test_should_import_transaction_to_future_and_promote_it_later() {
 		// given
 		let mut pool = test_pool();
-		let shard = modname::ShardIdentifier::default();
+		let shard = ShardIdentifier::default();
 
 		// when
 		pool.import(
@@ -700,7 +697,7 @@ pub mod tests {
 	pub fn test_should_promote_a_subgraph() {
 		// given
 		let mut pool = test_pool();
-		let shard = modname::ShardIdentifier::default();
+		let shard = ShardIdentifier::default();
 
 		// when
 		pool.import(
@@ -806,7 +803,7 @@ pub mod tests {
 	#[test]
 	pub fn test_should_handle_a_cycle() {
 		// given
-		let shard = modname::ShardIdentifier::default();
+		let shard = ShardIdentifier::default();
 		let mut pool = test_pool();
 		pool.import(
 			TrustedOperation {
@@ -899,7 +896,7 @@ pub mod tests {
 	pub fn test_should_handle_a_cycle_with_low_priority() {
 		// given
 		let mut pool = test_pool();
-		let shard = modname::ShardIdentifier::default();
+		let shard = ShardIdentifier::default();
 		pool.import(
 			TrustedOperation {
 				data: vec![1u8],
@@ -988,7 +985,7 @@ pub mod tests {
 	#[test]
 	pub fn test_can_track_heap_size() {
 		let mut pool = test_pool();
-		let shard = modname::ShardIdentifier::default();
+		let shard = ShardIdentifier::default();
 		pool.import(
 			TrustedOperation {
 				data: vec![5u8; 1024],
@@ -1026,7 +1023,7 @@ pub mod tests {
 	#[test]
 	pub fn test_should_remove_invalid_transactions() {
 		// given
-		let shard = modname::ShardIdentifier::default();
+		let shard = ShardIdentifier::default();
 		let mut pool = test_pool();
 		pool.import(
 			TrustedOperation {
@@ -1134,7 +1131,7 @@ pub mod tests {
 	pub fn test_should_prune_ready_transactions() {
 		// given
 		let mut pool = test_pool();
-		let shard = modname::ShardIdentifier::default();
+		let shard = ShardIdentifier::default();
 		// future (waiting for 0)
 		pool.import(
 			TrustedOperation {
@@ -1289,7 +1286,7 @@ source: External, requires: [03,02], provides: [04], data: [4]}"
 	pub fn test_should_reject_future_transactions() {
 		// given
 		let mut pool = test_pool();
-		let shard = modname::ShardIdentifier::default();
+		let shard = ShardIdentifier::default();
 
 		// when
 		pool.reject_future_operations = true;
@@ -1320,7 +1317,7 @@ source: External, requires: [03,02], provides: [04], data: [4]}"
 	pub fn test_should_clear_future_queue() {
 		// given
 		let mut pool = test_pool();
-		let shard = modname::ShardIdentifier::default();
+		let shard = ShardIdentifier::default();
 
 		// when
 		pool.import(
@@ -1354,7 +1351,7 @@ source: External, requires: [03,02], provides: [04], data: [4]}"
 		// given
 		let mut pool = test_pool();
 		pool.reject_future_operations = true;
-		let shard = modname::ShardIdentifier::default();
+		let shard = ShardIdentifier::default();
 
 		// when
 		let flag_value = pool.with_futures_enabled(|pool, flag| {

@@ -49,7 +49,7 @@ impl ShieldFundsCommand {
 		let chain_api = get_chain_api(cli);
 
 		let shard_opt = match self.shard.from_base58() {
-			Ok(s) => modname::ShardIdentifier::decode(&mut &s[..]),
+			Ok(s) => ShardIdentifier::decode(&mut &s[..]),
 			_ => panic!("shard argument must be base58 encoded"),
 		};
 
