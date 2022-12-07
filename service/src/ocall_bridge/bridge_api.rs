@@ -16,6 +16,7 @@
 
 */
 
+use itp_enclave_api::remote_attestation::QveReport;
 use lazy_static::lazy_static;
 use log::*;
 use parking_lot::RwLock;
@@ -183,7 +184,7 @@ pub trait RemoteAttestationBridge {
 		quote_collateral: &sgx_ql_qve_collateral_t,
 		qve_report_info: sgx_ql_qe_report_info_t,
 		supplemental_data_size: u32,
-	) -> OCallBridgeResult<(u32, sgx_ql_qv_result_t, sgx_ql_qe_report_info_t, Vec<u8>)>;
+	) -> OCallBridgeResult<QveReport>;
 
 	/// --
 	fn get_update_info(

@@ -19,7 +19,7 @@
 use crate::ocall_bridge::bridge_api::{
 	OCallBridgeError, OCallBridgeResult, RemoteAttestationBridge,
 };
-use itp_enclave_api::remote_attestation::RemoteAttestationCallBacks;
+use itp_enclave_api::remote_attestation::{QveReport, RemoteAttestationCallBacks};
 use sgx_types::*;
 use std::{
 	net::{SocketAddr, TcpStream},
@@ -97,7 +97,7 @@ where
 		quote_collateral: &sgx_ql_qve_collateral_t,
 		qve_report_info: sgx_ql_qe_report_info_t,
 		supplemental_data_size: u32,
-	) -> OCallBridgeResult<(u32, sgx_ql_qv_result_t, sgx_ql_qe_report_info_t, Vec<u8>)> {
+	) -> OCallBridgeResult<QveReport> {
 		self.enclave_api
 			.get_qve_report_on_quote(
 				quote,

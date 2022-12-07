@@ -72,12 +72,7 @@ fn get_qve_report_on_quote(
 	let quote_collateral = unsafe { &*p_quote_collateral };
 	let qve_report_info = unsafe { *p_qve_report_info };
 
-	let (
-		collateral_expiration_status,
-		quote_verification_result,
-		qve_report_info_return_value,
-		supplemental_data,
-	) = match ra_api.get_qve_report_on_quote(
+	let qve_report = match ra_api.get_qve_report_on_quote(
 		quote,
 		current_time,
 		quote_collateral,
@@ -93,12 +88,12 @@ fn get_qve_report_on_quote(
 
 	let supplemental_data_slice =
 		unsafe { slice::from_raw_parts_mut(p_supplemental_data, supplemental_data_size as usize) };
-	supplemental_data_slice.clone_from_slice(supplemental_data.as_slice());
+	supplemental_data_slice.clone_from_slice(qve_report.supplemental_data.as_slice());
 
 	unsafe {
-		*p_collateral_expiration_status = collateral_expiration_status;
-		*p_quote_verification_result = quote_verification_result;
-		*p_qve_report_info = qve_report_info_return_value;
+		*p_collateral_expiration_status = qve_report.collateral_expiration_status;
+		*p_quote_verification_result = qve_report.quote_verification_result;
+		*p_qve_report_info = qve_report.qve_report_info_return_value;
 	};
 
 	sgx_status_t::SGX_SUCCESS

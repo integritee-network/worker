@@ -33,6 +33,14 @@ const ID_ENCLAVE: &str = "libsgx_id_enclave.signed.so.1";
 const LIBDCAP_QUOTEPROV: &str = "libdcap_quoteprov.so.1";
 const QVE_ENCLAVE: &str = "libsgx_qve.signed.so.1";
 
+/// Struct that unites all relevant data reported by the QVE
+pub struct QveReport {
+	pub supplemental_data: Vec<u8>,
+	pub qve_report_info_return_value: sgx_ql_qe_report_info_t,
+	pub quote_verification_result: sgx_ql_qv_result_t,
+	pub collateral_expiration_status: u32,
+}
+
 /// general remote attestation methods
 pub trait RemoteAttestation {
 	fn generate_ias_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
@@ -75,7 +83,7 @@ pub trait RemoteAttestationCallBacks {
 		quote_collateral: &sgx_ql_qve_collateral_t,
 		qve_report_info: sgx_ql_qe_report_info_t,
 		supplemental_data_size: u32,
-	) -> EnclaveResult<(u32, sgx_ql_qv_result_t, sgx_ql_qe_report_info_t, Vec<u8>)>;
+	) -> EnclaveResult<QveReport>;
 
 	fn get_update_info(
 		&self,
@@ -306,7 +314,7 @@ impl RemoteAttestationCallBacks for Enclave {
 		quote_collateral: &sgx_ql_qve_collateral_t,
 		qve_report_info: sgx_ql_qe_report_info_t,
 		supplemental_data_size: u32,
-	) -> EnclaveResult<(u32, sgx_ql_qv_result_t, sgx_ql_qe_report_info_t, Vec<u8>)> {
+	) -> EnclaveResult<QveReport> {
 		let mut collateral_expiration_status = 1u32;
 		let mut quote_verification_result = sgx_ql_qv_result_t::SGX_QL_QV_RESULT_OK;
 		let mut supplemental_data: Vec<u8> = vec![0; supplemental_data_size as usize];
@@ -407,12 +415,12 @@ impl RemoteAttestationCallBacks for Enclave {
 			info!("QvE verification: Supplemental data version: {}", qv_supplemental_data.version);
 		}
 
-		Ok((
+		Ok(QveReport {
 			collateral_expiration_status,
 			quote_verification_result,
 			qve_report_info_return_value,
 			supplemental_data,
-		))
+		})
 	}
 
 	fn get_update_info(
