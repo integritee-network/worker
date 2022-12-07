@@ -27,7 +27,7 @@ use crate::{
 };
 use codec::Decode;
 use hdrhistogram::Histogram;
-use ita_stf::{Getter, Index, KeyPair, TrustedCall, TrustedGetter, TrustedOperation};
+use ita_stf::{modname::KeyPair, Getter, Index, TrustedCall, TrustedGetter, TrustedOperation};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
 use itp_types::{
 	Balance, ShardIdentifier, TrustedOperationStatus,
@@ -151,7 +151,7 @@ impl BenchmarkCommands {
 				initial_balance,
 			)
 			.sign(
-				&KeyPair::Sr25519(Box::new(funding_account_keys.clone())),
+				&modname::KeyPair::Sr25519(Box::new(funding_account_keys.clone())),
 				nonce,
 				&mrenclave,
 				&shard,
@@ -207,7 +207,7 @@ impl BenchmarkCommands {
 						new_account.public().into(),
 						EXISTENTIAL_DEPOSIT,
 					)
-					.sign(&KeyPair::Sr25519(Box::new(client.account.clone())), nonce, &mrenclave, &shard)
+					.sign(&modname::KeyPair::Sr25519(Box::new(client.account.clone())), nonce, &mrenclave, &shard)
 					.into_trusted_operation(trusted_args.direct);
 
 					let last_iteration = i == self.number_iterations - 1;
@@ -257,7 +257,7 @@ fn get_balance(
 ) -> Option<u128> {
 	let getter = Getter::trusted(
 		TrustedGetter::free_balance(account.public().into())
-			.sign(&KeyPair::Sr25519(Box::new(account.clone()))),
+			.sign(&modname::KeyPair::Sr25519(Box::new(account.clone()))),
 	);
 
 	let getter_start_timer = Instant::now();
@@ -277,7 +277,7 @@ fn get_nonce(
 ) -> Index {
 	let getter = Getter::trusted(
 		TrustedGetter::nonce(account.public().into())
-			.sign(&KeyPair::Sr25519(Box::new(account.clone()))),
+			.sign(&modname::KeyPair::Sr25519(Box::new(account.clone()))),
 	);
 
 	let getter_start_timer = Instant::now();

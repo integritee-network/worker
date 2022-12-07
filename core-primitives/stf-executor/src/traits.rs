@@ -18,7 +18,8 @@
 use crate::{error::Result, BatchExecutionResult};
 use codec::Encode;
 use ita_stf::{
-	AccountId, ParentchainHeader, ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedOperation,
+	modname::{AccountId, ShardIdentifier},
+	ParentchainHeader, TrustedCall, TrustedCallSigned, TrustedOperation,
 };
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_types::H256;
@@ -35,12 +36,12 @@ pub enum StatePostProcessing {
 ///
 /// The signing key is derived from the shielding key, which guarantees that all enclaves sign the same key.
 pub trait StfEnclaveSigning {
-	fn get_enclave_account(&self) -> Result<AccountId>;
+	fn get_enclave_account(&self) -> Result<modname::AccountId>;
 
 	fn sign_call_with_self(
 		&self,
 		trusted_call: &TrustedCall,
-		shard: &ShardIdentifier,
+		shard: &modname::ShardIdentifier,
 	) -> Result<TrustedCallSigned>;
 }
 

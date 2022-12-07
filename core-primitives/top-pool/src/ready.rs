@@ -25,7 +25,7 @@ use crate::{
 };
 use alloc::{boxed::Box, collections::BTreeSet, sync::Arc, vec, vec::Vec};
 use core::{cmp, cmp::Ord, default::Default, hash};
-use ita_stf::ShardIdentifier;
+use ita_stf::modname::ShardIdentifier;
 use log::trace;
 use sp_runtime::{traits::Member, transaction_validity::TransactionTag as Tag};
 use std::collections::{HashMap, HashSet};
@@ -105,13 +105,13 @@ qed
 #[derive(Debug)]
 pub struct ReadyOperations<Hash: hash::Hash + Eq + Ord, Ex> {
 	/// Insertion id
-	insertion_id: HashMap<ShardIdentifier, u64>,
+	insertion_id: HashMap<modname::ShardIdentifier, u64>,
 	/// tags that are provided by Ready operations
-	provided_tags: HashMap<ShardIdentifier, HashMap<Tag, Hash>>,
+	provided_tags: HashMap<modname::ShardIdentifier, HashMap<Tag, Hash>>,
 	/// Trusted Operations that are ready (i.e. don't have any requirements external to the pool)
-	ready: HashMap<ShardIdentifier, TrackedMap<Hash, ReadyTx<Hash, Ex>>>,
+	ready: HashMap<modname::ShardIdentifier, TrackedMap<Hash, ReadyTx<Hash, Ex>>>,
 	/// Best operations that are ready to be included to the block without any other previous operation.
-	best: HashMap<ShardIdentifier, BTreeSet<OperationRef<Hash, Ex>>>,
+	best: HashMap<modname::ShardIdentifier, BTreeSet<OperationRef<Hash, Ex>>>,
 }
 
 impl<Hash, Ex> tracked_map::Size for ReadyTx<Hash, Ex> {
@@ -133,7 +133,7 @@ impl<Hash: hash::Hash + Eq + Ord, Ex> Default for ReadyOperations<Hash, Ex> {
 
 impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 	/// Borrows a map of tags that are provided by operations in this queue.
-	pub fn provided_tags(&self, shard: ShardIdentifier) -> Option<&HashMap<Tag, Hash>> {
+	pub fn provided_tags(&self, shard: modname::ShardIdentifier) -> Option<&HashMap<Tag, Hash>> {
 		if let Some(tag_pool) = &self.provided_tags.get(&shard) {
 			return Some(tag_pool)
 		}
@@ -153,7 +153,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 	///    - operations that are longer in the queue go first
 	pub fn get(
 		&self,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> impl Iterator<Item = Arc<TrustedOperation<Hash, Ex>>> {
 		// check if shard tx pool exists
 		if let Some(ready_map) = self.ready.get(&shard) {
@@ -171,7 +171,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 		}
 	}
 	/// Returns an iterator over all shards
-	pub fn get_shards(&self) -> Box<dyn Iterator<Item = &ShardIdentifier> + '_> {
+	pub fn get_shards(&self) -> Box<dyn Iterator<Item = &modname::ShardIdentifier> + '_> {
 		// check if shard tx pool exists
 		Box::new(self.ready.keys())
 	}
@@ -184,7 +184,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 	pub fn import(
 		&mut self,
 		tx: WaitingTrustedOperations<Hash, Ex>,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> error::Result<Vec<Arc<TrustedOperation<Hash, Ex>>>> {
 		assert!(
 			tx.is_ready(),
@@ -263,7 +263,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 	pub fn fold<R, F: FnMut(Option<R>, &ReadyTx<Hash, Ex>) -> Option<R>>(
 		&mut self,
 		f: F,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Option<R> {
 		if let Some(ready_map) = self.ready.get(&shard) {
 			return ready_map.read().values().fold(None, f)
@@ -272,7 +272,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 	}
 
 	/// Returns true if given hash is part of the queue.
-	pub fn contains(&self, hash: &Hash, shard: ShardIdentifier) -> bool {
+	pub fn contains(&self, hash: &Hash, shard: modname::ShardIdentifier) -> bool {
 		if let Some(ready_map) = self.ready.get(&shard) {
 			return ready_map.read().contains_key(hash)
 		}
@@ -283,7 +283,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 	pub fn by_hash(
 		&self,
 		hash: &Hash,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Option<Arc<TrustedOperation<Hash, Ex>>> {
 		self.by_hashes(&[hash.clone()], shard).into_iter().next().unwrap_or(None)
 	}
@@ -292,7 +292,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 	pub fn by_hashes(
 		&self,
 		hashes: &[Hash],
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Vec<Option<Arc<TrustedOperation<Hash, Ex>>>> {
 		if let Some(ready_map) = self.ready.get(&shard) {
 			let ready = ready_map.read();
@@ -312,7 +312,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 	pub fn remove_subtree(
 		&mut self,
 		hashes: &[Hash],
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Vec<Arc<TrustedOperation<Hash, Ex>>> {
 		let to_remove = hashes.to_vec();
 		self.remove_subtree_with_tag_filter(to_remove, None, shard)
@@ -327,7 +327,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 		&mut self,
 		mut to_remove: Vec<Hash>,
 		provides_tag_filter: Option<HashSet<Tag>>,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Vec<Arc<TrustedOperation<Hash, Ex>>> {
 		let mut removed = vec![];
 		if let Some(ready_map) = self.ready.get_mut(&shard) {
@@ -383,7 +383,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 	pub fn prune_tags(
 		&mut self,
 		tag: Tag,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Vec<Arc<TrustedOperation<Hash, Ex>>> {
 		let mut removed = vec![];
 		let mut to_remove = vec![tag];
@@ -482,7 +482,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 	fn replace_previous(
 		&mut self,
 		tx: &TrustedOperation<Hash, Ex>,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> TopErrorResult<Hash, Ex> {
 		if let Some(provided_tag_map) = self.provided_tags.get(&shard) {
 			let (to_remove, unlocks) = {
@@ -539,12 +539,12 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 
 	/// Returns number of operations in this queue.
 	#[allow(clippy::len_without_is_empty)]
-	pub fn len(&self, shard: ShardIdentifier) -> usize {
+	pub fn len(&self, shard: modname::ShardIdentifier) -> usize {
 		self.ready.get(&shard).map_or(0, |ready_map| ready_map.len())
 	}
 
 	/// Returns sum of encoding lengths of all operations in this queue.
-	pub fn bytes(&self, shard: ShardIdentifier) -> usize {
+	pub fn bytes(&self, shard: modname::ShardIdentifier) -> usize {
 		self.ready.get(&shard).map_or(0, |ready_map| ready_map.bytes())
 	}
 }
@@ -648,7 +648,7 @@ pub mod tests {
 	fn import<H: hash::Hash + Eq + Member + Ord, Ex>(
 		ready: &mut ReadyOperations<H, Ex>,
 		tx: TrustedOperation<H, Ex>,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> error::Result<Vec<Arc<TrustedOperation<H, Ex>>>> {
 		let x = WaitingTrustedOperations::new(tx, ready.provided_tags(shard), &[]);
 		ready.import(x, shard)
@@ -657,7 +657,7 @@ pub mod tests {
 	#[test]
 	pub fn test_should_replace_transaction_that_provides_the_same_tag() {
 		// given
-		let shard = ShardIdentifier::default();
+		let shard = modname::ShardIdentifier::default();
 		let mut ready = ReadyOperations::default();
 		let mut tx1 = tx(1);
 		tx1.requires.clear();
@@ -686,7 +686,7 @@ pub mod tests {
 	#[test]
 	pub fn test_should_replace_multiple_transactions_correctly() {
 		// given
-		let shard = ShardIdentifier::default();
+		let shard = modname::ShardIdentifier::default();
 		let mut ready = ReadyOperations::default();
 		let mut tx0 = tx(0);
 		tx0.requires = vec![];
@@ -724,7 +724,7 @@ pub mod tests {
 	#[test]
 	pub fn test_should_return_best_transactions_in_correct_order() {
 		// given
-		let shard = ShardIdentifier::default();
+		let shard = modname::ShardIdentifier::default();
 		let mut ready = ReadyOperations::default();
 		let mut tx1 = tx(1);
 		tx1.requires.clear();

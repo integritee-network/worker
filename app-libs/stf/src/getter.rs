@@ -15,7 +15,7 @@
 
 */
 
-use crate::{AccountId, KeyPair, Signature};
+use crate::modname::{AccountId, KeyPair, Signature};
 use codec::{Decode, Encode};
 use ita_sgx_runtime::System;
 use itp_stf_interface::ExecuteGetter;
@@ -61,9 +61,9 @@ pub enum PublicGetter {
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum TrustedGetter {
-	free_balance(AccountId),
-	reserved_balance(AccountId),
-	nonce(AccountId),
+	free_balance(modname::AccountId),
+	reserved_balance(modname::AccountId),
+	nonce(modname::AccountId),
 	#[cfg(feature = "evm")]
 	evm_nonce(AccountId),
 	#[cfg(feature = "evm")]

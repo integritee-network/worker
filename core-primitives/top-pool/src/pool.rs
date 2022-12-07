@@ -25,7 +25,7 @@ use crate::{
 	validated_pool::{ValidatedOperation, ValidatedPool},
 };
 use core::matches;
-use ita_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
+use ita_stf::{modname::ShardIdentifier, TrustedOperation as StfTrustedOperation};
 use itc_direct_rpc_server::SendRpcResponse;
 use itp_types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::{channel::mpsc::Receiver, future, Future};
@@ -148,7 +148,7 @@ where
 		at: &BlockId<B::Block>,
 		source: TrustedOperationSource,
 		xts: impl IntoIterator<Item = StfTrustedOperation>,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Result<Vec<Result<ExtrinsicHash<B>, B::Error>>, B::Error> {
 		let xts = xts.into_iter().map(|xt| (source, xt));
 		let validated_transactions =
@@ -164,7 +164,7 @@ where
 		at: &BlockId<B::Block>,
 		source: TrustedOperationSource,
 		xts: impl IntoIterator<Item = StfTrustedOperation>,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Result<Vec<Result<ExtrinsicHash<B>, B::Error>>, B::Error> {
 		let xts = xts.into_iter().map(|xt| (source, xt));
 		let validated_transactions =
@@ -178,7 +178,7 @@ where
 		at: &BlockId<B::Block>,
 		source: TrustedOperationSource,
 		xt: StfTrustedOperation,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Result<ExtrinsicHash<B>, B::Error> {
 		let res = self.submit_at(at, source, std::iter::once(xt), shard).await?.pop();
 		res.expect("One extrinsic passed; one result returned; qed")
@@ -190,7 +190,7 @@ where
 		at: &BlockId<B::Block>,
 		source: TrustedOperationSource,
 		xt: StfTrustedOperation,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Result<ExtrinsicHash<B>, B::Error> {
 		//TODO
 		//let block_number = self.resolve_block_number(at)?;
@@ -206,7 +206,7 @@ where
 	pub fn resubmit(
 		&self,
 		revalidated_transactions: HashMap<ExtrinsicHash<B>, ValidatedOperationFor<B>>,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) {
 		let now = Instant::now();
 		self.validated_pool.resubmit(revalidated_transactions, shard);
@@ -226,7 +226,7 @@ where
 		&self,
 		at: &BlockId<B::Block>,
 		hashes: &[ExtrinsicHash<B>],
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Result<(), B::Error> {
 		// Get details of all extrinsics that are already in the pool
 		#[allow(clippy::filter_map_identity)]
@@ -256,7 +256,7 @@ where
 		at: &BlockId<B::Block>,
 		_parent: &BlockId<B::Block>,
 		extrinsics: &[StfTrustedOperation],
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Result<(), B::Error> {
 		log::debug!(
 			target: "txpool",
@@ -326,7 +326,7 @@ where
 		at: &BlockId<B::Block>,
 		tags: impl IntoIterator<Item = Tag>,
 		known_imported_hashes: impl IntoIterator<Item = ExtrinsicHash<B>> + Clone,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Result<(), B::Error> {
 		log::debug!(target: "txpool", "Pruning at {:?}", at);
 		// Prune all operations that provide given tags
@@ -381,7 +381,7 @@ where
 		at: &BlockId<B::Block>,
 		xts: impl IntoIterator<Item = (TrustedOperationSource, StfTrustedOperation)>,
 		check: CheckBannedBeforeVerify,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Result<HashMap<ExtrinsicHash<B>, ValidatedOperationFor<B>>, B::Error> {
 		//FIXME: Nicer verify
 		// we need a block number to compute tx validity
@@ -410,7 +410,7 @@ where
 		source: TrustedOperationSource,
 		xt: StfTrustedOperation,
 		check: CheckBannedBeforeVerify,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> (ExtrinsicHash<B>, ValidatedOperationFor<B>) {
 		let (hash, bytes) = self.validated_pool.api().hash_and_length(&xt);
 
@@ -556,7 +556,7 @@ pub mod tests {
 			&self,
 			_source: TrustedOperationSource,
 			uxt: StfTrustedOperation,
-			_shard: ShardIdentifier,
+			_shard: modname::ShardIdentifier,
 		) -> Self::ValidationFuture {
 			let hash = self.hash_and_length(&uxt).0;
 			let nonce: Index = match uxt {
@@ -656,7 +656,7 @@ pub mod tests {
 	pub fn test_should_validate_and_import_transaction() {
 		// given
 		let pool = test_pool();
-		let shard = ShardIdentifier::default();
+		let shard = modname::ShardIdentifier::default();
 
 		// when
 		let hash = block_on(pool.submit_one(
@@ -685,7 +685,7 @@ pub mod tests {
 	pub fn test_should_reject_if_temporarily_banned() {
 		// given
 		let pool = test_pool();
-		let shard = ShardIdentifier::default();
+		let shard = modname::ShardIdentifier::default();
 		let top = to_top(
 			TrustedCall::balance_transfer(
 				tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
@@ -710,7 +710,7 @@ pub mod tests {
 		let (stream, hash0, hash1) = {
 			// given
 			let pool = test_pool();
-			let shard = ShardIdentifier::default();
+			let shard = modname::ShardIdentifier::default();
 			let stream = pool.validated_pool().import_notification_stream();
 
 			// when
@@ -775,7 +775,7 @@ pub mod tests {
 	pub fn test_should_clear_stale_transactions() {
 		// given
 		let pool = test_pool();
-		let shard = ShardIdentifier::default();
+		let shard = modname::ShardIdentifier::default();
 		let hash1 = block_on(pool.submit_one(
 			&BlockId::Number(0),
 			SOURCE,
@@ -835,7 +835,7 @@ pub mod tests {
 	pub fn test_should_ban_mined_transactions() {
 		// given
 		let pool = test_pool();
-		let shard = ShardIdentifier::default();
+		let shard = modname::ShardIdentifier::default();
 		let hash1 = block_on(pool.submit_one(
 			&BlockId::Number(0),
 			SOURCE,
@@ -862,7 +862,7 @@ pub mod tests {
 	#[ignore] // flaky, fails sometimes
 	pub fn test_should_limit_futures() {
 		// given
-		let shard = ShardIdentifier::default();
+		let shard = modname::ShardIdentifier::default();
 		let limit = Limit { count: 100, total_bytes: 300 };
 		let pool = Pool::new(
 			Options { ready: limit.clone(), future: limit, ..Default::default() },
@@ -911,7 +911,7 @@ pub mod tests {
 	#[test]
 	pub fn test_should_error_if_reject_immediately() {
 		// given
-		let shard = ShardIdentifier::default();
+		let shard = modname::ShardIdentifier::default();
 		let limit = Limit { count: 100, total_bytes: 10 };
 		let pool = Pool::new(
 			Options { ready: limit.clone(), future: limit, ..Default::default() },
@@ -944,7 +944,7 @@ pub mod tests {
 	pub fn test_should_reject_transactions_with_no_provides() {
 		// given
 		let pool = test_pool();
-		let shard = ShardIdentifier::default();
+		let shard = modname::ShardIdentifier::default();
 
 		// when
 		let err = block_on(pool.submit_one(

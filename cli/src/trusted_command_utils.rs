@@ -21,7 +21,10 @@ use crate::{
 };
 use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode};
-use ita_stf::{AccountId, KeyPair, ShardIdentifier, TrustedGetter, TrustedOperation};
+use ita_stf::{
+	modname::{AccountId, KeyPair, ShardIdentifier},
+	TrustedGetter, TrustedOperation,
+};
 use log::*;
 use my_node_runtime::Balance;
 use sp_application_crypto::sr25519;
@@ -91,7 +94,7 @@ pub(crate) fn get_identifiers(trusted_args: &TrustedArgs) -> ([u8; 32], ShardIde
 }
 
 // TODO this function is redundant with client::main
-pub(crate) fn get_accountid_from_str(account: &str) -> AccountId {
+pub(crate) fn get_accountid_from_str(account: &str) -> modname::AccountId {
 	match &account[..2] {
 		"//" => sr25519::Pair::from_string(account, None)
 			.unwrap()

@@ -29,12 +29,12 @@ extern crate sgx_tstd as std;
 #[cfg(feature = "sgx")]
 pub use ita_sgx_runtime::{Balance, Index};
 #[cfg(feature = "std")]
-pub use my_node_runtime::{Balance, Index};
+pub use my_node_runtime::Balance;
 
-use codec::{Compact, Decode, Encode};
+use codec::{Decode, Encode};
 use derive_more::Display;
-use sp_core::{crypto::AccountId32, ed25519, sr25519, Pair, H256};
-use sp_runtime::{traits::Verify, MultiSignature};
+use sp_core::{crypto::AccountId32, Pair};
+use sp_runtime::traits::Verify;
 use std::{boxed::Box, string::String};
 
 pub use getter::*;
@@ -56,55 +56,82 @@ pub mod trusted_call;
 
 pub(crate) const ENCLAVE_ACCOUNT_KEY: &str = "Enclave_Account_Key";
 
-pub type Signature = MultiSignature;
-pub type AuthorityId = <Signature as Verify>::Signer;
-pub type AccountId = AccountId32;
-pub type Hash = H256;
-pub type BalanceTransferFn = ([u8; 2], AccountId, Compact<u128>);
+mod modname {
+	use sp_core::ed25519;
 
-pub type ShardIdentifier = H256;
+	use sp_core::sr25519;
 
-pub type StfResult<T> = Result<T, StfError>;
+	use std::boxed::Box;
 
-#[derive(Debug, Display, PartialEq, Eq)]
-pub enum StfError {
-	#[display(fmt = "Insufficient privileges {:?}, are you sure you are root?", _0)]
-	MissingPrivileges(AccountId),
-	#[display(fmt = "Valid enclave signer account is required")]
-	RequireEnclaveSignerAccount,
-	#[display(fmt = "Error dispatching runtime call. {:?}", _0)]
-	Dispatch(String),
-	#[display(fmt = "Not enough funds to perform operation")]
-	MissingFunds,
-	#[display(fmt = "Invalid Nonce {:?}", _0)]
-	InvalidNonce(Index),
-	StorageHashMismatch,
-	InvalidStorageDiff,
-}
-#[derive(Clone)]
-pub enum KeyPair {
-	Sr25519(Box<sr25519::Pair>),
-	Ed25519(Box<ed25519::Pair>),
-}
+	use my_node_runtime::Index;
 
-impl KeyPair {
-	fn sign(&self, payload: &[u8]) -> Signature {
-		match self {
-			Self::Sr25519(pair) => pair.sign(payload).into(),
-			Self::Ed25519(pair) => pair.sign(payload).into(),
+	use std::string::String;
+
+	use codec::Compact;
+
+	use sp_core::H256;
+
+	use sp_core::crypto::AccountId32;
+
+	use sp_runtime::traits::Verify;
+
+	use sp_runtime::MultiSignature;
+
+	pub type Signature = MultiSignature;
+
+	pub type AuthorityId = <Signature as Verify>::Signer;
+
+	pub type AccountId = AccountId32;
+
+	pub type Hash = H256;
+
+	pub type BalanceTransferFn = ([u8; 2], AccountId, Compact<u128>);
+
+	pub type ShardIdentifier = H256;
+
+	pub type StfResult<T> = Result<T, StfError>;
+
+	#[derive(Debug, Display, PartialEq, Eq)]
+	pub enum StfError {
+		#[display(fmt = "Insufficient privileges {:?}, are you sure you are root?", _0)]
+		MissingPrivileges(AccountId),
+		#[display(fmt = "Valid enclave signer account is required")]
+		RequireEnclaveSignerAccount,
+		#[display(fmt = "Error dispatching runtime call. {:?}", _0)]
+		Dispatch(String),
+		#[display(fmt = "Not enough funds to perform operation")]
+		MissingFunds,
+		#[display(fmt = "Invalid Nonce {:?}", _0)]
+		InvalidNonce(Index),
+		StorageHashMismatch,
+		InvalidStorageDiff,
+	}
+
+	#[derive(Clone)]
+	pub enum KeyPair {
+		Sr25519(Box<sr25519::Pair>),
+		Ed25519(Box<ed25519::Pair>),
+	}
+
+	impl KeyPair {
+		pub(crate) fn sign(&self, payload: &[u8]) -> Signature {
+			match self {
+				Self::Sr25519(pair) => pair.sign(payload).into(),
+				Self::Ed25519(pair) => pair.sign(payload).into(),
+			}
 		}
 	}
-}
 
-impl From<ed25519::Pair> for KeyPair {
-	fn from(x: ed25519::Pair) -> Self {
-		KeyPair::Ed25519(Box::new(x))
+	impl From<ed25519::Pair> for KeyPair {
+		fn from(x: ed25519::Pair) -> Self {
+			KeyPair::Ed25519(Box::new(x))
+		}
 	}
-}
 
-impl From<sr25519::Pair> for KeyPair {
-	fn from(x: sr25519::Pair) -> Self {
-		KeyPair::Sr25519(Box::new(x))
+	impl From<sr25519::Pair> for KeyPair {
+		fn from(x: sr25519::Pair) -> Self {
+			KeyPair::Sr25519(Box::new(x))
+		}
 	}
 }
 

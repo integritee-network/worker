@@ -41,7 +41,7 @@ pub enum Error {
 	#[error("Node metadata provider error: {0:?}")]
 	NodeMetadataProvider(#[from] itp_node_api::metadata::provider::Error),
 	#[error("STF error: {0}")]
-	Stf(ita_stf::StfError),
+	Stf(ita_stf::modname::StfError),
 	#[error("Ocall Api error: {0}")]
 	OcallApi(itp_ocall_api::Error),
 	#[error("Crypto error: {0}")]

@@ -20,7 +20,7 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::traits::AuthorApi;
 use codec::Encode;
-use ita_stf::{ShardIdentifier, TrustedOperation};
+use ita_stf::{modname::ShardIdentifier, TrustedOperation};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use jsonrpc_core::futures::executor;
 use sp_core::H256;
@@ -31,7 +31,7 @@ pub fn submit_operation_to_top_pool<R, S>(
 	author: &R,
 	top: &TrustedOperation,
 	shielding_key: &S,
-	shard: ShardIdentifier,
+	shard: modname::ShardIdentifier,
 ) -> Result<H256, jsonrpc_core::Error>
 where
 	R: AuthorApi<H256, H256>,

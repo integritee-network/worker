@@ -37,7 +37,7 @@ use crate::{
 };
 use alloc::{boxed::Box, string::String, sync::Arc};
 use core::pin::Pin;
-use ita_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
+use ita_stf::{modname::ShardIdentifier, TrustedOperation as StfTrustedOperation};
 use itc_direct_rpc_server::SendRpcResponse;
 use its_primitives::types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::{
@@ -150,7 +150,7 @@ where
 		at: &BlockId<Self::Block>,
 		source: TrustedOperationSource,
 		ops: Vec<StfTrustedOperation>,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> PoolFuture<Vec<Result<TxHash<Self>, Self::Error>>, Self::Error> {
 		let pool = self.pool.clone();
 		let at = *at;
@@ -162,7 +162,7 @@ where
 		at: &BlockId<Self::Block>,
 		source: TrustedOperationSource,
 		op: StfTrustedOperation,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> PoolFuture<TxHash<Self>, Self::Error> {
 		let pool = self.pool.clone();
 		let at = *at;
@@ -174,7 +174,7 @@ where
 		at: &BlockId<Self::Block>,
 		source: TrustedOperationSource,
 		xt: StfTrustedOperation,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> PoolFuture<TxHash<Self>, Self::Error> {
 		let at = *at;
 		let pool = self.pool.clone();
@@ -184,7 +184,7 @@ where
 	fn ready_at(
 		&self,
 		at: NumberFor<Self::Block>,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> PolledIterator<PoolApi> {
 		if self.ready_poll.lock().unwrap().updated_at() >= at {
 			let iterator: ReadyIteratorFor<PoolApi> =
@@ -200,24 +200,24 @@ where
 		}))
 	}
 
-	fn ready(&self, shard: ShardIdentifier) -> ReadyIteratorFor<PoolApi> {
+	fn ready(&self, shard: modname::ShardIdentifier) -> ReadyIteratorFor<PoolApi> {
 		Box::new(self.pool.validated_pool().ready(shard))
 	}
 
-	fn shards(&self) -> Vec<ShardIdentifier> {
+	fn shards(&self) -> Vec<modname::ShardIdentifier> {
 		self.pool.validated_pool().shards()
 	}
 
 	fn remove_invalid(
 		&self,
 		hashes: &[TxHash<Self>],
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 		inblock: bool,
 	) -> Vec<Arc<Self::InPoolOperation>> {
 		self.pool.validated_pool().remove_invalid(hashes, shard, inblock)
 	}
 
-	fn status(&self, shard: ShardIdentifier) -> PoolStatus {
+	fn status(&self, shard: modname::ShardIdentifier) -> PoolStatus {
 		self.pool.validated_pool().status(shard)
 	}
 
@@ -236,7 +236,7 @@ where
 	fn ready_transaction(
 		&self,
 		hash: &TxHash<Self>,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Option<Arc<Self::InPoolOperation>> {
 		self.pool.validated_pool().ready_by_hash(hash, shard)
 	}

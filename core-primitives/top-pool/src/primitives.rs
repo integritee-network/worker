@@ -9,7 +9,7 @@ use alloc::{boxed::Box, string::String, sync::Arc, vec::Vec};
 use byteorder::{BigEndian, ByteOrder};
 use codec::{Decode, Encode};
 use core::{hash::Hash, pin::Pin};
-use ita_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
+use ita_stf::{modname::ShardIdentifier, TrustedOperation as StfTrustedOperation};
 use itp_types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::{channel::mpsc::Receiver, Future, Stream};
 use sp_core::H256;
@@ -179,7 +179,7 @@ pub trait TrustedOperationPool: Send + Sync {
 		at: &BlockId<Self::Block>,
 		source: TrustedOperationSource,
 		xts: Vec<StfTrustedOperation>,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> PoolFuture<Vec<Result<TxHash<Self>, Self::Error>>, Self::Error>;
 
 	/// Returns a future that imports one unverified operation to the pool.
@@ -188,7 +188,7 @@ pub trait TrustedOperationPool: Send + Sync {
 		at: &BlockId<Self::Block>,
 		source: TrustedOperationSource,
 		xt: StfTrustedOperation,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> PoolFuture<TxHash<Self>, Self::Error>;
 
 	/// Returns a future that import a single operation and starts to watch their progress in the pool.
@@ -197,7 +197,7 @@ pub trait TrustedOperationPool: Send + Sync {
 		at: &BlockId<Self::Block>,
 		source: TrustedOperationSource,
 		xt: StfTrustedOperation,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> PoolFuture<TxHash<Self>, Self::Error>;
 
 	// *** Block production / Networking
@@ -210,7 +210,7 @@ pub trait TrustedOperationPool: Send + Sync {
 	fn ready_at(
 		&self,
 		at: NumberFor<Self::Block>,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Pin<
 		Box<
 			dyn Future<Output = Box<dyn Iterator<Item = Arc<Self::InPoolOperation>> + Send>> + Send,
@@ -220,24 +220,24 @@ pub trait TrustedOperationPool: Send + Sync {
 	/// Get an iterator for ready operations ordered by priority.
 	fn ready(
 		&self,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Box<dyn Iterator<Item = Arc<Self::InPoolOperation>> + Send>;
 
 	/// Get an iterator over all shards.
-	fn shards(&self) -> Vec<ShardIdentifier>;
+	fn shards(&self) -> Vec<modname::ShardIdentifier>;
 
 	// *** Block production
 	/// Remove operations identified by given hashes (and dependent operations) from the pool.
 	fn remove_invalid(
 		&self,
 		hashes: &[TxHash<Self>],
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 		inblock: bool,
 	) -> Vec<Arc<Self::InPoolOperation>>;
 
 	// *** logging
 	/// Returns pool status.
-	fn status(&self, shard: ShardIdentifier) -> PoolStatus;
+	fn status(&self, shard: modname::ShardIdentifier) -> PoolStatus;
 
 	// *** logging / RPC / networking
 	/// Return an event stream of operations imported to the pool.
@@ -254,7 +254,7 @@ pub trait TrustedOperationPool: Send + Sync {
 	fn ready_transaction(
 		&self,
 		hash: &TxHash<Self>,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Option<Arc<Self::InPoolOperation>>;
 
 	/// Notify the listener of top inclusion in sidechain block

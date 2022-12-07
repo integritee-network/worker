@@ -40,7 +40,7 @@ use crate::{
 };
 use codec::Encode;
 use core::{hash, result::Result};
-use ita_stf::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
+use ita_stf::{modname::ShardIdentifier, TrustedOperation as StfTrustedOperation};
 use itc_direct_rpc_server::SendRpcResponse;
 use itp_types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::channel::mpsc::{channel, Sender};
@@ -149,7 +149,7 @@ where
 		&self,
 		tx_hash: &ExtrinsicHash<B>,
 		ignore_banned: bool,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Result<(), B::Error> {
 		if !ignore_banned && self.is_banned(tx_hash) {
 			Err(error::Error::TemporarilyBanned.into())
@@ -164,7 +164,7 @@ where
 	pub fn submit(
 		&self,
 		txs: impl IntoIterator<Item = ValidatedOperationFor<B>>,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Vec<Result<ExtrinsicHash<B>, B::Error>> {
 		let results = txs
 			.into_iter()
@@ -192,7 +192,7 @@ where
 	fn submit_one(
 		&self,
 		tx: ValidatedOperationFor<B>,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Result<ExtrinsicHash<B>, B::Error> {
 		match tx {
 			ValidatedOperation::Valid(tx) => {
@@ -230,7 +230,7 @@ where
 		}
 	}
 
-	fn enforce_limits(&self, shard: ShardIdentifier) -> HashSet<ExtrinsicHash<B>> {
+	fn enforce_limits(&self, shard: modname::ShardIdentifier) -> HashSet<ExtrinsicHash<B>> {
 		let status = self.pool.read().unwrap().status(shard);
 		let ready_limit = &self.options.ready;
 		let future_limit = &self.options.future;
@@ -278,7 +278,7 @@ where
 	pub fn submit_and_watch(
 		&self,
 		tx: ValidatedOperationFor<B>,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Result<ExtrinsicHash<B>, B::Error> {
 		match tx {
 			ValidatedOperation::Valid(tx) => {
@@ -307,7 +307,7 @@ where
 	pub fn resubmit(
 		&self,
 		mut updated_transactions: HashMap<ExtrinsicHash<B>, ValidatedOperationFor<B>>,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) {
 		#[derive(Debug, Clone, Copy, PartialEq)]
 		enum Status {
@@ -439,7 +439,7 @@ where
 	pub fn extrinsics_tags(
 		&self,
 		hashes: &[ExtrinsicHash<B>],
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Vec<Option<Vec<Tag>>> {
 		self.pool
 			.read()
@@ -454,7 +454,7 @@ where
 	pub fn ready_by_hash(
 		&self,
 		hash: &ExtrinsicHash<B>,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Option<TransactionFor<B>> {
 		self.pool.read().unwrap().ready_by_hash(hash, shard)
 	}
@@ -463,7 +463,7 @@ where
 	pub fn prune_tags(
 		&self,
 		tags: impl IntoIterator<Item = Tag>,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Result<PruneStatus<ExtrinsicHash<B>, StfTrustedOperation>, B::Error> {
 		// Perform tag-based pruning in the base pool
 		let status = self.pool.write().unwrap().prune_tags(tags, shard);
@@ -489,7 +489,7 @@ where
 		known_imported_hashes: impl IntoIterator<Item = ExtrinsicHash<B>> + Clone,
 		pruned_hashes: Vec<ExtrinsicHash<B>>,
 		pruned_xts: Vec<ValidatedOperationFor<B>>,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Result<(), B::Error>
 	where
 		<B as ChainApi>::Error: error::IntoPoolError,
@@ -548,7 +548,7 @@ where
 	pub fn clear_stale(
 		&self,
 		at: &BlockId<B::Block>,
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 	) -> Result<(), B::Error> {
 		let block_number = self
 			.api
@@ -621,7 +621,7 @@ where
 	pub fn remove_invalid(
 		&self,
 		hashes: &[ExtrinsicHash<B>],
-		shard: ShardIdentifier,
+		shard: modname::ShardIdentifier,
 		inblock: bool,
 	) -> Vec<TransactionFor<B>> {
 		// early exit in case there is no invalid operations.
@@ -650,12 +650,15 @@ where
 	}
 
 	/// Get an iterator for ready operations ordered by priority
-	pub fn ready(&self, shard: ShardIdentifier) -> impl Iterator<Item = TransactionFor<B>> + Send {
+	pub fn ready(
+		&self,
+		shard: modname::ShardIdentifier,
+	) -> impl Iterator<Item = TransactionFor<B>> + Send {
 		self.pool.read().unwrap().ready(shard)
 	}
 
 	/// Get an iterator for all shards
-	pub fn shards(&self) -> Vec<ShardIdentifier> {
+	pub fn shards(&self) -> Vec<modname::ShardIdentifier> {
 		let mut shards = vec![];
 		let base_pool = self.pool.read().unwrap();
 		let shard_iterator = base_pool.get_shards();
@@ -666,7 +669,7 @@ where
 	}
 
 	/// Returns pool status.
-	pub fn status(&self, shard: ShardIdentifier) -> PoolStatus {
+	pub fn status(&self, shard: modname::ShardIdentifier) -> PoolStatus {
 		self.pool.read().unwrap().status(shard)
 	}
 

@@ -24,7 +24,7 @@ use crate::error::Result;
 use beefy_merkle_tree::{merkle_root, Keccak256};
 use codec::{Decode, Encode};
 use futures::executor;
-use ita_stf::{AccountId, TrustedCall, TrustedOperation};
+use ita_stf::{modname::AccountId, TrustedCall, TrustedOperation};
 use itp_node_api::{
 	api_client::ParentchainUncheckedExtrinsic,
 	metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata},
@@ -101,7 +101,7 @@ where
 		let shielding_key = self.shielding_key_repo.retrieve_key()?;
 		let account_vec = shielding_key.decrypt(&account_encrypted)?;
 
-		let account = AccountId::decode(&mut account_vec.as_slice())?;
+		let account = modname::AccountId::decode(&mut account_vec.as_slice())?;
 
 		let enclave_account_id = self.stf_enclave_signer.get_enclave_account()?;
 		let trusted_call = TrustedCall::balance_shield(enclave_account_id, account, amount);
@@ -385,7 +385,8 @@ mod test {
 	fn shield_funds_unchecked_extrinsic(
 		shielding_key: &ShieldingCryptoMock,
 	) -> ParentchainUncheckedExtrinsic<ShieldFundsFn> {
-		let target_account = shielding_key.encrypt(&AccountId::new([2u8; 32]).encode()).unwrap();
+		let target_account =
+			shielding_key.encrypt(&modname::AccountId::new([2u8; 32]).encode()).unwrap();
 		let dummy_metadata = NodeMetadataMock::new();
 
 		let shield_funds_indexes = dummy_metadata.shield_funds_call_indexes().unwrap();

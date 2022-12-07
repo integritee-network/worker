@@ -21,7 +21,7 @@ use crate::{
 };
 use base58::FromBase58;
 use codec::{Decode, Encode};
-use ita_stf::ShardIdentifier;
+use ita_stf::modname::ShardIdentifier;
 use itp_node_api::api_client::TEEREX;
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use log::*;
@@ -49,7 +49,7 @@ impl ShieldFundsCommand {
 		let chain_api = get_chain_api(cli);
 
 		let shard_opt = match self.shard.from_base58() {
-			Ok(s) => ShardIdentifier::decode(&mut &s[..]),
+			Ok(s) => modname::ShardIdentifier::decode(&mut &s[..]),
 			_ => panic!("shard argument must be base58 encoded"),
 		};
 
