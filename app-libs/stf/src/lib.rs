@@ -56,64 +56,7 @@ pub mod trusted_call;
 
 pub(crate) const ENCLAVE_ACCOUNT_KEY: &str = "Enclave_Account_Key";
 
-pub mod types {
-	use sp_core::ed25519;
-
-	use sp_core::Pair;
-
-	use sp_core::sr25519;
-
-	use std::boxed::Box;
-
-	use codec::Compact;
-
-	use sp_core::H256;
-
-	use sp_core::crypto::AccountId32;
-
-	use sp_runtime::traits::Verify;
-
-	use sp_runtime::MultiSignature;
-
-	pub type Signature = MultiSignature;
-
-	pub type AuthorityId = <Signature as Verify>::Signer;
-
-	pub type AccountId = AccountId32;
-
-	pub type Hash = H256;
-
-	pub type BalanceTransferFn = ([u8; 2], AccountId, Compact<u128>);
-
-	pub type ShardIdentifier = H256;
-
-	#[derive(Clone)]
-	pub enum KeyPair {
-		Sr25519(Box<sr25519::Pair>),
-		Ed25519(Box<ed25519::Pair>),
-	}
-
-	impl KeyPair {
-		pub(crate) fn sign(&self, payload: &[u8]) -> Signature {
-			match self {
-				Self::Sr25519(pair) => pair.sign(payload).into(),
-				Self::Ed25519(pair) => pair.sign(payload).into(),
-			}
-		}
-	}
-
-	impl From<ed25519::Pair> for KeyPair {
-		fn from(x: ed25519::Pair) -> Self {
-			KeyPair::Ed25519(Box::new(x))
-		}
-	}
-
-	impl From<sr25519::Pair> for KeyPair {
-		fn from(x: sr25519::Pair) -> Self {
-			KeyPair::Sr25519(Box::new(x))
-		}
-	}
-}
+pub mod types;
 
 pub type StfResult<T> = Result<T, StfError>;
 
