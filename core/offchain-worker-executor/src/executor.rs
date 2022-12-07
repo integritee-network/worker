@@ -205,7 +205,7 @@ mod tests {
 
 	use super::*;
 	use codec::{Decode, Encode};
-	use ita_stf::{modname::KeyPair, TrustedCall, TrustedOperation};
+	use ita_stf::{types::KeyPair, TrustedCall, TrustedOperation};
 	use itc_parentchain_light_client::mocks::validator_access_mock::ValidatorAccessMock;
 	use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
 	use itp_sgx_externalities::SgxExternalitiesTrait;
@@ -323,7 +323,7 @@ mod tests {
 			10000u128,
 		);
 		let call_signed = trusted_call.sign(
-			&modname::KeyPair::Ed25519(Box::new(sender)),
+			&types::KeyPair::Ed25519(Box::new(sender)),
 			0,
 			&mr_enclave(),
 			&shard(),

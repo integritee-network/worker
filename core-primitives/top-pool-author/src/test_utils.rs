@@ -20,7 +20,7 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::traits::AuthorApi;
 use codec::Encode;
-use ita_stf::{modname::ShardIdentifier, TrustedOperation};
+use ita_stf::{types::ShardIdentifier, TrustedOperation};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use jsonrpc_core::futures::executor;
 use sp_core::H256;

@@ -132,7 +132,7 @@ mod tests {
 
 	fn dummy_trusted_getter() -> TrustedGetterSigned {
 		TrustedGetterSigned::new(
-			TrustedGetter::nonce(modname::AccountId::new([0u8; 32])),
+			TrustedGetter::nonce(types::AccountId::new([0u8; 32])),
 			MultiSignature::Ed25519(Signature::from_raw([0u8; 64])),
 		)
 	}

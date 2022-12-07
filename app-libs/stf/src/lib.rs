@@ -35,7 +35,7 @@ use codec::{Decode, Encode};
 use derive_more::Display;
 use std::string::String;
 
-use crate::modname::AccountId;
+use crate::types::AccountId;
 
 pub use getter::*;
 pub use stf_sgx_primitives::{types::*, Stf};
@@ -56,7 +56,7 @@ pub mod trusted_call;
 
 pub(crate) const ENCLAVE_ACCOUNT_KEY: &str = "Enclave_Account_Key";
 
-pub mod modname {
+pub mod types {
 	use sp_core::ed25519;
 
 	use sp_core::Pair;

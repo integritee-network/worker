@@ -16,7 +16,7 @@
 */
 
 use crate::{
-	modname::{AccountId, Signature},
+	types::{AccountId, Signature},
 	Getter, State, Stf, TrustedCall, TrustedCallSigned,
 };
 use ita_sgx_runtime::Runtime;

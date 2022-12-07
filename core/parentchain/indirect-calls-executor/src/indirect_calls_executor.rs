@@ -24,7 +24,7 @@ use crate::error::Result;
 use beefy_merkle_tree::{merkle_root, Keccak256};
 use codec::{Decode, Encode};
 use futures::executor;
-use ita_stf::{modname::AccountId, TrustedCall, TrustedOperation};
+use ita_stf::{types::AccountId, TrustedCall, TrustedOperation};
 use itp_node_api::{
 	api_client::ParentchainUncheckedExtrinsic,
 	metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata},
@@ -386,7 +386,7 @@ mod test {
 		shielding_key: &ShieldingCryptoMock,
 	) -> ParentchainUncheckedExtrinsic<ShieldFundsFn> {
 		let target_account =
-			shielding_key.encrypt(&modname::AccountId::new([2u8; 32]).encode()).unwrap();
+			shielding_key.encrypt(&types::AccountId::new([2u8; 32]).encode()).unwrap();
 		let dummy_metadata = NodeMetadataMock::new();
 
 		let shield_funds_indexes = dummy_metadata.shield_funds_call_indexes().unwrap();

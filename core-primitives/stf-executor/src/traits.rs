@@ -18,7 +18,7 @@
 use crate::{error::Result, BatchExecutionResult};
 use codec::Encode;
 use ita_stf::{
-	modname::{AccountId, ShardIdentifier},
+	types::{AccountId, ShardIdentifier},
 	ParentchainHeader, TrustedCall, TrustedCallSigned, TrustedOperation,
 };
 use itp_sgx_externalities::SgxExternalitiesTrait;

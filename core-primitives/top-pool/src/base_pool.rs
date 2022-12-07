@@ -29,7 +29,7 @@ use crate::{
 };
 use alloc::{fmt, sync::Arc, vec, vec::Vec};
 use core::{hash, iter};
-use ita_stf::modname::ShardIdentifier;
+use ita_stf::types::ShardIdentifier;
 use log::{debug, trace, warn};
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::{

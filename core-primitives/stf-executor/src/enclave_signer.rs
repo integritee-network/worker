@@ -18,7 +18,7 @@
 use crate::{error::Result, traits::StfEnclaveSigning};
 use core::marker::PhantomData;
 use ita_stf::{
-	modname::{AccountId, KeyPair},
+	types::{AccountId, KeyPair},
 	TrustedCall, TrustedCallSigned,
 };
 use itp_ocall_api::EnclaveAttestationOCallApi;

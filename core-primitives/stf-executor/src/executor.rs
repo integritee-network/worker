@@ -23,8 +23,8 @@ use crate::{
 use codec::{Decode, Encode};
 use ita_stf::{
 	hash::{Hash, TrustedOperationOrHash},
-	modname::ShardIdentifier,
 	stf_sgx::{shards_key_hash, storage_hashes_to_update_per_shard},
+	types::ShardIdentifier,
 	ParentchainHeader, TrustedCallSigned, TrustedOperation,
 };
 use itp_node_api::metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata};

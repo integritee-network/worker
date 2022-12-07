@@ -35,9 +35,9 @@ use codec::Decode;
 use ita_sgx_runtime::Parentchain;
 use ita_stf::{
 	helpers::{account_key_hash, set_block_number},
-	modname::ShardIdentifier,
 	stf_sgx_tests,
 	test_genesis::{endowed_account as funded_pair, unendowed_account},
+	types::ShardIdentifier,
 	AccountInfo, Getter, State, StatePayload, TrustedCall, TrustedCallSigned, TrustedGetter,
 	TrustedOperation,
 };

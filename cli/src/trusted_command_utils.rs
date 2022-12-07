@@ -22,7 +22,7 @@ use crate::{
 use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode};
 use ita_stf::{
-	modname::{AccountId, KeyPair, ShardIdentifier},
+	types::{AccountId, KeyPair, ShardIdentifier},
 	TrustedGetter, TrustedOperation,
 };
 use log::*;

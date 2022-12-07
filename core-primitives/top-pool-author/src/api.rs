@@ -23,7 +23,7 @@ use crate::sgx_reexport_prelude::*;
 use crate::error;
 use codec::Encode;
 use ita_stf::{
-	modname::ShardIdentifier, Getter, TrustedCallSigned, TrustedOperation as StfTrustedOperation,
+	types::ShardIdentifier, Getter, TrustedCallSigned, TrustedOperation as StfTrustedOperation,
 };
 use itp_top_pool::{
 	pool::{ChainApi, ExtrinsicHash, NumberFor},
@@ -144,7 +144,7 @@ where
 mod tests {
 	use super::*;
 	use futures::executor;
-	use ita_stf::{modname::KeyPair, PublicGetter, TrustedCall, TrustedOperation};
+	use ita_stf::{types::KeyPair, PublicGetter, TrustedCall, TrustedOperation};
 	use itp_types::Block as ParentchainBlock;
 	use sp_core::{ed25519, Pair};
 	use sp_keyring::AccountKeyring;
@@ -162,7 +162,7 @@ mod tests {
 		let validation = executor::block_on(chain_api.validate_transaction(
 			TrustedOperationSource::Local,
 			operation,
-			modname::ShardIdentifier::default(),
+			types::ShardIdentifier::default(),
 		))
 		.unwrap();
 
@@ -177,7 +177,7 @@ mod tests {
 		let validation = executor::block_on(chain_api.validate_transaction(
 			TrustedOperationSource::Local,
 			public_getter,
-			modname::ShardIdentifier::default(),
+			types::ShardIdentifier::default(),
 		))
 		.unwrap();
 
@@ -191,10 +191,10 @@ mod tests {
 			1000u128,
 		)
 		.sign(
-			&modname::KeyPair::Ed25519(Box::new(signer())),
+			&types::KeyPair::Ed25519(Box::new(signer())),
 			1,
 			&[1u8; 32],
-			&modname::ShardIdentifier::default(),
+			&types::ShardIdentifier::default(),
 		);
 		TrustedOperation::indirect_call(trusted_call_signed)
 	}

@@ -19,7 +19,7 @@
 use crate::test_genesis::test_genesis_setup;
 
 use crate::{
-	helpers::enclave_signer_account, modname::ShardIdentifier, Stf, StfError, ENCLAVE_ACCOUNT_KEY,
+	helpers::enclave_signer_account, types::ShardIdentifier, Stf, StfError, ENCLAVE_ACCOUNT_KEY,
 };
 use codec::Encode;
 use frame_support::traits::{OriginTrait, UnfilteredDispatchable};

@@ -24,7 +24,7 @@ use crate::{
 use codec::Encode;
 use ita_stf::{
 	hash::{Hash, TrustedOperationOrHash},
-	modname::{AccountId, KeyPair, ShardIdentifier},
+	types::{AccountId, KeyPair, ShardIdentifier},
 	TrustedCall, TrustedCallSigned, TrustedGetterSigned, TrustedOperation,
 };
 use itp_sgx_externalities::SgxExternalitiesTrait;

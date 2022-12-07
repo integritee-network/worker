@@ -17,7 +17,7 @@
 
 use ita_sgx_runtime::Runtime;
 use ita_stf::{
-	modname::{AccountId, ShardIdentifier},
+	types::{AccountId, ShardIdentifier},
 	Stf, TrustedCall,
 };
 use itp_ocall_api::EnclaveAttestationOCallApi;

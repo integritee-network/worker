@@ -29,7 +29,7 @@ use crate::{
 	tls_ra::seal_handler::SealHandler,
 };
 use ita_sgx_runtime::Runtime;
-use ita_stf::{modname::Hash, Getter, State as StfState, Stf, TrustedCallSigned};
+use ita_stf::{types::Hash, Getter, State as StfState, Stf, TrustedCallSigned};
 use itc_direct_rpc_server::{
 	rpc_connection_registry::ConnectionRegistry, rpc_responder::RpcResponder,
 	rpc_watch_extractor::RpcWatchExtractor, rpc_ws_handler::RpcWsHandler,

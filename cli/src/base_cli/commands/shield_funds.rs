@@ -21,7 +21,7 @@ use crate::{
 };
 use base58::FromBase58;
 use codec::{Decode, Encode};
-use ita_stf::modname::ShardIdentifier;
+use ita_stf::types::ShardIdentifier;
 use itp_node_api::api_client::TEEREX;
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use log::*;

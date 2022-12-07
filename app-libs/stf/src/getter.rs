@@ -15,7 +15,7 @@
 
 */
 
-use crate::modname::{AccountId, KeyPair, Signature};
+use crate::types::{AccountId, KeyPair, Signature};
 use codec::{Decode, Encode};
 use ita_sgx_runtime::System;
 use itp_stf_interface::ExecuteGetter;

@@ -23,7 +23,7 @@ use std::vec::Vec;
 
 use crate::{
 	helpers::ensure_enclave_signer_account,
-	modname::{AccountId, KeyPair, ShardIdentifier, Signature},
+	types::{AccountId, KeyPair, ShardIdentifier, Signature},
 	StfError, TrustedOperation,
 };
 use codec::{Decode, Encode};
@@ -435,7 +435,7 @@ mod tests {
 			42,
 		);
 		let signed_call = call.sign(
-			&modname::KeyPair::Sr25519(Box::new(AccountKeyring::Alice.pair())),
+			&types::KeyPair::Sr25519(Box::new(AccountKeyring::Alice.pair())),
 			nonce,
 			&mrenclave,
 			&shard,

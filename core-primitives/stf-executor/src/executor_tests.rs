@@ -18,9 +18,9 @@
 use crate::{executor::StfExecutor, traits::StateUpdateProposer};
 use codec::Encode;
 use ita_stf::{
-	modname::ShardIdentifier,
 	stf_sgx_tests::StfState,
 	test_genesis::{endowed_account, test_genesis_setup},
+	types::ShardIdentifier,
 	State, TrustedCall,
 };
 use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;

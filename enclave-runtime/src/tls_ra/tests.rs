@@ -25,7 +25,7 @@ use crate::{
 	initialization::global_components::EnclaveStf,
 	tls_ra::seal_handler::{SealHandler, SealStateAndKeys, UnsealStateAndKeys},
 };
-use ita_stf::{modname::AccountId, State};
+use ita_stf::{types::AccountId, State};
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
 use itp_sgx_crypto::{mocks::KeyRepositoryMock, Aes};
 use itp_stf_interface::InitState;
