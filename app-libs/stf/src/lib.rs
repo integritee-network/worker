@@ -33,9 +33,8 @@ pub use my_node_runtime::{Balance, Index};
 
 use codec::{Decode, Encode};
 use derive_more::Display;
-use std::string::String;
-
 use itp_stf_primitives::types::AccountId;
+use std::string::String;
 
 pub use getter::*;
 pub use stf_sgx_primitives::{types::*, Stf};
