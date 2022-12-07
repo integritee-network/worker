@@ -81,7 +81,8 @@ where
 mod tests {
 	use super::*;
 	use codec::{Decode, Encode};
-	use ita_stf::{AccountId, PublicGetter, TrustedGetter, TrustedGetterSigned};
+	use ita_stf::{PublicGetter, TrustedGetter, TrustedGetterSigned};
+	use itp_stf_primitives::types::AccountId;
 	use itp_stf_state_observer::mock::ObserveStateMock;
 	use sp_core::ed25519::Signature;
 	use sp_runtime::MultiSignature;
@@ -132,7 +133,7 @@ mod tests {
 
 	fn dummy_trusted_getter() -> TrustedGetterSigned {
 		TrustedGetterSigned::new(
-			TrustedGetter::nonce(types::AccountId::new([0u8; 32])),
+			TrustedGetter::nonce(AccountId::new([0u8; 32])),
 			MultiSignature::Ed25519(Signature::from_raw([0u8; 64])),
 		)
 	}

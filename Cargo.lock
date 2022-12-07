@@ -2694,6 +2694,7 @@ dependencies = [
  "itp-sgx-externalities",
  "itp-stf-executor",
  "itp-stf-interface",
+ "itp-stf-primitives",
  "itp-stf-state-handler",
  "itp-test",
  "itp-top-pool-author",

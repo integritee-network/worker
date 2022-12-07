@@ -417,6 +417,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use itp_stf_primitives::types::KeyPair;
 	use sp_keyring::AccountKeyring;
 
 	#[test]
@@ -432,7 +433,7 @@ mod tests {
 			42,
 		);
 		let signed_call = call.sign(
-			&types::KeyPair::Sr25519(Box::new(AccountKeyring::Alice.pair())),
+			&KeyPair::Sr25519(Box::new(AccountKeyring::Alice.pair())),
 			nonce,
 			&mrenclave,
 			&shard,

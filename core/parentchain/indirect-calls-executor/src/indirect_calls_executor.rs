@@ -386,8 +386,7 @@ mod test {
 	fn shield_funds_unchecked_extrinsic(
 		shielding_key: &ShieldingCryptoMock,
 	) -> ParentchainUncheckedExtrinsic<ShieldFundsFn> {
-		let target_account =
-			shielding_key.encrypt(&types::AccountId::new([2u8; 32]).encode()).unwrap();
+		let target_account = shielding_key.encrypt(&AccountId::new([2u8; 32]).encode()).unwrap();
 		let dummy_metadata = NodeMetadataMock::new();
 
 		let shield_funds_indexes = dummy_metadata.shield_funds_call_indexes().unwrap();
