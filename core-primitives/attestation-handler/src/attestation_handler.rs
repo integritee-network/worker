@@ -646,7 +646,7 @@ where
 		let mut qve_report_info: sgx_ql_qe_report_info_t = unsafe { std::mem::zeroed() };
 		let supplemental_data_size = std::mem::size_of::<sgx_ql_qv_supplemental_t>() as u32;
 
-		// Get target info of SampleISVEnclave. QvE will target the generated report to this enclave.
+		// Get target info of the app enclave. QvE will target the generated report to this enclave.
 		let ret_val =
 			unsafe { sgx_self_target(&mut app_enclave_target_info as *mut sgx_target_info_t) };
 		if ret_val != sgx_status_t::SGX_SUCCESS {
