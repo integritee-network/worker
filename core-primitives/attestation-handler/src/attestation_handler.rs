@@ -30,7 +30,7 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use crate::{cert, Error as EnclaveError, Error, Result as EnclaveResult, SgxQlQveCollateral};
+use crate::{cert, Error as EnclaveError, Error, Result as EnclaveResult};
 use codec::Encode;
 use core::{convert::TryInto, default::Default};
 use hex_literal::hex;

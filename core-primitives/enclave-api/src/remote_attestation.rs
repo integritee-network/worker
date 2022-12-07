@@ -282,9 +282,12 @@ impl RemoteAttestation for Enclave {
 	}
 
 	fn dump_dcap_collateral_to_disk(&self, fmspc: [u8; 6]) -> EnclaveResult<()> {
+		let mut retval = sgx_status_t::SGX_SUCCESS;
 		let collateral = unsafe { self.get_collateral(fmspc)? };
-		let result = unsafe { ffi::dump_dcap_collateral_to_disk(collateral) };
+		let result =
+			unsafe { ffi::dump_dcap_collateral_to_disk(self.eid, &mut retval, collateral) };
 		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 		Ok(())
 	}
 }

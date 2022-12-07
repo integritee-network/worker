@@ -213,13 +213,6 @@ pub unsafe extern "C" fn generate_qe_extrinsic(
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 	let collateral = SgxQlQveCollateral::from_c_type(&*collateral);
-	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
-		Ok(r) => r,
-		Err(e) => {
-			error!("Component get failure: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
-	};
 	let (data, signature) = collateral.get_quoting_enclave_split().unwrap();
 
 	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain().unwrap();
@@ -278,13 +271,6 @@ pub unsafe extern "C" fn dump_dcap_ra_cert_to_disk(
 pub unsafe extern "C" fn dump_dcap_collateral_to_disk(
 	collateral: *const sgx_ql_qve_collateral_t,
 ) -> sgx_status_t {
-	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
-		Ok(r) => r,
-		Err(e) => {
-			error!("Component get failure: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
-	};
 	let collateral = SgxQlQveCollateral::from_c_type(&*collateral);
 	collateral.dump_to_disk();
 	sgx_status_t::SGX_SUCCESS
