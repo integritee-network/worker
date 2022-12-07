@@ -17,11 +17,9 @@
 
 use crate::{error::Result, BatchExecutionResult};
 use codec::Encode;
-use ita_stf::{
-	types::{AccountId, ShardIdentifier},
-	ParentchainHeader, TrustedCall, TrustedCallSigned, TrustedOperation,
-};
+use ita_stf::{ParentchainHeader, TrustedCall, TrustedCallSigned, TrustedOperation};
 use itp_sgx_externalities::SgxExternalitiesTrait;
+use itp_stf_primitives::types::{AccountId, ShardIdentifier};
 use itp_types::H256;
 use sp_runtime::traits::Header as HeaderTrait;
 use std::time::Duration;

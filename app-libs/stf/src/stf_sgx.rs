@@ -18,9 +18,7 @@
 #[cfg(feature = "test")]
 use crate::test_genesis::test_genesis_setup;
 
-use crate::{
-	helpers::enclave_signer_account, types::ShardIdentifier, Stf, StfError, ENCLAVE_ACCOUNT_KEY,
-};
+use crate::{helpers::enclave_signer_account, Stf, StfError, ENCLAVE_ACCOUNT_KEY};
 use codec::Encode;
 use frame_support::traits::{OriginTrait, UnfilteredDispatchable};
 use itp_sgx_externalities::SgxExternalitiesTrait;
@@ -30,6 +28,7 @@ use itp_stf_interface::{
 	system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface},
 	ExecuteCall, ExecuteGetter, InitState, StateCallInterface, StateGetterInterface, UpdateState,
 };
+use itp_stf_primitives::types::ShardIdentifier;
 use itp_storage::storage_value_key;
 use itp_types::OpaqueCall;
 use itp_utils::stringify::account_id_to_string;

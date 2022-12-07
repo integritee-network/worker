@@ -35,7 +35,7 @@ use codec::{Decode, Encode};
 use derive_more::Display;
 use std::string::String;
 
-use crate::types::AccountId;
+use itp_stf_primitives::types::AccountId;
 
 pub use getter::*;
 pub use stf_sgx_primitives::{types::*, Stf};
@@ -55,8 +55,6 @@ pub mod test_genesis;
 pub mod trusted_call;
 
 pub(crate) const ENCLAVE_ACCOUNT_KEY: &str = "Enclave_Account_Key";
-
-pub mod types;
 
 pub type StfResult<T> = Result<T, StfError>;
 

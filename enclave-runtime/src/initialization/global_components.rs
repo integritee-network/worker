@@ -29,7 +29,7 @@ use crate::{
 	tls_ra::seal_handler::SealHandler,
 };
 use ita_sgx_runtime::Runtime;
-use ita_stf::{types::Hash, Getter, State as StfState, Stf, TrustedCallSigned};
+use ita_stf::{Getter, State as StfState, Stf, TrustedCallSigned};
 use itc_direct_rpc_server::{
 	rpc_connection_registry::ConnectionRegistry, rpc_responder::RpcResponder,
 	rpc_watch_extractor::RpcWatchExtractor, rpc_ws_handler::RpcWsHandler,
@@ -60,6 +60,7 @@ use itp_stf_executor::{
 	enclave_signer::StfEnclaveSigner, executor::StfExecutor, getter_executor::GetterExecutor,
 	state_getter::StfStateGetter,
 };
+use itp_stf_primitives::types::Hash;
 use itp_stf_state_handler::{
 	file_io::sgx::SgxStateFileIo, state_initializer::StateInitializer,
 	state_snapshot_repository::StateSnapshotRepository, StateHandler,

@@ -16,10 +16,7 @@
 */
 
 use ita_sgx_runtime::Runtime;
-use ita_stf::{
-	types::{AccountId, ShardIdentifier},
-	Stf, TrustedCall,
-};
+use ita_stf::{Stf, TrustedCall};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{
 	ed25519_derivation::DeriveEd25519, key_repository::AccessKey, mocks::KeyRepositoryMock,
@@ -30,6 +27,7 @@ use itp_stf_interface::{
 	mocks::{CallExecutorMock, GetterExecutorMock},
 	InitState,
 };
+use itp_stf_primitives::types::{AccountId, ShardIdentifier};
 use itp_stf_state_observer::mock::ObserveStateMock;
 use itp_test::mock::onchain_mock::OnchainMock;
 use sgx_crypto_helper::{rsa3072::Rsa3072KeyPair, RsaKeyPair};

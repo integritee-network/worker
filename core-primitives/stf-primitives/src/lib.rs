@@ -14,18 +14,10 @@
 	limitations under the License.
 
 */
+#![cfg_attr(all(not(target_env = "sgx"), not(feature = "std")), no_std)]
+#![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
-pub fn add(left: usize, right: usize) -> usize {
-	left + right
-}
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+extern crate sgx_tstd as std;
 
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	#[test]
-	fn it_works() {
-		let result = add(2, 2);
-		assert_eq!(result, 4);
-	}
-}
+pub mod types;

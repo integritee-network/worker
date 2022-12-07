@@ -33,7 +33,7 @@ pub enum KeyPair {
 }
 
 impl KeyPair {
-	pub(crate) fn sign(&self, payload: &[u8]) -> Signature {
+	pub fn sign(&self, payload: &[u8]) -> Signature {
 		match self {
 			Self::Sr25519(pair) => pair.sign(payload).into(),
 			Self::Ed25519(pair) => pair.sign(payload).into(),

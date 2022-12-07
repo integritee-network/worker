@@ -2399,6 +2399,7 @@ dependencies = [
  "itp-node-api",
  "itp-rpc",
  "itp-sgx-crypto",
+ "itp-stf-primitives",
  "itp-time-utils",
  "itp-types",
  "itp-utils",
@@ -2644,6 +2645,7 @@ dependencies = [
  "itp-hashing",
  "itp-sgx-externalities",
  "itp-stf-interface",
+ "itp-stf-primitives",
  "itp-storage",
  "itp-types",
  "itp-utils",
@@ -2770,6 +2772,7 @@ dependencies = [
  "itp-ocall-api",
  "itp-sgx-crypto",
  "itp-stf-executor",
+ "itp-stf-primitives",
  "itp-test",
  "itp-top-pool-author",
  "itp-types",
@@ -3251,6 +3254,7 @@ dependencies = [
  "itp-sgx-crypto",
  "itp-sgx-externalities",
  "itp-stf-interface",
+ "itp-stf-primitives",
  "itp-stf-state-handler",
  "itp-stf-state-observer",
  "itp-storage",
@@ -3278,7 +3282,13 @@ dependencies = [
 
 [[package]]
 name = "itp-stf-primitives"
-version = "0.1.0"
+version = "0.9.0"
+dependencies = [
+ "parity-scale-codec",
+ "sgx_tstd",
+ "sp-core",
+ "sp-runtime",
+]
 
 [[package]]
 name = "itp-stf-state-handler"
@@ -3387,6 +3397,7 @@ dependencies = [
  "derive_more",
  "ita-stf",
  "itc-direct-rpc-server",
+ "itp-stf-primitives",
  "itp-types",
  "its-primitives",
  "jsonrpc-core 18.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3416,6 +3427,7 @@ dependencies = [
  "itp-enclave-metrics",
  "itp-ocall-api",
  "itp-sgx-crypto",
+ "itp-stf-primitives",
  "itp-stf-state-handler",
  "itp-test",
  "itp-top-pool",
