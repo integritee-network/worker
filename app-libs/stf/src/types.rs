@@ -14,34 +14,16 @@
 	limitations under the License.
 
 */
-use sp_core::ed25519;
-
-use sp_core::Pair;
-
-use sp_core::sr25519;
-
+use codec::Compact;
+use sp_core::{crypto::AccountId32, ed25519, sr25519, Pair, H256};
+use sp_runtime::{traits::Verify, MultiSignature};
 use std::boxed::Box;
 
-use codec::Compact;
-
-use sp_core::H256;
-
-use sp_core::crypto::AccountId32;
-
-use sp_runtime::traits::Verify;
-
-use sp_runtime::MultiSignature;
-
 pub type Signature = MultiSignature;
-
 pub type AuthorityId = <Signature as Verify>::Signer;
-
 pub type AccountId = AccountId32;
-
 pub type Hash = H256;
-
 pub type BalanceTransferFn = ([u8; 2], AccountId, Compact<u128>);
-
 pub type ShardIdentifier = H256;
 
 #[derive(Clone)]
