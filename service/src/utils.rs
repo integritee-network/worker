@@ -44,7 +44,7 @@ pub fn extract_shard<E: EnclaveBase>(
 pub fn check_files() {
 	use itp_settings::files::{ENCLAVE_FILE, RA_API_KEY_FILE, RA_SPID_FILE};
 	debug!("*** Check files");
-	let files = vec![ENCLAVE_FILE, RA_SPID_FILE, RA_API_KEY_FILE];
+	let files = [ENCLAVE_FILE, RA_SPID_FILE, RA_API_KEY_FILE];
 	for f in files.iter() {
 		assert!(Path::new(f).exists(), "File doesn't exist: {}", f);
 	}
