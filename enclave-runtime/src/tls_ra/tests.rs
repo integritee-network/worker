@@ -25,10 +25,11 @@ use crate::{
 	initialization::global_components::EnclaveStf,
 	tls_ra::seal_handler::{SealHandler, SealStateAndKeys, UnsealStateAndKeys},
 };
-use ita_stf::{AccountId, State};
+use ita_stf::State;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
 use itp_sgx_crypto::{mocks::KeyRepositoryMock, Aes};
 use itp_stf_interface::InitState;
+use itp_stf_primitives::types::AccountId;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::handle_state_mock::HandleStateMock;
 use itp_types::ShardIdentifier;

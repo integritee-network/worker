@@ -696,6 +696,7 @@ dependencies = [
  "itp-sgx-io",
  "itp-stf-executor",
  "itp-stf-interface",
+ "itp-stf-primitives",
  "itp-stf-state-handler",
  "itp-stf-state-observer",
  "itp-storage",
@@ -1495,6 +1496,7 @@ dependencies = [
  "itp-hashing",
  "itp-sgx-externalities",
  "itp-stf-interface",
+ "itp-stf-primitives",
  "itp-storage",
  "itp-types",
  "itp-utils",
@@ -1607,6 +1609,7 @@ dependencies = [
  "itp-ocall-api",
  "itp-sgx-crypto",
  "itp-stf-executor",
+ "itp-stf-primitives",
  "itp-top-pool-author",
  "itp-types",
  "log",
@@ -1951,6 +1954,7 @@ dependencies = [
  "itp-sgx-crypto",
  "itp-sgx-externalities",
  "itp-stf-interface",
+ "itp-stf-primitives",
  "itp-stf-state-handler",
  "itp-stf-state-observer",
  "itp-storage",
@@ -1973,6 +1977,15 @@ name = "itp-stf-interface"
 version = "0.8.0"
 dependencies = [
  "itp-types",
+]
+
+[[package]]
+name = "itp-stf-primitives"
+version = "0.9.0"
+dependencies = [
+ "parity-scale-codec",
+ "sp-core",
+ "sp-runtime",
 ]
 
 [[package]]
@@ -2077,6 +2090,7 @@ dependencies = [
  "derive_more",
  "ita-stf",
  "itc-direct-rpc-server",
+ "itp-stf-primitives",
  "itp-types",
  "its-primitives",
  "jsonrpc-core",
@@ -2101,6 +2115,7 @@ dependencies = [
  "itp-enclave-metrics",
  "itp-ocall-api",
  "itp-sgx-crypto",
+ "itp-stf-primitives",
  "itp-stf-state-handler",
  "itp-test",
  "itp-top-pool",

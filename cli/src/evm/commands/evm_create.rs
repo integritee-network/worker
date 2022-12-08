@@ -24,8 +24,9 @@ use crate::{
 };
 use codec::Decode;
 use ita_stf::{
-	evm_helpers::evm_create_address, Index, KeyPair, TrustedCall, TrustedGetter, TrustedOperation,
+	evm_helpers::evm_create_address, Index, TrustedCall, TrustedGetter, TrustedOperation,
 };
+use itp_stf_primitives::types::KeyPair;
 use itp_types::AccountId;
 use log::*;
 use pallet_evm::{AddressMapping, HashedAddressMapping};

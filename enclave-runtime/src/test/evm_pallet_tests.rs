@@ -23,10 +23,11 @@ use ita_stf::{
 		get_evm_account_storages,
 	},
 	test_genesis::{endow, endowed_account as funded_pair},
-	KeyPair, State, TrustedCall,
+	State, TrustedCall,
 };
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_interface::StateCallInterface;
+use itp_stf_primitives::types::KeyPair;
 use itp_types::{AccountId, OpaqueCall, ShardIdentifier};
 use primitive_types::H256;
 use sp_core::{crypto::Pair, H160, U256};

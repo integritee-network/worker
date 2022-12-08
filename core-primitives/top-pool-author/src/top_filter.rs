@@ -98,7 +98,8 @@ mod tests {
 
 	use super::*;
 	use codec::Encode;
-	use ita_stf::{Getter, KeyPair, TrustedCall, TrustedCallSigned, TrustedGetter};
+	use ita_stf::{Getter, TrustedCall, TrustedCallSigned, TrustedGetter};
+	use itp_stf_primitives::types::KeyPair;
 	use itp_types::ShardIdentifier;
 	use sp_core::{ed25519, Pair};
 	use sp_runtime::traits::{BlakeTwo256, Hash};

@@ -15,12 +15,13 @@
 
 */
 
-use crate::{AccountId, Getter, Signature, State, Stf, TrustedCall, TrustedCallSigned};
+use crate::{Getter, State, Stf, TrustedCall, TrustedCallSigned};
 use ita_sgx_runtime::Runtime;
 use itp_stf_interface::{
 	sudo_pallet::SudoPalletInterface, system_pallet::SystemPalletAccountInterface, InitState,
 	StateCallInterface,
 };
+use itp_stf_primitives::types::{AccountId, Signature};
 use sp_core::{
 	ed25519::{Pair as Ed25519Pair, Signature as Ed25519Signature},
 	Pair,

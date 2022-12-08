@@ -18,6 +18,7 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
+use ita_stf::StfError;
 use sgx_types::sgx_status_t;
 use std::{boxed::Box, format};
 
@@ -41,7 +42,7 @@ pub enum Error {
 	#[error("Node metadata provider error: {0:?}")]
 	NodeMetadataProvider(#[from] itp_node_api::metadata::provider::Error),
 	#[error("STF error: {0}")]
-	Stf(ita_stf::StfError),
+	Stf(StfError),
 	#[error("Ocall Api error: {0}")]
 	OcallApi(itp_ocall_api::Error),
 	#[error("Crypto error: {0}")]
@@ -62,8 +63,8 @@ impl From<codec::Error> for Error {
 	}
 }
 
-impl From<ita_stf::StfError> for Error {
-	fn from(error: ita_stf::StfError) -> Self {
+impl From<StfError> for Error {
+	fn from(error: StfError) -> Self {
 		Self::Stf(error)
 	}
 }

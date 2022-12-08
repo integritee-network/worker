@@ -25,7 +25,7 @@ use crate::{
 };
 use alloc::{boxed::Box, collections::BTreeSet, sync::Arc, vec, vec::Vec};
 use core::{cmp, cmp::Ord, default::Default, hash};
-use ita_stf::ShardIdentifier;
+use itp_stf_primitives::types::ShardIdentifier;
 use log::trace;
 use sp_runtime::{traits::Member, transaction_validity::TransactionTag as Tag};
 use std::collections::{HashMap, HashSet};
