@@ -14,10 +14,7 @@
 	limitations under the License.
 
 */
-#![cfg_attr(all(not(target_env = "sgx"), not(feature = "std")), no_std)]
-#![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-extern crate sgx_tstd as std;
+#![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod types;

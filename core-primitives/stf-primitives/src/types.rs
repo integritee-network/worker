@@ -14,10 +14,11 @@
 	limitations under the License.
 
 */
+extern crate alloc;
+use alloc::boxed::Box;
 use codec::Compact;
 use sp_core::{crypto::AccountId32, ed25519, sr25519, Pair, H256};
 use sp_runtime::{traits::Verify, MultiSignature};
-use std::boxed::Box;
 
 pub type Signature = MultiSignature;
 pub type AuthorityId = <Signature as Verify>::Signer;

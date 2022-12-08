@@ -59,7 +59,6 @@ std = [
     "itp-ocall-api/std",
     "itp-sgx-crypto/std",
     "itp-stf-executor/std",
-    "itp-stf-primitives/std",
     "itp-top-pool-author/std",
     "itp-types/std",
     "log/std",
@@ -77,7 +76,6 @@ sgx = [
     "itp-node-api/sgx",
     "itp-sgx-crypto/sgx",
     "itp-stf-executor/sgx",
-    "itp-stf-primitives/sgx",
     "itp-top-pool-author/sgx",
     "thiserror_sgx",
 ]

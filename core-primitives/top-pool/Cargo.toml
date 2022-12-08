@@ -46,7 +46,6 @@ sgx = [
     "sgx_tstd",
     "sgx_types",
     "ita-stf/sgx",
-    "itp-stf-primitives/sgx",
     "itc-direct-rpc-server/sgx",
     "jsonrpc-core_sgx",
     "linked-hash-map_sgx",
@@ -55,7 +54,6 @@ sgx = [
 std = [
     "ita-stf/std",
     "itc-direct-rpc-server/std",
-    "itp-stf-primitives/std",
     "itp-types/std",
     "its-primitives/std",
     "jsonrpc-core",

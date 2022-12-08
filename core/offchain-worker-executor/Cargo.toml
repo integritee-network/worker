@@ -35,7 +35,7 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 log = { version = "0.4", default-features = false }
 
 [dev-dependencies]
-itp-stf-primitives = { path = "../../core-primitives/stf-primitives" }
+itp-stf-primitives = { path = "../../core-primitives/stf-primitives", default-features = false }
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
 ita-stf = { path = "../../app-libs/stf" }
 itc-parentchain-light-client = { path = "../../core/parentchain/light-client", features = ["mocks"] }

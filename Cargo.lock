@@ -3286,7 +3286,6 @@ name = "itp-stf-primitives"
 version = "0.9.0"
 dependencies = [
  "parity-scale-codec",
- "sgx_tstd",
  "sp-core",
  "sp-runtime",
 ]
