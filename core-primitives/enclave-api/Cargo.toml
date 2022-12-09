@@ -14,10 +14,10 @@ sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teacla
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_urts = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
-frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
-sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
-sp-finality-grandpa = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
+frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.32" }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.32" }
+sp-finality-grandpa = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.32" }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.32" }
 
 itc-parentchain = { path = "../../core/parentchain/parentchain-crate" }
 itp-enclave-api-ffi = { path = "ffi" }
