@@ -24,7 +24,7 @@ use codec::{Decode, Encode};
 use ita_stf::{
 	hash::{Hash, TrustedOperationOrHash},
 	stf_sgx::{shards_key_hash, storage_hashes_to_update_per_shard},
-	ParentchainHeader, ShardIdentifier, TrustedCallSigned, TrustedOperation,
+	ParentchainHeader, TrustedCallSigned, TrustedOperation,
 };
 use itp_node_api::metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata};
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
@@ -32,6 +32,7 @@ use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_stf_interface::{
 	parentchain_pallet::ParentchainPalletInterface, ExecuteCall, StateCallInterface, UpdateState,
 };
+use itp_stf_primitives::types::ShardIdentifier;
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_time_utils::duration_now;
 use itp_types::{storage::StorageEntryVerified, OpaqueCall, H256};

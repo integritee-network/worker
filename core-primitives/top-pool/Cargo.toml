@@ -12,6 +12,7 @@ sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-s
 # local dependencies
 ita-stf = { path = "../../app-libs/stf", default-features = false }
 itc-direct-rpc-server = { path = "../../core/direct-rpc-server", default-features = false }
+itp-stf-primitives = { path = "../stf-primitives", default-features = false }
 itp-types = { path = "../types", default-features = false }
 its-primitives = { path = "../../sidechain/primitives", default-features = false }
 

@@ -15,10 +15,10 @@
 
 */
 
-use crate::{AccountId, KeyPair, Signature};
 use codec::{Decode, Encode};
 use ita_sgx_runtime::System;
 use itp_stf_interface::ExecuteGetter;
+use itp_stf_primitives::types::{AccountId, KeyPair, Signature};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
 use sp_runtime::traits::Verify;

@@ -16,10 +16,8 @@
 */
 
 use codec::Encode;
-use ita_stf::{
-	Getter, KeyPair, ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedGetter,
-	TrustedOperation,
-};
+use ita_stf::{Getter, TrustedCall, TrustedCallSigned, TrustedGetter, TrustedOperation};
+use itp_stf_primitives::types::{KeyPair, ShardIdentifier};
 use sp_core::{ed25519, Pair};
 use sp_runtime::traits::{BlakeTwo256, Hash};
 use std::{boxed::Box, vec};

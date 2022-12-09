@@ -22,9 +22,8 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::error;
 use codec::Encode;
-use ita_stf::{
-	Getter, ShardIdentifier, TrustedCallSigned, TrustedOperation as StfTrustedOperation,
-};
+use ita_stf::{Getter, TrustedCallSigned, TrustedOperation as StfTrustedOperation};
+use itp_stf_primitives::types::ShardIdentifier;
 use itp_top_pool::{
 	pool::{ChainApi, ExtrinsicHash, NumberFor},
 	primitives::TrustedOperationSource,
@@ -144,7 +143,8 @@ where
 mod tests {
 	use super::*;
 	use futures::executor;
-	use ita_stf::{KeyPair, PublicGetter, TrustedCall, TrustedOperation};
+	use ita_stf::{PublicGetter, TrustedCall, TrustedOperation};
+	use itp_stf_primitives::types::{KeyPair, ShardIdentifier};
 	use itp_types::Block as ParentchainBlock;
 	use sp_core::{ed25519, Pair};
 	use sp_keyring::AccountKeyring;

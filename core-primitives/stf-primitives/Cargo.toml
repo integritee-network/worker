@@ -1,0 +1,24 @@
+[package]
+name = "itp-stf-primitives"
+version = "0.9.0"
+authors = ["Integritee AG <hello@integritee.network>"]
+edition = "2021"
+
+[dependencies]
+# crates.io
+codec = { version = "3.0.0", default-features = false, features = ["derive"], package = "parity-scale-codec" }
+
+# Substrate dependencies
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
+
+
+[features]
+default = ["std"]
+std = [
+    # crates.io
+    "codec/std",
+    # substrate
+    "sp-core/std",
+    "sp-runtime/std",
+]
