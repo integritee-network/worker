@@ -23,7 +23,7 @@ trap "echo The demo is terminated (SIGTERM); exit 1" SIGTERM
 # then run this script
 #
 # usage:
-#   demo_teeracle_whitelist.sh -p <NODEPORT> -P <WORKERPORT> -d <DURATION> -i <WORKER_UPDATE_INTERVAL> -u <NODE_URL> -V <WORKER_URL> -C <CLIENT_BINARY_PATH>
+#   demo_teeracle_generic.sh -p <NODEPORT> -P <WORKERPORT> -d <DURATION> -i <WORKER_UPDATE_INTERVAL> -u <NODE_URL> -V <WORKER_URL> -C <CLIENT_BINARY_PATH>
 
 while getopts ":p:P:d:i:u:V:C:" opt; do
     case $opt in
@@ -69,12 +69,12 @@ ADD_TO_WHITELIST_CMD="oracle add-to-whitelist"
 echo "Using client binary ${CLIENT_BIN}"
 echo "Using node uri ${NODEURL}:${NPORT}"
 echo "Using trusted-worker uri ${WORKER1URL}:${WORKER1PORT}"
-echo "Using worker market data update interval ${INTERVAL}"
+echo "Using worker data update interval ${INTERVAL}"
 echo "Count the update events for ${DURATION}"
 echo ""
 
 OPEN_METEO="https://api.open-meteo.com/"
-let "MIN_EXPECTED_NUM_OF_EVENTS=$DURATION/$INTERVAL-2"
+let "MIN_EXPECTED_NUM_OF_EVENTS=$DURATION/$INTERVAL-3"
 echo "Minimum expected number of events with a single oracle source: ${MIN_EXPECTED_NUM_OF_EVENTS}"
 
 # let "MIN_EXPECTED_NUM_OF_EVENTS_2 = 2*$MIN_EXPECTED_NUM_OF_EVENTS"
