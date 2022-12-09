@@ -20,56 +20,40 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::{
 	metrics_exporter::ExportMetrics,
-	types::{ExchangeRate, TradingPair},
-	Error, GetExchangeRate,
+	traits::OracleSource,
+	types::{ExchangeRate, TradingInfo, TradingPair},
+	Error,
 };
-use core::time::Duration;
 use itc_rest_client::{
 	http_client::{HttpClient, SendWithCertificateVerification},
 	rest_client::RestClient,
 };
 use log::*;
-use std::{string::String, sync::Arc, time::Instant};
+use std::{sync::Arc, time::Instant};
 use url::Url;
 
-/// Oracle source trait used by the `ExchangeRateOracle` (strategy pattern).
-pub trait OracleSource: Default {
-	fn metrics_id(&self) -> String;
-
-	fn request_timeout(&self) -> Option<Duration>;
-
-	fn base_url(&self) -> Result<Url, Error>;
-
-	/// The server's root certificate. A valid certificate is required to open a tls connection
-	fn root_certificate_content(&self) -> String;
-
-	fn execute_exchange_rate_request(
-		&self,
-		rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
-		trading_pair: TradingPair,
-	) -> Result<ExchangeRate, Error>;
-}
-
+#[allow(unused)]
 pub struct ExchangeRateOracle<OracleSourceType, MetricsExporter> {
 	oracle_source: OracleSourceType,
 	metrics_exporter: Arc<MetricsExporter>,
 }
 
-impl<OracleSourceType, MetricsExporter> ExchangeRateOracle<OracleSourceType, MetricsExporter>
-where
-	OracleSourceType: OracleSource,
-	MetricsExporter: ExportMetrics,
-{
+impl<OracleSourceType, MetricsExporter> ExchangeRateOracle<OracleSourceType, MetricsExporter> {
 	pub fn new(oracle_source: OracleSourceType, metrics_exporter: Arc<MetricsExporter>) -> Self {
 		ExchangeRateOracle { oracle_source, metrics_exporter }
 	}
 }
 
+pub trait GetExchangeRate {
+	/// Get the cryptocurrency/fiat_currency exchange rate
+	fn get_exchange_rate(&self, trading_pair: TradingPair) -> Result<(ExchangeRate, Url), Error>;
+}
+
 impl<OracleSourceType, MetricsExporter> GetExchangeRate
 	for ExchangeRateOracle<OracleSourceType, MetricsExporter>
 where
-	OracleSourceType: OracleSource,
-	MetricsExporter: ExportMetrics,
+	OracleSourceType: OracleSource<TradingInfo>,
+	MetricsExporter: ExportMetrics<TradingInfo>,
 {
 	fn get_exchange_rate(&self, trading_pair: TradingPair) -> Result<(ExchangeRate, Url), Error> {
 		let source_id = self.oracle_source.metrics_id();

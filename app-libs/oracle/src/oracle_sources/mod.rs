@@ -14,10 +14,6 @@
 	limitations under the License.
 
 */
-
-mod add_to_whitelist;
-mod listen_to_exchange;
-
-pub use self::{
-	add_to_whitelist::AddToWhitelistCmd, listen_to_exchange::ListenToExchangeRateEventsCmd,
-};
+pub mod coin_gecko;
+pub mod coin_market_cap;
+pub mod weather_oracle_source;

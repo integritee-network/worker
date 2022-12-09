@@ -35,3 +35,17 @@ pub unsafe extern "C" fn update_market_data_xt(
 ) -> sgx_types::sgx_status_t {
 	unreachable!("Cannot update market data, teeracle feature is not enabled.")
 }
+
+/// Empty Teeracle Weather data implementation.
+#[cfg(not(feature = "teeracle"))]
+#[no_mangle]
+pub unsafe extern "C" fn update_weather_data_xt(
+	_weather_info_longitude: *const u8,
+	_weather_info_longitude_size: u32,
+	_weather_info_latitude: *const u8,
+	_weather_info_latitude_size: u32,
+	_unchecked_extrinsic: *mut u8,
+	_unchecked_extrinsic_size: u32,
+) -> sgx_types::sgx_status_t {
+	unreachable!("Cannot update weather data, teeracle feature is not enabled.")
+}

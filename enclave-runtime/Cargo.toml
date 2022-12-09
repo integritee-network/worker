@@ -24,7 +24,7 @@ offchain-worker = [
     "itp-top-pool-author/offchain-worker",
 ]
 teeracle = [
-    "ita-exchange-oracle",
+    "ita-oracle",
     "itp-settings/teeracle",
     "itp-top-pool-author/teeracle",
 ]
@@ -87,7 +87,7 @@ cid = { default-features = false, git = "https://github.com/whalelephant/rust-ci
 multibase = { default-features = false, git = "https://github.com/whalelephant/rust-multibase", branch = "nstd" }
 
 # local deps
-ita-exchange-oracle = { path = "../app-libs/exchange-oracle", default-features = false, optional = true, features = ["sgx"] }
+ita-oracle = { path = "../app-libs/oracle", default-features = false, optional = true, features = ["sgx"] }
 ita-sgx-runtime = { path = "../app-libs/sgx-runtime", default-features = false }
 ita-stf = { path = "../app-libs/stf", default-features = false, features = ["sgx"] }
 itc-direct-rpc-server = { path = "../core/direct-rpc-server", default-features = false, features = ["sgx"] }

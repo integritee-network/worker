@@ -17,8 +17,9 @@
 */
 
 use codec::alloc::string::ToString;
-use ita_exchange_oracle::{
-	create_coin_gecko_oracle, create_coin_market_cap_oracle, types::TradingPair, GetExchangeRate,
+use ita_oracle::{
+	create_coin_gecko_oracle, create_coin_market_cap_oracle,
+	oracles::exchange_rate_oracle::GetExchangeRate, types::TradingPair,
 };
 use itp_test::mock::metrics_ocall_mock::MetricsOCallMock;
 use std::sync::Arc;

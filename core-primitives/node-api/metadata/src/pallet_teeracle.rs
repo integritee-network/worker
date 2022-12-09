@@ -24,6 +24,7 @@ pub trait TeeracleCallIndexes {
 	fn add_to_whitelist_call_indexes(&self) -> Result<[u8; 2]>;
 	fn remove_from_whitelist_call_indexes(&self) -> Result<[u8; 2]>;
 	fn update_exchange_rate_call_indexes(&self) -> Result<[u8; 2]>;
+	fn update_oracle_call_indexes(&self) -> Result<[u8; 2]>;
 }
 
 impl TeeracleCallIndexes for NodeMetadata {
@@ -37,5 +38,9 @@ impl TeeracleCallIndexes for NodeMetadata {
 
 	fn update_exchange_rate_call_indexes(&self) -> Result<[u8; 2]> {
 		self.call_indexes(TEERACLE, "update_exchange_rate")
+	}
+
+	fn update_oracle_call_indexes(&self) -> Result<[u8; 2]> {
+		self.call_indexes(TEERACLE, "update_oracle")
 	}
 }
