@@ -56,7 +56,7 @@ use itc_tls_websocket_server::{
 	certificate_generation::ed25519_self_signed_certificate, create_ws_server, ConnectionToken,
 	WebSocketServer,
 };
-use itp_attestation_handler::IasAttestationHandler;
+use itp_attestation_handler::IntelAttestationHandler;
 use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_primitives_cache::GLOBAL_PRIMITIVES_CACHE;
 use itp_settings::files::STATE_SNAPSHOTS_CACHE_SIZE;
@@ -165,7 +165,7 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	let sidechain_block_import_queue = Arc::new(EnclaveSidechainBlockImportQueue::default());
 	GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.initialize(sidechain_block_import_queue);
 
-	let attestation_handler = Arc::new(IasAttestationHandler::new(ocall_api));
+	let attestation_handler = Arc::new(IntelAttestationHandler::new(ocall_api));
 	GLOBAL_ATTESTATION_HANDLER_COMPONENT.initialize(attestation_handler);
 
 	Ok(())

@@ -16,7 +16,7 @@
 
 */
 
-use itp_time_utils::now_as_u64;
+use itp_time_utils::now_as_millis;
 use itp_types::{EnclaveGen, PalletString};
 
 /// Builder for a generic enclave (`EnclaveGen`) struct.
@@ -35,7 +35,7 @@ where
 		EnclaveGenBuilder {
 			pubkey: AccountId::default(),
 			mr_enclave: [0u8; 32],
-			timestamp: now_as_u64(),
+			timestamp: now_as_millis(),
 			url: PalletString::default(),
 		}
 	}

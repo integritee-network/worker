@@ -21,8 +21,9 @@ use log::*;
 use sgx_types::{sgx_quote_nonce_t, sgx_quote_sign_type_t, sgx_report_t, sgx_spid_t, sgx_status_t};
 use std::{slice, sync::Arc};
 
+/// p_quote must be a pre-allocated memory region of size `maxlen`
 #[no_mangle]
-pub extern "C" fn ocall_get_quote(
+pub unsafe extern "C" fn ocall_get_quote(
 	p_sigrl: *const u8,
 	sigrl_len: u32,
 	p_report: *const sgx_report_t,
@@ -94,6 +95,46 @@ fn get_quote(
 		*p_qe_report = get_quote_result.0;
 		*p_quote_len = quote.len() as u32;
 	};
+
+	sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ocall_get_dcap_quote(
+	p_report: *const sgx_report_t,
+	p_quote: *mut u8,
+	quote_size: u32,
+) -> sgx_status_t {
+	get_dcap_quote(
+		p_report,
+		p_quote,
+		quote_size,
+		Bridge::get_ra_api(), // inject the RA API (global state)
+	)
+}
+
+fn get_dcap_quote(
+	p_report: *const sgx_report_t,
+	p_quote: *mut u8,
+	quote_size: u32,
+	ra_api: Arc<dyn RemoteAttestationBridge>,
+) -> sgx_status_t {
+	let report = unsafe { *p_report };
+
+	let quote = match ra_api.get_dcap_quote(report, quote_size) {
+		Ok(r) => r,
+		Err(e) => {
+			error!("Failed to get dcap quote: {:?}", e);
+			return e.into()
+		},
+	};
+
+	if quote.len() as u32 > quote_size {
+		return sgx_status_t::SGX_ERROR_FAAS_BUFFER_TOO_SHORT
+	}
+
+	let quote_slice = unsafe { slice::from_raw_parts_mut(p_quote, quote.len()) };
+	quote_slice.clone_from_slice(quote.as_slice());
 
 	sgx_status_t::SGX_SUCCESS
 }

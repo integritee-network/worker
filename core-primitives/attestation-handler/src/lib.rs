@@ -44,6 +44,6 @@ pub mod cert;
 pub mod error;
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
-pub use attestation_handler::{AttestationHandler, IasAttestationHandler, DEV_HOSTNAME};
+pub use attestation_handler::{AttestationHandler, IntelAttestationHandler, DEV_HOSTNAME};
 
 pub use error::{Error, Result};

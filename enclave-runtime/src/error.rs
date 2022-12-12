@@ -15,13 +15,13 @@
 
 */
 
-use derive_more::{Display, From};
+use derive_more::From;
 use sgx_types::sgx_status_t;
 use std::{boxed::Box, result::Result as StdResult, string::String};
 
 pub type Result<T> = StdResult<T, Error>;
 
-#[derive(Debug, Display, From)]
+#[derive(Debug, From)]
 pub enum Error {
 	TopPoolAuthor(itp_top_pool_author::error::Error),
 	Codec(codec::Error),
@@ -44,6 +44,7 @@ pub enum Error {
 	PrimitivesAccess(itp_primitives_cache::error::Error),
 	MutexAccess,
 	Attestation(itp_attestation_handler::error::Error),
+	Metadata(itp_node_api_metadata::error::Error),
 	Other(Box<dyn std::error::Error>),
 }
 

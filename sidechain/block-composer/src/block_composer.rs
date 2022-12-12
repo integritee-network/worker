@@ -21,7 +21,7 @@ use ita_stf::StatePayload;
 use itp_settings::worker::BLOCK_NUMBER_FINALIZATION_DIFF;
 use itp_sgx_crypto::{key_repository::AccessKey, StateCrypto};
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
-use itp_time_utils::now_as_u64;
+use itp_time_utils::now_as_millis;
 use itp_types::{ShardIdentifier, H256};
 use its_primitives::traits::{
 	Block as SidechainBlockTrait, BlockData, Header as HeaderTrait, SignBlock,
@@ -156,7 +156,7 @@ where
 			latest_parentchain_header.hash(),
 			top_call_hashes,
 			payload,
-			now_as_u64(),
+			now_as_millis(),
 		);
 
 		let mut finalization_candidate = next_finalization_block_number;

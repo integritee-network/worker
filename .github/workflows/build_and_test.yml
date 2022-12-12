@@ -94,7 +94,7 @@ jobs:
 
   clippy:
     runs-on: ubuntu-latest
-    container: "integritee/integritee-dev:0.1.9"
+    container: "integritee/integritee-dev:0.1.10"
     steps:
       - uses: actions/checkout@v3
       - name: init rust

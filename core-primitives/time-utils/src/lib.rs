@@ -26,8 +26,13 @@ extern crate sgx_tstd as std;
 
 use std::time::{Duration, SystemTime};
 
+/// Returns the current timestamp based on the unix epoch in seconds.
+pub fn now_as_secs() -> u64 {
+	duration_now().as_secs()
+}
+
 /// Returns current duration since unix epoch in millis as u64.
-pub fn now_as_u64() -> u64 {
+pub fn now_as_millis() -> u64 {
 	duration_now().as_millis() as u64
 }
 
