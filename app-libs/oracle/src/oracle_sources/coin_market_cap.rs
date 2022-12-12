@@ -19,8 +19,8 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::{
 	error::Error,
-	exchange_rate_oracle::OracleSource,
-	types::{ExchangeRate, TradingPair},
+	traits::OracleSource,
+	types::{ExchangeRate, TradingInfo, TradingPair},
 };
 use itc_rest_client::{
 	http_client::{HttpClient, SendWithCertificateVerification},
@@ -43,7 +43,7 @@ const FIAT_CURRENCY_PARAM: &str = "convert_id";
 const CRYPTO_CURRENCY_PARAM: &str = "id";
 const COINMARKETCAP_PATH: &str = "v2/cryptocurrency/quotes/latest"; // API endpoint to get the exchange rate with a basic API plan (free)
 const COINMARKETCAP_TIMEOUT: Duration = Duration::from_secs(3u64);
-const COINMARKETCAP_ROOT_CERTIFICATE: &str = include_str!("certificates/amazon_root_ca_a.pem");
+const COINMARKETCAP_ROOT_CERTIFICATE: &str = include_str!("../certificates/amazon_root_ca_a.pem");
 
 lazy_static! {
 	static ref CRYPTO_SYMBOL_ID_MAP: HashMap<&'static str, &'static str> =
@@ -75,7 +75,10 @@ impl CoinMarketCapSource {
 	}
 }
 
-impl OracleSource for CoinMarketCapSource {
+impl<OracleSourceInfo: Into<TradingInfo>> OracleSource<OracleSourceInfo> for CoinMarketCapSource {
+	// TODO Change this to return something useful?
+	type OracleRequestResult = Result<(), Error>;
+
 	fn metrics_id(&self) -> String {
 		"coin_market_cap".to_string()
 	}
@@ -90,6 +93,17 @@ impl OracleSource for CoinMarketCapSource {
 
 	fn root_certificate_content(&self) -> String {
 		COINMARKETCAP_ROOT_CERTIFICATE.to_string()
+	}
+
+	fn execute_request(
+		_rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
+		source_info: OracleSourceInfo,
+	) -> Self::OracleRequestResult {
+		let trading_info: TradingInfo = source_info.into();
+		let _fiat_currency = trading_info.trading_pair.fiat_currency;
+		let _crypto_currency = trading_info.trading_pair.crypto_currency;
+		// TODO Implement me
+		Ok(())
 	}
 
 	fn execute_exchange_rate_request(
@@ -166,7 +180,8 @@ impl RestPath<String> for CoinMarketCapMarket {
 mod tests {
 	use super::*;
 	use crate::{
-		exchange_rate_oracle::ExchangeRateOracle, mock::MetricsExporterMock, GetExchangeRate,
+		mock::MetricsExporterMock,
+		oracles::exchange_rate_oracle::{ExchangeRateOracle, GetExchangeRate},
 	};
 	use core::assert_matches::assert_matches;
 	use std::sync::Arc;

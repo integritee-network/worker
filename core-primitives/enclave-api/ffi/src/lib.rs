@@ -1,6 +1,6 @@
 ///! FFI's that call into the enclave. These functions need to be added to the
 /// enclave edl file and be implemented within the enclave.
-use sgx_types::{c_int, sgx_enclave_id_t, sgx_quote_sign_type_t, sgx_status_t};
+use sgx_types::{c_int, sgx_enclave_id_t, sgx_quote_sign_type_t, sgx_status_t, sgx_target_info_t};
 
 extern "C" {
 
@@ -90,7 +90,7 @@ extern "C" {
 		mrenclave_size: u32,
 	) -> sgx_status_t;
 
-	pub fn perform_ra(
+	pub fn generate_ias_ra_extrinsic(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
 		w_url: *const u8,
@@ -100,7 +100,29 @@ extern "C" {
 		skip_ra: c_int,
 	) -> sgx_status_t;
 
-	pub fn dump_ra_to_disk(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
+	pub fn generate_dcap_ra_extrinsic(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		w_url: *const u8,
+		w_url_size: u32,
+		unchecked_extrinsic: *mut u8,
+		unchecked_extrinsic_size: u32,
+		skip_ra: c_int,
+		quoting_enclave_target_info: &sgx_target_info_t,
+		quote_size: u32,
+	) -> sgx_status_t;
+
+	pub fn dump_ias_ra_cert_to_disk(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+	) -> sgx_status_t;
+
+	pub fn dump_dcap_ra_cert_to_disk(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		quoting_enclave_target_info: &sgx_target_info_t,
+		quote_size: u32,
+	) -> sgx_status_t;
 
 	pub fn test_main_entrance(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
 
@@ -120,6 +142,17 @@ extern "C" {
 		crypto_currency_size: u32,
 		fiat_currency: *const u8,
 		fiat_currency_size: u32,
+		unchecked_extrinsic: *mut u8,
+		unchecked_extrinsic_size: u32,
+	) -> sgx_status_t;
+
+	pub fn update_weather_data_xt(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		weather_info_longitude: *const u8,
+		weather_info_longitude_size: u32,
+		weather_info_latitude: *const u8,
+		weather_info_latitude_size: u32,
 		unchecked_extrinsic: *mut u8,
 		unchecked_extrinsic_size: u32,
 	) -> sgx_status_t;

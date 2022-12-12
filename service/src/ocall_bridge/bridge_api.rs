@@ -16,13 +16,11 @@
 
 */
 
+use itp_enclave_api::remote_attestation::QveReport;
 use lazy_static::lazy_static;
 use log::*;
 use parking_lot::RwLock;
-use sgx_types::{
-	sgx_epid_group_id_t, sgx_platform_info_t, sgx_quote_nonce_t, sgx_quote_sign_type_t,
-	sgx_report_t, sgx_spid_t, sgx_status_t, sgx_target_info_t, sgx_update_info_bit_t,
-};
+use sgx_types::*;
 use std::{sync::Arc, vec::Vec};
 
 #[cfg(test)]
@@ -174,6 +172,19 @@ pub trait RemoteAttestationBridge {
 		spid: sgx_spid_t,
 		quote_nonce: sgx_quote_nonce_t,
 	) -> OCallBridgeResult<(sgx_report_t, Vec<u8>)>;
+
+	/// retrieve the quote from dcap server
+	fn get_dcap_quote(&self, report: sgx_report_t, quote_size: u32) -> OCallBridgeResult<Vec<u8>>;
+
+	// Retrieve verification of quote
+	fn get_qve_report_on_quote(
+		&self,
+		quote: Vec<u8>,
+		current_time: i64,
+		quote_collateral: &sgx_ql_qve_collateral_t,
+		qve_report_info: sgx_ql_qe_report_info_t,
+		supplemental_data_size: u32,
+	) -> OCallBridgeResult<QveReport>;
 
 	/// --
 	fn get_update_info(

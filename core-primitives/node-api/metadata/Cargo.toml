@@ -7,6 +7,7 @@ edition = "2021"
 [dependencies]
 # crates.io
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+derive_more = { version = "0.99.5" }
 
 # substrate
 sp-core = { git = "https://github.com/paritytech/substrate.git", default-features = false, branch = "polkadot-v0.9.32" }

@@ -19,7 +19,7 @@ use codec::Encode;
 use finality_grandpa::BlockNumberOps;
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_stf_executor::traits::StateUpdateProposer;
-use itp_time_utils::now_as_u64;
+use itp_time_utils::now_as_millis;
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::H256;
 use its_block_composer::ComposeBlock;
@@ -108,7 +108,7 @@ where
 					sidechain_db.reset_events();
 					sidechain_db
 						.set_block_number(&sidechain_db.get_block_number().map_or(1, |n| n + 1));
-					sidechain_db.set_timestamp(&now_as_u64());
+					sidechain_db.set_timestamp(&now_as_millis());
 					sidechain_db
 				},
 			)

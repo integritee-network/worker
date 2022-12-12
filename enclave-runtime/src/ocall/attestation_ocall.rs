@@ -20,11 +20,7 @@ use frame_support::ensure;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use log::*;
 use sgx_tse::rsgx_create_report;
-use sgx_types::{
-	sgx_epid_group_id_t, sgx_measurement_t, sgx_platform_info_t, sgx_quote_nonce_t,
-	sgx_quote_sign_type_t, sgx_report_body_t, sgx_report_data_t, sgx_report_t, sgx_spid_t,
-	sgx_status_t, sgx_target_info_t, sgx_update_info_bit_t, SgxResult,
-};
+use sgx_types::*;
 use std::{ptr, vec::Vec};
 
 const RET_QUOTE_BUF_LEN: usize = 2048;
@@ -113,6 +109,60 @@ impl EnclaveAttestationOCallApi for OcallApi {
 		let quote_vec: Vec<u8> = Vec::from(&return_quote_buf[..quote_len as usize]);
 
 		Ok((qe_report, quote_vec))
+	}
+
+	fn get_dcap_quote(&self, report: sgx_report_t, quote_size: u32) -> SgxResult<Vec<u8>> {
+		let mut return_quote_buf = vec![0u8; quote_size as usize];
+		let p_quote = return_quote_buf.as_mut_ptr();
+		let p_report = &report as *const sgx_report_t;
+		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+
+		let result = unsafe {
+			ffi::ocall_get_dcap_quote(&mut rt as *mut sgx_status_t, p_report, p_quote, quote_size)
+		};
+		ensure!(result == sgx_status_t::SGX_SUCCESS, result);
+		ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
+		let quote_vec: Vec<u8> = Vec::from(&return_quote_buf[..quote_size as usize]);
+		Ok(quote_vec)
+	}
+
+	fn get_qve_report_on_quote(
+		&self,
+		quote: Vec<u8>,
+		current_time: i64,
+		quote_collateral: sgx_ql_qve_collateral_t,
+		qve_report_info: sgx_ql_qe_report_info_t,
+		supplemental_data_size: u32,
+	) -> SgxResult<(u32, sgx_ql_qv_result_t, sgx_ql_qe_report_info_t, Vec<u8>)> {
+		let mut supplemental_data = vec![0u8; supplemental_data_size as usize];
+		let mut qve_report_info_return_value: sgx_ql_qe_report_info_t = qve_report_info;
+		let mut quote_verification_result = sgx_ql_qv_result_t::SGX_QL_QV_RESULT_UNSPECIFIED;
+		let mut collateral_expiration_status = 1u32;
+		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+
+		let result = unsafe {
+			ffi::ocall_get_qve_report_on_quote(
+				&mut rt as *mut sgx_status_t,
+				quote.as_ptr(),
+				quote.len() as u32,
+				current_time,
+				&quote_collateral as *const sgx_ql_qve_collateral_t,
+				&mut collateral_expiration_status as *mut u32,
+				&mut quote_verification_result as *mut sgx_ql_qv_result_t,
+				&mut qve_report_info_return_value as *mut sgx_ql_qe_report_info_t,
+				supplemental_data.as_mut_ptr(),
+				supplemental_data_size,
+			)
+		};
+		ensure!(result == sgx_status_t::SGX_SUCCESS, result);
+		ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
+
+		Ok((
+			collateral_expiration_status,
+			quote_verification_result,
+			qve_report_info_return_value,
+			supplemental_data.to_vec(),
+		))
 	}
 
 	fn get_update_info(

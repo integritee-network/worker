@@ -16,13 +16,13 @@
 */
 
 use crate::types::{ExchangeRate, TradingPair};
-use itp_enclave_metrics::{EnclaveMetric, ExchangeRateOracleMetric};
+use itp_enclave_metrics::{EnclaveMetric, ExchangeRateOracleMetric, OracleMetric};
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use log::error;
 use std::{string::String, sync::Arc, time::Instant};
 
 /// Trait to export metrics for any Teeracle.
-pub trait ExportMetrics {
+pub trait ExportMetrics<MetricsInfo> {
 	fn increment_number_requests(&self, source: String);
 
 	fn record_response_time(&self, source: String, timer: Instant);
@@ -33,11 +33,26 @@ pub trait ExportMetrics {
 		exchange_rate: ExchangeRate,
 		trading_pair: TradingPair,
 	);
+
+	fn update_weather(&self, source: String, metrics_info: MetricsInfo);
+}
+
+pub trait UpdateMetric<MetricInfo> {
+	fn update_metric(&self, metric: OracleMetric<MetricInfo>);
 }
 
 /// Metrics exporter implementation.
 pub struct MetricsExporter<OCallApi> {
 	ocall_api: Arc<OCallApi>,
+}
+
+impl<OCallApi, MetricInfo> UpdateMetric<MetricInfo> for MetricsExporter<OCallApi>
+where
+	OCallApi: EnclaveMetricsOCallApi,
+{
+	fn update_metric(&self, _metric: OracleMetric<MetricInfo>) {
+		// TODO: Implement me
+	}
 }
 
 impl<OCallApi> MetricsExporter<OCallApi>
@@ -55,7 +70,7 @@ where
 	}
 }
 
-impl<OCallApi> ExportMetrics for MetricsExporter<OCallApi>
+impl<OCallApi, MetricsInfo> ExportMetrics<MetricsInfo> for MetricsExporter<OCallApi>
 where
 	OCallApi: EnclaveMetricsOCallApi,
 {
@@ -81,5 +96,9 @@ where
 			trading_pair.key(),
 			exchange_rate,
 		));
+	}
+
+	fn update_weather(&self, _source: String, _metrics_info: MetricsInfo) {
+		// TODO: Implement me
 	}
 }

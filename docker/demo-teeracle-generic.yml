@@ -1,0 +1,44 @@
+# Teeracle Demo Setup
+#
+# The demo is parameterized with the interval that the teeracle uses to query its sources.
+# Set the `TEERACLE_INTERVAL_SECONDS` variable when invoking, e.g. `TEERACLE_INTERVAL_SECONDS=4 docker compose -f docker-compose.yml -f demo-teeracle-generic.yml up --exit-code-from demo-teeracle-generic`
+services:
+  integritee-teeracle-worker:
+    image: integritee-worker:dev
+    container_name: integritee-teeracle-worker
+    build:
+      context: ..
+      dockerfile: build.Dockerfile
+      target: deployed-worker
+    depends_on: [ 'integritee-node' ]
+    environment:
+      - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=info,integritee_service::teeracle=debug,ita_stf=warn,ita_oracle=debug
+    networks:
+      - integritee-test-network
+    entrypoint: "dockerize -wait tcp://integritee-node:9912 -timeout 30s
+        /usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-teeracle-worker -T wss://integritee-teeracle-worker 
+        -u ws://integritee-node -U ws://integritee-teeracle-worker -P 2011 -w 2101 -p 9912 -h 4645
+        run --dev --skip-ra --teeracle-interval ${TEERACLE_INTERVAL_SECONDS}s"
+    restart: always
+  demo-teeracle-generic:
+    image: integritee-cli:dev
+    container_name: integritee-teeracle-demo
+    build:
+      context: ..
+      dockerfile: build.Dockerfile
+      target: deployed-client
+    depends_on: ['integritee-node', 'integritee-teeracle-worker']
+    environment:
+      - RUST_LOG=warn,sp_io=warn,integritee_cli::exchange_oracle=debug
+    networks:
+      - integritee-test-network
+    entrypoint: "dockerize -wait http://integritee-teeracle-worker:4645/is_initialized -timeout 250s    
+      /usr/local/worker-cli/demo_teeracle_generic.sh 
+      -u ws://integritee-node -p 9912
+      -V wss://integritee-teeracle-worker -P 2011
+      -d 21 -i ${TEERACLE_INTERVAL_SECONDS}
+      -C /usr/local/bin/integritee-cli 2>&1"
+    restart: "no"
+networks:
+  integritee-test-network:
+    driver: bridge

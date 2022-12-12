@@ -63,8 +63,8 @@ CLIENT_BIN=${CLIENT_BIN:-"./../bin/integritee-cli"}
 DURATION=${DURATION:-48}
 INTERVAL=${INTERVAL:-86400}
 
-LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD="exchange-oracle listen-to-exchange-rate-events"
-ADD_TO_WHITELIST_CMD="exchange-oracle add-to-whitelist"
+LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD="oracle listen-to-exchange-rate-events"
+ADD_TO_WHITELIST_CMD="oracle add-to-whitelist"
 
 echo "Using client binary ${CLIENT_BIN}"
 echo "Using node uri ${NODEURL}:${NPORT}"
@@ -75,7 +75,7 @@ echo ""
 
 COIN_GECKO="https://api.coingecko.com/"
 COIN_MARKET_CAP="https://pro-api.coinmarketcap.com/"
-let "MIN_EXPECTED_NUM_OF_EVENTS=$DURATION/$INTERVAL-2"
+let "MIN_EXPECTED_NUM_OF_EVENTS=$DURATION/$INTERVAL-3"
 echo "Minimum expected number of events with a single oracle source: ${MIN_EXPECTED_NUM_OF_EVENTS}"
 
 let "MIN_EXPECTED_NUM_OF_EVENTS_2 = 2*$MIN_EXPECTED_NUM_OF_EVENTS"

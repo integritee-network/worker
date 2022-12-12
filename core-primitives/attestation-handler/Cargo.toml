@@ -44,6 +44,7 @@ itp-ocall-api = { path = "../ocall-api", default-features = false }
 itp-settings = { path = "../settings" }
 itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
 itp-sgx-io = { path = "../sgx/io", default-features = false }
+itp-time-utils = { path = "../time-utils", default-features = false }
 itp-types = { path = "../types", default-features = false }
 
 # integritee

@@ -32,27 +32,23 @@ pub mod sgx_reexport_prelude {
 	pub use url_sgx as url;
 }
 
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-use crate::sgx_reexport_prelude::*;
-
-use crate::{
-	coin_gecko::CoinGeckoSource,
-	coin_market_cap::CoinMarketCapSource,
-	error::Error,
-	exchange_rate_oracle::ExchangeRateOracle,
-	metrics_exporter::MetricsExporter,
-	types::{ExchangeRate, TradingPair},
-};
+use crate::{error::Error, metrics_exporter::MetricsExporter};
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use std::sync::Arc;
-use url::Url;
 
-pub mod coin_gecko;
-pub mod coin_market_cap;
 pub mod error;
-pub mod exchange_rate_oracle;
 pub mod metrics_exporter;
+pub mod traits;
 pub mod types;
+
+pub mod oracles;
+pub use oracles::{exchange_rate_oracle::ExchangeRateOracle, weather_oracle::WeatherOracle};
+
+pub mod oracle_sources;
+pub use oracle_sources::{
+	coin_gecko::CoinGeckoSource, coin_market_cap::CoinMarketCapSource,
+	weather_oracle_source::WeatherOracleSource,
+};
 
 #[cfg(test)]
 mod mock;
@@ -66,6 +62,9 @@ pub type CoinGeckoExchangeRateOracle<OCallApi> =
 pub type CoinMarketCapExchangeRateOracle<OCallApi> =
 	ExchangeRateOracle<CoinMarketCapSource, MetricsExporter<OCallApi>>;
 
+pub type OpenMeteoWeatherOracle<OCallApi> =
+	WeatherOracle<WeatherOracleSource, MetricsExporter<OCallApi>>;
+
 pub fn create_coin_gecko_oracle<OCallApi: EnclaveMetricsOCallApi>(
 	ocall_api: Arc<OCallApi>,
 ) -> CoinGeckoExchangeRateOracle<OCallApi> {
@@ -78,7 +77,8 @@ pub fn create_coin_market_cap_oracle<OCallApi: EnclaveMetricsOCallApi>(
 	ExchangeRateOracle::new(CoinMarketCapSource {}, Arc::new(MetricsExporter::new(ocall_api)))
 }
 
-pub trait GetExchangeRate {
-	/// Get the cryptocurrency/fiat_currency exchange rate
-	fn get_exchange_rate(&self, trading_pair: TradingPair) -> Result<(ExchangeRate, Url), Error>;
+pub fn create_open_meteo_weather_oracle<OCallApi: EnclaveMetricsOCallApi>(
+	ocall_api: Arc<OCallApi>,
+) -> OpenMeteoWeatherOracle<OCallApi> {
+	WeatherOracle::new(WeatherOracleSource {}, Arc::new(MetricsExporter::new(ocall_api)))
 }

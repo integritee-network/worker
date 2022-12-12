@@ -100,7 +100,7 @@ pub fn create_ra_report_and_signature(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn perform_ra(
+pub unsafe extern "C" fn generate_ias_ra_extrinsic(
 	w_url: *const u8,
 	w_url_size: u32,
 	unchecked_extrinsic: *mut u8,
@@ -115,7 +115,7 @@ pub unsafe extern "C" fn perform_ra(
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
-	let extrinsic = match perform_ra_internal(url, skip_ra == 1) {
+	let extrinsic = match generate_ias_ra_extrinsic_internal(url, skip_ra == 1) {
 		Ok(xt) => xt,
 		Err(e) => return e.into(),
 	};
@@ -127,12 +127,45 @@ pub unsafe extern "C" fn perform_ra(
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn perform_ra_internal(url: String, skip_ra: bool) -> EnclaveResult<OpaqueExtrinsic> {
+#[no_mangle]
+pub unsafe extern "C" fn generate_dcap_ra_extrinsic(
+	_w_url: *const u8,
+	_w_url_size: u32,
+	_unchecked_extrinsic: *mut u8,
+	_unchecked_extrinsic_size: u32,
+	_skip_ra: c_int,
+	quoting_enclave_target_info: &sgx_target_info_t,
+	quote_size: u32,
+) -> sgx_status_t {
+	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
+		Ok(r) => r,
+		Err(e) => {
+			error!("Component get failure: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	let (_key_der, _cert_der) = match attestation_handler.generate_dcap_ra_cert(
+		quoting_enclave_target_info,
+		quote_size,
+		false,
+	) {
+		Ok(r) => r,
+		Err(e) => return e.into(),
+	};
+	// TODO Need to send this to the teerex pallet (something similar to perform_ra_internal)
+	sgx_status_t::SGX_SUCCESS
+}
+
+fn generate_ias_ra_extrinsic_internal(
+	url: String,
+	skip_ra: bool,
+) -> EnclaveResult<OpaqueExtrinsic> {
 	let attestation_handler = GLOBAL_ATTESTATION_HANDLER_COMPONENT.get()?;
 	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
 	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain()?;
 
-	let cert_der = attestation_handler.perform_ra(skip_ra)?;
+	let cert_der = attestation_handler.generate_ias_ra_cert(skip_ra)?;
 
 	info!("    [Enclave] Compose register enclave call");
 	let call_ids = node_metadata_repo
@@ -147,7 +180,7 @@ fn perform_ra_internal(url: String, skip_ra: bool) -> EnclaveResult<OpaqueExtrin
 }
 
 #[no_mangle]
-pub extern "C" fn dump_ra_to_disk() -> sgx_status_t {
+pub extern "C" fn dump_ias_ra_cert_to_disk() -> sgx_status_t {
 	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
 		Ok(r) => r,
 		Err(e) => {
@@ -155,7 +188,25 @@ pub extern "C" fn dump_ra_to_disk() -> sgx_status_t {
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	};
-	match attestation_handler.dump_ra_to_disk() {
+	match attestation_handler.dump_ias_ra_cert_to_disk() {
+		Ok(_) => sgx_status_t::SGX_SUCCESS,
+		Err(e) => e.into(),
+	}
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn dump_dcap_ra_cert_to_disk(
+	quoting_enclave_target_info: &sgx_target_info_t,
+	quote_size: u32,
+) -> sgx_status_t {
+	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
+		Ok(r) => r,
+		Err(e) => {
+			error!("Component get failure: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+	match attestation_handler.dump_dcap_ra_cert_to_disk(quoting_enclave_target_info, quote_size) {
 		Ok(_) => sgx_status_t::SGX_SUCCESS,
 		Err(e) => e.into(),
 	}

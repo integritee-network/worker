@@ -14,14 +14,5 @@
 	limitations under the License.
 
 */
-use derive_more::From;
-
-#[derive(Debug, PartialEq, Eq, From)]
-pub enum Error {
-	/// Metadata has not been set
-	MetadataNotSet,
-	/// Api-client metadata error
-	NodeMetadata(substrate_api_client::MetadataError),
-}
-
-pub type Result<T> = core::result::Result<T, Error>;
+pub mod exchange_rate_oracle;
+pub mod weather_oracle;
