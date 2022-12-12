@@ -20,8 +20,8 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::{
 	error::Error,
-	exchange_rate_oracle::OracleSource,
-	types::{ExchangeRate, TradingPair},
+	traits::OracleSource,
+	types::{ExchangeRate, TradingInfo, TradingPair},
 };
 use itc_rest_client::{
 	http_client::{HttpClient, SendWithCertificateVerification},
@@ -44,9 +44,8 @@ const COINGECKO_PARAM_COIN: &str = "ids";
 const COINGECKO_PATH: &str = "api/v3/coins/markets";
 const COINGECKO_TIMEOUT: Duration = Duration::from_secs(3u64);
 const COINGECKO_ROOT_CERTIFICATE: &str =
-	include_str!("certificates/baltimore_cyber_trust_root_v3.pem");
+	include_str!("../certificates/baltimore_cyber_trust_root_v3.pem");
 
-//TODO: Get CoinGecko coins' id from coingecko API ? For now add here the mapping symbol to id
 lazy_static! {
 	static ref SYMBOL_ID_MAP: HashMap<&'static str, &'static str> = HashMap::from([
 		("DOT", "polkadot"),
@@ -70,7 +69,9 @@ impl CoinGeckoSource {
 	}
 }
 
-impl OracleSource for CoinGeckoSource {
+impl<OracleSourceInfo: Into<TradingInfo>> OracleSource<OracleSourceInfo> for CoinGeckoSource {
+	type OracleRequestResult = Result<(), Error>;
+
 	fn metrics_id(&self) -> String {
 		"coin_gecko".to_string()
 	}
@@ -85,6 +86,15 @@ impl OracleSource for CoinGeckoSource {
 
 	fn root_certificate_content(&self) -> String {
 		COINGECKO_ROOT_CERTIFICATE.to_string()
+	}
+
+	fn execute_request(
+		_rest_client: &mut RestClient<HttpClient<SendWithCertificateVerification>>,
+		source_info: OracleSourceInfo,
+	) -> Self::OracleRequestResult {
+		let _trading_info: TradingInfo = source_info.into();
+		// TODO Implement me
+		Ok(())
 	}
 
 	fn execute_exchange_rate_request(
@@ -136,7 +146,8 @@ impl RestPath<String> for CoinGeckoMarket {
 mod tests {
 	use super::*;
 	use crate::{
-		exchange_rate_oracle::ExchangeRateOracle, mock::MetricsExporterMock, GetExchangeRate,
+		mock::MetricsExporterMock,
+		oracles::exchange_rate_oracle::{ExchangeRateOracle, GetExchangeRate},
 	};
 	use core::assert_matches::assert_matches;
 	use std::sync::Arc;

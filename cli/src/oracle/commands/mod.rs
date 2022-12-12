@@ -15,23 +15,11 @@
 
 */
 
-use codec::{Decode, Encode};
-use std::string::String;
-use substrate_fixed::types::U32F32;
+mod add_to_whitelist;
+mod listen_to_exchange;
+mod listen_to_oracle;
 
-/// Market identifier for order
-#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
-pub struct TradingPair {
-	pub crypto_currency: String,
-	pub fiat_currency: String,
-}
-
-impl TradingPair {
-	pub fn key(self) -> String {
-		format!("{}/{}", self.crypto_currency, self.fiat_currency)
-	}
-}
-
-/// TODO Fix https://github.com/integritee-network/pallets/issues/71 and get it from https://github.com/integritee-network/pallets.git
-/// Teeracle types
-pub type ExchangeRate = U32F32;
+pub use self::{
+	add_to_whitelist::AddToWhitelistCmd, listen_to_exchange::ListenToExchangeRateEventsCmd,
+	listen_to_oracle::ListenToOracleEventsCmd,
+};

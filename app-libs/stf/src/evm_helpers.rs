@@ -16,11 +16,11 @@
 */
 use crate::{
 	helpers::{get_storage_double_map, get_storage_map},
-	AccountId, Index, H256,
+	AccountId, Index,
 };
 use itp_storage::StorageHasher;
 use sha3::{Digest, Keccak256};
-use sp_core::H160;
+use sp_core::{H160, H256};
 use std::prelude::v1::*;
 
 pub fn get_evm_account_codes(evm_account: &H160) -> Option<Vec<u8>> {

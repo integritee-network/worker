@@ -24,10 +24,10 @@ use crate::{
 use codec::Encode;
 use ita_stf::{
 	hash::{Hash, TrustedOperationOrHash},
-	AccountId, KeyPair, ShardIdentifier, TrustedCall, TrustedCallSigned, TrustedGetterSigned,
-	TrustedOperation,
+	TrustedCall, TrustedCallSigned, TrustedGetterSigned, TrustedOperation,
 };
 use itp_sgx_externalities::SgxExternalitiesTrait;
+use itp_stf_primitives::types::{AccountId, KeyPair, ShardIdentifier};
 use itp_types::H256;
 use sp_core::Pair;
 use sp_runtime::traits::Header as HeaderTrait;

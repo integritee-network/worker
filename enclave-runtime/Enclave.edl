@@ -103,6 +103,12 @@ enclave {
 			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
 		);
 
+		public sgx_status_t update_weather_data_xt(
+			[in, size=weather_info_logitude_size] uint8_t* weather_info_logitude, uint32_t weather_info_logitude_size,
+			[in, size=weather_info_latitude_size] uint8_t* weather_info_latitude, uint32_t weather_info_latitude_size,
+			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
+		);
+
 		public sgx_status_t dump_ias_ra_cert_to_disk();
 
 		public sgx_status_t dump_dcap_ra_cert_to_disk([in] const sgx_target_info_t* quoting_enclave_target_info, uint32_t quote_size);

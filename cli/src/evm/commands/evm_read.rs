@@ -20,7 +20,8 @@ use crate::{
 	trusted_operation::perform_trusted_operation, Cli,
 };
 use codec::Decode;
-use ita_stf::{KeyPair, TrustedGetter, TrustedOperation};
+use ita_stf::{TrustedGetter, TrustedOperation};
+use itp_stf_primitives::types::KeyPair;
 use itp_types::AccountId;
 use log::*;
 use sp_core::{crypto::Ss58Codec, Pair, H160, H256};

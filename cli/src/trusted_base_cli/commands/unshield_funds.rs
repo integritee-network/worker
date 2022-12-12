@@ -23,7 +23,8 @@ use crate::{
 	Cli,
 };
 use codec::Decode;
-use ita_stf::{Index, KeyPair, TrustedCall, TrustedGetter, TrustedOperation};
+use ita_stf::{Index, TrustedCall, TrustedGetter, TrustedOperation};
+use itp_stf_primitives::types::KeyPair;
 use log::*;
 use my_node_runtime::Balance;
 use sp_core::{crypto::Ss58Codec, Pair};

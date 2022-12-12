@@ -21,7 +21,7 @@ pub extern crate alloc;
 use crate::base_pool::TrustedOperation;
 use alloc::{boxed::Box, fmt, sync::Arc, vec, vec::Vec};
 use core::hash;
-use ita_stf::ShardIdentifier;
+use itp_stf_primitives::types::ShardIdentifier;
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::transaction_validity::TransactionTag as Tag;
 use std::{

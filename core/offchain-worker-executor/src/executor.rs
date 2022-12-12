@@ -205,11 +205,12 @@ mod tests {
 
 	use super::*;
 	use codec::{Decode, Encode};
-	use ita_stf::{KeyPair, TrustedCall, TrustedOperation};
+	use ita_stf::{TrustedCall, TrustedOperation};
 	use itc_parentchain_light_client::mocks::validator_access_mock::ValidatorAccessMock;
 	use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
 	use itp_sgx_externalities::SgxExternalitiesTrait;
 	use itp_stf_executor::mocks::StfExecutorMock;
+	use itp_stf_primitives::types::KeyPair;
 	use itp_test::mock::handle_state_mock::HandleStateMock;
 	use itp_top_pool_author::mocks::AuthorApiMock;
 	use itp_types::Block as ParentchainBlock;

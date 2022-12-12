@@ -37,8 +37,8 @@ use ita_stf::{
 	helpers::{account_key_hash, set_block_number},
 	stf_sgx_tests,
 	test_genesis::{endowed_account as funded_pair, unendowed_account},
-	AccountInfo, Getter, ShardIdentifier, State, StatePayload, TrustedCall, TrustedCallSigned,
-	TrustedGetter, TrustedOperation,
+	AccountInfo, Getter, State, StatePayload, TrustedCall, TrustedCallSigned, TrustedGetter,
+	TrustedOperation,
 };
 use itp_sgx_crypto::{Aes, StateCrypto};
 use itp_sgx_externalities::{SgxExternalitiesDiffType, SgxExternalitiesTrait, StateHash};
@@ -50,6 +50,7 @@ use itp_stf_interface::{
 	system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface},
 	StateCallInterface,
 };
+use itp_stf_primitives::types::ShardIdentifier;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::handle_state_mock;
 use itp_top_pool_author::{test_utils::submit_operation_to_top_pool, traits::AuthorApi};

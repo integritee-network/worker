@@ -21,12 +21,13 @@ use crate::{
 	},
 };
 use ita_sgx_runtime::Runtime;
-use ita_stf::{Getter, ShardIdentifier, State, Stf, TrustedCallSigned};
+use ita_stf::{Getter, State, Stf, TrustedCallSigned};
 use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{ed25519_derivation::DeriveEd25519, mocks::KeyRepositoryMock};
 use itp_sgx_externalities::SgxExternalities;
 use itp_stf_executor::executor::StfExecutor;
+use itp_stf_primitives::types::ShardIdentifier;
 use itp_test::mock::{
 	handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock,
 	shielding_crypto_mock::ShieldingCryptoMock,

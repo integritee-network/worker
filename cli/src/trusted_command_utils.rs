@@ -21,7 +21,8 @@ use crate::{
 };
 use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode};
-use ita_stf::{AccountId, KeyPair, ShardIdentifier, TrustedGetter, TrustedOperation};
+use ita_stf::{TrustedGetter, TrustedOperation};
+use itp_stf_primitives::types::{AccountId, KeyPair, ShardIdentifier};
 use log::*;
 use my_node_runtime::Balance;
 use sp_application_crypto::sr25519;

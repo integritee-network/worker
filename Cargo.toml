@@ -1,7 +1,7 @@
 [workspace]
 
 members = [
-    "app-libs/exchange-oracle",
+    "app-libs/oracle",
     "app-libs/sgx-runtime",
     "app-libs/stf",
     "cli",
@@ -41,6 +41,7 @@ members = [
     "core-primitives/sgx-runtime-primitives",
     "core-primitives/stf-executor",
     "core-primitives/stf-interface",
+    "core-primitives/stf-primitives",
     "core-primitives/stf-state-handler",
     "core-primitives/stf-state-observer",
     "core-primitives/storage",

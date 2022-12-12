@@ -21,15 +21,13 @@ use sp_core::{H160, H256, U256};
 #[cfg(feature = "evm")]
 use std::vec::Vec;
 
-use crate::{
-	helpers::ensure_enclave_signer_account, AccountId, KeyPair, ShardIdentifier, Signature,
-	StfError, TrustedOperation,
-};
+use crate::{helpers::ensure_enclave_signer_account, StfError, TrustedOperation};
 use codec::{Decode, Encode};
 use frame_support::{ensure, traits::UnfilteredDispatchable};
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{Runtime, System};
 use itp_stf_interface::ExecuteCall;
+use itp_stf_primitives::types::{AccountId, KeyPair, ShardIdentifier, Signature};
 use itp_types::OpaqueCall;
 use itp_utils::stringify::account_id_to_string;
 use log::*;
@@ -419,6 +417,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use itp_stf_primitives::types::KeyPair;
 	use sp_keyring::AccountKeyring;
 
 	#[test]
