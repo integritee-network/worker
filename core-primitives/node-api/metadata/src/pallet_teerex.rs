@@ -21,13 +21,15 @@ use sp_core::storage::StorageKey;
 const TEEREX: &str = "Teerex";
 
 pub trait TeerexCallIndexes {
-	fn register_enclave_call_indexes(&self) -> Result<[u8; 2]>;
+	fn register_ias_enclave_call_indexes(&self) -> Result<[u8; 2]>;
 
 	fn register_dcap_enclave_call_indexes(&self) -> Result<[u8; 2]>;
 
+	fn unregister_enclave_call_indexes(&self) -> Result<[u8; 2]>;
+
 	fn register_quoting_enclave_call_indexes(&self) -> Result<[u8; 2]>;
 
-	fn unregister_enclave_call_indexes(&self) -> Result<[u8; 2]>;
+	fn register_tcb_info_call_indexes(&self) -> Result<[u8; 2]>;
 
 	fn call_worker_call_indexes(&self) -> Result<[u8; 2]>;
 
@@ -45,7 +47,7 @@ pub trait TeerexStorageKey {
 }
 
 impl TeerexCallIndexes for NodeMetadata {
-	fn register_enclave_call_indexes(&self) -> Result<[u8; 2]> {
+	fn register_ias_enclave_call_indexes(&self) -> Result<[u8; 2]> {
 		self.call_indexes(TEEREX, "register_enclave")
 	}
 
@@ -55,6 +57,10 @@ impl TeerexCallIndexes for NodeMetadata {
 
 	fn register_quoting_enclave_call_indexes(&self) -> Result<[u8; 2]> {
 		self.call_indexes(TEEREX, "register_quoting_enclave")
+	}
+
+	fn register_tcb_info_call_indexes(&self) -> Result<[u8; 2]> {
+		self.call_indexes(TEEREX, "register_tcb_info")
 	}
 
 	fn unregister_enclave_call_indexes(&self) -> Result<[u8; 2]> {
