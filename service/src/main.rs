@@ -63,6 +63,7 @@ use itp_settings::{
 	files::SIDECHAIN_STORAGE_PATH,
 	worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider},
 };
+use itp_utils::hex::hex_encode;
 use its_peer_fetch::{
 	block_fetch_client::BlockFetcher, untrusted_peer_fetch::UntrustedPeerFetcher,
 };
@@ -422,9 +423,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	{
 		let fmspc = [00u8, 0x90, 0x6E, 0xA1, 00, 00];
 		let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc).unwrap();
-
-		let mut xthex = hex::encode(uxt);
-		xthex.insert_str(0, "0x");
+		let xthex = hex_encode(uxt);
 
 		// Account funds
 		if let Err(x) =
@@ -443,9 +442,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	{
 		let fmspc = [00u8, 0x90, 0x6E, 0xA1, 00, 00];
 		let uxt = enclave.generate_register_tcb_info_extrinsic(fmspc).unwrap();
-
-		let mut xthex = hex::encode(uxt);
-		xthex.insert_str(0, "0x");
+		let xthex = hex_encode(uxt);
 
 		// Account funds
 		if let Err(x) =
@@ -475,9 +472,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	let uxt = enclave.generate_ias_ra_extrinsic(&trusted_url, skip_ra).unwrap();
 	#[cfg(feature = "dcap")]
 	let uxt = enclave.generate_dcap_ra_extrinsic(&trusted_url, skip_ra).unwrap();
-
-	let mut xthex = hex::encode(uxt);
-	xthex.insert_str(0, "0x");
+	let xthex = hex_encode(uxt);
 
 	// Account funds
 	if let Err(x) =
