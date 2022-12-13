@@ -420,17 +420,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		)
 		.expect("Could not set the node metadata in the enclave");
 
-	{
-		let fmspc = [00u8, 0x90, 0x6E, 0xA1, 00, 00];
-		let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc).unwrap();
-		send_extrinsic(&uxt, &node_api, &tee_accountid, is_development_mode);
-	}
-
-	{
-		let fmspc = [00u8, 0x90, 0x6E, 0xA1, 00, 00];
-		let uxt = enclave.generate_register_tcb_info_extrinsic(fmspc).unwrap();
-		send_extrinsic(&uxt, &node_api, &tee_accountid, is_development_mode);
-	}
+	register_collateral(&node_api, &*enclave, &tee_accountid, is_development_mode);
 
 	// ------------------------------------------------------------------------
 	// Perform a remote attestation and get an unchecked extrinsic back.
@@ -709,6 +699,20 @@ fn print_events(events: Events, _sender: Sender<String>) {
 			},
 		}
 	}
+}
+
+fn register_collateral(
+	api: &ParentchainApi,
+	enclave: &dyn RemoteAttestation,
+	accountid: &AccountId32,
+	is_development_mode: bool,
+) {
+	let fmspc = [00u8, 0x90, 0x6E, 0xA1, 00, 00];
+	let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc).unwrap();
+	send_extrinsic(&uxt, &api, &accountid, is_development_mode);
+
+	let uxt = enclave.generate_register_tcb_info_extrinsic(fmspc).unwrap();
+	send_extrinsic(&uxt, &api, &accountid, is_development_mode);
 }
 
 fn send_extrinsic(
