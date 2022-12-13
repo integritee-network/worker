@@ -20,7 +20,7 @@ use codec::Decode;
 use itp_node_api::api_client::ParentchainApi;
 use itp_time_utils::{duration_now, remaining_time};
 use log::{debug, info};
-use my_node_runtime::{Event, Hash};
+use my_node_runtime::{Hash, RuntimeEvent};
 use std::{sync::mpsc::channel, time::Duration};
 use substrate_api_client::FromHexString;
 
@@ -62,7 +62,7 @@ fn count_oracle_update_events(api: &ParentchainApi, duration: Duration) -> Event
 
 fn report_event_count(events_bytes: &[u8]) -> EventCount {
 	let event_records =
-		Vec::<frame_system::EventRecord<Event, Hash>>::decode(&mut &events_bytes[..]);
+		Vec::<frame_system::EventRecord<RuntimeEvent, Hash>>::decode(&mut &events_bytes[..]);
 	if event_records.is_err() {
 		// Return no count if cant successfully decode event
 		debug!("Could not successfully decode event_bytes {:?}", event_records);
@@ -72,7 +72,7 @@ fn report_event_count(events_bytes: &[u8]) -> EventCount {
 	let mut count = 0;
 	event_records.unwrap().iter().for_each(|event_record| {
 		info!("received event {:?}", event_record.event);
-		if let Event::Teeracle(event) = &event_record.event {
+		if let RuntimeEvent::Teeracle(event) = &event_record.event {
 			match &event {
 				my_node_runtime::pallet_teeracle::Event::OracleUpdated(oracle_name, src) => {
 					count += 1;

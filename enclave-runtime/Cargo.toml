@@ -65,7 +65,7 @@ derive_more = { version = "0.99.5" }
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 ipfs-unixfs = { default-features = false, git = "https://github.com/whalelephant/rust-ipfs", branch = "w-nstd" }
 lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
-primitive-types = { version = "0.11.1", default-features = false, features = ["codec", "serde_no_std"] }
+primitive-types = { version = "0.12.1", default-features = false, features = ["codec", "serde_no_std"] }
 
 # scs / integritee
 jsonrpc-core = { default-features = false, git = "https://github.com/scs/jsonrpc", branch = "no_std_v18" }

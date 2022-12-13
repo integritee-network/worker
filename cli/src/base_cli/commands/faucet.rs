@@ -19,8 +19,9 @@ use crate::{
 	command_utils::{get_accountid_from_str, get_chain_api},
 	Cli,
 };
-use my_node_runtime::{BalancesCall, Call};
+use my_node_runtime::{BalancesCall, RuntimeCall};
 use sp_keyring::AccountKeyring;
+use sp_runtime::MultiAddress;
 use std::vec::Vec;
 use substrate_api_client::{compose_extrinsic_offline, UncheckedExtrinsicV4, XtStatus};
 
@@ -42,8 +43,8 @@ impl FaucetCommand {
 			#[allow(clippy::redundant_clone)]
 			let xt: UncheckedExtrinsicV4<_, _> = compose_extrinsic_offline!(
 				api.clone().signer.unwrap(),
-				Call::Balances(BalancesCall::transfer {
-					dest: GenericAddress::Id(to.clone()),
+				RuntimeCall::Balances(BalancesCall::transfer {
+					dest: MultiAddress::Id(to.clone()),
 					value: PREFUNDING_AMOUNT
 				}),
 				api.extrinsic_params(nonce)

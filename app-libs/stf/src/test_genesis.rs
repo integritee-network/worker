@@ -109,7 +109,7 @@ pub fn endow(
 				new_free: e.1,
 				new_reserved: e.2,
 			}
-			.dispatch_bypass_filter(ita_sgx_runtime::Origin::root())
+			.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
 			.map_err(|e| StfError::Dispatch(format!("Balance Set Balance error: {:?}", e.error)))
 			.unwrap();
 

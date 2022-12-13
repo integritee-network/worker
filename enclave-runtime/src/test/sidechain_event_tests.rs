@@ -118,7 +118,7 @@ pub fn ensure_events_get_reset_upon_block_proposal() {
 		set_block_number(10);
 		frame_system::Pallet::<Runtime>::deposit_event_indexed(
 			&[topic_hash],
-			ita_sgx_runtime::Event::System(event),
+			ita_sgx_runtime::RuntimeEvent::System(event),
 		)
 	});
 	state_handler.write_after_mutation(state.clone(), lock, &shard_id).unwrap();

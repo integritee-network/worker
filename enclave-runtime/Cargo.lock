@@ -707,7 +707,7 @@ dependencies = [
  "log",
  "multibase",
  "parity-scale-codec",
- "primitive-types 0.11.1",
+ "primitive-types",
  "rust-base58",
  "rustls 0.19.0 (git+https://github.com/mesalock-linux/rustls?rev=sgx_1.1.3)",
  "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx?tag=sgx_1.1.3)",
@@ -763,7 +763,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c22d4b5885b6aa2fe5e8b9329fb8d232bf739e434e6b87347c63bdd00c120f60"
 dependencies = [
  "crunchy",
- "fixed-hash 0.8.0",
+ "fixed-hash",
  "impl-codec",
  "impl-rlp",
  "scale-info",
@@ -794,10 +794,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02d215cbf040552efcbe99a38372fe80ab9d00268e20012b79fcd0f073edd8ee"
 dependencies = [
  "ethbloom",
- "fixed-hash 0.8.0",
+ "fixed-hash",
  "impl-codec",
  "impl-rlp",
- "primitive-types 0.12.1",
+ "primitive-types",
  "scale-info",
  "uint",
 ]
@@ -815,7 +815,7 @@ dependencies = [
  "evm-runtime",
  "log",
  "parity-scale-codec",
- "primitive-types 0.12.1",
+ "primitive-types",
  "rlp",
  "scale-info",
  "sha3 0.10.6",
@@ -828,7 +828,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "64c51bec0eb68a891c2575c758eaaa1d61373fc51f7caaf216b1fb5c3fea3b5d"
 dependencies = [
  "parity-scale-codec",
- "primitive-types 0.12.1",
+ "primitive-types",
  "scale-info",
 ]
 
@@ -840,7 +840,7 @@ checksum = "a8b93c59c54fc26522d842f0e0d3f8e8be331c776df18ff3e540b53c2f64d509"
 dependencies = [
  "evm-core",
  "evm-runtime",
- "primitive-types 0.12.1",
+ "primitive-types",
 ]
 
 [[package]]
@@ -851,7 +851,7 @@ checksum = "c79b9459ce64f1a28688397c4013764ce53cd57bb84efc16b5187fa9b05b13ad"
 dependencies = [
  "auto_impl",
  "evm-core",
- "primitive-types 0.12.1",
+ "primitive-types",
  "sha3 0.10.6",
 ]
 
@@ -882,15 +882,6 @@ dependencies = [
  "num-traits 0.2.15",
  "parity-scale-codec",
  "scale-info",
-]
-
-[[package]]
-name = "fixed-hash"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cfcf0ed7fe52a17a03854ec54a9f76d6d84508d1c0e66bc1793301c73fc8493c"
-dependencies = [
- "static_assertions",
 ]
 
 [[package]]
@@ -1392,9 +1383,9 @@ dependencies = [
 
 [[package]]
 name = "impl-serde"
-version = "0.3.2"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4551f042f3438e64dbd6226b20527fc84a6e1fe65688b58746a2f53623f25f5c"
+checksum = "ebc88fc67028ae3db0c853baa36269d398d5f45b6982f95549ff5def78c935cd"
 dependencies = [
  "serde 1.0.150",
 ]
@@ -2148,7 +2139,7 @@ dependencies = [
  "itp-sgx-runtime-primitives",
  "pallet-balances",
  "parity-scale-codec",
- "primitive-types 0.11.1",
+ "primitive-types",
  "serde 1.0.150",
  "serde_json 1.0.89",
  "sp-core",
@@ -2774,7 +2765,7 @@ dependencies = [
  "log",
  "pallet-timestamp",
  "parity-scale-codec",
- "primitive-types 0.12.1",
+ "primitive-types",
  "rlp",
  "scale-info",
  "sp-core",
@@ -2949,7 +2940,7 @@ dependencies = [
  "hashbrown 0.12.3",
  "impl-trait-for-tuples",
  "parity-util-mem-derive",
- "primitive-types 0.12.1",
+ "primitive-types",
  "winapi",
 ]
 
@@ -3021,25 +3012,14 @@ source = "git+https://github.com/mesalock-linux/cryptocorrosion-sgx#32d7de50b5f0
 
 [[package]]
 name = "primitive-types"
-version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e28720988bff275df1f51b171e1b2a18c30d194c4d2b61defdacecd625a5d94a"
-dependencies = [
- "fixed-hash 0.7.0",
- "impl-codec",
- "impl-serde",
- "uint",
-]
-
-[[package]]
-name = "primitive-types"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f3486ccba82358b11a77516035647c34ba167dfa53312630de83b12bd4f3d66"
 dependencies = [
- "fixed-hash 0.8.0",
+ "fixed-hash",
  "impl-codec",
  "impl-rlp",
+ "impl-serde",
  "scale-info",
  "uint",
 ]
@@ -4002,7 +3982,7 @@ dependencies = [
  "num-traits 0.2.15",
  "parity-scale-codec",
  "parity-util-mem",
- "primitive-types 0.12.1",
+ "primitive-types",
  "scale-info",
  "schnorrkel",
  "secp256k1",
@@ -4163,7 +4143,7 @@ dependencies = [
  "bytes 1.3.0",
  "impl-trait-for-tuples",
  "parity-scale-codec",
- "primitive-types 0.12.1",
+ "primitive-types",
  "sp-externalities",
  "sp-runtime-interface-proc-macro",
  "sp-std",

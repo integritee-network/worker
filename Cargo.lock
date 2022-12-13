@@ -1237,7 +1237,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c22d4b5885b6aa2fe5e8b9329fb8d232bf739e434e6b87347c63bdd00c120f60"
 dependencies = [
  "crunchy",
- "fixed-hash 0.8.0",
+ "fixed-hash",
  "impl-codec",
  "impl-rlp",
  "impl-serde",
@@ -1270,11 +1270,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02d215cbf040552efcbe99a38372fe80ab9d00268e20012b79fcd0f073edd8ee"
 dependencies = [
  "ethbloom",
- "fixed-hash 0.8.0",
+ "fixed-hash",
  "impl-codec",
  "impl-rlp",
  "impl-serde",
- "primitive-types 0.12.1",
+ "primitive-types",
  "scale-info",
  "uint",
 ]
@@ -1293,7 +1293,7 @@ dependencies = [
  "evm-runtime",
  "log 0.4.17",
  "parity-scale-codec",
- "primitive-types 0.12.1",
+ "primitive-types",
  "rlp",
  "scale-info",
  "serde 1.0.150",
@@ -1307,7 +1307,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "64c51bec0eb68a891c2575c758eaaa1d61373fc51f7caaf216b1fb5c3fea3b5d"
 dependencies = [
  "parity-scale-codec",
- "primitive-types 0.12.1",
+ "primitive-types",
  "scale-info",
  "serde 1.0.150",
 ]
@@ -1321,7 +1321,7 @@ dependencies = [
  "environmental 1.1.4",
  "evm-core",
  "evm-runtime",
- "primitive-types 0.12.1",
+ "primitive-types",
 ]
 
 [[package]]
@@ -1333,7 +1333,7 @@ dependencies = [
  "auto_impl",
  "environmental 1.1.4",
  "evm-core",
- "primitive-types 0.12.1",
+ "primitive-types",
  "sha3",
 ]
 
@@ -1410,18 +1410,6 @@ dependencies = [
  "parity-scale-codec",
  "parking_lot 0.12.1",
  "scale-info",
-]
-
-[[package]]
-name = "fixed-hash"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cfcf0ed7fe52a17a03854ec54a9f76d6d84508d1c0e66bc1793301c73fc8493c"
-dependencies = [
- "byteorder 1.4.3",
- "rand 0.8.5",
- "rustc-hex",
- "static_assertions",
 ]
 
 [[package]]
@@ -2463,7 +2451,7 @@ dependencies = [
  "pallet-balances",
  "pallet-evm",
  "parity-scale-codec",
- "primitive-types 0.11.1",
+ "primitive-types",
  "rand 0.8.5",
  "rayon",
  "sc-keystore",
@@ -2564,7 +2552,7 @@ dependencies = [
  "parity-scale-codec",
  "parking_lot 0.12.1",
  "parse_duration",
- "primitive-types 0.11.1",
+ "primitive-types",
  "prometheus",
  "serde 1.0.150",
  "serde_derive 1.0.150",
@@ -3531,7 +3519,7 @@ dependencies = [
  "itp-sgx-runtime-primitives",
  "pallet-balances",
  "parity-scale-codec",
- "primitive-types 0.11.1",
+ "primitive-types",
  "serde 1.0.150",
  "serde_json 1.0.89",
  "sp-core",
@@ -4997,7 +4985,7 @@ dependencies = [
  "log 0.4.17",
  "pallet-timestamp",
  "parity-scale-codec",
- "primitive-types 0.12.1",
+ "primitive-types",
  "rlp",
  "scale-info",
  "serde 1.0.150",
@@ -5368,7 +5356,7 @@ dependencies = [
  "impl-trait-for-tuples",
  "parity-util-mem-derive",
  "parking_lot 0.12.1",
- "primitive-types 0.12.1",
+ "primitive-types",
  "winapi 0.3.9",
 ]
 
@@ -5626,22 +5614,11 @@ dependencies = [
 
 [[package]]
 name = "primitive-types"
-version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e28720988bff275df1f51b171e1b2a18c30d194c4d2b61defdacecd625a5d94a"
-dependencies = [
- "fixed-hash 0.7.0",
- "impl-codec",
- "uint",
-]
-
-[[package]]
-name = "primitive-types"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f3486ccba82358b11a77516035647c34ba167dfa53312630de83b12bd4f3d66"
 dependencies = [
- "fixed-hash 0.8.0",
+ "fixed-hash",
  "impl-codec",
  "impl-rlp",
  "impl-serde",
@@ -7147,7 +7124,7 @@ dependencies = [
  "parity-scale-codec",
  "parity-util-mem",
  "parking_lot 0.12.1",
- "primitive-types 0.12.1",
+ "primitive-types",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.7.0",
  "scale-info",
@@ -7410,7 +7387,7 @@ dependencies = [
  "bytes 1.3.0",
  "impl-trait-for-tuples",
  "parity-scale-codec",
- "primitive-types 0.12.1",
+ "primitive-types",
  "sp-externalities",
  "sp-runtime-interface-proc-macro",
  "sp-std",
@@ -7713,7 +7690,7 @@ dependencies = [
  "pallet-balances",
  "pallet-transaction-payment",
  "parity-scale-codec",
- "primitive-types 0.12.1",
+ "primitive-types",
  "serde 1.0.150",
  "serde_json 1.0.89",
  "sp-core",

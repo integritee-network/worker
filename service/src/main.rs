@@ -69,7 +69,7 @@ use its_peer_fetch::{
 use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use its_storage::{interface::FetchBlocks, BlockPruner, SidechainStorageLock};
 use log::*;
-use my_node_runtime::{Event, Hash, Header};
+use my_node_runtime::{Hash, Header, RuntimeEvent};
 use sgx_types::*;
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
@@ -564,7 +564,7 @@ fn spawn_worker_for_shard_polling<InitializationHandler>(
 	});
 }
 
-type Events = Vec<frame_system::EventRecord<Event, Hash>>;
+type Events = Vec<frame_system::EventRecord<RuntimeEvent, Hash>>;
 
 fn parse_events(event: String) -> Result<Events, String> {
 	let _unhex = Vec::from_hex(event).map_err(|_| "Decoding Events Failed".to_string())?;
@@ -576,7 +576,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
 	for evr in &events {
 		debug!("Decoded: phase = {:?}, event = {:?}", evr.phase, evr.event);
 		match &evr.event {
-			Event::Balances(be) => {
+			RuntimeEvent::Balances(be) => {
 				info!("[+] Received balances event");
 				debug!("{:?}", be);
 				match &be {
@@ -594,7 +594,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
 					},
 				}
 			},
-			Event::Teerex(re) => {
+			RuntimeEvent::Teerex(re) => {
 				debug!("{:?}", re);
 				match &re {
 					my_node_runtime::pallet_teerex::Event::AddedEnclave(sender, worker_url) => {
@@ -634,7 +634,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
 				}
 			},
 			#[cfg(feature = "teeracle")]
-			Event::Teeracle(re) => {
+			RuntimeEvent::Teeracle(re) => {
 				debug!("{:?}", re);
 				match &re {
 					my_node_runtime::pallet_teeracle::Event::ExchangeRateUpdated(
@@ -677,7 +677,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
 				}
 			},
 			#[cfg(feature = "sidechain")]
-			Event::Sidechain(re) => match &re {
+			RuntimeEvent::Sidechain(re) => match &re {
 				my_node_runtime::pallet_sidechain::Event::ProposedSidechainBlock(
 					sender,
 					payload,

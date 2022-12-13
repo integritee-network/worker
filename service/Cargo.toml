@@ -31,7 +31,7 @@ ipfs-api = "0.11.0"
 sha2 = { version = "0.7", default-features = false }
 
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-primitive-types = { version = "0.11.1", default-features = false, features = ["codec"] }
+primitive-types = { version = "0.12.1", default-features = false, features = ["codec"] }
 
 sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
