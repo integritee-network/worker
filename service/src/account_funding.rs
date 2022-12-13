@@ -54,7 +54,7 @@ impl EnclaveAccountInfoProvider {
 pub fn setup_account_funding(
 	api: &ParentchainApi,
 	accountid: &AccountId32,
-	extrinsic_prefix: String,
+	extrinsic_prefix: &str,
 	is_development_mode: bool,
 ) -> ServiceResult<()> {
 	// Account funds
@@ -63,7 +63,7 @@ pub fn setup_account_funding(
 		ensure_account_has_funds(api, accountid)?;
 	} else {
 		// Production mode, there is no faucet.
-		let registration_fees = enclave_registration_fees(api, &extrinsic_prefix)?;
+		let registration_fees = enclave_registration_fees(api, extrinsic_prefix)?;
 		info!("Registration fees = {:?}", registration_fees);
 		let free_balance = api.get_free_balance(accountid)?;
 		info!("TEE's free balance = {:?}", free_balance);

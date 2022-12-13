@@ -36,7 +36,9 @@ pub struct SgxQlQveCollateral {
 }
 
 impl SgxQlQveCollateral {
-	/// Safety: The caller is in charge of ensuring that `c` is properly initialized and all
+	/// # Safety
+	///
+	/// The caller is in charge of ensuring that `c` is properly initialized and all
 	/// its members have a value that is not nullptr
 	pub unsafe fn from_c_type(c: &sgx_ql_qve_collateral_t) -> Self {
 		let pck_crl_issuer_chain = std::slice::from_raw_parts(

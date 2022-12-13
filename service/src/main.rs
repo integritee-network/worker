@@ -423,39 +423,13 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	{
 		let fmspc = [00u8, 0x90, 0x6E, 0xA1, 00, 00];
 		let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc).unwrap();
-		let xthex = hex_encode(uxt);
-
-		// Account funds
-		if let Err(x) =
-			setup_account_funding(&node_api, &tee_accountid, xthex.clone(), is_development_mode)
-		{
-			error!("Starting worker failed: {:?}", x);
-			// Return without registering the enclave. This will fail and the transaction will be banned for 30min.
-			return
-		}
-
-		println!("[>] Register the quoting enclave (send the extrinsic)");
-		let register_qe_xt_hash = node_api.send_extrinsic(xthex, XtStatus::Finalized).unwrap();
-		println!("[<] Extrinsic got finalized. Hash: {:?}\n", register_qe_xt_hash);
+		send_extrinsic(&uxt, &node_api, &tee_accountid, is_development_mode);
 	}
 
 	{
 		let fmspc = [00u8, 0x90, 0x6E, 0xA1, 00, 00];
 		let uxt = enclave.generate_register_tcb_info_extrinsic(fmspc).unwrap();
-		let xthex = hex_encode(uxt);
-
-		// Account funds
-		if let Err(x) =
-			setup_account_funding(&node_api, &tee_accountid, xthex.clone(), is_development_mode)
-		{
-			error!("Starting worker failed: {:?}", x);
-			// Return without registering the enclave. This will fail and the transaction will be banned for 30min.
-			return
-		}
-
-		println!("[>] Register the TCB info (send the extrinsic)");
-		let register_qe_xt_hash = node_api.send_extrinsic(xthex, XtStatus::Finalized).unwrap();
-		println!("[<] Extrinsic got finalized. Hash: {:?}\n", register_qe_xt_hash);
+		send_extrinsic(&uxt, &node_api, &tee_accountid, is_development_mode);
 	}
 
 	// ------------------------------------------------------------------------
@@ -472,12 +446,11 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	let uxt = enclave.generate_ias_ra_extrinsic(&trusted_url, skip_ra).unwrap();
 	#[cfg(feature = "dcap")]
 	let uxt = enclave.generate_dcap_ra_extrinsic(&trusted_url, skip_ra).unwrap();
-	let xthex = hex_encode(uxt);
+	send_extrinsic(&uxt, &node_api, &tee_accountid, is_development_mode);
+	let xthex = hex_encode(&uxt);
 
 	// Account funds
-	if let Err(x) =
-		setup_account_funding(&node_api, &tee_accountid, xthex.clone(), is_development_mode)
-	{
+	if let Err(x) = setup_account_funding(&node_api, &tee_accountid, &xthex, is_development_mode) {
 		error!("Starting worker failed: {:?}", x);
 		// Return without registering the enclave. This will fail and the transaction will be banned for 30min.
 		return
@@ -736,6 +709,26 @@ fn print_events(events: Events, _sender: Sender<String>) {
 			},
 		}
 	}
+}
+
+fn send_extrinsic(
+	extrinsic: &[u8],
+	api: &ParentchainApi,
+	accountid: &AccountId32,
+	is_development_mode: bool,
+) -> Option<Hash> {
+	let xthex = hex_encode(extrinsic);
+	// Account funds
+	if let Err(x) = setup_account_funding(api, accountid, &xthex, is_development_mode) {
+		error!("Starting worker failed: {:?}", x);
+		// Return without registering the enclave. This will fail and the transaction will be banned for 30min.
+		return None
+	}
+
+	println!("[>] Register the TCB info (send the extrinsic)");
+	let register_qe_xt_hash = api.send_extrinsic(xthex, XtStatus::Finalized).unwrap();
+	println!("[<] Extrinsic got finalized. Hash: {:?}\n", register_qe_xt_hash);
+	register_qe_xt_hash
 }
 
 /// Subscribe to the node API finalized heads stream and trigger a parent chain sync
