@@ -421,7 +421,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	{
 		let fmspc = [00u8, 0x90, 0x6E, 0xA1, 00, 00];
-		let uxt = enclave.generate_qe_extrinsic(fmspc).unwrap();
+		let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc).unwrap();
 
 		let mut xthex = hex::encode(uxt);
 		xthex.insert_str(0, "0x");
@@ -436,6 +436,27 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		}
 
 		println!("[>] Register the quoting enclave (send the extrinsic)");
+		let register_qe_xt_hash = node_api.send_extrinsic(xthex, XtStatus::Finalized).unwrap();
+		println!("[<] Extrinsic got finalized. Hash: {:?}\n", register_qe_xt_hash);
+	}
+
+	{
+		let fmspc = [00u8, 0x90, 0x6E, 0xA1, 00, 00];
+		let uxt = enclave.generate_register_tcb_info_extrinsic(fmspc).unwrap();
+
+		let mut xthex = hex::encode(uxt);
+		xthex.insert_str(0, "0x");
+
+		// Account funds
+		if let Err(x) =
+			setup_account_funding(&node_api, &tee_accountid, xthex.clone(), is_development_mode)
+		{
+			error!("Starting worker failed: {:?}", x);
+			// Return without registering the enclave. This will fail and the transaction will be banned for 30min.
+			return
+		}
+
+		println!("[>] Register the TCB info (send the extrinsic)");
 		let register_qe_xt_hash = node_api.send_extrinsic(xthex, XtStatus::Finalized).unwrap();
 		println!("[<] Extrinsic got finalized. Hash: {:?}\n", register_qe_xt_hash);
 	}

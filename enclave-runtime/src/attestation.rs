@@ -202,7 +202,7 @@ fn generate_ias_ra_extrinsic_internal(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn generate_qe_extrinsic(
+pub unsafe extern "C" fn generate_register_quoting_enclave_extrinsic(
 	collateral: *const sgx_ql_qve_collateral_t,
 	unchecked_extrinsic: *mut u8,
 	unchecked_extrinsic_size: u32,
@@ -226,6 +226,39 @@ pub unsafe extern "C" fn generate_qe_extrinsic(
 	info!("    [Enclave] Compose register quoting enclave call: {:?}", call_ids);
 	let call =
 		OpaqueCall::from_tuple(&(call_ids, data, signature, collateral.qe_identity_issuer_chain));
+
+	let extrinsic = extrinsics_factory.create_extrinsics(&[call], None).unwrap()[0].clone();
+	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
+		return EnclaveError::Other(Box::new(e)).into()
+	};
+	sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn generate_register_tcb_info_extrinsic(
+	collateral: *const sgx_ql_qve_collateral_t,
+	unchecked_extrinsic: *mut u8,
+	unchecked_extrinsic_size: u32,
+) -> sgx_status_t {
+	if unchecked_extrinsic.is_null() || collateral.is_null() {
+		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+	}
+	let extrinsic_slice =
+		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
+	let collateral = SgxQlQveCollateral::from_c_type(&*collateral);
+	let (data, signature) = collateral.get_tcb_info_split().unwrap();
+
+	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain().unwrap();
+	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain().unwrap();
+
+	let call_ids = node_metadata_repo
+		.get_from_metadata(|m| m.register_tcb_info_call_indexes())
+		.unwrap()
+		.map_err(MetadataProviderError::MetadataError)
+		.unwrap();
+	info!("    [Enclave] Compose register TCB info call: {:?}", call_ids);
+	let call =
+		OpaqueCall::from_tuple(&(call_ids, data, signature, collateral.tcb_info_issuer_chain));
 
 	let extrinsic = extrinsics_factory.create_extrinsics(&[call], None).unwrap()[0].clone();
 	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {

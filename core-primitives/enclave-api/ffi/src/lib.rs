@@ -115,7 +115,15 @@ extern "C" {
 		quote_size: u32,
 	) -> sgx_status_t;
 
-	pub fn generate_qe_extrinsic(
+	pub fn generate_register_quoting_enclave_extrinsic(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		collateral: *const sgx_ql_qve_collateral_t,
+		unchecked_extrinsic: *mut u8,
+		unchecked_extrinsic_size: u32,
+	) -> sgx_status_t;
+
+	pub fn generate_register_tcb_info_extrinsic(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
 		collateral: *const sgx_ql_qve_collateral_t,
