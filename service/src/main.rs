@@ -436,19 +436,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	let uxt = enclave.generate_ias_ra_extrinsic(&trusted_url, skip_ra).unwrap();
 	#[cfg(feature = "dcap")]
 	let uxt = enclave.generate_dcap_ra_extrinsic(&trusted_url, skip_ra).unwrap();
-	send_extrinsic(&uxt, &node_api, &tee_accountid, is_development_mode);
-	let xthex = hex_encode(&uxt);
-
-	// Account funds
-	if let Err(x) = setup_account_funding(&node_api, &tee_accountid, &xthex, is_development_mode) {
-		error!("Starting worker failed: {:?}", x);
-		// Return without registering the enclave. This will fail and the transaction will be banned for 30min.
-		return
-	}
-
-	println!("[>] Register the enclave (send the extrinsic)");
-	let register_enclave_xt_hash = node_api.send_extrinsic(xthex, XtStatus::Finalized).unwrap();
-	println!("[<] Extrinsic got finalized. Hash: {:?}\n", register_enclave_xt_hash);
+	let register_enclave_xt_hash =
+		send_extrinsic(&uxt, &node_api, &tee_accountid, is_development_mode);
 
 	let register_enclave_xt_header =
 		node_api.get_header(register_enclave_xt_hash).unwrap().unwrap();
