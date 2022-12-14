@@ -19,7 +19,7 @@ use crate::{command_utils::get_chain_api, Cli};
 use base58::ToBase58;
 use codec::{Decode, Encode};
 use log::*;
-use my_node_runtime::{Event, Hash};
+use my_node_runtime::{Hash, RuntimeEvent};
 use std::{sync::mpsc::channel, vec::Vec};
 use substrate_api_client::utils::FromHexString;
 
@@ -57,14 +57,15 @@ impl ListenCommand {
 			let event_str = events_out.recv().unwrap();
 			let _unhex = Vec::from_hex(event_str).unwrap();
 			let mut _er_enc = _unhex.as_slice();
-			let _events = Vec::<frame_system::EventRecord<Event, Hash>>::decode(&mut _er_enc);
+			let _events =
+				Vec::<frame_system::EventRecord<RuntimeEvent, Hash>>::decode(&mut _er_enc);
 			blocks += 1;
 			match _events {
 				Ok(evts) =>
 					for evr in &evts {
 						println!("decoded: phase {:?} event {:?}", evr.phase, evr.event);
 						match &evr.event {
-							Event::Balances(be) => {
+							RuntimeEvent::Balances(be) => {
 								println!(">>>>>>>>>> balances event: {:?}", be);
 								match &be {
 									pallet_balances::Event::Transfer { from, to, amount } => {
@@ -77,7 +78,7 @@ impl ListenCommand {
 									},
 								}
 							},
-							Event::Teerex(ee) => {
+							RuntimeEvent::Teerex(ee) => {
 								println!(">>>>>>>>>> integritee event: {:?}", ee);
 								count += 1;
 								match &ee {
@@ -127,7 +128,7 @@ impl ListenCommand {
 									_ => debug!("ignoring unsupported teerex event: {:?}", ee),
 								}
 							},
-							Event::Sidechain(ee) => {
+							RuntimeEvent::Sidechain(ee) => {
 								count += 1;
 								match &ee {
 									my_node_runtime::pallet_sidechain::Event::ProposedSidechainBlock(

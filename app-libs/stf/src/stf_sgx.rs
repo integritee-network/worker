@@ -193,7 +193,7 @@ where
 	State: SgxExternalitiesTrait,
 	Runtime: frame_system::Config,
 {
-	type EventRecord = frame_system::EventRecord<Runtime::Event, Runtime::Hash>;
+	type EventRecord = frame_system::EventRecord<Runtime::RuntimeEvent, Runtime::Hash>;
 	type EventIndex = u32; // For some reason this is not a pub type in frame_system
 	type BlockNumber = Runtime::BlockNumber;
 	type Hash = Runtime::Hash;
@@ -232,7 +232,7 @@ where
 	) -> Result<(), Self::Error> {
 		state.execute_with(|| {
 			pallet_parentchain::Call::<Runtime>::set_block { header }
-				.dispatch_bypass_filter(Runtime::Origin::root())
+				.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
 				.map_err(|e| {
 					Self::Error::Dispatch(format!("Update parentchain block error: {:?}", e.error))
 				})
@@ -266,7 +266,7 @@ where
 		new_free: 1000.into(),
 		new_reserved: 0.into(),
 	}
-	.dispatch_bypass_filter(Runtime::Origin::root())
+	.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
 	.map_err(|e| {
 		StfError::Dispatch(format!("Set Balance for enclave signer account error: {:?}", e.error))
 	})

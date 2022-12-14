@@ -38,7 +38,7 @@ use std::{
 	sync::mpsc::{channel, Receiver},
 	time::Instant,
 };
-use substrate_api_client::{compose_extrinsic, XtStatus};
+use substrate_api_client::{compose_extrinsic, StaticEvent, XtStatus};
 use teerex_primitives::Request;
 
 pub(crate) fn perform_trusted_operation(
@@ -133,14 +133,8 @@ fn send_request(
 	_chain_api.subscribe_events(events_in).unwrap();
 
 	loop {
-		let ret: ProcessedParentchainBlockArgs = _chain_api
-			.wait_for_event::<ProcessedParentchainBlockArgs>(
-				TEEREX,
-				"ProcessedParentchainBlock",
-				None,
-				&events_out,
-			)
-			.unwrap();
+		let ret: ProcessedParentchainBlockArgs =
+			_chain_api.wait_for_event::<ProcessedParentchainBlockArgs>(&events_out).unwrap();
 		info!("Confirmation of ProcessedParentchainBlock received");
 		debug!("Expected block Hash: {:?}", block_hash);
 		debug!("Confirmed stf block Hash: {:?}", ret.block_hash);
@@ -349,4 +343,9 @@ struct ProcessedParentchainBlockArgs {
 	block_hash: H256,
 	merkle_root: H256,
 	block_number: BlockNumber,
+}
+
+impl StaticEvent for ProcessedParentchainBlockArgs {
+	const PALLET: &'static str = TEEREX;
+	const EVENT: &'static str = "ProcessedParentchainBlock";
 }

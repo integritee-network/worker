@@ -139,7 +139,7 @@ where
 			meta_data.confirm_processed_parentchain_block_call_indexes()
 		})??;
 
-		let root: H256 = merkle_root::<Keccak256, _, _>(extrinsics).into();
+		let root: H256 = merkle_root::<Keccak256, _>(extrinsics);
 		Ok(OpaqueCall::from_tuple(&(call, block_hash, block_number, root)))
 	}
 

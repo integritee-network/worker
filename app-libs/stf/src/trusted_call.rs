@@ -193,14 +193,14 @@ impl ExecuteCall for TrustedCallSigned {
 					new_free: free_balance,
 					new_reserved: reserved_balance,
 				}
-				.dispatch_bypass_filter(ita_sgx_runtime::Origin::root())
+				.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
 				.map_err(|e| {
 					Self::Error::Dispatch(format!("Balance Set Balance error: {:?}", e.error))
 				})?;
 				Ok(())
 			},
 			TrustedCall::balance_transfer(from, to, value) => {
-				let origin = ita_sgx_runtime::Origin::signed(from.clone());
+				let origin = ita_sgx_runtime::RuntimeOrigin::signed(from.clone());
 				debug!(
 					"balance_transfer({}, {}, {})",
 					account_id_to_string(&from),
@@ -245,7 +245,7 @@ impl ExecuteCall for TrustedCallSigned {
 			TrustedCall::evm_withdraw(from, address, value) => {
 				debug!("evm_withdraw({}, {}, {})", account_id_to_string(&from), address, value);
 				ita_sgx_runtime::EvmCall::<Runtime>::withdraw { address, value }
-					.dispatch_bypass_filter(ita_sgx_runtime::Origin::signed(from))
+					.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::signed(from))
 					.map_err(|e| {
 						Self::Error::Dispatch(format!("Evm Withdraw error: {:?}", e.error))
 					})?;
@@ -281,7 +281,7 @@ impl ExecuteCall for TrustedCallSigned {
 					nonce,
 					access_list,
 				}
-				.dispatch_bypass_filter(ita_sgx_runtime::Origin::signed(from))
+				.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::signed(from))
 				.map_err(|e| Self::Error::Dispatch(format!("Evm Call error: {:?}", e.error)))?;
 				Ok(())
 			},
@@ -315,7 +315,7 @@ impl ExecuteCall for TrustedCallSigned {
 					nonce,
 					access_list,
 				}
-				.dispatch_bypass_filter(ita_sgx_runtime::Origin::signed(from))
+				.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::signed(from))
 				.map_err(|e| Self::Error::Dispatch(format!("Evm Create error: {:?}", e.error)))?;
 				let contract_address = evm_create_address(source, nonce_evm_account);
 				info!("Trying to create evm contract with address {:?}", contract_address);
@@ -352,7 +352,7 @@ impl ExecuteCall for TrustedCallSigned {
 					nonce,
 					access_list,
 				}
-				.dispatch_bypass_filter(ita_sgx_runtime::Origin::signed(from))
+				.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::signed(from))
 				.map_err(|e| Self::Error::Dispatch(format!("Evm Create2 error: {:?}", e.error)))?;
 				let contract_address = evm_create2_address(source, salt, code_hash);
 				info!("Trying to create evm contract with address {:?}", contract_address);
@@ -388,7 +388,7 @@ fn unshield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
 		new_free: account_info.data.free - amount,
 		new_reserved: account_info.data.reserved,
 	}
-	.dispatch_bypass_filter(ita_sgx_runtime::Origin::root())
+	.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
 	.map_err(|e| StfError::Dispatch(format!("Unshield funds error: {:?}", e.error)))?;
 	Ok(())
 }
@@ -400,7 +400,7 @@ fn shield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
 		new_free: account_info.data.free + amount,
 		new_reserved: account_info.data.reserved,
 	}
-	.dispatch_bypass_filter(ita_sgx_runtime::Origin::root())
+	.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
 	.map_err(|e| StfError::Dispatch(format!("Shield funds error: {:?}", e.error)))?;
 
 	Ok(())

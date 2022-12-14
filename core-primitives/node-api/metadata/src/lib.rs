@@ -76,7 +76,7 @@ impl NodeMetadata {
 			Some(m) => m.pallet(pallet_name).map_err(Error::NodeMetadata)?,
 		};
 		let call_index = pallet
-			.calls
+			.call_indexes
 			.get(call_name)
 			.ok_or_else(|| Error::NodeMetadata(MetadataError::CallNotFound(call_name)))?;
 		Ok([pallet.index, *call_index])

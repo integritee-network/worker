@@ -32,13 +32,13 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 derive_more = { version = "0.99.5" }
 log = { version = "0.4", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
-sp-application-crypto = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
-sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
+sp-application-crypto = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.32" }
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.32" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.32" }
 
 # dev dependencies (for tests)
 [dev-dependencies]
-parity-util-mem = { version = "0.11.0", default-features = false, features = ["primitive-types"] }
+parity-util-mem = { version = "0.12.0", default-features = false, features = ["primitive-types"] }
 
 [features]
 default = ["std"]
