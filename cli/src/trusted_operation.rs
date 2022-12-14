@@ -346,6 +346,6 @@ struct ProcessedParentchainBlockArgs {
 }
 
 impl StaticEvent for ProcessedParentchainBlockArgs {
-	const PALLET: &'static str = "";
-	const EVENT: &'static str = "";
+	const PALLET: &'static str = TEEREX;
+	const EVENT: &'static str = "ProcessedParentchainBlock";
 }
