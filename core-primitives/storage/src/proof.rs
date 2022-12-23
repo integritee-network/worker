@@ -101,7 +101,9 @@ mod tests {
 		let proof: StorageProof = prove_read(backend, &[&b"key1"[..], &b"key2"[..], &b"key22"[..]])
 			.unwrap()
 			.iter_nodes()
-			.collect();
+            .cloned()
+            .collect();
+			
 
 		// check proof in runtime
 		let checker = <StorageProofChecker<Blake2Hasher>>::new(root, proof.clone()).unwrap();
