@@ -23,8 +23,27 @@ def setup_working_dir(source_dir: str, target_dir: str):
          target_dir: the working directory of the worker to be run.
      """
 
-    files_to_copy = ['enclave.signed.so', 'key.txt', 'spid.txt', 'integritee-service']
-    [shutil.copy(f'{source_dir}/{f}', f'{target_dir}/{f}') for f in files_to_copy]
+    optional = ['key.txt', 'spid.txt']
+
+    for file in optional:
+        source = f'{source_dir}/{file}'
+        target = f'{target_dir}/{file}'
+
+        if os.path.exists(source):
+            shutil.copy(source, target)
+        else:
+            print(f'{source} does not exist, this is fine, but you can\'t perform remote attestation with this.')
+
+    mandatory = ['enclave.signed.so', 'integritee-service']
+
+    for file in mandatory:
+        source = f'{source_dir}/{file}'
+        target = f'{target_dir}/{file}'
+
+        if os.path.exists(source):
+            shutil.copy(source, target)
+        else:
+            print(f'{source} does not exist. Did you run make?')
 
 
 def mkdir_p(path):
