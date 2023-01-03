@@ -36,8 +36,8 @@ mod evm;
 #[cfg(feature = "teeracle")]
 mod oracle;
 mod trusted_base_cli;
+mod trusted_cli;
 mod trusted_command_utils;
-mod trusted_commands;
 mod trusted_operation;
 
 use crate::commands::Commands;

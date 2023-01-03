@@ -17,8 +17,8 @@
 
 use crate::{
 	get_layer_two_nonce,
+	trusted_cli::TrustedCli,
 	trusted_command_utils::{get_identifiers, get_pair_from_str},
-	trusted_commands::TrustedCli,
 	trusted_operation::perform_trusted_operation,
 	Cli,
 };

@@ -16,7 +16,7 @@
 */
 
 extern crate chrono;
-use crate::{base_cli::BaseCommand, trusted_commands::TrustedCli, Cli};
+use crate::{base_cli::BaseCommand, trusted_cli::TrustedCli, Cli};
 use clap::Subcommand;
 
 #[cfg(feature = "teeracle")]

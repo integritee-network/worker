@@ -17,7 +17,7 @@
 
 use crate::{
 	command_utils::{get_chain_api, get_pair_from_str, get_shielding_key, get_worker_api_direct},
-	trusted_commands::TrustedCli,
+	trusted_cli::TrustedCli,
 	Cli,
 };
 use base58::FromBase58;

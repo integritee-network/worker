@@ -16,7 +16,7 @@
 */
 
 use crate::{
-	command_utils::mrenclave_from_base58, trusted_commands::TrustedCli,
+	command_utils::mrenclave_from_base58, trusted_cli::TrustedCli,
 	trusted_operation::perform_trusted_operation, Cli,
 };
 use base58::{FromBase58, ToBase58};

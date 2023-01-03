@@ -18,10 +18,10 @@
 use crate::{
 	command_utils::get_worker_api_direct,
 	get_layer_two_nonce,
+	trusted_cli::TrustedCli,
 	trusted_command_utils::{
 		decode_balance, get_identifiers, get_keystore_path, get_pair_from_str,
 	},
-	trusted_commands::TrustedCli,
 	trusted_operation::{get_json_request, get_state, perform_trusted_operation, wait_until},
 	Cli,
 };

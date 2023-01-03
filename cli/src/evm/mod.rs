@@ -19,7 +19,7 @@ use crate::{
 	evm::commands::{
 		evm_call::EvmCallCommands, evm_create::EvmCreateCommands, evm_read::EvmReadCommands,
 	},
-	trusted_commands::TrustedCli,
+	trusted_cli::TrustedCli,
 	Cli,
 };
 

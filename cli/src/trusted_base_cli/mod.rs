@@ -20,8 +20,8 @@ use crate::{
 		balance::BalanceCommand, set_balance::SetBalanceCommand, transfer::TransferCommand,
 		unshield_funds::UnshieldFundsCommand,
 	},
+	trusted_cli::TrustedCli,
 	trusted_command_utils::get_keystore_path,
-	trusted_commands::TrustedCli,
 	Cli,
 };
 use log::*;

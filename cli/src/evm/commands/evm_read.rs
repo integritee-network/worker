@@ -16,7 +16,7 @@
 */
 
 use crate::{
-	trusted_command_utils::get_pair_from_str, trusted_commands::TrustedCli,
+	trusted_cli::TrustedCli, trusted_command_utils::get_pair_from_str,
 	trusted_operation::perform_trusted_operation, Cli,
 };
 use codec::Decode;

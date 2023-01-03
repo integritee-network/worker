@@ -15,7 +15,7 @@
 
 */
 
-use crate::{trusted_command_utils::get_balance, trusted_commands::TrustedCli, Cli};
+use crate::{trusted_cli::TrustedCli, trusted_command_utils::get_balance, Cli};
 
 #[derive(Parser)]
 pub struct BalanceCommand {
