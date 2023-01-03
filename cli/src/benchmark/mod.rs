@@ -55,7 +55,7 @@ use substrate_client_keystore::{KeystoreExt, LocalKeystore};
 const EXISTENTIAL_DEPOSIT: Balance = 1000;
 
 #[derive(Parser)]
-pub struct BenchmarkCommands {
+pub struct BenchmarkCommand {
 	/// The number of clients (=threads) to be used in the benchmark
 	#[clap(default_value_t = 10)]
 	number_clients: u32,
@@ -112,7 +112,7 @@ struct BenchmarkTransaction {
 	confirmed: Option<Instant>,
 }
 
-impl BenchmarkCommands {
+impl BenchmarkCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
 		let random_wait_before_transaction_ms: (u32, u32) = (
 			self.random_wait_before_transaction_min_ms,

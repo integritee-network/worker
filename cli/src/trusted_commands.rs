@@ -15,7 +15,7 @@
 
 */
 
-use crate::{benchmark::BenchmarkCommands, Cli};
+use crate::{benchmark::BenchmarkCommand, Cli};
 
 #[cfg(feature = "evm")]
 use crate::evm::EvmCommands;
@@ -53,7 +53,7 @@ pub enum TrustedCommands {
 	EvmCommands(EvmCommands),
 
 	/// Run Benchmark
-	Benchmark(BenchmarkCommands),
+	Benchmark(BenchmarkCommand),
 }
 
 impl TrustedCli {
