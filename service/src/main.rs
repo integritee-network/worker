@@ -698,10 +698,10 @@ fn register_collateral(
 ) {
 	let fmspc = [00u8, 0x90, 0x6E, 0xA1, 00, 00];
 	let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc).unwrap();
-	send_extrinsic(&uxt, &api, &accountid, is_development_mode);
+	send_extrinsic(&uxt, api, accountid, is_development_mode);
 
 	let uxt = enclave.generate_register_tcb_info_extrinsic(fmspc).unwrap();
-	send_extrinsic(&uxt, &api, &accountid, is_development_mode);
+	send_extrinsic(&uxt, api, accountid, is_development_mode);
 }
 
 fn send_extrinsic(
