@@ -16,7 +16,7 @@
 */
 
 extern crate chrono;
-use crate::{base_cli::BaseCli, trusted_commands::TrustedArgs, Cli};
+use crate::{base_cli::BaseCli, trusted_commands::TrustedCli, Cli};
 use clap::Subcommand;
 
 #[cfg(feature = "teeracle")]
@@ -29,7 +29,7 @@ pub enum Commands {
 
 	/// trusted calls to worker enclave
 	#[clap(after_help = "stf subcommands depend on the stf crate this has been built against")]
-	Trusted(TrustedArgs),
+	Trusted(TrustedCli),
 
 	/// Subcommands for the oracle.
 	#[cfg(feature = "teeracle")]

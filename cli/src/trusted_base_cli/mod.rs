@@ -21,7 +21,7 @@ use crate::{
 		unshield_funds::UnshieldFundsCommand,
 	},
 	trusted_command_utils::get_keystore_path,
-	trusted_commands::TrustedArgs,
+	trusted_commands::TrustedCli,
 	Cli,
 };
 use log::*;
@@ -53,7 +53,7 @@ pub enum TrustedBaseCli {
 }
 
 impl TrustedBaseCli {
-	pub fn run(&self, cli: &Cli, trusted_args: &TrustedArgs) {
+	pub fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
 		match self {
 			TrustedBaseCli::NewAccount => new_account(trusted_args),
 			TrustedBaseCli::ListAccounts => list_accounts(trusted_args),
@@ -65,7 +65,7 @@ impl TrustedBaseCli {
 	}
 }
 
-fn new_account(trusted_args: &TrustedArgs) {
+fn new_account(trusted_args: &TrustedCli) {
 	let store = LocalKeystore::open(get_keystore_path(trusted_args), None).unwrap();
 	let key: sr25519::AppPair = store.generate().unwrap();
 	drop(store);
@@ -73,7 +73,7 @@ fn new_account(trusted_args: &TrustedArgs) {
 	println!("{}", key.public().to_ss58check());
 }
 
-fn list_accounts(trusted_args: &TrustedArgs) {
+fn list_accounts(trusted_args: &TrustedCli) {
 	let store = LocalKeystore::open(get_keystore_path(trusted_args), None).unwrap();
 	info!("sr25519 keys:");
 	for pubkey in store.public_keys::<sr25519::AppPublic>().unwrap().into_iter() {

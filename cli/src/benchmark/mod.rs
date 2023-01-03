@@ -21,7 +21,7 @@ use crate::{
 	trusted_command_utils::{
 		decode_balance, get_identifiers, get_keystore_path, get_pair_from_str,
 	},
-	trusted_commands::TrustedArgs,
+	trusted_commands::TrustedCli,
 	trusted_operation::{get_json_request, get_state, perform_trusted_operation, wait_until},
 	Cli,
 };
@@ -113,7 +113,7 @@ struct BenchmarkTransaction {
 }
 
 impl BenchmarkCommands {
-	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedArgs) {
+	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
 		let random_wait_before_transaction_ms: (u32, u32) = (
 			self.random_wait_before_transaction_min_ms,
 			self.random_wait_before_transaction_max_ms,

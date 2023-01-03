@@ -18,7 +18,7 @@
 use crate::{
 	get_layer_two_nonce,
 	trusted_command_utils::{get_identifiers, get_pair_from_str},
-	trusted_commands::TrustedArgs,
+	trusted_commands::TrustedCli,
 	trusted_operation::perform_trusted_operation,
 	Cli,
 };
@@ -40,7 +40,7 @@ pub struct SetBalanceCommand {
 }
 
 impl SetBalanceCommand {
-	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedArgs) {
+	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
 		let who = get_pair_from_str(trusted_args, &self.account);
 		let signer = get_pair_from_str(trusted_args, "//Alice");
 		info!("account ss58 is {}", who.public().to_ss58check());

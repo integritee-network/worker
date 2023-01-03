@@ -22,7 +22,7 @@ use crate::evm::EvmCommands;
 use crate::trusted_base_cli::TrustedBaseCli;
 
 #[derive(Args)]
-pub struct TrustedArgs {
+pub struct TrustedCli {
 	/// targeted worker MRENCLAVE
 	#[clap(short, long)]
 	pub(crate) mrenclave: String,
@@ -56,7 +56,7 @@ pub enum TrustedCommands {
 	Benchmark(BenchmarkCommands),
 }
 
-impl TrustedArgs {
+impl TrustedCli {
 	pub(crate) fn run(&self, cli: &Cli) {
 		match &self.command {
 			TrustedCommands::BaseTrusted(cmd) => cmd.run(cli, self),

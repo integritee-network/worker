@@ -19,7 +19,7 @@ use crate::{
 	evm::commands::{
 		evm_call::EvmCallCommands, evm_create::EvmCreateCommands, evm_read::EvmReadCommands,
 	},
-	trusted_commands::TrustedArgs,
+	trusted_commands::TrustedCli,
 	Cli,
 };
 
@@ -39,7 +39,7 @@ pub enum EvmCommands {
 }
 
 impl EvmCommands {
-	pub fn run(&self, cli: &Cli, trusted_args: &TrustedArgs) {
+	pub fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
 		match self {
 			EvmCommands::EvmCreate(cmd) => cmd.run(cli, trusted_args),
 			EvmCommands::EvmRead(cmd) => cmd.run(cli, trusted_args),
