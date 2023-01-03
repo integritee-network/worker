@@ -2534,7 +2534,7 @@ dependencies = [
  "sc-keystore",
  "serde 1.0.152",
  "serde_json 1.0.91",
- "sgx_crypto_helper 1.1.6 (git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master)",
+ "sgx_crypto_helper",
  "sp-application-crypto",
  "sp-core",
  "sp-keyring",
@@ -2634,7 +2634,7 @@ dependencies = [
  "serde 1.0.152",
  "serde_derive 1.0.152",
  "serde_json 1.0.91",
- "sgx_crypto_helper 1.1.6 (git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master)",
+ "sgx_crypto_helper",
  "sgx_types",
  "sgx_urts",
  "sha2 0.7.1",
@@ -3016,7 +3016,7 @@ dependencies = [
  "rustls 0.19.1",
  "serde_derive 1.0.152",
  "serde_json 1.0.91",
- "sgx_crypto_helper 1.1.6 (git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master)",
+ "sgx_crypto_helper",
  "substrate-api-client",
  "thiserror 1.0.38",
  "url 2.3.1",
@@ -3059,7 +3059,7 @@ dependencies = [
  "rcgen",
  "rustls 0.19.0 (git+https://github.com/mesalock-linux/rustls?branch=mesalock_sgx)",
  "rustls 0.19.1",
- "sgx_crypto_helper 1.1.6 (git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=v1.1.6-testing)",
+ "sgx_crypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
@@ -3190,7 +3190,7 @@ dependencies = [
  "log 0.4.17",
  "parity-scale-codec",
  "serde_json 1.0.91",
- "sgx_crypto_helper 1.1.6 (git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master)",
+ "sgx_crypto_helper",
  "sgx_types",
  "sgx_urts",
  "sp-core",
@@ -3351,7 +3351,7 @@ dependencies = [
  "serde 1.0.152",
  "serde_json 1.0.60 (git+https://github.com/mesalock-linux/serde-json-sgx?tag=sgx_1.1.3)",
  "serde_json 1.0.91",
- "sgx_crypto_helper 1.1.6 (git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master)",
+ "sgx_crypto_helper",
  "sgx_rand",
  "sgx_tstd",
  "sgx_types",
@@ -3410,7 +3410,7 @@ dependencies = [
  "itp-types",
  "log 0.4.17",
  "parity-scale-codec",
- "sgx_crypto_helper 1.1.6 (git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master)",
+ "sgx_crypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
@@ -3520,7 +3520,7 @@ dependencies = [
  "itp-types",
  "jsonrpc-core 18.0.0 (git+https://github.com/scs/jsonrpc?branch=no_std_v18)",
  "parity-scale-codec",
- "sgx_crypto_helper 1.1.6 (git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master)",
+ "sgx_crypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
@@ -3583,7 +3583,7 @@ dependencies = [
  "jsonrpc-core 18.0.0 (git+https://github.com/scs/jsonrpc?branch=no_std_v18)",
  "log 0.4.17",
  "parity-scale-codec",
- "sgx_crypto_helper 1.1.6 (git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master)",
+ "sgx_crypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
@@ -6752,20 +6752,6 @@ dependencies = [
  "sgx_tstd",
  "sgx_types",
  "sgx_ucrypto",
-]
-
-[[package]]
-name = "sgx_crypto_helper"
-version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=v1.1.6-testing#9c1bbd52f188f600a212b57c916124245da1b7fd"
-dependencies = [
- "itertools",
- "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx)",
- "serde-big-array 0.3.0",
- "serde_derive 1.0.118",
- "sgx_tcrypto",
- "sgx_tstd",
- "sgx_types",
 ]
 
 [[package]]

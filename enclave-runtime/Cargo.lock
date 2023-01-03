@@ -1673,7 +1673,7 @@ dependencies = [
  "mio-extras",
  "rcgen",
  "rustls 0.19.0 (git+https://github.com/mesalock-linux/rustls?branch=mesalock_sgx)",
- "sgx_crypto_helper 1.1.6 (git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=v1.1.6-testing)",
+ "sgx_crypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
@@ -1886,7 +1886,7 @@ dependencies = [
  "parity-scale-codec",
  "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx?tag=sgx_1.1.3)",
  "serde_json 1.0.60 (git+https://github.com/mesalock-linux/serde-json-sgx?tag=sgx_1.1.3)",
- "sgx_crypto_helper 1.1.6 (git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master)",
+ "sgx_crypto_helper",
  "sgx_rand",
  "sgx_tstd",
  "sgx_types",
@@ -1945,7 +1945,7 @@ dependencies = [
  "itp-types",
  "log",
  "parity-scale-codec",
- "sgx_crypto_helper 1.1.6 (git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master)",
+ "sgx_crypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
@@ -2049,7 +2049,7 @@ dependencies = [
  "itp-types",
  "jsonrpc-core",
  "parity-scale-codec",
- "sgx_crypto_helper 1.1.6 (git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master)",
+ "sgx_crypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
@@ -3560,20 +3560,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sgx_crypto_helper"
-version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=v1.1.6-testing#9c1bbd52f188f600a212b57c916124245da1b7fd"
-dependencies = [
- "itertools",
- "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx)",
- "serde-big-array",
- "serde_derive 1.0.118",
- "sgx_tcrypto",
- "sgx_tstd",
- "sgx_types",
-]
-
-[[package]]
 name = "sgx_demangle"
 version = "1.1.6"
 source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#27bd225ae6dbcd1d0a6d4d9590acc4d73c5195c2"
@@ -3635,7 +3621,7 @@ name = "sgx_tcrypto_helper"
 version = "1.1.6"
 source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#27bd225ae6dbcd1d0a6d4d9590acc4d73c5195c2"
 dependencies = [
- "sgx_crypto_helper 1.1.6 (git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master)",
+ "sgx_crypto_helper",
 ]
 
 [[package]]
