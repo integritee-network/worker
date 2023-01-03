@@ -32,7 +32,7 @@ use substrate_client_keystore::{KeystoreExt, LocalKeystore};
 mod commands;
 
 #[derive(Subcommand)]
-pub enum TrustedBaseCli {
+pub enum TrustedBaseCommands {
 	/// generates a new incognito account for the given shard
 	NewAccount,
 
@@ -52,15 +52,15 @@ pub enum TrustedBaseCli {
 	UnshieldFunds(UnshieldFundsCommand),
 }
 
-impl TrustedBaseCli {
+impl TrustedBaseCommands {
 	pub fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
 		match self {
-			TrustedBaseCli::NewAccount => new_account(trusted_args),
-			TrustedBaseCli::ListAccounts => list_accounts(trusted_args),
-			TrustedBaseCli::Transfer(cmd) => cmd.run(cli, trusted_args),
-			TrustedBaseCli::SetBalance(cmd) => cmd.run(cli, trusted_args),
-			TrustedBaseCli::Balance(cmd) => cmd.run(cli, trusted_args),
-			TrustedBaseCli::UnshieldFunds(cmd) => cmd.run(cli, trusted_args),
+			TrustedBaseCommands::NewAccount => new_account(trusted_args),
+			TrustedBaseCommands::ListAccounts => list_accounts(trusted_args),
+			TrustedBaseCommands::Transfer(cmd) => cmd.run(cli, trusted_args),
+			TrustedBaseCommands::SetBalance(cmd) => cmd.run(cli, trusted_args),
+			TrustedBaseCommands::Balance(cmd) => cmd.run(cli, trusted_args),
+			TrustedBaseCommands::UnshieldFunds(cmd) => cmd.run(cli, trusted_args),
 		}
 	}
 }
