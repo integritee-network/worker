@@ -40,11 +40,11 @@ pub struct TrustedCli {
 	pub(crate) direct: bool,
 
 	#[clap(subcommand)]
-	pub(crate) command: TrustedCommands,
+	pub(crate) command: TrustedCommand,
 }
 
 #[derive(Subcommand)]
-pub enum TrustedCommands {
+pub enum TrustedCommand {
 	#[clap(flatten)]
 	BaseTrusted(TrustedBaseCommand),
 
@@ -59,10 +59,10 @@ pub enum TrustedCommands {
 impl TrustedCli {
 	pub(crate) fn run(&self, cli: &Cli) {
 		match &self.command {
-			TrustedCommands::BaseTrusted(cmd) => cmd.run(cli, self),
-			TrustedCommands::Benchmark(cmd) => cmd.run(cli, self),
+			TrustedCommand::BaseTrusted(cmd) => cmd.run(cli, self),
+			TrustedCommand::Benchmark(cmd) => cmd.run(cli, self),
 			#[cfg(feature = "evm")]
-			TrustedCommands::EvmCommands(cmd) => cmd.run(cli, self),
+			TrustedCommand::EvmCommands(cmd) => cmd.run(cli, self),
 		}
 	}
 }
