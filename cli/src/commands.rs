@@ -40,7 +40,7 @@ pub enum Commands {
 pub fn match_command(cli: &Cli) {
 	match &cli.command {
 		Commands::Base(cmd) => cmd.run(cli),
-		Commands::Trusted(cmd) => cmd.run(cli),
+		Commands::Trusted(trusted_cli) => trusted_cli.run(cli),
 		#[cfg(feature = "teeracle")]
 		Commands::Oracle(cmd) => cmd.run(cli),
 	};

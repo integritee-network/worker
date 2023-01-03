@@ -53,14 +53,14 @@ pub enum TrustedBaseCommand {
 }
 
 impl TrustedBaseCommand {
-	pub fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
+	pub fn run(&self, cli: &Cli, trusted_cli: &TrustedCli) {
 		match self {
-			TrustedBaseCommand::NewAccount => new_account(trusted_args),
-			TrustedBaseCommand::ListAccounts => list_accounts(trusted_args),
-			TrustedBaseCommand::Transfer(cmd) => cmd.run(cli, trusted_args),
-			TrustedBaseCommand::SetBalance(cmd) => cmd.run(cli, trusted_args),
-			TrustedBaseCommand::Balance(cmd) => cmd.run(cli, trusted_args),
-			TrustedBaseCommand::UnshieldFunds(cmd) => cmd.run(cli, trusted_args),
+			TrustedBaseCommand::NewAccount => new_account(trusted_cli),
+			TrustedBaseCommand::ListAccounts => list_accounts(trusted_cli),
+			TrustedBaseCommand::Transfer(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::SetBalance(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::Balance(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::UnshieldFunds(cmd) => cmd.run(cli, trusted_cli),
 		}
 	}
 }
