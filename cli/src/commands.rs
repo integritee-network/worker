@@ -20,7 +20,7 @@ use crate::{base_cli::BaseCli, trusted_commands::TrustedCli, Cli};
 use clap::Subcommand;
 
 #[cfg(feature = "teeracle")]
-use crate::oracle::OracleSubCommand;
+use crate::oracle::OracleCommand;
 
 #[derive(Subcommand)]
 pub enum Commands {
@@ -34,7 +34,7 @@ pub enum Commands {
 	/// Subcommands for the oracle.
 	#[cfg(feature = "teeracle")]
 	#[clap(subcommand)]
-	Oracle(OracleSubCommand),
+	Oracle(OracleCommand),
 }
 
 pub fn match_command(cli: &Cli) {
