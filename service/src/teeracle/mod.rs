@@ -76,7 +76,7 @@ fn execute_weather_update<E: TeeracleApi>(
 	extrinsics.into_iter().for_each(|call| {
 		let node_api_clone = node_api.clone();
 		tokio_handle.spawn(async move {
-			let hex_encoded_extrinsic = hex_encode(call.encode());
+			let hex_encoded_extrinsic = hex_encode(&call.encode());
 			debug!("Hex encoded extrinsic to be sent: {}", hex_encoded_extrinsic);
 			println!("[>] Update oracle (send the extrinsic)");
 			let extrinsic_hash =
@@ -123,7 +123,7 @@ fn execute_update_market<E: TeeracleApi>(
 	for call in extrinsics.into_iter() {
 		let node_api_clone = node_api.clone();
 		tokio_handle.spawn(async move {
-			let hex_encoded_extrinsic = hex_encode(call.encode());
+			let hex_encoded_extrinsic = hex_encode(&call.encode());
 			debug!("Hex encoded extrinsic to be sent: {}", hex_encoded_extrinsic);
 
 			println!("[>] Update the exchange rate (send the extrinsic)");
