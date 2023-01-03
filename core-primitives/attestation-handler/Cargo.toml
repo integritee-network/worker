@@ -10,7 +10,6 @@ arrayvec = { version = "0.7.1", default-features = false }
 bit-vec = { version = "0.6", default-features = false }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
-hex-literal = { version = "0.3.2" }
 itertools = { default-features = false, version = "0.10.1" }
 log = { version = "0.4", default-features = false }
 
@@ -50,7 +49,6 @@ itp-types = { path = "../types", default-features = false }
 
 # integritee
 httparse = { default-features = false, git = "https://github.com/integritee-network/httparse-sgx", branch = "sgx-experimental" }
-
 
 # substrate deps
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.36" }

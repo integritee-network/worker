@@ -133,7 +133,6 @@ impl Enclave {
 			collateral_ptr_ptr,
 		);
 		ensure!(sgx_status == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(sgx_status));
-		println!("Collateral version: {}", (*collateral_ptr).version);
 		Ok(collateral_ptr)
 	}
 }
@@ -214,13 +213,10 @@ impl RemoteAttestation for Enclave {
 				unchecked_extrinsic.len() as u32,
 			)
 		};
+		let free_status = unsafe { sgx_ql_free_quote_verification_collateral(collateral_ptr) };
 		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
-
-		let sgx_status = unsafe { sgx_ql_free_quote_verification_collateral(collateral_ptr) };
-		println!("SGX status: {}", sgx_status);
-		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
-		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+		ensure!(free_status == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(free_status));
 
 		Ok(unchecked_extrinsic)
 	}
@@ -240,13 +236,10 @@ impl RemoteAttestation for Enclave {
 				unchecked_extrinsic.len() as u32,
 			)
 		};
+		let free_status = unsafe { sgx_ql_free_quote_verification_collateral(collateral_ptr) };
 		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
-
-		let sgx_status = unsafe { sgx_ql_free_quote_verification_collateral(collateral_ptr) };
-		println!("SGX status: {}", sgx_status);
-		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
-		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+		ensure!(free_status == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(free_status));
 
 		Ok(unchecked_extrinsic)
 	}
@@ -315,11 +308,13 @@ impl RemoteAttestation for Enclave {
 
 	fn dump_dcap_collateral_to_disk(&self, fmspc: [u8; 6]) -> EnclaveResult<()> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
-		let collateral = unsafe { self.get_collateral(fmspc)? };
+		let collateral_ptr = unsafe { self.get_collateral(fmspc)? };
 		let result =
-			unsafe { ffi::dump_dcap_collateral_to_disk(self.eid, &mut retval, collateral) };
+			unsafe { ffi::dump_dcap_collateral_to_disk(self.eid, &mut retval, collateral_ptr) };
+		let free_status = unsafe { sgx_ql_free_quote_verification_collateral(collateral_ptr) };
 		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+		ensure!(free_status == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(free_status));
 		Ok(())
 	}
 }
