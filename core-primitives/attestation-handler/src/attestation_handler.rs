@@ -33,7 +33,6 @@ use crate::sgx_reexport_prelude::*;
 use crate::{cert, Error as EnclaveError, Error, Result as EnclaveResult};
 use codec::Encode;
 use core::{convert::TryInto, default::Default};
-use hex_literal::hex;
 use itertools::Itertools;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::{
@@ -79,11 +78,14 @@ pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
 
 /// Trait to provide an abstraction to the attestation logic
 pub trait AttestationHandler {
-	/// Generates an encoded remote attestation certificate.
+	/// Generates an encoded remote attestation certificate. Returns certificate DER encoded.
 	/// If skip_ra is set, it will not perform a remote attestation via IAS
 	/// but instead generate a mock certificate.
 	fn generate_ias_ra_cert(&self, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
 
+	/// Returns the DER encoded certificate and the raw DCAP quote.
+	/// If skip_ra is set, it will not perform a remote attestation via IAS
+	/// but instead generate a mock certificate.
 	fn generate_dcap_ra_cert(
 		&self,
 		quoting_enclave_target_info: &sgx_target_info_t,
@@ -171,13 +173,13 @@ where
 		quoting_enclave_target_info: &sgx_target_info_t,
 		quote_size: u32,
 	) -> EnclaveResult<()> {
-		let (_key_der, cert_der) =
+		let (_cert_der, dcap_quote) =
 			match self.generate_dcap_ra_cert(quoting_enclave_target_info, quote_size, false) {
 				Ok(r) => r,
 				Err(e) => return Err(e),
 			};
 
-		if let Err(err) = io::write(&cert_der, RA_DUMP_CERT_DER_FILE) {
+		if let Err(err) = io::write(&dcap_quote, RA_DUMP_CERT_DER_FILE) {
 			error!(
 				"    [Enclave] failed to write RA file ({}), status: {:?}",
 				RA_DUMP_CERT_DER_FILE, err
@@ -267,8 +269,6 @@ where
 					return Err(e.into())
 				},
 			};
-			// Verify the quote via qve enclave
-			//self.ecdsa_quote_verification(qe_quote)?
 			qe_quote
 		} else {
 			Default::default()
@@ -276,18 +276,18 @@ where
 
 		// generate an ECC certificate
 		debug!("[Enclave] Generate ECC Certificate");
-		/*let (key_der, cert_der) = match cert::gen_ecc_cert(&payload, &prv_k, &pub_k, &ecc_handle) {
+		let (_key_der, cert_der) = match cert::gen_ecc_cert(&qe_quote, &prv_k, &pub_k, &ecc_handle)
+		{
 			Ok(r) => r,
 			Err(e) => {
 				error!("[Enclave] gen_ecc_cert failed: {:?}", e);
 				return Err(e.into())
 			},
-		};*/
+		};
 
 		let _ = ecc_handle.close();
 
-		//Ok((key_der, cert_der))
-		Ok((vec![], qe_quote))
+		Ok((cert_der, qe_quote))
 	}
 }
 

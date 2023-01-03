@@ -152,7 +152,7 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic(
 		},
 	};
 
-	let (_key_der, cert_der) = match attestation_handler.generate_dcap_ra_cert(
+	let (_cert_der, dcap_quote) = match attestation_handler.generate_dcap_ra_cert(
 		quoting_enclave_target_info,
 		quote_size,
 		skip_ra == 1,
@@ -170,7 +170,7 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic(
 		.map_err(MetadataProviderError::MetadataError)
 		.unwrap();
 	info!("    [Enclave] Compose register enclave call DCAP IDS: {:?}", call_ids);
-	let call = OpaqueCall::from_tuple(&(call_ids, cert_der, url));
+	let call = OpaqueCall::from_tuple(&(call_ids, dcap_quote, url));
 
 	let extrinsic = extrinsics_factory.create_extrinsics(&[call], None).unwrap()[0].clone();
 	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
