@@ -30,6 +30,7 @@ use itp_stf_interface::{
 use itp_stf_primitives::types::{AccountId, ShardIdentifier};
 use itp_stf_state_observer::mock::ObserveStateMock;
 use itp_test::mock::onchain_mock::OnchainMock;
+use itp_top_pool_author::mocks::AuthorApiMock;
 use sgx_crypto_helper::{rsa3072::Rsa3072KeyPair, RsaKeyPair};
 use sp_core::Pair;
 use std::sync::Arc;
@@ -46,6 +47,7 @@ pub fn derive_key_is_deterministic() {
 }
 
 pub fn enclave_signer_signatures_are_valid() {
+	let top_pool_author = Arc::new(AuthorApiMock::default());
 	let ocall_api = Arc::new(OnchainMock::default());
 	let shielding_key_repo = Arc::new(ShieldingKeyRepositoryMock::default());
 	let enclave_account: AccountId = shielding_key_repo
@@ -60,8 +62,12 @@ pub fn enclave_signer_signatures_are_valid() {
 		Arc::new(ObserveStateMock::new(TestStf::init_state(enclave_account.clone())));
 	let shard = ShardIdentifier::default();
 	let mr_enclave = ocall_api.get_mrenclave_of_self().unwrap();
-	let enclave_signer =
-		StfEnclaveSigner::<_, _, _, TestStf>::new(state_observer, ocall_api, shielding_key_repo);
+	let enclave_signer = StfEnclaveSigner::<_, _, _, TestStf, _>::new(
+		state_observer,
+		ocall_api,
+		shielding_key_repo,
+		top_pool_author,
+	);
 	let trusted_call =
 		TrustedCall::balance_shield(enclave_account, AccountId::new([3u8; 32]), 200u128);
 

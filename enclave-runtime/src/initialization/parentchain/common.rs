@@ -54,6 +54,7 @@ pub(crate) fn create_parentchain_block_importer(
 		state_observer,
 		ocall_api,
 		shielding_key_repository.clone(),
+		top_pool_author.clone(),
 	));
 	let indirect_calls_executor = Arc::new(EnclaveIndirectCallsExecutor::new(
 		shielding_key_repository,
