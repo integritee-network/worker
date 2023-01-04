@@ -27,7 +27,7 @@ mod commands;
 
 /// Oracle subcommands for the cli.
 #[derive(Debug, clap::Subcommand)]
-pub enum OracleSubCommand {
+pub enum OracleCommand {
 	/// Add a market source to the teeracle's whitelist.
 	AddToWhitelist(AddToWhitelistCmd),
 
@@ -38,12 +38,12 @@ pub enum OracleSubCommand {
 	ListenToOracleEvents(ListenToOracleEventsCmd),
 }
 
-impl OracleSubCommand {
+impl OracleCommand {
 	pub fn run(&self, cli: &Cli) {
 		match self {
-			OracleSubCommand::AddToWhitelist(cmd) => cmd.run(cli),
-			OracleSubCommand::ListenToExchangeRateEvents(cmd) => cmd.run(cli),
-			OracleSubCommand::ListenToOracleEvents(cmd) => cmd.run(cli),
+			OracleCommand::AddToWhitelist(cmd) => cmd.run(cli),
+			OracleCommand::ListenToExchangeRateEvents(cmd) => cmd.run(cli),
+			OracleCommand::ListenToOracleEvents(cmd) => cmd.run(cli),
 		}
 	}
 }

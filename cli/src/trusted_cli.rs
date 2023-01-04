@@ -15,14 +15,14 @@
 
 */
 
-use crate::{benchmark::BenchmarkCommands, Cli};
+use crate::{benchmark::BenchmarkCommand, Cli};
 
 #[cfg(feature = "evm")]
-use crate::evm::EvmCommands;
-use crate::trusted_base_cli::TrustedBaseCli;
+use crate::evm::EvmCommand;
+use crate::trusted_base_cli::TrustedBaseCommand;
 
 #[derive(Args)]
-pub struct TrustedArgs {
+pub struct TrustedCli {
 	/// targeted worker MRENCLAVE
 	#[clap(short, long)]
 	pub(crate) mrenclave: String,
@@ -40,29 +40,29 @@ pub struct TrustedArgs {
 	pub(crate) direct: bool,
 
 	#[clap(subcommand)]
-	pub(crate) command: TrustedCommands,
+	pub(crate) command: TrustedCommand,
 }
 
 #[derive(Subcommand)]
-pub enum TrustedCommands {
+pub enum TrustedCommand {
 	#[clap(flatten)]
-	BaseTrusted(TrustedBaseCli),
+	BaseTrusted(TrustedBaseCommand),
 
 	#[cfg(feature = "evm")]
 	#[clap(flatten)]
-	EvmCommands(EvmCommands),
+	EvmCommands(EvmCommand),
 
 	/// Run Benchmark
-	Benchmark(BenchmarkCommands),
+	Benchmark(BenchmarkCommand),
 }
 
-impl TrustedArgs {
+impl TrustedCli {
 	pub(crate) fn run(&self, cli: &Cli) {
 		match &self.command {
-			TrustedCommands::BaseTrusted(cmd) => cmd.run(cli, self),
-			TrustedCommands::Benchmark(benchmark_commands) => benchmark_commands.run(cli, self),
+			TrustedCommand::BaseTrusted(cmd) => cmd.run(cli, self),
+			TrustedCommand::Benchmark(cmd) => cmd.run(cli, self),
 			#[cfg(feature = "evm")]
-			TrustedCommands::EvmCommands(evm_commands) => evm_commands.run(cli, self),
+			TrustedCommand::EvmCommands(cmd) => cmd.run(cli, self),
 		}
 	}
 }

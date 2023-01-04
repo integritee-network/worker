@@ -17,8 +17,8 @@
 
 use crate::{
 	get_layer_two_evm_nonce, get_layer_two_nonce,
+	trusted_cli::TrustedCli,
 	trusted_command_utils::{get_identifiers, get_pair_from_str},
-	trusted_commands::TrustedArgs,
 	trusted_operation::perform_trusted_operation,
 	Cli,
 };
@@ -45,7 +45,7 @@ pub struct EvmCreateCommands {
 }
 
 impl EvmCreateCommands {
-	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedArgs) {
+	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
 		let from = get_pair_from_str(trusted_args, &self.from);
 		let from_acc: AccountId = from.public().into();
 		println!("from ss58 is {}", from.public().to_ss58check());
