@@ -17,7 +17,7 @@
 
 use crate::{
 	command_utils::{get_chain_api, get_pair_from_str, get_shielding_key, get_worker_api_direct},
-	trusted_commands::TrustedArgs,
+	trusted_cli::TrustedCli,
 	Cli,
 };
 use base58::FromBase58;
@@ -43,7 +43,7 @@ use teerex_primitives::Request;
 
 pub(crate) fn perform_trusted_operation(
 	cli: &Cli,
-	trusted_args: &TrustedArgs,
+	trusted_args: &TrustedCli,
 	top: &TrustedOperation,
 ) -> Option<Vec<u8>> {
 	match top {
@@ -55,7 +55,7 @@ pub(crate) fn perform_trusted_operation(
 
 fn execute_getter_from_cli_args(
 	cli: &Cli,
-	trusted_args: &TrustedArgs,
+	trusted_args: &TrustedCli,
 	getter: &Getter,
 ) -> Option<Vec<u8>> {
 	let shard = read_shard(trusted_args).unwrap();
@@ -104,7 +104,7 @@ pub(crate) fn get_state(
 
 fn send_request(
 	cli: &Cli,
-	trusted_args: &TrustedArgs,
+	trusted_args: &TrustedCli,
 	trusted_operation: &TrustedOperation,
 ) -> Option<Vec<u8>> {
 	let chain_api = get_chain_api(cli);
@@ -178,7 +178,7 @@ fn send_request(
 	}
 }
 
-fn read_shard(trusted_args: &TrustedArgs) -> StdResult<ShardIdentifier, codec::Error> {
+fn read_shard(trusted_args: &TrustedCli) -> StdResult<ShardIdentifier, codec::Error> {
 	match &trusted_args.shard {
 		Some(s) => match s.from_base58() {
 			Ok(s) => ShardIdentifier::decode(&mut &s[..]),
@@ -194,7 +194,7 @@ fn read_shard(trusted_args: &TrustedArgs) -> StdResult<ShardIdentifier, codec::E
 /// sends a rpc watch request to the worker api server
 fn send_direct_request(
 	cli: &Cli,
-	trusted_args: &TrustedArgs,
+	trusted_args: &TrustedCli,
 	operation_call: &TrustedOperation,
 ) -> Option<Vec<u8>> {
 	let encryption_key = get_shielding_key(cli).unwrap();

@@ -16,31 +16,31 @@
 */
 
 extern crate chrono;
-use crate::{base_cli::BaseCli, trusted_commands::TrustedArgs, Cli};
+use crate::{base_cli::BaseCommand, trusted_cli::TrustedCli, Cli};
 use clap::Subcommand;
 
 #[cfg(feature = "teeracle")]
-use crate::oracle::OracleSubCommand;
+use crate::oracle::OracleCommand;
 
 #[derive(Subcommand)]
 pub enum Commands {
 	#[clap(flatten)]
-	Base(BaseCli),
+	Base(BaseCommand),
 
 	/// trusted calls to worker enclave
 	#[clap(after_help = "stf subcommands depend on the stf crate this has been built against")]
-	Trusted(TrustedArgs),
+	Trusted(TrustedCli),
 
 	/// Subcommands for the oracle.
 	#[cfg(feature = "teeracle")]
 	#[clap(subcommand)]
-	Oracle(OracleSubCommand),
+	Oracle(OracleCommand),
 }
 
 pub fn match_command(cli: &Cli) {
 	match &cli.command {
 		Commands::Base(cmd) => cmd.run(cli),
-		Commands::Trusted(cmd) => cmd.run(cli),
+		Commands::Trusted(trusted_cli) => trusted_cli.run(cli),
 		#[cfg(feature = "teeracle")]
 		Commands::Oracle(cmd) => cmd.run(cli),
 	};

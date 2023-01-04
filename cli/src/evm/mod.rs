@@ -19,7 +19,7 @@ use crate::{
 	evm::commands::{
 		evm_call::EvmCallCommands, evm_create::EvmCreateCommands, evm_read::EvmReadCommands,
 	},
-	trusted_commands::TrustedArgs,
+	trusted_cli::TrustedCli,
 	Cli,
 };
 
@@ -27,7 +27,7 @@ mod commands;
 
 #[allow(clippy::enum_variant_names)]
 #[derive(Subcommand)]
-pub enum EvmCommands {
+pub enum EvmCommand {
 	/// Create smart contract
 	EvmCreate(EvmCreateCommands),
 
@@ -38,12 +38,12 @@ pub enum EvmCommands {
 	EvmCall(EvmCallCommands),
 }
 
-impl EvmCommands {
-	pub fn run(&self, cli: &Cli, trusted_args: &TrustedArgs) {
+impl EvmCommand {
+	pub fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
 		match self {
-			EvmCommands::EvmCreate(cmd) => cmd.run(cli, trusted_args),
-			EvmCommands::EvmRead(cmd) => cmd.run(cli, trusted_args),
-			EvmCommands::EvmCall(cmd) => cmd.run(cli, trusted_args),
+			EvmCommand::EvmCreate(cmd) => cmd.run(cli, trusted_args),
+			EvmCommand::EvmRead(cmd) => cmd.run(cli, trusted_args),
+			EvmCommand::EvmCall(cmd) => cmd.run(cli, trusted_args),
 		}
 	}
 }

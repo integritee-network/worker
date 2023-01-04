@@ -16,7 +16,7 @@
 */
 
 use crate::{
-	command_utils::mrenclave_from_base58, trusted_commands::TrustedArgs,
+	command_utils::mrenclave_from_base58, trusted_cli::TrustedCli,
 	trusted_operation::perform_trusted_operation, Cli,
 };
 use base58::{FromBase58, ToBase58};
@@ -54,7 +54,7 @@ macro_rules! get_layer_two_nonce {
 
 const TRUSTED_KEYSTORE_PATH: &str = "my_trusted_keystore";
 
-pub(crate) fn get_balance(cli: &Cli, trusted_args: &TrustedArgs, arg_who: &str) -> Option<u128> {
+pub(crate) fn get_balance(cli: &Cli, trusted_args: &TrustedCli, arg_who: &str) -> Option<u128> {
 	debug!("arg_who = {:?}", arg_who);
 	let who = get_pair_from_str(trusted_args, arg_who);
 	let top: TrustedOperation = TrustedGetter::free_balance(who.public().into())
@@ -76,12 +76,12 @@ pub(crate) fn decode_balance(maybe_encoded_balance: Option<Vec<u8>>) -> Option<B
 	})
 }
 
-pub(crate) fn get_keystore_path(trusted_args: &TrustedArgs) -> PathBuf {
+pub(crate) fn get_keystore_path(trusted_args: &TrustedCli) -> PathBuf {
 	let (_mrenclave, shard) = get_identifiers(trusted_args);
 	PathBuf::from(&format!("{}/{}", TRUSTED_KEYSTORE_PATH, shard.encode().to_base58()))
 }
 
-pub(crate) fn get_identifiers(trusted_args: &TrustedArgs) -> ([u8; 32], ShardIdentifier) {
+pub(crate) fn get_identifiers(trusted_args: &TrustedCli) -> ([u8; 32], ShardIdentifier) {
 	let mrenclave = mrenclave_from_base58(&trusted_args.mrenclave);
 	let shard = match &trusted_args.shard {
 		Some(val) =>
@@ -105,7 +105,7 @@ pub(crate) fn get_accountid_from_str(account: &str) -> AccountId {
 
 // TODO this function is ALMOST redundant with client::main
 // get a pair either form keyring (well known keys) or from the store
-pub(crate) fn get_pair_from_str(trusted_args: &TrustedArgs, account: &str) -> sr25519_core::Pair {
+pub(crate) fn get_pair_from_str(trusted_args: &TrustedCli, account: &str) -> sr25519_core::Pair {
 	info!("getting pair for {}", account);
 	match &account[..2] {
 		"//" => sr25519_core::Pair::from_string(account, None).unwrap(),
