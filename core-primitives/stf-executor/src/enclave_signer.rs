@@ -21,7 +21,7 @@ use crate::{
 	H256,
 };
 use core::marker::PhantomData;
-use ita_stf::{TrustedCall, TrustedCallSigned, TrustedOperation};
+use ita_stf::{TrustedCall, TrustedCallSigned};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{ed25519_derivation::DeriveEd25519, key_repository::AccessKey};
 use itp_sgx_externalities::SgxExternalitiesTrait;
@@ -106,24 +106,17 @@ where
 		shard: &ShardIdentifier,
 	) -> Result<TrustedCallSigned> {
 		let mr_enclave = self.ocall_api.get_mrenclave_of_self()?;
-		let enclave_account_id = self.get_enclave_account()?;
+		let enclave_account = self.get_enclave_account()?;
 		let enclave_call_signing_key = self.get_enclave_call_signing_key()?;
 
 		let current_nonce = self.get_enclave_account_nonce(shard)?;
-		let pending_tx = self
+		let pending_tx_count = self
 			.top_pool_author
-			.get_pending_trusted_calls(shard.clone())
-			.iter()
-			.filter(|v| match v {
-				TrustedOperation::indirect_call(ref call) =>
-					call.call.sender_account().eq(&enclave_account_id),
-				TrustedOperation::direct_call(ref call) =>
-					call.call.sender_account().eq(&enclave_account_id),
-				_ => false,
-			})
-			.count();
-		let pending_tx = Index::try_from(pending_tx).map_err(|e| Error::Other(e.into()))?;
-		let adjusted_nonce: Index = current_nonce.into() + pending_tx;
+			.get_pending_trusted_calls_for(*shard, &enclave_account)
+			.len();
+		let pending_tx_count =
+			Index::try_from(pending_tx_count).map_err(|e| Error::Other(e.into()))?;
+		let adjusted_nonce: Index = current_nonce.into() + pending_tx_count;
 
 		Ok(trusted_call.sign(
 			&KeyPair::Ed25519(Box::new(enclave_call_signing_key)),

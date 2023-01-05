@@ -129,6 +129,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		stf_executor_tests::propose_state_update_executes_all_calls_given_enough_time,
 		enclave_signer_tests::enclave_signer_signatures_are_valid,
 		enclave_signer_tests::derive_key_is_deterministic,
+		enclave_signer_tests::nonce_is_computed_correctly,
 		state_getter_tests::state_getter_works,
 		// sidechain integration tests
 		sidechain_aura_tests::produce_sidechain_block_and_import_it,
