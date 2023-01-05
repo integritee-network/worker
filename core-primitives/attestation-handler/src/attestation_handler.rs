@@ -643,7 +643,8 @@ where
 			.map_err(|e| EnclaveError::Other(e.into()))
 	}
 
-	pub fn ecdsa_quote_verification(&self, quote: Vec<u8>) -> SgxResult<Vec<u8>> {
+	/// Returns Ok if the verification of the quote by the quote verification enclave (QVE) was successful  
+	pub fn ecdsa_quote_verification(&self, quote: Vec<u8>) -> SgxResult<()> {
 		let mut app_enclave_target_info: sgx_target_info_t = unsafe { std::mem::zeroed() };
 		let quote_collateral: sgx_ql_qve_collateral_t = unsafe { std::mem::zeroed() };
 		let mut qve_report_info: sgx_ql_qe_report_info_t = unsafe { std::mem::zeroed() };
@@ -727,8 +728,7 @@ where
 			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
 		}
 
-		// TODO. What to send to our teerex pallet?
-		Ok(vec![])
+		Ok(())
 	}
 
 	pub fn retrieve_qe_dcap_quote(

@@ -3132,7 +3132,6 @@ dependencies = [
  "chrono 0.4.11",
  "chrono 0.4.23",
  "hex",
- "hex-literal",
  "httparse 1.4.1",
  "itertools",
  "itp-ocall-api",
