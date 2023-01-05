@@ -691,6 +691,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
 	}
 }
 
+#[cfg(feature = "dcap")]
 fn register_collateral(
 	api: &ParentchainApi,
 	enclave: &dyn RemoteAttestation,
