@@ -420,6 +420,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		)
 		.expect("Could not set the node metadata in the enclave");
 
+	#[cfg(feature = "dcap")]
 	register_collateral(&node_api, &*enclave, &tee_accountid, is_development_mode);
 
 	// ------------------------------------------------------------------------
