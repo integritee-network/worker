@@ -20,6 +20,7 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::error::Result;
 use ita_stf::{hash, TrustedOperation};
+use itp_stf_primitives::types::AccountId;
 use itp_top_pool::primitives::PoolFuture;
 use itp_types::{BlockHash as SidechainBlockHash, ShardIdentifier, H256};
 use jsonrpc_core::Error as RpcError;
@@ -44,6 +45,13 @@ pub trait AuthorApi<Hash, BlockHash> {
 
 	/// Returns all pending trusted calls.
 	fn get_pending_trusted_calls(&self, shard: ShardIdentifier) -> Vec<TrustedOperation>;
+
+	/// Returns all pending trusted calls for a given `account`
+	fn get_pending_trusted_calls_for(
+		&self,
+		shard: ShardIdentifier,
+		account: &AccountId,
+	) -> Vec<TrustedOperation>;
 
 	fn get_shards(&self) -> Vec<ShardIdentifier>;
 

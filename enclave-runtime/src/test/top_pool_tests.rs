@@ -120,10 +120,11 @@ pub fn submit_shielding_call_to_top_pool() {
 		Arc::new(MetricsOCallMock::default()),
 	));
 
-	let enclave_signer = Arc::new(StfEnclaveSigner::<_, _, _, TestStf>::new(
+	let enclave_signer = Arc::new(StfEnclaveSigner::<_, _, _, TestStf, _>::new(
 		state_observer,
 		ocall_api.clone(),
 		shielding_key_repo.clone(),
+		top_pool_author.clone(),
 	));
 	let node_meta_data_repository = Arc::new(NodeMetadataRepository::default());
 	node_meta_data_repository.set_metadata(NodeMetadataMock::new());

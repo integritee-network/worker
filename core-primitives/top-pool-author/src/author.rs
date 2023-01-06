@@ -29,6 +29,7 @@ use ita_stf::{hash, Getter, TrustedOperation};
 use itp_enclave_metrics::EnclaveMetric;
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt};
+use itp_stf_primitives::types::AccountId;
 use itp_stf_state_handler::query_shard_state::QueryShardState;
 use itp_top_pool::{
 	error::{Error as PoolError, IntoPoolError},
@@ -300,6 +301,17 @@ where
 				matches!(o, TrustedOperation::direct_call(_))
 					|| matches!(o, TrustedOperation::indirect_call(_))
 			})
+			.collect()
+	}
+
+	fn get_pending_trusted_calls_for(
+		&self,
+		shard: ShardIdentifier,
+		account: &AccountId,
+	) -> Vec<TrustedOperation> {
+		self.get_pending_trusted_calls(shard)
+			.into_iter()
+			.filter(|o| o.signed_caller_account() == Some(account))
 			.collect()
 	}
 

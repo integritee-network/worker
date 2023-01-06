@@ -106,6 +106,7 @@ pub type EnclaveStfEnclaveSigner = StfEnclaveSigner<
 	EnclaveStateObserver,
 	EnclaveShieldingKeyRepository,
 	EnclaveStf,
+	EnclaveTopPoolAuthor,
 >;
 pub type EnclaveAttestationHandler = IntelAttestationHandler<EnclaveOCallApi>;
 

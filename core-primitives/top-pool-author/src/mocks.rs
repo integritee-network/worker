@@ -33,6 +33,7 @@ use ita_stf::{
 	hash::{Hash, TrustedOperationOrHash},
 	Getter, TrustedGetterSigned, TrustedOperation,
 };
+use itp_stf_primitives::types::AccountId;
 use itp_top_pool::primitives::PoolFuture;
 use itp_types::ShardIdentifier;
 use jsonrpc_core::{futures::future::ready, Error as RpcError};
@@ -133,6 +134,29 @@ impl AuthorApi<H256, H256> for AuthorApiMock<H256, H256> {
 				for encoded_operation in encoded_operations {
 					if let Some(o) = Self::decode_trusted_operation(encoded_operation) {
 						trusted_operations.push(o);
+					}
+				}
+				trusted_operations
+			})
+			.unwrap_or_default()
+	}
+
+	fn get_pending_trusted_calls_for(
+		&self,
+		shard: ShardIdentifier,
+		account: &AccountId,
+	) -> Vec<TrustedOperation> {
+		self.tops
+			.read()
+			.unwrap()
+			.get(&shard)
+			.map(|encoded_operations| {
+				let mut trusted_operations: Vec<TrustedOperation> = Vec::new();
+				for encoded_operation in encoded_operations {
+					if let Some(o) = Self::decode_trusted_operation(encoded_operation) {
+						if o.signed_caller_account() == Some(account) {
+							trusted_operations.push(o);
+						}
 					}
 				}
 				trusted_operations
