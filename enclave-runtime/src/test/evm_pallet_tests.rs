@@ -25,6 +25,7 @@ use ita_stf::{
 	test_genesis::{endow, endowed_account as funded_pair},
 	State, TrustedCall,
 };
+use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_interface::StateCallInterface;
 use itp_stf_primitives::types::KeyPair;
@@ -77,7 +78,8 @@ pub fn test_evm_call() {
 	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
 
 	// when
-	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
+	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
+	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, repo).unwrap();
 
 	// then
 	assert_eq!(
@@ -121,7 +123,8 @@ pub fn test_evm_counter() {
 
 	// when
 	let execution_address = evm_create_address(sender_evm_acc, 0);
-	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
+	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
+	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, repo).unwrap();
 
 	// then
 	assert_eq!(
@@ -244,7 +247,8 @@ fn execute_and_verify_evm_call(
 		Vec::new(),
 	)
 	.sign(&pair, nonce, &mrenclave, &shard);
-	TestStf::execute_call(state, inc_call, calls, [0u8, 1u8]).unwrap();
+	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
+	TestStf::execute_call(state, inc_call, calls, repo).unwrap();
 
 	let counter_value = state
 		.execute_with(|| get_evm_account_storages(&execution_address, &H256::zero()))
@@ -289,7 +293,8 @@ pub fn test_evm_create() {
 	let nonce = state.execute_with(|| System::account_nonce(&sender_evm_substrate_addr));
 	assert_eq!(nonce, 0);
 	let execution_address = evm_create_address(sender_evm_acc, nonce);
-	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
+	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
+	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, repo).unwrap();
 
 	assert_eq!(
 		execution_address,
@@ -343,7 +348,8 @@ pub fn test_evm_create2() {
 	// when
 	let code_hash = create_code_hash(&smart_contract);
 	let execution_address = evm_create2_address(sender_evm_acc, salt, code_hash);
-	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
+	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
+	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, repo).unwrap();
 
 	// then
 	assert_eq!(

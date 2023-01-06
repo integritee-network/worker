@@ -28,6 +28,7 @@ use itp_stf_interface::{
 	mocks::GetterExecutorMock, system_pallet::SystemPalletAccountInterface, InitState,
 	StateCallInterface,
 };
+use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_stf_primitives::types::{AccountId, ShardIdentifier};
 use itp_stf_state_observer::mock::ObserveStateMock;
 use itp_test::mock::onchain_mock::OnchainMock;
@@ -125,9 +126,10 @@ pub fn nonce_is_computed_correctly() {
 	);
 
 	assert_eq!(0, TestStf::get_account_nonce(&mut state, &enclave_account));
-	assert!(TestStf::execute_call(&mut state, trusted_call_1_signed, &mut Vec::new(), [0u8, 1u8])
+	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
+	assert!(TestStf::execute_call(&mut state, trusted_call_1_signed, &mut Vec::new(), repo.clone())
 		.is_ok());
-	assert!(TestStf::execute_call(&mut state, trusted_call_2_signed, &mut Vec::new(), [0u8, 1u8])
+	assert!(TestStf::execute_call(&mut state, trusted_call_2_signed, &mut Vec::new(), repo)
 		.is_ok());
 	assert_eq!(2, TestStf::get_account_nonce(&mut state, &enclave_account));
 }

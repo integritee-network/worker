@@ -33,6 +33,8 @@ pub use my_node_runtime::{Balance, Index};
 
 use codec::{Decode, Encode};
 use derive_more::Display;
+use itp_node_api_metadata::Error as MetadataError;
+use itp_node_api_metadata_provider::Error as MetadataProviderError;
 use itp_stf_primitives::types::AccountId;
 use std::string::String;
 
@@ -71,6 +73,19 @@ pub enum StfError {
 	InvalidNonce(Index),
 	StorageHashMismatch,
 	InvalidStorageDiff,
+	InvalidMetadata,
+}
+
+impl From<MetadataError> for StfError {
+	fn from(_e: MetadataError) -> Self {
+		StfError::InvalidMetadata
+	}
+}
+
+impl From<MetadataProviderError> for StfError {
+	fn from(_e: MetadataProviderError) -> Self {
+		StfError::InvalidMetadata
+	}
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
