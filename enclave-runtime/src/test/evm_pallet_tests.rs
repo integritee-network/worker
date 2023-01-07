@@ -32,7 +32,7 @@ use itp_stf_primitives::types::KeyPair;
 use itp_types::{AccountId, OpaqueCall, ShardIdentifier};
 use primitive_types::H256;
 use sp_core::{crypto::Pair, H160, U256};
-use std::{string::ToString, vec::Vec};
+use std::{string::ToString, sync::Arc, vec::Vec};
 use substrate_api_client::utils::FromHexString;
 
 pub fn test_evm_call() {
