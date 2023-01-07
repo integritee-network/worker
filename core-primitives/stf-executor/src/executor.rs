@@ -112,10 +112,6 @@ where
 		// see issue #208
 		debug!("Update STF storage!");
 
-		// TODO: otherwise I got compile error:
-		//       cannot infer type for type parameter `NodeMetadataRepository` declared on the trait `ExecuteCall`
-		// let trusted_call_executor: Box<dyn ExecuteCall<NodeMetadataRepository, Error = StfError>> = Box::new(trusted_call.clone());
-		// let storage_hashes = trusted_call.clone().get_storage_hashes_to_update();
 		let storage_hashes = <TrustedCallSigned as ExecuteCall<NodeMetadataRepository>>::get_storage_hashes_to_update(trusted_call.clone());
 		let update_map = self
 			.ocall_api
