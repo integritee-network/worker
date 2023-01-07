@@ -59,6 +59,7 @@ sgx = [
     "itp-utils/sgx",
     "sp-io/sgx",
     "itp-node-api/sgx",
+    "itp-node-api-metadata-provider/sgx",
 ]
 std = [
     # crates.io
@@ -74,6 +75,8 @@ std = [
     "itp-types/std",
     "itp-utils/std",
     "itp-node-api/std",
+    "itp-node-api-metadata/std",
+    "itp-node-api-metadata-provider/std",
     # substrate
     "sp-core/std",
     "pallet-balances/std",
