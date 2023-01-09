@@ -169,7 +169,7 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic(
 		.unwrap()
 		.map_err(MetadataProviderError::MetadataError)
 		.unwrap();
-	info!("    [Enclave] Compose register enclave call DCAP IDS: {:?}", call_ids);
+	info!("    [Enclave] Compose register enclave call DCAP IDs: {:?}", call_ids);
 	let call = OpaqueCall::from_tuple(&(call_ids, dcap_quote, url));
 
 	let extrinsic = extrinsics_factory.create_extrinsics(&[call], None).unwrap()[0].clone();
