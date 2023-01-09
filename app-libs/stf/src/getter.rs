@@ -70,6 +70,7 @@ pub enum TrustedGetter {
 	evm_account_codes(AccountId, H160),
 	#[cfg(feature = "evm")]
 	evm_account_storages(AccountId, H160, H256),
+	add_num(AccountId),
 }
 
 impl TrustedGetter {
@@ -84,6 +85,7 @@ impl TrustedGetter {
 			TrustedGetter::evm_account_codes(sender_account, _) => sender_account,
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_account_storages(sender_account, ..) => sender_account,
+			TrustedGetter::add_num(sender_account) => sender_account,
 		}
 	}
 
@@ -164,6 +166,16 @@ impl ExecuteGetter for Getter {
 					} else {
 						None
 					},
+
+				TrustedGetter::add_num(_who) => {
+					let num1 = 2;
+					let num2 = 3;
+					let sum: i32 = num1 + num2;
+
+					let mut vec = Vec::new();
+					vec.extend_from_slice(&sum.to_le_bytes());
+					Some(vec)
+				},
 			},
 			Getter::public(g) => match g {
 				PublicGetter::some_value => Some(42u32.encode()),
