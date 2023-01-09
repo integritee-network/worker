@@ -17,8 +17,8 @@
 
 use crate::{
 	trusted_base_cli::commands::{
-		balance::BalanceCommand, set_balance::SetBalanceCommand, transfer::TransferCommand,
-		unshield_funds::UnshieldFundsCommand,
+		balance::BalanceCommand, get_sum::GetSumCommand, set_balance::SetBalanceCommand,
+		transfer::TransferCommand, unshield_funds::UnshieldFundsCommand,
 	},
 	trusted_cli::TrustedCli,
 	trusted_command_utils::get_keystore_path,
@@ -50,6 +50,9 @@ pub enum TrustedBaseCommand {
 
 	/// Transfer funds from an incognito account to an parentchain account
 	UnshieldFunds(UnshieldFundsCommand),
+
+	/// Get the sum
+	GetSum(GetSumCommand),
 }
 
 impl TrustedBaseCommand {
@@ -61,6 +64,7 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::SetBalance(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::Balance(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::UnshieldFunds(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::GetSum(cmd) => cmd.run(cli, trusted_cli),
 		}
 	}
 }
