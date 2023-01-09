@@ -41,9 +41,8 @@ use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::metadata::{
 	pallet_teerex::TeerexCallIndexes,
-	provider::{
-		AccessNodeMetadata, Error as MetadataProviderError, Result as MetadataProviderResult,
-	},
+	provider::{AccessNodeMetadata, Error as MetadataProviderError},
+	Error as MetadataError,
 };
 use itp_node_api_metadata::NodeMetadata;
 use itp_settings::worker::MR_ENCLAVE_SIZE;
@@ -284,7 +283,7 @@ pub fn generate_generic_register_collateral_extrinsic<F>(
 	issuer_chain: &[u8],
 ) -> EnclaveResult<()>
 where
-	F: Fn(&NodeMetadata) -> MetadataProviderResult<[u8; 2]>,
+	F: Fn(&NodeMetadata) -> Result<[u8; 2], MetadataError>,
 {
 	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
 
