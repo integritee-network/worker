@@ -144,39 +144,49 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic(
 	let url = String::decode(&mut url_slice).expect("Could not decode url slice to a valid String");
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
-	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
-		Ok(r) => r,
-		Err(e) => {
-			error!("Component get failure: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
-	};
 
-	let (_cert_der, dcap_quote) = match attestation_handler.generate_dcap_ra_cert(
+	let extrinsic = match generate_dcap_ra_extrinsic_internal(
+		url,
+		skip_ra == 1,
 		quoting_enclave_target_info,
 		quote_size,
-		skip_ra == 1,
 	) {
-		Ok(r) => r,
+		Ok(xt) => xt,
 		Err(e) => return e.into(),
 	};
-	// TODO Need to send this to the teerex pallet (something similar to perform_ra_internal)
-	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain().unwrap();
-	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain().unwrap();
 
-	let call_ids = node_metadata_repo
-		.get_from_metadata(|m| m.register_dcap_enclave_call_indexes())
-		.unwrap()
-		.map_err(MetadataProviderError::MetadataError)
-		.unwrap();
-	info!("    [Enclave] Compose register enclave call DCAP IDs: {:?}", call_ids);
-	let call = OpaqueCall::from_tuple(&(call_ids, dcap_quote, url));
-
-	let extrinsic = extrinsics_factory.create_extrinsics(&[call], None).unwrap()[0].clone();
 	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
 		return EnclaveError::Other(Box::new(e)).into()
 	};
 	sgx_status_t::SGX_SUCCESS
+}
+
+fn generate_dcap_ra_extrinsic_internal(
+	url: String,
+	skip_ra: bool,
+	quoting_enclave_target_info: &sgx_target_info_t,
+	quote_size: u32,
+) -> EnclaveResult<OpaqueExtrinsic> {
+	let attestation_handler = GLOBAL_ATTESTATION_HANDLER_COMPONENT.get()?;
+
+	let (_cert_der, dcap_quote) = attestation_handler.generate_dcap_ra_cert(
+		quoting_enclave_target_info,
+		quote_size,
+		skip_ra,
+	)?;
+
+	// TODO Need to send this to the teerex pallet (something similar to perform_ra_internal)
+	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
+	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain()?;
+
+	let call_ids = node_metadata_repo
+		.get_from_metadata(|m| m.register_dcap_enclave_call_indexes())?
+		.map_err(MetadataProviderError::MetadataError)?;
+	info!("    [Enclave] Compose register enclave call DCAP IDs: {:?}", call_ids);
+	let call = OpaqueCall::from_tuple(&(call_ids, dcap_quote, url));
+
+	let extrinsic = extrinsics_factory.create_extrinsics(&[call], None)?;
+	Ok(extrinsic[0].clone())
 }
 
 fn generate_ias_ra_extrinsic_internal(
