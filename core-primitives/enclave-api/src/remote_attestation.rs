@@ -33,6 +33,8 @@ const ID_ENCLAVE: &str = "libsgx_id_enclave.signed.so.1";
 const LIBDCAP_QUOTEPROV: &str = "libdcap_quoteprov.so.1";
 const QVE_ENCLAVE: &str = "libsgx_qve.signed.so.1";
 
+type Fmspc = [u8; 6];
+
 /// Struct that unites all relevant data reported by the QVE
 pub struct QveReport {
 	pub supplemental_data: Vec<u8>,
@@ -47,16 +49,15 @@ pub trait RemoteAttestation {
 
 	fn generate_dcap_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
 
-	fn generate_register_quoting_enclave_extrinsic(&self, fmspc: [u8; 6])
-		-> EnclaveResult<Vec<u8>>;
+	fn generate_register_quoting_enclave_extrinsic(&self, fmspc: Fmspc) -> EnclaveResult<Vec<u8>>;
 
-	fn generate_register_tcb_info_extrinsic(&self, fmspc: [u8; 6]) -> EnclaveResult<Vec<u8>>;
+	fn generate_register_tcb_info_extrinsic(&self, fmspc: Fmspc) -> EnclaveResult<Vec<u8>>;
 
 	fn dump_ias_ra_cert_to_disk(&self) -> EnclaveResult<()>;
 
 	fn dump_dcap_ra_cert_to_disk(&self) -> EnclaveResult<()>;
 
-	fn dump_dcap_collateral_to_disk(&self, fmspc: [u8; 6]) -> EnclaveResult<()>;
+	fn dump_dcap_collateral_to_disk(&self, fmspc: Fmspc) -> EnclaveResult<()>;
 
 	fn set_ql_qe_enclave_paths(&self) -> EnclaveResult<()>;
 
@@ -118,10 +119,7 @@ pub trait TlsRemoteAttestation {
 }
 
 impl Enclave {
-	unsafe fn get_collateral(
-		&self,
-		fmspc: [u8; 6],
-	) -> EnclaveResult<*const sgx_ql_qve_collateral_t> {
+	unsafe fn get_collateral(&self, fmspc: Fmspc) -> EnclaveResult<*const sgx_ql_qve_collateral_t> {
 		let pck_ra = b"processor\x00";
 
 		let mut collateral_ptr: *mut sgx_ql_qve_collateral_t = std::mem::zeroed();
@@ -195,10 +193,7 @@ impl RemoteAttestation for Enclave {
 		Ok(unchecked_extrinsic)
 	}
 
-	fn generate_register_quoting_enclave_extrinsic(
-		&self,
-		fmspc: [u8; 6],
-	) -> EnclaveResult<Vec<u8>> {
+	fn generate_register_quoting_enclave_extrinsic(&self, fmspc: Fmspc) -> EnclaveResult<Vec<u8>> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
 
@@ -221,7 +216,7 @@ impl RemoteAttestation for Enclave {
 		Ok(unchecked_extrinsic)
 	}
 
-	fn generate_register_tcb_info_extrinsic(&self, fmspc: [u8; 6]) -> EnclaveResult<Vec<u8>> {
+	fn generate_register_tcb_info_extrinsic(&self, fmspc: Fmspc) -> EnclaveResult<Vec<u8>> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
 
@@ -306,7 +301,7 @@ impl RemoteAttestation for Enclave {
 		Ok(quote_size)
 	}
 
-	fn dump_dcap_collateral_to_disk(&self, fmspc: [u8; 6]) -> EnclaveResult<()> {
+	fn dump_dcap_collateral_to_disk(&self, fmspc: Fmspc) -> EnclaveResult<()> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 		let collateral_ptr = unsafe { self.get_collateral(fmspc)? };
 		let result =
