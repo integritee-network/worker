@@ -223,7 +223,10 @@ pub unsafe extern "C" fn generate_register_quoting_enclave_extrinsic(
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 	let collateral = SgxQlQveCollateral::from_c_type(&*collateral);
-	let collateral_data = collateral.get_quoting_enclave_split().unwrap();
+	let collateral_data = match collateral.get_quoting_enclave_split() {
+		Some(d) => d,
+		None => return sgx_status_t::SGX_ERROR_INVALID_PARAMETER,
+	};
 
 	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain().unwrap();
 	let call_ids = node_metadata_repo
@@ -256,7 +259,10 @@ pub unsafe extern "C" fn generate_register_tcb_info_extrinsic(
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 	let collateral = SgxQlQveCollateral::from_c_type(&*collateral);
-	let collateral_data = collateral.get_tcb_info_split().unwrap();
+	let collateral_data = match collateral.get_tcb_info_split() {
+		Some(d) => d,
+		None => return sgx_status_t::SGX_ERROR_INVALID_PARAMETER,
+	};
 
 	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain().unwrap();
 	let call_ids = node_metadata_repo
