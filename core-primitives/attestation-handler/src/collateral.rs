@@ -21,7 +21,10 @@ use std::{
 	vec::Vec,
 };
 
-// This is a rust-ified version of the type sgx_ql_qve_collateral_t
+/// This is a rust-ified version of the type sgx_ql_qve_collateral_t.
+/// See Appendix A.3 in the document
+/// "Intel® Software Guard Extensions (Intel® SGX) Data Center Attestation Primitives: ECDSA Quote Library API"
+/// https://download.01.org/intel-sgx/latest/dcap-latest/linux/docs/Intel_SGX_ECDSA_QuoteLibReference_DCAP_API.pdf
 pub struct SgxQlQveCollateral {
 	pub version: u32, // version = 1.  PCK Cert chain is in the Quote.
 	/* intel DCAP 1.13 */
