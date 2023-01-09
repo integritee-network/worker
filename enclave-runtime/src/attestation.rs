@@ -213,25 +213,25 @@ pub unsafe extern "C" fn generate_register_quoting_enclave_extrinsic(
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 	let collateral = SgxQlQveCollateral::from_c_type(&*collateral);
-	let (data, signature) = collateral.get_quoting_enclave_split().unwrap();
+	let collateral_data = collateral.get_quoting_enclave_split().unwrap();
 
-	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain().unwrap();
 	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain().unwrap();
-
 	let call_ids = node_metadata_repo
 		.get_from_metadata(|m| m.register_quoting_enclave_call_indexes())
 		.unwrap()
 		.map_err(MetadataProviderError::MetadataError)
 		.unwrap();
-	info!("    [Enclave] Compose register quoting enclave call: {:?}", call_ids);
-	let call =
-		OpaqueCall::from_tuple(&(call_ids, data, signature, collateral.qe_identity_issuer_chain));
-
-	let extrinsic = extrinsics_factory.create_extrinsics(&[call], None).unwrap()[0].clone();
-	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
-		return EnclaveError::Other(Box::new(e)).into()
-	};
-	sgx_status_t::SGX_SUCCESS
+	let extrinsic = generate_generic_register_collateral_extrinsic(
+		&call_ids,
+		extrinsic_slice,
+		&collateral_data.0,
+		&collateral_data.1,
+		&collateral.qe_identity_issuer_chain,
+	);
+	match extrinsic {
+		Ok(_) => sgx_status_t::SGX_SUCCESS,
+		Err(e) => return e.into(),
+	}
 }
 
 #[no_mangle]
@@ -246,25 +246,44 @@ pub unsafe extern "C" fn generate_register_tcb_info_extrinsic(
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 	let collateral = SgxQlQveCollateral::from_c_type(&*collateral);
-	let (data, signature) = collateral.get_tcb_info_split().unwrap();
+	let collateral_data = collateral.get_tcb_info_split().unwrap();
 
-	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain().unwrap();
 	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain().unwrap();
-
 	let call_ids = node_metadata_repo
 		.get_from_metadata(|m| m.register_tcb_info_call_indexes())
 		.unwrap()
 		.map_err(MetadataProviderError::MetadataError)
 		.unwrap();
-	info!("    [Enclave] Compose register TCB info call: {:?}", call_ids);
-	let call =
-		OpaqueCall::from_tuple(&(call_ids, data, signature, collateral.tcb_info_issuer_chain));
+	let extrinsic = generate_generic_register_collateral_extrinsic(
+		&call_ids,
+		extrinsic_slice,
+		&collateral_data.0,
+		&collateral_data.1,
+		&collateral.tcb_info_issuer_chain,
+	);
+	match extrinsic {
+		Ok(_) => sgx_status_t::SGX_SUCCESS,
+		Err(e) => return e.into(),
+	}
+}
 
-	let extrinsic = extrinsics_factory.create_extrinsics(&[call], None).unwrap()[0].clone();
+pub fn generate_generic_register_collateral_extrinsic(
+	call_ids: &[u8; 2],
+	extrinsic_slice: &mut [u8],
+	collateral_data: &str,
+	data_signature: &[u8],
+	issuer_chain: &[u8],
+) -> EnclaveResult<()> {
+	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
+
+	info!("    [Enclave] Compose register collateral call: {:?}", call_ids);
+	let call = OpaqueCall::from_tuple(&(call_ids, collateral_data, data_signature, issuer_chain));
+
+	let extrinsic = extrinsics_factory.create_extrinsics(&[call], None)?[0].clone();
 	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
 		return EnclaveError::Other(Box::new(e)).into()
 	};
-	sgx_status_t::SGX_SUCCESS
+	Ok(())
 }
 
 #[no_mangle]
