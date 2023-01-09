@@ -41,8 +41,11 @@ use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::metadata::{
 	pallet_teerex::TeerexCallIndexes,
-	provider::{AccessNodeMetadata, Error as MetadataProviderError},
+	provider::{
+		AccessNodeMetadata, Error as MetadataProviderError, Result as MetadataProviderResult,
+	},
 };
+use itp_node_api_metadata::NodeMetadata;
 use itp_settings::worker::MR_ENCLAVE_SIZE;
 use itp_types::OpaqueCall;
 use itp_utils::write_slice_and_whitespace_pad;
@@ -228,14 +231,9 @@ pub unsafe extern "C" fn generate_register_quoting_enclave_extrinsic(
 		None => return sgx_status_t::SGX_ERROR_INVALID_PARAMETER,
 	};
 
-	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain().unwrap();
-	let call_ids = node_metadata_repo
-		.get_from_metadata(|m| m.register_quoting_enclave_call_indexes())
-		.unwrap()
-		.map_err(MetadataProviderError::MetadataError)
-		.unwrap();
+	let call_index_getter = |m: &NodeMetadata| m.register_quoting_enclave_call_indexes();
 	let extrinsic = generate_generic_register_collateral_extrinsic(
-		&call_ids,
+		call_index_getter,
 		extrinsic_slice,
 		&collateral_data.0,
 		&collateral_data.1,
@@ -264,14 +262,9 @@ pub unsafe extern "C" fn generate_register_tcb_info_extrinsic(
 		None => return sgx_status_t::SGX_ERROR_INVALID_PARAMETER,
 	};
 
-	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain().unwrap();
-	let call_ids = node_metadata_repo
-		.get_from_metadata(|m| m.register_tcb_info_call_indexes())
-		.unwrap()
-		.map_err(MetadataProviderError::MetadataError)
-		.unwrap();
+	let call_index_getter = |m: &NodeMetadata| m.register_tcb_info_call_indexes();
 	let extrinsic = generate_generic_register_collateral_extrinsic(
-		&call_ids,
+		call_index_getter,
 		extrinsic_slice,
 		&collateral_data.0,
 		&collateral_data.1,
@@ -283,15 +276,22 @@ pub unsafe extern "C" fn generate_register_tcb_info_extrinsic(
 	}
 }
 
-pub fn generate_generic_register_collateral_extrinsic(
-	call_ids: &[u8; 2],
+pub fn generate_generic_register_collateral_extrinsic<F>(
+	getter: F,
 	extrinsic_slice: &mut [u8],
 	collateral_data: &str,
 	data_signature: &[u8],
 	issuer_chain: &[u8],
-) -> EnclaveResult<()> {
+) -> EnclaveResult<()>
+where
+	F: Fn(&NodeMetadata) -> MetadataProviderResult<[u8; 2]>,
+{
 	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
 
+	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain()?;
+	let call_ids = node_metadata_repo
+		.get_from_metadata(getter)?
+		.map_err(MetadataProviderError::MetadataError)?;
 	info!("    [Enclave] Compose register collateral call: {:?}", call_ids);
 	let call = OpaqueCall::from_tuple(&(call_ids, collateral_data, data_signature, issuer_chain));
 
