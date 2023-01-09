@@ -170,11 +170,9 @@ impl ExecuteGetter for Getter {
 				TrustedGetter::add_num(_who) => {
 					let num1 = 2;
 					let num2 = 3;
-					let sum: i32 = num1 + num2;
+					let sum = num1 + num2;
 
-					let mut vec = Vec::new();
-					vec.extend_from_slice(&sum.to_le_bytes());
-					Some(vec)
+					Some(sum.encode())
 				},
 			},
 			Getter::public(g) => match g {
