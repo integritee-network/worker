@@ -18,6 +18,9 @@ sgx_tstd = { branch = "master", features = ["untrusted_fs", "net", "backtrace"],
 # local crates
 ita-sgx-runtime = { default-features = false, path = "../sgx-runtime" }
 itp-hashing = { default-features = false, path = "../../core-primitives/hashing" }
+itp-node-api = { default-features = false, path = "../../core-primitives/node-api" }
+itp-node-api-metadata = { default-features = false, path = "../../core-primitives/node-api/metadata" }
+itp-node-api-metadata-provider = { default-features = false, path = "../../core-primitives/node-api/metadata-provider" }
 itp-sgx-externalities = { default-features = false, path = "../../core-primitives/substrate-sgx/externalities" }
 itp-stf-interface = { default-features = false, path = "../../core-primitives/stf-interface" }
 itp-stf-primitives = { default-features = false, path = "../../core-primitives/stf-primitives" }
@@ -55,6 +58,8 @@ sgx = [
     "itp-sgx-externalities/sgx",
     "itp-utils/sgx",
     "sp-io/sgx",
+    "itp-node-api/sgx",
+    "itp-node-api-metadata-provider/sgx",
 ]
 std = [
     # crates.io
@@ -69,6 +74,9 @@ std = [
     "itp-storage/std",
     "itp-types/std",
     "itp-utils/std",
+    "itp-node-api/std",
+    "itp-node-api-metadata/std",
+    "itp-node-api-metadata-provider/std",
     # substrate
     "sp-core/std",
     "pallet-balances/std",

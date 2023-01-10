@@ -40,6 +40,7 @@ use ita_stf::{
 	AccountInfo, Getter, State, StatePayload, TrustedCall, TrustedCallSigned, TrustedGetter,
 	TrustedOperation,
 };
+use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_sgx_crypto::{Aes, StateCrypto};
 use itp_sgx_externalities::{SgxExternalitiesDiffType, SgxExternalitiesTrait, StateHash};
 use itp_stf_executor::{
@@ -597,7 +598,8 @@ pub fn test_retrieve_events() {
 		transfer_value,
 	)
 	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
-	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
+	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
+	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, repo).unwrap();
 
 	assert_eq!(TestStf::get_events(&mut state).len(), 3);
 }
@@ -620,7 +622,8 @@ pub fn test_retrieve_event_count() {
 	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
 
 	// when
-	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
+	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
+	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, repo).unwrap();
 
 	let event_count = TestStf::get_event_count(&mut state);
 	assert_eq!(event_count, 3);
@@ -641,7 +644,8 @@ pub fn test_reset_events() {
 		transfer_value,
 	)
 	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
-	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, [0u8, 1u8]).unwrap();
+	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
+	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, repo).unwrap();
 	let receiver_acc_info = TestStf::get_account_data(&mut state, &receiver.public().into());
 	assert_eq!(receiver_acc_info.free, transfer_value);
 	// Ensure that there really have been events generated.

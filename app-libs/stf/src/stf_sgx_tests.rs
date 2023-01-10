@@ -17,6 +17,7 @@
 
 use crate::{Getter, State, Stf, TrustedCall, TrustedCallSigned};
 use ita_sgx_runtime::Runtime;
+use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_stf_interface::{
 	sudo_pallet::SudoPalletInterface, system_pallet::SystemPalletAccountInterface, InitState,
 	StateCallInterface,
@@ -26,7 +27,7 @@ use sp_core::{
 	ed25519::{Pair as Ed25519Pair, Signature as Ed25519Signature},
 	Pair,
 };
-use std::vec::Vec;
+use std::{sync::Arc, vec::Vec};
 
 pub type StfState = Stf<TrustedCallSigned, Getter, State, Runtime>;
 
@@ -56,7 +57,8 @@ pub fn shield_funds_increments_signer_account_nonce() {
 		Signature::Ed25519(Ed25519Signature([0u8; 64])),
 	);
 
-	StfState::execute_call(&mut state, shield_funds_call, &mut Vec::new(), [0u8, 1u8]).unwrap();
+	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
+	StfState::execute_call(&mut state, shield_funds_call, &mut Vec::new(), repo).unwrap();
 	assert_eq!(1, StfState::get_account_nonce(&mut state, &enclave_signer_account_id));
 }
 
