@@ -27,6 +27,7 @@ use codec::{Decode, Encode};
 use frame_support::{ensure, traits::UnfilteredDispatchable};
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{Runtime, System};
+use itp_node_api::metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata};
 use itp_stf_interface::ExecuteCall;
 use itp_stf_primitives::types::{
 	AccountId, KeyPair, LeafIndex, OrdersFile, ShardIdentifier, Signature,
@@ -180,13 +181,17 @@ pub struct TrustedReturnValue<T> {
 impl TrustedReturnValue
 */
 
-impl ExecuteCall for TrustedCallSigned {
+impl<NodeMetadataRepository> ExecuteCall<NodeMetadataRepository> for TrustedCallSigned
+where
+	NodeMetadataRepository: AccessNodeMetadata,
+	NodeMetadataRepository::MetadataType: TeerexCallIndexes,
+{
 	type Error = StfError;
 
 	fn execute(
 		self,
 		calls: &mut Vec<OpaqueCall>,
-		unshield_funds_fn: [u8; 2],
+		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {
 		let sender = self.call.sender_account().clone();
 		let call_hash = blake2_256(&self.call.encode());
@@ -212,7 +217,9 @@ impl ExecuteCall for TrustedCallSigned {
 				.map_err(|e| {
 					Self::Error::Dispatch(format!("Balance Set Balance error: {:?}", e.error))
 				})?;
-				Ok(())
+				// TODO: we need clearly define the types so that the compiler can infer types
+				//       see https://github.com/integritee-network/worker/issues/1145
+				Ok::<(), Self::Error>(())
 			},
 			TrustedCall::balance_transfer(from, to, value) => {
 				let origin = ita_sgx_runtime::RuntimeOrigin::signed(from.clone());
@@ -242,7 +249,7 @@ impl ExecuteCall for TrustedCallSigned {
 				);
 				unshield_funds(account_incognito, value)?;
 				calls.push(OpaqueCall::from_tuple(&(
-					unshield_funds_fn,
+					node_metadata_repo.get_from_metadata(|m| m.unshield_funds_call_indexes())??,
 					beneficiary,
 					value,
 					shard,

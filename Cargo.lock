@@ -2802,6 +2802,9 @@ dependencies = [
  "integritee-node-runtime",
  "ita-sgx-runtime",
  "itp-hashing",
+ "itp-node-api",
+ "itp-node-api-metadata",
+ "itp-node-api-metadata-provider",
  "itp-sgx-externalities",
  "itp-stf-interface",
  "itp-stf-primitives",
@@ -3442,6 +3445,8 @@ dependencies = [
 name = "itp-stf-interface"
 version = "0.8.0"
 dependencies = [
+ "itp-node-api-metadata",
+ "itp-node-api-metadata-provider",
  "itp-types",
 ]
 

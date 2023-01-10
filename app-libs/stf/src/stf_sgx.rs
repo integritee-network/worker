@@ -21,6 +21,7 @@ use crate::test_genesis::test_genesis_setup;
 use crate::{helpers::enclave_signer_account, Stf, StfError, ENCLAVE_ACCOUNT_KEY};
 use codec::Encode;
 use frame_support::traits::{OriginTrait, UnfilteredDispatchable};
+use itp_node_api::metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata};
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_interface::{
 	parentchain_pallet::ParentchainPalletInterface,
@@ -34,7 +35,7 @@ use itp_types::OpaqueCall;
 use itp_utils::stringify::account_id_to_string;
 use log::*;
 use sp_runtime::traits::StaticLookup;
-use std::{fmt::Debug, format, prelude::v1::*, vec};
+use std::{fmt::Debug, format, prelude::v1::*, sync::Arc, vec};
 
 impl<Call, Getter, State, Runtime, AccountId> InitState<State, AccountId>
 	for Stf<Call, Getter, State, Runtime>
@@ -119,11 +120,13 @@ where
 	}
 }
 
-impl<Call, Getter, State, Runtime> StateCallInterface<Call, State>
-	for Stf<Call, Getter, State, Runtime>
+impl<Call, Getter, State, Runtime, NodeMetadataRepository>
+	StateCallInterface<Call, State, NodeMetadataRepository> for Stf<Call, Getter, State, Runtime>
 where
-	Call: ExecuteCall,
+	Call: ExecuteCall<NodeMetadataRepository>,
 	State: SgxExternalitiesTrait + Debug,
+	NodeMetadataRepository: AccessNodeMetadata,
+	NodeMetadataRepository::MetadataType: TeerexCallIndexes,
 {
 	type Error = Call::Error;
 
@@ -131,9 +134,9 @@ where
 		state: &mut State,
 		call: Call,
 		calls: &mut Vec<OpaqueCall>,
-		unshield_funds_fn: [u8; 2],
+		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {
-		state.execute_with(|| call.execute(calls, unshield_funds_fn))
+		state.execute_with(|| call.execute(calls, node_metadata_repo))
 	}
 }
 

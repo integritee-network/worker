@@ -22,7 +22,9 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
+use alloc::{sync::Arc, vec::Vec};
+use itp_node_api_metadata::pallet_teerex::TeerexCallIndexes;
+use itp_node_api_metadata_provider::AccessNodeMetadata;
 use itp_types::OpaqueCall;
 
 #[cfg(feature = "mocks")]
@@ -46,7 +48,11 @@ pub trait UpdateState<State, StateDiff> {
 }
 
 /// Interface to execute state mutating calls on a state.
-pub trait StateCallInterface<Call, State> {
+pub trait StateCallInterface<Call, State, NodeMetadataRepository>
+where
+	NodeMetadataRepository: AccessNodeMetadata,
+	NodeMetadataRepository::MetadataType: TeerexCallIndexes,
+{
 	type Error;
 
 	/// Execute a call on a specific state. Callbacks are added as an `OpaqueCall`.
@@ -54,7 +60,7 @@ pub trait StateCallInterface<Call, State> {
 		state: &mut State,
 		call: Call,
 		calls: &mut Vec<OpaqueCall>,
-		unshield_funds_fn: [u8; 2],
+		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error>;
 }
 
@@ -65,14 +71,18 @@ pub trait StateGetterInterface<Getter, State> {
 }
 
 /// Trait used to abstract the call execution.
-pub trait ExecuteCall {
+pub trait ExecuteCall<NodeMetadataRepository>
+where
+	NodeMetadataRepository: AccessNodeMetadata,
+	NodeMetadataRepository::MetadataType: TeerexCallIndexes,
+{
 	type Error;
 
 	/// Execute a call. Callbacks are added as an `OpaqueCall`.
 	fn execute(
 		self,
 		calls: &mut Vec<OpaqueCall>,
-		unshield_funds_fn: [u8; 2],
+		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error>;
 
 	/// Get storages hashes that should be updated for a specific call.

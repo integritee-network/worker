@@ -22,8 +22,10 @@ use crate::{
 	system_pallet::SystemPalletAccountInterface, ExecuteCall, ExecuteGetter, InitState,
 	StateCallInterface, StateGetterInterface, UpdateState,
 };
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, sync::Arc, vec::Vec};
 use core::marker::PhantomData;
+use itp_node_api_metadata::metadata_mocks::NodeMetadataMock;
+use itp_node_api_metadata_provider::NodeMetadataRepository;
 use itp_types::{AccountId, Index, OpaqueCall};
 
 #[derive(Default)]
@@ -49,7 +51,8 @@ impl<State, StateDiff> UpdateState<State, StateDiff> for StateInterfaceMock<Stat
 	}
 }
 
-impl<Call, State, StateDiff> StateCallInterface<Call, State>
+impl<Call, State, StateDiff>
+	StateCallInterface<Call, State, NodeMetadataRepository<NodeMetadataMock>>
 	for StateInterfaceMock<State, StateDiff>
 {
 	type Error = String;
@@ -58,7 +61,7 @@ impl<Call, State, StateDiff> StateCallInterface<Call, State>
 		_state: &mut State,
 		_call: Call,
 		_calls: &mut Vec<OpaqueCall>,
-		_unshield_funds_fn: [u8; 2],
+		_node_metadata_repo: Arc<NodeMetadataRepository<NodeMetadataMock>>,
 	) -> Result<(), Self::Error> {
 		unimplemented!()
 	}
@@ -88,13 +91,13 @@ impl<State, StateDiff> SystemPalletAccountInterface<State, AccountId>
 
 pub struct CallExecutorMock;
 
-impl ExecuteCall for CallExecutorMock {
+impl ExecuteCall<NodeMetadataRepository<NodeMetadataMock>> for CallExecutorMock {
 	type Error = String;
 
 	fn execute(
 		self,
 		_calls: &mut Vec<OpaqueCall>,
-		_unshield_funds_fn: [u8; 2],
+		_node_metadata_repo: Arc<NodeMetadataRepository<NodeMetadataMock>>,
 	) -> Result<(), Self::Error> {
 		unimplemented!()
 	}
