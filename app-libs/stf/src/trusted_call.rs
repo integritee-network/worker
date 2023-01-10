@@ -202,8 +202,8 @@ where
 				.map_err(|e| {
 					Self::Error::Dispatch(format!("Balance Set Balance error: {:?}", e.error))
 				})?;
-                // TODO: we need clearly define the types so that the compiler can infer types
-                //       see https://github.com/integritee-network/worker/issues/1145
+				// TODO: we need clearly define the types so that the compiler can infer types
+				//       see https://github.com/integritee-network/worker/issues/1145
 				Ok::<(), Self::Error>(())
 			},
 			TrustedCall::balance_transfer(from, to, value) => {
