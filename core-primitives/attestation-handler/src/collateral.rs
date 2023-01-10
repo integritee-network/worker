@@ -116,7 +116,8 @@ impl SgxQlQveCollateral {
 	/// Returns the data part and signature as a pair
 	fn separate_json_data_and_signature(data_name: &str, data: &[u8]) -> Option<(String, String)> {
 		let json = String::from_utf8_lossy(data);
-		// search pattern is something like `{"tcbInfo":`. Should be at the very beginning
+		let json = json.trim();
+		// search pattern is something like `{"data_name":`. Should be at the very beginning
 		let search_pattern = format!("{{\"{}\":", data_name);
 		let json = json.replace(&search_pattern, "");
 
@@ -125,12 +126,38 @@ impl SgxQlQveCollateral {
 			return None
 		}
 		let data = &parts[0];
-		let signature = &parts[1][0..parts[1].len() - 3]; // Remove the two last chars that 'close' the json
+		let signature = &parts[1][0..parts[1].len() - 2]; // Remove the two last chars that 'close' the json
 		Some((data.to_string(), signature.to_string()))
 	}
 
 	fn write_data_to_disk(filename: &str, contents: &[u8]) {
 		let mut file = std::fs::File::create(filename).unwrap();
 		file.write_all(contents).unwrap();
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn separate_json_data_and_signature_tcb_info() {
+		let json = br#"{"tcbInfo":{thejsondata},"signature":"thesignature"}"#;
+		let (data, signature) =
+			SgxQlQveCollateral::separate_json_data_and_signature("tcbInfo", json).unwrap();
+		assert_eq!(data, r#"{thejsondata}"#);
+		assert_eq!(signature, "thesignature");
+
+		let json = br#"{"tcbInfo":{thejsondata},"signature":"thesignature"#;
+		let (data, signature) =
+			SgxQlQveCollateral::separate_json_data_and_signature("tcbInfo", json).unwrap();
+		assert_eq!(data, r#"{thejsondata}"#);
+		assert_eq!(signature, "thesignatu"); // cut off the last two characters of signature
+
+		let json = br#"{"tcbInfo":{thejsondata},"nosignature":"thesignature"}"#;
+		assert!(SgxQlQveCollateral::separate_json_data_and_signature("tcbInfo", json).is_none());
+
+		let json = br#"{"tcbInfo":{thejsondata},"signature":""#;
+		assert!(SgxQlQveCollateral::separate_json_data_and_signature("tcbInfo", json).is_none());
 	}
 }
