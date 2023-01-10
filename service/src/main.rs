@@ -227,8 +227,9 @@ fn main() {
 			// Hard coded 6-byte FMSPC that represents the state of devsgx03
 			// TODO: either fetch this value from a list of pre-configured FMSPC values or
 			// extract the information out of the RA certificate
-			let fmspc = [00u8, 0x90, 0x6E, 0xA1, 00, 00];
-			enclave.dump_dcap_collateral_to_disk(fmspc).unwrap();
+			//let fmspc = [00u8, 0x90, 0x6E, 0xA1, 00, 00];
+			let fmspc_citadel = [00u8, 0xA0, 0x65, 0x51, 00, 00];
+			enclave.dump_dcap_collateral_to_disk(fmspc_citadel).unwrap();
 			enclave.dump_dcap_ra_cert_to_disk().unwrap();
 		}
 	} else if matches.is_present("mrenclave") {
@@ -701,11 +702,12 @@ fn register_collateral(
 	accountid: &AccountId32,
 	is_development_mode: bool,
 ) {
-	let fmspc = [00u8, 0x90, 0x6E, 0xA1, 00, 00];
-	let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc).unwrap();
+	//let fmspc = [00u8, 0x90, 0x6E, 0xA1, 00, 00];
+	let fmspc_citadel = [00u8, 0xA0, 0x65, 0x51, 00, 00];
+	let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc_citadel).unwrap();
 	send_extrinsic(&uxt, api, accountid, is_development_mode);
 
-	let uxt = enclave.generate_register_tcb_info_extrinsic(fmspc).unwrap();
+	let uxt = enclave.generate_register_tcb_info_extrinsic(fmspc_citadel).unwrap();
 	send_extrinsic(&uxt, api, accountid, is_development_mode);
 }
 
