@@ -240,7 +240,7 @@ pub unsafe extern "C" fn generate_register_quoting_enclave_extrinsic(
 	);
 	match extrinsic {
 		Ok(_) => sgx_status_t::SGX_SUCCESS,
-		Err(e) => return e.into(),
+		Err(e) => e.into(),
 	}
 }
 
@@ -271,7 +271,7 @@ pub unsafe extern "C" fn generate_register_tcb_info_extrinsic(
 	);
 	match extrinsic {
 		Ok(_) => sgx_status_t::SGX_SUCCESS,
-		Err(e) => return e.into(),
+		Err(e) => e.into(),
 	}
 }
 
