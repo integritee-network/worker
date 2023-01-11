@@ -35,8 +35,9 @@ pub fn state_getter_works() {
 	let signed_getter = TrustedGetter::free_balance(sender.public().into()).sign(&sender.into());
 	let mut state = test_state();
 
-	let encoded_balance =
-		TestStfStateGetter::get_state(&signed_getter, &mut state).unwrap().unwrap();
+	let encoded_balance = TestStfStateGetter::get_state(signed_getter.into(), &mut state)
+		.unwrap()
+		.unwrap();
 
 	let balance = Balance::decode(&mut encoded_balance.as_slice()).unwrap();
 
