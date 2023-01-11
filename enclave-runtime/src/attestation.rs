@@ -168,9 +168,9 @@ fn generate_ias_ra_extrinsic_internal(
 	let cert_der = attestation_handler.generate_ias_ra_cert(skip_ra)?;
 
 	info!("    [Enclave] Compose register enclave call");
-	let call_ids = node_metadata_repo
-		.get_from_metadata(|m| m.register_enclave_call_indexes())?
-		.map_err(MetadataProviderError::MetadataError)?;
+	let call_ids = node_metadata_repo.get().and_then(|n| {
+		n.register_enclave_call_indexes().map_err(MetadataProviderError::MetadataError)
+	})?;
 
 	let call = OpaqueCall::from_tuple(&(call_ids, cert_der, url));
 

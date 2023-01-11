@@ -16,6 +16,7 @@
 */
 //! Indirect calls execution logic.
 #![feature(trait_alias)]
+#![feature(is_some_and)]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(test, feature(assert_matches))]
 

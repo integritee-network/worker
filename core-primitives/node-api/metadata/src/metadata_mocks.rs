@@ -17,6 +17,7 @@
 
 use crate::{
 	error::Result, pallet_sidechain::SidechainCallIndexes, pallet_teerex::TeerexCallIndexes,
+	NodeMetadataTrait,
 };
 use codec::{Decode, Encode};
 
@@ -52,6 +53,8 @@ impl NodeMetadataMock {
 		}
 	}
 }
+
+impl NodeMetadataTrait for NodeMetadataMock {}
 
 impl TeerexCallIndexes for NodeMetadataMock {
 	fn register_enclave_call_indexes(&self) -> Result<[u8; 2]> {

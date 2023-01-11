@@ -35,12 +35,19 @@ pub mod pallet_teerex;
 #[cfg(feature = "mocks")]
 pub mod metadata_mocks;
 
+pub trait NodeMetadataTrait:
+	pallet_teerex::TeerexCallIndexes + pallet_sidechain::SidechainCallIndexes
+{
+}
+
 #[derive(Default, Encode, Decode, Debug, Clone)]
 pub struct NodeMetadata {
 	node_metadata: Option<Metadata>,
 	runtime_spec_version: u32,
 	runtime_transaction_version: u32,
 }
+
+impl NodeMetadataTrait for NodeMetadata {}
 
 impl NodeMetadata {
 	pub fn new(

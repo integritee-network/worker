@@ -27,7 +27,7 @@ use futures::executor;
 use ita_stf::{TrustedCall, TrustedOperation};
 use itp_node_api::{
 	api_client::ParentchainUncheckedExtrinsic,
-	metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata},
+	metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata, NodeMetadataTrait},
 };
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
 use itp_stf_executor::traits::StfEnclaveSigning;
@@ -73,7 +73,7 @@ where
 	StfEnclaveSigner: StfEnclaveSigning,
 	TopPoolAuthor: AuthorApi<H256, H256> + Send + Sync + 'static,
 	NodeMetadataProvider: AccessNodeMetadata,
-	NodeMetadataProvider::MetadataType: TeerexCallIndexes,
+	NodeMetadataProvider::MetadataType: NodeMetadataTrait,
 {
 	pub fn new(
 		shielding_key_repo: Arc<ShieldingKeyRepository>,
@@ -135,42 +135,39 @@ where
 	where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	{
-		let call = self.node_meta_data_provider.get_from_metadata(|meta_data| {
-			meta_data.confirm_processed_parentchain_block_call_indexes()
-		})??;
+		let call = self
+			.node_meta_data_provider
+			.get()?
+			.confirm_processed_parentchain_block_call_indexes()?;
 
 		let root: H256 = merkle_root::<Keccak256, _>(extrinsics);
 		Ok(OpaqueCall::from_tuple(&(call, block_hash, block_number, root)))
 	}
 
 	fn is_shield_funds_function(&self, function: &[u8; 2]) -> bool {
-		self.node_meta_data_provider
-			.get_from_metadata(|meta_data| {
-				let call = match meta_data.shield_funds_call_indexes() {
-					Ok(c) => c,
-					Err(e) => {
-						error!("Failed to get the indexes for the shield_funds call from the metadata: {:?}", e);
-						return false
-					},
-				};
-				function == &call
-			})
-			.unwrap_or(false)
+		self.node_meta_data_provider.get().is_ok_and(|n| {
+			let call = match n.shield_funds_call_indexes() {
+				Ok(c) => c,
+				Err(e) => {
+					error!("Failed to get the indexes for the shield_funds call from the metadata: {:?}", e);
+					return false
+				},
+			};
+			function == &call
+		})
 	}
 
 	fn is_call_worker_function(&self, function: &[u8; 2]) -> bool {
-		self.node_meta_data_provider
-			.get_from_metadata(|meta_data| {
-				let call = match meta_data.call_worker_call_indexes() {
-					Ok(c) => c,
-					Err(e) => {
-						error!("Failed to get the indexes for the call_worker call from the metadata: {:?}", e);
-						return false
-					},
-				};
-				function == &call
-			})
-			.unwrap_or(false)
+		self.node_meta_data_provider.get().is_ok_and(|n| {
+			let call = match n.call_worker_call_indexes() {
+				Ok(c) => c,
+				Err(e) => {
+					error!("Failed to get the indexes for the call_worker call from the metadata: {:?}", e);
+					return false
+				},
+			};
+			function == &call
+		})
 	}
 }
 
@@ -188,7 +185,7 @@ impl<ShieldingKeyRepository, StfEnclaveSigner, TopPoolAuthor, NodeMetadataProvid
 	StfEnclaveSigner: StfEnclaveSigning,
 	TopPoolAuthor: AuthorApi<H256, H256> + Send + Sync + 'static,
 	NodeMetadataProvider: AccessNodeMetadata,
-	NodeMetadataProvider::MetadataType: TeerexCallIndexes,
+	NodeMetadataProvider::MetadataType: NodeMetadataTrait,
 {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
