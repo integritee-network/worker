@@ -148,9 +148,14 @@ impl RemoteAttestation for Enclave {
 
 	fn generate_dcap_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
+		info!(
+			"inside of  itp_enclave_api::remote_attestation::Enclave::generate_dcap_ra_extrinsic"
+		);
 
 		self.set_ql_qe_enclave_paths()?;
+		info!("set_ql_qe_enclave_paths succeeded");
 		let quoting_enclave_target_info = self.qe_get_target_info()?;
+		info!("quoting_enclave_target_info succeeded");
 		let quote_size = self.qe_get_quote_size()?;
 		info!("Retrieved quote size of {:?}", quote_size);
 
@@ -587,7 +592,32 @@ impl TlsRemoteAttestation for Enclave {
 }
 
 fn create_system_path(file_name: &str) -> String {
-	format!("{}{}{}", OS_SYSTEM_PATH, file_name, C_STRING_ENDING)
+	info!("create_system_path:: file_name={}", &file_name);
+	let default_path = format!("{}{}", OS_SYSTEM_PATH, file_name);
+
+	let full_path = find_library_by_name(file_name).unwrap_or_else(|| default_path);
+
+	let c_terminated_path = format!("{}{}", full_path, C_STRING_ENDING);
+	info!("create_system_path:: created path={}", &c_terminated_path);
+	c_terminated_path
+}
+fn find_library_by_name(lib_name: &str) -> Option<String> {
+	use std::process::Command;
+	// ldconfig -p | grep libsgx_pce_logic.so.1
+
+	let ldconfig_output = Command::new("ldconfig").args(["-p"]).output().ok()?;
+	let possible_path = String::from_utf8(ldconfig_output.stdout)
+		.ok()?
+		.lines()
+		.filter(|line| line.contains(lib_name))
+		.map(|lib_name_and_path| {
+			lib_name_and_path
+				.rsplit_once("=>")
+				.and_then(|(_, lib_path)| Some(lib_path.trim().to_owned()))
+		})
+		.nth(0)?;
+
+	possible_path
 }
 
 fn set_ql_path(path_type: sgx_ql_path_type_t, path: &str) -> EnclaveResult<()> {
