@@ -37,7 +37,10 @@ use ita_oracle::{
 };
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
-use itp_node_api::metadata::{pallet_teeracle::TeeracleCallIndexes, provider::AccessNodeMetadata};
+use itp_node_api::metadata::{
+	pallet_teeracle::TeeracleCallIndexes,
+	provider::{AccessNodeMetadata, Error as MetadataProviderError},
+};
 use itp_types::OpaqueCall;
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
@@ -84,10 +87,9 @@ where
 
 	let node_metadata_repository = get_node_metadata_repository_from_solo_or_parachain()?;
 
-	let call_ids = node_metadata_repository
-		.get_from_metadata(|m| m.update_oracle_call_indexes())
-		.map_err(Error::NodeMetadataProvider)?
-		.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
+	let call_ids = node_metadata_repository.get().and_then(|n| {
+		n.update_oracle_call_indexes().map_err(MetadataProviderError::MetadataError)
+	})?;
 
 	let call = OpaqueCall::from_tuple(&(
 		call_ids,
@@ -249,10 +251,10 @@ where
 
 	let node_metadata_repository = get_node_metadata_repository_from_solo_or_parachain()?;
 
-	let call_ids = node_metadata_repository
-		.get_from_metadata(|m| m.update_exchange_rate_call_indexes())
-		.map_err(Error::NodeMetadataProvider)?
-		.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
+	let call_ids = node_metadata_repository.get().and_then(|n| {
+		n.update_exchange_rate_call_indexes()
+			.map_err(MetadataProviderError::MetadataError)
+	})?;
 
 	let call = OpaqueCall::from_tuple(&(
 		call_ids,
