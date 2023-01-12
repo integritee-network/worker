@@ -203,8 +203,13 @@ where
 				.map_err(|e| {
 					Self::Error::Dispatch(format!("Balance Set Balance error: {:?}", e.error))
 				})?;
-				// TODO: we need clearly define the types so that the compiler can infer types
-				//       see https://github.com/integritee-network/worker/issues/1145
+				// This explicit Error type is somehow still needed, otherwise the compiler complains
+				// 	multiple `impl`s satisfying `StfError: std::convert::From<_>`
+				// 		note: and another `impl` found in the `core` crate: `impl<T> std::convert::From<T> for T;`
+				// the impl From<..> for StfError conflicts with the standard convert
+				//
+				// Alternatively, removing the customised "impl From<..> for StfError" and use map_err directly
+				// would also work
 				Ok::<(), Self::Error>(())
 			},
 			TrustedCall::balance_transfer(from, to, value) => {
