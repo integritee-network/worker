@@ -51,7 +51,7 @@ where
 		}
 
 		debug!("calling into STF to get state");
-		Ok(Stf::execute_getter(state, getter.clone().into()))
+		Ok(Stf::execute_getter(state, getter))
 	}
 }
 
