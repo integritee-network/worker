@@ -18,16 +18,13 @@
 //! Getter executor uses the state observer to get the most recent state and runs the getter on it.
 //! The getter is verified (signature verfification) inside the `GetState` implementation.
 
-use crate::{
-	error::{Error, Result},
-	state_getter::GetState,
-};
+use crate::{error::Result, state_getter::GetState};
 use codec::Decode;
 use ita_stf::Getter;
 use itp_stf_state_observer::traits::ObserveState;
 use itp_types::ShardIdentifier;
 use log::*;
-use std::{format, marker::PhantomData, sync::Arc, time::Instant, vec::Vec};
+use std::{marker::PhantomData, sync::Arc, time::Instant, vec::Vec};
 
 /// Trait to execute a getter for a specific shard.
 pub trait ExecuteGetter {
@@ -60,20 +57,16 @@ where
 		encoded_signed_getter: Vec<u8>,
 	) -> Result<Option<Vec<u8>>> {
 		let getter: Getter = Decode::decode(&mut encoded_signed_getter.as_slice())?;
-
 		trace!("Successfully decoded trusted getter");
-		if let Getter::trusted(trusted_getter_signed) = getter {
-			let getter_timer_start = Instant::now();
-			let state_result = self.state_observer.observe_state(shard, |state| {
-				StateGetter::get_state(&trusted_getter_signed, state)
-			})??;
 
-			debug!("Getter executed in {} ms", getter_timer_start.elapsed().as_millis());
+		let getter_timer_start = Instant::now();
+		let state_result = self
+			.state_observer
+			.observe_state(shard, |state| StateGetter::get_state(getter, state))??;
 
-			Ok(state_result)
-		} else {
-			Err(Error::Other(format!("Unsupported getter type: {:?}", getter).into()))
-		}
+		debug!("Getter executed in {} ms", getter_timer_start.elapsed().as_millis());
+
+		Ok(state_result)
 	}
 }
 
@@ -92,10 +85,7 @@ mod tests {
 
 	struct TestStateGetter;
 	impl GetState<TestState> for TestStateGetter {
-		fn get_state(
-			_getter: &TrustedGetterSigned,
-			state: &mut TestState,
-		) -> Result<Option<Vec<u8>>> {
+		fn get_state(_getter: Getter, state: &mut TestState) -> Result<Option<Vec<u8>>> {
 			Ok(Some(state.encode()))
 		}
 	}
@@ -118,19 +108,19 @@ mod tests {
 	}
 
 	#[test]
-	fn executing_public_getter_gives_error() {
-		// no support for public getters yet.
-		let getter = Getter::public(PublicGetter::some_value);
-
+	fn executing_public_getter_works() {
 		let test_state = 23489u64;
 		let state_observer = Arc::new(TestStateObserver::new(test_state));
 		let getter_executor = TestGetterExecutor::new(state_observer);
+		let getter = Getter::public(PublicGetter::some_value);
 
-		assert!(getter_executor
+		let state_result = getter_executor
 			.execute_getter(&ShardIdentifier::default(), getter.encode())
-			.is_err());
+			.unwrap()
+			.unwrap();
+		let decoded_state: TestState = Decode::decode(&mut state_result.as_slice()).unwrap();
+		assert_eq!(decoded_state, test_state);
 	}
-
 	fn dummy_trusted_getter() -> TrustedGetterSigned {
 		TrustedGetterSigned::new(
 			TrustedGetter::nonce(AccountId::new([0u8; 32])),
