@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "app-libs/stf/simplyR",
     "app-libs/oracle",
     "app-libs/sgx-runtime",
     "app-libs/stf",
