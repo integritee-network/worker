@@ -33,7 +33,7 @@ struct Args {
     energy_unit: Option<f64>,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
     match args.algo {
