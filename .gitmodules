@@ -1,0 +1,3 @@
+[submodule "simplyR"]
+	path = app-libs/stf/simplyR
+	url = https://github.com/BESTenergytrade/simplyR.git
