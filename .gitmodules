@@ -1,3 +1,6 @@
 [submodule "simply"]
 	path = simply
 	url = https://github.com/BESTenergytrade/simply.git
+[submodule "simplyR"]
+	path = simplyR
+	url = https://github.com/BESTenergytrade/simplyR.git
