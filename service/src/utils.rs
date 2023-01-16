@@ -46,6 +46,7 @@ pub fn check_files() {
 	debug!("*** Check files");
 	let files = [ENCLAVE_FILE, RA_SPID_FILE, RA_API_KEY_FILE];
 	for f in files.iter() {
+		#[cfg(not(feature = "dcap"))]
 		assert!(Path::new(f).exists(), "File doesn't exist: {}", f);
 	}
 }

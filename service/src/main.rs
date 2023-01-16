@@ -303,7 +303,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	// ------------------------------------------------------------------------
 	// check for required files
 	if !skip_ra {
-		#[cfg(not(feature = "dcap"))]
 		check_files();
 	}
 	// ------------------------------------------------------------------------
