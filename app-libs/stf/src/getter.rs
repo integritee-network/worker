@@ -21,7 +21,7 @@ use itp_stf_interface::ExecuteGetter;
 use itp_stf_primitives::types::{AccountId, KeyPair, Signature};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
-use simplyr::pay_as_bid;
+use simplyr_lib::{pay_as_bid_matching, MarketInput, MarketOutput, Order, OrderType};
 use sp_runtime::traits::Verify;
 use std::prelude::v1::*;
 
@@ -71,7 +71,7 @@ pub enum TrustedGetter {
 	evm_account_codes(AccountId, H160),
 	#[cfg(feature = "evm")]
 	evm_account_storages(AccountId, H160, H256),
-	pay_as_bid_algo(AccountId),
+	pay_as_bid(AccountId),
 }
 
 impl TrustedGetter {
@@ -86,7 +86,7 @@ impl TrustedGetter {
 			TrustedGetter::evm_account_codes(sender_account, _) => sender_account,
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_account_storages(sender_account, ..) => sender_account,
-			TrustedGetter::pay_as_bid_algo(sender_account) => sender_account,
+			TrustedGetter::pay_as_bid(sender_account) => sender_account,
 		}
 	}
 
@@ -168,9 +168,33 @@ impl ExecuteGetter for Getter {
 						None
 					},
 
-				TrustedGetter::pay_as_bid_algo(_who) => {
-					let output = pay_as_bid();
-					Some(output.encode())
+				TrustedGetter::pay_as_bid(_who) => {
+					// list of orders
+					let order_1 = Order {
+						id: 1,
+						order_type: OrderType::Ask,
+						time_slot: "2022-03-04T05:06:07+00:00".to_string(),
+						actor_id: "actor_1".to_string(),
+						cluster_index: Some(0),
+						energy_kwh: 2.0,
+						price_euro_per_kwh: 0.3,
+					};
+
+					let order_2 = Order {
+						id: 2,
+						order_type: OrderType::Bid,
+						time_slot: "2022-03-04T05:06:07+00:00".to_string(),
+						actor_id: "actor_2".to_string(),
+						cluster_index: Some(0),
+						energy_kwh: 1.5,
+						price_euro_per_kwh: 0.35,
+					};
+
+					// create a market input
+					let market_input = MarketInput { orders: vec![order_1, order_2] };
+
+					let pay_as_bid: MarketOutput = pay_as_bid_matching(&market_input);
+					Some(pay_as_bid.encode())
 				},
 			},
 			Getter::public(g) => match g {

@@ -50,7 +50,7 @@ itp-types = { path = "../core-primitives/types" }
 itp-utils = { path = "../core-primitives/utils" }
 
 # Simplyr
-simplyr = { default-features = false, git = "https://github.com/BESTenergytrade/simplyR.git", branch = "cI/tee-simplyR" }
+simplyr-lib = { default-features = false, git = "https://github.com/BESTenergytrade/simplyR.git", branch = "cI/tee-simplyR" }
 
 [features]
 default = []

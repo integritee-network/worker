@@ -23,7 +23,7 @@ use codec::Decode;
 use ita_stf::{TrustedGetter, TrustedOperation};
 use itp_stf_primitives::types::KeyPair;
 use log::{debug, info};
-use simplyr::MarketOutput;
+use simplyr_lib::MarketOutput;
 use sp_core::Pair;
 
 #[derive(Parser)]
@@ -45,7 +45,7 @@ pub(crate) fn pay_as_bid(
 ) -> Option<MarketOutput> {
 	debug!("arg_who = {:?}", arg_who);
 	let who = get_pair_from_str(trusted_args, arg_who);
-	let top: TrustedOperation = TrustedGetter::pay_as_bid_algo(who.public().into())
+	let top: TrustedOperation = TrustedGetter::pay_as_bid(who.public().into())
 		.sign(&KeyPair::Sr25519(Box::new(who)))
 		.into();
 
