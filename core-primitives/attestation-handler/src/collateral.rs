@@ -119,8 +119,8 @@ impl SgxQlQveCollateral {
 		let data_json = serde_json::to_string(&value[data_name]).ok()?;
 		let signature = serde_json::to_string(&value["signature"]).ok()?;
 		// We want the signature without leading/ending "
-		let signature = signature.replace("\"", "");
-		return Some((data_json, signature))
+		let signature = signature.replace('\"', "");
+		Some((data_json, signature))
 	}
 
 	fn write_data_to_disk(filename: &str, contents: &[u8]) {
