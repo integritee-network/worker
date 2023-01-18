@@ -21,7 +21,7 @@ use itp_stf_interface::ExecuteGetter;
 use itp_stf_primitives::types::{AccountId, KeyPair, Signature};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
-use simplyr::*;
+use simplyr::pay_as_bid;
 use sp_runtime::traits::Verify;
 use std::prelude::v1::*;
 
@@ -71,6 +71,7 @@ pub enum TrustedGetter {
 	evm_account_codes(AccountId, H160),
 	#[cfg(feature = "evm")]
 	evm_account_storages(AccountId, H160, H256),
+	pay_as_bid_algo(AccountId),
 }
 
 impl TrustedGetter {
@@ -85,6 +86,7 @@ impl TrustedGetter {
 			TrustedGetter::evm_account_codes(sender_account, _) => sender_account,
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_account_storages(sender_account, ..) => sender_account,
+			TrustedGetter::pay_as_bid_algo(sender_account) => sender_account,
 		}
 	}
 
@@ -165,6 +167,11 @@ impl ExecuteGetter for Getter {
 					} else {
 						None
 					},
+
+				TrustedGetter::pay_as_bid_algo(_who) => {
+					let output = pay_as_bid();
+					Some(output.encode())
+				},
 			},
 			Getter::public(g) => match g {
 				PublicGetter::some_value => Some(42u32.encode()),

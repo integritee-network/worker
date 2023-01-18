@@ -448,6 +448,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "clap"
+version = "4.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ec7a4128863c188deefe750ac1d1dfe66c236909f845af04beed823638dc1b2"
+dependencies = [
+ "bitflags",
+ "clap_derive",
+ "clap_lex",
+ "is-terminal",
+ "once_cell 1.17.0",
+ "strsim",
+ "termcolor 1.2.0",
+]
+
+[[package]]
+name = "clap_derive"
+version = "4.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "684a277d672e91966334af371f1a7b5833f9aa00b07c84e92fbce95e00208ce8"
+dependencies = [
+ "heck",
+ "proc-macro-error",
+ "proc-macro2",
+ "quote 1.0.23",
+ "syn 1.0.107",
+]
+
+[[package]]
+name = "clap_lex"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "783fe232adfca04f90f56201b26d79682d4cd2625e0bc7290b95123afe558ade"
+dependencies = [
+ "os_str_bytes",
+]
+
+[[package]]
 name = "const-oid"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -724,7 +761,7 @@ dependencies = [
  "log",
  "regex 1.3.1",
  "sgx_tstd",
- "termcolor",
+ "termcolor 1.0.5",
 ]
 
 [[package]]
@@ -739,6 +776,27 @@ name = "environmental"
 version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e48c92028aaa870e83d51c64e5d4e0b6981b360c522198c23959f219a4e1b15b"
+
+[[package]]
+name = "errno"
+version = "0.2.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f639046355ee4f37944e44f60642c6f3a7efa3cf6b78c78a0d989a8ce6c396a1"
+dependencies = [
+ "errno-dragonfly",
+ "libc",
+ "winapi",
+]
+
+[[package]]
+name = "errno-dragonfly"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa68f1b12764fab894d2755d2518754e71b4fd80ecfb822714a1206c2aab39bf"
+dependencies = [
+ "cc",
+ "libc",
+]
 
 [[package]]
 name = "ethbloom"
@@ -1280,6 +1338,21 @@ version = "0.12.0"
 source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#27bd225ae6dbcd1d0a6d4d9590acc4d73c5195c2"
 
 [[package]]
+name = "heck"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2540771e65fc8cb83cd6e8a237f70c319bd5c29f78ed1084ba5d50eeac86f7f9"
+
+[[package]]
+name = "hermit-abi"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee512640fe35acbfb4bb779db6f0d80704c2cacfa2e39b601ef3e3f47d1ae4c7"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1394,6 +1467,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "io-lifetimes"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e7d6c6f8c91b4b9ed43484ad1a938e393caf35960fce7f82a040497207bd8e9e"
+dependencies = [
+ "libc",
+ "windows-sys",
+]
+
+[[package]]
 name = "iovec"
 version = "0.1.4"
 source = "git+https://github.com/mesalock-linux/iovec-sgx#5c2f8e81925b4c06c556d856f3237461b00e27c9"
@@ -1411,6 +1494,18 @@ dependencies = [
  "multihash",
  "quick-protobuf",
  "sha2 0.9.9",
+]
+
+[[package]]
+name = "is-terminal"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "28dfb6c8100ccc63462345b67d1bbc3679177c75ee4bf59bf29c8b1d110b8189"
+dependencies = [
+ "hermit-abi",
+ "io-lifetimes",
+ "rustix",
+ "windows-sys",
 ]
 
 [[package]]
@@ -1488,6 +1583,7 @@ dependencies = [
  "rlp",
  "sgx_tstd",
  "sha3 0.10.6",
+ "simplyr",
  "sp-application-crypto",
  "sp-core",
  "sp-io",
@@ -2449,6 +2545,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "linux-raw-sys"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f051f77a7c8e6957c0696eac88f26b0117e54f52d3fc682ab19397a8812846a4"
+
+[[package]]
 name = "log"
 version = "0.4.17"
 source = "git+https://github.com/integritee-network/log-sgx#483383a9be3e2e900042eef9b6b2d0837411783f"
@@ -2689,6 +2791,12 @@ name = "opaque-debug"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
+
+[[package]]
+name = "os_str_bytes"
+version = "6.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b7820b9daea5457c9f21c69448905d723fbd21136ccf521748f23fd49e723ee"
 
 [[package]]
 name = "pallet-aura"
@@ -3271,6 +3379,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustix"
+version = "0.36.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4feacf7db682c6c329c4ede12649cd36ecab0f3be5b7d74e6a20304725db4549"
+dependencies = [
+ "bitflags",
+ "errno",
+ "io-lifetimes",
+ "libc",
+ "linux-raw-sys",
+ "windows-sys",
+]
+
+[[package]]
 name = "rustls"
 version = "0.19.0"
 source = "git+https://github.com/mesalock-linux/rustls?tag=sgx_1.1.3#95b5e79dc24b02f3ce424437eb9698509d0baf58"
@@ -3789,6 +3911,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "simplyr"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "serde 1.0.152",
+ "serde_json 1.0.91",
+ "simplyr-lib",
+]
+
+[[package]]
+name = "simplyr-lib"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "serde 1.0.152",
+ "serde_json 1.0.91",
+]
+
+[[package]]
 name = "slab"
 version = "0.4.2"
 source = "git+https://github.com/mesalock-linux/slab-sgx#0b0e6ec2abd588afd2f40fd082bc473d100d0f40"
@@ -4304,6 +4445,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
+name = "strsim"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
+
+[[package]]
 name = "substrate-api-client"
 version = "0.7.0"
 source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.36#1446f5ba4082ba6df3bc7fd6165cca4c2f01af3e"
@@ -4393,6 +4540,15 @@ version = "1.0.5"
 source = "git+https://github.com/mesalock-linux/termcolor-sgx#fee5ac79b4a90197d646f3df5e1b45ac56be718b"
 dependencies = [
  "sgx_tstd",
+]
+
+[[package]]
+name = "termcolor"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be55cf8942feac5c765c2c993422806843c9a9a45d4d5c407ad6dd2ea95eb9b6"
+dependencies = [
+ "winapi-util",
 ]
 
 [[package]]
@@ -4683,6 +4839,94 @@ dependencies = [
  "sgx_tstd",
  "webpki",
 ]
+
+[[package]]
+name = "winapi"
+version = "0.3.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c839a674fcd7a98952e593242ea400abe93992746761e38641405d28b00f419"
+dependencies = [
+ "winapi-i686-pc-windows-gnu",
+ "winapi-x86_64-pc-windows-gnu",
+]
+
+[[package]]
+name = "winapi-i686-pc-windows-gnu"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6"
+
+[[package]]
+name = "winapi-util"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "70ec6ce85bb158151cae5e5c87f95a8e97d2c0c4b001223f33a334e3ce5de178"
+dependencies = [
+ "winapi",
+]
+
+[[package]]
+name = "winapi-x86_64-pc-windows-gnu"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
+
+[[package]]
+name = "windows-sys"
+version = "0.42.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a3e1820f08b8513f676f7ab6c1f99ff312fb97b553d30ff4dd86f9f15728aa7"
+dependencies = [
+ "windows_aarch64_gnullvm",
+ "windows_aarch64_msvc",
+ "windows_i686_gnu",
+ "windows_i686_msvc",
+ "windows_x86_64_gnu",
+ "windows_x86_64_gnullvm",
+ "windows_x86_64_msvc",
+]
+
+[[package]]
+name = "windows_aarch64_gnullvm"
+version = "0.42.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8c9864e83243fdec7fc9c5444389dcbbfd258f745e7853198f365e3c4968a608"
+
+[[package]]
+name = "windows_aarch64_msvc"
+version = "0.42.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4c8b1b673ffc16c47a9ff48570a9d85e25d265735c503681332589af6253c6c7"
+
+[[package]]
+name = "windows_i686_gnu"
+version = "0.42.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de3887528ad530ba7bdbb1faa8275ec7a1155a45ffa57c37993960277145d640"
+
+[[package]]
+name = "windows_i686_msvc"
+version = "0.42.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf4d1122317eddd6ff351aa852118a2418ad4214e6613a50e0191f7004372605"
+
+[[package]]
+name = "windows_x86_64_gnu"
+version = "0.42.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c1040f221285e17ebccbc2591ffdc2d44ee1f9186324dd3e84e99ac68d699c45"
+
+[[package]]
+name = "windows_x86_64_gnullvm"
+version = "0.42.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "628bfdf232daa22b0d64fdb62b09fcc36bb01f05a3939e20ab73aaf9470d0463"
+
+[[package]]
+name = "windows_x86_64_msvc"
+version = "0.42.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "447660ad36a13288b1db4d4248e857b510e8c3a225c822ba4fb748c0aafecffd"
 
 [[package]]
 name = "wyz"
