@@ -48,7 +48,9 @@ itp-stf-primitives = { path = "../core-primitives/stf-primitives" }
 itp-time-utils = { path = "../core-primitives/time-utils" }
 itp-types = { path = "../core-primitives/types" }
 itp-utils = { path = "../core-primitives/utils" }
-simplyr = {path = "../app-libs/stf/simplyR"}
+
+# Simplyr
+simplyr = { default-features = false, git = "https://github.com/BESTenergytrade/simplyR.git", branch = "cI/tee-simplyR" }
 
 [features]
 default = []

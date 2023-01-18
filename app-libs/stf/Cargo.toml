@@ -40,7 +40,7 @@ my-node-runtime = { package = "integritee-node-runtime", optional = true, git = 
 pallet-parentchain = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "master" }
 
 # simplyR
-simplyr = {path = "simplyR", default-features = false}
+simplyr = { default-features = false, git = "https://github.com/BESTenergytrade/simplyR.git", branch = "cI/tee-simplyR" }
 
 [dev-dependencies]
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.36" }
