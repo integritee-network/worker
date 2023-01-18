@@ -65,10 +65,7 @@ pub trait RemoteAttestation {
 
 	fn qe_get_quote_size(&self) -> EnclaveResult<u32>;
 
-	unsafe fn get_dcap_collateral(
-		&self,
-		fmspc: Fmspc,
-	) -> EnclaveResult<*const sgx_ql_qve_collateral_t>;
+	fn get_dcap_collateral(&self, fmspc: Fmspc) -> EnclaveResult<*const sgx_ql_qve_collateral_t>;
 }
 
 /// call-backs that are made from inside the enclave (using o-call), to e-calls again inside the enclave
@@ -185,7 +182,7 @@ impl RemoteAttestation for Enclave {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
 
-		let collateral_ptr = unsafe { self.get_dcap_collateral(fmspc)? };
+		let collateral_ptr = self.get_dcap_collateral(fmspc)?;
 
 		let result = unsafe {
 			ffi::generate_register_quoting_enclave_extrinsic(
@@ -208,7 +205,7 @@ impl RemoteAttestation for Enclave {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
 
-		let collateral_ptr = unsafe { self.get_dcap_collateral(fmspc)? };
+		let collateral_ptr = self.get_dcap_collateral(fmspc)?;
 
 		let result = unsafe {
 			ffi::generate_register_tcb_info_extrinsic(
@@ -291,7 +288,7 @@ impl RemoteAttestation for Enclave {
 
 	fn dump_dcap_collateral_to_disk(&self, fmspc: Fmspc) -> EnclaveResult<()> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
-		let collateral_ptr = unsafe { self.get_dcap_collateral(fmspc)? };
+		let collateral_ptr = self.get_dcap_collateral(fmspc)?;
 		let result =
 			unsafe { ffi::dump_dcap_collateral_to_disk(self.eid, &mut retval, collateral_ptr) };
 		let free_status = unsafe { sgx_ql_free_quote_verification_collateral(collateral_ptr) };
@@ -301,20 +298,22 @@ impl RemoteAttestation for Enclave {
 		Ok(())
 	}
 
-	unsafe fn get_dcap_collateral(
-		&self,
-		fmspc: Fmspc,
-	) -> EnclaveResult<*const sgx_ql_qve_collateral_t> {
+	fn get_dcap_collateral(&self, fmspc: Fmspc) -> EnclaveResult<*const sgx_ql_qve_collateral_t> {
 		let pck_ra = b"processor\x00";
 
-		let mut collateral_ptr: *mut sgx_ql_qve_collateral_t = std::mem::zeroed();
+		// SAFETY: Just get a nullptr for the FFI to overwrite later
+		let mut collateral_ptr: *mut sgx_ql_qve_collateral_t = unsafe { std::mem::zeroed() };
+
 		let collateral_ptr_ptr: *mut *mut sgx_ql_qve_collateral_t = &mut collateral_ptr;
-		let sgx_status = sgx_ql_get_quote_verification_collateral(
-			fmspc.as_ptr(),
-			fmspc.len() as uint16_t, //fmspc len is fixed in the function signature
-			pck_ra.as_ptr() as _,
-			collateral_ptr_ptr,
-		);
+		// SAFETY: All parameters are properly initialized so the FFI call should be fine
+		let sgx_status = unsafe {
+			sgx_ql_get_quote_verification_collateral(
+				fmspc.as_ptr(),
+				fmspc.len() as uint16_t, //fmspc len is fixed in the function signature
+				pck_ra.as_ptr() as _,
+				collateral_ptr_ptr,
+			)
+		};
 		ensure!(sgx_status == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(sgx_status));
 		Ok(collateral_ptr)
 	}
