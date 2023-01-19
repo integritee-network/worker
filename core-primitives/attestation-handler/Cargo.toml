@@ -26,7 +26,7 @@ base64_sgx = { package = "base64", rev = "sgx_1.1.3", git = "https://github.com/
 chrono_sgx = { package = "chrono", git = "https://github.com/mesalock-linux/chrono-sgx", optional = true }
 num-bigint = { optional = true, git = "https://github.com/mesalock-linux/num-bigint-sgx" }
 rustls_sgx = { package = "rustls", rev = "sgx_1.1.3", features = ["dangerous_configuration"], git = "https://github.com/mesalock-linux/rustls", optional = true }
-serde_json_sgx = { package = "serde_json", tag = "sgx_1.1.3", git = "https://github.com/mesalock-linux/serde-json-sgx", optional = true }
+serde_json_sgx = { package = "serde_json", tag = "sgx_1.1.3", features = ["preserve_order"], git = "https://github.com/mesalock-linux/serde-json-sgx", optional = true }
 thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
 webpki-roots = { git = "https://github.com/mesalock-linux/webpki-roots", branch = "mesalock_sgx" }
 webpki_sgx = { package = "webpki", git = "https://github.com/mesalock-linux/webpki", branch = "mesalock_sgx", optional = true }
