@@ -37,10 +37,7 @@ pub mod pallet_teerex;
 #[cfg(feature = "mocks")]
 pub mod metadata_mocks;
 
-pub trait NodeMetadataTrait:
-	pallet_teerex::TeerexCallIndexes + pallet_sidechain::SidechainCallIndexes
-{
-}
+pub trait NodeMetadataTrait: TeerexCallIndexes + SidechainCallIndexes {}
 impl<T: TeerexCallIndexes + SidechainCallIndexes> NodeMetadataTrait for T {}
 
 #[derive(Default, Encode, Decode, Debug, Clone)]
