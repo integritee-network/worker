@@ -45,7 +45,9 @@ pub mod error;
 pub trait AccessNodeMetadata {
 	type MetadataType;
 
-	fn get(&self) -> Result<Self::MetadataType>;
+	fn get_from_metadata<F, R>(&self, getter_function: F) -> Result<R>
+	where
+		F: FnOnce(&Self::MetadataType) -> R;
 }
 
 /// Repository to manage the node metadata.
@@ -73,9 +75,12 @@ where
 {
 	type MetadataType = NodeMetadata;
 
-	fn get(&self) -> Result<Self::MetadataType> {
+	fn get_from_metadata<F, R>(&self, getter_function: F) -> Result<R>
+	where
+		F: FnOnce(&Self::MetadataType) -> R,
+	{
 		match self.metadata_lock.read().expect("Lock poisoning").deref() {
-			Some(metadata) => Ok(metadata.clone()),
+			Some(metadata) => Ok(getter_function(metadata)),
 			None => Err(Error::MetadataNotSet),
 		}
 	}

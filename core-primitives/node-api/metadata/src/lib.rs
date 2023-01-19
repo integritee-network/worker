@@ -19,7 +19,9 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use crate::error::Result;
+use crate::{
+	error::Result, pallet_sidechain::SidechainCallIndexes, pallet_teerex::TeerexCallIndexes,
+};
 use codec::{Decode, Encode};
 use sp_core::storage::StorageKey;
 use substrate_api_client::{Metadata, MetadataError};
@@ -39,6 +41,7 @@ pub trait NodeMetadataTrait:
 	pallet_teerex::TeerexCallIndexes + pallet_sidechain::SidechainCallIndexes
 {
 }
+impl<T: TeerexCallIndexes + SidechainCallIndexes> NodeMetadataTrait for T {}
 
 #[derive(Default, Encode, Decode, Debug, Clone)]
 pub struct NodeMetadata {
@@ -46,8 +49,6 @@ pub struct NodeMetadata {
 	runtime_spec_version: u32,
 	runtime_transaction_version: u32,
 }
-
-impl NodeMetadataTrait for NodeMetadata {}
 
 impl NodeMetadata {
 	pub fn new(

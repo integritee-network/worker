@@ -240,7 +240,7 @@ where
 				);
 				unshield_funds(account_incognito, value)?;
 				calls.push(OpaqueCall::from_tuple(&(
-					node_metadata_repo.get()?.unshield_funds_call_indexes()?,
+					node_metadata_repo.get_from_metadata(|m| m.unshield_funds_call_indexes())??,
 					beneficiary,
 					value,
 					shard,

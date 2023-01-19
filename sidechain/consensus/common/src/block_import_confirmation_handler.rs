@@ -102,9 +102,8 @@ impl<
 	fn confirm_import(&self, header: &SidechainHeader, shard: &ShardIdentifier) -> Result<()> {
 		let call = self
 			.metadata_repository
-			.get()
-			.map_err(|e| Error::Other(format!("{:?}", e).into()))?
-			.confirm_imported_sidechain_block_indexes()
+			.get_from_metadata(|m| m.confirm_imported_sidechain_block_indexes())
+			.map_err(|e| Error::Other(e.into()))?
 			.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 
 		if header.block_number() == header.next_finalization_block_number() {

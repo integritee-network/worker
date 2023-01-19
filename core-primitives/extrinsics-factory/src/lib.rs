@@ -112,14 +112,17 @@ where
 				.tip(0)
 		});
 
-		let node_metadata = self.node_metadata_repository.get()?;
+		let (runtime_spec_version, runtime_transaction_version) =
+			self.node_metadata_repository.get_from_metadata(|m| {
+				(m.get_runtime_version(), m.get_runtime_transaction_version())
+			})?;
 
 		let extrinsics_buffer: Vec<OpaqueExtrinsic> = calls
 			.iter()
 			.map(|call| {
 				let extrinsic_params = ParentchainExtrinsicParams::new(
-					node_metadata.get_runtime_version(),
-					node_metadata.get_runtime_transaction_version(),
+					runtime_spec_version,
+					runtime_transaction_version,
 					nonce_value,
 					self.genesis_hash,
 					params_builder,

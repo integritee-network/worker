@@ -135,39 +135,42 @@ where
 	where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	{
-		let call = self
-			.node_meta_data_provider
-			.get()?
-			.confirm_processed_parentchain_block_call_indexes()?;
+		let call = self.node_meta_data_provider.get_from_metadata(|meta_data| {
+			meta_data.confirm_processed_parentchain_block_call_indexes()
+		})??;
 
 		let root: H256 = merkle_root::<Keccak256, _>(extrinsics);
 		Ok(OpaqueCall::from_tuple(&(call, block_hash, block_number, root)))
 	}
 
 	fn is_shield_funds_function(&self, function: &[u8; 2]) -> bool {
-		self.node_meta_data_provider.get().is_ok_and(|n| {
-			let call = match n.shield_funds_call_indexes() {
-				Ok(c) => c,
-				Err(e) => {
-					error!("Failed to get the indexes for the shield_funds call from the metadata: {:?}", e);
-					return false
-				},
-			};
-			function == &call
-		})
+		self.node_meta_data_provider
+			.get_from_metadata(|meta_data| {
+				let call = match meta_data.shield_funds_call_indexes() {
+					Ok(c) => c,
+					Err(e) => {
+						error!("Failed to get the indexes for the shield_funds call from the metadata: {:?}", e);
+						return false
+					},
+				};
+				function == &call
+			})
+			.unwrap_or(false)
 	}
 
 	fn is_call_worker_function(&self, function: &[u8; 2]) -> bool {
-		self.node_meta_data_provider.get().is_ok_and(|n| {
-			let call = match n.call_worker_call_indexes() {
-				Ok(c) => c,
-				Err(e) => {
-					error!("Failed to get the indexes for the call_worker call from the metadata: {:?}", e);
-					return false
-				},
-			};
-			function == &call
-		})
+		self.node_meta_data_provider
+			.get_from_metadata(|meta_data| {
+				let call = match meta_data.call_worker_call_indexes() {
+					Ok(c) => c,
+					Err(e) => {
+						error!("Failed to get the indexes for the call_worker call from the metadata: {:?}", e);
+						return false
+					},
+				};
+				function == &call
+			})
+			.unwrap_or(false)
 	}
 }
 
