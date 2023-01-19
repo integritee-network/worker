@@ -37,10 +37,7 @@ use ita_oracle::{
 };
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
-use itp_node_api::metadata::{
-	pallet_teeracle::TeeracleCallIndexes,
-	provider::{AccessNodeMetadata, Error as MetadataProviderError},
-};
+use itp_node_api::metadata::{pallet_teeracle::TeeracleCallIndexes, provider::AccessNodeMetadata};
 use itp_types::OpaqueCall;
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
