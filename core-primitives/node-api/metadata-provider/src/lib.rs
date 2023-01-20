@@ -32,8 +32,6 @@ use std::sync::SgxRwLock as RwLock;
 #[cfg(feature = "std")]
 use std::sync::RwLock;
 
-use itp_node_api_metadata::NodeMetadataTrait;
-
 pub use crate::error::Error;
 
 use crate::error::Result;
@@ -71,7 +69,7 @@ impl<NodeMetadata> NodeMetadataRepository<NodeMetadata> {
 
 impl<NodeMetadata> AccessNodeMetadata for NodeMetadataRepository<NodeMetadata>
 where
-	NodeMetadata: NodeMetadataTrait + Clone,
+	NodeMetadata:,
 {
 	type MetadataType = NodeMetadata;
 
@@ -83,5 +81,34 @@ where
 			Some(metadata) => Ok(getter_function(metadata)),
 			None => Err(Error::MetadataNotSet),
 		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use std::assert_matches::assert_matches;
+
+	#[derive(Default)]
+	struct NodeMetadataMock;
+
+	impl NodeMetadataMock {
+		fn get_one(&self) -> u32 {
+			1
+		}
+	}
+	#[test]
+	fn get_from_meta_data_returns_error_if_not_set() {
+		let repo = NodeMetadataRepository::<NodeMetadataMock>::default();
+
+		assert_matches!(repo.get_from_metadata(|m| m.get_one()), Err(Error::MetadataNotSet));
+	}
+
+	#[test]
+	fn get_from_metadata_works() {
+		let repo = NodeMetadataRepository::<NodeMetadataMock>::default();
+		repo.set_metadata(NodeMetadataMock);
+
+		assert_eq!(1, repo.get_from_metadata(|m| m.get_one()).unwrap());
 	}
 }
