@@ -113,44 +113,44 @@ where
 		}
 	});
 
-		// author_pendingTrustedCallsFor
-		let author_pending_trusted_calls_for_name: &str = "author_pendingTrustedCallsFor";
-		let pending_author = top_pool_author;
-		io_handler.add_sync_method(author_pending_trusted_calls_for_name, move |params: Params| {
-			match params.parse::<(String, String)>() {
-				Ok((shard_base58, account_hex)) => {
-					let shard = match decode_shard_from_base58(shard_base58.as_str()) {
-						Ok(id) => id,
-						Err(msg) => {
-							let error_msg: String =
-								format!("Could not retrieve pending trusted calls due to: {}", msg);
-							return Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
-						},
-					};
-					let account = match AccountId::from_hex(account_hex.as_str()) {
-						Ok(acc) => acc,
-						Err(msg) => {
-							let error_msg: String =
-								format!("Could not retrieve pending trusted calls due to: {}", msg);
-							return Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
-						},
-					};
-					let trusted_calls = pending_author.get_pending_trusted_calls_for(shard, &account);
-					let json_value = RpcReturnValue {
-						do_watch: false,
-						value: trusted_calls.encode(),
-						status: DirectRequestStatus::Ok,
-					};
-					Ok(json!(json_value.to_hex()))
-				},
-				Err(e) => {
-					let error_msg: String =
-						format!("Could not retrieve pending trusted calls due to: {}", e);
-					Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
-				},
-			}
-		});
-	
+	// author_pendingTrustedCallsFor
+	let author_pending_trusted_calls_for_name: &str = "author_pendingTrustedCallsFor";
+	let pending_author = top_pool_author;
+	io_handler.add_sync_method(author_pending_trusted_calls_for_name, move |params: Params| {
+		match params.parse::<(String, String)>() {
+			Ok((shard_base58, account_hex)) => {
+				let shard = match decode_shard_from_base58(shard_base58.as_str()) {
+					Ok(id) => id,
+					Err(msg) => {
+						let error_msg: String =
+							format!("Could not retrieve pending trusted calls due to: {}", msg);
+						return Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
+					},
+				};
+				let account = match AccountId::from_hex(account_hex.as_str()) {
+					Ok(acc) => acc,
+					Err(msg) => {
+						let error_msg: String =
+							format!("Could not retrieve pending trusted calls due to: {}", msg);
+						return Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
+					},
+				};
+				let trusted_calls = pending_author.get_pending_trusted_calls_for(shard, &account);
+				let json_value = RpcReturnValue {
+					do_watch: false,
+					value: trusted_calls.encode(),
+					status: DirectRequestStatus::Ok,
+				};
+				Ok(json!(json_value.to_hex()))
+			},
+			Err(e) => {
+				let error_msg: String =
+					format!("Could not retrieve pending trusted calls due to: {}", e);
+				Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
+			},
+		}
+	});
+
 	io_handler
 }
 

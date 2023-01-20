@@ -17,9 +17,8 @@
 
 use crate::{
 	trusted_base_cli::commands::{
-		balance::BalanceCommand, set_balance::SetBalanceCommand, transfer::TransferCommand,
-		unshield_funds::UnshieldFundsCommand,
-		nonce::NonceCommand,
+		balance::BalanceCommand, nonce::NonceCommand, set_balance::SetBalanceCommand,
+		transfer::TransferCommand, unshield_funds::UnshieldFundsCommand,
 	},
 	trusted_cli::TrustedCli,
 	trusted_command_utils::get_keystore_path,
