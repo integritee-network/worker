@@ -56,10 +56,7 @@ pub struct NodeMetadataRepository<NodeMetadata> {
 	metadata_lock: RwLock<Option<NodeMetadata>>,
 }
 
-impl<NodeMetadata> NodeMetadataRepository<NodeMetadata>
-where
-	NodeMetadata: Default,
-{
+impl<NodeMetadata> NodeMetadataRepository<NodeMetadata> {
 	pub fn new(metadata: NodeMetadata) -> Self {
 		NodeMetadataRepository { metadata_lock: RwLock::new(Some(metadata)) }
 	}
