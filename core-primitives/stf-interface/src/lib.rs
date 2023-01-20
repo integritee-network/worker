@@ -23,7 +23,7 @@
 extern crate alloc;
 
 use alloc::{sync::Arc, vec::Vec};
-use itp_node_api_metadata::pallet_teerex::TeerexCallIndexes;
+use itp_node_api_metadata::NodeMetadataTrait;
 use itp_node_api_metadata_provider::AccessNodeMetadata;
 use itp_types::OpaqueCall;
 
@@ -51,7 +51,7 @@ pub trait UpdateState<State, StateDiff> {
 pub trait StateCallInterface<Call, State, NodeMetadataRepository>
 where
 	NodeMetadataRepository: AccessNodeMetadata,
-	NodeMetadataRepository::MetadataType: TeerexCallIndexes,
+	NodeMetadataRepository::MetadataType: NodeMetadataTrait,
 {
 	type Error;
 
@@ -74,7 +74,7 @@ pub trait StateGetterInterface<Getter, State> {
 pub trait ExecuteCall<NodeMetadataRepository>
 where
 	NodeMetadataRepository: AccessNodeMetadata,
-	NodeMetadataRepository::MetadataType: TeerexCallIndexes,
+	NodeMetadataRepository::MetadataType: NodeMetadataTrait,
 {
 	type Error;
 

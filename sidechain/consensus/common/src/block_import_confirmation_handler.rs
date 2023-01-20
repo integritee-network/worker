@@ -20,7 +20,7 @@ use itc_parentchain_light_client::{
 	concurrent_access::ValidatorAccess, BlockNumberOps, ExtrinsicSender, NumberFor,
 };
 use itp_extrinsics_factory::CreateExtrinsics;
-use itp_node_api_metadata::pallet_sidechain::SidechainCallIndexes;
+use itp_node_api_metadata::{pallet_sidechain::SidechainCallIndexes, NodeMetadataTrait};
 use itp_node_api_metadata_provider::AccessNodeMetadata;
 use itp_settings::worker::BLOCK_NUMBER_FINALIZATION_DIFF;
 use itp_types::{OpaqueCall, ShardIdentifier};
@@ -95,7 +95,7 @@ impl<
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	SidechainHeader: HeaderTrait,
 	NodeMetadataRepository: AccessNodeMetadata,
-	NodeMetadataRepository::MetadataType: SidechainCallIndexes,
+	NodeMetadataRepository::MetadataType: NodeMetadataTrait,
 	ExtrinsicsFactory: CreateExtrinsics,
 	ValidatorAccessor: ValidatorAccess<ParentchainBlock> + Send + Sync + 'static,
 {

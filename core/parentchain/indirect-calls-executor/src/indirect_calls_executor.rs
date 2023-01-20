@@ -27,7 +27,7 @@ use futures::executor;
 use ita_stf::{TrustedCall, TrustedOperation};
 use itp_node_api::{
 	api_client::ParentchainUncheckedExtrinsic,
-	metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata},
+	metadata::{pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata, NodeMetadataTrait},
 };
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
 use itp_stf_executor::traits::StfEnclaveSigning;
@@ -73,7 +73,7 @@ where
 	StfEnclaveSigner: StfEnclaveSigning,
 	TopPoolAuthor: AuthorApi<H256, H256> + Send + Sync + 'static,
 	NodeMetadataProvider: AccessNodeMetadata,
-	NodeMetadataProvider::MetadataType: TeerexCallIndexes,
+	NodeMetadataProvider::MetadataType: NodeMetadataTrait,
 {
 	pub fn new(
 		shielding_key_repo: Arc<ShieldingKeyRepository>,
@@ -188,7 +188,7 @@ impl<ShieldingKeyRepository, StfEnclaveSigner, TopPoolAuthor, NodeMetadataProvid
 	StfEnclaveSigner: StfEnclaveSigning,
 	TopPoolAuthor: AuthorApi<H256, H256> + Send + Sync + 'static,
 	NodeMetadataProvider: AccessNodeMetadata,
-	NodeMetadataProvider::MetadataType: TeerexCallIndexes,
+	NodeMetadataProvider::MetadataType: NodeMetadataTrait,
 {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
