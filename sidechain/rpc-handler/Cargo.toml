@@ -11,6 +11,7 @@ sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-s
 
 # local dependencies
 itp-rpc = { path = "../../core-primitives/rpc", default-features = false }
+itp-stf-primitives = { path = "../../core-primitives/stf-primitives", default-features = false }
 itp-top-pool-author = { path = "../../core-primitives/top-pool-author", default-features = false }
 itp-types = { path = "../../core-primitives/types", default-features = false }
 itp-utils = { path = "../../core-primitives/utils", default-features = false }
