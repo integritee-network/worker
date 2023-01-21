@@ -80,6 +80,11 @@ where
 
 	if genesis_hash == params.genesis_header.hash() {
 		validator.set_state(validation_state);
+		// The init_parachain_validator function clear the state every time,
+		// so we should write the state again.
+		LightClientStateSeal::<B, LightValidationState<B>>::seal_to_static_file(
+			validator.get_state(),
+		)?;
 		info!("Found already initialized light client with Genesis Hash: {:?}", genesis_hash);
 	}
 	info!("light client state: {:?}", validator);
@@ -107,6 +112,11 @@ where
 
 	if genesis_hash == params.genesis_header.hash() {
 		validator.set_state(validation_state);
+		// The init_parachain_validator function clear the state every time,
+		// so we should write the state again.
+		LightClientStateSeal::<B, LightValidationState<B>>::seal_to_static_file(
+			validator.get_state(),
+		)?;
 		info!("Found already initialized light client with Genesis Hash: {:?}", genesis_hash);
 	}
 	info!("light client state: {:?}", validator);
