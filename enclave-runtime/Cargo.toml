@@ -4,9 +4,6 @@ version = "0.9.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
-[workspace]
-members = []
-
 [lib]
 name = "enclave_runtime"
 crate-type = ["staticlib"]
@@ -134,20 +131,6 @@ sp-core = { default-features = false, features = ["full_crypto"], git = "https:/
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.36" }
 sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.36" }
 
-[patch.crates-io]
-env_logger = { git = "https://github.com/integritee-network/env_logger-sgx" }
-getrandom = { git = "https://github.com/integritee-network/getrandom-sgx", branch = "update-v2.3" }
-log = { git = "https://github.com/integritee-network/log-sgx" }
-
-[patch."https://github.com/mesalock-linux/log-sgx"]
-log = { git = "https://github.com/integritee-network/log-sgx" }
-
-[patch."https://github.com/paritytech/substrate"]
-sp-io = { path = "../core-primitives/substrate-sgx/sp-io" }
-
-#[patch."https://github.com/integritee-network/frontier"]
-#pallet-evm = { path = "../../frontier/frame/evm"}
-
 [patch."https://github.com/apache/teaclave-sgx-sdk.git"]
 sgx_alloc = { version = "1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master" }
 sgx_crypto_helper = { version = "1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master" }
@@ -164,14 +147,3 @@ sgx_tseal = { version = "1.1.6", git = "https://github.com/apache/incubator-teac
 sgx_tstd = { version = "1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master" }
 sgx_tunittest = { version = "1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master" }
 sgx_types = { version = "1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master" }
-
-#[patch."https://github.com/scs/substrate-api-client"]
-#substrate-api-client = { path = "../../../scs/substrate-api-client" }
-
-#[patch."https://github.com/integritee-network/pallets.git"]
-#pallet-parentchain = { path = "../../pallets/parentchain" }
-#itp-types = {  path = "../../pallets/primitives/types" }
-#itp-utils = {  path = "../../pallets/primitives/utils" }
-
-#[patch."https://github.com/integritee-network/http_req"]
-#http_req-sgx = {  package = "http_req", path = '../../http_req' }

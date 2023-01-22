@@ -15,8 +15,6 @@
 
 */
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
 pub mod block_fetch_client;
 pub mod block_fetch_server;
 pub mod error;

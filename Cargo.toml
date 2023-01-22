@@ -55,6 +55,7 @@ members = [
     "core-primitives/top-pool-author",
     "core-primitives/types",
     "core-primitives/utils",
+    "enclave-runtime",
     "service",
     "sidechain/block-composer",
     "sidechain/block-verification",
@@ -81,10 +82,16 @@ sgx_types = { version = "1.1.6", git = "https://github.com/apache/incubator-teac
 sgx_ucrypto = { version = "1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master" }
 sgx_urts = { version = "1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master" }
 
-#[patch."https://github.com/integritee-network/sgx-runtime"]
-#sgx-runtime = { path = "../sgx-runtime/runtime"}
-#sp-io = { path = "../sgx-runtime/substrate-sgx/sp-io"}
-#sgx-externalities = { path = "../sgx-runtime/substrate-sgx/externalities"}
+[patch.crates-io]
+env_logger = { git = "https://github.com/integritee-network/env_logger-sgx" }
+getrandom = { git = "https://github.com/integritee-network/getrandom-sgx", branch = "update-v2.3" }
+log = { git = "https://github.com/integritee-network/log-sgx" }
+
+[patch."https://github.com/mesalock-linux/log-sgx"]
+log = { git = "https://github.com/integritee-network/log-sgx" }
+
+[patch."https://github.com/paritytech/substrate"]
+sp-io = { path = "core-primitives/substrate-sgx/sp-io" }
 
 #[patch."https://github.com/integritee-network/integritee-node"]
 #my-node-runtime = { package = "integritee-node-runtime", path = "../integritee-node/runtime"}
@@ -104,3 +111,17 @@ sgx_urts = { version = "1.1.6", git = "https://github.com/apache/incubator-teacl
 
 #[patch."https://github.com/integritee-network/http_req"]
 #http_req = {path = '..//http_req' }
+
+#[patch."https://github.com/scs/substrate-api-client"]
+#substrate-api-client = { path = "../../../scs/substrate-api-client" }
+
+#[patch."https://github.com/integritee-network/pallets.git"]
+#pallet-parentchain = { path = "../../pallets/parentchain" }
+#itp-types = {  path = "../../pallets/primitives/types" }
+#itp-utils = {  path = "../../pallets/primitives/utils" }
+
+#[patch."https://github.com/integritee-network/http_req"]
+#http_req-sgx = {  package = "http_req", path = '../../http_req' }
+
+#[patch."https://github.com/integritee-network/frontier"]
+#pallet-evm = { path = "../../frontier/frame/evm"}

@@ -219,15 +219,12 @@ clean:
  			service/*_u.* \
  			lib/*.a \
  			bin/*.bin
-	@echo "cargo clean in enclave directory"
-	@cd enclave-runtime && cargo clean
 	@echo "cargo clean in root directory"
 	@cargo clean
 
 .PHONY: pin-sgx
 pin-sgx:
 	@echo "Pin sgx dependencies to 27bd225ae6dbcd1d0a6d4d9590acc4d73c5195c2"
-	@cd enclave-runtime && cargo update -p sgx_tstd --precise 27bd225ae6dbcd1d0a6d4d9590acc4d73c5195c2
 	@cargo update -p sgx_tstd --precise 27bd225ae6dbcd1d0a6d4d9590acc4d73c5195c2
 
 mrenclave:

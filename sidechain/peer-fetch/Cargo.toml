@@ -31,6 +31,4 @@ its-storage = { path = "../storage", features = ["mocks"] }
 its-test = { path = "../test" }
 
 [features]
-default = ["std"]
-std = []
 mocks = []
