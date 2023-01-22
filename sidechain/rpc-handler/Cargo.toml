@@ -34,6 +34,7 @@ sp-core = { default-features = false, features = ["full_crypto"], git = "https:/
 default = ["std"]
 std = [
     "itp-rpc/std",
+    "itp-stf-primitives/std",
     "itp-top-pool-author/std",
     "itp-types/std",
     "itp-utils/std",
