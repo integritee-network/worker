@@ -1,4 +1,8 @@
 [workspace]
+# resolver = "2" should not be necessary, as it is the default. However, omitting it
+# leads to an `std` leak of itertools when it is used as a `proc-macro` dependency
+# for whatever reason.
+resolver = "2"
 
 members = [
     "app-libs/oracle",
