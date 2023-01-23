@@ -3826,6 +3826,7 @@ name = "its-rpc-handler"
 version = "0.9.0"
 dependencies = [
  "itp-rpc",
+ "itp-stf-primitives",
  "itp-top-pool-author",
  "itp-types",
  "itp-utils",
