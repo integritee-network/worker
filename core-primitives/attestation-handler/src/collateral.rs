@@ -14,6 +14,7 @@
 	limitations under the License.
 
 */
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::serde_json;
 use sgx_types::sgx_ql_qve_collateral_t;
 use std::{io::Write, string::String, vec::Vec};
