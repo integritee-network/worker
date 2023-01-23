@@ -178,7 +178,7 @@ fn send_request(
 	}
 }
 
-fn read_shard(trusted_args: &TrustedCli) -> StdResult<ShardIdentifier, codec::Error> {
+pub fn read_shard(trusted_args: &TrustedCli) -> StdResult<ShardIdentifier, codec::Error> {
 	match &trusted_args.shard {
 		Some(s) => match s.from_base58() {
 			Ok(s) => ShardIdentifier::decode(&mut &s[..]),

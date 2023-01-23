@@ -26,12 +26,11 @@ use base58::FromBase58;
 
 use codec::{Decode, Encode};
 use itp_rpc::RpcReturnValue;
+use itp_stf_primitives::types::AccountId;
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{DirectRequestStatus, Request, ShardIdentifier, TrustedOperationStatus};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
-use jsonrpc_core::{
-	futures::executor, serde_json::json, Error as RpcError, IoHandler, Params, Value,
-};
+use jsonrpc_core::{futures::executor, serde_json::json, Error as RpcError, IoHandler, Params};
 use log::*;
 use std::{borrow::ToOwned, format, string::String, sync::Arc, vec, vec::Vec};
 
@@ -82,7 +81,7 @@ where
 
 	// author_pendingExtrinsics
 	let author_pending_extrinsic_name: &str = "author_pendingExtrinsics";
-	let pending_author = top_pool_author;
+	let pending_author = top_pool_author.clone();
 	io_handler.add_sync_method(author_pending_extrinsic_name, move |params: Params| {
 		match params.parse::<Vec<String>>() {
 			Ok(shards) => {
@@ -90,7 +89,11 @@ where
 				for shard_base58 in shards.iter() {
 					let shard = match decode_shard_from_base58(shard_base58.as_str()) {
 						Ok(id) => id,
-						Err(msg) => return Ok(Value::String(msg)),
+						Err(msg) => {
+							let error_msg: String =
+								format!("Could not retrieve pending calls due to: {}", msg);
+							return Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
+						},
 					};
 					if let Ok(vec_of_operations) = pending_author.pending_tops(shard) {
 						retrieved_operations.push(vec_of_operations);
@@ -105,6 +108,44 @@ where
 			},
 			Err(e) => {
 				let error_msg: String = format!("Could not retrieve pending calls due to: {}", e);
+				Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
+			},
+		}
+	});
+
+	// author_pendingTrustedCallsFor
+	let author_pending_trusted_calls_for_name: &str = "author_pendingTrustedCallsFor";
+	let pending_author = top_pool_author;
+	io_handler.add_sync_method(author_pending_trusted_calls_for_name, move |params: Params| {
+		match params.parse::<(String, String)>() {
+			Ok((shard_base58, account_hex)) => {
+				let shard = match decode_shard_from_base58(shard_base58.as_str()) {
+					Ok(id) => id,
+					Err(msg) => {
+						let error_msg: String =
+							format!("Could not retrieve pending trusted calls due to: {}", msg);
+						return Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
+					},
+				};
+				let account = match AccountId::from_hex(account_hex.as_str()) {
+					Ok(acc) => acc,
+					Err(msg) => {
+						let error_msg: String =
+							format!("Could not retrieve pending trusted calls due to: {}", msg);
+						return Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
+					},
+				};
+				let trusted_calls = pending_author.get_pending_trusted_calls_for(shard, &account);
+				let json_value = RpcReturnValue {
+					do_watch: false,
+					value: trusted_calls.encode(),
+					status: DirectRequestStatus::Ok,
+				};
+				Ok(json!(json_value.to_hex()))
+			},
+			Err(e) => {
+				let error_msg: String =
+					format!("Could not retrieve pending trusted calls due to: {}", e);
 				Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
 			},
 		}
