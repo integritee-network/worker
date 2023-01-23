@@ -3792,7 +3792,7 @@ dependencies = [
 [[package]]
 name = "simplyr-lib"
 version = "0.1.0"
-source = "git+https://github.com/BESTenergytrade/simplyR.git?branch=cI/tee-simplyR#bb5028e1b564603c4e82b8f3c67e753734dbd460"
+source = "git+https://github.com/BESTenergytrade/simplyR.git?branch=cI/tee-simplyR#f41f5808d4c130c31e0ece65f5139e0b2523223c"
 dependencies = [
  "parity-scale-codec",
  "serde 1.0.152",

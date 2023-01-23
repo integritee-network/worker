@@ -7039,7 +7039,7 @@ dependencies = [
 [[package]]
 name = "simplyr-lib"
 version = "0.1.0"
-source = "git+https://github.com/BESTenergytrade/simplyR.git?branch=cI/tee-simplyR#65e81e535e6535e39b01b5e5c573bb915c186d72"
+source = "git+https://github.com/BESTenergytrade/simplyR.git?branch=cI/tee-simplyR#f41f5808d4c130c31e0ece65f5139e0b2523223c"
 dependencies = [
  "parity-scale-codec",
  "serde 1.0.152",
@@ -8456,9 +8456,9 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "digest 0.10.6",
- "rand 0.8.5",
+ "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "static_assertions",
 ]
 
