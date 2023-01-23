@@ -192,6 +192,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Set env
+        run: |
+          echo "FLAVOR_ID=${{ matrix.flavor_id }}" >> $GITHUB_ENV
+
       - name: Download Worker Image
         uses: actions/download-artifact@v3
         with:

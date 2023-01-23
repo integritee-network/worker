@@ -49,9 +49,15 @@ impl TransferCommand {
 		info!("from ss58 is {}", from.public().to_ss58check());
 		info!("to ss58 is {}", to.to_ss58check());
 
-		println!("send trusted call transfer from {} to {}: {}", from.public(), to, self.amount);
 		let (mrenclave, shard) = get_identifiers(trusted_args);
 		let nonce = get_layer_two_nonce!(from, cli, trusted_args);
+		println!(
+			"send trusted call transfer from {} to {}: {}, nonce: {}",
+			from.public(),
+			to,
+			self.amount,
+			nonce
+		);
 		let top: TrustedOperation =
 			TrustedCall::balance_transfer(from.public().into(), to, self.amount)
 				.sign(&KeyPair::Sr25519(Box::new(from)), nonce, &mrenclave, &shard)
