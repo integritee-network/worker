@@ -69,8 +69,8 @@ pub enum StfError {
 	Dispatch(String),
 	#[display(fmt = "Not enough funds to perform operation")]
 	MissingFunds,
-	#[display(fmt = "Invalid Nonce {:?}", _0)]
-	InvalidNonce(Index),
+	#[display(fmt = "Invalid Nonce {:?} != {:?}", _0, _1)]
+	InvalidNonce(Index, Index),
 	StorageHashMismatch,
 	InvalidStorageDiff,
 	InvalidMetadata,
