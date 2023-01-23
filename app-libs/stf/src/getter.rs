@@ -23,7 +23,7 @@ use itp_utils::stringify::account_id_to_string;
 use log::*;
 use simplyr_lib::{pay_as_bid_matching, MarketInput, MarketOutput, Order, OrderType};
 use sp_runtime::traits::Verify;
-use std::prelude::v1::*;
+use std::{prelude::v1::*, vec};
 
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
