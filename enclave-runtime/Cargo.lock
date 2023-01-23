@@ -2397,6 +2397,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "201de327520df007757c1f0adce6e827fe8562fbc28bfd9c15571c66ca1f5f79"
 
 [[package]]
+name = "libm"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "348108ab3fba42ec82ff6e9564fc4ca0247bdccdc68dd8af9764bbc79c3c8ffb"
+
+[[package]]
 name = "libsecp256k1"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3792,8 +3798,9 @@ dependencies = [
 [[package]]
 name = "simplyr-lib"
 version = "0.1.0"
-source = "git+https://github.com/BESTenergytrade/simplyR.git?branch=cI/tee-simplyR#f41f5808d4c130c31e0ece65f5139e0b2523223c"
+source = "git+https://github.com/BESTenergytrade/simplyR.git?branch=cI/tee-simplyR#af4fd24f05c9989880d4853a5a02ed9fe75c1209"
 dependencies = [
+ "libm",
  "parity-scale-codec",
  "serde 1.0.152",
  "serde_json 1.0.91",
