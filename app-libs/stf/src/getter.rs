@@ -21,7 +21,10 @@ use itp_stf_interface::ExecuteGetter;
 use itp_stf_primitives::types::{AccountId, KeyPair, Signature};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
-use simplyr_lib::{pay_as_bid_matching, MarketInput, MarketOutput, Order, OrderType};
+use simplyr_lib::{
+	custom_fair_matching, pay_as_bid_matching, GridFeeMatrix, MarketInput, MarketOutput, Order,
+	OrderType,
+};
 use sp_runtime::traits::Verify;
 use std::{prelude::v1::*, vec};
 
@@ -72,6 +75,7 @@ pub enum TrustedGetter {
 	#[cfg(feature = "evm")]
 	evm_account_storages(AccountId, H160, H256),
 	pay_as_bid(AccountId),
+	custom_fair(AccountId),
 }
 
 impl TrustedGetter {
@@ -87,6 +91,7 @@ impl TrustedGetter {
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_account_storages(sender_account, ..) => sender_account,
 			TrustedGetter::pay_as_bid(sender_account) => sender_account,
+			TrustedGetter::custom_fair(sender_account) => sender_account,
 		}
 	}
 
@@ -195,6 +200,39 @@ impl ExecuteGetter for Getter {
 
 					let pay_as_bid: MarketOutput = pay_as_bid_matching(&market_input);
 					Some(pay_as_bid.encode())
+				},
+
+				TrustedGetter::custom_fair(_who) => {
+					// custom_fair_matching
+					let order_1 = Order {
+						id: 1,
+						order_type: OrderType::Ask,
+						time_slot: "2022-03-04T05:06:07+00:00".to_string(),
+						actor_id: "actor_1".to_string(),
+						cluster_index: Some(0),
+						energy_kwh: 2.0,
+						price_euro_per_kwh: 0.3,
+					};
+
+					let order_2 = Order {
+						id: 2,
+						order_type: OrderType::Bid,
+						time_slot: "2022-03-04T05:06:07+00:00".to_string(),
+						actor_id: "actor_2".to_string(),
+						cluster_index: Some(0),
+						energy_kwh: 1.5,
+						price_euro_per_kwh: 0.35,
+					};
+
+					let grid_fee_matrix =
+						GridFeeMatrix::from_json_str("[[0,1,1], [1,0,1], [1,1,0]]").unwrap();
+
+					let market_input = MarketInput { orders: vec![order_1, order_2] };
+
+					let custom_fair: MarketOutput =
+						custom_fair_matching(&market_input, 1.0, &grid_fee_matrix);
+
+					Some(custom_fair.encode())
 				},
 			},
 			Getter::public(g) => match g {
