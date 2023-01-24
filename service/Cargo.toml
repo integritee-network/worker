@@ -26,6 +26,7 @@ thiserror = "1.0"
 tokio = { version = "1.6.1", features = ["full"] }
 warp = "0.3"
 
+
 # ipfs
 ipfs-api = "0.11.0"
 sha2 = { version = "0.7", default-features = false }
@@ -39,6 +40,7 @@ sgx_urts = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 
 # local
 itc-parentchain = { path = "../core/parentchain/parentchain-crate" }
+itc-rest-client = { path = "../core/rest-client" }
 itc-rpc-client = { path = "../core/rpc-client" }
 itc-rpc-server = { path = "../core/rpc-server" }
 itp-enclave-api = { path = "../core-primitives/enclave-api" }

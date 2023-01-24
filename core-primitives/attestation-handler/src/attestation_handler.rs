@@ -728,6 +728,7 @@ where
 			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
 		}
 
+		println!("szilard: it works");
 		Ok(())
 	}
 

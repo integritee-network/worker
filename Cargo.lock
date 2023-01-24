@@ -2632,6 +2632,7 @@ dependencies = [
  "ipfs-api",
  "itc-parentchain",
  "itc-parentchain-test",
+ "itc-rest-client",
  "itc-rpc-client",
  "itc-rpc-server",
  "itp-enclave-api",

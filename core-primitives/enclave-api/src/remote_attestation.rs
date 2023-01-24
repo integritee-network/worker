@@ -48,6 +48,11 @@ pub trait RemoteAttestation {
 	fn generate_ias_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
 
 	fn generate_dcap_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
+	fn generate_dcap_ra_extrinsic_internal_with_quote(
+		&self,
+		url: String,
+		quote: &[u8],
+	) -> EnclaveResult<Vec<u8>>;
 
 	fn generate_register_quoting_enclave_extrinsic(&self, fmspc: Fmspc) -> EnclaveResult<Vec<u8>>;
 
@@ -144,6 +149,34 @@ impl RemoteAttestation for Enclave {
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
 
 		Ok(unchecked_extrinsic)
+	}
+	fn generate_dcap_ra_extrinsic_internal_with_quote(
+		&self,
+		url: String,
+		quote: &[u8],
+	) -> EnclaveResult<Vec<u8>> {
+		let mut retval = sgx_status_t::SGX_SUCCESS;
+		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
+		let url = url.encode();
+
+		let result = unsafe {
+			ffi::generate_dcap_ra_extrinsic_with_quote(
+				self.eid,
+				&mut retval,
+				url.as_ptr(),
+				url.len() as u32,
+				quote.as_ptr(),
+				quote.len() as u32,
+				unchecked_extrinsic.as_mut_ptr(),
+				unchecked_extrinsic.len() as u32,
+			)
+		};
+
+		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+		println!("ensured 2x");
+
+		Ok(quote.to_vec())
 	}
 
 	fn generate_dcap_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>> {

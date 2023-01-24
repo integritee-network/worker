@@ -25,6 +25,7 @@ use crate::{
 	error::{Error, ServiceResult},
 };
 use async_trait::async_trait;
+use core::time::Duration;
 use itp_enclave_metrics::EnclaveMetric;
 use lazy_static::lazy_static;
 use log::*;
@@ -169,4 +170,57 @@ impl ReceiveEnclaveMetrics for EnclaveMetricsReceiver {
 		}
 		Ok(())
 	}
+}
+
+// Data structure that matches with REST API JSON
+use itc_rest_client::{
+	http_client::{DefaultSend, HttpClient, SendHttpRequest},
+	rest_client::{Method, Url as URL},
+	RestGet, RestPath,
+};
+use serde::{Deserialize, Serialize};
+
+struct PrometheusMarblerunEvents(pub Vec<PrometheusMarblerunEvent>);
+
+impl RestPath<()> for PrometheusMarblerunEvents {
+	fn get_path(_: ()) -> Result<String, itc_rest_client::error::Error> {
+		Ok(format!("events"))
+	}
+}
+
+pub fn fetch_stuff_with_itc_rest_client() -> Result<Vec<PrometheusMarblerunEvent>, Error> {
+	let http_client =
+		HttpClient::new(DefaultSend {}, true, Some(Duration::from_secs(15u64)), None, None);
+	let mut base_url = URL::parse("http://localhost:9944").unwrap();
+	base_url.set_path("events");
+
+	let (response, encoded_body) = http_client
+		.send_request::<(), PrometheusMarblerunEvents>(base_url, Method::GET, (), None, None)
+		.unwrap();
+
+	let encoded_body = String::from_utf8_lossy(&encoded_body);
+
+	let events: Vec<PrometheusMarblerunEvent> = serde_json::from_str(&encoded_body).unwrap();
+	println!("events is: {:#?}", &events);
+	Ok(events)
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct PrometheusMarblerunEvent {
+	pub time: String,
+	pub activation: PrometheusMarblerunEventActivation,
+}
+
+impl PrometheusMarblerunEvent {
+	pub fn get_quote_without_prepended_bytes(&self) -> &[u8] {
+		let marblerun_magic_prepended_header_size = 16usize;
+		&self.activation.quote.as_bytes()[marblerun_magic_prepended_header_size..]
+	}
+}
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct PrometheusMarblerunEventActivation {
+	pub marble_type: String,
+	pub uuid: String,
+	pub quote: String,
 }
