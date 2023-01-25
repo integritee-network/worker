@@ -114,7 +114,9 @@ impl SgxQlQveCollateral {
 	/// Returns the data part and signature as a pair
 	fn separate_json_data_and_signature(data_name: &str, data: &[u8]) -> Option<(String, String)> {
 		let json = String::from_utf8_lossy(data);
-		let value: serde_json::Value = serde_json::from_str(&json).ok()?;
+		// Remove potential C-style null terminators
+		let json = json.trim_matches(char::from(0));
+		let value: serde_json::Value = serde_json::from_str(json).ok()?;
 		if value[data_name].is_null() || value["signature"].is_null() {
 			return None
 		}
