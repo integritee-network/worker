@@ -58,6 +58,10 @@ where
 			return Ok(rustls::ClientCertVerified::assertion())
 		}
 
+		if certs.is_empty() {
+			return Err(rustls::TLSError::NoCertificatesPresented)
+		}
+
 		match cert::verify_mra_cert(&certs[0].0, &self.attestation_ocall) {
 			Ok(()) => Ok(rustls::ClientCertVerified::assertion()),
 			Err(sgx_status_t::SGX_ERROR_UPDATE_NEEDED) =>
@@ -100,6 +104,10 @@ where
 		if self.skip_ra {
 			warn!("Skip verifying ra-report");
 			return Ok(rustls::ServerCertVerified::assertion())
+		}
+
+		if certs.is_empty() {
+			return Err(rustls::TLSError::NoCertificatesPresented)
 		}
 
 		// This call will automatically verify cert is properly signed
