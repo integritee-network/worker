@@ -725,7 +725,7 @@ dependencies = [
  "bitflags",
  "clap_derive",
  "clap_lex",
- "indexmap",
+ "indexmap 1.9.2",
  "once_cell 1.17.0",
  "strsim 0.10.0",
  "termcolor",
@@ -2095,7 +2095,7 @@ dependencies = [
  "futures-sink 0.3.26",
  "futures-util 0.3.26",
  "http 0.2.8",
- "indexmap",
+ "indexmap 1.9.2",
  "slab 0.4.7",
  "tokio",
  "tokio-util 0.7.4",
@@ -2122,6 +2122,12 @@ name = "hashbrown"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29fba9abe4742d586dfd0c06ae4f7e73a1c2d86b856933509b269d82cdf06e18"
+
+[[package]]
+name = "hashbrown"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7afe4a420e3fe79967a00898cc1f4db7c8a49a9333a29f8a4bd76a253d5cd04"
 
 [[package]]
 name = "hashbrown"
@@ -2484,6 +2490,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "indexmap"
+version = "1.6.1"
+source = "git+https://github.com/mesalock-linux/indexmap-sgx#19f52458ba64dd7349a5d3a62227619a17e4db85"
+dependencies = [
+ "autocfg 1.1.0",
+ "hashbrown 0.9.1",
+ "sgx_tstd",
 ]
 
 [[package]]
@@ -4960,7 +4976,7 @@ checksum = "21158b2c33aa6d4561f1c0a6ea283ca92bc54802a93b263e910746d679a7eb53"
 dependencies = [
  "crc32fast",
  "hashbrown 0.12.3",
- "indexmap",
+ "indexmap 1.9.2",
  "memchr 2.5.0",
 ]
 
@@ -6764,6 +6780,7 @@ name = "serde_json"
 version = "1.0.60"
 source = "git+https://github.com/mesalock-linux/serde-json-sgx?tag=sgx_1.1.3#380893814ad2a057758d825bab798aa117f7362a"
 dependencies = [
+ "indexmap 1.6.1",
  "itoa 0.4.5",
  "ryu",
  "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx)",
@@ -6787,6 +6804,7 @@ version = "1.0.91"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "877c235533714907a8c2464236f5c4b2a17262ef1bd71f38f35ea592c8da6883"
 dependencies = [
+ "indexmap 1.9.2",
  "itoa 1.0.5",
  "ryu",
  "serde 1.0.152",
@@ -8373,7 +8391,7 @@ version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56c59d8dd7d0dcbc6428bf7aa2f0e823e26e43b3c9aca15bbc9475d23e5fa12b"
 dependencies = [
- "indexmap",
+ "indexmap 1.9.2",
  "nom8",
  "toml_datetime",
 ]
@@ -8977,7 +8995,7 @@ version = "0.89.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab5d3e08b13876f96dd55608d03cd4883a0545884932d5adf11925876c96daef"
 dependencies = [
- "indexmap",
+ "indexmap 1.9.2",
 ]
 
 [[package]]
@@ -8989,7 +9007,7 @@ dependencies = [
  "anyhow",
  "bincode",
  "cfg-if 1.0.0",
- "indexmap",
+ "indexmap 1.9.2",
  "libc",
  "log 0.4.17",
  "object 0.29.0",
@@ -9023,7 +9041,7 @@ dependencies = [
  "anyhow",
  "cranelift-entity",
  "gimli 0.26.2",
- "indexmap",
+ "indexmap 1.9.2",
  "log 0.4.17",
  "object 0.29.0",
  "serde 1.0.152",
@@ -9075,7 +9093,7 @@ dependencies = [
  "anyhow",
  "cc",
  "cfg-if 1.0.0",
- "indexmap",
+ "indexmap 1.9.2",
  "libc",
  "log 0.4.17",
  "mach",

@@ -78,11 +78,14 @@ pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
 
 /// Trait to provide an abstraction to the attestation logic
 pub trait AttestationHandler {
-	/// Generates an encoded remote attestation certificate.
+	/// Generates an encoded remote attestation certificate. Returns DER encoded certificate.
 	/// If skip_ra is set, it will not perform a remote attestation via IAS
 	/// but instead generate a mock certificate.
 	fn generate_ias_ra_cert(&self, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
 
+	/// Returns the DER encoded certificate and the raw DCAP quote.
+	/// If skip_ra is set, it will not perform a remote attestation via IAS
+	/// but instead generate a mock certificate.
 	fn generate_dcap_ra_cert(
 		&self,
 		quoting_enclave_target_info: &sgx_target_info_t,
@@ -170,13 +173,13 @@ where
 		quoting_enclave_target_info: &sgx_target_info_t,
 		quote_size: u32,
 	) -> EnclaveResult<()> {
-		let (_key_der, cert_der) =
+		let (_cert_der, dcap_quote) =
 			match self.generate_dcap_ra_cert(quoting_enclave_target_info, quote_size, false) {
 				Ok(r) => r,
 				Err(e) => return Err(e),
 			};
 
-		if let Err(err) = io::write(&cert_der, RA_DUMP_CERT_DER_FILE) {
+		if let Err(err) = io::write(&dcap_quote, RA_DUMP_CERT_DER_FILE) {
 			error!(
 				"    [Enclave] failed to write RA file ({}), status: {:?}",
 				RA_DUMP_CERT_DER_FILE, err
@@ -254,7 +257,7 @@ where
 		let (prv_k, pub_k) = ecc_handle.create_key_pair()?;
 		info!("Enclave Attestation] Generated ephemeral ECDSA keypair:");
 
-		let payload = if !skip_ra {
+		let qe_quote = if !skip_ra {
 			let qe_quote = match self.retrieve_qe_dcap_quote(
 				&chain_signer.public().0,
 				quoting_enclave_target_info,
@@ -266,15 +269,15 @@ where
 					return Err(e.into())
 				},
 			};
-			// Verify the quote via qve enclave
-			self.ecdsa_quote_verification(qe_quote)?
+			qe_quote
 		} else {
 			Default::default()
 		};
 
 		// generate an ECC certificate
 		debug!("[Enclave] Generate ECC Certificate");
-		let (key_der, cert_der) = match cert::gen_ecc_cert(&payload, &prv_k, &pub_k, &ecc_handle) {
+		let (_key_der, cert_der) = match cert::gen_ecc_cert(&qe_quote, &prv_k, &pub_k, &ecc_handle)
+		{
 			Ok(r) => r,
 			Err(e) => {
 				error!("[Enclave] gen_ecc_cert failed: {:?}", e);
@@ -284,7 +287,7 @@ where
 
 		let _ = ecc_handle.close();
 
-		Ok((key_der, cert_der))
+		Ok((cert_der, qe_quote))
 	}
 }
 
@@ -640,7 +643,8 @@ where
 			.map_err(|e| EnclaveError::Other(e.into()))
 	}
 
-	pub fn ecdsa_quote_verification(&self, quote: Vec<u8>) -> SgxResult<Vec<u8>> {
+	/// Returns Ok if the verification of the quote by the quote verification enclave (QVE) was successful  
+	pub fn ecdsa_quote_verification(&self, quote: Vec<u8>) -> SgxResult<()> {
 		let mut app_enclave_target_info: sgx_target_info_t = unsafe { std::mem::zeroed() };
 		let quote_collateral: sgx_ql_qve_collateral_t = unsafe { std::mem::zeroed() };
 		let mut qve_report_info: sgx_ql_qe_report_info_t = unsafe { std::mem::zeroed() };
@@ -724,8 +728,7 @@ where
 			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
 		}
 
-		// TODO. What to send to our teerex pallet?
-		Ok(vec![])
+		Ok(())
 	}
 
 	pub fn retrieve_qe_dcap_quote(

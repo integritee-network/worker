@@ -36,13 +36,15 @@ use crate::{
 	Error as EnclaveError, Result as EnclaveResult,
 };
 use codec::{Decode, Encode};
-use itp_attestation_handler::AttestationHandler;
+use itp_attestation_handler::{AttestationHandler, SgxQlQveCollateral};
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::metadata::{
 	pallet_teerex::TeerexCallIndexes,
 	provider::{AccessNodeMetadata, Error as MetadataProviderError},
+	Error as MetadataError,
 };
+use itp_node_api_metadata::NodeMetadata;
 use itp_settings::worker::MR_ENCLAVE_SIZE;
 use itp_types::OpaqueCall;
 use itp_utils::write_slice_and_whitespace_pad;
@@ -129,32 +131,64 @@ pub unsafe extern "C" fn generate_ias_ra_extrinsic(
 
 #[no_mangle]
 pub unsafe extern "C" fn generate_dcap_ra_extrinsic(
-	_w_url: *const u8,
-	_w_url_size: u32,
-	_unchecked_extrinsic: *mut u8,
-	_unchecked_extrinsic_size: u32,
-	_skip_ra: c_int,
+	w_url: *const u8,
+	w_url_size: u32,
+	unchecked_extrinsic: *mut u8,
+	unchecked_extrinsic_size: u32,
+	skip_ra: c_int,
 	quoting_enclave_target_info: &sgx_target_info_t,
 	quote_size: u32,
 ) -> sgx_status_t {
-	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
-		Ok(r) => r,
-		Err(e) => {
-			error!("Component get failure: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
-	};
+	if w_url.is_null() || unchecked_extrinsic.is_null() {
+		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+	}
+	let mut url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
+	let url = String::decode(&mut url_slice).expect("Could not decode url slice to a valid String");
+	let extrinsic_slice =
+		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
-	let (_key_der, _cert_der) = match attestation_handler.generate_dcap_ra_cert(
+	let extrinsic = match generate_dcap_ra_extrinsic_internal(
+		url,
+		skip_ra == 1,
 		quoting_enclave_target_info,
 		quote_size,
-		false,
 	) {
-		Ok(r) => r,
+		Ok(xt) => xt,
 		Err(e) => return e.into(),
 	};
-	// TODO Need to send this to the teerex pallet (something similar to perform_ra_internal)
+
+	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
+		return EnclaveError::Other(Box::new(e)).into()
+	};
 	sgx_status_t::SGX_SUCCESS
+}
+
+fn generate_dcap_ra_extrinsic_internal(
+	url: String,
+	skip_ra: bool,
+	quoting_enclave_target_info: &sgx_target_info_t,
+	quote_size: u32,
+) -> EnclaveResult<OpaqueExtrinsic> {
+	let attestation_handler = GLOBAL_ATTESTATION_HANDLER_COMPONENT.get()?;
+
+	let (_cert_der, dcap_quote) = attestation_handler.generate_dcap_ra_cert(
+		quoting_enclave_target_info,
+		quote_size,
+		skip_ra,
+	)?;
+
+	// TODO Need to send this to the teerex pallet (something similar to perform_ra_internal)
+	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
+	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain()?;
+
+	let call_ids = node_metadata_repo
+		.get_from_metadata(|m| m.register_dcap_enclave_call_indexes())?
+		.map_err(MetadataProviderError::MetadataError)?;
+	info!("    [Enclave] Compose register enclave call DCAP IDs: {:?}", call_ids);
+	let call = OpaqueCall::from_tuple(&(call_ids, dcap_quote, url));
+
+	let extrinsic = extrinsics_factory.create_extrinsics(&[call], None)?;
+	Ok(extrinsic[0].clone())
 }
 
 fn generate_ias_ra_extrinsic_internal(
@@ -169,7 +203,7 @@ fn generate_ias_ra_extrinsic_internal(
 
 	info!("    [Enclave] Compose register enclave call");
 	let call_ids = node_metadata_repo
-		.get_from_metadata(|m| m.register_enclave_call_indexes())?
+		.get_from_metadata(|m| m.register_ias_enclave_call_indexes())?
 		.map_err(MetadataProviderError::MetadataError)?;
 
 	let call = OpaqueCall::from_tuple(&(call_ids, cert_der, url));
@@ -177,6 +211,94 @@ fn generate_ias_ra_extrinsic_internal(
 	let extrinsics = extrinsics_factory.create_extrinsics(&[call], None)?;
 
 	Ok(extrinsics[0].clone())
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn generate_register_quoting_enclave_extrinsic(
+	collateral: *const sgx_ql_qve_collateral_t,
+	unchecked_extrinsic: *mut u8,
+	unchecked_extrinsic_size: u32,
+) -> sgx_status_t {
+	if unchecked_extrinsic.is_null() || collateral.is_null() {
+		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+	}
+	let extrinsic_slice =
+		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
+	let collateral = SgxQlQveCollateral::from_c_type(&*collateral);
+	let collateral_data = match collateral.get_quoting_enclave_split() {
+		Some(d) => d,
+		None => return sgx_status_t::SGX_ERROR_INVALID_PARAMETER,
+	};
+
+	let call_index_getter = |m: &NodeMetadata| m.register_quoting_enclave_call_indexes();
+	let extrinsic = generate_generic_register_collateral_extrinsic(
+		call_index_getter,
+		extrinsic_slice,
+		&collateral_data.0,
+		&collateral_data.1,
+		&collateral.qe_identity_issuer_chain,
+	);
+	match extrinsic {
+		Ok(_) => sgx_status_t::SGX_SUCCESS,
+		Err(e) => e.into(),
+	}
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn generate_register_tcb_info_extrinsic(
+	collateral: *const sgx_ql_qve_collateral_t,
+	unchecked_extrinsic: *mut u8,
+	unchecked_extrinsic_size: u32,
+) -> sgx_status_t {
+	if unchecked_extrinsic.is_null() || collateral.is_null() {
+		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+	}
+	let extrinsic_slice =
+		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
+	let collateral = SgxQlQveCollateral::from_c_type(&*collateral);
+	let collateral_data = match collateral.get_tcb_info_split() {
+		Some(d) => d,
+		None => return sgx_status_t::SGX_ERROR_INVALID_PARAMETER,
+	};
+
+	let call_index_getter = |m: &NodeMetadata| m.register_tcb_info_call_indexes();
+	let extrinsic = generate_generic_register_collateral_extrinsic(
+		call_index_getter,
+		extrinsic_slice,
+		&collateral_data.0,
+		&collateral_data.1,
+		&collateral.tcb_info_issuer_chain,
+	);
+	match extrinsic {
+		Ok(_) => sgx_status_t::SGX_SUCCESS,
+		Err(e) => e.into(),
+	}
+}
+
+pub fn generate_generic_register_collateral_extrinsic<F>(
+	getter: F,
+	extrinsic_slice: &mut [u8],
+	collateral_data: &str,
+	data_signature: &[u8],
+	issuer_chain: &[u8],
+) -> EnclaveResult<()>
+where
+	F: Fn(&NodeMetadata) -> Result<[u8; 2], MetadataError>,
+{
+	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
+
+	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain()?;
+	let call_ids = node_metadata_repo
+		.get_from_metadata(getter)?
+		.map_err(MetadataProviderError::MetadataError)?;
+	info!("    [Enclave] Compose register collateral call: {:?}", call_ids);
+	let call = OpaqueCall::from_tuple(&(call_ids, collateral_data, data_signature, issuer_chain));
+
+	let extrinsic = extrinsics_factory.create_extrinsics(&[call], None)?[0].clone();
+	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
+		return EnclaveError::Other(Box::new(e)).into()
+	};
+	Ok(())
 }
 
 #[no_mangle]
@@ -210,4 +332,13 @@ pub unsafe extern "C" fn dump_dcap_ra_cert_to_disk(
 		Ok(_) => sgx_status_t::SGX_SUCCESS,
 		Err(e) => e.into(),
 	}
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn dump_dcap_collateral_to_disk(
+	collateral: *const sgx_ql_qve_collateral_t,
+) -> sgx_status_t {
+	let collateral = SgxQlQveCollateral::from_c_type(&*collateral);
+	collateral.dump_to_disk();
+	sgx_status_t::SGX_SUCCESS
 }
