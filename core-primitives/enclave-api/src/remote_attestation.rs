@@ -33,6 +33,8 @@ const ID_ENCLAVE: &str = "libsgx_id_enclave.signed.so.1";
 const LIBDCAP_QUOTEPROV: &str = "libdcap_quoteprov.so.1";
 const QVE_ENCLAVE: &str = "libsgx_qve.signed.so.1";
 
+type Fmspc = [u8; 6];
+
 /// Struct that unites all relevant data reported by the QVE
 pub struct QveReport {
 	pub supplemental_data: Vec<u8>,
@@ -47,15 +49,23 @@ pub trait RemoteAttestation {
 
 	fn generate_dcap_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
 
+	fn generate_register_quoting_enclave_extrinsic(&self, fmspc: Fmspc) -> EnclaveResult<Vec<u8>>;
+
+	fn generate_register_tcb_info_extrinsic(&self, fmspc: Fmspc) -> EnclaveResult<Vec<u8>>;
+
 	fn dump_ias_ra_cert_to_disk(&self) -> EnclaveResult<()>;
 
 	fn dump_dcap_ra_cert_to_disk(&self) -> EnclaveResult<()>;
+
+	fn dump_dcap_collateral_to_disk(&self, fmspc: Fmspc) -> EnclaveResult<()>;
 
 	fn set_ql_qe_enclave_paths(&self) -> EnclaveResult<()>;
 
 	fn qe_get_target_info(&self) -> EnclaveResult<sgx_target_info_t>;
 
 	fn qe_get_quote_size(&self) -> EnclaveResult<u32>;
+
+	fn get_dcap_collateral(&self, fmspc: Fmspc) -> EnclaveResult<*const sgx_ql_qve_collateral_t>;
 }
 
 /// call-backs that are made from inside the enclave (using o-call), to e-calls again inside the enclave
@@ -168,6 +178,52 @@ impl RemoteAttestation for Enclave {
 		Ok(unchecked_extrinsic)
 	}
 
+	fn generate_register_quoting_enclave_extrinsic(&self, fmspc: Fmspc) -> EnclaveResult<Vec<u8>> {
+		let mut retval = sgx_status_t::SGX_SUCCESS;
+		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
+
+		let collateral_ptr = self.get_dcap_collateral(fmspc)?;
+
+		let result = unsafe {
+			ffi::generate_register_quoting_enclave_extrinsic(
+				self.eid,
+				&mut retval,
+				collateral_ptr,
+				unchecked_extrinsic.as_mut_ptr(),
+				unchecked_extrinsic.len() as u32,
+			)
+		};
+		let free_status = unsafe { sgx_ql_free_quote_verification_collateral(collateral_ptr) };
+		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+		ensure!(free_status == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(free_status));
+
+		Ok(unchecked_extrinsic)
+	}
+
+	fn generate_register_tcb_info_extrinsic(&self, fmspc: Fmspc) -> EnclaveResult<Vec<u8>> {
+		let mut retval = sgx_status_t::SGX_SUCCESS;
+		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
+
+		let collateral_ptr = self.get_dcap_collateral(fmspc)?;
+
+		let result = unsafe {
+			ffi::generate_register_tcb_info_extrinsic(
+				self.eid,
+				&mut retval,
+				collateral_ptr,
+				unchecked_extrinsic.as_mut_ptr(),
+				unchecked_extrinsic.len() as u32,
+			)
+		};
+		let free_status = unsafe { sgx_ql_free_quote_verification_collateral(collateral_ptr) };
+		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+		ensure!(free_status == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(free_status));
+
+		Ok(unchecked_extrinsic)
+	}
+
 	fn dump_ias_ra_cert_to_disk(&self) -> EnclaveResult<()> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
@@ -228,6 +284,38 @@ impl RemoteAttestation for Enclave {
 		ensure!(qe3_ret == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(qe3_ret));
 
 		Ok(quote_size)
+	}
+
+	fn dump_dcap_collateral_to_disk(&self, fmspc: Fmspc) -> EnclaveResult<()> {
+		let mut retval = sgx_status_t::SGX_SUCCESS;
+		let collateral_ptr = self.get_dcap_collateral(fmspc)?;
+		let result =
+			unsafe { ffi::dump_dcap_collateral_to_disk(self.eid, &mut retval, collateral_ptr) };
+		let free_status = unsafe { sgx_ql_free_quote_verification_collateral(collateral_ptr) };
+		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+		ensure!(free_status == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(free_status));
+		Ok(())
+	}
+
+	fn get_dcap_collateral(&self, fmspc: Fmspc) -> EnclaveResult<*const sgx_ql_qve_collateral_t> {
+		let pck_ra = b"processor\x00";
+
+		// SAFETY: Just get a nullptr for the FFI to overwrite later
+		let mut collateral_ptr: *mut sgx_ql_qve_collateral_t = unsafe { std::mem::zeroed() };
+
+		let collateral_ptr_ptr: *mut *mut sgx_ql_qve_collateral_t = &mut collateral_ptr;
+		// SAFETY: All parameters are properly initialized so the FFI call should be fine
+		let sgx_status = unsafe {
+			sgx_ql_get_quote_verification_collateral(
+				fmspc.as_ptr(),
+				fmspc.len() as uint16_t, //fmspc len is fixed in the function signature
+				pck_ra.as_ptr() as _,
+				collateral_ptr_ptr,
+			)
+		};
+		ensure!(sgx_status == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(sgx_status));
+		Ok(collateral_ptr)
 	}
 }
 
@@ -299,7 +387,6 @@ impl RemoteAttestationCallBacks for Enclave {
 
 	fn get_dcap_quote(&self, report: sgx_report_t, quote_size: u32) -> EnclaveResult<Vec<u8>> {
 		let mut quote_vec: Vec<u8> = vec![0; quote_size as usize];
-
 		let qe3_ret = unsafe { sgx_qe_get_quote(&report, quote_size, quote_vec.as_mut_ptr() as _) };
 
 		ensure!(qe3_ret == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(qe3_ret));

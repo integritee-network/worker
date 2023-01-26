@@ -97,6 +97,16 @@ enclave {
 			uint32_t quote_size
 		);
 
+		public sgx_status_t generate_register_quoting_enclave_extrinsic(
+		    [in] const sgx_ql_qve_collateral_t *p_quote_collateral,
+			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
+		);
+
+		public sgx_status_t generate_register_tcb_info_extrinsic(
+		    [in] const sgx_ql_qve_collateral_t *p_quote_collateral,
+			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
+		);
+
 		public sgx_status_t update_market_data_xt(
 			[in, size=crypto_currency_size] uint8_t* crypto_currency, uint32_t crypto_currency_size,
 			[in, size=fiat_currency_size] uint8_t* fiat_currency, uint32_t fiat_currency_size,
@@ -112,6 +122,8 @@ enclave {
 		public sgx_status_t dump_ias_ra_cert_to_disk();
 
 		public sgx_status_t dump_dcap_ra_cert_to_disk([in] const sgx_target_info_t* quoting_enclave_target_info, uint32_t quote_size);
+
+		public sgx_status_t dump_dcap_collateral_to_disk([in] const sgx_ql_qve_collateral_t *p_quote_collateral);
 
 		public sgx_status_t run_state_provisioning_server(int fd, sgx_quote_sign_type_t quote_type, int skip_ra);
 		public sgx_status_t request_state_provisioning(
