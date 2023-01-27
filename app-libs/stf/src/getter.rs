@@ -28,7 +28,7 @@ use simplyr_lib::{
 	OrderType,
 };
 use sp_runtime::traits::Verify;
-use std::{fs, prelude::v1::*, vec};
+use std::{fs, fs::File, prelude::v1::*, vec};
 
 #[cfg(feature = "evm")]
 use crate::evm_helpers::{get_evm_account, get_evm_account_codes, get_evm_account_storages};
@@ -173,11 +173,13 @@ impl ExecuteGetter for Getter {
 					},
 
 				TrustedGetter::pay_as_bid(_who) => {
-					let content = fs::read_string("./example_market_input.json");
-					let orders: Vec<Order> = serde_json::from_str(content);
+					let content = fs::read_to_string("order_10000_users.json")
+						.expect("error reading file");
+					let orders: Vec<Order> = serde_json::from_str(&content)
+						.expect("error serializing to JSON");
 
 					// create a market input
-					let market_input = MarketInput { orders: vec![orders] };
+					let market_input = MarketInput { orders };
 
 					let pay_as_bid: MarketOutput = pay_as_bid_matching(&market_input);
 					Some(pay_as_bid.encode())
