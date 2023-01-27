@@ -17,6 +17,8 @@
 
 use codec::{Decode, Encode};
 use ita_sgx_runtime::System;
+#[cfg(feature = "evm")]
+use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 use itp_stf_interface::ExecuteGetter;
 use itp_stf_primitives::types::{AccountId, KeyPair, Signature};
 use itp_utils::stringify::account_id_to_string;
@@ -26,10 +28,7 @@ use simplyr_lib::{
 	OrderType,
 };
 use sp_runtime::traits::Verify;
-use std::{prelude::v1::*, vec};
-
-#[cfg(feature = "evm")]
-use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
+use std::{fs, prelude::v1::*, vec};
 
 #[cfg(feature = "evm")]
 use crate::evm_helpers::{get_evm_account, get_evm_account_codes, get_evm_account_storages};
@@ -174,29 +173,11 @@ impl ExecuteGetter for Getter {
 					},
 
 				TrustedGetter::pay_as_bid(_who) => {
-					// list of orders
-					let order_1 = Order {
-						id: 1,
-						order_type: OrderType::Ask,
-						time_slot: "2022-03-04T05:06:07+00:00".to_string(),
-						actor_id: "actor_1".to_string(),
-						cluster_index: Some(0),
-						energy_kwh: 2.0,
-						price_euro_per_kwh: 0.3,
-					};
-
-					let order_2 = Order {
-						id: 2,
-						order_type: OrderType::Bid,
-						time_slot: "2022-03-04T05:06:07+00:00".to_string(),
-						actor_id: "actor_2".to_string(),
-						cluster_index: Some(0),
-						energy_kwh: 1.5,
-						price_euro_per_kwh: 0.35,
-					};
+					let content = fs::read_string("./example_market_input.json");
+					let orders: Vec<Order> = serde_json::from_str(content);
 
 					// create a market input
-					let market_input = MarketInput { orders: vec![order_1, order_2] };
+					let market_input = MarketInput { orders: vec![orders] };
 
 					let pay_as_bid: MarketOutput = pay_as_bid_matching(&market_input);
 					Some(pay_as_bid.encode())

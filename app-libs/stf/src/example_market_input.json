@@ -1,0 +1,22 @@
+{
+  "orders":[
+    {
+      "id":1,
+      "order_type":"ask",
+      "time_slot":"2022-03-04T05:06:07+00:00",
+      "actor_id":"actor_1",
+      "cluster_index":0,
+      "energy_kwh":2.0,
+      "price_euro_per_kwh":0.3
+    },
+    {
+      "id":2,
+      "order_type":"bid",
+      "time_slot":"2022-03-04T05:06:07+00:00",
+      "actor_id":"actor_2",
+      "cluster_index":0,
+      "energy_kwh":1.5,
+      "price_euro_per_kwh":0.35
+    }
+  ]
+}
