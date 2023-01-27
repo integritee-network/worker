@@ -2801,6 +2801,7 @@ dependencies = [
  "pallet-sudo",
  "parity-scale-codec",
  "rlp",
+ "serde_json 1.0.91",
  "sgx_tstd",
  "sha3",
  "simplyr-lib",
