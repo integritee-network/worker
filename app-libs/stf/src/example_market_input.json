@@ -1,5 +1,4 @@
-{
-  "orders":[
+[
     {
       "id":1,
       "order_type":"ask",
@@ -19,4 +18,4 @@
       "price_euro_per_kwh":0.35
     }
   ]
-}
+
