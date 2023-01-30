@@ -30,11 +30,12 @@ use sp_core::Pair;
 pub struct PayAsBidCommand {
 	/// AccountId in ss58check format
 	account: String,
+	orders_path: String,
 }
 
 impl PayAsBidCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
-		println!("Result: {:?}", pay_as_bid(cli, trusted_args, &self.account));
+		println!("Result: {:?}", pay_as_bid(cli, trusted_args, &self.account, &self.orders_path));
 	}
 }
 
@@ -42,11 +43,12 @@ pub(crate) fn pay_as_bid(
 	cli: &Cli,
 	trusted_args: &TrustedCli,
 	arg_who: &str,
+	order_path: &str,
 ) -> Option<MarketOutput> {
 	debug!("arg_who = {:?}", arg_who);
 	let who = get_pair_from_str(trusted_args, arg_who);
 	let top: TrustedOperation =
-		TrustedGetter::pay_as_bid(who.public().into(), trusted_args.orders.to_string())
+		TrustedGetter::pay_as_bid(who.public().into(), order_path.to_string())
 			.sign(&KeyPair::Sr25519(Box::new(who)))
 			.into();
 
