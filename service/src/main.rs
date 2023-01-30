@@ -20,6 +20,9 @@
 #[cfg(feature = "teeracle")]
 use crate::teeracle::start_interval_market_update;
 
+#[cfg(not(feature = "dcap"))]
+use crate::utils::check_files;
+
 use crate::{
 	account_funding::{setup_account_funding, EnclaveAccountInfoProvider},
 	error::Error,
@@ -34,7 +37,7 @@ use crate::{
 	prometheus_metrics::{start_metrics_server, EnclaveMetricsReceiver, MetricsHandler},
 	sidechain_setup::{sidechain_init_block_production, sidechain_start_untrusted_rpc_server},
 	sync_block_broadcaster::SyncBlockBroadcaster,
-	utils::{check_files, extract_shard},
+	utils::extract_shard,
 	worker::Worker,
 	worker_peers_updater::WorkerPeersUpdater,
 };
@@ -303,6 +306,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	// ------------------------------------------------------------------------
 	// check for required files
 	if !skip_ra {
+		#[cfg(not(feature = "dcap"))]
 		check_files();
 	}
 	// ------------------------------------------------------------------------
@@ -708,7 +712,6 @@ fn print_events(events: Events, _sender: Sender<String>) {
 	}
 }
 
-use itc_rest_client::rest_client::Url;
 #[cfg(feature = "dcap")]
 fn register_quotes_from_marblerun(
 	api: &ParentchainApi,

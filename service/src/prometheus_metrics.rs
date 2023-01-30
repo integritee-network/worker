@@ -176,7 +176,7 @@ impl ReceiveEnclaveMetrics for EnclaveMetricsReceiver {
 use itc_rest_client::{
 	http_client::{DefaultSend, HttpClient, SendHttpRequest},
 	rest_client::{Method, Url as URL},
-	RestGet, RestPath,
+	RestPath,
 };
 use serde::{Deserialize, Serialize};
 
@@ -199,7 +199,7 @@ pub fn fetch_marblerun_events(base_url: &str) -> Result<Vec<PrometheusMarblerunE
 	let http_client =
 		HttpClient::new(DefaultSend {}, true, Some(Duration::from_secs(timeout)), None, None);
 
-	let (response, encoded_body) = http_client
+	let (_response, encoded_body) = http_client
 		.send_request::<(), PrometheusMarblerunEvents>(base_url, Method::GET, (), None, None)
 		.unwrap();
 
