@@ -20,7 +20,7 @@ use ita_sgx_runtime::System;
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 use itp_stf_interface::ExecuteGetter;
-use itp_stf_primitives::types::{AccountId, KeyPair, Signature};
+use itp_stf_primitives::types::{AccountId, KeyPair, Signature, FilePath};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
 use simplyr_lib::{
