@@ -28,7 +28,7 @@ use simplyr_lib::{
 	OrderType,
 };
 use sp_runtime::traits::Verify;
-use std::{fs, fs::File, prelude::v1::*, vec};
+use std::{fs, prelude::v1::*, vec};
 
 #[cfg(feature = "evm")]
 use crate::evm_helpers::{get_evm_account, get_evm_account_codes, get_evm_account_storages};
@@ -73,7 +73,7 @@ pub enum TrustedGetter {
 	evm_account_codes(AccountId, H160),
 	#[cfg(feature = "evm")]
 	evm_account_storages(AccountId, H160, H256),
-	pay_as_bid(AccountId),
+	pay_as_bid(AccountId, FilePath),
 	custom_fair(AccountId),
 }
 
@@ -89,7 +89,7 @@ impl TrustedGetter {
 			TrustedGetter::evm_account_codes(sender_account, _) => sender_account,
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_account_storages(sender_account, ..) => sender_account,
-			TrustedGetter::pay_as_bid(sender_account) => sender_account,
+			TrustedGetter::pay_as_bid(sender_account, file_path) => sender_account,
 			TrustedGetter::custom_fair(sender_account) => sender_account,
 		}
 	}
@@ -172,11 +172,10 @@ impl ExecuteGetter for Getter {
 						None
 					},
 
-				TrustedGetter::pay_as_bid(_who) => {
-					let content = fs::read_to_string("order_10000_users.json")
-						.expect("error reading file");
-					let orders: Vec<Order> = serde_json::from_str(&content)
-						.expect("error serializing to JSON");
+				TrustedGetter::pay_as_bid(_who, file_path) => {
+					let content = fs::read_to_string(file_path).expect("error reading file");
+					let orders: Vec<Order> =
+						serde_json::from_str(&content).expect("error serializing to JSON");
 
 					// create a market input
 					let market_input = MarketInput { orders };
