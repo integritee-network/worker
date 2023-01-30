@@ -188,7 +188,7 @@ impl RestPath<()> for PrometheusMarblerunEvents {
 	}
 }
 
-pub fn fetch_stuff_with_itc_rest_client() -> Result<Vec<PrometheusMarblerunEvent>, Error> {
+pub fn fetch_marblerun_events() -> Result<Vec<PrometheusMarblerunEvent>, Error> {
 	let http_client =
 		HttpClient::new(DefaultSend {}, true, Some(Duration::from_secs(15u64)), None, None);
 	let base_url = URL::parse("http://localhost:9944").unwrap();

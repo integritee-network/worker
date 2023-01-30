@@ -720,7 +720,7 @@ fn register_collateral(
 	let uxt = enclave.generate_register_tcb_info_extrinsic(fmspc_citadel).unwrap();
 	send_extrinsic(&uxt, api, accountid, is_development_mode);
 
-	let events = prometheus_metrics::fetch_stuff_with_itc_rest_client().unwrap();
+	let events = prometheus_metrics::fetch_marblerun_events().unwrap();
 	let quotes: Vec<&[u8]> =
 		events.iter().map(|event| event.get_quote_without_prepended_bytes()).collect();
 
