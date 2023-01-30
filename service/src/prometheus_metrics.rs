@@ -189,8 +189,9 @@ impl RestPath<()> for PrometheusMarblerunEvents {
 }
 
 pub fn fetch_marblerun_events() -> Result<Vec<PrometheusMarblerunEvent>, Error> {
+	let timeout = 3u64;
 	let http_client =
-		HttpClient::new(DefaultSend {}, true, Some(Duration::from_secs(15u64)), None, None);
+		HttpClient::new(DefaultSend {}, true, Some(Duration::from_secs(timeout)), None, None);
 	let base_url = URL::parse("http://localhost:9944").unwrap();
 
 	let (response, encoded_body) = http_client
@@ -199,7 +200,7 @@ pub fn fetch_marblerun_events() -> Result<Vec<PrometheusMarblerunEvent>, Error> 
 
 	let encoded_body = String::from_utf8_lossy(&encoded_body);
 
-	let events: Vec<PrometheusMarblerunEvent> = serde_json::from_str(&encoded_body).unwrap();
+	let events: Vec<PrometheusMarblerunEvent> = serde_json::from_str(&encoded_body)?;
 	Ok(events)
 }
 
