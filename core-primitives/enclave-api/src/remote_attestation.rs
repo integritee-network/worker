@@ -174,7 +174,6 @@ impl RemoteAttestation for Enclave {
 
 		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
-		println!("ensured 2x");
 
 		Ok(unchecked_extrinsic.to_vec())
 	}
