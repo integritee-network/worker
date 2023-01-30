@@ -191,8 +191,7 @@ impl RestPath<()> for PrometheusMarblerunEvents {
 pub fn fetch_stuff_with_itc_rest_client() -> Result<Vec<PrometheusMarblerunEvent>, Error> {
 	let http_client =
 		HttpClient::new(DefaultSend {}, true, Some(Duration::from_secs(15u64)), None, None);
-	let mut base_url = URL::parse("http://localhost:9944").unwrap();
-	base_url.set_path("events");
+	let base_url = URL::parse("http://localhost:9944").unwrap();
 
 	let (response, encoded_body) = http_client
 		.send_request::<(), PrometheusMarblerunEvents>(base_url, Method::GET, (), None, None)
@@ -201,7 +200,6 @@ pub fn fetch_stuff_with_itc_rest_client() -> Result<Vec<PrometheusMarblerunEvent
 	let encoded_body = String::from_utf8_lossy(&encoded_body);
 
 	let events: Vec<PrometheusMarblerunEvent> = serde_json::from_str(&encoded_body).unwrap();
-	println!("events is: {:#?}", &events);
 	Ok(events)
 }
 

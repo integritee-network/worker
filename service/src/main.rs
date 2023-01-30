@@ -713,8 +713,6 @@ fn register_collateral(
 	//let fmspc = [00u8, 0x90, 0x6E, 0xA1, 00, 00];
 
 	let fmspc_citadel = [00u8, 0xA0, 0x65, 0x51, 00, 00];
-	// let events = prometheus_metrics::fetch_stuff().unwrap();
-	// let events: Vec<PrometheusMarblerunEvent> = serde_json::from_str(&events).unwrap();
 
 	let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc_citadel).unwrap();
 	send_extrinsic(&uxt, api, accountid, is_development_mode);
@@ -722,16 +720,11 @@ fn register_collateral(
 	let uxt = enclave.generate_register_tcb_info_extrinsic(fmspc_citadel).unwrap();
 	send_extrinsic(&uxt, api, accountid, is_development_mode);
 
-	//verify_dcap_quote();
-	//attestation_handler.
 	let events = prometheus_metrics::fetch_stuff_with_itc_rest_client().unwrap();
 	let quotes: Vec<&[u8]> =
 		events.iter().map(|event| event.get_quote_without_prepended_bytes()).collect();
-	println!("quotes is: {:#?}", quotes);
 
 	for quote in quotes {
-		//enclave.ecdsa_quote_verification(quote_split.to_vec()).unwrap();
-
 		let ext = enclave
 			.generate_dcap_ra_extrinsic_internal_with_quote(url.clone(), &quote)
 			.expect("you shall pass");
