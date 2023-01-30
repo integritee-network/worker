@@ -176,7 +176,7 @@ impl RemoteAttestation for Enclave {
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
 		println!("ensured 2x");
 
-		Ok(quote.to_vec())
+		Ok(unchecked_extrinsic.to_vec())
 	}
 
 	fn generate_dcap_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>> {
