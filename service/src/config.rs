@@ -16,6 +16,7 @@
 */
 
 use clap::ArgMatches;
+use itc_rest_client::rest_client::Url;
 use parse_duration::parse;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -183,6 +184,8 @@ pub struct RunConfig {
 	pub shard: Option<String>,
 	/// Optional teeracle update interval
 	pub teeracle_update_interval: Option<Duration>,
+	/// Marblerun's Prometheus endpoint base URL
+	pub marblerun_base_url: Option<String>,
 }
 
 impl From<&ArgMatches<'_>> for RunConfig {
@@ -194,8 +197,13 @@ impl From<&ArgMatches<'_>> for RunConfig {
 		let teeracle_update_interval = m.value_of("teeracle-interval").map(|i| {
 			parse(i).unwrap_or_else(|e| panic!("teeracle-interval parsing error {:?}", e))
 		});
+		let marblerun_base_url = m.value_of("marblerun-url").map(|i| {
+			Url::parse(i)
+				.unwrap_or_else(|e| panic!("marblerun-url parsing error: {:?}", e))
+				.to_string()
+		});
 
-		Self { skip_ra, dev, request_state, shard, teeracle_update_interval }
+		Self { skip_ra, dev, request_state, shard, teeracle_update_interval, marblerun_base_url }
 	}
 }
 

@@ -188,11 +188,16 @@ impl RestPath<()> for PrometheusMarblerunEvents {
 	}
 }
 
-pub fn fetch_marblerun_events() -> Result<Vec<PrometheusMarblerunEvent>, Error> {
+pub fn fetch_marblerun_events(base_url: &str) -> Result<Vec<PrometheusMarblerunEvent>, Error> {
+	let base_url = URL::parse(&base_url).map_err(|e| {
+		Error::Custom(
+			format!("Failed to parse marblerun promethes endpoint base URL: {:?}", e).into(),
+		)
+	})?;
+
 	let timeout = 3u64;
 	let http_client =
 		HttpClient::new(DefaultSend {}, true, Some(Duration::from_secs(timeout)), None, None);
-	let base_url = URL::parse("http://localhost:9944").unwrap();
 
 	let (response, encoded_body) = http_client
 		.send_request::<(), PrometheusMarblerunEvents>(base_url, Method::GET, (), None, None)

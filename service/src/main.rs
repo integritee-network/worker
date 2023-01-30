@@ -424,9 +424,12 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		)
 		.expect("Could not set the node metadata in the enclave");
 
-	let trusted_url = config.trusted_worker_url_external();
 	#[cfg(feature = "dcap")]
 	register_collateral(&node_api, &*enclave, &tee_accountid, is_development_mode);
+
+	let trusted_url = config.trusted_worker_url_external();
+	let marblerun_base_url =
+		run_config.marblerun_base_url.unwrap_or("http://localhost:9944".to_owned());
 	#[cfg(feature = "dcap")]
 	register_quotes_from_marblerun(
 		&node_api,
@@ -434,6 +437,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		&tee_accountid,
 		is_development_mode,
 		trusted_url.clone(),
+		marblerun_base_url.clone(),
 	);
 
 	// ------------------------------------------------------------------------
@@ -704,6 +708,7 @@ fn print_events(events: Events, _sender: Sender<String>) {
 	}
 }
 
+use itc_rest_client::rest_client::Url;
 #[cfg(feature = "dcap")]
 fn register_quotes_from_marblerun(
 	api: &ParentchainApi,
@@ -711,8 +716,9 @@ fn register_quotes_from_marblerun(
 	accountid: &AccountId32,
 	is_development_mode: bool,
 	url: String,
+	marblerun_base_url: String,
 ) {
-	let events = prometheus_metrics::fetch_marblerun_events().unwrap();
+	let events = prometheus_metrics::fetch_marblerun_events(&marblerun_base_url).unwrap();
 	let quotes: Vec<&[u8]> =
 		events.iter().map(|event| event.get_quote_without_prepended_bytes()).collect();
 
