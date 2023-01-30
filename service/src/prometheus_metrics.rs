@@ -26,10 +26,16 @@ use crate::{
 };
 use async_trait::async_trait;
 use core::time::Duration;
+use itc_rest_client::{
+	http_client::{DefaultSend, HttpClient},
+	rest_client::{RestClient, Url as URL},
+	RestGet, RestPath,
+};
 use itp_enclave_metrics::EnclaveMetric;
 use lazy_static::lazy_static;
 use log::*;
 use prometheus::{proto::MetricFamily, register_int_gauge, IntGauge};
+use serde::{Deserialize, Serialize};
 use std::{net::SocketAddr, sync::Arc};
 use warp::{Filter, Rejection, Reply};
 
@@ -173,18 +179,13 @@ impl ReceiveEnclaveMetrics for EnclaveMetricsReceiver {
 }
 
 // Data structure that matches with REST API JSON
-use itc_rest_client::{
-	http_client::{DefaultSend, HttpClient, SendHttpRequest},
-	rest_client::{Method, Url as URL},
-	RestPath,
-};
-use serde::{Deserialize, Serialize};
 
+#[derive(Serialize, Deserialize, Debug)]
 struct PrometheusMarblerunEvents(pub Vec<PrometheusMarblerunEvent>);
 
-impl RestPath<()> for PrometheusMarblerunEvents {
-	fn get_path(_: ()) -> Result<String, itc_rest_client::error::Error> {
-		Ok(format!("events"))
+impl RestPath<&str> for PrometheusMarblerunEvents {
+	fn get_path(path: &str) -> Result<String, itc_rest_client::error::Error> {
+		Ok(format!("{}", path))
 	}
 }
 
@@ -194,19 +195,19 @@ pub fn fetch_marblerun_events(base_url: &str) -> Result<Vec<PrometheusMarblerunE
 			format!("Failed to parse marblerun promethes endpoint base URL: {:?}", e).into(),
 		)
 	})?;
-
 	let timeout = 3u64;
 	let http_client =
 		HttpClient::new(DefaultSend {}, true, Some(Duration::from_secs(timeout)), None, None);
 
-	let (_response, encoded_body) = http_client
-		.send_request::<(), PrometheusMarblerunEvents>(base_url, Method::GET, (), None, None)
-		.unwrap();
+	let mut rest_client = RestClient::new(http_client, base_url.clone());
+	let events: PrometheusMarblerunEvents = rest_client.get("events").map_err(|e| {
+		Error::Custom(
+			format!("Failed to fetch marblerun prometheus events from: {}, error: {}", base_url, e)
+				.into(),
+		)
+	})?;
 
-	let encoded_body = String::from_utf8_lossy(&encoded_body);
-
-	let events: Vec<PrometheusMarblerunEvent> = serde_json::from_str(&encoded_body)?;
-	Ok(events)
+	Ok(events.0)
 }
 
 #[derive(Serialize, Deserialize, Debug)]
