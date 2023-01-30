@@ -426,7 +426,9 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	let trusted_url = config.trusted_worker_url_external();
 	#[cfg(feature = "dcap")]
-	register_collateral(
+	register_collateral(&node_api, &*enclave, &tee_accountid, is_development_mode);
+	#[cfg(feature = "dcap")]
+	register_quotes_from_marblerun(
 		&node_api,
 		&*enclave,
 		&tee_accountid,
@@ -703,23 +705,13 @@ fn print_events(events: Events, _sender: Sender<String>) {
 }
 
 #[cfg(feature = "dcap")]
-fn register_collateral(
+fn register_quotes_from_marblerun(
 	api: &ParentchainApi,
 	enclave: &dyn RemoteAttestation,
 	accountid: &AccountId32,
 	is_development_mode: bool,
 	url: String,
 ) {
-	//let fmspc = [00u8, 0x90, 0x6E, 0xA1, 00, 00];
-
-	let fmspc_citadel = [00u8, 0xA0, 0x65, 0x51, 00, 00];
-
-	let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc_citadel).unwrap();
-	send_extrinsic(&uxt, api, accountid, is_development_mode);
-
-	let uxt = enclave.generate_register_tcb_info_extrinsic(fmspc_citadel).unwrap();
-	send_extrinsic(&uxt, api, accountid, is_development_mode);
-
 	let events = prometheus_metrics::fetch_marblerun_events().unwrap();
 	let quotes: Vec<&[u8]> =
 		events.iter().map(|event| event.get_quote_without_prepended_bytes()).collect();
@@ -730,6 +722,23 @@ fn register_collateral(
 			.expect("you shall pass");
 		send_extrinsic(&ext, api, accountid, is_development_mode);
 	}
+}
+#[cfg(feature = "dcap")]
+fn register_collateral(
+	api: &ParentchainApi,
+	enclave: &dyn RemoteAttestation,
+	accountid: &AccountId32,
+	is_development_mode: bool,
+) {
+	//let fmspc = [00u8, 0x90, 0x6E, 0xA1, 00, 00];
+
+	let fmspc_citadel = [00u8, 0xA0, 0x65, 0x51, 00, 00];
+
+	let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc_citadel).unwrap();
+	send_extrinsic(&uxt, api, accountid, is_development_mode);
+
+	let uxt = enclave.generate_register_tcb_info_extrinsic(fmspc_citadel).unwrap();
+	send_extrinsic(&uxt, api, accountid, is_development_mode);
 }
 
 fn send_extrinsic(
