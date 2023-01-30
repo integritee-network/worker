@@ -180,14 +180,9 @@ impl RemoteAttestation for Enclave {
 
 	fn generate_dcap_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
-		info!(
-			"inside of  itp_enclave_api::remote_attestation::Enclave::generate_dcap_ra_extrinsic"
-		);
 
 		self.set_ql_qe_enclave_paths()?;
-		info!("set_ql_qe_enclave_paths succeeded");
 		let quoting_enclave_target_info = self.qe_get_target_info()?;
-		info!("quoting_enclave_target_info succeeded");
 		let quote_size = self.qe_get_quote_size()?;
 		info!("Retrieved quote size of {:?}", quote_size);
 
