@@ -41,6 +41,9 @@ pub struct TrustedCli {
 
 	#[clap(subcommand)]
 	pub(crate) command: TrustedCommand,
+
+	#[clap(short, long, value_name = "FILE.json")]
+	pub(crate) orders: String,
 }
 
 #[derive(Subcommand)]

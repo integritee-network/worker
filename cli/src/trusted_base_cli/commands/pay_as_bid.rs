@@ -45,9 +45,10 @@ pub(crate) fn pay_as_bid(
 ) -> Option<MarketOutput> {
 	debug!("arg_who = {:?}", arg_who);
 	let who = get_pair_from_str(trusted_args, arg_who);
-	let top: TrustedOperation = TrustedGetter::pay_as_bid(who.public().into())
-		.sign(&KeyPair::Sr25519(Box::new(who)))
-		.into();
+	let top: TrustedOperation =
+		TrustedGetter::pay_as_bid(who.public().into(), trusted_args.orders.to_string())
+			.sign(&KeyPair::Sr25519(Box::new(who)))
+			.into();
 
 	let res = perform_trusted_operation(cli, trusted_args, &top);
 	match res {
