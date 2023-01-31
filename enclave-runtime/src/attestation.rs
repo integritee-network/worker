@@ -36,6 +36,7 @@ use crate::{
 	Error as EnclaveError, Result as EnclaveResult,
 };
 use codec::{Decode, Encode};
+use core::mem;
 use itp_attestation_handler::{AttestationHandler, SgxQlQveCollateral};
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
@@ -189,6 +190,61 @@ pub fn generate_dcap_ra_extrinsic_internal(
 
 	let extrinsic = extrinsics_factory.create_extrinsics(&[call], None)?;
 	Ok(extrinsic[0].clone())
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn generate_dcap_ra(
+	skip_ra: c_int,
+	quoting_enclave_target_info: &sgx_target_info_t,
+	quote_size: u32,
+	cert_der_p: *mut u8,
+	cert_der_size: *mut u32,
+	cert_der_capacity: *mut u32,
+	dcap_quote_p: *mut u8,
+	dcap_quote_size: *mut u32,
+	dcap_quote_capacity: *mut u32,
+) -> sgx_status_t {
+	let (cert_der, dcap_quote) =
+		match generate_dcap_ra_internal(skip_ra == 1, quoting_enclave_target_info, quote_size) {
+			Ok(cert_and_dcap) => cert_and_dcap,
+			Err(e) => return e.into(),
+		};
+
+	// We will be deconstructing the 2 vectors and they must be reconstructed later with `Vec::from_raw_parts`.
+	// See https://doc.rust-lang.org/stable/std/vec/struct.Vec.html#examples-3 for details.
+
+	let mut cert_der = mem::ManuallyDrop::new(cert_der);
+	let (cert_der_ptr, cert_der_len, cert_der_cap) =
+		(cert_der.as_mut_ptr(), cert_der.len(), cert_der.capacity());
+	cert_der_p = cert_der_ptr;
+	*cert_der_size = cert_der_len as u32;
+	*cert_der_capacity = cert_der_cap as u32;
+	// TODO switch to `into_raw_parts` once it is stabilized.
+
+	let mut dcap_quote = mem::ManuallyDrop::new(dcap_quote);
+	let (dcap_quote_ptr, dcap_quote_len, dcap_quote_cap) =
+		(dcap_quote.as_mut_ptr(), dcap_quote.len(), dcap_quote.capacity());
+	dcap_quote_p = dcap_quote_ptr;
+	*dcap_quote_size = dcap_quote_len as u32;
+	*dcap_quote_capacity = dcap_quote_cap as u32;
+
+	sgx_status_t::SGX_SUCCESS
+}
+
+pub fn generate_dcap_ra_internal(
+	skip_ra: bool,
+	quoting_enclave_target_info: &sgx_target_info_t,
+	quote_size: u32,
+) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
+	let attestation_handler = GLOBAL_ATTESTATION_HANDLER_COMPONENT.get()?;
+
+	let (cert_der, dcap_quote) = attestation_handler.generate_dcap_ra_cert(
+		quoting_enclave_target_info,
+		quote_size,
+		skip_ra,
+	)?;
+
+	Ok((cert_der, dcap_quote))
 }
 
 #[no_mangle]

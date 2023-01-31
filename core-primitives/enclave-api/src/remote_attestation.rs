@@ -53,6 +53,7 @@ pub trait RemoteAttestation {
 		url: String,
 		quote: &[u8],
 	) -> EnclaveResult<Vec<u8>>;
+	fn generate_dcap_ra(&self, skip_ra: bool) -> EnclaveResult<(Vec<u8>, Vec<u8>)>;
 
 	fn generate_register_quoting_enclave_extrinsic(&self, fmspc: Fmspc) -> EnclaveResult<Vec<u8>>;
 
@@ -176,6 +177,56 @@ impl RemoteAttestation for Enclave {
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
 
 		Ok(unchecked_extrinsic.to_vec())
+	}
+
+	fn generate_dcap_ra(&self, skip_ra: bool) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
+		let mut retval = sgx_status_t::SGX_SUCCESS;
+		let quoting_enclave_target_info = self.qe_get_target_info()?;
+		let quote_size = self.qe_get_quote_size()?;
+
+		let mut cert_der: u8 = 0u8;
+		let cert_der_p: *mut u8 = &mut cert_der;
+		let mut cert_der_size = 0u32;
+		let mut cert_der_capacity = 0u32;
+
+		let mut dcap_quote: u8 = 0u8;
+		let dcap_quote_p: *mut u8 = &mut dcap_quote;
+		let mut dcap_quote_size = 0u32;
+		let mut dcap_quote_capacity = 0u32;
+
+		let result = unsafe {
+			ffi::generate_dcap_ra(
+				self.eid,
+				&mut retval,
+				skip_ra.into(),
+				&quoting_enclave_target_info,
+				quote_size,
+				cert_der_p,
+				&mut cert_der_size,
+				&mut cert_der_capacity,
+				dcap_quote_p,
+				&mut dcap_quote_size,
+				&mut dcap_quote_capacity,
+			)
+		};
+
+		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+
+		// TODO add some sanity checks regarding the vector to be built.
+
+		let cert_der = unsafe {
+			Vec::from_raw_parts(cert_der_p, cert_der_size as usize, cert_der_capacity as usize)
+		};
+		let dcap_quote = unsafe {
+			Vec::from_raw_parts(
+				dcap_quote_p,
+				dcap_quote_size as usize,
+				dcap_quote_capacity as usize,
+			)
+		};
+
+		Ok((cert_der, dcap_quote))
 	}
 
 	fn generate_dcap_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>> {

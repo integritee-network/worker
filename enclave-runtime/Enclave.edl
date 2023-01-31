@@ -88,6 +88,13 @@ enclave {
 			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size,
 			int skip_ra
 		);
+		public sgx_status_t generate_dcap_ra(
+			int skip_ra,
+			[in] const sgx_target_info_t* quoting_enclave_target_info,
+			uint32_t quote_size,
+			[out] uint8_t* cert_der_p, [out] uint32_t* cert_der_size, [out] uint32_t* cert_der_capacity,
+			[out] uint8_t* dcap_quote_p, [out] uint32_t* dcap_quote_size, [out] uint32_t* dcap_quote_capacity
+		);
 
 		public sgx_status_t generate_dcap_ra_extrinsic_with_quote(
 			[in, size=w_url_size] uint8_t* w_url, uint32_t w_url_size,

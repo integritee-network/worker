@@ -59,6 +59,7 @@ its-storage = { path = "../sidechain/storage" }
 my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node.git", branch = "polkadot-v0.9.37" }
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.37-tag-v0.7.0" }
 teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "polkadot-v0.9.37" }
+sgx-verify = { git = "https://github.com/integritee-network/pallets.git", branch = "polkadot-v0.9.37" }
 
 # Substrate dependencies
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }

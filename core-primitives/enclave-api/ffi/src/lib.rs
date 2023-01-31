@@ -126,6 +126,20 @@ extern "C" {
 		quote_size: u32,
 	) -> sgx_status_t;
 
+	pub fn generate_dcap_ra(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		skip_ra: c_int,
+		quoting_enclave_target_info: &sgx_target_info_t,
+		quote_size: u32,
+		cert_der_p: *mut u8,
+		cert_der_size: *mut u32,
+		cert_der_capacity: *mut u32,
+		dcap_quote_p: *mut u8,
+		dcap_quote_size: *mut u32,
+		dcap_quote_capacity: *mut u32,
+	) -> sgx_status_t;
+
 	pub fn generate_register_quoting_enclave_extrinsic(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,

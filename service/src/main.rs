@@ -75,6 +75,7 @@ use its_storage::{interface::FetchBlocks, BlockPruner, SidechainStorageLock};
 use log::*;
 use my_node_runtime::{Hash, Header, RuntimeEvent};
 use sgx_types::*;
+
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
 use std::{
@@ -429,7 +430,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		.expect("Could not set the node metadata in the enclave");
 
 	#[cfg(feature = "dcap")]
-	register_collateral(&node_api, &*enclave, &tee_accountid, is_development_mode);
+	register_collateral(&node_api, &*enclave, &tee_accountid, is_development_mode, skip_ra);
 
 	let trusted_url = config.trusted_worker_url_external();
 	let marblerun_base_url =
@@ -771,15 +772,17 @@ fn register_collateral(
 	enclave: &dyn RemoteAttestation,
 	accountid: &AccountId32,
 	is_development_mode: bool,
+	skip_ra: bool,
 ) {
-	//let fmspc = [00u8, 0x90, 0x6E, 0xA1, 00, 00];
-
 	let fmspc_citadel = [00u8, 0xA0, 0x65, 0x51, 00, 00];
 
-	let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc_citadel).unwrap();
+	let (_cert_der, dcap_quote) = enclave.generate_dcap_ra(skip_ra).unwrap();
+	let (fmspc, _tcb_info) = extract_tcb_info_from_raw_dcap_quote(&dcap_quote).unwrap();
+
+	let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc).unwrap();
 	send_extrinsic(&uxt, api, accountid, is_development_mode);
 
-	let uxt = enclave.generate_register_tcb_info_extrinsic(fmspc_citadel).unwrap();
+	let uxt = enclave.generate_register_tcb_info_extrinsic(fmspc).unwrap();
 	send_extrinsic(&uxt, api, accountid, is_development_mode);
 }
 
