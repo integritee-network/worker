@@ -20,7 +20,7 @@ use ita_sgx_runtime::System;
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 use itp_stf_interface::ExecuteGetter;
-use itp_stf_primitives::types::{AccountId, KeyPair, Signature, FilePath};
+use itp_stf_primitives::types::{AccountId, FilePath, KeyPair, Signature};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
 use simplyr_lib::{
@@ -74,7 +74,7 @@ pub enum TrustedGetter {
 	#[cfg(feature = "evm")]
 	evm_account_storages(AccountId, H160, H256),
 	pay_as_bid(AccountId, FilePath),
-	custom_fair(AccountId),
+	custom_fair(AccountId, FilePath),
 }
 
 impl TrustedGetter {
@@ -90,7 +90,7 @@ impl TrustedGetter {
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_account_storages(sender_account, ..) => sender_account,
 			TrustedGetter::pay_as_bid(sender_account, file_path) => sender_account,
-			TrustedGetter::custom_fair(sender_account) => sender_account,
+			TrustedGetter::custom_fair(sender_account, file_path) => sender_account,
 		}
 	}
 
@@ -184,32 +184,15 @@ impl ExecuteGetter for Getter {
 					Some(pay_as_bid.encode())
 				},
 
-				TrustedGetter::custom_fair(_who) => {
-					// custom_fair_matching
-					let order_1 = Order {
-						id: 1,
-						order_type: OrderType::Ask,
-						time_slot: "2022-03-04T05:06:07+00:00".to_string(),
-						actor_id: "actor_1".to_string(),
-						cluster_index: Some(0),
-						energy_kwh: 2.0,
-						price_euro_per_kwh: 0.3,
-					};
-
-					let order_2 = Order {
-						id: 2,
-						order_type: OrderType::Bid,
-						time_slot: "2022-03-04T05:06:07+00:00".to_string(),
-						actor_id: "actor_2".to_string(),
-						cluster_index: Some(0),
-						energy_kwh: 1.5,
-						price_euro_per_kwh: 0.35,
-					};
+				TrustedGetter::custom_fair(_who, file_path) => {
+					let content = fs::read_to_string(file_path).expect("error reading file");
+					let orders: Vec<Order> =
+						serde_json::from_str(&content).expect("error serializing to JSON");
 
 					let grid_fee_matrix =
 						GridFeeMatrix::from_json_str("[[0,1,1], [1,0,1], [1,1,0]]").unwrap();
 
-					let market_input = MarketInput { orders: vec![order_1, order_2] };
+					let market_input = MarketInput { orders };
 
 					let custom_fair: MarketOutput =
 						custom_fair_matching(&market_input, 1.0, &grid_fee_matrix);
