@@ -434,11 +434,12 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	let trusted_url = config.trusted_worker_url_external();
 	let marblerun_base_url =
 		run_config.marblerun_base_url.unwrap_or("http://localhost:9944".to_owned());
+
 	#[cfg(feature = "dcap")]
-	register_quotes_from_marblerun(
-		&node_api,
-		&*enclave,
-		&tee_accountid,
+	fetch_marblerun_events_every_hour(
+		node_api.clone(),
+		enclave.clone(),
+		tee_accountid.clone(),
 		is_development_mode,
 		trusted_url.clone(),
 		marblerun_base_url.clone(),
@@ -713,14 +714,46 @@ fn print_events(events: Events, _sender: Sender<String>) {
 }
 
 #[cfg(feature = "dcap")]
+fn fetch_marblerun_events_every_hour<E>(
+	api: ParentchainApi,
+	enclave: Arc<E>,
+	accountid: AccountId32,
+	is_development_mode: bool,
+	url: String,
+	marblerun_base_url: String,
+) where
+	E: RemoteAttestation + Clone + Sync + Send + 'static,
+{
+	let enclave = enclave.clone();
+	let handle = thread::spawn(move || {
+		const POLL_INTERVAL_1_HOUR_IN_SECS: u64 = 1 * 30;
+		loop {
+			info!("Polling marblerun evenets for quotes to register");
+			register_quotes_from_marblerun(
+				&api,
+				enclave.clone(),
+				&accountid,
+				is_development_mode,
+				url.clone(),
+				marblerun_base_url.clone(),
+			);
+
+			thread::sleep(Duration::from_secs(POLL_INTERVAL_1_HOUR_IN_SECS));
+		}
+	});
+
+	handle.join().unwrap()
+}
+#[cfg(feature = "dcap")]
 fn register_quotes_from_marblerun(
 	api: &ParentchainApi,
-	enclave: &dyn RemoteAttestation,
+	enclave: Arc<dyn RemoteAttestation>,
 	accountid: &AccountId32,
 	is_development_mode: bool,
 	url: String,
 	marblerun_base_url: String,
 ) {
+	let enclave = enclave.as_ref();
 	let events = prometheus_metrics::fetch_marblerun_events(&marblerun_base_url).unwrap();
 	let quotes: Vec<&[u8]> =
 		events.iter().map(|event| event.get_quote_without_prepended_bytes()).collect();
