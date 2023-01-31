@@ -217,7 +217,6 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic_with_quote(
 		Ok(xt) => xt,
 		Err(e) => return e.into(),
 	};
-	println!("got extrinsic");
 
 	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
 		return EnclaveError::Other(Box::new(e)).into()
