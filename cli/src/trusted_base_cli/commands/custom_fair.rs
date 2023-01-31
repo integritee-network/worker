@@ -30,8 +30,8 @@ use sp_core::Pair;
 pub struct CustomFairCommand {
 	/// AccountId in ss58check format
 	account: String,
-	orders_path: String,
-	grid_fee_matrix_path: String,
+	orders_file: String,
+	grid_fee_matrix_file: String,
 }
 
 impl CustomFairCommand {
@@ -42,8 +42,8 @@ impl CustomFairCommand {
 				cli,
 				trusted_args,
 				&self.account,
-				&self.orders_path,
-				&self.grid_fee_matrix_path
+				&self.orders_file,
+				&self.grid_fee_matrix_file
 			)
 		);
 	}
@@ -54,14 +54,14 @@ pub(crate) fn custom_fair(
 	trusted_args: &TrustedCli,
 	arg_who: &str,
 	order_path: &str,
-	grid_fee_matrix_path: &str,
+	grid_fee_matrix_file: &str,
 ) -> Option<MarketOutput> {
 	debug!("arg_who = {:?}", arg_who);
 	let who = get_pair_from_str(trusted_args, arg_who);
 	let top: TrustedOperation = TrustedGetter::custom_fair(
 		who.public().into(),
 		order_path.to_string(),
-		grid_fee_matrix_path.to_string(),
+		grid_fee_matrix_file.to_string(),
 	)
 	.sign(&KeyPair::Sr25519(Box::new(who)))
 	.into();

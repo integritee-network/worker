@@ -26,7 +26,7 @@ pub type AccountId = AccountId32;
 pub type Hash = H256;
 pub type BalanceTransferFn = ([u8; 2], AccountId, Compact<u128>);
 pub type ShardIdentifier = H256;
-pub type FilePath = String;
+pub type OrdersFile = String;
 pub type GridFeeMatrixFile = String;
 
 #[derive(Clone)]
