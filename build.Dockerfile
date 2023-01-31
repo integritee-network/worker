@@ -83,9 +83,7 @@ RUN --mount=type=cache,id=cargo,target=/root/work/.cache/sccache cargo test --re
 ##################################################
 FROM ubuntu:20.04 AS runner
 
-RUN apt update && apt install -y libssl-dev iproute2
-
-COPY --from=powerman/dockerize /usr/local/bin/dockerize /usr/local/bin/dockerize
+RUN apt update && apt install -y libssl-dev iproute2 curl
 
 
 ### Deployed CLI client

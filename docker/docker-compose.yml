@@ -4,6 +4,11 @@ services:
     container_name: integritee-node
     networks:
       - integritee-test-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "9912"]
+      interval: 10s
+      timeout: 10s
+      retries: 6
     command: --dev --rpc-methods unsafe --ws-external --rpc-external --ws-port 9912
     #logging:
       #driver: local
@@ -14,13 +19,20 @@ services:
       context: ..
       dockerfile: build.Dockerfile
       target: deployed-worker
-    depends_on: ['integritee-node']
+    depends_on:
+      integritee-node:
+        condition: service_healthy
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
     networks:
       - integritee-test-network
-    entrypoint: "dockerize -wait tcp://integritee-node:9912 -timeout 30s
-      /usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-1 -T wss://integritee-worker-1
+    healthcheck:
+      test: curl -s -f http://localhost:4645/is_initialized || exit 1
+      interval: 10s
+      timeout: 10s
+      retries: 25
+    entrypoint:
+      "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-1 -T wss://integritee-worker-1
       -u ws://integritee-node -U ws://integritee-worker-1 -P 2011 -w 2101 -p 9912 -h 4645
       run --dev --skip-ra"
     restart: "no"
@@ -31,13 +43,22 @@ services:
       context: ..
       dockerfile: build.Dockerfile
       target: deployed-worker
-    depends_on: ['integritee-node', 'integritee-worker-1']
+    depends_on:
+      integritee-node:
+        condition: service_healthy
+      integritee-worker-1:
+        condition: service_healthy
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
     networks:
       - integritee-test-network
-    entrypoint: "dockerize -wait http://integritee-worker-1:4645/is_initialized -timeout 150s
-      /usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-2 -T wss://integritee-worker-2
+    healthcheck:
+      test: curl -s -f http://localhost:4646/is_initialized || exit 1
+      interval: 10s
+      timeout: 10s
+      retries: 25
+    entrypoint:
+      "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-2 -T wss://integritee-worker-2
       -u ws://integritee-node -U ws://integritee-worker-2 -P 2012 -w 2102 -p 9912 -h 4646
       run --dev --skip-ra --request-state"
     restart: "no"
