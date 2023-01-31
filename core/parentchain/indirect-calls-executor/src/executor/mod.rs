@@ -45,14 +45,14 @@ pub(crate) trait Executor<
 {
 	type Call: Decode + Encode + Clone;
 
-	fn call_index(&self, call: Self::Call) -> [u8; 2];
+	fn call_index(&self, call: &Self::Call) -> [u8; 2];
 
 	fn call_index_from_metadata(
 		&self,
 		metadata_type: &NodeMetadataProvider::MetadataType,
 	) -> Result<[u8; 2], MetadataError>;
 
-	fn is_target_call(&self, call: Self::Call, node_metadata: &NodeMetadataProvider) -> bool {
+	fn is_target_call(&self, call: &Self::Call, node_metadata: &NodeMetadataProvider) -> bool {
 		node_metadata
 			.get_from_metadata(|m| match self.call_index_from_metadata(m) {
 				Ok(call_index) => self.call_index(call) == call_index,
@@ -124,7 +124,7 @@ where
 		input: &mut &[u8],
 	) -> Result<ExecutionStatus<H256>, Error> {
 		if let Ok(xt) = self.decode(input) {
-			if self.is_target_call(xt.function.clone(), context.node_meta_data_provider.as_ref()) {
+			if self.is_target_call(&xt.function, context.node_meta_data_provider.as_ref()) {
 				self.execute(context, xt.clone())
 					.map(|_| ExecutionStatus::Success(hash_of(&xt)))
 			} else {

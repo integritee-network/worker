@@ -48,7 +48,7 @@ where
 {
 	type Call = ShieldFundsFn;
 
-	fn call_index(&self, call: Self::Call) -> [u8; 2] {
+	fn call_index(&self, call: &Self::Call) -> [u8; 2] {
 		call.0
 	}
 
