@@ -20,7 +20,7 @@ use ita_sgx_runtime::System;
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 use itp_stf_interface::ExecuteGetter;
-use itp_stf_primitives::types::{AccountId, FilePath, KeyPair, Signature};
+use itp_stf_primitives::types::{AccountId, FilePath, GridFeeMatrixFile, KeyPair, Signature};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
 use simplyr_lib::{
@@ -74,7 +74,7 @@ pub enum TrustedGetter {
 	#[cfg(feature = "evm")]
 	evm_account_storages(AccountId, H160, H256),
 	pay_as_bid(AccountId, FilePath),
-	custom_fair(AccountId, FilePath),
+	custom_fair(AccountId, FilePath, GridFeeMatrixFile),
 }
 
 impl TrustedGetter {
@@ -90,7 +90,8 @@ impl TrustedGetter {
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_account_storages(sender_account, ..) => sender_account,
 			TrustedGetter::pay_as_bid(sender_account, file_path) => sender_account,
-			TrustedGetter::custom_fair(sender_account, file_path) => sender_account,
+			TrustedGetter::custom_fair(sender_account, file_path, grid_fee_matrix_file) =>
+				sender_account,
 		}
 	}
 
@@ -184,15 +185,19 @@ impl ExecuteGetter for Getter {
 					Some(pay_as_bid.encode())
 				},
 
-				TrustedGetter::custom_fair(_who, file_path) => {
+				TrustedGetter::custom_fair(_who, file_path, grid_fee_matrix_file) => {
 					let content = fs::read_to_string(file_path).expect("error reading file");
 					let orders: Vec<Order> =
 						serde_json::from_str(&content).expect("error serializing to JSON");
+					let market_input = MarketInput { orders };
+
+					let grid_fee_matrix_raw =
+						fs::read_to_string(grid_fee_matrix_file).expect("error reading file");
+					// let grid_fee_matrix: Vec<GridFeeMatrix> =
+					// 	serde_json::from_str(&content).expect("error serializing to JSON");
 
 					let grid_fee_matrix =
-						GridFeeMatrix::from_json_str("[[0,1,1], [1,0,1], [1,1,0]]").unwrap();
-
-					let market_input = MarketInput { orders };
+						GridFeeMatrix::from_json_str(&grid_fee_matrix_raw).unwrap();
 
 					let custom_fair: MarketOutput =
 						custom_fair_matching(&market_input, 1.0, &grid_fee_matrix);
