@@ -28,7 +28,7 @@ pub trait ToHexPrefixed {
 
 impl<T: Encode> ToHexPrefixed for T {
 	fn to_hex(&self) -> String {
-		hex_encode(self.encode())
+		hex_encode(&self.encode())
 	}
 }
 
@@ -49,7 +49,7 @@ impl<T: Decode> FromHexPrefixed for T {
 }
 
 /// Hex encodes given data and preappends a "0x".
-pub fn hex_encode(data: Vec<u8>) -> String {
+pub fn hex_encode(data: &[u8]) -> String {
 	let mut hex_str = hex::encode(data);
 	hex_str.insert_str(0, "0x");
 	hex_str
@@ -73,7 +73,7 @@ mod tests {
 	fn hex_encode_decode_works() {
 		let data = "Hello World!".to_string();
 
-		let hex_encoded_data = hex_encode(data.encode());
+		let hex_encoded_data = hex_encode(&data.encode());
 		let decoded_data =
 			String::decode(&mut decode_hex(hex_encoded_data).unwrap().as_slice()).unwrap();
 

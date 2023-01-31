@@ -48,17 +48,21 @@ where
 
 	fn verify_client_cert(
 		&self,
-		_certs: &[rustls::Certificate],
+		certs: &[rustls::Certificate],
 		_sni: Option<&DNSName>,
 	) -> Result<rustls::ClientCertVerified, rustls::TLSError> {
-		debug!("client cert: {:?}", _certs);
+		debug!("client cert: {:?}", certs);
 		// This call will automatically verify cert is properly signed
 		if self.skip_ra {
 			warn!("Skip verifying ra-report");
 			return Ok(rustls::ClientCertVerified::assertion())
 		}
 
-		match cert::verify_mra_cert(&_certs[0].0, &self.attestation_ocall) {
+		if certs.is_empty() {
+			return Err(rustls::TLSError::NoCertificatesPresented)
+		}
+
+		match cert::verify_mra_cert(&certs[0].0, &self.attestation_ocall) {
 			Ok(()) => Ok(rustls::ClientCertVerified::assertion()),
 			Err(sgx_status_t::SGX_ERROR_UPDATE_NEEDED) =>
 				if self.outdated_ok {
@@ -100,6 +104,10 @@ where
 		if self.skip_ra {
 			warn!("Skip verifying ra-report");
 			return Ok(rustls::ServerCertVerified::assertion())
+		}
+
+		if certs.is_empty() {
+			return Err(rustls::TLSError::NoCertificatesPresented)
 		}
 
 		// This call will automatically verify cert is properly signed

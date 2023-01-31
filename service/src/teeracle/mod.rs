@@ -20,6 +20,7 @@ use codec::{Decode, Encode};
 use itp_enclave_api::teeracle_api::TeeracleApi;
 use itp_node_api::api_client::ParentchainApi;
 use itp_settings::teeracle::DEFAULT_MARKET_DATA_UPDATE_INTERVAL;
+use itp_utils::hex::hex_encode;
 use log::*;
 use sp_runtime::OpaqueExtrinsic;
 use std::time::Duration;
@@ -75,8 +76,7 @@ fn execute_weather_update<E: TeeracleApi>(
 	extrinsics.into_iter().for_each(|call| {
 		let node_api_clone = node_api.clone();
 		tokio_handle.spawn(async move {
-			let mut hex_encoded_extrinsic = hex::encode(call.encode());
-			hex_encoded_extrinsic.insert_str(0, "0x");
+			let hex_encoded_extrinsic = hex_encode(&call.encode());
 			debug!("Hex encoded extrinsic to be sent: {}", hex_encoded_extrinsic);
 			println!("[>] Update oracle (send the extrinsic)");
 			let extrinsic_hash =
@@ -123,8 +123,7 @@ fn execute_update_market<E: TeeracleApi>(
 	for call in extrinsics.into_iter() {
 		let node_api_clone = node_api.clone();
 		tokio_handle.spawn(async move {
-			let mut hex_encoded_extrinsic = hex::encode(call.encode());
-			hex_encoded_extrinsic.insert_str(0, "0x");
+			let hex_encoded_extrinsic = hex_encode(&call.encode());
 			debug!("Hex encoded extrinsic to be sent: {}", hex_encoded_extrinsic);
 
 			println!("[>] Update the exchange rate (send the extrinsic)");

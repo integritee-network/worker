@@ -20,4 +20,5 @@ fn main() {
 	// ln -s libsgx_dcap_ql.so.1 libsgx_dcap_ql.so
 	println!("cargo:rustc-link-lib=dylib=sgx_dcap_ql");
 	println!("cargo:rustc-link-lib=dylib=sgx_dcap_quoteverify");
+	println!("cargo:rustc-link-lib=dylib=dcap_quoteprov");
 }

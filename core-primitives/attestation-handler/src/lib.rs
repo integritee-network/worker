@@ -39,11 +39,14 @@ pub mod sgx_reexport_prelude {
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub mod attestation_handler;
 
+pub mod collateral;
+
 pub mod cert;
 
 pub mod error;
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub use attestation_handler::{AttestationHandler, IntelAttestationHandler, DEV_HOSTNAME};
+pub use collateral::SgxQlQveCollateral;
 
 pub use error::{Error, Result};
