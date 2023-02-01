@@ -75,6 +75,7 @@ use its_storage::{interface::FetchBlocks, BlockPruner, SidechainStorageLock};
 use log::*;
 use my_node_runtime::{Hash, Header, RuntimeEvent};
 use sgx_types::*;
+use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
 
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
@@ -774,9 +775,9 @@ fn register_collateral(
 	is_development_mode: bool,
 	skip_ra: bool,
 ) {
-	let fmspc_citadel = [00u8, 0xA0, 0x65, 0x51, 00, 00];
+	let _fmspc_citadel = [00u8, 0xA0, 0x65, 0x51, 00, 00];
 
-	let (_cert_der, dcap_quote) = enclave.generate_dcap_ra(skip_ra).unwrap();
+	let dcap_quote = enclave.generate_dcap_ra_quote(skip_ra).unwrap();
 	let (fmspc, _tcb_info) = extract_tcb_info_from_raw_dcap_quote(&dcap_quote).unwrap();
 
 	let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc).unwrap();
