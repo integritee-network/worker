@@ -229,12 +229,10 @@ fn main() {
 		enclave.dump_ias_ra_cert_to_disk().unwrap();
 		#[cfg(feature = "dcap")]
 		{
-			// Hard coded 6-byte FMSPC that represents the state of devsgx03
-			// TODO: either fetch this value from a list of pre-configured FMSPC values or
-			// extract the information out of the RA certificate
-			//let fmspc = [00u8, 0x90, 0x6E, 0xA1, 00, 00];
-			let fmspc_citadel = [00u8, 0xA0, 0x65, 0x51, 00, 00];
-			enclave.dump_dcap_collateral_to_disk(fmspc_citadel).unwrap();
+			let skip_ra = false;
+			let dcap_quote = enclave.generate_dcap_ra_quote(skip_ra).unwrap();
+			let (fmspc, _tcb_info) = extract_tcb_info_from_raw_dcap_quote(&dcap_quote).unwrap();
+			enclave.dump_dcap_collateral_to_disk(fmspc).unwrap();
 			enclave.dump_dcap_ra_cert_to_disk().unwrap();
 		}
 	} else if matches.is_present("mrenclave") {
@@ -775,8 +773,6 @@ fn register_collateral(
 	is_development_mode: bool,
 	skip_ra: bool,
 ) {
-	let _fmspc_citadel = [00u8, 0xA0, 0x65, 0x51, 00, 00];
-
 	let dcap_quote = enclave.generate_dcap_ra_quote(skip_ra).unwrap();
 	let (fmspc, _tcb_info) = extract_tcb_info_from_raw_dcap_quote(&dcap_quote).unwrap();
 
