@@ -650,7 +650,7 @@ fn create_system_path(file_name: &str) -> String {
 	info!("create_system_path:: file_name={}", &file_name);
 	let default_path = format!("{}{}", OS_SYSTEM_PATH, file_name);
 
-	let full_path = find_library_by_name(file_name).unwrap_or_else(|| default_path);
+	let full_path = find_library_by_name(file_name).unwrap_or(default_path);
 
 	let c_terminated_path = format!("{}{}", full_path, C_STRING_ENDING);
 	info!("create_system_path:: created path={}", &c_terminated_path);
@@ -668,9 +668,9 @@ fn find_library_by_name(lib_name: &str) -> Option<String> {
 		.map(|lib_name_and_path| {
 			lib_name_and_path
 				.rsplit_once("=>")
-				.and_then(|(_, lib_path)| Some(lib_path.trim().to_owned()))
+				.map(|(_, lib_path)| lib_path.trim().to_owned())
 		})
-		.nth(0)?;
+		.next()?;
 
 	possible_path
 }
