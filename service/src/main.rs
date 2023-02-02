@@ -728,7 +728,7 @@ fn fetch_marblerun_events_every_hour<E>(
 	let handle = thread::spawn(move || {
 		const POLL_INTERVAL_1_HOUR_IN_SECS: u64 = 1 * 30;
 		loop {
-			info!("Polling marblerun evenets for quotes to register");
+			info!("Polling marblerun events for quotes to register");
 			register_quotes_from_marblerun(
 				&api,
 				enclave.clone(),
