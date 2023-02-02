@@ -27,7 +27,7 @@ use simplyr_lib::{
 	custom_fair_matching, pay_as_bid_matching, GridFeeMatrix, MarketInput, MarketOutput, Order,
 };
 use sp_runtime::traits::Verify;
-use std::{fs, prelude::v1::*};
+use std::{fs, prelude::v1::*, time::Instant};
 
 #[cfg(feature = "evm")]
 use crate::evm_helpers::{get_evm_account, get_evm_account_codes, get_evm_account_storages};
@@ -173,30 +173,37 @@ impl ExecuteGetter for Getter {
 					},
 
 				TrustedGetter::pay_as_bid(_who, orders_file) => {
+					let now = Instant::now();
+
 					let raw_orders = fs::read_to_string(orders_file).expect("error reading file");
 					let orders: Vec<Order> =
 						serde_json::from_str(&raw_orders).expect("error serializing to JSON");
-
-					// create a market input
 					let market_input = MarketInput { orders };
-
 					let pay_as_bid: MarketOutput = pay_as_bid_matching(&market_input);
+					let elapsed = now.elapsed();
+
+					info!("Time Elapsed for PayAsBid Algorithm is: {:.2?}", elapsed);
+
 					Some(pay_as_bid.encode())
 				},
 
 				TrustedGetter::custom_fair(_who, orders_file, grid_fee_matrix_file) => {
+					let now = Instant::now();
+
 					let raw_orders = fs::read_to_string(orders_file).expect("error reading file");
 					let orders: Vec<Order> =
 						serde_json::from_str(&raw_orders).expect("error serializing to JSON");
 					let market_input = MarketInput { orders };
-
 					let raw_grid_fee_matrix =
 						fs::read_to_string(grid_fee_matrix_file).expect("error reading file");
 					let grid_fee_matrix =
 						GridFeeMatrix::from_json_str(&raw_grid_fee_matrix).unwrap();
-
 					let custom_fair: MarketOutput =
 						custom_fair_matching(&market_input, 1.0, &grid_fee_matrix);
+
+					let elapsed = now.elapsed();
+
+					info!("Time Elapsed for CustomFair Algorithm is: {:.2?}", elapsed);
 
 					Some(custom_fair.encode())
 				},
