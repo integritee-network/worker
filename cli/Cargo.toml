@@ -9,7 +9,9 @@ base58 = "0.2"
 blake2-rfc = { version = "0.2.18" }
 chrono = "*"
 clap = { version = "3.1.6", features = ["derive"] }
-codec = { version = "3.0.0", package = "parity-scale-codec", features = ["derive"] }
+codec = { version = "3.0.0", package = "parity-scale-codec", features = [
+    "derive",
+] }
 env_logger = "0.9"
 hdrhistogram = "7.5.0"
 hex = "0.4.2"
@@ -27,7 +29,7 @@ my-node-runtime = { package = "integritee-node-runtime", git = "https://github.c
 pallet-evm = { optional = true, git = "https://github.com/integritee-network/frontier.git", branch = "polkadot-v0.9.37" }
 substrate-api-client = { features = ["ws-client"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.37-tag-v0.7.0" }
 substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.37-tag-v0.7.0" }
-teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "polkadot-v0.9.37" }
+teerex-primitives = { git = "https://github.com/OverOrion/pallets.git", branch = "szp/extract-tcb-info" }
 
 # substrate dependencies
 frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
@@ -51,10 +53,7 @@ itp-utils = { path = "../core-primitives/utils" }
 
 [features]
 default = []
-evm = [
-    "ita-stf/evm_std",
-    "pallet-evm",
-]
+evm = ["ita-stf/evm_std", "pallet-evm"]
 teeracle = []
 sidechain = []
 offchain-worker = []
