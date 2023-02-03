@@ -5,7 +5,7 @@ services:
     networks:
       - integritee-test-network
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "9912"]
+      test: ["CMD", "nc", "-z", "integritee-node", "9912"]
       interval: 10s
       timeout: 10s
       retries: 6
@@ -27,7 +27,7 @@ services:
     networks:
       - integritee-test-network
     healthcheck:
-      test: curl -s -f http://localhost:4645/is_initialized || exit 1
+      test: curl -s -f http://integritee-worker-1:4645/is_initialized || exit 1
       interval: 10s
       timeout: 10s
       retries: 25
@@ -53,7 +53,7 @@ services:
     networks:
       - integritee-test-network
     healthcheck:
-      test: curl -s -f http://localhost:4646/is_initialized || exit 1
+      test: curl -s -f http://integritee-worker-2:4646/is_initialized || exit 1
       interval: 10s
       timeout: 10s
       retries: 25

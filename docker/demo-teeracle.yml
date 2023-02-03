@@ -21,7 +21,7 @@ services:
     networks:
       - integritee-test-network
     healthcheck:
-      test: curl -s -f http://localhost:4645/is_initialized || exit 1
+      test: curl -s -f http://integritee-teeracle-worker:4645/is_initialized || exit 1
       interval: 10s
       timeout: 10s
       retries: 25
