@@ -8,11 +8,10 @@ edition = "2021"
 
 # scs
 substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.37" }
-my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node.git", branch = "polkadot-v0.9.37" }
+my-node-runtime = { package = "integritee-node-runtime", default-features = false, git = "https://github.com/integritee-network/integritee-node.git", branch = "polkadot-v0.9.37" }
 
 # substrate
 sp-core = { optional = true, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
-
 
 [features]
 default = ["std"]
@@ -20,4 +19,5 @@ std = [
     "substrate-api-client/std",
     "substrate-api-client/ws-client",
     "sp-core",
+    "my-node-runtime/std",
 ]
