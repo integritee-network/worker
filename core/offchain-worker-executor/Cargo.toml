@@ -28,8 +28,8 @@ itp-top-pool-author = { path = "../../core-primitives/top-pool-author", default-
 itp-types = { path = "../../core-primitives/types", default-features = false }
 
 # Substrate dependencies
-sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.36" }
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.36" }
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
 
 # no-std compatible libraries
 log = { version = "0.4", default-features = false }
