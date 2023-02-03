@@ -27,11 +27,11 @@ use sp_core::{
 	Pair,
 };
 use sp_keyring::AccountKeyring;
-use substrate_api_client::{Balance, GenericAddress, XtStatus};
+use substrate_api_client::{GenericAddress, XtStatus};
 
 /// Information about the enclave on-chain account.
 pub trait EnclaveAccountInfo {
-	fn free_balance(&self) -> ServiceResult<Balance>;
+	fn free_balance(&self) -> ServiceResult<u128>;
 }
 
 pub struct EnclaveAccountInfoProvider {
@@ -40,8 +40,8 @@ pub struct EnclaveAccountInfoProvider {
 }
 
 impl EnclaveAccountInfo for EnclaveAccountInfoProvider {
-	fn free_balance(&self) -> ServiceResult<Balance> {
-		self.node_api.get_free_balance(&self.account_id).map_err(|e| e.into())
+	fn free_balance(&self) -> ServiceResult<u128> {
+		Ok(self.node_api.get_account_data(&self.account_id)?.map_or_else(|| 0, |data| data.free))
 	}
 }
 
@@ -65,7 +65,7 @@ pub fn setup_account_funding(
 		// Production mode, there is no faucet.
 		let registration_fees = enclave_registration_fees(api, extrinsic_prefix)?;
 		info!("Registration fees = {:?}", registration_fees);
-		let free_balance = api.get_free_balance(accountid)?;
+		let free_balance = api.get_account_data(accountid)?.map_or_else(|| 0, |data| data.free);
 		info!("TEE's free balance = {:?}", free_balance);
 
 		let min_required_funds =
@@ -90,7 +90,7 @@ pub fn setup_account_funding(
 // Alice plays the faucet and sends some funds to the account if balance is low
 fn ensure_account_has_funds(api: &ParentchainApi, accountid: &AccountId32) -> Result<(), Error> {
 	// check account balance
-	let free_balance = api.get_free_balance(accountid)?;
+	let free_balance = api.get_account_data(accountid)?.map_or_else(|| 0, |data| data.free);
 	info!("TEE's free balance = {:?} (Account: {})", free_balance, accountid);
 
 	let existential_deposit = api.get_existential_deposit()?;
@@ -132,7 +132,7 @@ fn bootstrap_funds_from_alice(
 	let alice_acc = AccountId32::from(*alice.public().as_array_ref());
 	info!("encoding Alice's AccountId = {:?}", alice_acc.encode());
 
-	let alice_free = api.get_free_balance(&alice_acc)?;
+	let alice_free = api.get_account_data(&alice_acc)?.map_or_else(|| 0, |data| data.free);
 	info!("    Alice's free balance = {:?}", alice_free);
 	let nonce = api.get_nonce_of(&alice_acc)?;
 	info!("    Alice's Account Nonce is {}", nonce);
@@ -146,7 +146,7 @@ fn bootstrap_funds_from_alice(
 	}
 
 	let mut alice_signer_api = api.clone();
-	alice_signer_api.signer = Some(alice);
+	alice_signer_api.set_signer(alice);
 
 	println!("[+] bootstrap funding Enclave from Alice's funds");
 	let xt =
@@ -155,7 +155,7 @@ fn bootstrap_funds_from_alice(
 	info!("[<] Extrinsic got included in a block. Hash: {:?}\n", xt_hash);
 
 	// Verify funds have arrived.
-	let free_balance = alice_signer_api.get_free_balance(accountid);
+	let free_balance = alice_signer_api.get_account_data(accountid)?.map_or_else(|| 0, |data| data.free);
 	info!("TEE's NEW free balance = {:?}", free_balance);
 
 	Ok(())

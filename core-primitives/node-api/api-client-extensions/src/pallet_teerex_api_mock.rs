@@ -17,6 +17,7 @@
 
 use crate::{pallet_teerex::PalletTeerexApi, ApiResult};
 use itp_types::{Enclave, IpfsHash, ShardIdentifier, H256 as Hash};
+use my_node_runtime::Runtime;
 
 #[derive(Default)]
 pub struct PalletTeerexApiMock {
@@ -30,7 +31,7 @@ impl PalletTeerexApiMock {
 	}
 }
 
-impl PalletTeerexApi for PalletTeerexApiMock {
+impl PalletTeerexApi <Runtime> for PalletTeerexApiMock {
 	fn enclave(&self, index: u64, _at_block: Option<Hash>) -> ApiResult<Option<Enclave>> {
 		Ok(self.registered_enclaves.get(index as usize).cloned())
 	}

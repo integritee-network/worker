@@ -25,7 +25,7 @@ use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
 use itp_node_api::api_client::ChainApi;
 use itp_types::SignedBlock;
 use log::*;
-use my_node_runtime::Header;
+use my_node_runtime::{Header, Runtime};
 use sp_finality_grandpa::VersionedAuthorityList;
 use sp_runtime::traits::Header as HeaderTrait;
 use std::{cmp::min, sync::Arc};
@@ -54,7 +54,7 @@ pub trait HandleParentchain {
 }
 
 /// Handles the interaction between parentchain and enclave.
-pub(crate) struct ParentchainHandler<ParentchainApi: ChainApi, EnclaveApi: Sidechain> {
+pub(crate) struct ParentchainHandler<ParentchainApi: ChainApi<Runtime>, EnclaveApi: Sidechain> {
 	parentchain_api: ParentchainApi,
 	enclave_api: Arc<EnclaveApi>,
 	parentchain_init_params: ParentchainInitParams,
@@ -62,7 +62,7 @@ pub(crate) struct ParentchainHandler<ParentchainApi: ChainApi, EnclaveApi: Sidec
 
 impl<ParentchainApi, EnclaveApi> ParentchainHandler<ParentchainApi, EnclaveApi>
 where
-	ParentchainApi: ChainApi,
+	ParentchainApi: ChainApi<Runtime>,
 	EnclaveApi: Sidechain + EnclaveBase,
 {
 	pub fn new(
@@ -114,7 +114,7 @@ where
 impl<ParentchainApi, EnclaveApi> HandleParentchain
 	for ParentchainHandler<ParentchainApi, EnclaveApi>
 where
-	ParentchainApi: ChainApi,
+	ParentchainApi: ChainApi<Runtime>,
 	EnclaveApi: Sidechain + EnclaveBase,
 {
 	fn init_parentchain_components(&self) -> ServiceResult<Header> {

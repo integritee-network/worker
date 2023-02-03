@@ -42,7 +42,8 @@ impl TransferCommand {
 		let to_account = get_accountid_from_str(&self.to);
 		info!("from ss58 is {}", from_account.public().to_ss58check());
 		info!("to ss58 is {}", to_account.to_ss58check());
-		let api = get_chain_api(cli).set_signer(sr25519_core::Pair::from(from_account));
+		let mut api = get_chain_api(cli);
+		api.set_signer(sr25519_core::Pair::from(from_account));
 		let xt = api.balance_transfer(GenericAddress::Id(to_account.clone()), self.amount);
 		let tx_hash = api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock).unwrap();
 		println!("[+] TrustedOperation got finalized. Hash: {:?}\n", tx_hash);

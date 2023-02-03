@@ -19,23 +19,33 @@ use crate::ApiResult;
 use itp_types::AccountId;
 use sp_core::crypto::Pair;
 use sp_runtime::MultiSignature;
-use substrate_api_client::{Api, ExtrinsicParams, RpcClient};
+use sp_rpc::number::NumberOrHex;
+use substrate_api_client::{Api, ExtrinsicParams, RpcClient, BalancesConfig, FromHexString};
+
+use codec::Decode;
+use core::str::FromStr;
 
 /// ApiClient extension that contains some convenience methods around accounts.
 pub trait AccountApi {
 	fn get_nonce_of(&self, who: &AccountId) -> ApiResult<u32>;
-	fn get_free_balance(&self, who: &AccountId) -> ApiResult<u128>;
+	// fn get_free_balance(&self, who: &AccountId) -> ApiResult<u128>;
 }
 
-impl<P: Pair, Client: RpcClient, Params: ExtrinsicParams> AccountApi for Api<P, Client, Params>
+impl<P: Pair, Client: RpcClient, Params, Runtime> AccountApi for Api<P, Client, Params, Runtime>
 where
 	MultiSignature: From<P::Signature>,
+	Params: ExtrinsicParams<Runtime::Index, Runtime::Hash>,
+	Runtime: BalancesConfig,
+	Runtime::Hash: FromHexString,
+	Runtime::Index: Into<u32> + Decode,
+	Runtime::Balance: TryFrom<NumberOrHex> + FromStr + Into<u128>,
 {
 	fn get_nonce_of(&self, who: &AccountId) -> ApiResult<u32> {
-		Ok(self.get_account_info(who)?.map_or_else(|| 0, |info| info.nonce))
+		Ok(self.get_account_info(who)?.map_or_else(|| 0, |info| info.nonce.into()))
 	}
 
-	fn get_free_balance(&self, who: &AccountId) -> ApiResult<u128> {
-		Ok(self.get_account_data(who)?.map_or_else(|| 0, |data| data.free))
-	}
+	// fn get_free_balance(&self, who: &AccountId) -> ApiResult<u128> {
+	// 	Ok(self.get_account_info(who)?.map_or_else(|| 0, |info| info.data.free.into()))
+	// }
+
 }

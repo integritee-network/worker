@@ -414,9 +414,9 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		.set_nonce(nonce)
 		.expect("Could not set nonce of enclave. Returning here...");
 
-	let metadata = node_api.metadata.clone();
-	let runtime_spec_version = node_api.runtime_version.spec_version;
-	let runtime_transaction_version = node_api.runtime_version.transaction_version;
+	let metadata = node_api.metadata().clone();
+	let runtime_spec_version = node_api.runtime_version().spec_version;
+	let runtime_transaction_version = node_api.runtime_version().transaction_version;
 	enclave
 		.set_node_metadata(
 			NodeMetadata::new(metadata, runtime_spec_version, runtime_transaction_version).encode(),

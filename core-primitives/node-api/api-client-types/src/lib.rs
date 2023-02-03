@@ -23,15 +23,16 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use substrate_api_client::{
-	PlainTip, PlainTipExtrinsicParams, PlainTipExtrinsicParamsBuilder, SubstrateDefaultSignedExtra,
+	PlainTip, BaseExtrinsicParams, BaseExtrinsicParamsBuilder, SubstrateDefaultSignedExtra,
 	UncheckedExtrinsicV4,
 };
+use sp_core::H256;
 
 /// Configuration for the ExtrinsicParams.
 ///
 /// Valid for the default integritee node
-pub type ParentchainExtrinsicParams = PlainTipExtrinsicParams;
-pub type ParentchainExtrinsicParamsBuilder = PlainTipExtrinsicParamsBuilder;
+pub type ParentchainExtrinsicParams = BaseExtrinsicParams<PlainTip<u128>, u32, H256>;
+pub type ParentchainExtrinsicParamsBuilder = BaseExtrinsicParamsBuilder<PlainTip<u128>, H256>;
 
 // Pay in asset fees.
 //
@@ -40,7 +41,7 @@ pub type ParentchainExtrinsicParamsBuilder = PlainTipExtrinsicParamsBuilder;
 //pub type ParentchainExtrinsicParamsBuilder = AssetTipExtrinsicParamsBuilder;
 
 pub type ParentchainUncheckedExtrinsic<Call> =
-	UncheckedExtrinsicV4<Call, SubstrateDefaultSignedExtra<PlainTip>>;
+	UncheckedExtrinsicV4<Call, SubstrateDefaultSignedExtra<PlainTip<u128>, u32>>;
 
 #[cfg(feature = "std")]
 pub use api::*;
@@ -49,8 +50,9 @@ pub use api::*;
 mod api {
 	use super::ParentchainExtrinsicParams;
 	use substrate_api_client::Api;
+	use my_node_runtime::Runtime;
 
 	pub use substrate_api_client::{rpc::WsRpcClient, ApiClientError};
 
-	pub type ParentchainApi = Api<sp_core::sr25519::Pair, WsRpcClient, ParentchainExtrinsicParams>;
+	pub type ParentchainApi = Api<sp_core::sr25519::Pair, WsRpcClient, ParentchainExtrinsicParams, Runtime>;
 }

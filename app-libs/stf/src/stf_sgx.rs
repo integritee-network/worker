@@ -202,7 +202,7 @@ where
 	type Hash = Runtime::Hash;
 
 	fn get_events(state: &mut State) -> Vec<Box<Self::EventRecord>> {
-		state.execute_with(|| frame_system::Pallet::<Runtime>::read_events_no_consensus())
+		state.execute_with(|| frame_system::Pallet::<Runtime>::read_events_no_consensus().collect::<Vec<_>>())
 	}
 
 	fn get_event_count(state: &mut State) -> Self::EventIndex {

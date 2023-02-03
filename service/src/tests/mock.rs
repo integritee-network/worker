@@ -17,6 +17,7 @@
 
 use itp_node_api::api_client::{ApiResult, PalletTeerexApi};
 use itp_types::{Enclave, ShardIdentifier, H256 as Hash};
+use my_node_runtime::Runtime;
 
 pub struct TestNodeApi;
 
@@ -30,7 +31,7 @@ pub fn enclaves() -> Vec<Enclave> {
 	]
 }
 
-impl PalletTeerexApi for TestNodeApi {
+impl PalletTeerexApi<Runtime> for TestNodeApi {
 	fn enclave(&self, index: u64, _at_block: Option<Hash>) -> ApiResult<Option<Enclave>> {
 		Ok(Some(enclaves().remove(index as usize)))
 	}

@@ -36,13 +36,14 @@ pub struct FaucetCommand {
 
 impl FaucetCommand {
 	pub(crate) fn run(&self, cli: &Cli) {
-		let api = get_chain_api(cli).set_signer(AccountKeyring::Alice.pair());
+		let mut api = get_chain_api(cli);
+		api.set_signer(AccountKeyring::Alice.pair());
 		let mut nonce = api.get_nonce().unwrap();
 		for account in &self.accounts {
 			let to = get_accountid_from_str(account);
 			#[allow(clippy::redundant_clone)]
 			let xt: UncheckedExtrinsicV4<_, _> = compose_extrinsic_offline!(
-				api.clone().signer.unwrap(),
+				api.clone().signer().unwrap(),
 				RuntimeCall::Balances(BalancesCall::transfer {
 					dest: MultiAddress::Id(to.clone()),
 					value: PREFUNDING_AMOUNT

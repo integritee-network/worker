@@ -107,7 +107,7 @@ fn send_request(
 	trusted_args: &TrustedCli,
 	trusted_operation: &TrustedOperation,
 ) -> Option<Vec<u8>> {
-	let chain_api = get_chain_api(cli);
+	let mut chain_api = get_chain_api(cli);
 	let encryption_key = get_shielding_key(cli).unwrap();
 	let call_encrypted = encryption_key.encrypt(&trusted_operation.encode()).unwrap();
 
@@ -115,14 +115,14 @@ fn send_request(
 
 	let arg_signer = &trusted_args.xt_signer;
 	let signer = get_pair_from_str(arg_signer);
-	let _chain_api = chain_api.set_signer(sr25519_core::Pair::from(signer));
+	chain_api.set_signer(sr25519_core::Pair::from(signer));
 
 	let request = Request { shard, cyphertext: call_encrypted };
-	let xt = compose_extrinsic!(_chain_api, TEEREX, "call_worker", request);
+	let xt = compose_extrinsic!(chain_api, TEEREX, "call_worker", request);
 
 	// send and watch extrinsic until block is executed
 	let block_hash =
-		_chain_api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock).unwrap().unwrap();
+		chain_api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock).unwrap().unwrap();
 
 	info!(
 		"Trusted call extrinsic sent and successfully included in parentchain block with hash {:?}.",
@@ -130,15 +130,15 @@ fn send_request(
 	);
 	info!("Waiting for execution confirmation from enclave...");
 	let (events_in, events_out) = channel();
-	_chain_api.subscribe_events(events_in).unwrap();
+	chain_api.subscribe_events(events_in).unwrap();
 
 	loop {
 		let ret: ProcessedParentchainBlockArgs =
-			_chain_api.wait_for_event::<ProcessedParentchainBlockArgs>(&events_out).unwrap();
+			chain_api.wait_for_event::<ProcessedParentchainBlockArgs>(&events_out).unwrap();
 		info!("Confirmation of ProcessedParentchainBlock received");
 		debug!("Expected block Hash: {:?}", block_hash);
 		debug!("Confirmed stf block Hash: {:?}", ret.block_hash);
-		match _chain_api.get_header::<Header>(Some(block_hash)) {
+		match chain_api.get_header::<Header>(Some(block_hash)) {
 			Ok(option) => {
 				match option {
 					None => {
