@@ -153,6 +153,7 @@ jobs:
 
   integration-tests:
     runs-on: ubuntu-20.04
+    if: ${{ always() }}
     needs: build-test
     env:
       WORKER_IMAGE_TAG: integritee-worker:dev
