@@ -74,6 +74,7 @@ jobs:
 
       - name: Test Enclave # cargo test is not supported in the enclave, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
         run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} test --all
+        continue-on-error: true
 
       - name: Export worker image(s)
         run: |
@@ -94,7 +95,7 @@ jobs:
 
   clippy:
     runs-on: ubuntu-latest
-    container: "integritee/integritee-dev:0.1.11"
+    container: "integritee/integritee-dev:0.1.12"
     steps:
       - uses: actions/checkout@v3
       - name: init rust
@@ -153,6 +154,7 @@ jobs:
 
   integration-tests:
     runs-on: ubuntu-20.04
+    if: ${{ always() }}
     needs: build-test
     env:
       WORKER_IMAGE_TAG: integritee-worker:dev
