@@ -16,7 +16,7 @@ services:
     networks:
       - integritee-test-network
     entrypoint:
-      "/"usr/local/worker-cli/benchmark.sh -p 9912 -A 2011 -u ws://integritee-node
+      "/usr/local/worker-cli/benchmark.sh -p 9912 -A 2011 -u ws://integritee-node
       -V wss://integritee-worker-1 -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"
 networks:
