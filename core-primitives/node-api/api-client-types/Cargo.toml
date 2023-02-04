@@ -11,13 +11,13 @@ substrate-api-client = { default-features = false, git = "https://github.com/scs
 my-node-runtime = { package = "integritee-node-runtime", default-features = false, optional = true, git = "https://github.com/integritee-network/integritee-node.git", branch = "polkadot-v0.9.37" }
 
 # substrate
-sp-core = { optional = true, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
+sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
 
 [features]
 default = ["std"]
 std = [
     "substrate-api-client/std",
     "substrate-api-client/ws-client",
-    "sp-core",
+    "sp-core/std",
     "my-node-runtime/std",
 ]
