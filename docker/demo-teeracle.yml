@@ -12,14 +12,21 @@ services:
       context: ..
       dockerfile: build.Dockerfile
       target: deployed-worker
-    depends_on: [ 'integritee-node' ]
+    depends_on:
+      integritee-node:
+        condition: service_healthy
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=info,integritee_service::teeracle=debug,ita_stf=warn,ita_exchange_oracle=debug
       - COINMARKETCAP_KEY
     networks:
       - integritee-test-network
-    entrypoint: "dockerize -wait tcp://integritee-node:9912 -timeout 30s
-        /usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-teeracle-worker -T wss://integritee-teeracle-worker 
+    healthcheck:
+      test: curl -s -f http://integritee-teeracle-worker:4645/is_initialized || exit 1
+      interval: 10s
+      timeout: 10s
+      retries: 25
+    entrypoint:
+        "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-teeracle-worker -T wss://integritee-teeracle-worker
         -u ws://integritee-node -U ws://integritee-teeracle-worker -P 2011 -w 2101 -p 9912 -h 4645
         run --dev --skip-ra --teeracle-interval ${TEERACLE_INTERVAL_SECONDS}s"
     restart: always
@@ -30,13 +37,17 @@ services:
       context: ..
       dockerfile: build.Dockerfile
       target: deployed-client
-    depends_on: ['integritee-node', 'integritee-teeracle-worker']
+    depends_on:
+      integritee-node:
+        condition: service_healthy
+      integritee-teeracle-worker:
+        condition: service_healthy
     environment:
       - RUST_LOG=warn,sp_io=warn,integritee_cli::exchange_oracle=debug
     networks:
       - integritee-test-network
-    entrypoint: "dockerize -wait http://integritee-teeracle-worker:4645/is_initialized -timeout 250s    
-      /usr/local/worker-cli/demo_teeracle_whitelist.sh 
+    entrypoint:
+      "/usr/local/worker-cli/demo_teeracle_whitelist.sh
       -u ws://integritee-node -p 9912
       -V wss://integritee-teeracle-worker -P 2011
       -d 21 -i ${TEERACLE_INTERVAL_SECONDS}
