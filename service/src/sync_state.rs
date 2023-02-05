@@ -26,9 +26,9 @@ use itp_enclave_api::{enclave_base::EnclaveBase, remote_attestation::TlsRemoteAt
 use itp_node_api::api_client::PalletTeerexApi;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
 use itp_types::ShardIdentifier;
+use my_node_runtime::Runtime;
 use sgx_types::sgx_quote_sign_type_t;
 use std::string::String;
-use my_node_runtime::Runtime;
 
 pub(crate) fn sync_state<
 	E: TlsRemoteAttestation + EnclaveBase,
@@ -82,7 +82,10 @@ async fn get_author_url_of_last_finalized_sidechain_block<NodeApi: PalletTeerexA
 /// Returns the url of the first Enclave that matches our own MRENCLAVE.
 ///
 /// This should be run before we register ourselves as enclave, to ensure we don't get our own url.
-async fn get_enclave_url_of_first_registered<NodeApi: PalletTeerexApi<Runtime>, EnclaveApi: EnclaveBase>(
+async fn get_enclave_url_of_first_registered<
+	NodeApi: PalletTeerexApi<Runtime>,
+	EnclaveApi: EnclaveBase,
+>(
 	node_api: &NodeApi,
 	enclave_api: &EnclaveApi,
 ) -> Result<String> {

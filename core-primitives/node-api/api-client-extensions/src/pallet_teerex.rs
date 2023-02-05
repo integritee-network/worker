@@ -18,9 +18,9 @@
 use crate::ApiResult;
 use itp_types::{Enclave, IpfsHash, ShardIdentifier};
 use sp_core::Pair;
-use sp_runtime::MultiSignature;
 use sp_rpc::number::NumberOrHex;
-use substrate_api_client::{Api, ExtrinsicParams, RpcClient, BalancesConfig, FromHexString};
+use sp_runtime::MultiSignature;
+use substrate_api_client::{Api, BalancesConfig, ExtrinsicParams, FromHexString, RpcClient};
 
 use codec::Decode;
 use core::str::FromStr;
@@ -29,7 +29,7 @@ pub const TEEREX: &str = "Teerex";
 pub const SIDECHAIN: &str = "Sidechain";
 
 /// ApiClient extension that enables communication with the `teerex` pallet.
-pub trait PalletTeerexApi <Runtime: BalancesConfig> {
+pub trait PalletTeerexApi<Runtime: BalancesConfig> {
 	fn enclave(&self, index: u64, at_block: Option<Runtime::Hash>) -> ApiResult<Option<Enclave>>;
 	fn enclave_count(&self, at_block: Option<Runtime::Hash>) -> ApiResult<u64>;
 	fn all_enclaves(&self, at_block: Option<Runtime::Hash>) -> ApiResult<Vec<Enclave>>;
@@ -45,7 +45,8 @@ pub trait PalletTeerexApi <Runtime: BalancesConfig> {
 	) -> ApiResult<Option<IpfsHash>>;
 }
 
-impl<P: Pair, Client: RpcClient, Params, Runtime> PalletTeerexApi <Runtime> for Api<P, Client, Params, Runtime>
+impl<P: Pair, Client: RpcClient, Params, Runtime> PalletTeerexApi<Runtime>
+	for Api<P, Client, Params, Runtime>
 where
 	MultiSignature: From<P::Signature>,
 	Params: ExtrinsicParams<Runtime::Index, Runtime::Hash>,

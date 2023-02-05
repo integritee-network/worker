@@ -31,7 +31,7 @@ impl PalletTeerexApiMock {
 	}
 }
 
-impl PalletTeerexApi <Runtime> for PalletTeerexApiMock {
+impl PalletTeerexApi<Runtime> for PalletTeerexApiMock {
 	fn enclave(&self, index: u64, _at_block: Option<Hash>) -> ApiResult<Option<Enclave>> {
 		Ok(self.registered_enclaves.get(index as usize).cloned())
 	}

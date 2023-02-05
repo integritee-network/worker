@@ -121,8 +121,7 @@ fn send_request(
 	let xt = compose_extrinsic!(chain_api, TEEREX, "call_worker", request);
 
 	// send and watch extrinsic until block is executed
-	let block_hash =
-		chain_api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock).unwrap().unwrap();
+	let block_hash = chain_api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock).unwrap().unwrap();
 
 	info!(
 		"Trusted call extrinsic sent and successfully included in parentchain block with hash {:?}.",

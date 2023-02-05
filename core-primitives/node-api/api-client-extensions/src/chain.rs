@@ -19,18 +19,19 @@ use crate::ApiResult;
 use itp_types::{Header, SignedBlock};
 use sp_core::{storage::StorageKey, Pair, H256};
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
-use sp_runtime::MultiSignature;
 use sp_rpc::number::NumberOrHex;
-use substrate_api_client::{Api, ExtrinsicParams, RpcClient, BalancesConfig, FromHexString, FrameSystemConfig};
+use sp_runtime::MultiSignature;
+use substrate_api_client::{
+	Api, BalancesConfig, ExtrinsicParams, FrameSystemConfig, FromHexString, RpcClient,
+};
 
 use codec::Decode;
 use core::str::FromStr;
 
-
 pub type StorageProof = Vec<Vec<u8>>;
 
 /// ApiClient extension that simplifies chain data access.
-pub trait ChainApi <Runtime: FrameSystemConfig> {
+pub trait ChainApi<Runtime: FrameSystemConfig> {
 	fn last_finalized_block(&self) -> ApiResult<Option<SignedBlock>>;
 	fn signed_block(&self, hash: Option<Runtime::Hash>) -> ApiResult<Option<SignedBlock>>;
 	fn get_genesis_hash(&self) -> ApiResult<Runtime::Hash>;
@@ -44,7 +45,8 @@ pub trait ChainApi <Runtime: FrameSystemConfig> {
 	fn grandpa_authorities_proof(&self, hash: Option<Runtime::Hash>) -> ApiResult<StorageProof>;
 }
 
-impl<P: Pair, Client: RpcClient, Params, Runtime> ChainApi <Runtime> for Api<P, Client, Params, Runtime>
+impl<P: Pair, Client: RpcClient, Params, Runtime> ChainApi<Runtime>
+	for Api<P, Client, Params, Runtime>
 where
 	MultiSignature: From<P::Signature>,
 	Params: ExtrinsicParams<Runtime::Index, Runtime::Hash>,
@@ -100,7 +102,10 @@ where
 			.unwrap_or_default())
 	}
 
-	fn grandpa_authorities_proof(&self, at_block: Option<Runtime::Hash>) -> ApiResult<StorageProof> {
+	fn grandpa_authorities_proof(
+		&self,
+		at_block: Option<Runtime::Hash>,
+	) -> ApiResult<StorageProof> {
 		Ok(self
 			.get_storage_proof_by_keys(
 				vec![StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec())],

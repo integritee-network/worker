@@ -22,11 +22,11 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use sp_core::H256;
 pub use substrate_api_client::{
-	PlainTip, BaseExtrinsicParams, BaseExtrinsicParamsBuilder, SubstrateDefaultSignedExtra,
+	BaseExtrinsicParams, BaseExtrinsicParamsBuilder, PlainTip, SubstrateDefaultSignedExtra,
 	UncheckedExtrinsicV4,
 };
-use sp_core::H256;
 
 /// Configuration for the ExtrinsicParams.
 ///
@@ -49,10 +49,11 @@ pub use api::*;
 #[cfg(feature = "std")]
 mod api {
 	use super::ParentchainExtrinsicParams;
-	use substrate_api_client::Api;
 	use my_node_runtime::Runtime;
+	use substrate_api_client::Api;
 
 	pub use substrate_api_client::{rpc::WsRpcClient, ApiClientError};
 
-	pub type ParentchainApi = Api<sp_core::sr25519::Pair, WsRpcClient, ParentchainExtrinsicParams, Runtime>;
+	pub type ParentchainApi =
+		Api<sp_core::sr25519::Pair, WsRpcClient, ParentchainExtrinsicParams, Runtime>;
 }

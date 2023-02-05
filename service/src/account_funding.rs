@@ -41,7 +41,10 @@ pub struct EnclaveAccountInfoProvider {
 
 impl EnclaveAccountInfo for EnclaveAccountInfoProvider {
 	fn free_balance(&self) -> ServiceResult<u128> {
-		Ok(self.node_api.get_account_data(&self.account_id)?.map_or_else(|| 0, |data| data.free))
+		Ok(self
+			.node_api
+			.get_account_data(&self.account_id)?
+			.map_or_else(|| 0, |data| data.free))
 	}
 }
 
@@ -155,7 +158,9 @@ fn bootstrap_funds_from_alice(
 	info!("[<] Extrinsic got included in a block. Hash: {:?}\n", xt_hash);
 
 	// Verify funds have arrived.
-	let free_balance = alice_signer_api.get_account_data(accountid)?.map_or_else(|| 0, |data| data.free);
+	let free_balance = alice_signer_api
+		.get_account_data(accountid)?
+		.map_or_else(|| 0, |data| data.free);
 	info!("TEE's NEW free balance = {:?}", free_balance);
 
 	Ok(())

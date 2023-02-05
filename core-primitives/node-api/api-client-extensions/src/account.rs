@@ -18,9 +18,9 @@
 use crate::ApiResult;
 use itp_types::AccountId;
 use sp_core::crypto::Pair;
-use sp_runtime::MultiSignature;
 use sp_rpc::number::NumberOrHex;
-use substrate_api_client::{Api, ExtrinsicParams, RpcClient, BalancesConfig, FromHexString};
+use sp_runtime::MultiSignature;
+use substrate_api_client::{Api, BalancesConfig, ExtrinsicParams, FromHexString, RpcClient};
 
 use codec::Decode;
 use core::str::FromStr;
@@ -47,5 +47,4 @@ where
 	// fn get_free_balance(&self, who: &AccountId) -> ApiResult<u128> {
 	// 	Ok(self.get_account_info(who)?.map_or_else(|| 0, |info| info.data.free.into()))
 	// }
-
 }
