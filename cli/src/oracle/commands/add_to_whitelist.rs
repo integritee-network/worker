@@ -47,8 +47,13 @@ impl AddToWhitelistCmd {
 
 		api.set_signer(from.into());
 
-		let call =
-			compose_call!(api.metadata(), TEERACLE, ADD_TO_WHITELIST, market_data_source, mrenclave);
+		let call = compose_call!(
+			api.metadata(),
+			TEERACLE,
+			ADD_TO_WHITELIST,
+			market_data_source,
+			mrenclave
+		);
 
 		// compose the extrinsic
 		let xt: UncheckedExtrinsicV4<_, _> = compose_extrinsic!(api, "Sudo", "sudo", call);
