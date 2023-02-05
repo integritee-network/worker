@@ -67,6 +67,7 @@ where
 		self.get_signed_block(hash)
 	}
 
+	#[allow(unconditional_recursion)]
 	fn get_genesis_hash(&self) -> ApiResult<Runtime::Hash> {
 		self.get_genesis_hash()
 	}
