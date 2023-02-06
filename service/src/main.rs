@@ -75,6 +75,8 @@ use its_storage::{interface::FetchBlocks, BlockPruner, SidechainStorageLock};
 use log::*;
 use my_node_runtime::{Hash, Header, RuntimeEvent};
 use sgx_types::*;
+
+#[cfg(feature = "dcap")]
 use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
 
 use sp_core::crypto::{AccountId32, Ss58Codec};
@@ -432,6 +434,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	register_collateral(&node_api, &*enclave, &tee_accountid, is_development_mode, skip_ra);
 
 	let trusted_url = config.trusted_worker_url_external();
+	#[cfg(feature = "dcap")]
 	let marblerun_base_url =
 		run_config.marblerun_base_url.unwrap_or("http://localhost:9944".to_owned());
 

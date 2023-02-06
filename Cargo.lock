@@ -2668,7 +2668,7 @@ dependencies = [
  "serde 1.0.152",
  "serde_derive 1.0.152",
  "serde_json 1.0.93",
- "sgx-verify",
+ "sgx-verify 0.1.4 (git+https://github.com/OverOrion/pallets.git?branch=szp/extract-tcb-info)",
  "sgx_crypto_helper",
  "sgx_types",
  "sgx_urts",
@@ -2678,7 +2678,7 @@ dependencies = [
  "sp-keyring",
  "sp-runtime",
  "substrate-api-client",
- "teerex-primitives 0.1.0 (git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.37)",
+ "teerex-primitives 0.1.0 (git+https://github.com/OverOrion/pallets.git?branch=szp/extract-tcb-info)",
  "thiserror 1.0.38",
  "tokio",
  "warp",
@@ -5206,7 +5206,7 @@ dependencies = [
 [[package]]
 name = "pallet-parentchain"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.37#50cac490de02a6484751c193da9f8080477b885c"
+source = "git+https://github.com/OverOrion/pallets.git?branch=szp/extract-tcb-info#fb57261d1d6e4b2da12e90f563a5a3f5e6a50b88"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5368,7 +5368,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde 1.0.152",
- "sgx-verify",
+ "sgx-verify 0.1.4 (git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.37)",
  "sp-core",
  "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.37)",
  "sp-runtime",
@@ -6831,6 +6831,29 @@ dependencies = [
  "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.37)",
  "sp-std",
  "teerex-primitives 0.1.0 (git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.37)",
+ "webpki 0.21.0",
+ "x509-cert",
+]
+
+[[package]]
+name = "sgx-verify"
+version = "0.1.4"
+source = "git+https://github.com/OverOrion/pallets.git?branch=szp/extract-tcb-info#fb57261d1d6e4b2da12e90f563a5a3f5e6a50b88"
+dependencies = [
+ "base64 0.13.1",
+ "chrono 0.4.23",
+ "der",
+ "frame-support",
+ "hex",
+ "parity-scale-codec",
+ "ring 0.16.20 (git+https://github.com/Niederb/ring-xous.git?branch=0.16.20-cleanup)",
+ "scale-info",
+ "serde 1.0.152",
+ "serde_json 1.0.93",
+ "sp-core",
+ "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.37)",
+ "sp-std",
+ "teerex-primitives 0.1.0 (git+https://github.com/OverOrion/pallets.git?branch=szp/extract-tcb-info)",
  "webpki 0.21.0",
  "x509-cert",
 ]

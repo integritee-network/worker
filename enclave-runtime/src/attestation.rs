@@ -211,7 +211,7 @@ pub unsafe extern "C" fn generate_dcap_ra_quote(
 		Err(e) => return e.into(),
 	};
 
-	let mut dcap_quote_slice = slice::from_raw_parts_mut(dcap_quote_p, dcap_quote_size as usize);
+	let dcap_quote_slice = slice::from_raw_parts_mut(dcap_quote_p, dcap_quote_size as usize);
 
 	if let Err(e) = write_slice_and_whitespace_pad(dcap_quote_slice, dcap_quote) {
 		return EnclaveError::Other(Box::new(e)).into()
