@@ -26,13 +26,12 @@ use itp_enclave_api::{enclave_base::EnclaveBase, remote_attestation::TlsRemoteAt
 use itp_node_api::api_client::PalletTeerexApi;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
 use itp_types::ShardIdentifier;
-use my_node_runtime::Runtime;
 use sgx_types::sgx_quote_sign_type_t;
 use std::string::String;
 
 pub(crate) fn sync_state<
 	E: TlsRemoteAttestation + EnclaveBase,
-	NodeApi: PalletTeerexApi<Runtime>,
+	NodeApi: PalletTeerexApi,
 	WorkerModeProvider: ProvideWorkerMode,
 >(
 	node_api: &NodeApi,
@@ -68,7 +67,7 @@ pub(crate) fn sync_state<
 /// Note: The sidechainblock author will only change whenever a new parentchain block is
 /// produced. And even then, it might be the same as the last block. So if several workers
 /// are started in a timely manner, they will all get the same url.
-async fn get_author_url_of_last_finalized_sidechain_block<NodeApi: PalletTeerexApi<Runtime>>(
+async fn get_author_url_of_last_finalized_sidechain_block<NodeApi: PalletTeerexApi>(
 	node_api: &NodeApi,
 	shard: &ShardIdentifier,
 ) -> Result<String> {
@@ -82,10 +81,7 @@ async fn get_author_url_of_last_finalized_sidechain_block<NodeApi: PalletTeerexA
 /// Returns the url of the first Enclave that matches our own MRENCLAVE.
 ///
 /// This should be run before we register ourselves as enclave, to ensure we don't get our own url.
-async fn get_enclave_url_of_first_registered<
-	NodeApi: PalletTeerexApi<Runtime>,
-	EnclaveApi: EnclaveBase,
->(
+async fn get_enclave_url_of_first_registered<NodeApi: PalletTeerexApi, EnclaveApi: EnclaveBase>(
 	node_api: &NodeApi,
 	enclave_api: &EnclaveApi,
 ) -> Result<String> {

@@ -45,6 +45,8 @@ impl ParentchainApiMock {
 }
 
 impl ChainApi for ParentchainApiMock {
+	type Hash = H256;
+
 	fn last_finalized_block(&self) -> ApiResult<Option<SignedBlock>> {
 		Ok(self.parentchain.last().cloned())
 	}

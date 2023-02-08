@@ -29,23 +29,25 @@ pub const TEEREX: &str = "Teerex";
 pub const SIDECHAIN: &str = "Sidechain";
 
 /// ApiClient extension that enables communication with the `teerex` pallet.
-pub trait PalletTeerexApi<Runtime: BalancesConfig> {
-	fn enclave(&self, index: u64, at_block: Option<Runtime::Hash>) -> ApiResult<Option<Enclave>>;
-	fn enclave_count(&self, at_block: Option<Runtime::Hash>) -> ApiResult<u64>;
-	fn all_enclaves(&self, at_block: Option<Runtime::Hash>) -> ApiResult<Vec<Enclave>>;
+pub trait PalletTeerexApi {
+	type Hash;
+
+	fn enclave(&self, index: u64, at_block: Option<Self::Hash>) -> ApiResult<Option<Enclave>>;
+	fn enclave_count(&self, at_block: Option<Self::Hash>) -> ApiResult<u64>;
+	fn all_enclaves(&self, at_block: Option<Self::Hash>) -> ApiResult<Vec<Enclave>>;
 	fn worker_for_shard(
 		&self,
 		shard: &ShardIdentifier,
-		at_block: Option<Runtime::Hash>,
+		at_block: Option<Self::Hash>,
 	) -> ApiResult<Option<Enclave>>;
 	fn latest_ipfs_hash(
 		&self,
 		shard: &ShardIdentifier,
-		at_block: Option<Runtime::Hash>,
+		at_block: Option<Self::Hash>,
 	) -> ApiResult<Option<IpfsHash>>;
 }
 
-impl<P: Pair, Client: RpcClient, Params, Runtime> PalletTeerexApi<Runtime>
+impl<P: Pair, Client: RpcClient, Params, Runtime> PalletTeerexApi
 	for Api<P, Client, Params, Runtime>
 where
 	MultiSignature: From<P::Signature>,
@@ -55,15 +57,17 @@ where
 	Runtime::Index: Into<u32> + Decode,
 	Runtime::Balance: TryFrom<NumberOrHex> + FromStr + Into<u128>,
 {
-	fn enclave(&self, index: u64, at_block: Option<Runtime::Hash>) -> ApiResult<Option<Enclave>> {
+	type Hash = Runtime::Hash;
+
+	fn enclave(&self, index: u64, at_block: Option<Self::Hash>) -> ApiResult<Option<Enclave>> {
 		self.get_storage_map(TEEREX, "EnclaveRegistry", index, at_block)
 	}
 
-	fn enclave_count(&self, at_block: Option<Runtime::Hash>) -> ApiResult<u64> {
+	fn enclave_count(&self, at_block: Option<Self::Hash>) -> ApiResult<u64> {
 		Ok(self.get_storage_value(TEEREX, "EnclaveCount", at_block)?.unwrap_or(0u64))
 	}
 
-	fn all_enclaves(&self, at_block: Option<Runtime::Hash>) -> ApiResult<Vec<Enclave>> {
+	fn all_enclaves(&self, at_block: Option<Self::Hash>) -> ApiResult<Vec<Enclave>> {
 		let count = self.enclave_count(at_block)?;
 		let mut enclaves = Vec::with_capacity(count as usize);
 		for n in 1..=count {
@@ -75,7 +79,7 @@ where
 	fn worker_for_shard(
 		&self,
 		shard: &ShardIdentifier,
-		at_block: Option<Runtime::Hash>,
+		at_block: Option<Self::Hash>,
 	) -> ApiResult<Option<Enclave>> {
 		self.get_storage_map(SIDECHAIN, "WorkerForShard", shard, at_block)?
 			.map_or_else(|| Ok(None), |w_index| self.enclave(w_index, at_block))
@@ -84,7 +88,7 @@ where
 	fn latest_ipfs_hash(
 		&self,
 		shard: &ShardIdentifier,
-		at_block: Option<Runtime::Hash>,
+		at_block: Option<Self::Hash>,
 	) -> ApiResult<Option<IpfsHash>> {
 		self.get_storage_map(TEEREX, "LatestIPFSHash", shard, at_block)
 	}
