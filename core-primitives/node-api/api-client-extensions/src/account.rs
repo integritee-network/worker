@@ -41,7 +41,8 @@ where
 	Runtime::Balance: TryFrom<NumberOrHex> + FromStr + Into<u128>,
 {
 	fn get_nonce_of(&self, who: &AccountId) -> ApiResult<u32> {
-		self.get_account_info(who).map(|acc_opt| acc_opt.map_or_else(|| 0u32.into(), |acc| acc.nonce.into()))
+		self.get_account_info(who)
+			.map(|acc_opt| acc_opt.map_or_else(|| 0u32, |acc| acc.nonce.into()))
 	}
 
 	// Please refer to https://github.com/integritee-network/worker/issues/1170, for why it got commented out.
