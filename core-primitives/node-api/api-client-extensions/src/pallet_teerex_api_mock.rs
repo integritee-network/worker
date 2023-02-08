@@ -17,7 +17,6 @@
 
 use crate::{pallet_teerex::PalletTeerexApi, ApiResult};
 use itp_types::{Enclave, IpfsHash, ShardIdentifier, H256 as Hash};
-// use my_node_runtime::Runtime;
 
 #[derive(Default)]
 pub struct PalletTeerexApiMock {

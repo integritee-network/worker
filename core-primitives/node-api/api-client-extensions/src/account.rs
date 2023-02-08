@@ -44,6 +44,7 @@ where
 		Ok(self.get_account_info(who)?.map_or_else(|| 0, |info| info.nonce.into()))
 	}
 
+	// Please refer to https://github.com/integritee-network/worker/issues/1170, for why it got commented out.
 	// fn get_free_balance(&self, who: &AccountId) -> ApiResult<u128> {
 	// 	Ok(self.get_account_info(who)?.map_or_else(|| 0, |info| info.data.free.into()))
 	// }
