@@ -151,15 +151,17 @@ where
 			// FIXME: This is temporary only, as block broadcasting should be moved to trusted ws server.
 			let enclave_url = enclave.url.clone();
 			let worker_api_direct = DirectWorkerApi::new(enclave.url);
-			let untrusted_worker_url =
-				worker_api_direct.get_untrusted_worker_url().map_err(|e| {
+			match worker_api_direct.get_untrusted_worker_url() {
+				Ok(untrusted_worker_url) => {
+					peer_urls.push(untrusted_worker_url);
+				},
+				Err(e) => {
 					error!(
 						"Failed to get untrusted worker url (enclave: {}): {:?}",
 						enclave_url, e
 					);
-					e
-				})?;
-			peer_urls.push(untrusted_worker_url);
+				},
+			}
 		}
 		Ok(peer_urls)
 	}
