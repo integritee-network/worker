@@ -39,6 +39,7 @@ where
 	Runtime::Hash: FromHexString,
 	Runtime::Index: Into<u32> + Decode,
 	Runtime::Balance: TryFrom<NumberOrHex> + FromStr + Into<u128>,
+	Runtime::AccountData: Into<u32>,
 {
 	fn get_nonce_of(&self, who: &AccountId) -> ApiResult<u32> {
 		Ok(self.get_account_info(who)?.map_or_else(|| 0, |info| info.nonce.into()))
