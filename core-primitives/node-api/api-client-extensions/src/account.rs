@@ -39,10 +39,9 @@ where
 	Runtime::Hash: FromHexString,
 	Runtime::Index: Into<u32> + Decode,
 	Runtime::Balance: TryFrom<NumberOrHex> + FromStr + Into<u128>,
-	Runtime::AccountData: Into<u32>,
 {
 	fn get_nonce_of(&self, who: &AccountId) -> ApiResult<u32> {
-		Ok(self.get_account_info(who)?.map_or_else(|| 0, |info| info.nonce.into()))
+		self.get_account_info(who).map(|acc_opt| acc_opt.map_or_else(|| 0u32.into(), |acc| acc.nonce.into()))
 	}
 
 	// Please refer to https://github.com/integritee-network/worker/issues/1170, for why it got commented out.
