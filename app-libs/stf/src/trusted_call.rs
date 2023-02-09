@@ -258,10 +258,10 @@ where
 				shield_funds(who, value)?;
 
 				// Send proof of execution on chain.
-				let hash = calls.push(OpaqueCall::from_tuple(&(
+				calls.push(OpaqueCall::from_tuple(&(
 					node_metadata_repo.get_from_metadata(|m| m.publish_hash_call_indexes())??,
 					call_hash,
-					vec![],
+					Vec::<itp_types::H256>::new(),
 					b"shielded some funds!".to_vec(),
 				)));
 				Ok(())
