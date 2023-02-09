@@ -22,38 +22,44 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use sp_core::H256;
+use my_node_runtime::Signature;
+use sp_core::{crypto::AccountId32, H256};
+use substrate_api_client::GenericAdditionalParams;
 pub use substrate_api_client::{
-	BaseExtrinsicParams, BaseExtrinsicParamsBuilder, PlainTip, SubstrateDefaultSignedExtra,
-	UncheckedExtrinsicV4,
+	ExtrinsicSigner, GenericExtrinsicParams, GenericSignedExtra, PlainTip, UncheckedExtrinsicV4,
 };
 
 /// Configuration for the ExtrinsicParams.
 ///
 /// Valid for the default integritee node
-pub type ParentchainExtrinsicParams = BaseExtrinsicParams<PlainTip<u128>, u32, H256>;
-pub type ParentchainExtrinsicParamsBuilder = BaseExtrinsicParamsBuilder<PlainTip<u128>, H256>;
+pub type ParentchainExtrinsicParams = GenericExtrinsicParams<PlainTip<u128>, u32, H256>;
+pub type ParentchainAdditionalParams = GenericAdditionalParams<PlainTip<u128>, H256>;
 
 // Pay in asset fees.
 //
 // This needs to be used if the node uses the `pallet_asset_tx_payment`.
-//pub type ParentchainExtrinsicParams = AssetTipExtrinsicParams;
-//pub type ParentchainExtrinsicParamsBuilder = AssetTipExtrinsicParamsBuilder;
+//pub type ParentchainExtrinsicParams = GenericExtrinsicParams<AssetTip<u128>, u32, H256>;
 
 pub type ParentchainUncheckedExtrinsic<Call> =
-	UncheckedExtrinsicV4<Call, SubstrateDefaultSignedExtra<PlainTip<u128>, u32>>;
+	UncheckedExtrinsicV4<AccountId32, Call, Signature, GenericSignedExtra<PlainTip<u128>, u32>>;
 
 #[cfg(feature = "std")]
 pub use api::*;
 
 #[cfg(feature = "std")]
 mod api {
-	use super::ParentchainExtrinsicParams;
-	use my_node_runtime::Runtime;
+	use super::{ExtrinsicSigner, ParentchainExtrinsicParams};
+	use my_node_runtime::{Runtime, Signature};
 	use substrate_api_client::Api;
 
-	pub use substrate_api_client::{rpc::WsRpcClient, ApiClientError};
+	pub use substrate_api_client::{
+		api::Error as ApiClientError, rpc::jsonrpsee_client::JsonrpseeClient,
+	};
 
-	pub type ParentchainApi =
-		Api<sp_core::sr25519::Pair, WsRpcClient, ParentchainExtrinsicParams, Runtime>;
+	pub type ParentchainApi = Api<
+		ExtrinsicSigner<sp_core::sr25519::Pair, Signature, Runtime>,
+		JsonrpseeClient,
+		ParentchainExtrinsicParams,
+		Runtime,
+	>;
 }

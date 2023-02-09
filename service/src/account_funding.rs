@@ -27,7 +27,10 @@ use sp_core::{
 	Pair,
 };
 use sp_keyring::AccountKeyring;
-use substrate_api_client::{GenericAddress, XtStatus};
+use substrate_api_client::{
+	extrinsic::BalancesExtrinsics, GetAccountInformation, GetBalance, GetTransactionPayment,
+	XtStatus,
+};
 
 /// Information about the enclave on-chain account.
 pub trait EnclaveAccountInfo {
@@ -152,8 +155,7 @@ fn bootstrap_funds_from_alice(
 	alice_signer_api.set_signer(alice);
 
 	println!("[+] bootstrap funding Enclave from Alice's funds");
-	let xt =
-		alice_signer_api.balance_transfer(GenericAddress::Id(accountid.clone()), funding_amount);
+	let xt = alice_signer_api.balance_transfer(accountid.clone(), funding_amount);
 	let xt_hash = alice_signer_api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock)?;
 	info!("[<] Extrinsic got included in a block. Hash: {:?}\n", xt_hash);
 

@@ -16,7 +16,8 @@
 
 */
 
-use itp_api_client_types::{ParentchainApi, WsRpcClient};
+use crate::NodeApiFactoryError::FailedToCreateNodeApi;
+use itp_api_client_types::{ApiClientError, ExtrinsicSigner, JsonrpseeClient, ParentchainApi};
 use sp_core::sr25519;
 
 /// Trait to create a node API, based on a node URL and signer.
@@ -27,8 +28,8 @@ pub trait CreateNodeApi {
 /// Node API factory error.
 #[derive(Debug, thiserror::Error)]
 pub enum NodeApiFactoryError {
-	#[error("Failed to create a node API: {0}")]
-	FailedToCreateNodeApi(#[from] itp_api_client_types::ApiClientError),
+	#[error("Failed to create a node API: {0:?}")]
+	FailedToCreateNodeApi(ApiClientError),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
 }
@@ -49,8 +50,13 @@ impl NodeApiFactory {
 
 impl CreateNodeApi for NodeApiFactory {
 	fn create_api(&self) -> Result<ParentchainApi> {
-		let mut api = ParentchainApi::new(WsRpcClient::new(self.node_url.as_str()))?;
-		api.set_signer(self.signer.clone());
+		let mut api = ParentchainApi::new(
+			JsonrpseeClient::new(self.node_url.as_str())
+				.map_err(|e| FailedToCreateNodeApi(e.into()))?,
+		)
+		.map_err(|e| FailedToCreateNodeApi(e.into()))?;
+
+		api.set_signer(ExtrinsicSigner::new(self.signer.clone()));
 		Ok(api)
 	}
 }

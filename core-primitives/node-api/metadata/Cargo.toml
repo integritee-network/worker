@@ -9,9 +9,6 @@ edition = "2021"
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 derive_more = { version = "0.99.5" }
 
-# substrate
-sp-core = { git = "https://github.com/paritytech/substrate.git", default-features = false, branch = "polkadot-v0.9.37" }
-
 # scs
 substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.37-tag-v0.10.0" }
 
@@ -19,7 +16,6 @@ substrate-api-client = { default-features = false, git = "https://github.com/scs
 default = ["std"]
 std = [
     "codec/std",
-    "sp-core/std",
     "substrate-api-client/std",
 ]
 

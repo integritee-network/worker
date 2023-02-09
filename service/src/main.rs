@@ -84,7 +84,7 @@ use std::{
 	thread,
 	time::Duration,
 };
-use substrate_api_client::{utils::FromHexString, Header as HeaderTrait, XtStatus};
+use substrate_api_client::XtStatus;
 use teerex_primitives::ShardIdentifier;
 
 mod account_funding;

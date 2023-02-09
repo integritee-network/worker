@@ -16,7 +16,6 @@
 
 use codec::Error as CodecError;
 use itp_types::ShardIdentifier;
-use substrate_api_client::ApiClientError;
 
 pub type ServiceResult<T> = Result<T, Error>;
 
@@ -25,7 +24,7 @@ pub enum Error {
 	#[error("{0}")]
 	Codec(#[from] CodecError),
 	#[error("{0}")]
-	ApiClient(#[from] ApiClientError),
+	ApiClient(#[from] substrate_api_client::api::Error),
 	#[error("Node API terminated subscription unexpectedly: {0}")]
 	ApiSubscriptionDisconnected(#[from] std::sync::mpsc::RecvError),
 	#[error("Enclave API error: {0}")]

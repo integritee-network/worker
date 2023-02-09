@@ -17,7 +17,7 @@ sp-core = { default-features = false, git = "https://github.com/paritytech/subst
 default = ["std"]
 std = [
     "substrate-api-client/std",
-    "substrate-api-client/ws-client",
+    "substrate-api-client/jsonrpsee-client",
     "sp-core/std",
     "my-node-runtime/std",
 ]

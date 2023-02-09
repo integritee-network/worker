@@ -16,17 +16,16 @@
 */
 
 use crate::ApiResult;
-use itp_types::{Header, SignedBlock};
-use sp_core::{storage::StorageKey, Pair, H256};
+use my_node_runtime::{Block, BlockNumber, Hash as H256, Header};
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
-use sp_rpc::number::NumberOrHex;
-use sp_runtime::MultiSignature;
-use substrate_api_client::{Api, BalancesConfig, ExtrinsicParams, FromHexString, RpcClient};
-
-use codec::Decode;
-use core::str::FromStr;
+use substrate_api_client::{
+	primitives::{SignedBlock as SignedBlockG, StorageKey},
+	GetBlock, GetHeader, GetStorage,
+};
 
 pub type StorageProof = Vec<Vec<u8>>;
+
+type SignedBlock = SignedBlockG<Block>;
 
 /// ApiClient extension that simplifies chain data access.
 pub trait ChainApi {
@@ -45,16 +44,13 @@ pub trait ChainApi {
 	fn grandpa_authorities_proof(&self, hash: Option<Self::Hash>) -> ApiResult<StorageProof>;
 }
 
-impl<P: Pair, Client: RpcClient, Params, Runtime> ChainApi for Api<P, Client, Params, Runtime>
+impl<Api> ChainApi for Api
 where
-	MultiSignature: From<P::Signature>,
-	Params: ExtrinsicParams<Runtime::Index, Runtime::Hash>,
-	Runtime: BalancesConfig,
-	Runtime::Hash: FromHexString + From<H256> + Into<H256>,
-	Runtime::Index: Into<u32> + Decode,
-	Runtime::Balance: TryFrom<NumberOrHex> + FromStr + Into<u128>,
+	Api: GetHeader<H256, Header = Header>,
+	Api: GetBlock<BlockNumber, H256, Block = Block>,
+	Api: GetStorage<H256>,
 {
-	type Hash = Runtime::Hash;
+	type Hash = H256;
 
 	fn last_finalized_block(&self) -> ApiResult<Option<SignedBlock>> {
 		self.get_finalized_head()?
@@ -72,7 +68,7 @@ where
 		if let Some(hash) = self.get_block_hash(Some(0u32.into()))? {
 			Ok(hash)
 		} else {
-			Err(substrate_api_client::ApiClientError::Genesis)
+			Err(substrate_api_client::api::Error::FetchGenesisHash)
 		}
 	}
 

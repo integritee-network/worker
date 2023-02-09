@@ -16,36 +16,27 @@
 */
 
 use crate::ApiResult;
-use itp_types::AccountId;
-use sp_core::crypto::Pair;
-use sp_rpc::number::NumberOrHex;
-use sp_runtime::MultiSignature;
-use substrate_api_client::{Api, BalancesConfig, ExtrinsicParams, FromHexString, RpcClient};
-
-use codec::Decode;
-use core::str::FromStr;
+use itp_types::{AccountData, AccountId, Index};
 
 /// ApiClient extension that contains some convenience methods around accounts.
 pub trait AccountApi {
 	fn get_nonce_of(&self, who: &AccountId) -> ApiResult<u32>;
-	// fn get_free_balance(&self, who: &AccountId) -> ApiResult<u128>;
+	fn get_free_balance(&self, who: &AccountId) -> ApiResult<u128>;
 }
 
-impl<P: Pair, Client: RpcClient, Params, Runtime> AccountApi for Api<P, Client, Params, Runtime>
+impl<Api> AccountApi for Api
 where
-	MultiSignature: From<P::Signature>,
-	Params: ExtrinsicParams<Runtime::Index, Runtime::Hash>,
-	Runtime: BalancesConfig,
-	Runtime::Hash: FromHexString,
-	Runtime::Index: Into<u32> + Decode,
-	Runtime::Balance: TryFrom<NumberOrHex> + FromStr + Into<u128>,
+	Api: substrate_api_client::GetAccountInformation<
+		AccountId,
+		Index = Index,
+		AccountData = AccountData,
+	>,
 {
 	fn get_nonce_of(&self, who: &AccountId) -> ApiResult<u32> {
 		Ok(self.get_account_info(who)?.map_or_else(|| 0, |info| info.nonce.into()))
 	}
 
-	// Please refer to https://github.com/integritee-network/worker/issues/1170, for why it got commented out.
-	// fn get_free_balance(&self, who: &AccountId) -> ApiResult<u128> {
-	// 	Ok(self.get_account_info(who)?.map_or_else(|| 0, |info| info.data.free.into()))
-	// }
+	fn get_free_balance(&self, who: &AccountId) -> ApiResult<u128> {
+		Ok(self.get_account_info(who)?.map_or_else(|| 0, |info| info.data.free.into()))
+	}
 }

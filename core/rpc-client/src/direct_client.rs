@@ -19,6 +19,7 @@
 
 use crate::ws_client::{WsClient, WsClientControl};
 use codec::Decode;
+use frame_metadata::RuntimeMetadataPrefixed;
 use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
 use itp_types::DirectRequestStatus;
 use itp_utils::FromHexPrefixed;
@@ -32,7 +33,6 @@ use std::{
 	thread,
 	thread::JoinHandle,
 };
-use substrate_api_client::RuntimeMetadataPrefixed;
 
 pub use crate::error::{Error, Result};
 

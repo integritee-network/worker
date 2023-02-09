@@ -15,7 +15,7 @@
 
 */
 use crate::{error::Result, NodeMetadata};
-use sp_core::storage::StorageKey;
+use substrate_api_client::primitives::StorageKey;
 
 /// Pallet' name:
 const SYSTEM: &str = "System";
