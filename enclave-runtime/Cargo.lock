@@ -14,8 +14,8 @@ dependencies = [
 
 [[package]]
 name = "ac-compose-macros"
-version = "0.2.1"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.37#8b7587da971f521ed629b07aca606ba746f95807"
+version = "0.2.3"
+source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.37-tag-v0.10.0#5fc171dd6fcedfc2bcf0c7cb6e32723faaf210a4"
 dependencies = [
  "ac-primitives",
  "log",
@@ -27,8 +27,8 @@ dependencies = [
 
 [[package]]
 name = "ac-node-api"
-version = "0.2.1"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.37#8b7587da971f521ed629b07aca606ba746f95807"
+version = "0.2.3"
+source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.37-tag-v0.10.0#5fc171dd6fcedfc2bcf0c7cb6e32723faaf210a4"
 dependencies = [
  "ac-primitives",
  "bitvec",
@@ -45,23 +45,24 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-runtime-interface",
- "sp-std",
 ]
 
 [[package]]
 name = "ac-primitives"
-version = "0.3.0"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.37#8b7587da971f521ed629b07aca606ba746f95807"
+version = "0.5.0"
+source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.37-tag-v0.10.0#5fc171dd6fcedfc2bcf0c7cb6e32723faaf210a4"
 dependencies = [
  "hex",
+ "impl-serde",
  "parity-scale-codec",
+ "primitive-types",
  "scale-info",
  "serde 1.0.152",
+ "serde_json 1.0.91",
  "sp-core",
  "sp-runtime",
  "sp-staking",
- "sp-std",
- "sp-weights",
+ "sp-version",
 ]
 
 [[package]]
@@ -4341,12 +4342,13 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "substrate-api-client"
-version = "0.8.0"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.37#8b7587da971f521ed629b07aca606ba746f95807"
+version = "0.10.0"
+source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.37-tag-v0.10.0#5fc171dd6fcedfc2bcf0c7cb6e32723faaf210a4"
 dependencies = [
  "ac-compose-macros",
  "ac-node-api",
  "ac-primitives",
+ "derive_more",
  "frame-metadata 15.0.0 (git+https://github.com/paritytech/frame-metadata)",
  "hex",
  "log",
@@ -4356,7 +4358,6 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-runtime-interface",
- "sp-std",
 ]
 
 [[package]]

@@ -69,7 +69,7 @@ primitive-types = { version = "0.12.1", default-features = false, features = ["c
 
 # scs / integritee
 jsonrpc-core = { default-features = false, git = "https://github.com/scs/jsonrpc", branch = "no_std_v18" }
-substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.37" }
+substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.37-tag-v0.10.0" }
 
 # mesalock
 env_logger = { git = "https://github.com/integritee-network/env_logger-sgx" }
