@@ -42,6 +42,7 @@ pallet-parentchain = { default-features = false, git = "https://github.com/integ
 
 # simplyR
 simplyr-lib = { default-features = false, git = "https://github.com/BESTenergytrade/simplyr-lib.git" }
+binary-merkle-tree = { default-features = false, git = "https://github.com/paritytech/substrate.git" }
 
 [dev-dependencies]
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.36" }

@@ -22,18 +22,23 @@ use sp_core::{H160, H256, U256};
 use std::vec::Vec;
 
 use crate::{helpers::ensure_enclave_signer_account, StfError, TrustedOperation};
+use binary_merkle_tree::merkle_root;
 use codec::{Decode, Encode};
 use frame_support::{ensure, traits::UnfilteredDispatchable};
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{Runtime, System};
 use itp_stf_interface::ExecuteCall;
-use itp_stf_primitives::types::{AccountId, KeyPair, ShardIdentifier, Signature};
-use itp_types::OpaqueCall;
+use itp_stf_primitives::types::{AccountId, KeyPair, OrdersFile, ShardIdentifier, Signature};
+use itp_types::{OpaqueCall, H256};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
+use simplyr_lib::Order;
 use sp_io::hashing::blake2_256;
-use sp_runtime::{traits::Verify, MultiAddress};
-use std::{format, prelude::v1::*};
+use sp_runtime::{
+	traits::{Keccak256, Verify},
+	MultiAddress,
+};
+use std::{format, fs, prelude::v1::*};
 
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
@@ -48,6 +53,7 @@ pub enum TrustedCall {
 	balance_transfer(AccountId, AccountId, Balance),
 	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
 	balance_shield(AccountId, AccountId, Balance), // (Root, AccountIncognito, Amount)
+	pay_as_bid_hash(AccountId, OrdersFile),
 	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance), // (Origin, Address EVM Account, Value)
 	// (Origin, Source, Target, Input, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
@@ -100,6 +106,7 @@ impl TrustedCall {
 			TrustedCall::balance_transfer(sender_account, ..) => sender_account,
 			TrustedCall::balance_unshield(sender_account, ..) => sender_account,
 			TrustedCall::balance_shield(sender_account, ..) => sender_account,
+			TrustedCall::pay_as_bid_hash(sender_account, _orders_file) => sender_account,
 			#[cfg(feature = "evm")]
 			TrustedCall::evm_withdraw(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
@@ -241,6 +248,19 @@ impl ExecuteCall for TrustedCallSigned {
 				shield_funds(who, value)?;
 				Ok(())
 			},
+
+			TrustedCall::pay_as_bid_hash(who, orders_file) => {
+				let raw_orders = fs::read_to_string(orders_file).expect("error reading file");
+				let orders: Vec<Order> =
+					serde_json::from_str(&raw_orders).expect("error serializing to JSON");
+
+				let orders_encoded: Vec<Vec<u8>> = orders.into_iter().map(|o| o.encode()).collect();
+
+				let root: H256 = merkle_root::<Keccak256, _>(orders_encoded);
+
+				Some(root.encode())
+			},
+
 			#[cfg(feature = "evm")]
 			TrustedCall::evm_withdraw(from, address, value) => {
 				debug!("evm_withdraw({}, {}, {})", account_id_to_string(&from), address, value);

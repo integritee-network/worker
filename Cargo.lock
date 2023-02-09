@@ -336,6 +336,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "binary-merkle-tree"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate.git#0d611e091178f220455e2ec929ce38b0e9be3253"
+dependencies = [
+ "hash-db",
+]
+
+[[package]]
 name = "bincode"
 version = "1.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2787,6 +2795,7 @@ dependencies = [
 name = "ita-stf"
 version = "0.9.0"
 dependencies = [
+ "binary-merkle-tree",
  "derive_more",
  "frame-support",
  "frame-system",
