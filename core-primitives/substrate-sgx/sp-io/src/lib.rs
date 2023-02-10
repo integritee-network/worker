@@ -137,7 +137,7 @@ pub mod storage {
 		.expect("storage cannot be called outside of an Externalities-provided environment.")
 	}
 
-	pub fn read(key: &[u8], value_out: &mut [u8], value_offset: usize) -> Option<usize> {
+	pub fn read(key: &[u8], value_out: &mut [u8], value_offset: u32) -> Option<u32> {
 		debug!(
 			"read_storage('{}' with offset =  {:?}. value_out.len() is {})",
 			encode_hex(key),
@@ -147,12 +147,14 @@ pub mod storage {
 		with_externalities(|ext| {
 			ext.get(key).map(|value| {
 				debug!("  entire stored value: {:?}", value);
+				let value_offset = value_offset as usize;
 				let value = &value[value_offset..];
 				debug!("  stored value at offset: {:?}", value);
 				let written = std::cmp::min(value.len(), value_out.len());
 				value_out[..written].copy_from_slice(&value[..written]);
 				debug!("  write back {:?}, return len {}", value_out, value.len());
-				value.len()
+				// Just return u32::Max if we read more than u32::Max bytes.
+				value.len().try_into().unwrap_or(u32::MAX)
 			})
 		})
 		.expect("read_storage cannot be called outside of an Externalities-provided environment.")
