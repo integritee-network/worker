@@ -203,7 +203,7 @@ where
 
 	fn get_events(state: &mut State) -> Vec<Box<Self::EventRecord>> {
 		// Fixme: Not nice to have to call collect here, but we can't use impl Iterator<..>
-		// in trait functino return types yet, see:
+		// in trait method return types yet, see:
 		// https://rust-lang.github.io/impl-trait-initiative/RFCs/rpit-in-traits.html
 		state.execute_with(|| frame_system::Pallet::<Runtime>::read_events_no_consensus().collect())
 	}
