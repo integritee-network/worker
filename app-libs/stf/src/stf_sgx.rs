@@ -202,7 +202,10 @@ where
 	type Hash = Runtime::Hash;
 
 	fn get_events(state: &mut State) -> Vec<Box<Self::EventRecord>> {
-		state.execute_with(|| frame_system::Pallet::<Runtime>::read_events_no_consensus())
+		// Fixme: Not nice to have to call collect here, but we can't use impl Iterator<..>
+		// in trait method return types yet, see:
+		// https://rust-lang.github.io/impl-trait-initiative/RFCs/rpit-in-traits.html
+		state.execute_with(|| frame_system::Pallet::<Runtime>::read_events_no_consensus().collect())
 	}
 
 	fn get_event_count(state: &mut State) -> Self::EventIndex {
