@@ -16,7 +16,7 @@ serde = { version = "1.0", default-features = false, features = ["derive", "allo
 sgx_tstd = { optional = true, features = ["untrusted_fs", "net", "backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", branch = "master" }
 
 # substrate
-sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.36" }
+sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
 
 # local
 environmental = { default-features = false, path = "../environmental" }
