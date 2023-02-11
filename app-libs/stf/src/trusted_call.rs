@@ -271,6 +271,14 @@ where
 				ensure_enclave_signer_account(&enclave_account)?;
 				debug!("balance_shield({}, {})", account_id_to_string(&who), value);
 				shield_funds(who, value)?;
+
+				// Send proof of execution on chain.
+				calls.push(OpaqueCall::from_tuple(&(
+					node_metadata_repo.get_from_metadata(|m| m.publish_hash_call_indexes())??,
+					call_hash,
+					Vec::<itp_types::H256>::new(),
+					b"shielded some funds!".to_vec(),
+				)));
 				Ok(())
 			},
 

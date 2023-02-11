@@ -38,6 +38,8 @@ pub trait TeerexCallIndexes {
 	fn shield_funds_call_indexes(&self) -> Result<[u8; 2]>;
 
 	fn unshield_funds_call_indexes(&self) -> Result<[u8; 2]>;
+
+	fn publish_hash_call_indexes(&self) -> Result<[u8; 2]>;
 }
 
 pub trait TeerexStorageKey {
@@ -81,6 +83,10 @@ impl TeerexCallIndexes for NodeMetadata {
 
 	fn unshield_funds_call_indexes(&self) -> Result<[u8; 2]> {
 		self.call_indexes(TEEREX, "unshield_funds")
+	}
+
+	fn publish_hash_call_indexes(&self) -> Result<[u8; 2]> {
+		self.call_indexes(TEEREX, "publish_hash")
 	}
 }
 
