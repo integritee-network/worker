@@ -87,6 +87,7 @@ cid = { default-features = false, git = "https://github.com/whalelephant/rust-ci
 multibase = { default-features = false, git = "https://github.com/whalelephant/rust-multibase", branch = "nstd" }
 
 # local deps
+fork-tree = { path = "../sidechain/fork-tree", default-features = false, features = ["sgx"] }
 ita-oracle = { path = "../app-libs/oracle", default-features = false, optional = true, features = ["sgx"] }
 ita-sgx-runtime = { path = "../app-libs/sgx-runtime", default-features = false }
 ita-stf = { path = "../app-libs/stf", default-features = false, features = ["sgx"] }

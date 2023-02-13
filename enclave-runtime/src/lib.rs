@@ -58,6 +58,7 @@ use log::*;
 use sgx_types::sgx_status_t;
 use sp_core::crypto::Pair;
 use std::{boxed::Box, slice, vec::Vec};
+use fork_tree;
 
 mod attestation;
 mod empty_impls;
