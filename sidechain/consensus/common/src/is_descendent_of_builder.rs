@@ -3,10 +3,10 @@ use std::marker::PhantomData;
 
 // TODO: Pass in Block as Generic param?
 struct IsDescendentOfBuilder<Hash>(PhantomData<Hash>);
-impl<'a, Hash: PartialEq> IsDescendentOfBuilder<Hash> {
+impl<Hash: PartialEq> IsDescendentOfBuilder<Hash> {
     fn build_is_descendent_of(
-        curr_block: Option<(&Hash, &Hash)>
-    ) -> impl Fn(&Hash, &Hash) -> Result<bool, ()> + 'a {
+        current: Option<(&Hash, &Hash)>
+    ) -> impl Fn(&Hash, &Hash) -> Result<bool, ()> {
         move |base, head| {
             // TODO: Add body here
             // Need to make call to find_lowest_common_ancestor
