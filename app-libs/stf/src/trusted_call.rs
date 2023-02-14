@@ -253,12 +253,13 @@ impl ExecuteCall for TrustedCallSigned {
 				let raw_orders = fs::read_to_string(orders_file).expect("error reading file");
 				let orders: Vec<Order> =
 					serde_json::from_str(&raw_orders).expect("error serializing to JSON");
-
-				let orders_encoded: Vec<Vec<u8>> = orders.into_iter().map(|o| o.encode()).collect();
+				let orders_as_strings: Vec<String> =
+					orders.into_iter().map(|o| serde_json::to_string(&o).unwrap()).collect();
+				let orders_encoded: Vec<Vec<u8>> =
+					orders_as_strings.into_iter().map(|o| o.encode()).collect();
 
 				let root: H256 = merkle_root::<Keccak256, _>(orders_encoded);
-
-				Some(root.encode())
+				Ok(())
 			},
 
 			#[cfg(feature = "evm")]
@@ -390,6 +391,7 @@ impl ExecuteCall for TrustedCallSigned {
 			TrustedCall::balance_transfer(_, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_unshield(_, _, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_shield(_, _, _) => debug!("No storage updates needed..."),
+			TrustedCall::pay_as_bid_hash(_, _) => debug!("No storage updates needed..."),
 			#[cfg(feature = "evm")]
 			_ => debug!("No storage updates needed..."),
 		};
