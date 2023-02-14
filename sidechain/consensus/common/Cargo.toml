@@ -10,6 +10,7 @@ log = { version = "0.4", default-features = false }
 thiserror = { version = "1.0.26", optional = true }
 
 # local deps
+fork-tree = { path = "../../fork-tree", default-features = false }
 itc-parentchain-light-client = { path = "../../../core/parentchain/light-client", default-features = false }
 itp-block-import-queue = { path = "../../../core-primitives/block-import-queue", default-features = false }
 itp-extrinsics-factory = { path = "../../../core-primitives/extrinsics-factory", default-features = false }
@@ -60,6 +61,7 @@ std = [
     "its-primitives/std",
     "its-block-verification/std",
     "its-state/std",
+    "fork-tree/std",
     # substrate
     "sp-runtime/std",
     # scs
@@ -76,6 +78,7 @@ sgx = [
     "itp-sgx-crypto/sgx",
     "itp-sgx-externalities/sgx",
     "its-state/sgx",
+    "fork-tree/sgx",
     # scs
     "its-block-verification/sgx",
 ]

@@ -855,8 +855,6 @@ mod test {
 	use std::borrow::Borrow;
 	use std::collections::HashMap;
 
-	pub const ANCESTOR: &str = "B";
-
 	trait FindCommonAncestor<'a> {
 		type Output;
 
