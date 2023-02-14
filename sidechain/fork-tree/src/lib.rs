@@ -853,52 +853,71 @@ mod test {
 	impl std::error::Error for TestError {}
 
 	use std::borrow::Borrow;
+	use std::collections::HashMap;
 
 	pub const ANCESTOR: &str = "B";
 
-	struct BlockNum(u64);
-	impl<'a> From<crate::Node<&'a str, u64, ()>> for BlockNum {
-		fn from(node: crate::Node<&'a str, u64, ()>) -> Self {
-			BlockNum(node.number.into())
-		}
-	}
-
-	trait FindCommonAncestor<Node> {
+	trait FindCommonAncestor<'a> {
 		type Output;
 
-		fn find_common_ancestor(a: Node, b: Node) -> Self::Output;
+		fn find_common_ancestor(a: &str, b: &str, headers: &HashMap<&str, (u64, &'a str)>) -> Self::Output;
 	}
 
-	struct CommonAncestorFinder<BlockNum>(std::marker::PhantomData<BlockNum>);
-	impl<Node: Default, BlockNum: From<Node>> FindCommonAncestor<Node> for CommonAncestorFinder<BlockNum> {
-		type Output = ();
-		fn find_common_ancestor(a: Node, b: Node) -> Self::Output {
-		let block_num1 = BlockNum::from(a);
-			let block_num2 = BlockNum::from(b);
+	struct CommonAncestorFinder<'a>(std::marker::PhantomData<&'a ()>);
+	impl<'a> FindCommonAncestor<'a> for CommonAncestorFinder<'a> {
+		type Output = &'a str;
+		fn find_common_ancestor(a: &str, b: &str, headers: &HashMap<&str, (u64, &'a str)>) -> Self::Output {
+			let (mut block_num1, mut parent_1) = headers.get(a).expect("Tree is filled out Correctly");
+			let (mut block_num2, mut parent_2) = headers.get(b).expect("Tree is filled out Correctly");
+			
+			if a == parent_2 {
+				// Then a is the common ancestor of b and it means it is itself the ancestor
+				return parent_2
+			}
 
-			// while block_num1 < block_num2 {
-				// go up to parent node
-			//}
+			if b == parent_1 {
+				// Then b is the common ancestor of a and it means it is itself the ancestor
+				return parent_1
+			}
 
-			// while block_num2 < block_num1 {
+			while block_num1 > block_num2 {
 				// go up to parent node
-			//}
+				let (new_block_num, new_parent) = headers.get(parent_1).expect("Tree is filled out Correctly");
+				block_num1 = *new_block_num;
+				parent_1 = *new_parent;
+			}
+
+			while block_num2 > block_num1 {
+				// go up to parent node
+				let (new_block_num, new_parent) = headers.get(parent_2).expect("Tree is filled out Correctly");
+				block_num2 = *new_block_num;
+				parent_2 = *new_parent;
+			}
 
 			// At this point will be at equal height
-			// while parent_1 != parent_2 {
+			while parent_1 != parent_2 {
 				// go up on both nodes
-			//}
+				parent_1 = headers.get(parent_1).expect("Tree is filled out Correctly").1;
+				parent_2 = headers.get(parent_2).expect("Tree is filled out Correctly").1;
+			}
 
-			// return Parent node Hash
-
-			Default::default()
+			// return any Parent node Hash
+			parent_1
 		}
 	}
-
 
 	fn andrew_is_descendent_builder<'a>(
 		current: Option<(&'a &str, &'a &str)>
 	) -> impl Fn(&&str, &&str) -> Result<bool, TestError> + 'a {
+
+		let headers: HashMap<&str, (u64, &str)> = HashMap::from([
+			("B", (1, "NONE")),
+			("J", (2, "B")),
+			("C", (2, "B")),
+			("D", (3, "C")),
+			("E", (3, "C"))
+		]);
+
 		move |base, head| {
 			if base == head {
 				return Ok(false)
@@ -920,8 +939,8 @@ mod test {
 				}
 			}
 			
-			// get_common_ancestor()
-			Ok(ANCESTOR == *base)
+			let ancestor = CommonAncestorFinder::find_common_ancestor(head, base, &headers);
+			Ok(ancestor == *base)
 		}
 	}
 
@@ -932,6 +951,7 @@ mod test {
 		let is_descendent_of = andrew_is_descendent_builder(None);
 		(tree, is_descendent_of)
 	}
+	
 
 	#[test]
 	fn andrew_test() {
@@ -947,25 +967,31 @@ mod test {
 		//       - D
 		//
 		tree.import("B", 1, (), &is_descendent_of).unwrap();
+
+		assert_eq!(
+			tree.roots().map(|(h, n, _)| (*h, *n)).collect::<Vec<_>>(),
+			vec![("B", 1)]
+		);
+
 		tree.import("C", 2, (), &is_descendent_of).unwrap();
-		// tree.import("J", 2, (), &is_descendent_of).unwrap();
-		let is_descendent_of = andrew_is_descendent_builder(Some((&"D", &"C")));
+		tree.import("J", 2, (), &is_descendent_of).unwrap();
+
+		// let is_descendent_of = andrew_is_descendent_builder(Some((&"D", &"C")));
+		tree.finalize_root(&"B");
+		assert_eq!(
+			tree.roots().map(|(h, n, _)| (*h, *n)).collect::<Vec<_>>(),
+			vec![("C", 2), ("J", 2)]
+		);
+
 		tree.import("D", 3, (), &is_descendent_of).unwrap();
-		// tree.finalize_root(&"B");
-		// println!(
-		// 	"Roots are::{:?}",
-		// 	tree.roots().map(|(h, n, _)| (*h, *n)).collect::<Vec<_>>()
-		// );
-		// println!("Tree is {:?}", tree);
-		// tree.import("E", 3, (), &is_descendent_of).unwrap();
+		tree.import("E", 3, (), &is_descendent_of).unwrap();
+		
 
-		// assert_eq!(
-		// 	tree.roots().map(|(h, n, _)| (*h, *n)).collect::<Vec<_>>(),
-		// 	vec![("B", 1)]
-		// );
-
-		// tree.finalize_root(&"B");
-		// assert_eq!()
+		tree.finalize_root(&"C");
+		assert_eq!(
+			tree.roots().map(|(h, n, _)| (*h, *n)).collect::<Vec<_>>(),
+			vec![("D", 3), ("E", 3)]
+		);
 	}
 
 	fn test_fork_tree<'a>(
