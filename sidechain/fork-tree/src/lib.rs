@@ -856,15 +856,41 @@ mod test {
 
 	pub const ANCESTOR: &str = "B";
 
+	struct BlockNum(u64);
+	impl<'a> From<crate::Node<&'a str, u64, ()>> for BlockNum {
+		fn from(node: crate::Node<&'a str, u64, ()>) -> Self {
+			BlockNum(node.number.into())
+		}
+	}
+
 	trait FindCommonAncestor<Node> {
 		type Output;
 
 		fn find_common_ancestor(a: Node, b: Node) -> Self::Output;
 	}
-	struct CommonAncestorFinder;
-	impl<Node: Default> FindCommonAncestor<Node> for CommonAncestorFinder {
+
+	struct CommonAncestorFinder<BlockNum>(std::marker::PhantomData<BlockNum>);
+	impl<Node: Default, BlockNum: From<Node>> FindCommonAncestor<Node> for CommonAncestorFinder<BlockNum> {
 		type Output = ();
 		fn find_common_ancestor(a: Node, b: Node) -> Self::Output {
+		let block_num1 = BlockNum::from(a);
+			let block_num2 = BlockNum::from(b);
+
+			// while block_num1 < block_num2 {
+				// go up to parent node
+			//}
+
+			// while block_num2 < block_num1 {
+				// go up to parent node
+			//}
+
+			// At this point will be at equal height
+			// while parent_1 != parent_2 {
+				// go up on both nodes
+			//}
+
+			// return Parent node Hash
+
 			Default::default()
 		}
 	}
