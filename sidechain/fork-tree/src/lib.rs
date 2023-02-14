@@ -976,7 +976,6 @@ mod test {
 		tree.import("C", 2, (), &is_descendent_of).unwrap();
 		tree.import("J", 2, (), &is_descendent_of).unwrap();
 
-		// let is_descendent_of = andrew_is_descendent_builder(Some((&"D", &"C")));
 		tree.finalize_root(&"B");
 		assert_eq!(
 			tree.roots().map(|(h, n, _)| (*h, *n)).collect::<Vec<_>>(),

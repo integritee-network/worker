@@ -18,7 +18,7 @@
 use crate::{Error, Result, SyncBlockFromPeer};
 use core::marker::PhantomData;
 use itp_block_import_queue::PopFromBlockQueue;
-use its_primitives::traits::{Block as BlockTrait, SignedBlock as SignedSidechainBlockTrait};
+use its_primitives::traits::{Block as BlockTrait, SignedBlock as SignedSidechainBlockTrait, Header};
 use log::debug;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::{sync::Arc, time::Instant};
@@ -74,6 +74,11 @@ where
 	}
 }
 
+fn get_hashes<SignedSidechainBlock: SignedSidechainBlockTrait>(block: SignedSidechainBlock) {
+	let block_hash = block.hash();
+	let parent_hash = block.block().header().parent_hash();
+}
+
 impl<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
 	ProcessBlockImportQueue<ParentchainBlock::Header>
 	for BlockImportQueueWorker<
@@ -98,6 +103,8 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
 
 		loop {
 			match self.block_import_queue.pop_front() {
+				// TODO: Add to fork-tree here
+				// Decide if block should be imported
 				Ok(maybe_block) => match maybe_block {
 					Some(block) => {
 						latest_imported_parentchain_header = self

@@ -18,3 +18,4 @@
 pub mod block_importer_mock;
 pub mod confirm_block_import_mock;
 pub mod verifier_mock;
+pub mod block_import_queue_worker_mock;
