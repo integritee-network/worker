@@ -29,6 +29,8 @@ pub type ShardIdentifier = H256;
 pub type OrdersFile = String;
 pub type GridFeeMatrixFile = String;
 
+pub type LeafIndex = u8;
+
 #[derive(Clone)]
 pub enum KeyPair {
 	Sr25519(Box<sr25519::Pair>),
