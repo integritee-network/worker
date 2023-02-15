@@ -18,8 +18,8 @@
 use crate::{
 	trusted_base_cli::commands::{
 		balance::BalanceCommand, custom_fair::CustomFairCommand, pay_as_bid::PayAsBidCommand,
-		set_balance::SetBalanceCommand, transfer::TransferCommand,
-		unshield_funds::UnshieldFundsCommand,
+		pay_as_bid_hash::PayAsBidHashCommand, set_balance::SetBalanceCommand,
+		transfer::TransferCommand, unshield_funds::UnshieldFundsCommand,
 	},
 	trusted_cli::TrustedCli,
 	trusted_command_utils::get_keystore_path,
@@ -55,9 +55,11 @@ pub enum TrustedBaseCommand {
 	/// Pay As Bid Algorithm
 	PayAsBid(PayAsBidCommand),
 
-
 	/// Custom Fair Algorithm
 	CustomFair(CustomFairCommand),
+
+	/// PayAsBid Hash
+	PayAsBidHash(PayAsBidHashCommand),
 }
 
 impl TrustedBaseCommand {
@@ -71,6 +73,7 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::UnshieldFunds(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::PayAsBid(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::CustomFair(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::PayAsBidHash(cmd) => cmd.run(cli, trusted_cli),
 		}
 	}
 }
