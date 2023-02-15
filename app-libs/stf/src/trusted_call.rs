@@ -254,9 +254,9 @@ impl ExecuteCall for TrustedCallSigned {
 				let orders: Vec<Order> =
 					serde_json::from_str(&raw_orders).expect("error serializing to JSON");
 				let orders_as_strings: Vec<String> =
-					orders.into_iter().map(|o| serde_json::to_string(&o).unwrap()).collect();
+					orders.iter().map(|o| serde_json::to_string(&o).unwrap()).collect();
 				let orders_encoded: Vec<Vec<u8>> =
-					orders_as_strings.into_iter().map(|o| o.encode()).collect();
+					orders_as_strings.iter().map(|o| o.encode()).collect();
 
 				let root: H256 = merkle_root::<Keccak256, _>(orders_encoded);
 				Ok(())
