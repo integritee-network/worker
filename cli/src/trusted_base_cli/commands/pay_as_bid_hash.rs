@@ -25,6 +25,7 @@ use crate::{
 use codec::Decode;
 use ita_stf::{Index, TrustedCall, TrustedGetter, TrustedOperation};
 use itp_stf_primitives::types::KeyPair;
+use itp_types::H256;
 use log::{debug, info};
 use sp_core::Pair;
 
@@ -59,11 +60,14 @@ pub(crate) fn pay_as_bid_hash(
 		TrustedCall::pay_as_bid_hash(who.public().into(), orders_file.to_string())
 			.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
 			.into_trusted_operation(trusted_args.direct);
-	let _ = perform_trusted_operation(cli, trusted_args, &top);
 
 	let res = perform_trusted_operation(cli, trusted_args, &top);
 	match res {
-		Some(value) => Some(value.to_vec()),
+		Some(value) => {
+			let hash = H256::decode(&mut &value[..]).unwrap();
+			println!("Merkle root hash: {:?}", hash);
+			Some(hash.0.to_vec())
+		},
 		None => {
 			info!("Hash not found");
 			None
