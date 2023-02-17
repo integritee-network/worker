@@ -18,12 +18,9 @@
 #[cfg(feature = "evm")]
 use sp_core::{H160, H256, U256};
 
-#[cfg(feature = "evm")]
-use std::vec::Vec;
-
 use crate::{helpers::ensure_enclave_signer_account, StfError, TrustedOperation};
 use binary_merkle_tree::{merkle_proof, merkle_root, verify_proof};
-use codec::{Decode, Encode};
+use codec::{alloc::sync::Arc, Decode, Encode};
 use frame_support::{ensure, traits::UnfilteredDispatchable};
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{Runtime, System};
@@ -42,6 +39,8 @@ use sp_runtime::{
 	traits::{Keccak256, Verify},
 	MultiAddress,
 };
+#[cfg(feature = "evm")]
+use std::vec::Vec;
 use std::{format, fs, prelude::v1::*};
 
 #[cfg(feature = "evm")]
