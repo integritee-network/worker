@@ -1,6 +1,8 @@
 use fork_tree::ForkTree;
 use std::marker::PhantomData;
 
+// TODO: Build Cache for Latest Blocks
+
 // TODO: Pass in Block as Generic param?
 struct IsDescendentOfBuilder<Hash>(PhantomData<Hash>);
 impl<Hash: PartialEq> IsDescendentOfBuilder<Hash> {
