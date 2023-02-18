@@ -23,7 +23,7 @@ use crate::{
 	sidechain_header_builder::SidechainHeaderBuilder,
 };
 use its_primitives::{
-	traits::SignBlock,
+	traits::{SignBlock, Block as BlockT},
 	types::{block_data::BlockData, header::SidechainHeader as Header, Block, SignedBlock},
 };
 use sp_core::{ed25519, Pair};
@@ -31,6 +31,7 @@ use sp_core::{ed25519, Pair};
 type Seed = [u8; 32];
 const ENCLAVE_SEED: Seed = *b"12345678901234567890123456789012";
 
+#[derive(Clone)]
 pub struct SidechainBlockBuilder {
 	signer: ed25519::Pair,
 	header: Header,
@@ -47,8 +48,19 @@ impl Default for SidechainBlockBuilder {
 	}
 }
 
-impl SidechainBlockBuilder {
-	pub fn random() -> Self {
+pub trait SidechainBlockBuilderTrait {
+	type Block: BlockT;
+	fn random() -> Self;
+	fn with_header(&mut self, header: Header) -> Self;
+	fn with_block_data(&mut self, block_data: BlockData) -> Self;
+	fn with_signer(&mut self, signer: ed25519::Pair) -> Self;
+	fn build(&self) -> Self::Block;
+	fn build_signed(&self) -> SignedBlock;
+}
+
+impl SidechainBlockBuilderTrait for SidechainBlockBuilder {
+	type Block = Block;
+	fn random() -> Self {
 		SidechainBlockBuilder {
 			signer: Pair::from_seed(&ENCLAVE_SEED),
 			header: SidechainHeaderBuilder::random().build(),
@@ -56,26 +68,26 @@ impl SidechainBlockBuilder {
 		}
 	}
 
-	pub fn with_header(mut self, header: Header) -> Self {
+	fn with_header(&mut self, header: Header) -> Self {
 		self.header = header;
-		self
+		self.clone()
 	}
 
-	pub fn with_block_data(mut self, block_data: BlockData) -> Self {
+	fn with_block_data(&mut self, block_data: BlockData) -> Self {
 		self.block_data = block_data;
-		self
+		self.clone()
 	}
 
-	pub fn with_signer(mut self, signer: ed25519::Pair) -> Self {
+	fn with_signer(&mut self, signer: ed25519::Pair) -> Self {
 		self.signer = signer;
-		self
+		self.clone()
 	}
 
-	pub fn build(self) -> Block {
-		Block { header: self.header, block_data: self.block_data }
+	fn build(&self) -> Self::Block {
+		Block { header: self.header, block_data: self.block_data.clone() }
 	}
 
-	pub fn build_signed(self) -> SignedBlock {
+	fn build_signed(&self) -> SignedBlock {
 		let signer = self.signer;
 		self.build().sign_block(&signer)
 	}
