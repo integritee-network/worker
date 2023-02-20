@@ -19,7 +19,7 @@
 use sp_core::{H160, H256, U256};
 
 use crate::{helpers::ensure_enclave_signer_account, StfError, TrustedOperation};
-use binary_merkle_tree::{merkle_proof, merkle_root, verify_proof};
+use binary_merkle_tree::{ merkle_root};
 use codec::{alloc::sync::Arc, Decode, Encode};
 use frame_support::{ensure, traits::UnfilteredDispatchable};
 pub use ita_sgx_runtime::{Balance, Index};
@@ -28,12 +28,12 @@ use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_node_api_metadata::pallet_teerex::TeerexCallIndexes;
 use itp_stf_interface::ExecuteCall;
 use itp_stf_primitives::types::{
-	AccountId, KeyPair, LeafIndex, OrdersFile, ShardIdentifier, Signature,
+	AccountId, KeyPair, OrdersFile, ShardIdentifier, Signature,
 };
-use itp_types::{OpaqueCall, H256};
+use itp_types::{OpaqueCall};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
-use simplyr_lib::Order;
+use simplyr_lib::{pay_as_bid_matching, MarketInput, MarketOutput, Order};
 use sp_io::hashing::blake2_256;
 use sp_runtime::{
 	traits::{Keccak256, Verify},
@@ -41,7 +41,7 @@ use sp_runtime::{
 };
 #[cfg(feature = "evm")]
 use std::vec::Vec;
-use std::{format, fs, prelude::v1::*};
+use std::{format,fs, prelude::v1::*, time::Instant};
 
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
@@ -276,15 +276,40 @@ where
 			},
 
 			TrustedCall::pay_as_bid(who, orders_file) => {
+				let now = Instant::now();
+
 				let raw_orders = fs::read_to_string(orders_file).expect("error reading file");
 				let orders: Vec<Order> =
 					serde_json::from_str(&raw_orders).expect("error serializing to JSON");
+
 				let orders_as_strings: Vec<String> =
 					orders.iter().map(|o| serde_json::to_string(&o).unwrap()).collect();
 				let orders_encoded: Vec<Vec<u8>> =
 					orders_as_strings.iter().map(|o| o.encode()).collect();
 
-				let root: H256 = merkle_root::<Keccak256, _>(orders_encoded);
+				let market_input = MarketInput { orders };
+
+				let order_merkle_root =
+					merkle_root::<Keccak256, _>(orders_encoded.iter().map(|o| o.encode()));
+				let pay_as_bid: MarketOutput = pay_as_bid_matching(&market_input);
+
+				// Store current market output/hash in the state,
+				// so you don't have to recalculate it in the getters. (If this is needed).
+				sp_io::storage::set(b"MarketOutput", &pay_as_bid.encode());
+				sp_io::storage::set(b"OrdersMerkleRoot", &order_merkle_root.encode());
+
+				let elapsed = now.elapsed();
+				info!("Time Elapsed for PayAsBid Algorithm is: {:.2?}", elapsed);
+
+				// Send proof of execution on chain.
+				// calls is in the scope from the outside
+				calls.push(OpaqueCall::from_tuple(&(
+					node_metadata_repo.get_from_metadata(|m| m.publish_hash_call_indexes())??,
+					order_merkle_root,
+					Vec::<itp_types::H256>::new(), // you can ignore this for now. Clients could subscribe to the hashes here to be notified when a new hash is published.
+					b"Published merkle root of an order!".to_vec(),
+				)));
+				
 				Ok(())
 			},
 

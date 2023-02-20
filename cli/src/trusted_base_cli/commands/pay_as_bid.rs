@@ -38,19 +38,11 @@ pub struct PayAsBidCommand {
 
 impl PayAsBidCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
-		println!(
-			"Result: {:?}",
-			pay_as_bid(cli, trusted_args, &self.account, &self.orders_file)
-		);
+		println!("Result: {:?}", pay_as_bid(cli, trusted_args, &self.account, &self.orders_file));
 	}
 }
 
-pub(crate) fn pay_as_bid(
-	cli: &Cli,
-	trusted_args: &TrustedCli,
-	arg_who: &str,
-	orders_file: &str,
-) -> Option<Vec<u8>> {
+pub(crate) fn pay_as_bid(cli: &Cli, trusted_args: &TrustedCli, arg_who: &str, orders_file: &str) {
 	debug!("arg_who = {:?}", arg_who);
 	let who = get_pair_from_str(trusted_args, arg_who);
 	let signer = get_pair_from_str(trusted_args, arg_who);
@@ -62,15 +54,4 @@ pub(crate) fn pay_as_bid(
 			.into_trusted_operation(trusted_args.direct);
 
 	let res = perform_trusted_operation(cli, trusted_args, &top);
-	match res {
-		Some(value) => {
-			let hash = H256::decode(&mut &value[..]).unwrap();
-			println!("Merkle root hash: {:?}", hash);
-			Some(hash.0.to_vec())
-		},
-		None => {
-			info!("Hash not found");
-			None
-		},
-	}
 }
