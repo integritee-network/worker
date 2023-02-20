@@ -56,7 +56,7 @@ pub enum TrustedCall {
 	balance_transfer(AccountId, AccountId, Balance),
 	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
 	balance_shield(AccountId, AccountId, Balance), // (Root, AccountIncognito, Amount)
-	pay_as_bid_hash(AccountId, OrdersFile),
+	pay_as_bid(AccountId, OrdersFile),
 	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance), // (Origin, Address EVM Account, Value)
 	// (Origin, Source, Target, Input, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
@@ -109,7 +109,7 @@ impl TrustedCall {
 			TrustedCall::balance_transfer(sender_account, ..) => sender_account,
 			TrustedCall::balance_unshield(sender_account, ..) => sender_account,
 			TrustedCall::balance_shield(sender_account, ..) => sender_account,
-			TrustedCall::pay_as_bid_hash(sender_account, _orders_file) => sender_account,
+			TrustedCall::pay_as_bid(sender_account, _orders_file) => sender_account,
 			#[cfg(feature = "evm")]
 			TrustedCall::evm_withdraw(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
@@ -275,7 +275,7 @@ where
 				Ok(())
 			},
 
-			TrustedCall::pay_as_bid_hash(who, orders_file) => {
+			TrustedCall::pay_as_bid(who, orders_file) => {
 				let raw_orders = fs::read_to_string(orders_file).expect("error reading file");
 				let orders: Vec<Order> =
 					serde_json::from_str(&raw_orders).expect("error serializing to JSON");
@@ -416,7 +416,7 @@ where
 			TrustedCall::balance_transfer(_, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_unshield(_, _, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_shield(_, _, _) => debug!("No storage updates needed..."),
-			TrustedCall::pay_as_bid_hash(_, _) => debug!("No storage updates needed..."),
+			TrustedCall::pay_as_bid(_, _) => debug!("No storage updates needed..."),
 			#[cfg(feature = "evm")]
 			_ => debug!("No storage updates needed..."),
 		};

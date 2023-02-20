@@ -30,22 +30,22 @@ use log::{debug, info};
 use sp_core::Pair;
 
 #[derive(Parser)]
-pub struct PayAsBidHashCommand {
+pub struct PayAsBidCommand {
 	/// AccountId in ss58check format
 	account: String,
 	orders_file: String,
 }
 
-impl PayAsBidHashCommand {
+impl PayAsBidCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
 		println!(
 			"Result: {:?}",
-			pay_as_bid_hash(cli, trusted_args, &self.account, &self.orders_file)
+			pay_as_bid(cli, trusted_args, &self.account, &self.orders_file)
 		);
 	}
 }
 
-pub(crate) fn pay_as_bid_hash(
+pub(crate) fn pay_as_bid(
 	cli: &Cli,
 	trusted_args: &TrustedCli,
 	arg_who: &str,
@@ -57,7 +57,7 @@ pub(crate) fn pay_as_bid_hash(
 	let (mrenclave, shard) = get_identifiers(trusted_args);
 	let nonce = get_layer_two_nonce!(signer, cli, trusted_args);
 	let top: TrustedOperation =
-		TrustedCall::pay_as_bid_hash(who.public().into(), orders_file.to_string())
+		TrustedCall::pay_as_bid(who.public().into(), orders_file.to_string())
 			.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
 			.into_trusted_operation(trusted_args.direct);
 
