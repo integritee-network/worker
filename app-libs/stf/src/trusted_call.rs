@@ -57,8 +57,6 @@ pub enum TrustedCall {
 	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
 	balance_shield(AccountId, AccountId, Balance), // (Root, AccountIncognito, Amount)
 	pay_as_bid_hash(AccountId, OrdersFile),
-	pay_as_bid_proof(AccountId, OrdersFile, LeafIndex),
-	pay_as_bid_verify(AccountId, OrdersFile, LeafIndex),
 	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance), // (Origin, Address EVM Account, Value)
 	// (Origin, Source, Target, Input, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
@@ -112,10 +110,6 @@ impl TrustedCall {
 			TrustedCall::balance_unshield(sender_account, ..) => sender_account,
 			TrustedCall::balance_shield(sender_account, ..) => sender_account,
 			TrustedCall::pay_as_bid_hash(sender_account, _orders_file) => sender_account,
-			TrustedCall::pay_as_bid_proof(sender_account, _orders_file, _leaf_index) =>
-				sender_account,
-			TrustedCall::pay_as_bid_verify(sender_account, _orders_file, _leaf_index) =>
-				sender_account,
 			#[cfg(feature = "evm")]
 			TrustedCall::evm_withdraw(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
@@ -294,43 +288,6 @@ where
 				Ok(())
 			},
 
-			TrustedCall::pay_as_bid_proof(who, orders_file, leaf_index) => {
-				let raw_orders = fs::read_to_string(orders_file).expect("error reading file");
-				let orders: Vec<Order> =
-					serde_json::from_str(&raw_orders).expect("error serializing to JSON");
-				let orders_as_strings: Vec<String> =
-					orders.iter().map(|o| serde_json::to_string(&o).unwrap()).collect();
-				let orders_encoded: Vec<Vec<u8>> =
-					orders_as_strings.iter().map(|o| o.encode()).collect();
-				let merkle_proof =
-					merkle_proof::<Keccak256, _, _>(orders_encoded, leaf_index.into());
-
-				Ok(())
-			},
-
-			TrustedCall::pay_as_bid_verify(who, orders_file, leaf_index) => {
-				let raw_orders = fs::read_to_string(orders_file).expect("error reading file");
-				let orders: Vec<Order> =
-					serde_json::from_str(&raw_orders).expect("error serializing to JSON");
-				let orders_as_strings: Vec<String> =
-					orders.iter().map(|o| serde_json::to_string(&o).unwrap()).collect();
-				let orders_encoded: Vec<Vec<u8>> =
-					orders_as_strings.iter().map(|o| o.encode()).collect();
-
-				let root: H256 = merkle_root::<Keccak256, _>(orders_encoded.clone());
-				let merkle_proof =
-					merkle_proof::<Keccak256, _, _>(orders_encoded.clone(), leaf_index.into());
-
-				let verify_proof = verify_proof::<Keccak256, _, _>(
-					&root,
-					merkle_proof.proof.clone(),
-					orders_encoded.len(),
-					leaf_index.into(),
-					&merkle_proof.leaf,
-				);
-				Ok(())
-			},
-
 			#[cfg(feature = "evm")]
 			TrustedCall::evm_withdraw(from, address, value) => {
 				debug!("evm_withdraw({}, {}, {})", account_id_to_string(&from), address, value);
@@ -460,8 +417,6 @@ where
 			TrustedCall::balance_unshield(_, _, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_shield(_, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::pay_as_bid_hash(_, _) => debug!("No storage updates needed..."),
-			TrustedCall::pay_as_bid_proof(_, _, _) => debug!("No storage updates needed..."),
-			TrustedCall::pay_as_bid_verify(_, _, _) => debug!("No storage updates needed..."),
 			#[cfg(feature = "evm")]
 			_ => debug!("No storage updates needed..."),
 		};
