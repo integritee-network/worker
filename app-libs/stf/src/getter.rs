@@ -23,9 +23,6 @@ use itp_stf_interface::ExecuteGetter;
 use itp_stf_primitives::types::{AccountId, GridFeeMatrixFile, KeyPair, OrdersFile, Signature};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
-use simplyr_lib::{
-	custom_fair_matching, pay_as_bid_matching, GridFeeMatrix, MarketInput, MarketOutput, Order,
-};
 use sp_runtime::traits::Verify;
 use std::{fs, prelude::v1::*, time::Instant};
 
@@ -72,8 +69,6 @@ pub enum TrustedGetter {
 	evm_account_codes(AccountId, H160),
 	#[cfg(feature = "evm")]
 	evm_account_storages(AccountId, H160, H256),
-	pay_as_bid(AccountId, OrdersFile),
-	custom_fair(AccountId, OrdersFile, GridFeeMatrixFile),
 }
 
 impl TrustedGetter {
@@ -88,9 +83,6 @@ impl TrustedGetter {
 			TrustedGetter::evm_account_codes(sender_account, _) => sender_account,
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_account_storages(sender_account, ..) => sender_account,
-			TrustedGetter::pay_as_bid(sender_account, _orders_file) => sender_account,
-			TrustedGetter::custom_fair(sender_account, _orders_file, _grid_fee_matrix_file) =>
-				sender_account,
 		}
 	}
 
@@ -171,42 +163,6 @@ impl ExecuteGetter for Getter {
 					} else {
 						None
 					},
-
-				TrustedGetter::pay_as_bid(_who, orders_file) => {
-					let now = Instant::now();
-
-					let raw_orders = fs::read_to_string(orders_file).expect("error reading file");
-					let orders: Vec<Order> =
-						serde_json::from_str(&raw_orders).expect("error serializing to JSON");
-					let market_input = MarketInput { orders };
-					let pay_as_bid: MarketOutput = pay_as_bid_matching(&market_input);
-					let elapsed = now.elapsed();
-
-					info!("Time Elapsed for PayAsBid Algorithm is: {:.2?}", elapsed);
-
-					Some(pay_as_bid.encode())
-				},
-
-				TrustedGetter::custom_fair(_who, orders_file, grid_fee_matrix_file) => {
-					let now = Instant::now();
-
-					let raw_orders = fs::read_to_string(orders_file).expect("error reading file");
-					let orders: Vec<Order> =
-						serde_json::from_str(&raw_orders).expect("error serializing to JSON");
-					let market_input = MarketInput { orders };
-					let raw_grid_fee_matrix =
-						fs::read_to_string(grid_fee_matrix_file).expect("error reading file");
-					let grid_fee_matrix =
-						GridFeeMatrix::from_json_str(&raw_grid_fee_matrix).unwrap();
-					let custom_fair: MarketOutput =
-						custom_fair_matching(&market_input, 1.0, &grid_fee_matrix);
-
-					let elapsed = now.elapsed();
-
-					info!("Time Elapsed for CustomFair Algorithm is: {:.2?}", elapsed);
-
-					Some(custom_fair.encode())
-				},
 			},
 			Getter::public(g) => match g {
 				PublicGetter::some_value => Some(42u32.encode()),

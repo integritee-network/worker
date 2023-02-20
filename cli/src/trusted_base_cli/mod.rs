@@ -17,9 +17,9 @@
 
 use crate::{
 	trusted_base_cli::commands::{
-		balance::BalanceCommand, custom_fair::CustomFairCommand, pay_as_bid::PayAsBidCommand,
-		pay_as_bid_hash::PayAsBidHashCommand, set_balance::SetBalanceCommand,
-		transfer::TransferCommand, unshield_funds::UnshieldFundsCommand,
+		balance::BalanceCommand, pay_as_bid_hash::PayAsBidHashCommand,
+		set_balance::SetBalanceCommand, transfer::TransferCommand,
+		unshield_funds::UnshieldFundsCommand,
 	},
 	trusted_cli::TrustedCli,
 	trusted_command_utils::get_keystore_path,
@@ -52,12 +52,6 @@ pub enum TrustedBaseCommand {
 	/// Transfer funds from an incognito account to an parentchain account
 	UnshieldFunds(UnshieldFundsCommand),
 
-	/// Pay As Bid Algorithm
-	PayAsBid(PayAsBidCommand),
-
-	/// Custom Fair Algorithm
-	CustomFair(CustomFairCommand),
-
 	/// PayAsBid Hash
 	PayAsBidHash(PayAsBidHashCommand),
 }
@@ -71,8 +65,6 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::SetBalance(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::Balance(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::UnshieldFunds(cmd) => cmd.run(cli, trusted_cli),
-			TrustedBaseCommand::PayAsBid(cmd) => cmd.run(cli, trusted_cli),
-			TrustedBaseCommand::CustomFair(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::PayAsBidHash(cmd) => cmd.run(cli, trusted_cli),
 		}
 	}
