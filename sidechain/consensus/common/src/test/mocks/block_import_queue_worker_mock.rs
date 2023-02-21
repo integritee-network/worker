@@ -62,6 +62,26 @@ where
 	}
 }
 
+pub trait BlockQueueHeaderBuild<BlockNumber, Hash> {
+	type QueueHeader;
+	fn build_queue_header(block_number: BlockNumber, parent_hash: Hash) -> Self::QueueHeader;
+}
+pub struct BlockQueueHeaderBuilder<BlockNumber, Hash>(PhantomData<(BlockNumber, Hash)>);
+impl<BlockNumber, Hash> BlockQueueHeaderBuild<BlockNumber, Hash> for BlockQueueHeaderBuilder<BlockNumber, Hash>
+where
+	BlockNumber: Into<u64>,
+	Hash: Into<H256>,
+{
+	type QueueHeader = Header;
+	fn build_queue_header(block_number: BlockNumber, parent_hash: Hash) -> Self::QueueHeader {
+		Header {
+			block_number: block_number.into(),
+			parent_hash: parent_hash.into(),
+			..Default::default()
+		}
+	}
+}
+
 mod tests {
 	use super::*;
 
@@ -71,11 +91,7 @@ mod tests {
 		let queue = <BlockQueueBuilder<Block, SidechainBlockBuilder>>::new().build_queue(|mut queue| {
 			for i in 1..5 {
 				let parent_header = queue.back().unwrap().header();
-				let header = Header {
-					block_number: i,
-					parent_hash: parent_header.hash(),
-					..Default::default()
-				};
+				let header = <BlockQueueHeaderBuilder<u64, H256>>::build_queue_header(i, parent_header.hash());
 				queue.push_back(SidechainBlockBuilder::default().with_header(header).build());
 			}
 			queue
