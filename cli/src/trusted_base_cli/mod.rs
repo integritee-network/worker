@@ -18,8 +18,8 @@
 use crate::{
 	trusted_base_cli::commands::{
 		balance::BalanceCommand, pay_as_bid::PayAsBidCommand,
-		set_balance::SetBalanceCommand, transfer::TransferCommand,
-		unshield_funds::UnshieldFundsCommand,
+		pay_as_bid_proof::PayAsBidProofCommand, set_balance::SetBalanceCommand,
+		transfer::TransferCommand, unshield_funds::UnshieldFundsCommand,
 	},
 	trusted_cli::TrustedCli,
 	trusted_command_utils::get_keystore_path,
@@ -52,8 +52,11 @@ pub enum TrustedBaseCommand {
 	/// Transfer funds from an incognito account to an parentchain account
 	UnshieldFunds(UnshieldFundsCommand),
 
-	/// PayAsBid Command 
+	/// PayAsBid Command
 	PayAsBid(PayAsBidCommand),
+
+	/// PayAsBidProof Command
+	PayAsBidProof(PayAsBidProofCommand),
 }
 
 impl TrustedBaseCommand {
@@ -66,6 +69,7 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::Balance(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::UnshieldFunds(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::PayAsBid(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::PayAsBidProof(cmd) => cmd.run(cli, trusted_cli),
 		}
 	}
 }

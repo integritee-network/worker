@@ -15,7 +15,7 @@
 
 */
 
-use binary_merkle_tree::merkle_proof;
+use binary_merkle_tree::{merkle_proof, MerkleProof};
 use codec::{Decode, Encode};
 use ita_sgx_runtime::System;
 #[cfg(feature = "evm")]
@@ -33,6 +33,47 @@ use crate::evm_helpers::{get_evm_account, get_evm_account_codes, get_evm_account
 
 #[cfg(feature = "evm")]
 use sp_core::{H160, H256};
+
+/// Custom Merkle proof that implements codec
+/// The difference to the original one is that implements the scale-codec and that the fields contain u32 instead of usize.
+#[derive(Debug, PartialEq, Eq, Decode, Encode)]
+pub struct MerkleProofWithCodec<H, L> {
+	/// Root hash of generated merkle tree.
+	pub root: H,
+	/// Proof items (does not contain the leaf hash, nor the root obviously).
+	///
+	/// This vec contains all inner node hashes necessary to reconstruct the root hash given the
+	/// leaf hash.
+	pub proof: Vec<H>,
+	/// Number of leaves in the original tree.
+	///
+	/// This is needed to detect a case where we have an odd number of leaves that "get promoted"
+	/// to upper layers.
+	pub number_of_leaves: u32,
+	/// Index of the leaf the proof is for (0-based).
+	pub leaf_index: u32,
+	/// Leaf content.
+	pub leaf: L,
+}
+
+/// Then we can also implement conversion of the two types to make the handling more ergonomic:
+impl<H, L> From<MerkleProof<H, L>> for MerkleProofWithCodec<H, L> {
+	fn from(source: MerkleProof<H, L>) -> Self {
+		Self {
+			root: source.root,
+			proof: source.proof,
+			number_of_leaves: source
+				.number_of_leaves
+				.try_into()
+				.expect("We don't have more than u32::MAX leaves; qed"),
+			leaf_index: source
+				.leaf_index
+				.try_into()
+				.expect("Leave index is never bigger than U32::Max; qed"),
+			leaf: source.leaf,
+		}
+	}
+}
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
@@ -180,13 +221,15 @@ impl ExecuteGetter for Getter {
 						orders.iter().map(|o| serde_json::to_string(&o).unwrap()).collect();
 					let orders_encoded: Vec<Vec<u8>> =
 						orders_as_strings.iter().map(|o| o.encode()).collect();
-					let merkle_proof =
-						merkle_proof::<Keccak256, _, _>(orders_encoded, (*leaf_index).into());
+
+					let proof: MerkleProofWithCodec<_, _> =
+						merkle_proof::<Keccak256, _, _>(orders_encoded, (*leaf_index).into())
+							.into();
 
 					let elapsed = now.elapsed();
 					info!("Time Elapsed for PayAsBid Proof is: {:.2?}", elapsed);
 
-					Ok(Some(merkle_proof))
+					Some(proof.proof.encode())
 				},
 			},
 			Getter::public(g) => match g {
