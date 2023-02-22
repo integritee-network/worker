@@ -249,10 +249,8 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic_with_quote(
 		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
 	}
 	let mut url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
-	println!("url_slice is: {:#?}", &url_slice);
-
 	let url = String::decode(&mut url_slice).expect("Could not decode url slice to a valid String");
-	println!("url is: {:#?}", &url);
+
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
 
