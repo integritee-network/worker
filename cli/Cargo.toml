@@ -9,9 +9,7 @@ base58 = "0.2"
 blake2-rfc = { version = "0.2.18" }
 chrono = "*"
 clap = { version = "3.1.6", features = ["derive"] }
-codec = { version = "3.0.0", package = "parity-scale-codec", features = [
-    "derive",
-] }
+codec = { version = "3.0.0", package = "parity-scale-codec", features = ["derive"] }
 env_logger = "0.9"
 hdrhistogram = "7.5.0"
 hex = "0.4.2"
