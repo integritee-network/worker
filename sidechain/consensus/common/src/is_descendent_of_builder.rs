@@ -10,19 +10,34 @@ use its_primitives::types::header::SidechainHeader;
 use std::hash::Hash as HashT;
 use std::borrow::Borrow;
 
-// TODO: Build Cache for Latest Blocks
+// TODO: Build Cache for Latest Blocks?
 
-// Normally implemented on the Client in substrate I believe?
+// TODO: Check Normally implemented on the Client in substrate I believe?
+// TODO: Do we need all of these trait bounds?
 pub trait HeaderDbTrait {
     type Header;
     /// Retrieves Header for the corresponding block hash
-    // fn header(&self, hash: H256) -> Option<Block::HeaderType>;
     fn header(&self, hash: &H256) -> Option<Self::Header>;
 }
 
+// TODO: Do we need all of these trait bounds?
 pub struct HeaderDb<Hash, Header>(HashMap<Hash, Header>);
-impl<Hash: PartialEq + HashT + Into<H256> + From<H256> + std::cmp::Eq + Clone, Header> HeaderDbTrait for HeaderDb<Hash, Header>
+impl<Hash, Header> HeaderDb<Hash, Header> 
 where
+    Hash: PartialEq + Eq + HashT + Clone,
+    Header: Clone
+{
+    pub fn new() -> Self {
+        Self {
+            0: HashMap::new(),
+        }
+    }
+}
+
+// TODO: Do we need all of these trait bounds?
+impl<Hash, Header> HeaderDbTrait for HeaderDb<Hash, Header>
+where
+    Hash: PartialEq + HashT + Into<H256> + From<H256> + std::cmp::Eq + Clone,
     Header: HeaderT + Clone + Into<SidechainHeader>
 {
     type Header = SidechainHeader;
@@ -31,17 +46,14 @@ where
         Some(header.clone().into())
     }
 }
-impl<Hash: PartialEq + Eq + HashT + Clone, Header: Clone> HeaderDb<Hash, Header> {
-    pub fn new() -> Self {
-        Self {
-            0: HashMap::new(),
-        }
-    }
-}
 
-// TODO: Pass in Block as Generic param?
+// TODO: Do we need all of these trait bounds?
 struct IsDescendentOfBuilder<Hash, HeaderDb>(PhantomData<(Hash, HeaderDb)>);
-impl<'a, Hash: PartialEq + HashT + Default + Into<H256> + From<H256> + Clone, HeaderDb: HeaderDbTrait> IsDescendentOfBuilder<Hash, HeaderDb> {
+impl<'a, Hash, HeaderDb> IsDescendentOfBuilder<Hash, HeaderDb>
+where
+    Hash: PartialEq + HashT + Default + Into<H256> + From<H256> + Clone,
+    HeaderDb: HeaderDbTrait
+{
     fn build_is_descendent_of(
         current: Option<(&'a Hash, &'a Hash)>,
         header_db: &'a HeaderDb,
@@ -51,8 +63,6 @@ impl<'a, Hash: PartialEq + HashT + Default + Into<H256> + From<H256> + Clone, He
             if base == head {
                 return Ok(false)
             }
-
-            // let current = current.as_ref().map(|(c, p)| (c.borrow(), p.borrow()));
 
             let mut head = head;
             if let Some((current_hash, current_parent_hash)) = current {
@@ -77,8 +87,13 @@ impl<'a, Hash: PartialEq + HashT + Default + Into<H256> + From<H256> + Clone, He
     }
 }
 
+// TODO: Do we need all of these trait bounds?
 struct LowestCommonAncestorFinder<Hash, HeaderDb>(PhantomData<(Hash, HeaderDb)>);
-impl <Hash: PartialEq + Default + Into<H256> + From<H256> + Clone, HeaderDb: HeaderDbTrait> LowestCommonAncestorFinder<Hash, HeaderDb> {
+impl <Hash, HeaderDb> LowestCommonAncestorFinder<Hash, HeaderDb>
+where
+    Hash: PartialEq + Default + Into<H256> + From<H256> + Clone,
+    HeaderDb: HeaderDbTrait,
+{
     fn find_lowest_common_ancestor(a: &Hash, b: &Hash, header_db: &HeaderDb) -> Result<Hash, ()> {
         let header_1 = header_db.header(&<Hash as Into<H256>>::into(a.clone())).ok_or(())?;
         // TODO: Implement lowest common ancestor algorithm
