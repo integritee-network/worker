@@ -2822,7 +2822,7 @@ dependencies = [
 [[package]]
 name = "pallet-parentchain"
 version = "0.9.0"
-source = "git+https://github.com/OverOrion/pallets.git?branch=szp/extract-tcb-info#fb57261d1d6e4b2da12e90f563a5a3f5e6a50b88"
+source = "git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.37#824c9a50dd8902697bd3e75ab6b5f7c3d663167f"
 dependencies = [
  "frame-support",
  "frame-system",
