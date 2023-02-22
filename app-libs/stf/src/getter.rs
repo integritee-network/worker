@@ -15,6 +15,7 @@
 
 */
 
+use crate::StfError;
 use binary_merkle_tree::{merkle_proof, MerkleProof};
 use codec::{Decode, Encode};
 use ita_sgx_runtime::System;
@@ -26,7 +27,7 @@ use itp_utils::stringify::account_id_to_string;
 use log::*;
 use simplyr_lib::Order;
 use sp_runtime::traits::{Keccak256, Verify};
-use std::{fs, prelude::v1::*, time::Instant};
+use std::{format, fs, prelude::v1::*, time::Instant};
 
 #[cfg(feature = "evm")]
 use crate::evm_helpers::{get_evm_account, get_evm_account_codes, get_evm_account_storages};
@@ -213,10 +214,16 @@ impl ExecuteGetter for Getter {
 				TrustedGetter::pay_as_bid_proof(_who, orders_file, leaf_index) => {
 					let now = Instant::now();
 
-					let raw_orders = fs::read_to_string(orders_file).expect("error reading file");
+					let raw_orders = fs::read_to_string(&orders_file)
+						.map_err(|e| {
+							StfError::Dispatch(format!(
+								"Error reading {}. Error: {:?}",
+								orders_file, e
+							))
+						})
+						.ok()?;
 					let orders: Vec<Order> =
 						serde_json::from_str(&raw_orders).expect("error serializing to JSON");
-
 					let orders_as_strings: Vec<String> =
 						orders.iter().map(|o| serde_json::to_string(&o).unwrap()).collect();
 					let orders_encoded: Vec<Vec<u8>> =

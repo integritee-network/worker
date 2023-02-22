@@ -19,7 +19,7 @@
 use sp_core::{H160, H256, U256};
 
 use crate::{helpers::ensure_enclave_signer_account, StfError, TrustedOperation};
-use binary_merkle_tree::{ merkle_root};
+use binary_merkle_tree::merkle_root;
 use codec::{alloc::sync::Arc, Decode, Encode};
 use frame_support::{ensure, traits::UnfilteredDispatchable};
 pub use ita_sgx_runtime::{Balance, Index};
@@ -27,10 +27,8 @@ use ita_sgx_runtime::{Runtime, System};
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_node_api_metadata::pallet_teerex::TeerexCallIndexes;
 use itp_stf_interface::ExecuteCall;
-use itp_stf_primitives::types::{
-	AccountId, KeyPair, OrdersFile, ShardIdentifier, Signature,
-};
-use itp_types::{OpaqueCall};
+use itp_stf_primitives::types::{AccountId, KeyPair, OrdersFile, ShardIdentifier, Signature};
+use itp_types::OpaqueCall;
 use itp_utils::stringify::account_id_to_string;
 use log::*;
 use simplyr_lib::{pay_as_bid_matching, MarketInput, MarketOutput, Order};
@@ -41,7 +39,7 @@ use sp_runtime::{
 };
 #[cfg(feature = "evm")]
 use std::vec::Vec;
-use std::{format,fs, prelude::v1::*, time::Instant};
+use std::{format, fs, prelude::v1::*, time::Instant};
 
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
@@ -281,9 +279,9 @@ where
 				let raw_orders = fs::read_to_string(&orders_file).map_err(|e| {
 					StfError::Dispatch(format!("Error reading {}. Error: {:?}", orders_file, e))
 				})?;
-
-				let orders: Vec<Order> =
-					serde_json::from_str(&raw_orders).expect("error serializing to JSON");
+				let orders: Vec<Order> = serde_json::from_str(&raw_orders).map_err(|err| {
+					StfError::Dispatch(format!("Error serializing to JSON: {}", err))
+				})?;
 
 				let orders_as_strings: Vec<String> =
 					orders.iter().map(|o| serde_json::to_string(&o).unwrap()).collect();
@@ -312,7 +310,7 @@ where
 					Vec::<itp_types::H256>::new(), // you can ignore this for now. Clients could subscribe to the hashes here to be notified when a new hash is published.
 					b"Published merkle root of an order!".to_vec(),
 				)));
-				
+
 				Ok(())
 			},
 
