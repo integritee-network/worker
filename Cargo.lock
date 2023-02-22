@@ -338,7 +338,7 @@ dependencies = [
 [[package]]
 name = "binary-merkle-tree"
 version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/substrate.git#30cb4d10b3118d1b3aa5b2ae7fa8429b2c4f28de"
+source = "git+https://github.com/paritytech/substrate.git#b77175df6b7c73e0f56bb38aca875f8096b25379"
 dependencies = [
  "hash-db",
 ]
@@ -471,9 +471,9 @@ checksum = "771fe0050b883fcc3ea2359b1a96bcfbc090b7116eae7c3c512c7a083fdf23d3"
 
 [[package]]
 name = "bstr"
-version = "1.2.0"
+version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7f0778972c64420fdedc63f09919c8a88bda7b25135357fd25a5d9f3257e832"
+checksum = "5ffdb39cb703212f3c11973452c2861b972f757b021158f3516ba10f2fa8b2c1"
 dependencies = [
  "memchr 2.5.0",
  "serde 1.0.152",
@@ -562,9 +562,9 @@ checksum = "89b2fd2a0dcf38d7971e2194b6b6eebab45ae01067456a7fd93d5547a61b70be"
 
 [[package]]
 name = "camino"
-version = "1.1.2"
+version = "1.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c77df041dc383319cc661b428b6961a005db4d6808d5e12536931b1ca9556055"
+checksum = "6031a462f977dd38968b6f23378356512feeace69cef817e1a4475108093cec3"
 dependencies = [
  "serde 1.0.152",
 ]
@@ -690,9 +690,9 @@ dependencies = [
 
 [[package]]
 name = "clang-sys"
-version = "1.4.0"
+version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa2e27ae6ab525c3d369ded447057bca5438d86dc3a68f6faafb8269ba82ebf3"
+checksum = "77ed9a53e5d4d9c573ae844bfac6872b159cb1d1585a83b29e7a64b7eef7332a"
 dependencies = [
  "glob",
  "libc",
@@ -1971,7 +1971,7 @@ dependencies = [
  "memchr 2.5.0",
  "pin-project-lite",
  "pin-utils",
- "slab 0.4.7",
+ "slab 0.4.8",
 ]
 
 [[package]]
@@ -2094,7 +2094,7 @@ dependencies = [
  "futures-util 0.3.26",
  "http 0.2.9",
  "indexmap 1.9.2",
- "slab 0.4.7",
+ "slab 0.4.8",
  "tokio",
  "tokio-util 0.7.7",
  "tracing",
@@ -4513,7 +4513,7 @@ dependencies = [
  "log 0.4.17",
  "miow",
  "net2 0.2.38",
- "slab 0.4.7",
+ "slab 0.4.8",
  "winapi 0.2.8",
 ]
 
@@ -4538,7 +4538,7 @@ dependencies = [
  "lazycell",
  "log 0.4.17",
  "mio 0.6.23",
- "slab 0.4.7",
+ "slab 0.4.8",
 ]
 
 [[package]]
@@ -4552,7 +4552,7 @@ dependencies = [
  "mio 0.6.23",
  "sgx_tstd",
  "sgx_types",
- "slab 0.4.7",
+ "slab 0.4.8",
 ]
 
 [[package]]
@@ -7176,9 +7176,9 @@ dependencies = [
 
 [[package]]
 name = "slab"
-version = "0.4.7"
+version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4614a76b2a8be0058caa9dbbaf66d988527d86d003c11a94fbd335d7661edcef"
+checksum = "6528351c9bc8ab22353f9d776db39a20288e8d6c37ef8cfe3317cf875eecfc2d"
 dependencies = [
  "autocfg 1.1.0",
 ]
@@ -8300,9 +8300,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-stream"
-version = "0.1.11"
+version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d660770404473ccd7bc9f8b28494a811bc18542b915c0855c51e8f419d5223ce"
+checksum = "8fb52b74f05dbf495a8fba459fdc331812b96aa086d9eb78101fa0d4569c3313"
 dependencies = [
  "futures-core 0.3.26",
  "pin-project-lite",
@@ -9349,7 +9349,7 @@ dependencies = [
  "openssl",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha-1 0.8.2",
- "slab 0.4.7",
+ "slab 0.4.8",
  "url 2.3.1",
 ]
 
