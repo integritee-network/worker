@@ -763,7 +763,7 @@ fn register_quotes_from_marblerun(
 
 	for quote in quotes {
 		let ext = enclave
-			.generate_dcap_ra_extrinsic_internal_with_quote(url.clone(), &quote)
+			.generate_dcap_ra_extrinsic_from_quote(url.clone(), &quote)
 			.expect("Extracting information from valid valid quotes should never fail; qed");
 		send_extrinsic(&ext, api, accountid, is_development_mode);
 	}

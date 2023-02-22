@@ -48,7 +48,7 @@ pub trait RemoteAttestation {
 	fn generate_ias_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
 
 	fn generate_dcap_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
-	fn generate_dcap_ra_extrinsic_internal_with_quote(
+	fn generate_dcap_ra_extrinsic_from_quote(
 		&self,
 		url: String,
 		quote: &[u8],
@@ -151,7 +151,7 @@ impl RemoteAttestation for Enclave {
 
 		Ok(unchecked_extrinsic)
 	}
-	fn generate_dcap_ra_extrinsic_internal_with_quote(
+	fn generate_dcap_ra_extrinsic_from_quote(
 		&self,
 		url: String,
 		quote: &[u8],
