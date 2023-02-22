@@ -3848,7 +3848,7 @@ dependencies = [
 [[package]]
 name = "simplyr-lib"
 version = "0.1.0"
-source = "git+https://github.com/BESTenergytrade/simplyr-lib.git?branch=cI/usize#be8dfc5907d91698b587eb58c55d962623f0bc14"
+source = "git+https://github.com/BESTenergytrade/simplyr-lib.git#e9ca033e02de7261f9ae78ab19eda2321be7e430"
 dependencies = [
  "libm",
  "parity-scale-codec",
