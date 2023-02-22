@@ -8,15 +8,15 @@ In case you have
 - a sgx hardware and compile the worker with `SGX_MODE=HW` (default mode)
 - a valid intel IAS key (development key is fine)
 
-you can omit the `--features skip-ias-check` when building the node, but you must not use the subcommand flag `--skip-ra` in the json file (see [`simple-config.json`](simple-config.json)) you're using to start the worker.
+you can omit the `--features skip-ias-check` when building the node, but you must not use the subcommand flag `--skip-ra` in the json file (see [`two-workers.json`](./config/two-workers.json)) you're using to start the worker.
 
 ## Steps
-Adapt or create your own config file, as in the example of [`simple-config.json`](simple-config.json). Be mindful of the ports in case you're running the script on a server multiple people are working on.
+Adapt or create your own config file, as in the example of [`two-workers.json`](./config/two-workers.json). Be mindful of the ports in case you're running the script on a server multiple people are working on.
 
 ### Launch worker and node in terminal one
 You can launch the workers and the node with:
 ```bash
-./local-setup/launch.py ./local-setup/simple-config.json
+./local-setup/launch.py ./local-setup/config/two-workers.json
 ```
 wait a little until all workers have been launched. You can stop the worker and node simply by pressing `Ctrl + c`.
 

@@ -6,11 +6,13 @@
       "--dev",
       "-lruntime=info",
       "--ws-port",
-      "9930",
+      "9944",
       "--port",
-      "30330",
+      "30390",
       "--rpc-port",
-      "8930"
+      "9933",
+      "--ws-external",
+      "--rpc-external"
     ]
   },
   "workers": [
@@ -19,15 +21,16 @@
       "flags": [
         "--clean-reset",
         "-P",
-        "2030",
+        "2000",
         "-p",
-        "9930",
+        "9944",
         "-r",
-        "3430",
+        "3490",
         "-w",
-        "2031",
+        "2001",
         "-h",
-        "4530"
+        "4545",
+        "--ws-external"
       ],
       "subcommand_flags": [
         "--skip-ra",
