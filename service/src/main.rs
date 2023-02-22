@@ -762,10 +762,12 @@ fn register_quotes_from_marblerun(
 		events.iter().map(|event| event.get_quote_without_prepended_bytes()).collect();
 
 	for quote in quotes {
-		let ext = enclave
-			.generate_dcap_ra_extrinsic_from_quote(url.clone(), &quote)
-			.expect("Extracting information from valid quotes should never fail; qed");
-		send_extrinsic(&ext, api, accountid, is_development_mode);
+		match enclave.generate_dcap_ra_extrinsic_from_quote(url.clone(), &quote) {
+			Ok(xts) => send_extrinsic(&xts, api, accountid, is_development_mode),
+			Err(e) => {
+				error!("Extracting information from quote failed: {}", e.into())
+			},
+		}
 	}
 }
 #[cfg(feature = "dcap")]
