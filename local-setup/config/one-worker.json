@@ -10,7 +10,9 @@
       "--port",
       "30390",
       "--rpc-port",
-      "8990"
+      "9933",
+      "--ws-external",
+      "--rpc-external"
     ]
   },
   "workers": [
@@ -22,33 +24,16 @@
         "2000",
         "-p",
         "9944",
+        "-r",
+        "3490",
         "-w",
         "2001",
-        "-r",
-        "3443"
+        "-h",
+        "4545"
       ],
       "subcommand_flags": [
         "--skip-ra",
         "--dev"
-      ]
-    },
-    {
-      "source": "bin",
-      "flags": [
-        "--clean-reset",
-        "-P",
-        "3000",
-        "-p",
-        "9944",
-        "-w",
-        "3001",
-        "-r",
-        "3444"
-      ],
-      "subcommand_flags": [
-        "--skip-ra",
-        "--dev",
-        "--request-state"
       ]
     }
   ]

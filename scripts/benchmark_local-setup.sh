@@ -9,7 +9,7 @@ popd
 
 ulimit -S -n 4096
 
-python3 local-setup/launch.py local-setup/benchmark-config.json &
+python3 local-setup/launch.py local-setup/config/benchmark.json &
 PID=$!
 echo $PID > ./benchmark.pid
 echo "Benchmark PID: $PID"
