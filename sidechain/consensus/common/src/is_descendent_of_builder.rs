@@ -12,6 +12,8 @@ use std::borrow::Borrow;
 
 // TODO: Build Cache for Latest Blocks?
 
+// TODO: Remove all unecessary cloning/refactor to be more efficient
+
 // TODO: Check Normally implemented on the Client in substrate I believe?
 // TODO: Do we need all of these trait bounds?
 pub trait HeaderDbTrait {
@@ -41,6 +43,7 @@ where
     Header: HeaderT + Clone + Into<SidechainHeader>
 {
     type Header = SidechainHeader;
+
     fn header(&self, hash: &H256) -> Option<Self::Header> {
         let header = self.0.get(&Hash::from(*hash))?;
         Some(header.clone().into())
@@ -89,13 +92,14 @@ where
 
 // TODO: Do we need all of these trait bounds?
 struct LowestCommonAncestorFinder<Hash, HeaderDb>(PhantomData<(Hash, HeaderDb)>);
-impl <Hash, HeaderDb> LowestCommonAncestorFinder<Hash, HeaderDb>
+impl<Hash, HeaderDb> LowestCommonAncestorFinder<Hash, HeaderDb>
 where
     Hash: PartialEq + Default + Into<H256> + From<H256> + Clone,
     HeaderDb: HeaderDbTrait,
 {
     fn find_lowest_common_ancestor(a: &Hash, b: &Hash, header_db: &HeaderDb) -> Result<Hash, ()> {
-        let header_1 = header_db.header(&<Hash as Into<H256>>::into(a.clone())).ok_or(())?;
+        // let header_1 = header_db.header(&<Hash as Into<H256>>::into(a.clone())).ok_or(())?;
+        let header_1 = header_db.header(&a.clone().into()).ok_or(())?;
         // TODO: Implement lowest common ancestor algorithm
         /* 
         ** Need to access blocks and their headers for BlockHash and BlockNumber perhaps a cache?
