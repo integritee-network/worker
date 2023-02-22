@@ -923,7 +923,7 @@ mod test {
 
 			let mut head = head;
 			if let Some((current_hash, current_parent_hash)) = current {
-				if base == head {
+				if base == current_hash {
 					return Ok(false)
 				}
 
