@@ -29,7 +29,8 @@
         "-w",
         "2001",
         "-h",
-        "4545"
+        "4545",
+        "--ws-external"
       ],
       "subcommand_flags": [
         "--skip-ra",

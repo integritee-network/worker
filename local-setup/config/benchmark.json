@@ -29,7 +29,8 @@
         "-w",
         "2031",
         "-h",
-        "4530"
+        "4530",
+        "--ws-external"
       ],
       "subcommand_flags": [
         "--skip-ra",
