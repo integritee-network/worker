@@ -237,7 +237,7 @@ pub fn generate_dcap_ra_quote_internal(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn generate_dcap_ra_extrinsic_with_quote(
+pub unsafe extern "C" fn generate_dcap_ra_extrinsic_from_quote_internal(
 	w_url: *const u8,
 	w_url_size: u32,
 	quote: *const u8,
@@ -256,7 +256,7 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic_with_quote(
 
 	let quote_slice = slice::from_raw_parts(quote, quote_size as usize);
 
-	let extrinsic = match generate_dcap_ra_extrinsic_with_quote_internal(url, quote_slice) {
+	let extrinsic = match generate_dcap_ra_extrinsic_from_quote(url, quote_slice) {
 		Ok(xt) => xt,
 		Err(e) => return e.into(),
 	};
@@ -267,7 +267,7 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic_with_quote(
 	sgx_status_t::SGX_SUCCESS
 }
 
-pub fn generate_dcap_ra_extrinsic_with_quote_internal(
+pub fn generate_dcap_ra_extrinsic_from_quote(
 	url: String,
 	quote: &[u8],
 ) -> EnclaveResult<OpaqueExtrinsic> {

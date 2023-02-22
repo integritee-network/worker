@@ -7,7 +7,7 @@ use sgx_types::{
 
 extern "C" {
 
-	pub fn generate_dcap_ra_extrinsic_with_quote(
+	pub fn generate_dcap_ra_extrinsic_from_quote_internal(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
 		w_url: *const u8,

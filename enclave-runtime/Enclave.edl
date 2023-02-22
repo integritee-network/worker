@@ -95,7 +95,7 @@ enclave {
 			[out, size=dcap_quote_size] uint8_t* dcap_quote_p, uint32_t dcap_quote_size
 		);
 
-		public sgx_status_t generate_dcap_ra_extrinsic_with_quote(
+		public sgx_status_t generate_dcap_ra_extrinsic_from_quote_internal(
 			[in, size=w_url_size] uint8_t* w_url, uint32_t w_url_size,
 			[in, size=quote_size] uint8_t* quote, uint32_t quote_size,
 			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
