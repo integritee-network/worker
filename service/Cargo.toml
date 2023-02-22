@@ -19,6 +19,7 @@ log = "0.4"
 parking_lot = "0.12.1"
 parse_duration = "2.1.1"
 prometheus = { version = "0.13.0", features = ["process"] }
+scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"

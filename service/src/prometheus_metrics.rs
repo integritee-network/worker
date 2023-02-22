@@ -25,8 +25,10 @@ use crate::{
 	error::{Error, ServiceResult},
 };
 use async_trait::async_trait;
+use codec::{Decode, Encode};
 #[cfg(feature = "dcap")]
 use core::time::Duration;
+use frame_support::scale_info::TypeInfo;
 #[cfg(feature = "dcap")]
 use itc_rest_client::{
 	http_client::{DefaultSend, HttpClient},
@@ -214,7 +216,7 @@ pub fn fetch_marblerun_events(base_url: &str) -> Result<Vec<PrometheusMarblerunE
 	Ok(events.0)
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Encode, Decode, TypeInfo)]
 pub struct PrometheusMarblerunEvent {
 	pub time: String,
 	pub activation: PrometheusMarblerunEventActivation,
@@ -227,7 +229,7 @@ impl PrometheusMarblerunEvent {
 		&self.activation.quote.as_bytes()[marblerun_magic_prepended_header_size..]
 	}
 }
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Encode, Decode, TypeInfo)]
 #[serde(rename_all = "camelCase")]
 pub struct PrometheusMarblerunEventActivation {
 	pub marble_type: String,
