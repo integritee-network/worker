@@ -161,7 +161,7 @@ impl RemoteAttestation for Enclave {
 		let url = url.encode();
 
 		let result = unsafe {
-			ffi::generate_dcap_ra_extrinsic_from_quote_internal(
+			ffi::generate_dcap_ra_extrinsic_from_quote(
 				self.eid,
 				&mut retval,
 				url.as_ptr(),
