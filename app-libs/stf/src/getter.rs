@@ -229,9 +229,22 @@ impl ExecuteGetter for Getter {
 					let orders_encoded: Vec<Vec<u8>> =
 						orders_as_strings.iter().map(|o| o.encode()).collect();
 
-					let proof: MerkleProofWithCodec<_, _> =
-						merkle_proof::<Keccak256, _, _>(orders_encoded, (*leaf_index).into())
-							.into();
+					let leaf_index_u32: u32 = (*leaf_index).into();
+					if leaf_index_u32 > orders.len() as u32 {
+						let error_message = format!(
+							"leaf_index out of range: {} (orders length: {})",
+							leaf_index,
+							orders.len()
+						)
+						.into_bytes();
+						return Some(error_message)
+					}
+
+					let proof: MerkleProofWithCodec<_, _> = merkle_proof::<Keccak256, _, _>(
+						orders_encoded,
+						leaf_index_u32.try_into().unwrap(),
+					)
+					.into();
 
 					let elapsed = now.elapsed();
 					info!("Time Elapsed for PayAsBid Proof is: {:.2?}", elapsed);
