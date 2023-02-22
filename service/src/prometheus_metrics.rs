@@ -25,10 +25,21 @@ use crate::{
 	error::{Error, ServiceResult},
 };
 use async_trait::async_trait;
+use codec::{Decode, Encode};
+#[cfg(feature = "dcap")]
+use core::time::Duration;
+use frame_support::scale_info::TypeInfo;
+#[cfg(feature = "dcap")]
+use itc_rest_client::{
+	http_client::{DefaultSend, HttpClient},
+	rest_client::{RestClient, Url as URL},
+	RestGet, RestPath,
+};
 use itp_enclave_metrics::EnclaveMetric;
 use lazy_static::lazy_static;
 use log::*;
 use prometheus::{proto::MetricFamily, register_int_gauge, IntGauge};
+use serde::{Deserialize, Serialize};
 use std::{net::SocketAddr, sync::Arc};
 use warp::{Filter, Rejection, Reply};
 
@@ -169,4 +180,59 @@ impl ReceiveEnclaveMetrics for EnclaveMetricsReceiver {
 		}
 		Ok(())
 	}
+}
+
+// Data structure that matches with REST API JSON
+
+#[derive(Serialize, Deserialize, Debug)]
+struct PrometheusMarblerunEvents(pub Vec<PrometheusMarblerunEvent>);
+
+#[cfg(feature = "dcap")]
+impl RestPath<&str> for PrometheusMarblerunEvents {
+	fn get_path(path: &str) -> Result<String, itc_rest_client::error::Error> {
+		Ok(format!("{}", path))
+	}
+}
+
+#[cfg(feature = "dcap")]
+pub fn fetch_marblerun_events(base_url: &str) -> Result<Vec<PrometheusMarblerunEvent>, Error> {
+	let base_url = URL::parse(&base_url).map_err(|e| {
+		Error::Custom(
+			format!("Failed to parse marblerun prometheus endpoint base URL: {:?}", e).into(),
+		)
+	})?;
+	let timeout = 3u64;
+	let http_client =
+		HttpClient::new(DefaultSend {}, true, Some(Duration::from_secs(timeout)), None, None);
+
+	let mut rest_client = RestClient::new(http_client, base_url.clone());
+	let events: PrometheusMarblerunEvents = rest_client.get("events").map_err(|e| {
+		Error::Custom(
+			format!("Failed to fetch marblerun prometheus events from: {}, error: {}", base_url, e)
+				.into(),
+		)
+	})?;
+
+	Ok(events.0)
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Encode, Decode, TypeInfo)]
+pub struct PrometheusMarblerunEvent {
+	pub time: String,
+	pub activation: PrometheusMarblerunEventActivation,
+}
+
+#[cfg(feature = "dcap")]
+impl PrometheusMarblerunEvent {
+	pub fn get_quote_without_prepended_bytes(&self) -> &[u8] {
+		let marblerun_magic_prepended_header_size = 16usize;
+		&self.activation.quote.as_bytes()[marblerun_magic_prepended_header_size..]
+	}
+}
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Encode, Decode, TypeInfo)]
+#[serde(rename_all = "camelCase")]
+pub struct PrometheusMarblerunEventActivation {
+	pub marble_type: String,
+	pub uuid: String,
+	pub quote: String,
 }
