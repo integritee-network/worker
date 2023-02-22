@@ -177,7 +177,6 @@ pub fn generate_dcap_ra_extrinsic_internal(
 		skip_ra,
 	)?;
 
-	// TODO Need to send this to the teerex pallet (something similar to perform_ra_internal)
 	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
 	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain()?;
 
@@ -271,7 +270,6 @@ pub fn generate_dcap_ra_extrinsic_from_quote(
 	url: String,
 	quote: &[u8],
 ) -> EnclaveResult<OpaqueExtrinsic> {
-	// TODO Need to send this to the teerex pallet (something similar to perform_ra_internal)
 	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
 	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain()?;
 	info!("    [Enclave] Compose register enclave gettins callIDs:");
