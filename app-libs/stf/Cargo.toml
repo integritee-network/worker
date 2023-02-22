@@ -15,11 +15,7 @@ rlp = { version = "0.5", default-features = false }
 sha3 = { version = "0.10", default-features = false }
 
 # sgx deps
-sgx_tstd = { branch = "master", features = [
-    "untrusted_fs",
-    "net",
-    "backtrace",
-], git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_tstd = { branch = "master", features = ["untrusted_fs", "net", "backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
 # local crates
 ita-sgx-runtime = { default-features = false, path = "../sgx-runtime" }
