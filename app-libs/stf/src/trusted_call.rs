@@ -278,7 +278,10 @@ where
 			TrustedCall::pay_as_bid(who, orders_file) => {
 				let now = Instant::now();
 
-				let raw_orders = fs::read_to_string(orders_file).expect("error reading file");
+				let raw_orders = fs::read_to_string(&orders_file).map_err(|e| {
+					StfError::Dispatch(format!("Error reading {}. Error: {:?}", orders_file, e))
+				})?;
+
 				let orders: Vec<Order> =
 					serde_json::from_str(&raw_orders).expect("error serializing to JSON");
 
