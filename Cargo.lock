@@ -2568,7 +2568,7 @@ dependencies = [
  "serde 1.0.152",
  "serde_json 1.0.93",
  "sgx_crypto_helper",
- "simplyr-lib",
+ "simplyr-lib 0.1.0 (git+https://github.com/BESTenergytrade/simplyr-lib.git)",
  "sp-application-crypto",
  "sp-core",
  "sp-keyring",
@@ -2840,7 +2840,7 @@ dependencies = [
  "serde_json 1.0.93",
  "sgx_tstd",
  "sha3",
- "simplyr-lib",
+ "simplyr-lib 0.1.0 (git+https://github.com/BESTenergytrade/simplyr-lib.git?branch=cI/usize)",
  "sp-application-crypto",
  "sp-core",
  "sp-io 7.0.0",
@@ -7153,6 +7153,17 @@ dependencies = [
  "num-complex 0.4.3",
  "num-traits 0.2.15",
  "paste",
+]
+
+[[package]]
+name = "simplyr-lib"
+version = "0.1.0"
+source = "git+https://github.com/BESTenergytrade/simplyr-lib.git?branch=cI/usize#be8dfc5907d91698b587eb58c55d962623f0bc14"
+dependencies = [
+ "libm",
+ "parity-scale-codec",
+ "serde 1.0.152",
+ "serde_json 1.0.93",
 ]
 
 [[package]]
