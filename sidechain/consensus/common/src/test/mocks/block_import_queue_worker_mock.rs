@@ -95,6 +95,7 @@ mod tests {
 	#[test]
 	fn process_sequential_queue_no_forks() {
 
+		// Construct a queue which is sequential with 5 members
 		let mut queue = <BlockQueueBuilder<Block, SidechainBlockBuilder>>::new().build_queue(|mut queue| {
 			for i in 1..5 {
 				let parent_header = queue.back().unwrap().header();
@@ -103,9 +104,6 @@ mod tests {
 			}
 			queue
 		});
-
-		// printing queue to view
-		// queue.iter().for_each(|block| println!("queue item is {:?}", block));
 		
 		// Store all block_headers in db
 		let mut db = <HeaderDb<H256, Header>>::new();
