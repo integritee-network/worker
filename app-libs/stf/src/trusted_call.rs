@@ -283,10 +283,8 @@ where
 					StfError::Dispatch(format!("Error serializing to JSON: {}", err))
 				})?;
 
-				let orders_as_strings: Vec<String> =
-					orders.iter().map(|o| serde_json::to_string(&o).unwrap()).collect();
 				let orders_encoded: Vec<Vec<u8>> =
-					orders_as_strings.iter().map(|o| o.encode()).collect();
+					serde_json::to_vec(&orders).unwrap().into_iter().map(|o| o.encode()).collect();
 
 				let market_input = MarketInput { orders };
 

@@ -44,7 +44,7 @@ my-node-runtime = { package = "integritee-node-runtime", optional = true, git = 
 pallet-parentchain = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.11.0-polkadot-v0.9.37" }
 
 # simplyR
-simplyr-lib = { default-features = false, git = "https://github.com/BESTenergytrade/simplyr-lib.git" }
+simplyr-lib = { default-features = false, git = "https://github.com/BESTenergytrade/simplyr-lib.git", branch = "cI/usize"}
 binary-merkle-tree = { default-features = false, git = "https://github.com/paritytech/substrate.git" }
 
 [dev-dependencies]

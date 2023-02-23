@@ -224,10 +224,6 @@ impl ExecuteGetter for Getter {
 						.ok()?;
 					let orders: Vec<Order> =
 						serde_json::from_str(&raw_orders).expect("error serializing to JSON");
-					let orders_as_strings: Vec<String> =
-						orders.iter().map(|o| serde_json::to_string(&o).unwrap()).collect();
-					let orders_encoded: Vec<Vec<u8>> =
-						orders_as_strings.iter().map(|o| o.encode()).collect();
 
 					let leaf_index_u32: u32 = (*leaf_index).into();
 					if leaf_index_u32 > orders.len() as u32 {
@@ -237,6 +233,12 @@ impl ExecuteGetter for Getter {
 							orders.len()
 						);
 					}
+
+					let orders_encoded: Vec<Vec<u8>> = serde_json::to_vec(&orders)
+						.unwrap()
+						.into_iter()
+						.map(|o| o.encode())
+						.collect();
 
 					let proof: MerkleProofWithCodec<_, _> = merkle_proof::<Keccak256, _, _>(
 						orders_encoded,
