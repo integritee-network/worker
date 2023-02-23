@@ -231,13 +231,11 @@ impl ExecuteGetter for Getter {
 
 					let leaf_index_u32: u32 = (*leaf_index).into();
 					if leaf_index_u32 > orders.len() as u32 {
-						let error_message = format!(
+						info!(
 							"leaf_index out of range: {} (orders length: {})",
 							leaf_index,
 							orders.len()
-						)
-						.into_bytes();
-						return Some(error_message)
+						);
 					}
 
 					let proof: MerkleProofWithCodec<_, _> = merkle_proof::<Keccak256, _, _>(
