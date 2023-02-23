@@ -17,13 +17,13 @@ use std::borrow::Borrow;
 // TODO: Check Normally implemented on the Client in substrate I believe?
 // TODO: Do we need all of these trait bounds?
 pub trait HeaderDbTrait {
-    type Header;
+    type Header: HeaderT;
     /// Retrieves Header for the corresponding block hash
     fn header(&self, hash: &H256) -> Option<Self::Header>;
 }
 
 // TODO: Do we need all of these trait bounds?
-pub struct HeaderDb<Hash, Header>(HashMap<Hash, Header>);
+pub struct HeaderDb<Hash, Header>(pub HashMap<Hash, Header>);
 impl<Hash, Header> HeaderDb<Hash, Header> 
 where
     Hash: PartialEq + Eq + HashT + Clone,
@@ -33,6 +33,10 @@ where
         Self {
             0: HashMap::new(),
         }
+    }
+
+    pub fn insert(&mut self, hash: Hash, header: Header) {
+        let _ = self.0.insert(hash, header);
     }
 }
 
@@ -49,20 +53,38 @@ where
         Some(header.clone().into())
     }
 }
+#[derive(Debug)]
+pub enum TestError {
+	Error,
+}
+
+impl From<()> for TestError {
+    fn from(a: ()) -> Self {
+        TestError::Error
+    }
+}
+
+impl std::fmt::Display for TestError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "TestError")
+    }
+}
+
+impl std::error::Error for TestError { }
 
 // TODO: Do we need all of these trait bounds?
-struct IsDescendentOfBuilder<Hash, HeaderDb>(PhantomData<(Hash, HeaderDb)>);
-impl<'a, Hash, HeaderDb> IsDescendentOfBuilder<Hash, HeaderDb>
+pub struct IsDescendentOfBuilder<Hash, HeaderDb, Error>(PhantomData<(Hash, HeaderDb, Error)>);
+impl<'a, Hash, HeaderDb, Error> IsDescendentOfBuilder<Hash, HeaderDb, Error>
 where
+    Error: From<()>,
     Hash: PartialEq + HashT + Default + Into<H256> + From<H256> + Clone,
     HeaderDb: HeaderDbTrait
 {
-    fn build_is_descendent_of(
+    pub fn build_is_descendent_of(
         current: Option<(&'a Hash, &'a Hash)>,
         header_db: &'a HeaderDb,
-    ) -> impl Fn(&Hash, &Hash) -> Result<bool, ()> + 'a {
+    ) -> impl Fn(&Hash, &Hash) -> Result<bool, Error> + 'a {
         move |base, head| {
-            // TODO: Add body here
             if base == head {
                 return Ok(false)
             }
@@ -91,7 +113,7 @@ where
 }
 
 // TODO: Do we need all of these trait bounds?
-struct LowestCommonAncestorFinder<Hash, HeaderDb>(PhantomData<(Hash, HeaderDb)>);
+pub struct LowestCommonAncestorFinder<Hash, HeaderDb>(PhantomData<(Hash, HeaderDb)>);
 impl<Hash, HeaderDb> LowestCommonAncestorFinder<Hash, HeaderDb>
 where
     Hash: PartialEq + Default + Into<H256> + From<H256> + Clone,
@@ -99,21 +121,47 @@ where
 {
     fn find_lowest_common_ancestor(a: &Hash, b: &Hash, header_db: &HeaderDb) -> Result<Hash, ()> {
         // let header_1 = header_db.header(&<Hash as Into<H256>>::into(a.clone())).ok_or(())?;
-        let header_1 = header_db.header(&a.clone().into()).ok_or(())?;
-        // TODO: Implement lowest common ancestor algorithm
-        /* 
-        ** Need to access blocks and their headers for BlockHash and BlockNumber perhaps a cache?
-        ** (BlockHash -> BlockHeader)
-        */ 
-        Ok(Default::default())
-    }
-}
+        let mut header_1 = header_db.header(&a.clone().into()).ok_or(())?;
+        let mut header_2 = header_db.header(&b.clone().into()).ok_or(())?;
+        let mut blocknum_1 = header_1.block_number();
+        let mut blocknum_2 = header_2.block_number();
+        let mut parent_1 = Hash::from(header_1.parent_hash());
+        let mut parent_2 = Hash::from(header_2.parent_hash());
 
-#[test]
-fn test_build_is_descendent_of_works() {
-    let db = <HeaderDb<H256, SidechainHeader>>::new();
-    let is_descendent_of = <IsDescendentOfBuilder<H256, HeaderDb<H256, SidechainHeader>>>::build_is_descendent_of(None, &db);
-    let my_result = is_descendent_of(&[1; 32].into(), &[0; 32].into());
-    // TODO: Add something there Nothing in DB yet
-    assert_eq!(my_result, Err(()));
+        if *a == parent_2 {
+            // Then a is the common ancestor of b and it means it is itself the ancestor
+            return Ok(parent_2)
+        }
+
+        if *b == parent_1 {
+            // Then b is the common ancestor of a and it means it is itself the ancestor
+            return Ok(parent_1)
+        }
+
+        while blocknum_1 > blocknum_2 { // This means block 1 is further down in the tree than block 2
+            // go up to parent node
+            header_1 = header_db.header(&parent_1.into()).ok_or(())?;
+            blocknum_2 = header_1.block_number();
+            parent_1 = Hash::from(header_1.parent_hash());
+        }
+
+        while blocknum_2 > blocknum_1 { // This means block 2 is further down in the tree than block 1
+            // go up to parent node
+            header_2 = header_db.header(&parent_2.into()).ok_or(())?;
+            blocknum_2 = header_2.block_number();
+            parent_2 = Hash::from(header_2.parent_hash());
+        }
+
+        // At this point will be at equal height
+        while parent_1 != parent_2 {
+            // go up on both nodes
+            header_1 = header_db.header(&parent_1.into()).ok_or(())?;
+            header_2 = header_db.header(&parent_2.into()).ok_or(())?;
+            parent_1 = Hash::from(header_1.parent_hash());
+            parent_2 = Hash::from(header_2.parent_hash());
+        }
+
+        // Return any Parent node Hash as in worst case scenario it is the root which is shared amongst all
+		Ok(parent_1)
+    }
 }

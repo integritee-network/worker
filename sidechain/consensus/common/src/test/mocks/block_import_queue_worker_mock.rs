@@ -5,6 +5,10 @@ use crate::{
     Result,
     BlockImportQueueWorker, 
     SyncBlockFromPeer,
+	is_descendent_of_builder::{
+		HeaderDb, HeaderDbTrait, IsDescendentOfBuilder, LowestCommonAncestorFinder, 
+		TestError,
+	},
 };
 use its_test::{
 	sidechain_block_builder::SidechainBlockBuilderTrait,
@@ -26,6 +30,7 @@ use its_primitives::{
 };
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::{collections::VecDeque, sync::RwLock};
+use fork_tree::ForkTree;
 
 #[derive(Default)]
 pub struct BlockQueueBuilder<B, Builder> {
@@ -90,7 +95,7 @@ mod tests {
 	#[test]
 	fn process_sequential_queue_no_forks() {
 
-		let queue = <BlockQueueBuilder<Block, SidechainBlockBuilder>>::new().build_queue(|mut queue| {
+		let mut queue = <BlockQueueBuilder<Block, SidechainBlockBuilder>>::new().build_queue(|mut queue| {
 			for i in 1..5 {
 				let parent_header = queue.back().unwrap().header();
 				let header = <BlockQueueHeaderBuilder<u64, H256>>::build_queue_header(i, parent_header.hash());
@@ -100,11 +105,41 @@ mod tests {
 		});
 
 		// printing queue to view
-		queue.iter().for_each(|block| println!("queue item is {:?}", block));
-		// TODO: Add blocks to the fork-tree and assert that everything is correct
+		// queue.iter().for_each(|block| println!("queue item is {:?}", block));
+		
+		// Store all block_headers in db
+		let mut db = <HeaderDb<H256, Header>>::new();
+		queue.iter().for_each(|block| {
+			let _ = db.insert(block.header.hash(), block.header);
+		});
+
+		// Import into forktree
+		let is_descendent_of = 
+			<IsDescendentOfBuilder<H256, HeaderDb<H256, Header>, TestError>>::build_is_descendent_of(None, &db);
+		let mut tree = <ForkTree<H256, u64, ()>>::new();
+		queue.iter().for_each(|block| {
+			let _ = tree.import(block.header.hash(), block.header.block_number(), (), &is_descendent_of).unwrap();
+		});
+
+		// We have a tree which looks like this H1 is the only root
 		//
 		// H1 - H2 - H3 - H4 - H5
 		//
+
+		// We see that the only root of this tree is so far H1
+		assert_eq!(
+			tree.roots().map(|(h, n, _)| (*h, *n)).collect::<Vec<_>>(),
+			vec![(queue.front().unwrap().header.hash(), 0)]
+		);
+
+		// Now finalize H1 and so the new Root should be H2
+		tree.finalize_root(&queue.front().unwrap().header.hash()).unwrap();
+		let _ = queue.pop_front();
+		assert_eq!(
+			tree.roots().map(|(h, n, _)| (*h, *n)).collect::<Vec<_>>(),
+			vec![(queue.front().unwrap().header.hash(), 1)]
+		);
+
 		println!("Process Sequential Queue With No Forks");
 	}
 
