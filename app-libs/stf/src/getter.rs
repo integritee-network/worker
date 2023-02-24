@@ -232,6 +232,8 @@ impl ExecuteGetter for Getter {
 							leaf_index,
 							orders.len()
 						);
+
+						return None
 					}
 
 					let orders_encoded: Vec<Vec<u8>> = serde_json::to_vec(&orders)
