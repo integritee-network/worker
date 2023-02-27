@@ -30,13 +30,26 @@ where
     Header: Clone
 {
     pub fn new() -> Self {
-        Self {
-            0: HashMap::new(),
-        }
+        Self(HashMap::new())
     }
 
     pub fn insert(&mut self, hash: Hash, header: Header) {
         let _ = self.0.insert(hash, header);
+    }
+}
+
+impl<Hash, Header> From<&[(Hash, Header)]> for HeaderDb<Hash, Header>
+where
+    Hash: HashT + Eq + Copy + Clone,
+    Header: Copy + Clone,
+{
+    fn from(items: &[(Hash, Header)]) -> Self {
+        let mut header_db = HeaderDb::<Hash, Header>::new();
+        for item in items {
+            let (hash, header) = item;
+            header_db.insert(*hash, *header);
+        }
+        header_db
     }
 }
 
@@ -120,7 +133,6 @@ where
     HeaderDb: HeaderDbTrait,
 {
     fn find_lowest_common_ancestor(a: &Hash, b: &Hash, header_db: &HeaderDb) -> Result<Hash, ()> {
-        // let header_1 = header_db.header(&<Hash as Into<H256>>::into(a.clone())).ok_or(())?;
         let mut header_1 = header_db.header(&a.clone().into()).ok_or(())?;
         let mut header_2 = header_db.header(&b.clone().into()).ok_or(())?;
         let mut blocknum_1 = header_1.block_number();
@@ -139,26 +151,35 @@ where
         }
 
         while blocknum_1 > blocknum_2 { // This means block 1 is further down in the tree than block 2
-            // go up to parent node
-            header_1 = header_db.header(&parent_1.into()).ok_or(())?;
-            blocknum_2 = header_1.block_number();
-            parent_1 = Hash::from(header_1.parent_hash());
+            let new_parent = header_db.header(&parent_1.clone().into()).ok_or(())?;
+            // TODO: Research it is possible for a parent node to have a smaller block number?
+            if new_parent.block_number() >= blocknum_2 {
+                // go up to parent node
+                blocknum_2 = new_parent.block_number();
+                parent_1 = Hash::from(new_parent.parent_hash());    
+            } else {
+                break;
+            }
         }
 
         while blocknum_2 > blocknum_1 { // This means block 2 is further down in the tree than block 1
-            // go up to parent node
-            header_2 = header_db.header(&parent_2.into()).ok_or(())?;
-            blocknum_2 = header_2.block_number();
-            parent_2 = Hash::from(header_2.parent_hash());
+            let new_parent = header_db.header(&parent_2.clone().into()).ok_or(())?;
+            // TODO: Research it is possible for a parent node to have a smaller block number?
+            if new_parent.block_number() >= blocknum_1 {
+                blocknum_2 = new_parent.block_number();
+                parent_2 = Hash::from(new_parent.parent_hash());    
+            } else {
+                break;
+            }
         }
 
         // At this point will be at equal height
         while parent_1 != parent_2 {
             // go up on both nodes
-            header_1 = header_db.header(&parent_1.into()).ok_or(())?;
-            header_2 = header_db.header(&parent_2.into()).ok_or(())?;
-            parent_1 = Hash::from(header_1.parent_hash());
-            parent_2 = Hash::from(header_2.parent_hash());
+            let new_header_1 = header_db.header(&parent_1.into()).ok_or(())?;
+            let new_header_2 = header_db.header(&parent_2.into()).ok_or(())?;
+            parent_1 = Hash::from(new_header_1.parent_hash());
+            parent_2 = Hash::from(new_header_2.parent_hash());
         }
 
         // Return any Parent node Hash as in worst case scenario it is the root which is shared amongst all

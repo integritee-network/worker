@@ -209,6 +209,7 @@ mod tests {
 	use its_primitives::types::{block::SignedBlock, header::SidechainHeader as Header};
 	use its_test::{
 		sidechain_block_builder::SidechainBlockBuilder,
+		sidechain_block_builder::SidechainBlockBuilderTrait,
 		sidechain_block_data_builder::SidechainBlockDataBuilder,
 		sidechain_header_builder::SidechainHeaderBuilder,
 	};
