@@ -177,11 +177,6 @@ mod tests {
 			<IsDescendentOfBuilder<H256, HeaderDb<H256, Header>, TestError>>::build_is_descendent_of(None, &db);
 		let mut tree = <ForkTree<H256, u64, ()>>::new();
 		queue.iter().for_each(|block| {
-			// println!("block.header.hash(): {:?}, block.header.block_number(): {}, block.header.parent_hash(): {:?}",
-			// 	block.header.hash(),
-			// 	block.header.block_number(),
-			// 	block.header.parent_hash()
-			// );
 			let _ = tree.import(block.header.hash(), block.header.block_number(), (), &is_descendent_of).unwrap();
 		});
 
