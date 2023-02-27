@@ -279,7 +279,7 @@ pub fn generate_dcap_ra_extrinsic_from_quote_internal(
 		.map_err(MetadataProviderError::MetadataError)?;
 	info!("    [Enclave] Compose register enclave call DCAP IDs: {:?}", call_ids);
 	let call = OpaqueCall::from_tuple(&(call_ids, quote, url));
-	info!("    [Enclave] Compose register enclave got call: {:#?}", &call);
+	trace!("    [Enclave] Compose register enclave got call: {:#?}", &call);
 
 	let extrinsic = extrinsics_factory.create_extrinsics(&[call], None)?;
 	info!("    [Enclave] Compose register enclave got extrinsic, returning");
