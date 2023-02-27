@@ -22,12 +22,15 @@ use crate::{
 	trusted_operation::perform_trusted_operation,
 	Cli,
 };
-use codec::Decode;
-use ita_stf::{Index, TrustedCall, TrustedGetter, TrustedOperation};
+
+use codec::{Decode, Encode};
+use ita_stf::{Index, MerkleProofWithCodec, TrustedCall, TrustedGetter, TrustedOperation};
 use itp_stf_primitives::types::KeyPair;
-use itp_types::H256;
 use log::{debug, info};
-use sp_core::Pair;
+use simplyr_lib::Order;
+use sp_core::{Pair, H256};
+
+use codec;
 
 #[derive(Parser)]
 pub struct PayAsBidProofCommand {
@@ -52,7 +55,7 @@ pub(crate) fn pay_as_bid_proof(
 	arg_who: &str,
 	orders_file: &str,
 	leaf_index: u8,
-) -> Option<H256> {
+) -> Option<MerkleProofWithCodec<H256, Vec<u8>>> {
 	debug!("arg_who = {:?}", arg_who);
 	let who = get_pair_from_str(trusted_args, arg_who);
 
@@ -65,7 +68,8 @@ pub(crate) fn pay_as_bid_proof(
 
 	match res {
 		Some(value) => {
-			let proof = H256::decode(&mut &value[..]).unwrap();
+			let proof: MerkleProofWithCodec<_, _> =
+				MerkleProofWithCodec::decode(&mut &value[..]).unwrap();
 			Some(proof)
 		},
 		None => {
