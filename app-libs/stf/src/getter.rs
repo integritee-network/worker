@@ -224,6 +224,7 @@ impl ExecuteGetter for Getter {
 						.ok()?;
 					let orders: Vec<Order> =
 						serde_json::from_str(&raw_orders).expect("error serializing to JSON");
+					let orders_encoded: Vec<Vec<u8>> = orders.iter().map(|o| o.encode()).collect();
 
 					let leaf_index_u32: u32 = (*leaf_index).into();
 					if leaf_index_u32 >= orders.len() as u32 {
@@ -236,25 +237,14 @@ impl ExecuteGetter for Getter {
 						return None
 					}
 
-					let orders_strings: Vec<String> = orders
-						.clone()
-						.into_iter()
-						.map(|o| serde_json::to_string(&o).unwrap())
-						.collect();
-
-					info!("EncodedOrder Length is: {}", orders_strings.len());
-
 					let proof: MerkleProofWithCodec<_, _> = merkle_proof::<Keccak256, _, _>(
-						orders_strings,
+						orders_encoded,
 						leaf_index_u32.try_into().unwrap(),
 					)
 					.into();
 
 					let elapsed = now.elapsed();
 					info!("Time Elapsed for PayAsBid Proof is: {:.2?}", elapsed);
-					info!("Order Length is: {}", orders.len());
-					info!("Leaf Index is: {}", leaf_index_u32);
-					info!("Original Proof is: {:?}", proof);
 
 					Some(proof.encode())
 				},

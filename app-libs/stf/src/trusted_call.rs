@@ -283,15 +283,10 @@ where
 					StfError::Dispatch(format!("Error serializing to JSON: {}", err))
 				})?;
 
-				let orders_strings: Vec<String> = orders
-					.clone()
-					.into_iter()
-					.map(|o| serde_json::to_string(&o).unwrap())
-					.collect();
+				let market_input = MarketInput { orders: orders.clone() };
+				let orders_encoded: Vec<Vec<u8>> = orders.iter().map(|o| o.encode()).collect();
 
-				let market_input = MarketInput { orders };
-
-				let order_merkle_root = merkle_root::<Keccak256, _>(orders_strings);
+				let order_merkle_root = merkle_root::<Keccak256, _>(orders_encoded);
 				let pay_as_bid: MarketOutput = pay_as_bid_matching(&market_input);
 
 				// Store current market output/hash in the state,
