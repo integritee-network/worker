@@ -763,9 +763,11 @@ fn register_quotes_from_marblerun(
 
 	for quote in quotes {
 		match enclave.generate_dcap_ra_extrinsic_from_quote(url.clone(), &quote) {
-			Ok(xts) => send_extrinsic(&xts, api, accountid, is_development_mode),
+			Ok(xts) => {
+				send_extrinsic(&xts, api, accountid, is_development_mode);
+			},
 			Err(e) => {
-				error!("Extracting information from quote failed: {}", e.into())
+				error!("Extracting information from quote failed: {}", e)
 			},
 		}
 	}
