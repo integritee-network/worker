@@ -410,9 +410,9 @@ where
 		let mut is_first = true;
 
 		for child in root_children {
-			if is_first &&
-				(child.number == *number && child.hash == *hash ||
-					child.number < *number && is_descendent_of(&child.hash, hash)?)
+			if is_first
+				&& (child.number == *number && child.hash == *hash
+					|| child.number < *number && is_descendent_of(&child.hash, hash)?)
 			{
 				root.children.push(child);
 				// assuming that the tree is well formed only one child should pass this
@@ -539,9 +539,9 @@ where
 				let is_finalized = root.hash == *hash;
 				let is_descendant =
 					!is_finalized && root.number > number && is_descendent_of(hash, &root.hash)?;
-				let is_ancestor = !is_finalized &&
-					!is_descendant && root.number < number &&
-					is_descendent_of(&root.hash, hash)?;
+				let is_ancestor = !is_finalized
+					&& !is_descendant && root.number < number
+					&& is_descendent_of(&root.hash, hash)?;
 				(is_finalized, is_descendant, is_ancestor)
 			};
 
@@ -612,8 +612,8 @@ where
 			if predicate(&node.data) && (node.hash == *hash || is_descendent_of(&node.hash, hash)?)
 			{
 				for child in node.children.iter() {
-					if child.number <= number &&
-						(child.hash == *hash || is_descendent_of(&child.hash, hash)?)
+					if child.number <= number
+						&& (child.hash == *hash || is_descendent_of(&child.hash, hash)?)
 					{
 						return Err(Error::UnfinalizedAncestor)
 					}
@@ -659,8 +659,8 @@ where
 			if predicate(&root.data) && (root.hash == *hash || is_descendent_of(&root.hash, hash)?)
 			{
 				for child in root.children.iter() {
-					if child.number <= number &&
-						(child.hash == *hash || is_descendent_of(&child.hash, hash)?)
+					if child.number <= number
+						&& (child.hash == *hash || is_descendent_of(&child.hash, hash)?)
 					{
 						return Err(Error::UnfinalizedAncestor)
 					}
@@ -687,9 +687,9 @@ where
 		let roots = std::mem::take(&mut self.roots);
 
 		for root in roots {
-			let retain = root.number > number && is_descendent_of(hash, &root.hash)? ||
-				root.number == number && root.hash == *hash ||
-				is_descendent_of(&root.hash, hash)?;
+			let retain = root.number > number && is_descendent_of(hash, &root.hash)?
+				|| root.number == number && root.hash == *hash
+				|| is_descendent_of(&root.hash, hash)?;
 
 			if retain {
 				self.roots.push(root);
@@ -1158,15 +1158,15 @@ mod test {
 		// finalizing "D" will finalize a block from the tree, but it can't be applied yet
 		// since it is not a root change.
 		assert_eq!(
-			tree.finalizes_any_with_descendent_if(&"D", 10, &is_descendent_of, |c| c.effective ==
-				10),
+			tree.finalizes_any_with_descendent_if(&"D", 10, &is_descendent_of, |c| c.effective
+				== 10),
 			Ok(Some(false)),
 		);
 
 		// finalizing "E" is not allowed since there are not finalized anchestors.
 		assert_eq!(
-			tree.finalizes_any_with_descendent_if(&"E", 15, &is_descendent_of, |c| c.effective ==
-				10),
+			tree.finalizes_any_with_descendent_if(&"E", 15, &is_descendent_of, |c| c.effective
+				== 10),
 			Err(Error::UnfinalizedAncestor)
 		);
 
@@ -1199,15 +1199,15 @@ mod test {
 
 		// finalizing "F" will fail since it would finalize past "E" without finalizing "D" first
 		assert_eq!(
-			tree.finalizes_any_with_descendent_if(&"F", 100, &is_descendent_of, |c| c.effective <=
-				100,),
+			tree.finalizes_any_with_descendent_if(&"F", 100, &is_descendent_of, |c| c.effective
+				<= 100,),
 			Err(Error::UnfinalizedAncestor),
 		);
 
 		// it will work with "G" though since it is not in the same branch as "E"
 		assert_eq!(
-			tree.finalizes_any_with_descendent_if(&"G", 100, &is_descendent_of, |c| c.effective <=
-				100),
+			tree.finalizes_any_with_descendent_if(&"G", 100, &is_descendent_of, |c| c.effective
+				<= 100),
 			Ok(Some(true)),
 		);
 
