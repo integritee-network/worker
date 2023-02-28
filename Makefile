@@ -103,7 +103,7 @@ Enclave_EDL_Files := enclave-runtime/Enclave_t.c enclave-runtime/Enclave_t.h ser
 
 ######## Integritee-service settings ########
 SRC_Files := $(shell find . -type f -name '*.rs') $(shell find . -type f -name 'Cargo.toml')
-Worker_Rust_Flags := $(CARGO_TARGET) $(WORKER_FEATURES),dcap
+Worker_Rust_Flags := $(CARGO_TARGET) $(WORKER_FEATURES)
 Worker_Include_Paths := -I ./service -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
 Worker_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(Worker_Include_Paths)
 
