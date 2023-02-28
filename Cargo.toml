@@ -61,6 +61,7 @@ members = [
     "sidechain/consensus/aura",
     "sidechain/consensus/common",
     "sidechain/consensus/slots",
+    "sidechain/fork-tree",
     "sidechain/peer-fetch",
     "sidechain/primitives",
     "sidechain/rpc-handler",
