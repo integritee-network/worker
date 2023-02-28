@@ -20,6 +20,7 @@ use crate::{
 		balance::BalanceCommand, pay_as_bid::PayAsBidCommand,
 		pay_as_bid_proof::PayAsBidProofCommand, set_balance::SetBalanceCommand,
 		transfer::TransferCommand, unshield_funds::UnshieldFundsCommand,
+		verify_proof::VerifyMerkleProofCommand,
 	},
 	trusted_cli::TrustedCli,
 	trusted_command_utils::get_keystore_path,
@@ -57,6 +58,9 @@ pub enum TrustedBaseCommand {
 
 	/// PayAsBidProof Command
 	PayAsBidProof(PayAsBidProofCommand),
+
+	/// VerifyProof Command
+	VerifyProof(VerifyMerkleProofCommand),
 }
 
 impl TrustedBaseCommand {
@@ -70,6 +74,7 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::UnshieldFunds(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::PayAsBid(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::PayAsBidProof(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::VerifyProof(cmd) => cmd.run(cli, trusted_cli),
 		}
 	}
 }
