@@ -741,7 +741,7 @@ fn fetch_marblerun_events_every_hour<E>(
 				marblerun_base_url.clone(),
 			);
 
-			thread::sleep(Duration::from_secs(POLL_INTERVAL_1_HOUR_IN_SECS));
+			thread::sleep(Duration::from_secs(POLL_INTERVAL_5_MINUTES_IN_SECS));
 		}
 	});
 
