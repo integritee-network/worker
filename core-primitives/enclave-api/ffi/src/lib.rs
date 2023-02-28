@@ -7,6 +7,17 @@ use sgx_types::{
 
 extern "C" {
 
+	pub fn generate_dcap_ra_extrinsic_from_quote(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		w_url: *const u8,
+		w_url_size: u32,
+		quote: *const u8,
+		quote_size: u32,
+		unchecked_extrinsic: *mut u8,
+		unchecked_extrinsic_size: u32,
+	) -> sgx_status_t;
+
 	pub fn init(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
@@ -115,6 +126,16 @@ extern "C" {
 		quote_size: u32,
 	) -> sgx_status_t;
 
+	pub fn generate_dcap_ra_quote(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		skip_ra: c_int,
+		quoting_enclave_target_info: &sgx_target_info_t,
+		quote_size: u32,
+		dcap_quote_p: *mut u8,
+		dcap_quote_size: u32,
+	) -> sgx_status_t;
+
 	pub fn generate_register_quoting_enclave_extrinsic(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
@@ -199,4 +220,5 @@ extern "C" {
 		shard_size: u32,
 		skip_ra: c_int,
 	) -> sgx_status_t;
+
 }

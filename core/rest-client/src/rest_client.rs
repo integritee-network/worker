@@ -18,14 +18,16 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
+pub use http_req::{request::Method, response::Headers};
+pub use url::Url;
+
 use crate::{
 	error::Error, http_client::SendHttpRequest, Query, RestDelete, RestGet, RestPatch, RestPath,
 	RestPost, RestPut,
 };
-use http_req::{request::Method, response::Headers};
+
 use log::*;
 use std::string::{String, ToString};
-use url::Url;
 
 /// REST client to make HTTP GET and POST requests.
 pub struct RestClient<H> {

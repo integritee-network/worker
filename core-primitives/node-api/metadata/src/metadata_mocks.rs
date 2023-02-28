@@ -32,6 +32,7 @@ pub struct NodeMetadataMock {
 	processed_parentchain_block: u8,
 	shield_funds: u8,
 	unshield_funds: u8,
+	publish_hash: u8,
 	sidechain_module: u8,
 	imported_sidechain_block: u8,
 	runtime_spec_version: u32,
@@ -51,6 +52,7 @@ impl NodeMetadataMock {
 			processed_parentchain_block: 3u8,
 			shield_funds: 4u8,
 			unshield_funds: 5u8,
+			publish_hash: 9u8,
 			sidechain_module: 53u8,
 			imported_sidechain_block: 0u8,
 			runtime_spec_version: 25,
@@ -93,6 +95,10 @@ impl TeerexCallIndexes for NodeMetadataMock {
 	}
 
 	fn unshield_funds_call_indexes(&self) -> Result<[u8; 2]> {
+		Ok([self.teerex_module, self.unshield_funds])
+	}
+
+	fn publish_hash_call_indexes(&self) -> Result<[u8; 2]> {
 		Ok([self.teerex_module, self.unshield_funds])
 	}
 }

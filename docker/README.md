@@ -4,7 +4,7 @@
 
 * Make sure you have installed Docker (version >= `2.0.0`) with [Docker Compose](https://docs.docker.com/compose/install/). On Windows, this can be Docker Desktop with WSL 2 integration.
 * In case you also build the worker directly, without docker (e.g. on a dev machine, running `make`), you should run `make clean` before running the docker build. Otherwise, it can occasionally lead to build errors.
-* The node image version that is loaded in the `docker-compose.yml`, (e.g. `image: "integritee/integritee-node-dev:1.0.11"`) needs to be compatible with the worker you're trying to build.
+* The node image version that is loaded in the `docker-compose.yml`, (e.g. `image: "integritee/integritee-node-dev:1.0.32"`) needs to be compatible with the worker you're trying to build.
 
 ## Building the Docker containers
 

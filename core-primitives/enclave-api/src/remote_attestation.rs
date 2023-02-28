@@ -48,6 +48,12 @@ pub trait RemoteAttestation {
 	fn generate_ias_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
 
 	fn generate_dcap_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
+	fn generate_dcap_ra_extrinsic_from_quote(
+		&self,
+		url: String,
+		quote: &[u8],
+	) -> EnclaveResult<Vec<u8>>;
+	fn generate_dcap_ra_quote(&self, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
 
 	fn generate_register_quoting_enclave_extrinsic(&self, fmspc: Fmspc) -> EnclaveResult<Vec<u8>>;
 
@@ -144,6 +150,60 @@ impl RemoteAttestation for Enclave {
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
 
 		Ok(unchecked_extrinsic)
+	}
+	fn generate_dcap_ra_extrinsic_from_quote(
+		&self,
+		url: String,
+		quote: &[u8],
+	) -> EnclaveResult<Vec<u8>> {
+		let mut retval = sgx_status_t::SGX_SUCCESS;
+		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
+		let url = url.encode();
+
+		let result = unsafe {
+			ffi::generate_dcap_ra_extrinsic_from_quote(
+				self.eid,
+				&mut retval,
+				url.as_ptr(),
+				url.len() as u32,
+				quote.as_ptr(),
+				quote.len() as u32,
+				unchecked_extrinsic.as_mut_ptr(),
+				unchecked_extrinsic.len() as u32,
+			)
+		};
+
+		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+
+		Ok(unchecked_extrinsic.to_vec())
+	}
+
+	fn generate_dcap_ra_quote(&self, skip_ra: bool) -> EnclaveResult<Vec<u8>> {
+		let mut retval = sgx_status_t::SGX_SUCCESS;
+		let quoting_enclave_target_info = self.qe_get_target_info()?;
+		let quote_size = self.qe_get_quote_size()?;
+
+		let mut dcap_quote_vec: Vec<u8> = vec![0; quote_size as usize];
+		let (dcap_quote_p, dcap_quote_size) =
+			(dcap_quote_vec.as_mut_ptr(), dcap_quote_vec.len() as u32);
+
+		let result = unsafe {
+			ffi::generate_dcap_ra_quote(
+				self.eid,
+				&mut retval,
+				skip_ra.into(),
+				&quoting_enclave_target_info,
+				quote_size,
+				dcap_quote_p,
+				dcap_quote_size,
+			)
+		};
+
+		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+
+		Ok(dcap_quote_vec)
 	}
 
 	fn generate_dcap_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>> {
@@ -587,7 +647,32 @@ impl TlsRemoteAttestation for Enclave {
 }
 
 fn create_system_path(file_name: &str) -> String {
-	format!("{}{}{}", OS_SYSTEM_PATH, file_name, C_STRING_ENDING)
+	info!("create_system_path:: file_name={}", &file_name);
+	let default_path = format!("{}{}", OS_SYSTEM_PATH, file_name);
+
+	let full_path = find_library_by_name(file_name).unwrap_or(default_path);
+
+	let c_terminated_path = format!("{}{}", full_path, C_STRING_ENDING);
+	info!("create_system_path:: created path={}", &c_terminated_path);
+	c_terminated_path
+}
+fn find_library_by_name(lib_name: &str) -> Option<String> {
+	use std::process::Command;
+	// ldconfig -p | grep libsgx_pce_logic.so.1
+
+	let ldconfig_output = Command::new("ldconfig").args(["-p"]).output().ok()?;
+	let possible_path = String::from_utf8(ldconfig_output.stdout)
+		.ok()?
+		.lines()
+		.filter(|line| line.contains(lib_name))
+		.map(|lib_name_and_path| {
+			lib_name_and_path
+				.rsplit_once("=>")
+				.map(|(_, lib_path)| lib_path.trim().to_owned())
+		})
+		.next()?;
+
+	possible_path
 }
 
 fn set_ql_path(path_type: sgx_ql_path_type_t, path: &str) -> EnclaveResult<()> {

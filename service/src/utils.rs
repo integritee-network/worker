@@ -19,8 +19,7 @@
 use base58::{FromBase58, ToBase58};
 use itp_enclave_api::enclave_base::EnclaveBase;
 use itp_types::ShardIdentifier;
-use log::{debug, info};
-use std::path::Path;
+use log::info;
 
 pub fn extract_shard<E: EnclaveBase>(
 	maybe_shard_str: &Option<String>,
@@ -41,8 +40,11 @@ pub fn extract_shard<E: EnclaveBase>(
 	}
 }
 
+#[cfg(not(feature = "dcap"))]
 pub fn check_files() {
 	use itp_settings::files::{ENCLAVE_FILE, RA_API_KEY_FILE, RA_SPID_FILE};
+	use log::debug;
+	use std::path::Path;
 	debug!("*** Check files");
 	let files = [ENCLAVE_FILE, RA_SPID_FILE, RA_API_KEY_FILE];
 	for f in files.iter() {

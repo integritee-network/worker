@@ -17,7 +17,7 @@
 
 ### Builder Stage
 ##################################################
-FROM integritee/integritee-dev:0.1.11 AS builder
+FROM integritee/integritee-dev:0.1.12 AS builder
 LABEL maintainer="zoltan@integritee.network"
 
 # set environment variables
@@ -49,7 +49,7 @@ RUN cargo test --release
 # A builder stage that uses sccache to speed up local builds with docker
 # Installation and setup of sccache should be moved to the integritee-dev image, so we don't
 # always need to compile and install sccache on CI (where we have no caching so far).
-FROM integritee/integritee-dev:0.1.11 AS cached-builder
+FROM integritee/integritee-dev:0.1.12 AS cached-builder
 LABEL maintainer="zoltan@integritee.network"
 
 # set environment variables
@@ -83,9 +83,7 @@ RUN --mount=type=cache,id=cargo,target=/root/work/.cache/sccache cargo test --re
 ##################################################
 FROM ubuntu:20.04 AS runner
 
-RUN apt update && apt install -y libssl-dev iproute2
-
-COPY --from=powerman/dockerize /usr/local/bin/dockerize /usr/local/bin/dockerize
+RUN apt update && apt install -y libssl-dev iproute2 curl
 
 
 ### Deployed CLI client
@@ -123,7 +121,8 @@ WORKDIR /usr/local/bin
 
 COPY --from=builder /opt/sgxsdk/lib64 /opt/sgxsdk/lib64
 COPY --from=builder /root/work/worker/bin/* ./
-COPY --from=builder /lib/x86_64-linux-gnu /lib/x86_64-linux-gnu
+COPY --from=builder /lib/x86_64-linux-gnu/libsgx* /lib/x86_64-linux-gnu/
+COPY --from=builder /lib/x86_64-linux-gnu/libdcap* /lib/x86_64-linux-gnu/
 
 RUN touch spid.txt key.txt
 RUN chmod +x /usr/local/bin/integritee-service
