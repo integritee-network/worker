@@ -272,7 +272,7 @@ pub fn generate_dcap_ra_extrinsic_from_quote_internal(
 ) -> EnclaveResult<OpaqueExtrinsic> {
 	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
 	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain()?;
-	info!("    [Enclave] Compose register enclave gettings callIDs:");
+	info!("    [Enclave] Compose register enclave getting callIDs:");
 
 	let call_ids = node_metadata_repo
 		.get_from_metadata(|m| m.register_dcap_enclave_call_indexes())?
