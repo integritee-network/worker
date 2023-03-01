@@ -30,6 +30,9 @@ use itp_stf_primitives::types::KeyPair;
 use log::{debug, info};
 use sp_core::{Pair, H256};
 
+
+use core::hash::Hasher;
+
 use codec;
 
 #[derive(Parser)]
@@ -37,7 +40,7 @@ pub struct VerifyMerkleProofCommand {
 	merkle_root: String,
 	merkle_proof: String,
 	orders_encoded_len: usize,
-	leaf_index: u32,
+	leaf_index: usize,
 	leaf: String,
 }
 
@@ -45,34 +48,34 @@ impl VerifyMerkleProofCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
 		println!(
 			"Result: {:?}",
-			verify_merkle_proof(
+			verify_merkle_proof::<H>(
 				cli,
 				trusted_args,
 				&self.merkle_root,
 				&self.merkle_proof,
 				&self.orders_encoded_len,
 				self.leaf_index,
-				&self.leaf
+				self.leaf.as_bytes(),
 			)
 		);
 	}
 }
 
-pub(crate) fn verify_merkle_proof(
+pub(crate) fn verify_merkle_proof<'a, H>(
 	cli: &Cli,
 	trusted_args: &TrustedCli,
 	merkle_root: &str,
 	merkle_proof: &str,
 	orders_encoded_len: &usize,
-	leaf_index: u32,
-	leaf: &str,
+	leaf_index: usize,
+	leaf: &[u8],
 ) -> Option<bool> {
-	let res = verify_proof(
-		merkle_root,
+	let res = verify_proof::<Sha256Hasher, _, _>(
+		&hex::decode(merkle_root).unwrap(),
 		merkle_proof.chars(),
 		*orders_encoded_len,
 		leaf_index.try_into().unwrap(),
-		leaf,
+		leaf.into(),
 	);
 
 	info!("{}", res);
