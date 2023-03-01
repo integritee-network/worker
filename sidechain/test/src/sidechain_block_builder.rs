@@ -51,9 +51,9 @@ impl Default for SidechainBlockBuilder {
 pub trait SidechainBlockBuilderTrait {
 	type Block: BlockT;
 	fn random() -> Self;
-	fn with_header(&mut self, header: Header) -> Self;
-	fn with_block_data(&mut self, block_data: BlockData) -> Self;
-	fn with_signer(&mut self, signer: ed25519::Pair) -> Self;
+	fn with_header(self, header: Header) -> Self;
+	fn with_block_data(self, block_data: BlockData) -> Self;
+	fn with_signer(self, signer: ed25519::Pair) -> Self;
 	fn build(&self) -> Self::Block;
 	fn build_signed(&self) -> SignedBlock;
 }
@@ -68,19 +68,22 @@ impl SidechainBlockBuilderTrait for SidechainBlockBuilder {
 		}
 	}
 
-	fn with_header(&mut self, header: Header) -> Self {
-		self.header = header;
-		self.clone()
+	fn with_header(self, header: Header) -> Self {
+		let mut self_mut = self;
+		self_mut.header = header;
+		self_mut
 	}
 
-	fn with_block_data(&mut self, block_data: BlockData) -> Self {
-		self.block_data = block_data;
-		self.clone()
+	fn with_block_data(self, block_data: BlockData) -> Self {
+		let mut self_mut = self;
+		self_mut.block_data = block_data;
+		self_mut
 	}
 
-	fn with_signer(&mut self, signer: ed25519::Pair) -> Self {
-		self.signer = signer;
-		self.clone()
+	fn with_signer(self, signer: ed25519::Pair) -> Self {
+		let mut self_mut = self;
+		self_mut.signer = signer;
+		self_mut
 	}
 
 	fn build(&self) -> Self::Block {
