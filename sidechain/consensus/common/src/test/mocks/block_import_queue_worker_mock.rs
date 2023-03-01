@@ -164,7 +164,7 @@ mod tests {
 
 	#[test]
 	fn process_sequential_queue_with_forks() {
-		// Construct a queue which is sequential and every odd member has 3 block numbers which are the same
+		// Construct a queue which is sequential and every odd member has 2 block numbers which are the same
 		let mut queue = <BlockQueueBuilder<Block, SidechainBlockBuilder>>::new().build_queue(|mut queue| {
 			for i in 1..8 {
 				let parent_header = queue.back().unwrap().header();
