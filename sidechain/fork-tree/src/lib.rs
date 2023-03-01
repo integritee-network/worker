@@ -165,12 +165,8 @@ where
 
 		let (children, is_root) =
 			match self.find_node_where_mut(&hash, &number, is_descendent_of, &|_| true)? {
-				Some(parent) => {
-					(&mut parent.children, false)
-				},
-				None => {
-					(&mut self.roots, true)
-				},
+				Some(parent) => (&mut parent.children, false),
+				None => (&mut self.roots, true),
 			};
 
 		if children.iter().any(|elem| elem.hash == hash) {
