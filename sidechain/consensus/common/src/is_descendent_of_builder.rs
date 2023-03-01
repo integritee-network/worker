@@ -27,8 +27,8 @@ where
 	Hash: PartialEq + HashT + Default + Into<H256> + From<H256> + Clone,
 	HeaderDb: HeaderDbTrait,
 {
-    /// Build the `is_descendent_of` closure for the fork-tree structure
-    /// to utilize when adding and removing nodes from the tree.
+	/// Build the `is_descendent_of` closure for the fork-tree structure
+	/// to utilize when adding and removing nodes from the tree.
 	#[allow(dead_code)]
 	pub fn build_is_descendent_of(
 		current: Option<(&'a Hash, &'a Hash)>,
@@ -70,7 +70,7 @@ where
 	Hash: PartialEq + Default + Into<H256> + From<H256> + Clone,
 	HeaderDb: HeaderDbTrait,
 {
-    /// Used by the `build_is_descendent_of` to find the LCA of two nodes in the fork-tree.
+	/// Used by the `build_is_descendent_of` to find the LCA of two nodes in the fork-tree.
 	#[allow(dead_code)]
 	fn find_lowest_common_ancestor(a: &Hash, b: &Hash, header_db: &HeaderDb) -> Result<Hash, ()> {
 		let header_1 = header_db.header(&a.clone().into()).ok_or(())?;
