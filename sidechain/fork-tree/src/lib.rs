@@ -102,6 +102,12 @@ pub struct ForkTree<H, N, V> {
 	best_finalized_number: Option<N>,
 }
 
+impl<H, N, V> Default for ForkTree<H, N, V> {
+	fn default() -> ForkTree<H, N, V> {
+		ForkTree { roots: Vec::new(), best_finalized_number: None }
+	}
+}
+
 impl<H, N, V> ForkTree<H, N, V>
 where
 	H: PartialEq,
@@ -157,16 +163,12 @@ where
 			}
 		}
 
-		// println!("Hey I am here!!");
-
 		let (children, is_root) =
 			match self.find_node_where_mut(&hash, &number, is_descendent_of, &|_| true)? {
 				Some(parent) => {
-					// println!("Hello parent::{:?}", parent.hash);
 					(&mut parent.children, false)
 				},
 				None => {
-					// println!("Hello NONE");
 					(&mut self.roots, true)
 				},
 			};
