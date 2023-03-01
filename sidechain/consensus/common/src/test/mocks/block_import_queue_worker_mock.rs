@@ -81,12 +81,11 @@ mod tests {
 			queue
 		});
 
-		// printing queue to view
-		queue.iter().for_each(|block| println!("queue item is {:?}", block));
 		// TODO: Add blocks to the fork-tree and assert that everything is correct
 		//
 		// H1 - H2 - H3 - H4 - H5
 		//
+		todo!();
 		println!("Process Sequential Queue With No Forks");
 	}
 
