@@ -228,6 +228,7 @@ mod tests {
 	use itp_types::Block as ParentchainBlock;
 	use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 	use its_test::sidechain_block_builder::SidechainBlockBuilder;
+	use its_test::sidechain_block_builder::SidechainBlockBuilderTrait;
 
 	type TestBlockImport = BlockImportMock<ParentchainBlock, SignedSidechainBlock>;
 	type TestOCallApi = SidechainOCallApiMock<SignedSidechainBlock>;

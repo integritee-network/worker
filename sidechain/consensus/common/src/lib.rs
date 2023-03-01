@@ -37,6 +37,7 @@ mod block_import_confirmation_handler;
 mod block_import_queue_worker;
 mod error;
 mod peer_block_sync;
+mod is_descendent_of_builder;
 
 #[cfg(test)]
 mod test;
