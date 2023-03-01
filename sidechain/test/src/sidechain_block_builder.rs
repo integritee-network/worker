@@ -23,7 +23,7 @@ use crate::{
 	sidechain_header_builder::SidechainHeaderBuilder,
 };
 use its_primitives::{
-	traits::{SignBlock, Block as BlockT},
+	traits::{Block as BlockT, SignBlock},
 	types::{block_data::BlockData, header::SidechainHeader as Header, Block, SignedBlock},
 };
 use sp_core::{ed25519, Pair};

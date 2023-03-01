@@ -97,10 +97,7 @@ mod tests {
 	};
 	use its_primitives::types::block::SignedBlock;
 	use its_storage::fetch_blocks_mock::FetchBlocksMock;
-	use its_test::{
-		sidechain_block_builder::SidechainBlockBuilder,
-		sidechain_block_builder::SidechainBlockBuilderTrait,
-	};
+	use its_test::sidechain_block_builder::{SidechainBlockBuilder, SidechainBlockBuilderTrait};
 	use jsonrpsee::ws_server::WsServerBuilder;
 	use std::{net::SocketAddr, sync::Arc};
 

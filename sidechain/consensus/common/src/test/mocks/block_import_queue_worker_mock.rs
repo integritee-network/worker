@@ -5,6 +5,7 @@ use crate::{
     Result,
     BlockImportQueueWorker, 
     SyncBlockFromPeer,
+	IsDescendentOfBuilder,
 };
 use its_test::{
 	sidechain_block_builder::SidechainBlockBuilderTrait,

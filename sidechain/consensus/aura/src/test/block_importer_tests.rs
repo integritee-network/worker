@@ -37,8 +37,7 @@ use its_primitives::{
 };
 use its_state::StateUpdate;
 use its_test::{
-	sidechain_block_builder::SidechainBlockBuilder,
-	sidechain_block_builder::SidechainBlockBuilderTrait,
+	sidechain_block_builder::{SidechainBlockBuilder, SidechainBlockBuilderTrait},
 	sidechain_block_data_builder::SidechainBlockDataBuilder,
 	sidechain_header_builder::SidechainHeaderBuilder,
 };
