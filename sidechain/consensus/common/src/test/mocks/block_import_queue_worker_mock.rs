@@ -47,6 +47,11 @@ where
 		}
 	}
 
+	///
+	/// Allows definining a mock queue based on and assumes that a genesis block
+	/// will need to be appended to the queue
+	/// Returns: BuiltQueue
+	/// 
 	fn build_queue(&mut self, f: impl Fn(VecDeque<B>) -> VecDeque<B>) -> VecDeque<B> {
 		self.add_genesis_block_to_queue();
 		f(self.queue.clone())
@@ -65,6 +70,9 @@ where
 
 pub trait BlockQueueHeaderBuild<BlockNumber, Hash> {
 	type QueueHeader;
+	///
+	/// Helper trait to build a Header for a BlockQueue
+	/// 
 	fn build_queue_header(block_number: BlockNumber, parent_hash: Hash) -> Self::QueueHeader;
 }
 pub struct BlockQueueHeaderBuilder<BlockNumber, Hash>(PhantomData<(BlockNumber, Hash)>);
