@@ -89,6 +89,7 @@ where
 
 pub trait BlockQueueHeaderBuild<BlockNumber, Hash> {
 	type QueueHeader;
+	/// Helper trait to build a Header for a BlockQueue.
 	fn build_queue_header(block_number: BlockNumber, parent_hash: Hash) -> Self::QueueHeader;
 }
 
