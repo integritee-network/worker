@@ -1,35 +1,129 @@
-#[cfg(test)]
-use std::marker::PhantomData;
+/*
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
 
-#[cfg(test)]
-pub struct IsDescendentOfBuilder<Hash>(PhantomData<Hash>);
-#[cfg(test)]
-impl<'a, Hash: PartialEq> IsDescendentOfBuilder<Hash> {
-	#[cfg(test)]
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+
+		http://www.apache.org/licenses/LICENSE-2.0
+
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+
+*/
+use crate::header_db::HeaderDbTrait;
+use itp_types::H256;
+use its_primitives::traits::Header as HeaderT;
+use std::{hash::Hash as HashT, marker::PhantomData};
+
+#[allow(dead_code)]
+pub struct IsDescendentOfBuilder<Hash, HeaderDb, Error>(PhantomData<(Hash, HeaderDb, Error)>);
+impl<'a, Hash, HeaderDb, Error> IsDescendentOfBuilder<Hash, HeaderDb, Error>
+where
+	Error: From<()>,
+	Hash: PartialEq + HashT + Default + Into<H256> + From<H256> + Clone,
+	HeaderDb: HeaderDbTrait,
+{
+	#[allow(dead_code)]
 	/// Build the `is_descendent_of` closure for the fork-tree structure
 	/// to utilize when adding and removing nodes from the tree.
 	pub fn build_is_descendent_of(
-		_curr_block: Option<(&Hash, &Hash)>,
-	) -> impl Fn(&Hash, &Hash) -> Result<bool, ()> + 'a {
-		move |_base, _head| Ok(true)
+		current: Option<(&'a Hash, &'a Hash)>,
+		header_db: &'a HeaderDb,
+	) -> impl Fn(&Hash, &Hash) -> Result<bool, Error> + 'a {
+		move |base, head| {
+			if base == head {
+				return Ok(false)
+			}
+
+			let mut head = head;
+			if let Some((current_hash, current_parent_hash)) = current {
+				if current_hash == base {
+					return Ok(false)
+				}
+
+				if current_hash == head {
+					if current_parent_hash == base {
+						return Ok(true)
+					} else {
+						head = current_parent_hash;
+					}
+				}
+			}
+
+			let ancestor =
+				<LowestCommonAncestorFinder<Hash, HeaderDb>>::find_lowest_common_ancestor(
+					head, base, header_db,
+				)?;
+			Ok(ancestor == *base)
+		}
 	}
 }
 
-#[cfg(test)]
-pub struct LowestCommonAncestorFinder<Hash>(PhantomData<Hash>);
-#[cfg(test)]
-impl<Hash: PartialEq + Default> LowestCommonAncestorFinder<Hash> {
-	#[cfg(test)]
+#[allow(dead_code)]
+pub struct LowestCommonAncestorFinder<Hash, HeaderDb>(PhantomData<(Hash, HeaderDb)>);
+impl<Hash, HeaderDb> LowestCommonAncestorFinder<Hash, HeaderDb>
+where
+	Hash: PartialEq + Default + Into<H256> + From<H256> + Clone,
+	HeaderDb: HeaderDbTrait,
+{
+	#[allow(dead_code)]
 	/// Used by the `build_is_descendent_of` to find the LCA of two nodes in the fork-tree.
-	pub fn find_lowest_common_ancestor(_a: Hash, _b: Hash) -> Hash {
-		Default::default()
-	}
-}
+	fn find_lowest_common_ancestor(a: &Hash, b: &Hash, header_db: &HeaderDb) -> Result<Hash, ()> {
+		let header_1 = header_db.header(&a.clone().into()).ok_or(())?;
+		let header_2 = header_db.header(&b.clone().into()).ok_or(())?;
+		let mut blocknum_1 = header_1.block_number();
+		let mut blocknum_2 = header_2.block_number();
+		let mut parent_1 = Hash::from(header_1.parent_hash());
+		let mut parent_2 = Hash::from(header_2.parent_hash());
 
-#[cfg(test)]
-#[test]
-fn test_build_is_descendent_of_works() {
-	let is_descendent_of = <IsDescendentOfBuilder<u64>>::build_is_descendent_of(None);
-	let my_result = is_descendent_of(&42u64, &42u64);
-	assert_eq!(my_result, Ok(true));
+		if *a == parent_2 {
+			// Then a is the common ancestor of b and it means it is itself the ancestor
+			return Ok(parent_2)
+		}
+
+		if *b == parent_1 {
+			// Then b is the common ancestor of a and it means it is itself the ancestor
+			return Ok(parent_1)
+		}
+
+		while blocknum_1 > blocknum_2 {
+			// This means block 1 is further down in the tree than block 2
+			let new_parent = header_db.header(&parent_1.clone().into()).ok_or(())?;
+
+			if new_parent.block_number() >= blocknum_2 {
+				blocknum_1 = new_parent.block_number();
+				parent_1 = Hash::from(new_parent.parent_hash());
+			} else {
+				break
+			}
+		}
+
+		while blocknum_2 > blocknum_1 {
+			// This means block 2 is further down in the tree than block 1
+			let new_parent = header_db.header(&parent_2.clone().into()).ok_or(())?;
+
+			if new_parent.block_number() >= blocknum_1 {
+				blocknum_2 = new_parent.block_number();
+				parent_2 = Hash::from(new_parent.parent_hash());
+			} else {
+				break
+			}
+		}
+
+		// At this point will be at equal height
+		while parent_1 != parent_2 {
+			// go up on both nodes
+			let new_header_1 = header_db.header(&parent_1.into()).ok_or(())?;
+			let new_header_2 = header_db.header(&parent_2.into()).ok_or(())?;
+			parent_1 = Hash::from(new_header_1.parent_hash());
+			parent_2 = Hash::from(new_header_2.parent_hash());
+		}
+
+		// Return any Parent node Hash as in worst case scenario it is the root which is shared amongst all
+		Ok(parent_1)
+	}
 }
