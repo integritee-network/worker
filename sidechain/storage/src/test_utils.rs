@@ -21,6 +21,7 @@ use itp_types::ShardIdentifier;
 use its_primitives::types::{BlockHash, SignedBlock as SignedSidechainBlock};
 use its_test::{
 	sidechain_block_builder::SidechainBlockBuilder,
+	sidechain_block_builder::SidechainBlockBuilderTrait,
 	sidechain_block_data_builder::SidechainBlockDataBuilder,
 	sidechain_header_builder::SidechainHeaderBuilder,
 };

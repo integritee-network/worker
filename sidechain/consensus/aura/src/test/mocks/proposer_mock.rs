@@ -21,6 +21,7 @@ use its_consensus_common::{Proposal, Proposer};
 use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use its_test::{
 	sidechain_block_builder::SidechainBlockBuilder,
+	sidechain_block_builder::SidechainBlockBuilderTrait,
 	sidechain_block_data_builder::SidechainBlockDataBuilder,
 };
 use std::time::Duration;

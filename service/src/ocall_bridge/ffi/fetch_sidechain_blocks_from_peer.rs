@@ -108,7 +108,10 @@ mod tests {
 	use crate::ocall_bridge::test::mocks::sidechain_bridge_mock::SidechainBridgeMock;
 	use codec::{Decode, Encode};
 	use its_primitives::types::block::SignedBlock;
-	use its_test::sidechain_block_builder::SidechainBlockBuilder;
+	use its_test::{
+		sidechain_block_builder::SidechainBlockBuilder,
+		sidechain_block_builder::SidechainBlockBuilderTrait,
+	};
 	use primitive_types::H256;
 
 	#[test]

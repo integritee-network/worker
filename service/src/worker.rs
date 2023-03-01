@@ -188,7 +188,10 @@ mod tests {
 	use frame_support::assert_ok;
 	use itp_node_api::node_api_factory::NodeApiFactory;
 	use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
-	use its_test::sidechain_block_builder::SidechainBlockBuilder;
+	use its_test::{
+		sidechain_block_builder::SidechainBlockBuilder,
+		sidechain_block_builder::SidechainBlockBuilderTrait,
+	};
 	use jsonrpsee::{ws_server::WsServerBuilder, RpcModule};
 	use log::debug;
 	use sp_keyring::AccountKeyring;
