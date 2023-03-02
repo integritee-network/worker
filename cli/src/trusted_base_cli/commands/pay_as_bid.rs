@@ -25,8 +25,7 @@ use crate::{
 use codec::Decode;
 use ita_stf::{Index, TrustedCall, TrustedGetter, TrustedOperation};
 use itp_stf_primitives::types::KeyPair;
-use itp_types::H256;
-use log::{debug, info};
+use log::debug;
 use sp_core::Pair;
 
 #[derive(Parser)]

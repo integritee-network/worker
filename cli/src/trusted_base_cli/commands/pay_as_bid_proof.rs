@@ -16,18 +16,14 @@
 */
 
 use crate::{
-	get_layer_two_nonce,
-	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_identifiers, get_pair_from_str},
-	trusted_operation::perform_trusted_operation,
-	Cli,
+	trusted_cli::TrustedCli, trusted_command_utils::get_pair_from_str,
+	trusted_operation::perform_trusted_operation, Cli,
 };
 
-use codec::{Decode, Encode};
-use ita_stf::{Index, MerkleProofWithCodec, TrustedCall, TrustedGetter, TrustedOperation};
+use codec::Decode;
+use ita_stf::{MerkleProofWithCodec, TrustedGetter, TrustedOperation};
 use itp_stf_primitives::types::KeyPair;
 use log::{debug, info};
-use simplyr_lib::Order;
 use sp_core::{Pair, H256};
 
 use codec;

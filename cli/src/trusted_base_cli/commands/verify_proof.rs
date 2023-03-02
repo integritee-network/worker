@@ -15,25 +15,9 @@
 
 */
 
-use crate::{
-	get_layer_two_nonce,
-	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_identifiers, get_pair_from_str},
-	trusted_operation::perform_trusted_operation,
-	Cli,
-};
-
+use crate::{trusted_cli::TrustedCli, Cli};
 use binary_merkle_tree::verify_proof;
-use codec::{Decode, Encode};
-use ita_stf::{Index, TrustedCall, TrustedGetter, TrustedOperation};
-use itp_stf_primitives::types::KeyPair;
-use log::{debug, info};
-use sp_core::{Pair, H256};
-
-
-use core::hash::Hasher;
-
-use codec;
+use sp_runtime::traits::Keccak256;
 
 #[derive(Parser)]
 pub struct VerifyMerkleProofCommand {
