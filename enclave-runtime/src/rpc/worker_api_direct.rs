@@ -15,6 +15,7 @@
 
 */
 
+use crate::attestation::generate_dcap_ra_extrinsic_from_quote_internal;
 use codec::Encode;
 use core::result::Result;
 use ita_sgx_runtime::Runtime;
@@ -28,6 +29,7 @@ use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use its_primitives::types::block::SignedBlock;
 use its_sidechain::rpc_handler::{direct_top_pool_api, import_block_api};
 use jsonrpc_core::{serde_json::json, IoHandler, Params, Value};
+use sp_runtime::OpaqueExtrinsic;
 use std::{borrow::ToOwned, format, str, string::String, sync::Arc, vec::Vec};
 
 fn compute_hex_encoded_return_error(error_msg: &str) -> String {
@@ -143,6 +145,22 @@ where
 		Ok(json!(json_value))
 	});
 
+	// attesteer_forward_dcap_quote
+	let attesteer_forward_dcap_quote: &str = "attesteer_forward_dcap_quote";
+	io.add_sync_method(attesteer_forward_dcap_quote, move |params: Params| {
+		let json_value = match forward_dcap_quote_inner(params) {
+			Ok(val) => RpcReturnValue {
+				do_watch: false,
+				value: val.encode(),
+				status: DirectRequestStatus::Ok,
+			}
+			.to_hex(),
+			Err(error) => compute_hex_encoded_return_error(error.as_str()),
+		};
+
+		Ok(json!(json_value))
+	});
+
 	// system_health
 	let state_health_name: &str = "system_health";
 	io.add_sync_method(state_health_name, |_: Params| {
@@ -190,6 +208,22 @@ fn execute_getter_inner<G: ExecuteGetter>(
 		.map_err(|e| format!("{:?}", e))?;
 
 	Ok(getter_result)
+}
+
+fn forward_dcap_quote_inner(params: Params) -> Result<OpaqueExtrinsic, String> {
+	let hex_encoded_params = params.parse::<Vec<String>>().map_err(|e| format!("{:?}", e))?;
+
+	let request =
+		Request::from_hex(&hex_encoded_params[0].clone()).map_err(|e| format!("{:?}", e))?;
+
+	let shard: ShardIdentifier = request.shard;
+	let encoded_quote_to_forward: Vec<u8> = request.cyphertext;
+
+	let url = String::new();
+	let ext = generate_dcap_ra_extrinsic_from_quote_internal(url, &encoded_quote_to_forward)
+		.map_err(|e| format!("{:?}", e))?;
+
+	Ok(ext)
 }
 
 pub fn sidechain_io_handler<ImportFn, Error>(import_fn: ImportFn) -> IoHandler
