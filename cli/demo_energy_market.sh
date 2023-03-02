@@ -79,8 +79,6 @@ echo "Proof: ${PROOF}"
 echo "* Verifying merkle proof"
 RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} verify-proof ${PROOF}`
 
-echo "Result ${RESULT}"
-
 if [ "${RESULT}" = true ]; then
     echo "Merkle proof is correct"
     echo ""
