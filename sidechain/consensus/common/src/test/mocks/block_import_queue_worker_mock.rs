@@ -112,6 +112,25 @@ where
 	}
 }
 
+#[derive(Debug)]
+pub enum TestError {
+	Error,
+}
+
+impl From<()> for TestError {
+	fn from(_a: ()) -> Self {
+		TestError::Error
+	}
+}
+
+impl std::fmt::Display for TestError {
+	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+		write!(f, "TestError")
+	}
+}
+
+impl std::error::Error for TestError {}
+
 mod tests {
 	use super::*;
 
