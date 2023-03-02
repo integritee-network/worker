@@ -73,6 +73,7 @@ echo "* Getting merkle proof for orders"
 PROOF=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct pay-as-bid-proof //Alice ${ORDERS_FILE} 1`
 echo "Proof: ${PROOF}"
 
+echo "* Verifying merkle proof"
 RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} verify-proof ${PROOF}`
 
 echo "Result ${RESULT}"
