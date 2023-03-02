@@ -6,11 +6,13 @@
       "--dev",
       "-lruntime=info",
       "--ws-port",
-      "9990",
+      "9944",
       "--port",
       "30390",
       "--rpc-port",
-      "8990"
+      "9933",
+      "--ws-external",
+      "--rpc-external"
     ]
   },
   "workers": [
@@ -19,40 +21,20 @@
       "flags": [
         "--clean-reset",
         "-P",
-        "2090",
+        "2000",
         "-p",
-        "9990",
+        "9944",
         "-r",
         "3490",
         "-w",
-        "2091",
+        "2001",
         "-h",
-        "4545"
+        "4545",
+        "--ws-external"
       ],
       "subcommand_flags": [
         "--skip-ra",
         "--dev"
-      ]
-    },
-    {
-      "source": "bin",
-      "flags": [
-        "--clean-reset",
-        "-P",
-        "3090",
-        "-p",
-        "9990",
-        "-r",
-        "3590",
-        "-w",
-        "3091",
-        "-h",
-        "4546"
-      ],
-      "subcommand_flags": [
-        "--skip-ra",
-        "--dev",
-        "--request-state"
       ]
     }
   ]
