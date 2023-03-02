@@ -1,6 +1,12 @@
 #!/bin/bash
 
-# Executes a direct call on a worker and checks the balance afterwards.
+# Creates a merkle-root of a set of orders and verifies the proof afterwards.
+#
+# Note this script is the basis for a full fledget demo of the energy market.
+# Things that are missing:
+#   * Perform the pay as bid operation
+#   * Check the merkle root hash on chain
+#
 #
 # setup:
 # run all on localhost:
@@ -14,10 +20,7 @@
 # then run this script
 
 # usage:
-#  demo_direct_call.sh -p <NODEPORT> -P <WORKERPORT> -t <TEST_BALANCE_RUN> -m file
-#
-# TEST_BALANCE_RUN is either "first" or "second"
-# if -m file is set, the mrenclave will be read from file
+#  demo_energy_market.sh -p <NODEPORT> -P <WORKERPORT> -t -O <path-to-order-file>
 
 while getopts ":m:p:P:t:u:V:C:O:" opt; do
     case $opt in
