@@ -235,7 +235,6 @@ fn forward_dcap_quote_inner(params: Params) -> Result<OpaqueExtrinsic, String> {
 	let request =
 		Request::from_hex(&hex_encoded_params[0].clone()).map_err(|e| format!("{:?}", e))?;
 
-	let shard: ShardIdentifier = request.shard;
 	let encoded_quote_to_forward: Vec<u8> = request.cyphertext;
 
 	let url = String::new();
@@ -253,7 +252,6 @@ fn attesteer_forward_ias_attestation_report_inner(
 	let request =
 		Request::from_hex(&hex_encoded_params[0].clone()).map_err(|e| format!("{:?}", e))?;
 
-	let shard: ShardIdentifier = request.shard;
 	let ias_attestation_report: Vec<u8> = request.cyphertext;
 
 	let url = String::new();
