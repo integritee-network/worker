@@ -15,7 +15,10 @@
 
 */
 
-use crate::attestation::generate_dcap_ra_extrinsic_from_quote_internal;
+use crate::attestation::{
+	generate_dcap_ra_extrinsic_from_quote_internal,
+	generate_ias_ra_extrinsic_from_der_cert_internal,
+};
 use codec::Encode;
 use core::result::Result;
 use ita_sgx_runtime::Runtime;
@@ -161,6 +164,22 @@ where
 		Ok(json!(json_value))
 	});
 
+	// attesteer_forward_ias_attestation_report
+	let attesteer_forward_ias_attestation_report: &str = "attesteer_forward_ias_attestation_report";
+	io.add_sync_method(attesteer_forward_ias_attestation_report, move |params: Params| {
+		let json_value = match attesteer_forward_ias_attestation_report_inner(params) {
+			Ok(val) => RpcReturnValue {
+				do_watch: false,
+				value: val.encode(),
+				status: DirectRequestStatus::Ok,
+			}
+			.to_hex(),
+			Err(error) => compute_hex_encoded_return_error(error.as_str()),
+		};
+
+		Ok(json!(json_value))
+	});
+
 	// system_health
 	let state_health_name: &str = "system_health";
 	io.add_sync_method(state_health_name, |_: Params| {
@@ -221,6 +240,24 @@ fn forward_dcap_quote_inner(params: Params) -> Result<OpaqueExtrinsic, String> {
 
 	let url = String::new();
 	let ext = generate_dcap_ra_extrinsic_from_quote_internal(url, &encoded_quote_to_forward)
+		.map_err(|e| format!("{:?}", e))?;
+
+	Ok(ext)
+}
+
+fn attesteer_forward_ias_attestation_report_inner(
+	params: Params,
+) -> Result<OpaqueExtrinsic, String> {
+	let hex_encoded_params = params.parse::<Vec<String>>().map_err(|e| format!("{:?}", e))?;
+
+	let request =
+		Request::from_hex(&hex_encoded_params[0].clone()).map_err(|e| format!("{:?}", e))?;
+
+	let shard: ShardIdentifier = request.shard;
+	let ias_attestation_report: Vec<u8> = request.cyphertext;
+
+	let url = String::new();
+	let ext = generate_ias_ra_extrinsic_from_der_cert_internal(url, &ias_attestation_report)
 		.map_err(|e| format!("{:?}", e))?;
 
 	Ok(ext)

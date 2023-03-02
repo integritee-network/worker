@@ -307,6 +307,25 @@ fn generate_ias_ra_extrinsic_internal(
 	Ok(extrinsics[0].clone())
 }
 
+pub fn generate_ias_ra_extrinsic_from_der_cert_internal(
+	url: String,
+	cert_der: &[u8],
+) -> EnclaveResult<OpaqueExtrinsic> {
+	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
+	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain()?;
+
+	info!("    [Enclave] Compose register enclave call");
+	let call_ids = node_metadata_repo
+		.get_from_metadata(|m| m.register_ias_enclave_call_indexes())?
+		.map_err(MetadataProviderError::MetadataError)?;
+
+	let call = OpaqueCall::from_tuple(&(call_ids, cert_der, url));
+
+	let extrinsics = extrinsics_factory.create_extrinsics(&[call], None)?;
+
+	Ok(extrinsics[0].clone())
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn generate_register_quoting_enclave_extrinsic(
 	collateral: *const sgx_ql_qve_collateral_t,
