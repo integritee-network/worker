@@ -16,8 +16,9 @@
 */
 
 use crate::{trusted_cli::TrustedCli, Cli};
-use binary_merkle_tree::{verify_proof, MerkleProof};
+use binary_merkle_tree::verify_proof;
 use ita_stf::MerkleProofWithCodec;
+use log::info;
 use primitive_types::H256;
 use sp_runtime::traits::Keccak256;
 
@@ -28,10 +29,8 @@ pub struct VerifyMerkleProofCommand {
 
 impl VerifyMerkleProofCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
-		println!(
-			"Proof is valid: {:?}",
-			verify_merkle_proof(cli, trusted_args, &self.merkle_proof_json)
-		);
+		info!("Proof is valid:");
+		println!("{:?}", verify_merkle_proof(cli, trusted_args, &self.merkle_proof_json));
 	}
 }
 
@@ -40,10 +39,15 @@ pub(crate) fn verify_merkle_proof(
 	_trusted_args: &TrustedCli,
 	merkle_proof: &str,
 ) -> bool {
-	let proof: MerkleProofWithCodec<H256, Vec<u8>> =
-		serde_json::from_str(merkle_proof).expect("Could not parse merkle proof");
+	// Remove starting and trailing `"` and `\\\` in the string, which occur when we
+	// pass the proof in the bash script for whatever reason.
+	let proof_sanitized = merkle_proof.replace(r"\", "").trim_matches('\"').to_string();
+	info!("Sanitized input merkle proof: {}", &proof_sanitized);
 
-	println!("Proof: {:?}", proof);
+	let proof: MerkleProofWithCodec<H256, Vec<u8>> =
+		serde_json::from_str(&proof_sanitized).expect("Could not parse merkle proof");
+
+	info!("Proof: {:?}", proof);
 
 	verify_proof::<Keccak256, _, _>(
 		&proof.root,
