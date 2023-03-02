@@ -25,6 +25,7 @@ use itp_stf_interface::ExecuteGetter;
 use itp_stf_primitives::types::{AccountId, KeyPair, LeafIndex, OrdersFile, Signature};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
+use serde::{Deserialize, Serialize};
 use simplyr_lib::Order;
 use sp_runtime::traits::{Keccak256, Verify};
 use std::{format, fs, prelude::v1::*, time::Instant};
@@ -37,7 +38,7 @@ use sp_core::{H160, H256};
 
 /// Custom Merkle proof that implements codec
 /// The difference to the original one is that implements the scale-codec and that the fields contain u32 instead of usize.
-#[derive(Debug, PartialEq, Eq, Decode, Encode)]
+#[derive(Debug, PartialEq, Eq, Decode, Encode, Deserialize, Serialize)]
 pub struct MerkleProofWithCodec<H, L> {
 	/// Root hash of generated merkle tree.
 	pub root: H,

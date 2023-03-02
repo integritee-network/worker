@@ -40,7 +40,18 @@ impl PayAsBidProofCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
 		println!(
 			"Result: {:?}",
-			pay_as_bid_proof(cli, trusted_args, &self.account, &self.orders_file, self.leaf_index)
+			// if we serialize with serde-json we can easily just pass it as
+			// an argument in the verify-proof command.
+			serde_json::to_string(
+				&pay_as_bid_proof(
+					cli,
+					trusted_args,
+					&self.account,
+					&self.orders_file,
+					self.leaf_index
+				)
+				.unwrap()
+			)
 		);
 	}
 }

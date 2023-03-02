@@ -16,59 +16,43 @@
 */
 
 use crate::{trusted_cli::TrustedCli, Cli};
-use binary_merkle_tree::verify_proof;
+use binary_merkle_tree::{verify_proof, MerkleProof};
+use ita_stf::MerkleProofWithCodec;
+use primitive_types::H256;
 use sp_runtime::traits::Keccak256;
 
 #[derive(Parser)]
 pub struct VerifyMerkleProofCommand {
-	merkle_root: String,
-	merkle_proof: String,
-	orders_encoded_len: usize,
-	leaf_index: usize,
-	leaf: String,
+	merkle_proof_json: String,
 }
 
 impl VerifyMerkleProofCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
 		println!(
-			"Result: {:?}",
-			verify_merkle_proof::<H>(
-				cli,
-				trusted_args,
-				&self.merkle_root,
-				&self.merkle_proof,
-				&self.orders_encoded_len,
-				self.leaf_index,
-				self.leaf.as_bytes(),
-			)
+			"Proof is valid: {:?}",
+			verify_merkle_proof(cli, trusted_args, &self.merkle_proof_json)
 		);
 	}
 }
 
-pub(crate) fn verify_merkle_proof<'a, H>(
-	cli: &Cli,
-	trusted_args: &TrustedCli,
-	merkle_root: &str,
+pub(crate) fn verify_merkle_proof(
+	_cli: &Cli,
+	_trusted_args: &TrustedCli,
 	merkle_proof: &str,
-	orders_encoded_len: &usize,
-	leaf_index: usize,
-	leaf: &[u8],
-) -> Option<bool> {
-	let res = verify_proof::<Sha256Hasher, _, _>(
-		&hex::decode(merkle_root).unwrap(),
-		merkle_proof.chars(),
-		*orders_encoded_len,
-		leaf_index.try_into().unwrap(),
-		leaf.into(),
-	);
+) -> bool {
+	let proof: MerkleProofWithCodec<H256, Vec<u8>> =
+		serde_json::from_str(merkle_proof).expect("Could not parse merkle proof");
 
-	info!("{}", res);
+	println!("Proof: {:?}", proof);
 
-	match res {
-		Some(value) => Some(res),
-		None => {
-			info!("Proof not found");
-			None
-		},
-	}
+	verify_proof::<Keccak256, _, _>(
+		&proof.root,
+		proof.proof.clone(),
+		proof
+			.number_of_leaves
+			.try_into()
+			.expect("Target Architecture needs usize > 32bits "),
+		proof.leaf_index.try_into().expect("Target Architecture needs usize > 32bits "),
+		&proof.leaf,
+	)
 }
