@@ -177,15 +177,7 @@ pub fn generate_dcap_ra_extrinsic_internal(
 		skip_ra,
 	)?;
 
-	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain()?;
-
-	let call_ids = node_metadata_repo
-		.get_from_metadata(|m| m.register_dcap_enclave_call_indexes())?
-		.map_err(MetadataProviderError::MetadataError)?;
-	info!("    [Enclave] Compose register enclave call DCAP IDs: {:?}", call_ids);
-	let call = OpaqueCall::from_tuple(&(call_ids, dcap_quote, url));
-
-	create_extrinsics(call)
+	generate_dcap_ra_extrinsic_from_quote_internal(url, &dcap_quote)
 }
 
 #[no_mangle]
