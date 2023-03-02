@@ -290,21 +290,9 @@ fn generate_ias_ra_extrinsic_internal(
 	skip_ra: bool,
 ) -> EnclaveResult<OpaqueExtrinsic> {
 	let attestation_handler = GLOBAL_ATTESTATION_HANDLER_COMPONENT.get()?;
-	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
-	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain()?;
-
 	let cert_der = attestation_handler.generate_ias_ra_cert(skip_ra)?;
 
-	info!("    [Enclave] Compose register enclave call");
-	let call_ids = node_metadata_repo
-		.get_from_metadata(|m| m.register_ias_enclave_call_indexes())?
-		.map_err(MetadataProviderError::MetadataError)?;
-
-	let call = OpaqueCall::from_tuple(&(call_ids, cert_der, url));
-
-	let extrinsics = extrinsics_factory.create_extrinsics(&[call], None)?;
-
-	Ok(extrinsics[0].clone())
+	generate_ias_ra_extrinsic_from_der_cert_internal(url, &cert_der)
 }
 
 pub fn generate_ias_ra_extrinsic_from_der_cert_internal(
