@@ -40,7 +40,8 @@ pub(crate) fn verify_merkle_proof(
 	merkle_proof: &str,
 ) -> bool {
 	// Remove starting and trailing `"` and `\\\` in the string, which occur when we
-	// pass the proof in the bash script for whatever reason.
+	// pass the proof in the bash script for whatever reason. This is probably a hack,
+	// but I don't know bash well enough to fix it in the bash script.
 	let proof_sanitized = merkle_proof.replace(r"\", "").trim_matches('\"').to_string();
 	info!("Sanitized input merkle proof: {}", &proof_sanitized);
 
