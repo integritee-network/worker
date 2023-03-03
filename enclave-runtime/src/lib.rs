@@ -412,5 +412,5 @@ pub extern "C" fn __assert_fail(
 	__function: *const u8,
 ) -> ! {
 	use core::intrinsics::abort;
-	unsafe { abort() }
+	abort()
 }
