@@ -729,7 +729,7 @@ fn fetch_marblerun_events_every_hour<E>(
 {
 	let enclave = enclave.clone();
 	let handle = thread::spawn(move || {
-		const POLL_INTERVAL_1_HOUR_IN_SECS: u64 = 1 * 30;
+		const POLL_INTERVAL_5_MINUTES_IN_SECS: u64 = 5 * 60;
 		loop {
 			info!("Polling marblerun events for quotes to register");
 			register_quotes_from_marblerun(
@@ -741,7 +741,7 @@ fn fetch_marblerun_events_every_hour<E>(
 				marblerun_base_url.clone(),
 			);
 
-			thread::sleep(Duration::from_secs(POLL_INTERVAL_1_HOUR_IN_SECS));
+			thread::sleep(Duration::from_secs(POLL_INTERVAL_5_MINUTES_IN_SECS));
 		}
 	});
 
@@ -763,9 +763,11 @@ fn register_quotes_from_marblerun(
 
 	for quote in quotes {
 		match enclave.generate_dcap_ra_extrinsic_from_quote(url.clone(), &quote) {
-			Ok(xts) => send_extrinsic(&xts, api, accountid, is_development_mode),
+			Ok(xts) => {
+				send_extrinsic(&xts, api, accountid, is_development_mode);
+			},
 			Err(e) => {
-				error!("Extracting information from quote failed: {}", e.into())
+				error!("Extracting information from quote failed: {}", e)
 			},
 		}
 	}
