@@ -38,8 +38,8 @@ ifeq ($(SGX_DEBUG), 1)
 	OUTPUT_PATH := debug
 	CARGO_TARGET := 
 else
-	OUTPUT_PATH := debug
-	CARGO_TARGET := 
+	OUTPUT_PATH := release
+	CARGO_TARGET := --release
 endif
 
 ifeq ($(SGX_PRODUCTION), 1)
