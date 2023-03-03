@@ -60,9 +60,7 @@ endif
 endif
 
 ifeq ($(SGX_DEBUG), 1)
-	# we build with cargo --release, even in SGX DEBUG mode
 	SGX_COMMON_CFLAGS += -O0 -g -ggdb
-	# cargo sets this automatically, cannot use 'debug'
 	OUTPUT_PATH := debug
 	CARGO_TARGET :=
 else
