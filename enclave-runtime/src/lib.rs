@@ -403,6 +403,8 @@ fn internal_trigger_parentchain_block_import() -> Result<()> {
 	Ok(())
 }
 
+// This is required, because `ring` / `ring-xous` would not compile without it non-release (debug) mode.
+// See #1200 for more details.
 #[cfg(debug_assertions)]
 #[no_mangle]
 pub extern "C" fn __assert_fail(
