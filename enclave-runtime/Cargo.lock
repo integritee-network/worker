@@ -888,6 +888,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fork-tree"
+version = "3.0.0"
+dependencies = [
+ "parity-scale-codec",
+ "sgx_tstd",
+]
+
+[[package]]
 name = "fp-evm"
 version = "3.0.0-dev"
 source = "git+https://github.com/integritee-network/frontier.git?branch=polkadot-v0.9.37#a481e93c374fee030a43f6f045bb63f1a6c2f5c9"
@@ -2252,6 +2260,7 @@ dependencies = [
 name = "its-consensus-common"
 version = "0.9.0"
 dependencies = [
+ "fork-tree",
  "itc-parentchain-light-client",
  "itp-block-import-queue",
  "itp-extrinsics-factory",
