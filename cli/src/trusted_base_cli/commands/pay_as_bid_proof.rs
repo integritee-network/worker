@@ -16,18 +16,14 @@
 */
 
 use crate::{
-	get_layer_two_nonce,
-	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_identifiers, get_pair_from_str},
-	trusted_operation::perform_trusted_operation,
-	Cli,
+	trusted_cli::TrustedCli, trusted_command_utils::get_pair_from_str,
+	trusted_operation::perform_trusted_operation, Cli,
 };
 
-use codec::{Decode, Encode};
-use ita_stf::{Index, MerkleProofWithCodec, TrustedCall, TrustedGetter, TrustedOperation};
+use codec::Decode;
+use ita_stf::{MerkleProofWithCodec, TrustedGetter, TrustedOperation};
 use itp_stf_primitives::types::KeyPair;
-use log::{debug, info};
-use simplyr_lib::Order;
+use log::debug;
 use sp_core::{Pair, H256};
 
 use codec;
@@ -43,8 +39,17 @@ pub struct PayAsBidProofCommand {
 impl PayAsBidProofCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
 		println!(
-			"Result: {:?}",
-			pay_as_bid_proof(cli, trusted_args, &self.account, &self.orders_file, self.leaf_index)
+			"{:?}",
+			// if we serialize with serde-json we can easily just pass it as
+			// an argument in the verify-proof command.
+			serde_json::to_string(&pay_as_bid_proof(
+				cli,
+				trusted_args,
+				&self.account,
+				&self.orders_file,
+				self.leaf_index
+			))
+			.unwrap()
 		);
 	}
 }
@@ -55,7 +60,7 @@ pub(crate) fn pay_as_bid_proof(
 	arg_who: &str,
 	orders_file: &str,
 	leaf_index: u8,
-) -> Option<MerkleProofWithCodec<H256, Vec<u8>>> {
+) -> MerkleProofWithCodec<H256, Vec<u8>> {
 	debug!("arg_who = {:?}", arg_who);
 	let who = get_pair_from_str(trusted_args, arg_who);
 
@@ -70,11 +75,10 @@ pub(crate) fn pay_as_bid_proof(
 		Some(value) => {
 			let proof: MerkleProofWithCodec<_, _> =
 				MerkleProofWithCodec::decode(&mut &value[..]).unwrap();
-			Some(proof)
+			proof
 		},
 		None => {
-			info!("Proof not found");
-			None
+			panic!("Proof not found");
 		},
 	}
 }

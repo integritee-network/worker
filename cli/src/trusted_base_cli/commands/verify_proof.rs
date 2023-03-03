@@ -15,76 +15,49 @@
 
 */
 
-use crate::{
-	get_layer_two_nonce,
-	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_identifiers, get_pair_from_str},
-	trusted_operation::perform_trusted_operation,
-	Cli,
-};
-
+use crate::{trusted_cli::TrustedCli, Cli};
 use binary_merkle_tree::verify_proof;
-use codec::{Decode, Encode};
-use ita_stf::{Index, TrustedCall, TrustedGetter, TrustedOperation};
-use itp_stf_primitives::types::KeyPair;
-use log::{debug, info};
-use sp_core::{Pair, H256};
-
-
-use core::hash::Hasher;
-
-use codec;
+use ita_stf::MerkleProofWithCodec;
+use log::info;
+use primitive_types::H256;
+use sp_runtime::traits::Keccak256;
 
 #[derive(Parser)]
 pub struct VerifyMerkleProofCommand {
-	merkle_root: String,
-	merkle_proof: String,
-	orders_encoded_len: usize,
-	leaf_index: usize,
-	leaf: String,
+	merkle_proof_json: String,
 }
 
 impl VerifyMerkleProofCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
-		println!(
-			"Result: {:?}",
-			verify_merkle_proof::<H>(
-				cli,
-				trusted_args,
-				&self.merkle_root,
-				&self.merkle_proof,
-				&self.orders_encoded_len,
-				self.leaf_index,
-				self.leaf.as_bytes(),
-			)
-		);
+		info!("Proof is valid:");
+		println!("{:?}", verify_merkle_proof(cli, trusted_args, &self.merkle_proof_json));
 	}
 }
 
-pub(crate) fn verify_merkle_proof<'a, H>(
-	cli: &Cli,
-	trusted_args: &TrustedCli,
-	merkle_root: &str,
+pub(crate) fn verify_merkle_proof(
+	_cli: &Cli,
+	_trusted_args: &TrustedCli,
 	merkle_proof: &str,
-	orders_encoded_len: &usize,
-	leaf_index: usize,
-	leaf: &[u8],
-) -> Option<bool> {
-	let res = verify_proof::<Sha256Hasher, _, _>(
-		&hex::decode(merkle_root).unwrap(),
-		merkle_proof.chars(),
-		*orders_encoded_len,
-		leaf_index.try_into().unwrap(),
-		leaf.into(),
-	);
+) -> bool {
+	// Remove starting and trailing `"` and `\\\` in the string, which occur when we
+	// pass the proof in the bash script for whatever reason. This is probably a hack,
+	// but I don't know bash well enough to fix it in the bash script.
+	let proof_sanitized = merkle_proof.replace(r"\", "").trim_matches('\"').to_string();
+	info!("Sanitized input merkle proof: {}", &proof_sanitized);
 
-	info!("{}", res);
+	let proof: MerkleProofWithCodec<H256, Vec<u8>> =
+		serde_json::from_str(&proof_sanitized).expect("Could not parse merkle proof");
 
-	match res {
-		Some(value) => Some(res),
-		None => {
-			info!("Proof not found");
-			None
-		},
-	}
+	info!("Proof: {:?}", proof);
+
+	verify_proof::<Keccak256, _, _>(
+		&proof.root,
+		proof.proof.clone(),
+		proof
+			.number_of_leaves
+			.try_into()
+			.expect("Target Architecture needs usize > 32bits "),
+		proof.leaf_index.try_into().expect("Target Architecture needs usize > 32bits "),
+		&proof.leaf,
+	)
 }
