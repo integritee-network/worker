@@ -15,41 +15,41 @@
 
 */
 use crate::header_db::HeaderDbTrait;
+use core::{hash::Hash as HashT, marker::PhantomData};
 use itp_types::H256;
 use its_primitives::traits::Header as HeaderT;
-use core::{hash::Hash as HashT, marker::PhantomData};
 
 #[allow(dead_code)]
-pub struct IsDescendentOfBuilder<Hash, HeaderDb, Error>(PhantomData<(Hash, HeaderDb, Error)>);
+pub struct IsDescendantOfBuilder<Hash, HeaderDb, Error>(PhantomData<(Hash, HeaderDb, Error)>);
 
-impl<'a, Hash, HeaderDb, Error> IsDescendentOfBuilder<Hash, HeaderDb, Error>
+impl<'a, Hash, HeaderDb, Error> IsDescendantOfBuilder<Hash, HeaderDb, Error>
 where
 	Error: From<()>,
 	Hash: PartialEq + HashT + Default + Into<H256> + From<H256> + Clone,
 	HeaderDb: HeaderDbTrait,
 {
-	/// Build the `is_descendent_of` closure for the fork-tree structure
+	/// Build the `is_descendant_of` closure for the fork-tree structure
 	/// to utilize when adding and removing nodes from the tree.
 	#[allow(dead_code)]
-	pub fn build_is_descendent_of(
+	pub fn build_is_descendant_of(
 		current: Option<(&'a Hash, &'a Hash)>,
 		header_db: &'a HeaderDb,
 	) -> impl Fn(&Hash, &Hash) -> Result<bool, Error> + 'a {
 		move |base, head| {
-			// If the base is equal to the proposed head then the head is forsure not a descendent of the base
+			// If the base is equal to the proposed head then the head is forsure not a descendant of the base
 			if base == head {
 				return Ok(false)
 			}
 
 			let mut head = head;
 			if let Some((current_hash, current_parent_hash)) = current {
-				// If the current hash is equal to the base then it will not be a descendent of base
+				// If the current hash is equal to the base then it will not be a descendant of base
 				if current_hash == base {
 					return Ok(false)
 				}
 
 				// if the current hash is the head and the parent is the base then we know that
-				// this current hash is the descendent of the parent otherwise we can set the
+				// this current hash is the descendant of the parent otherwise we can set the
 				// head to the parent and find the lowest common ancestor between head and base in the tree.
 				if current_hash == head {
 					if current_parent_hash == base {
@@ -77,7 +77,7 @@ where
 	Hash: PartialEq + Default + Into<H256> + From<H256> + Clone,
 	HeaderDb: HeaderDbTrait,
 {
-	/// Used by the `build_is_descendent_of` to find the LCA of two nodes in the fork-tree.
+	/// Used by the `build_is_descendant_of` to find the LCA of two nodes in the fork-tree.
 	#[allow(dead_code)]
 	fn find_lowest_common_ancestor(a: &Hash, b: &Hash, header_db: &HeaderDb) -> Result<Hash, ()> {
 		let header_1 = header_db.header(&a.clone().into()).ok_or(())?;

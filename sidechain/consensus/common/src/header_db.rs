@@ -16,7 +16,7 @@
 */
 use itp_types::H256;
 use its_primitives::{traits::Header as HeaderT, types::header::SidechainHeader};
-use std::{collections::HashMap, hash::Hash as HashT, convert::From};
+use std::{collections::HashMap, convert::From, hash::Hash as HashT};
 
 /// Normally implemented on the `client` in substrate.
 /// Is a trait which can offer methods for interfacing with a block Database.
@@ -31,6 +31,7 @@ pub struct HeaderDb<Hash, Header>(pub HashMap<Hash, Header>);
 
 impl<Hash, Header> HeaderDbTrait for HeaderDb<Hash, Header>
 where
+	// TODO: the H256 trait bounds are needed because: #1203
 	Hash: PartialEq + HashT + Into<H256> + From<H256> + core::cmp::Eq + Clone,
 	Header: HeaderT + Clone + Into<SidechainHeader>,
 {

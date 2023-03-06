@@ -36,7 +36,7 @@ mod block_import;
 mod block_import_confirmation_handler;
 mod error;
 mod header_db;
-mod is_descendent_of_builder;
+mod is_descendant_of_builder;
 mod peer_block_sync;
 
 #[cfg(test)]
