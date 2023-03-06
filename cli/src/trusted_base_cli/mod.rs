@@ -17,8 +17,10 @@
 
 use crate::{
 	trusted_base_cli::commands::{
-		balance::BalanceCommand, nonce::NonceCommand, set_balance::SetBalanceCommand,
+		balance::BalanceCommand, nonce::NonceCommand, ay_as_bid::PayAsBidCommand,
+		pay_as_bid_proof::PayAsBidProofCommand, set_balance::SetBalanceCommand,
 		transfer::TransferCommand, unshield_funds::UnshieldFundsCommand,
+		verify_proof::VerifyMerkleProofCommand,
 	},
 	trusted_cli::TrustedCli,
 	trusted_command_utils::get_keystore_path,
@@ -51,6 +53,15 @@ pub enum TrustedBaseCommand {
 	/// Transfer funds from an incognito account to an parentchain account
 	UnshieldFunds(UnshieldFundsCommand),
 
+	/// PayAsBid Command
+	PayAsBid(PayAsBidCommand),
+
+	/// PayAsBidProof Command
+	PayAsBidProof(PayAsBidProofCommand),
+
+	/// VerifyProof Command
+	VerifyProof(VerifyMerkleProofCommand),
+
 	/// gets the nonce of a given account, taking the pending trusted calls
 	/// in top pool in consideration
 	Nonce(NonceCommand),
@@ -65,6 +76,9 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::SetBalance(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::Balance(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::UnshieldFunds(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::PayAsBid(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::PayAsBidProof(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::VerifyProof(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::Nonce(cmd) => cmd.run(cli, trusted_cli),
 		}
 	}

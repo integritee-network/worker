@@ -18,24 +18,28 @@
 #[cfg(feature = "evm")]
 use sp_core::{H160, H256, U256};
 
-#[cfg(feature = "evm")]
-use std::vec::Vec;
-
 use crate::{helpers::ensure_enclave_signer_account, StfError, TrustedOperation};
-use codec::{Decode, Encode};
+use binary_merkle_tree::merkle_root;
+use codec::{alloc::sync::Arc, Decode, Encode};
 use frame_support::{ensure, traits::UnfilteredDispatchable};
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{Runtime, System};
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_node_api_metadata::pallet_teerex::TeerexCallIndexes;
 use itp_stf_interface::ExecuteCall;
-use itp_stf_primitives::types::{AccountId, KeyPair, ShardIdentifier, Signature};
+use itp_stf_primitives::types::{AccountId, KeyPair, OrdersFile, ShardIdentifier, Signature};
 use itp_types::OpaqueCall;
 use itp_utils::stringify::account_id_to_string;
 use log::*;
+use simplyr_lib::{pay_as_bid_matching, MarketInput, MarketOutput, Order};
 use sp_io::hashing::blake2_256;
-use sp_runtime::{traits::Verify, MultiAddress};
-use std::{format, prelude::v1::*, sync::Arc};
+use sp_runtime::{
+	traits::{Keccak256, Verify},
+	MultiAddress,
+};
+#[cfg(feature = "evm")]
+use std::vec::Vec;
+use std::{format, fs, prelude::v1::*, time::Instant};
 
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
@@ -50,6 +54,7 @@ pub enum TrustedCall {
 	balance_transfer(AccountId, AccountId, Balance),
 	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
 	balance_shield(AccountId, AccountId, Balance), // (Root, AccountIncognito, Amount)
+	pay_as_bid(AccountId, OrdersFile),
 	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance), // (Origin, Address EVM Account, Value)
 	// (Origin, Source, Target, Input, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
@@ -102,6 +107,7 @@ impl TrustedCall {
 			TrustedCall::balance_transfer(sender_account, ..) => sender_account,
 			TrustedCall::balance_unshield(sender_account, ..) => sender_account,
 			TrustedCall::balance_shield(sender_account, ..) => sender_account,
+			TrustedCall::pay_as_bid(sender_account, _orders_file) => sender_account,
 			#[cfg(feature = "evm")]
 			TrustedCall::evm_withdraw(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
@@ -266,6 +272,43 @@ where
 				)));
 				Ok(())
 			},
+
+			TrustedCall::pay_as_bid(who, orders_file) => {
+				let now = Instant::now();
+
+				let raw_orders = fs::read_to_string(&orders_file).map_err(|e| {
+					StfError::Dispatch(format!("Error reading {}. Error: {:?}", orders_file, e))
+				})?;
+				let orders: Vec<Order> = serde_json::from_str(&raw_orders).map_err(|err| {
+					StfError::Dispatch(format!("Error serializing to JSON: {}", err))
+				})?;
+
+				let market_input = MarketInput { orders: orders.clone() };
+				let orders_encoded: Vec<Vec<u8>> = orders.iter().map(|o| o.encode()).collect();
+
+				let order_merkle_root = merkle_root::<Keccak256, _>(orders_encoded);
+				let pay_as_bid: MarketOutput = pay_as_bid_matching(&market_input);
+
+				// Store current market output/hash in the state,
+				// so you don't have to recalculate it in the getters. (If this is needed).
+				sp_io::storage::set(b"MarketOutput", &pay_as_bid.encode());
+				sp_io::storage::set(b"OrdersMerkleRoot", &order_merkle_root.encode());
+
+				let elapsed = now.elapsed();
+				info!("Time Elapsed for PayAsBid Algorithm is: {:.2?}", elapsed);
+
+				// Send proof of execution on chain.
+				// calls is in the scope from the outside
+				calls.push(OpaqueCall::from_tuple(&(
+					node_metadata_repo.get_from_metadata(|m| m.publish_hash_call_indexes())??,
+					order_merkle_root,
+					Vec::<itp_types::H256>::new(), // you can ignore this for now. Clients could subscribe to the hashes here to be notified when a new hash is published.
+					b"Published merkle root of an order!".to_vec(),
+				)));
+
+				Ok(())
+			},
+
 			#[cfg(feature = "evm")]
 			TrustedCall::evm_withdraw(from, address, value) => {
 				debug!("evm_withdraw({}, {}, {})", account_id_to_string(&from), address, value);
@@ -394,6 +437,7 @@ where
 			TrustedCall::balance_transfer(_, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_unshield(_, _, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_shield(_, _, _) => debug!("No storage updates needed..."),
+			TrustedCall::pay_as_bid(_, _) => debug!("No storage updates needed..."),
 			#[cfg(feature = "evm")]
 			_ => debug!("No storage updates needed..."),
 		};

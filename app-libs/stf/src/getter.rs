@@ -15,23 +15,67 @@
 
 */
 
+use crate::StfError;
+use binary_merkle_tree::{merkle_proof, MerkleProof};
 use codec::{Decode, Encode};
 use ita_sgx_runtime::System;
-use itp_stf_interface::ExecuteGetter;
-use itp_stf_primitives::types::{AccountId, KeyPair, Signature};
-use itp_utils::stringify::account_id_to_string;
-use log::*;
-use sp_runtime::traits::Verify;
-use std::prelude::v1::*;
-
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
+use itp_stf_interface::ExecuteGetter;
+use itp_stf_primitives::types::{AccountId, KeyPair, LeafIndex, OrdersFile, Signature};
+use itp_utils::stringify::account_id_to_string;
+use log::*;
+use serde::{Deserialize, Serialize};
+use simplyr_lib::Order;
+use sp_runtime::traits::{Keccak256, Verify};
+use std::{format, fs, prelude::v1::*, time::Instant};
 
 #[cfg(feature = "evm")]
 use crate::evm_helpers::{get_evm_account, get_evm_account_codes, get_evm_account_storages};
 
 #[cfg(feature = "evm")]
 use sp_core::{H160, H256};
+
+/// Custom Merkle proof that implements codec
+/// The difference to the original one is that implements the scale-codec and that the fields contain u32 instead of usize.
+#[derive(Debug, PartialEq, Eq, Decode, Encode, Deserialize, Serialize)]
+pub struct MerkleProofWithCodec<H, L> {
+	/// Root hash of generated merkle tree.
+	pub root: H,
+	/// Proof items (does not contain the leaf hash, nor the root obviously).
+	///
+	/// This vec contains all inner node hashes necessary to reconstruct the root hash given the
+	/// leaf hash.
+	pub proof: Vec<H>,
+	/// Number of leaves in the original tree.
+	///
+	/// This is needed to detect a case where we have an odd number of leaves that "get promoted"
+	/// to upper layers.
+	pub number_of_leaves: u32,
+	/// Index of the leaf the proof is for (0-based).
+	pub leaf_index: u32,
+	/// Leaf content.
+	pub leaf: L,
+}
+
+/// Then we can also implement conversion of the two types to make the handling more ergonomic:
+impl<H, L> From<MerkleProof<H, L>> for MerkleProofWithCodec<H, L> {
+	fn from(source: MerkleProof<H, L>) -> Self {
+		Self {
+			root: source.root,
+			proof: source.proof,
+			number_of_leaves: source
+				.number_of_leaves
+				.try_into()
+				.expect("We don't have more than u32::MAX leaves; qed"),
+			leaf_index: source
+				.leaf_index
+				.try_into()
+				.expect("Leave index is never bigger than U32::Max; qed"),
+			leaf: source.leaf,
+		}
+	}
+}
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
@@ -70,6 +114,7 @@ pub enum TrustedGetter {
 	evm_account_codes(AccountId, H160),
 	#[cfg(feature = "evm")]
 	evm_account_storages(AccountId, H160, H256),
+	pay_as_bid_proof(AccountId, OrdersFile, LeafIndex),
 }
 
 impl TrustedGetter {
@@ -84,6 +129,8 @@ impl TrustedGetter {
 			TrustedGetter::evm_account_codes(sender_account, _) => sender_account,
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_account_storages(sender_account, ..) => sender_account,
+			TrustedGetter::pay_as_bid_proof(sender_account, _orders_file, _leaf_index) =>
+				sender_account,
 		}
 	}
 
@@ -177,6 +224,44 @@ impl ExecuteGetter for TrustedGetterSigned {
 					Some(value.encode())
 				} else {
 					None
+				},
+
+				TrustedGetter::pay_as_bid_proof(_who, orders_file, leaf_index) => {
+					let now = Instant::now();
+
+					let raw_orders = fs::read_to_string(&orders_file)
+						.map_err(|e| {
+							StfError::Dispatch(format!(
+								"Error reading {}. Error: {:?}",
+								orders_file, e
+							))
+						})
+						.ok()?;
+					let orders: Vec<Order> =
+						serde_json::from_str(&raw_orders).expect("error serializing to JSON");
+					let orders_encoded: Vec<Vec<u8>> = orders.iter().map(|o| o.encode()).collect();
+
+					let leaf_index_u32: u32 = (*leaf_index).into();
+					if leaf_index_u32 >= orders.len() as u32 {
+						info!(
+							"leaf_index out of range: {} (orders length: {})",
+							leaf_index,
+							orders.len()
+						);
+
+						return None
+					}
+
+					let proof: MerkleProofWithCodec<_, _> = merkle_proof::<Keccak256, _, _>(
+						orders_encoded,
+						leaf_index_u32.try_into().unwrap(),
+					)
+					.into();
+
+					let elapsed = now.elapsed();
+					info!("Time Elapsed for PayAsBid Proof is: {:.2?}", elapsed);
+
+					Some(proof.encode())
 				},
 		}
 	}

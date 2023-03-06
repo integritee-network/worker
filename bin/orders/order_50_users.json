@@ -1,0 +1,452 @@
+[
+    {
+      "id": 0,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_0",
+      "cluster_index": 0,
+      "energy_kwh": 6.9,
+      "price_euro_per_kwh": 0.39
+    },
+    {
+      "id": 1,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_1",
+      "cluster_index": 0,
+      "energy_kwh": 3.1,
+      "price_euro_per_kwh": 0.4
+    },
+    {
+      "id": 2,
+      "order_type": "ask",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_2",
+      "cluster_index": 0,
+      "energy_kwh": 7.7,
+      "price_euro_per_kwh": 0.39
+    },
+    {
+      "id": 3,
+      "order_type": "ask",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_3",
+      "cluster_index": 0,
+      "energy_kwh": 0.9,
+      "price_euro_per_kwh": 0.11
+    },
+    {
+      "id": 4,
+      "order_type": "ask",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_4",
+      "cluster_index": 0,
+      "energy_kwh": 5.1,
+      "price_euro_per_kwh": 0.33
+    },
+    {
+      "id": 5,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_5",
+      "cluster_index": 0,
+      "energy_kwh": 9.3,
+      "price_euro_per_kwh": 0.21
+    },
+    {
+      "id": 6,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_6",
+      "cluster_index": 0,
+      "energy_kwh": 8.7,
+      "price_euro_per_kwh": 0.18
+    },
+    {
+      "id": 7,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_7",
+      "cluster_index": 0,
+      "energy_kwh": 9.0,
+      "price_euro_per_kwh": 0.19
+    },
+    {
+      "id": 8,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_8",
+      "cluster_index": 0,
+      "energy_kwh": 1.8,
+      "price_euro_per_kwh": 0.35
+    },
+    {
+      "id": 9,
+      "order_type": "ask",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_9",
+      "cluster_index": 0,
+      "energy_kwh": 4.7,
+      "price_euro_per_kwh": 0.19
+    },
+    {
+      "id": 10,
+      "order_type": "ask",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_10",
+      "cluster_index": 0,
+      "energy_kwh": 6.1,
+      "price_euro_per_kwh": 0.37
+    },
+    {
+      "id": 11,
+      "order_type": "ask",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_11",
+      "cluster_index": 0,
+      "energy_kwh": 9.9,
+      "price_euro_per_kwh": 0.23
+    },
+    {
+      "id": 12,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_12",
+      "cluster_index": 0,
+      "energy_kwh": 7.0,
+      "price_euro_per_kwh": 0.27
+    },
+    {
+      "id": 13,
+      "order_type": "ask",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_13",
+      "cluster_index": 0,
+      "energy_kwh": 3.4,
+      "price_euro_per_kwh": 0.27
+    },
+    {
+      "id": 14,
+      "order_type": "ask",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_14",
+      "cluster_index": 0,
+      "energy_kwh": 5.2,
+      "price_euro_per_kwh": 0.11
+    },
+    {
+      "id": 15,
+      "order_type": "ask",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_15",
+      "cluster_index": 0,
+      "energy_kwh": 7.7,
+      "price_euro_per_kwh": 0.34
+    },
+    {
+      "id": 16,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_16",
+      "cluster_index": 0,
+      "energy_kwh": 2.7,
+      "price_euro_per_kwh": 0.18
+    },
+    {
+      "id": 17,
+      "order_type": "ask",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_17",
+      "cluster_index": 0,
+      "energy_kwh": 9.9,
+      "price_euro_per_kwh": 0.34
+    },
+    {
+      "id": 18,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_18",
+      "cluster_index": 0,
+      "energy_kwh": 7.9,
+      "price_euro_per_kwh": 0.28
+    },
+    {
+      "id": 19,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_19",
+      "cluster_index": 0,
+      "energy_kwh": 3.6,
+      "price_euro_per_kwh": 0.19
+    },
+    {
+      "id": 20,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_20",
+      "cluster_index": 0,
+      "energy_kwh": 8.7,
+      "price_euro_per_kwh": 0.14
+    },
+    {
+      "id": 21,
+      "order_type": "ask",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_21",
+      "cluster_index": 0,
+      "energy_kwh": 3.7,
+      "price_euro_per_kwh": 0.39
+    },
+    {
+      "id": 22,
+      "order_type": "ask",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_22",
+      "cluster_index": 0,
+      "energy_kwh": 0.5,
+      "price_euro_per_kwh": 0.23
+    },
+    {
+      "id": 23,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_23",
+      "cluster_index": 0,
+      "energy_kwh": 1.0,
+      "price_euro_per_kwh": 0.14
+    },
+    {
+      "id": 24,
+      "order_type": "ask",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_24",
+      "cluster_index": 0,
+      "energy_kwh": 1.4,
+      "price_euro_per_kwh": 0.27
+    },
+    {
+      "id": 25,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_25",
+      "cluster_index": 0,
+      "energy_kwh": 5.4,
+      "price_euro_per_kwh": 0.26
+    },
+    {
+      "id": 26,
+      "order_type": "ask",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_26",
+      "cluster_index": 0,
+      "energy_kwh": 8.7,
+      "price_euro_per_kwh": 0.23
+    },
+    {
+      "id": 27,
+      "order_type": "ask",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_27",
+      "cluster_index": 0,
+      "energy_kwh": 9.4,
+      "price_euro_per_kwh": 0.3
+    },
+    {
+      "id": 28,
+      "order_type": "ask",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_28",
+      "cluster_index": 0,
+      "energy_kwh": 7.1,
+      "price_euro_per_kwh": 0.24
+    },
+    {
+      "id": 29,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_29",
+      "cluster_index": 0,
+      "energy_kwh": 9.8,
+      "price_euro_per_kwh": 0.33
+    },
+    {
+      "id": 30,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_30",
+      "cluster_index": 0,
+      "energy_kwh": 3.6,
+      "price_euro_per_kwh": 0.1
+    },
+    {
+      "id": 31,
+      "order_type": "ask",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_31",
+      "cluster_index": 0,
+      "energy_kwh": 0.7,
+      "price_euro_per_kwh": 0.38
+    },
+    {
+      "id": 32,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_32",
+      "cluster_index": 0,
+      "energy_kwh": 9.5,
+      "price_euro_per_kwh": 0.3
+    },
+    {
+      "id": 33,
+      "order_type": "ask",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_33",
+      "cluster_index": 0,
+      "energy_kwh": 8.9,
+      "price_euro_per_kwh": 0.4
+    },
+    {
+      "id": 34,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_34",
+      "cluster_index": 0,
+      "energy_kwh": 9.8,
+      "price_euro_per_kwh": 0.32
+    },
+    {
+      "id": 35,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_35",
+      "cluster_index": 0,
+      "energy_kwh": 0.4,
+      "price_euro_per_kwh": 0.13
+    },
+    {
+      "id": 36,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_36",
+      "cluster_index": 0,
+      "energy_kwh": 5.5,
+      "price_euro_per_kwh": 0.27
+    },
+    {
+      "id": 37,
+      "order_type": "ask",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_37",
+      "cluster_index": 0,
+      "energy_kwh": 9.7,
+      "price_euro_per_kwh": 0.11
+    },
+    {
+      "id": 38,
+      "order_type": "ask",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_38",
+      "cluster_index": 0,
+      "energy_kwh": 5.1,
+      "price_euro_per_kwh": 0.11
+    },
+    {
+      "id": 39,
+      "order_type": "ask",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_39",
+      "cluster_index": 0,
+      "energy_kwh": 4.8,
+      "price_euro_per_kwh": 0.12
+    },
+    {
+      "id": 40,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_40",
+      "cluster_index": 0,
+      "energy_kwh": 1.5,
+      "price_euro_per_kwh": 0.3
+    },
+    {
+      "id": 41,
+      "order_type": "ask",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_41",
+      "cluster_index": 0,
+      "energy_kwh": 4.7,
+      "price_euro_per_kwh": 0.38
+    },
+    {
+      "id": 42,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_42",
+      "cluster_index": 0,
+      "energy_kwh": 7.9,
+      "price_euro_per_kwh": 0.18
+    },
+    {
+      "id": 43,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_43",
+      "cluster_index": 0,
+      "energy_kwh": 9.2,
+      "price_euro_per_kwh": 0.38
+    },
+    {
+      "id": 44,
+      "order_type": "ask",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_44",
+      "cluster_index": 0,
+      "energy_kwh": 2.1,
+      "price_euro_per_kwh": 0.18
+    },
+    {
+      "id": 45,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_45",
+      "cluster_index": 0,
+      "energy_kwh": 9.0,
+      "price_euro_per_kwh": 0.12
+    },
+    {
+      "id": 46,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_46",
+      "cluster_index": 0,
+      "energy_kwh": 6.1,
+      "price_euro_per_kwh": 0.33
+    },
+    {
+      "id": 47,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_47",
+      "cluster_index": 0,
+      "energy_kwh": 4.8,
+      "price_euro_per_kwh": 0.11
+    },
+    {
+      "id": 48,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_48",
+      "cluster_index": 0,
+      "energy_kwh": 7.2,
+      "price_euro_per_kwh": 0.18
+    },
+    {
+      "id": 49,
+      "order_type": "bid",
+      "time_slot": "2022-03-04T05:06:07+00:00",
+      "actor_id": "actor_49",
+      "cluster_index": 0,
+      "energy_kwh": 3.5,
+      "price_euro_per_kwh": 0.28
+    }
+  ]

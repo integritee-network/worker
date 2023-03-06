@@ -10,11 +10,13 @@ checksum = "fe438c63458706e03479442743baae6c88256498e6431708f6dfc520a26515d3"
 dependencies = [
  "lazy_static",
  "regex 1.7.1",
+ "regex 1.7.1",
 ]
 
 [[package]]
 name = "ac-compose-macros"
 version = "0.2.0"
+source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.37-tag-v0.7.0#6516cd654435a68c883d56fcde09410e65f29a74"
 source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.37-tag-v0.7.0#6516cd654435a68c883d56fcde09410e65f29a74"
 dependencies = [
  "ac-primitives",
@@ -223,6 +225,14 @@ dependencies = [
  "sp-api",
  "sp-beefy",
  "sp-runtime",
+]
+
+[[package]]
+name = "binary-merkle-tree"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate.git#2ced413e40eed0e294fbc4c0d539bac2376016f6"
+dependencies = [
+ "hash-db",
 ]
 
 [[package]]
@@ -1283,7 +1293,7 @@ dependencies = [
 [[package]]
 name = "hashbrown_tstd"
 version = "0.12.0"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#6ee75754f0343a1a2c70125ed907556048a0cbc4"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#594806f827b57e6c4c9a0611fa4cbf2d83aabd2e"
 
 [[package]]
 name = "hex"
@@ -1495,6 +1505,7 @@ dependencies = [
 name = "ita-stf"
 version = "0.9.0"
 dependencies = [
+ "binary-merkle-tree",
  "derive_more",
  "frame-support",
  "frame-system",
@@ -1515,8 +1526,11 @@ dependencies = [
  "pallet-sudo",
  "parity-scale-codec",
  "rlp",
+ "serde 1.0.152",
+ "serde_json 1.0.91",
  "sgx_tstd",
  "sha3 0.10.6",
+ "simplyr-lib",
  "sp-application-crypto",
  "sp-core",
  "sp-io",
@@ -1894,7 +1908,7 @@ dependencies = [
  "itp-types",
  "parity-scale-codec",
  "serde 1.0.152",
- "serde_json 1.0.93",
+ "serde_json 1.0.91",
  "sgx_tstd",
 ]
 
@@ -2428,6 +2442,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "201de327520df007757c1f0adce6e827fe8562fbc28bfd9c15571c66ca1f5f79"
 
 [[package]]
+name = "libm"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "348108ab3fba42ec82ff6e9564fc4ca0247bdccdc68dd8af9764bbc79c3c8ffb"
+
+[[package]]
 name = "libsecp256k1"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2822,7 +2842,7 @@ dependencies = [
 [[package]]
 name = "pallet-parentchain"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.37#50cac490de02a6484751c193da9f8080477b885c"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.11.0-polkadot-v0.9.37#50cac490de02a6484751c193da9f8080477b885c"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -2928,9 +2948,9 @@ dependencies = [
 
 [[package]]
 name = "parity-scale-codec"
-version = "3.4.0"
+version = "3.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "637935964ff85a605d114591d4d2c13c5d1ba2806dae97cea6bf180238a749ac"
+checksum = "c3840933452adf7b3b9145e27086a5a3376c619dca1a21b1e5a5af0d54979bed"
 dependencies = [
  "arrayvec 0.7.2",
  "bitvec",
@@ -3070,9 +3090,9 @@ checksum = "bc881b2c22681370c6a780e47af9840ef841837bc98118431d4e1868bd0c1086"
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.51"
+version = "1.0.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d727cae5b39d21da60fa540906919ad737832fe0b1c165da3a34d6548c849d6"
+checksum = "6ef7d57beacfaf2d8aee5937dab7b7f28de3cb8b1828479bb5de2a7106f2bae2"
 dependencies = [
  "unicode-ident",
 ]
@@ -3559,7 +3579,7 @@ dependencies = [
 name = "serde_json"
 version = "1.0.93"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cad406b69c91885b5107daf2c29572f6c8cdb3c66826821e286c533490c0bc76"
+checksum = "877c235533714907a8c2464236f5c4b2a17262ef1bd71f38f35ea592c8da6883"
 dependencies = [
  "itoa 1.0.5",
  "ryu",
@@ -3569,12 +3589,12 @@ dependencies = [
 [[package]]
 name = "sgx_alloc"
 version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#6ee75754f0343a1a2c70125ed907556048a0cbc4"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#594806f827b57e6c4c9a0611fa4cbf2d83aabd2e"
 
 [[package]]
 name = "sgx_backtrace_sys"
 version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#6ee75754f0343a1a2c70125ed907556048a0cbc4"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#594806f827b57e6c4c9a0611fa4cbf2d83aabd2e"
 dependencies = [
  "cc",
  "sgx_build_helper",
@@ -3584,12 +3604,12 @@ dependencies = [
 [[package]]
 name = "sgx_build_helper"
 version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#6ee75754f0343a1a2c70125ed907556048a0cbc4"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#594806f827b57e6c4c9a0611fa4cbf2d83aabd2e"
 
 [[package]]
 name = "sgx_crypto_helper"
 version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#6ee75754f0343a1a2c70125ed907556048a0cbc4"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#594806f827b57e6c4c9a0611fa4cbf2d83aabd2e"
 dependencies = [
  "itertools",
  "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx)",
@@ -3603,12 +3623,12 @@ dependencies = [
 [[package]]
 name = "sgx_demangle"
 version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#6ee75754f0343a1a2c70125ed907556048a0cbc4"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#594806f827b57e6c4c9a0611fa4cbf2d83aabd2e"
 
 [[package]]
 name = "sgx_libc"
 version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#6ee75754f0343a1a2c70125ed907556048a0cbc4"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#594806f827b57e6c4c9a0611fa4cbf2d83aabd2e"
 dependencies = [
  "sgx_types",
 ]
@@ -3616,7 +3636,7 @@ dependencies = [
 [[package]]
 name = "sgx_rand"
 version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#6ee75754f0343a1a2c70125ed907556048a0cbc4"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#594806f827b57e6c4c9a0611fa4cbf2d83aabd2e"
 dependencies = [
  "sgx_trts",
  "sgx_tstd",
@@ -3626,7 +3646,7 @@ dependencies = [
 [[package]]
 name = "sgx_serialize"
 version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#6ee75754f0343a1a2c70125ed907556048a0cbc4"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#594806f827b57e6c4c9a0611fa4cbf2d83aabd2e"
 dependencies = [
  "sgx_tstd",
 ]
@@ -3634,7 +3654,7 @@ dependencies = [
 [[package]]
 name = "sgx_serialize_derive"
 version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#6ee75754f0343a1a2c70125ed907556048a0cbc4"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#594806f827b57e6c4c9a0611fa4cbf2d83aabd2e"
 dependencies = [
  "quote 0.3.15",
  "sgx_serialize_derive_internals",
@@ -3644,7 +3664,7 @@ dependencies = [
 [[package]]
 name = "sgx_serialize_derive_internals"
 version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#6ee75754f0343a1a2c70125ed907556048a0cbc4"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#594806f827b57e6c4c9a0611fa4cbf2d83aabd2e"
 dependencies = [
  "syn 0.11.11",
 ]
@@ -3652,7 +3672,7 @@ dependencies = [
 [[package]]
 name = "sgx_tcrypto"
 version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#6ee75754f0343a1a2c70125ed907556048a0cbc4"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#594806f827b57e6c4c9a0611fa4cbf2d83aabd2e"
 dependencies = [
  "sgx_types",
 ]
@@ -3660,7 +3680,7 @@ dependencies = [
 [[package]]
 name = "sgx_tcrypto_helper"
 version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#6ee75754f0343a1a2c70125ed907556048a0cbc4"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#594806f827b57e6c4c9a0611fa4cbf2d83aabd2e"
 dependencies = [
  "sgx_crypto_helper",
 ]
@@ -3668,7 +3688,7 @@ dependencies = [
 [[package]]
 name = "sgx_tprotected_fs"
 version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#6ee75754f0343a1a2c70125ed907556048a0cbc4"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#594806f827b57e6c4c9a0611fa4cbf2d83aabd2e"
 dependencies = [
  "sgx_trts",
  "sgx_types",
@@ -3677,7 +3697,7 @@ dependencies = [
 [[package]]
 name = "sgx_trts"
 version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#6ee75754f0343a1a2c70125ed907556048a0cbc4"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#594806f827b57e6c4c9a0611fa4cbf2d83aabd2e"
 dependencies = [
  "sgx_libc",
  "sgx_types",
@@ -3686,7 +3706,7 @@ dependencies = [
 [[package]]
 name = "sgx_tse"
 version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#6ee75754f0343a1a2c70125ed907556048a0cbc4"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#594806f827b57e6c4c9a0611fa4cbf2d83aabd2e"
 dependencies = [
  "sgx_types",
 ]
@@ -3694,7 +3714,7 @@ dependencies = [
 [[package]]
 name = "sgx_tseal"
 version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#6ee75754f0343a1a2c70125ed907556048a0cbc4"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#594806f827b57e6c4c9a0611fa4cbf2d83aabd2e"
 dependencies = [
  "sgx_tcrypto",
  "sgx_trts",
@@ -3705,7 +3725,7 @@ dependencies = [
 [[package]]
 name = "sgx_tstd"
 version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#6ee75754f0343a1a2c70125ed907556048a0cbc4"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#594806f827b57e6c4c9a0611fa4cbf2d83aabd2e"
 dependencies = [
  "hashbrown_tstd",
  "sgx_alloc",
@@ -3721,7 +3741,7 @@ dependencies = [
 [[package]]
 name = "sgx_tunittest"
 version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#6ee75754f0343a1a2c70125ed907556048a0cbc4"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#594806f827b57e6c4c9a0611fa4cbf2d83aabd2e"
 dependencies = [
  "sgx_tstd",
 ]
@@ -3729,12 +3749,12 @@ dependencies = [
 [[package]]
 name = "sgx_types"
 version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#6ee75754f0343a1a2c70125ed907556048a0cbc4"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#594806f827b57e6c4c9a0611fa4cbf2d83aabd2e"
 
 [[package]]
 name = "sgx_unwind"
 version = "1.1.6"
-source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#6ee75754f0343a1a2c70125ed907556048a0cbc4"
+source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#594806f827b57e6c4c9a0611fa4cbf2d83aabd2e"
 dependencies = [
  "sgx_build_helper",
 ]
@@ -3826,6 +3846,17 @@ checksum = "74233d3b3b2f6d4b006dc19dee745e73e2a6bfb6f93607cd3b02bd5b00797d7c"
 dependencies = [
  "digest 0.10.6",
  "rand_core 0.6.4",
+]
+
+[[package]]
+name = "simplyr-lib"
+version = "0.1.0"
+source = "git+https://github.com/BESTenergytrade/simplyr-lib.git?branch=cI/usize#f1d11a8e8daa0b819276309df03a1aac7c47db17"
+dependencies = [
+ "libm",
+ "parity-scale-codec",
+ "serde 1.0.152",
+ "serde_json 1.0.91",
 ]
 
 [[package]]
@@ -4585,7 +4616,7 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "digest 0.10.6",
  "static_assertions",
 ]

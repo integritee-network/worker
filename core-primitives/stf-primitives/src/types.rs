@@ -16,7 +16,7 @@
 */
 extern crate alloc;
 use alloc::boxed::Box;
-use codec::Compact;
+use codec::{alloc::string::String, Compact};
 use sp_core::{crypto::AccountId32, ed25519, sr25519, Pair, H256};
 use sp_runtime::{traits::Verify, MultiSignature};
 
@@ -26,6 +26,10 @@ pub type AccountId = AccountId32;
 pub type Hash = H256;
 pub type BalanceTransferFn = ([u8; 2], AccountId, Compact<u128>);
 pub type ShardIdentifier = H256;
+pub type OrdersFile = String;
+pub type GridFeeMatrixFile = String;
+
+pub type LeafIndex = u8;
 
 #[derive(Clone)]
 pub enum KeyPair {

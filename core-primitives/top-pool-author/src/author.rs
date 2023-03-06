@@ -50,8 +50,11 @@ use std::{boxed::Box, sync::Arc, vec::Vec};
 /// Define type of TOP filter that is used in the Author
 #[cfg(feature = "sidechain")]
 pub type AuthorTopFilter = crate::top_filter::CallsOnlyFilter;
+
+// This is different from upstream, direct calls are ok in the OLI case, as they
+//  come from a centralized instance.
 #[cfg(feature = "offchain-worker")]
-pub type AuthorTopFilter = crate::top_filter::IndirectCallsOnlyFilter;
+pub type AuthorTopFilter = crate::top_filter::CallsOnlyFilter;
 #[cfg(feature = "teeracle")] // Teeracle currently does not process any trusted operations
 pub type AuthorTopFilter = crate::top_filter::DenyAllFilter;
 
