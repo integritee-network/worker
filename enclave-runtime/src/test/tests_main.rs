@@ -169,8 +169,8 @@ pub extern "C" fn test_main_entrance() -> size_t {
 #[cfg(feature = "teeracle")]
 fn run_teeracle_tests() {
 	// FIXME - fix this testcase failure. #1162
-	// use super::teeracle_tests::*;
-	// test_verify_get_exchange_rate_from_coin_gecko_works();
+	use super::teeracle_tests::*;
+	test_verify_get_exchange_rate_from_coin_gecko_works();
 	// Disabled - requires API key, cannot run locally
 	//test_verify_get_exchange_rate_from_coin_market_cap_works();
 }
