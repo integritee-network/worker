@@ -1,4 +1,5 @@
 pub mod balance;
+pub mod nonce;
 pub mod pay_as_bid;
 pub mod pay_as_bid_proof;
 pub mod set_balance;

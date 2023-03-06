@@ -17,7 +17,7 @@
 
 use crate::{
 	trusted_base_cli::commands::{
-		balance::BalanceCommand, pay_as_bid::PayAsBidCommand,
+		balance::BalanceCommand, nonce::NonceCommand, ay_as_bid::PayAsBidCommand,
 		pay_as_bid_proof::PayAsBidProofCommand, set_balance::SetBalanceCommand,
 		transfer::TransferCommand, unshield_funds::UnshieldFundsCommand,
 		verify_proof::VerifyMerkleProofCommand,
@@ -61,6 +61,10 @@ pub enum TrustedBaseCommand {
 
 	/// VerifyProof Command
 	VerifyProof(VerifyMerkleProofCommand),
+
+	/// gets the nonce of a given account, taking the pending trusted calls
+	/// in top pool in consideration
+	Nonce(NonceCommand),
 }
 
 impl TrustedBaseCommand {
@@ -75,6 +79,7 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::PayAsBid(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::PayAsBidProof(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::VerifyProof(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::Nonce(cmd) => cmd.run(cli, trusted_cli),
 		}
 	}
 }

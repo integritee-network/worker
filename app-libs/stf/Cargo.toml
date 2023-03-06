@@ -23,6 +23,9 @@ itp-hashing = { default-features = false, path = "../../core-primitives/hashing"
 itp-node-api = { default-features = false, path = "../../core-primitives/node-api" }
 itp-node-api-metadata = { default-features = false, path = "../../core-primitives/node-api/metadata" }
 itp-node-api-metadata-provider = { default-features = false, path = "../../core-primitives/node-api/metadata-provider" }
+itp-node-api = { default-features = false, path = "../../core-primitives/node-api" }
+itp-node-api-metadata = { default-features = false, path = "../../core-primitives/node-api/metadata" }
+itp-node-api-metadata-provider = { default-features = false, path = "../../core-primitives/node-api/metadata-provider" }
 itp-sgx-externalities = { default-features = false, path = "../../core-primitives/substrate-sgx/externalities" }
 itp-stf-interface = { default-features = false, path = "../../core-primitives/stf-interface" }
 itp-stf-primitives = { default-features = false, path = "../../core-primitives/stf-primitives" }
@@ -49,6 +52,7 @@ simplyr-lib = { default-features = false, git = "https://github.com/BESTenergytr
 binary-merkle-tree = { default-features = false, git = "https://github.com/paritytech/substrate.git" }
 
 [dev-dependencies]
+sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
 
 [features]
