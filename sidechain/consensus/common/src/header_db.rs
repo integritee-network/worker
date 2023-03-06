@@ -16,9 +16,10 @@
 */
 use itp_types::H256;
 use its_primitives::{traits::Header as HeaderT, types::header::SidechainHeader};
-use std::{collections::HashMap, hash::Hash as HashT};
+use std::{collections::HashMap, hash::Hash as HashT, convert::From};
 
-// Normally implemented on the Client in substrate
+/// Normally implemented on the `client` in substrate.
+/// Is a trait which can offer methods for interfacing with a block Database.
 pub trait HeaderDbTrait {
 	type Header: HeaderT;
 	/// Retrieves Header for the corresponding block hash.
@@ -27,38 +28,10 @@ pub trait HeaderDbTrait {
 
 /// A mocked Header Database which allows you to take a Block Hash and Query a Block Header.
 pub struct HeaderDb<Hash, Header>(pub HashMap<Hash, Header>);
-impl<Hash, Header> HeaderDb<Hash, Header>
-where
-	Hash: PartialEq + Eq + HashT + Clone,
-	Header: Clone,
-{
-	pub fn new() -> Self {
-		Self(HashMap::new())
-	}
-
-	pub fn insert(&mut self, hash: Hash, header: Header) {
-		let _ = self.0.insert(hash, header);
-	}
-}
-
-impl<Hash, Header> From<&[(Hash, Header)]> for HeaderDb<Hash, Header>
-where
-	Hash: HashT + Eq + Copy + Clone,
-	Header: Copy + Clone,
-{
-	fn from(items: &[(Hash, Header)]) -> Self {
-		let mut header_db = HeaderDb::<Hash, Header>::new();
-		for item in items {
-			let (hash, header) = item;
-			header_db.insert(*hash, *header);
-		}
-		header_db
-	}
-}
 
 impl<Hash, Header> HeaderDbTrait for HeaderDb<Hash, Header>
 where
-	Hash: PartialEq + HashT + Into<H256> + From<H256> + std::cmp::Eq + Clone,
+	Hash: PartialEq + HashT + Into<H256> + From<H256> + core::cmp::Eq + Clone,
 	Header: HeaderT + Clone + Into<SidechainHeader>,
 {
 	type Header = SidechainHeader;

@@ -17,10 +17,11 @@
 use crate::header_db::HeaderDbTrait;
 use itp_types::H256;
 use its_primitives::traits::Header as HeaderT;
-use std::{hash::Hash as HashT, marker::PhantomData};
+use core::{hash::Hash as HashT, marker::PhantomData};
 
 #[allow(dead_code)]
 pub struct IsDescendentOfBuilder<Hash, HeaderDb, Error>(PhantomData<(Hash, HeaderDb, Error)>);
+
 impl<'a, Hash, HeaderDb, Error> IsDescendentOfBuilder<Hash, HeaderDb, Error>
 where
 	Error: From<()>,
@@ -35,16 +36,21 @@ where
 		header_db: &'a HeaderDb,
 	) -> impl Fn(&Hash, &Hash) -> Result<bool, Error> + 'a {
 		move |base, head| {
+			// If the base is equal to the proposed head then the head is forsure not a descendent of the base
 			if base == head {
 				return Ok(false)
 			}
 
 			let mut head = head;
 			if let Some((current_hash, current_parent_hash)) = current {
+				// If the current hash is equal to the base then it will not be a descendent of base
 				if current_hash == base {
 					return Ok(false)
 				}
 
+				// if the current hash is the head and the parent is the base then we know that
+				// this current hash is the descendent of the parent otherwise we can set the
+				// head to the parent and find the lowest common ancestor between head and base in the tree.
 				if current_hash == head {
 					if current_parent_hash == base {
 						return Ok(true)
@@ -65,6 +71,7 @@ where
 
 #[allow(dead_code)]
 pub struct LowestCommonAncestorFinder<Hash, HeaderDb>(PhantomData<(Hash, HeaderDb)>);
+
 impl<Hash, HeaderDb> LowestCommonAncestorFinder<Hash, HeaderDb>
 where
 	Hash: PartialEq + Default + Into<H256> + From<H256> + Clone,

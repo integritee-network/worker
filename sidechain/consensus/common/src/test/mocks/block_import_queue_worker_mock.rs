@@ -15,37 +15,22 @@
 
 */
 use crate::{
-    test::mocks::verifier_mock::VerifierMock,
-    BlockImport,
-    Error,
-    Result,
-    BlockImportQueueWorker, 
-    SyncBlockFromPeer,
+	header_db::{HeaderDb},
 	is_descendent_of_builder::{
-		HeaderDb, HeaderDbTrait, IsDescendentOfBuilder, LowestCommonAncestorFinder, 
-		TestError,
+		 IsDescendentOfBuilder,
 	},
 };
 use its_test::{
 	sidechain_block_builder::SidechainBlockBuilderTrait,
 	sidechain_block_builder::SidechainBlockBuilder,
-	sidechain_block_data_builder::SidechainBlockDataBuilder as SidechainBlockData,
-	sidechain_header_builder::SidechainHeaderBuilder as SidechainHeader,
 };
 use core::marker::PhantomData;
-use itp_sgx_crypto::aes::Aes;
-use itp_sgx_externalities::SgxExternalities;
-use itp_test::mock::onchain_mock::OnchainMock;
 use itp_types::{H256};
-use its_primitives::traits::{ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait};
-use sp_core::Pair;
-use itp_block_import_queue::PopFromBlockQueue;
 use its_primitives::{
 	traits::{Block as BlockT, Header as HeaderT},
-	types::{block_data::BlockData, header::SidechainHeader as Header, Block, SignedBlock}
+	types::{header::SidechainHeader as Header, Block}
 };
-use sp_runtime::traits::Block as ParentchainBlockTrait;
-use std::{collections::VecDeque, sync::RwLock};
+use std::{collections::VecDeque};
 use fork_tree::ForkTree;
 
 #[derive(Default)]
@@ -134,6 +119,23 @@ impl std::error::Error for TestError {}
 mod tests {
 	use super::*;
 
+	fn fork_tree_from_header_queue<B>(queue: VecDeque<B>) -> ForkTree<H256, u64, ()>
+	where
+		B: BlockT<HeaderType = Header>,
+	{
+		// Store all block_headers in db
+		let db = HeaderDb::<H256, Header>(queue.iter().map(|block| (block.hash(), *block.header())).collect());
+
+		// Import into forktree
+		let is_descendent_of = 
+			<IsDescendentOfBuilder<H256, HeaderDb<H256, Header>, TestError>>::build_is_descendent_of(None, &db);
+		let mut tree = <ForkTree<H256, u64, ()>>::new();
+		queue.iter().for_each(|block| {
+			let _ = tree.import(block.header().hash(), block.header().block_number(), (), &is_descendent_of).unwrap();
+		});
+		tree
+	}
+
 	#[test]
 	fn process_sequential_queue_no_forks() {
 		// Construct a queue which is sequential with 5 members all with distinct block numbers and parents
@@ -148,21 +150,10 @@ mod tests {
 
 		// queue -> [0, 1, 2, 3, 4]
 		assert_eq!(queue.len(), 5);
-		
-		// Store all block_headers in db
-		let mut db = <HeaderDb<H256, Header>>::from(
-			queue.iter().map(|block| (block.hash(), *block.header())).collect::<Vec<_>>().as_slice()
-		);
 
-		// Import into forktree
-		let is_descendent_of = 
-			<IsDescendentOfBuilder<H256, HeaderDb<H256, Header>, TestError>>::build_is_descendent_of(None, &db);
-		let mut tree = <ForkTree<H256, u64, ()>>::new();
-		queue.iter().for_each(|block| {
-			let _ = tree.import(block.header.hash(), block.header.block_number(), (), &is_descendent_of).unwrap();
-		});
+		let mut tree = fork_tree_from_header_queue::<Block>(queue.clone());
 
-		// We have a tree which looks like this H0 is the only root
+		// We have a tree which looks like this. H0 is the only root.
 		//
 		// H0 - H1 - H2 - H3 - H4
 		//
@@ -193,7 +184,7 @@ mod tests {
 					queue.push_back(SidechainBlockBuilder::default().with_header(header).build());
 				} else {
 					// build a Queue with 2 headers which are of the same block_number
-					let mut headers = vec![
+					let headers = vec![
 						<BlockQueueHeaderBuilder<u64, H256>>::build_queue_header(i, parent_header.hash()),
 						<BlockQueueHeaderBuilder<u64, H256>>::build_queue_header(i, parent_header.hash())
 					];
@@ -208,18 +199,7 @@ mod tests {
 		// queue -> [0, 1, 1, 2, 3, 3, 4, 5, 5, 6, 7, 7]
 		assert_eq!(queue.len(), 12);
 
-		// Store all block_headers in db
-		let mut db = <HeaderDb<H256, Header>>::from(
-			queue.iter().map(|block| (block.hash(), *block.header())).collect::<Vec<_>>().as_slice()
-		);
-
-		// Import into forktree
-		let is_descendent_of = 
-			<IsDescendentOfBuilder<H256, HeaderDb<H256, Header>, TestError>>::build_is_descendent_of(None, &db);
-		let mut tree = <ForkTree<H256, u64, ()>>::new();
-		queue.iter().for_each(|block| {
-			let _ = tree.import(block.header.hash(), block.header.block_number(), (), &is_descendent_of).unwrap();
-		});
+		let mut tree = fork_tree_from_header_queue::<Block>(queue.clone());
 
 		// We have a tree which looks like the following
 		//                      - (H5, B3)..
@@ -267,14 +247,16 @@ mod tests {
 			vec![(queue[1].header.hash(), 3), (queue[0].header.hash(), 3)]
 		);
 	}
+
+	#[test]
+	fn process_non_sequential_queue_without_forks() {
+		// TODO
+	}
+
+	#[test]
+	fn process_non_sequential_queue_with_forks() {
+		// TODO
+	}
 }
 
-#[test]
-fn process_non_sequential_queue_without_forks() {
-	todo!()
-}
 
-#[test]
-fn process_non_sequential_queue_with_forks() {
-	todo!()
-}
