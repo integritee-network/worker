@@ -1,23 +1,19 @@
 /*
 	Copyright 2021 Integritee AG and Supercomputing Systems AG
-
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
 	You may obtain a copy of the License at
-
 		http://www.apache.org/licenses/LICENSE-2.0
-
 	Unless required by applicable law or agreed to in writing, software
 	distributed under the License is distributed on an "AS IS" BASIS,
 	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 	See the License for the specific language governing permissions and
 	limitations under the License.
-
 */
 
 use crate::{
 	trusted_base_cli::commands::{
-		balance::BalanceCommand, nonce::NonceCommand, ay_as_bid::PayAsBidCommand,
+		balance::BalanceCommand, pay_as_bid::PayAsBidCommand,
 		pay_as_bid_proof::PayAsBidProofCommand, set_balance::SetBalanceCommand,
 		transfer::TransferCommand, unshield_funds::UnshieldFundsCommand,
 		verify_proof::VerifyMerkleProofCommand,
@@ -61,10 +57,6 @@ pub enum TrustedBaseCommand {
 
 	/// VerifyProof Command
 	VerifyProof(VerifyMerkleProofCommand),
-
-	/// gets the nonce of a given account, taking the pending trusted calls
-	/// in top pool in consideration
-	Nonce(NonceCommand),
 }
 
 impl TrustedBaseCommand {
@@ -79,7 +71,6 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::PayAsBid(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::PayAsBidProof(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::VerifyProof(cmd) => cmd.run(cli, trusted_cli),
-			TrustedBaseCommand::Nonce(cmd) => cmd.run(cli, trusted_cli),
 		}
 	}
 }
