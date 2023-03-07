@@ -402,3 +402,17 @@ fn internal_trigger_parentchain_block_import() -> Result<()> {
 	triggered_import_dispatcher.import_all()?;
 	Ok(())
 }
+
+// This is required, because `ring` / `ring-xous` would not compile without it non-release (debug) mode.
+// See #1200 for more details.
+#[cfg(debug_assertions)]
+#[no_mangle]
+pub extern "C" fn __assert_fail(
+	__assertion: *const u8,
+	__file: *const u8,
+	__line: u32,
+	__function: *const u8,
+) -> ! {
+	use core::intrinsics::abort;
+	abort()
+}

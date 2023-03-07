@@ -35,8 +35,8 @@ Rust_Enclave_Files := $(wildcard src/*.rs) $(wildcard ../stf/src/*.rs)
 RUSTFLAGS :="-C target-feature=+avx2"
 
 ifeq ($(SGX_DEBUG), 1)
-	OUTPUT_PATH := release
-	CARGO_TARGET := --release
+	OUTPUT_PATH := debug
+	CARGO_TARGET := 
 else
 	OUTPUT_PATH := release
 	CARGO_TARGET := --release
