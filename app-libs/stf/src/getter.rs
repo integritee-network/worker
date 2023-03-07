@@ -1,18 +1,14 @@
 /*
 	Copyright 2021 Integritee AG and Supercomputing Systems AG
-
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
 	You may obtain a copy of the License at
-
 		http://www.apache.org/licenses/LICENSE-2.0
-
 	Unless required by applicable law or agreed to in writing, software
 	distributed under the License is distributed on an "AS IS" BASIS,
 	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 	See the License for the specific language governing permissions and
 	limitations under the License.
-
 */
 
 use crate::StfError;
@@ -160,71 +156,57 @@ impl TrustedGetterSigned {
 impl ExecuteGetter for Getter {
 	fn execute(self) -> Option<Vec<u8>> {
 		match self {
-			Getter::trusted(g) => g.execute(),
-			Getter::public(g) => g.execute(),
-		}
-	}
-
-	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
-		match self {
-			Getter::trusted(g) => g.get_storage_hashes_to_update(),
-			Getter::public(g) => g.get_storage_hashes_to_update(),
-		}
-	}
-}
-
-impl ExecuteGetter for TrustedGetterSigned {
-	fn execute(self) -> Option<Vec<u8>> {
-		match self.getter {
-			TrustedGetter::free_balance(who) => {
-				let info = System::account(&who);
-				debug!("TrustedGetter free_balance");
-				debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
-				debug!("Account free balance is {}", info.data.free);
-				Some(info.data.free.encode())
-			},
-			TrustedGetter::reserved_balance(who) => {
-				let info = System::account(&who);
-				debug!("TrustedGetter reserved_balance");
-				debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
-				debug!("Account reserved balance is {}", info.data.reserved);
-				Some(info.data.reserved.encode())
-			},
-			TrustedGetter::nonce(who) => {
-				let nonce = System::account_nonce(&who);
-				debug!("TrustedGetter nonce");
-				debug!("Account nonce is {}", nonce);
-				Some(nonce.encode())
-			},
-			#[cfg(feature = "evm")]
-			TrustedGetter::evm_nonce(who) => {
-				let evm_account = get_evm_account(&who);
-				let evm_account = HashedAddressMapping::into_account_id(evm_account);
-				let nonce = System::account_nonce(&evm_account);
-				debug!("TrustedGetter evm_nonce");
-				debug!("Account nonce is {}", nonce);
-				Some(nonce.encode())
-			},
-			#[cfg(feature = "evm")]
-			TrustedGetter::evm_account_codes(_who, evm_account) =>
-			// TODO: This probably needs some security check if who == evm_account (or assosciated)
-				if let Some(info) = get_evm_account_codes(&evm_account) {
-					debug!("TrustedGetter Evm Account Codes");
-					debug!("AccountCodes for {} is {:?}", evm_account, info);
-					Some(info) // TOOD: encoded?
-				} else {
-					None
+			Getter::trusted(g) => match &g.getter {
+				TrustedGetter::free_balance(who) => {
+					let info = System::account(&who);
+					debug!("TrustedGetter free_balance");
+					debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
+					debug!("Account free balance is {}", info.data.free);
+					Some(info.data.free.encode())
 				},
-			#[cfg(feature = "evm")]
-			TrustedGetter::evm_account_storages(_who, evm_account, index) =>
-			// TODO: This probably needs some security check if who == evm_account (or assosciated)
-				if let Some(value) = get_evm_account_storages(&evm_account, &index) {
-					debug!("TrustedGetter Evm Account Storages");
-					debug!("AccountStorages for {} is {:?}", evm_account, value);
-					Some(value.encode())
-				} else {
-					None
+
+				TrustedGetter::reserved_balance(who) => {
+					let info = System::account(&who);
+					debug!("TrustedGetter reserved_balance");
+					debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
+					debug!("Account reserved balance is {}", info.data.reserved);
+					Some(info.data.reserved.encode())
 				},
+				TrustedGetter::nonce(who) => {
+					let nonce = System::account_nonce(&who);
+					debug!("TrustedGetter nonce");
+					debug!("Account nonce is {}", nonce);
+					Some(nonce.encode())
+				},
+				#[cfg(feature = "evm")]
+				TrustedGetter::evm_nonce(who) => {
+					let evm_account = get_evm_account(who);
+					let evm_account = HashedAddressMapping::into_account_id(evm_account);
+					let nonce = System::account_nonce(&evm_account);
+					debug!("TrustedGetter evm_nonce");
+					debug!("Account nonce is {}", nonce);
+					Some(nonce.encode())
+				},
+				#[cfg(feature = "evm")]
+				TrustedGetter::evm_account_codes(_who, evm_account) =>
+				// TODO: This probably needs some security check if who == evm_account (or assosciated)
+					if let Some(info) = get_evm_account_codes(evm_account) {
+						debug!("TrustedGetter Evm Account Codes");
+						debug!("AccountCodes for {} is {:?}", evm_account, info);
+						Some(info) // TOOD: encoded?
+					} else {
+						None
+					},
+				#[cfg(feature = "evm")]
+				TrustedGetter::evm_account_storages(_who, evm_account, index) =>
+				// TODO: This probably needs some security check if who == evm_account (or assosciated)
+					if let Some(value) = get_evm_account_storages(evm_account, index) {
+						debug!("TrustedGetter Evm Account Storages");
+						debug!("AccountStorages for {} is {:?}", evm_account, value);
+						Some(value.encode())
+					} else {
+						None
+					},
 
 				TrustedGetter::pay_as_bid_proof(_who, orders_file, leaf_index) => {
 					let now = Instant::now();
@@ -263,18 +245,10 @@ impl ExecuteGetter for TrustedGetterSigned {
 
 					Some(proof.encode())
 				},
-		}
-	}
-
-	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
-		Vec::new()
-	}
-}
-
-impl ExecuteGetter for PublicGetter {
-	fn execute(self) -> Option<Vec<u8>> {
-		match self {
-			PublicGetter::some_value => Some(42u32.encode()),
+			},
+			Getter::public(g) => match g {
+				PublicGetter::some_value => Some(42u32.encode()),
+			},
 		}
 	}
 
