@@ -34,6 +34,7 @@ use std::{time::Duration, vec::Vec};
 
 mod block_import;
 mod block_import_confirmation_handler;
+mod block_import_queue_worker;
 mod error;
 mod header_db;
 mod is_descendant_of_builder;
@@ -43,6 +44,7 @@ mod peer_block_sync;
 mod test;
 
 pub use block_import::*;
+pub use block_import_queue_worker::*;
 pub use block_import_confirmation_handler::*;
 pub use error::*;
 pub use peer_block_sync::*;
