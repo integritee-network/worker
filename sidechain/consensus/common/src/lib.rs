@@ -44,8 +44,8 @@ mod peer_block_sync;
 mod test;
 
 pub use block_import::*;
-pub use block_import_queue_worker::*;
 pub use block_import_confirmation_handler::*;
+pub use block_import_queue_worker::*;
 pub use error::*;
 pub use peer_block_sync::*;
 
