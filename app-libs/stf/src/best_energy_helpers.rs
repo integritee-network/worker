@@ -4,6 +4,7 @@ use codec::Encode;
 use simplyr_lib::Order;
 use sp_core::H256;
 use sp_runtime::traits::{Hash, Keccak256};
+use std::vec::Vec;
 
 /// Gets the merkle proof of an `actor_id` if it is in the order set.
 pub fn get_merkle_proof_for_actor(
