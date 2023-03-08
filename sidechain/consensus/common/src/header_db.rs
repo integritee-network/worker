@@ -15,7 +15,7 @@
 
 */
 use itp_types::H256;
-use its_primitives::{traits::Header as HeaderT, types::header::SidechainHeader};
+use its_primitives::traits::Header as HeaderT;
 use std::{collections::HashMap, convert::From, hash::Hash as HashT};
 
 /// Normally implemented on the `client` in substrate.
@@ -33,12 +33,12 @@ impl<Hash, Header> HeaderDbTrait for HeaderDb<Hash, Header>
 where
 	// TODO: the H256 trait bounds are needed because: #1203
 	Hash: PartialEq + HashT + Into<H256> + From<H256> + core::cmp::Eq + Clone,
-	Header: HeaderT + Clone + Into<SidechainHeader>,
+	Header: HeaderT + Clone,
 {
-	type Header = SidechainHeader;
+	type Header = Header;
 
 	fn header(&self, hash: &H256) -> Option<Self::Header> {
 		let header = self.0.get(&Hash::from(*hash))?;
-		Some(header.clone().into())
+		Some(header.clone())
 	}
 }
