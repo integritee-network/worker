@@ -41,7 +41,7 @@ where
 
 			let mut head = head;
 			if let Some((current_hash, current_parent_hash)) = current {
-				// If the current hash is equal to the base then it will not be a descendant of base
+				// If the current hash is equal to the base, then it will not be a descendant of base.
 				if current_hash == base {
 					return Ok(false)
 				}
