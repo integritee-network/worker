@@ -19,7 +19,6 @@ use core::{hash::Hash as HashT, marker::PhantomData};
 use itp_types::H256;
 use its_primitives::traits::Header as HeaderT;
 
-#[allow(dead_code)]
 pub struct IsDescendantOfBuilder<Hash, HeaderDb, Error>(PhantomData<(Hash, HeaderDb, Error)>);
 
 impl<'a, Hash, HeaderDb, Error> IsDescendantOfBuilder<Hash, HeaderDb, Error>
@@ -30,7 +29,6 @@ where
 {
 	/// Build the `is_descendant_of` closure for the fork-tree structure
 	/// to utilize when adding and removing nodes from the tree.
-	#[allow(dead_code)]
 	pub fn build_is_descendant_of(
 		current: Option<(&'a Hash, &'a Hash)>,
 		header_db: &'a HeaderDb,
@@ -69,7 +67,6 @@ where
 	}
 }
 
-#[allow(dead_code)]
 pub struct LowestCommonAncestorFinder<Hash, HeaderDb>(PhantomData<(Hash, HeaderDb)>);
 
 impl<Hash, HeaderDb> LowestCommonAncestorFinder<Hash, HeaderDb>
@@ -78,7 +75,6 @@ where
 	HeaderDb: HeaderDbTrait,
 {
 	/// Used by the `build_is_descendant_of` to find the LCA of two nodes in the fork-tree.
-	#[allow(dead_code)]
 	fn find_lowest_common_ancestor(a: &Hash, b: &Hash, header_db: &HeaderDb) -> Result<Hash, ()> {
 		let header_1 = header_db.header(&a.clone().into()).ok_or(())?;
 		let header_2 = header_db.header(&b.clone().into()).ok_or(())?;
