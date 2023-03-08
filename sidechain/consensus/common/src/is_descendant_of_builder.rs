@@ -34,7 +34,7 @@ where
 		header_db: &'a HeaderDb,
 	) -> impl Fn(&Hash, &Hash) -> Result<bool, Error> + 'a {
 		move |base, head| {
-			// If the base is equal to the proposed head then the head is forsure not a descendant of the base
+			// If the base is equal to the proposed head, then the head is for sure not a descendant of the base.
 			if base == head {
 				return Ok(false)
 			}
