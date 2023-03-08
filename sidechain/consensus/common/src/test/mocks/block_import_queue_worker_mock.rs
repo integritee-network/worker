@@ -105,6 +105,7 @@ impl std::fmt::Display for TestError {
 
 impl std::error::Error for TestError {}
 
+#[cfg(test)]
 mod tests {
 	use super::*;
 
