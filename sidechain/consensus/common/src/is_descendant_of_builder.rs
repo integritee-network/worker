@@ -27,8 +27,8 @@ where
 	Hash: PartialEq + HashT + Default + Into<H256> + From<H256> + Clone,
 	HeaderDb: HeaderDbTrait,
 {
-	/// Build the `is_descendant_of` closure for the fork-tree structure
-	/// to utilize when adding and removing nodes from the tree.
+	/// Builds the `is_descendant_of` closure for the fork-tree
+	/// used when adding and removing nodes from the tree.
 	pub fn build_is_descendant_of(
 		current: Option<(&'a Hash, &'a Hash)>,
 		header_db: &'a HeaderDb,
