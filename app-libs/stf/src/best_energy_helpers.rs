@@ -3,7 +3,7 @@ use binary_merkle_tree::merkle_proof;
 use codec::Encode;
 use simplyr_lib::Order;
 use sp_core::H256;
-use sp_runtime::traits::{Hash, Keccak256};
+use sp_runtime::traits::Keccak256;
 use std::vec::Vec;
 
 /// Gets the merkle proof of an `actor_id` if it is in the order set.
@@ -79,5 +79,5 @@ pub fn default_orders() -> Vec<Order> {
       "price_euro_per_kwh": 0.15
     }]"#;
 
-	serde_json::from_str(&orders_raw).unwrap()
+	serde_json::from_str(orders_raw).unwrap()
 }

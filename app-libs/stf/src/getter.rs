@@ -211,7 +211,7 @@ impl ExecuteGetter for Getter {
 				TrustedGetter::pay_as_bid_proof(_who, orders_file, leaf_index) => {
 					let now = Instant::now();
 
-					let raw_orders = fs::read_to_string(&orders_file)
+					let raw_orders = fs::read_to_string(orders_file)
 						.map_err(|e| {
 							StfError::Dispatch(format!(
 								"Error reading {}. Error: {:?}",
