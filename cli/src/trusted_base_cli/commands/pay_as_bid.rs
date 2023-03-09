@@ -52,5 +52,5 @@ pub(crate) fn pay_as_bid(cli: &Cli, trusted_args: &TrustedCli, arg_who: &str, or
 			.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
 			.into_trusted_operation(trusted_args.direct);
 
-	let res = perform_trusted_operation(cli, trusted_args, &top);
+	let _res = perform_trusted_operation(cli, trusted_args, &top);
 }

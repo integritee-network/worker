@@ -33,15 +33,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - flavor_id: sidechain
-            mode: sidechain
           - flavor_id: offchain-worker
             mode: offchain-worker
-          - flavor_id: teeracle
-            mode: teeracle
-          - flavor_id: sidechain-evm
-            mode: sidechain
-            additional_features: evm
 
     steps:
       - uses: actions/checkout@v3
@@ -107,21 +100,6 @@ jobs:
       - name: Enclave # Enclave is separate as it's not in the workspace
         run: cd enclave-runtime && cargo clippy -- -D warnings
 
-      - name: Clippy with EVM feature
-        run: |
-          cargo clippy --features evm -- -D warnings
-          cd enclave-runtime && cargo clippy --features evm -- -D warnings
-
-      - name: Clippy with Sidechain feature
-        run: |
-          cargo clippy --features sidechain -- -D warnings
-          cd enclave-runtime && cargo clippy --features sidechain -- -D warnings
-
-      - name: Clippy with Teeracle feature
-        run: |
-          cargo clippy --features teeracle -- -D warnings
-          cd enclave-runtime && cargo clippy --features teeracle -- -D warnings
-
       - name: Clippy with Offchain-worker feature
         run: |
           cargo clippy --features offchain-worker -- -D warnings
@@ -159,37 +137,14 @@ jobs:
     env:
       WORKER_IMAGE_TAG: integritee-worker:dev
       CLIENT_IMAGE_TAG: integritee-cli:dev
-      COINMARKETCAP_KEY: ${{ secrets.COINMARKETCAP_KEY }}
-      TEERACLE_INTERVAL_SECONDS: 4
 
     strategy:
       fail-fast: false
       matrix:
         include:
           - test: M6
-            flavor_id: sidechain
-            demo_name: demo-indirect-invocation
-          - test: M8
-            flavor_id: sidechain
-            demo_name: demo-direct-call
-          - test: Sidechain
-            flavor_id: sidechain
-            demo_name: demo-sidechain
-          - test: M6
             flavor_id: offchain-worker
             demo_name: demo-indirect-invocation
-          - test: Teeracle
-            flavor_id: teeracle
-            demo_name: demo-teeracle
-          - test: Teeracle
-            flavor_id: teeracle
-            demo_name: demo-teeracle-generic
-          - test: Benchmark
-            flavor_id: sidechain
-            demo_name: sidechain-benchmark
-          - test: EVM
-            flavor_id: sidechain-evm
-            demo_name: demo-smart-contract
 
     steps:
       - uses: actions/checkout@v3

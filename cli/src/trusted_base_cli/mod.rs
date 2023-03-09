@@ -13,7 +13,7 @@
 
 use crate::{
 	trusted_base_cli::commands::{
-		balance::BalanceCommand, pay_as_bid::PayAsBidCommand,
+		balance::BalanceCommand, nonce::NonceCommand, pay_as_bid::PayAsBidCommand,
 		pay_as_bid_proof::PayAsBidProofCommand, set_balance::SetBalanceCommand,
 		transfer::TransferCommand, unshield_funds::UnshieldFundsCommand,
 		verify_proof::VerifyMerkleProofCommand,
@@ -49,6 +49,9 @@ pub enum TrustedBaseCommand {
 	/// Transfer funds from an incognito account to an parentchain account
 	UnshieldFunds(UnshieldFundsCommand),
 
+	/// Gets the layer two nonce.
+	Nonce(NonceCommand),
+
 	/// PayAsBid Command
 	PayAsBid(PayAsBidCommand),
 
@@ -68,6 +71,7 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::SetBalance(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::Balance(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::UnshieldFunds(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::Nonce(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::PayAsBid(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::PayAsBidProof(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::VerifyProof(cmd) => cmd.run(cli, trusted_cli),

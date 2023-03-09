@@ -1,5 +1,6 @@
 name: Publish Docker image for new releases
 
+# Disable docker release for now. Check with oli systems if they want to do that.
 on:
   release:
     types:

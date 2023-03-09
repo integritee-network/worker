@@ -273,7 +273,7 @@ where
 				Ok(())
 			},
 
-			TrustedCall::pay_as_bid(who, orders_file) => {
+			TrustedCall::pay_as_bid(_who, orders_file) => {
 				let now = Instant::now();
 
 				let raw_orders = fs::read_to_string(&orders_file).map_err(|e| {
