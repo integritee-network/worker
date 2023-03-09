@@ -19,8 +19,8 @@
 use sp_core::{H160, H256, U256};
 
 use crate::{
-	best_energy_helpers, best_energy_helpers::storage::merkle_roots_map_key,
-	helpers::ensure_enclave_signer_account, StfError, TrustedOperation,
+	best_energy_helpers::storage::merkle_roots_map_key, helpers::ensure_enclave_signer_account,
+	StfError, TrustedOperation,
 };
 use binary_merkle_tree::merkle_root;
 use codec::{alloc::sync::Arc, Decode, Encode};
@@ -290,10 +290,10 @@ where
 				let orders_encoded: Vec<Vec<u8>> = orders.iter().map(|o| o.encode()).collect();
 
 				let order_merkle_root = merkle_root::<Keccak256, _>(orders_encoded);
-				let pay_as_bid: MarketOutput = pay_as_bid_matching(&market_input);
+				let _pay_as_bid: MarketOutput = pay_as_bid_matching(&market_input);
 
 				sp_io::storage::set(
-					merkle_roots_map_key(orders[0].time_slot),
+					&merkle_roots_map_key(orders[0].time_slot.clone()),
 					&order_merkle_root.encode(),
 				);
 
