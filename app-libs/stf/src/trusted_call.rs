@@ -18,7 +18,9 @@
 #[cfg(feature = "evm")]
 use sp_core::{H160, H256, U256};
 
-use crate::{helpers::ensure_enclave_signer_account, StfError, TrustedOperation};
+use crate::{
+	best_energy_helpers, helpers::ensure_enclave_signer_account, StfError, TrustedOperation,
+};
 use binary_merkle_tree::merkle_root;
 use codec::{alloc::sync::Arc, Decode, Encode};
 use frame_support::{ensure, traits::UnfilteredDispatchable};
@@ -43,6 +45,7 @@ use std::{format, fs, prelude::v1::*, time::Instant};
 
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
+use itp_storage::verify_storage_entries;
 
 #[cfg(feature = "evm")]
 use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_address};
@@ -289,10 +292,10 @@ where
 				let order_merkle_root = merkle_root::<Keccak256, _>(orders_encoded);
 				let pay_as_bid: MarketOutput = pay_as_bid_matching(&market_input);
 
-				// Store current market output/hash in the state,
-				// so you don't have to recalculate it in the getters. (If this is needed).
-				sp_io::storage::set(b"MarketOutput", &pay_as_bid.encode());
-				sp_io::storage::set(b"OrdersMerkleRoot", &order_merkle_root.encode());
+				best_energy_helpers::storage::merkle_roots::insert(
+					orders[0].time_slot,
+					order_merkle_root,
+				);
 
 				let elapsed = now.elapsed();
 				info!("Time Elapsed for PayAsBid Algorithm is: {:.2?}", elapsed);

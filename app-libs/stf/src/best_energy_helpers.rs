@@ -81,3 +81,56 @@ pub fn default_orders() -> Vec<Order> {
 
 	serde_json::from_str(orders_raw).unwrap()
 }
+
+/// SGX storage interface for all best energy data.
+///
+/// Example usage:
+/// ```
+/// use sp_core::H256;
+/// use ita_stf::best_energy_helpers::storage;
+///
+/// let timestamp = "2022-03-04T05:06:07+00:00".to_string();
+/// merkle_roots::insert(timestamp, H256::random());
+///
+/// let merkle_root = merkle_roots::get(timestamp).unwrap();
+/// ```
+pub mod storage {
+
+	/// Module prefix to prevent accidental overwrite of storage for equally named storages
+	const MODULE_PREFIX: &str = "best_energy";
+
+	pub mod merkle_roots {
+		use super::MODULE_PREFIX;
+		use codec::Encode;
+		use itp_storage::{storage_map_key, StorageHasher};
+		use sp_core::H256;
+
+		const STORAGE_PREFIX: &str = "merkle_roots";
+
+		fn map_key_hash(timestamp: String) -> Vec<u8> {
+			storage_map_key(
+				MODULE_PREFIX,
+				STORAGE_PREFIX,
+				&timestamp,
+				&StorageHasher::Blake2_128Concat,
+			)
+		}
+
+		pub fn insert(timestamp: String, merkle_root: H256) {
+			sp_io::storage::set(&map_key_hash(timestamp), &merkle_root.encode())
+		}
+
+		// Todo: Maybe we want to return a result here?
+		pub fn get(timestamp: String) -> Option<H256> {
+			let v = sp_io::storage::get(&map_key_hash(timestamp))?;
+
+			match H256::decode(v) {
+				Ok(h) => Some(h),
+				Err(e) => {
+					log::error!("Could not decode merkle root at timestamp {}", timestamp)
+					None
+				}
+			}
+		}
+	}
+}
