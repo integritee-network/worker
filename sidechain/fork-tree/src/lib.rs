@@ -188,6 +188,11 @@ where
 		self.roots.iter().map(|node| (&node.hash, &node.number, &node.data))
 	}
 
+	/// Iterates over the roots and gives just the hash and block number
+	pub fn roots_hash_and_number(&self) -> Vec<(&H, &N)> {
+		self.roots.iter().map(|node| (&node.hash, &node.number)).collect::<Vec<_>>()
+	}
+
 	fn node_iter(&self) -> impl Iterator<Item = &Node<H, N, V>> {
 		// we need to reverse the order of roots to maintain the expected
 		// ordering since the iterator uses a stack to track state.
