@@ -90,7 +90,7 @@ pub mod storage {
 	const MODULE_PREFIX: &str = "best_energy";
 	const MERKLE_ROOTS_KEY: &str = "merkle_roots";
 
-	pub fn merkle_roots_key(timestamp: String) -> Vec<u8> {
+	pub fn merkle_roots_map_key(timestamp: String) -> Vec<u8> {
 		storage_map_key(
 			MODULE_PREFIX,
 			MERKLE_ROOTS_KEY,

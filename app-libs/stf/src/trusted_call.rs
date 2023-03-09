@@ -19,7 +19,8 @@
 use sp_core::{H160, H256, U256};
 
 use crate::{
-	best_energy_helpers, helpers::ensure_enclave_signer_account, StfError, TrustedOperation,
+	best_energy_helpers, best_energy_helpers::storage::merkle_roots_map_key,
+	helpers::ensure_enclave_signer_account, StfError, TrustedOperation,
 };
 use binary_merkle_tree::merkle_root;
 use codec::{alloc::sync::Arc, Decode, Encode};
@@ -43,10 +44,8 @@ use sp_runtime::{
 use std::vec::Vec;
 use std::{format, fs, prelude::v1::*, time::Instant};
 
-use crate::best_energy_helpers::storage::merkle_roots_key;
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
-use itp_storage::verify_storage_entries;
 
 #[cfg(feature = "evm")]
 use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_address};
@@ -294,7 +293,7 @@ where
 				let pay_as_bid: MarketOutput = pay_as_bid_matching(&market_input);
 
 				sp_io::storage::set(
-					merkle_roots_key(orders[0].time_slot),
+					merkle_roots_map_key(orders[0].time_slot),
 					&order_merkle_root.encode(),
 				);
 
