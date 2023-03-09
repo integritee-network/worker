@@ -7,7 +7,7 @@ on:
 jobs:
   purge-image:
     name: Delete image from ghcr.io
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         binary: ["integritee-client", "integritee-demo-validateer"]

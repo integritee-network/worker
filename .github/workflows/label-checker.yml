@@ -8,7 +8,7 @@ on:
 
 jobs:
     check_for_matching_labels:
-      runs-on: ubuntu-latest
+      runs-on: ubuntu-22.04
       if: github.base_ref == 'master' && github.event.pull_request.draft == false
       steps:
         - name: Label check
