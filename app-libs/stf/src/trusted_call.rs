@@ -43,6 +43,7 @@ use sp_runtime::{
 use std::vec::Vec;
 use std::{format, fs, prelude::v1::*, time::Instant};
 
+use crate::best_energy_helpers::storage::merkle_roots_key;
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 use itp_storage::verify_storage_entries;
@@ -292,9 +293,9 @@ where
 				let order_merkle_root = merkle_root::<Keccak256, _>(orders_encoded);
 				let pay_as_bid: MarketOutput = pay_as_bid_matching(&market_input);
 
-				best_energy_helpers::storage::merkle_roots::insert(
-					orders[0].time_slot,
-					order_merkle_root,
+				sp_io::storage::set(
+					merkle_roots_key(orders[0].time_slot),
+					&order_merkle_root.encode(),
 				);
 
 				let elapsed = now.elapsed();
