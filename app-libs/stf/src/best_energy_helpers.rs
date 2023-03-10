@@ -81,3 +81,22 @@ pub fn default_orders() -> Vec<Order> {
 
 	serde_json::from_str(orders_raw).unwrap()
 }
+
+/// SGX storage helpers for all best energy data.
+pub mod storage {
+	use itp_storage::{storage_map_key, StorageHasher};
+	use std::{string::String, vec::Vec};
+
+	/// Module prefix to prevent accidental overwrite of storage for equally named storages.
+	const MODULE_PREFIX: &str = "best_energy";
+	const MERKLE_ROOTS_KEY: &str = "merkle_roots";
+
+	pub fn merkle_roots_map_key(timestamp: String) -> Vec<u8> {
+		storage_map_key(
+			MODULE_PREFIX,
+			MERKLE_ROOTS_KEY,
+			&timestamp,
+			&StorageHasher::Blake2_128Concat,
+		)
+	}
+}
