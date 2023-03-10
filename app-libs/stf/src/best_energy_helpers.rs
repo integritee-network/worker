@@ -84,6 +84,7 @@ pub fn default_orders() -> Vec<Order> {
 
 /// SGX storage helpers for all best energy data.
 pub mod storage {
+	use core::alloc::{String, Vec};
 	use itp_storage::{storage_map_key, StorageHasher};
 
 	/// Module prefix to prevent accidental overwrite of storage for equally named storages.
