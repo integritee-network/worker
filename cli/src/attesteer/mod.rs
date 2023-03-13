@@ -17,7 +17,7 @@
 
 use crate::Cli;
 
-use self::commands::{SendDCAPQuoteCmd, SendIASAttestationReportCmd};
+use self::commands::{SendDcapQuoteCmd, SendIASAttestationReportCmd};
 
 mod commands;
 
@@ -25,7 +25,7 @@ mod commands;
 #[derive(Debug, clap::Subcommand)]
 pub enum AttesteerCommand {
 	/// Forward DCAP quote for verification.
-	SendDCAPQuote(SendDCAPQuoteCmd),
+	SendDCAPQuote(SendDcapQuoteCmd),
 
 	/// Forward IAS attestation report for verification.
 	SendIASAttestationReport(SendIASAttestationReportCmd),

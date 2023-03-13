@@ -25,12 +25,12 @@ use std::fs::read_to_string;
 
 /// Forward DCAP quote for verification.
 #[derive(Debug, Clone, Parser)]
-pub struct SendDCAPQuoteCmd {
+pub struct SendDcapQuoteCmd {
 	/// Hex encoded DCAP quote filename.
 	quote: String,
 }
 
-impl SendDCAPQuoteCmd {
+impl SendDcapQuoteCmd {
 	pub fn run(&self, cli: &Cli) {
 		let direct_api = get_worker_api_direct(cli);
 		let hex_encoded_quote = read_to_string(&self.quote)
