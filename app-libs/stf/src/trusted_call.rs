@@ -167,6 +167,8 @@ pub struct TrustedReturnValue<T> {
 impl TrustedReturnValue
 */
 
+// TODO: Implement extrinsic logic here - ANDREW!!
+
 impl<NodeMetadataRepository> ExecuteCall<NodeMetadataRepository> for TrustedCallSigned
 where
 	NodeMetadataRepository: AccessNodeMetadata,
@@ -243,6 +245,8 @@ where
 					shard
 				);
 				unshield_funds(account_incognito, value)?;
+				// This sends to the parent chain
+				// Need to send a call to statemine
 				calls.push(OpaqueCall::from_tuple(&(
 					node_metadata_repo.get_from_metadata(|m| m.unshield_funds_call_indexes())??,
 					beneficiary,
@@ -252,6 +256,9 @@ where
 				)));
 				Ok(())
 			},
+
+			// TODO: Add subscribe module here which will call balance_shield when necessary.
+
 			TrustedCall::balance_shield(enclave_account, who, value) => {
 				ensure_enclave_signer_account(&enclave_account)?;
 				debug!("balance_shield({}, {})", account_id_to_string(&who), value);
