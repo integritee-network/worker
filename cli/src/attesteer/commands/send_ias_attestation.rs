@@ -17,22 +17,26 @@
 
 use itc_rpc_client::direct_client::DirectApi;
 use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
+use itp_types::DirectRequestStatus;
 use itp_utils::FromHexPrefixed;
 use log::error;
+use std::fs::read_to_string;
 
 use crate::{command_utils::get_worker_api_direct, Cli};
 
 /// Forward IAS attestation report for verification.
 #[derive(Debug, Clone, Parser)]
 pub struct SendIASAttestationReportCmd {
-	/// Hex encoded IAS attestation report.
+	/// Hex encoded IAS attestation report filename.
 	report: String,
 }
 
 impl SendIASAttestationReportCmd {
 	pub fn run(&self, cli: &Cli) {
 		let direct_api = get_worker_api_direct(&cli);
-		let hex_encoded_report = self.report.clone();
+		let hex_encoded_report = read_to_string(&self.report)
+			.map_err(|e| error!("Opening hex encoded IAS attestation report file failed: {:#?}", e))
+			.unwrap();
 
 		//let request = Request { shard, cyphertext: hex_encoded_quote.to_vec() };
 
@@ -52,5 +56,10 @@ impl SendIASAttestationReportCmd {
 			})
 			.ok()
 			.unwrap();
+
+		match rpc_return_value.status {
+			DirectRequestStatus::Ok => println!("IAS attestation report verification succeded."),
+			_ => error!("IAS attestation report verification failed"),
+		}
 	}
 }
