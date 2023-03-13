@@ -18,23 +18,24 @@
 use crate::{command_utils::get_worker_api_direct, Cli};
 use itc_rpc_client::direct_client::DirectApi;
 use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
-//use itp_types::Request;
+use itp_types::DirectRequestStatus;
 use itp_utils::FromHexPrefixed;
 use log::*;
+use std::fs::read_to_string;
 
 /// Forward DCAP quote for verification.
 #[derive(Debug, Clone, Parser)]
 pub struct SendDCAPQuoteCmd {
-	/// Hex encoded DCAP quote.
+	/// Hex encoded DCAP quote filename.
 	quote: String,
 }
 
 impl SendDCAPQuoteCmd {
 	pub fn run(&self, cli: &Cli) {
 		let direct_api = get_worker_api_direct(&cli);
-		let hex_encoded_quote = self.quote.clone();
-
-		//let request = Request { shard, cyphertext: hex_encoded_quote.to_vec() };
+		let hex_encoded_quote = read_to_string(&self.quote)
+			.map_err(|e| error!("Opening hex encoded DCAP quote file failed: {:#?}", e))
+			.unwrap();
 
 		let rpc_method = "attesteer_forward_dcap_quote".to_owned();
 		let jsonrpc_call: String =
@@ -52,5 +53,10 @@ impl SendDCAPQuoteCmd {
 			})
 			.ok()
 			.unwrap();
+
+		match rpc_return_value.status {
+			DirectRequestStatus::Ok => println!("DCAP quote verification succeded."),
+			_ => error!("DCAP quote verification failed"),
+		}
 	}
 }
