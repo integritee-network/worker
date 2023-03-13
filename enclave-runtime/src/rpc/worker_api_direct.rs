@@ -149,7 +149,7 @@ where
 	});
 
 	// attesteer_forward_dcap_quote
-	let attesteer_forward_dcap_quote: &str = "attesteer_callForwardDCAPQuote";
+	let attesteer_forward_dcap_quote: &str = "attesteer_ForwardDcapQuote";
 	io.add_sync_method(attesteer_forward_dcap_quote, move |params: Params| {
 		let json_value = match forward_dcap_quote_inner(params) {
 			Ok(val) => RpcReturnValue {

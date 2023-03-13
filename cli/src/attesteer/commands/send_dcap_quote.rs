@@ -37,7 +37,7 @@ impl SendDcapQuoteCmd {
 			.map_err(|e| error!("Opening hex encoded DCAP quote file failed: {:#?}", e))
 			.unwrap();
 
-		let rpc_method = "attesteer_callForwardDCAPQuote".to_owned();
+		let rpc_method = "attesteer_ForwardDcapQuote".to_owned();
 		let jsonrpc_call: String =
 			RpcRequest::compose_jsonrpc_call(rpc_method, vec![hex_encoded_quote]).unwrap();
 
