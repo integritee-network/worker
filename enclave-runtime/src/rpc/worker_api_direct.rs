@@ -165,8 +165,7 @@ where
 	});
 
 	// attesteer_forward_ias_attestation_report
-	let attesteer_forward_ias_attestation_report: &str =
-		"attesteer_callForwardIASAttestationReport";
+	let attesteer_forward_ias_attestation_report: &str = "attesteer_ForwardIasAttestationReport";
 	io.add_sync_method(attesteer_forward_ias_attestation_report, move |params: Params| {
 		let json_value = match attesteer_forward_ias_attestation_report_inner(params) {
 			Ok(val) => RpcReturnValue {
