@@ -15,7 +15,12 @@
 
 */
 
-use crate::{command_utils::get_chain_api, Cli};
+use itc_rpc_client::direct_client::DirectApi;
+use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
+use itp_utils::FromHexPrefixed;
+use log::error;
+
+use crate::{command_utils::get_worker_api_direct, Cli};
 
 /// Forward IAS attestation report for verification.
 #[derive(Debug, Clone, Parser)]
