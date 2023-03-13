@@ -30,7 +30,7 @@ use ita_sgx_runtime::{Runtime, System};
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_node_api_metadata::pallet_teerex::TeerexCallIndexes;
 use itp_stf_interface::ExecuteCall;
-use itp_stf_primitives::types::{AccountId, KeyPair, OrdersFile, ShardIdentifier, Signature};
+use itp_stf_primitives::types::{AccountId, KeyPair, OrdersString, ShardIdentifier, Signature};
 use itp_types::OpaqueCall;
 use itp_utils::stringify::account_id_to_string;
 use log::*;
@@ -50,6 +50,10 @@ use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 #[cfg(feature = "evm")]
 use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_address};
 
+use std::fs::create_dir_all;
+
+use crate::best_energy_helpers::{write_orders, write_results, ORDERS_DIR};
+
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum TrustedCall {
@@ -57,7 +61,7 @@ pub enum TrustedCall {
 	balance_transfer(AccountId, AccountId, Balance),
 	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
 	balance_shield(AccountId, AccountId, Balance), // (Root, AccountIncognito, Amount)
-	pay_as_bid(AccountId, OrdersFile),
+	pay_as_bid(AccountId, OrdersString),
 	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance), // (Origin, Address EVM Account, Value)
 	// (Origin, Source, Target, Input, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
@@ -110,7 +114,7 @@ impl TrustedCall {
 			TrustedCall::balance_transfer(sender_account, ..) => sender_account,
 			TrustedCall::balance_unshield(sender_account, ..) => sender_account,
 			TrustedCall::balance_shield(sender_account, ..) => sender_account,
-			TrustedCall::pay_as_bid(sender_account, _orders_file) => sender_account,
+			TrustedCall::pay_as_bid(sender_account, _orders_string) => sender_account,
 			#[cfg(feature = "evm")]
 			TrustedCall::evm_withdraw(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
@@ -276,21 +280,49 @@ where
 				Ok(())
 			},
 
-			TrustedCall::pay_as_bid(_who, orders_file) => {
+			TrustedCall::pay_as_bid(_who, orders_string) => {
 				let now = Instant::now();
 
-				let raw_orders = fs::read_to_string(&orders_file).map_err(|e| {
-					StfError::Dispatch(format!("Error reading {}. Error: {:?}", orders_file, e))
-				})?;
-				let orders: Vec<Order> = serde_json::from_str(&raw_orders).map_err(|err| {
+				create_dir_all(ORDERS_DIR).unwrap();
+
+				let orders: Vec<Order> = serde_json::from_str(&orders_string).map_err(|err| {
 					StfError::Dispatch(format!("Error serializing to JSON: {}", err))
 				})?;
 
 				let market_input = MarketInput { orders: orders.clone() };
 				let orders_encoded: Vec<Vec<u8>> = orders.iter().map(|o| o.encode()).collect();
 
+				let timestamp = &orders[0].time_slot;
+
+				let orders_path = format!("{}/{}.json", ORDERS_DIR, timestamp);
+
+				if fs::metadata(&orders_path).is_ok() {
+					info!("Orders file already exists for timestamp {}", timestamp);
+					return Ok(())
+				}
+
 				let order_merkle_root = merkle_root::<Keccak256, _>(orders_encoded);
-				let _pay_as_bid: MarketOutput = pay_as_bid_matching(&market_input);
+				let pay_as_bid: MarketOutput = pay_as_bid_matching(&market_input);
+
+				// fs::write(&orders_path, serde_json::to_string(&orders).unwrap()).map_err(|e| {
+				// 	StfError::Dispatch(format!("Writing results {}. Error: {:?}", orders_string, e))
+				// })?;
+
+				// fs::write(&results_path, serde_json::to_string(&pay_as_bid).unwrap().as_bytes())
+				// 	.map_err(|e| {
+				// 		StfError::Dispatch(format!(
+				// 			"Writing results {}. Error: {:?}",
+				// 			orders_string, e
+				// 		))
+				// 	})?;
+
+				write_orders(timestamp, &orders)?;
+
+				write_results(timestamp, pay_as_bid)?;
+
+				// store the merkle root associated with a given timestamp in the sgx state:
+				// to be defined.
+				// sp::io::set(storage_map_key());
 
 				sp_io::storage::set(
 					&merkle_roots_map_key(orders[0].time_slot.clone()),

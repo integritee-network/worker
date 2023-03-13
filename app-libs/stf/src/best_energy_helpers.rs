@@ -1,10 +1,31 @@
-use crate::MerkleProofWithCodec;
+use crate::{MerkleProofWithCodec, StfError};
 use binary_merkle_tree::merkle_proof;
 use codec::Encode;
-use simplyr_lib::Order;
+use simplyr_lib::{MarketOutput, Order};
 use sp_core::H256;
 use sp_runtime::traits::Keccak256;
-use std::vec::Vec;
+use std::{format, fs, vec::Vec};
+
+pub static ORDERS_DIR: &str = "./records/orders";
+pub static RESULTS_DIR: &str = "./records/market_results";
+
+pub fn write_orders(timestamp: &str, orders: &[Order]) -> Result<(), StfError> {
+	let orders_path = format!("{}/{}.json", ORDERS_DIR, timestamp);
+	fs::write(&orders_path, serde_json::to_string(&orders).unwrap())
+		.map_err(|e| StfError::Dispatch(format!("Writing orders {:?}. Error: {:?}", orders, e)))
+}
+
+pub fn write_results(timestamp: &str, market_results: MarketOutput) -> Result<(), StfError> {
+	let results_path = format!("{}/{}.json", RESULTS_DIR, timestamp);
+	fs::write(&results_path, serde_json::to_string(&market_results).unwrap().as_bytes()).map_err(
+		|e| {
+			StfError::Dispatch(format!(
+				"Writing market results {:?}. Error: {:?}",
+				market_results, e
+			))
+		},
+	)
+}
 
 /// Gets the merkle proof of an `actor_id` if it is in the order set.
 pub fn get_merkle_proof_for_actor(
