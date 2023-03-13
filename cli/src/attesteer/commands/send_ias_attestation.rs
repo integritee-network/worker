@@ -26,12 +26,12 @@ use crate::{command_utils::get_worker_api_direct, Cli};
 
 /// Forward IAS attestation report for verification.
 #[derive(Debug, Clone, Parser)]
-pub struct SendIASAttestationReportCmd {
+pub struct SendIasAttestationReportCmd {
 	/// Hex encoded IAS attestation report filename.
 	report: String,
 }
 
-impl SendIASAttestationReportCmd {
+impl SendIasAttestationReportCmd {
 	pub fn run(&self, cli: &Cli) {
 		let direct_api = get_worker_api_direct(cli);
 		let hex_encoded_report = read_to_string(&self.report)

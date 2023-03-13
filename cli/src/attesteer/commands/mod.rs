@@ -19,5 +19,5 @@ mod send_dcap_quote;
 mod send_ias_attestation;
 
 pub use self::{
-	send_dcap_quote::SendDcapQuoteCmd, send_ias_attestation::SendIASAttestationReportCmd,
+	send_dcap_quote::SendDcapQuoteCmd, send_ias_attestation::SendIasAttestationReportCmd,
 };
