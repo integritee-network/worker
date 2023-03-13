@@ -757,7 +757,11 @@ fn register_quotes_from_marblerun(
 	marblerun_base_url: String,
 ) {
 	let enclave = enclave.as_ref();
-	let events = prometheus_metrics::fetch_marblerun_events(&marblerun_base_url).unwrap();
+	let events = prometheus_metrics::fetch_marblerun_events(&marblerun_base_url)
+		.map_err(|e| {
+			info!("Fetching events from Marblerun failed with: {:?}, continuing with 0 events.", e);
+		})
+		.unwrap_or_default();
 	let quotes: Vec<&[u8]> =
 		events.iter().map(|event| event.get_quote_without_prepended_bytes()).collect();
 
