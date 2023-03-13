@@ -32,7 +32,7 @@ pub struct SendDCAPQuoteCmd {
 
 impl SendDCAPQuoteCmd {
 	pub fn run(&self, cli: &Cli) {
-		let direct_api = get_worker_api_direct(&cli);
+		let direct_api = get_worker_api_direct(cli);
 		let hex_encoded_quote = read_to_string(&self.quote)
 			.map_err(|e| error!("Opening hex encoded DCAP quote file failed: {:#?}", e))
 			.unwrap();

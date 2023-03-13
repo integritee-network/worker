@@ -33,7 +33,7 @@ pub struct SendIASAttestationReportCmd {
 
 impl SendIASAttestationReportCmd {
 	pub fn run(&self, cli: &Cli) {
-		let direct_api = get_worker_api_direct(&cli);
+		let direct_api = get_worker_api_direct(cli);
 		let hex_encoded_report = read_to_string(&self.report)
 			.map_err(|e| error!("Opening hex encoded IAS attestation report file failed: {:#?}", e))
 			.unwrap();
