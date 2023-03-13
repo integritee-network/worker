@@ -40,7 +40,7 @@ impl SendIASAttestationReportCmd {
 
 		//let request = Request { shard, cyphertext: hex_encoded_quote.to_vec() };
 
-		let rpc_method = "attesteer_forward_ias_attestation_report".to_owned();
+		let rpc_method = "attesteer_callForwardIASAttestationReport".to_owned();
 		let jsonrpc_call: String =
 			RpcRequest::compose_jsonrpc_call(rpc_method, vec![hex_encoded_report]).unwrap();
 

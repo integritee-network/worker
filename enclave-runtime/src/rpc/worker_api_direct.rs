@@ -149,7 +149,7 @@ where
 	});
 
 	// attesteer_forward_dcap_quote
-	let attesteer_forward_dcap_quote: &str = "attesteer_forward_dcap_quote";
+	let attesteer_forward_dcap_quote: &str = "attesteer_callForwardDCAPQuote";
 	io.add_sync_method(attesteer_forward_dcap_quote, move |params: Params| {
 		let json_value = match forward_dcap_quote_inner(params) {
 			Ok(val) => RpcReturnValue {
@@ -165,7 +165,8 @@ where
 	});
 
 	// attesteer_forward_ias_attestation_report
-	let attesteer_forward_ias_attestation_report: &str = "attesteer_forward_ias_attestation_report";
+	let attesteer_forward_ias_attestation_report: &str =
+		"attesteer_callForwardIASAttestationReport";
 	io.add_sync_method(attesteer_forward_ias_attestation_report, move |params: Params| {
 		let json_value = match attesteer_forward_ias_attestation_report_inner(params) {
 			Ok(val) => RpcReturnValue {
