@@ -34,9 +34,10 @@ pub struct SendIasAttestationReportCmd {
 impl SendIasAttestationReportCmd {
 	pub fn run(&self, cli: &Cli) {
 		let direct_api = get_worker_api_direct(cli);
-		let hex_encoded_report = read_to_string(&self.report)
-			.map_err(|e| error!("Opening hex encoded IAS attestation report file failed: {:#?}", e))
-			.unwrap();
+		let hex_encoded_report = match read_to_string(&self.report) {
+			Ok(hex_encoded_report) => hex_encoded_report,
+			Err(e) => panic!("Opening hex encoded IAS attestation report file failed: {:#?}", e),
+		};
 
 		//let request = Request { shard, cyphertext: hex_encoded_quote.to_vec() };
 
@@ -48,14 +49,10 @@ impl SendIasAttestationReportCmd {
 
 		// Decode RPC response.
 		let rpc_response: RpcResponse = serde_json::from_str(&rpc_response_str).ok().unwrap();
-		let rpc_return_value = RpcReturnValue::from_hex(&rpc_response.result)
-			// Replace with `inspect_err` once it's stable.
-			.map_err(|e| {
-				error!("Failed to decode RpcReturnValue: {:?}", e);
-				e
-			})
-			.ok()
-			.unwrap();
+		let rpc_return_value = match RpcReturnValue::from_hex(&rpc_response.result) {
+			Ok(rpc_return_value) => rpc_return_value,
+			Err(e) => panic!("Failed to decode RpcReturnValue: {:?}", e),
+		};
 
 		match rpc_return_value.status {
 			DirectRequestStatus::Ok => println!("IAS attestation report verification succeded."),
