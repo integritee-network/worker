@@ -45,7 +45,9 @@ impl SendDcapQuoteCmd {
 		let rpc_response_str = direct_api.get(&jsonrpc_call).unwrap();
 
 		// Decode RPC response.
-		let rpc_response: RpcResponse = serde_json::from_str(&rpc_response_str).ok().unwrap();
+		let Ok(rpc_response) = serde_json::from_str::<RpcResponse>(&rpc_response_str) else {
+			panic!("Can't parse RPC response: '{rpc_response_str}'");
+		};
 		let rpc_return_value = match RpcReturnValue::from_hex(&rpc_response.result) {
 			Ok(rpc_return_value) => rpc_return_value,
 			Err(e) => panic!("Failed to decode RpcReturnValue: {:?}", e),
