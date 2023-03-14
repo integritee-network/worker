@@ -214,8 +214,15 @@ impl ExecuteGetter for Getter {
 						serde_json::from_str(orders_string).expect("error serializing to JSON");
 					let orders_encoded: Vec<Vec<u8>> = orders.iter().map(|o| o.encode()).collect();
 
-					let leaf_index_u32: u32 = (*leaf_index).into();
-					if leaf_index_u32 >= orders.len() as u32 {
+					let leaf_index: usize = match (*leaf_index).try_into() {
+						Ok(index) => index,
+						Err(_) => {
+							info!("Error converting Leaf Index to usize: {})", leaf_index);
+							return None
+						},
+					};
+
+					if leaf_index >= orders.len() {
 						info!(
 							"leaf_index out of range: {} (orders length: {})",
 							leaf_index,
@@ -225,11 +232,8 @@ impl ExecuteGetter for Getter {
 						return None
 					}
 
-					let proof: MerkleProofWithCodec<_, _> = merkle_proof::<Keccak256, _, _>(
-						orders_encoded,
-						leaf_index_u32.try_into().unwrap(),
-					)
-					.into();
+					let proof: MerkleProofWithCodec<_, _> =
+						merkle_proof::<Keccak256, _, _>(orders_encoded, leaf_index).into();
 
 					let elapsed = now.elapsed();
 					info!("Time Elapsed for PayAsBid Proof is: {:.2?}", elapsed);

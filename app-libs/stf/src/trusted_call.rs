@@ -50,8 +50,6 @@ use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 #[cfg(feature = "evm")]
 use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_address};
 
-use std::fs::create_dir_all;
-
 use crate::best_energy_helpers::{write_orders, write_results, ORDERS_DIR};
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -283,7 +281,9 @@ where
 			TrustedCall::pay_as_bid(_who, orders_string) => {
 				let now = Instant::now();
 
-				create_dir_all(ORDERS_DIR).unwrap();
+				fs::create_dir_all(ORDERS_DIR).map_err(|err| {
+					StfError::Dispatch(format!("Creating orders directory. Error: {:?}", err))
+				})?;
 
 				let orders: Vec<Order> = serde_json::from_str(&orders_string).map_err(|err| {
 					StfError::Dispatch(format!("Error serializing to JSON: {}", err))
@@ -303,18 +303,6 @@ where
 
 				let order_merkle_root = merkle_root::<Keccak256, _>(orders_encoded);
 				let pay_as_bid: MarketOutput = pay_as_bid_matching(&market_input);
-
-				// fs::write(&orders_path, serde_json::to_string(&orders).unwrap()).map_err(|e| {
-				// 	StfError::Dispatch(format!("Writing results {}. Error: {:?}", orders_string, e))
-				// })?;
-
-				// fs::write(&results_path, serde_json::to_string(&pay_as_bid).unwrap().as_bytes())
-				// 	.map_err(|e| {
-				// 		StfError::Dispatch(format!(
-				// 			"Writing results {}. Error: {:?}",
-				// 			orders_string, e
-				// 		))
-				// 	})?;
 
 				write_orders(timestamp, &orders)?;
 

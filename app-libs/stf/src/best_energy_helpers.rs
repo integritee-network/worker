@@ -11,20 +11,31 @@ pub static RESULTS_DIR: &str = "./records/market_results";
 
 pub fn write_orders(timestamp: &str, orders: &[Order]) -> Result<(), StfError> {
 	let orders_path = format!("{}/{}.json", ORDERS_DIR, timestamp);
-	fs::write(&orders_path, serde_json::to_string(&orders).unwrap())
+
+	let orders_serialized = serde_json::to_string(&orders).map_err(|e| {
+		StfError::Dispatch(format!("Serializing orders {:?}. Error: {:?}", orders, e))
+	})?;
+
+	fs::write(&orders_path, orders_serialized)
 		.map_err(|e| StfError::Dispatch(format!("Writing orders {:?}. Error: {:?}", orders, e)))
 }
 
 pub fn write_results(timestamp: &str, market_results: MarketOutput) -> Result<(), StfError> {
 	let results_path = format!("{}/{}.json", RESULTS_DIR, timestamp);
-	fs::write(&results_path, serde_json::to_string(&market_results).unwrap().as_bytes()).map_err(
-		|e| {
-			StfError::Dispatch(format!(
-				"Writing market results {:?}. Error: {:?}",
-				market_results, e
-			))
-		},
-	)
+
+	let results_serialized = serde_json::to_string(&market_results).map_err(|e| {
+		StfError::Dispatch(format!(
+			"Serializing market results {:?}. Error: {:?}",
+			market_results, e
+		))
+	})?;
+
+	fs::write(&results_path, results_serialized.as_bytes()).map_err(|e| {
+		StfError::Dispatch(format!(
+			"Writing market results {:?}. Error: {:?}",
+			results_serialized, e
+		))
+	})
 }
 
 /// Gets the merkle proof of an `actor_id` if it is in the order set.
@@ -43,7 +54,6 @@ pub fn get_leaf_index_for_actor(actor_id: &str, orders: &[Order]) -> Option<usiz
 #[cfg(test)]
 mod test {
 	use super::*;
-	use binary_merkle_tree::{merkle_proof, MerkleProof};
 
 	#[test]
 	fn get_leaf_index_of_orders_works() {
