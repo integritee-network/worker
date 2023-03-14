@@ -15,13 +15,17 @@
 
 */
 
-use crate::attestation::{
-	generate_dcap_ra_extrinsic_from_quote_internal,
-	generate_ias_ra_extrinsic_from_der_cert_internal,
+use crate::{
+	attestation::{
+		generate_dcap_ra_extrinsic_from_quote_internal,
+		generate_ias_ra_extrinsic_from_der_cert_internal,
+	},
+	utils::get_validator_accessor_from_solo_or_parachain,
 };
 use codec::Encode;
 use core::result::Result;
 use ita_sgx_runtime::Runtime;
+use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, ExtrinsicSender};
 use itp_primitives_cache::{GetPrimitives, GLOBAL_PRIMITIVES_CACHE};
 use itp_rpc::RpcReturnValue;
 use itp_sgx_crypto::Rsa3072Seal;
@@ -232,14 +236,25 @@ fn execute_getter_inner<G: ExecuteGetter>(
 fn forward_dcap_quote_inner(params: Params) -> Result<OpaqueExtrinsic, String> {
 	let hex_encoded_params = params.parse::<Vec<String>>().map_err(|e| format!("{:?}", e))?;
 
-	let request =
-		Request::from_hex(&hex_encoded_params[0].clone()).map_err(|e| format!("{:?}", e))?;
+	if hex_encoded_params.len() != 1 {
+		return Err(format!(
+			"Wrong number of arguments for IAS attestation report forwarding: {}, expected: {}",
+			hex_encoded_params.len(),
+			1
+		))
+	}
 
-	let encoded_quote_to_forward: Vec<u8> = request.cyphertext;
+	let encoded_quote_to_forward: Vec<u8> =
+		itp_utils::hex::decode_hex(&hex_encoded_params[0]).map_err(|e| format!("{:?}", e))?;
 
 	let url = String::new();
 	let ext = generate_dcap_ra_extrinsic_from_quote_internal(url, &encoded_quote_to_forward)
 		.map_err(|e| format!("{:?}", e))?;
+
+	let validator_access = get_validator_accessor_from_solo_or_parachain().unwrap();
+	validator_access
+		.execute_mut_on_validator(|v| v.send_extrinsics(vec![ext.clone()]))
+		.unwrap();
 
 	Ok(ext)
 }
@@ -249,14 +264,25 @@ fn attesteer_forward_ias_attestation_report_inner(
 ) -> Result<OpaqueExtrinsic, String> {
 	let hex_encoded_params = params.parse::<Vec<String>>().map_err(|e| format!("{:?}", e))?;
 
-	let request =
-		Request::from_hex(&hex_encoded_params[0].clone()).map_err(|e| format!("{:?}", e))?;
+	if hex_encoded_params.len() != 1 {
+		return Err(format!(
+			"Wrong number of arguments for IAS attestation report forwarding: {}, expected: {}",
+			hex_encoded_params.len(),
+			1
+		))
+	}
 
-	let ias_attestation_report: Vec<u8> = request.cyphertext;
+	let ias_attestation_report =
+		itp_utils::hex::decode_hex(&hex_encoded_params[0]).map_err(|e| format!("{:?}", e))?;
 
 	let url = String::new();
 	let ext = generate_ias_ra_extrinsic_from_der_cert_internal(url, &ias_attestation_report)
 		.map_err(|e| format!("{:?}", e))?;
+
+	let validator_access = get_validator_accessor_from_solo_or_parachain().unwrap();
+	validator_access
+		.execute_mut_on_validator(|v| v.send_extrinsics(vec![ext.clone()]))
+		.unwrap();
 
 	Ok(ext)
 }
