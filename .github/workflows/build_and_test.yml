@@ -60,7 +60,7 @@ jobs:
         run: >
           docker build -t integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}
           --target deployed-worker
-          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }}
+          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=HW
           -f build.Dockerfile .
 
       - name: Build CLI client
@@ -69,7 +69,7 @@ jobs:
         run: >
           docker build -t integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}
           --target deployed-client
-          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }}
+          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=HW
           -f build.Dockerfile .
 
       - run: docker images --all
@@ -95,7 +95,7 @@ jobs:
           path: integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
 
   clippy:
-    runs-on: self-hosted
+    runs-on: ubuntu-22.04
     container: "integritee/integritee-dev:0.1.13"
     steps:
       - uses: actions/checkout@v3
@@ -133,7 +133,7 @@ jobs:
         uses: andymckay/cancel-action@0.2
 
   fmt:
-    runs-on: self-hosted
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
       - name: init rust

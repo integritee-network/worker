@@ -26,7 +26,10 @@ ENV PATH "$PATH:${SGX_SDK}/bin:${SGX_SDK}/bin/x64:/root/.cargo/bin"
 ENV PKG_CONFIG_PATH "${PKG_CONFIG_PATH}:${SGX_SDK}/pkgconfig"
 ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${SGX_SDK}/sdk_libs"
 ENV CARGO_NET_GIT_FETCH_WITH_CLI true
-ENV SGX_MODE SW
+
+# Default SGX MODE is software mode
+ARG SGX_MODE=SW
+ENV SGX_MODE=$SGX_MODE
 
 ENV HOME=/root/work
 
@@ -58,7 +61,10 @@ ENV PATH "$PATH:${SGX_SDK}/bin:${SGX_SDK}/bin/x64:/root/.cargo/bin"
 ENV PKG_CONFIG_PATH "${PKG_CONFIG_PATH}:${SGX_SDK}/pkgconfig"
 ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${SGX_SDK}/sdk_libs"
 ENV CARGO_NET_GIT_FETCH_WITH_CLI true
-ENV SGX_MODE SW
+
+# Default SGX MODE is software mode
+ARG SGX_MODE=SW
+ENV SGX_MODE=$SGX_MODE
 
 ENV HOME=/root/work
 
