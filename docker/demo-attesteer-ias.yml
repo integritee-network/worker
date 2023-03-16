@@ -1,0 +1,24 @@
+services:
+  demo-attesteer-ias:
+    image: integritee-cli:dev
+    container_name: integritee-attesteer-ias-demo
+    build:
+      context: ..
+      dockerfile: build.Dockerfile
+      target: deployed-client
+    depends_on:
+      integritee-node:
+        condition: service_healthy
+      integritee-worker-1:
+        condition: service_healthy
+    networks:
+      - integritee-test-network
+    entrypoint:
+      "/usr/local/worker-cli/demo_attesteer.sh -p 9912 -u ws://integritee-node
+      -V wss://integritee-worker-1 -P 2011
+      -t ias -a /usr/local/worker-cli/attesteer_ias_attestation_report_single_line.hex
+      -C /usr/local/bin/integritee-cli 2>&1"
+    restart: "no"
+networks:
+  integritee-test-network:
+    driver: bridge

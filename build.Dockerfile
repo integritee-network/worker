@@ -33,6 +33,9 @@ ENV HOME=/root/work
 ARG WORKER_MODE_ARG
 ENV WORKER_MODE=$WORKER_MODE_ARG
 
+ARG WORKER_FEATURES_ARG
+ENV WORKER_FEATURES=$WORKER_FEATURES_ARG
+
 ARG ADDITIONAL_FEATURES_ARG
 ENV ADDITIONAL_FEATURES=$ADDITIONAL_FEATURES_ARG
 
@@ -99,6 +102,7 @@ ENV LOG_DIR ${LOG_DIR}
 
 COPY --from=builder /root/work/worker/bin/integritee-cli /usr/local/bin
 COPY ./cli/*.sh /usr/local/worker-cli/
+COPY ./cli/*.hex /usr/local/worker-cli/
 
 RUN chmod +x /usr/local/bin/integritee-cli ${SCRIPT_DIR}/*.sh
 RUN mkdir ${LOG_DIR}
