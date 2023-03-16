@@ -18,7 +18,6 @@ on:
 env:
   CARGO_TERM_COLOR: always
   LOG_DIR: logs
-  BUILD_CONTAINER_NAME: integritee_worker_enclave_test
 
 jobs:
   cancel_previous_runs:
@@ -75,7 +74,7 @@ jobs:
       - run: docker images --all
 
       - name: Test Enclave # cargo test is not supported in the enclave, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
-        run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} test --all
+        run: docker run integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} test --all
 
       - name: Export worker image(s)
         run: |
