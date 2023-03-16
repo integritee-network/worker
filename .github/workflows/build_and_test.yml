@@ -128,7 +128,7 @@ jobs:
 
       - name: Fail-fast; cancel other jobs
         if: failure()
-        uses: andymckay/cancel-action@0.2
+        uses: andymckay/cancel-action@0.3
 
   fmt:
     runs-on: ubuntu-22.04
@@ -149,7 +149,7 @@ jobs:
 
       - name: Fail-fast; cancel other jobs
         if: failure()
-        uses: andymckay/cancel-action@0.2
+        uses: andymckay/cancel-action@0.3
 
   integration-tests:
     runs-on: ubuntu-22.04
