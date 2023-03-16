@@ -20,7 +20,24 @@
 //! from the sovereign parachain account to the desired account on the parachain assosciated parachain
 //! 
 
-#![cfg_attr(not(feature = "std"), no_std)]
+// #![cfg_attr(not(feature = "std"), no_std)]
+// pub use pallet::*;
+
+// #[frame_support::pallet]
+// pub mod pallet {
+// 	use crate::weights::WeightInfo;
+// 	use frame_support::prelude::*;
+// 	use frame_system::prelude::*;
+
+// 	#[pallet::pallet]
+// 	#[pallet::generate_store(pub(super) trait Store)]
+// 	pub struct Pallet<T>(_);
+
+// 	#[pallet::config]
+// 	pub trait Config: frame_system::Config {
+// 		type WeightInfo: WeightInfo
+// 	}
+// }
 
 /// Config:
 /// MAX_PARACHAINS = 3

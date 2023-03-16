@@ -50,6 +50,7 @@ pub enum TrustedCall {
 	balance_transfer(AccountId, AccountId, Balance),
 	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
 	balance_shield(AccountId, AccountId, Balance), // (Root, AccountIncognito, Amount)
+	test_extrinsic(AccountId), // Origin
 	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance), // (Origin, Address EVM Account, Value)
 	// (Origin, Source, Target, Input, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
@@ -102,6 +103,7 @@ impl TrustedCall {
 			TrustedCall::balance_transfer(sender_account, ..) => sender_account,
 			TrustedCall::balance_unshield(sender_account, ..) => sender_account,
 			TrustedCall::balance_shield(sender_account, ..) => sender_account,
+			TrustedCall::test_extrinsic(sender_account) => sender_account,
 			#[cfg(feature = "evm")]
 			TrustedCall::evm_withdraw(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
@@ -258,6 +260,13 @@ where
 			},
 
 			// TODO: Add subscribe module here which will call balance_shield when necessary.
+			TrustedCall::test_extrinsic(signer) => {
+				// TODO QUESTION: How does this return out if it isnt signed? like normal `ensure_signed()?`
+				let origin = ita_sgx_runtime::RuntimeOrigin::signed(signer);
+				info!("Calling Test Extrinsic ANDREW!!!!!!");
+				Ok(())
+			},
+
 
 			TrustedCall::balance_shield(enclave_account, who, value) => {
 				ensure_enclave_signer_account(&enclave_account)?;
@@ -401,6 +410,7 @@ where
 			TrustedCall::balance_transfer(_, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_unshield(_, _, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_shield(_, _, _) => debug!("No storage updates needed..."),
+			TrustedCall::test_extrinsic(_) => debug!("No storage updates needed..."),
 			#[cfg(feature = "evm")]
 			_ => debug!("No storage updates needed..."),
 		};

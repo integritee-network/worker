@@ -47,6 +47,7 @@ sp-version = { default-features = false, git = "https://github.com/paritytech/su
 # Integritee dependencies
 pallet-evm = { default-features = false, optional = true, git = "https://github.com/integritee-network/frontier.git", branch = "polkadot-v0.9.37" }
 pallet-parentchain = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "polkadot-v0.9.37" }
+pallet-privacy-sidechain = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "coax1d-privacy-pallet" }
 
 [features]
 default = ["std"]
@@ -81,6 +82,7 @@ std = [
     "pallet-timestamp/std",
     "pallet-transaction-payment/std",
     "pallet-parentchain/std",
+    "pallet-privacy-sidechain/std",
     "sp-api/std",
     "sp-core/std",
     "sp-inherents/std",

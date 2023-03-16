@@ -72,6 +72,7 @@ pub use frame_support::{
 };
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_parentchain::Call as ParentchainCall;
+pub use pallet_privacy_sidechain::Call as PrivacySidechainCall;
 pub use pallet_timestamp::Call as TimestampCall;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -259,6 +260,11 @@ impl pallet_parentchain::Config for Runtime {
 	type WeightInfo = ();
 }
 
+impl pallet_privacy_sidechain::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
+}
+
 // The plain sgx-runtime without the `evm-pallet`
 #[cfg(not(feature = "evm"))]
 construct_runtime!(
@@ -273,6 +279,7 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
 		Parentchain: pallet_parentchain::{Pallet, Call, Storage},
+		PrivacySidechain: pallet_privacy_sidechain,
 	}
 );
 
@@ -293,6 +300,7 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
 		Parentchain: pallet_parentchain::{Pallet, Call, Storage},
+
 
 		Evm: pallet_evm::{Pallet, Call, Storage, Config, Event<T>},
 	}

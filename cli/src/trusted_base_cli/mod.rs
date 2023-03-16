@@ -18,7 +18,7 @@
 use crate::{
 	trusted_base_cli::commands::{
 		balance::BalanceCommand, nonce::NonceCommand, set_balance::SetBalanceCommand,
-		transfer::TransferCommand, unshield_funds::UnshieldFundsCommand,
+		transfer::TransferCommand, unshield_funds::UnshieldFundsCommand, privacy::PrivacyCommand,
 	},
 	trusted_cli::TrustedCli,
 	trusted_command_utils::get_keystore_path,
@@ -54,6 +54,9 @@ pub enum TrustedBaseCommand {
 	/// gets the nonce of a given account, taking the pending trusted calls
 	/// in top pool in consideration
 	Nonce(NonceCommand),
+
+	/// Test Privacy Command.. For now..
+	PrivacySidechain(PrivacyCommand),
 }
 
 impl TrustedBaseCommand {
@@ -66,6 +69,7 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::Balance(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::UnshieldFunds(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::Nonce(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::PrivacySidechain(cmd) => cmd.run(cli, trusted_cli),
 		}
 	}
 }
