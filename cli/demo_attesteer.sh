@@ -36,13 +36,33 @@ echo "rem at is: ${REMOTE_ATTESTATION}, TYPE is: ${TYPE}"
 CLIENT="${CLIENT_BIN} -p ${NPORT} -P ${WORKER1PORT} -u ${NODEURL} -U ${WORKER1URL}"
 
 # attestation command
-ATTESTEER_CMD="attesteer send-${TYPE}-attestation-report"
+ATTESTEER_CMD="attesteer"
+case ${TYPE} in
+    ias|IAS)
+        ATTESTEER_CMD+="send-ias-attestation-report"
+    ;;
+    dcap|DCAP)
+        ATTESTEER_CMD+="send-dcap-quote"
+    ;;
+
+esac
+
+ATTESTEER_CMD+=${REMOTE_ATTESTATION}
+
 
 # call attesteer api
 RESULT=`${CLIENT} ${ATTESTEER_CMD} ${ATTESTATION}`
 
 # assert result (this needs to be tweaked a bit to support both attestation types.
-IF ${RESULT} = `IAS attestation report verification succeded.`
-   exit 0
-ELSE
-   exit 1
+case ${RESULT} in 
+    "DCAP quote verification succeded.")
+        exit 0
+    ;;
+    "IAS attestation report verification succeded.")
+        exit 0
+    ;;
+    *)
+        echo "attestation verification failed with: ${RESULT}"
+        exit 1
+    ;;
+esac
