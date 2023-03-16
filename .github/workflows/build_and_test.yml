@@ -94,7 +94,7 @@ jobs:
           path: integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
 
   clippy:
-    runs-on: ubuntu-22.04
+    runs-on: self-hosted
     container: "integritee/integritee-dev:0.1.13"
     steps:
       - uses: actions/checkout@v3
@@ -132,7 +132,7 @@ jobs:
         uses: andymckay/cancel-action@0.2
 
   fmt:
-    runs-on: ubuntu-22.04
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v3
       - name: init rust
