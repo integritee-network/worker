@@ -60,7 +60,7 @@ pub fn decode_hex<T: AsRef<[u8]>>(message: T) -> Result<Vec<u8>> {
 	let message = message.as_ref();
 	let message = match message {
 		[b'0', b'x', hex_value @ ..] => hex_value,
-		_ => &message,
+		_ => message,
 	};
 
 	let decoded_message = hex::decode(message).map_err(Error::Hex)?;
