@@ -9,6 +9,26 @@ use std::{format, fs, vec::Vec};
 pub static ORDERS_DIR: &str = "./records/orders";
 pub static RESULTS_DIR: &str = "./records/market_results";
 
+pub fn get_merkle_proof_for_actor_from_file(
+	timestamp: &str,
+	actor_id: &str,
+) -> Result<MerkleProofWithCodec<H256, Vec<u8>>, StfError> {
+	let orders = read_orders(timestamp)?;
+
+	get_merkle_proof_for_actor(actor_id, &orders)
+		.ok_or_else(|| StfError::Dispatch(format!("Leaf Index error: {:?}", actor_id)))
+}
+
+pub fn read_orders(timestamp: &str) -> Result<Vec<Order>, StfError> {
+	let file = format!("{}/{}.json", ORDERS_DIR, timestamp);
+	let content = fs::read_to_string(file)
+		.map_err(|e| StfError::Dispatch(format!("Reading Orders File Error: {:?}", e)))?;
+
+	serde_json::from_str(&content).map_err(|e| {
+		StfError::Dispatch(format!("Deserializing Orders {:?}. Error: {:?}", content, e))
+	})
+}
+
 pub fn write_orders(timestamp: &str, orders: &[Order]) -> Result<(), StfError> {
 	let orders_path = format!("{}/{}.json", ORDERS_DIR, timestamp);
 

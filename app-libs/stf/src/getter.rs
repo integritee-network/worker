@@ -11,18 +11,18 @@
 	limitations under the License.
 */
 
-use binary_merkle_tree::{merkle_proof, MerkleProof};
+use crate::best_energy_helpers::get_merkle_proof_for_actor_from_file;
+use binary_merkle_tree::MerkleProof;
 use codec::{Decode, Encode};
 use ita_sgx_runtime::System;
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 use itp_stf_interface::ExecuteGetter;
-use itp_stf_primitives::types::{AccountId, KeyPair, LeafIndex, OrdersString, Signature};
+use itp_stf_primitives::types::{AccountId, ActorId, KeyPair, Signature, Timestamp};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
 use serde::{Deserialize, Serialize};
-use simplyr_lib::Order;
-use sp_runtime::traits::{Keccak256, Verify};
+use sp_runtime::traits::Verify;
 use std::{prelude::v1::*, time::Instant};
 
 #[cfg(feature = "evm")]
@@ -109,7 +109,7 @@ pub enum TrustedGetter {
 	evm_account_codes(AccountId, H160),
 	#[cfg(feature = "evm")]
 	evm_account_storages(AccountId, H160, H256),
-	pay_as_bid_proof(AccountId, OrdersString, LeafIndex),
+	pay_as_bid_proof(AccountId, Timestamp, ActorId),
 }
 
 impl TrustedGetter {
@@ -124,8 +124,7 @@ impl TrustedGetter {
 			TrustedGetter::evm_account_codes(sender_account, _) => sender_account,
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_account_storages(sender_account, ..) => sender_account,
-			TrustedGetter::pay_as_bid_proof(sender_account, _orders_string, _leaf_index) =>
-				sender_account,
+			TrustedGetter::pay_as_bid_proof(sender_account, _timstamp, _actor_id) => sender_account,
 		}
 	}
 
@@ -207,33 +206,16 @@ impl ExecuteGetter for Getter {
 						None
 					},
 
-				TrustedGetter::pay_as_bid_proof(_who, orders_string, leaf_index) => {
+				TrustedGetter::pay_as_bid_proof(_who, timestamp, actor_id) => {
 					let now = Instant::now();
 
-					let orders: Vec<Order> =
-						serde_json::from_str(orders_string).expect("error serializing to JSON");
-					let orders_encoded: Vec<Vec<u8>> = orders.iter().map(|o| o.encode()).collect();
-
-					let leaf_index: usize = match (*leaf_index).try_into() {
-						Ok(index) => index,
-						Err(_) => {
-							info!("Error converting Leaf Index to usize: {})", leaf_index);
+					let proof = match get_merkle_proof_for_actor_from_file(timestamp, actor_id) {
+						Ok(proof) => proof,
+						Err(e) => {
+							log::error!("Getting Orders and Index Error, {:?}", e);
 							return None
 						},
 					};
-
-					if leaf_index >= orders.len() {
-						info!(
-							"leaf_index out of range: {} (orders length: {})",
-							leaf_index,
-							orders.len()
-						);
-
-						return None
-					}
-
-					let proof: MerkleProofWithCodec<_, _> =
-						merkle_proof::<Keccak256, _, _>(orders_encoded, leaf_index).into();
 
 					let elapsed = now.elapsed();
 					info!("Time Elapsed for PayAsBid Proof is: {:.2?}", elapsed);

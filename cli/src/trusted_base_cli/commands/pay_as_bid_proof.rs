@@ -28,8 +28,8 @@ use codec;
 pub struct PayAsBidProofCommand {
 	/// AccountId in ss58check format
 	account: String,
-	orders_string: String,
-	leaf_index: u8,
+	timestamp: String,
+	actor_id: String,
 }
 
 impl PayAsBidProofCommand {
@@ -42,8 +42,8 @@ impl PayAsBidProofCommand {
 				cli,
 				trusted_args,
 				&self.account,
-				self.orders_string.clone(),
-				self.leaf_index
+				self.timestamp.clone(),
+				self.actor_id.clone()
 			))
 			.unwrap()
 		);
@@ -54,14 +54,14 @@ pub(crate) fn pay_as_bid_proof(
 	cli: &Cli,
 	trusted_args: &TrustedCli,
 	arg_who: &str,
-	orders_string: String,
-	leaf_index: u8,
+	timestamp: String,
+	actor_id: String,
 ) -> MerkleProofWithCodec<H256, Vec<u8>> {
 	debug!("arg_who = {:?}", arg_who);
 	let who = get_pair_from_str(trusted_args, arg_who);
 
 	let top: TrustedOperation =
-		TrustedGetter::pay_as_bid_proof(who.public().into(), orders_string, leaf_index)
+		TrustedGetter::pay_as_bid_proof(who.public().into(), timestamp, actor_id)
 			.sign(&KeyPair::Sr25519(Box::new(who)))
 			.into();
 

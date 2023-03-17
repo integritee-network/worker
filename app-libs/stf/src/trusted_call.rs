@@ -50,7 +50,7 @@ use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 #[cfg(feature = "evm")]
 use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_address};
 
-use crate::best_energy_helpers::{write_orders, write_results, ORDERS_DIR};
+use crate::best_energy_helpers::{write_orders, write_results, ORDERS_DIR, RESULTS_DIR};
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
@@ -281,9 +281,11 @@ where
 			TrustedCall::pay_as_bid(_who, orders_string) => {
 				let now = Instant::now();
 
-				fs::create_dir_all(ORDERS_DIR).map_err(|err| {
-					StfError::Dispatch(format!("Creating orders directory. Error: {:?}", err))
-				})?;
+				for dir in &[ORDERS_DIR, RESULTS_DIR] {
+					fs::create_dir_all(dir).map_err(|err| {
+						StfError::Dispatch(format!("Error creating directory {:?}: {:?}", dir, err))
+					})?;
+				}
 
 				let orders: Vec<Order> = serde_json::from_str(&orders_string).map_err(|err| {
 					StfError::Dispatch(format!("Error serializing to JSON: {}", err))

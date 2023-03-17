@@ -60,6 +60,7 @@ WORKER1URL=${WORKER1URL:-"wss://127.0.0.1"}
 
 CLIENT_BIN=${CLIENT_BIN:-"./../bin/integritee-cli"}
 
+TIMESTAMP="2022-03-04T05:06:07+00:00"
 ORDERS_FILE=${ORDERS_FILE:-"../bin/orders/order_10_users.json"}
 FILE_CONTENTS=$(cat "$ORDERS_FILE" | tr -d '[:space:]')
 ORDERS_STRING="$FILE_CONTENTS"
@@ -75,7 +76,7 @@ CLIENT="${CLIENT_BIN} -p ${NPORT} -P ${WORKER1PORT} -u ${NODEURL} -U ${WORKER1UR
 read -r MRENCLAVE <<< "$($CLIENT list-workers | awk '/  MRENCLAVE: / { print $2; exit }')"
 
 echo "* Getting merkle proof for orders"
-PROOF=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct pay-as-bid-proof //Alice ${ORDERS_STRING} 1`
+PROOF=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct pay-as-bid-proof //Alice ${TIMESTAMP} actor_0`
 echo "Proof: ${PROOF}"
 
 echo "* Verifying merkle proof"
