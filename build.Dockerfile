@@ -17,7 +17,7 @@
 
 ### Builder Stage
 ##################################################
-FROM integritee/integritee-dev:0.2 AS builder
+FROM integritee/integritee-dev:0.2.1 AS builder
 LABEL maintainer="zoltan@integritee.network"
 
 # set environment variables
@@ -52,7 +52,7 @@ RUN cargo test --release
 # A builder stage that uses sccache to speed up local builds with docker
 # Installation and setup of sccache should be moved to the integritee-dev image, so we don't
 # always need to compile and install sccache on CI (where we have no caching so far).
-FROM integritee/integritee-dev:0.2 AS cached-builder
+FROM integritee/integritee-dev:0.2.1 AS cached-builder
 LABEL maintainer="zoltan@integritee.network"
 
 # set environment variables
@@ -118,9 +118,6 @@ ENTRYPOINT ["/usr/local/bin/integritee-cli"]
 ##################################################
 FROM runner AS deployed-worker
 LABEL maintainer="zoltan@integritee.network"
-
-ENV SGX_SDK /opt/sgxsdk
-ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${SGX_SDK}/lib64"
 
 WORKDIR /usr/local/bin
 
