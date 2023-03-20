@@ -86,10 +86,7 @@ RUN --mount=type=cache,id=cargo,target=${HOME}/.cache/sccache cargo test --relea
 
 ### Base Runner Stage
 ##################################################
-FROM ubuntu:22.04 AS runner
-
-RUN apt update && apt install -y libssl-dev iproute2 curl
-
+FROM oasisprotocol/aesmd:master AS runner
 
 ### Deployed CLI client
 ##################################################
