@@ -28,6 +28,7 @@ use itp_types::H256;
 
 pub mod call_worker;
 pub mod shield_funds;
+pub mod balances_transfer;
 
 pub(crate) trait Executor<
 	ShieldingKeyRepository,

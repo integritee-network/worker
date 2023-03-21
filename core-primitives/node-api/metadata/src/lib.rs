@@ -21,6 +21,7 @@
 
 use crate::{
 	error::Result, pallet_sidechain::SidechainCallIndexes, pallet_teerex::TeerexCallIndexes,
+	pallet_balances::BalancesCallIndexes,
 };
 use codec::{Decode, Encode};
 use sp_core::storage::StorageKey;
@@ -33,12 +34,13 @@ pub mod pallet_sidechain;
 pub mod pallet_system;
 pub mod pallet_teeracle;
 pub mod pallet_teerex;
+pub mod pallet_balances;
 
 #[cfg(feature = "mocks")]
 pub mod metadata_mocks;
 
-pub trait NodeMetadataTrait: TeerexCallIndexes + SidechainCallIndexes {}
-impl<T: TeerexCallIndexes + SidechainCallIndexes> NodeMetadataTrait for T {}
+pub trait NodeMetadataTrait: TeerexCallIndexes + SidechainCallIndexes + BalancesCallIndexes {}
+impl<T: TeerexCallIndexes + SidechainCallIndexes + BalancesCallIndexes> NodeMetadataTrait for T {}
 
 #[derive(Default, Encode, Decode, Debug, Clone)]
 pub struct NodeMetadata {

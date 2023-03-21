@@ -45,7 +45,8 @@ use crate::{
 use beefy_merkle_tree::{merkle_root, Keccak256};
 use codec::Encode;
 use itp_node_api::metadata::{
-	pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata, NodeMetadataTrait,
+	pallet_balances::BalancesCallIndexes, provider::AccessNodeMetadata, NodeMetadataTrait,
+	pallet_teerex::TeerexCallIndexes,
 };
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
 use itp_stf_executor::traits::StfEnclaveSigning;

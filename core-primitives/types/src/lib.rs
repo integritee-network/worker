@@ -23,6 +23,7 @@ use codec::{Decode, Encode};
 #[cfg(feature = "sgx")]
 use sgx_tstd as std;
 use sp_std::vec::Vec;
+use sp_runtime::traits::{AccountIdLookup, StaticLookup};
 
 pub mod storage;
 
@@ -45,6 +46,9 @@ pub type MrEnclave = [u8; 32];
 pub type ConfirmCallFn = ([u8; 2], ShardIdentifier, H256, Vec<u8>);
 pub type ShieldFundsFn = ([u8; 2], Vec<u8>, Balance, ShardIdentifier);
 pub type CallWorkerFn = ([u8; 2], Request);
+
+pub type TransferMultiAddress = <AccountIdLookup<AccountId, ()>  as StaticLookup>::Source;
+pub type TransferFn = ([u8; 2], TransferMultiAddress, Balance);
 
 pub type Enclave = EnclaveGen<AccountId>;
 

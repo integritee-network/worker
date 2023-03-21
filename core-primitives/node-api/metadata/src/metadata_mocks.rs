@@ -17,6 +17,7 @@
 
 use crate::{
 	error::Result, pallet_sidechain::SidechainCallIndexes, pallet_teerex::TeerexCallIndexes,
+	pallet_balances::BalancesCallIndexes,
 };
 use codec::{Decode, Encode};
 
@@ -30,6 +31,8 @@ pub struct NodeMetadataMock {
 	register_tcb_info: u8,
 	call_worker: u8,
 	processed_parentchain_block: u8,
+	balances_module: u8,
+	balances_transfer: u8,
 	shield_funds: u8,
 	unshield_funds: u8,
 	publish_hash: u8,
@@ -50,6 +53,8 @@ impl NodeMetadataMock {
 			register_tcb_info: 8,
 			call_worker: 2u8,
 			processed_parentchain_block: 3u8,
+			balances_module: 10u8,
+			balances_transfer: 7u8,
 			shield_funds: 4u8,
 			unshield_funds: 5u8,
 			publish_hash: 9u8,
@@ -106,5 +111,11 @@ impl TeerexCallIndexes for NodeMetadataMock {
 impl SidechainCallIndexes for NodeMetadataMock {
 	fn confirm_imported_sidechain_block_indexes(&self) -> Result<[u8; 2]> {
 		Ok([self.sidechain_module, self.imported_sidechain_block])
+	}
+}
+
+impl BalancesCallIndexes for NodeMetadataMock {
+	fn transfer_call_indexes(&self) -> Result<[u8; 2]> {
+		Ok([self.balances_module, self.balances_transfer])
 	}
 }
