@@ -35,26 +35,27 @@ pub mod sgx_reexport_prelude {
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-pub mod error;
-pub mod executor;
-
-use crate::{
-	error::Result,
-	executor::{call_worker::CallWorker, shield_funds::ShieldFunds, DecorateExecutor},
-};
+use crate::{error::Result, filter_calls::FilterCalls};
 use beefy_merkle_tree::{merkle_root, Keccak256};
 use codec::Encode;
+use core::marker::PhantomData;
+use ita_stf::{TrustedCall, TrustedCallSigned};
 use itp_node_api::metadata::{
 	pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata, NodeMetadataTrait,
 };
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
 use itp_stf_executor::traits::StfEnclaveSigning;
+use itp_stf_primitives::types::AccountId;
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{OpaqueCall, ShardIdentifier, H256};
 use log::*;
 use sp_core::blake2_256;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header};
-use std::{sync::Arc, vec, vec::Vec};
+use std::{sync::Arc, vec::Vec};
+
+pub mod error;
+// pub mod executor;
+pub mod filter_calls;
 
 #[derive(Clone)]
 pub enum ExecutionStatus<R> {
@@ -75,21 +76,39 @@ pub trait ExecuteIndirectCalls {
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>;
 }
 
+/// Trait that should be implemented on indirect calls to be executed.
+pub trait IndirectDispatch<E: IndirectExecutor> {
+	fn execute(&self, executor: &E) -> Result<()>;
+}
+
 pub struct IndirectCallsExecutor<
 	ShieldingKeyRepository,
 	StfEnclaveSigner,
 	TopPoolAuthor,
 	NodeMetadataProvider,
+	IndirectCallsFilter,
 > {
 	pub(crate) shielding_key_repo: Arc<ShieldingKeyRepository>,
 	pub(crate) stf_enclave_signer: Arc<StfEnclaveSigner>,
 	pub(crate) top_pool_author: Arc<TopPoolAuthor>,
 	pub(crate) node_meta_data_provider: Arc<NodeMetadataProvider>,
+	_phantom: PhantomData<IndirectCallsFilter>,
 }
 
-impl<ShieldingKeyRepository, StfEnclaveSigner, TopPoolAuthor, NodeMetadataProvider>
-	IndirectCallsExecutor<ShieldingKeyRepository, StfEnclaveSigner, TopPoolAuthor, NodeMetadataProvider>
-where
+impl<
+		ShieldingKeyRepository,
+		StfEnclaveSigner,
+		TopPoolAuthor,
+		NodeMetadataProvider,
+		IndirectCallsFilter,
+	>
+	IndirectCallsExecutor<
+		ShieldingKeyRepository,
+		StfEnclaveSigner,
+		TopPoolAuthor,
+		NodeMetadataProvider,
+		IndirectCallsFilter,
+	> where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
 		+ ShieldingCryptoEncrypt<Error = itp_sgx_crypto::Error>,
@@ -109,18 +128,7 @@ where
 			stf_enclave_signer,
 			top_pool_author,
 			node_meta_data_provider,
-		}
-	}
-
-	pub(crate) fn submit_trusted_call(
-		&self,
-		shard: ShardIdentifier,
-		encrypted_trusted_call: Vec<u8>,
-	) {
-		if let Err(e) = futures::executor::block_on(
-			self.top_pool_author.submit_top(encrypted_trusted_call, shard),
-		) {
-			error!("Error adding indirect trusted call to TOP pool: {:?}", e);
+			_phantom: Default::default(),
 		}
 	}
 
@@ -145,13 +153,19 @@ where
 	}
 }
 
-impl<ShieldingKeyRepository, StfEnclaveSigner, TopPoolAuthor, NodeMetadataProvider>
-	ExecuteIndirectCalls
+impl<
+		ShieldingKeyRepository,
+		StfEnclaveSigner,
+		TopPoolAuthor,
+		NodeMetadataProvider,
+		FilterIndirectCalls,
+	> ExecuteIndirectCalls
 	for IndirectCallsExecutor<
 		ShieldingKeyRepository,
 		StfEnclaveSigner,
 		TopPoolAuthor,
 		NodeMetadataProvider,
+		FilterIndirectCalls,
 	> where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
@@ -160,6 +174,8 @@ impl<ShieldingKeyRepository, StfEnclaveSigner, TopPoolAuthor, NodeMetadataProvid
 	TopPoolAuthor: AuthorApi<H256, H256> + Send + Sync + 'static,
 	NodeMetadataProvider: AccessNodeMetadata,
 	NodeMetadataProvider::MetadataType: NodeMetadataTrait,
+	FilterIndirectCalls: FilterCalls<NodeMetadataProvider::MetadataType>,
+	FilterIndirectCalls::Call: IndirectDispatch<Self>,
 {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
@@ -176,37 +192,26 @@ impl<ShieldingKeyRepository, StfEnclaveSigner, TopPoolAuthor, NodeMetadataProvid
 
 		// TODO: this logic might have better alternatives, see https://github.com/integritee-network/worker/issues/1156
 		for xt_opaque in block.extrinsics().iter() {
-			let encoded_xt_opaque = xt_opaque.encode();
+			let mut encoded_xt_opaque = xt_opaque.encode();
 
-			// Found ShieldFunds extrinsic in block.
-			let shield_funds = ShieldFunds {};
-			// Found CallWorker extrinsic in block.
-			// No else-if here! Because the same opaque extrinsic can contain multiple Fns at once (this lead to intermittent M6 failures)
-			let call_worker = CallWorker {};
+			let maybe_call = self.node_meta_data_provider.get_from_metadata(|metadata| {
+				FilterIndirectCalls::filter_into_with_metadata(
+					&mut encoded_xt_opaque.as_mut_slice(),
+					metadata,
+				)
+			})?;
 
-			let executors: Vec<
-				&dyn DecorateExecutor<
-					ShieldingKeyRepository,
-					StfEnclaveSigner,
-					TopPoolAuthor,
-					NodeMetadataProvider,
-				>,
-			> = vec![&shield_funds, &call_worker];
-			for executor in executors {
-				match executor.decode_and_execute(self, &mut encoded_xt_opaque.as_slice()) {
-					Ok(ExecutionStatus::Success(hash)) => {
-						executed_calls.push(hash);
-						break
-					},
-					Ok(ExecutionStatus::NextExecutor) => continue,
-					Err(e) => {
-						log::error!("fail to execute indirect_call. due to {:?} ", e);
-						// We should keep the same error handling as the original function `handle_shield_funds_xt`.
-						// `create_processed_parentchain_block_call` needs to be called in any case.
-						break
-					},
-				}
-			}
+			let call = match maybe_call {
+				Some(c) => c,
+				None => continue,
+			};
+
+			if let Err(e) = call.execute(&self) {
+				log::warn!("Error executing the indirect call: {:?}", e);
+				continue
+			};
+
+			executed_calls.push(hash_of(&call))
 		}
 
 		// Include a processed parentchain block confirmation for each block.
@@ -220,6 +225,77 @@ impl<ShieldingKeyRepository, StfEnclaveSigner, TopPoolAuthor, NodeMetadataProvid
 
 pub(crate) fn hash_of<T: Encode>(xt: &T) -> H256 {
 	blake2_256(&xt.encode()).into()
+}
+
+pub trait IndirectExecutor {
+	fn submit_trusted_call(&self, shard: ShardIdentifier, encrypted_trusted_call: Vec<u8>);
+
+	fn decrypt(&self, encrypted: Vec<u8>) -> Result<Vec<u8>>;
+
+	fn encrypt<V: Encode>(&self, value: &V) -> Result<Vec<u8>>;
+
+	fn get_enclave_account(&self) -> Result<AccountId>;
+
+	fn sign_call_with_self(
+		&self,
+		trusted_call: &TrustedCall,
+		shard: &ShardIdentifier,
+	) -> Result<TrustedCallSigned>;
+}
+
+impl<
+		ShieldingKeyRepository,
+		StfEnclaveSigner,
+		TopPoolAuthor,
+		NodeMetadataProvider,
+		FilterIndirectCalls,
+	> IndirectExecutor
+	for IndirectCallsExecutor<
+		ShieldingKeyRepository,
+		StfEnclaveSigner,
+		TopPoolAuthor,
+		NodeMetadataProvider,
+		FilterIndirectCalls,
+	> where
+	ShieldingKeyRepository: AccessKey,
+	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
+		+ ShieldingCryptoEncrypt<Error = itp_sgx_crypto::Error>,
+	StfEnclaveSigner: StfEnclaveSigning,
+	TopPoolAuthor: AuthorApi<H256, H256> + Send + Sync + 'static,
+	NodeMetadataProvider: AccessNodeMetadata,
+	NodeMetadataProvider::MetadataType: NodeMetadataTrait,
+	FilterIndirectCalls: FilterCalls<NodeMetadataProvider::MetadataType>,
+	FilterIndirectCalls::Call: IndirectDispatch<Self>,
+{
+	fn submit_trusted_call(&self, shard: ShardIdentifier, encrypted_trusted_call: Vec<u8>) {
+		if let Err(e) = futures::executor::block_on(
+			self.top_pool_author.submit_top(encrypted_trusted_call, shard),
+		) {
+			error!("Error adding indirect trusted call to TOP pool: {:?}", e);
+		}
+	}
+
+	fn decrypt(&self, encrypted: Vec<u8>) -> Result<Vec<u8>> {
+		let key = self.shielding_key_repo.retrieve_key()?;
+		Ok(key.decrypt(&encrypted)?)
+	}
+
+	fn encrypt<V: Encode>(&self, value: &V) -> Result<Vec<u8>> {
+		let key = self.shielding_key_repo.retrieve_key()?;
+		Ok(key.encrypt(&value.encode())?)
+	}
+
+	fn get_enclave_account(&self) -> Result<AccountId> {
+		Ok(self.stf_enclave_signer.get_enclave_account()?)
+	}
+
+	fn sign_call_with_self(
+		&self,
+		trusted_call: &TrustedCall,
+		shard: &ShardIdentifier,
+	) -> Result<TrustedCallSigned> {
+		Ok(self.stf_enclave_signer.sign_call_with_self(trusted_call, shard)?)
+	}
 }
 
 #[cfg(test)]
