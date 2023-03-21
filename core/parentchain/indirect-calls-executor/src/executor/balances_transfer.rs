@@ -29,8 +29,9 @@ use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, Shieldin
 use itp_stf_executor::traits::StfEnclaveSigning;
 use itp_stf_primitives::types::AccountId;
 use itp_top_pool_author::traits::AuthorApi;
-use itp_types::{TransferFn, TransferMultiAddress, H256};
+use itp_types::{TransferFn, TransferMultiAddress, H256, AccountLookup, StaticLookup};
 use log::{debug, info};
+use sp_runtime::traits::AccountIdLookup;
 
 pub struct Transfer {}
 
@@ -69,6 +70,26 @@ where
             >,
             extrinsic: ParentchainUncheckedExtrinsic<Self::Call>,
         ) -> Result<(), Error> {
+        let (call, _transfer_multi_address, amount) = extrinsic.function;
+
+        let sender_account: AccountId =
+            extrinsic.signature
+            .map(|signature| AccountLookup::lookup(signature.0))
+            .ok_or(Error::Other("Error getting signature tuple from extrinsic".into()))?
+            .map_err(|_| Error::Other("Error getting sender AccountId from signature tuple".into()))?;
+        
+        info!("Found Transfer extrinsic in block: \nCall: {:?}, \nAccount of Sender: {:?}, \nAmount: {}", call, account, amount);
+        // Get Enclave AccountId to pass to `balance_shield`
+        let enclave_account_id = context.stf_enclave_signer.get_enclave_account()?;
+        let trusted_call = TrustedCall::balance_shield(enclave_account_id, sender_account, amount);
+        // TODO: How to get the valid `shard_id`? Pallet_balances doesnt have access to that.
+        // let signed_trusted_call =
+		// 	context.stf_enclave_signer.sign_call_with_self(&trusted_call, &shard)?;
+
+        // Encrypt and Submit
+        // let trusted_operation = TrustedOperation::indirect_call(signed_trusted_call);
+        // context.submit_trusted_call(shard, encrypted_trusted_call);
+
         Ok(())
     }
 }
