@@ -23,7 +23,7 @@ env:
 jobs:
   cancel_previous_runs:
     name: Cancel Previous Runs
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: styfle/cancel-workflow-action@0.11.0
         with:
@@ -161,7 +161,7 @@ jobs:
       WORKER_IMAGE_TAG: integritee-worker:dev
       CLIENT_IMAGE_TAG: integritee-cli:dev
       COINMARKETCAP_KEY: ${{ secrets.COINMARKETCAP_KEY }}
-      TEERACLE_INTERVAL_SECONDS: 4
+      TEERACLE_INTERVAL_SECONDS: 10
 
     strategy:
       fail-fast: false
@@ -234,12 +234,12 @@ jobs:
       - name: Stop docker containers
         run: |
           cd docker
-          docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml stop
+          docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml down
 
       - name: Integration Test ${{ matrix.test }}-${{ matrix.flavor_id }}
         run: |
           cd docker
-          docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml up ${{ matrix.demo_name }} --no-build --exit-code-from ${{ matrix.demo_name }}
+          docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml up ${{ matrix.demo_name }} --no-build --exit-code-from ${{ matrix.demo_name }} --remove-orphans
 
       - name: Collect Docker Logs
         continue-on-error: true
@@ -261,7 +261,7 @@ jobs:
         if: always()
         run: |
           cd docker
-          docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml stop
+          docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml down
 
 
   release:

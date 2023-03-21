@@ -34,7 +34,7 @@ services:
     restart: always
   demo-teeracle-generic:
     image: integritee-cli:dev
-    container_name: integritee-teeracle-demo
+    container_name: integritee-teeracle-generic-demo
     devices:
       - "/dev/sgx/provision:/dev/sgx/provision"
       - "/dev/sgx/enclave:/dev/sgx/enclave"
