@@ -232,7 +232,7 @@ pub trait IndirectExecutor {
 
 	fn decrypt(&self, encrypted: &[u8]) -> Result<Vec<u8>>;
 
-	fn encrypt<V: Encode>(&self, value: &V) -> Result<Vec<u8>>;
+	fn encrypt(&self, value: &[u8]) -> Result<Vec<u8>>;
 
 	fn get_enclave_account(&self) -> Result<AccountId>;
 
@@ -276,9 +276,9 @@ impl<
 		Ok(key.decrypt(&encrypted)?)
 	}
 
-	fn encrypt<V: Encode>(&self, value: &V) -> Result<Vec<u8>> {
+	fn encrypt(&self, value: &[u8]) -> Result<Vec<u8>> {
 		let key = self.shielding_key_repo.retrieve_key()?;
-		Ok(key.encrypt(&value.encode())?)
+		Ok(key.encrypt(value)?)
 	}
 
 	fn get_enclave_account(&self) -> Result<AccountId> {

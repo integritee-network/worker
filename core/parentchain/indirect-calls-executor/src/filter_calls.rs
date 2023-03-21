@@ -2,7 +2,7 @@ use crate::{
 	error::Result, indirect_calls::shield_funds::ShiedFundsCall, IndirectDispatch, IndirectExecutor,
 };
 use codec::{Decode, Encode};
-use itp_node_api::metadata::NodeMetadataTrait;
+use itp_node_api::{api_client::ParentchainUncheckedExtrinsic, metadata::NodeMetadataTrait};
 use itp_types::CallWorkerFn;
 
 /// Trait to filter an indirect call and decode into it, where the decoding
@@ -19,15 +19,18 @@ impl<NodeMetadata: NodeMetadataTrait> FilterCalls<NodeMetadata> for ShieldFundsA
 	type Call = IndirectCall;
 
 	fn filter_into_with_metadata(call: &mut &[u8], metadata: &NodeMetadata) -> Option<Self::Call> {
-		// this will just skip the rest of the bytes.
-		let index = <[u8; 2]>::decode(call).ok()?;
+		// decode it into some arbitrary parentchain extrinsic to extract the indexes
+		let xt =
+			ParentchainUncheckedExtrinsic::<([u8; 2], Vec<u8>)>::decode(&mut call.clone()).ok()?;
 
-		if index == metadata.shield_funds_call_indexes().ok()? {
-			Some(IndirectCall::ShieldFunds(Decode::decode(call).ok()?))
-		} else if index == metadata.call_worker_call_indexes().ok()? {
+		let index = &xt.function.0;
+
+		if index == &metadata.shield_funds_call_indexes().ok()? {
+			let xt = ParentchainUncheckedExtrinsic::<ShiedFundsCall>::decode(call).ok()?;
+			Some(IndirectCall::ShieldFunds(xt.function))
+		} else if index == &metadata.call_worker_call_indexes().ok()? {
 			Some(IndirectCall::CallWorker(Decode::decode(call).ok()?))
 		} else {
-			println!("Call did not match");
 			None
 		}
 	}
