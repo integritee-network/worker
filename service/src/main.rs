@@ -784,14 +784,17 @@ fn register_collateral(
 	is_development_mode: bool,
 	skip_ra: bool,
 ) {
+	//TODO generate_dcap_ra_quote() does not really need skip_ra, rethink how many layers skip_ra should be passed along
 	let dcap_quote = enclave.generate_dcap_ra_quote(skip_ra).unwrap();
-	let (fmspc, _tcb_info) = extract_tcb_info_from_raw_dcap_quote(&dcap_quote).unwrap();
+	if !skip_ra {
+		let (fmspc, _tcb_info) = extract_tcb_info_from_raw_dcap_quote(&dcap_quote).unwrap();
 
-	let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc).unwrap();
-	send_extrinsic(&uxt, api, accountid, is_development_mode);
+		let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc).unwrap();
+		send_extrinsic(&uxt, api, accountid, is_development_mode);
 
-	let uxt = enclave.generate_register_tcb_info_extrinsic(fmspc).unwrap();
-	send_extrinsic(&uxt, api, accountid, is_development_mode);
+		let uxt = enclave.generate_register_tcb_info_extrinsic(fmspc).unwrap();
+		send_extrinsic(&uxt, api, accountid, is_development_mode);
+	}
 }
 
 fn send_extrinsic(
