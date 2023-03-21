@@ -15,6 +15,11 @@ services:
   integritee-worker-1:
     image: integritee-worker:dev
     container_name: integritee-worker-1
+    devices:
+      - "/dev/sgx/provision:/dev/sgx/provision"
+      - "/dev/sgx/enclave:/dev/sgx/enclave"
+    volumes:
+      - "/var/run/aesmd:/var/run/aesmd"
     build:
       context: ..
       dockerfile: build.Dockerfile
@@ -39,6 +44,11 @@ services:
   integritee-worker-2:
     image: integritee-worker:dev
     container_name: integritee-worker-2
+    devices:
+      - "/dev/sgx/provision:/dev/sgx/provision"
+      - "/dev/sgx/enclave:/dev/sgx/enclave"
+    volumes:
+      - "/var/run/aesmd:/var/run/aesmd"
     build:
       context: ..
       dockerfile: build.Dockerfile

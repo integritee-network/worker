@@ -6,6 +6,11 @@ services:
   integritee-teeracle-worker:
     image: integritee-worker:dev
     container_name: integritee-teeracle-worker
+    devices:
+      - "/dev/sgx/provision:/dev/sgx/provision"
+      - "/dev/sgx/enclave:/dev/sgx/enclave"
+    volumes:
+      - "/var/run/aesmd:/var/run/aesmd"
     build:
       context: ..
       dockerfile: build.Dockerfile
@@ -30,6 +35,11 @@ services:
   demo-teeracle-generic:
     image: integritee-cli:dev
     container_name: integritee-teeracle-demo
+    devices:
+      - "/dev/sgx/provision:/dev/sgx/provision"
+      - "/dev/sgx/enclave:/dev/sgx/enclave"
+    volumes:
+      - "/var/run/aesmd:/var/run/aesmd"
     build:
       context: ..
       dockerfile: build.Dockerfile
