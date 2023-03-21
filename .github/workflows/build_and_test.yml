@@ -221,8 +221,12 @@ jobs:
 
       - name: Re-name Image Tags
         run: |
-          docker image rmi ${{ env.WORKER_IMAGE_TAG }} 2>/dev/null
-          docker image rmi ${{ env.CLIENT_IMAGE_TAG }} 2>/dev/null
+          if [[ "$(docker images -q ${{ env.WORKER_IMAGE_TAG }} 2> /dev/null)" == "" ]]; then
+             docker image rmi --force ${{ env.WORKER_IMAGE_TAG }} 2>/dev/null
+          fi
+          if [[ "$(docker images -q ${{ env.CLIENT_IMAGE_TAG }} 2> /dev/null)" == "" ]]; then
+             docker image rmi --force ${{ env.CLIENT_IMAGE_TAG }} 2>/dev/null
+          fi
           docker tag integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.WORKER_IMAGE_TAG }}
           docker tag integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.CLIENT_IMAGE_TAG }}
           docker images --all
