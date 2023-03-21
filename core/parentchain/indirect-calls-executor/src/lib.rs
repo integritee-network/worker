@@ -54,8 +54,8 @@ use sp_runtime::traits::{Block as ParentchainBlockTrait, Header};
 use std::{sync::Arc, vec::Vec};
 
 pub mod error;
-// pub mod executor;
 pub mod filter_calls;
+pub mod indirect_calls;
 
 #[derive(Clone)]
 pub enum ExecutionStatus<R> {
@@ -230,7 +230,7 @@ pub(crate) fn hash_of<T: Encode>(xt: &T) -> H256 {
 pub trait IndirectExecutor {
 	fn submit_trusted_call(&self, shard: ShardIdentifier, encrypted_trusted_call: Vec<u8>);
 
-	fn decrypt(&self, encrypted: Vec<u8>) -> Result<Vec<u8>>;
+	fn decrypt(&self, encrypted: &[u8]) -> Result<Vec<u8>>;
 
 	fn encrypt<V: Encode>(&self, value: &V) -> Result<Vec<u8>>;
 
@@ -262,10 +262,6 @@ impl<
 		+ ShieldingCryptoEncrypt<Error = itp_sgx_crypto::Error>,
 	StfEnclaveSigner: StfEnclaveSigning,
 	TopPoolAuthor: AuthorApi<H256, H256> + Send + Sync + 'static,
-	NodeMetadataProvider: AccessNodeMetadata,
-	NodeMetadataProvider::MetadataType: NodeMetadataTrait,
-	FilterIndirectCalls: FilterCalls<NodeMetadataProvider::MetadataType>,
-	FilterIndirectCalls::Call: IndirectDispatch<Self>,
 {
 	fn submit_trusted_call(&self, shard: ShardIdentifier, encrypted_trusted_call: Vec<u8>) {
 		if let Err(e) = futures::executor::block_on(
@@ -275,7 +271,7 @@ impl<
 		}
 	}
 
-	fn decrypt(&self, encrypted: Vec<u8>) -> Result<Vec<u8>> {
+	fn decrypt(&self, encrypted: &[u8]) -> Result<Vec<u8>> {
 		let key = self.shielding_key_repo.retrieve_key()?;
 		Ok(key.decrypt(&encrypted)?)
 	}
@@ -301,6 +297,7 @@ impl<
 #[cfg(test)]
 mod test {
 	use super::*;
+	use crate::filter_calls::ShieldFundsAndCallWorkerFilter;
 	use codec::{Decode, Encode};
 	use ita_stf::TrustedOperation;
 	use itc_parentchain_test::parentchain_block_builder::ParentchainBlockBuilder;
@@ -331,6 +328,7 @@ mod test {
 		TestStfEnclaveSigner,
 		TestTopPoolAuthor,
 		TestNodeMetadataRepository,
+		ShieldFundsAndCallWorkerFilter,
 	>;
 
 	type Seed = [u8; 32];
