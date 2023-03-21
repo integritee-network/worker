@@ -192,11 +192,11 @@ impl<
 
 		// TODO: this logic might have better alternatives, see https://github.com/integritee-network/worker/issues/1156
 		for xt_opaque in block.extrinsics().iter() {
-			let mut encoded_xt_opaque = xt_opaque.encode();
+			let encoded_xt_opaque = xt_opaque.encode();
 
 			let maybe_call = self.node_meta_data_provider.get_from_metadata(|metadata| {
 				FilterIndirectCalls::filter_into_with_metadata(
-					&mut encoded_xt_opaque.as_mut_slice(),
+					&mut encoded_xt_opaque.as_slice(),
 					metadata,
 				)
 			})?;
