@@ -15,5 +15,8 @@
 
 */
 
-// pub mod call_worker;
+pub mod call_worker;
 pub mod shield_funds;
+
+pub use call_worker::CallWorkerCall;
+pub use shield_funds::ShiedFundsCall;

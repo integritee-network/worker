@@ -1,9 +1,10 @@
 use crate::{
-	error::Result, indirect_calls::shield_funds::ShiedFundsCall, IndirectDispatch, IndirectExecutor,
+	error::Result,
+	indirect_calls::{CallWorkerCall, ShiedFundsCall},
+	IndirectDispatch, IndirectExecutor,
 };
 use codec::{Decode, Encode};
 use itp_node_api::{api_client::ParentchainUncheckedExtrinsic, metadata::NodeMetadataTrait};
-use itp_types::CallWorkerFn;
 
 /// Trait to filter an indirect call and decode into it, where the decoding
 /// is based on the metadata provided.
@@ -29,7 +30,8 @@ impl<NodeMetadata: NodeMetadataTrait> FilterCalls<NodeMetadata> for ShieldFundsA
 			let xt = ParentchainUncheckedExtrinsic::<ShiedFundsCall>::decode(call).ok()?;
 			Some(IndirectCall::ShieldFunds(xt.function))
 		} else if index == &metadata.call_worker_call_indexes().ok()? {
-			Some(IndirectCall::CallWorker(Decode::decode(call).ok()?))
+			let xt = ParentchainUncheckedExtrinsic::<CallWorkerCall>::decode(call).ok()?;
+			Some(IndirectCall::CallWorker(xt.function))
 		} else {
 			None
 		}
@@ -39,14 +41,14 @@ impl<NodeMetadata: NodeMetadataTrait> FilterCalls<NodeMetadata> for ShieldFundsA
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub enum IndirectCall {
 	ShieldFunds(ShiedFundsCall),
-	CallWorker(CallWorkerFn),
+	CallWorker(CallWorkerCall),
 }
 
 impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for IndirectCall {
 	fn execute(&self, executor: &Executor) -> Result<()> {
 		match self {
 			IndirectCall::ShieldFunds(shieldfunds) => shieldfunds.execute(executor),
-			_ => unreachable!(),
+			IndirectCall::CallWorker(call_worker) => call_worker.execute(executor),
 		}
 	}
 }
