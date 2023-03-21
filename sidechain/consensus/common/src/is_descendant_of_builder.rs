@@ -49,7 +49,7 @@ where
 				// If the current hash is the head and the parent is the base, then we know that
 				// this current hash is the descendant of the parent. Otherwise we can set the
 				// head to the parent and find the lowest common ancestor between `head`
-				/// and `base` in the tree.
+				// and `base` in the tree.
 				if current_hash == head {
 					if current_parent_hash == base {
 						return Ok(true)
