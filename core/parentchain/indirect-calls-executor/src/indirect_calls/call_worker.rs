@@ -25,7 +25,7 @@ pub struct CallWorkerArgs {
 }
 
 impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for CallWorkerArgs {
-	fn execute(&self, executor: &Executor) -> Result<()> {
+	fn dispatch(&self, executor: &Executor) -> Result<()> {
 		log::debug!("Found trusted call extrinsic, submitting it to the top pool");
 		executor.submit_trusted_call(self.request.shard, self.request.cyphertext.clone());
 		Ok(())

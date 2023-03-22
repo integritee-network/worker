@@ -134,7 +134,7 @@ impl<
 				None => continue,
 			};
 
-			if let Err(e) = call.execute(self) {
+			if let Err(e) = call.dispatch(self) {
 				log::warn!("Error executing the indirect call: {:?}", e);
 				continue
 			};

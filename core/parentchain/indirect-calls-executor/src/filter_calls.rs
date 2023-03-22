@@ -96,10 +96,10 @@ pub enum IndirectCall {
 }
 
 impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for IndirectCall {
-	fn execute(&self, executor: &Executor) -> Result<()> {
+	fn dispatch(&self, executor: &Executor) -> Result<()> {
 		match self {
-			IndirectCall::ShieldFunds(shieldfunds) => shieldfunds.execute(executor),
-			IndirectCall::CallWorker(call_worker) => call_worker.execute(executor),
+			IndirectCall::ShieldFunds(shieldfunds) => shieldfunds.dispatch(executor),
+			IndirectCall::CallWorker(call_worker) => call_worker.dispatch(executor),
 		}
 	}
 }

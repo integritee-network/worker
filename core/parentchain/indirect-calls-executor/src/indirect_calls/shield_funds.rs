@@ -32,7 +32,7 @@ pub struct ShiedFundsArgs {
 }
 
 impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for ShiedFundsArgs {
-	fn execute(&self, executor: &Executor) -> Result<()> {
+	fn dispatch(&self, executor: &Executor) -> Result<()> {
 		info!("Found ShieldFunds extrinsic in block: \nAccount Encrypted {:?} \nAmount: {} \nShard: {}",
         	self.account_encrypted, self.amount, bs58::encode(self.shard.encode()).into_string());
 
