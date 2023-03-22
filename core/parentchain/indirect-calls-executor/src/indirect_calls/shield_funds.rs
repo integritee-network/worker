@@ -37,9 +37,7 @@ impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for ShiedFundsArgs {
         	self.account_encrypted, self.amount, bs58::encode(self.shard.encode()).into_string());
 
 		debug!("decrypt the account id");
-
 		let account_vec = executor.decrypt(&self.account_encrypted)?;
-
 		let account = AccountId::decode(&mut account_vec.as_slice())?;
 
 		let enclave_account_id = executor.get_enclave_account()?;
