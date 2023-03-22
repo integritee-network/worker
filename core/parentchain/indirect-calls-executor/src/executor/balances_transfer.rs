@@ -27,7 +27,7 @@ use itp_node_api::{
 };
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
 use itp_stf_executor::traits::StfEnclaveSigning;
-use itp_stf_primitives::types::AccountId;
+use itp_stf_primitives::types::{AccountId, ShardIdentifier};
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{TransferFn, TransferMultiAddress, H256, AccountLookup, StaticLookup};
 use log::{debug, info};
@@ -78,17 +78,19 @@ where
             .ok_or(Error::Other("Error getting signature tuple from extrinsic".into()))?
             .map_err(|_| Error::Other("Error getting sender AccountId from signature tuple".into()))?;
         
-        info!("Found Transfer extrinsic in block: \nCall: {:?}, \nAccount of Sender: {:?}, \nAmount: {}", call, account, amount);
-        // Get Enclave AccountId to pass to `balance_shield`
+        info!("Found Transfer extrinsic in block: \nCall: {:?}, \nAccount of Sender: {:?}, \nAmount: {}", call, sender_account, amount);
+        // Take the first shard as a hack to just basically say use `any shard`
+        let shard = context.top_pool_author.get_shards().into_iter().next().ok_or(Error::Other("Shard list empty for this context".into()))?;
         let enclave_account_id = context.stf_enclave_signer.get_enclave_account()?;
         let trusted_call = TrustedCall::balance_shield(enclave_account_id, sender_account, amount);
-        // TODO: How to get the valid `shard_id`? Pallet_balances doesnt have access to that.
-        // let signed_trusted_call =
-		// 	context.stf_enclave_signer.sign_call_with_self(&trusted_call, &shard)?;
+        let shielding_key = context.shielding_key_repo.retrieve_key()?;
 
+        let signed_trusted_call =
+			context.stf_enclave_signer.sign_call_with_self(&trusted_call, &shard)?;
+        let trusted_operation = TrustedOperation::indirect_call(signed_trusted_call);
         // Encrypt and Submit
-        // let trusted_operation = TrustedOperation::indirect_call(signed_trusted_call);
-        // context.submit_trusted_call(shard, encrypted_trusted_call);
+        let encrypted_trusted_call = shielding_key.encrypt(&trusted_operation.encode())?;
+        context.submit_trusted_call(shard, encrypted_trusted_call);
 
         Ok(())
     }
