@@ -25,8 +25,8 @@
 use sp_core::{Decode, Encode};
 
 pub use substrate_api_client::{
-	CallIndex, PlainTip, PlainTipExtrinsicParams, PlainTipExtrinsicParamsBuilder,
-	SubstrateDefaultSignedExtra, UncheckedExtrinsicV4,
+	CallIndex, GenericAddress, MultiSignature, PlainTip, PlainTipExtrinsicParams,
+	PlainTipExtrinsicParamsBuilder, SubstrateDefaultSignedExtra, UncheckedExtrinsicV4,
 };
 
 /// Configuration for the ExtrinsicParams.
@@ -44,24 +44,36 @@ pub type ParentchainExtrinsicParamsBuilder = PlainTipExtrinsicParamsBuilder;
 pub type ParentchainUncheckedExtrinsic<Call> =
 	UncheckedExtrinsicV4<Call, SubstrateDefaultSignedExtra<PlainTip>>;
 
-/// Trait to extract call indexes of an encoded [UncheckedExtrinsicV4].
-pub trait ExtractCallIndex {
-	fn extract_call_index(encode_call: &mut &[u8]) -> Option<CallIndex>;
+/// Trait to extract signature and call indexes of an encoded [UncheckedExtrinsicV4].
+pub trait ExtractCallIndexAndSignature {
+	/// SignedExtra type of the Extrinsic.
+	type SignedExtra;
+
+	fn extract_call_index_and_signature(
+		encode_call: &mut &[u8],
+	) -> Option<(Signature<Self::SignedExtra>, CallIndex)>;
 }
 
-impl<Call, SignedExtra> ExtractCallIndex for UncheckedExtrinsicV4<Call, SignedExtra>
+/// Signature type of the [UncheckedExtrinsicV4].
+pub type Signature<SignedExtra> = Option<(GenericAddress, MultiSignature, SignedExtra)>;
+
+impl<Call, SignedExtra> ExtractCallIndexAndSignature for UncheckedExtrinsicV4<Call, SignedExtra>
 where
 	// The Encode bounds are needed because of erroneous trait bounds in the api-client.
 	Call: Decode + Encode,
 	SignedExtra: Decode + Encode,
 {
+	type SignedExtra = SignedExtra;
+
 	/// Extract a call index of an encoded call.
 	///
 	/// Note: This mutates the slice. It will prune the `signature` field and the call
 	/// index of the `encoded_call`. Only the dispatchable's arguments are remaining.
-	fn extract_call_index(encoded_call: &mut &[u8]) -> Option<[u8; 2]> {
+	fn extract_call_index_and_signature(
+		encoded_call: &mut &[u8],
+	) -> Option<(Signature<SignedExtra>, CallIndex)> {
 		let xt = UncheckedExtrinsicV4::<(CallIndex, ()), SignedExtra>::decode(encoded_call).ok()?;
-		Some(xt.function.0)
+		Some((xt.signature, xt.function.0))
 	}
 }
 
