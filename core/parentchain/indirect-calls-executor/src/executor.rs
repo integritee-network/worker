@@ -126,10 +126,7 @@ impl<
 			let encoded_xt_opaque = xt_opaque.encode();
 
 			let maybe_call = self.node_meta_data_provider.get_from_metadata(|metadata| {
-				FilterIndirectCalls::filter_into_with_metadata(
-					&mut encoded_xt_opaque.as_slice(),
-					metadata,
-				)
+				FilterIndirectCalls::filter_into_with_metadata(&encoded_xt_opaque, metadata)
 			})?;
 
 			let call = match maybe_call {
