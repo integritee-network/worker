@@ -11,7 +11,7 @@ substrate-api-client = { default-features = false, git = "https://github.com/scs
 
 # substrate
 sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
-
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
 
 [features]
 default = ["std"]
@@ -19,4 +19,5 @@ std = [
     "substrate-api-client/std",
     "substrate-api-client/ws-client",
     "sp-core/std",
+    "sp-runtime/std",
 ]

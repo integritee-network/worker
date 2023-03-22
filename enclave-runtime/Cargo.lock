@@ -1748,6 +1748,7 @@ name = "itp-api-client-types"
 version = "0.9.0"
 dependencies = [
  "sp-core",
+ "sp-runtime",
  "substrate-api-client",
 ]
 
