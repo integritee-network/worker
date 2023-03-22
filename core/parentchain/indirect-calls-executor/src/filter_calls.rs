@@ -29,7 +29,7 @@ use itp_node_api::{
 /// Trait to filter an indirect call and decode into it, where the decoding
 /// is based on the metadata provided.
 pub trait FilterCalls<NodeMetadata> {
-	/// Call enum the we try to decode into.
+	/// Call enum we try to decode into.
 	type Call;
 
 	/// Format of the parentchain extrinsics.
@@ -41,7 +41,7 @@ pub trait FilterCalls<NodeMetadata> {
 	fn filter_into_with_metadata(call: &mut &[u8], metadata: &NodeMetadata) -> Option<Self::Call>;
 }
 
-/// Indirect calls filter, which should filter all indirect calls.
+/// Indirect calls filter denying all indirect calls.
 pub struct DenyAll;
 
 impl FilterCalls<NodeMetadata> for DenyAll {
@@ -82,7 +82,7 @@ impl<NodeMetadata: NodeMetadataTrait> FilterCalls<NodeMetadata> for ShieldFundsA
 	}
 }
 
-/// The default indirect call handling for the Integritee-Parachain.
+/// The default indirect call of the Integritee-Parachain.
 ///
 /// Todo: Move or provide a template in app-libs such that users
 /// can implemeent their own indirect call there.
@@ -101,7 +101,7 @@ impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for IndirectCall {
 	}
 }
 
-pub fn decode_and_log_error<V: Decode>(encoded: &mut &[u8]) -> Option<V> {
+fn decode_and_log_error<V: Decode>(encoded: &mut &[u8]) -> Option<V> {
 	match V::decode(encoded) {
 		Ok(v) => Some(v),
 		Err(e) => {
