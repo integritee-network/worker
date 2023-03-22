@@ -45,16 +45,13 @@ pub type ParentchainUncheckedExtrinsic<Call> =
 	UncheckedExtrinsicV4<Call, SubstrateDefaultSignedExtra<PlainTip>>;
 
 /// Trait to extract call indexes of an encoded [UncheckedExtrinsicV4].
-///
-/// This needs an extra trait as the call indexes are not always in the same
-/// position because the multisignature enum variants have different encoded
-/// lengths.
 pub trait ExtractCallIndex {
 	fn extract_call_index(encode_call: &mut &[u8]) -> Option<CallIndex>;
 }
 
 impl<Call, SignedExtra> ExtractCallIndex for UncheckedExtrinsicV4<Call, SignedExtra>
 where
+	// The Encode bounds are needed because of erroneous trait bounds in the api-client.
 	Call: Decode + Encode,
 	SignedExtra: Decode + Encode,
 {

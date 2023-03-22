@@ -20,7 +20,7 @@ pub trait FilterCalls<NodeMetadata> {
 	/// Needed to be able to find the call index in the encoded extrinsic.
 	type ParentchainExtrinsic;
 
-	/// Filters some bytes and returns `Some(Self::Target)` if the filter matches some criteria.
+	/// Filters some bytes and returns `Some(Self::Call)` if the filter matches some criteria.
 	fn filter_into_with_metadata(call: &mut &[u8], metadata: &NodeMetadata) -> Option<Self::Call>;
 }
 
@@ -36,6 +36,7 @@ impl FilterCalls<NodeMetadata> for DenyAll {
 	}
 }
 
+/// Default filter we use for the Integritee-Parachain.
 pub struct ShieldFundsAndCallWorkerFilter;
 
 impl<NodeMetadata: NodeMetadataTrait> FilterCalls<NodeMetadata> for ShieldFundsAndCallWorkerFilter {
@@ -44,8 +45,8 @@ impl<NodeMetadata: NodeMetadataTrait> FilterCalls<NodeMetadata> for ShieldFundsA
 	/// We only care about the signed extension type here for the decoding.
 	///
 	/// `()` is a trick to stop decoding after the call index. So the remaining
-	/// entries of the `call` after decoding contain the parentchain's dispatchable's
-	/// arguments only.
+	/// bytes of `call` after decoding only contain the parentchain's dispatchable's
+	/// arguments.
 	type ParentchainExtrinsic = ParentchainUncheckedExtrinsic<([u8; 2], ())>;
 
 	fn filter_into_with_metadata(call: &mut &[u8], metadata: &NodeMetadata) -> Option<Self::Call> {
