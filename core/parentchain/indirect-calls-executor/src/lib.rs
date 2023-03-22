@@ -57,12 +57,6 @@ pub mod error;
 pub mod filter_calls;
 pub mod indirect_calls;
 
-#[derive(Clone)]
-pub enum ExecutionStatus<R> {
-	Success(R),
-	NextExecutor,
-}
-
 /// Trait to execute the indirect calls found in the extrinsics of a block.
 pub trait ExecuteIndirectCalls {
 	/// Scans blocks for extrinsics that ask the enclave to execute some actions.
@@ -109,11 +103,6 @@ impl<
 		NodeMetadataProvider,
 		IndirectCallsFilter,
 	> where
-	ShieldingKeyRepository: AccessKey,
-	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
-		+ ShieldingCryptoEncrypt<Error = itp_sgx_crypto::Error>,
-	StfEnclaveSigner: StfEnclaveSigning,
-	TopPoolAuthor: AuthorApi<H256, H256> + Send + Sync + 'static,
 	NodeMetadataProvider: AccessNodeMetadata,
 	NodeMetadataProvider::MetadataType: NodeMetadataTrait,
 {
