@@ -22,8 +22,6 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use sp_core::{Decode, Encode};
-
 pub use sp_runtime::MultiSignature;
 pub use substrate_api_client::{
 	CallIndex, GenericAddress, PlainTip, PlainTipExtrinsicParams, PlainTipExtrinsicParamsBuilder,
@@ -42,46 +40,12 @@ pub type ParentchainExtrinsicParamsBuilder = PlainTipExtrinsicParamsBuilder;
 //pub type ParentchainExtrinsicParams = AssetTipExtrinsicParams;
 //pub type ParentchainExtrinsicParamsBuilder = AssetTipExtrinsicParamsBuilder;
 
-pub type ParentchainUncheckedExtrinsic<Call> =
-	UncheckedExtrinsicV4<Call, SubstrateDefaultSignedExtra<PlainTip>>;
-
-/// Trait to extract signature and call indexes of an encoded [UncheckedExtrinsicV4].
-pub trait ExtractCallIndexAndSignature {
-	/// Signed extra of the extrinsic.
-	type SignedExtra;
-
-	/// Signature of the extrinsics.
-	type Signature;
-
-	fn extract_call_index_and_signature(
-		encode_call: &mut &[u8],
-	) -> Option<(Self::Signature, CallIndex)>;
-}
+pub type ParentchainUncheckedExtrinsic<Call> = UncheckedExtrinsicV4<Call, ParentchainSignedExtra>;
+pub type ParentchainSignedExtra = SubstrateDefaultSignedExtra<PlainTip>;
+pub type ParentchainSignature = Signature<ParentchainSignedExtra>;
 
 /// Signature type of the [UncheckedExtrinsicV4].
 pub type Signature<SignedExtra> = Option<(GenericAddress, MultiSignature, SignedExtra)>;
-
-impl<Call, SignedExtra> ExtractCallIndexAndSignature for UncheckedExtrinsicV4<Call, SignedExtra>
-where
-	// The Encode bounds are needed because of erroneous trait bounds in the api-client.
-	Call: Decode + Encode,
-	SignedExtra: Decode + Encode,
-{
-	type SignedExtra = SignedExtra;
-	type Signature = Signature<Self::SignedExtra>;
-
-	/// Extract a call index of an encoded call.
-	///
-	/// Note: This mutates the pointer to the slice such that it is past the `signature` and the
-	/// `call_index`, which is at the start of the actual parentchain's dispatchable's arguments.
-	fn extract_call_index_and_signature(
-		encoded_call: &mut &[u8],
-	) -> Option<(Self::Signature, CallIndex)> {
-		let xt = UncheckedExtrinsicV4::<(CallIndex, ()), Self::SignedExtra>::decode(encoded_call)
-			.ok()?;
-		Some((xt.signature, xt.function.0))
-	}
-}
 
 #[cfg(feature = "std")]
 pub use api::*;

@@ -226,7 +226,10 @@ pub(crate) fn hash_of<T: Encode>(xt: &T) -> H256 {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::filter_calls::ShieldFundsAndCallWorkerFilter;
+	use crate::{
+		filter_calls::ShieldFundsAndCallWorkerFilter,
+		parentchain_extrinsic_parser::ParentchainExtrinsicParser,
+	};
 	use codec::{Decode, Encode};
 	use ita_stf::TrustedOperation;
 	use itc_parentchain_test::parentchain_block_builder::ParentchainBlockBuilder;
@@ -257,7 +260,7 @@ mod test {
 		TestStfEnclaveSigner,
 		TestTopPoolAuthor,
 		TestNodeMetadataRepository,
-		ShieldFundsAndCallWorkerFilter,
+		ShieldFundsAndCallWorkerFilter<ParentchainExtrinsicParser>,
 	>;
 
 	type Seed = [u8; 32];

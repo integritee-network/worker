@@ -18,13 +18,12 @@
 use crate::{
 	error::Result,
 	indirect_calls::{CallWorkerArgs, ShiedFundsArgs},
+	parentchain_extrinsic_parser::ParseExtrinsic,
 	IndirectDispatch, IndirectExecutor,
 };
 use codec::{Decode, Encode};
-use itp_node_api::{
-	api_client::{ExtractCallIndexAndSignature, ParentchainUncheckedExtrinsic},
-	metadata::{NodeMetadata, NodeMetadataTrait},
-};
+use core::marker::PhantomData;
+use itp_node_api::metadata::{NodeMetadata, NodeMetadataTrait};
 
 /// Trait to filter an indirect call and decode into it, where the decoding
 /// is based on the metadata provided.
@@ -32,10 +31,8 @@ pub trait FilterCalls<NodeMetadata> {
 	/// Call enum we try to decode into.
 	type Call;
 
-	/// Format of the parentchain extrinsics.
-	///
-	/// Needed to be able to find the call index in the encoded extrinsic.
-	type ParentchainExtrinsic;
+	/// Knows how to parse the parentchain extrinsics.
+	type ParseParentchainExtrinsic;
 
 	/// Filters some bytes and returns `Some(Self::Call)` if the filter matches some criteria.
 	fn filter_into_with_metadata(call: &[u8], metadata: &NodeMetadata) -> Option<Self::Call>;
@@ -46,7 +43,7 @@ pub struct DenyAll;
 
 impl FilterCalls<NodeMetadata> for DenyAll {
 	type Call = ();
-	type ParentchainExtrinsic = ();
+	type ParseParentchainExtrinsic = ();
 
 	fn filter_into_with_metadata(_: &[u8], _: &NodeMetadata) -> Option<Self::Call> {
 		None
@@ -54,30 +51,37 @@ impl FilterCalls<NodeMetadata> for DenyAll {
 }
 
 /// Default filter we use for the Integritee-Parachain.
-pub struct ShieldFundsAndCallWorkerFilter;
+pub struct ShieldFundsAndCallWorkerFilter<ExtrinsicParser> {
+	_phantom: PhantomData<ExtrinsicParser>,
+}
 
-impl<NodeMetadata: NodeMetadataTrait> FilterCalls<NodeMetadata> for ShieldFundsAndCallWorkerFilter {
+impl<ExtrinsicParser, NodeMetadata: NodeMetadataTrait> FilterCalls<NodeMetadata>
+	for ShieldFundsAndCallWorkerFilter<ExtrinsicParser>
+where
+	ExtrinsicParser: ParseExtrinsic,
+{
 	type Call = IndirectCall;
-
-	/// We only care about the signed extension type here for the decoding.
-	///
-	/// `()` is a trick to stop decoding after the call index. So the remaining
-	/// bytes of `call` after decoding only contain the parentchain's dispatchable's
-	/// arguments.
-	type ParentchainExtrinsic = ParentchainUncheckedExtrinsic<([u8; 2], ())>;
+	type ParseParentchainExtrinsic = ExtrinsicParser;
 
 	fn filter_into_with_metadata(call: &[u8], metadata: &NodeMetadata) -> Option<Self::Call> {
 		let call_mut = &mut &call[..];
 
-		// Note: This mutates the pointer to `call_mut`. It will put the pointer past the `signature`
-		// and the `call_index` at the start of the actual dispatchable's arguments.
-		let (_, index) = Self::ParentchainExtrinsic::extract_call_index_and_signature(call_mut)?;
+		let xt = match Self::ParseParentchainExtrinsic::parse_call(call_mut) {
+			Ok(xt) => xt,
+			Err(e) => {
+				log::error!("Could not parse parentchain extrinsic: {:?}", e);
+				return None
+			},
+		};
+
+		let index = xt.call_index;
+		let call_args = &mut &xt.call_args[..];
 
 		if index == metadata.shield_funds_call_indexes().ok()? {
-			let args = decode_and_log_error::<ShiedFundsArgs>(call_mut)?;
+			let args = decode_and_log_error::<ShiedFundsArgs>(call_args)?;
 			Some(IndirectCall::ShieldFunds(args))
 		} else if index == metadata.call_worker_call_indexes().ok()? {
-			let args = decode_and_log_error::<CallWorkerArgs>(call_mut)?;
+			let args = decode_and_log_error::<CallWorkerArgs>(call_args)?;
 			Some(IndirectCall::CallWorker(args))
 		} else {
 			None
