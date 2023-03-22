@@ -123,7 +123,6 @@ impl<
 		debug!("Scanning block {:?} for relevant xt", block_number);
 		let mut executed_calls = Vec::<H256>::new();
 
-		// TODO: this logic might have better alternatives, see https://github.com/integritee-network/worker/issues/1156
 		for xt_opaque in block.extrinsics().iter() {
 			let encoded_xt_opaque = xt_opaque.encode();
 
