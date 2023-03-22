@@ -38,7 +38,7 @@ pub trait FilterCalls<NodeMetadata> {
 	type ParentchainExtrinsic;
 
 	/// Filters some bytes and returns `Some(Self::Call)` if the filter matches some criteria.
-	fn filter_into_with_metadata(call: &mut &[u8], metadata: &NodeMetadata) -> Option<Self::Call>;
+	fn filter_into_with_metadata(call: &[u8], metadata: &NodeMetadata) -> Option<Self::Call>;
 }
 
 /// Indirect calls filter denying all indirect calls.
@@ -48,7 +48,7 @@ impl FilterCalls<NodeMetadata> for DenyAll {
 	type Call = ();
 	type ParentchainExtrinsic = ();
 
-	fn filter_into_with_metadata(_: &mut &[u8], _: &NodeMetadata) -> Option<Self::Call> {
+	fn filter_into_with_metadata(_: &[u8], _: &NodeMetadata) -> Option<Self::Call> {
 		None
 	}
 }
@@ -66,15 +66,18 @@ impl<NodeMetadata: NodeMetadataTrait> FilterCalls<NodeMetadata> for ShieldFundsA
 	/// arguments.
 	type ParentchainExtrinsic = ParentchainUncheckedExtrinsic<([u8; 2], ())>;
 
-	fn filter_into_with_metadata(call: &mut &[u8], metadata: &NodeMetadata) -> Option<Self::Call> {
-		// Note: This mutates `call`. It will prune the `signature` and the `call_index` of the slice.
-		let (_, index) = Self::ParentchainExtrinsic::extract_call_index_and_signature(call)?;
+	fn filter_into_with_metadata(call: &[u8], metadata: &NodeMetadata) -> Option<Self::Call> {
+		let call_mut = &mut &call[..];
+
+		// Note: This mutates the pointer to `call_mut`. It will put the pointer past the `signature`
+		// and the `call_index` at the start of the actual dispatchable's arguments.
+		let (_, index) = Self::ParentchainExtrinsic::extract_call_index_and_signature(call_mut)?;
 
 		if index == metadata.shield_funds_call_indexes().ok()? {
-			let args = decode_and_log_error::<ShiedFundsArgs>(call)?;
+			let args = decode_and_log_error::<ShiedFundsArgs>(call_mut)?;
 			Some(IndirectCall::ShieldFunds(args))
 		} else if index == metadata.call_worker_call_indexes().ok()? {
-			let args = decode_and_log_error::<CallWorkerArgs>(call)?;
+			let args = decode_and_log_error::<CallWorkerArgs>(call_mut)?;
 			Some(IndirectCall::CallWorker(args))
 		} else {
 			None
