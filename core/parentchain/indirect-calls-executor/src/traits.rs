@@ -34,6 +34,9 @@ pub trait ExecuteIndirectCalls {
 	where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>;
 
+	/// Creates a processed_parentchain_block extrinsic for a given parentchain block hash and the merkle executed extrinsics.
+	///
+	/// Calculates the merkle root of the extrinsics. In case no extrinsics are supplied, the root will be a hash filled with zeros.
 	fn create_processed_parentchain_block_call<ParentchainBlock>(
 		&self,
 		block_hash: H256,

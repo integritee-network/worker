@@ -54,7 +54,6 @@ pub struct IndirectCallsExecutor<
 	pub(crate) node_meta_data_provider: Arc<NodeMetadataProvider>,
 	_phantom: PhantomData<IndirectCallsFilter>,
 }
-
 impl<
 		ShieldingKeyRepository,
 		StfEnclaveSigner,
@@ -154,9 +153,6 @@ impl<
 		)
 	}
 
-	/// Creates a processed_parentchain_block extrinsic for a given parentchain block hash and the merkle executed extrinsics.
-	///
-	/// Calculates the merkle root of the extrinsics. In case no extrinsics are supplied, the root will be a hash filled with zeros.
 	fn create_processed_parentchain_block_call<ParentchainBlock>(
 		&self,
 		block_hash: H256,
@@ -173,10 +169,6 @@ impl<
 		let root: H256 = merkle_root::<Keccak256, _>(extrinsics);
 		Ok(OpaqueCall::from_tuple(&(call, block_hash, block_number, root)))
 	}
-}
-
-pub(crate) fn hash_of<T: Encode>(xt: &T) -> H256 {
-	blake2_256(&xt.encode()).into()
 }
 
 impl<
@@ -228,6 +220,10 @@ impl<
 	) -> Result<TrustedCallSigned> {
 		Ok(self.stf_enclave_signer.sign_call_with_self(trusted_call, shard)?)
 	}
+}
+
+pub(crate) fn hash_of<T: Encode>(xt: &T) -> H256 {
+	blake2_256(&xt.encode()).into()
 }
 
 #[cfg(test)]
