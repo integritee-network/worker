@@ -82,6 +82,10 @@ impl<NodeMetadata: NodeMetadataTrait> FilterCalls<NodeMetadata> for ShieldFundsA
 	}
 }
 
+/// The default indirect call handling for the Integritee-Parachain
+///
+/// Todo: Move or provide a template in app-libs such that useres
+/// can implemeent their own indirect call there.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub enum IndirectCall {
 	ShieldFunds(ShiedFundsArgs),
