@@ -68,6 +68,15 @@ pub trait ExecuteIndirectCalls {
 	) -> Result<OpaqueCall>
 	where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>;
+
+	fn create_processed_parentchain_block_call<ParentchainBlock>(
+		&self,
+		block_hash: H256,
+		extrinsics: Vec<H256>,
+		block_number: <<ParentchainBlock as ParentchainBlockTrait>::Header as Header>::Number,
+	) -> Result<OpaqueCall>
+	where
+		ParentchainBlock: ParentchainBlockTrait<Hash = H256>;
 }
 
 /// Trait that should be implemented on indirect calls to be executed.
@@ -102,9 +111,7 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		IndirectCallsFilter,
-	> where
-	NodeMetadataProvider: AccessNodeMetadata,
-	NodeMetadataProvider::MetadataType: NodeMetadataTrait,
+	>
 {
 	pub fn new(
 		shielding_key_repo: Arc<ShieldingKeyRepository>,
@@ -119,26 +126,6 @@ impl<
 			node_meta_data_provider,
 			_phantom: Default::default(),
 		}
-	}
-
-	/// Creates a processed_parentchain_block extrinsic for a given parentchain block hash and the merkle executed extrinsics.
-	///
-	/// Calculates the merkle root of the extrinsics. In case no extrinsics are supplied, the root will be a hash filled with zeros.
-	fn create_processed_parentchain_block_call<ParentchainBlock>(
-		&self,
-		block_hash: H256,
-		extrinsics: Vec<H256>,
-		block_number: <<ParentchainBlock as ParentchainBlockTrait>::Header as Header>::Number,
-	) -> Result<OpaqueCall>
-	where
-		ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
-	{
-		let call = self.node_meta_data_provider.get_from_metadata(|meta_data| {
-			meta_data.confirm_processed_parentchain_block_call_indexes()
-		})??;
-
-		let root: H256 = merkle_root::<Keccak256, _>(extrinsics);
-		Ok(OpaqueCall::from_tuple(&(call, block_hash, block_number, root)))
 	}
 }
 
@@ -209,6 +196,26 @@ impl<
 			executed_calls,
 			block_number,
 		)
+	}
+
+	/// Creates a processed_parentchain_block extrinsic for a given parentchain block hash and the merkle executed extrinsics.
+	///
+	/// Calculates the merkle root of the extrinsics. In case no extrinsics are supplied, the root will be a hash filled with zeros.
+	fn create_processed_parentchain_block_call<ParentchainBlock>(
+		&self,
+		block_hash: H256,
+		extrinsics: Vec<H256>,
+		block_number: <<ParentchainBlock as ParentchainBlockTrait>::Header as Header>::Number,
+	) -> Result<OpaqueCall>
+	where
+		ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
+	{
+		let call = self.node_meta_data_provider.get_from_metadata(|meta_data| {
+			meta_data.confirm_processed_parentchain_block_call_indexes()
+		})??;
+
+		let root: H256 = merkle_root::<Keccak256, _>(extrinsics);
+		Ok(OpaqueCall::from_tuple(&(call, block_hash, block_number, root)))
 	}
 }
 
