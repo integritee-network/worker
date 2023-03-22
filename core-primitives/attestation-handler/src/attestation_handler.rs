@@ -634,7 +634,7 @@ where
 			Ok(spid) => decode_spid(&spid),
 			Err(e) => {
 				error!("Failed to load SPID: {:?}", e);
-				return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+				Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
 			},
 		}
 	}
