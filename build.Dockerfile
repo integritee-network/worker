@@ -85,7 +85,9 @@ RUN --mount=type=cache,id=cargo,target=${HOME}/.cache/sccache cargo test --relea
 
 
 ### Base Runner Stage
-##################################################
+### The runner should contain an install aesmd service
+### that's why we use this one
+######################################################
 FROM oasisprotocol/aesmd:master AS runner
 
 ### Deployed CLI client
