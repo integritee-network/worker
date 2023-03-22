@@ -47,12 +47,15 @@ pub type ParentchainUncheckedExtrinsic<Call> =
 
 /// Trait to extract signature and call indexes of an encoded [UncheckedExtrinsicV4].
 pub trait ExtractCallIndexAndSignature {
-	/// SignedExtra type of the Extrinsic.
+	/// Signed extra of the extrinsic.
 	type SignedExtra;
+
+	/// Signature of the extrinsics.
+	type Signature;
 
 	fn extract_call_index_and_signature(
 		encode_call: &mut &[u8],
-	) -> Option<(Signature<Self::SignedExtra>, CallIndex)>;
+	) -> Option<(Self::Signature, CallIndex)>;
 }
 
 /// Signature type of the [UncheckedExtrinsicV4].
@@ -65,6 +68,7 @@ where
 	SignedExtra: Decode + Encode,
 {
 	type SignedExtra = SignedExtra;
+	type Signature = Signature<Self::SignedExtra>;
 
 	/// Extract a call index of an encoded call.
 	///
@@ -72,7 +76,7 @@ where
 	/// `call_index`, which is at the start of the actual parentchain's dispatchable's arguments.
 	fn extract_call_index_and_signature(
 		encoded_call: &mut &[u8],
-	) -> Option<(Signature<Self::SignedExtra>, CallIndex)> {
+	) -> Option<(Self::Signature, CallIndex)> {
 		let xt = UncheckedExtrinsicV4::<(CallIndex, ()), Self::SignedExtra>::decode(encoded_call)
 			.ok()?;
 		Some((xt.signature, xt.function.0))
