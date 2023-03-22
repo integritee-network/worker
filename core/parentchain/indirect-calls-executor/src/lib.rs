@@ -175,7 +175,7 @@ impl<
 	NodeMetadataProvider: AccessNodeMetadata,
 	NodeMetadataProvider::MetadataType: NodeMetadataTrait,
 	FilterIndirectCalls: FilterCalls<NodeMetadataProvider::MetadataType>,
-	FilterIndirectCalls::Call: IndirectDispatch<Self>,
+	FilterIndirectCalls::Call: IndirectDispatch<Self> + Encode,
 {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,

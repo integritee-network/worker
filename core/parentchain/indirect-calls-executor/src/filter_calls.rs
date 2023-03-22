@@ -6,22 +6,34 @@ use crate::{
 use codec::{Decode, Encode};
 use itp_node_api::{
 	api_client::{ExtractCallIndex, ParentchainUncheckedExtrinsic},
-	metadata::NodeMetadataTrait,
+	metadata::{NodeMetadata, NodeMetadataTrait},
 };
 
 /// Trait to filter an indirect call and decode into it, where the decoding
 /// is based on the metadata provided.
 pub trait FilterCalls<NodeMetadata> {
 	/// Call enum the we try to decode into.
-	type Call: Decode + Encode;
+	type Call;
 
 	/// Format of the parentchain extrinsics.
 	///
 	/// Needed to be able to find the call index in the encoded extrinsic.
-	type ParentchainExtrinsic: ExtractCallIndex;
+	type ParentchainExtrinsic;
 
 	/// Filters some bytes and returns `Some(Self::Target)` if the filter matches some criteria.
 	fn filter_into_with_metadata(call: &mut &[u8], metadata: &NodeMetadata) -> Option<Self::Call>;
+}
+
+/// Indirect calls filter, which should filter all indirect calls.
+pub struct DenyAll;
+
+impl FilterCalls<NodeMetadata> for DenyAll {
+	type Call = ();
+	type ParentchainExtrinsic = ();
+
+	fn filter_into_with_metadata(_: &mut &[u8], _: &NodeMetadata) -> Option<Self::Call> {
+		None
+	}
 }
 
 pub struct ShieldFundsAndCallWorkerFilter;
