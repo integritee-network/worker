@@ -58,9 +58,6 @@ where
 	type SignedExtra = SignedExtra;
 
 	/// Extract a call index of an encoded call.
-	///
-	/// Note: This mutates the pointer to the slice such that it is past the `signature` and the
-	/// `call_index`, which is at the start of the actual parentchain's dispatchable's arguments.
 	fn parse<'a>(
 		encoded_call: &'a [u8],
 	) -> Result<SemiOpaqueExtrinsic<'a, Self::SignedExtra>, codec::Error> {
