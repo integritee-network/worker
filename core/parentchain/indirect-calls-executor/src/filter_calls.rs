@@ -66,7 +66,7 @@ where
 	fn filter_into_with_metadata(call: &[u8], metadata: &NodeMetadata) -> Option<Self::Call> {
 		let call_mut = &mut &call[..];
 
-		let xt = match Self::ParseParentchainExtrinsic::parse_call(call_mut) {
+		let xt = match Self::ParseParentchainExtrinsic::parse(call_mut) {
 			Ok(xt) => xt,
 			Err(e) => {
 				log::error!("Could not parse parentchain extrinsic: {:?}", e);

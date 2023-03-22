@@ -28,7 +28,7 @@ pub struct ExtrinsicParser<SignedExtra> {
 /// Parses the extrinsics corresponding to the parentchain.
 pub type ParentchainExtrinsicParser = ExtrinsicParser<ParentchainSignedExtra>;
 
-/// Partly interpreted extrinsic it contains the `signature` and the `call_index` whereas
+/// Partially interpreted extrinsic it contains the `signature` and the `call_index` whereas
 /// the `call_args` remain in encoded form.
 ///
 /// Intended for usage, where the actual `call_args` form is unknown.
@@ -37,7 +37,7 @@ pub struct SemiOpaqueExtrinsic<'a, SignedExtra> {
 	pub signature: Signature<SignedExtra>,
 	/// Call index of the dispatchable.
 	pub call_index: CallIndex,
-	/// Encoded arguments of the call corresponding to the `call_index`.
+	/// Encoded arguments of the dispatchable corresponding to the `call_index`.
 	pub call_args: &'a [u8],
 }
 
@@ -46,9 +46,9 @@ pub trait ParseExtrinsic {
 	/// Signed extra of the extrinsic.
 	type SignedExtra;
 
-	fn parse_call<'a>(
-		encode_call: &'a [u8],
-	) -> std::result::Result<SemiOpaqueExtrinsic<'a, Self::SignedExtra>, codec::Error>;
+	fn parse<'a>(
+		encoded_call: &'a [u8],
+	) -> Result<SemiOpaqueExtrinsic<'a, Self::SignedExtra>, codec::Error>;
 }
 
 impl<SignedExtra> ParseExtrinsic for ExtrinsicParser<SignedExtra>
@@ -61,9 +61,9 @@ where
 	///
 	/// Note: This mutates the pointer to the slice such that it is past the `signature` and the
 	/// `call_index`, which is at the start of the actual parentchain's dispatchable's arguments.
-	fn parse_call<'a>(
+	fn parse<'a>(
 		encoded_call: &'a [u8],
-	) -> std::result::Result<SemiOpaqueExtrinsic<'a, Self::SignedExtra>, codec::Error> {
+	) -> Result<SemiOpaqueExtrinsic<'a, Self::SignedExtra>, codec::Error> {
 		let call_mut = &mut &encoded_call[..];
 
 		// `()` is a trick to stop decoding after the call index. So the remaining bytes
