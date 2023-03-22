@@ -53,36 +53,12 @@ use sp_core::blake2_256;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header};
 use std::{sync::Arc, vec::Vec};
 
+pub use traits::{ExecuteIndirectCalls, IndirectDispatch, IndirectExecutor};
+
 pub mod error;
 pub mod filter_calls;
 pub mod indirect_calls;
-
-/// Trait to execute the indirect calls found in the extrinsics of a block.
-pub trait ExecuteIndirectCalls {
-	/// Scans blocks for extrinsics that ask the enclave to execute some actions.
-	/// Executes indirect invocation calls, including shielding and unshielding calls.
-	/// Returns all unshielding call confirmations as opaque calls and the hashes of executed shielding calls.
-	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
-		&self,
-		block: &ParentchainBlock,
-	) -> Result<OpaqueCall>
-	where
-		ParentchainBlock: ParentchainBlockTrait<Hash = H256>;
-
-	fn create_processed_parentchain_block_call<ParentchainBlock>(
-		&self,
-		block_hash: H256,
-		extrinsics: Vec<H256>,
-		block_number: <<ParentchainBlock as ParentchainBlockTrait>::Header as Header>::Number,
-	) -> Result<OpaqueCall>
-	where
-		ParentchainBlock: ParentchainBlockTrait<Hash = H256>;
-}
-
-/// Trait that should be implemented on indirect calls to be executed.
-pub trait IndirectDispatch<E: IndirectExecutor> {
-	fn execute(&self, executor: &E) -> Result<()>;
-}
+pub mod traits;
 
 pub struct IndirectCallsExecutor<
 	ShieldingKeyRepository,
@@ -221,22 +197,6 @@ impl<
 
 pub(crate) fn hash_of<T: Encode>(xt: &T) -> H256 {
 	blake2_256(&xt.encode()).into()
-}
-
-pub trait IndirectExecutor {
-	fn submit_trusted_call(&self, shard: ShardIdentifier, encrypted_trusted_call: Vec<u8>);
-
-	fn decrypt(&self, encrypted: &[u8]) -> Result<Vec<u8>>;
-
-	fn encrypt(&self, value: &[u8]) -> Result<Vec<u8>>;
-
-	fn get_enclave_account(&self) -> Result<AccountId>;
-
-	fn sign_call_with_self(
-		&self,
-		trusted_call: &TrustedCall,
-		shard: &ShardIdentifier,
-	) -> Result<TrustedCallSigned>;
 }
 
 impl<
