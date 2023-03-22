@@ -137,7 +137,7 @@ impl<
 				None => continue,
 			};
 
-			if let Err(e) = call.execute(&self) {
+			if let Err(e) = call.execute(self) {
 				log::warn!("Error executing the indirect call: {:?}", e);
 				continue
 			};
@@ -201,7 +201,7 @@ impl<
 
 	fn decrypt(&self, encrypted: &[u8]) -> Result<Vec<u8>> {
 		let key = self.shielding_key_repo.retrieve_key()?;
-		Ok(key.decrypt(&encrypted)?)
+		Ok(key.decrypt(encrypted)?)
 	}
 
 	fn encrypt(&self, value: &[u8]) -> Result<Vec<u8>> {
