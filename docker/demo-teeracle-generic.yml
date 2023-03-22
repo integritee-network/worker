@@ -25,7 +25,7 @@ services:
     entrypoint:
         "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-teeracle-worker -T wss://integritee-teeracle-worker
         -u ws://integritee-node -U ws://integritee-teeracle-worker -P 2011 -w 2101 -p 9912 -h 4645
-        run --dev --skip-ra --teeracle-interval ${TEERACLE_INTERVAL_SECONDS}s"
+        run --dev --teeracle-interval ${TEERACLE_INTERVAL_SECONDS}s"
     restart: always
   demo-teeracle-generic:
     image: integritee-cli:dev
