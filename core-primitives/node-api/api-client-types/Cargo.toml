@@ -10,7 +10,7 @@ edition = "2021"
 substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.37-tag-v0.7.0" }
 
 # substrate
-sp-core = { optional = true, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
+sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
 
 
 [features]
@@ -18,5 +18,5 @@ default = ["std"]
 std = [
     "substrate-api-client/std",
     "substrate-api-client/ws-client",
-    "sp-core",
+    "sp-core/std",
 ]

@@ -18,5 +18,5 @@
 pub mod call_worker;
 pub mod shield_funds;
 
-pub use call_worker::CallWorkerCall;
-pub use shield_funds::ShiedFundsCall;
+pub use call_worker::CallWorkerArgs;
+pub use shield_funds::ShiedFundsArgs;

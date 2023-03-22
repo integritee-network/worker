@@ -17,17 +17,17 @@
 
 use crate::{error::Result, IndirectDispatch, IndirectExecutor};
 use codec::{Decode, Encode};
-use itp_types::CallWorkerFn;
+use itp_types::Request;
 
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
-pub struct CallWorkerCall(CallWorkerFn);
+pub struct CallWorkerArgs {
+	request: Request,
+}
 
-impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for CallWorkerCall {
+impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for CallWorkerArgs {
 	fn execute(&self, executor: &Executor) -> Result<()> {
-		let (_call, request) = &self.0;
-		let request = request.clone();
 		log::debug!("Found trusted call extrinsic, submitting it to the top pool");
-		executor.submit_trusted_call(request.shard, request.cyphertext);
+		executor.submit_trusted_call(self.request.shard, self.request.cyphertext.clone());
 		Ok(())
 	}
 }

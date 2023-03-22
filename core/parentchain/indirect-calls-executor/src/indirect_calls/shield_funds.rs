@@ -19,31 +19,36 @@ use crate::{error::Result, IndirectDispatch, IndirectExecutor};
 use codec::{Decode, Encode};
 use ita_stf::{TrustedCall, TrustedOperation};
 use itp_stf_primitives::types::AccountId;
-use itp_types::ShieldFundsFn;
+use itp_types::{Balance, ShardIdentifier};
 use log::{debug, info};
+use std::vec::Vec;
 
+/// Arguments of the Integritee-Parachain's shield fund dispatchable.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
-pub struct ShiedFundsCall(ShieldFundsFn);
+pub struct ShiedFundsArgs {
+	account_encrypted: Vec<u8>,
+	amount: Balance,
+	shard: ShardIdentifier,
+}
 
-impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for ShiedFundsCall {
+impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for ShiedFundsArgs {
 	fn execute(&self, executor: &Executor) -> Result<()> {
-		let (call, account_encrypted, amount, shard) = &self.0;
-		info!("Found ShieldFunds extrinsic in block: \nCall: {:?} \nAccount Encrypted {:?} \nAmount: {} \nShard: {}",
-        	call, account_encrypted, amount, bs58::encode(shard.encode()).into_string());
+		info!("Found ShieldFunds extrinsic in block: \nAccount Encrypted {:?} \nAmount: {} \nShard: {}",
+        	self.account_encrypted, self.amount, bs58::encode(self.shard.encode()).into_string());
 
 		debug!("decrypt the account id");
 
-		let account_vec = executor.decrypt(&account_encrypted)?;
+		let account_vec = executor.decrypt(&self.account_encrypted)?;
 
 		let account = AccountId::decode(&mut account_vec.as_slice())?;
 
 		let enclave_account_id = executor.get_enclave_account()?;
-		let trusted_call = TrustedCall::balance_shield(enclave_account_id, account, *amount);
-		let signed_trusted_call = executor.sign_call_with_self(&trusted_call, &shard)?;
+		let trusted_call = TrustedCall::balance_shield(enclave_account_id, account, self.amount);
+		let signed_trusted_call = executor.sign_call_with_self(&trusted_call, &self.shard)?;
 		let trusted_operation = TrustedOperation::indirect_call(signed_trusted_call);
 
 		let encrypted_trusted_call = executor.encrypt(&trusted_operation.encode())?;
-		executor.submit_trusted_call(*shard, encrypted_trusted_call);
+		executor.submit_trusted_call(self.shard, encrypted_trusted_call);
 		Ok(())
 	}
 }

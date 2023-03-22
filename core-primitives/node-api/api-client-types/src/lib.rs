@@ -22,9 +22,11 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use sp_core::{Decode, Encode};
+
 pub use substrate_api_client::{
-	PlainTip, PlainTipExtrinsicParams, PlainTipExtrinsicParamsBuilder, SubstrateDefaultSignedExtra,
-	UncheckedExtrinsicV4,
+	CallIndex, PlainTip, PlainTipExtrinsicParams, PlainTipExtrinsicParamsBuilder,
+	SubstrateDefaultSignedExtra, UncheckedExtrinsicV4,
 };
 
 /// Configuration for the ExtrinsicParams.
@@ -41,6 +43,30 @@ pub type ParentchainExtrinsicParamsBuilder = PlainTipExtrinsicParamsBuilder;
 
 pub type ParentchainUncheckedExtrinsic<Call> =
 	UncheckedExtrinsicV4<Call, SubstrateDefaultSignedExtra<PlainTip>>;
+
+/// Trait to extract call indexes of an encoded [UncheckedExtrinsicV4].
+///
+/// This needs an extra trait as the call indexes are not always in the same
+/// position because the multisignature enum variants have different encoded
+/// lengths.
+pub trait ExtractCallIndex {
+	fn extract_call_index(encode_call: &mut &[u8]) -> Option<CallIndex>;
+}
+
+impl<Call, SignedExtra> ExtractCallIndex for UncheckedExtrinsicV4<Call, SignedExtra>
+where
+	Call: Decode + Encode,
+	SignedExtra: Decode + Encode,
+{
+	/// Extract a call index of an encoded call.
+	///
+	/// Note: This mutates the slice. It will prune the `signature` field and the call
+	/// index of the `encoded_call`. Only the dispatchable's arguments are remaining.
+	fn extract_call_index(encoded_call: &mut &[u8]) -> Option<[u8; 2]> {
+		let xt = UncheckedExtrinsicV4::<(CallIndex, ()), SignedExtra>::decode(encoded_call).ok()?;
+		Some(xt.function.0)
+	}
+}
 
 #[cfg(feature = "std")]
 pub use api::*;
