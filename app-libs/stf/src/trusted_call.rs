@@ -27,7 +27,7 @@ use frame_support::{ensure, traits::UnfilteredDispatchable};
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{Runtime, System};
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
-use itp_node_api_metadata::pallet_teerex::TeerexCallIndexes;
+use itp_node_api_metadata::{pallet_teerex::TeerexCallIndexes, pallet_balances::BalancesCallIndexes};
 use itp_stf_interface::ExecuteCall;
 use itp_stf_primitives::types::{AccountId, KeyPair, ShardIdentifier, Signature};
 use itp_types::OpaqueCall;
@@ -247,14 +247,11 @@ where
 					shard
 				);
 				unshield_funds(account_incognito, value)?;
-				// This sends to the parent chain
-				// Need to send a call to statemine
+				
 				calls.push(OpaqueCall::from_tuple(&(
-					node_metadata_repo.get_from_metadata(|m| m.unshield_funds_call_indexes())??,
+					node_metadata_repo.get_from_metadata(|m| m.transfer_call_indexes())??,
 					beneficiary,
-					value,
-					shard,
-					call_hash,
+					value
 				)));
 				Ok(())
 			},
