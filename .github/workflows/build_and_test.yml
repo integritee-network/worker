@@ -177,6 +177,8 @@ jobs:
       WORKER_IMAGE_TAG: integritee-worker:dev
       CLIENT_IMAGE_TAG: integritee-cli:dev
       COINMARKETCAP_KEY: ${{ secrets.COINMARKETCAP_KEY }}
+      IAS_EPID_SPID: ${{ secrets.IAS_SPID }}
+      IAS_EPID_KEY: ${{ secrets.IAS_PRIMARY_KEY }}
       TEERACLE_INTERVAL_SECONDS: 10
 
     strategy:
