@@ -22,7 +22,7 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use itp_node_api::{
-	api_client::{ExtractCallIndex, ParentchainUncheckedExtrinsic},
+	api_client::{ExtractCallIndexAndSignature, ParentchainUncheckedExtrinsic},
 	metadata::{NodeMetadata, NodeMetadataTrait},
 };
 
@@ -68,7 +68,7 @@ impl<NodeMetadata: NodeMetadataTrait> FilterCalls<NodeMetadata> for ShieldFundsA
 
 	fn filter_into_with_metadata(call: &mut &[u8], metadata: &NodeMetadata) -> Option<Self::Call> {
 		// Note: This mutates `call`. It will prune the `signature` and the `call_index` of the slice.
-		let index = Self::ParentchainExtrinsic::extract_call_index(call)?;
+		let (_, index) = Self::ParentchainExtrinsic::extract_call_index_and_signature(call)?;
 
 		if index == metadata.shield_funds_call_indexes().ok()? {
 			let args = decode_and_log_error::<ShiedFundsArgs>(call)?;
@@ -82,9 +82,9 @@ impl<NodeMetadata: NodeMetadataTrait> FilterCalls<NodeMetadata> for ShieldFundsA
 	}
 }
 
-/// The default indirect call handling for the Integritee-Parachain
+/// The default indirect call handling for the Integritee-Parachain.
 ///
-/// Todo: Move or provide a template in app-libs such that useres
+/// Todo: Move or provide a template in app-libs such that users
 /// can implemeent their own indirect call there.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub enum IndirectCall {
