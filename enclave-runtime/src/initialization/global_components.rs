@@ -40,7 +40,9 @@ use itc_parentchain::{
 		BlockImportDispatcher,
 	},
 	block_importer::ParentchainBlockImporter,
-	indirect_calls_executor::IndirectCallsExecutor,
+	indirect_calls_executor::{
+		filter_calls::ShieldFundsAndCallWorkerFilter, IndirectCallsExecutor,
+	},
 	light_client::{
 		concurrent_access::ValidatorAccessor, io::LightClientStateSeal,
 		light_validation::LightValidation, light_validation_state::LightValidationState,
@@ -125,6 +127,7 @@ pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
 	EnclaveStfEnclaveSigner,
 	EnclaveTopPoolAuthor,
 	EnclaveNodeMetadataRepository,
+	ShieldFundsAndCallWorkerFilter,
 >;
 pub type EnclaveValidatorAccessor = ValidatorAccessor<
 	LightValidation<ParentchainBlock, EnclaveOCallApi>,
