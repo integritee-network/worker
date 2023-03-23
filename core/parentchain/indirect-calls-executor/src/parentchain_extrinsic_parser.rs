@@ -28,7 +28,7 @@ pub struct ExtrinsicParser<SignedExtra> {
 /// Parses the extrinsics corresponding to the parentchain.
 pub type ParentchainExtrinsicParser = ExtrinsicParser<ParentchainSignedExtra>;
 
-/// Partially interpreted extrinsic it contains the `signature` and the `call_index` whereas
+/// Partially interpreted extrinsic containing the `signature` and the `call_index` whereas
 /// the `call_args` remain in encoded form.
 ///
 /// Intended for usage, where the actual `call_args` form is unknown.
