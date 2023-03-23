@@ -46,9 +46,7 @@ pub trait ParseExtrinsic {
 	/// Signed extra of the extrinsic.
 	type SignedExtra;
 
-	fn parse<'a>(
-		encoded_call: &'a [u8],
-	) -> Result<SemiOpaqueExtrinsic<'a, Self::SignedExtra>, codec::Error>;
+	fn parse(encoded_call: &[u8]) -> Result<SemiOpaqueExtrinsic<Self::SignedExtra>, codec::Error>;
 }
 
 impl<SignedExtra> ParseExtrinsic for ExtrinsicParser<SignedExtra>
@@ -58,9 +56,7 @@ where
 	type SignedExtra = SignedExtra;
 
 	/// Extract a call index of an encoded call.
-	fn parse<'a>(
-		encoded_call: &'a [u8],
-	) -> Result<SemiOpaqueExtrinsic<'a, Self::SignedExtra>, codec::Error> {
+	fn parse(encoded_call: &[u8]) -> Result<SemiOpaqueExtrinsic<Self::SignedExtra>, codec::Error> {
 		let call_mut = &mut &encoded_call[..];
 
 		// `()` is a trick to stop decoding after the call index. So the remaining bytes
