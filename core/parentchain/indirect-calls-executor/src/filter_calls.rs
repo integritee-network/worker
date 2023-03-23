@@ -66,6 +66,8 @@ where
 	fn filter_into_with_metadata(call: &[u8], metadata: &NodeMetadata) -> Option<Self::Call> {
 		let call_mut = &mut &call[..];
 
+		// Todo: the filter should not need to parse, only filter. This should directly be configured
+		// in the indirect executor.
 		let xt = match Self::ParseParentchainExtrinsic::parse(call_mut) {
 			Ok(xt) => xt,
 			Err(e) => {
