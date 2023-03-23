@@ -19,6 +19,16 @@ pub fn get_merkle_proof_for_actor_from_file(
 		.ok_or_else(|| StfError::Dispatch(format!("Leaf Index error: {:?}", actor_id)))
 }
 
+pub fn read_market_results(timestamp: &str) -> Result<MarketOutput, StfError> {
+	let file = format!("{}/{}.json", RESULTS_DIR, timestamp);
+	let content = fs::read_to_string(file)
+		.map_err(|e| StfError::Dispatch(format!("Reading Results File Error: {:?}", e)))?;
+
+	serde_json::from_str(&content).map_err(|e| {
+		StfError::Dispatch(format!("Deserializing Results {:?}. Error: {:?}", content, e))
+	})
+}
+
 pub fn read_orders(timestamp: &str) -> Result<Vec<Order>, StfError> {
 	let file = format!("{}/{}.json", ORDERS_DIR, timestamp);
 	let content = fs::read_to_string(file)

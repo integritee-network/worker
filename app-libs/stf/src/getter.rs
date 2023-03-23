@@ -11,7 +11,7 @@
 	limitations under the License.
 */
 
-use crate::best_energy_helpers::get_merkle_proof_for_actor_from_file;
+use crate::best_energy_helpers::{get_merkle_proof_for_actor_from_file, read_market_results};
 use binary_merkle_tree::MerkleProof;
 use codec::{Decode, Encode};
 use ita_sgx_runtime::System;
@@ -110,6 +110,7 @@ pub enum TrustedGetter {
 	#[cfg(feature = "evm")]
 	evm_account_storages(AccountId, H160, H256),
 	pay_as_bid_proof(AccountId, Timestamp, ActorId),
+	get_market_results(AccountId, Timestamp),
 }
 
 impl TrustedGetter {
@@ -125,6 +126,7 @@ impl TrustedGetter {
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_account_storages(sender_account, ..) => sender_account,
 			TrustedGetter::pay_as_bid_proof(sender_account, _timstamp, _actor_id) => sender_account,
+			TrustedGetter::get_market_results(sender_account, _timstamp) => sender_account,
 		}
 	}
 
@@ -221,6 +223,18 @@ impl ExecuteGetter for Getter {
 					info!("Time Elapsed for PayAsBid Proof is: {:.2?}", elapsed);
 
 					Some(proof.encode())
+				},
+
+				TrustedGetter::get_market_results(_who, timestamp) => {
+					let market_results = match read_market_results(timestamp) {
+						Ok(market_results) => market_results,
+						Err(e) => {
+							log::error!("Getting Market Results Error, {:?}", e);
+							return None
+						},
+					};
+
+					Some(market_results.encode())
 				},
 			},
 			Getter::public(g) => match g {

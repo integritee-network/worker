@@ -13,10 +13,10 @@
 
 use crate::{
 	trusted_base_cli::commands::{
-		balance::BalanceCommand, nonce::NonceCommand, pay_as_bid::PayAsBidCommand,
-		pay_as_bid_proof::PayAsBidProofCommand, set_balance::SetBalanceCommand,
-		transfer::TransferCommand, unshield_funds::UnshieldFundsCommand,
-		verify_proof::VerifyMerkleProofCommand,
+		balance::BalanceCommand, get_market_results::GetMarketResultsCommand, nonce::NonceCommand,
+		pay_as_bid::PayAsBidCommand, pay_as_bid_proof::PayAsBidProofCommand,
+		set_balance::SetBalanceCommand, transfer::TransferCommand,
+		unshield_funds::UnshieldFundsCommand, verify_proof::VerifyMerkleProofCommand,
 	},
 	trusted_cli::TrustedCli,
 	trusted_command_utils::get_keystore_path,
@@ -60,6 +60,9 @@ pub enum TrustedBaseCommand {
 
 	/// VerifyProof Command
 	VerifyProof(VerifyMerkleProofCommand),
+
+	/// Get Market Results Command
+	GetMarketResults(GetMarketResultsCommand),
 }
 
 impl TrustedBaseCommand {
@@ -75,6 +78,7 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::PayAsBid(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::PayAsBidProof(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::VerifyProof(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::GetMarketResults(cmd) => cmd.run(cli, trusted_cli),
 		}
 	}
 }
