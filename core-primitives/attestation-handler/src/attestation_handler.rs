@@ -357,6 +357,7 @@ where
 	fn log_resp_code(&self, resp_code: &mut Option<u16>) {
 		let msg = match resp_code {
 			Some(200) => "OK Operation Successful",
+			Some(400) => "Bad request, quote is invalid, or linkability of quote/subscription does not match.",
 			Some(401) => "Unauthorized Failed to authenticate or authorize request.",
 			Some(404) => "Not Found GID does not refer to a valid EPID group ID.",
 			Some(500) => "Internal error occurred",
