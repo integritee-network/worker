@@ -367,7 +367,7 @@ where
 			temporary state – the same request can be repeated after
 			some time. ",
 			_ => {
-				error!("DBG:{:?}", resp_code);
+				error!("Error, received unknown HTTP response: {:?}", resp_code);
 				"Unknown error occured"
 			},
 		};
