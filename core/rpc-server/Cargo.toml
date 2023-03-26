@@ -27,5 +27,5 @@ std = []
 
 [dev-dependencies]
 env_logger = { version = "*" }
-sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
 its-test = { path = "../../sidechain/test" }
