@@ -42,7 +42,7 @@ use crate::{
 	error::Result,
 	executor::{call_worker::CallWorker, shield_funds::ShieldFunds, DecorateExecutor},
 };
-use beefy_merkle_tree::{merkle_root, Keccak256};
+use binary_merkle_tree::{merkle_root, Keccak256};
 use codec::Encode;
 use itp_node_api::metadata::{
 	pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata, NodeMetadataTrait,
