@@ -113,7 +113,10 @@ impl Send for SendWithCertificateVerification {
 		match request.send_with_pem_certificate(writer, Some(self.root_certificate.to_string())) {
 			Ok(response) => Ok(response),
 			Err(e) => {
-				error!("SendWithCertificateVerification::execute_send_request received error: {:#?}", &e);
+				error!(
+					"SendWithCertificateVerification::execute_send_request received error: {:#?}",
+					&e
+				);
 				Err(Error::HttpReqError(e))
 			},
 		}
