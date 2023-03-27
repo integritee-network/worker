@@ -33,7 +33,11 @@ use ita_stf::{
 	test_genesis::{endowed_account, unendowed_account},
 	TrustedCall, TrustedOperation,
 };
-use itc_parentchain::indirect_calls_executor::{ExecuteIndirectCalls, IndirectCallsExecutor};
+use itc_parentchain::indirect_calls_executor::{
+	filter_calls::ShieldFundsAndCallWorkerFilter,
+	parentchain_extrinsic_parser::ParentchainExtrinsicParser, ExecuteIndirectCalls,
+	IndirectCallsExecutor,
+};
 use itc_parentchain_test::{
 	parentchain_block_builder::ParentchainBlockBuilder,
 	parentchain_header_builder::ParentchainHeaderBuilder,
@@ -128,12 +132,16 @@ pub fn submit_shielding_call_to_top_pool() {
 	));
 	let node_meta_data_repository = Arc::new(NodeMetadataRepository::default());
 	node_meta_data_repository.set_metadata(NodeMetadataMock::new());
-	let indirect_calls_executor = IndirectCallsExecutor::new(
-		shielding_key_repo,
-		enclave_signer,
-		top_pool_author.clone(),
-		node_meta_data_repository,
-	);
+	let indirect_calls_executor =
+		IndirectCallsExecutor::<
+			_,
+			_,
+			_,
+			_,
+			ShieldFundsAndCallWorkerFilter<ParentchainExtrinsicParser>,
+		>::new(
+			shielding_key_repo, enclave_signer, top_pool_author.clone(), node_meta_data_repository
+		);
 
 	let block_with_shielding_call = create_shielding_call_extrinsic(shard_id, &shielding_key);
 
