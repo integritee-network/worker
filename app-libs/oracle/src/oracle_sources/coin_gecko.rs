@@ -29,6 +29,7 @@ use itc_rest_client::{
 	RestGet, RestPath,
 };
 use lazy_static::lazy_static;
+use log::debug;
 use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashMap,
@@ -42,7 +43,7 @@ const COINGECKO_URL: &str = "https://api.coingecko.com";
 const COINGECKO_PARAM_CURRENCY: &str = "vs_currency";
 const COINGECKO_PARAM_COIN: &str = "ids";
 const COINGECKO_PATH: &str = "api/v3/coins/markets";
-const COINGECKO_TIMEOUT: Duration = Duration::from_secs(3u64);
+const COINGECKO_TIMEOUT: Duration = Duration::from_secs(5u64);
 const COINGECKO_ROOT_CERTIFICATE: &str = include_str!("../certificates/lets_encrypt_root_cert.pem");
 
 lazy_static! {
@@ -111,6 +112,7 @@ impl<OracleSourceInfo: Into<TradingInfo>> OracleSource<OracleSourceInfo> for Coi
 			)
 			.map_err(Error::RestClient)?;
 
+		debug!("coingecko received response: {:#?}", &response);
 		let list = response.0;
 		if list.is_empty() {
 			return Err(Error::NoValidData(COINGECKO_URL.to_string(), trading_pair.key()))

@@ -110,9 +110,13 @@ impl Send for SendWithCertificateVerification {
 		request: &mut Request,
 		writer: &mut Vec<u8>,
 	) -> Result<Response, Error> {
-		request
-			.send_with_pem_certificate(writer, Some(self.root_certificate.to_string()))
-			.map_err(Error::HttpReqError)
+		match request.send_with_pem_certificate(writer, Some(self.root_certificate.to_string())) {
+			Ok(response) => Ok(response),
+			Err(e) => {
+				error!("SendWithCertificateVerification::execute_send_request received error: {:#?}", &e);
+				Err(Error::HttpReqError(e))
+			},
+		}
 	}
 }
 
@@ -237,7 +241,7 @@ where
 			.read_timeout(self.timeout)
 			.write_timeout(self.timeout);
 
-		trace!("{:?}", request);
+		trace!("request is: {:?}", request);
 
 		let mut writer = Vec::new();
 
