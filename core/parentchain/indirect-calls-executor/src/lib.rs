@@ -42,7 +42,7 @@ use crate::{
 	error::Result,
 	executor::{call_worker::CallWorker, shield_funds::ShieldFunds, DecorateExecutor},
 };
-use binary_merkle_tree::{merkle_root, Keccak256};
+use binary_merkle_tree::merkle_root;
 use codec::Encode;
 use itp_node_api::metadata::{
 	pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata, NodeMetadataTrait,
@@ -53,7 +53,7 @@ use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{OpaqueCall, ShardIdentifier, H256};
 use log::*;
 use sp_core::blake2_256;
-use sp_runtime::traits::{Block as ParentchainBlockTrait, Header};
+use sp_runtime::traits::{Block as ParentchainBlockTrait, Header, Keccak256};
 use std::{sync::Arc, vec, vec::Vec};
 
 #[derive(Clone)]
