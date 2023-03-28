@@ -51,8 +51,8 @@ itp-types = { path = "../types", default-features = false }
 httparse = { default-features = false, git = "https://github.com/integritee-network/httparse-sgx", branch = "sgx-experimental" }
 
 # substrate deps
-sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
 
 [features]
 default = ["std"]
