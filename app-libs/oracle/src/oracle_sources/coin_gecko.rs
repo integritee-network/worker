@@ -43,7 +43,7 @@ const COINGECKO_URL: &str = "https://api.coingecko.com";
 const COINGECKO_PARAM_CURRENCY: &str = "vs_currency";
 const COINGECKO_PARAM_COIN: &str = "ids";
 const COINGECKO_PATH: &str = "api/v3/coins/markets";
-const COINGECKO_TIMEOUT: Duration = Duration::from_secs(10u64);
+const COINGECKO_TIMEOUT: Duration = Duration::from_secs(20u64);
 const COINGECKO_ROOT_CERTIFICATE: &str = include_str!("../certificates/lets_encrypt_root_cert.pem");
 
 lazy_static! {
