@@ -118,21 +118,6 @@ where
 				},
 			}
 		}
-
-		match self
-			.oracle_source
-			.execute_exchange_rate_request(&mut rest_client, trading_pair.clone())
-		{
-			Ok(exchange_rate) => {
-				self.metrics_exporter.record_response_time(source_id.clone(), timer_start);
-				self.metrics_exporter
-					.update_exchange_rate(source_id, exchange_rate, trading_pair);
-
-				debug!("Successfully executed exchange rate request");
-				Ok((exchange_rate, base_url))
-			},
-			Err(e) => Err(e),
-		}
 	}
 }
 
