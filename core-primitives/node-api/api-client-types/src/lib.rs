@@ -22,9 +22,10 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub use sp_runtime::MultiSignature;
 pub use substrate_api_client::{
-	PlainTip, PlainTipExtrinsicParams, PlainTipExtrinsicParamsBuilder, SubstrateDefaultSignedExtra,
-	UncheckedExtrinsicV4,
+	CallIndex, GenericAddress, PlainTip, PlainTipExtrinsicParams, PlainTipExtrinsicParamsBuilder,
+	SubstrateDefaultSignedExtra, UncheckedExtrinsicV4,
 };
 
 /// Configuration for the ExtrinsicParams.
@@ -39,8 +40,12 @@ pub type ParentchainExtrinsicParamsBuilder = PlainTipExtrinsicParamsBuilder;
 //pub type ParentchainExtrinsicParams = AssetTipExtrinsicParams;
 //pub type ParentchainExtrinsicParamsBuilder = AssetTipExtrinsicParamsBuilder;
 
-pub type ParentchainUncheckedExtrinsic<Call> =
-	UncheckedExtrinsicV4<Call, SubstrateDefaultSignedExtra<PlainTip>>;
+pub type ParentchainUncheckedExtrinsic<Call> = UncheckedExtrinsicV4<Call, ParentchainSignedExtra>;
+pub type ParentchainSignedExtra = SubstrateDefaultSignedExtra<PlainTip>;
+pub type ParentchainSignature = Signature<ParentchainSignedExtra>;
+
+/// Signature type of the [UncheckedExtrinsicV4].
+pub type Signature<SignedExtra> = Option<(GenericAddress, MultiSignature, SignedExtra)>;
 
 #[cfg(feature = "std")]
 pub use api::*;
