@@ -72,7 +72,7 @@ where
 		let http_client = HttpClient::new(
 			SendWithCertificateVerification::new(root_certificate),
 			true,
-			request_timeout.clone(),
+			request_timeout,
 			None,
 			None,
 		);
@@ -107,7 +107,7 @@ where
 						);
 						debug!("Check that the API endpoint is available, for coingecko: https://status.coingecko.com/");
 						thread::sleep(
-							request_timeout.unwrap_or(Duration::from_secs(number_of_tries)),
+							request_timeout.unwrap_or_else(|| Duration::from_secs(number_of_tries)),
 						);
 					}
 					error!(
