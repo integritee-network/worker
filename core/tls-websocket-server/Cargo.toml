@@ -33,7 +33,7 @@ webpki = { version = "0.21", optional = true }
 yasna = { version = "0.4", optional = true, features = ["bit-vec", "num-bigint", "chrono", "std"] }
 
 # Substrate dependencies
-sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
 
 # no-std compatible libraries
 log = { version = "0.4", default-features = false }

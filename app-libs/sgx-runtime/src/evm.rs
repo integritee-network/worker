@@ -82,4 +82,5 @@ impl pallet_evm::Config for Runtime {
 	type BlockGasLimit = BlockGasLimit;
 	type FindAuthor = (); // Currently not available. Would need some more thoughts how prioritisation fees could be handled.
 	type WeightPerGas = ();
+	type OnCreate = ();
 }

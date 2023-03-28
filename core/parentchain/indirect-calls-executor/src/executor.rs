@@ -24,7 +24,7 @@ use crate::{
 	filter_calls::FilterCalls,
 	traits::{ExecuteIndirectCalls, IndirectDispatch, IndirectExecutor},
 };
-use beefy_merkle_tree::{merkle_root, Keccak256};
+use binary_merkle_tree::merkle_root;
 use codec::Encode;
 use core::marker::PhantomData;
 use ita_stf::{TrustedCall, TrustedCallSigned};
@@ -38,7 +38,7 @@ use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{OpaqueCall, ShardIdentifier, H256};
 use log::*;
 use sp_core::blake2_256;
-use sp_runtime::traits::{Block as ParentchainBlockTrait, Header};
+use sp_runtime::traits::{Block as ParentchainBlockTrait, Header, Keccak256};
 use std::{sync::Arc, vec::Vec};
 
 pub struct IndirectCallsExecutor<
