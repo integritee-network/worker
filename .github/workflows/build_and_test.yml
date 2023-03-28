@@ -159,7 +159,7 @@ jobs:
       WORKER_IMAGE_TAG: integritee-worker:dev
       CLIENT_IMAGE_TAG: integritee-cli:dev
       COINMARKETCAP_KEY: ${{ secrets.COINMARKETCAP_KEY }}
-      TEERACLE_INTERVAL_SECONDS: 4
+      TEERACLE_INTERVAL_SECONDS: 10
 
     strategy:
       fail-fast: false
