@@ -82,12 +82,15 @@ where
 		// If it still fails for the last attempt, then only in that case will it be considered a non-recoverable error.
 		let number_of_tries = 3;
 		let timer_start = Instant::now();
-		for i in 0..number_of_tries {
-			let result = self
+
+		let mut tries = 0;
+		let result = loop {
+			tries += 1;
+			let exchange_result = self
 				.oracle_source
 				.execute_exchange_rate_request(&mut rest_client, trading_pair.clone());
 
-			match result {
+			match exchange_result {
 				Ok(exchange_rate) => {
 					self.metrics_exporter.record_response_time(source_id.clone(), timer_start);
 					self.metrics_exporter.update_exchange_rate(
@@ -97,10 +100,10 @@ where
 					);
 
 					debug!("Successfully executed exchange rate request");
-					return Ok((exchange_rate, base_url))
+					break Ok((exchange_rate, base_url))
 				},
-				Err(e) => {
-					if i < number_of_tries {
+				Err(e) =>
+					if tries < number_of_tries {
 						error!(
 							"Getting exchange rate from {} failed with {}, trying again in {:#?}.",
 							&base_url, e, request_timeout
@@ -109,15 +112,16 @@ where
 						thread::sleep(
 							request_timeout.unwrap_or_else(|| Duration::from_secs(number_of_tries)),
 						);
-					}
-					error!(
-						"Getting exchange rate from {} failed {} times, latest error is: {}.",
-						&base_url, number_of_tries, &e
-					);
-					return Err(e)
-				},
+					} else {
+						error!(
+							"Getting exchange rate from {} failed {} times, latest error is: {}.",
+							&base_url, number_of_tries, &e
+						);
+						break Err(e)
+					},
 			}
-		}
+		};
+		result
 	}
 }
 
