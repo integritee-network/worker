@@ -25,7 +25,7 @@ use log::*;
 use sp_core::storage::StorageKey;
 use sp_runtime::OpaqueExtrinsic;
 use std::{sync::Arc, vec::Vec};
-use substrate_api_client::XtStatus;
+use substrate_api_client::{GetStorage, XtStatus};
 
 pub struct WorkerOnChainOCall<F> {
 	node_api_factory: Arc<F>,

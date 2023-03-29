@@ -3766,6 +3766,7 @@ version = "0.9.0"
 dependencies = [
  "chrono 0.4.24",
  "frame-system",
+ "integritee-node-runtime",
  "itp-sgx-runtime-primitives",
  "pallet-balances",
  "parity-scale-codec",

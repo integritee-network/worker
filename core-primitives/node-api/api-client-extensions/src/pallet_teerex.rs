@@ -19,7 +19,7 @@ use crate::ApiResult;
 use itp_types::{parentchain::Hash, Enclave, IpfsHash, ShardIdentifier};
 use sp_core::Pair;
 use sp_runtime::MultiSignature;
-use substrate_api_client::{rpc::Request, Api, ExtrinsicParams, GetStorage};
+use substrate_api_client::{rpc::Request, Api, ExtrinsicParams, FrameSystemConfig, GetStorage};
 
 pub const TEEREX: &str = "Teerex";
 pub const SIDECHAIN: &str = "Sidechain";
@@ -41,16 +41,21 @@ pub trait PalletTeerexApi {
 	) -> ApiResult<Option<IpfsHash>>;
 }
 
-impl<Api> PalletTeerexApi for Api
+impl<Signer, Client, Params, Runtime> PalletTeerexApi for Api<Signer, Client, Params, Runtime>
 where
-	Api: GetStorage<Hash>,
+	Client: Request,
+	Runtime: FrameSystemConfig,
+	Params: ExtrinsicParams<Runtime::Index, Runtime::Hash>,
+	Runtime::Hash: From<Hash>,
 {
 	fn enclave(&self, index: u64, at_block: Option<Hash>) -> ApiResult<Option<Enclave>> {
-		self.get_storage_map(TEEREX, "EnclaveRegistry", index, at_block)
+		self.get_storage_map(TEEREX, "EnclaveRegistry", index, at_block.map(|b| b.into()))
 	}
 
 	fn enclave_count(&self, at_block: Option<Hash>) -> ApiResult<u64> {
-		Ok(self.get_storage_value(TEEREX, "EnclaveCount", at_block)?.unwrap_or(0u64))
+		Ok(self
+			.get_storage_value(TEEREX, "EnclaveCount", at_block.map(|b| b.into()))?
+			.unwrap_or(0u64))
 	}
 
 	fn all_enclaves(&self, at_block: Option<Hash>) -> ApiResult<Vec<Enclave>> {
@@ -67,7 +72,7 @@ where
 		shard: &ShardIdentifier,
 		at_block: Option<Hash>,
 	) -> ApiResult<Option<Enclave>> {
-		self.get_storage_map(SIDECHAIN, "WorkerForShard", shard, at_block)?
+		self.get_storage_map(SIDECHAIN, "WorkerForShard", shard, at_block.map(|b| b.into()))?
 			.map_or_else(|| Ok(None), |w_index| self.enclave(w_index, at_block))
 	}
 
@@ -76,6 +81,6 @@ where
 		shard: &ShardIdentifier,
 		at_block: Option<Hash>,
 	) -> ApiResult<Option<IpfsHash>> {
-		self.get_storage_map(TEEREX, "LatestIPFSHash", shard, at_block)
+		self.get_storage_map(TEEREX, "LatestIPFSHash", shard, at_block.map(|b| b.into()))
 	}
 }

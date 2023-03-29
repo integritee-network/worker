@@ -24,11 +24,15 @@ sp-core = { default-features = false, features = ["full_crypto"], git = "https:/
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
 sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
 
+# integritee-node
+my-node-runtime = { package = "integritee-node-runtime", optional = true, git = "https://github.com/integritee-network/integritee-node.git", branch = "polkadot-v0.9.39" }
+
 [features]
 default = ["std"]
 std = [
     "codec/std",
     "chrono/std",
+    "my-node-runtime",
     "serde/std",
     "serde_json/std",
     "primitive-types/std",

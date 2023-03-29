@@ -28,6 +28,7 @@ use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
 use itp_types::ShardIdentifier;
 use sgx_types::sgx_quote_sign_type_t;
 use std::string::String;
+use substrate_api_client::FrameSystemConfig;
 
 pub(crate) fn sync_state<
 	E: TlsRemoteAttestation + EnclaveBase,

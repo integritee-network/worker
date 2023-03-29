@@ -66,7 +66,6 @@ use itp_settings::{
 	files::SIDECHAIN_STORAGE_PATH,
 	worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider},
 };
-use itp_utils::hex::hex_encode;
 use its_peer_fetch::{
 	block_fetch_client::BlockFetcher, untrusted_peer_fetch::UntrustedPeerFetcher,
 };
