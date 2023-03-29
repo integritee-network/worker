@@ -15,7 +15,7 @@ dependencies = [
 [[package]]
 name = "ac-compose-macros"
 version = "0.2.2"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.39-tag-v0.9.0#c952d689bfd6469432f92b10ca351876bd5ac51a"
+source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.39-tag-v0.9.0#c4d3f110b94e25d5ce52d5bb64d0c778c4c7f2da"
 dependencies = [
  "ac-primitives",
  "log 0.4.17",
@@ -28,7 +28,7 @@ dependencies = [
 [[package]]
 name = "ac-node-api"
 version = "0.2.2"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.39-tag-v0.9.0#c952d689bfd6469432f92b10ca351876bd5ac51a"
+source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.39-tag-v0.9.0#c4d3f110b94e25d5ce52d5bb64d0c778c4c7f2da"
 dependencies = [
  "ac-primitives",
  "bitvec",
@@ -50,7 +50,7 @@ dependencies = [
 [[package]]
 name = "ac-primitives"
 version = "0.4.0"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.39-tag-v0.9.0#c952d689bfd6469432f92b10ca351876bd5ac51a"
+source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.39-tag-v0.9.0#c4d3f110b94e25d5ce52d5bb64d0c778c4c7f2da"
 dependencies = [
  "frame-system",
  "hex",
@@ -3262,6 +3262,7 @@ checksum = "453ad9f582a441959e5f0d088b02ce04cfe8d51a8eaf077f12ac6d3e94164ca6"
 name = "itp-api-client-extensions"
 version = "0.9.0"
 dependencies = [
+ "itp-api-client-types",
  "itp-types",
  "parity-scale-codec",
  "sp-core",
@@ -8197,7 +8198,7 @@ dependencies = [
 [[package]]
 name = "substrate-api-client"
 version = "0.9.0"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.39-tag-v0.9.0#c952d689bfd6469432f92b10ca351876bd5ac51a"
+source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.39-tag-v0.9.0#c4d3f110b94e25d5ce52d5bb64d0c778c4c7f2da"
 dependencies = [
  "ac-compose-macros",
  "ac-node-api",
@@ -8235,7 +8236,7 @@ dependencies = [
 [[package]]
 name = "substrate-client-keystore"
 version = "0.7.0"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.39-tag-v0.9.0#c952d689bfd6469432f92b10ca351876bd5ac51a"
+source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.39-tag-v0.9.0#c4d3f110b94e25d5ce52d5bb64d0c778c4c7f2da"
 dependencies = [
  "async-trait",
  "hex",

@@ -74,6 +74,7 @@ use its_storage::{interface::FetchBlocks, BlockPruner, SidechainStorageLock};
 use log::*;
 use my_node_runtime::{Hash, Header, RuntimeEvent};
 use sgx_types::*;
+use substrate_api_client::{GetHeader, SubmitExtrinsic, SubscribeChain};
 
 #[cfg(feature = "dcap")]
 use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
@@ -799,7 +800,7 @@ fn send_extrinsic(
 	api: &ParentchainApi,
 	accountid: &AccountId32,
 	is_development_mode: bool,
-) -> Option<Hash> {
+) -> Hash {
 	// Account funds
 	if let Err(x) = setup_account_funding(api, accountid, extrinsic.clone(), is_development_mode) {
 		error!("Starting worker failed: {:?}", x);
@@ -808,8 +809,11 @@ fn send_extrinsic(
 	}
 
 	println!("[>] Register the TCB info (send the extrinsic)");
-	let register_qe_xt_hash = api.submit_extrinsic(extrinsic, XtStatus::Finalized).unwrap();
-	println!("[<] Extrinsic got finalized. Hash: {:?}\n", register_qe_xt_hash);
+	let register_qe_xt_hash = api
+		.submit_and_watch_extrinsic_until(extrinsic, XtStatus::Finalized)
+		.unwrap()
+		.extrinsic_hash;
+	println!("[<] Extrinsic got finalized. Extrinsic hash: {:?}\n", register_qe_xt_hash);
 	register_qe_xt_hash
 }
 

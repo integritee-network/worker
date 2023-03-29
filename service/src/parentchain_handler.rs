@@ -23,7 +23,7 @@ use itc_parentchain::{
 };
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
 use itp_node_api::api_client::ChainApi;
-use itp_types::SignedBlock;
+use itp_types::parentchain::SignedBlock;
 use log::*;
 use my_node_runtime::Header;
 use sp_finality_grandpa::VersionedAuthorityList;
