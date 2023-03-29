@@ -3276,6 +3276,7 @@ name = "itp-api-client-types"
 version = "0.9.0"
 dependencies = [
  "integritee-node-runtime",
+ "itp-types",
  "sp-core",
  "sp-runtime",
  "substrate-api-client",

@@ -46,7 +46,7 @@ pub struct ShieldFundsCommand {
 
 impl ShieldFundsCommand {
 	pub(crate) fn run(&self, cli: &Cli) {
-		let chain_api = get_chain_api(cli);
+		let mut chain_api = get_chain_api(cli);
 
 		let shard_opt = match self.shard.from_base58() {
 			Ok(s) => ShardIdentifier::decode(&mut &s[..]),
@@ -60,7 +60,7 @@ impl ShieldFundsCommand {
 
 		// get the sender
 		let from = get_pair_from_str(&self.from);
-		let chain_api = chain_api.set_signer(sr25519_core::Pair::from(from));
+		chain_api.set_signer(sr25519_core::Pair::from(from));
 
 		// get the recipient
 		let to = get_accountid_from_str(&self.to);

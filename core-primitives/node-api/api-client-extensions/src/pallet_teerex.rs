@@ -19,7 +19,7 @@ use crate::ApiResult;
 use itp_types::{Enclave, IpfsHash, ShardIdentifier};
 use sp_core::{Pair, H256 as Hash};
 use sp_runtime::MultiSignature;
-use substrate_api_client::{Api, ExtrinsicParams, RpcClient};
+use substrate_api_client::{rpc::Request, Api, ExtrinsicParams};
 
 pub const TEEREX: &str = "Teerex";
 pub const SIDECHAIN: &str = "Sidechain";
@@ -41,7 +41,7 @@ pub trait PalletTeerexApi {
 	) -> ApiResult<Option<IpfsHash>>;
 }
 
-impl<P: Pair, Client: RpcClient, Params: ExtrinsicParams> PalletTeerexApi for Api<P, Client, Params>
+impl<P: Pair, Client: Request, Params: ExtrinsicParams, Runtime> PalletTeerexApi for Api<P, Client, Params, Runtime>
 where
 	MultiSignature: From<P::Signature>,
 {

@@ -16,7 +16,7 @@
 */
 
 // Node specific params. Be sure to change them if your node uses different types.
-pub type AccountId = sp_core::crypto::AccountId;
+pub type AccountId = sp_core::crypto::AccountId32;
 pub type Index = u32;
 pub type Balance = u128;
 pub type Hash = sp_core::H256;

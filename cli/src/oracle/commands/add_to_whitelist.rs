@@ -39,16 +39,21 @@ pub struct AddToWhitelistCmd {
 
 impl AddToWhitelistCmd {
 	pub fn run(&self, cli: &Cli) {
-		let api = get_chain_api(cli);
+		let mut api = get_chain_api(cli);
 		let mrenclave = mrenclave_from_base58(&self.mrenclave);
 		let from = get_pair_from_str(&self.from);
 
 		let market_data_source = self.source.clone();
 
-		let api = api.set_signer(from.into());
+		api.set_signer(from.into());
 
-		let call =
-			compose_call!(api.metadata, TEERACLE, ADD_TO_WHITELIST, market_data_source, mrenclave);
+		let call = compose_call!(
+			api.metadata(),
+			TEERACLE,
+			ADD_TO_WHITELIST,
+			market_data_source,
+			mrenclave
+		);
 
 		// compose the extrinsic
 		let xt: UncheckedExtrinsicV4<_, _> = compose_extrinsic!(api, "Sudo", "sudo", call);
