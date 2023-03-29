@@ -81,6 +81,7 @@ use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
 
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
+use sp_runtime::traits::Header as HeaderTrait;
 use std::{
 	path::PathBuf,
 	str,
@@ -91,7 +92,7 @@ use std::{
 	thread,
 	time::Duration,
 };
-use substrate_api_client::{utils::FromHexString, Header as HeaderTrait, XtStatus};
+use substrate_api_client::{utils::FromHexString, XtStatus};
 use teerex_primitives::ShardIdentifier;
 
 mod account_funding;
@@ -421,9 +422,9 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		.set_nonce(nonce)
 		.expect("Could not set nonce of enclave. Returning here...");
 
-	let metadata = node_api.metadata.clone();
-	let runtime_spec_version = node_api.runtime_version.spec_version;
-	let runtime_transaction_version = node_api.runtime_version.transaction_version;
+	let metadata = node_api.metadata().clone();
+	let runtime_spec_version = node_api.runtime_version().spec_version;
+	let runtime_transaction_version = node_api.runtime_version().transaction_version;
 	enclave
 		.set_node_metadata(
 			NodeMetadata::new(metadata, runtime_spec_version, runtime_transaction_version).encode(),
@@ -459,11 +460,11 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		println!("[!] creating remote attestation report and create enclave register extrinsic.");
 	};
 	#[cfg(not(feature = "dcap"))]
-	let uxt = enclave.generate_ias_ra_extrinsic(&trusted_url, skip_ra).unwrap();
+	let xt = enclave.generate_ias_ra_extrinsic(&trusted_url, skip_ra).unwrap();
 	#[cfg(feature = "dcap")]
-	let uxt = enclave.generate_dcap_ra_extrinsic(&trusted_url, skip_ra).unwrap();
+	let xt = enclave.generate_dcap_ra_extrinsic(&trusted_url, skip_ra).unwrap();
 	let register_enclave_xt_hash =
-		send_extrinsic(&uxt, &node_api, &tee_accountid, is_development_mode);
+		send_extrinsic(xt, &node_api, &tee_accountid, is_development_mode);
 
 	let register_enclave_xt_header =
 		node_api.get_header(register_enclave_xt_hash).unwrap().unwrap();
@@ -767,8 +768,8 @@ fn register_quotes_from_marblerun(
 
 	for quote in quotes {
 		match enclave.generate_dcap_ra_extrinsic_from_quote(url.clone(), &quote) {
-			Ok(xts) => {
-				send_extrinsic(&xts, api, accountid, is_development_mode);
+			Ok(xt) => {
+				send_extrinsic(xt, api, accountid, is_development_mode);
 			},
 			Err(e) => {
 				error!("Extracting information from quote failed: {}", e)
@@ -787,29 +788,28 @@ fn register_collateral(
 	let dcap_quote = enclave.generate_dcap_ra_quote(skip_ra).unwrap();
 	let (fmspc, _tcb_info) = extract_tcb_info_from_raw_dcap_quote(&dcap_quote).unwrap();
 
-	let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc).unwrap();
-	send_extrinsic(&uxt, api, accountid, is_development_mode);
+	let xt = enclave.generate_register_quoting_enclave_extrinsic(fmspc).unwrap();
+	send_extrinsic(xt, api, accountid, is_development_mode);
 
-	let uxt = enclave.generate_register_tcb_info_extrinsic(fmspc).unwrap();
-	send_extrinsic(&uxt, api, accountid, is_development_mode);
+	let xt = enclave.generate_register_tcb_info_extrinsic(fmspc).unwrap();
+	send_extrinsic(xt, api, accountid, is_development_mode);
 }
 
 fn send_extrinsic(
-	extrinsic: &[u8],
+	extrinsic: Vec<u8>,
 	api: &ParentchainApi,
 	accountid: &AccountId32,
 	is_development_mode: bool,
 ) -> Option<Hash> {
-	let xthex = hex_encode(extrinsic);
 	// Account funds
-	if let Err(x) = setup_account_funding(api, accountid, &xthex, is_development_mode) {
+	if let Err(x) = setup_account_funding(api, accountid, extrinsic.clone(), is_development_mode) {
 		error!("Starting worker failed: {:?}", x);
 		// Return without registering the enclave. This will fail and the transaction will be banned for 30min.
 		return None
 	}
 
 	println!("[>] Register the TCB info (send the extrinsic)");
-	let register_qe_xt_hash = api.send_extrinsic(xthex, XtStatus::Finalized).unwrap();
+	let register_qe_xt_hash = api.submit_extrinsic(extrinsic, XtStatus::Finalized).unwrap();
 	println!("[<] Extrinsic got finalized. Hash: {:?}\n", register_qe_xt_hash);
 	register_qe_xt_hash
 }

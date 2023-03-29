@@ -22,27 +22,30 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub use itp_types::parentchain::{Balance, Index};
+pub use itp_types::parentchain::{Balance, Hash, Index};
 pub use sp_runtime::MultiSignature;
 pub use substrate_api_client::{
-	CallIndex, GenericAddress, PlainTip, PlainTipExtrinsicParams, PlainTipExtrinsicParamsBuilder,
+	AssetTip, BaseExtrinsicParams, BaseExtrinsicParamsBuilder, CallIndex, GenericAddress, PlainTip,
 	SubstrateDefaultSignedExtra, UncheckedExtrinsicV4,
 };
+
+pub type ParentchainPlainTip = PlainTip<Balance>;
+pub type ParentchainAssetTip = AssetTip<Balance>;
 
 /// Configuration for the ExtrinsicParams.
 ///
 /// Valid for the default integritee node
-pub type ParentchainExtrinsicParams<Runtime> = PlainTipExtrinsicParams<Runtime>;
-pub type ParentchainExtrinsicParamsBuilder<Runtime> = PlainTipExtrinsicParamsBuilder<Runtime>;
+pub type ParentchainExtrinsicParams = BaseExtrinsicParams<ParentchainPlainTip, Index, Hash>;
+pub type ParentchainExtrinsicParamsBuilder = BaseExtrinsicParamsBuilder<ParentchainPlainTip, Hash>;
 
 // Pay in asset fees.
 //
 // This needs to be used if the node uses the `pallet_asset_tx_payment`.
-//pub type ParentchainExtrinsicParams<Runtime> = AssetTipExtrinsicParams<Runtime>;
-//pub type ParentchainExtrinsicParamsBuilder<Runtime> = AssetTipExtrinsicParamsBuilder<Runtime>;
+//pub type ParentchainExtrinsicParams =  BaseExtrinsicParams<ParentchainAssetTip, Index, Hash>;
+//pub type ParentchainExtrinsicParamsBuilder = BaseExtrinsicParamsBuilder<ParentchainAssetTip, Hash>;
 
 pub type ParentchainUncheckedExtrinsic<Call> = UncheckedExtrinsicV4<Call, ParentchainSignedExtra>;
-pub type ParentchainSignedExtra = SubstrateDefaultSignedExtra<PlainTip<Balance>, Index>;
+pub type ParentchainSignedExtra = SubstrateDefaultSignedExtra<ParentchainPlainTip, Index>;
 pub type ParentchainSignature = Signature<ParentchainSignedExtra>;
 
 /// Signature type of the [UncheckedExtrinsicV4].
@@ -57,8 +60,11 @@ mod api {
 	use substrate_api_client::Api;
 
 	pub use my_node_runtime::Runtime;
-	pub use substrate_api_client::{api::Error as ApiClientError, rpc::WsRpcClient,  rpc::Error as RpcClientError};
+	pub use substrate_api_client::{
+		api::Error as ApiClientError,
+		rpc::{Error as RpcClientError, WsRpcClient},
+	};
 
 	pub type ParentchainApi =
-		Api<sp_core::sr25519::Pair, WsRpcClient, ParentchainExtrinsicParams<Runtime>, Runtime>;
+		Api<sp_core::sr25519::Pair, WsRpcClient, ParentchainExtrinsicParams, Runtime>;
 }

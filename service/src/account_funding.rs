@@ -21,13 +21,14 @@ use itp_node_api::api_client::{AccountApi, ParentchainApi};
 use itp_settings::worker::{
 	EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS, REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS,
 };
+use itp_types::parentchain::Balance;
 use log::*;
 use sp_core::{
 	crypto::{AccountId32, Ss58Codec},
 	Pair,
 };
 use sp_keyring::AccountKeyring;
-use substrate_api_client::{Balance, GenericAddress, XtStatus};
+use substrate_api_client::{GenericAddress, XtStatus};
 
 /// Information about the enclave on-chain account.
 pub trait EnclaveAccountInfo {
@@ -54,7 +55,7 @@ impl EnclaveAccountInfoProvider {
 pub fn setup_account_funding(
 	api: &ParentchainApi,
 	accountid: &AccountId32,
-	extrinsic_prefix: &str,
+	encoded_extrinsic: Vec<u8>,
 	is_development_mode: bool,
 ) -> ServiceResult<()> {
 	// Account funds
@@ -63,7 +64,7 @@ pub fn setup_account_funding(
 		ensure_account_has_funds(api, accountid)?;
 	} else {
 		// Production mode, there is no faucet.
-		let registration_fees = enclave_registration_fees(api, extrinsic_prefix)?;
+		let registration_fees = enclave_registration_fees(api, encoded_extrinsic)?;
 		info!("Registration fees = {:?}", registration_fees);
 		let free_balance = api.get_free_balance(accountid)?;
 		info!("TEE's free balance = {:?}", free_balance);
@@ -107,8 +108,11 @@ fn ensure_account_has_funds(api: &ParentchainApi, accountid: &AccountId32) -> Re
 	Ok(())
 }
 
-fn enclave_registration_fees(api: &ParentchainApi, xthex_prefixed: &str) -> Result<u128, Error> {
-	let reg_fee_details = api.get_fee_details(xthex_prefixed, None)?;
+fn enclave_registration_fees(
+	api: &ParentchainApi,
+	encoded_extrinsic: Vec<u8>,
+) -> Result<u128, Error> {
+	let reg_fee_details = api.get_fee_details(encoded_extrinsic, None)?;
 	match reg_fee_details {
 		Some(details) => match details.inclusion_fee {
 			Some(fee) => Ok(fee.inclusion_fee()),
