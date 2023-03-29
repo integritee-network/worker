@@ -245,11 +245,12 @@ jobs:
         run: |
           cd docker
           docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml down
-      
-      - name: Delete stopped containers
-        if: always()
-        run: |
-          docker container prune -f
+
+      # Comment it out while testing last step & collect docker logs
+      # - name: Delete stopped containers
+      #   if: always()
+      #   run: |
+      #     docker container prune -f
 
       - name: Integration Test ${{ matrix.test }}-${{ matrix.flavor_id }}
         run: |
@@ -261,7 +262,7 @@ jobs:
         if: always()
         uses: jwalton/gh-docker-logs@v2
         with:
-          #images: '${{ env.WORKER_IMAGE_TAG }},${{ env.CLIENT_IMAGE_TAG }}'
+          images: '${{ env.WORKER_IMAGE_TAG }},${{ env.CLIENT_IMAGE_TAG }}'
           tail: all
           dest: ./${{ env.LOG_DIR }}
 
@@ -277,6 +278,16 @@ jobs:
         run: |
           cd docker
           docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml down
+
+      - name: Delete images
+        run: |
+          if [[ "$(docker images -q integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} 2> /dev/null)" == "" ]]; then
+             docker image rmi --force integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} 2>/dev/null
+          fi
+          if [[ "$(docker images -q integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} 2> /dev/null)" == "" ]]; then
+             docker image rmi --force integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} 2>/dev/null
+          fi
+          docker images --all
 
 
   release:
