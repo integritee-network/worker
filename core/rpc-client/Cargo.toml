@@ -18,6 +18,10 @@ thiserror = { version = "1.0" }
 url = { version = "2.0.0" }
 ws = { version = "0.9.1", features = ["ssl"] }
 
+# parity
+frame-metadata = { git = "https://github.com/paritytech/frame-metadata", features = ["v14"] }
+
+
 # local
 itp-rpc = { path = "../../core-primitives/rpc" }
 itp-types = { path = "../../core-primitives/types" }

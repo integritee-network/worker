@@ -24,6 +24,7 @@ use codec::{Decode, Encode};
 use sgx_tstd as std;
 use sp_std::vec::Vec;
 
+pub mod parentchain;
 pub mod storage;
 
 /// Substrate runtimes provide no string type. Hence, for arbitrary data of varying length the

@@ -22,6 +22,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub use itp_types::parentchain::{Balance, Index};
 pub use sp_runtime::MultiSignature;
 pub use substrate_api_client::{
 	CallIndex, GenericAddress, PlainTip, PlainTipExtrinsicParams, PlainTipExtrinsicParamsBuilder,
@@ -31,17 +32,17 @@ pub use substrate_api_client::{
 /// Configuration for the ExtrinsicParams.
 ///
 /// Valid for the default integritee node
-pub type ParentchainExtrinsicParams = PlainTipExtrinsicParams;
-pub type ParentchainExtrinsicParamsBuilder = PlainTipExtrinsicParamsBuilder;
+pub type ParentchainExtrinsicParams<Runtime> = PlainTipExtrinsicParams<Runtime>;
+pub type ParentchainExtrinsicParamsBuilder<Runtime> = PlainTipExtrinsicParamsBuilder<Runtime>;
 
 // Pay in asset fees.
 //
 // This needs to be used if the node uses the `pallet_asset_tx_payment`.
-//pub type ParentchainExtrinsicParams = AssetTipExtrinsicParams;
-//pub type ParentchainExtrinsicParamsBuilder = AssetTipExtrinsicParamsBuilder;
+//pub type ParentchainExtrinsicParams<Runtime> = AssetTipExtrinsicParams<Runtime>;
+//pub type ParentchainExtrinsicParamsBuilder<Runtime> = AssetTipExtrinsicParamsBuilder<Runtime>;
 
 pub type ParentchainUncheckedExtrinsic<Call> = UncheckedExtrinsicV4<Call, ParentchainSignedExtra>;
-pub type ParentchainSignedExtra = SubstrateDefaultSignedExtra<PlainTip>;
+pub type ParentchainSignedExtra = SubstrateDefaultSignedExtra<PlainTip<Balance>, Index>;
 pub type ParentchainSignature = Signature<ParentchainSignedExtra>;
 
 /// Signature type of the [UncheckedExtrinsicV4].
@@ -55,7 +56,9 @@ mod api {
 	use super::ParentchainExtrinsicParams;
 	use substrate_api_client::Api;
 
+	pub use my_node_runtime::Runtime;
 	pub use substrate_api_client::{rpc::WsRpcClient, ApiClientError};
 
-	pub type ParentchainApi = Api<sp_core::sr25519::Pair, WsRpcClient, ParentchainExtrinsicParams>;
+	pub type ParentchainApi =
+		Api<sp_core::sr25519::Pair, WsRpcClient, ParentchainExtrinsicParams<Runtime>, Runtime>;
 }
