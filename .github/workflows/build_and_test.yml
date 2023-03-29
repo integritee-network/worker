@@ -245,6 +245,11 @@ jobs:
         run: |
           cd docker
           docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml down
+      
+      - name: Delete stopped containers
+        if: always()
+        run: |
+          docker container prune -f
 
       - name: Integration Test ${{ matrix.test }}-${{ matrix.flavor_id }}
         run: |
