@@ -154,7 +154,7 @@ jobs:
         uses: andymckay/cancel-action@0.3
 
   integration-tests:
-    runs-on: self-hosted
+    runs-on: test-runner-sgx
     if: ${{ always() }}
     needs: build-test
     env:
