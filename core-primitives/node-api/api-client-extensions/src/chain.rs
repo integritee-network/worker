@@ -20,7 +20,7 @@ use itp_types::parentchain::{Block, BlockNumber, Hash, Header, SignedBlock, Stor
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use sp_runtime::{traits::GetRuntimeBlockType, DeserializeOwned};
 use substrate_api_client::{
-	error::NoBlockHash, primitives::StorageKey, rpc::Request, Api, ExtrinsicParams,
+	api::Error::NoBlockHash, primitives::StorageKey, rpc::Request, Api, ExtrinsicParams,
 	FrameSystemConfig, GetBlock, GetHeader, GetStorage,
 };
 
@@ -43,6 +43,7 @@ impl<Api> ChainApi for Api
 where
 	Api: GetHeader<Hash, Header = Header>,
 	Api: GetBlock<BlockNumber, Hash, Block = Block>,
+	Api: GetStorage<Hash>,
 {
 	fn last_finalized_block(&self) -> ApiResult<Option<SignedBlock>> {
 		self.get_finalized_head()?
@@ -71,7 +72,7 @@ where
 
 		for n in from..=to {
 			if let Some(block) = self.get_signed_block_by_num(Some(n))? {
-				blocks.push(block);
+				blocks.push(block.into());
 			}
 		}
 		Ok(blocks)
