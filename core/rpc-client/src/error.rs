@@ -34,6 +34,8 @@ pub enum Error {
 	WsClientError(#[from] WsClientError),
 	#[error("Faulty channel: {0}")]
 	MspcReceiver(#[from] RecvError),
+	#[error("InvalidMetadata: {0}")]
+	InvalidMetadata(#[from] substrate_api_client::metadata::InvalidMetadataError),
 	#[error("Custom Error: {0}")]
 	Custom(Box<dyn std::error::Error + Sync + Send + 'static>),
 }

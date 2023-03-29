@@ -17,7 +17,7 @@
 
 //! Some substrate-api-client extension traits.
 
-pub use substrate_api_client::{rpc::WsRpcClient, Api, Error};
+pub use substrate_api_client::{api::Error as ApiClientError, rpc::WsRpcClient, Api};
 
 pub mod account;
 pub mod chain;
@@ -30,4 +30,4 @@ pub use chain::*;
 pub use pallet_teeracle::*;
 pub use pallet_teerex::*;
 
-pub type ApiResult<T> = Result<T, Error>;
+pub type ApiResult<T> = Result<T, ApiClientError>;

@@ -152,9 +152,7 @@ impl DirectApi for DirectClient {
 		// Decode Metadata.
 		let metadata = RuntimeMetadataPrefixed::decode(&mut rpc_return_value.value.as_slice())?;
 		println!("[+] Got metadata of enclave runtime");
-		let metadata = Metadata::try_from(metadata).map_err(|e| e.into());
-
-		Ok(metadata)
+		Metadata::try_from(metadata).map_err(|e| e.into())
 	}
 
 	fn send(&self, request: &str) -> Result<()> {

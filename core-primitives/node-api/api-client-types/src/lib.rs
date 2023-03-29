@@ -57,7 +57,7 @@ mod api {
 	use substrate_api_client::Api;
 
 	pub use my_node_runtime::Runtime;
-	pub use substrate_api_client::{rpc::WsRpcClient, ApiClientError};
+	pub use substrate_api_client::{api::Error as ApiClientError, rpc::WsRpcClient,  rpc::Error as RpcClientError};
 
 	pub type ParentchainApi =
 		Api<sp_core::sr25519::Pair, WsRpcClient, ParentchainExtrinsicParams<Runtime>, Runtime>;

@@ -16,54 +16,57 @@
 */
 
 use crate::ApiResult;
-use itp_types::{Header, SignedBlock};
-use sp_core::{storage::StorageKey, Pair, H256};
+use itp_types::parentchain::{Block, BlockNumber, Hash, Header, SignedBlock, StorageProof};
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
-use sp_runtime::MultiSignature;
-use substrate_api_client::{rpc::Request, Api, ExtrinsicParams};
-
-pub type StorageProof = Vec<Vec<u8>>;
+use sp_runtime::{traits::GetRuntimeBlockType, DeserializeOwned};
+use substrate_api_client::{
+	error::NoBlockHash, primitives::StorageKey, rpc::Request, Api, ExtrinsicParams,
+	FrameSystemConfig, GetBlock, GetHeader, GetStorage,
+};
 
 /// ApiClient extension that simplifies chain data access.
 pub trait ChainApi {
 	fn last_finalized_block(&self) -> ApiResult<Option<SignedBlock>>;
-	fn signed_block(&self, hash: Option<H256>) -> ApiResult<Option<SignedBlock>>;
-	fn get_genesis_hash(&self) -> ApiResult<H256>;
-	fn get_header(&self, header_hash: Option<H256>) -> ApiResult<Option<Header>>;
+	fn signed_block(&self, hash: Option<Hash>) -> ApiResult<Option<SignedBlock>>;
+	fn get_genesis_hash(&self) -> ApiResult<Hash>;
+	fn get_header(&self, header_hash: Option<Hash>) -> ApiResult<Option<Header>>;
 	/// Fetch blocks from parentchain with blocknumber from until to, including both boundaries.
 	/// Returns a vector with one element if from equals to.
 	/// Returns an empty vector if from is greater than to.
-	fn get_blocks(&self, from: u32, to: u32) -> ApiResult<Vec<SignedBlock>>;
+	fn get_blocks(&self, from: BlockNumber, to: BlockNumber) -> ApiResult<Vec<SignedBlock>>;
 	fn is_grandpa_available(&self) -> ApiResult<bool>;
-	fn grandpa_authorities(&self, hash: Option<H256>) -> ApiResult<AuthorityList>;
-	fn grandpa_authorities_proof(&self, hash: Option<H256>) -> ApiResult<StorageProof>;
+	fn grandpa_authorities(&self, hash: Option<Hash>) -> ApiResult<AuthorityList>;
+	fn grandpa_authorities_proof(&self, hash: Option<Hash>) -> ApiResult<StorageProof>;
 }
 
-impl<P: Pair, Client: Request, Params: ExtrinsicParams> ChainApi for Api<P, Client, Params, Run>
+impl<Api> ChainApi for Api
 where
-	MultiSignature: From<P::Signature>,
+	Api: GetHeader<Hash, Header = Header>,
+	Api: GetBlock<BlockNumber, Hash, Block = Block>,
 {
 	fn last_finalized_block(&self) -> ApiResult<Option<SignedBlock>> {
 		self.get_finalized_head()?
 			.map_or_else(|| Ok(None), |hash| self.signed_block(Some(hash)))
 	}
 
-	fn signed_block(&self, hash: Option<H256>) -> ApiResult<Option<SignedBlock>> {
-		// Even though this is only a wrapper here, we want to have this in the trait
-		// to be able to be generic over the trait and mock the `signed_block` method
-		// in tests.
-		self.get_signed_block(hash)
+	fn signed_block(&self, hash: Option<Hash>) -> ApiResult<Option<SignedBlock>> {
+		// Convert the substrate-api-clients `SignedBlock` redefinition into ours.
+		Ok(self.get_signed_block(hash)?.map(Into::into))
 	}
 
-	fn get_genesis_hash(&self) -> ApiResult<H256> {
-		self.get_genesis_hash()
+	fn get_genesis_hash(&self) -> ApiResult<Hash> {
+		if let Some(hash) = self.get_block_hash(Some(0u32.into()))? {
+			Ok(hash)
+		} else {
+			Err(NoBlockHash)
+		}
 	}
 
-	fn get_header(&self, header_hash: Option<H256>) -> ApiResult<Option<Header>> {
+	fn get_header(&self, header_hash: Option<Hash>) -> ApiResult<Option<Header>> {
 		self.get_header(header_hash)
 	}
 
-	fn get_blocks(&self, from: u32, to: u32) -> ApiResult<Vec<SignedBlock>> {
+	fn get_blocks(&self, from: BlockNumber, to: BlockNumber) -> ApiResult<Vec<SignedBlock>> {
 		let mut blocks = Vec::<SignedBlock>::new();
 
 		for n in from..=to {
@@ -83,14 +86,14 @@ where
 			.unwrap_or(false))
 	}
 
-	fn grandpa_authorities(&self, at_block: Option<H256>) -> ApiResult<AuthorityList> {
+	fn grandpa_authorities(&self, at_block: Option<Hash>) -> ApiResult<AuthorityList> {
 		Ok(self
 			.get_storage_by_key_hash(StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec()), at_block)?
 			.map(|g: VersionedAuthorityList| g.into())
 			.unwrap_or_default())
 	}
 
-	fn grandpa_authorities_proof(&self, at_block: Option<H256>) -> ApiResult<StorageProof> {
+	fn grandpa_authorities_proof(&self, at_block: Option<Hash>) -> ApiResult<StorageProof> {
 		Ok(self
 			.get_storage_proof_by_keys(
 				vec![StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec())],
