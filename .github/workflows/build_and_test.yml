@@ -128,7 +128,7 @@ jobs:
 
       - name: Fail-fast; cancel other jobs
         if: failure()
-        uses: andymckay/cancel-action@0.2
+        uses: andymckay/cancel-action@0.3
 
   fmt:
     runs-on: ubuntu-22.04
@@ -149,7 +149,7 @@ jobs:
 
       - name: Fail-fast; cancel other jobs
         if: failure()
-        uses: andymckay/cancel-action@0.2
+        uses: andymckay/cancel-action@0.3
 
   integration-tests:
     runs-on: ubuntu-22.04
@@ -159,7 +159,7 @@ jobs:
       WORKER_IMAGE_TAG: integritee-worker:dev
       CLIENT_IMAGE_TAG: integritee-cli:dev
       COINMARKETCAP_KEY: ${{ secrets.COINMARKETCAP_KEY }}
-      TEERACLE_INTERVAL_SECONDS: 4
+      TEERACLE_INTERVAL_SECONDS: 10
 
     strategy:
       fail-fast: false

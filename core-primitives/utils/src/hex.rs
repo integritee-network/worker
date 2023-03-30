@@ -57,10 +57,12 @@ pub fn hex_encode(data: &[u8]) -> String {
 
 /// Helper method for decoding hex.
 pub fn decode_hex<T: AsRef<[u8]>>(message: T) -> Result<Vec<u8>> {
-	let mut message = message.as_ref();
-	if message[..2] == [b'0', b'x'] {
-		message = &message[2..]
-	}
+	let message = message.as_ref();
+	let message = match message {
+		[b'0', b'x', hex_value @ ..] => hex_value,
+		_ => message,
+	};
+
 	let decoded_message = hex::decode(message).map_err(Error::Hex)?;
 	Ok(decoded_message)
 }
@@ -78,6 +80,26 @@ mod tests {
 			String::decode(&mut decode_hex(hex_encoded_data).unwrap().as_slice()).unwrap();
 
 		assert_eq!(data, decoded_data);
+	}
+
+	#[test]
+	fn hex_encode_decode_works_empty_input() {
+		let data = String::new();
+
+		let hex_encoded_data = hex_encode(&data.encode());
+		let decoded_data =
+			String::decode(&mut decode_hex(hex_encoded_data).unwrap().as_slice()).unwrap();
+
+		assert_eq!(data, decoded_data);
+	}
+
+	#[test]
+	fn hex_encode_decode_works_empty_input_for_decode() {
+		let data = String::new();
+
+		let decoded_data = decode_hex(&data).unwrap();
+
+		assert!(decoded_data.is_empty());
 	}
 
 	#[test]

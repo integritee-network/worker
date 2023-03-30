@@ -29,7 +29,11 @@ use itc_rest_client::{
 	rest_client::RestClient,
 };
 use log::*;
-use std::{sync::Arc, time::Instant};
+use std::{
+	sync::Arc,
+	thread,
+	time::{Duration, Instant},
+};
 use url::Url;
 
 #[allow(unused)]
@@ -61,34 +65,63 @@ where
 
 		let base_url = self.oracle_source.base_url()?;
 		let root_certificate = self.oracle_source.root_certificate_content();
+		let request_timeout = self.oracle_source.request_timeout();
 
 		debug!("Get exchange rate from URI: {}, trading pair: {:?}", base_url, trading_pair);
 
 		let http_client = HttpClient::new(
 			SendWithCertificateVerification::new(root_certificate),
 			true,
-			self.oracle_source.request_timeout(),
+			request_timeout,
 			None,
 			None,
 		);
 		let mut rest_client = RestClient::new(http_client, base_url.clone());
 
+		// Due to possible failures that may be temporarily this function tries to fetch the exchange rates `number_of_tries` times.
+		// If it still fails for the last attempt, then only in that case will it be considered a non-recoverable error.
+		let number_of_tries = 3;
 		let timer_start = Instant::now();
 
-		match self
-			.oracle_source
-			.execute_exchange_rate_request(&mut rest_client, trading_pair.clone())
-		{
-			Ok(exchange_rate) => {
-				self.metrics_exporter.record_response_time(source_id.clone(), timer_start);
-				self.metrics_exporter
-					.update_exchange_rate(source_id, exchange_rate, trading_pair);
+		let mut tries = 0;
+		let result = loop {
+			tries += 1;
+			let exchange_result = self
+				.oracle_source
+				.execute_exchange_rate_request(&mut rest_client, trading_pair.clone());
 
-				debug!("Successfully executed exchange rate request");
-				Ok((exchange_rate, base_url))
-			},
-			Err(e) => Err(e),
-		}
+			match exchange_result {
+				Ok(exchange_rate) => {
+					self.metrics_exporter.record_response_time(source_id.clone(), timer_start);
+					self.metrics_exporter.update_exchange_rate(
+						source_id,
+						exchange_rate,
+						trading_pair,
+					);
+
+					debug!("Successfully executed exchange rate request");
+					break Ok((exchange_rate, base_url))
+				},
+				Err(e) =>
+					if tries < number_of_tries {
+						error!(
+							"Getting exchange rate from {} failed with {}, trying again in {:#?}.",
+							&base_url, e, request_timeout
+						);
+						debug!("Check that the API endpoint is available, for coingecko: https://status.coingecko.com/");
+						thread::sleep(
+							request_timeout.unwrap_or_else(|| Duration::from_secs(number_of_tries)),
+						);
+					} else {
+						error!(
+							"Getting exchange rate from {} failed {} times, latest error is: {}.",
+							&base_url, number_of_tries, &e
+						);
+						break Err(e)
+					},
+			}
+		};
+		result
 	}
 }
 
