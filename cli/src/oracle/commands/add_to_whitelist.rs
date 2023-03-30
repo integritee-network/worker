@@ -19,8 +19,12 @@ use crate::{
 	command_utils::{get_chain_api, get_pair_from_str, mrenclave_from_base58},
 	Cli,
 };
+use codec::Encode;
 use itp_node_api::api_client::{ADD_TO_WHITELIST, TEERACLE};
-use substrate_api_client::{compose_call, compose_extrinsic, UncheckedExtrinsicV4, XtStatus};
+use substrate_api_client::{
+	compose_call, compose_extrinsic, SubmitAndWatch, SubscribeFrameSystem, UncheckedExtrinsicV4,
+	XtStatus,
+};
 
 /// Add a trusted market data source to the on-chain whitelist.
 #[derive(Debug, Clone, Parser)]
@@ -58,7 +62,8 @@ impl AddToWhitelistCmd {
 		// compose the extrinsic
 		let xt: UncheckedExtrinsicV4<_, _> = compose_extrinsic!(api, "Sudo", "sudo", call);
 
-		let tx_hash = api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized).unwrap();
-		println!("[+] Add to whitelist got finalized. Hash: {:?}\n", tx_hash);
+		let report =
+			api.submit_and_watch_extrinsic_until(xt.encode(), XtStatus::Finalized).unwrap();
+		println!("[+] Add to whitelist got finalized. Hash: {:?}\n", report.extrinsic_hash);
 	}
 }
