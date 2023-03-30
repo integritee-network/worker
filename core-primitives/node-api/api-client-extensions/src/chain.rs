@@ -18,9 +18,8 @@
 use crate::ApiResult;
 use itp_api_client_types::{Block, SignedBlock};
 use itp_types::parentchain::{BlockNumber, Hash, Header, StorageProof};
-use sp_core::Pair;
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
-use sp_runtime::{traits::GetRuntimeBlockType, DeserializeOwned, MultiSignature};
+use sp_runtime::{traits::GetRuntimeBlockType, DeserializeOwned};
 use substrate_api_client::{
 	api::Error::NoBlockHash, primitives::StorageKey, rpc::Request, Api, ExtrinsicParams,
 	FrameSystemConfig, GetBlock, GetHeader, GetStorage,

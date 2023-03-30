@@ -16,7 +16,7 @@
 */
 
 use crate::ApiResult;
-use itp_types::parentchain::{AccountData, AccountId, Balance, Hash, Index};
+use itp_types::parentchain::{AccountData, AccountId, Balance, Index};
 use sp_core::Pair;
 use sp_runtime::MultiSignature;
 use substrate_api_client::{

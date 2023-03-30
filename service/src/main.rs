@@ -74,7 +74,10 @@ use its_storage::{interface::FetchBlocks, BlockPruner, SidechainStorageLock};
 use log::*;
 use my_node_runtime::{Hash, Header, RuntimeEvent};
 use sgx_types::*;
-use substrate_api_client::{GetHeader, SubmitExtrinsic, SubscribeChain};
+use substrate_api_client::{
+	primitives::StorageChangeSet, rpc::HandleSubscription, GetHeader, SubmitAndWatchUntilSuccess,
+	SubmitExtrinsic, SubscribeChain, SubscribeFrameSystem,
+};
 
 #[cfg(feature = "dcap")]
 use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
@@ -463,11 +466,11 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	let xt = enclave.generate_ias_ra_extrinsic(&trusted_url, skip_ra).unwrap();
 	#[cfg(feature = "dcap")]
 	let xt = enclave.generate_dcap_ra_extrinsic(&trusted_url, skip_ra).unwrap();
-	let register_enclave_xt_hash =
+	let register_enclave_block_hash =
 		send_extrinsic(xt, &node_api, &tee_accountid, is_development_mode);
 
 	let register_enclave_xt_header =
-		node_api.get_header(register_enclave_xt_hash).unwrap().unwrap();
+		node_api.get_header(register_enclave_block_hash).unwrap().unwrap();
 
 	let we_are_primary_validateer =
 		we_are_primary_validateer(&node_api, &register_enclave_xt_header).unwrap();
@@ -534,23 +537,14 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	}
 
 	// ------------------------------------------------------------------------
-	// subscribe to events and react on firing
+	// Subscribe to events and print them.
 	println!("*** Subscribing to events");
-	let (sender, receiver) = channel();
-	let sender2 = sender.clone();
-	let _eventsubscriber = thread::Builder::new()
-		.name("eventsubscriber".to_owned())
-		.spawn(move || {
-			node_api.subscribe_events(sender2).unwrap();
-		})
-		.unwrap();
-
+	let subscription = node_api.subscribe_system_events().unwrap();
 	println!("[+] Subscribed to events. waiting...");
-	let timeout = Duration::from_millis(10);
 	loop {
-		if let Ok(msg) = receiver.recv_timeout(timeout) {
-			if let Ok(events) = parse_events(msg.clone()) {
-				print_events(events, sender.clone())
+		if let Some(Ok(storage_change_set)) = subscription.next() {
+			if let Ok(events) = parse_events(storage_change_set) {
+				print_events(events)
 			}
 		}
 	}
@@ -586,13 +580,12 @@ fn spawn_worker_for_shard_polling<InitializationHandler>(
 
 type Events = Vec<frame_system::EventRecord<RuntimeEvent, Hash>>;
 
-fn parse_events(event: String) -> Result<Events, String> {
-	let _unhex = Vec::from_hex(event).map_err(|_| "Decoding Events Failed".to_string())?;
-	let mut _er_enc = _unhex.as_slice();
-	Events::decode(&mut _er_enc).map_err(|_| "Decoding Events Failed".to_string())
+fn parse_events(change_set: StorageChangeSet<Hash>) -> Result<Events, String> {
+	let event_bytes = change_set[0].1.clone().map_err("Retrieving Events Failed".to_string())?.0;
+	Events::decode(&mut event_bytes.as_slice()).map_err(|_| "Decoding Events Failed".to_string())
 }
 
-fn print_events(events: Events, _sender: Sender<String>) {
+fn print_events(events: Events) {
 	for evr in &events {
 		debug!("Decoded: phase = {:?}, event = {:?}", evr.phase, evr.event);
 		match &evr.event {
@@ -800,7 +793,7 @@ fn send_extrinsic(
 	api: &ParentchainApi,
 	accountid: &AccountId32,
 	is_development_mode: bool,
-) -> Hash {
+) -> Option<Hash> {
 	// Account funds
 	if let Err(x) = setup_account_funding(api, accountid, extrinsic.clone(), is_development_mode) {
 		error!("Starting worker failed: {:?}", x);
@@ -809,12 +802,12 @@ fn send_extrinsic(
 	}
 
 	println!("[>] Register the TCB info (send the extrinsic)");
-	let register_qe_xt_hash = api
-		.submit_and_watch_extrinsic_until(extrinsic, XtStatus::Finalized)
+	let register_qe_block_hash = api
+		.submit_and_watch_extrinsic_until_success(extrinsic, true)
 		.unwrap()
-		.extrinsic_hash;
-	println!("[<] Extrinsic got finalized. Extrinsic hash: {:?}\n", register_qe_xt_hash);
-	register_qe_xt_hash
+		.block_hash;
+	println!("[<] Extrinsic got finalized. Block hash: {:?}\n", register_qe_block_hash);
+	register_qe_block_hash
 }
 
 /// Subscribe to the node API finalized heads stream and trigger a parent chain sync
@@ -823,19 +816,20 @@ fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 	parentchain_handler: Arc<ParentchainHandler<ParentchainApi, E>>,
 	mut last_synced_header: Header,
 ) -> Result<(), Error> {
-	let (sender, receiver) = channel();
-	//TODO: this should be implemented by parentchain_handler directly, and not via
-	// exposed parentchain_api. Blocked by https://github.com/scs/substrate-api-client/issues/267.
-	parentchain_handler
+	let subscription = parentchain_handler
 		.parentchain_api()
-		.subscribe_finalized_heads(sender)
+		.subscribe_finalized_heads()
 		.map_err(Error::ApiClient)?;
 
 	loop {
-		let new_header: Header = match receiver.recv() {
-			Ok(header_str) => serde_json::from_str(&header_str).map_err(Error::Serialization),
-			Err(e) => Err(Error::ApiSubscriptionDisconnected(e)),
-		}?;
+		let new_header = subscription
+			.next()
+			.ok_or(Error::ApiSubscriptionDisconnected)?
+			.map_err(|e| Error::ApiClientError(e.into()))?;
+		// {
+		// 	Ok(header_str) => serde_json::from_str(&header_str).map_err(Error::Serialization),
+		// 	Err(e) => Err(Error::ApiSubscriptionDisconnected(e)),
+		// }?;
 
 		println!(
 			"[+] Received finalized header update ({}), syncing parent chain...",

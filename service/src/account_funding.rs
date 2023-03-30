@@ -159,7 +159,10 @@ fn bootstrap_funds_from_alice(
 		alice_signer_api.balance_transfer(GenericAddress::Id(accountid.clone()), funding_amount);
 	let xt_report =
 		alice_signer_api.submit_and_watch_extrinsic_until(xt.encode(), XtStatus::InBlock)?;
-	info!("[<] Extrinsic got included in a block. Extrinsic Hash: {:?}\n", xt_hash.extrinsic_hash);
+	info!(
+		"[<] Extrinsic got included in a block. Extrinsic Hash: {:?}\n",
+		xt_report.extrinsic_hash
+	);
 
 	// Verify funds have arrived.
 	let free_balance = alice_signer_api.get_free_balance(accountid);

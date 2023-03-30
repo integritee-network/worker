@@ -26,8 +26,8 @@ pub enum Error {
 	Codec(#[from] CodecError),
 	#[error("{0}")]
 	ApiClient(ApiClientError),
-	#[error("Node API terminated subscription unexpectedly: {0}")]
-	ApiSubscriptionDisconnected(#[from] std::sync::mpsc::RecvError),
+	#[error("Node API terminated subscription unexpectedly")]
+	ApiSubscriptionDisconnected,
 	#[error("Enclave API error: {0}")]
 	EnclaveApi(#[from] itp_enclave_api::error::Error),
 	#[error("Trusted Rpc Client error: {0}")]
