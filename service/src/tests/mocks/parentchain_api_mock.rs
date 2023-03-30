@@ -19,8 +19,8 @@ use itc_parentchain_test::{
 	parentchain_block_builder::ParentchainBlockBuilder,
 	parentchain_header_builder::ParentchainHeaderBuilder,
 };
-use itp_node_api::api_client::{ApiResult, ChainApi, StorageProof};
-use itp_types::{Header, SignedBlock, H256};
+use itp_node_api::api_client::{ApiResult, ChainApi, SignedBlock};
+use itp_types::parentchain::{Hash, Header, StorageProof};
 use sp_finality_grandpa::AuthorityList;
 
 pub struct ParentchainApiMock {
@@ -49,15 +49,15 @@ impl ChainApi for ParentchainApiMock {
 		Ok(self.parentchain.last().cloned())
 	}
 
-	fn signed_block(&self, _hash: Option<H256>) -> ApiResult<Option<SignedBlock>> {
+	fn signed_block(&self, _hash: Option<Hash>) -> ApiResult<Option<SignedBlock>> {
 		todo!()
 	}
 
-	fn get_genesis_hash(&self) -> ApiResult<H256> {
+	fn get_genesis_hash(&self) -> ApiResult<Hash> {
 		todo!()
 	}
 
-	fn get_header(&self, _header_hash: Option<H256>) -> ApiResult<Option<Header>> {
+	fn header(&self, _header_hash: Option<Hash>) -> ApiResult<Option<Header>> {
 		todo!()
 	}
 
@@ -77,11 +77,11 @@ impl ChainApi for ParentchainApiMock {
 		todo!()
 	}
 
-	fn grandpa_authorities(&self, _hash: Option<H256>) -> ApiResult<AuthorityList> {
+	fn grandpa_authorities(&self, _hash: Option<Hash>) -> ApiResult<AuthorityList> {
 		todo!()
 	}
 
-	fn grandpa_authorities_proof(&self, _hash: Option<H256>) -> ApiResult<StorageProof> {
+	fn grandpa_authorities_proof(&self, _hash: Option<Hash>) -> ApiResult<StorageProof> {
 		todo!()
 	}
 }
