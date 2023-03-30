@@ -198,6 +198,8 @@ jobs:
       - name: Set env
         run: |
           echo "FLAVOR_ID=${{ matrix.flavor_id }}" >> $GITHUB_ENV
+          echo "WORKER_IMAGE_TAG=integritee-worker-${{ matrix.flavor_id }}-${{ matrix.demo_name }}-${{ github.sha }}" >> $GITHUB_ENV
+          echo "CLIENT_IMAGE_TAG=integritee-cli-client-${{ matrix.flavor_id }}-${{ matrix.demo_name }}-${{ github.sha }}" >> $GITHUB_ENV
 
       - name: Download Worker Image
         uses: actions/download-artifact@v3
@@ -255,8 +257,6 @@ jobs:
       - name: Integration Test ${{ matrix.test }}-${{ matrix.flavor_id }}
         run: |
           cd docker
-          export WORKER_IMAGE_TAG="integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}"
-          export CLIENT_IMAGE_TAG="integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}"
           export NETWORK="${{ matrix.flavor_id }}-${{ matrix.demo_name }}" 
           docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) up ${{ matrix.demo_name }} --no-build --exit-code-from ${{ matrix.demo_name }} --remove-orphans
 
@@ -287,11 +287,11 @@ jobs:
 
       - name: Delete images
         run: |
-          if [[ "$(docker images -q integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} 2> /dev/null)" == "" ]]; then
-             docker image rmi --force integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} 2>/dev/null
+          if [[ "$(docker images -q $WORKER_IMAGE_TAG 2> /dev/null)" == "" ]]; then
+             docker image rmi --force $WORKER_IMAGE_TAG 2>/dev/null
           fi
-          if [[ "$(docker images -q integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} 2> /dev/null)" == "" ]]; then
-             docker image rmi --force integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} 2>/dev/null
+          if [[ "$(docker images -q $CLIENT_IMAGE_TAG 2> /dev/null)" == "" ]]; then
+             docker image rmi --force $CLIENT_IMAGE_TAG 2>/dev/null
           fi
           docker images --all
 
