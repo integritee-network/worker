@@ -23,8 +23,7 @@ use itp_types::{WorkerRequest, WorkerResponse};
 use log::*;
 use sp_runtime::OpaqueExtrinsic;
 use std::{sync::Arc, vec::Vec};
-use substrate_api_client::{GetStorage, StorageKey};
-use substrate_api_client::SubmitExtrinsic;
+use substrate_api_client::{GetStorage, StorageKey, SubmitExtrinsic};
 
 pub struct WorkerOnChainOCall<F> {
 	node_api_factory: Arc<F>,
