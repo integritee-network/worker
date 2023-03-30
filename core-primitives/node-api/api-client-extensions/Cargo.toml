@@ -18,8 +18,8 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "po
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.39-tag-v0.9.0" }
 
 # local deps
-itp-types = { path = "../../types" }
 itp-api-client-types = { path = "../api-client-types" }
+itp-types = { path = "../../types" }
 
 [features]
 # used for unit testing only!
