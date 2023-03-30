@@ -29,6 +29,7 @@ use itc_rest_client::{
 	RestGet, RestPath,
 };
 use lazy_static::lazy_static;
+use log::{debug, error};
 use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashMap,
@@ -42,7 +43,7 @@ const COINGECKO_URL: &str = "https://api.coingecko.com";
 const COINGECKO_PARAM_CURRENCY: &str = "vs_currency";
 const COINGECKO_PARAM_COIN: &str = "ids";
 const COINGECKO_PATH: &str = "api/v3/coins/markets";
-const COINGECKO_TIMEOUT: Duration = Duration::from_secs(3u64);
+const COINGECKO_TIMEOUT: Duration = Duration::from_secs(20u64);
 const COINGECKO_ROOT_CERTIFICATE: &str = include_str!("../certificates/lets_encrypt_root_cert.pem");
 
 lazy_static! {
@@ -104,13 +105,20 @@ impl<OracleSourceInfo: Into<TradingInfo>> OracleSource<OracleSourceInfo> for Coi
 		let fiat_id = trading_pair.fiat_currency.clone();
 		let crypto_id = Self::map_crypto_currency_id(&trading_pair)?;
 
-		let response = rest_client
-			.get_with::<String, CoinGeckoMarket>(
-				COINGECKO_PATH.to_string(),
-				&[(COINGECKO_PARAM_CURRENCY, &fiat_id), (COINGECKO_PARAM_COIN, &crypto_id)],
-			)
-			.map_err(Error::RestClient)?;
+		let response = rest_client.get_with::<String, CoinGeckoMarket>(
+			COINGECKO_PATH.to_string(),
+			&[(COINGECKO_PARAM_CURRENCY, &fiat_id), (COINGECKO_PARAM_COIN, &crypto_id)],
+		);
 
+		let response = match response {
+			Ok(response) => response,
+			Err(e) => {
+				error!("coingecko execute_exchange_rate_request() failed with: {:#?}", &e);
+				return Err(Error::RestClient(e))
+			},
+		};
+
+		debug!("coingecko received response: {:#?}", &response);
 		let list = response.0;
 		if list.is_empty() {
 			return Err(Error::NoValidData(COINGECKO_URL.to_string(), trading_pair.key()))
