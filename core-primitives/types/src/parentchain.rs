@@ -18,6 +18,7 @@
 //! Parentchain specific params. Be sure to change them if your node uses different types.
 
 use sp_runtime::{generic::Header as HeaderG, traits::BlakeTwo256, MultiAddress, MultiSignature};
+use sp_std::vec::Vec;
 
 pub type StorageProof = Vec<Vec<u8>>;
 

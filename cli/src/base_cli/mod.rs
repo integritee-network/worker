@@ -110,7 +110,8 @@ fn list_accounts() {
 }
 
 fn print_metadata(cli: &Cli) {
-	let meta = get_chain_api(cli).metadata();
+	let api = get_chain_api(cli);
+	let meta = api.metadata();
 	println!("Metadata:\n {}", Metadata::pretty_format(&meta.runtime_metadata()).unwrap());
 }
 

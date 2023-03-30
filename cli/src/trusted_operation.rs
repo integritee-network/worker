@@ -110,7 +110,7 @@ fn send_request(
 	trusted_args: &TrustedCli,
 	trusted_operation: &TrustedOperation,
 ) -> Option<Vec<u8>> {
-	let chain_api = get_chain_api(cli);
+	let mut chain_api = get_chain_api(cli);
 	let encryption_key = get_shielding_key(cli).unwrap();
 	let call_encrypted = encryption_key.encrypt(&trusted_operation.encode()).unwrap();
 

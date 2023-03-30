@@ -56,8 +56,6 @@ where
 			},
 			None => 0,
 		};
-
-		//maybe_account_info.map_or_else(|| 0, |info| info.data.free.into())
 		Ok(free_balance)
 	}
 }

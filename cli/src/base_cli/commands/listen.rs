@@ -21,7 +21,7 @@ use codec::{Decode, Encode};
 use log::*;
 use my_node_runtime::{Hash, RuntimeEvent};
 use std::vec::Vec;
-use substrate_api_client::{rpc::HandleSubscription, utils::FromHexString, SubscribeFrameSystem};
+use substrate_api_client::{rpc::HandleSubscription, SubscribeFrameSystem};
 
 #[derive(Parser)]
 pub struct ListenCommand {
