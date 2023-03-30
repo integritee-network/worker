@@ -121,6 +121,7 @@ where
 	}
 }
 
+// Necessary because of https://github.com/scs/substrate-api-client/issues/492.
 fn convert_signed_block<Runtime>(
 	signed_block: substrate_api_client::SignedBlock<Runtime::RuntimeBlock>,
 ) -> SignedBlock
