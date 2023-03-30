@@ -111,13 +111,13 @@ fn list_accounts() {
 
 fn print_metadata(cli: &Cli) {
 	let meta = get_chain_api(cli).metadata();
-	println!("Metadata:\n {}", Metadata::pretty_format(&meta).unwrap());
+	println!("Metadata:\n {}", Metadata::pretty_format(&meta.runtime_metadata()).unwrap());
 }
 
 fn print_sgx_metadata(cli: &Cli) {
 	let worker_api_direct = get_worker_api_direct(cli);
 	let metadata = worker_api_direct.get_state_metadata().unwrap();
-	println!("Metadata:\n {}", Metadata::pretty_format(&metadata).unwrap());
+	println!("Metadata:\n {}", Metadata::pretty_format(metadata.runtime_metadata()).unwrap());
 }
 
 fn list_workers(cli: &Cli) {

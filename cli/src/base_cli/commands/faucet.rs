@@ -19,11 +19,12 @@ use crate::{
 	command_utils::{get_accountid_from_str, get_chain_api},
 	Cli,
 };
+use codec::Encode;
 use my_node_runtime::{BalancesCall, RuntimeCall};
 use sp_keyring::AccountKeyring;
 use sp_runtime::MultiAddress;
 use std::vec::Vec;
-use substrate_api_client::{compose_extrinsic_offline, UncheckedExtrinsicV4, XtStatus};
+use substrate_api_client::{compose_extrinsic_offline, SubmitExtrinsic, UncheckedExtrinsicV4};
 
 const PREFUNDING_AMOUNT: u128 = 1_000_000_000;
 
@@ -37,7 +38,7 @@ pub struct FaucetCommand {
 impl FaucetCommand {
 	pub(crate) fn run(&self, cli: &Cli) {
 		let mut api = get_chain_api(cli);
-		api.set_signer(sr25519_core::Pair::from(AccountKeyring::Alice.pair()));
+		api.set_signer(AccountKeyring::Alice.pair());
 		let mut nonce = api.get_nonce().unwrap();
 		for account in &self.accounts {
 			let to = get_accountid_from_str(account);
@@ -52,7 +53,7 @@ impl FaucetCommand {
 			);
 			// send and watch extrinsic until finalized
 			println!("Faucet drips to {} (Alice's nonce={})", to, nonce);
-			let _blockh = api.send_extrinsic(xt.hex_encode(), XtStatus::Ready).unwrap();
+			let _blockh = api.submit_extrinsic(xt.encode()).unwrap();
 			nonce += 1;
 		}
 	}

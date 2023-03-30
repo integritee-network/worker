@@ -27,7 +27,7 @@ use itp_stf_primitives::types::ShardIdentifier;
 use log::*;
 use my_node_runtime::Balance;
 use sp_core::sr25519 as sr25519_core;
-use substrate_api_client::{compose_extrinsic, UncheckedExtrinsicV4, XtStatus};
+use substrate_api_client::{compose_extrinsic, SubmitAndWatch, UncheckedExtrinsicV4, XtStatus};
 
 #[derive(Parser)]
 pub struct ShieldFundsCommand {
@@ -78,7 +78,9 @@ impl ShieldFundsCommand {
 			shard
 		);
 
-		let tx_hash = chain_api.send_extrinsic(xt.hex_encode(), XtStatus::Finalized).unwrap();
+		let tx_hash = chain_api
+			.submit_and_watch_extrinsic_until(xt.encode(), XtStatus::Finalized)
+			.unwrap();
 		println!("[+] TrustedOperation got finalized. Hash: {:?}\n", tx_hash);
 	}
 }

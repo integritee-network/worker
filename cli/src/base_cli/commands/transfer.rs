@@ -19,10 +19,11 @@ use crate::{
 	command_utils::{get_accountid_from_str, get_chain_api, *},
 	Cli,
 };
+use codec::Encode;
 use log::*;
 use my_node_runtime::Balance;
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
-use substrate_api_client::{GenericAddress, XtStatus};
+use substrate_api_client::{GenericAddress, GetAccountInformation, SubmitAndWatch, XtStatus};
 
 #[derive(Parser)]
 pub struct TransferCommand {
@@ -45,7 +46,7 @@ impl TransferCommand {
 		let mut api = get_chain_api(cli);
 		api.set_signer(sr25519_core::Pair::from(from_account));
 		let xt = api.balance_transfer(GenericAddress::Id(to_account.clone()), self.amount);
-		let tx_hash = api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock).unwrap();
+		let tx_hash = api.submit_and_watch_extrinsic_until(xt.encode(), XtStatus::InBlock).unwrap();
 		println!("[+] TrustedOperation got finalized. Hash: {:?}\n", tx_hash);
 		let result = api.get_account_data(&to_account).unwrap().unwrap();
 		println!("balance for {} is now {}", to_account, result.free);

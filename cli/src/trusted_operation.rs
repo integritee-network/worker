@@ -28,7 +28,7 @@ use itp_node_api::api_client::TEEREX;
 use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_stf_primitives::types::ShardIdentifier;
-use itp_types::{BlockNumber, DirectRequestStatus, Header, TrustedOperationStatus};
+use itp_types::{BlockNumber, DirectRequestStatus, TrustedOperationStatus};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use log::*;
 use my_node_runtime::{AccountId, Hash};
@@ -38,7 +38,10 @@ use std::{
 	sync::mpsc::{channel, Receiver},
 	time::Instant,
 };
-use substrate_api_client::{compose_extrinsic, StaticEvent, XtStatus};
+use substrate_api_client::{
+	compose_extrinsic, GetHeader, StaticEvent, SubmitAndWatch, SubscribeEvents,
+	SubscribeFrameSystem, XtStatus,
+};
 use teerex_primitives::Request;
 
 pub(crate) fn perform_trusted_operation(
@@ -121,9 +124,10 @@ fn send_request(
 	let xt = compose_extrinsic!(&chain_api, TEEREX, "call_worker", request);
 
 	// send and watch extrinsic until block is executed
-	let block_hash = _chain_api
+	let block_hash = chain_api
 		.submit_and_watch_extrinsic_until(xt.encode(), XtStatus::InBlock)
 		.unwrap()
+		.block_hash
 		.unwrap();
 
 	info!(
@@ -131,16 +135,15 @@ fn send_request(
 		block_hash
 	);
 	info!("Waiting for execution confirmation from enclave...");
-	let (events_in, events_out) = channel();
-	chain_api.subscribe_events(events_in).unwrap();
+	let mut subscription = chain_api.subscribe_system_events().unwrap();
 
 	loop {
 		let ret: ProcessedParentchainBlockArgs =
-			chain_api.wait_for_event::<ProcessedParentchainBlockArgs>(&events_out).unwrap();
+			chain_api.wait_for_event(&mut subscription).unwrap();
 		info!("Confirmation of ProcessedParentchainBlock received");
 		debug!("Expected block Hash: {:?}", block_hash);
 		debug!("Confirmed stf block Hash: {:?}", ret.block_hash);
-		match chain_api.get_header::<Header>(Some(block_hash)) {
+		match chain_api.get_header(Some(block_hash)) {
 			Ok(option) => {
 				match option {
 					None => {

@@ -20,8 +20,8 @@ use base58::ToBase58;
 use codec::{Decode, Encode};
 use log::*;
 use my_node_runtime::{Hash, RuntimeEvent};
-use std::{sync::mpsc::channel, vec::Vec};
-use substrate_api_client::utils::FromHexString;
+use std::vec::Vec;
+use substrate_api_client::{rpc::HandleSubscription, utils::FromHexString, SubscribeFrameSystem};
 
 #[derive(Parser)]
 pub struct ListenCommand {
@@ -39,10 +39,9 @@ impl ListenCommand {
 		println!("{:?} {:?}", self.events, self.blocks);
 		let api = get_chain_api(cli);
 		info!("Subscribing to events");
-		let (events_in, events_out) = channel();
 		let mut count = 0u32;
 		let mut blocks = 0u32;
-		api.subscribe_events(events_in).unwrap();
+		let mut subscription = api.subscribe_system_events().unwrap();
 		loop {
 			if let Some(e) = self.events {
 				if count >= e {
@@ -54,13 +53,13 @@ impl ListenCommand {
 					return
 				}
 			};
-			let event_str = events_out.recv().unwrap();
-			let _unhex = Vec::from_hex(event_str).unwrap();
-			let mut _er_enc = _unhex.as_slice();
-			let _events =
-				Vec::<frame_system::EventRecord<RuntimeEvent, Hash>>::decode(&mut _er_enc);
+
+			let event_bytes = subscription.next().unwrap().unwrap().changes[0].1.clone().unwrap().0;
+			let events_result = Vec::<frame_system::EventRecord<RuntimeEvent, Hash>>::decode(
+				&mut event_bytes.as_slice(),
+			);
 			blocks += 1;
-			match _events {
+			match events_result {
 				Ok(evts) =>
 					for evr in &evts {
 						println!("decoded: phase {:?} event {:?}", evr.phase, evr.event);
