@@ -526,6 +526,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 				if let Err(e) =
 					subscribe_to_parentchain_new_headers(parentchain_handler, last_synced_header)
 					// Add here
+					
 				{
 					error!("Parentchain block syncing terminated with a failure: {:?}", e);
 				}

@@ -130,9 +130,6 @@ where
 			.last_finalized_block()?
 			.ok_or(Error::MissingLastFinalizedBlock)?;
 		let curr_block_number = curr_block.block.header.number;
-		// ANDREW
-		// curr_block_hash = curr_block.block.hash();
-		// self.parentchain_api
 
 		let mut until_synced_header = last_synced_header;
 		loop {
@@ -145,8 +142,12 @@ where
 				return Ok(until_synced_header)
 			}
 
-			//self.parentchain_api.get_events(curr_block_hash)
+			// ANDREW
+			let events = self.parentchain_api.get_events_for_block(Some(until_synced_header.hash()));
+			let events_proof = self.parentchain_api.get_events_value_proof(Some(until_synced_header.hash()));
 
+			// ANDREW
+			// Add support to take events as Vec<u8> and events_proof into `sync_parentchain()`
 			self.enclave_api.sync_parentchain(block_chunk_to_sync.as_slice(), 0)?;
 
 			until_synced_header = block_chunk_to_sync
