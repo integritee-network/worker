@@ -807,6 +807,8 @@ fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 	parentchain_handler: Arc<ParentchainHandler<ParentchainApi, E>>,
 	mut last_synced_header: Header,
 ) -> Result<(), Error> {
+	// TODO: this should be implemented by parentchain_handler directly, and not via
+	// exposed parentchain_api
 	let mut subscription = parentchain_handler
 		.parentchain_api()
 		.subscribe_finalized_heads()
