@@ -7,7 +7,7 @@
 services:
   integritee-teeracle-worker:
     image: ${WORKER_IMAGE_TAG:-integritee-cli:dev}
-    container_name: integritee-teeracle-worker
+    container_name: integritee-teeracle-worker-${NETWORK:-default}
     devices:
       - "/dev/sgx/provision:/dev/sgx/provision"
       - "/dev/sgx/enclave:/dev/sgx/enclave"
@@ -26,18 +26,18 @@ services:
     networks:
       - integritee-test-network-${NETWORK:-default}
     healthcheck:
-      test: curl -s -f http://integritee-teeracle-worker:4645/is_initialized || exit 1
+      test: curl -s -f http://integritee-teeracle-worker-${NETWORK:-default}:4645/is_initialized || exit 1
       interval: 10s
       timeout: 10s
       retries: 25
     entrypoint:
-        "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-teeracle-worker -T wss://integritee-teeracle-worker
-        -u ws://integritee-node -U ws://integritee-teeracle-worker -P 2011 -w 2101 -p 9912 -h 4645
+        "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-teeracle-worker-${NETWORK:-default} -T wss://integritee-teeracle-worker-${NETWORK:-default}
+        -u ws://integritee-node-${NETWORK:-default} -U ws://integritee-teeracle-worker-${NETWORK:-default} -P 2011 -w 2101 -p 9912 -h 4645
         run --dev --skip-ra --teeracle-interval ${TEERACLE_INTERVAL_SECONDS}s"
     restart: always
   demo-teeracle:
     image: ${CLIENT_IMAGE_TAG:-integritee-cli:dev}
-    container_name: integritee-teeracle-demo
+    container_name: integritee-teeracle-demo-${NETWORK:-default}
     devices:
       - "/dev/sgx/provision:/dev/sgx/provision"
       - "/dev/sgx/enclave:/dev/sgx/enclave"
@@ -48,9 +48,9 @@ services:
       dockerfile: build.Dockerfile
       target: deployed-client
     depends_on:
-      integritee-node:
+      integritee-node-${NETWORK:-default}:
         condition: service_healthy
-      integritee-teeracle-worker:
+      integritee-teeracle-worker-${NETWORK:-default}:
         condition: service_healthy
     environment:
       - RUST_LOG=warn,sp_io=warn,integritee_cli::exchange_oracle=debug
@@ -58,8 +58,8 @@ services:
       - integritee-test-network-${NETWORK:-default}
     entrypoint:
       "/usr/local/worker-cli/demo_teeracle_whitelist.sh
-      -u ws://integritee-node -p 9912
-      -V wss://integritee-teeracle-worker -P 2011
+      -u ws://integritee-node-${NETWORK:-default} -p 9912
+      -V wss://integritee-teeracle-worker-${NETWORK:-default} -P 2011
       -d 21 -i ${TEERACLE_INTERVAL_SECONDS}
       -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"
