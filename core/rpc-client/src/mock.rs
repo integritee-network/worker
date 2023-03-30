@@ -22,9 +22,10 @@ use crate::{
 	error::Result,
 };
 use codec::Decode;
+use frame_metadata::RuntimeMetadataPrefixed;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use std::{sync::mpsc::Sender as MpscSender, thread::JoinHandle};
-use substrate_api_client::{FromHexString, RuntimeMetadataPrefixed};
+use substrate_api_client::{FromHexString, Metadata};
 
 #[derive(Clone, Default)]
 pub struct DirectClientMock {
@@ -86,13 +87,14 @@ impl DirectApi for DirectClientMock {
 		Ok(self.untrusted_worker_url.clone())
 	}
 
-	fn get_state_metadata(&self) -> Result<RuntimeMetadataPrefixed> {
-		let metadata = match Vec::from_hex(self.metadata.clone()) {
+	fn get_state_metadata(&self) -> Result<Metadata> {
+		let metadata_bytes = match Vec::from_hex(self.metadata.clone()) {
 			Ok(m) => m,
 			Err(e) =>
 				return Err(Error::Custom(format!("Decode metadata FromHexError: {:?}", e).into())),
 		};
-		RuntimeMetadataPrefixed::decode(&mut metadata.as_slice()).map_err(|e| e.into())
+		let metadata = RuntimeMetadataPrefixed::decode(&mut metadata_bytes.as_slice())?;
+		Metadata::try_from(metadata).map_err(|e| e.into())
 	}
 
 	fn send(&self, _request: &str) -> Result<()> {
