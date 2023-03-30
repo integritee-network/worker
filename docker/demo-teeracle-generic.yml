@@ -4,7 +4,7 @@
 # Set the `TEERACLE_INTERVAL_SECONDS` variable when invoking, e.g. `TEERACLE_INTERVAL_SECONDS=4 docker compose -f docker-compose.yml -f demo-teeracle-generic.yml up --exit-code-from demo-teeracle-generic`
 services:
   integritee-teeracle-worker:
-    image: integritee-worker:dev
+    image: ${WORKER_IMAGE_TAG:-integritee-cli:dev}
     container_name: integritee-teeracle-worker
     devices:
       - "/dev/sgx/provision:/dev/sgx/provision"
@@ -21,7 +21,7 @@ services:
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=info,integritee_service::teeracle=debug,ita_stf=warn,ita_oracle=debug
     networks:
-      - integritee-test-network
+      - integritee-test-network-${NETWORK:-default}
     healthcheck:
       test: curl -s -f http://integritee-teeracle-worker:4645/is_initialized || exit 1
       interval: 10s
@@ -33,7 +33,7 @@ services:
         run --dev --skip-ra --teeracle-interval ${TEERACLE_INTERVAL_SECONDS}s"
     restart: always
   demo-teeracle-generic:
-    image: integritee-cli:dev
+    image: ${CLIENT_IMAGE_TAG:-integritee-cli:dev}
     container_name: integritee-teeracle-generic-demo
     devices:
       - "/dev/sgx/provision:/dev/sgx/provision"
@@ -52,7 +52,7 @@ services:
     environment:
       - RUST_LOG=warn,sp_io=warn,integritee_cli::exchange_oracle=debug
     networks:
-      - integritee-test-network
+      - integritee-test-network-${NETWORK:-default}
     entrypoint:
       "/usr/local/worker-cli/demo_teeracle_generic.sh
       -u ws://integritee-node -p 9912
@@ -60,6 +60,3 @@ services:
       -d 21 -i ${TEERACLE_INTERVAL_SECONDS}
       -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"
-networks:
-  integritee-test-network:
-    driver: bridge

@@ -1,6 +1,6 @@
 services:
   demo-direct-call:
-    image: integritee-cli:dev
+    image: ${CLIENT_IMAGE_TAG:-integritee-cli:dev}
     container_name: integritee-direct-call-demo
     devices:
       - "/dev/sgx/provision:/dev/sgx/provision"
@@ -19,11 +19,8 @@ services:
       integritee-worker-2:
         condition: service_healthy
     networks:
-      - integritee-test-network
+      - integritee-test-network-${NETWORK:-default}
     entrypoint:
       "/usr/local/worker-cli/demo_direct_call_2_workers.sh -p 9912 -u ws://integritee-node
       -V wss://integritee-worker-1 -A 2011 -W wss://integritee-worker-2 -B 2012 -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"
-networks:
-  integritee-test-network:
-    driver: bridge

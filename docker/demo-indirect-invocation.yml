@@ -1,6 +1,6 @@
 services:
   demo-indirect-invocation:
-    image: integritee-cli:dev
+    image: ${CLIENT_IMAGE_TAG:-integritee-cli:dev}
     container_name: integritee-indirect-invocation-demo
     devices:
       - "/dev/sgx/provision:/dev/sgx/provision"
@@ -22,11 +22,8 @@ services:
       - RUST_LOG=warn,ws=warn,itc_rpc_client=warn
       - FLAVOR_ID
     networks:
-      - integritee-test-network
+      - integritee-test-network-${NETWORK:-default}
     entrypoint:
       "/usr/local/worker-cli/demo_indirect_invocation.sh -p 9912 -u ws://integritee-node
       -V wss://integritee-worker-1 -A 2011 -W wss://integritee-worker-2 -B 2012 -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"
-networks:
-  integritee-test-network:
-    driver: bridge

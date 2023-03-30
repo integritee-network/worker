@@ -1,6 +1,6 @@
 services:
   sidechain-benchmark:
-    image: integritee-cli:dev
+    image: ${CLIENT_IMAGE_TAG:-integritee-cli:dev}
     container_name: integritee-benchmark
     build:
       context: ..
@@ -14,11 +14,8 @@ services:
       integritee-worker-2:
         condition: service_healthy
     networks:
-      - integritee-test-network
+      - integritee-test-network-${NETWORK:-default}
     entrypoint:
       "/usr/local/worker-cli/benchmark.sh -p 9912 -A 2011 -u ws://integritee-node
       -V wss://integritee-worker-1 -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"
-networks:
-  integritee-test-network:
-    driver: bridge
