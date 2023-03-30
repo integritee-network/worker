@@ -21,8 +21,8 @@ use itp_types::parentchain::{BlockNumber, Hash, Header, StorageProof};
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use sp_runtime::traits::GetRuntimeBlockType;
 use substrate_api_client::{
-	primitives::StorageKey, rpc::Request, Api, ExtrinsicParams, FrameSystemConfig, GetBlock,
-	GetHeader, GetStorage,
+	api::Error as ApiClientError, primitives::StorageKey, rpc::Request, Api, ExtrinsicParams,
+	FrameSystemConfig, GetBlock, GetHeader, GetStorage,
 };
 
 /// ApiClient extension that simplifies chain data access.
@@ -57,7 +57,7 @@ where
 	}
 
 	fn get_genesis_hash(&self) -> ApiResult<Hash> {
-		self.get_block_hash(Some(0u32))?.ok_or(ApiClientError::NoBlockHash)
+		self.get_block_hash(Some(0u32))?.ok_or(ApiClientError::BlockHashNotFound)
 	}
 
 	fn header(&self, header_hash: Option<Hash>) -> ApiResult<Option<Header>> {

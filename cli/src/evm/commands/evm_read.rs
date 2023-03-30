@@ -25,8 +25,6 @@ use itp_stf_primitives::types::KeyPair;
 use itp_types::AccountId;
 use log::*;
 use sp_core::{crypto::Ss58Codec, Pair, H160, H256};
-use std::{boxed::Box, vec::Vec};
-use substrate_api_client::utils::FromHexString;
 
 #[derive(Parser)]
 pub struct EvmReadCommands {
@@ -52,7 +50,7 @@ impl EvmReadCommands {
 		info!("senders evm account is {}", sender_evm_acc);
 
 		let execution_address =
-			H160::from_slice(&Vec::from_hex(self.execution_address.to_string()).unwrap());
+			H160::from_slice(&array_bytes::hex2bytes(&self.execution_address).unwrap());
 
 		let top: TrustedOperation =
 			TrustedGetter::evm_account_storages(sender_acc, execution_address, H256::zero())

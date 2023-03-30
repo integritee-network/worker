@@ -29,7 +29,6 @@ use itp_types::AccountId;
 use log::*;
 use sp_core::{crypto::Ss58Codec, Pair, H160, U256};
 use std::{boxed::Box, vec::Vec};
-use substrate_api_client::utils::FromHexString;
 
 #[derive(Parser)]
 pub struct EvmCallCommands {
@@ -58,9 +57,9 @@ impl EvmCallCommands {
 		info!("senders evm account is {}", sender_evm_acc);
 
 		let execution_address =
-			H160::from_slice(&Vec::from_hex(self.execution_address.to_string()).unwrap());
+			H160::from_slice(&array_bytes::hex2bytes(&self.execution_address).unwrap());
 
-		let function_hash = Vec::from_hex(self.function.to_string()).unwrap();
+		let function_hash = array_bytes::hex2bytes(&self.function).unwrap();
 
 		let (mrenclave, shard) = get_identifiers(trusted_args);
 		let nonce = get_layer_two_nonce!(sender, cli, trusted_args);

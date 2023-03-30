@@ -19,7 +19,7 @@ use crate::{
 	command_utils::{get_accountid_from_str, get_chain_api},
 	Cli,
 };
-use codec::Encode;
+use itp_node_api::api_client::ParentchainExtrinsicSigner;
 use my_node_runtime::{BalancesCall, RuntimeCall};
 use sp_keyring::AccountKeyring;
 use sp_runtime::MultiAddress;
@@ -38,12 +38,12 @@ pub struct FaucetCommand {
 impl FaucetCommand {
 	pub(crate) fn run(&self, cli: &Cli) {
 		let mut api = get_chain_api(cli);
-		api.set_signer(AccountKeyring::Alice.pair());
+		api.set_signer(ParentchainExtrinsicSigner::new(AccountKeyring::Alice.pair()));
 		let mut nonce = api.get_nonce().unwrap();
 		for account in &self.accounts {
 			let to = get_accountid_from_str(account);
 			#[allow(clippy::redundant_clone)]
-			let xt: UncheckedExtrinsicV4<_, _> = compose_extrinsic_offline!(
+			let xt: UncheckedExtrinsicV4<_, _, _, _> = compose_extrinsic_offline!(
 				api.signer().unwrap(),
 				RuntimeCall::Balances(BalancesCall::transfer {
 					dest: MultiAddress::Id(to.clone()),
@@ -53,7 +53,7 @@ impl FaucetCommand {
 			);
 			// send and watch extrinsic until finalized
 			println!("Faucet drips to {} (Alice's nonce={})", to, nonce);
-			let _blockh = api.submit_extrinsic(xt.encode()).unwrap();
+			let _blockh = api.submit_extrinsic(xt).unwrap();
 			nonce += 1;
 		}
 	}

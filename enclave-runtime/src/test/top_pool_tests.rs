@@ -44,8 +44,7 @@ use itc_parentchain_test::{
 };
 use itp_node_api::{
 	api_client::{
-		ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder,
-		ParentchainUncheckedExtrinsic,
+		ParentchainAdditionalParams, ParentchainExtrinsicParams, ParentchainUncheckedExtrinsic,
 	},
 	metadata::{
 		metadata_mocks::NodeMetadataMock, pallet_teerex::TeerexCallIndexes,
@@ -58,14 +57,14 @@ use itp_stf_executor::enclave_signer::StfEnclaveSigner;
 use itp_stf_state_observer::mock::ObserveStateMock;
 use itp_test::mock::metrics_ocall_mock::MetricsOCallMock;
 use itp_top_pool_author::{top_filter::AllowAllTopsFilter, traits::AuthorApi};
-use itp_types::{AccountId, Block, ShardIdentifier, ShieldFundsFn, H256};
+use itp_types::{parentchain::Address, AccountId, Block, ShardIdentifier, ShieldFundsFn, H256};
 use jsonrpc_core::futures::executor;
 use log::*;
 use sgx_crypto_helper::RsaKeyPair;
 use sp_core::{ed25519, Pair};
 use sp_runtime::{MultiSignature, OpaqueExtrinsic};
 use std::{sync::Arc, vec::Vec};
-use substrate_api_client::{ExtrinsicParams, GenericAddress};
+use substrate_api_client::ExtrinsicParams;
 
 pub fn process_indirect_call_in_top_pool() {
 	let _ = env_logger::builder().is_test(true).try_init();
@@ -187,7 +186,7 @@ fn create_shielding_call_extrinsic<ShieldingKey: ShieldingCryptoEncrypt>(
 		0,
 		0,
 		H256::default(),
-		ParentchainExtrinsicParamsBuilder::default(),
+		ParentchainAdditionalParams::default(),
 	);
 
 	let dummy_node_metadata = NodeMetadataMock::new();
@@ -196,7 +195,7 @@ fn create_shielding_call_extrinsic<ShieldingKey: ShieldingCryptoEncrypt>(
 	let opaque_extrinsic = OpaqueExtrinsic::from_bytes(
 		ParentchainUncheckedExtrinsic::<ShieldFundsFn>::new_signed(
 			(shield_funds_indexes, target_account, 1000u128, shard),
-			GenericAddress::Address32([1u8; 32]),
+			Address::Address32([1u8; 32]),
 			MultiSignature::Ed25519(signature),
 			default_extra_for_test.signed_extra(),
 		)

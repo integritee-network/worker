@@ -17,10 +17,8 @@
 
 use crate::ApiResult;
 use itp_types::parentchain::{AccountData, AccountId, Balance, Index};
-use sp_core::Pair;
-use sp_runtime::MultiSignature;
 use substrate_api_client::{
-	rpc::Request, Api, ExtrinsicParams, FrameSystemConfig, GetAccountInformation,
+	rpc::Request, Api, ExtrinsicParams, FrameSystemConfig, GetAccountInformation, SignExtrinsic,
 };
 
 /// ApiClient extension that contains some convenience methods around accounts.
@@ -31,8 +29,7 @@ pub trait AccountApi {
 
 impl<Signer, Client, Params, Runtime> AccountApi for Api<Signer, Client, Params, Runtime>
 where
-	Signer: Pair,
-	MultiSignature: From<Signer::Signature>,
+	Signer: SignExtrinsic<Runtime::AccountId>,
 	Client: Request,
 	Runtime: FrameSystemConfig<AccountId = AccountId, AccountData = AccountData, Index = Index>,
 	Params: ExtrinsicParams<Runtime::Index, Runtime::Hash>,

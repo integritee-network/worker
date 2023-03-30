@@ -14,8 +14,8 @@ dependencies = [
 
 [[package]]
 name = "ac-compose-macros"
-version = "0.2.2"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.39-tag-v0.9.0#c952d689bfd6469432f92b10ca351876bd5ac51a"
+version = "0.2.3"
+source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.39#417c301cce7e23f765891cd56ca48878390c5cf9"
 dependencies = [
  "ac-primitives",
  "log",
@@ -27,14 +27,14 @@ dependencies = [
 
 [[package]]
 name = "ac-node-api"
-version = "0.2.2"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.39-tag-v0.9.0#c952d689bfd6469432f92b10ca351876bd5ac51a"
+version = "0.2.3"
+source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.39#417c301cce7e23f765891cd56ca48878390c5cf9"
 dependencies = [
  "ac-primitives",
  "bitvec",
  "derive_more",
  "either",
- "frame-metadata 15.0.0 (git+https://github.com/paritytech/frame-metadata)",
+ "frame-metadata 15.1.0",
  "hex",
  "log",
  "parity-scale-codec",
@@ -49,8 +49,8 @@ dependencies = [
 
 [[package]]
 name = "ac-primitives"
-version = "0.4.0"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.39-tag-v0.9.0#c952d689bfd6469432f92b10ca351876bd5ac51a"
+version = "0.5.0"
+source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.39#417c301cce7e23f765891cd56ca48878390c5cf9"
 dependencies = [
  "hex",
  "impl-serde",
@@ -141,6 +141,12 @@ name = "array-bytes"
 version = "4.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f52f63c5c1316a16a4b35eaac8b76a98248961a533f061684cb2a7cb0eafb6c6"
+
+[[package]]
+name = "array-bytes"
+version = "6.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "22f72e9d6fac4bc80778ea470b20197b88d28c292bb7d60c3fb099280003cd19"
 
 [[package]]
 name = "arrayref"
@@ -664,6 +670,7 @@ dependencies = [
 name = "enclave-runtime"
 version = "0.9.0"
 dependencies = [
+ "array-bytes 6.0.0",
  "cid",
  "derive_more",
  "env_logger",
@@ -977,8 +984,8 @@ dependencies = [
 
 [[package]]
 name = "frame-metadata"
-version = "15.0.0"
-source = "git+https://github.com/paritytech/frame-metadata#040a53c63af277e280282028b73b992eac9c35a2"
+version = "15.1.0"
+source = "git+https://github.com/paritytech/frame-metadata#438a5b098bb9d5b5a09bdc5b68275b2c5e63a010"
 dependencies = [
  "cfg-if 1.0.0",
  "parity-scale-codec",
@@ -992,7 +999,7 @@ version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.39#1837f423b494254e1d27834b1c9da34b2c0c2375"
 dependencies = [
  "bitflags",
- "frame-metadata 15.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-metadata 15.0.0",
  "frame-support-procedural",
  "impl-trait-for-tuples",
  "k256",
@@ -2105,7 +2112,7 @@ name = "itp-storage"
 version = "0.9.0"
 dependencies = [
  "derive_more",
- "frame-metadata 15.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-metadata 15.0.0",
  "frame-support",
  "hash-db",
  "itp-types",
@@ -4009,7 +4016,7 @@ name = "sp-core"
 version = "7.0.0"
 source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.39#1837f423b494254e1d27834b1c9da34b2c0c2375"
 dependencies = [
- "array-bytes",
+ "array-bytes 4.2.0",
  "bitflags",
  "blake2",
  "bounded-collections",
@@ -4352,13 +4359,14 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "substrate-api-client"
-version = "0.9.0"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.39-tag-v0.9.0#c952d689bfd6469432f92b10ca351876bd5ac51a"
+version = "0.10.0"
+source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.39#417c301cce7e23f765891cd56ca48878390c5cf9"
 dependencies = [
  "ac-compose-macros",
  "ac-node-api",
  "ac-primitives",
- "frame-metadata 15.0.0 (git+https://github.com/paritytech/frame-metadata)",
+ "derive_more",
+ "frame-metadata 15.1.0",
  "hex",
  "log",
  "parity-scale-codec",
@@ -4367,7 +4375,6 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-runtime-interface",
- "thiserror-core",
 ]
 
 [[package]]
@@ -4458,26 +4465,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "978c9a314bd8dc99be594bc3c175faaa9794be04a5a5e153caba6915336cebac"
 dependencies = [
  "thiserror-impl 1.0.40",
-]
-
-[[package]]
-name = "thiserror-core"
-version = "1.0.38"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d97345f6437bb2004cd58819d8a9ef8e36cdd7661c2abc4bbde0a7c40d9f497"
-dependencies = [
- "thiserror-core-impl",
-]
-
-[[package]]
-name = "thiserror-core-impl"
-version = "1.0.38"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10ac1c5050e43014d16b2f94d0d2ce79e65ffdd8b38d8048f9c8f6a8a6da62ac"
-dependencies = [
- "proc-macro2",
- "quote 1.0.26",
- "syn 1.0.109",
 ]
 
 [[package]]

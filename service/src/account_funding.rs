@@ -17,7 +17,7 @@
 
 use crate::error::{Error, ServiceResult};
 use codec::Encode;
-use itp_node_api::api_client::{AccountApi, ParentchainApi};
+use itp_node_api::api_client::{AccountApi, ParentchainApi, ParentchainExtrinsicSigner};
 use itp_settings::worker::{
 	EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS, REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS,
 };
@@ -28,8 +28,9 @@ use sp_core::{
 	Pair,
 };
 use sp_keyring::AccountKeyring;
+use sp_runtime::MultiAddress;
 use substrate_api_client::{
-	GenericAddress, GetBalance, GetTransactionPayment, SubmitAndWatch, XtStatus,
+	extrinsic::BalancesExtrinsics, GetBalance, GetTransactionPayment, SubmitAndWatch, XtStatus,
 };
 
 /// Information about the enclave on-chain account.
@@ -114,7 +115,7 @@ fn enclave_registration_fees(
 	api: &ParentchainApi,
 	encoded_extrinsic: Vec<u8>,
 ) -> Result<u128, Error> {
-	let reg_fee_details = api.get_fee_details(encoded_extrinsic, None)?;
+	let reg_fee_details = api.get_fee_details(encoded_extrinsic.into(), None)?;
 	match reg_fee_details {
 		Some(details) => match details.inclusion_fee {
 			Some(fee) => Ok(fee.inclusion_fee()),
@@ -152,13 +153,11 @@ fn bootstrap_funds_from_alice(
 	}
 
 	let mut alice_signer_api = api.clone();
-	alice_signer_api.set_signer(alice);
+	alice_signer_api.set_signer(ParentchainExtrinsicSigner::new(alice));
 
 	println!("[+] bootstrap funding Enclave from Alice's funds");
-	let xt =
-		alice_signer_api.balance_transfer(GenericAddress::Id(accountid.clone()), funding_amount);
-	let xt_report =
-		alice_signer_api.submit_and_watch_extrinsic_until(xt.encode(), XtStatus::InBlock)?;
+	let xt = alice_signer_api.balance_transfer(MultiAddress::Id(accountid.clone()), funding_amount);
+	let xt_report = alice_signer_api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock)?;
 	info!(
 		"[<] Extrinsic got included in a block. Extrinsic Hash: {:?}\n",
 		xt_report.extrinsic_hash

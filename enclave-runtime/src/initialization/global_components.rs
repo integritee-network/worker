@@ -56,7 +56,10 @@ use itp_attestation_handler::IntelAttestationHandler;
 use itp_block_import_queue::BlockImportQueue;
 use itp_component_container::ComponentContainer;
 use itp_extrinsics_factory::ExtrinsicsFactory;
-use itp_node_api::metadata::{provider::NodeMetadataRepository, NodeMetadata};
+use itp_node_api::{
+	api_client::PairSignature,
+	metadata::{provider::NodeMetadataRepository, NodeMetadata},
+};
 use itp_nonce_cache::NonceCache;
 use itp_sgx_crypto::{key_repository::KeyRepository, Aes, AesSeal, Rsa3072Seal};
 use itp_stf_executor::{
@@ -86,6 +89,9 @@ use its_sidechain::{
 };
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sp_core::ed25519::Pair;
+
+pub type EnclaveParentchainSigner =
+	itp_node_api::api_client::StaticExtrinsicSigner<Pair, PairSignature>;
 
 pub type EnclaveGetter = Getter;
 pub type EnclaveTrustedCallSigned = TrustedCallSigned;
@@ -122,7 +128,7 @@ pub type EnclaveSidechainApi = SidechainApi<ParentchainBlock>;
 
 // Parentchain types
 pub type EnclaveExtrinsicsFactory =
-	ExtrinsicsFactory<Pair, NonceCache, EnclaveNodeMetadataRepository>;
+	ExtrinsicsFactory<EnclaveParentchainSigner, NonceCache, EnclaveNodeMetadataRepository>;
 pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
 	EnclaveShieldingKeyRepository,
 	EnclaveStfEnclaveSigner,

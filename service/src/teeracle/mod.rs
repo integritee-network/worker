@@ -79,9 +79,10 @@ fn execute_weather_update<E: TeeracleApi>(
 			let encoded_extrinsic = call.encode();
 			debug!("Hex encoded extrinsic to be sent: {}", hex_encode(&encoded_extrinsic));
 			println!("[>] Update oracle (send the extrinsic)");
-			let extrinsic_hash = match node_api_clone
-				.submit_and_watch_extrinsic_until(encoded_extrinsic, XtStatus::InBlock)
-			{
+			let extrinsic_hash = match node_api_clone.submit_and_watch_opaque_extrinsic_until(
+				encoded_extrinsic.into(),
+				XtStatus::InBlock,
+			) {
 				Err(e) => {
 					error!("Failed to send extrinsic: {:?}", e);
 					set_extrinsics_inclusion_success(false);
@@ -128,9 +129,10 @@ fn execute_update_market<E: TeeracleApi>(
 			debug!("Hex encoded extrinsic to be sent: {}", hex_encode(&encoded_extrinsic));
 
 			println!("[>] Update the exchange rate (send the extrinsic)");
-			let extrinsic_hash = match node_api_clone
-				.submit_and_watch_extrinsic_until(encoded_extrinsic, XtStatus::InBlock)
-			{
+			let extrinsic_hash = match node_api_clone.submit_and_watch_opaque_extrinsic_until(
+				encoded_extrinsic.into(),
+				XtStatus::InBlock,
+			) {
 				Err(e) => {
 					error!("Failed to send extrinsic: {:?}", e);
 					set_extrinsics_inclusion_success(false);

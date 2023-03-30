@@ -18,7 +18,7 @@
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use itp_node_api::api_client::{
-	CallIndex, ParentchainSignedExtra, Signature, UncheckedExtrinsicV4,
+	Address, CallIndex, PairSignature, ParentchainSignedExtra, Signature, UncheckedExtrinsicV4,
 };
 
 pub struct ExtrinsicParser<SignedExtra> {
@@ -61,7 +61,12 @@ where
 
 		// `()` is a trick to stop decoding after the call index. So the remaining bytes
 		//  of `call` after decoding only contain the parentchain's dispatchable's arguments.
-		let xt = UncheckedExtrinsicV4::<(CallIndex, ()), Self::SignedExtra>::decode(call_mut)?;
+		let xt = UncheckedExtrinsicV4::<
+			Address,
+			(CallIndex, ()),
+			PairSignature,
+			Self::SignedExtra,
+		>::decode(call_mut)?;
 
 		Ok(SemiOpaqueExtrinsic {
 			signature: xt.signature,

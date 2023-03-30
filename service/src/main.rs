@@ -43,7 +43,7 @@ use crate::{
 };
 use base58::ToBase58;
 use clap::{load_yaml, App};
-use codec::{Decode, Encode};
+use codec::Encode;
 use config::Config;
 use enclave::{
 	api::enclave_init,
@@ -75,8 +75,7 @@ use log::*;
 use my_node_runtime::{Hash, Header, RuntimeEvent};
 use sgx_types::*;
 use substrate_api_client::{
-	primitives::StorageChangeSet, rpc::HandleSubscription, GetHeader, SubmitAndWatch,
-	SubscribeChain, SubscribeFrameSystem, XtStatus,
+	rpc::HandleSubscription, GetHeader, SubmitAndWatch, SubscribeChain, SubscribeEvents, XtStatus,
 };
 
 #[cfg(feature = "dcap")]
@@ -112,6 +111,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub type EnclaveWorker =
 	Worker<Config, NodeApiFactory, Enclave, InitializationHandler<WorkerModeProvider>>;
+pub type Event = substrate_api_client::EventRecord<RuntimeEvent, Hash>;
 
 fn main() {
 	// Setup logging
@@ -529,13 +529,11 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	// ------------------------------------------------------------------------
 	// Subscribe to events and print them.
 	println!("*** Subscribing to events");
-	let mut subscription = node_api.subscribe_system_events().unwrap();
+	let mut subscription = node_api.subscribe_events().unwrap();
 	println!("[+] Subscribed to events. waiting...");
 	loop {
-		if let Some(Ok(storage_change_set)) = subscription.next() {
-			if let Ok(events) = parse_events(storage_change_set) {
-				print_events(events)
-			}
+		if let Some(Ok(events)) = subscription.next_event::<RuntimeEvent, Hash>() {
+			print_events(events)
 		}
 	}
 }
@@ -568,18 +566,7 @@ fn spawn_worker_for_shard_polling<InitializationHandler>(
 	});
 }
 
-type Events = Vec<frame_system::EventRecord<RuntimeEvent, Hash>>;
-
-fn parse_events(change_set: StorageChangeSet<Hash>) -> Result<Events, String> {
-	let event_bytes = &change_set.changes[0]
-		.1
-		.as_ref()
-		.ok_or_else(|| "Retrieving Events Failed".to_string())?
-		.0;
-	Events::decode(&mut event_bytes.as_slice()).map_err(|_| "Decoding Events Failed".to_string())
-}
-
-fn print_events(events: Events) {
+fn print_events(events: Vec<Event>) {
 	for evr in &events {
 		debug!("Decoded: phase = {:?}, event = {:?}", evr.phase, evr.event);
 		match &evr.event {
@@ -797,7 +784,7 @@ fn send_extrinsic(
 
 	println!("[>] Register the TCB info (send the extrinsic)");
 	let register_qe_block_hash = api
-		.submit_and_watch_extrinsic_until(extrinsic, XtStatus::Finalized)
+		.submit_and_watch_opaque_extrinsic_until(extrinsic.into(), XtStatus::Finalized)
 		.unwrap()
 		.block_hash;
 	println!("[<] Extrinsic got finalized. Block hash: {:?}\n", register_qe_block_hash);

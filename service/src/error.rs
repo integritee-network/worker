@@ -24,7 +24,7 @@ pub type ServiceResult<T> = Result<T, Error>;
 pub enum Error {
 	#[error("{0}")]
 	Codec(#[from] CodecError),
-	#[error("{0}")]
+	#[error("{0:?}")]
 	ApiClient(ApiClientError),
 	#[error("Node API terminated subscription unexpectedly")]
 	ApiSubscriptionDisconnected,

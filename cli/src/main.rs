@@ -32,6 +32,7 @@ mod base_cli;
 mod benchmark;
 mod command_utils;
 mod commands;
+mod error;
 #[cfg(feature = "evm")]
 mod evm;
 #[cfg(feature = "teeracle")]
