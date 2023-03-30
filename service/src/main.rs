@@ -75,7 +75,7 @@ use log::*;
 use my_node_runtime::{Hash, Header, RuntimeEvent};
 use sgx_types::*;
 use substrate_api_client::{
-	primitives::StorageChangeSet, rpc::HandleSubscription, GetHeader, SubmitAndWatchUntilSuccess,
+	primitives::StorageChangeSet, rpc::HandleSubscription, GetHeader, SubmitAndWatch,
 	SubscribeChain, SubscribeFrameSystem, XtStatus,
 };
 
