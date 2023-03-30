@@ -29,7 +29,7 @@ use sp_core::{
 };
 use sp_keyring::AccountKeyring;
 use substrate_api_client::{
-	GenericAddress, GetBalance, GetTransactionPayment, SubmitAndWatch, SubmitExtrinsic, XtStatus,
+	GenericAddress, GetBalance, GetTransactionPayment, SubmitAndWatch, XtStatus,
 };
 
 /// Information about the enclave on-chain account.
@@ -152,7 +152,7 @@ fn bootstrap_funds_from_alice(
 	}
 
 	let mut alice_signer_api = api.clone();
-	api.set_signer(alice);
+	alice_signer_api.set_signer(alice);
 
 	println!("[+] bootstrap funding Enclave from Alice's funds");
 	let xt =

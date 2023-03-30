@@ -76,7 +76,7 @@ use my_node_runtime::{Hash, Header, RuntimeEvent};
 use sgx_types::*;
 use substrate_api_client::{
 	primitives::StorageChangeSet, rpc::HandleSubscription, GetHeader, SubmitAndWatchUntilSuccess,
-	SubmitExtrinsic, SubscribeChain, SubscribeFrameSystem,
+	SubscribeChain, SubscribeFrameSystem,
 };
 
 #[cfg(feature = "dcap")]
@@ -85,17 +85,7 @@ use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
 use sp_runtime::traits::Header as HeaderTrait;
-use std::{
-	path::PathBuf,
-	str,
-	sync::{
-		mpsc::{channel, Sender},
-		Arc,
-	},
-	thread,
-	time::Duration,
-};
-use substrate_api_client::{utils::FromHexString, XtStatus};
+use std::{path::PathBuf, str, sync::Arc, thread, time::Duration};
 use teerex_primitives::ShardIdentifier;
 
 mod account_funding;
@@ -539,7 +529,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	// ------------------------------------------------------------------------
 	// Subscribe to events and print them.
 	println!("*** Subscribing to events");
-	let subscription = node_api.subscribe_system_events().unwrap();
+	let mut subscription = node_api.subscribe_system_events().unwrap();
 	println!("[+] Subscribed to events. waiting...");
 	loop {
 		if let Some(Ok(storage_change_set)) = subscription.next() {
@@ -581,7 +571,8 @@ fn spawn_worker_for_shard_polling<InitializationHandler>(
 type Events = Vec<frame_system::EventRecord<RuntimeEvent, Hash>>;
 
 fn parse_events(change_set: StorageChangeSet<Hash>) -> Result<Events, String> {
-	let event_bytes = change_set[0].1.clone().map_err("Retrieving Events Failed".to_string())?.0;
+	let event_bytes =
+		change_set.changes[0].1.clone().ok_or("Retrieving Events Failed".to_string())?.0;
 	Events::decode(&mut event_bytes.as_slice()).map_err(|_| "Decoding Events Failed".to_string())
 }
 
@@ -816,7 +807,7 @@ fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 	parentchain_handler: Arc<ParentchainHandler<ParentchainApi, E>>,
 	mut last_synced_header: Header,
 ) -> Result<(), Error> {
-	let subscription = parentchain_handler
+	let mut subscription = parentchain_handler
 		.parentchain_api()
 		.subscribe_finalized_heads()
 		.map_err(Error::ApiClient)?;
@@ -825,11 +816,7 @@ fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 		let new_header = subscription
 			.next()
 			.ok_or(Error::ApiSubscriptionDisconnected)?
-			.map_err(|e| Error::ApiClientError(e.into()))?;
-		// {
-		// 	Ok(header_str) => serde_json::from_str(&header_str).map_err(Error::Serialization),
-		// 	Err(e) => Err(Error::ApiSubscriptionDisconnected(e)),
-		// }?;
+			.map_err(|e| Error::ApiClient(e.into()))?;
 
 		println!(
 			"[+] Received finalized header update ({}), syncing parent chain...",

@@ -20,11 +20,10 @@ use crate::ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, Worke
 use codec::{Decode, Encode};
 use itp_node_api::node_api_factory::CreateNodeApi;
 use itp_types::{WorkerRequest, WorkerResponse};
-use itp_utils::ToHexPrefixed;
 use log::*;
 use sp_runtime::OpaqueExtrinsic;
 use std::{sync::Arc, vec::Vec};
-use substrate_api_client::{GetStorage, StorageKey, XtStatus};
+use substrate_api_client::{GetStorage, StorageKey};
 use substrate_api_client::SubmitExtrinsic;
 
 pub struct WorkerOnChainOCall<F> {

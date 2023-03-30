@@ -17,8 +17,6 @@
 
 use crate::ApiResult;
 use itp_types::{parentchain::Hash, Enclave, IpfsHash, ShardIdentifier};
-use sp_core::Pair;
-use sp_runtime::MultiSignature;
 use substrate_api_client::{rpc::Request, Api, ExtrinsicParams, FrameSystemConfig, GetStorage};
 
 pub const TEEREX: &str = "Teerex";
