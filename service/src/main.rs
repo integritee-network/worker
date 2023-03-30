@@ -512,12 +512,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			.unwrap();
 		}
 
-		// ANDREW TODO:
-		// 1.) for each block // Static storage key ("System", Events)
-		// 2.) get_events(block)
-		// 3.) get_read_proof(key, block)
-		// 4.) pass to Enclave
-		// 5.) validate events_proof
 		// ------------------------------------------------------------------------
 		// start parentchain syncing loop (subscribe to header updates)
 		thread::Builder::new()
@@ -525,8 +519,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			.spawn(move || {
 				if let Err(e) =
 					subscribe_to_parentchain_new_headers(parentchain_handler, last_synced_header)
-					// Add here
-					
 				{
 					error!("Parentchain block syncing terminated with a failure: {:?}", e);
 				}
