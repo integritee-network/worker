@@ -1,7 +1,7 @@
 services:
   demo-sidechain:
     image: ${CLIENT_IMAGE_TAG:-integritee-cli:dev}
-    container_name: integritee-sidechain-demo-${NETWORK}
+    container_name: integritee-sidechain-demo-${FLAVOR}
     devices:
       - "/dev/sgx/provision:/dev/sgx/provision"
       - "/dev/sgx/enclave:/dev/sgx/enclave"
@@ -12,15 +12,15 @@ services:
       dockerfile: build.Dockerfile
       target: deployed-client
     depends_on:
-      integritee-node-${NETWORK}:
+      integritee-node-${FLAVOR}:
         condition: service_healthy
-      integritee-worker-1-${NETWORK}:
+      integritee-worker-1-${FLAVOR}:
         condition: service_healthy
-      integritee-worker-2-${NETWORK}:
+      integritee-worker-2-${FLAVOR}:
         condition: service_healthy
     networks:
       - integritee-test-network-${NETWORK}
     entrypoint:
-      "/usr/local/worker-cli/demo_sidechain.sh -p 9912 -A 2011 -B 2012 -u ws://integritee-node-${NETWORK}
-      -V wss://integritee-worker-1-${NETWORK} -W wss://integritee-worker-2-${NETWORK} -C /usr/local/bin/integritee-cli 2>&1"
+      "/usr/local/worker-cli/demo_sidechain.sh -p 9912 -A 2011 -B 2012 -u ws://integritee-node-${FLAVOR}
+      -V wss://integritee-worker-1-${FLAVOR} -W wss://integritee-worker-2-${FLAVOR} -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"
