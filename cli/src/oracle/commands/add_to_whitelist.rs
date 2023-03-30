@@ -22,8 +22,7 @@ use crate::{
 use codec::Encode;
 use itp_node_api::api_client::{ADD_TO_WHITELIST, TEERACLE};
 use substrate_api_client::{
-	compose_call, compose_extrinsic, SubmitAndWatch, SubscribeFrameSystem, UncheckedExtrinsicV4,
-	XtStatus,
+	compose_call, compose_extrinsic, SubmitAndWatch, UncheckedExtrinsicV4, XtStatus,
 };
 
 /// Add a trusted market data source to the on-chain whitelist.
