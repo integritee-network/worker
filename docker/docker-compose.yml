@@ -1,20 +1,20 @@
 services:
-  integritee-node:
+  integritee-node-${NETWORK}:
     image: "integritee/integritee-node-dev:1.0.33"
-    container_name: integritee-node-${NETWORK:-default}
+    container_name: integritee-node-${NETWORK}
     networks:
-      - integritee-test-network-${NETWORK:-default}
+      - integritee-test-network-${NETWORK}
     healthcheck:
-      test: ["CMD", "nc", "-z", "integritee-node-${NETWORK:-default}", "9912"]
+      test: ["CMD", "nc", "-z", "integritee-node-${NETWORK}", "9912"]
       interval: 10s
       timeout: 10s
       retries: 6
     command: --dev --rpc-methods unsafe --ws-external --rpc-external --ws-port 9912
     #logging:
       #driver: local
-  integritee-worker-1:
+  integritee-worker-1-${NETWORK}:
     image: ${WORKER_IMAGE_TAG:-integritee-cli:dev}
-    container_name: integritee-worker-1-${NETWORK:-default}
+    container_name: integritee-worker-1-${NETWORK}
     devices:
       - "/dev/sgx/provision:/dev/sgx/provision"
       - "/dev/sgx/enclave:/dev/sgx/enclave"
@@ -25,25 +25,25 @@ services:
       dockerfile: build.Dockerfile
       target: deployed-worker
     depends_on:
-      integritee-node-${NETWORK:-default}:
+      integritee-node-${NETWORK}:
         condition: service_healthy
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
     networks:
-      - integritee-test-network-${NETWORK:-default}
+      - integritee-test-network-${NETWORK}
     healthcheck:
-      test: curl -s -f http://integritee-worker-1-${NETWORK:-default}:4645/is_initialized || exit 1
+      test: curl -s -f http://integritee-worker-1-${NETWORK}:4645/is_initialized || exit 1
       interval: 10s
       timeout: 10s
       retries: 25
     entrypoint:
-      "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-1-${NETWORK:-default} -T wss://integritee-worker-1-${NETWORK:-default}
-      -u ws://integritee-node-${NETWORK:-default} -U ws://integritee-worker-1-${NETWORK:-default} -P 2011 -w 2101 -p 9912 -h 4645
+      "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-1-${NETWORK} -T wss://integritee-worker-1-${NETWORK}
+      -u ws://integritee-node-${NETWORK} -U ws://integritee-worker-1-${NETWORK} -P 2011 -w 2101 -p 9912 -h 4645
       run --dev --skip-ra"
     restart: "no"
-  integritee-worker-2:
+  integritee-worker-2-${NETWORK}:
     image: ${WORKER_IMAGE_TAG:-integritee-cli:dev}
-    container_name: integritee-worker-2-${NETWORK:-default}
+    container_name: integritee-worker-2-${NETWORK}
     devices:
       - "/dev/sgx/provision:/dev/sgx/provision"
       - "/dev/sgx/enclave:/dev/sgx/enclave"
@@ -54,22 +54,22 @@ services:
       dockerfile: build.Dockerfile
       target: deployed-worker
     depends_on:
-      integritee-node-${NETWORK:-default}:
+      integritee-node-${NETWORK}:
         condition: service_healthy
-      integritee-worker-1-${NETWORK:-default}:
+      integritee-worker-1-${NETWORK}:
         condition: service_healthy
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
     networks:
-      - integritee-test-network-${NETWORK:-default}
+      - integritee-test-network-${NETWORK}
     healthcheck:
-      test: curl -s -f http://integritee-worker-2-${NETWORK:-default}:4646/is_initialized || exit 1
+      test: curl -s -f http://integritee-worker-2-${NETWORK}:4646/is_initialized || exit 1
       interval: 10s
       timeout: 10s
       retries: 25
     entrypoint:
-      "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-2-${NETWORK:-default} -T wss://integritee-worker-2-${NETWORK:-default}
-      -u ws://integritee-node-${NETWORK:-default} -U ws://integritee-worker-2-${NETWORK:-default} -P 2012 -w 2102 -p 9912 -h 4646
+      "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-2-${NETWORK} -T wss://integritee-worker-2-${NETWORK}
+      -u ws://integritee-node-${NETWORK} -U ws://integritee-worker-2-${NETWORK} -P 2012 -w 2102 -p 9912 -h 4646
       run --dev --skip-ra --request-state"
     restart: "no"
 networks:

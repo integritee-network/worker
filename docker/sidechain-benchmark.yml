@@ -1,21 +1,21 @@
 services:
   sidechain-benchmark:
     image: ${CLIENT_IMAGE_TAG:-integritee-cli:dev}
-    container_name: integritee-benchmark-${NETWORK:-default}
+    container_name: integritee-benchmark-${NETWORK}
     build:
       context: ..
       dockerfile: build.Dockerfile
       target: deployed-client
     depends_on:
-      integritee-node-${NETWORK:-default}:
+      integritee-node-${NETWORK}:
         condition: service_healthy
-      integritee-worker-1-${NETWORK:-default}:
+      integritee-worker-1-${NETWORK}:
         condition: service_healthy
-      integritee-worker-2-${NETWORK:-default}:
+      integritee-worker-2-${NETWORK}:
         condition: service_healthy
     networks:
-      - integritee-test-network-${NETWORK:-default}
+      - integritee-test-network-${NETWORK}
     entrypoint:
-      "/usr/local/worker-cli/benchmark.sh -p 9912 -A 2011 -u ws://integritee-node-${NETWORK:-default}
-      -V wss://integritee-worker-1-${NETWORK:-default} -C /usr/local/bin/integritee-cli 2>&1"
+      "/usr/local/worker-cli/benchmark.sh -p 9912 -A 2011 -u ws://integritee-node-${NETWORK}
+      -V wss://integritee-worker-1-${NETWORK} -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"
