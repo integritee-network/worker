@@ -571,8 +571,11 @@ fn spawn_worker_for_shard_polling<InitializationHandler>(
 type Events = Vec<frame_system::EventRecord<RuntimeEvent, Hash>>;
 
 fn parse_events(change_set: StorageChangeSet<Hash>) -> Result<Events, String> {
-	let event_bytes =
-		change_set.changes[0].1.clone().ok_or("Retrieving Events Failed".to_string())?.0;
+	let event_bytes = change_set.changes[0]
+		.1
+		.clone()
+		.ok_or_else(|| "Retrieving Events Failed".to_string())?
+		.0;
 	Events::decode(&mut event_bytes.as_slice()).map_err(|_| "Decoding Events Failed".to_string())
 }
 

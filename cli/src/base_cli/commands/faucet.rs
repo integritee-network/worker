@@ -44,7 +44,7 @@ impl FaucetCommand {
 			let to = get_accountid_from_str(account);
 			#[allow(clippy::redundant_clone)]
 			let xt: UncheckedExtrinsicV4<_, _> = compose_extrinsic_offline!(
-				&api.signer().unwrap(),
+				api.signer().unwrap(),
 				RuntimeCall::Balances(BalancesCall::transfer {
 					dest: MultiAddress::Id(to.clone()),
 					value: PREFUNDING_AMOUNT
