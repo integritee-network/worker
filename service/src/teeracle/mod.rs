@@ -24,7 +24,7 @@ use itp_utils::hex::hex_encode;
 use log::*;
 use sp_runtime::OpaqueExtrinsic;
 use std::time::Duration;
-use substrate_api_client::XtStatus;
+use substrate_api_client::{SubmitAndWatch, XtStatus};
 use teeracle_metrics::{increment_number_of_request_failures, set_extrinsics_inclusion_success};
 use tokio::runtime::Handle;
 
@@ -76,21 +76,22 @@ fn execute_weather_update<E: TeeracleApi>(
 	extrinsics.into_iter().for_each(|call| {
 		let node_api_clone = node_api.clone();
 		tokio_handle.spawn(async move {
-			let hex_encoded_extrinsic = hex_encode(&call.encode());
-			debug!("Hex encoded extrinsic to be sent: {}", hex_encoded_extrinsic);
+			let encoded_extrinsic = call.encode();
+			debug!("Hex encoded extrinsic to be sent: {}", hex_encode(&encoded_extrinsic));
 			println!("[>] Update oracle (send the extrinsic)");
-			let extrinsic_hash =
-				match node_api_clone.send_extrinsic(hex_encoded_extrinsic, XtStatus::InBlock) {
-					Err(e) => {
-						error!("Failed to send extrinsic: {:?}", e);
-						set_extrinsics_inclusion_success(false);
-						return
-					},
-					Ok(hash) => {
-						set_extrinsics_inclusion_success(true);
-						hash
-					},
-				};
+			let extrinsic_hash = match node_api_clone
+				.submit_and_watch_extrinsic_until(encoded_extrinsic, XtStatus::InBlock)
+			{
+				Err(e) => {
+					error!("Failed to send extrinsic: {:?}", e);
+					set_extrinsics_inclusion_success(false);
+					return
+				},
+				Ok(report) => {
+					set_extrinsics_inclusion_success(true);
+					report.extrinsic_hash
+				},
+			};
 			println!("[<] Extrinsic got included into a block. Hash: {:?}\n", extrinsic_hash);
 		});
 	});
@@ -123,22 +124,23 @@ fn execute_update_market<E: TeeracleApi>(
 	for call in extrinsics.into_iter() {
 		let node_api_clone = node_api.clone();
 		tokio_handle.spawn(async move {
-			let hex_encoded_extrinsic = hex_encode(&call.encode());
-			debug!("Hex encoded extrinsic to be sent: {}", hex_encoded_extrinsic);
+			let encoded_extrinsic = call.encode();
+			debug!("Hex encoded extrinsic to be sent: {}", hex_encode(&encoded_extrinsic));
 
 			println!("[>] Update the exchange rate (send the extrinsic)");
-			let extrinsic_hash =
-				match node_api_clone.send_extrinsic(hex_encoded_extrinsic, XtStatus::InBlock) {
-					Err(e) => {
-						error!("Failed to send extrinsic: {:?}", e);
-						set_extrinsics_inclusion_success(false);
-						return
-					},
-					Ok(hash) => {
-						set_extrinsics_inclusion_success(true);
-						hash
-					},
-				};
+			let extrinsic_hash = match node_api_clone
+				.submit_and_watch_extrinsic_until(encoded_extrinsic, XtStatus::InBlock)
+			{
+				Err(e) => {
+					error!("Failed to send extrinsic: {:?}", e);
+					set_extrinsics_inclusion_success(false);
+					return
+				},
+				Ok(report) => {
+					set_extrinsics_inclusion_success(true);
+					report.extrinsic_hash
+				},
+			};
 
 			println!("[<] Extrinsic got included into a block. Hash: {:?}\n", extrinsic_hash);
 		});
