@@ -76,7 +76,7 @@ use my_node_runtime::{Hash, Header, RuntimeEvent};
 use sgx_types::*;
 use substrate_api_client::{
 	primitives::StorageChangeSet, rpc::HandleSubscription, GetHeader, SubmitAndWatchUntilSuccess,
-	SubscribeChain, SubscribeFrameSystem,
+	SubscribeChain, SubscribeFrameSystem, XtStatus,
 };
 
 #[cfg(feature = "dcap")]
@@ -797,7 +797,7 @@ fn send_extrinsic(
 
 	println!("[>] Register the TCB info (send the extrinsic)");
 	let register_qe_block_hash = api
-		.submit_and_watch_extrinsic_until_success(extrinsic, true)
+		.submit_and_watch_extrinsic_until(extrinsic, XtStatus::Finalized)
 		.unwrap()
 		.block_hash;
 	println!("[<] Extrinsic got finalized. Block hash: {:?}\n", register_qe_block_hash);
