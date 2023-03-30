@@ -258,7 +258,7 @@ jobs:
           export WORKER_IMAGE_TAG="integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}"
           export CLIENT_IMAGE_TAG="integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}"
           export NETWORK="${{ matrix.flavor_id }}-${{ matrix.demo_name }}" 
-          docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml up ${{ matrix.demo_name }} --no-build --exit-code-from ${{ matrix.demo_name }} --remove-orphans
+          docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) up ${{ matrix.demo_name }} --no-build --exit-code-from ${{ matrix.demo_name }} --remove-orphans
 
       - name: Collect Docker Logs
         continue-on-error: true
@@ -283,7 +283,7 @@ jobs:
           export WORKER_IMAGE_TAG="integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}"
           export CLIENT_IMAGE_TAG="integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}"
           export NETWORK="${{ matrix.flavor_id }}-${{ matrix.demo_name }}" 
-          docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml down
+          docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) down
 
       - name: Delete images
         run: |
