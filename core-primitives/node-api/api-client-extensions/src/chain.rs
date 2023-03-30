@@ -57,12 +57,10 @@ where
 
 	fn signed_block(&self, hash: Option<Hash>) -> ApiResult<Option<SignedBlock>> {
 		// Convert the substrate-api-clients `SignedBlock` redefinition into ours.
-		let maybe_signed_block = self.get_signed_block(hash.map(|h| h.into()))?;
-		let maybe_converted_block = match maybe_signed_block {
-			Some(block) => Some(convert_signed_block::<Runtime>(block)),
-			None => None,
-		};
-		Ok(maybe_converted_block)
+		let maybe_signed_block = self
+			.get_signed_block(hash.map(|h| h.into()))?
+			.map(convert_signed_block::<Runtime>);
+		Ok(maybe_signed_block)
 	}
 
 	fn get_genesis_hash(&self) -> ApiResult<Hash> {
