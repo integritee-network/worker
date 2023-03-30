@@ -23,6 +23,8 @@ use sp_runtime::MultiSignature;
 use substrate_api_client::{Api, ExtrinsicParams, RpcClient};
 
 pub type StorageProof = Vec<Vec<u8>>;
+// type Events = Vec<frame_system::EventRecord<RuntimeEvent, Hash>>;
+// pub type EventsAndProof = (StorageProof, Events);
 
 /// ApiClient extension that simplifies chain data access.
 pub trait ChainApi {
@@ -37,6 +39,7 @@ pub trait ChainApi {
 	fn is_grandpa_available(&self) -> ApiResult<bool>;
 	fn grandpa_authorities(&self, hash: Option<H256>) -> ApiResult<AuthorityList>;
 	fn grandpa_authorities_proof(&self, hash: Option<H256>) -> ApiResult<StorageProof>;
+	fn get_storage_value_proof(&self, block_hash: Option<H256>) -> ApiResult<StorageProof>;
 }
 
 impl<P: Pair, Client: RpcClient, Params: ExtrinsicParams> ChainApi for Api<P, Client, Params>
@@ -96,6 +99,13 @@ where
 				vec![StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec())],
 				at_block,
 			)?
+			.map(|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect())
+			.unwrap_or_default())
+	}
+
+	fn get_events_value_proof(&self, block_hash: Option<H256>) -> ApiResult<StorageProof> {
+		Ok(self
+			.get_storage_value_proof("System", "Events", block_hash)?
 			.map(|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect())
 			.unwrap_or_default())
 	}
