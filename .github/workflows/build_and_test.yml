@@ -283,11 +283,11 @@ jobs:
           name: logs-${{ matrix.test }}-${{ matrix.flavor_id }}
           path: ./${{ env.LOG_DIR }}-${{ matrix.flavor_id }}-${{ github.sha }}
 
-      - name: Stop docker containers
-        if: always()
-        run: |
-          cd docker
-          docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) stop
+      # - name: Stop docker containers
+      #   if: always()
+      #   run: |
+      #     cd docker
+      #     docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) stop
 
       # - name: Delete images
       #   run: |
