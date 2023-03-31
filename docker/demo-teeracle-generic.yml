@@ -3,9 +3,9 @@
 # The demo is parameterized with the interval that the teeracle uses to query its sources.
 # Set the `TEERACLE_INTERVAL_SECONDS` variable when invoking, e.g. `TEERACLE_INTERVAL_SECONDS=4 docker compose -f docker-compose.yml -f demo-teeracle-generic.yml up --exit-code-from demo-teeracle-generic`
 services:
-  integritee-teeracle-worker:
+  teeracle-worker-${FLAVOR}:
     image: ${WORKER_IMAGE_TAG:-integritee-cli:dev}
-    container_name: integritee-teeracle-worker-${FLAVOR}
+    container_name: teeracle-worker-${FLAVOR}
     devices:
       - "/dev/sgx/provision:/dev/sgx/provision"
       - "/dev/sgx/enclave:/dev/sgx/enclave"
@@ -16,7 +16,7 @@ services:
       dockerfile: build.Dockerfile
       target: deployed-worker
     depends_on:
-      integritee-node-${FLAVOR}:
+      node-${FLAVOR}:
         condition: service_healthy
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=info,integritee_service::teeracle=debug,ita_stf=warn,ita_oracle=debug
@@ -29,12 +29,12 @@ services:
       retries: 25
     entrypoint:
         "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-teeracle-worker-${FLAVOR} -T wss://integritee-teeracle-worker-${FLAVOR}
-        -u ws://integritee-node-${FLAVOR} -U ws://integritee-teeracle-worker-${FLAVOR} -P 2011 -w 2101 -p 9912 -h 4645
+        -u ws://node-${FLAVOR} -U ws://integritee-teeracle-worker-${FLAVOR} -P 2011 -w 2101 -p 9912 -h 4645
         run --dev --skip-ra --teeracle-interval ${TEERACLE_INTERVAL_SECONDS}s"
     restart: always
-  demo-teeracle-generic:
+  teeracle-generic-demo-${FLAVOR}:
     image: ${CLIENT_IMAGE_TAG:-integritee-cli:dev}
-    container_name: integritee-teeracle-generic-demo-${FLAVOR}
+    container_name: teeracle-generic-demo-${FLAVOR}
     devices:
       - "/dev/sgx/provision:/dev/sgx/provision"
       - "/dev/sgx/enclave:/dev/sgx/enclave"
@@ -45,7 +45,7 @@ services:
       dockerfile: build.Dockerfile
       target: deployed-client
     depends_on:
-      integritee-node-${FLAVOR}:
+      node-${FLAVOR}:
         condition: service_healthy
       integritee-teeracle-worker-${FLAVOR}:
         condition: service_healthy
@@ -55,7 +55,7 @@ services:
       - integritee-test-network-${NETWORK}
     entrypoint:
       "/usr/local/worker-cli/demo_teeracle_generic.sh
-      -u ws://integritee-node-${FLAVOR} -p 9912
+      -u ws://node-${FLAVOR} -p 9912
       -V wss://integritee-teeracle-worker-${FLAVOR} -P 2011
       -d 21 -i ${TEERACLE_INTERVAL_SECONDS}
       -C /usr/local/bin/integritee-cli 2>&1"

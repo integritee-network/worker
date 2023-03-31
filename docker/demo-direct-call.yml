@@ -1,7 +1,7 @@
 services:
   demo-direct-call:
     image: ${CLIENT_IMAGE_TAG:-integritee-cli:dev}
-    container_name: integritee-direct-call-demo-${FLAVOR}
+    container_name: demo-direct-call-${FLAVOR}
     devices:
       - "/dev/sgx/provision:/dev/sgx/provision"
       - "/dev/sgx/enclave:/dev/sgx/enclave"
@@ -12,15 +12,15 @@ services:
       dockerfile: build.Dockerfile
       target: deployed-client
     depends_on:
-      integritee-node-${FLAVOR}:
+      node-${FLAVOR}:
         condition: service_healthy
-      integritee-worker-1-${FLAVOR}:
+      worker-1-${FLAVOR}:
         condition: service_healthy
-      integritee-worker-2-${FLAVOR}:
+      worker-2-${FLAVOR}:
         condition: service_healthy
     networks:
       - integritee-test-network-${NETWORK}
     entrypoint:
-      "/usr/local/worker-cli/demo_direct_call_2_workers.sh -p 9912 -u ws://integritee-node-${FLAVOR}
-      -V wss://integritee-worker-1-${FLAVOR} -A 2011 -W wss://integritee-worker-2-${FLAVOR} -B 2012 -C /usr/local/bin/integritee-cli 2>&1"
+      "/usr/local/worker-cli/demo_direct_call_2_workers.sh -p 9912 -u ws://node-${FLAVOR}
+      -V wss://worker-1-${FLAVOR} -A 2011 -W wss://worker-2-${FLAVOR} -B 2012 -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"

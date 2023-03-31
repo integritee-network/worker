@@ -1,7 +1,7 @@
 services:
-  demo-smart-contract:
+  smart-contract-demo-${FLAVOR}:
     image: ${CLIENT_IMAGE_TAG:-integritee-cli:dev}
-    container_name: integritee-smart-contract-demo-${FLAVOR}
+    container_name: smart-contract-demo-${FLAVOR}
     devices:
       - "/dev/sgx/provision:/dev/sgx/provision"
       - "/dev/sgx/enclave:/dev/sgx/enclave"
@@ -12,17 +12,17 @@ services:
       dockerfile: build.Dockerfile
       target: deployed-client
     depends_on:
-      integritee-node-${FLAVOR}:
+      node-${FLAVOR}:
         condition: service_healthy
-      integritee-worker-1-${FLAVOR}:
+      worker-1-${FLAVOR}:
         condition: service_healthy
-      integritee-worker-2-${FLAVOR}:
+      worker-2-${FLAVOR}:
         condition: service_healthy
     environment:
       - RUST_LOG=warn,ws=warn,itc_rpc_client=warn
     networks:
       - integritee-test-network-${NETWORK}
     entrypoint:
-      "/usr/local/worker-cli/demo_smart_contract.sh -p 9912 -u ws://integritee-node-${FLAVOR}
-      -V wss://integritee-worker-1-${FLAVOR} -A 2011 -C /usr/local/bin/integritee-cli 2>&1"
+      "/usr/local/worker-cli/demo_smart_contract.sh -p 9912 -u ws://node-${FLAVOR}
+      -V wss://worker-1-${FLAVOR} -A 2011 -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"

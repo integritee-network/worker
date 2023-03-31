@@ -5,9 +5,9 @@
 # This setup requires an API key for CoinMarketCap
 # Add the API key to the environment variable `COINMARKETCAP_KEY`, with `export COINMARKETCAP_KEY=<your_key>`
 services:
-  integritee-teeracle-worker:
+  teeracle-worker-${FLAVOR}:
     image: ${WORKER_IMAGE_TAG:-integritee-cli:dev}
-    container_name: integritee-teeracle-worker-${FLAVOR}
+    container_name: teeracle-worker-${FLAVOR}
     devices:
       - "/dev/sgx/provision:/dev/sgx/provision"
       - "/dev/sgx/enclave:/dev/sgx/enclave"
@@ -18,7 +18,7 @@ services:
       dockerfile: build.Dockerfile
       target: deployed-worker
     depends_on:
-      integritee-node-${FLAVOR}:
+      node-${FLAVOR}:
         condition: service_healthy
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=info,integritee_service::teeracle=debug,ita_stf=warn,ita_exchange_oracle=debug
@@ -26,18 +26,18 @@ services:
     networks:
       - integritee-test-network-${NETWORK}
     healthcheck:
-      test: curl -s -f http://integritee-teeracle-worker-${FLAVOR}:4645/is_initialized || exit 1
+      test: curl -s -f http://teeracle-worker-${FLAVOR}:4645/is_initialized || exit 1
       interval: 10s
       timeout: 10s
       retries: 25
     entrypoint:
-        "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-teeracle-worker-${FLAVOR} -T wss://integritee-teeracle-worker-${FLAVOR}
-        -u ws://integritee-node-${FLAVOR} -U ws://integritee-teeracle-worker-${FLAVOR} -P 2011 -w 2101 -p 9912 -h 4645
+        "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-teeracle-worker-${FLAVOR} -T wss://teeracle-worker-${FLAVOR}
+        -u ws://node-${FLAVOR} -U ws://teeracle-worker-${FLAVOR} -P 2011 -w 2101 -p 9912 -h 4645
         run --dev --skip-ra --teeracle-interval ${TEERACLE_INTERVAL_SECONDS}s"
     restart: always
-  demo-teeracle:
+  teeracle-demo-${FLAVOR}:
     image: ${CLIENT_IMAGE_TAG:-integritee-cli:dev}
-    container_name: integritee-teeracle-demo-${FLAVOR}
+    container_name: teeracle-demo-${FLAVOR}
     devices:
       - "/dev/sgx/provision:/dev/sgx/provision"
       - "/dev/sgx/enclave:/dev/sgx/enclave"
@@ -48,7 +48,7 @@ services:
       dockerfile: build.Dockerfile
       target: deployed-client
     depends_on:
-      integritee-node-${FLAVOR}:
+      node-${FLAVOR}:
         condition: service_healthy
       integritee-teeracle-worker-${FLAVOR}:
         condition: service_healthy
@@ -58,8 +58,8 @@ services:
       - integritee-test-network-${NETWORK}
     entrypoint:
       "/usr/local/worker-cli/demo_teeracle_whitelist.sh
-      -u ws://integritee-node-${FLAVOR} -p 9912
-      -V wss://integritee-teeracle-worker-${FLAVOR} -P 2011
+      -u ws://node-${FLAVOR} -p 9912
+      -V wss://teeracle-worker-${FLAVOR} -P 2011
       -d 21 -i ${TEERACLE_INTERVAL_SECONDS}
       -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"

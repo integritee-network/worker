@@ -4,26 +4,26 @@ services:
     build:
       context: .
       dockerfile: ping.Dockerfile
-    depends_on: [ 'integritee-node-${FLAVOR}', 'integritee-worker-1-${FLAVOR}', 'integritee-worker-2-${FLAVOR}' ]
+    depends_on: [ 'node-${FLAVOR}', 'worker-1-${FLAVOR}', 'worker-2-${FLAVOR}' ]
     networks:
       - integritee-test-network-${NETWORK}
     #entrypoint: "ping integritee-worker-2 | while read pong; do echo \"$$(date): $$pong\"; done"
-    entrypoint: "ping integritee-worker-2-${FLAVOR}"
+    entrypoint: "ping worker-2-${FLAVOR}"
   pumba-network-delay:
     image: integritee-fork-producer:dev
     build:
       context: .
       dockerfile: fork.Dockerfile
     depends_on:
-      integritee-node-${FLAVOR}:
+      node-${FLAVOR}:
         condition: service_healthy
-      integritee-worker-1-${FLAVOR}:
+      worker-1-${FLAVOR}:
         condition: service_healthy
-      integritee-worker-2-${FLAVOR}:
+      worker-2-${FLAVOR}:
         condition: service_healthy
     networks:
       - integritee-test-network-${NETWORK}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     entrypoint:
-      "pumba --interval 3m netem --interface eth0 --duration 30s delay --time 1000 integritee-worker-2-${FLAVOR}"
+      "pumba --interval 3m netem --interface eth0 --duration 30s delay --time 1000 worker-2-${FLAVOR}"
