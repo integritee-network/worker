@@ -18,7 +18,8 @@
 use clap::Parser;
 use integritee_cli::{commands, Cli};
 
-fn main() {
+#[tokio::main]
+async fn main() {
 	env_logger::init();
 
 	let cli = Cli::parse();
