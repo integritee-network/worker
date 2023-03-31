@@ -74,6 +74,7 @@ use its_storage::{interface::FetchBlocks, BlockPruner, SidechainStorageLock};
 use log::*;
 use my_node_runtime::{Hash, Header, RuntimeEvent};
 use sgx_types::*;
+use std::thread;
 use substrate_api_client::{
 	rpc::HandleSubscription, GetHeader, SubmitAndWatch, SubscribeChain, SubscribeEvents, XtStatus,
 };
@@ -84,7 +85,7 @@ use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
 use sp_runtime::traits::Header as HeaderTrait;
-use std::{path::PathBuf, str, sync::Arc, thread, time::Duration};
+use std::{path::PathBuf, str, sync::Arc, time::Duration};
 use teerex_primitives::ShardIdentifier;
 
 mod account_funding;
@@ -113,7 +114,8 @@ pub type EnclaveWorker =
 	Worker<Config, NodeApiFactory, Enclave, InitializationHandler<WorkerModeProvider>>;
 pub type Event = substrate_api_client::EventRecord<RuntimeEvent, Hash>;
 
-fn main() {
+#[tokio::main]
+async fn main() {
 	// Setup logging
 	env_logger::init();
 
@@ -204,7 +206,8 @@ fn main() {
 			node_api,
 			tokio_handle,
 			initialization_handler,
-		);
+		)
+		.await;
 	} else if let Some(smatches) = matches.subcommand_matches("request-state") {
 		println!("*** Requesting state from a registered worker \n");
 		let node_api =
@@ -273,7 +276,7 @@ fn main() {
 
 /// FIXME: needs some discussion (restructuring?)
 #[allow(clippy::too_many_arguments)]
-fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
+async fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	config: Config,
 	shard: &ShardIdentifier,
 	enclave: Arc<E>,
@@ -317,7 +320,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	let is_development_mode = run_config.dev;
 	let ra_url = config.mu_ra_url();
 	let enclave_api_key_prov = enclave.clone();
-	thread::spawn(move || {
+	tokio::task::spawn_blocking(move || {
 		enclave_run_state_provisioning_server(
 			enclave_api_key_prov.as_ref(),
 			sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
@@ -375,7 +378,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	{
 		let direct_invocation_server_addr = config.trusted_worker_url_internal();
 		let enclave_for_direct_invocation = enclave.clone();
-		thread::spawn(move || {
+		tokio::task::spawn_blocking(move || {
 			println!(
 				"[+] Trusted RPC direct invocation server listening on {}",
 				direct_invocation_server_addr
@@ -503,22 +506,22 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 				sidechain_storage,
 				&last_synced_header,
 			)
+			.await
 			.unwrap();
 		}
 
 		// ------------------------------------------------------------------------
 		// start parentchain syncing loop (subscribe to header updates)
-		thread::Builder::new()
-			.name("parentchain_sync_loop".to_owned())
-			.spawn(move || {
-				if let Err(e) =
-					subscribe_to_parentchain_new_headers(parentchain_handler, last_synced_header)
-				{
-					error!("Parentchain block syncing terminated with a failure: {:?}", e);
-				}
-				println!("[!] Parentchain block syncing has terminated");
-			})
-			.unwrap();
+		tokio::task::spawn_blocking(move || {
+			if let Err(e) =
+				subscribe_to_parentchain_new_headers(parentchain_handler, last_synced_header)
+			{
+				error!("Parentchain block syncing terminated with a failure: {:?}", e);
+			}
+			println!("[!] Parentchain block syncing has terminated");
+		})
+		.await
+		.unwrap();
 	}
 
 	// ------------------------------------------------------------------------
@@ -550,7 +553,7 @@ fn spawn_worker_for_shard_polling<InitializationHandler>(
 	InitializationHandler: TrackInitialization + Sync + Send + 'static,
 {
 	let shard_for_initialized = *shard;
-	thread::spawn(move || {
+	tokio::task::spawn_blocking(move || {
 		const POLL_INTERVAL_SECS: u64 = 2;
 
 		loop {
@@ -703,7 +706,7 @@ fn fetch_marblerun_events_every_hour<E>(
 	E: RemoteAttestation + Clone + Sync + Send + 'static,
 {
 	let enclave = enclave.clone();
-	let handle = thread::spawn(move || {
+	let handle = tokio::task::spawn(move || {
 		const POLL_INTERVAL_5_MINUTES_IN_SECS: u64 = 5 * 60;
 		loop {
 			info!("Polling marblerun events for quotes to register");
@@ -716,7 +719,7 @@ fn fetch_marblerun_events_every_hour<E>(
 				marblerun_base_url.clone(),
 			);
 
-			thread::sleep(Duration::from_secs(POLL_INTERVAL_5_MINUTES_IN_SECS));
+			tokio::time::sleep(Duration::from_secs(POLL_INTERVAL_5_MINUTES_IN_SECS));
 		}
 	});
 
