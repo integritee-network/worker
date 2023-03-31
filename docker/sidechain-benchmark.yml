@@ -1,7 +1,7 @@
 services:
-  benchmark-${FLAVOR}:
+  sidechain-benchmark:
     image: ${CLIENT_IMAGE_TAG:-integritee-cli:dev}
-    container_name: benchmark-${FLAVOR}
+    container_name: sidechain-benchmark-${FLAVOR}
     build:
       context: ..
       dockerfile: build.Dockerfile
