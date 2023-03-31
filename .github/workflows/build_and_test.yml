@@ -200,7 +200,7 @@ jobs:
           echo "FLAVOR_ID=${{ matrix.flavor_id }}" >> $GITHUB_ENV
           echo "WORKER_IMAGE_TAG=integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}" >> $GITHUB_ENV
           echo "CLIENT_IMAGE_TAG=integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}" >> $GITHUB_ENV
-          echo "FLAVOR=${{ matrix.flavor_id }}" >> $GITHUB_ENV
+          echo "FLAVOR=${{ matrix.flavor_id }}-${{ github.sha }}" >> $GITHUB_ENV
           echo "NETWORK=${{ matrix.flavor_id }}-${{ matrix.demo_name }}" >> $GITHUB_ENV
 
       - name: Download Worker Image
