@@ -2,6 +2,7 @@ services:
   integritee-node-${FLAVOR}:
     image: "integritee/integritee-node-dev:1.0.33"
     container_name: integritee-node-${FLAVOR}
+    hostname: integritee-node-${FLAVOR}
     networks:
       - integritee-test-network-${NETWORK}
     healthcheck:
@@ -15,6 +16,7 @@ services:
   integritee-worker-1-${FLAVOR}:
     image: ${WORKER_IMAGE_TAG:-integritee-cli:dev}
     container_name: integritee-worker-1-${FLAVOR}
+    hostname: integritee-worker-1-${FLAVOR}
     devices:
       - "/dev/sgx/provision:/dev/sgx/provision"
       - "/dev/sgx/enclave:/dev/sgx/enclave"
@@ -44,6 +46,7 @@ services:
   integritee-worker-2-${FLAVOR}:
     image: ${WORKER_IMAGE_TAG:-integritee-cli:dev}
     container_name: integritee-worker-2-${FLAVOR}
+    hostname: integritee-worker-2-${FLAVOR}
     devices:
       - "/dev/sgx/provision:/dev/sgx/provision"
       - "/dev/sgx/enclave:/dev/sgx/enclave"
