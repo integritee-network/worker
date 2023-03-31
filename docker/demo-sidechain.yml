@@ -1,7 +1,7 @@
 services:
-  sidechain-demo-${FLAVOR}:
+  demo-sidechain:
     image: ${CLIENT_IMAGE_TAG:-integritee-cli:dev}
-    container_name: sidechain-demo-${FLAVOR}
+    container_name: demo-sidechain-${FLAVOR}
     devices:
       - "/dev/sgx/provision:/dev/sgx/provision"
       - "/dev/sgx/enclave:/dev/sgx/enclave"

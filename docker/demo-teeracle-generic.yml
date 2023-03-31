@@ -3,7 +3,7 @@
 # The demo is parameterized with the interval that the teeracle uses to query its sources.
 # Set the `TEERACLE_INTERVAL_SECONDS` variable when invoking, e.g. `TEERACLE_INTERVAL_SECONDS=4 docker compose -f docker-compose.yml -f demo-teeracle-generic.yml up --exit-code-from demo-teeracle-generic`
 services:
-  teeracle-worker-${FLAVOR}:
+   teeracle-worker:
     image: ${WORKER_IMAGE_TAG:-integritee-cli:dev}
     container_name: teeracle-worker-${FLAVOR}
     devices:
@@ -23,18 +23,18 @@ services:
     networks:
       - integritee-test-network-${NETWORK}
     healthcheck:
-      test: curl -s -f http://integritee-teeracle-worker-${FLAVOR}:4645/is_initialized || exit 1
+      test: curl -s -f http://teeracle-worker-${FLAVOR}:4645/is_initialized || exit 1
       interval: 10s
       timeout: 10s
       retries: 25
     entrypoint:
-        "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-teeracle-worker-${FLAVOR} -T wss://integritee-teeracle-worker-${FLAVOR}
-        -u ws://node-${FLAVOR} -U ws://integritee-teeracle-worker-${FLAVOR} -P 2011 -w 2101 -p 9912 -h 4645
+        "/usr/local/bin/integritee-service --clean-reset --ws-external -M teeracle-worker-${FLAVOR} -T wss://teeracle-worker-${FLAVOR}
+        -u ws://node-${FLAVOR} -U ws://teeracle-worker-${FLAVOR} -P 2011 -w 2101 -p 9912 -h 4645
         run --dev --skip-ra --teeracle-interval ${TEERACLE_INTERVAL_SECONDS}s"
     restart: always
-  teeracle-generic-demo-${FLAVOR}:
+  demo-teeracle-generic:
     image: ${CLIENT_IMAGE_TAG:-integritee-cli:dev}
-    container_name: teeracle-generic-demo-${FLAVOR}
+    container_name: demo-teeracle-generic-${FLAVOR}
     devices:
       - "/dev/sgx/provision:/dev/sgx/provision"
       - "/dev/sgx/enclave:/dev/sgx/enclave"
@@ -47,7 +47,7 @@ services:
     depends_on:
       node-${FLAVOR}:
         condition: service_healthy
-      integritee-teeracle-worker-${FLAVOR}:
+      teeracle-worker:
         condition: service_healthy
     environment:
       - RUST_LOG=warn,sp_io=warn,integritee_cli::exchange_oracle=debug
@@ -56,7 +56,7 @@ services:
     entrypoint:
       "/usr/local/worker-cli/demo_teeracle_generic.sh
       -u ws://node-${FLAVOR} -p 9912
-      -V wss://integritee-teeracle-worker-${FLAVOR} -P 2011
+      -V wss://teeracle-worker-${FLAVOR} -P 2011
       -d 21 -i ${TEERACLE_INTERVAL_SECONDS}
       -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"

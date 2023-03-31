@@ -5,7 +5,7 @@
 # This setup requires an API key for CoinMarketCap
 # Add the API key to the environment variable `COINMARKETCAP_KEY`, with `export COINMARKETCAP_KEY=<your_key>`
 services:
-  teeracle-worker-${FLAVOR}:
+  teeracle-worker:
     image: ${WORKER_IMAGE_TAG:-integritee-cli:dev}
     container_name: teeracle-worker-${FLAVOR}
     devices:
@@ -31,13 +31,13 @@ services:
       timeout: 10s
       retries: 25
     entrypoint:
-        "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-teeracle-worker-${FLAVOR} -T wss://teeracle-worker-${FLAVOR}
+        "/usr/local/bin/integritee-service --clean-reset --ws-external -M teeracle-worker-${FLAVOR} -T wss://teeracle-worker-${FLAVOR}
         -u ws://node-${FLAVOR} -U ws://teeracle-worker-${FLAVOR} -P 2011 -w 2101 -p 9912 -h 4645
         run --dev --skip-ra --teeracle-interval ${TEERACLE_INTERVAL_SECONDS}s"
     restart: always
-  teeracle-demo-${FLAVOR}:
+  demo-teeracle:
     image: ${CLIENT_IMAGE_TAG:-integritee-cli:dev}
-    container_name: teeracle-demo-${FLAVOR}
+    container_name: demo-teeracle-${FLAVOR}
     devices:
       - "/dev/sgx/provision:/dev/sgx/provision"
       - "/dev/sgx/enclave:/dev/sgx/enclave"
@@ -50,7 +50,7 @@ services:
     depends_on:
       node-${FLAVOR}:
         condition: service_healthy
-      integritee-teeracle-worker-${FLAVOR}:
+      teeracle-worker:
         condition: service_healthy
     environment:
       - RUST_LOG=warn,sp_io=warn,integritee_cli::exchange_oracle=debug

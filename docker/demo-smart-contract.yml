@@ -1,7 +1,7 @@
 services:
-  smart-contract-demo-${FLAVOR}:
+  demo-smart-contract:
     image: ${CLIENT_IMAGE_TAG:-integritee-cli:dev}
-    container_name: smart-contract-demo-${FLAVOR}
+    container_name: demo-smart-contract-${FLAVOR}
     devices:
       - "/dev/sgx/provision:/dev/sgx/provision"
       - "/dev/sgx/enclave:/dev/sgx/enclave"
