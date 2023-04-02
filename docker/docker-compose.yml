@@ -20,7 +20,7 @@ services:
       dockerfile: build.Dockerfile
       target: deployed-worker
     depends_on:
-      integritee-node:
+      integritee-node-${VERSION}:
         condition: service_healthy
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
@@ -44,9 +44,9 @@ services:
       dockerfile: build.Dockerfile
       target: deployed-worker
     depends_on:
-      integritee-node:
+      integritee-node-${VERSION}:
         condition: service_healthy
-      integritee-worker-1:
+      integritee-worker-1-${VERSION}:
         condition: service_healthy
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn

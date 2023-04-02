@@ -10,7 +10,7 @@ services:
       dockerfile: build.Dockerfile
       target: deployed-worker
     depends_on:
-      integritee-node:
+      integritee-node-${VERSION}:
         condition: service_healthy
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=info,integritee_service::teeracle=debug,ita_stf=warn,ita_oracle=debug
@@ -32,7 +32,7 @@ services:
       context: ..
       dockerfile: build.Dockerfile
       target: deployed-client
-    depends_on:
+    depends_on-${VERSION}:
       integritee-node:
         condition: service_healthy
       integritee-teeracle-worker:

@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: ping.Dockerfile
-    depends_on: [ 'integritee-node', 'integritee-worker-1', 'integritee-worker-2' ]
+    depends_on: [ 'integritee-node-${VERSION}', 'integritee-worker-1-${VERSION}', 'integritee-worker-2-${VERSION}' ]
     networks:
       - integritee-test-network-${NETWORK:-default}
     #entrypoint: "ping integritee-worker-2 | while read pong; do echo \"$$(date): $$pong\"; done"
@@ -15,11 +15,11 @@ services:
       context: .
       dockerfile: fork.Dockerfile
     depends_on:
-      integritee-node:
+      integritee-node-${VERSION}:
         condition: service_healthy
-      integritee-worker-1:
+      integritee-worker-1-${VERSION}:
         condition: service_healthy
-      integritee-worker-2:
+      integritee-worker-2-${VERSION}:
         condition: service_healthy
     networks:
       - integritee-test-network-${NETWORK:-default}
