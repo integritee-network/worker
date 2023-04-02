@@ -1,26 +1,24 @@
 services:
   demo-sidechain:
-    image: ${CLIENT_IMAGE_TAG:-integritee-cli:dev}
-    container_name: demo-sidechain-${FLAVOR}
-    devices:
-      - "/dev/sgx/provision:/dev/sgx/provision"
-      - "/dev/sgx/enclave:/dev/sgx/enclave"
-    volumes:
-      - "/var/run/aesmd:/var/run/aesmd"
+    image: integritee-cli:dev
+    container_name: integritee-sidechain-demo
     build:
       context: ..
       dockerfile: build.Dockerfile
       target: deployed-client
     depends_on:
-      node-${FLAVOR}:
+      integritee-node:
         condition: service_healthy
-      worker-1-${FLAVOR}:
+      integritee-worker-1:
         condition: service_healthy
-      worker-2-${FLAVOR}:
+      integritee-worker-2:
         condition: service_healthy
     networks:
-      - integritee-test-network-${NETWORK}
+      - integritee-test-network-${NETWORK:-default}
     entrypoint:
-      "/usr/local/worker-cli/demo_sidechain.sh -p 9912 -A 2011 -B 2012 -u ws://node-${FLAVOR}
-      -V wss://worker-1-${FLAVOR} -W wss://worker-2-${FLAVOR} -C /usr/local/bin/integritee-cli 2>&1"
+      "/usr/local/worker-cli/demo_sidechain.sh -p 9912 -A 2011 -B 2012 -u ws://integritee-node
+      -V wss://integritee-worker-1 -W wss://integritee-worker-2 -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"
+networks:
+  integritee-test-network:
+    driver: bridge

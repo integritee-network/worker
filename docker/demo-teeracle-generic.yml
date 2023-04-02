@@ -3,60 +3,53 @@
 # The demo is parameterized with the interval that the teeracle uses to query its sources.
 # Set the `TEERACLE_INTERVAL_SECONDS` variable when invoking, e.g. `TEERACLE_INTERVAL_SECONDS=4 docker compose -f docker-compose.yml -f demo-teeracle-generic.yml up --exit-code-from demo-teeracle-generic`
 services:
-   teeracle-worker:
-    image: ${WORKER_IMAGE_TAG:-integritee-cli:dev}
-    container_name: teeracle-worker-${FLAVOR}
-    devices:
-      - "/dev/sgx/provision:/dev/sgx/provision"
-      - "/dev/sgx/enclave:/dev/sgx/enclave"
-    volumes:
-      - "/var/run/aesmd:/var/run/aesmd"
+  integritee-teeracle-worker:
+    image: integritee-worker:dev
+    container_name: integritee-teeracle-worker
     build:
       context: ..
       dockerfile: build.Dockerfile
       target: deployed-worker
     depends_on:
-      node-${FLAVOR}:
+      integritee-node:
         condition: service_healthy
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=info,integritee_service::teeracle=debug,ita_stf=warn,ita_oracle=debug
     networks:
-      - integritee-test-network-${NETWORK}
+      - integritee-test-network-${NETWORK:-default}
     healthcheck:
-      test: curl -s -f http://teeracle-worker-${FLAVOR}:4645/is_initialized || exit 1
+      test: curl -s -f http://integritee-teeracle-worker:4645/is_initialized || exit 1
       interval: 10s
       timeout: 10s
       retries: 25
     entrypoint:
-        "/usr/local/bin/integritee-service --clean-reset --ws-external -M teeracle-worker-${FLAVOR} -T wss://teeracle-worker-${FLAVOR}
-        -u ws://node-${FLAVOR} -U ws://teeracle-worker-${FLAVOR} -P 2011 -w 2101 -p 9912 -h 4645
+        "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-teeracle-worker -T wss://integritee-teeracle-worker
+        -u ws://integritee-node -U ws://integritee-teeracle-worker -P 2011 -w 2101 -p 9912 -h 4645
         run --dev --skip-ra --teeracle-interval ${TEERACLE_INTERVAL_SECONDS}s"
     restart: always
   demo-teeracle-generic:
-    image: ${CLIENT_IMAGE_TAG:-integritee-cli:dev}
-    container_name: demo-teeracle-generic-${FLAVOR}
-    devices:
-      - "/dev/sgx/provision:/dev/sgx/provision"
-      - "/dev/sgx/enclave:/dev/sgx/enclave"
-    volumes:
-      - "/var/run/aesmd:/var/run/aesmd"
+    image: integritee-cli:dev
+    container_name: integritee-teeracle-demo
     build:
       context: ..
       dockerfile: build.Dockerfile
       target: deployed-client
     depends_on:
-      node-${FLAVOR}:
+      integritee-node:
         condition: service_healthy
-      teeracle-worker:
+      integritee-teeracle-worker:
         condition: service_healthy
     environment:
       - RUST_LOG=warn,sp_io=warn,integritee_cli::exchange_oracle=debug
     networks:
-      - integritee-test-network-${NETWORK}
+      - integritee-test-network-${NETWORK:-default}
     entrypoint:
       "/usr/local/worker-cli/demo_teeracle_generic.sh
-      -u ws://node-${FLAVOR} -p 9912
-      -V wss://teeracle-worker-${FLAVOR} -P 2011
+      -u ws://integritee-node -p 9912
+      -V wss://integritee-teeracle-worker -P 2011
       -d 21 -i ${TEERACLE_INTERVAL_SECONDS}
       -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"
+networks:
+  integritee-test-network:
+    driver: bridge

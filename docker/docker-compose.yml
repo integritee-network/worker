@@ -1,75 +1,65 @@
 services:
-  node-${FLAVOR}:
+  integritee-node:
     image: "integritee/integritee-node-dev:1.0.33"
-    container_name: node-${FLAVOR}
+    container_name: integritee-node
     networks:
-      - integritee-test-network-${NETWORK}
+      - integritee-test-network-${NETWORK:-default}
     healthcheck:
-      test: ["CMD", "nc", "-z", "node-${FLAVOR}", "9912"]
+      test: ["CMD", "nc", "-z", "integritee-node", "9912"]
       interval: 10s
       timeout: 10s
       retries: 6
     command: --dev --rpc-methods unsafe --ws-external --rpc-external --ws-port 9912
     #logging:
       #driver: local
-  worker-1-${FLAVOR}:
-    image: ${WORKER_IMAGE_TAG:-integritee-cli:dev}
-    container_name: worker-1-${FLAVOR}
-    devices:
-      - "/dev/sgx/provision:/dev/sgx/provision"
-      - "/dev/sgx/enclave:/dev/sgx/enclave"
-    volumes:
-      - "/var/run/aesmd:/var/run/aesmd"
+  integritee-worker-1:
+    image: integritee-worker:dev
+    container_name: integritee-worker-1
     build:
       context: ..
       dockerfile: build.Dockerfile
       target: deployed-worker
     depends_on:
-      node-${FLAVOR}:
+      integritee-node:
         condition: service_healthy
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
     networks:
-      - integritee-test-network-${NETWORK}
+      - integritee-test-network-${NETWORK:-default}
     healthcheck:
-      test: curl -s -f http://worker-1-${FLAVOR}:4645/is_initialized || exit 1
+      test: curl -s -f http://integritee-worker-1:4645/is_initialized || exit 1
       interval: 10s
       timeout: 10s
       retries: 25
     entrypoint:
-      "/usr/local/bin/integritee-service --clean-reset --ws-external -M worker-1-${FLAVOR} -T wss://worker-1-${FLAVOR}
-      -u ws://node-${FLAVOR} -U ws://worker-1-${FLAVOR} -P 2011 -w 2101 -p 9912 -h 4645
+      "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-1 -T wss://integritee-worker-1
+      -u ws://integritee-node -U ws://integritee-worker-1 -P 2011 -w 2101 -p 9912 -h 4645
       run --dev --skip-ra"
     restart: "no"
-  worker-2-${FLAVOR}:
-    image: ${WORKER_IMAGE_TAG:-integritee-cli:dev}
-    container_name: worker-2-${FLAVOR}
-    devices:
-      - "/dev/sgx/provision:/dev/sgx/provision"
-      - "/dev/sgx/enclave:/dev/sgx/enclave"
-    volumes:
-      - "/var/run/aesmd:/var/run/aesmd"
+  integritee-worker-2:
+    image: integritee-worker:dev
+    container_name: integritee-worker-2
     build:
       context: ..
       dockerfile: build.Dockerfile
       target: deployed-worker
     depends_on:
-      node-${FLAVOR}:
+      integritee-node:
         condition: service_healthy
-      worker-1-${FLAVOR}:
+      integritee-worker-1:
         condition: service_healthy
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
     networks:
-      - integritee-test-network-${NETWORK}
+      - integritee-test-network-${NETWORK:-default}
     healthcheck:
-      test: curl -s -f http://worker-2-${FLAVOR}:4646/is_initialized || exit 1
+      test: curl -s -f http://integritee-worker-2:4646/is_initialized || exit 1
       interval: 10s
       timeout: 10s
       retries: 25
     entrypoint:
-      "/usr/local/bin/integritee-service --clean-reset --ws-external -M worker-2-${FLAVOR} -T wss://worker-2-${FLAVOR}
-      -u ws://node-${FLAVOR} -U ws://worker-2-${FLAVOR} -P 2012 -w 2102 -p 9912 -h 4646
+      "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-2 -T wss://integritee-worker-2
+      -u ws://integritee-node -U ws://integritee-worker-2 -P 2012 -w 2102 -p 9912 -h 4646
       run --dev --skip-ra --request-state"
     restart: "no"
 networks:

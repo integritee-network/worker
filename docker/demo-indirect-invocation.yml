@@ -1,29 +1,27 @@
 services:
   demo-indirect-invocation:
-    image: ${CLIENT_IMAGE_TAG:-integritee-cli:dev}
-    container_name: demo-indirect-invocation-${FLAVOR}
-    devices:
-      - "/dev/sgx/provision:/dev/sgx/provision"
-      - "/dev/sgx/enclave:/dev/sgx/enclave"
-    volumes:
-      - "/var/run/aesmd:/var/run/aesmd"
+    image: integritee-cli:dev
+    container_name: integritee-indirect-invocation-demo
     build:
       context: ..
       dockerfile: build.Dockerfile
       target: deployed-client
     depends_on:
-      node-${FLAVOR}:
+      integritee-node:
         condition: service_healthy
-      worker-1-${FLAVOR}:
+      integritee-worker-1:
         condition: service_healthy
-      worker-2-${FLAVOR}:
+      integritee-worker-2:
         condition: service_healthy
     environment:
       - RUST_LOG=warn,ws=warn,itc_rpc_client=warn
       - FLAVOR_ID
     networks:
-      - integritee-test-network-${NETWORK}
+      - integritee-test-network-${NETWORK:-default}
     entrypoint:
-      "/usr/local/worker-cli/demo_indirect_invocation.sh -p 9912 -u ws://node-${FLAVOR}
-      -V wss://worker-1-${FLAVOR} -A 2011 -W wss://worker-2-${FLAVOR} -B 2012 -C /usr/local/bin/integritee-cli 2>&1"
+      "/usr/local/worker-cli/demo_indirect_invocation.sh -p 9912 -u ws://integritee-node
+      -V wss://integritee-worker-1 -A 2011 -W wss://integritee-worker-2 -B 2012 -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"
+networks:
+  integritee-test-network:
+    driver: bridge

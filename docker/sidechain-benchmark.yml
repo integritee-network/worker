@@ -1,21 +1,24 @@
 services:
   sidechain-benchmark:
-    image: ${CLIENT_IMAGE_TAG:-integritee-cli:dev}
-    container_name: sidechain-benchmark-${FLAVOR}
+    image: integritee-cli:dev
+    container_name: integritee-benchmark
     build:
       context: ..
       dockerfile: build.Dockerfile
       target: deployed-client
     depends_on:
-      node-${FLAVOR}:
+      integritee-node:
         condition: service_healthy
-      worker-1-${FLAVOR}:
+      integritee-worker-1:
         condition: service_healthy
-      worker-2-${FLAVOR}:
+      integritee-worker-2:
         condition: service_healthy
     networks:
-      - integritee-test-network-${NETWORK}
+      - integritee-test-network-${NETWORK:-default}
     entrypoint:
-      "/usr/local/worker-cli/benchmark.sh -p 9912 -A 2011 -u ws://node-${FLAVOR}
-      -V wss://worker-1-${FLAVOR} -C /usr/local/bin/integritee-cli 2>&1"
+      "/usr/local/worker-cli/benchmark.sh -p 9912 -A 2011 -u ws://integritee-node
+      -V wss://integritee-worker-1 -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"
+networks:
+  integritee-test-network:
+    driver: bridge

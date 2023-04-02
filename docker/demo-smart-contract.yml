@@ -1,28 +1,26 @@
 services:
   demo-smart-contract:
-    image: ${CLIENT_IMAGE_TAG:-integritee-cli:dev}
-    container_name: demo-smart-contract-${FLAVOR}
-    devices:
-      - "/dev/sgx/provision:/dev/sgx/provision"
-      - "/dev/sgx/enclave:/dev/sgx/enclave"
-    volumes:
-      - "/var/run/aesmd:/var/run/aesmd"
+    image: integritee-cli:dev
+    container_name: integritee-smart-contract-demo
     build:
       context: ..
       dockerfile: build.Dockerfile
       target: deployed-client
     depends_on:
-      node-${FLAVOR}:
+      integritee-node:
         condition: service_healthy
-      worker-1-${FLAVOR}:
+      integritee-worker-1:
         condition: service_healthy
-      worker-2-${FLAVOR}:
+      integritee-worker-2:
         condition: service_healthy
     environment:
       - RUST_LOG=warn,ws=warn,itc_rpc_client=warn
     networks:
-      - integritee-test-network-${NETWORK}
+      - integritee-test-network-${NETWORK:-default}
     entrypoint:
-      "/usr/local/worker-cli/demo_smart_contract.sh -p 9912 -u ws://node-${FLAVOR}
-      -V wss://worker-1-${FLAVOR} -A 2011 -C /usr/local/bin/integritee-cli 2>&1"
+      "/usr/local/worker-cli/demo_smart_contract.sh -p 9912 -u ws://integritee-node
+      -V wss://integritee-worker-1 -A 2011 -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"
+networks:
+  integritee-test-network:
+    driver: bridge
