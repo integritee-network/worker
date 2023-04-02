@@ -1,6 +1,7 @@
 services:
   integritee-node:
     image: "integritee/integritee-node-dev:1.0.33"
+    hostname: integritee-node
     networks:
       - integritee-test-network-${NETWORK:-default}
     healthcheck:
@@ -13,6 +14,7 @@ services:
       #driver: local
   integritee-worker-1:
     image: integritee-worker:${VERSION:-dev}
+    hostname: integritee-worker-1
     build:
       context: ..
       dockerfile: build.Dockerfile
@@ -36,6 +38,7 @@ services:
     restart: "no"
   integritee-worker-2:
     image: integritee-worker:${VERSION:-dev}
+    hostname: integritee-worker-1
     build:
       context: ..
       dockerfile: build.Dockerfile
