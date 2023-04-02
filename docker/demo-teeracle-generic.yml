@@ -4,7 +4,7 @@
 # Set the `TEERACLE_INTERVAL_SECONDS` variable when invoking, e.g. `TEERACLE_INTERVAL_SECONDS=4 docker compose -f docker-compose.yml -f demo-teeracle-generic.yml up --exit-code-from demo-teeracle-generic`
 services:
   integritee-teeracle-worker:
-    image: integritee-worker:dev
+    image: integritee-worker:${VERSION:-dev}
     container_name: integritee-teeracle-worker
     build:
       context: ..
@@ -28,7 +28,7 @@ services:
         run --dev --skip-ra --teeracle-interval ${TEERACLE_INTERVAL_SECONDS}s"
     restart: always
   demo-teeracle-generic:
-    image: integritee-cli:dev
+    image: integritee-cli:${VERSION:-dev}
     container_name: integritee-teeracle-demo
     build:
       context: ..

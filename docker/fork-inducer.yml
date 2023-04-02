@@ -1,6 +1,6 @@
 services:
   worker-ping:
-    image: worker-ping:dev
+    image: worker-ping:${VERSION:-dev}
     build:
       context: .
       dockerfile: ping.Dockerfile
@@ -10,7 +10,7 @@ services:
     #entrypoint: "ping integritee-worker-2 | while read pong; do echo \"$$(date): $$pong\"; done"
     entrypoint: "ping integritee-worker-2"
   pumba-network-delay:
-    image: integritee-fork-producer:dev
+    image: integritee-fork-producer:${VERSION:-dev}
     build:
       context: .
       dockerfile: fork.Dockerfile

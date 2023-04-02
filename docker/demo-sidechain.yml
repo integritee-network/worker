@@ -1,6 +1,6 @@
 services:
   demo-sidechain:
-    image: integritee-cli:dev
+    image: integritee-cli:${VERSION:-dev}
     container_name: integritee-sidechain-demo
     build:
       context: ..

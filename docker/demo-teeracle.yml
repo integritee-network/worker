@@ -6,7 +6,7 @@
 # Add the API key to the environment variable `COINMARKETCAP_KEY`, with `export COINMARKETCAP_KEY=<your_key>`
 services:
   integritee-teeracle-worker:
-    image: integritee-worker:dev
+    image: integritee-worker:${VERSION:-dev}
     container_name: integritee-teeracle-worker
     build:
       context: ..
@@ -31,7 +31,7 @@ services:
         run --dev --skip-ra --teeracle-interval ${TEERACLE_INTERVAL_SECONDS}s"
     restart: always
   demo-teeracle:
-    image: integritee-cli:dev
+    image: integritee-cli:${VERSION:-dev}
     container_name: integritee-teeracle-demo
     build:
       context: ..

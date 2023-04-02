@@ -199,6 +199,9 @@ jobs:
         run: |
           echo "FLAVOR_ID=${{ matrix.flavor_id }}" >> $GITHUB_ENV
           echo "NETWORK=${{ matrix.flavor_id }}-${{ matrix.demo_name }}" >> $GITHUB_ENV
+          echo "VERSION=dev.$RANDOM" >> $GITHUB_ENV
+          echo "WORKER_IMAGE_TAG=${{ env.WORKER_IMAGE_TAG }}.${{ env.VERSION }}" >> $GITHUB_ENV
+          echo "CLIENT_IMAGE_TAG=${{ env.CLIENT_IMAGE_TAG }}.${{ env.VERSION }}" >> $GITHUB_ENV
 
       - name: Download Worker Image
         uses: actions/download-artifact@v3
@@ -224,17 +227,17 @@ jobs:
       # Before tagging, delete the old "stuck" ones to be sure that the newly created ones are the latest
       # Without if the docker image rmi throws an error if the image doesn't exist.
       ##
-      # - name: Re-name Image Tags
-      #   run: |
-      #     if [[ "$(docker images -q ${{ env.WORKER_IMAGE_TAG }} 2> /dev/null)" == "" ]]; then
-      #        docker image rmi --force ${{ env.WORKER_IMAGE_TAG }} 2>/dev/null
-      #     fi
-      #     if [[ "$(docker images -q ${{ env.CLIENT_IMAGE_TAG }} 2> /dev/null)" == "" ]]; then
-      #        docker image rmi --force ${{ env.CLIENT_IMAGE_TAG }} 2>/dev/null
-      #     fi
-      #     docker tag integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.WORKER_IMAGE_TAG }}
-      #     docker tag integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.CLIENT_IMAGE_TAG }}
-      #     docker images --all
+      - name: Re-name Image Tags
+        run: |
+          if [[ "$(docker images -q ${{ env.WORKER_IMAGE_TAG }} 2> /dev/null)" == "" ]]; then
+             docker image rmi --force ${{ env.WORKER_IMAGE_TAG }} 2>/dev/null
+          fi
+          if [[ "$(docker images -q ${{ env.CLIENT_IMAGE_TAG }} 2> /dev/null)" == "" ]]; then
+             docker image rmi --force ${{ env.CLIENT_IMAGE_TAG }} 2>/dev/null
+          fi
+          docker tag integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.WORKER_IMAGE_TAG }}
+          docker tag integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.CLIENT_IMAGE_TAG }}
+          docker images --all
 
       ##
       # Using down instead of stop is better, because it will remove the stopped container with its state

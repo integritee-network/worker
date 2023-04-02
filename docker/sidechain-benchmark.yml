@@ -1,6 +1,6 @@
 services:
   sidechain-benchmark:
-    image: integritee-cli:dev
+    image: integritee-cli:${VERSION:-dev}
     container_name: integritee-benchmark
     build:
       context: ..
