@@ -197,11 +197,12 @@ jobs:
 
       - name: Set env
         run: |
+          version=$RANDOM
           echo "FLAVOR_ID=${{ matrix.flavor_id }}" >> $GITHUB_ENV
           echo "NETWORK=${{ matrix.flavor_id }}-${{ matrix.demo_name }}" >> $GITHUB_ENV
-          echo "VERSION=dev.$RANDOM" >> $GITHUB_ENV
-          echo "WORKER_IMAGE_TAG=${{ env.WORKER_IMAGE_TAG }}.${{ env.VERSION }}" >> $GITHUB_ENV
-          echo "CLIENT_IMAGE_TAG=${{ env.CLIENT_IMAGE_TAG }}.${{ env.VERSION }}" >> $GITHUB_ENV
+          echo "VERSION=$version" >> $GITHUB_ENV
+          echo "WORKER_IMAGE_TAG=${{ env.WORKER_IMAGE_TAG }}.$version" >> $GITHUB_ENV
+          echo "CLIENT_IMAGE_TAG=${{ env.CLIENT_IMAGE_TAG }}.$version" >> $GITHUB_ENV
 
       - name: Download Worker Image
         uses: actions/download-artifact@v3
