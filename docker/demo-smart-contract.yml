@@ -1,6 +1,11 @@
 services:
   demo-smart-contract:
     image: integritee-cli:${VERSION:-dev}
+    devices:
+      - "/dev/sgx/provision:/dev/sgx/provision"
+      - "/dev/sgx/enclave:/dev/sgx/enclave"
+    volumes:
+      - "/var/run/aesmd:/var/run/aesmd"
     build:
       context: ..
       dockerfile: build.Dockerfile
