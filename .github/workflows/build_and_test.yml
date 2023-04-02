@@ -265,7 +265,7 @@ jobs:
       - name: Integration Test ${{ matrix.test }}-${{ matrix.flavor_id }}
         run: |
           cd docker
-          docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) -p ${NETWORK} up ${{ matrix.demo_name }} --no-build --exit-code-from ${{ matrix.demo_name }} --remove-orphans
+          docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) -p ${NETWORK} up ${{ matrix.demo_name }} --no-build --exit-code-from ${{ matrix.demo_name }}
 
       - name: Collect Docker Logs
         continue-on-error: true
@@ -283,11 +283,11 @@ jobs:
           name: logs-${{ matrix.test }}-${{ matrix.flavor_id }}
           path: ./${{ env.LOG_DIR }}-${{ matrix.flavor_id }}-${{ github.sha }}
 
-      # - name: Stop docker containers
-      #   if: always()
-      #   run: |
-      #     cd docker
-      #     docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) stop
+      - name: Stop docker containers
+        if: always()
+        run: |
+          cd docker
+          docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) -p ${NETWORK} stop
 
       # - name: Delete images
       #   run: |
