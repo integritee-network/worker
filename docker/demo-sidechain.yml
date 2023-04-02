@@ -1,7 +1,6 @@
 services:
   demo-sidechain:
     image: integritee-cli:${VERSION:-dev}
-    container_name: integritee-sidechain-demo
     build:
       context: ..
       dockerfile: build.Dockerfile

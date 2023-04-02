@@ -1,7 +1,7 @@
 services:
   demo-direct-call:
     image: integritee-cli:${VERSION:-dev}
-    container_name: integritee-direct-call-demo
+
     build:
       context: ..
       dockerfile: build.Dockerfile

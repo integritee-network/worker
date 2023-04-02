@@ -1,7 +1,6 @@
 services:
   demo-smart-contract:
     image: integritee-cli:${VERSION:-dev}
-    container_name: integritee-smart-contract-demo
     build:
       context: ..
       dockerfile: build.Dockerfile

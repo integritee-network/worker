@@ -5,7 +5,6 @@
 services:
   integritee-teeracle-worker:
     image: integritee-worker:${VERSION:-dev}
-    container_name: integritee-teeracle-worker
     build:
       context: ..
       dockerfile: build.Dockerfile
@@ -29,7 +28,6 @@ services:
     restart: always
   demo-teeracle-generic:
     image: integritee-cli:${VERSION:-dev}
-    container_name: integritee-teeracle-demo
     build:
       context: ..
       dockerfile: build.Dockerfile

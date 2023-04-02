@@ -1,7 +1,6 @@
 services:
   demo-indirect-invocation:
     image: integritee-cli:${VERSION:-dev}
-    container_name: integritee-indirect-invocation-demo
     build:
       context: ..
       dockerfile: build.Dockerfile
