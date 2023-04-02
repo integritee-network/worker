@@ -249,7 +249,7 @@ jobs:
         if: always()
         run: |
           cd docker
-          docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml -p ${NETWORK} stop
+          docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) -p ${NETWORK} stop
 
       # Comment it out while testing last step & collect docker logs
       # - name: Delete stopped containers
@@ -266,7 +266,7 @@ jobs:
       - name: Integration Test ${{ matrix.test }}-${{ matrix.flavor_id }}
         run: |
           cd docker
-          docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml -p ${NETWORK} up ${{ matrix.demo_name }} --no-build --exit-code-from ${{ matrix.demo_name }}
+          docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) -p ${NETWORK} up ${{ matrix.demo_name }} --no-build --exit-code-from ${{ matrix.demo_name }}
 
 
       - name: Collect Docker Logs
@@ -289,7 +289,7 @@ jobs:
         if: always()
         run: |
           cd docker
-          docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml -p ${NETWORK} stop
+          docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) -p ${NETWORK} stop
 
       # - name: Delete images
       #   run: |
