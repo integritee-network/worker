@@ -21,6 +21,6 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "po
 
 itc-parentchain = { path = "../../core/parentchain/parentchain-crate" }
 itp-enclave-api-ffi = { path = "ffi" }
+itp-node-api = { path = "../node-api" }
 itp-settings = { path = "../settings" }
 itp-types = { path = "../types" }
-itp-node-api = { path = "../node-api" }
