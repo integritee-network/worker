@@ -19,7 +19,7 @@ services:
       integritee-worker-2-${VERSION}:
         condition: service_healthy
     networks:
-      - integritee-test-network-${NETWORK:-default}
+      - integritee-test-network
     entrypoint:
       "/usr/local/worker-cli/demo_sidechain.sh -p 9912 -A 2011 -B 2012 -u ws://integritee-node
       -V wss://integritee-worker-1 -W wss://integritee-worker-2 -C /usr/local/bin/integritee-cli 2>&1"

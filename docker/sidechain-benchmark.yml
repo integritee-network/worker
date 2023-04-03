@@ -18,7 +18,7 @@ services:
       integritee-worker-2-${VERSION}:
         condition: service_healthy
     networks:
-      - integritee-test-network-${NETWORK:-default}
+      - integritee-test-network
     entrypoint:
       "/usr/local/worker-cli/benchmark.sh -p 9912 -A 2011 -u ws://integritee-node
       -V wss://integritee-worker-1 -C /usr/local/bin/integritee-cli 2>&1"

@@ -20,7 +20,7 @@ services:
     environment:
       - RUST_LOG=warn,ws=warn,itc_rpc_client=warn
     networks:
-      - integritee-test-network-${NETWORK:-default}
+      - integritee-test-network
     entrypoint:
       "/usr/local/worker-cli/demo_smart_contract.sh -p 9912 -u ws://integritee-node
       -V wss://integritee-worker-1 -A 2011 -C /usr/local/bin/integritee-cli 2>&1"

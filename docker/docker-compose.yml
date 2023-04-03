@@ -8,7 +8,7 @@ services:
     volumes:
       - "/var/run/aesmd:/var/run/aesmd"
     networks:
-      - integritee-test-network-${NETWORK:-default}
+      - integritee-test-network
     healthcheck:
       test: ["CMD", "nc", "-z", "integritee-node", "9912"]
       interval: 10s
@@ -35,7 +35,7 @@ services:
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
     networks:
-      - integritee-test-network-${NETWORK:-default}
+      - integritee-test-network
     healthcheck:
       test: curl -s -f http://integritee-worker-1:4645/is_initialized || exit 1
       interval: 10s
@@ -66,7 +66,7 @@ services:
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
     networks:
-      - integritee-test-network-${NETWORK:-default}
+      - integritee-test-network
     healthcheck:
       test: curl -s -f http://integritee-worker-2:4646/is_initialized || exit 1
       interval: 10s
@@ -78,21 +78,5 @@ services:
       run --dev --skip-ra --request-state"
     restart: "no"
 networks:
-  integritee-test-network-default:
-    driver: bridge
-  integritee-test-network-sidechain-demo-indirect-invocation:
-    driver: bridge
-  integritee-test-network-sidechain-demo-direct-call:
-    driver: bridge
-  integritee-test-network-sidechain-demo-sidechain:
-    driver: bridge
-  integritee-test-network-sidechain-sidechain-benchmark:
-    driver: bridge
-  integritee-test-network-sidechain-evm-demo-smart-contract:
-    driver: bridge
-  integritee-test-network-offchain-worker-demo-indirect-invocation:
-    driver: bridge
-  integritee-test-network-teeracle-demo-teeracle:
-    driver: bridge
-  integritee-test-network-teeracle-demo-teeracle-generic:
+  integritee-test-network:
     driver: bridge

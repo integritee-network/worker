@@ -20,7 +20,7 @@ services:
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=info,integritee_service::teeracle=debug,ita_stf=warn,ita_oracle=debug
     networks:
-      - integritee-test-network-${NETWORK:-default}
+      - integritee-test-network
     healthcheck:
       test: curl -s -f http://integritee-teeracle-worker:4645/is_initialized || exit 1
       interval: 10s
@@ -50,7 +50,7 @@ services:
     environment:
       - RUST_LOG=warn,sp_io=warn,integritee_cli::exchange_oracle=debug
     networks:
-      - integritee-test-network-${NETWORK:-default}
+      - integritee-test-network
     entrypoint:
       "/usr/local/worker-cli/demo_teeracle_generic.sh
       -u ws://integritee-node -p 9912

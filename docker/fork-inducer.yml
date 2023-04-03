@@ -11,7 +11,7 @@ services:
       dockerfile: ping.Dockerfile
     depends_on: [ 'integritee-node-${VERSION}', 'integritee-worker-1-${VERSION}', 'integritee-worker-2-${VERSION}' ]
     networks:
-      - integritee-test-network-${NETWORK:-default}
+      - integritee-test-network
     #entrypoint: "ping integritee-worker-2 | while read pong; do echo \"$$(date): $$pong\"; done"
     entrypoint: "ping integritee-worker-2"
   pumba-network-delay:
@@ -32,7 +32,7 @@ services:
       integritee-worker-2-${VERSION}:
         condition: service_healthy
     networks:
-      - integritee-test-network-${NETWORK:-default}
+      - integritee-test-network
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     entrypoint:

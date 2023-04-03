@@ -199,7 +199,7 @@ jobs:
         run: |
           version=$RANDOM
           echo "FLAVOR_ID=${{ matrix.flavor_id }}" >> $GITHUB_ENV
-          echo "NETWORK=${{ matrix.flavor_id }}-${{ matrix.demo_name }}" >> $GITHUB_ENV
+          echo "PROJECT=${{ matrix.flavor_id }}-${{ matrix.demo_name }}" >> $GITHUB_ENV
           echo "VERSION=dev.$version" >> $GITHUB_ENV
           echo "WORKER_IMAGE_TAG=integritee-worker:dev.$version" >> $GITHUB_ENV
           echo "CLIENT_IMAGE_TAG=integritee-cli:dev.$version" >> $GITHUB_ENV
@@ -249,7 +249,7 @@ jobs:
         if: always()
         run: |
           cd docker
-          docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) -p ${NETWORK} stop
+          docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) -p ${PROJECT} stop
 
       # Comment it out while testing last step & collect docker logs
       # - name: Delete stopped containers
@@ -266,7 +266,7 @@ jobs:
       - name: Integration Test ${{ matrix.test }}-${{ matrix.flavor_id }}
         run: |
           cd docker
-          docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) -p ${NETWORK} up ${{ matrix.demo_name }} --no-build --exit-code-from ${{ matrix.demo_name }}
+          docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) -p ${PROJECT} up ${{ matrix.demo_name }} --no-build --exit-code-from ${{ matrix.demo_name }} --remove-orphans
 
 
       - name: Collect Docker Logs
@@ -289,17 +289,17 @@ jobs:
         if: always()
         run: |
           cd docker
-          docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) -p ${NETWORK} stop
+          docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) -p ${PROJECT} stop
 
-      # - name: Delete images
-      #   run: |
-      #     if [[ "$(docker images -q $WORKER_IMAGE_TAG 2> /dev/null)" == "" ]]; then
-      #        docker image rmi --force $WORKER_IMAGE_TAG 2>/dev/null
-      #     fi
-      #     if [[ "$(docker images -q $CLIENT_IMAGE_TAG 2> /dev/null)" == "" ]]; then
-      #        docker image rmi --force $CLIENT_IMAGE_TAG 2>/dev/null
-      #     fi
-      #     docker images --all
+      - name: Delete images
+        run: |
+          if [[ "$(docker images -q ${{ env.WORKER_IMAGE_TAG }} 2> /dev/null)" == "" ]]; then
+             docker image rmi --force ${{ env.WORKER_IMAGE_TAG }} 2>/dev/null
+          fi
+          if [[ "$(docker images -q ${{ env.CLIENT_IMAGE_TAG }} 2> /dev/null)" == "" ]]; then
+             docker image rmi --force ${{ env.CLIENT_IMAGE_TAG }} 2>/dev/null
+          fi
+          docker images --all
 
 
   release:
