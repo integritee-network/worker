@@ -34,28 +34,14 @@ where
 	Signer: Pair,
 	MultiSignature: From<Signer::Signature>,
 	Client: Request,
-	Runtime: FrameSystemConfig,
+	Runtime: FrameSystemConfig<AccountId = AccountId, AccountData = AccountData, Index = Index>,
 	Params: ExtrinsicParams<Runtime::Index, Runtime::Hash>,
-	Runtime::AccountId: From<AccountId>,
-	Runtime::Index: Into<u32>,
-	Runtime::AccountData: Into<AccountData>,
 {
 	fn get_nonce_of(&self, who: &AccountId) -> ApiResult<Index> {
-		let account_id = who.clone().into();
-		Ok(self.get_account_info(&account_id)?.map_or_else(|| 0, |info| info.nonce.into()))
+		Ok(self.get_account_info(&who)?.map_or_else(|| 0, |info| info.nonce))
 	}
 
 	fn get_free_balance(&self, who: &AccountId) -> ApiResult<Balance> {
-		let account_id = who.clone().into();
-		let maybe_account_info = self.get_account_info(&account_id)?;
-
-		let free_balance = match maybe_account_info {
-			Some(account_info) => {
-				let data: AccountData = account_info.data.into();
-				data.free
-			},
-			None => 0,
-		};
-		Ok(free_balance)
+		Ok(self.get_account_data(&who)?.map_or_else(|| 0, |data| data.free))
 	}
 }
