@@ -5,8 +5,9 @@
 # This setup requires an API key for CoinMarketCap
 # Add the API key to the environment variable `COINMARKETCAP_KEY`, with `export COINMARKETCAP_KEY=<your_key>`
 services:
-  integritee-teeracle-worker:
+  integritee-teeracle-worker-${VERSION}:
     image: integritee-worker:${VERSION:-dev}
+    hostname: integritee-teeracle-worker
     devices:
       - "/dev/sgx/provision:/dev/sgx/provision"
       - "/dev/sgx/enclave:/dev/sgx/enclave"

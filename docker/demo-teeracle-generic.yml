@@ -3,8 +3,9 @@
 # The demo is parameterized with the interval that the teeracle uses to query its sources.
 # Set the `TEERACLE_INTERVAL_SECONDS` variable when invoking, e.g. `TEERACLE_INTERVAL_SECONDS=4 docker compose -f docker-compose.yml -f demo-teeracle-generic.yml up --exit-code-from demo-teeracle-generic`
 services:
-  integritee-teeracle-worker:
+  integritee-teeracle-worker-${VERSION}:
     image: integritee-worker:${VERSION:-dev}
+    hostname: integritee-teeracle-worker
     devices:
       - "/dev/sgx/provision:/dev/sgx/provision"
       - "/dev/sgx/enclave:/dev/sgx/enclave"
@@ -45,7 +46,7 @@ services:
     depends_on-${VERSION}:
       integritee-node:
         condition: service_healthy
-      integritee-teeracle-worker:
+      integritee-teeracle-worker-${VERSION}:
         condition: service_healthy
     environment:
       - RUST_LOG=warn,sp_io=warn,integritee_cli::exchange_oracle=debug
