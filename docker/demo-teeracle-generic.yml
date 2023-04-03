@@ -43,8 +43,8 @@ services:
       context: ..
       dockerfile: build.Dockerfile
       target: deployed-client
-    depends_on-${VERSION}:
-      integritee-node:
+    depends_on:
+      integritee-node-${VERSION}:
         condition: service_healthy
       integritee-teeracle-worker-${VERSION}:
         condition: service_healthy
