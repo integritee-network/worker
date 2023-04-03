@@ -15,14 +15,14 @@
 
 */
 
-use crate::ApiResult;
+use crate::{ApiClientError, ApiResult};
 use itp_api_client_types::{Block, SignedBlock};
 use itp_types::parentchain::{BlockNumber, Hash, Header, StorageProof};
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use sp_runtime::{traits::GetRuntimeBlockType, DeserializeOwned};
 use substrate_api_client::{
-	api::Error::NoBlockHash, primitives::StorageKey, rpc::Request, Api, ExtrinsicParams,
-	FrameSystemConfig, GetBlock, GetHeader, GetStorage,
+	primitives::StorageKey, rpc::Request, Api, ExtrinsicParams, FrameSystemConfig, GetBlock,
+	GetHeader, GetStorage,
 };
 
 /// ApiClient extension that simplifies chain data access.
@@ -43,43 +43,36 @@ pub trait ChainApi {
 impl<Signer, Client, Params, Runtime> ChainApi for Api<Signer, Client, Params, Runtime>
 where
 	Client: Request,
-	Runtime: FrameSystemConfig + GetRuntimeBlockType,
+	Runtime: FrameSystemConfig<Hash = Hash, Header = Header, BlockNumber = BlockNumber>
+		+ GetRuntimeBlockType,
 	Params: ExtrinsicParams<Runtime::Index, Runtime::Hash>,
-	Runtime::Header: DeserializeOwned + Into<Header>,
-	Runtime::Hash: From<Hash> + Into<Hash>,
+	Runtime::Header: DeserializeOwned,
 	Runtime::RuntimeBlock: DeserializeOwned + Into<Block>,
-	Runtime::BlockNumber: Into<u32>,
 {
 	fn last_finalized_block(&self) -> ApiResult<Option<SignedBlock>> {
 		self.get_finalized_head()?
-			.map_or_else(|| Ok(None), |hash| self.signed_block(Some(hash.into())))
+			.map_or_else(|| Ok(None), |hash| self.signed_block(Some(hash)))
 	}
 
 	fn signed_block(&self, hash: Option<Hash>) -> ApiResult<Option<SignedBlock>> {
 		// Convert the substrate-api-clients `SignedBlock` redefinition into ours.
-		let maybe_signed_block = self
-			.get_signed_block(hash.map(|h| h.into()))?
-			.map(convert_signed_block::<Runtime>);
+		let maybe_signed_block = self.get_signed_block(hash)?.map(convert_signed_block::<Runtime>);
 		Ok(maybe_signed_block)
 	}
 
 	fn get_genesis_hash(&self) -> ApiResult<Hash> {
-		if let Some(hash) = self.get_block_hash(Some(0u32.into()))? {
-			Ok(hash.into())
-		} else {
-			Err(NoBlockHash)
-		}
+		self.get_block_hash(Some(0u32.into()))?.ok_or(ApiClientError::NoBlockHash)
 	}
 
 	fn header(&self, header_hash: Option<Hash>) -> ApiResult<Option<Header>> {
-		Ok(self.get_header(header_hash.map(|h| h.into()))?.map(Into::into))
+		Ok(self.get_header(header_hash)?)
 	}
 
 	fn get_blocks(&self, from: BlockNumber, to: BlockNumber) -> ApiResult<Vec<SignedBlock>> {
 		let mut blocks = Vec::<SignedBlock>::new();
 
 		for n in from..=to {
-			if let Some(block) = self.get_signed_block_by_num(Some(n.into()))? {
+			if let Some(block) = self.get_signed_block_by_num(Some(n))? {
 				blocks.push(convert_signed_block::<Runtime>(block));
 			}
 		}
@@ -89,10 +82,7 @@ where
 	fn is_grandpa_available(&self) -> ApiResult<bool> {
 		let genesis_hash = Some(self.get_genesis_hash().expect("Failed to get genesis hash"));
 		Ok(self
-			.get_storage_by_key_hash(
-				StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec()),
-				genesis_hash.map(|b| b.into()),
-			)?
+			.get_storage_by_key_hash(StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec()), genesis_hash)?
 			.map(|v: VersionedAuthorityList| v.into())
 			.map(|v: AuthorityList| !v.is_empty())
 			.unwrap_or(false))
@@ -100,10 +90,7 @@ where
 
 	fn grandpa_authorities(&self, at_block: Option<Hash>) -> ApiResult<AuthorityList> {
 		Ok(self
-			.get_storage_by_key_hash(
-				StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec()),
-				at_block.map(|b| b.into()),
-			)?
+			.get_storage_by_key_hash(StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec()), at_block)?
 			.map(|g: VersionedAuthorityList| g.into())
 			.unwrap_or_default())
 	}
@@ -112,7 +99,7 @@ where
 		Ok(self
 			.get_storage_proof_by_keys(
 				vec![StorageKey(GRANDPA_AUTHORITIES_KEY.to_vec())],
-				at_block.map(|b| b.into()),
+				at_block,
 			)?
 			.map(|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect())
 			.unwrap_or_default())
