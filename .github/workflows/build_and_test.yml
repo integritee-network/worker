@@ -93,8 +93,8 @@ jobs:
           path: integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
 
   clippy:
-    runs-on: ubuntu-22.04
-    container: "integritee/integritee-dev:0.2"
+    runs-on: integritee-builder-sgx
+    container: "integritee/integritee-dev:0.2.1"
     steps:
       - uses: actions/checkout@v3
       - name: init rust
