@@ -4,6 +4,8 @@
 # Set the `TEERACLE_INTERVAL_SECONDS` variable when invoking, e.g. `TEERACLE_INTERVAL_SECONDS=4 docker compose -f docker-compose.yml -f demo-teeracle.yml up --exit-code-from demo-teeracle`
 # This setup requires an API key for CoinMarketCap
 # Add the API key to the environment variable `COINMARKETCAP_KEY`, with `export COINMARKETCAP_KEY=<your_key>`
+# Set the `ADDITIONAL_RUNTIME_FLAGS` variable to for additional flags.
+# To skip remote attestation: `export ADDITIONAL_RUNTIME_FLAG="--skip-ra"`
 services:
   integritee-teeracle-worker-${VERSION}:
     image: integritee-worker:${VERSION:-dev}
@@ -33,7 +35,7 @@ services:
     entrypoint:
         "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-teeracle-worker -T wss://integritee-teeracle-worker
         -u ws://integritee-node -U ws://integritee-teeracle-worker -P 2011 -w 2101 -p 9912 -h 4645
-        run --dev --teeracle-interval ${TEERACLE_INTERVAL_SECONDS}s"
+        run --dev ${ADDITIONAL_RUNTIME_FLAGS} --teeracle-interval ${TEERACLE_INTERVAL_SECONDS}s"
     restart: always
   demo-teeracle:
     image: integritee-cli:${VERSION:-dev}
