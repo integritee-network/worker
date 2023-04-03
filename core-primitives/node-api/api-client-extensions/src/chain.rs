@@ -53,7 +53,7 @@ where
 	}
 
 	fn signed_block(&self, hash: Option<Hash>) -> ApiResult<Option<SignedBlock>> {
-		self.get_signed_block(hash)
+		Ok(self.get_signed_block(hash)?.map(|block| block.into()))
 	}
 
 	fn get_genesis_hash(&self) -> ApiResult<Hash> {
@@ -69,7 +69,7 @@ where
 
 		for n in from..=to {
 			if let Some(block) = self.get_signed_block_by_num(Some(n))? {
-				blocks.push(block);
+				blocks.push(block.into());
 			}
 		}
 		Ok(blocks)

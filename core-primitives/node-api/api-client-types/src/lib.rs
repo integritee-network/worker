@@ -57,6 +57,7 @@ pub use api::*;
 #[cfg(feature = "std")]
 mod api {
 	use super::ParentchainExtrinsicParams;
+	use sp_runtime::generic::SignedBlock as GenericSignedBlock;
 	use substrate_api_client::Api;
 
 	pub use my_node_runtime::{Block, Runtime, UncheckedExtrinsic};
@@ -64,7 +65,6 @@ mod api {
 	pub use substrate_api_client::{
 		api::Error as ApiClientError,
 		rpc::{Error as RpcClientError, WsRpcClient},
-		SignedBlock as GenericSignedBlock,
 	};
 
 	pub type SignedBlock = GenericSignedBlock<Block>;
