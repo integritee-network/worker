@@ -38,10 +38,10 @@ where
 	Params: ExtrinsicParams<Runtime::Index, Runtime::Hash>,
 {
 	fn get_nonce_of(&self, who: &AccountId) -> ApiResult<Index> {
-		Ok(self.get_account_info(&who)?.map_or_else(|| 0, |info| info.nonce))
+		Ok(self.get_account_info(who)?.map_or_else(|| 0, |info| info.nonce))
 	}
 
 	fn get_free_balance(&self, who: &AccountId) -> ApiResult<Balance> {
-		Ok(self.get_account_data(&who)?.map_or_else(|| 0, |data| data.free))
+		Ok(self.get_account_data(who)?.map_or_else(|| 0, |data| data.free))
 	}
 }
