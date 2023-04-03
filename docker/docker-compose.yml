@@ -48,7 +48,7 @@ services:
     restart: "no"
   integritee-worker-2-${VERSION}:
     image: integritee-worker:${VERSION:-dev}
-    hostname: integritee-worker-1
+    hostname: integritee-worker-2
     build:
       context: ..
       dockerfile: build.Dockerfile
