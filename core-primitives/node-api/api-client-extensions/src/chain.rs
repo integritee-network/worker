@@ -19,7 +19,7 @@ use crate::{ApiClientError, ApiResult};
 use itp_api_client_types::{Block, SignedBlock};
 use itp_types::parentchain::{BlockNumber, Hash, Header, StorageProof};
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
-use sp_runtime::{traits::GetRuntimeBlockType, DeserializeOwned};
+use sp_runtime::traits::GetRuntimeBlockType;
 use substrate_api_client::{
 	primitives::StorageKey, rpc::Request, Api, ExtrinsicParams, FrameSystemConfig, GetBlock,
 	GetHeader, GetStorage,
@@ -44,10 +44,8 @@ impl<Signer, Client, Params, Runtime> ChainApi for Api<Signer, Client, Params, R
 where
 	Client: Request,
 	Runtime: FrameSystemConfig<Hash = Hash, Header = Header, BlockNumber = BlockNumber>
-		+ GetRuntimeBlockType,
+		+ GetRuntimeBlockType<RuntimeBlock = Block>,
 	Params: ExtrinsicParams<Runtime::Index, Runtime::Hash>,
-	Runtime::Header: DeserializeOwned,
-	Runtime::RuntimeBlock: DeserializeOwned + Into<Block>,
 {
 	fn last_finalized_block(&self) -> ApiResult<Option<SignedBlock>> {
 		self.get_finalized_head()?
@@ -55,9 +53,7 @@ where
 	}
 
 	fn signed_block(&self, hash: Option<Hash>) -> ApiResult<Option<SignedBlock>> {
-		// Convert the substrate-api-clients `SignedBlock` redefinition into ours.
-		let maybe_signed_block = self.get_signed_block(hash)?.map(convert_signed_block::<Runtime>);
-		Ok(maybe_signed_block)
+		self.get_signed_block(hash)
 	}
 
 	fn get_genesis_hash(&self) -> ApiResult<Hash> {
@@ -65,7 +61,7 @@ where
 	}
 
 	fn header(&self, header_hash: Option<Hash>) -> ApiResult<Option<Header>> {
-		Ok(self.get_header(header_hash)?)
+		self.get_header(header_hash)
 	}
 
 	fn get_blocks(&self, from: BlockNumber, to: BlockNumber) -> ApiResult<Vec<SignedBlock>> {
@@ -73,7 +69,7 @@ where
 
 		for n in from..=to {
 			if let Some(block) = self.get_signed_block_by_num(Some(n))? {
-				blocks.push(convert_signed_block::<Runtime>(block));
+				blocks.push(block);
 			}
 		}
 		Ok(blocks)
@@ -103,19 +99,5 @@ where
 			)?
 			.map(|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect())
 			.unwrap_or_default())
-	}
-}
-
-// Necessary because of https://github.com/scs/substrate-api-client/issues/492.
-fn convert_signed_block<Runtime>(
-	signed_block: substrate_api_client::SignedBlock<Runtime::RuntimeBlock>,
-) -> SignedBlock
-where
-	Runtime: GetRuntimeBlockType,
-	Runtime::RuntimeBlock: Into<Block>,
-{
-	SignedBlock {
-		block: signed_block.block.into(),
-		justifications: signed_block.justifications.map(|justifactions| justifactions.into()),
 	}
 }

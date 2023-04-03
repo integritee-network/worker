@@ -61,13 +61,13 @@ mod api {
 
 	pub use my_node_runtime::{Block, Runtime, UncheckedExtrinsic};
 
-	pub type SignedBlock = sp_runtime::generic::SignedBlock<Block>;
-
 	pub use substrate_api_client::{
 		api::Error as ApiClientError,
 		rpc::{Error as RpcClientError, WsRpcClient},
+		SignedBlock as GenericSignedBlock,
 	};
 
+	pub type SignedBlock = GenericSignedBlock<Block>;
 	pub type ParentchainApi =
 		Api<sp_core::sr25519::Pair, WsRpcClient, ParentchainExtrinsicParams, Runtime>;
 }

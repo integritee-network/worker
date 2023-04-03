@@ -3350,6 +3350,7 @@ dependencies = [
  "frame-support",
  "itc-parentchain",
  "itp-enclave-api-ffi",
+ "itp-node-api",
  "itp-settings",
  "itp-types",
  "log 0.4.17",
