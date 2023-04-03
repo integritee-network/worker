@@ -93,7 +93,7 @@ jobs:
           path: integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
 
   clippy:
-    runs-on: integritee-builder-sgx
+    runs-on: ubuntu-22.04
     container: "integritee/integritee-dev:0.2.1"
     steps:
       - uses: actions/checkout@v3
