@@ -34,7 +34,7 @@ dependencies = [
  "bitvec",
  "derive_more",
  "either",
- "frame-metadata 15.1.0",
+ "frame-metadata 15.0.0 (git+https://github.com/paritytech/frame-metadata)",
  "hex",
  "log",
  "parity-scale-codec",
@@ -984,8 +984,8 @@ dependencies = [
 
 [[package]]
 name = "frame-metadata"
-version = "15.1.0"
-source = "git+https://github.com/paritytech/frame-metadata#438a5b098bb9d5b5a09bdc5b68275b2c5e63a010"
+version = "15.0.0"
+source = "git+https://github.com/paritytech/frame-metadata#040a53c63af277e280282028b73b992eac9c35a2"
 dependencies = [
  "cfg-if 1.0.0",
  "parity-scale-codec",
@@ -999,7 +999,7 @@ version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.39#1837f423b494254e1d27834b1c9da34b2c0c2375"
 dependencies = [
  "bitflags",
- "frame-metadata 15.0.0",
+ "frame-metadata 15.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support-procedural",
  "impl-trait-for-tuples",
  "k256",
@@ -2112,7 +2112,7 @@ name = "itp-storage"
 version = "0.9.0"
 dependencies = [
  "derive_more",
- "frame-metadata 15.0.0",
+ "frame-metadata 15.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support",
  "hash-db",
  "itp-types",
@@ -4366,7 +4366,7 @@ dependencies = [
  "ac-node-api",
  "ac-primitives",
  "derive_more",
- "frame-metadata 15.1.0",
+ "frame-metadata 15.0.0 (git+https://github.com/paritytech/frame-metadata)",
  "hex",
  "log",
  "parity-scale-codec",
