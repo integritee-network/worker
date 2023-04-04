@@ -146,16 +146,16 @@ where
 			let events_chunk_to_sync: Vec<Vec<u8>> = block_chunk_to_sync
 				.iter()
 				.map(|block| {
-					self.parentchain_api.get_events_for_block(Some(block.block.hash()))
-				})?
-				.collect();
+					self.parentchain_api.get_events_for_block(Some(block.block.header.hash()))
+				})
+				.collect::<Result<Vec<_>, _>>()?;
 
 			let events_proofs_chunk_to_sync: Vec<StorageProof> = block_chunk_to_sync
 				.iter()
 				.map(|block| {
-					self.parentchain_api.get_events_value_proof(Some(block.block.hash()))
-				})?
-				.collect();
+					self.parentchain_api.get_events_value_proof(Some(block.block.header.hash()))
+				})
+				.collect::<Result<Vec<_>, _>>()?;
 
 			self.enclave_api.sync_parentchain(
 				block_chunk_to_sync.as_slice(),

@@ -84,4 +84,12 @@ impl ChainApi for ParentchainApiMock {
 	fn grandpa_authorities_proof(&self, _hash: Option<H256>) -> ApiResult<StorageProof> {
 		todo!()
 	}
+
+	fn get_events_value_proof(&self, _block_hash: Option<H256>) -> ApiResult<StorageProof> {
+		todo!()
+	}
+
+	fn get_events_for_block(&self, _block_hash: Option<H256>) -> ApiResult<itp_node_api::api_client::Events> {
+		todo!()
+	}
 }

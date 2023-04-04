@@ -50,7 +50,7 @@ impl Sidechain for Enclave {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 		let blocks_enc = blocks.encode();
 		let events_enc = events.encode();
-		let event_proofs_enc = events_proofs.encode();
+		let events_proofs_enc = events_proofs.encode();
 
 		let result = unsafe {
 			ffi::sync_parentchain(

@@ -24,6 +24,7 @@ use itc_parentchain::primitives::{
 };
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain, EnclaveResult};
 use itp_settings::worker::MR_ENCLAVE_SIZE;
+use itp_storage::StorageProof;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_core::ed25519;
 
@@ -88,6 +89,8 @@ impl Sidechain for EnclaveMock {
 	fn sync_parentchain<ParentchainBlock: ParentchainBlockTrait>(
 		&self,
 		_blocks: &[sp_runtime::generic::SignedBlock<ParentchainBlock>],
+		_events: &[Vec<u8>],
+		_events_proofs: &[StorageProof],
 		_nonce: u32,
 	) -> EnclaveResult<()> {
 		Ok(())
