@@ -2709,6 +2709,7 @@ dependencies = [
  "substrate-client-keystore",
  "teerex-primitives",
  "thiserror 1.0.40",
+ "tokio",
  "ws",
 ]
 
@@ -8226,7 +8227,6 @@ dependencies = [
  "sp-runtime",
  "sp-runtime-interface",
  "url 2.3.1",
- "ws",
 ]
 
 [[package]]

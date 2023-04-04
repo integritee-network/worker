@@ -74,7 +74,8 @@ pub struct Cli {
 	command: Commands,
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
 	env_logger::init();
 
 	let cli = Cli::parse();
