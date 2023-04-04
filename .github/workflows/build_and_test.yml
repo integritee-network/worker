@@ -26,8 +26,8 @@ env:
 
   # Change the matrix below to enable these values
   # example:
-  #  host: ${{ env.RUNNER_NONSGX_BUILDER }}
-  #  sgx_mode: ${{ env.SGX_SW_MODE }}
+  #  host: $RUNNER_NONSGX_BUILDER
+  #  sgx_mode: $SGX_SW_MODE
   ##
   SGX_SW_MODE: SW 
   RUNNER_NONSGX_BUILDER: ubuntu-latest
@@ -50,21 +50,21 @@ jobs:
         include:
           - flavor_id: sidechain
             mode: sidechain
-            host: ${{ env.RUNNER_SGX_BUILDER }}
-            sgx_mode: ${{ env.SGX_HW_MODE }}
+            host: $RUNNER_SGX_BUILDER
+            sgx_mode: $SGX_HW_MODE
           - flavor_id: offchain-worker
             mode: offchain-worker
-            host: ${{ env.RUNNER_SGX_BUILDER }}
-            sgx_mode: ${{ env.SGX_HW_MODE }}
+            host: $RUNNER_SGX_BUILDER
+            sgx_mode: $SGX_HW_MODE
           - flavor_id: teeracle
             mode: teeracle
-            host: ${{ env.RUNNER_SGX_BUILDER }}
-            sgx_mode: ${{ env.SGX_HW_MODE }}
+            host: $RUNNER_SGX_BUILDER
+            sgx_mode: $SGX_HW_MODE
           - flavor_id: sidechain-evm
             mode: sidechain
             additional_features: evm
-            host: ${{ env.RUNNER_SGX_BUILDER }}
-            sgx_mode: ${{ env.SGX_HW_MODE }}
+            host: $RUNNER_SGX_BUILDER
+            sgx_mode: $SGX_HW_MODE
 
     steps:
       - uses: actions/checkout@v3
@@ -191,43 +191,43 @@ jobs:
           - test: M6
             flavor_id: sidechain
             demo_name: demo-indirect-invocation
-            host: ${{ env.RUNNER_SGX_TEST }}
-            sgx_mode: ${{ env.SGX_HW_MODE }}
+            host: $RUNNER_SGX_TEST
+            sgx_mode: $SGX_HW_MODE
           - test: M8
             flavor_id: sidechain
             demo_name: demo-direct-call
-            host: ${{ env.RUNNER_SGX_TEST }}
-            sgx_mode: ${{ env.SGX_HW_MODE }}
+            host: $RUNNER_SGX_TEST
+            sgx_mode: $SGX_HW_MODE
           - test: Sidechain
             flavor_id: sidechain
             demo_name: demo-sidechain
-            host: ${{ env.RUNNER_SGX_TEST }}
-            sgx_mode: ${{ env.SGX_HW_MODE }}
+            host: $RUNNER_SGX_TEST
+            sgx_mode: $SGX_HW_MODE
           - test: M6
             flavor_id: offchain-worker
             demo_name: demo-indirect-invocation
-            host: ${{ env.RUNNER_SGX_TEST }}
-            sgx_mode: ${{ env.SGX_HW_MODE }}
+            host: $RUNNER_SGX_TEST
+            sgx_mode: $SGX_HW_MODE
           - test: Teeracle
             flavor_id: teeracle
             demo_name: demo-teeracle
-            host: ${{ env.RUNNER_SGX_TEST }}
-            sgx_mode: ${{ env.SGX_HW_MODE }}
+            host: $RUNNER_SGX_TEST
+            sgx_mode: $SGX_HW_MODE
           - test: Teeracle
             flavor_id: teeracle
             demo_name: demo-teeracle-generic
-            host: ${{ env.RUNNER_SGX_TEST }}
-            sgx_mode: ${{ env.SGX_HW_MODE }}
+            host: $RUNNER_SGX_TEST
+            sgx_mode: $SGX_HW_MODE
           - test: Benchmark
             flavor_id: sidechain
             demo_name: sidechain-benchmark
-            host: ${{ env.RUNNER_SGX_TEST }}
-            sgx_mode: ${{ env.SGX_HW_MODE }}
+            host: $RUNNER_SGX_TEST
+            sgx_mode: $SGX_HW_MODE
           - test: EVM
             flavor_id: sidechain-evm
             demo_name: demo-smart-contract
-            host: ${{ env.RUNNER_SGX_TEST }}
-            sgx_mode: ${{ env.SGX_HW_MODE }}
+            host: $RUNNER_SGX_TEST
+            sgx_mode: $SGX_HW_MODE
 
     steps:
       - uses: actions/checkout@v3
@@ -311,14 +311,14 @@ jobs:
         with:
           images: 'integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }},integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}'
           tail: all
-          dest: ./${{ env.LOG_DIR }}-${{ matrix.flavor_id }}-${{ github.sha }}
+          dest: ./$LOG_DIR-${{ matrix.flavor_id }}-${{ github.sha }}
 
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v3
         with:
           name: logs-${{ matrix.test }}-${{ matrix.flavor_id }}
-          path: ./${{ env.LOG_DIR }}-${{ matrix.flavor_id }}-${{ github.sha }}
+          path: ./$LOG_DIR-${{ matrix.flavor_id }}-${{ github.sha }}
 
       - name: Stop docker containers
         if: always()
