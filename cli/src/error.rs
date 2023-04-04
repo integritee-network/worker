@@ -26,8 +26,8 @@ pub enum Error {
 	ApiClient(ApiClientError),
 	#[error("Could not retrieve Header from node")]
 	MissingBlock,
-	#[error("Confirmed Block Number ({0:?}) exeeds expected one ({0:?})")]
-	ConfirmedBlockNumeberTooHigh(BlockNumber, BlockNumber),
+	#[error("Confirmed Block Number ({0:?}) exceeds expected one ({0:?})")]
+	ConfirmedBlockNumberTooHigh(BlockNumber, BlockNumber),
 	#[error("Confirmed Block Hash ({0:?}) does not match expected one ({0:?})")]
 	ConfirmedBlockHashDoesNotMatchExpected(BlockHash, BlockHash),
 }
