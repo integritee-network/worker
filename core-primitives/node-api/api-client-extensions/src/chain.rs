@@ -21,8 +21,8 @@ use itp_types::parentchain::{BlockNumber, Hash, Header, StorageProof};
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use sp_runtime::traits::GetRuntimeBlockType;
 use substrate_api_client::{
-	api::Error as ApiClientError, primitives::StorageKey, rpc::Request, Api, ExtrinsicParams,
-	FrameSystemConfig, GetBlock, GetHeader, GetStorage,
+	primitives::StorageKey, rpc::Request, Api, ExtrinsicParams, FrameSystemConfig, GetBlock,
+	GetHeader, GetStorage,
 };
 
 /// ApiClient extension that simplifies chain data access.
