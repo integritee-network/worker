@@ -142,13 +142,19 @@ where
 				return Ok(until_synced_header)
 			}
 
-			// ANDREW
-			let events = self.parentchain_api.get_events_for_block(Some(until_synced_header.hash()));
-			let events_proof = self.parentchain_api.get_events_value_proof(Some(until_synced_header.hash()));
+			let events_and_proofs: Vec<_> = block_chunk_to_sync
+				.iter()
+				.map(|block| {
+					(self.parentchain_api.get_events_for_block(Some(block.block.hash())), self.parentchain_api.get_events_value_proof(Some(block.block.hash())))
+				})
+				.collect()?;
 
 			// ANDREW
 			// Add support to take events as Vec<u8> and events_proof into `sync_parentchain()`
-			self.enclave_api.sync_parentchain(block_chunk_to_sync.as_slice(), 0)?;
+			self.enclave_api.sync_parentchain(
+				block_chunk_to_sync.as_slice(),
+				events_and_proofs.as_slice(),
+				0)?;
 
 			until_synced_header = block_chunk_to_sync
 				.last()

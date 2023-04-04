@@ -67,6 +67,8 @@ extern "C" {
 		retval: *mut sgx_status_t,
 		blocks: *const u8,
 		blocks_size: usize,
+		events_and_proofs: *const u8,
+		events_and_proofs_size: usize,
 		nonce: *const u32,
 	) -> sgx_status_t;
 

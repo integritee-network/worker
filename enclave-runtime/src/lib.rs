@@ -48,6 +48,7 @@ use itc_parentchain::block_import_dispatcher::{
 use itp_block_import_queue::PushToBlockQueue;
 use itp_component_container::ComponentGetter;
 use itp_node_api::metadata::NodeMetadata;
+use itp_storage::StorageProof;
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
 use itp_sgx_crypto::{ed25519, Ed25519Seal, Rsa3072Seal};
@@ -338,7 +339,8 @@ pub unsafe extern "C" fn init_shard(shard: *const u8, shard_size: u32) -> sgx_st
 pub unsafe extern "C" fn sync_parentchain(
 	blocks_to_sync: *const u8,
 	blocks_to_sync_size: usize,
-	/* ANDREW Add events + read_proof here */
+	events_and_proofs_to_sync: *const u8,
+	events_and_proofs_to_sync_size: usize,
 	_nonce: *const u32,
 ) -> sgx_status_t {
 	let blocks_to_sync = match Vec::<SignedBlock>::decode_raw(blocks_to_sync, blocks_to_sync_size) {
@@ -349,6 +351,19 @@ pub unsafe extern "C" fn sync_parentchain(
 	if let Err(e) = dispatch_parentchain_blocks_for_import::<WorkerModeProvider>(blocks_to_sync) {
 		return e.into()
 	}
+
+	let events_and_proofs_to_sync = match StorageProof::decode_raw(events_and_proofs_to_sync, events_and_proofs_to_sync_size) {
+		Ok(events_proof) => events_and_proofs,
+		Err(e) => return Error::Codec(e).into(),
+	};
+
+	// if let Err(e) = validate_events(events_to_sync, events_proof_to_sync) {
+	// 	return e.into()
+	// }
+
+	// ANDREW
+	// how to get this type inside the enclave? or just pass along as bytes?
+	// type Events = Vec<frame_system::EventRecord<RuntimeEvent, Hash>>;
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -381,6 +396,12 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 	import_dispatcher.dispatch_import(blocks_to_sync)?;
 	Ok(())
 }
+
+// ANDREW
+// /// Validates the events coming from the parentchain
+// fn validate_events() -> Result<()> {
+	
+// }
 
 /// Triggers the import of parentchain blocks when using a queue to sync parentchain block import
 /// with sidechain block production.
