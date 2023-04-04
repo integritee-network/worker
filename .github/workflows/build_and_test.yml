@@ -39,7 +39,7 @@ jobs:
           access_token: ${{ secrets.GITHUB_TOKEN }}
 
   build-test:
-    runs-on: ${{ env.RUNNER_BUILDER }}
+    runs-on: $RUNNER_BUILDER
     strategy:
       fail-fast: false
       matrix:
@@ -77,7 +77,7 @@ jobs:
         run: >
           docker build -t integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}
           --target deployed-worker
-          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=${{ env.SGX_MODE }}
+          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=$SGX_MODE
           -f build.Dockerfile .
 
       - name: Build CLI client
@@ -171,7 +171,7 @@ jobs:
         uses: andymckay/cancel-action@0.3
 
   integration-tests:
-    runs-on: ${{ env.RUNNER_TEST }}
+    runs-on: $RUNNER_TEST
     if: ${{ always() }}
     needs: build-test
     env:
