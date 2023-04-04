@@ -180,7 +180,7 @@ fn check_if_received_event_exceeds_expected(
 	info!("Confirmed block Number: {:?}", confirmed_block_number);
 	// The returned block number belongs to a subsequent event. We missed our event and can break the loop.
 	if confirmed_block_number > block_number {
-		return Err(Error::ConfirmedBlockNumeberTooHigh(confirmed_block_number, block_number))
+		return Err(Error::ConfirmedBlockNumberTooHigh(confirmed_block_number, block_number))
 	}
 	// The block number is correct, but the block hash does not fit.
 	if block_number == confirmed_block_number && block_hash != confirmed_block_hash {
