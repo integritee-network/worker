@@ -17,6 +17,7 @@
 use codec::Error as CodecError;
 use serde_json::Error as JsonError;
 use std::{boxed::Box, sync::mpsc::RecvError};
+use substrate_api_client::metadata::InvalidMetadataError;
 use thiserror;
 use ws::Error as WsClientError;
 
@@ -34,6 +35,14 @@ pub enum Error {
 	WsClientError(#[from] WsClientError),
 	#[error("Faulty channel: {0}")]
 	MspcReceiver(#[from] RecvError),
+	#[error("InvalidMetadata: {0:?}")]
+	InvalidMetadata(InvalidMetadataError),
 	#[error("Custom Error: {0}")]
 	Custom(Box<dyn std::error::Error + Sync + Send + 'static>),
+}
+
+impl From<InvalidMetadataError> for Error {
+	fn from(error: InvalidMetadataError) -> Self {
+		Error::InvalidMetadata(error)
+	}
 }

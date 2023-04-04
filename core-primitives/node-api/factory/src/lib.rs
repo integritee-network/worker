@@ -27,6 +27,8 @@ pub trait CreateNodeApi {
 /// Node API factory error.
 #[derive(Debug, thiserror::Error)]
 pub enum NodeApiFactoryError {
+	#[error("Could not connect to node with rpc client: {0}")]
+	FailedToCreateRpcClient(#[from] itp_api_client_types::RpcClientError),
 	#[error("Failed to create a node API: {0}")]
 	FailedToCreateNodeApi(#[from] itp_api_client_types::ApiClientError),
 	#[error(transparent)]
@@ -49,8 +51,11 @@ impl NodeApiFactory {
 
 impl CreateNodeApi for NodeApiFactory {
 	fn create_api(&self) -> Result<ParentchainApi> {
-		ParentchainApi::new(WsRpcClient::new(self.node_url.as_str()))
-			.map_err(NodeApiFactoryError::FailedToCreateNodeApi)
-			.map(|a| a.set_signer(self.signer.clone()))
+		let rpc_client = WsRpcClient::new(self.node_url.as_str())
+			.map_err(NodeApiFactoryError::FailedToCreateRpcClient)?;
+		let mut api =
+			ParentchainApi::new(rpc_client).map_err(NodeApiFactoryError::FailedToCreateNodeApi)?;
+		api.set_signer(self.signer.clone());
+		Ok(api)
 	}
 }

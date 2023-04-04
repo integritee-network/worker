@@ -98,6 +98,7 @@ impl NodeMetadata {
 			None => Err(Error::MetadataNotSet),
 			Some(m) => m
 				.storage_value_key(storage_prefix, storage_key_name)
+				.map(|key| key.into())
 				.map_err(Error::NodeMetadata),
 		}
 	}
@@ -112,6 +113,7 @@ impl NodeMetadata {
 			None => Err(Error::MetadataNotSet),
 			Some(m) => m
 				.storage_map_key::<K>(storage_prefix, storage_key_name, map_key)
+				.map(|key| key.into())
 				.map_err(Error::NodeMetadata),
 		}
 	}
@@ -127,6 +129,7 @@ impl NodeMetadata {
 			None => Err(Error::MetadataNotSet),
 			Some(m) => m
 				.storage_double_map_key(storage_prefix, storage_key_name, first, second)
+				.map(|key| key.into())
 				.map_err(Error::NodeMetadata),
 		}
 	}

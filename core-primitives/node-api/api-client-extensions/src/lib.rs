@@ -17,7 +17,7 @@
 
 //! Some substrate-api-client extension traits.
 
-pub use substrate_api_client::{rpc::WsRpcClient, Api, ApiClientError};
+pub use substrate_api_client::{api::Error as ApiClientError, rpc::WsRpcClient, Api};
 
 pub mod account;
 pub mod chain;

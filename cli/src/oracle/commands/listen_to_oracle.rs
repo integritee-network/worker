@@ -21,8 +21,8 @@ use itp_node_api::api_client::ParentchainApi;
 use itp_time_utils::{duration_now, remaining_time};
 use log::{debug, info};
 use my_node_runtime::{Hash, RuntimeEvent};
-use std::{sync::mpsc::channel, time::Duration};
-use substrate_api_client::FromHexString;
+use std::time::Duration;
+use substrate_api_client::{rpc::HandleSubscription, SubscribeFrameSystem};
 
 /// Listen to exchange rate events.
 #[derive(Debug, Clone, Parser)]
@@ -47,14 +47,12 @@ fn count_oracle_update_events(api: &ParentchainApi, duration: Duration) -> Event
 	let stop = duration_now() + duration;
 
 	//subscribe to events
-	let (events_in, events_out) = channel();
-	api.subscribe_events(events_in).unwrap();
+	let mut subscription = api.subscribe_system_events().unwrap();
 	let mut count = 0;
 
 	while remaining_time(stop).unwrap_or_default() > Duration::ZERO {
-		let events_str = events_out.recv().unwrap();
-		let events_vec_bytes = Vec::from_hex(events_str).unwrap();
-		count += report_event_count(&events_vec_bytes);
+		let event_bytes = subscription.next().unwrap().unwrap().changes[0].1.clone().unwrap().0;
+		count += report_event_count(&event_bytes);
 	}
 	debug!("Received {} ExchangeRateUpdated event(s) in total", count);
 	count
