@@ -16,7 +16,7 @@
 
 */
 
-use itp_api_client_types::{ParentchainApi, WsRpcClient};
+use itp_api_client_types::{ParentchainApi, ParentchainExtrinsicSigner, WsRpcClient};
 use sp_core::sr25519;
 
 /// Trait to create a node API, based on a node URL and signer.
@@ -27,12 +27,24 @@ pub trait CreateNodeApi {
 /// Node API factory error.
 #[derive(Debug, thiserror::Error)]
 pub enum NodeApiFactoryError {
-	#[error("Could not connect to node with rpc client: {0}")]
-	FailedToCreateRpcClient(#[from] itp_api_client_types::RpcClientError),
-	#[error("Failed to create a node API: {0}")]
-	FailedToCreateNodeApi(#[from] itp_api_client_types::ApiClientError),
+	#[error("Could not connect to node with rpc client")]
+	FailedToCreateRpcClient(itp_api_client_types::RpcClientError),
+	#[error("Failed to create a node API")]
+	FailedToCreateNodeApi(itp_api_client_types::ApiClientError),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
+}
+
+impl From<itp_api_client_types::RpcClientError> for NodeApiFactoryError {
+	fn from(error: itp_api_client_types::RpcClientError) -> Self {
+		NodeApiFactoryError::FailedToCreateRpcClient(error)
+	}
+}
+
+impl From<itp_api_client_types::ApiClientError> for NodeApiFactoryError {
+	fn from(error: itp_api_client_types::ApiClientError) -> Self {
+		NodeApiFactoryError::FailedToCreateNodeApi(error)
+	}
 }
 
 pub type Result<T> = std::result::Result<T, NodeApiFactoryError>;
@@ -40,12 +52,12 @@ pub type Result<T> = std::result::Result<T, NodeApiFactoryError>;
 /// Node API factory implementation.
 pub struct NodeApiFactory {
 	node_url: String,
-	signer: sr25519::Pair,
+	signer: ParentchainExtrinsicSigner,
 }
 
 impl NodeApiFactory {
 	pub fn new(url: String, signer: sr25519::Pair) -> Self {
-		NodeApiFactory { node_url: url, signer }
+		NodeApiFactory { node_url: url, signer: ParentchainExtrinsicSigner::new(signer) }
 	}
 }
 

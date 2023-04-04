@@ -22,11 +22,12 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub use itp_types::parentchain::{Balance, Hash, Index};
-pub use sp_runtime::MultiSignature;
+pub use itp_types::parentchain::{
+	AccountId, Address, Balance, Hash, Index, Signature as PairSignature,
+};
 pub use substrate_api_client::{
-	AssetTip, BaseExtrinsicParams, BaseExtrinsicParamsBuilder, CallIndex, GenericAddress, PlainTip,
-	SubstrateDefaultSignedExtra, UncheckedExtrinsicV4,
+	AssetTip, CallIndex, GenericAdditionalParams, GenericExtrinsicParams, GenericSignedExtra,
+	PlainTip, StaticExtrinsicSigner, UncheckedExtrinsicV4,
 };
 
 pub type ParentchainPlainTip = PlainTip<Balance>;
@@ -35,28 +36,29 @@ pub type ParentchainAssetTip = AssetTip<Balance>;
 /// Configuration for the ExtrinsicParams.
 ///
 /// Valid for the default integritee node
-pub type ParentchainExtrinsicParams = BaseExtrinsicParams<ParentchainPlainTip, Index, Hash>;
-pub type ParentchainExtrinsicParamsBuilder = BaseExtrinsicParamsBuilder<ParentchainPlainTip, Hash>;
+pub type ParentchainExtrinsicParams = GenericExtrinsicParams<ParentchainPlainTip, Index, Hash>;
+pub type ParentchainAdditionalParams = GenericAdditionalParams<ParentchainPlainTip, Hash>;
 
 // Pay in asset fees.
 //
 // This needs to be used if the node uses the `pallet_asset_tx_payment`.
-//pub type ParentchainExtrinsicParams =  BaseExtrinsicParams<ParentchainAssetTip, Index, Hash>;
-//pub type ParentchainExtrinsicParamsBuilder = BaseExtrinsicParamsBuilder<ParentchainAssetTip, Hash>;
+//pub type ParentchainExtrinsicParams =  GenericExtrinsicParams<ParentchainAssetTip, Index, Hash>;
+// pub type ParentchainAdditionalParams = GenericAdditionalParams<ParentchainAssetTip, Hash>;
 
-pub type ParentchainUncheckedExtrinsic<Call> = UncheckedExtrinsicV4<Call, ParentchainSignedExtra>;
-pub type ParentchainSignedExtra = SubstrateDefaultSignedExtra<ParentchainPlainTip, Index>;
+pub type ParentchainUncheckedExtrinsic<Call> =
+	UncheckedExtrinsicV4<Address, Call, PairSignature, ParentchainSignedExtra>;
+pub type ParentchainSignedExtra = GenericSignedExtra<ParentchainPlainTip, Index>;
 pub type ParentchainSignature = Signature<ParentchainSignedExtra>;
 
 /// Signature type of the [UncheckedExtrinsicV4].
-pub type Signature<SignedExtra> = Option<(GenericAddress, MultiSignature, SignedExtra)>;
+pub type Signature<SignedExtra> = Option<(Address, PairSignature, SignedExtra)>;
 
 #[cfg(feature = "std")]
 pub use api::*;
 
 #[cfg(feature = "std")]
 mod api {
-	use super::ParentchainExtrinsicParams;
+	use super::{PairSignature, ParentchainExtrinsicParams, StaticExtrinsicSigner};
 	use sp_runtime::generic::SignedBlock as GenericSignedBlock;
 	use substrate_api_client::Api;
 
@@ -68,6 +70,9 @@ mod api {
 	};
 
 	pub type SignedBlock = GenericSignedBlock<Block>;
+	pub type ParentchainExtrinsicSigner =
+		StaticExtrinsicSigner<sp_core::sr25519::Pair, PairSignature>;
+
 	pub type ParentchainApi =
-		Api<sp_core::sr25519::Pair, WsRpcClient, ParentchainExtrinsicParams, Runtime>;
+		Api<ParentchainExtrinsicSigner, WsRpcClient, ParentchainExtrinsicParams, Runtime>;
 }

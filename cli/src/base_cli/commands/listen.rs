@@ -17,11 +17,10 @@
 
 use crate::{command_utils::get_chain_api, Cli};
 use base58::ToBase58;
-use codec::{Decode, Encode};
+use codec::Encode;
 use log::*;
 use my_node_runtime::{Hash, RuntimeEvent};
-use std::vec::Vec;
-use substrate_api_client::{rpc::HandleSubscription, SubscribeFrameSystem};
+use substrate_api_client::SubscribeEvents;
 
 #[derive(Parser)]
 pub struct ListenCommand {
@@ -41,7 +40,7 @@ impl ListenCommand {
 		info!("Subscribing to events");
 		let mut count = 0u32;
 		let mut blocks = 0u32;
-		let mut subscription = api.subscribe_system_events().unwrap();
+		let mut subscription = api.subscribe_events().unwrap();
 		loop {
 			if let Some(e) = self.events {
 				if count >= e {
@@ -54,12 +53,9 @@ impl ListenCommand {
 				}
 			};
 
-			let event_bytes = subscription.next().unwrap().unwrap().changes[0].1.clone().unwrap().0;
-			let events_result = Vec::<frame_system::EventRecord<RuntimeEvent, Hash>>::decode(
-				&mut event_bytes.as_slice(),
-			);
+			let event_results = subscription.next_event::<RuntimeEvent, Hash>().unwrap();
 			blocks += 1;
-			match events_result {
+			match event_results {
 				Ok(evts) =>
 					for evr in &evts {
 						println!("decoded: phase {:?} event {:?}", evr.phase, evr.event);

@@ -21,26 +21,23 @@ use crate::{
 };
 use base58::FromBase58;
 use codec::{Decode, Encode};
-use itp_node_api::api_client::TEEREX;
+use itp_node_api::api_client::{ParentchainExtrinsicSigner, TEEREX};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_stf_primitives::types::ShardIdentifier;
 use log::*;
 use my_node_runtime::Balance;
 use sp_core::sr25519 as sr25519_core;
-use substrate_api_client::{compose_extrinsic, SubmitAndWatch, UncheckedExtrinsicV4, XtStatus};
+use substrate_api_client::{compose_extrinsic, SubmitAndWatch, XtStatus};
 
 #[derive(Parser)]
 pub struct ShieldFundsCommand {
-	/// Sender's parentchain AccountId in ss58check format
+	/// Sender's parentchain AccountId in ss58check format.
 	from: String,
-
-	/// Recipient's incognito AccountId in ss58check format
+	/// Recipient's incognito AccountId in ss58check format.
 	to: String,
-
-	/// Amount to be transferred
+	/// Amount to be transferred.
 	amount: Balance,
-
-	/// Shard identifier
+	/// Shard identifier.
 	shard: String,
 }
 
@@ -58,18 +55,18 @@ impl ShieldFundsCommand {
 			Err(e) => panic!("{}", e),
 		};
 
-		// get the sender
+		// Get the sender.
 		let from = get_pair_from_str(&self.from);
-		chain_api.set_signer(sr25519_core::Pair::from(from));
+		chain_api.set_signer(ParentchainExtrinsicSigner::new(sr25519_core::Pair::from(from)));
 
-		// get the recipient
+		// Get the recipient.
 		let to = get_accountid_from_str(&self.to);
 
 		let encryption_key = get_shielding_key(cli).unwrap();
 		let encrypted_recevier = encryption_key.encrypt(&to.encode()).unwrap();
 
-		// compose the extrinsic
-		let xt: UncheckedExtrinsicV4<_, _> = compose_extrinsic!(
+		// Compose the extrinsic.
+		let xt = compose_extrinsic!(
 			chain_api,
 			TEEREX,
 			"shield_funds",
@@ -78,9 +75,7 @@ impl ShieldFundsCommand {
 			shard
 		);
 
-		let tx_hash = chain_api
-			.submit_and_watch_extrinsic_until(xt.encode(), XtStatus::Finalized)
-			.unwrap();
+		let tx_hash = chain_api.submit_and_watch_extrinsic_until(xt, XtStatus::Finalized).unwrap();
 		println!("[+] TrustedOperation got finalized. Hash: {:?}\n", tx_hash);
 	}
 }

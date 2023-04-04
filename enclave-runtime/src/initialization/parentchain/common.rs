@@ -23,10 +23,11 @@ use crate::{
 			EnclaveIndirectCallsExecutor, EnclaveNodeMetadataRepository,
 			EnclaveOffchainWorkerExecutor, EnclaveParentchainBlockImportDispatcher,
 			EnclaveParentchainBlockImportQueue, EnclaveParentchainBlockImporter,
-			EnclaveStfExecutor, EnclaveTriggeredParentchainBlockImportDispatcher,
-			EnclaveValidatorAccessor, GLOBAL_OCALL_API_COMPONENT,
-			GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
-			GLOBAL_STATE_OBSERVER_COMPONENT, GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
+			EnclaveParentchainSigner, EnclaveStfExecutor,
+			EnclaveTriggeredParentchainBlockImportDispatcher, EnclaveValidatorAccessor,
+			GLOBAL_OCALL_API_COMPONENT, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
+			GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STATE_OBSERVER_COMPONENT,
+			GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
 		},
 		EnclaveStfEnclaveSigner,
 	},
@@ -78,7 +79,7 @@ pub(crate) fn create_extrinsics_factory(
 
 	Ok(Arc::new(EnclaveExtrinsicsFactory::new(
 		genesis_hash,
-		signer,
+		EnclaveParentchainSigner::new(signer),
 		GLOBAL_NONCE_CACHE.clone(),
 		node_metadata_repository,
 	)))

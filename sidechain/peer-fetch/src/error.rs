@@ -23,8 +23,8 @@ pub type Result<T> = core::result::Result<T, Error>;
 pub enum Error {
 	#[error("RPC client error: {0}")]
 	RpcClient(#[from] itc_rpc_client::error::Error),
-	#[error("Node API extensions error: {0}")]
-	NodeApiExtensions(#[from] itp_node_api::api_client::ApiClientError),
+	#[error("Node API extensions error: {0:?}")]
+	NodeApiExtensions(itp_node_api::api_client::ApiClientError),
 	#[error("Node API factory error: {0}")]
 	NodeApiFactory(#[from] itp_node_api::node_api_factory::NodeApiFactoryError),
 	#[error("Serialization error: {0}")]
@@ -35,4 +35,10 @@ pub enum Error {
 	NoPeerFoundForShard(its_primitives::types::ShardIdentifier),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
+}
+
+impl From<itp_node_api::api_client::ApiClientError> for Error {
+	fn from(error: itp_node_api::api_client::ApiClientError) -> Self {
+		Error::NodeApiExtensions(error)
+	}
 }

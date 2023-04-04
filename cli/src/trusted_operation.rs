@@ -17,6 +17,7 @@
 
 use crate::{
 	command_utils::{get_chain_api, get_pair_from_str, get_shielding_key, get_worker_api_direct},
+	error::{Error, Result},
 	trusted_cli::TrustedCli,
 	Cli,
 };
@@ -24,14 +25,15 @@ use base58::FromBase58;
 use codec::{Decode, Encode};
 use ita_stf::{Getter, TrustedOperation};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
-use itp_node_api::api_client::TEEREX;
+use itp_node_api::api_client::{ParentchainApi, ParentchainExtrinsicSigner, TEEREX};
 use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_stf_primitives::types::ShardIdentifier;
 use itp_types::{BlockNumber, DirectRequestStatus, TrustedOperationStatus};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use log::*;
-use my_node_runtime::{AccountId, Hash};
+use my_node_runtime::{Hash, RuntimeEvent};
+use pallet_teerex::Event as TeerexEvent;
 use sp_core::{sr25519 as sr25519_core, H256};
 use std::{
 	result::Result as StdResult,
@@ -39,8 +41,7 @@ use std::{
 	time::Instant,
 };
 use substrate_api_client::{
-	compose_extrinsic, GetHeader, StaticEvent, SubmitAndWatch, SubscribeEvents,
-	SubscribeFrameSystem, XtStatus,
+	compose_extrinsic, GetHeader, SubmitAndWatch, SubscribeEvents, XtStatus,
 };
 use teerex_primitives::Request;
 
@@ -118,14 +119,14 @@ fn send_request(
 
 	let arg_signer = &trusted_args.xt_signer;
 	let signer = get_pair_from_str(arg_signer);
-	chain_api.set_signer(sr25519_core::Pair::from(signer));
+	chain_api.set_signer(ParentchainExtrinsicSigner::new(sr25519_core::Pair::from(signer)));
 
 	let request = Request { shard, cyphertext: call_encrypted };
 	let xt = compose_extrinsic!(&chain_api, TEEREX, "call_worker", request);
 
 	// send and watch extrinsic until block is executed
 	let block_hash = chain_api
-		.submit_and_watch_extrinsic_until(xt.encode(), XtStatus::InBlock)
+		.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock)
 		.unwrap()
 		.block_hash
 		.unwrap();
@@ -135,52 +136,57 @@ fn send_request(
 		block_hash
 	);
 	info!("Waiting for execution confirmation from enclave...");
-	let mut subscription = chain_api.subscribe_system_events().unwrap();
-
+	let mut subscription = chain_api.subscribe_events().unwrap();
 	loop {
-		let ret: ProcessedParentchainBlockArgs =
-			chain_api.wait_for_event(&mut subscription).unwrap();
-		info!("Confirmation of ProcessedParentchainBlock received");
-		debug!("Expected block Hash: {:?}", block_hash);
-		debug!("Confirmed stf block Hash: {:?}", ret.block_hash);
-		match chain_api.get_header(Some(block_hash)) {
-			Ok(option) => {
-				match option {
-					None => {
-						error!("Could not get Block Header");
-						return None
-					},
-					Some(header) => {
-						let block_number: BlockNumber = header.number;
-						info!("Expected block Number: {:?}", block_number);
-						info!("Confirmed block Number: {:?}", ret.block_number);
-						// The returned block number belongs to a subsequent event. We missed our event and can break the loop.
-						if ret.block_number > block_number {
-							warn!(
-								"Received block number ({:?}) exceeds expected one ({:?}) ",
-								ret.block_number, block_number
-							);
-							return None
-						}
-						// The block number is correct, but the block hash does not fit.
-						if block_number == ret.block_number && block_hash != ret.block_hash {
-							error!(
-								"Block hash for event does not match expected hash. Expected: {:?}, returned: {:?}",
-								block_hash, ret.block_hash);
-							return None
-						}
-					},
+		let event_records = subscription.next_event::<RuntimeEvent, Hash>().unwrap().unwrap();
+		for event_record in event_records {
+			if let RuntimeEvent::Teerex(TeerexEvent::ProcessedParentchainBlock(
+				_signer,
+				confirmed_block_hash,
+				_merkle_root,
+				confirmed_block_number,
+			)) = event_record.event
+			{
+				info!("Confirmation of ProcessedParentchainBlock received");
+				debug!("Expected block Hash: {:?}", block_hash);
+				debug!("Confirmed stf block Hash: {:?}", confirmed_block_hash);
+				if let Err(e) = check_if_received_event_exceeds_expected(
+					&chain_api,
+					block_hash,
+					confirmed_block_hash,
+					confirmed_block_number,
+				) {
+					error!("ProcessedParentchainBlock event: {:?}", e);
+					return None
+				};
+
+				if confirmed_block_hash == block_hash {
+					return Some(confirmed_block_hash.encode())
 				}
-			},
-			Err(err) => {
-				error!("Could not get Block Header, due to error: {:?}", err);
-				return None
-			},
-		}
-		if ret.block_hash == block_hash {
-			return Some(ret.block_hash.encode())
+			}
 		}
 	}
+}
+
+fn check_if_received_event_exceeds_expected(
+	chain_api: &ParentchainApi,
+	block_hash: Hash,
+	confirmed_block_hash: Hash,
+	confirmed_block_number: BlockNumber,
+) -> Result<()> {
+	let block_number = chain_api.get_header(Some(block_hash))?.ok_or(Error::MissingBlock)?.number;
+
+	info!("Expected block Number: {:?}", block_number);
+	info!("Confirmed block Number: {:?}", confirmed_block_number);
+	// The returned block number belongs to a subsequent event. We missed our event and can break the loop.
+	if confirmed_block_number > block_number {
+		return Err(Error::ConfirmedBlockNumberTooHigh(confirmed_block_number, block_number))
+	}
+	// The block number is correct, but the block hash does not fit.
+	if block_number == confirmed_block_number && block_hash != confirmed_block_hash {
+		return Err(Error::ConfirmedBlockHashDoesNotMatchExpected(confirmed_block_hash, block_hash))
+	}
+	Ok(())
 }
 
 pub fn read_shard(trusted_args: &TrustedCli) -> StdResult<ShardIdentifier, codec::Error> {
@@ -286,7 +292,7 @@ pub(crate) fn wait_until(
 		match receiver.recv() {
 			Ok(response) => {
 				debug!("received response: {}", response);
-				let parse_result: Result<RpcResponse, _> = serde_json::from_str(&response);
+				let parse_result: StdResult<RpcResponse, _> = serde_json::from_str(&response);
 				if let Ok(response) = parse_result {
 					if let Ok(return_value) = RpcReturnValue::from_hex(&response.result) {
 						debug!("successfully decoded rpc response: {:?}", return_value);
@@ -339,18 +345,4 @@ fn connection_can_be_closed(top_status: TrustedOperationStatus) -> bool {
 			| TrustedOperationStatus::Ready
 			| TrustedOperationStatus::Broadcast
 	)
-}
-
-#[allow(dead_code)]
-#[derive(Decode)]
-struct ProcessedParentchainBlockArgs {
-	signer: AccountId,
-	block_hash: H256,
-	merkle_root: H256,
-	block_number: BlockNumber,
-}
-
-impl StaticEvent for ProcessedParentchainBlockArgs {
-	const PALLET: &'static str = TEEREX;
-	const EVENT: &'static str = "ProcessedParentchainBlock";
 }

@@ -23,7 +23,7 @@ use itp_types::{WorkerRequest, WorkerResponse};
 use log::*;
 use sp_runtime::OpaqueExtrinsic;
 use std::{sync::Arc, vec::Vec};
-use substrate_api_client::{GetStorage, StorageKey, SubmitExtrinsic};
+use substrate_api_client::{serde_impls::StorageKey, GetStorage, SubmitExtrinsic};
 
 pub struct WorkerOnChainOCall<F> {
 	node_api_factory: Arc<F>,
@@ -87,7 +87,7 @@ where
 			debug!("Enclave wants to send {} extrinsics", extrinsics.len());
 			let api = self.node_api_factory.create_api()?;
 			for call in extrinsics.into_iter() {
-				if let Err(e) = api.submit_extrinsic(call.encode()) {
+				if let Err(e) = api.submit_opaque_extrinsic(call.encode().into()) {
 					error!("Could not send extrsinic to node: {:?}", e);
 				}
 			}
