@@ -18,6 +18,21 @@ env:
   LOG_DIR: logs
   BUILD_CONTAINER_NAME: integritee_worker_enclave_test
 
+  # By default we are using HW build and SGX runner
+  ##
+  SGX_HW_MODE: HW 
+  RUNNER_SGX_BUILDER: integritee-builder-sgx
+  RUNNER_SGX_TEST: test-runner-sgx
+
+  # Change the matrix below to enable these values
+  # example:
+  #  host: ${{ env.RUNNER_NONSGX_BUILDER }}
+  #  sgx_mode: ${{ env.SGX_SW_MODE }}
+  ##
+  SGX_SW_MODE: SW 
+  RUNNER_NONSGX_BUILDER: ubuntu-latest
+  RUNNER_NONSGX_TEST: ubuntu-latest
+
 jobs:
   cancel_previous_runs:
     name: Cancel Previous Runs
@@ -28,20 +43,28 @@ jobs:
           access_token: ${{ secrets.GITHUB_TOKEN }}
 
   build-test:
-    runs-on: integritee-builder-sgx
+    runs-on: ${{ matrix.host }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - flavor_id: sidechain
             mode: sidechain
+            host: ${{ env.RUNNER_SGX_BUILDER }}
+            sgx_mode: ${{ env.SGX_HW_MODE }}
           - flavor_id: offchain-worker
             mode: offchain-worker
+            host: ${{ env.RUNNER_SGX_BUILDER }}
+            sgx_mode: ${{ env.SGX_HW_MODE }}
           - flavor_id: teeracle
             mode: teeracle
+            host: ${{ env.RUNNER_SGX_BUILDER }}
+            sgx_mode: ${{ env.SGX_HW_MODE }}
           - flavor_id: sidechain-evm
             mode: sidechain
             additional_features: evm
+            host: ${{ env.RUNNER_SGX_BUILDER }}
+            sgx_mode: ${{ env.SGX_HW_MODE }}
 
     steps:
       - uses: actions/checkout@v3
@@ -58,7 +81,7 @@ jobs:
         run: >
           docker build -t integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}
           --target deployed-worker
-          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=HW
+          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=${{ matrix.sgx_mode }}
           -f build.Dockerfile .
 
       - name: Build CLI client
@@ -67,7 +90,7 @@ jobs:
         run: >
           docker build -t integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}
           --target deployed-client
-          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=HW
+          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }}
           -f build.Dockerfile .
 
       - run: docker images --all
@@ -152,7 +175,7 @@ jobs:
         uses: andymckay/cancel-action@0.3
 
   integration-tests:
-    runs-on: test-runner-sgx
+    runs-on: ${{ matrix.host }}
     if: ${{ always() }}
     needs: build-test
     env:
@@ -168,27 +191,43 @@ jobs:
           - test: M6
             flavor_id: sidechain
             demo_name: demo-indirect-invocation
+            host: ${{ env.RUNNER_SGX_TEST }}
+            sgx_mode: ${{ env.SGX_HW_MODE }}
           - test: M8
             flavor_id: sidechain
             demo_name: demo-direct-call
+            host: ${{ env.RUNNER_SGX_TEST }}
+            sgx_mode: ${{ env.SGX_HW_MODE }}
           - test: Sidechain
             flavor_id: sidechain
             demo_name: demo-sidechain
+            host: ${{ env.RUNNER_SGX_TEST }}
+            sgx_mode: ${{ env.SGX_HW_MODE }}
           - test: M6
             flavor_id: offchain-worker
             demo_name: demo-indirect-invocation
+            host: ${{ env.RUNNER_SGX_TEST }}
+            sgx_mode: ${{ env.SGX_HW_MODE }}
           - test: Teeracle
             flavor_id: teeracle
             demo_name: demo-teeracle
+            host: ${{ env.RUNNER_SGX_TEST }}
+            sgx_mode: ${{ env.SGX_HW_MODE }}
           - test: Teeracle
             flavor_id: teeracle
             demo_name: demo-teeracle-generic
+            host: ${{ env.RUNNER_SGX_TEST }}
+            sgx_mode: ${{ env.SGX_HW_MODE }}
           - test: Benchmark
             flavor_id: sidechain
             demo_name: sidechain-benchmark
+            host: ${{ env.RUNNER_SGX_TEST }}
+            sgx_mode: ${{ env.SGX_HW_MODE }}
           - test: EVM
             flavor_id: sidechain-evm
             demo_name: demo-smart-contract
+            host: ${{ env.RUNNER_SGX_TEST }}
+            sgx_mode: ${{ env.SGX_HW_MODE }}
 
     steps:
       - uses: actions/checkout@v3
@@ -201,6 +240,11 @@ jobs:
           echo "VERSION=dev.$version" >> $GITHUB_ENV
           echo "WORKER_IMAGE_TAG=integritee-worker:dev.$version" >> $GITHUB_ENV
           echo "CLIENT_IMAGE_TAG=integritee-cli:dev.$version" >> $GITHUB_ENV
+          if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
+             echo "SGX_PROVISION=/dev/sgx/provision" >> $GITHUB_ENV
+             echo "SGX_ENCLAVE=/dev/sgx/enclave" >> $GITHUB_ENV
+             echo "AESMD=/var/run/aesmd" >> $GITHUB_ENV
+          fi
 
       - name: Download Worker Image
         uses: actions/download-artifact@v3
@@ -295,7 +339,7 @@ jobs:
 
 
   release:
-    runs-on: self-hosted
+    runs-on: ubuntu-22.04
     name: Draft Release
     if: startsWith(github.ref, 'refs/tags/')
     needs: [build-test, integration-tests]

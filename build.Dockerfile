@@ -85,8 +85,7 @@ RUN --mount=type=cache,id=cargo,target=${HOME}/.cache/sccache cargo test --relea
 
 
 ### Base Runner Stage
-### The runner should contain an install aesmd service
-### that's why we use this one
+### The runner needs the aesmd service for the `SGX_MODE=HW`.
 ######################################################
 FROM oasisprotocol/aesmd:master AS runner
 
@@ -120,7 +119,7 @@ LABEL maintainer="zoltan@integritee.network"
 
 WORKDIR /usr/local/bin
 
-COPY --from=builder /opt/sgxsdk/lib64 /opt/sgxsdk/lib64
+COPY --from=builder /opt/sgxsdk /opt/sgxsdk
 COPY --from=builder /home/ubuntu/work/worker/bin/* ./
 COPY --from=builder /lib/x86_64-linux-gnu/libsgx* /lib/x86_64-linux-gnu/
 COPY --from=builder /lib/x86_64-linux-gnu/libdcap* /lib/x86_64-linux-gnu/
@@ -130,6 +129,8 @@ RUN chmod +x /usr/local/bin/integritee-service
 RUN ls -al /usr/local/bin
 
 # checks
+ENV SGX_SDK /opt/sgxsdk
+ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:$SGX_SDK/sdk_libs
 RUN ldd /usr/local/bin/integritee-service && \
 	/usr/local/bin/integritee-service --version
 

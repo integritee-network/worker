@@ -8,7 +8,7 @@ on:
 jobs:
   main:
     name: Push Integritee Services to Dockerhub
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         binary: ["integritee-demo-validateer", "integritee-client"]
