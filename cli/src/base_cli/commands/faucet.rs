@@ -24,7 +24,7 @@ use my_node_runtime::{BalancesCall, RuntimeCall};
 use sp_keyring::AccountKeyring;
 use sp_runtime::MultiAddress;
 use std::vec::Vec;
-use substrate_api_client::{compose_extrinsic_offline, SubmitExtrinsic, UncheckedExtrinsicV4};
+use substrate_api_client::{compose_extrinsic_offline, SubmitExtrinsic};
 
 const PREFUNDING_AMOUNT: u128 = 1_000_000_000;
 
@@ -43,7 +43,7 @@ impl FaucetCommand {
 		for account in &self.accounts {
 			let to = get_accountid_from_str(account);
 			#[allow(clippy::redundant_clone)]
-			let xt: UncheckedExtrinsicV4<_, _, _, _> = compose_extrinsic_offline!(
+			let xt = compose_extrinsic_offline!(
 				api.signer().unwrap(),
 				RuntimeCall::Balances(BalancesCall::transfer {
 					dest: MultiAddress::Id(to.clone()),

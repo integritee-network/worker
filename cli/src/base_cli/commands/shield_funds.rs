@@ -27,7 +27,7 @@ use itp_stf_primitives::types::ShardIdentifier;
 use log::*;
 use my_node_runtime::Balance;
 use sp_core::sr25519 as sr25519_core;
-use substrate_api_client::{compose_extrinsic, SubmitAndWatch, UncheckedExtrinsicV4, XtStatus};
+use substrate_api_client::{compose_extrinsic, SubmitAndWatch, XtStatus};
 
 #[derive(Parser)]
 pub struct ShieldFundsCommand {
@@ -66,7 +66,7 @@ impl ShieldFundsCommand {
 		let encrypted_recevier = encryption_key.encrypt(&to.encode()).unwrap();
 
 		// Compose the extrinsic.
-		let xt: UncheckedExtrinsicV4<_, _, _, _> = compose_extrinsic!(
+		let xt = compose_extrinsic!(
 			chain_api,
 			TEEREX,
 			"shield_funds",
