@@ -6,6 +6,7 @@
 * In case you also build the worker directly, without docker (e.g. on a dev machine, running `make`), you should run `make clean` before running the docker build. Otherwise, it can occasionally lead to build errors.
 * The node image version that is loaded in the `docker-compose.yml`, (e.g. `image: "integritee/integritee-node-dev:1.0.32"`) needs to be compatible with the worker you're trying to build.
 * Set export VERSION=dev
+* `envsubst` should be installed, it is needed to replace the $VERSION in yaml files as docker compose doesn't support variables on service names.
 
 ## Building the Docker containers
 
@@ -27,11 +28,11 @@ Starts all services (node and workers), using the `integritee-worker:dev` images
 ### Demo indirect invocation (M6)
 Build
 ```
-COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f <(envsubst < <(envsubst < docker-compose.yml)) -f <(envsubst < demo-indirect-invocation.yml) build --build-arg WORKER_MODE_ARG=offchain-worker
+COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < demo-indirect-invocation.yml) build --build-arg WORKER_MODE_ARG=offchain-worker
 ```
 Run
 ```
-docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < demo-indirect-invocation.yml) up demo-indirect-invocation --exit-code-from demo-indirect-invocation
+FLAVOR_ID=offchain-worker docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < demo-indirect-invocation.yml) up demo-indirect-invocation --exit-code-from demo-indirect-invocation
 ```
 ### Demo direct call (M8)
 

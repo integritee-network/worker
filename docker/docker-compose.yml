@@ -3,10 +3,10 @@ services:
     image: "integritee/integritee-node-dev:1.0.33"
     hostname: integritee-node
     devices:
-      - "/dev/sgx/provision:/dev/sgx/provision"
-      - "/dev/sgx/enclave:/dev/sgx/enclave"
+      - "${SGX_PROVISION:-/dev/null}:/dev/sgx/provision"
+      - "${SGX_ENCLAVE:-/dev/null}:/dev/sgx/enclave"
     volumes:
-      - "/var/run/aesmd:/var/run/aesmd"
+      - "${AESMD:-/dev/null}:/var/run/aesmd"
     networks:
       - integritee-test-network
     healthcheck:
@@ -21,17 +21,17 @@ services:
     image: integritee-worker:${VERSION:-dev}
     hostname: integritee-worker-1
     build:
-      context: ..
+      context: ${PWD}/..
       dockerfile: build.Dockerfile
       target: deployed-worker
     depends_on:
       integritee-node-${VERSION}:
         condition: service_healthy
     devices:
-      - "/dev/sgx/provision:/dev/sgx/provision"
-      - "/dev/sgx/enclave:/dev/sgx/enclave"
+      - "${SGX_PROVISION:-/dev/null}:/dev/sgx/provision"
+      - "${SGX_ENCLAVE:-/dev/null}:/dev/sgx/enclave"
     volumes:
-      - "/var/run/aesmd:/var/run/aesmd"
+      - "${AESMD:-/dev/null}:/var/run/aesmd"
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
     networks:
@@ -50,7 +50,7 @@ services:
     image: integritee-worker:${VERSION:-dev}
     hostname: integritee-worker-2
     build:
-      context: ..
+      context: ${PWD}/..
       dockerfile: build.Dockerfile
       target: deployed-worker
     depends_on:
@@ -59,10 +59,10 @@ services:
       integritee-worker-1-${VERSION}:
         condition: service_healthy
     devices:
-      - "/dev/sgx/provision:/dev/sgx/provision"
-      - "/dev/sgx/enclave:/dev/sgx/enclave"
+      - "${SGX_PROVISION:-/dev/null}:/dev/sgx/provision"
+      - "${SGX_ENCLAVE:-/dev/null}:/dev/sgx/enclave"
     volumes:
-      - "/var/run/aesmd:/var/run/aesmd"
+      - "${AESMD:-/dev/null}:/var/run/aesmd"
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
     networks:

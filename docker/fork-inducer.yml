@@ -2,25 +2,24 @@ services:
   worker-ping:
     image: worker-ping:${VERSION:-dev}
     devices:
-      - "/dev/sgx/provision:/dev/sgx/provision"
-      - "/dev/sgx/enclave:/dev/sgx/enclave"
+      - "${SGX_PROVISION:-/dev/null}:/dev/sgx/provision"
+      - "${SGX_ENCLAVE:-/dev/null}:/dev/sgx/enclave"
     volumes:
-      - "/var/run/aesmd:/var/run/aesmd"
+      - "${AESMD:-/dev/null}:/var/run/aesmd"
     build:
       context: .
       dockerfile: ping.Dockerfile
     depends_on: [ 'integritee-node-${VERSION}', 'integritee-worker-1-${VERSION}', 'integritee-worker-2-${VERSION}' ]
     networks:
       - integritee-test-network
-    #entrypoint: "ping integritee-worker-2 | while read pong; do echo \"$$(date): $$pong\"; done"
     entrypoint: "ping integritee-worker-2"
   pumba-network-delay:
     image: integritee-fork-producer:${VERSION:-dev}
     devices:
-      - "/dev/sgx/provision:/dev/sgx/provision"
-      - "/dev/sgx/enclave:/dev/sgx/enclave"
+      - "${SGX_PROVISION:-/dev/null}:/dev/sgx/provision"
+      - "${SGX_ENCLAVE:-/dev/null}:/dev/sgx/enclave"
     volumes:
-      - "/var/run/aesmd:/var/run/aesmd"
+      - "${AESMD:-/dev/null}:/var/run/aesmd"
     build:
       context: .
       dockerfile: fork.Dockerfile

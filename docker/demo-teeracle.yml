@@ -9,12 +9,12 @@ services:
     image: integritee-worker:${VERSION:-dev}
     hostname: integritee-teeracle-worker
     devices:
-      - "/dev/sgx/provision:/dev/sgx/provision"
-      - "/dev/sgx/enclave:/dev/sgx/enclave"
+      - "${SGX_PROVISION:-/dev/null}:/dev/sgx/provision"
+      - "${SGX_ENCLAVE:-/dev/null}:/dev/sgx/enclave"
     volumes:
-      - "/var/run/aesmd:/var/run/aesmd"
+      - "${AESMD:-/dev/null}:/var/run/aesmd"
     build:
-      context: ..
+      context: ${PWD}/..
       dockerfile: build.Dockerfile
       target: deployed-worker
     depends_on:
@@ -38,12 +38,12 @@ services:
   demo-teeracle:
     image: integritee-cli:${VERSION:-dev}
     devices:
-      - "/dev/sgx/provision:/dev/sgx/provision"
-      - "/dev/sgx/enclave:/dev/sgx/enclave"
+      - "${SGX_PROVISION:-/dev/null}:/dev/sgx/provision"
+      - "${SGX_ENCLAVE:-/dev/null}:/dev/sgx/enclave"
     volumes:
-      - "/var/run/aesmd:/var/run/aesmd"
+      - "${AESMD:-/dev/null}:/var/run/aesmd"
     build:
-      context: ..
+      context: ${PWD}/..
       dockerfile: build.Dockerfile
       target: deployed-client
     depends_on:
