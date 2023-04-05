@@ -349,11 +349,7 @@ pub unsafe extern "C" fn sync_parentchain(
 		Ok(blocks) => blocks,
 		Err(e) => return Error::Codec(e).into(),
 	};
-
-	if let Err(e) = dispatch_parentchain_blocks_for_import::<WorkerModeProvider>(blocks_to_sync) {
-		return e.into()
-	}
-
+	
 	let events_proofs_to_sync = match Vec::<StorageProof>::decode_raw(events_proofs_to_sync, events_proofs_to_sync_size) {
 		Ok(events_proofs) => events_proofs,
 		Err(e) => return Error::Codec(e).into(),
@@ -365,9 +361,11 @@ pub unsafe extern "C" fn sync_parentchain(
 		return e.into()
 	}
 
-	// ANDREW
-	// how to get this type inside the enclave? or just pass along as bytes?
-	// type Events = Vec<frame_system::EventRecord<RuntimeEvent, Hash>>;
+	// TODO: Need to pass validated events down this path or store them somewhere such that
+	// the `indirect_calls_executor` can access them to verify extrinsics in each block have succeeded or not.
+	if let Err(e) = dispatch_parentchain_blocks_for_import::<WorkerModeProvider>(blocks_to_sync) {
+		return e.into()
+	}
 
 	sgx_status_t::SGX_SUCCESS
 }
