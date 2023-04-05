@@ -54,6 +54,16 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Set env
+        run: |
+          if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
+             echo "DOCKER_DEVICES=--device=/dev/sgx/enclave --device=/dev/sgx/provision" >> $GITHUB_ENV
+             echo "DOCKER_VOLUMES=-v /var/run/aesmd:/var/run/aesmd" >> $GITHUB_ENV
+          else
+             echo "DOCKER_DEVICES=" >> $GITHUB_ENV
+             echo "DOCKER_VOLUMES=" >> $GITHUB_ENV
+          fi
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
         with:
@@ -81,7 +91,7 @@ jobs:
       - run: docker images --all
 
       - name: Test Enclave # cargo test is not supported in the enclave, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
-        run: docker run --device=/dev/sgx/enclave --device=/dev/sgx/provision -v /var/run/aesmd:/var/run/aesmd integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} test --all
+        run: docker run ${{ env.DOCKER_DEVICES }} ${{ env.DOCKER_VOLUMES }} integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} test --all
 
       - name: Export worker image(s)
         run: |
@@ -101,7 +111,7 @@ jobs:
           path: integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
 
   clippy:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     container: "integritee/integritee-dev:0.2.1"
     steps:
       - uses: actions/checkout@v3
@@ -139,7 +149,7 @@ jobs:
         uses: andymckay/cancel-action@0.3
 
   fmt:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: init rust
@@ -324,7 +334,7 @@ jobs:
 
 
   release:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     name: Draft Release
     if: startsWith(github.ref, 'refs/tags/')
     needs: [build-test, integration-tests]
