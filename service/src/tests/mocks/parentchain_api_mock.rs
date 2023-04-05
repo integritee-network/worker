@@ -89,7 +89,10 @@ impl ChainApi for ParentchainApiMock {
 		Ok(Default::default())
 	}
 
-	fn get_events_for_block(&self, _block_hash: Option<H256>) -> ApiResult<itp_node_api::api_client::Events> {
+	fn get_events_for_block(
+		&self,
+		_block_hash: Option<H256>,
+	) -> ApiResult<itp_node_api::api_client::Events> {
 		Ok(Default::default())
 	}
 }

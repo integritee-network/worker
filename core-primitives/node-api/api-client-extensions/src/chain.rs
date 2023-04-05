@@ -111,9 +111,6 @@ where
 	}
 
 	fn get_events_for_block(&self, block_hash: Option<H256>) -> ApiResult<Events> {
-		Ok(self
-			.get_storage_value("System", "Events", block_hash)?
-			.unwrap_or_default()
-		)
+		Ok(self.get_storage_value("System", "Events", block_hash)?.unwrap_or_default())
 	}
 }

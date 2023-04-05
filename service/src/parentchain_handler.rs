@@ -23,8 +23,8 @@ use itc_parentchain::{
 };
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
 use itp_node_api::api_client::ChainApi;
-use itp_types::SignedBlock;
 use itp_storage::StorageProof;
+use itp_types::SignedBlock;
 use log::*;
 use my_node_runtime::Header;
 use sp_finality_grandpa::VersionedAuthorityList;
@@ -161,7 +161,8 @@ where
 				block_chunk_to_sync.as_slice(),
 				events_chunk_to_sync.as_slice(),
 				events_proofs_chunk_to_sync.as_slice(),
-				0)?;
+				0,
+			)?;
 
 			until_synced_header = block_chunk_to_sync
 				.last()
