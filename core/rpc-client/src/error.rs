@@ -15,9 +15,9 @@
 
 */
 use codec::Error as CodecError;
+use itp_api_client_types::InvalidMetadataError;
 use serde_json::Error as JsonError;
 use std::{boxed::Box, sync::mpsc::RecvError};
-use substrate_api_client::metadata::InvalidMetadataError;
 use thiserror;
 use ws::Error as WsClientError;
 

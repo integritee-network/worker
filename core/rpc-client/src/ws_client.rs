@@ -15,11 +15,11 @@
 
 */
 
-use crate::error::{Error, Result as RpcClientResult};
 ///! Websocket client implementation to access the direct-rpc-server running inside an enclave.
 ///
 /// This should be replaced with the `jsonrpsee::WsClient`as soon as available in no-std:
 /// https://github.com/paritytech/jsonrpsee/issues/1
+use crate::error::{Error, Result as RpcClientResult};
 use log::*;
 use openssl::ssl::{SslConnector, SslMethod, SslStream, SslVerifyMode};
 use parking_lot::Mutex;

@@ -13,8 +13,6 @@ parking_lot = "0.12.1"
 serde_derive = "1.0"
 serde_json = "1.0"
 sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-# `default-features = false` to remove the jsonrpsee dependency.
-substrate-api-client = { default-features = false, features = ["std", "ws-client"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.39" }
 thiserror = { version = "1.0" }
 url = { version = "2.0.0" }
 ws = { version = "0.9.1", features = ["ssl"] }
@@ -22,8 +20,8 @@ ws = { version = "0.9.1", features = ["ssl"] }
 # parity
 frame-metadata = { git = "https://github.com/paritytech/frame-metadata", features = ["v14"] }
 
-
 # local
+itp-api-client-types = { path = "../../core-primitives/node-api/api-client-types" }
 itp-rpc = { path = "../../core-primitives/rpc" }
 itp-types = { path = "../../core-primitives/types" }
 itp-utils = { path = "../../core-primitives/utils" }
