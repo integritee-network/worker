@@ -26,8 +26,8 @@ pub use itp_types::parentchain::{
 	AccountId, Address, Balance, Hash, Index, Signature as PairSignature,
 };
 pub use substrate_api_client::{
-	AssetTip, CallIndex, GenericAdditionalParams, GenericExtrinsicParams, GenericSignedExtra,
-	PlainTip, StaticExtrinsicSigner, UncheckedExtrinsicV4,
+	AssetTip, CallIndex, ExtrinsicParams, GenericAdditionalParams, GenericExtrinsicParams,
+	GenericSignedExtra, PlainTip, StaticExtrinsicSigner, UncheckedExtrinsicV4,
 };
 
 pub type ParentchainPlainTip = PlainTip<Balance>;
