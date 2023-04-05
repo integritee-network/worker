@@ -742,7 +742,6 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
- "substrate-api-client",
  "webpki",
 ]
 
@@ -1909,9 +1908,9 @@ name = "itp-node-api-metadata"
 version = "0.9.0"
 dependencies = [
  "derive_more",
+ "itp-api-client-types",
  "parity-scale-codec",
  "sp-core",
- "substrate-api-client",
 ]
 
 [[package]]
