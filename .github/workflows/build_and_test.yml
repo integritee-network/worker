@@ -58,7 +58,7 @@ jobs:
         run: |
           if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
              echo "DOCKER_DEVICES=--device=/dev/sgx/enclave --device=/dev/sgx/provision" >> $GITHUB_ENV
-             echo "DOCKER_VOLUMES=-v /var/run/aesmd:/var/run/aesmd" >> $GITHUB_ENV
+             echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd" >> $GITHUB_ENV
           else
              echo "DOCKER_DEVICES=" >> $GITHUB_ENV
              echo "DOCKER_VOLUMES=" >> $GITHUB_ENV
@@ -241,6 +241,8 @@ jobs:
              echo "AESMD=/var/run/aesmd" >> $GITHUB_ENV
           fi
 
+          echo "LOG_DIR=./logs-${{ matrix.flavor_id }}-${{ github.sha }}" >> $GITHUB_ENV
+
       - name: Download Worker Image
         uses: actions/download-artifact@v3
         with:
@@ -306,14 +308,14 @@ jobs:
         with:
           images: 'integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }},integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}'
           tail: all
-          dest: ./${LOG_DIR}-${{ matrix.flavor_id }}-${{ github.sha }}
+          dest: ${{ env.LOG_DIR }}
 
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v3
         with:
           name: logs-${{ matrix.test }}-${{ matrix.flavor_id }}
-          path: ./${LOG_DIR}-${{ matrix.flavor_id }}-${{ github.sha }}
+          path: ${{ env.LOG_DIR }}
 
       - name: Stop docker containers
         if: always()
