@@ -40,7 +40,7 @@ pub(crate) fn get_shielding_key(cli: &Cli) -> Result<Rsa3072PubKey, String> {
 pub(crate) fn get_chain_api(cli: &Cli) -> ParentchainApi {
 	let url = format!("{}:{}", cli.node_url, cli.node_port);
 	info!("connecting to {}", url);
-	ParentchainApi::new(WsRpcClient::new(&url)).unwrap()
+	ParentchainApi::new(WsRpcClient::new(&url).unwrap()).unwrap()
 }
 
 pub(crate) fn get_accountid_from_str(account: &str) -> AccountId {

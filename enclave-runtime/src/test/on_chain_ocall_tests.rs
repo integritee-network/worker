@@ -21,7 +21,7 @@ use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_types::{WorkerRequest, WorkerResponse};
 use log::*;
 use std::vec::Vec;
-use substrate_api_client::utils::storage_key;
+use substrate_api_client::storage_key;
 
 #[allow(unused)]
 fn test_ocall_worker_request() {

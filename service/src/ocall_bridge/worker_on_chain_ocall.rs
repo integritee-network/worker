@@ -20,12 +20,10 @@ use crate::ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, Worke
 use codec::{Decode, Encode};
 use itp_node_api::node_api_factory::CreateNodeApi;
 use itp_types::{WorkerRequest, WorkerResponse};
-use itp_utils::ToHexPrefixed;
 use log::*;
-use sp_core::storage::StorageKey;
 use sp_runtime::OpaqueExtrinsic;
 use std::{sync::Arc, vec::Vec};
-use substrate_api_client::XtStatus;
+use substrate_api_client::{serde_impls::StorageKey, GetStorage, SubmitExtrinsic};
 
 pub struct WorkerOnChainOCall<F> {
 	node_api_factory: Arc<F>,
@@ -89,7 +87,7 @@ where
 			debug!("Enclave wants to send {} extrinsics", extrinsics.len());
 			let api = self.node_api_factory.create_api()?;
 			for call in extrinsics.into_iter() {
-				if let Err(e) = api.send_extrinsic(call.to_hex(), XtStatus::Ready) {
+				if let Err(e) = api.submit_opaque_extrinsic(call.encode().into()) {
 					error!("Could not send extrsinic to node: {:?}", e);
 				}
 			}

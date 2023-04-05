@@ -15,19 +15,27 @@
 
 */
 
-//! Some substrate-api-client extension traits.
+use crate::Cli;
 
-pub use substrate_api_client::{api::Error as ApiClientError, rpc::WsRpcClient, Api};
+use self::commands::{SendDcapQuoteCmd, SendIasAttestationReportCmd};
 
-pub mod account;
-pub mod chain;
-pub mod pallet_teeracle;
-pub mod pallet_teerex;
-pub mod pallet_teerex_api_mock;
+mod commands;
 
-pub use account::*;
-pub use chain::*;
-pub use pallet_teeracle::*;
-pub use pallet_teerex::*;
+/// Attesteer subcommands for the CLI.
+#[derive(Debug, clap::Subcommand)]
+pub enum AttesteerCommand {
+	/// Forward DCAP quote for verification.
+	SendDCAPQuote(SendDcapQuoteCmd),
 
-pub type ApiResult<T> = Result<T, ApiClientError>;
+	/// Forward IAS attestation report for verification.
+	SendIASAttestationReport(SendIasAttestationReportCmd),
+}
+
+impl AttesteerCommand {
+	pub fn run(&self, cli: &Cli) {
+		match self {
+			AttesteerCommand::SendDCAPQuote(cmd) => cmd.run(cli),
+			AttesteerCommand::SendIASAttestationReport(cmd) => cmd.run(cli),
+		}
+	}
+}

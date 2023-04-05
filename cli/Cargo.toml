@@ -5,6 +5,7 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
 [dependencies]
+array-bytes = { version = "6.0.0" }
 base58 = "0.2"
 blake2-rfc = { version = "0.2.18" }
 chrono = "*"
@@ -20,13 +21,15 @@ rayon = "1.5.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+thiserror = "1.0"
 ws = { version = "0.9.1", features = ["ssl"] }
 
 # scs / integritee
 my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node.git", branch = "polkadot-v0.9.39" }
 pallet-evm = { optional = true, git = "https://github.com/integritee-network/frontier.git", branch = "polkadot-v0.9.39" }
-substrate-api-client = { features = ["ws-client"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.39-tag-v0.7.0" }
-substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.39-tag-v0.7.0" }
+pallet-teerex = { git = "https://github.com/integritee-network/pallets.git", branch = "polkadot-v0.9.39" }
+substrate-api-client = { features = ["ws-client"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.39" }
+substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.39" }
 teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "polkadot-v0.9.39" }
 
 # substrate dependencies

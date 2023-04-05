@@ -19,6 +19,7 @@ use crate::{
 	command_utils::{get_accountid_from_str, get_chain_api},
 	Cli,
 };
+use substrate_api_client::GetAccountInformation;
 
 #[derive(Parser)]
 pub struct BalanceCommand {
