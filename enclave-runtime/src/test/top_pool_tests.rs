@@ -44,7 +44,8 @@ use itc_parentchain_test::{
 };
 use itp_node_api::{
 	api_client::{
-		ParentchainAdditionalParams, ParentchainExtrinsicParams, ParentchainUncheckedExtrinsic,
+		ExtrinsicParams, ParentchainAdditionalParams, ParentchainExtrinsicParams,
+		ParentchainUncheckedExtrinsic,
 	},
 	metadata::{
 		metadata_mocks::NodeMetadataMock, pallet_teerex::TeerexCallIndexes,
@@ -64,7 +65,6 @@ use sgx_crypto_helper::RsaKeyPair;
 use sp_core::{ed25519, Pair};
 use sp_runtime::{MultiSignature, OpaqueExtrinsic};
 use std::{sync::Arc, vec::Vec};
-use substrate_api_client::ExtrinsicParams;
 
 pub fn process_indirect_call_in_top_pool() {
 	let _ = env_logger::builder().is_test(true).try_init();
