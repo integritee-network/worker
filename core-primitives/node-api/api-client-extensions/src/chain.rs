@@ -22,7 +22,7 @@ use itp_types::{
 	H256,
 };
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
-use sp_runtime::{traits::GetRuntimeBlockType, MultiSignature};
+use sp_runtime::traits::GetRuntimeBlockType;
 use substrate_api_client::{
 	rpc::Request, serde_impls::StorageKey, Api, ExtrinsicParams, FrameSystemConfig, GetBlock,
 	GetHeader, GetStorage,
