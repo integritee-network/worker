@@ -52,8 +52,11 @@ use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
 use itp_sgx_crypto::{ed25519, Ed25519Seal, Rsa3072Seal};
 use itp_sgx_io::StaticSealedIO;
-use itp_storage::StorageProof;
-use itp_types::{ShardIdentifier, SignedBlock};
+use sp_runtime::traits::BlakeTwo256;
+use itp_storage::{StorageProof, StorageProofChecker};
+use itp_types::{
+	ShardIdentifier, SignedBlock,
+};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use sgx_types::sgx_status_t;
@@ -339,8 +342,8 @@ pub unsafe extern "C" fn init_shard(shard: *const u8, shard_size: u32) -> sgx_st
 pub unsafe extern "C" fn sync_parentchain(
 	blocks_to_sync: *const u8,
 	blocks_to_sync_size: usize,
-	_events_to_sync: *const u8,
-	_events_to_sync_size: *const u8,
+	events_to_sync: *const u8,
+	events_to_sync_size: usize,
 	events_proofs_to_sync: *const u8,
 	events_proofs_to_sync_size: usize,
 	_nonce: *const u32,
@@ -362,6 +365,11 @@ pub unsafe extern "C" fn sync_parentchain(
 	if let Err(e) = validate_events(&events_proofs_to_sync, &blocks_to_sync_merkle_roots) {
 		return e.into()
 	}
+
+	let events_to_sync = match Vec::<Vec<u8>>::decode_raw(events_to_sync, events_to_sync_size) {
+		Ok(events) => events,
+		Err(e) => return Error::Codec(e).into(),
+	};
 
 	// TODO: Need to pass validated events down this path or store them somewhere such that
 	// the `indirect_calls_executor` can access them to verify extrinsics in each block have succeeded or not.
@@ -403,10 +411,29 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 
 // ANDREW
 /// Validates the events coming from the parentchain
+/// Unit test this?
 fn validate_events(
 	events_proofs: &Vec<StorageProof>,
 	blocks_merkle_roots: &Vec<sp_core::H256>,
 ) -> Result<()> {
+	if events_proofs.len() != blocks_merkle_roots.len() {
+		return Err(Error::ParentChainSync);
+	}
+	let events_key = itp_storage::storage_value_key("System", "Events");
+	let validated_events: Result<Vec<Vec<u8>>> = events_proofs
+		.iter()
+		.zip(blocks_merkle_roots.iter())
+		.map(|(proof, root)| {
+			StorageProofChecker::<BlakeTwo256>::check_proof(
+				*root,
+				events_key.as_slice(),
+				proof.clone(),
+			)
+			.map_err(|_| Error::ParentChainValidation(itp_storage::Error::WrongValue))
+			.and_then(|opt| opt.ok_or(Error::ParentChainValidation(itp_storage::Error::WrongValue)))
+		})
+		.collect();
+	let _ = validated_events?;
 	info!(
 		"Validating events, events_proofs_length: {:?}, blocks_merkle_roots_lengths: {:?}",
 		events_proofs.len(),
