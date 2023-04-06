@@ -235,7 +235,8 @@ mod test {
 	use itc_parentchain_test::parentchain_block_builder::ParentchainBlockBuilder;
 	use itp_node_api::{
 		api_client::{
-			ParentchainAdditionalParams, ParentchainExtrinsicParams, ParentchainUncheckedExtrinsic,
+			ExtrinsicParams, ParentchainAdditionalParams, ParentchainExtrinsicParams,
+			ParentchainUncheckedExtrinsic,
 		},
 		metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository},
 	};
@@ -250,7 +251,6 @@ mod test {
 	use sp_core::{ed25519, Pair};
 	use sp_runtime::{MultiSignature, OpaqueExtrinsic};
 	use std::assert_matches::assert_matches;
-	use substrate_api_client::ExtrinsicParams;
 
 	type TestShieldingKeyRepo = KeyRepositoryMock<ShieldingCryptoMock>;
 	type TestStfEnclaveSigner = StfEnclaveSignerMock;
