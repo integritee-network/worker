@@ -83,6 +83,7 @@ pub mod teeracle;
 pub mod test;
 
 pub type Hash = sp_core::H256;
+// pub type Event = frame_system::EventRecord<RuntimeEvent, Hash>;
 pub type AuthorityPair = sp_core::ed25519::Pair;
 
 /// Initialize the enclave.
@@ -366,10 +367,12 @@ pub unsafe extern "C" fn sync_parentchain(
 		return e.into()
 	}
 
-	let events_to_sync = match Vec::<Vec<u8>>::decode_raw(events_to_sync, events_to_sync_size) {
+	let _events_to_sync = match Vec::<Vec<u8>>::decode_raw(events_to_sync, events_to_sync_size) {
 		Ok(events) => events,
 		Err(e) => return Error::Codec(e).into(),
 	};
+
+	// let events_to_sync: Vec<_> = events_to_sync.iter().map(|raw_event| Event::decode(& &mut raw_event[..]).unwrap()).collect();
 
 	// TODO: Need to pass validated events down this path or store them somewhere such that
 	// the `indirect_calls_executor` can access them to verify extrinsics in each block have succeeded or not.
@@ -416,10 +419,18 @@ fn validate_events(
 	events_proofs: &Vec<StorageProof>,
 	blocks_merkle_roots: &Vec<sp_core::H256>,
 ) -> Result<()> {
+	info!(
+		"Validating events, events_proofs_length: {:?}, blocks_merkle_roots_lengths: {:?}",
+		events_proofs.len(),
+		blocks_merkle_roots.len()
+	);
+
 	if events_proofs.len() != blocks_merkle_roots.len() {
 		return Err(Error::ParentChainSync);
 	}
+
 	let events_key = itp_storage::storage_value_key("System", "Events");
+
 	let validated_events: Result<Vec<Vec<u8>>> = events_proofs
 		.iter()
 		.zip(blocks_merkle_roots.iter())
@@ -433,12 +444,9 @@ fn validate_events(
 			.and_then(|opt| opt.ok_or(Error::ParentChainValidation(itp_storage::Error::WrongValue)))
 		})
 		.collect();
+
 	let _ = validated_events?;
-	info!(
-		"Validating events, events_proofs_length: {:?}, blocks_merkle_roots_lengths: {:?}",
-		events_proofs.len(),
-		blocks_merkle_roots.len()
-	);
+
 	Ok(())
 }
 
