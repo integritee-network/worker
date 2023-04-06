@@ -235,7 +235,7 @@ mod test {
 	use itc_parentchain_test::parentchain_block_builder::ParentchainBlockBuilder;
 	use itp_node_api::{
 		api_client::{
-			ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder,
+			ExtrinsicParams, ParentchainAdditionalParams, ParentchainExtrinsicParams,
 			ParentchainUncheckedExtrinsic,
 		},
 		metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository},
@@ -245,11 +245,12 @@ mod test {
 	use itp_stf_primitives::types::AccountId;
 	use itp_test::mock::shielding_crypto_mock::ShieldingCryptoMock;
 	use itp_top_pool_author::mocks::AuthorApiMock;
-	use itp_types::{Block, CallWorkerFn, Request, ShardIdentifier, ShieldFundsFn};
+	use itp_types::{
+		parentchain::Address, Block, CallWorkerFn, Request, ShardIdentifier, ShieldFundsFn,
+	};
 	use sp_core::{ed25519, Pair};
 	use sp_runtime::{MultiSignature, OpaqueExtrinsic};
 	use std::assert_matches::assert_matches;
-	use substrate_api_client::{ExtrinsicParams, GenericAddress};
 
 	type TestShieldingKeyRepo = KeyRepositoryMock<ShieldingCryptoMock>;
 	type TestStfEnclaveSigner = StfEnclaveSignerMock;
@@ -375,7 +376,7 @@ mod test {
 		let shield_funds_indexes = dummy_metadata.shield_funds_call_indexes().unwrap();
 		ParentchainUncheckedExtrinsic::<ShieldFundsFn>::new_signed(
 			(shield_funds_indexes, target_account, 1000u128, shard_id()),
-			GenericAddress::Address32([1u8; 32]),
+			Address::Address32([1u8; 32]),
 			MultiSignature::Ed25519(default_signature()),
 			default_extrinsic_params().signed_extra(),
 		)
@@ -388,7 +389,7 @@ mod test {
 
 		ParentchainUncheckedExtrinsic::<CallWorkerFn>::new_signed(
 			(call_worker_indexes, request),
-			GenericAddress::Address32([1u8; 32]),
+			Address::Address32([1u8; 32]),
 			MultiSignature::Ed25519(default_signature()),
 			default_extrinsic_params().signed_extra(),
 		)
@@ -412,7 +413,7 @@ mod test {
 			0,
 			0,
 			H256::default(),
-			ParentchainExtrinsicParamsBuilder::default(),
+			ParentchainAdditionalParams::default(),
 		)
 	}
 	fn test_fixtures(

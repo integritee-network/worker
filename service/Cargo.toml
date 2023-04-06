@@ -61,7 +61,8 @@ its-storage = { path = "../sidechain/storage" }
 
 my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node.git", branch = "polkadot-v0.9.39" }
 sgx-verify = { git = "https://github.com/integritee-network/pallets.git", branch = "polkadot-v0.9.39" }
-substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.39-tag-v0.7.0" }
+# `default-features = false` to remove the jsonrpsee dependency.
+substrate-api-client = { default-features = false, features = ["std", "ws-client"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.39" }
 teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "polkadot-v0.9.39" }
 
 # Substrate dependencies

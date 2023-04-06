@@ -32,15 +32,15 @@ pub mod sgx_reexport_prelude {
 use codec::Encode;
 use error::Result;
 use itp_node_api::{
-	api_client::{ParentchainExtrinsicParams, ParentchainExtrinsicParamsBuilder},
+	api_client::{ParentchainAdditionalParams, ParentchainExtrinsicParams},
 	metadata::{provider::AccessNodeMetadata, NodeMetadata},
 };
 use itp_nonce_cache::{MutateNonce, Nonce};
-use itp_types::OpaqueCall;
-use sp_core::{Pair, H256};
-use sp_runtime::{generic::Era, MultiSignature, OpaqueExtrinsic};
+use itp_types::{parentchain::AccountId, OpaqueCall};
+use sp_core::H256;
+use sp_runtime::{generic::Era, OpaqueExtrinsic};
 use std::{sync::Arc, vec::Vec};
-use substrate_api_client::{compose_extrinsic_offline, ExtrinsicParams};
+use substrate_api_client::{compose_extrinsic_offline, ExtrinsicParams, SignExtrinsic};
 
 pub mod error;
 
@@ -54,15 +54,14 @@ pub trait CreateExtrinsics {
 	fn create_extrinsics(
 		&self,
 		calls: &[OpaqueCall],
-		extrinsics_params_builder: Option<ParentchainExtrinsicParamsBuilder>,
+		extrinsics_params: Option<ParentchainAdditionalParams>,
 	) -> Result<Vec<OpaqueExtrinsic>>;
 }
 
 /// Extrinsics factory
 pub struct ExtrinsicsFactory<Signer, NonceCache, NodeMetadataRepository>
 where
-	Signer: Pair<Public = sp_core::ed25519::Public>,
-	Signer::Signature: Into<MultiSignature>,
+	Signer: SignExtrinsic<AccountId>,
 	NonceCache: MutateNonce,
 	NodeMetadataRepository: AccessNodeMetadata<MetadataType = NodeMetadata>,
 {
@@ -75,8 +74,7 @@ where
 impl<Signer, NonceCache, NodeMetadataRepository>
 	ExtrinsicsFactory<Signer, NonceCache, NodeMetadataRepository>
 where
-	Signer: Pair<Public = sp_core::ed25519::Public>,
-	Signer::Signature: Into<MultiSignature>,
+	Signer: SignExtrinsic<AccountId>,
 	NonceCache: MutateNonce,
 	NodeMetadataRepository: AccessNodeMetadata<MetadataType = NodeMetadata>,
 {
@@ -93,23 +91,20 @@ where
 impl<Signer, NonceCache, NodeMetadataRepository> CreateExtrinsics
 	for ExtrinsicsFactory<Signer, NonceCache, NodeMetadataRepository>
 where
-	Signer: Pair<Public = sp_core::ed25519::Public>,
-	Signer::Signature: Into<MultiSignature>,
+	Signer: SignExtrinsic<AccountId>,
 	NonceCache: MutateNonce,
 	NodeMetadataRepository: AccessNodeMetadata<MetadataType = NodeMetadata>,
 {
 	fn create_extrinsics(
 		&self,
 		calls: &[OpaqueCall],
-		extrinsics_params_builder: Option<ParentchainExtrinsicParamsBuilder>,
+		extrinsics_params: Option<ParentchainAdditionalParams>,
 	) -> Result<Vec<OpaqueExtrinsic>> {
 		let mut nonce_lock = self.nonce_cache.load_for_mutation()?;
 		let mut nonce_value = nonce_lock.0;
 
-		let params_builder = extrinsics_params_builder.unwrap_or_else(|| {
-			ParentchainExtrinsicParamsBuilder::new()
-				.era(Era::Immortal, self.genesis_hash)
-				.tip(0)
+		let additional_extrinsic_params = extrinsics_params.unwrap_or_else(|| {
+			ParentchainAdditionalParams::new().era(Era::Immortal, self.genesis_hash).tip(0)
 		});
 
 		let (runtime_spec_version, runtime_transaction_version) =
@@ -125,10 +120,9 @@ where
 					runtime_transaction_version,
 					nonce_value,
 					self.genesis_hash,
-					params_builder,
+					additional_extrinsic_params,
 				);
-				let xt = compose_extrinsic_offline!(self.signer.clone(), call, extrinsic_params)
-					.encode();
+				let xt = compose_extrinsic_offline!(&self.signer, call, extrinsic_params).encode();
 				nonce_value += 1;
 				xt
 			})
@@ -148,9 +142,12 @@ where
 pub mod tests {
 
 	use super::*;
-	use itp_node_api::metadata::provider::NodeMetadataRepository;
+	use itp_node_api::{
+		api_client::{PairSignature, StaticExtrinsicSigner},
+		metadata::provider::NodeMetadataRepository,
+	};
 	use itp_nonce_cache::{GetNonce, Nonce, NonceCache, NonceValue};
-	use sp_core::ed25519;
+	use sp_core::{ed25519, Pair};
 	//use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
 
 	#[test]
@@ -159,7 +156,7 @@ pub mod tests {
 		let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadata::default()));
 		let extrinsics_factory = ExtrinsicsFactory::new(
 			test_genesis_hash(),
-			test_account(),
+			StaticExtrinsicSigner::<_, PairSignature>::new(test_account()),
 			nonce_cache.clone(),
 			node_metadata_repo,
 		);

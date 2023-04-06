@@ -16,13 +16,12 @@
 */
 
 use crate::{command_utils::get_chain_api, Cli};
-use codec::Decode;
 use itp_node_api::api_client::ParentchainApi;
 use itp_time_utils::{duration_now, remaining_time};
 use log::{debug, info, trace};
 use my_node_runtime::{Hash, RuntimeEvent};
-use std::{sync::mpsc::channel, time::Duration};
-use substrate_api_client::FromHexString;
+use std::time::Duration;
+use substrate_api_client::SubscribeEvents;
 
 /// Listen to exchange rate events.
 #[derive(Debug, Clone, Parser)]
@@ -47,17 +46,11 @@ pub fn count_exchange_rate_update_events(api: &ParentchainApi, duration: Duratio
 	let stop = duration_now() + duration;
 
 	//subscribe to events
-	let (events_in, events_out) = channel();
-	api.subscribe_events(events_in).unwrap();
+	let mut subscription = api.subscribe_events().unwrap();
 	let mut count = 0;
 
 	while remaining_time(stop).unwrap_or_default() > Duration::ZERO {
-		let event_str = events_out.recv().unwrap();
-		let unhex = Vec::from_hex(event_str).unwrap();
-		let mut event_records_encoded = unhex.as_slice();
-		let events_result = Vec::<frame_system::EventRecord<RuntimeEvent, Hash>>::decode(
-			&mut event_records_encoded,
-		);
+		let events_result = subscription.next_event::<RuntimeEvent, Hash>().unwrap();
 		if let Ok(events) = events_result {
 			for event_record in &events {
 				info!("received event {:?}", event_record.event);

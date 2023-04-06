@@ -80,9 +80,8 @@ where
 		enclave_api: Arc<EnclaveApi>,
 	) -> ServiceResult<Self> {
 		let genesis_hash = parentchain_api.get_genesis_hash()?;
-		let genesis_header: Header = parentchain_api
-			.get_header(Some(genesis_hash))?
-			.ok_or(Error::MissingGenesisHeader)?;
+		let genesis_header =
+			parentchain_api.header(Some(genesis_hash))?.ok_or(Error::MissingGenesisHeader)?;
 
 		let parentchain_init_params: ParentchainInitParams = if parentchain_api
 			.is_grandpa_available()?
@@ -126,7 +125,7 @@ where
 
 	fn sync_parentchain(&self, last_synced_header: Header) -> ServiceResult<Header> {
 		trace!("Getting current head");
-		let curr_block: SignedBlock = self
+		let curr_block = self
 			.parentchain_api
 			.last_finalized_block()?
 			.ok_or(Error::MissingLastFinalizedBlock)?;

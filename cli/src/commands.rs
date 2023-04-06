@@ -22,6 +22,8 @@ use clap::Subcommand;
 #[cfg(feature = "teeracle")]
 use crate::oracle::OracleCommand;
 
+use crate::attesteer::AttesteerCommand;
+
 #[derive(Subcommand)]
 pub enum Commands {
 	#[clap(flatten)]
@@ -35,6 +37,10 @@ pub enum Commands {
 	#[cfg(feature = "teeracle")]
 	#[clap(subcommand)]
 	Oracle(OracleCommand),
+
+	/// Subcommand for the attesteer.
+	#[clap(subcommand)]
+	Attesteer(AttesteerCommand),
 }
 
 pub fn match_command(cli: &Cli) {
@@ -43,5 +49,6 @@ pub fn match_command(cli: &Cli) {
 		Commands::Trusted(trusted_cli) => trusted_cli.run(cli),
 		#[cfg(feature = "teeracle")]
 		Commands::Oracle(cmd) => cmd.run(cli),
+		Commands::Attesteer(cmd) => cmd.run(cli),
 	};
 }

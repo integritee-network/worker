@@ -33,7 +33,6 @@ use pallet_evm::{AddressMapping, HashedAddressMapping};
 use sp_core::{crypto::Ss58Codec, Pair, H160, U256};
 use sp_runtime::traits::BlakeTwo256;
 use std::vec::Vec;
-use substrate_api_client::utils::FromHexString;
 
 #[derive(Parser)]
 pub struct EvmCreateCommands {
@@ -70,7 +69,7 @@ impl EvmCreateCommands {
 		let top = TrustedCall::evm_create(
 			from_acc,
 			sender_evm_acc,
-			Vec::from_hex(self.smart_contract.to_string()).unwrap(),
+			array_bytes::hex2bytes(&self.smart_contract).unwrap().to_vec(),
 			U256::from(0),
 			967295,        // gas limit
 			U256::from(1), // max_fee_per_gas !>= min_gas_price defined in runtime

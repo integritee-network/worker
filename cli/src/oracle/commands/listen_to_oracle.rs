@@ -16,13 +16,12 @@
 */
 
 use crate::{command_utils::get_chain_api, Cli};
-use codec::Decode;
 use itp_node_api::api_client::ParentchainApi;
 use itp_time_utils::{duration_now, remaining_time};
 use log::{debug, info};
 use my_node_runtime::{Hash, RuntimeEvent};
-use std::{sync::mpsc::channel, time::Duration};
-use substrate_api_client::FromHexString;
+use std::time::Duration;
+use substrate_api_client::{EventRecord, SubscribeEvents};
 
 /// Listen to exchange rate events.
 #[derive(Debug, Clone, Parser)]
@@ -32,6 +31,7 @@ pub struct ListenToOracleEventsCmd {
 }
 
 type EventCount = u32;
+type Event = EventRecord<RuntimeEvent, Hash>;
 
 impl ListenToOracleEventsCmd {
 	pub fn run(&self, cli: &Cli) {
@@ -47,30 +47,27 @@ fn count_oracle_update_events(api: &ParentchainApi, duration: Duration) -> Event
 	let stop = duration_now() + duration;
 
 	//subscribe to events
-	let (events_in, events_out) = channel();
-	api.subscribe_events(events_in).unwrap();
+	let mut subscription = api.subscribe_events().unwrap();
 	let mut count = 0;
 
 	while remaining_time(stop).unwrap_or_default() > Duration::ZERO {
-		let events_str = events_out.recv().unwrap();
-		let events_vec_bytes = Vec::from_hex(events_str).unwrap();
-		count += report_event_count(&events_vec_bytes);
+		let events_result = subscription.next_event::<RuntimeEvent, Hash>();
+		let event_count = match events_result {
+			Some(Ok(event_records)) => {
+				debug!("Could not successfully decode event_bytes {:?}", event_records);
+				report_event_count(event_records)
+			},
+			_ => 0,
+		};
+		count += event_count;
 	}
 	debug!("Received {} ExchangeRateUpdated event(s) in total", count);
 	count
 }
 
-fn report_event_count(events_bytes: &[u8]) -> EventCount {
-	let event_records =
-		Vec::<frame_system::EventRecord<RuntimeEvent, Hash>>::decode(&mut &events_bytes[..]);
-	if event_records.is_err() {
-		// Return no count if cant successfully decode event
-		debug!("Could not successfully decode event_bytes {:?}", event_records);
-		return 0
-	}
-
+fn report_event_count(event_records: Vec<Event>) -> EventCount {
 	let mut count = 0;
-	event_records.unwrap().iter().for_each(|event_record| {
+	event_records.iter().for_each(|event_record| {
 		info!("received event {:?}", event_record.event);
 		if let RuntimeEvent::Teeracle(event) = &event_record.event {
 			match &event {
