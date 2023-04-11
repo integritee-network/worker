@@ -306,7 +306,7 @@ jobs:
         if: always()
         uses: jwalton/gh-docker-logs@v2
         with:
-          images: 'integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }},integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}'
+          #images: 'integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }},integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}'
           tail: all
           dest: ${{ env.LOG_DIR }}
 
