@@ -20,7 +20,10 @@ use itc_parentchain_test::{
 	parentchain_header_builder::ParentchainHeaderBuilder,
 };
 use itp_node_api::api_client::{ApiResult, ChainApi, SignedBlock};
-use itp_types::parentchain::{Hash, Header, StorageProof};
+use itp_types::{
+	parentchain::{Hash, Header, StorageProof},
+	H256,
+};
 use sp_finality_grandpa::AuthorityList;
 
 pub struct ParentchainApiMock {
