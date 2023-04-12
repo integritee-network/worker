@@ -289,8 +289,7 @@ mod tests {
 	use std::vec::Vec;
 
 	const HTTPBIN_ROOT_CERT: &str = include_str!("fixtures/amazon_root_ca_1_v3.pem");
-	const COINGECKO_ROOT_CERTIFICATE: &str =
-		include_str!("fixtures/baltimore_cyber_trust_root_v3.pem");
+	const COINGECKO_ROOT_CERTIFICATE: &str = include_str!("fixtures/lets_encrypt_root_cert.pem");
 
 	#[test]
 	fn join_url_adds_query_parameters() {
