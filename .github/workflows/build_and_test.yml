@@ -234,6 +234,7 @@ jobs:
           echo "PROJECT=${{ matrix.flavor_id }}-${{ matrix.demo_name }}" >> $GITHUB_ENV
           echo "VERSION=dev.$version" >> $GITHUB_ENV
           echo "WORKER_IMAGE_TAG=integritee-worker:dev.$version" >> $GITHUB_ENV
+          echo "INTEGRITEE_NODE=integritee-node-dev:1.0.33.$version" >> $GITHUB_ENV
           echo "CLIENT_IMAGE_TAG=integritee-cli:dev.$version" >> $GITHUB_ENV
           if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
              echo "SGX_PROVISION=/dev/sgx/provision" >> $GITHUB_ENV
@@ -277,6 +278,7 @@ jobs:
           fi
           docker tag integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.WORKER_IMAGE_TAG }}
           docker tag integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.CLIENT_IMAGE_TAG }}
+          docker tag integritee/integritee-node-dev:1.0.33 ${{ env.INTEGRITEE_NODE }}
           docker images --all
 
       ##
@@ -306,7 +308,7 @@ jobs:
         if: always()
         uses: jwalton/gh-docker-logs@v2
         with:
-          images: '${{ env.WORKER_IMAGE_TAG }},${{ env.CLIENT_IMAGE_TAG }},${PROJECT}-integritee-node-${{ env.VERSION }}'
+          images: '${{ env.WORKER_IMAGE_TAG }},${{ env.CLIENT_IMAGE_TAG }},${{ env.INTEGRITEE_NODE }}'
           tail: all
           dest: ${{ env.LOG_DIR }}
 
@@ -332,8 +334,8 @@ jobs:
           if [[ "$(docker images -q ${{ env.CLIENT_IMAGE_TAG }} 2> /dev/null)" != "" ]]; then
              docker image rmi --force ${{ env.CLIENT_IMAGE_TAG }} 2>/dev/null
           fi
-          if [[ "$(docker images -q integritee/integritee-node-dev 2> /dev/null)" != "" ]]; then
-             docker image rmi --force integritee/integritee-node-dev 2>/dev/null
+          if [[ "$(docker images -q ${{ env.INTEGRITEE_NODE }} 2> /dev/null)" != "" ]]; then
+             docker image rmi --force ${{ env.INTEGRITEE_NODE }} 2>/dev/null
           fi
           docker images --all
 
