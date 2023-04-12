@@ -306,7 +306,7 @@ jobs:
         if: always()
         uses: jwalton/gh-docker-logs@v2
         with:
-          #images: 'integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }},integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}'
+          images: '${{ env.WORKER_IMAGE_TAG }},${{ env.CLIENT_IMAGE_TAG }},integritee/integritee-node-dev'
           tail: all
           dest: ${{ env.LOG_DIR }}
 
@@ -326,11 +326,14 @@ jobs:
 
       - name: Delete images
         run: |
-          if [[ "$(docker images -q ${{ env.WORKER_IMAGE_TAG }} 2> /dev/null)" == "" ]]; then
+          if [[ "$(docker images -q ${{ env.WORKER_IMAGE_TAG }} 2> /dev/null)" != "" ]]; then
              docker image rmi --force ${{ env.WORKER_IMAGE_TAG }} 2>/dev/null
           fi
-          if [[ "$(docker images -q ${{ env.CLIENT_IMAGE_TAG }} 2> /dev/null)" == "" ]]; then
+          if [[ "$(docker images -q ${{ env.CLIENT_IMAGE_TAG }} 2> /dev/null)" != "" ]]; then
              docker image rmi --force ${{ env.CLIENT_IMAGE_TAG }} 2>/dev/null
+          fi
+          if [[ "$(docker images -q integritee/integritee-node-dev 2> /dev/null)" != "" ]]; then
+             docker image rmi --force integritee/integritee-node-dev 2>/dev/null
           fi
           docker images --all
 
