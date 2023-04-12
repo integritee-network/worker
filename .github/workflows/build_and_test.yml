@@ -241,7 +241,7 @@ jobs:
              echo "AESMD=/var/run/aesmd" >> $GITHUB_ENV
           fi
 
-          echo "LOG_DIR=./logs-${{ matrix.flavor_id }}-${{ github.sha }}" >> $GITHUB_ENV
+          echo "LOG_DIR=./logs-$version" >> $GITHUB_ENV
 
       - name: Download Worker Image
         uses: actions/download-artifact@v3
