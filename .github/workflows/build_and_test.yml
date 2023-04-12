@@ -21,30 +21,48 @@ env:
 jobs:
   cancel_previous_runs:
     name: Cancel Previous Runs
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - uses: styfle/cancel-workflow-action@0.11.0
         with:
           access_token: ${{ secrets.GITHUB_TOKEN }}
 
   build-test:
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.host }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - flavor_id: sidechain
             mode: sidechain
+            host: integritee-builder-sgx
+            sgx_mode: HW
           - flavor_id: offchain-worker
             mode: offchain-worker
+            host: integritee-builder-sgx
+            sgx_mode: HW
           - flavor_id: teeracle
             mode: teeracle
+            host: integritee-builder-sgx
+            sgx_mode: HW
           - flavor_id: sidechain-evm
             mode: sidechain
             additional_features: evm
+            host: integritee-builder-sgx
+            sgx_mode: HW
 
     steps:
       - uses: actions/checkout@v3
+
+      - name: Set env
+        run: |
+          if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
+             echo "DOCKER_DEVICES=--device=/dev/sgx/enclave --device=/dev/sgx/provision" >> $GITHUB_ENV
+             echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd" >> $GITHUB_ENV
+          else
+             echo "DOCKER_DEVICES=" >> $GITHUB_ENV
+             echo "DOCKER_VOLUMES=" >> $GITHUB_ENV
+          fi
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -58,7 +76,7 @@ jobs:
         run: >
           docker build -t integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}
           --target deployed-worker
-          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }}
+          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=${{ matrix.sgx_mode }}
           -f build.Dockerfile .
 
       - name: Build CLI client
@@ -73,7 +91,7 @@ jobs:
       - run: docker images --all
 
       - name: Test Enclave # cargo test is not supported in the enclave, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
-        run: docker run --name ${{ env.BUILD_CONTAINER_NAME }} integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} test --all
+        run: docker run ${{ env.DOCKER_DEVICES }} ${{ env.DOCKER_VOLUMES }} integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} test --all
 
       - name: Export worker image(s)
         run: |
@@ -93,8 +111,8 @@ jobs:
           path: integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
 
   clippy:
-    runs-on: ubuntu-22.04
-    container: "integritee/integritee-dev:0.1.13"
+    runs-on: ubuntu-latest
+    container: "integritee/integritee-dev:0.2.1"
     steps:
       - uses: actions/checkout@v3
       - name: init rust
@@ -131,7 +149,7 @@ jobs:
         uses: andymckay/cancel-action@0.3
 
   fmt:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: init rust
@@ -152,7 +170,7 @@ jobs:
         uses: andymckay/cancel-action@0.3
 
   integration-tests:
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.host }}
     if: ${{ always() }}
     needs: build-test
     env:
@@ -168,34 +186,63 @@ jobs:
           - test: M6
             flavor_id: sidechain
             demo_name: demo-indirect-invocation
+            host: test-runner-sgx
+            sgx_mode: HW
           - test: M8
             flavor_id: sidechain
             demo_name: demo-direct-call
+            host: test-runner-sgx
+            sgx_mode: HW
           - test: Sidechain
             flavor_id: sidechain
             demo_name: demo-sidechain
+            host: test-runner-sgx
+            sgx_mode: HW
           - test: M6
             flavor_id: offchain-worker
             demo_name: demo-indirect-invocation
+            host: test-runner-sgx
+            sgx_mode: HW
           - test: Teeracle
             flavor_id: teeracle
             demo_name: demo-teeracle
+            host: test-runner-sgx
+            sgx_mode: HW
           - test: Teeracle
             flavor_id: teeracle
             demo_name: demo-teeracle-generic
+            host: test-runner-sgx
+            sgx_mode: HW
           - test: Benchmark
             flavor_id: sidechain
             demo_name: sidechain-benchmark
+            host: test-runner-sgx
+            sgx_mode: HW
           - test: EVM
             flavor_id: sidechain-evm
             demo_name: demo-smart-contract
+            host: test-runner-sgx
+            sgx_mode: HW
 
     steps:
       - uses: actions/checkout@v3
 
       - name: Set env
         run: |
+          version=$RANDOM
           echo "FLAVOR_ID=${{ matrix.flavor_id }}" >> $GITHUB_ENV
+          echo "PROJECT=${{ matrix.flavor_id }}-${{ matrix.demo_name }}" >> $GITHUB_ENV
+          echo "VERSION=dev.$version" >> $GITHUB_ENV
+          echo "WORKER_IMAGE_TAG=integritee-worker:dev.$version" >> $GITHUB_ENV
+          echo "INTEGRITEE_NODE=integritee-node-dev:1.0.33.$version" >> $GITHUB_ENV
+          echo "CLIENT_IMAGE_TAG=integritee-cli:dev.$version" >> $GITHUB_ENV
+          if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
+             echo "SGX_PROVISION=/dev/sgx/provision" >> $GITHUB_ENV
+             echo "SGX_ENCLAVE=/dev/sgx/enclave" >> $GITHUB_ENV
+             echo "AESMD=/var/run/aesmd" >> $GITHUB_ENV
+          fi
+
+          echo "LOG_DIR=./logs-$version" >> $GITHUB_ENV
 
       - name: Download Worker Image
         uses: actions/download-artifact@v3
@@ -217,42 +264,86 @@ jobs:
           docker image load --input integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
           docker images --all
 
+      ##
+      # Before tagging, delete the old "stuck" ones to be sure that the newly created ones are the latest
+      # Without if the docker image rmi throws an error if the image doesn't exist.
+      ##
       - name: Re-name Image Tags
         run: |
+          if [[ "$(docker images -q ${{ env.WORKER_IMAGE_TAG }} 2> /dev/null)" == "" ]]; then
+             docker image rmi --force ${{ env.WORKER_IMAGE_TAG }} 2>/dev/null
+          fi
+          if [[ "$(docker images -q ${{ env.CLIENT_IMAGE_TAG }} 2> /dev/null)" == "" ]]; then
+             docker image rmi --force ${{ env.CLIENT_IMAGE_TAG }} 2>/dev/null
+          fi
           docker tag integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.WORKER_IMAGE_TAG }}
           docker tag integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.CLIENT_IMAGE_TAG }}
+          docker tag integritee/integritee-node-dev:1.0.33 ${{ env.INTEGRITEE_NODE }}
           docker images --all
+
+      ##
+      # Stop any stucked/running compose projects
+      ##
+      - name: Stop docker containers
+        if: always()
+        continue-on-error: true
+        run: |
+          cd docker
+          docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) -p ${PROJECT} stop
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
       - name: Integration Test ${{ matrix.test }}-${{ matrix.flavor_id }}
         run: |
           cd docker
-          docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml up ${{ matrix.demo_name }} --no-build --exit-code-from ${{ matrix.demo_name }}
+          docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) -p ${PROJECT} up ${{ matrix.demo_name }} --no-build --exit-code-from ${{ matrix.demo_name }} --remove-orphans
 
-      - name: Stop docker containers
-        run: |
-          cd docker
-          docker compose -f docker-compose.yml -f ${{ matrix.demo_name }}.yml stop
 
       - name: Collect Docker Logs
         continue-on-error: true
         if: always()
         uses: jwalton/gh-docker-logs@v2
         with:
-          #images: '${{ env.WORKER_IMAGE_TAG }},${{ env.CLIENT_IMAGE_TAG }}'
+          images: '${{ env.WORKER_IMAGE_TAG }},${{ env.CLIENT_IMAGE_TAG }},${{ env.INTEGRITEE_NODE }}'
           tail: all
-          dest: ./${{ env.LOG_DIR }}
+          dest: ${{ env.LOG_DIR }}
 
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v3
         with:
           name: logs-${{ matrix.test }}-${{ matrix.flavor_id }}
-          path: ./${{ env.LOG_DIR }}
+          path: ${{ env.LOG_DIR }}
+
+      - name: Stop docker containers
+        if: always()
+        continue-on-error: true
+        run: |
+          cd docker
+          docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) -p ${PROJECT} stop
+
+      - name: Delete images
+        run: |
+          if [[ "$(docker images -q ${{ env.WORKER_IMAGE_TAG }} 2> /dev/null)" != "" ]]; then
+             docker image rmi --force ${{ env.WORKER_IMAGE_TAG }} 2>/dev/null
+          fi
+          if [[ "$(docker images -q ${{ env.CLIENT_IMAGE_TAG }} 2> /dev/null)" != "" ]]; then
+             docker image rmi --force ${{ env.CLIENT_IMAGE_TAG }} 2>/dev/null
+          fi
+          if [[ "$(docker images -q ${{ env.INTEGRITEE_NODE }} 2> /dev/null)" != "" ]]; then
+             docker image rmi --force ${{ env.INTEGRITEE_NODE }} 2>/dev/null
+          fi
+          docker images --all
+
 
   release:
+    runs-on: ubuntu-latest
     name: Draft Release
     if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-22.04
     needs: [build-test, integration-tests]
     outputs:
       release_url: ${{ steps.create-release.outputs.html_url }}
