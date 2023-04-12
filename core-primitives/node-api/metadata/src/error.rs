@@ -21,7 +21,7 @@ pub enum Error {
 	/// Metadata has not been set
 	MetadataNotSet,
 	/// Api-client metadata error
-	NodeMetadata(substrate_api_client::MetadataError),
+	NodeMetadata(itp_api_client_types::MetadataError),
 }
 
 pub type Result<T> = core::result::Result<T, Error>;

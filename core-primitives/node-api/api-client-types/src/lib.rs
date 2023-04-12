@@ -26,7 +26,8 @@ pub use itp_types::parentchain::{
 	AccountId, Address, Balance, Hash, Index, Signature as PairSignature,
 };
 pub use substrate_api_client::{
-	AssetTip, CallIndex, GenericAdditionalParams, GenericExtrinsicParams, GenericSignedExtra,
+	storage_key, AssetTip, CallIndex, ExtrinsicParams, GenericAdditionalParams,
+	GenericExtrinsicParams, GenericSignedExtra, InvalidMetadataError, Metadata, MetadataError,
 	PlainTip, StaticExtrinsicSigner, UncheckedExtrinsicV4,
 };
 

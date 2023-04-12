@@ -23,8 +23,8 @@ use crate::{
 	error::Result, pallet_sidechain::SidechainCallIndexes, pallet_teerex::TeerexCallIndexes,
 };
 use codec::{Decode, Encode};
+use itp_api_client_types::{Metadata, MetadataError};
 use sp_core::storage::StorageKey;
-use substrate_api_client::{Metadata, MetadataError};
 
 pub use crate::error::Error;
 

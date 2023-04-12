@@ -742,7 +742,6 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
- "substrate-api-client",
  "webpki",
 ]
 
@@ -1693,7 +1692,6 @@ dependencies = [
  "sgx_types",
  "sp-core",
  "sp-runtime",
- "substrate-api-client",
  "thiserror 1.0.9",
 ]
 
@@ -1910,9 +1908,9 @@ name = "itp-node-api-metadata"
 version = "0.9.0"
 dependencies = [
  "derive_more",
+ "itp-api-client-types",
  "parity-scale-codec",
  "sp-core",
- "substrate-api-client",
 ]
 
 [[package]]
@@ -2049,7 +2047,6 @@ dependencies = [
  "sgx_types",
  "sp-core",
  "sp-runtime",
- "substrate-api-client",
  "thiserror 1.0.9",
 ]
 
@@ -4605,7 +4602,7 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "digest 0.10.6",
  "static_assertions",
 ]

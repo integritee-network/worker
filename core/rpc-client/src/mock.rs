@@ -20,9 +20,9 @@
 use crate::{direct_client::DirectApi, error::Result};
 use codec::Decode;
 use frame_metadata::RuntimeMetadataPrefixed;
+use itp_api_client_types::Metadata;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use std::{sync::mpsc::Sender as MpscSender, thread::JoinHandle};
-use substrate_api_client::Metadata;
 
 #[derive(Clone, Default)]
 pub struct DirectClientMock {
