@@ -23,6 +23,7 @@ use itc_parentchain::{
 };
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
 use itp_node_api::api_client::ChainApi;
+use itp_storage::StorageProof;
 use log::*;
 use my_node_runtime::Header;
 use sp_finality_grandpa::VersionedAuthorityList;
@@ -140,7 +141,26 @@ where
 				return Ok(until_synced_header)
 			}
 
-			self.enclave_api.sync_parentchain(block_chunk_to_sync.as_slice(), 0)?;
+			let events_chunk_to_sync: Vec<Vec<u8>> = block_chunk_to_sync
+				.iter()
+				.map(|block| {
+					self.parentchain_api.get_events_for_block(Some(block.block.header.hash()))
+				})
+				.collect::<Result<Vec<_>, _>>()?;
+
+			let events_proofs_chunk_to_sync: Vec<StorageProof> = block_chunk_to_sync
+				.iter()
+				.map(|block| {
+					self.parentchain_api.get_events_value_proof(Some(block.block.header.hash()))
+				})
+				.collect::<Result<Vec<_>, _>>()?;
+
+			self.enclave_api.sync_parentchain(
+				block_chunk_to_sync.as_slice(),
+				events_chunk_to_sync.as_slice(),
+				events_proofs_chunk_to_sync.as_slice(),
+				0,
+			)?;
 
 			until_synced_header = block_chunk_to_sync
 				.last()

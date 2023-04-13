@@ -52,6 +52,7 @@ use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
 use itp_sgx_crypto::{ed25519, Ed25519Seal, Rsa3072Seal};
 use itp_sgx_io::StaticSealedIO;
+use itp_storage::StorageProof;
 use itp_types::{ShardIdentifier, SignedBlock};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
@@ -338,6 +339,10 @@ pub unsafe extern "C" fn init_shard(shard: *const u8, shard_size: u32) -> sgx_st
 pub unsafe extern "C" fn sync_parentchain(
 	blocks_to_sync: *const u8,
 	blocks_to_sync_size: usize,
+	_events_to_sync: *const u8,
+	_events_to_sync_size: *const u8,
+	events_proofs_to_sync: *const u8,
+	events_proofs_to_sync_size: usize,
 	_nonce: *const u32,
 ) -> sgx_status_t {
 	let blocks_to_sync = match Vec::<SignedBlock>::decode_raw(blocks_to_sync, blocks_to_sync_size) {
@@ -345,6 +350,21 @@ pub unsafe extern "C" fn sync_parentchain(
 		Err(e) => return Error::Codec(e).into(),
 	};
 
+	let events_proofs_to_sync =
+		match Vec::<StorageProof>::decode_raw(events_proofs_to_sync, events_proofs_to_sync_size) {
+			Ok(events_proofs) => events_proofs,
+			Err(e) => return Error::Codec(e).into(),
+		};
+
+	let blocks_to_sync_merkle_roots: Vec<sp_core::H256> =
+		blocks_to_sync.iter().map(|block| block.block.header.state_root).collect();
+
+	if let Err(e) = validate_events(&events_proofs_to_sync, &blocks_to_sync_merkle_roots) {
+		return e.into()
+	}
+
+	// TODO: Need to pass validated events down this path or store them somewhere such that
+	// the `indirect_calls_executor` can access them to verify extrinsics in each block have succeeded or not.
 	if let Err(e) = dispatch_parentchain_blocks_for_import::<WorkerModeProvider>(blocks_to_sync) {
 		return e.into()
 	}
@@ -378,6 +398,20 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 		};
 
 	import_dispatcher.dispatch_import(blocks_to_sync)?;
+	Ok(())
+}
+
+// ANDREW
+/// Validates the events coming from the parentchain
+fn validate_events(
+	events_proofs: &Vec<StorageProof>,
+	blocks_merkle_roots: &Vec<sp_core::H256>,
+) -> Result<()> {
+	info!(
+		"Validating events, events_proofs_length: {:?}, blocks_merkle_roots_lengths: {:?}",
+		events_proofs.len(),
+		blocks_merkle_roots.len()
+	);
 	Ok(())
 }
 
