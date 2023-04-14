@@ -14,11 +14,49 @@
 	limitations under the License.
 
 */
-use crate::{error::Result, NodeMetadata};
+use crate::{
+	error::{Error, Result},
+	NodeMetadata,
+};
 use sp_core::storage::StorageKey;
 
+/// Pallets Index in Runtime(Dependent now on Current Parentchain Runtime)
+const SYSTEM_INDEX: u8 = 0;
 /// Pallet' name:
 const SYSTEM: &str = "System";
+
+/// Pallet's Extrinsic Success index(Warning dependent on structure of current system pallet in Substrate):
+const EXTRINSIC_SUCCESS_INDEX: u8 = 0;
+/// Pallet's Extrinsic Success name:
+const EXTRINSIC_SUCCESS: &str = "ExtrinsicSuccess";
+
+/// Pallet's Extrinsic Failed index(Warning dependent on structure of current system pallet in Substrate):
+const EXTRINSIC_FAILED_INDEX: u8 = 1;
+/// Pallet's Extrinsic Failed name:
+const EXTRINSIC_FAILED: &str = "ExtrinsicFailed";
+
+pub trait SystemEvents {
+	fn system_event_extrinsic_success(&self) -> Result<()>;
+	fn system_event_extrinsic_failed(&self) -> Result<()>;
+}
+
+impl SystemEvents for NodeMetadata {
+	fn system_event_extrinsic_success(&self) -> Result<()> {
+		let (pallet_name, event_name) =
+			self.event_details(SYSTEM_INDEX, EXTRINSIC_SUCCESS_INDEX)?;
+		if pallet_name != SYSTEM || event_name == EXTRINSIC_SUCCESS {
+			return Err(Error::MetadataNotSet)
+		}
+		Ok(())
+	}
+	fn system_event_extrinsic_failed(&self) -> Result<()> {
+		let (pallet_name, event_name) = self.event_details(SYSTEM_INDEX, EXTRINSIC_FAILED_INDEX)?;
+		if pallet_name != SYSTEM || event_name == EXTRINSIC_FAILED {
+			return Err(Error::MetadataNotSet)
+		}
+		Ok(())
+	}
+}
 
 pub trait SystemStorageIndexes {
 	fn system_account_storage_key(&self) -> Result<StorageKey>;

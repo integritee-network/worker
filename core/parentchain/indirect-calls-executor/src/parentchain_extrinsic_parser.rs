@@ -55,6 +55,8 @@ where
 {
 	type SignedExtra = SignedExtra;
 
+	// TODO: HOW TO DO THIS FOR EVENTS? -- ANDREW
+
 	/// Extract a call index of an encoded call.
 	fn parse(encoded_call: &[u8]) -> Result<SemiOpaqueExtrinsic<Self::SignedExtra>, codec::Error> {
 		let call_mut = &mut &encoded_call[..];
