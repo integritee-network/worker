@@ -1,17 +1,21 @@
 services:
   demo-smart-contract:
-    image: integritee-cli:dev
-    container_name: integritee-smart-contract-demo
+    image: integritee-cli:${VERSION:-dev}
+    devices:
+      - "${SGX_PROVISION:-/dev/null}:/dev/sgx/provision"
+      - "${SGX_ENCLAVE:-/dev/null}:/dev/sgx/enclave"
+    volumes:
+      - "${AESMD:-/dev/null}:/var/run/aesmd"
     build:
-      context: ..
+      context: ${PWD}/..
       dockerfile: build.Dockerfile
       target: deployed-client
     depends_on:
-      integritee-node:
+      integritee-node-${VERSION}:
         condition: service_healthy
-      integritee-worker-1:
+      integritee-worker-1-${VERSION}:
         condition: service_healthy
-      integritee-worker-2:
+      integritee-worker-2-${VERSION}:
         condition: service_healthy
     environment:
       - RUST_LOG=warn,ws=warn,itc_rpc_client=warn

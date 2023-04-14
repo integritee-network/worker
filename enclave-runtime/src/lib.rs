@@ -372,8 +372,6 @@ pub unsafe extern "C" fn sync_parentchain(
 		Err(e) => return Error::Codec(e).into(),
 	};
 
-	// let events_to_sync: Vec<_> = events_to_sync.iter().map(|raw_event| Event::decode(& &mut raw_event[..]).unwrap()).collect();
-
 	// TODO: Need to pass validated events down this path or store them somewhere such that
 	// the `indirect_calls_executor` can access them to verify extrinsics in each block have succeeded or not.
 	if let Err(e) = dispatch_parentchain_blocks_for_import::<WorkerModeProvider>(blocks_to_sync) {

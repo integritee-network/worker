@@ -1,25 +1,34 @@
 services:
   worker-ping:
-    image: worker-ping:dev
+    image: worker-ping:${VERSION:-dev}
+    devices:
+      - "${SGX_PROVISION:-/dev/null}:/dev/sgx/provision"
+      - "${SGX_ENCLAVE:-/dev/null}:/dev/sgx/enclave"
+    volumes:
+      - "${AESMD:-/dev/null}:/var/run/aesmd"
     build:
       context: .
       dockerfile: ping.Dockerfile
-    depends_on: [ 'integritee-node', 'integritee-worker-1', 'integritee-worker-2' ]
+    depends_on: [ 'integritee-node-${VERSION}', 'integritee-worker-1-${VERSION}', 'integritee-worker-2-${VERSION}' ]
     networks:
       - integritee-test-network
-    #entrypoint: "ping integritee-worker-2 | while read pong; do echo \"$$(date): $$pong\"; done"
     entrypoint: "ping integritee-worker-2"
   pumba-network-delay:
-    image: integritee-fork-producer:dev
+    image: integritee-fork-producer:${VERSION:-dev}
+    devices:
+      - "${SGX_PROVISION:-/dev/null}:/dev/sgx/provision"
+      - "${SGX_ENCLAVE:-/dev/null}:/dev/sgx/enclave"
+    volumes:
+      - "${AESMD:-/dev/null}:/var/run/aesmd"
     build:
       context: .
       dockerfile: fork.Dockerfile
     depends_on:
-      integritee-node:
+      integritee-node-${VERSION}:
         condition: service_healthy
-      integritee-worker-1:
+      integritee-worker-1-${VERSION}:
         condition: service_healthy
-      integritee-worker-2:
+      integritee-worker-2-${VERSION}:
         condition: service_healthy
     networks:
       - integritee-test-network
