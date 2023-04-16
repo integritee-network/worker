@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:experimental
 # Copyright 2021 Integritee AG
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,34 +18,34 @@
 
 ### Builder Stage
 ##################################################
-FROM integritee/integritee-dev:0.2.1 AS builder
-LABEL maintainer="zoltan@integritee.network"
+# FROM integritee/integritee-dev:0.2.1 AS builder
+# LABEL maintainer="zoltan@integritee.network"
 
-# set environment variables
-ENV SGX_SDK /opt/sgxsdk
-ENV PATH "$PATH:${SGX_SDK}/bin:${SGX_SDK}/bin/x64:/opt/rust/bin//bin"
-ENV PKG_CONFIG_PATH "${PKG_CONFIG_PATH}:${SGX_SDK}/pkgconfig"
-ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${SGX_SDK}/sdk_libs"
-ENV CARGO_NET_GIT_FETCH_WITH_CLI true
+# # set environment variables
+# ENV SGX_SDK /opt/sgxsdk
+# ENV PATH "$PATH:${SGX_SDK}/bin:${SGX_SDK}/bin/x64:/opt/rust/bin"
+# ENV PKG_CONFIG_PATH "${PKG_CONFIG_PATH}:${SGX_SDK}/pkgconfig"
+# ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${SGX_SDK}/sdk_libs"
+# ENV CARGO_NET_GIT_FETCH_WITH_CLI true
 
-# Default SGX MODE is software mode
-ARG SGX_MODE=SW
-ENV SGX_MODE=$SGX_MODE
+# # Default SGX MODE is software mode
+# ARG SGX_MODE=SW
+# ENV SGX_MODE=$SGX_MODE
 
-ENV HOME=/home/ubuntu/work
+# ENV HOME=/home/ubuntu/work
 
-ARG WORKER_MODE_ARG
-ENV WORKER_MODE=$WORKER_MODE_ARG
+# ARG WORKER_MODE_ARG
+# ENV WORKER_MODE=$WORKER_MODE_ARG
 
-ARG ADDITIONAL_FEATURES_ARG
-ENV ADDITIONAL_FEATURES=$ADDITIONAL_FEATURES_ARG
+# ARG ADDITIONAL_FEATURES_ARG
+# ENV ADDITIONAL_FEATURES=$ADDITIONAL_FEATURES_ARG
 
-WORKDIR $HOME/worker
-COPY . .
+# WORKDIR $HOME/worker
+# COPY . .
 
-RUN make
+# RUN make
 
-RUN cargo test --release
+# RUN cargo test --release
 
 
 ### Cached Builder Stage (WIP)
@@ -52,12 +53,12 @@ RUN cargo test --release
 # A builder stage that uses sccache to speed up local builds with docker
 # Installation and setup of sccache should be moved to the integritee-dev image, so we don't
 # always need to compile and install sccache on CI (where we have no caching so far).
-FROM integritee/integritee-dev:0.2.1 AS cached-builder
+FROM integritee/integritee-dev:0.2.1 AS builder
 LABEL maintainer="zoltan@integritee.network"
 
 # set environment variables
 ENV SGX_SDK /opt/sgxsdk
-ENV PATH "$PATH:${SGX_SDK}/bin:${SGX_SDK}/bin/x64:/opt/rust/bin/bin"
+ENV PATH "$PATH:${SGX_SDK}/bin:${SGX_SDK}/bin/x64:/opt/rust/bin"
 ENV PKG_CONFIG_PATH "${PKG_CONFIG_PATH}:${SGX_SDK}/pkgconfig"
 ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${SGX_SDK}/sdk_libs"
 ENV CARGO_NET_GIT_FETCH_WITH_CLI true
@@ -66,23 +67,53 @@ ENV CARGO_NET_GIT_FETCH_WITH_CLI true
 ARG SGX_MODE=SW
 ENV SGX_MODE=$SGX_MODE
 
-ENV HOME=/home/ubuntu/work
+ENV WORKHOME=/home/ubuntu/work
+ENV HOME=/home/ubuntu
 
-RUN rustup default stable && cargo install sccache
-ENV SCCACHE_CACHE_SIZE="3G"
-ENV SCCACHE_DIR=$HOME/.cache/sccache
-ENV RUSTC_WRAPPER="/opt/rust/bin/sccache"
+RUN rustup default stable 
+#&& cargo install sccache
+
+#ENV SCCACHE_CACHE_SIZE="3G"
+#ENV SCCACHE_DIR=$HOME/.cache/sccache
+#ENV RUSTC_WRAPPER="/opt/rust/bin/sccache"
 
 ARG WORKER_MODE_ARG
 ENV WORKER_MODE=$WORKER_MODE_ARG
 
-WORKDIR $HOME/worker
+WORKDIR $WORKHOME/worker
+
+# ADD src src
+# ADD Cargo.lock .
+# ADD Cargo.toml .
+
 COPY . .
+#RUN  --mount=type=cache,id=cargo-target,target=/home/ubuntu/work/worker/target ls -la target
 
-RUN --mount=type=cache,id=cargo,target=${HOME}/.cache/sccache make && sccache --show-stats
 
-RUN --mount=type=cache,id=cargo,target=${HOME}/.cache/sccache cargo test --release && sccache --show-stats
+RUN --mount=type=cache,id=cargo-registry,target=/opt/rust/registry \
+	--mount=type=cache,id=cargo-target,target=/home/ubuntu/work/worker/target \
+	--mount=type=cache,id=cargo-enclave-target,target=/home/ubuntu/work/worker/enclave-runtime/target \
+    ls -la /opt/rust/registry && ls -la /home/ubuntu/work/worker/target && ls -la /home/ubuntu/work/worker/enclave-runtime/target
 
+#RUN mkdir -p $HOME/.cache/sccache
+# RUN sccache --start-server
+RUN echo 11
+#RUN --mount=type=cache,id=cargo,target=${SCCACHE_DIR} --mount=type=cache,id=cargo-target,target=${WORKHOME}/worker/target \ 
+#  --mount=type=cache,id=cargo-git,target=/opt/rust/git/db --mount=type=cache,id=cargo-registry,target=/opt/rust/registry make && cargo test --release && sccache --show-stats
+
+RUN --mount=type=cache,id=cargo-registry,target=/opt/rust/registry \
+    --mount=type=cache,id=cargo-git,target=/opt/rust/git/db \
+	--mount=type=cache,id=cargo-target,target=/home/ubuntu/work/worker/target \
+	--mount=type=cache,id=cargo-enclave-target,target=/home/ubuntu/work/worker/enclave-runtime/target \
+	make
+
+RUN --mount=type=cache,id=cargo-registry,target=/opt/rust/registry \
+	--mount=type=cache,id=cargo-target,target=/home/ubuntu/work/worker/target \
+	--mount=type=cache,id=cargo-enclave-target,target=/home/ubuntu/work/worker/enclave-runtime/target \
+    ls -la /opt/rust/registry && ls -la /home/ubuntu/work/worker/target && ls -la /home/ubuntu/work/worker/enclave-runtime/target
+
+# RUN --mount=type=cache,id=cargo,target=${SCCACHE_DIR} cargo test --release && sccache --show-stats
+# RUN sccache --stop-server
 
 ### Base Runner Stage
 ### The runner needs the aesmd service for the `SGX_MODE=HW`.
