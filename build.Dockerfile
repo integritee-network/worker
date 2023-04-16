@@ -108,6 +108,12 @@ RUN --mount=type=cache,id=cargo-registry,target=/opt/rust/registry \
 	make
 
 RUN --mount=type=cache,id=cargo-registry,target=/opt/rust/registry \
+    --mount=type=cache,id=cargo-git,target=/opt/rust/git/db \
+	--mount=type=cache,id=cargo-target,target=/home/ubuntu/work/worker/target \
+	--mount=type=cache,id=cargo-enclave-target,target=/home/ubuntu/work/worker/enclave-runtime/target \
+	cargo test --release
+
+RUN --mount=type=cache,id=cargo-registry,target=/opt/rust/registry \
 	--mount=type=cache,id=cargo-target,target=/home/ubuntu/work/worker/target \
 	--mount=type=cache,id=cargo-enclave-target,target=/home/ubuntu/work/worker/enclave-runtime/target \
     ls -la /opt/rust/registry && ls -la /home/ubuntu/work/worker/target && ls -la /home/ubuntu/work/worker/enclave-runtime/target
