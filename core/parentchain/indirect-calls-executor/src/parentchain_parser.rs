@@ -21,6 +21,26 @@ use itp_node_api::api_client::{
 	Address, CallIndex, PairSignature, ParentchainSignedExtra, Signature, UncheckedExtrinsicV4,
 };
 
+pub struct EventParser;
+
+pub trait ParseEvent {
+	type Event: Encode + Decode;
+
+	fn parse(encoded_event: &[u8]) -> Result<Self::Event, codec::Error>;
+}
+
+impl ParseEvent for EventParser {
+	type Event = Vec<u8>; // TODO: Replace with `SomeType`
+
+	fn parse(encoded_event: &[u8]) -> Result<Self::Event, codec::Error> {
+		/*
+		TODO: How to get this `SomeType`
+		let some_event = SomeType::Decode(& &mut encoded_event[..])?;
+		*/
+		Ok(Vec::new())
+	}
+}
+
 pub struct ExtrinsicParser<SignedExtra> {
 	_phantom: PhantomData<SignedExtra>,
 }

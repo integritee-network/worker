@@ -21,7 +21,7 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::{
 	error::Result,
-	filter_calls::FilterCalls,
+	filter_metadata::FilterMetadata,
 	traits::{ExecuteIndirectCalls, IndirectDispatch, IndirectExecutor},
 };
 use binary_merkle_tree::merkle_root;
@@ -106,8 +106,8 @@ impl<
 	TopPoolAuthor: AuthorApi<H256, H256> + Send + Sync + 'static,
 	NodeMetadataProvider: AccessNodeMetadata,
 	NodeMetadataProvider::MetadataType: NodeMetadataTrait,
-	FilterIndirectCalls: FilterCalls<NodeMetadataProvider::MetadataType>,
-	FilterIndirectCalls::Call: IndirectDispatch<Self> + Encode,
+	FilterIndirectCalls: FilterMetadata<NodeMetadataProvider::MetadataType>,
+	FilterIndirectCalls::Output: IndirectDispatch<Self> + Encode,
 {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
@@ -227,8 +227,8 @@ pub(crate) fn hash_of<T: Encode>(xt: &T) -> H256 {
 mod test {
 	use super::*;
 	use crate::{
-		filter_calls::ShieldFundsAndCallWorkerFilter,
-		parentchain_extrinsic_parser::ParentchainExtrinsicParser,
+		filter_metadata::ShieldFundsAndCallWorkerFilter,
+		parentchain_parser::ParentchainExtrinsicParser,
 	};
 	use codec::{Decode, Encode};
 	use ita_stf::TrustedOperation;
