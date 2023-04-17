@@ -46,7 +46,9 @@ ENV SCCACHE_DIR=$HOME/.cache/sccache
 ENV RUSTC_WRAPPER="/opt/rust/bin/sccache"
 
 ARG WORKER_MODE_ARG
+ARG ADDITIONAL_FEATURES_ARG
 ENV WORKER_MODE=$WORKER_MODE_ARG
+ENV ADDITIONAL_FEATURES=$ADDITIONAL_FEATURES_ARG
 
 WORKDIR $WORKHOME/worker
 
@@ -54,7 +56,7 @@ COPY . .
 
 RUN --mount=type=cache,id=cargo-registry,target=/opt/rust/registry \
     --mount=type=cache,id=cargo-git,target=/opt/rust/git/db \
-	--mount=type=cache,id=cargo-sccache-${WORKER_MODE},target=/home/ubuntu/.cache/sccache \
+	--mount=type=cache,id=cargo-sccache-${WORKER_MODE}${ADDITIONAL_FEATURES},target=/home/ubuntu/.cache/sccache \
 	make && cargo test --release && sccache --show-stats
 
 #	--mount=type=cache,id=cargo-enclave-target-${WORKER_MODE},target=/home/ubuntu/work/worker/enclave-runtime/target \
