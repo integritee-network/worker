@@ -356,17 +356,18 @@ where
 
 	fn log_resp_code(&self, resp_code: &mut Option<u16>) {
 		let msg = match resp_code {
-			Some(200) => "OK Operation Successful",
-			Some(401) => "Unauthorized Failed to authenticate or authorize request.",
-			Some(404) => "Not Found GID does not refer to a valid EPID group ID.",
-			Some(500) => "Internal error occurred",
+			Some(200) => "OK, operation successful",
+			Some(400) => "Bad request, quote is invalid, or linkability of quote/subscription does not match.",
+			Some(401) => "Unauthorized, failed to authenticate or authorize request.",
+			Some(404) => "Not found, GID does not refer to a valid EPID group ID.",
+			Some(500) => "Internal error occurred.",
 			Some(503) =>
 				"Service is currently not able to process the request (due to
 			a temporary overloading or maintenance). This is a
 			temporary state – the same request can be repeated after
-			some time. ",
+			some time.",
 			_ => {
-				error!("DBG:{:?}", resp_code);
+				error!("Error, received unknown HTTP response: {:?}", resp_code);
 				"Unknown error occured"
 			},
 		};
