@@ -55,7 +55,7 @@ COPY . .
 RUN --mount=type=cache,id=cargo-registry,target=/opt/rust/registry \
     --mount=type=cache,id=cargo-git,target=/opt/rust/git/db \
 	--mount=type=cache,id=cargo-sccache-${WORKER_MODE},target=/home/ubuntu/.cache/sccache \
-	make && cargo test --release
+	make && cargo test --release && sccache --show-stats
 
 #	--mount=type=cache,id=cargo-enclave-target-${WORKER_MODE},target=/home/ubuntu/work/worker/enclave-runtime/target \
 
