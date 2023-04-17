@@ -17,13 +17,18 @@
 
 use crate::{ApiClientError, ApiResult};
 use itp_api_client_types::{Block, SignedBlock};
-use itp_types::parentchain::{BlockNumber, Hash, Header, StorageProof};
+use itp_types::{
+	parentchain::{BlockNumber, Hash, Header, StorageProof},
+	H256,
+};
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use sp_runtime::traits::GetRuntimeBlockType;
 use substrate_api_client::{
-	primitives::StorageKey, rpc::Request, Api, ExtrinsicParams, FrameSystemConfig, GetBlock,
+	rpc::Request, serde_impls::StorageKey, Api, ExtrinsicParams, FrameSystemConfig, GetBlock,
 	GetHeader, GetStorage,
 };
+
+pub type Events = Vec<u8>;
 
 /// ApiClient extension that simplifies chain data access.
 pub trait ChainApi {
@@ -36,8 +41,10 @@ pub trait ChainApi {
 	/// Returns an empty vector if from is greater than to.
 	fn get_blocks(&self, from: BlockNumber, to: BlockNumber) -> ApiResult<Vec<SignedBlock>>;
 	fn is_grandpa_available(&self) -> ApiResult<bool>;
-	fn grandpa_authorities(&self, hash: Option<Hash>) -> ApiResult<AuthorityList>;
-	fn grandpa_authorities_proof(&self, hash: Option<Hash>) -> ApiResult<StorageProof>;
+	fn grandpa_authorities(&self, hash: Option<H256>) -> ApiResult<AuthorityList>;
+	fn grandpa_authorities_proof(&self, hash: Option<H256>) -> ApiResult<StorageProof>;
+	fn get_events_value_proof(&self, block_hash: Option<H256>) -> ApiResult<StorageProof>;
+	fn get_events_for_block(&self, block_hash: Option<H256>) -> ApiResult<Events>;
 }
 
 impl<Signer, Client, Params, Runtime> ChainApi for Api<Signer, Client, Params, Runtime>
@@ -99,5 +106,16 @@ where
 			)?
 			.map(|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect())
 			.unwrap_or_default())
+	}
+
+	fn get_events_value_proof(&self, block_hash: Option<H256>) -> ApiResult<StorageProof> {
+		Ok(self
+			.get_storage_value_proof("System", "Events", block_hash)?
+			.map(|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect())
+			.unwrap_or_default())
+	}
+
+	fn get_events_for_block(&self, block_hash: Option<H256>) -> ApiResult<Events> {
+		Ok(self.get_storage_value("System", "Events", block_hash)?.unwrap_or_default())
 	}
 }

@@ -63,6 +63,8 @@ enclave {
 
 		public sgx_status_t sync_parentchain(
 			[in, size=blocks_size] uint8_t* blocks, size_t blocks_size,
+			[in, size=events_size] uint8_t* events, size_t events_size,
+			[in, size=events_proofs_size] uint8_t* events_proofs, size_t events_proofs_size,
 			[in] uint32_t* nonce
 		);
 
