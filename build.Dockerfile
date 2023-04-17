@@ -39,6 +39,11 @@ ENV WORKHOME=/home/ubuntu/work
 ENV HOME=/home/ubuntu
 
 RUN rustup default stable 
+RUN cargo install sccache
+
+ENV SCCACHE_CACHE_SIZE="20G"
+ENV SCCACHE_DIR=$HOME/.cache/sccache
+ENV RUSTC_WRAPPER="/opt/rust/bin/sccache"
 
 ARG WORKER_MODE_ARG
 ENV WORKER_MODE=$WORKER_MODE_ARG
@@ -49,9 +54,10 @@ COPY . .
 
 RUN --mount=type=cache,id=cargo-registry,target=/opt/rust/registry \
     --mount=type=cache,id=cargo-git,target=/opt/rust/git/db \
-	--mount=type=cache,id=cargo-target,target=/home/ubuntu/work/worker/target \
-	--mount=type=cache,id=cargo-enclave-target,target=/home/ubuntu/work/worker/enclave-runtime/target \
+	--mount=type=cache,id=cargo-sccache-${WORKER_MODE},target=/home/ubuntu/.cache/sccache \
 	make && cargo test --release
+
+#	--mount=type=cache,id=cargo-enclave-target-${WORKER_MODE},target=/home/ubuntu/work/worker/enclave-runtime/target \
 
 ### Base Runner Stage
 ### The runner needs the aesmd service for the `SGX_MODE=HW`.
