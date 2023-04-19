@@ -280,6 +280,7 @@ jobs:
           fi
           docker tag integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.WORKER_IMAGE_TAG }}
           docker tag integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.CLIENT_IMAGE_TAG }}
+          docker pull integritee/integritee-node-dev:1.0.33
           docker tag integritee/integritee-node-dev:1.0.33 ${{ env.INTEGRITEE_NODE }}
           docker images --all
 
