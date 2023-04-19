@@ -44,7 +44,7 @@ pub(crate) fn start_interval_market_update<E: TeeracleApi>(
 
 	schedule_on_repeating_intervals(
 		|| {
-			execute_update_market(api, enclave_api, tokio_handle);
+			execute_market_update(api, enclave_api, tokio_handle);
 			execute_weather_update(api, enclave_api, tokio_handle);
 		},
 		interval,
@@ -98,7 +98,7 @@ fn execute_weather_update<E: TeeracleApi>(
 	});
 }
 
-fn execute_update_market<E: TeeracleApi>(
+fn execute_market_update<E: TeeracleApi>(
 	node_api: &ParentchainApi,
 	enclave: &E,
 	tokio_handle: &Handle,
