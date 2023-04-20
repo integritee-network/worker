@@ -119,11 +119,12 @@ impl<
 	fn import_parentchain_blocks(
 		&self,
 		blocks_to_import: Vec<Self::SignedBlockType>,
+		events_to_import: Vec<Vec<u8>>,
 	) -> Result<()> {
 		let mut calls = Vec::<OpaqueCall>::new();
 
 		debug!("Import blocks to light-client!");
-		for signed_block in blocks_to_import.into_iter() {
+		for (signed_block, raw_events) in blocks_to_import.into_iter().zip(events_to_import.into_iter()) {
 			// Check if there are any extrinsics in the to-be-imported block that we sent and cached in the light-client before.
 			// If so, remove them now from the cache.
 			if let Err(e) = self.validator_accessor.execute_mut_on_validator(|v| {
@@ -141,6 +142,8 @@ impl<
 				error!("Error performing state updates upon block import");
 				return Err(e.into())
 			}
+
+			// Validate events here
 
 			// Execute indirect calls that were found in the extrinsics of the block,
 			// incl. shielding and unshielding.

@@ -367,14 +367,14 @@ pub unsafe extern "C" fn sync_parentchain(
 		return e.into()
 	}
 
-	let _events_to_sync = match Vec::<Vec<u8>>::decode_raw(events_to_sync, events_to_sync_size) {
+	let events_to_sync = match Vec::<Vec<u8>>::decode_raw(events_to_sync, events_to_sync_size) {
 		Ok(events) => events,
 		Err(e) => return Error::Codec(e).into(),
 	};
 
 	// TODO: Need to pass validated events down this path or store them somewhere such that
 	// the `indirect_calls_executor` can access them to verify extrinsics in each block have succeeded or not.
-	if let Err(e) = dispatch_parentchain_blocks_for_import::<WorkerModeProvider>(blocks_to_sync) {
+	if let Err(e) = dispatch_parentchain_blocks_for_import::<WorkerModeProvider>(blocks_to_sync, events_to_sync) {
 		return e.into()
 	}
 
@@ -391,6 +391,7 @@ pub unsafe extern "C" fn sync_parentchain(
 ///
 fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>(
 	blocks_to_sync: Vec<SignedBlock>,
+	events_to_sync: Vec<Vec<u8>>,
 ) -> Result<()> {
 	if WorkerModeProvider::worker_mode() == WorkerMode::Teeracle {
 		trace!("Not importing any parentchain blocks");
@@ -406,7 +407,7 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 			return Err(Error::NoParentchainAssigned)
 		};
 
-	import_dispatcher.dispatch_import(blocks_to_sync)?;
+	import_dispatcher.dispatch_import(blocks_to_sync, events_to_sync)?;
 	Ok(())
 }
 

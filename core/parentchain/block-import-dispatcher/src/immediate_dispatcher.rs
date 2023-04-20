@@ -47,9 +47,9 @@ impl<BlockImporter, SignedBlockType> DispatchBlockImport<SignedBlockType>
 where
 	BlockImporter: ImportParentchainBlocks<SignedBlockType = SignedBlockType>,
 {
-	fn dispatch_import(&self, blocks: Vec<SignedBlockType>) -> Result<()> {
+	fn dispatch_import(&self, blocks: Vec<SignedBlockType>, events: Vec<Vec<u8>>) -> Result<()> {
 		debug!("Importing {} parentchain blocks", blocks.len());
-		self.block_importer.import_parentchain_blocks(blocks)?;
+		self.block_importer.import_parentchain_blocks(blocks, events)?;
 		debug!("Notifying {} observers of import", self.import_event_observers.len());
 		self.import_event_observers.iter().for_each(|callback| callback());
 		Ok(())

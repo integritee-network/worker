@@ -34,8 +34,8 @@ use ita_stf::{
 	TrustedCall, TrustedOperation,
 };
 use itc_parentchain::indirect_calls_executor::{
-	filter_calls::ShieldFundsAndCallWorkerFilter,
-	parentchain_extrinsic_parser::ParentchainExtrinsicParser, ExecuteIndirectCalls,
+	filter_metadata::ShieldFundsAndCallWorkerFilter,
+	parentchain_parser::ParentchainExtrinsicParser, ExecuteIndirectCalls,
 	IndirectCallsExecutor,
 };
 use itc_parentchain_test::{

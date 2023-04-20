@@ -82,7 +82,7 @@ where
 	BlockImportQueue:
 		PushToBlockQueue<SignedBlockType> + PopFromBlockQueue<BlockType = SignedBlockType>,
 {
-	fn dispatch_import(&self, blocks: Vec<SignedBlockType>) -> Result<()> {
+	fn dispatch_import(&self, blocks: Vec<SignedBlockType>, _events: Vec<Vec<u8>>) -> Result<()> {
 		debug!("Pushing parentchain block(s) ({}) to import queue", blocks.len());
 		// Push all the blocks to be dispatched into the queue.
 		self.import_queue.push_multiple(blocks).map_err(Error::BlockImportQueue)
@@ -107,7 +107,7 @@ where
 		debug!("Trigger import of all parentchain blocks in queue ({})", blocks_to_import.len());
 
 		self.block_importer
-			.import_parentchain_blocks(blocks_to_import)
+			.import_parentchain_blocks(blocks_to_import, Vec::new())
 			.map_err(Error::BlockImport)?;
 
 		Ok(latest_imported_block)
@@ -123,7 +123,7 @@ where
 		);
 
 		self.block_importer
-			.import_parentchain_blocks(blocks_to_import)
+			.import_parentchain_blocks(blocks_to_import, Vec::new())
 			.map_err(Error::BlockImport)
 	}
 
@@ -142,7 +142,7 @@ where
 		);
 
 		self.block_importer
-			.import_parentchain_blocks(blocks_to_import)
+			.import_parentchain_blocks(blocks_to_import, Vec::new())
 			.map_err(Error::BlockImport)?;
 
 		Ok(latest_imported_block)
