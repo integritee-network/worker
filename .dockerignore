@@ -8,6 +8,7 @@ docs/
 local-setup/
 scripts/
 target/
+enclave-runtime/target/
 tmp/
 *.Dockerfile
 Dockerfile
