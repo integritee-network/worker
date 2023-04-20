@@ -34,8 +34,8 @@ use ita_stf::{
 	TrustedCall, TrustedOperation,
 };
 use itc_parentchain::indirect_calls_executor::{
-	filter_metadata::ShieldFundsAndCallWorkerFilter,
-	parentchain_parser::ParentchainExtrinsicParser, ExecuteIndirectCalls,
+	filter_metadata::{ShieldFundsAndCallWorkerFilter, ExtrinsicSuccessAndFailedFilter},
+	parentchain_parser::{ParentchainExtrinsicParser, ParentchainEventParser}, ExecuteIndirectCalls,
 	IndirectCallsExecutor,
 };
 use itc_parentchain_test::{
@@ -138,6 +138,7 @@ pub fn submit_shielding_call_to_top_pool() {
 			_,
 			_,
 			ShieldFundsAndCallWorkerFilter<ParentchainExtrinsicParser>,
+			ExtrinsicSuccessAndFailedFilter<ParentchainEventParser>,
 		>::new(
 			shielding_key_repo, enclave_signer, top_pool_author.clone(), node_meta_data_repository
 		);
@@ -145,7 +146,7 @@ pub fn submit_shielding_call_to_top_pool() {
 	let block_with_shielding_call = create_shielding_call_extrinsic(shard_id, &shielding_key);
 
 	let _ = indirect_calls_executor
-		.execute_indirect_calls_in_extrinsics(&block_with_shielding_call)
+		.execute_indirect_calls_in_extrinsics(&block_with_shielding_call, &Vec::new())
 		.unwrap();
 
 	assert_eq!(1, top_pool_author.get_pending_trusted_calls(shard_id).len());

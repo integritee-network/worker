@@ -27,6 +27,9 @@ use std::vec::Vec;
 
 pub struct EventParser;
 
+/// Parses the events corresponding to the parentchain.
+pub type ParentchainEventParser = EventParser;
+
 pub trait ParseEvent {
 	type Event: Encode + Decode;
 

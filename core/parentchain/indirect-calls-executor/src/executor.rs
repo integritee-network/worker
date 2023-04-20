@@ -47,12 +47,13 @@ pub struct IndirectCallsExecutor<
 	TopPoolAuthor,
 	NodeMetadataProvider,
 	IndirectCallsFilter,
+	IndirectEventsFilter,
 > {
 	pub(crate) shielding_key_repo: Arc<ShieldingKeyRepository>,
 	pub(crate) stf_enclave_signer: Arc<StfEnclaveSigner>,
 	pub(crate) top_pool_author: Arc<TopPoolAuthor>,
 	pub(crate) node_meta_data_provider: Arc<NodeMetadataProvider>,
-	_phantom: PhantomData<IndirectCallsFilter>,
+	_phantom: PhantomData<(IndirectCallsFilter, IndirectEventsFilter)>,
 }
 impl<
 		ShieldingKeyRepository,
@@ -60,6 +61,7 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		IndirectCallsFilter,
+		IndirectEventsFilter,
 	>
 	IndirectCallsExecutor<
 		ShieldingKeyRepository,
@@ -67,6 +69,7 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		IndirectCallsFilter,
+		IndirectEventsFilter,
 	>
 {
 	pub fn new(
@@ -91,6 +94,7 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		FilterIndirectCalls,
+		FilterIndirectEvents,
 	> ExecuteIndirectCalls
 	for IndirectCallsExecutor<
 		ShieldingKeyRepository,
@@ -98,6 +102,7 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		FilterIndirectCalls,
+		FilterIndirectEvents,
 	> where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
@@ -108,10 +113,12 @@ impl<
 	NodeMetadataProvider::MetadataType: NodeMetadataTrait,
 	FilterIndirectCalls: FilterMetadata<NodeMetadataProvider::MetadataType>,
 	FilterIndirectCalls::Output: IndirectDispatch<Self> + Encode,
+	FilterIndirectEvents: FilterMetadata<NodeMetadataProvider::MetadataType>,
 {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
 		block: &ParentchainBlock,
+		events: &Vec<u8>
 	) -> Result<OpaqueCall>
 	where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
@@ -127,6 +134,10 @@ impl<
 
 			let maybe_call = self.node_meta_data_provider.get_from_metadata(|metadata| {
 				FilterIndirectCalls::filter_into_with_metadata(&encoded_xt_opaque, metadata)
+			})?;
+
+			let maybe_event = self.node_meta_data_provider.get_from_metadata(|metadata| {
+				FilterIndirectEvents::filter_into_with_metadata(&events, metadata)
 			})?;
 
 			let call = match maybe_call {
@@ -174,6 +185,7 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		FilterIndirectCalls,
+		FilterIndirectEvents,
 	> IndirectExecutor
 	for IndirectCallsExecutor<
 		ShieldingKeyRepository,
@@ -181,6 +193,7 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		FilterIndirectCalls,
+		FilterIndirectEvents,
 	> where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
@@ -283,7 +296,7 @@ mod test {
 			.build();
 
 		indirect_calls_executor
-			.execute_indirect_calls_in_extrinsics(&parentchain_block)
+			.execute_indirect_calls_in_extrinsics(&parentchain_block, Vec::new())
 			.unwrap();
 
 		assert_eq!(1, top_pool_author.pending_tops(shard_id()).unwrap().len());
