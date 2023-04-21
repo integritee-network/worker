@@ -64,6 +64,8 @@ services:
       - "${AESMD:-/dev/null}:/var/run/aesmd"
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
+      - IAS_EPID_SPID
+      - IAS_EPID_KEY
     networks:
       - integritee-test-network
     healthcheck:
