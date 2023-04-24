@@ -15,7 +15,8 @@
 
 */
 
-use crate::{error::Error, LightValidationState};
+use crate::{error::Error, state::RelayState, LightValidationState};
+use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
 use itp_sgx_io::StaticSealedIO;
 use itp_types::Block;
 
@@ -28,7 +29,10 @@ impl StaticSealedIO for LightValidationStateSealMock {
 	type Unsealed = LightValidationState<Block>;
 
 	fn unseal_from_static_file() -> Result<Self::Unsealed, Self::Error> {
-		Ok(LightValidationState::new())
+		Ok(LightValidationState::new(RelayState::new(
+			ParentchainHeaderBuilder::default().build(),
+			Default::default(),
+		)))
 	}
 
 	fn seal_to_static_file(_unsealed: &Self::Unsealed) -> Result<(), Self::Error> {
