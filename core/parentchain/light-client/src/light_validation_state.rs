@@ -17,7 +17,7 @@
 
 //! State of the light-client validation.
 
-use crate::state::RelayState;
+use crate::{state::RelayState, Error, HashFor, LightClientState};
 use codec::{Decode, Encode};
 pub use sp_finality_grandpa::SetId;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
@@ -44,5 +44,31 @@ impl<Block: ParentchainBlockTrait> LightValidationState<Block> {
 
 	pub(crate) fn get_relay_mut(&mut self) -> &mut RelayState<Block> {
 		&mut self.relay_state
+	}
+}
+
+impl<Block> LightClientState<Block> for LightValidationState<Block>
+where
+	Block: ParentchainBlockTrait,
+{
+	fn num_xt_to_be_included(&self) -> Result<usize, Error> {
+		let relay = self.get_relay();
+		Ok(relay.verify_tx_inclusion.len())
+	}
+
+	fn genesis_hash(&self) -> Result<HashFor<Block>, Error> {
+		let relay = self.get_relay();
+		let hash = relay.header_hashes.get(0).ok_or(Error::NoGenesis)?;
+		Ok(*hash)
+	}
+
+	fn latest_finalized_header(&self) -> Result<Block::Header, Error> {
+		let relay = self.get_relay();
+		Ok(relay.last_finalized_block_header.clone())
+	}
+
+	fn penultimate_finalized_block_header(&self) -> Result<Block::Header, Error> {
+		let relay = self.get_relay();
+		Ok(relay.penultimate_finalized_block_header.clone())
 	}
 }

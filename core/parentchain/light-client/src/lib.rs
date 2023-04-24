@@ -95,6 +95,17 @@ pub trait LightClientState<Block: ParentchainBlockTrait> {
 	fn penultimate_finalized_block_header(&self) -> Result<Block::Header, Error>;
 }
 
+pub trait LightClientDBPath {
+	fn path() -> &'static str;
+}
+
+pub trait LightClientSealing<LightClientState> {
+	fn seal_to_static_file(state: &LightClientState) -> Result<(), Error>;
+	fn unseal_from_static_file() -> Result<LightClientState, Error>;
+	fn exists() -> bool;
+	fn path() -> &'static str;
+}
+
 pub fn grandpa_log<Block: ParentchainBlockTrait>(
 	digest: &Digest,
 ) -> Option<ConsensusLog<NumberFor<Block>>> {

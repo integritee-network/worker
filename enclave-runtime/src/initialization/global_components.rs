@@ -45,8 +45,10 @@ use itc_parentchain::{
 		parentchain_extrinsic_parser::ParentchainExtrinsicParser, IndirectCallsExecutor,
 	},
 	light_client::{
-		concurrent_access::ValidatorAccessor, io::LightClientStateSeal,
-		light_validation::LightValidation, light_validation_state::LightValidationState,
+		concurrent_access::ValidatorAccessor,
+		io::{LightClientDB, LightClientStateSeal},
+		light_validation::LightValidation,
+		light_validation_state::LightValidationState,
 	},
 };
 use itc_tls_websocket_server::{
@@ -127,6 +129,8 @@ pub type EnclaveRpcResponder = RpcResponder<EnclaveRpcConnectionRegistry, Hash, 
 pub type EnclaveSidechainApi = SidechainApi<ParentchainBlock>;
 
 // Parentchain types
+pub type EnclaveLightClientSeal =
+	LightClientStateSeal<ParentchainBlock, LightValidationState<ParentchainBlock>, LightClientDB>;
 pub type EnclaveExtrinsicsFactory =
 	ExtrinsicsFactory<EnclaveParentchainSigner, NonceCache, EnclaveNodeMetadataRepository>;
 pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
@@ -139,7 +143,7 @@ pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
 pub type EnclaveValidatorAccessor = ValidatorAccessor<
 	LightValidation<ParentchainBlock, EnclaveOCallApi>,
 	ParentchainBlock,
-	LightClientStateSeal<ParentchainBlock, LightValidationState<ParentchainBlock>>,
+	EnclaveLightClientSeal,
 >;
 pub type EnclaveParentchainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,

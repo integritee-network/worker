@@ -19,10 +19,10 @@ use crate::{
 	error::Result,
 	initialization::{
 		global_components::{
-			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOCallApi,
-			EnclaveParentchainBlockImportDispatcher, EnclaveStfExecutor, EnclaveValidatorAccessor,
-			GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
-			GLOBAL_STATE_HANDLER_COMPONENT,
+			EnclaveExtrinsicsFactory, EnclaveLightClientSeal, EnclaveNodeMetadataRepository,
+			EnclaveOCallApi, EnclaveParentchainBlockImportDispatcher, EnclaveStfExecutor,
+			EnclaveValidatorAccessor, GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT,
+			GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 		},
 		parentchain::common::{
 			create_extrinsics_factory, create_offchain_immediate_import_dispatcher,
@@ -59,6 +59,7 @@ impl FullSolochainHandler {
 		let validator = itc_parentchain::light_client::io::read_or_init_grandpa_validator::<
 			SolochainBlock,
 			EnclaveOCallApi,
+			EnclaveLightClientSeal,
 		>(params, ocall_api.clone())?;
 		let latest_header = validator.latest_finalized_header()?;
 		let validator_accessor = Arc::new(EnclaveValidatorAccessor::new(validator));

@@ -26,11 +26,10 @@ use std::sync::RwLock;
 
 use crate::{
 	error::{Error, Result},
-	ExtrinsicSender as ExtrinsicSenderTrait, LightClientState, LightValidationState,
-	Validator as ValidatorTrait,
+	ExtrinsicSender as ExtrinsicSenderTrait, LightClientSealing, LightClientState,
+	LightValidationState, Validator as ValidatorTrait,
 };
 use finality_grandpa::BlockNumberOps;
-use itp_sgx_io::StaticSealedIO;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, NumberFor};
 use std::marker::PhantomData;
 
@@ -67,7 +66,7 @@ where
 	Validator: ValidatorTrait<ParentchainBlock>
 		+ LightClientState<ParentchainBlock>
 		+ ExtrinsicSenderTrait,
-	Seal: StaticSealedIO<Error = Error, Unsealed = LightValidationState<ParentchainBlock>>,
+	Seal: LightClientSealing<LightValidationState<ParentchainBlock>>,
 	ParentchainBlock: ParentchainBlockTrait,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 {
@@ -80,7 +79,7 @@ where
 	Validator: ValidatorTrait<ParentchainBlock>
 		+ LightClientState<ParentchainBlock>
 		+ ExtrinsicSenderTrait,
-	Seal: StaticSealedIO<Error = Error, Unsealed = LightValidationState<ParentchainBlock>>,
+	Seal: LightClientSealing<LightValidationState<ParentchainBlock>>,
 	ParentchainBlock: ParentchainBlockTrait,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 {
@@ -95,7 +94,7 @@ where
 	Validator: ValidatorTrait<ParentchainBlock>
 		+ LightClientState<ParentchainBlock>
 		+ ExtrinsicSenderTrait,
-	Seal: StaticSealedIO<Error = Error, Unsealed = LightValidationState<ParentchainBlock>>,
+	Seal: LightClientSealing<LightValidationState<ParentchainBlock>>,
 	ParentchainBlock: ParentchainBlockTrait,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 {
