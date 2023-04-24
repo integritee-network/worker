@@ -21,7 +21,8 @@ use crate::{
 	light_client_init_params::{GrandpaParams, SimpleParams},
 	light_validation::{check_validator_set_proof, LightValidation},
 	state::RelayState,
-	LightClientState, LightValidationState, NumberFor, Validator,
+	LightClientDBPath, LightClientSealing, LightClientState, LightValidationState, NumberFor,
+	Validator,
 };
 use codec::{Decode, Encode};
 use core::fmt::Debug;

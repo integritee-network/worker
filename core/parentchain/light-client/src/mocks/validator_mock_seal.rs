@@ -17,7 +17,6 @@
 
 use crate::{error::Error, state::RelayState, LightClientSealing, LightValidationState};
 use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
-use itp_sgx_io::StaticSealedIO;
 use itp_types::Block;
 
 /// A seal that returns a mock validator.
