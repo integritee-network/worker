@@ -1679,6 +1679,7 @@ dependencies = [
  "bs58",
  "futures 0.3.8",
  "ita-stf",
+ "itp-api-client-types",
  "itp-node-api",
  "itp-ocall-api",
  "itp-sgx-crypto",

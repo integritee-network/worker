@@ -28,7 +28,7 @@ pub use itp_types::parentchain::{
 pub use substrate_api_client::{
 	storage_key, AssetTip, CallIndex, ExtrinsicParams, GenericAdditionalParams,
 	GenericExtrinsicParams, GenericSignedExtra, InvalidMetadataError, Metadata, MetadataError,
-	PlainTip, StaticExtrinsicSigner, UncheckedExtrinsicV4,
+	PlainTip, StaticExtrinsicSigner, UncheckedExtrinsicV4, EventDetails, Events, StaticEvent,
 };
 
 pub type ParentchainPlainTip = PlainTip<Balance>;

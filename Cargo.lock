@@ -3062,6 +3062,7 @@ dependencies = [
  "futures 0.3.8",
  "ita-stf",
  "itc-parentchain-test",
+ "itp-api-client-types",
  "itp-node-api",
  "itp-ocall-api",
  "itp-sgx-crypto",

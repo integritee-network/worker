@@ -18,6 +18,7 @@ itp-stf-executor = { path = "../../../core-primitives/stf-executor", default-fea
 itp-stf-primitives = { path = "../../../core-primitives/stf-primitives", default-features = false }
 itp-top-pool-author = { path = "../../../core-primitives/top-pool-author", default-features = false }
 itp-types = { path = "../../../core-primitives/types", default-features = false }
+itp-api-client-types = { path = "../../../core-primitives/node-api/api-client-types", default-features = false }
 
 # sgx enabled external libraries
 futures_sgx = { package = "futures", git = "https://github.com/mesalock-linux/futures-rs-sgx", optional = true }
@@ -58,6 +59,7 @@ std = [
     "itp-sgx-crypto/std",
     "itp-stf-executor/std",
     "itp-top-pool-author/std",
+    "itp-api-client-types/std",
     "itp-types/std",
     "log/std",
     #substrate
@@ -74,5 +76,6 @@ sgx = [
     "itp-sgx-crypto/sgx",
     "itp-stf-executor/sgx",
     "itp-top-pool-author/sgx",
+    #"itp-api-client-types/sgx",
     "thiserror_sgx",
 ]

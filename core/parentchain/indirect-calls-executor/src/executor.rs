@@ -36,10 +36,11 @@ use itp_stf_executor::traits::StfEnclaveSigning;
 use itp_stf_primitives::types::AccountId;
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{OpaqueCall, ShardIdentifier, H256};
+use itp_api_client_types::{Events, EventDetails, StaticEvent, Metadata};
 use log::*;
 use sp_core::blake2_256;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header, Keccak256};
-use std::{sync::Arc, vec::Vec};
+use std::{sync::Arc, vec::Vec, string::String};
 
 pub struct IndirectCallsExecutor<
 	ShieldingKeyRepository,
@@ -110,8 +111,8 @@ impl<
 	StfEnclaveSigner: StfEnclaveSigning,
 	TopPoolAuthor: AuthorApi<H256, H256> + Send + Sync + 'static,
 	NodeMetadataProvider: AccessNodeMetadata,
-	NodeMetadataProvider::MetadataType: NodeMetadataTrait,
 	FilterIndirectCalls: FilterMetadata<NodeMetadataProvider::MetadataType>,
+	NodeMetadataProvider::MetadataType: NodeMetadataTrait + Into<Option<Metadata>> + Clone,
 	FilterIndirectCalls::Output: IndirectDispatch<Self> + Encode,
 	FilterIndirectEvents: FilterMetadata<NodeMetadataProvider::MetadataType>,
 {
@@ -137,6 +138,13 @@ impl<
 			})?;
 
 			let maybe_event = self.node_meta_data_provider.get_from_metadata(|metadata| {
+				let raw_metadata: Metadata = metadata.clone().into()?;
+				let events_decoded = Events::<H256>::new(raw_metadata, block_hash, events.clone());
+				let events_and_pallet_names: Vec<_> = events_decoded.iter().map(|maybe_details| {
+					let event_details = maybe_details.unwrap();
+					(String::from(event_details.variant_name().clone()), String::from(event_details.pallet_name().clone()))
+				}).collect();
+				log::info!("Events for this block are {:?}", events_and_pallet_names);
 				FilterIndirectEvents::filter_into_with_metadata(&events, metadata)
 			})?;
 
@@ -236,11 +244,18 @@ pub(crate) fn hash_of<T: Encode>(xt: &T) -> H256 {
 	blake2_256(&xt.encode()).into()
 }
 
+#[derive(codec::Decode)]
+pub struct ExtrinsicSuccess;
+impl StaticEvent for ExtrinsicSuccess {
+	const PALLET: &'static str = "System";
+	const EVENT: &'static str = "ExtrinsicSuccess";
+}
+
 #[cfg(test)]
 mod test {
 	use super::*;
 	use crate::{
-		filter_metadata::ShieldFundsAndCallWorkerFilter,
+		filter_metadata::{ShieldFundsAndCallWorkerFilter, ExtrinsicSuccessAndFailedFilter},
 		parentchain_parser::ParentchainExtrinsicParser,
 	};
 	use codec::{Decode, Encode};
@@ -275,6 +290,7 @@ mod test {
 		TestTopPoolAuthor,
 		TestNodeMetadataRepository,
 		ShieldFundsAndCallWorkerFilter<ParentchainExtrinsicParser>,
+		ExtrinsicSuccessAndFailedFilter<crate::parentchain_parser::ParentchainEventParser>
 	>;
 
 	type Seed = [u8; 32];
@@ -296,7 +312,7 @@ mod test {
 			.build();
 
 		indirect_calls_executor
-			.execute_indirect_calls_in_extrinsics(&parentchain_block, Vec::new())
+			.execute_indirect_calls_in_extrinsics(&parentchain_block, &Vec::new())
 			.unwrap();
 
 		assert_eq!(1, top_pool_author.pending_tops(shard_id()).unwrap().len());
@@ -321,7 +337,7 @@ mod test {
 			.build();
 
 		indirect_calls_executor
-			.execute_indirect_calls_in_extrinsics(&parentchain_block)
+			.execute_indirect_calls_in_extrinsics(&parentchain_block, &Vec::new())
 			.unwrap();
 
 		assert_eq!(1, top_pool_author.pending_tops(shard_id()).unwrap().len());

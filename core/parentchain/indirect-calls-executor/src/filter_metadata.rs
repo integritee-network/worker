@@ -38,6 +38,7 @@ pub trait FilterMetadata<NodeMetadata> {
 	fn filter_into_with_metadata(encoded_data: &[u8], metadata: &NodeMetadata) -> Option<Self::Output>;
 }
 
+
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub enum ParentchainEvent {
 	ExtrinsicSuccess, // TODO: Add some Args here
@@ -51,6 +52,7 @@ impl<EventParser, NodeMetadata: NodeMetadataTrait> FilterMetadata<NodeMetadata>
 where
 	EventParser: ParseEvent,
 {
+		// Vec<EventRecord<E,_>>
 		type Output = ParentchainEvent;
 		type ParseParentchainMetadata = EventParser;
 
