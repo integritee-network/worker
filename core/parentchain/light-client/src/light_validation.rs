@@ -118,7 +118,7 @@ impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi>
 		Ok(())
 	}
 
-	fn submit_xt_to_be_included(&mut self, extrinsic: OpaqueExtrinsic) -> Result<(), Error> {
+	fn submit_xt_to_be_included(&mut self, extrinsic: OpaqueExtrinsic) {
 		let relay = self.light_validation_state.get_relay_mut();
 		relay.verify_tx_inclusion.push(extrinsic);
 
@@ -126,8 +126,6 @@ impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi>
 			"{} extrinsics in cache, waiting for inclusion verification",
 			relay.verify_tx_inclusion.len()
 		);
-
-		Ok(())
 	}
 }
 
@@ -196,7 +194,7 @@ where
 {
 	fn send_extrinsics(&mut self, extrinsics: Vec<OpaqueExtrinsic>) -> Result<(), Error> {
 		for xt in extrinsics.iter() {
-			self.submit_xt_to_be_included(xt.clone()).expect("No Relays");
+			self.submit_xt_to_be_included(xt.clone());
 		}
 
 		self.ocall_api
