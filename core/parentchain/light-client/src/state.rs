@@ -23,7 +23,7 @@ use sp_runtime::{
 };
 use std::{fmt, vec::Vec};
 
-#[derive(Encode, Decode, Clone, PartialEq, Default)]
+#[derive(Encode, Decode, Clone, PartialEq)]
 pub struct RelayState<Block: BlockT> {
 	pub last_finalized_block_header: Block::Header,
 	pub penultimate_finalized_block_header: Block::Header,
