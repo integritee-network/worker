@@ -3090,7 +3090,6 @@ dependencies = [
  "hash-db",
  "itc-parentchain-test",
  "itp-ocall-api",
- "itp-settings",
  "itp-sgx-io",
  "itp-storage",
  "itp-test",
