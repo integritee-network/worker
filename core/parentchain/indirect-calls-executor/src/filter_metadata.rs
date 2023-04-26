@@ -28,7 +28,7 @@ use itp_node_api::metadata::{NodeMetadata, NodeMetadataTrait};
 /// Trait to filter an indirect call and decode into it, where the decoding
 /// is based on the metadata provided.
 pub trait FilterMetadata<NodeMetadata> {
-	/// Call enum we try to decode into.
+	/// Call enum or Events we try to decode into.
 	type Output;
 
 	/// Knows how to parse the parentchain metadata.

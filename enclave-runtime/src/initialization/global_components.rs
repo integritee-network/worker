@@ -53,7 +53,7 @@ use itc_tls_websocket_server::{
 	config_provider::FromFileConfigProvider, ws_server::TungsteniteWsServer, ConnectionToken,
 };
 use itp_attestation_handler::IntelAttestationHandler;
-use itp_block_import_queue::BlockImportQueue;
+use itp_block_import_queue::ImportQueue;
 use itp_component_container::ComponentContainer;
 use itp_extrinsics_factory::ExtrinsicsFactory;
 use itp_node_api::{
@@ -149,7 +149,7 @@ pub type EnclaveParentchainBlockImporter = ParentchainBlockImporter<
 	EnclaveExtrinsicsFactory,
 	EnclaveIndirectCallsExecutor,
 >;
-pub type EnclaveParentchainBlockImportQueue = BlockImportQueue<SignedParentchainBlock>;
+pub type EnclaveParentchainBlockImportQueue = ImportQueue<SignedParentchainBlock>;
 pub type EnclaveTriggeredParentchainBlockImportDispatcher =
 	TriggeredDispatcher<EnclaveParentchainBlockImporter, EnclaveParentchainBlockImportQueue>;
 
@@ -183,7 +183,7 @@ pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 	EnclaveTopPoolAuthor,
 	EnclaveTriggeredParentchainBlockImportDispatcher,
 >;
-pub type EnclaveSidechainBlockImportQueue = BlockImportQueue<SignedSidechainBlock>;
+pub type EnclaveSidechainBlockImportQueue = ImportQueue<SignedSidechainBlock>;
 pub type EnclaveBlockImportConfirmationHandler = BlockImportConfirmationHandler<
 	ParentchainBlock,
 	<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType,

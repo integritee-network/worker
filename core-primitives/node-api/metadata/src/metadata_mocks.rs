@@ -20,6 +20,14 @@ use crate::{
 };
 use codec::{Decode, Encode};
 
+use itp_api_client_types::Metadata;
+
+impl From<NodeMetadataMock> for Option<Metadata> {
+	fn from(_: NodeMetadataMock) -> Self {
+		None
+	}
+}
+
 #[derive(Default, Encode, Decode, Debug, Clone)]
 pub struct NodeMetadataMock {
 	teerex_module: u8,

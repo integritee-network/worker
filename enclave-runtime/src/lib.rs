@@ -45,7 +45,7 @@ use codec::{alloc::string::String, Decode};
 use itc_parentchain::block_import_dispatcher::{
 	triggered_dispatcher::TriggerParentchainBlockImport, DispatchBlockImport,
 };
-use itp_block_import_queue::PushToBlockQueue;
+use itp_block_import_queue::PushToQueue;
 use itp_component_container::ComponentGetter;
 use itp_node_api::metadata::NodeMetadata;
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
@@ -349,6 +349,7 @@ pub unsafe extern "C" fn sync_parentchain(
 	events_proofs_to_sync_size: usize,
 	_nonce: *const u32,
 ) -> sgx_status_t {
+	info!("SYNCING PARENTCHAIN!@#!@#!@#!@");
 	let blocks_to_sync = match Vec::<SignedBlock>::decode_raw(blocks_to_sync, blocks_to_sync_size) {
 		Ok(blocks) => blocks,
 		Err(e) => return Error::Codec(e).into(),
@@ -407,6 +408,7 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 			return Err(Error::NoParentchainAssigned)
 		};
 
+	info!("DISPATCHING IMPORT!@#!@#!@");
 	import_dispatcher.dispatch_import(blocks_to_sync, events_to_sync)?;
 	Ok(())
 }

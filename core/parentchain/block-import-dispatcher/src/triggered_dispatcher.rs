@@ -22,7 +22,7 @@ use crate::{
 	DispatchBlockImport,
 };
 use itc_parentchain_block_importer::ImportParentchainBlocks;
-use itp_block_import_queue::{PeekBlockQueue, PopFromBlockQueue, PushToBlockQueue};
+use itp_block_import_queue::{PeekQueue, PopFromQueue, PushToQueue};
 use log::debug;
 use std::vec::Vec;
 
@@ -62,13 +62,14 @@ pub trait TriggerParentchainBlockImport {
 pub struct TriggeredDispatcher<BlockImporter, BlockImportQueue> {
 	block_importer: BlockImporter,
 	import_queue: BlockImportQueue,
+	// events_queue: EventsImportQueue,
 }
 
 impl<BlockImporter, BlockImportQueue> TriggeredDispatcher<BlockImporter, BlockImportQueue>
 where
 	BlockImporter: ImportParentchainBlocks,
-	BlockImportQueue: PushToBlockQueue<BlockImporter::SignedBlockType>
-		+ PopFromBlockQueue<BlockType = BlockImporter::SignedBlockType>,
+	BlockImportQueue: PushToQueue<BlockImporter::SignedBlockType>
+		+ PopFromQueue<ItemType = BlockImporter::SignedBlockType>,
 {
 	pub fn new(block_importer: BlockImporter, block_import_queue: BlockImportQueue) -> Self {
 		TriggeredDispatcher { block_importer, import_queue: block_import_queue }
@@ -80,7 +81,7 @@ impl<BlockImporter, BlockImportQueue, SignedBlockType> DispatchBlockImport<Signe
 where
 	BlockImporter: ImportParentchainBlocks<SignedBlockType = SignedBlockType>,
 	BlockImportQueue:
-		PushToBlockQueue<SignedBlockType> + PopFromBlockQueue<BlockType = SignedBlockType>,
+		PushToQueue<SignedBlockType> + PopFromQueue<ItemType = SignedBlockType>,
 {
 	fn dispatch_import(&self, blocks: Vec<SignedBlockType>, _events: Vec<Vec<u8>>) -> Result<()> {
 		debug!("Pushing parentchain block(s) ({}) to import queue", blocks.len());
@@ -93,14 +94,16 @@ impl<BlockImporter, BlockImportQueue> TriggerParentchainBlockImport
 	for TriggeredDispatcher<BlockImporter, BlockImportQueue>
 where
 	BlockImporter: ImportParentchainBlocks,
-	BlockImportQueue: PushToBlockQueue<BlockImporter::SignedBlockType>
-		+ PopFromBlockQueue<BlockType = BlockImporter::SignedBlockType>
-		+ PeekBlockQueue<BlockType = BlockImporter::SignedBlockType>,
+	BlockImportQueue: PushToQueue<BlockImporter::SignedBlockType>
+		+ PopFromQueue<ItemType = BlockImporter::SignedBlockType>
+		+ PeekQueue<ItemType = BlockImporter::SignedBlockType>,
 {
 	type SignedBlockType = BlockImporter::SignedBlockType;
 
 	fn import_all(&self) -> Result<Option<BlockImporter::SignedBlockType>> {
 		let blocks_to_import = self.import_queue.pop_all().map_err(Error::BlockImportQueue)?;
+
+		// TODO: Need to get events from queue here as well
 
 		let latest_imported_block = blocks_to_import.last().map(|b| (*b).clone());
 
@@ -116,6 +119,8 @@ where
 	fn import_all_but_latest(&self) -> Result<()> {
 		let blocks_to_import =
 			self.import_queue.pop_all_but_last().map_err(Error::BlockImportQueue)?;
+
+			// TODO: Need to get events from queue here as well
 
 		debug!(
 			"Trigger import of all parentchain blocks, except the latest, from queue ({})",
@@ -133,6 +138,8 @@ where
 	) -> Result<Option<BlockImporter::SignedBlockType>> {
 		let blocks_to_import =
 			self.import_queue.pop_until(predicate).map_err(Error::BlockImportQueue)?;
+
+		// TODO: Need to get events from queue here as well
 
 		let latest_imported_block = blocks_to_import.last().map(|b| (*b).clone());
 
@@ -172,11 +179,11 @@ where
 mod tests {
 	use super::*;
 	use itc_parentchain_block_importer::block_importer_mock::ParentchainBlockImporterMock;
-	use itp_block_import_queue::{BlockImportQueue, PopFromBlockQueue};
+	use itp_block_import_queue::{ImportQueue, PopFromQueue};
 
 	type SignedBlockType = u32;
 	type TestBlockImporter = ParentchainBlockImporterMock<SignedBlockType>;
-	type TestQueue = BlockImportQueue<SignedBlockType>;
+	type TestQueue = ImportQueue<SignedBlockType>;
 	type TestDispatcher = TriggeredDispatcher<TestBlockImporter, TestQueue>;
 
 	#[test]
@@ -264,7 +271,7 @@ mod tests {
 	}
 
 	fn test_fixtures() -> TestDispatcher {
-		let import_queue = BlockImportQueue::<SignedBlockType>::default();
+		let import_queue = ImportQueue::<SignedBlockType>::default();
 		let block_importer = ParentchainBlockImporterMock::<SignedBlockType>::default();
 		let dispatcher = TriggeredDispatcher::new(block_importer, import_queue);
 		dispatcher

@@ -127,7 +127,9 @@ impl<
 		let block_number = *block.header().number();
 		let block_hash = block.hash();
 
-		debug!("Scanning block {:?} for relevant xt", block_number);
+		// Obtain all decoded events here as a Vec
+
+		info!("Scanning block {:?} for relevant xt", block_number);
 		let mut executed_calls = Vec::<H256>::new();
 
 		for xt_opaque in block.extrinsics().iter() {
@@ -144,7 +146,7 @@ impl<
 					let event_details = maybe_details.unwrap();
 					(String::from(event_details.variant_name().clone()), String::from(event_details.pallet_name().clone()))
 				}).collect();
-				log::info!("Events for this block are {:?}", events_and_pallet_names);
+				info!("Events for this block are {:?}", events_and_pallet_names);
 				FilterIndirectEvents::filter_into_with_metadata(&events, metadata)
 			})?;
 

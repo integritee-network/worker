@@ -101,11 +101,18 @@ where
 {
 	fn dispatch_import(&self, blocks: Vec<SignedBlockType>, events: Vec<Vec<u8>>) -> Result<()> {
 		match self {
-			BlockImportDispatcher::TriggeredDispatcher(dispatcher) =>
-				dispatcher.dispatch_import(blocks, events),
-			BlockImportDispatcher::ImmediateDispatcher(dispatcher) =>
-				dispatcher.dispatch_import(blocks, events),
-			BlockImportDispatcher::EmptyDispatcher => Err(Error::NoDispatcherAssigned),
+			BlockImportDispatcher::TriggeredDispatcher(dispatcher) => {
+				log::info!("TRIGGERED DISPATCHER MATCH");
+				dispatcher.dispatch_import(blocks, events)
+			},
+			BlockImportDispatcher::ImmediateDispatcher(dispatcher) => {
+				log::info!("IMMEDIATE DISPATCHER MATCH");
+				dispatcher.dispatch_import(blocks, events)
+			},
+			BlockImportDispatcher::EmptyDispatcher => {
+				log::info!("EMPTY DISPATCHER DISPATCHER MATCH");
+				Err(Error::NoDispatcherAssigned)
+			},
 		}
 	}
 }
