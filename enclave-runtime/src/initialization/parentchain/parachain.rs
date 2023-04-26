@@ -61,11 +61,10 @@ impl FullParachainHandler {
 			ParachainBlock,
 			EnclaveOCallApi,
 		>(params, ocall_api.clone())?;
-		let latest_header = validator.latest_finalized_header(validator.num_relays())?;
+		let latest_header = validator.latest_finalized_header()?;
 		let validator_accessor = Arc::new(EnclaveValidatorAccessor::new(validator));
 
-		let genesis_hash =
-			validator_accessor.execute_on_validator(|v| v.genesis_hash(v.num_relays()))?;
+		let genesis_hash = validator_accessor.execute_on_validator(|v| v.genesis_hash())?;
 
 		let extrinsics_factory =
 			create_extrinsics_factory(genesis_hash, node_metadata_repository.clone())?;

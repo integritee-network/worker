@@ -43,8 +43,6 @@ pub enum Error {
 	ValidatorSetMismatch,
 	#[error("Invalid ancestry proof")]
 	InvalidAncestryProof,
-	#[error("No such relay exists")]
-	NoSuchRelayExists,
 	#[error("Invalid Finality Proof: {0}")]
 	InvalidFinalityProof(#[from] JustificationError),
 	#[error("Header ancestry mismatch")]
