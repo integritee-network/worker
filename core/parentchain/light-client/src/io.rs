@@ -130,7 +130,6 @@ where
 	OCallApi: EnclaveOnChainOCallApi,
 	LightClientSeal: LightClientSealing<LightValidationState<B>>,
 {
-	// FIXME: That should be an unique path.
 	if !seal.exists() {
 		info!("[Enclave] ChainRelay DB not found, creating new! {}", seal.path());
 		let validator = init_parachain_validator::<B, OCallApi>(
