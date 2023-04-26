@@ -61,14 +61,16 @@ where
 
 /// Implementation of a validator access based on a global lock and corresponding file.
 #[derive(Debug)]
-pub struct ValidatorAccessor<Validator, ParentchainBlock, Seal> {
-	seal: Seal,
+pub struct ValidatorAccessor<Validator, ParentchainBlock, LightClientSeal> {
+	seal: LightClientSeal,
 	light_validation: RwLock<Validator>,
-	_phantom: PhantomData<(Seal, Validator, ParentchainBlock)>,
+	_phantom: PhantomData<(LightClientSeal, Validator, ParentchainBlock)>,
 }
 
-impl<Validator, ParentchainBlock, Seal> ValidatorAccessor<Validator, ParentchainBlock, Seal> {
-	pub fn new(validator: Validator, seal: Seal) -> Self {
+impl<Validator, ParentchainBlock, LightClientSeal>
+	ValidatorAccessor<Validator, ParentchainBlock, LightClientSeal>
+{
+	pub fn new(validator: Validator, seal: LightClientSeal) -> Self {
 		ValidatorAccessor {
 			light_validation: RwLock::new(validator),
 			seal,
