@@ -105,10 +105,8 @@ where
 	where
 		F: FnOnce(&Self::ValidatorType) -> Result<R>,
 	{
-		let mut light_validation_lock =
+		let light_validation_lock =
 			self.light_validation.write().map_err(|_| Error::PoisonedLock)?;
-		let state = Seal::unseal_from_static_file()?;
-		light_validation_lock.set_state(state);
 		getter_function(&light_validation_lock)
 	}
 
@@ -118,8 +116,6 @@ where
 	{
 		let mut light_validation_lock =
 			self.light_validation.write().map_err(|_| Error::PoisonedLock)?;
-		let state = Seal::unseal_from_static_file()?;
-		light_validation_lock.set_state(state);
 		let result = mutating_function(&mut light_validation_lock);
 		Seal::seal_to_static_file(light_validation_lock.get_state())?;
 		result

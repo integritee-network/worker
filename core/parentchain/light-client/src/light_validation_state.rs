@@ -17,39 +17,32 @@
 
 //! State of the light-client validation.
 
-use crate::{state::RelayState, Error, RelayId};
+use crate::state::RelayState;
 use codec::{Decode, Encode};
 pub use sp_finality_grandpa::SetId;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
-use std::collections::BTreeMap;
 
 #[derive(Encode, Decode, Clone, Debug)]
 pub struct LightValidationState<Block: ParentchainBlockTrait> {
-	pub num_relays: RelayId,
-	pub tracked_relays: BTreeMap<RelayId, RelayState<Block>>,
+	pub(crate) relay_state: RelayState<Block>,
+}
+
+impl<Block: ParentchainBlockTrait> From<RelayState<Block>> for LightValidationState<Block> {
+	fn from(value: RelayState<Block>) -> Self {
+		Self::new(value)
+	}
 }
 
 impl<Block: ParentchainBlockTrait> LightValidationState<Block> {
-	pub fn new() -> Self {
-		Self { num_relays: Default::default(), tracked_relays: Default::default() }
+	pub fn new(relay_state: RelayState<Block>) -> Self {
+		Self { relay_state }
 	}
 
-	pub(crate) fn get_tracked_relay(&self, relay_id: RelayId) -> Result<&RelayState<Block>, Error> {
-		let relay = self.tracked_relays.get(&relay_id).ok_or(Error::NoSuchRelayExists)?;
-		Ok(relay)
+	pub(crate) fn get_relay(&self) -> &RelayState<Block> {
+		&self.relay_state
 	}
 
-	pub(crate) fn get_tracked_relay_mut(
-		&mut self,
-		relay_id: RelayId,
-	) -> Result<&mut RelayState<Block>, Error> {
-		let relay = self.tracked_relays.get_mut(&relay_id).ok_or(Error::NoSuchRelayExists)?;
-		Ok(relay)
-	}
-}
-
-impl<Block: ParentchainBlockTrait> Default for LightValidationState<Block> {
-	fn default() -> Self {
-		Self { num_relays: Default::default(), tracked_relays: Default::default() }
+	pub(crate) fn get_relay_mut(&mut self) -> &mut RelayState<Block> {
+		&mut self.relay_state
 	}
 }

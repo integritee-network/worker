@@ -101,7 +101,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	// itself, will  operate on a parentchain block that is potentially outdated by one block
 	// (in case we have a block in the queue, but not imported yet).
 	let current_parentchain_header = validator_access.execute_on_validator(|v| {
-		let latest_parentchain_header = v.latest_finalized_header(v.num_relays())?;
+		let latest_parentchain_header = v.latest_finalized_header()?;
 		Ok(latest_parentchain_header)
 	})?;
 
