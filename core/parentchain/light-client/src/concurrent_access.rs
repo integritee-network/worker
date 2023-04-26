@@ -61,30 +61,19 @@ where
 
 /// Implementation of a validator access based on a global lock and corresponding file.
 #[derive(Debug)]
-pub struct ValidatorAccessor<Validator, ParentchainBlock, Seal>
-where
-	Validator: ValidatorTrait<ParentchainBlock>
-		+ LightClientState<ParentchainBlock>
-		+ ExtrinsicSenderTrait,
-	Seal: LightClientSealing<LightValidationState<ParentchainBlock>>,
-	ParentchainBlock: ParentchainBlockTrait,
-	NumberFor<ParentchainBlock>: BlockNumberOps,
-{
+pub struct ValidatorAccessor<Validator, ParentchainBlock, Seal> {
+	seal: Seal,
 	light_validation: RwLock<Validator>,
 	_phantom: PhantomData<(Seal, Validator, ParentchainBlock)>,
 }
 
-impl<Validator, ParentchainBlock, Seal> ValidatorAccessor<Validator, ParentchainBlock, Seal>
-where
-	Validator: ValidatorTrait<ParentchainBlock>
-		+ LightClientState<ParentchainBlock>
-		+ ExtrinsicSenderTrait,
-	Seal: LightClientSealing<LightValidationState<ParentchainBlock>>,
-	ParentchainBlock: ParentchainBlockTrait,
-	NumberFor<ParentchainBlock>: BlockNumberOps,
-{
-	pub fn new(validator: Validator) -> Self {
-		ValidatorAccessor { light_validation: RwLock::new(validator), _phantom: Default::default() }
+impl<Validator, ParentchainBlock, Seal> ValidatorAccessor<Validator, ParentchainBlock, Seal> {
+	pub fn new(validator: Validator, seal: Seal) -> Self {
+		ValidatorAccessor {
+			light_validation: RwLock::new(validator),
+			seal,
+			_phantom: Default::default(),
+		}
 	}
 }
 
@@ -116,7 +105,7 @@ where
 		let mut light_validation_lock =
 			self.light_validation.write().map_err(|_| Error::PoisonedLock)?;
 		let result = mutating_function(&mut light_validation_lock);
-		Seal::seal_to_static_file(light_validation_lock.get_state())?;
+		self.seal.seal(light_validation_lock.get_state())?;
 		result
 	}
 }

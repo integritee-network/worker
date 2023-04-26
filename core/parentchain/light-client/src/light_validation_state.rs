@@ -19,8 +19,9 @@
 
 use crate::{state::RelayState, Error, HashFor, LightClientState};
 use codec::{Decode, Encode};
-pub use sp_finality_grandpa::SetId;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
+
+pub use sp_finality_grandpa::SetId;
 
 #[derive(Encode, Decode, Clone, Debug)]
 pub struct LightValidationState<Block: ParentchainBlockTrait> {

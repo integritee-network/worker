@@ -24,22 +24,22 @@ use itp_types::Block;
 pub struct LightValidationStateSealMock;
 
 impl LightClientSealing<LightValidationState<Block>> for LightValidationStateSealMock {
-	fn unseal_from_static_file() -> Result<LightValidationState<Block>, Error> {
+	fn unseal(&self) -> Result<LightValidationState<Block>, Error> {
 		Ok(LightValidationState::new(RelayState::new(
 			ParentchainHeaderBuilder::default().build(),
 			Default::default(),
 		)))
 	}
 
-	fn seal_to_static_file(_: &LightValidationState<Block>) -> Result<(), Error> {
+	fn seal(&self, _: &LightValidationState<Block>) -> Result<(), Error> {
 		Ok(())
 	}
 
-	fn exists() -> bool {
+	fn exists(&self) -> bool {
 		false
 	}
 
-	fn path() -> &'static str {
+	fn path(&self) -> &'static str {
 		"/tmp/db"
 	}
 }
