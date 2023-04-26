@@ -45,7 +45,7 @@ use codec::{alloc::string::String, Decode};
 use itc_parentchain::block_import_dispatcher::{
 	triggered_dispatcher::TriggerParentchainBlockImport, DispatchBlockImport,
 };
-use itp_block_import_queue::PushToQueue;
+use itp_import_queue::PushToQueue;
 use itp_component_container::ComponentGetter;
 use itp_node_api::metadata::NodeMetadata;
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};

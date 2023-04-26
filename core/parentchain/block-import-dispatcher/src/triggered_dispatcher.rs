@@ -22,7 +22,7 @@ use crate::{
 	DispatchBlockImport,
 };
 use itc_parentchain_block_importer::ImportParentchainBlocks;
-use itp_block_import_queue::{PeekQueue, PopFromQueue, PushToQueue};
+use itp_import_queue::{PeekQueue, PopFromQueue, PushToQueue};
 use log::debug;
 use std::vec::Vec;
 
@@ -97,6 +97,7 @@ where
 	BlockImportQueue: PushToQueue<BlockImporter::SignedBlockType>
 		+ PopFromQueue<ItemType = BlockImporter::SignedBlockType>
 		+ PeekQueue<ItemType = BlockImporter::SignedBlockType>,
+	// EventImportQueue: PushToQueue<Vec<Vec<u8>>>.. + ..
 {
 	type SignedBlockType = BlockImporter::SignedBlockType;
 

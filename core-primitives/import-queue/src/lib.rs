@@ -31,10 +31,10 @@ pub mod sgx_reexport_prelude {
 	pub use thiserror_sgx as thiserror;
 }
 
-pub mod block_import_queue;
+pub mod import_queue;
 pub mod error;
 
-pub use block_import_queue::*;
+pub use import_queue::*;
 
 use error::Result;
 use std::vec::Vec;

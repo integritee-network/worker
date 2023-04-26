@@ -17,7 +17,7 @@
 
 use crate::{Error, Result, SyncBlockFromPeer};
 use core::marker::PhantomData;
-use itp_block_import_queue::PopFromQueue;
+use itp_import_queue::PopFromQueue;
 use its_primitives::traits::{Block as BlockTrait, SignedBlock as SignedSidechainBlockTrait};
 use log::debug;
 use sp_runtime::traits::Block as ParentchainBlockTrait;

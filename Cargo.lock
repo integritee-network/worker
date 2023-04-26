@@ -3021,7 +3021,7 @@ name = "itc-parentchain-block-import-dispatcher"
 version = "0.9.0"
 dependencies = [
  "itc-parentchain-block-importer",
- "itp-block-import-queue",
+ "itp-import-queue",
  "itp-types",
  "log 0.4.17",
  "sgx_tstd",
@@ -3314,16 +3314,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "itp-block-import-queue"
-version = "0.8.0"
-dependencies = [
- "sgx_tstd",
- "sgx_types",
- "thiserror 1.0.40",
- "thiserror 1.0.9",
-]
-
-[[package]]
 name = "itp-component-container"
 version = "0.8.0"
 dependencies = [
@@ -3393,6 +3383,16 @@ name = "itp-hashing"
 version = "0.9.0"
 dependencies = [
  "sp-core",
+]
+
+[[package]]
+name = "itp-import-queue"
+version = "0.8.0"
+dependencies = [
+ "sgx_tstd",
+ "sgx_types",
+ "thiserror 1.0.40",
+ "thiserror 1.0.9",
 ]
 
 [[package]]
@@ -3873,8 +3873,8 @@ dependencies = [
  "fork-tree",
  "itc-parentchain-light-client",
  "itc-parentchain-test",
- "itp-block-import-queue",
  "itp-extrinsics-factory",
+ "itp-import-queue",
  "itp-node-api-metadata",
  "itp-node-api-metadata-provider",
  "itp-ocall-api",
