@@ -28,6 +28,7 @@ use crate::{
 	rpc::rpc_response_channel::RpcResponseChannel,
 	tls_ra::seal_handler::SealHandler,
 };
+use sgx_tstd::vec::Vec;
 use ita_sgx_runtime::Runtime;
 use ita_stf::{Getter, State as StfState, Stf, TrustedCallSigned};
 use itc_direct_rpc_server::{
@@ -150,13 +151,12 @@ pub type EnclaveParentchainBlockImporter = ParentchainBlockImporter<
 	EnclaveIndirectCallsExecutor,
 >;
 pub type EnclaveParentchainBlockImportQueue = ImportQueue<SignedParentchainBlock>;
-// TODO: Add this..
-// pub type EnclaveParentchainEventImportQueue = ImportQueue<Vec<Vec<u8>>>;
+pub type EnclaveParentchainEventImportQueue = ImportQueue<Vec<Vec<u8>>>;
 pub type EnclaveTriggeredParentchainBlockImportDispatcher =
 	TriggeredDispatcher<
 		EnclaveParentchainBlockImporter,
 		EnclaveParentchainBlockImportQueue,
-		/* EnclaveParentchainEventImportQueue */
+		EnclaveParentchainEventImportQueue,
 	>;
 
 pub type EnclaveImmediateParentchainBlockImportDispatcher =

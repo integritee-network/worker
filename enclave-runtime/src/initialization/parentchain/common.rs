@@ -22,12 +22,12 @@ use crate::{
 			EnclaveExtrinsicsFactory, EnclaveImmediateParentchainBlockImportDispatcher,
 			EnclaveIndirectCallsExecutor, EnclaveNodeMetadataRepository,
 			EnclaveOffchainWorkerExecutor, EnclaveParentchainBlockImportDispatcher,
-			EnclaveParentchainBlockImportQueue, EnclaveParentchainBlockImporter,
+			EnclaveParentchainBlockImportQueue,` EnclaveParentchainBlockImporter,
 			EnclaveParentchainSigner, EnclaveStfExecutor,
 			EnclaveTriggeredParentchainBlockImportDispatcher, EnclaveValidatorAccessor,
 			GLOBAL_OCALL_API_COMPONENT, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
 			GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STATE_OBSERVER_COMPONENT,
-			GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
+			GLOBAL_TOP_POOL_AUTHOR_COMPONENT, EnclaveParentchainEventImportQueue,
 		},
 		EnclaveStfEnclaveSigner,
 	},
@@ -119,9 +119,11 @@ pub(crate) fn create_sidechain_triggered_import_dispatcher(
 	block_importer: EnclaveParentchainBlockImporter,
 ) -> Arc<EnclaveParentchainBlockImportDispatcher> {
 	let parentchain_block_import_queue = EnclaveParentchainBlockImportQueue::default();
+	let parentchain_event_import_queue = EnclaveParentchainEventImportQueue::default();
 	let triggered_dispatcher = EnclaveTriggeredParentchainBlockImportDispatcher::new(
 		block_importer,
 		parentchain_block_import_queue,
+		parentchain_event_import_queue,
 	);
 	Arc::new(EnclaveParentchainBlockImportDispatcher::new_triggered_dispatcher(Arc::new(
 		triggered_dispatcher,

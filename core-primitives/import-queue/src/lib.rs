@@ -65,6 +65,9 @@ pub trait PopFromQueue {
 
 	/// Pop (front) queue. Returns None if queue is empty.
 	fn pop_front(&self) -> Result<Option<Self::ItemType>>;
+
+	/// Pop (front) queue until a specific amount of pops has been reached
+	fn pop_from_front_until(&self, amount: usize) -> Result<Vec<Self::ItemType>>;
 }
 
 /// Trait to peek items in the import queue without altering the queue.
