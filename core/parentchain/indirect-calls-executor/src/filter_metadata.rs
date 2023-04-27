@@ -18,7 +18,7 @@
 use crate::{
 	error::Result,
 	indirect_calls::{CallWorkerArgs, ShiedFundsArgs},
-	parentchain_parser::{ParseExtrinsic, ParseEvent},
+	parentchain_parser::{ParseEvent, ParseExtrinsic},
 	IndirectDispatch, IndirectExecutor,
 };
 use codec::{Decode, Encode};
@@ -35,14 +35,16 @@ pub trait FilterMetadata<NodeMetadata> {
 	type ParseParentchainMetadata;
 
 	/// Filters some bytes and returns `Some(Self::Output)` if the filter matches some criteria.
-	fn filter_into_with_metadata(encoded_data: &[u8], metadata: &NodeMetadata) -> Option<Self::Output>;
+	fn filter_into_with_metadata(
+		encoded_data: &[u8],
+		metadata: &NodeMetadata,
+	) -> Option<Self::Output>;
 }
-
 
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub enum ParentchainEvent {
 	ExtrinsicSuccess, // TODO: Add some Args here
-	ExtrinsicFailed, // TODO: Add some Args here
+	ExtrinsicFailed,  // TODO: Add some Args here
 }
 
 pub struct ExtrinsicSuccessAndFailedFilter<EventParser>(PhantomData<EventParser>);
@@ -52,13 +54,16 @@ impl<EventParser, NodeMetadata: NodeMetadataTrait> FilterMetadata<NodeMetadata>
 where
 	EventParser: ParseEvent,
 {
-		// Vec<EventRecord<E,_>>
-		type Output = ParentchainEvent;
-		type ParseParentchainMetadata = EventParser;
+	// Vec<EventRecord<E,_>>
+	type Output = ParentchainEvent;
+	type ParseParentchainMetadata = EventParser;
 
-		fn filter_into_with_metadata(encoded_data: &[u8], metadata: &NodeMetadata) -> Option<Self::Output> {
-			Some(ParentchainEvent::ExtrinsicSuccess)
-		}
+	fn filter_into_with_metadata(
+		encoded_data: &[u8],
+		metadata: &NodeMetadata,
+	) -> Option<Self::Output> {
+		Some(ParentchainEvent::ExtrinsicSuccess)
+	}
 }
 
 /// Indirect calls filter denying all indirect calls.

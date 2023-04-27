@@ -99,7 +99,9 @@ impl<Item> PopFromQueue for ImportQueue<Item> {
 	fn pop_from_front_until(&self, amount: usize) -> Result<Vec<Self::ItemType>> {
 		let mut queue_lock = self.queue.write().map_err(|_| Error::PoisonedLock)?;
 		if amount > queue_lock.len() {
-			return Err(Error::Other("Cannot Pop more items from the queue than are available".into()))
+			return Err(Error::Other(
+				"Cannot Pop more items from the queue than are available".into(),
+			))
 		}
 		Ok(queue_lock.drain(..amount).collect::<Vec<_>>())
 	}

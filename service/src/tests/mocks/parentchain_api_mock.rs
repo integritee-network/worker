@@ -92,10 +92,7 @@ impl ChainApi for ParentchainApiMock {
 		Ok(Default::default())
 	}
 
-	fn get_events_for_block(
-		&self,
-		_block_hash: Option<H256>,
-	) -> ApiResult<Vec<u8>> {
+	fn get_events_for_block(&self, _block_hash: Option<H256>) -> ApiResult<Vec<u8>> {
 		Ok(Default::default())
 	}
 }

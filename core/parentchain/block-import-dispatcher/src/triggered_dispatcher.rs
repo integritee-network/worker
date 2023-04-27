@@ -67,29 +67,42 @@ pub struct TriggeredDispatcher<BlockImporter, BlockImportQueue, EventsImportQueu
 	events_queue: EventsImportQueue,
 }
 
-impl<BlockImporter, BlockImportQueue, EventsImportQueue> TriggeredDispatcher<BlockImporter, BlockImportQueue, EventsImportQueue>
+impl<BlockImporter, BlockImportQueue, EventsImportQueue>
+	TriggeredDispatcher<BlockImporter, BlockImportQueue, EventsImportQueue>
 where
 	BlockImporter: ImportParentchainBlocks,
 	BlockImportQueue: PushToQueue<BlockImporter::SignedBlockType>
 		+ PopFromQueue<ItemType = BlockImporter::SignedBlockType>,
-	EventsImportQueue: PushToQueue<RawEventsPerBlock> + PopFromQueue<ItemType = RawEventsPerBlock>
+	EventsImportQueue: PushToQueue<RawEventsPerBlock> + PopFromQueue<ItemType = RawEventsPerBlock>,
 {
-	pub fn new(block_importer: BlockImporter, block_import_queue: BlockImportQueue, events_import_queue: EventsImportQueue) -> Self {
-		TriggeredDispatcher { block_importer, import_queue: block_import_queue, events_queue: events_import_queue }
+	pub fn new(
+		block_importer: BlockImporter,
+		block_import_queue: BlockImportQueue,
+		events_import_queue: EventsImportQueue,
+	) -> Self {
+		TriggeredDispatcher {
+			block_importer,
+			import_queue: block_import_queue,
+			events_queue: events_import_queue,
+		}
 	}
 }
 
-impl<BlockImporter, BlockImportQueue, SignedBlockType, EventsImportQueue> DispatchBlockImport<SignedBlockType>
+impl<BlockImporter, BlockImportQueue, SignedBlockType, EventsImportQueue>
+	DispatchBlockImport<SignedBlockType>
 	for TriggeredDispatcher<BlockImporter, BlockImportQueue, EventsImportQueue>
 where
 	BlockImporter: ImportParentchainBlocks<SignedBlockType = SignedBlockType>,
-	BlockImportQueue:
-		PushToQueue<SignedBlockType> + PopFromQueue<ItemType = SignedBlockType>,
-	EventsImportQueue:
-		PushToQueue<RawEventsPerBlock> + PopFromQueue<ItemType = RawEventsPerBlock>
+	BlockImportQueue: PushToQueue<SignedBlockType> + PopFromQueue<ItemType = SignedBlockType>,
+	EventsImportQueue: PushToQueue<RawEventsPerBlock> + PopFromQueue<ItemType = RawEventsPerBlock>,
 {
-	fn dispatch_import(&self, blocks: Vec<SignedBlockType>, events: Vec<RawEventsPerBlock>) -> Result<()> {
-		debug!("Pushing parentchain block(s) and event(s) ({}) ({}) to import queue",
+	fn dispatch_import(
+		&self,
+		blocks: Vec<SignedBlockType>,
+		events: Vec<RawEventsPerBlock>,
+	) -> Result<()> {
+		debug!(
+			"Pushing parentchain block(s) and event(s) ({}) ({}) to import queue",
 			blocks.len(),
 			events.len()
 		);
@@ -108,7 +121,7 @@ where
 		+ PeekQueue<ItemType = BlockImporter::SignedBlockType>,
 	EventsImportQueue: PushToQueue<RawEventsPerBlock>
 		+ PopFromQueue<ItemType = RawEventsPerBlock>
-		+ PeekQueue<ItemType = RawEventsPerBlock>
+		+ PeekQueue<ItemType = RawEventsPerBlock>,
 {
 	type SignedBlockType = BlockImporter::SignedBlockType;
 
@@ -119,7 +132,8 @@ where
 		let latest_imported_block = blocks_to_import.last().map(|b| (*b).clone());
 		let latest_imported_events = events_to_import.last().map(|e| (*e).clone());
 
-		debug!("Trigger import of all parentchain blocks and events in queue ({}) ({})",
+		debug!(
+			"Trigger import of all parentchain blocks and events in queue ({}) ({})",
 			blocks_to_import.len(),
 			events_to_import.len()
 		);
@@ -132,8 +146,7 @@ where
 	}
 
 	fn import_all_but_latest(&self) -> Result<()> {
-		let blocks_to_import =
-			self.import_queue.pop_all_but_last().map_err(Error::ImportQueue)?;
+		let blocks_to_import = self.import_queue.pop_all_but_last().map_err(Error::ImportQueue)?;
 		let events_to_import = self.events_queue.pop_all_but_last().map_err(Error::ImportQueue)?;
 
 		debug!(
@@ -154,7 +167,10 @@ where
 		let blocks_to_import =
 			self.import_queue.pop_until(predicate).map_err(Error::ImportQueue)?;
 
-		let events_to_import = self.events_queue.pop_from_front_until(blocks_to_import.len()).map_err(Error::ImportQueue)?;
+		let events_to_import = self
+			.events_queue
+			.pop_from_front_until(blocks_to_import.len())
+			.map_err(Error::ImportQueue)?;
 
 		let latest_imported_block = blocks_to_import.last().map(|b| (*b).clone());
 		let latest_imported_events = events_to_import.last().map(|e| (*e).clone());
@@ -208,23 +224,35 @@ mod tests {
 	fn dispatching_blocks_imports_none_if_not_triggered() {
 		let dispatcher = test_fixtures();
 
-		dispatcher.dispatch_import(vec![1, 2, 3, 4, 5], vec![vec![1], vec![2], vec![3], vec![4], vec![5]]).unwrap();
+		dispatcher
+			.dispatch_import(vec![1, 2, 3, 4, 5], vec![vec![1], vec![2], vec![3], vec![4], vec![5]])
+			.unwrap();
 
 		assert!(dispatcher.block_importer.get_all_imported_blocks().is_empty());
 		assert_eq!(dispatcher.import_queue.pop_all().unwrap(), vec![1, 2, 3, 4, 5]);
-		assert_eq!(dispatcher.events_queue.pop_all().unwrap(), vec![vec![1], vec![2], vec![3], vec![4], vec![5]]);
+		assert_eq!(
+			dispatcher.events_queue.pop_all().unwrap(),
+			vec![vec![1], vec![2], vec![3], vec![4], vec![5]]
+		);
 	}
 
 	#[test]
 	fn dispatching_blocks_multiple_times_add_all_to_queue() {
 		let dispatcher = test_fixtures();
 
-		dispatcher.dispatch_import(vec![1, 2, 3, 4, 5], vec![vec![1], vec![2], vec![3], vec![4], vec![5]]).unwrap();
-		dispatcher.dispatch_import(vec![6, 7, 8], vec![vec![6], vec![7], vec![8]]).unwrap();
+		dispatcher
+			.dispatch_import(vec![1, 2, 3, 4, 5], vec![vec![1], vec![2], vec![3], vec![4], vec![5]])
+			.unwrap();
+		dispatcher
+			.dispatch_import(vec![6, 7, 8], vec![vec![6], vec![7], vec![8]])
+			.unwrap();
 
 		assert!(dispatcher.block_importer.get_all_imported_blocks().is_empty());
 		assert_eq!(dispatcher.import_queue.pop_all().unwrap(), vec![1, 2, 3, 4, 5, 6, 7, 8]);
-		assert_eq!(dispatcher.events_queue.pop_all().unwrap(), vec![vec![1], vec![2], vec![3], vec![4], vec![5], vec![6], vec![7], vec![8]]);
+		assert_eq!(
+			dispatcher.events_queue.pop_all().unwrap(),
+			vec![vec![1], vec![2], vec![3], vec![4], vec![5], vec![6], vec![7], vec![8]]
+		);
 	}
 
 	#[test]
@@ -259,7 +287,9 @@ mod tests {
 	fn triggering_import_until_leaves_remaining_in_queue() {
 		let dispatcher = test_fixtures();
 
-		dispatcher.dispatch_import(vec![1, 2, 3, 4, 5], vec![vec![1], vec![2], vec![3], vec![4], vec![5]]).unwrap();
+		dispatcher
+			.dispatch_import(vec![1, 2, 3, 4, 5], vec![vec![1], vec![2], vec![3], vec![4], vec![5]])
+			.unwrap();
 		let latest_imported =
 			dispatcher.import_until(|i: &SignedBlockType| i == &4).unwrap().unwrap();
 
@@ -273,13 +303,18 @@ mod tests {
 	fn triggering_import_until_with_no_match_imports_nothing() {
 		let dispatcher = test_fixtures();
 
-		dispatcher.dispatch_import(vec![1, 2, 3, 4, 5], vec![vec![1], vec![2], vec![3], vec![4], vec![5]]).unwrap();
+		dispatcher
+			.dispatch_import(vec![1, 2, 3, 4, 5], vec![vec![1], vec![2], vec![3], vec![4], vec![5]])
+			.unwrap();
 		let maybe_latest_imported = dispatcher.import_until(|i: &SignedBlockType| i == &8).unwrap();
 
 		assert!(maybe_latest_imported.is_none());
 		assert!(dispatcher.block_importer.get_all_imported_blocks().is_empty());
 		assert_eq!(dispatcher.import_queue.pop_all().unwrap(), vec![1, 2, 3, 4, 5]);
-		assert_eq!(dispatcher.events_queue.pop_all().unwrap(), vec![vec![1], vec![2], vec![3], vec![4], vec![5]]);
+		assert_eq!(
+			dispatcher.events_queue.pop_all().unwrap(),
+			vec![vec![1], vec![2], vec![3], vec![4], vec![5]]
+		);
 	}
 
 	#[test]
@@ -297,7 +332,8 @@ mod tests {
 		let events_import_queue = ImportQueue::<RawEventsPerBlock>::default();
 		let import_queue = ImportQueue::<SignedBlockType>::default();
 		let block_importer = ParentchainBlockImporterMock::<SignedBlockType>::default();
-		let dispatcher = TriggeredDispatcher::new(block_importer, import_queue, events_import_queue);
+		let dispatcher =
+			TriggeredDispatcher::new(block_importer, import_queue, events_import_queue);
 		dispatcher
 	}
 }

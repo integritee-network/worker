@@ -31,8 +31,8 @@ pub mod sgx_reexport_prelude {
 	pub use thiserror_sgx as thiserror;
 }
 
-pub mod import_queue;
 pub mod error;
+pub mod import_queue;
 
 pub use import_queue::*;
 

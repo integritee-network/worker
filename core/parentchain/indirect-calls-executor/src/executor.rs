@@ -28,6 +28,7 @@ use binary_merkle_tree::merkle_root;
 use codec::Encode;
 use core::marker::PhantomData;
 use ita_stf::{TrustedCall, TrustedCallSigned};
+use itp_api_client_types::{EventDetails, Events, Metadata, StaticEvent};
 use itp_node_api::metadata::{
 	pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata, NodeMetadataTrait,
 };
@@ -36,11 +37,10 @@ use itp_stf_executor::traits::StfEnclaveSigning;
 use itp_stf_primitives::types::AccountId;
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{OpaqueCall, ShardIdentifier, H256};
-use itp_api_client_types::{Events, EventDetails, StaticEvent, Metadata};
 use log::*;
 use sp_core::blake2_256;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header, Keccak256};
-use std::{sync::Arc, vec::Vec, string::String};
+use std::{string::String, sync::Arc, vec::Vec};
 
 pub struct IndirectCallsExecutor<
 	ShieldingKeyRepository,
@@ -119,7 +119,7 @@ impl<
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
 		block: &ParentchainBlock,
-		events: &Vec<u8>
+		events: &Vec<u8>,
 	) -> Result<OpaqueCall>
 	where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
@@ -142,10 +142,16 @@ impl<
 			let maybe_event = self.node_meta_data_provider.get_from_metadata(|metadata| {
 				let raw_metadata: Metadata = metadata.clone().into()?;
 				let events_decoded = Events::<H256>::new(raw_metadata, block_hash, events.clone());
-				let events_and_pallet_names: Vec<_> = events_decoded.iter().map(|maybe_details| {
-					let event_details = maybe_details.unwrap();
-					(String::from(event_details.variant_name().clone()), String::from(event_details.pallet_name().clone()))
-				}).collect();
+				let events_and_pallet_names: Vec<_> = events_decoded
+					.iter()
+					.map(|maybe_details| {
+						let event_details = maybe_details.unwrap();
+						(
+							String::from(event_details.variant_name().clone()),
+							String::from(event_details.pallet_name().clone()),
+						)
+					})
+					.collect();
 				info!("Events for this block are {:?}", events_and_pallet_names);
 				FilterIndirectEvents::filter_into_with_metadata(&events, metadata)
 			})?;
@@ -257,7 +263,7 @@ impl StaticEvent for ExtrinsicSuccess {
 mod test {
 	use super::*;
 	use crate::{
-		filter_metadata::{ShieldFundsAndCallWorkerFilter, ExtrinsicSuccessAndFailedFilter},
+		filter_metadata::{ExtrinsicSuccessAndFailedFilter, ShieldFundsAndCallWorkerFilter},
 		parentchain_parser::ParentchainExtrinsicParser,
 	};
 	use codec::{Decode, Encode};
@@ -292,7 +298,7 @@ mod test {
 		TestTopPoolAuthor,
 		TestNodeMetadataRepository,
 		ShieldFundsAndCallWorkerFilter<ParentchainExtrinsicParser>,
-		ExtrinsicSuccessAndFailedFilter<crate::parentchain_parser::ParentchainEventParser>
+		ExtrinsicSuccessAndFailedFilter<crate::parentchain_parser::ParentchainEventParser>,
 	>;
 
 	type Seed = [u8; 32];
