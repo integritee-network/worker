@@ -22,7 +22,7 @@ use crate::{
 			EnclaveExtrinsicsFactory, EnclaveImmediateParentchainBlockImportDispatcher,
 			EnclaveIndirectCallsExecutor, EnclaveNodeMetadataRepository,
 			EnclaveOffchainWorkerExecutor, EnclaveParentchainBlockImportDispatcher,
-			EnclaveParentchainBlockImportQueue,` EnclaveParentchainBlockImporter,
+			EnclaveParentchainBlockImportQueue, EnclaveParentchainBlockImporter,
 			EnclaveParentchainSigner, EnclaveStfExecutor,
 			EnclaveTriggeredParentchainBlockImportDispatcher, EnclaveValidatorAccessor,
 			GLOBAL_OCALL_API_COMPONENT, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,

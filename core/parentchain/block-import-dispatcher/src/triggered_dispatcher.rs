@@ -26,7 +26,7 @@ use itp_import_queue::{PeekQueue, PopFromQueue, PushToQueue};
 use log::debug;
 use std::vec::Vec;
 
-type RawEventsPerBlock = Vec<u8>;
+pub type RawEventsPerBlock = Vec<u8>;
 
 /// Trait to specifically trigger the import of parentchain blocks.
 pub trait TriggerParentchainBlockImport {
