@@ -1706,6 +1706,7 @@ dependencies = [
  "itc-parentchain-test",
  "itp-ocall-api",
  "itp-sgx-io",
+ "itp-sgx-temp-dir",
  "itp-storage",
  "itp-types",
  "lazy_static",
@@ -2018,6 +2019,13 @@ dependencies = [
  "pallet-balances",
  "sp-core",
  "sp-runtime",
+]
+
+[[package]]
+name = "itp-sgx-temp-dir"
+version = "0.1.0"
+dependencies = [
+ "sgx_tstd",
 ]
 
 [[package]]
