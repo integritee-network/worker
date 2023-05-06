@@ -1,6 +1,6 @@
 //! # temp-dir
 //!
-//! Copied from the original tempdir crate with one line difference and sgx-support.
+//! Copied from the original tempdir crate with tiny adjustments for SGX-compatibility.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
