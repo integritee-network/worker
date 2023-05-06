@@ -29,17 +29,17 @@ use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_sgx_io::{seal, unseal};
 use log::*;
 use sp_runtime::traits::{Block, Header};
-use std::{boxed::Box, fs, sgxfs::SgxFile, sync::Arc};
+use std::{boxed::Box, fs, path::Path, sgxfs::SgxFile, sync::Arc};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct LightClientStateSeal<B, LightClientState> {
-	path: &'static str,
+	path: Box<Path>,
 	_phantom: PhantomData<(B, LightClientState)>,
 }
 
 impl<B, L> LightClientStateSeal<B, L> {
-	pub fn new(path: &'static str) -> Self {
-		Self { path, _phantom: Default::default() }
+	pub fn new(path: &str) -> Self {
+		Self { path: Path::new(path).into(), _phantom: Default::default() }
 	}
 }
 
@@ -48,23 +48,23 @@ impl<B: Block, LightClientState: Decode + Encode + Debug> LightClientSealing<Lig
 {
 	fn seal(&self, unsealed: &LightClientState) -> Result<()> {
 		debug!("backup light client state");
-		if fs::copy(self.path, format!("{}.1", self.path())).is_err() {
+		if fs::copy(&self.path(), &self.path().join(".1")).is_err() {
 			warn!("could not backup previous light client state");
 		};
 		debug!("Seal light client State. Current state: {:?}", unsealed);
-		Ok(unsealed.using_encoded(|bytes| seal(bytes, self.path))?)
+		Ok(unsealed.using_encoded(|bytes| seal(bytes, self.path()))?)
 	}
 
 	fn unseal(&self) -> Result<LightClientState> {
-		Ok(unseal(self.path).map(|b| Decode::decode(&mut b.as_slice()))??)
+		Ok(unseal(self.path()).map(|b| Decode::decode(&mut b.as_slice()))??)
 	}
 
 	fn exists(&self) -> bool {
-		SgxFile::open(self.path).is_err()
+		SgxFile::open(self.path()).is_err()
 	}
 
-	fn path(&self) -> &'static str {
-		self.path
+	fn path(&self) -> &Path {
+		&self.path
 	}
 }
 
@@ -88,7 +88,7 @@ where
 	)?;
 
 	if !seal.exists() {
-		info!("[Enclave] ChainRelay DB not found, creating new! {}", seal.path());
+		info!("[Enclave] ChainRelay DB not found, creating new! {}", seal.path().display());
 		let validator = init_grandpa_validator::<B, OCallApi>(
 			ocall_api,
 			RelayState::new(params.genesis_header, params.authorities).into(),
@@ -131,7 +131,7 @@ where
 	LightClientSeal: LightClientSealing<LightValidationState<B>>,
 {
 	if !seal.exists() {
-		info!("[Enclave] ChainRelay DB not found, creating new! {}", seal.path());
+		info!("[Enclave] ChainRelay DB not found, creating new! {}", seal.path().display());
 		let validator = init_parachain_validator::<B, OCallApi>(
 			ocall_api,
 			RelayState::new(params.genesis_header, Default::default()).into(),

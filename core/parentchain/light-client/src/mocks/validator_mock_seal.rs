@@ -17,11 +17,22 @@
 
 use crate::{error::Error, state::RelayState, LightClientSealing, LightValidationState};
 use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
+use itp_sgx_temp_dir::TempDir;
 use itp_types::Block;
+use std::path::Path;
 
 /// A seal that returns a mock validator.
 #[derive(Clone)]
-pub struct LightValidationStateSealMock;
+pub struct LightValidationStateSealMock {
+	// The directory is deleted when the seal is dropped.
+	temp_dir: TempDir,
+}
+
+impl LightValidationStateSealMock {
+	pub fn new() -> Self {
+		Self { temp_dir: TempDir::new().unwrap() }
+	}
+}
 
 impl LightClientSealing<LightValidationState<Block>> for LightValidationStateSealMock {
 	fn unseal(&self) -> Result<LightValidationState<Block>, Error> {
@@ -39,7 +50,7 @@ impl LightClientSealing<LightValidationState<Block>> for LightValidationStateSea
 		false
 	}
 
-	fn path(&self) -> &'static str {
-		"/tmp/db"
+	fn path(&self) -> &Path {
+		self.temp_dir.path()
 	}
 }

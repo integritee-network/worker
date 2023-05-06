@@ -35,10 +35,12 @@ sp-trie = { default-features = false, git = "https://github.com/paritytech/subst
 
 # mocks dependencies
 itc-parentchain-test = { optional = true, default-features = false, path = "../../../core/parentchain/test" }
+itp-sgx-temp-dir = { version = "0.1", default-features = false, path = "../../../core-primitives/sgx/temp-dir" }
 
 [dev-dependencies]
 itc-parentchain-test = { path = "../../../core/parentchain/test" }
 itp-test = { path = "../../../core-primitives/test" }
+itp-sgx-temp-dir = { version = "0.1", path = "../../../core-primitives/sgx/temp-dir" }
 
 [features]
 default = ["std"]
@@ -69,6 +71,7 @@ sgx = [
     "thiserror-sgx",
     "itp-sgx-io/sgx",
     "itp-storage/sgx",
+    "itp-sgx-temp-dir/sgx"
 ]
 mocks = [
     "itc-parentchain-test",
