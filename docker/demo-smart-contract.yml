@@ -18,7 +18,7 @@ services:
       integritee-worker-2-${VERSION}:
         condition: service_healthy
     environment:
-      - RUST_LOG=warn,ws=warn,itc_rpc_client=warn
+      - RUST_LOG=warn,ws=warn,itc_rpc_client=warn,itc_parentchain_light_client=debug
     networks:
       - integritee-test-network
     entrypoint:
