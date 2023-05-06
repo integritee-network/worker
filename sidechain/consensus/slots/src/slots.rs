@@ -205,7 +205,7 @@ pub mod sgx {
 mod tests {
 	use super::*;
 	use core::assert_matches::assert_matches;
-	use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
+	use itc_parentchain_test::ParentchainHeaderBuilder;
 	use itp_sgx_io::StaticSealedIO;
 	use itp_types::Block as ParentchainBlock;
 	use its_primitives::{

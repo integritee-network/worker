@@ -20,5 +20,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub mod parentchain_block_builder;
-pub mod parentchain_header_builder;
+mod parentchain_block_builder;
+mod parentchain_header_builder;
+
+pub use parentchain_block_builder::{Block, ParentchainBlockBuilder, SignedBlock};
+pub use parentchain_header_builder::{BlockNumber, Header, ParentchainHeaderBuilder, H256};
