@@ -37,6 +37,7 @@ sp-trie = { default-features = false, git = "https://github.com/paritytech/subst
 itc-parentchain-test = { optional = true, default-features = false, path = "../../../core/parentchain/test" }
 
 [dev-dependencies]
+itc-parentchain-test = { path = "../../../core/parentchain/test" }
 itp-test = { path = "../../../core-primitives/test" }
 
 [features]
