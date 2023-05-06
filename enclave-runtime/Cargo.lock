@@ -1708,6 +1708,7 @@ dependencies = [
  "itp-sgx-io",
  "itp-sgx-temp-dir",
  "itp-storage",
+ "itp-test",
  "itp-types",
  "lazy_static",
  "log",

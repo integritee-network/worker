@@ -38,3 +38,7 @@ mocks = [
     "itc-parentchain-block-import-dispatcher/mocks",
     "itc-parentchain-light-client/mocks",
 ]
+test = [
+    "mocks",
+    "itc-parentchain-light-client/test",
+]

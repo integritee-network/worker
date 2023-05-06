@@ -193,3 +193,33 @@ where
 	let validator = LightValidation::<B, OCallApi>::new(ocall_api, finality, state);
 	Ok(validator)
 }
+
+#[cfg(feature = "test")]
+pub mod sgx_tests {
+	use super::{read_or_init_parachain_validator, Arc, LightClientStateSeal};
+	use crate::{light_client_init_params::SimpleParams, LightValidationState};
+	use itc_parentchain_test::{Block, Header, ParentchainHeaderBuilder};
+	use itp_test::mock::onchain_mock::OnchainMock;
+	use sp_runtime::OpaqueExtrinsic;
+
+	type TestBlock = Block<Header, OpaqueExtrinsic>;
+	type TestSeal = LightClientStateSeal<TestBlock, LightValidationState<TestBlock>>;
+
+	fn default_params() -> SimpleParams<Header> {
+		SimpleParams { genesis_header: ParentchainHeaderBuilder::default().build() }
+	}
+
+	pub fn init_parachain_light_client_works() {
+		let parachain_params = default_params();
+
+		let seal = TestSeal::new("/tmp/seal-test");
+
+		let res = read_or_init_parachain_validator::<TestBlock, OnchainMock, _>(
+			parachain_params,
+			Arc::new(OnchainMock::default()),
+			&seal,
+		);
+
+		res.unwrap();
+	}
+}
