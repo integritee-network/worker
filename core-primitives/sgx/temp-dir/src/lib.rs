@@ -20,6 +20,7 @@ use std::{
 	string::String,
 };
 
+/// Serve some low-security random ID to prevent temp-dir clashes across multiple processes.
 fn rand_id() -> String {
 	// u64 always has more than 4 bytes so this never panics.
 	format!("{:x}", RandomState::new().build_hasher().finish())[..4].to_owned()
