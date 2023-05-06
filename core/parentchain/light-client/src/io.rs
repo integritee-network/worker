@@ -206,12 +206,12 @@ pub mod sgx_tests {
 	type TestBlock = Block<Header, OpaqueExtrinsic>;
 	type TestSeal = LightClientStateSeal<TestBlock, LightValidationState<TestBlock>>;
 
-	fn default_params() -> SimpleParams<Header> {
+	fn default_simple_params() -> SimpleParams<Header> {
 		SimpleParams { genesis_header: ParentchainHeaderBuilder::default().build() }
 	}
 
 	pub fn init_parachain_light_client_works() {
-		let parachain_params = default_params();
+		let parachain_params = default_simple_params();
 		let temp_dir = TempDir::with_prefix("init_parachain_light_client_works").unwrap();
 		let seal = TestSeal::new(temp_dir.path().to_str().unwrap());
 
