@@ -37,7 +37,7 @@ sp-trie = { default-features = false, git = "https://github.com/paritytech/subst
 itc-parentchain-test = { optional = true, default-features = false, path = "../../../core/parentchain/test" }
 # We can't really make this optional due to feature flag complexities.
 itp-sgx-temp-dir = { version = "0.1", default-features = false, path = "../../../core-primitives/sgx/temp-dir" }
-itp-test = { optional = true, default-features = false, features = ["sgx"],  path = "../../../core-primitives/test" }
+itp-test = { optional = true, default-features = false, features = ["sgx"], path = "../../../core-primitives/test" }
 
 [dev-dependencies]
 itc-parentchain-test = { path = "../../../core/parentchain/test" }
