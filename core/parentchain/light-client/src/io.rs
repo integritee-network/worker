@@ -60,7 +60,7 @@ impl<B: Block, LightClientState: Decode + Encode + Debug> LightClientSealing<Lig
 	}
 
 	fn exists(&self) -> bool {
-		SgxFile::open(self.path()).is_err()
+		SgxFile::open(self.path()).is_ok()
 	}
 
 	fn path(&self) -> &Path {
@@ -197,8 +197,9 @@ where
 #[cfg(feature = "test")]
 pub mod sgx_tests {
 	use super::{read_or_init_parachain_validator, Arc, LightClientStateSeal};
-	use crate::{light_client_init_params::SimpleParams, LightValidationState};
+	use crate::{light_client_init_params::SimpleParams, LightClientState, LightValidationState};
 	use itc_parentchain_test::{Block, Header, ParentchainHeaderBuilder};
+	use itp_sgx_temp_dir::TempDir;
 	use itp_test::mock::onchain_mock::OnchainMock;
 	use sp_runtime::OpaqueExtrinsic;
 
@@ -211,15 +212,22 @@ pub mod sgx_tests {
 
 	pub fn init_parachain_light_client_works() {
 		let parachain_params = default_params();
+		let temp_dir = TempDir::with_prefix("init_parachain_light_client_works").unwrap();
+		let seal = TestSeal::new(temp_dir.path().to_str().unwrap());
 
-		let seal = TestSeal::new("/tmp/seal-test");
-
-		let res = read_or_init_parachain_validator::<TestBlock, OnchainMock, _>(
-			parachain_params,
+		let validator = read_or_init_parachain_validator::<TestBlock, OnchainMock, _>(
+			parachain_params.clone(),
 			Arc::new(OnchainMock::default()),
 			&seal,
-		);
+		)
+		.unwrap();
 
-		res.unwrap();
+		assert_eq!(validator.genesis_hash().unwrap(), parachain_params.genesis_header.hash());
+		assert_eq!(validator.num_xt_to_be_included().unwrap(), 0);
+		assert_eq!(validator.latest_finalized_header().unwrap(), parachain_params.genesis_header);
+		assert_eq!(
+			validator.penultimate_finalized_block_header().unwrap(),
+			parachain_params.genesis_header
+		);
 	}
 }
