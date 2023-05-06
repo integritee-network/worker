@@ -119,7 +119,7 @@ impl TempDir {
 		let path_buf = std::env::temp_dir().join(format!(
 			"{}{}-{:x}",
 			prefix.as_ref(),
-			// std::process::id(), -> The original tempdir crate had this, but the sgx-std lib does not expose this.
+			// std::process::id(), -> The original tempdir crate had this, but the sgx-std lib does not expose it.
 			*PROCESS_UNIQUE_ID,
 			COUNTER.fetch_add(1, Ordering::AcqRel),
 		));

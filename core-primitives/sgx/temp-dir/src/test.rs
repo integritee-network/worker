@@ -34,7 +34,7 @@ fn should_skip_cleanup_test() -> bool {
 	// false
 
 	// The above code was from the original. However, for some reason the
-	// clean always succeeds on my local machine too. I am not sure why
+	// cleanup always succeeds on my local machine too. I am not sure why
 	// this is the case. So we skip them always for now.
 	true
 }
