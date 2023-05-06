@@ -230,4 +230,7 @@ pub mod sgx_tests {
 			parachain_params.genesis_header
 		);
 	}
+
+	// Todo #1293: add a unit test for the grandpa validator, but this needs a little effort for
+	// setting up correct finality params.
 }
