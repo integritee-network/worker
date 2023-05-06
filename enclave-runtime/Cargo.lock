@@ -2025,6 +2025,7 @@ dependencies = [
 name = "itp-sgx-temp-dir"
 version = "0.1.0"
 dependencies = [
+ "lazy_static",
  "sgx_tstd",
 ]
 

@@ -11,8 +11,27 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 extern crate sgx_tstd as std;
 
 use core::sync::atomic::{AtomicU32, Ordering};
-use std::path::{Path, PathBuf};
-use std::format;
+use std::{
+	borrow::ToOwned,
+	collections::hash_map::RandomState,
+	format,
+	hash::{BuildHasher, Hasher},
+	path::{Path, PathBuf},
+	string::String,
+};
+
+fn rand_id() -> String {
+	// u64 always has more than 4 bytes so this never panics.
+	format!("{:x}", RandomState::new().build_hasher().finish())[..4].to_owned()
+}
+
+lazy_static::lazy_static! {
+	/// A unique identifier, which is instanciated upon process start, but it is
+	/// not the process id itself.
+	///
+	/// This is a workaround for `sgx_tstd` lib not exposing the `process::id()`.
+	pub static ref PROCESS_UNIQUE_ID: String = rand_id();
+}
 
 static COUNTER: AtomicU32 = AtomicU32::new(0);
 
@@ -98,9 +117,10 @@ impl TempDir {
 	/// ```
 	pub fn with_prefix(prefix: impl AsRef<str>) -> Result<Self, std::io::Error> {
 		let path_buf = std::env::temp_dir().join(format!(
-			"{}-{:x}",
+			"{}{}-{:x}",
 			prefix.as_ref(),
-			// std::process::id(), -> The original had this but the sgx-std lib does not expose this.
+			// std::process::id(), -> The original tempdir crate had this, but the sgx-std lib does not expose this.
+			*PROCESS_UNIQUE_ID,
 			COUNTER.fetch_add(1, Ordering::AcqRel),
 		));
 		std::fs::create_dir(&path_buf).map_err(|e| {
