@@ -18,4 +18,3 @@ std = []
 sgx = [
     "sgx_tstd",
 ]
-

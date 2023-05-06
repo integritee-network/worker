@@ -68,14 +68,14 @@ std = [
     "itp-types/std",
 
     # mock deps
-    "itp-sgx-temp-dir/std"
+    "itp-sgx-temp-dir/std",
 ]
 sgx = [
     "sgx_tstd",
     "thiserror-sgx",
     "itp-sgx-io/sgx",
     "itp-storage/sgx",
-    "itp-sgx-temp-dir/sgx"
+    "itp-sgx-temp-dir/sgx",
 ]
 mocks = [
     "itc-parentchain-test",
