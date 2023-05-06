@@ -34,6 +34,12 @@ impl LightValidationStateSealMock {
 	}
 }
 
+impl Default for LightValidationStateSealMock {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 impl LightClientSealing<LightValidationState<Block>> for LightValidationStateSealMock {
 	fn unseal(&self) -> Result<LightValidationState<Block>, Error> {
 		Ok(LightValidationState::new(RelayState::new(
