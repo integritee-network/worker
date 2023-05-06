@@ -16,7 +16,7 @@
 */
 
 use crate::{mocks::SimpleSlotWorkerMock, PerShardSlotWorkerScheduler, SlotInfo};
-use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
+use itc_parentchain_test::ParentchainHeaderBuilder;
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_time_utils::duration_now;
 use itp_types::{Block as ParentchainBlock, ShardIdentifier};

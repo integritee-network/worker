@@ -20,7 +20,7 @@
 
 extern crate alloc;
 
-use crate::parentchain_header_builder::ParentchainHeaderBuilder;
+use crate::ParentchainHeaderBuilder;
 use alloc::vec::Vec;
 use sp_runtime::traits::MaybeSerialize;
 

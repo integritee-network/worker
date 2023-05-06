@@ -16,7 +16,7 @@
 */
 
 use crate::{error::Error, state::RelayState, LightClientSealing, LightValidationState};
-use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
+use itc_parentchain_test::ParentchainHeaderBuilder;
 use itp_sgx_temp_dir::TempDir;
 use itp_types::Block;
 use std::path::Path;

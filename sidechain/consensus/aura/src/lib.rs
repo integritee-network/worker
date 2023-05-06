@@ -260,10 +260,7 @@ mod tests {
 		mocks::environment_mock::EnvironmentMock,
 	};
 	use itc_parentchain_block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
-	use itc_parentchain_test::{
-		parentchain_block_builder::ParentchainBlockBuilder,
-		parentchain_header_builder::ParentchainHeaderBuilder,
-	};
+	use itc_parentchain_test::{ParentchainBlockBuilder, ParentchainHeaderBuilder};
 	use itp_test::mock::onchain_mock::OnchainMock;
 	use itp_types::{
 		Block as ParentchainBlock, Enclave, Header as ParentchainHeader,
