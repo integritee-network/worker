@@ -18,8 +18,8 @@
 
 //! Builder pattern for a parentchain header.
 
-use itp_types::{BlockNumber, Header, H256};
-use sp_runtime::generic::Digest;
+pub use itp_types::{BlockNumber, Header, H256};
+pub use sp_runtime::generic::Digest;
 
 #[derive(Default)]
 pub struct ParentchainHeaderBuilder {
