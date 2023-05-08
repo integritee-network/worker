@@ -325,6 +325,12 @@ jobs:
 
       - name: Delete images
         run: |
+          if [[ "$(docker images -q integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} 2> /dev/null)" != "" ]]; then
+              docker image rmi --force integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} 2>/dev/null
+          fi
+          if [[ "$(docker images -q integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} 2> /dev/null)" != "" ]]; then
+              docker image rmi --force integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} 2>/dev/null
+          fi
           if [[ "$(docker images -q ${{ env.WORKER_IMAGE_TAG }} 2> /dev/null)" != "" ]]; then
              docker image rmi --force ${{ env.WORKER_IMAGE_TAG }} 2>/dev/null
           fi
