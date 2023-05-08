@@ -354,35 +354,25 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Download Integritee Service
+      - name: Download Worker Image
         uses: actions/download-artifact@v3
         with:
-          name: integritee-worker-sidechain-${{ github.sha }}
-          path: integritee-worker-tmp
+          name: integritee-worker-teeracle-${{ github.sha }}.tar.gz
+          path: .
 
-      - name: Download Integritee Client
-        uses: actions/download-artifact@v3
+      - name: Save released teeracle
+        run: |
+            docker image load --input integritee-worker-teeracle-${{ github.sha }}.tar.gz
+            docker tag integritee-worker-teeracle-${{ github.sha }} integritee/teeracle:${{ github.event.release.tag_name }}
+            docker image save integritee/teeracle:${{ github.event.release.tag_name }} | gzip > integritee-worker-teeracle-${{ github.event.release.tag_name }}.tar.gz
+            docker images --all
+  
+      - name: Upload teeracle image
+        uses: actions/upload-artifact@v3
         with:
-          name: integritee-client-sidechain-${{ github.sha }}
-          path: integritee-client-tmp
-
-      - name: Download Enclave Signed
-        uses: actions/download-artifact@v3
-        with:
-          name: enclave-signed-sidechain-${{ github.sha }}
-          path: enclave-signed-tmp
-
-      - name: Move service binaries
-        run: mv integritee-worker-tmp/integritee-service ./integritee-demo-validateer
-
-      - name: Move service client binaries
-        run: mv integritee-client-tmp/integritee-cli ./integritee-client
-
-      - name: Move service client binaries
-        run: mv enclave-signed-tmp/enclave.signed.so ./enclave.signed.so
-
-      - name: Create required package.json
-        run: test -f package.json || echo '{}' >package.json
+          name: integritee-worker-teeracle-${{ github.event.release.tag_name }}.tar.gz
+          path: integritee-worker-teeracle-${{ github.event.release.tag_name }}.tar.gz
+  
 
       - name: Changelog
         uses: scottbrenner/generate-changelog-action@master
@@ -401,7 +391,14 @@ jobs:
           body: |
             ${{ steps.Changelog.outputs.changelog }}
           draft: true
-          files: |
-            integritee-client
-            integritee-demo-validateer
-            enclave.signed.so
+
+      - name: Delete images
+        run: |
+            if [[ "$(docker images -q integritee/teeracle:${{ github.event.release.tag_name }} 2> /dev/null)" != "" ]]; then
+                docker image rmi --force integritee/teeracle:${{ github.event.release.tag_name }} 2>/dev/null
+            fi
+            if [[ "$(docker images -q integritee-worker-teeracle-${{ github.sha }} 2> /dev/null)" != "" ]]; then
+                docker image rmi --force integritee-worker-teeracle-${{ github.sha }} 2>/dev/null
+            fi
+            docker images --all
+  
