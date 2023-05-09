@@ -1,6 +1,9 @@
 //! # temp-dir
 //!
 //! Copied from the original tempdir crate with tiny adjustments for SGX-compatibility.
+//!
+//! Note: The temp-dir is deprecated and there might be uncovered security aspects. If we want to
+//! use this in production, we should run some checks.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
