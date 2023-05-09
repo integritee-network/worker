@@ -629,7 +629,7 @@ where
 	}
 
 	fn load_spid(filename: &str) -> SgxResult<sgx_spid_t> {
-		// Check if set as enviromental variable
+		// Check if set as an environment variable
 		match env::var("IAS_EPID_SPID").or_else(|_| io::read_to_string(filename)) {
 			Ok(spid) => decode_spid(&spid),
 			Err(e) => {
