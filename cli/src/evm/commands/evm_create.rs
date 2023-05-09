@@ -20,7 +20,7 @@ use crate::{
 	trusted_cli::TrustedCli,
 	trusted_command_utils::{get_identifiers, get_pair_from_str},
 	trusted_operation::perform_trusted_operation,
-	Cli,
+	Cli, CliResult, CliResultOk,
 };
 use codec::Decode;
 use ita_stf::{
@@ -44,7 +44,7 @@ pub struct EvmCreateCommands {
 }
 
 impl EvmCreateCommands {
-	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
+	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
 		let from = get_pair_from_str(trusted_args, &self.from);
 		let from_acc: AccountId = from.public().into();
 		println!("from ss58 is {}", from.public().to_ss58check());
@@ -80,10 +80,11 @@ impl EvmCreateCommands {
 		.sign(&from.into(), nonce, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
 
-		let _ = perform_trusted_operation(cli, trusted_args, &top);
+		let _ = perform_trusted_operation(cli, trusted_args, &top)?;
 
 		let execution_address = evm_create_address(sender_evm_acc, evm_account_nonce);
 		info!("trusted call evm_create executed");
 		println!("Created the smart contract with address {:?}", execution_address);
+		Ok(CliResultOk::H160 { hash: execution_address })
 	}
 }

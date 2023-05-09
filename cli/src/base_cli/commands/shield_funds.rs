@@ -17,7 +17,7 @@
 
 use crate::{
 	command_utils::{get_accountid_from_str, get_chain_api, *},
-	Cli,
+	Cli, CliResult, CliResultOk,
 };
 use base58::FromBase58;
 use codec::{Decode, Encode};
@@ -42,7 +42,7 @@ pub struct ShieldFundsCommand {
 }
 
 impl ShieldFundsCommand {
-	pub(crate) fn run(&self, cli: &Cli) {
+	pub(crate) fn run(&self, cli: &Cli) -> CliResult {
 		let mut chain_api = get_chain_api(cli);
 
 		let shard_opt = match self.shard.from_base58() {
@@ -77,5 +77,7 @@ impl ShieldFundsCommand {
 
 		let tx_hash = chain_api.submit_and_watch_extrinsic_until(xt, XtStatus::Finalized).unwrap();
 		println!("[+] TrustedOperation got finalized. Hash: {:?}\n", tx_hash);
+
+		Ok(CliResultOk::None)
 	}
 }

@@ -17,7 +17,7 @@
 
 use crate::{
 	get_layer_two_nonce, trusted_cli::TrustedCli, trusted_command_utils::get_pair_from_str,
-	trusted_operation::perform_trusted_operation, Cli,
+	trusted_operation::perform_trusted_operation, Cli, CliResult, CliResultOk,
 };
 use codec::Decode;
 use ita_stf::{Index, TrustedGetter, TrustedOperation};
@@ -32,8 +32,9 @@ pub struct NonceCommand {
 }
 
 impl NonceCommand {
-	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
+	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
 		let who = get_pair_from_str(trusted_args, &self.account);
 		println!("{}", get_layer_two_nonce!(who, cli, trusted_args));
+		Ok(CliResultOk::None)
 	}
 }

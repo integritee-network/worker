@@ -20,7 +20,7 @@ use crate::{
 	trusted_cli::TrustedCli,
 	trusted_command_utils::{get_accountid_from_str, get_identifiers, get_pair_from_str},
 	trusted_operation::perform_trusted_operation,
-	Cli,
+	Cli, CliResult, CliResultOk,
 };
 use codec::Decode;
 use ita_stf::{Index, TrustedCall, TrustedGetter, TrustedOperation};
@@ -43,7 +43,7 @@ pub struct TransferCommand {
 }
 
 impl TransferCommand {
-	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
+	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
 		let from = get_pair_from_str(trusted_args, &self.from);
 		let to = get_accountid_from_str(&self.to);
 		info!("from ss58 is {}", from.public().to_ss58check());
@@ -62,7 +62,8 @@ impl TransferCommand {
 			TrustedCall::balance_transfer(from.public().into(), to, self.amount)
 				.sign(&KeyPair::Sr25519(Box::new(from)), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct);
-		let _ = perform_trusted_operation(cli, trusted_args, &top);
+		let res = perform_trusted_operation(cli, trusted_args, &top).map(|_| CliResultOk::None)?;
 		info!("trusted call transfer executed");
+		Ok(res)
 	}
 }
