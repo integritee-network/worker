@@ -16,7 +16,7 @@
 */
 
 use crate::{error::Error, state::RelayState, LightValidationState};
-use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
+use itc_parentchain_test::ParentchainHeaderBuilder;
 use itp_sgx_io::StaticSealedIO;
 use itp_types::Block;
 
