@@ -15,7 +15,7 @@ jobs:
       - name: Download Worker Image
         uses: actions/download-artifact@v3
         with:
-          name: integritee-worker-teeracle-${{ github.event.release.tag_name }}.tar.gz
+          name: integritee-worker-teeracle-${{ github.ref_name }}.tar.gz
           path: .
 
       - name: Login to Dockerhub
@@ -28,13 +28,13 @@ jobs:
         env:
           DOCKER_BUILDKIT: 1
         run: |
-            docker image load --input integritee-worker-teeracle-${{ github.event.release.tag_name }}.tar.gz
-            docker push integritee/teeracle:${{ github.event.release.tag_name }}
+            docker image load --input integritee-worker-teeracle-${{ github.ref_name }}.tar.gz
+            docker push integritee/teeracle:${{ github.ref_name }}
             docker images --all
   
       - name: Delete images
         run: |
-          if [[ "$(docker images -q integritee/teeracle:${{ github.event.release.tag_name }} 2> /dev/null)" != "" ]]; then
-              docker image rmi --force integritee/teeracle:${{ github.event.release.tag_name }} 2>/dev/null
+          if [[ "$(docker images -q integritee/teeracle:${{ github.ref_name }} 2> /dev/null)" != "" ]]; then
+              docker image rmi --force integritee/teeracle:${{ github.ref_name }} 2>/dev/null
           fi
           docker images --all

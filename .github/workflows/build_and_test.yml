@@ -363,15 +363,14 @@ jobs:
       - name: Save released teeracle
         run: |
             docker image load --input integritee-worker-teeracle-${{ github.sha }}.tar.gz
-            docker tag integritee-worker-teeracle-${{ github.sha }} integritee/teeracle:${{ github.event.release.tag_name }}
-            docker image save integritee/teeracle:${{ github.event.release.tag_name }} | gzip > integritee-worker-teeracle-${{ github.event.release.tag_name }}.tar.gz
+            docker tag integritee-worker-teeracle-${{ github.sha }} integritee/teeracle:${{ github.ref_name }}
+            docker image save integritee/teeracle:${{ github.ref_name }} | gzip > integritee-worker-teeracle-${{ github.ref_name }}.tar.gz
             docker images --all
   
       - name: Upload teeracle image
         uses: actions/upload-artifact@v3
         with:
-          name: integritee-worker-teeracle-${{ github.event.release.tag_name }}.tar.gz
-          path: integritee-worker-teeracle-${{ github.event.release.tag_name }}.tar.gz
+          path: integritee-worker-teeracle-${{ github.ref_name }}.tar.gz
   
 
       - name: Changelog
@@ -394,8 +393,8 @@ jobs:
 
       - name: Delete images
         run: |
-            if [[ "$(docker images -q integritee/teeracle:${{ github.event.release.tag_name }} 2> /dev/null)" != "" ]]; then
-                docker image rmi --force integritee/teeracle:${{ github.event.release.tag_name }} 2>/dev/null
+            if [[ "$(docker images -q integritee/teeracle:${{ github.ref_name }} 2> /dev/null)" != "" ]]; then
+                docker image rmi --force integritee/teeracle:${{ github.ref_name }} 2>/dev/null
             fi
             if [[ "$(docker images -q integritee-worker-teeracle-${{ github.sha }} 2> /dev/null)" != "" ]]; then
                 docker image rmi --force integritee-worker-teeracle-${{ github.sha }} 2>/dev/null
