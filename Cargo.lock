@@ -3350,6 +3350,7 @@ dependencies = [
  "sp-core",
  "sp-finality-grandpa",
  "sp-runtime",
+ "teerex-primitives",
  "thiserror 1.0.40",
 ]
 
