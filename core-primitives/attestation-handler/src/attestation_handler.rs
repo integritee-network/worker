@@ -640,7 +640,7 @@ where
 	}
 
 	fn get_ias_api_key() -> EnclaveResult<String> {
-		// Check if set as enviromental variable
+		// Check if set as an environment variable
 		env::var("IAS_EPID_KEY")
 			.or_else(|_| io::read_to_string(RA_API_KEY_FILE))
 			.map(|key| key.trim_end().to_owned())
