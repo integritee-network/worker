@@ -24,6 +24,7 @@ use itp_settings::worker::EXTRINSIC_MAX_SIZE;
 use itp_types::ShardIdentifier;
 use log::*;
 use sgx_types::*;
+use teerex_primitives::Fmspc;
 
 const OS_SYSTEM_PATH: &str = "/usr/lib/x86_64-linux-gnu/";
 const C_STRING_ENDING: &str = "\0";
@@ -32,8 +33,6 @@ const QE3_ENCLAVE: &str = "libsgx_qe3.signed.so.1";
 const ID_ENCLAVE: &str = "libsgx_id_enclave.signed.so.1";
 const LIBDCAP_QUOTEPROV: &str = "libdcap_quoteprov.so.1";
 const QVE_ENCLAVE: &str = "libsgx_qve.signed.so.1";
-
-type Fmspc = [u8; 6];
 
 /// Struct that unites all relevant data reported by the QVE
 pub struct QveReport {
