@@ -29,17 +29,23 @@ use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_sgx_io::{seal, unseal};
 use log::*;
 use sp_runtime::traits::{Block, Header};
-use std::{boxed::Box, fs, path::Path, sgxfs::SgxFile, sync::Arc};
+use std::{
+	boxed::Box,
+	fs,
+	path::{Path, PathBuf},
+	sgxfs::SgxFile,
+	sync::Arc,
+};
 
 #[derive(Clone, Debug)]
 pub struct LightClientStateSeal<B, LightClientState> {
-	path: Box<Path>,
+	path_buf: PathBuf,
 	_phantom: PhantomData<(B, LightClientState)>,
 }
 
 impl<B, L> LightClientStateSeal<B, L> {
 	pub fn new(path: &str) -> Self {
-		Self { path: Path::new(path).into(), _phantom: Default::default() }
+		Self { path_buf: PathBuf::from(path), _phantom: Default::default() }
 	}
 }
 
@@ -64,7 +70,7 @@ impl<B: Block, LightClientState: Decode + Encode + Debug> LightClientSealing<Lig
 	}
 
 	fn path(&self) -> &Path {
-		&self.path
+		&self.path_buf.as_path()
 	}
 }
 
