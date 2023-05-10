@@ -23,7 +23,7 @@ use crate::{
 		decode_balance, get_identifiers, get_keystore_path, get_pair_from_str,
 	},
 	trusted_operation::{get_json_request, get_state, perform_trusted_operation, wait_until},
-	Cli,
+	Cli, CliResult, CliResultOk,
 };
 use codec::Decode;
 use hdrhistogram::Histogram;
@@ -113,7 +113,7 @@ struct BenchmarkTransaction {
 }
 
 impl BenchmarkCommand {
-	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
+	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
 		let random_wait_before_transaction_ms: (u32, u32) = (
 			self.random_wait_before_transaction_min_ms,
 			self.random_wait_before_transaction_max_ms,
@@ -247,7 +247,9 @@ impl BenchmarkCommand {
 			overall_start.elapsed().as_millis()
 		);
 
-		print_benchmark_statistic(outputs, self.wait_for_confirmation)
+		print_benchmark_statistic(outputs, self.wait_for_confirmation);
+
+		Ok(CliResultOk::None)
 	}
 }
 
@@ -262,7 +264,7 @@ fn get_balance(
 	);
 
 	let getter_start_timer = Instant::now();
-	let getter_result = get_state(direct_client, shard, &getter);
+	let getter_result = get_state(direct_client, shard, &getter).unwrap_or_default();
 	let getter_execution_time = getter_start_timer.elapsed().as_millis();
 
 	let balance = decode_balance(getter_result);
@@ -282,7 +284,7 @@ fn get_nonce(
 	);
 
 	let getter_start_timer = Instant::now();
-	let getter_result = get_state(direct_client, shard, &getter);
+	let getter_result = get_state(direct_client, shard, &getter).unwrap_or_default();
 	let getter_execution_time = getter_start_timer.elapsed().as_millis();
 
 	let nonce = match getter_result {

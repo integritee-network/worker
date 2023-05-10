@@ -20,15 +20,10 @@ macro_rules! get_layer_two_evm_nonce {
 		let top: TrustedOperation = TrustedGetter::evm_nonce($signer_pair.public().into())
 			.sign(&KeyPair::Sr25519(Box::new($signer_pair.clone())))
 			.into();
-		let res = perform_trusted_operation($cli, $trusted_args, &top);
-		let nonce: Index = if let Some(n) = res {
-			if let Ok(nonce) = Index::decode(&mut n.as_slice()) {
-				nonce
-			} else {
-				0
-			}
-		} else {
-			0
+		let res = perform_trusted_operation($cli, $trusted_args, &top).unwrap_or_default();
+		let nonce = match res {
+			Some(n) => Index::decode(&mut n.as_slice()).unwrap_or(0),
+			None => 0,
 		};
 		debug!("got evm nonce: {:?}", nonce);
 		nonce

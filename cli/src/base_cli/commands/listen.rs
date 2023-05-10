@@ -15,7 +15,7 @@
 
 */
 
-use crate::{command_utils::get_chain_api, Cli};
+use crate::{command_utils::get_chain_api, Cli, CliResult, CliResultOk};
 use base58::ToBase58;
 use codec::Encode;
 use log::*;
@@ -34,7 +34,7 @@ pub struct ListenCommand {
 }
 
 impl ListenCommand {
-	pub(crate) fn run(&self, cli: &Cli) {
+	pub(crate) fn run(&self, cli: &Cli) -> CliResult {
 		println!("{:?} {:?}", self.events, self.blocks);
 		let api = get_chain_api(cli);
 		info!("Subscribing to events");
@@ -44,12 +44,12 @@ impl ListenCommand {
 		loop {
 			if let Some(e) = self.events {
 				if count >= e {
-					return
+					return Ok(CliResultOk::None)
 				}
 			};
 			if let Some(b) = self.blocks {
 				if blocks >= b {
-					return
+					return Ok(CliResultOk::None)
 				}
 			};
 

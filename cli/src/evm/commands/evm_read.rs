@@ -17,7 +17,7 @@
 
 use crate::{
 	trusted_cli::TrustedCli, trusted_command_utils::get_pair_from_str,
-	trusted_operation::perform_trusted_operation, Cli,
+	trusted_operation::perform_trusted_operation, Cli, CliError, CliResult, CliResultOk,
 };
 use codec::Decode;
 use ita_stf::{TrustedGetter, TrustedOperation};
@@ -36,7 +36,7 @@ pub struct EvmReadCommands {
 }
 
 impl EvmReadCommands {
-	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
+	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
 		let sender = get_pair_from_str(trusted_args, &self.from);
 		let sender_acc: AccountId = sender.public().into();
 
@@ -56,21 +56,20 @@ impl EvmReadCommands {
 			TrustedGetter::evm_account_storages(sender_acc, execution_address, H256::zero())
 				.sign(&KeyPair::Sr25519(Box::new(sender)))
 				.into();
-		let res = perform_trusted_operation(cli, trusted_args, &top);
+		let res = perform_trusted_operation(cli, trusted_args, &top)?;
 
 		debug!("received result for balance");
-		let val = if let Some(v) = res {
+		if let Some(v) = res {
 			if let Ok(vd) = H256::decode(&mut v.as_slice()) {
-				vd
+				println!("{:?}", vd);
+				Ok(CliResultOk::H256 { hash: vd })
 			} else {
 				error!("could not decode value. {:x?}", v);
-				H256::zero()
+				Err(CliError::EvmRead { msg: format!("could not decode value. {:x?}", v) })
 			}
 		} else {
 			error!("Nothing in state!");
-			H256::zero()
-		};
-
-		println!("{:?}", val);
+			Err(CliError::EvmRead { msg: "Nothing in state!".to_string() })
+		}
 	}
 }
