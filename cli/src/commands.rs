@@ -44,7 +44,6 @@ pub enum Commands {
 }
 
 pub fn match_command(cli: &Cli) -> CliResult {
-	#[allow(non_snake_case, unused_variables)]
 	match &cli.command {
 		Commands::Base(cmd) => cmd.run(cli),
 		Commands::Trusted(trusted_cli) => trusted_cli.run(cli),
