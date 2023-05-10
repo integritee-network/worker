@@ -30,7 +30,7 @@ teeracle = [
 ]
 test = [
     "ita-stf/test",
-    "itc-parentchain/mocks",
+    "itc-parentchain/test",
     "itp-attestation-handler/test",
     "itp-extrinsics-factory/mocks",
     "itp-sgx-crypto/mocks",

@@ -38,7 +38,7 @@ use sp_runtime::{
 	traits::{Block as ParentchainBlockTrait, Header as HeaderTrait},
 	OpaqueExtrinsic,
 };
-use std::vec::Vec;
+use std::{path::Path, vec::Vec};
 
 pub mod concurrent_access;
 pub mod error;
@@ -93,6 +93,13 @@ pub trait LightClientState<Block: ParentchainBlockTrait> {
 
 	// Todo: Check if we still need this after #423
 	fn penultimate_finalized_block_header(&self) -> Result<Block::Header, Error>;
+}
+
+pub trait LightClientSealing<LightClientState> {
+	fn seal(&self, state: &LightClientState) -> Result<(), Error>;
+	fn unseal(&self) -> Result<LightClientState, Error>;
+	fn exists(&self) -> bool;
+	fn path(&self) -> &Path;
 }
 
 pub fn grandpa_log<Block: ParentchainBlockTrait>(

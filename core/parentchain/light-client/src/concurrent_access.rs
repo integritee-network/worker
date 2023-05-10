@@ -26,11 +26,10 @@ use std::sync::RwLock;
 
 use crate::{
 	error::{Error, Result},
-	ExtrinsicSender as ExtrinsicSenderTrait, LightClientState, LightValidationState,
-	Validator as ValidatorTrait,
+	ExtrinsicSender as ExtrinsicSenderTrait, LightClientSealing, LightClientState,
+	LightValidationState, Validator as ValidatorTrait,
 };
 use finality_grandpa::BlockNumberOps;
-use itp_sgx_io::StaticSealedIO;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, NumberFor};
 use std::marker::PhantomData;
 
@@ -62,30 +61,21 @@ where
 
 /// Implementation of a validator access based on a global lock and corresponding file.
 #[derive(Debug)]
-pub struct ValidatorAccessor<Validator, ParentchainBlock, Seal>
-where
-	Validator: ValidatorTrait<ParentchainBlock>
-		+ LightClientState<ParentchainBlock>
-		+ ExtrinsicSenderTrait,
-	Seal: StaticSealedIO<Error = Error, Unsealed = LightValidationState<ParentchainBlock>>,
-	ParentchainBlock: ParentchainBlockTrait,
-	NumberFor<ParentchainBlock>: BlockNumberOps,
-{
+pub struct ValidatorAccessor<Validator, ParentchainBlock, LightClientSeal> {
+	seal: LightClientSeal,
 	light_validation: RwLock<Validator>,
-	_phantom: PhantomData<(Seal, Validator, ParentchainBlock)>,
+	_phantom: PhantomData<(LightClientSeal, Validator, ParentchainBlock)>,
 }
 
-impl<Validator, ParentchainBlock, Seal> ValidatorAccessor<Validator, ParentchainBlock, Seal>
-where
-	Validator: ValidatorTrait<ParentchainBlock>
-		+ LightClientState<ParentchainBlock>
-		+ ExtrinsicSenderTrait,
-	Seal: StaticSealedIO<Error = Error, Unsealed = LightValidationState<ParentchainBlock>>,
-	ParentchainBlock: ParentchainBlockTrait,
-	NumberFor<ParentchainBlock>: BlockNumberOps,
+impl<Validator, ParentchainBlock, LightClientSeal>
+	ValidatorAccessor<Validator, ParentchainBlock, LightClientSeal>
 {
-	pub fn new(validator: Validator) -> Self {
-		ValidatorAccessor { light_validation: RwLock::new(validator), _phantom: Default::default() }
+	pub fn new(validator: Validator, seal: LightClientSeal) -> Self {
+		ValidatorAccessor {
+			light_validation: RwLock::new(validator),
+			seal,
+			_phantom: Default::default(),
+		}
 	}
 }
 
@@ -95,7 +85,7 @@ where
 	Validator: ValidatorTrait<ParentchainBlock>
 		+ LightClientState<ParentchainBlock>
 		+ ExtrinsicSenderTrait,
-	Seal: StaticSealedIO<Error = Error, Unsealed = LightValidationState<ParentchainBlock>>,
+	Seal: LightClientSealing<LightValidationState<ParentchainBlock>>,
 	ParentchainBlock: ParentchainBlockTrait,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 {
@@ -117,7 +107,7 @@ where
 		let mut light_validation_lock =
 			self.light_validation.write().map_err(|_| Error::PoisonedLock)?;
 		let result = mutating_function(&mut light_validation_lock);
-		Seal::seal_to_static_file(light_validation_lock.get_state())?;
+		self.seal.seal(light_validation_lock.get_state())?;
 		result
 	}
 }
@@ -135,7 +125,8 @@ mod tests {
 	#[test]
 	fn execute_with_and_without_mut_in_single_thread_works() {
 		let validator_mock = ValidatorMock::default();
-		let accessor = TestAccessor::new(validator_mock);
+		let seal = LightValidationStateSealMock::new();
+		let accessor = TestAccessor::new(validator_mock, seal);
 
 		let _read_result = accessor.execute_on_validator(|_v| Ok(())).unwrap();
 		let _write_result = accessor.execute_mut_on_validator(|_v| Ok(())).unwrap();
