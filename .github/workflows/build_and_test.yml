@@ -391,6 +391,8 @@ jobs:
           body: |
             ${{ steps.Changelog.outputs.changelog }}
           draft: true
+          files: |
+            integritee-worker-teeracle-${{ github.ref_name }}.tar.gz
 
       - name: Delete images
         run: |
