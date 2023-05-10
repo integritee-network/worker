@@ -1,5 +1,5 @@
 use clap::Parser;
-use integritee_cli::{commands, Cli};
+use integritee_cli::Cli;
 
 fn init() {
 	env_logger::try_init();

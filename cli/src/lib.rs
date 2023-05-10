@@ -45,9 +45,9 @@ pub mod commands;
 
 use crate::commands::Commands;
 use clap::Parser;
-use snafu::prelude::*;
 use sp_core::{H160, H256};
 use substrate_api_client::Metadata;
+use thiserror::Error;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -104,11 +104,11 @@ pub enum CliResultOk {
 	None,
 }
 
-#[derive(Debug, Snafu)]
+#[derive(Debug, Error)]
 pub enum CliError {
-	#[snafu(display("trusted operation error: {:?}", msg))]
+	#[error("trusted operation error: {:?}", msg)]
 	TrustedOp { msg: String },
-	#[snafu(display("EvmReadCommands error: {:?}", msg))]
+	#[error("EvmReadCommands error: {:?}", msg)]
 	EvmRead { msg: String },
 }
 

@@ -34,7 +34,6 @@ use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use log::*;
 use my_node_runtime::{Hash, RuntimeEvent};
 use pallet_teerex::Event as TeerexEvent;
-use snafu::prelude::*;
 use sp_core::{sr25519 as sr25519_core, H256};
 use std::{
 	result::Result as StdResult,
@@ -45,10 +44,11 @@ use substrate_api_client::{
 	compose_extrinsic, GetHeader, SubmitAndWatch, SubscribeEvents, XtStatus,
 };
 use teerex_primitives::Request;
+use thiserror::Error;
 
-#[derive(Debug, Snafu)]
+#[derive(Debug, Error)]
 pub(crate) enum TrustedOperationError {
-	#[snafu(display("default error: {:?}", msg))]
+	#[error("default error: {msg:?}")]
 	Default { msg: String },
 }
 
