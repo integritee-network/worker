@@ -21,52 +21,71 @@ use crate::{
 	light_client_init_params::{GrandpaParams, SimpleParams},
 	light_validation::{check_validator_set_proof, LightValidation},
 	state::RelayState,
-	Error, LightValidationState, NumberFor, Validator,
+	LightClientSealing, LightClientState, LightValidationState, NumberFor, Validator,
 };
 use codec::{Decode, Encode};
-use core::fmt::Debug;
+use core::{fmt::Debug, marker::PhantomData};
 use itp_ocall_api::EnclaveOnChainOCallApi;
-use itp_settings::files::LIGHT_CLIENT_DB;
-use itp_sgx_io::{seal, unseal, StaticSealedIO};
+use itp_sgx_io::{seal, unseal};
 use log::*;
 use sp_runtime::traits::{Block, Header};
-use std::{boxed::Box, fs, sgxfs::SgxFile, sync::Arc};
+use std::{
+	boxed::Box,
+	fs,
+	path::{Path, PathBuf},
+	sgxfs::SgxFile,
+	sync::Arc,
+};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct LightClientStateSeal<B, LightClientState> {
-	_phantom: (B, LightClientState),
+	path_buf: PathBuf,
+	_phantom: PhantomData<(B, LightClientState)>,
 }
 
-impl<B: Block, LightClientState: Decode + Encode + Debug> StaticSealedIO
+impl<B, L> LightClientStateSeal<B, L> {
+	pub fn new(path: &str) -> Self {
+		Self { path_buf: PathBuf::from(path), _phantom: Default::default() }
+	}
+}
+
+impl<B: Block, LightClientState: Decode + Encode + Debug> LightClientSealing<LightClientState>
 	for LightClientStateSeal<B, LightClientState>
 {
-	type Error = Error;
-	type Unsealed = LightClientState;
-
-	fn unseal_from_static_file() -> Result<Self::Unsealed> {
-		Ok(unseal(LIGHT_CLIENT_DB).map(|b| Decode::decode(&mut b.as_slice()))??)
-	}
-
-	fn seal_to_static_file(unsealed: &Self::Unsealed) -> Result<()> {
+	fn seal(&self, unsealed: &LightClientState) -> Result<()> {
 		debug!("backup light client state");
-		if fs::copy(LIGHT_CLIENT_DB, format!("{}.1", LIGHT_CLIENT_DB)).is_err() {
+		if fs::copy(&self.path(), &self.path().join(".1")).is_err() {
 			warn!("could not backup previous light client state");
 		};
 		debug!("Seal light client State. Current state: {:?}", unsealed);
-		Ok(unsealed.using_encoded(|bytes| seal(bytes, LIGHT_CLIENT_DB))?)
+		Ok(unsealed.using_encoded(|bytes| seal(bytes, self.path()))?)
+	}
+
+	fn unseal(&self) -> Result<LightClientState> {
+		Ok(unseal(self.path()).map(|b| Decode::decode(&mut b.as_slice()))??)
+	}
+
+	fn exists(&self) -> bool {
+		SgxFile::open(self.path()).is_ok()
+	}
+
+	fn path(&self) -> &Path {
+		&self.path_buf.as_path()
 	}
 }
 
 // FIXME: This is a lot of duplicate code for the initialization of two
 // different but sameish light clients. Should be tackled with #1081
-pub fn read_or_init_grandpa_validator<B, OCallApi>(
+pub fn read_or_init_grandpa_validator<B, OCallApi, LightClientSeal>(
 	params: GrandpaParams<B::Header>,
 	ocall_api: Arc<OCallApi>,
+	seal: &LightClientSeal,
 ) -> Result<LightValidation<B, OCallApi>>
 where
 	B: Block,
 	NumberFor<B>: finality_grandpa::BlockNumberOps,
 	OCallApi: EnclaveOnChainOCallApi,
+	LightClientSeal: LightClientSealing<LightValidationState<B>>,
 {
 	check_validator_set_proof::<B>(
 		params.genesis_header.state_root(),
@@ -74,20 +93,18 @@ where
 		&params.authorities,
 	)?;
 
-	// FIXME: That should be an unique path.
-	if SgxFile::open(LIGHT_CLIENT_DB).is_err() {
-		info!("[Enclave] ChainRelay DB not found, creating new! {}", LIGHT_CLIENT_DB);
+	if !seal.exists() {
+		info!("[Enclave] ChainRelay DB not found, creating new! {}", seal.path().display());
 		let validator = init_grandpa_validator::<B, OCallApi>(
 			ocall_api,
 			RelayState::new(params.genesis_header, params.authorities).into(),
 		)?;
-		LightClientStateSeal::<B, LightValidationState<B>>::seal_to_static_file(
-			validator.get_state(),
-		)?;
+		seal.seal(validator.get_state())?;
 		return Ok(validator)
 	}
 
-	let (validation_state, genesis_hash) = get_validation_state::<B>()?;
+	let validation_state = seal.unseal()?;
+	let genesis_hash = validation_state.genesis_hash()?;
 
 	let init_state = if genesis_hash == params.genesis_header.hash() {
 		info!("Found already initialized light client with Genesis Hash: {:?}", genesis_hash);
@@ -104,33 +121,33 @@ where
 
 	info!("light client state: {:?}", validator);
 
-	LightClientStateSeal::<B, LightValidationState<B>>::seal_to_static_file(validator.get_state())?;
+	seal.seal(validator.get_state())?;
 	Ok(validator)
 }
 
-pub fn read_or_init_parachain_validator<B, OCallApi>(
+pub fn read_or_init_parachain_validator<B, OCallApi, LightClientSeal>(
 	params: SimpleParams<B::Header>,
 	ocall_api: Arc<OCallApi>,
+	seal: &LightClientSeal,
 ) -> Result<LightValidation<B, OCallApi>>
 where
 	B: Block,
 	NumberFor<B>: finality_grandpa::BlockNumberOps,
 	OCallApi: EnclaveOnChainOCallApi,
+	LightClientSeal: LightClientSealing<LightValidationState<B>>,
 {
-	// FIXME: That should be an unique path.
-	if SgxFile::open(LIGHT_CLIENT_DB).is_err() {
-		info!("[Enclave] ChainRelay DB not found, creating new! {}", LIGHT_CLIENT_DB);
+	if !seal.exists() {
+		info!("[Enclave] ChainRelay DB not found, creating new! {}", seal.path().display());
 		let validator = init_parachain_validator::<B, OCallApi>(
 			ocall_api,
 			RelayState::new(params.genesis_header, Default::default()).into(),
 		)?;
-		LightClientStateSeal::<B, LightValidationState<B>>::seal_to_static_file(
-			validator.get_state(),
-		)?;
+		seal.seal(validator.get_state())?;
 		return Ok(validator)
 	}
 
-	let (validation_state, genesis_hash) = get_validation_state::<B>()?;
+	let validation_state = seal.unseal()?;
+	let genesis_hash = validation_state.genesis_hash()?;
 
 	let init_state = if genesis_hash == params.genesis_header.hash() {
 		info!("Found already initialized light client with Genesis Hash: {:?}", genesis_hash);
@@ -146,19 +163,8 @@ where
 	let validator = init_parachain_validator::<B, OCallApi>(ocall_api, init_state)?;
 	info!("light client state: {:?}", validator);
 
-	LightClientStateSeal::<B, LightValidationState<B>>::seal_to_static_file(validator.get_state())?;
+	seal.seal(validator.get_state())?;
 	Ok(validator)
-}
-
-// Todo: Implement this on the `LightClientStateSeal` itself.
-fn get_validation_state<B: Block>() -> Result<(LightValidationState<B>, B::Hash)> {
-	let validation_state =
-		LightClientStateSeal::<B, LightValidationState<B>>::unseal_from_static_file()?;
-
-	let relay = validation_state.get_relay();
-	let genesis_hash = relay.header_hashes[0];
-
-	Ok((validation_state, genesis_hash))
 }
 
 fn init_grandpa_validator<B, OCallApi>(
@@ -192,4 +198,45 @@ where
 
 	let validator = LightValidation::<B, OCallApi>::new(ocall_api, finality, state);
 	Ok(validator)
+}
+
+#[cfg(feature = "test")]
+pub mod sgx_tests {
+	use super::{read_or_init_parachain_validator, Arc, LightClientStateSeal};
+	use crate::{light_client_init_params::SimpleParams, LightClientState, LightValidationState};
+	use itc_parentchain_test::{Block, Header, ParentchainHeaderBuilder};
+	use itp_sgx_temp_dir::TempDir;
+	use itp_test::mock::onchain_mock::OnchainMock;
+	use sp_runtime::OpaqueExtrinsic;
+
+	type TestBlock = Block<Header, OpaqueExtrinsic>;
+	type TestSeal = LightClientStateSeal<TestBlock, LightValidationState<TestBlock>>;
+
+	fn default_simple_params() -> SimpleParams<Header> {
+		SimpleParams { genesis_header: ParentchainHeaderBuilder::default().build() }
+	}
+
+	pub fn init_parachain_light_client_works() {
+		let parachain_params = default_simple_params();
+		let temp_dir = TempDir::with_prefix("init_parachain_light_client_works").unwrap();
+		let seal = TestSeal::new(temp_dir.path().to_str().unwrap());
+
+		let validator = read_or_init_parachain_validator::<TestBlock, OnchainMock, _>(
+			parachain_params.clone(),
+			Arc::new(OnchainMock::default()),
+			&seal,
+		)
+		.unwrap();
+
+		assert_eq!(validator.genesis_hash().unwrap(), parachain_params.genesis_header.hash());
+		assert_eq!(validator.num_xt_to_be_included().unwrap(), 0);
+		assert_eq!(validator.latest_finalized_header().unwrap(), parachain_params.genesis_header);
+		assert_eq!(
+			validator.penultimate_finalized_block_header().unwrap(),
+			parachain_params.genesis_header
+		);
+	}
+
+	// Todo #1293: add a unit test for the grandpa validator, but this needs a little effort for
+	// setting up correct finality params.
 }

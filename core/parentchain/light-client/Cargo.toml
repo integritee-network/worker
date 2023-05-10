@@ -21,7 +21,6 @@ thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linu
 
 # local deps
 itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
-itp-settings = { path = "../../../core-primitives/settings" }
 itp-sgx-io = { path = "../../../core-primitives/sgx/io", default-features = false }
 itp-storage = { path = "../../../core-primitives/storage", default-features = false }
 itp-types = { path = "../../../core-primitives/types", default-features = false }
@@ -34,11 +33,16 @@ sp-finality-grandpa = { default-features = false, git = "https://github.com/pari
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
 sp-trie = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
 
-# mocks dependencies
+# test & mock dependencies
 itc-parentchain-test = { optional = true, default-features = false, path = "../../../core/parentchain/test" }
+# We can't really make this optional due to feature flag complexities.
+itp-sgx-temp-dir = { version = "0.1", default-features = false, path = "../../../core-primitives/sgx/temp-dir" }
+itp-test = { optional = true, default-features = false, features = ["sgx"], path = "../../../core-primitives/test" }
 
 [dev-dependencies]
+itc-parentchain-test = { path = "../../../core/parentchain/test" }
 itp-test = { path = "../../../core-primitives/test" }
+itp-sgx-temp-dir = { version = "0.1", path = "../../../core-primitives/sgx/temp-dir" }
 
 [features]
 default = ["std"]
@@ -63,13 +67,19 @@ std = [
     "itp-storage/std",
     "itp-sgx-io/std",
     "itp-types/std",
+
+    # mock deps
+    "itp-sgx-temp-dir/std",
 ]
 sgx = [
     "sgx_tstd",
     "thiserror-sgx",
     "itp-sgx-io/sgx",
     "itp-storage/sgx",
+    "itp-sgx-temp-dir/sgx",
 ]
 mocks = [
     "itc-parentchain-test",
 ]
+
+test = ["mocks", "itp-test"]
