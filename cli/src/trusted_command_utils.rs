@@ -45,9 +45,11 @@ macro_rules! get_layer_two_nonce {
 			.sign(&KeyPair::Sr25519(Box::new($signer_pair.clone())))
 			.into();
 		// final nonce = current system nonce + pending tx count, panic early
-		let nonce = perform_trusted_operation($cli, $trusted_args, &top)
-			.and_then(|n| Index::decode(&mut n.as_slice()).ok())
-			.unwrap();
+		let res = perform_trusted_operation($cli, $trusted_args, &top).unwrap_or_default();
+		let nonce = match res {
+			Some(n) => Index::decode(&mut n.as_slice()).unwrap_or(0),
+			None => 0,
+		};
 		debug!("got system nonce: {:?}", nonce);
 		let pending_tx_count =
 			get_pending_trusted_calls_for($cli, $trusted_args, &$signer_pair.public().into()).len();
@@ -65,7 +67,7 @@ pub(crate) fn get_balance(cli: &Cli, trusted_args: &TrustedCli, arg_who: &str) -
 	let top: TrustedOperation = TrustedGetter::free_balance(who.public().into())
 		.sign(&KeyPair::Sr25519(Box::new(who)))
 		.into();
-	let res = perform_trusted_operation(cli, trusted_args, &top);
+	let res = perform_trusted_operation(cli, trusted_args, &top).unwrap_or(None);
 	debug!("received result for balance");
 	decode_balance(res)
 }

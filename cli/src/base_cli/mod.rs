@@ -21,7 +21,7 @@ use crate::{
 		shield_funds::ShieldFundsCommand, transfer::TransferCommand,
 	},
 	command_utils::*,
-	Cli,
+	Cli, CliResult, CliResultOk,
 };
 use base58::ToBase58;
 use chrono::{DateTime, Utc};
@@ -73,7 +73,7 @@ pub enum BaseCommand {
 }
 
 impl BaseCommand {
-	pub fn run(&self, cli: &Cli) {
+	pub fn run(&self, cli: &Cli) -> CliResult {
 		match self {
 			BaseCommand::Balance(cmd) => cmd.run(cli),
 			BaseCommand::NewAccount => new_account(),
@@ -89,42 +89,63 @@ impl BaseCommand {
 	}
 }
 
-fn new_account() {
+fn new_account() -> CliResult {
 	let store = LocalKeystore::open(PathBuf::from(&KEYSTORE_PATH), None).unwrap();
 	let key: sr25519::AppPair = store.generate().unwrap();
+	let key_base58 = key.public().to_ss58check();
 	drop(store);
-	println!("{}", key.public().to_ss58check());
+	println!("{}", key_base58);
+	Ok(CliResultOk::PubKeysBase58 {
+		pubkeys_sr25519: Some(vec![key_base58]),
+		pubkeys_ed25519: None,
+	})
 }
 
-fn list_accounts() {
+fn list_accounts() -> CliResult {
 	let store = LocalKeystore::open(PathBuf::from(&KEYSTORE_PATH), None).unwrap();
 	println!("sr25519 keys:");
+	let mut keys_sr25519 = vec![];
 	for pubkey in store.public_keys::<sr25519::AppPublic>().unwrap().into_iter() {
-		println!("{}", pubkey.to_ss58check());
+		let key_ss58 = pubkey.to_ss58check();
+		println!("{}", key_ss58);
+		keys_sr25519.push(key_ss58);
 	}
 	println!("ed25519 keys:");
+	let mut keys_ed25519 = vec![];
 	for pubkey in store.public_keys::<ed25519::AppPublic>().unwrap().into_iter() {
-		println!("{}", pubkey.to_ss58check());
+		let key_ss58 = pubkey.to_ss58check();
+		println!("{}", key_ss58);
+		keys_ed25519.push(key_ss58);
 	}
 	drop(store);
+
+	Ok(CliResultOk::PubKeysBase58 {
+		pubkeys_sr25519: Some(keys_sr25519),
+		pubkeys_ed25519: Some(keys_ed25519),
+	})
 }
 
-fn print_metadata(cli: &Cli) {
+fn print_metadata(cli: &Cli) -> CliResult {
 	let api = get_chain_api(cli);
 	let meta = api.metadata();
 	println!("Metadata:\n {}", Metadata::pretty_format(&meta.runtime_metadata()).unwrap());
+	Ok(CliResultOk::Metadata { metadata: meta.clone() })
 }
 
-fn print_sgx_metadata(cli: &Cli) {
+fn print_sgx_metadata(cli: &Cli) -> CliResult {
 	let worker_api_direct = get_worker_api_direct(cli);
 	let metadata = worker_api_direct.get_state_metadata().unwrap();
 	println!("Metadata:\n {}", Metadata::pretty_format(metadata.runtime_metadata()).unwrap());
+	Ok(CliResultOk::Metadata { metadata })
 }
 
-fn list_workers(cli: &Cli) {
+fn list_workers(cli: &Cli) -> CliResult {
 	let api = get_chain_api(cli);
 	let wcount = api.enclave_count(None).unwrap();
 	println!("number of workers registered: {}", wcount);
+
+	let mut mr_enclaves = Vec::with_capacity(wcount as usize);
+
 	for w in 1..=wcount {
 		let enclave = api.enclave(w, None).unwrap();
 		if enclave.is_none() {
@@ -134,10 +155,15 @@ fn list_workers(cli: &Cli) {
 		let enclave = enclave.unwrap();
 		let timestamp =
 			DateTime::<Utc>::from(UNIX_EPOCH + Duration::from_millis(enclave.timestamp));
+		let mr_enclave = enclave.mr_enclave.to_base58();
 		println!("Enclave {}", w);
 		println!("   AccountId: {}", enclave.pubkey.to_ss58check());
-		println!("   MRENCLAVE: {}", enclave.mr_enclave.to_base58());
+		println!("   MRENCLAVE: {}", mr_enclave);
 		println!("   RA timestamp: {}", timestamp);
 		println!("   URL: {}", enclave.url);
+
+		mr_enclaves.push(mr_enclave);
 	}
+
+	Ok(CliResultOk::MrEnclaveBase58 { mr_enclaves })
 }
