@@ -398,11 +398,11 @@ jobs:
           path: integritee-worker-${{ matrix.flavor_id }}-${{ github.ref_name }}.tar.gz
 
       - name: Delete images
-      run: |
-          if [[ "$(docker images -q integritee/${{ matrix.flavor_id }}:${{ github.ref_name }} 2> /dev/null)" != "" ]]; then
-              docker image rmi --force integritee/${{ matrix.flavor_id }}:${{ github.ref_name }} 2>/dev/null
-          fi
-          docker images --all
+        run: |
+            if [[ "$(docker images -q integritee/${{ matrix.flavor_id }}:${{ github.ref_name }} 2> /dev/null)" != "" ]]; then
+                docker image rmi --force integritee/${{ matrix.flavor_id }}:${{ github.ref_name }} 2>/dev/null
+            fi
+            docker images --all
 
   release:
     runs-on: ubuntu-latest
