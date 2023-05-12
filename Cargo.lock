@@ -2757,6 +2757,7 @@ dependencies = [
  "itc-rest-client",
  "itc-rpc-client",
  "itc-rpc-server",
+ "itp-api-client-types",
  "itp-enclave-api",
  "itp-enclave-metrics",
  "itp-node-api",

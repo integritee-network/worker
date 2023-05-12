@@ -51,6 +51,7 @@ itp-settings = { path = "../core-primitives/settings" }
 itp-storage = { path = "../core-primitives/storage" }
 itp-types = { path = "../core-primitives/types" }
 itp-utils = { path = "../core-primitives/utils" }
+itp-api-client-types = { path = "../core-primitives/node-api/api-client-types" }
 its-consensus-slots = { path = "../sidechain/consensus/slots" }
 its-peer-fetch = { path = "../sidechain/peer-fetch" }
 its-primitives = { path = "../sidechain/primitives" }

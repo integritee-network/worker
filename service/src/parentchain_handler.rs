@@ -22,13 +22,14 @@ use itc_parentchain::{
 	primitives::ParentchainInitParams,
 };
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
-use itp_node_api::api_client::ChainApi;
+use itp_node_api::api_client::{ChainApi, Metadata, Events, EventDetails};
 use itp_storage::StorageProof;
 use log::*;
 use my_node_runtime::Header;
 use sp_finality_grandpa::VersionedAuthorityList;
 use sp_runtime::traits::Header as HeaderTrait;
-use std::{cmp::min, sync::Arc};
+use sp_core::H256;
+use std::{cmp::min, sync::Arc, string::String};
 
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
 
@@ -147,6 +148,33 @@ where
 					self.parentchain_api.get_events_for_block(Some(block.block.header.hash()))
 				})
 				.collect::<Result<Vec<_>, _>>()?;
+
+			println!("[+] Found {} event vector(s) to sync", events_chunk_to_sync.len());
+
+			// Test Code REMOVE
+			// Intention is to quickly decode the events using the metadata to verify can decode what we just got back
+			if events_chunk_to_sync.len() > 0 {
+				println!("Have a single event available!!");
+				let single_event_block = events_chunk_to_sync[0].clone();
+				let single_block = block_chunk_to_sync[0].clone();
+
+				let decoded_events = Events::<H256>::new(self.parentchain_api.get_metadata().unwrap(), single_block.block.header.hash(), single_event_block);
+				println!("Got Decoded Events in Service");
+				println!("Decoded_events len {}", decoded_events.len());
+				if decoded_events.len() > 0 {
+					let events_and_pallet_names: Vec<_> = decoded_events
+						.iter()
+						.map(|maybe_details| {
+							let event_details = maybe_details.unwrap();
+							(
+								String::from(event_details.variant_name().clone()),
+								String::from(event_details.pallet_name().clone()),
+							)
+						})
+						.collect();
+					println!("Now printing all the events and pallet names {:?}", events_and_pallet_names);
+				}
+			}
 
 			let events_proofs_chunk_to_sync: Vec<StorageProof> = block_chunk_to_sync
 				.iter()

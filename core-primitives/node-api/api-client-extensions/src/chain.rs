@@ -16,7 +16,7 @@
 */
 
 use crate::{ApiClientError, ApiResult};
-use itp_api_client_types::{Block, SignedBlock};
+use itp_api_client_types::{Block, SignedBlock, Metadata};
 use itp_types::{
 	parentchain::{BlockNumber, Hash, Header, StorageProof},
 	H256,
@@ -28,7 +28,7 @@ use substrate_api_client::{
 	GetHeader, GetStorage,
 };
 
-pub type Events = Vec<u8>;
+type Events = Vec<u8>;
 
 /// ApiClient extension that simplifies chain data access.
 pub trait ChainApi {
@@ -45,6 +45,7 @@ pub trait ChainApi {
 	fn grandpa_authorities_proof(&self, hash: Option<H256>) -> ApiResult<StorageProof>;
 	fn get_events_value_proof(&self, block_hash: Option<H256>) -> ApiResult<StorageProof>;
 	fn get_events_for_block(&self, block_hash: Option<H256>) -> ApiResult<Events>;
+	fn get_metadata(&self) -> ApiResult<Metadata>;
 }
 
 impl<Signer, Client, Params, Runtime> ChainApi for Api<Signer, Client, Params, Runtime>
@@ -117,5 +118,9 @@ where
 
 	fn get_events_for_block(&self, block_hash: Option<H256>) -> ApiResult<Events> {
 		Ok(self.get_storage_value("System", "Events", block_hash)?.unwrap_or_default())
+	}
+
+	fn get_metadata(&self) -> ApiResult<Metadata> {
+		Ok(self.metadata().clone())
 	}
 }

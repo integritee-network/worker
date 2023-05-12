@@ -140,20 +140,20 @@ impl<
 			})?;
 
 			let maybe_event = self.node_meta_data_provider.get_from_metadata(|metadata| {
-				let raw_metadata: Metadata = metadata.clone().into()?;
-				let events_decoded = Events::<H256>::new(raw_metadata, block_hash, events.clone());
-				let events_and_pallet_names: Vec<_> = events_decoded
-					.iter()
-					.map(|maybe_details| {
-						let event_details = maybe_details.unwrap();
-						(
-							String::from(event_details.variant_name().clone()),
-							String::from(event_details.pallet_name().clone()),
-						)
-					})
-					.collect();
-				info!("Events for this block are {:?}", events_and_pallet_names);
-				FilterIndirectEvents::filter_into_with_metadata(&events, metadata)
+				// let raw_metadata: Metadata = metadata.clone().into()?;
+				// let events_decoded = Events::<H256>::new(raw_metadata, block_hash, events.clone());
+				// let events_and_pallet_names: Vec<_> = events_decoded
+				// 	.iter()
+				// 	.map(|maybe_details| {
+				// 		let event_details = maybe_details.unwrap();
+				// 		(
+				// 			String::from(event_details.variant_name().clone()),
+				// 			String::from(event_details.pallet_name().clone()),
+				// 		)
+				// 	})
+				// 	.collect();
+				// info!("Events for this block are {:?}", events_and_pallet_names);
+				// FilterIndirectEvents::filter_into_with_metadata(&events, metadata)
 			})?;
 
 			let call = match maybe_call {
