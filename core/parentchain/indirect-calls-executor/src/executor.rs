@@ -25,7 +25,7 @@ use crate::{
 	traits::{ExecuteIndirectCalls, IndirectDispatch, IndirectExecutor},
 };
 use binary_merkle_tree::merkle_root;
-use codec::Encode;
+use codec::{Encode, Decode};
 use core::marker::PhantomData;
 use ita_stf::{TrustedCall, TrustedCallSigned};
 use itp_api_client_types::{EventDetails, Events, Metadata, StaticEvent};
@@ -41,6 +41,20 @@ use log::*;
 use sp_core::blake2_256;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header, Keccak256};
 use std::{string::String, sync::Arc, vec::Vec};
+
+#[derive(Decode, Encode)]
+pub struct ExtrinsicSuccess;
+impl StaticEvent for ExtrinsicSuccess {
+	const PALLET: &'static str = "System";
+	const EVENT: &'static str = "ExtrinsicSuccess";
+}
+
+#[derive(Decode, Encode)]
+pub struct ExtrinsicFailed;
+impl StaticEvent for ExtrinsicFailed {
+	const PALLET: &'static str = "System";
+	const EVENT: &'static str = "ExtrinsicFailed";
+}
 
 pub struct IndirectCallsExecutor<
 	ShieldingKeyRepository,
@@ -139,20 +153,26 @@ impl<
 				FilterIndirectCalls::filter_into_with_metadata(&encoded_xt_opaque, metadata)
 			})?;
 
-			let maybe_event = self.node_meta_data_provider.get_from_metadata(|metadata| {
+			let maybe_events = self.node_meta_data_provider.get_from_metadata(|metadata| {
 				let raw_metadata: Metadata = metadata.clone().into()?;
 				let events_decoded = Events::<H256>::new(raw_metadata, block_hash, events.clone());
-				let events_and_pallet_names: Vec<_> = events_decoded
-					.iter()
-					.map(|maybe_details| {
-						let event_details = maybe_details.unwrap();
-						(
-							String::from(event_details.variant_name().clone()),
-							String::from(event_details.pallet_name().clone()),
-						)
-					})
-					.collect();
-				info!("Events for this block are {:?}", events_and_pallet_names);
+
+				// TODO:
+				// Now find the events I care about..
+				// Perhaps we add something here which defines which events should be cared about
+				// then we find each of those and return our findings or return a collection of what we found
+
+				// let events_and_pallet_names: Vec<_> = events_decoded
+				// 	.iter()
+				// 	.map(|maybe_details| {
+				// 		let event_details = maybe_details.unwrap();
+				// 		(
+				// 			String::from(event_details.variant_name().clone()),
+				// 			String::from(event_details.pallet_name().clone()),
+				// 		)
+				// 	})
+				// 	.collect();
+				// info!("Events for this block are {:?}", events_and_pallet_names);
 				FilterIndirectEvents::filter_into_with_metadata(&events, metadata)
 			})?;
 
@@ -250,13 +270,6 @@ impl<
 
 pub(crate) fn hash_of<T: Encode>(xt: &T) -> H256 {
 	blake2_256(&xt.encode()).into()
-}
-
-#[derive(codec::Decode)]
-pub struct ExtrinsicSuccess;
-impl StaticEvent for ExtrinsicSuccess {
-	const PALLET: &'static str = "System";
-	const EVENT: &'static str = "ExtrinsicSuccess";
 }
 
 #[cfg(test)]

@@ -25,7 +25,7 @@ use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORI
 use sp_runtime::traits::GetRuntimeBlockType;
 use substrate_api_client::{
 	rpc::Request, serde_impls::StorageKey, Api, ExtrinsicParams, FrameSystemConfig, GetBlock,
-	GetHeader, GetStorage, FetchEvents, Events, storage_key,
+	GetHeader, GetStorage, Events, storage_key,
 };
 
 type RawEvents = Vec<u8>;
@@ -45,8 +45,6 @@ pub trait ChainApi {
 	fn grandpa_authorities_proof(&self, hash: Option<H256>) -> ApiResult<StorageProof>;
 	fn get_events_value_proof(&self, block_hash: Option<H256>) -> ApiResult<StorageProof>;
 	fn get_events_for_block(&self, block_hash: Option<H256>) -> ApiResult<RawEvents>;
-	fn get_metadata(&self) -> ApiResult<Metadata>;
-	fn get_some_other_events(&self, block_hash: Option<H256>) -> ApiResult<Events<H256>>;
 }
 
 impl<Signer, Client, Params, Runtime> ChainApi for Api<Signer, Client, Params, Runtime>
@@ -113,24 +111,10 @@ where
 	fn get_events_value_proof(&self, block_hash: Option<H256>) -> ApiResult<StorageProof> {
 		let key = storage_key("System", "Events");
 		Ok(self.get_storage_proof_by_keys(Vec::from([key]), block_hash)?.map(|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect()).unwrap_or_default())
-		// Ok(self
-		// 	.get_storage_value_proof("System", "Events", block_hash)?
-		// 	.map(|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect())
-		// 	.unwrap_or_default())
 	}
 
 	fn get_events_for_block(&self, block_hash: Option<H256>) -> ApiResult<RawEvents> {
 		let key = storage_key("System", "Events");
 		Ok(self.get_opaque_storage_by_key_hash(key, block_hash)?.unwrap_or_default())
-		// Ok(self.get_storage_value("System", "Events", block_hash)?.unwrap_or_default())
-	}
-
-	fn get_metadata(&self) -> ApiResult<Metadata> {
-		Ok(self.metadata().clone())
-	}
-
-	fn get_some_other_events(&self, block_hash: Option<H256>) -> ApiResult<Events<H256>> {
-		let block_hash = block_hash.ok_or(ApiClientError::Other("Block hash must be something".into()))?;
-		self.fetch_events_from_block(block_hash)
 	}
 }
