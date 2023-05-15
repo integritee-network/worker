@@ -23,6 +23,7 @@ use itc_parentchain::{
 };
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
 use itp_node_api::api_client::{ChainApi, Metadata, Events, EventDetails};
+use substrate_api_client::FetchEvents;
 use itp_storage::StorageProof;
 use log::*;
 use my_node_runtime::Header;
@@ -154,14 +155,29 @@ where
 			// Test Code REMOVE
 			// Intention is to quickly decode the events using the metadata to verify can decode what we just got back
 			if events_chunk_to_sync.len() > 0 {
+
 				println!("Have a single event available!!");
 				let single_event_block = events_chunk_to_sync[0].clone();
 				let single_block = block_chunk_to_sync[0].clone();
 
-				let decoded_events = Events::<H256>::new(self.parentchain_api.get_metadata().unwrap(), single_block.block.header.hash(), single_event_block);
+				let some_test_events: Events<H256> = self.parentchain_api.get_some_other_events(Some(single_block.block.header.hash())).unwrap();
+
+				// TODO: some_test_events and decoded_events expected to be the same but are not... Discover why..
+				let decoded_events = Events::<H256>::new(self.parentchain_api.get_metadata().unwrap(), single_block.block.header.hash(), single_event_block.clone());
 				println!("Got Decoded Events in Service");
+				println!("Decoded Events: {:?}, Some events: {:?}", hex::encode(decoded_events.event_bytes()), hex::encode(some_test_events.event_bytes()));
 				println!("Decoded_events len {}", decoded_events.len());
 				if decoded_events.len() > 0 {
+					// let events_and_pallet_names: Vec<_> = decoded_events
+					// 	.iter()
+					// 	.map(|maybe_details| {
+					// 		let event_details = maybe_details.unwrap();
+					// 		(
+					// 			String::from(event_details.variant_name().clone()),
+					// 			String::from(event_details.pallet_name().clone()),
+					// 		)
+					// 	})
+					// 	.collect();
 					let events_and_pallet_names: Vec<_> = decoded_events
 						.iter()
 						.map(|maybe_details| {
