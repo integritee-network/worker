@@ -52,6 +52,7 @@ pub(crate) fn start_interval_market_update<E: TeeracleApi>(
 	schedule_on_repeating_intervals(updates_to_run, interval);
 }
 
+#[allow(dead_code)]
 fn execute_weather_update<E: TeeracleApi>(
 	node_api: &ParentchainApi,
 	enclave: &E,
