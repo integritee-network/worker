@@ -22,15 +22,15 @@ use itc_parentchain::{
 	primitives::ParentchainInitParams,
 };
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
-use itp_node_api::api_client::{ChainApi, Metadata, Events, EventDetails};
-use substrate_api_client::FetchEvents;
+use itp_node_api::api_client::{ChainApi, EventDetails, Events, Metadata};
 use itp_storage::StorageProof;
 use log::*;
 use my_node_runtime::Header;
+use sp_core::H256;
 use sp_finality_grandpa::VersionedAuthorityList;
 use sp_runtime::traits::Header as HeaderTrait;
-use sp_core::H256;
-use std::{cmp::min, sync::Arc, string::String};
+use std::{cmp::min, string::String, sync::Arc};
+use substrate_api_client::FetchEvents;
 
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
 

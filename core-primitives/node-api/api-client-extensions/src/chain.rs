@@ -16,7 +16,7 @@
 */
 
 use crate::{ApiClientError, ApiResult};
-use itp_api_client_types::{Block, SignedBlock, Metadata};
+use itp_api_client_types::{Block, Metadata, SignedBlock};
 use itp_types::{
 	parentchain::{BlockNumber, Hash, Header, StorageProof},
 	H256,
@@ -24,8 +24,8 @@ use itp_types::{
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use sp_runtime::traits::GetRuntimeBlockType;
 use substrate_api_client::{
-	rpc::Request, serde_impls::StorageKey, Api, ExtrinsicParams, FrameSystemConfig, GetBlock,
-	GetHeader, GetStorage, Events, storage_key,
+	rpc::Request, serde_impls::StorageKey, storage_key, Api, Events, ExtrinsicParams,
+	FrameSystemConfig, GetBlock, GetHeader, GetStorage,
 };
 
 type RawEvents = Vec<u8>;
@@ -110,7 +110,10 @@ where
 
 	fn get_events_value_proof(&self, block_hash: Option<H256>) -> ApiResult<StorageProof> {
 		let key = storage_key("System", "Events");
-		Ok(self.get_storage_proof_by_keys(Vec::from([key]), block_hash)?.map(|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect()).unwrap_or_default())
+		Ok(self
+			.get_storage_proof_by_keys(Vec::from([key]), block_hash)?
+			.map(|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect())
+			.unwrap_or_default())
 	}
 
 	fn get_events_for_block(&self, block_hash: Option<H256>) -> ApiResult<RawEvents> {

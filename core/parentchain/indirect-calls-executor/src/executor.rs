@@ -25,7 +25,7 @@ use crate::{
 	traits::{ExecuteIndirectCalls, IndirectDispatch, IndirectExecutor},
 };
 use binary_merkle_tree::merkle_root;
-use codec::{Encode, Decode};
+use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use ita_stf::{TrustedCall, TrustedCallSigned};
 use itp_api_client_types::{EventDetails, Events, Metadata, StaticEvent};

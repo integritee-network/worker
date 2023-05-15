@@ -28,7 +28,6 @@ use crate::{
 	rpc::rpc_response_channel::RpcResponseChannel,
 	tls_ra::seal_handler::SealHandler,
 };
-use sgx_tstd::vec::Vec;
 use ita_sgx_runtime::Runtime;
 use ita_stf::{Getter, State as StfState, Stf, TrustedCallSigned};
 use itc_direct_rpc_server::{
@@ -42,8 +41,9 @@ use itc_parentchain::{
 	},
 	block_importer::ParentchainBlockImporter,
 	indirect_calls_executor::{
-		filter_metadata::{ShieldFundsAndCallWorkerFilter, ExtrinsicSuccessAndFailedFilter},
-		parentchain_parser::{ParentchainExtrinsicParser, ParentchainEventParser}, IndirectCallsExecutor,
+		filter_metadata::{ExtrinsicSuccessAndFailedFilter, ShieldFundsAndCallWorkerFilter},
+		parentchain_parser::{ParentchainEventParser, ParentchainExtrinsicParser},
+		IndirectCallsExecutor,
 	},
 	light_client::{
 		concurrent_access::ValidatorAccessor, io::LightClientStateSeal,
@@ -54,9 +54,9 @@ use itc_tls_websocket_server::{
 	config_provider::FromFileConfigProvider, ws_server::TungsteniteWsServer, ConnectionToken,
 };
 use itp_attestation_handler::IntelAttestationHandler;
-use itp_import_queue::ImportQueue;
 use itp_component_container::ComponentContainer;
 use itp_extrinsics_factory::ExtrinsicsFactory;
+use itp_import_queue::ImportQueue;
 use itp_node_api::{
 	api_client::PairSignature,
 	metadata::{provider::NodeMetadataRepository, NodeMetadata},
@@ -89,6 +89,7 @@ use its_sidechain::{
 	consensus_common::{BlockImportConfirmationHandler, BlockImportQueueWorker, PeerBlockSync},
 };
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
+use sgx_tstd::vec::Vec;
 use sp_core::ed25519::Pair;
 
 pub type EnclaveParentchainSigner =
@@ -152,12 +153,11 @@ pub type EnclaveParentchainBlockImporter = ParentchainBlockImporter<
 >;
 pub type EnclaveParentchainBlockImportQueue = ImportQueue<SignedParentchainBlock>;
 pub type EnclaveParentchainEventImportQueue = ImportQueue<Vec<u8>>;
-pub type EnclaveTriggeredParentchainBlockImportDispatcher =
-	TriggeredDispatcher<
-		EnclaveParentchainBlockImporter,
-		EnclaveParentchainBlockImportQueue,
-		EnclaveParentchainEventImportQueue,
-	>;
+pub type EnclaveTriggeredParentchainBlockImportDispatcher = TriggeredDispatcher<
+	EnclaveParentchainBlockImporter,
+	EnclaveParentchainBlockImportQueue,
+	EnclaveParentchainEventImportQueue,
+>;
 
 pub type EnclaveImmediateParentchainBlockImportDispatcher =
 	ImmediateDispatcher<EnclaveParentchainBlockImporter>;
