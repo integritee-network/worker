@@ -35,8 +35,7 @@ use ita_stf::{
 };
 use itc_parentchain::indirect_calls_executor::{
 	filter_metadata::ShieldFundsAndCallWorkerFilter,
-	parentchain_parser::ParentchainExtrinsicParser,
-	ExecuteIndirectCalls, IndirectCallsExecutor,
+	parentchain_parser::ParentchainExtrinsicParser, ExecuteIndirectCalls, IndirectCallsExecutor,
 };
 use itc_parentchain_test::{
 	parentchain_block_builder::ParentchainBlockBuilder,

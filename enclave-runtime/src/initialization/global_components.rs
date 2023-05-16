@@ -42,8 +42,7 @@ use itc_parentchain::{
 	block_importer::ParentchainBlockImporter,
 	indirect_calls_executor::{
 		filter_metadata::ShieldFundsAndCallWorkerFilter,
-		parentchain_parser::ParentchainExtrinsicParser,
-		IndirectCallsExecutor,
+		parentchain_parser::ParentchainExtrinsicParser, IndirectCallsExecutor,
 	},
 	light_client::{
 		concurrent_access::ValidatorAccessor, io::LightClientStateSeal,
