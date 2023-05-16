@@ -37,9 +37,9 @@ pub mod sgx_reexport_prelude {
 	pub use thiserror_sgx as thiserror;
 }
 
+mod event_filter;
 mod executor;
 mod traits;
-mod event_filter;
 
 pub mod error;
 pub mod filter_metadata;

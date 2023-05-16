@@ -20,11 +20,10 @@
 use crate::sgx_reexport_prelude::*;
 
 use crate::{
-	error::Result,
-	error::Error,
+	error::{Error, Result},
+	event_filter::{EventFilter, ExtrinsicStatus},
 	filter_metadata::FilterMetadata,
 	traits::{ExecuteIndirectCalls, IndirectDispatch, IndirectExecutor},
-	event_filter::{ExtrinsicStatus, EventFilter},
 };
 use binary_merkle_tree::merkle_root;
 use codec::{Decode, Encode};
@@ -43,8 +42,6 @@ use log::*;
 use sp_core::blake2_256;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header, Keccak256};
 use std::{string::String, sync::Arc, vec::Vec};
-
-
 
 pub struct IndirectCallsExecutor<
 	ShieldingKeyRepository,
@@ -128,24 +125,25 @@ impl<
 		info!("Scanning block {:?} for relevant xt", block_number);
 		let mut executed_calls = Vec::<H256>::new();
 
-		let events = self.node_meta_data_provider.get_from_metadata(|metadata| {
-			let raw_metadata: Metadata = metadata.clone().into()?;
-			Some(Events::<H256>::new(raw_metadata, block_hash, events.clone()))
-		})?
-		.ok_or(Error::Other("Could not unpack Events from Metadata".into()))?;
+		let events = self
+			.node_meta_data_provider
+			.get_from_metadata(|metadata| {
+				let raw_metadata: Metadata = metadata.clone().into()?;
+				Some(Events::<H256>::new(raw_metadata, block_hash, events.clone()))
+			})?
+			.ok_or(Error::Other("Could not unpack Events from Metadata".into()))?;
 
 		let xt_statuses = EventFilter::get_extrinsic_statuses(events)?;
 		debug!("xt_statuses:: {:?}", xt_statuses);
 
 		// This would be catastrophic but should never happen
 		if xt_statuses.len() != block.extrinsics().len() {
-			return Err(Error::Other("Extrinsic Status and Extrinsic count not equal".into()));
+			return Err(Error::Other("Extrinsic Status and Extrinsic count not equal".into()))
 		}
 
 		for (xt_opaque, xt_status) in block.extrinsics().iter().zip(xt_statuses.iter()) {
-
 			if let ExtrinsicStatus::Failed = xt_status {
-				continue;
+				continue
 			}
 
 			let encoded_xt_opaque = xt_opaque.encode();
