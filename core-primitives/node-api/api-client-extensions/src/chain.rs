@@ -24,8 +24,8 @@ use itp_types::{
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use sp_runtime::traits::GetRuntimeBlockType;
 use substrate_api_client::{
-	rpc::Request, serde_impls::StorageKey, storage_key, Api, ExtrinsicParams,
-	FrameSystemConfig, GetBlock, GetHeader, GetStorage,
+	rpc::Request, serde_impls::StorageKey, storage_key, Api, ExtrinsicParams, FrameSystemConfig,
+	GetBlock, GetHeader, GetStorage,
 };
 
 type RawEvents = Vec<u8>;

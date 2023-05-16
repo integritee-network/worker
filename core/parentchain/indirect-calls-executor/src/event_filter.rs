@@ -20,7 +20,7 @@
 use crate::sgx_reexport_prelude::*;
 
 use crate::error::Result;
-use codec::{Encode, Decode};
+use codec::{Decode, Encode};
 use itp_api_client_types::{Events, StaticEvent};
 use itp_types::H256;
 use std::vec::Vec;
@@ -53,13 +53,13 @@ impl EventFilter {
 			.iter()
 			.filter_map(|ev| {
 				ev.and_then(|ev| {
-                    if (ev.as_event::<ExtrinsicSuccess>()?).is_some() {
-                        return Ok(Some(ExtrinsicStatus::Success))
-                    }
+					if (ev.as_event::<ExtrinsicSuccess>()?).is_some() {
+						return Ok(Some(ExtrinsicStatus::Success))
+					}
 
-                    if (ev.as_event::<ExtrinsicFailed>()?).is_some() {
-                        return Ok(Some(ExtrinsicStatus::Failed))
-                    }
+					if (ev.as_event::<ExtrinsicFailed>()?).is_some() {
+						return Ok(Some(ExtrinsicStatus::Failed))
+					}
 
 					Ok(None)
 				})
