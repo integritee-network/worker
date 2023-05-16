@@ -122,7 +122,7 @@ impl<
 		let block_number = *block.header().number();
 		let block_hash = block.hash();
 
-		info!("Scanning block {:?} for relevant xt", block_number);
+		debug!("Scanning block {:?} for relevant xt", block_number);
 		let mut executed_calls = Vec::<H256>::new();
 
 		let events = self
