@@ -56,6 +56,8 @@ jobs:
 
       - name: Set env
         run: |
+          fingerprint=$RANDOM
+          echo "FINGERPRINT=$fingerprint" >> $GITHUB_ENV
           if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
              echo "DOCKER_DEVICES=--device=/dev/sgx/enclave --device=/dev/sgx/provision" >> $GITHUB_ENV
              echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd" >> $GITHUB_ENV
@@ -76,7 +78,7 @@ jobs:
         run: >
           docker build -t integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}
           --target deployed-worker
-          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=${{ matrix.sgx_mode }}
+          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg FINGERPRINT=${FINGERPRINT} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=${{ matrix.sgx_mode }}
           -f build.Dockerfile .
 
       - name: Build CLI client
@@ -177,6 +179,8 @@ jobs:
       WORKER_IMAGE_TAG: integritee-worker:dev
       CLIENT_IMAGE_TAG: integritee-cli:dev
       COINMARKETCAP_KEY: ${{ secrets.COINMARKETCAP_KEY }}
+      IAS_EPID_SPID: ${{ secrets.IAS_SPID }}
+      IAS_EPID_KEY: ${{ secrets.IAS_PRIMARY_KEY }}
       TEERACLE_INTERVAL_SECONDS: 10
 
     strategy:
@@ -234,7 +238,7 @@ jobs:
           echo "PROJECT=${{ matrix.flavor_id }}-${{ matrix.demo_name }}" >> $GITHUB_ENV
           echo "VERSION=dev.$version" >> $GITHUB_ENV
           echo "WORKER_IMAGE_TAG=integritee-worker:dev.$version" >> $GITHUB_ENV
-          echo "INTEGRITEE_NODE=integritee-node-dev:1.0.33.$version" >> $GITHUB_ENV
+          echo "INTEGRITEE_NODE=integritee-node-dev-ias:1.0.34.$version" >> $GITHUB_ENV
           echo "CLIENT_IMAGE_TAG=integritee-cli:dev.$version" >> $GITHUB_ENV
           if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
              echo "SGX_PROVISION=/dev/sgx/provision" >> $GITHUB_ENV
@@ -278,7 +282,8 @@ jobs:
           fi
           docker tag integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.WORKER_IMAGE_TAG }}
           docker tag integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.CLIENT_IMAGE_TAG }}
-          docker tag integritee/integritee-node-dev:1.0.33 ${{ env.INTEGRITEE_NODE }}
+          docker pull integritee/integritee-node-dev-ias:1.0.34
+          docker tag integritee/integritee-node-dev-ias:1.0.34 ${{ env.INTEGRITEE_NODE }}
           docker images --all
 
       ##
@@ -290,12 +295,6 @@ jobs:
         run: |
           cd docker
           docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) -p ${PROJECT} stop
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
       - name: Integration Test ${{ matrix.test }}-${{ matrix.flavor_id }}
         run: |

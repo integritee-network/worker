@@ -54,7 +54,7 @@ use sgx_types::{
 use sp_core::Pair;
 use std::{
 	borrow::ToOwned,
-	format,
+	env, format,
 	io::{Read, Write},
 	net::TcpStream,
 	prelude::v1::*,
@@ -356,17 +356,18 @@ where
 
 	fn log_resp_code(&self, resp_code: &mut Option<u16>) {
 		let msg = match resp_code {
-			Some(200) => "OK Operation Successful",
-			Some(401) => "Unauthorized Failed to authenticate or authorize request.",
-			Some(404) => "Not Found GID does not refer to a valid EPID group ID.",
-			Some(500) => "Internal error occurred",
+			Some(200) => "OK, operation successful",
+			Some(400) => "Bad request, quote is invalid, or linkability of quote/subscription does not match.",
+			Some(401) => "Unauthorized, failed to authenticate or authorize request.",
+			Some(404) => "Not found, GID does not refer to a valid EPID group ID.",
+			Some(500) => "Internal error occurred.",
 			Some(503) =>
 				"Service is currently not able to process the request (due to
 			a temporary overloading or maintenance). This is a
 			temporary state – the same request can be repeated after
-			some time. ",
+			some time.",
 			_ => {
-				error!("DBG:{:?}", resp_code);
+				error!("Error, received unknown HTTP response: {:?}", resp_code);
 				"Unknown error occured"
 			},
 		};
@@ -628,8 +629,9 @@ where
 	}
 
 	fn load_spid(filename: &str) -> SgxResult<sgx_spid_t> {
-		match io::read_to_string(filename).map(|contents| decode_spid(&contents)) {
-			Ok(r) => r,
+		// Check if set as an environment variable
+		match env::var("IAS_EPID_SPID").or_else(|_| io::read_to_string(filename)) {
+			Ok(spid) => decode_spid(&spid),
 			Err(e) => {
 				error!("Failed to load SPID: {:?}", e);
 				Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
@@ -638,7 +640,9 @@ where
 	}
 
 	fn get_ias_api_key() -> EnclaveResult<String> {
-		io::read_to_string(RA_API_KEY_FILE)
+		// Check if set as an environment variable
+		env::var("IAS_EPID_KEY")
+			.or_else(|_| io::read_to_string(RA_API_KEY_FILE))
 			.map(|key| key.trim_end().to_owned())
 			.map_err(|e| EnclaveError::Other(e.into()))
 	}

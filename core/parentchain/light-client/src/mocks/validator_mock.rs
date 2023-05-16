@@ -16,11 +16,10 @@
 */
 
 use crate::{
-	error::Result, AuthorityList, ExtrinsicSender, HashFor, LightClientState, LightValidationState,
-	RelayId, Validator,
+	error::Result, state::RelayState, ExtrinsicSender, HashFor, LightClientState,
+	LightValidationState, Validator,
 };
-use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
-use itp_storage::StorageProof;
+use itc_parentchain_test::ParentchainHeaderBuilder;
 use itp_types::Block;
 use sp_runtime::{generic::SignedBlock, traits::Block as BlockT, OpaqueExtrinsic};
 use std::vec::Vec;
@@ -28,43 +27,30 @@ use std::vec::Vec;
 type Header = <Block as BlockT>::Header;
 
 /// Validator mock to be used in tests.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct ValidatorMock {
 	light_validation_state: LightValidationState<Block>,
 }
 
+impl Default for ValidatorMock {
+	fn default() -> Self {
+		Self {
+			light_validation_state: RelayState::new(
+				ParentchainHeaderBuilder::default().build(),
+				Default::default(),
+			)
+			.into(),
+		}
+	}
+}
+
 impl Validator<Block> for ValidatorMock {
-	fn initialize_grandpa_relay(
-		&mut self,
-		_block_header: Header,
-		_validator_set: AuthorityList,
-		_validator_set_proof: StorageProof,
-	) -> Result<RelayId> {
-		todo!()
-	}
-
-	fn initialize_parachain_relay(
-		&mut self,
-		_block_header: Header,
-		_validator_set: AuthorityList,
-	) -> Result<RelayId> {
-		todo!()
-	}
-
-	fn submit_block(
-		&mut self,
-		_relay_id: RelayId,
-		_signed_block: &SignedBlock<Block>,
-	) -> Result<()> {
+	fn submit_block(&mut self, _signed_block: &SignedBlock<Block>) -> Result<()> {
 		Ok(())
 	}
 
-	fn check_xt_inclusion(&mut self, _relay_id: RelayId, _block: &Block) -> Result<()> {
+	fn check_xt_inclusion(&mut self, _block: &Block) -> Result<()> {
 		Ok(())
-	}
-
-	fn set_state(&mut self, state: LightValidationState<Block>) {
-		self.light_validation_state = state;
 	}
 
 	fn get_state(&self) -> &LightValidationState<Block> {
@@ -79,23 +65,19 @@ impl ExtrinsicSender for ValidatorMock {
 }
 
 impl LightClientState<Block> for ValidatorMock {
-	fn num_xt_to_be_included(&self, _relay_id: RelayId) -> Result<usize> {
+	fn num_xt_to_be_included(&self) -> Result<usize> {
 		todo!()
 	}
 
-	fn genesis_hash(&self, _relay_id: RelayId) -> Result<HashFor<Block>> {
+	fn genesis_hash(&self) -> Result<HashFor<Block>> {
 		todo!()
 	}
 
-	fn latest_finalized_header(&self, _relay_id: RelayId) -> Result<Header> {
+	fn latest_finalized_header(&self) -> Result<Header> {
 		Ok(ParentchainHeaderBuilder::default().build())
 	}
 
-	fn penultimate_finalized_block_header(&self, _relay_id: RelayId) -> Result<Header> {
+	fn penultimate_finalized_block_header(&self) -> Result<Header> {
 		Ok(ParentchainHeaderBuilder::default().build())
-	}
-
-	fn num_relays(&self) -> RelayId {
-		0
 	}
 }

@@ -39,18 +39,20 @@ pub(crate) fn start_interval_market_update<E: TeeracleApi>(
 	enclave_api: &E,
 	tokio_handle: &Handle,
 ) {
+	let updates_to_run = || {
+		execute_market_update(api, enclave_api, tokio_handle);
+		// TODO: Refactor and add this back according to ISSUE: https://github.com/integritee-network/worker/issues/1300
+		// execute_weather_update(api, enclave_api, tokio_handle);
+	};
+	info!("Teeracle will update now");
+	updates_to_run();
+
 	let interval = maybe_interval.unwrap_or(DEFAULT_MARKET_DATA_UPDATE_INTERVAL);
 	info!("Starting teeracle interval for oracle update, interval of {:?}", interval);
-
-	schedule_on_repeating_intervals(
-		|| {
-			execute_update_market(api, enclave_api, tokio_handle);
-			execute_weather_update(api, enclave_api, tokio_handle);
-		},
-		interval,
-	);
+	schedule_on_repeating_intervals(updates_to_run, interval);
 }
 
+#[allow(dead_code)]
 fn execute_weather_update<E: TeeracleApi>(
 	node_api: &ParentchainApi,
 	enclave: &E,
@@ -98,7 +100,7 @@ fn execute_weather_update<E: TeeracleApi>(
 	});
 }
 
-fn execute_update_market<E: TeeracleApi>(
+fn execute_market_update<E: TeeracleApi>(
 	node_api: &ParentchainApi,
 	enclave: &E,
 	tokio_handle: &Handle,

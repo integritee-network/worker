@@ -255,7 +255,7 @@ mod test {
 	};
 	use codec::{Decode, Encode};
 	use ita_stf::TrustedOperation;
-	use itc_parentchain_test::parentchain_block_builder::ParentchainBlockBuilder;
+	use itc_parentchain_test::ParentchainBlockBuilder;
 	use itp_node_api::{
 		api_client::{
 			ExtrinsicParams, ParentchainAdditionalParams, ParentchainExtrinsicParams,

@@ -15,10 +15,7 @@
 
 */
 
-use itc_parentchain_test::{
-	parentchain_block_builder::ParentchainBlockBuilder,
-	parentchain_header_builder::ParentchainHeaderBuilder,
-};
+use itc_parentchain_test::{ParentchainBlockBuilder, ParentchainHeaderBuilder};
 use itp_node_api::api_client::{ApiResult, ChainApi, SignedBlock};
 use itp_types::{
 	parentchain::{Hash, Header, StorageProof},

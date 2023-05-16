@@ -17,7 +17,7 @@
 
 use crate::{
 	command_utils::{get_accountid_from_str, get_chain_api},
-	Cli,
+	Cli, CliResult, CliResultOk,
 };
 use substrate_api_client::GetAccountInformation;
 
@@ -28,11 +28,12 @@ pub struct BalanceCommand {
 }
 
 impl BalanceCommand {
-	pub(crate) fn run(&self, cli: &Cli) {
+	pub(crate) fn run(&self, cli: &Cli) -> CliResult {
 		let api = get_chain_api(cli);
 		let accountid = get_accountid_from_str(&self.account);
 		let balance =
 			if let Some(data) = api.get_account_data(&accountid).unwrap() { data.free } else { 0 };
 		println!("{}", balance);
+		Ok(CliResultOk::Balance { balance })
 	}
 }

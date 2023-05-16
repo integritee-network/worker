@@ -15,7 +15,7 @@
 
 */
 
-use crate::{benchmark::BenchmarkCommand, Cli};
+use crate::{benchmark::BenchmarkCommand, Cli, CliResult};
 
 #[cfg(feature = "evm")]
 use crate::evm::EvmCommand;
@@ -57,7 +57,7 @@ pub enum TrustedCommand {
 }
 
 impl TrustedCli {
-	pub(crate) fn run(&self, cli: &Cli) {
+	pub(crate) fn run(&self, cli: &Cli) -> CliResult {
 		match &self.command {
 			TrustedCommand::BaseTrusted(cmd) => cmd.run(cli, self),
 			TrustedCommand::Benchmark(cmd) => cmd.run(cli, self),

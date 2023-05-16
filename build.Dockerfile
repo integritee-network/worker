@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:experimental
 # Copyright 2021 Integritee AG
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,14 +16,17 @@
 # This is a multi-stage docker file, where the first stage is used
 # for building and the second deploys the built application.
 
-### Builder Stage
+### Cached Builder Stage
 ##################################################
+# A builder stage that uses sccache to speed up local builds with docker
+# Installation and setup of sccache should be moved to the integritee-dev image, so we don't
+# always need to compile and install sccache on CI (where we have no caching so far).
 FROM integritee/integritee-dev:0.2.1 AS builder
 LABEL maintainer="zoltan@integritee.network"
 
 # set environment variables
 ENV SGX_SDK /opt/sgxsdk
-ENV PATH "$PATH:${SGX_SDK}/bin:${SGX_SDK}/bin/x64:/opt/rust/bin//bin"
+ENV PATH "$PATH:${SGX_SDK}/bin:${SGX_SDK}/bin/x64:/opt/rust/bin"
 ENV PKG_CONFIG_PATH "${PKG_CONFIG_PATH}:${SGX_SDK}/pkgconfig"
 ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${SGX_SDK}/sdk_libs"
 ENV CARGO_NET_GIT_FETCH_WITH_CLI true
@@ -31,58 +35,31 @@ ENV CARGO_NET_GIT_FETCH_WITH_CLI true
 ARG SGX_MODE=SW
 ENV SGX_MODE=$SGX_MODE
 
-ENV HOME=/home/ubuntu/work
+ENV WORKHOME=/home/ubuntu/work
+ENV HOME=/home/ubuntu
 
-ARG WORKER_MODE_ARG
-ENV WORKER_MODE=$WORKER_MODE_ARG
+RUN rustup default stable 
+RUN cargo install sccache
 
-ARG ADDITIONAL_FEATURES_ARG
-ENV ADDITIONAL_FEATURES=$ADDITIONAL_FEATURES_ARG
-
-WORKDIR $HOME/worker
-COPY . .
-
-RUN make
-
-RUN cargo test --release
-
-
-### Cached Builder Stage (WIP)
-##################################################
-# A builder stage that uses sccache to speed up local builds with docker
-# Installation and setup of sccache should be moved to the integritee-dev image, so we don't
-# always need to compile and install sccache on CI (where we have no caching so far).
-FROM integritee/integritee-dev:0.2.1 AS cached-builder
-LABEL maintainer="zoltan@integritee.network"
-
-# set environment variables
-ENV SGX_SDK /opt/sgxsdk
-ENV PATH "$PATH:${SGX_SDK}/bin:${SGX_SDK}/bin/x64:/opt/rust/bin/bin"
-ENV PKG_CONFIG_PATH "${PKG_CONFIG_PATH}:${SGX_SDK}/pkgconfig"
-ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${SGX_SDK}/sdk_libs"
-ENV CARGO_NET_GIT_FETCH_WITH_CLI true
-
-# Default SGX MODE is software mode
-ARG SGX_MODE=SW
-ENV SGX_MODE=$SGX_MODE
-
-ENV HOME=/home/ubuntu/work
-
-RUN rustup default stable && cargo install sccache
-ENV SCCACHE_CACHE_SIZE="3G"
+ENV SCCACHE_CACHE_SIZE="20G"
 ENV SCCACHE_DIR=$HOME/.cache/sccache
 ENV RUSTC_WRAPPER="/opt/rust/bin/sccache"
 
 ARG WORKER_MODE_ARG
+ARG ADDITIONAL_FEATURES_ARG
 ENV WORKER_MODE=$WORKER_MODE_ARG
+ENV ADDITIONAL_FEATURES=$ADDITIONAL_FEATURES_ARG
 
-WORKDIR $HOME/worker
+ARG FINGERPRINT=none
+
+WORKDIR $WORKHOME/worker
+
 COPY . .
 
-RUN --mount=type=cache,id=cargo,target=${HOME}/.cache/sccache make && sccache --show-stats
-
-RUN --mount=type=cache,id=cargo,target=${HOME}/.cache/sccache cargo test --release && sccache --show-stats
-
+RUN --mount=type=cache,id=cargo-registry,target=/opt/rust/registry \
+    --mount=type=cache,id=cargo-git,target=/opt/rust/git/db \
+	--mount=type=cache,id=cargo-sccache-${WORKER_MODE}${ADDITIONAL_FEATURES},target=/home/ubuntu/.cache/sccache \
+	echo ${FINGERPRINT} && make && cargo test --release && sccache --show-stats
 
 ### Base Runner Stage
 ### The runner needs the aesmd service for the `SGX_MODE=HW`.

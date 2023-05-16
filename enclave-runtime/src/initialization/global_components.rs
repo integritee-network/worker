@@ -128,6 +128,8 @@ pub type EnclaveRpcResponder = RpcResponder<EnclaveRpcConnectionRegistry, Hash, 
 pub type EnclaveSidechainApi = SidechainApi<ParentchainBlock>;
 
 // Parentchain types
+pub type EnclaveLightClientSeal =
+	LightClientStateSeal<ParentchainBlock, LightValidationState<ParentchainBlock>>;
 pub type EnclaveExtrinsicsFactory =
 	ExtrinsicsFactory<EnclaveParentchainSigner, NonceCache, EnclaveNodeMetadataRepository>;
 pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
@@ -140,7 +142,7 @@ pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
 pub type EnclaveValidatorAccessor = ValidatorAccessor<
 	LightValidation<ParentchainBlock, EnclaveOCallApi>,
 	ParentchainBlock,
-	LightClientStateSeal<ParentchainBlock, LightValidationState<ParentchainBlock>>,
+	EnclaveLightClientSeal,
 >;
 pub type EnclaveParentchainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,

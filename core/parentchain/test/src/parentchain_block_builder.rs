@@ -20,13 +20,12 @@
 
 extern crate alloc;
 
-use crate::parentchain_header_builder::ParentchainHeaderBuilder;
+use crate::ParentchainHeaderBuilder;
 use alloc::vec::Vec;
-use itp_types::parentchain::Header;
-use sp_runtime::{
-	generic::{Block, SignedBlock},
-	traits::MaybeSerialize,
-};
+use sp_runtime::traits::MaybeSerialize;
+
+pub use itp_types::Header;
+pub use sp_runtime::generic::{Block, SignedBlock};
 
 pub struct ParentchainBlockBuilder<Extrinsic> {
 	header: Header,
