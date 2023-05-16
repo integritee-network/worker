@@ -34,8 +34,8 @@ use ita_stf::{
 	TrustedCall, TrustedOperation,
 };
 use itc_parentchain::indirect_calls_executor::{
-	filter_metadata::{ExtrinsicSuccessAndFailedFilter, ShieldFundsAndCallWorkerFilter},
-	parentchain_parser::{ParentchainEventParser, ParentchainExtrinsicParser},
+	filter_metadata::ShieldFundsAndCallWorkerFilter,
+	parentchain_parser::ParentchainExtrinsicParser,
 	ExecuteIndirectCalls, IndirectCallsExecutor,
 };
 use itc_parentchain_test::{
@@ -138,7 +138,6 @@ pub fn submit_shielding_call_to_top_pool() {
 			_,
 			_,
 			ShieldFundsAndCallWorkerFilter<ParentchainExtrinsicParser>,
-			ExtrinsicSuccessAndFailedFilter<ParentchainEventParser>,
 		>::new(
 			shielding_key_repo, enclave_signer, top_pool_author.clone(), node_meta_data_repository
 		);

@@ -39,6 +39,7 @@ pub mod sgx_reexport_prelude {
 
 mod executor;
 mod traits;
+mod event_filter;
 
 pub mod error;
 pub mod filter_metadata;

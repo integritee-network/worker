@@ -21,8 +21,10 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::{
 	error::Result,
+	error::Error,
 	filter_metadata::FilterMetadata,
 	traits::{ExecuteIndirectCalls, IndirectDispatch, IndirectExecutor},
+	event_filter::{ExtrinsicStatus, EventFilter},
 };
 use binary_merkle_tree::merkle_root;
 use codec::{Decode, Encode};
@@ -42,19 +44,7 @@ use sp_core::blake2_256;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header, Keccak256};
 use std::{string::String, sync::Arc, vec::Vec};
 
-#[derive(Decode, Encode)]
-pub struct ExtrinsicSuccess;
-impl StaticEvent for ExtrinsicSuccess {
-	const PALLET: &'static str = "System";
-	const EVENT: &'static str = "ExtrinsicSuccess";
-}
 
-#[derive(Decode, Encode)]
-pub struct ExtrinsicFailed;
-impl StaticEvent for ExtrinsicFailed {
-	const PALLET: &'static str = "System";
-	const EVENT: &'static str = "ExtrinsicFailed";
-}
 
 pub struct IndirectCallsExecutor<
 	ShieldingKeyRepository,
@@ -62,13 +52,12 @@ pub struct IndirectCallsExecutor<
 	TopPoolAuthor,
 	NodeMetadataProvider,
 	IndirectCallsFilter,
-	IndirectEventsFilter,
 > {
 	pub(crate) shielding_key_repo: Arc<ShieldingKeyRepository>,
 	pub(crate) stf_enclave_signer: Arc<StfEnclaveSigner>,
 	pub(crate) top_pool_author: Arc<TopPoolAuthor>,
 	pub(crate) node_meta_data_provider: Arc<NodeMetadataProvider>,
-	_phantom: PhantomData<(IndirectCallsFilter, IndirectEventsFilter)>,
+	_phantom: PhantomData<IndirectCallsFilter>,
 }
 impl<
 		ShieldingKeyRepository,
@@ -76,7 +65,6 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		IndirectCallsFilter,
-		IndirectEventsFilter,
 	>
 	IndirectCallsExecutor<
 		ShieldingKeyRepository,
@@ -84,7 +72,6 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		IndirectCallsFilter,
-		IndirectEventsFilter,
 	>
 {
 	pub fn new(
@@ -109,7 +96,6 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		FilterIndirectCalls,
-		FilterIndirectEvents,
 	> ExecuteIndirectCalls
 	for IndirectCallsExecutor<
 		ShieldingKeyRepository,
@@ -117,7 +103,6 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		FilterIndirectCalls,
-		FilterIndirectEvents,
 	> where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
@@ -128,7 +113,6 @@ impl<
 	FilterIndirectCalls: FilterMetadata<NodeMetadataProvider::MetadataType>,
 	NodeMetadataProvider::MetadataType: NodeMetadataTrait + Into<Option<Metadata>> + Clone,
 	FilterIndirectCalls::Output: IndirectDispatch<Self> + Encode,
-	FilterIndirectEvents: FilterMetadata<NodeMetadataProvider::MetadataType>,
 {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
@@ -141,39 +125,33 @@ impl<
 		let block_number = *block.header().number();
 		let block_hash = block.hash();
 
-		// Obtain all decoded events here as a Vec
-
 		info!("Scanning block {:?} for relevant xt", block_number);
 		let mut executed_calls = Vec::<H256>::new();
 
-		for xt_opaque in block.extrinsics().iter() {
+		let events = self.node_meta_data_provider.get_from_metadata(|metadata| {
+			let raw_metadata: Metadata = metadata.clone().into()?;
+			Some(Events::<H256>::new(raw_metadata, block_hash, events.clone()))
+		})?
+		.ok_or(Error::Other("Could not unpack Events from Metadata".into()))?;
+
+		let xt_statuses = EventFilter::get_extrinsic_statuses(events)?;
+		debug!("xt_statuses:: {:?}", xt_statuses);
+
+		// This would be catastrophic but should never happen
+		if xt_statuses.len() != block.extrinsics().len() {
+			return Err(Error::Other("Extrinsic Status and Extrinsic count not equal".into()));
+		}
+
+		for (xt_opaque, xt_status) in block.extrinsics().iter().zip(xt_statuses.iter()) {
+
+			if let ExtrinsicStatus::Failed = xt_status {
+				continue;
+			}
+
 			let encoded_xt_opaque = xt_opaque.encode();
 
 			let maybe_call = self.node_meta_data_provider.get_from_metadata(|metadata| {
 				FilterIndirectCalls::filter_into_with_metadata(&encoded_xt_opaque, metadata)
-			})?;
-
-			let maybe_events = self.node_meta_data_provider.get_from_metadata(|metadata| {
-				let raw_metadata: Metadata = metadata.clone().into()?;
-				let events_decoded = Events::<H256>::new(raw_metadata, block_hash, events.clone());
-
-				// TODO:
-				// Now find the events I care about..
-				// Perhaps we add something here which defines which events should be cared about
-				// then we find each of those and return our findings or return a collection of what we found
-
-				// let events_and_pallet_names: Vec<_> = events_decoded
-				// 	.iter()
-				// 	.map(|maybe_details| {
-				// 		let event_details = maybe_details.unwrap();
-				// 		(
-				// 			String::from(event_details.variant_name().clone()),
-				// 			String::from(event_details.pallet_name().clone()),
-				// 		)
-				// 	})
-				// 	.collect();
-				// info!("Events for this block are {:?}", events_and_pallet_names);
-				FilterIndirectEvents::filter_into_with_metadata(&events, metadata)
 			})?;
 
 			let call = match maybe_call {
@@ -186,7 +164,7 @@ impl<
 				continue
 			};
 
-			executed_calls.push(hash_of(&call))
+			executed_calls.push(hash_of(&call));
 		}
 
 		// Include a processed parentchain block confirmation for each block.
@@ -221,7 +199,6 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		FilterIndirectCalls,
-		FilterIndirectEvents,
 	> IndirectExecutor
 	for IndirectCallsExecutor<
 		ShieldingKeyRepository,
@@ -229,7 +206,6 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		FilterIndirectCalls,
-		FilterIndirectEvents,
 	> where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
@@ -276,7 +252,7 @@ pub(crate) fn hash_of<T: Encode>(xt: &T) -> H256 {
 mod test {
 	use super::*;
 	use crate::{
-		filter_metadata::{ExtrinsicSuccessAndFailedFilter, ShieldFundsAndCallWorkerFilter},
+		filter_metadata::ShieldFundsAndCallWorkerFilter,
 		parentchain_parser::ParentchainExtrinsicParser,
 	};
 	use codec::{Decode, Encode};
@@ -311,7 +287,6 @@ mod test {
 		TestTopPoolAuthor,
 		TestNodeMetadataRepository,
 		ShieldFundsAndCallWorkerFilter<ParentchainExtrinsicParser>,
-		ExtrinsicSuccessAndFailedFilter<crate::parentchain_parser::ParentchainEventParser>,
 	>;
 
 	type Seed = [u8; 32];

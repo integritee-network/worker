@@ -413,9 +413,7 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 	Ok(())
 }
 
-// ANDREW
 /// Validates the events coming from the parentchain
-/// Unit test this?
 fn validate_events(
 	events_proofs: &Vec<StorageProof>,
 	blocks_merkle_roots: &Vec<sp_core::H256>,
