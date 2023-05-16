@@ -130,7 +130,6 @@ where
 		let events_to_import = self.events_queue.pop_all().map_err(Error::ImportQueue)?;
 
 		let latest_imported_block = blocks_to_import.last().map(|b| (*b).clone());
-		let latest_imported_events = events_to_import.last().map(|e| (*e).clone());
 
 		debug!(
 			"Trigger import of all parentchain blocks and events in queue ({}) ({})",
@@ -173,7 +172,6 @@ where
 			.map_err(Error::ImportQueue)?;
 
 		let latest_imported_block = blocks_to_import.last().map(|b| (*b).clone());
-		let latest_imported_events = events_to_import.last().map(|e| (*e).clone());
 
 		debug!(
 			"Import of parentchain blocks and events has been triggered, importing {} blocks and {} events from queue",

@@ -19,20 +19,20 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use crate::error::{Error, Result};
-use codec::{Decode, Encode};
-use itp_api_client_types::{EventDetails, Events, Metadata, StaticEvent};
+use crate::error::Result;
+use codec::{Encode, Decode};
+use itp_api_client_types::{Events, StaticEvent};
 use itp_types::H256;
 use std::vec::Vec;
 
-#[derive(Decode, Encode, Debug)]
+#[derive(Encode, Decode, Debug)]
 pub struct ExtrinsicSuccess;
 impl StaticEvent for ExtrinsicSuccess {
 	const PALLET: &'static str = "System";
 	const EVENT: &'static str = "ExtrinsicSuccess";
 }
 
-#[derive(Decode, Encode)]
+#[derive(Encode, Decode)]
 pub struct ExtrinsicFailed;
 impl StaticEvent for ExtrinsicFailed {
 	const PALLET: &'static str = "System";
@@ -53,13 +53,13 @@ impl EventFilter {
 			.iter()
 			.filter_map(|ev| {
 				ev.and_then(|ev| {
-					if let Some(_) = ev.as_event::<ExtrinsicSuccess>()? {
-						return Ok(Some(ExtrinsicStatus::Success))
-					}
+                    if (ev.as_event::<ExtrinsicSuccess>()?).is_some() {
+                        return Ok(Some(ExtrinsicStatus::Success))
+                    }
 
-					if let Some(_) = ev.as_event::<ExtrinsicFailed>()? {
-						return Ok(Some(ExtrinsicStatus::Failed))
-					}
+                    if (ev.as_event::<ExtrinsicFailed>()?).is_some() {
+                        return Ok(Some(ExtrinsicStatus::Failed))
+                    }
 
 					Ok(None)
 				})

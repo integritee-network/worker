@@ -26,10 +26,10 @@ use crate::{
 	traits::{ExecuteIndirectCalls, IndirectDispatch, IndirectExecutor},
 };
 use binary_merkle_tree::merkle_root;
-use codec::{Decode, Encode};
+use codec::Encode;
 use core::marker::PhantomData;
 use ita_stf::{TrustedCall, TrustedCallSigned};
-use itp_api_client_types::{EventDetails, Events, Metadata, StaticEvent};
+use itp_api_client_types::{Events, Metadata};
 use itp_node_api::metadata::{
 	pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata, NodeMetadataTrait,
 };
@@ -41,7 +41,7 @@ use itp_types::{OpaqueCall, ShardIdentifier, H256};
 use log::*;
 use sp_core::blake2_256;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header, Keccak256};
-use std::{string::String, sync::Arc, vec::Vec};
+use std::{sync::Arc, vec::Vec};
 
 pub struct IndirectCallsExecutor<
 	ShieldingKeyRepository,
@@ -114,7 +114,7 @@ impl<
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
 		block: &ParentchainBlock,
-		events: &Vec<u8>,
+		events: &[u8],
 	) -> Result<OpaqueCall>
 	where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
@@ -129,9 +129,9 @@ impl<
 			.node_meta_data_provider
 			.get_from_metadata(|metadata| {
 				let raw_metadata: Metadata = metadata.clone().into()?;
-				Some(Events::<H256>::new(raw_metadata, block_hash, events.clone()))
+				Some(Events::<H256>::new(raw_metadata, block_hash, events.to_vec()))
 			})?
-			.ok_or(Error::Other("Could not unpack Events from Metadata".into()))?;
+			.ok_or_else(|| Error::Other("Could not unpack Events from Metadata".into()))?;
 
 		let xt_statuses = EventFilter::get_extrinsic_statuses(events)?;
 		debug!("xt_statuses:: {:?}", xt_statuses);

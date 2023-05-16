@@ -30,7 +30,6 @@ pub use crate::error::Error;
 
 pub mod error;
 pub mod pallet_sidechain;
-pub mod pallet_system;
 pub mod pallet_teeracle;
 pub mod pallet_teerex;
 
@@ -91,21 +90,6 @@ impl NodeMetadata {
 			.get(call_name)
 			.ok_or_else(|| Error::NodeMetadata(MetadataError::CallNotFound(call_name)))?;
 		Ok([pallet.index, *call_index])
-	}
-
-	/// Gets the event name and pallet name as (pallet_name, event_name) for the particular event
-	pub fn event_details<'a>(
-		&'a self,
-		pallet_index: u8,
-		event_index: u8,
-	) -> Result<(&'a str, &'a str)> {
-		let event = match &self.node_metadata {
-			None => return Err(Error::MetadataNotSet),
-			Some(m) => m.event(pallet_index, event_index).map_err(Error::NodeMetadata)?,
-		};
-		let pallet_name = event.pallet();
-		let event_name = event.event();
-		Ok((pallet_name.clone(), event_name.clone()))
 	}
 
 	/// Generic storages:

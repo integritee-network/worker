@@ -18,7 +18,7 @@
 use crate::{
 	error::Result,
 	indirect_calls::{CallWorkerArgs, ShiedFundsArgs},
-	parentchain_parser::{ParseEvent, ParseExtrinsic},
+	parentchain_parser::ParseExtrinsic,
 	IndirectDispatch, IndirectExecutor,
 };
 use codec::{Decode, Encode};

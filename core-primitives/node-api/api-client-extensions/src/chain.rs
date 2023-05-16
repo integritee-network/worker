@@ -16,7 +16,7 @@
 */
 
 use crate::{ApiClientError, ApiResult};
-use itp_api_client_types::{Block, Metadata, SignedBlock};
+use itp_api_client_types::{Block, SignedBlock};
 use itp_types::{
 	parentchain::{BlockNumber, Hash, Header, StorageProof},
 	H256,
@@ -24,7 +24,7 @@ use itp_types::{
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use sp_runtime::traits::GetRuntimeBlockType;
 use substrate_api_client::{
-	rpc::Request, serde_impls::StorageKey, storage_key, Api, Events, ExtrinsicParams,
+	rpc::Request, serde_impls::StorageKey, storage_key, Api, ExtrinsicParams,
 	FrameSystemConfig, GetBlock, GetHeader, GetStorage,
 };
 

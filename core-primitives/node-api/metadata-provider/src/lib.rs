@@ -35,7 +35,6 @@ use std::sync::RwLock;
 pub use crate::error::Error;
 
 use crate::error::Result;
-use itp_node_api_metadata::Metadata;
 use std::ops::Deref;
 
 pub mod error;
