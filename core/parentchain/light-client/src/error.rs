@@ -37,6 +37,8 @@ pub enum JustificationError {
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+	#[error("Genesis not found")]
+	NoGenesis,
 	#[error(transparent)]
 	Storage(#[from] itp_storage::Error),
 	#[error("Validator set mismatch")]

@@ -15,27 +15,48 @@
 
 */
 
-use crate::{error::Error, state::RelayState, LightValidationState};
-use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
-use itp_sgx_io::StaticSealedIO;
+use crate::{error::Error, state::RelayState, LightClientSealing, LightValidationState};
+use itc_parentchain_test::ParentchainHeaderBuilder;
+use itp_sgx_temp_dir::TempDir;
 use itp_types::Block;
+use std::path::Path;
 
 /// A seal that returns a mock validator.
 #[derive(Clone)]
-pub struct LightValidationStateSealMock;
+pub struct LightValidationStateSealMock {
+	// The directory is deleted when the seal is dropped.
+	temp_dir: TempDir,
+}
 
-impl StaticSealedIO for LightValidationStateSealMock {
-	type Error = Error;
-	type Unsealed = LightValidationState<Block>;
+impl LightValidationStateSealMock {
+	pub fn new() -> Self {
+		Self { temp_dir: TempDir::new().unwrap() }
+	}
+}
 
-	fn unseal_from_static_file() -> Result<Self::Unsealed, Self::Error> {
+impl Default for LightValidationStateSealMock {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
+impl LightClientSealing<LightValidationState<Block>> for LightValidationStateSealMock {
+	fn unseal(&self) -> Result<LightValidationState<Block>, Error> {
 		Ok(LightValidationState::new(RelayState::new(
 			ParentchainHeaderBuilder::default().build(),
 			Default::default(),
 		)))
 	}
 
-	fn seal_to_static_file(_unsealed: &Self::Unsealed) -> Result<(), Self::Error> {
+	fn seal(&self, _: &LightValidationState<Block>) -> Result<(), Error> {
 		Ok(())
+	}
+
+	fn exists(&self) -> bool {
+		false
+	}
+
+	fn path(&self) -> &Path {
+		self.temp_dir.path()
 	}
 }

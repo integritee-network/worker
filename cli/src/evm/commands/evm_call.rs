@@ -20,7 +20,7 @@ use crate::{
 	trusted_cli::TrustedCli,
 	trusted_command_utils::{get_identifiers, get_pair_from_str},
 	trusted_operation::perform_trusted_operation,
-	Cli,
+	Cli, CliResult, CliResultOk,
 };
 use codec::Decode;
 use ita_stf::{Index, TrustedCall, TrustedGetter, TrustedOperation};
@@ -43,7 +43,7 @@ pub struct EvmCallCommands {
 }
 
 impl EvmCallCommands {
-	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
+	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
 		let sender = get_pair_from_str(trusted_args, &self.from);
 		let sender_acc: AccountId = sender.public().into();
 
@@ -80,6 +80,7 @@ impl EvmCallCommands {
 		)
 		.sign(&KeyPair::Sr25519(Box::new(sender)), nonce, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
-		let _ = perform_trusted_operation(cli, trusted_args, &function_call);
+		Ok(perform_trusted_operation(cli, trusted_args, &function_call)
+			.map(|_| CliResultOk::None)?)
 	}
 }

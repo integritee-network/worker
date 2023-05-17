@@ -210,23 +210,19 @@ where
 	OCallApi: EnclaveOnChainOCallApi,
 {
 	fn num_xt_to_be_included(&self) -> Result<usize, Error> {
-		let relay = self.light_validation_state.get_relay();
-		Ok(relay.verify_tx_inclusion.len())
+		self.light_validation_state.num_xt_to_be_included()
 	}
 
 	fn genesis_hash(&self) -> Result<HashFor<Block>, Error> {
-		let relay = self.light_validation_state.get_relay();
-		Ok(relay.header_hashes[0])
+		self.light_validation_state.genesis_hash()
 	}
 
 	fn latest_finalized_header(&self) -> Result<Block::Header, Error> {
-		let relay = self.light_validation_state.get_relay();
-		Ok(relay.last_finalized_block_header.clone())
+		self.light_validation_state.latest_finalized_header()
 	}
 
 	fn penultimate_finalized_block_header(&self) -> Result<Block::Header, Error> {
-		let relay = self.light_validation_state.get_relay();
-		Ok(relay.penultimate_finalized_block_header.clone())
+		self.light_validation_state.penultimate_finalized_block_header()
 	}
 }
 

@@ -22,7 +22,7 @@ use crate::{
 use itc_parentchain::{
 	light_client::light_client_init_params::SimpleParams, primitives::ParentchainInitParams,
 };
-use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
+use itc_parentchain_test::ParentchainHeaderBuilder;
 use itp_node_api::api_client::ChainApi;
 use std::sync::Arc;
 

@@ -17,7 +17,7 @@
 
 use crate::{
 	command_utils::{get_accountid_from_str, get_chain_api},
-	Cli,
+	Cli, CliResult, CliResultOk,
 };
 use itp_node_api::api_client::ParentchainExtrinsicSigner;
 use my_node_runtime::{BalancesCall, RuntimeCall};
@@ -36,7 +36,7 @@ pub struct FaucetCommand {
 }
 
 impl FaucetCommand {
-	pub(crate) fn run(&self, cli: &Cli) {
+	pub(crate) fn run(&self, cli: &Cli) -> CliResult {
 		let mut api = get_chain_api(cli);
 		api.set_signer(ParentchainExtrinsicSigner::new(AccountKeyring::Alice.pair()));
 		let mut nonce = api.get_nonce().unwrap();
@@ -56,5 +56,7 @@ impl FaucetCommand {
 			let _blockh = api.submit_extrinsic(xt).unwrap();
 			nonce += 1;
 		}
+
+		Ok(CliResultOk::None)
 	}
 }
