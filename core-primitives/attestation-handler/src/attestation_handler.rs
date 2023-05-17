@@ -54,7 +54,7 @@ use sgx_types::{
 use sp_core::Pair;
 use std::{
 	borrow::ToOwned,
-	format,
+	env, format,
 	io::{Read, Write},
 	net::TcpStream,
 	prelude::v1::*,
@@ -629,8 +629,9 @@ where
 	}
 
 	fn load_spid(filename: &str) -> SgxResult<sgx_spid_t> {
-		match io::read_to_string(filename).map(|contents| decode_spid(&contents)) {
-			Ok(r) => r,
+		// Check if set as an environment variable
+		match env::var("IAS_EPID_SPID").or_else(|_| io::read_to_string(filename)) {
+			Ok(spid) => decode_spid(&spid),
 			Err(e) => {
 				error!("Failed to load SPID: {:?}", e);
 				Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
@@ -639,7 +640,9 @@ where
 	}
 
 	fn get_ias_api_key() -> EnclaveResult<String> {
-		io::read_to_string(RA_API_KEY_FILE)
+		// Check if set as an environment variable
+		env::var("IAS_EPID_KEY")
+			.or_else(|_| io::read_to_string(RA_API_KEY_FILE))
 			.map(|key| key.trim_end().to_owned())
 			.map_err(|e| EnclaveError::Other(e.into()))
 	}

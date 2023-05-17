@@ -366,6 +366,7 @@ where
 		debug!("isvEnclaveQuoteStatus = {}", quote_status);
 		match quote_status.as_ref() {
 			"OK" => (),
+			"SW_HARDENING_NEEDED" => info!("Status in attestation report is SW_HARDENING_NEEDED, which is considered acceptable."),
 			"GROUP_OUT_OF_DATE" | "GROUP_REVOKED" | "CONFIGURATION_NEEDED" => {
 				// Verify platformInfoBlob for further info if status not OK
 				if let Value::String(pib) = &attn_report["platformInfoBlob"] {

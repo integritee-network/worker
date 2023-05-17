@@ -30,7 +30,7 @@ use crate::{
 use ita_sgx_runtime::Runtime;
 use ita_stf::helpers::set_block_number;
 use itc_parentchain::light_client::mocks::validator_access_mock::ValidatorAccessMock;
-use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
+use itc_parentchain_test::ParentchainHeaderBuilder;
 use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
 use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_settings::{
