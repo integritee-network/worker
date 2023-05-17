@@ -68,6 +68,7 @@ RUN --mount=type=cache,id=cargo-registry,target=/opt/rust/registry \
 ### The runner needs the aesmd service for the `SGX_MODE=HW`.
 ######################################################
 FROM oasisprotocol/aesmd:master AS runner
+ENV LD_LIBRARY_PATH "${SGX_SDK}/sdk_libs"
 
 ### Deployed CLI client
 ##################################################
