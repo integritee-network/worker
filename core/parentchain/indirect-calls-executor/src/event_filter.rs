@@ -16,9 +16,6 @@
 */
 //! Various way to filter Parentchain events
 
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-use crate::sgx_reexport_prelude::*;
-
 use crate::error::Result;
 use codec::{Decode, Encode};
 use itp_api_client_types::{Events, StaticEvent};

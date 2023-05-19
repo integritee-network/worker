@@ -40,9 +40,7 @@ pub trait EventsFromMetadata<NodeMetadata> {
 
 pub struct EventCreator;
 
-impl<NodeMetadata: TryInto<Metadata> + Clone> EventsFromMetadata<NodeMetadata>
-	for EventCreator
-{
+impl<NodeMetadata: TryInto<Metadata> + Clone> EventsFromMetadata<NodeMetadata> for EventCreator {
 	type Output = Events<H256>;
 
 	fn create_from_metadata(

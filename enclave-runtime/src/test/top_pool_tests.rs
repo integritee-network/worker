@@ -34,8 +34,9 @@ use ita_stf::{
 	TrustedCall, TrustedOperation,
 };
 use itc_parentchain::indirect_calls_executor::{
-	filter_metadata::{ShieldFundsAndCallWorkerFilter, EventCreator},
-	parentchain_parser::ParentchainExtrinsicParser, ExecuteIndirectCalls, IndirectCallsExecutor,
+	filter_metadata::{EventCreator, ShieldFundsAndCallWorkerFilter},
+	parentchain_parser::ParentchainExtrinsicParser,
+	ExecuteIndirectCalls, IndirectCallsExecutor,
 };
 use itc_parentchain_test::{ParentchainBlockBuilder, ParentchainHeaderBuilder};
 use itp_node_api::{
