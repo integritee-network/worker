@@ -75,6 +75,7 @@ ifeq ($(SGX_PRODUCTION), 1)
 	SGX_ENCLAVE_MODE = "Production Mode"
 	SGX_ENCLAVE_CONFIG = "enclave-runtime/Enclave.config.production.xml"
 	SGX_SIGN_KEY = $(SGX_COMMERCIAL_KEY)
+	SGX_SIGN_PASSFILE = $(SGX_PASSFILE)
 	WORKER_FEATURES := --features=production,$(WORKER_MODE),$(WORKER_FEATURES),$(ADDITIONAL_FEATURES)
 else
 	SGX_ENCLAVE_MODE = "Development Mode"
@@ -194,7 +195,14 @@ $(RustEnclave_Name): enclave enclave-runtime/Enclave_t.o
 $(Signed_RustEnclave_Name): $(RustEnclave_Name)
 	@echo
 	@echo "Signing the enclave: $(SGX_ENCLAVE_MODE)"
-	$(SGX_ENCLAVE_SIGNER) sign -key $(SGX_SIGN_KEY) -enclave $(RustEnclave_Name) -out $@ -config $(SGX_ENCLAVE_CONFIG)
+	ifeq ($(SGX_PRODUCTION), 1)
+	    $(SGX_ENCLAVE_SIGNER) gendata -enclave $(RustEnclave_Name) -out enclave_sig.dat -config $(SGX_ENCLAVE_CONFIG)
+		openssl dgst -sha256 -passin file:$(SGX_PASSFILE) -sign $(SGX_SIGN_KEY) -out signature.dat enclave_sig.dat
+		openssl dgst -sha256 -verify intel_sgx.pub -signature signature.dat enclave_sig.dat
+		$(SGX_ENCLAVE_SIGNER) catsig -enclave $(RustEnclave_Name) -config $(SGX_ENCLAVE_CONFIG) -out $@ -key intel_sgx.pub -sig signature.dat -unsigned enclave_sig.dat
+	else
+		$(SGX_ENCLAVE_SIGNER) sign -key $(SGX_SIGN_KEY) -enclave $(RustEnclave_Name) -out $@ -config $(SGX_ENCLAVE_CONFIG)
+	endif
 	@echo "SIGN =>  $@"
 	@echo
 	@echo "Enclave is in $(SGX_ENCLAVE_MODE)"

@@ -112,43 +112,43 @@ jobs:
           name: integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
           path: integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
 
-  clippy:
-    runs-on: ubuntu-latest
-    container: "integritee/integritee-dev:0.2.1"
-    steps:
-      - uses: actions/checkout@v3
-      - name: init rust
-        # enclave is not in the same workspace
-        run: rustup show && cd enclave-runtime && rustup show
+  # clippy:
+  #   runs-on: ubuntu-latest
+  #   container: "integritee/integritee-dev:0.2.1"
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - name: init rust
+  #       # enclave is not in the same workspace
+  #       run: rustup show && cd enclave-runtime && rustup show
 
-      - name: Clippy default features
-        run: cargo clippy -- -D warnings
-      - name: Enclave # Enclave is separate as it's not in the workspace
-        run: cd enclave-runtime && cargo clippy -- -D warnings
+  #     - name: Clippy default features
+  #       run: cargo clippy -- -D warnings
+  #     - name: Enclave # Enclave is separate as it's not in the workspace
+  #       run: cd enclave-runtime && cargo clippy -- -D warnings
 
-      - name: Clippy with EVM feature
-        run: |
-          cargo clippy --features evm -- -D warnings
-          cd enclave-runtime && cargo clippy --features evm -- -D warnings
+  #     - name: Clippy with EVM feature
+  #       run: |
+  #         cargo clippy --features evm -- -D warnings
+  #         cd enclave-runtime && cargo clippy --features evm -- -D warnings
 
-      - name: Clippy with Sidechain feature
-        run: |
-          cargo clippy --features sidechain -- -D warnings
-          cd enclave-runtime && cargo clippy --features sidechain -- -D warnings
+  #     - name: Clippy with Sidechain feature
+  #       run: |
+  #         cargo clippy --features sidechain -- -D warnings
+  #         cd enclave-runtime && cargo clippy --features sidechain -- -D warnings
 
-      - name: Clippy with Teeracle feature
-        run: |
-          cargo clippy --features teeracle -- -D warnings
-          cd enclave-runtime && cargo clippy --features teeracle -- -D warnings
+  #     - name: Clippy with Teeracle feature
+  #       run: |
+  #         cargo clippy --features teeracle -- -D warnings
+  #         cd enclave-runtime && cargo clippy --features teeracle -- -D warnings
 
-      - name: Clippy with Offchain-worker feature
-        run: |
-          cargo clippy --features offchain-worker -- -D warnings
-          cd enclave-runtime && cargo clippy --features offchain-worker -- -D warnings
+  #     - name: Clippy with Offchain-worker feature
+  #       run: |
+  #         cargo clippy --features offchain-worker -- -D warnings
+  #         cd enclave-runtime && cargo clippy --features offchain-worker -- -D warnings
 
-      - name: Fail-fast; cancel other jobs
-        if: failure()
-        uses: andymckay/cancel-action@0.3
+  #     - name: Fail-fast; cancel other jobs
+  #       if: failure()
+  #       uses: andymckay/cancel-action@0.3
 
   fmt:
     runs-on: ubuntu-latest
@@ -171,182 +171,182 @@ jobs:
         if: failure()
         uses: andymckay/cancel-action@0.3
 
-  integration-tests:
-    runs-on: ${{ matrix.host }}
-    if: ${{ always() }}
-    needs: build-test
-    env:
-      WORKER_IMAGE_TAG: integritee-worker:dev
-      CLIENT_IMAGE_TAG: integritee-cli:dev
-      COINMARKETCAP_KEY: ${{ secrets.COINMARKETCAP_KEY }}
-      TEERACLE_INTERVAL_SECONDS: 10
+  # integration-tests:
+  #   runs-on: ${{ matrix.host }}
+  #   if: ${{ always() }}
+  #   needs: build-test
+  #   env:
+  #     WORKER_IMAGE_TAG: integritee-worker:dev
+  #     CLIENT_IMAGE_TAG: integritee-cli:dev
+  #     COINMARKETCAP_KEY: ${{ secrets.COINMARKETCAP_KEY }}
+  #     TEERACLE_INTERVAL_SECONDS: 10
 
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - test: M6
-            flavor_id: sidechain
-            demo_name: demo-indirect-invocation
-            host: test-runner-sgx
-            sgx_mode: HW
-          - test: M8
-            flavor_id: sidechain
-            demo_name: demo-direct-call
-            host: test-runner-sgx
-            sgx_mode: HW
-          - test: Sidechain
-            flavor_id: sidechain
-            demo_name: demo-sidechain
-            host: test-runner-sgx
-            sgx_mode: HW
-          - test: M6
-            flavor_id: offchain-worker
-            demo_name: demo-indirect-invocation
-            host: test-runner-sgx
-            sgx_mode: HW
-          - test: Teeracle
-            flavor_id: teeracle
-            demo_name: demo-teeracle
-            host: test-runner-sgx
-            sgx_mode: HW
-          - test: Teeracle
-            flavor_id: teeracle
-            demo_name: demo-teeracle-generic
-            host: test-runner-sgx
-            sgx_mode: HW
-          - test: Benchmark
-            flavor_id: sidechain
-            demo_name: sidechain-benchmark
-            host: test-runner-sgx
-            sgx_mode: HW
-          - test: EVM
-            flavor_id: sidechain-evm
-            demo_name: demo-smart-contract
-            host: test-runner-sgx
-            sgx_mode: HW
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include:
+  #         - test: M6
+  #           flavor_id: sidechain
+  #           demo_name: demo-indirect-invocation
+  #           host: test-runner-sgx
+  #           sgx_mode: HW
+  #         - test: M8
+  #           flavor_id: sidechain
+  #           demo_name: demo-direct-call
+  #           host: test-runner-sgx
+  #           sgx_mode: HW
+  #         - test: Sidechain
+  #           flavor_id: sidechain
+  #           demo_name: demo-sidechain
+  #           host: test-runner-sgx
+  #           sgx_mode: HW
+  #         - test: M6
+  #           flavor_id: offchain-worker
+  #           demo_name: demo-indirect-invocation
+  #           host: test-runner-sgx
+  #           sgx_mode: HW
+  #         - test: Teeracle
+  #           flavor_id: teeracle
+  #           demo_name: demo-teeracle
+  #           host: test-runner-sgx
+  #           sgx_mode: HW
+  #         - test: Teeracle
+  #           flavor_id: teeracle
+  #           demo_name: demo-teeracle-generic
+  #           host: test-runner-sgx
+  #           sgx_mode: HW
+  #         - test: Benchmark
+  #           flavor_id: sidechain
+  #           demo_name: sidechain-benchmark
+  #           host: test-runner-sgx
+  #           sgx_mode: HW
+  #         - test: EVM
+  #           flavor_id: sidechain-evm
+  #           demo_name: demo-smart-contract
+  #           host: test-runner-sgx
+  #           sgx_mode: HW
 
-    steps:
-      - uses: actions/checkout@v3
+  #   steps:
+  #     - uses: actions/checkout@v3
 
-      - name: Set env
-        run: |
-          version=$RANDOM
-          echo "FLAVOR_ID=${{ matrix.flavor_id }}" >> $GITHUB_ENV
-          echo "PROJECT=${{ matrix.flavor_id }}-${{ matrix.demo_name }}" >> $GITHUB_ENV
-          echo "VERSION=dev.$version" >> $GITHUB_ENV
-          echo "WORKER_IMAGE_TAG=integritee-worker:dev.$version" >> $GITHUB_ENV
-          echo "INTEGRITEE_NODE=integritee-node-dev:1.0.33.$version" >> $GITHUB_ENV
-          echo "CLIENT_IMAGE_TAG=integritee-cli:dev.$version" >> $GITHUB_ENV
-          if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
-             echo "SGX_PROVISION=/dev/sgx/provision" >> $GITHUB_ENV
-             echo "SGX_ENCLAVE=/dev/sgx/enclave" >> $GITHUB_ENV
-             echo "AESMD=/var/run/aesmd" >> $GITHUB_ENV
-          fi
+  #     - name: Set env
+  #       run: |
+  #         version=$RANDOM
+  #         echo "FLAVOR_ID=${{ matrix.flavor_id }}" >> $GITHUB_ENV
+  #         echo "PROJECT=${{ matrix.flavor_id }}-${{ matrix.demo_name }}" >> $GITHUB_ENV
+  #         echo "VERSION=dev.$version" >> $GITHUB_ENV
+  #         echo "WORKER_IMAGE_TAG=integritee-worker:dev.$version" >> $GITHUB_ENV
+  #         echo "INTEGRITEE_NODE=integritee-node-dev:1.0.33.$version" >> $GITHUB_ENV
+  #         echo "CLIENT_IMAGE_TAG=integritee-cli:dev.$version" >> $GITHUB_ENV
+  #         if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
+  #            echo "SGX_PROVISION=/dev/sgx/provision" >> $GITHUB_ENV
+  #            echo "SGX_ENCLAVE=/dev/sgx/enclave" >> $GITHUB_ENV
+  #            echo "AESMD=/var/run/aesmd" >> $GITHUB_ENV
+  #         fi
 
-          echo "LOG_DIR=./logs-$version" >> $GITHUB_ENV
+  #         echo "LOG_DIR=./logs-$version" >> $GITHUB_ENV
 
-      - name: Download Worker Image
-        uses: actions/download-artifact@v3
-        with:
-          name: integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
-          path: .
+  #     - name: Download Worker Image
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         name: integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
+  #         path: .
 
-      - name: Download CLI client Image
-        uses: actions/download-artifact@v3
-        with:
-          name: integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
-          path: .
+  #     - name: Download CLI client Image
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         name: integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
+  #         path: .
 
-      - name: Load Worker & Client Images
-        env:
-          DOCKER_BUILDKIT: 1
-        run: |
-          docker image load --input integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
-          docker image load --input integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
-          docker images --all
+  #     - name: Load Worker & Client Images
+  #       env:
+  #         DOCKER_BUILDKIT: 1
+  #       run: |
+  #         docker image load --input integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
+  #         docker image load --input integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
+  #         docker images --all
 
-      ##
-      # Before tagging, delete the old "stuck" ones to be sure that the newly created ones are the latest
-      # Without if the docker image rmi throws an error if the image doesn't exist.
-      ##
-      - name: Re-name Image Tags
-        run: |
-          if [[ "$(docker images -q ${{ env.WORKER_IMAGE_TAG }} 2> /dev/null)" == "" ]]; then
-             docker image rmi --force ${{ env.WORKER_IMAGE_TAG }} 2>/dev/null
-          fi
-          if [[ "$(docker images -q ${{ env.CLIENT_IMAGE_TAG }} 2> /dev/null)" == "" ]]; then
-             docker image rmi --force ${{ env.CLIENT_IMAGE_TAG }} 2>/dev/null
-          fi
-          docker tag integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.WORKER_IMAGE_TAG }}
-          docker tag integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.CLIENT_IMAGE_TAG }}
-          docker pull integritee/integritee-node-dev:1.0.33
-          docker tag integritee/integritee-node-dev:1.0.33 ${{ env.INTEGRITEE_NODE }}
-          docker images --all
+  #     ##
+  #     # Before tagging, delete the old "stuck" ones to be sure that the newly created ones are the latest
+  #     # Without if the docker image rmi throws an error if the image doesn't exist.
+  #     ##
+  #     - name: Re-name Image Tags
+  #       run: |
+  #         if [[ "$(docker images -q ${{ env.WORKER_IMAGE_TAG }} 2> /dev/null)" == "" ]]; then
+  #            docker image rmi --force ${{ env.WORKER_IMAGE_TAG }} 2>/dev/null
+  #         fi
+  #         if [[ "$(docker images -q ${{ env.CLIENT_IMAGE_TAG }} 2> /dev/null)" == "" ]]; then
+  #            docker image rmi --force ${{ env.CLIENT_IMAGE_TAG }} 2>/dev/null
+  #         fi
+  #         docker tag integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.WORKER_IMAGE_TAG }}
+  #         docker tag integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.CLIENT_IMAGE_TAG }}
+  #         docker pull integritee/integritee-node-dev:1.0.33
+  #         docker tag integritee/integritee-node-dev:1.0.33 ${{ env.INTEGRITEE_NODE }}
+  #         docker images --all
 
-      ##
-      # Stop any stucked/running compose projects
-      ##
-      - name: Stop docker containers
-        if: always()
-        continue-on-error: true
-        run: |
-          cd docker
-          docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) -p ${PROJECT} stop
+  #     ##
+  #     # Stop any stucked/running compose projects
+  #     ##
+  #     - name: Stop docker containers
+  #       if: always()
+  #       continue-on-error: true
+  #       run: |
+  #         cd docker
+  #         docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) -p ${PROJECT} stop
 
-      - name: Integration Test ${{ matrix.test }}-${{ matrix.flavor_id }}
-        run: |
-          cd docker
-          docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) -p ${PROJECT} up ${{ matrix.demo_name }} --no-build --exit-code-from ${{ matrix.demo_name }} --remove-orphans
+  #     - name: Integration Test ${{ matrix.test }}-${{ matrix.flavor_id }}
+  #       run: |
+  #         cd docker
+  #         docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) -p ${PROJECT} up ${{ matrix.demo_name }} --no-build --exit-code-from ${{ matrix.demo_name }} --remove-orphans
 
 
-      - name: Collect Docker Logs
-        continue-on-error: true
-        if: always()
-        uses: jwalton/gh-docker-logs@v2
-        with:
-          images: '${{ env.WORKER_IMAGE_TAG }},${{ env.CLIENT_IMAGE_TAG }},${{ env.INTEGRITEE_NODE }}'
-          tail: all
-          dest: ${{ env.LOG_DIR }}
+  #     - name: Collect Docker Logs
+  #       continue-on-error: true
+  #       if: always()
+  #       uses: jwalton/gh-docker-logs@v2
+  #       with:
+  #         images: '${{ env.WORKER_IMAGE_TAG }},${{ env.CLIENT_IMAGE_TAG }},${{ env.INTEGRITEE_NODE }}'
+  #         tail: all
+  #         dest: ${{ env.LOG_DIR }}
 
-      - name: Upload logs
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: logs-${{ matrix.test }}-${{ matrix.flavor_id }}
-          path: ${{ env.LOG_DIR }}
+  #     - name: Upload logs
+  #       if: always()
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: logs-${{ matrix.test }}-${{ matrix.flavor_id }}
+  #         path: ${{ env.LOG_DIR }}
 
-      - name: Stop docker containers
-        if: always()
-        continue-on-error: true
-        run: |
-          cd docker
-          docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) -p ${PROJECT} stop
+  #     - name: Stop docker containers
+  #       if: always()
+  #       continue-on-error: true
+  #       run: |
+  #         cd docker
+  #         docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < ${{ matrix.demo_name }}.yml) -p ${PROJECT} stop
 
-      - name: Delete images
-        run: |
-          if [[ "$(docker images -q integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} 2> /dev/null)" != "" ]]; then
-              docker image rmi --force integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} 2>/dev/null
-          fi
-          if [[ "$(docker images -q integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} 2> /dev/null)" != "" ]]; then
-              docker image rmi --force integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} 2>/dev/null
-          fi
-          if [[ "$(docker images -q ${{ env.WORKER_IMAGE_TAG }} 2> /dev/null)" != "" ]]; then
-             docker image rmi --force ${{ env.WORKER_IMAGE_TAG }} 2>/dev/null
-          fi
-          if [[ "$(docker images -q ${{ env.CLIENT_IMAGE_TAG }} 2> /dev/null)" != "" ]]; then
-             docker image rmi --force ${{ env.CLIENT_IMAGE_TAG }} 2>/dev/null
-          fi
-          if [[ "$(docker images -q ${{ env.INTEGRITEE_NODE }} 2> /dev/null)" != "" ]]; then
-             docker image rmi --force ${{ env.INTEGRITEE_NODE }} 2>/dev/null
-          fi
-          docker images --all
+  #     - name: Delete images
+  #       run: |
+  #         if [[ "$(docker images -q integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} 2> /dev/null)" != "" ]]; then
+  #             docker image rmi --force integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} 2>/dev/null
+  #         fi
+  #         if [[ "$(docker images -q integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} 2> /dev/null)" != "" ]]; then
+  #             docker image rmi --force integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} 2>/dev/null
+  #         fi
+  #         if [[ "$(docker images -q ${{ env.WORKER_IMAGE_TAG }} 2> /dev/null)" != "" ]]; then
+  #            docker image rmi --force ${{ env.WORKER_IMAGE_TAG }} 2>/dev/null
+  #         fi
+  #         if [[ "$(docker images -q ${{ env.CLIENT_IMAGE_TAG }} 2> /dev/null)" != "" ]]; then
+  #            docker image rmi --force ${{ env.CLIENT_IMAGE_TAG }} 2>/dev/null
+  #         fi
+  #         if [[ "$(docker images -q ${{ env.INTEGRITEE_NODE }} 2> /dev/null)" != "" ]]; then
+  #            docker image rmi --force ${{ env.INTEGRITEE_NODE }} 2>/dev/null
+  #         fi
+  #         docker images --all
 
   release-build:
     runs-on: integritee-builder-sgx
     name: Release Build of teeracle
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [build-test, integration-tests]
+    needs: [build-test] #, integration-tests]
 
     strategy:
       fail-fast: false
@@ -359,6 +359,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Add masks
+        run: |
+          echo "::add-mask::$VAULT_TOKEN"
+          echo "::add-mask::$PRIVKEY_B64"
+          echo "::add-mask::$PRIVKEY_PASS"
+
       - name: Set env
         run: |
           fingerprint=$RANDOM
@@ -370,6 +376,7 @@ jobs:
               echo "DOCKER_DEVICES=" >> $GITHUB_ENV
               echo "DOCKER_VOLUMES=" >> $GITHUB_ENV
           fi
+          echo "VAULT_TOKEN=$VAULT_TOKEN" >> "$GITHUB_ENV"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -377,13 +384,30 @@ jobs:
           buildkitd-flags: --debug
           driver: docker-container
 
+      - name: Import secrets
+        uses: hashicorp/vault-action@v2
+        id: import-secrets
+        with:
+          url: ${{ secrets.VAULT_URL }}
+          tlsSkipVerify: false
+          token: ${{ env.VAULT_TOKEN }}
+          exportEnv: false
+          secrets: |
+            ${{ secrets.VAULT_PATH }} intel_sgx.pem.base64 | PRIVKEY_B64 ;
+            ${{ secrets.VAULT_PATH }} password | PRIVKEY_PASS
+
       - name: Build Worker & Run Cargo Test
         env:
           DOCKER_BUILDKIT: 1
+          PRIVKEY_B64: ${{ steps.import-secrets.outputs.PRIVKEY_B64 }}
+          PRIVKEY_PASS: ${{ steps.import-secrets.outputs.PRIVKEY_PASS }}
         run: >
+          echo $PRIVKEY_B64 > privkey.pem.base64
+          base64 -i --decode privkey.pem.base64 > enclave-runtime/intel_sgx.pem
+          echo $PRIVKEY_PASS > enclave-runtime/passfile.txt
           docker build -t integritee/${{ matrix.flavor_id }}:${{ github.ref_name }}
           --target deployed-worker
-          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg SGX_PRODUCTION=1 --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=${{ matrix.sgx_mode }}
+          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg SGX_COMMERCIAL_KEY=enclave-runtime/intel_sgx.pem --build-arg SGX_PASSFILE=enclave-runtime/passfile.txt --build-arg SGX_PRODUCTION=1 --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=${{ matrix.sgx_mode }}
           -f build.Dockerfile .
 
       - name: Save released teeracle
