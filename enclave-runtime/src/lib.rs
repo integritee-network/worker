@@ -347,7 +347,6 @@ pub unsafe extern "C" fn sync_parentchain(
 	events_proofs_to_sync_size: usize,
 	_nonce: *const u32,
 ) -> sgx_status_t {
-	info!("SYNCING PARENTCHAIN!@#!@#!@#!@");
 	let blocks_to_sync = match Vec::<SignedBlock>::decode_raw(blocks_to_sync, blocks_to_sync_size) {
 		Ok(blocks) => blocks,
 		Err(e) => return Error::Codec(e).into(),
@@ -371,8 +370,6 @@ pub unsafe extern "C" fn sync_parentchain(
 		Err(e) => return Error::Codec(e).into(),
 	};
 
-	// TODO: Need to pass validated events down this path or store them somewhere such that
-	// the `indirect_calls_executor` can access them to verify extrinsics in each block have succeeded or not.
 	if let Err(e) =
 		dispatch_parentchain_blocks_for_import::<WorkerModeProvider>(blocks_to_sync, events_to_sync)
 	{
@@ -408,7 +405,6 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 			return Err(Error::NoParentchainAssigned)
 		};
 
-	info!("DISPATCHING IMPORT!@#!@#!@");
 	import_dispatcher.dispatch_import(blocks_to_sync, events_to_sync)?;
 	Ok(())
 }

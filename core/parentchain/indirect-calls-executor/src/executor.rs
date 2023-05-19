@@ -22,14 +22,13 @@ use crate::sgx_reexport_prelude::*;
 use crate::{
 	error::{Error, Result},
 	event_filter::{ExtrinsicStatus, FilterEvents},
-	filter_metadata::{EventsFromMetadata, FilterMetadata, TestEventCreator},
+	filter_metadata::{EventsFromMetadata, FilterMetadata},
 	traits::{ExecuteIndirectCalls, IndirectDispatch, IndirectExecutor},
 };
 use binary_merkle_tree::merkle_root;
 use codec::Encode;
 use core::marker::PhantomData;
 use ita_stf::{TrustedCall, TrustedCallSigned};
-use itp_api_client_types::{Events, Metadata};
 use itp_node_api::metadata::{
 	pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata, NodeMetadataTrait,
 };
@@ -113,7 +112,7 @@ impl<
 	TopPoolAuthor: AuthorApi<H256, H256> + Send + Sync + 'static,
 	NodeMetadataProvider: AccessNodeMetadata,
 	FilterIndirectCalls: FilterMetadata<NodeMetadataProvider::MetadataType>,
-	NodeMetadataProvider::MetadataType: NodeMetadataTrait + Into<Option<Metadata>> + Clone,
+	NodeMetadataProvider::MetadataType: NodeMetadataTrait,
 	FilterIndirectCalls::Output: IndirectDispatch<Self> + Encode,
 	EventCreator: EventsFromMetadata<NodeMetadataProvider::MetadataType>,
 {
@@ -257,7 +256,7 @@ pub(crate) fn hash_of<T: Encode>(xt: &T) -> H256 {
 mod test {
 	use super::*;
 	use crate::{
-		filter_metadata::ShieldFundsAndCallWorkerFilter,
+		filter_metadata::{ShieldFundsAndCallWorkerFilter, TestEventCreator},
 		parentchain_parser::ParentchainExtrinsicParser,
 	};
 	use codec::{Decode, Encode};

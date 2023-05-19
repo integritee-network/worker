@@ -75,6 +75,6 @@ pub struct MockEvents;
 
 impl FilterEvents for MockEvents {
 	fn get_extrinsic_statuses(self) -> Result<Vec<ExtrinsicStatus>> {
-		Ok(vec![ExtrinsicStatus::Success])
+		Ok(Vec::from([ExtrinsicStatus::Success]))
 	}
 }

@@ -22,9 +22,11 @@ use codec::{Decode, Encode};
 
 use itp_api_client_types::Metadata;
 
-impl From<NodeMetadataMock> for Option<Metadata> {
-	fn from(_: NodeMetadataMock) -> Self {
-		None
+impl TryFrom<NodeMetadataMock> for Metadata {
+	type Error = ();
+
+	fn try_from(_: NodeMetadataMock) -> core::result::Result<Self, Self::Error> {
+		Err(())
 	}
 }
 

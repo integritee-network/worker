@@ -39,9 +39,11 @@ pub mod metadata_mocks;
 pub trait NodeMetadataTrait: TeerexCallIndexes + SidechainCallIndexes {}
 impl<T: TeerexCallIndexes + SidechainCallIndexes> NodeMetadataTrait for T {}
 
-impl From<NodeMetadata> for Option<Metadata> {
-	fn from(a: NodeMetadata) -> Self {
-		a.node_metadata
+impl TryFrom<NodeMetadata> for Metadata {
+	type Error = ();
+
+	fn try_from(value: NodeMetadata) -> core::result::Result<Self, Self::Error> {
+		value.node_metadata.ok_or(())
 	}
 }
 

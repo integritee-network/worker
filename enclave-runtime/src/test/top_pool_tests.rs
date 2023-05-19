@@ -34,7 +34,7 @@ use ita_stf::{
 	TrustedCall, TrustedOperation,
 };
 use itc_parentchain::indirect_calls_executor::{
-	filter_metadata::ShieldFundsAndCallWorkerFilter,
+	filter_metadata::{ShieldFundsAndCallWorkerFilter, EventCreator},
 	parentchain_parser::ParentchainExtrinsicParser, ExecuteIndirectCalls, IndirectCallsExecutor,
 };
 use itc_parentchain_test::{ParentchainBlockBuilder, ParentchainHeaderBuilder};
@@ -134,6 +134,7 @@ pub fn submit_shielding_call_to_top_pool() {
 			_,
 			_,
 			ShieldFundsAndCallWorkerFilter<ParentchainExtrinsicParser>,
+			EventCreator,
 		>::new(
 			shielding_key_repo, enclave_signer, top_pool_author.clone(), node_meta_data_repository
 		);
