@@ -21,8 +21,8 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::{
 	error::{Error, Result},
-	event_filter::{EventFilter, ExtrinsicStatus},
-	filter_metadata::FilterMetadata,
+	event_filter::{ExtrinsicStatus, FilterEvents},
+	filter_metadata::{FilterMetadata, EventsFromMetadata, TestEventCreator},
 	traits::{ExecuteIndirectCalls, IndirectDispatch, IndirectExecutor},
 };
 use binary_merkle_tree::merkle_root;
@@ -49,12 +49,13 @@ pub struct IndirectCallsExecutor<
 	TopPoolAuthor,
 	NodeMetadataProvider,
 	IndirectCallsFilter,
+	EventCreator,
 > {
 	pub(crate) shielding_key_repo: Arc<ShieldingKeyRepository>,
 	pub(crate) stf_enclave_signer: Arc<StfEnclaveSigner>,
 	pub(crate) top_pool_author: Arc<TopPoolAuthor>,
 	pub(crate) node_meta_data_provider: Arc<NodeMetadataProvider>,
-	_phantom: PhantomData<IndirectCallsFilter>,
+	_phantom: PhantomData<(IndirectCallsFilter, EventCreator)>,
 }
 impl<
 		ShieldingKeyRepository,
@@ -62,6 +63,7 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		IndirectCallsFilter,
+		EventCreator,
 	>
 	IndirectCallsExecutor<
 		ShieldingKeyRepository,
@@ -69,6 +71,7 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		IndirectCallsFilter,
+		EventCreator,
 	>
 {
 	pub fn new(
@@ -93,6 +96,7 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		FilterIndirectCalls,
+		EventCreator,
 	> ExecuteIndirectCalls
 	for IndirectCallsExecutor<
 		ShieldingKeyRepository,
@@ -100,6 +104,7 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		FilterIndirectCalls,
+		EventCreator,
 	> where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
@@ -110,6 +115,7 @@ impl<
 	FilterIndirectCalls: FilterMetadata<NodeMetadataProvider::MetadataType>,
 	NodeMetadataProvider::MetadataType: NodeMetadataTrait + Into<Option<Metadata>> + Clone,
 	FilterIndirectCalls::Output: IndirectDispatch<Self> + Encode,
+	EventCreator: EventsFromMetadata<NodeMetadataProvider::MetadataType>
 {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
@@ -128,12 +134,10 @@ impl<
 		let events = self
 			.node_meta_data_provider
 			.get_from_metadata(|metadata| {
-				let raw_metadata: Metadata = metadata.clone().into()?;
-				Some(Events::<H256>::new(raw_metadata, block_hash, events.to_vec()))
-			})?
-			.ok_or_else(|| Error::Other("Could not unpack Events from Metadata".into()))?;
+				EventCreator::create_from_metadata(metadata, block_hash, &events)
+			})?.ok_or(Error::Other("Could not create events from metadata".into()))?;
 
-		let xt_statuses = EventFilter::get_extrinsic_statuses(events)?;
+		let xt_statuses = events.get_extrinsic_statuses()?;
 		debug!("xt_statuses:: {:?}", xt_statuses);
 
 		// This would be catastrophic but should never happen
@@ -197,6 +201,7 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		FilterIndirectCalls,
+		EventFilter,
 	> IndirectExecutor
 	for IndirectCallsExecutor<
 		ShieldingKeyRepository,
@@ -204,6 +209,7 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		FilterIndirectCalls,
+		EventFilter,
 	> where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
@@ -285,6 +291,7 @@ mod test {
 		TestTopPoolAuthor,
 		TestNodeMetadataRepository,
 		ShieldFundsAndCallWorkerFilter<ParentchainExtrinsicParser>,
+		TestEventCreator,
 	>;
 
 	type Seed = [u8; 32];

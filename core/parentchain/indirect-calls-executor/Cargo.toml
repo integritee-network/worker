@@ -76,6 +76,5 @@ sgx = [
     "itp-sgx-crypto/sgx",
     "itp-stf-executor/sgx",
     "itp-top-pool-author/sgx",
-    #"itp-api-client-types/sgx",
     "thiserror_sgx",
 ]

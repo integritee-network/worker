@@ -44,12 +44,13 @@ pub enum ExtrinsicStatus {
 	Success,
 	Failed,
 }
+pub trait FilterEvents {
+	fn get_extrinsic_statuses(self) -> Result<Vec<ExtrinsicStatus>>;
+}
 
-pub struct EventFilter;
-
-impl EventFilter {
-	pub fn get_extrinsic_statuses(events: Events<H256>) -> Result<Vec<ExtrinsicStatus>> {
-		Ok(events
+impl FilterEvents for Events<H256> {
+	fn get_extrinsic_statuses(self) -> Result<Vec<ExtrinsicStatus>> {
+		Ok(self
 			.iter()
 			.filter_map(|ev| {
 				ev.and_then(|ev| {
@@ -67,5 +68,13 @@ impl EventFilter {
 				.flatten()
 			})
 			.collect())
+	}
+}
+
+pub struct MockEvents;
+
+impl FilterEvents for MockEvents {
+	fn get_extrinsic_statuses(self) -> Result<Vec<ExtrinsicStatus>> {
+		Ok(vec![ExtrinsicStatus::Success])
 	}
 }
