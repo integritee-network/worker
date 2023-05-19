@@ -22,7 +22,7 @@ use crate::sgx_reexport_prelude::*;
 use crate::{
 	error::{Error, Result},
 	event_filter::{ExtrinsicStatus, FilterEvents},
-	filter_metadata::{FilterMetadata, EventsFromMetadata, TestEventCreator},
+	filter_metadata::{EventsFromMetadata, FilterMetadata, TestEventCreator},
 	traits::{ExecuteIndirectCalls, IndirectDispatch, IndirectExecutor},
 };
 use binary_merkle_tree::merkle_root;
@@ -115,7 +115,7 @@ impl<
 	FilterIndirectCalls: FilterMetadata<NodeMetadataProvider::MetadataType>,
 	NodeMetadataProvider::MetadataType: NodeMetadataTrait + Into<Option<Metadata>> + Clone,
 	FilterIndirectCalls::Output: IndirectDispatch<Self> + Encode,
-	EventCreator: EventsFromMetadata<NodeMetadataProvider::MetadataType>
+	EventCreator: EventsFromMetadata<NodeMetadataProvider::MetadataType>,
 {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
@@ -135,7 +135,8 @@ impl<
 			.node_meta_data_provider
 			.get_from_metadata(|metadata| {
 				EventCreator::create_from_metadata(metadata, block_hash, &events)
-			})?.ok_or(Error::Other("Could not create events from metadata".into()))?;
+			})?
+			.ok_or(Error::Other("Could not create events from metadata".into()))?;
 
 		let xt_statuses = events.get_extrinsic_statuses()?;
 		debug!("xt_statuses:: {:?}", xt_statuses);

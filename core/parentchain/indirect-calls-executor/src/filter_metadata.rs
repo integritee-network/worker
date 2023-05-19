@@ -17,28 +17,39 @@
 
 use crate::{
 	error::Result,
+	event_filter::{FilterEvents, MockEvents},
 	indirect_calls::{CallWorkerArgs, ShiedFundsArgs},
 	parentchain_parser::ParseExtrinsic,
-	IndirectDispatch, IndirectExecutor, event_filter::{FilterEvents, MockEvents},
+	IndirectDispatch, IndirectExecutor,
 };
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
+use itp_api_client_types::{Events, Metadata};
 use itp_node_api::metadata::{NodeMetadata, NodeMetadataTrait};
 use itp_types::H256;
-use itp_api_client_types::{Events, Metadata};
 
 pub trait EventsFromMetadata<NodeMetadata> {
 	type Output: FilterEvents;
 
-	fn create_from_metadata(metadata: &NodeMetadata, block_hash: H256, events: &[u8]) -> Option<Self::Output>;
+	fn create_from_metadata(
+		metadata: &NodeMetadata,
+		block_hash: H256,
+		events: &[u8],
+	) -> Option<Self::Output>;
 }
 
 pub struct EventCreator;
 
-impl<NodeMetadata: Into<Option<Metadata>> + Clone> EventsFromMetadata<NodeMetadata> for EventCreator {
+impl<NodeMetadata: Into<Option<Metadata>> + Clone> EventsFromMetadata<NodeMetadata>
+	for EventCreator
+{
 	type Output = Events<H256>;
 
-	fn create_from_metadata(metadata: &NodeMetadata, block_hash: H256, events: &[u8]) -> Option<Self::Output> {
+	fn create_from_metadata(
+		metadata: &NodeMetadata,
+		block_hash: H256,
+		events: &[u8],
+	) -> Option<Self::Output> {
 		let raw_metadata: Metadata = metadata.clone().into()?;
 		Some(Events::<H256>::new(raw_metadata, block_hash, events.to_vec()))
 	}
@@ -49,7 +60,11 @@ pub struct TestEventCreator;
 impl<NodeMetadata> EventsFromMetadata<NodeMetadata> for TestEventCreator {
 	type Output = MockEvents;
 
-	fn create_from_metadata(metadata: &NodeMetadata, block_hash: H256, events: &[u8]) -> Option<Self::Output> {
+	fn create_from_metadata(
+		metadata: &NodeMetadata,
+		block_hash: H256,
+		events: &[u8],
+	) -> Option<Self::Output> {
 		Some(MockEvents)
 	}
 }
