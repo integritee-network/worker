@@ -435,10 +435,9 @@ fn validate_events(
 				events_key.as_slice(),
 				proof.clone(),
 			)
-			.map_err(|_| Error::ParentChainValidation(itp_storage::Error::WrongValue))
-			.and_then(|opt| {
-				opt.ok_or_else(|| Error::ParentChainValidation(itp_storage::Error::WrongValue))
-			})
+			.ok()
+			.flatten()
+			.ok_or_else(|| Error::ParentChainValidation(itp_storage::Error::WrongValue))
 		})
 		.collect();
 

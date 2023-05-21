@@ -23,10 +23,10 @@ use crate::{
 	error::Result, pallet_sidechain::SidechainCallIndexes, pallet_teerex::TeerexCallIndexes,
 };
 use codec::{Decode, Encode};
-pub use itp_api_client_types::{Metadata, MetadataError};
 use sp_core::storage::StorageKey;
 
 pub use crate::error::Error;
+pub use itp_api_client_types::{Metadata, MetadataError};
 
 pub mod error;
 pub mod pallet_sidechain;
