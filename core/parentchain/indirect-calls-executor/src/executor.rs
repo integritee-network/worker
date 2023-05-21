@@ -133,9 +133,9 @@ impl<
 		let events = self
 			.node_meta_data_provider
 			.get_from_metadata(|metadata| {
-				EventCreator::create_from_metadata(metadata, block_hash, &events)
+				EventCreator::create_from_metadata(metadata, block_hash, events)
 			})?
-			.ok_or(Error::Other("Could not create events from metadata".into()))?;
+			.ok_or_else(|| Error::Other("Could not create events from metadata".into()))?;
 
 		let xt_statuses = events.get_extrinsic_statuses()?;
 		debug!("xt_statuses:: {:?}", xt_statuses);
