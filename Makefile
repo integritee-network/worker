@@ -203,14 +203,14 @@ $(Signed_RustEnclave_Name): $(RustEnclave_Name)
 	@echo "SGX_SIGN_KEY: $(SGX_SIGN_KEY)"
 
 
-	ifeq ($(SGX_PRODUCTION), 1)
-	    $(SGX_ENCLAVE_SIGNER) gendata -enclave $(RustEnclave_Name) -out enclave_sig.dat -config $(SGX_ENCLAVE_CONFIG)
-		openssl dgst -sha256 -passin file:$(SGX_SIGN_PASSFILE) -sign $(SGX_SIGN_KEY) -out signature.dat enclave_sig.dat
-		openssl dgst -sha256 -verify intel_sgx.pub -signature signature.dat enclave_sig.dat
-		$(SGX_ENCLAVE_SIGNER) catsig -enclave $(RustEnclave_Name) -config $(SGX_ENCLAVE_CONFIG) -out $@ -key intel_sgx.pub -sig signature.dat -unsigned enclave_sig.dat
-	else
-		$(SGX_ENCLAVE_SIGNER) sign -key $(SGX_SIGN_KEY) -enclave $(RustEnclave_Name) -out $@ -config $(SGX_ENCLAVE_CONFIG)
-	endif
+ifeq ($(SGX_PRODUCTION), 1)
+	$(SGX_ENCLAVE_SIGNER) gendata -enclave $(RustEnclave_Name) -out enclave_sig.dat -config $(SGX_ENCLAVE_CONFIG)
+	openssl dgst -sha256 -passin file:$(SGX_SIGN_PASSFILE) -sign $(SGX_SIGN_KEY) -out signature.dat enclave_sig.dat
+	openssl dgst -sha256 -verify intel_sgx.pub -signature signature.dat enclave_sig.dat
+	$(SGX_ENCLAVE_SIGNER) catsig -enclave $(RustEnclave_Name) -config $(SGX_ENCLAVE_CONFIG) -out $@ -key intel_sgx.pub -sig signature.dat -unsigned enclave_sig.dat
+else
+	$(SGX_ENCLAVE_SIGNER) sign -key $(SGX_SIGN_KEY) -enclave $(RustEnclave_Name) -out $@ -config $(SGX_ENCLAVE_CONFIG)
+endif
 	@echo "SIGN =>  $@"
 	@echo
 	@echo "Enclave is in $(SGX_ENCLAVE_MODE)"
