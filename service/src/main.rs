@@ -456,8 +456,13 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	let xt = enclave.generate_ias_ra_extrinsic(&trusted_url, skip_ra).unwrap();
 	#[cfg(feature = "dcap")]
 	let xt = enclave.generate_dcap_ra_extrinsic(&trusted_url, skip_ra).unwrap();
-	let register_enclave_block_hash =
-		send_extrinsic(xt, &node_api, &tee_accountid, is_development_mode);
+	let register_enclave_block_hash = send_extrinsic(
+		xt,
+		"remote attestation enclave",
+		&node_api,
+		&tee_accountid,
+		is_development_mode,
+	);
 
 	let register_enclave_xt_header =
 		node_api.get_header(register_enclave_block_hash).unwrap().unwrap();
@@ -743,7 +748,7 @@ fn register_quotes_from_marblerun(
 	for quote in quotes {
 		match enclave.generate_dcap_ra_extrinsic_from_quote(url.clone(), &quote) {
 			Ok(xt) => {
-				send_extrinsic(xt, api, accountid, is_development_mode);
+				send_extrinsic(xt, "marblerun quote", api, accountid, is_development_mode);
 			},
 			Err(e) => {
 				error!("Extracting information from quote failed: {}", e)
@@ -765,15 +770,16 @@ fn register_collateral(
 		let (fmspc, _tcb_info) = extract_tcb_info_from_raw_dcap_quote(&dcap_quote).unwrap();
 
 		let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc).unwrap();
-		send_extrinsic(uxt, api, accountid, is_development_mode);
+		send_extrinsic(uxt, "DCAP quoting enclave", api, accountid, is_development_mode);
 
 		let uxt = enclave.generate_register_tcb_info_extrinsic(fmspc).unwrap();
-		send_extrinsic(uxt, api, accountid, is_development_mode);
+		send_extrinsic(uxt, "DCAP TCB info", api, accountid, is_development_mode);
 	}
 }
 
 fn send_extrinsic(
 	extrinsic: Vec<u8>,
+	extrinsic_name: &str,
 	api: &ParentchainApi,
 	accountid: &AccountId32,
 	is_development_mode: bool,
@@ -785,13 +791,13 @@ fn send_extrinsic(
 		return None
 	}
 
-	println!("[>] Register the TCB info (send the extrinsic)");
-	let register_qe_block_hash = api
+	println!("[>] Sending extrinsic: ({})", extrinsic_name);
+	let register_block_hash = api
 		.submit_and_watch_opaque_extrinsic_until(extrinsic.into(), XtStatus::Finalized)
 		.unwrap()
 		.block_hash;
-	println!("[<] Extrinsic got finalized. Block hash: {:?}\n", register_qe_block_hash);
-	register_qe_block_hash
+	println!("[<] Extrinsic got finalized. Block hash: {:?}\n", register_block_hash);
+	register_block_hash
 }
 
 /// Subscribe to the node API finalized heads stream and trigger a parent chain sync
