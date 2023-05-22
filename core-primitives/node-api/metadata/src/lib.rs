@@ -40,10 +40,10 @@ pub trait NodeMetadataTrait: TeerexCallIndexes + SidechainCallIndexes {}
 impl<T: TeerexCallIndexes + SidechainCallIndexes> NodeMetadataTrait for T {}
 
 impl TryFrom<NodeMetadata> for Metadata {
-	type Error = ();
+	type Error = crate::error::Error;
 
 	fn try_from(value: NodeMetadata) -> core::result::Result<Self, Self::Error> {
-		value.node_metadata.ok_or(())
+		value.node_metadata.ok_or(Error::MetadataNotSet)
 	}
 }
 

@@ -112,7 +112,7 @@ impl<
 	TopPoolAuthor: AuthorApi<H256, H256> + Send + Sync + 'static,
 	NodeMetadataProvider: AccessNodeMetadata,
 	FilterIndirectCalls: FilterMetadata<NodeMetadataProvider::MetadataType>,
-	NodeMetadataProvider::MetadataType: NodeMetadataTrait,
+	NodeMetadataProvider::MetadataType: NodeMetadataTrait + Clone,
 	FilterIndirectCalls::Output: IndirectDispatch<Self> + Encode,
 	EventCreator: EventsFromMetadata<NodeMetadataProvider::MetadataType>,
 {
@@ -133,7 +133,7 @@ impl<
 		let events = self
 			.node_meta_data_provider
 			.get_from_metadata(|metadata| {
-				EventCreator::create_from_metadata(metadata, block_hash, events)
+				EventCreator::create_from_metadata(metadata.clone(), block_hash, events)
 			})?
 			.ok_or_else(|| Error::Other("Could not create events from metadata".into()))?;
 
@@ -146,10 +146,6 @@ impl<
 		}
 
 		for (xt_opaque, xt_status) in block.extrinsics().iter().zip(xt_statuses.iter()) {
-			if let ExtrinsicStatus::Failed = xt_status {
-				continue
-			}
-
 			let encoded_xt_opaque = xt_opaque.encode();
 
 			let maybe_call = self.node_meta_data_provider.get_from_metadata(|metadata| {
@@ -161,12 +157,16 @@ impl<
 				None => continue,
 			};
 
+			if let ExtrinsicStatus::Failed = xt_status {
+				log::warn!("Error Extrinsic Status is {:?}", xt_status);
+				continue
+			}
+
 			if let Err(e) = call.dispatch(self) {
 				log::warn!("Error executing the indirect call: {:?}", e);
-				continue
-			};
-
-			executed_calls.push(hash_of(&call));
+			} else {
+				executed_calls.push(hash_of(&call));
+			}
 		}
 
 		// Include a processed parentchain block confirmation for each block.

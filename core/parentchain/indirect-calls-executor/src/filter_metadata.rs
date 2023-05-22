@@ -32,7 +32,7 @@ pub trait EventsFromMetadata<NodeMetadata> {
 	type Output: FilterEvents;
 
 	fn create_from_metadata(
-		metadata: &NodeMetadata,
+		metadata: NodeMetadata,
 		block_hash: H256,
 		events: &[u8],
 	) -> Option<Self::Output>;
@@ -44,11 +44,11 @@ impl<NodeMetadata: TryInto<Metadata> + Clone> EventsFromMetadata<NodeMetadata> f
 	type Output = Events<H256>;
 
 	fn create_from_metadata(
-		metadata: &NodeMetadata,
+		metadata: NodeMetadata,
 		block_hash: H256,
 		events: &[u8],
 	) -> Option<Self::Output> {
-		let raw_metadata: Metadata = metadata.clone().try_into().ok()?;
+		let raw_metadata: Metadata = metadata.try_into().ok()?;
 		Some(Events::<H256>::new(raw_metadata, block_hash, events.to_vec()))
 	}
 }
@@ -59,7 +59,7 @@ impl<NodeMetadata> EventsFromMetadata<NodeMetadata> for TestEventCreator {
 	type Output = MockEvents;
 
 	fn create_from_metadata(
-		_metadata: &NodeMetadata,
+		_metadata: NodeMetadata,
 		_block_hash: H256,
 		_events: &[u8],
 	) -> Option<Self::Output> {
