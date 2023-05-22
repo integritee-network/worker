@@ -40,7 +40,7 @@ use itp_types::{OpaqueCall, ShardIdentifier, H256};
 use log::*;
 use sp_core::blake2_256;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header, Keccak256};
-use std::{sync::Arc, vec::Vec};
+use std::{sync::Arc, vec::Vec, fmt::Debug};
 
 pub struct IndirectCallsExecutor<
 	ShieldingKeyRepository,
@@ -113,7 +113,7 @@ impl<
 	NodeMetadataProvider: AccessNodeMetadata,
 	FilterIndirectCalls: FilterMetadata<NodeMetadataProvider::MetadataType>,
 	NodeMetadataProvider::MetadataType: NodeMetadataTrait + Clone,
-	FilterIndirectCalls::Output: IndirectDispatch<Self> + Encode,
+	FilterIndirectCalls::Output: IndirectDispatch<Self> + Encode + Debug,
 	EventCreator: EventsFromMetadata<NodeMetadataProvider::MetadataType>,
 {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
