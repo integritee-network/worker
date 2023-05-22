@@ -19,7 +19,7 @@ use clap::ArgMatches;
 use itc_rest_client::rest_client::Url;
 use parse_duration::parse;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use std::{path::PathBuf, time::Duration};
 
 static DEFAULT_NODE_SERVER: &str = "ws://127.0.0.1";
 static DEFAULT_NODE_PORT: &str = "9944";
@@ -31,29 +31,31 @@ static DEFAULT_UNTRUSTED_HTTP_PORT: &str = "4545";
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Config {
-	pub node_ip: String,
-	pub node_port: String,
-	pub worker_ip: String,
+	node_ip: String,
+	node_port: String,
+	worker_ip: String,
 	/// Trusted worker address that will be advertised on the parentchain.
-	pub trusted_external_worker_address: Option<String>,
+	trusted_external_worker_address: Option<String>,
 	/// Port to directly communicate with the trusted tls server inside the enclave.
-	pub trusted_worker_port: String,
+	trusted_worker_port: String,
 	/// Untrusted worker address that will be returned by the dedicated trusted ws rpc call.
-	pub untrusted_external_worker_address: Option<String>,
+	untrusted_external_worker_address: Option<String>,
 	/// Port to the untrusted ws of the validateer.
-	pub untrusted_worker_port: String,
+	untrusted_worker_port: String,
 	/// Mutual remote attestation address that will be returned by the dedicated trusted ws rpc call.
-	pub mu_ra_external_address: Option<String>,
+	mu_ra_external_address: Option<String>,
 	/// Port for mutual-remote attestation requests.
-	pub mu_ra_port: String,
+	mu_ra_port: String,
 	/// Enable the metrics server
-	pub enable_metrics_server: bool,
+	enable_metrics_server: bool,
 	/// Port for the metrics server
-	pub metrics_server_port: String,
+	metrics_server_port: String,
 	/// Port for the untrusted HTTP server (e.g. for `is_initialized`)
-	pub untrusted_http_port: String,
+	untrusted_http_port: String,
+	/// Data directory used by all the services.
+	base_dir: PathBuf,
 	/// Config of the 'run' subcommand
-	pub run_config: Option<RunConfig>,
+	run_config: Option<RunConfig>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -71,6 +73,7 @@ impl Config {
 		enable_metrics_server: bool,
 		metrics_server_port: String,
 		untrusted_http_port: String,
+		base_dir: PathBuf,
 		run_config: Option<RunConfig>,
 	) -> Self {
 		Self {
@@ -86,6 +89,7 @@ impl Config {
 			enable_metrics_server,
 			metrics_server_port,
 			untrusted_http_port,
+			base_dir,
 			run_config,
 		}
 	}
@@ -131,6 +135,18 @@ impl Config {
 		}
 	}
 
+	pub fn base_dir(&self) -> &PathBuf {
+		&self.base_dir
+	}
+
+	pub fn run_config(&self) -> &Option<RunConfig> {
+		&self.run_config
+	}
+
+	pub fn enable_metrics_server(&self) -> bool {
+		self.enable_metrics_server
+	}
+
 	pub fn try_parse_metrics_server_port(&self) -> Option<u16> {
 		self.metrics_server_port.parse::<u16>().ok()
 	}
@@ -149,6 +165,16 @@ impl From<&ArgMatches<'_>> for Config {
 		let metrics_server_port = m.value_of("metrics-port").unwrap_or(DEFAULT_METRICS_PORT);
 		let untrusted_http_port =
 			m.value_of("untrusted-http-port").unwrap_or(DEFAULT_UNTRUSTED_HTTP_PORT);
+
+		let base_dir = match m.value_of("base-dir") {
+			Some(d) => PathBuf::from(d),
+			None => {
+				log::warn!("[Config] defaulting to data-dir = PWD because it was previous behaviour. This might change soon.\
+				Please pass the data-dir explicitly to ensure nothing breaks in your setup.");
+				pwd()
+			},
+		};
+
 		let run_config = m.subcommand_matches("run").map(RunConfig::from);
 
 		Self::new(
@@ -167,6 +193,7 @@ impl From<&ArgMatches<'_>> for Config {
 			is_metrics_server_enabled,
 			metrics_server_port.to_string(),
 			untrusted_http_port.to_string(),
+			base_dir,
 			run_config,
 		)
 	}
@@ -225,6 +252,10 @@ fn add_port_if_necessary(url: &str, port: &str) -> String {
 	}
 }
 
+pub fn pwd() -> PathBuf {
+	std::env::current_dir().expect("works on all supported platforms; qed.")
+}
+
 #[cfg(test)]
 mod test {
 	use super::*;
@@ -235,6 +266,7 @@ mod test {
 		let empty_args = ArgMatches::default();
 		let config = Config::from(&empty_args);
 		let expected_worker_ip = "127.0.0.1";
+		let pwd = std::env::current_dir().unwrap().to_str().unwrap().to_string();
 
 		assert_eq!(config.node_ip, DEFAULT_NODE_SERVER);
 		assert_eq!(config.node_port, DEFAULT_NODE_PORT);
@@ -247,6 +279,7 @@ mod test {
 		assert!(config.mu_ra_external_address.is_none());
 		assert!(!config.enable_metrics_server);
 		assert_eq!(config.untrusted_http_port, DEFAULT_UNTRUSTED_HTTP_PORT);
+		assert_eq!(config.base_dir, pwd);
 		assert!(config.run_config.is_none());
 	}
 

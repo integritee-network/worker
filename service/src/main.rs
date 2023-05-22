@@ -177,7 +177,7 @@ fn main() {
 		enclave_metrics_receiver,
 	)));
 
-	if let Some(run_config) = &config.run_config {
+	if let Some(run_config) = config.run_config() {
 		let shard = extract_shard(&run_config.shard, enclave.as_ref());
 
 		println!("Worker Config: {:?}", config);
@@ -296,7 +296,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	InitializationHandler: TrackInitialization + IsInitialized + Sync + Send + 'static,
 	WorkerModeProvider: ProvideWorkerMode,
 {
-	let run_config = config.run_config.clone().expect("Run config missing");
+	let run_config = config.run_config().clone().expect("Run config missing");
 	let skip_ra = run_config.skip_ra;
 
 	println!("Integritee Worker v{}", VERSION);
@@ -356,7 +356,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	// ------------------------------------------------------------------------
 	// Start prometheus metrics server.
-	if config.enable_metrics_server {
+	if config.enable_metrics_server() {
 		let enclave_wallet =
 			Arc::new(EnclaveAccountInfoProvider::new(node_api.clone(), tee_accountid.clone()));
 		let metrics_handler = Arc::new(MetricsHandler::new(enclave_wallet));
