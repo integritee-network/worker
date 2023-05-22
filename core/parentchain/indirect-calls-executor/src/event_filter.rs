@@ -24,6 +24,7 @@ use std::vec::Vec;
 
 #[derive(Encode, Decode, Debug)]
 pub struct ExtrinsicSuccess;
+
 impl StaticEvent for ExtrinsicSuccess {
 	const PALLET: &'static str = "System";
 	const EVENT: &'static str = "ExtrinsicSuccess";
@@ -31,6 +32,7 @@ impl StaticEvent for ExtrinsicSuccess {
 
 #[derive(Encode, Decode)]
 pub struct ExtrinsicFailed;
+
 impl StaticEvent for ExtrinsicFailed {
 	const PALLET: &'static str = "System";
 	const EVENT: &'static str = "ExtrinsicFailed";
