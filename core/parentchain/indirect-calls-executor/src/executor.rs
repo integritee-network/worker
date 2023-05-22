@@ -40,7 +40,7 @@ use itp_types::{OpaqueCall, ShardIdentifier, H256};
 use log::*;
 use sp_core::blake2_256;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header, Keccak256};
-use std::{sync::Arc, vec::Vec, fmt::Debug};
+use std::{fmt::Debug, sync::Arc, vec::Vec};
 
 pub struct IndirectCallsExecutor<
 	ShieldingKeyRepository,
