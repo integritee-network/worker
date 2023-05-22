@@ -158,12 +158,12 @@ impl<
 			};
 
 			if let ExtrinsicStatus::Failed = xt_status {
-				log::warn!("Error Extrinsic Status is {:?}", xt_status);
+				log::warn!("Parentchain Extrinsic Failed, {:?} wont be dispatched", call);
 				continue
 			}
 
 			if let Err(e) = call.dispatch(self) {
-				log::warn!("Error executing the indirect call: {:?}", e);
+				log::warn!("Error executing the indirect call: {:?}. Error {:?}", call, e);
 			} else {
 				executed_calls.push(hash_of(&call));
 			}
