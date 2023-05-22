@@ -81,6 +81,7 @@ else
 	SGX_ENCLAVE_MODE = "Development Mode"
 	SGX_ENCLAVE_CONFIG = "enclave-runtime/Enclave.config.xml"
 	SGX_SIGN_KEY = "enclave-runtime/Enclave_private.pem"
+	SGX_SIGN_PASSFILE = ""
 	WORKER_FEATURES := --features=default,$(WORKER_MODE),$(WORKER_FEATURES),$(ADDITIONAL_FEATURES)
 endif
 
@@ -195,6 +196,13 @@ $(RustEnclave_Name): enclave enclave-runtime/Enclave_t.o
 $(Signed_RustEnclave_Name): $(RustEnclave_Name)
 	@echo
 	@echo "Signing the enclave: $(SGX_ENCLAVE_MODE)"
+	@echo "SGX_ENCLAVE_SIGNER: $(SGX_ENCLAVE_SIGNER)"
+	@echo "RustEnclave_Name: $(RustEnclave_Name)"
+	@echo "SGX_ENCLAVE_CONFIG: $(SGX_ENCLAVE_CONFIG)"
+	@echo "SGX_SIGN_PASSFILE: $(SGX_SIGN_PASSFILE)"
+	@echo "SGX_SIGN_KEY: $(SGX_SIGN_KEY)"
+
+
 	ifeq ($(SGX_PRODUCTION), 1)
 	    $(SGX_ENCLAVE_SIGNER) gendata -enclave $(RustEnclave_Name) -out enclave_sig.dat -config $(SGX_ENCLAVE_CONFIG)
 		openssl dgst -sha256 -passin file:$(SGX_SIGN_PASSFILE) -sign $(SGX_SIGN_KEY) -out signature.dat enclave_sig.dat
