@@ -393,8 +393,8 @@ jobs:
           token: ${{ env.VAULT_TOKEN }}
           exportEnv: false
           secrets: |
-            ${{ secrets.VAULT_PATH }} intel_sgx.pem.base64 | PRIVKEY_B64 ;
-            ${{ secrets.VAULT_PATH }} password | PRIVKEY_PASS
+            devops/data/intel-sgx intel_sgx.pem.base64 | PRIVKEY_B64 ;
+            devops/data/intel-sgx password | PRIVKEY_PASS
 
       - name: Build Worker & Run Cargo Test
         env:
