@@ -396,15 +396,19 @@ jobs:
             ${{ secrets.VAULT_PATH }} intel_sgx_pem_base64 | PRIVKEY_B64 ;
             ${{ secrets.VAULT_PATH }} password | PRIVKEY_PASS
 
-      - name: Build Worker & Run Cargo Test
+      - name: Get secrets
         env:
-          DOCKER_BUILDKIT: 1
           PRIVKEY_B64: ${{ steps.import-secrets.outputs.PRIVKEY_B64 }}
           PRIVKEY_PASS: ${{ steps.import-secrets.outputs.PRIVKEY_PASS }}
         run: |
           echo $PRIVKEY_B64 > privkey.pem.base64
           base64 -i --decode privkey.pem.base64 > enclave-runtime/intel_sgx.pem
           echo $PRIVKEY_PASS > enclave-runtime/passfile.txt
+
+      - name: Build Worker & Run Cargo Test
+        env:
+          DOCKER_BUILDKIT: 1
+        run: >
           docker build -t integritee/${{ matrix.flavor_id }}:${{ github.ref_name }}
           --target deployed-worker
           --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg SGX_COMMERCIAL_KEY=enclave-runtime/intel_sgx.pem --build-arg SGX_PASSFILE=enclave-runtime/passfile.txt --build-arg SGX_PRODUCTION=1 --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=${{ matrix.sgx_mode }}
