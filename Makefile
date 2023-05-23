@@ -205,7 +205,7 @@ $(Signed_RustEnclave_Name): $(RustEnclave_Name)
 
 ifeq ($(SGX_PRODUCTION), 1)
 	$(SGX_ENCLAVE_SIGNER) gendata -enclave $(RustEnclave_Name) -out enclave_sig.dat -config $(SGX_ENCLAVE_CONFIG)
-	openssl rsa -passin file:$(SGX_SIGN_PASSFILE) -pubout -in intel_sgx.pem -out intel_sgx.pub
+	openssl rsa -passin file:$(SGX_SIGN_PASSFILE) -pubout -in $(SGX_SIGN_KEY) -out intel_sgx.pub
 	openssl dgst -sha256 -passin file:$(SGX_SIGN_PASSFILE) -sign $(SGX_SIGN_KEY) -out signature.dat enclave_sig.dat
 	openssl dgst -sha256 -verify intel_sgx.pub -signature signature.dat enclave_sig.dat
 	$(SGX_ENCLAVE_SIGNER) catsig -enclave $(RustEnclave_Name) -config $(SGX_ENCLAVE_CONFIG) -out $@ -key intel_sgx.pub -sig signature.dat -unsigned enclave_sig.dat
