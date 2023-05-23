@@ -154,6 +154,7 @@ pub type EnclaveParentchainBlockImporter = ParentchainBlockImporter<
 	EnclaveIndirectCallsExecutor,
 >;
 pub type EnclaveParentchainBlockImportQueue = ImportQueue<SignedParentchainBlock>;
+// Should not be a Vec<Vec<u8>>
 pub type EnclaveParentchainEventImportQueue = ImportQueue<Vec<u8>>;
 pub type EnclaveTriggeredParentchainBlockImportDispatcher = TriggeredDispatcher<
 	EnclaveParentchainBlockImporter,

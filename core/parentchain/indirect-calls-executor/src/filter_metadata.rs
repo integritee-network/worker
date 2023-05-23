@@ -108,8 +108,11 @@ where
 	type Output = IndirectCall;
 	type ParseParentchainMetadata = ExtrinsicParser;
 
-	fn filter_into_with_metadata(call: &[u8], metadata: &NodeMetadata) -> Option<Self::Output> {
-		let call_mut = &mut &call[..];
+	fn filter_into_with_metadata(
+		encoded_data: &[u8],
+		metadata: &NodeMetadata,
+	) -> Option<Self::Output> {
+		let call_mut = &mut &encoded_data[..];
 
 		// Todo: the filter should not need to parse, only filter. This should directly be configured
 		// in the indirect executor.

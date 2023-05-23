@@ -81,7 +81,6 @@ pub mod teeracle;
 pub mod test;
 
 pub type Hash = sp_core::H256;
-// pub type Event = frame_system::EventRecord<RuntimeEvent, Hash>;
 pub type AuthorityPair = sp_core::ed25519::Pair;
 
 /// Initialize the enclave.
