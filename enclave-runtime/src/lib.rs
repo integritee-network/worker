@@ -46,20 +46,21 @@ use codec::{alloc::string::String, Decode};
 use itc_parentchain::block_import_dispatcher::{
 	triggered_dispatcher::TriggerParentchainBlockImport, DispatchBlockImport,
 };
-use itp_block_import_queue::PushToBlockQueue;
 use itp_component_container::ComponentGetter;
+use itp_import_queue::PushToQueue;
 use itp_node_api::metadata::NodeMetadata;
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
 use itp_sgx_crypto::{ed25519, key_repository::AccessPubkey, Ed25519Seal};
 use itp_sgx_io::StaticSealedIO;
-use itp_storage::StorageProof;
+use itp_storage::{StorageProof, StorageProofChecker};
 use itp_types::{ShardIdentifier, SignedBlock};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use once_cell::sync::OnceCell;
 use sgx_types::sgx_status_t;
 use sp_core::crypto::Pair;
+use sp_runtime::traits::BlakeTwo256;
 use std::{boxed::Box, path::PathBuf, slice, vec::Vec};
 
 mod attestation;
@@ -363,8 +364,8 @@ pub unsafe extern "C" fn init_shard(shard: *const u8, shard_size: u32) -> sgx_st
 pub unsafe extern "C" fn sync_parentchain(
 	blocks_to_sync: *const u8,
 	blocks_to_sync_size: usize,
-	_events_to_sync: *const u8,
-	_events_to_sync_size: *const u8,
+	events_to_sync: *const u8,
+	events_to_sync_size: usize,
 	events_proofs_to_sync: *const u8,
 	events_proofs_to_sync_size: usize,
 	_nonce: *const u32,
@@ -387,9 +388,14 @@ pub unsafe extern "C" fn sync_parentchain(
 		return e.into()
 	}
 
-	// TODO: Need to pass validated events down this path or store them somewhere such that
-	// the `indirect_calls_executor` can access them to verify extrinsics in each block have succeeded or not.
-	if let Err(e) = dispatch_parentchain_blocks_for_import::<WorkerModeProvider>(blocks_to_sync) {
+	let events_to_sync = match Vec::<Vec<u8>>::decode_raw(events_to_sync, events_to_sync_size) {
+		Ok(events) => events,
+		Err(e) => return Error::Codec(e).into(),
+	};
+
+	if let Err(e) =
+		dispatch_parentchain_blocks_for_import::<WorkerModeProvider>(blocks_to_sync, events_to_sync)
+	{
 		return e.into()
 	}
 
@@ -406,6 +412,7 @@ pub unsafe extern "C" fn sync_parentchain(
 ///
 fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>(
 	blocks_to_sync: Vec<SignedBlock>,
+	events_to_sync: Vec<Vec<u8>>,
 ) -> Result<()> {
 	if WorkerModeProvider::worker_mode() == WorkerMode::Teeracle {
 		trace!("Not importing any parentchain blocks");
@@ -421,11 +428,10 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 			return Err(Error::NoParentchainAssigned)
 		};
 
-	import_dispatcher.dispatch_import(blocks_to_sync)?;
+	import_dispatcher.dispatch_import(blocks_to_sync, events_to_sync)?;
 	Ok(())
 }
 
-// ANDREW
 /// Validates the events coming from the parentchain
 fn validate_events(
 	events_proofs: &Vec<StorageProof>,
@@ -436,6 +442,30 @@ fn validate_events(
 		events_proofs.len(),
 		blocks_merkle_roots.len()
 	);
+
+	if events_proofs.len() != blocks_merkle_roots.len() {
+		return Err(Error::ParentChainSync)
+	}
+
+	let events_key = itp_storage::storage_value_key("System", "Events");
+
+	let validated_events: Result<Vec<Vec<u8>>> = events_proofs
+		.iter()
+		.zip(blocks_merkle_roots.iter())
+		.map(|(proof, root)| {
+			StorageProofChecker::<BlakeTwo256>::check_proof(
+				*root,
+				events_key.as_slice(),
+				proof.clone(),
+			)
+			.ok()
+			.flatten()
+			.ok_or_else(|| Error::ParentChainValidation(itp_storage::Error::WrongValue))
+		})
+		.collect();
+
+	let _ = validated_events?;
+
 	Ok(())
 }
 

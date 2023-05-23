@@ -26,9 +26,9 @@ pub use itp_types::parentchain::{
 	AccountId, Address, Balance, Hash, Index, Signature as PairSignature,
 };
 pub use substrate_api_client::{
-	storage_key, AssetTip, CallIndex, ExtrinsicParams, GenericAdditionalParams,
-	GenericExtrinsicParams, GenericSignedExtra, InvalidMetadataError, Metadata, MetadataError,
-	PlainTip, StaticExtrinsicSigner, UncheckedExtrinsicV4,
+	storage_key, AssetTip, CallIndex, EventDetails, Events, ExtrinsicParams,
+	GenericAdditionalParams, GenericExtrinsicParams, GenericSignedExtra, InvalidMetadataError,
+	Metadata, MetadataError, PlainTip, StaticEvent, StaticExtrinsicSigner, UncheckedExtrinsicV4,
 };
 
 pub type ParentchainPlainTip = PlainTip<Balance>;
