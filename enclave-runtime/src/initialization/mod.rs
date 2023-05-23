@@ -73,17 +73,18 @@ use itp_types::ShardIdentifier;
 use its_sidechain::block_composer::BlockComposer;
 use log::*;
 use sp_core::crypto::Pair;
-use std::{collections::HashMap, string::String, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, string::String, sync::Arc};
 
-pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> EnclaveResult<()> {
-	// Initialize the logging environment in the enclave.
-	env_logger::init();
-
+pub(crate) fn init_enclave(
+	mu_ra_url: String,
+	untrusted_worker_url: String,
+	base_dir: PathBuf,
+) -> EnclaveResult<()> {
 	ed25519::create_sealed_if_absent().map_err(Error::Crypto)?;
 	let signer = Ed25519Seal::unseal_from_static_file().map_err(Error::Crypto)?;
 	info!("[Enclave initialized] Ed25519 prim raw : {:?}", signer.public().0);
 
-	let shielding_key_repository = Arc::new(get_rsa3072_repository(base_path.clone())?);
+	let shielding_key_repository = Arc::new(get_rsa3072_repository(base_dir.clone())?);
 	GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.initialize(shielding_key_repository.clone());
 
 	// Create the aes key that is used for state encryption such that a key is always present in tests.

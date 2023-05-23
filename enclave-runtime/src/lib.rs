@@ -57,9 +57,10 @@ use itp_storage::StorageProof;
 use itp_types::{ShardIdentifier, SignedBlock};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
+use once_cell::sync::OnceCell;
 use sgx_types::sgx_status_t;
 use sp_core::crypto::Pair;
-use std::{boxed::Box, slice, vec::Vec};
+use std::{boxed::Box, path::PathBuf, slice, vec::Vec};
 
 mod attestation;
 mod empty_impls;
@@ -83,6 +84,8 @@ pub mod test;
 pub type Hash = sp_core::H256;
 pub type AuthorityPair = sp_core::ed25519::Pair;
 
+static BASE_PATH: OnceCell<PathBuf> = OnceCell::new();
+
 /// Initialize the enclave.
 #[no_mangle]
 pub unsafe extern "C" fn init(
@@ -91,6 +94,15 @@ pub unsafe extern "C" fn init(
 	untrusted_worker_addr: *const u8,
 	untrusted_worker_addr_size: u32,
 ) -> sgx_status_t {
+	// Initialize the logging environment in the enclave.
+	env_logger::init();
+
+	// Todo: This will be changed to be a param of the `init` ecall:
+	// https://github.com/integritee-network/worker/issues/1292
+	let pwd = std::env::current_dir().expect("Works on all supported platforms; qed");
+	info!("Setting base_dir to pwd: {}", pwd.display());
+	BASE_PATH.set(pwd.clone()).expect("We only init this once here; qed.");
+
 	let mu_ra_url =
 		match String::decode(&mut slice::from_raw_parts(mu_ra_addr, mu_ra_addr_size as usize))
 			.map_err(Error::Codec)
@@ -109,7 +121,7 @@ pub unsafe extern "C" fn init(
 		Err(e) => return e.into(),
 	};
 
-	match initialization::init_enclave(mu_ra_url, untrusted_worker_url) {
+	match initialization::init_enclave(mu_ra_url, untrusted_worker_url, pwd) {
 		Err(e) => e.into(),
 		Ok(()) => sgx_status_t::SGX_SUCCESS,
 	}
