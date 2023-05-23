@@ -17,17 +17,17 @@ use sp_core::storage::StorageKey;
 const SYSTEM: &str = "System";
 
 pub trait SystemStorageIndexes {
-fn system_account_storage_key(&self) -> Result<StorageKey>;
+    fn system_account_storage_key(&self) -> Result<StorageKey>;
 
-fn system_account_storage_map_key(&self, index: u64) -> Result<StorageKey>;
+    fn system_account_storage_map_key(&self, index: u64) -> Result<StorageKey>;
 }
 
 impl SystemStorageIndexes for NodeMetadata {
-fn system_account_storage_key(&self) -> Result<StorageKey> {
-    self.storage_value_key(SYSTEM, "Account")
-}
+    fn system_account_storage_key(&self) -> Result<StorageKey> {
+        self.storage_value_key(SYSTEM, "Account")
+    }
 
-fn system_account_storage_map_key(&self, index: u64) -> Result<StorageKey> {
-    self.storage_map_key(SYSTEM, "Account", index)
-}
+    fn system_account_storage_map_key(&self, index: u64) -> Result<StorageKey> {
+        self.storage_map_key(SYSTEM, "Account", index)
+    }
 }
