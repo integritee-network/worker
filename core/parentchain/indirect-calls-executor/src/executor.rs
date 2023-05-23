@@ -127,7 +127,7 @@ impl<
 		let block_number = *block.header().number();
 		let block_hash = block.hash();
 
-		trace!("Scanning block {:?} for relevant xt", block_number);
+		debug!("Scanning block {:?} for relevant xt", block_number);
 		let mut executed_calls = Vec::<H256>::new();
 
 		let events = self
@@ -138,7 +138,7 @@ impl<
 			.ok_or_else(|| Error::Other("Could not create events from metadata".into()))?;
 
 		let xt_statuses = events.get_extrinsic_statuses()?;
-		trace!("xt_statuses:: {:?}", xt_statuses);
+		debug!("xt_statuses:: {:?}", xt_statuses);
 
 		// This would be catastrophic but should never happen
 		if xt_statuses.len() != block.extrinsics().len() {
