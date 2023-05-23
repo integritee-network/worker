@@ -75,6 +75,7 @@ jsonrpc-core = { default-features = false, git = "https://github.com/scs/jsonrpc
 # mesalock
 env_logger = { git = "https://github.com/integritee-network/env_logger-sgx" }
 log = { git = "https://github.com/integritee-network/log-sgx" }
+# Todo: use the `once_cell` included in rusts core library once we use rust v1.70.0
 once_cell = { git = "https://github.com/mesalock-linux/once_cell-sgx" }
 rustls = { rev = "sgx_1.1.3", features = ["dangerous_configuration"], git = "https://github.com/mesalock-linux/rustls" }
 serde = { tag = "sgx_1.1.3", git = "https://github.com/mesalock-linux/serde-sgx", features = ["alloc", "mesalock_sgx"] }
