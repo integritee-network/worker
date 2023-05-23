@@ -23,7 +23,7 @@ use crate::{
 };
 use itc_parentchain_block_importer::ImportParentchainBlocks;
 use itp_import_queue::{PeekQueue, PopFromQueue, PushToQueue};
-use log::debug;
+use log::trace;
 use std::vec::Vec;
 
 pub type RawEventsPerBlock = Vec<u8>;
@@ -101,7 +101,7 @@ where
 		blocks: Vec<SignedBlockType>,
 		events: Vec<RawEventsPerBlock>,
 	) -> Result<()> {
-		debug!(
+		trace!(
 			"Pushing parentchain block(s) and event(s) ({}) ({}) to import queue",
 			blocks.len(),
 			events.len()
@@ -131,7 +131,7 @@ where
 
 		let latest_imported_block = blocks_to_import.last().map(|b| (*b).clone());
 
-		debug!(
+		trace!(
 			"Trigger import of all parentchain blocks and events in queue ({}) ({})",
 			blocks_to_import.len(),
 			events_to_import.len()
@@ -148,7 +148,7 @@ where
 		let blocks_to_import = self.import_queue.pop_all_but_last().map_err(Error::ImportQueue)?;
 		let events_to_import = self.events_queue.pop_all_but_last().map_err(Error::ImportQueue)?;
 
-		debug!(
+		trace!(
 			"Trigger import of all parentchain blocks and events, except the latest, from queue ({}) ({})",
 			blocks_to_import.len(),
 			events_to_import.len()
@@ -173,7 +173,7 @@ where
 
 		let latest_imported_block = blocks_to_import.last().map(|b| (*b).clone());
 
-		debug!(
+		trace!(
 			"Import of parentchain blocks and events has been triggered, importing {} blocks and {} events from queue",
 			blocks_to_import.len(),
 			events_to_import.len(),
@@ -190,7 +190,7 @@ where
 		&self,
 		predicate: impl Fn(&BlockImporter::SignedBlockType) -> bool,
 	) -> Result<Option<BlockImporter::SignedBlockType>> {
-		debug!(
+		trace!(
 			"Peek find parentchain import queue (currently has {} elements)",
 			self.import_queue.peek_queue_size().unwrap_or(0)
 		);
@@ -198,7 +198,7 @@ where
 	}
 
 	fn peek_latest(&self) -> Result<Option<BlockImporter::SignedBlockType>> {
-		debug!(
+		trace!(
 			"Peek latest parentchain import queue (currently has {} elements)",
 			self.import_queue.peek_queue_size().unwrap_or(0)
 		);
