@@ -106,6 +106,8 @@ pub unsafe extern "C" fn init(
 	mu_ra_addr_size: u32,
 	untrusted_worker_addr: *const u8,
 	untrusted_worker_addr_size: u32,
+	encoded_base_dir_str: *const u8,
+	encoded_base_dir_size: u32,
 ) -> sgx_status_t {
 	// Initialize the logging environment in the enclave.
 	env_logger::init();
@@ -137,7 +139,22 @@ pub unsafe extern "C" fn init(
 		Err(e) => return e.into(),
 	};
 
-	match initialization::init_enclave(mu_ra_url, untrusted_worker_url, pwd) {
+	let base_dir = match String::decode(&mut slice::from_raw_parts(
+		encoded_base_dir_str,
+		encoded_base_dir_size as usize,
+	))
+	.map_err(Error::Codec)
+	{
+		Ok(b) => b,
+		Err(e) => return e.into(),
+	};
+
+	info!("Setting base_dir to {}", base_dir);
+	BASE_PATH
+		.set(PathBuf::from(base_dir))
+		.expect("We only init this once here; qed.");
+
+	match initialization::init_enclave(mu_ra_url, untrusted_worker_url, base_dir) {
 		Err(e) => e.into(),
 		Ok(()) => sgx_status_t::SGX_SUCCESS,
 	}
