@@ -140,7 +140,6 @@ sp-std = { default-features = false, git = "https://github.com/paritytech/substr
 # test-deps
 itp-sgx-temp-dir = { version = "0.1", default-features = false, optional = true, path = "../core-primitives/sgx/temp-dir" }
 
-
 [patch.crates-io]
 env_logger = { git = "https://github.com/integritee-network/env_logger-sgx" }
 getrandom = { git = "https://github.com/integritee-network/getrandom-sgx", branch = "update-v2.3" }
