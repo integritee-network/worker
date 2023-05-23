@@ -50,6 +50,9 @@ pub trait ImportParentchainBlocks {
 	/// * Validates and execute those extrinsics, mutating state
 	/// * Includes block headers into the light client
 	/// * Sends `PROCESSED_PARENTCHAIN_BLOCK` extrinsics that include the merkle root of all processed calls
-	fn import_parentchain_blocks(&self, blocks_to_import: Vec<Self::SignedBlockType>)
-		-> Result<()>;
+	fn import_parentchain_blocks(
+		&self,
+		blocks_to_import: Vec<Self::SignedBlockType>,
+		events_to_import: Vec<Vec<u8>>,
+	) -> Result<()>;
 }

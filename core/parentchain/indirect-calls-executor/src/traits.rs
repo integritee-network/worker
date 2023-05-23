@@ -30,6 +30,7 @@ pub trait ExecuteIndirectCalls {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
 		block: &ParentchainBlock,
+		events: &[u8],
 	) -> Result<OpaqueCall>
 	where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>;

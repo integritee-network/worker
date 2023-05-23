@@ -118,11 +118,14 @@ impl<
 	fn import_parentchain_blocks(
 		&self,
 		blocks_to_import: Vec<Self::SignedBlockType>,
+		events_to_import: Vec<Vec<u8>>,
 	) -> Result<()> {
 		let mut calls = Vec::<OpaqueCall>::new();
 
 		debug!("Import blocks to light-client!");
-		for signed_block in blocks_to_import.into_iter() {
+		for (signed_block, raw_events) in
+			blocks_to_import.into_iter().zip(events_to_import.into_iter())
+		{
 			// Check if there are any extrinsics in the to-be-imported block that we sent and cached in the light-client before.
 			// If so, remove them now from the cache.
 			if let Err(e) = self.validator_accessor.execute_mut_on_validator(|v| {
@@ -143,7 +146,10 @@ impl<
 
 			// Execute indirect calls that were found in the extrinsics of the block,
 			// incl. shielding and unshielding.
-			match self.indirect_calls_executor.execute_indirect_calls_in_extrinsics(&block) {
+			match self
+				.indirect_calls_executor
+				.execute_indirect_calls_in_extrinsics(&block, &raw_events)
+			{
 				Ok(executed_shielding_calls) => {
 					calls.push(executed_shielding_calls);
 				},
