@@ -22,7 +22,7 @@ use crate::sgx_reexport_prelude::*;
 use crate::{
 	error::{Error, Result},
 	event_filter::{ExtrinsicStatus, FilterEvents},
-	filter_metadata::{EventsFromMetadata, FilterMetadata},
+	filter_metadata::{EventsFromMetadata, FilterIntoDataFrom},
 	traits::{ExecuteIndirectCalls, IndirectDispatch, IndirectExecutor},
 };
 use binary_merkle_tree::merkle_root;
@@ -111,7 +111,7 @@ impl<
 	StfEnclaveSigner: StfEnclaveSigning,
 	TopPoolAuthor: AuthorApi<H256, H256> + Send + Sync + 'static,
 	NodeMetadataProvider: AccessNodeMetadata,
-	FilterIndirectCalls: FilterMetadata<NodeMetadataProvider::MetadataType>,
+	FilterIndirectCalls: FilterIntoDataFrom<NodeMetadataProvider::MetadataType>,
 	NodeMetadataProvider::MetadataType: NodeMetadataTrait + Clone,
 	FilterIndirectCalls::Output: IndirectDispatch<Self> + Encode + Debug,
 	EventCreator: EventsFromMetadata<NodeMetadataProvider::MetadataType>,
@@ -149,7 +149,7 @@ impl<
 			let encoded_xt_opaque = xt_opaque.encode();
 
 			let maybe_call = self.node_meta_data_provider.get_from_metadata(|metadata| {
-				FilterIndirectCalls::filter_into_with_metadata(&encoded_xt_opaque, metadata)
+				FilterIndirectCalls::filter_into_from_metadata(&encoded_xt_opaque, metadata)
 			})?;
 
 			let call = match maybe_call {

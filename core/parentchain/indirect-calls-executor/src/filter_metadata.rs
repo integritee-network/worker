@@ -69,7 +69,7 @@ impl<NodeMetadata> EventsFromMetadata<NodeMetadata> for TestEventCreator {
 
 /// Trait to filter an indirect call and decode into it, where the decoding
 /// is based on the metadata provided.
-pub trait FilterMetadata<NodeMetadata> {
+pub trait FilterIntoDataFrom<NodeMetadata> {
 	/// Type to decode into.
 	type Output;
 
@@ -77,7 +77,7 @@ pub trait FilterMetadata<NodeMetadata> {
 	type ParseParentchainMetadata;
 
 	/// Filters some bytes and returns `Some(Self::Output)` if the filter matches some criteria.
-	fn filter_into_with_metadata(
+	fn filter_into_from_metadata(
 		encoded_data: &[u8],
 		metadata: &NodeMetadata,
 	) -> Option<Self::Output>;
@@ -86,11 +86,11 @@ pub trait FilterMetadata<NodeMetadata> {
 /// Indirect calls filter denying all indirect calls.
 pub struct DenyAll;
 
-impl FilterMetadata<NodeMetadata> for DenyAll {
+impl FilterIntoDataFrom<NodeMetadata> for DenyAll {
 	type Output = ();
 	type ParseParentchainMetadata = ();
 
-	fn filter_into_with_metadata(_: &[u8], _: &NodeMetadata) -> Option<Self::Output> {
+	fn filter_into_from_metadata(_: &[u8], _: &NodeMetadata) -> Option<Self::Output> {
 		None
 	}
 }
@@ -100,7 +100,7 @@ pub struct ShieldFundsAndCallWorkerFilter<ExtrinsicParser> {
 	_phantom: PhantomData<ExtrinsicParser>,
 }
 
-impl<ExtrinsicParser, NodeMetadata: NodeMetadataTrait> FilterMetadata<NodeMetadata>
+impl<ExtrinsicParser, NodeMetadata: NodeMetadataTrait> FilterIntoDataFrom<NodeMetadata>
 	for ShieldFundsAndCallWorkerFilter<ExtrinsicParser>
 where
 	ExtrinsicParser: ParseExtrinsic,
@@ -108,7 +108,7 @@ where
 	type Output = IndirectCall;
 	type ParseParentchainMetadata = ExtrinsicParser;
 
-	fn filter_into_with_metadata(
+	fn filter_into_from_metadata(
 		encoded_data: &[u8],
 		metadata: &NodeMetadata,
 	) -> Option<Self::Output> {
