@@ -779,7 +779,7 @@ fn register_collateral(
 
 fn send_extrinsic(
 	extrinsic: Vec<u8>,
-	extrinsic_name: &str,
+	extrinsic_info: &str,
 	api: &ParentchainApi,
 	accountid: &AccountId32,
 	is_development_mode: bool,
