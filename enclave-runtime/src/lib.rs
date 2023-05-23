@@ -109,18 +109,6 @@ pub unsafe extern "C" fn init(
 	encoded_base_dir_str: *const u8,
 	encoded_base_dir_size: u32,
 ) -> sgx_status_t {
-	// Initialize the logging environment in the enclave.
-	env_logger::init();
-
-	// Todo: This will be changed to be a param of the `init` ecall:
-	// https://github.com/integritee-network/worker/issues/1292
-	//
-	// Until the above task is finished, we just fall back to the
-	// static behaviour, which uses the PWD already.
-	let pwd = std::env::current_dir().expect("Works on all supported platforms; qed");
-	info!("Setting base_dir to pwd: {}", pwd.display());
-	BASE_PATH.set(pwd.clone()).expect("We only init this once here; qed.");
-
 	let mu_ra_url =
 		match String::decode(&mut slice::from_raw_parts(mu_ra_addr, mu_ra_addr_size as usize))
 			.map_err(Error::Codec)
@@ -150,11 +138,10 @@ pub unsafe extern "C" fn init(
 	};
 
 	info!("Setting base_dir to {}", base_dir);
-	BASE_PATH
-		.set(PathBuf::from(base_dir))
-		.expect("We only init this once here; qed.");
+	let path = PathBuf::from(base_dir);
+	BASE_PATH.set(path.clone()).expect("We only init this once here; qed.");
 
-	match initialization::init_enclave(mu_ra_url, untrusted_worker_url, base_dir) {
+	match initialization::init_enclave(mu_ra_url, untrusted_worker_url, path) {
 		Err(e) => e.into(),
 		Ok(()) => sgx_status_t::SGX_SUCCESS,
 	}
