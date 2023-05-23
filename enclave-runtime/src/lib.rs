@@ -99,6 +99,9 @@ pub unsafe extern "C" fn init(
 
 	// Todo: This will be changed to be a param of the `init` ecall:
 	// https://github.com/integritee-network/worker/issues/1292
+	//
+	// Until the above task is finished, we just fall back to the
+	// static behaviour, which uses the PWD already.
 	let pwd = std::env::current_dir().expect("Works on all supported platforms; qed");
 	info!("Setting base_dir to pwd: {}", pwd.display());
 	BASE_PATH.set(pwd.clone()).expect("We only init this once here; qed.");
