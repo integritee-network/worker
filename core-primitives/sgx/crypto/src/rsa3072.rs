@@ -95,7 +95,7 @@ pub mod sgx {
 	use log::*;
 	use std::{path::PathBuf, sgxfs::SgxFile};
 
-	/// Gets an key repository for an Rsa3072 keypair and initializes
+	/// Gets a repository for an Rsa3072 keypair and initializes
 	/// a fresh key pair if it doesn't exist at `path`.
 	pub fn get_rsa3072_repository(
 		path: PathBuf,
