@@ -60,7 +60,7 @@ use itp_attestation_handler::IntelAttestationHandler;
 use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_primitives_cache::GLOBAL_PRIMITIVES_CACHE;
 use itp_settings::files::STATE_SNAPSHOTS_CACHE_SIZE;
-use itp_sgx_crypto::{aes, ed25519, rsa3072, AesSeal, Ed25519Seal, Rsa3072Seal};
+use itp_sgx_crypto::{aes, ed25519, get_rsa3072_repository, AesSeal, Ed25519Seal};
 use itp_sgx_io::StaticSealedIO;
 use itp_stf_state_handler::{
 	handle_state::HandleState, query_shard_state::QueryShardState,
@@ -83,12 +83,7 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 	let signer = Ed25519Seal::unseal_from_static_file().map_err(Error::Crypto)?;
 	info!("[Enclave initialized] Ed25519 prim raw : {:?}", signer.public().0);
 
-	rsa3072::create_sealed_if_absent()?;
-
-	let shielding_key = Rsa3072Seal::unseal_from_static_file()?;
-
-	let shielding_key_repository =
-		Arc::new(EnclaveShieldingKeyRepository::new(shielding_key, Arc::new(Rsa3072Seal)));
+	let shielding_key_repository = Arc::new(get_rsa3072_repository(base_path.clone())?);
 	GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.initialize(shielding_key_repository.clone());
 
 	// Create the aes key that is used for state encryption such that a key is always present in tests.
@@ -153,12 +148,13 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 		connection_registry.clone(),
 		state_handler,
 		ocall_api.clone(),
-		shielding_key_repository,
+		shielding_key_repository.clone(),
 	);
 	GLOBAL_TOP_POOL_AUTHOR_COMPONENT.initialize(top_pool_author.clone());
 
 	let getter_executor = Arc::new(EnclaveGetterExecutor::new(state_observer));
-	let io_handler = public_api_rpc_handler(top_pool_author, getter_executor);
+	let io_handler =
+		public_api_rpc_handler(top_pool_author, getter_executor, shielding_key_repository);
 	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));
 	GLOBAL_RPC_WS_HANDLER_COMPONENT.initialize(rpc_handler);
 

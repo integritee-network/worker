@@ -33,7 +33,8 @@ use crate::{
 	error::{Error, Result},
 	initialization::global_components::{
 		GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT, GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT,
-		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
+		GLOBAL_STATE_HANDLER_COMPONENT,
 	},
 	rpc::worker_api_direct::sidechain_io_handler,
 	utils::{
@@ -50,7 +51,7 @@ use itp_component_container::ComponentGetter;
 use itp_node_api::metadata::NodeMetadata;
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
-use itp_sgx_crypto::{ed25519, Ed25519Seal, Rsa3072Seal};
+use itp_sgx_crypto::{ed25519, key_repository::AccessPubkey, Ed25519Seal};
 use itp_sgx_io::StaticSealedIO;
 use itp_storage::StorageProof;
 use itp_types::{ShardIdentifier, SignedBlock};
@@ -119,7 +120,15 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(
 	pubkey: *mut u8,
 	pubkey_size: u32,
 ) -> sgx_status_t {
-	let rsa_pubkey = match Rsa3072Seal::unseal_pubkey() {
+	let shielding_key_repository = match GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.get() {
+		Ok(s) => s,
+		Err(e) => {
+			error!("{:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	let rsa_pubkey = match shielding_key_repository.retrieve_pubkey() {
 		Ok(key) => key,
 		Err(e) => return e.into(),
 	};
