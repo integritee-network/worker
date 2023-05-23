@@ -266,7 +266,7 @@ mod test {
 		let empty_args = ArgMatches::default();
 		let config = Config::from(&empty_args);
 		let expected_worker_ip = "127.0.0.1";
-		let pwd = std::env::current_dir().unwrap().to_str().unwrap().to_string();
+		let pwd = pwd().to_str().unwrap().to_string();
 
 		assert_eq!(config.node_ip, DEFAULT_NODE_SERVER);
 		assert_eq!(config.node_port, DEFAULT_NODE_PORT);
