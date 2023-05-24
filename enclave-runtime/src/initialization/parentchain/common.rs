@@ -26,16 +26,15 @@ use crate::{
 			EnclaveParentchainEventImportQueue, EnclaveParentchainSigner, EnclaveStfExecutor,
 			EnclaveTriggeredParentchainBlockImportDispatcher, EnclaveValidatorAccessor,
 			GLOBAL_OCALL_API_COMPONENT, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
-			GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STATE_OBSERVER_COMPONENT,
-			GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
+			GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+			GLOBAL_STATE_OBSERVER_COMPONENT, GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
 		},
 		EnclaveStfEnclaveSigner,
 	},
 };
 use itp_component_container::ComponentGetter;
 use itp_nonce_cache::GLOBAL_NONCE_CACHE;
-use itp_sgx_crypto::Ed25519Seal;
-use itp_sgx_io::StaticSealedIO;
+use itp_sgx_crypto::key_repository::AccessKey;
 use log::*;
 use sp_core::H256;
 use std::sync::Arc;
@@ -75,7 +74,7 @@ pub(crate) fn create_extrinsics_factory(
 	genesis_hash: H256,
 	node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
 ) -> Result<Arc<EnclaveExtrinsicsFactory>> {
-	let signer = Ed25519Seal::unseal_from_static_file()?;
+	let signer = GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT.get()?.retrieve_key()?;
 
 	Ok(Arc::new(EnclaveExtrinsicsFactory::new(
 		genesis_hash,

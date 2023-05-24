@@ -34,7 +34,7 @@ use crate::{
 	initialization::global_components::{
 		GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT, GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT,
 		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
-		GLOBAL_STATE_HANDLER_COMPONENT,
+		GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 	},
 	rpc::worker_api_direct::sidechain_io_handler,
 	utils::{
@@ -51,15 +51,13 @@ use itp_import_queue::PushToQueue;
 use itp_node_api::metadata::NodeMetadata;
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
-use itp_sgx_crypto::{ed25519, key_repository::AccessPubkey, Ed25519Seal};
-use itp_sgx_io::StaticSealedIO;
+use itp_sgx_crypto::key_repository::AccessPubkey;
 use itp_storage::{StorageProof, StorageProofChecker};
 use itp_types::{ShardIdentifier, SignedBlock};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use once_cell::sync::OnceCell;
 use sgx_types::sgx_status_t;
-use sp_core::crypto::Pair;
 use sp_runtime::traits::BlakeTwo256;
 use std::{boxed::Box, path::PathBuf, slice, vec::Vec};
 
@@ -170,18 +168,23 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(
 
 #[no_mangle]
 pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
-	if let Err(e) = ed25519::create_sealed_if_absent().map_err(Error::Crypto) {
-		return e.into()
-	}
+	let signing_key_repository = match GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT.get() {
+		Ok(s) => s,
+		Err(e) => {
+			error!("{:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
 
-	let signer = match Ed25519Seal::unseal_from_static_file().map_err(Error::Crypto) {
-		Ok(pair) => pair,
+	let signer_public = match signing_key_repository.retrieve_pubkey() {
+		Ok(s) => s,
 		Err(e) => return e.into(),
 	};
-	debug!("Restored ECC pubkey: {:?}", signer.public());
+
+	debug!("Restored ECC pubkey: {:?}", signer_public);
 
 	let pubkey_slice = slice::from_raw_parts_mut(pubkey, pubkey_size as usize);
-	pubkey_slice.clone_from_slice(&signer.public());
+	pubkey_slice.clone_from_slice(&signer_public);
 
 	sgx_status_t::SGX_SUCCESS
 }
