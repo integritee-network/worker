@@ -380,6 +380,10 @@ fn given_initialized_shard(shard: &ShardIdentifier) -> Result<()> {
 
 fn number_of_files_in_shard_dir(shard: &ShardIdentifier) -> Result<usize> {
 	let shard_dir_path = shard_path(shard);
-	let files_in_dir = std::fs::read_dir(shard_dir_path).map_err(|e| Error::Other(e.into()))?;
+	let files_in_dir =
+		std::fs::read_dir(shard_dir_path.clone()).map_err(|e| Error::Other(e.into()))?;
+
+	log::info!("File in shard dir: {:?}", files_in_dir);
+
 	Ok(files_in_dir.count())
 }
