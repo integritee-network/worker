@@ -41,7 +41,7 @@ impl ToPubkey for ed25519::Pair {
 	type Pubkey = ed25519::Public;
 
 	fn pubkey(&self) -> Result<Self::Pubkey> {
-		Ok(self.clone().into())
+		Ok((*self).into())
 	}
 }
 
