@@ -145,7 +145,7 @@ pub mod sgx {
 		fn create_sealed(&self) -> Result<()> {
 			let rsa_keypair =
 				Rsa3072KeyPair::new().map_err(|e| Error::Other(format!("{:?}", e).into()))?;
-			// println!("[Enclave] generated RSA3072 key pair. Cleartext: {}", rsa_key_json);
+			info!("Generated RSA3072 key pair. PubKey: {:?}", rsa_keypair.pubkey()?);
 			self.seal(&rsa_keypair)
 		}
 	}
