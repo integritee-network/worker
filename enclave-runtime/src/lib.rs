@@ -33,7 +33,8 @@ use crate::{
 	error::{Error, Result},
 	initialization::global_components::{
 		GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT, GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT,
-		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
+		GLOBAL_STATE_HANDLER_COMPONENT,
 	},
 	rpc::worker_api_direct::sidechain_io_handler,
 	utils::{
@@ -50,16 +51,17 @@ use itp_import_queue::PushToQueue;
 use itp_node_api::metadata::NodeMetadata;
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
-use itp_sgx_crypto::{ed25519, Ed25519Seal, Rsa3072Seal};
+use itp_sgx_crypto::{ed25519, key_repository::AccessPubkey, Ed25519Seal};
 use itp_sgx_io::StaticSealedIO;
 use itp_storage::{StorageProof, StorageProofChecker};
 use itp_types::{ShardIdentifier, SignedBlock};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
+use once_cell::sync::OnceCell;
 use sgx_types::sgx_status_t;
 use sp_core::crypto::Pair;
 use sp_runtime::traits::BlakeTwo256;
-use std::{boxed::Box, slice, vec::Vec};
+use std::{boxed::Box, path::PathBuf, slice, vec::Vec};
 
 mod attestation;
 mod empty_impls;
@@ -83,6 +85,8 @@ pub mod test;
 pub type Hash = sp_core::H256;
 pub type AuthorityPair = sp_core::ed25519::Pair;
 
+static BASE_PATH: OnceCell<PathBuf> = OnceCell::new();
+
 /// Initialize the enclave.
 #[no_mangle]
 pub unsafe extern "C" fn init(
@@ -91,6 +95,18 @@ pub unsafe extern "C" fn init(
 	untrusted_worker_addr: *const u8,
 	untrusted_worker_addr_size: u32,
 ) -> sgx_status_t {
+	// Initialize the logging environment in the enclave.
+	env_logger::init();
+
+	// Todo: This will be changed to be a param of the `init` ecall:
+	// https://github.com/integritee-network/worker/issues/1292
+	//
+	// Until the above task is finished, we just fall back to the
+	// static behaviour, which uses the PWD already.
+	let pwd = std::env::current_dir().expect("Works on all supported platforms; qed");
+	info!("Setting base_dir to pwd: {}", pwd.display());
+	BASE_PATH.set(pwd.clone()).expect("We only init this once here; qed.");
+
 	let mu_ra_url =
 		match String::decode(&mut slice::from_raw_parts(mu_ra_addr, mu_ra_addr_size as usize))
 			.map_err(Error::Codec)
@@ -109,7 +125,7 @@ pub unsafe extern "C" fn init(
 		Err(e) => return e.into(),
 	};
 
-	match initialization::init_enclave(mu_ra_url, untrusted_worker_url) {
+	match initialization::init_enclave(mu_ra_url, untrusted_worker_url, pwd) {
 		Err(e) => e.into(),
 		Ok(()) => sgx_status_t::SGX_SUCCESS,
 	}
@@ -120,7 +136,15 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(
 	pubkey: *mut u8,
 	pubkey_size: u32,
 ) -> sgx_status_t {
-	let rsa_pubkey = match Rsa3072Seal::unseal_pubkey() {
+	let shielding_key_repository = match GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.get() {
+		Ok(s) => s,
+		Err(e) => {
+			error!("{:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	let rsa_pubkey = match shielding_key_repository.retrieve_pubkey() {
 		Ok(key) => key,
 		Err(e) => return e.into(),
 	};

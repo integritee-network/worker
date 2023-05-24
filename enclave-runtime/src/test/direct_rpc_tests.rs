@@ -25,6 +25,8 @@ use itc_direct_rpc_server::{
 };
 use itc_tls_websocket_server::{ConnectionToken, WebSocketMessageHandler};
 use itp_rpc::{RpcRequest, RpcReturnValue};
+use itp_sgx_crypto::get_rsa3072_repository;
+use itp_sgx_temp_dir::TempDir;
 use itp_stf_executor::{getter_executor::GetterExecutor, mocks::GetStateMock};
 use itp_stf_state_observer::mock::ObserveStateMock;
 use itp_top_pool_author::mocks::AuthorApiMock;
@@ -37,15 +39,20 @@ use std::{string::ToString, sync::Arc, vec::Vec};
 pub fn get_state_request_works() {
 	type TestState = u64;
 
+	let temp_dir = TempDir::with_prefix("get_state_request_works").unwrap();
+
 	let connection_registry = Arc::new(ConnectionRegistry::<Hash, ConnectionToken>::new());
 	let watch_extractor = Arc::new(create_determine_watch::<Hash>());
+	let rsa_repository = get_rsa3072_repository(temp_dir.path().to_path_buf()).unwrap();
 
 	let state: TestState = 78234u64;
 	let state_observer = Arc::new(ObserveStateMock::<TestState>::new(state));
 	let getter_executor =
 		Arc::new(GetterExecutor::<_, GetStateMock<TestState>>::new(state_observer));
 	let top_pool_author = Arc::new(AuthorApiMock::default());
-	let io_handler = public_api_rpc_handler(top_pool_author, getter_executor);
+
+	let io_handler =
+		public_api_rpc_handler(top_pool_author, getter_executor, Arc::new(rsa_repository));
 	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));
 
 	let getter = Getter::trusted(TrustedGetterSigned::new(
