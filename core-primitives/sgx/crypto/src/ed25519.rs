@@ -58,7 +58,7 @@ pub mod sgx {
 	use log::*;
 	use sgx_rand::{Rng, StdRng};
 	use sp_core::{crypto::Pair, ed25519};
-	use std::{path::PathBuf, sgxfs::SgxFile};
+	use std::path::PathBuf;
 
 	/// Gets a repository for an Ed25519 keypair and initializes
 	/// a fresh key pair if it doesn't exist at `path`.
@@ -96,7 +96,7 @@ pub mod sgx {
 		}
 
 		fn exists(&self) -> bool {
-			SgxFile::open(self.path()).is_ok()
+			self.path().exists()
 		}
 
 		fn create_sealed_if_absent(&self) -> Result<()> {
