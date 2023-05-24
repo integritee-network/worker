@@ -1,0 +1,20 @@
+[package]
+name = "itp-sgx-temp-dir"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
+
+# sgx deps
+sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+
+[dev-dependencies.safe-lock]
+version = "^0.1"
+
+[features]
+default = ["std"]
+std = []
+sgx = [
+    "sgx_tstd",
+]

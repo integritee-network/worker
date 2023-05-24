@@ -32,14 +32,13 @@ pub use sp_finality_grandpa::{AuthorityList, SetId};
 
 use crate::light_validation_state::LightValidationState;
 use error::Error;
-use itp_storage::StorageProof;
 use sp_finality_grandpa::{AuthorityId, AuthorityWeight, ConsensusLog, GRANDPA_ENGINE_ID};
 use sp_runtime::{
 	generic::{Digest, OpaqueDigestItemId, SignedBlock},
 	traits::{Block as ParentchainBlockTrait, Header as HeaderTrait},
 	OpaqueExtrinsic,
 };
-use std::vec::Vec;
+use std::{path::Path, vec::Vec};
 
 pub mod concurrent_access;
 pub mod error;
@@ -73,28 +72,9 @@ pub trait Validator<Block: ParentchainBlockTrait>
 where
 	NumberFor<Block>: finality_grandpa::BlockNumberOps,
 {
-	fn initialize_grandpa_relay(
-		&mut self,
-		block_header: Block::Header,
-		validator_set: AuthorityList,
-		validator_set_proof: StorageProof,
-	) -> Result<RelayId, Error>;
+	fn submit_block(&mut self, signed_block: &SignedBlock<Block>) -> Result<(), Error>;
 
-	fn initialize_parachain_relay(
-		&mut self,
-		block_header: Block::Header,
-		validator_set: AuthorityList,
-	) -> Result<RelayId, Error>;
-
-	fn submit_block(
-		&mut self,
-		relay_id: RelayId,
-		signed_block: &SignedBlock<Block>,
-	) -> Result<(), Error>;
-
-	fn check_xt_inclusion(&mut self, relay_id: RelayId, block: &Block) -> Result<(), Error>;
-
-	fn set_state(&mut self, state: LightValidationState<Block>);
+	fn check_xt_inclusion(&mut self, block: &Block) -> Result<(), Error>;
 
 	fn get_state(&self) -> &LightValidationState<Block>;
 }
@@ -105,17 +85,21 @@ pub trait ExtrinsicSender {
 }
 
 pub trait LightClientState<Block: ParentchainBlockTrait> {
-	fn num_xt_to_be_included(&self, relay_id: RelayId) -> Result<usize, Error>;
+	fn num_xt_to_be_included(&self) -> Result<usize, Error>;
 
-	fn genesis_hash(&self, relay_id: RelayId) -> Result<HashFor<Block>, Error>;
+	fn genesis_hash(&self) -> Result<HashFor<Block>, Error>;
 
-	fn latest_finalized_header(&self, relay_id: RelayId) -> Result<Block::Header, Error>;
+	fn latest_finalized_header(&self) -> Result<Block::Header, Error>;
 
 	// Todo: Check if we still need this after #423
-	fn penultimate_finalized_block_header(&self, relay_id: RelayId)
-		-> Result<Block::Header, Error>;
+	fn penultimate_finalized_block_header(&self) -> Result<Block::Header, Error>;
+}
 
-	fn num_relays(&self) -> RelayId;
+pub trait LightClientSealing<LightClientState> {
+	fn seal(&self, state: &LightClientState) -> Result<(), Error>;
+	fn unseal(&self) -> Result<LightClientState, Error>;
+	fn exists(&self) -> bool;
+	fn path(&self) -> &Path;
 }
 
 pub fn grandpa_log<Block: ParentchainBlockTrait>(

@@ -50,6 +50,7 @@ where
 	fn import_parentchain_blocks(
 		&self,
 		blocks_to_import: Vec<Self::SignedBlockType>,
+		_events: Vec<Vec<u8>>,
 	) -> Result<()> {
 		let mut imported_blocks_lock = self.imported_blocks.write().map_err(|e| {
 			Error::Other(format!("failed to acquire lock for imported blocks vec: {:?}", e).into())

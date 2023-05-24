@@ -20,8 +20,9 @@
 use crate::sgx_reexport_prelude::*;
 
 use crate::{
-	error::Result,
-	filter_calls::FilterCalls,
+	error::{Error, Result},
+	event_filter::{ExtrinsicStatus, FilterEvents},
+	filter_metadata::{EventsFromMetadata, FilterIntoDataFrom},
 	traits::{ExecuteIndirectCalls, IndirectDispatch, IndirectExecutor},
 };
 use binary_merkle_tree::merkle_root;
@@ -39,7 +40,7 @@ use itp_types::{OpaqueCall, ShardIdentifier, H256};
 use log::*;
 use sp_core::blake2_256;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header, Keccak256};
-use std::{sync::Arc, vec::Vec};
+use std::{fmt::Debug, sync::Arc, vec::Vec};
 
 pub struct IndirectCallsExecutor<
 	ShieldingKeyRepository,
@@ -47,12 +48,13 @@ pub struct IndirectCallsExecutor<
 	TopPoolAuthor,
 	NodeMetadataProvider,
 	IndirectCallsFilter,
+	EventCreator,
 > {
 	pub(crate) shielding_key_repo: Arc<ShieldingKeyRepository>,
 	pub(crate) stf_enclave_signer: Arc<StfEnclaveSigner>,
 	pub(crate) top_pool_author: Arc<TopPoolAuthor>,
 	pub(crate) node_meta_data_provider: Arc<NodeMetadataProvider>,
-	_phantom: PhantomData<IndirectCallsFilter>,
+	_phantom: PhantomData<(IndirectCallsFilter, EventCreator)>,
 }
 impl<
 		ShieldingKeyRepository,
@@ -60,6 +62,7 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		IndirectCallsFilter,
+		EventCreator,
 	>
 	IndirectCallsExecutor<
 		ShieldingKeyRepository,
@@ -67,6 +70,7 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		IndirectCallsFilter,
+		EventCreator,
 	>
 {
 	pub fn new(
@@ -91,6 +95,7 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		FilterIndirectCalls,
+		EventCreator,
 	> ExecuteIndirectCalls
 	for IndirectCallsExecutor<
 		ShieldingKeyRepository,
@@ -98,6 +103,7 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		FilterIndirectCalls,
+		EventCreator,
 	> where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
@@ -105,13 +111,15 @@ impl<
 	StfEnclaveSigner: StfEnclaveSigning,
 	TopPoolAuthor: AuthorApi<H256, H256> + Send + Sync + 'static,
 	NodeMetadataProvider: AccessNodeMetadata,
-	NodeMetadataProvider::MetadataType: NodeMetadataTrait,
-	FilterIndirectCalls: FilterCalls<NodeMetadataProvider::MetadataType>,
-	FilterIndirectCalls::Call: IndirectDispatch<Self> + Encode,
+	FilterIndirectCalls: FilterIntoDataFrom<NodeMetadataProvider::MetadataType>,
+	NodeMetadataProvider::MetadataType: NodeMetadataTrait + Clone,
+	FilterIndirectCalls::Output: IndirectDispatch<Self> + Encode + Debug,
+	EventCreator: EventsFromMetadata<NodeMetadataProvider::MetadataType>,
 {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
 		block: &ParentchainBlock,
+		events: &[u8],
 	) -> Result<OpaqueCall>
 	where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
@@ -122,11 +130,26 @@ impl<
 		debug!("Scanning block {:?} for relevant xt", block_number);
 		let mut executed_calls = Vec::<H256>::new();
 
-		for xt_opaque in block.extrinsics().iter() {
+		let events = self
+			.node_meta_data_provider
+			.get_from_metadata(|metadata| {
+				EventCreator::create_from_metadata(metadata.clone(), block_hash, events)
+			})?
+			.ok_or_else(|| Error::Other("Could not create events from metadata".into()))?;
+
+		let xt_statuses = events.get_extrinsic_statuses()?;
+		debug!("xt_statuses:: {:?}", xt_statuses);
+
+		// This would be catastrophic but should never happen
+		if xt_statuses.len() != block.extrinsics().len() {
+			return Err(Error::Other("Extrinsic Status and Extrinsic count not equal".into()))
+		}
+
+		for (xt_opaque, xt_status) in block.extrinsics().iter().zip(xt_statuses.iter()) {
 			let encoded_xt_opaque = xt_opaque.encode();
 
 			let maybe_call = self.node_meta_data_provider.get_from_metadata(|metadata| {
-				FilterIndirectCalls::filter_into_with_metadata(&encoded_xt_opaque, metadata)
+				FilterIndirectCalls::filter_into_from_metadata(&encoded_xt_opaque, metadata)
 			})?;
 
 			let call = match maybe_call {
@@ -134,12 +157,16 @@ impl<
 				None => continue,
 			};
 
-			if let Err(e) = call.dispatch(self) {
-				log::warn!("Error executing the indirect call: {:?}", e);
+			if let ExtrinsicStatus::Failed = xt_status {
+				warn!("Parentchain Extrinsic Failed, {:?} wont be dispatched", call);
 				continue
-			};
+			}
 
-			executed_calls.push(hash_of(&call))
+			if let Err(e) = call.dispatch(self) {
+				warn!("Error executing the indirect call: {:?}. Error {:?}", call, e);
+			} else {
+				executed_calls.push(hash_of(&call));
+			}
 		}
 
 		// Include a processed parentchain block confirmation for each block.
@@ -174,6 +201,7 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		FilterIndirectCalls,
+		EventFilter,
 	> IndirectExecutor
 	for IndirectCallsExecutor<
 		ShieldingKeyRepository,
@@ -181,6 +209,7 @@ impl<
 		TopPoolAuthor,
 		NodeMetadataProvider,
 		FilterIndirectCalls,
+		EventFilter,
 	> where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
@@ -227,12 +256,12 @@ pub(crate) fn hash_of<T: Encode>(xt: &T) -> H256 {
 mod test {
 	use super::*;
 	use crate::{
-		filter_calls::ShieldFundsAndCallWorkerFilter,
-		parentchain_extrinsic_parser::ParentchainExtrinsicParser,
+		filter_metadata::{ShieldFundsAndCallWorkerFilter, TestEventCreator},
+		parentchain_parser::ParentchainExtrinsicParser,
 	};
 	use codec::{Decode, Encode};
 	use ita_stf::TrustedOperation;
-	use itc_parentchain_test::parentchain_block_builder::ParentchainBlockBuilder;
+	use itc_parentchain_test::ParentchainBlockBuilder;
 	use itp_node_api::{
 		api_client::{
 			ExtrinsicParams, ParentchainAdditionalParams, ParentchainExtrinsicParams,
@@ -262,6 +291,7 @@ mod test {
 		TestTopPoolAuthor,
 		TestNodeMetadataRepository,
 		ShieldFundsAndCallWorkerFilter<ParentchainExtrinsicParser>,
+		TestEventCreator,
 	>;
 
 	type Seed = [u8; 32];
@@ -283,7 +313,7 @@ mod test {
 			.build();
 
 		indirect_calls_executor
-			.execute_indirect_calls_in_extrinsics(&parentchain_block)
+			.execute_indirect_calls_in_extrinsics(&parentchain_block, &Vec::new())
 			.unwrap();
 
 		assert_eq!(1, top_pool_author.pending_tops(shard_id()).unwrap().len());
@@ -308,7 +338,7 @@ mod test {
 			.build();
 
 		indirect_calls_executor
-			.execute_indirect_calls_in_extrinsics(&parentchain_block)
+			.execute_indirect_calls_in_extrinsics(&parentchain_block, &Vec::new())
 			.unwrap();
 
 		assert_eq!(1, top_pool_author.pending_tops(shard_id()).unwrap().len());

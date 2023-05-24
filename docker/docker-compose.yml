@@ -1,6 +1,6 @@
 services:
-  integritee-node-${VERSION}:
-    image: "${INTEGRITEE_NODE:-integritee/integritee-node-dev:1.0.33}"
+  "integritee-node-${VERSION}":
+    image: "${INTEGRITEE_NODE:-integritee/integritee-node-dev-ias:1.0.35}"
     hostname: integritee-node
     devices:
       - "${SGX_PROVISION:-/dev/null}:/dev/sgx/provision"
@@ -10,14 +10,14 @@ services:
     networks:
       - integritee-test-network
     healthcheck:
-      test: ["CMD", "nc", "-z", "integritee-node", "9912"]
+      test: [ "CMD", "nc", "-z", "integritee-node", "9912" ]
       interval: 10s
       timeout: 10s
       retries: 6
     command: --dev --rpc-methods unsafe --ws-external --rpc-external --ws-port 9912
     #logging:
-      #driver: local
-  integritee-worker-1-${VERSION}:
+    #driver: local
+  "integritee-worker-1-${VERSION}":
     image: integritee-worker:${VERSION:-dev}
     hostname: integritee-worker-1
     build:
@@ -25,7 +25,7 @@ services:
       dockerfile: build.Dockerfile
       target: deployed-worker
     depends_on:
-      integritee-node-${VERSION}:
+      "integritee-node-${VERSION}":
         condition: service_healthy
     devices:
       - "${SGX_PROVISION:-/dev/null}:/dev/sgx/provision"
@@ -34,6 +34,8 @@ services:
       - "${AESMD:-/dev/null}:/var/run/aesmd"
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
+      - IAS_EPID_SPID
+      - IAS_EPID_KEY
     networks:
       - integritee-test-network
     healthcheck:
@@ -41,12 +43,9 @@ services:
       interval: 10s
       timeout: 10s
       retries: 25
-    entrypoint:
-      "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-1 -T wss://integritee-worker-1
-      -u ws://integritee-node -U ws://integritee-worker-1 -P 2011 -w 2101 -p 9912 -h 4645
-      run --dev --skip-ra"
+    entrypoint: "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-1 -T wss://integritee-worker-1 -u ws://integritee-node -U ws://integritee-worker-1 -P 2011 -w 2101 -p 9912 -h 4645 run --dev"
     restart: "no"
-  integritee-worker-2-${VERSION}:
+  "integritee-worker-2-${VERSION}":
     image: integritee-worker:${VERSION:-dev}
     hostname: integritee-worker-2
     build:
@@ -54,9 +53,9 @@ services:
       dockerfile: build.Dockerfile
       target: deployed-worker
     depends_on:
-      integritee-node-${VERSION}:
+      "integritee-node-${VERSION}":
         condition: service_healthy
-      integritee-worker-1-${VERSION}:
+      "integritee-worker-1-${VERSION}":
         condition: service_healthy
     devices:
       - "${SGX_PROVISION:-/dev/null}:/dev/sgx/provision"
@@ -65,6 +64,8 @@ services:
       - "${AESMD:-/dev/null}:/var/run/aesmd"
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
+      - IAS_EPID_SPID
+      - IAS_EPID_KEY
     networks:
       - integritee-test-network
     healthcheck:
@@ -72,10 +73,7 @@ services:
       interval: 10s
       timeout: 10s
       retries: 25
-    entrypoint:
-      "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-2 -T wss://integritee-worker-2
-      -u ws://integritee-node -U ws://integritee-worker-2 -P 2012 -w 2102 -p 9912 -h 4646
-      run --dev --skip-ra --request-state"
+    entrypoint: "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-2 -T wss://integritee-worker-2 -u ws://integritee-node -U ws://integritee-worker-2 -P 2012 -w 2102 -p 9912 -h 4646 run --dev --request-state"
     restart: "no"
 networks:
   integritee-test-network:

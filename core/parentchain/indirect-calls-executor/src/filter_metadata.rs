@@ -17,35 +17,80 @@
 
 use crate::{
 	error::Result,
+	event_filter::{FilterEvents, MockEvents},
 	indirect_calls::{CallWorkerArgs, ShiedFundsArgs},
-	parentchain_extrinsic_parser::ParseExtrinsic,
+	parentchain_parser::ParseExtrinsic,
 	IndirectDispatch, IndirectExecutor,
 };
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
+use itp_api_client_types::{Events, Metadata};
 use itp_node_api::metadata::{NodeMetadata, NodeMetadataTrait};
+use itp_types::H256;
+
+pub trait EventsFromMetadata<NodeMetadata> {
+	type Output: FilterEvents;
+
+	fn create_from_metadata(
+		metadata: NodeMetadata,
+		block_hash: H256,
+		events: &[u8],
+	) -> Option<Self::Output>;
+}
+
+pub struct EventCreator;
+
+impl<NodeMetadata: TryInto<Metadata> + Clone> EventsFromMetadata<NodeMetadata> for EventCreator {
+	type Output = Events<H256>;
+
+	fn create_from_metadata(
+		metadata: NodeMetadata,
+		block_hash: H256,
+		events: &[u8],
+	) -> Option<Self::Output> {
+		let raw_metadata: Metadata = metadata.try_into().ok()?;
+		Some(Events::<H256>::new(raw_metadata, block_hash, events.to_vec()))
+	}
+}
+
+pub struct TestEventCreator;
+
+impl<NodeMetadata> EventsFromMetadata<NodeMetadata> for TestEventCreator {
+	type Output = MockEvents;
+
+	fn create_from_metadata(
+		_metadata: NodeMetadata,
+		_block_hash: H256,
+		_events: &[u8],
+	) -> Option<Self::Output> {
+		Some(MockEvents)
+	}
+}
 
 /// Trait to filter an indirect call and decode into it, where the decoding
 /// is based on the metadata provided.
-pub trait FilterCalls<NodeMetadata> {
-	/// Call enum we try to decode into.
-	type Call;
+pub trait FilterIntoDataFrom<NodeMetadata> {
+	/// Type to decode into.
+	type Output;
 
-	/// Knows how to parse the parentchain extrinsics.
-	type ParseParentchainExtrinsic;
+	/// Knows how to parse the parentchain metadata.
+	type ParseParentchainMetadata;
 
-	/// Filters some bytes and returns `Some(Self::Call)` if the filter matches some criteria.
-	fn filter_into_with_metadata(call: &[u8], metadata: &NodeMetadata) -> Option<Self::Call>;
+	/// Filters some bytes and returns `Some(Self::Output)` if the filter matches some criteria.
+	fn filter_into_from_metadata(
+		encoded_data: &[u8],
+		metadata: &NodeMetadata,
+	) -> Option<Self::Output>;
 }
 
 /// Indirect calls filter denying all indirect calls.
 pub struct DenyAll;
 
-impl FilterCalls<NodeMetadata> for DenyAll {
-	type Call = ();
-	type ParseParentchainExtrinsic = ();
+impl FilterIntoDataFrom<NodeMetadata> for DenyAll {
+	type Output = ();
+	type ParseParentchainMetadata = ();
 
-	fn filter_into_with_metadata(_: &[u8], _: &NodeMetadata) -> Option<Self::Call> {
+	fn filter_into_from_metadata(_: &[u8], _: &NodeMetadata) -> Option<Self::Output> {
 		None
 	}
 }
@@ -55,20 +100,23 @@ pub struct ShieldFundsAndCallWorkerFilter<ExtrinsicParser> {
 	_phantom: PhantomData<ExtrinsicParser>,
 }
 
-impl<ExtrinsicParser, NodeMetadata: NodeMetadataTrait> FilterCalls<NodeMetadata>
+impl<ExtrinsicParser, NodeMetadata: NodeMetadataTrait> FilterIntoDataFrom<NodeMetadata>
 	for ShieldFundsAndCallWorkerFilter<ExtrinsicParser>
 where
 	ExtrinsicParser: ParseExtrinsic,
 {
-	type Call = IndirectCall;
-	type ParseParentchainExtrinsic = ExtrinsicParser;
+	type Output = IndirectCall;
+	type ParseParentchainMetadata = ExtrinsicParser;
 
-	fn filter_into_with_metadata(call: &[u8], metadata: &NodeMetadata) -> Option<Self::Call> {
-		let call_mut = &mut &call[..];
+	fn filter_into_from_metadata(
+		encoded_data: &[u8],
+		metadata: &NodeMetadata,
+	) -> Option<Self::Output> {
+		let call_mut = &mut &encoded_data[..];
 
 		// Todo: the filter should not need to parse, only filter. This should directly be configured
 		// in the indirect executor.
-		let xt = match Self::ParseParentchainExtrinsic::parse(call_mut) {
+		let xt = match Self::ParseParentchainMetadata::parse(call_mut) {
 			Ok(xt) => xt,
 			Err(e) => {
 				log::error!("Could not parse parentchain extrinsic: {:?}", e);

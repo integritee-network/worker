@@ -41,8 +41,9 @@ use itc_parentchain::{
 	},
 	block_importer::ParentchainBlockImporter,
 	indirect_calls_executor::{
-		filter_calls::ShieldFundsAndCallWorkerFilter,
-		parentchain_extrinsic_parser::ParentchainExtrinsicParser, IndirectCallsExecutor,
+		filter_metadata::{EventCreator, ShieldFundsAndCallWorkerFilter},
+		parentchain_parser::ParentchainExtrinsicParser,
+		IndirectCallsExecutor,
 	},
 	light_client::{
 		concurrent_access::ValidatorAccessor, io::LightClientStateSeal,
@@ -53,9 +54,9 @@ use itc_tls_websocket_server::{
 	config_provider::FromFileConfigProvider, ws_server::TungsteniteWsServer, ConnectionToken,
 };
 use itp_attestation_handler::IntelAttestationHandler;
-use itp_block_import_queue::BlockImportQueue;
 use itp_component_container::ComponentContainer;
 use itp_extrinsics_factory::ExtrinsicsFactory;
+use itp_import_queue::ImportQueue;
 use itp_node_api::{
 	api_client::PairSignature,
 	metadata::{provider::NodeMetadataRepository, NodeMetadata},
@@ -88,6 +89,7 @@ use its_sidechain::{
 	consensus_common::{BlockImportConfirmationHandler, BlockImportQueueWorker, PeerBlockSync},
 };
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
+use sgx_tstd::vec::Vec;
 use sp_core::ed25519::Pair;
 
 pub type EnclaveParentchainSigner =
@@ -127,6 +129,8 @@ pub type EnclaveRpcResponder = RpcResponder<EnclaveRpcConnectionRegistry, Hash, 
 pub type EnclaveSidechainApi = SidechainApi<ParentchainBlock>;
 
 // Parentchain types
+pub type EnclaveLightClientSeal =
+	LightClientStateSeal<ParentchainBlock, LightValidationState<ParentchainBlock>>;
 pub type EnclaveExtrinsicsFactory =
 	ExtrinsicsFactory<EnclaveParentchainSigner, NonceCache, EnclaveNodeMetadataRepository>;
 pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
@@ -135,11 +139,12 @@ pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
 	EnclaveTopPoolAuthor,
 	EnclaveNodeMetadataRepository,
 	ShieldFundsAndCallWorkerFilter<ParentchainExtrinsicParser>,
+	EventCreator,
 >;
 pub type EnclaveValidatorAccessor = ValidatorAccessor<
 	LightValidation<ParentchainBlock, EnclaveOCallApi>,
 	ParentchainBlock,
-	LightClientStateSeal<ParentchainBlock, LightValidationState<ParentchainBlock>>,
+	EnclaveLightClientSeal,
 >;
 pub type EnclaveParentchainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
@@ -148,9 +153,14 @@ pub type EnclaveParentchainBlockImporter = ParentchainBlockImporter<
 	EnclaveExtrinsicsFactory,
 	EnclaveIndirectCallsExecutor,
 >;
-pub type EnclaveParentchainBlockImportQueue = BlockImportQueue<SignedParentchainBlock>;
-pub type EnclaveTriggeredParentchainBlockImportDispatcher =
-	TriggeredDispatcher<EnclaveParentchainBlockImporter, EnclaveParentchainBlockImportQueue>;
+pub type EnclaveParentchainBlockImportQueue = ImportQueue<SignedParentchainBlock>;
+// Should not be a Vec<Vec<u8>>
+pub type EnclaveParentchainEventImportQueue = ImportQueue<Vec<u8>>;
+pub type EnclaveTriggeredParentchainBlockImportDispatcher = TriggeredDispatcher<
+	EnclaveParentchainBlockImporter,
+	EnclaveParentchainBlockImportQueue,
+	EnclaveParentchainEventImportQueue,
+>;
 
 pub type EnclaveImmediateParentchainBlockImportDispatcher =
 	ImmediateDispatcher<EnclaveParentchainBlockImporter>;
@@ -182,7 +192,7 @@ pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 	EnclaveTopPoolAuthor,
 	EnclaveTriggeredParentchainBlockImportDispatcher,
 >;
-pub type EnclaveSidechainBlockImportQueue = BlockImportQueue<SignedSidechainBlock>;
+pub type EnclaveSidechainBlockImportQueue = ImportQueue<SignedSidechainBlock>;
 pub type EnclaveBlockImportConfirmationHandler = BlockImportConfirmationHandler<
 	ParentchainBlock,
 	<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType,

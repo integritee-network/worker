@@ -223,7 +223,7 @@ mod tests {
 		block_importer_mock::BlockImportMock, confirm_block_import_mock::ConfirmBlockImportMock,
 	};
 	use core::assert_matches::assert_matches;
-	use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
+	use itc_parentchain_test::ParentchainHeaderBuilder;
 	use itp_test::mock::sidechain_ocall_api_mock::SidechainOCallApiMock;
 	use itp_types::Block as ParentchainBlock;
 	use its_primitives::types::block::SignedBlock as SignedSidechainBlock;

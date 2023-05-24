@@ -37,14 +37,14 @@ pub enum JustificationError {
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+	#[error("Genesis not found")]
+	NoGenesis,
 	#[error(transparent)]
 	Storage(#[from] itp_storage::Error),
 	#[error("Validator set mismatch")]
 	ValidatorSetMismatch,
 	#[error("Invalid ancestry proof")]
 	InvalidAncestryProof,
-	#[error("No such relay exists")]
-	NoSuchRelayExists,
 	#[error("Invalid Finality Proof: {0}")]
 	InvalidFinalityProof(#[from] JustificationError),
 	#[error("Header ancestry mismatch")]

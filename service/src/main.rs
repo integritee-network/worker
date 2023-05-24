@@ -765,10 +765,10 @@ fn register_collateral(
 		let (fmspc, _tcb_info) = extract_tcb_info_from_raw_dcap_quote(&dcap_quote).unwrap();
 
 		let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc).unwrap();
-		send_extrinsic(&uxt, api, accountid, is_development_mode);
+		send_extrinsic(uxt, api, accountid, is_development_mode);
 
 		let uxt = enclave.generate_register_tcb_info_extrinsic(fmspc).unwrap();
-		send_extrinsic(&uxt, api, accountid, is_development_mode);
+		send_extrinsic(uxt, api, accountid, is_development_mode);
 	}
 }
 

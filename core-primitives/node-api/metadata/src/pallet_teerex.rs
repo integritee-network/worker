@@ -50,7 +50,7 @@ pub trait TeerexStorageKey {
 
 impl TeerexCallIndexes for NodeMetadata {
 	fn register_ias_enclave_call_indexes(&self) -> Result<[u8; 2]> {
-		self.call_indexes(TEEREX, "register_enclave")
+		self.call_indexes(TEEREX, "register_ias_enclave")
 	}
 
 	fn register_dcap_enclave_call_indexes(&self) -> Result<[u8; 2]> {

@@ -148,6 +148,8 @@ where
 				})
 				.collect::<Result<Vec<_>, _>>()?;
 
+			println!("[+] Found {} event vector(s) to sync", events_chunk_to_sync.len());
+
 			let events_proofs_chunk_to_sync: Vec<StorageProof> = block_chunk_to_sync
 				.iter()
 				.map(|block| {

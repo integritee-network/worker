@@ -17,39 +17,59 @@
 
 //! State of the light-client validation.
 
-use crate::{state::RelayState, Error, RelayId};
+use crate::{state::RelayState, Error, HashFor, LightClientState};
 use codec::{Decode, Encode};
-pub use sp_finality_grandpa::SetId;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
-use std::collections::BTreeMap;
+
+pub use sp_finality_grandpa::SetId;
 
 #[derive(Encode, Decode, Clone, Debug)]
 pub struct LightValidationState<Block: ParentchainBlockTrait> {
-	pub num_relays: RelayId,
-	pub tracked_relays: BTreeMap<RelayId, RelayState<Block>>,
+	pub(crate) relay_state: RelayState<Block>,
+}
+
+impl<Block: ParentchainBlockTrait> From<RelayState<Block>> for LightValidationState<Block> {
+	fn from(value: RelayState<Block>) -> Self {
+		Self::new(value)
+	}
 }
 
 impl<Block: ParentchainBlockTrait> LightValidationState<Block> {
-	pub fn new() -> Self {
-		Self { num_relays: Default::default(), tracked_relays: Default::default() }
+	pub fn new(relay_state: RelayState<Block>) -> Self {
+		Self { relay_state }
 	}
 
-	pub(crate) fn get_tracked_relay(&self, relay_id: RelayId) -> Result<&RelayState<Block>, Error> {
-		let relay = self.tracked_relays.get(&relay_id).ok_or(Error::NoSuchRelayExists)?;
-		Ok(relay)
+	pub(crate) fn get_relay(&self) -> &RelayState<Block> {
+		&self.relay_state
 	}
 
-	pub(crate) fn get_tracked_relay_mut(
-		&mut self,
-		relay_id: RelayId,
-	) -> Result<&mut RelayState<Block>, Error> {
-		let relay = self.tracked_relays.get_mut(&relay_id).ok_or(Error::NoSuchRelayExists)?;
-		Ok(relay)
+	pub(crate) fn get_relay_mut(&mut self) -> &mut RelayState<Block> {
+		&mut self.relay_state
 	}
 }
 
-impl<Block: ParentchainBlockTrait> Default for LightValidationState<Block> {
-	fn default() -> Self {
-		Self { num_relays: Default::default(), tracked_relays: Default::default() }
+impl<Block> LightClientState<Block> for LightValidationState<Block>
+where
+	Block: ParentchainBlockTrait,
+{
+	fn num_xt_to_be_included(&self) -> Result<usize, Error> {
+		let relay = self.get_relay();
+		Ok(relay.verify_tx_inclusion.len())
+	}
+
+	fn genesis_hash(&self) -> Result<HashFor<Block>, Error> {
+		let relay = self.get_relay();
+		let hash = relay.header_hashes.get(0).ok_or(Error::NoGenesis)?;
+		Ok(*hash)
+	}
+
+	fn latest_finalized_header(&self) -> Result<Block::Header, Error> {
+		let relay = self.get_relay();
+		Ok(relay.last_finalized_block_header.clone())
+	}
+
+	fn penultimate_finalized_block_header(&self) -> Result<Block::Header, Error> {
+		let relay = self.get_relay();
+		Ok(relay.penultimate_finalized_block_header.clone())
 	}
 }

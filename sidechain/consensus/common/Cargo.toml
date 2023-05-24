@@ -12,8 +12,8 @@ thiserror = { version = "1.0.26", optional = true }
 # local deps
 fork-tree = { path = "../../fork-tree", default-features = false }
 itc-parentchain-light-client = { path = "../../../core/parentchain/light-client", default-features = false }
-itp-block-import-queue = { path = "../../../core-primitives/block-import-queue", default-features = false }
 itp-extrinsics-factory = { path = "../../../core-primitives/extrinsics-factory", default-features = false }
+itp-import-queue = { path = "../../../core-primitives/import-queue", default-features = false }
 itp-node-api-metadata = { path = "../../../core-primitives/node-api/metadata", default-features = false }
 itp-node-api-metadata-provider = { path = "../../../core-primitives/node-api/metadata-provider", default-features = false }
 itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
@@ -50,7 +50,7 @@ std = [
     "thiserror",
     # local
     "itc-parentchain-light-client/std",
-    "itp-block-import-queue/std",
+    "itp-import-queue/std",
     "itp-extrinsics-factory/std",
     "itp-node-api-metadata/std",
     "itp-node-api-metadata-provider/std",
@@ -72,7 +72,7 @@ sgx = [
     "thiserror-sgx",
     # local
     "itc-parentchain-light-client/sgx",
-    "itp-block-import-queue/sgx",
+    "itp-import-queue/sgx",
     "itp-extrinsics-factory/sgx",
     "itp-node-api-metadata-provider/sgx",
     "itp-sgx-crypto/sgx",

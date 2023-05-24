@@ -15,10 +15,7 @@
 
 */
 
-use itc_parentchain_test::{
-	parentchain_block_builder::ParentchainBlockBuilder,
-	parentchain_header_builder::ParentchainHeaderBuilder,
-};
+use itc_parentchain_test::{ParentchainBlockBuilder, ParentchainHeaderBuilder};
 use itp_node_api::api_client::{ApiResult, ChainApi, SignedBlock};
 use itp_types::{
 	parentchain::{Hash, Header, StorageProof},
@@ -92,10 +89,7 @@ impl ChainApi for ParentchainApiMock {
 		Ok(Default::default())
 	}
 
-	fn get_events_for_block(
-		&self,
-		_block_hash: Option<H256>,
-	) -> ApiResult<itp_node_api::api_client::Events> {
+	fn get_events_for_block(&self, _block_hash: Option<H256>) -> ApiResult<Vec<u8>> {
 		Ok(Default::default())
 	}
 }

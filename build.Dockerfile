@@ -38,6 +38,9 @@ ENV SGX_MODE=$SGX_MODE
 ARG SGX_PRODUCTION=0
 ENV SGX_PRODUCTION=$SGX_PRODUCTION
 
+ARG WORKER_FEATURES_ARG
+ENV WORKER_FEATURES=$WORKER_FEATURES_ARG
+
 ENV WORKHOME=/home/ubuntu/work
 ENV HOME=/home/ubuntu
 
@@ -66,7 +69,7 @@ WORKDIR $WORKHOME/worker
 COPY . .
 
 RUN --mount=type=cache,id=cargo-registry,target=/opt/rust/registry \
-    --mount=type=cache,id=cargo-git,target=/opt/rust/git/db \
+	--mount=type=cache,id=cargo-git,target=/opt/rust/git/db \
 	--mount=type=cache,id=cargo-sccache-${WORKER_MODE}${ADDITIONAL_FEATURES},target=/home/ubuntu/.cache/sccache \
 	echo ${FINGERPRINT} && make && make mrenclave && make mrsigner && cargo test --release && sccache --show-stats
 
@@ -74,6 +77,8 @@ RUN --mount=type=cache,id=cargo-registry,target=/opt/rust/registry \
 ### The runner needs the aesmd service for the `SGX_MODE=HW`.
 ######################################################
 FROM oasisprotocol/aesmd:master AS runner
+ENV SGX_SDK /opt/sgxsdk
+ENV LD_LIBRARY_PATH "${SGX_SDK}/sdk_libs"
 
 ### Deployed CLI client
 ##################################################
