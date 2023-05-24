@@ -23,14 +23,13 @@ use crate::{
 	error::Result, pallet_sidechain::SidechainCallIndexes, pallet_teerex::TeerexCallIndexes,
 };
 use codec::{Decode, Encode};
-use itp_api_client_types::{Metadata, MetadataError};
 use sp_core::storage::StorageKey;
 
 pub use crate::error::Error;
+pub use itp_api_client_types::{Metadata, MetadataError};
 
 pub mod error;
 pub mod pallet_sidechain;
-pub mod pallet_system;
 pub mod pallet_teeracle;
 pub mod pallet_teerex;
 
@@ -39,6 +38,14 @@ pub mod metadata_mocks;
 
 pub trait NodeMetadataTrait: TeerexCallIndexes + SidechainCallIndexes {}
 impl<T: TeerexCallIndexes + SidechainCallIndexes> NodeMetadataTrait for T {}
+
+impl TryFrom<NodeMetadata> for Metadata {
+	type Error = crate::error::Error;
+
+	fn try_from(value: NodeMetadata) -> core::result::Result<Self, Self::Error> {
+		value.node_metadata.ok_or(Error::MetadataNotSet)
+	}
+}
 
 #[derive(Default, Encode, Decode, Debug, Clone)]
 pub struct NodeMetadata {

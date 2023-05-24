@@ -96,10 +96,10 @@ itc-parentchain = { path = "../core/parentchain/parentchain-crate", default-feat
 itc-parentchain-test = { path = "../core/parentchain/test", default-features = false }
 itc-tls-websocket-server = { path = "../core/tls-websocket-server", default-features = false, features = ["sgx"] }
 itp-attestation-handler = { path = "../core-primitives/attestation-handler", default-features = false, features = ["sgx"] }
-itp-block-import-queue = { path = "../core-primitives/block-import-queue", default-features = false, features = ["sgx"] }
 itp-component-container = { path = "../core-primitives/component-container", default-features = false, features = ["sgx"] }
 itp-extrinsics-factory = { path = "../core-primitives/extrinsics-factory", default-features = false, features = ["sgx"] }
 itp-hashing = { path = "../core-primitives/hashing", default-features = false }
+itp-import-queue = { path = "../core-primitives/import-queue", default-features = false, features = ["sgx"] }
 itp-node-api = { path = "../core-primitives/node-api", default-features = false, features = ["sgx"] }
 itp-node-api-metadata = { path = "../core-primitives/node-api/metadata", default-features = false }
 itp-nonce-cache = { path = "../core-primitives/nonce-cache", default-features = false, features = ["sgx"] }

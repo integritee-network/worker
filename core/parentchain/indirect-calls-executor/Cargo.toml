@@ -11,6 +11,7 @@ sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-s
 
 # local dependencies
 ita-stf = { path = "../../../app-libs/stf", default-features = false }
+itp-api-client-types = { path = "../../../core-primitives/node-api/api-client-types", default-features = false }
 itp-node-api = { path = "../../../core-primitives/node-api", default-features = false }
 itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
@@ -58,6 +59,7 @@ std = [
     "itp-sgx-crypto/std",
     "itp-stf-executor/std",
     "itp-top-pool-author/std",
+    "itp-api-client-types/std",
     "itp-types/std",
     "log/std",
     #substrate
