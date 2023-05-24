@@ -3627,6 +3627,7 @@ dependencies = [
  "itp-sgx-crypto",
  "itp-sgx-externalities",
  "itp-sgx-io",
+ "itp-sgx-temp-dir",
  "itp-stf-interface",
  "itp-stf-state-observer",
  "itp-time-utils",
