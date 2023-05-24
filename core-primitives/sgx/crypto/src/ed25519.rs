@@ -15,7 +15,10 @@
 
 */
 
-use crate::error::Result;
+use crate::{
+	error::{Error, Result},
+	ToPubkey,
+};
 use sp_core::ed25519;
 
 #[cfg(feature = "sgx")]
@@ -31,6 +34,15 @@ pub trait Ed25519Sealing {
 	fn create_sealed_if_absent(&self) -> Result<()>;
 
 	fn create_sealed(&self) -> Result<()>;
+}
+
+impl ToPubkey for ed25519::Pair {
+	type Error = Error;
+	type Pubkey = ed25519::Public;
+
+	fn pubkey(&self) -> Result<Self::Pubkey> {
+		Ok(self.clone().into())
+	}
 }
 
 #[cfg(feature = "sgx")]
