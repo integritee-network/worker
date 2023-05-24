@@ -80,8 +80,7 @@ where
 	type KeyType = <Pair as ToPubkey>::Pubkey;
 
 	fn retrieve_pubkey(&self) -> Result<Self::KeyType> {
-		let pair = self.key_lock.read().map_err(|_| Error::LockPoisoning).map(|l| l.clone())?;
-		pair.pubkey()
+		self.key_lock.read().map_err(|_| Error::LockPoisoning).map(|p| p.pubkey())?
 	}
 }
 
