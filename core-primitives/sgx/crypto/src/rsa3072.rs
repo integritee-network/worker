@@ -32,6 +32,9 @@ use std::vec::Vec;
 #[cfg(feature = "sgx")]
 pub use sgx::*;
 
+/// File name of the sealed RSA key file.
+pub const RSA3072_SEALED_KEY_FILE: &str = "rsa3072_key_sealed.bin";
+
 impl ShieldingCryptoEncrypt for Rsa3072KeyPair {
 	type Error = Error;
 
@@ -90,10 +93,9 @@ pub trait RsaSealing {
 pub mod sgx {
 	use super::*;
 	use crate::key_repository::KeyRepository;
-	use itp_settings::files::RSA3072_SEALED_KEY_FILE;
 	use itp_sgx_io::{seal, unseal, SealedIO};
 	use log::*;
-	use std::{path::PathBuf, sgxfs::SgxFile};
+	use std::path::PathBuf;
 
 	/// Gets a repository for an Rsa3072 keypair and initializes
 	/// a fresh key pair if it doesn't exist at `path`.
@@ -131,7 +133,7 @@ pub mod sgx {
 		}
 
 		fn exists(&self) -> bool {
-			SgxFile::open(self.path()).is_ok()
+			self.path().exists()
 		}
 
 		fn create_sealed_if_absent(&self) -> Result<()> {
@@ -145,7 +147,7 @@ pub mod sgx {
 		fn create_sealed(&self) -> Result<()> {
 			let rsa_keypair =
 				Rsa3072KeyPair::new().map_err(|e| Error::Other(format!("{:?}", e).into()))?;
-			// println!("[Enclave] generated RSA3072 key pair. Cleartext: {}", rsa_key_json);
+			info!("Generated RSA3072 key pair. PubKey: {:?}", rsa_keypair.pubkey()?);
 			self.seal(&rsa_keypair)
 		}
 	}

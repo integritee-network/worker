@@ -87,7 +87,7 @@ pub(crate) fn init_enclave(
 	let signer = signing_key_repository.retrieve_key()?;
 	info!("[Enclave initialized] Ed25519 prim raw : {:?}", signer.public().0);
 
-	let shielding_key_repository = Arc::new(get_rsa3072_repository(base_dir.clone())?);
+	let shielding_key_repository = Arc::new(get_rsa3072_repository(base_dir)?);
 	GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.initialize(shielding_key_repository.clone());
 
 	// Create the aes key that is used for state encryption such that a key is always present in tests.
