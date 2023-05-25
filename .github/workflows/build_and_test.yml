@@ -358,7 +358,7 @@ jobs:
     runs-on: integritee-builder-sgx
     name: Release Build of teeracle
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [build-test] #, integration-tests]
+    needs: [build-test, integration-tests]
 
     strategy:
       fail-fast: false
