@@ -413,8 +413,7 @@ jobs:
           PRIVKEY_B64: ${{ steps.import-secrets.outputs.PRIVKEY_B64 }}
           PRIVKEY_PASS: ${{ steps.import-secrets.outputs.PRIVKEY_PASS }}
         run: |
-          echo $PRIVKEY_B64 > privkey.pem.base64
-          base64 -i --decode privkey.pem.base64 > enclave-runtime/intel_sgx.pem
+       echo $PRIVKEY_B64 | base64 --ignore-garbage --decode > enclave-runtime/intel_sgx.pem
           echo $PRIVKEY_PASS > enclave-runtime/passfile.txt
 
       - name: Build Worker & Run Cargo Test
