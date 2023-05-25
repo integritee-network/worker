@@ -164,7 +164,7 @@ class Worker:
                                         'substrate_api_client=warn,'
                                         'jsonrpsee_ws_client=warn,'
                                         'jsonrpsee_ws_server=warn,'
-                                        'enclave_runtime=warn,'
+                                        'enclave_runtime=info,'
                                         'integritee_service=warn,'
                                         'ita_stf=debug')
 

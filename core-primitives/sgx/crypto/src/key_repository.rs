@@ -21,7 +21,10 @@ use std::sync::SgxRwLock as RwLock;
 #[cfg(feature = "std")]
 use std::sync::RwLock;
 
-use crate::error::{Error, Result};
+use crate::{
+	error::{Error, Result},
+	ToPubkey,
+};
 use itp_sgx_io::SealedIO;
 use std::sync::Arc;
 
@@ -30,6 +33,13 @@ pub trait AccessKey {
 	type KeyType;
 
 	fn retrieve_key(&self) -> Result<Self::KeyType>;
+}
+
+/// Access a cryptographic public key.
+pub trait AccessPubkey {
+	type KeyType;
+
+	fn retrieve_pubkey(&self) -> Result<Self::KeyType>;
 }
 
 /// Mutate a cryptographic key.
@@ -59,6 +69,18 @@ where
 
 	fn retrieve_key(&self) -> Result<Self::KeyType> {
 		self.key_lock.read().map_err(|_| Error::LockPoisoning).map(|l| l.clone())
+	}
+}
+
+impl<Pair, SealedIo> AccessPubkey for KeyRepository<Pair, SealedIo>
+where
+	Pair: ToPubkey<Error = crate::error::Error> + Clone,
+	SealedIo: SealedIO<Unsealed = Pair, Error = crate::error::Error>,
+{
+	type KeyType = <Pair as ToPubkey>::Pubkey;
+
+	fn retrieve_pubkey(&self) -> Result<Self::KeyType> {
+		self.key_lock.read().map_err(|_| Error::LockPoisoning).map(|p| p.pubkey())?
 	}
 }
 
