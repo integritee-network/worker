@@ -422,7 +422,7 @@ jobs:
         run: >
           docker build -t integritee/${{ matrix.flavor_id }}:${{ github.ref_name }}
           --target deployed-worker
-          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg SGX_SIGN_KEY=enclave-runtime/intel_sgx.pem --build-arg SGX_PASSFILE=enclave-runtime/passfile.txt --build-arg SGX_PRODUCTION=1 --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=${{ matrix.sgx_mode }}
+          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg SGX_COMMERCIAL_KEY=enclave-runtime/intel_sgx.pem --build-arg SGX_PASSFILE=enclave-runtime/passfile.txt --build-arg SGX_PRODUCTION=1 --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=${{ matrix.sgx_mode }}
           -f build.Dockerfile .
 
       - name: Save released teeracle
@@ -460,32 +460,35 @@ jobs:
           name: integritee-worker-teeracle-${{ github.ref_name }}.tar.gz
           path: .  
 
-      - name: Download Integritee Service
-        uses: actions/download-artifact@v3
-        with:
-          name: integritee-worker-sidechain-${{ github.sha }}
-          path: integritee-worker-tmp
+      # 
+      # Temporary comment out until we decide what to release
+      #
+      # - name: Download Integritee Service
+      #   uses: actions/download-artifact@v3
+      #   with:
+      #     name: integritee-worker-sidechain-${{ github.sha }}
+      #     path: integritee-worker-tmp
 
-      - name: Download Integritee Client
-        uses: actions/download-artifact@v3
-        with:
-          name: integritee-client-sidechain-${{ github.sha }}
-          path: integritee-client-tmp
+      # - name: Download Integritee Client
+      #   uses: actions/download-artifact@v3
+      #   with:
+      #     name: integritee-client-sidechain-${{ github.sha }}
+      #     path: integritee-client-tmp
 
-      - name: Download Enclave Signed
-        uses: actions/download-artifact@v3
-        with:
-          name: enclave-signed-sidechain-${{ github.sha }}
-          path: enclave-signed-tmp
+      # - name: Download Enclave Signed
+      #   uses: actions/download-artifact@v3
+      #   with:
+      #     name: enclave-signed-sidechain-${{ github.sha }}
+      #     path: enclave-signed-tmp
 
-      - name: Move service binaries
-        run: mv integritee-worker-tmp/integritee-service ./integritee-demo-validateer
+      # - name: Move service binaries
+      #   run: mv integritee-worker-tmp/integritee-service ./integritee-demo-validateer
 
-      - name: Move service client binaries
-        run: mv integritee-client-tmp/integritee-cli ./integritee-client
+      # - name: Move service client binaries
+      #   run: mv integritee-client-tmp/integritee-cli ./integritee-client
 
-      - name: Move service client binaries
-        run: mv enclave-signed-tmp/enclave.signed.so ./enclave.signed.so
+      # - name: Move service client binaries
+      #   run: mv enclave-signed-tmp/enclave.signed.so ./enclave.signed.so
 
       - name: Changelog
         uses: scottbrenner/generate-changelog-action@master
