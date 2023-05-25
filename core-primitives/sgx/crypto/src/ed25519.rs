@@ -139,7 +139,7 @@ pub mod sgx_tests {
 	use crate::{key_repository::AccessKey, Ed25519Sealing, ToPubkey};
 	use itp_sgx_temp_dir::TempDir;
 
-	pub fn initializing_new_repo_twice_initializes_key_only_once() {
+	pub fn using_get_ed25519_repository_twice_initializes_key_only_once() {
 		let temp_dir =
 			TempDir::with_prefix("initializing_new_repo_twice_initializes_key_only_once").unwrap();
 		let temp_path = temp_dir.path().to_path_buf();
