@@ -28,7 +28,7 @@ use ita_sgx_runtime::Runtime;
 use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, ExtrinsicSender};
 use itp_primitives_cache::{GetPrimitives, GLOBAL_PRIMITIVES_CACHE};
 use itp_rpc::RpcReturnValue;
-use itp_sgx_crypto::Rsa3072Seal;
+use itp_sgx_crypto::key_repository::AccessPubkey;
 use itp_stf_executor::getter_executor::ExecuteGetter;
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{DirectRequestStatus, Request, ShardIdentifier, H256};
@@ -36,6 +36,7 @@ use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use its_primitives::types::block::SignedBlock;
 use its_sidechain::rpc_handler::{direct_top_pool_api, import_block_api};
 use jsonrpc_core::{serde_json::json, IoHandler, Params, Value};
+use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_runtime::OpaqueExtrinsic;
 use std::{borrow::ToOwned, format, str, string::String, sync::Arc, vec::Vec};
 
@@ -53,10 +54,15 @@ fn get_all_rpc_methods_string(io_handler: &IoHandler) -> String {
 	format!("methods: [{}]", method_string)
 }
 
-pub fn public_api_rpc_handler<R, G>(top_pool_author: Arc<R>, getter_executor: Arc<G>) -> IoHandler
+pub fn public_api_rpc_handler<Author, GetterExecutor, AccessShieldingKey>(
+	top_pool_author: Arc<Author>,
+	getter_executor: Arc<GetterExecutor>,
+	shielding_key: Arc<AccessShieldingKey>,
+) -> IoHandler
 where
-	R: AuthorApi<H256, H256> + Send + Sync + 'static,
-	G: ExecuteGetter + Send + Sync + 'static,
+	Author: AuthorApi<H256, H256> + Send + Sync + 'static,
+	GetterExecutor: ExecuteGetter + Send + Sync + 'static,
+	AccessShieldingKey: AccessPubkey<KeyType = Rsa3072PubKey> + Send + Sync + 'static,
 {
 	let io = IoHandler::new();
 
@@ -66,7 +72,7 @@ where
 	// author_getShieldingKey
 	let rsa_pubkey_name: &str = "author_getShieldingKey";
 	io.add_sync_method(rsa_pubkey_name, move |_: Params| {
-		let rsa_pubkey = match Rsa3072Seal::unseal_pubkey() {
+		let rsa_pubkey = match shielding_key.retrieve_pubkey() {
 			Ok(key) => key,
 			Err(status) => {
 				let error_msg: String = format!("Could not get rsa pubkey due to: {}", status);

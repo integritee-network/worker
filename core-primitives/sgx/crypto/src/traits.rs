@@ -33,3 +33,10 @@ pub trait ShieldingCryptoDecrypt {
 	type Error: Debug;
 	fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error>;
 }
+
+pub trait ToPubkey {
+	type Error: Debug;
+	type Pubkey;
+
+	fn pubkey(&self) -> Result<Self::Pubkey, Self::Error>;
+}
