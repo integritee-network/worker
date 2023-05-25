@@ -24,6 +24,9 @@ use sp_core::ed25519;
 #[cfg(feature = "sgx")]
 pub use sgx::*;
 
+/// File name of the sealed Ed25519 seed file.
+pub const SEALED_SIGNER_SEED_FILE: &str = "ed25519_key_sealed.bin";
+
 pub trait Ed25519Sealing {
 	fn unseal_pubkey(&self) -> Result<ed25519::Public>;
 
@@ -47,13 +50,13 @@ impl ToPubkey for ed25519::Pair {
 
 #[cfg(feature = "sgx")]
 pub mod sgx {
+	use super::SEALED_SIGNER_SEED_FILE;
 	use crate::{
 		error::{Error, Result},
 		key_repository::KeyRepository,
 		Ed25519Sealing,
 	};
 	use codec::Encode;
-	use itp_settings::files::SEALED_SIGNER_SEED_FILE;
 	use itp_sgx_io::{seal, unseal, SealedIO};
 	use log::*;
 	use sgx_rand::{Rng, StdRng};
