@@ -413,7 +413,7 @@ jobs:
           PRIVKEY_B64: ${{ steps.import-secrets.outputs.PRIVKEY_B64 }}
           PRIVKEY_PASS: ${{ steps.import-secrets.outputs.PRIVKEY_PASS }}
         run: |
-       echo $PRIVKEY_B64 | base64 --ignore-garbage --decode > enclave-runtime/intel_sgx.pem
+          echo $PRIVKEY_B64 | base64 --ignore-garbage --decode > enclave-runtime/intel_sgx.pem
           echo $PRIVKEY_PASS > enclave-runtime/passfile.txt
 
       - name: Build Worker & Run Cargo Test
@@ -460,6 +460,33 @@ jobs:
           name: integritee-worker-teeracle-${{ github.ref_name }}.tar.gz
           path: .  
 
+      - name: Download Integritee Service
+        uses: actions/download-artifact@v3
+        with:
+          name: integritee-worker-sidechain-${{ github.sha }}
+          path: integritee-worker-tmp
+
+      - name: Download Integritee Client
+        uses: actions/download-artifact@v3
+        with:
+          name: integritee-client-sidechain-${{ github.sha }}
+          path: integritee-client-tmp
+
+      - name: Download Enclave Signed
+        uses: actions/download-artifact@v3
+        with:
+          name: enclave-signed-sidechain-${{ github.sha }}
+          path: enclave-signed-tmp
+
+      - name: Move service binaries
+        run: mv integritee-worker-tmp/integritee-service ./integritee-demo-validateer
+
+      - name: Move service client binaries
+        run: mv integritee-client-tmp/integritee-cli ./integritee-client
+
+      - name: Move service client binaries
+        run: mv enclave-signed-tmp/enclave.signed.so ./enclave.signed.so
+
       - name: Changelog
         uses: scottbrenner/generate-changelog-action@master
         id: Changelog
@@ -479,4 +506,6 @@ jobs:
           draft: true
           files: |
             integritee-worker-teeracle-${{ github.ref_name }}.tar.gz
-
+            integritee-client
+            integritee-demo-validateer
+            enclave.signed.so

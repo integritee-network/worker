@@ -58,7 +58,7 @@ jobs:
           -H "Authorization: JWT ${TOKEN}"
 
       - name: Delete tag as well
-        uses: dev-drprasad/delete-tag-and-release@v0.2.0
+        uses: dev-drprasad/delete-tag-and-release@v0.2.1
         with:
           delete_release: false # it is triggered by release deletion
           tag_name: ${{ steps.vars.outputs.tag }} # tag name to delete
