@@ -257,6 +257,7 @@ fn send_direct_request(
 							}
 							if connection_can_be_closed(status) {
 								direct_api.close().unwrap();
+								return Ok(None)
 							}
 						},
 						DirectRequestStatus::Ok => {
