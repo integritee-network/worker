@@ -178,7 +178,7 @@ pub mod sgx_tests {
 	use itp_sgx_temp_dir::TempDir;
 	use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 
-	/// Helper method beques Rsa3072 does not implement `Eq`.
+	/// Helper method because Rsa3072 does not implement `Eq`.
 	pub fn equal(pubkey1: &Rsa3072PubKey, pubkey2: &Rsa3072PubKey) -> bool {
 		serde_json::to_vec(pubkey1).unwrap() == serde_json::to_vec(pubkey2).unwrap()
 	}
