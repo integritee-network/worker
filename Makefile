@@ -74,7 +74,7 @@ SGX_COMMON_CFLAGS += -fstack-protector
 ifeq ($(SGX_PRODUCTION), 1)
 	SGX_ENCLAVE_MODE = "Production Mode"
 	SGX_ENCLAVE_CONFIG = "enclave-runtime/Enclave.config.production.xml"
-	SGX_SIGN_KEY = $(SGX_COMMERCIAL_KEY)
+	SGX_SIGN_KEY = $(SGX_SIGN_KEY)
 	SGX_SIGN_PASSFILE = $(SGX_PASSFILE)
 	WORKER_FEATURES := --features=production,$(WORKER_MODE),$(WORKER_FEATURES),$(ADDITIONAL_FEATURES)
 else
