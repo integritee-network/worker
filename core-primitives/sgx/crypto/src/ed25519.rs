@@ -144,7 +144,8 @@ pub mod sgx_tests {
 
 	pub fn using_get_ed25519_repository_twice_initializes_key_only_once() {
 		let temp_dir =
-			TempDir::with_prefix("initializing_new_repo_twice_initializes_key_only_once").unwrap();
+			TempDir::with_prefix("using_get_rsa3072_repository_twice_initializes_key_only_once")
+				.unwrap();
 		let temp_path = temp_dir.path().to_path_buf();
 		let key1 = get_ed25519_repository(temp_path.clone()).unwrap().retrieve_key().unwrap();
 		let key2 = get_ed25519_repository(temp_path).unwrap().retrieve_key().unwrap();
