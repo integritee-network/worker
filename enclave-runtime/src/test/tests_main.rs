@@ -91,6 +91,8 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		itp_stf_state_handler::test::sgx_tests::test_file_io_get_state_hash_works,
 		itp_stf_state_handler::test::sgx_tests::test_list_state_ids_ignores_files_not_matching_the_pattern,
 		itp_stf_state_handler::test::sgx_tests::test_in_memory_state_initializes_from_shard_directory,
+		itp_sgx_crypto::tests::ed25529_sealing_works,
+		itp_sgx_crypto::tests::initializing_new_repo_twice_initializes_key_only_once,
 		test_compose_block,
 		test_submit_trusted_call_to_top_pool,
 		test_submit_trusted_getter_to_top_pool,

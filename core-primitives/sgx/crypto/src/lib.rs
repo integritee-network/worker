@@ -47,3 +47,10 @@ pub use traits::*;
 
 #[cfg(feature = "mocks")]
 pub mod mocks;
+
+#[cfg(feature = "test")]
+pub mod tests {
+	pub use super::ed25519::sgx_tests::{
+		ed25529_sealing_works, initializing_new_repo_twice_initializes_key_only_once,
+	};
+}

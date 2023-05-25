@@ -132,3 +132,44 @@ pub mod sgx {
 		}
 	}
 }
+
+#[cfg(feature = "test")]
+pub mod sgx_tests {
+	use super::sgx::*;
+	use crate::{key_repository::AccessKey, Ed25519Sealing, ToPubkey};
+	use itp_sgx_temp_dir::TempDir;
+
+	pub fn initializing_new_repo_twice_initializes_key_only_once() {
+		let temp_dir =
+			TempDir::with_prefix("initializing_new_repo_twice_initializes_key_only_once").unwrap();
+		let temp_path = temp_dir.path().to_path_buf();
+		let key1 = get_ed25519_repository(temp_path.clone()).unwrap().retrieve_key().unwrap();
+		let key2 = get_ed25519_repository(temp_path).unwrap().retrieve_key().unwrap();
+		assert_eq!(key1.pubkey().unwrap(), key2.pubkey().unwrap());
+	}
+
+	pub fn ed25529_sealing_works() {
+		let temp_dir = TempDir::with_prefix("ed25529_sealing_works").unwrap();
+		let seal = Ed25519Seal::new(temp_dir.path().to_path_buf());
+
+		// Create new sealed keys and unseal them.
+		seal.create_sealed_if_absent().unwrap();
+		let pair = seal.unseal_pair().unwrap();
+		let pubkey = seal.unseal_pubkey().unwrap();
+
+		assert!(seal.exists());
+		assert_eq!(pair.pubkey().unwrap(), pubkey);
+
+		// Should not change anything because the key is already there.
+		seal.create_sealed_if_absent().unwrap();
+		let pair_same = seal.unseal_pair().unwrap();
+
+		assert_eq!(pair.pubkey().unwrap(), pair_same.pubkey().unwrap());
+
+		// Should overwrite previous keys.
+		seal.create_sealed().unwrap();
+		let pair_different = seal.unseal_pair().unwrap();
+
+		assert_ne!(pair_different.pubkey().unwrap(), pair.pubkey().unwrap());
+	}
+}
