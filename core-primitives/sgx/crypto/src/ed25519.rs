@@ -156,6 +156,7 @@ pub mod sgx_tests {
 		let seal = Ed25519Seal::new(temp_dir.path().to_path_buf());
 
 		// Create new sealed keys and unseal them.
+		assert!(!seal.exists());
 		seal.create_sealed_if_absent().unwrap();
 		let pair = seal.unseal_pair().unwrap();
 		let pubkey = seal.unseal_pubkey().unwrap();
