@@ -71,7 +71,7 @@ COPY . .
 RUN --mount=type=cache,id=cargo-registry,target=/opt/rust/registry \
 	--mount=type=cache,id=cargo-git,target=/opt/rust/git/db \
 	--mount=type=cache,id=cargo-sccache-${WORKER_MODE}${ADDITIONAL_FEATURES},target=/home/ubuntu/.cache/sccache \
-	echo ${FINGERPRINT} && make && make mrenclave && make mrsigner && cargo test --release && sccache --show-stats
+	echo ${FINGERPRINT} && make && make identity && cargo test --release && sccache --show-stats
 
 ### Base Runner Stage
 ### The runner needs the aesmd service for the `SGX_MODE=HW`.
