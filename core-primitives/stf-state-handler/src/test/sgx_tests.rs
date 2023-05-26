@@ -57,6 +57,14 @@ fn aes_repo(path: PathBuf) -> StateKeyRepository {
 	get_aes_repository(path).unwrap()
 }
 
+/// Gets a temporary key repository.
+///
+/// We pass and ID such that it doesn't clash with other temp repositories.
+fn temp_state_key_repository(id: &str) -> StateKeyRepository {
+	let temp_dir = TempDir::with_prefix(id).unwrap();
+	get_aes_repository(temp_dir.path().to_path_buf()).unwrap()
+}
+
 // Fixme: Move this test to sgx-runtime:
 //
 // https://github.com/integritee-network/sgx-runtime/issues/23
