@@ -158,3 +158,44 @@ pub mod sgx {
 		}
 	}
 }
+
+#[cfg(feature = "test")]
+pub mod sgx_tests {
+	use super::sgx::*;
+	use crate::{key_repository::AccessKey, AesSeal, AesSealing};
+	use itp_sgx_temp_dir::TempDir;
+
+	pub fn using_get_aes_repository_twice_initializes_key_only_once() {
+		let temp_dir =
+			TempDir::with_prefix("using_get_aes_repository_twice_initializes_key_only_once")
+				.unwrap();
+		let temp_path = temp_dir.path().to_path_buf();
+		let key1 = get_aes_repository(temp_path.clone()).unwrap().retrieve_key().unwrap();
+		let key2 = get_aes_repository(temp_path).unwrap().retrieve_key().unwrap();
+		assert_eq!(key1, key2);
+	}
+
+	pub fn aes_sealing_works() {
+		let temp_dir = TempDir::with_prefix("aes_sealing_works").unwrap();
+		let seal = AesSeal::new(temp_dir.path().to_path_buf());
+
+		// Create new sealed keys and unseal them
+		assert!(!seal.exists());
+		seal.create_sealed_if_absent().unwrap();
+		let key = seal.unseal_key().unwrap();
+
+		assert!(seal.exists());
+
+		// Should not change anything because the key is already there.
+		seal.create_sealed_if_absent().unwrap();
+		let key_same = seal.unseal_key().unwrap();
+
+		assert_eq!(key, key_same);
+
+		// Should overwrite previous keys.
+		seal.create_sealed().unwrap();
+		let key_different = seal.unseal_key().unwrap();
+
+		assert_ne!(key_different, key);
+	}
+}
