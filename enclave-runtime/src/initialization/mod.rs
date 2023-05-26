@@ -26,9 +26,9 @@ use crate::{
 		EnclaveSidechainApi, EnclaveSidechainBlockImportQueue,
 		EnclaveSidechainBlockImportQueueWorker, EnclaveSidechainBlockImporter,
 		EnclaveSidechainBlockSyncer, EnclaveStateFileIo, EnclaveStateHandler,
-		EnclaveStateInitializer, EnclaveStateKeyRepository, EnclaveStateObserver,
-		EnclaveStateSnapshotRepository, EnclaveStfEnclaveSigner, EnclaveTopPool,
-		EnclaveTopPoolAuthor, GLOBAL_ATTESTATION_HANDLER_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
+		EnclaveStateInitializer, EnclaveStateObserver, EnclaveStateSnapshotRepository,
+		EnclaveStfEnclaveSigner, EnclaveTopPool, EnclaveTopPoolAuthor,
+		GLOBAL_ATTESTATION_HANDLER_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
 		GLOBAL_RPC_WS_HANDLER_COMPONENT, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
 		GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT,
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
@@ -61,9 +61,8 @@ use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_primitives_cache::GLOBAL_PRIMITIVES_CACHE;
 use itp_settings::files::STATE_SNAPSHOTS_CACHE_SIZE;
 use itp_sgx_crypto::{
-	aes, get_ed25519_repository, get_rsa3072_repository, key_repository::AccessKey, AesSeal,
+	get_aes_repository, get_ed25519_repository, get_rsa3072_repository, key_repository::AccessKey,
 };
-use itp_sgx_io::StaticSealedIO;
 use itp_stf_state_handler::{
 	handle_state::HandleState, query_shard_state::QueryShardState,
 	state_snapshot_repository::VersionedStateAccess,
@@ -87,16 +86,12 @@ pub(crate) fn init_enclave(
 	let signer = signing_key_repository.retrieve_key()?;
 	info!("[Enclave initialized] Ed25519 prim raw : {:?}", signer.public().0);
 
-	let shielding_key_repository = Arc::new(get_rsa3072_repository(base_dir)?);
+	let shielding_key_repository = Arc::new(get_rsa3072_repository(base_dir.clone())?);
 	GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.initialize(shielding_key_repository.clone());
 
 	// Create the aes key that is used for state encryption such that a key is always present in tests.
 	// It will be overwritten anyway if mutual remote attestation is performed with the primary worker.
-	aes::create_sealed_if_absent().map_err(Error::Crypto)?;
-
-	let state_key = AesSeal::unseal_from_static_file()?;
-	let state_key_repository =
-		Arc::new(EnclaveStateKeyRepository::new(state_key, Arc::new(AesSeal)));
+	let state_key_repository = Arc::new(get_aes_repository(base_dir)?);
 	GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.initialize(state_key_repository.clone());
 
 	let state_file_io = Arc::new(EnclaveStateFileIo::new(state_key_repository));

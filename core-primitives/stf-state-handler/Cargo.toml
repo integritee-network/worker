@@ -22,6 +22,9 @@ itp-stf-state-observer = { path = "../stf-state-observer", default-features = fa
 itp-time-utils = { path = "../../core-primitives/time-utils", default-features = false }
 itp-types = { path = "../types", default-features = false }
 
+# for tests
+itp-sgx-temp-dir = { version = "0.1", default-features = false, optional = true, path = "../../core-primitives/sgx/temp-dir" }
+
 # sgx enabled external libraries
 rust-base58_sgx = { package = "rust-base58", rev = "sgx_1.1.3", git = "https://github.com/mesalock-linux/rust-base58-sgx", optional = true, default-features = false, features = ["mesalock_sgx"] }
 thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
@@ -71,4 +74,5 @@ sgx = [
 test = [
     "itp-sgx-crypto/mocks",
     "itp-stf-interface/mocks",
+    "itp-sgx-temp-dir",
 ]
