@@ -39,7 +39,7 @@ use itp_sgx_io::write;
 use itp_sgx_temp_dir::TempDir;
 use itp_stf_state_observer::state_observer::StateObserver;
 use itp_types::{ShardIdentifier, H256};
-use std::{path::PathBuf, sync::Arc, thread, vec::Vec};
+use std::{sync::Arc, thread, vec::Vec};
 
 const STATE_SNAPSHOTS_CACHE_SIZE: usize = 3;
 
