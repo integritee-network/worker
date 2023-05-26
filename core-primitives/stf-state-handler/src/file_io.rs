@@ -339,13 +339,10 @@ pub(crate) fn list_shards(path: &Path) -> Result<Vec<ShardIdentifier>> {
 	let directory_items = list_items_in_directory(path);
 	Ok(directory_items
 		.iter()
-		.flat_map(|item| {
-			item.from_base58()
-				.ok()
-				.map(|encoded_shard_id| {
-					ShardIdentifier::decode(&mut encoded_shard_id.as_slice()).ok()
-				})
-				.flatten()
+		.filter_map(|item| {
+			item.from_base58().ok().and_then(|encoded_shard_id| {
+				ShardIdentifier::decode(&mut encoded_shard_id.as_slice()).ok()
+			})
 		})
 		.collect())
 }
@@ -357,7 +354,7 @@ fn list_items_in_directory(directory: &Path) -> Vec<String> {
 	};
 
 	items
-		.flat_map(|fr| fr.map(|de| de.file_name().into_string().ok()).ok().flatten())
+		.filter_map(|fr| fr.ok().and_then(|de| de.file_name().into_string().ok()))
 		.collect()
 }
 
