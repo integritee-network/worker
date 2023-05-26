@@ -16,7 +16,6 @@
 */
 
 use crate::{
-	error::{Error, Result},
 	file_io::{sgx::SgxStateFileIo, StateDir, StateFileIo},
 	handle_state::HandleState,
 	in_memory_state_file_io::sgx::create_in_memory_state_io_from_shards_directories,
@@ -165,11 +164,11 @@ pub fn test_state_handler_file_backend_is_initialized() {
 
 	assert!(state_handler.shard_exists(&shard).unwrap());
 	assert!(1 <= state_handler.list_shards().unwrap().len()); // only greater equal, because there might be other (non-test) shards present
-	assert_eq!(1, state_dir.number_of_files_in_shard_dir(&shard).unwrap()); // creates a first initialized file
+	assert_eq!(1, state_dir.list_state_ids_for_shard(&shard).unwrap().len()); // creates a first initialized file
 
 	let _state = state_handler.load_cloned(&shard).unwrap();
 
-	assert_eq!(1, state_dir.number_of_files_in_shard_dir(&shard).unwrap());
+	assert_eq!(1, state_dir.list_state_ids_for_shard(&shard).unwrap().len());
 }
 
 pub fn test_multiple_state_updates_create_snapshots_up_to_cache_size() {
@@ -179,35 +178,35 @@ pub fn test_multiple_state_updates_create_snapshots_up_to_cache_size() {
 
 	let state_handler = initialize_state_handler(state_key_access, state_dir.clone());
 
-	assert_eq!(1, state_dir.number_of_files_in_shard_dir(&shard).unwrap());
+	assert_eq!(1, state_dir.list_state_ids_for_shard(&shard).unwrap().len());
 
 	let hash_1 = update_state(
 		state_handler.as_ref(),
 		&shard,
 		("my_key_1".encode(), "mega_secret_value".encode()),
 	);
-	assert_eq!(2, state_dir.number_of_files_in_shard_dir(&shard).unwrap());
+	assert_eq!(2, state_dir.list_state_ids_for_shard(&shard).unwrap().len());
 
 	let hash_2 = update_state(
 		state_handler.as_ref(),
 		&shard,
 		("my_key_2".encode(), "mega_secret_value222".encode()),
 	);
-	assert_eq!(3, state_dir.number_of_files_in_shard_dir(&shard).unwrap());
+	assert_eq!(3, state_dir.list_state_ids_for_shard(&shard).unwrap().len());
 
 	let hash_3 = update_state(
 		state_handler.as_ref(),
 		&shard,
 		("my_key_3".encode(), "mega_secret_value3".encode()),
 	);
-	assert_eq!(3, state_dir.number_of_files_in_shard_dir(&shard).unwrap());
+	assert_eq!(3, state_dir.list_state_ids_for_shard(&shard).unwrap().len());
 
 	let hash_4 = update_state(
 		state_handler.as_ref(),
 		&shard,
 		("my_key_3".encode(), "mega_secret_valuenot3".encode()),
 	);
-	assert_eq!(3, state_dir.number_of_files_in_shard_dir(&shard).unwrap());
+	assert_eq!(3, state_dir.list_state_ids_for_shard(&shard).unwrap().len());
 
 	assert_ne!(hash_1, hash_2);
 	assert_ne!(hash_1, hash_3);
@@ -216,7 +215,10 @@ pub fn test_multiple_state_updates_create_snapshots_up_to_cache_size() {
 	assert_ne!(hash_2, hash_4);
 	assert_ne!(hash_3, hash_4);
 
-	assert_eq!(STATE_SNAPSHOTS_CACHE_SIZE, state_dir.number_of_files_in_shard_dir(&shard).unwrap());
+	assert_eq!(
+		STATE_SNAPSHOTS_CACHE_SIZE,
+		state_dir.list_state_ids_for_shard(&shard).unwrap().len()
+	);
 }
 
 pub fn test_file_io_get_state_hash_works() {
@@ -255,7 +257,10 @@ pub fn test_state_files_from_handler_can_be_loaded_again() {
 	// We initialize another state handler to load the state from the changes we just made.
 	let updated_state_handler = initialize_state_handler(state_key_access, state_dir.clone());
 
-	assert_eq!(STATE_SNAPSHOTS_CACHE_SIZE, state_dir.number_of_files_in_shard_dir(&shard).unwrap());
+	assert_eq!(
+		STATE_SNAPSHOTS_CACHE_SIZE,
+		state_dir.list_state_ids_for_shard(&shard).unwrap().len()
+	);
 	assert_eq!(
 		&"value3".encode(),
 		updated_state_handler
