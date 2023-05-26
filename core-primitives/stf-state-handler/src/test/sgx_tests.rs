@@ -296,10 +296,12 @@ pub fn test_list_state_ids_ignores_files_not_matching_the_pattern() {
 
 pub fn test_in_memory_state_initializes_from_shard_directory() {
 	let shard: ShardIdentifier = [45u8; 32].into();
-	let (temp_dir, _, _) =
+	let (_temp_dir, _, path_provider) =
 		setup("test_list_state_ids_ignores_files_not_matching_the_pattern", &shard);
 
-	let file_io = create_in_memory_state_io_from_shards_directories(&temp_dir.path()).unwrap();
+	let file_io =
+		create_in_memory_state_io_from_shards_directories(&path_provider.shards_directory())
+			.unwrap();
 	let state_initializer = Arc::new(TestStateInitializer::new(StfState::new(Default::default())));
 	let state_repository_loader =
 		StateSnapshotRepositoryLoader::new(file_io.clone(), state_initializer);
