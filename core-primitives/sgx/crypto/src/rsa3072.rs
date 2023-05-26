@@ -32,6 +32,9 @@ use std::vec::Vec;
 #[cfg(feature = "sgx")]
 pub use sgx::*;
 
+/// File name of the sealed RSA key file.
+pub const RSA3072_SEALED_KEY_FILE: &str = "rsa3072_key_sealed.bin";
+
 impl ShieldingCryptoEncrypt for Rsa3072KeyPair {
 	type Error = Error;
 
@@ -90,10 +93,9 @@ pub trait RsaSealing {
 pub mod sgx {
 	use super::*;
 	use crate::key_repository::KeyRepository;
-	use itp_settings::files::RSA3072_SEALED_KEY_FILE;
 	use itp_sgx_io::{seal, unseal, SealedIO};
 	use log::*;
-	use std::{path::PathBuf, sgxfs::SgxFile};
+	use std::path::PathBuf;
 
 	/// Gets a repository for an Rsa3072 keypair and initializes
 	/// a fresh key pair if it doesn't exist at `path`.
@@ -131,7 +133,7 @@ pub mod sgx {
 		}
 
 		fn exists(&self) -> bool {
-			SgxFile::open(self.path()).is_ok()
+			self.path().exists()
 		}
 
 		fn create_sealed_if_absent(&self) -> Result<()> {
@@ -145,7 +147,7 @@ pub mod sgx {
 		fn create_sealed(&self) -> Result<()> {
 			let rsa_keypair =
 				Rsa3072KeyPair::new().map_err(|e| Error::Other(format!("{:?}", e).into()))?;
-			// println!("[Enclave] generated RSA3072 key pair. Cleartext: {}", rsa_key_json);
+			info!("Generated RSA3072 key pair. PubKey: {:?}", rsa_keypair.pubkey()?);
 			self.seal(&rsa_keypair)
 		}
 	}
@@ -166,5 +168,54 @@ pub mod sgx {
 				.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
 			Ok(seal(&key_json, self.path())?)
 		}
+	}
+}
+
+#[cfg(feature = "test")]
+pub mod sgx_tests {
+	use super::{serde_json, sgx::*};
+	use crate::{key_repository::AccessKey, RsaSealing, ToPubkey};
+	use itp_sgx_temp_dir::TempDir;
+	use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
+
+	/// Helper method because Rsa3072 does not implement `Eq`.
+	pub fn equal(pubkey1: &Rsa3072PubKey, pubkey2: &Rsa3072PubKey) -> bool {
+		serde_json::to_vec(pubkey1).unwrap() == serde_json::to_vec(pubkey2).unwrap()
+	}
+
+	pub fn using_get_rsa3072_repository_twice_initializes_key_only_once() {
+		let temp_dir =
+			TempDir::with_prefix("using_get_rsa3072_repository_twice_initializes_key_only_once")
+				.unwrap();
+		let temp_path = temp_dir.path().to_path_buf();
+		let key1 = get_rsa3072_repository(temp_path.clone()).unwrap().retrieve_key().unwrap();
+		let key2 = get_rsa3072_repository(temp_path).unwrap().retrieve_key().unwrap();
+		assert!(equal(&key1.pubkey().unwrap(), &key2.pubkey().unwrap()));
+	}
+
+	pub fn rsa3072_sealing_works() {
+		let temp_dir = TempDir::with_prefix("rsa3072_sealing_works").unwrap();
+		let seal = Rsa3072Seal::new(temp_dir.path().to_path_buf());
+
+		// Create new sealed keys and unseal them
+		assert!(!seal.exists());
+		seal.create_sealed_if_absent().unwrap();
+		let pair = seal.unseal_pair().unwrap();
+		let pubkey = seal.unseal_pubkey().unwrap();
+
+		assert!(seal.exists());
+		assert!(equal(&pair.pubkey().unwrap(), &pubkey));
+
+		// Should not change anything because the key is already there.
+		seal.create_sealed_if_absent().unwrap();
+		let pair_same = seal.unseal_pair().unwrap();
+
+		assert!(equal(&pair.pubkey().unwrap(), &pair_same.pubkey().unwrap()));
+
+		// Should overwrite previous keys.
+		seal.create_sealed().unwrap();
+		let pair_different = seal.unseal_pair().unwrap();
+
+		assert!(!equal(&pair_different.pubkey().unwrap(), &pair.pubkey().unwrap()));
 	}
 }

@@ -24,6 +24,9 @@ use sp_core::ed25519;
 #[cfg(feature = "sgx")]
 pub use sgx::*;
 
+/// File name of the sealed Ed25519 seed file.
+pub const SEALED_SIGNER_SEED_FILE: &str = "ed25519_key_sealed.bin";
+
 pub trait Ed25519Sealing {
 	fn unseal_pubkey(&self) -> Result<ed25519::Public>;
 
@@ -41,24 +44,24 @@ impl ToPubkey for ed25519::Pair {
 	type Pubkey = ed25519::Public;
 
 	fn pubkey(&self) -> Result<Self::Pubkey> {
-		Ok(self.clone().into())
+		Ok((*self).into())
 	}
 }
 
 #[cfg(feature = "sgx")]
 pub mod sgx {
+	use super::SEALED_SIGNER_SEED_FILE;
 	use crate::{
 		error::{Error, Result},
 		key_repository::KeyRepository,
 		Ed25519Sealing,
 	};
 	use codec::Encode;
-	use itp_settings::files::SEALED_SIGNER_SEED_FILE;
 	use itp_sgx_io::{seal, unseal, SealedIO};
 	use log::*;
 	use sgx_rand::{Rng, StdRng};
 	use sp_core::{crypto::Pair, ed25519};
-	use std::{path::PathBuf, sgxfs::SgxFile};
+	use std::path::PathBuf;
 
 	/// Gets a repository for an Ed25519 keypair and initializes
 	/// a fresh key pair if it doesn't exist at `path`.
@@ -96,7 +99,7 @@ pub mod sgx {
 		}
 
 		fn exists(&self) -> bool {
-			SgxFile::open(self.path()).is_ok()
+			self.path().exists()
 		}
 
 		fn create_sealed_if_absent(&self) -> Result<()> {
@@ -130,5 +133,48 @@ pub mod sgx {
 		fn seal(&self, unsealed: &Self::Unsealed) -> Result<()> {
 			Ok(unsealed.seed().using_encoded(|bytes| seal(bytes, self.path()))?)
 		}
+	}
+}
+
+#[cfg(feature = "test")]
+pub mod sgx_tests {
+	use super::sgx::*;
+	use crate::{key_repository::AccessKey, Ed25519Sealing, ToPubkey};
+	use itp_sgx_temp_dir::TempDir;
+
+	pub fn using_get_ed25519_repository_twice_initializes_key_only_once() {
+		let temp_dir =
+			TempDir::with_prefix("using_get_rsa3072_repository_twice_initializes_key_only_once")
+				.unwrap();
+		let temp_path = temp_dir.path().to_path_buf();
+		let key1 = get_ed25519_repository(temp_path.clone()).unwrap().retrieve_key().unwrap();
+		let key2 = get_ed25519_repository(temp_path).unwrap().retrieve_key().unwrap();
+		assert_eq!(key1.pubkey().unwrap(), key2.pubkey().unwrap());
+	}
+
+	pub fn ed25529_sealing_works() {
+		let temp_dir = TempDir::with_prefix("ed25529_sealing_works").unwrap();
+		let seal = Ed25519Seal::new(temp_dir.path().to_path_buf());
+
+		// Create new sealed keys and unseal them.
+		assert!(!seal.exists());
+		seal.create_sealed_if_absent().unwrap();
+		let pair = seal.unseal_pair().unwrap();
+		let pubkey = seal.unseal_pubkey().unwrap();
+
+		assert!(seal.exists());
+		assert_eq!(pair.pubkey().unwrap(), pubkey);
+
+		// Should not change anything because the key is already there.
+		seal.create_sealed_if_absent().unwrap();
+		let pair_same = seal.unseal_pair().unwrap();
+
+		assert_eq!(pair.pubkey().unwrap(), pair_same.pubkey().unwrap());
+
+		// Should overwrite previous keys.
+		seal.create_sealed().unwrap();
+		let pair_different = seal.unseal_pair().unwrap();
+
+		assert_ne!(pair_different.pubkey().unwrap(), pair.pubkey().unwrap());
 	}
 }

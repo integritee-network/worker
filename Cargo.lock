@@ -3514,6 +3514,7 @@ dependencies = [
  "derive_more",
  "itp-settings",
  "itp-sgx-io",
+ "itp-sgx-temp-dir",
  "log 0.4.17",
  "ofb",
  "parity-scale-codec",
