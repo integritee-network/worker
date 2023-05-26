@@ -33,7 +33,7 @@ test = [
     "itc-parentchain/test",
     "itp-attestation-handler/test",
     "itp-extrinsics-factory/mocks",
-    "itp-sgx-crypto/mocks",
+    "itp-sgx-crypto/test",
     "itp-sgx-temp-dir",
     "itp-stf-executor/test",
     "itp-stf-executor/mocks",

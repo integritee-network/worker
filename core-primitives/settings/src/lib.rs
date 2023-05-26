@@ -42,7 +42,6 @@ pub mod files {
 	pub static SIDECHAIN_PURGE_LIMIT: u64 = 100; // keep the last.. sidechainblocks when purging
 
 	// used by enclave
-	pub const SEALED_SIGNER_SEED_FILE: &str = "ed25519_key_sealed.bin";
 	pub const AES_KEY_FILE_AND_INIT_V: &str = "aes_key_sealed.bin";
 	pub const LIGHT_CLIENT_DB: &str = "light_client_db.bin";
 

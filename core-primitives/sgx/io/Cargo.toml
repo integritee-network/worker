@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 
 # sgx deps
-sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_tstd = { optional = true, features = ["untrusted_fs"], branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 [features]
 default = ["std"]
