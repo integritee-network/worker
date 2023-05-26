@@ -41,10 +41,12 @@ use std::{
 	vec::Vec,
 };
 
-/// Encrypted state file suffix
+/// File name of the encrypted state file.
+///
+/// It is also the suffix of all past snapshots.
 pub const ENCRYPTED_STATE_FILE: &str = "state.bin";
 
-/// Helps with file system operations for all files relevant for the State.
+/// Helps with file system operations of all files relevant for the State.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct StatePathHelper {
 	base_path: PathBuf,
