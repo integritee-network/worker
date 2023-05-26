@@ -45,11 +45,11 @@ use std::{
 pub const ENCRYPTED_STATE_FILE: &str = "state.bin";
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct StatePathProvider {
+pub struct StatePathHelper {
 	base_path: PathBuf,
 }
 
-impl StatePathProvider {
+impl StatePathHelper {
 	pub fn new(base_path: PathBuf) -> Self {
 		Self { base_path }
 	}
@@ -62,8 +62,9 @@ impl StatePathProvider {
 		self.shards_directory().join(shard.encode().to_base58())
 	}
 
-	/// List any valid shards that are found in the shard path.
-	/// Ignore any items (files, directories) that are not valid shard identifiers.
+	/// Lists any valid shards that are found in the shard path.
+	///
+	/// Ignores any items (files, directories) that are not valid shard identifiers.
 	pub fn list_shards(&self) -> Result<Vec<ShardIdentifier>> {
 		list_shards(&self.shards_directory())
 	}
@@ -189,7 +190,7 @@ pub mod sgx {
 	/// SGX state file I/O.
 	pub struct SgxStateFileIo<StateKeyRepository, State> {
 		state_key_repository: Arc<StateKeyRepository>,
-		path_provider: StatePathProvider,
+		path_helper: StatePathHelper,
 		_phantom: PhantomData<State>,
 	}
 
@@ -201,9 +202,9 @@ pub mod sgx {
 	{
 		pub fn new(
 			state_key_repository: Arc<StateKeyRepository>,
-			path_provider: StatePathProvider,
+			path_helper: StatePathHelper,
 		) -> Self {
-			SgxStateFileIo { state_key_repository, path_provider, _phantom: PhantomData }
+			SgxStateFileIo { state_key_repository, path_helper, _phantom: PhantomData }
 		}
 
 		fn read(&self, path: &Path) -> Result<Vec<u8>> {
@@ -248,11 +249,11 @@ pub mod sgx {
 			shard_identifier: &ShardIdentifier,
 			state_id: StateId,
 		) -> Result<Self::StateType> {
-			if !self.path_provider.file_for_state_exists(shard_identifier, state_id) {
+			if !self.path_helper.file_for_state_exists(shard_identifier, state_id) {
 				return Err(Error::InvalidStateId(state_id))
 			}
 
-			let state_path = self.path_provider.state_file_path(shard_identifier, state_id);
+			let state_path = self.path_helper.state_file_path(shard_identifier, state_id);
 			trace!("loading state from: {:?}", state_path);
 			let state_encoded = self.read(&state_path)?;
 
@@ -288,7 +289,7 @@ pub mod sgx {
 			state_id: StateId,
 			state: &Self::StateType,
 		) -> Result<Self::HashType> {
-			self.path_provider.create_shard(&shard_identifier)?;
+			self.path_helper.create_shard(&shard_identifier)?;
 			self.write(shard_identifier, state_id, state)
 		}
 
@@ -300,7 +301,7 @@ pub mod sgx {
 			state_id: StateId,
 			state: &Self::StateType,
 		) -> Result<Self::HashType> {
-			let state_path = self.path_provider.state_file_path(shard_identifier, state_id);
+			let state_path = self.path_helper.state_file_path(shard_identifier, state_id);
 			trace!("writing state to: {:?}", state_path);
 
 			// Only save the state, the state diff is pruned.
@@ -314,20 +315,20 @@ pub mod sgx {
 		}
 
 		fn remove(&self, shard_identifier: &ShardIdentifier, state_id: StateId) -> Result<()> {
-			fs::remove_file(self.path_provider.state_file_path(shard_identifier, state_id))
+			fs::remove_file(self.path_helper.state_file_path(shard_identifier, state_id))
 				.map_err(|e| Error::Other(e.into()))
 		}
 
 		fn shard_exists(&self, shard_identifier: &ShardIdentifier) -> bool {
-			self.path_provider.shard_exists(shard_identifier)
+			self.path_helper.shard_exists(shard_identifier)
 		}
 
 		fn list_shards(&self) -> Result<Vec<ShardIdentifier>> {
-			self.path_provider.list_shards()
+			self.path_helper.list_shards()
 		}
 
 		fn list_state_ids_for_shard(&self, shard: &ShardIdentifier) -> Result<Vec<StateId>> {
-			self.path_provider.list_state_ids_for_shard(shard)
+			self.path_helper.list_state_ids_for_shard(shard)
 		}
 	}
 }
