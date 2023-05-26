@@ -44,6 +44,7 @@ use std::{
 /// Encrypted state file suffix
 pub const ENCRYPTED_STATE_FILE: &str = "state.bin";
 
+/// Helps with file system operations for all files relevant for the State.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct StatePathHelper {
 	base_path: PathBuf,
@@ -69,6 +70,7 @@ impl StatePathHelper {
 		list_shards(&self.shards_directory())
 	}
 
+	/// Lists all files with a valid state snapshot naming pattern.
 	pub fn list_state_ids_for_shard(
 		&self,
 		shard_identifier: &ShardIdentifier,
