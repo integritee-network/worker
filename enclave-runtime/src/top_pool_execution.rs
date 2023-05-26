@@ -19,8 +19,8 @@ use crate::{
 	error::Result,
 	initialization::global_components::{
 		GLOBAL_OCALL_API_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT,
-		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
-		GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT, GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT,
+		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
 	},
 	sync::{EnclaveLock, EnclaveStateRWLock},
 	utils::{
@@ -41,8 +41,7 @@ use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_ocall_api::{EnclaveOnChainOCallApi, EnclaveSidechainOCallApi};
 use itp_settings::sidechain::SLOT_DURATION;
-use itp_sgx_crypto::Ed25519Seal;
-use itp_sgx_io::StaticSealedIO;
+use itp_sgx_crypto::key_repository::AccessKey;
 use itp_stf_state_handler::query_shard_state::QueryShardState;
 use itp_time_utils::duration_now;
 use itp_types::{Block, OpaqueCall, H256};
@@ -130,7 +129,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 
-	let authority = Ed25519Seal::unseal_from_static_file()?;
+	let authority = GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT.get()?.retrieve_key()?;
 
 	match yield_next_slot(
 		slot_beginning_timestamp,

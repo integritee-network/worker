@@ -29,6 +29,9 @@ sp-core = { default-features = false, git = "https://github.com/paritytech/subst
 itp-settings = { path = "../../settings" }
 itp-sgx-io = { path = "../io", default-features = false }
 
+# test sgx deps
+itp-sgx-temp-dir = { default-features = false, optional = true, path = "../temp-dir" }
+
 [features]
 default = ["std"]
 std = [
@@ -49,3 +52,10 @@ sgx = [
     "serde-sgx",
 ]
 mocks = []
+test = [
+    # features
+    "mocks",
+    "sgx",
+    # deps
+    "itp-sgx-temp-dir",
+]
