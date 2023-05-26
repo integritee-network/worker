@@ -82,7 +82,7 @@ impl StateDir {
 
 		Ok(directory_items
 			.iter()
-			.flat_map(|item| {
+			.filter_map(|item| {
 				let maybe_state_id = extract_state_id_from_file_name(item.as_str());
 				if maybe_state_id.is_none() {
 					log::warn!("Found item ({}) that does not match state snapshot naming pattern, ignoring it", item)
