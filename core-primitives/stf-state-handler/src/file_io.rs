@@ -123,6 +123,25 @@ impl StateDir {
 	pub fn file_for_state_exists(&self, shard: &ShardIdentifier, state_id: StateId) -> bool {
 		self.state_file_path(shard, state_id).exists()
 	}
+
+	#[cfg(feature = "test")]
+	fn given_initialized_shard(&self, shard: &ShardIdentifier) {
+		if self.shard_exists(shard) {
+			self.purge_shard_dir(shard);
+		}
+		self.create_shard(&shard).unwrap()
+	}
+
+	#[cfg(feature = "test")]
+	fn number_of_files_in_shard_dir(&self, shard: &ShardIdentifier) -> Result<usize> {
+		let shard_dir_path = self.shard_path(shard);
+		let files_in_dir =
+			std::fs::read_dir(shard_dir_path.clone()).map_err(|e| Error::Other(e.into()))?;
+
+		log::info!("File in shard dir: {:?}", files_in_dir);
+
+		Ok(files_in_dir.count())
+	}
 }
 
 /// Trait to abstract file I/O for state.

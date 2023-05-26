@@ -351,22 +351,3 @@ fn setup(id: &str, shard: &ShardIdentifier) -> (TempDir, Arc<StateKeyRepository>
 
 	(temp_dir, state_key_access, state_dir)
 }
-
-impl StateDir {
-	fn given_initialized_shard(&self, shard: &ShardIdentifier) {
-		if self.shard_exists(shard) {
-			self.purge_shard_dir(shard);
-		}
-		self.create_shard(&shard).unwrap()
-	}
-
-	fn number_of_files_in_shard_dir(&self, shard: &ShardIdentifier) -> Result<usize> {
-		let shard_dir_path = self.shard_path(shard);
-		let files_in_dir =
-			std::fs::read_dir(shard_dir_path.clone()).map_err(|e| Error::Other(e.into()))?;
-
-		log::info!("File in shard dir: {:?}", files_in_dir);
-
-		Ok(files_in_dir.count())
-	}
-}
