@@ -125,7 +125,7 @@ impl StateDir {
 	}
 
 	#[cfg(feature = "test")]
-	fn given_initialized_shard(&self, shard: &ShardIdentifier) {
+	pub fn given_initialized_shard(&self, shard: &ShardIdentifier) {
 		if self.shard_exists(shard) {
 			self.purge_shard_dir(shard);
 		}
@@ -133,7 +133,7 @@ impl StateDir {
 	}
 
 	#[cfg(feature = "test")]
-	fn number_of_files_in_shard_dir(&self, shard: &ShardIdentifier) -> Result<usize> {
+	pub fn number_of_files_in_shard_dir(&self, shard: &ShardIdentifier) -> Result<usize> {
 		let shard_dir_path = self.shard_path(shard);
 		let files_in_dir =
 			std::fs::read_dir(shard_dir_path.clone()).map_err(|e| Error::Other(e.into()))?;
