@@ -21,7 +21,6 @@ use crate::{
 };
 use aes::Aes128;
 use codec::{Decode, Encode};
-use itp_settings::files::AES_KEY_FILE_AND_INIT_V;
 use ofb::{
 	cipher::{NewStreamCipher, SyncStreamCipher},
 	Ofb,
@@ -32,6 +31,9 @@ use std::{
 };
 
 type AesOfb = Ofb<Aes128>;
+
+/// File name of the sealed AES key data.
+pub const AES_KEY_FILE_AND_INIT_V: &str = "aes_key_sealed.bin";
 
 #[derive(Debug, Default, Encode, Decode, Clone, Copy, PartialEq, Eq)]
 pub struct Aes {
