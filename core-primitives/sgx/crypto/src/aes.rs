@@ -33,7 +33,7 @@ use std::{
 type AesOfb = Ofb<Aes128>;
 
 /// File name of the sealed AES key data.
-pub const AES_KEY_FILE_AND_INIT_V: &str = "aes_key_sealed.bin";
+pub const AES_KEY_FILE_AND_INIT_V: &str = "aes_key_and_iv_sealed_data.bin";
 
 #[derive(Debug, Default, Encode, Decode, Clone, Copy, PartialEq, Eq)]
 pub struct Aes {
