@@ -10,7 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        binary: ["integritee-client", "integritee-demo-validateer"]
+        #binary: ["integritee-client", "integritee-demo-validateer"]
+        binary: ["teeracle"]
     steps:
       - uses: actions/checkout@v2
 
@@ -18,9 +19,13 @@ jobs:
         id: vars
         run: echo "{tag}={$GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
 
+      - name: Get Tag
+        id: get_tag
+        run: echo ::set-output name=TAG::${GITHUB_REF/refs\/tags\//}
+
       - name: Check output
         env:
-          RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.get_tag.outputs.TAG }}
         run: |
           echo $RELEASE_VERSION
           echo ${{ steps.vars.outputs.tag }}
@@ -39,7 +44,7 @@ jobs:
         run: |
           ORGANIZATION="integritee"
           IMAGE="${{ matrix.binary }}"
-          TAG="${{ steps.vars.outputs.tag }}"
+          TAG="${{ steps.get_tag.outputs.TAG }}"
 
           login_data() {
           cat <<EOF
@@ -57,9 +62,9 @@ jobs:
           -H "Authorization: JWT ${TOKEN}"
 
       - name: Delete tag as well
-        uses: dev-drprasad/delete-tag-and-release@v0.2.0
+        uses: dev-drprasad/delete-tag-and-release@v0.2.1
         with:
           delete_release: false # it is triggered by release deletion
-          tag_name: ${{ steps.vars.outputs.tag }} # tag name to delete
+          tag_name: ${{ steps.get_tag.outputs.TAG }} # tag name to delete
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
