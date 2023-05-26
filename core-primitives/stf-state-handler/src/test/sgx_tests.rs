@@ -47,9 +47,9 @@ use std::{sync::Arc, thread, vec::Vec};
 
 const STATE_SNAPSHOTS_CACHE_SIZE: usize = 3;
 
-type StateKeyRepositoryMock = KeyRepository<Aes, AesSeal>;
+type StateKeyRepository = KeyRepository<Aes, AesSeal>;
 type TestStateInitializer = InitializeStateMock<StfState>;
-type TestStateFileIo = SgxStateFileIo<StateKeyRepositoryMock, SgxExternalities>;
+type TestStateFileIo = SgxStateFileIo<StateKeyRepository, SgxExternalities>;
 type TestStateRepository = StateSnapshotRepository<TestStateFileIo>;
 type TestStateRepositoryLoader =
 	StateSnapshotRepositoryLoader<TestStateFileIo, TestStateInitializer>;
@@ -78,7 +78,7 @@ impl Drop for ShardDirectoryHandle {
 /// Gets a temporary key repository.
 ///
 /// We pass and ID such that it doesn't clash with other temp repositories.
-fn temp_state_key_repository(id: &str) -> StateKeyRepositoryMock {
+fn temp_state_key_repository(id: &str) -> StateKeyRepository {
 	let temp_dir = TempDir::with_prefix(id).unwrap();
 	get_aes_repository(temp_dir.path().to_path_buf()).unwrap()
 }
@@ -349,15 +349,13 @@ pub fn test_in_memory_state_initializes_from_shard_directory() {
 
 fn initialize_state_handler_with_directory_handle(
 	shard: &ShardIdentifier,
-	state_key_access: Arc<StateKeyRepositoryMock>,
+	state_key_access: Arc<StateKeyRepository>,
 ) -> (Arc<TestStateHandler>, ShardDirectoryHandle) {
 	let shard_dir_handle = ShardDirectoryHandle::new(*shard).unwrap();
 	(initialize_state_handler(state_key_access), shard_dir_handle)
 }
 
-fn initialize_state_handler(
-	state_key_access: Arc<StateKeyRepositoryMock>,
-) -> Arc<TestStateHandler> {
+fn initialize_state_handler(state_key_access: Arc<StateKeyRepository>) -> Arc<TestStateHandler> {
 	let file_io = Arc::new(TestStateFileIo::new(state_key_access));
 	let state_initializer = Arc::new(TestStateInitializer::new(StfState::new(Default::default())));
 	let state_repository_loader =
