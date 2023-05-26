@@ -64,7 +64,7 @@ use itp_sgx_crypto::{
 	get_aes_repository, get_ed25519_repository, get_rsa3072_repository, key_repository::AccessKey,
 };
 use itp_stf_state_handler::{
-	file_io::StatePathHelper, handle_state::HandleState, query_shard_state::QueryShardState,
+	file_io::StateDir, handle_state::HandleState, query_shard_state::QueryShardState,
 	state_snapshot_repository::VersionedStateAccess,
 	state_snapshot_repository_loader::StateSnapshotRepositoryLoader, StateHandler,
 };
@@ -95,7 +95,7 @@ pub(crate) fn init_enclave(
 	GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.initialize(state_key_repository.clone());
 
 	let state_file_io =
-		Arc::new(EnclaveStateFileIo::new(state_key_repository, StatePathHelper::new(base_dir)));
+		Arc::new(EnclaveStateFileIo::new(state_key_repository, StateDir::new(base_dir)));
 	let state_initializer =
 		Arc::new(EnclaveStateInitializer::new(shielding_key_repository.clone()));
 	let state_snapshot_repository_loader = StateSnapshotRepositoryLoader::<
