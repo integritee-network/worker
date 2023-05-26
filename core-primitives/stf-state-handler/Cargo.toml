@@ -74,5 +74,5 @@ sgx = [
 test = [
     "itp-sgx-crypto/mocks",
     "itp-stf-interface/mocks",
-    "itp-sgx-temp-dir"
+    "itp-sgx-temp-dir",
 ]
