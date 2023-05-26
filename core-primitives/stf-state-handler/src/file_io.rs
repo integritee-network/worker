@@ -32,6 +32,7 @@ use crate::{
 	state_snapshot_primitives::StateId,
 };
 use codec::{Decode, Encode};
+// Todo: Can be migrated to here in the course of #1292.
 use itp_settings::files::SHARDS_PATH;
 use itp_types::ShardIdentifier;
 use log::error;
