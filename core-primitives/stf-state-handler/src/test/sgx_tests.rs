@@ -76,7 +76,6 @@ pub fn test_encrypt_decrypt_state_type_works() {
 	// given
 	let state = given_hello_world_state();
 	let temp_dir = TempDir::with_prefix("test_encrypt_decrypt_state_type_works").unwrap();
-
 	let state_key = aes_repo(temp_dir.path().to_path_buf()).retrieve_key().unwrap();
 
 	// when
@@ -93,10 +92,8 @@ pub fn test_encrypt_decrypt_state_type_works() {
 pub fn test_write_and_load_state_works() {
 	// given
 	let shard: ShardIdentifier = [94u8; 32].into();
-	let temp_dir = TempDir::with_prefix("test_write_and_load_state_works").unwrap();
-	let state_key_access = Arc::new(aes_repo(temp_dir.path().to_path_buf()));
-	let path_provider = StatePathProvider::new(temp_dir.path().to_path_buf());
-	path_provider.given_initialized_shard(&shard);
+	let (_temp_dir, state_key_access, path_provider) =
+		setup("test_write_and_load_state_works", &shard);
 
 	let state_handler = initialize_state_handler(state_key_access, path_provider);
 
@@ -115,11 +112,8 @@ pub fn test_write_and_load_state_works() {
 pub fn test_ensure_subsequent_state_loads_have_same_hash() {
 	// given
 	let shard: ShardIdentifier = [49u8; 32].into();
-	let temp_dir =
-		TempDir::with_prefix("test_ensure_subsequent_state_loads_have_same_hash").unwrap();
-	let state_key_access = Arc::new(get_aes_repository(temp_dir.path().to_path_buf()).unwrap());
-	let path_provider = StatePathProvider::new(temp_dir.path().to_path_buf());
-	path_provider.given_initialized_shard(&shard);
+	let (_temp_dir, state_key_access, path_provider) =
+		setup("test_ensure_subsequent_state_loads_have_same_hash", &shard);
 
 	let state_handler = initialize_state_handler(state_key_access, path_provider);
 
@@ -137,10 +131,8 @@ pub fn test_write_access_locks_read_until_finished() {
 
 	// given
 	let shard: ShardIdentifier = [47u8; 32].into();
-	let temp_dir = TempDir::with_prefix("test_write_access_locks_read_until_finished").unwrap();
-	let state_key_access = Arc::new(get_aes_repository(temp_dir.path().to_path_buf()).unwrap());
-	let path_provider = StatePathProvider::new(temp_dir.path().to_path_buf());
-	path_provider.given_initialized_shard(&shard);
+	let (_temp_dir, state_key_access, path_provider) =
+		setup("test_write_access_locks_read_until_finished", &shard);
 
 	let state_handler = initialize_state_handler(state_key_access, path_provider);
 
@@ -169,10 +161,8 @@ pub fn test_write_access_locks_read_until_finished() {
 
 pub fn test_state_handler_file_backend_is_initialized() {
 	let shard: ShardIdentifier = [11u8; 32].into();
-	let temp_dir = TempDir::with_prefix("test_state_handler_file_backend_is_initialized").unwrap();
-	let state_key_access = Arc::new(get_aes_repository(temp_dir.path().to_path_buf()).unwrap());
-	let path_provider = StatePathProvider::new(temp_dir.path().to_path_buf());
-	path_provider.given_initialized_shard(&shard);
+	let (_temp_dir, state_key_access, path_provider) =
+		setup("test_state_handler_file_backend_is_initialized", &shard);
 
 	let state_handler = initialize_state_handler(state_key_access, path_provider.clone());
 
@@ -187,10 +177,8 @@ pub fn test_state_handler_file_backend_is_initialized() {
 
 pub fn test_multiple_state_updates_create_snapshots_up_to_cache_size() {
 	let shard: ShardIdentifier = [17u8; 32].into();
-	let temp_dir = TempDir::with_prefix("test_state_handler_file_backend_is_initialized").unwrap();
-	let state_key_access = Arc::new(aes_repo(temp_dir.path().to_path_buf()));
-	let path_provider = StatePathProvider::new(temp_dir.path().to_path_buf());
-	path_provider.given_initialized_shard(&shard);
+	let (_temp_dir, state_key_access, path_provider) =
+		setup("test_state_handler_file_backend_is_initialized", &shard);
 
 	let state_handler = initialize_state_handler(state_key_access, path_provider.clone());
 
@@ -239,10 +227,8 @@ pub fn test_multiple_state_updates_create_snapshots_up_to_cache_size() {
 
 pub fn test_file_io_get_state_hash_works() {
 	let shard: ShardIdentifier = [21u8; 32].into();
-	let temp_dir = TempDir::with_prefix("test_file_io_get_state_hash_works").unwrap();
-	let state_key_access = Arc::new(aes_repo(temp_dir.path().to_path_buf()));
-	let path_provider = StatePathProvider::new(temp_dir.path().to_path_buf());
-	path_provider.given_initialized_shard(&shard);
+	let (_temp_dir, state_key_access, path_provider) =
+		setup("test_file_io_get_state_hash_works", &shard);
 
 	let file_io = TestStateFileIo::new(state_key_access, path_provider);
 
@@ -258,11 +244,8 @@ pub fn test_file_io_get_state_hash_works() {
 
 pub fn test_state_files_from_handler_can_be_loaded_again() {
 	let shard: ShardIdentifier = [15u8; 32].into();
-	let temp_dir =
-		TempDir::with_prefix("test_state_files_from_handler_can_be_loaded_again").unwrap();
-	let state_key_access = Arc::new(aes_repo(temp_dir.path().to_path_buf()));
-	let path_provider = StatePathProvider::new(temp_dir.path().to_path_buf());
-	path_provider.given_initialized_shard(&shard);
+	let (_temp_dir, state_key_access, path_provider) =
+		setup("test_state_files_from_handler_can_be_loaded_again", &shard);
 
 	let state_handler = initialize_state_handler(state_key_access.clone(), path_provider.clone());
 
@@ -296,11 +279,8 @@ pub fn test_state_files_from_handler_can_be_loaded_again() {
 
 pub fn test_list_state_ids_ignores_files_not_matching_the_pattern() {
 	let shard: ShardIdentifier = [21u8; 32].into();
-	let temp_dir =
-		TempDir::with_prefix("test_list_state_ids_ignores_files_not_matching_the_pattern").unwrap();
-	let state_key_access = Arc::new(aes_repo(temp_dir.path().to_path_buf()));
-	let path_provider = StatePathProvider::new(temp_dir.path().to_path_buf());
-	path_provider.given_initialized_shard(&shard);
+	let (_temp_dir, state_key_access, path_provider) =
+		setup("test_list_state_ids_ignores_files_not_matching_the_pattern", &shard);
 
 	let file_io = TestStateFileIo::new(state_key_access, path_provider.clone());
 
@@ -316,10 +296,8 @@ pub fn test_list_state_ids_ignores_files_not_matching_the_pattern() {
 
 pub fn test_in_memory_state_initializes_from_shard_directory() {
 	let shard: ShardIdentifier = [45u8; 32].into();
-	let temp_dir =
-		TempDir::with_prefix("test_list_state_ids_ignores_files_not_matching_the_pattern").unwrap();
-	let path_provider = StatePathProvider::new(temp_dir.path().to_path_buf());
-	path_provider.given_initialized_shard(&shard);
+	let (temp_dir, _, _) =
+		setup("test_list_state_ids_ignores_files_not_matching_the_pattern", &shard);
 
 	let file_io = create_in_memory_state_io_from_shards_directories(&temp_dir.path()).unwrap();
 	let state_initializer = Arc::new(TestStateInitializer::new(StfState::new(Default::default())));
@@ -371,6 +349,18 @@ fn given_hello_world_state() -> StfState {
 	let mut state = StfState::new(Default::default());
 	state.insert(key, value);
 	state
+}
+
+fn setup(
+	id: &str,
+	shard: &ShardIdentifier,
+) -> (TempDir, Arc<StateKeyRepository>, StatePathProvider) {
+	let temp_dir = TempDir::with_prefix(id).unwrap();
+	let state_key_access = Arc::new(aes_repo(temp_dir.path().to_path_buf()));
+	let path_provider = StatePathProvider::new(temp_dir.path().to_path_buf());
+	path_provider.given_initialized_shard(shard);
+
+	(temp_dir, state_key_access, path_provider)
 }
 
 impl StatePathProvider {
