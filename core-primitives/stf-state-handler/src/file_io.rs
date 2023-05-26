@@ -25,9 +25,6 @@ use rust_base58::base58::ToBase58;
 use base58::ToBase58;
 
 #[cfg(any(test, feature = "sgx"))]
-use itp_settings::files::ENCRYPTED_STATE_FILE;
-
-#[cfg(any(test, feature = "sgx"))]
 use std::string::String;
 
 use crate::{error::Result, state_snapshot_primitives::StateId};
@@ -36,6 +33,39 @@ use itp_settings::files::SHARDS_PATH;
 use itp_types::ShardIdentifier;
 use log::error;
 use std::{format, path::PathBuf, vec::Vec};
+
+/// Encrypted state file suffix
+pub const ENCRYPTED_STATE_FILE: &str = "state.bin";
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct StatePathProvider {
+	base_path: PathBuf,
+}
+
+impl StatePathProvider {
+	pub fn new(base_path: PathBuf) -> Self {
+		Self { base_path }
+	}
+
+	pub fn shards_directory(&self) -> PathBuf {
+		self.base_path.join(SHARDS_PATH)
+	}
+
+	pub fn shard_path(&self, shard: &ShardIdentifier) -> PathBuf {
+		self.shards_directory().join(shard.encode().to_base58())
+	}
+
+	pub fn state_file_path(&self, shard: &ShardIdentifier, state_id: StateId) -> PathBuf {
+		self.shard_path(shard).join(to_file_name(state_id))
+	}
+
+	pub fn purge_shard_dir(&self, shard: &ShardIdentifier) {
+		let shard_dir_path = self.shard_path(shard);
+		if let Err(e) = std::fs::remove_dir_all(&shard_dir_path) {
+			error!("Failed to remove shard directory {:?}: {:?}", shard_dir_path, e);
+		}
+	}
+}
 
 /// Trait to abstract file I/O for state.
 pub trait StateFileIo {
@@ -108,6 +138,7 @@ pub mod sgx {
 	/// SGX state file I/O.
 	pub struct SgxStateFileIo<StateKeyRepository, State> {
 		state_key_repository: Arc<StateKeyRepository>,
+		path_provider: StatePathProvider,
 		_phantom: PhantomData<State>,
 	}
 
@@ -117,8 +148,11 @@ pub mod sgx {
 		<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
 		State: SgxExternalitiesTrait,
 	{
-		pub fn new(state_key_repository: Arc<StateKeyRepository>) -> Self {
-			SgxStateFileIo { state_key_repository, _phantom: PhantomData }
+		pub fn new(
+			state_key_repository: Arc<StateKeyRepository>,
+			path_provider: StatePathProvider,
+		) -> Self {
+			SgxStateFileIo { state_key_repository, path_provider, _phantom: PhantomData }
 		}
 
 		fn read(&self, path: &Path) -> Result<Vec<u8>> {
@@ -331,7 +365,6 @@ pub(crate) fn shard_path(shard: &ShardIdentifier) -> PathBuf {
 	PathBuf::from(format!("./{}/{}", SHARDS_PATH, shard.encode().to_base58()))
 }
 
-#[cfg(any(test, feature = "sgx"))]
 fn to_file_name(state_id: StateId) -> String {
 	format!("{}_{}", state_id, ENCRYPTED_STATE_FILE)
 }
