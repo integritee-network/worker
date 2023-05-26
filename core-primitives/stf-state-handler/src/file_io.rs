@@ -358,18 +358,6 @@ fn list_items_in_directory(directory: &Path) -> Vec<String> {
 		.collect()
 }
 
-/// Remove a shard directory with all of its content.
-pub fn purge_shard_dir(shard: &ShardIdentifier) {
-	let shard_dir_path = shard_path(shard);
-	if let Err(e) = std::fs::remove_dir_all(&shard_dir_path) {
-		error!("Failed to remove shard directory {:?}: {:?}", shard_dir_path, e);
-	}
-}
-
-pub(crate) fn shard_path(shard: &ShardIdentifier) -> PathBuf {
-	PathBuf::from(format!("./{}/{}", SHARDS_PATH, shard.encode().to_base58()))
-}
-
 fn to_file_name(state_id: StateId) -> String {
 	format!("{}_{}", state_id, ENCRYPTED_STATE_FILE)
 }

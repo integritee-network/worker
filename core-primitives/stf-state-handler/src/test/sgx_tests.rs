@@ -17,7 +17,7 @@
 
 use crate::{
 	error::{Error, Result},
-	file_io::{sgx::SgxStateFileIo, shard_path, StateFileIo, StatePathProvider},
+	file_io::{sgx::SgxStateFileIo, StateFileIo, StatePathProvider},
 	handle_state::HandleState,
 	in_memory_state_file_io::sgx::create_in_memory_state_io_from_shards_directories,
 	query_shard_state::QueryShardState,
@@ -302,7 +302,7 @@ pub fn test_list_state_ids_ignores_files_not_matching_the_pattern() {
 	let path_provider = StatePathProvider::new(temp_dir.path().to_path_buf());
 	path_provider.given_initialized_shard(&shard);
 
-	let file_io = TestStateFileIo::new(state_key_access, path_provider);
+	let file_io = TestStateFileIo::new(state_key_access, path_provider.clone());
 
 	let invalid_state_file_path = path_provider.shard_path(&shard).join("invalid-state.bin");
 	write(&[0, 1, 2, 3, 4, 5], invalid_state_file_path).unwrap();
