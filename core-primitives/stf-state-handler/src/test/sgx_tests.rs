@@ -17,11 +17,7 @@
 
 use crate::{
 	error::{Error, Result},
-	file_io::{
-		purge_shard_dir,
-		sgx::{init_shard, shard_exists, SgxStateFileIo},
-		shard_path, StateFileIo, StatePathProvider,
-	},
+	file_io::{sgx::SgxStateFileIo, shard_path, StateFileIo, StatePathProvider},
 	handle_state::HandleState,
 	in_memory_state_file_io::sgx::create_in_memory_state_io_from_shards_directories,
 	query_shard_state::QueryShardState,
@@ -55,25 +51,6 @@ type TestStateRepositoryLoader =
 	StateSnapshotRepositoryLoader<TestStateFileIo, TestStateInitializer>;
 type TestStateObserver = StateObserver<StfState>;
 type TestStateHandler = StateHandler<TestStateRepository, TestStateObserver, TestStateInitializer>;
-
-/// Directory handle to automatically initialize a directory
-/// and upon dropping the reference, removing it again.
-struct ShardDirectoryHandle {
-	shard: ShardIdentifier,
-}
-
-impl ShardDirectoryHandle {
-	pub fn new(shard: ShardIdentifier) -> Result<Self> {
-		given_initialized_shard(&shard)?;
-		Ok(ShardDirectoryHandle { shard })
-	}
-}
-
-impl Drop for ShardDirectoryHandle {
-	fn drop(&mut self) {
-		purge_shard_dir(&self.shard)
-	}
-}
 
 // For better readability in tests.
 fn aes_repo(path: PathBuf) -> StateKeyRepository {
@@ -119,9 +96,9 @@ pub fn test_write_and_load_state_works() {
 	let temp_dir = TempDir::with_prefix("test_write_and_load_state_works").unwrap();
 	let state_key_access = Arc::new(aes_repo(temp_dir.path().to_path_buf()));
 	let path_provider = StatePathProvider::new(temp_dir.path().to_path_buf());
+	path_provider.given_initialized_shard(&shard);
 
-	let (state_handler, shard_dir_handle) =
-		initialize_state_handler_with_directory_handle(&shard, state_key_access, path_provider);
+	let state_handler = initialize_state_handler(state_key_access, path_provider);
 
 	let state = given_hello_world_state();
 
@@ -133,9 +110,6 @@ pub fn test_write_and_load_state_works() {
 
 	// then
 	assert_eq!(state.state, result_state.state);
-
-	// clean up
-	std::mem::drop(shard_dir_handle);
 }
 
 pub fn test_ensure_subsequent_state_loads_have_same_hash() {
@@ -145,9 +119,9 @@ pub fn test_ensure_subsequent_state_loads_have_same_hash() {
 		TempDir::with_prefix("test_ensure_subsequent_state_loads_have_same_hash").unwrap();
 	let state_key_access = Arc::new(get_aes_repository(temp_dir.path().to_path_buf()).unwrap());
 	let path_provider = StatePathProvider::new(temp_dir.path().to_path_buf());
+	path_provider.given_initialized_shard(&shard);
 
-	let (state_handler, shard_dir_handle) =
-		initialize_state_handler_with_directory_handle(&shard, state_key_access, path_provider);
+	let state_handler = initialize_state_handler(state_key_access, path_provider);
 
 	let (lock, initial_state) = state_handler.load_for_mutation(&shard).unwrap();
 	state_handler.write_after_mutation(initial_state.clone(), lock, &shard).unwrap();
@@ -155,9 +129,6 @@ pub fn test_ensure_subsequent_state_loads_have_same_hash() {
 	let (_, loaded_state_hash) = state_handler.load_cloned(&shard).unwrap();
 
 	assert_eq!(initial_state.hash(), loaded_state_hash);
-
-	// clean up
-	std::mem::drop(shard_dir_handle);
 }
 
 pub fn test_write_access_locks_read_until_finished() {
@@ -169,9 +140,9 @@ pub fn test_write_access_locks_read_until_finished() {
 	let temp_dir = TempDir::with_prefix("test_write_access_locks_read_until_finished").unwrap();
 	let state_key_access = Arc::new(get_aes_repository(temp_dir.path().to_path_buf()).unwrap());
 	let path_provider = StatePathProvider::new(temp_dir.path().to_path_buf());
+	path_provider.given_initialized_shard(&shard);
 
-	let (state_handler, shard_dir_handle) =
-		initialize_state_handler_with_directory_handle(&shard, state_key_access, path_provider);
+	let state_handler = initialize_state_handler(state_key_access, path_provider);
 
 	let new_state_key = "my_new_state".encode();
 	let (lock, mut state_to_mutate) = state_handler.load_for_mutation(&shard).unwrap();
@@ -194,9 +165,6 @@ pub fn test_write_access_locks_read_until_finished() {
 	let _hash = state_handler.write_after_mutation(state_to_mutate, lock, &shard).unwrap();
 
 	join_handle.join().unwrap();
-
-	// clean up
-	std::mem::drop(shard_dir_handle);
 }
 
 pub fn test_state_handler_file_backend_is_initialized() {
@@ -204,20 +172,17 @@ pub fn test_state_handler_file_backend_is_initialized() {
 	let temp_dir = TempDir::with_prefix("test_state_handler_file_backend_is_initialized").unwrap();
 	let state_key_access = Arc::new(get_aes_repository(temp_dir.path().to_path_buf()).unwrap());
 	let path_provider = StatePathProvider::new(temp_dir.path().to_path_buf());
+	path_provider.given_initialized_shard(&shard);
 
-	let (state_handler, shard_dir_handle) =
-		initialize_state_handler_with_directory_handle(&shard, state_key_access, path_provider);
+	let state_handler = initialize_state_handler(state_key_access, path_provider.clone());
 
 	assert!(state_handler.shard_exists(&shard).unwrap());
 	assert!(1 <= state_handler.list_shards().unwrap().len()); // only greater equal, because there might be other (non-test) shards present
-	assert_eq!(1, number_of_files_in_shard_dir(&shard).unwrap()); // creates a first initialized file
+	assert_eq!(1, path_provider.number_of_files_in_shard_dir(&shard).unwrap()); // creates a first initialized file
 
 	let _state = state_handler.load_cloned(&shard).unwrap();
 
-	assert_eq!(1, number_of_files_in_shard_dir(&shard).unwrap());
-
-	// clean up
-	std::mem::drop(shard_dir_handle);
+	assert_eq!(1, path_provider.number_of_files_in_shard_dir(&shard).unwrap());
 }
 
 pub fn test_multiple_state_updates_create_snapshots_up_to_cache_size() {
@@ -225,39 +190,39 @@ pub fn test_multiple_state_updates_create_snapshots_up_to_cache_size() {
 	let temp_dir = TempDir::with_prefix("test_state_handler_file_backend_is_initialized").unwrap();
 	let state_key_access = Arc::new(aes_repo(temp_dir.path().to_path_buf()));
 	let path_provider = StatePathProvider::new(temp_dir.path().to_path_buf());
+	path_provider.given_initialized_shard(&shard);
 
-	let (state_handler, _shard_dir_handle) =
-		initialize_state_handler_with_directory_handle(&shard, state_key_access, path_provider);
+	let state_handler = initialize_state_handler(state_key_access, path_provider.clone());
 
-	assert_eq!(1, number_of_files_in_shard_dir(&shard).unwrap());
+	assert_eq!(1, path_provider.number_of_files_in_shard_dir(&shard).unwrap());
 
 	let hash_1 = update_state(
 		state_handler.as_ref(),
 		&shard,
 		("my_key_1".encode(), "mega_secret_value".encode()),
 	);
-	assert_eq!(2, number_of_files_in_shard_dir(&shard).unwrap());
+	assert_eq!(2, path_provider.number_of_files_in_shard_dir(&shard).unwrap());
 
 	let hash_2 = update_state(
 		state_handler.as_ref(),
 		&shard,
 		("my_key_2".encode(), "mega_secret_value222".encode()),
 	);
-	assert_eq!(3, number_of_files_in_shard_dir(&shard).unwrap());
+	assert_eq!(3, path_provider.number_of_files_in_shard_dir(&shard).unwrap());
 
 	let hash_3 = update_state(
 		state_handler.as_ref(),
 		&shard,
 		("my_key_3".encode(), "mega_secret_value3".encode()),
 	);
-	assert_eq!(3, number_of_files_in_shard_dir(&shard).unwrap());
+	assert_eq!(3, path_provider.number_of_files_in_shard_dir(&shard).unwrap());
 
 	let hash_4 = update_state(
 		state_handler.as_ref(),
 		&shard,
 		("my_key_3".encode(), "mega_secret_valuenot3".encode()),
 	);
-	assert_eq!(3, number_of_files_in_shard_dir(&shard).unwrap());
+	assert_eq!(3, path_provider.number_of_files_in_shard_dir(&shard).unwrap());
 
 	assert_ne!(hash_1, hash_2);
 	assert_ne!(hash_1, hash_3);
@@ -266,15 +231,18 @@ pub fn test_multiple_state_updates_create_snapshots_up_to_cache_size() {
 	assert_ne!(hash_2, hash_4);
 	assert_ne!(hash_3, hash_4);
 
-	assert_eq!(STATE_SNAPSHOTS_CACHE_SIZE, number_of_files_in_shard_dir(&shard).unwrap());
+	assert_eq!(
+		STATE_SNAPSHOTS_CACHE_SIZE,
+		path_provider.number_of_files_in_shard_dir(&shard).unwrap()
+	);
 }
 
 pub fn test_file_io_get_state_hash_works() {
 	let shard: ShardIdentifier = [21u8; 32].into();
-	let _shard_dir_handle = ShardDirectoryHandle::new(shard).unwrap();
 	let temp_dir = TempDir::with_prefix("test_file_io_get_state_hash_works").unwrap();
 	let state_key_access = Arc::new(aes_repo(temp_dir.path().to_path_buf()));
 	let path_provider = StatePathProvider::new(temp_dir.path().to_path_buf());
+	path_provider.given_initialized_shard(&shard);
 
 	let file_io = TestStateFileIo::new(state_key_access, path_provider);
 
@@ -294,12 +262,9 @@ pub fn test_state_files_from_handler_can_be_loaded_again() {
 		TempDir::with_prefix("test_state_files_from_handler_can_be_loaded_again").unwrap();
 	let state_key_access = Arc::new(aes_repo(temp_dir.path().to_path_buf()));
 	let path_provider = StatePathProvider::new(temp_dir.path().to_path_buf());
+	path_provider.given_initialized_shard(&shard);
 
-	let (state_handler, _shard_dir_handle) = initialize_state_handler_with_directory_handle(
-		&shard,
-		state_key_access.clone(),
-		path_provider.clone(),
-	);
+	let state_handler = initialize_state_handler(state_key_access.clone(), path_provider.clone());
 
 	update_state(state_handler.as_ref(), &shard, ("test_key_1".encode(), "value1".encode()));
 	update_state(state_handler.as_ref(), &shard, ("test_key_2".encode(), "value2".encode()));
@@ -311,9 +276,12 @@ pub fn test_state_files_from_handler_can_be_loaded_again() {
 	update_state(state_handler.as_ref(), &shard, ("test_key_3".encode(), "value3".encode()));
 
 	// We initialize another state handler to load the state from the changes we just made.
-	let updated_state_handler = initialize_state_handler(state_key_access, path_provider);
+	let updated_state_handler = initialize_state_handler(state_key_access, path_provider.clone());
 
-	assert_eq!(STATE_SNAPSHOTS_CACHE_SIZE, number_of_files_in_shard_dir(&shard).unwrap());
+	assert_eq!(
+		STATE_SNAPSHOTS_CACHE_SIZE,
+		path_provider.number_of_files_in_shard_dir(&shard).unwrap()
+	);
 	assert_eq!(
 		&"value3".encode(),
 		updated_state_handler
@@ -328,16 +296,15 @@ pub fn test_state_files_from_handler_can_be_loaded_again() {
 
 pub fn test_list_state_ids_ignores_files_not_matching_the_pattern() {
 	let shard: ShardIdentifier = [21u8; 32].into();
-	let _shard_dir_handle = ShardDirectoryHandle::new(shard).unwrap();
 	let temp_dir =
 		TempDir::with_prefix("test_list_state_ids_ignores_files_not_matching_the_pattern").unwrap();
 	let state_key_access = Arc::new(aes_repo(temp_dir.path().to_path_buf()));
 	let path_provider = StatePathProvider::new(temp_dir.path().to_path_buf());
+	path_provider.given_initialized_shard(&shard);
 
 	let file_io = TestStateFileIo::new(state_key_access, path_provider);
 
-	let mut invalid_state_file_path = shard_path(&shard);
-	invalid_state_file_path.push("invalid-state.bin");
+	let invalid_state_file_path = path_provider.shard_path(&shard).join("invalid-state.bin");
 	write(&[0, 1, 2, 3, 4, 5], invalid_state_file_path).unwrap();
 
 	file_io
@@ -349,9 +316,10 @@ pub fn test_list_state_ids_ignores_files_not_matching_the_pattern() {
 
 pub fn test_in_memory_state_initializes_from_shard_directory() {
 	let shard: ShardIdentifier = [45u8; 32].into();
-	let _shard_dir_handle = ShardDirectoryHandle::new(shard).unwrap();
 	let temp_dir =
 		TempDir::with_prefix("test_list_state_ids_ignores_files_not_matching_the_pattern").unwrap();
+	let path_provider = StatePathProvider::new(temp_dir.path().to_path_buf());
+	path_provider.given_initialized_shard(&shard);
 
 	let file_io = create_in_memory_state_io_from_shards_directories(&temp_dir.path()).unwrap();
 	let state_initializer = Arc::new(TestStateInitializer::new(StfState::new(Default::default())));
@@ -363,15 +331,6 @@ pub fn test_in_memory_state_initializes_from_shard_directory() {
 
 	assert_eq!(1, file_io.get_states_for_shard(&shard).unwrap().len());
 	assert!(state_snapshot_repository.shard_exists(&shard));
-}
-
-fn initialize_state_handler_with_directory_handle(
-	shard: &ShardIdentifier,
-	state_key_access: Arc<StateKeyRepository>,
-	path_provider: StatePathProvider,
-) -> (Arc<TestStateHandler>, ShardDirectoryHandle) {
-	let shard_dir_handle = ShardDirectoryHandle::new(*shard).unwrap();
-	(initialize_state_handler(state_key_access, path_provider), shard_dir_handle)
 }
 
 fn initialize_state_handler(
@@ -414,19 +373,21 @@ fn given_hello_world_state() -> StfState {
 	state
 }
 
-fn given_initialized_shard(shard: &ShardIdentifier) -> Result<()> {
-	if shard_exists(&shard) {
-		purge_shard_dir(shard);
+impl StatePathProvider {
+	fn given_initialized_shard(&self, shard: &ShardIdentifier) {
+		if self.shard_exists(shard) {
+			self.purge_shard_dir(shard);
+		}
+		self.create_shard(&shard).unwrap()
 	}
-	init_shard(&shard)
-}
 
-fn number_of_files_in_shard_dir(shard: &ShardIdentifier) -> Result<usize> {
-	let shard_dir_path = shard_path(shard);
-	let files_in_dir =
-		std::fs::read_dir(shard_dir_path.clone()).map_err(|e| Error::Other(e.into()))?;
+	fn number_of_files_in_shard_dir(&self, shard: &ShardIdentifier) -> Result<usize> {
+		let shard_dir_path = self.shard_path(shard);
+		let files_in_dir =
+			std::fs::read_dir(shard_dir_path.clone()).map_err(|e| Error::Other(e.into()))?;
 
-	log::info!("File in shard dir: {:?}", files_in_dir);
+		log::info!("File in shard dir: {:?}", files_in_dir);
 
-	Ok(files_in_dir.count())
+		Ok(files_in_dir.count())
+	}
 }

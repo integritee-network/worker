@@ -27,7 +27,10 @@ use base58::{FromBase58, ToBase58};
 #[cfg(any(test, feature = "sgx"))]
 use std::string::String;
 
-use crate::{error::Result, state_snapshot_primitives::StateId};
+use crate::{
+	error::{Error, Result},
+	state_snapshot_primitives::StateId,
+};
 use codec::{Decode, Encode};
 use itp_settings::files::SHARDS_PATH;
 use itp_types::ShardIdentifier;
@@ -102,6 +105,10 @@ impl StatePathProvider {
 			// When the iterator over all files in the directory returns none, the directory is empty.
 			.map(|mut d| d.next().is_some())
 			.unwrap_or(false)
+	}
+
+	pub fn create_shard(&self, shard: &ShardIdentifier) -> Result<()> {
+		std::fs::create_dir_all(self.shard_path(shard)).map_err(|e| Error::Other(e.into()))
 	}
 
 	pub fn state_file_path(&self, shard: &ShardIdentifier, state_id: StateId) -> PathBuf {
@@ -281,7 +288,7 @@ pub mod sgx {
 			state_id: StateId,
 			state: &Self::StateType,
 		) -> Result<Self::HashType> {
-			init_shard(&shard_identifier)?;
+			self.path_provider.create_shard(&shard_identifier)?;
 			self.write(shard_identifier, state_id, state)
 		}
 
@@ -322,25 +329,6 @@ pub mod sgx {
 		fn list_state_ids_for_shard(&self, shard: &ShardIdentifier) -> Result<Vec<StateId>> {
 			self.path_provider.list_state_ids_for_shard(shard)
 		}
-	}
-
-	/// Returns true if a shard directory for a given identifier exists AND contains at least one state file.
-	pub(crate) fn shard_exists(shard: &ShardIdentifier) -> bool {
-		let shard_path = shard_path(shard);
-		if !shard_path.exists() {
-			return false
-		}
-
-		shard_path
-			.read_dir()
-			// When the iterator over all files in the directory returns none, the directory is empty.
-			.map(|mut d| d.next().is_some())
-			.unwrap_or(false)
-	}
-
-	pub(crate) fn init_shard(shard: &ShardIdentifier) -> Result<()> {
-		let path = shard_path(shard);
-		fs::create_dir_all(path).map_err(|e| Error::Other(e.into()))
 	}
 }
 
