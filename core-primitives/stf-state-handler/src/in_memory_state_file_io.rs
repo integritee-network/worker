@@ -224,11 +224,13 @@ fn sgx_externalities_wrapper() -> ExternalStateGenerator<SgxExternalitiesType, S
 #[cfg(feature = "sgx")]
 pub mod sgx {
 	use super::*;
-	use crate::file_io::sgx::list_shards;
+	use crate::file_io::list_shards;
+	use std::path::Path;
 
 	pub fn create_in_memory_state_io_from_shards_directories(
+		path: &Path,
 	) -> Result<Arc<InMemoryStateFileIo<SgxExternalitiesType, SgxExternalities>>> {
-		let shards = list_shards()?;
+		let shards = list_shards(path)?;
 		Ok(create_in_memory_externalities_state_io(&shards))
 	}
 }

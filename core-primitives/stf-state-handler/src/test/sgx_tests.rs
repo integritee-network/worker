@@ -330,7 +330,7 @@ pub fn test_list_state_ids_ignores_files_not_matching_the_pattern() {
 	let shard: ShardIdentifier = [21u8; 32].into();
 	let _shard_dir_handle = ShardDirectoryHandle::new(shard).unwrap();
 	let temp_dir =
-		TempDir::with_prefix("test_state_files_from_handler_can_be_loaded_again").unwrap();
+		TempDir::with_prefix("test_list_state_ids_ignores_files_not_matching_the_pattern").unwrap();
 	let state_key_access = Arc::new(aes_repo(temp_dir.path().to_path_buf()));
 	let path_provider = StatePathProvider::new(temp_dir.path().to_path_buf());
 
@@ -350,8 +350,10 @@ pub fn test_list_state_ids_ignores_files_not_matching_the_pattern() {
 pub fn test_in_memory_state_initializes_from_shard_directory() {
 	let shard: ShardIdentifier = [45u8; 32].into();
 	let _shard_dir_handle = ShardDirectoryHandle::new(shard).unwrap();
+	let temp_dir =
+		TempDir::with_prefix("test_list_state_ids_ignores_files_not_matching_the_pattern").unwrap();
 
-	let file_io = create_in_memory_state_io_from_shards_directories().unwrap();
+	let file_io = create_in_memory_state_io_from_shards_directories(&temp_dir.path()).unwrap();
 	let state_initializer = Arc::new(TestStateInitializer::new(StfState::new(Default::default())));
 	let state_repository_loader =
 		StateSnapshotRepositoryLoader::new(file_io.clone(), state_initializer);

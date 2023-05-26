@@ -19,20 +19,24 @@
 use crate::sgx_reexport_prelude::*;
 
 #[cfg(any(test, feature = "std"))]
-use rust_base58::base58::ToBase58;
+use rust_base58::base58::{FromBase58, ToBase58};
 
 #[cfg(feature = "sgx")]
-use base58::ToBase58;
+use base58::{FromBase58, ToBase58};
 
 #[cfg(any(test, feature = "sgx"))]
 use std::string::String;
 
 use crate::{error::Result, state_snapshot_primitives::StateId};
-use codec::Encode;
+use codec::{Decode, Encode};
 use itp_settings::files::SHARDS_PATH;
 use itp_types::ShardIdentifier;
 use log::error;
-use std::{format, path::PathBuf, vec::Vec};
+use std::{
+	format,
+	path::{Path, PathBuf},
+	vec::Vec,
+};
 
 /// Encrypted state file suffix
 pub const ENCRYPTED_STATE_FILE: &str = "state.bin";
@@ -55,8 +59,29 @@ impl StatePathProvider {
 		self.shards_directory().join(shard.encode().to_base58())
 	}
 
-	pub fn state_file_path(&self, shard: &ShardIdentifier, state_id: StateId) -> PathBuf {
-		self.shard_path(shard).join(to_file_name(state_id))
+	/// List any valid shards that are found in the shard path.
+	/// Ignore any items (files, directories) that are not valid shard identifiers.
+	pub fn list_shards(&self) -> Result<Vec<ShardIdentifier>> {
+		list_shards(&self.shards_directory())
+	}
+
+	pub fn list_state_ids_for_shard(
+		&self,
+		shard_identifier: &ShardIdentifier,
+	) -> Result<Vec<StateId>> {
+		let shard_path = self.shard_path(shard_identifier);
+		let directory_items = list_items_in_directory(&shard_path);
+
+		Ok(directory_items
+			.iter()
+			.flat_map(|item| {
+				let maybe_state_id = extract_state_id_from_file_name(item.as_str());
+				if maybe_state_id.is_none() {
+					log::warn!("Found item ({}) that does not match state snapshot naming pattern, ignoring it", item)
+				}
+				maybe_state_id
+			})
+			.collect())
 	}
 
 	pub fn purge_shard_dir(&self, shard: &ShardIdentifier) {
@@ -64,6 +89,27 @@ impl StatePathProvider {
 		if let Err(e) = std::fs::remove_dir_all(&shard_dir_path) {
 			error!("Failed to remove shard directory {:?}: {:?}", shard_dir_path, e);
 		}
+	}
+
+	pub fn shard_exists(&self, shard: &ShardIdentifier) -> bool {
+		let shard_path = self.shard_path(shard);
+		if !shard_path.exists() {
+			return false
+		}
+
+		shard_path
+			.read_dir()
+			// When the iterator over all files in the directory returns none, the directory is empty.
+			.map(|mut d| d.next().is_some())
+			.unwrap_or(false)
+	}
+
+	pub fn state_file_path(&self, shard: &ShardIdentifier, state_id: StateId) -> PathBuf {
+		self.shard_path(shard).join(to_file_name(state_id))
+	}
+
+	pub fn file_for_state_exists(&self, shard: &ShardIdentifier, state_id: StateId) -> bool {
+		self.state_file_path(shard, state_id).exists()
 	}
 }
 
@@ -121,10 +167,8 @@ pub trait StateFileIo {
 
 #[cfg(feature = "sgx")]
 pub mod sgx {
-
 	use super::*;
 	use crate::error::Error;
-	use base58::FromBase58;
 	use codec::Decode;
 	use core::fmt::Debug;
 	use itp_hashing::Hash;
@@ -197,11 +241,11 @@ pub mod sgx {
 			shard_identifier: &ShardIdentifier,
 			state_id: StateId,
 		) -> Result<Self::StateType> {
-			if !file_for_state_exists(shard_identifier, state_id) {
+			if !self.path_provider.file_for_state_exists(shard_identifier, state_id) {
 				return Err(Error::InvalidStateId(state_id))
 			}
 
-			let state_path = state_file_path(shard_identifier, state_id);
+			let state_path = self.path_provider.state_file_path(shard_identifier, state_id);
 			trace!("loading state from: {:?}", state_path);
 			let state_encoded = self.read(&state_path)?;
 
@@ -249,7 +293,7 @@ pub mod sgx {
 			state_id: StateId,
 			state: &Self::StateType,
 		) -> Result<Self::HashType> {
-			let state_path = state_file_path(shard_identifier, state_id);
+			let state_path = self.path_provider.state_file_path(shard_identifier, state_id);
 			trace!("writing state to: {:?}", state_path);
 
 			// Only save the state, the state diff is pruned.
@@ -263,46 +307,21 @@ pub mod sgx {
 		}
 
 		fn remove(&self, shard_identifier: &ShardIdentifier, state_id: StateId) -> Result<()> {
-			fs::remove_file(state_file_path(shard_identifier, state_id))
+			fs::remove_file(self.path_provider.state_file_path(shard_identifier, state_id))
 				.map_err(|e| Error::Other(e.into()))
 		}
 
 		fn shard_exists(&self, shard_identifier: &ShardIdentifier) -> bool {
-			shard_exists(shard_identifier)
+			self.path_provider.shard_exists(shard_identifier)
 		}
 
 		fn list_shards(&self) -> Result<Vec<ShardIdentifier>> {
-			list_shards()
+			self.path_provider.list_shards()
 		}
 
-		fn list_state_ids_for_shard(
-			&self,
-			shard_identifier: &ShardIdentifier,
-		) -> Result<Vec<StateId>> {
-			let shard_path = shard_path(shard_identifier);
-			let directory_items = list_items_in_directory(&shard_path);
-
-			Ok(directory_items
-				.iter()
-				.flat_map(|item| {
-					let maybe_state_id = extract_state_id_from_file_name(item.as_str());
-					if maybe_state_id.is_none() {
-						warn!("Found item ({}) that does not match state snapshot naming pattern, ignoring it", item)
-					}
-					maybe_state_id
-				})
-				.collect())
+		fn list_state_ids_for_shard(&self, shard: &ShardIdentifier) -> Result<Vec<StateId>> {
+			self.path_provider.list_state_ids_for_shard(shard)
 		}
-	}
-
-	fn state_file_path(shard: &ShardIdentifier, state_id: StateId) -> PathBuf {
-		let mut shard_file_path = shard_path(shard);
-		shard_file_path.push(to_file_name(state_id));
-		shard_file_path
-	}
-
-	fn file_for_state_exists(shard: &ShardIdentifier, state_id: StateId) -> bool {
-		state_file_path(shard, state_id).exists()
 	}
 
 	/// Returns true if a shard directory for a given identifier exists AND contains at least one state file.
@@ -323,34 +342,32 @@ pub mod sgx {
 		let path = shard_path(shard);
 		fs::create_dir_all(path).map_err(|e| Error::Other(e.into()))
 	}
+}
 
-	/// List any valid shards that are found in the shard path.
-	/// Ignore any items (files, directories) that are not valid shard identifiers.
-	pub(crate) fn list_shards() -> Result<Vec<ShardIdentifier>> {
-		let directory_items = list_items_in_directory(&PathBuf::from(format!("./{}", SHARDS_PATH)));
-		Ok(directory_items
-			.iter()
-			.flat_map(|item| {
-				item.from_base58()
-					.ok()
-					.map(|encoded_shard_id| {
-						ShardIdentifier::decode(&mut encoded_shard_id.as_slice()).ok()
-					})
-					.flatten()
-			})
-			.collect())
-	}
+pub(crate) fn list_shards(path: &Path) -> Result<Vec<ShardIdentifier>> {
+	let directory_items = list_items_in_directory(path);
+	Ok(directory_items
+		.iter()
+		.flat_map(|item| {
+			item.from_base58()
+				.ok()
+				.map(|encoded_shard_id| {
+					ShardIdentifier::decode(&mut encoded_shard_id.as_slice()).ok()
+				})
+				.flatten()
+		})
+		.collect())
+}
 
-	fn list_items_in_directory(directory: &Path) -> Vec<String> {
-		let items = match directory.read_dir() {
-			Ok(rd) => rd,
-			Err(_) => return Vec::new(),
-		};
+fn list_items_in_directory(directory: &Path) -> Vec<String> {
+	let items = match directory.read_dir() {
+		Ok(rd) => rd,
+		Err(_) => return Vec::new(),
+	};
 
-		items
-			.flat_map(|fr| fr.map(|de| de.file_name().into_string().ok()).ok().flatten())
-			.collect()
-	}
+	items
+		.flat_map(|fr| fr.map(|de| de.file_name().into_string().ok()).ok().flatten())
+		.collect()
 }
 
 /// Remove a shard directory with all of its content.
@@ -369,7 +386,6 @@ fn to_file_name(state_id: StateId) -> String {
 	format!("{}_{}", state_id, ENCRYPTED_STATE_FILE)
 }
 
-#[cfg(any(test, feature = "sgx"))]
 fn extract_state_id_from_file_name(file_name: &str) -> Option<StateId> {
 	let state_id_str = file_name.strip_suffix(format!("_{}", ENCRYPTED_STATE_FILE).as_str())?;
 	state_id_str.parse::<StateId>().ok()
