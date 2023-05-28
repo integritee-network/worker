@@ -27,10 +27,7 @@ use base58::{FromBase58, ToBase58};
 #[cfg(any(test, feature = "sgx"))]
 use std::string::String;
 
-use crate::{
-	error::{Error, Result},
-	state_snapshot_primitives::StateId,
-};
+use crate::{error::Result, state_snapshot_primitives::StateId};
 use codec::{Decode, Encode};
 // Todo: Can be migrated to here in the course of #1292.
 use itp_settings::files::SHARDS_PATH;
@@ -66,31 +63,16 @@ impl StateDir {
 		self.shards_directory().join(shard.encode().to_base58())
 	}
 
-	/// Lists any valid shards that are found in the shard path.
-	///
-	/// Ignores any items (files, directories) that are not valid shard identifiers.
 	pub fn list_shards(&self) -> Result<Vec<ShardIdentifier>> {
-		list_shards(&self.shards_directory())
+		Ok(list_shards(&self.shards_directory())?.collect())
 	}
 
-	/// Lists all files with a valid state snapshot naming pattern.
 	pub fn list_state_ids_for_shard(
 		&self,
 		shard_identifier: &ShardIdentifier,
 	) -> Result<Vec<StateId>> {
 		let shard_path = self.shard_path(shard_identifier);
-		let directory_items = list_items_in_directory(&shard_path);
-
-		Ok(directory_items
-			.iter()
-			.filter_map(|item| {
-				let maybe_state_id = extract_state_id_from_file_name(item.as_str());
-				if maybe_state_id.is_none() {
-					log::warn!("Found item ({}) that does not match state snapshot naming pattern, ignoring it", item)
-				}
-				maybe_state_id
-			})
-			.collect())
+		Ok(state_ids_for_shard(shard_path.as_path())?.collect())
 	}
 
 	pub fn purge_shard_dir(&self, shard: &ShardIdentifier) {
@@ -102,19 +84,11 @@ impl StateDir {
 
 	pub fn shard_exists(&self, shard: &ShardIdentifier) -> bool {
 		let shard_path = self.shard_path(shard);
-		if !shard_path.exists() {
-			return false
-		}
-
-		shard_path
-			.read_dir()
-			// When the iterator over all files in the directory returns none, the directory is empty.
-			.map(|mut d| d.next().is_some())
-			.unwrap_or(false)
+		shard_path.exists() && shard_contains_state(&shard_path)
 	}
 
 	pub fn create_shard(&self, shard: &ShardIdentifier) -> Result<()> {
-		std::fs::create_dir_all(self.shard_path(shard)).map_err(|e| Error::Other(e.into()))
+		Ok(std::fs::create_dir_all(self.shard_path(shard))?)
 	}
 
 	pub fn state_file_path(&self, shard: &ShardIdentifier, state_id: StateId) -> PathBuf {
@@ -343,27 +317,58 @@ pub mod sgx {
 	}
 }
 
-pub(crate) fn list_shards(path: &Path) -> Result<Vec<ShardIdentifier>> {
-	let directory_items = list_items_in_directory(path);
-	Ok(directory_items
-		.iter()
-		.filter_map(|item| {
-			item.from_base58().ok().and_then(|encoded_shard_id| {
-				ShardIdentifier::decode(&mut encoded_shard_id.as_slice()).ok()
-			})
-		})
-		.collect())
+/// Lists all files with a valid state snapshot naming pattern.
+pub(crate) fn state_ids_for_shard(shard_path: &Path) -> Result<impl Iterator<Item = StateId>> {
+	Ok(items_in_directory(shard_path)?.filter_map(|item| {
+		match extract_state_id_from_file_name(&item) {
+			Some(state_id) => Some(state_id),
+			None => {
+				log::warn!(
+				"Found item ({}) that does not match state snapshot naming pattern, ignoring it",
+				item
+			);
+				None
+			},
+		}
+	}))
 }
 
-fn list_items_in_directory(directory: &Path) -> Vec<String> {
-	let items = match directory.read_dir() {
-		Ok(rd) => rd,
-		Err(_) => return Vec::new(),
-	};
+/// Returns an iterator over all valid shards in a directory.
+///
+/// Ignore any items (files, directories) that are not valid shard identifiers.
+pub(crate) fn list_shards(path: &Path) -> Result<impl Iterator<Item = ShardIdentifier>> {
+	items_in_directory(path).map(|items| {
+		items.filter_map(|base58| match shard_from_base58(&base58) {
+			Ok(shard) => Some(shard),
+			Err(e) => {
+				error!("Found invalid shard ({}). Error: {:?}", base58, e);
+				None
+			},
+		})
+	})
+}
 
-	items
-		.filter_map(|fr| fr.ok().and_then(|de| de.file_name().into_string().ok()))
-		.collect()
+fn shard_from_base58(base58: &str) -> Result<ShardIdentifier> {
+	let vec = base58.from_base58()?;
+	Ok(Decode::decode(&mut vec.as_slice())?)
+}
+
+/// Returns an iterator over all filenames in a directory.
+fn items_in_directory(directory: &Path) -> Result<impl Iterator<Item = String>> {
+	Ok(directory
+		.read_dir()?
+		.filter_map(|fr| fr.ok().and_then(|de| de.file_name().into_string().ok())))
+}
+
+fn shard_contains_state(path: &Path) -> bool {
+	// If at least on item can be decoded into a state id, the shard is not empty.
+	match state_ids_for_shard(path) {
+		Ok(mut iter) => iter.next().is_some(),
+		Err(e) => {
+			error!("Error in reading shard dir: {:?}", e);
+			false
+		},
+	}
 }
 
 fn to_file_name(state_id: StateId) -> String {

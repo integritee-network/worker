@@ -230,7 +230,7 @@ pub mod sgx {
 	pub fn create_in_memory_state_io_from_shards_directories(
 		path: &Path,
 	) -> Result<Arc<InMemoryStateFileIo<SgxExternalitiesType, SgxExternalities>>> {
-		let shards = list_shards(path)?;
+		let shards: Vec<ShardIdentifier> = list_shards(path)?.collect();
 		Ok(create_in_memory_externalities_state_io(&shards))
 	}
 }

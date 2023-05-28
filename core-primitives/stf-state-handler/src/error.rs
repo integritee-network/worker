@@ -51,6 +51,8 @@ pub enum Error {
 	OsStringConversion,
 	#[error("SGX crypto error: {0}")]
 	CryptoError(itp_sgx_crypto::Error),
+	#[error("IO error: {0}")]
+	IO(std::io::Error),
 	#[error("SGX error, status: {0}")]
 	SgxError(sgx_status_t),
 	#[error(transparent)]
@@ -59,7 +61,7 @@ pub enum Error {
 
 impl From<std::io::Error> for Error {
 	fn from(e: std::io::Error) -> Self {
-		Self::Other(e.into())
+		Self::IO(e)
 	}
 }
 
