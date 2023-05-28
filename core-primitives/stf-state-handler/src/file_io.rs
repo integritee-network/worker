@@ -340,15 +340,13 @@ pub(crate) fn state_ids_for_shard(shard_path: &Path) -> Result<impl Iterator<Ite
 ///
 /// Ignore any items (files, directories) that are not valid shard identifiers.
 pub(crate) fn list_shards(path: &Path) -> Result<impl Iterator<Item = ShardIdentifier>> {
-	items_in_directory(path).map(|items| {
-		items.filter_map(|base58| match shard_from_base58(&base58) {
-			Ok(shard) => Some(shard),
-			Err(e) => {
-				error!("Found invalid shard ({}). Error: {:?}", base58, e);
-				None
-			},
-		})
-	})
+	Ok(items_in_directory(path)?.filter_map(|base58| match shard_from_base58(&base58) {
+		Ok(shard) => Some(shard),
+		Err(e) => {
+			error!("Found invalid shard ({}). Error: {:?}", base58, e);
+			None
+		},
+	}))
 }
 
 fn shard_from_base58(base58: &str) -> Result<ShardIdentifier> {
