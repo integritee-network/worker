@@ -66,7 +66,7 @@ impl StateDir {
 	pub fn list_shards(&self) -> Result<Vec<ShardIdentifier>> {
 		Ok(list_shards(&self.shards_directory())
 			.map(|iter| iter.collect())
-			// return an empty vec in case the directory does not exis.
+			// return an empty vec in case the directory does not exist.
 			.unwrap_or_default())
 	}
 
