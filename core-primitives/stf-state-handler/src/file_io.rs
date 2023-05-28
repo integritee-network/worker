@@ -84,7 +84,7 @@ impl StateDir {
 
 	pub fn shard_exists(&self, shard: &ShardIdentifier) -> bool {
 		let shard_path = self.shard_path(shard);
-		shard_path.exists() && shard_contains_state(&shard_path)
+		shard_path.exists() && shard_contains_valid_state_id(&shard_path)
 	}
 
 	pub fn create_shard(&self, shard: &ShardIdentifier) -> Result<()> {
@@ -360,7 +360,7 @@ fn items_in_directory(directory: &Path) -> Result<impl Iterator<Item = String>> 
 		.filter_map(|fr| fr.ok().and_then(|de| de.file_name().into_string().ok())))
 }
 
-fn shard_contains_state(path: &Path) -> bool {
+fn shard_contains_valid_state_id(path: &Path) -> bool {
 	// If at least on item can be decoded into a state id, the shard is not empty.
 	match state_ids_for_shard(path) {
 		Ok(mut iter) => iter.next().is_some(),
