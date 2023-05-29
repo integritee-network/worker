@@ -89,7 +89,8 @@ pub fn test_encrypt_decrypt_state_type_works() {
 pub fn test_write_and_load_state_works() {
 	// given
 	let shard: ShardIdentifier = [94u8; 32].into();
-	let (_temp_dir, state_key_access, state_dir) = setup("test_write_and_load_state_works", &shard);
+	let (_temp_dir, state_key_access, state_dir) =
+		test_setup("test_write_and_load_state_works", &shard);
 
 	let state_handler = initialize_state_handler(state_key_access, state_dir);
 
@@ -109,7 +110,7 @@ pub fn test_ensure_subsequent_state_loads_have_same_hash() {
 	// given
 	let shard: ShardIdentifier = [49u8; 32].into();
 	let (_temp_dir, state_key_access, state_dir) =
-		setup("test_ensure_subsequent_state_loads_have_same_hash", &shard);
+		test_setup("test_ensure_subsequent_state_loads_have_same_hash", &shard);
 
 	let state_handler = initialize_state_handler(state_key_access, state_dir);
 
@@ -128,7 +129,7 @@ pub fn test_write_access_locks_read_until_finished() {
 	// given
 	let shard: ShardIdentifier = [47u8; 32].into();
 	let (_temp_dir, state_key_access, state_dir) =
-		setup("test_write_access_locks_read_until_finished", &shard);
+		test_setup("test_write_access_locks_read_until_finished", &shard);
 
 	let state_handler = initialize_state_handler(state_key_access, state_dir);
 
@@ -158,7 +159,7 @@ pub fn test_write_access_locks_read_until_finished() {
 pub fn test_state_handler_file_backend_is_initialized() {
 	let shard: ShardIdentifier = [11u8; 32].into();
 	let (_temp_dir, state_key_access, state_dir) =
-		setup("test_state_handler_file_backend_is_initialized", &shard);
+		test_setup("test_state_handler_file_backend_is_initialized", &shard);
 
 	let state_handler = initialize_state_handler(state_key_access, state_dir.clone());
 
@@ -174,7 +175,7 @@ pub fn test_state_handler_file_backend_is_initialized() {
 pub fn test_multiple_state_updates_create_snapshots_up_to_cache_size() {
 	let shard: ShardIdentifier = [17u8; 32].into();
 	let (_temp_dir, state_key_access, state_dir) =
-		setup("test_state_handler_file_backend_is_initialized", &shard);
+		test_setup("test_state_handler_file_backend_is_initialized", &shard);
 
 	let state_handler = initialize_state_handler(state_key_access, state_dir.clone());
 
@@ -224,7 +225,7 @@ pub fn test_multiple_state_updates_create_snapshots_up_to_cache_size() {
 pub fn test_file_io_get_state_hash_works() {
 	let shard: ShardIdentifier = [21u8; 32].into();
 	let (_temp_dir, state_key_access, state_dir) =
-		setup("test_file_io_get_state_hash_works", &shard);
+		test_setup("test_file_io_get_state_hash_works", &shard);
 
 	let file_io = TestStateFileIo::new(state_key_access, state_dir);
 
@@ -241,7 +242,7 @@ pub fn test_file_io_get_state_hash_works() {
 pub fn test_state_files_from_handler_can_be_loaded_again() {
 	let shard: ShardIdentifier = [15u8; 32].into();
 	let (_temp_dir, state_key_access, state_dir) =
-		setup("test_state_files_from_handler_can_be_loaded_again", &shard);
+		test_setup("test_state_files_from_handler_can_be_loaded_again", &shard);
 
 	let state_handler = initialize_state_handler(state_key_access.clone(), state_dir.clone());
 
@@ -276,7 +277,7 @@ pub fn test_state_files_from_handler_can_be_loaded_again() {
 pub fn test_list_state_ids_ignores_files_not_matching_the_pattern() {
 	let shard: ShardIdentifier = [21u8; 32].into();
 	let (_temp_dir, state_key_access, state_dir) =
-		setup("test_list_state_ids_ignores_files_not_matching_the_pattern", &shard);
+		test_setup("test_list_state_ids_ignores_files_not_matching_the_pattern", &shard);
 
 	let file_io = TestStateFileIo::new(state_key_access, state_dir.clone());
 
@@ -293,7 +294,7 @@ pub fn test_list_state_ids_ignores_files_not_matching_the_pattern() {
 pub fn test_in_memory_state_initializes_from_shard_directory() {
 	let shard: ShardIdentifier = [45u8; 32].into();
 	let (_temp_dir, _, state_dir) =
-		setup("test_list_state_ids_ignores_files_not_matching_the_pattern", &shard);
+		test_setup("test_list_state_ids_ignores_files_not_matching_the_pattern", &shard);
 
 	let file_io =
 		create_in_memory_state_io_from_shards_directories(&state_dir.shards_directory()).unwrap();
@@ -348,7 +349,7 @@ fn given_hello_world_state() -> StfState {
 	state
 }
 
-fn setup(id: &str, shard: &ShardIdentifier) -> (TempDir, Arc<StateKeyRepository>, StateDir) {
+fn test_setup(id: &str, shard: &ShardIdentifier) -> (TempDir, Arc<StateKeyRepository>, StateDir) {
 	let temp_dir = TempDir::with_prefix(id).unwrap();
 	let state_key_access = Arc::new(get_aes_repository(temp_dir.path().to_path_buf()).unwrap());
 	let state_dir = StateDir::new(temp_dir.path().to_path_buf());
