@@ -302,8 +302,7 @@ pub mod sgx {
 		}
 
 		fn remove(&self, shard_identifier: &ShardIdentifier, state_id: StateId) -> Result<()> {
-			fs::remove_file(self.state_dir.state_file_path(shard_identifier, state_id))
-				.map_err(|e| Error::Other(e.into()))
+			Ok(fs::remove_file(self.state_dir.state_file_path(shard_identifier, state_id))?)
 		}
 
 		fn shard_exists(&self, shard_identifier: &ShardIdentifier) -> bool {
