@@ -64,7 +64,7 @@ use itp_sgx_crypto::{
 	get_aes_repository, get_ed25519_repository, get_rsa3072_repository, key_repository::AccessKey,
 };
 use itp_stf_state_handler::{
-	handle_state::HandleState, query_shard_state::QueryShardState,
+	file_io::StateDir, handle_state::HandleState, query_shard_state::QueryShardState,
 	state_snapshot_repository::VersionedStateAccess,
 	state_snapshot_repository_loader::StateSnapshotRepositoryLoader, StateHandler,
 };
@@ -91,10 +91,11 @@ pub(crate) fn init_enclave(
 
 	// Create the aes key that is used for state encryption such that a key is always present in tests.
 	// It will be overwritten anyway if mutual remote attestation is performed with the primary worker.
-	let state_key_repository = Arc::new(get_aes_repository(base_dir)?);
+	let state_key_repository = Arc::new(get_aes_repository(base_dir.clone())?);
 	GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.initialize(state_key_repository.clone());
 
-	let state_file_io = Arc::new(EnclaveStateFileIo::new(state_key_repository));
+	let state_file_io =
+		Arc::new(EnclaveStateFileIo::new(state_key_repository, StateDir::new(base_dir)));
 	let state_initializer =
 		Arc::new(EnclaveStateInitializer::new(shielding_key_repository.clone()));
 	let state_snapshot_repository_loader = StateSnapshotRepositoryLoader::<

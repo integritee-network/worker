@@ -48,7 +48,6 @@ pub mod files {
 
 	// used by worker and enclave
 	pub const SHARDS_PATH: &str = "shards";
-	pub const ENCRYPTED_STATE_FILE: &str = "state.bin";
 	pub const LAST_SLOT_BIN: &str = "last_slot.bin";
 
 	#[cfg(feature = "production")]
