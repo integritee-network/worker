@@ -110,7 +110,7 @@ pub fn enclave_init(config: &Config) -> EnclaveResult<Enclave> {
 	enclave_api.init(
 		&config.mu_ra_url_external(),
 		&config.untrusted_worker_url_external(),
-		&config.base_dir().display().to_string(),
+		&config.data_dir().display().to_string(),
 	)?;
 
 	Ok(enclave_api)

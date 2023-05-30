@@ -19,7 +19,11 @@ use clap::ArgMatches;
 use itc_rest_client::rest_client::Url;
 use parse_duration::parse;
 use serde::{Deserialize, Serialize};
-use std::{fs, path::PathBuf, time::Duration};
+use std::{
+	fs,
+	path::{Path, PathBuf},
+	time::Duration,
+};
 
 static DEFAULT_NODE_SERVER: &str = "ws://127.0.0.1";
 static DEFAULT_NODE_PORT: &str = "9944";
@@ -53,7 +57,7 @@ pub struct Config {
 	/// Port for the untrusted HTTP server (e.g. for `is_initialized`)
 	untrusted_http_port: String,
 	/// Data directory used by all the services.
-	base_dir: PathBuf,
+	data_dir: PathBuf,
 	/// Config of the 'run' subcommand
 	run_config: Option<RunConfig>,
 }
@@ -89,7 +93,7 @@ impl Config {
 			enable_metrics_server,
 			metrics_server_port,
 			untrusted_http_port,
-			base_dir,
+			data_dir: base_dir,
 			run_config,
 		}
 	}
@@ -135,8 +139,8 @@ impl Config {
 		}
 	}
 
-	pub fn base_dir(&self) -> &PathBuf {
-		&self.base_dir
+	pub fn data_dir(&self) -> &Path {
+		self.data_dir.as_path()
 	}
 
 	pub fn run_config(&self) -> &Option<RunConfig> {
@@ -288,7 +292,7 @@ mod test {
 		assert!(config.mu_ra_external_address.is_none());
 		assert!(!config.enable_metrics_server);
 		assert_eq!(config.untrusted_http_port, DEFAULT_UNTRUSTED_HTTP_PORT);
-		assert_eq!(config.base_dir, pwd);
+		assert_eq!(config.data_dir, pwd);
 		assert!(config.run_config.is_none());
 	}
 
