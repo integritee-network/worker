@@ -22,7 +22,6 @@ use std::boxed::Box;
 
 pub type Result<T> = core::result::Result<T, Error>;
 
-/// extrinsics factory error
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
 	#[error("Could not decode from hex data: {0}")]
