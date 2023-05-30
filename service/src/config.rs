@@ -166,7 +166,7 @@ impl From<&ArgMatches<'_>> for Config {
 		let untrusted_http_port =
 			m.value_of("untrusted-http-port").unwrap_or(DEFAULT_UNTRUSTED_HTTP_PORT);
 
-		let base_dir = match m.value_of("base-dir") {
+		let base_dir = match m.value_of("data-dir") {
 			Some(d) => PathBuf::from(d),
 			None => {
 				log::warn!("[Config] defaulting to data-dir = PWD because it was previous behaviour. This might change soon.\

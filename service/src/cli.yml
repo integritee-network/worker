@@ -24,10 +24,10 @@ args:
           help: Set the websocket port to listen for substrate events
           takes_value: true
           default_value: "9944"
-    - base-dir:
+    - data-dir:
           short: d
-          long: base-dir
-          help: Base directory where the service operates.
+          long: data-dir
+          help: Data dir where the worker stores it's keys and other data.
           takes_value: true
     - ws-external:
         long: ws-external

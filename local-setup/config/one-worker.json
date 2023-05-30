@@ -30,7 +30,9 @@
         "2001",
         "-h",
         "4545",
-        "--ws-external"
+        "--ws-external",
+        "--data-dir",
+        "/tmp/data-dir"
       ],
       "subcommand_flags": [
         "--skip-ra",
