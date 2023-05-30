@@ -40,7 +40,7 @@ pub fn create_temp_dir() -> TempDir {
 }
 
 pub fn get_storage(path: PathBuf) -> SidechainStorage<SignedSidechainBlock> {
-	SidechainStorage::<SignedSidechainBlock>::new(path).unwrap()
+	SidechainStorage::<SignedSidechainBlock>::load_from_base_path(path).unwrap()
 }
 
 pub fn default_shard() -> ShardIdentifier {

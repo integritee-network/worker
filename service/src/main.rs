@@ -120,6 +120,13 @@ fn main() {
 	let yml = load_yaml!("cli.yml");
 	let matches = App::from_yaml(yml).get_matches();
 
+	// Todo: This will be changed to be a param of the CLI:
+	// https://github.com/integritee-network/worker/issues/1292
+	//
+	// Until the above task is finished, we just fall back to the
+	// static behaviour, which uses the PWD already.
+	let pwd = std::env::current_dir().expect("Works on all supported platforms; qed");
+
 	let config = Config::from(&matches);
 
 	GlobalTokioHandle::initialize();
@@ -140,10 +147,8 @@ fn main() {
 
 	// build the entire dependency tree
 	let tokio_handle = Arc::new(GlobalTokioHandle {});
-	let sidechain_blockstorage = Arc::new(
-		SidechainStorageLock::<SignedSidechainBlock>::new(PathBuf::from(&SIDECHAIN_STORAGE_PATH))
-			.unwrap(),
-	);
+	let sidechain_blockstorage =
+		Arc::new(SidechainStorageLock::<SignedSidechainBlock>::from_base_path(pwd).unwrap());
 	let node_api_factory =
 		Arc::new(NodeApiFactory::new(config.node_url(), AccountKeyring::Alice.pair()));
 	let enclave = Arc::new(enclave_init(&config).unwrap());
