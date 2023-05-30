@@ -72,7 +72,8 @@ use log::*;
 use my_node_runtime::{Hash, Header, RuntimeEvent};
 use sgx_types::*;
 use substrate_api_client::{
-	rpc::HandleSubscription, GetHeader, SubmitAndWatch, SubscribeChain, SubscribeEvents, XtStatus,
+	rpc::HandleSubscription, GetHeader, SubmitAndWatch, SubmitAndWatchUntilSuccess, SubscribeChain,
+	SubscribeEvents, XtStatus,
 };
 
 #[cfg(feature = "dcap")]
@@ -788,12 +789,18 @@ fn send_extrinsic(
 	}
 
 	println!("[>] Register the TCB info (send the extrinsic)");
-	let register_qe_block_hash = api
-		.submit_and_watch_opaque_extrinsic_until(extrinsic.into(), XtStatus::Finalized)
-		.unwrap()
-		.block_hash;
-	println!("[<] Extrinsic got finalized. Block hash: {:?}\n", register_qe_block_hash);
-	register_qe_block_hash
+
+	match api.submit_and_watch_opaque_extrinsic_until_success(extrinsic.into(), true) {
+		Ok(xt_report) => {
+			let register_qe_block_hash = xt_report.block_hash;
+			println!("[<] Extrinsic got finalized. Block hash: {:?}\n", register_qe_block_hash);
+			register_qe_block_hash
+		},
+		Err(e) => {
+			error!("ExtrinsicFailed {:?}", e);
+			None
+		},
+	}
 }
 
 /// Subscribe to the node API finalized heads stream and trigger a parent chain sync
