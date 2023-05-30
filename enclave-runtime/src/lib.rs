@@ -85,6 +85,14 @@ pub type AuthorityPair = sp_core::ed25519::Pair;
 
 static BASE_PATH: OnceCell<PathBuf> = OnceCell::new();
 
+fn get_base_path() -> Result<PathBuf> {
+	let base_path = BASE_PATH.get().ok_or_else(|| {
+		Error::Other(format!("BASE_PATH not initialized. Broken enclave init flow!").into())
+	})?;
+
+	Ok(base_path.clone())
+}
+
 /// Initialize the enclave.
 #[no_mangle]
 pub unsafe extern "C" fn init(
@@ -332,22 +340,30 @@ pub unsafe extern "C" fn init_parentchain_components(
 ) -> sgx_status_t {
 	info!("Initializing light client!");
 
+	match init_parentchain_params_internal(params, params_size, latest_header, latest_header_size) {
+		Ok(()) => sgx_status_t::SGX_SUCCESS,
+		Err(e) => e.into(),
+	}
+}
+
+unsafe fn init_parentchain_params_internal(
+	params: *const u8,
+	params_size: usize,
+	latest_header: *mut u8,
+	latest_header_size: usize,
+) -> Result<()> {
+	let base_path = get_base_path()?;
+
 	let encoded_params = slice::from_raw_parts(params, params_size);
 	let latest_header_slice = slice::from_raw_parts_mut(latest_header, latest_header_size);
 
-	let encoded_latest_header = match initialization::parentchain::init_parentchain_components::<
+	let encoded_latest_header = initialization::parentchain::init_parentchain_components::<
 		WorkerModeProvider,
-	>(encoded_params.to_vec())
-	{
-		Ok(h) => h,
-		Err(e) => return e.into(),
-	};
+	>(base_path, encoded_params.to_vec())?;
 
-	if let Err(e) = write_slice_and_whitespace_pad(latest_header_slice, encoded_latest_header) {
-		return Error::Other(Box::new(e)).into()
-	};
+	write_slice_and_whitespace_pad(latest_header_slice, encoded_latest_header)?;
 
-	sgx_status_t::SGX_SUCCESS
+	Ok(())
 }
 
 #[no_mangle]
