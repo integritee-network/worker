@@ -4042,6 +4042,7 @@ dependencies = [
 name = "its-storage"
 version = "0.9.0"
 dependencies = [
+ "itp-settings",
  "itp-time-utils",
  "itp-types",
  "its-primitives",

@@ -34,9 +34,9 @@ pub struct SidechainStorageLock<SignedBlock: SignedBlockT> {
 }
 
 impl<SignedBlock: SignedBlockT> SidechainStorageLock<SignedBlock> {
-	pub fn new(path: PathBuf) -> Result<SidechainStorageLock<SignedBlock>> {
+	pub fn from_base_path(path: PathBuf) -> Result<SidechainStorageLock<SignedBlock>> {
 		Ok(SidechainStorageLock {
-			storage: RwLock::new(SidechainStorage::<SignedBlock>::new(path)?),
+			storage: RwLock::new(SidechainStorage::<SignedBlock>::load_from_base_path(path)?),
 		})
 	}
 }
