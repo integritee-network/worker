@@ -28,6 +28,7 @@
 #[cfg(not(target_env = "sgx"))]
 #[macro_use]
 extern crate sgx_tstd as std;
+extern crate alloc;
 
 use crate::{
 	error::{Error, Result},
@@ -42,6 +43,7 @@ use crate::{
 		get_triggered_dispatcher_from_solo_or_parachain, utf8_str_from_raw, DecodeRaw,
 	},
 };
+use alloc::string::ToString;
 use codec::{alloc::string::String, Decode};
 use itc_parentchain::block_import_dispatcher::{
 	triggered_dispatcher::TriggerParentchainBlockImport, DispatchBlockImport,
@@ -87,7 +89,7 @@ static BASE_PATH: OnceCell<PathBuf> = OnceCell::new();
 
 fn get_base_path() -> Result<PathBuf> {
 	let base_path = BASE_PATH.get().ok_or_else(|| {
-		Error::Other(format!("BASE_PATH not initialized. Broken enclave init flow!").into())
+		Error::Other("BASE_PATH not initialized. Broken enclave init flow!".to_string().into())
 	})?;
 
 	Ok(base_path.clone())
