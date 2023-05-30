@@ -19,7 +19,7 @@ use clap::ArgMatches;
 use itc_rest_client::rest_client::Url;
 use parse_duration::parse;
 use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, time::Duration};
+use std::{fs, path::PathBuf, time::Duration};
 
 static DEFAULT_NODE_SERVER: &str = "ws://127.0.0.1";
 static DEFAULT_NODE_PORT: &str = "9944";
@@ -167,7 +167,16 @@ impl From<&ArgMatches<'_>> for Config {
 			m.value_of("untrusted-http-port").unwrap_or(DEFAULT_UNTRUSTED_HTTP_PORT);
 
 		let base_dir = match m.value_of("data-dir") {
-			Some(d) => PathBuf::from(d),
+			Some(d) => {
+				let p = PathBuf::from(d);
+				if !p.exists() {
+					log::info!("Creating new data-directory for the service {}.", p.display());
+					fs::create_dir_all(p.as_path()).unwrap();
+				} else {
+					log::info!("Starting service in existing directory {}.", p.display());
+				}
+				p
+			},
 			None => {
 				log::warn!("[Config] defaulting to data-dir = PWD because it was previous behaviour. This might change soon.\
 				Please pass the data-dir explicitly to ensure nothing breaks in your setup.");
