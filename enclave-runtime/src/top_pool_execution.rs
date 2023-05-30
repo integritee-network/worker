@@ -54,7 +54,7 @@ use its_primitives::{
 use its_sidechain::{
 	aura::{proposer_factory::ProposerFactory, Aura, SlotClaimStrategy},
 	consensus_common::{Environment, Error as ConsensusError, ProcessBlockImportQueue},
-	slots::{sgx::LastSlotSeal, yield_next_slot, PerShardSlotWorkerScheduler, SlotInfo},
+	slots::{yield_next_slot, LastSlot, PerShardSlotWorkerScheduler, SlotInfo},
 	validateer_fetch::ValidateerFetch,
 };
 use log::*;
@@ -135,7 +135,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 		slot_beginning_timestamp,
 		SLOT_DURATION,
 		latest_parentchain_header,
-		&mut LastSlotSeal,
+		&mut LastSlot,
 	)? {
 		Some(slot) => {
 			if slot.duration_remaining().is_none() {
