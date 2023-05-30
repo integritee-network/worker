@@ -58,8 +58,9 @@ pub struct SidechainStorage<SignedBlock: SignedBlockT> {
 }
 
 impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
-	/// Loads the DB from the given path and stores the listed shard
-	/// and their last blocks in memory for better performance
+	/// Loads or initializes the DB at a given path.
+	///
+	/// Loads existing shards and their last blocks in memory for better performance.
 	pub fn load_from_base_path(base_path: PathBuf) -> Result<SidechainStorage<SignedBlock>> {
 		// load db
 		let db = SidechainDB::open_default(base_path.join(SIDECHAIN_STORAGE_PATH))?;
