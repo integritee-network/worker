@@ -131,6 +131,8 @@ impl RemoteAttestation for Enclave {
 
 		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
 
+		trace!("Generating dcap_ra_extrinsic with URL: {}", w_url);
+
 		let url = w_url.encode();
 
 		let result = unsafe {
@@ -217,6 +219,8 @@ impl RemoteAttestation for Enclave {
 		let quote_size = self.qe_get_quote_size()?;
 		info!("Retrieved quote size of {:?}", quote_size);
 
+		trace!("Generating dcap_ra_extrinsic with URL: {}", w_url);
+
 		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
 
 		let url = w_url.encode();
@@ -245,6 +249,8 @@ impl RemoteAttestation for Enclave {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
 
+		trace!("Generating register quoting enclave");
+
 		let collateral_ptr = self.get_dcap_collateral(fmspc)?;
 
 		let result = unsafe {
@@ -267,6 +273,8 @@ impl RemoteAttestation for Enclave {
 	fn generate_register_tcb_info_extrinsic(&self, fmspc: Fmspc) -> EnclaveResult<Vec<u8>> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
+
+		trace!("Generating tcb_info registration");
 
 		let collateral_ptr = self.get_dcap_collateral(fmspc)?;
 
