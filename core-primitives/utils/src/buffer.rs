@@ -17,21 +17,32 @@
 
 //! Buffer utility functions.
 
-use crate::error::{Error, Result};
 use frame_support::ensure;
 use std::vec::Vec;
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::thiserror;
+
 /// Fills a given buffer with data and the left over buffer space with white spaces.
-pub fn write_slice_and_whitespace_pad(writable: &mut [u8], data: Vec<u8>) -> Result<()> {
+pub fn write_slice_and_whitespace_pad(
+	writable: &mut [u8],
+	data: Vec<u8>,
+) -> Result<(), BufferError> {
 	ensure!(
 		data.len() <= writable.len(),
-		Error::InsufficientBufferSize(writable.len(), data.len())
+		BufferError::InsufficientBufferSize(writable.len(), data.len())
 	);
 	let (left, right) = writable.split_at_mut(data.len());
 	left.clone_from_slice(&data);
 	// fill the right side with whitespace
 	right.iter_mut().for_each(|x| *x = 0x20);
 	Ok(())
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum BufferError {
+	#[error("Insufficient buffer size. Actual: {0}, required: {1}")]
+	InsufficientBufferSize(usize, usize),
 }
 
 #[cfg(test)]

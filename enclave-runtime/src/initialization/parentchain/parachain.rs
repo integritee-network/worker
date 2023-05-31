@@ -37,7 +37,7 @@ use itp_settings::{
 	files::LIGHT_CLIENT_DB,
 	worker_mode::{ProvideWorkerMode, WorkerMode},
 };
-use std::{sync::Arc, vec::Vec};
+use std::{path::PathBuf, sync::Arc, vec::Vec};
 
 pub use itc_parentchain::primitives::{ParachainBlock, ParachainHeader, ParachainParams};
 
@@ -53,14 +53,17 @@ pub struct FullParachainHandler {
 }
 
 impl FullParachainHandler {
-	pub fn init<WorkerModeProvider: ProvideWorkerMode>(params: ParachainParams) -> Result<Vec<u8>> {
+	pub fn init<WorkerModeProvider: ProvideWorkerMode>(
+		base_path: PathBuf,
+		params: ParachainParams,
+	) -> Result<Vec<u8>> {
 		let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 		let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 		let node_metadata_repository = Arc::new(EnclaveNodeMetadataRepository::default());
 
 		let genesis_header = params.genesis_header.clone();
 
-		let light_client_seal = EnclaveLightClientSeal::new(LIGHT_CLIENT_DB);
+		let light_client_seal = EnclaveLightClientSeal::new(base_path.join(LIGHT_CLIENT_DB));
 		let validator = itc_parentchain::light_client::io::read_or_init_parachain_validator::<
 			ParachainBlock,
 			EnclaveOCallApi,

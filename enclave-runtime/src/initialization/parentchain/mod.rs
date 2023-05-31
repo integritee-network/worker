@@ -21,19 +21,20 @@ use itc_parentchain::primitives::ParentchainInitParams;
 use itp_settings::worker_mode::ProvideWorkerMode;
 use parachain::FullParachainHandler;
 use solochain::FullSolochainHandler;
-use std::vec::Vec;
+use std::{path::PathBuf, vec::Vec};
 
 mod common;
 pub mod parachain;
 pub mod solochain;
 
 pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>(
+	base_path: PathBuf,
 	encoded_params: Vec<u8>,
 ) -> Result<Vec<u8>> {
 	match ParentchainInitParams::decode(&mut encoded_params.as_slice())? {
 		ParentchainInitParams::Parachain { params } =>
-			FullParachainHandler::init::<WorkerModeProvider>(params),
+			FullParachainHandler::init::<WorkerModeProvider>(base_path, params),
 		ParentchainInitParams::Solochain { params } =>
-			FullSolochainHandler::init::<WorkerModeProvider>(params),
+			FullSolochainHandler::init::<WorkerModeProvider>(base_path, params),
 	}
 }
