@@ -202,6 +202,10 @@ impl RemoteAttestation for Enclave {
 		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
 
+		unsafe {
+			trace!("Generating DCAP RA Quote: {}", *dcap_quote_p);
+		}
+
 		Ok(dcap_quote_vec)
 	}
 
@@ -373,6 +377,48 @@ impl RemoteAttestation for Enclave {
 				collateral_ptr_ptr,
 			)
 		};
+
+		unsafe {
+			trace!("FMSPC: {:?}", hex::encode(fmspc));
+			let collateral = &*collateral_ptr;
+
+			trace!("collateral:");
+			trace!(
+				"version: {}, \
+				 tee_type: {}, \
+				 pck_crl_issuer_chain: {:?}, \
+				 pck_crl_issuer_chain_size: {}, \
+				 root_ca_crl: {:?}, \
+				 root_ca_crl_size: {}, \
+				 pck_crl: {:?}, \
+				 pck_crl_size: {}, \
+				 tcb_info_issuer_chain: {:?}, \
+				 tcb_info_issuer_chain_size: {}, \
+				 tcb_info: {:?}, \
+				 tcb_info_size: {}, \
+				 qe_identity_issuer_chain: {:?}, \
+				 qe_identity_issuer_chain_size: {}, \
+				 qe_identity: {:?}, \
+				 qe_identity_size: {}",
+				collateral.version,
+				collateral.tee_type,
+				collateral.pck_crl_issuer_chain,
+				collateral.pck_crl_issuer_chain_size,
+				collateral.root_ca_crl,
+				collateral.root_ca_crl_size,
+				collateral.pck_crl,
+				collateral.pck_crl_size,
+				collateral.tcb_info_issuer_chain,
+				collateral.tcb_info_issuer_chain_size,
+				collateral.tcb_info,
+				collateral.tcb_info_size,
+				collateral.qe_identity_issuer_chain,
+				collateral.qe_identity_issuer_chain_size,
+				collateral.qe_identity,
+				collateral.qe_identity_size,
+			);
+		}
+
 		ensure!(sgx_status == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(sgx_status));
 		Ok(collateral_ptr)
 	}
@@ -440,47 +486,6 @@ impl RemoteAttestationCallBacks for Enclave {
 		};
 
 		ensure!(ret == sgx_status_t::SGX_SUCCESS, Error::Sgx(ret));
-
-		unsafe {
-			trace!("FMSPC: {:?}", hex::encode(fmspc));
-			let collateral = &*collateral_ptr;
-
-			trace!("collateral:");
-			trace!(
-				"version: {}, \
-				 tee_type: {}, \
-				 pck_crl_issuer_chain: {:?}, \
-				 pck_crl_issuer_chain_size: {}, \
-				 root_ca_crl: {:?}, \
-				 root_ca_crl_size: {}, \
-				 pck_crl: {:?}, \
-				 pck_crl_size: {}, \
-				 tcb_info_issuer_chain: {:?}, \
-				 tcb_info_issuer_chain_size: {}, \
-				 tcb_info: {:?}, \
-				 tcb_info_size: {}, \
-				 qe_identity_issuer_chain: {:?}, \
-				 qe_identity_issuer_chain_size: {}, \
-				 qe_identity: {:?}, \
-				 qe_identity_size: {}",
-				collateral.version,
-				collateral.tee_type,
-				collateral.pck_crl_issuer_chain,
-				collateral.pck_crl_issuer_chain_size,
-				collateral.root_ca_crl,
-				collateral.root_ca_crl_size,
-				collateral.pck_crl,
-				collateral.pck_crl_size,
-				collateral.tcb_info_issuer_chain,
-				collateral.tcb_info_issuer_chain_size,
-				collateral.tcb_info,
-				collateral.tcb_info_size,
-				collateral.qe_identity_issuer_chain,
-				collateral.qe_identity_issuer_chain_size,
-				collateral.qe_identity,
-				collateral.qe_identity_size,
-			);
-		}
 
 		Ok((qe_report, return_quote_buf))
 	}
