@@ -13,7 +13,7 @@ derive_more = { version = "0.99.5" }
 itp-api-client-types = { default-features = false, path = "../api-client-types" }
 
 # substrate
-sp-core = { git = "https://github.com/paritytech/substrate.git", default-features = false, branch = "polkadot-v0.9.39" }
+sp-core = { git = "https://github.com/paritytech/substrate.git", default-features = false, branch = "polkadot-v0.9.42" }
 
 [features]
 default = ["std"]
