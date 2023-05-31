@@ -63,7 +63,7 @@ impl FullParachainHandler {
 
 		let genesis_header = params.genesis_header.clone();
 
-		let light_client_seal = EnclaveLightClientSeal::new(base_path.join(LIGHT_CLIENT_DB_PATH));
+		let light_client_seal = EnclaveLightClientSeal::new(base_path.join(LIGHT_CLIENT_DB_PATH))?;
 		let validator = itc_parentchain::light_client::io::read_or_init_parachain_validator::<
 			ParachainBlock,
 			EnclaveOCallApi,

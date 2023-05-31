@@ -49,13 +49,14 @@ pub struct LightClientStateSeal<B, LightClientState> {
 }
 
 impl<B, L> LightClientStateSeal<B, L> {
-	pub fn new(base_path: PathBuf) -> Self {
-		Self {
+	pub fn new(base_path: PathBuf) -> Result<Self> {
+		std::fs::create_dir_all(&base_path)?;
+		Ok(Self {
 			base_path: base_path.clone(),
 			db_path: base_path.clone().join(DB_FILE),
 			backup_path: base_path.join(BACKUP_FILE),
 			_phantom: Default::default(),
-		}
+		})
 	}
 
 	pub fn base_path(&self) -> &Path {
@@ -255,7 +256,7 @@ pub mod sgx_tests {
 	pub fn init_parachain_light_client_works() {
 		let parachain_params = default_simple_params();
 		let temp_dir = TempDir::with_prefix("init_parachain_light_client_works").unwrap();
-		let seal = TestSeal::new(temp_dir.path().to_path_buf());
+		let seal = TestSeal::new(temp_dir.path().to_path_buf()).unwrap();
 
 		let validator = read_or_init_parachain_validator::<TestBlock, OnchainMock, _>(
 			parachain_params.clone(),
@@ -276,7 +277,7 @@ pub mod sgx_tests {
 	pub fn sealing_creates_backup() {
 		let params = default_simple_params();
 		let temp_dir = TempDir::with_prefix("sealing_creates_backup").unwrap();
-		let seal = TestSeal::new(temp_dir.path().to_path_buf());
+		let seal = TestSeal::new(temp_dir.path().to_path_buf()).unwrap();
 		let state = RelayState::new(params.genesis_header, Default::default()).into();
 
 		seal.seal(&state).unwrap();
