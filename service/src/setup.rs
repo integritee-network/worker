@@ -20,7 +20,7 @@ use crate::error::{Error, ServiceResult};
 use codec::Encode;
 use itp_enclave_api::{enclave_base::EnclaveBase, Enclave};
 use itp_settings::files::{
-	LIGHT_CLIENT_DB, SHARDS_PATH, SHIELDING_KEY_FILE, SIDECHAIN_STORAGE_PATH, SIGNING_KEY_FILE,
+	LIGHT_CLIENT_DB_PATH, SHARDS_PATH, SHIELDING_KEY_FILE, SIDECHAIN_STORAGE_PATH, SIGNING_KEY_FILE,
 };
 use itp_types::ShardIdentifier;
 use log::*;
@@ -95,7 +95,7 @@ fn purge_files(root_directory: &Path) -> ServiceResult<()> {
 	remove_dir_if_it_exists(root_directory, SHARDS_PATH)?;
 	remove_dir_if_it_exists(root_directory, SIDECHAIN_STORAGE_PATH)?;
 
-	remove_file_if_it_exists(root_directory, LIGHT_CLIENT_DB)?;
+	remove_file_if_it_exists(root_directory, LIGHT_CLIENT_DB_PATH)?;
 	remove_file_if_it_exists(root_directory, light_client_backup_file().as_str())?;
 
 	Ok(())
@@ -118,7 +118,7 @@ fn remove_file_if_it_exists(root_directory: &Path, file_name: &str) -> ServiceRe
 }
 
 fn light_client_backup_file() -> String {
-	format!("{}.1", LIGHT_CLIENT_DB)
+	format!("{}.1", LIGHT_CLIENT_DB_PATH)
 }
 
 #[cfg(test)]
@@ -144,14 +144,14 @@ mod tests {
 		fs::File::create(&sidechain_db_path.join("sidechain_db_2.bin")).unwrap();
 		fs::File::create(&sidechain_db_path.join("sidechain_db_3.bin")).unwrap();
 
-		fs::File::create(&root_directory.join(LIGHT_CLIENT_DB)).unwrap();
+		fs::File::create(&root_directory.join(LIGHT_CLIENT_DB_PATH)).unwrap();
 		fs::File::create(&root_directory.join(light_client_backup_file())).unwrap();
 
 		purge_files(&root_directory).unwrap();
 
 		assert!(!shards_path.exists());
 		assert!(!sidechain_db_path.exists());
-		assert!(!root_directory.join(LIGHT_CLIENT_DB).exists());
+		assert!(!root_directory.join(LIGHT_CLIENT_DB_PATH).exists());
 		assert!(!root_directory.join(light_client_backup_file()).exists());
 	}
 

@@ -23,7 +23,7 @@ use sp_runtime::traits::Block as ParentchainBlockTrait;
 
 pub use sp_finality_grandpa::SetId;
 
-#[derive(Encode, Decode, Clone, Debug)]
+#[derive(Encode, Decode, Clone, Debug, Eq, PartialEq)]
 pub struct LightValidationState<Block: ParentchainBlockTrait> {
 	pub(crate) relay_state: RelayState<Block>,
 }
