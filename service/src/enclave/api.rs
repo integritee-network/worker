@@ -15,8 +15,6 @@
 
 */
 
-//! keep this api free from chain-specific types!
-
 use crate::config::Config;
 use itp_enclave_api::{
 	enclave_base::EnclaveBase, error::Error as EnclaveApiError, Enclave, EnclaveResult,
