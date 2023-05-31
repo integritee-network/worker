@@ -72,7 +72,7 @@ impl<B, L> LightClientStateSeal<B, L> {
 
 	pub fn backup(&self) -> Result<()> {
 		if self.db_path().exists() {
-			let _bytes = fs::copy(self.db_path(), &self.backup_path())?;
+			let _bytes = fs::copy(self.db_path(), self.backup_path())?;
 		} else {
 			info!("{} does not exist yet, skipping backup...", self.db_path().display())
 		}
