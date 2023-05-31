@@ -77,7 +77,7 @@ impl Config {
 		enable_metrics_server: bool,
 		metrics_server_port: String,
 		untrusted_http_port: String,
-		base_dir: PathBuf,
+		data_dir: PathBuf,
 		run_config: Option<RunConfig>,
 	) -> Self {
 		Self {
@@ -93,7 +93,7 @@ impl Config {
 			enable_metrics_server,
 			metrics_server_port,
 			untrusted_http_port,
-			data_dir: base_dir,
+			data_dir,
 			run_config,
 		}
 	}
@@ -170,7 +170,7 @@ impl From<&ArgMatches<'_>> for Config {
 		let untrusted_http_port =
 			m.value_of("untrusted-http-port").unwrap_or(DEFAULT_UNTRUSTED_HTTP_PORT);
 
-		let base_dir = match m.value_of("data-dir") {
+		let data_dir = match m.value_of("data-dir") {
 			Some(d) => {
 				let p = PathBuf::from(d);
 				if !p.exists() {
@@ -206,7 +206,7 @@ impl From<&ArgMatches<'_>> for Config {
 			is_metrics_server_enabled,
 			metrics_server_port.to_string(),
 			untrusted_http_port.to_string(),
-			base_dir,
+			data_dir,
 			run_config,
 		)
 	}
