@@ -44,8 +44,8 @@ pub struct LightClientStateSeal<B, LightClientState> {
 }
 
 impl<B, L> LightClientStateSeal<B, L> {
-	pub fn new(path: &str) -> Self {
-		Self { path_buf: PathBuf::from(path), _phantom: Default::default() }
+	pub fn new(path: PathBuf) -> Self {
+		Self { path_buf: path, _phantom: Default::default() }
 	}
 }
 
@@ -219,7 +219,7 @@ pub mod sgx_tests {
 	pub fn init_parachain_light_client_works() {
 		let parachain_params = default_simple_params();
 		let temp_dir = TempDir::with_prefix("init_parachain_light_client_works").unwrap();
-		let seal = TestSeal::new(temp_dir.path().to_str().unwrap());
+		let seal = TestSeal::new(temp_dir.path().to_path_buf());
 
 		let validator = read_or_init_parachain_validator::<TestBlock, OnchainMock, _>(
 			parachain_params.clone(),
