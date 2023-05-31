@@ -28,7 +28,6 @@
 #[cfg(not(target_env = "sgx"))]
 #[macro_use]
 extern crate sgx_tstd as std;
-extern crate alloc;
 
 use crate::{
 	error::{Error, Result},
@@ -43,8 +42,7 @@ use crate::{
 		get_triggered_dispatcher_from_solo_or_parachain, utf8_str_from_raw, DecodeRaw,
 	},
 };
-use alloc::string::ToString;
-use codec::{alloc::string::String, Decode};
+use codec::Decode;
 use itc_parentchain::block_import_dispatcher::{
 	triggered_dispatcher::TriggerParentchainBlockImport, DispatchBlockImport,
 };
@@ -61,7 +59,13 @@ use log::*;
 use once_cell::sync::OnceCell;
 use sgx_types::sgx_status_t;
 use sp_runtime::traits::BlakeTwo256;
-use std::{boxed::Box, path::PathBuf, slice, vec::Vec};
+use std::{
+	boxed::Box,
+	path::PathBuf,
+	slice,
+	string::{String, ToString},
+	vec::Vec,
+};
 
 mod attestation;
 mod empty_impls;
