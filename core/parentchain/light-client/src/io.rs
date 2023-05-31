@@ -47,17 +47,36 @@ impl<B, L> LightClientStateSeal<B, L> {
 	pub fn new(path: PathBuf) -> Self {
 		Self { path_buf: path, _phantom: Default::default() }
 	}
+
+	pub fn path(&self) -> &Path {
+		self.path_buf.as_path()
+	}
+
+	pub fn backup_path(&self) -> PathBuf {
+		self.path_buf.as_path().join(".1")
+	}
+
+	pub fn backup(&self) -> Result<()> {
+		if self.path().exists() {
+			let _bytes = fs::copy(self.path(), &self.backup_path())?;
+		} else {
+			info!("{} does not exist yet, skipping backup...", self.path().display())
+		}
+		Ok(())
+	}
 }
 
 impl<B: Block, LightClientState: Decode + Encode + Debug> LightClientSealing<LightClientState>
 	for LightClientStateSeal<B, LightClientState>
 {
 	fn seal(&self, unsealed: &LightClientState) -> Result<()> {
-		debug!("backup light client state");
-		if fs::copy(&self.path(), &self.path().join(".1")).is_err() {
-			warn!("could not backup previous light client state");
+		trace!("Backup light client state");
+
+		if let Err(e) = self.backup() {
+			warn!("Could not backup previous light client state: Error: {}", e);
 		};
-		debug!("Seal light client State. Current state: {:?}", unsealed);
+
+		trace!("Seal light client State. Current state: {:?}", unsealed);
 		Ok(unsealed.using_encoded(|bytes| seal(bytes, self.path()))?)
 	}
 
@@ -202,8 +221,11 @@ where
 
 #[cfg(feature = "test")]
 pub mod sgx_tests {
-	use super::{read_or_init_parachain_validator, Arc, LightClientStateSeal};
-	use crate::{light_client_init_params::SimpleParams, LightClientState, LightValidationState};
+	use super::{read_or_init_parachain_validator, Arc, LightClientStateSeal, RelayState};
+	use crate::{
+		light_client_init_params::SimpleParams, LightClientSealing, LightClientState,
+		LightValidationState,
+	};
 	use itc_parentchain_test::{Block, Header, ParentchainHeaderBuilder};
 	use itp_sgx_temp_dir::TempDir;
 	use itp_test::mock::onchain_mock::OnchainMock;
@@ -219,7 +241,7 @@ pub mod sgx_tests {
 	pub fn init_parachain_light_client_works() {
 		let parachain_params = default_simple_params();
 		let temp_dir = TempDir::with_prefix("init_parachain_light_client_works").unwrap();
-		let seal = TestSeal::new(temp_dir.path().to_path_buf());
+		let seal = TestSeal::new(temp_dir.path().join("db"));
 
 		let validator = read_or_init_parachain_validator::<TestBlock, OnchainMock, _>(
 			parachain_params.clone(),
@@ -235,6 +257,23 @@ pub mod sgx_tests {
 			validator.penultimate_finalized_block_header().unwrap(),
 			parachain_params.genesis_header
 		);
+	}
+
+	pub fn sealing_creates_backup() {
+		let params = default_simple_params();
+		let temp_dir = TempDir::with_prefix("sealing_creates_backup").unwrap();
+		let seal = TestSeal::new(temp_dir.path().join("db"));
+		let state = RelayState::new(params.genesis_header, Default::default()).into();
+
+		seal.seal(&state).unwrap();
+		let unsealed = seal.unseal().unwrap();
+
+		assert_eq!(state, unsealed);
+
+		// The first seal operation doesn't create back-up as these is nothing to backup.
+		seal.seal(&unsealed).unwrap();
+		/// Todo: fails here because the backup failes...
+		assert!(seal.backup_path().exists())
 	}
 
 	// Todo #1293: add a unit test for the grandpa validator, but this needs a little effort for
