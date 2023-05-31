@@ -346,28 +346,23 @@ pub unsafe extern "C" fn init_parentchain_components(
 ) -> sgx_status_t {
 	info!("Initializing light client!");
 
-	match init_parentchain_params_internal(params, params_size, latest_header, latest_header_size) {
+	let encoded_params = slice::from_raw_parts(params, params_size);
+	let latest_header_slice = slice::from_raw_parts_mut(latest_header, latest_header_size);
+
+	match init_parentchain_params_internal(encoded_params.to_vec(), latest_header_slice) {
 		Ok(()) => sgx_status_t::SGX_SUCCESS,
 		Err(e) => e.into(),
 	}
 }
 
-unsafe fn init_parentchain_params_internal(
-	params: *const u8,
-	params_size: usize,
-	latest_header: *mut u8,
-	latest_header_size: usize,
-) -> Result<()> {
-	let base_path = get_base_path()?;
+/// Initializes the parentchain components and writes the latest header into the `latest_header` slice.
+fn init_parentchain_params_internal(params: Vec<u8>, latest_header: &mut [u8]) -> Result<()> {
+	use initialization::parentchain::init_parentchain_components;
 
-	let encoded_params = slice::from_raw_parts(params, params_size);
-	let latest_header_slice = slice::from_raw_parts_mut(latest_header, latest_header_size);
+	let encoded_latest_header =
+		init_parentchain_components::<WorkerModeProvider>(get_base_path()?, params)?;
 
-	let encoded_latest_header = initialization::parentchain::init_parentchain_components::<
-		WorkerModeProvider,
-	>(base_path, encoded_params.to_vec())?;
-
-	write_slice_and_whitespace_pad(latest_header_slice, encoded_latest_header)?;
+	write_slice_and_whitespace_pad(latest_header, encoded_latest_header)?;
 
 	Ok(())
 }
