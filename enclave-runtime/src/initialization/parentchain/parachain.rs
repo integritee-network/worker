@@ -34,7 +34,7 @@ use codec::Encode;
 use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, LightClientState};
 use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_settings::{
-	files::LIGHT_CLIENT_DB,
+	files::LIGHT_CLIENT_DB_PATH,
 	worker_mode::{ProvideWorkerMode, WorkerMode},
 };
 use std::{path::PathBuf, sync::Arc, vec::Vec};
@@ -63,7 +63,7 @@ impl FullParachainHandler {
 
 		let genesis_header = params.genesis_header.clone();
 
-		let light_client_seal = EnclaveLightClientSeal::new(base_path.join(LIGHT_CLIENT_DB));
+		let light_client_seal = EnclaveLightClientSeal::new(base_path.join(LIGHT_CLIENT_DB_PATH));
 		let validator = itc_parentchain::light_client::io::read_or_init_parachain_validator::<
 			ParachainBlock,
 			EnclaveOCallApi,
