@@ -37,30 +37,44 @@ use std::{
 	sync::Arc,
 };
 
+pub const DB_FILE: &str = "db.bin";
+pub const BACKUP_FILE: &str = "db.bin.backup";
+
 #[derive(Clone, Debug)]
 pub struct LightClientStateSeal<B, LightClientState> {
-	path_buf: PathBuf,
+	base_path: PathBuf,
+	db_path: PathBuf,
+	backup_path: PathBuf,
 	_phantom: PhantomData<(B, LightClientState)>,
 }
 
 impl<B, L> LightClientStateSeal<B, L> {
-	pub fn new(path: PathBuf) -> Self {
-		Self { path_buf: path, _phantom: Default::default() }
+	pub fn new(base_path: PathBuf) -> Self {
+		Self {
+			base_path: base_path.clone(),
+			db_path: base_path.clone().join(DB_FILE),
+			backup_path: base_path.join(BACKUP_FILE),
+			_phantom: Default::default(),
+		}
 	}
 
-	pub fn path(&self) -> &Path {
-		self.path_buf.as_path()
+	pub fn base_path(&self) -> &Path {
+		&self.base_path
 	}
 
-	pub fn backup_path(&self) -> PathBuf {
-		self.path_buf.as_path().join(".1")
+	pub fn db_path(&self) -> &Path {
+		&self.db_path
+	}
+
+	pub fn backup_path(&self) -> &Path {
+		&self.backup_path
 	}
 
 	pub fn backup(&self) -> Result<()> {
-		if self.path().exists() {
-			let _bytes = fs::copy(self.path(), &self.backup_path())?;
+		if self.db_path().exists() {
+			let _bytes = fs::copy(self.db_path(), &self.backup_path())?;
 		} else {
-			info!("{} does not exist yet, skipping backup...", self.path().display())
+			info!("{} does not exist yet, skipping backup...", self.db_path().display())
 		}
 		Ok(())
 	}
@@ -77,19 +91,19 @@ impl<B: Block, LightClientState: Decode + Encode + Debug> LightClientSealing<Lig
 		};
 
 		trace!("Seal light client State. Current state: {:?}", unsealed);
-		Ok(unsealed.using_encoded(|bytes| seal(bytes, self.path()))?)
+		Ok(unsealed.using_encoded(|bytes| seal(bytes, self.db_path()))?)
 	}
 
 	fn unseal(&self) -> Result<LightClientState> {
-		Ok(unseal(self.path()).map(|b| Decode::decode(&mut b.as_slice()))??)
+		Ok(unseal(self.db_path()).map(|b| Decode::decode(&mut b.as_slice()))??)
 	}
 
 	fn exists(&self) -> bool {
-		SgxFile::open(self.path()).is_ok()
+		SgxFile::open(self.db_path()).is_ok()
 	}
 
 	fn path(&self) -> &Path {
-		&self.path_buf.as_path()
+		self.db_path()
 	}
 }
 
@@ -241,7 +255,7 @@ pub mod sgx_tests {
 	pub fn init_parachain_light_client_works() {
 		let parachain_params = default_simple_params();
 		let temp_dir = TempDir::with_prefix("init_parachain_light_client_works").unwrap();
-		let seal = TestSeal::new(temp_dir.path().join("db"));
+		let seal = TestSeal::new(temp_dir.path().to_path_buf());
 
 		let validator = read_or_init_parachain_validator::<TestBlock, OnchainMock, _>(
 			parachain_params.clone(),
@@ -262,7 +276,7 @@ pub mod sgx_tests {
 	pub fn sealing_creates_backup() {
 		let params = default_simple_params();
 		let temp_dir = TempDir::with_prefix("sealing_creates_backup").unwrap();
-		let seal = TestSeal::new(temp_dir.path().join("db"));
+		let seal = TestSeal::new(temp_dir.path().to_path_buf());
 		let state = RelayState::new(params.genesis_header, Default::default()).into();
 
 		seal.seal(&state).unwrap();
@@ -270,9 +284,8 @@ pub mod sgx_tests {
 
 		assert_eq!(state, unsealed);
 
-		// The first seal operation doesn't create back-up as these is nothing to backup.
+		// The first seal operation doesn't create a backup, as there is nothing to backup.
 		seal.seal(&unsealed).unwrap();
-		/// Todo: fails here because the backup failes...
 		assert!(seal.backup_path().exists())
 	}
 

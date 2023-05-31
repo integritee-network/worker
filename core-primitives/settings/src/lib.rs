@@ -43,7 +43,7 @@ pub mod files {
 
 	// used by enclave
 	/// Path to the light-client db.
-	pub const LIGHT_CLIENT_DB_PATH: &str = "LIGHT_CLIENT_DB_PATH";
+	pub const LIGHT_CLIENT_DB_PATH: &str = "light_client_db";
 
 	pub const RA_DUMP_CERT_DER_FILE: &str = "ra_dump_cert.der";
 
