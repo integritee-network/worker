@@ -279,7 +279,6 @@ mod test {
 		let empty_args = ArgMatches::default();
 		let config = Config::from(&empty_args);
 		let expected_worker_ip = "127.0.0.1";
-		let pwd = pwd().to_str().unwrap().to_string();
 
 		assert_eq!(config.node_ip, DEFAULT_NODE_SERVER);
 		assert_eq!(config.node_port, DEFAULT_NODE_PORT);
@@ -292,7 +291,7 @@ mod test {
 		assert!(config.mu_ra_external_address.is_none());
 		assert!(!config.enable_metrics_server);
 		assert_eq!(config.untrusted_http_port, DEFAULT_UNTRUSTED_HTTP_PORT);
-		assert_eq!(config.data_dir, pwd);
+		assert_eq!(config.data_dir, pwd());
 		assert!(config.run_config.is_none());
 	}
 
