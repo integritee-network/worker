@@ -42,7 +42,7 @@ use crate::{
 		get_triggered_dispatcher_from_solo_or_parachain, utf8_str_from_raw, DecodeRaw,
 	},
 };
-use codec::{alloc::string::String, Decode};
+use codec::Decode;
 use itc_parentchain::block_import_dispatcher::{
 	triggered_dispatcher::TriggerParentchainBlockImport, DispatchBlockImport,
 };
@@ -59,7 +59,13 @@ use log::*;
 use once_cell::sync::OnceCell;
 use sgx_types::sgx_status_t;
 use sp_runtime::traits::BlakeTwo256;
-use std::{boxed::Box, path::PathBuf, slice, vec::Vec};
+use std::{
+	boxed::Box,
+	path::PathBuf,
+	slice,
+	string::{String, ToString},
+	vec::Vec,
+};
 
 mod attestation;
 mod empty_impls;
@@ -84,6 +90,14 @@ pub type Hash = sp_core::H256;
 pub type AuthorityPair = sp_core::ed25519::Pair;
 
 static BASE_PATH: OnceCell<PathBuf> = OnceCell::new();
+
+fn get_base_path() -> Result<PathBuf> {
+	let base_path = BASE_PATH.get().ok_or_else(|| {
+		Error::Other("BASE_PATH not initialized. Broken enclave init flow!".to_string().into())
+	})?;
+
+	Ok(base_path.clone())
+}
 
 /// Initialize the enclave.
 #[no_mangle]
@@ -335,19 +349,22 @@ pub unsafe extern "C" fn init_parentchain_components(
 	let encoded_params = slice::from_raw_parts(params, params_size);
 	let latest_header_slice = slice::from_raw_parts_mut(latest_header, latest_header_size);
 
-	let encoded_latest_header = match initialization::parentchain::init_parentchain_components::<
-		WorkerModeProvider,
-	>(encoded_params.to_vec())
-	{
-		Ok(h) => h,
-		Err(e) => return e.into(),
-	};
+	match init_parentchain_params_internal(encoded_params.to_vec(), latest_header_slice) {
+		Ok(()) => sgx_status_t::SGX_SUCCESS,
+		Err(e) => e.into(),
+	}
+}
 
-	if let Err(e) = write_slice_and_whitespace_pad(latest_header_slice, encoded_latest_header) {
-		return Error::Other(Box::new(e)).into()
-	};
+/// Initializes the parentchain components and writes the latest header into the `latest_header` slice.
+fn init_parentchain_params_internal(params: Vec<u8>, latest_header: &mut [u8]) -> Result<()> {
+	use initialization::parentchain::init_parentchain_components;
 
-	sgx_status_t::SGX_SUCCESS
+	let encoded_latest_header =
+		init_parentchain_components::<WorkerModeProvider>(get_base_path()?, params)?;
+
+	write_slice_and_whitespace_pad(latest_header, encoded_latest_header)?;
+
+	Ok(())
 }
 
 #[no_mangle]
