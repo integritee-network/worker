@@ -42,7 +42,8 @@ pub mod files {
 	pub static SIDECHAIN_PURGE_LIMIT: u64 = 100; // keep the last.. sidechainblocks when purging
 
 	// used by enclave
-	pub const LIGHT_CLIENT_DB: &str = "light_client_db.bin";
+	/// Path to the light-client db.
+	pub const LIGHT_CLIENT_DB_PATH: &str = "light_client_db";
 
 	pub const RA_DUMP_CERT_DER_FILE: &str = "ra_dump_cert.der";
 
