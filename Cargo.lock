@@ -3341,6 +3341,7 @@ name = "itp-enclave-api"
 version = "0.9.0"
 dependencies = [
  "frame-support",
+ "hex",
  "itc-parentchain",
  "itp-enclave-api-ffi",
  "itp-settings",

@@ -6,6 +6,7 @@ edition = "2021"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
+hex = "0.4"
 log = "0.4"
 serde_json = "1.0"
 thiserror = "1.0.25"

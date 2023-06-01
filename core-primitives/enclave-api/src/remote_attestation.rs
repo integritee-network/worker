@@ -131,6 +131,8 @@ impl RemoteAttestation for Enclave {
 
 		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
 
+		trace!("Generating dcap_ra_extrinsic with URL: {}", w_url);
+
 		let url = w_url.encode();
 
 		let result = unsafe {
@@ -202,6 +204,10 @@ impl RemoteAttestation for Enclave {
 		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
 
+		unsafe {
+			trace!("Generating DCAP RA Quote: {}", *dcap_quote_p);
+		}
+
 		Ok(dcap_quote_vec)
 	}
 
@@ -212,6 +218,8 @@ impl RemoteAttestation for Enclave {
 		let quoting_enclave_target_info = self.qe_get_target_info()?;
 		let quote_size = self.qe_get_quote_size()?;
 		info!("Retrieved quote size of {:?}", quote_size);
+
+		trace!("Generating dcap_ra_extrinsic with URL: {}", w_url);
 
 		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
 
@@ -241,6 +249,8 @@ impl RemoteAttestation for Enclave {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
 
+		trace!("Generating register quoting enclave");
+
 		let collateral_ptr = self.get_dcap_collateral(fmspc)?;
 
 		let result = unsafe {
@@ -263,6 +273,8 @@ impl RemoteAttestation for Enclave {
 	fn generate_register_tcb_info_extrinsic(&self, fmspc: Fmspc) -> EnclaveResult<Vec<u8>> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 		let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
+
+		trace!("Generating tcb_info registration");
 
 		let collateral_ptr = self.get_dcap_collateral(fmspc)?;
 
@@ -373,6 +385,55 @@ impl RemoteAttestation for Enclave {
 				collateral_ptr_ptr,
 			)
 		};
+
+		trace!("FMSPC: {:?}", hex::encode(fmspc));
+
+		if collateral_ptr.is_null() {
+			error!("PCK quote collateral data is null, sgx_status is: {}", sgx_status);
+			return Err(Error::SgxQuote(sgx_status))
+		}
+
+		trace!("collateral:");
+		// SAFETY: the previous block checks for `collateral_ptr` being null.
+		// SAFETY: the fields should be nul terminated C strings.
+		unsafe {
+			let collateral = &*collateral_ptr;
+			trace!(
+				"version: {}\n, \
+				 tee_type: {}\n, \
+				 pck_crl_issuer_chain: {:?}\n, \
+				 pck_crl_issuer_chain_size: {}\n, \
+				 root_ca_crl: {:?}\n, \
+				 root_ca_crl_size: {}\n, \
+				 pck_crl: {:?}\n, \
+				 pck_crl_size: {}\n, \
+				 tcb_info_issuer_chain: {:?}\n, \
+				 tcb_info_issuer_chain_size: {}\n, \
+				 tcb_info: {:?}\n, \
+				 tcb_info_size: {}\n, \
+				 qe_identity_issuer_chain: {:?}\n, \
+				 qe_identity_issuer_chain_size: {}\n, \
+				 qe_identity: {:?}\n, \
+				 qe_identity_size: {}\n",
+				collateral.version,
+				collateral.tee_type,
+				std::ffi::CStr::from_ptr(collateral.pck_crl_issuer_chain).to_str().unwrap(),
+				collateral.pck_crl_issuer_chain_size,
+				std::ffi::CStr::from_ptr(collateral.root_ca_crl).to_str().unwrap(),
+				collateral.root_ca_crl_size,
+				std::ffi::CStr::from_ptr(collateral.pck_crl).to_str().unwrap(),
+				collateral.pck_crl_size,
+				std::ffi::CStr::from_ptr(collateral.tcb_info_issuer_chain).to_str().unwrap(),
+				collateral.tcb_info_issuer_chain_size,
+				std::ffi::CStr::from_ptr(collateral.tcb_info).to_str().unwrap(),
+				collateral.tcb_info_size,
+				std::ffi::CStr::from_ptr(collateral.qe_identity_issuer_chain).to_str().unwrap(),
+				collateral.qe_identity_issuer_chain_size,
+				std::ffi::CStr::from_ptr(collateral.qe_identity).to_str().unwrap(),
+				collateral.qe_identity_size,
+			);
+		};
+
 		ensure!(sgx_status == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(sgx_status));
 		Ok(collateral_ptr)
 	}
