@@ -386,13 +386,20 @@ impl RemoteAttestation for Enclave {
 			)
 		};
 
-		unsafe {
-			trace!("FMSPC: {:?}", hex::encode(fmspc));
-			let collateral = &*collateral_ptr;
+		trace!("FMSPC: {:?}", hex::encode(fmspc));
 
-			trace!("collateral:");
-			trace!(
-				"version: {}, \
+		if collateral_ptr.is_null() {
+			error!("PCK quote collateral data is null, sgx_status is: {}", sgx_status);
+			return Error::SgxQuote(sgx_status)
+		}
+
+		// SAFETY: the previous block checks for it being null.
+		let collateral = unsafe {
+			&*collateral_ptr;
+		};
+		trace!("collateral:");
+		trace!(
+			"version: {}, \
 				 tee_type: {}, \
 				 pck_crl_issuer_chain: {:?}, \
 				 pck_crl_issuer_chain_size: {}, \
@@ -408,24 +415,23 @@ impl RemoteAttestation for Enclave {
 				 qe_identity_issuer_chain_size: {}, \
 				 qe_identity: {:?}, \
 				 qe_identity_size: {}",
-				collateral.version,
-				collateral.tee_type,
-				collateral.pck_crl_issuer_chain,
-				collateral.pck_crl_issuer_chain_size,
-				collateral.root_ca_crl,
-				collateral.root_ca_crl_size,
-				collateral.pck_crl,
-				collateral.pck_crl_size,
-				collateral.tcb_info_issuer_chain,
-				collateral.tcb_info_issuer_chain_size,
-				collateral.tcb_info,
-				collateral.tcb_info_size,
-				collateral.qe_identity_issuer_chain,
-				collateral.qe_identity_issuer_chain_size,
-				collateral.qe_identity,
-				collateral.qe_identity_size,
-			);
-		}
+			collateral.version,
+			collateral.tee_type,
+			collateral.pck_crl_issuer_chain,
+			collateral.pck_crl_issuer_chain_size,
+			collateral.root_ca_crl,
+			collateral.root_ca_crl_size,
+			collateral.pck_crl,
+			collateral.pck_crl_size,
+			collateral.tcb_info_issuer_chain,
+			collateral.tcb_info_issuer_chain_size,
+			collateral.tcb_info,
+			collateral.tcb_info_size,
+			collateral.qe_identity_issuer_chain,
+			collateral.qe_identity_issuer_chain_size,
+			collateral.qe_identity,
+			collateral.qe_identity_size,
+		);
 
 		ensure!(sgx_status == sgx_quote3_error_t::SGX_QL_SUCCESS, Error::SgxQuote(sgx_status));
 		Ok(collateral_ptr)
