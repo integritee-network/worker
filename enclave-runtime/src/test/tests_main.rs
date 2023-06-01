@@ -163,6 +163,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 
 		// light-client-test
 		itc_parentchain::light_client::io::sgx_tests::init_parachain_light_client_works,
+		itc_parentchain::light_client::io::sgx_tests::sealing_creates_backup,
 
 		// these unit test (?) need an ipfs node running..
 		// ipfs::test_creates_ipfs_content_struct_works,

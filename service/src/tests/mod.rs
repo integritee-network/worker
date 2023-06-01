@@ -31,7 +31,7 @@ pub mod parentchain_handler_test;
 pub fn run_enclave_tests(matches: &ArgMatches) {
 	println!("*** Starting Test enclave");
 	let config = Config::from(matches);
-	setup::purge_files_from_cwd().unwrap();
+	setup::purge_files_from_dir(config.data_dir()).unwrap();
 	let enclave = enclave_init(&config).unwrap();
 
 	if matches.is_present("all") || matches.is_present("unit") {

@@ -23,7 +23,7 @@ use sp_runtime::{
 };
 use std::{fmt, vec::Vec};
 
-#[derive(Encode, Decode, Clone, PartialEq)]
+#[derive(Encode, Decode, Clone, Eq, PartialEq)]
 pub struct RelayState<Block: BlockT> {
 	pub last_finalized_block_header: Block::Header,
 	pub penultimate_finalized_block_header: Block::Header,
@@ -35,7 +35,7 @@ pub struct RelayState<Block: BlockT> {
 	pub scheduled_change: Option<ScheduledChangeAtBlock<Block::Header>>, // Scheduled Authorities change as indicated in the header's digest.
 }
 
-#[derive(Encode, Decode, Clone, PartialEq)]
+#[derive(Encode, Decode, Clone, Eq, PartialEq)]
 pub struct ScheduledChangeAtBlock<Header: HeaderT> {
 	pub at_block: Header::Number,
 	pub next_authority_list: AuthorityList,

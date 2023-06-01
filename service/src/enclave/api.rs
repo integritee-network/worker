@@ -23,9 +23,11 @@ use itp_settings::files::{ENCLAVE_FILE, ENCLAVE_TOKEN};
 use log::*;
 use sgx_types::*;
 use sgx_urts::SgxEnclave;
-/// keep this api free from chain-specific types!
-use std::io::{Read, Write};
-use std::{fs::File, path::PathBuf};
+use std::{
+	fs::File,
+	io::{Read, Write},
+	path::PathBuf,
+};
 
 pub fn enclave_init(config: &Config) -> EnclaveResult<Enclave> {
 	const LEN: usize = 1024;
@@ -103,7 +105,11 @@ pub fn enclave_init(config: &Config) -> EnclaveResult<Enclave> {
 
 	// create an enclave API and initialize it
 	let enclave_api = Enclave::new(enclave);
-	enclave_api.init(&config.mu_ra_url_external(), &config.untrusted_worker_url_external())?;
+	enclave_api.init(
+		&config.mu_ra_url_external(),
+		&config.untrusted_worker_url_external(),
+		&config.data_dir().display().to_string(),
+	)?;
 
 	Ok(enclave_api)
 }
