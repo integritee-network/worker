@@ -25,6 +25,8 @@ extern "C" {
 		mu_ra_addr_size: u32,
 		untrusted_worker_addr: *const u8,
 		untrusted_worker_addr_size: u32,
+		encoded_base_dir_str: *const u8,
+		encoded_base_dir_size: u32,
 	) -> sgx_status_t;
 
 	pub fn init_enclave_sidechain_components(

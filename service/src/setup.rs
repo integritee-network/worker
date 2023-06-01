@@ -26,13 +26,12 @@ use itp_types::ShardIdentifier;
 use log::*;
 use std::{fs, fs::File, path::Path};
 
-/// Purge all worker files from the current working directory (cwd).
-pub(crate) fn purge_files_from_cwd() -> ServiceResult<()> {
-	let current_directory = std::env::current_dir().map_err(|e| Error::Custom(e.into()))?;
+/// Purge all worker files from `dir`.
+pub(crate) fn purge_files_from_dir(dir: &Path) -> ServiceResult<()> {
 	println!("[+] Performing a clean reset of the worker");
 
 	println!("[+] Purge all files from previous runs");
-	purge_files(&current_directory)?;
+	purge_files(dir)?;
 
 	Ok(())
 }

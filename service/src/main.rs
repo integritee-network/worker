@@ -117,13 +117,6 @@ fn main() {
 	let yml = load_yaml!("cli.yml");
 	let matches = App::from_yaml(yml).get_matches();
 
-	// Todo: This will be changed to be a param of the CLI:
-	// https://github.com/integritee-network/worker/issues/1292
-	//
-	// Until the above task is finished, we just fall back to the
-	// static behaviour, which uses the PWD already.
-	let pwd = std::env::current_dir().expect("Works on all supported platforms; qed");
-
 	let config = Config::from(&matches);
 
 	GlobalTokioHandle::initialize();
@@ -139,13 +132,17 @@ fn main() {
 
 	let clean_reset = matches.is_present("clean-reset");
 	if clean_reset {
-		setup::purge_files_from_cwd().unwrap();
+		setup::purge_files_from_dir(config.data_dir()).unwrap();
 	}
 
 	// build the entire dependency tree
 	let tokio_handle = Arc::new(GlobalTokioHandle {});
-	let sidechain_blockstorage =
-		Arc::new(SidechainStorageLock::<SignedSidechainBlock>::from_base_path(pwd).unwrap());
+	let sidechain_blockstorage = Arc::new(
+		SidechainStorageLock::<SignedSidechainBlock>::from_base_path(
+			config.data_dir().to_path_buf(),
+		)
+		.unwrap(),
+	);
 	let node_api_factory =
 		Arc::new(NodeApiFactory::new(config.node_url(), AccountKeyring::Alice.pair()));
 	let enclave = Arc::new(enclave_init(&config).unwrap());
@@ -177,7 +174,7 @@ fn main() {
 		enclave_metrics_receiver,
 	)));
 
-	if let Some(run_config) = &config.run_config {
+	if let Some(run_config) = config.run_config() {
 		let shard = extract_shard(&run_config.shard, enclave.as_ref());
 
 		println!("Worker Config: {:?}", config);
@@ -296,7 +293,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	InitializationHandler: TrackInitialization + IsInitialized + Sync + Send + 'static,
 	WorkerModeProvider: ProvideWorkerMode,
 {
-	let run_config = config.run_config.clone().expect("Run config missing");
+	let run_config = config.run_config().clone().expect("Run config missing");
 	let skip_ra = run_config.skip_ra;
 
 	println!("Integritee Worker v{}", VERSION);
@@ -356,7 +353,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	// ------------------------------------------------------------------------
 	// Start prometheus metrics server.
-	if config.enable_metrics_server {
+	if config.enable_metrics_server() {
 		let enclave_wallet =
 			Arc::new(EnclaveAccountInfoProvider::new(node_api.clone(), tee_accountid.clone()));
 		let metrics_handler = Arc::new(MetricsHandler::new(enclave_wallet));
