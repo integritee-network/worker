@@ -22,11 +22,8 @@ use std::boxed::Box;
 
 pub type Result<T> = core::result::Result<T, Error>;
 
-/// extrinsics factory error
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-	#[error("Insufficient buffer size. Actual: {0}, required: {1}")]
-	InsufficientBufferSize(usize, usize),
 	#[error("Could not decode from hex data: {0}")]
 	Hex(hex::FromHexError),
 	#[error("Parity Scale Codec: {0}")]

@@ -37,15 +37,47 @@ use std::{
 	sync::Arc,
 };
 
+pub const DB_FILE: &str = "db.bin";
+pub const BACKUP_FILE: &str = "db.bin.backup";
+
 #[derive(Clone, Debug)]
 pub struct LightClientStateSeal<B, LightClientState> {
-	path_buf: PathBuf,
+	base_path: PathBuf,
+	db_path: PathBuf,
+	backup_path: PathBuf,
 	_phantom: PhantomData<(B, LightClientState)>,
 }
 
 impl<B, L> LightClientStateSeal<B, L> {
-	pub fn new(path: &str) -> Self {
-		Self { path_buf: PathBuf::from(path), _phantom: Default::default() }
+	pub fn new(base_path: PathBuf) -> Result<Self> {
+		std::fs::create_dir_all(&base_path)?;
+		Ok(Self {
+			base_path: base_path.clone(),
+			db_path: base_path.clone().join(DB_FILE),
+			backup_path: base_path.join(BACKUP_FILE),
+			_phantom: Default::default(),
+		})
+	}
+
+	pub fn base_path(&self) -> &Path {
+		&self.base_path
+	}
+
+	pub fn db_path(&self) -> &Path {
+		&self.db_path
+	}
+
+	pub fn backup_path(&self) -> &Path {
+		&self.backup_path
+	}
+
+	pub fn backup(&self) -> Result<()> {
+		if self.db_path().exists() {
+			let _bytes = fs::copy(self.db_path(), self.backup_path())?;
+		} else {
+			info!("{} does not exist yet, skipping backup...", self.db_path().display())
+		}
+		Ok(())
 	}
 }
 
@@ -53,24 +85,26 @@ impl<B: Block, LightClientState: Decode + Encode + Debug> LightClientSealing<Lig
 	for LightClientStateSeal<B, LightClientState>
 {
 	fn seal(&self, unsealed: &LightClientState) -> Result<()> {
-		debug!("backup light client state");
-		if fs::copy(&self.path(), &self.path().join(".1")).is_err() {
-			warn!("could not backup previous light client state");
+		trace!("Backup light client state");
+
+		if let Err(e) = self.backup() {
+			warn!("Could not backup previous light client state: Error: {}", e);
 		};
-		debug!("Seal light client State. Current state: {:?}", unsealed);
-		Ok(unsealed.using_encoded(|bytes| seal(bytes, self.path()))?)
+
+		trace!("Seal light client State. Current state: {:?}", unsealed);
+		Ok(unsealed.using_encoded(|bytes| seal(bytes, self.db_path()))?)
 	}
 
 	fn unseal(&self) -> Result<LightClientState> {
-		Ok(unseal(self.path()).map(|b| Decode::decode(&mut b.as_slice()))??)
+		Ok(unseal(self.db_path()).map(|b| Decode::decode(&mut b.as_slice()))??)
 	}
 
 	fn exists(&self) -> bool {
-		SgxFile::open(self.path()).is_ok()
+		SgxFile::open(self.db_path()).is_ok()
 	}
 
 	fn path(&self) -> &Path {
-		&self.path_buf.as_path()
+		self.db_path()
 	}
 }
 
@@ -202,8 +236,11 @@ where
 
 #[cfg(feature = "test")]
 pub mod sgx_tests {
-	use super::{read_or_init_parachain_validator, Arc, LightClientStateSeal};
-	use crate::{light_client_init_params::SimpleParams, LightClientState, LightValidationState};
+	use super::{read_or_init_parachain_validator, Arc, LightClientStateSeal, RelayState};
+	use crate::{
+		light_client_init_params::SimpleParams, LightClientSealing, LightClientState,
+		LightValidationState,
+	};
 	use itc_parentchain_test::{Block, Header, ParentchainHeaderBuilder};
 	use itp_sgx_temp_dir::TempDir;
 	use itp_test::mock::onchain_mock::OnchainMock;
@@ -219,7 +256,7 @@ pub mod sgx_tests {
 	pub fn init_parachain_light_client_works() {
 		let parachain_params = default_simple_params();
 		let temp_dir = TempDir::with_prefix("init_parachain_light_client_works").unwrap();
-		let seal = TestSeal::new(temp_dir.path().to_str().unwrap());
+		let seal = TestSeal::new(temp_dir.path().to_path_buf()).unwrap();
 
 		let validator = read_or_init_parachain_validator::<TestBlock, OnchainMock, _>(
 			parachain_params.clone(),
@@ -235,6 +272,22 @@ pub mod sgx_tests {
 			validator.penultimate_finalized_block_header().unwrap(),
 			parachain_params.genesis_header
 		);
+	}
+
+	pub fn sealing_creates_backup() {
+		let params = default_simple_params();
+		let temp_dir = TempDir::with_prefix("sealing_creates_backup").unwrap();
+		let seal = TestSeal::new(temp_dir.path().to_path_buf()).unwrap();
+		let state = RelayState::new(params.genesis_header, Default::default()).into();
+
+		seal.seal(&state).unwrap();
+		let unsealed = seal.unseal().unwrap();
+
+		assert_eq!(state, unsealed);
+
+		// The first seal operation doesn't create a backup, as there is nothing to backup.
+		seal.seal(&unsealed).unwrap();
+		assert!(seal.backup_path().exists())
 	}
 
 	// Todo #1293: add a unit test for the grandpa validator, but this needs a little effort for

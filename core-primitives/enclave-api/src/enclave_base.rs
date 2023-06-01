@@ -33,7 +33,12 @@ use sp_core::ed25519;
 /// Trait for base/common Enclave API functions
 pub trait EnclaveBase: Send + Sync + 'static {
 	/// Initialize the enclave (needs to be called once at application startup).
-	fn init(&self, mu_ra_addr: &str, untrusted_worker_addr: &str) -> EnclaveResult<()>;
+	fn init(
+		&self,
+		mu_ra_addr: &str,
+		untrusted_worker_addr: &str,
+		base_dir: &str,
+	) -> EnclaveResult<()>;
 
 	/// Initialize the enclave sidechain components.
 	fn init_enclave_sidechain_components(&self) -> EnclaveResult<()>;
@@ -67,11 +72,17 @@ pub trait EnclaveBase: Send + Sync + 'static {
 
 /// EnclaveApi implementation for Enclave struct
 impl EnclaveBase for Enclave {
-	fn init(&self, mu_ra_addr: &str, untrusted_worker_addr: &str) -> EnclaveResult<()> {
+	fn init(
+		&self,
+		mu_ra_addr: &str,
+		untrusted_worker_addr: &str,
+		base_dir: &str,
+	) -> EnclaveResult<()> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
 		let encoded_mu_ra_addr = mu_ra_addr.encode();
 		let encoded_untrusted_worker_addr = untrusted_worker_addr.encode();
+		let encoded_base_dir = base_dir.encode();
 
 		let result = unsafe {
 			ffi::init(
@@ -81,6 +92,8 @@ impl EnclaveBase for Enclave {
 				encoded_mu_ra_addr.len() as u32,
 				encoded_untrusted_worker_addr.as_ptr(),
 				encoded_untrusted_worker_addr.len() as u32,
+				encoded_base_dir.as_ptr(),
+				encoded_base_dir.len() as u32,
 			)
 		};
 

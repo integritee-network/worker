@@ -32,7 +32,7 @@ use sp_core::ed25519;
 pub struct EnclaveMock;
 
 impl EnclaveBase for EnclaveMock {
-	fn init(&self, _mu_ra_url: &str, _untrusted_url: &str) -> EnclaveResult<()> {
+	fn init(&self, _mu_ra_url: &str, _untrusted_url: &str, _base_dir: &str) -> EnclaveResult<()> {
 		Ok(())
 	}
 
