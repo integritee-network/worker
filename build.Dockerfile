@@ -45,7 +45,7 @@ ENV WORKHOME=/home/ubuntu/work
 ENV HOME=/home/ubuntu
 
 RUN rustup default stable 
-RUN cargo install sccache
+RUN cargo install sccache --version 0.5.0
 
 ENV SCCACHE_CACHE_SIZE="20G"
 ENV SCCACHE_DIR=$HOME/.cache/sccache
