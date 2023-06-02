@@ -28,11 +28,7 @@ use chrono::{DateTime, Utc};
 use clap::Subcommand;
 use itc_rpc_client::direct_client::DirectApi;
 use itp_node_api::api_client::PalletTeerexApi;
-use sp_application_crypto::{ed25519, sr25519};
-use sp_core::{
-	crypto::{key_types::ACCOUNT, Ss58Codec},
-	Pair,
-};
+use sp_core::crypto::{key_types::ACCOUNT, Ss58Codec};
 use sp_keystore::Keystore;
 use std::{
 	path::PathBuf,

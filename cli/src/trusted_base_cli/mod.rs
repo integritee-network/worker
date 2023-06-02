@@ -25,11 +25,7 @@ use crate::{
 	Cli, CliResult, CliResultOk,
 };
 use log::*;
-use sp_application_crypto::{ed25519, sr25519};
-use sp_core::{
-	crypto::{key_types::ACCOUNT, Ss58Codec},
-	Pair,
-};
+use sp_core::crypto::{key_types::ACCOUNT, Ss58Codec};
 use sp_keystore::Keystore;
 use substrate_client_keystore::LocalKeystore;
 
