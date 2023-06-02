@@ -104,10 +104,9 @@ pub fn endow(
 		for e in endowees.into_iter() {
 			let account = e.0;
 
-			ita_sgx_runtime::BalancesCall::<Runtime>::set_balance {
+			ita_sgx_runtime::BalancesCall::<Runtime>::force_set_balance {
 				who: MultiAddress::Id(account.clone()),
 				new_free: e.1,
-				new_reserved: e.2,
 			}
 			.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
 			.map_err(|e| StfError::Dispatch(format!("Balance Set Balance error: {:?}", e.error)))

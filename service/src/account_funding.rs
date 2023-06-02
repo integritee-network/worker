@@ -156,7 +156,8 @@ fn bootstrap_funds_from_alice(
 	alice_signer_api.set_signer(ParentchainExtrinsicSigner::new(alice));
 
 	println!("[+] bootstrap funding Enclave from Alice's funds");
-	let xt = alice_signer_api.balance_transfer(MultiAddress::Id(accountid.clone()), funding_amount);
+	let xt = alice_signer_api
+		.balance_transfer_allow_death(MultiAddress::Id(accountid.clone()), funding_amount);
 	let xt_report = alice_signer_api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock)?;
 	info!(
 		"[<] Extrinsic got included in a block. Extrinsic Hash: {:?}\n",

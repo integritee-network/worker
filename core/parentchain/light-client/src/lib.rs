@@ -28,11 +28,11 @@ extern crate sgx_tstd as std;
 
 // Re-export useful types.
 pub use finality_grandpa::BlockNumberOps;
-pub use sp_finality_grandpa::{AuthorityList, SetId};
+pub use sp_consensus_grandpa::{AuthorityList, SetId};
 
 use crate::light_validation_state::LightValidationState;
 use error::Error;
-use sp_finality_grandpa::{AuthorityId, AuthorityWeight, ConsensusLog, GRANDPA_ENGINE_ID};
+use sp_consensus_grandpa::{AuthorityId, AuthorityWeight, ConsensusLog, GRANDPA_ENGINE_ID};
 use sp_runtime::{
 	generic::{Digest, OpaqueDigestItemId, SignedBlock},
 	traits::{Block as ParentchainBlockTrait, Header as HeaderTrait},

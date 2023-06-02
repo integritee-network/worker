@@ -29,13 +29,17 @@ use clap::Subcommand;
 use itc_rpc_client::direct_client::DirectApi;
 use itp_node_api::api_client::PalletTeerexApi;
 use sp_application_crypto::{ed25519, sr25519};
-use sp_core::{crypto::Ss58Codec, Pair};
+use sp_core::{
+	crypto::{key_types::ACCOUNT, Ss58Codec},
+	Pair,
+};
+use sp_keystore::Keystore;
 use std::{
 	path::PathBuf,
 	time::{Duration, UNIX_EPOCH},
 };
 use substrate_api_client::Metadata;
-use substrate_client_keystore::{KeystoreExt, LocalKeystore};
+use substrate_client_keystore::LocalKeystore;
 
 mod commands;
 
@@ -91,8 +95,9 @@ impl BaseCommand {
 
 fn new_account() -> CliResult {
 	let store = LocalKeystore::open(PathBuf::from(&KEYSTORE_PATH), None).unwrap();
-	let key: sr25519::AppPair = store.generate().unwrap();
-	let key_base58 = key.public().to_ss58check();
+	let key = LocalKeystore::sr25519_generate_new(&store, ACCOUNT, None).unwrap();
+	//let key: sr25519::AppPair = store.generate().unwrap();
+	let key_base58 = key.to_ss58check();
 	drop(store);
 	println!("{}", key_base58);
 	Ok(CliResultOk::PubKeysBase58 {
@@ -105,14 +110,14 @@ fn list_accounts() -> CliResult {
 	let store = LocalKeystore::open(PathBuf::from(&KEYSTORE_PATH), None).unwrap();
 	println!("sr25519 keys:");
 	let mut keys_sr25519 = vec![];
-	for pubkey in store.public_keys::<sr25519::AppPublic>().unwrap().into_iter() {
+	for pubkey in store.sr25519_public_keys(ACCOUNT).into_iter() {
 		let key_ss58 = pubkey.to_ss58check();
 		println!("{}", key_ss58);
 		keys_sr25519.push(key_ss58);
 	}
 	println!("ed25519 keys:");
 	let mut keys_ed25519 = vec![];
-	for pubkey in store.public_keys::<ed25519::AppPublic>().unwrap().into_iter() {
+	for pubkey in store.ed25519_public_keys(ACCOUNT).into_iter() {
 		let key_ss58 = pubkey.to_ss58check();
 		println!("{}", key_ss58);
 		keys_ed25519.push(key_ss58);
