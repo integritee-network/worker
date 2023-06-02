@@ -26,7 +26,7 @@ use itp_node_api::api_client::ChainApi;
 use itp_storage::StorageProof;
 use log::*;
 use my_node_runtime::Header;
-use sp_finality_grandpa::VersionedAuthorityList;
+use sp_consensus_grandpa::VersionedAuthorityList;
 use sp_runtime::traits::Header as HeaderTrait;
 use std::{cmp::min, sync::Arc};
 

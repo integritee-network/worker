@@ -26,8 +26,8 @@ use crate::{
 };
 use finality_grandpa::voter_set::VoterSet;
 use log::*;
-pub use sp_finality_grandpa::SetId;
-use sp_finality_grandpa::{AuthorityId, ScheduledChange, GRANDPA_ENGINE_ID};
+pub use sp_consensus_grandpa::SetId;
+use sp_consensus_grandpa::{AuthorityId, ScheduledChange, GRANDPA_ENGINE_ID};
 use sp_runtime::{
 	generic::Digest,
 	traits::{Block as ParentchainBlockTrait, Header as HeaderTrait},

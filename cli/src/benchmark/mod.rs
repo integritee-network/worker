@@ -39,7 +39,8 @@ use rand::Rng;
 use rayon::prelude::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_application_crypto::sr25519;
-use sp_core::{sr25519 as sr25519_core, Pair};
+use sp_core::{crypto::key_types::ACCOUNT, sr25519 as sr25519_core, Pair};
+use sp_keystore::Keystore;
 use std::{
 	boxed::Box,
 	string::ToString,
@@ -48,7 +49,7 @@ use std::{
 	time::Instant,
 	vec::Vec,
 };
-use substrate_client_keystore::{KeystoreExt, LocalKeystore};
+use substrate_client_keystore::LocalKeystore;
 
 // Needs to be above the existential deposit minimum, otherwise an account will not
 // be created and the state is not increased.
@@ -141,8 +142,9 @@ impl BenchmarkCommand {
 			println!("Initializing account {}", i);
 
 			// Create new account to use.
-			let a: sr25519::AppPair = store.generate().unwrap();
-			let account = get_pair_from_str(trusted_args, a.public().to_string().as_str());
+			//let a: sr25519::AppPair = store.generate().unwrap();
+			let a = LocalKeystore::sr25519_generate_new(&store, ACCOUNT, None).unwrap();
+			let account = get_pair_from_str(trusted_args, a.to_string().as_str());
 			let initial_balance = 10000000;
 
 			// Transfer amount from Alice to new account.
@@ -190,9 +192,10 @@ impl BenchmarkCommand {
 					}
 
 					// Create new account.
-					let account_keys: sr25519::AppPair = store.generate().unwrap();
+					let account_keys = LocalKeystore::sr25519_generate_new(&store, ACCOUNT, None).unwrap();
+
 					let new_account =
-						get_pair_from_str(trusted_args, account_keys.public().to_string().as_str());
+						get_pair_from_str(trusted_args, account_keys.to_string().as_str());
 
 
 					println!("  Transfer amount: {}", EXISTENTIAL_DEPOSIT);

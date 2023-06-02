@@ -47,7 +47,7 @@ impl TransferCommand {
 		info!("to ss58 is {}", to_account.to_ss58check());
 		let mut api = get_chain_api(cli);
 		api.set_signer(ParentchainExtrinsicSigner::new(sr25519_core::Pair::from(from_account)));
-		let xt = api.balance_transfer(Address::Id(to_account.clone()), self.amount);
+		let xt = api.balance_transfer_allow_death(Address::Id(to_account.clone()), self.amount);
 		let tx_hash = api
 			.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock)
 			.unwrap()

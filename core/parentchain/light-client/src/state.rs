@@ -16,7 +16,7 @@
 */
 
 use codec::{Decode, Encode};
-use sp_finality_grandpa::{AuthorityList, SetId};
+use sp_consensus_grandpa::{AuthorityList, SetId};
 use sp_runtime::{
 	traits::{Block as BlockT, Header as HeaderT},
 	OpaqueExtrinsic,

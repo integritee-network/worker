@@ -18,9 +18,10 @@
 //! Logic for checking Substrate storage proofs.
 
 use crate::error::Error;
-use hash_db::{HashDB, Hasher, EMPTY_PREFIX};
+use hash_db::EMPTY_PREFIX;
+use sp_core::Hasher;
 use sp_std::vec::Vec;
-use sp_trie::{trie_types::TrieDB, MemoryDB, Trie, TrieDBBuilder};
+use sp_trie::{trie_types::TrieDB, HashDBT, MemoryDB, Trie, TrieDBBuilder};
 
 pub type StorageProof = Vec<Vec<u8>>;
 
