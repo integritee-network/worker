@@ -23,7 +23,7 @@ pub const MAXIMUM_BLOCK_WEIGHT: Weight =
 pub struct FixedGasPrice;
 impl FeeCalculator for FixedGasPrice {
 	fn min_gas_price() -> (U256, Weight) {
-		(1.into(), Weight::from_ref_time(1))
+		(1.into(), Weight::from_parts(1, 0u64))
 	}
 }
 
@@ -41,7 +41,7 @@ pub struct FixedGasWeightMapping;
 
 impl GasWeightMapping for FixedGasWeightMapping {
 	fn gas_to_weight(gas: u64, _without_base_weight: bool) -> Weight {
-		Weight::from_ref_time(gas.saturating_mul(WEIGHT_PER_GAS))
+		Weight::from_parts(gas.saturating_mul(WEIGHT_PER_GAS), 0u64)
 	}
 	fn weight_to_gas(weight: Weight) -> u64 {
 		weight.ref_time().wrapping_div(WEIGHT_PER_GAS)
@@ -83,4 +83,6 @@ impl pallet_evm::Config for Runtime {
 	type FindAuthor = (); // Currently not available. Would need some more thoughts how prioritisation fees could be handled.
 	type WeightPerGas = ();
 	type OnCreate = ();
+	type Timestamp = ();
+	type WeightInfo = ();
 }
