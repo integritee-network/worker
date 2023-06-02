@@ -1,6 +1,6 @@
 services:
   "integritee-node-${VERSION}":
-    image: "${INTEGRITEE_NODE:-integritee/integritee-node-dev-ias:1.0.35}"
+    image: "${INTEGRITEE_NODE:-integritee/integritee-node-dev:1.0.35}"
     hostname: integritee-node
     devices:
       - "${SGX_PROVISION:-/dev/null}:/dev/sgx/provision"
@@ -43,7 +43,7 @@ services:
       interval: 10s
       timeout: 10s
       retries: 25
-    entrypoint: "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-1 -T wss://integritee-worker-1 -u ws://integritee-node -U ws://integritee-worker-1 -P 2011 -w 2101 -p 9912 -h 4645 run --dev"
+    entrypoint: "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-1 -T wss://integritee-worker-1 -u ws://integritee-node -U ws://integritee-worker-1 -P 2011 -w 2101 -p 9912 -h 4645 run --dev --skip-ra"
     restart: "no"
   "integritee-worker-2-${VERSION}":
     image: integritee-worker:${VERSION:-dev}
@@ -73,7 +73,7 @@ services:
       interval: 10s
       timeout: 10s
       retries: 25
-    entrypoint: "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-2 -T wss://integritee-worker-2 -u ws://integritee-node -U ws://integritee-worker-2 -P 2012 -w 2102 -p 9912 -h 4646 run --dev --request-state"
+    entrypoint: "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-2 -T wss://integritee-worker-2 -u ws://integritee-node -U ws://integritee-worker-2 -P 2012 -w 2102 -p 9912 -h 4646 run --dev --request-state --skip-ra"
     restart: "no"
 networks:
   integritee-test-network:
