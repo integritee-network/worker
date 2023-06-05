@@ -44,7 +44,8 @@ const COINGECKO_PARAM_CURRENCY: &str = "vs_currency";
 const COINGECKO_PARAM_COIN: &str = "ids";
 const COINGECKO_PATH: &str = "api/v3/coins/markets";
 const COINGECKO_TIMEOUT: Duration = Duration::from_secs(20u64);
-const COINGECKO_ROOT_CERTIFICATE: &str = include_str!("../certificates/lets_encrypt_root_cert.pem");
+const COINGECKO_ROOT_CERTIFICATE: &str =
+	include_str!("../certificates/baltimore_cyber_trust_root_v3.pem");
 
 lazy_static! {
 	static ref SYMBOL_ID_MAP: HashMap<&'static str, &'static str> = HashMap::from([
