@@ -44,8 +44,10 @@ const COINGECKO_PARAM_CURRENCY: &str = "vs_currency";
 const COINGECKO_PARAM_COIN: &str = "ids";
 const COINGECKO_PATH: &str = "api/v3/coins/markets";
 const COINGECKO_TIMEOUT: Duration = Duration::from_secs(20u64);
-const COINGECKO_ROOT_CERTIFICATE: &str =
+const COINGECKO_ROOT_CERTIFICATE_BALTIMORE: &str =
 	include_str!("../certificates/baltimore_cyber_trust_root_v3.pem");
+const COINGECKO_ROOT_CERTIFICATE_LETSENCRYPT: &str =
+	include_str!("../certificates/lets_encrypt_root_cert.pem");
 
 lazy_static! {
 	static ref SYMBOL_ID_MAP: HashMap<&'static str, &'static str> = HashMap::from([
@@ -85,8 +87,11 @@ impl<OracleSourceInfo: Into<TradingInfo>> OracleSource<OracleSourceInfo> for Coi
 		Url::parse(COINGECKO_URL).map_err(|e| Error::Other(format!("{:?}", e).into()))
 	}
 
-	fn root_certificate_content(&self) -> String {
-		COINGECKO_ROOT_CERTIFICATE.to_string()
+	fn root_certificates_content(&self) -> Vec<String> {
+		vec![
+			COINGECKO_ROOT_CERTIFICATE_LETSENCRYPT.to_string(),
+			COINGECKO_ROOT_CERTIFICATE_BALTIMORE.to_string(),
+		]
 	}
 
 	fn execute_request(
