@@ -34,6 +34,7 @@ use std::{
 	env,
 	string::{String, ToString},
 	time::Duration,
+	vec::Vec,
 };
 use url::Url;
 
@@ -91,8 +92,8 @@ impl<OracleSourceInfo: Into<TradingInfo>> OracleSource<OracleSourceInfo> for Coi
 		Url::parse(COINMARKETCAP_URL).map_err(|e| Error::Other(format!("{:?}", e).into()))
 	}
 
-	fn root_certificate_content(&self) -> String {
-		COINMARKETCAP_ROOT_CERTIFICATE.to_string()
+	fn root_certificates_content(&self) -> Vec<String> {
+		vec![COINMARKETCAP_ROOT_CERTIFICATE.to_string()]
 	}
 
 	fn execute_request(

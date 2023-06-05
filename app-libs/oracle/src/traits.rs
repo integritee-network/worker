@@ -27,7 +27,7 @@ use itc_rest_client::{
 	http_client::{HttpClient, SendWithCertificateVerification},
 	rest_client::RestClient,
 };
-use std::string::String;
+use std::{string::String, vec::Vec};
 use url::Url;
 
 pub trait OracleSource<OracleSourceInfo>: Default {
@@ -39,8 +39,8 @@ pub trait OracleSource<OracleSourceInfo>: Default {
 
 	fn base_url(&self) -> Result<Url, Error>;
 
-	/// The server's root certificate. A valid certificate is required to open a tls connection
-	fn root_certificate_content(&self) -> String;
+	/// The server's root certificate(s). A valid certificate is required to open a tls connection
+	fn root_certificates_content(&self) -> Vec<String>;
 
 	fn execute_exchange_rate_request(
 		&self,

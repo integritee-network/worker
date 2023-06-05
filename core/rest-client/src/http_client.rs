@@ -113,7 +113,7 @@ impl Send for SendWithCertificateVerification {
 	) -> Result<Response, Error> {
 		let mut cnf = Config::empty_root_store();
 		for cert in self.root_certificates.iter() {
-			cnf.add_root_cert_content_pem_file(&cert)?;
+			cnf.add_root_cert_content_pem_file(cert)?;
 		}
 
 		match request.send_with_config(writer, Some(&cnf)) {
@@ -295,8 +295,10 @@ mod tests {
 	use std::vec::Vec;
 
 	const HTTPBIN_ROOT_CERT: &str = include_str!("fixtures/amazon_root_ca_1_v3.pem");
-	const COINGECKO_ROOT_CERTIFICATE: &str =
+	const COINGECKO_ROOT_CERTIFICATE_BALTIMORE: &str =
 		include_str!("fixtures/baltimore_cyber_trust_root_v3.pem");
+	const COINGECKO_ROOT_CERTIFICATE_LETSENCRYPT: &str =
+		include_str!("fixtures/lets_encrypt_root_cert.pem");
 
 	#[test]
 	fn join_url_adds_query_parameters() {
@@ -545,10 +547,13 @@ mod tests {
 		}
 
 		let base_url = Url::parse("https://httpbin.org").unwrap();
-		let root_certificate = COINGECKO_ROOT_CERTIFICATE.to_string();
+		let root_certificates = vec![
+			COINGECKO_ROOT_CERTIFICATE_LETSENCRYPT.to_string(),
+			COINGECKO_ROOT_CERTIFICATE_BALTIMORE.to_string(),
+		];
 
 		let http_client = HttpClient::new(
-			SendWithCertificateVerification::new(vec![root_certificate]),
+			SendWithCertificateVerification::new(root_certificates),
 			true,
 			Some(Duration::from_secs(3u64)),
 			Some(headers_connection_close()),
