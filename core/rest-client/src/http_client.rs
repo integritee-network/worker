@@ -26,6 +26,7 @@ use http::{
 use http_req::{
 	request::{Method, Request},
 	response::{Headers, Response},
+	tls::Config,
 	uri::Uri,
 };
 use log::*;
@@ -91,16 +92,16 @@ impl Send for DefaultSend {
 	}
 }
 
-/// Sends a HTTPs request with the server's root certificate.
-/// The connection will only be established if the supplied certificate
+/// Sends a HTTPs request with the server's root certificate(s).
+/// The connection will only be established if one of the supplied certificates
 /// matches the server's root certificate.
 pub struct SendWithCertificateVerification {
-	root_certificate: String,
+	root_certificates: Vec<String>,
 }
 
 impl SendWithCertificateVerification {
-	pub fn new(root_certificate: String) -> Self {
-		SendWithCertificateVerification { root_certificate }
+	pub fn new(root_certificates: Vec<String>) -> Self {
+		SendWithCertificateVerification { root_certificates }
 	}
 }
 
@@ -110,7 +111,12 @@ impl Send for SendWithCertificateVerification {
 		request: &mut Request,
 		writer: &mut Vec<u8>,
 	) -> Result<Response, Error> {
-		match request.send_with_pem_certificate(writer, Some(self.root_certificate.to_string())) {
+		let mut cnf = Config::empty_root_store();
+		for cert in self.root_certificates.iter() {
+			cnf.add_root_cert_content_pem_file(&cert)?;
+		}
+
+		match request.send_with_config(writer, Some(&cnf)) {
 			Ok(response) => Ok(response),
 			Err(e) => {
 				error!(
@@ -504,7 +510,7 @@ mod tests {
 		let root_certificate = HTTPBIN_ROOT_CERT.to_string();
 
 		let http_client = HttpClient::new(
-			SendWithCertificateVerification { root_certificate },
+			SendWithCertificateVerification::new(vec![root_certificate]),
 			true,
 			Some(Duration::from_secs(3u64)),
 			Some(headers_connection_close()),
@@ -542,7 +548,7 @@ mod tests {
 		let root_certificate = COINGECKO_ROOT_CERTIFICATE.to_string();
 
 		let http_client = HttpClient::new(
-			SendWithCertificateVerification { root_certificate },
+			SendWithCertificateVerification::new(vec![root_certificate]),
 			true,
 			Some(Duration::from_secs(3u64)),
 			Some(headers_connection_close()),

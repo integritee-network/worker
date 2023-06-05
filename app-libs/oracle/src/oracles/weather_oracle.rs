@@ -68,7 +68,7 @@ where
 		debug!("Get longitude from URI: {}, query: {:?}", base_url, query);
 
 		let http_client = HttpClient::new(
-			SendWithCertificateVerification::new(root_certificate),
+			SendWithCertificateVerification::new(vec![root_certificate]),
 			true,
 			self.oracle_source.request_timeout(),
 			None,

@@ -70,7 +70,7 @@ where
 		debug!("Get exchange rate from URI: {}, trading pair: {:?}", base_url, trading_pair);
 
 		let http_client = HttpClient::new(
-			SendWithCertificateVerification::new(root_certificate),
+			SendWithCertificateVerification::new(vec![root_certificate]),
 			true,
 			request_timeout,
 			None,
