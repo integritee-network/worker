@@ -64,13 +64,13 @@ where
 		self.metrics_exporter.increment_number_requests(source_id.clone());
 
 		let base_url = self.oracle_source.base_url()?;
-		let root_certificate = self.oracle_source.root_certificate_content();
+		let root_certificates = self.oracle_source.root_certificates_content();
 		let request_timeout = self.oracle_source.request_timeout();
 
 		debug!("Get exchange rate from URI: {}, trading pair: {:?}", base_url, trading_pair);
 
 		let http_client = HttpClient::new(
-			SendWithCertificateVerification::new(root_certificate),
+			SendWithCertificateVerification::new(root_certificates),
 			true,
 			request_timeout,
 			None,

@@ -63,12 +63,12 @@ where
 		let query = weather_info.weather_query.clone();
 
 		let base_url = self.oracle_source.base_url()?;
-		let root_certificate = self.oracle_source.root_certificate_content();
+		let root_certificates = self.oracle_source.root_certificates_content();
 
 		debug!("Get longitude from URI: {}, query: {:?}", base_url, query);
 
 		let http_client = HttpClient::new(
-			SendWithCertificateVerification::new(root_certificate),
+			SendWithCertificateVerification::new(root_certificates),
 			true,
 			self.oracle_source.request_timeout(),
 			None,

@@ -32,6 +32,7 @@ use serde::{Deserialize, Serialize};
 use std::{
 	string::{String, ToString},
 	time::Duration,
+	vec::Vec,
 };
 use url::Url;
 
@@ -63,8 +64,8 @@ impl<OracleSourceInfo: Into<WeatherInfo>> OracleSource<OracleSourceInfo> for Wea
 	}
 
 	/// The server's root certificate. A valid certificate is required to open a tls connection
-	fn root_certificate_content(&self) -> String {
-		WEATHER_ROOT_CERTIFICATE.to_string()
+	fn root_certificates_content(&self) -> Vec<String> {
+		vec![WEATHER_ROOT_CERTIFICATE.to_string()]
 	}
 
 	fn execute_exchange_rate_request(
