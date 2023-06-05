@@ -427,11 +427,11 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	register_collateral(&node_api, &*enclave, &tee_accountid, is_development_mode, skip_ra);
 
 	let trusted_url = config.trusted_worker_url_external();
-	#[cfg(feature = "dcap")]
+	#[cfg(feature = "attesteer")]
 	let marblerun_base_url =
 		run_config.marblerun_base_url.unwrap_or("http://localhost:9944".to_owned());
 
-	#[cfg(feature = "dcap")]
+	#[cfg(feature = "attesteer")]
 	fetch_marblerun_events_every_hour(
 		node_api.clone(),
 		enclave.clone(),
