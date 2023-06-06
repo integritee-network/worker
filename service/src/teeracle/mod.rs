@@ -19,6 +19,7 @@ use crate::{error::ServiceResult, teeracle::interval_scheduling::schedule_on_rep
 use codec::{Decode, Encode};
 use itp_enclave_api::teeracle_api::TeeracleApi;
 use itp_node_api::api_client::ParentchainApi;
+use itp_types::parentchain::Hash;
 use itp_utils::hex::hex_encode;
 use log::*;
 use sp_runtime::OpaqueExtrinsic;
@@ -29,6 +30,22 @@ use tokio::runtime::Handle;
 
 pub(crate) mod interval_scheduling;
 pub(crate) mod teeracle_metrics;
+
+pub(crate) fn schedule_teeracle_reregistration(
+	send_register_xt: impl Fn() -> Option<Hash>,
+	interval: Duration,
+) {
+	info!("Schedule the teeracle reregistration every: {:?}", interval);
+	schedule_on_repeating_intervals(
+		|| {
+			info!("Re-registering the teeracle.");
+			if let None = send_register_xt() {
+				error!("Could not re-register the teeracle")
+			}
+		},
+		interval,
+	);
+}
 
 /// Send extrinsic to chain according to the market data update interval in the settings
 /// with the current market data (for now only exchange rate).

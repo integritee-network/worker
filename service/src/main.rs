@@ -78,7 +78,7 @@ use substrate_api_client::{
 #[cfg(feature = "dcap")]
 use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
 
-use crate::teeracle::interval_scheduling::schedule_on_repeating_intervals;
+use crate::teeracle::schedule_teeracle_reregistration;
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
 use sp_runtime::traits::Header as HeaderTrait;
@@ -474,12 +474,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	// initialize teeracle interval
 	#[cfg(feature = "teeracle")]
 	if WorkerModeProvider::worker_mode() == WorkerMode::Teeracle {
-		schedule_on_repeating_intervals(
-			|| {
-				if let None = send_register_xt() {
-					error!("Could not re-register the teeracle")
-				}
-			},
+		schedule_teeracle_reregistration(
+			send_register_xt,
 			run_config.reregister_teeracle_interval(),
 		);
 
