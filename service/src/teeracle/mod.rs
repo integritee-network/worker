@@ -15,10 +15,7 @@
 
 */
 
-use crate::{
-	error::{Error, ServiceResult},
-	teeracle::interval_scheduling::schedule_on_repeating_intervals,
-};
+use crate::{error::ServiceResult, teeracle::interval_scheduling::schedule_on_repeating_intervals};
 use codec::{Decode, Encode};
 use itp_enclave_api::teeracle_api::TeeracleApi;
 use itp_node_api::api_client::ParentchainApi;
@@ -73,7 +70,7 @@ where
 {
 	let oracle_xt = get_oracle_xt().map_err(|e| {
 		increment_number_of_request_failures();
-		Error::Custom(format!("{:?}", e).into())
+		e
 	})?;
 
 	let extrinsics = <Vec<OpaqueExtrinsic>>::decode(&mut oracle_xt.as_slice())?;
