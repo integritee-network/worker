@@ -429,7 +429,7 @@ impl RemoteAttestation for Enclave {
 				collateral.tcb_info_size,
 				std::ffi::CStr::from_ptr(collateral.qe_identity_issuer_chain).to_string_lossy(),
 				collateral.qe_identity_issuer_chain_size,
-				std::ffi::CStr::from_ptr(collateral.qe_identity).to_string_lossy(),
+				std::ffi::CStr::from_ptr(collateral.qe_identity).to_string_lossy().retain(|c| c != '\'),
 				collateral.qe_identity_size,
 			);
 		};
