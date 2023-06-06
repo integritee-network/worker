@@ -18,7 +18,7 @@
 #![cfg_attr(test, feature(assert_matches))]
 
 #[cfg(feature = "teeracle")]
-use crate::teeracle::start_interval_market_update;
+use crate::teeracle::{schedule_teeracle_reregistration_thread, start_interval_market_update};
 
 #[cfg(not(feature = "dcap"))]
 use crate::utils::check_files;
@@ -78,8 +78,6 @@ use substrate_api_client::{
 #[cfg(feature = "dcap")]
 use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
 
-#[cfg(feature = "teeracle")]
-use crate::teeracle::schedule_teeracle_reregistration;
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
 use sp_runtime::traits::Header as HeaderTrait;
