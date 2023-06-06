@@ -273,7 +273,7 @@ impl From<&ArgMatches<'_>> for RunConfig {
 		let teeracle_update_interval = m.value_of("teeracle-interval").map(|i| {
 			parse(i).unwrap_or_else(|e| panic!("teeracle-interval parsing error {:?}", e))
 		});
-		let reregister_teeracle_interval = m.value_of("teeracle-interval").map(|i| {
+		let reregister_teeracle_interval = m.value_of("reregister-teeracle-interval").map(|i| {
 			parse(i).unwrap_or_else(|e| panic!("teeracle-interval parsing error {:?}", e))
 		});
 
