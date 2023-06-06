@@ -450,7 +450,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	let enclave2 = enclave.clone();
 	let node_api2 = node_api.clone();
 	#[cfg(not(feature = "dcap"))]
-	let register_xt = move || enclave_2.generate_ias_ra_extrinsic(&trusted_url, skip_ra).unwrap();
+	let register_xt = move || enclave2.generate_ias_ra_extrinsic(&trusted_url, skip_ra).unwrap();
 	#[cfg(feature = "dcap")]
 	let register_xt = move || enclave2.generate_dcap_ra_extrinsic(&trusted_url, skip_ra).unwrap();
 
