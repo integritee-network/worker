@@ -252,6 +252,10 @@ impl RunConfig {
 		self.teeracle_update_interval.unwrap_or(DEFAULT_MARKET_DATA_UPDATE_INTERVAL)
 	}
 
+	/// The periodic registration period of the teeracle.
+	///
+	/// Defaults to 23h30m, as this is slightly below the currently configured automatic
+	/// deregistration period on the Integritee chains.
 	pub fn reregister_teeracle_interval(&self) -> Duration {
 		self.reregister_teeracle_interval.unwrap_or(ONE_DAY - THIRTY_MINUTES)
 	}
