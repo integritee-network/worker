@@ -194,7 +194,7 @@ impl RestPath<&str> for PrometheusMarblerunEvents {
 	}
 }
 
-#[cfg(feature = "dcap")]
+#[cfg(feature = "attesteer")]
 pub fn fetch_marblerun_events(base_url: &str) -> Result<Vec<PrometheusMarblerunEvent>, Error> {
 	let base_url = URL::parse(&base_url).map_err(|e| {
 		Error::Custom(
@@ -222,7 +222,7 @@ pub struct PrometheusMarblerunEvent {
 	pub activation: PrometheusMarblerunEventActivation,
 }
 
-#[cfg(feature = "dcap")]
+#[cfg(feature = "attesteer")]
 impl PrometheusMarblerunEvent {
 	pub fn get_quote_without_prepended_bytes(&self) -> &[u8] {
 		let marblerun_magic_prepended_header_size = 16usize;
