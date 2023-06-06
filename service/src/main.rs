@@ -764,11 +764,11 @@ fn register_collateral(
 		let (fmspc, _tcb_info) = extract_tcb_info_from_raw_dcap_quote(&dcap_quote).unwrap();
 		println!("[>] DCAP setup: register QE collateral");
 		let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc).unwrap();
-		send_extrinsic(uxt, api, accountid, is_development_mode).expect("failed to register QE collateral for DCAP");
+		send_extrinsic(uxt, api, accountid, is_development_mode);
 
 		println!("[>] DCAP setup: register TCB info");
 		let uxt = enclave.generate_register_tcb_info_extrinsic(fmspc).unwrap();
-		send_extrinsic(uxt, api, accountid, is_development_mode).expect("failed to register TCB info DCAP");;
+		send_extrinsic(uxt, api, accountid, is_development_mode);
 	}
 }
 
