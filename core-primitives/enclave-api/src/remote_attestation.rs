@@ -409,11 +409,11 @@ impl RemoteAttestation for Enclave {
 				 pck_crl_size: {}\n, \
 				 tcb_info_issuer_chain: {:?}\n, \
 				 tcb_info_issuer_chain_size: {}\n, \
-				 tcb_info: {:?}\n, \
+				 tcb_info: {}\n, \
 				 tcb_info_size: {}\n, \
 				 qe_identity_issuer_chain: {:?}\n, \
 				 qe_identity_issuer_chain_size: {}\n, \
-				 qe_identity: {:?}\n, \
+				 qe_identity: {}\n, \
 				 qe_identity_size: {}\n",
 				collateral.version,
 				collateral.tee_type,
@@ -425,11 +425,11 @@ impl RemoteAttestation for Enclave {
 				collateral.pck_crl_size,
 				std::ffi::CStr::from_ptr(collateral.tcb_info_issuer_chain).to_string_lossy(),
 				collateral.tcb_info_issuer_chain_size,
-				std::ffi::CStr::from_ptr(collateral.tcb_info).to_string_lossy().replace("\\", ""),
+				std::ffi::CStr::from_ptr(collateral.tcb_info).to_string_lossy(),
 				collateral.tcb_info_size,
 				std::ffi::CStr::from_ptr(collateral.qe_identity_issuer_chain).to_string_lossy(),
 				collateral.qe_identity_issuer_chain_size,
-				std::ffi::CStr::from_ptr(collateral.qe_identity).to_string_lossy().replace("\\", ""),
+				std::ffi::CStr::from_ptr(collateral.qe_identity).to_string_lossy(),
 				collateral.qe_identity_size,
 			);
 		};
