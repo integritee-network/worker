@@ -690,7 +690,7 @@ fn print_events(events: Vec<Event>) {
 	}
 }
 
-#[cfg(feature = "dcap")]
+#[cfg(feature = "attesteer")]
 fn fetch_marblerun_events_every_hour<E>(
 	api: ParentchainApi,
 	enclave: Arc<E>,
@@ -721,7 +721,7 @@ fn fetch_marblerun_events_every_hour<E>(
 
 	handle.join().unwrap()
 }
-#[cfg(feature = "dcap")]
+#[cfg(feature = "attesteer")]
 fn register_quotes_from_marblerun(
 	api: &ParentchainApi,
 	enclave: Arc<dyn RemoteAttestation>,
