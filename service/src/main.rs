@@ -78,6 +78,7 @@ use substrate_api_client::{
 #[cfg(feature = "dcap")]
 use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
 
+#[cfg(feature = "teeracle")]
 use crate::teeracle::schedule_teeracle_reregistration;
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
