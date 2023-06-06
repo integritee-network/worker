@@ -427,11 +427,11 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	register_collateral(&node_api, &*enclave, &tee_accountid, is_development_mode, skip_ra);
 
 	let trusted_url = config.trusted_worker_url_external();
-	#[cfg(feature = "dcap")]
+	#[cfg(feature = "attesteer")]
 	let marblerun_base_url =
 		run_config.marblerun_base_url.unwrap_or("http://localhost:9944".to_owned());
 
-	#[cfg(feature = "dcap")]
+	#[cfg(feature = "attesteer")]
 	fetch_marblerun_events_every_hour(
 		node_api.clone(),
 		enclave.clone(),
@@ -762,10 +762,11 @@ fn register_collateral(
 	let dcap_quote = enclave.generate_dcap_ra_quote(skip_ra).unwrap();
 	if !skip_ra {
 		let (fmspc, _tcb_info) = extract_tcb_info_from_raw_dcap_quote(&dcap_quote).unwrap();
-
+		println!("[>] DCAP setup: register QE collateral");
 		let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc).unwrap();
 		send_extrinsic(uxt, api, accountid, is_development_mode);
 
+		println!("[>] DCAP setup: register TCB info");
 		let uxt = enclave.generate_register_tcb_info_extrinsic(fmspc).unwrap();
 		send_extrinsic(uxt, api, accountid, is_development_mode);
 	}
@@ -784,7 +785,7 @@ fn send_extrinsic(
 		return None
 	}
 
-	println!("[>] Register the TCB info (send the extrinsic)");
+	println!("[>] send extrinsic");
 
 	match api.submit_and_watch_opaque_extrinsic_until_success(extrinsic.into(), true) {
 		Ok(xt_report) => {
