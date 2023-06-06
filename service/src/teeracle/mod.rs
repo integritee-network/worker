@@ -49,14 +49,12 @@ pub(crate) fn start_interval_market_update<E: TeeracleApi>(
 			error!("Error running market update {:?}", e)
 		}
 
-		if let Err(e) = execute_oracle_update(api, tokio_handle, || {
-			enclave_api.update_weather_data_xt("54.32", "15.37")
-		}) {
-			error!("Error running weather update {:?}", e)
-		}
-
 		// TODO: Refactor and add this back according to ISSUE: https://github.com/integritee-network/worker/issues/1300
-		// execute_weather_update(api, enclave_api, tokio_handle);
+		// if let Err(e) = execute_oracle_update(api, tokio_handle, || {
+		// 	enclave_api.update_weather_data_xt("54.32", "15.37")
+		// }) {
+		// 	error!("Error running weather update {:?}", e)
+		// }
 	};
 	info!("Teeracle will update now");
 	updates_to_run();
