@@ -78,6 +78,7 @@ use substrate_api_client::{
 #[cfg(feature = "dcap")]
 use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
 
+use crate::teeracle::interval_scheduling::schedule_on_repeating_intervals;
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
 use sp_runtime::traits::Header as HeaderTrait;
@@ -446,11 +447,14 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		println!("[!] creating remote attestation report and create enclave register extrinsic.");
 	};
 	#[cfg(not(feature = "dcap"))]
-	let xt = enclave.generate_ias_ra_extrinsic(&trusted_url, skip_ra).unwrap();
+	let register_xt = || enclave.generate_ias_ra_extrinsic(&trusted_url, skip_ra).unwrap();
 	#[cfg(feature = "dcap")]
-	let xt = enclave.generate_dcap_ra_extrinsic(&trusted_url, skip_ra).unwrap();
-	let register_enclave_block_hash =
-		send_extrinsic(xt, &node_api, &tee_accountid, is_development_mode);
+	let register_xt = || enclave.generate_dcap_ra_extrinsic(&trusted_url, skip_ra).unwrap();
+
+	let send_register_xt =
+		|| send_extrinsic(register_xt(), &node_api, &tee_accountid, is_development_mode);
+
+	let register_enclave_block_hash = send_register_xt();
 
 	let register_enclave_xt_header =
 		node_api.get_header(register_enclave_block_hash).unwrap().unwrap();
@@ -470,6 +474,15 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	// initialize teeracle interval
 	#[cfg(feature = "teeracle")]
 	if WorkerModeProvider::worker_mode() == WorkerMode::Teeracle {
+		schedule_on_repeating_intervals(
+			|| {
+				if let None = send_register_xt() {
+					error!("Could not re-register the teeracle")
+				}
+			},
+			run_config.reregister_teeracle_interval(),
+		);
+
 		start_interval_market_update(
 			&node_api,
 			run_config.teeracle_update_interval(),
