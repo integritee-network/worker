@@ -42,8 +42,17 @@ pub(crate) fn start_interval_market_update<E: TeeracleApi>(
 	tokio_handle: &Handle,
 ) {
 	let updates_to_run = || {
-		if let Err(e) = execute_market_update(api, enclave_api, tokio_handle) {
-			error!("Error running teeracle update {:?}", e)
+		if let Err(e) = execute_oracle_update(api, tokio_handle, || {
+			// Get market data for usd (hardcoded)
+			enclave_api.update_market_data_xt("TEER", "USD")
+		}) {
+			error!("Error running market update {:?}", e)
+		}
+
+		if let Err(e) = execute_oracle_update(api, tokio_handle, || {
+			enclave_api.update_weather_data_xt("54.32", "15.37")
+		}) {
+			error!("Error running weather update {:?}", e)
 		}
 
 		// TODO: Refactor and add this back according to ISSUE: https://github.com/integritee-network/worker/issues/1300
@@ -56,58 +65,20 @@ pub(crate) fn start_interval_market_update<E: TeeracleApi>(
 	schedule_on_repeating_intervals(updates_to_run, interval);
 }
 
-#[allow(dead_code)]
-fn execute_weather_update<E: TeeracleApi>(
+fn execute_oracle_update<F>(
 	node_api: &ParentchainApi,
-	enclave: &E,
 	tokio_handle: &Handle,
-) -> ServiceResult<()> {
-	let updated_extrinsic = enclave.update_weather_data_xt("54.32", "15.37").map_err(|e| {
+	get_oracle_xt: F,
+) -> ServiceResult<()>
+where
+	F: Fn() -> Result<Vec<u8>, itp_enclave_api::error::Error>,
+{
+	let oracle_xt = get_oracle_xt().map_err(|e| {
 		increment_number_of_request_failures();
 		Error::Custom(format!("{:?}", e).into())
 	})?;
 
-	let extrinsics = <Vec<OpaqueExtrinsic>>::decode(&mut updated_extrinsic.as_slice())?;
-
-	extrinsics.into_iter().for_each(|call| {
-		let node_api_clone = node_api.clone();
-		tokio_handle.spawn(async move {
-			let encoded_extrinsic = call.encode();
-			debug!("Hex encoded extrinsic to be sent: {}", hex_encode(&encoded_extrinsic));
-			println!("[>] Update oracle (send the extrinsic)");
-			let extrinsic_hash = match node_api_clone.submit_and_watch_opaque_extrinsic_until(
-				encoded_extrinsic.into(),
-				XtStatus::InBlock,
-			) {
-				Err(e) => {
-					error!("Failed to send extrinsic: {:?}", e);
-					set_extrinsics_inclusion_success(false);
-					return
-				},
-				Ok(report) => {
-					set_extrinsics_inclusion_success(true);
-					report.extrinsic_hash
-				},
-			};
-			println!("[<] Extrinsic got included into a block. Hash: {:?}\n", extrinsic_hash);
-		});
-	});
-
-	Ok(())
-}
-
-fn execute_market_update<E: TeeracleApi>(
-	node_api: &ParentchainApi,
-	enclave: &E,
-	tokio_handle: &Handle,
-) -> ServiceResult<()> {
-	// Get market data for usd (hardcoded)
-	let updated_extrinsic = enclave.update_market_data_xt("TEER", "USD").map_err(|e| {
-		increment_number_of_request_failures();
-		Error::Custom(format!("{:?}", e).into())
-	})?;
-
-	let extrinsics = <Vec<OpaqueExtrinsic>>::decode(&mut updated_extrinsic.as_slice())?;
+	let extrinsics = <Vec<OpaqueExtrinsic>>::decode(&mut oracle_xt.as_slice())?;
 
 	// Send the extrinsics to the parentchain and wait for InBlock confirmation.
 	for call in extrinsics.into_iter() {
@@ -116,7 +87,7 @@ fn execute_market_update<E: TeeracleApi>(
 			let encoded_extrinsic = call.encode();
 			debug!("Hex encoded extrinsic to be sent: {}", hex_encode(&encoded_extrinsic));
 
-			println!("[>] Update the exchange rate (send the extrinsic)");
+			println!("[>] Update oracle data (send the extrinsic)");
 			let extrinsic_hash = match node_api_clone.submit_and_watch_opaque_extrinsic_until(
 				encoded_extrinsic.into(),
 				XtStatus::InBlock,
