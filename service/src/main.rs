@@ -445,13 +445,18 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	} else {
 		println!("[!] creating remote attestation report and create enclave register extrinsic.");
 	};
-	#[cfg(not(feature = "dcap"))]
-	let register_xt = || enclave.generate_ias_ra_extrinsic(&trusted_url, skip_ra).unwrap();
-	#[cfg(feature = "dcap")]
-	let register_xt = || enclave.generate_dcap_ra_extrinsic(&trusted_url, skip_ra).unwrap();
 
-	let send_register_xt =
-		|| send_extrinsic(register_xt(), &node_api, &tee_accountid, is_development_mode);
+	// clones because of the move
+	let enclave2 = enclave.clone();
+	let node_api2 = node_api.clone();
+	#[cfg(not(feature = "dcap"))]
+	let register_xt = move || enclave_2.generate_ias_ra_extrinsic(&trusted_url, skip_ra).unwrap();
+	#[cfg(feature = "dcap")]
+	let register_xt = move || enclave2.generate_dcap_ra_extrinsic(&trusted_url, skip_ra).unwrap();
+
+	let send_register_xt = move || {
+		send_extrinsic(register_xt(), &node_api2, &tee_accountid.clone(), is_development_mode)
+	};
 
 	let register_enclave_block_hash = send_register_xt();
 
@@ -473,7 +478,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	// initialize teeracle interval
 	#[cfg(feature = "teeracle")]
 	if WorkerModeProvider::worker_mode() == WorkerMode::Teeracle {
-		schedule_teeracle_reregistration(
+		schedule_teeracle_reregistration_thread(
 			send_register_xt,
 			run_config.reregister_teeracle_interval(),
 		);

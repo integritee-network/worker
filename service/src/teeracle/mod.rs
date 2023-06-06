@@ -31,20 +31,26 @@ use tokio::runtime::Handle;
 pub(crate) mod interval_scheduling;
 pub(crate) mod teeracle_metrics;
 
-pub(crate) fn schedule_teeracle_reregistration(
-	send_register_xt: impl Fn() -> Option<Hash>,
+pub(crate) fn schedule_teeracle_reregistration_thread(
+	send_register_xt: impl Fn() -> Option<Hash> + std::marker::Send + 'static,
 	interval: Duration,
 ) {
-	info!("Schedule the teeracle reregistration every: {:?}", interval);
-	schedule_on_repeating_intervals(
-		|| {
-			info!("Re-registering the teeracle.");
-			if let None = send_register_xt() {
-				error!("Could not re-register the teeracle")
-			}
-		},
-		interval,
-	);
+	println!("Schedule the teeracle reregistration every: {:?}", interval);
+
+	std::thread::Builder::new()
+		.name("parentchain_sync_loop".to_owned())
+		.spawn(move || {
+			schedule_on_repeating_intervals(
+				|| {
+					println!("Re-registering the teeracle.");
+					if let None = send_register_xt() {
+						error!("Could not re-register the teeracle")
+					}
+				},
+				interval,
+			);
+		})
+		.unwrap();
 }
 
 /// Send extrinsic to chain according to the market data update interval in the settings
@@ -73,7 +79,7 @@ pub(crate) fn start_interval_market_update<E: TeeracleApi>(
 	info!("Teeracle will update now");
 	updates_to_run();
 
-	info!("Starting teeracle interval for oracle update, interval of {:?}", interval);
+	info!("Schedule teeracle updates every {:?}", interval);
 	schedule_on_repeating_intervals(updates_to_run, interval);
 }
 
