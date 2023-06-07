@@ -424,9 +424,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	register_collateral(&node_api, &*enclave, &tee_accountid, is_development_mode, skip_ra);
 
 	let trusted_url = config.trusted_worker_url_external();
-	#[cfg(feature = "attesteer")]
-	let marblerun_base_url =
-		run_config.marblerun_base_url.unwrap_or("http://localhost:9944".to_owned());
 
 	#[cfg(feature = "attesteer")]
 	fetch_marblerun_events_every_hour(
@@ -435,7 +432,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		tee_accountid.clone(),
 		is_development_mode,
 		trusted_url.clone(),
-		marblerun_base_url.clone(),
+		run_config.marblerun_base_url().to_string(),
 	);
 
 	// ------------------------------------------------------------------------
@@ -709,7 +706,7 @@ fn fetch_marblerun_events_every_hour<E>(
 				&accountid,
 				is_development_mode,
 				url.clone(),
-				marblerun_base_url.clone(),
+				&marblerun_base_url,
 			);
 
 			thread::sleep(Duration::from_secs(POLL_INTERVAL_5_MINUTES_IN_SECS));
@@ -725,10 +722,10 @@ fn register_quotes_from_marblerun(
 	accountid: &AccountId32,
 	is_development_mode: bool,
 	url: String,
-	marblerun_base_url: String,
+	marblerun_base_url: &str,
 ) {
 	let enclave = enclave.as_ref();
-	let events = prometheus_metrics::fetch_marblerun_events(&marblerun_base_url)
+	let events = prometheus_metrics::fetch_marblerun_events(marblerun_base_url)
 		.map_err(|e| {
 			info!("Fetching events from Marblerun failed with: {:?}, continuing with 0 events.", e);
 		})
