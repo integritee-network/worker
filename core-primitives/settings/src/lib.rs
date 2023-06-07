@@ -101,5 +101,9 @@ pub mod enclave {}
 pub mod teeracle {
 	use core::time::Duration;
 	// Send extrinsic to update market exchange rate on the parentchain once per day
-	pub static DEFAULT_MARKET_DATA_UPDATE_INTERVAL: Duration = Duration::from_secs(86400);
+	pub static DEFAULT_MARKET_DATA_UPDATE_INTERVAL: Duration = ONE_DAY;
+
+	pub static ONE_DAY: Duration = Duration::from_secs(86400);
+
+	pub static THIRTY_MINUTES: Duration = Duration::from_secs(1800);
 }

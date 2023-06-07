@@ -17,7 +17,7 @@
 
 use clap::ArgMatches;
 use itc_rest_client::rest_client::Url;
-use itp_settings::teeracle::DEFAULT_MARKET_DATA_UPDATE_INTERVAL;
+use itp_settings::teeracle::{DEFAULT_MARKET_DATA_UPDATE_INTERVAL, ONE_DAY, THIRTY_MINUTES};
 use parse_duration::parse;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -225,6 +225,8 @@ pub struct RunConfig {
 	shard: Option<String>,
 	/// Optional teeracle update interval
 	teeracle_update_interval: Option<Duration>,
+	/// Optional teeracle reregistration interval
+	reregister_teeracle_interval: Option<Duration>,
 	/// Marblerun's Prometheus endpoint base URL
 	marblerun_base_url: Option<String>,
 }
@@ -250,6 +252,15 @@ impl RunConfig {
 		self.teeracle_update_interval.unwrap_or(DEFAULT_MARKET_DATA_UPDATE_INTERVAL)
 	}
 
+	/// The periodic registration period of the teeracle.
+	///
+	/// Defaults to 23h30m, as this is slightly below the currently configured automatic
+	/// deregistration period on the Integritee chains.
+	pub fn reregister_teeracle_interval(&self) -> Duration {
+		// Todo: Derive this from chain https://github.com/integritee-network/worker/issues/1351
+		self.reregister_teeracle_interval.unwrap_or(ONE_DAY - THIRTY_MINUTES)
+	}
+
 	pub fn marblerun_base_url(&self) -> &str {
 		// This conflicts with the default port of a substrate node, but it is indeed the
 		// default port of marblerun too:
@@ -267,13 +278,25 @@ impl From<&ArgMatches<'_>> for RunConfig {
 		let teeracle_update_interval = m.value_of("teeracle-interval").map(|i| {
 			parse(i).unwrap_or_else(|e| panic!("teeracle-interval parsing error {:?}", e))
 		});
+		let reregister_teeracle_interval = m.value_of("reregister-teeracle-interval").map(|i| {
+			parse(i).unwrap_or_else(|e| panic!("teeracle-interval parsing error {:?}", e))
+		});
+
 		let marblerun_base_url = m.value_of("marblerun-url").map(|i| {
 			Url::parse(i)
 				.unwrap_or_else(|e| panic!("marblerun-url parsing error: {:?}", e))
 				.to_string()
 		});
 
-		Self { skip_ra, dev, request_state, shard, teeracle_update_interval, marblerun_base_url }
+		Self {
+			skip_ra,
+			dev,
+			request_state,
+			shard,
+			teeracle_update_interval,
+			reregister_teeracle_interval,
+			marblerun_base_url,
+		}
 	}
 }
 

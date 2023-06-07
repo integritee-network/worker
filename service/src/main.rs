@@ -18,7 +18,7 @@
 #![cfg_attr(test, feature(assert_matches))]
 
 #[cfg(feature = "teeracle")]
-use crate::teeracle::start_interval_market_update;
+use crate::teeracle::{schedule_periodic_reregistration_thread, start_periodic_market_update};
 
 #[cfg(not(feature = "dcap"))]
 use crate::utils::check_files;
@@ -445,12 +445,20 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	} else {
 		println!("[!] creating remote attestation report and create enclave register extrinsic.");
 	};
+
+	// clones because of the move
+	let enclave2 = enclave.clone();
+	let node_api2 = node_api.clone();
 	#[cfg(not(feature = "dcap"))]
-	let xt = enclave.generate_ias_ra_extrinsic(&trusted_url, skip_ra).unwrap();
+	let register_xt = move || enclave2.generate_ias_ra_extrinsic(&trusted_url, skip_ra).unwrap();
 	#[cfg(feature = "dcap")]
-	let xt = enclave.generate_dcap_ra_extrinsic(&trusted_url, skip_ra).unwrap();
-	let register_enclave_block_hash =
-		send_extrinsic(xt, &node_api, &tee_accountid, is_development_mode);
+	let register_xt = move || enclave2.generate_dcap_ra_extrinsic(&trusted_url, skip_ra).unwrap();
+
+	let send_register_xt = move || {
+		send_extrinsic(register_xt(), &node_api2, &tee_accountid.clone(), is_development_mode)
+	};
+
+	let register_enclave_block_hash = send_register_xt();
 
 	let register_enclave_xt_header =
 		node_api.get_header(register_enclave_block_hash).unwrap().unwrap();
@@ -470,7 +478,12 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	// initialize teeracle interval
 	#[cfg(feature = "teeracle")]
 	if WorkerModeProvider::worker_mode() == WorkerMode::Teeracle {
-		start_interval_market_update(
+		schedule_periodic_reregistration_thread(
+			send_register_xt,
+			run_config.reregister_teeracle_interval(),
+		);
+
+		start_periodic_market_update(
 			&node_api,
 			run_config.teeracle_update_interval(),
 			enclave.as_ref(),
