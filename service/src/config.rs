@@ -17,6 +17,7 @@
 
 use clap::ArgMatches;
 use itc_rest_client::rest_client::Url;
+use itp_settings::teeracle::DEFAULT_MARKET_DATA_UPDATE_INTERVAL;
 use parse_duration::parse;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -215,17 +216,46 @@ impl From<&ArgMatches<'_>> for Config {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct RunConfig {
 	/// Skip remote attestation. Set this flag if running enclave in SW mode
-	pub skip_ra: bool,
+	skip_ra: bool,
 	/// Set this flag if running in development mode to bootstrap enclave account on parentchain via //Alice.
-	pub dev: bool,
+	dev: bool,
 	/// Request key and state provisioning from a peer worker.
-	pub request_state: bool,
+	request_state: bool,
 	/// Shard identifier base58 encoded. Defines the shard that this worker operates on. Default is mrenclave.
-	pub shard: Option<String>,
+	shard: Option<String>,
 	/// Optional teeracle update interval
-	pub teeracle_update_interval: Option<Duration>,
+	teeracle_update_interval: Option<Duration>,
 	/// Marblerun's Prometheus endpoint base URL
-	pub marblerun_base_url: Option<String>,
+	marblerun_base_url: Option<String>,
+}
+
+impl RunConfig {
+	pub fn skip_ra(&self) -> bool {
+		self.skip_ra
+	}
+
+	pub fn dev(&self) -> bool {
+		self.dev
+	}
+
+	pub fn request_state(&self) -> bool {
+		self.request_state
+	}
+
+	pub fn shard(&self) -> Option<&str> {
+		self.shard.as_ref().map(|s| s.as_str())
+	}
+
+	pub fn teeracle_update_interval(&self) -> Duration {
+		self.teeracle_update_interval.unwrap_or(DEFAULT_MARKET_DATA_UPDATE_INTERVAL)
+	}
+
+	pub fn marblerun_base_url(&self) -> &str {
+		self.marblerun_base_url
+			.as_ref()
+			.map(|s| s.as_str())
+			.unwrap_or("http://localhost:9944")
+	}
 }
 
 impl From<&ArgMatches<'_>> for RunConfig {

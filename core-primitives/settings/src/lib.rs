@@ -98,7 +98,6 @@ pub mod sidechain {
 pub mod enclave {}
 
 /// Settings for the Teeracle
-#[cfg(feature = "teeracle")]
 pub mod teeracle {
 	use core::time::Duration;
 	// Send extrinsic to update market exchange rate on the parentchain once per day

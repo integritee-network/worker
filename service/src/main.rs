@@ -175,7 +175,7 @@ fn main() {
 	)));
 
 	if let Some(run_config) = config.run_config() {
-		let shard = extract_shard(&run_config.shard, enclave.as_ref());
+		let shard = extract_shard(run_config.shard(), enclave.as_ref());
 
 		println!("Worker Config: {:?}", config);
 
@@ -186,12 +186,12 @@ fn main() {
 		let node_api =
 			node_api_factory.create_api().expect("Failed to create parentchain node API");
 
-		if run_config.request_state {
+		if run_config.request_state() {
 			sync_state::sync_state::<_, _, WorkerModeProvider>(
 				&node_api,
 				&shard,
 				enclave.as_ref(),
-				run_config.skip_ra,
+				run_config.skip_ra(),
 			);
 		}
 
@@ -210,7 +210,7 @@ fn main() {
 			node_api_factory.create_api().expect("Failed to create parentchain node API");
 		sync_state::sync_state::<_, _, WorkerModeProvider>(
 			&node_api,
-			&extract_shard(&smatches.value_of("shard").map(|s| s.to_string()), enclave.as_ref()),
+			&extract_shard(smatches.value_of("shard"), enclave.as_ref()),
 			enclave.as_ref(),
 			smatches.is_present("skip-ra"),
 		);
@@ -235,7 +235,7 @@ fn main() {
 	} else if let Some(sub_matches) = matches.subcommand_matches("init-shard") {
 		setup::init_shard(
 			enclave.as_ref(),
-			&extract_shard(&sub_matches.value_of("shard").map(|s| s.to_string()), enclave.as_ref()),
+			&extract_shard(sub_matches.value_of("shard"), enclave.as_ref()),
 		);
 	} else if let Some(sub_matches) = matches.subcommand_matches("test") {
 		if sub_matches.is_present("provisioning-server") {
@@ -249,10 +249,7 @@ fn main() {
 			println!("[+] Done!");
 		} else if sub_matches.is_present("provisioning-client") {
 			println!("*** Running Enclave MU-RA TLS client\n");
-			let shard = extract_shard(
-				&sub_matches.value_of("shard").map(|s| s.to_string()),
-				enclave.as_ref(),
-			);
+			let shard = extract_shard(sub_matches.value_of("shard"), enclave.as_ref());
 			enclave_request_state_provisioning(
 				enclave.as_ref(),
 				sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
@@ -294,7 +291,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	WorkerModeProvider: ProvideWorkerMode,
 {
 	let run_config = config.run_config().clone().expect("Run config missing");
-	let skip_ra = run_config.skip_ra;
+	let skip_ra = run_config.skip_ra();
 
 	println!("Integritee Worker v{}", VERSION);
 	info!("starting worker on shard {}", shard.encode().to_base58());
@@ -313,7 +310,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	// ------------------------------------------------------------------------
 	// let new workers call us for key provisioning
 	println!("MU-RA server listening on {}", config.mu_ra_url());
-	let is_development_mode = run_config.dev;
+	let is_development_mode = run_config.dev();
 	let ra_url = config.mu_ra_url();
 	let enclave_api_key_prov = enclave.clone();
 	thread::spawn(move || {
@@ -478,7 +475,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	if WorkerModeProvider::worker_mode() == WorkerMode::Teeracle {
 		start_interval_market_update(
 			&node_api,
-			run_config.teeracle_update_interval,
+			run_config.teeracle_update_interval(),
 			enclave.as_ref(),
 			&teeracle_tokio_handle,
 		);
