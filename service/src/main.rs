@@ -18,7 +18,7 @@
 #![cfg_attr(test, feature(assert_matches))]
 
 #[cfg(feature = "teeracle")]
-use crate::teeracle::{schedule_teeracle_reregistration_thread, start_periodic_market_update};
+use crate::teeracle::{schedule_periodic_reregistration_thread, start_periodic_market_update};
 
 #[cfg(not(feature = "dcap"))]
 use crate::utils::check_files;
@@ -478,7 +478,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	// initialize teeracle interval
 	#[cfg(feature = "teeracle")]
 	if WorkerModeProvider::worker_mode() == WorkerMode::Teeracle {
-		schedule_teeracle_reregistration_thread(
+		schedule_periodic_reregistration_thread(
 			send_register_xt,
 			run_config.reregister_teeracle_interval(),
 		);

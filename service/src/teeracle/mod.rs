@@ -31,28 +31,32 @@ use tokio::runtime::Handle;
 pub(crate) mod schedule_periodic;
 pub(crate) mod teeracle_metrics;
 
-pub(crate) fn schedule_teeracle_reregistration_thread(
+/// Schedule periodic reregistration of the enclave.
+///
+/// The `send_register_xt` needs to create a fresh registration extrinsic every time it is called
+/// (updated nonce, fresh IAS-RA or DCAP-Quote).
+///
+/// Currently, this is only used for the teeracle, but could also be used for other flavors in the
+/// future.
+pub(crate) fn schedule_periodic_reregistration_thread(
 	send_register_xt: impl Fn() -> Option<Hash> + std::marker::Send + 'static,
-	interval: Duration,
+	period: Duration,
 ) {
-	println!("Schedule the teeracle reregistration every: {:?}", interval);
+	println!("Schedule periodic enclave reregistration every: {:?}", period);
 
 	std::thread::Builder::new()
-		.name("teeracle_reregistration_thread".to_owned())
+		.name("enclave_reregistration_thread".to_owned())
 		.spawn(move || {
 			schedule_periodic(
 				|| {
 					println!("Reregistering the teeracle.");
 					if let Some(block_hash) = send_register_xt() {
-						println!(
-							"Successfully reregistered the teeracle. Block hash {}",
-							block_hash
-						)
+						println!("Successfully reregistered the enclave. Block hash {}", block_hash)
 					} else {
-						error!("Could not reregister the teeracle")
+						error!("Could not reregister the enclave")
 					}
 				},
-				interval,
+				period,
 			);
 		})
 		.unwrap();
