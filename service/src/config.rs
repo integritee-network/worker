@@ -243,7 +243,7 @@ impl RunConfig {
 	}
 
 	pub fn shard(&self) -> Option<&str> {
-		self.shard.as_ref().map(|s| s.as_str())
+		self.shard.as_deref()
 	}
 
 	pub fn teeracle_update_interval(&self) -> Duration {
@@ -251,10 +251,7 @@ impl RunConfig {
 	}
 
 	pub fn marblerun_base_url(&self) -> &str {
-		self.marblerun_base_url
-			.as_ref()
-			.map(|s| s.as_str())
-			.unwrap_or("http://localhost:9944")
+		self.marblerun_base_url.as_deref().unwrap_or("http://localhost:9944")
 	}
 }
 
