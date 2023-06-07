@@ -43,8 +43,11 @@ pub(crate) fn schedule_teeracle_reregistration_thread(
 			schedule_on_repeating_intervals(
 				|| {
 					println!("Reregistering the teeracle.");
-					if let Some(_block_hash) = send_register_xt() {
-						println!("Successfully reregistered the teeracle. ")
+					if let Some(block_hash) = send_register_xt() {
+						println!(
+							"Successfully reregistered the teeracle. Block hash {}",
+							block_hash
+						)
 					} else {
 						error!("Could not reregister the teeracle")
 					}
