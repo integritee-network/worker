@@ -257,6 +257,7 @@ impl RunConfig {
 	/// Defaults to 23h30m, as this is slightly below the currently configured automatic
 	/// deregistration period on the Integritee chains.
 	pub fn reregister_teeracle_interval(&self) -> Duration {
+		// Todo: Derive this from chain https://github.com/integritee-network/worker/issues/1351
 		self.reregister_teeracle_interval.unwrap_or(ONE_DAY - THIRTY_MINUTES)
 	}
 
