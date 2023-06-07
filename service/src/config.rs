@@ -251,6 +251,9 @@ impl RunConfig {
 	}
 
 	pub fn marblerun_base_url(&self) -> &str {
+		// This conflicts with the default port of a substrate node, but it is indeed the
+		// default port of marblerun too:
+		// https://github.com/edgelesssys/marblerun/blob/master/docs/docs/workflows/monitoring.md?plain=1#L26
 		self.marblerun_base_url.as_deref().unwrap_or("http://localhost:9944")
 	}
 }
