@@ -42,7 +42,7 @@ pub(crate) fn schedule_teeracle_reregistration_thread(
 		.spawn(move || {
 			schedule_on_repeating_intervals(
 				|| {
-					println!("Re-registering the teeracle.");
+					println!("Reregistering the teeracle.");
 					if let Some(_block_hash) = send_register_xt() {
 						println!("Successfully reregistered the teeracle. ")
 					} else {
