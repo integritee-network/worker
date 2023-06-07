@@ -22,7 +22,7 @@ use itp_types::ShardIdentifier;
 use log::info;
 
 pub fn extract_shard<E: EnclaveBase>(
-	maybe_shard_str: &Option<String>,
+	maybe_shard_str: Option<&str>,
 	enclave_api: &E,
 ) -> ShardIdentifier {
 	match maybe_shard_str {

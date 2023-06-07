@@ -19,7 +19,6 @@ use crate::teeracle::interval_scheduling::schedule_on_repeating_intervals;
 use codec::{Decode, Encode};
 use itp_enclave_api::teeracle_api::TeeracleApi;
 use itp_node_api::api_client::ParentchainApi;
-use itp_settings::teeracle::DEFAULT_MARKET_DATA_UPDATE_INTERVAL;
 use itp_utils::hex::hex_encode;
 use log::*;
 use sp_runtime::OpaqueExtrinsic;
@@ -35,7 +34,7 @@ pub(crate) mod teeracle_metrics;
 /// with the current market data (for now only exchange rate).
 pub(crate) fn start_interval_market_update<E: TeeracleApi>(
 	api: &ParentchainApi,
-	maybe_interval: Option<Duration>,
+	interval: Duration,
 	enclave_api: &E,
 	tokio_handle: &Handle,
 ) {
@@ -47,7 +46,6 @@ pub(crate) fn start_interval_market_update<E: TeeracleApi>(
 	info!("Teeracle will update now");
 	updates_to_run();
 
-	let interval = maybe_interval.unwrap_or(DEFAULT_MARKET_DATA_UPDATE_INTERVAL);
 	info!("Starting teeracle interval for oracle update, interval of {:?}", interval);
 	schedule_on_repeating_intervals(updates_to_run, interval);
 }
