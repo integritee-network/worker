@@ -20,12 +20,12 @@ use std::{
 	time::{Duration, Instant},
 };
 
-/// Schedules a task on perpetually looping intervals.
+/// Schedules a periodic task in the current thread.
 ///
 /// In case the task takes longer than is scheduled by the interval duration,
 /// the interval timing will drift. The task is responsible for
 /// ensuring it does not use up more time than is scheduled.
-pub(super) fn schedule_on_repeating_intervals<T>(task: T, interval_duration: Duration)
+pub(super) fn schedule_periodic<T>(task: T, period: Duration)
 where
 	T: Fn(),
 {
@@ -33,13 +33,13 @@ where
 	loop {
 		let elapsed = interval_start.elapsed();
 
-		if elapsed >= interval_duration {
+		if elapsed >= period {
 			// update interval time
 			interval_start = Instant::now();
 			task();
 		} else {
 			// sleep for the rest of the interval
-			let sleep_time = interval_duration - elapsed;
+			let sleep_time = period - elapsed;
 			thread::sleep(sleep_time);
 		}
 	}

@@ -15,7 +15,7 @@
 
 */
 
-use crate::{error::ServiceResult, teeracle::interval_scheduling::schedule_on_repeating_intervals};
+use crate::{error::ServiceResult, teeracle::schedule_periodic::schedule_periodic};
 use codec::{Decode, Encode};
 use itp_enclave_api::teeracle_api::TeeracleApi;
 use itp_node_api::api_client::ParentchainApi;
@@ -28,7 +28,7 @@ use substrate_api_client::{SubmitAndWatch, XtStatus};
 use teeracle_metrics::{increment_number_of_request_failures, set_extrinsics_inclusion_success};
 use tokio::runtime::Handle;
 
-pub(crate) mod interval_scheduling;
+pub(crate) mod schedule_periodic;
 pub(crate) mod teeracle_metrics;
 
 pub(crate) fn schedule_teeracle_reregistration_thread(
@@ -40,7 +40,7 @@ pub(crate) fn schedule_teeracle_reregistration_thread(
 	std::thread::Builder::new()
 		.name("teeracle_reregistration_thread".to_owned())
 		.spawn(move || {
-			schedule_on_repeating_intervals(
+			schedule_periodic(
 				|| {
 					println!("Reregistering the teeracle.");
 					if let Some(block_hash) = send_register_xt() {
@@ -58,11 +58,12 @@ pub(crate) fn schedule_teeracle_reregistration_thread(
 		.unwrap();
 }
 
-/// Send extrinsic to chain according to the market data update interval in the settings
-/// with the current market data (for now only exchange rate).
-pub(crate) fn start_interval_market_update<E: TeeracleApi>(
+/// Executes a periodic teeracle data update and sends the new data to the parentchain.
+///
+/// Note: Puts the current thread to sleep for `period`.
+pub(crate) fn start_periodic_market_update<E: TeeracleApi>(
 	api: &ParentchainApi,
-	interval: Duration,
+	period: Duration,
 	enclave_api: &E,
 	tokio_handle: &Handle,
 ) {
@@ -84,8 +85,8 @@ pub(crate) fn start_interval_market_update<E: TeeracleApi>(
 	info!("Teeracle will update now");
 	updates_to_run();
 
-	info!("Schedule teeracle updates every {:?}", interval);
-	schedule_on_repeating_intervals(updates_to_run, interval);
+	info!("Schedule teeracle updates every {:?}", period);
+	schedule_periodic(updates_to_run, period);
 }
 
 fn execute_oracle_update<F>(
