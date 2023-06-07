@@ -49,11 +49,14 @@ pub(crate) fn schedule_periodic_reregistration_thread(
 		.spawn(move || {
 			schedule_periodic(
 				|| {
-					println!("Reregistering the teeracle.");
+					trace!("Reregistering the enclave.");
 					if let Some(block_hash) = send_register_xt() {
-						println!("Successfully reregistered the enclave. Block hash {}", block_hash)
+						println!(
+							"✅ Successfully reregistered the enclave. Block hash: {}.",
+							block_hash
+						)
 					} else {
-						error!("Could not reregister the enclave")
+						error!("❌ Could not reregister the enclave.")
 					}
 				},
 				period,
