@@ -95,8 +95,7 @@ fn purge_files(root_directory: &Path) -> ServiceResult<()> {
 	remove_dir_if_it_exists(root_directory, SHARDS_PATH)?;
 	remove_dir_if_it_exists(root_directory, SIDECHAIN_STORAGE_PATH)?;
 
-	remove_file_if_it_exists(root_directory, LIGHT_CLIENT_DB_PATH)?;
-	remove_file_if_it_exists(root_directory, light_client_backup_file().as_str())?;
+	remove_dir_if_it_exists(root_directory, LIGHT_CLIENT_DB_PATH)?;
 
 	Ok(())
 }
@@ -107,18 +106,6 @@ fn remove_dir_if_it_exists(root_directory: &Path, dir_name: &str) -> ServiceResu
 		fs::remove_dir_all(directory_path).map_err(|e| Error::Custom(e.into()))?;
 	}
 	Ok(())
-}
-
-fn remove_file_if_it_exists(root_directory: &Path, file_name: &str) -> ServiceResult<()> {
-	let file = root_directory.join(file_name);
-	if file.exists() {
-		fs::remove_file(file).map_err(|e| Error::Custom(e.into()))?;
-	}
-	Ok(())
-}
-
-fn light_client_backup_file() -> String {
-	format!("{}.1", LIGHT_CLIENT_DB_PATH)
 }
 
 #[cfg(test)]
@@ -144,15 +131,13 @@ mod tests {
 		fs::File::create(&sidechain_db_path.join("sidechain_db_2.bin")).unwrap();
 		fs::File::create(&sidechain_db_path.join("sidechain_db_3.bin")).unwrap();
 
-		fs::File::create(&root_directory.join(LIGHT_CLIENT_DB_PATH)).unwrap();
-		fs::File::create(&root_directory.join(light_client_backup_file())).unwrap();
+		fs::create_dir_all(&root_directory.join(LIGHT_CLIENT_DB_PATH)).unwrap();
 
 		purge_files(&root_directory).unwrap();
 
 		assert!(!shards_path.exists());
 		assert!(!sidechain_db_path.exists());
 		assert!(!root_directory.join(LIGHT_CLIENT_DB_PATH).exists());
-		assert!(!root_directory.join(light_client_backup_file()).exists());
 	}
 
 	#[test]
