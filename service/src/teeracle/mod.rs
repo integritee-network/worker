@@ -38,7 +38,7 @@ pub(crate) fn schedule_teeracle_reregistration_thread(
 	println!("Schedule the teeracle reregistration every: {:?}", interval);
 
 	std::thread::Builder::new()
-		.name("parentchain_sync_loop".to_owned())
+		.name("teeracle_reregistration_thread".to_owned())
 		.spawn(move || {
 			schedule_on_repeating_intervals(
 				|| {
