@@ -248,7 +248,7 @@ jobs:
           echo "PROJECT=${{ matrix.flavor_id }}-${{ matrix.demo_name }}" >> $GITHUB_ENV
           echo "VERSION=dev.$version" >> $GITHUB_ENV
           echo "WORKER_IMAGE_TAG=integritee-worker:dev.$version" >> $GITHUB_ENV
-          echo "INTEGRITEE_NODE=integritee-node-dev-ias:1.0.35.$version" >> $GITHUB_ENV
+          echo "INTEGRITEE_NODE=integritee-node-dev-ias:1.0.36.$version" >> $GITHUB_ENV
           echo "CLIENT_IMAGE_TAG=integritee-cli:dev.$version" >> $GITHUB_ENV
           if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
              echo "SGX_PROVISION=/dev/sgx/provision" >> $GITHUB_ENV
@@ -292,8 +292,8 @@ jobs:
           fi
           docker tag integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.WORKER_IMAGE_TAG }}
           docker tag integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.CLIENT_IMAGE_TAG }}
-          docker pull integritee/integritee-node-dev-ias:1.0.35
-          docker tag integritee/integritee-node-dev-ias:1.0.35 ${{ env.INTEGRITEE_NODE }}
+          docker pull integritee/integritee-node-dev-ias:1.0.36
+          docker tag integritee/integritee-node-dev-ias:1.0.36 ${{ env.INTEGRITEE_NODE }}
           docker images --all
 
       ##
