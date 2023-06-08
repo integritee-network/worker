@@ -2772,8 +2772,8 @@ dependencies = [
 
 [[package]]
 name = "integritee-node-runtime"
-version = "1.0.32"
-source = "git+https://github.com/integritee-network/integritee-node.git?branch=szp/polkadot-v0.9.42#03c799358ad096e97852d5322fc67ce0d4aced03"
+version = "1.0.33"
+source = "git+https://github.com/integritee-network/integritee-node.git?branch=polkadot-v0.9.42#2c13d1fd5708825b7832b6b1bc33448ca3111514"
 dependencies = [
  "frame-executive",
  "frame-support",
