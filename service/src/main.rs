@@ -597,9 +597,13 @@ fn print_events(events: Vec<Event>) {
 			RuntimeEvent::Teerex(re) => {
 				debug!("{:?}", re);
 				match &re {
-					my_node_runtime::pallet_teerex::Event::AddedEnclave(sender, worker_url) => {
+					my_node_runtime::pallet_teerex::Event::AddedEnclave {
+						registered_by,
+						worker_url,
+						..
+					} => {
 						println!("[+] Received AddedEnclave event");
-						println!("    Sender (Worker):  {:?}", sender);
+						println!("    Sender (Worker):  {:?}", registered_by);
 						println!("    Registered URL: {:?}", str::from_utf8(worker_url).unwrap());
 					},
 					my_node_runtime::pallet_teerex::Event::Forwarded(shard) => {
