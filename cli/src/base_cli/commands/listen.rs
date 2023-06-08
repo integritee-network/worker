@@ -77,14 +77,15 @@ impl ListenCommand {
 								println!(">>>>>>>>>> integritee event: {:?}", ee);
 								count += 1;
 								match &ee {
-									my_node_runtime::pallet_teerex::Event::AddedEnclave(
-										accountid,
-										url,
-									) => {
+									my_node_runtime::pallet_teerex::Event::AddedEnclave{
+										registered_by,
+										worker_url, ..
+									}
+									 => {
 										println!(
 											"AddedEnclave: {:?} at url {}",
-											accountid,
-											String::from_utf8(url.to_vec())
+											registered_by,
+											String::from_utf8(worker_url.to_vec())
 												.unwrap_or_else(|_| "error".to_string())
 										);
 									},
