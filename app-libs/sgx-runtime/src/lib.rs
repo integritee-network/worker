@@ -297,7 +297,7 @@ construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
-		Parentchain: pallet_parentchain::{Pallet, Call, Storage},
+		Parentchain: pallet_parentchain::{Pallet, Call, Storage, Event<T>},
 
 		Evm: pallet_evm::{Pallet, Call, Storage, Config, Event<T>},
 	}
