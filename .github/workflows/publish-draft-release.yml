@@ -3,7 +3,7 @@ name: Release - Publish draft
 on:
   push:
     tags:
-      # Catches v1.2.3 and v1.2.3
+      # Catches only v1.2.3 (-dev,-rc1 etc won't be released as SDK)
       - v[0-9]+.[0-9]+.[0-9]+
 
 jobs:
