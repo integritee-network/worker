@@ -507,6 +507,7 @@ jobs:
           body: |
             ${{ steps.Changelog.outputs.changelog }}
           draft: true
+          name: Docker ${{ github.ref_name }}
           files: |
             integritee-worker-teeracle-${{ github.ref_name }}.tar.gz
             integritee-client
