@@ -3080,6 +3080,7 @@ dependencies = [
  "itp-node-api",
  "itp-ocall-api",
  "itp-sgx-crypto",
+ "itp-sgx-runtime-primitives",
  "itp-stf-executor",
  "itp-stf-primitives",
  "itp-test",
