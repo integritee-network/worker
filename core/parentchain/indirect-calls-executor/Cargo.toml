@@ -15,11 +15,11 @@ itp-api-client-types = { path = "../../../core-primitives/node-api/api-client-ty
 itp-node-api = { path = "../../../core-primitives/node-api", default-features = false }
 itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
+itp-sgx-runtime-primitives = { path = "../../../core-primitives/sgx-runtime-primitives", default-features = false }
 itp-stf-executor = { path = "../../../core-primitives/stf-executor", default-features = false }
 itp-stf-primitives = { path = "../../../core-primitives/stf-primitives", default-features = false }
 itp-top-pool-author = { path = "../../../core-primitives/top-pool-author", default-features = false }
 itp-types = { path = "../../../core-primitives/types", default-features = false }
-itp-sgx-runtime-primitives = { path = "../../../core-primitives/sgx-runtime-primitives", default-features = false }
 
 # sgx enabled external libraries
 futures_sgx = { package = "futures", git = "https://github.com/mesalock-linux/futures-rs-sgx", optional = true }
