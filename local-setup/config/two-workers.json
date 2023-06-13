@@ -55,7 +55,7 @@
         "4546",
         "--ws-external",
         "--data-dir",
-        "/tmp/data-dir"
+        "/tmp/data-dir2"
       ],
       "subcommand_flags": [
         "--skip-ra",
