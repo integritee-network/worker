@@ -90,9 +90,16 @@ impl FilterEvents for Events<H256> {
 		Ok(self
 			.iter()
 			.filter_map(|ev| {
+				log::info!("GOT BEFORE AND_THEN");
 				ev.and_then(|ev| match ev.as_event::<BalanceTransfer>()? {
-					Some(e) => Ok(Some(e)),
-					None => Ok(None),
+					Some(e) => {
+						log::info!("GOT IN SOME MATCH");
+						Ok(Some(e))
+					},
+					None => {
+						log::info!("GOT IN NONE MATCH");
+						Ok(None)
+					},
 				})
 				.ok()
 				.flatten()

@@ -140,9 +140,9 @@ impl<
 		let xt_statuses = events.get_extrinsic_statuses()?;
 		debug!("xt_statuses:: {:?}", xt_statuses);
 
-		let filter_events = events.get_transfer_events()?;
-		if !filter_events.is_empty() {
-			info!("transfer_event:: {:?}", filter_events[0]);
+		let filter_events = events.get_transfer_events();
+		if filter_events.is_ok() {
+			info!("transfer_event:: {:?}", filter_events.unwrap()[0]);
 		}
 
 		// This would be catastrophic but should never happen
