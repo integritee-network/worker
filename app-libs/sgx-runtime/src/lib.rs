@@ -39,7 +39,7 @@ pub use evm::{
 };
 
 use core::convert::{TryFrom, TryInto};
-use frame_support::weights::ConstantMultiplier;
+use frame_support::{traits::ConstU32, weights::ConstantMultiplier};
 use pallet_transaction_payment::CurrencyAdapter;
 use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
