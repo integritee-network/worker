@@ -142,7 +142,6 @@ impl BenchmarkCommand {
 			println!("Initializing account {}", i);
 
 			// Create new account to use.
-			//let a: sr25519::AppPair = store.generate().unwrap();
 			let a = LocalKeystore::sr25519_generate_new(&store, ACCOUNT, None).unwrap();
 			let account = get_pair_from_str(trusted_args, a.to_string().as_str());
 			let initial_balance = 10000000;

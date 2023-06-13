@@ -92,7 +92,6 @@ impl BaseCommand {
 fn new_account() -> CliResult {
 	let store = LocalKeystore::open(PathBuf::from(&KEYSTORE_PATH), None).unwrap();
 	let key = LocalKeystore::sr25519_generate_new(&store, ACCOUNT, None).unwrap();
-	//let key: sr25519::AppPair = store.generate().unwrap();
 	let key_base58 = key.to_ss58check();
 	drop(store);
 	println!("{}", key_base58);
