@@ -369,9 +369,9 @@ jobs:
             sgx_mode: HW
             worker_features: dcap
           - flavor_id: attesteer
-            mode: attesteer
+            mode: teeracle
             sgx_mode: HW
-            worker_features: dcap
+            worker_features: dcap,attesteer
 
     steps:
       - uses: actions/checkout@v3
