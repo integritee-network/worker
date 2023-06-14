@@ -159,6 +159,8 @@ class Worker:
                                         'jsonrpsee_ws_server=warn,'
                                         'enclave_runtime=info,'
                                         'integritee_service=warn,'
+                                        'itp_stf_state_handler=trace,'
+                                        'its_consensus_common=debug,'
                                         'ita_stf=debug')
 
         return Popen(
