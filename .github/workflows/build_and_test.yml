@@ -368,6 +368,10 @@ jobs:
             mode: teeracle
             sgx_mode: HW
             worker_features: dcap
+          - flavor_id: attesteer
+            mode: attesteer
+            sgx_mode: HW
+            worker_features: dcap
 
     steps:
       - uses: actions/checkout@v3
@@ -426,12 +430,12 @@ jobs:
           --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg SGX_COMMERCIAL_KEY=enclave-runtime/intel_sgx.pem --build-arg SGX_PASSFILE=enclave-runtime/passfile.txt --build-arg SGX_PRODUCTION=1 --build-arg WORKER_FEATURES_ARG=${{ matrix.worker_features }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=${{ matrix.sgx_mode }}
           -f build.Dockerfile .
 
-      - name: Save released teeracle
+      - name: Save released ${{ matrix.flavor_id }}
         run: |
             docker image save integritee/${{ matrix.flavor_id }}:${{ github.ref_name }} | gzip > integritee-worker-${{ matrix.flavor_id }}-${{ github.ref_name }}.tar.gz
             docker images --all
 
-      - name: Upload teeracle image
+      - name: Upload ${{ matrix.flavor_id }} image
         uses: actions/upload-artifact@v3
         with:
           name: integritee-worker-${{ matrix.flavor_id }}-${{ github.ref_name }}.tar.gz
@@ -455,12 +459,18 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Download Worker Image
+      - name: Download Teeracle Image
         uses: actions/download-artifact@v3
         with:
           name: integritee-worker-teeracle-${{ github.ref_name }}.tar.gz
           path: .  
 
+      - name: Download Attesteer Image
+        uses: actions/download-artifact@v3
+        with:
+          name: integritee-worker-attesteer-${{ github.ref_name }}.tar.gz
+          path: .  
+  
       # 
       # Temporary comment out until we decide what to release
       #
@@ -511,6 +521,7 @@ jobs:
           name: Docker ${{ github.ref_name }}
           files: |
             integritee-worker-teeracle-${{ github.ref_name }}.tar.gz
+            integritee-worker-attesteer-${{ github.ref_name }}.tar.gz
             integritee-client
             integritee-demo-validateer
             enclave.signed.so
