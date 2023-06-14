@@ -3086,6 +3086,7 @@ dependencies = [
  "itp-test",
  "itp-top-pool-author",
  "itp-types",
+ "itp-utils",
  "log 0.4.17",
  "parity-scale-codec",
  "sgx_tstd",

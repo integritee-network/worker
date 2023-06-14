@@ -141,8 +141,11 @@ impl<
 		debug!("xt_statuses:: {:?}", xt_statuses);
 
 		let filter_events = events.get_transfer_events();
-		if filter_events.is_ok() {
-			info!("transfer_event:: {:?}", filter_events.unwrap()[0]);
+
+		if let Ok(events) = filter_events {
+			events
+				.iter()
+				.for_each(|event| info!("transfer_event :: {}", event.print_string()))
 		}
 
 		// This would be catastrophic but should never happen

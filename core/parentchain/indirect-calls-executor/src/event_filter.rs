@@ -20,9 +20,10 @@ use crate::error::Result;
 use codec::{Decode, Encode};
 use itp_api_client_types::{Events, StaticEvent};
 
-use itp_sgx_runtime_primitives::types::{AccountId, Balance, BlockNumber};
+use itp_sgx_runtime_primitives::types::{AccountId, Balance};
 use itp_types::H256;
-use std::vec::Vec;
+use itp_utils::stringify::account_id_to_string;
+use std::{format, string::String, vec::Vec};
 
 #[derive(Encode, Decode, Debug)]
 pub struct ExtrinsicSuccess;
@@ -48,14 +49,25 @@ pub enum ExtrinsicStatus {
 
 #[derive(Encode, Decode, Debug)]
 pub struct BalanceTransfer {
-	from: AccountId,
-	to: AccountId,
-	amount: Balance,
+	pub from: AccountId,
+	pub to: AccountId,
+	pub amount: Balance,
 }
 
 impl StaticEvent for BalanceTransfer {
 	const PALLET: &'static str = "Balances";
 	const EVENT: &'static str = "Transfer";
+}
+
+impl BalanceTransfer {
+	pub fn print_string(&self) -> String {
+		format!(
+			"BalanceTransfer :: from: {}, to: {}, amount: {}",
+			account_id_to_string::<AccountId>(&self.from),
+			account_id_to_string::<AccountId>(&self.to),
+			self.amount
+		)
+	}
 }
 
 pub trait FilterEvents {
@@ -117,8 +129,8 @@ impl FilterEvents for MockEvents {
 
 	fn get_transfer_events(&self) -> Result<Vec<BalanceTransfer>> {
 		let xsfer = BalanceTransfer {
-			to: [0; 32].into(),
-			from: [0; 32].into(),
+			to: [0u8; 32].into(),
+			from: [0u8; 32].into(),
 			amount: Balance::default(),
 		};
 		Ok(Vec::from([xsfer]))

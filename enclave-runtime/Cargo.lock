@@ -1690,6 +1690,7 @@ dependencies = [
  "itp-stf-primitives",
  "itp-top-pool-author",
  "itp-types",
+ "itp-utils",
  "log",
  "parity-scale-codec",
  "sgx_tstd",
