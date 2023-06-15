@@ -112,7 +112,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	let latest_parentchain_header =
 		sidechain_block_import_queue_worker.process_queue(&current_parentchain_header)?;
 
-	info!(
+	trace!(
 		"Elapsed time to process sidechain block import queue: {} ms",
 		start_time.elapsed().as_millis()
 	);
@@ -283,7 +283,7 @@ fn log_remaining_slot_duration<B: BlockTrait<Hash = H256>>(
 			info!("No time remaining in slot (id: {:?}, stage: {})", slot_info.slot, stage_name);
 		},
 		Some(remainder) => {
-			info!(
+			trace!(
 				"Remaining time in slot (id: {:?}, stage {}): {} ms, {}% of slot time",
 				slot_info.slot,
 				stage_name,
