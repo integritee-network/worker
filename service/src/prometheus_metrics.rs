@@ -224,9 +224,13 @@ pub struct PrometheusMarblerunEvent {
 
 #[cfg(feature = "attesteer")]
 impl PrometheusMarblerunEvent {
-	pub fn get_quote_without_prepended_bytes(&self) -> &[u8] {
+	pub fn get_quote_without_prepended_bytes(&self) -> Vec<u8> {
+		let whole_quote_decoded = base64::decode(&self.activation.quote)
+			.expect("Marblerun code should not be malformed.");
 		let marblerun_magic_prepended_header_size = 16usize;
-		&self.activation.quote.as_bytes()[marblerun_magic_prepended_header_size..]
+		let quote_decoded = whole_quote_decoded[marblerun_magic_prepended_header_size..].to_vec();
+
+		quote_decoded
 	}
 }
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Encode, Decode, TypeInfo)]

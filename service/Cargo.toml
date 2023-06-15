@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 async-trait = "0.1.50"
 base58 = "0.2"
+base64 = { version = "0.13", features = ["alloc"] }
 clap = { version = "2.33", features = ["yaml"] }
 dirs = "3.0.2"
 env_logger = "0.9"

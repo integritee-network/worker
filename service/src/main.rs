@@ -743,7 +743,7 @@ fn register_quotes_from_marblerun(
 			info!("Fetching events from Marblerun failed with: {:?}, continuing with 0 events.", e);
 		})
 		.unwrap_or_default();
-	let quotes: Vec<&[u8]> =
+	let quotes: Vec<Vec<u8>> =
 		events.iter().map(|event| event.get_quote_without_prepended_bytes()).collect();
 
 	for quote in quotes {
