@@ -54,6 +54,7 @@ pub mod stf_sgx_tests;
 #[cfg(all(feature = "test", feature = "sgx"))]
 pub mod test_genesis;
 pub mod trusted_call;
+pub mod privacy_sidechain_inherent;
 
 pub(crate) const ENCLAVE_ACCOUNT_KEY: &str = "Enclave_Account_Key";
 

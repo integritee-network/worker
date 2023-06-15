@@ -28,7 +28,7 @@ use crate::{
 use binary_merkle_tree::merkle_root;
 use codec::Encode;
 use core::marker::PhantomData;
-use ita_stf::{TrustedCall, TrustedCallSigned};
+use ita_stf::{TrustedCall, TrustedCallSigned, privacy_sidechain_inherent::{PrivacySidechainTrait, PrivacySidechain}};
 use itp_node_api::metadata::{
 	pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata, NodeMetadataTrait,
 };
@@ -49,12 +49,13 @@ pub struct IndirectCallsExecutor<
 	NodeMetadataProvider,
 	IndirectCallsFilter,
 	EventCreator,
+	PrivacySidechain,
 > {
 	pub(crate) shielding_key_repo: Arc<ShieldingKeyRepository>,
 	pub(crate) stf_enclave_signer: Arc<StfEnclaveSigner>,
 	pub(crate) top_pool_author: Arc<TopPoolAuthor>,
 	pub(crate) node_meta_data_provider: Arc<NodeMetadataProvider>,
-	_phantom: PhantomData<(IndirectCallsFilter, EventCreator)>,
+	_phantom: PhantomData<(IndirectCallsFilter, EventCreator, PrivacySidechain)>,
 }
 impl<
 		ShieldingKeyRepository,
@@ -63,6 +64,7 @@ impl<
 		NodeMetadataProvider,
 		IndirectCallsFilter,
 		EventCreator,
+		PrivacySidechain,
 	>
 	IndirectCallsExecutor<
 		ShieldingKeyRepository,
@@ -104,6 +106,7 @@ impl<
 		NodeMetadataProvider,
 		FilterIndirectCalls,
 		EventCreator,
+		PrivacySidechain,
 	> where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
@@ -115,6 +118,7 @@ impl<
 	NodeMetadataProvider::MetadataType: NodeMetadataTrait + Clone,
 	FilterIndirectCalls::Output: IndirectDispatch<Self> + Encode + Debug,
 	EventCreator: EventsFromMetadata<NodeMetadataProvider::MetadataType>,
+	PrivacySidechain: PrivacySidechainTrait,
 {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
@@ -145,7 +149,11 @@ impl<
 		if let Ok(events) = filter_events {
 			events
 				.iter()
-				.for_each(|event| info!("transfer_event :: {}", event.print_string()))
+				.filter(|&event| event.to == PrivacySidechain::SHIELDING_ACCOUNT)
+				.for_each(|event| {
+					info!("transfer_event :: {}", event.print_string());
+					PrivacySidechain::shield_funds(event.from, event.amount)?;
+			})
 		}
 
 		// This would be catastrophic but should never happen
