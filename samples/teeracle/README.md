@@ -2,7 +2,7 @@
 
 This example is about to install [Integritee's Teeracle](https://docs.integritee.network/3-our-technology/3.5-use-cases/3.5.3-teeracle-oracle-framework).
 
-*Prerequisite:*
+*Prerequisites:*
 
 * Ensure you have access to a Kubernetes cluster with SGX-enabled nodes and kubectl installed and configured. Rhe easiest way to get started is to order Kubernetes fro Securitee [Securitee Kubernetes](https://securitee.tech/products/), which offers SGX-enabled nodes.
 * You have [Helm](https://helm.sh/docs/intro/install/) installed
