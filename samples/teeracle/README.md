@@ -4,7 +4,7 @@ This example is about to install [Integritee's Teeracle](https://docs.integritee
 
 *Prerequisites:*
 
-* Ensure you have access to a Kubernetes cluster with SGX-enabled nodes and kubectl installed and configured. Rhe easiest way to get started is to order Kubernetes fro Securitee [Securitee Kubernetes](https://securitee.tech/products/), which offers SGX-enabled nodes.
+* Ensure you have access to a Kubernetes cluster with SGX-enabled nodes and kubectl installed and configured. The easiest way to get started is to order Kubernetes from Securitee [Securitee Kubernetes](https://securitee.tech/products/), which offers SGX-enabled nodes.
 * You have [Helm](https://helm.sh/docs/intro/install/) installed
 
 ## Kubernetes deployment walkthrough
