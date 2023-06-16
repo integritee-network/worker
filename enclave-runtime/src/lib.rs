@@ -43,11 +43,8 @@ use crate::{
 	},
 };
 use codec::Decode;
-use itc_parentchain::{
-	block_import_dispatcher::{
-		triggered_dispatcher::TriggerParentchainBlockImport, DispatchBlockImport,
-	},
-	block_importer::ImportType,
+use itc_parentchain::block_import_dispatcher::{
+	triggered_dispatcher::TriggerParentchainBlockImport, DispatchBlockImport,
 };
 use itp_component_container::ComponentGetter;
 use itp_import_queue::PushToQueue;
@@ -458,8 +455,7 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 			return Err(Error::NoParentchainAssigned)
 		};
 
-	// We use the triggered dispatched, hence the import type does not matter here.
-	import_dispatcher.dispatch_import(blocks_to_sync, events_to_sync, &ImportType::Sync)?;
+	import_dispatcher.dispatch_import(blocks_to_sync, events_to_sync)?;
 	Ok(())
 }
 
@@ -518,7 +514,7 @@ pub unsafe extern "C" fn trigger_parentchain_block_import() -> sgx_status_t {
 
 fn internal_trigger_parentchain_block_import() -> Result<()> {
 	let triggered_import_dispatcher = get_triggered_dispatcher_from_solo_or_parachain()?;
-	triggered_import_dispatcher.import_all(&ImportType::Sync)?;
+	triggered_import_dispatcher.import_all()?;
 	Ok(())
 }
 

@@ -18,7 +18,6 @@
 #[cfg(feature = "sgx")]
 use std::sync::SgxRwLock as RwLock;
 
-use itc_parentchain_block_importer::ImportType;
 #[cfg(feature = "std")]
 use std::sync::RwLock;
 
@@ -61,13 +60,13 @@ where
 {
 	type SignedBlockType = SignedBlockType;
 
-	fn import_all(&self, _import_type: &ImportType) -> Result<Option<SignedBlockType>> {
+	fn import_all(&self) -> Result<Option<SignedBlockType>> {
 		let mut import_flag = self.import_has_been_called.write().unwrap();
 		*import_flag = true;
 		Ok(self.latest_imported.clone())
 	}
 
-	fn import_all_but_latest(&self, _import_type: &ImportType) -> Result<()> {
+	fn import_all_but_latest(&self) -> Result<()> {
 		let mut import_flag = self.import_has_been_called.write().unwrap();
 		*import_flag = true;
 		Ok(())
@@ -75,7 +74,6 @@ where
 
 	fn import_until(
 		&self,
-		_import_type: &ImportType,
 		_predicate: impl Fn(&SignedBlockType) -> bool,
 	) -> Result<Option<SignedBlockType>> {
 		let mut import_flag = self.import_has_been_called.write().unwrap();
