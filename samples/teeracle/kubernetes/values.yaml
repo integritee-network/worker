@@ -6,7 +6,8 @@ imagePullPolicy: IfNotPresent
 image: integritee/teeracle:v0.12.2-dev
 
 # 
-# Run docker run integritee/teeracle:v0.12.2-dev --help to get more insights
+# To get more insights run:
+# docker run integritee/teeracle:v0.12.2-dev --help
 #
 app:
   url: "wss://rococo.api.integritee.network"
