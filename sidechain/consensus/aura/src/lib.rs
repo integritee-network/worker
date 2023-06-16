@@ -30,7 +30,9 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 extern crate sgx_tstd as std;
 
 use core::marker::PhantomData;
-use itc_parentchain_block_import_dispatcher::triggered_dispatcher::TriggerParentchainBlockImport;
+use itc_parentchain_block_import_dispatcher::{
+	triggered_dispatcher::TriggerParentchainBlockImport, ImportType,
+};
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_time_utils::duration_now;
 use its_block_verification::slot::slot_author;
@@ -197,7 +199,7 @@ where
 	) -> Result<Option<ParentchainBlock::Header>, ConsensusError> {
 		let maybe_parentchain_block = self
 			.parentchain_import_trigger
-			.import_until(|parentchain_block| {
+			.import_until(&ImportType::BlockProduction, |parentchain_block| {
 				parentchain_block.block.hash() == *parentchain_header_hash
 			})
 			.map_err(|e| ConsensusError::Other(e.into()))?;
