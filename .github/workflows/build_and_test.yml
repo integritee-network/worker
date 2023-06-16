@@ -12,6 +12,7 @@ on:
     branches:
       - master
       - 'sdk-v[0-9]+.[0-9]+.[0-9]+-*'
+      - 'szp/polkadot-v0.9.42'
 
 env:
   CARGO_TERM_COLOR: always
