@@ -22,7 +22,9 @@ pub use its_consensus_common::BlockImport;
 
 use crate::{AuraVerifier, EnclaveOnChainOCallApi, SidechainBlockTrait};
 use ita_stf::hash::TrustedOperationOrHash;
-use itc_parentchain_block_import_dispatcher::triggered_dispatcher::TriggerParentchainBlockImport;
+use itc_parentchain_block_import_dispatcher::{
+	triggered_dispatcher::TriggerParentchainBlockImport, ImportType,
+};
 use itp_enclave_metrics::EnclaveMetric;
 use itp_ocall_api::{EnclaveMetricsOCallApi, EnclaveSidechainOCallApi};
 use itp_settings::sidechain::SLOT_DURATION;
@@ -260,7 +262,7 @@ impl<
 		// sidechain block that we're importing. This is done to prevent forks in the sidechain (#423)
 		let maybe_latest_imported_block = self
 			.parentchain_block_importer
-			.import_until(|signed_parentchain_block| {
+			.import_until(&ImportType::BlockProduction, |signed_parentchain_block| {
 				signed_parentchain_block.block.hash()
 					== sidechain_block.block_data().layer_one_head()
 			})

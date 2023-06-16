@@ -41,12 +41,19 @@ use crate::triggered_dispatcher::TriggerParentchainBlockImport;
 use error::{Error, Result};
 use std::{sync::Arc, vec::Vec};
 
+pub use itc_parentchain_block_importer::ImportType;
+
 /// Trait to dispatch blocks for import into the local light-client.
 pub trait DispatchBlockImport<SignedBlockType> {
 	/// Dispatch blocks to be imported.
 	///
 	/// The blocks may be imported immediately, get queued, delayed or grouped.
-	fn dispatch_import(&self, blocks: Vec<SignedBlockType>, events: Vec<Vec<u8>>) -> Result<()>;
+	fn dispatch_import(
+		&self,
+		blocks: Vec<SignedBlockType>,
+		events: Vec<Vec<u8>>,
+		import_type: &ImportType,
+	) -> Result<()>;
 }
 
 /// Wrapper for the actual dispatchers. Allows to define one global type for
@@ -99,15 +106,20 @@ where
 	TriggeredDispatcher: DispatchBlockImport<SignedBlockType>,
 	ImmediateDispatcher: DispatchBlockImport<SignedBlockType>,
 {
-	fn dispatch_import(&self, blocks: Vec<SignedBlockType>, events: Vec<Vec<u8>>) -> Result<()> {
+	fn dispatch_import(
+		&self,
+		blocks: Vec<SignedBlockType>,
+		events: Vec<Vec<u8>>,
+		import_type: &ImportType,
+	) -> Result<()> {
 		match self {
 			BlockImportDispatcher::TriggeredDispatcher(dispatcher) => {
 				log::info!("TRIGGERED DISPATCHER MATCH");
-				dispatcher.dispatch_import(blocks, events)
+				dispatcher.dispatch_import(blocks, events, import_type)
 			},
 			BlockImportDispatcher::ImmediateDispatcher(dispatcher) => {
 				log::info!("IMMEDIATE DISPATCHER MATCH");
-				dispatcher.dispatch_import(blocks, events)
+				dispatcher.dispatch_import(blocks, events, import_type)
 			},
 			BlockImportDispatcher::EmptyDispatcher => {
 				log::info!("EMPTY DISPATCHER DISPATCHER MATCH");
