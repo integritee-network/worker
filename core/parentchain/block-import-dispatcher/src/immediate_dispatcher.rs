@@ -16,7 +16,7 @@
 */
 
 use crate::{error::Result, DispatchBlockImport};
-use itc_parentchain_block_importer::{ImportParentchainBlocks, ImportType};
+use itc_parentchain_block_importer::ImportParentchainBlocks;
 use log::*;
 use std::{boxed::Box, vec::Vec};
 
@@ -47,14 +47,9 @@ impl<BlockImporter, SignedBlockType> DispatchBlockImport<SignedBlockType>
 where
 	BlockImporter: ImportParentchainBlocks<SignedBlockType = SignedBlockType>,
 {
-	fn dispatch_import(
-		&self,
-		blocks: Vec<SignedBlockType>,
-		events: Vec<Vec<u8>>,
-		import_type: &ImportType,
-	) -> Result<()> {
+	fn dispatch_import(&self, blocks: Vec<SignedBlockType>, events: Vec<Vec<u8>>) -> Result<()> {
 		debug!("Importing {} parentchain blocks", blocks.len());
-		self.block_importer.import_parentchain_blocks(blocks, events, import_type)?;
+		self.block_importer.import_parentchain_blocks(blocks, events)?;
 		debug!("Notifying {} observers of import", self.import_event_observers.len());
 		self.import_event_observers.iter().for_each(|callback| callback());
 		Ok(())
@@ -98,9 +93,7 @@ mod tests {
 			counter_clone.increment();
 		});
 
-		dispatcher
-			.dispatch_import(vec![1u32, 2u32], vec![], &ImportType::BlockProduction)
-			.unwrap();
+		dispatcher.dispatch_import(vec![1u32, 2u32], vec![]).unwrap();
 
 		assert_eq!(1, notification_counter.get_counter());
 	}

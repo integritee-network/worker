@@ -21,7 +21,7 @@ use crate::{
 	error::{Error, Result},
 	DispatchBlockImport,
 };
-use itc_parentchain_block_importer::{ImportParentchainBlocks, ImportType};
+use itc_parentchain_block_importer::ImportParentchainBlocks;
 use itp_import_queue::{PeekQueue, PopFromQueue, PushToQueue};
 use log::trace;
 use std::vec::Vec;
@@ -34,10 +34,10 @@ pub trait TriggerParentchainBlockImport {
 	/// Trigger the import of all queued block, **including** the latest one.
 	///
 	/// Returns the latest imported block (if any).
-	fn import_all(&self, import_type: &ImportType) -> Result<Option<Self::SignedBlockType>>;
+	fn import_all(&self) -> Result<Option<Self::SignedBlockType>>;
 
 	/// Trigger import of all queued blocks, **except** the latest one.
-	fn import_all_but_latest(&self, import_type: &ImportType) -> Result<()>;
+	fn import_all_but_latest(&self) -> Result<()>;
 
 	/// Trigger import of all blocks up to **and including** a specific block.
 	///
@@ -45,7 +45,6 @@ pub trait TriggerParentchainBlockImport {
 	/// Returns the latest imported block (if any).
 	fn import_until(
 		&self,
-		import_type: &ImportType,
 		predicate: impl Fn(&Self::SignedBlockType) -> bool,
 	) -> Result<Option<Self::SignedBlockType>>;
 
@@ -101,7 +100,6 @@ where
 		&self,
 		blocks: Vec<SignedBlockType>,
 		events: Vec<RawEventsPerBlock>,
-		_import_type: &ImportType,
 	) -> Result<()> {
 		trace!(
 			"Pushing parentchain block(s) and event(s) ({}) ({}) to import queue",
@@ -127,10 +125,7 @@ where
 {
 	type SignedBlockType = BlockImporter::SignedBlockType;
 
-	fn import_all(
-		&self,
-		import_type: &ImportType,
-	) -> Result<Option<BlockImporter::SignedBlockType>> {
+	fn import_all(&self) -> Result<Option<BlockImporter::SignedBlockType>> {
 		let blocks_to_import = self.import_queue.pop_all().map_err(Error::ImportQueue)?;
 		let events_to_import = self.events_queue.pop_all().map_err(Error::ImportQueue)?;
 
@@ -143,13 +138,13 @@ where
 		);
 
 		self.block_importer
-			.import_parentchain_blocks(blocks_to_import, events_to_import, import_type)
+			.import_parentchain_blocks(blocks_to_import, events_to_import)
 			.map_err(Error::BlockImport)?;
 
 		Ok(latest_imported_block)
 	}
 
-	fn import_all_but_latest(&self, import_type: &ImportType) -> Result<()> {
+	fn import_all_but_latest(&self) -> Result<()> {
 		let blocks_to_import = self.import_queue.pop_all_but_last().map_err(Error::ImportQueue)?;
 		let events_to_import = self.events_queue.pop_all_but_last().map_err(Error::ImportQueue)?;
 
@@ -160,13 +155,12 @@ where
 		);
 
 		self.block_importer
-			.import_parentchain_blocks(blocks_to_import, events_to_import, import_type)
+			.import_parentchain_blocks(blocks_to_import, events_to_import)
 			.map_err(Error::BlockImport)
 	}
 
 	fn import_until(
 		&self,
-		import_type: &ImportType,
 		predicate: impl Fn(&BlockImporter::SignedBlockType) -> bool,
 	) -> Result<Option<BlockImporter::SignedBlockType>> {
 		let blocks_to_import =
@@ -186,7 +180,7 @@ where
 		);
 
 		self.block_importer
-			.import_parentchain_blocks(blocks_to_import, events_to_import, import_type)
+			.import_parentchain_blocks(blocks_to_import, events_to_import)
 			.map_err(Error::BlockImport)?;
 
 		Ok(latest_imported_block)

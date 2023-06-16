@@ -41,15 +41,6 @@ pub use block_importer::*;
 use error::Result;
 use std::vec::Vec;
 
-#[derive(Debug, PartialEq, Copy, Clone)]
-pub enum ImportType {
-	/// Importing in sync mode and ommiting STF actions.
-	Sync,
-	/// Importing as a pre-step to sidechain block production
-	/// and we perform STF actions.
-	BlockProduction,
-}
-
 /// Block import from the parentchain.
 pub trait ImportParentchainBlocks {
 	type SignedBlockType: Clone;
@@ -63,6 +54,5 @@ pub trait ImportParentchainBlocks {
 		&self,
 		blocks_to_import: Vec<Self::SignedBlockType>,
 		events_to_import: Vec<Vec<u8>>,
-		import_type: &ImportType,
 	) -> Result<()>;
 }

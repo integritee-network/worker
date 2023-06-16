@@ -22,7 +22,7 @@ use crate::{
 	attestation::create_ra_report_and_signature,
 	error::{Error as EnclaveError, Result as EnclaveResult},
 	initialization::global_components::{
-		EnclaveSealHandler, EnclaveStateHandler, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
+		EnclaveSealHandler, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
 		GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
 	},
 	ocall::OcallApi,
@@ -192,11 +192,8 @@ pub unsafe extern "C" fn request_state_provisioning(
 		},
 	};
 
-	let seal_handler = EnclaveSealHandler::new(
-		state_handler.clone(),
-		state_key_repository,
-		shielding_key_repository,
-	);
+	let seal_handler =
+		EnclaveSealHandler::new(state_handler, state_key_repository, shielding_key_repository);
 
 	if let Err(e) = request_state_provisioning_internal(
 		socket_fd,
@@ -211,44 +208,7 @@ pub unsafe extern "C" fn request_state_provisioning(
 		return e.into()
 	};
 
-	info!("Successfully performed state-provisioning");
-	if let Err(e) = import_already_handled_parentchain_blocks(&shard, &state_handler) {
-		error!("Failed to import parentchain blocks. Error: {:?}", e);
-	}
-
 	sgx_status_t::SGX_SUCCESS
-}
-
-fn import_already_handled_parentchain_blocks(
-	shard: &ShardIdentifier,
-	state_handler: &EnclaveStateHandler,
-) -> EnclaveResult<()> {
-	use crate::utils::get_triggered_dispatcher_from_solo_or_parachain;
-	use itc_parentchain::block_import_dispatcher::{
-		triggered_dispatcher::TriggerParentchainBlockImport, ImportType,
-	};
-	use itp_stf_state_handler::handle_state::HandleState;
-	use its_primitives::{
-		traits::{Block as _, BlockData},
-		types::Block as SidechainBlock,
-	};
-	use its_sidechain::state::LastBlockExt;
-	use sp_runtime::traits::Block;
-
-	info!("Importing parentchain-blocks in sync mode.");
-
-	let handler = get_triggered_dispatcher_from_solo_or_parachain()?;
-	let imported_parentchain_blocks = state_handler
-		.execute_on_current(shard, |state, _| {
-			state.get_last_block().map(|b: SidechainBlock| b.block_data().layer_one_head())
-		})
-		.unwrap();
-
-	if let Some(b) = imported_parentchain_blocks {
-		handler.import_until(&ImportType::Sync, |i| i.block.header().hash() == b)?;
-	}
-
-	Ok(())
 }
 
 /// Internal [`request_state_provisioning`] function to be able to use the handy `?` operator.

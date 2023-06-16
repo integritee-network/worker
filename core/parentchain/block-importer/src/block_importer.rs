@@ -17,7 +17,7 @@
 
 //! Imports parentchain blocks and executes any indirect calls found in the extrinsics.
 
-use crate::{error::Result, ImportParentchainBlocks, ImportType};
+use crate::{error::Result, ImportParentchainBlocks};
 use ita_stf::ParentchainHeader;
 use itc_parentchain_indirect_calls_executor::ExecuteIndirectCalls;
 use itc_parentchain_light_client::{
@@ -119,7 +119,6 @@ impl<
 		&self,
 		blocks_to_import: Vec<Self::SignedBlockType>,
 		events_to_import: Vec<Vec<u8>>,
-		import_type: &ImportType,
 	) -> Result<()> {
 		let mut calls = Vec::<OpaqueCall>::new();
 
@@ -139,26 +138,23 @@ impl<
 			}
 
 			let block = signed_block.block;
-
-			if import_type == &ImportType::BlockProduction {
-				// Perform state updates.
-				if let Err(e) = self.stf_executor.update_states(block.header()) {
-					error!("Error performing state updates upon block import");
-					return Err(e.into())
-				}
-
-				// Execute indirect calls that were found in the extrinsics of the block,
-				// incl. shielding and unshielding.
-				match self
-					.indirect_calls_executor
-					.execute_indirect_calls_in_extrinsics(&block, &raw_events)
-				{
-					Ok(executed_shielding_calls) => {
-						calls.push(executed_shielding_calls);
-					},
-					Err(_) => error!("Error executing relevant extrinsics"),
-				};
+			// Perform state updates.
+			if let Err(e) = self.stf_executor.update_states(block.header()) {
+				error!("Error performing state updates upon block import");
+				return Err(e.into())
 			}
+
+			// Execute indirect calls that were found in the extrinsics of the block,
+			// incl. shielding and unshielding.
+			match self
+				.indirect_calls_executor
+				.execute_indirect_calls_in_extrinsics(&block, &raw_events)
+			{
+				Ok(executed_shielding_calls) => {
+					calls.push(executed_shielding_calls);
+				},
+				Err(_) => error!("Error executing relevant extrinsics"),
+			};
 
 			info!(
 				"Successfully imported parentchain block (number: {}, hash: {})",
@@ -167,15 +163,13 @@ impl<
 			);
 		}
 
-		if import_type == &ImportType::BlockProduction {
-			// Create extrinsics for all `unshielding` and `block processed` calls we've gathered.
-			let parentchain_extrinsics =
-				self.extrinsics_factory.create_extrinsics(calls.as_slice(), None)?;
+		// Create extrinsics for all `unshielding` and `block processed` calls we've gathered.
+		let parentchain_extrinsics =
+			self.extrinsics_factory.create_extrinsics(calls.as_slice(), None)?;
 
-			// Sending the extrinsic requires mut access because the validator caches the sent extrinsics internally.
-			self.validator_accessor
-				.execute_mut_on_validator(|v| v.send_extrinsics(parentchain_extrinsics))?;
-		}
+		// Sending the extrinsic requires mut access because the validator caches the sent extrinsics internally.
+		self.validator_accessor
+			.execute_mut_on_validator(|v| v.send_extrinsics(parentchain_extrinsics))?;
 
 		Ok(())
 	}
