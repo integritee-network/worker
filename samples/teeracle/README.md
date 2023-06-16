@@ -29,3 +29,30 @@ We are now installing Teeracle
     ```
 
 
+## Misc.
+
+### SGX Plugin
+
+If you are running in simulation mode, or are using a different plugin please edit the [kubernetes/templates/teeracle.yaml](kubernetes/templates/teeracle.yaml)
+  ```yaml
+    limits:
+      sgx.intel.com/epc: "10Mi"
+      sgx.intel.com/enclave: 1
+      sgx.intel.com/provision: 1
+  ```
+
+### PCCS server
+
+The DCAP attestation requires a running PCCS server - which is provided by Securitee by default that's why we need to mount the ```/etc/sgx_default_qcnl.conf``` config file
+see [kubernetes/templates/teeracle.yaml](kubernetes/templates/teeracle.yaml)
+  ```yaml
+          volumeMounts:
+          - name: qcnl
+          mountPath: /etc/sgx_default_qcnl.conf
+          ...
+      volumes:
+      - name: qcnl
+        hostPath:
+          path: /etc/sgx_default_qcnl.conf
+
+  ```

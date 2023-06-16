@@ -24,9 +24,6 @@ spec:
     metadata:
       labels:
         app: teeracle
-        role: main
-        tier: backend
-        marblerun/marbletype: teeracle-main
     spec:
       serviceAccountName: teeracle
       containers:
