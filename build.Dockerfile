@@ -116,7 +116,7 @@ COPY --from=builder /home/ubuntu/work/worker/bin/* ./
 COPY --from=builder /lib/x86_64-linux-gnu/libsgx* /lib/x86_64-linux-gnu/
 COPY --from=builder /lib/x86_64-linux-gnu/libdcap* /lib/x86_64-linux-gnu/
 
-RUN touch spid.txt key.txt
+# RUN touch spid.txt key.txt
 RUN chmod +x /usr/local/bin/integritee-service
 RUN ls -al /usr/local/bin
 
