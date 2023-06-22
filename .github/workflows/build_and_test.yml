@@ -64,7 +64,7 @@ jobs:
           echo "FINGERPRINT=$fingerprint" >> $GITHUB_ENV
           if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
              echo "DOCKER_DEVICES=--device=/dev/sgx/enclave --device=/dev/sgx/provision" >> $GITHUB_ENV
-             echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd" >> $GITHUB_ENV
+             echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd --volume /etc/sgx_default_qcnl.conf:/etc/sgx_default_qcnl.conf" >> $GITHUB_ENV
           else
              echo "DOCKER_DEVICES=" >> $GITHUB_ENV
              echo "DOCKER_VOLUMES=" >> $GITHUB_ENV
@@ -258,6 +258,7 @@ jobs:
              echo "SGX_PROVISION=/dev/sgx/provision" >> $GITHUB_ENV
              echo "SGX_ENCLAVE=/dev/sgx/enclave" >> $GITHUB_ENV
              echo "AESMD=/var/run/aesmd" >> $GITHUB_ENV
+             echo "SGX_QCNL=/etc/sgx_default_qcnl.conf" >> $GITHUB_ENV
           fi
 
           echo "LOG_DIR=./logs-$version" >> $GITHUB_ENV
@@ -388,7 +389,7 @@ jobs:
           echo "FINGERPRINT=$fingerprint" >> $GITHUB_ENV
           if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
               echo "DOCKER_DEVICES=--device=/dev/sgx/enclave --device=/dev/sgx/provision" >> $GITHUB_ENV
-              echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd" >> $GITHUB_ENV
+              echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd --volume /etc/sgx_default_qcnl.conf:/etc/sgx_default_qcnl.conf" >> $GITHUB_ENV
           else
               echo "DOCKER_DEVICES=" >> $GITHUB_ENV
               echo "DOCKER_VOLUMES=" >> $GITHUB_ENV
