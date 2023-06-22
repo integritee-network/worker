@@ -16,14 +16,21 @@
 */
 //! Various way to filter Parentchain events
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 use codec::{Decode, Encode};
+use ita_stf::{privacy_sidechain_inherent::PrivacySidechainTrait, StfError};
 use itp_api_client_types::{Events, StaticEvent};
 
 use itp_sgx_runtime_primitives::types::{AccountId, Balance};
 use itp_types::H256;
 use itp_utils::stringify::account_id_to_string;
 use std::{format, string::String, vec::Vec};
+
+impl From<StfError> for Error {
+	fn from(a: StfError) -> Self {
+		Error::Other(format!("Error when shielding for privacy sidechain {:?}", a).into())
+	}
+}
 
 #[derive(Encode, Decode, Debug)]
 pub struct ExtrinsicSuccess;
@@ -102,16 +109,9 @@ impl FilterEvents for Events<H256> {
 		Ok(self
 			.iter()
 			.filter_map(|ev| {
-				log::info!("GOT BEFORE AND_THEN");
 				ev.and_then(|ev| match ev.as_event::<BalanceTransfer>()? {
-					Some(e) => {
-						log::info!("GOT IN SOME MATCH");
-						Ok(Some(e))
-					},
-					None => {
-						log::info!("GOT IN NONE MATCH");
-						Ok(None)
-					},
+					Some(e) => Ok(Some(e)),
+					None => Ok(None),
 				})
 				.ok()
 				.flatten()
@@ -134,5 +134,14 @@ impl FilterEvents for MockEvents {
 			amount: Balance::default(),
 		};
 		Ok(Vec::from([xsfer]))
+	}
+}
+
+pub struct MockPrivacySidechain;
+
+impl PrivacySidechainTrait for MockPrivacySidechain {
+	const SHIELDING_ACCOUNT: AccountId = AccountId::new([0u8; 32]);
+	fn shield_funds(_: &AccountId, _: Balance) -> core::result::Result<(), StfError> {
+		Ok(())
 	}
 }

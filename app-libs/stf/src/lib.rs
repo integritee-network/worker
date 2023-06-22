@@ -47,6 +47,7 @@ pub mod evm_helpers;
 pub mod getter;
 pub mod hash;
 pub mod helpers;
+pub mod privacy_sidechain_inherent;
 pub mod stf_sgx;
 pub mod stf_sgx_primitives;
 #[cfg(all(feature = "test", feature = "sgx"))]
@@ -54,7 +55,6 @@ pub mod stf_sgx_tests;
 #[cfg(all(feature = "test", feature = "sgx"))]
 pub mod test_genesis;
 pub mod trusted_call;
-pub mod privacy_sidechain_inherent;
 
 pub(crate) const ENCLAVE_ACCOUNT_KEY: &str = "Enclave_Account_Key";
 

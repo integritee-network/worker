@@ -1565,6 +1565,7 @@ dependencies = [
  "derive_more",
  "frame-support",
  "frame-system",
+ "hex",
  "ita-sgx-runtime",
  "itp-hashing",
  "itp-node-api",

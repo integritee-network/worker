@@ -37,11 +37,11 @@ pub mod sgx_reexport_prelude {
 	pub use thiserror_sgx as thiserror;
 }
 
-mod event_filter;
 mod executor;
 mod traits;
 
 pub mod error;
+pub mod event_filter;
 pub mod filter_metadata;
 pub mod indirect_calls;
 pub mod parentchain_parser;

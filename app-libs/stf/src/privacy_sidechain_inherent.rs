@@ -15,13 +15,13 @@
 
 */
 
-use crate::{helpers::ensure_enclave_signer_account, StfError, };
+use crate::StfError;
+use frame_support::traits::UnfilteredDispatchable;
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{Runtime, System};
-use sp_runtime::{traits::Verify, MultiAddress};
-use itp_stf_primitives::types::{AccountId};
-use frame_support::{ensure, traits::UnfilteredDispatchable};
-use std::{format};
+use itp_stf_primitives::types::AccountId;
+use sp_runtime::MultiAddress;
+use std::format;
 
 type Seed = [u8; 32];
 
@@ -31,29 +31,31 @@ const ALICE_ENCODED: Seed = [
 ];
 
 pub trait PrivacySidechainTrait {
-    const SHIELDING_ACCOUNT: AccountId;
-    fn shield_funds(account: AccountId, amount: Balance) -> Result<(), StfError>;
+	const SHIELDING_ACCOUNT: AccountId;
+	fn shield_funds(account: &AccountId, amount: Balance) -> Result<(), StfError>;
 }
 
 pub struct PrivacySidechain;
 
 impl PrivacySidechainTrait for PrivacySidechain {
-    const SHIELDING_ACCOUNT: AccountId = ALICE_ENCODED.into();
-    fn shield_funds(account: AccountId, amount: Balance) -> Result<(), StfError> {
-        let account_info = System::account(&account);
-        ita_sgx_runtime::BalancesCall::<Runtime>::set_balance {
-            who: MultiAddress::Id(account),
-            new_free: account_info.data.free + amount,
-            new_reserved: account_info.data.reserved,
-        }
-        .dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
-        .map_err(|e| StfError::Dispatch(format!("Shield funds error: {:?}", e.error)))?;
+	const SHIELDING_ACCOUNT: AccountId = AccountId::new(ALICE_ENCODED);
+	fn shield_funds(account: &AccountId, amount: Balance) -> Result<(), StfError> {
+		let account_info = System::account(&account);
+		log::info!(
+			"shielding for {:?} amount {} new_free {} new_reserved {}",
+			account,
+			amount,
+			account_info.data.free + amount,
+			account_info.data.reserved
+		);
+		ita_sgx_runtime::BalancesCall::<Runtime>::set_balance {
+			who: MultiAddress::Id(account.clone()),
+			new_free: account_info.data.free + amount,
+			new_reserved: account_info.data.reserved,
+		}
+		.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
+		.map_err(|e| StfError::Dispatch(format!("Shield funds error: {:?}", e.error)))?;
 
-        Ok(())
-    }
+		Ok(())
+	}
 }
-
-
-
-
-

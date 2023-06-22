@@ -28,7 +28,7 @@ use crate::{
 use binary_merkle_tree::merkle_root;
 use codec::Encode;
 use core::marker::PhantomData;
-use ita_stf::{TrustedCall, TrustedCallSigned, privacy_sidechain_inherent::{PrivacySidechainTrait, PrivacySidechain}};
+use ita_stf::{privacy_sidechain_inherent::PrivacySidechainTrait, TrustedCall, TrustedCallSigned};
 use itp_node_api::metadata::{
 	pallet_teerex::TeerexCallIndexes, provider::AccessNodeMetadata, NodeMetadataTrait,
 };
@@ -73,6 +73,7 @@ impl<
 		NodeMetadataProvider,
 		IndirectCallsFilter,
 		EventCreator,
+		PrivacySidechain,
 	>
 {
 	pub fn new(
@@ -98,6 +99,7 @@ impl<
 		NodeMetadataProvider,
 		FilterIndirectCalls,
 		EventCreator,
+		PrivacySidechain,
 	> ExecuteIndirectCalls
 	for IndirectCallsExecutor<
 		ShieldingKeyRepository,
@@ -150,10 +152,10 @@ impl<
 			events
 				.iter()
 				.filter(|&event| event.to == PrivacySidechain::SHIELDING_ACCOUNT)
-				.for_each(|event| {
+				.try_for_each(|event| {
 					info!("transfer_event :: {}", event.print_string());
-					PrivacySidechain::shield_funds(event.from, event.amount)?;
-			})
+					PrivacySidechain::shield_funds(&event.from, event.amount)
+				})?;
 		}
 
 		// This would be catastrophic but should never happen
@@ -218,6 +220,7 @@ impl<
 		NodeMetadataProvider,
 		FilterIndirectCalls,
 		EventFilter,
+		PrivacySidechain,
 	> IndirectExecutor
 	for IndirectCallsExecutor<
 		ShieldingKeyRepository,
@@ -226,6 +229,7 @@ impl<
 		NodeMetadataProvider,
 		FilterIndirectCalls,
 		EventFilter,
+		PrivacySidechain,
 	> where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
@@ -272,6 +276,7 @@ pub(crate) fn hash_of<T: Encode>(xt: &T) -> H256 {
 mod test {
 	use super::*;
 	use crate::{
+		event_filter::MockPrivacySidechain,
 		filter_metadata::{ShieldFundsAndCallWorkerFilter, TestEventCreator},
 		parentchain_parser::ParentchainExtrinsicParser,
 	};
@@ -308,6 +313,7 @@ mod test {
 		TestNodeMetadataRepository,
 		ShieldFundsAndCallWorkerFilter<ParentchainExtrinsicParser>,
 		TestEventCreator,
+		MockPrivacySidechain,
 	>;
 
 	type Seed = [u8; 32];

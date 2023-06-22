@@ -29,7 +29,9 @@ use crate::{
 	tls_ra::seal_handler::SealHandler,
 };
 use ita_sgx_runtime::Runtime;
-use ita_stf::{Getter, State as StfState, Stf, TrustedCallSigned};
+use ita_stf::{
+	privacy_sidechain_inherent::PrivacySidechain, Getter, State as StfState, Stf, TrustedCallSigned,
+};
 use itc_direct_rpc_server::{
 	rpc_connection_registry::ConnectionRegistry, rpc_responder::RpcResponder,
 	rpc_watch_extractor::RpcWatchExtractor, rpc_ws_handler::RpcWsHandler,
@@ -142,6 +144,7 @@ pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
 	EnclaveNodeMetadataRepository,
 	ShieldFundsAndCallWorkerFilter<ParentchainExtrinsicParser>,
 	EventCreator,
+	PrivacySidechain,
 >;
 pub type EnclaveValidatorAccessor = ValidatorAccessor<
 	LightValidation<ParentchainBlock, EnclaveOCallApi>,
