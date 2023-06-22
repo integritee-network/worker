@@ -126,4 +126,4 @@ ENV SGX_SDK /opt/sgxsdk
 ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:$SGX_SDK/sdk_libs
 RUN ldd /usr/local/bin/integritee-service && \
 	/usr/local/bin/integritee-service --version
-ENTRYPOINT ["/opt/intel/sgx-aesm-service/aesm/aesm_service && /usr/local/bin/integritee-service"]
+ENTRYPOINT ["/bin/sh", "-c" , "/opt/intel/sgx-aesm-service/aesm/aesm_service && /usr/local/bin/integritee-service"]
