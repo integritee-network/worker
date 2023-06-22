@@ -128,4 +128,5 @@ ENV AESM_PATH=/opt/intel/sgx-aesm-service/aesm
 
 RUN ldd /usr/local/bin/integritee-service && \
 	/usr/local/bin/integritee-service --version
-ENTRYPOINT ["/bin/sh", "-c" , "/opt/intel/sgx-aesm-service/aesm/aesm_service && /usr/local/bin/integritee-service"]
+#ENTRYPOINT ["/bin/sh", "-c" , "/opt/intel/sgx-aesm-service/aesm/aesm_service && /usr/local/bin/integritee-service"]
+ENTRYPOINT ["/usr/local/bin/integritee-service"]
