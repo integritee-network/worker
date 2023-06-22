@@ -110,8 +110,6 @@ ENTRYPOINT ["/usr/local/bin/integritee-cli"]
 FROM runner AS deployed-worker
 LABEL maintainer="zoltan@integritee.network"
 
-WORKDIR /usr/local/bin
-
 COPY --from=builder /opt/sgxsdk /opt/sgxsdk
 COPY --from=builder /home/ubuntu/work/worker/bin/* ./
 COPY --from=builder /lib/x86_64-linux-gnu/libsgx* /lib/x86_64-linux-gnu/
@@ -127,6 +125,9 @@ ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/intel/sgx-aesm-service/aesm:$SGX_SDK/s
 ENV AESM_PATH=/opt/intel/sgx-aesm-service/aesm
 
 COPY ./docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+WORKDIR /usr/local/bin
 
 RUN ldd /usr/local/bin/integritee-service && \
 	/usr/local/bin/integritee-service --version
