@@ -80,6 +80,7 @@ RUN --mount=type=cache,id=cargo-registry-cache,target=/opt/rust/registry/cache,s
 FROM oasisprotocol/aesmd:master AS runner
 ENV SGX_SDK /opt/sgxsdk
 ENV LD_LIBRARY_PATH "${SGX_SDK}/sdk_libs"
+RUN apt update && apt install libsgx-aesm-ecdsa-plugin
 
 ### Deployed CLI client
 ##################################################
@@ -125,5 +126,4 @@ ENV SGX_SDK /opt/sgxsdk
 ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:$SGX_SDK/sdk_libs
 RUN ldd /usr/local/bin/integritee-service && \
 	/usr/local/bin/integritee-service --version
-
-ENTRYPOINT ["/usr/local/bin/integritee-service"]
+ENTRYPOINT ["/opt/intel/sgx-aesm-service/aesm/aesm_service && /usr/local/bin/integritee-service"]
