@@ -80,7 +80,7 @@ RUN --mount=type=cache,id=cargo-registry-cache,target=/opt/rust/registry/cache,s
 FROM oasisprotocol/aesmd:master AS runner
 ENV SGX_SDK /opt/sgxsdk
 ENV LD_LIBRARY_PATH "${SGX_SDK}/sdk_libs"
-RUN apt update && apt install libsgx-aesm-ecdsa-plugin
+RUN apt update && apt install -y libsgx-aesm-ecdsa-plugin
 
 ### Deployed CLI client
 ##################################################
