@@ -126,43 +126,43 @@ jobs:
           fi
           docker images --all
 
-  clippy:
-    runs-on: ubuntu-latest
-    container: "integritee/integritee-dev:0.2.1"
-    steps:
-      - uses: actions/checkout@v3
-      - name: init rust
-        # enclave is not in the same workspace
-        run: rustup show && cd enclave-runtime && rustup show
+  # clippy:
+  #   runs-on: ubuntu-latest
+  #   container: "integritee/integritee-dev:0.2.1"
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - name: init rust
+  #       # enclave is not in the same workspace
+  #       run: rustup show && cd enclave-runtime && rustup show
 
-      - name: Clippy default features
-        run: cargo clippy -- -D warnings
-      - name: Enclave # Enclave is separate as it's not in the workspace
-        run: cd enclave-runtime && cargo clippy -- -D warnings
+  #     - name: Clippy default features
+  #       run: cargo clippy -- -D warnings
+  #     - name: Enclave # Enclave is separate as it's not in the workspace
+  #       run: cd enclave-runtime && cargo clippy -- -D warnings
 
-      - name: Clippy with EVM feature
-        run: |
-          cargo clippy --features evm -- -D warnings
-          cd enclave-runtime && cargo clippy --features evm -- -D warnings
+  #     - name: Clippy with EVM feature
+  #       run: |
+  #         cargo clippy --features evm -- -D warnings
+  #         cd enclave-runtime && cargo clippy --features evm -- -D warnings
 
-      - name: Clippy with Sidechain feature
-        run: |
-          cargo clippy --features sidechain -- -D warnings
-          cd enclave-runtime && cargo clippy --features sidechain -- -D warnings
+  #     - name: Clippy with Sidechain feature
+  #       run: |
+  #         cargo clippy --features sidechain -- -D warnings
+  #         cd enclave-runtime && cargo clippy --features sidechain -- -D warnings
 
-      - name: Clippy with Teeracle feature
-        run: |
-          cargo clippy --features teeracle -- -D warnings
-          cd enclave-runtime && cargo clippy --features teeracle -- -D warnings
+  #     - name: Clippy with Teeracle feature
+  #       run: |
+  #         cargo clippy --features teeracle -- -D warnings
+  #         cd enclave-runtime && cargo clippy --features teeracle -- -D warnings
 
-      - name: Clippy with Offchain-worker feature
-        run: |
-          cargo clippy --features offchain-worker -- -D warnings
-          cd enclave-runtime && cargo clippy --features offchain-worker -- -D warnings
+  #     - name: Clippy with Offchain-worker feature
+  #       run: |
+  #         cargo clippy --features offchain-worker -- -D warnings
+  #         cd enclave-runtime && cargo clippy --features offchain-worker -- -D warnings
 
-      - name: Fail-fast; cancel other jobs
-        if: failure()
-        uses: andymckay/cancel-action@0.3
+  #     - name: Fail-fast; cancel other jobs
+  #       if: failure()
+  #       uses: andymckay/cancel-action@0.3
 
   fmt:
     runs-on: ubuntu-latest

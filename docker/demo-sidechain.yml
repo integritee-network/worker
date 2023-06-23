@@ -26,5 +26,5 @@ services:
       -V wss://integritee-worker-1 -W wss://integritee-worker-2 -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"
 networks:
-  integritee-test-network:
+  integritee-test-  network:
     driver: bridge
