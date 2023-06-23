@@ -21,6 +21,7 @@
 use crate::error::{Error as EnclaveError, Result as EnclaveResult};
 use codec::{Decode, Encode};
 use ita_stf::{State as StfState, StateType as StfStateType};
+use itc_parentchain::light_client::LightClientSealing;
 use itp_sgx_crypto::{
 	key_repository::{AccessKey, MutateKey},
 	Aes,
@@ -45,6 +46,7 @@ where
 	state_handler: Arc<StateHandler>,
 	state_key_repository: Arc<StateKeyRepository>,
 	shielding_key_repository: Arc<ShieldingKeyRepository>,
+	light_client_seal: LightClientSealing,
 }
 
 impl<ShieldingKeyRepository, StateKeyRepository, StateHandler>
