@@ -47,14 +47,14 @@ use std::{
 #[derive(Clone, Eq, PartialEq, Debug)]
 enum ProvisioningPayload {
 	Everything,
-	ShieldingKeyOnly,
+	ShieldingKeyAndLightClient,
 }
 
 impl From<WorkerMode> for ProvisioningPayload {
 	fn from(m: WorkerMode) -> Self {
 		match m {
 			WorkerMode::OffChainWorker | WorkerMode::Teeracle =>
-				ProvisioningPayload::ShieldingKeyOnly,
+				ProvisioningPayload::ShieldingKeyAndLightClient,
 			WorkerMode::Sidechain => ProvisioningPayload::Everything,
 		}
 	}
@@ -108,7 +108,7 @@ where
 				self.write_state_key()?;
 				self.write_state(shard)?;
 			},
-			ProvisioningPayload::ShieldingKeyOnly => {
+			ProvisioningPayload::ShieldingKeyAndLightClient => {
 				self.write_shielding_key()?;
 			},
 		}
