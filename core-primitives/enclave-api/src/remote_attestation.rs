@@ -66,6 +66,8 @@ pub trait RemoteAttestation {
 
 	fn set_ql_qe_enclave_paths(&self) -> EnclaveResult<()>;
 
+	fn set_sgx_qpl_logging(&self) -> EnclaveResult<()>;
+
 	fn qe_get_target_info(&self) -> EnclaveResult<sgx_target_info_t>;
 
 	fn qe_get_quote_size(&self) -> EnclaveResult<u32>;
@@ -339,6 +341,17 @@ impl RemoteAttestation for Enclave {
 		set_qv_path(sgx_qv_path_type_t::SGX_QV_QVE_PATH, QVE_ENCLAVE)?;
 
 		Ok(())
+	}
+
+	fn set_sgx_qpl_logging(&self) -> EnclaveResult<()> {
+		let log_level = sgx_ql_log_level_t::SGX_QL_LOG_INFO;
+		let res = unsafe { sgx_ql_set_logging_callback(forward_qpl_log, log_level) };
+		if res == sgx_quote3_error_t::SGX_QL_SUCCESS {
+			Ok(())
+		} else {
+			error!("Setting logging function failed with: {:#?}", res);
+			Err(Error::SgxQuote(res))
+		}
 	}
 
 	fn qe_get_target_info(&self) -> EnclaveResult<sgx_target_info_t> {
@@ -751,4 +764,20 @@ fn set_qv_path(path_type: sgx_qv_path_type_t, path: &str) -> EnclaveResult<()> {
 		return Err(Error::SgxQuote(ret_val))
 	}
 	Ok(())
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+/// Make sure that the `log_slice_ptr` points to a null termianted string.
+// This function must not be marked as `unsafe`, because `sgx_ql_set_logging_callback` expects a safe (i.e. not `unsafe`) function.
+pub extern "C" fn forward_qpl_log(log_level: sgx_ql_log_level_t, log_slice_ptr: *const c_char) {
+	if log_slice_ptr.is_null() {
+		error!("[QPL - ERROR], slice to print was NULL");
+		return
+	}
+	// This is safe, as the previous block checks for `NULL` pointer.
+	let slice = unsafe { core::ffi::CStr::from_ptr(log_slice_ptr) };
+	match log_level {
+		sgx_ql_log_level_t::SGX_QL_LOG_INFO => info!("[QPL - INFO], {:#?}", slice),
+		sgx_ql_log_level_t::SGX_QL_LOG_ERROR => error!("[QPL - ERROR], {:#?}", slice),
+	}
 }

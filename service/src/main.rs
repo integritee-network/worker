@@ -449,6 +449,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	// clones because of the move
 	let enclave2 = enclave.clone();
 	let node_api2 = node_api.clone();
+	#[cfg(feature = "dcap")]
+	enclave2.set_sgx_qpl_logging().expect("QPL logging setup failed");
 	#[cfg(not(feature = "dcap"))]
 	let register_xt = move || enclave2.generate_ias_ra_extrinsic(&trusted_url, skip_ra).unwrap();
 	#[cfg(feature = "dcap")]
