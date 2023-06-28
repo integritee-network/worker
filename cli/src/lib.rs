@@ -45,11 +45,15 @@ pub mod commands;
 
 use crate::commands::Commands;
 use clap::Parser;
+use sp_application_crypto::KeyTypeId;
 use sp_core::{H160, H256};
 use substrate_api_client::Metadata;
 use thiserror::Error;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+pub(crate) const SR25519_KEY_TYPE: KeyTypeId = KeyTypeId(*b"sr25");
+pub(crate) const ED25519_KEY_TYPE: KeyTypeId = KeyTypeId(*b"ed25");
 
 #[derive(Parser)]
 #[clap(name = "integritee-cli")]
