@@ -94,15 +94,53 @@ pub fn create_ra_report_and_signature(
 		},
 	};
 
-	//match remote_attestation_type {}
-
-	match attestation_handler.create_epid_ra_report_and_signature(sign_type, skip_ra) {
-		Ok(r) => Ok(r),
-		Err(e) => {
-			error!("create_ra_report_and_signature failure: {:?}", e);
-			Err(e.into())
+	match remote_attestation_type {
+		RemoteAttestationType::Epid => {
+			match attestation_handler.create_epid_ra_report_and_signature(sign_type, skip_ra) {
+				Ok(epid) => Ok(epid),
+				Err(e) => {
+					error!("create_epid_ra_report_and_signature failure: {:?}", e);
+					Err(e.into())
+				},
+			}
+		},
+		RemoteAttestationType::Dcap => {
+			let quoting_enclave_target_info = qe_get_target_info()?;
+			let quote_size = qe_get_quote_size()?;
+			match attestation_handler.generate_dcap_ra_cert(
+				&quoting_enclave_target_info,
+				quote_size,
+				skip_ra,
+			) {
+				Ok(dcap) => Ok(dcap),
+				Err(e) => {
+					error!("create_epid_ra_report_and_signature failure: {:?}", e);
+					Err(e.into())
+				},
+			}
 		},
 	}
+}
+//FIXME: remove these two duplicates
+fn qe_get_target_info() -> EnclaveResult<sgx_target_info_t> {
+	let mut quoting_enclave_target_info: sgx_target_info_t = sgx_target_info_t::default();
+	let qe3_ret = unsafe { sgx_qe_get_target_info(&mut quoting_enclave_target_info as *mut _) };
+	if qe3_ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
+		panic!("{}", format!("qe_get_target_info failed, return value={:#?}", qe3_ret));
+	}
+
+	Ok(quoting_enclave_target_info)
+}
+
+fn qe_get_quote_size() -> EnclaveResult<u32> {
+	let mut quote_size: u32 = 0;
+	let qe3_ret = unsafe { sgx_qe_get_quote_size(&mut quote_size as *mut _) };
+
+	if qe3_ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
+		panic!("{}", format!("qe_get_quote_size failed, return value={:#?}", qe3_ret));
+	}
+
+	Ok(quote_size)
 }
 
 #[no_mangle]
