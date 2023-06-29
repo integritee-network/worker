@@ -80,6 +80,7 @@ pub unsafe extern "C" fn get_mrenclave(mrenclave: *mut u8, mrenclave_size: usize
 	}
 }
 
+// FIXME: add dcap suppoort for call site
 pub fn create_ra_report_and_signature(
 	sign_type: sgx_quote_sign_type_t,
 	skip_ra: bool,
@@ -92,7 +93,7 @@ pub fn create_ra_report_and_signature(
 		},
 	};
 
-	match attestation_handler.create_ra_report_and_signature(sign_type, skip_ra) {
+	match attestation_handler.create_epid_ra_report_and_signature(sign_type, skip_ra) {
 		Ok(r) => Ok(r),
 		Err(e) => {
 			error!("create_ra_report_and_signature failure: {:?}", e);

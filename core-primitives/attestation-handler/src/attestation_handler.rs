@@ -107,7 +107,7 @@ pub trait AttestationHandler {
 
 	/// Create the remote attestation report and encapsulate it in a DER certificate
 	/// Returns a pair consisting of (private key DER, certificate DER)
-	fn create_ra_report_and_signature(
+	fn create_epid_ra_report_and_signature(
 		&self,
 		sign_type: sgx_quote_sign_type_t,
 		skip_ra: bool,
@@ -132,7 +132,7 @@ where
 		// FIXME: should call `create_ra_report_and_signature` in skip_ra mode as well:
 		// https://github.com/integritee-network/worker/issues/321.
 		let cert_der = if !skip_ra {
-			match self.create_ra_report_and_signature(sign_type, skip_ra) {
+			match self.create_epid_ra_report_and_signature(sign_type, skip_ra) {
 				Ok((_key_der, cert_der)) => cert_der,
 				Err(e) => return Err(e),
 			}
@@ -154,7 +154,8 @@ where
 		// our certificate is unlinkable
 		let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
-		let (_key_der, cert_der) = match self.create_ra_report_and_signature(sign_type, false) {
+		let (_key_der, cert_der) = match self.create_epid_ra_report_and_signature(sign_type, false)
+		{
 			Ok(r) => r,
 			Err(e) => return Err(e),
 		};
@@ -192,7 +193,7 @@ where
 		Ok(())
 	}
 
-	fn create_ra_report_and_signature(
+	fn create_epid_ra_report_and_signature(
 		&self,
 		sign_type: sgx_quote_sign_type_t,
 		skip_ra: bool,
@@ -211,7 +212,7 @@ where
 		let payload = if !skip_ra {
 			info!("    [Enclave] Create attestation report");
 			let (attn_report, sig, cert) =
-				match self.create_attestation_report(&chain_signer.public().0, sign_type) {
+				match self.create_epid_attestation_report(&chain_signer.public().0, sign_type) {
 					Ok(r) => r,
 					Err(e) => {
 						error!("    [Enclave] Error in create_attestation_report: {:?}", e);
@@ -511,7 +512,7 @@ where
 			+ (u32::from(array[3]) << 24)
 	}
 
-	fn create_attestation_report(
+	fn create_epid_attestation_report(
 		&self,
 		pub_k: &[u8; 32],
 		sign_type: sgx_quote_sign_type_t,

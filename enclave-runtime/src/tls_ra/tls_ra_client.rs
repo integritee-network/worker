@@ -220,7 +220,7 @@ pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAn
 	client.read_shard()
 }
 
-fn tls_client_config<A: EnclaveAttestationOCallApi + 'static>(
+fn tls_client_config_epid<A: EnclaveAttestationOCallApi + 'static>(
 	sign_type: sgx_quote_sign_type_t,
 	ocall_api: A,
 	skip_ra: bool,
