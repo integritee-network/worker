@@ -50,3 +50,8 @@ pub use attestation_handler::{AttestationHandler, IntelAttestationHandler, DEV_H
 pub use collateral::SgxQlQveCollateral;
 
 pub use error::{Error, Result};
+
+pub enum RemoteAttestationType {
+	Epid,
+	Dcap,
+}

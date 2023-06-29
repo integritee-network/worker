@@ -75,11 +75,6 @@ pub const SIGRL_SUFFIX: &str = "/sgx/dev/attestation/v4/sigrl/";
 #[cfg(not(feature = "production"))]
 pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
 
-pub enum RemoteAttestationType {
-	Epid,
-	Dcap,
-}
-
 /// Trait to provide an abstraction to the attestation logic
 pub trait AttestationHandler {
 	/// Generates an encoded remote attestation certificate. Returns DER encoded certificate.

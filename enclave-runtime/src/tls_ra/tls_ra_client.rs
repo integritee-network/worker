@@ -29,7 +29,7 @@ use crate::{
 	tls_ra::seal_handler::SealStateAndKeys,
 	GLOBAL_STATE_HANDLER_COMPONENT,
 };
-use itp_attestation_handler::DEV_HOSTNAME;
+use itp_attestation_handler::{RemoteAttestationType, DEV_HOSTNAME};
 use itp_component_container::ComponentGetter;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_types::ShardIdentifier;
@@ -225,7 +225,12 @@ fn tls_client_config_epid<A: EnclaveAttestationOCallApi + 'static>(
 	ocall_api: A,
 	skip_ra: bool,
 ) -> EnclaveResult<ClientConfig> {
-	let (key_der, cert_der) = create_ra_report_and_signature(sign_type, skip_ra)?;
+	#[cfg(not(feature = "dcap"))]
+	let (key_der, cert_der) =
+		create_ra_report_and_signature(skip_ra, RemoteAttestationType::Epid, sign_type)?;
+	#[cfg(feature = "dcap")]
+	let (key_der, cert_der) =
+		create_ra_report_and_signature(skip_ra, RemoteAttestationType::Dcap, sign_type)?;
 
 	let mut cfg = rustls::ClientConfig::new();
 	let certs = vec![rustls::Certificate(cert_der)];

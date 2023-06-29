@@ -29,6 +29,7 @@ use crate::{
 	tls_ra::seal_handler::UnsealStateAndKeys,
 	GLOBAL_STATE_HANDLER_COMPONENT,
 };
+use itp_attestation_handler::RemoteAttestationType;
 use itp_component_container::ComponentGetter;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
@@ -234,7 +235,12 @@ fn tls_server_config<A: EnclaveAttestationOCallApi + 'static>(
 	ocall_api: A,
 	skip_ra: bool,
 ) -> EnclaveResult<ServerConfig> {
-	let (key_der, cert_der) = create_ra_report_and_signature(sign_type, skip_ra)?;
+	#[cfg(not(feature = "dcap"))]
+	let (key_der, cert_der) =
+		create_ra_report_and_signature(skip_ra, RemoteAttestationType::Epid, sign_type)?;
+	#[cfg(feature = "dcap")]
+	let (key_der, cert_der) =
+		create_ra_report_and_signature(skip_ra, RemoteAttestationType::Dcap, sign_type)?;
 
 	let mut cfg = rustls::ServerConfig::new(Arc::new(ClientAuth::new(true, skip_ra, ocall_api)));
 	let certs = vec![rustls::Certificate(cert_der)];
