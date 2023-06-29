@@ -207,7 +207,7 @@ pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAn
 	skip_ra: c_int,
 	seal_handler: StateAndKeySealer,
 ) -> EnclaveResult<()> {
-	let client_config = tls_client_config(sign_type, OcallApi, skip_ra == 1)?;
+	let client_config = tls_client_config_epid(sign_type, OcallApi, skip_ra == 1)?;
 	let (mut client_session, mut tcp_stream) = tls_client_session_stream(socket_fd, client_config)?;
 
 	let mut client = TlsClient::new(

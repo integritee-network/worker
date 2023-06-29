@@ -75,6 +75,11 @@ pub const SIGRL_SUFFIX: &str = "/sgx/dev/attestation/v4/sigrl/";
 #[cfg(not(feature = "production"))]
 pub const REPORT_SUFFIX: &str = "/sgx/dev/attestation/v4/report";
 
+pub enum RemoteAttestationType {
+	Epid,
+	Dcap,
+}
+
 /// Trait to provide an abstraction to the attestation logic
 pub trait AttestationHandler {
 	/// Generates an encoded remote attestation certificate. Returns DER encoded certificate.
@@ -117,6 +122,35 @@ pub trait AttestationHandler {
 pub struct IntelAttestationHandler<OCallApi, SigningKeyRepo> {
 	pub(crate) ocall_api: Arc<OCallApi>,
 	pub(crate) signing_key_repo: Arc<SigningKeyRepo>,
+}
+
+impl<OCallApi, AccessSigningKey> IntelAttestationHandler<OCallApi, AccessSigningKey>
+where
+	OCallApi: EnclaveAttestationOCallApi,
+	AccessSigningKey: AccessKey<KeyType = ed25519::Pair>,
+{
+	fn create_payload_epid(
+		&self,
+		pub_k: &[u8; 32],
+		sign_type: sgx_quote_sign_type_t,
+	) -> EnclaveResult<String> {
+		info!("    [Enclave] Create attestation report");
+		let (attn_report, sig, cert) = match self.create_epid_attestation_report(&pub_k, sign_type)
+		{
+			Ok(r) => r,
+			Err(e) => {
+				error!("    [Enclave] Error in create_attestation_report: {:?}", e);
+				return Err(e.into())
+			},
+		};
+		println!("    [Enclave] Create attestation report successful");
+		debug!("              attn_report = {:?}", attn_report);
+		debug!("              sig         = {:?}", sig);
+		debug!("              cert        = {:?}", cert);
+
+		// concat the information
+		Ok(attn_report + "|" + &sig + "|" + &cert)
+	}
 }
 
 impl<OCallApi, AccessSigningKey> AttestationHandler
@@ -210,22 +244,7 @@ where
 		debug!("     pubkey Y is {:02x}", pub_k.gy.iter().format(""));
 
 		let payload = if !skip_ra {
-			info!("    [Enclave] Create attestation report");
-			let (attn_report, sig, cert) =
-				match self.create_epid_attestation_report(&chain_signer.public().0, sign_type) {
-					Ok(r) => r,
-					Err(e) => {
-						error!("    [Enclave] Error in create_attestation_report: {:?}", e);
-						return Err(e.into())
-					},
-				};
-			println!("    [Enclave] Create attestation report successful");
-			debug!("              attn_report = {:?}", attn_report);
-			debug!("              sig         = {:?}", sig);
-			debug!("              cert        = {:?}", cert);
-
-			// concat the information
-			attn_report + "|" + &sig + "|" + &cert
+			self.create_payload_epid(&chain_signer.public().0, sign_type)?
 		} else {
 			Default::default()
 		};
