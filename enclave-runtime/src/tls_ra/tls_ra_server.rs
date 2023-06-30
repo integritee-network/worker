@@ -156,6 +156,8 @@ where
 pub unsafe extern "C" fn run_state_provisioning_server(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
+	quoting_enclave_target_info: sgx_target_info_t,
+	quote_size: u32,
 	skip_ra: c_int,
 ) -> sgx_status_t {
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
@@ -190,6 +192,8 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 	if let Err(e) = run_state_provisioning_server_internal::<_, WorkerModeProvider>(
 		socket_fd,
 		sign_type,
+		&quoting_enclave_target_info,
+		quote_size,
 		skip_ra,
 		seal_handler,
 	) {
@@ -207,10 +211,18 @@ pub(crate) fn run_state_provisioning_server_internal<
 >(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
+	quoting_enclave_target_info: &sgx_target_info_t,
+	quote_size: u32,
 	skip_ra: c_int,
 	seal_handler: StateAndKeyUnsealer,
 ) -> EnclaveResult<()> {
-	let server_config = tls_server_config(sign_type, OcallApi, skip_ra == 1)?;
+	let server_config = tls_server_config(
+		sign_type,
+		quoting_enclave_target_info,
+		quote_size,
+		OcallApi,
+		skip_ra == 1,
+	)?;
 	let (server_session, tcp_stream) = tls_server_session_stream(socket_fd, server_config)?;
 	let provisioning = ProvisioningPayload::from(WorkerModeProvider::worker_mode());
 
@@ -232,15 +244,27 @@ fn tls_server_session_stream(
 
 fn tls_server_config<A: EnclaveAttestationOCallApi + 'static>(
 	sign_type: sgx_quote_sign_type_t,
+	quoting_enclave_target_info: &sgx_target_info_t,
+	quote_size: u32,
 	ocall_api: A,
 	skip_ra: bool,
 ) -> EnclaveResult<ServerConfig> {
 	#[cfg(not(feature = "dcap"))]
-	let (key_der, cert_der) =
-		create_ra_report_and_signature(skip_ra, RemoteAttestationType::Epid, sign_type)?;
+	let (key_der, cert_der) = create_ra_report_and_signature(
+		skip_ra,
+		RemoteAttestationType::Epid,
+		sign_type,
+		quoting_enclave_target_info,
+		quote_size,
+	)?;
 	#[cfg(feature = "dcap")]
-	let (key_der, cert_der) =
-		create_ra_report_and_signature(skip_ra, RemoteAttestationType::Dcap, sign_type)?;
+	let (key_der, cert_der) = create_ra_report_and_signature(
+		skip_ra,
+		RemoteAttestationType::Dcap,
+		sign_type,
+		quoting_enclave_target_info,
+		quote_size,
+	)?;
 
 	let mut cfg = rustls::ServerConfig::new(Arc::new(ClientAuth::new(true, skip_ra, ocall_api)));
 	let certs = vec![rustls::Certificate(cert_der)];

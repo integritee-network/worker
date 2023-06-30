@@ -155,6 +155,8 @@ where
 pub unsafe extern "C" fn request_state_provisioning(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
+	quoting_enclave_target_info: sgx_target_info_t,
+	quote_size: u32,
 	shard: *const u8,
 	shard_size: u32,
 	skip_ra: c_int,
@@ -189,9 +191,15 @@ pub unsafe extern "C" fn request_state_provisioning(
 	let seal_handler =
 		EnclaveSealHandler::new(state_handler, state_key_repository, shielding_key_repository);
 
-	if let Err(e) =
-		request_state_provisioning_internal(socket_fd, sign_type, shard, skip_ra, seal_handler)
-	{
+	if let Err(e) = request_state_provisioning_internal(
+		socket_fd,
+		sign_type,
+		&quoting_enclave_target_info,
+		quote_size,
+		shard,
+		skip_ra,
+		seal_handler,
+	) {
 		error!("Failed to sync state due to: {:?}", e);
 		return e.into()
 	};
@@ -203,11 +211,19 @@ pub unsafe extern "C" fn request_state_provisioning(
 pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAndKeys>(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
+	quoting_enclave_target_info: &sgx_target_info_t,
+	quote_size: u32,
 	shard: ShardIdentifier,
 	skip_ra: c_int,
 	seal_handler: StateAndKeySealer,
 ) -> EnclaveResult<()> {
-	let client_config = tls_client_config_epid(sign_type, OcallApi, skip_ra == 1)?;
+	let client_config = tls_client_config(
+		sign_type,
+		quoting_enclave_target_info,
+		quote_size,
+		OcallApi,
+		skip_ra == 1,
+	)?;
 	let (mut client_session, mut tcp_stream) = tls_client_session_stream(socket_fd, client_config)?;
 
 	let mut client = TlsClient::new(
@@ -220,17 +236,29 @@ pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAn
 	client.read_shard()
 }
 
-fn tls_client_config_epid<A: EnclaveAttestationOCallApi + 'static>(
+fn tls_client_config<A: EnclaveAttestationOCallApi + 'static>(
 	sign_type: sgx_quote_sign_type_t,
+	quoting_enclave_target_info: &sgx_target_info_t,
+	quote_size: u32,
 	ocall_api: A,
 	skip_ra: bool,
 ) -> EnclaveResult<ClientConfig> {
 	#[cfg(not(feature = "dcap"))]
-	let (key_der, cert_der) =
-		create_ra_report_and_signature(skip_ra, RemoteAttestationType::Epid, sign_type)?;
+	let (key_der, cert_der) = create_ra_report_and_signature(
+		skip_ra,
+		RemoteAttestationType::Epid,
+		sign_type,
+		quoting_enclave_target_info,
+		quote_size,
+	)?;
 	#[cfg(feature = "dcap")]
-	let (key_der, cert_der) =
-		create_ra_report_and_signature(skip_ra, RemoteAttestationType::Dcap, sign_type)?;
+	let (key_der, cert_der) = create_ra_report_and_signature(
+		skip_ra,
+		RemoteAttestationType::Dcap,
+		sign_type,
+		quoting_enclave_target_info,
+		quote_size,
+	)?;
 
 	let mut cfg = rustls::ClientConfig::new();
 	let certs = vec![rustls::Certificate(cert_der)];

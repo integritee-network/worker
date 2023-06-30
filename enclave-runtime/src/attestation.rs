@@ -85,6 +85,8 @@ pub fn create_ra_report_and_signature(
 	skip_ra: bool,
 	remote_attestation_type: RemoteAttestationType,
 	sign_type: sgx_quote_sign_type_t,
+	quoting_enclave_target_info: &sgx_target_info_t,
+	quote_size: u32,
 ) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
 	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
 		Ok(r) => r,
@@ -106,8 +108,6 @@ pub fn create_ra_report_and_signature(
 		},
 		RemoteAttestationType::Dcap => {
 			// FIXME: this shoudl return a result with value
-			let quoting_enclave_target_info = qe_get_target_info_attestation_handler()?;
-			let quote_size = qe_get_quote_size_attestation_handler()?;
 			match attestation_handler.generate_dcap_ra_cert(
 				&quoting_enclave_target_info,
 				quote_size,
@@ -119,42 +119,6 @@ pub fn create_ra_report_and_signature(
 					Err(e.into())
 				},
 			}
-		},
-	}
-}
-
-pub fn qe_get_target_info_attestation_handler() -> EnclaveResult<sgx_target_info_t> {
-	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
-		Ok(r) => r,
-		Err(e) => {
-			error!("Component get failure: {:?}", e);
-			return Err(e.into())
-		},
-	};
-	let mut quote_err = sgx_quote3_error_t::SGX_QL_SUCCESS;
-	match attestation_handler.qe_get_target_info(&mut quote_err) {
-		Ok(quoting_enclave_target_info) => Ok(quoting_enclave_target_info),
-		Err(e) => {
-			error!("qe_get_target_info_attestation_handler failure: {:?}", e);
-			return Err(EnclaveError::SgxQuote(quote_err))
-		},
-	}
-}
-
-pub fn qe_get_quote_size_attestation_handler() -> EnclaveResult<u32> {
-	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
-		Ok(r) => r,
-		Err(e) => {
-			error!("Component get failure: {:?}", e);
-			return Err(e.into())
-		},
-	};
-	let mut quote_err = sgx_quote3_error_t::SGX_QL_SUCCESS;
-	match attestation_handler.qe_get_quote_size(&mut quote_err) {
-		Ok(quote_size) => Ok(quote_size),
-		Err(e) => {
-			error!("qe_get_quote_size_attestation_handler failure: {:?}", e);
-			return Err(EnclaveError::SgxQuote(quote_err))
 		},
 	}
 }

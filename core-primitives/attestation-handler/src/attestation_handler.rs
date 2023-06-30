@@ -92,14 +92,19 @@ pub trait AttestationHandler {
 		skip_ra: bool,
 	) -> EnclaveResult<(Vec<u8>, Vec<u8>)>;
 
-	///
-	fn qe_get_target_info(
-		&self,
-		qe3_ret: &mut sgx_quote3_error_t,
-	) -> EnclaveResult<sgx_target_info_t>;
+	// fn generate_dcap_ra_cert_get_qe_data_inside(
+	// 	&self,
+	// 	skip_ra: bool,
+	// ) -> EnclaveResult<(Vec<u8>, Vec<u8>)>;
 
 	///
-	fn qe_get_quote_size(&self, qe3_ret: &mut sgx_quote3_error_t) -> EnclaveResult<u32>;
+	// fn qe_get_target_info(
+	// 	&self,
+	// 	qe3_ret: &mut sgx_quote3_error_t,
+	// ) -> EnclaveResult<sgx_target_info_t>;
+
+	// ///
+	// fn qe_get_quote_size(&self, qe3_ret: &mut sgx_quote3_error_t) -> EnclaveResult<u32>;
 
 	/// Get the measurement register value of the enclave
 	fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]>;
@@ -269,35 +274,48 @@ where
 		Ok((key_der, cert_der))
 	}
 
-	fn qe_get_target_info(
-		&self,
-		qe3_ret: &mut sgx_quote3_error_t,
-	) -> EnclaveResult<sgx_target_info_t> {
-		let mut quoting_enclave_target_info: sgx_target_info_t = sgx_target_info_t::default();
-		let ret = unsafe { sgx_qe_get_target_info(&mut quoting_enclave_target_info as *mut _) };
-		if ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
-			error!("qe_get_target_info failed, return value={:#?}", ret);
-			*qe3_ret = ret;
-			//return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-			//return Err(Error::SgxQuote(qe3_ret))
-			return Err(Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))
-		}
+	// fn qe_get_target_info(
+	// 	&self,
+	// 	qe3_ret: &mut sgx_quote3_error_t,
+	// ) -> EnclaveResult<sgx_target_info_t> {
+	// 	let mut quoting_enclave_target_info: sgx_target_info_t = sgx_target_info_t::default();
+	// 	let ret = unsafe { sgx_qe_get_target_info(&mut quoting_enclave_target_info as *mut _) };
+	// 	if ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
+	// 		error!("qe_get_target_info failed, return value={:#?}", ret);
+	// 		*qe3_ret = ret;
+	// 		//return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+	// 		//return Err(Error::SgxQuote(qe3_ret))
+	// 		return Err(Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))
+	// 	}
 
-		Ok(quoting_enclave_target_info)
-	}
+	// 	Ok(quoting_enclave_target_info)
+	// }
 
-	fn qe_get_quote_size(&self, qe3_ret: &mut sgx_quote3_error_t) -> EnclaveResult<u32> {
-		let mut quote_size: u32 = 0;
-		let ret = unsafe { sgx_qe_get_quote_size(&mut quote_size as *mut _) };
+	// fn qe_get_quote_size(&self, qe3_ret: &mut sgx_quote3_error_t) -> EnclaveResult<u32> {
+	// 	let mut quote_size: u32 = 0;
+	// 	let ret = unsafe { sgx_qe_get_quote_size(&mut quote_size as *mut _) };
 
-		if ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
-			error!("e_get_quote_size failed, return value={:#?}", ret);
-			*qe3_ret = ret;
-			return Err(Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))
-		}
+	// 	if ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
+	// 		error!("e_get_quote_size failed, return value={:#?}", ret);
+	// 		*qe3_ret = ret;
+	// 		return Err(Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))
+	// 	}
 
-		Ok(quote_size)
-	}
+	// 	Ok(quote_size)
+	// }
+
+	// fn generate_dcap_ra_cert_get_qe_data_inside(
+	// 	&self,
+	// 	skip_ra: bool,
+	// ) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
+	// 	let mut quote_err = sgx_quote3_error_t::SGX_QL_SUCCESS;
+	// 	let quoting_enclave_target_info = self.qe_get_target_info(&mut quote_err)?;
+
+	// 	let mut quote_err_2 = sgx_quote3_error_t::SGX_QL_SUCCESS;
+	// 	let quote_size = self.qe_get_quote_size(&mut quote_err_2)?;
+
+	// 	self.generate_dcap_ra_cert(&quoting_enclave_target_info, quote_size, skip_ra)
+	// }
 
 	fn generate_dcap_ra_cert(
 		&self,

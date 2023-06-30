@@ -18,7 +18,7 @@ fn main() {
 	// if libsgx_dcap_ql.so.1 is there, but no libsgx-dcap_ql,
 	// just create a symlink by
 	// ln -s libsgx_dcap_ql.so.1 libsgx_dcap_ql.so
-	println!("cargo:rustc-link-lib=dylib=sgx_dcap_ql");
-	println!("cargo:rustc-link-lib=dylib=sgx_dcap_quoteverify");
-	println!("cargo:rustc-link-lib=dylib=dcap_quoteprov");
+	//println!("cargo:rustc-link-lib=dylib=sgx_dcap_ql");
+	//println!("cargo:rustc-link-lib=dylib=sgx_dcap_quoteverify");
+	//println!("cargo:rustc-link-lib=dylib=dcap_quoteprov");
 }
