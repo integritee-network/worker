@@ -46,6 +46,7 @@ test = [
     # substrate
     "frame-system",
 ]
+dcap = []
 
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
 sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_tcrypto_helper" }

@@ -37,23 +37,22 @@ jobs:
             mode: sidechain
             host: integritee-builder-sgx
             sgx_mode: HW
-            worker_features: dcap
+            additional_features: dcap
           - flavor_id: offchain-worker
             mode: offchain-worker
             host: integritee-builder-sgx
             sgx_mode: HW
-            worker_features: dcap
+            additional_features: dcap
           - flavor_id: teeracle
             mode: teeracle
             host: integritee-builder-sgx
             sgx_mode: HW
-            worker_features: dcap
+            additional_features: dcap
           - flavor_id: sidechain-evm
             mode: sidechain
-            additional_features: evm
+            additional_features: evm,dcap
             host: integritee-builder-sgx
             sgx_mode: HW
-            worker_features: dcap
 
     steps:
       - uses: actions/checkout@v3
