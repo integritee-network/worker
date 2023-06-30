@@ -360,6 +360,10 @@ where
 
 		let _ = ecc_handle.close();
 
+		println!("[Enclave] Generated ECC cert info:");
+		println!("[Enclave] Generated ECC cert info: key_der={:#?}", &key_der);
+		println!("[Enclave] Generated ECC cert info: cert_der={:#?}", &cert_der);
+		println!("[Enclave] Generated ECC cert info: qe_quote={:#?}", &qe_quote);
 		Ok((key_der, cert_der, qe_quote))
 	}
 }
