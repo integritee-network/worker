@@ -82,7 +82,7 @@ pub trait AttestationHandler {
 	/// but instead generate a mock certificate.
 	fn generate_ias_ra_cert(&self, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
 
-	/// Returns the DER encoded certificate and the raw DCAP quote.
+	/// Returns the DER encoded private_key, DER encoded certificate and the raw DCAP quote.
 	/// If skip_ra is set, it will not perform a remote attestation via IAS
 	/// but instead generate a mock certificate.
 	fn generate_dcap_ra_cert(
@@ -90,7 +90,7 @@ pub trait AttestationHandler {
 		quoting_enclave_target_info: &sgx_target_info_t,
 		quote_size: u32,
 		skip_ra: bool,
-	) -> EnclaveResult<(Vec<u8>, Vec<u8>)>;
+	) -> EnclaveResult<(Vec<u8>, Vec<u8>, Vec<u8>)>;
 
 	// fn generate_dcap_ra_cert_get_qe_data_inside(
 	// 	&self,
@@ -219,7 +219,7 @@ where
 		quoting_enclave_target_info: &sgx_target_info_t,
 		quote_size: u32,
 	) -> EnclaveResult<()> {
-		let (_cert_der, dcap_quote) =
+		let (_priv_key_der, _cert_der, dcap_quote) =
 			match self.generate_dcap_ra_cert(quoting_enclave_target_info, quote_size, false) {
 				Ok(r) => r,
 				Err(e) => return Err(e),
@@ -322,7 +322,7 @@ where
 		quoting_enclave_target_info: &sgx_target_info_t,
 		quote_size: u32,
 		skip_ra: bool,
-	) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
+	) -> EnclaveResult<(Vec<u8>, Vec<u8>, Vec<u8>)> {
 		let chain_signer = self.signing_key_repo.retrieve_key()?;
 		info!("[Enclave Attestation] Ed25519 signer pub key: {:?}", chain_signer.public().0);
 
@@ -350,8 +350,7 @@ where
 
 		// generate an ECC certificate
 		debug!("[Enclave] Generate ECC Certificate");
-		let (_key_der, cert_der) = match cert::gen_ecc_cert(&qe_quote, &prv_k, &pub_k, &ecc_handle)
-		{
+		let (key_der, cert_der) = match cert::gen_ecc_cert(&qe_quote, &prv_k, &pub_k, &ecc_handle) {
 			Ok(r) => r,
 			Err(e) => {
 				error!("[Enclave] gen_ecc_cert failed: {:?}", e);
@@ -361,7 +360,7 @@ where
 
 		let _ = ecc_handle.close();
 
-		Ok((cert_der, qe_quote))
+		Ok((key_der, cert_der, qe_quote))
 	}
 }
 

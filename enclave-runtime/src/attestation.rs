@@ -113,7 +113,7 @@ pub fn create_ra_report_and_signature(
 				quote_size,
 				skip_ra,
 			) {
-				Ok(dcap) => Ok(dcap),
+				Ok((key_der, cert_der, _qe_quote)) => Ok((key_der, cert_der)),
 				Err(e) => {
 					error!("create_epid_ra_report_and_signature failure: {:?}", e);
 					Err(e.into())
@@ -193,7 +193,7 @@ pub fn generate_dcap_ra_extrinsic_internal(
 ) -> EnclaveResult<OpaqueExtrinsic> {
 	let attestation_handler = GLOBAL_ATTESTATION_HANDLER_COMPONENT.get()?;
 
-	let (_cert_der, dcap_quote) = attestation_handler.generate_dcap_ra_cert(
+	let (_priv_key_der, _cert_der, dcap_quote) = attestation_handler.generate_dcap_ra_cert(
 		quoting_enclave_target_info,
 		quote_size,
 		skip_ra,
@@ -238,7 +238,7 @@ pub fn generate_dcap_ra_quote_internal(
 ) -> EnclaveResult<Vec<u8>> {
 	let attestation_handler = GLOBAL_ATTESTATION_HANDLER_COMPONENT.get()?;
 
-	let (_, dcap_quote) = attestation_handler.generate_dcap_ra_cert(
+	let (_priv_key_der, _cert_der, dcap_quote) = attestation_handler.generate_dcap_ra_cert(
 		quoting_enclave_target_info,
 		quote_size,
 		skip_ra,
