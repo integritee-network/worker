@@ -74,13 +74,17 @@ where
 	/// We trust here that the server sends us the correct data, as
 	/// we do not have any way to test it.
 	fn read_shard(&mut self) -> EnclaveResult<()> {
+		debug!("read_shard called, about to call self.write_shard().");
 		self.write_shard()?;
+		debug!("self.write_shard() succeeded.");
 		self.read_and_seal_all()
 	}
 
 	/// Send the shard of the state we want to receive to the provisioning server.
 	fn write_shard(&mut self) -> EnclaveResult<()> {
+		debug!("self.write_shard() called.");
 		self.tls_stream.write_all(self.shard.as_bytes())?;
+		debug!("write_all succeeded.");
 		Ok(())
 	}
 
@@ -217,6 +221,7 @@ pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAn
 	skip_ra: c_int,
 	seal_handler: StateAndKeySealer,
 ) -> EnclaveResult<()> {
+	debug!("Client config generate...");
 	let client_config = tls_client_config(
 		sign_type,
 		quoting_enclave_target_info,
@@ -224,13 +229,16 @@ pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAn
 		OcallApi,
 		skip_ra == 1,
 	)?;
+	debug!("Client config retrieved, client_config: {:#?}", &client_config);
 	let (mut client_session, mut tcp_stream) = tls_client_session_stream(socket_fd, client_config)?;
+	debug!("Client sesssion established.");
 
 	let mut client = TlsClient::new(
 		rustls::Stream::new(&mut client_session, &mut tcp_stream),
 		seal_handler,
 		shard,
 	);
+	debug!("Client is:{:#?}", &client);
 
 	info!("Requesting keys and state from mu-ra server of fellow validateer");
 	client.read_shard()
@@ -259,6 +267,7 @@ fn tls_client_config<A: EnclaveAttestationOCallApi + 'static>(
 		quoting_enclave_target_info,
 		quote_size,
 	)?;
+	debug!("got key_der and cert_der");
 
 	let mut cfg = rustls::ClientConfig::new();
 	let certs = vec![rustls::Certificate(cert_der)];
