@@ -115,7 +115,7 @@ pub fn create_ra_report_and_signature(
 			) {
 				Ok((key_der, cert_der, _qe_quote)) => Ok((key_der, cert_der)),
 				Err(e) => {
-					error!("create_epid_ra_report_and_signature failure: {:?}", e);
+					error!("generate_dcap_ra_cert failure: {:?}", e);
 					Err(e.into())
 				},
 			}
