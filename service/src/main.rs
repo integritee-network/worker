@@ -174,6 +174,9 @@ fn main() {
 		enclave_metrics_receiver,
 	)));
 
+	let quoting_enclave_target_info = enclave.qe_get_target_info().unwrap();
+	let quote_size = enclave.qe_get_quote_size().unwrap();
+
 	if let Some(run_config) = config.run_config() {
 		let shard = extract_shard(run_config.shard(), enclave.as_ref());
 
@@ -203,6 +206,8 @@ fn main() {
 			node_api,
 			tokio_handle,
 			initialization_handler,
+			quoting_enclave_target_info,
+			quote_size,
 		);
 	} else if let Some(smatches) = matches.subcommand_matches("request-state") {
 		println!("*** Requesting state from a registered worker \n");
@@ -240,8 +245,6 @@ fn main() {
 	} else if let Some(sub_matches) = matches.subcommand_matches("test") {
 		if sub_matches.is_present("provisioning-server") {
 			println!("*** Running Enclave MU-RA TLS server\n");
-			let quoting_enclave_target_info = enclave.qe_get_target_info().unwrap();
-			let quote_size = enclave.qe_get_quote_size().unwrap();
 			enclave_run_state_provisioning_server(
 				enclave.as_ref(),
 				sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
@@ -281,6 +284,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	node_api: ParentchainApi,
 	tokio_handle_getter: Arc<T>,
 	initialization_handler: Arc<InitializationHandler>,
+	quoting_enclave_target_info: sgx_target_info_t,
+	quote_size: u32,
 ) where
 	T: GetTokioHandle,
 	E: EnclaveBase
@@ -317,8 +322,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	let is_development_mode = run_config.dev();
 	let ra_url = config.mu_ra_url();
 	let enclave_api_key_prov = enclave.clone();
-	let quoting_enclave_target_info = enclave.qe_get_target_info().unwrap();
-	let quote_size = enclave.qe_get_quote_size().unwrap();
 	thread::spawn(move || {
 		enclave_run_state_provisioning_server(
 			enclave_api_key_prov.as_ref(),

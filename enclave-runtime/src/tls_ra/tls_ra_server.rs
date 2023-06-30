@@ -83,7 +83,10 @@ where
 
 	/// Sends all relevant data of the specific shard to the client.
 	fn write_shard(&mut self) -> EnclaveResult<()> {
+		println!("    [Enclave] (MU-RA-Server) write_shard, calling read_shard()");
 		let shard = self.read_shard()?;
+		println!("    [Enclave] (MU-RA-Server) write_shard, read_shard() OK");
+		println!("    [Enclave] (MU-RA-Server) write_shard, write_all()");
 		self.write_all(&shard)
 	}
 
@@ -91,6 +94,7 @@ where
 	fn read_shard(&mut self) -> EnclaveResult<ShardIdentifier> {
 		let mut shard_holder = ShardIdentifier::default();
 		let shard = shard_holder.as_fixed_bytes_mut();
+		println!("    [Enclave] (MU-RA-Server) read_shard, calling read_exact()");
 		self.tls_stream.read_exact(shard)?;
 		Ok(shard.into())
 	}
@@ -230,6 +234,7 @@ pub(crate) fn run_state_provisioning_server_internal<
 		TlsServer::new(StreamOwned::new(server_session, tcp_stream), seal_handler, provisioning);
 
 	println!("    [Enclave] (MU-RA-Server) MU-RA successful sending keys");
+	println!("    [Enclave] (MU-RA-Server) MU-RA successful, calling write_shard()");
 	server.write_shard()
 }
 
