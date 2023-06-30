@@ -139,7 +139,7 @@ RustEnclave_Link_Libs := -L$(CUSTOM_LIBRARY_PATH) -lenclave
 RustEnclave_Compile_Flags := $(SGX_COMMON_CFLAGS) $(ENCLAVE_CFLAGS) $(RustEnclave_Include_Paths)
 RustEnclave_Link_Flags := -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) \
 	-Wl,--whole-archive -l$(Trts_Library_Name) -Wl,--no-whole-archive \
-	-Wl,--start-group -lsgx_tstdc -lsgx_tcxx -lsgx_dcap_tvl -l$(Crypto_Library_Name) -l$(Service_Library_Name) -l$(ProtectedFs_Library_Name) $(RustEnclave_Link_Libs) -Wl,--end-group \
+	-Wl,--start-group -lsgx_tstdc -lsgx_tcxx -lsgx_dcap_tvl -lsgx_dcap_ql -lsgx_dcap_quoteverify -ldcap_quoteprov -l$(Crypto_Library_Name) -l$(Service_Library_Name) -l$(ProtectedFs_Library_Name) $(RustEnclave_Link_Libs) -Wl,--end-group \
 	-Wl,--version-script=enclave-runtime/Enclave.lds \
 	$(ENCLAVE_LDFLAGS)
 
@@ -171,7 +171,7 @@ $(Worker_Enclave_u_Object): service/Enclave_u.o
 $(Worker_Name): $(Worker_Enclave_u_Object) $(SRC_Files)
 	@echo
 	@echo "Building the integritee-service"
-	@SGX_SDK=$(SGX_SDK) SGX_MODE=$(SGX_MODE) cargo build -p integritee-service $(Worker_Rust_Flags)
+	@SGX_SDK=$(SGX_SDK) SGX_MODE=$(SGX_MODE) cargo build -vv -p integritee-service $(Worker_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	cp $(Worker_Rust_Path)/integritee-service ./bin
 

@@ -105,8 +105,9 @@ pub fn create_ra_report_and_signature(
 			}
 		},
 		RemoteAttestationType::Dcap => {
-			let quoting_enclave_target_info = qe_get_target_info()?;
-			let quote_size = qe_get_quote_size()?;
+			// FIXME: this shoudl return a result with value
+			let quoting_enclave_target_info = qe_get_target_info_attestation_handler()?;
+			let quote_size = qe_get_quote_size_attestation_handler()?;
 			match attestation_handler.generate_dcap_ra_cert(
 				&quoting_enclave_target_info,
 				quote_size,
@@ -121,26 +122,41 @@ pub fn create_ra_report_and_signature(
 		},
 	}
 }
-//FIXME: remove these two duplicates
-fn qe_get_target_info() -> EnclaveResult<sgx_target_info_t> {
-	let mut quoting_enclave_target_info: sgx_target_info_t = sgx_target_info_t::default();
-	let qe3_ret = unsafe { sgx_qe_get_target_info(&mut quoting_enclave_target_info as *mut _) };
-	if qe3_ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
-		panic!("{}", format!("qe_get_target_info failed, return value={:#?}", qe3_ret));
-	}
 
-	Ok(quoting_enclave_target_info)
+pub fn qe_get_target_info_attestation_handler() -> EnclaveResult<sgx_target_info_t> {
+	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
+		Ok(r) => r,
+		Err(e) => {
+			error!("Component get failure: {:?}", e);
+			return Err(e.into())
+		},
+	};
+	let mut quote_err = sgx_quote3_error_t::SGX_QL_SUCCESS;
+	match attestation_handler.qe_get_target_info(&mut quote_err) {
+		Ok(quoting_enclave_target_info) => Ok(quoting_enclave_target_info),
+		Err(e) => {
+			error!("qe_get_target_info_attestation_handler failure: {:?}", e);
+			return Err(EnclaveError::SgxQuote(quote_err))
+		},
+	}
 }
 
-fn qe_get_quote_size() -> EnclaveResult<u32> {
-	let mut quote_size: u32 = 0;
-	let qe3_ret = unsafe { sgx_qe_get_quote_size(&mut quote_size as *mut _) };
-
-	if qe3_ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
-		panic!("{}", format!("qe_get_quote_size failed, return value={:#?}", qe3_ret));
+pub fn qe_get_quote_size_attestation_handler() -> EnclaveResult<u32> {
+	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
+		Ok(r) => r,
+		Err(e) => {
+			error!("Component get failure: {:?}", e);
+			return Err(e.into())
+		},
+	};
+	let mut quote_err = sgx_quote3_error_t::SGX_QL_SUCCESS;
+	match attestation_handler.qe_get_quote_size(&mut quote_err) {
+		Ok(quote_size) => Ok(quote_size),
+		Err(e) => {
+			error!("qe_get_quote_size_attestation_handler failure: {:?}", e);
+			return Err(EnclaveError::SgxQuote(quote_err))
+		},
 	}
-
-	Ok(quote_size)
 }
 
 #[no_mangle]
