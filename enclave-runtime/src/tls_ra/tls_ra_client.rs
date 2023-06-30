@@ -229,7 +229,7 @@ pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAn
 		OcallApi,
 		skip_ra == 1,
 	)?;
-	debug!("Client config retrieved, client_config: {:#?}", &client_config);
+	debug!("Client config retrieved");
 	let (mut client_session, mut tcp_stream) = tls_client_session_stream(socket_fd, client_config)?;
 	debug!("Client sesssion established.");
 
@@ -238,7 +238,6 @@ pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAn
 		seal_handler,
 		shard,
 	);
-	debug!("Client is:{:#?}", &client);
 
 	info!("Requesting keys and state from mu-ra server of fellow validateer");
 	client.read_shard()
