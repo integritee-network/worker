@@ -36,7 +36,7 @@ use crate::{
 	Error as EnclaveError, Result as EnclaveResult,
 };
 use codec::{Decode, Encode};
-use itp_attestation_handler::{AttestationHandler, SgxQlQveCollateral};
+use itp_attestation_handler::{AttestationHandler, RemoteAttestationType, SgxQlQveCollateral};
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::metadata::{
@@ -80,9 +80,13 @@ pub unsafe extern "C" fn get_mrenclave(mrenclave: *mut u8, mrenclave_size: usize
 	}
 }
 
+// FIXME: add dcap suppoort for call site
 pub fn create_ra_report_and_signature(
-	sign_type: sgx_quote_sign_type_t,
 	skip_ra: bool,
+	remote_attestation_type: RemoteAttestationType,
+	sign_type: sgx_quote_sign_type_t,
+	quoting_enclave_target_info: &sgx_target_info_t,
+	quote_size: u32,
 ) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
 	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
 		Ok(r) => r,
@@ -92,11 +96,29 @@ pub fn create_ra_report_and_signature(
 		},
 	};
 
-	match attestation_handler.create_ra_report_and_signature(sign_type, skip_ra) {
-		Ok(r) => Ok(r),
-		Err(e) => {
-			error!("create_ra_report_and_signature failure: {:?}", e);
-			Err(e.into())
+	match remote_attestation_type {
+		RemoteAttestationType::Epid => {
+			match attestation_handler.create_epid_ra_report_and_signature(sign_type, skip_ra) {
+				Ok(epid) => Ok(epid),
+				Err(e) => {
+					error!("create_epid_ra_report_and_signature failure: {:?}", e);
+					Err(e.into())
+				},
+			}
+		},
+		RemoteAttestationType::Dcap => {
+			// FIXME: this shoudl return a result with value
+			match attestation_handler.generate_dcap_ra_cert(
+				&quoting_enclave_target_info,
+				quote_size,
+				skip_ra,
+			) {
+				Ok(dcap) => Ok(dcap),
+				Err(e) => {
+					error!("create_epid_ra_report_and_signature failure: {:?}", e);
+					Err(e.into())
+				},
+			}
 		},
 	}
 }

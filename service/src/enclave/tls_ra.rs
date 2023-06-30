@@ -14,7 +14,11 @@
 	limitations under the License.
 
 */
-use itp_enclave_api::{error::Error, remote_attestation::TlsRemoteAttestation, EnclaveResult};
+use itp_enclave_api::{
+	error::Error,
+	remote_attestation::{RemoteAttestation, TlsRemoteAttestation},
+	EnclaveResult,
+};
 use itp_types::ShardIdentifier;
 use log::*;
 use sgx_types::*;
@@ -62,7 +66,7 @@ pub fn enclave_run_state_provisioning_server<E: TlsRemoteAttestation>(
 	}
 }
 
-pub fn enclave_request_state_provisioning<E: TlsRemoteAttestation>(
+pub fn enclave_request_state_provisioning<E: TlsRemoteAttestation + RemoteAttestation>(
 	enclave_api: &E,
 	sign_type: sgx_quote_sign_type_t,
 	addr: &str,
@@ -72,5 +76,15 @@ pub fn enclave_request_state_provisioning<E: TlsRemoteAttestation>(
 	info!("[MU-RA-Client] Requesting key provisioning from {}", addr);
 
 	let stream = TcpStream::connect(addr).map_err(|e| Error::Other(Box::new(e)))?;
-	enclave_api.request_state_provisioning(stream.as_raw_fd(), sign_type, shard, skip_ra)
+	let quote_size = enclave_api.qe_get_quote_size()?;
+	let quoting_enclave_target_info = enclave_api.qe_get_target_info()?;
+
+	enclave_api.request_state_provisioning(
+		stream.as_raw_fd(),
+		sign_type,
+		quoting_enclave_target_info,
+		quote_size,
+		shard,
+		skip_ra,
+	)
 }

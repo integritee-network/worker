@@ -92,6 +92,20 @@ pub trait AttestationHandler {
 		skip_ra: bool,
 	) -> EnclaveResult<(Vec<u8>, Vec<u8>)>;
 
+	// fn generate_dcap_ra_cert_get_qe_data_inside(
+	// 	&self,
+	// 	skip_ra: bool,
+	// ) -> EnclaveResult<(Vec<u8>, Vec<u8>)>;
+
+	///
+	// fn qe_get_target_info(
+	// 	&self,
+	// 	qe3_ret: &mut sgx_quote3_error_t,
+	// ) -> EnclaveResult<sgx_target_info_t>;
+
+	// ///
+	// fn qe_get_quote_size(&self, qe3_ret: &mut sgx_quote3_error_t) -> EnclaveResult<u32>;
+
 	/// Get the measurement register value of the enclave
 	fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]>;
 
@@ -107,7 +121,7 @@ pub trait AttestationHandler {
 
 	/// Create the remote attestation report and encapsulate it in a DER certificate
 	/// Returns a pair consisting of (private key DER, certificate DER)
-	fn create_ra_report_and_signature(
+	fn create_epid_ra_report_and_signature(
 		&self,
 		sign_type: sgx_quote_sign_type_t,
 		skip_ra: bool,
@@ -117,6 +131,35 @@ pub trait AttestationHandler {
 pub struct IntelAttestationHandler<OCallApi, SigningKeyRepo> {
 	pub(crate) ocall_api: Arc<OCallApi>,
 	pub(crate) signing_key_repo: Arc<SigningKeyRepo>,
+}
+
+impl<OCallApi, AccessSigningKey> IntelAttestationHandler<OCallApi, AccessSigningKey>
+where
+	OCallApi: EnclaveAttestationOCallApi,
+	AccessSigningKey: AccessKey<KeyType = ed25519::Pair>,
+{
+	fn create_payload_epid(
+		&self,
+		pub_k: &[u8; 32],
+		sign_type: sgx_quote_sign_type_t,
+	) -> EnclaveResult<String> {
+		info!("    [Enclave] Create attestation report");
+		let (attn_report, sig, cert) = match self.create_epid_attestation_report(&pub_k, sign_type)
+		{
+			Ok(r) => r,
+			Err(e) => {
+				error!("    [Enclave] Error in create_attestation_report: {:?}", e);
+				return Err(e.into())
+			},
+		};
+		println!("    [Enclave] Create attestation report successful");
+		debug!("              attn_report = {:?}", attn_report);
+		debug!("              sig         = {:?}", sig);
+		debug!("              cert        = {:?}", cert);
+
+		// concat the information
+		Ok(attn_report + "|" + &sig + "|" + &cert)
+	}
 }
 
 impl<OCallApi, AccessSigningKey> AttestationHandler
@@ -132,7 +175,7 @@ where
 		// FIXME: should call `create_ra_report_and_signature` in skip_ra mode as well:
 		// https://github.com/integritee-network/worker/issues/321.
 		let cert_der = if !skip_ra {
-			match self.create_ra_report_and_signature(sign_type, skip_ra) {
+			match self.create_epid_ra_report_and_signature(sign_type, skip_ra) {
 				Ok((_key_der, cert_der)) => cert_der,
 				Err(e) => return Err(e),
 			}
@@ -154,7 +197,8 @@ where
 		// our certificate is unlinkable
 		let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 
-		let (_key_der, cert_der) = match self.create_ra_report_and_signature(sign_type, false) {
+		let (_key_der, cert_der) = match self.create_epid_ra_report_and_signature(sign_type, false)
+		{
 			Ok(r) => r,
 			Err(e) => return Err(e),
 		};
@@ -192,7 +236,7 @@ where
 		Ok(())
 	}
 
-	fn create_ra_report_and_signature(
+	fn create_epid_ra_report_and_signature(
 		&self,
 		sign_type: sgx_quote_sign_type_t,
 		skip_ra: bool,
@@ -209,22 +253,7 @@ where
 		debug!("     pubkey Y is {:02x}", pub_k.gy.iter().format(""));
 
 		let payload = if !skip_ra {
-			info!("    [Enclave] Create attestation report");
-			let (attn_report, sig, cert) =
-				match self.create_attestation_report(&chain_signer.public().0, sign_type) {
-					Ok(r) => r,
-					Err(e) => {
-						error!("    [Enclave] Error in create_attestation_report: {:?}", e);
-						return Err(e.into())
-					},
-				};
-			println!("    [Enclave] Create attestation report successful");
-			debug!("              attn_report = {:?}", attn_report);
-			debug!("              sig         = {:?}", sig);
-			debug!("              cert        = {:?}", cert);
-
-			// concat the information
-			attn_report + "|" + &sig + "|" + &cert
+			self.create_payload_epid(&chain_signer.public().0, sign_type)?
 		} else {
 			Default::default()
 		};
@@ -244,6 +273,49 @@ where
 		info!("    [Enclave] Generate ECC Certificate successful");
 		Ok((key_der, cert_der))
 	}
+
+	// fn qe_get_target_info(
+	// 	&self,
+	// 	qe3_ret: &mut sgx_quote3_error_t,
+	// ) -> EnclaveResult<sgx_target_info_t> {
+	// 	let mut quoting_enclave_target_info: sgx_target_info_t = sgx_target_info_t::default();
+	// 	let ret = unsafe { sgx_qe_get_target_info(&mut quoting_enclave_target_info as *mut _) };
+	// 	if ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
+	// 		error!("qe_get_target_info failed, return value={:#?}", ret);
+	// 		*qe3_ret = ret;
+	// 		//return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+	// 		//return Err(Error::SgxQuote(qe3_ret))
+	// 		return Err(Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))
+	// 	}
+
+	// 	Ok(quoting_enclave_target_info)
+	// }
+
+	// fn qe_get_quote_size(&self, qe3_ret: &mut sgx_quote3_error_t) -> EnclaveResult<u32> {
+	// 	let mut quote_size: u32 = 0;
+	// 	let ret = unsafe { sgx_qe_get_quote_size(&mut quote_size as *mut _) };
+
+	// 	if ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
+	// 		error!("e_get_quote_size failed, return value={:#?}", ret);
+	// 		*qe3_ret = ret;
+	// 		return Err(Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))
+	// 	}
+
+	// 	Ok(quote_size)
+	// }
+
+	// fn generate_dcap_ra_cert_get_qe_data_inside(
+	// 	&self,
+	// 	skip_ra: bool,
+	// ) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
+	// 	let mut quote_err = sgx_quote3_error_t::SGX_QL_SUCCESS;
+	// 	let quoting_enclave_target_info = self.qe_get_target_info(&mut quote_err)?;
+
+	// 	let mut quote_err_2 = sgx_quote3_error_t::SGX_QL_SUCCESS;
+	// 	let quote_size = self.qe_get_quote_size(&mut quote_err_2)?;
+
+	// 	self.generate_dcap_ra_cert(&quoting_enclave_target_info, quote_size, skip_ra)
+	// }
 
 	fn generate_dcap_ra_cert(
 		&self,
@@ -511,7 +583,7 @@ where
 			+ (u32::from(array[3]) << 24)
 	}
 
-	fn create_attestation_report(
+	fn create_epid_attestation_report(
 		&self,
 		pub_k: &[u8; 32],
 		sign_type: sgx_quote_sign_type_t,
