@@ -235,7 +235,11 @@ pub fn percent_decode(orig: String) -> EnclaveResult<String> {
 }
 
 // FIXME: This code is redundant with the host call of the integritee-node
-pub fn verify_mra_cert<A>(cert_der: &[u8], attestation_ocall: &A) -> SgxResult<()>
+pub fn verify_mra_cert<A>(
+	cert_der: &[u8],
+	is_payload_base64_encoded: bool,
+	attestation_ocall: &A,
+) -> SgxResult<()>
 where
 	A: EnclaveAttestationOCallApi,
 {
@@ -277,10 +281,11 @@ where
 
 	// Obtain Netscape Comment
 	offset += 1;
-	let payload = cert_der[offset..offset + len].to_vec();
-	let payload = base64::decode(&payload[..])
-		.expect("The received payload is not in Base64 encoded format or it is damaged.");
-
+	let mut payload = cert_der[offset..offset + len].to_vec();
+	if is_payload_base64_encoded {
+		payload = base64::decode(&payload[..])
+			.expect("The received payload is not in Base64 encoded format or it is damaged.");
+	}
 	// Extract each field
 	let mut iter = payload.split(|x| *x == 0x7C);
 	let attn_report_raw = iter.next().ok_or(sgx_status_t::SGX_ERROR_UNEXPECTED)?;
