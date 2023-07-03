@@ -307,7 +307,7 @@ where
 		let qe_quote_base_64 = base64::encode(&qe_quote[..]);
 		// generate an ECC certificate
 		debug!("[Enclave] Generate ECC Certificate");
-		let (_key_der, cert_der) =
+		let (key_der, cert_der) =
 			match cert::gen_ecc_cert(&qe_quote_base_64, &prv_k, &pub_k, &ecc_handle) {
 				Ok(r) => r,
 				Err(e) => {
