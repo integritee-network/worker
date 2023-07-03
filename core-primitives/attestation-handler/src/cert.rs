@@ -70,8 +70,9 @@ pub mod sgx {
 	const ISSUER: &str = "Integritee";
 	const SUBJECT: &str = "Integritee ephemeral";
 
+	/// `payload` must be a valid a string, not just arbitrary data.
 	pub fn gen_ecc_cert(
-		payload: &[u8],
+		payload: &str,
 		prv_k: &sgx_ec256_private_t,
 		pub_k: &sgx_ec256_public_t,
 		ecc_handle: &SgxEccHandle,
@@ -158,7 +159,7 @@ pub mod sgx {
 								writer.next().write_oid(&ObjectIdentifier::from_slice(&[
 									2, 16, 840, 1, 113_730, 1, 13,
 								]));
-								writer.next().write_bytes(payload);
+								writer.next().write_bytes(payload.as_bytes());
 							});
 						});
 					});
@@ -277,6 +278,8 @@ where
 	// Obtain Netscape Comment
 	offset += 1;
 	let payload = cert_der[offset..offset + len].to_vec();
+	let payload = base64::decode(&payload[..])
+		.expect("The received payload is not in Base64 encoded format or it is damaged.");
 
 	// Extract each field
 	let mut iter = payload.split(|x| *x == 0x7C);
