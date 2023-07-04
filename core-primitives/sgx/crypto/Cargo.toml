@@ -23,11 +23,14 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # substrate deps
-sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
+sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 # local deps
 itp-settings = { path = "../../settings" }
 itp-sgx-io = { path = "../io", default-features = false }
+
+# test sgx deps
+itp-sgx-temp-dir = { default-features = false, optional = true, path = "../temp-dir" }
 
 [features]
 default = ["std"]
@@ -49,3 +52,10 @@ sgx = [
     "serde-sgx",
 ]
 mocks = []
+test = [
+    # features
+    "mocks",
+    "sgx",
+    # deps
+    "itp-sgx-temp-dir",
+]

@@ -1,0 +1,27 @@
+[package]
+name = "fork-tree"
+version = "3.0.0"
+authors = ["Parity Technologies <admin@parity.io>"]
+edition = "2021"
+license = "Apache-2.0"
+homepage = "https://substrate.io"
+repository = "https://github.com/paritytech/substrate/"
+description = "Utility library for managing tree-like ordered data with logic for pruning the tree while finalizing nodes."
+documentation = "https://docs.rs/fork-tree"
+readme = "README.md"
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "3.2.2", features = ["derive"], default-features = false }
+
+# sgx deps
+sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+]
+sgx = [
+    # teaclave
+    "sgx_tstd",
+]

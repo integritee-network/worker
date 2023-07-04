@@ -41,10 +41,13 @@ pub enum Error {
 	ExpectedTriggeredImportDispatcher,
 	CouldNotDispatchBlockImport,
 	NoParentchainAssigned,
+	ParentChainValidation(itp_storage::error::Error),
+	ParentChainSync,
 	PrimitivesAccess(itp_primitives_cache::error::Error),
 	MutexAccess,
 	Attestation(itp_attestation_handler::error::Error),
 	Metadata(itp_node_api_metadata::error::Error),
+	BufferError(itp_utils::buffer::BufferError),
 	Other(Box<dyn std::error::Error>),
 }
 

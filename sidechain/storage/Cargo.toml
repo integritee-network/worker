@@ -13,11 +13,12 @@ rocksdb = "0.17.0"
 thiserror = "1.0"
 
 # integritee
+itp-settings = { path = "../../core-primitives/settings" }
 itp-types = { path = "../../core-primitives/types" }
 its-primitives = { path = "../primitives" }
 
 # Substrate dependencies
-sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 [dev-dependencies]
 # crate.io

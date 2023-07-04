@@ -22,7 +22,7 @@ use ita_stf::{
 	test_genesis::{endowed_account, test_genesis_setup},
 	State, TrustedCall,
 };
-use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
+use itc_parentchain_test::ParentchainHeaderBuilder;
 use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_externalities::SgxExternalitiesTrait;

@@ -15,7 +15,7 @@
 
 */
 
-use crate::{trusted_cli::TrustedCli, Cli};
+use crate::{trusted_cli::TrustedCli, Cli, CliResult, CliResultOk};
 use binary_merkle_tree::verify_proof;
 use ita_stf::MerkleProofWithCodec;
 use log::info;
@@ -28,9 +28,10 @@ pub struct VerifyMerkleProofCommand {
 }
 
 impl VerifyMerkleProofCommand {
-	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
+	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
 		info!("Proof is valid:");
 		println!("{:?}", verify_merkle_proof(cli, trusted_args, &self.merkle_proof_json));
+		Ok(CliResultOk::None)
 	}
 }
 

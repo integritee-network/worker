@@ -23,10 +23,10 @@ use itc_parentchain::{
 };
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
 use itp_node_api::api_client::ChainApi;
-use itp_types::SignedBlock;
+use itp_storage::StorageProof;
 use log::*;
 use my_node_runtime::Header;
-use sp_finality_grandpa::VersionedAuthorityList;
+use sp_consensus_grandpa::VersionedAuthorityList;
 use sp_runtime::traits::Header as HeaderTrait;
 use std::{cmp::min, sync::Arc};
 
@@ -79,9 +79,8 @@ where
 		enclave_api: Arc<EnclaveApi>,
 	) -> ServiceResult<Self> {
 		let genesis_hash = parentchain_api.get_genesis_hash()?;
-		let genesis_header: Header = parentchain_api
-			.get_header(Some(genesis_hash))?
-			.ok_or(Error::MissingGenesisHeader)?;
+		let genesis_header =
+			parentchain_api.header(Some(genesis_hash))?.ok_or(Error::MissingGenesisHeader)?;
 
 		let parentchain_init_params: ParentchainInitParams = if parentchain_api
 			.is_grandpa_available()?
@@ -125,7 +124,7 @@ where
 
 	fn sync_parentchain(&self, last_synced_header: Header) -> ServiceResult<Header> {
 		trace!("Getting current head");
-		let curr_block: SignedBlock = self
+		let curr_block = self
 			.parentchain_api
 			.last_finalized_block()?
 			.ok_or(Error::MissingLastFinalizedBlock)?;
@@ -142,7 +141,28 @@ where
 				return Ok(until_synced_header)
 			}
 
-			self.enclave_api.sync_parentchain(block_chunk_to_sync.as_slice(), 0)?;
+			let events_chunk_to_sync: Vec<Vec<u8>> = block_chunk_to_sync
+				.iter()
+				.map(|block| {
+					self.parentchain_api.get_events_for_block(Some(block.block.header.hash()))
+				})
+				.collect::<Result<Vec<_>, _>>()?;
+
+			println!("[+] Found {} event vector(s) to sync", events_chunk_to_sync.len());
+
+			let events_proofs_chunk_to_sync: Vec<StorageProof> = block_chunk_to_sync
+				.iter()
+				.map(|block| {
+					self.parentchain_api.get_events_value_proof(Some(block.block.header.hash()))
+				})
+				.collect::<Result<Vec<_>, _>>()?;
+
+			self.enclave_api.sync_parentchain(
+				block_chunk_to_sync.as_slice(),
+				events_chunk_to_sync.as_slice(),
+				events_proofs_chunk_to_sync.as_slice(),
+				0,
+			)?;
 
 			until_synced_header = block_chunk_to_sync
 				.last()

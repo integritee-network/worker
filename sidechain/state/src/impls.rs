@@ -17,15 +17,17 @@
 
 //! Implement the sidechain state traits.
 
+use core::fmt::Debug;
+
 use crate::{Error, SidechainState, StateUpdate};
 use codec::{Decode, Encode};
 use frame_support::ensure;
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_storage::keys::storage_value_key;
-use log::{error, info};
+use log::{debug, error, info};
 use sp_io::{storage, KillStorageResult};
 
-impl<T: SgxExternalitiesTrait + Clone + StateHash> SidechainState for T
+impl<T: SgxExternalitiesTrait + Clone + StateHash + Debug> SidechainState for T
 where
 	<T as SgxExternalitiesTrait>::SgxExternalitiesType: Encode,
 {
@@ -34,6 +36,10 @@ where
 
 	fn apply_state_update(&mut self, state_payload: &Self::StateUpdate) -> Result<(), Error> {
 		info!("Current state size: {}", self.state().encoded_size());
+		debug!("Current hash: {}", self.hash());
+		debug!("State_payload hash: {}", state_payload.state_hash_apriori());
+		debug!("self is: {:#?}", &self);
+		debug!("state_payload is: {:#?}", &state_payload);
 		ensure!(self.hash() == state_payload.state_hash_apriori(), Error::InvalidAprioriHash);
 
 		self.execute_with(|| {

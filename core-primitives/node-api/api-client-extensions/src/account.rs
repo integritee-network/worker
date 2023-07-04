@@ -16,26 +16,29 @@
 */
 
 use crate::ApiResult;
-use itp_types::AccountId;
-use sp_core::crypto::Pair;
-use sp_runtime::MultiSignature;
-use substrate_api_client::{Api, ExtrinsicParams, RpcClient};
+use itp_types::parentchain::{AccountData, AccountId, Balance, Index};
+use substrate_api_client::{
+	rpc::Request, Api, ExtrinsicParams, FrameSystemConfig, GetAccountInformation, SignExtrinsic,
+};
 
 /// ApiClient extension that contains some convenience methods around accounts.
 pub trait AccountApi {
-	fn get_nonce_of(&self, who: &AccountId) -> ApiResult<u32>;
-	fn get_free_balance(&self, who: &AccountId) -> ApiResult<u128>;
+	fn get_nonce_of(&self, who: &AccountId) -> ApiResult<Index>;
+	fn get_free_balance(&self, who: &AccountId) -> ApiResult<Balance>;
 }
 
-impl<P: Pair, Client: RpcClient, Params: ExtrinsicParams> AccountApi for Api<P, Client, Params>
+impl<Signer, Client, Params, Runtime> AccountApi for Api<Signer, Client, Params, Runtime>
 where
-	MultiSignature: From<P::Signature>,
+	Signer: SignExtrinsic<Runtime::AccountId>,
+	Client: Request,
+	Runtime: FrameSystemConfig<AccountId = AccountId, AccountData = AccountData, Index = Index>,
+	Params: ExtrinsicParams<Runtime::Index, Runtime::Hash>,
 {
-	fn get_nonce_of(&self, who: &AccountId) -> ApiResult<u32> {
+	fn get_nonce_of(&self, who: &AccountId) -> ApiResult<Index> {
 		Ok(self.get_account_info(who)?.map_or_else(|| 0, |info| info.nonce))
 	}
 
-	fn get_free_balance(&self, who: &AccountId) -> ApiResult<u128> {
+	fn get_free_balance(&self, who: &AccountId) -> ApiResult<Balance> {
 		Ok(self.get_account_data(who)?.map_or_else(|| 0, |data| data.free))
 	}
 }

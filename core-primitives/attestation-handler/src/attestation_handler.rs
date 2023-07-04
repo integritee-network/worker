@@ -39,9 +39,8 @@ use itp_settings::{
 	files::{RA_API_KEY_FILE, RA_DUMP_CERT_DER_FILE, RA_SPID_FILE},
 	worker::MR_ENCLAVE_SIZE,
 };
-use itp_sgx_crypto::Ed25519Seal;
+use itp_sgx_crypto::key_repository::AccessKey;
 use itp_sgx_io as io;
-use itp_sgx_io::StaticSealedIO;
 use itp_time_utils::now_as_secs;
 use log::*;
 use sgx_rand::{os, Rng};
@@ -51,10 +50,10 @@ use sgx_types::{
 	c_int, sgx_epid_group_id_t, sgx_quote_nonce_t, sgx_quote_sign_type_t, sgx_report_data_t,
 	sgx_spid_t, sgx_status_t, sgx_target_info_t, SgxResult, *,
 };
-use sp_core::Pair;
+use sp_core::{ed25519, Pair};
 use std::{
 	borrow::ToOwned,
-	format,
+	env, format,
 	io::{Read, Write},
 	net::TcpStream,
 	prelude::v1::*,
@@ -115,13 +114,16 @@ pub trait AttestationHandler {
 	) -> EnclaveResult<(Vec<u8>, Vec<u8>)>;
 }
 
-pub struct IntelAttestationHandler<OCallApi> {
+pub struct IntelAttestationHandler<OCallApi, SigningKeyRepo> {
 	pub(crate) ocall_api: Arc<OCallApi>,
+	pub(crate) signing_key_repo: Arc<SigningKeyRepo>,
 }
 
-impl<OCallApi> AttestationHandler for IntelAttestationHandler<OCallApi>
+impl<OCallApi, AccessSigningKey> AttestationHandler
+	for IntelAttestationHandler<OCallApi, AccessSigningKey>
 where
 	OCallApi: EnclaveAttestationOCallApi,
+	AccessSigningKey: AccessKey<KeyType = ed25519::Pair>,
 {
 	fn generate_ias_ra_cert(&self, skip_ra: bool) -> EnclaveResult<Vec<u8>> {
 		// Our certificate is unlinkable.
@@ -195,7 +197,7 @@ where
 		sign_type: sgx_quote_sign_type_t,
 		skip_ra: bool,
 	) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
-		let chain_signer = Ed25519Seal::unseal_from_static_file()?;
+		let chain_signer = self.signing_key_repo.retrieve_key()?;
 		info!("[Enclave Attestation] Ed25519 pub raw : {:?}", chain_signer.public().0);
 
 		info!("    [Enclave] Generate keypair");
@@ -249,7 +251,7 @@ where
 		quote_size: u32,
 		skip_ra: bool,
 	) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
-		let chain_signer = Ed25519Seal::unseal_from_static_file()?;
+		let chain_signer = self.signing_key_repo.retrieve_key()?;
 		info!("[Enclave Attestation] Ed25519 signer pub key: {:?}", chain_signer.public().0);
 
 		let ecc_handle = SgxEccHandle::new();
@@ -291,14 +293,17 @@ where
 	}
 }
 
-impl<OCallApi> IntelAttestationHandler<OCallApi>
+impl<OCallApi, AccessSigningKey> IntelAttestationHandler<OCallApi, AccessSigningKey> {
+	pub fn new(ocall_api: Arc<OCallApi>, signing_key_repo: Arc<AccessSigningKey>) -> Self {
+		Self { ocall_api, signing_key_repo }
+	}
+}
+
+impl<OCallApi, AccessSigningKey> IntelAttestationHandler<OCallApi, AccessSigningKey>
 where
 	OCallApi: EnclaveAttestationOCallApi,
+	AccessSigningKey: AccessKey<KeyType = ed25519::Pair>,
 {
-	pub fn new(ocall_api: Arc<OCallApi>) -> Self {
-		Self { ocall_api }
-	}
-
 	fn parse_response_attn_report(&self, resp: &[u8]) -> EnclaveResult<(String, String, String)> {
 		debug!("    [Enclave] Entering parse_response_attn_report");
 		let mut headers = [httparse::EMPTY_HEADER; 16];
@@ -356,17 +361,18 @@ where
 
 	fn log_resp_code(&self, resp_code: &mut Option<u16>) {
 		let msg = match resp_code {
-			Some(200) => "OK Operation Successful",
-			Some(401) => "Unauthorized Failed to authenticate or authorize request.",
-			Some(404) => "Not Found GID does not refer to a valid EPID group ID.",
-			Some(500) => "Internal error occurred",
+			Some(200) => "OK, operation successful",
+			Some(400) => "Bad request, quote is invalid, or linkability of quote/subscription does not match.",
+			Some(401) => "Unauthorized, failed to authenticate or authorize request.",
+			Some(404) => "Not found, GID does not refer to a valid EPID group ID.",
+			Some(500) => "Internal error occurred.",
 			Some(503) =>
 				"Service is currently not able to process the request (due to
 			a temporary overloading or maintenance). This is a
 			temporary state – the same request can be repeated after
-			some time. ",
+			some time.",
 			_ => {
-				error!("DBG:{:?}", resp_code);
+				error!("Error, received unknown HTTP response: {:?}", resp_code);
 				"Unknown error occured"
 			},
 		};
@@ -628,8 +634,9 @@ where
 	}
 
 	fn load_spid(filename: &str) -> SgxResult<sgx_spid_t> {
-		match io::read_to_string(filename).map(|contents| decode_spid(&contents)) {
-			Ok(r) => r,
+		// Check if set as an environment variable
+		match env::var("IAS_EPID_SPID").or_else(|_| io::read_to_string(filename)) {
+			Ok(spid) => decode_spid(&spid),
 			Err(e) => {
 				error!("Failed to load SPID: {:?}", e);
 				Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
@@ -638,7 +645,9 @@ where
 	}
 
 	fn get_ias_api_key() -> EnclaveResult<String> {
-		io::read_to_string(RA_API_KEY_FILE)
+		// Check if set as an environment variable
+		env::var("IAS_EPID_KEY")
+			.or_else(|_| io::read_to_string(RA_API_KEY_FILE))
 			.map(|key| key.trim_end().to_owned())
 			.map_err(|e| EnclaveError::Other(e.into()))
 	}

@@ -20,17 +20,19 @@
 
 extern crate alloc;
 
-use crate::parentchain_header_builder::ParentchainHeaderBuilder;
+use crate::ParentchainHeaderBuilder;
 use alloc::vec::Vec;
-use itp_types::{Block, Header, SignedBlock};
-use sp_runtime::OpaqueExtrinsic;
+use sp_runtime::traits::MaybeSerialize;
 
-pub struct ParentchainBlockBuilder {
+pub use itp_types::Header;
+pub use sp_runtime::generic::{Block, SignedBlock};
+
+pub struct ParentchainBlockBuilder<Extrinsic> {
 	header: Header,
-	extrinsics: Vec<OpaqueExtrinsic>,
+	extrinsics: Vec<Extrinsic>,
 }
 
-impl Default for ParentchainBlockBuilder {
+impl<Extrinsic> Default for ParentchainBlockBuilder<Extrinsic> {
 	fn default() -> Self {
 		ParentchainBlockBuilder {
 			header: ParentchainHeaderBuilder::default().build(),
@@ -39,22 +41,22 @@ impl Default for ParentchainBlockBuilder {
 	}
 }
 
-impl ParentchainBlockBuilder {
+impl<Extrinsic: MaybeSerialize> ParentchainBlockBuilder<Extrinsic> {
 	pub fn with_header(mut self, header: Header) -> Self {
 		self.header = header;
 		self
 	}
 
-	pub fn with_extrinsics(mut self, extrinsics: Vec<OpaqueExtrinsic>) -> Self {
+	pub fn with_extrinsics(mut self, extrinsics: Vec<Extrinsic>) -> Self {
 		self.extrinsics = extrinsics;
 		self
 	}
 
-	pub fn build(self) -> Block {
+	pub fn build(self) -> Block<Header, Extrinsic> {
 		Block { header: self.header, extrinsics: self.extrinsics }
 	}
 
-	pub fn build_signed(self) -> SignedBlock {
+	pub fn build_signed(self) -> SignedBlock<Block<Header, Extrinsic>> {
 		SignedBlock { block: self.build(), justifications: None }
 	}
 }

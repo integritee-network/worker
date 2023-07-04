@@ -16,11 +16,13 @@
 */
 
 extern crate chrono;
-use crate::{base_cli::BaseCommand, trusted_cli::TrustedCli, Cli};
+use crate::{base_cli::BaseCommand, trusted_cli::TrustedCli, Cli, CliResult, CliResultOk};
 use clap::Subcommand;
 
 #[cfg(feature = "teeracle")]
 use crate::oracle::OracleCommand;
+
+use crate::attesteer::AttesteerCommand;
 
 #[derive(Subcommand)]
 pub enum Commands {
@@ -35,13 +37,24 @@ pub enum Commands {
 	#[cfg(feature = "teeracle")]
 	#[clap(subcommand)]
 	Oracle(OracleCommand),
+
+	/// Subcommand for the attesteer.
+	#[clap(subcommand)]
+	Attesteer(AttesteerCommand),
 }
 
-pub fn match_command(cli: &Cli) {
+pub fn match_command(cli: &Cli) -> CliResult {
 	match &cli.command {
 		Commands::Base(cmd) => cmd.run(cli),
 		Commands::Trusted(trusted_cli) => trusted_cli.run(cli),
 		#[cfg(feature = "teeracle")]
-		Commands::Oracle(cmd) => cmd.run(cli),
-	};
+		Commands::Oracle(cmd) => {
+			cmd.run(cli);
+			Ok(CliResultOk::None)
+		},
+		Commands::Attesteer(cmd) => {
+			cmd.run(cli);
+			Ok(CliResultOk::None)
+		},
+	}
 }

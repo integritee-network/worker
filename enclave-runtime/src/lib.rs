@@ -33,7 +33,8 @@ use crate::{
 	error::{Error, Result},
 	initialization::global_components::{
 		GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT, GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT,
-		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
+		GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 	},
 	rpc::worker_api_direct::sidechain_io_handler,
 	utils::{
@@ -41,23 +42,30 @@ use crate::{
 		get_triggered_dispatcher_from_solo_or_parachain, utf8_str_from_raw, DecodeRaw,
 	},
 };
-use codec::{alloc::string::String, Decode};
+use codec::Decode;
 use itc_parentchain::block_import_dispatcher::{
 	triggered_dispatcher::TriggerParentchainBlockImport, DispatchBlockImport,
 };
-use itp_block_import_queue::PushToBlockQueue;
 use itp_component_container::ComponentGetter;
+use itp_import_queue::PushToQueue;
 use itp_node_api::metadata::NodeMetadata;
 use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
-use itp_sgx_crypto::{ed25519, Ed25519Seal, Rsa3072Seal};
-use itp_sgx_io::StaticSealedIO;
+use itp_sgx_crypto::key_repository::AccessPubkey;
+use itp_storage::{StorageProof, StorageProofChecker};
 use itp_types::{ShardIdentifier, SignedBlock};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
+use once_cell::sync::OnceCell;
 use sgx_types::sgx_status_t;
-use sp_core::crypto::Pair;
-use std::{boxed::Box, slice, vec::Vec};
+use sp_runtime::traits::BlakeTwo256;
+use std::{
+	boxed::Box,
+	path::PathBuf,
+	slice,
+	string::{String, ToString},
+	vec::Vec,
+};
 
 mod attestation;
 mod empty_impls;
@@ -81,6 +89,16 @@ pub mod test;
 pub type Hash = sp_core::H256;
 pub type AuthorityPair = sp_core::ed25519::Pair;
 
+static BASE_PATH: OnceCell<PathBuf> = OnceCell::new();
+
+fn get_base_path() -> Result<PathBuf> {
+	let base_path = BASE_PATH.get().ok_or_else(|| {
+		Error::Other("BASE_PATH not initialized. Broken enclave init flow!".to_string().into())
+	})?;
+
+	Ok(base_path.clone())
+}
+
 /// Initialize the enclave.
 #[no_mangle]
 pub unsafe extern "C" fn init(
@@ -88,7 +106,12 @@ pub unsafe extern "C" fn init(
 	mu_ra_addr_size: u32,
 	untrusted_worker_addr: *const u8,
 	untrusted_worker_addr_size: u32,
+	encoded_base_dir_str: *const u8,
+	encoded_base_dir_size: u32,
 ) -> sgx_status_t {
+	// Initialize the logging environment in the enclave.
+	env_logger::init();
+
 	let mu_ra_url =
 		match String::decode(&mut slice::from_raw_parts(mu_ra_addr, mu_ra_addr_size as usize))
 			.map_err(Error::Codec)
@@ -107,7 +130,21 @@ pub unsafe extern "C" fn init(
 		Err(e) => return e.into(),
 	};
 
-	match initialization::init_enclave(mu_ra_url, untrusted_worker_url) {
+	let base_dir = match String::decode(&mut slice::from_raw_parts(
+		encoded_base_dir_str,
+		encoded_base_dir_size as usize,
+	))
+	.map_err(Error::Codec)
+	{
+		Ok(b) => b,
+		Err(e) => return e.into(),
+	};
+
+	info!("Setting base_dir to {}", base_dir);
+	let path = PathBuf::from(base_dir);
+	BASE_PATH.set(path.clone()).expect("We only init this once here; qed.");
+
+	match initialization::init_enclave(mu_ra_url, untrusted_worker_url, path) {
 		Err(e) => e.into(),
 		Ok(()) => sgx_status_t::SGX_SUCCESS,
 	}
@@ -118,7 +155,15 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(
 	pubkey: *mut u8,
 	pubkey_size: u32,
 ) -> sgx_status_t {
-	let rsa_pubkey = match Rsa3072Seal::unseal_pubkey() {
+	let shielding_key_repository = match GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.get() {
+		Ok(s) => s,
+		Err(e) => {
+			error!("{:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	let rsa_pubkey = match shielding_key_repository.retrieve_pubkey() {
 		Ok(key) => key,
 		Err(e) => return e.into(),
 	};
@@ -144,18 +189,23 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(
 
 #[no_mangle]
 pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
-	if let Err(e) = ed25519::create_sealed_if_absent().map_err(Error::Crypto) {
-		return e.into()
-	}
+	let signing_key_repository = match GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT.get() {
+		Ok(s) => s,
+		Err(e) => {
+			error!("{:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
 
-	let signer = match Ed25519Seal::unseal_from_static_file().map_err(Error::Crypto) {
-		Ok(pair) => pair,
+	let signer_public = match signing_key_repository.retrieve_pubkey() {
+		Ok(s) => s,
 		Err(e) => return e.into(),
 	};
-	debug!("Restored ECC pubkey: {:?}", signer.public());
+
+	debug!("Restored ECC pubkey: {:?}", signer_public);
 
 	let pubkey_slice = slice::from_raw_parts_mut(pubkey, pubkey_size as usize);
-	pubkey_slice.clone_from_slice(&signer.public());
+	pubkey_slice.clone_from_slice(&signer_public);
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -306,19 +356,22 @@ pub unsafe extern "C" fn init_parentchain_components(
 	let encoded_params = slice::from_raw_parts(params, params_size);
 	let latest_header_slice = slice::from_raw_parts_mut(latest_header, latest_header_size);
 
-	let encoded_latest_header = match initialization::parentchain::init_parentchain_components::<
-		WorkerModeProvider,
-	>(encoded_params.to_vec())
-	{
-		Ok(h) => h,
-		Err(e) => return e.into(),
-	};
+	match init_parentchain_params_internal(encoded_params.to_vec(), latest_header_slice) {
+		Ok(()) => sgx_status_t::SGX_SUCCESS,
+		Err(e) => e.into(),
+	}
+}
 
-	if let Err(e) = write_slice_and_whitespace_pad(latest_header_slice, encoded_latest_header) {
-		return Error::Other(Box::new(e)).into()
-	};
+/// Initializes the parentchain components and writes the latest header into the `latest_header` slice.
+fn init_parentchain_params_internal(params: Vec<u8>, latest_header: &mut [u8]) -> Result<()> {
+	use initialization::parentchain::init_parentchain_components;
 
-	sgx_status_t::SGX_SUCCESS
+	let encoded_latest_header =
+		init_parentchain_components::<WorkerModeProvider>(get_base_path()?, params)?;
+
+	write_slice_and_whitespace_pad(latest_header, encoded_latest_header)?;
+
+	Ok(())
 }
 
 #[no_mangle]
@@ -338,6 +391,10 @@ pub unsafe extern "C" fn init_shard(shard: *const u8, shard_size: u32) -> sgx_st
 pub unsafe extern "C" fn sync_parentchain(
 	blocks_to_sync: *const u8,
 	blocks_to_sync_size: usize,
+	events_to_sync: *const u8,
+	events_to_sync_size: usize,
+	events_proofs_to_sync: *const u8,
+	events_proofs_to_sync_size: usize,
 	_nonce: *const u32,
 ) -> sgx_status_t {
 	let blocks_to_sync = match Vec::<SignedBlock>::decode_raw(blocks_to_sync, blocks_to_sync_size) {
@@ -345,7 +402,27 @@ pub unsafe extern "C" fn sync_parentchain(
 		Err(e) => return Error::Codec(e).into(),
 	};
 
-	if let Err(e) = dispatch_parentchain_blocks_for_import::<WorkerModeProvider>(blocks_to_sync) {
+	let events_proofs_to_sync =
+		match Vec::<StorageProof>::decode_raw(events_proofs_to_sync, events_proofs_to_sync_size) {
+			Ok(events_proofs) => events_proofs,
+			Err(e) => return Error::Codec(e).into(),
+		};
+
+	let blocks_to_sync_merkle_roots: Vec<sp_core::H256> =
+		blocks_to_sync.iter().map(|block| block.block.header.state_root).collect();
+
+	if let Err(e) = validate_events(&events_proofs_to_sync, &blocks_to_sync_merkle_roots) {
+		return e.into()
+	}
+
+	let events_to_sync = match Vec::<Vec<u8>>::decode_raw(events_to_sync, events_to_sync_size) {
+		Ok(events) => events,
+		Err(e) => return Error::Codec(e).into(),
+	};
+
+	if let Err(e) =
+		dispatch_parentchain_blocks_for_import::<WorkerModeProvider>(blocks_to_sync, events_to_sync)
+	{
 		return e.into()
 	}
 
@@ -362,6 +439,7 @@ pub unsafe extern "C" fn sync_parentchain(
 ///
 fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>(
 	blocks_to_sync: Vec<SignedBlock>,
+	events_to_sync: Vec<Vec<u8>>,
 ) -> Result<()> {
 	if WorkerModeProvider::worker_mode() == WorkerMode::Teeracle {
 		trace!("Not importing any parentchain blocks");
@@ -377,7 +455,44 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 			return Err(Error::NoParentchainAssigned)
 		};
 
-	import_dispatcher.dispatch_import(blocks_to_sync)?;
+	import_dispatcher.dispatch_import(blocks_to_sync, events_to_sync)?;
+	Ok(())
+}
+
+/// Validates the events coming from the parentchain
+fn validate_events(
+	events_proofs: &Vec<StorageProof>,
+	blocks_merkle_roots: &Vec<sp_core::H256>,
+) -> Result<()> {
+	info!(
+		"Validating events, events_proofs_length: {:?}, blocks_merkle_roots_lengths: {:?}",
+		events_proofs.len(),
+		blocks_merkle_roots.len()
+	);
+
+	if events_proofs.len() != blocks_merkle_roots.len() {
+		return Err(Error::ParentChainSync)
+	}
+
+	let events_key = itp_storage::storage_value_key("System", "Events");
+
+	let validated_events: Result<Vec<Vec<u8>>> = events_proofs
+		.iter()
+		.zip(blocks_merkle_roots.iter())
+		.map(|(proof, root)| {
+			StorageProofChecker::<BlakeTwo256>::check_proof(
+				*root,
+				events_key.as_slice(),
+				proof.clone(),
+			)
+			.ok()
+			.flatten()
+			.ok_or_else(|| Error::ParentChainValidation(itp_storage::Error::WrongValue))
+		})
+		.collect();
+
+	let _ = validated_events?;
+
 	Ok(())
 }
 
@@ -401,4 +516,18 @@ fn internal_trigger_parentchain_block_import() -> Result<()> {
 	let triggered_import_dispatcher = get_triggered_dispatcher_from_solo_or_parachain()?;
 	triggered_import_dispatcher.import_all()?;
 	Ok(())
+}
+
+// This is required, because `ring` / `ring-xous` would not compile without it non-release (debug) mode.
+// See #1200 for more details.
+#[cfg(debug_assertions)]
+#[no_mangle]
+pub extern "C" fn __assert_fail(
+	__assertion: *const u8,
+	__file: *const u8,
+	__line: u32,
+	__function: *const u8,
+) -> ! {
+	use core::intrinsics::abort;
+	abort()
 }

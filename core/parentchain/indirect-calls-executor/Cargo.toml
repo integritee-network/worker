@@ -11,6 +11,7 @@ sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-s
 
 # local dependencies
 ita-stf = { path = "../../../app-libs/stf", default-features = false }
+itp-api-client-types = { path = "../../../core-primitives/node-api/api-client-types", default-features = false }
 itp-node-api = { path = "../../../core-primitives/node-api", default-features = false }
 itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
@@ -33,15 +34,13 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 log = { version = "0.4", default-features = false }
 
 # substrate dep
-beefy-merkle-tree = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
-sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
-
-# scs/integritee
-substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.37-tag-v0.7.0", default-features = false }
+binary-merkle-tree = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 [dev-dependencies]
 env_logger = "0.9.0"
+itp-node-api = { path = "../../../core-primitives/node-api", features = ["mocks"] }
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", features = ["mocks"] }
 itp-stf-executor = { path = "../../../core-primitives/stf-executor", features = ["mocks"] }
 itp-test = { path = "../../../core-primitives/test" }
@@ -60,13 +59,13 @@ std = [
     "itp-sgx-crypto/std",
     "itp-stf-executor/std",
     "itp-top-pool-author/std",
+    "itp-api-client-types/std",
     "itp-types/std",
     "log/std",
     #substrate
-    "beefy-merkle-tree/std",
+    "binary-merkle-tree/std",
     "sp-core/std",
     "sp-runtime/std",
-    "substrate-api-client/std",
     "thiserror",
 ]
 sgx = [

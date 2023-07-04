@@ -20,7 +20,7 @@ use itp_time_utils::now_as_millis;
 use itp_types::ShardIdentifier;
 use its_primitives::types::{BlockHash, SignedBlock as SignedSidechainBlock};
 use its_test::{
-	sidechain_block_builder::SidechainBlockBuilder,
+	sidechain_block_builder::{SidechainBlockBuilder, SidechainBlockBuilderTrait},
 	sidechain_block_data_builder::SidechainBlockDataBuilder,
 	sidechain_header_builder::SidechainHeaderBuilder,
 };
@@ -40,7 +40,7 @@ pub fn create_temp_dir() -> TempDir {
 }
 
 pub fn get_storage(path: PathBuf) -> SidechainStorage<SignedSidechainBlock> {
-	SidechainStorage::<SignedSidechainBlock>::new(path).unwrap()
+	SidechainStorage::<SignedSidechainBlock>::load_from_base_path(path).unwrap()
 }
 
 pub fn default_shard() -> ShardIdentifier {

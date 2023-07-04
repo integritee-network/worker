@@ -126,7 +126,7 @@ pub fn nonce_is_computed_correctly() {
 	);
 
 	assert_eq!(0, TestStf::get_account_nonce(&mut state, &enclave_account));
-	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
+	let repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
 	assert!(TestStf::execute_call(
 		&mut state,
 		trusted_call_1_signed,

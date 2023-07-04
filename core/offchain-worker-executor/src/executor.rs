@@ -155,7 +155,7 @@ impl<
 
 	fn get_latest_parentchain_header(&self) -> Result<ParentchainBlock::Header> {
 		let header = self.validator_accessor.execute_on_validator(|v| {
-			let latest_parentchain_header = v.latest_finalized_header(v.num_relays())?;
+			let latest_parentchain_header = v.latest_finalized_header()?;
 			Ok(latest_parentchain_header)
 		})?;
 		Ok(header)

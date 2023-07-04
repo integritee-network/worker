@@ -20,7 +20,7 @@ use crate::{
 	trusted_cli::TrustedCli,
 	trusted_command_utils::{get_identifiers, get_pair_from_str},
 	trusted_operation::perform_trusted_operation,
-	Cli,
+	Cli, CliResult, CliResultOk,
 };
 use codec::Decode;
 use ita_stf::{
@@ -33,7 +33,6 @@ use pallet_evm::{AddressMapping, HashedAddressMapping};
 use sp_core::{crypto::Ss58Codec, Pair, H160, U256};
 use sp_runtime::traits::BlakeTwo256;
 use std::vec::Vec;
-use substrate_api_client::utils::FromHexString;
 
 #[derive(Parser)]
 pub struct EvmCreateCommands {
@@ -45,7 +44,7 @@ pub struct EvmCreateCommands {
 }
 
 impl EvmCreateCommands {
-	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
+	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
 		let from = get_pair_from_str(trusted_args, &self.from);
 		let from_acc: AccountId = from.public().into();
 		println!("from ss58 is {}", from.public().to_ss58check());
@@ -70,7 +69,7 @@ impl EvmCreateCommands {
 		let top = TrustedCall::evm_create(
 			from_acc,
 			sender_evm_acc,
-			Vec::from_hex(self.smart_contract.to_string()).unwrap(),
+			array_bytes::hex2bytes(&self.smart_contract).unwrap().to_vec(),
 			U256::from(0),
 			967295,        // gas limit
 			U256::from(1), // max_fee_per_gas !>= min_gas_price defined in runtime
@@ -81,10 +80,11 @@ impl EvmCreateCommands {
 		.sign(&from.into(), nonce, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
 
-		let _ = perform_trusted_operation(cli, trusted_args, &top);
+		let _ = perform_trusted_operation(cli, trusted_args, &top)?;
 
 		let execution_address = evm_create_address(sender_evm_acc, evm_account_nonce);
 		info!("trusted call evm_create executed");
 		println!("Created the smart contract with address {:?}", execution_address);
+		Ok(CliResultOk::H160 { hash: execution_address })
 	}
 }

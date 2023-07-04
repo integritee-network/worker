@@ -17,6 +17,7 @@
 
 use super::{db::SidechainDB, Error, Result};
 use codec::{Decode, Encode};
+use itp_settings::files::SIDECHAIN_STORAGE_PATH;
 use its_primitives::{
 	traits::{Block as BlockTrait, Header as HeaderTrait, SignedBlock as SignedBlockT},
 	types::{BlockHash, BlockNumber},
@@ -25,6 +26,7 @@ use log::*;
 use rocksdb::WriteBatch;
 use sp_core::H256;
 use std::{collections::HashMap, fmt::Debug, path::PathBuf};
+
 /// key value of sidechain db of last block
 const LAST_BLOCK_KEY: &[u8] = b"last_sidechainblock";
 /// key value of the stored shards vector
@@ -56,11 +58,12 @@ pub struct SidechainStorage<SignedBlock: SignedBlockT> {
 }
 
 impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
-	/// loads the DB from the given paths and stores the listed shard
-	/// and their last blocks in memory for better performance
-	pub fn new(path: PathBuf) -> Result<SidechainStorage<SignedBlock>> {
+	/// Loads or initializes the DB at a given path.
+	///
+	/// Loads existing shards and their last blocks in memory for better performance.
+	pub fn load_from_base_path(base_path: PathBuf) -> Result<SidechainStorage<SignedBlock>> {
 		// load db
-		let db = SidechainDB::open_default(path)?;
+		let db = SidechainDB::open_default(base_path.join(SIDECHAIN_STORAGE_PATH))?;
 		let mut storage = SidechainStorage { db, shards: vec![], last_blocks: HashMap::new() };
 		storage.shards = storage.load_shards_from_db()?;
 		// get last block of each shard

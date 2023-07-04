@@ -1,5 +1,5 @@
 [package]
-name = "itp-block-import-queue"
+name = "itp-import-queue"
 version = "0.8.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"

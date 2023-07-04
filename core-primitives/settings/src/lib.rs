@@ -42,17 +42,13 @@ pub mod files {
 	pub static SIDECHAIN_PURGE_LIMIT: u64 = 100; // keep the last.. sidechainblocks when purging
 
 	// used by enclave
-	pub const RSA3072_SEALED_KEY_FILE: &str = "rsa3072_key_sealed.bin";
-	pub const SEALED_SIGNER_SEED_FILE: &str = "ed25519_key_sealed.bin";
-	pub const AES_KEY_FILE_AND_INIT_V: &str = "aes_key_sealed.bin";
-	pub const LIGHT_CLIENT_DB: &str = "light_client_db.bin";
+	/// Path to the light-client db.
+	pub const LIGHT_CLIENT_DB_PATH: &str = "light_client_db";
 
 	pub const RA_DUMP_CERT_DER_FILE: &str = "ra_dump_cert.der";
 
 	// used by worker and enclave
 	pub const SHARDS_PATH: &str = "shards";
-	pub const ENCRYPTED_STATE_FILE: &str = "state.bin";
-	pub const LAST_SLOT_BIN: &str = "last_slot.bin";
 
 	#[cfg(feature = "production")]
 	pub static RA_SPID_FILE: &str = "spid_production.txt";
@@ -95,16 +91,19 @@ pub mod worker {
 pub mod sidechain {
 	use core::time::Duration;
 
-	pub static SLOT_DURATION: Duration = Duration::from_millis(300);
+	pub static SLOT_DURATION: Duration = Duration::from_millis(1000);
 }
 
 /// Settings concerning the enclave
 pub mod enclave {}
 
 /// Settings for the Teeracle
-#[cfg(feature = "teeracle")]
 pub mod teeracle {
 	use core::time::Duration;
 	// Send extrinsic to update market exchange rate on the parentchain once per day
-	pub static DEFAULT_MARKET_DATA_UPDATE_INTERVAL: Duration = Duration::from_secs(86400);
+	pub static DEFAULT_MARKET_DATA_UPDATE_INTERVAL: Duration = ONE_DAY;
+
+	pub static ONE_DAY: Duration = Duration::from_secs(86400);
+
+	pub static THIRTY_MINUTES: Duration = Duration::from_secs(1800);
 }

@@ -17,12 +17,15 @@
 
 use crate::{
 	command_utils::{get_accountid_from_str, get_chain_api, *},
-	Cli,
+	Cli, CliResult, CliResultOk,
 };
+use itp_node_api::api_client::{Address, ParentchainExtrinsicSigner};
 use log::*;
 use my_node_runtime::Balance;
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
-use substrate_api_client::{GenericAddress, XtStatus};
+use substrate_api_client::{
+	extrinsic::BalancesExtrinsics, GetAccountInformation, SubmitAndWatch, XtStatus,
+};
 
 #[derive(Parser)]
 pub struct TransferCommand {
@@ -37,16 +40,23 @@ pub struct TransferCommand {
 }
 
 impl TransferCommand {
-	pub(crate) fn run(&self, cli: &Cli) {
+	pub(crate) fn run(&self, cli: &Cli) -> CliResult {
 		let from_account = get_pair_from_str(&self.from);
 		let to_account = get_accountid_from_str(&self.to);
 		info!("from ss58 is {}", from_account.public().to_ss58check());
 		info!("to ss58 is {}", to_account.to_ss58check());
-		let api = get_chain_api(cli).set_signer(sr25519_core::Pair::from(from_account));
-		let xt = api.balance_transfer(GenericAddress::Id(to_account.clone()), self.amount);
-		let tx_hash = api.send_extrinsic(xt.hex_encode(), XtStatus::InBlock).unwrap();
+		let mut api = get_chain_api(cli);
+		api.set_signer(ParentchainExtrinsicSigner::new(sr25519_core::Pair::from(from_account)));
+		let xt = api.balance_transfer_allow_death(Address::Id(to_account.clone()), self.amount);
+		let tx_hash = api
+			.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock)
+			.unwrap()
+			.extrinsic_hash;
 		println!("[+] TrustedOperation got finalized. Hash: {:?}\n", tx_hash);
 		let result = api.get_account_data(&to_account).unwrap().unwrap();
-		println!("balance for {} is now {}", to_account, result.free);
+		let balance = result.free;
+		println!("balance for {} is now {}", to_account, balance);
+
+		Ok(CliResultOk::Balance { balance })
 	}
 }

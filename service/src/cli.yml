@@ -19,11 +19,16 @@ args:
         takes_value: true
         default_value: "ws://127.0.0.1"
     - node-port:
-        short: p
-        long: node-port
-        help: Set the websocket port to listen for substrate events
-        takes_value: true
-        default_value: "9944"
+          short: p
+          long: node-port
+          help: Set the websocket port to listen for substrate events
+          takes_value: true
+          default_value: "9944"
+    - data-dir:
+          short: d
+          long: data-dir
+          help: Data dir where the worker stores it's keys and other data.
+          takes_value: true
     - ws-external:
         long: ws-external
         help: Set this flag in case the worker should listen to external requests.
@@ -90,7 +95,6 @@ subcommands:
         args:
             - skip-ra:
                 long: skip-ra
-                short: s
                 help: skip remote attestation. Set this flag if running enclave in SW mode
             - shard:
                 required: false
@@ -110,17 +114,20 @@ subcommands:
                 short: i
                 help: Set the teeracle exchange rate update interval. Example of accepted syntax <5 seconds 15 minutes 2 hours 1 days> or short <5s15m2h1d>
                 takes_value: true
+            - reregister-teeracle-interval:
+                required: false
+                long: reregister
+                help: Set the teeracle reregistration interval. Example of accepted syntax <5 seconds 15 minutes 2 hours 1 days> or short <5s15m2h1d>
+                takes_value: true
     - request-state:
         about: join a shard by requesting key provisioning from another worker
         args:
             - shard:
                 long: shard
-                short: s
                 required: false
                 help: shard identifier base58 encoded. Defines the state that this worker shall operate on. Default is mrenclave
             - skip-ra:
                   long: skip-ra
-                  short: s
                   help: skip remote attestation. Set this flag if running enclave in SW mode
     - shielding-key:
         about: Get the public RSA3072 key from the TEE to be used to encrypt requests

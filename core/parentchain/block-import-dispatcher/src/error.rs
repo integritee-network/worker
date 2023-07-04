@@ -33,7 +33,7 @@ pub enum Error {
 	#[error("Even though there is no dispatcher assigned, the dispatch function is called.")]
 	NoDispatcherAssigned,
 	#[error("Block import queue error: {0}")]
-	BlockImportQueue(#[from] itp_block_import_queue::error::Error),
+	ImportQueue(#[from] itp_import_queue::error::Error),
 	#[error("Block import error: {0}")]
 	BlockImport(#[from] itc_parentchain_block_importer::error::Error),
 	#[error(transparent)]

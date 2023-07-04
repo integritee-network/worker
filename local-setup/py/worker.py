@@ -100,7 +100,6 @@ class Worker:
     def purge(self):
         """ Deletes the light_client_db.bin, the shards and the sidechain_db
         """
-        self.purge_last_slot_seal()
         self.purge_light_client_db()
         self.purge_shards_and_sidechain_db()
         return self
@@ -117,12 +116,6 @@ class Worker:
     def purge_light_client_db(self):
         print(f'purging light_client_db')
         for db in pathlib.Path(self.cwd).glob('light_client_db.bin*'):
-            print(f'remove: {db}')
-            db.unlink()
-
-    def purge_last_slot_seal(self):
-        print(f'purging last_slot_seal')
-        for db in pathlib.Path(self.cwd).glob('last_slot.bin'):
             print(f'remove: {db}')
             db.unlink()
 
@@ -164,8 +157,12 @@ class Worker:
                                         'substrate_api_client=warn,'
                                         'jsonrpsee_ws_client=warn,'
                                         'jsonrpsee_ws_server=warn,'
-                                        'enclave_runtime=warn,'
+                                        'enclave_runtime=info,'
                                         'integritee_service=warn,'
+                                        'itp_stf_state_handler=debug,'
+                                        'its_consensus_common=debug,'
+                                        'its_consensus_aura=trace,'
+                                        'itc_parentchain_block_importer=debug,'
                                         'ita_stf=debug')
 
         return Popen(

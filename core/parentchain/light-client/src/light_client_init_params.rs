@@ -17,7 +17,7 @@
 */
 
 use codec::{Decode, Encode};
-use sp_finality_grandpa::AuthorityList;
+use sp_consensus_grandpa::AuthorityList;
 use std::vec::Vec;
 
 #[derive(Encode, Decode, Clone)]

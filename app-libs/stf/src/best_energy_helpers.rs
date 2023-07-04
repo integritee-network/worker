@@ -21,8 +21,9 @@ pub fn get_merkle_proof_for_actor_from_file(
 
 pub fn read_market_results(timestamp: &str) -> Result<MarketOutput, StfError> {
 	let file = format!("{}/{}.json", RESULTS_DIR, timestamp);
-	let content = fs::read_to_string(file)
-		.map_err(|e| StfError::Dispatch(format!("Reading Results File Error: {:?}", e)))?;
+	let content = fs::read_to_string(&file).map_err(|e| {
+		StfError::Dispatch(format!("Reading Results File: {}, Error: {:?}", file, e))
+	})?;
 
 	serde_json::from_str(&content).map_err(|e| {
 		StfError::Dispatch(format!("Deserializing Results {:?}. Error: {:?}", content, e))
@@ -31,8 +32,9 @@ pub fn read_market_results(timestamp: &str) -> Result<MarketOutput, StfError> {
 
 pub fn read_orders(timestamp: &str) -> Result<Vec<Order>, StfError> {
 	let file = format!("{}/{}.json", ORDERS_DIR, timestamp);
-	let content = fs::read_to_string(file)
-		.map_err(|e| StfError::Dispatch(format!("Reading Orders File Error: {:?}", e)))?;
+	let content = fs::read_to_string(&file).map_err(|e| {
+		StfError::Dispatch(format!("Reading Orders File: {}, Error: {:?}", file, e))
+	})?;
 
 	serde_json::from_str(&content).map_err(|e| {
 		StfError::Dispatch(format!("Deserializing Orders {:?}. Error: {:?}", content, e))

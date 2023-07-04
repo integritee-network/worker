@@ -19,18 +19,24 @@
 //!
 //! This is used instead of `futures_timer::Interval` because it was unreliable.
 
-pub use sp_consensus_slots::Slot;
-
-use itp_sgx_io::StaticSealedIO;
 use itp_time_utils::duration_now;
 use its_block_verification::slot::slot_from_timestamp_and_duration;
 use its_consensus_common::Error as ConsensusError;
 use its_primitives::traits::{
 	Block as SidechainBlockTrait, BlockData, SignedBlock as SignedSidechainBlockTrait,
 };
+use lazy_static::lazy_static;
 use log::warn;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::time::Duration;
+
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use std::sync::SgxRwLock as RwLock;
+
+#[cfg(all(feature = "std", not(feature = "sgx")))]
+use std::sync::RwLock;
+
+pub use sp_consensus_slots::Slot;
 
 /// Returns the duration until the next slot from now.
 pub fn time_until_next_slot(slot_duration: Duration) -> Duration {
@@ -129,7 +135,7 @@ pub fn yield_next_slot<SlotGetter, ParentchainBlock>(
 	last_slot_getter: &mut SlotGetter,
 ) -> Result<Option<SlotInfo<ParentchainBlock>>, ConsensusError>
 where
-	SlotGetter: GetLastSlot,
+	SlotGetter: LastSlotTrait,
 	ParentchainBlock: ParentchainBlockTrait,
 {
 	if duration == Default::default() {
@@ -149,55 +155,27 @@ where
 	Ok(Some(SlotInfo::new(slot, timestamp, duration, slot_ends_time, header)))
 }
 
-pub trait GetLastSlot {
+pub trait LastSlotTrait {
 	fn get_last_slot(&self) -> Result<Slot, ConsensusError>;
 	fn set_last_slot(&mut self, slot: Slot) -> Result<(), ConsensusError>;
 }
 
-impl<T: StaticSealedIO<Unsealed = Slot, Error = ConsensusError>> GetLastSlot for T {
-	fn get_last_slot(&self) -> Result<Slot, ConsensusError> {
-		T::unseal_from_static_file()
-	}
-	fn set_last_slot(&mut self, slot: Slot) -> Result<(), ConsensusError> {
-		T::seal_to_static_file(&slot)
-	}
+pub struct LastSlot;
+
+lazy_static! {
+	static ref LAST_SLOT: RwLock<Slot> = Default::default();
 }
 
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-pub mod sgx {
-	use super::*;
-	use codec::{Decode, Encode};
-	use itp_settings::files::LAST_SLOT_BIN;
-	use itp_sgx_io::{seal, unseal, StaticSealedIO};
-	use lazy_static::lazy_static;
-	use std::sync::SgxRwLock;
-
-	pub struct LastSlotSeal;
-
-	lazy_static! {
-		static ref FILE_LOCK: SgxRwLock<()> = Default::default();
+impl LastSlotTrait for LastSlot {
+	fn get_last_slot(&self) -> Result<Slot, ConsensusError> {
+		Ok(*LAST_SLOT.read().map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?)
 	}
 
-	impl StaticSealedIO for LastSlotSeal {
-		type Error = ConsensusError;
-		type Unsealed = Slot;
-
-		fn unseal_from_static_file() -> Result<Self::Unsealed, Self::Error> {
-			let _ = FILE_LOCK.read().map_err(|e| Self::Error::Other(format!("{:?}", e).into()))?;
-
-			match unseal(LAST_SLOT_BIN) {
-				Ok(slot) => Ok(Decode::decode(&mut slot.as_slice())?),
-				Err(_) => {
-					log::info!("Could not open {:?} file, returning first slot", LAST_SLOT_BIN);
-					Ok(Default::default())
-				},
-			}
-		}
-
-		fn seal_to_static_file(unsealed: &Self::Unsealed) -> Result<(), Self::Error> {
-			let _ = FILE_LOCK.write().map_err(|e| Self::Error::Other(format!("{:?}", e).into()))?;
-			Ok(unsealed.using_encoded(|bytes| seal(bytes, LAST_SLOT_BIN))?)
-		}
+	fn set_last_slot(&mut self, slot: Slot) -> Result<(), ConsensusError> {
+		*LAST_SLOT
+			.write()
+			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))? = slot;
+		Ok(())
 	}
 }
 
@@ -205,8 +183,7 @@ pub mod sgx {
 mod tests {
 	use super::*;
 	use core::assert_matches::assert_matches;
-	use itc_parentchain_test::parentchain_header_builder::ParentchainHeaderBuilder;
-	use itp_sgx_io::StaticSealedIO;
+	use itc_parentchain_test::ParentchainHeaderBuilder;
 	use itp_types::Block as ParentchainBlock;
 	use its_primitives::{
 		traits::{Block as BlockT, SignBlock},
@@ -221,22 +198,6 @@ mod tests {
 
 	const SLOT_DURATION: Duration = Duration::from_millis(1000);
 	const ALLOWED_THRESHOLD: Duration = Duration::from_millis(1);
-
-	struct LastSlotSealMock;
-
-	impl StaticSealedIO for LastSlotSealMock {
-		type Error = ConsensusError;
-		type Unsealed = Slot;
-
-		fn unseal_from_static_file() -> Result<Self::Unsealed, Self::Error> {
-			Ok(slot_from_timestamp_and_duration(duration_now(), SLOT_DURATION))
-		}
-
-		fn seal_to_static_file(_unsealed: &Self::Unsealed) -> Result<(), Self::Error> {
-			println!("Seal method stub called.");
-			Ok(())
-		}
-	}
 
 	fn test_block_with_time_stamp(timestamp: u64) -> SignedBlock {
 		let header = SidechainHeaderBuilder::default().build();
@@ -385,7 +346,7 @@ mod tests {
 			duration_now(),
 			SLOT_DURATION,
 			ParentchainHeaderBuilder::default().build(),
-			&mut LastSlotSealMock,
+			&mut LastSlot,
 		)
 		.unwrap()
 		.is_none())
@@ -397,7 +358,7 @@ mod tests {
 			duration_now() + SLOT_DURATION,
 			SLOT_DURATION,
 			ParentchainHeaderBuilder::default().build(),
-			&mut LastSlotSealMock
+			&mut LastSlot
 		)
 		.unwrap()
 		.is_some())
@@ -410,7 +371,7 @@ mod tests {
 				duration_now(),
 				Default::default(),
 				ParentchainHeaderBuilder::default().build(),
-				&mut LastSlotSealMock,
+				&mut LastSlot,
 			),
 			"Tried to yield next slot with 0 duration",
 		)

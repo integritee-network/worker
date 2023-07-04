@@ -163,7 +163,7 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic(
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn generate_dcap_ra_extrinsic_internal(
+pub fn generate_dcap_ra_extrinsic_internal(
 	url: String,
 	skip_ra: bool,
 	quoting_enclave_target_info: &sgx_target_info_t,
@@ -177,18 +177,100 @@ fn generate_dcap_ra_extrinsic_internal(
 		skip_ra,
 	)?;
 
-	// TODO Need to send this to the teerex pallet (something similar to perform_ra_internal)
-	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
+	generate_dcap_ra_extrinsic_from_quote_internal(url, &dcap_quote)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn generate_dcap_ra_quote(
+	skip_ra: c_int,
+	quoting_enclave_target_info: &sgx_target_info_t,
+	quote_size: u32,
+	dcap_quote_p: *mut u8,
+	dcap_quote_size: u32,
+) -> sgx_status_t {
+	if dcap_quote_p.is_null() {
+		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+	}
+	let dcap_quote = match generate_dcap_ra_quote_internal(
+		skip_ra == 1,
+		quoting_enclave_target_info,
+		quote_size,
+	) {
+		Ok(dcap_quote) => dcap_quote,
+		Err(e) => return e.into(),
+	};
+
+	let dcap_quote_slice = slice::from_raw_parts_mut(dcap_quote_p, dcap_quote_size as usize);
+
+	if let Err(e) = write_slice_and_whitespace_pad(dcap_quote_slice, dcap_quote) {
+		return EnclaveError::Other(Box::new(e)).into()
+	};
+
+	sgx_status_t::SGX_SUCCESS
+}
+
+pub fn generate_dcap_ra_quote_internal(
+	skip_ra: bool,
+	quoting_enclave_target_info: &sgx_target_info_t,
+	quote_size: u32,
+) -> EnclaveResult<Vec<u8>> {
+	let attestation_handler = GLOBAL_ATTESTATION_HANDLER_COMPONENT.get()?;
+
+	let (_, dcap_quote) = attestation_handler.generate_dcap_ra_cert(
+		quoting_enclave_target_info,
+		quote_size,
+		skip_ra,
+	)?;
+
+	Ok(dcap_quote)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn generate_dcap_ra_extrinsic_from_quote(
+	w_url: *const u8,
+	w_url_size: u32,
+	quote: *const u8,
+	quote_size: u32,
+	unchecked_extrinsic: *mut u8,
+	unchecked_extrinsic_size: u32,
+) -> sgx_status_t {
+	if w_url.is_null() || unchecked_extrinsic.is_null() {
+		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+	}
+	let mut url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
+	let url = String::decode(&mut url_slice).expect("Could not decode url slice to a valid String");
+
+	let extrinsic_slice =
+		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
+
+	let quote_slice = slice::from_raw_parts(quote, quote_size as usize);
+
+	let extrinsic = match generate_dcap_ra_extrinsic_from_quote_internal(url, quote_slice) {
+		Ok(xt) => xt,
+		Err(e) => return e.into(),
+	};
+
+	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
+		return EnclaveError::Other(Box::new(e)).into()
+	};
+	sgx_status_t::SGX_SUCCESS
+}
+
+pub fn generate_dcap_ra_extrinsic_from_quote_internal(
+	url: String,
+	quote: &[u8],
+) -> EnclaveResult<OpaqueExtrinsic> {
 	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain()?;
+	info!("    [Enclave] Compose register enclave getting callIDs:");
 
 	let call_ids = node_metadata_repo
 		.get_from_metadata(|m| m.register_dcap_enclave_call_indexes())?
 		.map_err(MetadataProviderError::MetadataError)?;
 	info!("    [Enclave] Compose register enclave call DCAP IDs: {:?}", call_ids);
-	let call = OpaqueCall::from_tuple(&(call_ids, dcap_quote, url));
+	let call = OpaqueCall::from_tuple(&(call_ids, quote, url));
 
-	let extrinsic = extrinsics_factory.create_extrinsics(&[call], None)?;
-	Ok(extrinsic[0].clone())
+	info!("    [Enclave] Compose register enclave got extrinsic, returning");
+	create_extrinsics(call)
 }
 
 fn generate_ias_ra_extrinsic_internal(
@@ -196,10 +278,16 @@ fn generate_ias_ra_extrinsic_internal(
 	skip_ra: bool,
 ) -> EnclaveResult<OpaqueExtrinsic> {
 	let attestation_handler = GLOBAL_ATTESTATION_HANDLER_COMPONENT.get()?;
-	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
-	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain()?;
-
 	let cert_der = attestation_handler.generate_ias_ra_cert(skip_ra)?;
+
+	generate_ias_ra_extrinsic_from_der_cert_internal(url, &cert_der)
+}
+
+pub fn generate_ias_ra_extrinsic_from_der_cert_internal(
+	url: String,
+	cert_der: &[u8],
+) -> EnclaveResult<OpaqueExtrinsic> {
+	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain()?;
 
 	info!("    [Enclave] Compose register enclave call");
 	let call_ids = node_metadata_repo
@@ -208,6 +296,11 @@ fn generate_ias_ra_extrinsic_internal(
 
 	let call = OpaqueCall::from_tuple(&(call_ids, cert_der, url));
 
+	create_extrinsics(call)
+}
+
+fn create_extrinsics(call: OpaqueCall) -> EnclaveResult<OpaqueExtrinsic> {
+	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
 	let extrinsics = extrinsics_factory.create_extrinsics(&[call], None)?;
 
 	Ok(extrinsics[0].clone())

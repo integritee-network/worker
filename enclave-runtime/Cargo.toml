@@ -17,7 +17,7 @@ evm = [
     "ita-sgx-runtime/evm",
     "ita-stf/evm",
 ]
-production = ["itp-settings/production"]
+production = ["itp-settings/production", "itp-attestation-handler/production"]
 sidechain = ["itp-settings/sidechain", "itp-top-pool-author/sidechain"]
 offchain-worker = [
     "itp-settings/offchain-worker",
@@ -30,10 +30,11 @@ teeracle = [
 ]
 test = [
     "ita-stf/test",
-    "itc-parentchain/mocks",
+    "itc-parentchain/test",
     "itp-attestation-handler/test",
     "itp-extrinsics-factory/mocks",
-    "itp-sgx-crypto/mocks",
+    "itp-sgx-crypto/test",
+    "itp-sgx-temp-dir",
     "itp-stf-executor/test",
     "itp-stf-executor/mocks",
     "itp-stf-state-handler/test",
@@ -60,6 +61,7 @@ sgx_tunittest = { branch = "master", git = "https://github.com/apache/teaclave-s
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 [dependencies]
+array-bytes = { version = "6.0.0" }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 derive_more = { version = "0.99.5" }
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
@@ -69,11 +71,12 @@ primitive-types = { version = "0.12.1", default-features = false, features = ["c
 
 # scs / integritee
 jsonrpc-core = { default-features = false, git = "https://github.com/scs/jsonrpc", branch = "no_std_v18" }
-substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.37-tag-v0.7.0" }
 
 # mesalock
 env_logger = { git = "https://github.com/integritee-network/env_logger-sgx" }
 log = { git = "https://github.com/integritee-network/log-sgx" }
+# Todo #1313: use the `once_cell` included in rusts core library once we use rust v1.70.0
+once_cell = { git = "https://github.com/mesalock-linux/once_cell-sgx" }
 rustls = { rev = "sgx_1.1.3", features = ["dangerous_configuration"], git = "https://github.com/mesalock-linux/rustls" }
 serde = { tag = "sgx_1.1.3", git = "https://github.com/mesalock-linux/serde-sgx", features = ["alloc", "mesalock_sgx"] }
 serde_derive = { git = "https://github.com/mesalock-linux/serde-sgx" }
@@ -96,10 +99,10 @@ itc-parentchain = { path = "../core/parentchain/parentchain-crate", default-feat
 itc-parentchain-test = { path = "../core/parentchain/test", default-features = false }
 itc-tls-websocket-server = { path = "../core/tls-websocket-server", default-features = false, features = ["sgx"] }
 itp-attestation-handler = { path = "../core-primitives/attestation-handler", default-features = false, features = ["sgx"] }
-itp-block-import-queue = { path = "../core-primitives/block-import-queue", default-features = false, features = ["sgx"] }
 itp-component-container = { path = "../core-primitives/component-container", default-features = false, features = ["sgx"] }
 itp-extrinsics-factory = { path = "../core-primitives/extrinsics-factory", default-features = false, features = ["sgx"] }
 itp-hashing = { path = "../core-primitives/hashing", default-features = false }
+itp-import-queue = { path = "../core-primitives/import-queue", default-features = false, features = ["sgx"] }
 itp-node-api = { path = "../core-primitives/node-api", default-features = false, features = ["sgx"] }
 itp-node-api-metadata = { path = "../core-primitives/node-api/metadata", default-features = false }
 itp-nonce-cache = { path = "../core-primitives/nonce-cache", default-features = false, features = ["sgx"] }
@@ -128,11 +131,14 @@ its-primitives = { path = "../sidechain/primitives", default-features = false }
 its-sidechain = { path = "../sidechain/sidechain-crate", default-features = false, features = ["sgx"] }
 
 # substrate deps
-frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
-frame-system = { optional = true, default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
-sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
-sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
+frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+frame-system = { optional = true, default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+
+# test-deps
+itp-sgx-temp-dir = { version = "0.1", default-features = false, optional = true, path = "../core-primitives/sgx/temp-dir" }
 
 [patch.crates-io]
 env_logger = { git = "https://github.com/integritee-network/env_logger-sgx" }

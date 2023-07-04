@@ -13,7 +13,7 @@
 
 use crate::{
 	trusted_cli::TrustedCli, trusted_command_utils::get_pair_from_str,
-	trusted_operation::perform_trusted_operation, Cli,
+	trusted_operation::perform_trusted_operation, Cli, CliResult, CliResultOk,
 };
 
 use codec::Decode;
@@ -31,7 +31,7 @@ pub struct GetMarketResultsCommand {
 }
 
 impl GetMarketResultsCommand {
-	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
+	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
 		println!(
 			"{:?}",
 			// if we serialize with serde-json we can easily just pass it as
@@ -44,6 +44,7 @@ impl GetMarketResultsCommand {
 			))
 			.unwrap()
 		);
+		Ok(CliResultOk::None)
 	}
 }
 
@@ -60,7 +61,7 @@ pub(crate) fn get_market_results(
 		.sign(&KeyPair::Sr25519(Box::new(who)))
 		.into();
 
-	let res = perform_trusted_operation(cli, trusted_args, &top);
+	let res = perform_trusted_operation(cli, trusted_args, &top).unwrap();
 
 	match res {
 		Some(market_results) => match MarketOutput::decode(&mut market_results.as_slice()) {

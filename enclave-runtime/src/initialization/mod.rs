@@ -26,15 +26,15 @@ use crate::{
 		EnclaveSidechainApi, EnclaveSidechainBlockImportQueue,
 		EnclaveSidechainBlockImportQueueWorker, EnclaveSidechainBlockImporter,
 		EnclaveSidechainBlockSyncer, EnclaveStateFileIo, EnclaveStateHandler,
-		EnclaveStateInitializer, EnclaveStateKeyRepository, EnclaveStateObserver,
-		EnclaveStateSnapshotRepository, EnclaveStfEnclaveSigner, EnclaveTopPool,
-		EnclaveTopPoolAuthor, GLOBAL_ATTESTATION_HANDLER_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
+		EnclaveStateInitializer, EnclaveStateObserver, EnclaveStateSnapshotRepository,
+		EnclaveStfEnclaveSigner, EnclaveTopPool, EnclaveTopPoolAuthor,
+		GLOBAL_ATTESTATION_HANDLER_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
 		GLOBAL_RPC_WS_HANDLER_COMPONENT, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
 		GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT,
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
-		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
-		GLOBAL_STATE_OBSERVER_COMPONENT, GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
-		GLOBAL_WEB_SOCKET_SERVER_COMPONENT,
+		GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+		GLOBAL_STATE_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_OBSERVER_COMPONENT,
+		GLOBAL_TOP_POOL_AUTHOR_COMPONENT, GLOBAL_WEB_SOCKET_SERVER_COMPONENT,
 	},
 	ocall::OcallApi,
 	rpc::{rpc_response_channel::RpcResponseChannel, worker_api_direct::public_api_rpc_handler},
@@ -60,10 +60,11 @@ use itp_attestation_handler::IntelAttestationHandler;
 use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_primitives_cache::GLOBAL_PRIMITIVES_CACHE;
 use itp_settings::files::STATE_SNAPSHOTS_CACHE_SIZE;
-use itp_sgx_crypto::{aes, ed25519, rsa3072, AesSeal, Ed25519Seal, Rsa3072Seal};
-use itp_sgx_io::StaticSealedIO;
+use itp_sgx_crypto::{
+	get_aes_repository, get_ed25519_repository, get_rsa3072_repository, key_repository::AccessKey,
+};
 use itp_stf_state_handler::{
-	handle_state::HandleState, query_shard_state::QueryShardState,
+	file_io::StateDir, handle_state::HandleState, query_shard_state::QueryShardState,
 	state_snapshot_repository::VersionedStateAccess,
 	state_snapshot_repository_loader::StateSnapshotRepositoryLoader, StateHandler,
 };
@@ -73,34 +74,28 @@ use itp_types::ShardIdentifier;
 use its_sidechain::block_composer::BlockComposer;
 use log::*;
 use sp_core::crypto::Pair;
-use std::{collections::HashMap, string::String, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, string::String, sync::Arc};
 
-pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> EnclaveResult<()> {
-	// Initialize the logging environment in the enclave.
-	env_logger::init();
-
-	ed25519::create_sealed_if_absent().map_err(Error::Crypto)?;
-	let signer = Ed25519Seal::unseal_from_static_file().map_err(Error::Crypto)?;
+pub(crate) fn init_enclave(
+	mu_ra_url: String,
+	untrusted_worker_url: String,
+	base_dir: PathBuf,
+) -> EnclaveResult<()> {
+	let signing_key_repository = Arc::new(get_ed25519_repository(base_dir.clone())?);
+	GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT.initialize(signing_key_repository.clone());
+	let signer = signing_key_repository.retrieve_key()?;
 	info!("[Enclave initialized] Ed25519 prim raw : {:?}", signer.public().0);
 
-	rsa3072::create_sealed_if_absent()?;
-
-	let shielding_key = Rsa3072Seal::unseal_from_static_file()?;
-
-	let shielding_key_repository =
-		Arc::new(EnclaveShieldingKeyRepository::new(shielding_key, Arc::new(Rsa3072Seal)));
+	let shielding_key_repository = Arc::new(get_rsa3072_repository(base_dir.clone())?);
 	GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.initialize(shielding_key_repository.clone());
 
 	// Create the aes key that is used for state encryption such that a key is always present in tests.
 	// It will be overwritten anyway if mutual remote attestation is performed with the primary worker.
-	aes::create_sealed_if_absent().map_err(Error::Crypto)?;
-
-	let state_key = AesSeal::unseal_from_static_file()?;
-	let state_key_repository =
-		Arc::new(EnclaveStateKeyRepository::new(state_key, Arc::new(AesSeal)));
+	let state_key_repository = Arc::new(get_aes_repository(base_dir.clone())?);
 	GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.initialize(state_key_repository.clone());
 
-	let state_file_io = Arc::new(EnclaveStateFileIo::new(state_key_repository));
+	let state_file_io =
+		Arc::new(EnclaveStateFileIo::new(state_key_repository, StateDir::new(base_dir)));
 	let state_initializer =
 		Arc::new(EnclaveStateInitializer::new(shielding_key_repository.clone()));
 	let state_snapshot_repository_loader = StateSnapshotRepositoryLoader::<
@@ -153,19 +148,21 @@ pub(crate) fn init_enclave(mu_ra_url: String, untrusted_worker_url: String) -> E
 		connection_registry.clone(),
 		state_handler,
 		ocall_api.clone(),
-		shielding_key_repository,
+		shielding_key_repository.clone(),
 	);
 	GLOBAL_TOP_POOL_AUTHOR_COMPONENT.initialize(top_pool_author.clone());
 
 	let getter_executor = Arc::new(EnclaveGetterExecutor::new(state_observer));
-	let io_handler = public_api_rpc_handler(top_pool_author, getter_executor);
+	let io_handler =
+		public_api_rpc_handler(top_pool_author, getter_executor, shielding_key_repository);
 	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));
 	GLOBAL_RPC_WS_HANDLER_COMPONENT.initialize(rpc_handler);
 
 	let sidechain_block_import_queue = Arc::new(EnclaveSidechainBlockImportQueue::default());
 	GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.initialize(sidechain_block_import_queue);
 
-	let attestation_handler = Arc::new(IntelAttestationHandler::new(ocall_api));
+	let attestation_handler =
+		Arc::new(IntelAttestationHandler::new(ocall_api, signing_key_repository));
 	GLOBAL_ATTESTATION_HANDLER_COMPONENT.initialize(attestation_handler);
 
 	Ok(())
@@ -190,12 +187,11 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
+	let state_key_repository = GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.get()?;
 
 	let parentchain_block_import_dispatcher = get_triggered_dispatcher_from_solo_or_parachain()?;
 
-	let state_key_repository = GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.get()?;
-
-	let signer = Ed25519Seal::unseal_from_static_file()?;
+	let signer = GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT.get()?.retrieve_key()?;
 
 	let sidechain_block_importer = Arc::new(EnclaveSidechainBlockImporter::new(
 		state_handler,
@@ -239,10 +235,10 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 
 pub(crate) fn init_direct_invocation_server(server_addr: String) -> EnclaveResult<()> {
 	let rpc_handler = GLOBAL_RPC_WS_HANDLER_COMPONENT.get()?;
-	let signing = Ed25519Seal::unseal_from_static_file()?;
+	let signer = GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT.get()?.retrieve_key()?;
 
 	let cert =
-		ed25519_self_signed_certificate(signing, "Enclave").map_err(|e| Error::Other(e.into()))?;
+		ed25519_self_signed_certificate(signer, "Enclave").map_err(|e| Error::Other(e.into()))?;
 
 	// Serialize certificate(s) and private key to PEM.
 	// PEM format is needed as a certificate chain can only be serialized into PEM.

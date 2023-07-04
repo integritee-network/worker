@@ -60,7 +60,7 @@ WORKER1URL=${WORKER1URL:-"wss://127.0.0.1"}
 
 CLIENT_BIN=${CLIENT_BIN:-"./../bin/integritee-cli"}
 
-TIMESTAMP="2022-03-04T05:06:07+00:00"
+TIMESTAMP="2023-03-04T05:06:07+00:00"
 ORDERS_FILE=${ORDERS_FILE:-"../bin/orders/order_10_users.json"}
 FILE_CONTENTS=$(cat "$ORDERS_FILE" | tr -d '[:space:]')
 ORDERS_STRING="$FILE_CONTENTS"

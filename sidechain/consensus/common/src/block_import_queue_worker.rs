@@ -17,7 +17,7 @@
 
 use crate::{Error, Result, SyncBlockFromPeer};
 use core::marker::PhantomData;
-use itp_block_import_queue::PopFromBlockQueue;
+use itp_import_queue::PopFromQueue;
 use its_primitives::traits::{Block as BlockTrait, SignedBlock as SignedSidechainBlockTrait};
 use log::debug;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
@@ -49,7 +49,7 @@ where
 	ParentchainBlock: ParentchainBlockTrait,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
 	SignedSidechainBlock::Block: BlockTrait,
-	BlockImportQueue: PopFromBlockQueue<BlockType = SignedSidechainBlock>,
+	BlockImportQueue: PopFromQueue<ItemType = SignedSidechainBlock>,
 	PeerBlockSyncer: SyncBlockFromPeer<ParentchainBlock::Header, SignedSidechainBlock>,
 {
 	pub fn new(
@@ -85,7 +85,7 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
 	ParentchainBlock: ParentchainBlockTrait,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
 	SignedSidechainBlock::Block: BlockTrait,
-	BlockImportQueue: PopFromBlockQueue<BlockType = SignedSidechainBlock>,
+	BlockImportQueue: PopFromQueue<ItemType = SignedSidechainBlock>,
 	PeerBlockSyncer: SyncBlockFromPeer<ParentchainBlock::Header, SignedSidechainBlock>,
 {
 	fn process_queue(

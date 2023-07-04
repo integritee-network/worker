@@ -46,8 +46,6 @@ pub enum Error {
 	InvalidAuthority(String),
 	#[error("Could not get authorities: {0:?}.")]
 	CouldNotGetAuthorities(String),
-	#[error(transparent)]
-	Other(#[from] Box<dyn error::Error + Sync + Send + 'static>),
 	#[error("Chain lookup failed: {0}")]
 	ChainLookup(String),
 	#[error("Failed to sign using key: {0:?}. Reason: {1}")]
@@ -63,9 +61,11 @@ pub enum Error {
 	#[error("Could not import block (number: {0}). A block with this number is already imported (current state block number: {1})")]
 	BlockAlreadyImported(BlockNumber, BlockNumber),
 	#[error("Failed to pop from block import queue: {0}")]
-	FailedToPopBlockImportQueue(#[from] itp_block_import_queue::error::Error),
+	FailedToPopBlockImportQueue(#[from] itp_import_queue::error::Error),
 	#[error("Verification Error: {0}")]
 	VerificationError(its_block_verification::error::Error),
+	#[error(transparent)]
+	Other(#[from] Box<dyn error::Error + Sync + Send + 'static>),
 }
 
 impl core::convert::From<std::io::Error> for Error {

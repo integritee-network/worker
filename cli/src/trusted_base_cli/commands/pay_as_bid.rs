@@ -20,7 +20,7 @@ use crate::{
 	trusted_cli::TrustedCli,
 	trusted_command_utils::{get_identifiers, get_pair_from_str},
 	trusted_operation::perform_trusted_operation,
-	Cli,
+	Cli, CliResult, CliResultOk,
 };
 use codec::Decode;
 use ita_stf::{Index, TrustedCall, TrustedGetter, TrustedOperation};
@@ -36,8 +36,9 @@ pub struct PayAsBidCommand {
 }
 
 impl PayAsBidCommand {
-	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) {
+	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
 		println!("Result: {:?}", pay_as_bid(cli, trusted_args, &self.account, &self.orders_string));
+		Ok(CliResultOk::None)
 	}
 }
 

@@ -16,7 +16,7 @@
 */
 
 use crate::{error::Result, CreateExtrinsics};
-use itp_node_api::api_client::ParentchainExtrinsicParamsBuilder;
+use itp_node_api::api_client::ParentchainAdditionalParams;
 use itp_types::OpaqueCall;
 use sp_runtime::OpaqueExtrinsic;
 use std::vec::Vec;
@@ -31,7 +31,7 @@ impl CreateExtrinsics for ExtrinsicsFactoryMock {
 	fn create_extrinsics(
 		&self,
 		_calls: &[OpaqueCall],
-		_extrinsics_params_builder: Option<ParentchainExtrinsicParamsBuilder>,
+		_additional_params: Option<ParentchainAdditionalParams>,
 	) -> Result<Vec<OpaqueExtrinsic>> {
 		// Intention was to map an OpaqueCall to some dummy OpaqueExtrinsic,
 		// so the output vector has the same size as the input one (and thus can be tested from the outside).

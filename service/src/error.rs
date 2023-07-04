@@ -15,8 +15,8 @@
 */
 
 use codec::Error as CodecError;
+use itp_node_api::api_client::ApiClientError;
 use itp_types::ShardIdentifier;
-use substrate_api_client::ApiClientError;
 
 pub type ServiceResult<T> = Result<T, Error>;
 
@@ -24,10 +24,10 @@ pub type ServiceResult<T> = Result<T, Error>;
 pub enum Error {
 	#[error("{0}")]
 	Codec(#[from] CodecError),
-	#[error("{0}")]
-	ApiClient(#[from] ApiClientError),
-	#[error("Node API terminated subscription unexpectedly: {0}")]
-	ApiSubscriptionDisconnected(#[from] std::sync::mpsc::RecvError),
+	#[error("{0:?}")]
+	ApiClient(ApiClientError),
+	#[error("Node API terminated subscription unexpectedly")]
+	ApiSubscriptionDisconnected,
 	#[error("Enclave API error: {0}")]
 	EnclaveApi(#[from] itp_enclave_api::error::Error),
 	#[error("Trusted Rpc Client error: {0}")]
@@ -52,4 +52,10 @@ pub enum Error {
 	MissingLastFinalizedBlock,
 	#[error("{0}")]
 	Custom(Box<dyn std::error::Error + Sync + Send + 'static>),
+}
+
+impl From<ApiClientError> for Error {
+	fn from(error: ApiClientError) -> Self {
+		Error::ApiClient(error)
+	}
 }

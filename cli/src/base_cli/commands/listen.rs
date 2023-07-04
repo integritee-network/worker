@@ -15,13 +15,12 @@
 
 */
 
-use crate::{command_utils::get_chain_api, Cli};
+use crate::{command_utils::get_chain_api, Cli, CliResult, CliResultOk};
 use base58::ToBase58;
-use codec::{Decode, Encode};
+use codec::Encode;
 use log::*;
 use my_node_runtime::{Hash, RuntimeEvent};
-use std::{sync::mpsc::channel, vec::Vec};
-use substrate_api_client::utils::FromHexString;
+use substrate_api_client::SubscribeEvents;
 
 #[derive(Parser)]
 pub struct ListenCommand {
@@ -35,32 +34,28 @@ pub struct ListenCommand {
 }
 
 impl ListenCommand {
-	pub(crate) fn run(&self, cli: &Cli) {
+	pub(crate) fn run(&self, cli: &Cli) -> CliResult {
 		println!("{:?} {:?}", self.events, self.blocks);
 		let api = get_chain_api(cli);
 		info!("Subscribing to events");
-		let (events_in, events_out) = channel();
 		let mut count = 0u32;
 		let mut blocks = 0u32;
-		api.subscribe_events(events_in).unwrap();
+		let mut subscription = api.subscribe_events().unwrap();
 		loop {
 			if let Some(e) = self.events {
 				if count >= e {
-					return
+					return Ok(CliResultOk::None)
 				}
 			};
 			if let Some(b) = self.blocks {
 				if blocks >= b {
-					return
+					return Ok(CliResultOk::None)
 				}
 			};
-			let event_str = events_out.recv().unwrap();
-			let _unhex = Vec::from_hex(event_str).unwrap();
-			let mut _er_enc = _unhex.as_slice();
-			let _events =
-				Vec::<frame_system::EventRecord<RuntimeEvent, Hash>>::decode(&mut _er_enc);
+
+			let event_results = subscription.next_event::<RuntimeEvent, Hash>().unwrap();
 			blocks += 1;
-			match _events {
+			match event_results {
 				Ok(evts) =>
 					for evr in &evts {
 						println!("decoded: phase {:?} event {:?}", evr.phase, evr.event);
@@ -82,14 +77,15 @@ impl ListenCommand {
 								println!(">>>>>>>>>> integritee event: {:?}", ee);
 								count += 1;
 								match &ee {
-									my_node_runtime::pallet_teerex::Event::AddedEnclave(
-										accountid,
-										url,
-									) => {
+									my_node_runtime::pallet_teerex::Event::AddedEnclave{
+										registered_by,
+										worker_url, ..
+									}
+									 => {
 										println!(
 											"AddedEnclave: {:?} at url {}",
-											accountid,
-											String::from_utf8(url.to_vec())
+											registered_by,
+											String::from_utf8(worker_url.to_vec())
 												.unwrap_or_else(|_| "error".to_string())
 										);
 									},

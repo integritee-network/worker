@@ -39,7 +39,8 @@ enclave {
 		/* define ECALLs here. */
 		public sgx_status_t init(
 			[in, size=mu_ra_addr_size] uint8_t* mu_ra_addr, uint32_t mu_ra_addr_size,
-			[in, size=untrusted_worker_addr_size] uint8_t* untrusted_worker_addr, uint32_t untrusted_worker_addr_size
+			[in, size=untrusted_worker_addr_size] uint8_t* untrusted_worker_addr, uint32_t untrusted_worker_addr_size,
+			[in, size=encoded_base_dir_size] uint8_t* encoded_base_dir_str, uint32_t encoded_base_dir_size
 		);
 
 		public sgx_status_t init_enclave_sidechain_components();
@@ -63,6 +64,8 @@ enclave {
 
 		public sgx_status_t sync_parentchain(
 			[in, size=blocks_size] uint8_t* blocks, size_t blocks_size,
+			[in, size=events_size] uint8_t* events, size_t events_size,
+			[in, size=events_proofs_size] uint8_t* events_proofs, size_t events_proofs_size,
 			[in] uint32_t* nonce
 		);
 
@@ -87,6 +90,18 @@ enclave {
 			[in, size=w_url_size] uint8_t* w_url, uint32_t w_url_size,
 			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size,
 			int skip_ra
+		);
+		public sgx_status_t generate_dcap_ra_quote(
+			int skip_ra,
+			[in] const sgx_target_info_t* quoting_enclave_target_info,
+			uint32_t quote_size,
+			[out, size=dcap_quote_size] uint8_t* dcap_quote_p, uint32_t dcap_quote_size
+		);
+
+		public sgx_status_t generate_dcap_ra_extrinsic_from_quote(
+			[in, size=w_url_size] uint8_t* w_url, uint32_t w_url_size,
+			[in, size=quote_size] uint8_t* quote, uint32_t quote_size,
+			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size
 		);
 
 		public sgx_status_t generate_dcap_ra_extrinsic(

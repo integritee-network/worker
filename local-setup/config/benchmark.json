@@ -10,7 +10,9 @@
       "--port",
       "30330",
       "--rpc-port",
-      "8930"
+      "8930",
+      "--ws-external",
+      "--rpc-external"
     ]
   },
   "workers": [
@@ -27,7 +29,8 @@
         "-w",
         "2031",
         "-h",
-        "4530"
+        "4530",
+        "--ws-external"
       ],
       "subcommand_flags": [
         "--skip-ra",
