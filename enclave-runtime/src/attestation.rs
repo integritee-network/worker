@@ -109,7 +109,7 @@ pub fn create_ra_report_and_signature(
 		RemoteAttestationType::Dcap => {
 			// FIXME: this shoudl return a result with value
 			match attestation_handler.generate_dcap_ra_cert(
-				&quoting_enclave_target_info,
+				quoting_enclave_target_info,
 				quote_size,
 				skip_ra,
 			) {
