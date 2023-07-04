@@ -1,6 +1,5 @@
 [package]
 name = "itp-attestation-handler"
-build = "build.rs"
 version = "0.8.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
