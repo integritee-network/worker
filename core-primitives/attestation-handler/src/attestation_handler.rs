@@ -92,20 +92,6 @@ pub trait AttestationHandler {
 		skip_ra: bool,
 	) -> EnclaveResult<(Vec<u8>, Vec<u8>, Vec<u8>)>;
 
-	// fn generate_dcap_ra_cert_get_qe_data_inside(
-	// 	&self,
-	// 	skip_ra: bool,
-	// ) -> EnclaveResult<(Vec<u8>, Vec<u8>)>;
-
-	///
-	// fn qe_get_target_info(
-	// 	&self,
-	// 	qe3_ret: &mut sgx_quote3_error_t,
-	// ) -> EnclaveResult<sgx_target_info_t>;
-
-	// ///
-	// fn qe_get_quote_size(&self, qe3_ret: &mut sgx_quote3_error_t) -> EnclaveResult<u32>;
-
 	/// Get the measurement register value of the enclave
 	fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]>;
 
