@@ -779,7 +779,7 @@ fn set_qv_path(path_type: sgx_qv_path_type_t, path: &str) -> EnclaveResult<()> {
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-/// Make sure that the `log_slice_ptr` points to a null termianted string.
+/// Make sure that the `log_slice_ptr` points to a null terminated string.
 // This function must not be marked as `unsafe`, because `sgx_ql_set_logging_callback` expects a safe (i.e. not `unsafe`) function.
 pub extern "C" fn forward_qpl_log(log_level: sgx_ql_log_level_t, log_slice_ptr: *const c_char) {
 	if log_slice_ptr.is_null() {
