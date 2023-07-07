@@ -221,8 +221,22 @@ impl RemoteAttestation for Enclave {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
 		self.set_ql_qe_enclave_paths()?;
-		let quoting_enclave_target_info = self.qe_get_target_info()?;
-		let quote_size = self.qe_get_quote_size()?;
+		let quoting_enclave_target_info = if !skip_ra {
+			match self.qe_get_target_info() {
+				Ok(target_info) => Some(target_info),
+				Err(e) => return Err(e.into()),
+			}
+		} else {
+			None
+		};
+		let quote_size = if !skip_ra {
+			match self.qe_get_quote_size() {
+				Ok(quote_size) => Some(quote_size),
+				Err(e) => return Err(e.into()),
+			}
+		} else {
+			None
+		};
 		info!("Retrieved quote size of {:?}", quote_size);
 
 		trace!("Generating dcap_ra_extrinsic with URL: {}", w_url);
@@ -240,8 +254,8 @@ impl RemoteAttestation for Enclave {
 				unchecked_extrinsic.as_mut_ptr(),
 				unchecked_extrinsic.len() as u32,
 				skip_ra.into(),
-				&quoting_enclave_target_info,
-				quote_size,
+				quoting_enclave_target_info.as_ref(),
+				quote_size.as_ref(),
 			)
 		};
 

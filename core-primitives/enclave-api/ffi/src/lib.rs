@@ -128,8 +128,8 @@ extern "C" {
 		unchecked_extrinsic: *mut u8,
 		unchecked_extrinsic_size: u32,
 		skip_ra: c_int,
-		quoting_enclave_target_info: &sgx_target_info_t,
-		quote_size: u32,
+		quoting_enclave_target_info: Option<&sgx_target_info_t>,
+		quote_size: Option<&u32>,
 	) -> sgx_status_t;
 
 	pub fn generate_dcap_ra_quote(

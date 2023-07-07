@@ -259,7 +259,6 @@ fn tls_server_config<A: EnclaveAttestationOCallApi + 'static>(
 	#[cfg(feature = "dcap")]
 	let attestation_type = RemoteAttestationType::Dcap;
 
-	#[cfg(feature = "dcap")]
 	let (key_der, cert_der) = create_ra_report_and_signature(
 		skip_ra,
 		attestation_type,

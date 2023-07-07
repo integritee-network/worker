@@ -158,8 +158,8 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic(
 	unchecked_extrinsic: *mut u8,
 	unchecked_extrinsic_size: u32,
 	skip_ra: c_int,
-	quoting_enclave_target_info: &sgx_target_info_t,
-	quote_size: u32,
+	quoting_enclave_target_info: Option<&sgx_target_info_t>,
+	quote_size: Option<&u32>,
 ) -> sgx_status_t {
 	if w_url.is_null() || unchecked_extrinsic.is_null() {
 		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
@@ -188,14 +188,14 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic(
 pub fn generate_dcap_ra_extrinsic_internal(
 	url: String,
 	skip_ra: bool,
-	quoting_enclave_target_info: &sgx_target_info_t,
-	quote_size: u32,
+	quoting_enclave_target_info: Option<&sgx_target_info_t>,
+	quote_size: Option<&u32>,
 ) -> EnclaveResult<OpaqueExtrinsic> {
 	let attestation_handler = GLOBAL_ATTESTATION_HANDLER_COMPONENT.get()?;
 
 	let (_priv_key_der, _cert_der, dcap_quote) = attestation_handler.generate_dcap_ra_cert(
-		Some(quoting_enclave_target_info),
-		Some(&quote_size),
+		quoting_enclave_target_info,
+		quote_size,
 		skip_ra,
 	)?;
 
