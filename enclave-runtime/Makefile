@@ -53,6 +53,6 @@ endif
 all: $(Rust_Enclave_Name)
 
 $(Rust_Enclave_Name): $(Rust_Enclave_Files)
-	RUSTFLAGS=$(RUSTFLAGS) cargo build -vv $(CARGO_TARGET) $(ENCLAVE_FEATURES)
+	RUSTFLAGS=$(RUSTFLAGS) cargo build $(CARGO_TARGET) $(ENCLAVE_FEATURES)
 	cp ./target/$(OUTPUT_PATH)/libenclave_runtime.a ../lib/libenclave.a
 
