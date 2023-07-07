@@ -251,20 +251,16 @@ fn tls_client_config<A: EnclaveAttestationOCallApi + 'static>(
 	skip_ra: bool,
 ) -> EnclaveResult<ClientConfig> {
 	#[cfg(not(feature = "dcap"))]
-	let (key_der, cert_der) = create_ra_report_and_signature(
-		skip_ra,
-		RemoteAttestationType::Epid,
-		sign_type,
-		quoting_enclave_target_info,
-		quote_size,
-	)?;
+	let attestation_type = RemoteAttestationType::Epid;
 	#[cfg(feature = "dcap")]
+	let attestation_type = RemoteAttestationType::Dcap;
+
 	let (key_der, cert_der) = create_ra_report_and_signature(
 		skip_ra,
-		RemoteAttestationType::Dcap,
+		attestation_type,
 		sign_type,
-		quoting_enclave_target_info,
-		quote_size,
+		Some(quoting_enclave_target_info),
+		Some(&quote_size),
 	)?;
 	debug!("got key_der and cert_der");
 

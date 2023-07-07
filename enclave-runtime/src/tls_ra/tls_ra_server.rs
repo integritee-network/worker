@@ -160,8 +160,8 @@ where
 pub unsafe extern "C" fn run_state_provisioning_server(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
-	quoting_enclave_target_info: sgx_target_info_t,
-	quote_size: u32,
+	quoting_enclave_target_info: Option<&sgx_target_info_t>,
+	quote_size: Option<&u32>,
 	skip_ra: c_int,
 ) -> sgx_status_t {
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
@@ -196,7 +196,7 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 	if let Err(e) = run_state_provisioning_server_internal::<_, WorkerModeProvider>(
 		socket_fd,
 		sign_type,
-		&quoting_enclave_target_info,
+		quoting_enclave_target_info,
 		quote_size,
 		skip_ra,
 		seal_handler,
@@ -215,8 +215,8 @@ pub(crate) fn run_state_provisioning_server_internal<
 >(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
-	quoting_enclave_target_info: &sgx_target_info_t,
-	quote_size: u32,
+	quoting_enclave_target_info: Option<&sgx_target_info_t>,
+	quote_size: Option<&u32>,
 	skip_ra: c_int,
 	seal_handler: StateAndKeyUnsealer,
 ) -> EnclaveResult<()> {
@@ -249,23 +249,20 @@ fn tls_server_session_stream(
 
 fn tls_server_config<A: EnclaveAttestationOCallApi + 'static>(
 	sign_type: sgx_quote_sign_type_t,
-	quoting_enclave_target_info: &sgx_target_info_t,
-	quote_size: u32,
+	quoting_enclave_target_info: Option<&sgx_target_info_t>,
+	quote_size: Option<&u32>,
 	ocall_api: A,
 	skip_ra: bool,
 ) -> EnclaveResult<ServerConfig> {
 	#[cfg(not(feature = "dcap"))]
-	let (key_der, cert_der) = create_ra_report_and_signature(
-		skip_ra,
-		RemoteAttestationType::Epid,
-		sign_type,
-		quoting_enclave_target_info,
-		quote_size,
-	)?;
+	let attestation_type = RemoteAttestationType::Epid;
+	#[cfg(feature = "dcap")]
+	let attestation_type = RemoteAttestationType::Dcap;
+
 	#[cfg(feature = "dcap")]
 	let (key_der, cert_der) = create_ra_report_and_signature(
 		skip_ra,
-		RemoteAttestationType::Dcap,
+		attestation_type,
 		sign_type,
 		quoting_enclave_target_info,
 		quote_size,

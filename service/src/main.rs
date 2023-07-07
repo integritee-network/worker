@@ -174,8 +174,20 @@ fn main() {
 		enclave_metrics_receiver,
 	)));
 
-	let quoting_enclave_target_info = enclave.qe_get_target_info().unwrap();
-	let quote_size = enclave.qe_get_quote_size().unwrap();
+	let quoting_enclave_target_info = match enclave.qe_get_target_info() {
+		Ok(target_info) => Some(target_info),
+		Err(e) => {
+			warn!("Setting up DCAP - qe_get_target_info failed with error: {:#?}, continuing.", e);
+			None
+		},
+	};
+	let quote_size = match enclave.qe_get_quote_size() {
+		Ok(size) => Some(size),
+		Err(e) => {
+			warn!("Setting up DCAP - qe_get_quote_size failed with error: {:#?}, continuing.", e);
+			None
+		},
+	};
 
 	if let Some(run_config) = config.run_config() {
 		let shard = extract_shard(run_config.shard(), enclave.as_ref());
@@ -284,8 +296,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	node_api: ParentchainApi,
 	tokio_handle_getter: Arc<T>,
 	initialization_handler: Arc<InitializationHandler>,
-	quoting_enclave_target_info: sgx_target_info_t,
-	quote_size: u32,
+	quoting_enclave_target_info: Option<sgx_target_info_t>,
+	quote_size: Option<u32>,
 ) where
 	T: GetTokioHandle,
 	E: EnclaveBase

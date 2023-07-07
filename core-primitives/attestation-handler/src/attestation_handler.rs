@@ -48,7 +48,7 @@ use sgx_tcrypto::{rsgx_sha256_slice, SgxEccHandle};
 use sgx_tse::{rsgx_create_report, rsgx_verify_report};
 use sgx_types::{
 	c_int, sgx_epid_group_id_t, sgx_quote_nonce_t, sgx_quote_sign_type_t, sgx_report_data_t,
-	sgx_spid_t, sgx_status_t, sgx_target_info_t, SgxResult, *,
+	sgx_spid_t, sgx_status_t, sgx_status_t::SGX_ERROR_UNEXPECTED, sgx_target_info_t, SgxResult, *,
 };
 use sp_core::{ed25519, Pair};
 use std::{
@@ -87,8 +87,8 @@ pub trait AttestationHandler {
 	/// but instead generate a mock certificate.
 	fn generate_dcap_ra_cert(
 		&self,
-		quoting_enclave_target_info: &sgx_target_info_t,
-		quote_size: u32,
+		quoting_enclave_target_info: Option<&sgx_target_info_t>,
+		quote_size: Option<&u32>,
 		skip_ra: bool,
 	) -> EnclaveResult<(Vec<u8>, Vec<u8>, Vec<u8>)>;
 
@@ -205,11 +205,14 @@ where
 		quoting_enclave_target_info: &sgx_target_info_t,
 		quote_size: u32,
 	) -> EnclaveResult<()> {
-		let (_priv_key_der, _cert_der, dcap_quote) =
-			match self.generate_dcap_ra_cert(quoting_enclave_target_info, quote_size, false) {
-				Ok(r) => r,
-				Err(e) => return Err(e),
-			};
+		let (_priv_key_der, _cert_der, dcap_quote) = match self.generate_dcap_ra_cert(
+			Some(quoting_enclave_target_info),
+			Some(&quote_size),
+			false,
+		) {
+			Ok(r) => r,
+			Err(e) => return Err(e),
+		};
 
 		if let Err(err) = io::write(&dcap_quote, RA_DUMP_CERT_DER_FILE) {
 			error!(
@@ -261,10 +264,14 @@ where
 
 	fn generate_dcap_ra_cert(
 		&self,
-		quoting_enclave_target_info: &sgx_target_info_t,
-		quote_size: u32,
+		quoting_enclave_target_info: Option<&sgx_target_info_t>,
+		quote_size: Option<&u32>,
 		skip_ra: bool,
 	) -> EnclaveResult<(Vec<u8>, Vec<u8>, Vec<u8>)> {
+		if !skip_ra && quoting_enclave_target_info.is_none() && quote_size.is_none() {
+			error!("Enclave Attestation] remote attestation not skipped, but Quoting Enclave (QE) data is not available");
+			return Err(EnclaveError::Sgx(SGX_ERROR_UNEXPECTED))
+		}
 		let chain_signer = self.signing_key_repo.retrieve_key()?;
 		info!("[Enclave Attestation] Ed25519 signer pub key: {:?}", chain_signer.public().0);
 
@@ -276,8 +283,8 @@ where
 		let qe_quote = if !skip_ra {
 			let qe_quote = match self.retrieve_qe_dcap_quote(
 				&chain_signer.public().0,
-				quoting_enclave_target_info,
-				quote_size,
+				quoting_enclave_target_info.unwrap(),
+				*quote_size.unwrap(),
 			) {
 				Ok(quote) => quote,
 				Err(e) => {

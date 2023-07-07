@@ -85,8 +85,8 @@ pub fn create_ra_report_and_signature(
 	skip_ra: bool,
 	remote_attestation_type: RemoteAttestationType,
 	sign_type: sgx_quote_sign_type_t,
-	quoting_enclave_target_info: &sgx_target_info_t,
-	quote_size: u32,
+	quoting_enclave_target_info: Option<&sgx_target_info_t>,
+	quote_size: Option<&u32>,
 ) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
 	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
 		Ok(r) => r,
@@ -194,8 +194,8 @@ pub fn generate_dcap_ra_extrinsic_internal(
 	let attestation_handler = GLOBAL_ATTESTATION_HANDLER_COMPONENT.get()?;
 
 	let (_priv_key_der, _cert_der, dcap_quote) = attestation_handler.generate_dcap_ra_cert(
-		quoting_enclave_target_info,
-		quote_size,
+		Some(quoting_enclave_target_info),
+		Some(&quote_size),
 		skip_ra,
 	)?;
 
@@ -239,8 +239,8 @@ pub fn generate_dcap_ra_quote_internal(
 	let attestation_handler = GLOBAL_ATTESTATION_HANDLER_COMPONENT.get()?;
 
 	let (_priv_key_der, _cert_der, dcap_quote) = attestation_handler.generate_dcap_ra_cert(
-		quoting_enclave_target_info,
-		quote_size,
+		Some(quoting_enclave_target_info),
+		Some(&quote_size),
 		skip_ra,
 	)?;
 

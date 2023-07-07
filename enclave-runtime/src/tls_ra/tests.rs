@@ -57,8 +57,8 @@ fn run_state_provisioning_server(seal_handler: impl UnsealStateAndKeys, port: u1
 	run_state_provisioning_server_internal::<_, WorkerModeProvider>(
 		socket.as_raw_fd(),
 		SIGN_TYPE,
-		&sgx_target_info,
-		QUOTE_SIZE,
+		Some(&sgx_target_info),
+		Some(&QUOTE_SIZE),
 		SKIP_RA,
 		seal_handler,
 	)
