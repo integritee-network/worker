@@ -285,8 +285,7 @@ where
 	let mut payload = cert_der[offset..offset + len].to_vec();
 	println!("payload in mra cert verifier is: {:#?}", &payload);
 	if is_payload_base64_encoded {
-		payload = base64::decode(&payload[..])
-			.expect("The received payload is not in Base64 encoded format or it is damaged.");
+		payload = base64::decode(&payload[..]).or(Err(sgx_status_t::SGX_ERROR_UNEXPECTED))?;
 	}
 	println!("payload in mra cert verifier is: {:#?}", &payload);
 	if !is_dcap {
