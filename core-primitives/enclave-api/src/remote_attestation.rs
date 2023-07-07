@@ -224,7 +224,7 @@ impl RemoteAttestation for Enclave {
 		let quoting_enclave_target_info = if !skip_ra {
 			match self.qe_get_target_info() {
 				Ok(target_info) => Some(target_info),
-				Err(e) => return Err(e.into()),
+				Err(e) => return Err(e),
 			}
 		} else {
 			None
@@ -232,7 +232,7 @@ impl RemoteAttestation for Enclave {
 		let quote_size = if !skip_ra {
 			match self.qe_get_quote_size() {
 				Ok(quote_size) => Some(quote_size),
-				Err(e) => return Err(e.into()),
+				Err(e) => return Err(e),
 			}
 		} else {
 			None
