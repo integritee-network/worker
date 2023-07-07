@@ -81,7 +81,7 @@ jobs:
         run: >
           docker build -t integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}
           --target deployed-worker
-          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg FINGERPRINT=${FINGERPRINT} --build-arg WORKER_FEATURES_ARG=${{ matrix.worker_features }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=${{ matrix.sgx_mode }}
+          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg FINGERPRINT=${FINGERPRINT} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=${{ matrix.sgx_mode }}
           -f build.Dockerfile .
 
       - name: Build CLI client
@@ -371,7 +371,7 @@ jobs:
           - flavor_id: teeracle
             mode: teeracle
             sgx_mode: HW
-            worker_features: dcap
+            additional_features: dcap
 
     steps:
       - uses: actions/checkout@v3
@@ -427,7 +427,7 @@ jobs:
         run: >
           docker build -t integritee/${{ matrix.flavor_id }}:${{ github.ref_name }}
           --target deployed-worker
-          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg SGX_COMMERCIAL_KEY=enclave-runtime/intel_sgx.pem --build-arg SGX_PASSFILE=enclave-runtime/passfile.txt --build-arg SGX_PRODUCTION=1 --build-arg WORKER_FEATURES_ARG=${{ matrix.worker_features }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=${{ matrix.sgx_mode }}
+          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg SGX_COMMERCIAL_KEY=enclave-runtime/intel_sgx.pem --build-arg SGX_PASSFILE=enclave-runtime/passfile.txt --build-arg SGX_PRODUCTION=1 --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=${{ matrix.sgx_mode }}
           -f build.Dockerfile .
 
       - name: Save released teeracle
