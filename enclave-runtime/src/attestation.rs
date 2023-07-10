@@ -88,6 +88,7 @@ pub fn create_ra_report_and_signature(
 	quoting_enclave_target_info: Option<&sgx_target_info_t>,
 	quote_size: Option<&u32>,
 ) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
+	info!("in create_ra_report_and_signature(), fetching attestation_handler()");
 	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
 		Ok(r) => r,
 		Err(e) => {
@@ -96,6 +97,10 @@ pub fn create_ra_report_and_signature(
 		},
 	};
 
+	info!(
+		"in create_ra_report_and_signature(), remote_attestation_type: {:#?}",
+		&remote_attestation_type
+	);
 	match remote_attestation_type {
 		RemoteAttestationType::Epid => {
 			match attestation_handler.create_epid_ra_report_and_signature(sign_type, skip_ra) {
