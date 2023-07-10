@@ -124,8 +124,8 @@ pub trait TlsRemoteAttestation {
 		&self,
 		socket_fd: c_int,
 		sign_type: sgx_quote_sign_type_t,
-		quoting_enclave_target_info: sgx_target_info_t,
-		quote_size: u32,
+		quoting_enclave_target_info: Option<&sgx_target_info_t>,
+		quote_size: Option<&u32>,
 		shard: &ShardIdentifier,
 		skip_ra: bool,
 	) -> EnclaveResult<()>;
@@ -718,8 +718,8 @@ impl TlsRemoteAttestation for Enclave {
 		&self,
 		socket_fd: c_int,
 		sign_type: sgx_quote_sign_type_t,
-		quoting_enclave_target_info: sgx_target_info_t,
-		quote_size: u32,
+		quoting_enclave_target_info: Option<&sgx_target_info_t>,
+		quote_size: Option<&u32>,
 		shard: &ShardIdentifier,
 		skip_ra: bool,
 	) -> EnclaveResult<()> {

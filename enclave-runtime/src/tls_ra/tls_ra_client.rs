@@ -159,8 +159,8 @@ where
 pub unsafe extern "C" fn request_state_provisioning(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
-	quoting_enclave_target_info: sgx_target_info_t,
-	quote_size: u32,
+	quoting_enclave_target_info: Option<&sgx_target_info_t>,
+	quote_size: Option<&u32>,
 	shard: *const u8,
 	shard_size: u32,
 	skip_ra: c_int,
@@ -198,7 +198,7 @@ pub unsafe extern "C" fn request_state_provisioning(
 	if let Err(e) = request_state_provisioning_internal(
 		socket_fd,
 		sign_type,
-		&quoting_enclave_target_info,
+		quoting_enclave_target_info,
 		quote_size,
 		shard,
 		skip_ra,
@@ -215,8 +215,8 @@ pub unsafe extern "C" fn request_state_provisioning(
 pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAndKeys>(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
-	quoting_enclave_target_info: &sgx_target_info_t,
-	quote_size: u32,
+	quoting_enclave_target_info: Option<&sgx_target_info_t>,
+	quote_size: Option<&u32>,
 	shard: ShardIdentifier,
 	skip_ra: c_int,
 	seal_handler: StateAndKeySealer,
@@ -245,8 +245,8 @@ pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAn
 
 fn tls_client_config<A: EnclaveAttestationOCallApi + 'static>(
 	sign_type: sgx_quote_sign_type_t,
-	quoting_enclave_target_info: &sgx_target_info_t,
-	quote_size: u32,
+	quoting_enclave_target_info: Option<&sgx_target_info_t>,
+	quote_size: Option<&u32>,
 	ocall_api: A,
 	skip_ra: bool,
 ) -> EnclaveResult<ClientConfig> {
@@ -259,8 +259,8 @@ fn tls_client_config<A: EnclaveAttestationOCallApi + 'static>(
 		skip_ra,
 		attestation_type,
 		sign_type,
-		Some(quoting_enclave_target_info),
-		Some(&quote_size),
+		quoting_enclave_target_info,
+		quote_size,
 	)?;
 	debug!("got key_der and cert_der");
 

@@ -106,8 +106,8 @@ pub fn test_tls_ra_server_client_networking() {
 	let result = request_state_provisioning_internal(
 		socket.as_raw_fd(),
 		SIGN_TYPE,
-		&sgx_target_info,
-		QUOTE_SIZE,
+		Some(&sgx_target_info),
+		Some(&QUOTE_SIZE),
 		shard,
 		SKIP_RA,
 		client_seal_handler.clone(),
@@ -155,8 +155,8 @@ pub fn test_state_and_key_provisioning() {
 	let result = request_state_provisioning_internal(
 		socket.as_raw_fd(),
 		SIGN_TYPE,
-		&sgx_target_info,
-		QUOTE_SIZE,
+		Some(&sgx_target_info),
+		Some(&QUOTE_SIZE),
 		shard,
 		SKIP_RA,
 		client_seal_handler,

@@ -80,14 +80,30 @@ pub fn enclave_request_state_provisioning<E: TlsRemoteAttestation + RemoteAttest
 	info!("[MU-RA-Client] Requesting key provisioning from {}", addr);
 
 	let stream = TcpStream::connect(addr).map_err(|e| Error::Other(Box::new(e)))?;
-	let quoting_enclave_target_info = enclave_api.qe_get_target_info()?;
-	let quote_size = enclave_api.qe_get_quote_size()?;
+
+	let quoting_enclave_target_info = if !skip_ra {
+		match enclave_api.qe_get_target_info() {
+			Ok(quote_size) => Some(quote_size),
+			Err(e) => return Err(e),
+		}
+	} else {
+		None
+	};
+
+	let quote_size = if !skip_ra {
+		match enclave_api.qe_get_quote_size() {
+			Ok(quote_size) => Some(quote_size),
+			Err(e) => return Err(e),
+		}
+	} else {
+		None
+	};
 
 	enclave_api.request_state_provisioning(
 		stream.as_raw_fd(),
 		sign_type,
-		quoting_enclave_target_info,
-		quote_size,
+		quoting_enclave_target_info.as_ref(),
+		quote_size.as_ref(),
 		shard,
 		skip_ra,
 	)
