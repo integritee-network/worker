@@ -51,6 +51,7 @@ pub use collateral::SgxQlQveCollateral;
 
 pub use error::{Error, Result};
 
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub enum RemoteAttestationType {
 	Epid,
 	Dcap,
