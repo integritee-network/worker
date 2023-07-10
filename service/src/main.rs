@@ -260,8 +260,8 @@ fn main() {
 			enclave_run_state_provisioning_server(
 				enclave.as_ref(),
 				sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-				quoting_enclave_target_info,
-				quote_size,
+				(&quoting_enclave_target_info).as_ref(),
+				(&quote_size).as_ref(),
 				&config.mu_ra_url(),
 				sub_matches.is_present("skip-ra"),
 			);
@@ -338,8 +338,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		enclave_run_state_provisioning_server(
 			enclave_api_key_prov.as_ref(),
 			sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-			quoting_enclave_target_info,
-			quote_size,
+			(&quoting_enclave_target_info).as_ref(),
+			(&quote_size).as_ref(),
 			&ra_url,
 			skip_ra,
 		);
