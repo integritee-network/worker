@@ -268,7 +268,6 @@ where
 		quote_size: Option<&u32>,
 		skip_ra: bool,
 	) -> EnclaveResult<(Vec<u8>, Vec<u8>, Vec<u8>)> {
-		println!("Enclave Attestation] generate_dcap_ra_cert() target_info:{:#?}, quote_size: {:#?}, skip_ra: {:#?}", &quoting_enclave_target_info, &quote_size, &skip_ra);
 		if !skip_ra && quoting_enclave_target_info.is_none() && quote_size.is_none() {
 			error!("Enclave Attestation] remote attestation not skipped, but Quoting Enclave (QE) data is not available");
 			return Err(EnclaveError::Sgx(SGX_ERROR_UNEXPECTED))

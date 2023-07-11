@@ -166,8 +166,6 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 ) -> sgx_status_t {
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
 
-	debug!("in ffi::run_state_provisioning_server(), fetching state_handler()");
-
 	let state_handler = match GLOBAL_STATE_HANDLER_COMPONENT.get() {
 		Ok(s) => s,
 		Err(e) => {
@@ -176,7 +174,6 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 		},
 	};
 
-	debug!("in ffi::run_state_provisioning_server(), fetching state_key_repository()");
 	let state_key_repository = match GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.get() {
 		Ok(s) => s,
 		Err(e) => {
@@ -185,7 +182,6 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 		},
 	};
 
-	debug!("in ffi::run_state_provisioning_server(), fetching shielding_key_repository()");
 	let shielding_key_repository = match GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.get() {
 		Ok(s) => s,
 		Err(e) => {
@@ -194,11 +190,9 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 		},
 	};
 
-	debug!("in ffi::run_state_provisioning_server(), generating seal_handler()");
 	let seal_handler =
 		EnclaveSealHandler::new(state_handler, state_key_repository, shielding_key_repository);
 
-	debug!("in ffi::run_state_provisioning_server(), calling _internal");
 	if let Err(e) = run_state_provisioning_server_internal::<_, WorkerModeProvider>(
 		socket_fd,
 		sign_type,
@@ -226,7 +220,6 @@ pub(crate) fn run_state_provisioning_server_internal<
 	skip_ra: c_int,
 	seal_handler: StateAndKeyUnsealer,
 ) -> EnclaveResult<()> {
-	println!("    [Enclave] (MU-RA-Server) MU-RA: fetching tls_server_config");
 	let server_config = tls_server_config(
 		sign_type,
 		quoting_enclave_target_info,
@@ -266,9 +259,6 @@ fn tls_server_config<A: EnclaveAttestationOCallApi + 'static>(
 	#[cfg(feature = "dcap")]
 	let attestation_type = RemoteAttestationType::Dcap;
 
-	println!(
-		"    [Enclave] (MU-RA-Server) MU-RA: tls_server_config, getting ra_report_and_signature"
-	);
 	let (key_der, cert_der) = create_ra_report_and_signature(
 		skip_ra,
 		attestation_type,

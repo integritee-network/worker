@@ -692,7 +692,6 @@ impl TlsRemoteAttestation for Enclave {
 		skip_ra: bool,
 	) -> EnclaveResult<()> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
-		debug!("in run_state_provisioning_server(), calling the ffi version");
 
 		let result = unsafe {
 			ffi::run_state_provisioning_server(
@@ -706,8 +705,6 @@ impl TlsRemoteAttestation for Enclave {
 			)
 		};
 
-		debug!("in run_state_provisioning_server(), result={:#?}\n", &result);
-		debug!("in run_state_provisioning_server(), retval={:#?}\n", &retval);
 		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
 
