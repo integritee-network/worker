@@ -338,8 +338,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		enclave_run_state_provisioning_server(
 			enclave_api_key_prov.as_ref(),
 			sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-			quoting_enclave_target_info.clone().as_ref(),
-			quote_size.clone().as_ref(),
+			quoting_enclave_target_info.as_ref(),
+			quote_size.as_ref(),
 			&ra_url,
 			skip_ra,
 		);
