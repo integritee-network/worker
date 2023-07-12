@@ -12,22 +12,37 @@
 */
 
 use crate::{
-	trusted_base_cli::commands::{
-		balance::BalanceCommand, get_market_results::GetMarketResultsCommand, nonce::NonceCommand,
-		pay_as_bid::PayAsBidCommand, pay_as_bid_proof::PayAsBidProofCommand,
-		set_balance::SetBalanceCommand, transfer::TransferCommand,
-		unshield_funds::UnshieldFundsCommand, verify_proof::VerifyMerkleProofCommand,
-	},
-	trusted_cli::TrustedCli,
-	trusted_command_utils::get_keystore_path,
-	Cli, CliResult, CliResultOk, ED25519_KEY_TYPE, SR25519_KEY_TYPE,
+	trusted_cli::TrustedCli, trusted_command_utils::get_keystore_path, Cli, CliResult, CliResultOk,
+	ED25519_KEY_TYPE, SR25519_KEY_TYPE,
 };
 use log::*;
 use sp_core::crypto::Ss58Codec;
 use sp_keystore::Keystore;
 use substrate_client_keystore::LocalKeystore;
 
+// private modules defining commands.
 mod commands;
+
+// Public module re-exporting the commands.
+pub mod cmds {
+	pub use super::commands::{
+		balance::BalanceCommand, nonce::NonceCommand, set_balance::SetBalanceCommand,
+		transfer::TransferCommand, unshield_funds::UnshieldFundsCommand,
+	};
+}
+
+// Commands for the BEST-energy worker.
+// For upstream merges it is always better to have a clear separate between local code and upstream
+// code.
+pub mod oli_cmds {
+	pub use super::commands::{
+		get_market_results::GetMarketResultsCommand, pay_as_bid::PayAsBidCommand,
+		pay_as_bid_proof::PayAsBidProofCommand, verify_proof::VerifyMerkleProofCommand,
+	};
+}
+
+use cmds::*;
+use oli_cmds::*;
 
 #[derive(Subcommand)]
 pub enum TrustedBaseCommand {

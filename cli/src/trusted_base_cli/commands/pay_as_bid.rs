@@ -31,8 +31,8 @@ use sp_core::Pair;
 #[derive(Parser)]
 pub struct PayAsBidCommand {
 	/// AccountId in ss58check format
-	account: String,
-	orders_string: String,
+	pub account: String,
+	pub orders_string: String,
 }
 
 impl PayAsBidCommand {

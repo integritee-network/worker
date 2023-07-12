@@ -27,9 +27,9 @@ use codec;
 #[derive(Parser)]
 pub struct PayAsBidProofCommand {
 	/// AccountId in ss58check format
-	account: String,
-	timestamp: String,
-	actor_id: String,
+	pub account: String,
+	pub timestamp: String,
+	pub actor_id: String,
 }
 
 impl PayAsBidProofCommand {

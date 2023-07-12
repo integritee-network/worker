@@ -37,11 +37,11 @@ mod evm;
 #[cfg(feature = "teeracle")]
 mod oracle;
 mod trusted_base_cli;
-mod trusted_cli;
 mod trusted_command_utils;
 mod trusted_operation;
 
 pub mod commands;
+pub mod trusted_cli;
 
 use crate::commands::Commands;
 use clap::Parser;
@@ -64,22 +64,22 @@ pub(crate) const ED25519_KEY_TYPE: KeyTypeId = KeyTypeId(*b"ed25");
 pub struct Cli {
 	/// node url
 	#[clap(short = 'u', long, default_value_t = String::from("ws://127.0.0.1"))]
-	node_url: String,
+	pub node_url: String,
 
 	/// node port
 	#[clap(short = 'p', long, default_value_t = String::from("9944"))]
-	node_port: String,
+	pub node_port: String,
 
 	/// worker url
 	#[clap(short = 'U', long, default_value_t = String::from("wss://127.0.0.1"))]
-	worker_url: String,
+	pub worker_url: String,
 
 	/// worker direct invocation port
 	#[clap(short = 'P', long, default_value_t = String::from("2000"))]
-	trusted_worker_port: String,
+	pub trusted_worker_port: String,
 
 	#[clap(subcommand)]
-	command: Commands,
+	pub command: Commands,
 }
 
 pub enum CliResultOk {
