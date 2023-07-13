@@ -64,7 +64,7 @@ my-node-runtime = { package = "integritee-node-runtime", git = "https://github.c
 sgx-verify = { git = "https://github.com/integritee-network/pallets.git", branch = "ab/shard-config-upgradability-2" }
 # `default-features = false` to remove the jsonrpsee dependency.
 substrate-api-client = { default-features = false, features = ["std", "ws-client"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.10.0" }
-teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "ab/shard-config-upgradability-2" }
+enclave-bridge-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "ab/shard-config-upgradability-2" }
 
 # Substrate dependencies
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }

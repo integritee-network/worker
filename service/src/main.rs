@@ -82,7 +82,7 @@ use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
 use sp_runtime::traits::Header as HeaderTrait;
 use std::{str, sync::Arc, thread, time::Duration};
-use teerex_primitives::ShardIdentifier;
+use enclave_bridge_primitives::ShardIdentifier;
 
 mod account_funding;
 mod config;
@@ -597,22 +597,30 @@ fn print_events(events: Vec<Event>) {
 			RuntimeEvent::Teerex(re) => {
 				debug!("{:?}", re);
 				match &re {
-					my_node_runtime::pallet_teerex::Event::AddedEnclave {
+					my_node_runtime::pallet_teerex::Event::AddedSgxEnclave {
 						registered_by,
 						worker_url,
 						..
 					} => {
 						println!("[+] Received AddedEnclave event");
 						println!("    Sender (Worker):  {:?}", registered_by);
-						println!("    Registered URL: {:?}", str::from_utf8(worker_url).unwrap());
+						println!("    Registered URL: {:?}", str::from_utf8(&worker_url.clone().unwrap_or("none".into())).unwrap());
 					},
-					my_node_runtime::pallet_teerex::Event::Forwarded(shard) => {
+					_ => {
+						trace!("Ignoring unsupported pallet_teerex event");
+					},
+				}
+			},
+			RuntimeEvent::EnclaveBridge(re) => {
+				debug!("{:?}", re);
+				match &re {
+					my_node_runtime::pallet_enclave_bridge::Event::IndirectInvocationRegistered(shard) => {
 						println!(
 							"[+] Received trusted call for shard {}",
 							shard.encode().to_base58()
 						);
 					},
-					my_node_runtime::pallet_teerex::Event::ProcessedParentchainBlock(
+					my_node_runtime::pallet_enclave_bridge::Event::ProcessedParentchainBlock(
 						sender,
 						block_hash,
 						merkle_root,
@@ -624,16 +632,18 @@ fn print_events(events: Vec<Event>) {
 						debug!("    Merkle Root: {:?}", hex::encode(merkle_root));
 						debug!("    Block Number: {:?}", block_number);
 					},
-					my_node_runtime::pallet_teerex::Event::ShieldFunds(incognito_account) => {
+					my_node_runtime::pallet_enclave_bridge::Event::ShieldFunds(incognito_account, amount) => {
 						info!("[+] Received ShieldFunds event");
 						debug!("    For:    {:?}", incognito_account);
+						debug!("    Amount:    {:?}", amount);
 					},
-					my_node_runtime::pallet_teerex::Event::UnshieldedFunds(incognito_account) => {
+					my_node_runtime::pallet_enclave_bridge::Event::UnshieldedFunds(beneficiary, amount) => {
 						info!("[+] Received UnshieldedFunds event");
-						debug!("    For:    {:?}", incognito_account);
+						debug!("    For:    {:?}", beneficiary);
+						debug!("    For:    {:?}", amount);
 					},
 					_ => {
-						trace!("Ignoring unsupported pallet_teerex event");
+						trace!("Ignoring unsupported pallet_enclave_bridge event");
 					},
 				}
 			},

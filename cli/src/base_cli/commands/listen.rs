@@ -74,10 +74,10 @@ impl ListenCommand {
 								}
 							},
 							RuntimeEvent::Teerex(ee) => {
-								println!(">>>>>>>>>> integritee event: {:?}", ee);
+								println!(">>>>>>>>>> integritee teerex event: {:?}", ee);
 								count += 1;
 								match &ee {
-									my_node_runtime::pallet_teerex::Event::AddedEnclave{
+									my_node_runtime::pallet_teerex::Event::AddedSgxEnclave{
 										registered_by,
 										worker_url, ..
 									}
@@ -85,22 +85,34 @@ impl ListenCommand {
 										println!(
 											"AddedEnclave: {:?} at url {}",
 											registered_by,
-											String::from_utf8(worker_url.to_vec())
+											String::from_utf8(worker_url.clone().unwrap_or("none".into()).to_vec())
 												.unwrap_or_else(|_| "error".to_string())
 										);
 									},
-									my_node_runtime::pallet_teerex::Event::RemovedEnclave(
+									my_node_runtime::pallet_teerex::Event::RemovedSovereignEnclave(
 										accountid,
 									) => {
 										println!("RemovedEnclave: {:?}", accountid);
 									},
-									my_node_runtime::pallet_teerex::Event::Forwarded(shard) => {
+									my_node_runtime::pallet_teerex::Event::RemovedProxiedEnclave(
+										eia,
+									) => {
+										println!("RemovedEnclave: {:?}", eia);
+									},
+									_ => debug!("ignoring unsupported teerex event: {:?}", ee),
+								}
+							},
+							RuntimeEvent::EnclaveBridge(ee) => {
+								println!(">>>>>>>>>> integritee enclave bridge event: {:?}", ee);
+								count += 1;
+								match &ee {
+									my_node_runtime::pallet_enclave_bridge::Event::IndirectInvocationRegistered(shard) => {
 										println!(
 											"Forwarded request for shard {}",
 											shard.encode().to_base58()
 										);
 									},
-									my_node_runtime::pallet_teerex::Event::ProcessedParentchainBlock(
+									my_node_runtime::pallet_enclave_bridge::Event::ProcessedParentchainBlock(
 										accountid,
 										block_hash,
 										merkle_root,
@@ -111,20 +123,21 @@ impl ListenCommand {
 											accountid, block_hash, merkle_root, block_number
 										);
 									},
-									my_node_runtime::pallet_teerex::Event::ShieldFunds(
-										incognito_account,
+									my_node_runtime::pallet_enclave_bridge::Event::ShieldFunds(
+										incognito_account, amount
 									) => {
-										println!("ShieldFunds for {:?}", incognito_account);
+										println!("ShieldFunds for {:?}. amount: {:?}", incognito_account, amount);
 									},
-									my_node_runtime::pallet_teerex::Event::UnshieldedFunds(
-										public_account,
+									my_node_runtime::pallet_enclave_bridge::Event::UnshieldedFunds(
+										beneficiary, amount
 									) => {
-										println!("UnshieldFunds for {:?}", public_account);
+										println!("UnshieldFunds for {:?}. amount: {:?}", beneficiary, amount);
 									},
-									_ => debug!("ignoring unsupported teerex event: {:?}", ee),
+									_ => debug!("ignoring unsupported enclave_bridge event: {:?}", ee),
 								}
 							},
 							RuntimeEvent::Sidechain(ee) => {
+								println!(">>>>>>>>>> integritee sidechain event: {:?}", ee);
 								count += 1;
 								match &ee {
 									my_node_runtime::pallet_sidechain::Event::ProposedSidechainBlock(

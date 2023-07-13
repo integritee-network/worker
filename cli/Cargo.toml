@@ -28,10 +28,11 @@ ws = { version = "0.9.1", features = ["ssl"] }
 my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node.git", branch = "polkadot-v0.9.42" }
 pallet-evm = { optional = true, git = "https://github.com/integritee-network/frontier.git", branch = "bar/polkadot-v0.9.42" }
 pallet-teerex = { git = "https://github.com/integritee-network/pallets.git", branch = "ab/shard-config-upgradability-2" }
+pallet-enclave-bridge = { git = "https://github.com/integritee-network/pallets.git", branch = "ab/shard-config-upgradability-2" }
 # `default-features = false` to remove the jsonrpsee dependency.
 substrate-api-client = { default-features = false, features = ["std", "ws-client"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.10.0" }
 substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.10.0" }
-teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "ab/shard-config-upgradability-2" }
+enclave-bridge-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "ab/shard-config-upgradability-2" }
 
 # substrate dependencies
 frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }

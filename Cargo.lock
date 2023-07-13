@@ -726,7 +726,7 @@ dependencies = [
 [[package]]
 name = "claims-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.42#be26e6b85f14896860ef919488e6bb4cf4b7aa29"
+source = "git+https://github.com/integritee-network//pallets?branch=ab/shard-config-upgradability-2#a39316db78a14fe90996d25f357f840b2d9c6f37"
 dependencies = [
  "parity-scale-codec",
  "rustc-hex",
@@ -831,8 +831,13 @@ dependencies = [
 [[package]]
 name = "common-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.42#be26e6b85f14896860ef919488e6bb4cf4b7aa29"
+source = "git+https://github.com/integritee-network//pallets?branch=ab/shard-config-upgradability-2#a39316db78a14fe90996d25f357f840b2d9c6f37"
 dependencies = [
+ "derive_more",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
  "sp-std",
 ]
 
@@ -1321,6 +1326,21 @@ dependencies = [
  "sec1",
  "subtle",
  "zeroize",
+]
+
+[[package]]
+name = "enclave-bridge-primitives"
+version = "0.1.0"
+source = "git+https://github.com/integritee-network//pallets?branch=ab/shard-config-upgradability-2#a39316db78a14fe90996d25f357f840b2d9c6f37"
+dependencies = [
+ "common-primitives",
+ "parity-scale-codec",
+ "scale-info",
+ "serde 1.0.164",
+ "sp-core",
+ "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -2732,6 +2752,7 @@ dependencies = [
  "blake2-rfc",
  "chrono 0.4.26",
  "clap 3.2.25",
+ "enclave-bridge-primitives",
  "env_logger 0.9.3",
  "frame-system",
  "hdrhistogram",
@@ -2748,6 +2769,7 @@ dependencies = [
  "itp-utils",
  "log 0.4.19",
  "pallet-balances",
+ "pallet-enclave-bridge",
  "pallet-evm",
  "pallet-teerex",
  "parity-scale-codec",
@@ -2765,7 +2787,6 @@ dependencies = [
  "sp-runtime",
  "substrate-api-client",
  "substrate-client-keystore",
- "teerex-primitives",
  "thiserror 1.0.40",
  "ws",
 ]
@@ -2773,7 +2794,7 @@ dependencies = [
 [[package]]
 name = "integritee-node-runtime"
 version = "1.0.33"
-source = "git+https://github.com/integritee-network/integritee-node.git?branch=polkadot-v0.9.42#2c13d1fd5708825b7832b6b1bc33448ca3111514"
+source = "git+https://github.com/integritee-network//integritee-node?branch=ab/integrate-pallet-teerex-refactoring#c4fc90152f6c8505efd248c93d51de9d77bd7aec"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -2782,6 +2803,7 @@ dependencies = [
  "pallet-aura",
  "pallet-balances",
  "pallet-claims",
+ "pallet-enclave-bridge",
  "pallet-grandpa",
  "pallet-insecure-randomness-collective-flip",
  "pallet-multisig",
@@ -2824,6 +2846,7 @@ dependencies = [
  "base58",
  "clap 2.34.0",
  "dirs",
+ "enclave-bridge-primitives",
  "env_logger 0.9.3",
  "frame-support",
  "frame-system",
@@ -2874,7 +2897,6 @@ dependencies = [
  "sp-keyring",
  "sp-runtime",
  "substrate-api-client",
- "teerex-primitives",
  "thiserror 1.0.40",
  "tokio",
  "warp",
@@ -5344,7 +5366,7 @@ dependencies = [
 [[package]]
 name = "pallet-claims"
 version = "0.9.12"
-source = "git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.42#be26e6b85f14896860ef919488e6bb4cf4b7aa29"
+source = "git+https://github.com/integritee-network//pallets?branch=ab/shard-config-upgradability-2#a39316db78a14fe90996d25f357f840b2d9c6f37"
 dependencies = [
  "claims-primitives",
  "frame-support",
@@ -5409,6 +5431,27 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.18",
+]
+
+[[package]]
+name = "pallet-enclave-bridge"
+version = "0.9.0"
+source = "git+https://github.com/integritee-network//pallets?branch=ab/shard-config-upgradability-2#a39316db78a14fe90996d25f357f840b2d9c6f37"
+dependencies = [
+ "enclave-bridge-primitives",
+ "frame-support",
+ "frame-system",
+ "log 0.4.19",
+ "pallet-teerex",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "serde 1.0.164",
+ "sp-core",
+ "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
+ "sp-runtime",
+ "sp-std",
+ "teerex-primitives",
 ]
 
 [[package]]
@@ -5491,7 +5534,7 @@ dependencies = [
 [[package]]
 name = "pallet-parentchain"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.42#be26e6b85f14896860ef919488e6bb4cf4b7aa29"
+source = "git+https://github.com/integritee-network/pallets.git?branch=ab/shard-config-upgradability-2#a39316db78a14fe90996d25f357f840b2d9c6f37"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5576,11 +5619,13 @@ dependencies = [
 [[package]]
 name = "pallet-sidechain"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.42#be26e6b85f14896860ef919488e6bb4cf4b7aa29"
+source = "git+https://github.com/integritee-network//pallets?branch=ab/shard-config-upgradability-2#a39316db78a14fe90996d25f357f840b2d9c6f37"
 dependencies = [
+ "enclave-bridge-primitives",
  "frame-support",
  "frame-system",
  "log 0.4.19",
+ "pallet-enclave-bridge",
  "pallet-teerex",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -5633,7 +5678,7 @@ dependencies = [
 [[package]]
 name = "pallet-teeracle"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.42#be26e6b85f14896860ef919488e6bb4cf4b7aa29"
+source = "git+https://github.com/integritee-network//pallets?branch=ab/shard-config-upgradability-2#a39316db78a14fe90996d25f357f840b2d9c6f37"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5647,12 +5692,13 @@ dependencies = [
  "sp-std",
  "substrate-fixed",
  "teeracle-primitives",
+ "teerex-primitives",
 ]
 
 [[package]]
 name = "pallet-teerex"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.42#be26e6b85f14896860ef919488e6bb4cf4b7aa29"
+source = "git+https://github.com/integritee-network//pallets?branch=ab/shard-config-upgradability-2#a39316db78a14fe90996d25f357f840b2d9c6f37"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7137,7 +7183,7 @@ dependencies = [
 [[package]]
 name = "sgx-verify"
 version = "0.1.4"
-source = "git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.42#be26e6b85f14896860ef919488e6bb4cf4b7aa29"
+source = "git+https://github.com/integritee-network//pallets?branch=ab/shard-config-upgradability-2#a39316db78a14fe90996d25f357f840b2d9c6f37"
 dependencies = [
  "base64 0.13.1",
  "chrono 0.4.26",
@@ -7423,7 +7469,7 @@ checksum = "43b2853a4d09f215c24cc5489c992ce46052d359b5109343cbafbf26bc62f8a3"
 [[package]]
 name = "sidechain-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.42#be26e6b85f14896860ef919488e6bb4cf4b7aa29"
+source = "git+https://github.com/integritee-network//pallets?branch=ab/shard-config-upgradability-2#a39316db78a14fe90996d25f357f840b2d9c6f37"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -8358,7 +8404,7 @@ checksum = "fd1ba337640d60c3e96bc6f0638a939b9c9a7f2c316a1598c279828b3d1dc8c5"
 [[package]]
 name = "teeracle-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.42#be26e6b85f14896860ef919488e6bb4cf4b7aa29"
+source = "git+https://github.com/integritee-network//pallets?branch=ab/shard-config-upgradability-2#a39316db78a14fe90996d25f357f840b2d9c6f37"
 dependencies = [
  "common-primitives",
  "sp-std",
@@ -8368,14 +8414,15 @@ dependencies = [
 [[package]]
 name = "teerex-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.42#be26e6b85f14896860ef919488e6bb4cf4b7aa29"
+source = "git+https://github.com/integritee-network//pallets?branch=ab/shard-config-upgradability-2#a39316db78a14fe90996d25f357f840b2d9c6f37"
 dependencies = [
  "common-primitives",
+ "derive_more",
  "parity-scale-codec",
  "scale-info",
  "serde 1.0.164",
  "sp-core",
- "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
+ "sp-runtime",
  "sp-std",
 ]
 
@@ -9902,3 +9949,8 @@ dependencies = [
  "libc",
  "pkg-config",
 ]
+
+[[patch.unused]]
+name = "test-utils"
+version = "0.1.0"
+source = "git+https://github.com/integritee-network//pallets?branch=ab/shard-config-upgradability-2#a39316db78a14fe90996d25f357f840b2d9c6f37"

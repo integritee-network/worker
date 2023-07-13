@@ -33,7 +33,7 @@ use itp_types::{BlockNumber, DirectRequestStatus, TrustedOperationStatus};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use log::*;
 use my_node_runtime::{Hash, RuntimeEvent};
-use pallet_teerex::Event as TeerexEvent;
+use pallet_enclave_bridge::Event as EnclaveBridgeEvent;
 use sp_core::{sr25519 as sr25519_core, H256};
 use std::{
 	result::Result as StdResult,
@@ -43,7 +43,7 @@ use std::{
 use substrate_api_client::{
 	compose_extrinsic, GetHeader, SubmitAndWatch, SubscribeEvents, XtStatus,
 };
-use teerex_primitives::Request;
+use enclave_bridge_primitives::Request;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -150,8 +150,8 @@ fn send_request(
 	loop {
 		let event_records = subscription.next_event::<RuntimeEvent, Hash>().unwrap().unwrap();
 		for event_record in event_records {
-			if let RuntimeEvent::Teerex(TeerexEvent::ProcessedParentchainBlock(
-				_signer,
+			if let RuntimeEvent::EnclaveBridge(EnclaveBridgeEvent::ProcessedParentchainBlock(
+				_shard,
 				confirmed_block_hash,
 				_merkle_root,
 				confirmed_block_number,
