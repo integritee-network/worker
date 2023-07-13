@@ -4,7 +4,7 @@ description = "Verification logic for sidechain blocks"
 version = "0.9.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 homepage = "https://integritee.network/"
-repository = "https://github.com/integritee-network/pallets/"
+repository = "https://github.com/integritee-network/worker/"
 license = "Apache-2.0"
 edition = "2021"
 
