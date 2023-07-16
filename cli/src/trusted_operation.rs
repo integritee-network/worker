@@ -23,6 +23,7 @@ use crate::{
 };
 use base58::FromBase58;
 use codec::{Decode, Encode};
+use enclave_bridge_primitives::Request;
 use ita_stf::{Getter, TrustedOperation};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
 use itp_node_api::api_client::{ParentchainApi, ParentchainExtrinsicSigner, TEEREX};
@@ -43,7 +44,6 @@ use std::{
 use substrate_api_client::{
 	compose_extrinsic, GetHeader, SubmitAndWatch, SubscribeEvents, XtStatus,
 };
-use enclave_bridge_primitives::Request;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -150,12 +150,12 @@ fn send_request(
 	loop {
 		let event_records = subscription.next_event::<RuntimeEvent, Hash>().unwrap().unwrap();
 		for event_record in event_records {
-			if let RuntimeEvent::EnclaveBridge(EnclaveBridgeEvent::ProcessedParentchainBlock(
-				_shard,
-				confirmed_block_hash,
-				_merkle_root,
-				confirmed_block_number,
-			)) = event_record.event
+			if let RuntimeEvent::EnclaveBridge(EnclaveBridgeEvent::ProcessedParentchainBlock {
+				shard,
+				block_hash: confirmed_block_hash,
+				trusted_calls_merkle_root,
+				block_number: confirmed_block_number,
+			}) = event_record.event
 			{
 				info!("Confirmation of ProcessedParentchainBlock received");
 				debug!("Expected block Hash: {:?}", block_hash);

@@ -2952,7 +2952,7 @@ dependencies = [
 [[package]]
 name = "pallet-parentchain"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=ab/shard-config-upgradability-2#a39316db78a14fe90996d25f357f840b2d9c6f37"
+source = "git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.42#5c52182eb3a5156e8d9f69c10ca1441214ee6662"
 dependencies = [
  "frame-support",
  "frame-system",

@@ -112,26 +112,26 @@ impl ListenCommand {
 											shard.encode().to_base58()
 										);
 									},
-									my_node_runtime::pallet_enclave_bridge::Event::ProcessedParentchainBlock(
-										accountid,
+									my_node_runtime::pallet_enclave_bridge::Event::ProcessedParentchainBlock {
+										shard,
 										block_hash,
-										merkle_root,
+										trusted_calls_merkle_root,
 										block_number,
-									) => {
+									} => {
 										println!(
 											"ProcessedParentchainBlock from {} with hash {:?}, number {} and merkle root {:?}",
-											accountid, block_hash, merkle_root, block_number
+											shard, block_hash, trusted_calls_merkle_root, block_number
 										);
 									},
-									my_node_runtime::pallet_enclave_bridge::Event::ShieldFunds(
-										incognito_account, amount
-									) => {
-										println!("ShieldFunds for {:?}. amount: {:?}", incognito_account, amount);
+									my_node_runtime::pallet_enclave_bridge::Event::ShieldFunds {
+										shard, encrypted_beneficiary, amount
+									} => {
+										println!("ShieldFunds on shard {:?} for {:?}. amount: {:?}", shard, encrypted_beneficiary, amount);
 									},
-									my_node_runtime::pallet_enclave_bridge::Event::UnshieldedFunds(
-										beneficiary, amount
-									) => {
-										println!("UnshieldFunds for {:?}. amount: {:?}", beneficiary, amount);
+									my_node_runtime::pallet_enclave_bridge::Event::UnshieldedFunds {
+										shard, beneficiary, amount
+									} => {
+										println!("UnshieldFunds on shard {:?} for {:?}. amount: {:?}", shard, beneficiary, amount);
 									},
 									_ => debug!("ignoring unsupported enclave_bridge event: {:?}", ee),
 								}
@@ -140,13 +140,14 @@ impl ListenCommand {
 								println!(">>>>>>>>>> integritee sidechain event: {:?}", ee);
 								count += 1;
 								match &ee {
-									my_node_runtime::pallet_sidechain::Event::ProposedSidechainBlock(
-										accountid,
-										block_hash,
-									) => {
+									my_node_runtime::pallet_sidechain::Event::FinalizedSidechainBlock {
+										shard,
+										block_header_hash,
+										validateer,
+									} => {
 										println!(
-											"ProposedSidechainBlock from {} with hash {:?}",
-											accountid, block_hash
+											"ProposedSidechainBlock on shard {} from {} with hash {:?}",
+											shard, validateer, block_header_hash
 										);
 									},
 									_ => debug!("ignoring unsupported sidechain event: {:?}", ee),

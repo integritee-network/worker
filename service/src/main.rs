@@ -78,11 +78,11 @@ use substrate_api_client::{
 #[cfg(feature = "dcap")]
 use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
 
+use enclave_bridge_primitives::ShardIdentifier;
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
 use sp_runtime::traits::Header as HeaderTrait;
 use std::{str, sync::Arc, thread, time::Duration};
-use enclave_bridge_primitives::ShardIdentifier;
 
 mod account_funding;
 mod config;
@@ -604,7 +604,10 @@ fn print_events(events: Vec<Event>) {
 					} => {
 						println!("[+] Received AddedEnclave event");
 						println!("    Sender (Worker):  {:?}", registered_by);
-						println!("    Registered URL: {:?}", str::from_utf8(&worker_url.clone().unwrap_or("none".into())).unwrap());
+						println!(
+							"    Registered URL: {:?}",
+							str::from_utf8(&worker_url.clone().unwrap_or("none".into())).unwrap()
+						);
 					},
 					_ => {
 						trace!("Ignoring unsupported pallet_teerex event");
@@ -614,33 +617,45 @@ fn print_events(events: Vec<Event>) {
 			RuntimeEvent::EnclaveBridge(re) => {
 				debug!("{:?}", re);
 				match &re {
-					my_node_runtime::pallet_enclave_bridge::Event::IndirectInvocationRegistered(shard) => {
+					my_node_runtime::pallet_enclave_bridge::Event::IndirectInvocationRegistered(
+						shard,
+					) => {
 						println!(
 							"[+] Received trusted call for shard {}",
 							shard.encode().to_base58()
 						);
 					},
-					my_node_runtime::pallet_enclave_bridge::Event::ProcessedParentchainBlock(
-						sender,
+					my_node_runtime::pallet_enclave_bridge::Event::ProcessedParentchainBlock {
+						shard,
 						block_hash,
-						merkle_root,
+						trusted_calls_merkle_root,
 						block_number,
-					) => {
+					} => {
 						info!("[+] Received ProcessedParentchainBlock event");
-						debug!("    From:    {:?}", sender);
+						debug!("    for shard:    {:?}", shard);
 						debug!("    Block Hash: {:?}", hex::encode(block_hash));
-						debug!("    Merkle Root: {:?}", hex::encode(merkle_root));
+						debug!("    Merkle Root: {:?}", hex::encode(trusted_calls_merkle_root));
 						debug!("    Block Number: {:?}", block_number);
 					},
-					my_node_runtime::pallet_enclave_bridge::Event::ShieldFunds(incognito_account, amount) => {
+					my_node_runtime::pallet_enclave_bridge::Event::ShieldFunds {
+						shard,
+						encrypted_beneficiary,
+						amount,
+					} => {
 						info!("[+] Received ShieldFunds event");
-						debug!("    For:    {:?}", incognito_account);
+						debug!("    for shard:    {:?}", shard);
+						debug!("    for enc. beneficiary:    {:?}", encrypted_beneficiary);
 						debug!("    Amount:    {:?}", amount);
 					},
-					my_node_runtime::pallet_enclave_bridge::Event::UnshieldedFunds(beneficiary, amount) => {
+					my_node_runtime::pallet_enclave_bridge::Event::UnshieldedFunds {
+						shard,
+						beneficiary,
+						amount,
+					} => {
 						info!("[+] Received UnshieldedFunds event");
-						debug!("    For:    {:?}", beneficiary);
-						debug!("    For:    {:?}", amount);
+						debug!("    for shard:    {:?}", shard);
+						debug!("    beneficiary:    {:?}", beneficiary);
+						debug!("    Amount:    {:?}", amount);
 					},
 					_ => {
 						trace!("Ignoring unsupported pallet_enclave_bridge event");
@@ -683,7 +698,7 @@ fn print_events(events: Vec<Event>) {
 					) => {
 						println!("[+] Received RemovedFromWhitelist event");
 						println!("    Data source:  {}", source);
-						println!("    Currency:  {:?}", mrenclave);
+						println!("    fingerprint:  {:?}", mrenclave);
 					},
 					_ => {
 						trace!("Ignoring unsupported pallet_teeracle event");
@@ -692,13 +707,15 @@ fn print_events(events: Vec<Event>) {
 			},
 			#[cfg(feature = "sidechain")]
 			RuntimeEvent::Sidechain(re) => match &re {
-				my_node_runtime::pallet_sidechain::Event::ProposedSidechainBlock(
-					sender,
-					payload,
-				) => {
-					info!("[+] Received ProposedSidechainBlock event");
-					debug!("    From:    {:?}", sender);
-					debug!("    Payload: {:?}", hex::encode(payload));
+				my_node_runtime::pallet_sidechain::Event::FinalizedSidechainBlock {
+					shard,
+					block_header_hash,
+					validateer,
+				} => {
+					info!("[+] Received FinalizedSidechainBlock event");
+					debug!("    for shard:    {:?}", shard);
+					debug!("    From:    {:?}", hex::encode(block_header_hash));
+					debug!("    validateer: {:?}", validateer);
 				},
 				_ => {
 					trace!("Ignoring unsupported pallet_sidechain event");
