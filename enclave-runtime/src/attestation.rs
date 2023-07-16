@@ -52,6 +52,7 @@ use log::*;
 use sgx_types::*;
 use sp_runtime::OpaqueExtrinsic;
 use std::{prelude::v1::*, slice, vec::Vec};
+use teerex_primitives::SgxAttestationMethod;
 
 #[no_mangle]
 pub unsafe extern "C" fn get_mrenclave(mrenclave: *mut u8, mrenclave_size: usize) -> sgx_status_t {
@@ -264,10 +265,15 @@ pub fn generate_dcap_ra_extrinsic_from_quote_internal(
 	info!("    [Enclave] Compose register enclave getting callIDs:");
 
 	let call_ids = node_metadata_repo
-		.get_from_metadata(|m| m.register_dcap_enclave_call_indexes())?
+		.get_from_metadata(|m| m.register_sgx_enclave_call_indexes())?
 		.map_err(MetadataProviderError::MetadataError)?;
 	info!("    [Enclave] Compose register enclave call DCAP IDs: {:?}", call_ids);
-	let call = OpaqueCall::from_tuple(&(call_ids, quote, url));
+	let call = OpaqueCall::from_tuple(&(
+		call_ids,
+		quote,
+		Some(url),
+		SgxAttestationMethod::Dcap { proxied: false },
+	));
 
 	info!("    [Enclave] Compose register enclave got extrinsic, returning");
 	create_extrinsics(call)
@@ -291,10 +297,10 @@ pub fn generate_ias_ra_extrinsic_from_der_cert_internal(
 
 	info!("    [Enclave] Compose register enclave call");
 	let call_ids = node_metadata_repo
-		.get_from_metadata(|m| m.register_ias_enclave_call_indexes())?
+		.get_from_metadata(|m| m.register_sgx_enclave_call_indexes())?
 		.map_err(MetadataProviderError::MetadataError)?;
 
-	let call = OpaqueCall::from_tuple(&(call_ids, cert_der, url));
+	let call = OpaqueCall::from_tuple(&(call_ids, cert_der, Some(url), SgxAttestationMethod::Ias));
 
 	create_extrinsics(call)
 }

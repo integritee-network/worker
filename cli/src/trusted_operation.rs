@@ -158,7 +158,9 @@ fn send_request(
 			}) = event_record.event
 			{
 				info!("Confirmation of ProcessedParentchainBlock received");
-				debug!("Expected block Hash: {:?}", block_hash);
+				debug!("shard: {:?}", shard);
+				debug!("confirmed parentchain block Hash: {:?}", block_hash);
+				debug!("trusted calls merkle root: {:?}", trusted_calls_merkle_root);
 				debug!("Confirmed stf block Hash: {:?}", confirmed_block_hash);
 				if let Err(e) = check_if_received_event_exceeds_expected(
 					&chain_api,

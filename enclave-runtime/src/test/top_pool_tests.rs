@@ -45,7 +45,7 @@ use itp_node_api::{
 		ParentchainUncheckedExtrinsic,
 	},
 	metadata::{
-		metadata_mocks::NodeMetadataMock, pallet_teerex::TeerexCallIndexes,
+		metadata_mocks::NodeMetadataMock, pallet_enclave_bridge::EnclaveBridgeCallIndexes,
 		provider::NodeMetadataRepository,
 	},
 };

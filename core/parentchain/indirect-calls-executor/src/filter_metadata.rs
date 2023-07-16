@@ -18,7 +18,7 @@
 use crate::{
 	error::Result,
 	event_filter::{FilterEvents, MockEvents},
-	indirect_calls::{CallWorkerArgs, ShiedFundsArgs},
+	indirect_calls::{InvokeArgs, ShiedFundsArgs},
 	parentchain_parser::ParseExtrinsic,
 	IndirectDispatch, IndirectExecutor,
 };
@@ -130,9 +130,9 @@ where
 		if index == metadata.shield_funds_call_indexes().ok()? {
 			let args = decode_and_log_error::<ShiedFundsArgs>(call_args)?;
 			Some(IndirectCall::ShieldFunds(args))
-		} else if index == metadata.call_worker_call_indexes().ok()? {
-			let args = decode_and_log_error::<CallWorkerArgs>(call_args)?;
-			Some(IndirectCall::CallWorker(args))
+		} else if index == metadata.invoke_call_indexes().ok()? {
+			let args = decode_and_log_error::<InvokeArgs>(call_args)?;
+			Some(IndirectCall::Invoke(args))
 		} else {
 			None
 		}
@@ -146,14 +146,14 @@ where
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub enum IndirectCall {
 	ShieldFunds(ShiedFundsArgs),
-	CallWorker(CallWorkerArgs),
+	Invoke(InvokeArgs),
 }
 
 impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for IndirectCall {
 	fn dispatch(&self, executor: &Executor) -> Result<()> {
 		match self {
 			IndirectCall::ShieldFunds(shieldfunds) => shieldfunds.dispatch(executor),
-			IndirectCall::CallWorker(call_worker) => call_worker.dispatch(executor),
+			IndirectCall::Invoke(call_worker) => call_worker.dispatch(executor),
 		}
 	}
 }

@@ -485,6 +485,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "common-primitives"
+version = "0.1.0"
+source = "git+https://github.com/integritee-network/pallets#5c52182eb3a5156e8d9f69c10ca1441214ee6662"
+dependencies = [
+ "derive_more",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "const-oid"
 version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -770,6 +783,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
+ "teerex-primitives",
  "webpki",
 ]
 
@@ -4520,6 +4534,22 @@ name = "tap"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
+
+[[package]]
+name = "teerex-primitives"
+version = "0.1.0"
+source = "git+https://github.com/integritee-network/pallets#5c52182eb3a5156e8d9f69c10ca1441214ee6662"
+dependencies = [
+ "common-primitives",
+ "derive_more",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "serde 1.0.164",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
 
 [[package]]
 name = "termcolor"
