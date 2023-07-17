@@ -21,6 +21,7 @@ use crate::{
 	error::{Error, Result},
 	ImportParentchainBlocks,
 };
+use itp_types::ShardIdentifier;
 use std::{sync::RwLock, vec::Vec};
 
 /// Mock implementation for the block importer.
@@ -49,6 +50,7 @@ where
 
 	fn import_parentchain_blocks(
 		&self,
+		shard: ShardIdentifier,
 		blocks_to_import: Vec<Self::SignedBlockType>,
 		_events: Vec<Vec<u8>>,
 	) -> Result<()> {

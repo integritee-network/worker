@@ -38,6 +38,7 @@ pub mod triggered_dispatcher;
 pub mod trigger_parentchain_block_import_mock;
 
 use crate::triggered_dispatcher::TriggerParentchainBlockImport;
+use enclave_bridge_primitives::ShardIdentifier;
 use error::{Error, Result};
 use std::{sync::Arc, vec::Vec};
 
@@ -46,7 +47,12 @@ pub trait DispatchBlockImport<SignedBlockType> {
 	/// Dispatch blocks to be imported.
 	///
 	/// The blocks may be imported immediately, get queued, delayed or grouped.
-	fn dispatch_import(&self, blocks: Vec<SignedBlockType>, events: Vec<Vec<u8>>) -> Result<()>;
+	fn dispatch_import(
+		&self,
+		shard: ShardIdentifier,
+		blocks: Vec<SignedBlockType>,
+		events: Vec<Vec<u8>>,
+	) -> Result<()>;
 }
 
 /// Wrapper for the actual dispatchers. Allows to define one global type for
@@ -99,15 +105,20 @@ where
 	TriggeredDispatcher: DispatchBlockImport<SignedBlockType>,
 	ImmediateDispatcher: DispatchBlockImport<SignedBlockType>,
 {
-	fn dispatch_import(&self, blocks: Vec<SignedBlockType>, events: Vec<Vec<u8>>) -> Result<()> {
+	fn dispatch_import(
+		&self,
+		shard: ShardIdentifier,
+		blocks: Vec<SignedBlockType>,
+		events: Vec<Vec<u8>>,
+	) -> Result<()> {
 		match self {
 			BlockImportDispatcher::TriggeredDispatcher(dispatcher) => {
 				log::info!("TRIGGERED DISPATCHER MATCH");
-				dispatcher.dispatch_import(blocks, events)
+				dispatcher.dispatch_import(shard, blocks, events)
 			},
 			BlockImportDispatcher::ImmediateDispatcher(dispatcher) => {
 				log::info!("IMMEDIATE DISPATCHER MATCH");
-				dispatcher.dispatch_import(blocks, events)
+				dispatcher.dispatch_import(shard, blocks, events)
 			},
 			BlockImportDispatcher::EmptyDispatcher => {
 				log::info!("EMPTY DISPATCHER DISPATCHER MATCH");

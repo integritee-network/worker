@@ -25,7 +25,7 @@ use itc_parentchain_light_client::{
 };
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_stf_executor::traits::StfUpdateState;
-use itp_types::{OpaqueCall, H256};
+use itp_types::{OpaqueCall, ShardIdentifier, H256};
 use log::*;
 use sp_runtime::{
 	generic::SignedBlock as SignedBlockG,
@@ -117,6 +117,7 @@ impl<
 
 	fn import_parentchain_blocks(
 		&self,
+		shard: ShardIdentifier,
 		blocks_to_import: Vec<Self::SignedBlockType>,
 		events_to_import: Vec<Vec<u8>>,
 	) -> Result<()> {
@@ -146,10 +147,11 @@ impl<
 
 			// Execute indirect calls that were found in the extrinsics of the block,
 			// incl. shielding and unshielding.
-			match self
-				.indirect_calls_executor
-				.execute_indirect_calls_in_extrinsics(&block, &raw_events)
-			{
+			match self.indirect_calls_executor.execute_indirect_calls_in_extrinsics(
+				shard,
+				&block,
+				&raw_events,
+			) {
 				Ok(executed_shielding_calls) => {
 					calls.push(executed_shielding_calls);
 				},

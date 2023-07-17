@@ -16,6 +16,7 @@
 */
 
 use crate::{error::Result, DispatchBlockImport};
+use enclave_bridge_primitives::ShardIdentifier;
 use itc_parentchain_block_importer::ImportParentchainBlocks;
 use log::*;
 use std::{boxed::Box, vec::Vec};
@@ -47,9 +48,14 @@ impl<BlockImporter, SignedBlockType> DispatchBlockImport<SignedBlockType>
 where
 	BlockImporter: ImportParentchainBlocks<SignedBlockType = SignedBlockType>,
 {
-	fn dispatch_import(&self, blocks: Vec<SignedBlockType>, events: Vec<Vec<u8>>) -> Result<()> {
+	fn dispatch_import(
+		&self,
+		shard: ShardIdentifier,
+		blocks: Vec<SignedBlockType>,
+		events: Vec<Vec<u8>>,
+	) -> Result<()> {
 		debug!("Importing {} parentchain blocks", blocks.len());
-		self.block_importer.import_parentchain_blocks(blocks, events)?;
+		self.block_importer.import_parentchain_blocks(shard, blocks, events)?;
 		debug!("Notifying {} observers of import", self.import_event_observers.len());
 		self.import_event_observers.iter().for_each(|callback| callback());
 		Ok(())

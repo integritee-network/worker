@@ -119,6 +119,7 @@ impl<
 {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
+		shard: ShardIdentifier,
 		block: &ParentchainBlock,
 		events: &[u8],
 	) -> Result<OpaqueCall>
@@ -172,6 +173,7 @@ impl<
 
 		// Include a processed parentchain block confirmation for each block.
 		self.create_processed_parentchain_block_call::<ParentchainBlock>(
+			shard,
 			block_hash,
 			executed_calls,
 			block_number,
@@ -180,6 +182,7 @@ impl<
 
 	fn create_processed_parentchain_block_call<ParentchainBlock>(
 		&self,
+		shard: ShardIdentifier,
 		block_hash: H256,
 		extrinsics: Vec<H256>,
 		block_number: <<ParentchainBlock as ParentchainBlockTrait>::Header as Header>::Number,
@@ -192,7 +195,7 @@ impl<
 		})??;
 
 		let root: H256 = merkle_root::<Keccak256, _>(extrinsics);
-		Ok(OpaqueCall::from_tuple(&(call, block_hash, block_number, root)))
+		Ok(OpaqueCall::from_tuple(&(call, shard, block_hash, block_number, root)))
 	}
 }
 
@@ -361,6 +364,8 @@ mod test {
 
 		let block_hash = H256::from([1; 32]);
 		let extrinsics = Vec::new();
+		let shard = ShardIdentifier::default();
+
 		let confirm_processed_parentchain_block_indexes =
 			dummy_metadata.confirm_processed_parentchain_block_call_indexes().unwrap();
 		let expected_call =
@@ -368,7 +373,7 @@ mod test {
 
 		// when
 		let call = indirect_calls_executor
-			.create_processed_parentchain_block_call::<Block>(block_hash, extrinsics, 1)
+			.create_processed_parentchain_block_call::<Block>(shard, block_hash, extrinsics, 1)
 			.unwrap();
 
 		// then
@@ -383,6 +388,7 @@ mod test {
 
 		let block_hash = H256::from([1; 32]);
 		let extrinsics = vec![H256::from([4; 32]), H256::from([9; 32])];
+		let shard = ShardIdentifier::default();
 		let confirm_processed_parentchain_block_indexes =
 			dummy_metadata.confirm_processed_parentchain_block_call_indexes().unwrap();
 
@@ -391,7 +397,7 @@ mod test {
 
 		// when
 		let call = indirect_calls_executor
-			.create_processed_parentchain_block_call::<Block>(block_hash, extrinsics, 1)
+			.create_processed_parentchain_block_call::<Block>(shard, block_hash, extrinsics, 1)
 			.unwrap();
 
 		// then

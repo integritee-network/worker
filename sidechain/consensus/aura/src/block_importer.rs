@@ -260,7 +260,7 @@ impl<
 		// sidechain block that we're importing. This is done to prevent forks in the sidechain (#423)
 		let maybe_latest_imported_block = self
 			.parentchain_block_importer
-			.import_until(|signed_parentchain_block| {
+			.import_until(shard, |signed_parentchain_block| {
 				signed_parentchain_block.block.hash()
 					== sidechain_block.block_data().layer_one_head()
 			})

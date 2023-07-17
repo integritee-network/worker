@@ -21,6 +21,7 @@ use crate::{
 	error::{Error, Result},
 	DispatchBlockImport,
 };
+use enclave_bridge_primitives::ShardIdentifier;
 use itc_parentchain_block_importer::ImportParentchainBlocks;
 use itp_import_queue::{PeekQueue, PopFromQueue, PushToQueue};
 use log::trace;
@@ -34,10 +35,10 @@ pub trait TriggerParentchainBlockImport {
 	/// Trigger the import of all queued block, **including** the latest one.
 	///
 	/// Returns the latest imported block (if any).
-	fn import_all(&self) -> Result<Option<Self::SignedBlockType>>;
+	fn import_all(&self, shard: ShardIdentifier) -> Result<Option<Self::SignedBlockType>>;
 
 	/// Trigger import of all queued blocks, **except** the latest one.
-	fn import_all_but_latest(&self) -> Result<()>;
+	fn import_all_but_latest(&self, shard: ShardIdentifier) -> Result<()>;
 
 	/// Trigger import of all blocks up to **and including** a specific block.
 	///
@@ -45,6 +46,7 @@ pub trait TriggerParentchainBlockImport {
 	/// Returns the latest imported block (if any).
 	fn import_until(
 		&self,
+		shard: ShardIdentifier,
 		predicate: impl Fn(&Self::SignedBlockType) -> bool,
 	) -> Result<Option<Self::SignedBlockType>>;
 
@@ -52,11 +54,12 @@ pub trait TriggerParentchainBlockImport {
 	/// to the first element that matches the predicate.
 	fn peek(
 		&self,
+		shard: ShardIdentifier,
 		predicate: impl Fn(&Self::SignedBlockType) -> bool,
 	) -> Result<Option<Self::SignedBlockType>>;
 
 	/// Peek the latest block in the import queue. Returns None if queue is empty.
-	fn peek_latest(&self) -> Result<Option<Self::SignedBlockType>>;
+	fn peek_latest(&self, shard: ShardIdentifier) -> Result<Option<Self::SignedBlockType>>;
 }
 
 /// Dispatcher for block imports that retains blocks until the import is triggered, using the
@@ -98,6 +101,7 @@ where
 {
 	fn dispatch_import(
 		&self,
+		shard: ShardIdentifier,
 		blocks: Vec<SignedBlockType>,
 		events: Vec<RawEventsPerBlock>,
 	) -> Result<()> {
@@ -125,7 +129,7 @@ where
 {
 	type SignedBlockType = BlockImporter::SignedBlockType;
 
-	fn import_all(&self) -> Result<Option<BlockImporter::SignedBlockType>> {
+	fn import_all(&self, shard: ShardIdentifier) -> Result<Option<BlockImporter::SignedBlockType>> {
 		let blocks_to_import = self.import_queue.pop_all().map_err(Error::ImportQueue)?;
 		let events_to_import = self.events_queue.pop_all().map_err(Error::ImportQueue)?;
 
@@ -138,13 +142,13 @@ where
 		);
 
 		self.block_importer
-			.import_parentchain_blocks(blocks_to_import, events_to_import)
+			.import_parentchain_blocks(shard, blocks_to_import, events_to_import)
 			.map_err(Error::BlockImport)?;
 
 		Ok(latest_imported_block)
 	}
 
-	fn import_all_but_latest(&self) -> Result<()> {
+	fn import_all_but_latest(&self, shard: ShardIdentifier) -> Result<()> {
 		let blocks_to_import = self.import_queue.pop_all_but_last().map_err(Error::ImportQueue)?;
 		let events_to_import = self.events_queue.pop_all_but_last().map_err(Error::ImportQueue)?;
 
@@ -155,12 +159,13 @@ where
 		);
 
 		self.block_importer
-			.import_parentchain_blocks(blocks_to_import, events_to_import)
+			.import_parentchain_blocks(shard, blocks_to_import, events_to_import)
 			.map_err(Error::BlockImport)
 	}
 
 	fn import_until(
 		&self,
+		shard: ShardIdentifier,
 		predicate: impl Fn(&BlockImporter::SignedBlockType) -> bool,
 	) -> Result<Option<BlockImporter::SignedBlockType>> {
 		let blocks_to_import =
@@ -180,7 +185,7 @@ where
 		);
 
 		self.block_importer
-			.import_parentchain_blocks(blocks_to_import, events_to_import)
+			.import_parentchain_blocks(shard, blocks_to_import, events_to_import)
 			.map_err(Error::BlockImport)?;
 
 		Ok(latest_imported_block)
@@ -188,6 +193,7 @@ where
 
 	fn peek(
 		&self,
+		shard: ShardIdentifier,
 		predicate: impl Fn(&BlockImporter::SignedBlockType) -> bool,
 	) -> Result<Option<BlockImporter::SignedBlockType>> {
 		trace!(
@@ -197,7 +203,10 @@ where
 		self.import_queue.peek_find(predicate).map_err(Error::ImportQueue)
 	}
 
-	fn peek_latest(&self) -> Result<Option<BlockImporter::SignedBlockType>> {
+	fn peek_latest(
+		&self,
+		shard: ShardIdentifier,
+	) -> Result<Option<BlockImporter::SignedBlockType>> {
 		trace!(
 			"Peek latest parentchain import queue (currently has {} elements)",
 			self.import_queue.peek_queue_size().unwrap_or(0)

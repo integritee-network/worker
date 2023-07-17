@@ -29,6 +29,7 @@ pub trait ExecuteIndirectCalls {
 	/// Returns all unshielding call confirmations as opaque calls and the hashes of executed shielding calls.
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
+		shard: ShardIdentifier,
 		block: &ParentchainBlock,
 		events: &[u8],
 	) -> Result<OpaqueCall>
@@ -40,6 +41,7 @@ pub trait ExecuteIndirectCalls {
 	/// Calculates the merkle root of the extrinsics. In case no extrinsics are supplied, the root will be a hash filled with zeros.
 	fn create_processed_parentchain_block_call<ParentchainBlock>(
 		&self,
+		shard: ShardIdentifier,
 		block_hash: H256,
 		extrinsics: Vec<H256>,
 		block_number: <<ParentchainBlock as ParentchainBlockTrait>::Header as Header>::Number,

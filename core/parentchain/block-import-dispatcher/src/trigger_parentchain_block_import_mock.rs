@@ -21,7 +21,7 @@ use std::sync::SgxRwLock as RwLock;
 #[cfg(feature = "std")]
 use std::sync::RwLock;
 
-use crate::{error::Result, triggered_dispatcher::TriggerParentchainBlockImport};
+use crate::{error::Result, triggered_dispatcher::TriggerParentchainBlockImport, ShardIdentifier};
 
 /// Mock for `TriggerParentchainBlockImport`, to be used in unit tests.
 ///
@@ -60,13 +60,13 @@ where
 {
 	type SignedBlockType = SignedBlockType;
 
-	fn import_all(&self) -> Result<Option<SignedBlockType>> {
+	fn import_all(&self, _shard: ShardIdentifier) -> Result<Option<SignedBlockType>> {
 		let mut import_flag = self.import_has_been_called.write().unwrap();
 		*import_flag = true;
 		Ok(self.latest_imported.clone())
 	}
 
-	fn import_all_but_latest(&self) -> Result<()> {
+	fn import_all_but_latest(&self, _shard: ShardIdentifier) -> Result<()> {
 		let mut import_flag = self.import_has_been_called.write().unwrap();
 		*import_flag = true;
 		Ok(())
@@ -74,6 +74,7 @@ where
 
 	fn import_until(
 		&self,
+		_shard: ShardIdentifier,
 		_predicate: impl Fn(&SignedBlockType) -> bool,
 	) -> Result<Option<SignedBlockType>> {
 		let mut import_flag = self.import_has_been_called.write().unwrap();
@@ -83,6 +84,7 @@ where
 
 	fn peek(
 		&self,
+		_shard: ShardIdentifier,
 		predicate: impl Fn(&SignedBlockType) -> bool,
 	) -> Result<Option<SignedBlockType>> {
 		match &self.latest_imported {
@@ -96,7 +98,7 @@ where
 		}
 	}
 
-	fn peek_latest(&self) -> Result<Option<SignedBlockType>> {
+	fn peek_latest(&self, _shard: ShardIdentifier) -> Result<Option<SignedBlockType>> {
 		Ok(self.latest_imported.clone())
 	}
 }

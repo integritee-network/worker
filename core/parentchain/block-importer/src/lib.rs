@@ -39,6 +39,7 @@ pub mod block_importer_mock;
 pub use block_importer::*;
 
 use error::Result;
+use itp_types::ShardIdentifier;
 use std::vec::Vec;
 
 /// Block import from the parentchain.
@@ -52,6 +53,7 @@ pub trait ImportParentchainBlocks {
 	/// * Sends `PROCESSED_PARENTCHAIN_BLOCK` extrinsics that include the merkle root of all processed calls
 	fn import_parentchain_blocks(
 		&self,
+		shard: ShardIdentifier,
 		blocks_to_import: Vec<Self::SignedBlockType>,
 		events_to_import: Vec<Vec<u8>>,
 	) -> Result<()>;
