@@ -270,7 +270,7 @@ where
 	) -> EnclaveResult<(Vec<u8>, Vec<u8>, Vec<u8>)> {
 		if !skip_ra && quoting_enclave_target_info.is_none() && quote_size.is_none() {
 			error!("Enclave Attestation] remote attestation not skipped, but Quoting Enclave (QE) data is not available");
-			return Err(EnclaveError::Sgx(SGX_ERROR_UNEXPECTED))
+			return Err(EnclaveError::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))
 		}
 		let chain_signer = self.signing_key_repo.retrieve_key()?;
 		info!("[Enclave Attestation] Ed25519 signer pub key: {:?}", chain_signer.public().0);
