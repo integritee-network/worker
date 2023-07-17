@@ -109,7 +109,7 @@ enclave {
 			[out, size=unchecked_extrinsic_size] uint8_t* unchecked_extrinsic, uint32_t unchecked_extrinsic_size,
 			int skip_ra,
 			[in] const sgx_target_info_t* quoting_enclave_target_info,
-			uint32_t quote_size
+			[in] uint32_t* quote_size
 		);
 
 		public sgx_status_t generate_register_quoting_enclave_extrinsic(
@@ -140,10 +140,18 @@ enclave {
 
 		public sgx_status_t dump_dcap_collateral_to_disk([in] const sgx_ql_qve_collateral_t *p_quote_collateral);
 
-		public sgx_status_t run_state_provisioning_server(int fd, sgx_quote_sign_type_t quote_type, int skip_ra);
+		public sgx_status_t run_state_provisioning_server(
+			int fd,
+			sgx_quote_sign_type_t quote_type,
+			[in] sgx_target_info_t* quoting_enclave_target_info,
+			[in] uint32_t* quote_size,
+			int skip_ra
+		);
 		public sgx_status_t request_state_provisioning(
 			int fd,
 			sgx_quote_sign_type_t quote_type,
+			[in] sgx_target_info_t* quoting_enclave_target_info,
+			[in] uint32_t* quote_size,
 			[in, size=shard_size] uint8_t* shard, uint32_t shard_size,
 			int skip_ra
 		);

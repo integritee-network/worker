@@ -22,7 +22,10 @@ use crate::{
 };
 use futures::executor;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
-use itp_enclave_api::{enclave_base::EnclaveBase, remote_attestation::TlsRemoteAttestation};
+use itp_enclave_api::{
+	enclave_base::EnclaveBase,
+	remote_attestation::{RemoteAttestation, TlsRemoteAttestation},
+};
 use itp_node_api::api_client::PalletTeerexApi;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
 use itp_types::ShardIdentifier;
@@ -30,7 +33,7 @@ use sgx_types::sgx_quote_sign_type_t;
 use std::string::String;
 
 pub(crate) fn sync_state<
-	E: TlsRemoteAttestation + EnclaveBase,
+	E: TlsRemoteAttestation + EnclaveBase + RemoteAttestation,
 	NodeApi: PalletTeerexApi,
 	WorkerModeProvider: ProvideWorkerMode,
 >(

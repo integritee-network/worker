@@ -34,7 +34,7 @@ pub fn test_verify_mra_cert_should_work() {
 	let mr_enclave = get_mr_enclave_from_hex_string(TEST4_MRENCLAVE).unwrap();
 	let attestation_ocall =
 		AttestationOCallMock::create_with_mr_enclave(sgx_measurement_t { m: mr_enclave });
-	let result = verify_mra_cert(TEST4_CERT, &attestation_ocall);
+	let result = verify_mra_cert(TEST4_CERT, false, false, &attestation_ocall);
 
 	assert!(result.is_ok());
 }
@@ -43,7 +43,7 @@ pub fn test_verify_wrong_cert_is_err() {
 	let mr_enclave = get_mr_enclave_from_hex_string(TEST4_MRENCLAVE).unwrap();
 	let attestation_ocall =
 		AttestationOCallMock::create_with_mr_enclave(sgx_measurement_t { m: mr_enclave });
-	let result = verify_mra_cert(CERT_WRONG_PLATFORM_BLOB, &attestation_ocall);
+	let result = verify_mra_cert(CERT_WRONG_PLATFORM_BLOB, false, false, &attestation_ocall);
 
 	assert!(result.is_err());
 	assert_eq!(result.unwrap_err(), sgx_status_t::SGX_ERROR_UNEXPECTED);

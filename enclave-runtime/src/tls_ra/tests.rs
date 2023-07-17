@@ -34,7 +34,7 @@ use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::handle_state_mock::HandleStateMock;
 use itp_types::ShardIdentifier;
 use sgx_crypto_helper::{rsa3072::Rsa3072KeyPair, RsaKeyPair};
-use sgx_types::sgx_quote_sign_type_t;
+use sgx_types::{sgx_quote_sign_type_t, sgx_target_info_t};
 use std::{
 	net::{TcpListener, TcpStream},
 	os::unix::io::AsRawFd,
@@ -47,14 +47,18 @@ use std::{
 
 static SIGN_TYPE: sgx_quote_sign_type_t = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 static SKIP_RA: i32 = 1;
+static QUOTE_SIZE: u32 = 0;
 
 fn run_state_provisioning_server(seal_handler: impl UnsealStateAndKeys, port: u16) {
 	let listener = TcpListener::bind(server_addr(port)).unwrap();
 
 	let (socket, _addr) = listener.accept().unwrap();
+	let sgx_target_info: sgx_target_info_t = sgx_target_info_t::default();
 	run_state_provisioning_server_internal::<_, WorkerModeProvider>(
 		socket.as_raw_fd(),
 		SIGN_TYPE,
+		Some(&sgx_target_info),
+		Some(&QUOTE_SIZE),
 		SKIP_RA,
 		seal_handler,
 	)
@@ -98,9 +102,12 @@ pub fn test_tls_ra_server_client_networking() {
 
 	// Start client.
 	let socket = TcpStream::connect(server_addr(port)).unwrap();
+	let sgx_target_info: sgx_target_info_t = sgx_target_info_t::default();
 	let result = request_state_provisioning_internal(
 		socket.as_raw_fd(),
 		SIGN_TYPE,
+		Some(&sgx_target_info),
+		Some(&QUOTE_SIZE),
 		shard,
 		SKIP_RA,
 		client_seal_handler.clone(),
@@ -144,9 +151,12 @@ pub fn test_state_and_key_provisioning() {
 
 	// Start client.
 	let socket = TcpStream::connect(server_addr(port)).unwrap();
+	let sgx_target_info: sgx_target_info_t = sgx_target_info_t::default();
 	let result = request_state_provisioning_internal(
 		socket.as_raw_fd(),
 		SIGN_TYPE,
+		Some(&sgx_target_info),
+		Some(&QUOTE_SIZE),
 		shard,
 		SKIP_RA,
 		client_seal_handler,
