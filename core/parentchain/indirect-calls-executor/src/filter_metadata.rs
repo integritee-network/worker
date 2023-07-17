@@ -18,7 +18,7 @@
 use crate::{
 	error::Result,
 	event_filter::{FilterEvents, MockEvents},
-	indirect_calls::{InvokeArgs, ShiedFundsArgs},
+	indirect_calls::{InvokeArgs, ShieldFundsArgs},
 	parentchain_parser::ParseExtrinsic,
 	IndirectDispatch, IndirectExecutor,
 };
@@ -128,7 +128,7 @@ where
 		let call_args = &mut &xt.call_args[..];
 
 		if index == metadata.shield_funds_call_indexes().ok()? {
-			let args = decode_and_log_error::<ShiedFundsArgs>(call_args)?;
+			let args = decode_and_log_error::<ShieldFundsArgs>(call_args)?;
 			Some(IndirectCall::ShieldFunds(args))
 		} else if index == metadata.invoke_call_indexes().ok()? {
 			let args = decode_and_log_error::<InvokeArgs>(call_args)?;
@@ -145,7 +145,7 @@ where
 /// can implemeent their own indirect call there.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub enum IndirectCall {
-	ShieldFunds(ShiedFundsArgs),
+	ShieldFunds(ShieldFundsArgs),
 	Invoke(InvokeArgs),
 }
 
