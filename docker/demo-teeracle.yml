@@ -15,6 +15,7 @@ services:
       - "${SGX_ENCLAVE:-/dev/null}:/dev/sgx/enclave"
     volumes:
       - "${AESMD:-/dev/null}:/var/run/aesmd"
+      - "${SGX_QCNL:-/dev/null}:/etc/sgx_default_qcnl.conf"
     build:
       context: ${PWD}/..
       dockerfile: build.Dockerfile
@@ -25,8 +26,6 @@ services:
     environment:
       - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=info,integritee_service::teeracle=debug,ita_stf=warn,ita_exchange_oracle=debug
       - COINMARKETCAP_KEY
-      - IAS_EPID_SPID
-      - IAS_EPID_KEY
     networks:
       - integritee-test-network
     healthcheck:
@@ -34,8 +33,8 @@ services:
       interval: 10s
       timeout: 10s
       retries: 25
-    entrypoint:
-        "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-teeracle-worker -T wss://integritee-teeracle-worker
+    command:
+        "--clean-reset --ws-external -M integritee-teeracle-worker -T wss://integritee-teeracle-worker
         -u ws://integritee-node -U ws://integritee-teeracle-worker -P 2011 -w 2101 -p 9912 -h 4645
         run --dev ${ADDITIONAL_RUNTIME_FLAGS} --teeracle-interval ${TEERACLE_INTERVAL_SECONDS}s"
     restart: always
@@ -46,6 +45,7 @@ services:
       - "${SGX_ENCLAVE:-/dev/null}:/dev/sgx/enclave"
     volumes:
       - "${AESMD:-/dev/null}:/var/run/aesmd"
+      - "${SGX_QCNL:-/dev/null}:/etc/sgx_default_qcnl.conf"
     build:
       context: ${PWD}/..
       dockerfile: build.Dockerfile

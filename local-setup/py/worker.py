@@ -160,9 +160,10 @@ class Worker:
                                         'enclave_runtime=info,'
                                         'integritee_service=warn,'
                                         'ita_stf=debug')
-
+        worker_cmd = self._assemble_cmd(flags=flags, subcommand_flags=subcommand_flags)
+        print("worker command is "+ str(worker_cmd))
         return Popen(
-            self._assemble_cmd(flags=flags, subcommand_flags=subcommand_flags),
+            worker_cmd,
             env=env,
             stdout=log_file,
             stderr=STDOUT,

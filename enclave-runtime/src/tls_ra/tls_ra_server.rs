@@ -29,6 +29,7 @@ use crate::{
 	tls_ra::seal_handler::UnsealStateAndKeys,
 	GLOBAL_STATE_HANDLER_COMPONENT,
 };
+use itp_attestation_handler::RemoteAttestationType;
 use itp_component_container::ComponentGetter;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
@@ -82,7 +83,10 @@ where
 
 	/// Sends all relevant data of the specific shard to the client.
 	fn write_shard(&mut self) -> EnclaveResult<()> {
+		println!("    [Enclave] (MU-RA-Server) write_shard, calling read_shard()");
 		let shard = self.read_shard()?;
+		println!("    [Enclave] (MU-RA-Server) write_shard, read_shard() OK");
+		println!("    [Enclave] (MU-RA-Server) write_shard, write_all()");
 		self.write_all(&shard)
 	}
 
@@ -90,6 +94,7 @@ where
 	fn read_shard(&mut self) -> EnclaveResult<ShardIdentifier> {
 		let mut shard_holder = ShardIdentifier::default();
 		let shard = shard_holder.as_fixed_bytes_mut();
+		println!("    [Enclave] (MU-RA-Server) read_shard, calling read_exact()");
 		self.tls_stream.read_exact(shard)?;
 		Ok(shard.into())
 	}
@@ -155,6 +160,8 @@ where
 pub unsafe extern "C" fn run_state_provisioning_server(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
+	quoting_enclave_target_info: Option<&sgx_target_info_t>,
+	quote_size: Option<&u32>,
 	skip_ra: c_int,
 ) -> sgx_status_t {
 	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
@@ -189,6 +196,8 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 	if let Err(e) = run_state_provisioning_server_internal::<_, WorkerModeProvider>(
 		socket_fd,
 		sign_type,
+		quoting_enclave_target_info,
+		quote_size,
 		skip_ra,
 		seal_handler,
 	) {
@@ -206,10 +215,18 @@ pub(crate) fn run_state_provisioning_server_internal<
 >(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
+	quoting_enclave_target_info: Option<&sgx_target_info_t>,
+	quote_size: Option<&u32>,
 	skip_ra: c_int,
 	seal_handler: StateAndKeyUnsealer,
 ) -> EnclaveResult<()> {
-	let server_config = tls_server_config(sign_type, OcallApi, skip_ra == 1)?;
+	let server_config = tls_server_config(
+		sign_type,
+		quoting_enclave_target_info,
+		quote_size,
+		OcallApi,
+		skip_ra == 1,
+	)?;
 	let (server_session, tcp_stream) = tls_server_session_stream(socket_fd, server_config)?;
 	let provisioning = ProvisioningPayload::from(WorkerModeProvider::worker_mode());
 
@@ -217,6 +234,7 @@ pub(crate) fn run_state_provisioning_server_internal<
 		TlsServer::new(StreamOwned::new(server_session, tcp_stream), seal_handler, provisioning);
 
 	println!("    [Enclave] (MU-RA-Server) MU-RA successful sending keys");
+	println!("    [Enclave] (MU-RA-Server) MU-RA successful, calling write_shard()");
 	server.write_shard()
 }
 
@@ -231,10 +249,23 @@ fn tls_server_session_stream(
 
 fn tls_server_config<A: EnclaveAttestationOCallApi + 'static>(
 	sign_type: sgx_quote_sign_type_t,
+	quoting_enclave_target_info: Option<&sgx_target_info_t>,
+	quote_size: Option<&u32>,
 	ocall_api: A,
 	skip_ra: bool,
 ) -> EnclaveResult<ServerConfig> {
-	let (key_der, cert_der) = create_ra_report_and_signature(sign_type, skip_ra)?;
+	#[cfg(not(feature = "dcap"))]
+	let attestation_type = RemoteAttestationType::Epid;
+	#[cfg(feature = "dcap")]
+	let attestation_type = RemoteAttestationType::Dcap;
+
+	let (key_der, cert_der) = create_ra_report_and_signature(
+		skip_ra,
+		attestation_type,
+		sign_type,
+		quoting_enclave_target_info,
+		quote_size,
+	)?;
 
 	let mut cfg = rustls::ServerConfig::new(Arc::new(ClientAuth::new(true, skip_ra, ocall_api)));
 	let certs = vec![rustls::Certificate(cert_der)];

@@ -174,6 +174,21 @@ fn main() {
 		enclave_metrics_receiver,
 	)));
 
+	let quoting_enclave_target_info = match enclave.qe_get_target_info() {
+		Ok(target_info) => Some(target_info),
+		Err(e) => {
+			warn!("Setting up DCAP - qe_get_target_info failed with error: {:#?}, continuing.", e);
+			None
+		},
+	};
+	let quote_size = match enclave.qe_get_quote_size() {
+		Ok(size) => Some(size),
+		Err(e) => {
+			warn!("Setting up DCAP - qe_get_quote_size failed with error: {:#?}, continuing.", e);
+			None
+		},
+	};
+
 	if let Some(run_config) = config.run_config() {
 		let shard = extract_shard(run_config.shard(), enclave.as_ref());
 
@@ -203,6 +218,8 @@ fn main() {
 			node_api,
 			tokio_handle,
 			initialization_handler,
+			quoting_enclave_target_info,
+			quote_size,
 		);
 	} else if let Some(smatches) = matches.subcommand_matches("request-state") {
 		println!("*** Requesting state from a registered worker \n");
@@ -243,6 +260,8 @@ fn main() {
 			enclave_run_state_provisioning_server(
 				enclave.as_ref(),
 				sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
+				quoting_enclave_target_info.as_ref(),
+				quote_size.as_ref(),
 				&config.mu_ra_url(),
 				sub_matches.is_present("skip-ra"),
 			);
@@ -277,6 +296,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	node_api: ParentchainApi,
 	tokio_handle_getter: Arc<T>,
 	initialization_handler: Arc<InitializationHandler>,
+	quoting_enclave_target_info: Option<sgx_target_info_t>,
+	quote_size: Option<u32>,
 ) where
 	T: GetTokioHandle,
 	E: EnclaveBase
@@ -317,6 +338,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		enclave_run_state_provisioning_server(
 			enclave_api_key_prov.as_ref(),
 			sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
+			quoting_enclave_target_info.as_ref(),
+			quote_size.as_ref(),
 			&ra_url,
 			skip_ra,
 		);
@@ -449,6 +472,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	// clones because of the move
 	let enclave2 = enclave.clone();
 	let node_api2 = node_api.clone();
+	#[cfg(feature = "dcap")]
+	enclave2.set_sgx_qpl_logging().expect("QPL logging setup failed");
 	#[cfg(not(feature = "dcap"))]
 	let register_xt = move || enclave2.generate_ias_ra_extrinsic(&trusted_url, skip_ra).unwrap();
 	#[cfg(feature = "dcap")]
@@ -766,8 +791,8 @@ fn register_collateral(
 	skip_ra: bool,
 ) {
 	//TODO generate_dcap_ra_quote() does not really need skip_ra, rethink how many layers skip_ra should be passed along
-	let dcap_quote = enclave.generate_dcap_ra_quote(skip_ra).unwrap();
 	if !skip_ra {
+		let dcap_quote = enclave.generate_dcap_ra_quote(skip_ra).unwrap();
 		let (fmspc, _tcb_info) = extract_tcb_info_from_raw_dcap_quote(&dcap_quote).unwrap();
 		println!("[>] DCAP setup: register QE collateral");
 		let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc).unwrap();

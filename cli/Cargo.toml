@@ -60,3 +60,5 @@ teeracle = []
 sidechain = []
 offchain-worker = []
 production = []
+# dcap feature flag is not used in this crate, but for easier build purposes only it present here as well
+dcap = []
