@@ -345,6 +345,7 @@ where
 
 		verify_attn_report(attn_report_raw, pub_k, attestation_ocall)
 	} else {
+		// TODO Refactor state provisioning to not use MURA #1385
 		Ok(())
 	}
 }
