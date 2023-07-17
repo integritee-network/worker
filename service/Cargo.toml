@@ -83,7 +83,7 @@ offchain-worker = ["itp-settings/offchain-worker"]
 production = ["itp-settings/production"]
 teeracle = ["itp-settings/teeracle"]
 dcap = []
-attesteer = []
+attesteer = ["dcap"]
 
 [dev-dependencies]
 # crates.io

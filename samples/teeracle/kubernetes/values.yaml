@@ -1,0 +1,14 @@
+imagePullSecrets:
+  - name: regcred
+
+imagePullPolicy: IfNotPresent
+
+image: integritee/teeracle:v0.12.2-dev
+
+# 
+# To get more insights run:
+# docker run integritee/teeracle:v0.12.2-dev --help
+#
+app:
+  url: "wss://rococo.api.integritee.network"
+  interval: "2m"
