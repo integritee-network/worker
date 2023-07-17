@@ -666,40 +666,40 @@ fn print_events(events: Vec<Event>) {
 			RuntimeEvent::Teeracle(re) => {
 				debug!("{:?}", re);
 				match &re {
-					my_node_runtime::pallet_teeracle::Event::ExchangeRateUpdated(
-						source,
-						currency,
-						new_value,
-					) => {
+					my_node_runtime::pallet_teeracle::Event::ExchangeRateUpdated {
+						data_source,
+						trading_pair,
+						exchange_rate,
+					} => {
 						println!("[+] Received ExchangeRateUpdated event");
-						println!("    Data source:  {}", source);
-						println!("    Currency:  {}", currency);
-						println!("    Exchange rate: {:?}", new_value);
-					},
-					my_node_runtime::pallet_teeracle::Event::ExchangeRateDeleted(
-						source,
-						currency,
-					) => {
+						println!("    Data source:  {}", data_source);
+						println!("    trading pair:  {}", trading_pair);
+						println!("    Exchange rate: {:?}", exchange_rate);
+					}
+					my_node_runtime::pallet_teeracle::Event::ExchangeRateDeleted {
+						data_source,
+						trading_pair,
+					} => {
 						println!("[+] Received ExchangeRateDeleted event");
-						println!("    Data source:  {}", source);
-						println!("    Currency:  {}", currency);
-					},
-					my_node_runtime::pallet_teeracle::Event::AddedToWhitelist(
-						source,
-						mrenclave,
-					) => {
+						println!("    Data source:  {}", data_source);
+						println!("    trading pair:  {}", trading_pair);
+					}
+					my_node_runtime::pallet_teeracle::Event::AddedToWhitelist {
+						data_source,
+						enclave_fingerprint,
+					} => {
 						println!("[+] Received AddedToWhitelist event");
-						println!("    Data source:  {}", source);
-						println!("    Currency:  {:?}", mrenclave);
-					},
-					my_node_runtime::pallet_teeracle::Event::RemovedFromWhitelist(
-						source,
-						mrenclave,
-					) => {
+						println!("    Data source:  {}", data_source);
+						println!("    fingerprint:  {:?}", enclave_fingerprint);
+					}
+					my_node_runtime::pallet_teeracle::Event::RemovedFromWhitelist {
+						data_source,
+						enclave_fingerprint,
+					} => {
 						println!("[+] Received RemovedFromWhitelist event");
-						println!("    Data source:  {}", source);
-						println!("    fingerprint:  {:?}", mrenclave);
-					},
+						println!("    Data source:  {}", data_source);
+						println!("    fingerprint:  {:?}", enclave_fingerprint);
+					}
 					_ => {
 						trace!("Ignoring unsupported pallet_teeracle event");
 					},
