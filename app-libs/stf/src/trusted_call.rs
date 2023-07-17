@@ -244,9 +244,9 @@ where
 				unshield_funds(account_incognito, value)?;
 				calls.push(OpaqueCall::from_tuple(&(
 					node_metadata_repo.get_from_metadata(|m| m.unshield_funds_call_indexes())??,
+					shard,
 					beneficiary,
 					value,
-					shard,
 					call_hash,
 				)));
 				Ok(())
