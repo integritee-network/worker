@@ -586,10 +586,10 @@ fn spawn_worker_for_shard_polling<InitializationHandler>(
 
 		loop {
 			info!("Polling for worker for shard ({} seconds interval)", POLL_INTERVAL_SECS);
-			if let Ok(Some(_)) = node_api.worker_for_shard(&shard_for_initialized, None) {
+			if let Ok(Some(enclave)) = node_api.worker_for_shard(&shard_for_initialized, None) {
 				// Set that the service is initialized.
 				initialization_handler.worker_for_shard_registered();
-				println!("[+] Found `WorkerForShard` on parentchain state");
+				println!("[+] Found `WorkerForShard` on parentchain state: {:?}", enclave.pubkey);
 				break
 			}
 			thread::sleep(Duration::from_secs(POLL_INTERVAL_SECS));
