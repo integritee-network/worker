@@ -480,6 +480,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	let register_xt = move || enclave2.generate_dcap_ra_extrinsic(&trusted_url, skip_ra).unwrap();
 
 	let send_register_xt = move || {
+		println!("[+] Send register enclave extrinsic");
 		send_extrinsic(register_xt(), &node_api2, &tee_accountid.clone(), is_development_mode)
 	};
 
@@ -814,20 +815,23 @@ fn send_extrinsic(
 	accountid: &AccountId32,
 	is_development_mode: bool,
 ) -> Option<Hash> {
-	// Account funds
+	// ensure account funds
 	if let Err(x) = setup_account_funding(api, accountid, extrinsic.clone(), is_development_mode) {
-		error!("Starting worker failed: {:?}", x);
+		error!("Ensure enclave funding failed: {:?}", x);
 		// Return without registering the enclave. This will fail and the transaction will be banned for 30min.
 		return None
 	}
 
-	println!("[>] send extrinsic");
+	info!("[>] send extrinsic");
+	trace!("  encoded extrinsic: 0x{:}", hex::encode(extrinsic.clone()));
 
 	match api.submit_and_watch_opaque_extrinsic_until_success(extrinsic.into(), true) {
 		Ok(xt_report) => {
-			let register_qe_block_hash = xt_report.block_hash;
-			println!("[<] Extrinsic got finalized. Block hash: {:?}\n", register_qe_block_hash);
-			register_qe_block_hash
+			info!(
+				"[+] L1 extrinsic success. extrinsic hash: {:?} / status: {:?}",
+				xt_report.extrinsic_hash, xt_report.status
+			);
+			xt_report.block_hash
 		},
 		Err(e) => {
 			error!("ExtrinsicFailed {:?}", e);
@@ -878,5 +882,10 @@ fn we_are_primary_validateer(
 ) -> Result<bool, Error> {
 	let enclave_count_of_previous_block =
 		node_api.enclave_count(Some(*register_enclave_xt_header.parent_hash()))?;
+	println!(
+		"enclave count is {} for previous block 0x{:?}",
+		enclave_count_of_previous_block,
+		register_enclave_xt_header.parent_hash()
+	);
 	Ok(enclave_count_of_previous_block == 0)
 }
