@@ -428,6 +428,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		.unwrap(),
 	);
 	let last_synced_header = parentchain_handler.init_parentchain_components().unwrap();
+	trace!("last synched parentchain block: {}", last_synced_header.number);
+
 	let nonce = node_api.get_nonce_of(&tee_accountid).unwrap();
 	info!("Enclave nonce = {:?}", nonce);
 	enclave
@@ -484,10 +486,10 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		send_extrinsic(register_xt(), &node_api2, &tee_accountid.clone(), is_development_mode)
 	};
 
-	let register_enclave_block_hash = send_register_xt();
+	let register_enclave_block_hash = send_register_xt().unwrap();
 
 	let register_enclave_xt_header =
-		node_api.get_header(register_enclave_block_hash).unwrap().unwrap();
+		node_api.get_header(Some(register_enclave_block_hash)).unwrap().unwrap();
 
 	let we_are_primary_validateer =
 		we_are_primary_validateer(&node_api, &register_enclave_xt_header).unwrap();
