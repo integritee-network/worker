@@ -63,7 +63,7 @@ services:
       "/usr/local/worker-cli/demo_teeracle_whitelist.sh
       -u ws://integritee-node -p 9912
       -V wss://integritee-teeracle-worker -P 2011
-      -d 21 -i ${TEERACLE_INTERVAL_SECONDS}
+      -d 7 -i ${TEERACLE_INTERVAL_SECONDS}
       -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"
 networks:
