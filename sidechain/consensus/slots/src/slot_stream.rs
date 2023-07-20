@@ -22,17 +22,18 @@
 //! provides generic functionality for slots.
 
 use crate::time_until_next_slot;
-use std::{thread, time::Duration};
+use futures_timer::Delay;
+use std::time::Duration;
 
 /// Executes given `task` repeatedly when the next slot becomes available.
-pub fn start_slot_worker<F>(task: F, slot_duration: Duration)
+pub async fn start_slot_worker<F>(task: F, slot_duration: Duration)
 where
 	F: Fn(),
 {
 	let mut slot_stream = SlotStream::new(slot_duration);
 
 	loop {
-		slot_stream.next_slot();
+		slot_stream.next_slot().await;
 		task();
 	}
 }
@@ -40,7 +41,7 @@ where
 /// Stream to calculate the slot schedule with.
 pub struct SlotStream {
 	slot_duration: Duration,
-	inner_delay: Option<std::time::Instant>,
+	inner_delay: Option<Delay>,
 }
 
 impl SlotStream {
@@ -52,18 +53,25 @@ impl SlotStream {
 impl SlotStream {
 	/// Waits for the duration of `inner_delay`.
 	/// Upon timeout, `inner_delay` is reset according to the time left until next slot.
-	pub fn next_slot(&mut self) {
-		if let Some(inner_delay) = self.inner_delay {
-			if inner_delay > std::time::Instant::now() {
-				// Sleep until the next slot is available
-				thread::sleep(inner_delay - std::time::Instant::now());
-			}
+	pub async fn next_slot(&mut self) {
+		self.inner_delay = match self.inner_delay.take() {
+			None => {
+				// Delay is not initialized in this case,
+				// so we have to initialize with the time until the next slot.
+				let wait_dur = time_until_next_slot(self.slot_duration);
+				Some(Delay::new(wait_dur))
+			},
+			Some(d) => Some(d),
+		};
+
+		if let Some(inner_delay) = self.inner_delay.take() {
+			inner_delay.await;
 		}
 
 		let ends_in = time_until_next_slot(self.slot_duration);
 
 		// Re-schedule delay for next slot.
-		self.inner_delay = Some(std::time::Instant::now() + ends_in);
+		self.inner_delay = Some(Delay::new(ends_in));
 	}
 }
 
@@ -76,15 +84,14 @@ mod tests {
 	const SLOT_TOLERANCE: Duration = Duration::from_millis(10);
 
 	#[tokio::test]
-	#[ignore]
 	async fn short_task_execution_does_not_influence_next_slot() {
 		let mut slot_stream = SlotStream::new(SLOT_DURATION);
 
-		slot_stream.next_slot();
+		slot_stream.next_slot().await;
 		let now = Instant::now();
 		// Task execution is shorter than slot duration.
 		thread::sleep(Duration::from_millis(200));
-		slot_stream.next_slot();
+		slot_stream.next_slot().await;
 
 		let elapsed = now.elapsed();
 		assert!(elapsed >= SLOT_DURATION - SLOT_TOLERANCE);
@@ -92,16 +99,15 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore]
 	async fn long_task_execution_does_not_cause_drift() {
 		let mut slot_stream = SlotStream::new(SLOT_DURATION);
 
-		slot_stream.next_slot();
+		slot_stream.next_slot().await;
 		let now = Instant::now();
 		// Task execution is longer than slot duration.
 		thread::sleep(Duration::from_millis(500));
-		slot_stream.next_slot();
-		slot_stream.next_slot();
+		slot_stream.next_slot().await;
+		slot_stream.next_slot().await;
 
 		let elapsed = now.elapsed();
 		assert!(elapsed >= 2 * SLOT_DURATION - SLOT_TOLERANCE);

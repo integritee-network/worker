@@ -20,6 +20,7 @@ use crate::{
 	parentchain_handler::HandleParentchain,
 	Config,
 };
+use futures::executor::block_on;
 use itp_enclave_api::{
 	direct_request::DirectRequest, enclave_base::EnclaveBase, sidechain::Sidechain,
 };
@@ -89,9 +90,15 @@ where
 	let sidechain_enclave_api = enclave;
 	println!("[+] Spawning thread for sidechain block production");
 	tokio::task::spawn_blocking(move || {
-		start_slot_worker(|| execute_trusted_calls(sidechain_enclave_api.as_ref()), SLOT_DURATION);
+		let future = start_slot_worker(
+			|| execute_trusted_calls(sidechain_enclave_api.as_ref()),
+			SLOT_DURATION,
+		);
+		block_on(future);
 		println!("[!] Sidechain block production loop has terminated");
-	});
+	})
+	.await
+	.map_err(|e| Error::Custom(Box::new(e)))?;
 
 	// ------------------------------------------------------------------------
 	// start sidechain pruning loop
