@@ -176,7 +176,7 @@ jobs:
         run: cd enclave-runtime && cargo fmt --all -- --check
 
       - name: Install taplo
-        run: cargo install taplo-cli --locked
+        run: CARGO_HTTP_MULTIPLEXING=false cargo install taplo-cli --locked
       - name: Cargo.toml fmt
         run: taplo fmt --check
 
