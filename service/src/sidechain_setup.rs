@@ -20,7 +20,6 @@ use crate::{
 	parentchain_handler::HandleParentchain,
 	Config,
 };
-use futures::executor::block_on;
 use itp_enclave_api::{
 	direct_request::DirectRequest, enclave_base::EnclaveBase, sidechain::Sidechain,
 };
@@ -54,7 +53,7 @@ pub(crate) fn sidechain_start_untrusted_rpc_server<Enclave, SidechainStorage>(
 	});
 }
 
-pub(crate) fn sidechain_init_block_production<Enclave, SidechainStorage, ParentchainHandler>(
+pub(crate) async fn sidechain_init_block_production<Enclave, SidechainStorage, ParentchainHandler>(
 	enclave: Arc<Enclave>,
 	register_enclave_xt_header: &Header,
 	we_are_primary_validateer: bool,
@@ -94,7 +93,7 @@ where
 			|| execute_trusted_calls(sidechain_enclave_api.as_ref()),
 			SLOT_DURATION,
 		);
-		block_on(future);
+		futures_lite::future::block_on(future);
 		println!("[!] Sidechain block production loop has terminated");
 	})
 	.await

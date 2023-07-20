@@ -528,21 +528,14 @@ async fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		// ------------------------------------------------------------------------
 		// Initialize the sidechain
 		if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain {
-			let parent_chain_handler_clone = parentchain_handler.clone();
-			last_synced_header = tokio::task::spawn_blocking(move || {
-				sidechain_init_block_production(
-					enclave,
-					&register_enclave_xt_header,
-					we_are_primary_validateer,
-					parent_chain_handler_clone,
-					sidechain_storage,
-					&last_synced_header,
-				)
-				.map_err(|e| {
-					println!("sidechain_init_block_production error: {:#?}", &e);
-				})
-				.unwrap()
-			})
+			last_synced_header = sidechain_init_block_production(
+				enclave,
+				&register_enclave_xt_header,
+				we_are_primary_validateer,
+				parentchain_handler.clone(),
+				sidechain_storage,
+				&last_synced_header,
+			)
 			.await
 			.map_err(|e| {
 				println!("spawn_blocking::sidechain_init_block_production error: {:#?}", &e);
