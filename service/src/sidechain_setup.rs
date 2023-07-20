@@ -33,7 +33,7 @@ use its_consensus_slots::start_slot_worker;
 use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use its_storage::{interface::FetchBlocks, start_sidechain_pruning_loop, BlockPruner};
 use log::*;
-use std::sync::Arc;
+use std::{sync::Arc, thread};
 use tokio::runtime::Handle;
 
 pub(crate) fn sidechain_start_untrusted_rpc_server<Enclave, SidechainStorage>(
@@ -54,7 +54,7 @@ pub(crate) fn sidechain_start_untrusted_rpc_server<Enclave, SidechainStorage>(
 	});
 }
 
-pub(crate) async fn sidechain_init_block_production<Enclave, SidechainStorage, ParentchainHandler>(
+pub(crate) fn sidechain_init_block_production<Enclave, SidechainStorage, ParentchainHandler>(
 	enclave: Arc<Enclave>,
 	register_enclave_xt_header: &Header,
 	we_are_primary_validateer: bool,
@@ -89,29 +89,31 @@ where
 	// Start interval sidechain block production (execution of trusted calls, sidechain block production).
 	let sidechain_enclave_api = enclave;
 	println!("[+] Spawning thread for sidechain block production");
-	tokio::task::spawn_blocking(move || {
-		let future = start_slot_worker(
-			|| execute_trusted_calls(sidechain_enclave_api.as_ref()),
-			SLOT_DURATION,
-		);
-		block_on(future);
-		println!("[!] Sidechain block production loop has terminated");
-	})
-	.await
-	.map_err(|e| Error::Custom(Box::new(e)))?;
+	thread::Builder::new()
+		.name("interval_block_production_timer".to_owned())
+		.spawn(move || {
+			let future = start_slot_worker(
+				|| execute_trusted_calls(sidechain_enclave_api.as_ref()),
+				SLOT_DURATION,
+			);
+			block_on(future);
+			println!("[!] Sidechain block production loop has terminated");
+		})
+		.map_err(|e| Error::Custom(Box::new(e)))?;
 
 	// ------------------------------------------------------------------------
 	// start sidechain pruning loop
 	println!("[+] Spawning thread for sidechain pruning loop");
-	tokio::task::spawn_blocking(move || {
-		start_sidechain_pruning_loop(
-			&sidechain_storage,
-			SIDECHAIN_PURGE_INTERVAL,
-			SIDECHAIN_PURGE_LIMIT,
-		);
-	})
-	.await
-	.map_err(|e| Error::Custom(Box::new(e)))?;
+	thread::Builder::new()
+		.name("sidechain_pruning_loop".to_owned())
+		.spawn(move || {
+			start_sidechain_pruning_loop(
+				&sidechain_storage,
+				SIDECHAIN_PURGE_INTERVAL,
+				SIDECHAIN_PURGE_LIMIT,
+			);
+		})
+		.map_err(|e| Error::Custom(Box::new(e)))?;
 
 	Ok(updated_header.unwrap_or_else(|| last_synced_header.clone()))
 }
