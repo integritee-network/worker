@@ -102,6 +102,7 @@ where
 
 	// ------------------------------------------------------------------------
 	// start sidechain pruning loop
+	println!("[+] Spawning thread for sidechain pruning loop");
 	tokio::task::spawn_blocking(move || {
 		start_sidechain_pruning_loop(
 			&sidechain_storage,
