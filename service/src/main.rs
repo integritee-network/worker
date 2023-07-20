@@ -72,7 +72,7 @@ use log::*;
 use my_node_runtime::{Hash, Header, RuntimeEvent};
 use sgx_types::*;
 use substrate_api_client::{
-	rpc::HandleSubscription, GetHeader, SubmitAndWatchUntilSuccess, SubscribeChain, SubscribeEvents,
+	rpc::HandleSubscription, GetHeader, SubmitAndWatch, SubscribeChain, SubscribeEvents, api::XtStatus
 };
 
 #[cfg(feature = "dcap")]
@@ -814,11 +814,11 @@ fn register_collateral(
 fn send_extrinsic(
 	extrinsic: Vec<u8>,
 	api: &ParentchainApi,
-	accountid: &AccountId32,
+	fee_payer: &AccountId32,
 	is_development_mode: bool,
 ) -> Option<Hash> {
 	// ensure account funds
-	if let Err(x) = setup_account_funding(api, accountid, extrinsic.clone(), is_development_mode) {
+	if let Err(x) = setup_account_funding(api, fee_payer, extrinsic.clone(), is_development_mode) {
 		error!("Ensure enclave funding failed: {:?}", x);
 		// Return without registering the enclave. This will fail and the transaction will be banned for 30min.
 		return None
@@ -827,7 +827,9 @@ fn send_extrinsic(
 	info!("[>] send extrinsic");
 	trace!("  encoded extrinsic: 0x{:}", hex::encode(extrinsic.clone()));
 
-	match api.submit_and_watch_opaque_extrinsic_until_success(extrinsic.into(), true) {
+	// fixme: wait ...until_success doesn't work due to https://github.com/scs/substrate-api-client/issues/624
+	// fixme: currently, we don't verify if the extrinsic was a success here
+	match api.submit_and_watch_opaque_extrinsic_until(extrinsic.into(), XtStatus::Finalized) {
 		Ok(xt_report) => {
 			info!(
 				"[+] L1 extrinsic success. extrinsic hash: {:?} / status: {:?}",
@@ -884,7 +886,7 @@ fn we_are_primary_validateer(
 ) -> Result<bool, Error> {
 	let enclave_count_of_previous_block =
 		node_api.enclave_count(Some(*register_enclave_xt_header.parent_hash()))?;
-	println!(
+	trace!(
 		"enclave count is {} for previous block 0x{:?}",
 		enclave_count_of_previous_block,
 		register_enclave_xt_header.parent_hash()
