@@ -119,6 +119,6 @@ where
 /// Execute trusted operations in the enclave.
 fn execute_trusted_calls<E: Sidechain>(enclave_api: &E) {
 	if let Err(e) = enclave_api.execute_trusted_calls() {
-		error!("{:?}", e);
+		error!("execute_trusted_calls failed: {:?}", e);
 	};
 }
