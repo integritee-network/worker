@@ -59,12 +59,29 @@ impl NodeApiFactory {
 	pub fn new(url: String, signer: sr25519::Pair) -> Self {
 		NodeApiFactory { node_url: url, signer: ParentchainExtrinsicSigner::new(signer) }
 	}
+
+	// This uses `block_on` inside to call an `async` constructor, which can have unintended consenquences (e.g., nested `block_on` panics out of the blue)
+	// By moving it to a seperate thread, this should help with the nested `block_on` panic, but this is just a workaround.
+	fn get_json_rpsee_client_from_new_thread(&self) -> JsonrpseeClient {
+		use std::thread;
+
+		let node_url = self.node_url.clone();
+		let handle = thread::spawn(move || {
+			let rpc_client = JsonrpseeClient::new(node_url.as_str())
+				.map_err(NodeApiFactoryError::FailedToCreateRpcClient)
+				.expect("Failed to create RPC client");
+			rpc_client
+		});
+
+		handle.join().expect("Failed to create RPC client")
+	}
 }
 
 impl CreateNodeApi for NodeApiFactory {
 	fn create_api(&self) -> Result<ParentchainApi> {
-		let rpc_client = JsonrpseeClient::new(self.node_url.as_str())
-			.map_err(NodeApiFactoryError::FailedToCreateRpcClient)?;
+		// This is a rather ugly workaround, please see the function for explanation.
+		let rpc_client = self.get_json_rpsee_client_from_new_thread();
+
 		let mut api =
 			ParentchainApi::new(rpc_client).map_err(NodeApiFactoryError::FailedToCreateNodeApi)?;
 		api.set_signer(self.signer.clone());
