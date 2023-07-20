@@ -84,17 +84,22 @@ pub unsafe extern "C" fn execute_trusted_calls() -> sgx_status_t {
 /// *   Sends sidechain `confirm_block` xt's with the produced sidechain blocks.
 /// *   Broadcast produced sidechain blocks to peer validateers.
 fn execute_top_pool_trusted_calls_internal() -> Result<()> {
+	println!("inside execute_top_pool_trusted_calls_internal()");
+
 	let start_time = Instant::now();
 
 	// We acquire lock explicitly (variable binding), since '_' will drop the lock after the statement.
 	// See https://medium.com/codechain/rust-underscore-does-not-bind-fec6a18115a8
 	let _enclave_write_lock = EnclaveLock::write_all()?;
+	println!("inside execute_top_pool_trusted_calls_internal(), _enclave_write_lock");
 
 	let slot_beginning_timestamp = duration_now();
 
 	let parentchain_import_dispatcher = get_triggered_dispatcher_from_solo_or_parachain()?;
+	println!("inside execute_top_pool_trusted_calls_internal(), parentchain_import_dispatcher");
 
 	let validator_access = get_validator_accessor_from_solo_or_parachain()?;
+	println!("inside execute_top_pool_trusted_calls_internal(), validator_access");
 
 	// This gets the latest imported block. We accept that all of AURA, up until the block production
 	// itself, will  operate on a parentchain block that is potentially outdated by one block
@@ -103,14 +108,19 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 		let latest_parentchain_header = v.latest_finalized_header()?;
 		Ok(latest_parentchain_header)
 	})?;
+	println!("inside execute_top_pool_trusted_calls_internal(), current_parentchain_header");
 
 	// Import any sidechain blocks that are in the import queue. In case we are missing blocks,
 	// a peer sync will happen. If that happens, the slot time might already be used up just by this import.
 	let sidechain_block_import_queue_worker =
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT.get()?;
+	println!(
+		"inside execute_top_pool_trusted_calls_internal(), sidechain_block_import_queue_worker"
+	);
 
 	let latest_parentchain_header =
 		sidechain_block_import_queue_worker.process_queue(&current_parentchain_header)?;
+	println!("inside execute_top_pool_trusted_calls_internal(), latest_parentchain_header");
 
 	info!(
 		"Elapsed time to process sidechain block import queue: {} ms",
@@ -118,18 +128,25 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	);
 
 	let stf_executor = get_stf_executor_from_solo_or_parachain()?;
+	println!("inside execute_top_pool_trusted_calls_internal(), stf_executor");
 
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
+	println!("inside execute_top_pool_trusted_calls_internal(), top_pool_author");
 
 	let block_composer = GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT.get()?;
+	println!("inside execute_top_pool_trusted_calls_internal(), block_composer");
 
 	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
+	println!("inside execute_top_pool_trusted_calls_internal(), extrinsics_factory");
 
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
+	println!("inside execute_top_pool_trusted_calls_internal(), state_handler");
 
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
+	println!("inside execute_top_pool_trusted_calls_internal(), ocall_api");
 
 	let authority = GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT.get()?.retrieve_key()?;
+	println!("inside execute_top_pool_trusted_calls_internal(), authority");
 
 	match yield_next_slot(
 		slot_beginning_timestamp,
