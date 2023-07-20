@@ -89,17 +89,16 @@ where
 	// Start interval sidechain block production (execution of trusted calls, sidechain block production).
 	let sidechain_enclave_api = enclave;
 	println!("[+] Spawning thread for sidechain block production");
-	thread::Builder::new()
-		.name("interval_block_production_timer".to_owned())
-		.spawn(move || {
-			let future = start_slot_worker(
-				|| execute_trusted_calls(sidechain_enclave_api.as_ref()),
-				SLOT_DURATION,
-			);
-			block_on(future);
-			println!("[!] Sidechain block production loop has terminated");
-		})
-		.map_err(|e| Error::Custom(Box::new(e)))?;
+	tokio::task::spawn_blocking(move || {
+		let future = start_slot_worker(
+			|| execute_trusted_calls(sidechain_enclave_api.as_ref()),
+			SLOT_DURATION,
+		);
+		block_on(future);
+		println!("[!] Sidechain block production loop has terminated");
+	})
+	.await
+	.map_err(|e| Error::Custom(Box::new(e)))?;
 
 	// ------------------------------------------------------------------------
 	// start sidechain pruning loop
