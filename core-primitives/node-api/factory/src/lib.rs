@@ -18,6 +18,7 @@
 
 use itp_api_client_types::{JsonrpseeClient, ParentchainApi, ParentchainExtrinsicSigner};
 use sp_core::sr25519;
+use std::thread;
 use tokio::task::JoinError;
 
 /// Trait to create a node API, based on a node URL and signer.
@@ -74,10 +75,7 @@ impl NodeApiFactory {
 
 	// This uses `block_on` inside to call an `async` constructor, which can have unintended consenquences (e.g., nested `block_on` panics out of the blue)
 	// By moving it to a seperate thread, this should help with the nested `block_on` panic, but this is just a workaround.
-	fn get_json_rpsee_client_from_new_thread(&self) -> JsonrpseeClient {
-		use std::thread;
-
-		let node_url = self.node_url.clone();
+	fn get_json_rpsee_client_from_new_thread(node_url: String) -> JsonrpseeClient {
 		let handle =
 			thread::spawn(move || Self::get_json_rpsee_client_from_new_thread_helper(node_url));
 
@@ -88,7 +86,10 @@ impl NodeApiFactory {
 impl CreateNodeApi for NodeApiFactory {
 	fn create_api(&self) -> Result<ParentchainApi> {
 		// This is a rather ugly workaround, please see the function for explanation.
-		let rpc_client = self.get_json_rpsee_client_from_new_thread();
+		let node_url = self.node_url.clone();
+
+		let handle = thread::spawn(move || Self::get_json_rpsee_client_from_new_thread(node_url));
+		let rpc_client = handle.join().expect("Failed to create RPC client, outer thread");
 
 		let mut api =
 			ParentchainApi::new(rpc_client).map_err(NodeApiFactoryError::FailedToCreateNodeApi)?;
