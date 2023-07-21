@@ -19,7 +19,6 @@
 use itp_api_client_types::{JsonrpseeClient, ParentchainApi, ParentchainExtrinsicSigner};
 use sp_core::sr25519;
 use std::thread;
-use tokio::task::JoinError;
 
 /// Trait to create a node API, based on a node URL and signer.
 pub trait CreateNodeApi {
