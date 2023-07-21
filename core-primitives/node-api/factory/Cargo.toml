@@ -5,9 +5,9 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
 [dependencies]
+futures = { version = "0.3.8" }
 thiserror = { version = "1.0" }
 tokio = { version = "1.6.1", features = ["full"] }
-futures = { version = "0.3.8" }
 
 # substrate
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
