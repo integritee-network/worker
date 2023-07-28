@@ -250,6 +250,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "binary-merkle-tree"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate.git#1612e39131e3fe57ba4c78447fb1cbf7c4f8830e"
+dependencies = [
+ "hash-db 0.16.0",
+]
+
+[[package]]
 name = "bit-vec"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1617,6 +1625,7 @@ dependencies = [
 name = "ita-stf"
 version = "0.9.0"
 dependencies = [
+ "binary-merkle-tree 4.0.0-dev (git+https://github.com/paritytech/substrate.git)",
  "derive_more",
  "frame-support",
  "frame-system",
@@ -1637,8 +1646,11 @@ dependencies = [
  "pallet-sudo",
  "parity-scale-codec",
  "rlp",
+ "serde 1.0.164",
+ "serde_json 1.0.96",
  "sgx_tstd",
  "sha3 0.10.8",
+ "simplyr-lib",
  "sp-application-crypto",
  "sp-core",
  "sp-io",
@@ -1732,7 +1744,7 @@ dependencies = [
 name = "itc-parentchain-indirect-calls-executor"
 version = "0.9.0"
 dependencies = [
- "binary-merkle-tree",
+ "binary-merkle-tree 4.0.0-dev (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
  "bs58",
  "futures 0.3.8",
  "ita-stf",
@@ -2562,6 +2574,12 @@ name = "libc"
 version = "0.2.146"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f92be4933c13fd498862a9e02a3055f8a8d9c039ce33db97306fd5a6caa7f29b"
+
+[[package]]
+name = "libm"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f7012b1bbb0719e1097c47611d3898568c546d597c2e74d66f6087edd5233ff4"
 
 [[package]]
 name = "libsecp256k1"
@@ -3952,6 +3970,17 @@ checksum = "5e1788eed21689f9cf370582dfc467ef36ed9c707f073528ddafa8d83e3b8500"
 dependencies = [
  "digest 0.10.7",
  "rand_core 0.6.4",
+]
+
+[[package]]
+name = "simplyr-lib"
+version = "0.1.0"
+source = "git+https://github.com/BESTenergytrade/simplyr-lib.git?branch=cI/usize#ec8e1266141112a75b304cecfa2da35bfdde215c"
+dependencies = [
+ "libm",
+ "parity-scale-codec",
+ "serde 1.0.164",
+ "serde_json 1.0.96",
 ]
 
 [[package]]
