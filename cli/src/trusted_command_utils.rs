@@ -19,7 +19,7 @@ use crate::{
 	command_utils::{get_worker_api_direct, mrenclave_from_base58},
 	trusted_cli::TrustedCli,
 	trusted_operation::{perform_trusted_operation, read_shard},
-	Cli,
+	Cli, SR25519_KEY_TYPE,
 };
 use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode};
@@ -33,6 +33,7 @@ use log::*;
 use my_node_runtime::Balance;
 use sp_application_crypto::sr25519;
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
+use sp_keystore::Keystore;
 use sp_runtime::traits::IdentifyAccount;
 use std::{boxed::Box, path::PathBuf};
 use substrate_client_keystore::LocalKeystore;
