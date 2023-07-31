@@ -31,7 +31,7 @@ use crate::{
 };
 use finality_grandpa::BlockNumberOps;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, NumberFor};
-use std::marker::PhantomData;
+use std::{marker::PhantomData, sync::Arc};
 
 /// Retrieve an exclusive lock on a validator for either read or write access.
 ///
@@ -62,7 +62,7 @@ where
 /// Implementation of a validator access based on a global lock and corresponding file.
 #[derive(Debug)]
 pub struct ValidatorAccessor<Validator, ParentchainBlock, LightClientSeal> {
-	seal: LightClientSeal,
+	seal: Arc<LightClientSeal>,
 	light_validation: RwLock<Validator>,
 	_phantom: PhantomData<(LightClientSeal, Validator, ParentchainBlock)>,
 }
@@ -70,7 +70,7 @@ pub struct ValidatorAccessor<Validator, ParentchainBlock, LightClientSeal> {
 impl<Validator, ParentchainBlock, LightClientSeal>
 	ValidatorAccessor<Validator, ParentchainBlock, LightClientSeal>
 {
-	pub fn new(validator: Validator, seal: LightClientSeal) -> Self {
+	pub fn new(validator: Validator, seal: Arc<LightClientSeal>) -> Self {
 		ValidatorAccessor {
 			light_validation: RwLock::new(validator),
 			seal,
