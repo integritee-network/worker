@@ -48,10 +48,10 @@ impl TcpHeader {
 /// Indicates the payload content type.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Decode, Encode, MaxEncodedLen)]
 pub enum Opcode {
-	ShieldingKey = 0,
-	StateKey = 1,
-	State = 2,
-	LightClient = 3,
+	ShieldingKey,
+	StateKey,
+	State,
+	LightClient,
 }
 
 impl From<u8> for Opcode {
