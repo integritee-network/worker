@@ -46,7 +46,7 @@ use itc_parentchain::{
 		IndirectCallsExecutor,
 	},
 	light_client::{
-		concurrent_access::ValidatorAccessor, io::LightClientStateSeal,
+		concurrent_access::ValidatorAccessor, io::LightClientStateSealSync,
 		light_validation::LightValidation, light_validation_state::LightValidationState,
 	},
 };
@@ -132,7 +132,7 @@ pub type EnclaveSidechainApi = SidechainApi<ParentchainBlock>;
 
 // Parentchain types
 pub type EnclaveLightClientSeal =
-	LightClientStateSeal<ParentchainBlock, LightValidationState<ParentchainBlock>>;
+	LightClientStateSealSync<ParentchainBlock, LightValidationState<ParentchainBlock>>;
 pub type EnclaveExtrinsicsFactory =
 	ExtrinsicsFactory<EnclaveParentchainSigner, NonceCache, EnclaveNodeMetadataRepository>;
 pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
@@ -243,6 +243,10 @@ pub static GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT: ComponentContainer<
 pub static GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT: ComponentContainer<
 	EnclaveSigningKeyRepository,
 > = ComponentContainer::new("Signing key repository");
+
+/// Light client db seal.
+pub static GLOBAL_LIGHT_CLIENT_SEAL: ComponentContainer<EnclaveLightClientSeal> =
+	ComponentContainer::new("EnclaveLightClientSealSync");
 
 /// O-Call API
 pub static GLOBAL_OCALL_API_COMPONENT: ComponentContainer<EnclaveOCallApi> =
