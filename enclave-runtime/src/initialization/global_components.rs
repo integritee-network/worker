@@ -215,8 +215,12 @@ pub type EnclaveSidechainBlockImportQueueWorker = BlockImportQueueWorker<
 	EnclaveSidechainBlockImportQueue,
 	EnclaveSidechainBlockSyncer,
 >;
-pub type EnclaveSealHandler =
-	SealHandler<EnclaveShieldingKeyRepository, EnclaveStateKeyRepository, EnclaveStateHandler>;
+pub type EnclaveSealHandler = SealHandler<
+	EnclaveShieldingKeyRepository,
+	EnclaveStateKeyRepository,
+	EnclaveStateHandler,
+	EnclaveLightClientSeal,
+>;
 pub type EnclaveOffchainWorkerExecutor = itc_offchain_worker_executor::executor::Executor<
 	ParentchainBlock,
 	EnclaveTopPoolAuthor,

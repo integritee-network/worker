@@ -87,9 +87,11 @@ impl<B, L> LightClientStateSeal<B, L> {
 	}
 }
 
-impl<B: Block, LightClientState: Decode + Encode + Debug> LightClientSealing<LightClientState>
+impl<B: Block, LightClientState: Decode + Encode + Debug> LightClientSealing
 	for LightClientStateSeal<B, LightClientState>
 {
+	type LightClientState = LightClientState;
+
 	fn seal(&self, unsealed: &LightClientState) -> Result<()> {
 		trace!("Backup light client state");
 
@@ -128,9 +130,11 @@ impl<B, LightClientState> LightClientStateSealSync<B, LightClientState> {
 	}
 }
 
-impl<B: Block, LightClientState: Decode + Encode + Debug> LightClientSealing<LightClientState>
+impl<B: Block, LightClientState: Decode + Encode + Debug> LightClientSealing
 	for LightClientStateSealSync<B, LightClientState>
 {
+	type LightClientState = LightClientState;
+
 	fn seal(&self, unsealed: &LightClientState) -> Result<()> {
 		let _lock = self._rw_lock.write().map_err(|_| Error::PoisonedLock)?;
 		self.seal.seal(unsealed)
@@ -161,7 +165,7 @@ where
 	B: Block,
 	NumberFor<B>: finality_grandpa::BlockNumberOps,
 	OCallApi: EnclaveOnChainOCallApi,
-	LightClientSeal: LightClientSealing<LightValidationState<B>>,
+	LightClientSeal: LightClientSealing<LightClientState = LightValidationState<B>>,
 {
 	check_validator_set_proof::<B>(
 		params.genesis_header.state_root(),
@@ -210,7 +214,7 @@ where
 	B: Block,
 	NumberFor<B>: finality_grandpa::BlockNumberOps,
 	OCallApi: EnclaveOnChainOCallApi,
-	LightClientSeal: LightClientSealing<LightValidationState<B>>,
+	LightClientSeal: LightClientSealing<LightClientState = LightValidationState<B>>,
 {
 	if !seal.exists() {
 		info!("[Enclave] ChainRelay DB not found, creating new! {}", seal.path().display());

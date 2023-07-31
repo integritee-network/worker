@@ -85,7 +85,7 @@ where
 	Validator: ValidatorTrait<ParentchainBlock>
 		+ LightClientState<ParentchainBlock>
 		+ ExtrinsicSenderTrait,
-	Seal: LightClientSealing<LightValidationState<ParentchainBlock>>,
+	Seal: LightClientSealing<LightClientState = LightValidationState<ParentchainBlock>>,
 	ParentchainBlock: ParentchainBlockTrait,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 {

@@ -95,9 +95,11 @@ pub trait LightClientState<Block: ParentchainBlockTrait> {
 	fn penultimate_finalized_block_header(&self) -> Result<Block::Header, Error>;
 }
 
-pub trait LightClientSealing<LightClientState> {
-	fn seal(&self, state: &LightClientState) -> Result<(), Error>;
-	fn unseal(&self) -> Result<LightClientState, Error>;
+pub trait LightClientSealing {
+	type LightClientState;
+
+	fn seal(&self, state: &Self::LightClientState) -> Result<(), Error>;
+	fn unseal(&self) -> Result<Self::LightClientState, Error>;
 	fn exists(&self) -> bool;
 	fn path(&self) -> &Path;
 }
