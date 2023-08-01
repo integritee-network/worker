@@ -416,7 +416,7 @@ mod test {
 	fn call_worker_unchecked_extrinsic() -> ParentchainUncheckedExtrinsic<CallWorkerFn> {
 		let request = Request { shard: shard_id(), cyphertext: vec![1u8, 2u8] };
 		let dummy_metadata = NodeMetadataMock::new();
-		let call_worker_indexes = dummy_metadata.call_worker_call_indexes().unwrap();
+		let call_worker_indexes = dummy_metadata.invoke_call_indexes().unwrap();
 
 		ParentchainUncheckedExtrinsic::<CallWorkerFn>::new_signed(
 			(call_worker_indexes, request),
