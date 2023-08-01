@@ -126,7 +126,7 @@ mod tests {
 	fn execute_with_and_without_mut_in_single_thread_works() {
 		let validator_mock = ValidatorMock::default();
 		let seal = LightValidationStateSealMock::new();
-		let accessor = TestAccessor::new(validator_mock, seal);
+		let accessor = TestAccessor::new(validator_mock, seal.into());
 
 		let _read_result = accessor.execute_on_validator(|_v| Ok(())).unwrap();
 		let _write_result = accessor.execute_mut_on_validator(|_v| Ok(())).unwrap();
