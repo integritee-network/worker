@@ -306,7 +306,7 @@ mod test {
 			test_fixtures([0u8; 32], NodeMetadataMock::new());
 
 		let opaque_extrinsic =
-			OpaqueExtrinsic::from_bytes(call_worker_unchecked_extrinsic().encode().as_slice())
+			OpaqueExtrinsic::from_bytes(invoke_unchecked_extrinsic().encode().as_slice())
 				.unwrap();
 
 		let parentchain_block = ParentchainBlockBuilder::default()
@@ -406,14 +406,14 @@ mod test {
 
 		let shield_funds_indexes = dummy_metadata.shield_funds_call_indexes().unwrap();
 		ParentchainUncheckedExtrinsic::<ShieldFundsFn>::new_signed(
-			(shield_funds_indexes, target_account, 1000u128, shard_id()),
+			(shield_funds_indexes, shard_id(), target_account, 1000u128),
 			Address::Address32([1u8; 32]),
 			MultiSignature::Ed25519(default_signature()),
 			default_extrinsic_params().signed_extra(),
 		)
 	}
 
-	fn call_worker_unchecked_extrinsic() -> ParentchainUncheckedExtrinsic<CallWorkerFn> {
+	fn invoke_unchecked_extrinsic() -> ParentchainUncheckedExtrinsic<CallWorkerFn> {
 		let request = Request { shard: shard_id(), cyphertext: vec![1u8, 2u8] };
 		let dummy_metadata = NodeMetadataMock::new();
 		let call_worker_indexes = dummy_metadata.invoke_call_indexes().unwrap();
