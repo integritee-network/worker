@@ -704,7 +704,7 @@ fn print_events(events: Vec<Event>) {
 						println!("    Data source:  {}", data_source);
 						println!("    trading pair:  {}", trading_pair);
 						println!("    Exchange rate: {:?}", exchange_rate);
-					}
+					},
 					my_node_runtime::pallet_teeracle::Event::ExchangeRateDeleted {
 						data_source,
 						trading_pair,
@@ -712,7 +712,7 @@ fn print_events(events: Vec<Event>) {
 						println!("[+] Received ExchangeRateDeleted event");
 						println!("    Data source:  {}", data_source);
 						println!("    trading pair:  {}", trading_pair);
-					}
+					},
 					my_node_runtime::pallet_teeracle::Event::AddedToWhitelist {
 						data_source,
 						enclave_fingerprint,
@@ -720,7 +720,7 @@ fn print_events(events: Vec<Event>) {
 						println!("[+] Received AddedToWhitelist event");
 						println!("    Data source:  {}", data_source);
 						println!("    fingerprint:  {:?}", enclave_fingerprint);
-					}
+					},
 					my_node_runtime::pallet_teeracle::Event::RemovedFromWhitelist {
 						data_source,
 						enclave_fingerprint,
@@ -728,7 +728,7 @@ fn print_events(events: Vec<Event>) {
 						println!("[+] Received RemovedFromWhitelist event");
 						println!("    Data source:  {}", data_source);
 						println!("    fingerprint:  {:?}", enclave_fingerprint);
-					}
+					},
 					_ => {
 						trace!("Ignoring unsupported pallet_teeracle event");
 					},

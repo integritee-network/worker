@@ -67,7 +67,7 @@ pub fn count_exchange_rate_update_events(api: &ParentchainApi, duration: Duratio
 								"ExchangeRateUpdated: TRADING_PAIR : {}, SRC : {}, VALUE :{:?}",
 								trading_pair, data_source, exchange_rate
 							);
-						}
+						},
 						_ => trace!("ignoring teeracle event: {:?}", event),
 					}
 				}
