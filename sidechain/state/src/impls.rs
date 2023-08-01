@@ -18,10 +18,8 @@
 //! Implement the sidechain state traits.
 
 use core::fmt::Debug;
-
 use crate::{Error, SidechainState, StateUpdate};
 use codec::{Decode, Encode};
-use core::fmt::Debug;
 use frame_support::ensure;
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_storage::keys::storage_value_key;
