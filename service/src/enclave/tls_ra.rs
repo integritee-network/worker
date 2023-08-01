@@ -14,7 +14,11 @@
 	limitations under the License.
 
 */
-use itp_enclave_api::{error::Error, remote_attestation::TlsRemoteAttestation, EnclaveResult};
+use itp_enclave_api::{
+	error::Error,
+	remote_attestation::{RemoteAttestation, TlsRemoteAttestation},
+	EnclaveResult,
+};
 use itp_types::ShardIdentifier;
 use log::*;
 use sgx_types::*;
@@ -26,6 +30,8 @@ use std::{
 pub fn enclave_run_state_provisioning_server<E: TlsRemoteAttestation>(
 	enclave_api: &E,
 	sign_type: sgx_quote_sign_type_t,
+	quoting_enclave_target_info: Option<&sgx_target_info_t>,
+	quote_size: Option<&u32>,
 	addr: &str,
 	skip_ra: bool,
 ) {
@@ -45,6 +51,8 @@ pub fn enclave_run_state_provisioning_server<E: TlsRemoteAttestation>(
 				let result = enclave_api.run_state_provisioning_server(
 					socket.as_raw_fd(),
 					sign_type,
+					quoting_enclave_target_info,
+					quote_size,
 					skip_ra,
 				);
 
@@ -62,7 +70,7 @@ pub fn enclave_run_state_provisioning_server<E: TlsRemoteAttestation>(
 	}
 }
 
-pub fn enclave_request_state_provisioning<E: TlsRemoteAttestation>(
+pub fn enclave_request_state_provisioning<E: TlsRemoteAttestation + RemoteAttestation>(
 	enclave_api: &E,
 	sign_type: sgx_quote_sign_type_t,
 	addr: &str,
@@ -72,5 +80,31 @@ pub fn enclave_request_state_provisioning<E: TlsRemoteAttestation>(
 	info!("[MU-RA-Client] Requesting key provisioning from {}", addr);
 
 	let stream = TcpStream::connect(addr).map_err(|e| Error::Other(Box::new(e)))?;
-	enclave_api.request_state_provisioning(stream.as_raw_fd(), sign_type, shard, skip_ra)
+
+	let quoting_enclave_target_info = if !skip_ra {
+		match enclave_api.qe_get_target_info() {
+			Ok(quote_size) => Some(quote_size),
+			Err(e) => return Err(e),
+		}
+	} else {
+		None
+	};
+
+	let quote_size = if !skip_ra {
+		match enclave_api.qe_get_quote_size() {
+			Ok(quote_size) => Some(quote_size),
+			Err(e) => return Err(e),
+		}
+	} else {
+		None
+	};
+
+	enclave_api.request_state_provisioning(
+		stream.as_raw_fd(),
+		sign_type,
+		quoting_enclave_target_info.as_ref(),
+		quote_size.as_ref(),
+		shard,
+		skip_ra,
+	)
 }

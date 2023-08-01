@@ -72,7 +72,8 @@ use log::*;
 use my_node_runtime::{Hash, Header, RuntimeEvent};
 use sgx_types::*;
 use substrate_api_client::{
-	rpc::HandleSubscription, GetHeader, SubmitAndWatchUntilSuccess, SubscribeChain, SubscribeEvents,
+	api::XtStatus, rpc::HandleSubscription, GetHeader, SubmitAndWatch, SubscribeChain,
+	SubscribeEvents,
 };
 
 #[cfg(feature = "dcap")]
@@ -174,6 +175,21 @@ fn main() {
 		enclave_metrics_receiver,
 	)));
 
+	let quoting_enclave_target_info = match enclave.qe_get_target_info() {
+		Ok(target_info) => Some(target_info),
+		Err(e) => {
+			warn!("Setting up DCAP - qe_get_target_info failed with error: {:#?}, continuing.", e);
+			None
+		},
+	};
+	let quote_size = match enclave.qe_get_quote_size() {
+		Ok(size) => Some(size),
+		Err(e) => {
+			warn!("Setting up DCAP - qe_get_quote_size failed with error: {:#?}, continuing.", e);
+			None
+		},
+	};
+
 	if let Some(run_config) = config.run_config() {
 		let shard = extract_shard(run_config.shard(), enclave.as_ref());
 
@@ -203,6 +219,8 @@ fn main() {
 			node_api,
 			tokio_handle,
 			initialization_handler,
+			quoting_enclave_target_info,
+			quote_size,
 		);
 	} else if let Some(smatches) = matches.subcommand_matches("request-state") {
 		println!("*** Requesting state from a registered worker \n");
@@ -243,6 +261,8 @@ fn main() {
 			enclave_run_state_provisioning_server(
 				enclave.as_ref(),
 				sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
+				quoting_enclave_target_info.as_ref(),
+				quote_size.as_ref(),
 				&config.mu_ra_url(),
 				sub_matches.is_present("skip-ra"),
 			);
@@ -277,6 +297,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	node_api: ParentchainApi,
 	tokio_handle_getter: Arc<T>,
 	initialization_handler: Arc<InitializationHandler>,
+	quoting_enclave_target_info: Option<sgx_target_info_t>,
+	quote_size: Option<u32>,
 ) where
 	T: GetTokioHandle,
 	E: EnclaveBase
@@ -317,6 +339,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		enclave_run_state_provisioning_server(
 			enclave_api_key_prov.as_ref(),
 			sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
+			quoting_enclave_target_info.as_ref(),
+			quote_size.as_ref(),
 			&ra_url,
 			skip_ra,
 		);
@@ -405,6 +429,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		.unwrap(),
 	);
 	let last_synced_header = parentchain_handler.init_parentchain_components().unwrap();
+	trace!("last synched parentchain block: {}", last_synced_header.number);
+
 	let nonce = node_api.get_nonce_of(&tee_accountid).unwrap();
 	info!("Enclave nonce = {:?}", nonce);
 	enclave
@@ -449,19 +475,22 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	// clones because of the move
 	let enclave2 = enclave.clone();
 	let node_api2 = node_api.clone();
+	#[cfg(feature = "dcap")]
+	enclave2.set_sgx_qpl_logging().expect("QPL logging setup failed");
 	#[cfg(not(feature = "dcap"))]
 	let register_xt = move || enclave2.generate_ias_ra_extrinsic(&trusted_url, skip_ra).unwrap();
 	#[cfg(feature = "dcap")]
 	let register_xt = move || enclave2.generate_dcap_ra_extrinsic(&trusted_url, skip_ra).unwrap();
 
 	let send_register_xt = move || {
+		println!("[+] Send register enclave extrinsic");
 		send_extrinsic(register_xt(), &node_api2, &tee_accountid.clone(), is_development_mode)
 	};
 
-	let register_enclave_block_hash = send_register_xt();
+	let register_enclave_block_hash = send_register_xt().unwrap();
 
 	let register_enclave_xt_header =
-		node_api.get_header(register_enclave_block_hash).unwrap().unwrap();
+		node_api.get_header(Some(register_enclave_block_hash)).unwrap().unwrap();
 
 	let we_are_primary_validateer =
 		we_are_primary_validateer(&node_api, &register_enclave_xt_header).unwrap();
@@ -561,10 +590,10 @@ fn spawn_worker_for_shard_polling<InitializationHandler>(
 
 		loop {
 			info!("Polling for worker for shard ({} seconds interval)", POLL_INTERVAL_SECS);
-			if let Ok(Some(_)) = node_api.worker_for_shard(&shard_for_initialized, None) {
+			if let Ok(Some(enclave)) = node_api.worker_for_shard(&shard_for_initialized, None) {
 				// Set that the service is initialized.
 				initialization_handler.worker_for_shard_registered();
-				println!("[+] Found `WorkerForShard` on parentchain state");
+				println!("[+] Found `WorkerForShard` on parentchain state: {:?}", enclave.pubkey);
 				break
 			}
 			thread::sleep(Duration::from_secs(POLL_INTERVAL_SECS));
@@ -797,8 +826,8 @@ fn register_collateral(
 	skip_ra: bool,
 ) {
 	//TODO generate_dcap_ra_quote() does not really need skip_ra, rethink how many layers skip_ra should be passed along
-	let dcap_quote = enclave.generate_dcap_ra_quote(skip_ra).unwrap();
 	if !skip_ra {
+		let dcap_quote = enclave.generate_dcap_ra_quote(skip_ra).unwrap();
 		let (fmspc, _tcb_info) = extract_tcb_info_from_raw_dcap_quote(&dcap_quote).unwrap();
 		println!("[>] DCAP setup: register QE collateral");
 		let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc).unwrap();
@@ -813,23 +842,28 @@ fn register_collateral(
 fn send_extrinsic(
 	extrinsic: Vec<u8>,
 	api: &ParentchainApi,
-	accountid: &AccountId32,
+	fee_payer: &AccountId32,
 	is_development_mode: bool,
 ) -> Option<Hash> {
-	// Account funds
-	if let Err(x) = setup_account_funding(api, accountid, extrinsic.clone(), is_development_mode) {
-		error!("Starting worker failed: {:?}", x);
+	// ensure account funds
+	if let Err(x) = setup_account_funding(api, fee_payer, extrinsic.clone(), is_development_mode) {
+		error!("Ensure enclave funding failed: {:?}", x);
 		// Return without registering the enclave. This will fail and the transaction will be banned for 30min.
 		return None
 	}
 
-	println!("[>] send extrinsic");
+	info!("[>] send extrinsic");
+	trace!("  encoded extrinsic: 0x{:}", hex::encode(extrinsic.clone()));
 
-	match api.submit_and_watch_opaque_extrinsic_until_success(extrinsic.into(), true) {
+	// fixme: wait ...until_success doesn't work due to https://github.com/scs/substrate-api-client/issues/624
+	// fixme: currently, we don't verify if the extrinsic was a success here
+	match api.submit_and_watch_opaque_extrinsic_until(extrinsic.into(), XtStatus::Finalized) {
 		Ok(xt_report) => {
-			let register_qe_block_hash = xt_report.block_hash;
-			println!("[<] Extrinsic got finalized. Block hash: {:?}\n", register_qe_block_hash);
-			register_qe_block_hash
+			info!(
+				"[+] L1 extrinsic success. extrinsic hash: {:?} / status: {:?}",
+				xt_report.extrinsic_hash, xt_report.status
+			);
+			xt_report.block_hash
 		},
 		Err(e) => {
 			error!("ExtrinsicFailed {:?}", e);
@@ -880,5 +914,10 @@ fn we_are_primary_validateer(
 ) -> Result<bool, Error> {
 	let enclave_count_of_previous_block =
 		node_api.enclave_count(Some(*register_enclave_xt_header.parent_hash()))?;
+	trace!(
+		"enclave count is {} for previous block 0x{:?}",
+		enclave_count_of_previous_block,
+		register_enclave_xt_header.parent_hash()
+	);
 	Ok(enclave_count_of_previous_block == 0)
 }

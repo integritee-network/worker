@@ -30,7 +30,7 @@ use sp_core::{
 use sp_keyring::AccountKeyring;
 use sp_runtime::MultiAddress;
 use substrate_api_client::{
-	extrinsic::BalancesExtrinsics, GetBalance, GetTransactionPayment, SubmitAndWatch, XtStatus,
+	extrinsic::BalancesExtrinsics, GetBalance, GetTransactionPayment, SubmitAndWatchUntilSuccess,
 };
 
 /// Information about the enclave on-chain account.
@@ -155,15 +155,14 @@ fn bootstrap_funds_from_alice(
 	let mut alice_signer_api = api.clone();
 	alice_signer_api.set_signer(ParentchainExtrinsicSigner::new(alice));
 
-	println!("[+] bootstrap funding Enclave from Alice's funds");
+	println!("[+] send extrinsic: bootstrap funding Enclave from Alice's funds");
 	let xt = alice_signer_api
 		.balance_transfer_allow_death(MultiAddress::Id(accountid.clone()), funding_amount);
-	let xt_report = alice_signer_api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock)?;
+	let xt_report = alice_signer_api.submit_and_watch_extrinsic_until_success(xt, false)?;
 	info!(
-		"[<] Extrinsic got included in a block. Extrinsic Hash: {:?}\n",
-		xt_report.extrinsic_hash
+		"[<] L1 extrinsic success. extrinsic hash: {:?} / status: {:?}",
+		xt_report.extrinsic_hash, xt_report.status
 	);
-
 	// Verify funds have arrived.
 	let free_balance = alice_signer_api.get_free_balance(accountid);
 	info!("TEE's NEW free balance = {:?}", free_balance);

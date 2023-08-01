@@ -1,0 +1,73 @@
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: teeracle
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teeracle-main
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: teeracle
+    role: main
+    tier: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: teeracle
+      role: main
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: teeracle
+    spec:
+      serviceAccountName: teeracle
+      containers:
+      - image: {{ .Values.image }}
+        imagePullPolicy: {{ .Values.imagePullPolicy }}
+
+        args: [
+          "-p", "443",
+          "-u", {{ .Values.app.url }},
+          "--enable-metrics",
+          "--data-dir", "/opt/teeracle",
+          "run",
+          "--teeracle-interval", {{ .Values.app.interval }}
+        ]
+        name: teeracle
+
+        resources:
+          # Resource request to use Intel SGX Device Plugin
+          # If you are running in simulation mode, or are using a different plugin,
+          # update these values accordingly
+          limits:
+            sgx.intel.com/epc: "10Mi"
+            sgx.intel.com/enclave: 1
+            sgx.intel.com/provision: 1
+
+        volumeMounts:
+        - name: aesmd-socket
+          mountPath: /var/run/aesmd
+        - name: data-dir
+          mountPath: /opt/teeracle
+        - name: qcnl
+          mountPath: /etc/sgx_default_qcnl.conf
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+      - name: aesmd-socket
+        hostPath:
+          path: /var/run/aesmd
+      - name: data-dir
+        hostPath:
+          path: /opt/teeracle
+      - name: qcnl
+        hostPath:
+          path: /etc/sgx_default_qcnl.conf
+

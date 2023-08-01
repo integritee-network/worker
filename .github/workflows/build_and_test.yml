@@ -37,17 +37,20 @@ jobs:
             mode: sidechain
             host: integritee-builder-sgx
             sgx_mode: HW
+            additional_features: dcap
           - flavor_id: offchain-worker
             mode: offchain-worker
             host: integritee-builder-sgx
             sgx_mode: HW
+            additional_features: dcap
           - flavor_id: teeracle
             mode: teeracle
             host: integritee-builder-sgx
             sgx_mode: HW
+            additional_features: dcap
           - flavor_id: sidechain-evm
             mode: sidechain
-            additional_features: evm
+            additional_features: evm,dcap
             host: integritee-builder-sgx
             sgx_mode: HW
 
@@ -60,7 +63,7 @@ jobs:
           echo "FINGERPRINT=$fingerprint" >> $GITHUB_ENV
           if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
              echo "DOCKER_DEVICES=--device=/dev/sgx/enclave --device=/dev/sgx/provision" >> $GITHUB_ENV
-             echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd" >> $GITHUB_ENV
+             echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd --volume /etc/sgx_default_qcnl.conf:/etc/sgx_default_qcnl.conf" >> $GITHUB_ENV
           else
              echo "DOCKER_DEVICES=" >> $GITHUB_ENV
              echo "DOCKER_VOLUMES=" >> $GITHUB_ENV
@@ -189,8 +192,8 @@ jobs:
       WORKER_IMAGE_TAG: integritee-worker:dev
       CLIENT_IMAGE_TAG: integritee-cli:dev
       COINMARKETCAP_KEY: ${{ secrets.COINMARKETCAP_KEY }}
-      IAS_EPID_SPID: ${{ secrets.IAS_SPID }}
-      IAS_EPID_KEY: ${{ secrets.IAS_PRIMARY_KEY }}
+      # IAS_EPID_SPID: ${{ secrets.IAS_SPID }}
+      # IAS_EPID_KEY: ${{ secrets.IAS_PRIMARY_KEY }}
       TEERACLE_INTERVAL_SECONDS: 10
 
     strategy:
@@ -254,6 +257,7 @@ jobs:
              echo "SGX_PROVISION=/dev/sgx/provision" >> $GITHUB_ENV
              echo "SGX_ENCLAVE=/dev/sgx/enclave" >> $GITHUB_ENV
              echo "AESMD=/var/run/aesmd" >> $GITHUB_ENV
+             echo "SGX_QCNL=/etc/sgx_default_qcnl.conf" >> $GITHUB_ENV
           fi
 
           echo "LOG_DIR=./logs-$version" >> $GITHUB_ENV
@@ -367,6 +371,7 @@ jobs:
           - flavor_id: teeracle
             mode: teeracle
             sgx_mode: HW
+            additional_features: dcap
 
     steps:
       - uses: actions/checkout@v3
@@ -383,7 +388,7 @@ jobs:
           echo "FINGERPRINT=$fingerprint" >> $GITHUB_ENV
           if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
               echo "DOCKER_DEVICES=--device=/dev/sgx/enclave --device=/dev/sgx/provision" >> $GITHUB_ENV
-              echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd" >> $GITHUB_ENV
+              echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd --volume /etc/sgx_default_qcnl.conf:/etc/sgx_default_qcnl.conf" >> $GITHUB_ENV
           else
               echo "DOCKER_DEVICES=" >> $GITHUB_ENV
               echo "DOCKER_VOLUMES=" >> $GITHUB_ENV
