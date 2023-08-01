@@ -5,7 +5,7 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
 [dependencies]
-sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
+sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 #local deps
 itp-storage = { path = "../storage", default-features = false }

@@ -267,10 +267,9 @@ where
 	<<Runtime as frame_system::Config>::Lookup as StaticLookup>::Source: From<AccountId>,
 	Runtime::Balance: From<u32>,
 {
-	pallet_balances::Call::<Runtime>::set_balance {
+	pallet_balances::Call::<Runtime>::force_set_balance {
 		who: enclave_account.into(),
 		new_free: 1000.into(),
-		new_reserved: 0.into(),
 	}
 	.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
 	.map_err(|e| {

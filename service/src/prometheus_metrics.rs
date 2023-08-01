@@ -26,10 +26,10 @@ use crate::{
 };
 use async_trait::async_trait;
 use codec::{Decode, Encode};
-#[cfg(feature = "dcap")]
+#[cfg(feature = "attesteer")]
 use core::time::Duration;
 use frame_support::scale_info::TypeInfo;
-#[cfg(feature = "dcap")]
+#[cfg(feature = "attesteer")]
 use itc_rest_client::{
 	http_client::{DefaultSend, HttpClient},
 	rest_client::{RestClient, Url as URL},
@@ -187,7 +187,7 @@ impl ReceiveEnclaveMetrics for EnclaveMetricsReceiver {
 #[derive(Serialize, Deserialize, Debug)]
 struct PrometheusMarblerunEvents(pub Vec<PrometheusMarblerunEvent>);
 
-#[cfg(feature = "dcap")]
+#[cfg(feature = "attesteer")]
 impl RestPath<&str> for PrometheusMarblerunEvents {
 	fn get_path(path: &str) -> Result<String, itc_rest_client::error::Error> {
 		Ok(format!("{}", path))

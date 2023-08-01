@@ -19,13 +19,13 @@
 //! `Debug` implementation on `sgx`.
 
 use codec::Encode;
-use sp_core::{hexdisplay::HexDisplay, Public};
+use sp_core::{crypto::Public, hexdisplay::HexDisplay};
 use std::{format, string::String};
 
 /// Convert a sp_core public type to string.
 pub fn public_to_string<T: Public>(t: &T) -> String {
-	let crypto_pair = t.to_public_crypto_pair();
-	format!("{}", HexDisplay::from(&crypto_pair.1))
+	let crypto_pair = t.as_ref();
+	format!("{}", HexDisplay::from(&crypto_pair))
 }
 
 pub fn account_id_to_string<AccountId: Encode>(account: &AccountId) -> String {

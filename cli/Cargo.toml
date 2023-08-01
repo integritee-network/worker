@@ -25,22 +25,23 @@ thiserror = "1.0"
 ws = { version = "0.9.1", features = ["ssl"] }
 
 # scs / integritee
-my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node.git", branch = "polkadot-v0.9.39" }
-pallet-evm = { optional = true, git = "https://github.com/integritee-network/frontier.git", branch = "polkadot-v0.9.39" }
-pallet-teerex = { git = "https://github.com/integritee-network/pallets.git", branch = "polkadot-v0.9.39" }
+my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node.git", branch = "polkadot-v0.9.42" }
+pallet-evm = { optional = true, git = "https://github.com/integritee-network/frontier.git", branch = "bar/polkadot-v0.9.42" }
+pallet-teerex = { git = "https://github.com/integritee-network/pallets.git", branch = "polkadot-v0.9.42" }
 # `default-features = false` to remove the jsonrpsee dependency.
-substrate-api-client = { default-features = false, features = ["std", "ws-client"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.39" }
-substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.39" }
-teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "polkadot-v0.9.39" }
+substrate-api-client = { default-features = false, features = ["std", "ws-client"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.10.0" }
+substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.10.0" }
+teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "polkadot-v0.9.42" }
 
 # substrate dependencies
-frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
-pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
-sc-keystore = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
-sp-application-crypto = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
-sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
-sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
+frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sc-keystore = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-application-crypto = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-keystore = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 # local dependencies
 ita-stf = { path = "../app-libs/stf" }

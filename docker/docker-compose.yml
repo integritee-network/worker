@@ -1,6 +1,6 @@
 services:
   "integritee-node-${VERSION}":
-    image: "${INTEGRITEE_NODE:-integritee/integritee-node-dev-ias:1.0.35}"
+    image: "${INTEGRITEE_NODE:-integritee/integritee-node-dev-ias:1.0.36}"
     hostname: integritee-node
     devices:
       - "${SGX_PROVISION:-/dev/null}:/dev/sgx/provision"
@@ -35,7 +35,7 @@ services:
       - "${AESMD:-/dev/null}:/var/run/aesmd"
       - "${SGX_QCNL:-/dev/null}:/etc/sgx_default_qcnl.conf"
     environment:
-      - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
+      - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn,its_consensus_common=debug
     networks:
       - integritee-test-network
     healthcheck:
@@ -64,7 +64,7 @@ services:
       - "${AESMD:-/dev/null}:/var/run/aesmd"
       - "${SGX_QCNL:-/dev/null}:/etc/sgx_default_qcnl.conf"
     environment:
-      - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn
+      - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=warn,ita_stf=warn,its_consensus_common=debug
     networks:
       - integritee-test-network
     healthcheck:

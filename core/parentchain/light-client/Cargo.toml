@@ -26,12 +26,12 @@ itp-storage = { path = "../../../core-primitives/storage", default-features = fa
 itp-types = { path = "../../../core-primitives/types", default-features = false }
 
 # substrate deps
-frame-system = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
-sp-application-crypto = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
-sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
-sp-finality-grandpa = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
-sp-trie = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
+frame-system = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-application-crypto = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-consensus-grandpa = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-trie = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 # test & mock dependencies
 itc-parentchain-test = { optional = true, default-features = false, path = "../../../core/parentchain/test" }
@@ -58,7 +58,7 @@ std = [
     "frame-system/std",
     "sp-core/std",
     "sp-application-crypto/std",
-    "sp-finality-grandpa/std",
+    "sp-consensus-grandpa/std",
     "sp-runtime/std",
     "sp-trie/std",
 

@@ -6,7 +6,7 @@ edition = "2021"
 
 [dependencies]
 # substrate
-sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
+sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 [features]
 default = ["std"]

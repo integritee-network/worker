@@ -15,12 +15,12 @@ sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teacla
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_urts = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
-frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
-sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
-sp-finality-grandpa = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
+frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-consensus-grandpa = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
-teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "polkadot-v0.9.39" }
+teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "polkadot-v0.9.42" }
 
 itc-parentchain = { path = "../../core/parentchain/parentchain-crate" }
 itp-enclave-api-ffi = { path = "ffi" }

@@ -21,7 +21,7 @@ use itp_types::{
 	parentchain::{BlockNumber, Hash, Header, StorageProof},
 	H256,
 };
-use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
+use sp_consensus_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use sp_runtime::traits::GetRuntimeBlockType;
 use substrate_api_client::{
 	rpc::Request, serde_impls::StorageKey, storage_key, Api, ExtrinsicParams, FrameSystemConfig,
