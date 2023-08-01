@@ -21,7 +21,7 @@ use crate::{
 	trusted_cli::TrustedCli,
 	Cli,
 };
-use base58::FromBase58;
+use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode};
 use ita_stf::{Getter, TrustedOperation};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
@@ -45,7 +45,6 @@ use substrate_api_client::{
 };
 use teerex_primitives::Request;
 use thiserror::Error;
-use base58::ToBase58;
 
 #[derive(Debug, Error)]
 pub(crate) enum TrustedOperationError {
@@ -127,7 +126,11 @@ fn send_indirect_request(
 	let call_encrypted = encryption_key.encrypt(&trusted_operation.encode()).unwrap();
 
 	let shard = read_shard(trusted_args).unwrap();
-	debug!("indirect send_request: trusted operation: {:?},  shard: {}", trusted_operation, shard.encode().to_base58());
+	debug!(
+		"indirect send_request: trusted operation: {:?},  shard: {}",
+		trusted_operation,
+		shard.encode().to_base58()
+	);
 	let arg_signer = &trusted_args.xt_signer;
 	let signer = get_pair_from_str(arg_signer);
 	chain_api.set_signer(ParentchainExtrinsicSigner::new(sr25519_core::Pair::from(signer)));
@@ -224,7 +227,11 @@ fn send_direct_request(
 	let encryption_key = get_shielding_key(cli).unwrap();
 	let shard = read_shard(trusted_args).unwrap();
 	let jsonrpc_call: String = get_json_request(shard, operation_call, encryption_key);
-	debug!("send_direct_request: trusted operation: {:?},  shard: {}", operation_call, shard.encode().to_base58());
+	debug!(
+		"send_direct_request: trusted operation: {:?},  shard: {}",
+		operation_call,
+		shard.encode().to_base58()
+	);
 	let direct_api = get_worker_api_direct(cli);
 
 	debug!("setup sender and receiver");
