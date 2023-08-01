@@ -306,8 +306,7 @@ mod test {
 			test_fixtures([0u8; 32], NodeMetadataMock::new());
 
 		let opaque_extrinsic =
-			OpaqueExtrinsic::from_bytes(invoke_unchecked_extrinsic().encode().as_slice())
-				.unwrap();
+			OpaqueExtrinsic::from_bytes(invoke_unchecked_extrinsic().encode().as_slice()).unwrap();
 
 		let parentchain_block = ParentchainBlockBuilder::default()
 			.with_extrinsics(vec![opaque_extrinsic])
