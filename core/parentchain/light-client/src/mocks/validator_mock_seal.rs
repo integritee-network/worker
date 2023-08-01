@@ -40,7 +40,9 @@ impl Default for LightValidationStateSealMock {
 	}
 }
 
-impl LightClientSealing<LightValidationState<Block>> for LightValidationStateSealMock {
+impl LightClientSealing for LightValidationStateSealMock {
+	type LightClientState = LightValidationState<Block>;
+
 	fn unseal(&self) -> Result<LightValidationState<Block>, Error> {
 		Ok(LightValidationState::new(RelayState::new(
 			ParentchainHeaderBuilder::default().build(),
