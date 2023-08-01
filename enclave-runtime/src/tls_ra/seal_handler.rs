@@ -21,6 +21,7 @@
 use crate::error::{Error as EnclaveError, Result as EnclaveResult};
 use codec::{Decode, Encode};
 use ita_stf::{State as StfState, StateType as StfStateType};
+use itc_parentchain::light_client::LightClientSealing;
 use itp_sgx_crypto::{
 	key_repository::{AccessKey, MutateKey},
 	Aes,
@@ -34,32 +35,23 @@ use std::{sync::Arc, vec::Vec};
 
 /// Handles the sealing and unsealing of the shielding key, state key and the state.
 #[derive(Default)]
-pub struct SealHandler<ShieldingKeyRepository, StateKeyRepository, StateHandler>
-where
-	ShieldingKeyRepository: AccessKey<KeyType = Rsa3072KeyPair> + MutateKey<Rsa3072KeyPair>,
-	StateKeyRepository: AccessKey<KeyType = Aes> + MutateKey<Aes>,
-	// Constraint StateT = StfState currently necessary because SgxExternalities Encode/Decode does not work.
-	// See https://github.com/integritee-network/sgx-runtime/issues/46.
-	StateHandler: HandleState<StateT = StfState>,
-{
+pub struct SealHandler<ShieldingKeyRepository, StateKeyRepository, StateHandler, LightClientSeal> {
 	state_handler: Arc<StateHandler>,
 	state_key_repository: Arc<StateKeyRepository>,
 	shielding_key_repository: Arc<ShieldingKeyRepository>,
+	light_client_seal: Arc<LightClientSeal>,
 }
 
-impl<ShieldingKeyRepository, StateKeyRepository, StateHandler>
-	SealHandler<ShieldingKeyRepository, StateKeyRepository, StateHandler>
-where
-	ShieldingKeyRepository: AccessKey<KeyType = Rsa3072KeyPair> + MutateKey<Rsa3072KeyPair>,
-	StateKeyRepository: AccessKey<KeyType = Aes> + MutateKey<Aes>,
-	StateHandler: HandleState<StateT = StfState>,
+impl<ShieldingKeyRepository, StateKeyRepository, StateHandler, LightClientSeal>
+	SealHandler<ShieldingKeyRepository, StateKeyRepository, StateHandler, LightClientSeal>
 {
 	pub fn new(
 		state_handler: Arc<StateHandler>,
 		state_key_repository: Arc<StateKeyRepository>,
 		shielding_key_repository: Arc<ShieldingKeyRepository>,
+		light_client_seal: Arc<LightClientSeal>,
 	) -> Self {
-		Self { state_handler, state_key_repository, shielding_key_repository }
+		Self { state_handler, state_key_repository, shielding_key_repository, light_client_seal }
 	}
 }
 
@@ -68,20 +60,24 @@ pub trait SealStateAndKeys {
 	fn seal_state_key(&self, bytes: &[u8]) -> EnclaveResult<()>;
 	fn seal_state(&self, bytes: &[u8], shard: &ShardIdentifier) -> EnclaveResult<()>;
 	fn seal_new_empty_state(&self, shard: &ShardIdentifier) -> EnclaveResult<()>;
+	fn seal_light_client_state(&self, bytes: &[u8]) -> EnclaveResult<()>;
 }
 
 pub trait UnsealStateAndKeys {
 	fn unseal_shielding_key(&self) -> EnclaveResult<Vec<u8>>;
 	fn unseal_state_key(&self) -> EnclaveResult<Vec<u8>>;
 	fn unseal_state(&self, shard: &ShardIdentifier) -> EnclaveResult<Vec<u8>>;
+	fn unseal_light_client_state(&self) -> EnclaveResult<Vec<u8>>;
 }
 
-impl<ShieldingKeyRepository, StateKeyRepository, StateHandler> SealStateAndKeys
-	for SealHandler<ShieldingKeyRepository, StateKeyRepository, StateHandler>
+impl<ShieldingKeyRepository, StateKeyRepository, StateHandler, LightClientSeal> SealStateAndKeys
+	for SealHandler<ShieldingKeyRepository, StateKeyRepository, StateHandler, LightClientSeal>
 where
 	ShieldingKeyRepository: AccessKey<KeyType = Rsa3072KeyPair> + MutateKey<Rsa3072KeyPair>,
 	StateKeyRepository: AccessKey<KeyType = Aes> + MutateKey<Aes>,
 	StateHandler: HandleState<StateT = StfState>,
+	LightClientSeal: LightClientSealing,
+	LightClientSeal::LightClientState: Decode,
 {
 	fn seal_shielding_key(&self, bytes: &[u8]) -> EnclaveResult<()> {
 		let key: Rsa3072KeyPair = serde_json::from_slice(bytes).map_err(|e| {
@@ -109,6 +105,13 @@ where
 		Ok(())
 	}
 
+	fn seal_light_client_state(&self, mut bytes: &[u8]) -> EnclaveResult<()> {
+		let state = <LightClientSeal as LightClientSealing>::LightClientState::decode(&mut bytes)?;
+		self.light_client_seal.seal(&state)?;
+		info!("Successfully sealed light client state");
+		Ok(())
+	}
+
 	/// Seal an empty, newly initialized state.
 	///
 	/// Requires the shielding key to be sealed and updated before calling this.
@@ -123,12 +126,14 @@ where
 	}
 }
 
-impl<ShieldingKeyRepository, StateKeyRepository, StateHandler> UnsealStateAndKeys
-	for SealHandler<ShieldingKeyRepository, StateKeyRepository, StateHandler>
+impl<ShieldingKeyRepository, StateKeyRepository, StateHandler, LightClientSeal> UnsealStateAndKeys
+	for SealHandler<ShieldingKeyRepository, StateKeyRepository, StateHandler, LightClientSeal>
 where
 	ShieldingKeyRepository: AccessKey<KeyType = Rsa3072KeyPair> + MutateKey<Rsa3072KeyPair>,
 	StateKeyRepository: AccessKey<KeyType = Aes> + MutateKey<Aes>,
 	StateHandler: HandleState<StateT = StfState>,
+	LightClientSeal: LightClientSealing,
+	LightClientSeal::LightClientState: Encode,
 {
 	fn unseal_shielding_key(&self) -> EnclaveResult<Vec<u8>> {
 		let shielding_key = self
@@ -148,19 +153,28 @@ where
 	fn unseal_state(&self, shard: &ShardIdentifier) -> EnclaveResult<Vec<u8>> {
 		Ok(self.state_handler.execute_on_current(shard, |state, _| state.state.encode())?)
 	}
+
+	fn unseal_light_client_state(&self) -> EnclaveResult<Vec<u8>> {
+		Ok(self.light_client_seal.unseal()?.encode())
+	}
 }
 
 #[cfg(feature = "test")]
 pub mod test {
 	use super::*;
+	use itc_parentchain::light_client::mocks::validator_mock_seal::LightValidationStateSealMock;
 	use itp_sgx_crypto::mocks::KeyRepositoryMock;
 	use itp_test::mock::handle_state_mock::HandleStateMock;
 
 	type StateKeyRepositoryMock = KeyRepositoryMock<Aes>;
 	type ShieldingKeyRepositoryMock = KeyRepositoryMock<Rsa3072KeyPair>;
 
-	type SealHandlerMock =
-		SealHandler<ShieldingKeyRepositoryMock, StateKeyRepositoryMock, HandleStateMock>;
+	type SealHandlerMock = SealHandler<
+		ShieldingKeyRepositoryMock,
+		StateKeyRepositoryMock,
+		HandleStateMock,
+		LightValidationStateSealMock,
+	>;
 
 	pub fn seal_shielding_key_works() {
 		let seal_handler = SealHandlerMock::default();

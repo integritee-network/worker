@@ -22,7 +22,7 @@ use crate::{
 	attestation::create_ra_report_and_signature,
 	error::{Error as EnclaveError, Result as EnclaveResult},
 	initialization::global_components::{
-		EnclaveSealHandler, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
+		EnclaveSealHandler, GLOBAL_LIGHT_CLIENT_SEAL, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
 		GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
 	},
 	ocall::OcallApi,
@@ -128,6 +128,7 @@ where
 			Opcode::ShieldingKey => self.seal_handler.seal_shielding_key(&bytes)?,
 			Opcode::StateKey => self.seal_handler.seal_state_key(&bytes)?,
 			Opcode::State => self.seal_handler.seal_state(&bytes, &self.shard)?,
+			Opcode::LightClient => self.seal_handler.seal_light_client_state(&bytes)?,
 		};
 		Ok(Some(header.opcode))
 	}
@@ -192,8 +193,20 @@ pub unsafe extern "C" fn request_state_provisioning(
 		},
 	};
 
-	let seal_handler =
-		EnclaveSealHandler::new(state_handler, state_key_repository, shielding_key_repository);
+	let light_client_seal = match GLOBAL_LIGHT_CLIENT_SEAL.get() {
+		Ok(s) => s,
+		Err(e) => {
+			error!("{:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	let seal_handler = EnclaveSealHandler::new(
+		state_handler,
+		state_key_repository,
+		shielding_key_repository,
+		light_client_seal,
+	);
 
 	if let Err(e) = request_state_provisioning_internal(
 		socket_fd,

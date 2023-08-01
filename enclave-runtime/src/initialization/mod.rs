@@ -21,14 +21,14 @@ pub mod parentchain;
 use crate::{
 	error::{Error, Result as EnclaveResult},
 	initialization::global_components::{
-		EnclaveBlockImportConfirmationHandler, EnclaveGetterExecutor, EnclaveOCallApi,
-		EnclaveRpcConnectionRegistry, EnclaveRpcResponder, EnclaveShieldingKeyRepository,
-		EnclaveSidechainApi, EnclaveSidechainBlockImportQueue,
+		EnclaveBlockImportConfirmationHandler, EnclaveGetterExecutor, EnclaveLightClientSeal,
+		EnclaveOCallApi, EnclaveRpcConnectionRegistry, EnclaveRpcResponder,
+		EnclaveShieldingKeyRepository, EnclaveSidechainApi, EnclaveSidechainBlockImportQueue,
 		EnclaveSidechainBlockImportQueueWorker, EnclaveSidechainBlockImporter,
 		EnclaveSidechainBlockSyncer, EnclaveStateFileIo, EnclaveStateHandler,
 		EnclaveStateInitializer, EnclaveStateObserver, EnclaveStateSnapshotRepository,
 		EnclaveStfEnclaveSigner, EnclaveTopPool, EnclaveTopPoolAuthor,
-		GLOBAL_ATTESTATION_HANDLER_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
+		GLOBAL_ATTESTATION_HANDLER_COMPONENT, GLOBAL_LIGHT_CLIENT_SEAL, GLOBAL_OCALL_API_COMPONENT,
 		GLOBAL_RPC_WS_HANDLER_COMPONENT, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
 		GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT,
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
@@ -59,7 +59,7 @@ use itc_tls_websocket_server::{
 use itp_attestation_handler::IntelAttestationHandler;
 use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_primitives_cache::GLOBAL_PRIMITIVES_CACHE;
-use itp_settings::files::STATE_SNAPSHOTS_CACHE_SIZE;
+use itp_settings::files::{LIGHT_CLIENT_DB_PATH, STATE_SNAPSHOTS_CACHE_SIZE};
 use itp_sgx_crypto::{
 	get_aes_repository, get_ed25519_repository, get_rsa3072_repository, key_repository::AccessKey,
 };
@@ -93,6 +93,10 @@ pub(crate) fn init_enclave(
 	// It will be overwritten anyway if mutual remote attestation is performed with the primary worker.
 	let state_key_repository = Arc::new(get_aes_repository(base_dir.clone())?);
 	GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.initialize(state_key_repository.clone());
+
+	let light_client_seal =
+		Arc::new(EnclaveLightClientSeal::new(base_dir.join(LIGHT_CLIENT_DB_PATH))?);
+	GLOBAL_LIGHT_CLIENT_SEAL.initialize(light_client_seal);
 
 	let state_file_io =
 		Arc::new(EnclaveStateFileIo::new(state_key_repository, StateDir::new(base_dir)));

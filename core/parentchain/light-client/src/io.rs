@@ -16,7 +16,7 @@
 */
 
 use crate::{
-	error::Result,
+	error::{Error, Result},
 	finality::{Finality, GrandpaFinality, ParachainFinality},
 	light_client_init_params::{GrandpaParams, SimpleParams},
 	light_validation::{check_validator_set_proof, LightValidation},
@@ -36,6 +36,12 @@ use std::{
 	sgxfs::SgxFile,
 	sync::Arc,
 };
+
+#[cfg(feature = "sgx")]
+use std::sync::SgxRwLock as RwLock;
+
+#[cfg(feature = "std")]
+use std::sync::RwLock;
 
 pub const DB_FILE: &str = "db.bin";
 pub const BACKUP_FILE: &str = "db.bin.backup";
@@ -81,9 +87,11 @@ impl<B, L> LightClientStateSeal<B, L> {
 	}
 }
 
-impl<B: Block, LightClientState: Decode + Encode + Debug> LightClientSealing<LightClientState>
+impl<B: Block, LightClientState: Decode + Encode + Debug> LightClientSealing
 	for LightClientStateSeal<B, LightClientState>
 {
+	type LightClientState = LightClientState;
+
 	fn seal(&self, unsealed: &LightClientState) -> Result<()> {
 		trace!("Backup light client state");
 
@@ -108,6 +116,44 @@ impl<B: Block, LightClientState: Decode + Encode + Debug> LightClientSealing<Lig
 	}
 }
 
+/// Same as [LightClientStateSeal], but it ensures that no concurrent write operations are done
+/// accross different threads.
+#[derive(Debug)]
+pub struct LightClientStateSealSync<B, LightClientState> {
+	seal: LightClientStateSeal<B, LightClientState>,
+	_rw_lock: RwLock<()>,
+}
+
+impl<B, LightClientState> LightClientStateSealSync<B, LightClientState> {
+	pub fn new(base_path: PathBuf) -> Result<Self> {
+		Ok(Self { seal: LightClientStateSeal::new(base_path)?, _rw_lock: RwLock::new(()) })
+	}
+}
+
+impl<B: Block, LightClientState: Decode + Encode + Debug> LightClientSealing
+	for LightClientStateSealSync<B, LightClientState>
+{
+	type LightClientState = LightClientState;
+
+	fn seal(&self, unsealed: &LightClientState) -> Result<()> {
+		let _lock = self._rw_lock.write().map_err(|_| Error::PoisonedLock)?;
+		self.seal.seal(unsealed)
+	}
+
+	fn unseal(&self) -> Result<LightClientState> {
+		let _lock = self._rw_lock.read().map_err(|_| Error::PoisonedLock)?;
+		self.seal.unseal()
+	}
+
+	fn exists(&self) -> bool {
+		self.seal.exists()
+	}
+
+	fn path(&self) -> &Path {
+		self.seal.path()
+	}
+}
+
 // FIXME: This is a lot of duplicate code for the initialization of two
 // different but sameish light clients. Should be tackled with #1081
 pub fn read_or_init_grandpa_validator<B, OCallApi, LightClientSeal>(
@@ -119,7 +165,7 @@ where
 	B: Block,
 	NumberFor<B>: finality_grandpa::BlockNumberOps,
 	OCallApi: EnclaveOnChainOCallApi,
-	LightClientSeal: LightClientSealing<LightValidationState<B>>,
+	LightClientSeal: LightClientSealing<LightClientState = LightValidationState<B>>,
 {
 	check_validator_set_proof::<B>(
 		params.genesis_header.state_root(),
@@ -168,7 +214,7 @@ where
 	B: Block,
 	NumberFor<B>: finality_grandpa::BlockNumberOps,
 	OCallApi: EnclaveOnChainOCallApi,
-	LightClientSeal: LightClientSealing<LightValidationState<B>>,
+	LightClientSeal: LightClientSealing<LightClientState = LightValidationState<B>>,
 {
 	if !seal.exists() {
 		info!("[Enclave] ChainRelay DB not found, creating new! {}", seal.path().display());

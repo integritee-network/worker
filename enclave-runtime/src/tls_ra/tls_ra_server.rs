@@ -22,7 +22,7 @@ use crate::{
 	attestation::create_ra_report_and_signature,
 	error::{Error as EnclaveError, Result as EnclaveResult},
 	initialization::global_components::{
-		EnclaveSealHandler, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
+		EnclaveSealHandler, GLOBAL_LIGHT_CLIENT_SEAL, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
 		GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
 	},
 	ocall::OcallApi,
@@ -47,14 +47,14 @@ use std::{
 #[derive(Clone, Eq, PartialEq, Debug)]
 enum ProvisioningPayload {
 	Everything,
-	ShieldingKeyOnly,
+	ShieldingKeyAndLightClient,
 }
 
 impl From<WorkerMode> for ProvisioningPayload {
 	fn from(m: WorkerMode) -> Self {
 		match m {
 			WorkerMode::OffChainWorker | WorkerMode::Teeracle =>
-				ProvisioningPayload::ShieldingKeyOnly,
+				ProvisioningPayload::ShieldingKeyAndLightClient,
 			WorkerMode::Sidechain => ProvisioningPayload::Everything,
 		}
 	}
@@ -107,9 +107,11 @@ where
 				self.write_shielding_key()?;
 				self.write_state_key()?;
 				self.write_state(shard)?;
+				self.write_light_client_state()?;
 			},
-			ProvisioningPayload::ShieldingKeyOnly => {
+			ProvisioningPayload::ShieldingKeyAndLightClient => {
 				self.write_shielding_key()?;
+				self.write_light_client_state()?;
 			},
 		}
 
@@ -132,6 +134,12 @@ where
 	fn write_state(&mut self, shard: &ShardIdentifier) -> EnclaveResult<()> {
 		let state = self.seal_handler.unseal_state(shard)?;
 		self.write(Opcode::State, &state)?;
+		Ok(())
+	}
+
+	fn write_light_client_state(&mut self) -> EnclaveResult<()> {
+		let state = self.seal_handler.unseal_light_client_state()?;
+		self.write(Opcode::LightClient, &state)?;
 		Ok(())
 	}
 
@@ -190,8 +198,20 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 		},
 	};
 
-	let seal_handler =
-		EnclaveSealHandler::new(state_handler, state_key_repository, shielding_key_repository);
+	let light_client_seal = match GLOBAL_LIGHT_CLIENT_SEAL.get() {
+		Ok(s) => s,
+		Err(e) => {
+			error!("{:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	let seal_handler = EnclaveSealHandler::new(
+		state_handler,
+		state_key_repository,
+		shielding_key_repository,
+		light_client_seal,
+	);
 
 	if let Err(e) = run_state_provisioning_server_internal::<_, WorkerModeProvider>(
 		socket_fd,
