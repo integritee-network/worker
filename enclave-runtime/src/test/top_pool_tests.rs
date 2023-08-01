@@ -192,7 +192,7 @@ fn create_shielding_call_extrinsic<ShieldingKey: ShieldingCryptoEncrypt>(
 	let shield_funds_indexes = dummy_node_metadata.shield_funds_call_indexes().unwrap();
 	let opaque_extrinsic = OpaqueExtrinsic::from_bytes(
 		ParentchainUncheckedExtrinsic::<ShieldFundsFn>::new_signed(
-			(shield_funds_indexes, target_account, 1000u128, shard),
+			(shield_funds_indexes, shard, target_account, 1000u128),
 			Address::Address32([1u8; 32]),
 			MultiSignature::Ed25519(signature),
 			default_extra_for_test.signed_extra(),
