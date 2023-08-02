@@ -33,7 +33,6 @@ make
 ./bin/integritee-service test --all
 ```
 
-
 ### Integration Tests
 See [docker/README.md](docker/README.md)
 
