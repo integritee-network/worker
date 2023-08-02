@@ -199,7 +199,11 @@ pub fn generate_dcap_ra_extrinsic_internal(
 		skip_ra,
 	)?;
 
-	generate_dcap_ra_extrinsic_from_quote_internal(url, &dcap_quote)
+	if skip_ra {
+		generate_dcap_ra_extrinsic_from_quote_internal(url, &dcap_quote)
+	} else {
+		generate_dcap_skip_ra_extrinsic_from_quote_internal(url, &dcap_quote)
+	}
 }
 
 #[no_mangle]
@@ -300,6 +304,28 @@ pub fn generate_dcap_ra_extrinsic_from_quote_internal(
 	create_extrinsics(call)
 }
 
+pub fn generate_dcap_skip_ra_extrinsic_from_quote_internal(
+	url: String,
+	quote: &[u8],
+) -> EnclaveResult<OpaqueExtrinsic> {
+	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain()?;
+	info!("    [Enclave] Compose register enclave (skip-ra) getting callIDs:");
+
+	let call_ids = node_metadata_repo
+		.get_from_metadata(|m| m.register_sgx_enclave_call_indexes())?
+		.map_err(MetadataProviderError::MetadataError)?;
+	info!("    [Enclave] Compose register enclave (skip-ra) call DCAP IDs: {:?}", call_ids);
+	let call = OpaqueCall::from_tuple(&(
+		call_ids,
+		quote,
+		Some(url),
+		SgxAttestationMethod::Skip { proxied: false },
+	));
+
+	info!("    [Enclave] Compose register enclave (skip-ra) got extrinsic, returning");
+	create_extrinsics(call)
+}
+
 fn generate_ias_ra_extrinsic_internal(
 	url: String,
 	skip_ra: bool,
@@ -307,7 +333,11 @@ fn generate_ias_ra_extrinsic_internal(
 	let attestation_handler = GLOBAL_ATTESTATION_HANDLER_COMPONENT.get()?;
 	let cert_der = attestation_handler.generate_ias_ra_cert(skip_ra)?;
 
-	generate_ias_ra_extrinsic_from_der_cert_internal(url, &cert_der)
+	if skip_ra {
+		generate_ias_ra_extrinsic_from_der_cert_internal(url, &cert_der)
+	} else {
+		generate_ias_skip_ra_extrinsic_from_der_cert_internal(url, &cert_der)
+	}
 }
 
 pub fn generate_ias_ra_extrinsic_from_der_cert_internal(
@@ -322,6 +352,27 @@ pub fn generate_ias_ra_extrinsic_from_der_cert_internal(
 		.map_err(MetadataProviderError::MetadataError)?;
 
 	let call = OpaqueCall::from_tuple(&(call_ids, cert_der, Some(url), SgxAttestationMethod::Ias));
+
+	create_extrinsics(call)
+}
+
+pub fn generate_ias_skip_ra_extrinsic_from_der_cert_internal(
+	url: String,
+	cert_der: &[u8],
+) -> EnclaveResult<OpaqueExtrinsic> {
+	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain()?;
+
+	info!("    [Enclave] Compose register ias enclave (skip-ra) call");
+	let call_ids = node_metadata_repo
+		.get_from_metadata(|m| m.register_sgx_enclave_call_indexes())?
+		.map_err(MetadataProviderError::MetadataError)?;
+
+	let call = OpaqueCall::from_tuple(&(
+		call_ids,
+		cert_der,
+		Some(url),
+		SgxAttestationMethod::Skip { proxied: false },
+	));
 
 	create_extrinsics(call)
 }
