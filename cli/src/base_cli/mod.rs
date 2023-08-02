@@ -149,7 +149,7 @@ fn list_workers(cli: &Cli) -> CliResult {
 		.map(|enclave| {
 			println!("Enclave");
 			println!("   signer: {:?}", enclave.instance_signer());
-			println!("   MRENCLAVE: {}", enclave.fingerprint());
+			println!("   MRENCLAVE: {}", enclave.fingerprint().0.to_base58());
 			println!("   RA timestamp: {}", enclave.attestation_timestamp());
 			println!(
 				"   URL: {}",
