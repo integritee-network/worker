@@ -96,12 +96,12 @@ impl FilterIntoDataFrom<NodeMetadata> for DenyAll {
 }
 
 /// Default filter we use for the Integritee-Parachain.
-pub struct ShieldFundsAndCallWorkerFilter<ExtrinsicParser> {
+pub struct ShieldFundsAndInvokeFilter<ExtrinsicParser> {
 	_phantom: PhantomData<ExtrinsicParser>,
 }
 
 impl<ExtrinsicParser, NodeMetadata: NodeMetadataTrait> FilterIntoDataFrom<NodeMetadata>
-	for ShieldFundsAndCallWorkerFilter<ExtrinsicParser>
+	for ShieldFundsAndInvokeFilter<ExtrinsicParser>
 where
 	ExtrinsicParser: ParseExtrinsic,
 {
@@ -123,14 +123,15 @@ where
 				return None
 			},
 		};
-
 		let index = xt.call_index;
 		let call_args = &mut &xt.call_args[..];
-
+		log::trace!("attempting to execute indirect call with index {:?}", index);
 		if index == metadata.shield_funds_call_indexes().ok()? {
+			log::trace!("executing shield funds call");
 			let args = decode_and_log_error::<ShieldFundsArgs>(call_args)?;
 			Some(IndirectCall::ShieldFunds(args))
 		} else if index == metadata.invoke_call_indexes().ok()? {
+			log::trace!("executing invoke call");
 			let args = decode_and_log_error::<InvokeArgs>(call_args)?;
 			Some(IndirectCall::Invoke(args))
 		} else {

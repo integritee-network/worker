@@ -128,7 +128,7 @@ impl<
 		let block_number = *block.header().number();
 		let block_hash = block.hash();
 
-		debug!("Scanning block {:?} for relevant xt", block_number);
+		trace!("Scanning block {:?} for relevant xt", block_number);
 		let mut executed_calls = Vec::<H256>::new();
 
 		let events = self
@@ -139,7 +139,7 @@ impl<
 			.ok_or_else(|| Error::Other("Could not create events from metadata".into()))?;
 
 		let xt_statuses = events.get_extrinsic_statuses()?;
-		debug!("xt_statuses:: {:?}", xt_statuses);
+		trace!("xt_statuses:: {:?}", xt_statuses);
 
 		// This would be catastrophic but should never happen
 		if xt_statuses.len() != block.extrinsics().len() {
@@ -169,7 +169,7 @@ impl<
 				executed_calls.push(hash_of(&call));
 			}
 		}
-
+		debug!("successfully processed {} indirect invocations", executed_calls.len());
 		// Include a processed parentchain block confirmation for each block.
 		self.create_processed_parentchain_block_call::<ParentchainBlock>(
 			block_hash,
@@ -190,9 +190,17 @@ impl<
 		let call = self.node_meta_data_provider.get_from_metadata(|meta_data| {
 			meta_data.confirm_processed_parentchain_block_call_indexes()
 		})??;
-
 		let root: H256 = merkle_root::<Keccak256, _>(extrinsics);
-		Ok(OpaqueCall::from_tuple(&(call, block_hash, block_number, root)))
+		let mrenclave = self.stf_enclave_signer.ocall_api.get_mr
+		let shard = self.top_pool_author.get_shards().get(0).unwrap_or(),
+		trace!("prepared confirm_processed_parentchain_block() call for block {:?} with index {:?} and merkle root {}", block_number, call, root);
+		Ok(OpaqueCall::from_tuple(&(
+			call,
+			shard,
+			block_hash,
+			block_number,
+			root,
+		)))
 	}
 }
 
@@ -257,7 +265,7 @@ pub(crate) fn hash_of<T: Encode>(xt: &T) -> H256 {
 mod test {
 	use super::*;
 	use crate::{
-		filter_metadata::{ShieldFundsAndCallWorkerFilter, TestEventCreator},
+		filter_metadata::{ShieldFundsAndInvokeFilter, TestEventCreator},
 		parentchain_parser::ParentchainExtrinsicParser,
 	};
 	use codec::{Decode, Encode};
@@ -291,7 +299,7 @@ mod test {
 		TestStfEnclaveSigner,
 		TestTopPoolAuthor,
 		TestNodeMetadataRepository,
-		ShieldFundsAndCallWorkerFilter<ParentchainExtrinsicParser>,
+		ShieldFundsAndInvokeFilter<ParentchainExtrinsicParser>,
 		TestEventCreator,
 	>;
 

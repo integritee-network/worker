@@ -199,7 +199,7 @@ pub fn generate_dcap_ra_extrinsic_internal(
 		skip_ra,
 	)?;
 
-	if skip_ra {
+	if !skip_ra {
 		generate_dcap_ra_extrinsic_from_quote_internal(url, &dcap_quote)
 	} else {
 		generate_dcap_skip_ra_extrinsic_from_quote_internal(url, &dcap_quote)
@@ -333,7 +333,7 @@ fn generate_ias_ra_extrinsic_internal(
 	let attestation_handler = GLOBAL_ATTESTATION_HANDLER_COMPONENT.get()?;
 	let cert_der = attestation_handler.generate_ias_ra_cert(skip_ra)?;
 
-	if skip_ra {
+	if !skip_ra {
 		generate_ias_ra_extrinsic_from_der_cert_internal(url, &cert_der)
 	} else {
 		generate_ias_skip_ra_extrinsic_from_der_cert_internal(url, &cert_der)
