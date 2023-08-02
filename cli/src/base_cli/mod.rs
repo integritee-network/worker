@@ -151,9 +151,12 @@ fn list_workers(cli: &Cli) -> CliResult {
 			println!("   signer: {:?}", enclave.instance_signer());
 			println!("   MRENCLAVE: {}", enclave.fingerprint());
 			println!("   RA timestamp: {}", enclave.attestation_timestamp());
-			println!("   URL: {}", enclave.instance_url().unwrap_or("none".encode()));
-			enclave.fingerprint()
+			println!(
+				"   URL: {}",
+				String::from_utf8(enclave.instance_url().unwrap_or("none".encode())).unwrap()
+			);
+			enclave.fingerprint().0.to_base58()
 		})
 		.collect();
-	Ok(CliResultOk::MrEnclaveBase58 { fingerprints })
+	Ok(CliResultOk::MrEnclaveBase58 { mr_enclaves: fingerprints })
 }
