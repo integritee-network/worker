@@ -249,7 +249,7 @@ fn main() {
 			enclave.dump_dcap_ra_cert_to_disk().unwrap();
 		}
 	} else if matches.is_present("mrenclave") {
-		println!("{}", enclave.get_mrenclave().unwrap().encode().to_base58());
+		println!("{}", enclave.get_fingerprint().unwrap().encode().to_base58());
 	} else if let Some(sub_matches) = matches.subcommand_matches("init-shard") {
 		setup::init_shard(
 			enclave.as_ref(),
@@ -325,8 +325,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	}
 	// ------------------------------------------------------------------------
 	// initialize the enclave
-	let mrenclave = enclave.get_mrenclave().unwrap();
-	println!("MRENCLAVE={}", mrenclave.to_base58());
+	let mrenclave = enclave.get_fingerprint().unwrap();
+	println!("MRENCLAVE={}", mrenclave.0.to_base58());
 	println!("MRENCLAVE in hex {:?}", hex::encode(mrenclave));
 
 	// ------------------------------------------------------------------------
@@ -595,7 +595,10 @@ fn spawn_worker_for_shard_polling<InitializationHandler>(
 			{
 				// Set that the service is initialized.
 				initialization_handler.worker_for_shard_registered();
-				println!("[+] Found `WorkerForShard` on parentchain state: {:?}", enclave.pubkey);
+				println!(
+					"[+] Found `WorkerForShard` on parentchain state: {:?}",
+					enclave.instance_signer()
+				);
 				break
 			}
 			thread::sleep(Duration::from_secs(POLL_INTERVAL_SECS));

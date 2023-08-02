@@ -29,6 +29,7 @@ use log::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;
 use sp_core::ed25519;
+use teerex_primitives::EnclaveFingerprint;
 
 /// Trait for base/common Enclave API functions
 pub trait EnclaveBase: Send + Sync + 'static {
@@ -67,7 +68,7 @@ pub trait EnclaveBase: Send + Sync + 'static {
 
 	fn get_ecc_signing_pubkey(&self) -> EnclaveResult<ed25519::Public>;
 
-	fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]>;
+	fn get_fingerprint(&self) -> EnclaveResult<EnclaveFingerprint>;
 }
 
 /// EnclaveApi implementation for Enclave struct
@@ -236,7 +237,7 @@ impl EnclaveBase for Enclave {
 		Ok(ed25519::Public::from_raw(pubkey))
 	}
 
-	fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]> {
+	fn get_fingerprint(&self) -> EnclaveResult<EnclaveFingerprint> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 		let mut mr_enclave = [0u8; MR_ENCLAVE_SIZE];
 
@@ -252,7 +253,7 @@ impl EnclaveBase for Enclave {
 		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
 
-		Ok(mr_enclave)
+		Ok(mr_enclave.into())
 	}
 }
 

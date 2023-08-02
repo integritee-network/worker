@@ -78,7 +78,7 @@ where
 		}
 		Ok(storage_keys
 			.iter()
-			.map(|key| self.get_storage_by_key(key, at_block).unwrap().unwrap())
+			.map(|key| self.get_storage_by_key_hash(key.clone(), at_block).unwrap().unwrap())
 			.collect())
 	}
 
@@ -93,7 +93,7 @@ where
 				|statuses: ShardStatus| {
 					statuses.get(0).map_or_else(
 						|| Ok(None),
-						|signerstatus| self.enclave(signerstatus.signer, at_block),
+						|signerstatus| self.enclave(signerstatus.signer.clone(), at_block),
 					)
 				},
 			)

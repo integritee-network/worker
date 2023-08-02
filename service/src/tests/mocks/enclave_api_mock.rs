@@ -80,7 +80,7 @@ impl EnclaveBase for EnclaveMock {
 		unreachable!()
 	}
 
-	fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]> {
+	fn get_fingerprint(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]> {
 		Ok([1u8; MR_ENCLAVE_SIZE])
 	}
 }

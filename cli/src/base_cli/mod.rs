@@ -26,6 +26,7 @@ use crate::{
 use base58::ToBase58;
 use chrono::{DateTime, Utc};
 use clap::Subcommand;
+use codec::Encode;
 use itc_rpc_client::direct_client::DirectApi;
 use itp_node_api::api_client::PalletTeerexApi;
 use sp_core::crypto::Ss58Codec;
@@ -146,13 +147,13 @@ fn list_workers(cli: &Cli) -> CliResult {
 	let fingerprints = enclaves
 		.iter()
 		.map(|enclave| {
-			println!("Enclave {}", enclave.);
+			println!("Enclave");
 			println!("   signer: {:?}", enclave.instance_signer());
 			println!("   MRENCLAVE: {}", enclave.fingerprint());
 			println!("   RA timestamp: {}", enclave.attestation_timestamp());
-			println!("   URL: {}", enclave.instance_url().unwrap_or("none"));
+			println!("   URL: {}", enclave.instance_url().unwrap_or("none".encode()));
 			enclave.fingerprint()
 		})
 		.collect();
-	Ok(CliResultOk::MrEnclaveBase58 { mr_enclaves })
+	Ok(CliResultOk::MrEnclaveBase58 { fingerprints })
 }
