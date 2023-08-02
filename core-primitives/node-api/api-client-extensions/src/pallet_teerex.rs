@@ -31,7 +31,7 @@ pub const ENCLAVE_BRIDGE: &str = "EnclaveBridge";
 pub trait PalletTeerexApi {
 	fn enclave(
 		&self,
-		account: AccountId,
+		account: &AccountId,
 		at_block: Option<Hash>,
 	) -> ApiResult<Option<MultiEnclave<Vec<u8>>>>;
 	fn enclave_count(&self, at_block: Option<Hash>) -> ApiResult<u64>;
@@ -56,7 +56,7 @@ where
 {
 	fn enclave(
 		&self,
-		account: AccountId,
+		account: &AccountId,
 		at_block: Option<Hash>,
 	) -> ApiResult<Option<MultiEnclave<Vec<u8>>>> {
 		self.get_storage_map(TEEREX, "SovereignEnclaves", account, at_block)
@@ -93,7 +93,7 @@ where
 				|statuses: ShardStatus| {
 					statuses.get(0).map_or_else(
 						|| Ok(None),
-						|signerstatus| self.enclave(signerstatus.signer.clone(), at_block),
+						|signerstatus| self.enclave(&signerstatus.signer, at_block),
 					)
 				},
 			)

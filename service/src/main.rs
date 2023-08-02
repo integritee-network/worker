@@ -75,6 +75,7 @@ use substrate_api_client::{
 	api::XtStatus, rpc::HandleSubscription, GetHeader, SubmitAndWatch, SubscribeChain,
 	SubscribeEvents,
 };
+use teerex_primitives::AnySigner;
 
 #[cfg(feature = "dcap")]
 use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
@@ -82,7 +83,7 @@ use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
 use enclave_bridge_primitives::ShardIdentifier;
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
-use sp_runtime::traits::Header as HeaderTrait;
+use sp_runtime::{traits::Header as HeaderTrait, MultiSigner};
 use std::{str, sync::Arc, thread, time::Duration};
 
 mod account_funding;
@@ -482,9 +483,10 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	#[cfg(feature = "dcap")]
 	let register_xt = move || enclave2.generate_dcap_ra_extrinsic(&trusted_url, skip_ra).unwrap();
 
+	let tee_accountid_clone = tee_accountid.clone();
 	let send_register_xt = move || {
 		println!("[+] Send register enclave extrinsic");
-		send_extrinsic(register_xt(), &node_api2, &tee_accountid.clone(), is_development_mode)
+		send_extrinsic(register_xt(), &node_api2, &tee_accountid_clone, is_development_mode)
 	};
 
 	let register_enclave_block_hash = send_register_xt().unwrap();
@@ -493,12 +495,12 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		node_api.get_header(Some(register_enclave_block_hash)).unwrap().unwrap();
 
 	let we_are_primary_validateer =
-		we_are_primary_validateer(&node_api, &register_enclave_xt_header).unwrap();
+		we_are_primary_worker(&node_api, shard, &tee_accountid).unwrap();
 
 	if we_are_primary_validateer {
-		println!("[+] We are the primary validateer");
+		println!("[+] We are the primary worker");
 	} else {
-		println!("[+] We are NOT the primary validateer");
+		println!("[+] We are NOT the primary worker");
 	}
 
 	initialization_handler.registered_on_parentchain();
@@ -913,16 +915,36 @@ fn enclave_account<E: EnclaveBase>(enclave_api: &E) -> AccountId32 {
 }
 
 /// Checks if we are the first validateer to register on the parentchain.
-fn we_are_primary_validateer(
+fn we_are_primary_worker(
 	node_api: &ParentchainApi,
-	register_enclave_xt_header: &Header,
+	shard: &ShardIdentifier,
+	enclave_account: &AccountId32,
 ) -> Result<bool, Error> {
-	let enclave_count_of_previous_block =
-		node_api.enclave_count(Some(*register_enclave_xt_header.parent_hash()))?;
-	trace!(
-		"enclave count is {} for previous block 0x{:?}",
-		enclave_count_of_previous_block,
-		register_enclave_xt_header.parent_hash()
-	);
-	Ok(enclave_count_of_previous_block == 0)
+	// are we registered? else fail.
+	node_api
+		.enclave(enclave_account, None)
+		.unwrap()
+		.expect("our enclave should be registered at this point");
+	trace!("our enclave is registered");
+	match node_api.primary_worker_for_shard(shard, None).unwrap() {
+		Some(enclave) =>
+			match enclave.instance_signer() {
+				AnySigner::Known(MultiSigner::Ed25519(primary)) =>
+					if primary.encode() == enclave_account.encode() {
+						debug!("We are primary worker on this shard adn we have been previously running.");
+						Ok(true)
+					} else {
+						debug!("The primary worker is {}", primary.to_ss58check());
+						Ok(false)
+					},
+				_ => {
+					warn!("the primary worker is of unknown type");
+					Ok(false)
+				},
+			},
+		None => {
+			debug!("We are the primary worker on this shard and the shard is untouched");
+			Ok(true)
+		},
+	}
 }

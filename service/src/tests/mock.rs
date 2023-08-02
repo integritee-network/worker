@@ -57,7 +57,7 @@ pub fn enclaves() -> Vec<MultiEnclave<Vec<u8>>> {
 impl PalletTeerexApi for TestNodeApi {
 	fn enclave(
 		&self,
-		_account: AccountId,
+		_account: &AccountId,
 		_at_block: Option<Hash>,
 	) -> ApiResult<Option<MultiEnclave<Vec<u8>>>> {
 		Ok(Some(enclaves().remove(0)))
