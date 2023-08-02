@@ -141,29 +141,18 @@ fn print_sgx_metadata(cli: &Cli) -> CliResult {
 
 fn list_workers(cli: &Cli) -> CliResult {
 	let api = get_chain_api(cli);
-	let wcount = api.enclave_count(None).unwrap();
-	println!("number of workers registered: {}", wcount);
-
-	let mut mr_enclaves = Vec::with_capacity(wcount as usize);
-
-	for w in 1..=wcount {
-		let enclave = api.enclave(w, None).unwrap();
-		if enclave.is_none() {
-			println!("error reading enclave data");
-			continue
-		};
-		let enclave = enclave.unwrap();
-		let timestamp =
-			DateTime::<Utc>::from(UNIX_EPOCH + Duration::from_millis(enclave.timestamp));
-		let mr_enclave = enclave.mr_enclave.to_base58();
-		println!("Enclave {}", w);
-		println!("   AccountId: {}", enclave.pubkey.to_ss58check());
-		println!("   MRENCLAVE: {}", mr_enclave);
-		println!("   RA timestamp: {}", timestamp);
-		println!("   URL: {}", enclave.url);
-
-		mr_enclaves.push(mr_enclave);
-	}
-
+	let enclaves = api.all_enclaves(None).unwrap();
+	println!("number of enclaves registered: {}", enclaves.len());
+	let fingerprints = enclaves
+		.iter()
+		.map(|enclave| {
+			println!("Enclave {}", enclave.);
+			println!("   signer: {:?}", enclave.instance_signer());
+			println!("   MRENCLAVE: {}", enclave.fingerprint());
+			println!("   RA timestamp: {}", enclave.attestation_timestamp());
+			println!("   URL: {}", enclave.instance_url().unwrap_or("none"));
+			enclave.fingerprint()
+		})
+		.collect();
 	Ok(CliResultOk::MrEnclaveBase58 { mr_enclaves })
 }

@@ -47,6 +47,8 @@ pub type ConfirmCallFn = ([u8; 2], ShardIdentifier, H256, Vec<u8>);
 pub type ShieldFundsFn = ([u8; 2], ShardIdentifier, Vec<u8>, Balance);
 pub type CallWorkerFn = ([u8; 2], Request);
 
+pub type ShardStatus = Vec<enclave_bridge_primitives::ShardSignerStatus<AccountId, BlockNumber>>;
+pub use teerex_primitives::MultiEnclave;
 pub type Enclave = EnclaveGen<AccountId>;
 
 /// Simple blob to hold an encoded call

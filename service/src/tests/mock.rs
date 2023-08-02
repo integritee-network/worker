@@ -42,7 +42,7 @@ impl PalletTeerexApi for TestNodeApi {
 		Ok(enclaves())
 	}
 
-	fn worker_for_shard(
+	fn primary_worker_for_shard(
 		&self,
 		_: &ShardIdentifier,
 		_at_block: Option<Hash>,

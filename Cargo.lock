@@ -3871,6 +3871,7 @@ name = "itp-types"
 version = "0.9.0"
 dependencies = [
  "chrono 0.4.26",
+ "enclave-bridge-primitives",
  "frame-system",
  "integritee-node-runtime",
  "itp-sgx-runtime-primitives",
@@ -3882,6 +3883,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
+ "teerex-primitives",
 ]
 
 [[package]]
