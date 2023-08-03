@@ -149,7 +149,8 @@ fn list_workers(cli: &Cli) -> CliResult {
 			println!("   RA timestamp: {}", enclave.attestation_timestamp());
 			println!(
 				"   URL: {}",
-				String::from_utf8(enclave.instance_url().unwrap_or("none".encode())).unwrap()
+				String::from_utf8(enclave.instance_url().unwrap_or_else(|| "none".encode()))
+					.unwrap()
 			);
 			enclave.fingerprint().0.to_base58()
 		})
