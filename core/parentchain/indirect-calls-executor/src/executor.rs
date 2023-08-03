@@ -369,7 +369,7 @@ mod test {
 			dummy_metadata.confirm_processed_parentchain_block_call_indexes().unwrap();
 		let expected_call = (
 			confirm_processed_parentchain_block_indexes,
-			ShardIdentifier::defaul(),
+			ShardIdentifier::default(),
 			block_hash,
 			1,
 			H256::default(),
