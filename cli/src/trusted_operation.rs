@@ -26,7 +26,7 @@ use codec::{Decode, Encode};
 use enclave_bridge_primitives::Request;
 use ita_stf::{Getter, TrustedOperation};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
-use itp_node_api::api_client::{ParentchainApi, ParentchainExtrinsicSigner, TEEREX};
+use itp_node_api::api_client::{ParentchainApi, ParentchainExtrinsicSigner, ENCLAVE_BRIDGE};
 use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_stf_primitives::types::ShardIdentifier;
@@ -42,12 +42,14 @@ use std::{
 	time::Instant,
 };
 use substrate_api_client::{
-	compose_extrinsic, GetHeader, SubmitAndWatch, SubscribeEvents, XtStatus,
+	compose_extrinsic, GetHeader, SubmitAndWatchUntilSuccess, SubscribeEvents,
 };
 use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub(crate) enum TrustedOperationError {
+	#[error("extrinsic L1 error: {msg:?}")]
+	Extrinsic { msg: String },
 	#[error("default error: {msg:?}")]
 	Default { msg: String },
 }
@@ -127,7 +129,7 @@ fn send_indirect_request(
 
 	let shard = read_shard(trusted_args).unwrap();
 	debug!(
-		"indirect send_request: trusted operation: {:?},  shard: {}",
+		"invoke indirect send_request: trusted operation: {:?},  shard: {}",
 		trusted_operation,
 		shard.encode().to_base58()
 	);
@@ -136,14 +138,21 @@ fn send_indirect_request(
 	chain_api.set_signer(ParentchainExtrinsicSigner::new(sr25519_core::Pair::from(signer)));
 
 	let request = Request { shard, cyphertext: call_encrypted };
-	let xt = compose_extrinsic!(&chain_api, TEEREX, "call_worker", request);
+	let xt = compose_extrinsic!(&chain_api, ENCLAVE_BRIDGE, "invoke", request);
 
-	// send and watch extrinsic until block is executed
-	let block_hash = chain_api
-		.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock)
-		.unwrap()
-		.block_hash
-		.unwrap();
+	let block_hash = match chain_api.submit_and_watch_extrinsic_until_success(xt, false) {
+		Ok(xt_report) => {
+			println!(
+				"[+] invoke TrustedOperation extrinsic success. extrinsic hash: {:?} / status: {:?} / block hash: {:?}",
+				xt_report.extrinsic_hash, xt_report.status, xt_report.block_hash.unwrap()
+			);
+			xt_report.block_hash.unwrap()
+		},
+		Err(e) => {
+			error!("invoke TrustedOperation extrinsic failed {:?}", e);
+			return Err(TrustedOperationError::Extrinsic { msg: format!("{:?}", e) })
+		},
+	};
 
 	info!(
 		"Trusted call extrinsic sent for shard {} and successfully included in parentchain block with hash {:?}.",
