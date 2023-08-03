@@ -45,7 +45,7 @@ use jsonrpc_core::{
 };
 use log::*;
 use sp_runtime::generic;
-use std::{boxed::Box, sync::Arc, vec, vec::Vec};
+use std::{boxed::Box, sync::Arc, vec::Vec};
 
 /// Define type of TOP filter that is used in the Author
 #[cfg(feature = "sidechain")]
