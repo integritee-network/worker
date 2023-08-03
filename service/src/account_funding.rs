@@ -16,7 +16,6 @@
 */
 
 use crate::error::{Error, ServiceResult};
-use codec::Encode;
 use itp_node_api::api_client::{AccountApi, ParentchainApi, ParentchainExtrinsicSigner};
 use itp_settings::worker::{
 	EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS, REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS,

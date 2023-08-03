@@ -16,7 +16,6 @@
 */
 
 use crate::ApiResult;
-use codec::Decode;
 use itp_types::{
 	parentchain::Hash, AccountId, IpfsHash, MultiEnclave, ShardIdentifier, ShardStatus,
 };

@@ -83,7 +83,7 @@ use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
 use enclave_bridge_primitives::ShardIdentifier;
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
-use sp_runtime::{traits::Header as HeaderTrait, MultiSigner};
+use sp_runtime::MultiSigner;
 use std::{str, sync::Arc, thread, time::Duration};
 
 mod account_funding;
