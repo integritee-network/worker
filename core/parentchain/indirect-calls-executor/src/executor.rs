@@ -191,16 +191,13 @@ impl<
 			meta_data.confirm_processed_parentchain_block_call_indexes()
 		})??;
 		let root: H256 = merkle_root::<Keccak256, _>(extrinsics);
-		let mrenclave = self.stf_enclave_signer.ocall_api.get_mr
-		let shard = self.top_pool_author.get_shards().get(0).unwrap_or(),
+		//todo: really use mrenclave here
+		let mrenclave = ShardIdentifier::default();
+		let handled_shards = self.top_pool_author.list_handled_shards();
+		trace!("got handled shards: {:?}", handled_shards);
+		let shard = handled_shards.get(0).unwrap_or(&mrenclave);
 		trace!("prepared confirm_processed_parentchain_block() call for block {:?} with index {:?} and merkle root {}", block_number, call, root);
-		Ok(OpaqueCall::from_tuple(&(
-			call,
-			shard,
-			block_hash,
-			block_number,
-			root,
-		)))
+		Ok(OpaqueCall::from_tuple(&(call, shard, block_hash, block_number, root)))
 	}
 }
 

@@ -45,7 +45,7 @@ use jsonrpc_core::{
 };
 use log::*;
 use sp_runtime::generic;
-use std::{boxed::Box, sync::Arc, vec::Vec};
+use std::{boxed::Box, sync::Arc, vec, vec::Vec};
 
 /// Define type of TOP filter that is used in the Author
 #[cfg(feature = "sidechain")]
@@ -317,6 +317,10 @@ where
 
 	fn get_shards(&self) -> Vec<ShardIdentifier> {
 		self.top_pool.shards()
+	}
+
+	fn list_handled_shards(&self) -> Vec<ShardIdentifier> {
+		self.state_facade.list_shards().unwrap_or(vec![])
 	}
 
 	fn remove_calls_from_pool(
