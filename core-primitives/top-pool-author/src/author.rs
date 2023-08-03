@@ -320,7 +320,7 @@ where
 	}
 
 	fn list_handled_shards(&self) -> Vec<ShardIdentifier> {
-		self.state_facade.list_shards().unwrap_or(vec![])
+		self.state_facade.list_shards().unwrap_or_default()
 	}
 
 	fn remove_calls_from_pool(
