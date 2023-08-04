@@ -24,7 +24,7 @@ use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_stf_primitives::types::KeyPair;
 use itp_top_pool::pool::Options as PoolOptions;
 use itp_top_pool_author::api::SidechainApi;
-use itp_types::{Block as ParentchainBlock, Enclave, ShardIdentifier};
+use itp_types::{Block as ParentchainBlock, ShardIdentifier};
 use sp_core::{ed25519, Pair, H256};
 use sp_runtime::traits::Header as HeaderTrait;
 use std::{boxed::Box, sync::Arc, vec::Vec};
@@ -39,13 +39,11 @@ pub(crate) fn create_ocall_api<Header: HeaderTrait<Hash = H256>>(
 	header: &Header,
 	signer: &TestSigner,
 ) -> Arc<TestOCallApi> {
-	let enclave_validateer = Enclave::new(
-		signer.public().into(),
-		Default::default(),
-		Default::default(),
-		Default::default(),
-	);
-	Arc::new(TestOCallApi::default().add_validateer_set(header, Some(vec![enclave_validateer])))
+	Arc::new(TestOCallApi::default().add_validateer_set(
+		header,
+		ShardIdentifier::default(),
+		Some(vec![signer.public().into()]),
+	))
 }
 
 pub(crate) fn encrypt_trusted_operation<ShieldingKey: ShieldingCryptoEncrypt>(

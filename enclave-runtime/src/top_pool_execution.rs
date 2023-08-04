@@ -59,7 +59,7 @@ use its_sidechain::{
 };
 use log::*;
 use sgx_types::sgx_status_t;
-use sp_core::Pair;
+use sp_core::{crypto::UncheckedFrom, Pair};
 use sp_runtime::{
 	generic::SignedBlock as SignedParentchainBlock, traits::Block as BlockTrait, MultiSignature,
 };
@@ -213,7 +213,7 @@ where
 		HeaderTrait<ShardIdentifier = H256>,
 	SignedSidechainBlock::Signature: From<Authority::Signature>,
 	Authority: Pair<Public = sp_core::ed25519::Public>,
-	Authority::Public: Encode,
+	Authority::Public: Encode + UncheckedFrom<[u8; 32]>,
 	OCallApi: ValidateerFetch + EnclaveOnChainOCallApi + Send + 'static,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	PEnvironment:
