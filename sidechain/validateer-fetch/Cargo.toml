@@ -17,10 +17,10 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 # local deps
+itp-enclave-bridge-storage = { path = "../../core-primitives/enclave-bridge-storage", default-features = false }
 itp-ocall-api = { path = "../../core-primitives/ocall-api", default-features = false }
 itp-storage = { path = "../../core-primitives/storage", default-features = false }
 itp-teerex-storage = { path = "../../core-primitives/teerex-storage", default-features = false }
-itp-enclave-bridge-storage = { path = "../../core-primitives/enclave-bridge-storage", default-features = false }
 itp-types = { path = "../../core-primitives/types", default-features = false }
 its-primitives = { path = "../primitives", default-features = false }
 

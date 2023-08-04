@@ -17,5 +17,5 @@ default = ["std"]
 std = [
     "sp-std/std",
     "itp-storage/std",
-    "itp-types/std"
+    "itp-types/std",
 ]
