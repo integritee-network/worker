@@ -137,8 +137,6 @@ where
 				signed_sidechain_block.clone(),
 				&peeked_parentchain_header,
 				shard,
-				//				ShardIdentifier::decode(&mut shard.encode().as_ref())
-				//					.expect("same type encode and decode always works"),
 				self.get_context(),
 			)
 		})?;
