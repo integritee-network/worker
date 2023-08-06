@@ -34,6 +34,7 @@ std = [
     "itp-types/std",
     "itp-storage/std",
     "itp-ocall-api/std",
+    "its-primitives/std",
 ]
 
 [dev-dependencies]

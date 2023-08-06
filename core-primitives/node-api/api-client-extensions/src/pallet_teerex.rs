@@ -66,19 +66,21 @@ where
 	}
 
 	fn all_enclaves(&self, at_block: Option<Hash>) -> ApiResult<Vec<MultiEnclave<Vec<u8>>>> {
-		let key_prefix = self.get_storage_map_key_prefix("Teerex", "SovereignEnclaves").unwrap();
+		let key_prefix = self.get_storage_map_key_prefix("Teerex", "SovereignEnclaves")?;
 		//fixme: solve this properly with infinite elements
 		let max_keys = 1000;
 		let storage_keys =
-			self.get_storage_keys_paged(Some(key_prefix), max_keys, None, at_block).unwrap();
+			self.get_storage_keys_paged(Some(key_prefix), max_keys, None, at_block)?;
 
 		if storage_keys.len() == max_keys as usize {
 			error!("results can be wrong because max keys reached for query")
 		}
-		Ok(storage_keys
+		let enclaves = storage_keys
 			.iter()
-			.map(|key| self.get_storage_by_key_hash(key.clone(), at_block).unwrap().unwrap())
-			.collect())
+			.map(|key| self.get_storage_by_key_hash(key.clone(), at_block).ok()?)
+			.flatten()
+			.collect();
+		Ok(enclaves)
 	}
 
 	fn primary_worker_for_shard(
