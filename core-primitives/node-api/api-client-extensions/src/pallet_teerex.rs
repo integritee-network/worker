@@ -77,8 +77,7 @@ where
 		}
 		let enclaves = storage_keys
 			.iter()
-			.map(|key| self.get_storage_by_key_hash(key.clone(), at_block).ok()?)
-			.flatten()
+			.filter_map(|key| self.get_storage_by_key_hash(key.clone(), at_block).ok()?)
 			.collect();
 		Ok(enclaves)
 	}
