@@ -35,6 +35,7 @@ std = [
     "itp-storage/std",
     "itp-ocall-api/std",
     "its-primitives/std",
+    "itp-enclave-bridge-storage/std",
 ]
 
 [dev-dependencies]
