@@ -922,8 +922,7 @@ fn we_are_primary_worker(
 ) -> Result<bool, Error> {
 	// are we registered? else fail.
 	node_api
-		.enclave(enclave_account, None)
-		.unwrap()
+		.enclave(enclave_account, None)?
 		.expect("our enclave should be registered at this point");
 	trace!("our enclave is registered");
 	match node_api.primary_worker_for_shard(shard, None).unwrap() {
