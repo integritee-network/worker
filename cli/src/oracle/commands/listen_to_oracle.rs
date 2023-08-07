@@ -71,10 +71,16 @@ fn report_event_count(event_records: Vec<Event>) -> EventCount {
 		info!("received event {:?}", event_record.event);
 		if let RuntimeEvent::Teeracle(event) = &event_record.event {
 			match &event {
-				my_node_runtime::pallet_teeracle::Event::OracleUpdated(oracle_name, src) => {
+				my_node_runtime::pallet_teeracle::Event::OracleUpdated {
+					oracle_data_name,
+					data_source,
+				} => {
 					count += 1;
 					debug!("Received OracleUpdated event");
-					println!("OracleUpdated: ORACLE_NAME : {}, SRC : {}", oracle_name, src);
+					println!(
+						"OracleUpdated: ORACLE_NAME : {}, SRC : {}",
+						oracle_data_name, data_source
+					);
 				},
 				// Can just remove this and ignore handling this case
 				_ => debug!("ignoring teeracle event: {:?}", event),

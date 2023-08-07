@@ -16,22 +16,27 @@
 */
 
 use crate::{pallet_teerex::PalletTeerexApi, ApiResult};
-use itp_types::{parentchain::Hash, Enclave, IpfsHash, ShardIdentifier};
+use itp_types::{parentchain::Hash, AccountId, IpfsHash, MultiEnclave, ShardIdentifier};
+use std::collections::HashMap;
 
 #[derive(Default)]
 pub struct PalletTeerexApiMock {
-	registered_enclaves: Vec<Enclave>,
+	registered_enclaves: HashMap<AccountId, MultiEnclave<Vec<u8>>>,
 }
 
 impl PalletTeerexApiMock {
-	pub fn with_enclaves(mut self, enclaves: Vec<Enclave>) -> Self {
-		self.registered_enclaves.extend(enclaves);
+	pub fn with_enclaves(mut self, enclaves: Vec<MultiEnclave<Vec<u8>>>) -> Self {
+		enclaves.iter().map(|enclave| self.registered_enclaves.insert(enclave));
 		self
 	}
 }
 
 impl PalletTeerexApi for PalletTeerexApiMock {
-	fn enclave(&self, index: u64, _at_block: Option<Hash>) -> ApiResult<Option<Enclave>> {
+	fn enclave(
+		&self,
+		account: AccountId,
+		_at_block: Option<Hash>,
+	) -> ApiResult<Option<MultiEnclave<Vec<u8>>>> {
 		Ok(self.registered_enclaves.get(index as usize).cloned())
 	}
 
@@ -39,15 +44,15 @@ impl PalletTeerexApi for PalletTeerexApiMock {
 		Ok(self.registered_enclaves.len() as u64)
 	}
 
-	fn all_enclaves(&self, _at_block: Option<Hash>) -> ApiResult<Vec<Enclave>> {
+	fn all_enclaves(&self, _at_block: Option<Hash>) -> ApiResult<Vec<MultiEnclave<Vec<u8>>>> {
 		Ok(self.registered_enclaves.clone())
 	}
 
-	fn worker_for_shard(
+	fn primary_worker_for_shard(
 		&self,
 		_shard: &ShardIdentifier,
 		_at_block: Option<Hash>,
-	) -> ApiResult<Option<Enclave>> {
+	) -> ApiResult<Option<MultiEnclave<Vec<u8>>>> {
 		todo!()
 	}
 

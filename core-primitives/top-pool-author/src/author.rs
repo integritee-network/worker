@@ -319,6 +319,10 @@ where
 		self.top_pool.shards()
 	}
 
+	fn list_handled_shards(&self) -> Vec<ShardIdentifier> {
+		self.state_facade.list_shards().unwrap_or_default()
+	}
+
 	fn remove_calls_from_pool(
 		&self,
 		shard: ShardIdentifier,

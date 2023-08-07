@@ -68,6 +68,7 @@ where
 		&self,
 		block: SignedSidechainBlock,
 		parentchain_header: &ParentchainBlock::Header,
+		shard: ShardIdentifierFor<SignedSidechainBlock>,
 		ctx: &Self::Context,
 	) -> Result<Self::BlockImportParams>;
 }

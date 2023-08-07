@@ -75,15 +75,16 @@ use substrate_api_client::{
 	api::XtStatus, rpc::HandleSubscription, GetHeader, SubmitAndWatch, SubscribeChain,
 	SubscribeEvents,
 };
+use teerex_primitives::AnySigner;
 
 #[cfg(feature = "dcap")]
 use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
 
+use enclave_bridge_primitives::ShardIdentifier;
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
-use sp_runtime::traits::Header as HeaderTrait;
+use sp_runtime::MultiSigner;
 use std::{str, sync::Arc, thread, time::Duration};
-use teerex_primitives::ShardIdentifier;
 
 mod account_funding;
 mod config;
@@ -249,7 +250,7 @@ fn main() {
 			enclave.dump_dcap_ra_cert_to_disk().unwrap();
 		}
 	} else if matches.is_present("mrenclave") {
-		println!("{}", enclave.get_mrenclave().unwrap().encode().to_base58());
+		println!("{}", enclave.get_fingerprint().unwrap().encode().to_base58());
 	} else if let Some(sub_matches) = matches.subcommand_matches("init-shard") {
 		setup::init_shard(
 			enclave.as_ref(),
@@ -325,8 +326,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	}
 	// ------------------------------------------------------------------------
 	// initialize the enclave
-	let mrenclave = enclave.get_mrenclave().unwrap();
-	println!("MRENCLAVE={}", mrenclave.to_base58());
+	let mrenclave = enclave.get_fingerprint().unwrap();
+	println!("MRENCLAVE={}", mrenclave.0.to_base58());
 	println!("MRENCLAVE in hex {:?}", hex::encode(mrenclave));
 
 	// ------------------------------------------------------------------------
@@ -482,9 +483,10 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	#[cfg(feature = "dcap")]
 	let register_xt = move || enclave2.generate_dcap_ra_extrinsic(&trusted_url, skip_ra).unwrap();
 
+	let tee_accountid_clone = tee_accountid.clone();
 	let send_register_xt = move || {
 		println!("[+] Send register enclave extrinsic");
-		send_extrinsic(register_xt(), &node_api2, &tee_accountid.clone(), is_development_mode)
+		send_extrinsic(register_xt(), &node_api2, &tee_accountid_clone, is_development_mode)
 	};
 
 	let register_enclave_block_hash = send_register_xt().unwrap();
@@ -493,12 +495,12 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		node_api.get_header(Some(register_enclave_block_hash)).unwrap().unwrap();
 
 	let we_are_primary_validateer =
-		we_are_primary_validateer(&node_api, &register_enclave_xt_header).unwrap();
+		we_are_primary_worker(&node_api, shard, &tee_accountid).unwrap();
 
 	if we_are_primary_validateer {
-		println!("[+] We are the primary validateer");
+		println!("[+] We are the primary worker");
 	} else {
-		println!("[+] We are NOT the primary validateer");
+		println!("[+] We are NOT the primary worker");
 	}
 
 	initialization_handler.registered_on_parentchain();
@@ -590,10 +592,15 @@ fn spawn_worker_for_shard_polling<InitializationHandler>(
 
 		loop {
 			info!("Polling for worker for shard ({} seconds interval)", POLL_INTERVAL_SECS);
-			if let Ok(Some(enclave)) = node_api.worker_for_shard(&shard_for_initialized, None) {
+			if let Ok(Some(enclave)) =
+				node_api.primary_worker_for_shard(&shard_for_initialized, None)
+			{
 				// Set that the service is initialized.
 				initialization_handler.worker_for_shard_registered();
-				println!("[+] Found `WorkerForShard` on parentchain state: {:?}", enclave.pubkey);
+				println!(
+					"[+] Found `WorkerForShard` on parentchain state: {:?}",
+					enclave.instance_signer()
+				);
 				break
 			}
 			thread::sleep(Duration::from_secs(POLL_INTERVAL_SECS));
@@ -626,43 +633,68 @@ fn print_events(events: Vec<Event>) {
 			RuntimeEvent::Teerex(re) => {
 				debug!("{:?}", re);
 				match &re {
-					my_node_runtime::pallet_teerex::Event::AddedEnclave {
+					my_node_runtime::pallet_teerex::Event::AddedSgxEnclave {
 						registered_by,
 						worker_url,
 						..
 					} => {
 						println!("[+] Received AddedEnclave event");
 						println!("    Sender (Worker):  {:?}", registered_by);
-						println!("    Registered URL: {:?}", str::from_utf8(worker_url).unwrap());
+						println!(
+							"    Registered URL: {:?}",
+							str::from_utf8(&worker_url.clone().unwrap_or("none".into())).unwrap()
+						);
 					},
-					my_node_runtime::pallet_teerex::Event::Forwarded(shard) => {
+					_ => {
+						trace!("Ignoring unsupported pallet_teerex event");
+					},
+				}
+			},
+			RuntimeEvent::EnclaveBridge(re) => {
+				debug!("{:?}", re);
+				match &re {
+					my_node_runtime::pallet_enclave_bridge::Event::IndirectInvocationRegistered(
+						shard,
+					) => {
 						println!(
 							"[+] Received trusted call for shard {}",
 							shard.encode().to_base58()
 						);
 					},
-					my_node_runtime::pallet_teerex::Event::ProcessedParentchainBlock(
-						sender,
+					my_node_runtime::pallet_enclave_bridge::Event::ProcessedParentchainBlock {
+						shard,
 						block_hash,
-						merkle_root,
+						trusted_calls_merkle_root,
 						block_number,
-					) => {
+					} => {
 						info!("[+] Received ProcessedParentchainBlock event");
-						debug!("    From:    {:?}", sender);
+						debug!("    for shard:    {:?}", shard);
 						debug!("    Block Hash: {:?}", hex::encode(block_hash));
-						debug!("    Merkle Root: {:?}", hex::encode(merkle_root));
+						debug!("    Merkle Root: {:?}", hex::encode(trusted_calls_merkle_root));
 						debug!("    Block Number: {:?}", block_number);
 					},
-					my_node_runtime::pallet_teerex::Event::ShieldFunds(incognito_account) => {
+					my_node_runtime::pallet_enclave_bridge::Event::ShieldFunds {
+						shard,
+						encrypted_beneficiary,
+						amount,
+					} => {
 						info!("[+] Received ShieldFunds event");
-						debug!("    For:    {:?}", incognito_account);
+						debug!("    for shard:    {:?}", shard);
+						debug!("    for enc. beneficiary:    {:?}", encrypted_beneficiary);
+						debug!("    Amount:    {:?}", amount);
 					},
-					my_node_runtime::pallet_teerex::Event::UnshieldedFunds(incognito_account) => {
+					my_node_runtime::pallet_enclave_bridge::Event::UnshieldedFunds {
+						shard,
+						beneficiary,
+						amount,
+					} => {
 						info!("[+] Received UnshieldedFunds event");
-						debug!("    For:    {:?}", incognito_account);
+						debug!("    for shard:    {:?}", shard);
+						debug!("    beneficiary:    {:?}", beneficiary);
+						debug!("    Amount:    {:?}", amount);
 					},
 					_ => {
-						trace!("Ignoring unsupported pallet_teerex event");
+						trace!("Ignoring unsupported pallet_enclave_bridge event");
 					},
 				}
 			},
@@ -670,39 +702,39 @@ fn print_events(events: Vec<Event>) {
 			RuntimeEvent::Teeracle(re) => {
 				debug!("{:?}", re);
 				match &re {
-					my_node_runtime::pallet_teeracle::Event::ExchangeRateUpdated(
-						source,
-						currency,
-						new_value,
-					) => {
+					my_node_runtime::pallet_teeracle::Event::ExchangeRateUpdated {
+						data_source,
+						trading_pair,
+						exchange_rate,
+					} => {
 						println!("[+] Received ExchangeRateUpdated event");
-						println!("    Data source:  {}", source);
-						println!("    Currency:  {}", currency);
-						println!("    Exchange rate: {:?}", new_value);
+						println!("    Data source:  {}", data_source);
+						println!("    trading pair:  {}", trading_pair);
+						println!("    Exchange rate: {:?}", exchange_rate);
 					},
-					my_node_runtime::pallet_teeracle::Event::ExchangeRateDeleted(
-						source,
-						currency,
-					) => {
+					my_node_runtime::pallet_teeracle::Event::ExchangeRateDeleted {
+						data_source,
+						trading_pair,
+					} => {
 						println!("[+] Received ExchangeRateDeleted event");
-						println!("    Data source:  {}", source);
-						println!("    Currency:  {}", currency);
+						println!("    Data source:  {}", data_source);
+						println!("    trading pair:  {}", trading_pair);
 					},
-					my_node_runtime::pallet_teeracle::Event::AddedToWhitelist(
-						source,
-						mrenclave,
-					) => {
+					my_node_runtime::pallet_teeracle::Event::AddedToWhitelist {
+						data_source,
+						enclave_fingerprint,
+					} => {
 						println!("[+] Received AddedToWhitelist event");
-						println!("    Data source:  {}", source);
-						println!("    Currency:  {:?}", mrenclave);
+						println!("    Data source:  {}", data_source);
+						println!("    fingerprint:  {:?}", enclave_fingerprint);
 					},
-					my_node_runtime::pallet_teeracle::Event::RemovedFromWhitelist(
-						source,
-						mrenclave,
-					) => {
+					my_node_runtime::pallet_teeracle::Event::RemovedFromWhitelist {
+						data_source,
+						enclave_fingerprint,
+					} => {
 						println!("[+] Received RemovedFromWhitelist event");
-						println!("    Data source:  {}", source);
-						println!("    Currency:  {:?}", mrenclave);
+						println!("    Data source:  {}", data_source);
+						println!("    fingerprint:  {:?}", enclave_fingerprint);
 					},
 					_ => {
 						trace!("Ignoring unsupported pallet_teeracle event");
@@ -711,13 +743,15 @@ fn print_events(events: Vec<Event>) {
 			},
 			#[cfg(feature = "sidechain")]
 			RuntimeEvent::Sidechain(re) => match &re {
-				my_node_runtime::pallet_sidechain::Event::ProposedSidechainBlock(
-					sender,
-					payload,
-				) => {
-					info!("[+] Received ProposedSidechainBlock event");
-					debug!("    From:    {:?}", sender);
-					debug!("    Payload: {:?}", hex::encode(payload));
+				my_node_runtime::pallet_sidechain::Event::FinalizedSidechainBlock {
+					shard,
+					block_header_hash,
+					validateer,
+				} => {
+					info!("[+] Received FinalizedSidechainBlock event");
+					debug!("    for shard:    {:?}", shard);
+					debug!("    From:    {:?}", hex::encode(block_header_hash));
+					debug!("    validateer: {:?}", validateer);
 				},
 				_ => {
 					trace!("Ignoring unsupported pallet_sidechain event");
@@ -881,16 +915,35 @@ fn enclave_account<E: EnclaveBase>(enclave_api: &E) -> AccountId32 {
 }
 
 /// Checks if we are the first validateer to register on the parentchain.
-fn we_are_primary_validateer(
+fn we_are_primary_worker(
 	node_api: &ParentchainApi,
-	register_enclave_xt_header: &Header,
+	shard: &ShardIdentifier,
+	enclave_account: &AccountId32,
 ) -> Result<bool, Error> {
-	let enclave_count_of_previous_block =
-		node_api.enclave_count(Some(*register_enclave_xt_header.parent_hash()))?;
-	trace!(
-		"enclave count is {} for previous block 0x{:?}",
-		enclave_count_of_previous_block,
-		register_enclave_xt_header.parent_hash()
-	);
-	Ok(enclave_count_of_previous_block == 0)
+	// are we registered? else fail.
+	node_api
+		.enclave(enclave_account, None)?
+		.expect("our enclave should be registered at this point");
+	trace!("our enclave is registered");
+	match node_api.primary_worker_for_shard(shard, None).unwrap() {
+		Some(enclave) =>
+			match enclave.instance_signer() {
+				AnySigner::Known(MultiSigner::Ed25519(primary)) =>
+					if primary.encode() == enclave_account.encode() {
+						debug!("We are primary worker on this shard adn we have been previously running.");
+						Ok(true)
+					} else {
+						debug!("The primary worker is {}", primary.to_ss58check());
+						Ok(false)
+					},
+				_ => {
+					warn!("the primary worker is of unknown type");
+					Ok(false)
+				},
+			},
+		None => {
+			debug!("We are the primary worker on this shard and the shard is untouched");
+			Ok(true)
+		},
+	}
 }

@@ -16,7 +16,6 @@
 */
 
 use crate::error::{Error, ServiceResult};
-use codec::Encode;
 use itp_node_api::api_client::{AccountApi, ParentchainApi, ParentchainExtrinsicSigner};
 use itp_settings::worker::{
 	EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS, REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS,
@@ -135,14 +134,12 @@ fn bootstrap_funds_from_alice(
 	funding_amount: u128,
 ) -> Result<(), Error> {
 	let alice = AccountKeyring::Alice.pair();
-	info!("encoding Alice's public 	= {:?}", alice.public().0.encode());
 	let alice_acc = AccountId32::from(*alice.public().as_array_ref());
-	info!("encoding Alice's AccountId = {:?}", alice_acc.encode());
 
 	let alice_free = api.get_free_balance(&alice_acc)?;
-	info!("    Alice's free balance = {:?}", alice_free);
+	trace!("    Alice's free balance = {:?}", alice_free);
 	let nonce = api.get_nonce_of(&alice_acc)?;
-	info!("    Alice's Account Nonce is {}", nonce);
+	trace!("    Alice's Account Nonce is {}", nonce);
 
 	if funding_amount > alice_free {
 		println!(
@@ -165,7 +162,7 @@ fn bootstrap_funds_from_alice(
 	);
 	// Verify funds have arrived.
 	let free_balance = alice_signer_api.get_free_balance(accountid);
-	info!("TEE's NEW free balance = {:?}", free_balance);
+	trace!("TEE's NEW free balance = {:?}", free_balance);
 
 	Ok(())
 }

@@ -37,7 +37,7 @@ use its_primitives::traits::{
 };
 use its_validateer_fetch::ValidateerFetch;
 use log::*;
-use sp_core::Pair;
+use sp_core::{crypto::UncheckedFrom, Pair};
 use sp_runtime::{
 	generic::SignedBlock as SignedParentchainBlock,
 	traits::{Block as ParentchainBlockTrait, Header},
@@ -85,7 +85,7 @@ impl<
 		ParentchainBlockImporter,
 	> where
 	Authority: Pair,
-	Authority::Public: std::fmt::Debug,
+	Authority::Public: std::fmt::Debug + UncheckedFrom<[u8; 32]>,
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	SignedSidechainBlock: SignedBlockTrait<Public = Authority::Public> + 'static,
 	<<SignedSidechainBlock as SignedBlockTrait>::Block as SidechainBlockTrait>::HeaderType:
@@ -170,7 +170,7 @@ impl<
 		ParentchainBlockImporter,
 	> where
 	Authority: Pair,
-	Authority::Public: std::fmt::Debug,
+	Authority::Public: std::fmt::Debug + UncheckedFrom<[u8; 32]>,
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	SignedSidechainBlock: SignedBlockTrait<Public = Authority::Public> + 'static,
 	<<SignedSidechainBlock as SignedBlockTrait>::Block as SidechainBlockTrait>::HeaderType:

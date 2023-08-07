@@ -53,7 +53,11 @@ pub trait AuthorApi<Hash, BlockHash> {
 		account: &AccountId,
 	) -> Vec<TrustedOperation>;
 
+	/// returns all shards which are currently present in the tops in the pool
 	fn get_shards(&self) -> Vec<ShardIdentifier>;
+
+	/// returns all shards which are handled by our worker
+	fn list_handled_shards(&self) -> Vec<ShardIdentifier>;
 
 	/// Remove a collection of trusted operations from the pool.
 	/// Return operations that were not successfully removed.

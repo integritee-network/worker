@@ -17,6 +17,7 @@
 
 use codec::{Decode, Encode};
 use core::fmt::Debug;
+use enclave_bridge_primitives::EnclaveFingerprint;
 use frame_support::sp_runtime::traits::Block as ParentchainBlockTrait;
 use itc_parentchain::primitives::{
 	ParentchainInitParams,
@@ -80,8 +81,8 @@ impl EnclaveBase for EnclaveMock {
 		unreachable!()
 	}
 
-	fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]> {
-		Ok([1u8; MR_ENCLAVE_SIZE])
+	fn get_fingerprint(&self) -> EnclaveResult<EnclaveFingerprint> {
+		Ok([1u8; MR_ENCLAVE_SIZE].into())
 	}
 }
 

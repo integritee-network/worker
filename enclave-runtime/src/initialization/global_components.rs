@@ -41,7 +41,7 @@ use itc_parentchain::{
 	},
 	block_importer::ParentchainBlockImporter,
 	indirect_calls_executor::{
-		filter_metadata::{EventCreator, ShieldFundsAndCallWorkerFilter},
+		filter_metadata::{EventCreator, ShieldFundsAndInvokeFilter},
 		parentchain_parser::ParentchainExtrinsicParser,
 		IndirectCallsExecutor,
 	},
@@ -140,7 +140,7 @@ pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
 	EnclaveStfEnclaveSigner,
 	EnclaveTopPoolAuthor,
 	EnclaveNodeMetadataRepository,
-	ShieldFundsAndCallWorkerFilter<ParentchainExtrinsicParser>,
+	ShieldFundsAndInvokeFilter<ParentchainExtrinsicParser>,
 	EventCreator,
 >;
 pub type EnclaveValidatorAccessor = ValidatorAccessor<

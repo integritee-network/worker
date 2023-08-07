@@ -88,20 +88,25 @@ sgx_urts = { version = "1.1.6", git = "https://github.com/apache/incubator-teacl
 #sgx-externalities = { path = "../sgx-runtime/substrate-sgx/externalities"}
 
 #[patch."https://github.com/integritee-network/integritee-node"]
-#my-node-runtime = { package = "integritee-node-runtime", path = "../integritee-node/runtime"}
+#my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network//integritee-node", branch = "ab/integrate-pallet-teerex-refactoring" }
 
 #[patch."https://github.com/scs/substrate-api-client"]
 #substrate-api-client = { path = "../../scs/substrate-api-client" }
 #substrate-client-keystore = { path = "../../scs/substrate-api-client/client-keystore" }
 
 #[patch."https://github.com/integritee-network/pallets.git"]
-#pallet-claims = { path = "../pallets/claims" }
-#pallet-teerex = { path = "../pallets/teerex" }
-#pallet-teeracle = { path = "../pallets/teeracle" }
-#teerex-primitives = {path = "../pallets/primitives/teerex"}
-#pallet-parentchain = { path = "../pallets/parentchain" }
-#itp-types = {  path = "../pallets/primitives/types"}
-#itp-utils = {  path = "../pallets/primitives/utils"}
+#pallet-claims = { git = "https://github.com/integritee-network//pallets", branch = "ab/shard-config-upgradability-2" }
+#pallet-enclave-bridge = { git = "https://github.com/integritee-network//pallets", branch = "ab/shard-config-upgradability-2" }
+#pallet-teerex = { git = "https://github.com/integritee-network//pallets", branch = "ab/shard-config-upgradability-2" }
+#pallet-sidechain = { git = "https://github.com/integritee-network//pallets", branch = "ab/shard-config-upgradability-2" }
+#sgx-verify = { git = "https://github.com/integritee-network//pallets", branch = "ab/shard-config-upgradability-2" }
+#pallet-teeracle = { git = "https://github.com/integritee-network//pallets", branch = "ab/shard-config-upgradability-2" }
+#test-utils = { git = "https://github.com/integritee-network//pallets", branch = "ab/shard-config-upgradability-2" }
+#claims-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/shard-config-upgradability-2" }
+#enclave-bridge-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/shard-config-upgradability-2" }
+#teerex-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/shard-config-upgradability-2" }
+#teeracle-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/shard-config-upgradability-2" }
+#common-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/shard-config-upgradability-2" }
 
 #[patch."https://github.com/integritee-network/http_req"]
 #http_req = {path = '..//http_req' }
