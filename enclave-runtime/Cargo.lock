@@ -252,7 +252,7 @@ dependencies = [
 [[package]]
 name = "binary-merkle-tree"
 version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/substrate.git#6e0059a416a5768e58765a49b33c21920c0b0eb9"
+source = "git+https://github.com/paritytech/substrate.git#1612e39131e3fe57ba4c78447fb1cbf7c4f8830e"
 dependencies = [
  "hash-db 0.16.0",
 ]
