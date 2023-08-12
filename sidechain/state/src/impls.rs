@@ -17,8 +17,6 @@
 
 //! Implement the sidechain state traits.
 
-use core::fmt::Debug;
-
 use crate::{Error, SidechainState, StateUpdate};
 use codec::{Decode, Encode};
 use core::fmt::Debug;
