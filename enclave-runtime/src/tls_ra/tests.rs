@@ -26,6 +26,7 @@ use crate::{
 	tls_ra::seal_handler::{SealHandler, SealStateAndKeys, UnsealStateAndKeys},
 };
 use ita_stf::State;
+use itc_parentchain::light_client::mocks::validator_mock_seal::LightValidationStateSealMock;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
 use itp_sgx_crypto::{mocks::KeyRepositoryMock, Aes};
 use itp_stf_interface::InitState;
@@ -34,7 +35,7 @@ use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::handle_state_mock::HandleStateMock;
 use itp_types::ShardIdentifier;
 use sgx_crypto_helper::{rsa3072::Rsa3072KeyPair, RsaKeyPair};
-use sgx_types::sgx_quote_sign_type_t;
+use sgx_types::{sgx_quote_sign_type_t, sgx_target_info_t};
 use std::{
 	net::{TcpListener, TcpStream},
 	os::unix::io::AsRawFd,
@@ -47,14 +48,18 @@ use std::{
 
 static SIGN_TYPE: sgx_quote_sign_type_t = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 static SKIP_RA: i32 = 1;
+static QUOTE_SIZE: u32 = 0;
 
 fn run_state_provisioning_server(seal_handler: impl UnsealStateAndKeys, port: u16) {
 	let listener = TcpListener::bind(server_addr(port)).unwrap();
 
 	let (socket, _addr) = listener.accept().unwrap();
+	let sgx_target_info: sgx_target_info_t = sgx_target_info_t::default();
 	run_state_provisioning_server_internal::<_, WorkerModeProvider>(
 		socket.as_raw_fd(),
 		SIGN_TYPE,
+		Some(&sgx_target_info),
+		Some(&QUOTE_SIZE),
 		SKIP_RA,
 		seal_handler,
 	)
@@ -70,22 +75,28 @@ pub fn test_tls_ra_server_client_networking() {
 	let shielding_key_encoded = vec![1, 2, 3];
 	let state_key_encoded = vec![5, 2, 3, 7];
 	let state_encoded = Vec::from([1u8; 26000]); // Have a decently sized state, so read() must be called multiple times.
+	let light_client_state_encoded = Vec::from([1u8; 10000]); // Have a decently sized state, so read() must be called multiple times.
 
 	let server_seal_handler = SealHandlerMock::new(
 		Arc::new(RwLock::new(shielding_key_encoded.clone())),
 		Arc::new(RwLock::new(state_key_encoded.clone())),
 		Arc::new(RwLock::new(state_encoded.clone())),
+		Arc::new(RwLock::new(light_client_state_encoded.clone())),
 	);
 	let initial_client_state = vec![0, 0, 1];
 	let initial_client_state_key = vec![0, 0, 2];
+	let initial_client_light_client_state = vec![0, 0, 3];
 	let client_shielding_key = Arc::new(RwLock::new(Vec::new()));
 	let client_state_key = Arc::new(RwLock::new(initial_client_state_key.clone()));
 	let client_state = Arc::new(RwLock::new(initial_client_state.clone()));
+	let client_light_client_state =
+		Arc::new(RwLock::new(initial_client_light_client_state.clone()));
 
 	let client_seal_handler = SealHandlerMock::new(
 		client_shielding_key.clone(),
 		client_state_key.clone(),
 		client_state.clone(),
+		client_light_client_state.clone(),
 	);
 
 	let port: u16 = 3149;
@@ -98,9 +109,12 @@ pub fn test_tls_ra_server_client_networking() {
 
 	// Start client.
 	let socket = TcpStream::connect(server_addr(port)).unwrap();
+	let sgx_target_info: sgx_target_info_t = sgx_target_info_t::default();
 	let result = request_state_provisioning_internal(
 		socket.as_raw_fd(),
 		SIGN_TYPE,
+		Some(&sgx_target_info),
+		Some(&QUOTE_SIZE),
 		shard,
 		SKIP_RA,
 		client_seal_handler.clone(),
@@ -111,6 +125,7 @@ pub fn test_tls_ra_server_client_networking() {
 
 	assert!(result.is_ok());
 	assert_eq!(*client_shielding_key.read().unwrap(), shielding_key_encoded);
+	assert_eq!(*client_light_client_state.read().unwrap(), light_client_state_encoded);
 
 	// State and state-key are provisioned only in sidechain mode
 	if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain {
@@ -144,9 +159,12 @@ pub fn test_state_and_key_provisioning() {
 
 	// Start client.
 	let socket = TcpStream::connect(server_addr(port)).unwrap();
+	let sgx_target_info: sgx_target_info_t = sgx_target_info_t::default();
 	let result = request_state_provisioning_internal(
 		socket.as_raw_fd(),
 		SIGN_TYPE,
+		Some(&sgx_target_info),
+		Some(&QUOTE_SIZE),
 		shard,
 		SKIP_RA,
 		client_seal_handler,
@@ -169,5 +187,7 @@ fn create_seal_handler(
 		Arc::new(KeyRepositoryMock::<Rsa3072KeyPair>::new(shielding_key));
 	let state_handler = Arc::new(HandleStateMock::default());
 	state_handler.reset(state, shard).unwrap();
-	SealHandler::new(state_handler, state_key_repository, shielding_key_repository)
+	let seal = Arc::new(LightValidationStateSealMock::new());
+
+	SealHandler::new(state_handler, state_key_repository, shielding_key_repository, seal)
 }

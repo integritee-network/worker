@@ -20,7 +20,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use crate::{
-	error::Result, pallet_sidechain::SidechainCallIndexes, pallet_teerex::TeerexCallIndexes,
+	error::Result, pallet_enclave_bridge::EnclaveBridgeCallIndexes,
+	pallet_sidechain::SidechainCallIndexes, pallet_teerex::TeerexCallIndexes,
 };
 use codec::{Decode, Encode};
 use sp_core::storage::StorageKey;
@@ -29,6 +30,7 @@ pub use crate::error::Error;
 pub use itp_api_client_types::{Metadata, MetadataError};
 
 pub mod error;
+pub mod pallet_enclave_bridge;
 pub mod pallet_sidechain;
 pub mod pallet_teeracle;
 pub mod pallet_teerex;
@@ -36,8 +38,14 @@ pub mod pallet_teerex;
 #[cfg(feature = "mocks")]
 pub mod metadata_mocks;
 
-pub trait NodeMetadataTrait: TeerexCallIndexes + SidechainCallIndexes {}
-impl<T: TeerexCallIndexes + SidechainCallIndexes> NodeMetadataTrait for T {}
+pub trait NodeMetadataTrait:
+	TeerexCallIndexes + EnclaveBridgeCallIndexes + SidechainCallIndexes
+{
+}
+impl<T: TeerexCallIndexes + EnclaveBridgeCallIndexes + SidechainCallIndexes> NodeMetadataTrait
+	for T
+{
+}
 
 impl TryFrom<NodeMetadata> for Metadata {
 	type Error = crate::error::Error;

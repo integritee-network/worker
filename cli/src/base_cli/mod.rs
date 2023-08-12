@@ -24,16 +24,13 @@ use crate::{
 	Cli, CliResult, CliResultOk, ED25519_KEY_TYPE, SR25519_KEY_TYPE,
 };
 use base58::ToBase58;
-use chrono::{DateTime, Utc};
 use clap::Subcommand;
+use codec::Encode;
 use itc_rpc_client::direct_client::DirectApi;
 use itp_node_api::api_client::PalletTeerexApi;
 use sp_core::crypto::Ss58Codec;
 use sp_keystore::Keystore;
-use std::{
-	path::PathBuf,
-	time::{Duration, UNIX_EPOCH},
-};
+use std::path::PathBuf;
 use substrate_api_client::Metadata;
 use substrate_client_keystore::LocalKeystore;
 
@@ -141,29 +138,22 @@ fn print_sgx_metadata(cli: &Cli) -> CliResult {
 
 fn list_workers(cli: &Cli) -> CliResult {
 	let api = get_chain_api(cli);
-	let wcount = api.enclave_count(None).unwrap();
-	println!("number of workers registered: {}", wcount);
-
-	let mut mr_enclaves = Vec::with_capacity(wcount as usize);
-
-	for w in 1..=wcount {
-		let enclave = api.enclave(w, None).unwrap();
-		if enclave.is_none() {
-			println!("error reading enclave data");
-			continue
-		};
-		let enclave = enclave.unwrap();
-		let timestamp =
-			DateTime::<Utc>::from(UNIX_EPOCH + Duration::from_millis(enclave.timestamp));
-		let mr_enclave = enclave.mr_enclave.to_base58();
-		println!("Enclave {}", w);
-		println!("   AccountId: {}", enclave.pubkey.to_ss58check());
-		println!("   MRENCLAVE: {}", mr_enclave);
-		println!("   RA timestamp: {}", timestamp);
-		println!("   URL: {}", enclave.url);
-
-		mr_enclaves.push(mr_enclave);
-	}
-
-	Ok(CliResultOk::MrEnclaveBase58 { mr_enclaves })
+	let enclaves = api.all_enclaves(None).unwrap();
+	println!("number of enclaves registered: {}", enclaves.len());
+	let fingerprints = enclaves
+		.iter()
+		.map(|enclave| {
+			println!("Enclave");
+			println!("   signer: {:?}", enclave.instance_signer());
+			println!("   MRENCLAVE: {}", enclave.fingerprint().0.to_base58());
+			println!("   RA timestamp: {}", enclave.attestation_timestamp());
+			println!(
+				"   URL: {}",
+				String::from_utf8(enclave.instance_url().unwrap_or_else(|| "none".encode()))
+					.unwrap()
+			);
+			enclave.fingerprint().0.to_base58()
+		})
+		.collect();
+	Ok(CliResultOk::MrEnclaveBase58 { mr_enclaves: fingerprints })
 }

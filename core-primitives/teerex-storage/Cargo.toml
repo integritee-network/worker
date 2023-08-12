@@ -9,10 +9,12 @@ sp-std = { default-features = false, git = "https://github.com/paritytech/substr
 
 #local deps
 itp-storage = { path = "../storage", default-features = false }
+itp-types = { path = "../types", default-features = false }
 
 [features]
 default = ["std"]
 std = [
     "sp-std/std",
     "itp-storage/std",
+    "itp-types/std",
 ]

@@ -164,9 +164,10 @@ class Worker:
                                         'its_consensus_aura=trace,'
                                         'itc_parentchain_block_importer=debug,'
                                         'ita_stf=debug')
-
+        worker_cmd = self._assemble_cmd(flags=flags, subcommand_flags=subcommand_flags)
+        print("worker command is "+ str(worker_cmd))
         return Popen(
-            self._assemble_cmd(flags=flags, subcommand_flags=subcommand_flags),
+            worker_cmd,
             env=env,
             stdout=log_file,
             stderr=STDOUT,

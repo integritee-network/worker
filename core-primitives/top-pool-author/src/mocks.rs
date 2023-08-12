@@ -168,6 +168,11 @@ impl AuthorApi<H256, H256> for AuthorApiMock<H256, H256> {
 		self.tops.read().unwrap().keys().cloned().collect()
 	}
 
+	fn list_handled_shards(&self) -> Vec<ShardIdentifier> {
+		//dummy
+		self.tops.read().unwrap().keys().cloned().collect()
+	}
+
 	fn remove_calls_from_pool(
 		&self,
 		shard: ShardIdentifier,

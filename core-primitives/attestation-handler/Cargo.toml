@@ -37,7 +37,7 @@ sgx_rand = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 sgx_tcrypto = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 sgx_tse = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["untrusted_fs", "net", "backtrace"], optional = true }
-sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["extra_traits"] }
 
 # local deps
 itp-ocall-api = { path = "../ocall-api", default-features = false }

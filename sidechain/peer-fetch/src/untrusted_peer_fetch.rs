@@ -50,10 +50,15 @@ where
 		let node_api = self.node_api_factory.create_api()?;
 
 		let validateer = node_api
-			.worker_for_shard(shard, None)?
+			.primary_worker_for_shard(shard, None)?
 			.ok_or_else(|| Error::NoPeerFoundForShard(*shard))?;
 
-		let trusted_worker_client = DirectWorkerApi::new(validateer.url);
+		let trusted_worker_client = DirectWorkerApi::new(
+			validateer
+				.instance_url()
+				.map(|url| String::from_utf8(url).unwrap_or_default())
+				.ok_or_else(|| Error::NoPeerFoundForShard(*shard))?,
+		);
 		Ok(trusted_worker_client.get_untrusted_worker_url()?)
 	}
 }

@@ -3,7 +3,7 @@ name = "itp-types"
 version = "0.9.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 homepage = "https://integritee.network/"
-repository = "https://github.com/integritee-network/pallets/"
+repository = "https://github.com/integritee-network/worker/"
 license = "Apache-2.0"
 edition = "2021"
 
@@ -25,7 +25,10 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 # integritee-node
+enclave-bridge-primitives = { git = "https://github.com/integritee-network/pallets.git", default-features = false, branch = "polkadot-v0.9.42" }
 my-node-runtime = { package = "integritee-node-runtime", optional = true, git = "https://github.com/integritee-network/integritee-node.git", branch = "polkadot-v0.9.42" }
+teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", default-features = false, branch = "polkadot-v0.9.42" }
+
 
 [features]
 default = ["std"]
@@ -37,6 +40,8 @@ std = [
     "serde_json/std",
     "primitive-types/std",
     "itp-sgx-runtime-primitives/std",
+    "teerex-primitives/std",
+    "enclave-bridge-primitives/std",
     # substrate
     "frame-system/std",
     "pallet-balances/std",

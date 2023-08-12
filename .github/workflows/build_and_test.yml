@@ -37,7 +37,7 @@ jobs:
             mode: offchain-worker
             host: ubuntu-latest
             sgx_mode: SW
-
+            additional_features: dcap
 
     steps:
       - uses: actions/checkout@v3
@@ -48,7 +48,7 @@ jobs:
           echo "FINGERPRINT=$fingerprint" >> $GITHUB_ENV
           if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
              echo "DOCKER_DEVICES=--device=/dev/sgx/enclave --device=/dev/sgx/provision" >> $GITHUB_ENV
-             echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd" >> $GITHUB_ENV
+             echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd --volume /etc/sgx_default_qcnl.conf:/etc/sgx_default_qcnl.conf" >> $GITHUB_ENV
           else
              echo "DOCKER_DEVICES=" >> $GITHUB_ENV
              echo "DOCKER_VOLUMES=" >> $GITHUB_ENV
@@ -182,12 +182,13 @@ jobs:
           echo "PROJECT=${{ matrix.flavor_id }}-${{ matrix.demo_name }}" >> $GITHUB_ENV
           echo "VERSION=dev.$version" >> $GITHUB_ENV
           echo "WORKER_IMAGE_TAG=integritee-worker:dev.$version" >> $GITHUB_ENV
-          echo "INTEGRITEE_NODE=integritee-node-dev:1.0.36.$version" >> $GITHUB_ENV
+          echo "INTEGRITEE_NODE=integritee-node-dev-ias:1.1.0.$version" >> $GITHUB_ENV
           echo "CLIENT_IMAGE_TAG=integritee-cli:dev.$version" >> $GITHUB_ENV
           if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
              echo "SGX_PROVISION=/dev/sgx/provision" >> $GITHUB_ENV
              echo "SGX_ENCLAVE=/dev/sgx/enclave" >> $GITHUB_ENV
              echo "AESMD=/var/run/aesmd" >> $GITHUB_ENV
+             echo "SGX_QCNL=/etc/sgx_default_qcnl.conf" >> $GITHUB_ENV
           fi
 
           echo "LOG_DIR=./logs-$version" >> $GITHUB_ENV
@@ -226,8 +227,8 @@ jobs:
           fi
           docker tag integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.WORKER_IMAGE_TAG }}
           docker tag integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.CLIENT_IMAGE_TAG }}
-          docker pull integritee/integritee-node-dev:1.0.36
-          docker tag integritee/integritee-node-dev:1.0.36 ${{ env.INTEGRITEE_NODE }}
+          docker pull integritee/integritee-node-dev-ias:1.1.0
+          docker tag integritee/integritee-node-dev-ias:1.1.0 ${{ env.INTEGRITEE_NODE }}
           docker images --all
 
       ##
@@ -302,6 +303,7 @@ jobs:
           - flavor_id: teeracle
             mode: teeracle
             sgx_mode: HW
+            additional_features: dcap
 
     steps:
       - uses: actions/checkout@v3
@@ -318,7 +320,7 @@ jobs:
           echo "FINGERPRINT=$fingerprint" >> $GITHUB_ENV
           if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
               echo "DOCKER_DEVICES=--device=/dev/sgx/enclave --device=/dev/sgx/provision" >> $GITHUB_ENV
-              echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd" >> $GITHUB_ENV
+              echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd --volume /etc/sgx_default_qcnl.conf:/etc/sgx_default_qcnl.conf" >> $GITHUB_ENV
           else
               echo "DOCKER_DEVICES=" >> $GITHUB_ENV
               echo "DOCKER_VOLUMES=" >> $GITHUB_ENV
