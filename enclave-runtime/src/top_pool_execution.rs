@@ -59,7 +59,7 @@ use its_sidechain::{
 };
 use log::*;
 use sgx_types::sgx_status_t;
-use sp_core::Pair;
+use sp_core::{crypto::UncheckedFrom, Pair};
 use sp_runtime::{
 	generic::SignedBlock as SignedParentchainBlock, traits::Block as BlockTrait, MultiSignature,
 };
@@ -112,7 +112,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	let latest_parentchain_header =
 		sidechain_block_import_queue_worker.process_queue(&current_parentchain_header)?;
 
-	info!(
+	trace!(
 		"Elapsed time to process sidechain block import queue: {} ms",
 		start_time.elapsed().as_millis()
 	);
@@ -213,7 +213,7 @@ where
 		HeaderTrait<ShardIdentifier = H256>,
 	SignedSidechainBlock::Signature: From<Authority::Signature>,
 	Authority: Pair<Public = sp_core::ed25519::Public>,
-	Authority::Public: Encode,
+	Authority::Public: Encode + UncheckedFrom<[u8; 32]>,
 	OCallApi: ValidateerFetch + EnclaveOnChainOCallApi + Send + 'static,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	PEnvironment:
@@ -283,7 +283,7 @@ fn log_remaining_slot_duration<B: BlockTrait<Hash = H256>>(
 			info!("No time remaining in slot (id: {:?}, stage: {})", slot_info.slot, stage_name);
 		},
 		Some(remainder) => {
-			info!(
+			trace!(
 				"Remaining time in slot (id: {:?}, stage {}): {} ms, {}% of slot time",
 				slot_info.slot,
 				stage_name,

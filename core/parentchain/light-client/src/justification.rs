@@ -25,7 +25,7 @@ use super::error::JustificationError as ClientError;
 use codec::{Decode, Encode};
 use finality_grandpa::{voter_set::VoterSet, Error as GrandpaError};
 use log::*;
-use sp_finality_grandpa::{AuthorityId, AuthorityList, AuthoritySignature};
+use sp_consensus_grandpa::{AuthorityId, AuthorityList, AuthoritySignature};
 use sp_runtime::traits::{Block as BlockT, Header as HeaderT, NumberFor};
 
 /// A commit message for this chain's block type.
@@ -143,7 +143,7 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 		let mut buf = Vec::new();
 		let mut visited_hashes = HashSet::new();
 		for signed in self.commit.precommits.iter() {
-			if !sp_finality_grandpa::check_message_signature_with_buffer(
+			if !sp_consensus_grandpa::check_message_signature_with_buffer(
 				&finality_grandpa::Message::Precommit(signed.precommit.clone()),
 				&signed.id,
 				&signed.signature,

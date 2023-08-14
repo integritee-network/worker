@@ -70,8 +70,9 @@ pub mod sgx {
 	const ISSUER: &str = "Integritee";
 	const SUBJECT: &str = "Integritee ephemeral";
 
+	/// `payload` must be a valid a string, not just arbitrary data.
 	pub fn gen_ecc_cert(
-		payload: &[u8],
+		payload: &str,
 		prv_k: &sgx_ec256_private_t,
 		pub_k: &sgx_ec256_public_t,
 		ecc_handle: &SgxEccHandle,
@@ -158,7 +159,7 @@ pub mod sgx {
 								writer.next().write_oid(&ObjectIdentifier::from_slice(&[
 									2, 16, 840, 1, 113_730, 1, 13,
 								]));
-								writer.next().write_bytes(payload);
+								writer.next().write_bytes(payload.as_bytes());
 							});
 						});
 					});
@@ -234,7 +235,12 @@ pub fn percent_decode(orig: String) -> EnclaveResult<String> {
 }
 
 // FIXME: This code is redundant with the host call of the integritee-node
-pub fn verify_mra_cert<A>(cert_der: &[u8], attestation_ocall: &A) -> SgxResult<()>
+pub fn verify_mra_cert<A>(
+	cert_der: &[u8],
+	is_payload_base64_encoded: bool,
+	is_dcap: bool,
+	attestation_ocall: &A,
+) -> SgxResult<()>
 where
 	A: EnclaveAttestationOCallApi,
 {
@@ -276,62 +282,72 @@ where
 
 	// Obtain Netscape Comment
 	offset += 1;
-	let payload = cert_der[offset..offset + len].to_vec();
-
-	// Extract each field
-	let mut iter = payload.split(|x| *x == 0x7C);
-	let attn_report_raw = iter.next().ok_or(sgx_status_t::SGX_ERROR_UNEXPECTED)?;
-	let sig_raw = iter.next().ok_or(sgx_status_t::SGX_ERROR_UNEXPECTED)?;
-	let sig = base64::decode(sig_raw).map_err(|e| EnclaveError::Other(e.into()))?;
-
-	let sig_cert_raw = iter.next().ok_or(sgx_status_t::SGX_ERROR_UNEXPECTED)?;
-	let sig_cert_dec = base64::decode_config(sig_cert_raw, base64::STANDARD)
-		.map_err(|e| EnclaveError::Other(e.into()))?;
-	let sig_cert = webpki::EndEntityCert::from(&sig_cert_dec).expect("Bad DER");
-
-	// Verify if the signing cert is issued by Intel CA
-	let mut ias_ca_stripped = IAS_REPORT_CA.to_vec();
-	ias_ca_stripped.retain(|&x| x != 0x0d && x != 0x0a);
-	let head_len = "-----BEGIN CERTIFICATE-----".len();
-	let tail_len = "-----END CERTIFICATE-----".len();
-	let full_len = ias_ca_stripped.len();
-	let ias_ca_core: &[u8] = &ias_ca_stripped[head_len..full_len - tail_len];
-	let ias_cert_dec = base64::decode_config(ias_ca_core, base64::STANDARD)
-		.map_err(|e| EnclaveError::Other(e.into()))?;
-
-	let mut ca_reader = BufReader::new(IAS_REPORT_CA);
-
-	let mut root_store = rustls::RootCertStore::empty();
-	root_store.add_pem_file(&mut ca_reader).expect("Failed to add CA");
-
-	let trust_anchors: Vec<webpki::TrustAnchor> =
-		root_store.roots.iter().map(|cert| cert.to_trust_anchor()).collect();
-
-	let now_func = webpki::Time::try_from(SystemTime::now());
-
-	match sig_cert.verify_is_valid_tls_server_cert(
-		SUPPORTED_SIG_ALGS,
-		&webpki::TLSServerTrustAnchors(&trust_anchors),
-		&[ias_cert_dec.as_slice()],
-		now_func.map_err(|_e| EnclaveError::Time)?,
-	) {
-		Ok(_) => info!("Cert is good"),
-		Err(e) => {
-			error!("Cert verification error {:?}", e);
-			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-		},
+	let mut payload = cert_der[offset..offset + len].to_vec();
+	trace!("payload in mra cert verifier is: {:?}", &payload);
+	if is_payload_base64_encoded {
+		payload = base64::decode(&payload[..]).or(Err(sgx_status_t::SGX_ERROR_UNEXPECTED))?;
 	}
+	trace!("payload in mra cert verifier is: {:?}", &payload);
+	if !is_dcap {
+		// Extract each field
+		let mut iter = payload.split(|x| *x == b'|');
+		let attn_report_raw = iter.next().ok_or(sgx_status_t::SGX_ERROR_UNEXPECTED)?;
+		let sig_raw = iter.next().ok_or(sgx_status_t::SGX_ERROR_UNEXPECTED)?;
+		let sig = base64::decode(sig_raw).map_err(|e| EnclaveError::Other(e.into()))?;
 
-	// Verify the signature against the signing cert
-	match sig_cert.verify_signature(&webpki::RSA_PKCS1_2048_8192_SHA256, attn_report_raw, &sig) {
-		Ok(_) => info!("Signature good"),
-		Err(e) => {
-			error!("Signature verification error {:?}", e);
-			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
-		},
+		let sig_cert_raw = iter.next().ok_or(sgx_status_t::SGX_ERROR_UNEXPECTED)?;
+		let sig_cert_dec = base64::decode_config(sig_cert_raw, base64::STANDARD)
+			.map_err(|e| EnclaveError::Other(e.into()))?;
+		let sig_cert = webpki::EndEntityCert::from(&sig_cert_dec).expect("Bad DER");
+
+		// Verify if the signing cert is issued by Intel CA
+		let mut ias_ca_stripped = IAS_REPORT_CA.to_vec();
+		ias_ca_stripped.retain(|&x| x != b'\r' && x != b'\n');
+		let head_len = "-----BEGIN CERTIFICATE-----".len();
+		let tail_len = "-----END CERTIFICATE-----".len();
+		let full_len = ias_ca_stripped.len();
+		let ias_ca_core: &[u8] = &ias_ca_stripped[head_len..full_len - tail_len];
+		let ias_cert_dec = base64::decode_config(ias_ca_core, base64::STANDARD)
+			.map_err(|e| EnclaveError::Other(e.into()))?;
+
+		let mut ca_reader = BufReader::new(IAS_REPORT_CA);
+
+		let mut root_store = rustls::RootCertStore::empty();
+		root_store.add_pem_file(&mut ca_reader).expect("Failed to add CA");
+
+		let trust_anchors: Vec<webpki::TrustAnchor> =
+			root_store.roots.iter().map(|cert| cert.to_trust_anchor()).collect();
+
+		let now_func = webpki::Time::try_from(SystemTime::now());
+
+		match sig_cert.verify_is_valid_tls_server_cert(
+			SUPPORTED_SIG_ALGS,
+			&webpki::TLSServerTrustAnchors(&trust_anchors),
+			&[ias_cert_dec.as_slice()],
+			now_func.map_err(|_e| EnclaveError::Time)?,
+		) {
+			Ok(_) => info!("Cert is good"),
+			Err(e) => {
+				error!("Cert verification error {:?}", e);
+				return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+			},
+		}
+
+		// Verify the signature against the signing cert
+		match sig_cert.verify_signature(&webpki::RSA_PKCS1_2048_8192_SHA256, attn_report_raw, &sig)
+		{
+			Ok(_) => info!("Signature good"),
+			Err(e) => {
+				error!("Signature verification error {:?}", e);
+				return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+			},
+		}
+
+		verify_attn_report(attn_report_raw, pub_k, attestation_ocall)
+	} else {
+		// TODO Refactor state provisioning to not use MURA #1385
+		Ok(())
 	}
-
-	verify_attn_report(attn_report_raw, pub_k, attestation_ocall)
 }
 
 pub fn verify_attn_report<A>(

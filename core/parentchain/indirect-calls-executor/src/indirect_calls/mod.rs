@@ -15,8 +15,8 @@
 
 */
 
-mod call_worker;
+mod invoke;
 mod shield_funds;
 
-pub use call_worker::CallWorkerArgs;
-pub use shield_funds::ShiedFundsArgs;
+pub use invoke::InvokeArgs;
+pub use shield_funds::ShieldFundsArgs;

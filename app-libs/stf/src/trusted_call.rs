@@ -27,7 +27,7 @@ use frame_support::{ensure, traits::UnfilteredDispatchable};
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{Runtime, System};
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
-use itp_node_api_metadata::pallet_teerex::TeerexCallIndexes;
+use itp_node_api_metadata::pallet_enclave_bridge::EnclaveBridgeCallIndexes;
 use itp_stf_interface::ExecuteCall;
 use itp_stf_primitives::types::{AccountId, KeyPair, ShardIdentifier, Signature};
 use itp_types::OpaqueCall;
@@ -198,10 +198,9 @@ where
 					free_balance,
 					reserved_balance
 				);
-				ita_sgx_runtime::BalancesCall::<Runtime>::set_balance {
+				ita_sgx_runtime::BalancesCall::<Runtime>::force_set_balance {
 					who: MultiAddress::Id(who),
 					new_free: free_balance,
-					new_reserved: reserved_balance,
 				}
 				.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
 				.map_err(|e| {
@@ -245,9 +244,9 @@ where
 				unshield_funds(account_incognito, value)?;
 				calls.push(OpaqueCall::from_tuple(&(
 					node_metadata_repo.get_from_metadata(|m| m.unshield_funds_call_indexes())??,
+					shard,
 					beneficiary,
 					value,
-					shard,
 					call_hash,
 				)));
 				Ok(())
@@ -407,10 +406,9 @@ fn unshield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
 		return Err(StfError::MissingFunds)
 	}
 
-	ita_sgx_runtime::BalancesCall::<Runtime>::set_balance {
+	ita_sgx_runtime::BalancesCall::<Runtime>::force_set_balance {
 		who: MultiAddress::Id(account),
 		new_free: account_info.data.free - amount,
-		new_reserved: account_info.data.reserved,
 	}
 	.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
 	.map_err(|e| StfError::Dispatch(format!("Unshield funds error: {:?}", e.error)))?;
@@ -419,10 +417,9 @@ fn unshield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
 
 fn shield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
 	let account_info = System::account(&account);
-	ita_sgx_runtime::BalancesCall::<Runtime>::set_balance {
+	ita_sgx_runtime::BalancesCall::<Runtime>::force_set_balance {
 		who: MultiAddress::Id(account),
 		new_free: account_info.data.free + amount,
-		new_reserved: account_info.data.reserved,
 	}
 	.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
 	.map_err(|e| StfError::Dispatch(format!("Shield funds error: {:?}", e.error)))?;

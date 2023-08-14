@@ -20,11 +20,10 @@ use crate::error::{Error, Result};
 use codec::{Decode, Encode};
 use ita_stf::{privacy_sidechain_inherent::PrivacySidechainTrait, StfError};
 use itp_api_client_types::{Events, StaticEvent};
-
 use itp_sgx_runtime_primitives::types::{AccountId, Balance};
 use itp_types::H256;
 use itp_utils::stringify::account_id_to_string;
-use std::{format, string::String, vec::Vec};
+use std::{fmt::Display, format, vec::Vec};
 
 impl From<StfError> for Error {
 	fn from(a: StfError) -> Self {
@@ -66,14 +65,15 @@ impl StaticEvent for BalanceTransfer {
 	const EVENT: &'static str = "Transfer";
 }
 
-impl BalanceTransfer {
-	pub fn print_string(&self) -> String {
-		format!(
+impl Display for BalanceTransfer {
+	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+		let message = format!(
 			"BalanceTransfer :: from: {}, to: {}, amount: {}",
 			account_id_to_string::<AccountId>(&self.from),
 			account_id_to_string::<AccountId>(&self.to),
 			self.amount
-		)
+		);
+		write!(f, "{}", message)
 	}
 }
 
@@ -108,13 +108,18 @@ impl FilterEvents for Events<H256> {
 	fn get_transfer_events(&self) -> Result<Vec<BalanceTransfer>> {
 		Ok(self
 			.iter()
-			.filter_map(|ev| {
-				ev.and_then(|ev| match ev.as_event::<BalanceTransfer>()? {
-					Some(e) => Ok(Some(e)),
-					None => Ok(None),
-				})
-				.ok()
-				.flatten()
+			.flatten() // flatten filters out the nones
+			.filter_map(|ev| match ev.as_event::<BalanceTransfer>() {
+				Ok(maybe_event) => {
+					if maybe_event.is_none() {
+						log::warn!("Transfer event does not exist in parentchain metadata");
+					};
+					maybe_event
+				},
+				Err(e) => {
+					log::error!("Could not decode event: {:?}", e);
+					None
+				},
 			})
 			.collect())
 	}
@@ -128,12 +133,12 @@ impl FilterEvents for MockEvents {
 	}
 
 	fn get_transfer_events(&self) -> Result<Vec<BalanceTransfer>> {
-		let xsfer = BalanceTransfer {
+		let transfer = BalanceTransfer {
 			to: [0u8; 32].into(),
 			from: [0u8; 32].into(),
 			amount: Balance::default(),
 		};
-		Ok(Vec::from([xsfer]))
+		Ok(Vec::from([transfer]))
 	}
 }
 

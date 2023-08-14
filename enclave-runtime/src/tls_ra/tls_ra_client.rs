@@ -22,14 +22,14 @@ use crate::{
 	attestation::create_ra_report_and_signature,
 	error::{Error as EnclaveError, Result as EnclaveResult},
 	initialization::global_components::{
-		EnclaveSealHandler, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
+		EnclaveSealHandler, GLOBAL_LIGHT_CLIENT_SEAL, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
 		GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
 	},
 	ocall::OcallApi,
 	tls_ra::seal_handler::SealStateAndKeys,
 	GLOBAL_STATE_HANDLER_COMPONENT,
 };
-use itp_attestation_handler::DEV_HOSTNAME;
+use itp_attestation_handler::{RemoteAttestationType, DEV_HOSTNAME};
 use itp_component_container::ComponentGetter;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_types::ShardIdentifier;
@@ -74,13 +74,17 @@ where
 	/// We trust here that the server sends us the correct data, as
 	/// we do not have any way to test it.
 	fn read_shard(&mut self) -> EnclaveResult<()> {
+		debug!("read_shard called, about to call self.write_shard().");
 		self.write_shard()?;
+		debug!("self.write_shard() succeeded.");
 		self.read_and_seal_all()
 	}
 
 	/// Send the shard of the state we want to receive to the provisioning server.
 	fn write_shard(&mut self) -> EnclaveResult<()> {
+		debug!("self.write_shard() called.");
 		self.tls_stream.write_all(self.shard.as_bytes())?;
+		debug!("write_all succeeded.");
 		Ok(())
 	}
 
@@ -124,6 +128,7 @@ where
 			Opcode::ShieldingKey => self.seal_handler.seal_shielding_key(&bytes)?,
 			Opcode::StateKey => self.seal_handler.seal_state_key(&bytes)?,
 			Opcode::State => self.seal_handler.seal_state(&bytes, &self.shard)?,
+			Opcode::LightClient => self.seal_handler.seal_light_client_state(&bytes)?,
 		};
 		Ok(Some(header.opcode))
 	}
@@ -155,6 +160,8 @@ where
 pub unsafe extern "C" fn request_state_provisioning(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
+	quoting_enclave_target_info: Option<&sgx_target_info_t>,
+	quote_size: Option<&u32>,
 	shard: *const u8,
 	shard_size: u32,
 	skip_ra: c_int,
@@ -186,12 +193,30 @@ pub unsafe extern "C" fn request_state_provisioning(
 		},
 	};
 
-	let seal_handler =
-		EnclaveSealHandler::new(state_handler, state_key_repository, shielding_key_repository);
+	let light_client_seal = match GLOBAL_LIGHT_CLIENT_SEAL.get() {
+		Ok(s) => s,
+		Err(e) => {
+			error!("{:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
 
-	if let Err(e) =
-		request_state_provisioning_internal(socket_fd, sign_type, shard, skip_ra, seal_handler)
-	{
+	let seal_handler = EnclaveSealHandler::new(
+		state_handler,
+		state_key_repository,
+		shielding_key_repository,
+		light_client_seal,
+	);
+
+	if let Err(e) = request_state_provisioning_internal(
+		socket_fd,
+		sign_type,
+		quoting_enclave_target_info,
+		quote_size,
+		shard,
+		skip_ra,
+		seal_handler,
+	) {
 		error!("Failed to sync state due to: {:?}", e);
 		return e.into()
 	};
@@ -203,12 +228,23 @@ pub unsafe extern "C" fn request_state_provisioning(
 pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAndKeys>(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
+	quoting_enclave_target_info: Option<&sgx_target_info_t>,
+	quote_size: Option<&u32>,
 	shard: ShardIdentifier,
 	skip_ra: c_int,
 	seal_handler: StateAndKeySealer,
 ) -> EnclaveResult<()> {
-	let client_config = tls_client_config(sign_type, OcallApi, skip_ra == 1)?;
+	debug!("Client config generate...");
+	let client_config = tls_client_config(
+		sign_type,
+		quoting_enclave_target_info,
+		quote_size,
+		OcallApi,
+		skip_ra == 1,
+	)?;
+	debug!("Client config retrieved");
 	let (mut client_session, mut tcp_stream) = tls_client_session_stream(socket_fd, client_config)?;
+	debug!("Client sesssion established.");
 
 	let mut client = TlsClient::new(
 		rustls::Stream::new(&mut client_session, &mut tcp_stream),
@@ -222,10 +258,24 @@ pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAn
 
 fn tls_client_config<A: EnclaveAttestationOCallApi + 'static>(
 	sign_type: sgx_quote_sign_type_t,
+	quoting_enclave_target_info: Option<&sgx_target_info_t>,
+	quote_size: Option<&u32>,
 	ocall_api: A,
 	skip_ra: bool,
 ) -> EnclaveResult<ClientConfig> {
-	let (key_der, cert_der) = create_ra_report_and_signature(sign_type, skip_ra)?;
+	#[cfg(not(feature = "dcap"))]
+	let attestation_type = RemoteAttestationType::Epid;
+	#[cfg(feature = "dcap")]
+	let attestation_type = RemoteAttestationType::Dcap;
+
+	let (key_der, cert_der) = create_ra_report_and_signature(
+		skip_ra,
+		attestation_type,
+		sign_type,
+		quoting_enclave_target_info,
+		quote_size,
+	)?;
+	debug!("got key_der and cert_der");
 
 	let mut cfg = rustls::ClientConfig::new();
 	let certs = vec![rustls::Certificate(cert_der)];

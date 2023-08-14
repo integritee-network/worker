@@ -21,7 +21,7 @@ use itp_types::{
 	parentchain::{Hash, Header, StorageProof},
 	H256,
 };
-use sp_finality_grandpa::AuthorityList;
+use sp_consensus_grandpa::AuthorityList;
 
 pub struct ParentchainApiMock {
 	parentchain: Vec<SignedBlock>,

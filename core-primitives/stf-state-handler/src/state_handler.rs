@@ -28,10 +28,12 @@ use crate::{
 	state_initializer::InitializeState,
 	state_snapshot_repository::VersionedStateAccess,
 };
+use core::fmt::Debug;
 use itp_hashing::Hash;
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_state_observer::traits::UpdateState;
 use itp_types::ShardIdentifier;
+use log::{debug, trace};
 use std::{collections::HashMap, sync::Arc, vec::Vec};
 
 type StatesMap<State, Hash> = HashMap<ShardIdentifier, (State, Hash)>;
@@ -146,7 +148,7 @@ impl<Repository, StateObserver, StateInitializer> HandleState
 	for StateHandler<Repository, StateObserver, StateInitializer>
 where
 	Repository: VersionedStateAccess,
-	Repository::StateType: SgxExternalitiesTrait + Hash<Repository::HashType>,
+	Repository::StateType: SgxExternalitiesTrait + Hash<Repository::HashType> + Debug,
 	Repository::HashType: Copy,
 	StateObserver: UpdateState<Repository::StateType>,
 	StateInitializer: InitializeState<StateType = Repository::StateType>,
@@ -204,6 +206,8 @@ where
 		mut state_lock: RwLockWriteGuard<'_, Self::WriteLockPayload>,
 		shard: &ShardIdentifier,
 	) -> Result<Self::HashType> {
+		debug!("Writing state");
+		trace!("State: {:?}", state);
 		state.prune_state_diff(); // Remove state diff before storing.
 		let state_hash = state.hash();
 		// We create a state copy here, in order to serve the state observer. This does not scale
@@ -218,6 +222,8 @@ where
 	}
 
 	fn reset(&self, state: Self::StateT, shard: &ShardIdentifier) -> Result<Self::HashType> {
+		debug!("Resetting state");
+		trace!("Resetting state: {:?}", state);
 		let state_write_lock = self.states_map_lock.write().map_err(|_| Error::LockPoisoning)?;
 		self.write_after_mutation(state, state_write_lock, shard)
 	}

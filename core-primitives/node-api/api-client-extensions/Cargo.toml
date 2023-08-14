@@ -10,13 +10,13 @@ codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive
 thiserror = { version = "1.0" }
 
 # substrate
-sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
-sp-finality-grandpa = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
+sp-consensus-grandpa = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 # scs
 # `default-features = false` to remove the jsonrpsee dependency.
-substrate-api-client = { default-features = false, features = ["std"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.39" }
+substrate-api-client = { default-features = false, features = ["std"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.10.0" }
 
 # local deps
 itp-api-client-types = { path = "../api-client-types" }
