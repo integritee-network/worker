@@ -21,7 +21,7 @@ use crate::{state::RelayState, Error, HashFor, LightClientState};
 use codec::{Decode, Encode};
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 
-pub use sp_finality_grandpa::SetId;
+pub use sp_consensus_grandpa::SetId;
 
 #[derive(Encode, Decode, Clone, Debug, Eq, PartialEq)]
 pub struct LightValidationState<Block: ParentchainBlockTrait> {
@@ -58,9 +58,7 @@ where
 	}
 
 	fn genesis_hash(&self) -> Result<HashFor<Block>, Error> {
-		let relay = self.get_relay();
-		let hash = relay.header_hashes.get(0).ok_or(Error::NoGenesis)?;
-		Ok(*hash)
+		Ok(self.get_relay().genesis_hash)
 	}
 
 	fn latest_finalized_header(&self) -> Result<Block::Header, Error> {

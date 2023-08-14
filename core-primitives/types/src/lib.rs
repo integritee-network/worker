@@ -44,10 +44,17 @@ pub type IpfsHash = [u8; 46];
 pub type MrEnclave = [u8; 32];
 
 pub type ConfirmCallFn = ([u8; 2], ShardIdentifier, H256, Vec<u8>);
-pub type ShieldFundsFn = ([u8; 2], Vec<u8>, Balance, ShardIdentifier);
+pub type ShieldFundsFn = ([u8; 2], ShardIdentifier, Vec<u8>, Balance);
 pub type CallWorkerFn = ([u8; 2], Request);
 
-pub type Enclave = EnclaveGen<AccountId>;
+use enclave_bridge_primitives::ShardSignerStatus as ShardSignerStatusGen;
+pub type ShardSignerStatus = ShardSignerStatusGen<AccountId, BlockNumber>;
+pub type ShardStatus = Vec<ShardSignerStatus>;
+pub use enclave_bridge_primitives::Request;
+pub use teerex_primitives::{
+	EnclaveFingerprint, MultiEnclave, SgxBuildMode, SgxEnclave, SgxReportData, SgxStatus,
+};
+pub type Enclave = MultiEnclave<Vec<u8>>;
 
 /// Simple blob to hold an encoded call
 #[derive(Debug, PartialEq, Eq, Clone, Default)]
@@ -63,30 +70,6 @@ impl OpaqueCall {
 impl Encode for OpaqueCall {
 	fn encode(&self) -> Vec<u8> {
 		self.0.clone()
-	}
-}
-
-// Note in the pallet teerex this is a struct. But for the codec this does not matter.
-#[derive(Encode, Decode, Default, Clone, PartialEq, Eq, Debug)]
-pub struct Request {
-	pub shard: ShardIdentifier,
-	pub cyphertext: Vec<u8>,
-}
-
-// Todo: move this improved enclave definition into a primitives crate in the pallet_teerex repo.
-#[derive(Encode, Decode, Clone, PartialEq, sp_core::RuntimeDebug)]
-pub struct EnclaveGen<AccountId> {
-	pub pubkey: AccountId,
-	// FIXME: this is redundant information
-	pub mr_enclave: [u8; 32],
-	pub timestamp: u64,
-	// unix epoch in milliseconds
-	pub url: PalletString, // utf8 encoded url
-}
-
-impl<AccountId> EnclaveGen<AccountId> {
-	pub fn new(pubkey: AccountId, mr_enclave: [u8; 32], timestamp: u64, url: PalletString) -> Self {
-		Self { pubkey, mr_enclave, timestamp, url }
 	}
 }
 

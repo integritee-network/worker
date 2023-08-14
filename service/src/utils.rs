@@ -33,8 +33,8 @@ pub fn extract_shard<E: EnclaveBase>(
 			shard.into()
 		},
 		_ => {
-			let mrenclave = enclave_api.get_mrenclave().unwrap();
-			info!("no shard specified. using mrenclave as id: {}", mrenclave.to_base58());
+			let mrenclave = enclave_api.get_fingerprint().unwrap();
+			info!("no shard specified. using mrenclave as id: {}", mrenclave.0.to_base58());
 			ShardIdentifier::from_slice(&mrenclave[..])
 		},
 	}

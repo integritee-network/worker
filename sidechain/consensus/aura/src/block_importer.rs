@@ -37,7 +37,7 @@ use its_primitives::traits::{
 };
 use its_validateer_fetch::ValidateerFetch;
 use log::*;
-use sp_core::Pair;
+use sp_core::{crypto::UncheckedFrom, Pair};
 use sp_runtime::{
 	generic::SignedBlock as SignedParentchainBlock,
 	traits::{Block as ParentchainBlockTrait, Header},
@@ -85,7 +85,7 @@ impl<
 		ParentchainBlockImporter,
 	> where
 	Authority: Pair,
-	Authority::Public: std::fmt::Debug,
+	Authority::Public: std::fmt::Debug + UncheckedFrom<[u8; 32]>,
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	SignedSidechainBlock: SignedBlockTrait<Public = Authority::Public> + 'static,
 	<<SignedSidechainBlock as SignedBlockTrait>::Block as SidechainBlockTrait>::HeaderType:
@@ -170,7 +170,7 @@ impl<
 		ParentchainBlockImporter,
 	> where
 	Authority: Pair,
-	Authority::Public: std::fmt::Debug,
+	Authority::Public: std::fmt::Debug + UncheckedFrom<[u8; 32]>,
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	SignedSidechainBlock: SignedBlockTrait<Public = Authority::Public> + 'static,
 	<<SignedSidechainBlock as SignedBlockTrait>::Block as SidechainBlockTrait>::HeaderType:
@@ -276,6 +276,19 @@ impl<
 		sidechain_block: &SignedSidechainBlock::Block,
 		last_imported_parentchain_header: &ParentchainBlock::Header,
 	) -> Result<ParentchainBlock::Header, ConsensusError> {
+		let last = last_imported_parentchain_header;
+		debug!("Peeking parentchain header");
+		debug!(
+			"sidechain block parentchain head: {}",
+			sidechain_block.block_data().layer_one_head()
+		);
+		debug!(
+			"last imported head: {}, number: {:?}, parenthash: {}",
+			last.hash(),
+			last.number(),
+			last.parent_hash()
+		);
+
 		let parentchain_header_hash_to_peek = sidechain_block.block_data().layer_one_head();
 		if parentchain_header_hash_to_peek == last_imported_parentchain_header.hash() {
 			debug!("No queue peek necessary, sidechain block references latest imported parentchain block");

@@ -37,17 +37,20 @@ jobs:
             mode: sidechain
             host: integritee-builder-sgx
             sgx_mode: HW
+            additional_features: dcap
           - flavor_id: offchain-worker
             mode: offchain-worker
             host: integritee-builder-sgx
             sgx_mode: HW
+            additional_features: dcap
           - flavor_id: teeracle
             mode: teeracle
             host: integritee-builder-sgx
             sgx_mode: HW
+            additional_features: dcap
           - flavor_id: sidechain-evm
             mode: sidechain
-            additional_features: evm
+            additional_features: evm,dcap
             host: integritee-builder-sgx
             sgx_mode: HW
 
@@ -60,7 +63,7 @@ jobs:
           echo "FINGERPRINT=$fingerprint" >> $GITHUB_ENV
           if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
              echo "DOCKER_DEVICES=--device=/dev/sgx/enclave --device=/dev/sgx/provision" >> $GITHUB_ENV
-             echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd" >> $GITHUB_ENV
+             echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd --volume /etc/sgx_default_qcnl.conf:/etc/sgx_default_qcnl.conf" >> $GITHUB_ENV
           else
              echo "DOCKER_DEVICES=" >> $GITHUB_ENV
              echo "DOCKER_VOLUMES=" >> $GITHUB_ENV
@@ -189,8 +192,8 @@ jobs:
       WORKER_IMAGE_TAG: integritee-worker:dev
       CLIENT_IMAGE_TAG: integritee-cli:dev
       COINMARKETCAP_KEY: ${{ secrets.COINMARKETCAP_KEY }}
-      IAS_EPID_SPID: ${{ secrets.IAS_SPID }}
-      IAS_EPID_KEY: ${{ secrets.IAS_PRIMARY_KEY }}
+      # IAS_EPID_SPID: ${{ secrets.IAS_SPID }}
+      # IAS_EPID_KEY: ${{ secrets.IAS_PRIMARY_KEY }}
       TEERACLE_INTERVAL_SECONDS: 10
 
     strategy:
@@ -248,12 +251,13 @@ jobs:
           echo "PROJECT=${{ matrix.flavor_id }}-${{ matrix.demo_name }}" >> $GITHUB_ENV
           echo "VERSION=dev.$version" >> $GITHUB_ENV
           echo "WORKER_IMAGE_TAG=integritee-worker:dev.$version" >> $GITHUB_ENV
-          echo "INTEGRITEE_NODE=integritee-node-dev-ias:1.0.35.$version" >> $GITHUB_ENV
+          echo "INTEGRITEE_NODE=integritee-node-dev-ias:1.1.0.$version" >> $GITHUB_ENV
           echo "CLIENT_IMAGE_TAG=integritee-cli:dev.$version" >> $GITHUB_ENV
           if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
              echo "SGX_PROVISION=/dev/sgx/provision" >> $GITHUB_ENV
              echo "SGX_ENCLAVE=/dev/sgx/enclave" >> $GITHUB_ENV
              echo "AESMD=/var/run/aesmd" >> $GITHUB_ENV
+             echo "SGX_QCNL=/etc/sgx_default_qcnl.conf" >> $GITHUB_ENV
           fi
 
           echo "LOG_DIR=./logs-$version" >> $GITHUB_ENV
@@ -292,8 +296,8 @@ jobs:
           fi
           docker tag integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.WORKER_IMAGE_TAG }}
           docker tag integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.CLIENT_IMAGE_TAG }}
-          docker pull integritee/integritee-node-dev-ias:1.0.35
-          docker tag integritee/integritee-node-dev-ias:1.0.35 ${{ env.INTEGRITEE_NODE }}
+          docker pull integritee/integritee-node-dev-ias:1.1.0
+          docker tag integritee/integritee-node-dev-ias:1.1.0 ${{ env.INTEGRITEE_NODE }}
           docker images --all
 
       ##
@@ -367,7 +371,7 @@ jobs:
           - flavor_id: teeracle
             mode: teeracle
             sgx_mode: HW
-            worker_features: dcap
+            additional_features: dcap
 
     steps:
       - uses: actions/checkout@v3
@@ -384,7 +388,7 @@ jobs:
           echo "FINGERPRINT=$fingerprint" >> $GITHUB_ENV
           if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
               echo "DOCKER_DEVICES=--device=/dev/sgx/enclave --device=/dev/sgx/provision" >> $GITHUB_ENV
-              echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd" >> $GITHUB_ENV
+              echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd --volume /etc/sgx_default_qcnl.conf:/etc/sgx_default_qcnl.conf" >> $GITHUB_ENV
           else
               echo "DOCKER_DEVICES=" >> $GITHUB_ENV
               echo "DOCKER_VOLUMES=" >> $GITHUB_ENV
@@ -423,7 +427,7 @@ jobs:
         run: >
           docker build -t integritee/${{ matrix.flavor_id }}:${{ github.ref_name }}
           --target deployed-worker
-          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg SGX_COMMERCIAL_KEY=enclave-runtime/intel_sgx.pem --build-arg SGX_PASSFILE=enclave-runtime/passfile.txt --build-arg SGX_PRODUCTION=1 --build-arg WORKER_FEATURES_ARG=${{ matrix.worker_features }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=${{ matrix.sgx_mode }}
+          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg SGX_COMMERCIAL_KEY=enclave-runtime/intel_sgx.pem --build-arg SGX_PASSFILE=enclave-runtime/passfile.txt --build-arg SGX_PRODUCTION=1 --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=${{ matrix.sgx_mode }}
           -f build.Dockerfile .
 
       - name: Save released teeracle
@@ -459,9 +463,9 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: integritee-worker-teeracle-${{ github.ref_name }}.tar.gz
-          path: .  
+          path: .
 
-      # 
+      #
       # Temporary comment out until we decide what to release
       #
       # - name: Download Integritee Service

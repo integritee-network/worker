@@ -25,13 +25,13 @@ use std::vec::Vec;
 
 /// Arguments of the Integritee-Parachain's shield fund dispatchable.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
-pub struct ShiedFundsArgs {
+pub struct ShieldFundsArgs {
+	shard: ShardIdentifier,
 	account_encrypted: Vec<u8>,
 	amount: Balance,
-	shard: ShardIdentifier,
 }
 
-impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for ShiedFundsArgs {
+impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for ShieldFundsArgs {
 	fn dispatch(&self, executor: &Executor) -> Result<()> {
 		info!("Found ShieldFunds extrinsic in block: \nAccount Encrypted {:?} \nAmount: {} \nShard: {}",
         	self.account_encrypted, self.amount, bs58::encode(self.shard.encode()).into_string());

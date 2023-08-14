@@ -15,7 +15,7 @@
 
 */
 
-use crate::{block_importer::BlockImporter, test::fixtures::validateer, ShardIdentifierFor};
+use crate::{block_importer::BlockImporter, ShardIdentifierFor};
 use codec::Encode;
 use core::assert_matches::assert_matches;
 use itc_parentchain_block_import_dispatcher::trigger_parentchain_block_import_mock::TriggerParentchainBlockImportMock;
@@ -78,7 +78,8 @@ fn test_fixtures(
 	let top_pool_author = Arc::new(TestTopPoolAuthor::default());
 	let ocall_api = Arc::new(OnchainMock::default().add_validateer_set(
 		parentchain_header,
-		Some(vec![validateer(Keyring::Alice.public().into())]),
+		shard(),
+		Some(vec![Keyring::Alice.public().into()]),
 	));
 	let state_key_repository = Arc::new(TestStateKeyRepo::new(state_key()));
 

@@ -60,7 +60,12 @@ where
 		"test"
 	}
 
-	fn epoch_data(&self, _header: &B::Header, _slot: Slot) -> Result<Self::EpochData> {
+	fn epoch_data(
+		&self,
+		_header: &B::Header,
+		_shard: ShardIdentifierFor<Self::Output>,
+		_slot: Slot,
+	) -> Result<Self::EpochData> {
 		todo!()
 	}
 

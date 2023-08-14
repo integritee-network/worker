@@ -26,7 +26,7 @@ use itp_node_api::api_client::ChainApi;
 use itp_storage::StorageProof;
 use log::*;
 use my_node_runtime::Header;
-use sp_finality_grandpa::VersionedAuthorityList;
+use sp_consensus_grandpa::VersionedAuthorityList;
 use sp_runtime::traits::Header as HeaderTrait;
 use std::{cmp::min, sync::Arc};
 
@@ -176,6 +176,7 @@ where
 	}
 
 	fn trigger_parentchain_block_import(&self) -> ServiceResult<()> {
+		trace!("trigger parentchain block import");
 		Ok(self.enclave_api.trigger_parentchain_block_import()?)
 	}
 
@@ -184,10 +185,16 @@ where
 		last_synced_header: &Header,
 		until_header: &Header,
 	) -> ServiceResult<Header> {
+		trace!(
+			"last synched block number: {}. synching until {}",
+			last_synced_header.number,
+			until_header.number
+		);
 		let mut last_synced_header = last_synced_header.clone();
 
 		while last_synced_header.number() < until_header.number() {
 			last_synced_header = self.sync_parentchain(last_synced_header)?;
+			trace!("synched block number: {}", last_synced_header.number);
 		}
 		self.trigger_parentchain_block_import()?;
 

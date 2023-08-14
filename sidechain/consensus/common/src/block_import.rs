@@ -136,6 +136,7 @@ where
 			verifier.verify(
 				signed_sidechain_block.clone(),
 				&peeked_parentchain_header,
+				shard,
 				self.get_context(),
 			)
 		})?;

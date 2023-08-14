@@ -39,7 +39,7 @@ pub use evm::{
 };
 
 use core::convert::{TryFrom, TryInto};
-use frame_support::weights::ConstantMultiplier;
+use frame_support::{traits::ConstU32, weights::ConstantMultiplier};
 use pallet_transaction_payment::CurrencyAdapter;
 use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
@@ -234,6 +234,10 @@ impl pallet_balances::Config for Runtime {
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type WeightInfo = ();
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ConstU32<0>;
+	type MaxFreezes = ConstU32<0>;
 }
 
 parameter_types! {
@@ -257,6 +261,7 @@ impl pallet_sudo::Config for Runtime {
 
 impl pallet_parentchain::Config for Runtime {
 	type WeightInfo = ();
+	type RuntimeEvent = RuntimeEvent;
 }
 
 // The plain sgx-runtime without the `evm-pallet`
@@ -272,7 +277,7 @@ construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
-		Parentchain: pallet_parentchain::{Pallet, Call, Storage},
+		Parentchain: pallet_parentchain::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -292,7 +297,7 @@ construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
-		Parentchain: pallet_parentchain::{Pallet, Call, Storage},
+		Parentchain: pallet_parentchain::{Pallet, Call, Storage, Event<T>},
 
 		Evm: pallet_evm::{Pallet, Call, Storage, Config, Event<T>},
 	}
@@ -316,6 +321,14 @@ impl_runtime_apis! {
 	impl sp_api::Metadata<Block> for Runtime {
 		fn metadata() -> OpaqueMetadata {
 			OpaqueMetadata::new(Runtime::metadata().into())
+		}
+
+		fn metadata_at_version(version: u32) -> Option<OpaqueMetadata> {
+			Runtime::metadata_at_version(version)
+		}
+
+		fn metadata_versions() -> sp_std::vec::Vec<u32> {
+			Runtime::metadata_versions()
 		}
 	}
 
