@@ -48,10 +48,9 @@ impl PrivacySidechainTrait for PrivacySidechain {
 			account_info.data.free + amount,
 			account_info.data.reserved
 		);
-		ita_sgx_runtime::BalancesCall::<Runtime>::set_balance {
+		ita_sgx_runtime::BalancesCall::<Runtime>::force_set_balance {
 			who: MultiAddress::Id(account.clone()),
 			new_free: account_info.data.free + amount,
-			new_reserved: account_info.data.reserved,
 		}
 		.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
 		.map_err(|e| StfError::Dispatch(format!("Shield funds error: {:?}", e.error)))?;
