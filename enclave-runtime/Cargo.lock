@@ -487,20 +487,7 @@ dependencies = [
 [[package]]
 name = "common-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.42#5c52182eb3a5156e8d9f69c10ca1441214ee6662"
-dependencies = [
- "derive_more",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "common-primitives"
-version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets#5c52182eb3a5156e8d9f69c10ca1441214ee6662"
+source = "git+https://github.com/integritee-network/pallets?branch=polkadot-v0.9.42#5c52182eb3a5156e8d9f69c10ca1441214ee6662"
 dependencies = [
  "derive_more",
  "parity-scale-codec",
@@ -721,9 +708,9 @@ dependencies = [
 [[package]]
 name = "enclave-bridge-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.42#5c52182eb3a5156e8d9f69c10ca1441214ee6662"
+source = "git+https://github.com/integritee-network/pallets?branch=polkadot-v0.9.42#5c52182eb3a5156e8d9f69c10ca1441214ee6662"
 dependencies = [
- "common-primitives 0.1.0 (git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.42)",
+ "common-primitives",
  "log",
  "parity-scale-codec",
  "scale-info",
@@ -812,7 +799,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
- "teerex-primitives 0.1.0 (git+https://github.com/integritee-network/pallets)",
+ "teerex-primitives",
  "webpki",
 ]
 
@@ -1783,10 +1770,12 @@ dependencies = [
  "itp-node-api",
  "itp-ocall-api",
  "itp-sgx-crypto",
+ "itp-sgx-runtime-primitives",
  "itp-stf-executor",
  "itp-stf-primitives",
  "itp-top-pool-author",
  "itp-types",
+ "itp-utils",
  "log",
  "parity-scale-codec",
  "sgx_tstd",
@@ -2350,7 +2339,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
- "teerex-primitives 0.1.0 (git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.42)",
+ "teerex-primitives",
 ]
 
 [[package]]
@@ -3012,7 +3001,7 @@ dependencies = [
 [[package]]
 name = "pallet-parentchain"
 version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.42#5c52182eb3a5156e8d9f69c10ca1441214ee6662"
+source = "git+https://github.com/integritee-network/pallets?branch=polkadot-v0.9.42#5c52182eb3a5156e8d9f69c10ca1441214ee6662"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4584,25 +4573,9 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 [[package]]
 name = "teerex-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.42#5c52182eb3a5156e8d9f69c10ca1441214ee6662"
+source = "git+https://github.com/integritee-network/pallets?branch=polkadot-v0.9.42#5c52182eb3a5156e8d9f69c10ca1441214ee6662"
 dependencies = [
- "common-primitives 0.1.0 (git+https://github.com/integritee-network/pallets.git?branch=polkadot-v0.9.42)",
- "derive_more",
- "log",
- "parity-scale-codec",
- "scale-info",
- "serde 1.0.164",
- "sp-core",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "teerex-primitives"
-version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets#5c52182eb3a5156e8d9f69c10ca1441214ee6662"
-dependencies = [
- "common-primitives 0.1.0 (git+https://github.com/integritee-network/pallets)",
+ "common-primitives",
  "derive_more",
  "log",
  "parity-scale-codec",
