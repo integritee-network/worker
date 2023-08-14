@@ -103,7 +103,12 @@ impl FilterEvents for Events<H256> {
 			.iter()
 			.flatten() // flatten filters out the nones
 			.filter_map(|ev| match ev.as_event::<BalanceTransfer>() {
-				Ok(maybe_event) => maybe_event,
+				Ok(maybe_event) => {
+					if maybe_event.is_none() {
+						log::warn!("Transfer event does not exist in parentchain metadata");
+					};
+					maybe_event
+				},
 				Err(e) => {
 					log::error!("Could not decode event: {:?}", e);
 					None
