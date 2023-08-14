@@ -121,11 +121,11 @@ impl FilterEvents for MockEvents {
 	}
 
 	fn get_transfer_events(&self) -> Result<Vec<BalanceTransfer>> {
-		let xsfer = BalanceTransfer {
+		let transfer = BalanceTransfer {
 			to: [0u8; 32].into(),
 			from: [0u8; 32].into(),
 			amount: Balance::default(),
 		};
-		Ok(Vec::from([xsfer]))
+		Ok(Vec::from([transfer]))
 	}
 }
