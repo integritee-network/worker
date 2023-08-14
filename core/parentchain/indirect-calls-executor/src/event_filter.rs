@@ -19,8 +19,10 @@
 use crate::error::Result;
 use codec::{Decode, Encode};
 use itp_api_client_types::{Events, StaticEvent};
+use itp_sgx_runtime_primitives::types::{AccountId, Balance};
 use itp_types::H256;
-use std::vec::Vec;
+use itp_utils::stringify::account_id_to_string;
+use std::{fmt::Display, format, vec::Vec};
 
 #[derive(Encode, Decode, Debug)]
 pub struct ExtrinsicSuccess;
@@ -43,8 +45,35 @@ pub enum ExtrinsicStatus {
 	Success,
 	Failed,
 }
+
+#[derive(Encode, Decode, Debug)]
+pub struct BalanceTransfer {
+	pub from: AccountId,
+	pub to: AccountId,
+	pub amount: Balance,
+}
+
+impl StaticEvent for BalanceTransfer {
+	const PALLET: &'static str = "Balances";
+	const EVENT: &'static str = "Transfer";
+}
+
+impl Display for BalanceTransfer {
+	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+		let message = format!(
+			"BalanceTransfer :: from: {}, to: {}, amount: {}",
+			account_id_to_string::<AccountId>(&self.from),
+			account_id_to_string::<AccountId>(&self.to),
+			self.amount
+		);
+		write!(f, "{}", message)
+	}
+}
+
 pub trait FilterEvents {
 	fn get_extrinsic_statuses(&self) -> Result<Vec<ExtrinsicStatus>>;
+
+	fn get_transfer_events(&self) -> Result<Vec<BalanceTransfer>>;
 }
 
 impl FilterEvents for Events<H256> {
@@ -68,6 +97,25 @@ impl FilterEvents for Events<H256> {
 			})
 			.collect())
 	}
+
+	fn get_transfer_events(&self) -> Result<Vec<BalanceTransfer>> {
+		Ok(self
+			.iter()
+			.flatten() // flatten filters out the nones
+			.filter_map(|ev| match ev.as_event::<BalanceTransfer>() {
+				Ok(maybe_event) => {
+					if maybe_event.is_none() {
+						log::warn!("Transfer event does not exist in parentchain metadata");
+					};
+					maybe_event
+				},
+				Err(e) => {
+					log::error!("Could not decode event: {:?}", e);
+					None
+				},
+			})
+			.collect())
+	}
 }
 
 pub struct MockEvents;
@@ -75,5 +123,14 @@ pub struct MockEvents;
 impl FilterEvents for MockEvents {
 	fn get_extrinsic_statuses(&self) -> Result<Vec<ExtrinsicStatus>> {
 		Ok(Vec::from([ExtrinsicStatus::Success]))
+	}
+
+	fn get_transfer_events(&self) -> Result<Vec<BalanceTransfer>> {
+		let transfer = BalanceTransfer {
+			to: [0u8; 32].into(),
+			from: [0u8; 32].into(),
+			amount: Balance::default(),
+		};
+		Ok(Vec::from([transfer]))
 	}
 }
