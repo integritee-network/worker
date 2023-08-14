@@ -154,7 +154,7 @@ impl<
 				.iter()
 				.filter(|&event| event.to == PrivacySidechain::SHIELDING_ACCOUNT)
 				.try_for_each(|event| {
-					info!("transfer_event :: {}", event.print_string());
+					info!("transfer_event: {}", event);
 					PrivacySidechain::shield_funds(&event.from, event.amount)
 				})?;
 		}
