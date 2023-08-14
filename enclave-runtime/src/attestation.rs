@@ -193,16 +193,19 @@ pub fn generate_dcap_ra_extrinsic_internal(
 ) -> EnclaveResult<OpaqueExtrinsic> {
 	let attestation_handler = GLOBAL_ATTESTATION_HANDLER_COMPONENT.get()?;
 
-	let (_priv_key_der, _cert_der, dcap_quote) = attestation_handler.generate_dcap_ra_cert(
-		quoting_enclave_target_info,
-		quote_size,
-		skip_ra,
-	)?;
-
 	if !skip_ra {
+		let (_priv_key_der, _cert_der, dcap_quote) = attestation_handler.generate_dcap_ra_cert(
+			quoting_enclave_target_info,
+			quote_size,
+			skip_ra,
+		)?;
+
 		generate_dcap_ra_extrinsic_from_quote_internal(url, &dcap_quote)
 	} else {
-		generate_dcap_skip_ra_extrinsic_from_quote_internal(url, &dcap_quote)
+		generate_dcap_skip_ra_extrinsic_from_mr_enclave(
+			url,
+			&attestation_handler.get_mrenclave()?.encode(),
+		)
 	}
 }
 
@@ -304,7 +307,7 @@ pub fn generate_dcap_ra_extrinsic_from_quote_internal(
 	create_extrinsics(call)
 }
 
-pub fn generate_dcap_skip_ra_extrinsic_from_quote_internal(
+pub fn generate_dcap_skip_ra_extrinsic_from_mr_enclave(
 	url: String,
 	quote: &[u8],
 ) -> EnclaveResult<OpaqueExtrinsic> {
