@@ -100,20 +100,13 @@ impl FilterEvents for Events<H256> {
 	fn get_transfer_events(&self) -> Result<Vec<BalanceTransfer>> {
 		Ok(self
 			.iter()
-			.filter_map(|ev| {
-				log::info!("GOT BEFORE AND_THEN");
-				ev.and_then(|ev| match ev.as_event::<BalanceTransfer>()? {
-					Some(e) => {
-						log::info!("GOT IN SOME MATCH");
-						Ok(Some(e))
-					},
-					None => {
-						log::info!("GOT IN NONE MATCH");
-						Ok(None)
-					},
-				})
-				.ok()
-				.flatten()
+			.flatten() // flatten filters out the nones
+			.filter_map(|ev| match ev.as_event::<BalanceTransfer>() {
+				Ok(maybe_event) => maybe_event,
+				Err(e) => {
+					log::error!("Could not decode event: {:?}", e);
+					None
+				},
 			})
 			.collect())
 	}
