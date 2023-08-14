@@ -110,6 +110,8 @@ pub enum CliResultOk {
 
 #[derive(Debug, Error)]
 pub enum CliError {
+	#[error("extrinsic error: {:?}", msg)]
+	Extrinsic { msg: String },
 	#[error("trusted operation error: {:?}", msg)]
 	TrustedOp { msg: String },
 	#[error("EvmReadCommands error: {:?}", msg)]

@@ -32,5 +32,4 @@ pub mod sgx_reexport_prelude {
 	pub use jsonrpc_core_sgx as jsonrpc_core;
 }
 
-pub mod builders;
 pub mod mock;

@@ -17,6 +17,7 @@
 */
 
 use crate::error::{Error, ServiceResult};
+use base58::ToBase58;
 use codec::Encode;
 use itp_enclave_api::{enclave_base::EnclaveBase, Enclave};
 use itp_settings::files::{
@@ -54,10 +55,10 @@ pub(crate) fn initialize_shard_and_keys(
 pub(crate) fn init_shard(enclave: &Enclave, shard_identifier: &ShardIdentifier) {
 	match enclave.init_shard(shard_identifier.encode()) {
 		Err(e) => {
-			println!("Failed to initialize shard {:?}: {:?}", shard_identifier, e);
+			println!("Failed to initialize shard {:?}: {:?}", shard_identifier.0.to_base58(), e);
 		},
 		Ok(_) => {
-			println!("Successfully initialized shard {:?}", shard_identifier);
+			println!("Successfully initialized shard {:?}", shard_identifier.0.to_base58());
 		},
 	}
 }

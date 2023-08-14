@@ -6,6 +6,7 @@ services:
       - "${SGX_ENCLAVE:-/dev/null}:/dev/sgx/enclave"
     volumes:
       - "${AESMD:-/dev/null}:/var/run/aesmd"
+      - "${SGX_QCNL:-/dev/null}:/etc/sgx_default_qcnl.conf"
 
     build:
       context: ${PWD}/..
@@ -18,6 +19,8 @@ services:
         condition: service_healthy
       integritee-worker-2-${VERSION}:
         condition: service_healthy
+    environment:
+      - RUST_LOG=warn,ws=warn,sp_io=warn,substrate_api_client=warn,jsonrpsee_ws_client=warn,jsonrpsee_ws_server=warn,enclave_runtime=warn,integritee_service=info,integritee_service::sidechain=debug,ita_stf=warn
     networks:
       - integritee-test-network
     entrypoint:

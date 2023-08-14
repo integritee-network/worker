@@ -88,7 +88,7 @@ where
 			let api = self.node_api_factory.create_api()?;
 			for call in extrinsics.into_iter() {
 				if let Err(e) = api.submit_opaque_extrinsic(call.encode().into()) {
-					error!("Could not send extrsinic to node: {:?}", e);
+					error!("Could not send extrsinic to node: {:?}, error: {:?}", call, e);
 				}
 			}
 		}

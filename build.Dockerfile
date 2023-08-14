@@ -36,8 +36,6 @@ ENV SGX_MODE=$SGX_MODE
 ARG SGX_PRODUCTION=0
 ENV SGX_PRODUCTION=$SGX_PRODUCTION
 
-ARG WORKER_FEATURES_ARG
-ENV WORKER_FEATURES=$WORKER_FEATURES_ARG
 
 ENV WORKHOME=/home/ubuntu/work
 ENV HOME=/home/ubuntu
@@ -70,6 +68,19 @@ RUN --mount=type=cache,id=cargo-registry-cache,target=/opt/rust/registry/cache \
 FROM oasisprotocol/aesmd:master AS runner
 ENV SGX_SDK /opt/sgxsdk
 ENV LD_LIBRARY_PATH "${SGX_SDK}/sdk_libs"
+RUN apt-get install -y \
+	libsgx-aesm-ecdsa-plugin \
+	libsgx-ae-qve \
+	libsgx-aesm-quote-ex-plugin \
+	libsgx-dcap-default-qpl \
+	libsgx-dcap-ql \
+	libsgx-dcap-quote-verify \ 
+	libsgx-epid \ 
+	libsgx-headers \ 
+	libsgx-quote-ex \ 
+	libsgx-ra-network \ 
+	libsgx-ra-uefi \ 
+	libsgx-uae-service
 
 ### Deployed CLI client
 ##################################################
@@ -106,14 +117,19 @@ COPY --from=builder /home/ubuntu/work/worker/bin/* ./
 COPY --from=builder /lib/x86_64-linux-gnu/libsgx* /lib/x86_64-linux-gnu/
 COPY --from=builder /lib/x86_64-linux-gnu/libdcap* /lib/x86_64-linux-gnu/
 
-RUN touch spid.txt key.txt
 RUN chmod +x /usr/local/bin/integritee-service
 RUN ls -al /usr/local/bin
 
 # checks
 ENV SGX_SDK /opt/sgxsdk
-ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:$SGX_SDK/sdk_libs
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/intel/sgx-aesm-service/aesm:$SGX_SDK/sdk_libs
+ENV AESM_PATH=/opt/intel/sgx-aesm-service/aesm
+
+COPY ./docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+
 RUN ldd /usr/local/bin/integritee-service && \
 	/usr/local/bin/integritee-service --version
 
-ENTRYPOINT ["/usr/local/bin/integritee-service"]
+ENTRYPOINT ["/entrypoint.sh"]

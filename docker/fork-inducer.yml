@@ -6,6 +6,7 @@ services:
       - "${SGX_ENCLAVE:-/dev/null}:/dev/sgx/enclave"
     volumes:
       - "${AESMD:-/dev/null}:/var/run/aesmd"
+      - "${SGX_QCNL:-/dev/null}:/etc/sgx_default_qcnl.conf"
     build:
       context: .
       dockerfile: ping.Dockerfile
@@ -20,6 +21,7 @@ services:
       - "${SGX_ENCLAVE:-/dev/null}:/dev/sgx/enclave"
     volumes:
       - "${AESMD:-/dev/null}:/var/run/aesmd"
+      - "${SGX_QCNL:-/dev/null}:/etc/sgx_default_qcnl.conf"
     build:
       context: .
       dockerfile: fork.Dockerfile

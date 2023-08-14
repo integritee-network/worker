@@ -176,6 +176,7 @@ where
 	}
 
 	fn trigger_parentchain_block_import(&self) -> ServiceResult<()> {
+		trace!("trigger parentchain block import");
 		Ok(self.enclave_api.trigger_parentchain_block_import()?)
 	}
 
@@ -184,10 +185,16 @@ where
 		last_synced_header: &Header,
 		until_header: &Header,
 	) -> ServiceResult<Header> {
+		trace!(
+			"last synched block number: {}. synching until {}",
+			last_synced_header.number,
+			until_header.number
+		);
 		let mut last_synced_header = last_synced_header.clone();
 
 		while last_synced_header.number() < until_header.number() {
 			last_synced_header = self.sync_parentchain(last_synced_header)?;
+			trace!("synched block number: {}", last_synced_header.number);
 		}
 		self.trigger_parentchain_block_import()?;
 

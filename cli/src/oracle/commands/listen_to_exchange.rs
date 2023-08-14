@@ -56,16 +56,16 @@ pub fn count_exchange_rate_update_events(api: &ParentchainApi, duration: Duratio
 				info!("received event {:?}", event_record.event);
 				if let RuntimeEvent::Teeracle(event) = &event_record.event {
 					match &event {
-						my_node_runtime::pallet_teeracle::Event::ExchangeRateUpdated(
-							src,
+						my_node_runtime::pallet_teeracle::Event::ExchangeRateUpdated {
+							data_source,
 							trading_pair,
 							exchange_rate,
-						) => {
+						} => {
 							count += 1;
 							debug!("Received ExchangeRateUpdated event");
 							println!(
 								"ExchangeRateUpdated: TRADING_PAIR : {}, SRC : {}, VALUE :{:?}",
-								trading_pair, src, exchange_rate
+								trading_pair, data_source, exchange_rate
 							);
 						},
 						_ => trace!("ignoring teeracle event: {:?}", event),

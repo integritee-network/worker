@@ -22,7 +22,10 @@ use crate::{
 };
 use futures::executor;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
-use itp_enclave_api::{enclave_base::EnclaveBase, remote_attestation::TlsRemoteAttestation};
+use itp_enclave_api::{
+	enclave_base::EnclaveBase,
+	remote_attestation::{RemoteAttestation, TlsRemoteAttestation},
+};
 use itp_node_api::api_client::PalletTeerexApi;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
 use itp_types::ShardIdentifier;
@@ -30,7 +33,7 @@ use sgx_types::sgx_quote_sign_type_t;
 use std::string::String;
 
 pub(crate) fn sync_state<
-	E: TlsRemoteAttestation + EnclaveBase,
+	E: TlsRemoteAttestation + EnclaveBase + RemoteAttestation,
 	NodeApi: PalletTeerexApi,
 	WorkerModeProvider: ProvideWorkerMode,
 >(
@@ -72,9 +75,10 @@ async fn get_author_url_of_last_finalized_sidechain_block<NodeApi: PalletTeerexA
 	shard: &ShardIdentifier,
 ) -> Result<String> {
 	let enclave = node_api
-		.worker_for_shard(shard, None)?
+		.primary_worker_for_shard(shard, None)?
 		.ok_or_else(|| Error::NoWorkerForShardFound(*shard))?;
-	let worker_api_direct = DirectWorkerApi::new(enclave.url);
+	let worker_api_direct =
+		DirectWorkerApi::new(String::from_utf8(enclave.instance_url().unwrap()).unwrap());
 	Ok(worker_api_direct.get_mu_ra_url()?)
 }
 
@@ -85,12 +89,13 @@ async fn get_enclave_url_of_first_registered<NodeApi: PalletTeerexApi, EnclaveAp
 	node_api: &NodeApi,
 	enclave_api: &EnclaveApi,
 ) -> Result<String> {
-	let self_mr_enclave = enclave_api.get_mrenclave()?;
+	let self_mr_enclave = enclave_api.get_fingerprint()?;
 	let first_enclave = node_api
 		.all_enclaves(None)?
 		.into_iter()
-		.find(|e| e.mr_enclave == self_mr_enclave)
+		.find(|e| e.fingerprint() == self_mr_enclave)
 		.ok_or(Error::NoPeerWorkerFound)?;
-	let worker_api_direct = DirectWorkerApi::new(first_enclave.url);
+	let worker_api_direct =
+		DirectWorkerApi::new(String::from_utf8(first_enclave.instance_url().unwrap()).unwrap());
 	Ok(worker_api_direct.get_mu_ra_url()?)
 }

@@ -15,7 +15,7 @@
 
 */
 
-use crate::{Result, Verifier};
+use crate::{Result, ShardIdentifierFor, Verifier};
 use itp_types::H256;
 use its_primitives::traits::SignedBlock as SignedSidechainBlockTrait;
 use sp_core::Pair;
@@ -54,6 +54,7 @@ where
 		&self,
 		_block: SignedSidechainBlock,
 		_parentchain_header: &ParentchainBlock::Header,
+		_shard: ShardIdentifierFor<SignedSidechainBlock>,
 		_ctx: &Self::Context,
 	) -> Result<Self::BlockImportParams> {
 		todo!()

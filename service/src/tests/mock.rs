@@ -15,38 +15,66 @@
 
 */
 
+use codec::Encode;
 use itp_node_api::api_client::{ApiResult, PalletTeerexApi};
-use itp_types::{Enclave, ShardIdentifier, H256 as Hash};
+use itp_types::{
+	AccountId, MultiEnclave, SgxBuildMode, SgxEnclave, SgxReportData, SgxStatus, ShardIdentifier,
+	H256 as Hash,
+};
 
 pub struct TestNodeApi;
 
 pub const W1_URL: &str = "127.0.0.1:22222";
 pub const W2_URL: &str = "127.0.0.1:33333";
 
-pub fn enclaves() -> Vec<Enclave> {
+pub fn enclaves() -> Vec<MultiEnclave<Vec<u8>>> {
 	vec![
-		Enclave::new([0; 32].into(), [1; 32], 1, format!("wss://{}", W1_URL)),
-		Enclave::new([2; 32].into(), [3; 32], 2, format!("wss://{}", W2_URL)),
+		MultiEnclave::from(
+			SgxEnclave::new(
+				SgxReportData::default(),
+				[1; 32],
+				[1; 32],
+				1,
+				SgxBuildMode::Production,
+				SgxStatus::Ok,
+			)
+			.with_url(format!("wss://{}", W1_URL).encode()),
+		),
+		MultiEnclave::from(
+			SgxEnclave::new(
+				SgxReportData::default(),
+				[2; 32],
+				[2; 32],
+				2,
+				SgxBuildMode::Production,
+				SgxStatus::Ok,
+			)
+			.with_url(format!("wss://{}", W2_URL).encode()),
+		),
 	]
 }
 
 impl PalletTeerexApi for TestNodeApi {
-	fn enclave(&self, index: u64, _at_block: Option<Hash>) -> ApiResult<Option<Enclave>> {
-		Ok(Some(enclaves().remove(index as usize)))
+	fn enclave(
+		&self,
+		_account: &AccountId,
+		_at_block: Option<Hash>,
+	) -> ApiResult<Option<MultiEnclave<Vec<u8>>>> {
+		Ok(Some(enclaves().remove(0)))
 	}
 	fn enclave_count(&self, _at_block: Option<Hash>) -> ApiResult<u64> {
 		unreachable!()
 	}
 
-	fn all_enclaves(&self, _at_block: Option<Hash>) -> ApiResult<Vec<Enclave>> {
+	fn all_enclaves(&self, _at_block: Option<Hash>) -> ApiResult<Vec<MultiEnclave<Vec<u8>>>> {
 		Ok(enclaves())
 	}
 
-	fn worker_for_shard(
+	fn primary_worker_for_shard(
 		&self,
 		_: &ShardIdentifier,
 		_at_block: Option<Hash>,
-	) -> ApiResult<Option<Enclave>> {
+	) -> ApiResult<Option<MultiEnclave<Vec<u8>>>> {
 		unreachable!()
 	}
 	fn latest_ipfs_hash(

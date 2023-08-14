@@ -58,9 +58,7 @@ where
 	}
 
 	fn genesis_hash(&self) -> Result<HashFor<Block>, Error> {
-		let relay = self.get_relay();
-		let hash = relay.header_hashes.get(0).ok_or(Error::NoGenesis)?;
-		Ok(*hash)
+		Ok(self.get_relay().genesis_hash)
 	}
 
 	fn latest_finalized_header(&self) -> Result<Block::Header, Error> {
