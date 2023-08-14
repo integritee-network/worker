@@ -22,7 +22,7 @@ use itp_api_client_types::{Events, StaticEvent};
 use itp_sgx_runtime_primitives::types::{AccountId, Balance};
 use itp_types::H256;
 use itp_utils::stringify::account_id_to_string;
-use std::{format, string::String, vec::Vec};
+use std::{fmt::Display, format, vec::Vec};
 
 #[derive(Encode, Decode, Debug)]
 pub struct ExtrinsicSuccess;
@@ -58,14 +58,15 @@ impl StaticEvent for BalanceTransfer {
 	const EVENT: &'static str = "Transfer";
 }
 
-impl BalanceTransfer {
-	pub fn print_string(&self) -> String {
-		format!(
+impl Display for BalanceTransfer {
+	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+		let message = format!(
 			"BalanceTransfer :: from: {}, to: {}, amount: {}",
 			account_id_to_string::<AccountId>(&self.from),
 			account_id_to_string::<AccountId>(&self.to),
 			self.amount
-		)
+		);
+		write!(f, "{}", message)
 	}
 }
 
