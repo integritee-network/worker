@@ -19,7 +19,6 @@
 use crate::error::Result;
 use codec::{Decode, Encode};
 use itp_api_client_types::{Events, StaticEvent};
-
 use itp_sgx_runtime_primitives::types::{AccountId, Balance};
 use itp_types::H256;
 use itp_utils::stringify::account_id_to_string;
