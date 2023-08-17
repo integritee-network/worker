@@ -86,15 +86,6 @@ pub trait FilterIntoDataFrom<NodeMetadata> {
 /// Indirect calls filter denying all indirect calls.
 pub struct DenyAll;
 
-impl FilterIntoDataFrom<NodeMetadata> for DenyAll {
-	type Output = ();
-	type ParseParentchainMetadata = ();
-
-	fn filter_into_from_metadata(_: &[u8], _: &NodeMetadata) -> Option<Self::Output> {
-		None
-	}
-}
-
 /// Default filter we use for the Integritee-Parachain.
 pub struct ShieldFundsAndInvokeFilter<ExtrinsicParser> {
 	_phantom: PhantomData<ExtrinsicParser>,
@@ -166,5 +157,36 @@ fn decode_and_log_error<V: Decode>(encoded: &mut &[u8]) -> Option<V> {
 			log::warn!("Could not decode. {:?}", e);
 			None
 		},
+	}
+}
+
+mod seal {
+	use super::*;
+
+	/// Stub struct for the `DenyAll` filter that never executes anything.
+	#[derive(Debug, Encode)]
+	pub struct CantExecute;
+
+	impl FilterIntoDataFrom<NodeMetadata> for DenyAll {
+		type Output = CantExecute;
+		type ParseParentchainMetadata = ();
+
+		fn filter_into_from_metadata(_: &[u8], _: &NodeMetadata) -> Option<CantExecute> {
+			None
+		}
+	}
+
+	impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for CantExecute {
+		fn dispatch(&self, _: &Executor) -> Result<()> {
+			// We should never get here because `CantExecute is private and the trait implementation
+			// is sealed and always returns `None` instead of a `CantExecute` instance.
+			// Regardless, we never want the enclave to panic, this is why we take this extra safety
+			// measure.
+			log::warn!(
+				"Executed indirect dispatch for 'CantExecute'\
+			 	this means there is some logic error."
+			);
+			Ok(())
+		}
 	}
 }
