@@ -23,7 +23,7 @@
 use crate::{
 	initialization::parentchain::{
 		parachain::FullParachainHandler, parachain2::FullParachainHandler2,
-		solochain::FullSolochainHandler,
+		solochain::FullSolochainHandler, solochain2::FullSolochainHandler2,
 	},
 	ocall::OcallApi,
 	rpc::rpc_response_channel::RpcResponseChannel,
@@ -331,11 +331,14 @@ pub static GLOBAL_ATTESTATION_HANDLER_COMPONENT: ComponentContainer<EnclaveAttes
 pub static GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT: ComponentContainer<FullSolochainHandler> =
 	ComponentContainer::new("full solochain handler");
 
+pub static GLOBAL_FULL_SOLOCHAIN2_HANDLER_COMPONENT: ComponentContainer<FullSolochainHandler2> =
+	ComponentContainer::new("full solochain 2 handler");
+
 pub static GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT: ComponentContainer<FullParachainHandler> =
 	ComponentContainer::new("full parachain handler");
 
 pub static GLOBAL_FULL_PARACHAIN2_HANDLER_COMPONENT: ComponentContainer<FullParachainHandler2> =
-	ComponentContainer::new("full parachain handler 2");
+	ComponentContainer::new("full parachain 2 handler");
 
 /// Sidechain component instances
 ///-------------------------------------------------------------------------------------------------

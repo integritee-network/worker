@@ -17,8 +17,12 @@
 
 use crate::{
 	error::Result,
-	initialization::global_components::{
-		GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT, GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT,
+	initialization::{
+		global_components::{
+			GLOBAL_FULL_PARACHAIN2_HANDLER_COMPONENT, GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT,
+			GLOBAL_FULL_SOLOCHAIN2_HANDLER_COMPONENT, GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT,
+		},
+		parentchain::{parachain2::FullParachainHandler2, solochain2::FullSolochainHandler2},
 	},
 };
 use codec::{Decode, Encode};
@@ -57,6 +61,22 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 				.validator_accessor
 				.execute_on_validator(|v| v.latest_finalized_header())?;
 			GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.initialize(handler.into());
+			Ok(header.encode())
+		},
+		ParentchainInitParams::Parachain2 { params } => {
+			let handler = FullParachainHandler2::init::<WorkerModeProvider>(base_path, params)?;
+			let header = handler
+				.validator_accessor
+				.execute_on_validator(|v| v.latest_finalized_header())?;
+			GLOBAL_FULL_PARACHAIN2_HANDLER_COMPONENT.initialize(handler.into());
+			Ok(header.encode())
+		},
+		ParentchainInitParams::Solochain2 { params } => {
+			let handler = FullSolochainHandler2::init::<WorkerModeProvider>(base_path, params)?;
+			let header = handler
+				.validator_accessor
+				.execute_on_validator(|v| v.latest_finalized_header())?;
+			GLOBAL_FULL_SOLOCHAIN2_HANDLER_COMPONENT.initialize(handler.into());
 			Ok(header.encode())
 		},
 	}

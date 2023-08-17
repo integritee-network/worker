@@ -35,16 +35,9 @@ pub type ParachainParams = SimpleParams<ParachainHeader>;
 pub enum ParentchainInitParams {
 	Solochain { params: SolochainParams },
 	Parachain { params: ParachainParams },
-}
-
-impl From<SolochainParams> for ParentchainInitParams {
-	fn from(params: SolochainParams) -> Self {
-		ParentchainInitParams::Solochain { params }
-	}
-}
-
-impl From<ParachainParams> for ParentchainInitParams {
-	fn from(params: ParachainParams) -> Self {
-		ParentchainInitParams::Parachain { params }
-	}
+	// Initialize a secondary parentchain handler.
+	// HOwever, it always needs a first one too,
+	// where the enclave registers itself.
+	Solochain2 { params: SolochainParams },
+	Parachain2 { params: ParachainParams },
 }
