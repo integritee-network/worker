@@ -21,8 +21,7 @@ use crate::{
 		global_components::{
 			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOCallApi,
 			EnclaveParentchainBlockImportDispatcher, EnclaveStfExecutor, EnclaveValidatorAccessor,
-			GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT, GLOBAL_LIGHT_CLIENT_SEAL,
-			GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+			GLOBAL_LIGHT_CLIENT_SEAL, GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 		},
 		parentchain::common::{
 			create_extrinsics_factory, create_offchain_immediate_import_dispatcher,
@@ -30,11 +29,10 @@ use crate::{
 		},
 	},
 };
-use codec::Encode;
 use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, LightClientState};
-use itp_component_container::{ComponentGetter, ComponentInitializer};
+use itp_component_container::ComponentGetter;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
-use std::{path::PathBuf, sync::Arc, vec::Vec};
+use std::{path::PathBuf, sync::Arc};
 
 pub use itc_parentchain::primitives::{SolochainBlock, SolochainHeader, SolochainParams};
 
@@ -52,7 +50,7 @@ impl FullSolochainHandler {
 	pub fn init<WorkerModeProvider: ProvideWorkerMode>(
 		_base_path: PathBuf,
 		params: SolochainParams,
-	) -> Result<Vec<u8>> {
+	) -> Result<Self> {
 		let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 		let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 		let light_client_seal = GLOBAL_LIGHT_CLIENT_SEAL.get()?;
@@ -65,7 +63,6 @@ impl FullSolochainHandler {
 			EnclaveOCallApi,
 			_,
 		>(params, ocall_api.clone(), &*light_client_seal)?;
-		let latest_header = validator.latest_finalized_header()?;
 		let validator_accessor =
 			Arc::new(EnclaveValidatorAccessor::new(validator, light_client_seal));
 
@@ -99,17 +96,15 @@ impl FullSolochainHandler {
 				Arc::new(EnclaveParentchainBlockImportDispatcher::new_empty_dispatcher()),
 		};
 
-		let solochain_handler = Arc::new(Self {
+		let solochain_handler = Self {
 			genesis_header,
 			node_metadata_repository,
 			stf_executor,
 			validator_accessor,
 			extrinsics_factory,
 			import_dispatcher,
-		});
+		};
 
-		GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.initialize(solochain_handler);
-
-		Ok(latest_header.encode())
+		Ok(solochain_handler)
 	}
 }

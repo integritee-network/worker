@@ -15,9 +15,18 @@
 
 */
 
-use crate::error::Result;
-use codec::Decode;
-use itc_parentchain::primitives::ParentchainInitParams;
+use crate::{
+	error::Result,
+	initialization::global_components::{
+		GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT, GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT,
+	},
+};
+use codec::{Decode, Encode};
+use itc_parentchain::{
+	light_client::{concurrent_access::ValidatorAccess, LightClientState},
+	primitives::ParentchainInitParams,
+};
+use itp_component_container::ComponentInitializer;
 use itp_settings::worker_mode::ProvideWorkerMode;
 use parachain::FullParachainHandler;
 use solochain::FullSolochainHandler;
@@ -25,6 +34,7 @@ use std::{path::PathBuf, vec::Vec};
 
 mod common;
 pub mod parachain;
+pub mod parachain2;
 pub mod solochain;
 
 pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>(
@@ -32,9 +42,21 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 	encoded_params: Vec<u8>,
 ) -> Result<Vec<u8>> {
 	match ParentchainInitParams::decode(&mut encoded_params.as_slice())? {
-		ParentchainInitParams::Parachain { params } =>
-			FullParachainHandler::init::<WorkerModeProvider>(base_path, params),
-		ParentchainInitParams::Solochain { params } =>
-			FullSolochainHandler::init::<WorkerModeProvider>(base_path, params),
+		ParentchainInitParams::Parachain { params } => {
+			let handler = FullParachainHandler::init::<WorkerModeProvider>(base_path, params)?;
+			let header = handler
+				.validator_accessor
+				.execute_on_validator(|v| v.latest_finalized_header())?;
+			GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.initialize(handler.into());
+			Ok(header.encode())
+		},
+		ParentchainInitParams::Solochain { params } => {
+			let handler = FullSolochainHandler::init::<WorkerModeProvider>(base_path, params)?;
+			let header = handler
+				.validator_accessor
+				.execute_on_validator(|v| v.latest_finalized_header())?;
+			GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.initialize(handler.into());
+			Ok(header.encode())
+		},
 	}
 }
