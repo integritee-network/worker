@@ -20,7 +20,7 @@ use crate::{
 	initialization::{
 		global_components::{
 			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOCallApi,
-			EnclaveParentchainBlockImportDispatcher, EnclaveStfExecutor, EnclaveValidatorAccessor,
+			EnclaveStfExecutor, EnclaveValidatorAccessor, TeerexParentchainBlockImportDispatcher,
 			GLOBAL_LIGHT_CLIENT_SEAL, GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 		},
 		parentchain::common::{
@@ -43,7 +43,7 @@ pub struct FullSolochainHandler {
 	pub stf_executor: Arc<EnclaveStfExecutor>,
 	pub validator_accessor: Arc<EnclaveValidatorAccessor>,
 	pub extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
-	pub import_dispatcher: Arc<EnclaveParentchainBlockImportDispatcher>,
+	pub import_dispatcher: Arc<TeerexParentchainBlockImportDispatcher>,
 }
 
 impl FullSolochainHandler {
@@ -93,7 +93,7 @@ impl FullSolochainHandler {
 			)?,
 			WorkerMode::Sidechain => create_sidechain_triggered_import_dispatcher(block_importer),
 			WorkerMode::Teeracle =>
-				Arc::new(EnclaveParentchainBlockImportDispatcher::new_empty_dispatcher()),
+				Arc::new(TeerexParentchainBlockImportDispatcher::new_empty_dispatcher()),
 		};
 
 		let solochain_handler = Self {

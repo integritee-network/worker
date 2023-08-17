@@ -19,13 +19,12 @@ use crate::{
 	error::Result,
 	initialization::{
 		global_components::{
-			EnclaveExtrinsicsFactory, EnclaveImmediateParentchainBlockImportDispatcher,
-§			EnclaveNodeMetadataRepository, EnclaveOffchainWorkerExecutor,
-			EnclaveParentchainBlockImportDispatcher, EnclaveParentchainBlockImportQueue,
-			EnclaveParentchainBlockImporter, EnclaveParentchainEventImportQueue,
-			EnclaveParentchainSigner, EnclaveStfExecutor,
-			EnclaveTriggeredParentchainBlockImportDispatcher, EnclaveValidatorAccessor,
-			TeerexParentchainIndirectExecutor, GLOBAL_OCALL_API_COMPONENT,
+			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOffchainWorkerExecutor,
+			EnclaveParentchainBlockImportQueue, EnclaveParentchainEventImportQueue,
+			EnclaveParentchainSigner, EnclaveStfExecutor, EnclaveValidatorAccessor,
+			TeerexParentchainBlockImportDispatcher, TeerexParentchainBlockImporter,
+			TeerexParentchainImmediateBlockImportDispatcher, TeerexParentchainIndirectExecutor,
+			TeerexParentchainTriggeredBlockImportDispatcher, GLOBAL_OCALL_API_COMPONENT,
 			GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT,
 			GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STATE_OBSERVER_COMPONENT,
 			GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
@@ -45,7 +44,7 @@ pub(crate) fn create_parentchain_block_importer(
 	stf_executor: Arc<EnclaveStfExecutor>,
 	extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
 	node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
-) -> Result<EnclaveParentchainBlockImporter> {
+) -> Result<TeerexParentchainBlockImporter> {
 	let state_observer = GLOBAL_STATE_OBSERVER_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 	let shielding_key_repository = GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.get()?;
@@ -63,7 +62,7 @@ pub(crate) fn create_parentchain_block_importer(
 		top_pool_author,
 		node_metadata_repository,
 	));
-	Ok(EnclaveParentchainBlockImporter::new(
+	Ok(TeerexParentchainBlockImporter::new(
 		validator_access,
 		stf_executor,
 		extrinsics_factory,
@@ -87,10 +86,10 @@ pub(crate) fn create_extrinsics_factory(
 
 pub(crate) fn create_offchain_immediate_import_dispatcher(
 	stf_executor: Arc<EnclaveStfExecutor>,
-	block_importer: EnclaveParentchainBlockImporter,
+	block_importer: TeerexParentchainBlockImporter,
 	validator_access: Arc<EnclaveValidatorAccessor>,
 	extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
-) -> Result<Arc<EnclaveParentchainBlockImportDispatcher>> {
+) -> Result<Arc<TeerexParentchainBlockImportDispatcher>> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 
@@ -101,31 +100,29 @@ pub(crate) fn create_offchain_immediate_import_dispatcher(
 		validator_access,
 		extrinsics_factory,
 	));
-	let immediate_dispatcher = EnclaveImmediateParentchainBlockImportDispatcher::new(
-		block_importer,
-	)
-	.with_observer(move || {
-		if let Err(e) = offchain_worker_executor.execute() {
-			error!("Failed to execute trusted calls: {:?}", e);
-		}
-	});
+	let immediate_dispatcher = TeerexParentchainImmediateBlockImportDispatcher::new(block_importer)
+		.with_observer(move || {
+			if let Err(e) = offchain_worker_executor.execute() {
+				error!("Failed to execute trusted calls: {:?}", e);
+			}
+		});
 
-	Ok(Arc::new(EnclaveParentchainBlockImportDispatcher::new_immediate_dispatcher(Arc::new(
+	Ok(Arc::new(TeerexParentchainBlockImportDispatcher::new_immediate_dispatcher(Arc::new(
 		immediate_dispatcher,
 	))))
 }
 
 pub(crate) fn create_sidechain_triggered_import_dispatcher(
-	block_importer: EnclaveParentchainBlockImporter,
-) -> Arc<EnclaveParentchainBlockImportDispatcher> {
+	block_importer: TeerexParentchainBlockImporter,
+) -> Arc<TeerexParentchainBlockImportDispatcher> {
 	let parentchain_block_import_queue = EnclaveParentchainBlockImportQueue::default();
 	let parentchain_event_import_queue = EnclaveParentchainEventImportQueue::default();
-	let triggered_dispatcher = EnclaveTriggeredParentchainBlockImportDispatcher::new(
+	let triggered_dispatcher = TeerexParentchainTriggeredBlockImportDispatcher::new(
 		block_importer,
 		parentchain_block_import_queue,
 		parentchain_event_import_queue,
 	);
-	Arc::new(EnclaveParentchainBlockImportDispatcher::new_triggered_dispatcher(Arc::new(
+	Arc::new(TeerexParentchainBlockImportDispatcher::new_triggered_dispatcher(Arc::new(
 		triggered_dispatcher,
 	)))
 }

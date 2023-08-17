@@ -130,13 +130,15 @@ pub type EnclaveWebSocketServer = TungsteniteWsServer<EnclaveRpcWsHandler, FromF
 pub type EnclaveRpcResponder = RpcResponder<EnclaveRpcConnectionRegistry, Hash, RpcResponseChannel>;
 pub type EnclaveSidechainApi = SidechainApi<ParentchainBlock>;
 
-// Parentchain types
+// Parentchain types for relevant for all parentchains
 pub type EnclaveLightClientSeal =
 	LightClientStateSealSync<ParentchainBlock, LightValidationState<ParentchainBlock>>;
 pub type EnclaveExtrinsicsFactory =
 	ExtrinsicsFactory<EnclaveParentchainSigner, NonceCache, EnclaveNodeMetadataRepository>;
-pub type TeerexParentchainIndirectExecutor =
-	EIndirectCallsExecutor<ShieldFundsAndInvokeFilter<ParentchainExtrinsicParser>>;
+
+/// The enclave's generic indirect executor type.
+///
+/// The `IndirectCallsFilter` calls filter can be configured per parentchain.
 pub type EIndirectCallsExecutor<IndirectCallsFilter> = IndirectCallsExecutor<
 	EnclaveShieldingKeyRepository,
 	EnclaveStfEnclaveSigner,
@@ -145,33 +147,45 @@ pub type EIndirectCallsExecutor<IndirectCallsFilter> = IndirectCallsExecutor<
 	IndirectCallsFilter,
 	EventCreator,
 >;
+
 pub type EnclaveValidatorAccessor = ValidatorAccessor<
 	LightValidation<ParentchainBlock, EnclaveOCallApi>,
 	ParentchainBlock,
 	EnclaveLightClientSeal,
 >;
-pub type EnclaveParentchainBlockImporter = ParentchainBlockImporter<
+
+pub type EnclaveParentchainBlockImportQueue = ImportQueue<SignedParentchainBlock>;
+
+/// Import queue for the events
+///
+/// Note: `Vec<u8>` is correct. It should not be `Vec<Vec<u8>`
+pub type EnclaveParentchainEventImportQueue = ImportQueue<Vec<u8>>;
+
+// Stuff for the integritee parentchain
+
+pub type TeerexParentchainIndirectExecutor =
+	EIndirectCallsExecutor<ShieldFundsAndInvokeFilter<ParentchainExtrinsicParser>>;
+
+pub type TeerexParentchainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
 	EnclaveValidatorAccessor,
 	EnclaveStfExecutor,
 	EnclaveExtrinsicsFactory,
 	TeerexParentchainIndirectExecutor,
 >;
-pub type EnclaveParentchainBlockImportQueue = ImportQueue<SignedParentchainBlock>;
-// Should not be a Vec<Vec<u8>>
-pub type EnclaveParentchainEventImportQueue = ImportQueue<Vec<u8>>;
-pub type EnclaveTriggeredParentchainBlockImportDispatcher = TriggeredDispatcher<
-	EnclaveParentchainBlockImporter,
+
+pub type TeerexParentchainTriggeredBlockImportDispatcher = TriggeredDispatcher<
+	TeerexParentchainBlockImporter,
 	EnclaveParentchainBlockImportQueue,
 	EnclaveParentchainEventImportQueue,
 >;
 
-pub type EnclaveImmediateParentchainBlockImportDispatcher =
-	ImmediateDispatcher<EnclaveParentchainBlockImporter>;
+pub type TeerexParentchainImmediateBlockImportDispatcher =
+	ImmediateDispatcher<TeerexParentchainBlockImporter>;
 
-pub type EnclaveParentchainBlockImportDispatcher = BlockImportDispatcher<
-	EnclaveTriggeredParentchainBlockImportDispatcher,
-	EnclaveImmediateParentchainBlockImportDispatcher,
+pub type TeerexParentchainBlockImportDispatcher = BlockImportDispatcher<
+	TeerexParentchainTriggeredBlockImportDispatcher,
+	TeerexParentchainImmediateBlockImportDispatcher,
 >;
 
 /// Sidechain types
@@ -194,7 +208,7 @@ pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 	EnclaveStateHandler,
 	EnclaveStateKeyRepository,
 	EnclaveTopPoolAuthor,
-	EnclaveTriggeredParentchainBlockImportDispatcher,
+	TeerexParentchainTriggeredBlockImportDispatcher,
 >;
 pub type EnclaveSidechainBlockImportQueue = ImportQueue<SignedSidechainBlock>;
 pub type EnclaveBlockImportConfirmationHandler = BlockImportConfirmationHandler<

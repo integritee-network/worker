@@ -17,10 +17,10 @@
 use crate::{
 	error::{Error, Result},
 	initialization::global_components::{
-		EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository,
-		EnclaveParentchainBlockImportDispatcher, EnclaveStfExecutor,
-		EnclaveTriggeredParentchainBlockImportDispatcher, EnclaveValidatorAccessor,
-		GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT, GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT,
+		EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveStfExecutor,
+		EnclaveValidatorAccessor, TeerexParentchainBlockImportDispatcher,
+		TeerexParentchainTriggeredBlockImportDispatcher, GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT,
+		GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT,
 	},
 };
 use codec::{Decode, Input};
@@ -71,7 +71,7 @@ pub unsafe fn utf8_str_from_raw<'a>(
 // FIXME: When solving #1080, these helper functions should be obsolete, because no dynamic allocation
 // is necessary anymore.
 pub(crate) fn get_triggered_dispatcher_from_solo_or_parachain(
-) -> Result<Arc<EnclaveTriggeredParentchainBlockImportDispatcher>> {
+) -> Result<Arc<TeerexParentchainTriggeredBlockImportDispatcher>> {
 	let dispatcher = if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
 		get_triggered_dispatcher(solochain_handler.import_dispatcher.clone())?
 	} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
@@ -83,8 +83,8 @@ pub(crate) fn get_triggered_dispatcher_from_solo_or_parachain(
 }
 
 pub(crate) fn get_triggered_dispatcher(
-	dispatcher: Arc<EnclaveParentchainBlockImportDispatcher>,
-) -> Result<Arc<EnclaveTriggeredParentchainBlockImportDispatcher>> {
+	dispatcher: Arc<TeerexParentchainBlockImportDispatcher>,
+) -> Result<Arc<TeerexParentchainTriggeredBlockImportDispatcher>> {
 	let triggered_dispatcher = dispatcher
 		.triggered_dispatcher()
 		.ok_or(Error::ExpectedTriggeredImportDispatcher)?;
