@@ -26,11 +26,13 @@ use crate::{
 	initialization::{
 		global_components::{
 			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOCallApi,
-			EnclaveStfExecutor, EnclaveValidatorAccessor, GLOBAL_LIGHT_CLIENT_SEAL,
+			EnclaveStfExecutor, EnclaveValidatorAccessor,
+			SecondaryParentchainBlockImportDispatcher, GLOBAL_LIGHT_CLIENT_SEAL,
 			GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 		},
 		parentchain::common::{
-			create_extrinsics_factory, create_secondary_parentchain_block_importer,
+			create_extrinsics_factory, create_secondary_offchain_immediate_import_dispatcher,
+			create_secondary_parentchain_block_importer,
 		},
 	},
 };
@@ -40,10 +42,6 @@ use itp_nonce_cache::GLOBAL_NONCE_CACHE2;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
 use std::{path::PathBuf, sync::Arc};
 
-use crate::initialization::{
-	global_components::SecondaryParentchainBlockImportDispatcher,
-	parentchain::common::create_secondary_offchain_immediate_import_dispatcher,
-};
 pub use itc_parentchain::primitives::{ParachainBlock, ParachainHeader, ParachainParams};
 
 #[derive(Clone)]

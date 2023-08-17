@@ -42,7 +42,6 @@ pub use itc_parentchain::primitives::{ParachainBlock, ParachainHeader, Parachain
 pub struct FullParachainHandler {
 	pub genesis_header: ParachainHeader,
 	pub node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
-	// FIXME: Probably should be split up into a parentchain dependent executor and one independent.
 	pub stf_executor: Arc<EnclaveStfExecutor>,
 	pub validator_accessor: Arc<EnclaveValidatorAccessor>,
 	pub extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
