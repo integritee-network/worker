@@ -81,6 +81,7 @@ use teerex_primitives::AnySigner;
 use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
 
 use enclave_bridge_primitives::ShardIdentifier;
+use itc_parentchain::primitives::ParentchainId;
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
 use sp_runtime::MultiSigner;
@@ -426,6 +427,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		ParentchainHandler::new_with_automatic_light_client_allocation(
 			node_api.clone(),
 			enclave.clone(),
+			ParentchainId::Teerex,
 		)
 		.unwrap(),
 	);

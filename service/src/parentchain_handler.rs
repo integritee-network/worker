@@ -19,7 +19,7 @@
 use crate::error::{Error, ServiceResult};
 use itc_parentchain::{
 	light_client::light_client_init_params::{GrandpaParams, SimpleParams},
-	primitives::ParentchainInitParams,
+	primitives::{ParentchainId, ParentchainInitParams},
 };
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
 use itp_node_api::api_client::ChainApi;
@@ -77,6 +77,7 @@ where
 	pub fn new_with_automatic_light_client_allocation(
 		parentchain_api: ParentchainApi,
 		enclave_api: Arc<EnclaveApi>,
+		id: ParentchainId,
 	) -> ServiceResult<Self> {
 		let genesis_hash = parentchain_api.get_genesis_hash()?;
 		let genesis_header =
@@ -92,14 +93,9 @@ where
 
 			let authority_list = VersionedAuthorityList::from(grandpas);
 
-			GrandpaParams {
-				genesis_header,
-				authorities: authority_list.into(),
-				authority_proof: grandpa_proof,
-			}
-			.into()
+			(id, GrandpaParams::new(genesis_header, authority_list.into(), grandpa_proof)).into()
 		} else {
-			SimpleParams { genesis_header }.into()
+			(id, SimpleParams::new(genesis_header)).into()
 		};
 
 		Ok(Self::new(parentchain_api, enclave_api, parentchain_init_params))

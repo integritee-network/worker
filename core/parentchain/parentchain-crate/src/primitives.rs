@@ -33,11 +33,26 @@ pub type ParachainParams = SimpleParams<ParachainHeader>;
 /// Allows to use a single E-call for the initialization of different parentchain types.
 #[derive(Encode, Decode, Clone)]
 pub enum ParentchainInitParams {
-	Solochain { params: SolochainParams },
-	Parachain { params: ParachainParams },
-	// Initialize a secondary parentchain handler.
-	// HOwever, it always needs a first one too,
-	// where the enclave registers itself.
-	Solochain2 { params: SolochainParams },
-	Parachain2 { params: ParachainParams },
+	Solochain { id: ParentchainId, params: SolochainParams },
+	Parachain { id: ParentchainId, params: ParachainParams },
+}
+
+impl From<(ParentchainId, SolochainParams)> for ParentchainInitParams {
+	fn from(value: (ParentchainId, SolochainParams)) -> Self {
+		Self::Solochain { id: value.0, params: value.1 }
+	}
+}
+
+impl From<(ParentchainId, ParachainParams)> for ParentchainInitParams {
+	fn from(value: (ParentchainId, ParachainParams)) -> Self {
+		Self::Parachain { id: value.0, params: value.1 }
+	}
+}
+
+#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq)]
+pub enum ParentchainId {
+	/// Primary parentchain containing the teerex pallet.
+	Teerex,
+	/// Some secondary parentchain contaning custom business logic.
+	Secondary,
 }

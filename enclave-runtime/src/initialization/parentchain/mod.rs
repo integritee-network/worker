@@ -28,7 +28,7 @@ use crate::{
 use codec::{Decode, Encode};
 use itc_parentchain::{
 	light_client::{concurrent_access::ValidatorAccess, LightClientState},
-	primitives::ParentchainInitParams,
+	primitives::{ParentchainId, ParentchainInitParams},
 };
 use itp_component_container::ComponentInitializer;
 use itp_settings::worker_mode::ProvideWorkerMode;
@@ -47,37 +47,41 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 	encoded_params: Vec<u8>,
 ) -> Result<Vec<u8>> {
 	match ParentchainInitParams::decode(&mut encoded_params.as_slice())? {
-		ParentchainInitParams::Parachain { params } => {
-			let handler = FullParachainHandler::init::<WorkerModeProvider>(base_path, params)?;
-			let header = handler
-				.validator_accessor
-				.execute_on_validator(|v| v.latest_finalized_header())?;
-			GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.initialize(handler.into());
-			Ok(header.encode())
+		ParentchainInitParams::Parachain { id, params } => match id {
+			ParentchainId::Teerex => {
+				let handler = FullParachainHandler::init::<WorkerModeProvider>(base_path, params)?;
+				let header = handler
+					.validator_accessor
+					.execute_on_validator(|v| v.latest_finalized_header())?;
+				GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.initialize(handler.into());
+				Ok(header.encode())
+			},
+			ParentchainId::Secondary => {
+				let handler = FullParachainHandler2::init::<WorkerModeProvider>(base_path, params)?;
+				let header = handler
+					.validator_accessor
+					.execute_on_validator(|v| v.latest_finalized_header())?;
+				GLOBAL_FULL_PARACHAIN2_HANDLER_COMPONENT.initialize(handler.into());
+				Ok(header.encode())
+			},
 		},
-		ParentchainInitParams::Solochain { params } => {
-			let handler = FullSolochainHandler::init::<WorkerModeProvider>(base_path, params)?;
-			let header = handler
-				.validator_accessor
-				.execute_on_validator(|v| v.latest_finalized_header())?;
-			GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.initialize(handler.into());
-			Ok(header.encode())
-		},
-		ParentchainInitParams::Parachain2 { params } => {
-			let handler = FullParachainHandler2::init::<WorkerModeProvider>(base_path, params)?;
-			let header = handler
-				.validator_accessor
-				.execute_on_validator(|v| v.latest_finalized_header())?;
-			GLOBAL_FULL_PARACHAIN2_HANDLER_COMPONENT.initialize(handler.into());
-			Ok(header.encode())
-		},
-		ParentchainInitParams::Solochain2 { params } => {
-			let handler = FullSolochainHandler2::init::<WorkerModeProvider>(base_path, params)?;
-			let header = handler
-				.validator_accessor
-				.execute_on_validator(|v| v.latest_finalized_header())?;
-			GLOBAL_FULL_SOLOCHAIN2_HANDLER_COMPONENT.initialize(handler.into());
-			Ok(header.encode())
+		ParentchainInitParams::Solochain { id, params } => match id {
+			ParentchainId::Teerex => {
+				let handler = FullSolochainHandler::init::<WorkerModeProvider>(base_path, params)?;
+				let header = handler
+					.validator_accessor
+					.execute_on_validator(|v| v.latest_finalized_header())?;
+				GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.initialize(handler.into());
+				Ok(header.encode())
+			},
+			ParentchainId::Secondary => {
+				let handler = FullSolochainHandler2::init::<WorkerModeProvider>(base_path, params)?;
+				let header = handler
+					.validator_accessor
+					.execute_on_validator(|v| v.latest_finalized_header())?;
+				GLOBAL_FULL_SOLOCHAIN2_HANDLER_COMPONENT.initialize(handler.into());
+				Ok(header.encode())
+			},
 		},
 	}
 }
