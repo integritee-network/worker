@@ -20,34 +20,34 @@ use crate::{
 	initialization::{
 		global_components::{
 			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOCallApi,
-			EnclaveStfExecutor, EnclaveValidatorAccessor, TeerexParentchainBlockImportDispatcher,
-			GLOBAL_LIGHT_CLIENT_SEAL, GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+			EnclaveStfExecutor, EnclaveValidatorAccessor,
+			SecondaryParentchainBlockImportDispatcher, GLOBAL_LIGHT_CLIENT_SEAL,
+			GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 		},
 		parentchain::common::{
-			create_extrinsics_factory, create_sidechain_triggered_import_dispatcher,
-			create_teerex_offchain_immediate_import_dispatcher,
-			create_teerex_parentchain_block_importer,
+			create_extrinsics_factory, create_secondary_offchain_immediate_import_dispatcher,
+			create_secondary_parentchain_block_importer,
 		},
 	},
 };
 use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, LightClientState};
 use itp_component_container::ComponentGetter;
-use itp_nonce_cache::GLOBAL_NONCE_CACHE;
+use itp_nonce_cache::GLOBAL_NONCE_CACHE2;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
 use std::{path::PathBuf, sync::Arc};
 
 pub use itc_parentchain::primitives::{SolochainBlock, SolochainHeader, SolochainParams};
 
-pub struct FullSolochainHandler {
+pub struct FullSolochainHandler2 {
 	pub genesis_header: SolochainHeader,
 	pub node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
 	pub stf_executor: Arc<EnclaveStfExecutor>,
 	pub validator_accessor: Arc<EnclaveValidatorAccessor>,
 	pub extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
-	pub import_dispatcher: Arc<TeerexParentchainBlockImportDispatcher>,
+	pub import_dispatcher: Arc<SecondaryParentchainBlockImportDispatcher>,
 }
 
-impl FullSolochainHandler {
+impl FullSolochainHandler2 {
 	pub fn init<WorkerModeProvider: ProvideWorkerMode>(
 		_base_path: PathBuf,
 		params: SolochainParams,
@@ -71,7 +71,7 @@ impl FullSolochainHandler {
 
 		let extrinsics_factory = create_extrinsics_factory(
 			genesis_hash,
-			GLOBAL_NONCE_CACHE.clone(),
+			GLOBAL_NONCE_CACHE2.clone(),
 			node_metadata_repository.clone(),
 		)?;
 
@@ -81,7 +81,7 @@ impl FullSolochainHandler {
 			node_metadata_repository.clone(),
 		));
 
-		let block_importer = create_teerex_parentchain_block_importer(
+		let block_importer = create_secondary_parentchain_block_importer(
 			validator_accessor.clone(),
 			stf_executor.clone(),
 			extrinsics_factory.clone(),
@@ -89,15 +89,16 @@ impl FullSolochainHandler {
 		)?;
 
 		let import_dispatcher = match WorkerModeProvider::worker_mode() {
-			WorkerMode::OffChainWorker => create_teerex_offchain_immediate_import_dispatcher(
+			WorkerMode::OffChainWorker => create_secondary_offchain_immediate_import_dispatcher(
 				stf_executor.clone(),
 				block_importer,
 				validator_accessor.clone(),
 				extrinsics_factory.clone(),
 			)?,
-			WorkerMode::Sidechain => create_sidechain_triggered_import_dispatcher(block_importer),
+			WorkerMode::Sidechain =>
+				unimplemented!("Can't run secondary chain in sidechain mode yet."),
 			WorkerMode::Teeracle =>
-				Arc::new(TeerexParentchainBlockImportDispatcher::new_empty_dispatcher()),
+				Arc::new(SecondaryParentchainBlockImportDispatcher::new_empty_dispatcher()),
 		};
 
 		let solochain_handler = Self {

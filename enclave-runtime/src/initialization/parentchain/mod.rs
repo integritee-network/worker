@@ -36,6 +36,7 @@ mod common;
 pub mod parachain;
 pub mod parachain2;
 pub mod solochain;
+pub mod solochain2;
 
 pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>(
 	base_path: PathBuf,
