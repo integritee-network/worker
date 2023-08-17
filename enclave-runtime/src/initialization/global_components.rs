@@ -212,7 +212,7 @@ pub type SecondaryParentchainTriggeredBlockImportDispatcher = TriggeredDispatche
 >;
 
 pub type SecondaryParentchainImmediateBlockImportDispatcher =
-	ImmediateDispatcher<SecondaryParentchainTriggeredBlockImportDispatcher>;
+	ImmediateDispatcher<SecondaryParentchainBlockImporter>;
 
 pub type SecondaryParentchainBlockImportDispatcher = BlockImportDispatcher<
 	SecondaryParentchainTriggeredBlockImportDispatcher,
