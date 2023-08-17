@@ -21,7 +21,7 @@ use crate::{
 		global_components::{
 			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOCallApi,
 			EnclaveStfExecutor, EnclaveValidatorAccessor,
-			SecondaryParentchainBlockImportDispatcher, GLOBAL_LIGHT_CLIENT_SEAL,
+			SecondaryParentchainBlockImportDispatcher, GLOBAL_LIGHT_CLIENT_SEAL2,
 			GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 		},
 		parentchain::common::{
@@ -54,7 +54,7 @@ impl FullSolochainHandler2 {
 	) -> Result<Self> {
 		let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 		let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
-		let light_client_seal = GLOBAL_LIGHT_CLIENT_SEAL.get()?;
+		let light_client_seal = GLOBAL_LIGHT_CLIENT_SEAL2.get()?;
 		let node_metadata_repository = Arc::new(EnclaveNodeMetadataRepository::default());
 
 		let genesis_header = params.genesis_header.clone();

@@ -27,7 +27,7 @@ use crate::{
 		global_components::{
 			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOCallApi,
 			EnclaveStfExecutor, EnclaveValidatorAccessor,
-			SecondaryParentchainBlockImportDispatcher, GLOBAL_LIGHT_CLIENT_SEAL,
+			SecondaryParentchainBlockImportDispatcher, GLOBAL_LIGHT_CLIENT_SEAL2,
 			GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 		},
 		parentchain::common::{
@@ -65,7 +65,7 @@ impl FullParachainHandler2 {
 
 		let genesis_header = params.genesis_header.clone();
 
-		let light_client_seal = GLOBAL_LIGHT_CLIENT_SEAL.get()?;
+		let light_client_seal = GLOBAL_LIGHT_CLIENT_SEAL2.get()?;
 		let validator = itc_parentchain::light_client::io::read_or_init_parachain_validator::<
 			ParachainBlock,
 			EnclaveOCallApi,
