@@ -22,7 +22,8 @@
 
 use crate::{
 	initialization::parentchain::{
-		parachain::FullParachainHandler, solochain::FullSolochainHandler,
+		parachain::FullParachainHandler, parachain2::FullParachainHandler2,
+		solochain::FullSolochainHandler,
 	},
 	ocall::OcallApi,
 	rpc::rpc_response_channel::RpcResponseChannel,
@@ -41,7 +42,7 @@ use itc_parentchain::{
 	},
 	block_importer::ParentchainBlockImporter,
 	indirect_calls_executor::{
-		filter_metadata::{EventCreator, ShieldFundsAndInvokeFilter},
+		filter_metadata::{DenyAll, EventCreator, ShieldFundsAndInvokeFilter},
 		parentchain_parser::ParentchainExtrinsicParser,
 		IndirectCallsExecutor,
 	},
@@ -188,6 +189,36 @@ pub type TeerexParentchainBlockImportDispatcher = BlockImportDispatcher<
 	TeerexParentchainImmediateBlockImportDispatcher,
 >;
 
+// Stuff for the secondary parentchain
+
+/// IndirectCalls executor instance of the secondary parentchain.
+///
+/// **Note**: The `DenyAll` filter is just a placeholder and is dependent on the
+/// secondary chain's business logic.
+pub type SecondaryParentchainIndirectExecutor = EIndirectCallsExecutor<DenyAll>;
+
+pub type SecondaryParentchainBlockImporter = ParentchainBlockImporter<
+	ParentchainBlock,
+	EnclaveValidatorAccessor,
+	EnclaveStfExecutor,
+	EnclaveExtrinsicsFactory,
+	SecondaryParentchainIndirectExecutor,
+>;
+
+pub type SecondaryParentchainTriggeredBlockImportDispatcher = TriggeredDispatcher<
+	TeerexParentchainBlockImporter,
+	EnclaveParentchainBlockImportQueue,
+	EnclaveParentchainEventImportQueue,
+>;
+
+pub type SecondaryParentchainImmediateBlockImportDispatcher =
+	ImmediateDispatcher<SecondaryParentchainTriggeredBlockImportDispatcher>;
+
+pub type SecondaryParentchainBlockImportDispatcher = BlockImportDispatcher<
+	SecondaryParentchainTriggeredBlockImportDispatcher,
+	SecondaryParentchainImmediateBlockImportDispatcher,
+>;
+
 /// Sidechain types
 pub type EnclaveTopPool = BasicPool<EnclaveSidechainApi, ParentchainBlock, EnclaveRpcResponder>;
 
@@ -208,6 +239,7 @@ pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 	EnclaveStateHandler,
 	EnclaveStateKeyRepository,
 	EnclaveTopPoolAuthor,
+	// For now the sidechain does only support one parentchain.
 	TeerexParentchainTriggeredBlockImportDispatcher,
 >;
 pub type EnclaveSidechainBlockImportQueue = ImportQueue<SignedSidechainBlock>;
@@ -301,6 +333,9 @@ pub static GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT: ComponentContainer<FullSoloc
 
 pub static GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT: ComponentContainer<FullParachainHandler> =
 	ComponentContainer::new("full parachain handler");
+
+pub static GLOBAL_FULL_PARACHAIN2_HANDLER_COMPONENT: ComponentContainer<FullParachainHandler2> =
+	ComponentContainer::new("full parachain handler 2");
 
 /// Sidechain component instances
 ///-------------------------------------------------------------------------------------------------
