@@ -131,7 +131,7 @@ pub type EnclaveWebSocketServer = TungsteniteWsServer<EnclaveRpcWsHandler, FromF
 pub type EnclaveRpcResponder = RpcResponder<EnclaveRpcConnectionRegistry, Hash, RpcResponseChannel>;
 pub type EnclaveSidechainApi = SidechainApi<ParentchainBlock>;
 
-// Parentchain types for relevant for all parentchains
+// Parentchain types relevant for all parentchains
 pub type EnclaveLightClientSeal =
 	LightClientStateSealSync<ParentchainBlock, LightValidationState<ParentchainBlock>>;
 pub type EnclaveExtrinsicsFactory =
@@ -140,7 +140,7 @@ pub type EnclaveExtrinsicsFactory =
 /// The enclave's generic indirect executor type.
 ///
 /// The `IndirectCallsFilter` calls filter can be configured per parentchain.
-pub type EIndirectCallsExecutor<IndirectCallsFilter> = IndirectCallsExecutor<
+pub type EnclaveIndirectCallsExecutor<IndirectCallsFilter> = IndirectCallsExecutor<
 	EnclaveShieldingKeyRepository,
 	EnclaveStfEnclaveSigner,
 	EnclaveTopPoolAuthor,
@@ -165,7 +165,7 @@ pub type EnclaveParentchainEventImportQueue = ImportQueue<Vec<u8>>;
 // Stuff for the integritee parentchain
 
 pub type TeerexParentchainIndirectExecutor =
-	EIndirectCallsExecutor<ShieldFundsAndInvokeFilter<ParentchainExtrinsicParser>>;
+	EnclaveIndirectCallsExecutor<ShieldFundsAndInvokeFilter<ParentchainExtrinsicParser>>;
 
 pub type TeerexParentchainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
@@ -193,9 +193,9 @@ pub type TeerexParentchainBlockImportDispatcher = BlockImportDispatcher<
 
 /// IndirectCalls executor instance of the secondary parentchain.
 ///
-/// **Note**: The `DenyAll` filter is just a placeholder and is dependent on the
+/// **Note**: The `DenyAll` filter is just a placeholder. The real one and is dependent on the
 /// secondary chain's business logic.
-pub type SecondaryParentchainIndirectExecutor = EIndirectCallsExecutor<DenyAll>;
+pub type SecondaryParentchainIndirectExecutor = EnclaveIndirectCallsExecutor<DenyAll>;
 
 pub type SecondaryParentchainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
