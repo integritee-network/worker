@@ -33,7 +33,7 @@ use crate::{
 	},
 };
 use itp_component_container::ComponentGetter;
-use itp_nonce_cache::GLOBAL_NONCE_CACHE;
+use itp_nonce_cache::NonceCache;
 use itp_sgx_crypto::key_repository::AccessKey;
 use log::*;
 use sp_core::H256;
@@ -72,6 +72,7 @@ pub(crate) fn create_parentchain_block_importer(
 
 pub(crate) fn create_extrinsics_factory(
 	genesis_hash: H256,
+	nonce_cache: Arc<NonceCache>,
 	node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
 ) -> Result<Arc<EnclaveExtrinsicsFactory>> {
 	let signer = GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT.get()?.retrieve_key()?;
@@ -79,7 +80,7 @@ pub(crate) fn create_extrinsics_factory(
 	Ok(Arc::new(EnclaveExtrinsicsFactory::new(
 		genesis_hash,
 		EnclaveParentchainSigner::new(signer),
-		GLOBAL_NONCE_CACHE.clone(),
+		nonce_cache,
 		node_metadata_repository,
 	)))
 }

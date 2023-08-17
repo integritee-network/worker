@@ -42,10 +42,15 @@ use std::sync::Arc;
 pub use nonce_cache::NonceCache;
 
 lazy_static! {
-	/// Global instance of a nonce cache
+	/// Global instance of a nonce cache for parentchain 1.
 	///
 	/// Concurrent access is managed internally, using RW locks
 	pub static ref GLOBAL_NONCE_CACHE: Arc<NonceCache> = Default::default();
+
+	/// Global instance of a nonce cache for parentchain 2.
+	///
+	/// Concurrent access is managed internally, using RW locks
+	pub static ref GLOBAL_NONCE_CACHE2: Arc<NonceCache> = Default::default();
 }
 
 pub mod error;

@@ -21,7 +21,7 @@ use crate::{
 		global_components::{
 			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOCallApi,
 			EnclaveStfExecutor, EnclaveValidatorAccessor, TeerexParentchainBlockImportDispatcher,
-			GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+			GLOBAL_LIGHT_CLIENT_SEAL, GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 		},
 		parentchain::common::{
 			create_extrinsics_factory, create_offchain_immediate_import_dispatcher,
@@ -31,10 +31,10 @@ use crate::{
 };
 use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, LightClientState};
 use itp_component_container::ComponentGetter;
+use itp_nonce_cache::GLOBAL_NONCE_CACHE;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
 use std::{path::PathBuf, sync::Arc};
 
-use crate::initialization::global_components::GLOBAL_LIGHT_CLIENT_SEAL;
 pub use itc_parentchain::primitives::{ParachainBlock, ParachainHeader, ParachainParams};
 
 #[derive(Clone)]
@@ -70,8 +70,11 @@ impl FullParachainHandler {
 
 		let genesis_hash = validator_accessor.execute_on_validator(|v| v.genesis_hash())?;
 
-		let extrinsics_factory =
-			create_extrinsics_factory(genesis_hash, node_metadata_repository.clone())?;
+		let extrinsics_factory = create_extrinsics_factory(
+			genesis_hash,
+			GLOBAL_NONCE_CACHE.clone(),
+			node_metadata_repository.clone(),
+		)?;
 
 		let stf_executor = Arc::new(EnclaveStfExecutor::new(
 			ocall_api,
