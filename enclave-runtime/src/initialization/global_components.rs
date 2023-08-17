@@ -135,12 +135,14 @@ pub type EnclaveLightClientSeal =
 	LightClientStateSealSync<ParentchainBlock, LightValidationState<ParentchainBlock>>;
 pub type EnclaveExtrinsicsFactory =
 	ExtrinsicsFactory<EnclaveParentchainSigner, NonceCache, EnclaveNodeMetadataRepository>;
-pub type EnclaveIndirectCallsExecutor = IndirectCallsExecutor<
+pub type TeerexParentchainIndirectExecutor =
+	EIndirectCallsExecutor<ShieldFundsAndInvokeFilter<ParentchainExtrinsicParser>>;
+pub type EIndirectCallsExecutor<IndirectCallsFilter> = IndirectCallsExecutor<
 	EnclaveShieldingKeyRepository,
 	EnclaveStfEnclaveSigner,
 	EnclaveTopPoolAuthor,
 	EnclaveNodeMetadataRepository,
-	ShieldFundsAndInvokeFilter<ParentchainExtrinsicParser>,
+	IndirectCallsFilter,
 	EventCreator,
 >;
 pub type EnclaveValidatorAccessor = ValidatorAccessor<
@@ -153,7 +155,7 @@ pub type EnclaveParentchainBlockImporter = ParentchainBlockImporter<
 	EnclaveValidatorAccessor,
 	EnclaveStfExecutor,
 	EnclaveExtrinsicsFactory,
-	EnclaveIndirectCallsExecutor,
+	TeerexParentchainIndirectExecutor,
 >;
 pub type EnclaveParentchainBlockImportQueue = ImportQueue<SignedParentchainBlock>;
 // Should not be a Vec<Vec<u8>>

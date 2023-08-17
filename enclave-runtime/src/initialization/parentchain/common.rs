@@ -20,14 +20,15 @@ use crate::{
 	initialization::{
 		global_components::{
 			EnclaveExtrinsicsFactory, EnclaveImmediateParentchainBlockImportDispatcher,
-			EnclaveIndirectCallsExecutor, EnclaveNodeMetadataRepository,
-			EnclaveOffchainWorkerExecutor, EnclaveParentchainBlockImportDispatcher,
-			EnclaveParentchainBlockImportQueue, EnclaveParentchainBlockImporter,
-			EnclaveParentchainEventImportQueue, EnclaveParentchainSigner, EnclaveStfExecutor,
+§			EnclaveNodeMetadataRepository, EnclaveOffchainWorkerExecutor,
+			EnclaveParentchainBlockImportDispatcher, EnclaveParentchainBlockImportQueue,
+			EnclaveParentchainBlockImporter, EnclaveParentchainEventImportQueue,
+			EnclaveParentchainSigner, EnclaveStfExecutor,
 			EnclaveTriggeredParentchainBlockImportDispatcher, EnclaveValidatorAccessor,
-			GLOBAL_OCALL_API_COMPONENT, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
-			GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
-			GLOBAL_STATE_OBSERVER_COMPONENT, GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
+			TeerexParentchainIndirectExecutor, GLOBAL_OCALL_API_COMPONENT,
+			GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT,
+			GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STATE_OBSERVER_COMPONENT,
+			GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
 		},
 		EnclaveStfEnclaveSigner,
 	},
@@ -56,7 +57,7 @@ pub(crate) fn create_parentchain_block_importer(
 		shielding_key_repository.clone(),
 		top_pool_author.clone(),
 	));
-	let indirect_calls_executor = Arc::new(EnclaveIndirectCallsExecutor::new(
+	let indirect_calls_executor = Arc::new(TeerexParentchainIndirectExecutor::new(
 		shielding_key_repository,
 		stf_enclave_signer,
 		top_pool_author,
