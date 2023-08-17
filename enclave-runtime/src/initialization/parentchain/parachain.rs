@@ -24,8 +24,9 @@ use crate::{
 			GLOBAL_LIGHT_CLIENT_SEAL, GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 		},
 		parentchain::common::{
-			create_extrinsics_factory, create_offchain_immediate_import_dispatcher,
-			create_parentchain_block_importer, create_sidechain_triggered_import_dispatcher,
+			create_extrinsics_factory, create_sidechain_triggered_import_dispatcher,
+			create_teerex_offchain_immediate_import_dispatcher,
+			create_teerex_parentchain_block_importer,
 		},
 	},
 };
@@ -82,7 +83,7 @@ impl FullParachainHandler {
 			node_metadata_repository.clone(),
 		));
 
-		let block_importer = create_parentchain_block_importer(
+		let block_importer = create_teerex_parentchain_block_importer(
 			validator_accessor.clone(),
 			stf_executor.clone(),
 			extrinsics_factory.clone(),
@@ -90,7 +91,7 @@ impl FullParachainHandler {
 		)?;
 
 		let import_dispatcher = match WorkerModeProvider::worker_mode() {
-			WorkerMode::OffChainWorker => create_offchain_immediate_import_dispatcher(
+			WorkerMode::OffChainWorker => create_teerex_offchain_immediate_import_dispatcher(
 				stf_executor.clone(),
 				block_importer,
 				validator_accessor.clone(),
