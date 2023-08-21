@@ -24,7 +24,7 @@ use sp_runtime::traits::Keccak256;
 
 #[derive(Parser)]
 pub struct VerifyMerkleProofCommand {
-	merkle_proof_json: String,
+	pub merkle_proof_json: String,
 }
 
 impl VerifyMerkleProofCommand {

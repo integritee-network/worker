@@ -26,8 +26,8 @@ use sp_core::Pair;
 #[derive(Parser)]
 pub struct GetMarketResultsCommand {
 	/// AccountId in ss58check format
-	account: String,
-	timestamp: String,
+	pub account: String,
+	pub timestamp: String,
 }
 
 impl GetMarketResultsCommand {
