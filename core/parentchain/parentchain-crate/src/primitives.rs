@@ -49,7 +49,7 @@ impl From<(ParentchainId, ParachainParams)> for ParentchainInitParams {
 	}
 }
 
-#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq)]
+#[derive(Encode, Decode, Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ParentchainId {
 	/// Primary parentchain containing the teerex pallet.
 	Teerex,

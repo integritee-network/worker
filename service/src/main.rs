@@ -423,31 +423,9 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	// ------------------------------------------------------------------------
 	// Init parentchain specific stuff. Needed for parentchain communication.
-	let parentchain_handler = Arc::new(
-		ParentchainHandler::new_with_automatic_light_client_allocation(
-			node_api.clone(),
-			enclave.clone(),
-			ParentchainId::Teerex,
-		)
-		.unwrap(),
-	);
-	let last_synced_header = parentchain_handler.init_parentchain_components().unwrap();
-	trace!("last synched parentchain block: {}", last_synced_header.number);
 
-	let nonce = node_api.get_nonce_of(&tee_accountid).unwrap();
-	info!("Enclave nonce = {:?}", nonce);
-	enclave
-		.set_nonce(nonce)
-		.expect("Could not set nonce of enclave. Returning here...");
-
-	let metadata = node_api.metadata().clone();
-	let runtime_spec_version = node_api.runtime_version().spec_version;
-	let runtime_transaction_version = node_api.runtime_version().transaction_version;
-	enclave
-		.set_node_metadata(
-			NodeMetadata::new(metadata, runtime_spec_version, runtime_transaction_version).encode(),
-		)
-		.expect("Could not set the node metadata in the enclave");
+	let (parentchain_handler, last_synced_header) =
+		init_parentchain(&enclave, &node_api, &tee_accountid, ParentchainId::Teerex);
 
 	#[cfg(feature = "dcap")]
 	register_collateral(&node_api, &*enclave, &tee_accountid, is_development_mode, skip_ra);
@@ -575,6 +553,50 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			print_events(events)
 		}
 	}
+}
+
+fn init_parentchain<E>(
+	enclave: &Arc<E>,
+	node_api: &ParentchainApi,
+	tee_account_id: &AccountId32,
+	parentchain_id: ParentchainId,
+) -> (Arc<ParentchainHandler<ParentchainApi, E>>, Header)
+where
+	E: EnclaveBase
+		+ DirectRequest
+		+ Sidechain
+		+ RemoteAttestation
+		+ TlsRemoteAttestation
+		+ TeeracleApi
+		+ Clone,
+{
+	let parentchain_handler = Arc::new(
+		ParentchainHandler::new_with_automatic_light_client_allocation(
+			node_api.clone(),
+			enclave.clone(),
+			parentchain_id,
+		)
+		.unwrap(),
+	);
+	let last_synced_header = parentchain_handler.init_parentchain_components().unwrap();
+	trace!("last synched parentchain block: {}", last_synced_header.number);
+
+	let nonce = node_api.get_nonce_of(&tee_account_id).unwrap();
+	info!("Enclave nonce = {:?}", nonce);
+	enclave
+		.set_nonce(nonce, parentchain_id)
+		.expect("Could not set nonce of enclave. Returning here...");
+
+	let metadata = node_api.metadata().clone();
+	let runtime_spec_version = node_api.runtime_version().spec_version;
+	let runtime_transaction_version = node_api.runtime_version().transaction_version;
+	enclave
+		.set_node_metadata(
+			NodeMetadata::new(metadata, runtime_spec_version, runtime_transaction_version).encode(),
+			parentchain_id,
+		)
+		.expect("Could not set the node metadata in the enclave");
+	(parentchain_handler, last_synced_header)
 }
 
 /// Start polling loop to wait until we have a worker for a shard registered on

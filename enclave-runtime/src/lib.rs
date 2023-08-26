@@ -43,8 +43,11 @@ use crate::{
 	},
 };
 use codec::Decode;
-use itc_parentchain::block_import_dispatcher::{
-	triggered_dispatcher::TriggerParentchainBlockImport, DispatchBlockImport,
+use itc_parentchain::{
+	block_import_dispatcher::{
+		triggered_dispatcher::TriggerParentchainBlockImport, DispatchBlockImport,
+	},
+	primitives::ParentchainId,
 };
 use itp_component_container::ComponentGetter;
 use itp_import_queue::PushToQueue;
@@ -211,8 +214,20 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u3
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn set_nonce(nonce: *const u32) -> sgx_status_t {
-	log::info!("[Ecall Set Nonce] Setting the nonce of the enclave to: {}", *nonce);
+pub unsafe extern "C" fn set_nonce(
+	nonce: *const u32,
+	parentchain_id: *const u8,
+	parentchain_id_size: u32,
+) -> sgx_status_t {
+	let id = match ParentchainId::decode_raw(parentchain_id, parentchain_id_size as usize) {
+		Err(e) => {
+			error!("Failed to decode parentchain_id: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+		Ok(m) => m,
+	};
+
+	info!("Setting the nonce of the enclave to: {} for parentchain: {:?}", *nonce, id);
 
 	let mut nonce_lock = match GLOBAL_NONCE_CACHE.load_for_mutation() {
 		Ok(l) => l,
@@ -231,15 +246,26 @@ pub unsafe extern "C" fn set_nonce(nonce: *const u32) -> sgx_status_t {
 pub unsafe extern "C" fn set_node_metadata(
 	node_metadata: *const u8,
 	node_metadata_size: u32,
+	parentchain_id: *const u8,
+	parentchain_id_size: u32,
 ) -> sgx_status_t {
-	let mut node_metadata_slice = slice::from_raw_parts(node_metadata, node_metadata_size as usize);
-	let metadata = match NodeMetadata::decode(&mut node_metadata_slice).map_err(Error::Codec) {
+	let id = match ParentchainId::decode_raw(parentchain_id, parentchain_id_size as usize) {
+		Err(e) => {
+			error!("Failed to decode parentchain_id: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+		Ok(m) => m,
+	};
+
+	let metadata = match NodeMetadata::decode_raw(node_metadata, node_metadata_size as usize) {
 		Err(e) => {
 			error!("Failed to decode node metadata: {:?}", e);
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 		Ok(m) => m,
 	};
+
+	info!("Setting node meta data for parentchain: {:?}", id);
 
 	let node_metadata_repository = match get_node_metadata_repository_from_solo_or_parachain() {
 		Ok(r) => r,
