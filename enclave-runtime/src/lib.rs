@@ -53,7 +53,7 @@ use itc_parentchain::{
 use itp_component_container::ComponentGetter;
 use itp_import_queue::PushToQueue;
 use itp_node_api::metadata::NodeMetadata;
-use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE};
+use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE, GLOBAL_NONCE_CACHE2};
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
 use itp_sgx_crypto::key_repository::AccessPubkey;
 use itp_storage::{StorageProof, StorageProofChecker};
@@ -230,15 +230,18 @@ pub unsafe extern "C" fn set_nonce(
 
 	info!("Setting the nonce of the enclave to: {} for parentchain: {:?}", *nonce, id);
 
-	let mut nonce_lock = match GLOBAL_NONCE_CACHE.load_for_mutation() {
-		Ok(l) => l,
+	let nonce_lock = match id {
+		ParentchainId::Teerex => GLOBAL_NONCE_CACHE.load_for_mutation(),
+		ParentchainId::Secondary => GLOBAL_NONCE_CACHE2.load_for_mutation(),
+	};
+
+	match nonce_lock {
+		Ok(mut nonce_guard) => *nonce_guard = Nonce(*nonce),
 		Err(e) => {
-			error!("Failed to set nonce in enclave: {:?}", e);
+			error!("Failed to set {:?} parentchain nonce in enclave: {:?}", id, e);
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	};
-
-	*nonce_lock = Nonce(*nonce);
 
 	sgx_status_t::SGX_SUCCESS
 }
