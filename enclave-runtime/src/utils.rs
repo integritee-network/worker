@@ -19,7 +19,8 @@ use crate::{
 	initialization::global_components::{
 		EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveStfExecutor,
 		EnclaveValidatorAccessor, TeerexParentchainBlockImportDispatcher,
-		TeerexParentchainTriggeredBlockImportDispatcher, GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT,
+		TeerexParentchainTriggeredBlockImportDispatcher, GLOBAL_FULL_PARACHAIN2_HANDLER_COMPONENT,
+		GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT, GLOBAL_FULL_SOLOCHAIN2_HANDLER_COMPONENT,
 		GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT,
 	},
 };
@@ -77,7 +78,7 @@ pub(crate) fn get_triggered_dispatcher_from_solo_or_parachain(
 	} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
 		get_triggered_dispatcher(parachain_handler.import_dispatcher.clone())?
 	} else {
-		return Err(Error::NoParentchainAssigned)
+		return Err(Error::NoTeerexParentchainAssigned)
 	};
 	Ok(dispatcher)
 }
@@ -99,12 +100,12 @@ pub(crate) fn get_validator_accessor_from_solo_or_parachain(
 		} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
 			parachain_handler.validator_accessor.clone()
 		} else {
-			return Err(Error::NoParentchainAssigned)
+			return Err(Error::NoTeerexParentchainAssigned)
 		};
 	Ok(validator_accessor)
 }
 
-pub(crate) fn get_node_metadata_repository_from_solo_or_parachain(
+pub(crate) fn get_node_metadata_repository_from_teerex_solo_or_parachain(
 ) -> Result<Arc<EnclaveNodeMetadataRepository>> {
 	let metadata_repository =
 		if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
@@ -112,7 +113,20 @@ pub(crate) fn get_node_metadata_repository_from_solo_or_parachain(
 		} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
 			parachain_handler.node_metadata_repository.clone()
 		} else {
-			return Err(Error::NoParentchainAssigned)
+			return Err(Error::NoTeerexParentchainAssigned)
+		};
+	Ok(metadata_repository)
+}
+
+pub(crate) fn get_node_metadata_repository_from_secondary_solo_or_parachain(
+) -> Result<Arc<EnclaveNodeMetadataRepository>> {
+	let metadata_repository =
+		if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN2_HANDLER_COMPONENT.get() {
+			solochain_handler.node_metadata_repository.clone()
+		} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN2_HANDLER_COMPONENT.get() {
+			parachain_handler.node_metadata_repository.clone()
+		} else {
+			return Err(Error::NoSecondaryParentchainAssigned)
 		};
 	Ok(metadata_repository)
 }
@@ -125,7 +139,7 @@ pub(crate) fn get_extrinsic_factory_from_solo_or_parachain() -> Result<Arc<Encla
 		} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
 			parachain_handler.extrinsics_factory.clone()
 		} else {
-			return Err(Error::NoParentchainAssigned)
+			return Err(Error::NoTeerexParentchainAssigned)
 		};
 	Ok(extrinsics_factory)
 }
@@ -137,7 +151,7 @@ pub(crate) fn get_stf_executor_from_solo_or_parachain() -> Result<Arc<EnclaveStf
 	} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
 		parachain_handler.stf_executor.clone()
 	} else {
-		return Err(Error::NoParentchainAssigned)
+		return Err(Error::NoTeerexParentchainAssigned)
 	};
 	Ok(stf_executor)
 }

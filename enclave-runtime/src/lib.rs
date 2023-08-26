@@ -38,7 +38,8 @@ use crate::{
 	},
 	rpc::worker_api_direct::sidechain_io_handler,
 	utils::{
-		get_node_metadata_repository_from_solo_or_parachain,
+		get_node_metadata_repository_from_secondary_solo_or_parachain,
+		get_node_metadata_repository_from_teerex_solo_or_parachain,
 		get_triggered_dispatcher_from_solo_or_parachain, utf8_str_from_raw, DecodeRaw,
 	},
 };
@@ -267,15 +268,19 @@ pub unsafe extern "C" fn set_node_metadata(
 
 	info!("Setting node meta data for parentchain: {:?}", id);
 
-	let node_metadata_repository = match get_node_metadata_repository_from_solo_or_parachain() {
-		Ok(r) => r,
+	let node_metadata_repository = match id {
+		ParentchainId::Teerex => get_node_metadata_repository_from_teerex_solo_or_parachain(),
+		ParentchainId::Secondary => get_node_metadata_repository_from_secondary_solo_or_parachain(),
+	};
+
+	match node_metadata_repository {
+		Ok(repo) => repo.set_metadata(metadata),
 		Err(e) => {
-			error!("Component get failure: {:?}", e);
+			error!("Could not get {:?} parentchain component: {:?}", id, e);
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	};
 
-	node_metadata_repository.set_metadata(metadata);
 	info!("Successfully set the node meta data");
 
 	sgx_status_t::SGX_SUCCESS
@@ -478,7 +483,7 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 		} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
 			parachain_handler.import_dispatcher.clone()
 		} else {
-			return Err(Error::NoParentchainAssigned)
+			return Err(Error::NoTeerexParentchainAssigned)
 		};
 
 	import_dispatcher.dispatch_import(blocks_to_sync, events_to_sync)?;
