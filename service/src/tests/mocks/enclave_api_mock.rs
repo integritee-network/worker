@@ -20,7 +20,7 @@ use core::fmt::Debug;
 use enclave_bridge_primitives::EnclaveFingerprint;
 use frame_support::sp_runtime::traits::Block as ParentchainBlockTrait;
 use itc_parentchain::primitives::{
-	ParentchainInitParams,
+	ParentchainId, ParentchainInitParams,
 	ParentchainInitParams::{Parachain, Solochain},
 };
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain, EnclaveResult};
@@ -50,8 +50,8 @@ impl EnclaveBase for EnclaveMock {
 		params: ParentchainInitParams,
 	) -> EnclaveResult<Header> {
 		let genesis_header_encoded = match params {
-			Solochain { params } => params.genesis_header.encode(),
-			Parachain { params } => params.genesis_header.encode(),
+			Solochain { params, .. } => params.genesis_header.encode(),
+			Parachain { params, .. } => params.genesis_header.encode(),
 		};
 		let header = Header::decode(&mut genesis_header_encoded.as_slice())?;
 		Ok(header)
@@ -65,11 +65,11 @@ impl EnclaveBase for EnclaveMock {
 		unimplemented!()
 	}
 
-	fn set_nonce(&self, _: u32) -> EnclaveResult<()> {
+	fn set_nonce(&self, _: u32, _: ParentchainId) -> EnclaveResult<()> {
 		unimplemented!()
 	}
 
-	fn set_node_metadata(&self, _metadata: Vec<u8>) -> EnclaveResult<()> {
+	fn set_node_metadata(&self, _metadata: Vec<u8>, _: ParentchainId) -> EnclaveResult<()> {
 		todo!()
 	}
 
