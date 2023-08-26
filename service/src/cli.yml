@@ -15,15 +15,25 @@ args:
     - node-server:
         short: u
         long: node-url
-        help: Set the node server protocol and IP address
+        help: Set the primary node server address and protocol. It is assumed that this node contains the integritee pallets.
         takes_value: true
         default_value: "ws://127.0.0.1"
     - node-port:
           short: p
           long: node-port
-          help: Set the websocket port to listen for substrate events
+          help: Port of the primary node.
           takes_value: true
           default_value: "9944"
+    - secondary-node-server:
+          long: secondary-node-url
+          help: Optional secondary node, which contains your business logic specific pallets.
+          takes_value: true
+          required: false
+    - secondary-node-port:
+          long: secondary-node-port
+          help: Port of the secondary node.
+          takes_value: true
+          required: false
     - data-dir:
           short: d
           long: data-dir
