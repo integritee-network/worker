@@ -24,7 +24,7 @@ args:
           help: Port of the primary node.
           takes_value: true
           default_value: "9944"
-    - secondary-node-server:
+    - secondary-node-url:
           long: secondary-node-url
           help: Optional secondary node, which contains your business logic specific pallets.
           takes_value: true

@@ -513,7 +513,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		// Initialize the sidechain
 		if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain {
 			last_synced_header = sidechain_init_block_production(
-				enclave,
+				enclave.clone(),
 				&register_enclave_xt_header,
 				we_are_primary_validateer,
 				parentchain_handler.clone(),
@@ -543,6 +543,10 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		spawn_worker_for_shard_polling(shard, node_api.clone(), initialization_handler);
 	}
 
+	if let Some(url) = config.secondary_node_url() {
+		init_secondary_parentchain(&enclave, &tee_accountid, url)
+	}
+
 	// ------------------------------------------------------------------------
 	// Subscribe to events and print them.
 	println!("*** Subscribing to events");
@@ -553,6 +557,61 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			print_events(events)
 		}
 	}
+}
+
+fn init_secondary_parentchain<E>(enclave: &Arc<E>, tee_account_id: &AccountId32, url: String)
+where
+	E: EnclaveBase
+		+ DirectRequest
+		+ Sidechain
+		+ RemoteAttestation
+		+ TlsRemoteAttestation
+		+ TeeracleApi
+		+ Clone,
+{
+	let node_api = NodeApiFactory::new(url, AccountKeyring::Alice.pair())
+		.create_api()
+		.expect("Failed to create secondary parentchain node API");
+
+	let (secondary_parentchain_handler, last_synced_header_secondary) =
+		init_parentchain(&enclave, &node_api, &tee_account_id, ParentchainId::Secondary);
+
+	if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
+		println!("*** [+] Finished syncing light client, syncing parentchain...");
+
+		// Syncing all parentchain blocks, this might take a while..
+		let last_synced_header_secondary = secondary_parentchain_handler
+			.sync_parentchain(last_synced_header_secondary)
+			.unwrap();
+
+		// start parentchain syncing loop (subscribe to header updates)
+		thread::Builder::new()
+			.name("secondary_parentchain_sync_loop".to_owned())
+			.spawn(move || {
+				if let Err(e) = subscribe_to_parentchain_new_headers(
+					secondary_parentchain_handler,
+					last_synced_header_secondary,
+				) {
+					error!("Parentchain block syncing terminated with a failure: {:?}", e);
+				}
+				println!("[!] Parentchain block syncing has terminated");
+			})
+			.unwrap();
+	}
+
+	// Subscribe to events and print them.
+	println!("*** Subscribing to events of secondary chain");
+	let mut subscription = node_api.subscribe_events().unwrap();
+	println!("[+] Subscribed to events. waiting...");
+
+	thread::Builder::new()
+		.name("secondary_parentchain_event_subscription".to_owned())
+		.spawn(move || loop {
+			if let Some(Ok(events)) = subscription.next_event::<RuntimeEvent, Hash>() {
+				print_events(events)
+			}
+		})
+		.unwrap();
 }
 
 fn init_parentchain<E>(

@@ -38,6 +38,8 @@ static DEFAULT_UNTRUSTED_HTTP_PORT: &str = "4545";
 pub struct Config {
 	node_ip: String,
 	node_port: String,
+	secondary_node_ip: Option<String>,
+	secondary_node_port: Option<String>,
 	worker_ip: String,
 	/// Trusted worker address that will be advertised on the parentchain.
 	trusted_external_worker_address: Option<String>,
@@ -68,6 +70,8 @@ impl Config {
 	pub fn new(
 		node_ip: String,
 		node_port: String,
+		secondary_node_ip: Option<String>,
+		secondary_node_port: Option<String>,
 		worker_ip: String,
 		trusted_external_worker_address: Option<String>,
 		trusted_worker_port: String,
@@ -84,6 +88,8 @@ impl Config {
 		Self {
 			node_ip,
 			node_port,
+			secondary_node_ip,
+			secondary_node_port,
 			worker_ip,
 			trusted_external_worker_address,
 			trusted_worker_port,
@@ -102,6 +108,19 @@ impl Config {
 	/// Returns the client url of the node (including ws://).
 	pub fn node_url(&self) -> String {
 		format!("{}:{}", self.node_ip, self.node_port)
+	}
+
+	pub fn secondary_node_url(&self) -> Option<String> {
+		if self.secondary_node_ip.is_some() && self.secondary_node_port.is_some() {
+			return Some(format!(
+				"{}:{}",
+				// Can be done better, but this code is obsolete anyhow with clap v4.
+				self.secondary_node_ip.clone().unwrap(),
+				self.secondary_node_ip.clone().unwrap()
+			))
+		};
+
+		None
 	}
 
 	pub fn trusted_worker_url_internal(&self) -> String {
@@ -194,6 +213,8 @@ impl From<&ArgMatches<'_>> for Config {
 		Self::new(
 			m.value_of("node-server").unwrap_or(DEFAULT_NODE_SERVER).into(),
 			m.value_of("node-port").unwrap_or(DEFAULT_NODE_PORT).into(),
+			m.value_of("secondary-node-server").map(Into::into),
+			m.value_of("secondary-node-port").map(Into::into),
 			if m.is_present("ws-external") { "0.0.0.0".into() } else { "127.0.0.1".into() },
 			m.value_of("trusted-external-address")
 				.map(|url| add_port_if_necessary(url, trusted_port)),
@@ -335,6 +356,8 @@ mod test {
 
 		assert_eq!(config.node_ip, DEFAULT_NODE_SERVER);
 		assert_eq!(config.node_port, DEFAULT_NODE_PORT);
+		assert_eq!(config.secondary_node_ip, None);
+		assert_eq!(config.secondary_node_port, None);
 		assert_eq!(config.trusted_worker_port, DEFAULT_TRUSTED_PORT);
 		assert_eq!(config.untrusted_worker_port, DEFAULT_UNTRUSTED_PORT);
 		assert_eq!(config.mu_ra_port, DEFAULT_MU_RA_PORT);
@@ -349,7 +372,7 @@ mod test {
 	}
 
 	#[test]
-	fn worker_ip_is_set_correcty_for_set_ws_external_flag() {
+	fn worker_ip_is_set_correctly_for_set_ws_external_flag() {
 		let expected_worker_ip = "0.0.0.0";
 
 		let mut args = ArgMatches::default();
