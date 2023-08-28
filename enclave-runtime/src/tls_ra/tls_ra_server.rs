@@ -165,7 +165,7 @@ where
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn run_state_provisioning_server(
+pub extern "C" fn run_state_provisioning_server(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,
 	quoting_enclave_target_info: Option<&sgx_target_info_t>,

@@ -16,46 +16,41 @@
 
 */
 
-use crate::ocall_bridge::bridge_api::{Bridge, RemoteAttestationBridge};
+use crate::ocall_bridge::bridge_api::{Bridge, OCallBridgeResult, RemoteAttestationBridge};
 use log::*;
 use sgx_types::{sgx_platform_info_t, sgx_status_t, sgx_update_info_bit_t};
 use std::sync::Arc;
 
 #[no_mangle]
-pub extern "C" fn ocall_get_update_info(
+pub unsafe extern "C" fn ocall_get_update_info(
 	p_platform_blob: *const sgx_platform_info_t,
 	enclave_trusted: i32,
 	p_update_info: *mut sgx_update_info_bit_t,
 ) -> sgx_status_t {
-	get_update_info(
-		p_platform_blob,
-		enclave_trusted,
-		p_update_info,
-		Bridge::get_ra_api(), // inject the RA API (global state)
-	)
-}
-
-fn get_update_info(
-	p_platform_blob: *const sgx_platform_info_t,
-	enclave_trusted: i32,
-	p_update_info: *mut sgx_update_info_bit_t,
-	ra_api: Arc<dyn RemoteAttestationBridge>,
-) -> sgx_status_t {
-	debug!("    Entering ocall_get_update_info");
-
+	if p_platform_blob.is_null() || p_update_info.is_null() {
+		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+	}
 	let platform_blob = unsafe { *p_platform_blob };
 
-	let update_info_result = match ra_api.get_update_info(platform_blob, enclave_trusted) {
-		Ok(r) => r,
-		Err(e) => {
-			error!("[-]  Failed to get update info: {:?}", e);
-			return e.into()
-		},
+	let update_info_result = match get_update_info(
+		&platform_blob,
+		enclave_trusted,
+		Bridge::get_ra_api(), // inject the RA API (global state)
+	) {
+		Ok(update_info_result) => update_info_result,
+		Err(e) => return e.into(),
 	};
-
 	unsafe {
 		*p_update_info = update_info_result;
 	}
-
 	sgx_status_t::SGX_SUCCESS
+}
+
+fn get_update_info(
+	platform_blob: &sgx_platform_info_t,
+	enclave_trusted: i32,
+	ra_api: Arc<dyn RemoteAttestationBridge>,
+) -> OCallBridgeResult<sgx_update_info_bit_t> {
+	debug!("    Entering ocall_get_update_info");
+	ra_api.get_update_info(*platform_blob, enclave_trusted)
 }

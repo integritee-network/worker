@@ -66,7 +66,7 @@ use sp_runtime::{
 use std::{sync::Arc, time::Instant, vec::Vec};
 
 #[no_mangle]
-pub unsafe extern "C" fn execute_trusted_calls() -> sgx_status_t {
+pub extern "C" fn execute_trusted_calls() -> sgx_status_t {
 	if let Err(e) = execute_top_pool_trusted_calls_internal() {
 		return e.into()
 	}
