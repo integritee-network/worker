@@ -577,7 +577,7 @@ where
 		init_parentchain(&enclave, &node_api, &tee_account_id, ParentchainId::Secondary);
 
 	if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
-		println!("*** [+] Finished syncing light client, syncing parentchain...");
+		println!("*** [+] Finished syncing secondary light client, syncing parentchain...");
 
 		// Syncing all parentchain blocks, this might take a while..
 		let last_synced_header_secondary = secondary_parentchain_handler
@@ -592,9 +592,12 @@ where
 					secondary_parentchain_handler,
 					last_synced_header_secondary,
 				) {
-					error!("Parentchain block syncing terminated with a failure: {:?}", e);
+					error!(
+						"Secondary parentchain block syncing terminated with a failure: {:?}",
+						e
+					);
 				}
-				println!("[!] Parentchain block syncing has terminated");
+				println!("[!] Secondary parentchain block syncing has terminated");
 			})
 			.unwrap();
 	}
