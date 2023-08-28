@@ -67,6 +67,7 @@ LISTEN_TO_EXCHANGE_RATE_EVENTS_CMD="oracle listen-to-exchange-rate-events"
 ADD_TO_WHITELIST_CMD="oracle add-to-whitelist"
 
 echo "Using client binary ${CLIENT_BIN}"
+${CLIENT_BIN} --version
 echo "Using node uri ${NODEURL}:${NPORT}"
 echo "Using trusted-worker uri ${WORKER1URL}:${WORKER1PORT}"
 echo "Using worker market data update interval ${INTERVAL}"
