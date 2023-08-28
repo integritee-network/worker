@@ -38,7 +38,7 @@ static DEFAULT_UNTRUSTED_HTTP_PORT: &str = "4545";
 pub struct Config {
 	node_ip: String,
 	node_port: String,
-	secondary_node_ip: Option<String>,
+	secondary_node_url: Option<String>,
 	secondary_node_port: Option<String>,
 	worker_ip: String,
 	/// Trusted worker address that will be advertised on the parentchain.
@@ -70,7 +70,7 @@ impl Config {
 	pub fn new(
 		node_ip: String,
 		node_port: String,
-		secondary_node_ip: Option<String>,
+		secondary_node_url: Option<String>,
 		secondary_node_port: Option<String>,
 		worker_ip: String,
 		trusted_external_worker_address: Option<String>,
@@ -88,7 +88,7 @@ impl Config {
 		Self {
 			node_ip,
 			node_port,
-			secondary_node_ip,
+			secondary_node_url,
 			secondary_node_port,
 			worker_ip,
 			trusted_external_worker_address,
@@ -111,12 +111,12 @@ impl Config {
 	}
 
 	pub fn secondary_node_url(&self) -> Option<String> {
-		if self.secondary_node_ip.is_some() && self.secondary_node_port.is_some() {
+		if self.secondary_node_url.is_some() && self.secondary_node_port.is_some() {
 			return Some(format!(
 				"{}:{}",
 				// Can be done better, but this code is obsolete anyhow with clap v4.
-				self.secondary_node_ip.clone().unwrap(),
-				self.secondary_node_ip.clone().unwrap()
+				self.secondary_node_url.clone().unwrap(),
+				self.secondary_node_port.clone().unwrap()
 			))
 		};
 
@@ -213,7 +213,7 @@ impl From<&ArgMatches<'_>> for Config {
 		Self::new(
 			m.value_of("node-server").unwrap_or(DEFAULT_NODE_SERVER).into(),
 			m.value_of("node-port").unwrap_or(DEFAULT_NODE_PORT).into(),
-			m.value_of("secondary-node-server").map(Into::into),
+			m.value_of("secondary-node-url").map(Into::into),
 			m.value_of("secondary-node-port").map(Into::into),
 			if m.is_present("ws-external") { "0.0.0.0".into() } else { "127.0.0.1".into() },
 			m.value_of("trusted-external-address")
@@ -356,7 +356,7 @@ mod test {
 
 		assert_eq!(config.node_ip, DEFAULT_NODE_SERVER);
 		assert_eq!(config.node_port, DEFAULT_NODE_PORT);
-		assert_eq!(config.secondary_node_ip, None);
+		assert_eq!(config.secondary_node_url, None);
 		assert_eq!(config.secondary_node_port, None);
 		assert_eq!(config.trusted_worker_port, DEFAULT_TRUSTED_PORT);
 		assert_eq!(config.untrusted_worker_port, DEFAULT_UNTRUSTED_PORT);
