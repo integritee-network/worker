@@ -574,7 +574,7 @@ where
 		.expect("Failed to create secondary parentchain node API");
 
 	let (secondary_parentchain_handler, last_synced_header_secondary) =
-		init_parentchain(&enclave, &node_api, &tee_account_id, ParentchainId::Secondary);
+		init_parentchain(enclave, &node_api, tee_account_id, ParentchainId::Secondary);
 
 	if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
 		println!("*** [+] Finished syncing secondary light client, syncing parentchain...");
@@ -643,7 +643,7 @@ where
 	let last_synced_header = parentchain_handler.init_parentchain_components().unwrap();
 	trace!("last synched parentchain block: {}", last_synced_header.number);
 
-	let nonce = node_api.get_nonce_of(&tee_account_id).unwrap();
+	let nonce = node_api.get_nonce_of(tee_account_id).unwrap();
 	info!("Enclave nonce = {:?}", nonce);
 	enclave
 		.set_nonce(nonce, parentchain_id)
