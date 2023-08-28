@@ -1,7 +1,7 @@
 pipeline {
   agent {
     docker {
-      image 'integritee/integritee-dev:0.1.7'
+      image 'integritee/integritee-dev:0.2.2'
       args '''
         -u root
         --privileged
