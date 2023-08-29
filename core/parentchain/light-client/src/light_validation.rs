@@ -25,6 +25,7 @@ use codec::Encode;
 use core::iter::Iterator;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_storage::{Error as StorageError, StorageProof, StorageProofChecker};
+use itp_types::parentchain::ParentchainId;
 use log::*;
 use sp_runtime::{
 	generic::SignedBlock,
@@ -37,6 +38,7 @@ use std::{boxed::Box, fmt, sync::Arc, vec::Vec};
 pub struct LightValidation<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi> {
 	light_validation_state: LightValidationState<Block>,
 	ocall_api: Arc<OcallApi>,
+	parentchain_id: ParentchainId,
 	finality: Arc<Box<dyn Finality<Block> + Sync + Send + 'static>>,
 }
 
@@ -47,8 +49,9 @@ impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi>
 		ocall_api: Arc<OcallApi>,
 		finality: Arc<Box<dyn Finality<Block> + Sync + Send + 'static>>,
 		light_validation_state: LightValidationState<Block>,
+		parentchain_id: ParentchainId,
 	) -> Self {
-		Self { light_validation_state, ocall_api, finality }
+		Self { light_validation_state, ocall_api, finality, parentchain_id }
 	}
 
 	// A naive way to check whether a `child` header is a descendant
@@ -198,7 +201,7 @@ where
 		}
 
 		self.ocall_api
-			.send_to_parentchain(extrinsics)
+			.send_to_parentchain(extrinsics, &self.parentchain_id)
 			.map_err(|e| Error::Other(format!("Failed to send extrinsics: {}", e).into()))
 	}
 }

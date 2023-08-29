@@ -25,7 +25,7 @@ use itc_parentchain_light_client::{
 };
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_stf_executor::traits::StfUpdateState;
-use itp_types::{OpaqueCall, H256};
+use itp_types::{parentchain::IdentifyParentchain, OpaqueCall, H256};
 use log::*;
 use sp_runtime::{
 	generic::SignedBlock as SignedBlockG,
@@ -95,7 +95,7 @@ impl<
 	> where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256, Header = ParentchainHeader>,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
-	ValidatorAccessor: ValidatorAccess<ParentchainBlock>,
+	ValidatorAccessor: ValidatorAccess<ParentchainBlock> + IdentifyParentchain,
 	StfExecutor: StfUpdateState,
 	ExtrinsicsFactory: CreateExtrinsics,
 	IndirectCallsExecutor: ExecuteIndirectCalls,
@@ -126,7 +126,10 @@ impl<
 
 			let block = signed_block.block;
 			// Perform state updates.
-			if let Err(e) = self.stf_executor.update_states(block.header()) {
+			if let Err(e) = self
+				.stf_executor
+				.update_states(block.header(), &self.validator_accessor.parentchain_id())
+			{
 				error!("Error performing state updates upon block import");
 				return Err(e.into())
 			}

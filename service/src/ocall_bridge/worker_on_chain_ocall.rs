@@ -18,8 +18,9 @@
 
 use crate::ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, WorkerOnChainBridge};
 use codec::{Decode, Encode};
+use itp_api_client_types::ParentchainApi;
 use itp_node_api::node_api_factory::CreateNodeApi;
-use itp_types::{WorkerRequest, WorkerResponse};
+use itp_types::{parentchain::ParentchainId, WorkerRequest, WorkerResponse};
 use log::*;
 use sp_runtime::OpaqueExtrinsic;
 use std::{sync::Arc, vec::Vec};
@@ -27,11 +28,25 @@ use substrate_api_client::{serde_impls::StorageKey, GetStorage, SubmitExtrinsic}
 
 pub struct WorkerOnChainOCall<F> {
 	node_api_factory: Arc<F>,
+	secondary_node_api_factory: Option<Arc<F>>,
 }
 
 impl<F> WorkerOnChainOCall<F> {
-	pub fn new(node_api_factory: Arc<F>) -> Self {
-		WorkerOnChainOCall { node_api_factory }
+	pub fn new(node_api_factory: Arc<F>, secondary_node_api_factory: Option<Arc<F>>) -> Self {
+		WorkerOnChainOCall { node_api_factory, secondary_node_api_factory }
+	}
+}
+
+impl<F: CreateNodeApi> WorkerOnChainOCall<F> {
+	pub fn create_api(&self, parentchain_id: ParentchainId) -> OCallBridgeResult<ParentchainApi> {
+		Ok(match parentchain_id {
+			ParentchainId::Teerex => self.node_api_factory.create_api()?,
+			ParentchainId::Secondary => self
+				.secondary_node_api_factory
+				.as_ref()
+				.ok_or(OCallBridgeError::SecondaryNodeNotInitialized)
+				.and_then(|f| f.create_api().map_err(Into::into))?,
+		})
 	}
 }
 
@@ -39,16 +54,22 @@ impl<F> WorkerOnChainBridge for WorkerOnChainOCall<F>
 where
 	F: CreateNodeApi,
 {
-	fn worker_request(&self, request: Vec<u8>) -> OCallBridgeResult<Vec<u8>> {
+	fn worker_request(
+		&self,
+		request: Vec<u8>,
+		parentchain_id: Vec<u8>,
+	) -> OCallBridgeResult<Vec<u8>> {
 		debug!("    Entering ocall_worker_request");
 
-		let requests: Vec<WorkerRequest> = Decode::decode(&mut request.as_slice()).unwrap();
+		let requests: Vec<WorkerRequest> = Decode::decode(&mut request.as_slice())?;
 		if requests.is_empty() {
 			debug!("requests is empty, returning empty vector");
 			return Ok(Vec::<u8>::new().encode())
 		}
 
-		let api = self.node_api_factory.create_api()?;
+		let parentchain_id = ParentchainId::decode(&mut parentchain_id.as_slice())?;
+
+		let api = self.create_api(parentchain_id)?;
 
 		let resp: Vec<WorkerResponse<Vec<u8>>> = requests
 			.into_iter()
@@ -68,7 +89,11 @@ where
 		Ok(encoded_response)
 	}
 
-	fn send_to_parentchain(&self, extrinsics_encoded: Vec<u8>) -> OCallBridgeResult<()> {
+	fn send_to_parentchain(
+		&self,
+		extrinsics_encoded: Vec<u8>,
+		parentchain_id: Vec<u8>,
+	) -> OCallBridgeResult<()> {
 		// TODO: improve error handling, using a mut status is not good design?
 		let mut status: OCallBridgeResult<()> = Ok(());
 
@@ -85,7 +110,8 @@ where
 
 		if !extrinsics.is_empty() {
 			debug!("Enclave wants to send {} extrinsics", extrinsics.len());
-			let api = self.node_api_factory.create_api()?;
+			let parentchain_id = ParentchainId::decode(&mut parentchain_id.as_slice())?;
+			let api = self.create_api(parentchain_id)?;
 			for call in extrinsics.into_iter() {
 				if let Err(e) = api.submit_opaque_extrinsic(call.encode().into()) {
 					error!("Could not send extrsinic to node: {:?}, error: {:?}", call, e);

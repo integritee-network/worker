@@ -22,7 +22,7 @@ use codec::{Decode, Encode};
 
 use sp_runtime::traits::Block;
 
-pub use itp_types::{Block as ParachainBlock, Block as SolochainBlock};
+pub use itp_types::{parentchain::ParentchainId, Block as ParachainBlock, Block as SolochainBlock};
 pub type HeaderFor<B> = <B as Block>::Header;
 pub type SolochainHeader = HeaderFor<SolochainBlock>;
 pub type ParachainHeader = HeaderFor<ParachainBlock>;
@@ -47,12 +47,4 @@ impl From<(ParentchainId, ParachainParams)> for ParentchainInitParams {
 	fn from(value: (ParentchainId, ParachainParams)) -> Self {
 		Self::Parachain { id: value.0, params: value.1 }
 	}
-}
-
-#[derive(Encode, Decode, Copy, Clone, Debug, PartialEq, Eq)]
-pub enum ParentchainId {
-	/// Primary parentchain containing the teerex pallet.
-	Teerex,
-	/// Some secondary parentchain contaning custom business logic.
-	Secondary,
 }
