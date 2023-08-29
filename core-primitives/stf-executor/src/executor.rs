@@ -83,7 +83,7 @@ where
 		&self,
 		state: &mut StateHandler::StateT,
 		trusted_operation: &TrustedOperation,
-		header: &PH,
+		_header: &PH,
 		shard: &ShardIdentifier,
 		post_processing: StatePostProcessing,
 	) -> Result<ExecutedOperation>
@@ -107,19 +107,6 @@ where
 			error!("TrustedCallSigned: bad signature");
 			return Ok(ExecutedOperation::failed(top_or_hash))
 		}
-
-		// Necessary because light client sync may not be up to date
-		// see issue #208
-		debug!("Update STF storage!");
-
-		let storage_hashes = <TrustedCallSigned as ExecuteCall<NodeMetadataRepository>>::get_storage_hashes_to_update(trusted_call.clone());
-		let update_map = self
-			.ocall_api
-			.get_multiple_storages_verified(storage_hashes, header)
-			.map(into_map)?;
-
-		debug!("Apply state diff with {} entries from parentchain block", update_map.len());
-		Stf::apply_state_diff(state, update_map.into());
 
 		debug!("execute on STF, call with nonce {}", trusted_call.nonce);
 		let mut extrinsic_call_backs: Vec<OpaqueCall> = Vec::new();
