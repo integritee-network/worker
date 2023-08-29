@@ -317,11 +317,16 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	let skip_ra = run_config.skip_ra();
 
 	#[cfg(feature = "teeracle")]
-	println!("Integritee Worker for Teeracle v{}", VERSION);
+	let flavor_str = "teeracle";
 	#[cfg(feature = "sidechain")]
-	println!("Integritee Worker for Sidechain v{}", VERSION);
+	let flavor_str = "sidechain";
 	#[cfg(feature = "offchain-worker")]
-	println!("Integritee Worker for Offchain-Worker v{}", VERSION);
+	let flavor_str = "offchain-worker";
+	#[cfg(not(any(feature = "offchain-worker", feature = "sidechain", feature = "teeracle")))]
+	let flavor_str = "offchain-worker";
+
+	println!("Integritee Worker for {} v{}", flavor_str, VERSION);
+
 	#[cfg(feature = "dcap")]
 	println!("  DCAP is enabled");
 	#[cfg(not(feature = "dcap"))]
