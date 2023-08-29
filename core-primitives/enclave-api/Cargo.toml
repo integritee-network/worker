@@ -20,7 +20,7 @@ sp-consensus-grandpa = { git = "https://github.com/paritytech/substrate.git", br
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
-teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "polkadot-v0.9.42" }
+teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.0-polkadot-v0.9.42" }
 
 itc-parentchain = { path = "../../core/parentchain/parentchain-crate" }
 itp-enclave-api-ffi = { path = "ffi" }

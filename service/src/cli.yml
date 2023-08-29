@@ -1,5 +1,5 @@
 name: "integritee-service"
-version: "0.8.0"
+version: "0.12.0"
 about: Worker using Intel SGX TEE for Integritee-node
 authors: "Integritee AG <hello@integritee.network>"
 
