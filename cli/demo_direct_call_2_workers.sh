@@ -45,6 +45,13 @@ WORKER2URL=${WORKER2URL:-"wss://127.0.0.1"}
 
 CLIENT_BIN=${CLIENT_BIN:-"./../bin/integritee-cli"}
 
+echo "Using client binary ${CLIENT_BIN}"
+${CLIENT_BIN} --version
+echo "Using node uri ${NODEURL}:${NPORT}"
+echo "Using trusted-worker uri 1 ${WORKER1URL}:${WORKER1PORT}"
+echo "Using trusted-worker uri 2 ${WORKER2URL}:${WORKER2PORT}"
+echo ""
+
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 "${SCRIPT_DIR}"/demo_direct_call.sh -p "${NPORT}" -u "${NODEURL}" -V "${WORKER1URL}" -P "${WORKER1PORT}" -C "${CLIENT_BIN}" -t first
