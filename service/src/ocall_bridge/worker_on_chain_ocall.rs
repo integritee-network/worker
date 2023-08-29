@@ -144,9 +144,11 @@ mod tests {
 
 		let mock_node_api_factory = Arc::new(MockNodeApiFactory::new());
 
-		let on_chain_ocall = WorkerOnChainOCall::new(mock_node_api_factory);
+		let on_chain_ocall = WorkerOnChainOCall::new(mock_node_api_factory, None);
 
-		let response = on_chain_ocall.worker_request(Vec::<u8>::new().encode()).unwrap();
+		let response = on_chain_ocall
+			.worker_request(Vec::<u8>::new().encode(), ParentchainId::Teerex.encode())
+			.unwrap();
 
 		assert!(!response.is_empty()); // the encoded empty vector is not empty
 		let decoded_response: Vec<u8> = Decode::decode(&mut response.as_slice()).unwrap();
