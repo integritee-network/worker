@@ -373,7 +373,7 @@ pub(crate) fn wait_until(
 }
 
 fn connection_can_be_closed(top_status: TrustedOperationStatus) -> bool {
-	!matches!(
+	matches!(
 		top_status,
 		TrustedOperationStatus::Submitted
 			| TrustedOperationStatus::Future
