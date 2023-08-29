@@ -40,14 +40,7 @@ pub struct ParentchainBlockImporter<
 	StfExecutor,
 	ExtrinsicsFactory,
 	IndirectCallsExecutor,
-> where
-	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
-	NumberFor<ParentchainBlock>: BlockNumberOps,
-	ValidatorAccessor: ValidatorAccess<ParentchainBlock>,
-	StfExecutor: StfUpdateState,
-	ExtrinsicsFactory: CreateExtrinsics,
-	IndirectCallsExecutor: ExecuteIndirectCalls,
-{
+> {
 	validator_accessor: Arc<ValidatorAccessor>,
 	stf_executor: Arc<StfExecutor>,
 	extrinsics_factory: Arc<ExtrinsicsFactory>,
@@ -68,13 +61,7 @@ impl<
 		StfExecutor,
 		ExtrinsicsFactory,
 		IndirectCallsExecutor,
-	> where
-	ParentchainBlock: ParentchainBlockTrait<Hash = H256, Header = ParentchainHeader>,
-	NumberFor<ParentchainBlock>: BlockNumberOps,
-	ValidatorAccessor: ValidatorAccess<ParentchainBlock>,
-	StfExecutor: StfUpdateState,
-	ExtrinsicsFactory: CreateExtrinsics,
-	IndirectCallsExecutor: ExecuteIndirectCalls,
+	>
 {
 	pub fn new(
 		validator_accessor: Arc<ValidatorAccessor>,
