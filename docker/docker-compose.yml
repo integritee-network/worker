@@ -43,7 +43,7 @@ services:
       interval: 10s
       timeout: 10s
       retries: 25
-    command: "--clean-reset --ws-external -M integritee-worker-1 -T wss://integritee-worker-1 -u ws://integritee-node -U ws://integritee-worker-1 -P 2011 -w 2101 -p 9912 -h 4645 run --dev"
+    command: "--clean-reset --data-dir /tmp/worker1 --ws-external -M integritee-worker-1 -T wss://integritee-worker-1 -u ws://integritee-node -U ws://integritee-worker-1 -P 2011 -w 2101 -p 9912 -h 4645 run --dev ${ADDITIONAL_RUNTIME_FLAGS}"
     restart: "no"
   "integritee-worker-2-${VERSION}":
     image: integritee-worker:${VERSION:-dev}
@@ -72,7 +72,7 @@ services:
       interval: 10s
       timeout: 10s
       retries: 25
-    command: "--clean-reset --ws-external -M integritee-worker-2 -T wss://integritee-worker-2 -u ws://integritee-node -U ws://integritee-worker-2 -P 2012 -w 2102 -p 9912 -h 4646 run --dev --request-state"
+    command: "--clean-reset --data-dir /tmp/worker2 --ws-external -M integritee-worker-2 -T wss://integritee-worker-2 -u ws://integritee-node -U ws://integritee-worker-2 -P 2012 -w 2102 -p 9912 -h 4646 run --dev --request-state ${ADDITIONAL_RUNTIME_FLAGS}"
     restart: "no"
 networks:
   integritee-test-network:

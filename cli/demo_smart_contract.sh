@@ -53,6 +53,7 @@ WORKERURL=${WORKERURL:-"wss://127.0.0.1"}
 CLIENT_BIN=${CLIENT_BIN:-"./../bin/integritee-cli"}
 
 echo "Using client binary ${CLIENT_BIN}"
+${CLIENT_BIN} --version
 echo "Using node uri ${NODEURL}:${NPORT}"
 echo "Using trusted-worker uri ${WORKERURL}:${WORKERPORT}"
 
