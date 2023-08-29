@@ -16,7 +16,6 @@
 */
 
 use crate::error::{Error, ServiceResult};
-use codec::Encode;
 use itp_node_api::api_client::{AccountApi, ParentchainApi, ParentchainExtrinsicSigner};
 use itp_settings::worker::{
 	EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS, REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS,
@@ -30,7 +29,7 @@ use sp_core::{
 use sp_keyring::AccountKeyring;
 use sp_runtime::MultiAddress;
 use substrate_api_client::{
-	extrinsic::BalancesExtrinsics, GetBalance, GetTransactionPayment, SubmitAndWatch, XtStatus,
+	extrinsic::BalancesExtrinsics, GetBalance, GetTransactionPayment, SubmitAndWatchUntilSuccess,
 };
 
 /// Information about the enclave on-chain account.
@@ -135,14 +134,12 @@ fn bootstrap_funds_from_alice(
 	funding_amount: u128,
 ) -> Result<(), Error> {
 	let alice = AccountKeyring::Alice.pair();
-	info!("encoding Alice's public 	= {:?}", alice.public().0.encode());
 	let alice_acc = AccountId32::from(*alice.public().as_array_ref());
-	info!("encoding Alice's AccountId = {:?}", alice_acc.encode());
 
 	let alice_free = api.get_free_balance(&alice_acc)?;
-	info!("    Alice's free balance = {:?}", alice_free);
+	trace!("    Alice's free balance = {:?}", alice_free);
 	let nonce = api.get_nonce_of(&alice_acc)?;
-	info!("    Alice's Account Nonce is {}", nonce);
+	trace!("    Alice's Account Nonce is {}", nonce);
 
 	if funding_amount > alice_free {
 		println!(
@@ -155,18 +152,17 @@ fn bootstrap_funds_from_alice(
 	let mut alice_signer_api = api.clone();
 	alice_signer_api.set_signer(ParentchainExtrinsicSigner::new(alice));
 
-	println!("[+] bootstrap funding Enclave from Alice's funds");
+	println!("[+] send extrinsic: bootstrap funding Enclave from Alice's funds");
 	let xt = alice_signer_api
 		.balance_transfer_allow_death(MultiAddress::Id(accountid.clone()), funding_amount);
-	let xt_report = alice_signer_api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock)?;
+	let xt_report = alice_signer_api.submit_and_watch_extrinsic_until_success(xt, false)?;
 	info!(
-		"[<] Extrinsic got included in a block. Extrinsic Hash: {:?}\n",
-		xt_report.extrinsic_hash
+		"[<] L1 extrinsic success. extrinsic hash: {:?} / status: {:?}",
+		xt_report.extrinsic_hash, xt_report.status
 	);
-
 	// Verify funds have arrived.
 	let free_balance = alice_signer_api.get_free_balance(accountid);
-	info!("TEE's NEW free balance = {:?}", free_balance);
+	trace!("TEE's NEW free balance = {:?}", free_balance);
 
 	Ok(())
 }

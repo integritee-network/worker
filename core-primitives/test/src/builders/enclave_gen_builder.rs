@@ -17,7 +17,7 @@
 */
 
 use itp_time_utils::now_as_millis;
-use itp_types::{EnclaveGen, PalletString};
+use itp_types::{Enclave, PalletString};
 
 /// Builder for a generic enclave (`EnclaveGen`) struct.
 pub struct EnclaveGenBuilder<AccountId> {

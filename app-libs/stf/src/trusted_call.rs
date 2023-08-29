@@ -28,7 +28,7 @@ use frame_support::{ensure, traits::UnfilteredDispatchable};
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{Runtime, System};
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
-use itp_node_api_metadata::pallet_teerex::TeerexCallIndexes;
+use itp_node_api_metadata::pallet_enclave_bridge::EnclaveBridgeCallIndexes;
 use itp_stf_interface::ExecuteCall;
 use itp_stf_primitives::types::{AccountId, KeyPair, OrdersString, ShardIdentifier, Signature};
 use itp_types::OpaqueCall;
@@ -255,9 +255,9 @@ where
 				unshield_funds(account_incognito, value)?;
 				calls.push(OpaqueCall::from_tuple(&(
 					node_metadata_repo.get_from_metadata(|m| m.unshield_funds_call_indexes())??,
+					shard,
 					beneficiary,
 					value,
-					shard,
 					call_hash,
 				)));
 				Ok(())

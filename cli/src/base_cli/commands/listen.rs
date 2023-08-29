@@ -74,10 +74,10 @@ impl ListenCommand {
 								}
 							},
 							RuntimeEvent::Teerex(ee) => {
-								println!(">>>>>>>>>> integritee event: {:?}", ee);
+								println!(">>>>>>>>>> integritee teerex event: {:?}", ee);
 								count += 1;
 								match &ee {
-									my_node_runtime::pallet_teerex::Event::AddedEnclave{
+									my_node_runtime::pallet_teerex::Event::AddedSgxEnclave{
 										registered_by,
 										worker_url, ..
 									}
@@ -85,55 +85,69 @@ impl ListenCommand {
 										println!(
 											"AddedEnclave: {:?} at url {}",
 											registered_by,
-											String::from_utf8(worker_url.to_vec())
+											String::from_utf8(worker_url.clone().unwrap_or("none".into()).to_vec())
 												.unwrap_or_else(|_| "error".to_string())
 										);
 									},
-									my_node_runtime::pallet_teerex::Event::RemovedEnclave(
+									my_node_runtime::pallet_teerex::Event::RemovedSovereignEnclave(
 										accountid,
 									) => {
 										println!("RemovedEnclave: {:?}", accountid);
 									},
-									my_node_runtime::pallet_teerex::Event::Forwarded(shard) => {
+									my_node_runtime::pallet_teerex::Event::RemovedProxiedEnclave(
+										eia,
+									) => {
+										println!("RemovedEnclave: {:?}", eia);
+									},
+									_ => debug!("ignoring unsupported teerex event: {:?}", ee),
+								}
+							},
+							RuntimeEvent::EnclaveBridge(ee) => {
+								println!(">>>>>>>>>> integritee enclave bridge event: {:?}", ee);
+								count += 1;
+								match &ee {
+									my_node_runtime::pallet_enclave_bridge::Event::IndirectInvocationRegistered(shard) => {
 										println!(
 											"Forwarded request for shard {}",
 											shard.encode().to_base58()
 										);
 									},
-									my_node_runtime::pallet_teerex::Event::ProcessedParentchainBlock(
-										accountid,
+									my_node_runtime::pallet_enclave_bridge::Event::ProcessedParentchainBlock {
+										shard,
 										block_hash,
-										merkle_root,
+										trusted_calls_merkle_root,
 										block_number,
-									) => {
+									} => {
 										println!(
 											"ProcessedParentchainBlock from {} with hash {:?}, number {} and merkle root {:?}",
-											accountid, block_hash, merkle_root, block_number
+											shard, block_hash, trusted_calls_merkle_root, block_number
 										);
 									},
-									my_node_runtime::pallet_teerex::Event::ShieldFunds(
-										incognito_account,
-									) => {
-										println!("ShieldFunds for {:?}", incognito_account);
+									my_node_runtime::pallet_enclave_bridge::Event::ShieldFunds {
+										shard, encrypted_beneficiary, amount
+									} => {
+										println!("ShieldFunds on shard {:?} for {:?}. amount: {:?}", shard, encrypted_beneficiary, amount);
 									},
-									my_node_runtime::pallet_teerex::Event::UnshieldedFunds(
-										public_account,
-									) => {
-										println!("UnshieldFunds for {:?}", public_account);
+									my_node_runtime::pallet_enclave_bridge::Event::UnshieldedFunds {
+										shard, beneficiary, amount
+									} => {
+										println!("UnshieldFunds on shard {:?} for {:?}. amount: {:?}", shard, beneficiary, amount);
 									},
-									_ => debug!("ignoring unsupported teerex event: {:?}", ee),
+									_ => debug!("ignoring unsupported enclave_bridge event: {:?}", ee),
 								}
 							},
 							RuntimeEvent::Sidechain(ee) => {
+								println!(">>>>>>>>>> integritee sidechain event: {:?}", ee);
 								count += 1;
 								match &ee {
-									my_node_runtime::pallet_sidechain::Event::ProposedSidechainBlock(
-										accountid,
-										block_hash,
-									) => {
+									my_node_runtime::pallet_sidechain::Event::FinalizedSidechainBlock {
+										shard,
+										block_header_hash,
+										validateer,
+									} => {
 										println!(
-											"ProposedSidechainBlock from {} with hash {:?}",
-											accountid, block_hash
+											"ProposedSidechainBlock on shard {} from {} with hash {:?}",
+											shard, validateer, block_header_hash
 										);
 									},
 									_ => debug!("ignoring unsupported sidechain event: {:?}", ee),

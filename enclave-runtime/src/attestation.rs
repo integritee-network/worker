@@ -36,7 +36,7 @@ use crate::{
 	Error as EnclaveError, Result as EnclaveResult,
 };
 use codec::{Decode, Encode};
-use itp_attestation_handler::{AttestationHandler, SgxQlQveCollateral};
+use itp_attestation_handler::{AttestationHandler, RemoteAttestationType, SgxQlQveCollateral};
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::metadata::{
@@ -52,6 +52,7 @@ use log::*;
 use sgx_types::*;
 use sp_runtime::OpaqueExtrinsic;
 use std::{prelude::v1::*, slice, vec::Vec};
+use teerex_primitives::SgxAttestationMethod;
 
 #[no_mangle]
 pub unsafe extern "C" fn get_mrenclave(mrenclave: *mut u8, mrenclave_size: usize) -> sgx_status_t {
@@ -80,9 +81,13 @@ pub unsafe extern "C" fn get_mrenclave(mrenclave: *mut u8, mrenclave_size: usize
 	}
 }
 
+// FIXME: add dcap suppoort for call site
 pub fn create_ra_report_and_signature(
-	sign_type: sgx_quote_sign_type_t,
 	skip_ra: bool,
+	remote_attestation_type: RemoteAttestationType,
+	sign_type: sgx_quote_sign_type_t,
+	quoting_enclave_target_info: Option<&sgx_target_info_t>,
+	quote_size: Option<&u32>,
 ) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
 	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
 		Ok(r) => r,
@@ -92,11 +97,28 @@ pub fn create_ra_report_and_signature(
 		},
 	};
 
-	match attestation_handler.create_ra_report_and_signature(sign_type, skip_ra) {
-		Ok(r) => Ok(r),
-		Err(e) => {
-			error!("create_ra_report_and_signature failure: {:?}", e);
-			Err(e.into())
+	match remote_attestation_type {
+		RemoteAttestationType::Epid => {
+			match attestation_handler.create_epid_ra_report_and_signature(sign_type, skip_ra) {
+				Ok(epid) => Ok(epid),
+				Err(e) => {
+					error!("create_epid_ra_report_and_signature failure: {:?}", e);
+					Err(e.into())
+				},
+			}
+		},
+		RemoteAttestationType::Dcap => {
+			match attestation_handler.generate_dcap_ra_cert(
+				quoting_enclave_target_info,
+				quote_size,
+				skip_ra,
+			) {
+				Ok((key_der, cert_der, _qe_quote)) => Ok((key_der, cert_der)),
+				Err(e) => {
+					error!("generate_dcap_ra_cert failure: {:?}", e);
+					Err(e.into())
+				},
+			}
 		},
 	}
 }
@@ -136,8 +158,8 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic(
 	unchecked_extrinsic: *mut u8,
 	unchecked_extrinsic_size: u32,
 	skip_ra: c_int,
-	quoting_enclave_target_info: &sgx_target_info_t,
-	quote_size: u32,
+	quoting_enclave_target_info: Option<&sgx_target_info_t>,
+	quote_size: Option<&u32>,
 ) -> sgx_status_t {
 	if w_url.is_null() || unchecked_extrinsic.is_null() {
 		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
@@ -166,18 +188,25 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic(
 pub fn generate_dcap_ra_extrinsic_internal(
 	url: String,
 	skip_ra: bool,
-	quoting_enclave_target_info: &sgx_target_info_t,
-	quote_size: u32,
+	quoting_enclave_target_info: Option<&sgx_target_info_t>,
+	quote_size: Option<&u32>,
 ) -> EnclaveResult<OpaqueExtrinsic> {
 	let attestation_handler = GLOBAL_ATTESTATION_HANDLER_COMPONENT.get()?;
 
-	let (_cert_der, dcap_quote) = attestation_handler.generate_dcap_ra_cert(
-		quoting_enclave_target_info,
-		quote_size,
-		skip_ra,
-	)?;
+	if !skip_ra {
+		let (_priv_key_der, _cert_der, dcap_quote) = attestation_handler.generate_dcap_ra_cert(
+			quoting_enclave_target_info,
+			quote_size,
+			skip_ra,
+		)?;
 
-	generate_dcap_ra_extrinsic_from_quote_internal(url, &dcap_quote)
+		generate_dcap_ra_extrinsic_from_quote_internal(url, &dcap_quote)
+	} else {
+		generate_dcap_skip_ra_extrinsic_from_mr_enclave(
+			url,
+			&attestation_handler.get_mrenclave()?.encode(),
+		)
+	}
 }
 
 #[no_mangle]
@@ -216,9 +245,9 @@ pub fn generate_dcap_ra_quote_internal(
 ) -> EnclaveResult<Vec<u8>> {
 	let attestation_handler = GLOBAL_ATTESTATION_HANDLER_COMPONENT.get()?;
 
-	let (_, dcap_quote) = attestation_handler.generate_dcap_ra_cert(
-		quoting_enclave_target_info,
-		quote_size,
+	let (_priv_key_der, _cert_der, dcap_quote) = attestation_handler.generate_dcap_ra_cert(
+		Some(quoting_enclave_target_info),
+		Some(&quote_size),
 		skip_ra,
 	)?;
 
@@ -264,12 +293,39 @@ pub fn generate_dcap_ra_extrinsic_from_quote_internal(
 	info!("    [Enclave] Compose register enclave getting callIDs:");
 
 	let call_ids = node_metadata_repo
-		.get_from_metadata(|m| m.register_dcap_enclave_call_indexes())?
+		.get_from_metadata(|m| m.register_sgx_enclave_call_indexes())?
 		.map_err(MetadataProviderError::MetadataError)?;
 	info!("    [Enclave] Compose register enclave call DCAP IDs: {:?}", call_ids);
-	let call = OpaqueCall::from_tuple(&(call_ids, quote, url));
+	let call = OpaqueCall::from_tuple(&(
+		call_ids,
+		quote,
+		Some(url),
+		SgxAttestationMethod::Dcap { proxied: false },
+	));
 
 	info!("    [Enclave] Compose register enclave got extrinsic, returning");
+	create_extrinsics(call)
+}
+
+pub fn generate_dcap_skip_ra_extrinsic_from_mr_enclave(
+	url: String,
+	quote: &[u8],
+) -> EnclaveResult<OpaqueExtrinsic> {
+	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain()?;
+	info!("    [Enclave] Compose register enclave (skip-ra) getting callIDs:");
+
+	let call_ids = node_metadata_repo
+		.get_from_metadata(|m| m.register_sgx_enclave_call_indexes())?
+		.map_err(MetadataProviderError::MetadataError)?;
+	info!("    [Enclave] Compose register enclave (skip-ra) call DCAP IDs: {:?}", call_ids);
+	let call = OpaqueCall::from_tuple(&(
+		call_ids,
+		quote,
+		Some(url),
+		SgxAttestationMethod::Skip { proxied: false },
+	));
+
+	info!("    [Enclave] Compose register enclave (skip-ra) got extrinsic, returning");
 	create_extrinsics(call)
 }
 
@@ -280,7 +336,11 @@ fn generate_ias_ra_extrinsic_internal(
 	let attestation_handler = GLOBAL_ATTESTATION_HANDLER_COMPONENT.get()?;
 	let cert_der = attestation_handler.generate_ias_ra_cert(skip_ra)?;
 
-	generate_ias_ra_extrinsic_from_der_cert_internal(url, &cert_der)
+	if !skip_ra {
+		generate_ias_ra_extrinsic_from_der_cert_internal(url, &cert_der)
+	} else {
+		generate_ias_skip_ra_extrinsic_from_der_cert_internal(url, &cert_der)
+	}
 }
 
 pub fn generate_ias_ra_extrinsic_from_der_cert_internal(
@@ -291,10 +351,31 @@ pub fn generate_ias_ra_extrinsic_from_der_cert_internal(
 
 	info!("    [Enclave] Compose register enclave call");
 	let call_ids = node_metadata_repo
-		.get_from_metadata(|m| m.register_ias_enclave_call_indexes())?
+		.get_from_metadata(|m| m.register_sgx_enclave_call_indexes())?
 		.map_err(MetadataProviderError::MetadataError)?;
 
-	let call = OpaqueCall::from_tuple(&(call_ids, cert_der, url));
+	let call = OpaqueCall::from_tuple(&(call_ids, cert_der, Some(url), SgxAttestationMethod::Ias));
+
+	create_extrinsics(call)
+}
+
+pub fn generate_ias_skip_ra_extrinsic_from_der_cert_internal(
+	url: String,
+	cert_der: &[u8],
+) -> EnclaveResult<OpaqueExtrinsic> {
+	let node_metadata_repo = get_node_metadata_repository_from_solo_or_parachain()?;
+
+	info!("    [Enclave] Compose register ias enclave (skip-ra) call");
+	let call_ids = node_metadata_repo
+		.get_from_metadata(|m| m.register_sgx_enclave_call_indexes())?
+		.map_err(MetadataProviderError::MetadataError)?;
+
+	let call = OpaqueCall::from_tuple(&(
+		call_ids,
+		cert_der,
+		Some(url),
+		SgxAttestationMethod::Skip { proxied: false },
+	));
 
 	create_extrinsics(call)
 }

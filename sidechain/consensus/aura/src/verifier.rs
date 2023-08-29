@@ -15,7 +15,7 @@
 
 */
 
-use crate::{authorities, EnclaveOnChainOCallApi};
+use crate::{authorities, EnclaveOnChainOCallApi, ShardIdentifierFor};
 use core::marker::PhantomData;
 use its_block_verification::verify_sidechain_block;
 use its_consensus_common::{Error as ConsensusError, Verifier};
@@ -24,6 +24,7 @@ use its_primitives::{
 	types::block::BlockHash,
 };
 use its_validateer_fetch::ValidateerFetch;
+use sp_core::crypto::UncheckedFrom;
 use sp_runtime::{app_crypto::Pair, traits::Block as ParentchainBlockTrait};
 use std::{fmt::Debug, time::Duration};
 
@@ -57,7 +58,7 @@ impl<AuthorityPair, ParentchainBlock, SignedSidechainBlock, Context>
 	for AuraVerifier<AuthorityPair, ParentchainBlock, SignedSidechainBlock, Context>
 where
 	AuthorityPair: Pair,
-	AuthorityPair::Public: Debug,
+	AuthorityPair::Public: Debug + UncheckedFrom<[u8; 32]>,
 	// todo: Relax hash trait bound, but this needs a change to some other parts in the code.
 	ParentchainBlock: ParentchainBlockTrait<Hash = BlockHash>,
 	SignedSidechainBlock: SignedSidechainBlockTrait<Public = AuthorityPair::Public> + 'static,
@@ -72,10 +73,15 @@ where
 		&self,
 		signed_block: SignedSidechainBlock,
 		parentchain_header: &ParentchainBlock::Header,
+		shard: ShardIdentifierFor<SignedSidechainBlock>,
 		ctx: &Self::Context,
 	) -> Result<Self::BlockImportParams, ConsensusError> {
-		let authorities =
-			authorities::<_, AuthorityPair, ParentchainBlock::Header>(ctx, parentchain_header)?;
+		let authorities = authorities::<
+			_,
+			AuthorityPair,
+			SignedSidechainBlock,
+			ParentchainBlock::Header,
+		>(ctx, parentchain_header, shard)?;
 
 		Ok(verify_sidechain_block::<AuthorityPair, ParentchainBlock, SignedSidechainBlock>(
 			signed_block,

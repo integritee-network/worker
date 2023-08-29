@@ -105,8 +105,8 @@ impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi>
 		}
 
 		// A valid grandpa proof proves finalization of all previous unjustified blocks.
-		relay.header_hashes.append(&mut relay.unjustified_headers);
-		relay.header_hashes.push(header.hash());
+		relay.justify_headers();
+		relay.push_header_hash(header.hash());
 
 		relay.set_last_finalized_block_header(header);
 

@@ -18,7 +18,7 @@
 use crate::{
 	error::Result,
 	event_filter::{FilterEvents, MockEvents},
-	indirect_calls::{CallWorkerArgs, ShiedFundsArgs},
+	indirect_calls::{InvokeArgs, ShieldFundsArgs},
 	parentchain_parser::ParseExtrinsic,
 	IndirectDispatch, IndirectExecutor,
 };
@@ -96,12 +96,12 @@ impl FilterIntoDataFrom<NodeMetadata> for DenyAll {
 }
 
 /// Default filter we use for the Integritee-Parachain.
-pub struct ShieldFundsAndCallWorkerFilter<ExtrinsicParser> {
+pub struct ShieldFundsAndInvokeFilter<ExtrinsicParser> {
 	_phantom: PhantomData<ExtrinsicParser>,
 }
 
 impl<ExtrinsicParser, NodeMetadata: NodeMetadataTrait> FilterIntoDataFrom<NodeMetadata>
-	for ShieldFundsAndCallWorkerFilter<ExtrinsicParser>
+	for ShieldFundsAndInvokeFilter<ExtrinsicParser>
 where
 	ExtrinsicParser: ParseExtrinsic,
 {
@@ -123,16 +123,17 @@ where
 				return None
 			},
 		};
-
 		let index = xt.call_index;
 		let call_args = &mut &xt.call_args[..];
-
+		log::trace!("attempting to execute indirect call with index {:?}", index);
 		if index == metadata.shield_funds_call_indexes().ok()? {
-			let args = decode_and_log_error::<ShiedFundsArgs>(call_args)?;
+			log::trace!("executing shield funds call");
+			let args = decode_and_log_error::<ShieldFundsArgs>(call_args)?;
 			Some(IndirectCall::ShieldFunds(args))
-		} else if index == metadata.call_worker_call_indexes().ok()? {
-			let args = decode_and_log_error::<CallWorkerArgs>(call_args)?;
-			Some(IndirectCall::CallWorker(args))
+		} else if index == metadata.invoke_call_indexes().ok()? {
+			log::trace!("executing invoke call");
+			let args = decode_and_log_error::<InvokeArgs>(call_args)?;
+			Some(IndirectCall::Invoke(args))
 		} else {
 			None
 		}
@@ -145,15 +146,15 @@ where
 /// can implemeent their own indirect call there.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub enum IndirectCall {
-	ShieldFunds(ShiedFundsArgs),
-	CallWorker(CallWorkerArgs),
+	ShieldFunds(ShieldFundsArgs),
+	Invoke(InvokeArgs),
 }
 
 impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for IndirectCall {
 	fn dispatch(&self, executor: &Executor) -> Result<()> {
 		match self {
-			IndirectCall::ShieldFunds(shieldfunds) => shieldfunds.dispatch(executor),
-			IndirectCall::CallWorker(call_worker) => call_worker.dispatch(executor),
+			IndirectCall::ShieldFunds(shieldfunds_args) => shieldfunds_args.dispatch(executor),
+			IndirectCall::Invoke(invoke_args) => invoke_args.dispatch(executor),
 		}
 	}
 }

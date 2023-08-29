@@ -26,7 +26,7 @@ use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-pub type ShardIdentifier = H256;
+pub use itp_types::ShardIdentifier;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug, Copy, Default, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
