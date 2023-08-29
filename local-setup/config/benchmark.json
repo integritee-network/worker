@@ -1,20 +1,23 @@
 {
-  "node": {
-    "bin": "../integritee-node/target/release/integritee-node",
-    "flags": [
-      "--tmp",
-      "--dev",
-      "-lruntime=info",
-      "--ws-port",
-      "9930",
-      "--port",
-      "30330",
-      "--rpc-port",
-      "8930",
-      "--ws-external",
-      "--rpc-external"
-    ]
-  },
+  "nodes": [
+    {
+      "bin": "../integritee-node/target/release/integritee-node",
+      "flags": [
+        "--tmp",
+        "--dev",
+        "-lruntime=info",
+        "-lteerex=debug",
+        "--ws-port",
+        "9944",
+        "--port",
+        "30390",
+        "--rpc-port",
+        "9933",
+        "--ws-external",
+        "--rpc-external"
+      ]
+    }
+  ],
   "workers": [
     {
       "source": "bin",
