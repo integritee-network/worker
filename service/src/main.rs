@@ -71,6 +71,7 @@ use its_storage::{interface::FetchBlocks, BlockPruner, SidechainStorageLock};
 use log::*;
 use my_node_runtime::{Hash, Header, RuntimeEvent};
 use sgx_types::*;
+use sp_runtime::traits::Header as HeaderT;
 use substrate_api_client::{
 	api::XtStatus, rpc::HandleSubscription, GetHeader, SubmitAndWatch, SubscribeChain,
 	SubscribeEvents,
@@ -473,6 +474,12 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	let register_enclave_xt_header =
 		node_api.get_header(Some(register_enclave_block_hash)).unwrap().unwrap();
+
+	println!(
+		"[+] Enclave registered at block number: {:?}, hash: {:?}",
+		register_enclave_xt_header.number(),
+		register_enclave_xt_header.hash()
+	);
 
 	let we_are_primary_validateer =
 		we_are_primary_worker(&node_api, shard, &tee_accountid).unwrap();
