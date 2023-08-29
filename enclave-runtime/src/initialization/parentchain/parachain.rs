@@ -34,6 +34,7 @@ use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, LightCli
 use itp_component_container::ComponentGetter;
 use itp_nonce_cache::GLOBAL_NONCE_CACHE;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
+use itp_types::parentchain::ParentchainId;
 use std::{path::PathBuf, sync::Arc};
 
 pub use itc_parentchain::primitives::{ParachainBlock, ParachainHeader, ParachainParams};
@@ -64,7 +65,7 @@ impl FullParachainHandler {
 			ParachainBlock,
 			EnclaveOCallApi,
 			_,
-		>(params, ocall_api.clone(), &*light_client_seal)?;
+		>(params, ocall_api.clone(), &*light_client_seal, ParentchainId::Teerex)?;
 		let validator_accessor =
 			Arc::new(EnclaveValidatorAccessor::new(validator, light_client_seal));
 

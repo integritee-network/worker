@@ -73,7 +73,7 @@ use itp_stf_state_handler::{
 };
 use itp_top_pool::pool::Options as PoolOptions;
 use itp_top_pool_author::author::AuthorTopFilter;
-use itp_types::ShardIdentifier;
+use itp_types::{parentchain::ParentchainId, ShardIdentifier};
 use its_sidechain::block_composer::BlockComposer;
 use log::*;
 use sp_core::crypto::Pair;
@@ -97,12 +97,16 @@ pub(crate) fn init_enclave(
 	let state_key_repository = Arc::new(get_aes_repository(base_dir.clone())?);
 	GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.initialize(state_key_repository.clone());
 
-	let light_client_seal =
-		Arc::new(EnclaveLightClientSeal::new(base_dir.join(LIGHT_CLIENT_DB_PATH))?);
+	let light_client_seal = Arc::new(EnclaveLightClientSeal::new(
+		base_dir.join(LIGHT_CLIENT_DB_PATH),
+		ParentchainId::Teerex,
+	)?);
 	GLOBAL_LIGHT_CLIENT_SEAL.initialize(light_client_seal);
 
-	let light_client_seal2 =
-		Arc::new(EnclaveLightClientSeal::new(base_dir.join(LIGHT_CLIENT_DB2_PATH))?);
+	let light_client_seal2 = Arc::new(EnclaveLightClientSeal::new(
+		base_dir.join(LIGHT_CLIENT_DB2_PATH),
+		ParentchainId::Secondary,
+	)?);
 	GLOBAL_LIGHT_CLIENT_SEAL2.initialize(light_client_seal2);
 
 	let state_file_io =
