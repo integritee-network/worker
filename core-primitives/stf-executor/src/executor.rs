@@ -26,7 +26,6 @@ use ita_stf::{
 	stf_sgx::{shards_key_hash, storage_hashes_to_update_per_shard},
 	ParentchainHeader, TrustedCallSigned, TrustedOperation,
 };
-use itc_parentchain_test::Header;
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
@@ -215,7 +214,7 @@ where
 {
 	fn initialize_new_shards(
 		&self,
-		header: &Header,
+		header: &ParentchainHeader,
 		state_diff_update: &BTreeMap<Vec<u8>, Option<Vec<u8>>>,
 		shards: &Vec<u8>,
 	) -> Result<()> {
