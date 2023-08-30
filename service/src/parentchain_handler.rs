@@ -54,7 +54,7 @@ pub trait HandleParentchain {
 }
 
 /// Handles the interaction between parentchain and enclave.
-pub(crate) struct ParentchainHandler<ParentchainApi: ChainApi, EnclaveApi: Sidechain> {
+pub(crate) struct ParentchainHandler<ParentchainApi, EnclaveApi> {
 	parentchain_api: ParentchainApi,
 	enclave_api: Arc<EnclaveApi>,
 	parentchain_init_params: ParentchainInitParams,
@@ -63,7 +63,7 @@ pub(crate) struct ParentchainHandler<ParentchainApi: ChainApi, EnclaveApi: Sidec
 impl<ParentchainApi, EnclaveApi> ParentchainHandler<ParentchainApi, EnclaveApi>
 where
 	ParentchainApi: ChainApi,
-	EnclaveApi: Sidechain + EnclaveBase,
+	EnclaveApi: EnclaveBase,
 {
 	pub fn new(
 		parentchain_api: ParentchainApi,

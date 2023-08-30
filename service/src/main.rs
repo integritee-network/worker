@@ -596,13 +596,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 fn init_secondary_parentchain<E>(enclave: &Arc<E>, tee_account_id: &AccountId32, url: String)
 where
-	E: EnclaveBase
-		+ DirectRequest
-		+ Sidechain
-		+ RemoteAttestation
-		+ TlsRemoteAttestation
-		+ TeeracleApi
-		+ Clone,
+	E: EnclaveBase + Sidechain,
 {
 	let node_api = NodeApiFactory::new(url, AccountKeyring::Alice.pair())
 		.create_api()
@@ -659,13 +653,7 @@ fn init_parentchain<E>(
 	parentchain_id: ParentchainId,
 ) -> (Arc<ParentchainHandler<ParentchainApi, E>>, Header)
 where
-	E: EnclaveBase
-		+ DirectRequest
-		+ Sidechain
-		+ RemoteAttestation
-		+ TlsRemoteAttestation
-		+ TeeracleApi
-		+ Clone,
+	E: EnclaveBase + Sidechain,
 {
 	let parentchain_handler = Arc::new(
 		ParentchainHandler::new_with_automatic_light_client_allocation(
