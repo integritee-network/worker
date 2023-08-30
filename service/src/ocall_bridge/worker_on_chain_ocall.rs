@@ -109,8 +109,12 @@ where
 			};
 
 		if !extrinsics.is_empty() {
-			debug!("Enclave wants to send {} extrinsics", extrinsics.len());
 			let parentchain_id = ParentchainId::decode(&mut parentchain_id.as_slice())?;
+			debug!(
+				"Enclave wants to send {} extrinsics to parentchain: {:?}",
+				extrinsics.len(),
+				parentchain_id
+			);
 			let api = self.create_api(parentchain_id)?;
 			for call in extrinsics.into_iter() {
 				if let Err(e) = api.submit_opaque_extrinsic(call.encode().into()) {
