@@ -58,7 +58,8 @@ pub trait EnclaveBase: Send + Sync + 'static {
 
 	/// Trigger the import of parentchain block explicitly. Used when initializing a light-client
 	/// with a triggered import dispatcher.
-	fn trigger_parentchain_block_import(&self) -> EnclaveResult<()>;
+	fn trigger_parentchain_block_import(&self, parentchain_id: &ParentchainId)
+		-> EnclaveResult<()>;
 
 	fn set_nonce(&self, nonce: u32, parentchain_id: ParentchainId) -> EnclaveResult<()>;
 
@@ -163,10 +164,21 @@ impl EnclaveBase for Enclave {
 		Ok(())
 	}
 
-	fn trigger_parentchain_block_import(&self) -> EnclaveResult<()> {
+	fn trigger_parentchain_block_import(
+		&self,
+		parentchain_id: &ParentchainId,
+	) -> EnclaveResult<()> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
+		let parentchain_id_enc = parentchain_id.encode();
 
-		let result = unsafe { ffi::trigger_parentchain_block_import(self.eid, &mut retval) };
+		let result = unsafe {
+			ffi::trigger_parentchain_block_import(
+				self.eid,
+				&mut retval,
+				parentchain_id_enc.as_ptr(),
+				parentchain_id_enc.len() as u32,
+			)
+		};
 
 		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));

@@ -61,7 +61,7 @@ impl EnclaveBase for EnclaveMock {
 		unimplemented!()
 	}
 
-	fn trigger_parentchain_block_import(&self) -> EnclaveResult<()> {
+	fn trigger_parentchain_block_import(&self, _: &ParentchainId) -> EnclaveResult<()> {
 		unimplemented!()
 	}
 
@@ -92,7 +92,7 @@ impl Sidechain for EnclaveMock {
 		_blocks: &[sp_runtime::generic::SignedBlock<ParentchainBlock>],
 		_events: &[Vec<u8>],
 		_events_proofs: &[StorageProof],
-		_nonce: u32,
+		_: &ParentchainId,
 	) -> EnclaveResult<()> {
 		Ok(())
 	}

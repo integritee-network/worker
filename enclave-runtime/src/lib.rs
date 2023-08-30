@@ -32,15 +32,15 @@ extern crate sgx_tstd as std;
 use crate::{
 	error::{Error, Result},
 	initialization::global_components::{
-		GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT, GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT,
+		GLOBAL_FULL_PARACHAIN2_HANDLER_COMPONENT, GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT,
+		GLOBAL_FULL_SOLOCHAIN2_HANDLER_COMPONENT, GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT,
 		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
 		GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 	},
 	rpc::worker_api_direct::sidechain_io_handler,
 	utils::{
 		get_node_metadata_repository_from_secondary_solo_or_parachain,
-		get_node_metadata_repository_from_teerex_solo_or_parachain,
-		get_triggered_dispatcher_from_solo_or_parachain, utf8_str_from_raw, DecodeRaw,
+		get_node_metadata_repository_from_teerex_solo_or_parachain, utf8_str_from_raw, DecodeRaw,
 	},
 };
 use codec::Decode;
@@ -429,18 +429,39 @@ pub unsafe extern "C" fn sync_parentchain(
 	events_to_sync_size: usize,
 	events_proofs_to_sync: *const u8,
 	events_proofs_to_sync_size: usize,
-	_nonce: *const u32,
+	parentchain_id: *const u8,
+	parentchain_id_size: u32,
 ) -> sgx_status_t {
-	let blocks_to_sync = match Vec::<SignedBlock>::decode_raw(blocks_to_sync, blocks_to_sync_size) {
-		Ok(blocks) => blocks,
-		Err(e) => return Error::Codec(e).into(),
-	};
+	if let Err(e) = sync_parentchain_internal(
+		blocks_to_sync,
+		blocks_to_sync_size,
+		events_to_sync,
+		events_to_sync_size,
+		events_proofs_to_sync,
+		events_proofs_to_sync_size,
+		parentchain_id,
+		parentchain_id_size,
+	) {
+		error!("Error synching parentchain: {:?}", e);
+	}
 
+	sgx_status_t::SGX_SUCCESS
+}
+
+unsafe fn sync_parentchain_internal(
+	blocks_to_sync: *const u8,
+	blocks_to_sync_size: usize,
+	events_to_sync: *const u8,
+	events_to_sync_size: usize,
+	events_proofs_to_sync: *const u8,
+	events_proofs_to_sync_size: usize,
+	parentchain_id: *const u8,
+	parentchain_id_size: u32,
+) -> Result<()> {
+	let blocks_to_sync = Vec::<SignedBlock>::decode_raw(blocks_to_sync, blocks_to_sync_size)?;
 	let events_proofs_to_sync =
-		match Vec::<StorageProof>::decode_raw(events_proofs_to_sync, events_proofs_to_sync_size) {
-			Ok(events_proofs) => events_proofs,
-			Err(e) => return Error::Codec(e).into(),
-		};
+		Vec::<StorageProof>::decode_raw(events_proofs_to_sync, events_proofs_to_sync_size)?;
+	let parentchain_id = ParentchainId::decode_raw(parentchain_id, parentchain_id_size as usize)?;
 
 	let blocks_to_sync_merkle_roots: Vec<sp_core::H256> =
 		blocks_to_sync.iter().map(|block| block.block.header.state_root).collect();
@@ -449,18 +470,13 @@ pub unsafe extern "C" fn sync_parentchain(
 		return e.into()
 	}
 
-	let events_to_sync = match Vec::<Vec<u8>>::decode_raw(events_to_sync, events_to_sync_size) {
-		Ok(events) => events,
-		Err(e) => return Error::Codec(e).into(),
-	};
+	let events_to_sync = Vec::<Vec<u8>>::decode_raw(events_to_sync, events_to_sync_size)?;
 
-	if let Err(e) =
-		dispatch_parentchain_blocks_for_import::<WorkerModeProvider>(blocks_to_sync, events_to_sync)
-	{
-		return e.into()
-	}
-
-	sgx_status_t::SGX_SUCCESS
+	dispatch_parentchain_blocks_for_import::<WorkerModeProvider>(
+		blocks_to_sync,
+		events_to_sync,
+		&parentchain_id,
+	)
 }
 
 /// Dispatch the parentchain blocks for import.
@@ -474,22 +490,42 @@ pub unsafe extern "C" fn sync_parentchain(
 fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>(
 	blocks_to_sync: Vec<SignedBlock>,
 	events_to_sync: Vec<Vec<u8>>,
+	id: &ParentchainId,
 ) -> Result<()> {
 	if WorkerModeProvider::worker_mode() == WorkerMode::Teeracle {
 		trace!("Not importing any parentchain blocks");
 		return Ok(())
 	}
 
-	let import_dispatcher =
-		if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
-			solochain_handler.import_dispatcher.clone()
-		} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
-			parachain_handler.import_dispatcher.clone()
-		} else {
-			return Err(Error::NoTeerexParentchainAssigned)
-		};
+	match id {
+		ParentchainId::Teerex => {
+			if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
+				solochain_handler
+					.import_dispatcher
+					.dispatch_import(blocks_to_sync, events_to_sync)?;
+			} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
+				parachain_handler
+					.import_dispatcher
+					.dispatch_import(blocks_to_sync, events_to_sync)?;
+			} else {
+				return Err(Error::NoTeerexParentchainAssigned)
+			};
+		},
+		ParentchainId::Secondary => {
+			if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN2_HANDLER_COMPONENT.get() {
+				solochain_handler
+					.import_dispatcher
+					.dispatch_import(blocks_to_sync, events_to_sync)?;
+			} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN2_HANDLER_COMPONENT.get() {
+				parachain_handler
+					.import_dispatcher
+					.dispatch_import(blocks_to_sync, events_to_sync)?;
+			} else {
+				return Err(Error::NoSecondaryParentchainAssigned)
+			};
+		},
+	}
 
-	import_dispatcher.dispatch_import(blocks_to_sync, events_to_sync)?;
 	Ok(())
 }
 
@@ -536,8 +572,20 @@ fn validate_events(
 /// This trigger is only useful in combination with a `TriggeredDispatcher` and sidechain. In case no
 /// sidechain and the `ImmediateDispatcher` are used, this function is obsolete.
 #[no_mangle]
-pub unsafe extern "C" fn trigger_parentchain_block_import() -> sgx_status_t {
-	match internal_trigger_parentchain_block_import() {
+pub unsafe extern "C" fn trigger_parentchain_block_import(
+	parentchain_id: *const u8,
+	parentchain_id_size: u32,
+) -> sgx_status_t {
+	let parentchain_id =
+		match ParentchainId::decode_raw(parentchain_id, parentchain_id_size as usize) {
+			Ok(id) => id,
+			Err(e) => {
+				error!("Could not decode parentchain id: {:?}", e);
+				return sgx_status_t::SGX_ERROR_UNEXPECTED
+			},
+		};
+
+	match internal_trigger_parentchain_block_import(&parentchain_id) {
 		Ok(()) => sgx_status_t::SGX_SUCCESS,
 		Err(e) => {
 			error!("Failed to trigger import of parentchain blocks: {:?}", e);
@@ -546,9 +594,44 @@ pub unsafe extern "C" fn trigger_parentchain_block_import() -> sgx_status_t {
 	}
 }
 
-fn internal_trigger_parentchain_block_import() -> Result<()> {
-	let triggered_import_dispatcher = get_triggered_dispatcher_from_solo_or_parachain()?;
-	triggered_import_dispatcher.import_all()?;
+fn internal_trigger_parentchain_block_import(id: &ParentchainId) -> Result<()> {
+	let _maybe_latest_block = match id {
+		ParentchainId::Teerex => {
+			if let Ok(handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
+				handler
+					.import_dispatcher
+					.triggered_dispatcher()
+					.ok_or(Error::ExpectedTriggeredImportDispatcher)?
+					.import_all()?
+			} else if let Ok(handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
+				handler
+					.import_dispatcher
+					.triggered_dispatcher()
+					.ok_or(Error::ExpectedTriggeredImportDispatcher)?
+					.import_all()?
+			} else {
+				return Err(Error::NoTeerexParentchainAssigned)
+			}
+		},
+		ParentchainId::Secondary => {
+			if let Ok(handler) = GLOBAL_FULL_SOLOCHAIN2_HANDLER_COMPONENT.get() {
+				handler
+					.import_dispatcher
+					.triggered_dispatcher()
+					.ok_or(Error::ExpectedTriggeredImportDispatcher)?
+					.import_all()?
+			} else if let Ok(handler) = GLOBAL_FULL_PARACHAIN2_HANDLER_COMPONENT.get() {
+				handler
+					.import_dispatcher
+					.triggered_dispatcher()
+					.ok_or(Error::ExpectedTriggeredImportDispatcher)?
+					.import_all()?
+			} else {
+				return Err(Error::NoSecondaryParentchainAssigned)
+			}
+		},
+	};
+
 	Ok(())
 }
 

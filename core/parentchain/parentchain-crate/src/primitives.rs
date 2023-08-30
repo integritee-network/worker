@@ -37,6 +37,15 @@ pub enum ParentchainInitParams {
 	Parachain { id: ParentchainId, params: ParachainParams },
 }
 
+impl ParentchainInitParams {
+	pub fn id(&self) -> &ParentchainId {
+		match self {
+			Self::Solochain { id, .. } => id,
+			Self::Parachain { id, .. } => id,
+		}
+	}
+}
+
 impl From<(ParentchainId, SolochainParams)> for ParentchainInitParams {
 	fn from(value: (ParentchainId, SolochainParams)) -> Self {
 		Self::Solochain { id: value.0, params: value.1 }

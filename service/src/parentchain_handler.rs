@@ -104,6 +104,10 @@ where
 	pub fn parentchain_api(&self) -> &ParentchainApi {
 		&self.parentchain_api
 	}
+
+	pub fn parentchain_id(&self) -> &ParentchainId {
+		self.parentchain_init_params.id()
+	}
 }
 
 impl<ParentchainApi, EnclaveApi> HandleParentchain
@@ -157,7 +161,7 @@ where
 				block_chunk_to_sync.as_slice(),
 				events_chunk_to_sync.as_slice(),
 				events_proofs_chunk_to_sync.as_slice(),
-				0,
+				self.parentchain_id(),
 			)?;
 
 			until_synced_header = block_chunk_to_sync
@@ -173,7 +177,7 @@ where
 
 	fn trigger_parentchain_block_import(&self) -> ServiceResult<()> {
 		trace!("trigger parentchain block import");
-		Ok(self.enclave_api.trigger_parentchain_block_import()?)
+		Ok(self.enclave_api.trigger_parentchain_block_import(self.parentchain_id())?)
 	}
 
 	fn sync_and_import_parentchain_until(
