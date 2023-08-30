@@ -538,7 +538,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	}
 
 	if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
-		println!("*** [+] Finished syncing light client, syncing parentchain...");
+		println!("*** [+] Finished initializing light client, syncing parentchain...");
 
 		// Syncing all parentchain blocks, this might take a while..
 		let mut last_synced_header =
@@ -606,7 +606,7 @@ where
 		init_parentchain(enclave, &node_api, tee_account_id, ParentchainId::Secondary);
 
 	if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
-		println!("*** [+] Finished syncing secondary light client, syncing parentchain...");
+		println!("*** [+] Finished initializing secondary light client, syncing parentchain...");
 
 		// Syncing all parentchain blocks, this might take a while..
 		let last_synced_header_secondary = secondary_parentchain_handler
