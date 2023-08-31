@@ -118,7 +118,7 @@ where
 			let api = self.create_api(parentchain_id)?;
 			for call in extrinsics.into_iter() {
 				if let Err(e) = api.submit_opaque_extrinsic(call.encode().into()) {
-					error!("Could not send extrsinic to node: {:?}, error: {:?}", call, e);
+					error!("Could not send extrinsic to node: {:?}, error: {:?}", call, e);
 				}
 			}
 		}
