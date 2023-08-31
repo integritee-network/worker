@@ -448,6 +448,7 @@ pub unsafe extern "C" fn sync_parentchain(
 	sgx_status_t::SGX_SUCCESS
 }
 
+#[allow(clippy::too_many_arguments)]
 unsafe fn sync_parentchain_internal(
 	blocks_to_sync: *const u8,
 	blocks_to_sync_size: usize,
