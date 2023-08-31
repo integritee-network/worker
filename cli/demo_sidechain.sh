@@ -70,9 +70,10 @@ WORKER2URL=${WORKER2URL:-"wss://127.0.0.1"}
 CLIENT_BIN=${CLIENT_BIN:-"./../bin/integritee-cli"}
 
 echo "Using client binary ${CLIENT_BIN}"
+${CLIENT_BIN} --version
 echo "Using node uri ${NODEURL}:${NPORT}"
-echo "Using trusted-worker uri ${WORKER1URL}:${WORKER1PORT}"
-echo "Using trusted-worker-2 uri ${WORKER2URL}:${WORKER2PORT}"
+echo "Using trusted-worker 1 uri ${WORKER1URL}:${WORKER1PORT}"
+echo "Using trusted-worker 2 uri ${WORKER2URL}:${WORKER2PORT}"
 
 INITIALFUNDS=50000000000
 AMOUNTTRANSFER=20000000000

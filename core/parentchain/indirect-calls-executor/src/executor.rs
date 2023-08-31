@@ -141,6 +141,12 @@ impl<
 		let xt_statuses = events.get_extrinsic_statuses()?;
 		trace!("xt_statuses:: {:?}", xt_statuses);
 
+		let filter_events = events.get_transfer_events();
+
+		if let Ok(events) = filter_events {
+			events.iter().for_each(|event| info!("Found transfer_event: {:?}", event))
+		}
+
 		// This would be catastrophic but should never happen
 		if xt_statuses.len() != block.extrinsics().len() {
 			return Err(Error::Other("Extrinsic Status and Extrinsic count not equal".into()))

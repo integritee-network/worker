@@ -32,7 +32,7 @@ def setup_working_dir(source_dir: str, target_dir: str):
         if os.path.exists(source):
             shutil.copy(source, target)
         else:
-            print(f'{source} does not exist, this is fine, but you can\'t perform remote attestation with this.')
+            print(f'{source} does not exist, this may be fine for DCAP or skip-ra, but you can\'t perform IAS remote attestation without this file.')
 
     mandatory = ['enclave.signed.so', 'integritee-service']
 
