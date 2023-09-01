@@ -1,7 +1,6 @@
 services:
   "integritee-node-${VERSION}":
-    # OLI: stripped `-ias` from node name.
-    image: "${INTEGRITEE_NODE:-integritee/integritee-node-dev-ias:1.0.36}"
+    image: "${INTEGRITEE_NODE:-integritee/integritee-node-dev:1.1.0}"
     hostname: integritee-node
     devices:
       - "${SGX_PROVISION:-/dev/null}:/dev/sgx/provision"
@@ -44,8 +43,8 @@ services:
       interval: 10s
       timeout: 10s
       retries: 25
-    # OLI: added `--skip-ra`
-    entrypoint: "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-1 -T wss://integritee-worker-1 -u ws://integritee-node -U ws://integritee-worker-1 -P 2011 -w 2101 -p 9912 -h 4645 run --dev --skip-ra"
+    # OLI: added --skip-ra`
+    command: "--clean-reset --data-dir /tmp/worker1 --ws-external -M integritee-worker-1 -T wss://integritee-worker-1 -u ws://integritee-node -U ws://integritee-worker-1 -P 2011 -w 2101 -p 9912 -h 4645 run --dev ${ADDITIONAL_RUNTIME_FLAGS} --skip-ra"
     restart: "no"
   "integritee-worker-2-${VERSION}":
     image: integritee-worker:${VERSION:-dev}
@@ -74,8 +73,8 @@ services:
       interval: 10s
       timeout: 10s
       retries: 25
-    # OLI: added `--skip-ra`
-    entrypoint: "/usr/local/bin/integritee-service --clean-reset --ws-external -M integritee-worker-2 -T wss://integritee-worker-2 -u ws://integritee-node -U ws://integritee-worker-2 -P 2012 -w 2102 -p 9912 -h 4646 run --dev --skip-ra --request-state"
+    # OLI: added --skip-ra
+    command: "--clean-reset --data-dir /tmp/worker2 --ws-external -M integritee-worker-2 -T wss://integritee-worker-2 -u ws://integritee-node -U ws://integritee-worker-2 -P 2012 -w 2102 -p 9912 -h 4646 run --dev --request-state ${ADDITIONAL_RUNTIME_FLAGS} --skip-ra"
     restart: "no"
 networks:
   integritee-test-network:

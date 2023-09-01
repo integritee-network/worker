@@ -316,7 +316,30 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	let run_config = config.run_config().clone().expect("Run config missing");
 	let skip_ra = run_config.skip_ra();
 
-	println!("Integritee Worker v{}", VERSION);
+	#[cfg(feature = "teeracle")]
+	let flavor_str = "teeracle";
+	#[cfg(feature = "sidechain")]
+	let flavor_str = "sidechain";
+	#[cfg(feature = "offchain-worker")]
+	let flavor_str = "offchain-worker";
+	#[cfg(not(any(feature = "offchain-worker", feature = "sidechain", feature = "teeracle")))]
+	let flavor_str = "offchain-worker";
+
+	println!("Integritee Worker for {} v{}", flavor_str, VERSION);
+
+	#[cfg(feature = "dcap")]
+	println!("  DCAP is enabled");
+	#[cfg(not(feature = "dcap"))]
+	println!("  DCAP is disabled");
+	#[cfg(feature = "production")]
+	println!("  Production Mode is enabled");
+	#[cfg(not(feature = "production"))]
+	println!("  Production Mode is disabled");
+	#[cfg(feature = "evm")]
+	println!("  EVM is enabled");
+	#[cfg(not(feature = "evm"))]
+	println!("  EVM is disabled");
+
 	info!("starting worker on shard {}", shard.encode().to_base58());
 	// ------------------------------------------------------------------------
 	// check for required files
