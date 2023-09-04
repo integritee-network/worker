@@ -24,6 +24,7 @@
 #[macro_use]
 extern crate clap;
 extern crate chrono;
+extern crate core;
 extern crate env_logger;
 extern crate log;
 
