@@ -2761,7 +2761,6 @@ dependencies = [
  "integritee-node-runtime",
  "ita-stf",
  "itc-rpc-client",
- "itp-attestation-handler",
  "itp-node-api",
  "itp-rpc",
  "itp-sgx-crypto",
@@ -2783,7 +2782,6 @@ dependencies = [
  "serde 1.0.164",
  "serde_json 1.0.96",
  "sgx_crypto_helper",
- "sgx_types",
  "sp-application-crypto",
  "sp-core",
  "sp-keyring",
@@ -2791,7 +2789,6 @@ dependencies = [
  "sp-runtime",
  "substrate-api-client",
  "substrate-client-keystore",
- "teerex-primitives",
  "thiserror 1.0.40",
  "ws",
 ]

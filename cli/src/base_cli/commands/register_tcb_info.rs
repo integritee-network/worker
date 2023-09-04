@@ -20,28 +20,40 @@ use crate::{
 	Cli, CliError, CliResult, CliResultOk,
 };
 use itp_node_api::api_client::{ParentchainExtrinsicSigner, TEEREX};
+use itp_types::OpaqueCall;
 use itp_utils::ToHexPrefixed;
 use log::*;
 use serde::Deserialize;
 use serde_json::Value;
 use sp_core::sr25519 as sr25519_core;
 use std::fs::read_to_string;
-use substrate_api_client::{compose_extrinsic, SubmitAndWatchUntilSuccess};
+use substrate_api_client::{compose_call, compose_extrinsic_offline, SubmitAndWatchUntilSuccess};
 
 #[derive(Debug, Deserialize)]
 struct TcbInfo {
-	tcb_info: Value,
+	#[allow(non_snake_case_types)]
+	tcbInfo: Value,
 	signature: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct Platform {
+	fmspc: String,
+	_platform: String,
 }
 
 #[derive(Parser)]
 pub struct RegisterTcbInfoCommand {
 	/// Sender's parentchain AccountId in ss58check format.
 	sender: String,
-	/// Intel's Family-Model-Stepping-Platform-Custom SKU. 6-Byte non-prefixed hex value
-	fmspc: String,
 	/// certificate chain PEM file
 	pem_file: String,
+	/// Intel's Family-Model-Stepping-Platform-Custom SKU. 6-Byte non-prefixed hex value
+	#[clap(short, long, action, conflicts_with = "all")]
+	fmspc: Option<String>,
+	/// registeres all fmspc currently published by Intel
+	#[clap(short, long, action)]
+	all: bool,
 }
 
 impl RegisterTcbInfoCommand {
@@ -57,26 +69,56 @@ impl RegisterTcbInfoCommand {
 		let from = get_pair_from_str(&self.sender);
 		chain_api.set_signer(ParentchainExtrinsicSigner::new(sr25519_core::Pair::from(from)));
 
-		trace!("fetching tcb info from api.trustedservices.intel.com");
+		let fmspcs = if self.all {
+			trace!("fetching all fmspc's from api.trustedservices.intel.com");
+			let fmspcs = reqwest::blocking::get(
+				"https://api.trustedservices.intel.com/sgx/certification/v4/fmspcs",
+			)
+			.unwrap();
+			let fmspcs: Vec<Platform> = fmspcs.json().expect("Error parsing JSON");
+			println!("{:?}", fmspcs);
+			fmspcs.into_iter().map(|f| f.fmspc).collect()
+		} else {
+			if let Some(fmspc) = self.fmspc.clone() {
+				vec![fmspc]
+			} else {
+				panic!("must specify either '--all' or '--fmspc'");
+			}
+		};
+		let calls: Vec<OpaqueCall> = fmspcs
+			.into_iter()
+			.map(|fmspc| {
+				trace!("fetching tcb info for fmspc {} from api.trustedservices.intel.com", fmspc);
+				let tcbinfo_json = reqwest::blocking::get(format!(
+					"https://api.trustedservices.intel.com/sgx/certification/v4/tcb?fmspc={}",
+					fmspc
+				))
+				.unwrap();
+				let tcb_info: TcbInfo = tcbinfo_json.json().expect("Error parsing JSON");
+				let intel_signature = hex::decode(tcb_info.signature).unwrap();
+				OpaqueCall::from_tuple(&compose_call!(
+					chain_api.metadata(),
+					TEEREX,
+					"register_tcb_info",
+					tcb_info.tcbInfo.to_string(),
+					intel_signature,
+					certificate_chain_pem.clone()
+				))
+			})
+			.collect();
+		let call = if calls.len() > 1 {
+			OpaqueCall::from_tuple(&compose_call!(chain_api.metadata(), "Utility", "batch", calls))
+		} else {
+			calls[0].clone()
+		};
+		trace!("encoded call to be sent as extrinsic: {}", call.to_hex());
 
-		let tcbinfo_json = reqwest::blocking::get(format!(
-			"https://api.trustedservices.intel.com/sgx/certification/v4/tcb?fmspc={}",
-			&self.fmspc
-		))
-		.unwrap();
-		let tcb_info: TcbInfo = tcbinfo_json.json().expect("Error parsing JSON");
-		let intel_signature = hex::decode(tcb_info.signature).unwrap();
-
-		// Compose the extrinsic.
-		let xt = compose_extrinsic!(
-			chain_api,
-			TEEREX,
-			"register_tcb_info",
-			tcb_info.tcb_info.to_string(),
-			intel_signature,
-			certificate_chain_pem
+		let nonce = chain_api.get_nonce().unwrap();
+		let xt = compose_extrinsic_offline!(
+			chain_api.clone().signer().unwrap(),
+			call,
+			chain_api.extrinsic_params(nonce)
 		);
-		trace!("encoded call to be sent as extrinsic: {}", xt.function.to_hex());
 
 		match chain_api.submit_and_watch_extrinsic_until_success(xt, true) {
 			Ok(xt_report) => {
