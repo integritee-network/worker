@@ -18,12 +18,19 @@
 use crate::ocall::{ffi, OcallApi};
 use frame_support::ensure;
 use itp_ocall_api::EnclaveAttestationOCallApi;
+use lazy_static::lazy_static;
 use log::*;
 use sgx_tse::rsgx_create_report;
 use sgx_types::*;
-use std::{ptr, vec::Vec};
+use std::{ptr, sync::Arc, vec::Vec};
 
 const RET_QUOTE_BUF_LEN: usize = 2048;
+
+lazy_static! {
+	/// Global cache of MRENCLAVE
+	/// will never change at runtime but must be initialized at runtime
+	pub static ref MY_MRENCLAVE: Arc<Option<sgx_measurement_t>> = None.into();
+}
 
 impl EnclaveAttestationOCallApi for OcallApi {
 	fn sgx_init_quote(&self) -> SgxResult<(sgx_target_info_t, sgx_epid_group_id_t)> {
@@ -199,7 +206,17 @@ impl EnclaveAttestationOCallApi for OcallApi {
 	}
 
 	fn get_mrenclave_of_self(&self) -> SgxResult<sgx_measurement_t> {
-		Ok(self.get_report_of_self()?.mr_enclave)
+		if MY_MRENCLAVE.is_none() {
+			let cache = Arc::get_mut(&mut MY_MRENCLAVE);
+			if cache.is_none() {
+				debug!("someone else is currently mutating the MY_MRENCLAVE cache. Fall back to uncached fn call");
+				return Ok(self.get_report_of_self()?.mr_enclave)
+			} else {
+				*cache.unwrap() = Some(self.get_report_of_self()?.mr_enclave);
+				debug!("initialized MY_MRENCLAVE cache");
+			}
+		}
+		Ok(MY_MRENCLAVE.expect("has been initialized above, so has to be Some. q.e.d."))
 	}
 }
 
