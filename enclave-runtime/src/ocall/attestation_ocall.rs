@@ -22,14 +22,56 @@ use lazy_static::lazy_static;
 use log::*;
 use sgx_tse::rsgx_create_report;
 use sgx_types::*;
-use std::{ptr, sync::Arc, vec::Vec};
+use std::{
+	boxed::Box,
+	ptr,
+	sync::{Arc, RwLock, RwLockWriteGuard},
+	vec::Vec,
+};
+pub type Result<T> = core::result::Result<T, Error>;
 
 const RET_QUOTE_BUF_LEN: usize = 2048;
 
 lazy_static! {
 	/// Global cache of MRENCLAVE
 	/// will never change at runtime but must be initialized at runtime
-	pub static ref MY_MRENCLAVE: Arc<Option<sgx_measurement_t>> = None.into();
+	pub static ref MY_MRENCLAVE: Arc<MrEnclaveCache> = Default::default();
+}
+
+/// nonce cache error
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+	#[error("MrEnclave lock is poisoned")]
+	LockPoisoning,
+	#[error("MrEnclave not initialized")]
+	MrEnclaveNotInitialized,
+	#[error(transparent)]
+	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
+}
+
+#[derive(Default, Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub struct MrEnclave(pub Option<sgx_measurement_t>);
+
+#[derive(Default)]
+struct MrEnclaveCache {
+	lock: RwLock<MrEnclave>,
+}
+
+impl MrEnclaveCache {
+	pub fn new(lock: RwLock<MrEnclave>) -> Self {
+		MrEnclaveCache { lock }
+	}
+	fn load_for_mutation(&self) -> Result<RwLockWriteGuard<'_, MrEnclave>> {
+		self.lock.write().map_err(|_| Error::LockPoisoning)
+	}
+	fn get_mrenclave(&self) -> Result<MrEnclave> {
+		let lock = self.lock.read().map_err(|_| Error::LockPoisoning)?;
+		if let Some(mrenclave) = *lock {
+			Ok(mrenclave)
+		} else {
+			Err(Error::MrEnclaveNotInitialized)
+		}
+	}
 }
 
 impl EnclaveAttestationOCallApi for OcallApi {
@@ -206,17 +248,15 @@ impl EnclaveAttestationOCallApi for OcallApi {
 	}
 
 	fn get_mrenclave_of_self(&self) -> SgxResult<sgx_measurement_t> {
-		if MY_MRENCLAVE.is_none() {
-			let cache = Arc::get_mut(&mut MY_MRENCLAVE);
-			if cache.is_none() {
-				debug!("someone else is currently mutating the MY_MRENCLAVE cache. Fall back to uncached fn call");
-				return Ok(self.get_report_of_self()?.mr_enclave)
-			} else {
-				*cache.unwrap() = Some(self.get_report_of_self()?.mr_enclave);
-				debug!("initialized MY_MRENCLAVE cache");
-			}
-		}
-		Ok(MY_MRENCLAVE.expect("has been initialized above, so has to be Some. q.e.d."))
+		if let Ok(mrenclave) = MY_MRENCLAVE.get() {
+			trace!("found cached MRENCLAVE");
+			return Ok(mrenclave.0)
+		};
+		debug!("initializing MY_MRENCLAVE cache");
+		let mut mrenclave_lock = MY_MRENCLAVE.load_for_mutation()?;
+		let mut mrenclave_value = mrenclave_lock.0;
+		mrenclave_value = Some(self.get_report_of_self()?.mr_enclave);
+		*mrenclave_lock = MrEnclave(mrenclave_value);
 	}
 }
 
