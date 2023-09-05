@@ -56,6 +56,9 @@ def main(processes, config_path):
     for n_conf in config["nodes"]:
         processes.append(run_node(n_conf, n))
         n += 1
+        # let the first node begin before we start the second one, it is
+        # easier to track the logs if they don't start at the same time.
+        sleep(18)
 
     # sleep to give the node some time to startup
     sleep(5)
