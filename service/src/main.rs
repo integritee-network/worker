@@ -579,7 +579,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	}
 
 	if let Some(url) = config.secondary_node_url() {
-		init_secondary_parentchain(&enclave, &tee_accountid, url)
+		init_secondary_parentchain(&enclave, &tee_accountid, url, is_development_mode)
 	}
 
 	// ------------------------------------------------------------------------
@@ -594,13 +594,21 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	}
 }
 
-fn init_secondary_parentchain<E>(enclave: &Arc<E>, tee_account_id: &AccountId32, url: String)
-where
+fn init_secondary_parentchain<E>(
+	enclave: &Arc<E>,
+	tee_account_id: &AccountId32,
+	url: String,
+	is_development_mode: bool,
+) where
 	E: EnclaveBase + Sidechain,
 {
 	let node_api = NodeApiFactory::new(url, AccountKeyring::Alice.pair())
 		.create_api()
 		.expect("Failed to create secondary parentchain node API");
+
+	// some random bytes not too small to ensure that the enclave has enough funds
+	setup_account_funding(&node_api, tee_account_id, [0u8; 100].into(), is_development_mode)
+		.expect("Could not fund secondary enclave account");
 
 	let (secondary_parentchain_handler, last_synced_header_secondary) =
 		init_parentchain(enclave, &node_api, tee_account_id, ParentchainId::Secondary);
