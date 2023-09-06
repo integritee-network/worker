@@ -49,7 +49,7 @@ use sp_application_crypto::KeyTypeId;
 use sp_core::{H160, H256};
 use substrate_api_client::Metadata;
 use thiserror::Error;
-
+use simplyr_lib::MarketOutput;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub(crate) const SR25519_KEY_TYPE: KeyTypeId = KeyTypeId(*b"sr25");
@@ -106,6 +106,8 @@ pub enum CliResultOk {
 	// TODO should ideally be removed; or at least drastically less used
 	// We WANT all commands exposed by the cli to return something useful for the caller(ie instead of printing)
 	None,
+
+	Matches(MarketOutput),
 }
 
 #[derive(Debug, Error)]

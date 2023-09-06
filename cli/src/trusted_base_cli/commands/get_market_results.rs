@@ -32,19 +32,9 @@ pub struct GetMarketResultsCommand {
 
 impl GetMarketResultsCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		println!(
-			"{:?}",
-			// if we serialize with serde-json we can easily just pass it as
-			// an argument in the verify-proof command.
-			serde_json::to_string(&get_market_results(
-				cli,
-				trusted_args,
-				&self.account,
-				self.timestamp.clone(),
-			))
-			.unwrap()
-		);
-		Ok(CliResultOk::None)
+		let results =
+			get_market_results(cli, trusted_args, &self.account, self.timestamp.clone());
+		Ok(CliResultOk::Matches(results))
 	}
 }
 
