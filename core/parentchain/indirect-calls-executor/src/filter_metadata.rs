@@ -120,13 +120,19 @@ where
 		let xt = match Self::ParseParentchainMetadata::parse(call_mut) {
 			Ok(xt) => xt,
 			Err(e) => {
-				log::error!("Could not parse parentchain extrinsic: {:?}", e);
+				log::error!(
+					"[ShieldFundsAndInvokeFilter] Could not parse parentchain extrinsic: {:?}",
+					e
+				);
 				return None
 			},
 		};
 		let index = xt.call_index;
 		let call_args = &mut &xt.call_args[..];
-		log::trace!("attempting to execute indirect call with index {:?}", index);
+		log::trace!(
+			"[ShieldFundsAndInvokeFilter] attempting to execute indirect call with index {:?}",
+			index
+		);
 		if index == metadata.shield_funds_call_indexes().ok()? {
 			log::trace!("executing shield funds call");
 			let args = decode_and_log_error::<ShieldFundsArgs>(call_args)?;
@@ -160,21 +166,22 @@ where
 		let xt = match Self::ParseParentchainMetadata::parse(call_mut) {
 			Ok(xt) => xt,
 			Err(e) => {
-				log::error!("Could not parse parentchain extrinsic: {:?}", e);
+				log::error!("[TransferToAliceShieldsFundsFilter] Could not parse parentchain extrinsic: {:?}", e);
 				return None
 			},
 		};
 		let index = xt.call_index;
 		let call_args = &mut &xt.call_args[..];
-		log::trace!("attempting to execute indirect call with index {:?}", index);
+		log::trace!("[TransferToAliceShieldsFundsFilter] attempting to execute indirect call with index {:?}", index);
 		if index == metadata.transfer_call_index().ok()?
 			|| index == metadata.transfer_allow_death_call_index().ok()?
 		{
-			log::trace!("found transfer or transfer allow death call.");
+			log::trace!("found `transfer` or `transfer_allow_death` call.");
 			let args = decode_and_log_error::<TransferToAliceShieldsFundsArgs>(call_args)?;
 			if args.destination == alice_account().into() {
 				Some(IndirectCall::TransferToAliceShieldsFunds(args))
 			} else {
+				log::trace!("Parentchain transfer was not for Alice; ignoring...");
 				// No need to put it into the top pool if it isn't executed in the first place.
 				None
 			}
