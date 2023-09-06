@@ -22,6 +22,7 @@ use itp_stf_primitives::types::AccountId;
 use itp_types::Balance;
 use log::info;
 use sp_core::Pair;
+use sp_runtime::MultiAddress;
 
 /// Arguments of a parentchains `transfer` or `transfer_allow_death` dispatchable.
 ///
@@ -29,7 +30,9 @@ use sp_core::Pair;
 /// funds to alice on sidechain.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub struct TransferToAliceShieldsFundsArgs {
-	pub destination: AccountId,
+	// () is just a placeholder for index, which we don't use
+	pub destination: MultiAddress<AccountId, ()>,
+	#[codec(compact)]
 	pub value: Balance,
 }
 
@@ -47,7 +50,7 @@ pub fn alice_account() -> AccountId {
 impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for TransferToAliceShieldsFundsArgs {
 	fn dispatch(&self, executor: &Executor) -> Result<()> {
 		let alice = alice_account();
-		if self.destination == alice {
+		if self.destination == alice.clone().into() {
 			info!("Found Transfer to Alice extrinsic in block: \nAmount: {}", self.value);
 
 			let shard = executor.get_default_shard();
