@@ -42,7 +42,9 @@ use itc_parentchain::{
 	},
 	block_importer::ParentchainBlockImporter,
 	indirect_calls_executor::{
-		filter_metadata::{DenyAll, EventCreator, ShieldFundsAndInvokeFilter},
+		filter_metadata::{
+			EventCreator, ShieldFundsAndInvokeFilter, TransferToAliceShieldsFundsFilter,
+		},
 		parentchain_parser::ParentchainExtrinsicParser,
 		IndirectCallsExecutor,
 	},
@@ -193,9 +195,11 @@ pub type TeerexParentchainBlockImportDispatcher = BlockImportDispatcher<
 
 /// IndirectCalls executor instance of the secondary parentchain.
 ///
-/// **Note**: The `DenyAll` filter is just a placeholder. The real one and is dependent on the
-/// secondary chain's business logic.
-pub type SecondaryParentchainIndirectExecutor = EnclaveIndirectCallsExecutor<DenyAll>;
+/// **Note**: The filter here is purely used for demo purposes.
+///
+/// Also note that the extrinsic parser must be changed if the signed extra contains the `AssetTxPayment`
+pub type SecondaryParentchainIndirectExecutor =
+	EnclaveIndirectCallsExecutor<TransferToAliceShieldsFundsFilter<ParentchainExtrinsicParser>>;
 
 pub type SecondaryParentchainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,

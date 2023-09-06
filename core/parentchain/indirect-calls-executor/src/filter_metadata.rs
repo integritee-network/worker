@@ -18,14 +18,16 @@
 use crate::{
 	error::Result,
 	event_filter::{FilterEvents, MockEvents},
-	indirect_calls::{InvokeArgs, ShieldFundsArgs},
+	indirect_calls::{alice_account, InvokeArgs, ShieldFundsArgs, TransferToAliceShieldsFundsArgs},
 	parentchain_parser::ParseExtrinsic,
 	IndirectDispatch, IndirectExecutor,
 };
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use itp_api_client_types::{Events, Metadata};
-use itp_node_api::metadata::{NodeMetadata, NodeMetadataTrait};
+use itp_node_api::metadata::{
+	pallet_balances::BalancesCallIndexes, NodeMetadata, NodeMetadataTrait,
+};
 use itp_types::H256;
 
 pub trait EventsFromMetadata<NodeMetadata> {
@@ -86,6 +88,12 @@ pub trait FilterIntoDataFrom<NodeMetadata> {
 /// Indirect calls filter denying all indirect calls.
 pub struct DenyAll;
 
+/// Simple demo filter for testing where a transfer to Alice will shield funds.
+///
+/// It does not do anything else.
+pub struct TransferToAliceShieldsFundsFilter<ExtrinsicParser> {
+	_phantom: PhantomData<ExtrinsicParser>,
+}
 /// Default filter we use for the Integritee-Parachain.
 pub struct ShieldFundsAndInvokeFilter<ExtrinsicParser> {
 	_phantom: PhantomData<ExtrinsicParser>,
@@ -131,6 +139,49 @@ where
 	}
 }
 
+impl<ExtrinsicParser, NodeMetadata: BalancesCallIndexes> FilterIntoDataFrom<NodeMetadata>
+	for TransferToAliceShieldsFundsFilter<ExtrinsicParser>
+where
+	ExtrinsicParser: ParseExtrinsic,
+{
+	type Output = IndirectCall;
+	type ParseParentchainMetadata = ExtrinsicParser;
+
+	fn filter_into_from_metadata(
+		encoded_data: &[u8],
+		metadata: &NodeMetadata,
+	) -> Option<Self::Output> {
+		let call_mut = &mut &encoded_data[..];
+
+		// Todo: the filter should not need to parse, only filter. This should directly be configured
+		// in the indirect executor.
+		let xt = match Self::ParseParentchainMetadata::parse(call_mut) {
+			Ok(xt) => xt,
+			Err(e) => {
+				log::error!("Could not parse parentchain extrinsic: {:?}", e);
+				return None
+			},
+		};
+		let index = xt.call_index;
+		let call_args = &mut &xt.call_args[..];
+		log::trace!("attempting to execute indirect call with index {:?}", index);
+		if index == metadata.transfer_call_index().ok()?
+			|| index == metadata.transfer_allow_death_call_index().ok()?
+		{
+			log::trace!("found transfer or transfer allow death call.");
+			let args = decode_and_log_error::<TransferToAliceShieldsFundsArgs>(call_args)?;
+			if args.destination == alice_account() {
+				Some(IndirectCall::TransferToAliceShieldsFunds(args))
+			} else {
+				// No need to put it into the top pool if it isn't executed in the first place.
+				None
+			}
+		} else {
+			None
+		}
+	}
+}
+
 /// The default indirect call of the Integritee-Parachain.
 ///
 /// Todo: Move or provide a template in app-libs such that users
@@ -139,6 +190,7 @@ where
 pub enum IndirectCall {
 	ShieldFunds(ShieldFundsArgs),
 	Invoke(InvokeArgs),
+	TransferToAliceShieldsFunds(TransferToAliceShieldsFundsArgs),
 }
 
 impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for IndirectCall {
@@ -146,6 +198,7 @@ impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for IndirectCall {
 		match self {
 			IndirectCall::ShieldFunds(shieldfunds_args) => shieldfunds_args.dispatch(executor),
 			IndirectCall::Invoke(invoke_args) => invoke_args.dispatch(executor),
+			IndirectCall::TransferToAliceShieldsFunds(args) => args.dispatch(executor),
 		}
 	}
 }

@@ -251,6 +251,14 @@ impl<
 		Ok(self.stf_enclave_signer.get_enclave_account()?)
 	}
 
+	fn get_default_shard(&self) -> ShardIdentifier {
+		self.top_pool_author
+			.list_handled_shards()
+			.first()
+			.map(|s| *s)
+			.unwrap_or_default()
+	}
+
 	fn sign_call_with_self(
 		&self,
 		trusted_call: &TrustedCall,
