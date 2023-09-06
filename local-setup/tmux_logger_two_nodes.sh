@@ -20,12 +20,10 @@ else
   tmux new-session -d -s integritee_logger_two_nodes \; \
     split-window -v \; \
     split-window -v \; \
-    split-window -v \; \
     select-layout even-vertical \; \
     send-keys -t integritee_logger_two_nodes:0.0 'tail -f ../log/node1.log' C-m \; \
     send-keys -t integritee_logger_two_nodes:0.1 'tail -f ../log/node2.log' C-m \; \
     send-keys -t integritee_logger_two_nodes:0.2 'tail -f ../log/worker1.log' C-m \; \
-    send-keys -t integritee_logger_two_nodes:0.3 'tail -f ../log/worker2.log' C-m
 
     # Attention: Depending on your tmux conf, indexes may start at 1
 
