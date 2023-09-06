@@ -28,9 +28,7 @@ use itp_api_client_types::{Events, Metadata};
 use itp_node_api::metadata::{
 	pallet_balances::BalancesCallIndexes, NodeMetadata, NodeMetadataTrait,
 };
-use itp_stf_primitives::types::AccountId;
 use itp_types::H256;
-use sp_runtime::MultiAddress;
 
 pub trait EventsFromMetadata<NodeMetadata> {
 	type Output: FilterEvents;
