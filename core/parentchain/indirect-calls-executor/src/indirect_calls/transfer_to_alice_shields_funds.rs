@@ -38,9 +38,19 @@ pub struct TransferToAliceShieldsFundsArgs {
 
 type Seed = [u8; 32];
 
+/// Seed for `//Alice` because we can't derive the alice account in `no-std` otherwise.
+///
+/// The following seed has been obtained by:
+///
+/// ```
+/// use sp_core::{sr25519, Pair};
+///
+/// let alice = sr25519::Pair::from_string_with_seed("//Alice", None).unwrap();
+/// println!("{:?}", alice.1.unwrap());
+/// ```
 const ALICE_ENCODED: Seed = [
-	212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133, 88, 133,
-	76, 205, 227, 154, 86, 132, 231, 165, 109, 162, 125,
+	229, 190, 154, 80, 146, 184, 27, 202, 100, 190, 129, 210, 18, 231, 242, 249, 235, 161, 131,
+	187, 122, 144, 149, 79, 123, 118, 54, 31, 110, 219, 92, 10,
 ];
 
 pub fn alice_account() -> AccountId {
@@ -66,5 +76,18 @@ impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for TransferToAliceS
 		}
 
 		Ok(())
+	}
+}
+
+#[cfg(test)]
+mod test {
+	use crate::indirect_calls::{alice_account, transfer_to_alice_shields_funds::ALICE_ENCODED};
+	use sp_core::{sr25519, Pair};
+
+	#[test]
+	fn alice_account_is_correct() {
+		let alice = sr25519::Pair::from_string_with_seed("//Alice", None).unwrap();
+		assert_eq!(alice.1.unwrap(), ALICE_ENCODED);
+		assert_eq!(alice_account(), alice.0.public().into());
 	}
 }
