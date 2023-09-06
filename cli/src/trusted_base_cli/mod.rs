@@ -104,7 +104,6 @@ fn new_account(trusted_args: &TrustedCli) -> CliResult {
 	drop(store);
 	info!("new account {}", key.to_ss58check());
 	let key_str = key.to_ss58check();
-	println!("{}", key_str);
 
 	Ok(CliResultOk::PubKeysBase58 { pubkeys_sr25519: Some(vec![key_str]), pubkeys_ed25519: None })
 }

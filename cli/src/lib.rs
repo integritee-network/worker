@@ -45,11 +45,11 @@ pub mod trusted_cli;
 
 use crate::commands::Commands;
 use clap::Parser;
+use simplyr_lib::MarketOutput;
 use sp_application_crypto::KeyTypeId;
 use sp_core::{H160, H256};
 use substrate_api_client::Metadata;
 use thiserror::Error;
-use simplyr_lib::MarketOutput;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub(crate) const SR25519_KEY_TYPE: KeyTypeId = KeyTypeId(*b"sr25");
