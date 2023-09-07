@@ -65,7 +65,7 @@ impl<OnchainStorage: EnclaveOnChainOCallApi> ValidateerFetch for OnchainStorage 
 					shard,
 				),
 				header,
-				&ParentchainId::Teerex,
+				&ParentchainId::Integritee,
 			)?
 			.into_tuple()
 			.1

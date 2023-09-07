@@ -40,8 +40,8 @@ impl<F> WorkerOnChainOCall<F> {
 impl<F: CreateNodeApi> WorkerOnChainOCall<F> {
 	pub fn create_api(&self, parentchain_id: ParentchainId) -> OCallBridgeResult<ParentchainApi> {
 		Ok(match parentchain_id {
-			ParentchainId::Teerex => self.node_api_factory.create_api()?,
-			ParentchainId::Secondary => self
+			ParentchainId::Integritee => self.node_api_factory.create_api()?,
+			ParentchainId::TargetA => self
 				.secondary_node_api_factory
 				.as_ref()
 				.ok_or(OCallBridgeError::SecondaryNodeNotInitialized)
@@ -155,7 +155,7 @@ mod tests {
 		let on_chain_ocall = WorkerOnChainOCall::new(mock_node_api_factory, None);
 
 		let response = on_chain_ocall
-			.worker_request(Vec::<u8>::new().encode(), ParentchainId::Teerex.encode())
+			.worker_request(Vec::<u8>::new().encode(), ParentchainId::Integritee.encode())
 			.unwrap();
 
 		assert!(!response.is_empty()); // the encoded empty vector is not empty

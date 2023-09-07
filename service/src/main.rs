@@ -454,7 +454,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	// Init parentchain specific stuff. Needed for parentchain communication.
 
 	let (parentchain_handler, last_synced_header) =
-		init_parentchain(&enclave, &node_api, &tee_accountid, ParentchainId::Teerex);
+		init_parentchain(&enclave, &node_api, &tee_accountid, ParentchainId::Integritee);
 
 	#[cfg(feature = "dcap")]
 	register_collateral(&node_api, &*enclave, &tee_accountid, is_development_mode, skip_ra);
@@ -611,7 +611,7 @@ fn init_secondary_parentchain<E>(
 		.expect("Could not fund secondary enclave account");
 
 	let (secondary_parentchain_handler, last_synced_header_secondary) =
-		init_parentchain(enclave, &node_api, tee_account_id, ParentchainId::Secondary);
+		init_parentchain(enclave, &node_api, tee_account_id, ParentchainId::TargetA);
 
 	if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
 		println!("*** [+] Finished initializing secondary light client, syncing parentchain...");

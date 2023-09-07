@@ -327,7 +327,7 @@ pub mod sgx_tests {
 			parachain_params.clone(),
 			Arc::new(OnchainMock::default()),
 			&seal,
-			ParentchainId::Teerex,
+			ParentchainId::Integritee,
 		)
 		.unwrap();
 

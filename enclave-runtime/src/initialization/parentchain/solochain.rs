@@ -60,11 +60,12 @@ impl FullSolochainHandler {
 
 		let genesis_header = params.genesis_header.clone();
 
-		let validator = itc_parentchain::light_client::io::read_or_init_grandpa_validator::<
-			SolochainBlock,
-			EnclaveOCallApi,
-			_,
-		>(params, ocall_api.clone(), &*light_client_seal, ParentchainId::Teerex)?;
+		let validator =
+			itc_parentchain::light_client::io::read_or_init_grandpa_validator::<
+				SolochainBlock,
+				EnclaveOCallApi,
+				_,
+			>(params, ocall_api.clone(), &*light_client_seal, ParentchainId::Integritee)?;
 		let validator_accessor =
 			Arc::new(EnclaveValidatorAccessor::new(validator, light_client_seal));
 

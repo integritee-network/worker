@@ -61,11 +61,12 @@ impl FullParachainHandler {
 		let genesis_header = params.genesis_header.clone();
 
 		let light_client_seal = GLOBAL_LIGHT_CLIENT_SEAL.get()?;
-		let validator = itc_parentchain::light_client::io::read_or_init_parachain_validator::<
-			ParachainBlock,
-			EnclaveOCallApi,
-			_,
-		>(params, ocall_api.clone(), &*light_client_seal, ParentchainId::Teerex)?;
+		let validator =
+			itc_parentchain::light_client::io::read_or_init_parachain_validator::<
+				ParachainBlock,
+				EnclaveOCallApi,
+				_,
+			>(params, ocall_api.clone(), &*light_client_seal, ParentchainId::Integritee)?;
 		let validator_accessor =
 			Arc::new(EnclaveValidatorAccessor::new(validator, light_client_seal));
 

@@ -231,8 +231,8 @@ pub unsafe extern "C" fn set_nonce(
 	info!("Setting the nonce of the enclave to: {} for parentchain: {:?}", *nonce, id);
 
 	let nonce_lock = match id {
-		ParentchainId::Teerex => GLOBAL_NONCE_CACHE.load_for_mutation(),
-		ParentchainId::Secondary => GLOBAL_NONCE_CACHE2.load_for_mutation(),
+		ParentchainId::Integritee => GLOBAL_NONCE_CACHE.load_for_mutation(),
+		ParentchainId::TargetA => GLOBAL_NONCE_CACHE2.load_for_mutation(),
 	};
 
 	match nonce_lock {
@@ -272,8 +272,8 @@ pub unsafe extern "C" fn set_node_metadata(
 	info!("Setting node meta data for parentchain: {:?}", id);
 
 	let node_metadata_repository = match id {
-		ParentchainId::Teerex => get_node_metadata_repository_from_teerex_solo_or_parachain(),
-		ParentchainId::Secondary => get_node_metadata_repository_from_secondary_solo_or_parachain(),
+		ParentchainId::Integritee => get_node_metadata_repository_from_teerex_solo_or_parachain(),
+		ParentchainId::TargetA => get_node_metadata_repository_from_secondary_solo_or_parachain(),
 	};
 
 	match node_metadata_repository {
@@ -499,7 +499,7 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 	}
 
 	match id {
-		ParentchainId::Teerex => {
+		ParentchainId::Integritee => {
 			if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
 				solochain_handler
 					.import_dispatcher
@@ -512,7 +512,7 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 				return Err(Error::NoTeerexParentchainAssigned)
 			};
 		},
-		ParentchainId::Secondary => {
+		ParentchainId::TargetA => {
 			if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN2_HANDLER_COMPONENT.get() {
 				solochain_handler
 					.import_dispatcher
@@ -597,7 +597,7 @@ pub unsafe extern "C" fn trigger_parentchain_block_import(
 
 fn internal_trigger_parentchain_block_import(id: &ParentchainId) -> Result<()> {
 	let _maybe_latest_block = match id {
-		ParentchainId::Teerex => {
+		ParentchainId::Integritee => {
 			if let Ok(handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
 				handler
 					.import_dispatcher
@@ -614,7 +614,7 @@ fn internal_trigger_parentchain_block_import(id: &ParentchainId) -> Result<()> {
 				return Err(Error::NoTeerexParentchainAssigned)
 			}
 		},
-		ParentchainId::Secondary => {
+		ParentchainId::TargetA => {
 			if let Ok(handler) = GLOBAL_FULL_SOLOCHAIN2_HANDLER_COMPONENT.get() {
 				handler
 					.import_dispatcher

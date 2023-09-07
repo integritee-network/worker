@@ -71,7 +71,7 @@ impl FullParachainHandler2 {
 			ParachainBlock,
 			EnclaveOCallApi,
 			_,
-		>(params, ocall_api.clone(), &*light_client_seal, ParentchainId::Secondary)?;
+		>(params, ocall_api.clone(), &*light_client_seal, ParentchainId::TargetA)?;
 		let validator_accessor =
 			Arc::new(EnclaveValidatorAccessor::new(validator, light_client_seal));
 

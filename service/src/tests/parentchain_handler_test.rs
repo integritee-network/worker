@@ -37,7 +37,7 @@ fn test_number_of_synced_blocks() {
 
 	let enclave_api_mock = EnclaveMock;
 	let parentchain_params: ParentchainInitParams =
-		(ParentchainId::Teerex, SimpleParams::new(ParentchainHeaderBuilder::default().build()))
+		(ParentchainId::Integritee, SimpleParams::new(ParentchainHeaderBuilder::default().build()))
 			.into();
 
 	let parentchain_handler = ParentchainHandler::new(

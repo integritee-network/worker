@@ -99,13 +99,13 @@ pub(crate) fn init_enclave(
 
 	let light_client_seal = Arc::new(EnclaveLightClientSeal::new(
 		base_dir.join(LIGHT_CLIENT_DB_PATH),
-		ParentchainId::Teerex,
+		ParentchainId::Integritee,
 	)?);
 	GLOBAL_LIGHT_CLIENT_SEAL.initialize(light_client_seal);
 
 	let light_client_seal2 = Arc::new(EnclaveLightClientSeal::new(
 		base_dir.join(LIGHT_CLIENT_DB2_PATH),
-		ParentchainId::Secondary,
+		ParentchainId::TargetA,
 	)?);
 	GLOBAL_LIGHT_CLIENT_SEAL2.initialize(light_client_seal2);
 

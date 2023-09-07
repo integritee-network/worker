@@ -117,8 +117,8 @@ where
 	fn storage_hashes_to_update_on_block(parentchain_id: &ParentchainId) -> Vec<Vec<u8>> {
 		// Get all shards that are currently registered.
 		match parentchain_id {
-			ParentchainId::Teerex => vec![shards_key_hash()],
-			ParentchainId::Secondary => vec![],
+			ParentchainId::Integritee => vec![shards_key_hash()],
+			ParentchainId::TargetA => vec![],
 		}
 	}
 }

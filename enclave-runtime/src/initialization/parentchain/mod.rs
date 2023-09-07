@@ -48,7 +48,7 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 ) -> Result<Vec<u8>> {
 	match ParentchainInitParams::decode(&mut encoded_params.as_slice())? {
 		ParentchainInitParams::Parachain { id, params } => match id {
-			ParentchainId::Teerex => {
+			ParentchainId::Integritee => {
 				let handler = FullParachainHandler::init::<WorkerModeProvider>(base_path, params)?;
 				let header = handler
 					.validator_accessor
@@ -56,7 +56,7 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 				GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.initialize(handler.into());
 				Ok(header.encode())
 			},
-			ParentchainId::Secondary => {
+			ParentchainId::TargetA => {
 				let handler = FullParachainHandler2::init::<WorkerModeProvider>(base_path, params)?;
 				let header = handler
 					.validator_accessor
@@ -66,7 +66,7 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 			},
 		},
 		ParentchainInitParams::Solochain { id, params } => match id {
-			ParentchainId::Teerex => {
+			ParentchainId::Integritee => {
 				let handler = FullSolochainHandler::init::<WorkerModeProvider>(base_path, params)?;
 				let header = handler
 					.validator_accessor
@@ -74,7 +74,7 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 				GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.initialize(handler.into());
 				Ok(header.encode())
 			},
-			ParentchainId::Secondary => {
+			ParentchainId::TargetA => {
 				let handler = FullSolochainHandler2::init::<WorkerModeProvider>(base_path, params)?;
 				let header = handler
 					.validator_accessor

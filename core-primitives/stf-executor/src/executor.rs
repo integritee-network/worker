@@ -180,7 +180,7 @@ where
 			}
 		}
 
-		if parentchain_id != &ParentchainId::Teerex {
+		if parentchain_id != &ParentchainId::Integritee {
 			// nothing else to do
 			return Ok(())
 		}
@@ -228,7 +228,11 @@ where
 			let per_shard_hashes = storage_hashes_to_update_per_shard(&shard_id);
 			let per_shard_update = self
 				.ocall_api
-				.get_multiple_storages_verified(per_shard_hashes, header, &ParentchainId::Teerex)
+				.get_multiple_storages_verified(
+					per_shard_hashes,
+					header,
+					&ParentchainId::Integritee,
+				)
 				.map(into_map)?;
 
 			Stf::apply_state_diff(&mut state, per_shard_update.into());

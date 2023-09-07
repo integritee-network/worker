@@ -61,6 +61,6 @@ impl ValidatorAccess<Block> for ValidatorAccessMock {
 
 impl IdentifyParentchain for ValidatorAccessMock {
 	fn parentchain_id(&self) -> ParentchainId {
-		ParentchainId::Teerex
+		ParentchainId::Integritee
 	}
 }

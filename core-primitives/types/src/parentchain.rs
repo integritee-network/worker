@@ -44,10 +44,10 @@ pub type Signature = MultiSignature;
 
 #[derive(Encode, Decode, Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ParentchainId {
-	/// Primary parentchain containing the teerex pallet.
-	Teerex,
-	/// Some secondary parentchain contaning custom business logic.
-	Secondary,
+	/// The Integritee Parentchain, the trust root of the enclave and serving finality to sidechains.
+	Integritee,
+	/// A target chain containing custom business logics.
+	TargetA,
 }
 
 pub trait IdentifyParentchain {
