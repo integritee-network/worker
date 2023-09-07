@@ -162,6 +162,7 @@ class Worker:
                                         'itp_stf_state_handler=debug,'
                                         'its_consensus_common=debug,'
                                         'its_consensus_aura=trace,'
+                                        'itc_parentchain_indirect_calls_executor=trace,'
                                         'itc_parentchain_block_importer=debug,'
                                         'ita_stf=debug')
         worker_cmd = self._assemble_cmd(flags=flags, subcommand_flags=subcommand_flags)
