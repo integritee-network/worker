@@ -110,7 +110,7 @@ impl Config {
 		format!("{}:{}", self.integritee_rpc_url, self.integritee_rpc_port)
 	}
 
-	pub fn target_a_chain_rpc_endpoint(&self) -> Option<String> {
+	pub fn target_a_parentchain_rpc_endpoint(&self) -> Option<String> {
 		if self.target_a_parentchain_rpc_url.is_some()
 			&& self.target_a_parentchain_rpc_port.is_some()
 		{

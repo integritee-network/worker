@@ -169,7 +169,7 @@ fn main() {
 	let enclave_metrics_receiver = Arc::new(EnclaveMetricsReceiver {});
 
 	let maybe_target_a_chain_api_factory = config
-		.target_a_chain_rpc_endpoint()
+		.target_a_parentchain_rpc_endpoint()
 		.map(|url| Arc::new(NodeApiFactory::new(url, AccountKeyring::Alice.pair())));
 
 	// initialize o-call bridge with a concrete factory implementation
@@ -594,7 +594,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		spawn_worker_for_shard_polling(shard, integritee_rpc_api.clone(), initialization_handler);
 	}
 
-	if let Some(url) = config.target_a_chain_rpc_endpoint() {
+	if let Some(url) = config.target_a_parentchain_rpc_endpoint() {
 		init_target_a_parentchain(&enclave, &tee_accountid, url, is_development_mode)
 	}
 
