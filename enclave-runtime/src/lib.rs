@@ -32,11 +32,12 @@ extern crate sgx_tstd as std;
 use crate::{
 	error::{Error, Result},
 	initialization::global_components::{
-		GLOBAL_FULL_PARACHAIN2_HANDLER_COMPONENT, GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT,
-		GLOBAL_FULL_SOLOCHAIN2_HANDLER_COMPONENT, GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT,
-		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
-		GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
-		INTEGRITEE_PARENTCHAIN_NONCE_CACHE, TARGET_A_PARENTCHAIN_NONCE_CACHE,
+		GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT,
+		GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT, GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT,
+		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT,
+		GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT, INTEGRITEE_PARENTCHAIN_NONCE_CACHE,
+		TARGET_A_PARENTCHAIN_NONCE_CACHE,
 	},
 	rpc::worker_api_direct::sidechain_io_handler,
 	utils::{
@@ -503,11 +504,13 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 
 	match id {
 		ParentchainId::Integritee => {
-			if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
+			if let Ok(solochain_handler) = GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT.get() {
 				solochain_handler
 					.import_dispatcher
 					.dispatch_import(blocks_to_sync, events_to_sync)?;
-			} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
+			} else if let Ok(parachain_handler) =
+				GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT.get()
+			{
 				parachain_handler
 					.import_dispatcher
 					.dispatch_import(blocks_to_sync, events_to_sync)?;
@@ -516,11 +519,12 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 			};
 		},
 		ParentchainId::TargetA => {
-			if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN2_HANDLER_COMPONENT.get() {
+			if let Ok(solochain_handler) = GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT.get() {
 				solochain_handler
 					.import_dispatcher
 					.dispatch_import(blocks_to_sync, events_to_sync)?;
-			} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN2_HANDLER_COMPONENT.get() {
+			} else if let Ok(parachain_handler) = GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT.get()
+			{
 				parachain_handler
 					.import_dispatcher
 					.dispatch_import(blocks_to_sync, events_to_sync)?;
@@ -601,13 +605,13 @@ pub unsafe extern "C" fn trigger_parentchain_block_import(
 fn internal_trigger_parentchain_block_import(id: &ParentchainId) -> Result<()> {
 	let _maybe_latest_block = match id {
 		ParentchainId::Integritee => {
-			if let Ok(handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
+			if let Ok(handler) = GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT.get() {
 				handler
 					.import_dispatcher
 					.triggered_dispatcher()
 					.ok_or(Error::ExpectedTriggeredImportDispatcher)?
 					.import_all()?
-			} else if let Ok(handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
+			} else if let Ok(handler) = GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT.get() {
 				handler
 					.import_dispatcher
 					.triggered_dispatcher()
@@ -618,13 +622,13 @@ fn internal_trigger_parentchain_block_import(id: &ParentchainId) -> Result<()> {
 			}
 		},
 		ParentchainId::TargetA => {
-			if let Ok(handler) = GLOBAL_FULL_SOLOCHAIN2_HANDLER_COMPONENT.get() {
+			if let Ok(handler) = GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT.get() {
 				handler
 					.import_dispatcher
 					.triggered_dispatcher()
 					.ok_or(Error::ExpectedTriggeredImportDispatcher)?
 					.import_all()?
-			} else if let Ok(handler) = GLOBAL_FULL_PARACHAIN2_HANDLER_COMPONENT.get() {
+			} else if let Ok(handler) = GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT.get() {
 				handler
 					.import_dispatcher
 					.triggered_dispatcher()

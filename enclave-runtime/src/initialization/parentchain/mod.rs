@@ -19,8 +19,10 @@ use crate::{
 	error::Result,
 	initialization::{
 		global_components::{
-			GLOBAL_FULL_PARACHAIN2_HANDLER_COMPONENT, GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT,
-			GLOBAL_FULL_SOLOCHAIN2_HANDLER_COMPONENT, GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT,
+			GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT,
+			GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT,
+			GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT,
+			GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT,
 		},
 		parentchain::{
 			target_a_parachain::TargetAParachainHandler,
@@ -57,7 +59,7 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 				let header = handler
 					.validator_accessor
 					.execute_on_validator(|v| v.latest_finalized_header())?;
-				GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.initialize(handler.into());
+				GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT.initialize(handler.into());
 				Ok(header.encode())
 			},
 			ParentchainId::TargetA => {
@@ -66,7 +68,7 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 				let header = handler
 					.validator_accessor
 					.execute_on_validator(|v| v.latest_finalized_header())?;
-				GLOBAL_FULL_PARACHAIN2_HANDLER_COMPONENT.initialize(handler.into());
+				GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT.initialize(handler.into());
 				Ok(header.encode())
 			},
 		},
@@ -77,7 +79,7 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 				let header = handler
 					.validator_accessor
 					.execute_on_validator(|v| v.latest_finalized_header())?;
-				GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.initialize(handler.into());
+				GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT.initialize(handler.into());
 				Ok(header.encode())
 			},
 			ParentchainId::TargetA => {
@@ -86,7 +88,7 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 				let header = handler
 					.validator_accessor
 					.execute_on_validator(|v| v.latest_finalized_header())?;
-				GLOBAL_FULL_SOLOCHAIN2_HANDLER_COMPONENT.initialize(handler.into());
+				GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT.initialize(handler.into());
 				Ok(header.encode())
 			},
 		},

@@ -347,17 +347,21 @@ lazy_static! {
 }
 
 /// Solochain Handler.
-pub static GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT: ComponentContainer<IntegriteeSolochainHandler> =
-	ComponentContainer::new("full solochain handler");
+pub static GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT: ComponentContainer<
+	IntegriteeSolochainHandler,
+> = ComponentContainer::new("integritee solochain handler");
 
-pub static GLOBAL_FULL_SOLOCHAIN2_HANDLER_COMPONENT: ComponentContainer<TargetASolochainHandler> =
-	ComponentContainer::new("full solochain 2 handler");
+pub static GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT: ComponentContainer<
+	IntegriteeParachainHandler,
+> = ComponentContainer::new("integritee parachain handler");
 
-pub static GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT: ComponentContainer<IntegriteeParachainHandler> =
-	ComponentContainer::new("full parachain handler");
+pub static GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT: ComponentContainer<
+	TargetASolochainHandler,
+> = ComponentContainer::new("target A solochain handler");
 
-pub static GLOBAL_FULL_PARACHAIN2_HANDLER_COMPONENT: ComponentContainer<TargetAParachainHandler> =
-	ComponentContainer::new("full parachain 2 handler");
+pub static GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT: ComponentContainer<
+	TargetAParachainHandler,
+> = ComponentContainer::new("target A parachain handler");
 
 // Sidechain component instances
 //-------------------------------------------------------------------------------------------------
