@@ -36,6 +36,7 @@ use crate::{
 		GLOBAL_FULL_SOLOCHAIN2_HANDLER_COMPONENT, GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT,
 		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
 		GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+		INTEGRITEE_PARENTCHAIN_NONCE_CACHE, TARGET_A_PARENTCHAIN_NONCE_CACHE,
 	},
 	rpc::worker_api_direct::sidechain_io_handler,
 	utils::{
@@ -54,9 +55,7 @@ use itc_parentchain::{
 use itp_component_container::ComponentGetter;
 use itp_import_queue::PushToQueue;
 use itp_node_api::metadata::NodeMetadata;
-use itp_nonce_cache::{
-	MutateNonce, Nonce, INTEGRITEE_PARENTCHAIN_NONCE_CACHE, TARGET_A_PARENTCHAIN_NONCE_CACHE,
-};
+use itp_nonce_cache::{MutateNonce, Nonce};
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
 use itp_sgx_crypto::key_repository::AccessPubkey;
 use itp_storage::{StorageProof, StorageProofChecker};

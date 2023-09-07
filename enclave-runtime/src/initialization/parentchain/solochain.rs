@@ -22,6 +22,7 @@ use crate::{
 			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOCallApi,
 			EnclaveStfExecutor, EnclaveValidatorAccessor, TeerexParentchainBlockImportDispatcher,
 			GLOBAL_LIGHT_CLIENT_SEAL, GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+			INTEGRITEE_PARENTCHAIN_NONCE_CACHE,
 		},
 		parentchain::common::{
 			create_extrinsics_factory, create_sidechain_triggered_import_dispatcher,
@@ -32,7 +33,6 @@ use crate::{
 };
 use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, LightClientState};
 use itp_component_container::ComponentGetter;
-use itp_nonce_cache::INTEGRITEE_PARENTCHAIN_NONCE_CACHE;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
 use itp_types::parentchain::ParentchainId;
 use std::{path::PathBuf, sync::Arc};

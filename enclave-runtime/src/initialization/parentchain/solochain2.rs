@@ -23,6 +23,7 @@ use crate::{
 			EnclaveStfExecutor, EnclaveValidatorAccessor,
 			SecondaryParentchainBlockImportDispatcher, GLOBAL_LIGHT_CLIENT_SEAL2,
 			GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+			TARGET_A_PARENTCHAIN_NONCE_CACHE,
 		},
 		parentchain::common::{
 			create_extrinsics_factory, create_secondary_offchain_immediate_import_dispatcher,
@@ -32,7 +33,6 @@ use crate::{
 };
 use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, LightClientState};
 use itp_component_container::ComponentGetter;
-use itp_nonce_cache::TARGET_A_PARENTCHAIN_NONCE_CACHE;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
 use itp_types::parentchain::ParentchainId;
 use std::{path::PathBuf, sync::Arc};

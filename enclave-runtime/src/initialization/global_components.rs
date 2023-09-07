@@ -91,9 +91,11 @@ use its_sidechain::{
 	block_composer::BlockComposer,
 	consensus_common::{BlockImportConfirmationHandler, BlockImportQueueWorker, PeerBlockSync},
 };
+use lazy_static::lazy_static;
 use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
 use sgx_tstd::vec::Vec;
 use sp_core::{ed25519, ed25519::Pair};
+use std::sync::Arc;
 
 pub type EnclaveParentchainSigner =
 	itp_node_api::api_client::StaticExtrinsicSigner<Pair, PairSignature>;
@@ -334,6 +336,14 @@ pub static GLOBAL_ATTESTATION_HANDLER_COMPONENT: ComponentContainer<EnclaveAttes
 
 /// Parentchain component instances
 ///-------------------------------------------------------------------------------------------------
+
+lazy_static! {
+	/// Global nonce cache for the Integritee Parentchain.
+	pub static ref INTEGRITEE_PARENTCHAIN_NONCE_CACHE: Arc<NonceCache> = Default::default();
+
+	/// Global nonce cache for the Target A parentchain..
+	pub static ref TARGET_A_PARENTCHAIN_NONCE_CACHE: Arc<NonceCache> = Default::default();
+}
 
 /// Solochain Handler.
 pub static GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT: ComponentContainer<FullSolochainHandler> =
