@@ -398,8 +398,8 @@ mod test {
 
 		let mut args = ArgMatches::default();
 		args.args = HashMap::from([
-			("node-server", Default::default()),
-			("node-port", Default::default()),
+			("integritee-rpc-url", Default::default()),
+			("integritee-rpc-port", Default::default()),
 			("ws-external", Default::default()),
 			("trusted-external-address", Default::default()),
 			("untrusted-external-address", Default::default()),
@@ -410,8 +410,8 @@ mod test {
 			("untrusted-http-port", Default::default()),
 		]);
 		// Workaround because MatchedArg is private.
-		args.args.get_mut("node-server").unwrap().vals = vec![node_ip.into()];
-		args.args.get_mut("node-port").unwrap().vals = vec![node_port.into()];
+		args.args.get_mut("integritee-rpc-url").unwrap().vals = vec![node_ip.into()];
+		args.args.get_mut("integritee-rpc-port").unwrap().vals = vec![node_port.into()];
 		args.args.get_mut("trusted-external-address").unwrap().vals = vec![trusted_ext_addr.into()];
 		args.args.get_mut("untrusted-external-address").unwrap().vals =
 			vec![untrusted_ext_addr.into()];
