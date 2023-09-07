@@ -28,14 +28,14 @@ use crate::{
 		EnclaveSidechainBlockSyncer, EnclaveStateFileIo, EnclaveStateHandler,
 		EnclaveStateInitializer, EnclaveStateObserver, EnclaveStateSnapshotRepository,
 		EnclaveStfEnclaveSigner, EnclaveTopPool, EnclaveTopPoolAuthor,
-		GLOBAL_ATTESTATION_HANDLER_COMPONENT, GLOBAL_LIGHT_CLIENT_SEAL, GLOBAL_LIGHT_CLIENT_SEAL2,
+		GLOBAL_ATTESTATION_HANDLER_COMPONENT, GLOBAL_INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_SEAL,
 		GLOBAL_OCALL_API_COMPONENT, GLOBAL_RPC_WS_HANDLER_COMPONENT,
 		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT,
 		GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT, GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT,
 		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
-		GLOBAL_STATE_OBSERVER_COMPONENT, GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
-		GLOBAL_WEB_SOCKET_SERVER_COMPONENT,
+		GLOBAL_STATE_OBSERVER_COMPONENT, GLOBAL_TARGET_A_PARENTCHAIN_LIGHT_CLIENT_SEAL,
+		GLOBAL_TOP_POOL_AUTHOR_COMPONENT, GLOBAL_WEB_SOCKET_SERVER_COMPONENT,
 	},
 	ocall::OcallApi,
 	rpc::{rpc_response_channel::RpcResponseChannel, worker_api_direct::public_api_rpc_handler},
@@ -102,13 +102,13 @@ pub(crate) fn init_enclave(
 		base_dir.join(INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_DB_PATH),
 		ParentchainId::Integritee,
 	)?);
-	GLOBAL_LIGHT_CLIENT_SEAL.initialize(light_client_seal);
+	GLOBAL_INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_SEAL.initialize(light_client_seal);
 
 	let light_client_seal2 = Arc::new(EnclaveLightClientSeal::new(
 		base_dir.join(TARGET_A_LIGHT_CLIENT_DB_PATH),
 		ParentchainId::TargetA,
 	)?);
-	GLOBAL_LIGHT_CLIENT_SEAL2.initialize(light_client_seal2);
+	GLOBAL_TARGET_A_PARENTCHAIN_LIGHT_CLIENT_SEAL.initialize(light_client_seal2);
 
 	let state_file_io =
 		Arc::new(EnclaveStateFileIo::new(state_key_repository, StateDir::new(base_dir)));
