@@ -147,8 +147,10 @@ fn main() {
 		)
 		.unwrap(),
 	);
-	let node_api_factory =
-		Arc::new(NodeApiFactory::new(config.node_url(), AccountKeyring::Alice.pair()));
+	let node_api_factory = Arc::new(NodeApiFactory::new(
+		config.integritee_rpc_endpoint(),
+		AccountKeyring::Alice.pair(),
+	));
 	let enclave = Arc::new(enclave_init(&config).unwrap());
 	let initialization_handler = Arc::new(InitializationHandler::default());
 	let worker = Arc::new(EnclaveWorker::new(
@@ -166,14 +168,14 @@ fn main() {
 		Arc::new(BlockFetcher::<SignedSidechainBlock, _>::new(untrusted_peer_fetcher));
 	let enclave_metrics_receiver = Arc::new(EnclaveMetricsReceiver {});
 
-	let maybe_secondary_api_factory = config
-		.secondary_node_url()
+	let maybe_target_a_chain_api_factory = config
+		.target_a_chain_rpc_endpoint()
 		.map(|url| Arc::new(NodeApiFactory::new(url, AccountKeyring::Alice.pair())));
 
 	// initialize o-call bridge with a concrete factory implementation
 	OCallBridge::initialize(Arc::new(OCallBridgeComponentFactory::new(
 		node_api_factory.clone(),
-		maybe_secondary_api_factory,
+		maybe_target_a_chain_api_factory,
 		sync_block_broadcaster,
 		enclave.clone(),
 		sidechain_blockstorage.clone(),
@@ -578,7 +580,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		spawn_worker_for_shard_polling(shard, node_api.clone(), initialization_handler);
 	}
 
-	if let Some(url) = config.secondary_node_url() {
+	if let Some(url) = config.target_a_chain_rpc_endpoint() {
 		init_secondary_parentchain(&enclave, &tee_accountid, url, is_development_mode)
 	}
 
