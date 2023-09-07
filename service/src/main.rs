@@ -457,8 +457,12 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	// ------------------------------------------------------------------------
 	// Init parentchain specific stuff. Needed for parentchain communication.
 
-	let (parentchain_handler, last_synced_header) =
-		init_parentchain(&enclave, &integritee_rpc_api, &tee_accountid, ParentchainId::Integritee);
+	let (parentchain_handler, last_synced_header) = init_integritee_parentchain(
+		&enclave,
+		&integritee_rpc_api,
+		&tee_accountid,
+		ParentchainId::Integritee,
+	);
 
 	#[cfg(feature = "dcap")]
 	register_collateral(
@@ -591,7 +595,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	}
 
 	if let Some(url) = config.target_a_chain_rpc_endpoint() {
-		init_secondary_parentchain(&enclave, &tee_accountid, url, is_development_mode)
+		init_target_a_parentchain(&enclave, &tee_accountid, url, is_development_mode)
 	}
 
 	// ------------------------------------------------------------------------
@@ -606,7 +610,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	}
 }
 
-fn init_secondary_parentchain<E>(
+fn init_target_a_parentchain<E>(
 	enclave: &Arc<E>,
 	tee_account_id: &AccountId32,
 	url: String,
@@ -623,7 +627,7 @@ fn init_secondary_parentchain<E>(
 		.expect("Could not fund secondary enclave account");
 
 	let (secondary_parentchain_handler, last_synced_header_secondary) =
-		init_parentchain(enclave, &node_api, tee_account_id, ParentchainId::TargetA);
+		init_integritee_parentchain(enclave, &node_api, tee_account_id, ParentchainId::TargetA);
 
 	if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
 		println!("*** [+] Finished initializing secondary light client, syncing parentchain...");
@@ -666,7 +670,7 @@ fn init_secondary_parentchain<E>(
 		.unwrap();
 }
 
-fn init_parentchain<E>(
+fn init_integritee_parentchain<E>(
 	enclave: &Arc<E>,
 	node_api: &ParentchainApi,
 	tee_account_id: &AccountId32,
