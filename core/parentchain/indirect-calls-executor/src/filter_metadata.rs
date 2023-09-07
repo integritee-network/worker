@@ -18,7 +18,9 @@
 use crate::{
 	error::Result,
 	event_filter::{FilterEvents, MockEvents},
-	indirect_calls::{alice_account, InvokeArgs, ShieldFundsArgs, TransferToAliceShieldsFundsArgs},
+	indirect_calls::{
+		InvokeArgs, ShieldFundsArgs, TransferToAliceShieldsFundsArgs, ALICE_ACCOUNT_ID,
+	},
 	parentchain_parser::ParseExtrinsic,
 	IndirectDispatch, IndirectExecutor,
 };
@@ -177,7 +179,7 @@ where
 		{
 			log::trace!("found `transfer` or `transfer_allow_death` call.");
 			let args = decode_and_log_error::<TransferToAliceShieldsFundsArgs>(call_args)?;
-			if args.destination == alice_account().into() {
+			if args.destination == ALICE_ACCOUNT_ID.into() {
 				Some(IndirectCall::TransferToAliceShieldsFunds(args))
 			} else {
 				log::trace!("Parentchain transfer was not for Alice; ignoring...");

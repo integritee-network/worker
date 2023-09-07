@@ -21,4 +21,4 @@ mod transfer_to_alice_shields_funds;
 
 pub use invoke::InvokeArgs;
 pub use shield_funds::ShieldFundsArgs;
-pub use transfer_to_alice_shields_funds::{alice_account, TransferToAliceShieldsFundsArgs};
+pub use transfer_to_alice_shields_funds::{TransferToAliceShieldsFundsArgs, ALICE_ACCOUNT_ID};
