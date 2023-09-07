@@ -42,11 +42,11 @@ pub mod files {
 	pub static SIDECHAIN_PURGE_LIMIT: u64 = 100; // keep the last.. sidechainblocks when purging
 
 	// used by enclave
-	/// Path to the light-client db for the teerex parentchain.
-	pub const LIGHT_CLIENT_DB_PATH: &str = "light_client_db";
+	/// Path to the light-client db for the Integritee parentchain.
+	pub const INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_DB_PATH: &str = "integritee_lcdb";
 
-	/// Path to the light-client db for the secondary parentchain.
-	pub const LIGHT_CLIENT_DB2_PATH: &str = "light_client_db2";
+	/// Path to the light-client db for the Target A parentchain.
+	pub const TARGET_A_LIGHT_CLIENT_DB_PATH: &str = "target_a_lcdb";
 
 	pub const RA_DUMP_CERT_DER_FILE: &str = "ra_dump_cert.der";
 

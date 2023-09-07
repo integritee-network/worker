@@ -61,7 +61,8 @@ use itp_attestation_handler::IntelAttestationHandler;
 use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_primitives_cache::GLOBAL_PRIMITIVES_CACHE;
 use itp_settings::files::{
-	LIGHT_CLIENT_DB2_PATH, LIGHT_CLIENT_DB_PATH, STATE_SNAPSHOTS_CACHE_SIZE,
+	INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_DB_PATH, STATE_SNAPSHOTS_CACHE_SIZE,
+	TARGET_A_LIGHT_CLIENT_DB_PATH,
 };
 use itp_sgx_crypto::{
 	get_aes_repository, get_ed25519_repository, get_rsa3072_repository, key_repository::AccessKey,
@@ -98,13 +99,13 @@ pub(crate) fn init_enclave(
 	GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.initialize(state_key_repository.clone());
 
 	let light_client_seal = Arc::new(EnclaveLightClientSeal::new(
-		base_dir.join(LIGHT_CLIENT_DB_PATH),
+		base_dir.join(INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_DB_PATH),
 		ParentchainId::Integritee,
 	)?);
 	GLOBAL_LIGHT_CLIENT_SEAL.initialize(light_client_seal);
 
 	let light_client_seal2 = Arc::new(EnclaveLightClientSeal::new(
-		base_dir.join(LIGHT_CLIENT_DB2_PATH),
+		base_dir.join(TARGET_A_LIGHT_CLIENT_DB_PATH),
 		ParentchainId::TargetA,
 	)?);
 	GLOBAL_LIGHT_CLIENT_SEAL2.initialize(light_client_seal2);
