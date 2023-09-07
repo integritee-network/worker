@@ -20,14 +20,14 @@ use crate::{
 	initialization::{
 		global_components::{
 			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOCallApi,
-			EnclaveStfExecutor, EnclaveValidatorAccessor, TeerexParentchainBlockImportDispatcher,
-			GLOBAL_INTEGRITEE_PARENTCHAIN_NONCE_CACHE, GLOBAL_LIGHT_CLIENT_SEAL,
-			GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+			EnclaveStfExecutor, EnclaveValidatorAccessor,
+			IntegriteeParentchainBlockImportDispatcher, GLOBAL_INTEGRITEE_PARENTCHAIN_NONCE_CACHE,
+			GLOBAL_LIGHT_CLIENT_SEAL, GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 		},
 		parentchain::common::{
-			create_extrinsics_factory, create_sidechain_triggered_import_dispatcher,
+			create_extrinsics_factory, create_integritee_parentchain_block_importer,
+			create_sidechain_triggered_import_dispatcher,
 			create_teerex_offchain_immediate_import_dispatcher,
-			create_teerex_parentchain_block_importer,
 		},
 	},
 };
@@ -46,7 +46,7 @@ pub struct IntegriteeParachainHandler {
 	pub stf_executor: Arc<EnclaveStfExecutor>,
 	pub validator_accessor: Arc<EnclaveValidatorAccessor>,
 	pub extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
-	pub import_dispatcher: Arc<TeerexParentchainBlockImportDispatcher>,
+	pub import_dispatcher: Arc<IntegriteeParentchainBlockImportDispatcher>,
 }
 
 impl IntegriteeParachainHandler {
@@ -84,7 +84,7 @@ impl IntegriteeParachainHandler {
 			node_metadata_repository.clone(),
 		));
 
-		let block_importer = create_teerex_parentchain_block_importer(
+		let block_importer = create_integritee_parentchain_block_importer(
 			validator_accessor.clone(),
 			stf_executor.clone(),
 			extrinsics_factory.clone(),
@@ -100,7 +100,7 @@ impl IntegriteeParachainHandler {
 			)?,
 			WorkerMode::Sidechain => create_sidechain_triggered_import_dispatcher(block_importer),
 			WorkerMode::Teeracle =>
-				Arc::new(TeerexParentchainBlockImportDispatcher::new_empty_dispatcher()),
+				Arc::new(IntegriteeParentchainBlockImportDispatcher::new_empty_dispatcher()),
 		};
 
 		let parachain_handler = Self {

@@ -18,8 +18,8 @@ use crate::{
 	error::{Error, Result},
 	initialization::global_components::{
 		EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveStfExecutor,
-		EnclaveValidatorAccessor, TeerexParentchainBlockImportDispatcher,
-		TeerexParentchainTriggeredBlockImportDispatcher,
+		EnclaveValidatorAccessor, IntegriteeParentchainBlockImportDispatcher,
+		IntegriteeParentchainTriggeredBlockImportDispatcher,
 		GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT,
 		GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT, GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT,
 		GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT,
@@ -73,7 +73,7 @@ pub unsafe fn utf8_str_from_raw<'a>(
 // FIXME: When solving #1080, these helper functions should be obsolete, because no dynamic allocation
 // is necessary anymore.
 pub(crate) fn get_triggered_dispatcher_from_solo_or_parachain(
-) -> Result<Arc<TeerexParentchainTriggeredBlockImportDispatcher>> {
+) -> Result<Arc<IntegriteeParentchainTriggeredBlockImportDispatcher>> {
 	let dispatcher =
 		if let Ok(solochain_handler) = GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT.get() {
 			get_triggered_dispatcher(solochain_handler.import_dispatcher.clone())?
@@ -86,8 +86,8 @@ pub(crate) fn get_triggered_dispatcher_from_solo_or_parachain(
 }
 
 pub(crate) fn get_triggered_dispatcher(
-	dispatcher: Arc<TeerexParentchainBlockImportDispatcher>,
-) -> Result<Arc<TeerexParentchainTriggeredBlockImportDispatcher>> {
+	dispatcher: Arc<IntegriteeParentchainBlockImportDispatcher>,
+) -> Result<Arc<IntegriteeParentchainTriggeredBlockImportDispatcher>> {
 	let triggered_dispatcher = dispatcher
 		.triggered_dispatcher()
 		.ok_or(Error::ExpectedTriggeredImportDispatcher)?;

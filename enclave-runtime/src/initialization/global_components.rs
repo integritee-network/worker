@@ -169,29 +169,29 @@ pub type EnclaveParentchainEventImportQueue = ImportQueue<Vec<u8>>;
 
 // Stuff for the integritee parentchain
 
-pub type TeerexParentchainIndirectExecutor =
+pub type IntegriteeParentchainIndirectExecutor =
 	EnclaveIndirectCallsExecutor<ShieldFundsAndInvokeFilter<ParentchainExtrinsicParser>>;
 
-pub type TeerexParentchainBlockImporter = ParentchainBlockImporter<
+pub type IntegriteeParentchainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
 	EnclaveValidatorAccessor,
 	EnclaveStfExecutor,
 	EnclaveExtrinsicsFactory,
-	TeerexParentchainIndirectExecutor,
+	IntegriteeParentchainIndirectExecutor,
 >;
 
-pub type TeerexParentchainTriggeredBlockImportDispatcher = TriggeredDispatcher<
-	TeerexParentchainBlockImporter,
+pub type IntegriteeParentchainTriggeredBlockImportDispatcher = TriggeredDispatcher<
+	IntegriteeParentchainBlockImporter,
 	EnclaveParentchainBlockImportQueue,
 	EnclaveParentchainEventImportQueue,
 >;
 
-pub type TeerexParentchainImmediateBlockImportDispatcher =
-	ImmediateDispatcher<TeerexParentchainBlockImporter>;
+pub type IntegriteeParentchainImmediateBlockImportDispatcher =
+	ImmediateDispatcher<IntegriteeParentchainBlockImporter>;
 
-pub type TeerexParentchainBlockImportDispatcher = BlockImportDispatcher<
-	TeerexParentchainTriggeredBlockImportDispatcher,
-	TeerexParentchainImmediateBlockImportDispatcher,
+pub type IntegriteeParentchainBlockImportDispatcher = BlockImportDispatcher<
+	IntegriteeParentchainTriggeredBlockImportDispatcher,
+	IntegriteeParentchainImmediateBlockImportDispatcher,
 >;
 
 // Stuff for the secondary parentchain
@@ -213,7 +213,7 @@ pub type SecondaryParentchainBlockImporter = ParentchainBlockImporter<
 >;
 
 pub type SecondaryParentchainTriggeredBlockImportDispatcher = TriggeredDispatcher<
-	TeerexParentchainBlockImporter,
+	IntegriteeParentchainBlockImporter,
 	EnclaveParentchainBlockImportQueue,
 	EnclaveParentchainEventImportQueue,
 >;
@@ -247,7 +247,7 @@ pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 	EnclaveStateKeyRepository,
 	EnclaveTopPoolAuthor,
 	// For now the sidechain does only support one parentchain.
-	TeerexParentchainTriggeredBlockImportDispatcher,
+	IntegriteeParentchainTriggeredBlockImportDispatcher,
 >;
 pub type EnclaveSidechainBlockImportQueue = ImportQueue<SignedSidechainBlock>;
 pub type EnclaveBlockImportConfirmationHandler = BlockImportConfirmationHandler<
