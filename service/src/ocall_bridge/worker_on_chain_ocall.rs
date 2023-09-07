@@ -27,22 +27,25 @@ use std::{sync::Arc, vec::Vec};
 use substrate_api_client::{serde_impls::StorageKey, GetStorage, SubmitExtrinsic};
 
 pub struct WorkerOnChainOCall<F> {
-	node_api_factory: Arc<F>,
-	secondary_node_api_factory: Option<Arc<F>>,
+	integritee_api_factory: Arc<F>,
+	target_a_parentchain_api_factory: Option<Arc<F>>,
 }
 
 impl<F> WorkerOnChainOCall<F> {
-	pub fn new(node_api_factory: Arc<F>, secondary_node_api_factory: Option<Arc<F>>) -> Self {
-		WorkerOnChainOCall { node_api_factory, secondary_node_api_factory }
+	pub fn new(
+		integritee_api_factory: Arc<F>,
+		target_a_parentchain_api_factory: Option<Arc<F>>,
+	) -> Self {
+		WorkerOnChainOCall { integritee_api_factory, target_a_parentchain_api_factory }
 	}
 }
 
 impl<F: CreateNodeApi> WorkerOnChainOCall<F> {
 	pub fn create_api(&self, parentchain_id: ParentchainId) -> OCallBridgeResult<ParentchainApi> {
 		Ok(match parentchain_id {
-			ParentchainId::Integritee => self.node_api_factory.create_api()?,
+			ParentchainId::Integritee => self.integritee_api_factory.create_api()?,
 			ParentchainId::TargetA => self
-				.secondary_node_api_factory
+				.target_a_parentchain_api_factory
 				.as_ref()
 				.ok_or(OCallBridgeError::TargetAParentchainNotInitialized)
 				.and_then(|f| f.create_api().map_err(Into::into))?,
