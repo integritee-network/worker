@@ -24,10 +24,10 @@ while getopts ":m:p:A:B:u:W:V:x:y:C:" opt; do
             WORKER_2_URL=$OPTARG
             ;;
         x)
-            TARGET_A_CHAIN_RPC_URL=$OPTARG
+            TARGET_A_PARENTCHAIN_RPC_URL=$OPTARG
             ;;
         y)
-            TARGET_A_CHAIN_RPC_PORT=$OPTARG
+            TARGET_A_PARENTCHAIN_RPC_PORT=$OPTARG
             ;;
         C)
             CLIENT_BIN=$OPTARG
@@ -41,8 +41,8 @@ done
 # Using default port if none given as arguments.
 INTEGRITEE_RPC_PORT=${INTEGRITEE_RPC_PORT:-9944}
 INTEGRITEE_RPC_URL=${INTEGRITEE_RPC_URL:-"ws://127.0.0.1"}
-TARGET_A_CHAIN_RPC_PORT=${TARGET_A_CHAIN_RPC_PORT:-9966}
-TARGET_A_CHAIN_RPC_URL=${TARGET_A_CHAIN_RPC_URL:-"ws://127.0.0.1"}
+TARGET_A_PARENTCHAIN_RPC_PORT=${TARGET_A_PARENTCHAIN_RPC_PORT:-9966}
+TARGET_A_PARENTCHAIN_RPC_URL=${TARGET_A_PARENTCHAIN_RPC_URL:-"ws://127.0.0.1"}
 
 WORKER_1_PORT=${WORKER_1_PORT:-2000}
 WORKER_1_URL=${WORKER_1_URL:-"wss://127.0.0.1"}
@@ -55,7 +55,7 @@ CLIENT_BIN=${CLIENT_BIN:-"./../bin/integritee-cli"}
 echo "Using client binary ${CLIENT_BIN}"
 ${CLIENT_BIN} --version
 echo "Using node uri ${INTEGRITEE_RPC_URL}:${INTEGRITEE_RPC_PORT}"
-echo "Using node 2 uri ${TARGET_A_CHAIN_RPC_URL}:${TARGET_A_CHAIN_RPC_PORT}"
+echo "Using node 2 uri ${TARGET_A_PARENTCHAIN_RPC_URL}:${TARGET_A_PARENTCHAIN_RPC_PORT}"
 echo "Using trusted-worker 1 uri ${WORKER_1_URL}:${WORKER_1_PORT}"
 echo "Using trusted-worker 2 uri ${WORKER_2_URL}:${WORKER_2_PORT}"
 echo ""
@@ -69,7 +69,7 @@ AMOUNT_TRANSFER=$(( 2 * UNIT ))
 AMOUNT_UNSHIELD=$(( 1 * UNIT ))
 
 CLIENT="${CLIENT_BIN} -p ${INTEGRITEE_RPC_PORT} -P ${WORKER_1_PORT} -u ${INTEGRITEE_RPC_URL} -U ${WORKER_1_URL}"
-CLIENT2="${CLIENT_BIN} -p ${TARGET_A_CHAIN_RPC_PORT} -P ${WORKER_1_PORT} -u ${TARGET_A_CHAIN_RPC_URL} -U ${WORKER_1_URL}"
+CLIENT2="${CLIENT_BIN} -p ${TARGET_A_PARENTCHAIN_RPC_PORT} -P ${WORKER_1_PORT} -u ${TARGET_A_PARENTCHAIN_RPC_URL} -U ${WORKER_1_URL}"
 
 # interval and max rounds to wait to check the given account balance in sidechain
 WAIT_INTERVAL_SECONDS=10

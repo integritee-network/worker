@@ -24,13 +24,13 @@ args:
           help: Set the port of the Integritee RPC endpoint.
           takes_value: true
           default_value: "9944"
-    - target-a-chain-rpc-url:
-          long: target-a-chain-rpc-url
+    - target-a-parentchain-rpc-url:
+          long: target-a-parentchain-rpc-url
           help: Set the url and the protocol of an optional Target A parentchain RPC endpoint that contains your business logic specific pallets.
           takes_value: true
           required: false
-    - target-a-chain-rpc-port:
-          long: target-a-chain-rpc-port
+    - target-a-parentchain-rpc-port:
+          long: target-a-parentchain-rpc-port
           help: Set the port of the optional Target A parentchain RPC endpoint.
           takes_value: true
           required: false

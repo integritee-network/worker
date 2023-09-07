@@ -168,14 +168,14 @@ fn main() {
 		Arc::new(BlockFetcher::<SignedSidechainBlock, _>::new(untrusted_peer_fetcher));
 	let enclave_metrics_receiver = Arc::new(EnclaveMetricsReceiver {});
 
-	let maybe_target_a_chain_api_factory = config
+	let maybe_target_a_parentchain_api_factory = config
 		.target_a_parentchain_rpc_endpoint()
 		.map(|url| Arc::new(NodeApiFactory::new(url, AccountKeyring::Alice.pair())));
 
 	// initialize o-call bridge with a concrete factory implementation
 	OCallBridge::initialize(Arc::new(OCallBridgeComponentFactory::new(
 		node_api_factory.clone(),
-		maybe_target_a_chain_api_factory,
+		maybe_target_a_parentchain_api_factory,
 		sync_block_broadcaster,
 		enclave.clone(),
 		sidechain_blockstorage.clone(),

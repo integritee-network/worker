@@ -54,7 +54,7 @@ pub struct OCallBridgeComponentFactory<
 	MetricsReceiver,
 > {
 	integritee_rpc_api_factory: Arc<NodeApi>,
-	target_a_chain_rpc_api_factory: Option<Arc<NodeApi>>,
+	target_a_parentchain_rpc_api_factory: Option<Arc<NodeApi>>,
 	block_broadcaster: Arc<Broadcaster>,
 	enclave_api: Arc<EnclaveApi>,
 	block_storage: Arc<Storage>,
@@ -88,7 +88,7 @@ impl<
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
 		integritee_rpc_api_factory: Arc<NodeApi>,
-		target_a_chain_rpc_api_factory: Option<Arc<NodeApi>>,
+		target_a_parentchain_rpc_api_factory: Option<Arc<NodeApi>>,
 		block_broadcaster: Arc<Broadcaster>,
 		enclave_api: Arc<EnclaveApi>,
 		block_storage: Arc<Storage>,
@@ -99,7 +99,7 @@ impl<
 	) -> Self {
 		OCallBridgeComponentFactory {
 			integritee_rpc_api_factory,
-			target_a_chain_rpc_api_factory,
+			target_a_parentchain_rpc_api_factory,
 			block_broadcaster,
 			enclave_api,
 			block_storage,
@@ -157,7 +157,7 @@ impl<
 	fn get_oc_api(&self) -> Arc<dyn WorkerOnChainBridge> {
 		Arc::new(WorkerOnChainOCall::new(
 			self.integritee_rpc_api_factory.clone(),
-			self.target_a_chain_rpc_api_factory.clone(),
+			self.target_a_parentchain_rpc_api_factory.clone(),
 		))
 	}
 

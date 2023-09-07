@@ -215,8 +215,8 @@ impl From<&ArgMatches<'_>> for Config {
 		Self::new(
 			m.value_of("integritee-rpc-url").unwrap_or(DEFAULT_INTEGRITEE_RPC_URL).into(),
 			m.value_of("integritee-rpc-port").unwrap_or(DEFAULT_INTEGRITEE_RPC_PORT).into(),
-			m.value_of("target-a-chain-rpc-url").map(Into::into),
-			m.value_of("target-a-chain-rpc-port").map(Into::into),
+			m.value_of("target-a-parentchain-rpc-url").map(Into::into),
+			m.value_of("target-a-parentchain-rpc-port").map(Into::into),
 			if m.is_present("ws-external") { "0.0.0.0".into() } else { "127.0.0.1".into() },
 			m.value_of("trusted-external-address")
 				.map(|url| add_port_if_necessary(url, trusted_port)),
