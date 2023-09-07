@@ -285,8 +285,8 @@ pub type EnclaveOffchainWorkerExecutor = itc_offchain_worker_executor::executor:
 	EnclaveStf,
 >;
 
-/// Base component instances
-///-------------------------------------------------------------------------------------------------
+// Base component instances
+//-------------------------------------------------------------------------------------------------
 
 /// State key repository
 pub static GLOBAL_STATE_KEY_REPOSITORY_COMPONENT: ComponentContainer<EnclaveStateKeyRepository> =
@@ -334,8 +334,8 @@ pub static GLOBAL_TOP_POOL_AUTHOR_COMPONENT: ComponentContainer<EnclaveTopPoolAu
 pub static GLOBAL_ATTESTATION_HANDLER_COMPONENT: ComponentContainer<EnclaveAttestationHandler> =
 	ComponentContainer::new("Attestation handler");
 
-/// Parentchain component instances
-///-------------------------------------------------------------------------------------------------
+// Parentchain component instances
+//-------------------------------------------------------------------------------------------------
 
 lazy_static! {
 	/// Global nonce cache for the Integritee Parentchain.
@@ -358,8 +358,8 @@ pub static GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT: ComponentContainer<FullParac
 pub static GLOBAL_FULL_PARACHAIN2_HANDLER_COMPONENT: ComponentContainer<FullParachainHandler2> =
 	ComponentContainer::new("full parachain 2 handler");
 
-/// Sidechain component instances
-///-------------------------------------------------------------------------------------------------
+// Sidechain component instances
+//-------------------------------------------------------------------------------------------------
 
 /// Enclave RPC WS handler.
 pub static GLOBAL_RPC_WS_HANDLER_COMPONENT: ComponentContainer<EnclaveRpcWsHandler> =
