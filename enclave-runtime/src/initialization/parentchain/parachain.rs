@@ -32,7 +32,7 @@ use crate::{
 };
 use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, LightClientState};
 use itp_component_container::ComponentGetter;
-use itp_nonce_cache::GLOBAL_NONCE_CACHE;
+use itp_nonce_cache::INTEGRITEE_PARENTCHAIN_NONCE_CACHE;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
 use itp_types::parentchain::ParentchainId;
 use std::{path::PathBuf, sync::Arc};
@@ -74,7 +74,7 @@ impl FullParachainHandler {
 
 		let extrinsics_factory = create_extrinsics_factory(
 			genesis_hash,
-			GLOBAL_NONCE_CACHE.clone(),
+			INTEGRITEE_PARENTCHAIN_NONCE_CACHE.clone(),
 			node_metadata_repository.clone(),
 		)?;
 

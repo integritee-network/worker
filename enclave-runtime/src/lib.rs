@@ -54,7 +54,9 @@ use itc_parentchain::{
 use itp_component_container::ComponentGetter;
 use itp_import_queue::PushToQueue;
 use itp_node_api::metadata::NodeMetadata;
-use itp_nonce_cache::{MutateNonce, Nonce, GLOBAL_NONCE_CACHE, GLOBAL_NONCE_CACHE2};
+use itp_nonce_cache::{
+	MutateNonce, Nonce, INTEGRITEE_PARENTCHAIN_NONCE_CACHE, TARGET_A_PARENTCHAIN_NONCE_CACHE,
+};
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
 use itp_sgx_crypto::key_repository::AccessPubkey;
 use itp_storage::{StorageProof, StorageProofChecker};
@@ -232,8 +234,8 @@ pub unsafe extern "C" fn set_nonce(
 	info!("Setting the nonce of the enclave to: {} for parentchain: {:?}", *nonce, id);
 
 	let nonce_lock = match id {
-		ParentchainId::Integritee => GLOBAL_NONCE_CACHE.load_for_mutation(),
-		ParentchainId::TargetA => GLOBAL_NONCE_CACHE2.load_for_mutation(),
+		ParentchainId::Integritee => INTEGRITEE_PARENTCHAIN_NONCE_CACHE.load_for_mutation(),
+		ParentchainId::TargetA => TARGET_A_PARENTCHAIN_NONCE_CACHE.load_for_mutation(),
 	};
 
 	match nonce_lock {
