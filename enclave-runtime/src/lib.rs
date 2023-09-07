@@ -41,8 +41,7 @@ use crate::{
 	rpc::worker_api_direct::sidechain_io_handler,
 	utils::{
 		get_node_metadata_repository_from_integritee_solo_or_parachain,
-		get_node_metadata_repository_from_secondary_solo_or_parachain, utf8_str_from_raw,
-		DecodeRaw,
+		get_node_metadata_repository_from_target_a_solo_or_parachain, utf8_str_from_raw, DecodeRaw,
 	},
 };
 use codec::Decode;
@@ -276,7 +275,7 @@ pub unsafe extern "C" fn set_node_metadata(
 	let node_metadata_repository = match id {
 		ParentchainId::Integritee =>
 			get_node_metadata_repository_from_integritee_solo_or_parachain(),
-		ParentchainId::TargetA => get_node_metadata_repository_from_secondary_solo_or_parachain(),
+		ParentchainId::TargetA => get_node_metadata_repository_from_target_a_solo_or_parachain(),
 	};
 
 	match node_metadata_repository {

@@ -73,7 +73,7 @@ pub(crate) fn create_integritee_parentchain_block_importer(
 	))
 }
 
-pub(crate) fn create_secondary_parentchain_block_importer(
+pub(crate) fn create_target_a_parentchain_block_importer(
 	validator_access: Arc<EnclaveValidatorAccessor>,
 	stf_executor: Arc<EnclaveStfExecutor>,
 	extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
@@ -119,7 +119,7 @@ pub(crate) fn create_extrinsics_factory(
 	)))
 }
 
-pub(crate) fn create_teerex_offchain_immediate_import_dispatcher(
+pub(crate) fn create_integritee_offchain_immediate_import_dispatcher(
 	stf_executor: Arc<EnclaveStfExecutor>,
 	block_importer: IntegriteeParentchainBlockImporter,
 	validator_access: Arc<EnclaveValidatorAccessor>,
@@ -149,7 +149,7 @@ pub(crate) fn create_teerex_offchain_immediate_import_dispatcher(
 	))))
 }
 
-pub(crate) fn create_secondary_offchain_immediate_import_dispatcher(
+pub(crate) fn create_target_a_offchain_immediate_import_dispatcher(
 	stf_executor: Arc<EnclaveStfExecutor>,
 	block_importer: TargetAParentchainBlockImporter,
 	validator_access: Arc<EnclaveValidatorAccessor>,

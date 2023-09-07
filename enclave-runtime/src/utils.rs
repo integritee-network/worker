@@ -120,7 +120,7 @@ pub(crate) fn get_node_metadata_repository_from_integritee_solo_or_parachain(
 	Ok(metadata_repository)
 }
 
-pub(crate) fn get_node_metadata_repository_from_secondary_solo_or_parachain(
+pub(crate) fn get_node_metadata_repository_from_target_a_solo_or_parachain(
 ) -> Result<Arc<EnclaveNodeMetadataRepository>> {
 	let metadata_repository =
 		if let Ok(solochain_handler) = GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT.get() {

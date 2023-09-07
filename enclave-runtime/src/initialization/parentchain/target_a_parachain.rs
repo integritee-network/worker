@@ -31,8 +31,8 @@ use crate::{
 			GLOBAL_TARGET_A_PARENTCHAIN_LIGHT_CLIENT_SEAL, GLOBAL_TARGET_A_PARENTCHAIN_NONCE_CACHE,
 		},
 		parentchain::common::{
-			create_extrinsics_factory, create_secondary_offchain_immediate_import_dispatcher,
-			create_secondary_parentchain_block_importer,
+			create_extrinsics_factory, create_target_a_offchain_immediate_import_dispatcher,
+			create_target_a_parentchain_block_importer,
 		},
 	},
 };
@@ -88,7 +88,7 @@ impl TargetAParachainHandler {
 			node_metadata_repository.clone(),
 		));
 
-		let block_importer = create_secondary_parentchain_block_importer(
+		let block_importer = create_target_a_parentchain_block_importer(
 			validator_accessor.clone(),
 			stf_executor.clone(),
 			extrinsics_factory.clone(),
@@ -96,14 +96,14 @@ impl TargetAParachainHandler {
 		)?;
 
 		let import_dispatcher = match WorkerModeProvider::worker_mode() {
-			WorkerMode::OffChainWorker => create_secondary_offchain_immediate_import_dispatcher(
+			WorkerMode::OffChainWorker => create_target_a_offchain_immediate_import_dispatcher(
 				stf_executor.clone(),
 				block_importer,
 				validator_accessor.clone(),
 				extrinsics_factory.clone(),
 			)?,
 			WorkerMode::Sidechain =>
-				unimplemented!("Can't run secondary chain in sidechain mode yet."),
+				unimplemented!("Can't run target a chain in sidechain mode yet."),
 			WorkerMode::Teeracle =>
 				Arc::new(TargetAParentchainBlockImportDispatcher::new_empty_dispatcher()),
 		};
