@@ -304,15 +304,15 @@ pub static GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT: ComponentContainer<
 	EnclaveSigningKeyRepository,
 > = ComponentContainer::new("Signing key repository");
 
-/// Light client db seal for the first parentchain
+/// Light client db seal for the Integritee parentchain
 pub static GLOBAL_INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_SEAL: ComponentContainer<
 	EnclaveLightClientSeal,
-> = ComponentContainer::new("EnclaveLightClientSealSync");
+> = ComponentContainer::new("Integritee Parentchain EnclaveLightClientSealSync");
 
-/// Light client db seal for the second parentchain.
+/// Light client db seal for the Target A parentchain.
 pub static GLOBAL_TARGET_A_PARENTCHAIN_LIGHT_CLIENT_SEAL: ComponentContainer<
 	EnclaveLightClientSeal,
-> = ComponentContainer::new("EnclaveLightClientSealSync 2");
+> = ComponentContainer::new("Target A EnclaveLightClientSealSync");
 
 /// O-Call API
 pub static GLOBAL_OCALL_API_COMPONENT: ComponentContainer<EnclaveOCallApi> =
