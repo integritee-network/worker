@@ -78,7 +78,7 @@ pub(crate) fn get_triggered_dispatcher_from_solo_or_parachain(
 	} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
 		get_triggered_dispatcher(parachain_handler.import_dispatcher.clone())?
 	} else {
-		return Err(Error::NoTeerexParentchainAssigned)
+		return Err(Error::NoIntegriteeParentchainAssigned)
 	};
 	Ok(dispatcher)
 }
@@ -100,7 +100,7 @@ pub(crate) fn get_validator_accessor_from_solo_or_parachain(
 		} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
 			parachain_handler.validator_accessor.clone()
 		} else {
-			return Err(Error::NoTeerexParentchainAssigned)
+			return Err(Error::NoIntegriteeParentchainAssigned)
 		};
 	Ok(validator_accessor)
 }
@@ -113,7 +113,7 @@ pub(crate) fn get_node_metadata_repository_from_integritee_solo_or_parachain(
 		} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
 			parachain_handler.node_metadata_repository.clone()
 		} else {
-			return Err(Error::NoTeerexParentchainAssigned)
+			return Err(Error::NoIntegriteeParentchainAssigned)
 		};
 	Ok(metadata_repository)
 }
@@ -139,7 +139,7 @@ pub(crate) fn get_extrinsic_factory_from_solo_or_parachain() -> Result<Arc<Encla
 		} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
 			parachain_handler.extrinsics_factory.clone()
 		} else {
-			return Err(Error::NoTeerexParentchainAssigned)
+			return Err(Error::NoIntegriteeParentchainAssigned)
 		};
 	Ok(extrinsics_factory)
 }
@@ -151,7 +151,7 @@ pub(crate) fn get_stf_executor_from_solo_or_parachain() -> Result<Arc<EnclaveStf
 	} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
 		parachain_handler.stf_executor.clone()
 	} else {
-		return Err(Error::NoTeerexParentchainAssigned)
+		return Err(Error::NoIntegriteeParentchainAssigned)
 	};
 	Ok(stf_executor)
 }

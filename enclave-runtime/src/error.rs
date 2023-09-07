@@ -41,7 +41,7 @@ pub enum Error {
 	ParentchainBlockImportDispatch(itc_parentchain::block_import_dispatcher::error::Error),
 	ExpectedTriggeredImportDispatcher,
 	CouldNotDispatchBlockImport,
-	NoTeerexParentchainAssigned,
+	NoIntegriteeParentchainAssigned,
 	NoSecondaryParentchainAssigned,
 	ParentChainValidation(itp_storage::error::Error),
 	ParentChainSync,

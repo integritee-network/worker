@@ -39,8 +39,9 @@ use crate::{
 	},
 	rpc::worker_api_direct::sidechain_io_handler,
 	utils::{
-		get_node_metadata_repository_from_secondary_solo_or_parachain,
-		get_node_metadata_repository_from_integritee_solo_or_parachain, utf8_str_from_raw, DecodeRaw,
+		get_node_metadata_repository_from_integritee_solo_or_parachain,
+		get_node_metadata_repository_from_secondary_solo_or_parachain, utf8_str_from_raw,
+		DecodeRaw,
 	},
 };
 use codec::Decode;
@@ -272,7 +273,8 @@ pub unsafe extern "C" fn set_node_metadata(
 	info!("Setting node meta data for parentchain: {:?}", id);
 
 	let node_metadata_repository = match id {
-		ParentchainId::Integritee => get_node_metadata_repository_from_integritee_solo_or_parachain(),
+		ParentchainId::Integritee =>
+			get_node_metadata_repository_from_integritee_solo_or_parachain(),
 		ParentchainId::TargetA => get_node_metadata_repository_from_secondary_solo_or_parachain(),
 	};
 
@@ -509,7 +511,7 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 					.import_dispatcher
 					.dispatch_import(blocks_to_sync, events_to_sync)?;
 			} else {
-				return Err(Error::NoTeerexParentchainAssigned)
+				return Err(Error::NoIntegriteeParentchainAssigned)
 			};
 		},
 		ParentchainId::TargetA => {
@@ -611,7 +613,7 @@ fn internal_trigger_parentchain_block_import(id: &ParentchainId) -> Result<()> {
 					.ok_or(Error::ExpectedTriggeredImportDispatcher)?
 					.import_all()?
 			} else {
-				return Err(Error::NoTeerexParentchainAssigned)
+				return Err(Error::NoIntegriteeParentchainAssigned)
 			}
 		},
 		ParentchainId::TargetA => {
