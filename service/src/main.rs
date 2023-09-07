@@ -497,14 +497,15 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	};
 
 	#[cfg(feature = "dcap")]
-	enclave2.set_sgx_qpl_logging().expect("QPL logging setup failed");
+	enclave.set_sgx_qpl_logging().expect("QPL logging setup failed");
+
+	let enclave2 = enclave.clone();
 	#[cfg(not(feature = "dcap"))]
 	let register_xt = move || enclave2.generate_ias_ra_extrinsic(&trusted_url, skip_ra).unwrap();
 	#[cfg(feature = "dcap")]
 	let register_xt = move || enclave2.generate_dcap_ra_extrinsic(&trusted_url, skip_ra).unwrap();
 
 	// clones because of the move
-	let enclave2 = enclave.clone();
 	let node_api2 = integritee_rpc_api.clone();
 	let tee_accountid_clone = tee_accountid.clone();
 	let send_register_xt = move || {
