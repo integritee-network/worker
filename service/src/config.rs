@@ -26,8 +26,8 @@ use std::{
 	time::Duration,
 };
 
-static DEFAULT_NODE_SERVER: &str = "ws://127.0.0.1";
-static DEFAULT_NODE_PORT: &str = "9944";
+static DEFAULT_INTEGRITEE_RPC_URL: &str = "ws://127.0.0.1";
+static DEFAULT_INTEGRITEE_RPC_PORT: &str = "9944";
 static DEFAULT_TRUSTED_PORT: &str = "2000";
 static DEFAULT_UNTRUSTED_PORT: &str = "2001";
 static DEFAULT_MU_RA_PORT: &str = "3443";
@@ -36,10 +36,10 @@ static DEFAULT_UNTRUSTED_HTTP_PORT: &str = "4545";
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Config {
-	node_ip: String,
-	node_port: String,
-	secondary_node_url: Option<String>,
-	secondary_node_port: Option<String>,
+	integritee_rpc_url: String,
+	integritee_rpc_port: String,
+	target_a_parentchain_rpc_url: Option<String>,
+	target_a_parentchain_rpc_port: Option<String>,
 	worker_ip: String,
 	/// Trusted worker address that will be advertised on the parentchain.
 	trusted_external_worker_address: Option<String>,
@@ -68,10 +68,10 @@ pub struct Config {
 #[allow(clippy::too_many_arguments)]
 impl Config {
 	pub fn new(
-		node_ip: String,
-		node_port: String,
-		secondary_node_url: Option<String>,
-		secondary_node_port: Option<String>,
+		integritee_rpc_url: String,
+		integritee_rpc_port: String,
+		target_a_parentchain_rpc_url: Option<String>,
+		target_a_parentchain_rpc_port: Option<String>,
 		worker_ip: String,
 		trusted_external_worker_address: Option<String>,
 		trusted_worker_port: String,
@@ -86,10 +86,10 @@ impl Config {
 		run_config: Option<RunConfig>,
 	) -> Self {
 		Self {
-			node_ip,
-			node_port,
-			secondary_node_url,
-			secondary_node_port,
+			integritee_rpc_url,
+			integritee_rpc_port,
+			target_a_parentchain_rpc_url,
+			target_a_parentchain_rpc_port,
 			worker_ip,
 			trusted_external_worker_address,
 			trusted_worker_port,
@@ -107,16 +107,18 @@ impl Config {
 
 	/// Returns the client url of the node (including ws://).
 	pub fn node_url(&self) -> String {
-		format!("{}:{}", self.node_ip, self.node_port)
+		format!("{}:{}", self.integritee_rpc_url, self.integritee_rpc_port)
 	}
 
 	pub fn secondary_node_url(&self) -> Option<String> {
-		if self.secondary_node_url.is_some() && self.secondary_node_port.is_some() {
+		if self.target_a_parentchain_rpc_url.is_some()
+			&& self.target_a_parentchain_rpc_port.is_some()
+		{
 			return Some(format!(
 				"{}:{}",
 				// Can be done better, but this code is obsolete anyhow with clap v4.
-				self.secondary_node_url.clone().unwrap(),
-				self.secondary_node_port.clone().unwrap()
+				self.target_a_parentchain_rpc_url.clone().unwrap(),
+				self.target_a_parentchain_rpc_port.clone().unwrap()
 			))
 		};
 
@@ -211,10 +213,10 @@ impl From<&ArgMatches<'_>> for Config {
 		let run_config = m.subcommand_matches("run").map(RunConfig::from);
 
 		Self::new(
-			m.value_of("node-server").unwrap_or(DEFAULT_NODE_SERVER).into(),
-			m.value_of("node-port").unwrap_or(DEFAULT_NODE_PORT).into(),
-			m.value_of("secondary-node-url").map(Into::into),
-			m.value_of("secondary-node-port").map(Into::into),
+			m.value_of("integritee-rpc-url").unwrap_or(DEFAULT_INTEGRITEE_RPC_URL).into(),
+			m.value_of("integritee-rpc-port").unwrap_or(DEFAULT_INTEGRITEE_RPC_PORT).into(),
+			m.value_of("target-a-chain-rpc-url").map(Into::into),
+			m.value_of("target-a-chain-rpc-port").map(Into::into),
 			if m.is_present("ws-external") { "0.0.0.0".into() } else { "127.0.0.1".into() },
 			m.value_of("trusted-external-address")
 				.map(|url| add_port_if_necessary(url, trusted_port)),
@@ -354,10 +356,10 @@ mod test {
 		let config = Config::from(&empty_args);
 		let expected_worker_ip = "127.0.0.1";
 
-		assert_eq!(config.node_ip, DEFAULT_NODE_SERVER);
-		assert_eq!(config.node_port, DEFAULT_NODE_PORT);
-		assert_eq!(config.secondary_node_url, None);
-		assert_eq!(config.secondary_node_port, None);
+		assert_eq!(config.integritee_rpc_url, DEFAULT_INTEGRITEE_RPC_URL);
+		assert_eq!(config.integritee_rpc_port, DEFAULT_INTEGRITEE_RPC_PORT);
+		assert_eq!(config.target_a_parentchain_rpc_url, None);
+		assert_eq!(config.target_a_parentchain_rpc_port, None);
 		assert_eq!(config.trusted_worker_port, DEFAULT_TRUSTED_PORT);
 		assert_eq!(config.untrusted_worker_port, DEFAULT_UNTRUSTED_PORT);
 		assert_eq!(config.mu_ra_port, DEFAULT_MU_RA_PORT);
@@ -421,8 +423,8 @@ mod test {
 
 		let config = Config::from(&args);
 
-		assert_eq!(config.node_ip, node_ip);
-		assert_eq!(config.node_port, node_port);
+		assert_eq!(config.integritee_rpc_url, node_ip);
+		assert_eq!(config.integritee_rpc_port, node_port);
 		assert_eq!(config.trusted_worker_port, trusted_port);
 		assert_eq!(config.untrusted_worker_port, untrusted_port);
 		assert_eq!(config.mu_ra_port, mu_ra_port);
