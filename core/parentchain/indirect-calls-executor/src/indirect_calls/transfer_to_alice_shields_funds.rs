@@ -48,13 +48,13 @@ type Seed = [u8; 32];
 /// let alice = sr25519::Pair::from_string_with_seed("//Alice", None).unwrap();
 /// println!("{:?}", alice.1.unwrap());
 /// ```
-const ALICE_ENCODED: Seed = [
+const ALICE_SEED: Seed = [
 	229, 190, 154, 80, 146, 184, 27, 202, 100, 190, 129, 210, 18, 231, 242, 249, 235, 161, 131,
 	187, 122, 144, 149, 79, 123, 118, 54, 31, 110, 219, 92, 10,
 ];
 
 pub fn alice_account() -> AccountId {
-	sp_core::sr25519::Pair::from_seed(&ALICE_ENCODED).public().into()
+	sp_core::sr25519::Pair::from_seed(&ALICE_SEED).public().into()
 }
 
 impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for TransferToAliceShieldsFundsArgs {
@@ -81,13 +81,13 @@ impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for TransferToAliceS
 
 #[cfg(test)]
 mod test {
-	use crate::indirect_calls::{alice_account, transfer_to_alice_shields_funds::ALICE_ENCODED};
+	use crate::indirect_calls::{alice_account, transfer_to_alice_shields_funds::ALICE_SEED};
 	use sp_core::{sr25519, Pair};
 
 	#[test]
 	fn alice_account_is_correct() {
 		let alice = sr25519::Pair::from_string_with_seed("//Alice", None).unwrap();
-		assert_eq!(alice.1.unwrap(), ALICE_ENCODED);
+		assert_eq!(alice.1.unwrap(), ALICE_SEED);
 		assert_eq!(alice_account(), alice.0.public().into());
 	}
 }
