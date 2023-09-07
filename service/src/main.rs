@@ -457,12 +457,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	// ------------------------------------------------------------------------
 	// Init parentchain specific stuff. Needed for parentchain communication.
 
-	let (parentchain_handler, last_synced_header) = init_integritee_parentchain(
-		&enclave,
-		&integritee_rpc_api,
-		&tee_accountid,
-		ParentchainId::Integritee,
-	);
+	let (parentchain_handler, last_synced_header) =
+		init_parentchain(&enclave, &integritee_rpc_api, &tee_accountid, ParentchainId::Integritee);
 
 	#[cfg(feature = "dcap")]
 	register_collateral(
@@ -621,48 +617,43 @@ fn init_target_a_parentchain<E>(
 {
 	let node_api = NodeApiFactory::new(url, AccountKeyring::Alice.pair())
 		.create_api()
-		.expect("Failed to create secondary parentchain node API");
+		.expect("Failed to create Target A parentchain node API");
 
 	// some random bytes not too small to ensure that the enclave has enough funds
 	setup_account_funding(&node_api, tee_account_id, [0u8; 100].into(), is_development_mode)
-		.expect("Could not fund secondary enclave account");
+		.expect("Could not fund Target A parentchain enclave account");
 
-	let (secondary_parentchain_handler, last_synced_header_secondary) =
-		init_integritee_parentchain(enclave, &node_api, tee_account_id, ParentchainId::TargetA);
+	let (parentchain_handler, last_synched_header) =
+		init_parentchain(enclave, &node_api, tee_account_id, ParentchainId::TargetA);
 
 	if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
-		println!("*** [+] Finished initializing secondary light client, syncing parentchain...");
+		println!("*** [+] Finished initializing Target A parentchain light client, syncing parentchain...");
 
 		// Syncing all parentchain blocks, this might take a while..
-		let last_synced_header_secondary = secondary_parentchain_handler
-			.sync_parentchain(last_synced_header_secondary)
-			.unwrap();
+		let last_synched_header =
+			parentchain_handler.sync_parentchain(last_synched_header).unwrap();
 
 		// start parentchain syncing loop (subscribe to header updates)
 		thread::Builder::new()
-			.name("secondary_parentchain_sync_loop".to_owned())
+			.name("target_a_parentchain_sync_loop".to_owned())
 			.spawn(move || {
-				if let Err(e) = subscribe_to_parentchain_new_headers(
-					secondary_parentchain_handler,
-					last_synced_header_secondary,
-				) {
-					error!(
-						"Secondary parentchain block syncing terminated with a failure: {:?}",
-						e
-					);
+				if let Err(e) =
+					subscribe_to_parentchain_new_headers(parentchain_handler, last_synched_header)
+				{
+					error!("Target A parentchain block syncing terminated with a failure: {:?}", e);
 				}
-				println!("[!] Secondary parentchain block syncing has terminated");
+				println!("[!] Target A parentchain block syncing has terminated");
 			})
 			.unwrap();
 	}
 
 	// Subscribe to events and print them.
-	println!("*** Subscribing to events of secondary chain");
+	println!("*** Subscribing to events of Target A chain");
 	let mut subscription = node_api.subscribe_events().unwrap();
 	println!("[+] Subscribed to events. waiting...");
 
 	thread::Builder::new()
-		.name("secondary_parentchain_event_subscription".to_owned())
+		.name("target_a_parentchain_event_subscription".to_owned())
 		.spawn(move || loop {
 			if let Some(Ok(events)) = subscription.next_event::<RuntimeEvent, Hash>() {
 				print_events(events)
@@ -671,7 +662,7 @@ fn init_target_a_parentchain<E>(
 		.unwrap();
 }
 
-fn init_integritee_parentchain<E>(
+fn init_parentchain<E>(
 	enclave: &Arc<E>,
 	node_api: &ParentchainApi,
 	tee_account_id: &AccountId32,

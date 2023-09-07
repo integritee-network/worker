@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# Verifies that shielding from a secondary parentchain works by sending a transfer to //Alice
+# Verifies that shielding from the Target A parentchain works by sending a transfer to //Alice
 
 while getopts ":m:p:A:B:u:W:V:x:y:C:" opt; do
     case $opt in
