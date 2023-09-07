@@ -40,7 +40,7 @@ use std::{path::PathBuf, sync::Arc};
 pub use itc_parentchain::primitives::{ParachainBlock, ParachainHeader, ParachainParams};
 
 #[derive(Clone)]
-pub struct FullParachainHandler {
+pub struct IntegriteeParachainHandler {
 	pub genesis_header: ParachainHeader,
 	pub node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
 	pub stf_executor: Arc<EnclaveStfExecutor>,
@@ -49,7 +49,7 @@ pub struct FullParachainHandler {
 	pub import_dispatcher: Arc<TeerexParentchainBlockImportDispatcher>,
 }
 
-impl FullParachainHandler {
+impl IntegriteeParachainHandler {
 	pub fn init<WorkerModeProvider: ProvideWorkerMode>(
 		_base_path: PathBuf,
 		params: ParachainParams,
