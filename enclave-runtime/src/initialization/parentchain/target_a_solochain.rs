@@ -39,7 +39,7 @@ use std::{path::PathBuf, sync::Arc};
 
 pub use itc_parentchain::primitives::{SolochainBlock, SolochainHeader, SolochainParams};
 
-pub struct FullSolochainHandler2 {
+pub struct TargetASolochainHandler {
 	pub genesis_header: SolochainHeader,
 	pub node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
 	pub stf_executor: Arc<EnclaveStfExecutor>,
@@ -48,7 +48,7 @@ pub struct FullSolochainHandler2 {
 	pub import_dispatcher: Arc<SecondaryParentchainBlockImportDispatcher>,
 }
 
-impl FullSolochainHandler2 {
+impl TargetASolochainHandler {
 	pub fn init<WorkerModeProvider: ProvideWorkerMode>(
 		_base_path: PathBuf,
 		params: SolochainParams,
