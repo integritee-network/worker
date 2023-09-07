@@ -252,11 +252,7 @@ impl<
 	}
 
 	fn get_default_shard(&self) -> ShardIdentifier {
-		self.top_pool_author
-			.list_handled_shards()
-			.first()
-			.map(|s| *s)
-			.unwrap_or_default()
+		self.top_pool_author.list_handled_shards().first().copied().unwrap_or_default()
 	}
 
 	fn sign_call_with_self(
