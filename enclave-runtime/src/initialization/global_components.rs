@@ -22,8 +22,9 @@
 
 use crate::{
 	initialization::parentchain::{
-		integritee_parachain::IntegriteeParachainHandler, solochain::FullSolochainHandler,
-		solochain2::FullSolochainHandler2, target_a_parachain::TargetAParachainHandler,
+		integritee_parachain::IntegriteeParachainHandler,
+		integritee_solochain::IntegriteeSolochainHandler, solochain2::FullSolochainHandler2,
+		target_a_parachain::TargetAParachainHandler,
 	},
 	ocall::OcallApi,
 	rpc::rpc_response_channel::RpcResponseChannel,
@@ -346,7 +347,7 @@ lazy_static! {
 }
 
 /// Solochain Handler.
-pub static GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT: ComponentContainer<FullSolochainHandler> =
+pub static GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT: ComponentContainer<IntegriteeSolochainHandler> =
 	ComponentContainer::new("full solochain handler");
 
 pub static GLOBAL_FULL_SOLOCHAIN2_HANDLER_COMPONENT: ComponentContainer<FullSolochainHandler2> =

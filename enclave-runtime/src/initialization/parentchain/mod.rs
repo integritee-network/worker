@@ -29,18 +29,18 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use integritee_parachain::IntegriteeParachainHandler;
+use integritee_solochain::IntegriteeSolochainHandler;
 use itc_parentchain::{
 	light_client::{concurrent_access::ValidatorAccess, LightClientState},
 	primitives::{ParentchainId, ParentchainInitParams},
 };
 use itp_component_container::ComponentInitializer;
 use itp_settings::worker_mode::ProvideWorkerMode;
-use solochain::FullSolochainHandler;
 use std::{path::PathBuf, vec::Vec};
 
 mod common;
 pub mod integritee_parachain;
-pub mod solochain;
+pub mod integritee_solochain;
 pub mod solochain2;
 pub mod target_a_parachain;
 
@@ -71,7 +71,8 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 		},
 		ParentchainInitParams::Solochain { id, params } => match id {
 			ParentchainId::Integritee => {
-				let handler = FullSolochainHandler::init::<WorkerModeProvider>(base_path, params)?;
+				let handler =
+					IntegriteeSolochainHandler::init::<WorkerModeProvider>(base_path, params)?;
 				let header = handler
 					.validator_accessor
 					.execute_on_validator(|v| v.latest_finalized_header())?;
