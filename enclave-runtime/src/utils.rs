@@ -105,7 +105,7 @@ pub(crate) fn get_validator_accessor_from_solo_or_parachain(
 	Ok(validator_accessor)
 }
 
-pub(crate) fn get_node_metadata_repository_from_teerex_solo_or_parachain(
+pub(crate) fn get_node_metadata_repository_from_integritee_solo_or_parachain(
 ) -> Result<Arc<EnclaveNodeMetadataRepository>> {
 	let metadata_repository =
 		if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
