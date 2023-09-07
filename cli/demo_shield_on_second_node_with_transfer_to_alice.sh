@@ -5,32 +5,29 @@ set -euo pipefail
 
 while getopts ":m:p:A:B:u:W:V:x:y:C:" opt; do
     case $opt in
-        m)
-              READMRENCLAVE=$OPTARG
-              ;;
         p)
-            NPORT=$OPTARG
+            INTEGRITEE_RPC_PORT=$OPTARG
             ;;
         A)
-            WORKER1PORT=$OPTARG
+            WORKER_1_PORT=$OPTARG
             ;;
         B)
-            WORKER2PORT=$OPTARG
+            WORKER_2_PORT=$OPTARG
             ;;
         u)
-            NODEURL=$OPTARG
+            INTEGRITEE_RPC_URL=$OPTARG
             ;;
         V)
-            WORKER1URL=$OPTARG
+            WORKER_1_URL=$OPTARG
             ;;
         W)
-            WORKER2URL=$OPTARG
+            WORKER_2_URL=$OPTARG
             ;;
         x)
-            NODE2URL=$OPTARG
+            TARGET_A_CHAIN_RPC_URL=$OPTARG
             ;;
         y)
-            NODE2PORT=$OPTARG
+            TARGET_A_CHAIN_RPC_PORT=$OPTARG
             ;;
         C)
             CLIENT_BIN=$OPTARG
@@ -42,25 +39,25 @@ while getopts ":m:p:A:B:u:W:V:x:y:C:" opt; do
 done
 
 # Using default port if none given as arguments.
-NPORT=${NPORT:-9944}
-NODEURL=${NODEURL:-"ws://127.0.0.1"}
-NODE2PORT=${NODE2PORT:-9966}
-NODE2URL=${NODE2URL:-"ws://127.0.0.1"}
+INTEGRITEE_RPC_PORT=${INTEGRITEE_RPC_PORT:-9944}
+INTEGRITEE_RPC_URL=${INTEGRITEE_RPC_URL:-"ws://127.0.0.1"}
+TARGET_A_CHAIN_RPC_PORT=${TARGET_A_CHAIN_RPC_PORT:-9966}
+TARGET_A_CHAIN_RPC_URL=${TARGET_A_CHAIN_RPC_URL:-"ws://127.0.0.1"}
 
-WORKER1PORT=${WORKER1PORT:-2000}
-WORKER1URL=${WORKER1URL:-"wss://127.0.0.1"}
+WORKER_1_PORT=${WORKER_1_PORT:-2000}
+WORKER_1_URL=${WORKER_1_URL:-"wss://127.0.0.1"}
 
-WORKER2PORT=${WORKER2PORT:-3000}
-WORKER2URL=${WORKER2URL:-"wss://127.0.0.1"}
+WORKER_2_PORT=${WORKER_2_PORT:-3000}
+WORKER_2_URL=${WORKER_2_URL:-"wss://127.0.0.1"}
 
 CLIENT_BIN=${CLIENT_BIN:-"./../bin/integritee-cli"}
 
 echo "Using client binary ${CLIENT_BIN}"
 ${CLIENT_BIN} --version
-echo "Using node uri ${NODEURL}:${NPORT}"
-echo "Using node 2 uri ${NODE2URL}:${NODE2PORT}"
-echo "Using trusted-worker 1 uri ${WORKER1URL}:${WORKER1PORT}"
-echo "Using trusted-worker 2 uri ${WORKER2URL}:${WORKER2PORT}"
+echo "Using node uri ${INTEGRITEE_RPC_URL}:${INTEGRITEE_RPC_PORT}"
+echo "Using node 2 uri ${TARGET_A_CHAIN_RPC_URL}:${TARGET_A_CHAIN_RPC_PORT}"
+echo "Using trusted-worker 1 uri ${WORKER_1_URL}:${WORKER_1_PORT}"
+echo "Using trusted-worker 2 uri ${WORKER_2_URL}:${WORKER_2_PORT}"
 echo ""
 
 # the parentchain token is 12 decimal
@@ -71,8 +68,8 @@ AMOUNT_SHIELD=$(( 6 * UNIT ))
 AMOUNT_TRANSFER=$(( 2 * UNIT ))
 AMOUNT_UNSHIELD=$(( 1 * UNIT ))
 
-CLIENT="${CLIENT_BIN} -p ${NPORT} -P ${WORKER1PORT} -u ${NODEURL} -U ${WORKER1URL}"
-CLIENT2="${CLIENT_BIN} -p ${NODE2PORT} -P ${WORKER1PORT} -u ${NODE2URL} -U ${WORKER1URL}"
+CLIENT="${CLIENT_BIN} -p ${INTEGRITEE_RPC_PORT} -P ${WORKER_1_PORT} -u ${INTEGRITEE_RPC_URL} -U ${WORKER_1_URL}"
+CLIENT2="${CLIENT_BIN} -p ${TARGET_A_CHAIN_RPC_PORT} -P ${WORKER_1_PORT} -u ${TARGET_A_CHAIN_RPC_URL} -U ${WORKER_1_URL}"
 
 # interval and max rounds to wait to check the given account balance in sidechain
 WAIT_INTERVAL_SECONDS=10
