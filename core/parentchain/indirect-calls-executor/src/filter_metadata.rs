@@ -88,8 +88,9 @@ pub trait FilterIntoDataFrom<NodeMetadata> {
 /// Indirect calls filter denying all indirect calls.
 pub struct DenyAll;
 
-/// Simple demo filter for testing where a transfer to Alice will shield funds.
+/// Simple demo filter for testing.
 ///
+/// A transfer to Alice will issue the corresponding balance to Alice in the enclave.
 /// It does not do anything else.
 pub struct TransferToAliceShieldsFundsFilter<ExtrinsicParser> {
 	_phantom: PhantomData<ExtrinsicParser>,
@@ -238,8 +239,8 @@ mod seal {
 
 	impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for CantExecute {
 		fn dispatch(&self, _: &Executor) -> Result<()> {
-			// We should never get here because `CantExecute is private and the trait implementation
-			// is sealed and always returns `None` instead of a `CantExecute` instance.
+			// We should never get here because `CantExecute` is in a private module and the trait
+			// implementation is sealed and always returns `None` instead of a `CantExecute` instance.
 			// Regardless, we never want the enclave to panic, this is why we take this extra safety
 			// measure.
 			log::warn!(
