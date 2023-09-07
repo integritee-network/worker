@@ -41,9 +41,11 @@ pub struct TransferToAliceShieldsFundsArgs {
 ///
 /// ```
 /// use sp_core::{sr25519, Pair};
+/// use itc_parentchain_indirect_calls_executor::indirect_calls::ALICE_ACCOUNT_ID;
 ///
 /// let alice = sr25519::Pair::from_string_with_seed("//Alice", None).unwrap();
 /// println!("{:?}", alice.0.public().to_vec());
+/// assert_eq!(ALICE_ACCOUNT_ID, alice.0.public().into())
 /// ```
 pub const ALICE_ACCOUNT_ID: AccountId = AccountId::new([
 	212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133, 88, 133,
