@@ -44,7 +44,7 @@ impl<F: CreateNodeApi> WorkerOnChainOCall<F> {
 			ParentchainId::TargetA => self
 				.secondary_node_api_factory
 				.as_ref()
-				.ok_or(OCallBridgeError::SecondaryNodeNotInitialized)
+				.ok_or(OCallBridgeError::TargetAParentchainNotInitialized)
 				.and_then(|f| f.create_api().map_err(Into::into))?,
 		})
 	}

@@ -141,8 +141,8 @@ pub enum OCallBridgeError {
 	Codec(#[from] codec::Error),
 	#[error("Node API factory error: {0}")]
 	NodeApiFactory(#[from] itp_node_api::node_api_factory::NodeApiFactoryError),
-	#[error("Secondary parentchain node not initialized")]
-	SecondaryNodeNotInitialized,
+	#[error("Target A parentchain not initialized")]
+	TargetAParentchainNotInitialized,
 }
 
 impl From<OCallBridgeError> for sgx_status_t {
