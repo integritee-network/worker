@@ -32,12 +32,11 @@ extern crate sgx_tstd as std;
 use crate::{
 	error::{Error, Result},
 	initialization::global_components::{
-		GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT,
+		GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT, GLOBAL_INTEGRITEE_PARENTCHAIN_NONCE_CACHE,
 		GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT, GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT,
 		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT,
-		GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT, INTEGRITEE_PARENTCHAIN_NONCE_CACHE,
-		TARGET_A_PARENTCHAIN_NONCE_CACHE,
+		GLOBAL_TARGET_A_PARENTCHAIN_NONCE_CACHE, GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT,
 	},
 	rpc::worker_api_direct::sidechain_io_handler,
 	utils::{
@@ -234,8 +233,8 @@ pub unsafe extern "C" fn set_nonce(
 	info!("Setting the nonce of the enclave to: {} for parentchain: {:?}", *nonce, id);
 
 	let nonce_lock = match id {
-		ParentchainId::Integritee => INTEGRITEE_PARENTCHAIN_NONCE_CACHE.load_for_mutation(),
-		ParentchainId::TargetA => TARGET_A_PARENTCHAIN_NONCE_CACHE.load_for_mutation(),
+		ParentchainId::Integritee => GLOBAL_INTEGRITEE_PARENTCHAIN_NONCE_CACHE.load_for_mutation(),
+		ParentchainId::TargetA => GLOBAL_TARGET_A_PARENTCHAIN_NONCE_CACHE.load_for_mutation(),
 	};
 
 	match nonce_lock {

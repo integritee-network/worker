@@ -29,7 +29,7 @@ use crate::{
 			EnclaveStfExecutor, EnclaveValidatorAccessor,
 			SecondaryParentchainBlockImportDispatcher, GLOBAL_LIGHT_CLIENT_SEAL2,
 			GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
-			TARGET_A_PARENTCHAIN_NONCE_CACHE,
+			GLOBAL_TARGET_A_PARENTCHAIN_NONCE_CACHE,
 		},
 		parentchain::common::{
 			create_extrinsics_factory, create_secondary_offchain_immediate_import_dispatcher,
@@ -79,7 +79,7 @@ impl TargetAParachainHandler {
 
 		let extrinsics_factory = create_extrinsics_factory(
 			genesis_hash,
-			TARGET_A_PARENTCHAIN_NONCE_CACHE.clone(),
+			GLOBAL_TARGET_A_PARENTCHAIN_NONCE_CACHE.clone(),
 			node_metadata_repository.clone(),
 		)?;
 

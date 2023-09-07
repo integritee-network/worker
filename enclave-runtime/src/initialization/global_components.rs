@@ -340,10 +340,10 @@ pub static GLOBAL_ATTESTATION_HANDLER_COMPONENT: ComponentContainer<EnclaveAttes
 
 lazy_static! {
 	/// Global nonce cache for the Integritee Parentchain.
-	pub static ref INTEGRITEE_PARENTCHAIN_NONCE_CACHE: Arc<NonceCache> = Default::default();
+	pub static ref GLOBAL_INTEGRITEE_PARENTCHAIN_NONCE_CACHE: Arc<NonceCache> = Default::default();
 
 	/// Global nonce cache for the Target A parentchain..
-	pub static ref TARGET_A_PARENTCHAIN_NONCE_CACHE: Arc<NonceCache> = Default::default();
+	pub static ref GLOBAL_TARGET_A_PARENTCHAIN_NONCE_CACHE: Arc<NonceCache> = Default::default();
 }
 
 /// Solochain Handler.

@@ -21,8 +21,8 @@ use crate::{
 		global_components::{
 			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOCallApi,
 			EnclaveStfExecutor, EnclaveValidatorAccessor, TeerexParentchainBlockImportDispatcher,
-			GLOBAL_LIGHT_CLIENT_SEAL, GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
-			INTEGRITEE_PARENTCHAIN_NONCE_CACHE,
+			GLOBAL_INTEGRITEE_PARENTCHAIN_NONCE_CACHE, GLOBAL_LIGHT_CLIENT_SEAL,
+			GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 		},
 		parentchain::common::{
 			create_extrinsics_factory, create_sidechain_triggered_import_dispatcher,
@@ -74,7 +74,7 @@ impl IntegriteeParachainHandler {
 
 		let extrinsics_factory = create_extrinsics_factory(
 			genesis_hash,
-			INTEGRITEE_PARENTCHAIN_NONCE_CACHE.clone(),
+			GLOBAL_INTEGRITEE_PARENTCHAIN_NONCE_CACHE.clone(),
 			node_metadata_repository.clone(),
 		)?;
 
