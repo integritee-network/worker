@@ -194,36 +194,36 @@ pub type IntegriteeParentchainBlockImportDispatcher = BlockImportDispatcher<
 	IntegriteeParentchainImmediateBlockImportDispatcher,
 >;
 
-// Stuff for the secondary parentchain
+// Stuff for the Target A parentchain
 
-/// IndirectCalls executor instance of the secondary parentchain.
+/// IndirectCalls executor instance of the Target A parentchain.
 ///
 /// **Note**: The filter here is purely used for demo purposes.
 ///
 /// Also note that the extrinsic parser must be changed if the signed extra contains the `AssetTxPayment`
-pub type SecondaryParentchainIndirectExecutor =
+pub type TargetAParentchainIndirectExecutor =
 	EnclaveIndirectCallsExecutor<TransferToAliceShieldsFundsFilter<ParentchainExtrinsicParser>>;
 
-pub type SecondaryParentchainBlockImporter = ParentchainBlockImporter<
+pub type TargetAParentchainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
 	EnclaveValidatorAccessor,
 	EnclaveStfExecutor,
 	EnclaveExtrinsicsFactory,
-	SecondaryParentchainIndirectExecutor,
+	TargetAParentchainIndirectExecutor,
 >;
 
-pub type SecondaryParentchainTriggeredBlockImportDispatcher = TriggeredDispatcher<
+pub type TargetAParentchainTriggeredBlockImportDispatcher = TriggeredDispatcher<
 	IntegriteeParentchainBlockImporter,
 	EnclaveParentchainBlockImportQueue,
 	EnclaveParentchainEventImportQueue,
 >;
 
-pub type SecondaryParentchainImmediateBlockImportDispatcher =
-	ImmediateDispatcher<SecondaryParentchainBlockImporter>;
+pub type TargetAParentchainImmediateBlockImportDispatcher =
+	ImmediateDispatcher<TargetAParentchainBlockImporter>;
 
-pub type SecondaryParentchainBlockImportDispatcher = BlockImportDispatcher<
-	SecondaryParentchainTriggeredBlockImportDispatcher,
-	SecondaryParentchainImmediateBlockImportDispatcher,
+pub type TargetAParentchainBlockImportDispatcher = BlockImportDispatcher<
+	TargetAParentchainTriggeredBlockImportDispatcher,
+	TargetAParentchainImmediateBlockImportDispatcher,
 >;
 
 /// Sidechain types

@@ -26,9 +26,8 @@ use crate::{
 	initialization::{
 		global_components::{
 			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOCallApi,
-			EnclaveStfExecutor, EnclaveValidatorAccessor,
-			SecondaryParentchainBlockImportDispatcher, GLOBAL_LIGHT_CLIENT_SEAL2,
-			GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+			EnclaveStfExecutor, EnclaveValidatorAccessor, TargetAParentchainBlockImportDispatcher,
+			GLOBAL_LIGHT_CLIENT_SEAL2, GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 			GLOBAL_TARGET_A_PARENTCHAIN_NONCE_CACHE,
 		},
 		parentchain::common::{
@@ -52,7 +51,7 @@ pub struct TargetAParachainHandler {
 	pub stf_executor: Arc<EnclaveStfExecutor>,
 	pub validator_accessor: Arc<EnclaveValidatorAccessor>,
 	pub extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
-	pub import_dispatcher: Arc<SecondaryParentchainBlockImportDispatcher>,
+	pub import_dispatcher: Arc<TargetAParentchainBlockImportDispatcher>,
 }
 
 impl TargetAParachainHandler {
@@ -106,7 +105,7 @@ impl TargetAParachainHandler {
 			WorkerMode::Sidechain =>
 				unimplemented!("Can't run secondary chain in sidechain mode yet."),
 			WorkerMode::Teeracle =>
-				Arc::new(SecondaryParentchainBlockImportDispatcher::new_empty_dispatcher()),
+				Arc::new(TargetAParentchainBlockImportDispatcher::new_empty_dispatcher()),
 		};
 
 		let parachain_handler = Self {

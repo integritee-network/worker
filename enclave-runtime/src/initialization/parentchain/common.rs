@@ -26,12 +26,11 @@ use crate::{
 			IntegriteeParentchainImmediateBlockImportDispatcher,
 			IntegriteeParentchainIndirectExecutor,
 			IntegriteeParentchainTriggeredBlockImportDispatcher,
-			SecondaryParentchainBlockImportDispatcher, SecondaryParentchainBlockImporter,
-			SecondaryParentchainImmediateBlockImportDispatcher,
-			SecondaryParentchainIndirectExecutor, GLOBAL_OCALL_API_COMPONENT,
-			GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT,
-			GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STATE_OBSERVER_COMPONENT,
-			GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
+			TargetAParentchainBlockImportDispatcher, TargetAParentchainBlockImporter,
+			TargetAParentchainImmediateBlockImportDispatcher, TargetAParentchainIndirectExecutor,
+			GLOBAL_OCALL_API_COMPONENT, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
+			GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+			GLOBAL_STATE_OBSERVER_COMPONENT, GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
 		},
 		EnclaveStfEnclaveSigner,
 	},
@@ -79,7 +78,7 @@ pub(crate) fn create_secondary_parentchain_block_importer(
 	stf_executor: Arc<EnclaveStfExecutor>,
 	extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
 	node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
-) -> Result<SecondaryParentchainBlockImporter> {
+) -> Result<TargetAParentchainBlockImporter> {
 	let state_observer = GLOBAL_STATE_OBSERVER_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 	let shielding_key_repository = GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.get()?;
@@ -91,13 +90,13 @@ pub(crate) fn create_secondary_parentchain_block_importer(
 		shielding_key_repository.clone(),
 		top_pool_author.clone(),
 	));
-	let indirect_calls_executor = Arc::new(SecondaryParentchainIndirectExecutor::new(
+	let indirect_calls_executor = Arc::new(TargetAParentchainIndirectExecutor::new(
 		shielding_key_repository,
 		stf_enclave_signer,
 		top_pool_author,
 		node_metadata_repository,
 	));
-	Ok(SecondaryParentchainBlockImporter::new(
+	Ok(TargetAParentchainBlockImporter::new(
 		validator_access,
 		stf_executor,
 		extrinsics_factory,
@@ -152,10 +151,10 @@ pub(crate) fn create_teerex_offchain_immediate_import_dispatcher(
 
 pub(crate) fn create_secondary_offchain_immediate_import_dispatcher(
 	stf_executor: Arc<EnclaveStfExecutor>,
-	block_importer: SecondaryParentchainBlockImporter,
+	block_importer: TargetAParentchainBlockImporter,
 	validator_access: Arc<EnclaveValidatorAccessor>,
 	extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
-) -> Result<Arc<SecondaryParentchainBlockImportDispatcher>> {
+) -> Result<Arc<TargetAParentchainBlockImportDispatcher>> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 
@@ -166,7 +165,7 @@ pub(crate) fn create_secondary_offchain_immediate_import_dispatcher(
 		validator_access,
 		extrinsics_factory,
 	));
-	let immediate_dispatcher = SecondaryParentchainImmediateBlockImportDispatcher::new(
+	let immediate_dispatcher = TargetAParentchainImmediateBlockImportDispatcher::new(
 		block_importer,
 	)
 	.with_observer(move || {
@@ -175,7 +174,7 @@ pub(crate) fn create_secondary_offchain_immediate_import_dispatcher(
 		}
 	});
 
-	Ok(Arc::new(SecondaryParentchainBlockImportDispatcher::new_immediate_dispatcher(Arc::new(
+	Ok(Arc::new(TargetAParentchainBlockImportDispatcher::new_immediate_dispatcher(Arc::new(
 		immediate_dispatcher,
 	))))
 }
