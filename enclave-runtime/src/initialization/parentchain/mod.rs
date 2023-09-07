@@ -22,7 +22,9 @@ use crate::{
 			GLOBAL_FULL_PARACHAIN2_HANDLER_COMPONENT, GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT,
 			GLOBAL_FULL_SOLOCHAIN2_HANDLER_COMPONENT, GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT,
 		},
-		parentchain::{parachain2::FullParachainHandler2, solochain2::FullSolochainHandler2},
+		parentchain::{
+			solochain2::FullSolochainHandler2, target_a_parachain::TargetAParachainHandler,
+		},
 	},
 };
 use codec::{Decode, Encode};
@@ -38,9 +40,9 @@ use std::{path::PathBuf, vec::Vec};
 
 mod common;
 pub mod integritee_parachain;
-pub mod parachain2;
 pub mod solochain;
 pub mod solochain2;
+pub mod target_a_parachain;
 
 pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>(
 	base_path: PathBuf,
@@ -58,7 +60,8 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 				Ok(header.encode())
 			},
 			ParentchainId::TargetA => {
-				let handler = FullParachainHandler2::init::<WorkerModeProvider>(base_path, params)?;
+				let handler =
+					TargetAParachainHandler::init::<WorkerModeProvider>(base_path, params)?;
 				let header = handler
 					.validator_accessor
 					.execute_on_validator(|v| v.latest_finalized_header())?;

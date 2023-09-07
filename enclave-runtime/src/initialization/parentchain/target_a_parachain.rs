@@ -18,7 +18,7 @@
 //! Naive implementation of adding a second parachain handler to the setup.
 //!
 //! Ideally, most of the redundant code can be abstracted away, but it turns out
-//! that this is quite tedious, so for now this is a copy-past of the [FullParachainHandler].:
+//! that this is quite tedious, so for now this is a copy-past of the [IntegriteeParachainHandler]:
 //! * https://github.com/integritee-network/worker/issues/1417
 
 use crate::{
@@ -46,7 +46,7 @@ use std::{path::PathBuf, sync::Arc};
 pub use itc_parentchain::primitives::{ParachainBlock, ParachainHeader, ParachainParams};
 
 #[derive(Clone)]
-pub struct FullParachainHandler2 {
+pub struct TargetAParachainHandler {
 	pub genesis_header: ParachainHeader,
 	pub node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
 	pub stf_executor: Arc<EnclaveStfExecutor>,
@@ -55,7 +55,7 @@ pub struct FullParachainHandler2 {
 	pub import_dispatcher: Arc<SecondaryParentchainBlockImportDispatcher>,
 }
 
-impl FullParachainHandler2 {
+impl TargetAParachainHandler {
 	pub fn init<WorkerModeProvider: ProvideWorkerMode>(
 		_base_path: PathBuf,
 		params: ParachainParams,
