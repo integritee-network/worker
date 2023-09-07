@@ -304,7 +304,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	shard: &ShardIdentifier,
 	enclave: Arc<E>,
 	sidechain_storage: Arc<D>,
-	node_api: ParentchainApi,
+	integritee_rpc_api: ParentchainApi,
 	tokio_handle_getter: Arc<T>,
 	initialization_handler: Arc<InitializationHandler>,
 	quoting_enclave_target_info: Option<sgx_target_info_t>,
@@ -408,8 +408,10 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	// ------------------------------------------------------------------------
 	// Start prometheus metrics server.
 	if config.enable_metrics_server() {
-		let enclave_wallet =
-			Arc::new(EnclaveAccountInfoProvider::new(node_api.clone(), tee_accountid.clone()));
+		let enclave_wallet = Arc::new(EnclaveAccountInfoProvider::new(
+			integritee_rpc_api.clone(),
+			tee_accountid.clone(),
+		));
 		let metrics_handler = Arc::new(MetricsHandler::new(enclave_wallet));
 		let metrics_server_port = config
 			.try_parse_metrics_server_port()
@@ -456,16 +458,22 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	// Init parentchain specific stuff. Needed for parentchain communication.
 
 	let (parentchain_handler, last_synced_header) =
-		init_parentchain(&enclave, &node_api, &tee_accountid, ParentchainId::Integritee);
+		init_parentchain(&enclave, &integritee_rpc_api, &tee_accountid, ParentchainId::Integritee);
 
 	#[cfg(feature = "dcap")]
-	register_collateral(&node_api, &*enclave, &tee_accountid, is_development_mode, skip_ra);
+	register_collateral(
+		&integritee_rpc_api,
+		&*enclave,
+		&tee_accountid,
+		is_development_mode,
+		skip_ra,
+	);
 
 	let trusted_url = config.trusted_worker_url_external();
 
 	#[cfg(feature = "attesteer")]
 	fetch_marblerun_events_every_hour(
-		node_api.clone(),
+		integritee_rpc_api.clone(),
 		enclave.clone(),
 		tee_accountid.clone(),
 		is_development_mode,
@@ -484,9 +492,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		println!("[!] creating remote attestation report and create enclave register extrinsic.");
 	};
 
-	// clones because of the move
-	let enclave2 = enclave.clone();
-	let node_api2 = node_api.clone();
 	#[cfg(feature = "dcap")]
 	enclave2.set_sgx_qpl_logging().expect("QPL logging setup failed");
 	#[cfg(not(feature = "dcap"))]
@@ -494,6 +499,9 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	#[cfg(feature = "dcap")]
 	let register_xt = move || enclave2.generate_dcap_ra_extrinsic(&trusted_url, skip_ra).unwrap();
 
+	// clones because of the move
+	let enclave2 = enclave.clone();
+	let node_api2 = integritee_rpc_api.clone();
 	let tee_accountid_clone = tee_accountid.clone();
 	let send_register_xt = move || {
 		println!("[+] Send register enclave extrinsic");
@@ -502,8 +510,10 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	let register_enclave_block_hash = send_register_xt().unwrap();
 
-	let register_enclave_xt_header =
-		node_api.get_header(Some(register_enclave_block_hash)).unwrap().unwrap();
+	let register_enclave_xt_header = integritee_rpc_api
+		.get_header(Some(register_enclave_block_hash))
+		.unwrap()
+		.unwrap();
 
 	println!(
 		"[+] Enclave registered at block number: {:?}, hash: {:?}",
@@ -512,7 +522,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	);
 
 	let we_are_primary_validateer =
-		we_are_primary_worker(&node_api, shard, &tee_accountid).unwrap();
+		we_are_primary_worker(&integritee_rpc_api, shard, &tee_accountid).unwrap();
 
 	if we_are_primary_validateer {
 		println!("[+] We are the primary worker");
@@ -532,7 +542,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		);
 
 		start_periodic_market_update(
-			&node_api,
+			&integritee_rpc_api,
 			run_config.teeracle_update_interval(),
 			enclave.as_ref(),
 			&teeracle_tokio_handle,
@@ -577,7 +587,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	// ------------------------------------------------------------------------
 	if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain {
-		spawn_worker_for_shard_polling(shard, node_api.clone(), initialization_handler);
+		spawn_worker_for_shard_polling(shard, integritee_rpc_api.clone(), initialization_handler);
 	}
 
 	if let Some(url) = config.target_a_chain_rpc_endpoint() {
@@ -587,7 +597,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	// ------------------------------------------------------------------------
 	// Subscribe to events and print them.
 	println!("*** Subscribing to events");
-	let mut subscription = node_api.subscribe_events().unwrap();
+	let mut subscription = integritee_rpc_api.subscribe_events().unwrap();
 	println!("[+] Subscribed to events. waiting...");
 	loop {
 		if let Some(Ok(events)) = subscription.next_event::<RuntimeEvent, Hash>() {
