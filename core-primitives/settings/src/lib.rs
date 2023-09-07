@@ -46,7 +46,7 @@ pub mod files {
 	pub const INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_DB_PATH: &str = "integritee_lcdb";
 
 	/// Path to the light-client db for the Target A parentchain.
-	pub const TARGET_A_LIGHT_CLIENT_DB_PATH: &str = "target_a_lcdb";
+	pub const TARGET_A_PARENTCHAIN_LIGHT_CLIENT_DB_PATH: &str = "target_a_lcdb";
 
 	pub const RA_DUMP_CERT_DER_FILE: &str = "ra_dump_cert.der";
 
