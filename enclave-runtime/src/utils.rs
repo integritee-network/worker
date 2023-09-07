@@ -126,7 +126,7 @@ pub(crate) fn get_node_metadata_repository_from_secondary_solo_or_parachain(
 		} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN2_HANDLER_COMPONENT.get() {
 			parachain_handler.node_metadata_repository.clone()
 		} else {
-			return Err(Error::NoSecondaryParentchainAssigned)
+			return Err(Error::NoTargetAParentchainAssigned)
 		};
 	Ok(metadata_repository)
 }

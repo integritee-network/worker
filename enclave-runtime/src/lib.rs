@@ -524,7 +524,7 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 					.import_dispatcher
 					.dispatch_import(blocks_to_sync, events_to_sync)?;
 			} else {
-				return Err(Error::NoSecondaryParentchainAssigned)
+				return Err(Error::NoTargetAParentchainAssigned)
 			};
 		},
 	}
@@ -630,7 +630,7 @@ fn internal_trigger_parentchain_block_import(id: &ParentchainId) -> Result<()> {
 					.ok_or(Error::ExpectedTriggeredImportDispatcher)?
 					.import_all()?
 			} else {
-				return Err(Error::NoSecondaryParentchainAssigned)
+				return Err(Error::NoTargetAParentchainAssigned)
 			}
 		},
 	};
