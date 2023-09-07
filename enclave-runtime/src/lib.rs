@@ -502,30 +502,19 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 
 	match id {
 		ParentchainId::Integritee => {
-			if let Ok(solochain_handler) = GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT.get() {
-				solochain_handler
-					.import_dispatcher
-					.dispatch_import(blocks_to_sync, events_to_sync)?;
-			} else if let Ok(parachain_handler) =
-				GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT.get()
-			{
-				parachain_handler
-					.import_dispatcher
-					.dispatch_import(blocks_to_sync, events_to_sync)?;
+			if let Ok(handler) = GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT.get() {
+				handler.import_dispatcher.dispatch_import(blocks_to_sync, events_to_sync)?;
+			} else if let Ok(handler) = GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT.get() {
+				handler.import_dispatcher.dispatch_import(blocks_to_sync, events_to_sync)?;
 			} else {
 				return Err(Error::NoIntegriteeParentchainAssigned)
 			};
 		},
 		ParentchainId::TargetA => {
-			if let Ok(solochain_handler) = GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT.get() {
-				solochain_handler
-					.import_dispatcher
-					.dispatch_import(blocks_to_sync, events_to_sync)?;
-			} else if let Ok(parachain_handler) = GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT.get()
-			{
-				parachain_handler
-					.import_dispatcher
-					.dispatch_import(blocks_to_sync, events_to_sync)?;
+			if let Ok(handler) = GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT.get() {
+				handler.import_dispatcher.dispatch_import(blocks_to_sync, events_to_sync)?;
+			} else if let Ok(handler) = GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT.get() {
+				handler.import_dispatcher.dispatch_import(blocks_to_sync, events_to_sync)?;
 			} else {
 				return Err(Error::NoTargetAParentchainAssigned)
 			};
