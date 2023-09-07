@@ -200,7 +200,8 @@ pub type IntegriteeParentchainBlockImportDispatcher = BlockImportDispatcher<
 ///
 /// **Note**: The filter here is purely used for demo purposes.
 ///
-/// Also note that the extrinsic parser must be changed if the signed extra contains the `AssetTxPayment`
+/// Also note that the extrinsic parser must be changed if the signed extra contains the
+/// `AssetTxPayment`.
 pub type TargetAParentchainIndirectExecutor =
 	EnclaveIndirectCallsExecutor<TransferToAliceShieldsFundsFilter<ParentchainExtrinsicParser>>;
 
