@@ -105,12 +105,12 @@ impl Config {
 		}
 	}
 
-	/// Returns the client url of the node (including ws://).
-	pub fn node_url(&self) -> String {
+	/// Integritee RPC endpoint (including ws://).
+	pub fn integritee_rpc_endpoint(&self) -> String {
 		format!("{}:{}", self.integritee_rpc_url, self.integritee_rpc_port)
 	}
 
-	pub fn secondary_node_url(&self) -> Option<String> {
+	pub fn target_a_chain_rpc_endpoint(&self) -> Option<String> {
 		if self.target_a_parentchain_rpc_url.is_some()
 			&& self.target_a_parentchain_rpc_port.is_some()
 		{
