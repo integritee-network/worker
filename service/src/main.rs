@@ -637,6 +637,7 @@ fn init_target_parentchain<E>(
 ) where
 	E: EnclaveBase + Sidechain,
 {
+	info!("Initializing parentchain {:?} with url: {}", parentchain_id, url);
 	let node_api = NodeApiFactory::new(url, AccountKeyring::Alice.pair())
 		.create_api()
 		.unwrap_or_else(|_| panic!("Failed to create {:?} parentchain node API", parentchain_id));
