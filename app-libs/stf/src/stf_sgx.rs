@@ -119,6 +119,7 @@ where
 		match parentchain_id {
 			ParentchainId::Integritee => vec![shards_key_hash()],
 			ParentchainId::TargetA => vec![],
+			ParentchainId::TargetB => vec![],
 		}
 	}
 }

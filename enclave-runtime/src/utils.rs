@@ -22,7 +22,8 @@ use crate::{
 		IntegriteeParentchainTriggeredBlockImportDispatcher,
 		GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT,
 		GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT, GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT,
-		GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT,
+		GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT, GLOBAL_TARGET_B_PARACHAIN_HANDLER_COMPONENT,
+		GLOBAL_TARGET_B_SOLOCHAIN_HANDLER_COMPONENT,
 	},
 };
 use codec::{Decode, Input};
@@ -129,6 +130,19 @@ pub(crate) fn get_node_metadata_repository_from_target_a_solo_or_parachain(
 			parachain_handler.node_metadata_repository.clone()
 		} else {
 			return Err(Error::NoTargetAParentchainAssigned)
+		};
+	Ok(metadata_repository)
+}
+
+pub(crate) fn get_node_metadata_repository_from_target_b_solo_or_parachain(
+) -> Result<Arc<EnclaveNodeMetadataRepository>> {
+	let metadata_repository =
+		if let Ok(solochain_handler) = GLOBAL_TARGET_B_SOLOCHAIN_HANDLER_COMPONENT.get() {
+			solochain_handler.node_metadata_repository.clone()
+		} else if let Ok(parachain_handler) = GLOBAL_TARGET_B_PARACHAIN_HANDLER_COMPONENT.get() {
+			parachain_handler.node_metadata_repository.clone()
+		} else {
+			return Err(Error::NoTargetBParentchainAssigned)
 		};
 	Ok(metadata_repository)
 }

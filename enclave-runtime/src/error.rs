@@ -43,6 +43,7 @@ pub enum Error {
 	CouldNotDispatchBlockImport,
 	NoIntegriteeParentchainAssigned,
 	NoTargetAParentchainAssigned,
+	NoTargetBParentchainAssigned,
 	ParentChainValidation(itp_storage::error::Error),
 	ParentChainSync,
 	PrimitivesAccess(itp_primitives_cache::error::Error),

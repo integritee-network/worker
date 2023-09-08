@@ -37,11 +37,14 @@ use crate::{
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT, GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT,
 		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT,
 		GLOBAL_TARGET_A_PARENTCHAIN_NONCE_CACHE, GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT,
+		GLOBAL_TARGET_B_PARACHAIN_HANDLER_COMPONENT, GLOBAL_TARGET_B_PARENTCHAIN_NONCE_CACHE,
+		GLOBAL_TARGET_B_SOLOCHAIN_HANDLER_COMPONENT,
 	},
 	rpc::worker_api_direct::sidechain_io_handler,
 	utils::{
 		get_node_metadata_repository_from_integritee_solo_or_parachain,
-		get_node_metadata_repository_from_target_a_solo_or_parachain, utf8_str_from_raw, DecodeRaw,
+		get_node_metadata_repository_from_target_a_solo_or_parachain,
+		get_node_metadata_repository_from_target_b_solo_or_parachain, utf8_str_from_raw, DecodeRaw,
 	},
 };
 use codec::Decode;
@@ -234,6 +237,7 @@ pub unsafe extern "C" fn set_nonce(
 	let nonce_lock = match id {
 		ParentchainId::Integritee => GLOBAL_INTEGRITEE_PARENTCHAIN_NONCE_CACHE.load_for_mutation(),
 		ParentchainId::TargetA => GLOBAL_TARGET_A_PARENTCHAIN_NONCE_CACHE.load_for_mutation(),
+		ParentchainId::TargetB => GLOBAL_TARGET_B_PARENTCHAIN_NONCE_CACHE.load_for_mutation(),
 	};
 
 	match nonce_lock {
@@ -276,6 +280,7 @@ pub unsafe extern "C" fn set_node_metadata(
 		ParentchainId::Integritee =>
 			get_node_metadata_repository_from_integritee_solo_or_parachain(),
 		ParentchainId::TargetA => get_node_metadata_repository_from_target_a_solo_or_parachain(),
+		ParentchainId::TargetB => get_node_metadata_repository_from_target_b_solo_or_parachain(),
 	};
 
 	match node_metadata_repository {
@@ -519,6 +524,15 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 				return Err(Error::NoTargetAParentchainAssigned)
 			};
 		},
+		ParentchainId::TargetB => {
+			if let Ok(handler) = GLOBAL_TARGET_B_SOLOCHAIN_HANDLER_COMPONENT.get() {
+				handler.import_dispatcher.dispatch_import(blocks_to_sync, events_to_sync)?;
+			} else if let Ok(handler) = GLOBAL_TARGET_B_PARACHAIN_HANDLER_COMPONENT.get() {
+				handler.import_dispatcher.dispatch_import(blocks_to_sync, events_to_sync)?;
+			} else {
+				return Err(Error::NoTargetBParentchainAssigned)
+			};
+		},
 	}
 
 	Ok(())
@@ -623,6 +637,23 @@ fn internal_trigger_parentchain_block_import(id: &ParentchainId) -> Result<()> {
 					.import_all()?
 			} else {
 				return Err(Error::NoTargetAParentchainAssigned)
+			}
+		},
+		ParentchainId::TargetB => {
+			if let Ok(handler) = GLOBAL_TARGET_B_SOLOCHAIN_HANDLER_COMPONENT.get() {
+				handler
+					.import_dispatcher
+					.triggered_dispatcher()
+					.ok_or(Error::ExpectedTriggeredImportDispatcher)?
+					.import_all()?
+			} else if let Ok(handler) = GLOBAL_TARGET_B_PARACHAIN_HANDLER_COMPONENT.get() {
+				handler
+					.import_dispatcher
+					.triggered_dispatcher()
+					.ok_or(Error::ExpectedTriggeredImportDispatcher)?
+					.import_all()?
+			} else {
+				return Err(Error::NoTargetBParentchainAssigned)
 			}
 		},
 	};

@@ -46,8 +46,10 @@ pub type Signature = MultiSignature;
 pub enum ParentchainId {
 	/// The Integritee Parentchain, the trust root of the enclave and serving finality to sidechains.
 	Integritee,
-	/// A target chain containing custom business logics.
+	/// A target chain containing custom business logic.
 	TargetA,
+	/// Another target chain containing custom business logic.
+	TargetB,
 }
 
 pub trait IdentifyParentchain {

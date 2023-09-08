@@ -35,7 +35,8 @@ use crate::{
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT, GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT,
 		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
 		GLOBAL_STATE_OBSERVER_COMPONENT, GLOBAL_TARGET_A_PARENTCHAIN_LIGHT_CLIENT_SEAL,
-		GLOBAL_TOP_POOL_AUTHOR_COMPONENT, GLOBAL_WEB_SOCKET_SERVER_COMPONENT,
+		GLOBAL_TARGET_B_PARENTCHAIN_LIGHT_CLIENT_SEAL, GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
+		GLOBAL_WEB_SOCKET_SERVER_COMPONENT,
 	},
 	ocall::OcallApi,
 	rpc::{rpc_response_channel::RpcResponseChannel, worker_api_direct::public_api_rpc_handler},
@@ -62,7 +63,7 @@ use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_primitives_cache::GLOBAL_PRIMITIVES_CACHE;
 use itp_settings::files::{
 	INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_DB_PATH, STATE_SNAPSHOTS_CACHE_SIZE,
-	TARGET_A_PARENTCHAIN_LIGHT_CLIENT_DB_PATH,
+	TARGET_A_PARENTCHAIN_LIGHT_CLIENT_DB_PATH, TARGET_B_PARENTCHAIN_LIGHT_CLIENT_DB_PATH,
 };
 use itp_sgx_crypto::{
 	get_aes_repository, get_ed25519_repository, get_rsa3072_repository, key_repository::AccessKey,
@@ -109,6 +110,12 @@ pub(crate) fn init_enclave(
 		ParentchainId::TargetA,
 	)?);
 	GLOBAL_TARGET_A_PARENTCHAIN_LIGHT_CLIENT_SEAL.initialize(target_a_light_client_seal);
+
+	let target_b_light_client_seal = Arc::new(EnclaveLightClientSeal::new(
+		base_dir.join(TARGET_B_PARENTCHAIN_LIGHT_CLIENT_DB_PATH),
+		ParentchainId::TargetB,
+	)?);
+	GLOBAL_TARGET_B_PARENTCHAIN_LIGHT_CLIENT_SEAL.initialize(target_b_light_client_seal);
 
 	let state_file_io =
 		Arc::new(EnclaveStateFileIo::new(state_key_repository, StateDir::new(base_dir)));
