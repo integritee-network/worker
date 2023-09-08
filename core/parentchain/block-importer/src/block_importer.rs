@@ -109,7 +109,10 @@ impl<
 	) -> Result<()> {
 		let mut calls = Vec::<OpaqueCall>::new();
 
-		debug!("Import blocks to light-client!");
+		debug!(
+			"Import blocks to light-client for parentchain {:?}!",
+			self.validator_accessor.parentchain_id()
+		);
 		for (signed_block, raw_events) in
 			blocks_to_import.into_iter().zip(events_to_import.into_iter())
 		{
@@ -147,7 +150,8 @@ impl<
 			};
 
 			info!(
-				"Successfully imported parentchain block (number: {}, hash: {})",
+				"{:?} Successfully imported parentchain block (number: {}, hash: {})",
+				self.validator_accessor.parentchain_id(),
 				block.header().number,
 				block.header().hash()
 			);

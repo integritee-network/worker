@@ -135,11 +135,11 @@ where
 			index
 		);
 		if index == metadata.shield_funds_call_indexes().ok()? {
-			log::trace!("executing shield funds call");
+			log::debug!("executing shield funds call");
 			let args = decode_and_log_error::<ShieldFundsArgs>(call_args)?;
 			Some(IndirectCall::ShieldFunds(args))
 		} else if index == metadata.invoke_call_indexes().ok()? {
-			log::trace!("executing invoke call");
+			log::debug!("executing invoke call");
 			let args = decode_and_log_error::<InvokeArgs>(call_args)?;
 			Some(IndirectCall::Invoke(args))
 		} else {
@@ -177,12 +177,12 @@ where
 		if index == metadata.transfer_call_index().ok()?
 			|| index == metadata.transfer_allow_death_call_index().ok()?
 		{
-			log::trace!("found `transfer` or `transfer_allow_death` call.");
+			log::debug!("found `transfer` or `transfer_allow_death` call.");
 			let args = decode_and_log_error::<TransferToAliceShieldsFundsArgs>(call_args)?;
 			if args.destination == ALICE_ACCOUNT_ID.into() {
 				Some(IndirectCall::TransferToAliceShieldsFunds(args))
 			} else {
-				log::trace!("Parentchain transfer was not for Alice; ignoring...");
+				log::debug!("Parentchain transfer was not for Alice; ignoring...");
 				// No need to put it into the top pool if it isn't executed in the first place.
 				None
 			}
