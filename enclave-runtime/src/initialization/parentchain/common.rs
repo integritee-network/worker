@@ -214,7 +214,7 @@ pub(crate) fn create_target_a_offchain_immediate_import_dispatcher(
 
 pub(crate) fn create_target_b_offchain_immediate_import_dispatcher(
 	stf_executor: Arc<EnclaveStfExecutor>,
-	block_importer: TargetAParentchainBlockImporter,
+	block_importer: TargetBParentchainBlockImporter,
 	validator_access: Arc<EnclaveValidatorAccessor>,
 	extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
 ) -> Result<Arc<TargetBParentchainBlockImportDispatcher>> {
