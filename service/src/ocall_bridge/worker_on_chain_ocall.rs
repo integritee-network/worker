@@ -166,7 +166,7 @@ mod tests {
 
 		let mock_node_api_factory = Arc::new(MockNodeApiFactory::new());
 
-		let on_chain_ocall = WorkerOnChainOCall::new(mock_node_api_factory, None);
+		let on_chain_ocall = WorkerOnChainOCall::new(mock_node_api_factory, None, None);
 
 		let response = on_chain_ocall
 			.worker_request(Vec::<u8>::new().encode(), ParentchainId::Integritee.encode())
