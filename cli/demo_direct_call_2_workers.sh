@@ -30,6 +30,9 @@ while getopts ":p:A:B:u:W:V:C:" opt; do
         C)
             CLIENT_BIN=$OPTARG
             ;;
+        *)
+            echo "invalid arg ${OPTARG}"
+            exit 1
     esac
 done
 

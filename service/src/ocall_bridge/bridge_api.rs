@@ -137,8 +137,12 @@ pub enum OCallBridgeError {
 	IpfsError(String),
 	#[error("DirectInvocation Error: {0}")]
 	DirectInvocationError(String),
+	#[error(transparent)]
+	Codec(#[from] codec::Error),
 	#[error("Node API factory error: {0}")]
 	NodeApiFactory(#[from] itp_node_api::node_api_factory::NodeApiFactoryError),
+	#[error("Target A parentchain not initialized")]
+	TargetAParentchainNotInitialized,
 }
 
 impl From<OCallBridgeError> for sgx_status_t {
@@ -197,9 +201,17 @@ pub trait RemoteAttestationBridge {
 /// Trait for all the OCalls related to parentchain operations
 #[cfg_attr(test, automock)]
 pub trait WorkerOnChainBridge {
-	fn worker_request(&self, request: Vec<u8>) -> OCallBridgeResult<Vec<u8>>;
+	fn worker_request(
+		&self,
+		request: Vec<u8>,
+		parentchain_id: Vec<u8>,
+	) -> OCallBridgeResult<Vec<u8>>;
 
-	fn send_to_parentchain(&self, extrinsics_encoded: Vec<u8>) -> OCallBridgeResult<()>;
+	fn send_to_parentchain(
+		&self,
+		extrinsics_encoded: Vec<u8>,
+		parentchain_id: Vec<u8>,
+	) -> OCallBridgeResult<()>;
 }
 
 /// Trait for updating metrics from inside the enclave.

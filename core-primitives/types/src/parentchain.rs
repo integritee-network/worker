@@ -17,6 +17,7 @@
 
 //! Parentchain specific params. Be sure to change them if your node uses different types.
 
+use codec::{Decode, Encode};
 use sp_runtime::{generic::Header as HeaderG, traits::BlakeTwo256, MultiAddress, MultiSignature};
 use sp_std::vec::Vec;
 
@@ -40,3 +41,15 @@ pub type BlockHash = sp_core::H256;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
+
+#[derive(Encode, Decode, Copy, Clone, Debug, PartialEq, Eq)]
+pub enum ParentchainId {
+	/// The Integritee Parentchain, the trust root of the enclave and serving finality to sidechains.
+	Integritee,
+	/// A target chain containing custom business logics.
+	TargetA,
+}
+
+pub trait IdentifyParentchain {
+	fn parentchain_id(&self) -> ParentchainId;
+}
