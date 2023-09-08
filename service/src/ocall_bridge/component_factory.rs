@@ -55,6 +55,7 @@ pub struct OCallBridgeComponentFactory<
 > {
 	integritee_rpc_api_factory: Arc<NodeApi>,
 	target_a_parentchain_rpc_api_factory: Option<Arc<NodeApi>>,
+	target_b_parentchain_rpc_api_factory: Option<Arc<NodeApi>>,
 	block_broadcaster: Arc<Broadcaster>,
 	enclave_api: Arc<EnclaveApi>,
 	block_storage: Arc<Storage>,
@@ -89,6 +90,7 @@ impl<
 	pub fn new(
 		integritee_rpc_api_factory: Arc<NodeApi>,
 		target_a_parentchain_rpc_api_factory: Option<Arc<NodeApi>>,
+		target_b_parentchain_rpc_api_factory: Option<Arc<NodeApi>>,
 		block_broadcaster: Arc<Broadcaster>,
 		enclave_api: Arc<EnclaveApi>,
 		block_storage: Arc<Storage>,
@@ -100,6 +102,7 @@ impl<
 		OCallBridgeComponentFactory {
 			integritee_rpc_api_factory,
 			target_a_parentchain_rpc_api_factory,
+			target_b_parentchain_rpc_api_factory,
 			block_broadcaster,
 			enclave_api,
 			block_storage,
@@ -158,6 +161,7 @@ impl<
 		Arc::new(WorkerOnChainOCall::new(
 			self.integritee_rpc_api_factory.clone(),
 			self.target_a_parentchain_rpc_api_factory.clone(),
+			self.target_b_parentchain_rpc_api_factory.clone(),
 		))
 	}
 

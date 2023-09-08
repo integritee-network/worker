@@ -40,6 +40,8 @@ pub struct Config {
 	integritee_rpc_port: String,
 	target_a_parentchain_rpc_url: Option<String>,
 	target_a_parentchain_rpc_port: Option<String>,
+	target_b_parentchain_rpc_url: Option<String>,
+	target_b_parentchain_rpc_port: Option<String>,
 	worker_ip: String,
 	/// Trusted worker address that will be advertised on the parentchain.
 	trusted_external_worker_address: Option<String>,
@@ -72,6 +74,8 @@ impl Config {
 		integritee_rpc_port: String,
 		target_a_parentchain_rpc_url: Option<String>,
 		target_a_parentchain_rpc_port: Option<String>,
+		target_b_parentchain_rpc_url: Option<String>,
+		target_b_parentchain_rpc_port: Option<String>,
 		worker_ip: String,
 		trusted_external_worker_address: Option<String>,
 		trusted_worker_port: String,
@@ -90,6 +94,8 @@ impl Config {
 			integritee_rpc_port,
 			target_a_parentchain_rpc_url,
 			target_a_parentchain_rpc_port,
+			target_b_parentchain_rpc_url,
+			target_b_parentchain_rpc_port,
 			worker_ip,
 			trusted_external_worker_address,
 			trusted_worker_port,
@@ -119,6 +125,21 @@ impl Config {
 				// Can be done better, but this code is obsolete anyhow with clap v4.
 				self.target_a_parentchain_rpc_url.clone().unwrap(),
 				self.target_a_parentchain_rpc_port.clone().unwrap()
+			))
+		};
+
+		None
+	}
+
+	pub fn target_b_parentchain_rpc_endpoint(&self) -> Option<String> {
+		if self.target_b_parentchain_rpc_url.is_some()
+			&& self.target_b_parentchain_rpc_port.is_some()
+		{
+			return Some(format!(
+				"{}:{}",
+				// Can be done better, but this code is obsolete anyhow with clap v4.
+				self.target_b_parentchain_rpc_url.clone().unwrap(),
+				self.target_b_parentchain_rpc_port.clone().unwrap()
 			))
 		};
 
@@ -217,6 +238,8 @@ impl From<&ArgMatches<'_>> for Config {
 			m.value_of("integritee-rpc-port").unwrap_or(DEFAULT_INTEGRITEE_RPC_PORT).into(),
 			m.value_of("target-a-parentchain-rpc-url").map(Into::into),
 			m.value_of("target-a-parentchain-rpc-port").map(Into::into),
+			m.value_of("target-b-parentchain-rpc-url").map(Into::into),
+			m.value_of("target-b-parentchain-rpc-port").map(Into::into),
 			if m.is_present("ws-external") { "0.0.0.0".into() } else { "127.0.0.1".into() },
 			m.value_of("trusted-external-address")
 				.map(|url| add_port_if_necessary(url, trusted_port)),
@@ -360,6 +383,8 @@ mod test {
 		assert_eq!(config.integritee_rpc_port, DEFAULT_INTEGRITEE_RPC_PORT);
 		assert_eq!(config.target_a_parentchain_rpc_url, None);
 		assert_eq!(config.target_a_parentchain_rpc_port, None);
+		assert_eq!(config.target_b_parentchain_rpc_url, None);
+		assert_eq!(config.target_b_parentchain_rpc_port, None);
 		assert_eq!(config.trusted_worker_port, DEFAULT_TRUSTED_PORT);
 		assert_eq!(config.untrusted_worker_port, DEFAULT_UNTRUSTED_PORT);
 		assert_eq!(config.mu_ra_port, DEFAULT_MU_RA_PORT);

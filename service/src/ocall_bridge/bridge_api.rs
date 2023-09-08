@@ -143,6 +143,8 @@ pub enum OCallBridgeError {
 	NodeApiFactory(#[from] itp_node_api::node_api_factory::NodeApiFactoryError),
 	#[error("Target A parentchain not initialized")]
 	TargetAParentchainNotInitialized,
+	#[error("Target B parentchain not initialized")]
+	TargetBParentchainNotInitialized,
 }
 
 impl From<OCallBridgeError> for sgx_status_t {
