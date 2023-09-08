@@ -28,7 +28,7 @@ use crate::{
 use binary_merkle_tree::merkle_root;
 use codec::Encode;
 use core::marker::PhantomData;
-use ita_stf::{privacy_sidechain_inherent::PrivacySidechainTrait, TrustedCall, TrustedCallSigned};
+use ita_stf::{privacy_sidechain_inherent::HandleParentchainEvents, TrustedCall, TrustedCallSigned};
 use itp_node_api::metadata::{
 	pallet_enclave_bridge::EnclaveBridgeCallIndexes, provider::AccessNodeMetadata,
 	NodeMetadataTrait,
@@ -50,13 +50,13 @@ pub struct IndirectCallsExecutor<
 	NodeMetadataProvider,
 	IndirectCallsFilter,
 	EventCreator,
-	PrivacySidechain,
+	ParentchainEventHandler,
 > {
 	pub(crate) shielding_key_repo: Arc<ShieldingKeyRepository>,
 	pub(crate) stf_enclave_signer: Arc<StfEnclaveSigner>,
 	pub(crate) top_pool_author: Arc<TopPoolAuthor>,
 	pub(crate) node_meta_data_provider: Arc<NodeMetadataProvider>,
-	_phantom: PhantomData<(IndirectCallsFilter, EventCreator, PrivacySidechain)>,
+	_phantom: PhantomData<(IndirectCallsFilter, EventCreator, ParentchainEventHandler)>,
 }
 impl<
 		ShieldingKeyRepository,
@@ -65,7 +65,7 @@ impl<
 		NodeMetadataProvider,
 		IndirectCallsFilter,
 		EventCreator,
-		PrivacySidechain,
+		ParentchainEventHandler,
 	>
 	IndirectCallsExecutor<
 		ShieldingKeyRepository,
@@ -74,7 +74,7 @@ impl<
 		NodeMetadataProvider,
 		IndirectCallsFilter,
 		EventCreator,
-		PrivacySidechain,
+		ParentchainEventHandler,
 	>
 {
 	pub fn new(
@@ -100,7 +100,7 @@ impl<
 		NodeMetadataProvider,
 		FilterIndirectCalls,
 		EventCreator,
-		PrivacySidechain,
+		ParentchainEventHandler,
 	> ExecuteIndirectCalls
 	for IndirectCallsExecutor<
 		ShieldingKeyRepository,
@@ -109,7 +109,7 @@ impl<
 		NodeMetadataProvider,
 		FilterIndirectCalls,
 		EventCreator,
-		PrivacySidechain,
+		ParentchainEventHandler,
 	> where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
@@ -121,7 +121,7 @@ impl<
 	NodeMetadataProvider::MetadataType: NodeMetadataTrait + Clone,
 	FilterIndirectCalls::Output: IndirectDispatch<Self> + Encode + Debug,
 	EventCreator: EventsFromMetadata<NodeMetadataProvider::MetadataType>,
-	PrivacySidechain: PrivacySidechainTrait,
+	ParentchainEventHandler: HandleParentchainEvents,
 {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
@@ -147,17 +147,18 @@ impl<
 		let xt_statuses = events.get_extrinsic_statuses()?;
 		trace!("xt_statuses:: {:?}", xt_statuses);
 
-		let filter_events = events.get_transfer_events();
+		ParentchainEventHandler::handle_events(&events)?;
+		// let filter_events = events.get_transfer_events();
 
-		if let Ok(events) = filter_events {
-			events
-				.iter()
-				.filter(|&event| event.to == PrivacySidechain::SHIELDING_ACCOUNT)
-				.try_for_each(|event| {
-					info!("transfer_event: {}", event);
-					PrivacySidechain::shield_funds(&event.from, event.amount)
-				})?;
-		}
+		// if let Ok(events) = filter_events {
+		// 	events
+		// 		.iter()
+		// 		.filter(|&event| event.to == ParentchainEventHandler::SHIELDING_ACCOUNT)
+		// 		.try_for_each(|event| {
+		// 			info!("transfer_event: {}", event);
+		// 			ParentchainEventHandler::shield_funds(&event.from, event.amount)
+		// 		})?;
+		// }
 
 		// This would be catastrophic but should never happen
 		if xt_statuses.len() != block.extrinsics().len() {
