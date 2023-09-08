@@ -28,20 +28,33 @@ use std::{slice, sync::Arc, vec::Vec};
 pub unsafe extern "C" fn ocall_send_to_parentchain(
 	extrinsics_encoded: *const u8,
 	extrinsics_encoded_size: u32,
+	parentchain_id: *const u8,
+	parentchain_id_size: u32,
 ) -> sgx_status_t {
-	send_to_parentchain(extrinsics_encoded, extrinsics_encoded_size, Bridge::get_oc_api())
+	send_to_parentchain(
+		extrinsics_encoded,
+		extrinsics_encoded_size,
+		parentchain_id,
+		parentchain_id_size,
+		Bridge::get_oc_api(),
+	)
 }
 
 fn send_to_parentchain(
 	extrinsics_encoded: *const u8,
 	extrinsics_encoded_size: u32,
+	parentchain_id: *const u8,
+	parentchain_id_size: u32,
 	oc_api: Arc<dyn WorkerOnChainBridge>,
 ) -> sgx_status_t {
 	let extrinsics_encoded_vec: Vec<u8> = unsafe {
 		Vec::from(slice::from_raw_parts(extrinsics_encoded, extrinsics_encoded_size as usize))
 	};
 
-	match oc_api.send_to_parentchain(extrinsics_encoded_vec) {
+	let parentchain_id: Vec<u8> =
+		unsafe { Vec::from(slice::from_raw_parts(parentchain_id, parentchain_id_size as usize)) };
+
+	match oc_api.send_to_parentchain(extrinsics_encoded_vec, parentchain_id) {
 		Ok(_) => sgx_status_t::SGX_SUCCESS,
 		Err(e) => {
 			error!("send extrinsics_encoded failed: {:?}", e);

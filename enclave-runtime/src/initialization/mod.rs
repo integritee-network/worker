@@ -28,19 +28,20 @@ use crate::{
 		EnclaveSidechainBlockSyncer, EnclaveStateFileIo, EnclaveStateHandler,
 		EnclaveStateInitializer, EnclaveStateObserver, EnclaveStateSnapshotRepository,
 		EnclaveStfEnclaveSigner, EnclaveTopPool, EnclaveTopPoolAuthor,
-		GLOBAL_ATTESTATION_HANDLER_COMPONENT, GLOBAL_LIGHT_CLIENT_SEAL, GLOBAL_OCALL_API_COMPONENT,
-		GLOBAL_RPC_WS_HANDLER_COMPONENT, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
-		GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT,
-		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
-		GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
-		GLOBAL_STATE_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_OBSERVER_COMPONENT,
+		GLOBAL_ATTESTATION_HANDLER_COMPONENT, GLOBAL_INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_SEAL,
+		GLOBAL_OCALL_API_COMPONENT, GLOBAL_RPC_WS_HANDLER_COMPONENT,
+		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT,
+		GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT, GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT,
+		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
+		GLOBAL_STATE_OBSERVER_COMPONENT, GLOBAL_TARGET_A_PARENTCHAIN_LIGHT_CLIENT_SEAL,
 		GLOBAL_TOP_POOL_AUTHOR_COMPONENT, GLOBAL_WEB_SOCKET_SERVER_COMPONENT,
 	},
 	ocall::OcallApi,
 	rpc::{rpc_response_channel::RpcResponseChannel, worker_api_direct::public_api_rpc_handler},
 	utils::{
 		get_extrinsic_factory_from_solo_or_parachain,
-		get_node_metadata_repository_from_solo_or_parachain,
+		get_node_metadata_repository_from_integritee_solo_or_parachain,
 		get_triggered_dispatcher_from_solo_or_parachain,
 		get_validator_accessor_from_solo_or_parachain,
 	},
@@ -59,7 +60,10 @@ use itc_tls_websocket_server::{
 use itp_attestation_handler::IntelAttestationHandler;
 use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_primitives_cache::GLOBAL_PRIMITIVES_CACHE;
-use itp_settings::files::{LIGHT_CLIENT_DB_PATH, STATE_SNAPSHOTS_CACHE_SIZE};
+use itp_settings::files::{
+	INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_DB_PATH, STATE_SNAPSHOTS_CACHE_SIZE,
+	TARGET_A_PARENTCHAIN_LIGHT_CLIENT_DB_PATH,
+};
 use itp_sgx_crypto::{
 	get_aes_repository, get_ed25519_repository, get_rsa3072_repository, key_repository::AccessKey,
 };
@@ -70,7 +74,7 @@ use itp_stf_state_handler::{
 };
 use itp_top_pool::pool::Options as PoolOptions;
 use itp_top_pool_author::author::AuthorTopFilter;
-use itp_types::ShardIdentifier;
+use itp_types::{parentchain::ParentchainId, ShardIdentifier};
 use its_sidechain::block_composer::BlockComposer;
 use log::*;
 use sp_core::crypto::Pair;
@@ -94,9 +98,17 @@ pub(crate) fn init_enclave(
 	let state_key_repository = Arc::new(get_aes_repository(base_dir.clone())?);
 	GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.initialize(state_key_repository.clone());
 
-	let light_client_seal =
-		Arc::new(EnclaveLightClientSeal::new(base_dir.join(LIGHT_CLIENT_DB_PATH))?);
-	GLOBAL_LIGHT_CLIENT_SEAL.initialize(light_client_seal);
+	let integritee_light_client_seal = Arc::new(EnclaveLightClientSeal::new(
+		base_dir.join(INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_DB_PATH),
+		ParentchainId::Integritee,
+	)?);
+	GLOBAL_INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_SEAL.initialize(integritee_light_client_seal);
+
+	let target_a_light_client_seal = Arc::new(EnclaveLightClientSeal::new(
+		base_dir.join(TARGET_A_PARENTCHAIN_LIGHT_CLIENT_DB_PATH),
+		ParentchainId::TargetA,
+	)?);
+	GLOBAL_TARGET_A_PARENTCHAIN_LIGHT_CLIENT_SEAL.initialize(target_a_light_client_seal);
 
 	let state_file_io =
 		Arc::new(EnclaveStateFileIo::new(state_key_repository, StateDir::new(base_dir)));
@@ -206,7 +218,7 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 	));
 
 	let sidechain_block_import_queue = GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.get()?;
-	let metadata_repository = get_node_metadata_repository_from_solo_or_parachain()?;
+	let metadata_repository = get_node_metadata_repository_from_integritee_solo_or_parachain()?;
 	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
 	let validator_accessor = get_validator_accessor_from_solo_or_parachain()?;
 

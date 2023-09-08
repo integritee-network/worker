@@ -27,6 +27,7 @@ use codec::{Decode, Encode};
 use core::{fmt::Debug, marker::PhantomData};
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_sgx_io::{seal, unseal};
+use itp_types::parentchain::{IdentifyParentchain, ParentchainId};
 use log::*;
 use sp_runtime::traits::{Block, Header};
 use std::{
@@ -121,12 +122,23 @@ impl<B: Block, LightClientState: Decode + Encode + Debug> LightClientSealing
 #[derive(Debug)]
 pub struct LightClientStateSealSync<B, LightClientState> {
 	seal: LightClientStateSeal<B, LightClientState>,
+	parentchain_id: ParentchainId,
 	_rw_lock: RwLock<()>,
 }
 
 impl<B, LightClientState> LightClientStateSealSync<B, LightClientState> {
-	pub fn new(base_path: PathBuf) -> Result<Self> {
-		Ok(Self { seal: LightClientStateSeal::new(base_path)?, _rw_lock: RwLock::new(()) })
+	pub fn new(base_path: PathBuf, parentchain_id: ParentchainId) -> Result<Self> {
+		Ok(Self {
+			seal: LightClientStateSeal::new(base_path)?,
+			parentchain_id,
+			_rw_lock: RwLock::new(()),
+		})
+	}
+}
+
+impl<B, LightClientState> IdentifyParentchain for LightClientStateSealSync<B, LightClientState> {
+	fn parentchain_id(&self) -> ParentchainId {
+		self.parentchain_id
 	}
 }
 
@@ -160,6 +172,7 @@ pub fn read_or_init_grandpa_validator<B, OCallApi, LightClientSeal>(
 	params: GrandpaParams<B::Header>,
 	ocall_api: Arc<OCallApi>,
 	seal: &LightClientSeal,
+	parentchain_id: ParentchainId,
 ) -> Result<LightValidation<B, OCallApi>>
 where
 	B: Block,
@@ -178,6 +191,7 @@ where
 		let validator = init_grandpa_validator::<B, OCallApi>(
 			ocall_api,
 			RelayState::new(params.genesis_header, params.authorities).into(),
+			parentchain_id,
 		)?;
 		seal.seal(validator.get_state())?;
 		return Ok(validator)
@@ -197,7 +211,7 @@ where
 		RelayState::new(params.genesis_header, params.authorities).into()
 	};
 
-	let validator = init_grandpa_validator::<B, OCallApi>(ocall_api, init_state)?;
+	let validator = init_grandpa_validator::<B, OCallApi>(ocall_api, init_state, parentchain_id)?;
 
 	info!("light client state: {:?}", validator);
 
@@ -209,6 +223,7 @@ pub fn read_or_init_parachain_validator<B, OCallApi, LightClientSeal>(
 	params: SimpleParams<B::Header>,
 	ocall_api: Arc<OCallApi>,
 	seal: &LightClientSeal,
+	parentchain_id: ParentchainId,
 ) -> Result<LightValidation<B, OCallApi>>
 where
 	B: Block,
@@ -221,6 +236,7 @@ where
 		let validator = init_parachain_validator::<B, OCallApi>(
 			ocall_api,
 			RelayState::new(params.genesis_header, Default::default()).into(),
+			parentchain_id,
 		)?;
 		seal.seal(validator.get_state())?;
 		return Ok(validator)
@@ -240,7 +256,7 @@ where
 		RelayState::new(params.genesis_header, vec![]).into()
 	};
 
-	let validator = init_parachain_validator::<B, OCallApi>(ocall_api, init_state)?;
+	let validator = init_parachain_validator::<B, OCallApi>(ocall_api, init_state, parentchain_id)?;
 	info!("light client state: {:?}", validator);
 
 	seal.seal(validator.get_state())?;
@@ -250,6 +266,7 @@ where
 fn init_grandpa_validator<B, OCallApi>(
 	ocall_api: Arc<OCallApi>,
 	state: LightValidationState<B>,
+	parentchain_id: ParentchainId,
 ) -> Result<LightValidation<B, OCallApi>>
 where
 	B: Block,
@@ -259,7 +276,7 @@ where
 	let finality: Arc<Box<dyn Finality<B> + Sync + Send + 'static>> =
 		Arc::new(Box::new(GrandpaFinality));
 
-	let validator = LightValidation::<B, OCallApi>::new(ocall_api, finality, state);
+	let validator = LightValidation::<B, OCallApi>::new(ocall_api, finality, state, parentchain_id);
 
 	Ok(validator)
 }
@@ -267,6 +284,7 @@ where
 fn init_parachain_validator<B, OCallApi>(
 	ocall_api: Arc<OCallApi>,
 	state: LightValidationState<B>,
+	parentchain_id: ParentchainId,
 ) -> Result<LightValidation<B, OCallApi>>
 where
 	B: Block,
@@ -276,7 +294,7 @@ where
 	let finality: Arc<Box<dyn Finality<B> + Sync + Send + 'static>> =
 		Arc::new(Box::new(ParachainFinality));
 
-	let validator = LightValidation::<B, OCallApi>::new(ocall_api, finality, state);
+	let validator = LightValidation::<B, OCallApi>::new(ocall_api, finality, state, parentchain_id);
 	Ok(validator)
 }
 
@@ -290,6 +308,7 @@ pub mod sgx_tests {
 	use itc_parentchain_test::{Block, Header, ParentchainHeaderBuilder};
 	use itp_sgx_temp_dir::TempDir;
 	use itp_test::mock::onchain_mock::OnchainMock;
+	use itp_types::parentchain::ParentchainId;
 	use sp_runtime::OpaqueExtrinsic;
 
 	type TestBlock = Block<Header, OpaqueExtrinsic>;
@@ -308,6 +327,7 @@ pub mod sgx_tests {
 			parachain_params.clone(),
 			Arc::new(OnchainMock::default()),
 			&seal,
+			ParentchainId::Integritee,
 		)
 		.unwrap();
 

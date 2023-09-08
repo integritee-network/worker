@@ -53,7 +53,8 @@ pub struct OCallBridgeComponentFactory<
 	TokioHandle,
 	MetricsReceiver,
 > {
-	node_api_factory: Arc<NodeApi>,
+	integritee_rpc_api_factory: Arc<NodeApi>,
+	target_a_parentchain_rpc_api_factory: Option<Arc<NodeApi>>,
 	block_broadcaster: Arc<Broadcaster>,
 	enclave_api: Arc<EnclaveApi>,
 	block_storage: Arc<Storage>,
@@ -86,7 +87,8 @@ impl<
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
-		node_api_factory: Arc<NodeApi>,
+		integritee_rpc_api_factory: Arc<NodeApi>,
+		target_a_parentchain_rpc_api_factory: Option<Arc<NodeApi>>,
 		block_broadcaster: Arc<Broadcaster>,
 		enclave_api: Arc<EnclaveApi>,
 		block_storage: Arc<Storage>,
@@ -96,7 +98,8 @@ impl<
 		metrics_receiver: Arc<MetricsReceiver>,
 	) -> Self {
 		OCallBridgeComponentFactory {
-			node_api_factory,
+			integritee_rpc_api_factory,
+			target_a_parentchain_rpc_api_factory,
 			block_broadcaster,
 			enclave_api,
 			block_storage,
@@ -152,7 +155,10 @@ impl<
 	}
 
 	fn get_oc_api(&self) -> Arc<dyn WorkerOnChainBridge> {
-		Arc::new(WorkerOnChainOCall::new(self.node_api_factory.clone()))
+		Arc::new(WorkerOnChainOCall::new(
+			self.integritee_rpc_api_factory.clone(),
+			self.target_a_parentchain_rpc_api_factory.clone(),
+		))
 	}
 
 	fn get_ipfs_api(&self) -> Arc<dyn IpfsBridge> {

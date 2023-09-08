@@ -18,7 +18,10 @@
 use crate::error::{Error, Result};
 use itp_enclave_bridge_storage::{EnclaveBridgeStorage, EnclaveBridgeStorageKeys};
 use itp_ocall_api::EnclaveOnChainOCallApi;
-use itp_types::{parentchain::AccountId, ShardSignerStatus};
+use itp_types::{
+	parentchain::{AccountId, ParentchainId},
+	ShardSignerStatus,
+};
 use its_primitives::traits::{Block as SidechainBlockTrait, Header as HeaderTrait, SignedBlock};
 use log::trace;
 use sp_core::H256;
@@ -62,6 +65,7 @@ impl<OnchainStorage: EnclaveOnChainOCallApi> ValidateerFetch for OnchainStorage 
 					shard,
 				),
 				header,
+				&ParentchainId::Integritee,
 			)?
 			.into_tuple()
 			.1

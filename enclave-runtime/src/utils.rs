@@ -17,10 +17,12 @@
 use crate::{
 	error::{Error, Result},
 	initialization::global_components::{
-		EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository,
-		EnclaveParentchainBlockImportDispatcher, EnclaveStfExecutor,
-		EnclaveTriggeredParentchainBlockImportDispatcher, EnclaveValidatorAccessor,
-		GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT, GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT,
+		EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveStfExecutor,
+		EnclaveValidatorAccessor, IntegriteeParentchainBlockImportDispatcher,
+		IntegriteeParentchainTriggeredBlockImportDispatcher,
+		GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT,
+		GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT, GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT,
+		GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT,
 	},
 };
 use codec::{Decode, Input};
@@ -71,20 +73,21 @@ pub unsafe fn utf8_str_from_raw<'a>(
 // FIXME: When solving #1080, these helper functions should be obsolete, because no dynamic allocation
 // is necessary anymore.
 pub(crate) fn get_triggered_dispatcher_from_solo_or_parachain(
-) -> Result<Arc<EnclaveTriggeredParentchainBlockImportDispatcher>> {
-	let dispatcher = if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
-		get_triggered_dispatcher(solochain_handler.import_dispatcher.clone())?
-	} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
-		get_triggered_dispatcher(parachain_handler.import_dispatcher.clone())?
-	} else {
-		return Err(Error::NoParentchainAssigned)
-	};
+) -> Result<Arc<IntegriteeParentchainTriggeredBlockImportDispatcher>> {
+	let dispatcher =
+		if let Ok(solochain_handler) = GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT.get() {
+			get_triggered_dispatcher(solochain_handler.import_dispatcher.clone())?
+		} else if let Ok(parachain_handler) = GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT.get() {
+			get_triggered_dispatcher(parachain_handler.import_dispatcher.clone())?
+		} else {
+			return Err(Error::NoIntegriteeParentchainAssigned)
+		};
 	Ok(dispatcher)
 }
 
 pub(crate) fn get_triggered_dispatcher(
-	dispatcher: Arc<EnclaveParentchainBlockImportDispatcher>,
-) -> Result<Arc<EnclaveTriggeredParentchainBlockImportDispatcher>> {
+	dispatcher: Arc<IntegriteeParentchainBlockImportDispatcher>,
+) -> Result<Arc<IntegriteeParentchainTriggeredBlockImportDispatcher>> {
 	let triggered_dispatcher = dispatcher
 		.triggered_dispatcher()
 		.ok_or(Error::ExpectedTriggeredImportDispatcher)?;
@@ -94,25 +97,38 @@ pub(crate) fn get_triggered_dispatcher(
 pub(crate) fn get_validator_accessor_from_solo_or_parachain(
 ) -> Result<Arc<EnclaveValidatorAccessor>> {
 	let validator_accessor =
-		if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
+		if let Ok(solochain_handler) = GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT.get() {
 			solochain_handler.validator_accessor.clone()
-		} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
+		} else if let Ok(parachain_handler) = GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT.get() {
 			parachain_handler.validator_accessor.clone()
 		} else {
-			return Err(Error::NoParentchainAssigned)
+			return Err(Error::NoIntegriteeParentchainAssigned)
 		};
 	Ok(validator_accessor)
 }
 
-pub(crate) fn get_node_metadata_repository_from_solo_or_parachain(
+pub(crate) fn get_node_metadata_repository_from_integritee_solo_or_parachain(
 ) -> Result<Arc<EnclaveNodeMetadataRepository>> {
 	let metadata_repository =
-		if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
+		if let Ok(solochain_handler) = GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT.get() {
 			solochain_handler.node_metadata_repository.clone()
-		} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
+		} else if let Ok(parachain_handler) = GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT.get() {
 			parachain_handler.node_metadata_repository.clone()
 		} else {
-			return Err(Error::NoParentchainAssigned)
+			return Err(Error::NoIntegriteeParentchainAssigned)
+		};
+	Ok(metadata_repository)
+}
+
+pub(crate) fn get_node_metadata_repository_from_target_a_solo_or_parachain(
+) -> Result<Arc<EnclaveNodeMetadataRepository>> {
+	let metadata_repository =
+		if let Ok(solochain_handler) = GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT.get() {
+			solochain_handler.node_metadata_repository.clone()
+		} else if let Ok(parachain_handler) = GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT.get() {
+			parachain_handler.node_metadata_repository.clone()
+		} else {
+			return Err(Error::NoTargetAParentchainAssigned)
 		};
 	Ok(metadata_repository)
 }
@@ -120,24 +136,24 @@ pub(crate) fn get_node_metadata_repository_from_solo_or_parachain(
 pub(crate) fn get_extrinsic_factory_from_solo_or_parachain() -> Result<Arc<EnclaveExtrinsicsFactory>>
 {
 	let extrinsics_factory =
-		if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get() {
+		if let Ok(solochain_handler) = GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT.get() {
 			solochain_handler.extrinsics_factory.clone()
-		} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
+		} else if let Ok(parachain_handler) = GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT.get() {
 			parachain_handler.extrinsics_factory.clone()
 		} else {
-			return Err(Error::NoParentchainAssigned)
+			return Err(Error::NoIntegriteeParentchainAssigned)
 		};
 	Ok(extrinsics_factory)
 }
 
 pub(crate) fn get_stf_executor_from_solo_or_parachain() -> Result<Arc<EnclaveStfExecutor>> {
-	let stf_executor = if let Ok(solochain_handler) = GLOBAL_FULL_SOLOCHAIN_HANDLER_COMPONENT.get()
-	{
-		solochain_handler.stf_executor.clone()
-	} else if let Ok(parachain_handler) = GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.get() {
-		parachain_handler.stf_executor.clone()
-	} else {
-		return Err(Error::NoParentchainAssigned)
-	};
+	let stf_executor =
+		if let Ok(solochain_handler) = GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT.get() {
+			solochain_handler.stf_executor.clone()
+		} else if let Ok(parachain_handler) = GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT.get() {
+			parachain_handler.stf_executor.clone()
+		} else {
+			return Err(Error::NoIntegriteeParentchainAssigned)
+		};
 	Ok(stf_executor)
 }

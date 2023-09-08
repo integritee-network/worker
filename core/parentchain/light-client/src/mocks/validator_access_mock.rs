@@ -26,7 +26,10 @@ use crate::{
 	error::{Error, Result},
 	mocks::validator_mock::ValidatorMock,
 };
-use itp_types::Block;
+use itp_types::{
+	parentchain::{IdentifyParentchain, ParentchainId},
+	Block,
+};
 
 /// Mock for the validator access.
 ///
@@ -53,5 +56,11 @@ impl ValidatorAccess<Block> for ValidatorAccessMock {
 	{
 		let mut validator_lock = self.validator.write().map_err(|_| Error::PoisonedLock)?;
 		mutating_function(&mut validator_lock)
+	}
+}
+
+impl IdentifyParentchain for ValidatorAccessMock {
+	fn parentchain_id(&self) -> ParentchainId {
+		ParentchainId::Integritee
 	}
 }
