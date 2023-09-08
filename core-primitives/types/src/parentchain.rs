@@ -19,6 +19,9 @@
 
 use sp_runtime::{generic::Header as HeaderG, traits::BlakeTwo256, MultiAddress, MultiSignature};
 use sp_std::vec::Vec;
+use codec::{Encode, Decode};
+
+use substrate_api_client::StaticEvent;
 
 pub type StorageProof = Vec<Vec<u8>>;
 
@@ -40,3 +43,54 @@ pub type BlockHash = sp_core::H256;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
+
+pub trait FilterEvents {
+	fn get_extrinsic_statuses(&self) -> Result<Vec<ExtrinsicStatus>>;
+
+	fn get_transfer_events(&self) -> Result<Vec<BalanceTransfer>>;
+}
+
+#[derive(Encode, Decode, Debug)]
+pub struct ExtrinsicSuccess;
+
+impl StaticEvent for ExtrinsicSuccess {
+	const PALLET: &'static str = "System";
+	const EVENT: &'static str = "ExtrinsicSuccess";
+}
+
+#[derive(Encode, Decode)]
+pub struct ExtrinsicFailed;
+
+impl StaticEvent for ExtrinsicFailed {
+	const PALLET: &'static str = "System";
+	const EVENT: &'static str = "ExtrinsicFailed";
+}
+
+#[derive(Debug)]
+pub enum ExtrinsicStatus {
+	Success,
+	Failed,
+}
+
+#[derive(Encode, Decode, Debug)]
+pub struct BalanceTransfer {
+	pub from: AccountId,
+	pub to: AccountId,
+	pub amount: Balance,
+}
+
+impl StaticEvent for BalanceTransfer {
+	const PALLET: &'static str = "Balances";
+	const EVENT: &'static str = "Transfer";
+}
+
+pub struct ParentchainEventHandler;
+
+pub trait HandleParentchainEvents {
+	const SHIELDING_ACCOUNT: AccountId;
+	fn shield_funds(account: &AccountId, amount: Balance) -> Result<(), ParentchainError>;
+}
+
+pub enum ParentchainError {
+	ShieldFundsFailure,
+}

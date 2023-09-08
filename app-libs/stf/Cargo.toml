@@ -25,7 +25,6 @@ itp-node-api-metadata-provider = { default-features = false, path = "../../core-
 itp-sgx-externalities = { default-features = false, path = "../../core-primitives/substrate-sgx/externalities" }
 itp-stf-interface = { default-features = false, path = "../../core-primitives/stf-interface" }
 itp-stf-primitives = { default-features = false, path = "../../core-primitives/stf-primitives" }
-itc-parentchain-indirect-calls-executor = { default-features = false, path = "../../core/parentchain/indirect-calls-executor" }
 itp-storage = { default-features = false, path = "../../core-primitives/storage" }
 itp-types = { default-features = false, path = "../../core-primitives/types" }
 itp-utils = { default-features = false, path = "../../core-primitives/utils" }
@@ -67,7 +66,6 @@ std = [
     "rlp/std",
     # local
     "ita-sgx-runtime/std",
-    "itc-parentchain-indirect-calls-executor/std",
     "itp-hashing/std",
     "itp-sgx-externalities/std",
     "itp-stf-interface/std",

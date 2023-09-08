@@ -21,10 +21,10 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::{
 	error::{Error, Result},
-	event_filter::{ExtrinsicStatus, FilterEvents},
 	filter_metadata::{EventsFromMetadata, FilterIntoDataFrom},
 	traits::{ExecuteIndirectCalls, IndirectDispatch, IndirectExecutor},
 };
+use itc_parentchain::{ExtrinsicStatus, FilterEvents},
 use binary_merkle_tree::merkle_root;
 use codec::Encode;
 use core::marker::PhantomData;

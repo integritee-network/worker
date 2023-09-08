@@ -17,11 +17,12 @@
 
 use crate::{
 	error::Result,
-	event_filter::{FilterEvents, MockEvents},
+	event_filter::MockEvents,
 	indirect_calls::{InvokeArgs, ShieldFundsArgs},
 	parentchain_parser::ParseExtrinsic,
 	IndirectDispatch, IndirectExecutor,
 };
+use itc_parentchain::FilterEvents;
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use itp_api_client_types::{Events, Metadata};

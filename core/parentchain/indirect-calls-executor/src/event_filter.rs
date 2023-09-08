@@ -20,6 +20,7 @@ use crate::error::{Error, Result};
 use codec::{Decode, Encode};
 use ita_stf::{privacy_sidechain_inherent::PrivacySidechainTrait, StfError};
 use itp_api_client_types::{Events, StaticEvent};
+use itc_parentchain::{ExtrinsicSuccess, ExtrinsicFailed, BalanceTransfer}
 use itp_sgx_runtime_primitives::types::{AccountId, Balance};
 use itp_types::H256;
 use itp_utils::stringify::account_id_to_string;
@@ -29,58 +30,6 @@ impl From<StfError> for Error {
 	fn from(a: StfError) -> Self {
 		Error::Other(format!("Error when shielding for privacy sidechain {:?}", a).into())
 	}
-}
-
-#[derive(Encode, Decode, Debug)]
-pub struct ExtrinsicSuccess;
-
-impl StaticEvent for ExtrinsicSuccess {
-	const PALLET: &'static str = "System";
-	const EVENT: &'static str = "ExtrinsicSuccess";
-}
-
-#[derive(Encode, Decode)]
-pub struct ExtrinsicFailed;
-
-impl StaticEvent for ExtrinsicFailed {
-	const PALLET: &'static str = "System";
-	const EVENT: &'static str = "ExtrinsicFailed";
-}
-
-#[derive(Debug)]
-pub enum ExtrinsicStatus {
-	Success,
-	Failed,
-}
-
-#[derive(Encode, Decode, Debug)]
-pub struct BalanceTransfer {
-	pub from: AccountId,
-	pub to: AccountId,
-	pub amount: Balance,
-}
-
-impl StaticEvent for BalanceTransfer {
-	const PALLET: &'static str = "Balances";
-	const EVENT: &'static str = "Transfer";
-}
-
-impl Display for BalanceTransfer {
-	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-		let message = format!(
-			"BalanceTransfer :: from: {}, to: {}, amount: {}",
-			account_id_to_string::<AccountId>(&self.from),
-			account_id_to_string::<AccountId>(&self.to),
-			self.amount
-		);
-		write!(f, "{}", message)
-	}
-}
-
-pub trait FilterEvents {
-	fn get_extrinsic_statuses(&self) -> Result<Vec<ExtrinsicStatus>>;
-
-	fn get_transfer_events(&self) -> Result<Vec<BalanceTransfer>>;
 }
 
 impl FilterEvents for Events<H256> {

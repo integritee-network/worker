@@ -19,8 +19,8 @@ use crate::StfError;
 use frame_support::traits::UnfilteredDispatchable;
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{Runtime, System};
-use itc_parentchain_indirect_calls_executor::FilterEvents;
-use itp_stf_primitives::types::AccountId;
+use itc_parentchain::FilterEvents;
+use itp_types::types::{AccountId, ParentchainEventHandler, HandleParentchainEvents, ParentchainError};
 use sp_runtime::MultiAddress;
 use std::format;
 
@@ -31,17 +31,10 @@ const ALICE_ENCODED: Seed = [
 	76, 205, 227, 154, 86, 132, 231, 165, 109, 162, 125,
 ];
 
-pub trait HandleParentchainEvents {
-	const SHIELDING_ACCOUNT: AccountId;
-	fn shield_funds(account: &AccountId, amount: Balance) -> Result<(), StfError>;
-}
-
-pub struct ParentchainEventHandler;
-
 impl HandleParentchainEvents for ParentchainEventHandler {
 	const SHIELDING_ACCOUNT: AccountId = AccountId::new(ALICE_ENCODED);
 
-	fn handle_events(events: impl FilterEvents) -> Result<(), StfError> {
+	fn handle_events(events: impl FilterEvents) -> Result<(), ParentchainError> {
 		let filter_events = events.get_transfer_events();
 
 		if let Ok(events) = filter_events {
@@ -51,13 +44,13 @@ impl HandleParentchainEvents for ParentchainEventHandler {
 				.try_for_each(|event| {
 					info!("transfer_event: {}", event);
 					Self::shield_funds(&event.from, event.amount)
-				})?;
+				}).map_err(|e| ParentchainError::ShieldFundsFailure)?;
 		}
 
 		Ok(())
 	}
 
-	fn shield_funds(account: &AccountId, amount: Balance) -> Result<(), StfError> {
+	fn shield_funds(account: &AccountId, amount: Balance) -> Result<(), ParentchainError> {
 		let account_info = System::account(&account);
 		log::info!(
 			"shielding for {:?} amount {} new_free {} new_reserved {}",
@@ -71,8 +64,20 @@ impl HandleParentchainEvents for ParentchainEventHandler {
 			new_free: account_info.data.free + amount,
 		}
 		.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
-		.map_err(|e| StfError::Dispatch(format!("Shield funds error: {:?}", e.error)))?;
+		.map_err(|e| ParentchainError::ShieldFundsFailure)?;
 
 		Ok(())
+	}
+}
+
+impl Display for BalanceTransfer {
+	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+		let message = format!(
+			"BalanceTransfer :: from: {}, to: {}, amount: {}",
+			account_id_to_string::<AccountId>(&self.from),
+			account_id_to_string::<AccountId>(&self.to),
+			self.amount
+		);
+		write!(f, "{}", message)
 	}
 }
