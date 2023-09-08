@@ -20,7 +20,7 @@ use crate::{
 	initialization::{
 		global_components::{
 			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOCallApi,
-			EnclaveStfExecutor, EnclaveValidatorAccessor, TargetAParentchainBlockImportDispatcher,
+			EnclaveStfExecutor, EnclaveValidatorAccessor, TargetBParentchainBlockImportDispatcher,
 			GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 			GLOBAL_TARGET_B_PARENTCHAIN_LIGHT_CLIENT_SEAL, GLOBAL_TARGET_B_PARENTCHAIN_NONCE_CACHE,
 		},
@@ -44,7 +44,7 @@ pub struct TargetBSolochainHandler {
 	pub stf_executor: Arc<EnclaveStfExecutor>,
 	pub validator_accessor: Arc<EnclaveValidatorAccessor>,
 	pub extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
-	pub import_dispatcher: Arc<TargetAParentchainBlockImportDispatcher>,
+	pub import_dispatcher: Arc<TargetBParentchainBlockImportDispatcher>,
 }
 
 impl TargetBSolochainHandler {
@@ -98,7 +98,7 @@ impl TargetBSolochainHandler {
 			WorkerMode::Sidechain =>
 				unimplemented!("Can't run target B chain in sidechain mode yet."),
 			WorkerMode::Teeracle =>
-				Arc::new(TargetAParentchainBlockImportDispatcher::new_empty_dispatcher()),
+				Arc::new(TargetBParentchainBlockImportDispatcher::new_empty_dispatcher()),
 		};
 
 		let solochain_handler = Self {
