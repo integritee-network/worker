@@ -214,7 +214,7 @@ pub type TargetAParentchainBlockImporter = ParentchainBlockImporter<
 >;
 
 pub type TargetAParentchainTriggeredBlockImportDispatcher = TriggeredDispatcher<
-	IntegriteeParentchainBlockImporter,
+	TargetAParentchainBlockImporter,
 	EnclaveParentchainBlockImportQueue,
 	EnclaveParentchainEventImportQueue,
 >;
