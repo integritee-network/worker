@@ -144,7 +144,7 @@ wait_assert_state ${MRENCLAVE} ${ALICETRUSTEDACCOUNT} balance $(( TRUSTED_BALANC
 echo "✔ ok"
 
 echo "* Send ${AMOUNT_SHIELD} from //Alice to //Alice on the Target B Parentchain, which should trigger the shield process again"
-${CLIENT2} transfer //Alice ${ALICETRUSTEDACCOUNT} ${AMOUNT_SHIELD}
+${CLIENT3} transfer //Alice ${ALICETRUSTEDACCOUNT} ${AMOUNT_SHIELD}
 echo ""
 
 echo "* Wait and assert Alice's incognito account balance, should be $(( TRUSTED_BALANCE_ALICE + 2*AMOUNT_SHIELD ))"
