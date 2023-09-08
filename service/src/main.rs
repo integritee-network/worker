@@ -639,11 +639,13 @@ fn init_target_parentchain<E>(
 {
 	let node_api = NodeApiFactory::new(url, AccountKeyring::Alice.pair())
 		.create_api()
-		.expect(&format!("Failed to create {:?} parentchain node API", parentchain_id));
+		.unwrap_or_else(|_| panic!("Failed to create {:?} parentchain node API", parentchain_id));
 
 	// some random bytes not too small to ensure that the enclave has enough funds
 	setup_account_funding(&node_api, tee_account_id, [0u8; 100].into(), is_development_mode)
-		.expect(&format!("Could not fund {:?} parentchain enclave account", parentchain_id));
+		.unwrap_or_else(|_| {
+			panic!("Could not fund {:?} parentchain enclave account", parentchain_id)
+		});
 
 	let (parentchain_handler, last_synched_header) =
 		init_parentchain(enclave, &node_api, tee_account_id, parentchain_id);
