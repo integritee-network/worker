@@ -108,11 +108,9 @@ impl<
 		events_to_import: Vec<Vec<u8>>,
 	) -> Result<()> {
 		let mut calls = Vec::<OpaqueCall>::new();
+		let id = self.validator_accessor.parentchain_id();
 
-		debug!(
-			"Import blocks to light-client for parentchain {:?}!",
-			self.validator_accessor.parentchain_id()
-		);
+		debug!("[{:?}] Import blocks to light-client!", id);
 		for (signed_block, raw_events) in
 			blocks_to_import.into_iter().zip(events_to_import.into_iter())
 		{
@@ -123,7 +121,7 @@ impl<
 
 				v.submit_block(&signed_block)
 			}) {
-				error!("[Validator] Header submission failed: {:?}", e);
+				error!("[{:?}]  [Validator] Header submission failed: {:?}", id, e);
 				return Err(e.into())
 			}
 
@@ -133,7 +131,7 @@ impl<
 				.stf_executor
 				.update_states(block.header(), &self.validator_accessor.parentchain_id())
 			{
-				error!("Error performing state updates upon block import");
+				error!("[{:?}]  Error performing state updates upon block import", id);
 				return Err(e.into())
 			}
 
@@ -146,12 +144,12 @@ impl<
 				Ok(executed_shielding_calls) => {
 					calls.push(executed_shielding_calls);
 				},
-				Err(_) => error!("Error executing relevant extrinsics"),
+				Err(_) => error!("[{:?}] Error executing relevant extrinsics", id),
 			};
 
 			info!(
-				"{:?} Successfully imported parentchain block (number: {}, hash: {})",
-				self.validator_accessor.parentchain_id(),
+				"[{:?}] Successfully imported parentchain block (number: {}, hash: {})",
+				id,
 				block.header().number,
 				block.header().hash()
 			);
