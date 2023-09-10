@@ -618,9 +618,9 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	// ------------------------------------------------------------------------
 	// Subscribe to events and print them.
-	println!("*** Subscribing to events");
+	println!("*** [{:?}] Subscribing to events", ParentchainId::Integritee);
 	let mut subscription = integritee_rpc_api.subscribe_events().unwrap();
-	println!("[+] Subscribed to events. waiting...");
+	println!("[+] [{:?}] Subscribed to events. waiting...", ParentchainId::Integritee);
 	loop {
 		if let Some(Ok(events)) = subscription.next_event::<RuntimeEvent, Hash>() {
 			print_events(events)
@@ -637,15 +637,15 @@ fn init_target_parentchain<E>(
 ) where
 	E: EnclaveBase + Sidechain,
 {
-	info!("Initializing parentchain {:?} with url: {}", parentchain_id, url);
+	println!("Initializing parentchain {:?} with url: {}", parentchain_id, url);
 	let node_api = NodeApiFactory::new(url, AccountKeyring::Alice.pair())
 		.create_api()
-		.unwrap_or_else(|_| panic!("Failed to create {:?} parentchain node API", parentchain_id));
+		.unwrap_or_else(|_| panic!("[{:?}] Failed to create parentchain node API", parentchain_id));
 
 	// some random bytes not too small to ensure that the enclave has enough funds
 	setup_account_funding(&node_api, tee_account_id, [0u8; 100].into(), is_development_mode)
 		.unwrap_or_else(|_| {
-			panic!("Could not fund {:?} parentchain enclave account", parentchain_id)
+			panic!("[{:?}] Could not fund parentchain enclave account", parentchain_id)
 		});
 
 	let (parentchain_handler, last_synched_header) =
@@ -653,7 +653,7 @@ fn init_target_parentchain<E>(
 
 	if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
 		println!(
-			"*** [+] Finished initializing {:?} parentchain light client, syncing parentchain...",
+			"*** [+] [{:?}] Finished initializing light client, syncing parentchain...",
 			parentchain_id
 		);
 
@@ -669,19 +669,19 @@ fn init_target_parentchain<E>(
 					subscribe_to_parentchain_new_headers(parentchain_handler, last_synched_header)
 				{
 					error!(
-						"{:?} parentchain block syncing terminated with a failure: {:?}",
+						"[{:?}] parentchain block syncing terminated with a failure: {:?}",
 						parentchain_id, e
 					);
 				}
-				println!("[!] {:?} parentchain block syncing has terminated", parentchain_id);
+				println!("[!] [{:?}] parentchain block syncing has terminated", parentchain_id);
 			})
 			.unwrap();
 	}
 
 	// Subscribe to events and print them.
-	println!("*** Subscribing to events of {:?} chain", parentchain_id);
+	println!("*** [{:?}] Subscribing to events...", parentchain_id);
 	let mut subscription = node_api.subscribe_events().unwrap();
-	println!("[+] Subscribed to events. waiting...");
+	println!("[+] [{:?}] Subscribed to events. waiting...", parentchain_id);
 
 	thread::Builder::new()
 		.name(format!("{:?}_parentchain_event_subscription", parentchain_id))
@@ -711,13 +711,13 @@ where
 		.unwrap(),
 	);
 	let last_synced_header = parentchain_handler.init_parentchain_components().unwrap();
-	trace!("last synched parentchain block: {}", last_synced_header.number);
+	println!("[{:?}] last synced parentchain block: {}", parentchain_id, last_synced_header.number);
 
 	let nonce = node_api.get_nonce_of(tee_account_id).unwrap();
-	info!("Enclave nonce = {:?}", nonce);
-	enclave
-		.set_nonce(nonce, parentchain_id)
-		.expect("Could not set nonce of enclave. Returning here...");
+	info!("[{:?}] Enclave nonce = {:?}", parentchain_id, nonce);
+	enclave.set_nonce(nonce, parentchain_id).unwrap_or_else(|_| {
+		panic!("[{:?}] Could not set nonce of enclave. Returning here...", parentchain_id)
+	});
 
 	let metadata = node_api.metadata().clone();
 	let runtime_spec_version = node_api.runtime_version().spec_version;
@@ -727,7 +727,10 @@ where
 			NodeMetadata::new(metadata, runtime_spec_version, runtime_transaction_version).encode(),
 			parentchain_id,
 		)
-		.expect("Could not set the node metadata in the enclave");
+		.unwrap_or_else(|_| {
+			panic!("[{:?}] Could not set the node metadata in the enclave", parentchain_id)
+		});
+
 	(parentchain_handler, last_synced_header)
 }
 
