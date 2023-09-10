@@ -23,6 +23,7 @@ use itp_enclave_api::{enclave_base::EnclaveBase, Enclave};
 use itp_settings::files::{
 	INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_DB_PATH, SHARDS_PATH, SHIELDING_KEY_FILE,
 	SIDECHAIN_STORAGE_PATH, SIGNING_KEY_FILE, TARGET_A_PARENTCHAIN_LIGHT_CLIENT_DB_PATH,
+	TARGET_B_PARENTCHAIN_LIGHT_CLIENT_DB_PATH,
 };
 use itp_types::ShardIdentifier;
 use log::*;
@@ -99,6 +100,7 @@ fn purge_files(root_directory: &Path) -> ServiceResult<()> {
 
 	remove_dir_if_it_exists(root_directory, INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_DB_PATH)?;
 	remove_dir_if_it_exists(root_directory, TARGET_A_PARENTCHAIN_LIGHT_CLIENT_DB_PATH)?;
+	remove_dir_if_it_exists(root_directory, TARGET_B_PARENTCHAIN_LIGHT_CLIENT_DB_PATH)?;
 
 	Ok(())
 }
@@ -138,6 +140,8 @@ mod tests {
 			.unwrap();
 		fs::create_dir_all(&root_directory.join(TARGET_A_PARENTCHAIN_LIGHT_CLIENT_DB_PATH))
 			.unwrap();
+		fs::create_dir_all(&root_directory.join(TARGET_B_PARENTCHAIN_LIGHT_CLIENT_DB_PATH))
+			.unwrap();
 
 		purge_files(&root_directory).unwrap();
 
@@ -145,6 +149,7 @@ mod tests {
 		assert!(!sidechain_db_path.exists());
 		assert!(!root_directory.join(INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_DB_PATH).exists());
 		assert!(!root_directory.join(TARGET_A_PARENTCHAIN_LIGHT_CLIENT_DB_PATH).exists());
+		assert!(!root_directory.join(TARGET_B_PARENTCHAIN_LIGHT_CLIENT_DB_PATH).exists());
 	}
 
 	#[test]
