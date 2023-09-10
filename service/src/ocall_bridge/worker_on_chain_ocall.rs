@@ -29,14 +29,20 @@ use substrate_api_client::{serde_impls::StorageKey, GetStorage, SubmitExtrinsic}
 pub struct WorkerOnChainOCall<F> {
 	integritee_api_factory: Arc<F>,
 	target_a_parentchain_api_factory: Option<Arc<F>>,
+	target_b_parentchain_api_factory: Option<Arc<F>>,
 }
 
 impl<F> WorkerOnChainOCall<F> {
 	pub fn new(
 		integritee_api_factory: Arc<F>,
 		target_a_parentchain_api_factory: Option<Arc<F>>,
+		target_b_parentchain_api_factory: Option<Arc<F>>,
 	) -> Self {
-		WorkerOnChainOCall { integritee_api_factory, target_a_parentchain_api_factory }
+		WorkerOnChainOCall {
+			integritee_api_factory,
+			target_a_parentchain_api_factory,
+			target_b_parentchain_api_factory,
+		}
 	}
 }
 
@@ -48,6 +54,11 @@ impl<F: CreateNodeApi> WorkerOnChainOCall<F> {
 				.target_a_parentchain_api_factory
 				.as_ref()
 				.ok_or(OCallBridgeError::TargetAParentchainNotInitialized)
+				.and_then(|f| f.create_api().map_err(Into::into))?,
+			ParentchainId::TargetB => self
+				.target_b_parentchain_api_factory
+				.as_ref()
+				.ok_or(OCallBridgeError::TargetBParentchainNotInitialized)
 				.and_then(|f| f.create_api().map_err(Into::into))?,
 		})
 	}
@@ -155,7 +166,7 @@ mod tests {
 
 		let mock_node_api_factory = Arc::new(MockNodeApiFactory::new());
 
-		let on_chain_ocall = WorkerOnChainOCall::new(mock_node_api_factory, None);
+		let on_chain_ocall = WorkerOnChainOCall::new(mock_node_api_factory, None, None);
 
 		let response = on_chain_ocall
 			.worker_request(Vec::<u8>::new().encode(), ParentchainId::Integritee.encode())

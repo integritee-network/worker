@@ -48,6 +48,9 @@ pub mod files {
 	/// Path to the light-client db for the Target A parentchain.
 	pub const TARGET_A_PARENTCHAIN_LIGHT_CLIENT_DB_PATH: &str = "target_a_lcdb";
 
+	/// Path to the light-client db for the Target B parentchain.
+	pub const TARGET_B_PARENTCHAIN_LIGHT_CLIENT_DB_PATH: &str = "target_b_lcdb";
+
 	pub const RA_DUMP_CERT_DER_FILE: &str = "ra_dump_cert.der";
 
 	// used by worker and enclave

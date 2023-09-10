@@ -25,6 +25,7 @@ use crate::{
 		integritee_parachain::IntegriteeParachainHandler,
 		integritee_solochain::IntegriteeSolochainHandler,
 		target_a_parachain::TargetAParachainHandler, target_a_solochain::TargetASolochainHandler,
+		target_b_parachain::TargetBParachainHandler, target_b_solochain::TargetBSolochainHandler,
 	},
 	ocall::OcallApi,
 	rpc::rpc_response_channel::RpcResponseChannel,
@@ -227,6 +228,39 @@ pub type TargetAParentchainBlockImportDispatcher = BlockImportDispatcher<
 	TargetAParentchainImmediateBlockImportDispatcher,
 >;
 
+// Stuff for the Target B parentchain
+
+/// IndirectCalls executor instance of the Target B parentchain.
+///
+/// **Note**: The filter here is purely used for demo purposes.
+///
+/// Also note that the extrinsic parser must be changed if the signed extra contains the
+/// `AssetTxPayment`.
+pub type TargetBParentchainIndirectExecutor =
+	EnclaveIndirectCallsExecutor<TransferToAliceShieldsFundsFilter<ParentchainExtrinsicParser>>;
+
+pub type TargetBParentchainBlockImporter = ParentchainBlockImporter<
+	ParentchainBlock,
+	EnclaveValidatorAccessor,
+	EnclaveStfExecutor,
+	EnclaveExtrinsicsFactory,
+	TargetBParentchainIndirectExecutor,
+>;
+
+pub type TargetBParentchainTriggeredBlockImportDispatcher = TriggeredDispatcher<
+	TargetBParentchainBlockImporter,
+	EnclaveParentchainBlockImportQueue,
+	EnclaveParentchainEventImportQueue,
+>;
+
+pub type TargetBParentchainImmediateBlockImportDispatcher =
+	ImmediateDispatcher<TargetBParentchainBlockImporter>;
+
+pub type TargetBParentchainBlockImportDispatcher = BlockImportDispatcher<
+	TargetBParentchainTriggeredBlockImportDispatcher,
+	TargetBParentchainImmediateBlockImportDispatcher,
+>;
+
 /// Sidechain types
 pub type EnclaveTopPool = BasicPool<EnclaveSidechainApi, ParentchainBlock, EnclaveRpcResponder>;
 
@@ -314,6 +348,11 @@ pub static GLOBAL_TARGET_A_PARENTCHAIN_LIGHT_CLIENT_SEAL: ComponentContainer<
 	EnclaveLightClientSeal,
 > = ComponentContainer::new("Target A EnclaveLightClientSealSync");
 
+/// Light client db seal for the Target A parentchain.
+pub static GLOBAL_TARGET_B_PARENTCHAIN_LIGHT_CLIENT_SEAL: ComponentContainer<
+	EnclaveLightClientSeal,
+> = ComponentContainer::new("Target B EnclaveLightClientSealSync");
+
 /// O-Call API
 pub static GLOBAL_OCALL_API_COMPONENT: ComponentContainer<EnclaveOCallApi> =
 	ComponentContainer::new("O-call API");
@@ -347,6 +386,9 @@ lazy_static! {
 
 	/// Global nonce cache for the Target A parentchain..
 	pub static ref GLOBAL_TARGET_A_PARENTCHAIN_NONCE_CACHE: Arc<NonceCache> = Default::default();
+
+	/// Global nonce cache for the Target B parentchain..
+	pub static ref GLOBAL_TARGET_B_PARENTCHAIN_NONCE_CACHE: Arc<NonceCache> = Default::default();
 }
 
 /// Solochain Handler.
@@ -365,6 +407,14 @@ pub static GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT: ComponentContainer<
 pub static GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT: ComponentContainer<
 	TargetAParachainHandler,
 > = ComponentContainer::new("target A parachain handler");
+
+pub static GLOBAL_TARGET_B_SOLOCHAIN_HANDLER_COMPONENT: ComponentContainer<
+	TargetBSolochainHandler,
+> = ComponentContainer::new("target B solochain handler");
+
+pub static GLOBAL_TARGET_B_PARACHAIN_HANDLER_COMPONENT: ComponentContainer<
+	TargetBParachainHandler,
+> = ComponentContainer::new("target B parachain handler");
 
 // Sidechain component instances
 //-------------------------------------------------------------------------------------------------

@@ -23,10 +23,14 @@ use crate::{
 			GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT,
 			GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT,
 			GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT,
+			GLOBAL_TARGET_B_PARACHAIN_HANDLER_COMPONENT,
+			GLOBAL_TARGET_B_SOLOCHAIN_HANDLER_COMPONENT,
 		},
 		parentchain::{
 			target_a_parachain::TargetAParachainHandler,
 			target_a_solochain::TargetASolochainHandler,
+			target_b_parachain::TargetBParachainHandler,
+			target_b_solochain::TargetBSolochainHandler,
 		},
 	},
 };
@@ -46,6 +50,8 @@ pub mod integritee_parachain;
 pub mod integritee_solochain;
 pub mod target_a_parachain;
 pub mod target_a_solochain;
+pub mod target_b_parachain;
+pub mod target_b_solochain;
 
 pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>(
 	base_path: PathBuf,
@@ -71,6 +77,15 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 				GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT.initialize(handler.into());
 				Ok(header.encode())
 			},
+			ParentchainId::TargetB => {
+				let handler =
+					TargetBParachainHandler::init::<WorkerModeProvider>(base_path, params)?;
+				let header = handler
+					.validator_accessor
+					.execute_on_validator(|v| v.latest_finalized_header())?;
+				GLOBAL_TARGET_B_PARACHAIN_HANDLER_COMPONENT.initialize(handler.into());
+				Ok(header.encode())
+			},
 		},
 		ParentchainInitParams::Solochain { id, params } => match id {
 			ParentchainId::Integritee => {
@@ -89,6 +104,15 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 					.validator_accessor
 					.execute_on_validator(|v| v.latest_finalized_header())?;
 				GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT.initialize(handler.into());
+				Ok(header.encode())
+			},
+			ParentchainId::TargetB => {
+				let handler =
+					TargetBSolochainHandler::init::<WorkerModeProvider>(base_path, params)?;
+				let header = handler
+					.validator_accessor
+					.execute_on_validator(|v| v.latest_finalized_header())?;
+				GLOBAL_TARGET_B_SOLOCHAIN_HANDLER_COMPONENT.initialize(handler.into());
 				Ok(header.encode())
 			},
 		},

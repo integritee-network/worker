@@ -28,6 +28,8 @@ use crate::{
 			IntegriteeParentchainTriggeredBlockImportDispatcher,
 			TargetAParentchainBlockImportDispatcher, TargetAParentchainBlockImporter,
 			TargetAParentchainImmediateBlockImportDispatcher, TargetAParentchainIndirectExecutor,
+			TargetBParentchainBlockImportDispatcher, TargetBParentchainBlockImporter,
+			TargetBParentchainImmediateBlockImportDispatcher, TargetBParentchainIndirectExecutor,
 			GLOBAL_OCALL_API_COMPONENT, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
 			GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 			GLOBAL_STATE_OBSERVER_COMPONENT, GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
@@ -97,6 +99,37 @@ pub(crate) fn create_target_a_parentchain_block_importer(
 		node_metadata_repository,
 	));
 	Ok(TargetAParentchainBlockImporter::new(
+		validator_access,
+		stf_executor,
+		extrinsics_factory,
+		indirect_calls_executor,
+	))
+}
+
+pub(crate) fn create_target_b_parentchain_block_importer(
+	validator_access: Arc<EnclaveValidatorAccessor>,
+	stf_executor: Arc<EnclaveStfExecutor>,
+	extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
+	node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
+) -> Result<TargetBParentchainBlockImporter> {
+	let state_observer = GLOBAL_STATE_OBSERVER_COMPONENT.get()?;
+	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
+	let shielding_key_repository = GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.get()?;
+	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
+
+	let stf_enclave_signer = Arc::new(EnclaveStfEnclaveSigner::new(
+		state_observer,
+		ocall_api,
+		shielding_key_repository.clone(),
+		top_pool_author.clone(),
+	));
+	let indirect_calls_executor = Arc::new(TargetBParentchainIndirectExecutor::new(
+		shielding_key_repository,
+		stf_enclave_signer,
+		top_pool_author,
+		node_metadata_repository,
+	));
+	Ok(TargetBParentchainBlockImporter::new(
 		validator_access,
 		stf_executor,
 		extrinsics_factory,
@@ -175,6 +208,36 @@ pub(crate) fn create_target_a_offchain_immediate_import_dispatcher(
 	});
 
 	Ok(Arc::new(TargetAParentchainBlockImportDispatcher::new_immediate_dispatcher(Arc::new(
+		immediate_dispatcher,
+	))))
+}
+
+pub(crate) fn create_target_b_offchain_immediate_import_dispatcher(
+	stf_executor: Arc<EnclaveStfExecutor>,
+	block_importer: TargetBParentchainBlockImporter,
+	validator_access: Arc<EnclaveValidatorAccessor>,
+	extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
+) -> Result<Arc<TargetBParentchainBlockImportDispatcher>> {
+	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
+	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
+
+	let offchain_worker_executor = Arc::new(EnclaveOffchainWorkerExecutor::new(
+		top_pool_author,
+		stf_executor,
+		state_handler,
+		validator_access,
+		extrinsics_factory,
+	));
+	let immediate_dispatcher = TargetBParentchainImmediateBlockImportDispatcher::new(
+		block_importer,
+	)
+	.with_observer(move || {
+		if let Err(e) = offchain_worker_executor.execute() {
+			error!("Failed to execute trusted calls: {:?}", e);
+		}
+	});
+
+	Ok(Arc::new(TargetBParentchainBlockImportDispatcher::new_immediate_dispatcher(Arc::new(
 		immediate_dispatcher,
 	))))
 }
