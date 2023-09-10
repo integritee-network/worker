@@ -121,7 +121,7 @@ impl<
 
 				v.submit_block(&signed_block)
 			}) {
-				error!("[{:?}]  [Validator] Header submission failed: {:?}", id, e);
+				error!("[{:?}] Header submission to light client failed: {:?}", id, e);
 				return Err(e.into())
 			}
 
@@ -131,7 +131,7 @@ impl<
 				.stf_executor
 				.update_states(block.header(), &self.validator_accessor.parentchain_id())
 			{
-				error!("[{:?}]  Error performing state updates upon block import", id);
+				error!("[{:?}] Error performing state updates upon block import", id);
 				return Err(e.into())
 			}
 
