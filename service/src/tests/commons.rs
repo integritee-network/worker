@@ -42,6 +42,8 @@ pub fn local_worker_config(
 		Default::default(),
 		Default::default(),
 		Default::default(),
+		Default::default(),
+		Default::default(),
 		url.next().unwrap().into(),
 		None,
 		url.next().unwrap().into(),

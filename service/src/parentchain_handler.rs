@@ -89,7 +89,7 @@ where
 			let grandpas = parentchain_api.grandpa_authorities(Some(genesis_hash))?;
 			let grandpa_proof = parentchain_api.grandpa_authorities_proof(Some(genesis_hash))?;
 
-			debug!("Grandpa Authority List: \n {:?} \n ", grandpas);
+			debug!("[{:?}] Grandpa Authority List: \n {:?} \n ", id, grandpas);
 
 			let authority_list = VersionedAuthorityList::from(grandpas);
 
@@ -123,12 +123,18 @@ where
 	}
 
 	fn sync_parentchain(&self, last_synced_header: Header) -> ServiceResult<Header> {
-		trace!("Getting current head");
+		let id = self.parentchain_id();
+		trace!("[{:?}] Getting current head", id);
 		let curr_block = self
 			.parentchain_api
 			.last_finalized_block()?
 			.ok_or(Error::MissingLastFinalizedBlock)?;
 		let curr_block_number = curr_block.block.header.number;
+
+		println!(
+			"[{:?}] Syncing blocks from {} to {}",
+			id, last_synced_header.number, curr_block_number
+		);
 
 		let mut until_synced_header = last_synced_header;
 		loop {
@@ -136,7 +142,7 @@ where
 				until_synced_header.number + 1,
 				min(until_synced_header.number + BLOCK_SYNC_BATCH_SIZE, curr_block_number),
 			)?;
-			println!("[+] Found {} block(s) to sync", block_chunk_to_sync.len());
+			println!("[+] [{:?}] Found {} block(s) to sync", id, block_chunk_to_sync.len());
 			if block_chunk_to_sync.is_empty() {
 				return Ok(until_synced_header)
 			}
@@ -148,7 +154,7 @@ where
 				})
 				.collect::<Result<Vec<_>, _>>()?;
 
-			println!("[+] Found {} event vector(s) to sync", events_chunk_to_sync.len());
+			println!("[+] [{:?}] Found {} event vector(s) to sync", id, events_chunk_to_sync.len());
 
 			let events_proofs_chunk_to_sync: Vec<StorageProof> = block_chunk_to_sync
 				.iter()
@@ -169,14 +175,14 @@ where
 				.map(|b| b.block.header.clone())
 				.ok_or(Error::EmptyChunk)?;
 			println!(
-				"Synced {} out of {} finalized parentchain blocks",
-				until_synced_header.number, curr_block_number,
+				"[{:?}] Synced {} out of {} finalized parentchain blocks",
+				id, until_synced_header.number, curr_block_number,
 			)
 		}
 	}
 
 	fn trigger_parentchain_block_import(&self) -> ServiceResult<()> {
-		trace!("trigger parentchain block import");
+		trace!("[{:?}] trigger parentchain block import", self.parentchain_id());
 		Ok(self.enclave_api.trigger_parentchain_block_import(self.parentchain_id())?)
 	}
 
@@ -185,8 +191,11 @@ where
 		last_synced_header: &Header,
 		until_header: &Header,
 	) -> ServiceResult<Header> {
+		let id = self.parentchain_id();
+
 		trace!(
-			"last synched block number: {}. synching until {}",
+			"[{:?}] last synced block number: {}. synching until {}",
+			id,
 			last_synced_header.number,
 			until_header.number
 		);
@@ -194,7 +203,7 @@ where
 
 		while last_synced_header.number() < until_header.number() {
 			last_synced_header = self.sync_parentchain(last_synced_header)?;
-			trace!("synched block number: {}", last_synced_header.number);
+			trace!("[{:?}] synced block number: {}", id, last_synced_header.number);
 		}
 		self.trigger_parentchain_block_import()?;
 

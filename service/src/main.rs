@@ -172,10 +172,15 @@ fn main() {
 		.target_a_parentchain_rpc_endpoint()
 		.map(|url| Arc::new(NodeApiFactory::new(url, AccountKeyring::Alice.pair())));
 
+	let maybe_target_b_parentchain_api_factory = config
+		.target_b_parentchain_rpc_endpoint()
+		.map(|url| Arc::new(NodeApiFactory::new(url, AccountKeyring::Alice.pair())));
+
 	// initialize o-call bridge with a concrete factory implementation
 	OCallBridge::initialize(Arc::new(OCallBridgeComponentFactory::new(
 		node_api_factory.clone(),
 		maybe_target_a_parentchain_api_factory,
+		maybe_target_b_parentchain_api_factory,
 		sync_block_broadcaster,
 		enclave.clone(),
 		sidechain_blockstorage.clone(),
@@ -592,14 +597,30 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	}
 
 	if let Some(url) = config.target_a_parentchain_rpc_endpoint() {
-		init_target_a_parentchain(&enclave, &tee_accountid, url, is_development_mode)
+		init_target_parentchain(
+			&enclave,
+			&tee_accountid,
+			url,
+			ParentchainId::TargetA,
+			is_development_mode,
+		)
+	}
+
+	if let Some(url) = config.target_b_parentchain_rpc_endpoint() {
+		init_target_parentchain(
+			&enclave,
+			&tee_accountid,
+			url,
+			ParentchainId::TargetB,
+			is_development_mode,
+		)
 	}
 
 	// ------------------------------------------------------------------------
 	// Subscribe to events and print them.
-	println!("*** Subscribing to events");
+	println!("*** [{:?}] Subscribing to events", ParentchainId::Integritee);
 	let mut subscription = integritee_rpc_api.subscribe_events().unwrap();
-	println!("[+] Subscribed to events. waiting...");
+	println!("[+] [{:?}] Subscribed to events. waiting...", ParentchainId::Integritee);
 	loop {
 		if let Some(Ok(events)) = subscription.next_event::<RuntimeEvent, Hash>() {
 			print_events(events)
@@ -607,27 +628,34 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	}
 }
 
-fn init_target_a_parentchain<E>(
+fn init_target_parentchain<E>(
 	enclave: &Arc<E>,
 	tee_account_id: &AccountId32,
 	url: String,
+	parentchain_id: ParentchainId,
 	is_development_mode: bool,
 ) where
 	E: EnclaveBase + Sidechain,
 {
+	println!("Initializing parentchain {:?} with url: {}", parentchain_id, url);
 	let node_api = NodeApiFactory::new(url, AccountKeyring::Alice.pair())
 		.create_api()
-		.expect("Failed to create Target A parentchain node API");
+		.unwrap_or_else(|_| panic!("[{:?}] Failed to create parentchain node API", parentchain_id));
 
 	// some random bytes not too small to ensure that the enclave has enough funds
 	setup_account_funding(&node_api, tee_account_id, [0u8; 100].into(), is_development_mode)
-		.expect("Could not fund Target A parentchain enclave account");
+		.unwrap_or_else(|_| {
+			panic!("[{:?}] Could not fund parentchain enclave account", parentchain_id)
+		});
 
 	let (parentchain_handler, last_synched_header) =
-		init_parentchain(enclave, &node_api, tee_account_id, ParentchainId::TargetA);
+		init_parentchain(enclave, &node_api, tee_account_id, parentchain_id);
 
 	if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
-		println!("*** [+] Finished initializing Target A parentchain light client, syncing parentchain...");
+		println!(
+			"*** [+] [{:?}] Finished initializing light client, syncing parentchain...",
+			parentchain_id
+		);
 
 		// Syncing all parentchain blocks, this might take a while..
 		let last_synched_header =
@@ -635,25 +663,28 @@ fn init_target_a_parentchain<E>(
 
 		// start parentchain syncing loop (subscribe to header updates)
 		thread::Builder::new()
-			.name("target_a_parentchain_sync_loop".to_owned())
+			.name(format!("{:?}_parentchain_sync_loop", parentchain_id))
 			.spawn(move || {
 				if let Err(e) =
 					subscribe_to_parentchain_new_headers(parentchain_handler, last_synched_header)
 				{
-					error!("Target A parentchain block syncing terminated with a failure: {:?}", e);
+					error!(
+						"[{:?}] parentchain block syncing terminated with a failure: {:?}",
+						parentchain_id, e
+					);
 				}
-				println!("[!] Target A parentchain block syncing has terminated");
+				println!("[!] [{:?}] parentchain block syncing has terminated", parentchain_id);
 			})
 			.unwrap();
 	}
 
 	// Subscribe to events and print them.
-	println!("*** Subscribing to events of Target A chain");
+	println!("*** [{:?}] Subscribing to events...", parentchain_id);
 	let mut subscription = node_api.subscribe_events().unwrap();
-	println!("[+] Subscribed to events. waiting...");
+	println!("[+] [{:?}] Subscribed to events. waiting...", parentchain_id);
 
 	thread::Builder::new()
-		.name("target_a_parentchain_event_subscription".to_owned())
+		.name(format!("{:?}_parentchain_event_subscription", parentchain_id))
 		.spawn(move || loop {
 			if let Some(Ok(events)) = subscription.next_event::<RuntimeEvent, Hash>() {
 				print_events(events)
@@ -680,13 +711,13 @@ where
 		.unwrap(),
 	);
 	let last_synced_header = parentchain_handler.init_parentchain_components().unwrap();
-	trace!("last synched parentchain block: {}", last_synced_header.number);
+	println!("[{:?}] last synced parentchain block: {}", parentchain_id, last_synced_header.number);
 
 	let nonce = node_api.get_nonce_of(tee_account_id).unwrap();
-	info!("Enclave nonce = {:?}", nonce);
-	enclave
-		.set_nonce(nonce, parentchain_id)
-		.expect("Could not set nonce of enclave. Returning here...");
+	info!("[{:?}] Enclave nonce = {:?}", parentchain_id, nonce);
+	enclave.set_nonce(nonce, parentchain_id).unwrap_or_else(|_| {
+		panic!("[{:?}] Could not set nonce of enclave. Returning here...", parentchain_id)
+	});
 
 	let metadata = node_api.metadata().clone();
 	let runtime_spec_version = node_api.runtime_version().spec_version;
@@ -696,7 +727,10 @@ where
 			NodeMetadata::new(metadata, runtime_spec_version, runtime_transaction_version).encode(),
 			parentchain_id,
 		)
-		.expect("Could not set the node metadata in the enclave");
+		.unwrap_or_else(|_| {
+			panic!("[{:?}] Could not set the node metadata in the enclave", parentchain_id)
+		});
+
 	(parentchain_handler, last_synced_header)
 }
 

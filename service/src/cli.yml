@@ -34,6 +34,16 @@ args:
           help: Set the port of the optional Target A parentchain RPC endpoint.
           takes_value: true
           required: false
+    - target-b-parentchain-rpc-url:
+          long: target-b-parentchain-rpc-url
+          help: Set the url and the protocol of an optional Target B parentchain RPC endpoint that contains your business logic specific pallets.
+          takes_value: true
+          required: false
+    - target-b-parentchain-rpc-port:
+          long: target-b-parentchain-rpc-port
+          help: Set the port of the optional Target B parentchain RPC endpoint.
+          takes_value: true
+          required: false
     - data-dir:
           short: d
           long: data-dir
