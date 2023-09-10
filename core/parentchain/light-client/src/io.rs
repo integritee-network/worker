@@ -52,16 +52,18 @@ pub struct LightClientStateSeal<B, LightClientState> {
 	base_path: PathBuf,
 	db_path: PathBuf,
 	backup_path: PathBuf,
+	parentchain_id: ParentchainId,
 	_phantom: PhantomData<(B, LightClientState)>,
 }
 
 impl<B, L> LightClientStateSeal<B, L> {
-	pub fn new(base_path: PathBuf) -> Result<Self> {
+	pub fn new(base_path: PathBuf, parentchain_id: ParentchainId) -> Result<Self> {
 		std::fs::create_dir_all(&base_path)?;
 		Ok(Self {
 			base_path: base_path.clone(),
 			db_path: base_path.clone().join(DB_FILE),
 			backup_path: base_path.join(BACKUP_FILE),
+			parentchain_id,
 			_phantom: Default::default(),
 		})
 	}
@@ -88,19 +90,36 @@ impl<B, L> LightClientStateSeal<B, L> {
 	}
 }
 
+impl<B, L> IdentifyParentchain for LightClientStateSeal<B, L> {
+	fn parentchain_id(&self) -> ParentchainId {
+		self.parentchain_id
+	}
+}
+
 impl<B: Block, LightClientState: Decode + Encode + Debug> LightClientSealing
 	for LightClientStateSeal<B, LightClientState>
 {
 	type LightClientState = LightClientState;
 
 	fn seal(&self, unsealed: &LightClientState) -> Result<()> {
-		trace!("Backup light client state");
+		trace!(
+			"[{:?}] Backup light client state to {}",
+			self.parentchain_id,
+			self.backup_path().display()
+		);
 
 		if let Err(e) = self.backup() {
-			warn!("Could not backup previous light client state: Error: {}", e);
+			warn!(
+				"[{:?}] Could not backup previous light client state: Error: {}",
+				self.parentchain_id, e
+			);
 		};
 
-		trace!("Seal light client State. Current state: {:?}", unsealed);
+		trace!(
+			"[{:?}] Seal light client State. Current state: {:?}",
+			self.parentchain_id,
+			unsealed
+		);
 		Ok(unsealed.using_encoded(|bytes| seal(bytes, self.db_path()))?)
 	}
 
@@ -122,15 +141,13 @@ impl<B: Block, LightClientState: Decode + Encode + Debug> LightClientSealing
 #[derive(Debug)]
 pub struct LightClientStateSealSync<B, LightClientState> {
 	seal: LightClientStateSeal<B, LightClientState>,
-	parentchain_id: ParentchainId,
 	_rw_lock: RwLock<()>,
 }
 
 impl<B, LightClientState> LightClientStateSealSync<B, LightClientState> {
 	pub fn new(base_path: PathBuf, parentchain_id: ParentchainId) -> Result<Self> {
 		Ok(Self {
-			seal: LightClientStateSeal::new(base_path)?,
-			parentchain_id,
+			seal: LightClientStateSeal::new(base_path, parentchain_id)?,
 			_rw_lock: RwLock::new(()),
 		})
 	}
@@ -138,7 +155,7 @@ impl<B, LightClientState> LightClientStateSealSync<B, LightClientState> {
 
 impl<B, LightClientState> IdentifyParentchain for LightClientStateSealSync<B, LightClientState> {
 	fn parentchain_id(&self) -> ParentchainId {
-		self.parentchain_id
+		self.seal.parentchain_id
 	}
 }
 
@@ -178,7 +195,8 @@ where
 	B: Block,
 	NumberFor<B>: finality_grandpa::BlockNumberOps,
 	OCallApi: EnclaveOnChainOCallApi,
-	LightClientSeal: LightClientSealing<LightClientState = LightValidationState<B>>,
+	LightClientSeal:
+		LightClientSealing<LightClientState = LightValidationState<B>> + IdentifyParentchain,
 {
 	check_validator_set_proof::<B>(
 		params.genesis_header.state_root(),
@@ -187,7 +205,11 @@ where
 	)?;
 
 	if !seal.exists() {
-		info!("[Enclave] ChainRelay DB not found, creating new! {}", seal.path().display());
+		info!(
+			"[{:?}] ChainRelay DB not found, creating new! {}",
+			seal.parentchain_id(),
+			seal.path().display()
+		);
 		let validator = init_grandpa_validator::<B, OCallApi>(
 			ocall_api,
 			RelayState::new(params.genesis_header, params.authorities).into(),
@@ -201,7 +223,11 @@ where
 	let genesis_hash = validation_state.genesis_hash()?;
 
 	let init_state = if genesis_hash == params.genesis_header.hash() {
-		info!("Found already initialized light client with Genesis Hash: {:?}", genesis_hash);
+		info!(
+			"[{:?}] Found already initialized light client with Genesis Hash: {:?}",
+			seal.parentchain_id(),
+			genesis_hash
+		);
 		validation_state
 	} else {
 		info!(
@@ -213,7 +239,7 @@ where
 
 	let validator = init_grandpa_validator::<B, OCallApi>(ocall_api, init_state, parentchain_id)?;
 
-	info!("light client state: {:?}", validator);
+	info!("[{:?}] light client state: {:?}", seal.parentchain_id(), validator);
 
 	seal.seal(validator.get_state())?;
 	Ok(validator)
@@ -321,7 +347,7 @@ pub mod sgx_tests {
 	pub fn init_parachain_light_client_works() {
 		let parachain_params = default_simple_params();
 		let temp_dir = TempDir::with_prefix("init_parachain_light_client_works").unwrap();
-		let seal = TestSeal::new(temp_dir.path().to_path_buf()).unwrap();
+		let seal = TestSeal::new(temp_dir.path().to_path_buf(), ParentchainId::Integritee).unwrap();
 
 		let validator = read_or_init_parachain_validator::<TestBlock, OnchainMock, _>(
 			parachain_params.clone(),
@@ -343,7 +369,7 @@ pub mod sgx_tests {
 	pub fn sealing_creates_backup() {
 		let params = default_simple_params();
 		let temp_dir = TempDir::with_prefix("sealing_creates_backup").unwrap();
-		let seal = TestSeal::new(temp_dir.path().to_path_buf()).unwrap();
+		let seal = TestSeal::new(temp_dir.path().to_path_buf(), ParentchainId::Integritee).unwrap();
 		let state = RelayState::new(params.genesis_header, Default::default()).into();
 
 		seal.seal(&state).unwrap();
