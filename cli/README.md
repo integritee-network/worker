@@ -25,3 +25,7 @@ Trusted call 0x69ddfd1698bd2d629180c2dca34ce7add087526c51f43cf68245241b3f13154e 
 Trusted call 0x69ddfd1698bd2d629180c2dca34ce7add087526c51f43cf68245241b3f13154e is Invalid
 
 ```
+
+## housekeeping tasks
+
+populate all TCBinfo's Intel has published
