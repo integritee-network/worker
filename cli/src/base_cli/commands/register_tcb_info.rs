@@ -23,6 +23,7 @@ use itp_node_api::api_client::{ParentchainExtrinsicSigner, TEEREX};
 use itp_types::{parentchain::Hash, OpaqueCall};
 use itp_utils::ToHexPrefixed;
 use log::*;
+use regex::Regex;
 use serde::Deserialize;
 use serde_json::Value;
 use sp_core::sr25519 as sr25519_core;
@@ -103,18 +104,22 @@ impl RegisterTcbInfoCommand {
 				.to_string();
 				trace!("certificate chain: \n{}", certificate_chain);
 
-				let tcb_info: TcbInfo = response.json().expect("Error parsing JSON");
+				let body = response.text().unwrap();
+				trace!("raw json: \n{}", body);
+				let re = Regex::new(r#"tcbInfo\"\s?:(\{.*\}),\s?\"signature"#).unwrap();
+				let tcb_info = &re.captures(&body).unwrap()[1];
+				let re = Regex::new(r#"\"signature\"\s?:\s?\"(.*)\"\}"#).unwrap();
+				let intel_signature_hex = &re.captures(&body).unwrap()[1];
+				trace!("TCB info: {}", tcb_info);
+				trace!("signature: {}", body);
 
-				trace!("TCB info: {:?}", tcb_info.tcbInfo);
-				trace!("signature: {:?}", tcb_info.signature);
-
-				let intel_signature = hex::decode(tcb_info.signature).unwrap();
+				let intel_signature = hex::decode(intel_signature_hex).unwrap();
 
 				let call = OpaqueCall::from_tuple(&compose_call!(
 					chain_api.metadata(),
 					TEEREX,
 					"register_tcb_info",
-					tcb_info.tcbInfo.to_string(),
+					tcb_info,
 					intel_signature,
 					certificate_chain
 				));
