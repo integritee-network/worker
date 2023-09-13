@@ -22,7 +22,7 @@ use lazy_static::lazy_static;
 use log::*;
 use sgx_tse::rsgx_create_report;
 use sgx_types::*;
-use std::{boxed::Box, ptr, sync::Arc, vec::Vec};
+use std::{ptr, sync::Arc, vec::Vec};
 
 use std::sync::SgxRwLock as RwLock;
 
@@ -41,10 +41,10 @@ pub struct MrEnclave {
 
 impl MrEnclave {
 	pub fn current() -> Arc<MrEnclave> {
-		MY_MRENCLAVE.with(|c| c.read().unwrap().clone())
+		MY_MRENCLAVE.read().unwrap().clone()
 	}
 	pub fn make_current(self) {
-		MY_MRENCLAVE.with(|c| *c.write().unwrap() = Arc::new(self))
+		*MY_MRENCLAVE.write().unwrap() = Arc::new(self)
 	}
 }
 
@@ -224,7 +224,7 @@ impl EnclaveAttestationOCallApi for OcallApi {
 	fn get_mrenclave_of_self(&self) -> SgxResult<sgx_measurement_t> {
 		if let Some(mrenclave) = MrEnclave::current().maybe_mrenclave {
 			trace!("found cached MRENCLAVE");
-			return Ok(mrenclave.m)
+			return Ok(mrenclave)
 		};
 		debug!("initializing MY_MRENCLAVE cache");
 		let mrenclave_value = self.get_report_of_self()?.mr_enclave;
