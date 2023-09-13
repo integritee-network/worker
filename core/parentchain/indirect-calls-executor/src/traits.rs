@@ -64,6 +64,8 @@ pub trait IndirectExecutor {
 
 	fn get_enclave_account(&self) -> Result<AccountId>;
 
+	fn get_default_shard(&self) -> ShardIdentifier;
+
 	fn sign_call_with_self(
 		&self,
 		trusted_call: &TrustedCall,

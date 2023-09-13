@@ -37,7 +37,6 @@ pub mod triggered_dispatcher;
 #[cfg(feature = "mocks")]
 pub mod trigger_parentchain_block_import_mock;
 
-use crate::triggered_dispatcher::TriggerParentchainBlockImport;
 use error::{Error, Result};
 use std::{sync::Arc, vec::Vec};
 
@@ -61,8 +60,6 @@ pub enum BlockImportDispatcher<TriggeredDispatcher, ImmediateDispatcher> {
 
 impl<TriggeredDispatcher, ImmediateDispatcher>
 	BlockImportDispatcher<TriggeredDispatcher, ImmediateDispatcher>
-where
-	TriggeredDispatcher: TriggerParentchainBlockImport,
 {
 	pub fn new_triggered_dispatcher(triggered_dispatcher: Arc<TriggeredDispatcher>) -> Self {
 		BlockImportDispatcher::TriggeredDispatcher(triggered_dispatcher)

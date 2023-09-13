@@ -18,7 +18,8 @@
 use crate::{
 	base_cli::commands::{
 		balance::BalanceCommand, faucet::FaucetCommand, listen::ListenCommand,
-		shield_funds::ShieldFundsCommand, transfer::TransferCommand,
+		register_tcb_info::RegisterTcbInfoCommand, shield_funds::ShieldFundsCommand,
+		transfer::TransferCommand,
 	},
 	command_utils::*,
 	Cli, CliResult, CliResultOk, ED25519_KEY_TYPE, SR25519_KEY_TYPE,
@@ -65,6 +66,9 @@ pub enum BaseCommand {
 	/// listen to parentchain events
 	Listen(ListenCommand),
 
+	/// Register TCB info for FMSPC
+	RegisterTcbInfo(RegisterTcbInfoCommand),
+
 	/// Transfer funds from an parentchain account to an incognito account
 	ShieldFunds(ShieldFundsCommand),
 }
@@ -81,6 +85,7 @@ impl BaseCommand {
 			BaseCommand::Transfer(cmd) => cmd.run(cli),
 			BaseCommand::ListWorkers => list_workers(cli),
 			BaseCommand::Listen(cmd) => cmd.run(cli),
+			BaseCommand::RegisterTcbInfo(cmd) => cmd.run(cli),
 			BaseCommand::ShieldFunds(cmd) => cmd.run(cli),
 		}
 	}
