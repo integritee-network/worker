@@ -18,7 +18,7 @@
 use crate::Cli;
 use base58::FromBase58;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
-use itp_node_api::api_client::{ParentchainApi, WsRpcClient};
+use itp_node_api::api_client::{ParentchainApi, TungsteniteRpcClient};
 use log::*;
 use my_node_runtime::{AccountId, Signature};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
@@ -40,7 +40,7 @@ pub(crate) fn get_shielding_key(cli: &Cli) -> Result<Rsa3072PubKey, String> {
 pub(crate) fn get_chain_api(cli: &Cli) -> ParentchainApi {
 	let url = format!("{}:{}", cli.node_url, cli.node_port);
 	info!("connecting to {}", url);
-	ParentchainApi::new(WsRpcClient::new(&url).unwrap()).unwrap()
+	ParentchainApi::new(TungsteniteRpcClient::new(&url, 5).unwrap()).unwrap()
 }
 
 pub(crate) fn get_accountid_from_str(account: &str) -> AccountId {

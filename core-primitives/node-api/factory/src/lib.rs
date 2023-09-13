@@ -16,7 +16,7 @@
 
 */
 
-use itp_api_client_types::{ParentchainApi, ParentchainExtrinsicSigner, WsRpcClient};
+use itp_api_client_types::{ParentchainApi, ParentchainExtrinsicSigner, TungsteniteRpcClient};
 use sp_core::sr25519;
 
 /// Trait to create a node API, based on a node URL and signer.
@@ -63,7 +63,7 @@ impl NodeApiFactory {
 
 impl CreateNodeApi for NodeApiFactory {
 	fn create_api(&self) -> Result<ParentchainApi> {
-		let rpc_client = WsRpcClient::new(self.node_url.as_str())
+		let rpc_client = TungsteniteRpcClient::new(self.node_url.as_str(), 5)
 			.map_err(NodeApiFactoryError::FailedToCreateRpcClient)?;
 		let mut api =
 			ParentchainApi::new(rpc_client).map_err(NodeApiFactoryError::FailedToCreateNodeApi)?;

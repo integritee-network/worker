@@ -67,7 +67,7 @@ mod api {
 
 	pub use substrate_api_client::{
 		api::Error as ApiClientError,
-		rpc::{Error as RpcClientError, WsRpcClient},
+		rpc::{tungstenite_client::TungsteniteRpcClient, Error as RpcClientError},
 	};
 
 	pub type SignedBlock = GenericSignedBlock<Block>;
@@ -75,5 +75,5 @@ mod api {
 		StaticExtrinsicSigner<sp_core::sr25519::Pair, PairSignature>;
 
 	pub type ParentchainApi =
-		Api<ParentchainExtrinsicSigner, WsRpcClient, ParentchainExtrinsicParams, Runtime>;
+		Api<ParentchainExtrinsicSigner, TungsteniteRpcClient, ParentchainExtrinsicParams, Runtime>;
 }

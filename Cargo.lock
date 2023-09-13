@@ -9,7 +9,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe438c63458706e03479442743baae6c88256498e6431708f6dfc520a26515d3"
 dependencies = [
  "lazy_static",
- "regex 1.9.5",
+ "regex 1.8.4",
 ]
 
 [[package]]
@@ -39,8 +39,8 @@ dependencies = [
  "log 0.4.19",
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
- "serde_json 1.0.96",
+ "serde 1.0.188",
+ "serde_json 1.0.106",
  "sp-application-crypto",
  "sp-core",
  "sp-runtime",
@@ -62,8 +62,8 @@ dependencies = [
  "parity-scale-codec",
  "primitive-types",
  "scale-info",
- "serde 1.0.164",
- "serde_json 1.0.96",
+ "serde 1.0.188",
+ "serde_json 1.0.106",
  "sp-core",
  "sp-runtime",
  "sp-staking",
@@ -155,7 +155,7 @@ version = "0.7.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cc936419f96fa211c1b9166887b38e5e40b19958e5b895be7c1f93adec7071ac"
 dependencies = [
- "memchr 2.6.3",
+ "memchr 2.5.0",
 ]
 
 [[package]]
@@ -164,7 +164,7 @@ version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "43f6cb1bf222025340178f382c426f13757b2960e89779dfcb319c32542a5a41"
 dependencies = [
- "memchr 2.6.3",
+ "memchr 2.5.0",
 ]
 
 [[package]]
@@ -253,7 +253,7 @@ checksum = "b9ccdd8f2a161be9bd5c023df56f1b2a0bd1d83872ae53b71a84a12c9bf6e842"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.18",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -369,7 +369,7 @@ version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a8241f3ebb85c056b509d4327ad0358fbbba6ffb340bf388f26350aeda225b1"
 dependencies = [
- "serde 1.0.164",
+ "serde 1.0.188",
 ]
 
 [[package]]
@@ -387,7 +387,7 @@ version = "1.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
 dependencies = [
- "serde 1.0.164",
+ "serde 1.0.188",
 ]
 
 [[package]]
@@ -404,7 +404,7 @@ dependencies = [
  "peeking_take_while",
  "proc-macro2",
  "quote",
- "regex 1.9.5",
+ "regex 1.8.4",
  "rustc-hash",
  "shlex",
 ]
@@ -521,7 +521,7 @@ dependencies = [
  "log 0.4.19",
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
 ]
 
 [[package]]
@@ -536,8 +536,8 @@ version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a246e68bb43f6cd9db24bea052a53e40405417c5fb372e3d1a8a7f770a564ef5"
 dependencies = [
- "memchr 2.6.3",
- "serde 1.0.164",
+ "memchr 2.5.0",
+ "serde 1.0.188",
 ]
 
 [[package]]
@@ -623,7 +623,7 @@ version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c530edf18f37068ac2d977409ed5cd50d53d73bc653c7647b48eb78976ac9ae2"
 dependencies = [
- "serde 1.0.164",
+ "serde 1.0.188",
 ]
 
 [[package]]
@@ -632,7 +632,7 @@ version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cbdb825da8a5df079a43676dbe042702f1707b1109f713a01420fbb4cc71fa27"
 dependencies = [
- "serde 1.0.164",
+ "serde 1.0.188",
 ]
 
 [[package]]
@@ -644,8 +644,8 @@ dependencies = [
  "camino",
  "cargo-platform",
  "semver 1.0.17",
- "serde 1.0.164",
- "serde_json 1.0.96",
+ "serde 1.0.188",
+ "serde_json 1.0.106",
  "thiserror 1.0.40",
 ]
 
@@ -708,7 +708,7 @@ dependencies = [
  "iana-time-zone",
  "js-sys",
  "num-traits 0.2.15",
- "serde 1.0.164",
+ "serde 1.0.188",
  "time",
  "wasm-bindgen",
  "winapi 0.3.9",
@@ -731,7 +731,7 @@ dependencies = [
  "parity-scale-codec",
  "rustc-hex",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
  "sp-runtime",
  "sp-std",
@@ -905,7 +905,7 @@ version = "0.93.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f42ea692c7b450ad18b8c9889661505d51c09ec4380cf1c2d278dbb2da22cae1"
 dependencies = [
- "serde 1.0.164",
+ "serde 1.0.188",
 ]
 
 [[package]]
@@ -1067,7 +1067,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "scratch",
- "syn 2.0.18",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -1084,7 +1084,7 @@ checksum = "4a076022ece33e7686fb76513518e219cca4fce5750a8ae6d1ce6c0f48fd1af9"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.18",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -1337,7 +1337,7 @@ dependencies = [
  "log 0.4.19",
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-core",
  "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
  "sp-runtime",
@@ -1362,7 +1362,7 @@ dependencies = [
  "atty",
  "humantime",
  "log 0.4.19",
- "regex 1.9.5",
+ "regex 1.8.4",
  "termcolor",
 ]
 
@@ -1375,7 +1375,7 @@ dependencies = [
  "humantime",
  "is-terminal",
  "log 0.4.19",
- "regex 1.9.5",
+ "regex 1.8.4",
  "termcolor",
 ]
 
@@ -1391,6 +1391,12 @@ name = "environmental"
 version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e48c92028aaa870e83d51c64e5d4e0b6981b360c522198c23959f219a4e1b15b"
+
+[[package]]
+name = "equivalent"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 
 [[package]]
 name = "errno"
@@ -1441,7 +1447,7 @@ dependencies = [
  "parity-scale-codec",
  "rlp",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sha3",
  "triehash",
 ]
@@ -1479,7 +1485,7 @@ dependencies = [
  "primitive-types",
  "rlp",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sha3",
 ]
 
@@ -1492,7 +1498,7 @@ dependencies = [
  "parity-scale-codec",
  "primitive-types",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
 ]
 
 [[package]]
@@ -1708,7 +1714,7 @@ dependencies = [
  "log 0.4.19",
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-core",
  "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
  "sp-runtime",
@@ -1724,7 +1730,7 @@ dependencies = [
  "frame-support",
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-core",
  "sp-runtime",
  "sp-std",
@@ -1749,7 +1755,7 @@ dependencies = [
  "parity-scale-codec",
  "paste",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-api",
  "sp-application-crypto",
  "sp-core",
@@ -1769,7 +1775,7 @@ dependencies = [
  "proc-macro-crate",
  "proc-macro2",
  "quote",
- "syn 2.0.18",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -1814,7 +1820,7 @@ dependencies = [
  "cfg-if 1.0.0",
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
 ]
 
 [[package]]
@@ -1825,7 +1831,7 @@ dependencies = [
  "cfg-if 1.0.0",
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
 ]
 
 [[package]]
@@ -1844,7 +1850,7 @@ dependencies = [
  "parity-scale-codec",
  "paste",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "smallvec 1.10.0",
  "sp-api",
  "sp-arithmetic",
@@ -1874,7 +1880,7 @@ dependencies = [
  "proc-macro-warning",
  "proc-macro2",
  "quote",
- "syn 2.0.18",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -1886,7 +1892,7 @@ dependencies = [
  "proc-macro-crate",
  "proc-macro2",
  "quote",
- "syn 2.0.18",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -1896,7 +1902,7 @@ source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.4
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.18",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -1908,7 +1914,7 @@ dependencies = [
  "log 0.4.19",
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-core",
  "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
  "sp-runtime",
@@ -2089,7 +2095,7 @@ checksum = "89ca545a94061b6365f2c7355b4b32bd20df3ff95f02da9329b34ccc3bd6ee72"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.18",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -2156,7 +2162,7 @@ dependencies = [
  "futures-macro 0.3.28",
  "futures-sink 0.3.28",
  "futures-task 0.3.28",
- "memchr 2.6.3",
+ "memchr 2.5.0",
  "pin-project-lite",
  "pin-utils",
  "slab 0.4.8",
@@ -2256,7 +2262,7 @@ dependencies = [
  "bstr",
  "fnv 1.0.7",
  "log 0.4.19",
- "regex 1.9.5",
+ "regex 1.8.4",
 ]
 
 [[package]]
@@ -2339,6 +2345,12 @@ checksum = "43a3c133739dddd0d2990f9a4bdf8eb4b21ef50e4851ca85ab661199821d510e"
 dependencies = [
  "ahash 0.8.3",
 ]
+
+[[package]]
+name = "hashbrown"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c6201b9ff9fd90a5a3bac2e56a830d0caa509576f0e503818ee82c181b3437a"
 
 [[package]]
 name = "hashbrown_tstd"
@@ -2685,7 +2697,7 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ebc88fc67028ae3db0c853baa36269d398d5f45b6982f95549ff5def78c935cd"
 dependencies = [
- "serde 1.0.164",
+ "serde 1.0.188",
 ]
 
 [[package]]
@@ -2717,7 +2729,17 @@ checksum = "bd070e393353796e801d209ad339e89596eb4c8d430d18ede6a1cced8fafbd99"
 dependencies = [
  "autocfg 1.1.0",
  "hashbrown 0.12.3",
- "serde 1.0.164",
+ "serde 1.0.188",
+]
+
+[[package]]
+name = "indexmap"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d5477fe2230a79769d8dc68e0eabf5437907c0457a5614a9e8dddb67f65eb65d"
+dependencies = [
+ "equivalent",
+ "hashbrown 0.14.0",
 ]
 
 [[package]]
@@ -2777,11 +2799,9 @@ dependencies = [
  "primitive-types",
  "rand 0.8.5",
  "rayon",
- "regex 1.9.5",
- "reqwest",
  "sc-keystore",
- "serde 1.0.164",
- "serde_json 1.0.96",
+ "serde 1.0.188",
+ "serde_json 1.0.106",
  "sgx_crypto_helper",
  "sp-application-crypto",
  "sp-core",
@@ -2791,7 +2811,6 @@ dependencies = [
  "substrate-api-client",
  "substrate-client-keystore",
  "thiserror 1.0.40",
- "urlencoding",
  "ws",
 ]
 
@@ -2888,9 +2907,9 @@ dependencies = [
  "primitive-types",
  "prometheus",
  "scale-info",
- "serde 1.0.164",
- "serde_derive 1.0.164",
- "serde_json 1.0.96",
+ "serde 1.0.188",
+ "serde_derive 1.0.188",
+ "serde_json 1.0.106",
  "sgx-verify",
  "sgx_crypto_helper",
  "sgx_types",
@@ -2950,8 +2969,8 @@ dependencies = [
  "hyper-multipart-rfc7578",
  "hyper-tls",
  "parity-multiaddr",
- "serde 1.0.164",
- "serde_json 1.0.96",
+ "serde 1.0.188",
+ "serde_json 1.0.106",
  "serde_urlencoded",
  "tokio",
  "tokio-util 0.6.10",
@@ -2959,12 +2978,6 @@ dependencies = [
  "typed-builder",
  "walkdir",
 ]
-
-[[package]]
-name = "ipnet"
-version = "2.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "28b29a3cd74f0f4598934efe3aeba42bae0eb4680554128851ebbecb02af14e6"
 
 [[package]]
 name = "is-terminal"
@@ -2988,8 +3001,8 @@ dependencies = [
  "lazy_static",
  "log 0.4.19",
  "parity-scale-codec",
- "serde 1.0.164",
- "serde_json 1.0.96",
+ "serde 1.0.188",
+ "serde_json 1.0.106",
  "sgx_tstd",
  "substrate-fixed",
  "thiserror 1.0.40",
@@ -3022,7 +3035,7 @@ dependencies = [
  "pallet-transaction-payment-rpc-runtime-api",
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-api",
  "sp-block-builder",
  "sp-consensus-aura",
@@ -3082,7 +3095,7 @@ dependencies = [
  "jsonrpc-core 18.0.0 (git+https://github.com/scs/jsonrpc?branch=no_std_v18)",
  "log 0.4.19",
  "parity-scale-codec",
- "serde_json 1.0.96",
+ "serde_json 1.0.106",
  "sgx_tstd",
  "sgx_types",
  "sp-runtime",
@@ -3126,6 +3139,7 @@ dependencies = [
  "itc-parentchain-light-client",
  "itp-types",
  "parity-scale-codec",
+ "serde_json 1.0.106",
  "sp-runtime",
 ]
 
@@ -3236,7 +3250,7 @@ dependencies = [
  "log 0.4.19",
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-core",
  "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
  "sp-runtime",
@@ -3253,8 +3267,8 @@ dependencies = [
  "http_req 0.8.1 (git+https://github.com/integritee-network/http_req?branch=master)",
  "http_req 0.8.1 (git+https://github.com/integritee-network/http_req)",
  "log 0.4.19",
- "serde 1.0.164",
- "serde_json 1.0.96",
+ "serde 1.0.188",
+ "serde_json 1.0.106",
  "sgx_tstd",
  "sgx_types",
  "thiserror 1.0.40",
@@ -3280,8 +3294,8 @@ dependencies = [
  "parity-scale-codec",
  "parking_lot 0.12.1",
  "rustls 0.19.1",
- "serde_derive 1.0.164",
- "serde_json 1.0.96",
+ "serde_derive 1.0.188",
+ "serde_json 1.0.106",
  "sgx_crypto_helper",
  "thiserror 1.0.40",
  "url 2.4.0",
@@ -3305,7 +3319,7 @@ dependencies = [
  "jsonrpsee",
  "log 0.4.19",
  "parity-scale-codec",
- "serde_json 1.0.96",
+ "serde_json 1.0.106",
  "sp-core",
  "tokio",
 ]
@@ -3411,8 +3425,8 @@ dependencies = [
  "parity-scale-codec",
  "rustls 0.19.0 (git+https://github.com/mesalock-linux/rustls?rev=sgx_1.1.3)",
  "rustls 0.19.1",
+ "serde_json 1.0.106",
  "serde_json 1.0.60 (git+https://github.com/mesalock-linux/serde-json-sgx?tag=sgx_1.1.3)",
- "serde_json 1.0.96",
  "sgx_rand",
  "sgx_tcrypto",
  "sgx_tse",
@@ -3450,7 +3464,7 @@ dependencies = [
  "itp-types",
  "log 0.4.19",
  "parity-scale-codec",
- "serde_json 1.0.96",
+ "serde_json 1.0.106",
  "sgx_crypto_helper",
  "sgx_types",
  "sgx_urts",
@@ -3609,8 +3623,8 @@ version = "0.9.0"
 dependencies = [
  "itp-types",
  "parity-scale-codec",
- "serde 1.0.164",
- "serde_json 1.0.96",
+ "serde 1.0.188",
+ "serde_json 1.0.106",
  "sgx_tstd",
 ]
 
@@ -3631,9 +3645,9 @@ dependencies = [
  "ofb",
  "parity-scale-codec",
  "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx?tag=sgx_1.1.3)",
- "serde 1.0.164",
+ "serde 1.0.188",
+ "serde_json 1.0.106",
  "serde_json 1.0.60 (git+https://github.com/mesalock-linux/serde-json-sgx?tag=sgx_1.1.3)",
- "serde_json 1.0.96",
  "sgx_crypto_helper",
  "sgx_rand",
  "sgx_tstd",
@@ -3651,7 +3665,7 @@ dependencies = [
  "log 0.4.19",
  "parity-scale-codec",
  "postcard",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sgx_tstd",
  "sp-core",
 ]
@@ -3849,7 +3863,7 @@ dependencies = [
  "log 0.4.19",
  "parity-scale-codec",
  "parity-util-mem",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sgx_tstd",
  "sgx_types",
  "sp-application-crypto",
@@ -3901,8 +3915,8 @@ dependencies = [
  "pallet-balances",
  "parity-scale-codec",
  "primitive-types",
- "serde 1.0.164",
- "serde_json 1.0.96",
+ "serde 1.0.188",
+ "serde_json 1.0.106",
  "sp-core",
  "sp-runtime",
  "sp-std",
@@ -4079,8 +4093,8 @@ dependencies = [
  "its-test",
  "jsonrpsee",
  "log 0.4.19",
- "serde 1.0.164",
- "serde_json 1.0.96",
+ "serde 1.0.188",
+ "serde_json 1.0.106",
  "thiserror 1.0.40",
  "tokio",
 ]
@@ -4092,7 +4106,7 @@ dependencies = [
  "itp-types",
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-core",
  "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
  "sp-runtime",
@@ -4144,7 +4158,7 @@ dependencies = [
  "its-primitives",
  "log 0.4.19",
  "parity-scale-codec",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sgx_tstd",
  "sp-core",
  "sp-io 7.0.0",
@@ -4234,9 +4248,9 @@ dependencies = [
  "futures-executor 0.3.28",
  "futures-util 0.3.28",
  "log 0.4.19",
- "serde 1.0.164",
- "serde_derive 1.0.164",
- "serde_json 1.0.96",
+ "serde 1.0.188",
+ "serde_derive 1.0.188",
+ "serde_json 1.0.106",
 ]
 
 [[package]]
@@ -4279,8 +4293,8 @@ dependencies = [
  "jsonrpsee-types",
  "jsonrpsee-utils",
  "log 0.4.19",
- "serde 1.0.164",
- "serde_json 1.0.96",
+ "serde 1.0.188",
+ "serde_json 1.0.106",
  "thiserror 1.0.40",
  "url 2.4.0",
 ]
@@ -4299,8 +4313,8 @@ dependencies = [
  "jsonrpsee-utils",
  "lazy_static",
  "log 0.4.19",
- "serde 1.0.164",
- "serde_json 1.0.96",
+ "serde 1.0.188",
+ "serde_json 1.0.106",
  "socket2",
  "thiserror 1.0.40",
  "tokio",
@@ -4332,8 +4346,8 @@ dependencies = [
  "futures-util 0.3.28",
  "hyper",
  "log 0.4.19",
- "serde 1.0.164",
- "serde_json 1.0.96",
+ "serde 1.0.188",
+ "serde_json 1.0.106",
  "soketto",
  "thiserror 1.0.40",
 ]
@@ -4352,8 +4366,8 @@ dependencies = [
  "parking_lot 0.11.2",
  "rand 0.8.5",
  "rustc-hash",
- "serde 1.0.164",
- "serde_json 1.0.96",
+ "serde 1.0.188",
+ "serde_json 1.0.106",
  "thiserror 1.0.40",
 ]
 
@@ -4371,8 +4385,8 @@ dependencies = [
  "pin-project",
  "rustls 0.19.1",
  "rustls-native-certs",
- "serde 1.0.164",
- "serde_json 1.0.96",
+ "serde 1.0.188",
+ "serde_json 1.0.106",
  "soketto",
  "thiserror 1.0.40",
  "tokio",
@@ -4393,8 +4407,8 @@ dependencies = [
  "jsonrpsee-utils",
  "log 0.4.19",
  "rustc-hash",
- "serde 1.0.164",
- "serde_json 1.0.96",
+ "serde 1.0.188",
+ "serde_json 1.0.106",
  "soketto",
  "thiserror 1.0.40",
  "tokio",
@@ -4497,7 +4511,7 @@ dependencies = [
  "libsecp256k1-gen-ecmult",
  "libsecp256k1-gen-genmult",
  "rand 0.8.5",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sha2 0.9.9",
  "typenum 1.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -4624,7 +4638,7 @@ version = "0.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f099785f7595cc4b4553a174ce30dd7589ef93391ff414dbb67f62392b9e0ce1"
 dependencies = [
- "regex-automata 0.1.10",
+ "regex-automata",
 ]
 
 [[package]]
@@ -4654,9 +4668,9 @@ dependencies = [
 
 [[package]]
 name = "memchr"
-version = "2.6.3"
+version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f232d6ef707e1956a43342693d2a31e72989554d58299d7a88738cc95b0d35c"
+checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 
 [[package]]
 name = "memfd"
@@ -4873,7 +4887,7 @@ dependencies = [
  "http 0.2.9",
  "httparse 1.8.0",
  "log 0.4.19",
- "memchr 2.6.3",
+ "memchr 2.5.0",
  "mime",
  "spin 0.9.8",
  "version_check",
@@ -4988,7 +5002,7 @@ version = "7.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d273983c5a657a70a3e8f2a01329822f3b8c8172b73826411a55751e404a0a4a"
 dependencies = [
- "memchr 2.6.3",
+ "memchr 2.5.0",
  "minimal-lexical",
 ]
 
@@ -5236,7 +5250,7 @@ dependencies = [
  "crc32fast",
  "hashbrown 0.12.3",
  "indexmap 1.9.3",
- "memchr 2.6.3",
+ "memchr 2.5.0",
 ]
 
 [[package]]
@@ -5245,7 +5259,7 @@ version = "0.30.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03b4680b86d9cfafba8fc491dc9b6df26b68cf40e9e6cd73909194759a63c385"
 dependencies = [
- "memchr 2.6.3",
+ "memchr 2.5.0",
 ]
 
 [[package]]
@@ -5306,7 +5320,7 @@ checksum = "a948666b637a0f465e8564c73e89d4dde00d72d4d473cc972f390fc3dcee7d9c"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.18",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -5404,8 +5418,8 @@ dependencies = [
  "parity-scale-codec",
  "rustc-hex",
  "scale-info",
- "serde 1.0.164",
- "serde_derive 1.0.164",
+ "serde 1.0.188",
+ "serde_derive 1.0.188",
  "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
  "sp-runtime",
  "sp-std",
@@ -5428,7 +5442,7 @@ dependencies = [
  "parity-scale-codec",
  "rand 0.8.5",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "smallvec 1.10.0",
  "sp-api",
  "sp-core",
@@ -5460,7 +5474,7 @@ source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.4
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.18",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -5476,7 +5490,7 @@ dependencies = [
  "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-core",
  "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
  "sp-runtime",
@@ -5571,7 +5585,7 @@ dependencies = [
  "log 0.4.19",
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-core",
  "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
  "sp-runtime",
@@ -5660,7 +5674,7 @@ dependencies = [
  "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sidechain-primitives",
  "sp-core",
  "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
@@ -5683,7 +5697,7 @@ dependencies = [
  "pallet-session",
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-application-crypto",
  "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
  "sp-runtime",
@@ -5737,7 +5751,7 @@ dependencies = [
  "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sgx-verify",
  "sp-core",
  "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
@@ -5773,7 +5787,7 @@ dependencies = [
  "frame-system",
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-core",
  "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
  "sp-runtime",
@@ -5804,7 +5818,7 @@ dependencies = [
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-runtime",
  "sp-std",
 ]
@@ -5852,7 +5866,7 @@ dependencies = [
  "data-encoding",
  "multihash",
  "percent-encoding 2.3.0",
- "serde 1.0.164",
+ "serde 1.0.188",
  "static_assertions",
  "unsigned-varint 0.7.1",
  "url 2.4.0",
@@ -5870,7 +5884,7 @@ dependencies = [
  "bytes 1.4.0",
  "impl-trait-for-tuples",
  "parity-scale-codec-derive",
- "serde 1.0.164",
+ "serde 1.0.188",
 ]
 
 [[package]]
@@ -5971,7 +5985,7 @@ checksum = "7037e5e93e0172a5a96874380bf73bc6ecef022e26fa25f2be26864d6b3ba95d"
 dependencies = [
  "lazy_static",
  "num 0.2.1",
- "regex 1.9.5",
+ "regex 1.8.4",
 ]
 
 [[package]]
@@ -6052,7 +6066,7 @@ checksum = "39407670928234ebc5e6e580247dd567ad73a3578460c5990f9503df207e8f07"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.18",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -6090,7 +6104,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a25c0b0ae06fcffe600ad392aabfa535696c8973f2253d9ac83171924c58a858"
 dependencies = [
  "postcard-cobs",
- "serde 1.0.164",
+ "serde 1.0.188",
 ]
 
 [[package]]
@@ -6121,7 +6135,7 @@ dependencies = [
  "itertools",
  "normalize-line-endings",
  "predicates-core",
- "regex 1.9.5",
+ "regex 1.8.4",
 ]
 
 [[package]]
@@ -6208,14 +6222,14 @@ checksum = "0e99670bafb56b9a106419397343bdbc8b8742c3cc449fec6345f86173f47cd4"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.18",
+ "syn 2.0.32",
 ]
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.60"
+version = "1.0.66"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dec2b086b7a862cf4de201096214fa870344cf922b2b30c167badb3af3195406"
+checksum = "18fb31db3f9bddb2ea821cde30a9f70117e3f119938b5ee630b7403aa6e2ead9"
 dependencies = [
  "unicode-ident",
 ]
@@ -6243,7 +6257,7 @@ dependencies = [
  "fnv 1.0.7",
  "lazy_static",
  "libc",
- "memchr 2.6.3",
+ "memchr 2.5.0",
  "parking_lot 0.12.1",
  "procfs",
  "protobuf",
@@ -6515,7 +6529,7 @@ checksum = "8d2275aab483050ab2a7364c1a46604865ee7d6906684e08db0f090acf74f9e7"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.18",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -6529,14 +6543,13 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.9.5"
+version = "1.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "697061221ea1b4a94a624f67d0ae2bfe4e22b8a17b6a192afb11046542cc8c47"
+checksum = "d0ab3ca65655bb1e41f2a8c8cd662eb4fb035e67c3f78da1d61dffe89d07300f"
 dependencies = [
  "aho-corasick 1.0.2",
- "memchr 2.6.3",
- "regex-automata 0.3.8",
- "regex-syntax 0.7.5",
+ "memchr 2.5.0",
+ "regex-syntax 0.7.2",
 ]
 
 [[package]]
@@ -6546,17 +6559,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c230d73fb8d8c1b9c0b3135c5142a8acee3a0558fb8db5cf1cb65f8d7862132"
 dependencies = [
  "regex-syntax 0.6.29",
-]
-
-[[package]]
-name = "regex-automata"
-version = "0.3.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2f401f4955220693b56f8ec66ee9c78abffd8d1c4f23dc41a23839eb88f0795"
-dependencies = [
- "aho-corasick 1.0.2",
- "memchr 2.6.3",
- "regex-syntax 0.7.5",
 ]
 
 [[package]]
@@ -6575,46 +6577,9 @@ checksum = "f162c6dd7b008981e4d40210aca20b4bd0f9b60ca9271061b07f78537722f2e1"
 
 [[package]]
 name = "regex-syntax"
-version = "0.7.5"
+version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dbb5fb1acd8a1a18b3dd5be62d25485eb770e05afb408a9627d14d451bae12da"
-
-[[package]]
-name = "reqwest"
-version = "0.11.20"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e9ad3fe7488d7e34558a2033d45a0c90b72d97b4f80705666fea71472e2e6a1"
-dependencies = [
- "base64 0.21.2",
- "bytes 1.4.0",
- "encoding_rs",
- "futures-core 0.3.28",
- "futures-util 0.3.28",
- "h2",
- "http 0.2.9",
- "http-body",
- "hyper",
- "hyper-tls",
- "ipnet",
- "js-sys",
- "log 0.4.19",
- "mime",
- "native-tls",
- "once_cell 1.18.0",
- "percent-encoding 2.3.0",
- "pin-project-lite",
- "serde 1.0.164",
- "serde_json 1.0.96",
- "serde_urlencoded",
- "tokio",
- "tokio-native-tls",
- "tower-service",
- "url 2.4.0",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
- "winreg",
-]
+checksum = "436b050e76ed2903236f032a59761c1eb99e1b0aead2c257922771dab1fc8c78"
 
 [[package]]
 name = "rfc6979"
@@ -6932,7 +6897,7 @@ dependencies = [
  "array-bytes 4.2.0",
  "async-trait",
  "parking_lot 0.12.1",
- "serde_json 1.0.96",
+ "serde_json 1.0.106",
  "sp-application-crypto",
  "sp-core",
  "sp-keystore",
@@ -6950,7 +6915,7 @@ dependencies = [
  "derive_more",
  "parity-scale-codec",
  "scale-info-derive",
- "serde 1.0.164",
+ "serde 1.0.188",
 ]
 
 [[package]]
@@ -7129,7 +7094,7 @@ version = "1.0.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bebd363326d05ec3e2f532ab7660680f3b02130d780c299bca73469d521bc0ed"
 dependencies = [
- "serde 1.0.164",
+ "serde 1.0.188",
 ]
 
 [[package]]
@@ -7157,11 +7122,11 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.164"
+version = "1.0.188"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e8c8cf938e98f769bc164923b06dce91cea1751522f46f8466461af04c9027d"
+checksum = "cf9e0fcba69a370eed61bcf2b728575f726b50b55cba78064753d708ddc7549e"
 dependencies = [
- "serde_derive 1.0.164",
+ "serde_derive 1.0.188",
 ]
 
 [[package]]
@@ -7170,8 +7135,8 @@ version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b926cfbabfe8011609dda0350cb24d884955d294909ac71c0db7027366c77e3e"
 dependencies = [
- "serde 1.0.164",
- "serde_derive 1.0.164",
+ "serde 1.0.188",
+ "serde_derive 1.0.188",
 ]
 
 [[package]]
@@ -7195,13 +7160,13 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.164"
+version = "1.0.188"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9735b638ccc51c28bf6914d90a2e9725b377144fc612c49a611fddd1b631d68"
+checksum = "4eca7ac642d82aa35b60049a6eccb4be6be75e599bd2e9adb5f875a737654af2"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.18",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -7229,14 +7194,14 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.96"
+version = "1.0.106"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "057d394a50403bcac12672b2b18fb387ab6d289d957dab67dd201875391e52f1"
+checksum = "2cc66a619ed80bf7a0f6b17dd063a84b88f6dea1813737cf469aef1d081142c2"
 dependencies = [
- "indexmap 1.9.3",
+ "indexmap 2.0.0",
  "itoa 1.0.6",
  "ryu",
- "serde 1.0.164",
+ "serde 1.0.188",
 ]
 
 [[package]]
@@ -7245,7 +7210,7 @@ version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93107647184f6027e3b7dcb2e11034cf95ffa1e3a682c67951963ac69c1c007d"
 dependencies = [
- "serde 1.0.164",
+ "serde 1.0.188",
 ]
 
 [[package]]
@@ -7257,7 +7222,7 @@ dependencies = [
  "form_urlencoded",
  "itoa 1.0.6",
  "ryu",
- "serde 1.0.164",
+ "serde 1.0.188",
 ]
 
 [[package]]
@@ -7275,8 +7240,8 @@ dependencies = [
  "parity-scale-codec",
  "ring 0.16.20 (git+https://github.com/Niederb/ring-xous.git?branch=0.16.20-cleanup)",
  "scale-info",
- "serde 1.0.164",
- "serde_json 1.0.96",
+ "serde 1.0.188",
+ "serde_json 1.0.106",
  "sp-core",
  "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
  "sp-std",
@@ -7313,11 +7278,11 @@ dependencies = [
  "itertools",
  "libc",
  "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx)",
- "serde 1.0.164",
+ "serde 1.0.188",
  "serde-big-array 0.1.5",
  "serde-big-array 0.3.0",
  "serde_derive 1.0.118",
- "serde_derive 1.0.164",
+ "serde_derive 1.0.188",
  "sgx_tcrypto",
  "sgx_tstd",
  "sgx_types",
@@ -7554,7 +7519,7 @@ source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12
 dependencies = [
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-core",
  "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
  "sp-runtime",
@@ -7686,7 +7651,7 @@ dependencies = [
  "proc-macro-crate",
  "proc-macro2",
  "quote",
- "syn 2.0.18",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -7696,7 +7661,7 @@ source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.4
 dependencies = [
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-core",
  "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
  "sp-std",
@@ -7711,7 +7676,7 @@ dependencies = [
  "num-traits 0.2.15",
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-std",
  "static_assertions",
 ]
@@ -7770,7 +7735,7 @@ dependencies = [
  "log 0.4.19",
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-api",
  "sp-application-crypto",
  "sp-core",
@@ -7786,7 +7751,7 @@ source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.4
 dependencies = [
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-std",
  "sp-timestamp",
 ]
@@ -7816,12 +7781,12 @@ dependencies = [
  "paste",
  "primitive-types",
  "rand 0.8.5",
- "regex 1.9.5",
+ "regex 1.8.4",
  "scale-info",
  "schnorrkel",
  "secp256k1",
  "secrecy",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-core-hashing",
  "sp-debug-derive",
  "sp-externalities",
@@ -7857,7 +7822,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "sp-core-hashing",
- "syn 2.0.18",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -7867,7 +7832,7 @@ source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.4
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.18",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -7964,7 +7929,7 @@ dependencies = [
  "futures 0.3.28",
  "parity-scale-codec",
  "parking_lot 0.12.1",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-core",
  "sp-externalities",
  "thiserror 1.0.40",
@@ -7997,7 +7962,7 @@ source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.4
 dependencies = [
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-arithmetic",
  "sp-core",
  "sp-runtime",
@@ -8021,7 +7986,7 @@ source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.4
 dependencies = [
  "backtrace",
  "lazy_static",
- "regex 1.9.5",
+ "regex 1.8.4",
 ]
 
 [[package]]
@@ -8037,7 +8002,7 @@ dependencies = [
  "paste",
  "rand 0.8.5",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-application-crypto",
  "sp-arithmetic",
  "sp-core",
@@ -8073,7 +8038,7 @@ dependencies = [
  "proc-macro-crate",
  "proc-macro2",
  "quote",
- "syn 2.0.18",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -8097,7 +8062,7 @@ source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.4
 dependencies = [
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-core",
  "sp-runtime",
  "sp-std",
@@ -8136,7 +8101,7 @@ dependencies = [
  "impl-serde",
  "parity-scale-codec",
  "ref-cast",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-debug-derive",
  "sp-std",
 ]
@@ -8209,7 +8174,7 @@ dependencies = [
  "parity-scale-codec",
  "parity-wasm",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-core-hashing-proc-macro",
  "sp-runtime",
  "sp-std",
@@ -8225,7 +8190,7 @@ dependencies = [
  "parity-scale-codec",
  "proc-macro2",
  "quote",
- "syn 2.0.18",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -8249,7 +8214,7 @@ source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.4
 dependencies = [
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "smallvec 1.10.0",
  "sp-arithmetic",
  "sp-core",
@@ -8299,8 +8264,8 @@ dependencies = [
  "num-format",
  "proc-macro2",
  "quote",
- "serde 1.0.164",
- "serde_json 1.0.96",
+ "serde 1.0.188",
+ "serde_json 1.0.106",
  "unicode-xid",
 ]
 
@@ -8364,11 +8329,12 @@ dependencies = [
  "hex",
  "log 0.4.19",
  "parity-scale-codec",
- "serde 1.0.164",
- "serde_json 1.0.96",
+ "serde 1.0.188",
+ "serde_json 1.0.106",
  "sp-core",
  "sp-runtime",
  "sp-runtime-interface",
+ "tungstenite 0.18.0",
  "url 2.4.0",
  "ws",
 ]
@@ -8395,7 +8361,7 @@ dependencies = [
  "async-trait",
  "parking_lot 0.12.1",
  "sc-keystore",
- "serde_json 1.0.96",
+ "serde_json 1.0.106",
  "sp-application-crypto",
  "sp-core",
  "sp-keyring",
@@ -8409,7 +8375,7 @@ source = "git+https://github.com/encointer/substrate-fixed?tag=v0.5.9#a4fb461aae
 dependencies = [
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "typenum 1.16.0 (git+https://github.com/encointer/typenum?tag=v1.16.0)",
 ]
 
@@ -8449,9 +8415,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.18"
+version = "2.0.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32d41677bcbe24c20c52e7c70b0d8db04134c5d1066bf98662e2871ad200ea3e"
+checksum = "239814284fd6f1a4ffe4ca893952cdd93c224b6a1571c9a9eadd670295c0c9e2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -8502,7 +8468,7 @@ dependencies = [
  "log 0.4.19",
  "parity-scale-codec",
  "scale-info",
- "serde 1.0.164",
+ "serde 1.0.188",
  "sp-core",
  "sp-runtime",
  "sp-std",
@@ -8594,7 +8560,7 @@ checksum = "f9456a42c5b0d803c8cd86e73dd7cc9edd429499f37a3550d286d5e86720569f"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.18",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -8688,7 +8654,7 @@ checksum = "630bdcf245f78637c13ec01ffae6187cca34625e8c63150d424b59e55af2675e"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.18",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -8770,7 +8736,7 @@ version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6135d499e69981f9ff0ef2167955a5333c35e36f6937d382974566b3d5b94ec"
 dependencies = [
- "serde 1.0.164",
+ "serde 1.0.188",
  "serde_spanned",
  "toml_datetime",
  "toml_edit",
@@ -8782,7 +8748,7 @@ version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a76a9312f5ba4c2dec6b9161fdf25d87ad8a09256ccea5a556fef03c706a10f"
 dependencies = [
- "serde 1.0.164",
+ "serde 1.0.188",
 ]
 
 [[package]]
@@ -8792,7 +8758,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2380d56e8670370eee6566b0bfd4265f65b3f432e8c6d85623f728d4fa31f739"
 dependencies = [
  "indexmap 1.9.3",
- "serde 1.0.164",
+ "serde 1.0.188",
  "serde_spanned",
  "toml_datetime",
  "winnow",
@@ -8825,7 +8791,7 @@ checksum = "0f57e3ca2a01450b1a921183a9c9cbfda207fd822cef4ccb00a65402cbba7a74"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.18",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -8855,7 +8821,7 @@ version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc6b213177105856957181934e4920de57730fc69bf42c37ee5bb664d406d9e1"
 dependencies = [
- "serde 1.0.164",
+ "serde 1.0.188",
  "tracing-core",
 ]
 
@@ -8869,9 +8835,9 @@ dependencies = [
  "chrono 0.4.26",
  "lazy_static",
  "matchers",
- "regex 1.9.5",
- "serde 1.0.164",
- "serde_json 1.0.96",
+ "regex 1.8.4",
+ "serde 1.0.188",
+ "serde_json 1.0.106",
  "sharded-slab",
  "smallvec 1.10.0",
  "thread_local",
@@ -8981,6 +8947,7 @@ dependencies = [
  "http 0.2.9",
  "httparse 1.8.0",
  "log 0.4.19",
+ "native-tls",
  "rand 0.8.5",
  "sha1 0.10.5",
  "thiserror 1.0.40",
@@ -9147,12 +9114,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "urlencoding"
-version = "2.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "daf8dba3b7eb870caf1ddeed7bc9d2a049f3cfdfae7cb521b087cc33ae4c49da"
-
-[[package]]
 name = "utf-8"
 version = "0.7.4"
 source = "git+https://github.com/integritee-network/rust-utf8-sgx?branch=sgx-experimental#b026700da83a2f00f0e9f36f813ef28e447a719e"
@@ -9230,8 +9191,8 @@ dependencies = [
  "pin-project",
  "rustls-pemfile",
  "scoped-tls",
- "serde 1.0.164",
- "serde_json 1.0.96",
+ "serde 1.0.188",
+ "serde_json 1.0.106",
  "serde_urlencoded",
  "tokio",
  "tokio-stream",
@@ -9280,20 +9241,8 @@ dependencies = [
  "once_cell 1.18.0",
  "proc-macro2",
  "quote",
- "syn 2.0.18",
+ "syn 2.0.32",
  "wasm-bindgen-shared",
-]
-
-[[package]]
-name = "wasm-bindgen-futures"
-version = "0.4.37"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c02dbc21516f9f1f04f187958890d7e6026df8d16540b7ad9492bc34a67cea03"
-dependencies = [
- "cfg-if 1.0.0",
- "js-sys",
- "wasm-bindgen",
- "web-sys",
 ]
 
 [[package]]
@@ -9314,7 +9263,7 @@ checksum = "54681b18a46765f095758388f2d0cf16eb8d4169b639ab575a8f5693af210c7b"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.18",
+ "syn 2.0.32",
  "wasm-bindgen-backend",
  "wasm-bindgen-shared",
 ]
@@ -9372,7 +9321,7 @@ dependencies = [
  "cc",
  "cxx",
  "cxx-build",
- "regex 1.9.5",
+ "regex 1.8.4",
 ]
 
 [[package]]
@@ -9473,7 +9422,7 @@ dependencies = [
  "once_cell 1.18.0",
  "paste",
  "psm",
- "serde 1.0.164",
+ "serde 1.0.188",
  "target-lexicon",
  "wasmparser",
  "wasmtime-environ",
@@ -9503,7 +9452,7 @@ dependencies = [
  "indexmap 1.9.3",
  "log 0.4.19",
  "object 0.29.0",
- "serde 1.0.164",
+ "serde 1.0.188",
  "target-lexicon",
  "thiserror 1.0.40",
  "wasmparser",
@@ -9525,7 +9474,7 @@ dependencies = [
  "log 0.4.19",
  "object 0.29.0",
  "rustc-demangle",
- "serde 1.0.164",
+ "serde 1.0.188",
  "target-lexicon",
  "wasmtime-environ",
  "wasmtime-jit-icache-coherence",
@@ -9584,7 +9533,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "83e5572c5727c1ee7e8f28717aaa8400e4d22dcbd714ea5457d85b5005206568"
 dependencies = [
  "cranelift-entity",
- "serde 1.0.164",
+ "serde 1.0.188",
  "thiserror 1.0.40",
  "wasmparser",
 ]
@@ -9871,17 +9820,7 @@ version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61de7bac303dc551fe038e2b3cef0f571087a47571ea6e79a87692ac99b99699"
 dependencies = [
- "memchr 2.6.3",
-]
-
-[[package]]
-name = "winreg"
-version = "0.50.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "524e57b2c537c0f9b1e69f1965311ec12182b4122e45035b1508cd24d2adadb1"
-dependencies = [
- "cfg-if 1.0.0",
- "windows-sys 0.48.0",
+ "memchr 2.5.0",
 ]
 
 [[package]]
@@ -10027,7 +9966,7 @@ checksum = "ce36e65b0d2999d2aafac989fb249189a141aee1f53c612c1f37d72631959f69"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.18",
+ "syn 2.0.32",
 ]
 
 [[package]]
