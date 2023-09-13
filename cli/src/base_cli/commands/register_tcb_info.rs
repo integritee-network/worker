@@ -17,7 +17,7 @@
 
 use crate::{
 	command_utils::{get_chain_api, *},
-	Cli, CliError, CliResult, CliResultOk,
+	Cli, CliResult, CliResultOk,
 };
 use itp_node_api::api_client::{ParentchainExtrinsicSigner, TEEREX};
 use itp_types::{parentchain::Hash, OpaqueCall};
@@ -25,26 +25,15 @@ use itp_utils::ToHexPrefixed;
 use log::*;
 use regex::Regex;
 use serde::Deserialize;
-use serde_json::Value;
 use sp_core::sr25519 as sr25519_core;
-use std::fs::read_to_string;
-use substrate_api_client::{
-	compose_call, compose_extrinsic_offline, SubmitAndWatch, SubmitAndWatchUntilSuccess, XtStatus,
-};
+use substrate_api_client::{compose_call, compose_extrinsic_offline, SubmitAndWatchUntilSuccess};
 use urlencoding;
-
-#[derive(Debug, Deserialize)]
-struct TcbInfo {
-	#[allow(non_snake_case)]
-	tcbInfo: Value,
-	signature: String,
-}
 
 #[derive(Debug, Deserialize)]
 struct Platform {
 	fmspc: String,
-	#[allow(dead_code)]
-	platform: String,
+	#[serde(rename = "platform")]
+	_platform: String,
 }
 
 #[derive(Parser)]
@@ -111,7 +100,7 @@ impl RegisterTcbInfoCommand {
 				let re = Regex::new(r#"\"signature\"\s?:\s?\"(.*)\"\}"#).unwrap();
 				let intel_signature_hex = &re.captures(&body).unwrap()[1];
 				trace!("TCB info: {}", tcb_info);
-				trace!("signature: {}", body);
+				trace!("signature: {}", intel_signature_hex);
 
 				let intel_signature = hex::decode(intel_signature_hex).unwrap();
 
