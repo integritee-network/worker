@@ -30,12 +30,12 @@ use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_stf_interface::{
-	parentchain_pallet::ParentchainPalletInterface, ExecuteCall, StateCallInterface, UpdateState,
+	parentchain_pallet::ParentchainPalletInterface, StateCallInterface, UpdateState,
 };
 use itp_stf_primitives::types::ShardIdentifier;
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_time_utils::duration_now;
-use itp_types::{storage::StorageEntryVerified, OpaqueCall, H256};
+use itp_types::{parentchain::ParentchainId, storage::StorageEntryVerified, OpaqueCall, H256};
 use log::*;
 use sp_runtime::traits::Header as HeaderTrait;
 use std::{
@@ -83,7 +83,7 @@ where
 		&self,
 		state: &mut StateHandler::StateT,
 		trusted_operation: &TrustedOperation,
-		header: &PH,
+		_header: &PH,
 		shard: &ShardIdentifier,
 		post_processing: StatePostProcessing,
 	) -> Result<ExecutedOperation>
@@ -107,19 +107,6 @@ where
 			error!("TrustedCallSigned: bad signature");
 			return Ok(ExecutedOperation::failed(top_or_hash))
 		}
-
-		// Necessary because light client sync may not be up to date
-		// see issue #208
-		debug!("Update STF storage!");
-
-		let storage_hashes = <TrustedCallSigned as ExecuteCall<NodeMetadataRepository>>::get_storage_hashes_to_update(trusted_call.clone());
-		let update_map = self
-			.ocall_api
-			.get_multiple_storages_verified(storage_hashes, header)
-			.map(into_map)?;
-
-		debug!("Apply state diff with {} entries from parentchain block", update_map.len());
-		Stf::apply_state_diff(state, update_map.into());
 
 		debug!("execute on STF, call with nonce {}", trusted_call.nonce);
 		let mut extrinsic_call_backs: Vec<OpaqueCall> = Vec::new();
@@ -161,9 +148,13 @@ where
 	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
 		From<BTreeMap<Vec<u8>, Option<Vec<u8>>>>,
 {
-	fn update_states(&self, header: &ParentchainHeader) -> Result<()> {
+	fn update_states(
+		&self,
+		header: &ParentchainHeader,
+		parentchain_id: &ParentchainId,
+	) -> Result<()> {
 		debug!("Update STF storage upon block import!");
-		let storage_hashes = Stf::storage_hashes_to_update_on_block();
+		let storage_hashes = Stf::storage_hashes_to_update_on_block(parentchain_id);
 
 		if storage_hashes.is_empty() {
 			return Ok(())
@@ -172,7 +163,7 @@ where
 		// global requests they are the same for every shard
 		let state_diff_update = self
 			.ocall_api
-			.get_multiple_storages_verified(storage_hashes, header)
+			.get_multiple_storages_verified(storage_hashes, header, parentchain_id)
 			.map(into_map)?;
 
 		// Update parentchain block on all states.
@@ -189,36 +180,69 @@ where
 			}
 		}
 
+		if parentchain_id != &ParentchainId::Integritee {
+			// nothing else to do
+			return Ok(())
+		}
+
 		// look for new shards an initialize them
 		if let Some(maybe_shards) = state_diff_update.get(&shards_key_hash()) {
 			match maybe_shards {
-				Some(shards) => {
-					let shards: Vec<ShardIdentifier> = Decode::decode(&mut shards.as_slice())?;
-
-					for shard_id in shards {
-						let (state_lock, mut state) =
-							self.state_handler.load_for_mutation(&shard_id)?;
-						trace!("Successfully loaded state, updating states ...");
-
-						// per shard (cid) requests
-						let per_shard_hashes = storage_hashes_to_update_per_shard(&shard_id);
-						let per_shard_update = self
-							.ocall_api
-							.get_multiple_storages_verified(per_shard_hashes, header)
-							.map(into_map)?;
-
-						Stf::apply_state_diff(&mut state, per_shard_update.into());
-						Stf::apply_state_diff(&mut state, state_diff_update.clone().into());
-						if let Err(e) = Stf::update_parentchain_block(&mut state, header.clone()) {
-							error!("Could not update parentchain block. {:?}: {:?}", shard_id, e)
-						}
-
-						self.state_handler.write_after_mutation(state, state_lock, &shard_id)?;
-					}
-				},
+				Some(shards) => self.initialize_new_shards(header, &state_diff_update, &shards)?,
 				None => debug!("No shards are on the chain yet"),
 			};
 		};
+		Ok(())
+	}
+}
+
+impl<OCallApi, StateHandler, NodeMetadataRepository, Stf>
+	StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf>
+where
+	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
+		From<BTreeMap<Vec<u8>, Option<Vec<u8>>>> + IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>,
+	<Stf as ParentchainPalletInterface<StateHandler::StateT, ParentchainHeader>>::Error: Debug,
+	NodeMetadataRepository: AccessNodeMetadata,
+	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
+	StateHandler: HandleState<HashType = H256> + QueryShardState,
+	StateHandler::StateT: Encode + SgxExternalitiesTrait,
+	Stf: ParentchainPalletInterface<StateHandler::StateT, ParentchainHeader>
+		+ UpdateState<
+			StateHandler::StateT,
+			<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
+		>,
+{
+	fn initialize_new_shards(
+		&self,
+		header: &ParentchainHeader,
+		state_diff_update: &BTreeMap<Vec<u8>, Option<Vec<u8>>>,
+		shards: &Vec<u8>,
+	) -> Result<()> {
+		let shards: Vec<ShardIdentifier> = Decode::decode(&mut shards.as_slice())?;
+
+		for shard_id in shards {
+			let (state_lock, mut state) = self.state_handler.load_for_mutation(&shard_id)?;
+			trace!("Successfully loaded state, updating states ...");
+
+			// per shard (cid) requests
+			let per_shard_hashes = storage_hashes_to_update_per_shard(&shard_id);
+			let per_shard_update = self
+				.ocall_api
+				.get_multiple_storages_verified(
+					per_shard_hashes,
+					header,
+					&ParentchainId::Integritee,
+				)
+				.map(into_map)?;
+
+			Stf::apply_state_diff(&mut state, per_shard_update.into());
+			Stf::apply_state_diff(&mut state, state_diff_update.clone().into());
+			if let Err(e) = Stf::update_parentchain_block(&mut state, header.clone()) {
+				error!("Could not update parentchain block. {:?}: {:?}", shard_id, e)
+			}
+
+			self.state_handler.write_after_mutation(state, state_lock, &shard_id)?;
+		}
 		Ok(())
 	}
 }
