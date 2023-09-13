@@ -65,12 +65,10 @@ impl RegisterTcbInfoCommand {
 			let fmspcs: Vec<Platform> = fmspcs.json().expect("Error parsing JSON");
 			println!("{:?}", fmspcs);
 			fmspcs.into_iter().map(|f| f.fmspc).collect()
+		} else if let Some(fmspc) = self.fmspc.clone() {
+			vec![fmspc]
 		} else {
-			if let Some(fmspc) = self.fmspc.clone() {
-				vec![fmspc]
-			} else {
-				panic!("must specify either '--all' or '--fmspc'");
-			}
+			panic!("must specify either '--all' or '--fmspc'");
 		};
 		let mut nonce = chain_api.get_nonce().unwrap();
 		let xt_hashes: Vec<(String, Option<Hash>)> = fmspcs
