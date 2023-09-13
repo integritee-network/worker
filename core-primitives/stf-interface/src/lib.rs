@@ -25,7 +25,7 @@ extern crate alloc;
 use alloc::{sync::Arc, vec::Vec};
 use itp_node_api_metadata::NodeMetadataTrait;
 use itp_node_api_metadata_provider::AccessNodeMetadata;
-use itp_types::OpaqueCall;
+use itp_types::{parentchain::ParentchainId, OpaqueCall};
 
 #[cfg(feature = "mocks")]
 pub mod mocks;
@@ -44,7 +44,7 @@ pub trait InitState<State, AccountId> {
 pub trait UpdateState<State, StateDiff> {
 	/// Updates a given state for
 	fn apply_state_diff(state: &mut State, state_diff: StateDiff);
-	fn storage_hashes_to_update_on_block() -> Vec<Vec<u8>>;
+	fn storage_hashes_to_update_on_block(parentchain_id: &ParentchainId) -> Vec<Vec<u8>>;
 }
 
 /// Interface to execute state mutating calls on a state.

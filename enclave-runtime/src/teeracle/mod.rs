@@ -20,7 +20,7 @@ use crate::{
 	initialization::global_components::GLOBAL_OCALL_API_COMPONENT,
 	utils::{
 		get_extrinsic_factory_from_solo_or_parachain,
-		get_node_metadata_repository_from_solo_or_parachain,
+		get_node_metadata_repository_from_integritee_solo_or_parachain,
 	},
 };
 use codec::{Decode, Encode};
@@ -82,7 +82,8 @@ where
 
 	println!("Update the longitude:  {}, for source {}", longitude, source_base_url);
 
-	let node_metadata_repository = get_node_metadata_repository_from_solo_or_parachain()?;
+	let node_metadata_repository =
+		get_node_metadata_repository_from_integritee_solo_or_parachain()?;
 
 	let call_ids = node_metadata_repository
 		.get_from_metadata(|m| m.update_oracle_call_indexes())
@@ -247,7 +248,8 @@ where
 		source_base_url,
 	);
 
-	let node_metadata_repository = get_node_metadata_repository_from_solo_or_parachain()?;
+	let node_metadata_repository =
+		get_node_metadata_repository_from_integritee_solo_or_parachain()?;
 
 	let call_ids = node_metadata_repository
 		.get_from_metadata(|m| m.update_exchange_rate_call_indexes())

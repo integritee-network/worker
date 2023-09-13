@@ -21,6 +21,7 @@ use codec::Encode;
 use frame_support::ensure;
 use itp_enclave_api_ffi as ffi;
 use itp_storage::StorageProof;
+use itp_types::parentchain::ParentchainId;
 use sgx_types::sgx_status_t;
 use sp_runtime::{generic::SignedBlock, traits::Block as ParentchainBlockTrait};
 
@@ -33,7 +34,7 @@ pub trait Sidechain: Send + Sync + 'static {
 		blocks: &[SignedBlock<ParentchainBlock>],
 		events: &[Vec<u8>],
 		events_proofs: &[StorageProof],
-		nonce: u32,
+		parentchain_id: &ParentchainId,
 	) -> EnclaveResult<()>;
 
 	fn execute_trusted_calls(&self) -> EnclaveResult<()>;
@@ -45,12 +46,13 @@ impl Sidechain for Enclave {
 		blocks: &[SignedBlock<ParentchainBlock>],
 		events: &[Vec<u8>],
 		events_proofs: &[StorageProof],
-		nonce: u32,
+		parentchain_id: &ParentchainId,
 	) -> EnclaveResult<()> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 		let blocks_enc = blocks.encode();
 		let events_enc = events.encode();
 		let events_proofs_enc = events_proofs.encode();
+		let parentchain_id_enc = parentchain_id.encode();
 
 		let result = unsafe {
 			ffi::sync_parentchain(
@@ -62,7 +64,8 @@ impl Sidechain for Enclave {
 				events_enc.len(),
 				events_proofs_enc.as_ptr(),
 				events_proofs_enc.len(),
-				&nonce,
+				parentchain_id_enc.as_ptr(),
+				parentchain_id_enc.len() as u32,
 			)
 		};
 

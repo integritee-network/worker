@@ -22,8 +22,8 @@ use crate::{
 	attestation::create_ra_report_and_signature,
 	error::{Error as EnclaveError, Result as EnclaveResult},
 	initialization::global_components::{
-		EnclaveSealHandler, GLOBAL_LIGHT_CLIENT_SEAL, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
-		GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
+		EnclaveSealHandler, GLOBAL_INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_SEAL,
+		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
 	},
 	ocall::OcallApi,
 	tls_ra::seal_handler::UnsealStateAndKeys,
@@ -198,7 +198,7 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 		},
 	};
 
-	let light_client_seal = match GLOBAL_LIGHT_CLIENT_SEAL.get() {
+	let light_client_seal = match GLOBAL_INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_SEAL.get() {
 		Ok(s) => s,
 		Err(e) => {
 			error!("{:?}", e);

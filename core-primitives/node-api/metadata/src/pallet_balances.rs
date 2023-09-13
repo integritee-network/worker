@@ -15,10 +15,23 @@
 
 */
 
-mod invoke;
-mod shield_funds;
-mod transfer_to_alice_shields_funds;
+use crate::{error::Result, NodeMetadata};
 
-pub use invoke::InvokeArgs;
-pub use shield_funds::ShieldFundsArgs;
-pub use transfer_to_alice_shields_funds::{TransferToAliceShieldsFundsArgs, ALICE_ACCOUNT_ID};
+/// Pallet name:
+const BALANCES: &str = "Balances";
+
+pub trait BalancesCallIndexes {
+	fn transfer_call_index(&self) -> Result<[u8; 2]>;
+
+	fn transfer_allow_death_call_index(&self) -> Result<[u8; 2]>;
+}
+
+impl BalancesCallIndexes for NodeMetadata {
+	fn transfer_call_index(&self) -> Result<[u8; 2]> {
+		self.call_indexes(BALANCES, "transfer")
+	}
+
+	fn transfer_allow_death_call_index(&self) -> Result<[u8; 2]> {
+		self.call_indexes(BALANCES, "transfer_allow_death")
+	}
+}
