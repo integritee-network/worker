@@ -25,6 +25,7 @@ std = [
     "itp-types/std",
     "substrate-api-client/std",
     "substrate-api-client/tungstenite-client",
+    "substrate-api-client/sync-api",
     "sp-core/std",
     "sp-runtime/std",
     "my-node-runtime",
