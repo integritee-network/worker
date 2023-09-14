@@ -26,7 +26,7 @@ use codec::{Decode, Encode};
 use enclave_bridge_primitives::Request;
 use ita_stf::{Getter, TrustedOperation};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
-use itp_node_api::api_client::{ParentchainApi, ParentchainExtrinsicSigner, ENCLAVE_BRIDGE};
+use itp_node_api::api_client::{ParentchainApi, ENCLAVE_BRIDGE};
 use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_stf_primitives::types::ShardIdentifier;
@@ -135,7 +135,7 @@ fn send_indirect_request(
 	);
 	let arg_signer = &trusted_args.xt_signer;
 	let signer = get_pair_from_str(arg_signer);
-	chain_api.set_signer(ParentchainExtrinsicSigner::new(sr25519_core::Pair::from(signer)));
+	chain_api.set_signer(sr25519_core::Pair::from(signer).into());
 
 	let request = Request { shard, cyphertext: call_encrypted };
 	let xt = compose_extrinsic!(&chain_api, ENCLAVE_BRIDGE, "invoke", request);

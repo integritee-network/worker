@@ -32,7 +32,9 @@ pub mod sgx_reexport_prelude {
 use codec::Encode;
 use error::Result;
 use itp_node_api::{
-	api_client::{ParentchainAdditionalParams, ParentchainExtrinsicParams},
+	api_client::{
+		ExtrinsicParams, ParentchainAdditionalParams, ParentchainExtrinsicParams, SignExtrinsic,
+	},
 	metadata::{provider::AccessNodeMetadata, NodeMetadata},
 };
 use itp_nonce_cache::{MutateNonce, Nonce};
@@ -40,7 +42,7 @@ use itp_types::{parentchain::AccountId, OpaqueCall};
 use sp_core::H256;
 use sp_runtime::{generic::Era, OpaqueExtrinsic};
 use std::{sync::Arc, vec::Vec};
-use substrate_api_client::{compose_extrinsic_offline, ExtrinsicParams, SignExtrinsic};
+use substrate_api_client::ac_compose_macros::compose_extrinsic_offline;
 
 pub mod error;
 

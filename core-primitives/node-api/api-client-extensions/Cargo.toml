@@ -7,6 +7,7 @@ edition = "2021"
 [dependencies]
 # crates.io
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
+log = { version = "0.4", default-features = false }
 thiserror = { version = "1.0" }
 
 # substrate
