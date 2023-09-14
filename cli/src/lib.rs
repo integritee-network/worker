@@ -110,6 +110,7 @@ pub enum CliResultOk {
 	None,
 
 	Matches(MarketOutput),
+	PayAsBidOutput(Option<Vec<u8>>),
 }
 
 #[derive(Debug, Error)]
