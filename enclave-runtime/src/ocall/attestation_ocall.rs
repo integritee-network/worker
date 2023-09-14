@@ -228,7 +228,7 @@ impl EnclaveAttestationOCallApi for OcallApi {
 		};
 		debug!("initializing MY_MRENCLAVE cache");
 		let mrenclave_value = self.get_report_of_self()?.mr_enclave;
-		MrEnclave { maybe_mrenclave: Some(mrenclave_value.clone()) }.make_current();
+		MrEnclave { maybe_mrenclave: Some(mrenclave_value) }.make_current();
 		Ok(mrenclave_value)
 	}
 }
