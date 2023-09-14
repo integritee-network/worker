@@ -18,12 +18,45 @@
 use crate::ocall::{ffi, OcallApi};
 use frame_support::ensure;
 use itp_ocall_api::EnclaveAttestationOCallApi;
+use lazy_static::lazy_static;
 use log::*;
 use sgx_tse::rsgx_create_report;
 use sgx_types::*;
-use std::{ptr, vec::Vec};
+use std::{ptr, sync::Arc, vec::Vec};
+
+use std::sync::SgxRwLock as RwLock;
 
 const RET_QUOTE_BUF_LEN: usize = 2048;
+
+lazy_static! {
+	/// Global cache of MRENCLAVE
+	/// will never change at runtime but must be initialized at runtime
+	static ref MY_MRENCLAVE: RwLock<Arc<MrEnclave>> = RwLock::new(Default::default());
+}
+
+#[derive(Default, Copy, Clone, Debug)]
+pub struct MrEnclave {
+	pub maybe_mrenclave: Option<sgx_measurement_t>,
+}
+
+impl MrEnclave {
+	pub fn current() -> SgxResult<Arc<MrEnclave>> {
+		Ok(MY_MRENCLAVE
+			.read()
+			.map_err(|e| {
+				error!("fetching current value of MR_ENCLAVE lazy static failed: {:?}", e);
+				sgx_status_t::SGX_ERROR_UNEXPECTED
+			})?
+			.clone())
+	}
+	pub fn make_current(self) -> SgxResult<()> {
+		*MY_MRENCLAVE.write().map_err(|e| {
+			error!("writing current value of MR_ENCLAVE lazy static failed: {:?}", e);
+			sgx_status_t::SGX_ERROR_UNEXPECTED
+		})? = Arc::new(self);
+		Ok(())
+	}
+}
 
 impl EnclaveAttestationOCallApi for OcallApi {
 	fn sgx_init_quote(&self) -> SgxResult<(sgx_target_info_t, sgx_epid_group_id_t)> {
@@ -199,7 +232,14 @@ impl EnclaveAttestationOCallApi for OcallApi {
 	}
 
 	fn get_mrenclave_of_self(&self) -> SgxResult<sgx_measurement_t> {
-		Ok(self.get_report_of_self()?.mr_enclave)
+		if let Some(mrenclave) = MrEnclave::current()?.maybe_mrenclave {
+			trace!("found cached MRENCLAVE");
+			return Ok(mrenclave)
+		};
+		debug!("initializing MY_MRENCLAVE cache");
+		let mrenclave_value = self.get_report_of_self()?.mr_enclave;
+		MrEnclave { maybe_mrenclave: Some(mrenclave_value) }.make_current()?;
+		Ok(mrenclave_value)
 	}
 }
 
