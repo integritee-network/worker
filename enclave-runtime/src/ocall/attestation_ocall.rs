@@ -40,11 +40,21 @@ pub struct MrEnclave {
 }
 
 impl MrEnclave {
-	pub fn current() -> Arc<MrEnclave> {
-		MY_MRENCLAVE.read().unwrap().clone()
+	pub fn current() -> SgxResult<Arc<MrEnclave>> {
+		Ok(MY_MRENCLAVE
+			.read()
+			.map_err(|e| {
+				error!("fetching current value of MR_ENCLAVE lazy static failed: {:?}", e);
+				sgx_status_t::SGX_ERROR_UNEXPECTED
+			})?
+			.clone())
 	}
-	pub fn make_current(self) {
-		*MY_MRENCLAVE.write().unwrap() = Arc::new(self)
+	pub fn make_current(self) -> SgxResult<()> {
+		*MY_MRENCLAVE.write().map_err(|e| {
+			error!("writing current value of MR_ENCLAVE lazy static failed: {:?}", e);
+			sgx_status_t::SGX_ERROR_UNEXPECTED
+		})? = Arc::new(self);
+		Ok(())
 	}
 }
 
@@ -222,13 +232,13 @@ impl EnclaveAttestationOCallApi for OcallApi {
 	}
 
 	fn get_mrenclave_of_self(&self) -> SgxResult<sgx_measurement_t> {
-		if let Some(mrenclave) = MrEnclave::current().maybe_mrenclave {
+		if let Some(mrenclave) = MrEnclave::current()?.maybe_mrenclave {
 			trace!("found cached MRENCLAVE");
 			return Ok(mrenclave)
 		};
 		debug!("initializing MY_MRENCLAVE cache");
 		let mrenclave_value = self.get_report_of_self()?.mr_enclave;
-		MrEnclave { maybe_mrenclave: Some(mrenclave_value) }.make_current();
+		MrEnclave { maybe_mrenclave: Some(mrenclave_value) }.make_current()?;
 		Ok(mrenclave_value)
 	}
 }
