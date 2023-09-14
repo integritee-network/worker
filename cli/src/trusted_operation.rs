@@ -42,7 +42,7 @@ use std::{
 	time::Instant,
 };
 use substrate_api_client::{
-	compose_extrinsic, GetHeader, SubmitAndWatchUntilSuccess, SubscribeEvents,
+	ac_compose_macros::compose_extrinsic, GetChainInfo, SubmitAndWatch, SubscribeEvents, XtStatus,
 };
 use thiserror::Error;
 
@@ -140,7 +140,7 @@ fn send_indirect_request(
 	let request = Request { shard, cyphertext: call_encrypted };
 	let xt = compose_extrinsic!(&chain_api, ENCLAVE_BRIDGE, "invoke", request);
 
-	let block_hash = match chain_api.submit_and_watch_extrinsic_until_success(xt, false) {
+	let block_hash = match chain_api.submit_and_watch_extrinsic_until(xt, XtStatus::Finalized) {
 		Ok(xt_report) => {
 			println!(
 				"[+] invoke TrustedOperation extrinsic success. extrinsic hash: {:?} / status: {:?} / block hash: {:?}",
@@ -161,7 +161,7 @@ fn send_indirect_request(
 	info!("Waiting for execution confirmation from enclave...");
 	let mut subscription = chain_api.subscribe_events().unwrap();
 	loop {
-		let event_records = subscription.next_event::<RuntimeEvent, Hash>().unwrap().unwrap();
+		let event_records = subscription.next_events::<RuntimeEvent, Hash>().unwrap().unwrap();
 		for event_record in event_records {
 			if let RuntimeEvent::EnclaveBridge(EnclaveBridgeEvent::ProcessedParentchainBlock {
 				shard,

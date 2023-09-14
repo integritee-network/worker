@@ -27,7 +27,7 @@ use itp_stf_primitives::types::ShardIdentifier;
 use log::*;
 use my_node_runtime::Balance;
 use sp_core::sr25519 as sr25519_core;
-use substrate_api_client::{compose_extrinsic, SubmitAndWatchUntilSuccess};
+use substrate_api_client::{ac_compose_macros::compose_extrinsic, SubmitAndWatch, XtStatus};
 
 #[derive(Parser)]
 pub struct ShieldFundsCommand {
@@ -75,7 +75,7 @@ impl ShieldFundsCommand {
 			self.amount
 		);
 
-		match chain_api.submit_and_watch_extrinsic_until_success(xt, true) {
+		match chain_api.submit_and_watch_extrinsic_until(xt, XtStatus::Finalized) {
 			Ok(xt_report) => {
 				println!(
 					"[+] shield funds success. extrinsic hash: {:?} / status: {:?} / block hash: {:?}",

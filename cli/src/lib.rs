@@ -46,9 +46,9 @@ pub mod commands;
 
 use crate::commands::Commands;
 use clap::Parser;
+use itp_node_api::api_client::Metadata;
 use sp_application_crypto::KeyTypeId;
 use sp_core::{H160, H256};
-use substrate_api_client::Metadata;
 use thiserror::Error;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");

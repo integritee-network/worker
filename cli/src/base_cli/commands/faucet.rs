@@ -23,7 +23,7 @@ use my_node_runtime::{BalancesCall, RuntimeCall};
 use sp_keyring::AccountKeyring;
 use sp_runtime::MultiAddress;
 use std::vec::Vec;
-use substrate_api_client::{compose_extrinsic_offline, SubmitExtrinsic};
+use substrate_api_client::{ac_compose_macros::compose_extrinsic_offline, SubmitExtrinsic};
 
 const PREFUNDING_AMOUNT: u128 = 1_000_000_000;
 

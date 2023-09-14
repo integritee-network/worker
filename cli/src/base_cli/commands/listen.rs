@@ -53,7 +53,7 @@ impl ListenCommand {
 				}
 			};
 
-			let event_results = subscription.next_event::<RuntimeEvent, Hash>().unwrap();
+			let event_results = subscription.next_events::<RuntimeEvent, Hash>().unwrap();
 			blocks += 1;
 			match event_results {
 				Ok(evts) =>

@@ -19,12 +19,11 @@ use crate::{
 	command_utils::{get_accountid_from_str, get_chain_api, *},
 	Cli, CliResult, CliResultOk,
 };
-use itp_node_api::api_client::Address;
 use log::*;
 use my_node_runtime::Balance;
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
 use substrate_api_client::{
-	extrinsic::BalancesExtrinsics, GetAccountInformation, SubmitAndWatchUntilSuccess,
+	extrinsic::BalancesExtrinsics, GetAccountInformation, SubmitAndWatch, XtStatus,
 };
 
 #[derive(Parser)]
@@ -47,8 +46,8 @@ impl TransferCommand {
 		info!("to ss58 is {}", to_account.to_ss58check());
 		let mut api = get_chain_api(cli);
 		api.set_signer(sr25519_core::Pair::from(from_account).into());
-		let xt = api.balance_transfer_allow_death(Address::Id(to_account.clone()), self.amount);
-		let tx_report = api.submit_and_watch_extrinsic_until_success(xt, false).unwrap();
+		let xt = api.balance_transfer_allow_death(to_account.clone().into(), self.amount);
+		let tx_report = api.submit_and_watch_extrinsic_until(xt, XtStatus::Finalized).unwrap();
 		println!(
 			"[+] L1 extrinsic success. extrinsic hash: {:?} / status: {:?}",
 			tx_report.extrinsic_hash, tx_report.status
