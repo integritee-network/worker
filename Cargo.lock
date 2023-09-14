@@ -15,7 +15,7 @@ dependencies = [
 [[package]]
 name = "ac-compose-macros"
 version = "0.4.2"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0#f5c9fec6674be45f42225ca167624a0f316a177b"
+source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0#7217d43b7085286ca84b7649aa6d32016f0d307a"
 dependencies = [
  "ac-primitives",
  "log 0.4.19",
@@ -25,7 +25,7 @@ dependencies = [
 [[package]]
 name = "ac-node-api"
 version = "0.5.1"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0#f5c9fec6674be45f42225ca167624a0f316a177b"
+source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0#7217d43b7085286ca84b7649aa6d32016f0d307a"
 dependencies = [
  "ac-primitives",
  "bitvec",
@@ -45,13 +45,12 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-runtime-interface",
- "sp-storage",
 ]
 
 [[package]]
 name = "ac-primitives"
 version = "0.9.0"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0#f5c9fec6674be45f42225ca167624a0f316a177b"
+source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0#7217d43b7085286ca84b7649aa6d32016f0d307a"
 dependencies = [
  "frame-system",
  "impl-serde",
@@ -3366,6 +3365,7 @@ version = "0.9.0"
 dependencies = [
  "itp-api-client-types",
  "itp-types",
+ "log 0.4.19",
  "parity-scale-codec",
  "sp-consensus-grandpa",
  "sp-core",
@@ -5370,7 +5370,7 @@ checksum = "4d5d9eb14b174ee9aa2ef96dc2b94637a2d4b6e7cb873c7e171f0c20c6cf3eac"
 [[package]]
 name = "pallet-assets"
 version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42#569aae5341ea0c1d10426fa1ec13a36c0b64393b"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42#ff24c60ac7d9f87727ecdd0ded9a80c56e4f4b65"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -8315,7 +8315,7 @@ dependencies = [
 [[package]]
 name = "substrate-api-client"
 version = "0.14.0"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0#f5c9fec6674be45f42225ca167624a0f316a177b"
+source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0#7217d43b7085286ca84b7649aa6d32016f0d307a"
 dependencies = [
  "ac-compose-macros",
  "ac-node-api",
@@ -8333,8 +8333,6 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-runtime-interface",
- "sp-storage",
- "sp-version",
  "tungstenite 0.18.0",
  "url 2.4.0",
 ]
@@ -8355,7 +8353,7 @@ dependencies = [
 [[package]]
 name = "substrate-client-keystore"
 version = "0.9.1"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0#f5c9fec6674be45f42225ca167624a0f316a177b"
+source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0#7217d43b7085286ca84b7649aa6d32016f0d307a"
 dependencies = [
  "array-bytes 4.2.0",
  "async-trait",
@@ -8961,7 +8959,7 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 0.1.10",
+ "cfg-if 1.0.0",
  "digest 0.10.7",
  "rand 0.8.5",
  "static_assertions",
