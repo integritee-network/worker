@@ -34,8 +34,9 @@ pallet-evm = { optional = true, git = "https://github.com/integritee-network/fro
 pallet-teerex = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.0-polkadot-v0.9.42" }
 # `default-features = false` to remove the jsonrpsee dependency.
 enclave-bridge-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.0-polkadot-v0.9.42" }
-substrate-api-client = { default-features = false, features = ["std", "ws-client"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.10.0" }
-substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.10.0" }
+# disable unsupported jsonrpcsee
+substrate-api-client = { default-features = false, features = ["std", "sync-api"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }
+substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }
 
 # substrate dependencies
 frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }

@@ -8,7 +8,7 @@ edition = "2021"
 # sgx dependencies
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-substrate-api-client = { default-features = false, git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.10.0" }
+substrate-api-client = { default-features = false, features = ["sync-api"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }
 
 # local dependencies
 itp-node-api = { path = "../node-api", default-features = false }

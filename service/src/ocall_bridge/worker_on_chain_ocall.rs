@@ -24,7 +24,7 @@ use itp_types::{parentchain::ParentchainId, WorkerRequest, WorkerResponse};
 use log::*;
 use sp_runtime::OpaqueExtrinsic;
 use std::{sync::Arc, vec::Vec};
-use substrate_api_client::{serde_impls::StorageKey, GetStorage, SubmitExtrinsic};
+use substrate_api_client::{ac_primitives::serde_impls::StorageKey, GetStorage, SubmitExtrinsic};
 
 pub struct WorkerOnChainOCall<F> {
 	integritee_api_factory: Arc<F>,
@@ -90,7 +90,7 @@ where
 			.map(|req| match req {
 				WorkerRequest::ChainStorage(key, hash) => WorkerResponse::ChainStorage(
 					key.clone(),
-					api.get_opaque_storage_by_key_hash(StorageKey(key.clone()), hash).unwrap(),
+					api.get_opaque_storage_by_key(StorageKey(key.clone()), hash).unwrap(),
 					api.get_storage_proof_by_keys(vec![StorageKey(key)], hash).unwrap().map(
 						|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect(),
 					),
@@ -131,7 +131,7 @@ where
 			);
 			let api = self.create_api(parentchain_id)?;
 			for call in extrinsics.into_iter() {
-				if let Err(e) = api.submit_opaque_extrinsic(call.encode().into()) {
+				if let Err(e) = api.submit_opaque_extrinsic(&call.encode().into()) {
 					error!(
 						"Could not send extrinsic to node: {:?}, error: {:?}",
 						serde_json::to_string(&call),

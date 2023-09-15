@@ -25,8 +25,9 @@ pub mod mock;
 #[cfg(test)]
 pub mod mocks;
 
-#[cfg(test)]
-pub mod parentchain_handler_test;
+// Todo: Revive when #1451 is resolved
+// #[cfg(test)]
+// pub mod parentchain_handler_test;
 
 pub fn run_enclave_tests(matches: &ArgMatches) {
 	println!("*** Starting Test enclave");

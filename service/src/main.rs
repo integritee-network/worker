@@ -43,7 +43,7 @@ use crate::{
 };
 use base58::ToBase58;
 use clap::{load_yaml, App};
-use codec::Encode;
+use codec::{Decode, Encode};
 use config::Config;
 use enclave::{
 	api::enclave_init,
@@ -73,7 +73,7 @@ use my_node_runtime::{Hash, Header, RuntimeEvent};
 use sgx_types::*;
 use sp_runtime::traits::Header as HeaderT;
 use substrate_api_client::{
-	api::XtStatus, rpc::HandleSubscription, GetHeader, SubmitAndWatch, SubscribeChain,
+	api::XtStatus, rpc::HandleSubscription, GetChainInfo, SubmitAndWatch, SubscribeChain,
 	SubscribeEvents,
 };
 use teerex_primitives::AnySigner;
@@ -112,7 +112,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub type EnclaveWorker =
 	Worker<Config, NodeApiFactory, Enclave, InitializationHandler<WorkerModeProvider>>;
-pub type Event = substrate_api_client::EventRecord<RuntimeEvent, Hash>;
+pub type Event = substrate_api_client::ac_node_api::EventRecord<RuntimeEvent, Hash>;
 
 fn main() {
 	// Setup logging
@@ -514,12 +514,16 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		send_extrinsic(register_xt(), &node_api2, &tee_accountid_clone, is_development_mode)
 	};
 
-	let register_enclave_block_hash = send_register_xt().unwrap();
+	// Todo: Can't unwrap here because the extrinsic is for some reason not found in the block
+	// even if it was successful: https://github.com/scs/substrate-api-client/issues/624.
+	let register_enclave_block_hash = send_register_xt();
+	let api_register_enclave_xt_header =
+		integritee_rpc_api.get_header(register_enclave_block_hash).unwrap().unwrap();
 
-	let register_enclave_xt_header = integritee_rpc_api
-		.get_header(Some(register_enclave_block_hash))
-		.unwrap()
-		.unwrap();
+	// TODO: #1451: Fix api-client type hacks
+	let register_enclave_xt_header =
+		Header::decode(&mut api_register_enclave_xt_header.encode().as_slice())
+			.expect("Can decode previously encoded header; qed");
 
 	println!(
 		"[+] Enclave registered at block number: {:?}, hash: {:?}",
@@ -622,7 +626,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	let mut subscription = integritee_rpc_api.subscribe_events().unwrap();
 	println!("[+] [{:?}] Subscribed to events. waiting...", ParentchainId::Integritee);
 	loop {
-		if let Some(Ok(events)) = subscription.next_event::<RuntimeEvent, Hash>() {
+		if let Some(Ok(events)) = subscription.next_events::<RuntimeEvent, Hash>() {
 			print_events(events)
 		}
 	}
@@ -686,7 +690,7 @@ fn init_target_parentchain<E>(
 	thread::Builder::new()
 		.name(format!("{:?}_parentchain_event_subscription", parentchain_id))
 		.spawn(move || loop {
-			if let Some(Ok(events)) = subscription.next_event::<RuntimeEvent, Hash>() {
+			if let Some(Ok(events)) = subscription.next_events::<RuntimeEvent, Hash>() {
 				print_events(events)
 			}
 		})
@@ -1023,7 +1027,7 @@ fn send_extrinsic(
 
 	// fixme: wait ...until_success doesn't work due to https://github.com/scs/substrate-api-client/issues/624
 	// fixme: currently, we don't verify if the extrinsic was a success here
-	match api.submit_and_watch_opaque_extrinsic_until(extrinsic.into(), XtStatus::Finalized) {
+	match api.submit_and_watch_opaque_extrinsic_until(&extrinsic.into(), XtStatus::Finalized) {
 		Ok(xt_report) => {
 			info!(
 				"[+] L1 extrinsic success. extrinsic hash: {:?} / status: {:?}",

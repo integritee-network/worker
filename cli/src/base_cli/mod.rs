@@ -32,7 +32,6 @@ use itp_node_api::api_client::PalletTeerexApi;
 use sp_core::crypto::Ss58Codec;
 use sp_keystore::Keystore;
 use std::path::PathBuf;
-use substrate_api_client::Metadata;
 use substrate_client_keystore::LocalKeystore;
 
 mod commands;
@@ -130,14 +129,13 @@ fn list_accounts() -> CliResult {
 fn print_metadata(cli: &Cli) -> CliResult {
 	let api = get_chain_api(cli);
 	let meta = api.metadata();
-	println!("Metadata:\n {}", Metadata::pretty_format(&meta.runtime_metadata()).unwrap());
+	println!("Metadata:\n {}", &meta.pretty_format().unwrap());
 	Ok(CliResultOk::Metadata { metadata: meta.clone() })
 }
-
 fn print_sgx_metadata(cli: &Cli) -> CliResult {
 	let worker_api_direct = get_worker_api_direct(cli);
 	let metadata = worker_api_direct.get_state_metadata().unwrap();
-	println!("Metadata:\n {}", Metadata::pretty_format(metadata.runtime_metadata()).unwrap());
+	println!("Metadata:\n {}", metadata.pretty_format().unwrap());
 	Ok(CliResultOk::Metadata { metadata })
 }
 
