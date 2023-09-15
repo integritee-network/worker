@@ -18,7 +18,7 @@ url = { version = "2.0.0" }
 ws = { version = "0.9.1", features = ["ssl"] }
 
 # parity
-frame-metadata = { git = "https://github.com/paritytech/frame-metadata", features = ["v14"] }
+frame-metadata = { version = "15.1.0", features = ["v14"] }
 
 # local
 itp-api-client-types = { path = "../../core-primitives/node-api/api-client-types" }

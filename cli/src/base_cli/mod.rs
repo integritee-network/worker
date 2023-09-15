@@ -18,7 +18,8 @@
 use crate::{
 	base_cli::commands::{
 		balance::BalanceCommand, faucet::FaucetCommand, listen::ListenCommand,
-		shield_funds::ShieldFundsCommand, transfer::TransferCommand,
+		register_tcb_info::RegisterTcbInfoCommand, shield_funds::ShieldFundsCommand,
+		transfer::TransferCommand,
 	},
 	command_utils::*,
 	Cli, CliResult, CliResultOk, ED25519_KEY_TYPE, SR25519_KEY_TYPE,
@@ -31,7 +32,6 @@ use itp_node_api::api_client::PalletTeerexApi;
 use sp_core::crypto::Ss58Codec;
 use sp_keystore::Keystore;
 use std::path::PathBuf;
-use substrate_api_client::Metadata;
 use substrate_client_keystore::LocalKeystore;
 
 mod commands;
@@ -65,6 +65,9 @@ pub enum BaseCommand {
 	/// listen to parentchain events
 	Listen(ListenCommand),
 
+	/// Register TCB info for FMSPC
+	RegisterTcbInfo(RegisterTcbInfoCommand),
+
 	/// Transfer funds from an parentchain account to an incognito account
 	ShieldFunds(ShieldFundsCommand),
 }
@@ -81,6 +84,7 @@ impl BaseCommand {
 			BaseCommand::Transfer(cmd) => cmd.run(cli),
 			BaseCommand::ListWorkers => list_workers(cli),
 			BaseCommand::Listen(cmd) => cmd.run(cli),
+			BaseCommand::RegisterTcbInfo(cmd) => cmd.run(cli),
 			BaseCommand::ShieldFunds(cmd) => cmd.run(cli),
 		}
 	}
@@ -125,14 +129,13 @@ fn list_accounts() -> CliResult {
 fn print_metadata(cli: &Cli) -> CliResult {
 	let api = get_chain_api(cli);
 	let meta = api.metadata();
-	println!("Metadata:\n {}", Metadata::pretty_format(&meta.runtime_metadata()).unwrap());
+	println!("Metadata:\n {}", &meta.pretty_format().unwrap());
 	Ok(CliResultOk::Metadata { metadata: meta.clone() })
 }
-
 fn print_sgx_metadata(cli: &Cli) -> CliResult {
 	let worker_api_direct = get_worker_api_direct(cli);
 	let metadata = worker_api_direct.get_state_metadata().unwrap();
-	println!("Metadata:\n {}", Metadata::pretty_format(metadata.runtime_metadata()).unwrap());
+	println!("Metadata:\n {}", metadata.pretty_format().unwrap());
 	Ok(CliResultOk::Metadata { metadata })
 }
 

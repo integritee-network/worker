@@ -18,7 +18,6 @@
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use enclave_bridge_primitives::EnclaveFingerprint;
-use frame_support::sp_runtime::traits::Block as ParentchainBlockTrait;
 use itc_parentchain::primitives::{
 	ParentchainId, ParentchainInitParams,
 	ParentchainInitParams::{Parachain, Solochain},
@@ -87,7 +86,7 @@ impl EnclaveBase for EnclaveMock {
 }
 
 impl Sidechain for EnclaveMock {
-	fn sync_parentchain<ParentchainBlock: ParentchainBlockTrait>(
+	fn sync_parentchain<ParentchainBlock: Encode>(
 		&self,
 		_blocks: &[sp_runtime::generic::SignedBlock<ParentchainBlock>],
 		_events: &[Vec<u8>],
