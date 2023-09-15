@@ -155,7 +155,7 @@ fn bootstrap_funds_from_alice(
 	println!("[+] send extrinsic: bootstrap funding Enclave from Alice's funds");
 	let xt = alice_signer_api
 		.balance_transfer_allow_death(MultiAddress::Id(accountid.clone()), funding_amount);
-	let xt_report = alice_signer_api.submit_and_watch_extrinsic_until(xt, XtStatus::Finalized)?;
+	let xt_report = alice_signer_api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock)?;
 	info!(
 		"[<] L1 extrinsic success. extrinsic hash: {:?} / status: {:?}",
 		xt_report.extrinsic_hash, xt_report.status
