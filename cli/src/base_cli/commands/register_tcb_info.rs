@@ -19,14 +19,16 @@ use crate::{
 	command_utils::{get_chain_api, *},
 	Cli, CliResult, CliResultOk,
 };
-use itp_node_api::api_client::{ParentchainExtrinsicSigner, TEEREX};
+use itp_node_api::api_client::TEEREX;
 use itp_types::{parentchain::Hash, OpaqueCall};
 use itp_utils::ToHexPrefixed;
 use log::*;
 use regex::Regex;
 use serde::Deserialize;
-use sp_core::sr25519 as sr25519_core;
-use substrate_api_client::{compose_call, compose_extrinsic_offline, SubmitAndWatchUntilSuccess};
+use substrate_api_client::{
+	ac_compose_macros::{compose_call, compose_extrinsic_offline},
+	SubmitAndWatch, XtStatus,
+};
 use urlencoding;
 
 #[derive(Debug, Deserialize)]
@@ -54,7 +56,7 @@ impl RegisterTcbInfoCommand {
 
 		// Get the sender.
 		let from = get_pair_from_str(&self.sender);
-		chain_api.set_signer(ParentchainExtrinsicSigner::new(sr25519_core::Pair::from(from)));
+		chain_api.set_signer(from.into());
 
 		let fmspcs = if self.all {
 			trace!("fetching all fmspc's from api.trustedservices.intel.com");
@@ -123,7 +125,7 @@ impl RegisterTcbInfoCommand {
 					chain_api.extrinsic_params(nonce)
 				);
 				nonce += 1;
-				match chain_api.submit_and_watch_extrinsic_until_success(xt, false) {
+				match chain_api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock) {
 					Ok(xt_report) => {
 						println!(
 							"[+] register_tcb_info. extrinsic hash: {:?} / status: {:?}",
