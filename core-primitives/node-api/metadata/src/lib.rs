@@ -98,7 +98,7 @@ impl NodeMetadata {
 		};
 		let call_index = pallet
 			.call_variant_by_name(call_name)
-			.ok_or_else(|| Error::NodeMetadata(MetadataError::CallNotFound(call_name)))?;
+			.ok_or(Error::NodeMetadata(MetadataError::CallNotFound(call_name)))?;
 		Ok([pallet.index(), call_index.index])
 	}
 

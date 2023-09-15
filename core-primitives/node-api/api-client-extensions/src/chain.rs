@@ -79,7 +79,7 @@ where
 	}
 
 	fn get_genesis_hash(&self) -> ApiResult<Self::Hash> {
-		self.get_block_hash(Some(0u32.into()))?.ok_or(ApiClientError::BlockHashNotFound)
+		self.get_block_hash(Some(0u32))?.ok_or(ApiClientError::BlockHashNotFound)
 	}
 
 	fn header(&self, header_hash: Option<Self::Hash>) -> ApiResult<Option<Self::Header>> {
