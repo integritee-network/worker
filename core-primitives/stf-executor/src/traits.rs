@@ -20,7 +20,7 @@ use codec::Encode;
 use ita_stf::{ParentchainHeader, TrustedCall, TrustedCallSigned, TrustedOperation};
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_primitives::types::{AccountId, ShardIdentifier};
-use itp_types::H256;
+use itp_types::{parentchain::ParentchainId, H256};
 use sp_runtime::traits::Header as HeaderTrait;
 use std::time::Duration;
 
@@ -68,5 +68,9 @@ pub trait StateUpdateProposer {
 ///
 /// Cannot be implemented for a generic header currently, because the runtime expects a ParentchainHeader.
 pub trait StfUpdateState {
-	fn update_states(&self, header: &ParentchainHeader) -> Result<()>;
+	fn update_states(
+		&self,
+		header: &ParentchainHeader,
+		parentchain_id: &ParentchainId,
+	) -> Result<()>;
 }

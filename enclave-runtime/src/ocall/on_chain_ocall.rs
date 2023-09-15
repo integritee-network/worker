@@ -19,6 +19,7 @@
 use crate::ocall::{ffi, OcallApi};
 use codec::{Decode, Encode};
 use frame_support::ensure;
+use itc_parentchain::primitives::ParentchainId;
 use itp_ocall_api::{EnclaveOnChainOCallApi, Result};
 use itp_storage::{verify_storage_entries, Error as StorageError};
 use itp_types::{storage::StorageEntryVerified, WorkerRequest, WorkerResponse, H256};
@@ -28,15 +29,22 @@ use sp_runtime::{traits::Header, OpaqueExtrinsic};
 use std::vec::Vec;
 
 impl EnclaveOnChainOCallApi for OcallApi {
-	fn send_to_parentchain(&self, extrinsics: Vec<OpaqueExtrinsic>) -> SgxResult<()> {
+	fn send_to_parentchain(
+		&self,
+		extrinsics: Vec<OpaqueExtrinsic>,
+		parentchain_id: &ParentchainId,
+	) -> SgxResult<()> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		let extrinsics_encoded = extrinsics.encode();
+		let parentchain_id_encoded = parentchain_id.encode();
 
 		let res = unsafe {
 			ffi::ocall_send_to_parentchain(
 				&mut rt as *mut sgx_status_t,
 				extrinsics_encoded.as_ptr(),
 				extrinsics_encoded.len() as u32,
+				parentchain_id_encoded.as_ptr(),
+				parentchain_id_encoded.len() as u32,
 			)
 		};
 
@@ -49,16 +57,20 @@ impl EnclaveOnChainOCallApi for OcallApi {
 	fn worker_request<V: Encode + Decode>(
 		&self,
 		req: Vec<WorkerRequest>,
+		parentchain_id: &ParentchainId,
 	) -> SgxResult<Vec<WorkerResponse<V>>> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		let mut resp: Vec<u8> = vec![0; 4196 * 4];
 		let request_encoded = req.encode();
+		let parentchain_id_encoded = parentchain_id.encode();
 
 		let res = unsafe {
 			ffi::ocall_worker_request(
 				&mut rt as *mut sgx_status_t,
 				request_encoded.as_ptr(),
 				request_encoded.len() as u32,
+				parentchain_id_encoded.as_ptr(),
+				parentchain_id_encoded.len() as u32,
 				resp.as_mut_ptr(),
 				resp.len() as u32,
 			)
@@ -80,11 +92,12 @@ impl EnclaveOnChainOCallApi for OcallApi {
 		&self,
 		storage_hash: Vec<u8>,
 		header: &H,
+		parentchain_id: &ParentchainId,
 	) -> Result<StorageEntryVerified<V>> {
 		// the code below seems like an overkill, but it is surprisingly difficult to
 		// get an owned value from a `Vec` without cloning.
 		Ok(self
-			.get_multiple_storages_verified(vec![storage_hash], header)?
+			.get_multiple_storages_verified(vec![storage_hash], header, parentchain_id)?
 			.into_iter()
 			.next()
 			.ok_or(StorageError::StorageValueUnavailable)?)
@@ -94,6 +107,7 @@ impl EnclaveOnChainOCallApi for OcallApi {
 		&self,
 		storage_hashes: Vec<Vec<u8>>,
 		header: &H,
+		parentchain_id: &ParentchainId,
 	) -> Result<Vec<StorageEntryVerified<V>>> {
 		let requests = storage_hashes
 			.into_iter()
@@ -101,7 +115,7 @@ impl EnclaveOnChainOCallApi for OcallApi {
 			.collect();
 
 		let storage_entries = self
-			.worker_request::<Vec<u8>>(requests)
+			.worker_request::<Vec<u8>>(requests, parentchain_id)
 			.map(|storages| verify_storage_entries(storages, header))??;
 
 		Ok(storage_entries)

@@ -23,13 +23,30 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use itp_types::parentchain::{
-	AccountId, Address, Balance, Hash, Index, Signature as PairSignature,
+	AccountData, AccountId, AccountInfo, Address, Balance, Hash, Index, Signature as PairSignature,
 };
 pub use substrate_api_client::{
-	storage_key, AssetTip, CallIndex, EventDetails, Events, ExtrinsicParams,
-	GenericAdditionalParams, GenericExtrinsicParams, GenericSignedExtra, InvalidMetadataError,
-	Metadata, MetadataError, PlainTip, StaticEvent, StaticExtrinsicSigner, UncheckedExtrinsicV4,
+	ac_node_api::{
+		metadata::{InvalidMetadataError, Metadata, MetadataError},
+		EventDetails, Events, StaticEvent,
+	},
+	ac_primitives::{
+		config::{AssetRuntimeConfig, Config, DefaultRuntimeConfig},
+		extrinsics::{
+			AssetTip, CallIndex, ExtrinsicParams, GenericAdditionalParams, GenericAdditionalSigned,
+			GenericExtrinsicParams, GenericSignedExtra, PlainTip, UncheckedExtrinsicV4,
+		},
+		serde_impls::StorageKey,
+		signer::{SignExtrinsic, StaticExtrinsicSigner},
+	},
+	rpc::Request,
+	storage_key, Api,
 };
+
+// traits from the api-client
+pub mod traits {
+	pub use substrate_api_client::{GetAccountInformation, GetChainInfo, GetStorage};
+}
 
 pub type ParentchainPlainTip = PlainTip<Balance>;
 pub type ParentchainAssetTip = AssetTip<Balance>;
@@ -37,14 +54,16 @@ pub type ParentchainAssetTip = AssetTip<Balance>;
 /// Configuration for the ExtrinsicParams.
 ///
 /// Valid for the default integritee node
-pub type ParentchainExtrinsicParams = GenericExtrinsicParams<ParentchainPlainTip, Index, Hash>;
+pub type ParentchainExtrinsicParams =
+	GenericExtrinsicParams<DefaultRuntimeConfig, ParentchainPlainTip>;
 pub type ParentchainAdditionalParams = GenericAdditionalParams<ParentchainPlainTip, Hash>;
+pub use DefaultRuntimeConfig as ParentchainRuntimeConfig;
 
 // Pay in asset fees.
 //
 // This needs to be used if the node uses the `pallet_asset_tx_payment`.
-//pub type ParentchainExtrinsicParams =  GenericExtrinsicParams<ParentchainAssetTip, Index, Hash>;
-// pub type ParentchainAdditionalParams = GenericAdditionalParams<ParentchainAssetTip, Hash>;
+//pub type ParentchainExtrinsicParams =  GenericExtrinsicParams<AssetRuntimeConfig, AssetTip>;
+// pub type ParentchainAdditionalParams = GenericAdditionalParams<AssetRuntimeConfig, Hash>;
 
 pub type ParentchainUncheckedExtrinsic<Call> =
 	UncheckedExtrinsicV4<Address, Call, PairSignature, ParentchainSignedExtra>;
@@ -59,21 +78,21 @@ pub use api::*;
 
 #[cfg(feature = "std")]
 mod api {
-	use super::{PairSignature, ParentchainExtrinsicParams, StaticExtrinsicSigner};
+	use super::ParentchainRuntimeConfig;
 	use sp_runtime::generic::SignedBlock as GenericSignedBlock;
 	use substrate_api_client::Api;
 
+	// We should probably switch to the opaque block, then we can get rid of the
+	// runtime dependency here.
+	// pub use itp_types::Block;
 	pub use my_node_runtime::{Block, Runtime, UncheckedExtrinsic};
 
 	pub use substrate_api_client::{
 		api::Error as ApiClientError,
-		rpc::{Error as RpcClientError, WsRpcClient},
+		rpc::{tungstenite_client::TungsteniteRpcClient, Error as RpcClientError},
 	};
 
 	pub type SignedBlock = GenericSignedBlock<Block>;
-	pub type ParentchainExtrinsicSigner =
-		StaticExtrinsicSigner<sp_core::sr25519::Pair, PairSignature>;
 
-	pub type ParentchainApi =
-		Api<ParentchainExtrinsicSigner, WsRpcClient, ParentchainExtrinsicParams, Runtime>;
+	pub type ParentchainApi = Api<ParentchainRuntimeConfig, TungsteniteRpcClient>;
 }

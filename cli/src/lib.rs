@@ -24,6 +24,7 @@
 #[macro_use]
 extern crate clap;
 extern crate chrono;
+extern crate core;
 extern crate env_logger;
 extern crate log;
 
@@ -49,7 +50,6 @@ use ita_stf::MerkleProofWithCodec;
 use simplyr_lib::MarketOutput;
 use sp_application_crypto::KeyTypeId;
 use sp_core::{H160, H256};
-use substrate_api_client::Metadata;
 use thiserror::Error;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 

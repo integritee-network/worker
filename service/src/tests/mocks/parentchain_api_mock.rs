@@ -16,7 +16,7 @@
 */
 
 use itc_parentchain_test::{ParentchainBlockBuilder, ParentchainHeaderBuilder};
-use itp_node_api::api_client::{ApiResult, ChainApi, SignedBlock};
+use itp_node_api::api_client::{ApiResult, Block, ChainApi, SignedBlock};
 use itp_types::{
 	parentchain::{Hash, Header, StorageProof},
 	H256,
@@ -28,11 +28,14 @@ pub struct ParentchainApiMock {
 }
 
 impl ParentchainApiMock {
+	// Todo: Remove when #1451 is resolved
+	#[allow(unused)]
 	pub(crate) fn new() -> Self {
 		ParentchainApiMock { parentchain: Vec::new() }
 	}
 
 	/// Initializes parentchain with a default block chain of a given length.
+	// Todo: Remove when #1451 is resolved
 	pub fn with_default_blocks(mut self, number_of_blocks: u32) -> Self {
 		self.parentchain = (1..=number_of_blocks)
 			.map(|n| {
@@ -45,6 +48,11 @@ impl ParentchainApiMock {
 }
 
 impl ChainApi for ParentchainApiMock {
+	type Hash = Hash;
+	type Block = Block;
+	type Header = Header;
+	type BlockNumber = u32;
+
 	fn last_finalized_block(&self) -> ApiResult<Option<SignedBlock>> {
 		Ok(self.parentchain.last().cloned())
 	}

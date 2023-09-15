@@ -58,7 +58,9 @@ enclave {
 			[in, size=shard_size] uint8_t* shard, uint32_t shard_size
 		);
 
-		public sgx_status_t trigger_parentchain_block_import();
+		public sgx_status_t trigger_parentchain_block_import(
+			[in, size=parentchain_id_size] uint8_t* parentchain_id, uint32_t parentchain_id_size
+		);
 
 		public sgx_status_t execute_trusted_calls();
 
@@ -66,15 +68,17 @@ enclave {
 			[in, size=blocks_size] uint8_t* blocks, size_t blocks_size,
 			[in, size=events_size] uint8_t* events, size_t events_size,
 			[in, size=events_proofs_size] uint8_t* events_proofs, size_t events_proofs_size,
-			[in] uint32_t* nonce
+			[in, size=parentchain_id_size] uint8_t* parentchain_id, uint32_t parentchain_id_size
 		);
 
 		public sgx_status_t set_nonce(
-			[in] uint32_t* nonce
+			[in] uint32_t* nonce,
+			[in, size=parentchain_id_size] uint8_t* parentchain_id, uint32_t parentchain_id_size
 		);
 
 		public sgx_status_t set_node_metadata(
-			[in, size=node_metadata_size] uint8_t* node_metadata, uint32_t node_metadata_size
+			[in, size=node_metadata_size] uint8_t* node_metadata, uint32_t node_metadata_size,
+			[in, size=parentchain_id_size] uint8_t* parentchain_id, uint32_t parentchain_id_size
 		);
 
 		public sgx_status_t get_rsa_encryption_pubkey(
@@ -213,6 +217,7 @@ enclave {
 
 		sgx_status_t ocall_worker_request(
 			[in, size = req_size] uint8_t * request, uint32_t req_size,
+			[in, size=parentchain_id_size] uint8_t* parentchain_id, uint32_t parentchain_id_size,
 			[out, size = resp_size] uint8_t * response, uint32_t resp_size
 		);
 
@@ -236,7 +241,8 @@ enclave {
 		);
 
 		sgx_status_t ocall_send_to_parentchain(
-			[in, size = extrinsics_size] uint8_t * extrinsics, uint32_t extrinsics_size
+			[in, size = extrinsics_size] uint8_t * extrinsics, uint32_t extrinsics_size,
+			[in, size=parentchain_id_size] uint8_t* parentchain_id, uint32_t parentchain_id_size
 		);
 	};
 };

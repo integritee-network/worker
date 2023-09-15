@@ -36,17 +36,8 @@ use std::sync::RwLockWriteGuard;
 use std::sync::SgxRwLockWriteGuard as RwLockWriteGuard;
 
 use crate::error::Result;
-use lazy_static::lazy_static;
-use std::sync::Arc;
 
 pub use nonce_cache::NonceCache;
-
-lazy_static! {
-	/// Global instance of a nonce cache
-	///
-	/// Concurrent access is managed internally, using RW locks
-	pub static ref GLOBAL_NONCE_CACHE: Arc<NonceCache> = Default::default();
-}
 
 pub mod error;
 pub mod nonce_cache;

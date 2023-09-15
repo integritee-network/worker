@@ -15,66 +15,72 @@
 
 */
 
+//! Naive implementation of adding a second parachain handler to the setup.
+//!
+//! Ideally, most of the redundant code can be abstracted away, but it turns out
+//! that this is quite tedious, so for now this is a copy-past of the [IntegriteeParachainHandler]:
+//! * https://github.com/integritee-network/worker/issues/1417
+
 use crate::{
 	error::Result,
 	initialization::{
 		global_components::{
 			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOCallApi,
-			EnclaveParentchainBlockImportDispatcher, EnclaveStfExecutor, EnclaveValidatorAccessor,
-			GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
-			GLOBAL_STATE_HANDLER_COMPONENT,
+			EnclaveStfExecutor, EnclaveValidatorAccessor, TargetAParentchainBlockImportDispatcher,
+			GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+			GLOBAL_TARGET_A_PARENTCHAIN_LIGHT_CLIENT_SEAL, GLOBAL_TARGET_A_PARENTCHAIN_NONCE_CACHE,
 		},
 		parentchain::common::{
-			create_extrinsics_factory, create_offchain_immediate_import_dispatcher,
-			create_parentchain_block_importer, create_sidechain_triggered_import_dispatcher,
+			create_extrinsics_factory, create_target_a_offchain_immediate_import_dispatcher,
+			create_target_a_parentchain_block_importer,
 		},
 	},
 };
-use codec::Encode;
 use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, LightClientState};
-use itp_component_container::{ComponentGetter, ComponentInitializer};
+use itp_component_container::ComponentGetter;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
-use std::{path::PathBuf, sync::Arc, vec::Vec};
+use itp_types::parentchain::ParentchainId;
+use std::{path::PathBuf, sync::Arc};
 
-use crate::initialization::global_components::GLOBAL_LIGHT_CLIENT_SEAL;
 pub use itc_parentchain::primitives::{ParachainBlock, ParachainHeader, ParachainParams};
 
 #[derive(Clone)]
-pub struct FullParachainHandler {
+pub struct TargetAParachainHandler {
 	pub genesis_header: ParachainHeader,
 	pub node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
-	// FIXME: Probably should be split up into a parentchain dependent executor and one independent.
 	pub stf_executor: Arc<EnclaveStfExecutor>,
 	pub validator_accessor: Arc<EnclaveValidatorAccessor>,
 	pub extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
-	pub import_dispatcher: Arc<EnclaveParentchainBlockImportDispatcher>,
+	pub import_dispatcher: Arc<TargetAParentchainBlockImportDispatcher>,
 }
 
-impl FullParachainHandler {
+impl TargetAParachainHandler {
 	pub fn init<WorkerModeProvider: ProvideWorkerMode>(
 		_base_path: PathBuf,
 		params: ParachainParams,
-	) -> Result<Vec<u8>> {
+	) -> Result<Self> {
 		let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 		let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 		let node_metadata_repository = Arc::new(EnclaveNodeMetadataRepository::default());
 
 		let genesis_header = params.genesis_header.clone();
 
-		let light_client_seal = GLOBAL_LIGHT_CLIENT_SEAL.get()?;
+		let light_client_seal = GLOBAL_TARGET_A_PARENTCHAIN_LIGHT_CLIENT_SEAL.get()?;
 		let validator = itc_parentchain::light_client::io::read_or_init_parachain_validator::<
 			ParachainBlock,
 			EnclaveOCallApi,
 			_,
-		>(params, ocall_api.clone(), &*light_client_seal)?;
-		let latest_header = validator.latest_finalized_header()?;
+		>(params, ocall_api.clone(), &*light_client_seal, ParentchainId::TargetA)?;
 		let validator_accessor =
 			Arc::new(EnclaveValidatorAccessor::new(validator, light_client_seal));
 
 		let genesis_hash = validator_accessor.execute_on_validator(|v| v.genesis_hash())?;
 
-		let extrinsics_factory =
-			create_extrinsics_factory(genesis_hash, node_metadata_repository.clone())?;
+		let extrinsics_factory = create_extrinsics_factory(
+			genesis_hash,
+			GLOBAL_TARGET_A_PARENTCHAIN_NONCE_CACHE.clone(),
+			node_metadata_repository.clone(),
+		)?;
 
 		let stf_executor = Arc::new(EnclaveStfExecutor::new(
 			ocall_api,
@@ -82,7 +88,7 @@ impl FullParachainHandler {
 			node_metadata_repository.clone(),
 		));
 
-		let block_importer = create_parentchain_block_importer(
+		let block_importer = create_target_a_parentchain_block_importer(
 			validator_accessor.clone(),
 			stf_executor.clone(),
 			extrinsics_factory.clone(),
@@ -90,28 +96,27 @@ impl FullParachainHandler {
 		)?;
 
 		let import_dispatcher = match WorkerModeProvider::worker_mode() {
-			WorkerMode::OffChainWorker => create_offchain_immediate_import_dispatcher(
+			WorkerMode::OffChainWorker => create_target_a_offchain_immediate_import_dispatcher(
 				stf_executor.clone(),
 				block_importer,
 				validator_accessor.clone(),
 				extrinsics_factory.clone(),
 			)?,
-			WorkerMode::Sidechain => create_sidechain_triggered_import_dispatcher(block_importer),
+			WorkerMode::Sidechain =>
+				unimplemented!("Can't run target a chain in sidechain mode yet."),
 			WorkerMode::Teeracle =>
-				Arc::new(EnclaveParentchainBlockImportDispatcher::new_empty_dispatcher()),
+				Arc::new(TargetAParentchainBlockImportDispatcher::new_empty_dispatcher()),
 		};
 
-		let parachain_handler = Arc::new(Self {
+		let parachain_handler = Self {
 			genesis_header,
 			node_metadata_repository,
 			stf_executor,
 			validator_accessor,
 			extrinsics_factory,
 			import_dispatcher,
-		});
+		};
 
-		GLOBAL_FULL_PARACHAIN_HANDLER_COMPONENT.initialize(parachain_handler);
-
-		Ok(latest_header.encode())
+		Ok(parachain_handler)
 	}
 }

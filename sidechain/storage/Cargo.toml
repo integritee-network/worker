@@ -9,7 +9,7 @@ edition = "2021"
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
 log = "0.4"
 parking_lot = "0.12.1"
-rocksdb = "0.17.0"
+rocksdb = "0.20.1"
 thiserror = "1.0"
 
 # integritee

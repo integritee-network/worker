@@ -21,7 +21,7 @@ use itp_time_utils::{duration_now, remaining_time};
 use log::{debug, info};
 use my_node_runtime::{Hash, RuntimeEvent};
 use std::time::Duration;
-use substrate_api_client::{EventRecord, SubscribeEvents};
+use substrate_api_client::{ac_node_api::EventRecord, SubscribeEvents};
 
 /// Listen to exchange rate events.
 #[derive(Debug, Clone, Parser)]
@@ -51,7 +51,7 @@ fn count_oracle_update_events(api: &ParentchainApi, duration: Duration) -> Event
 	let mut count = 0;
 
 	while remaining_time(stop).unwrap_or_default() > Duration::ZERO {
-		let events_result = subscription.next_event::<RuntimeEvent, Hash>();
+		let events_result = subscription.next_events::<RuntimeEvent, Hash>();
 		let event_count = match events_result {
 			Some(Ok(event_records)) => {
 				debug!("Could not successfully decode event_bytes {:?}", event_records);

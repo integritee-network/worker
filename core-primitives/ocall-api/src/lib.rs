@@ -25,8 +25,8 @@ use core::result::Result as StdResult;
 use derive_more::{Display, From};
 use itp_storage::Error as StorageError;
 use itp_types::{
-	storage::StorageEntryVerified, BlockHash, ShardIdentifier, TrustedOperationStatus,
-	WorkerRequest, WorkerResponse,
+	parentchain::ParentchainId, storage::StorageEntryVerified, BlockHash, ShardIdentifier,
+	TrustedOperationStatus, WorkerRequest, WorkerResponse,
 };
 use sgx_types::*;
 use sp_core::H256;
@@ -89,23 +89,30 @@ pub trait EnclaveRpcOCallApi: Clone + Send + Sync + Default {
 
 /// trait for o-calls related to on-chain interactions
 pub trait EnclaveOnChainOCallApi: Clone + Send + Sync {
-	fn send_to_parentchain(&self, extrinsics: Vec<OpaqueExtrinsic>) -> SgxResult<()>;
+	fn send_to_parentchain(
+		&self,
+		extrinsics: Vec<OpaqueExtrinsic>,
+		parentchain_id: &ParentchainId,
+	) -> SgxResult<()>;
 
 	fn worker_request<V: Encode + Decode>(
 		&self,
 		req: Vec<WorkerRequest>,
+		parentchain_id: &ParentchainId,
 	) -> SgxResult<Vec<WorkerResponse<V>>>;
 
 	fn get_storage_verified<H: Header<Hash = H256>, V: Decode>(
 		&self,
 		storage_hash: Vec<u8>,
 		header: &H,
+		parentchain_id: &ParentchainId,
 	) -> Result<StorageEntryVerified<V>>;
 
 	fn get_multiple_storages_verified<H: Header<Hash = H256>, V: Decode>(
 		&self,
 		storage_hashes: Vec<Vec<u8>>,
 		header: &H,
+		parentchain_id: &ParentchainId,
 	) -> Result<Vec<StorageEntryVerified<V>>>;
 }
 

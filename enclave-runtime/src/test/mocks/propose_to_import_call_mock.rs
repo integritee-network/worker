@@ -18,6 +18,7 @@
 
 use crate::test::mocks::types::TestBlockImporter;
 use codec::{Decode, Encode};
+use itc_parentchain::primitives::ParentchainId;
 use itp_ocall_api::{EnclaveOnChainOCallApi, EnclaveSidechainOCallApi, Result};
 use itp_types::{
 	storage::StorageEntryVerified, BlockHash, Header as ParentchainHeader, ShardIdentifier,
@@ -47,13 +48,18 @@ impl ProposeToImportOCallApi {
 }
 
 impl EnclaveOnChainOCallApi for ProposeToImportOCallApi {
-	fn send_to_parentchain(&self, _extrinsics: Vec<OpaqueExtrinsic>) -> SgxResult<()> {
+	fn send_to_parentchain(
+		&self,
+		_extrinsics: Vec<OpaqueExtrinsic>,
+		_: &ParentchainId,
+	) -> SgxResult<()> {
 		Ok(())
 	}
 
 	fn worker_request<V: Encode + Decode>(
 		&self,
 		_req: Vec<WorkerRequest>,
+		_: &ParentchainId,
 	) -> SgxResult<Vec<WorkerResponse<V>>> {
 		todo!()
 	}
@@ -62,6 +68,7 @@ impl EnclaveOnChainOCallApi for ProposeToImportOCallApi {
 		&self,
 		_storage_hash: Vec<u8>,
 		_header: &H,
+		_: &ParentchainId,
 	) -> Result<StorageEntryVerified<V>> {
 		todo!()
 	}
@@ -70,6 +77,7 @@ impl EnclaveOnChainOCallApi for ProposeToImportOCallApi {
 		&self,
 		_storage_hashes: Vec<Vec<u8>>,
 		_header: &H,
+		_: &ParentchainId,
 	) -> Result<Vec<StorageEntryVerified<V>>> {
 		todo!()
 	}

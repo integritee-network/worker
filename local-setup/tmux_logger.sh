@@ -21,7 +21,7 @@ else
     split-window -v \; \
     split-window -v \; \
     select-layout even-vertical \; \
-    send-keys -t integritee_logger:0.0 'tail -f ../log/node.log' C-m \; \
+    send-keys -t integritee_logger:0.0 'tail -f ../log/node1.log' C-m \; \
     send-keys -t integritee_logger:0.1 'tail -f ../log/worker1.log' C-m \; \
     send-keys -t integritee_logger:0.2 'tail -f ../log/worker2.log' C-m
 

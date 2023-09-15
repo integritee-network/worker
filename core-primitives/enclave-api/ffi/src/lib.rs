@@ -60,6 +60,8 @@ extern "C" {
 	pub fn trigger_parentchain_block_import(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
+		parentchain_id: *const u8,
+		parentchain_id_size: u32,
 	) -> sgx_status_t;
 
 	pub fn execute_trusted_calls(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
@@ -73,13 +75,16 @@ extern "C" {
 		events_size: usize,
 		events_proofs: *const u8,
 		events_proofs_size: usize,
-		nonce: *const u32,
+		parentchain_id: *const u8,
+		parentchain_id_size: u32,
 	) -> sgx_status_t;
 
 	pub fn set_nonce(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
 		nonce: *const u32,
+		parentchain_id: *const u8,
+		parentchain_id_size: u32,
 	) -> sgx_status_t;
 
 	pub fn set_node_metadata(
@@ -87,6 +92,8 @@ extern "C" {
 		retval: *mut sgx_status_t,
 		node_metadata: *const u8,
 		node_metadata_size: u32,
+		parentchain_id: *const u8,
+		parentchain_id_size: u32,
 	) -> sgx_status_t;
 
 	pub fn get_rsa_encryption_pubkey(

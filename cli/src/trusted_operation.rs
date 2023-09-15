@@ -26,7 +26,7 @@ use codec::{Decode, Encode};
 use enclave_bridge_primitives::Request;
 use ita_stf::{Getter, TrustedOperation};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
-use itp_node_api::api_client::{ParentchainApi, ParentchainExtrinsicSigner, ENCLAVE_BRIDGE};
+use itp_node_api::api_client::{ParentchainApi, ENCLAVE_BRIDGE};
 use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_stf_primitives::types::ShardIdentifier;
@@ -35,14 +35,14 @@ use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use log::*;
 use my_node_runtime::{Hash, RuntimeEvent};
 use pallet_enclave_bridge::Event as EnclaveBridgeEvent;
-use sp_core::{sr25519 as sr25519_core, H256};
+use sp_core::H256;
 use std::{
 	result::Result as StdResult,
 	sync::mpsc::{channel, Receiver},
 	time::Instant,
 };
 use substrate_api_client::{
-	compose_extrinsic, GetHeader, SubmitAndWatchUntilSuccess, SubscribeEvents,
+	ac_compose_macros::compose_extrinsic, GetChainInfo, SubmitAndWatch, SubscribeEvents, XtStatus,
 };
 use thiserror::Error;
 
@@ -135,12 +135,12 @@ fn send_indirect_request(
 	);
 	let arg_signer = &trusted_args.xt_signer;
 	let signer = get_pair_from_str(arg_signer);
-	chain_api.set_signer(ParentchainExtrinsicSigner::new(sr25519_core::Pair::from(signer)));
+	chain_api.set_signer(signer.into());
 
 	let request = Request { shard, cyphertext: call_encrypted };
 	let xt = compose_extrinsic!(&chain_api, ENCLAVE_BRIDGE, "invoke", request);
 
-	let block_hash = match chain_api.submit_and_watch_extrinsic_until_success(xt, false) {
+	let block_hash = match chain_api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock) {
 		Ok(xt_report) => {
 			println!(
 				"[+] invoke TrustedOperation extrinsic success. extrinsic hash: {:?} / status: {:?} / block hash: {:?}",
@@ -161,7 +161,7 @@ fn send_indirect_request(
 	info!("Waiting for execution confirmation from enclave...");
 	let mut subscription = chain_api.subscribe_events().unwrap();
 	loop {
-		let event_records = subscription.next_event::<RuntimeEvent, Hash>().unwrap().unwrap();
+		let event_records = subscription.next_events::<RuntimeEvent, Hash>().unwrap().unwrap();
 		for event_record in event_records {
 			if let RuntimeEvent::EnclaveBridge(EnclaveBridgeEvent::ProcessedParentchainBlock {
 				shard,
