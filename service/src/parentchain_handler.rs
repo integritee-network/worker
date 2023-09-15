@@ -158,7 +158,7 @@ where
 		loop {
 			let block_chunk_to_sync = self.parentchain_api.get_blocks(
 				until_synced_header.number + 1,
-				min(until_synced_header.number + BLOCK_SYNC_BATCH_SIZE, curr_block_number).into(),
+				min(until_synced_header.number + BLOCK_SYNC_BATCH_SIZE, curr_block_number),
 			)?;
 			println!("[+] [{:?}] Found {} block(s) to sync", id, block_chunk_to_sync.len());
 			if block_chunk_to_sync.is_empty() {
