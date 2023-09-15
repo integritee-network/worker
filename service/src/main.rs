@@ -521,7 +521,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		.unwrap()
 		.unwrap();
 
-	// #TODO: API-CLIENT-TYPES
+	// TODO: #1451: Fix api-client type hacks
 	let register_enclave_xt_header =
 		Header::decode(&mut api_register_enclave_xt_header.encode().as_slice())
 			.expect("Can decode previously encoded header; qed");

@@ -187,7 +187,7 @@ where
 				id, until_synced_header.number, curr_block_number,
 			);
 
-			// #TODO: API-CLIENT-TYPES
+			// #TODO: #1451: fix api/client types
 			until_synced_header =
 				Header::decode(&mut api_client_until_synced_header.encode().as_slice())
 					.expect("Can decode previously encoded header; qed");
