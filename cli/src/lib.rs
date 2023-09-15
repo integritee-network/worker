@@ -35,7 +35,6 @@ mod command_utils;
 mod error;
 #[cfg(feature = "evm")]
 mod evm;
-#[cfg(feature = "teeracle")]
 mod oracle;
 mod trusted_base_cli;
 mod trusted_cli;

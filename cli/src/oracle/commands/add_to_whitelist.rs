@@ -20,7 +20,10 @@ use crate::{
 	Cli,
 };
 use itp_node_api::api_client::{ADD_TO_WHITELIST, TEERACLE};
-use substrate_api_client::{compose_call, compose_extrinsic, SubmitAndWatch, XtStatus};
+use substrate_api_client::{
+	ac_compose_macros::{compose_call, compose_extrinsic},
+	SubmitAndWatch, XtStatus,
+};
 
 /// Add a trusted market data source to the on-chain whitelist.
 #[derive(Debug, Clone, Parser)]

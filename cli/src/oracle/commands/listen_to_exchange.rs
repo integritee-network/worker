@@ -50,7 +50,7 @@ pub fn count_exchange_rate_update_events(api: &ParentchainApi, duration: Duratio
 	let mut count = 0;
 
 	while remaining_time(stop).unwrap_or_default() > Duration::ZERO {
-		let events_result = subscription.next_event::<RuntimeEvent, Hash>().unwrap();
+		let events_result = subscription.next_events::<RuntimeEvent, Hash>().unwrap();
 		if let Ok(events) = events_result {
 			for event_record in &events {
 				info!("received event {:?}", event_record.event);
