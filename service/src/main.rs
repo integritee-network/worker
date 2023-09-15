@@ -514,12 +514,11 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		send_extrinsic(register_xt(), &node_api2, &tee_accountid_clone, is_development_mode)
 	};
 
-	let register_enclave_block_hash = send_register_xt().unwrap();
-
-	let api_register_enclave_xt_header = integritee_rpc_api
-		.get_header(Some(register_enclave_block_hash))
-		.unwrap()
-		.unwrap();
+	// Todo: Can't unwrap here because the extrinsic is for some reason not found in the block
+	// even if it was successful: https://github.com/scs/substrate-api-client/issues/624.
+	let register_enclave_block_hash = send_register_xt();
+	let api_register_enclave_xt_header =
+		integritee_rpc_api.get_header(register_enclave_block_hash).unwrap().unwrap();
 
 	// TODO: #1451: Fix api-client type hacks
 	let register_enclave_xt_header =
