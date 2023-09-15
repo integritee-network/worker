@@ -30,8 +30,8 @@ type RawEvents = Vec<u8>;
 /// ApiClient extension that simplifies chain data access.
 pub trait ChainApi {
 	type Hash;
-	type Block: substrate_api_client::ac_primitives::Block;
-	type Header: substrate_api_client::ac_primitives::Header;
+	type Block;
+	type Header;
 	type BlockNumber;
 
 	fn last_finalized_block(&self) -> ApiResult<Option<GenericSignedBlock<Self::Block>>>;
