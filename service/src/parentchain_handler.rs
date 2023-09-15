@@ -63,6 +63,8 @@ pub(crate) struct ParentchainHandler<ParentchainApi, EnclaveApi> {
 	parentchain_init_params: ParentchainInitParams,
 }
 
+// #TODO: #1451: Reintroduce `ParentchainApi: ChainApi` once there is no trait bound conflict
+// any more with the api-clients own trait definitions.
 impl<EnclaveApi> ParentchainHandler<ParentchainApi, EnclaveApi>
 where
 	EnclaveApi: EnclaveBase,
@@ -98,6 +100,7 @@ where
 			(
 				id,
 				GrandpaParams::new(
+					// #TODO: #1451: clean up type hacks
 					Header::decode(&mut genesis_header.encode().as_slice())?,
 					authority_list.into(),
 					grandpa_proof,
@@ -105,7 +108,14 @@ where
 			)
 				.into()
 		} else {
-			(id, SimpleParams::new(Header::decode(&mut genesis_header.encode().as_slice())?)).into()
+			(
+				id,
+				SimpleParams::new(
+					// #TODO: #1451: clean up type hacks
+					Header::decode(&mut genesis_header.encode().as_slice())?,
+				),
+			)
+				.into()
 		};
 
 		Ok(Self::new(parentchain_api, enclave_api, parentchain_init_params))
