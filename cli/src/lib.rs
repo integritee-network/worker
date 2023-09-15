@@ -45,6 +45,7 @@ pub mod trusted_cli;
 
 use crate::commands::Commands;
 use clap::Parser;
+use ita_stf::MerkleProofWithCodec;
 use simplyr_lib::MarketOutput;
 use sp_application_crypto::KeyTypeId;
 use sp_core::{H160, H256};
@@ -111,6 +112,7 @@ pub enum CliResultOk {
 
 	Matches(MarketOutput),
 	PayAsBidOutput(Option<Vec<u8>>),
+	PayAsBidProofOutput(MerkleProofWithCodec<H256, Vec<u8>>),
 }
 
 #[derive(Debug, Error)]
