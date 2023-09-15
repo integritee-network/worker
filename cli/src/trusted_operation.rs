@@ -35,7 +35,7 @@ use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use log::*;
 use my_node_runtime::{Hash, RuntimeEvent};
 use pallet_enclave_bridge::Event as EnclaveBridgeEvent;
-use sp_core::{sr25519 as sr25519_core, H256};
+use sp_core::H256;
 use std::{
 	result::Result as StdResult,
 	sync::mpsc::{channel, Receiver},
@@ -135,12 +135,12 @@ fn send_indirect_request(
 	);
 	let arg_signer = &trusted_args.xt_signer;
 	let signer = get_pair_from_str(arg_signer);
-	chain_api.set_signer(sr25519_core::Pair::from(signer).into());
+	chain_api.set_signer(signer.into());
 
 	let request = Request { shard, cyphertext: call_encrypted };
 	let xt = compose_extrinsic!(&chain_api, ENCLAVE_BRIDGE, "invoke", request);
 
-	let block_hash = match chain_api.submit_and_watch_extrinsic_until(xt, XtStatus::Finalized) {
+	let block_hash = match chain_api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock) {
 		Ok(xt_report) => {
 			println!(
 				"[+] invoke TrustedOperation extrinsic success. extrinsic hash: {:?} / status: {:?} / block hash: {:?}",
