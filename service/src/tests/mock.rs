@@ -55,6 +55,8 @@ pub fn enclaves() -> Vec<MultiEnclave<Vec<u8>>> {
 }
 
 impl PalletTeerexApi for TestNodeApi {
+	type Hash = Hash;
+
 	fn enclave(
 		&self,
 		_account: &AccountId,

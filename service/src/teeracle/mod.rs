@@ -120,7 +120,7 @@ where
 
 			println!("[>] Update oracle data (send the extrinsic)");
 			let extrinsic_hash = match node_api_clone.submit_and_watch_opaque_extrinsic_until(
-				encoded_extrinsic.into(),
+				&encoded_extrinsic.into(),
 				XtStatus::InBlock,
 			) {
 				Err(e) => {

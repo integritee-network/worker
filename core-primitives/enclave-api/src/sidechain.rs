@@ -23,13 +23,13 @@ use itp_enclave_api_ffi as ffi;
 use itp_storage::StorageProof;
 use itp_types::parentchain::ParentchainId;
 use sgx_types::sgx_status_t;
-use sp_runtime::{generic::SignedBlock, traits::Block as ParentchainBlockTrait};
+use sp_runtime::generic::SignedBlock;
 
 /// trait for handling blocks on the side chain
 pub trait Sidechain: Send + Sync + 'static {
 	/// Sync parentchain blocks and events. Execute pending tops
 	/// and events proof in the enclave.
-	fn sync_parentchain<ParentchainBlock: ParentchainBlockTrait>(
+	fn sync_parentchain<ParentchainBlock: Encode>(
 		&self,
 		blocks: &[SignedBlock<ParentchainBlock>],
 		events: &[Vec<u8>],
@@ -41,7 +41,7 @@ pub trait Sidechain: Send + Sync + 'static {
 }
 
 impl Sidechain for Enclave {
-	fn sync_parentchain<ParentchainBlock: ParentchainBlockTrait>(
+	fn sync_parentchain<ParentchainBlock: Encode>(
 		&self,
 		blocks: &[SignedBlock<ParentchainBlock>],
 		events: &[Vec<u8>],

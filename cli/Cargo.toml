@@ -18,10 +18,13 @@ log = "0.4"
 primitive-types = { version = "0.12.1", features = ["codec"] }
 rand = "0.8.5"
 rayon = "1.5.1"
+regex = "1.9.5"
+reqwest = { version = "0.11", features = ["blocking", "json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 thiserror = "1.0"
+urlencoding = "2.1.3"
 ws = { version = "0.9.1", features = ["ssl"] }
 
 # scs / integritee
@@ -31,8 +34,9 @@ pallet-evm = { optional = true, git = "https://github.com/integritee-network/fro
 pallet-teerex = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.0-polkadot-v0.9.42" }
 # `default-features = false` to remove the jsonrpsee dependency.
 enclave-bridge-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.0-polkadot-v0.9.42" }
-substrate-api-client = { default-features = false, features = ["std", "ws-client"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.10.0" }
-substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.10.0" }
+# disable unsupported jsonrpcsee
+substrate-api-client = { default-features = false, features = ["std", "sync-api"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }
+substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }
 
 # substrate dependencies
 frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }

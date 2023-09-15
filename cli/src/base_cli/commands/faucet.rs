@@ -19,12 +19,11 @@ use crate::{
 	command_utils::{get_accountid_from_str, get_chain_api},
 	Cli, CliResult, CliResultOk,
 };
-use itp_node_api::api_client::ParentchainExtrinsicSigner;
 use my_node_runtime::{BalancesCall, RuntimeCall};
 use sp_keyring::AccountKeyring;
 use sp_runtime::MultiAddress;
 use std::vec::Vec;
-use substrate_api_client::{compose_extrinsic_offline, SubmitExtrinsic};
+use substrate_api_client::{ac_compose_macros::compose_extrinsic_offline, SubmitExtrinsic};
 
 const PREFUNDING_AMOUNT: u128 = 1_000_000_000;
 
@@ -38,7 +37,7 @@ pub struct FaucetCommand {
 impl FaucetCommand {
 	pub(crate) fn run(&self, cli: &Cli) -> CliResult {
 		let mut api = get_chain_api(cli);
-		api.set_signer(ParentchainExtrinsicSigner::new(AccountKeyring::Alice.pair()));
+		api.set_signer(AccountKeyring::Alice.pair().into());
 		let mut nonce = api.get_nonce().unwrap();
 		for account in &self.accounts {
 			let to = get_accountid_from_str(account);
