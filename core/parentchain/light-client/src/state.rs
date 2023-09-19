@@ -90,10 +90,11 @@ impl<Block: BlockT> fmt::Debug for RelayState<Block> {
 		write!(
 			f,
 			"RelayInfo {{ last_finalized_block_header_number: {:?}, current_validator_set: {:?}, \
-        current_validator_set_id: {} }}",
+        current_validator_set_id: {}, number of unjustified headers: {} }}",
 			self.last_finalized_block_header.number(),
 			self.current_validator_set,
 			self.current_validator_set_id,
+			self.unjustified_headers.len()
 		)
 	}
 }
