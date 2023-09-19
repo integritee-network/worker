@@ -116,11 +116,10 @@ impl<
 		{
 			// Check if there are any extrinsics in the to-be-imported block that we sent and cached in the light-client before.
 			// If so, remove them now from the cache.
-			if let Err(e) = self.validator_accessor.execute_mut_on_validator(|v| {
-				v.check_xt_inclusion(&signed_block.block)?;
-
-				v.submit_block(&signed_block)
-			}) {
+			if let Err(e) = self
+				.validator_accessor
+				.execute_mut_on_validator(|v| v.submit_block(&signed_block))
+			{
 				error!("[{:?}] Header submission to light client failed: {:?}", id, e);
 				return Err(e.into())
 			}

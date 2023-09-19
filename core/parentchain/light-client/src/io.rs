@@ -358,7 +358,6 @@ pub mod sgx_tests {
 		.unwrap();
 
 		assert_eq!(validator.genesis_hash().unwrap(), parachain_params.genesis_header.hash());
-		assert_eq!(validator.num_xt_to_be_included().unwrap(), 0);
 		assert_eq!(validator.latest_finalized_header().unwrap(), parachain_params.genesis_header);
 		assert_eq!(
 			validator.penultimate_finalized_block_header().unwrap(),
