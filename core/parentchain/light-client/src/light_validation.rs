@@ -114,7 +114,10 @@ impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi>
 			}
 		}
 
-		// A valid grandpa proof proves finalization of all previous unjustified blocks.
+		// Todo: Justifying the headers here is actually wrong, but it prevents ever growing
+		// `unjustified_headers` queue  because in the parachain case we won't have justifications,
+		// and in solo chain setups we only get a justification upon an Grandpa authority change.
+		// Hence, we justify the headers here until we properly solve this in #1404.
 		relay.justify_headers();
 		relay.push_header_hash(header.hash());
 
