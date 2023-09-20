@@ -15,7 +15,7 @@ services:
       interval: 10s
       timeout: 10s
       retries: 6
-    command: --dev --rpc-methods unsafe --ws-external --rpc-external --ws-port 9912
+    command: -lruntime=info -lteerex=debug --dev --rpc-methods unsafe --ws-external --rpc-external --ws-port 9912
     #logging:
     #driver: local
   "integritee-worker-1-${VERSION}":
