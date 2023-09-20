@@ -46,7 +46,9 @@ pub mod trusted_cli;
 
 use crate::commands::Commands;
 use clap::Parser;
-use itp_node_api::api_client::Metadata;
+use ita_stf::MerkleProofWithCodec;
+use itp_node_api::metadata::Metadata;
+use simplyr_lib::MarketOutput;
 use sp_application_crypto::KeyTypeId;
 use sp_core::{H160, H256};
 use thiserror::Error;
@@ -109,6 +111,10 @@ pub enum CliResultOk {
 	// TODO should ideally be removed; or at least drastically less used
 	// We WANT all commands exposed by the cli to return something useful for the caller(ie instead of printing)
 	None,
+
+	Matches(MarketOutput),
+	PayAsBidOutput(Option<Vec<u8>>),
+	PayAsBidProofOutput(MerkleProofWithCodec<H256, Vec<u8>>),
 }
 
 #[derive(Debug, Error)]
