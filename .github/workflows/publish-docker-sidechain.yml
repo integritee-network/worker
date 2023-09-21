@@ -1,4 +1,4 @@
-name: Publish Docker image for new teeracle release
+name: Publish Docker image for new sidechain release
 
 on:
   release:
