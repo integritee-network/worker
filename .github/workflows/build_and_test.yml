@@ -372,6 +372,10 @@ jobs:
             mode: teeracle
             sgx_mode: HW
             additional_features: dcap
+          - flavor_id: sidechain
+            mode: teeracle
+            sgx_mode: HW
+            additional_features: dcap
 
     steps:
       - uses: actions/checkout@v3
