@@ -114,8 +114,6 @@ impl<
 		for (signed_block, raw_events) in
 			blocks_to_import.into_iter().zip(events_to_import.into_iter())
 		{
-			// Check if there are any extrinsics in the to-be-imported block that we sent and cached in the light-client before.
-			// If so, remove them now from the cache.
 			if let Err(e) = self
 				.validator_accessor
 				.execute_mut_on_validator(|v| v.submit_block(&signed_block))
