@@ -372,6 +372,10 @@ jobs:
             mode: teeracle
             sgx_mode: HW
             additional_features: dcap
+          - flavor_id: sidechain
+            mode: teeracle
+            sgx_mode: HW
+            additional_features: dcap
 
     steps:
       - uses: actions/checkout@v3
@@ -465,15 +469,15 @@ jobs:
           name: integritee-worker-teeracle-${{ github.ref_name }}.tar.gz
           path: .
 
+      - name: Download Worker Image
+        uses: actions/download-artifact@v3
+        with:
+          name: integritee-worker-sidechain-${{ github.ref_name }}.tar.gz
+          path: .
+
       #
       # Temporary comment out until we decide what to release
       #
-      # - name: Download Integritee Service
-      #   uses: actions/download-artifact@v3
-      #   with:
-      #     name: integritee-worker-sidechain-${{ github.sha }}
-      #     path: integritee-worker-tmp
-
       # - name: Download Integritee Client
       #   uses: actions/download-artifact@v3
       #   with:
@@ -515,6 +519,7 @@ jobs:
           name: Docker ${{ github.ref_name }}
           files: |
             integritee-worker-teeracle-${{ github.ref_name }}.tar.gz
+            integritee-worker-sidechain-${{ github.ref_name }}.tar.gz
             integritee-client
             integritee-demo-validateer
             enclave.signed.so
