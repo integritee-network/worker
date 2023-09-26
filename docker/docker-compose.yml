@@ -1,6 +1,6 @@
 services:
   "integritee-node-${VERSION}":
-    image: "${INTEGRITEE_NODE:-integritee/integritee-node-dev:1.1.0}"
+    image: "${INTEGRITEE_NODE:-integritee/integritee-node:1.1.3}"
     hostname: integritee-node
     devices:
       - "${SGX_PROVISION:-/dev/null}:/dev/sgx/provision"
@@ -15,7 +15,7 @@ services:
       interval: 10s
       timeout: 10s
       retries: 6
-    command: --dev --rpc-methods unsafe --ws-external --rpc-external --ws-port 9912
+    command: -lruntime=info -lteerex=debug --dev --rpc-methods unsafe --ws-external --rpc-external --ws-port 9912
     #logging:
     #driver: local
   "integritee-worker-1-${VERSION}":
