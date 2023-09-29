@@ -49,10 +49,6 @@ impl Validator<Block> for ValidatorMock {
 		Ok(())
 	}
 
-	fn check_xt_inclusion(&mut self, _block: &Block) -> Result<()> {
-		Ok(())
-	}
-
 	fn get_state(&self) -> &LightValidationState<Block> {
 		&self.light_validation_state
 	}
@@ -65,10 +61,6 @@ impl ExtrinsicSender for ValidatorMock {
 }
 
 impl LightClientState<Block> for ValidatorMock {
-	fn num_xt_to_be_included(&self) -> Result<usize> {
-		todo!()
-	}
-
 	fn genesis_hash(&self) -> Result<HashFor<Block>> {
 		todo!()
 	}
