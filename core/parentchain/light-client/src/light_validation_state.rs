@@ -52,11 +52,6 @@ impl<Block> LightClientState<Block> for LightValidationState<Block>
 where
 	Block: ParentchainBlockTrait,
 {
-	fn num_xt_to_be_included(&self) -> Result<usize, Error> {
-		let relay = self.get_relay();
-		Ok(relay.verify_tx_inclusion.len())
-	}
-
 	fn genesis_hash(&self) -> Result<HashFor<Block>, Error> {
 		Ok(self.get_relay().genesis_hash)
 	}
