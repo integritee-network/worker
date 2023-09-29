@@ -17,10 +17,7 @@
 
 use codec::{Decode, Encode};
 use sp_consensus_grandpa::{AuthorityList, SetId};
-use sp_runtime::{
-	traits::{Block as BlockT, Header as HeaderT},
-	OpaqueExtrinsic,
-};
+use sp_runtime::traits::{Block as BlockT, Header as HeaderT};
 use std::{collections::VecDeque, fmt, vec::Vec};
 
 /// Defines the amount of parentchain headers to keep.
@@ -35,7 +32,6 @@ pub struct RelayState<Block: BlockT> {
 	pub current_validator_set_id: SetId,
 	header_hashes: VecDeque<Block::Hash>,
 	pub unjustified_headers: Vec<Block::Hash>, // Finalized headers without grandpa proof
-	pub verify_tx_inclusion: Vec<OpaqueExtrinsic>, // Transactions sent by the relay
 	pub scheduled_change: Option<ScheduledChangeAtBlock<Block::Header>>, // Scheduled Authorities change as indicated in the header's digest.
 }
 
@@ -79,7 +75,6 @@ impl<Block: BlockT> RelayState<Block> {
 			current_validator_set: validator_set,
 			current_validator_set_id: 0,
 			unjustified_headers: Vec::new(),
-			verify_tx_inclusion: Vec::new(),
 			scheduled_change: None,
 		}
 	}
@@ -95,11 +90,11 @@ impl<Block: BlockT> fmt::Debug for RelayState<Block> {
 		write!(
 			f,
 			"RelayInfo {{ last_finalized_block_header_number: {:?}, current_validator_set: {:?}, \
-        current_validator_set_id: {} amount of transaction in tx_inclusion_queue: {} }}",
+        current_validator_set_id: {}, number of unjustified headers: {} }}",
 			self.last_finalized_block_header.number(),
 			self.current_validator_set,
 			self.current_validator_set_id,
-			self.verify_tx_inclusion.len()
+			self.unjustified_headers.len()
 		)
 	}
 }
