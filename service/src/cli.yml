@@ -1,5 +1,5 @@
 name: "integritee-service"
-version: "0.8.0"
+version: "0.12.0"
 about: Worker using Intel SGX TEE for Integritee-node
 authors: "Integritee AG <hello@integritee.network>"
 
@@ -12,18 +12,38 @@ settings:
 # the list is the name of the subcommand, and all settings for that command are
 # part of a Hash
 args:
-    - node-server:
+    - integritee-rpc-url:
         short: u
-        long: node-url
-        help: Set the node server protocol and IP address
+        long: integritee-rpc-url
+        help: Set the url and the protocol of the Integritee RPC endpoint.
         takes_value: true
         default_value: "ws://127.0.0.1"
-    - node-port:
+    - integritee-rpc-port:
           short: p
-          long: node-port
-          help: Set the websocket port to listen for substrate events
+          long: integritee-rpc-port
+          help: Set the port of the Integritee RPC endpoint.
           takes_value: true
           default_value: "9944"
+    - target-a-parentchain-rpc-url:
+          long: target-a-parentchain-rpc-url
+          help: Set the url and the protocol of an optional Target A parentchain RPC endpoint that contains your business logic specific pallets.
+          takes_value: true
+          required: false
+    - target-a-parentchain-rpc-port:
+          long: target-a-parentchain-rpc-port
+          help: Set the port of the optional Target A parentchain RPC endpoint.
+          takes_value: true
+          required: false
+    - target-b-parentchain-rpc-url:
+          long: target-b-parentchain-rpc-url
+          help: Set the url and the protocol of an optional Target B parentchain RPC endpoint that contains your business logic specific pallets.
+          takes_value: true
+          required: false
+    - target-b-parentchain-rpc-port:
+          long: target-b-parentchain-rpc-port
+          help: Set the port of the optional Target B parentchain RPC endpoint.
+          takes_value: true
+          required: false
     - data-dir:
           short: d
           long: data-dir

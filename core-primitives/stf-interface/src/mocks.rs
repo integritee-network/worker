@@ -26,7 +26,7 @@ use alloc::{string::String, sync::Arc, vec::Vec};
 use core::marker::PhantomData;
 use itp_node_api_metadata::metadata_mocks::NodeMetadataMock;
 use itp_node_api_metadata_provider::NodeMetadataRepository;
-use itp_types::{AccountId, Index, OpaqueCall};
+use itp_types::{parentchain::ParentchainId, AccountId, Index, OpaqueCall};
 
 #[derive(Default)]
 pub struct StateInterfaceMock<State, StateDiff> {
@@ -46,7 +46,7 @@ impl<State, StateDiff> UpdateState<State, StateDiff> for StateInterfaceMock<Stat
 		unimplemented!()
 	}
 
-	fn storage_hashes_to_update_on_block() -> Vec<Vec<u8>> {
+	fn storage_hashes_to_update_on_block(_: &ParentchainId) -> Vec<Vec<u8>> {
 		unimplemented!()
 	}
 }

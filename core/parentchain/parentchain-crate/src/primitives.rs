@@ -22,7 +22,7 @@ use codec::{Decode, Encode};
 
 use sp_runtime::traits::Block;
 
-pub use itp_types::{Block as ParachainBlock, Block as SolochainBlock};
+pub use itp_types::{parentchain::ParentchainId, Block as ParachainBlock, Block as SolochainBlock};
 pub type HeaderFor<B> = <B as Block>::Header;
 pub type SolochainHeader = HeaderFor<SolochainBlock>;
 pub type ParachainHeader = HeaderFor<ParachainBlock>;
@@ -33,18 +33,27 @@ pub type ParachainParams = SimpleParams<ParachainHeader>;
 /// Allows to use a single E-call for the initialization of different parentchain types.
 #[derive(Encode, Decode, Clone)]
 pub enum ParentchainInitParams {
-	Solochain { params: SolochainParams },
-	Parachain { params: ParachainParams },
+	Solochain { id: ParentchainId, params: SolochainParams },
+	Parachain { id: ParentchainId, params: ParachainParams },
 }
 
-impl From<SolochainParams> for ParentchainInitParams {
-	fn from(params: SolochainParams) -> Self {
-		ParentchainInitParams::Solochain { params }
+impl ParentchainInitParams {
+	pub fn id(&self) -> &ParentchainId {
+		match self {
+			Self::Solochain { id, .. } => id,
+			Self::Parachain { id, .. } => id,
+		}
 	}
 }
 
-impl From<ParachainParams> for ParentchainInitParams {
-	fn from(params: ParachainParams) -> Self {
-		ParentchainInitParams::Parachain { params }
+impl From<(ParentchainId, SolochainParams)> for ParentchainInitParams {
+	fn from(value: (ParentchainId, SolochainParams)) -> Self {
+		Self::Solochain { id: value.0, params: value.1 }
+	}
+}
+
+impl From<(ParentchainId, ParachainParams)> for ParentchainInitParams {
+	fn from(value: (ParentchainId, ParachainParams)) -> Self {
+		Self::Parachain { id: value.0, params: value.1 }
 	}
 }

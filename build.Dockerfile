@@ -21,7 +21,7 @@
 # A builder stage that uses sccache to speed up local builds with docker
 # Installation and setup of sccache should be moved to the integritee-dev image, so we don't
 # always need to compile and install sccache on CI (where we have no caching so far).
-FROM integritee/integritee-dev:0.2.1 AS builder
+FROM integritee/integritee-dev:0.2.2 AS builder
 LABEL maintainer="zoltan@integritee.network"
 
 # set environment variables
@@ -42,8 +42,8 @@ ENV SGX_PRODUCTION=$SGX_PRODUCTION
 ENV WORKHOME=/home/ubuntu/work
 ENV HOME=/home/ubuntu
 
-RUN rustup default stable 
-RUN cargo install sccache
+RUN rustup default stable
+RUN cargo install sccache --locked
 
 ENV SCCACHE_CACHE_SIZE="20G"
 ENV SCCACHE_DIR=$HOME/.cache/sccache
@@ -84,12 +84,12 @@ RUN apt-get install -y \
 	libsgx-aesm-quote-ex-plugin \
 	libsgx-dcap-default-qpl \
 	libsgx-dcap-ql \
-	libsgx-dcap-quote-verify \ 
-	libsgx-epid \ 
-	libsgx-headers \ 
-	libsgx-quote-ex \ 
-	libsgx-ra-network \ 
-	libsgx-ra-uefi \ 
+	libsgx-dcap-quote-verify \
+	libsgx-epid \
+	libsgx-headers \
+	libsgx-quote-ex \
+	libsgx-ra-network \
+	libsgx-ra-uefi \
 	libsgx-uae-service
 
 ### Deployed CLI client

@@ -30,6 +30,9 @@ while getopts ":p:A:B:u:W:V:C:" opt; do
         C)
             CLIENT_BIN=$OPTARG
             ;;
+        *)
+            echo "invalid arg ${OPTARG}"
+            exit 1
     esac
 done
 
@@ -44,6 +47,13 @@ WORKER2PORT=${WORKER2PORT:-3000}
 WORKER2URL=${WORKER2URL:-"wss://127.0.0.1"}
 
 CLIENT_BIN=${CLIENT_BIN:-"./../bin/integritee-cli"}
+
+echo "Using client binary ${CLIENT_BIN}"
+${CLIENT_BIN} --version
+echo "Using node uri ${NODEURL}:${NPORT}"
+echo "Using trusted-worker uri 1 ${WORKER1URL}:${WORKER1PORT}"
+echo "Using trusted-worker uri 2 ${WORKER2URL}:${WORKER2PORT}"
+echo ""
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 

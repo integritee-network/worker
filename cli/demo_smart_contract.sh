@@ -13,25 +13,28 @@
 
 # usage:
 #  export RUST_LOG_LOG=integritee-cli=info,ita_stf=info
-#  demo_smart_contract.sh -p <NODEPORT> -P <WORKERPORT>
+#  demo_smart_contract.sh -p <NODEPORT> -P <WORKER_PORT>
 
 while getopts ":p:A:u:V:C:" opt; do
     case $opt in
         p)
-            NPORT=$OPTARG
+            INTEGRITEE_RPC_PORT=$OPTARG
             ;;
         A)
-            WORKERPORT=$OPTARG
+            WORKER_PORT=$OPTARG
             ;;
         u)
-            NODEURL=$OPTARG
+            INTEGRITEE_RPC_URL=$OPTARG
             ;;
         V)
-            WORKERURL=$OPTARG
+            WORKER_URL=$OPTARG
             ;;
         C)
             CLIENT_BIN=$OPTARG
             ;;
+        *)
+            echo "invalid arg ${OPTARG}"
+            exit 1
     esac
 done
 
@@ -43,20 +46,21 @@ ADDFUNCTION="1003e2d200000000000000000000000000000000000000000000000000000000000
 
 
 # using default port if none given as arguments
-NPORT=${NPORT:-9944}
-NODEURL=${NODEURL:-"ws://127.0.0.1"}
+INTEGRITEE_RPC_PORT=${INTEGRITEE_RPC_PORT:-9944}
+INTEGRITEE_RPC_URL=${INTEGRITEE_RPC_URL:-"ws://127.0.0.1"}
 
-WORKERPORT=${WORKERPORT:-2000}
-WORKERURL=${WORKERURL:-"wss://127.0.0.1"}
+WORKER_PORT=${WORKER_PORT:-2000}
+WORKER_URL=${WORKER_URL:-"wss://127.0.0.1"}
 
 
 CLIENT_BIN=${CLIENT_BIN:-"./../bin/integritee-cli"}
 
 echo "Using client binary ${CLIENT_BIN}"
-echo "Using node uri ${NODEURL}:${NPORT}"
-echo "Using trusted-worker uri ${WORKERURL}:${WORKERPORT}"
+${CLIENT_BIN} --version
+echo "Using node uri ${INTEGRITEE_RPC_URL}:${INTEGRITEE_RPC_PORT}"
+echo "Using trusted-worker uri ${WORKER_URL}:${WORKER_PORT}"
 
-CLIENTWORKER="${CLIENT_BIN} -p ${NPORT} -P ${WORKERPORT} -u ${NODEURL} -U ${WORKERURL}"
+CLIENTWORKER="${CLIENT_BIN} -p ${INTEGRITEE_RPC_PORT} -P ${WORKER_PORT} -u ${INTEGRITEE_RPC_URL} -U ${WORKER_URL}"
 
 
 # this will always take the first MRENCLAVE found in the registry !!

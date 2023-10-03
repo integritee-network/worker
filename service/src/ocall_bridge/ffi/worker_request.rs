@@ -29,15 +29,27 @@ use std::{slice, sync::Arc, vec::Vec};
 pub unsafe extern "C" fn ocall_worker_request(
 	request: *const u8,
 	req_size: u32,
+	parentchain_id: *const u8,
+	parentchain_id_size: u32,
 	response: *mut u8,
 	resp_size: u32,
 ) -> sgx_status_t {
-	worker_request(request, req_size, response, resp_size, Bridge::get_oc_api())
+	worker_request(
+		request,
+		req_size,
+		parentchain_id,
+		parentchain_id_size,
+		response,
+		resp_size,
+		Bridge::get_oc_api(),
+	)
 }
 
 fn worker_request(
 	request: *const u8,
 	req_size: u32,
+	parentchain_id: *const u8,
+	parentchain_id_size: u32,
 	response: *mut u8,
 	resp_size: u32,
 	oc_api: Arc<dyn WorkerOnChainBridge>,
@@ -45,7 +57,10 @@ fn worker_request(
 	let request_vec: Vec<u8> =
 		unsafe { Vec::from(slice::from_raw_parts(request, req_size as usize)) };
 
-	match oc_api.worker_request(request_vec) {
+	let parentchain_id: Vec<u8> =
+		unsafe { Vec::from(slice::from_raw_parts(parentchain_id, parentchain_id_size as usize)) };
+
+	match oc_api.worker_request(request_vec, parentchain_id) {
 		Ok(r) => {
 			let resp_slice = unsafe { slice::from_raw_parts_mut(response, resp_size as usize) };
 			if let Err(e) = write_slice_and_whitespace_pad(resp_slice, r) {

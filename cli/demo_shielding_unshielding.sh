@@ -30,38 +30,42 @@ while getopts ":m:p:P:t:u:V:C:" opt; do
             TEST=$OPTARG
             ;;
         m)
-            READMRENCLAVE=$OPTARG
+            READ_MRENCLAVE=$OPTARG
             ;;
         p)
-            NPORT=$OPTARG
+            INTEGRITEE_RPC_PORT=$OPTARG
             ;;
         P)
-            WORKER1PORT=$OPTARG
+            WORKER_1_PORT=$OPTARG
             ;;
         u)
-            NODEURL=$OPTARG
+            INTEGRITEE_RPC_URL=$OPTARG
             ;;
         V)
-            WORKER1URL=$OPTARG
+            WORKER_1_URL=$OPTARG
             ;;
         C)
             CLIENT_BIN=$OPTARG
             ;;
+        *)
+            echo "invalid arg ${OPTARG}"
+            exit 1
     esac
 done
 
 # Using default port if none given as arguments.
-NPORT=${NPORT:-9944}
-NODEURL=${NODEURL:-"ws://127.0.0.1"}
+INTEGRITEE_RPC_PORT=${INTEGRITEE_RPC_PORT:-9944}
+INTEGRITEE_RPC_URL=${INTEGRITEE_RPC_URL:-"ws://127.0.0.1"}
 
-WORKER1PORT=${WORKER1PORT:-2000}
-WORKER1URL=${WORKER1URL:-"wss://127.0.0.1"}
+WORKER_1_PORT=${WORKER_1_PORT:-2000}
+WORKER_1_URL=${WORKER_1_URL:-"wss://127.0.0.1"}
 
 CLIENT_BIN=${CLIENT_BIN:-"./../bin/integritee-cli"}
 
 echo "Using client binary ${CLIENT_BIN}"
-echo "Using node uri ${NODEURL}:${NPORT}"
-echo "Using trusted-worker uri ${WORKER1URL}:${WORKER1PORT}"
+${CLIENT_BIN} --version
+echo "Using node uri ${INTEGRITEE_RPC_URL}:${INTEGRITEE_RPC_PORT}"
+echo "Using trusted-worker uri ${WORKER_1_URL}:${WORKER_1_PORT}"
 echo ""
 
 # the parentchain token is 12 decimal
@@ -72,7 +76,7 @@ AMOUNT_SHIELD=$(( 6 * UNIT ))
 AMOUNT_TRANSFER=$(( 2 * UNIT ))
 AMOUNT_UNSHIELD=$(( 1 * UNIT ))
 
-CLIENT="${CLIENT_BIN} -p ${NPORT} -P ${WORKER1PORT} -u ${NODEURL} -U ${WORKER1URL}"
+CLIENT="${CLIENT_BIN} -p ${INTEGRITEE_RPC_PORT} -P ${WORKER_1_PORT} -u ${INTEGRITEE_RPC_URL} -U ${WORKER_1_URL}"
 
 # offchain-worker only suppports indirect calls
 CALLTYPE=
@@ -130,7 +134,7 @@ echo "* Query on-chain enclave registry:"
 ${CLIENT} list-workers
 echo ""
 
-if [ "$READMRENCLAVE" = "file" ]
+if [ "$READ_MRENCLAVE" = "file" ]
 then
     read MRENCLAVE <<< $(cat ~/mrenclave.b58)
     echo "Reading MRENCLAVE from file: ${MRENCLAVE}"

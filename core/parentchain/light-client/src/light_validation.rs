@@ -25,19 +25,28 @@ use codec::Encode;
 use core::iter::Iterator;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_storage::{Error as StorageError, StorageProof, StorageProofChecker};
-use log::*;
+use itp_types::parentchain::{IdentifyParentchain, ParentchainId};
 use sp_runtime::{
 	generic::SignedBlock,
-	traits::{Block as ParentchainBlockTrait, Hash as HashTrait, Header as HeaderTrait},
+	traits::{Block as ParentchainBlockTrait, Header as HeaderTrait},
 	Justifications, OpaqueExtrinsic,
 };
 use std::{boxed::Box, fmt, sync::Arc, vec::Vec};
 
 #[derive(Clone)]
-pub struct LightValidation<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi> {
+pub struct LightValidation<Block: ParentchainBlockTrait, OcallApi> {
 	light_validation_state: LightValidationState<Block>,
 	ocall_api: Arc<OcallApi>,
+	parentchain_id: ParentchainId,
 	finality: Arc<Box<dyn Finality<Block> + Sync + Send + 'static>>,
+}
+
+impl<Block: ParentchainBlockTrait, OcallApi> IdentifyParentchain
+	for LightValidation<Block, OcallApi>
+{
+	fn parentchain_id(&self) -> ParentchainId {
+		self.parentchain_id
+	}
 }
 
 impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi>
@@ -47,8 +56,9 @@ impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi>
 		ocall_api: Arc<OcallApi>,
 		finality: Arc<Box<dyn Finality<Block> + Sync + Send + 'static>>,
 		light_validation_state: LightValidationState<Block>,
+		parentchain_id: ParentchainId,
 	) -> Self {
-		Self { light_validation_state, ocall_api, finality }
+		Self { light_validation_state, ocall_api, finality, parentchain_id }
 	}
 
 	// A naive way to check whether a `child` header is a descendant
@@ -104,7 +114,10 @@ impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi>
 			}
 		}
 
-		// A valid grandpa proof proves finalization of all previous unjustified blocks.
+		// Todo: Justifying the headers here is actually wrong, but it prevents an ever-growing
+		// `unjustified_headers` queue because in the parachain case we won't have justifications,
+		// and in solo chain setups we only get a justification upon an Grandpa authority change.
+		// Hence, we justify the headers here until we properly solve this in #1404.
 		relay.justify_headers();
 		relay.push_header_hash(header.hash());
 
@@ -116,16 +129,6 @@ impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi>
 		}
 
 		Ok(())
-	}
-
-	fn submit_xt_to_be_included(&mut self, extrinsic: OpaqueExtrinsic) {
-		let relay = self.light_validation_state.get_relay_mut();
-		relay.verify_tx_inclusion.push(extrinsic);
-
-		debug!(
-			"{} extrinsics in cache, waiting for inclusion verification",
-			relay.verify_tx_inclusion.len()
-		);
 	}
 }
 
@@ -148,39 +151,6 @@ where
 		self.submit_finalized_headers(header.clone(), vec![], justifications)
 	}
 
-	fn check_xt_inclusion(&mut self, block: &Block) -> Result<(), Error> {
-		let relay = self.light_validation_state.get_relay_mut();
-
-		if relay.verify_tx_inclusion.is_empty() {
-			return Ok(())
-		}
-
-		let mut found_xts = vec![];
-		block.extrinsics().iter().for_each(|xt| {
-			if let Some(index) = relay.verify_tx_inclusion.iter().position(|xt_opaque| {
-				<HashingFor<Block>>::hash_of(xt) == <HashingFor<Block>>::hash_of(xt_opaque)
-			}) {
-				found_xts.push(index);
-			}
-		});
-
-		// sort highest index first
-		found_xts.sort_by(|a, b| b.cmp(a));
-
-		let rm: Vec<OpaqueExtrinsic> =
-			found_xts.into_iter().map(|i| relay.verify_tx_inclusion.remove(i)).collect();
-
-		if !rm.is_empty() {
-			info!("Verified inclusion proof of {} extrinsics.", rm.len());
-		}
-		debug!(
-			"{} extrinsics remaining in cache, waiting for inclusion verification",
-			relay.verify_tx_inclusion.len()
-		);
-
-		Ok(())
-	}
-
 	fn get_state(&self) -> &LightValidationState<Block> {
 		&self.light_validation_state
 	}
@@ -193,13 +163,13 @@ where
 	OCallApi: EnclaveOnChainOCallApi,
 {
 	fn send_extrinsics(&mut self, extrinsics: Vec<OpaqueExtrinsic>) -> Result<(), Error> {
-		for xt in extrinsics.iter() {
-			self.submit_xt_to_be_included(xt.clone());
-		}
-
 		self.ocall_api
-			.send_to_parentchain(extrinsics)
-			.map_err(|e| Error::Other(format!("Failed to send extrinsics: {}", e).into()))
+			.send_to_parentchain(extrinsics, &self.parentchain_id)
+			.map_err(|e| {
+				Error::Other(
+					format!("[{:?}] Failed to send extrinsics: {}", self.parentchain_id, e).into(),
+				)
+			})
 	}
 }
 
@@ -209,10 +179,6 @@ where
 	Block: ParentchainBlockTrait,
 	OCallApi: EnclaveOnChainOCallApi,
 {
-	fn num_xt_to_be_included(&self) -> Result<usize, Error> {
-		self.light_validation_state.num_xt_to_be_included()
-	}
-
 	fn genesis_hash(&self) -> Result<HashFor<Block>, Error> {
 		self.light_validation_state.genesis_hash()
 	}
@@ -226,17 +192,12 @@ where
 	}
 }
 
-impl<Block, OCallApi> fmt::Debug for LightValidation<Block, OCallApi>
-where
-	NumberFor<Block>: finality_grandpa::BlockNumberOps,
-	Block: ParentchainBlockTrait,
-	OCallApi: EnclaveOnChainOCallApi,
-{
+impl<Block: ParentchainBlockTrait, OCallApi> fmt::Debug for LightValidation<Block, OCallApi> {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		write!(
 			f,
-			"LightValidation {{ relay_state: {:?} }}",
-			self.light_validation_state.relay_state
+			"LightValidation {{ parentchain_id: {:?}, relay_state: {:?} }}",
+			self.parentchain_id, self.light_validation_state.relay_state
 		)
 	}
 }

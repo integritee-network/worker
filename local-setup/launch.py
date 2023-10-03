@@ -21,8 +21,6 @@ from py.helpers import GracefulKiller, mkdir_p
 
 log_dir = 'log'
 mkdir_p(log_dir)
-node_log = open(f'{log_dir}/node.log', 'w+')
-
 
 def setup_worker(work_dir: str, source_dir: str, std_err: Union[None, int, IO]):
     print(f'Setting up worker in {work_dir}')
@@ -33,9 +31,10 @@ def setup_worker(work_dir: str, source_dir: str, std_err: Union[None, int, IO]):
     return worker
 
 
-def run_node(config):
-    node_cmd = [config["node"]["bin"]] + config["node"]["flags"]
-    print(f'Run node with command: {node_cmd}')
+def run_node(config, i: int):
+    node_log = open(f'{log_dir}/node{i}.log', 'w+')
+    node_cmd = [config["bin"]] + config["flags"]
+    print(f'Run node {i} with command: {node_cmd}')
     return Popen(node_cmd, stdout=node_log, stderr=STDOUT, bufsize=1)
 
 
@@ -53,9 +52,16 @@ def main(processes, config_path):
     with open(config_path) as config_file:
         config = json.load(config_file)
 
-    processes.append(run_node(config))
+    n = 1
+    for n_conf in config["nodes"]:
+        processes.append(run_node(n_conf, n))
+        n += 1
+        # let the first node begin before we start the second one, it is
+        # easier to track the logs if they don't start at the same time.
+        sleep(18)
+
     # sleep to give the node some time to startup
-    sleep(3)
+    sleep(5)
 
     i = 1
     for w_conf in config["workers"]:

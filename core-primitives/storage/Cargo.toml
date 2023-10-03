@@ -7,7 +7,7 @@ edition = "2021"
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["chain-error"] }
 derive_more = { version = "0.99.5" }
-frame-metadata = { version = "15.0.0", features = ["v14"], default-features = false }
+frame-metadata = { version = "15.1.0", features = ["v14"], default-features = false }
 hash-db = { version = "0.15.2", default-features = false }
 thiserror = { version = "1.0.26", optional = true }
 

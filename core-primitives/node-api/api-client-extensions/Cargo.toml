@@ -7,6 +7,7 @@ edition = "2021"
 [dependencies]
 # crates.io
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
+log = { version = "0.4" }
 thiserror = { version = "1.0" }
 
 # substrate
@@ -16,7 +17,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "po
 
 # scs
 # `default-features = false` to remove the jsonrpsee dependency.
-substrate-api-client = { default-features = false, features = ["std"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.10.0" }
+substrate-api-client = { default-features = false, features = ["std", "sync-api"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }
 
 # local deps
 itp-api-client-types = { path = "../api-client-types" }

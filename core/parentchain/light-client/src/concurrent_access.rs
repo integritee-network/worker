@@ -30,6 +30,7 @@ use crate::{
 	LightValidationState, Validator as ValidatorTrait,
 };
 use finality_grandpa::BlockNumberOps;
+use itp_types::parentchain::{IdentifyParentchain, ParentchainId};
 use sp_runtime::traits::{Block as ParentchainBlockTrait, NumberFor};
 use std::{marker::PhantomData, sync::Arc};
 
@@ -76,6 +77,14 @@ impl<Validator, ParentchainBlock, LightClientSeal>
 			seal,
 			_phantom: Default::default(),
 		}
+	}
+}
+
+impl<Validator, ParentchainBlock, LightClientSeal: IdentifyParentchain> IdentifyParentchain
+	for ValidatorAccessor<Validator, ParentchainBlock, LightClientSeal>
+{
+	fn parentchain_id(&self) -> ParentchainId {
+		(*self.seal).parentchain_id()
 	}
 }
 
