@@ -21,7 +21,7 @@ use codec::{Decode, Encode};
 use sp_runtime::{generic::Header as HeaderG, traits::BlakeTwo256, MultiAddress, MultiSignature};
 use sp_std::vec::Vec;
 
-use substrate_api_client::StaticEvent;
+use substrate_api_client::ac_node_api::StaticEvent;
 
 pub type StorageProof = Vec<Vec<u8>>;
 
