@@ -19,8 +19,8 @@
 use crate::error::{Error, Result};
 use codec::{Decode, Encode};
 use ita_stf::{privacy_sidechain_inherent::PrivacySidechainTrait, StfError};
+use itc_parentchain::{BalanceTransfer, ExtrinsicFailed, ExtrinsicSuccess};
 use itp_api_client_types::{Events, StaticEvent};
-use itc_parentchain::{ExtrinsicSuccess, ExtrinsicFailed, BalanceTransfer}
 use itp_sgx_runtime_primitives::types::{AccountId, Balance};
 use itp_types::H256;
 use itp_utils::stringify::account_id_to_string;

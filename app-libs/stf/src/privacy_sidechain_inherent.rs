@@ -20,7 +20,9 @@ use frame_support::traits::UnfilteredDispatchable;
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{Runtime, System};
 use itc_parentchain::FilterEvents;
-use itp_types::types::{AccountId, ParentchainEventHandler, HandleParentchainEvents, ParentchainError};
+use itp_types::types::{
+	AccountId, HandleParentchainEvents, ParentchainError, ParentchainEventHandler,
+};
 use sp_runtime::MultiAddress;
 use std::format;
 
@@ -44,7 +46,8 @@ impl HandleParentchainEvents for ParentchainEventHandler {
 				.try_for_each(|event| {
 					info!("transfer_event: {}", event);
 					Self::shield_funds(&event.from, event.amount)
-				}).map_err(|e| ParentchainError::ShieldFundsFailure)?;
+				})
+				.map_err(|e| ParentchainError::ShieldFundsFailure)?;
 		}
 
 		Ok(())

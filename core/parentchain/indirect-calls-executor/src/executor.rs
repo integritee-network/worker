@@ -24,11 +24,13 @@ use crate::{
 	filter_metadata::{EventsFromMetadata, FilterIntoDataFrom},
 	traits::{ExecuteIndirectCalls, IndirectDispatch, IndirectExecutor},
 };
-use itc_parentchain::{ExtrinsicStatus, FilterEvents},
 use binary_merkle_tree::merkle_root;
 use codec::Encode;
 use core::marker::PhantomData;
-use ita_stf::{privacy_sidechain_inherent::HandleParentchainEvents, TrustedCall, TrustedCallSigned};
+use ita_stf::{
+	privacy_sidechain_inherent::HandleParentchainEvents, TrustedCall, TrustedCallSigned,
+};
+use itc_parentchain::{ExtrinsicStatus, FilterEvents};
 use itp_node_api::metadata::{
 	pallet_enclave_bridge::EnclaveBridgeCallIndexes, provider::AccessNodeMetadata,
 	NodeMetadataTrait,
