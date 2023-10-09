@@ -38,8 +38,8 @@ pub enum Error {
 	Serialization(#[from] serde_json::Error),
 	#[error("{0}")]
 	FromUtf8(#[from] std::string::FromUtf8Error),
-	#[error("Application setup error!")]
-	ApplicationSetup,
+	#[error("Application setup error: {0}")]
+	ApplicationSetup(String),
 	#[error("Failed to find any peer worker")]
 	NoPeerWorkerFound,
 	#[error("No worker for shard {0} found on parentchain")]

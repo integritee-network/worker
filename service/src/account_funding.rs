@@ -146,7 +146,7 @@ fn bootstrap_funds_from_alice(
             "funding amount is too high: please change EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS ({:?})",
             funding_amount
         );
-		return Err(Error::ApplicationSetup)
+		return Err(Error::ApplicationSetup("Alice funds too low".into()))
 	}
 
 	let mut alice_signer_api = api.clone();

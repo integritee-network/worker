@@ -149,6 +149,21 @@ where
 			.ok_or(Error::MissingLastFinalizedBlock)?;
 		let curr_block_number = curr_block.block.header().number();
 
+		if last_synced_header.number == curr_block_number {
+			println!(
+				"[{:?}] No sync necessary, we are already up to date with block {}",
+				id, last_synced_header.number,
+			);
+			return Ok(last_synced_header)
+		}
+
+		if last_synced_header.number > curr_block_number {
+			return Err(Error::ApplicationSetup(format!(
+				"[{:?}] Bad config, last synced header {} is recent than current parentchain head {}",
+				id, last_synced_header.number, curr_block_number
+			)))
+		}
+
 		println!(
 			"[{:?}] Syncing blocks from {} to {}",
 			id, last_synced_header.number, curr_block_number
