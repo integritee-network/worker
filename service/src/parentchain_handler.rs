@@ -242,8 +242,13 @@ where
 		while last_synced_header.number() < until_header.number() {
 			last_synced_header = self.sync_parentchain(last_synced_header)?;
 			trace!("[{:?}] synced block number: {}", id, last_synced_header.number);
+
+			// Verify and import blocks into the light client. This can't be done after the loop
+			// because the import is mandatory to remove them from RAM loop. When we register on
+			// a production system that has already many blocks this might lead to an OOM if we
+			// import them all at once after the loop, see #1462.
+			self.trigger_parentchain_block_import()?;
 		}
-		self.trigger_parentchain_block_import()?;
 
 		Ok(last_synced_header)
 	}
