@@ -75,6 +75,8 @@ use itp_settings::files::{
 use itp_sgx_crypto::{
 	get_aes_repository, get_ed25519_repository, get_rsa3072_repository, key_repository::AccessKey,
 };
+use itp_sgx_externalities::SgxExternalitiesTrait;
+use itp_stf_interface::SHARD_VAULT_KEY;
 use itp_stf_state_handler::{
 	file_io::StateDir, handle_state::HandleState, query_shard_state::QueryShardState,
 	state_snapshot_repository::VersionedStateAccess,
@@ -83,7 +85,7 @@ use itp_stf_state_handler::{
 use itp_top_pool::pool::Options as PoolOptions;
 use itp_top_pool_author::author::AuthorTopFilter;
 use itp_types::{
-	parentchain::{AccountId, Address, Balance, ParentchainId},
+	parentchain::{AccountId, Address, Balance, ParentchainId, ProxyType},
 	OpaqueCall, ShardIdentifier,
 };
 use its_sidechain::block_composer::BlockComposer;
@@ -319,6 +321,9 @@ pub(crate) fn init_proxied_shard_vault(shard: ShardIdentifier) -> EnclaveResult<
 
 	info!("shard vault account derived pubkey: 0x{}", hex::encode(vault.public().0.clone()));
 
+	let (state_lock, mut state) = state_handler.load_for_mutation(&shard)?;
+	state.state.insert(SHARD_VAULT_KEY.into(), vault.public().0.to_vec());
+	state_handler.write_after_mutation(state, state_lock, &shard)?;
 	// todo!
 	// parentchain-query: if shard vault not yet existing or self not proxy:
 
@@ -343,6 +348,23 @@ pub(crate) fn init_proxied_shard_vault(shard: ShardIdentifier) -> EnclaveResult<
 	let nonce_cache = Arc::new(NonceCache::default());
 	let vault_extrinsics_factory = enclave_extrinsics_factory
 		.with_signer(StaticExtrinsicSigner::<_, PairSignature>::new(vault), nonce_cache);
+
+	info!("register enclave signer as proxy for shard vault");
+	let call_ids = node_metadata_repo
+		.get_from_metadata(|m| m.call_indexes("Proxy", "add_proxy"))?
+		.map_err(MetadataProviderError::MetadataError)?;
+
+	let call = OpaqueCall::from_tuple(&(
+		call_ids,
+		Address::from(AccountId::from(enclave_signer.public().0)),
+		ProxyType::Any,
+		0u32, // delay
+	));
+
+	info!("add proxy call: 0x{}", hex::encode(call.0.clone()));
+	let xts = vault_extrinsics_factory.create_extrinsics(&[call], None)?;
+
+	ocall_api.send_to_parentchain(xts, &ParentchainId::Integritee);
 
 	// xt: delegate proxy authority to its own enclave accountid proxy.add_proxy() (panic if fails)
 	// caveat: must send from vault account. how to sign extrinsics with other keypair?

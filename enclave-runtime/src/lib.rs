@@ -60,6 +60,8 @@ use itp_node_api::metadata::NodeMetadata;
 use itp_nonce_cache::{MutateNonce, Nonce};
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
 use itp_sgx_crypto::key_repository::AccessPubkey;
+use itp_stf_interface::SHARD_VAULT_KEY;
+use itp_stf_state_handler::handle_state::HandleState;
 use itp_storage::{StorageProof, StorageProofChecker};
 use itp_types::{ShardIdentifier, SignedBlock};
 use itp_utils::write_slice_and_whitespace_pad;
@@ -216,6 +218,36 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u3
 	pubkey_slice.clone_from_slice(&signer_public);
 
 	sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn get_ecc_vault_pubkey(
+	shard: *const u8,
+	shard_size: u32,
+	pubkey: *mut u8,
+	pubkey_size: u32,
+) -> sgx_status_t {
+	let shard = ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
+	let state_handler = match GLOBAL_STATE_HANDLER_COMPONENT.get() {
+		Ok(s) => s,
+		Err(e) => {
+			error!("{:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	/*let vault_pubkey: Vec<u8> = state_handler
+			.execute_on_current(&shard, |state, _| state.state.get::<Vec<u8>>(&SHARD_VAULT_KEY.into()))
+			.unwrap()
+			.unwrap()
+			.to_vec();
+
+		let pubkey_slice = slice::from_raw_parts_mut(pubkey, pubkey_size as usize);
+		//debug!("Restored ECC pubkey: {:?}", signer_public);
+
+		pubkey_slice.clone_from_slice(&vault_pubkey);
+	*/
+	sgx_status_t::SGX_ERROR_UNEXPECTED
 }
 
 #[no_mangle]

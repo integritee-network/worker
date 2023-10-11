@@ -117,6 +117,13 @@ extern "C" {
 		pubkey_size: u32,
 	) -> sgx_status_t;
 
+	pub fn get_ecc_vault_pubkey(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		pubkey: *mut u8,
+		pubkey_size: u32,
+	) -> sgx_status_t;
+
 	pub fn get_mrenclave(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,

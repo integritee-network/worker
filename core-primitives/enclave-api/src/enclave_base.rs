@@ -76,6 +76,8 @@ pub trait EnclaveBase: Send + Sync + 'static {
 
 	fn get_ecc_signing_pubkey(&self) -> EnclaveResult<ed25519::Public>;
 
+	fn get_ecc_vault_pubkey(&self, shard: Vec<u8>) -> EnclaveResult<ed25519::Public>;
+
 	fn get_fingerprint(&self) -> EnclaveResult<EnclaveFingerprint>;
 }
 
@@ -278,6 +280,25 @@ impl EnclaveBase for Enclave {
 
 		let result = unsafe {
 			ffi::get_ecc_signing_pubkey(
+				self.eid,
+				&mut retval,
+				pubkey.as_mut_ptr(),
+				pubkey.len() as u32,
+			)
+		};
+
+		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+
+		Ok(ed25519::Public::from_raw(pubkey))
+	}
+
+	fn get_ecc_vault_pubkey(&self, shard: Vec<u8>) -> EnclaveResult<ed25519::Public> {
+		let mut retval = sgx_status_t::SGX_SUCCESS;
+		let mut pubkey = [0u8; SIGNING_KEY_SIZE];
+
+		let result = unsafe {
+			ffi::get_ecc_vault_pubkey(
 				self.eid,
 				&mut retval,
 				pubkey.as_mut_ptr(),
