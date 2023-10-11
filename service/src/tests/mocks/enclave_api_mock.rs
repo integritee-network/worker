@@ -60,6 +60,10 @@ impl EnclaveBase for EnclaveMock {
 		unimplemented!()
 	}
 
+	fn init_proxied_shard_vault(&self, _shard: Vec<u8>) -> EnclaveResult<()> {
+		unimplemented!()
+	}
+
 	fn trigger_parentchain_block_import(&self, _: &ParentchainId) -> EnclaveResult<()> {
 		unimplemented!()
 	}

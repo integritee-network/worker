@@ -41,7 +41,7 @@ use crate::{
 	ocall::OcallApi,
 	rpc::{rpc_response_channel::RpcResponseChannel, worker_api_direct::public_api_rpc_handler},
 	utils::{
-		get_extrinsic_factory_from_solo_or_parachain,
+		get_extrinsic_factory_from_integritee_solo_or_parachain,
 		get_node_metadata_repository_from_integritee_solo_or_parachain,
 		get_triggered_dispatcher_from_solo_or_parachain,
 		get_validator_accessor_from_solo_or_parachain,
@@ -49,7 +49,7 @@ use crate::{
 	Hash,
 };
 use base58::ToBase58;
-use codec::Encode;
+use codec::{Compact, Encode};
 use itc_direct_rpc_server::{
 	create_determine_watch, rpc_connection_registry::ConnectionRegistry,
 	rpc_ws_handler::RpcWsHandler,
@@ -60,6 +60,13 @@ use itc_tls_websocket_server::{
 };
 use itp_attestation_handler::IntelAttestationHandler;
 use itp_component_container::{ComponentGetter, ComponentInitializer};
+use itp_extrinsics_factory::CreateExtrinsics;
+use itp_node_api::{
+	api_client::{PairSignature, StaticExtrinsicSigner},
+	metadata::provider::{AccessNodeMetadata, Error as MetadataProviderError},
+};
+use itp_nonce_cache::NonceCache;
+use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_primitives_cache::GLOBAL_PRIMITIVES_CACHE;
 use itp_settings::files::{
 	INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_DB_PATH, STATE_SNAPSHOTS_CACHE_SIZE,
@@ -75,12 +82,18 @@ use itp_stf_state_handler::{
 };
 use itp_top_pool::pool::Options as PoolOptions;
 use itp_top_pool_author::author::AuthorTopFilter;
-use itp_types::{parentchain::ParentchainId, ShardIdentifier};
+use itp_types::{
+	parentchain::{AccountId, Address, Balance, ParentchainId},
+	OpaqueCall, ShardIdentifier,
+};
 use its_sidechain::block_composer::BlockComposer;
 use log::*;
-use sp_core::crypto::Pair;
+use sp_core::{
+	blake2_256,
+	crypto::{DeriveJunction, Pair},
+	ed25519,
+};
 use std::{collections::HashMap, path::PathBuf, string::String, sync::Arc};
-
 pub(crate) fn init_enclave(
 	mu_ra_url: String,
 	untrusted_worker_url: String,
@@ -226,7 +239,7 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 
 	let sidechain_block_import_queue = GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.get()?;
 	let metadata_repository = get_node_metadata_repository_from_integritee_solo_or_parachain()?;
-	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
+	let extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
 	let validator_accessor = get_validator_accessor_from_solo_or_parachain()?;
 
 	let sidechain_block_import_confirmation_handler =
@@ -286,6 +299,56 @@ pub(crate) fn init_direct_invocation_server(server_addr: String) -> EnclaveResul
 pub(crate) fn init_shard(shard: ShardIdentifier) -> EnclaveResult<()> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let _ = state_handler.initialize_shard(shard)?;
+	Ok(())
+}
+
+pub(crate) fn init_proxied_shard_vault(shard: ShardIdentifier) -> EnclaveResult<()> {
+	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
+	if !state_handler.shard_exists(&shard).unwrap() {
+		return Err(Error::Other("shard not initialized".into()))
+	};
+
+	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
+	let enclave_signer = GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT.get()?.retrieve_key()?;
+	let enclave_extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
+	let node_metadata_repo = get_node_metadata_repository_from_integritee_solo_or_parachain()?;
+	let vault = enclave_signer
+		.derive(vec![DeriveJunction::hard(shard.encode())].into_iter(), None)
+		.map_err(|e| Error::Other("failed to derive shard vault keypair".into()))?
+		.0;
+
+	info!("shard vault account derived pubkey: 0x{}", hex::encode(vault.public().0.clone()));
+
+	// todo!
+	// parentchain-query: if shard vault not yet existing or self not proxy:
+
+	// xt: send funds from enclave account to new vault account (panic if not enough funds)
+
+	info!("send existential funds from enclave account to vault account");
+	let call_ids = node_metadata_repo
+		.get_from_metadata(|m| m.call_indexes("Balances", "transfer_keep_alive"))?
+		.map_err(MetadataProviderError::MetadataError)?;
+
+	let call = OpaqueCall::from_tuple(&(
+		call_ids,
+		Address::from(AccountId::from(vault.public().0)),
+		Compact(Balance::from(20_000_000_000_000u128)),
+	));
+
+	info!("vault funding call: 0x{}", hex::encode(call.0.clone()));
+	let xts = enclave_extrinsics_factory.create_extrinsics(&[call], None)?;
+
+	ocall_api.send_to_parentchain(xts, &ParentchainId::Integritee);
+
+	let nonce_cache = Arc::new(NonceCache::default());
+	let vault_extrinsics_factory = enclave_extrinsics_factory
+		.with_signer(StaticExtrinsicSigner::<_, PairSignature>::new(vault), nonce_cache);
+
+	// xt: delegate proxy authority to its own enclave accountid proxy.add_proxy() (panic if fails)
+	// caveat: must send from vault account. how to sign extrinsics with other keypair?
+	// sth like: extrinsics_factory.with_signer(keypair).create_extrinsics(
+	// write vault accountid to STF State (SgxExternalitiesType) with key ShardVaultAccountId to make it available also beyond service restart for non-primary SCV later
+	// return and log vault accountId
 	Ok(())
 }
 

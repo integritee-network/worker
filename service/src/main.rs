@@ -593,6 +593,9 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 				println!("[!] Parentchain block syncing has terminated");
 			})
 			.unwrap();
+
+		println!("initializing proxied shard vault account now");
+		enclave.init_proxied_shard_vault(shard.encode());
 	}
 
 	// ------------------------------------------------------------------------
@@ -605,6 +608,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			&enclave,
 			&tee_accountid,
 			url,
+			shard,
 			ParentchainId::TargetA,
 			is_development_mode,
 		)
@@ -615,6 +619,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			&enclave,
 			&tee_accountid,
 			url,
+			shard,
 			ParentchainId::TargetB,
 			is_development_mode,
 		)
@@ -636,6 +641,7 @@ fn init_target_parentchain<E>(
 	enclave: &Arc<E>,
 	tee_account_id: &AccountId32,
 	url: String,
+	shard: &ShardIdentifier,
 	parentchain_id: ParentchainId,
 	is_development_mode: bool,
 ) where
@@ -664,6 +670,17 @@ fn init_target_parentchain<E>(
 		// Syncing all parentchain blocks, this might take a while..
 		let last_synched_header =
 			parentchain_handler.sync_parentchain(last_synched_header).unwrap();
+
+		//setup_proxied_shard_vault
+		//println!("initializing proxied shard vault account now");
+		// todo: generic for targetA/B
+		//enclave.init_proxied_shard_vault(shard.encode());
+
+		// if we are primary validateer and if doesn't exist, create a pure_proxy for shard vault
+		// todo
+
+		// check if exists
+		//tee_account_id
 
 		// start parentchain syncing loop (subscribe to header updates)
 		thread::Builder::new()
@@ -734,6 +751,12 @@ where
 		.unwrap_or_else(|_| {
 			panic!("[{:?}] Could not set the node metadata in the enclave", parentchain_id)
 		});
+
+	// todo!: ensure shard vault proxy exists
+	// should only be registered by primary worker for shard
+	// check if metadata contains proxy pallet and issue warning otherwise
+	// check if shard vault exists (must derive accountid from primary worker and index
+	// let enclave compose proxy.create_pure(proxyType: Any, delay:0, index:0)
 
 	(parentchain_handler, last_synced_header)
 }

@@ -429,6 +429,22 @@ pub unsafe extern "C" fn init_shard(shard: *const u8, shard_size: u32) -> sgx_st
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn init_proxied_shard_vault(
+	shard: *const u8,
+	shard_size: u32,
+) -> sgx_status_t {
+	let shard_identifier =
+		ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
+
+	if let Err(e) = initialization::init_proxied_shard_vault(shard_identifier) {
+		error!("Failed to initialize proxied shard vault ({:?}): {:?}", shard_identifier, e);
+		return sgx_status_t::SGX_ERROR_UNEXPECTED
+	}
+
+	sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn sync_parentchain(
 	blocks_to_sync: *const u8,
 	blocks_to_sync_size: usize,
