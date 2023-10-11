@@ -30,7 +30,7 @@ use log::*;
 use my_node_runtime::Header;
 use sp_consensus_grandpa::VersionedAuthorityList;
 use sp_runtime::traits::Header as HeaderTrait;
-use std::{cmp::min, sync::Arc};
+use std::{cmp::min, sync::Arc, thread, time::Duration};
 use substrate_api_client::ac_primitives::{Block, Header as HeaderT};
 
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
@@ -227,6 +227,8 @@ where
 		while last_synced_header.number() < until_header.number() {
 			last_synced_header = self.sync_parentchain(last_synced_header)?;
 			trace!("[{:?}] synced block number: {}", id, last_synced_header.number);
+			// fast polling is useless because we only loop here if the target block hasn't been finalized yet
+			thread::sleep(Duration::from_millis(1000));
 		}
 		self.trigger_parentchain_block_import()?;
 
