@@ -33,6 +33,7 @@ impl EnclaveOnChainOCallApi for OcallApi {
 		&self,
 		extrinsics: Vec<OpaqueExtrinsic>,
 		parentchain_id: &ParentchainId,
+		await_each_inclusion: bool,
 	) -> SgxResult<()> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		let extrinsics_encoded = extrinsics.encode();
@@ -45,6 +46,7 @@ impl EnclaveOnChainOCallApi for OcallApi {
 				extrinsics_encoded.len() as u32,
 				parentchain_id_encoded.as_ptr(),
 				parentchain_id_encoded.len() as u32,
+				await_each_inclusion.into(),
 			)
 		};
 

@@ -343,7 +343,8 @@ pub(crate) fn init_proxied_shard_vault(shard: ShardIdentifier) -> EnclaveResult<
 	info!("vault funding call: 0x{}", hex::encode(call.0.clone()));
 	let xts = enclave_extrinsics_factory.create_extrinsics(&[call], None)?;
 
-	ocall_api.send_to_parentchain(xts, &ParentchainId::Integritee);
+	//this extrinsic must be included in a block before we can move on. otherwise the next will fail
+	ocall_api.send_to_parentchain(xts, &ParentchainId::Integritee, true);
 
 	let nonce_cache = Arc::new(NonceCache::default());
 	let vault_extrinsics_factory = enclave_extrinsics_factory
@@ -364,7 +365,7 @@ pub(crate) fn init_proxied_shard_vault(shard: ShardIdentifier) -> EnclaveResult<
 	info!("add proxy call: 0x{}", hex::encode(call.0.clone()));
 	let xts = vault_extrinsics_factory.create_extrinsics(&[call], None)?;
 
-	ocall_api.send_to_parentchain(xts, &ParentchainId::Integritee);
+	ocall_api.send_to_parentchain(xts, &ParentchainId::Integritee, false);
 
 	// xt: delegate proxy authority to its own enclave accountid proxy.add_proxy() (panic if fails)
 	// caveat: must send from vault account. how to sign extrinsics with other keypair?

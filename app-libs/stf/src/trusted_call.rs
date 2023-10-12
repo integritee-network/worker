@@ -254,7 +254,6 @@ where
 					call_hash,
 				)));
 				// todo: the following is a placeholder dummy which will replace the above with #1257
-				// todo: insert correct vault accountid here
 				let vault_pubkey: [u8; 32] = get_storage_by_key_hash(SHARD_VAULT_KEY.into())
 					.ok_or(StfError::Dispatch("shard vault key hasn't been set".to_string()))?;
 				let vault_address = Address::from(AccountId::from(vault_pubkey));
