@@ -48,11 +48,11 @@ pub trait HandleParentchain {
 	fn trigger_parentchain_block_import(&self) -> ServiceResult<()>;
 
 	/// Syncs and directly imports parentchain blocks from the latest synced header
-	/// until the specified until_header.
+	/// until the specified sync_target.
 	fn sync_and_import_parentchain_until(
 		&self,
 		last_synced_header: &Header,
-		until_header: &Header,
+		sync_target: &Header,
 	) -> ServiceResult<Header>;
 }
 
@@ -188,17 +188,17 @@ where
 	fn sync_and_import_parentchain_until(
 		&self,
 		last_synced_header: &Header,
-		until_header: &Header,
+		sync_target: &Header,
 	) -> ServiceResult<Header> {
 		let id = self.parentchain_id();
 
 		println!(
 			"[{:?}] last synced block number: {}. syncing until {}",
-			id, last_synced_header.number, until_header.number
+			id, last_synced_header.number, sync_target.number
 		);
 		let mut last_synced_header = last_synced_header.clone();
 
-		while last_synced_header.number() < until_header.number() {
+		while last_synced_header.number() < sync_target.number() {
 			let curr_block_number = self
 				.parentchain_api
 				.last_finalized_block()?
@@ -207,23 +207,23 @@ where
 				.header()
 				.number;
 
-			if curr_block_number < until_header.number
+			if curr_block_number < sync_target.number
 				&& curr_block_number < last_synced_header.number + 1
 			{
 				// Skip the rest of the loop and wait if we have synced as much
 				// as possible, but haven't reached the sync target yet.
 				println!(
 					"[{:?}] sync target #{} is not finalized (#{}), wait a sec ...",
-					id, until_header.number, curr_block_number
+					id, sync_target.number, curr_block_number
 				);
 				std::thread::sleep(std::time::Duration::from_secs(1));
 				continue
 			}
 
-			// min(until_header, last_synced.number + chunk_size, current_parentchain_finalized_block)
+			// min(sync_target, last_synced.number + chunk_size, current_parentchain_finalized_block)
 			let chunk_target = min(
 				min(last_synced_header.number + BLOCK_SYNC_BATCH_SIZE, curr_block_number),
-				until_header.number,
+				sync_target.number,
 			);
 
 			// Tested above that last_synced_header.number < current_block_number (i.e. chunk_target).
