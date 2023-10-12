@@ -157,13 +157,6 @@ where
 			return Ok(last_synced_header)
 		}
 
-		if last_synced_header.number > curr_block_number {
-			return Err(Error::ApplicationSetup(format!(
-				"[{:?}] Bad config, last synced header {} is recent than current parentchain head {}",
-				id, last_synced_header.number, curr_block_number
-			)))
-		}
-
 		println!(
 			"[{:?}] Syncing blocks from {} to {}",
 			id, last_synced_header.number, curr_block_number
@@ -228,6 +221,13 @@ where
 {
 	fn sync_blocks(&self, from: u32, to: u32) -> ServiceResult<Header> {
 		let id = self.parentchain_id();
+
+		if from > to {
+			return Err(Error::ApplicationSetup(format!(
+				"[{:?}] from can't be bigger than to. {} > {}",
+				id, from, to
+			)))
+		}
 
 		let blocks = self.parentchain_api.get_blocks(from, to)?;
 		println!("[+] [{:?}] Found {} block(s) to sync", id, blocks.len());
