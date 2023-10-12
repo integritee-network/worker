@@ -169,10 +169,9 @@ where
 			id, last_synced_header.number, curr_block_number
 		);
 
-		let sync_until = last_synced_header.number;
 		let mut until_synced_header = last_synced_header;
 		loop {
-			if &until_synced_header.number >= &sync_until {
+			if &until_synced_header.number >= &curr_block_number {
 				return Ok(until_synced_header)
 			}
 
