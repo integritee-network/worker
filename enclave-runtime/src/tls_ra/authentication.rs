@@ -16,7 +16,6 @@
 */
 
 //! Remote attestation certificate authentication of server and client
-
 use itp_attestation_handler::cert;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use log::*;
@@ -52,6 +51,9 @@ where
 		_sni: Option<&DNSName>,
 	) -> Result<rustls::ClientCertVerified, rustls::TLSError> {
 		debug!("client cert: {:?}", certs);
+		let issuer = cert::parse_cert_issuer(&certs[0].0).unwrap();
+		info!("client signer (issuer) is: 0x{}", hex::encode(issuer.clone()));
+
 		// This call will automatically verify cert is properly signed
 		if self.skip_ra {
 			warn!("Skip verifying ra-report");
@@ -104,6 +106,8 @@ where
 		_ocsp: &[u8],
 	) -> Result<rustls::ServerCertVerified, rustls::TLSError> {
 		debug!("server cert: {:?}", certs);
+		let issuer = cert::parse_cert_issuer(&certs[0].0).unwrap();
+		info!("server signer (issuer) is: 0x{}", hex::encode(issuer.clone()));
 
 		if self.skip_ra {
 			warn!("Skip verifying ra-report");

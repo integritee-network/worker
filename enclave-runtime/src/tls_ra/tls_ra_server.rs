@@ -253,18 +253,6 @@ pub(crate) fn run_state_provisioning_server_internal<
 	)?;
 	let (server_session, tcp_stream) = tls_server_session_stream(socket_fd, server_config)?;
 
-	let client_signer = if let Some(cert_chain) = server_session.get_peer_certificates() {
-		if !cert_chain.is_empty() {
-			// Assuming the leaf certificate is the first in the list
-			parse_cert_issuer(&cert_chain[0].0)?
-		} else {
-			return Err(EnclaveError::Other("no certificates found".into()))
-		}
-	} else {
-		return Err(EnclaveError::Other("get peer certificates failed".into()))
-	};
-	info!("client signer (issuer) is: 0x{}", hex::encode(client_signer.clone()));
-
 	// todo: verify client signer belongs to a registered enclave on integritee network with a
 	// matching or whitelisted MRENCLAVE as replacement for MU RA #1385
 
