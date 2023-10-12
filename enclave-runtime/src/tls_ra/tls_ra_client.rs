@@ -73,16 +73,18 @@ where
 	///
 	/// We trust here that the server sends us the correct data, as
 	/// we do not have any way to test it.
-	fn read_shard(&mut self) -> EnclaveResult<()> {
-		debug!("read_shard called, about to call self.write_shard().");
-		self.write_shard()?;
-		debug!("self.write_shard() succeeded.");
+	fn obtain_provisioning_for_shard(&mut self) -> EnclaveResult<()> {
+		debug!(
+			"obtain_provisioning_for_shard called, about to call self.send_provisioning_request()."
+		);
+		self.send_provisioning_request()?;
+		debug!("self.send_provisioning_request() succeeded.");
 		self.read_and_seal_all()
 	}
 
 	/// Send the shard of the state we want to receive to the provisioning server.
-	fn write_shard(&mut self) -> EnclaveResult<()> {
-		debug!("self.write_shard() called.");
+	fn send_provisioning_request(&mut self) -> EnclaveResult<()> {
+		debug!("self.send_provisioning_request() called.");
 		self.tls_stream.write_all(self.shard.as_bytes())?;
 		debug!("write_all succeeded.");
 		Ok(())
@@ -253,7 +255,7 @@ pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAn
 	);
 
 	info!("Requesting keys and state from mu-ra server of fellow validateer");
-	client.read_shard()
+	client.obtain_provisioning_for_shard()
 }
 
 fn tls_client_config<A: EnclaveAttestationOCallApi + 'static>(
@@ -268,6 +270,7 @@ fn tls_client_config<A: EnclaveAttestationOCallApi + 'static>(
 	#[cfg(feature = "dcap")]
 	let attestation_type = RemoteAttestationType::Dcap;
 
+	// report will be signed with enclave ed25519 signing key
 	let (key_der, cert_der) = create_ra_report_and_signature(
 		skip_ra,
 		attestation_type,
