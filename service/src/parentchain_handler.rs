@@ -166,6 +166,7 @@ where
 		while synced_until.number() <= &curr_block_number {
 			synced_until = self.sync_blocks(
 				synced_until.number + 1,
+				// while statement tests that synced_until.number < curr_block_number
 				min(synced_until.number + BLOCK_SYNC_BATCH_SIZE, curr_block_number),
 			)?;
 
