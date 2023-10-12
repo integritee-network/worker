@@ -140,7 +140,7 @@ where
 			.init_parentchain_components(self.parentchain_init_params.clone())?)
 	}
 
-	fn sync_parentchain(&self, sync_until_header: Header) -> ServiceResult<Header> {
+	fn sync_parentchain(&self, last_synced_header: Header) -> ServiceResult<Header> {
 		let id = self.parentchain_id();
 		trace!("[{:?}] Getting current head", id);
 		let curr_block = self
@@ -149,28 +149,28 @@ where
 			.ok_or(Error::MissingLastFinalizedBlock)?;
 		let curr_block_number = curr_block.block.header().number();
 
-		if sync_until_header.number == curr_block_number {
+		if last_synced_header.number == curr_block_number {
 			println!(
 				"[{:?}] No sync necessary, we are already up to date with block {}",
-				id, sync_until_header.number,
+				id, last_synced_header.number,
 			);
-			return Ok(sync_until_header)
+			return Ok(last_synced_header)
 		}
 
-		if sync_until_header.number > curr_block_number {
+		if last_synced_header.number > curr_block_number {
 			return Err(Error::ApplicationSetup(format!(
 				"[{:?}] Bad config, last synced header {} is recent than current parentchain head {}",
-				id, sync_until_header.number, curr_block_number
+				id, last_synced_header.number, curr_block_number
 			)))
 		}
 
 		println!(
 			"[{:?}] Syncing blocks from {} to {}",
-			id, sync_until_header.number, curr_block_number
+			id, last_synced_header.number, curr_block_number
 		);
 
-		let sync_until = sync_until_header.number;
-		let mut until_synced_header = sync_until_header;
+		let sync_until = last_synced_header.number;
+		let mut until_synced_header = last_synced_header;
 		loop {
 			if &until_synced_header.number >= &sync_until {
 				return Ok(until_synced_header)
