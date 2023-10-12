@@ -230,17 +230,17 @@ where
 	fn sync_blocks(&self, from: u32, to: u32) -> ServiceResult<Header> {
 		let id = self.parentchain_id();
 
-		let block_chunk_to_sync = self.parentchain_api.get_blocks(from, to)?;
-		println!("[+] [{:?}] Found {} block(s) to sync", id, block_chunk_to_sync.len());
+		let blocks = self.parentchain_api.get_blocks(from, to)?;
+		println!("[+] [{:?}] Found {} block(s) to sync", id, blocks.len());
 
-		let events_chunk_to_sync: Vec<Vec<u8>> = block_chunk_to_sync
+		let events: Vec<Vec<u8>> = blocks
 			.iter()
 			.map(|block| self.parentchain_api.get_events_for_block(Some(block.block.header.hash())))
 			.collect::<Result<Vec<_>, _>>()?;
 
-		println!("[+] [{:?}] Found {} event vector(s) to sync", id, events_chunk_to_sync.len());
+		println!("[+] [{:?}] Found {} event vector(s) to sync", id, events.len());
 
-		let events_proofs_chunk_to_sync: Vec<StorageProof> = block_chunk_to_sync
+		let events_proofs: Vec<StorageProof> = blocks
 			.iter()
 			.map(|block| {
 				self.parentchain_api.get_events_value_proof(Some(block.block.header.hash()))
@@ -248,19 +248,17 @@ where
 			.collect::<Result<Vec<_>, _>>()?;
 
 		self.enclave_api.sync_parentchain(
-			block_chunk_to_sync.as_slice(),
-			events_chunk_to_sync.as_slice(),
-			events_proofs_chunk_to_sync.as_slice(),
+			blocks.as_slice(),
+			events.as_slice(),
+			events_proofs.as_slice(),
 			self.parentchain_id(),
 		)?;
 
-		let api_client_until_synced_header = block_chunk_to_sync
-			.last()
-			.map(|b| b.block.header.clone())
-			.ok_or(Error::EmptyChunk)?;
+		let last_synced_header =
+			blocks.last().map(|b| b.block.header.clone()).ok_or(Error::EmptyChunk)?;
 
 		// #TODO: #1451: fix api/client types
-		Ok(Header::decode(&mut api_client_until_synced_header.encode().as_slice())
+		Ok(Header::decode(&mut last_synced_header.encode().as_slice())
 			.expect("Can decode previously encoded header; qed"))
 	}
 }
