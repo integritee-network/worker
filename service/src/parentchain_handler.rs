@@ -199,7 +199,7 @@ where
 	) -> ServiceResult<Header> {
 		let id = self.parentchain_id();
 
-		trace!(
+		printl!(
 			"[{:?}] last synced block number: {}. synching until {}",
 			id,
 			last_synced_header.number,
