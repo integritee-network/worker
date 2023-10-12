@@ -151,14 +151,14 @@ where
 
 		if last_synced_header.number == curr_block_number {
 			println!(
-				"[{:?}] No sync necessary, we are already up to date with block {}",
+				"[{:?}] No sync necessary, we are already up to date with block #{}",
 				id, last_synced_header.number,
 			);
 			return Ok(last_synced_header)
 		}
 
 		println!(
-			"[{:?}] Syncing blocks from {} to {}",
+			"[{:?}] Syncing blocks from #{} to #{}",
 			id, last_synced_header.number, curr_block_number
 		);
 
