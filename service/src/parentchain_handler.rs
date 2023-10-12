@@ -192,21 +192,47 @@ where
 	) -> ServiceResult<Header> {
 		let id = self.parentchain_id();
 
-		printl!(
-			"[{:?}] last synced block number: {}. synching until {}",
-			id,
-			last_synced_header.number,
-			until_header.number
+		println!(
+			"[{:?}] last synced block number: {}. syncing until {}",
+			id, last_synced_header.number, until_header.number
 		);
 		let mut last_synced_header = last_synced_header.clone();
 
 		while last_synced_header.number() < until_header.number() {
-			last_synced_header = self.sync_parentchain(last_synced_header)?;
+			let curr_block_number = self
+				.parentchain_api
+				.last_finalized_block()?
+				.ok_or(Error::MissingLastFinalizedBlock)?
+				.block
+				.header()
+				.number;
+
+			if curr_block_number < until_header.number
+				&& curr_block_number < last_synced_header.number + 1
+			{
+				// Skip the rest of the loop and wait if we have synced as much
+				// as possible, but haven't reached the sync target yet.
+				println!(
+					"[{:?}] sync target #{} is not finalized (#{}), wait a sec ...",
+					id, until_header.number, curr_block_number
+				);
+				std::thread::sleep(std::time::Duration::from_secs(1));
+				continue
+			}
+
+			// min(until_header, last_synced.number + chunk_size, current_parentchain_finalized_block)
+			let chunk_target = min(
+				min(last_synced_header.number + BLOCK_SYNC_BATCH_SIZE, curr_block_number),
+				until_header.number,
+			);
+
+			// Tested above that last_synced_header.number < current_block_number (i.e. chunk_target).
+			last_synced_header = self.sync_blocks(last_synced_header.number + 1, chunk_target)?;
 			trace!("[{:?}] synced block number: {}", id, last_synced_header.number);
 
 			// Verify and import blocks into the light client. This can't be done after the loop
-			// because the import is mandatory to remove them from RAM loop. When we register on
-			// a production system that has already many blocks this might lead to an OOM if we
+			// because the import is mandatory to remove them from RAM. When we register on
+			// a production system that has already many blocks, this might lead to an OOM if we
 			// import them all at once after the loop, see #1462.
 			self.trigger_parentchain_block_import()?;
 		}
