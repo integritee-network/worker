@@ -129,9 +129,9 @@ where
 		if !extrinsics.is_empty() {
 			let parentchain_id = ParentchainId::decode(&mut parentchain_id.as_slice())?;
 			debug!(
-				"Enclave wants to send {} extrinsics to parentchain: {:?}",
+				"Enclave wants to send {} extrinsics to parentchain: {:?}. await each inclusion: {:?}",
 				extrinsics.len(),
-				parentchain_id
+				parentchain_id, await_each_inlcusion
 			);
 			let api = self.create_api(parentchain_id)?;
 			for call in extrinsics.into_iter() {

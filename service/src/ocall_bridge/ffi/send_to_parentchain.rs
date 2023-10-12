@@ -37,7 +37,7 @@ pub unsafe extern "C" fn ocall_send_to_parentchain(
 		extrinsics_encoded_size,
 		parentchain_id,
 		parentchain_id_size,
-		await_each_inclusion.into(),
+		await_each_inclusion == 1,
 		Bridge::get_oc_api(),
 	)
 }

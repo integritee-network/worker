@@ -35,7 +35,7 @@ use itp_node_api_metadata::{
 };
 use itp_stf_interface::{ExecuteCall, SHARD_VAULT_KEY};
 use itp_stf_primitives::types::{AccountId, KeyPair, ShardIdentifier, Signature};
-use itp_types::{Address, OpaqueCall};
+use itp_types::{parentchain::ProxyType, Address, OpaqueCall};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
 use sp_io::hashing::blake2_256;
@@ -253,7 +253,9 @@ where
 					value,
 					call_hash,
 				)));
-				// todo: the following is a placeholder dummy which will replace the above with #1257
+				// todo: the following is a placeholder dummy which will replace the above with #1257.
+				// the extrinsic will be sent and potentially deplete the vault at the current state which
+				// is nothing to worry about before we solve mentioned issue.
 				let vault_pubkey: [u8; 32] = get_storage_by_key_hash(SHARD_VAULT_KEY.into())
 					.ok_or(StfError::Dispatch("shard vault key hasn't been set".to_string()))?;
 				let vault_address = Address::from(AccountId::from(vault_pubkey));
@@ -263,11 +265,13 @@ where
 					Address::from(beneficiary),
 					Compact(value),
 				));
-				calls.push(OpaqueCall::from_tuple(&(
+				let proxy_call = OpaqueCall::from_tuple(&(
 					node_metadata_repo.get_from_metadata(|m| m.proxy_call_indexes())??,
 					vault_address,
+					None::<ProxyType>,
 					vault_transfer_call,
-				)));
+				));
+				calls.push(proxy_call);
 				Ok(())
 			},
 			TrustedCall::balance_shield(enclave_account, who, value) => {

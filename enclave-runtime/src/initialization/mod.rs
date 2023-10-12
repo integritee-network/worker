@@ -63,7 +63,10 @@ use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::{
 	api_client::{PairSignature, StaticExtrinsicSigner},
-	metadata::provider::{AccessNodeMetadata, Error as MetadataProviderError},
+	metadata::{
+		pallet_proxy::PROXY_DEPOSIT,
+		provider::{AccessNodeMetadata, Error as MetadataProviderError},
+	},
 };
 use itp_nonce_cache::NonceCache;
 use itp_ocall_api::EnclaveOnChainOCallApi;
@@ -337,7 +340,7 @@ pub(crate) fn init_proxied_shard_vault(shard: ShardIdentifier) -> EnclaveResult<
 	let call = OpaqueCall::from_tuple(&(
 		call_ids,
 		Address::from(AccountId::from(vault.public().0)),
-		Compact(Balance::from(20_000_000_000_000u128)),
+		Compact(Balance::from(PROXY_DEPOSIT)),
 	));
 
 	info!("vault funding call: 0x{}", hex::encode(call.0.clone()));
@@ -346,6 +349,7 @@ pub(crate) fn init_proxied_shard_vault(shard: ShardIdentifier) -> EnclaveResult<
 	//this extrinsic must be included in a block before we can move on. otherwise the next will fail
 	ocall_api.send_to_parentchain(xts, &ParentchainId::Integritee, true);
 
+	// we are assuming nonce=0 here.
 	let nonce_cache = Arc::new(NonceCache::default());
 	let vault_extrinsics_factory = enclave_extrinsics_factory
 		.with_signer(StaticExtrinsicSigner::<_, PairSignature>::new(vault), nonce_cache);
