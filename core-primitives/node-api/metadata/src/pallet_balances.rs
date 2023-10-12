@@ -21,23 +21,23 @@ use crate::{error::Result, NodeMetadata};
 const BALANCES: &str = "Balances";
 
 pub trait BalancesCallIndexes {
-	fn transfer_call_index(&self) -> Result<[u8; 2]>;
+	fn transfer_call_indexes(&self) -> Result<[u8; 2]>;
 
-	fn transfer_keep_alive_call_index(&self) -> Result<[u8; 2]>;
+	fn transfer_keep_alive_call_indexes(&self) -> Result<[u8; 2]>;
 
-	fn transfer_allow_death_call_index(&self) -> Result<[u8; 2]>;
+	fn transfer_allow_death_call_indexes(&self) -> Result<[u8; 2]>;
 }
 
 impl BalancesCallIndexes for NodeMetadata {
-	fn transfer_call_index(&self) -> Result<[u8; 2]> {
+	fn transfer_call_indexes(&self) -> Result<[u8; 2]> {
 		self.call_indexes(BALANCES, "transfer")
 	}
 
-	fn transfer_keep_alive_call_index(&self) -> Result<[u8; 2]> {
+	fn transfer_keep_alive_call_indexes(&self) -> Result<[u8; 2]> {
 		self.call_indexes(BALANCES, "transfer_keep_alive")
 	}
 
-	fn transfer_allow_death_call_index(&self) -> Result<[u8; 2]> {
+	fn transfer_allow_death_call_indexes(&self) -> Result<[u8; 2]> {
 		self.call_indexes(BALANCES, "transfer_allow_death")
 	}
 }

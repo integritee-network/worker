@@ -156,15 +156,15 @@ impl ProxyCallIndexes for NodeMetadataMock {
 }
 
 impl BalancesCallIndexes for NodeMetadataMock {
-	fn transfer_call_index(&self) -> Result<[u8; 2]> {
+	fn transfer_call_indexes(&self) -> Result<[u8; 2]> {
 		Ok([self.balances_module, self.transfer])
 	}
 
-	fn transfer_keep_alive_call_index(&self) -> Result<[u8; 2]> {
+	fn transfer_keep_alive_call_indexes(&self) -> Result<[u8; 2]> {
 		Ok([self.balances_module, self.transfer_keep_alive])
 	}
 
-	fn transfer_allow_death_call_index(&self) -> Result<[u8; 2]> {
+	fn transfer_allow_death_call_indexes(&self) -> Result<[u8; 2]> {
 		Ok([self.balances_module, self.transfer_allow_death])
 	}
 }
