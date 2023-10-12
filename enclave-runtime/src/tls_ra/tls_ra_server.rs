@@ -29,13 +29,13 @@ use crate::{
 	tls_ra::seal_handler::UnsealStateAndKeys,
 	GLOBAL_STATE_HANDLER_COMPONENT,
 };
-use itp_attestation_handler::RemoteAttestationType;
+use itp_attestation_handler::{cert::parse_cert_issuer, RemoteAttestationType};
 use itp_component_container::ComponentGetter;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
 use itp_types::ShardIdentifier;
 use log::*;
-use rustls::{ServerConfig, ServerSession, StreamOwned};
+use rustls::{ServerConfig, ServerSession, Session, StreamOwned};
 use sgx_types::*;
 use std::{
 	backtrace::{self, PrintFormat},
@@ -82,25 +82,29 @@ where
 	}
 
 	/// Sends all relevant data of the specific shard to the client.
-	fn write_shard(&mut self) -> EnclaveResult<()> {
-		println!("    [Enclave] (MU-RA-Server) write_shard, calling read_shard()");
-		let shard = self.read_shard()?;
-		println!("    [Enclave] (MU-RA-Server) write_shard, read_shard() OK");
-		println!("    [Enclave] (MU-RA-Server) write_shard, write_all()");
-		self.write_all(&shard)
+	fn handle_shard_request_from_client(&mut self) -> EnclaveResult<()> {
+		println!(
+			"    [Enclave] (MU-RA-Server) handle_shard_request_from_client, calling read_shard()"
+		);
+		let shard = self.await_shard_request_from_client()?;
+		println!("    [Enclave] (MU-RA-Server) handle_shard_request_from_client, await_shard_request_from_client() OK");
+		println!("    [Enclave] (MU-RA-Server) handle_shard_request_from_client, write_all()");
+		self.write_provisioning_payloads(&shard)
 	}
 
 	/// Read the shard of the state the client wants to receive.
-	fn read_shard(&mut self) -> EnclaveResult<ShardIdentifier> {
+	fn await_shard_request_from_client(&mut self) -> EnclaveResult<ShardIdentifier> {
 		let mut shard_holder = ShardIdentifier::default();
 		let shard = shard_holder.as_fixed_bytes_mut();
-		println!("    [Enclave] (MU-RA-Server) read_shard, calling read_exact()");
+		println!(
+			"    [Enclave] (MU-RA-Server) await_shard_request_from_client, calling read_exact()"
+		);
 		self.tls_stream.read_exact(shard)?;
 		Ok(shard.into())
 	}
 
 	/// Sends all relevant data to the client.
-	fn write_all(&mut self, shard: &ShardIdentifier) -> EnclaveResult<()> {
+	fn write_provisioning_payloads(&mut self, shard: &ShardIdentifier) -> EnclaveResult<()> {
 		debug!("Provisioning is set to: {:?}", self.provisioning_payload);
 		match self.provisioning_payload {
 			ProvisioningPayload::Everything => {
@@ -248,14 +252,34 @@ pub(crate) fn run_state_provisioning_server_internal<
 		skip_ra == 1,
 	)?;
 	let (server_session, tcp_stream) = tls_server_session_stream(socket_fd, server_config)?;
+
+	let client_signer = if let Some(cert_chain) = server_session.get_peer_certificates() {
+		if !cert_chain.is_empty() {
+			// Assuming the leaf certificate is the first in the list
+			parse_cert_issuer(&cert_chain[0].0)?
+		} else {
+			return Err(EnclaveError::Other("no certificates found".into()))
+		}
+	} else {
+		return Err(EnclaveError::Other("get peer certificates failed".into()))
+	};
+	info!("client signer (issuer) is: 0x{}", hex::encode(client_signer.clone()));
+
+	// todo: verify client signer belongs to a registered enclave on integritee network with a
+	// matching or whitelisted MRENCLAVE as replacement for MU RA #1385
+
 	let provisioning = ProvisioningPayload::from(WorkerModeProvider::worker_mode());
 
 	let mut server =
 		TlsServer::new(StreamOwned::new(server_session, tcp_stream), seal_handler, provisioning);
 
 	println!("    [Enclave] (MU-RA-Server) MU-RA successful sending keys");
-	println!("    [Enclave] (MU-RA-Server) MU-RA successful, calling write_shard()");
-	server.write_shard()
+	println!(
+		"    [Enclave] (MU-RA-Server) MU-RA successful, calling handle_shard_request_from_client()"
+	);
+	server.handle_shard_request_from_client()
+
+	// todo! add client account as a proxy to shard vault account
 }
 
 fn tls_server_session_stream(
@@ -279,7 +303,7 @@ fn tls_server_config<A: EnclaveAttestationOCallApi + 'static>(
 	#[cfg(feature = "dcap")]
 	let attestation_type = RemoteAttestationType::Dcap;
 
-	// report will be signed with enclave ed25519 signing key
+	// report will be signed with server enclave ed25519 signing key
 	let (key_der, cert_der) = create_ra_report_and_signature(
 		skip_ra,
 		attestation_type,
@@ -288,6 +312,7 @@ fn tls_server_config<A: EnclaveAttestationOCallApi + 'static>(
 		quote_size,
 	)?;
 
+	// ClientAuth will perform MU RA as part of authentication process
 	let mut cfg = rustls::ServerConfig::new(Arc::new(ClientAuth::new(true, skip_ra, ocall_api)));
 	let certs = vec![rustls::Certificate(cert_der)];
 	let privkey = rustls::PrivateKey(key_der);

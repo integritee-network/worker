@@ -270,7 +270,7 @@ fn tls_client_config<A: EnclaveAttestationOCallApi + 'static>(
 	#[cfg(feature = "dcap")]
 	let attestation_type = RemoteAttestationType::Dcap;
 
-	// report will be signed with enclave ed25519 signing key
+	// report will be signed with client enclave ed25519 signing key
 	let (key_der, cert_der) = create_ra_report_and_signature(
 		skip_ra,
 		attestation_type,
@@ -285,6 +285,7 @@ fn tls_client_config<A: EnclaveAttestationOCallApi + 'static>(
 	let privkey = rustls::PrivateKey(key_der);
 
 	cfg.set_single_client_cert(certs, privkey).unwrap();
+	// ServerAuth will perform MU RA as part of authentication process
 	cfg.dangerous()
 		.set_certificate_verifier(Arc::new(ServerAuth::new(true, skip_ra, ocall_api)));
 	cfg.versions.clear();
