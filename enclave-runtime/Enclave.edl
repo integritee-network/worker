@@ -92,7 +92,7 @@ enclave {
 			[out, size=pubkey_size] uint8_t* pubkey, uint32_t pubkey_size);
 
 		public sgx_status_t get_ecc_vault_pubkey(
-			[in, size=shard_size] uint8_t* shard, uint32_t shard_size
+			[in, size=shard_size] uint8_t* shard, uint32_t shard_size,
 			[out, size=pubkey_size] uint8_t* pubkey, uint32_t pubkey_size);
 
 		public sgx_status_t get_mrenclave(

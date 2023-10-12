@@ -18,26 +18,20 @@
 use crate::{error::Result, NodeMetadata};
 
 /// Pallet name:
-const BALANCES: &str = "Balances";
+const PROXY: &str = "Proxy";
 
-pub trait BalancesCallIndexes {
-	fn transfer_call_index(&self) -> Result<[u8; 2]>;
+pub trait ProxyCallIndexes {
+	fn add_proxy_call_indexes(&self) -> Result<[u8; 2]>;
 
-	fn transfer_keep_alive_call_index(&self) -> Result<[u8; 2]>;
-
-	fn transfer_allow_death_call_index(&self) -> Result<[u8; 2]>;
+	fn proxy_call_indexes(&self) -> Result<[u8; 2]>;
 }
 
-impl BalancesCallIndexes for NodeMetadata {
-	fn transfer_call_index(&self) -> Result<[u8; 2]> {
-		self.call_indexes(BALANCES, "transfer")
+impl ProxyCallIndexes for NodeMetadata {
+	fn add_proxy_call_indexes(&self) -> Result<[u8; 2]> {
+		self.call_indexes(PROXY, "add_proxy")
 	}
 
-	fn transfer_keep_alive_call_index(&self) -> Result<[u8; 2]> {
-		self.call_indexes(BALANCES, "transfer_keep_alive")
-	}
-
-	fn transfer_allow_death_call_index(&self) -> Result<[u8; 2]> {
-		self.call_indexes(BALANCES, "transfer_allow_death")
+	fn proxy_call_indexes(&self) -> Result<[u8; 2]> {
+		self.call_indexes(PROXY, "proxy")
 	}
 }

@@ -84,6 +84,10 @@ impl EnclaveBase for EnclaveMock {
 		unreachable!()
 	}
 
+	fn get_ecc_vault_pubkey(&self) -> EnclaveResult<ed25519::Public> {
+		unreachable!()
+	}
+
 	fn get_fingerprint(&self) -> EnclaveResult<EnclaveFingerprint> {
 		Ok([1u8; MR_ENCLAVE_SIZE].into())
 	}

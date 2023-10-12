@@ -22,15 +22,17 @@ use sp_core::{H160, H256, U256};
 use std::vec::Vec;
 
 use crate::{helpers::ensure_enclave_signer_account, StfError, TrustedOperation};
-use codec::{Decode, Encode};
+use codec::{Compact, Decode, Encode};
 use frame_support::{ensure, traits::UnfilteredDispatchable};
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{Runtime, System};
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
-use itp_node_api_metadata::pallet_enclave_bridge::EnclaveBridgeCallIndexes;
+use itp_node_api_metadata::{
+	pallet_enclave_bridge::EnclaveBridgeCallIndexes, pallet_proxy::ProxyCallIndexes,
+};
 use itp_stf_interface::ExecuteCall;
 use itp_stf_primitives::types::{AccountId, KeyPair, ShardIdentifier, Signature};
-use itp_types::OpaqueCall;
+use itp_types::{Address, OpaqueCall};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
 use sp_io::hashing::blake2_256;
@@ -246,9 +248,24 @@ where
 				calls.push(OpaqueCall::from_tuple(&(
 					node_metadata_repo.get_from_metadata(|m| m.unshield_funds_call_indexes())??,
 					shard,
-					beneficiary,
+					beneficiary.clone(),
 					value,
 					call_hash,
+				)));
+				// todo: the following is a placeholder dummy which will replace the above with #1257
+				// todo: insert correct vault accountid here
+				let vault_address = Address::from(AccountId::from([0u8; 32]));
+				let vault_transfer_call = OpaqueCall::from_tuple(&(
+					//node_metadata_repo
+					//	.get_from_metadata(|m| m.transfer_keep_alive_call_indexes())??,
+					[0u8, 0u8],
+					Address::from(beneficiary),
+					Compact(value),
+				));
+				calls.push(OpaqueCall::from_tuple(&(
+					node_metadata_repo.get_from_metadata(|m| m.proxy_call_indexes())??,
+					vault_address,
+					vault_transfer_call,
 				)));
 				Ok(())
 			},

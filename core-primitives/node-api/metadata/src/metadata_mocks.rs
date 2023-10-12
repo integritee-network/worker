@@ -16,11 +16,12 @@
 */
 
 use crate::{
-	error::Result, pallet_sidechain::SidechainCallIndexes, pallet_teerex::TeerexCallIndexes,
+	error::Result, pallet_balances::BalancesCallIndexes,
+	pallet_enclave_bridge::EnclaveBridgeCallIndexes, pallet_proxy::ProxyCallIndexes,
+	pallet_sidechain::SidechainCallIndexes, pallet_teerex::TeerexCallIndexes,
 };
 use codec::{Decode, Encode};
 
-use crate::pallet_enclave_bridge::EnclaveBridgeCallIndexes;
 use itp_api_client_types::Metadata;
 
 impl TryFrom<NodeMetadataMock> for Metadata {
@@ -48,6 +49,13 @@ pub struct NodeMetadataMock {
 	update_shard_config: u8,
 	sidechain_module: u8,
 	imported_sidechain_block: u8,
+	proxy_module: u8,
+	add_proxy: u8,
+	proxy: u8,
+	balances_module: u8,
+	transfer: u8,
+	transfer_keep_alive: u8,
+	transfer_allow_death: u8,
 	runtime_spec_version: u32,
 	runtime_transaction_version: u32,
 }
@@ -70,6 +78,13 @@ impl NodeMetadataMock {
 			update_shard_config: 5u8,
 			sidechain_module: 53u8,
 			imported_sidechain_block: 0u8,
+			proxy_module: 7u8,
+			add_proxy: 1u8,
+			proxy: 0u8,
+			balances_module: 10u8,
+			transfer: 7u8,
+			transfer_keep_alive: 3u8,
+			transfer_allow_death: 0u8,
 			runtime_spec_version: 25,
 			runtime_transaction_version: 4,
 		}
@@ -127,5 +142,29 @@ impl EnclaveBridgeCallIndexes for NodeMetadataMock {
 impl SidechainCallIndexes for NodeMetadataMock {
 	fn confirm_imported_sidechain_block_indexes(&self) -> Result<[u8; 2]> {
 		Ok([self.sidechain_module, self.imported_sidechain_block])
+	}
+}
+
+impl ProxyCallIndexes for NodeMetadataMock {
+	fn add_proxy_call_indexes(&self) -> Result<[u8; 2]> {
+		Ok([self.proxy_module, self.add_proxy])
+	}
+
+	fn proxy_call_indexes(&self) -> Result<[u8; 2]> {
+		Ok([self.proxy_module, self.proxy])
+	}
+}
+
+impl BalancesCallIndexes for NodeMetadataMock {
+	fn transfer_call_index(&self) -> Result<[u8; 2]> {
+		Ok([self.balances_module, self.transfer])
+	}
+
+	fn transfer_keep_alive_call_index(&self) -> Result<[u8; 2]> {
+		Ok([self.balances_module, self.transfer_keep_alive])
+	}
+
+	fn transfer_allow_death_call_index(&self) -> Result<[u8; 2]> {
+		Ok([self.balances_module, self.transfer_allow_death])
 	}
 }

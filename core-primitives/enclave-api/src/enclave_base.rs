@@ -301,6 +301,8 @@ impl EnclaveBase for Enclave {
 			ffi::get_ecc_vault_pubkey(
 				self.eid,
 				&mut retval,
+				shard.as_ptr(),
+				shard.len() as u32,
 				pubkey.as_mut_ptr(),
 				pubkey.len() as u32,
 			)
