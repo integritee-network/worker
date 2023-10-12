@@ -140,7 +140,7 @@ where
 			.init_parentchain_components(self.parentchain_init_params.clone())?)
 	}
 
-	fn sync_parentchain(&self, last_synced_header: Header) -> ServiceResult<Header> {
+	fn sync_parentchain(&self, sync_until_header: Header) -> ServiceResult<Header> {
 		let id = self.parentchain_id();
 		trace!("[{:?}] Getting current head", id);
 		let curr_block = self
@@ -149,27 +149,27 @@ where
 			.ok_or(Error::MissingLastFinalizedBlock)?;
 		let curr_block_number = curr_block.block.header().number();
 
-		if last_synced_header.number == curr_block_number {
+		if sync_until_header.number == curr_block_number {
 			println!(
 				"[{:?}] No sync necessary, we are already up to date with block {}",
-				id, last_synced_header.number,
+				id, sync_until_header.number,
 			);
-			return Ok(last_synced_header)
+			return Ok(sync_until_header)
 		}
 
-		if last_synced_header.number > curr_block_number {
+		if sync_until_header.number > curr_block_number {
 			return Err(Error::ApplicationSetup(format!(
 				"[{:?}] Bad config, last synced header {} is recent than current parentchain head {}",
-				id, last_synced_header.number, curr_block_number
+				id, sync_until_header.number, curr_block_number
 			)))
 		}
 
 		println!(
 			"[{:?}] Syncing blocks from {} to {}",
-			id, last_synced_header.number, curr_block_number
+			id, sync_until_header.number, curr_block_number
 		);
 
-		let mut until_synced_header = last_synced_header;
+		let mut until_synced_header = sync_until_header;
 		loop {
 			let block_chunk_to_sync = self.parentchain_api.get_blocks(
 				until_synced_header.number + 1,
@@ -252,4 +252,9 @@ where
 
 		Ok(last_synced_header)
 	}
+}
+
+impl<EnclaveApi> ParentchainHandler<ParentchainApi, EnclaveApi> where
+	EnclaveApi: Sidechain + EnclaveBase
+{
 }
