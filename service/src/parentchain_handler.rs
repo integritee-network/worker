@@ -162,22 +162,20 @@ where
 			id, last_synced_header.number, curr_block_number
 		);
 
-		let mut until_synced_header = last_synced_header;
-		loop {
-			until_synced_header = self.sync_blocks(
-				until_synced_header.number + 1,
-				min(until_synced_header.number + BLOCK_SYNC_BATCH_SIZE, curr_block_number),
+		let mut synced_until = last_synced_header;
+		while synced_until.number() <= &curr_block_number {
+			synced_until = self.sync_blocks(
+				synced_until.number + 1,
+				min(synced_until.number + BLOCK_SYNC_BATCH_SIZE, curr_block_number),
 			)?;
 
 			println!(
 				"[{:?}] Synced {} out of {} finalized parentchain blocks",
-				id, until_synced_header.number, curr_block_number,
+				id, synced_until.number, curr_block_number,
 			);
-
-			if &until_synced_header.number >= &curr_block_number {
-				return Ok(until_synced_header)
-			}
 		}
+
+		return Ok(synced_until)
 	}
 
 	fn trigger_parentchain_block_import(&self) -> ServiceResult<()> {
