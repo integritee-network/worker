@@ -171,10 +171,6 @@ where
 
 		let mut until_synced_header = last_synced_header;
 		loop {
-			if &until_synced_header.number >= &curr_block_number {
-				return Ok(until_synced_header)
-			}
-
 			until_synced_header = self.sync_blocks(
 				until_synced_header.number + 1,
 				min(until_synced_header.number + BLOCK_SYNC_BATCH_SIZE, curr_block_number),
@@ -184,6 +180,10 @@ where
 				"[{:?}] Synced {} out of {} finalized parentchain blocks",
 				id, until_synced_header.number, curr_block_number,
 			);
+
+			if &until_synced_header.number >= &curr_block_number {
+				return Ok(until_synced_header)
+			}
 		}
 	}
 
