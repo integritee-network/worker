@@ -33,7 +33,7 @@ use itp_node_api_metadata::{
 	pallet_balances::BalancesCallIndexes, pallet_enclave_bridge::EnclaveBridgeCallIndexes,
 	pallet_proxy::ProxyCallIndexes,
 };
-use itp_stf_interface::ExecuteCall;
+use itp_stf_interface::{ExecuteCall, SHARD_VAULT_KEY};
 use itp_stf_primitives::types::{AccountId, KeyPair, ShardIdentifier, Signature};
 use itp_types::{Address, OpaqueCall};
 use itp_utils::stringify::account_id_to_string;
@@ -44,6 +44,7 @@ use std::{format, prelude::v1::*, sync::Arc};
 
 #[cfg(feature = "evm")]
 use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_address};
+use crate::helpers::get_storage_by_key_hash;
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
@@ -254,7 +255,9 @@ where
 				)));
 				// todo: the following is a placeholder dummy which will replace the above with #1257
 				// todo: insert correct vault accountid here
-				let vault_address = Address::from(AccountId::from([0u8; 32]));
+				let vault_pubkey: [u8; 32] = get_storage_by_key_hash(SHARD_VAULT_KEY.into())
+					.ok_or(StfError::Dispatch("shard vault key hasn't been set".to_string()))?;
+				let vault_address = Address::from(AccountId::from(vault_pubkey));
 				let vault_transfer_call = OpaqueCall::from_tuple(&(
 					node_metadata_repo
 						.get_from_metadata(|m| m.transfer_keep_alive_call_indexes())??,
