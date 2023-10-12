@@ -192,7 +192,7 @@ where
 		let id = self.parentchain_id();
 
 		println!(
-			"[{:?}] last synced block number: {}. syncing until {}",
+			"[{:?}] last synced block number: #{}. syncing until #{}",
 			id, last_synced_header.number, sync_target.number
 		);
 		let mut last_synced_header = last_synced_header.clone();
@@ -227,7 +227,7 @@ where
 
 			// Tested above that last_synced_header.number < current_block_number (i.e. chunk_target).
 			last_synced_header = self.sync_blocks(last_synced_header.number + 1, chunk_target)?;
-			trace!("[{:?}] synced block number: {}", id, last_synced_header.number);
+			trace!("[{:?}] synced block number: #{}", id, last_synced_header.number);
 
 			// Verify and import blocks into the light client. This can't be done after the loop
 			// because the import is mandatory to remove them from RAM. When we register on
@@ -249,7 +249,7 @@ where
 
 		if from > to {
 			return Err(Error::ApplicationSetup(format!(
-				"[{:?}] from can't be bigger than to. {} > {}",
+				"[{:?}] `from` can't be bigger than `to`. {} > {}",
 				id, from, to
 			)))
 		}
