@@ -163,7 +163,7 @@ where
 		);
 
 		let mut synced_until = last_synced_header;
-		while synced_until.number() <= &curr_block_number {
+		while synced_until.number() < &curr_block_number {
 			synced_until = self.sync_blocks(
 				synced_until.number + 1,
 				// while statement tests that synced_until.number < curr_block_number
@@ -248,8 +248,8 @@ where
 		let id = self.parentchain_id();
 
 		if from > to {
-			return Err(Error::ApplicationSetup(format!(
-				"[{:?}] `from` can't be bigger than `to`. {} > {}",
+			return Err(Error::BlockSync(format!(
+				"[{:?}] Block range to import must be positive, i.e., `from` can't be bigger than `to`. {} > {}",
 				id, from, to
 			)))
 		}
