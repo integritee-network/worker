@@ -26,13 +26,15 @@ use crate::{
 		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
 	},
 	ocall::OcallApi,
-	tls_ra::seal_handler::SealStateAndKeys,
-	GLOBAL_STATE_HANDLER_COMPONENT,
+	tls_ra::{seal_handler::SealStateAndKeys, ClientProvisioningRequest},
+	GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 };
+use codec::Encode;
 use itp_attestation_handler::{RemoteAttestationType, DEV_HOSTNAME};
 use itp_component_container::ComponentGetter;
 use itp_ocall_api::EnclaveAttestationOCallApi;
-use itp_types::ShardIdentifier;
+use itp_sgx_crypto::key_repository::AccessPubkey;
+use itp_types::{AccountId, ShardIdentifier};
 use log::*;
 use rustls::{ClientConfig, ClientSession, Stream};
 use sgx_types::*;
@@ -44,7 +46,6 @@ use std::{
 	sync::Arc,
 	vec::Vec,
 };
-
 /// Client part of the TCP-level connection and the underlying TLS-level session.
 ///
 /// Includes a seal handler, which handles the storage part of the received data.
@@ -73,19 +74,20 @@ where
 	///
 	/// We trust here that the server sends us the correct data, as
 	/// we do not have any way to test it.
-	fn obtain_provisioning_for_shard(&mut self) -> EnclaveResult<()> {
+	fn obtain_provisioning_for_shard(&mut self, account: AccountId) -> EnclaveResult<()> {
 		debug!(
 			"obtain_provisioning_for_shard called, about to call self.send_provisioning_request()."
 		);
-		self.send_provisioning_request()?;
+		self.send_provisioning_request(account)?;
 		debug!("self.send_provisioning_request() succeeded.");
 		self.read_and_seal_all()
 	}
 
 	/// Send the shard of the state we want to receive to the provisioning server.
-	fn send_provisioning_request(&mut self) -> EnclaveResult<()> {
+	fn send_provisioning_request(&mut self, account: AccountId) -> EnclaveResult<()> {
 		debug!("self.send_provisioning_request() called.");
-		self.tls_stream.write_all(self.shard.as_bytes())?;
+		self.tls_stream
+			.write_all(&ClientProvisioningRequest { shard: self.shard, account }.encode())?;
 		debug!("write_all succeeded.");
 		Ok(())
 	}
@@ -210,6 +212,19 @@ pub unsafe extern "C" fn request_state_provisioning(
 		light_client_seal,
 	);
 
+	let signing_key_repository = match GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT.get() {
+		Ok(s) => s,
+		Err(e) => {
+			error!("{:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
+	let client_account = match signing_key_repository.retrieve_pubkey() {
+		Ok(s) => AccountId::from(s),
+		Err(e) => return e.into(),
+	};
+
 	if let Err(e) = request_state_provisioning_internal(
 		socket_fd,
 		sign_type,
@@ -218,6 +233,7 @@ pub unsafe extern "C" fn request_state_provisioning(
 		shard,
 		skip_ra,
 		seal_handler,
+		client_account,
 	) {
 		error!("Failed to sync state due to: {:?}", e);
 		return e.into()
@@ -235,6 +251,7 @@ pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAn
 	shard: ShardIdentifier,
 	skip_ra: c_int,
 	seal_handler: StateAndKeySealer,
+	client_account: AccountId,
 ) -> EnclaveResult<()> {
 	debug!("Client config generate...");
 	let client_config = tls_client_config(
@@ -255,7 +272,7 @@ pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAn
 	);
 
 	info!("Requesting keys and state from mu-ra server of fellow validateer");
-	client.obtain_provisioning_for_shard()
+	client.obtain_provisioning_for_shard(client_account)
 }
 
 fn tls_client_config<A: EnclaveAttestationOCallApi + 'static>(

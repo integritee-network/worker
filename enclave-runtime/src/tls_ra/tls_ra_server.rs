@@ -17,7 +17,7 @@
 
 //! Implementation of the server part of the state provisioning.
 
-use super::{authentication::ClientAuth, Opcode, TcpHeader};
+use super::{authentication::ClientAuth, ClientProvisioningRequest, Opcode, TcpHeader};
 use crate::{
 	attestation::create_ra_report_and_signature,
 	error::{Error as EnclaveError, Result as EnclaveResult},
@@ -29,11 +29,12 @@ use crate::{
 	tls_ra::seal_handler::UnsealStateAndKeys,
 	GLOBAL_STATE_HANDLER_COMPONENT,
 };
+use codec::Decode;
 use itp_attestation_handler::{cert::parse_cert_issuer, RemoteAttestationType};
 use itp_component_container::ComponentGetter;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
-use itp_types::ShardIdentifier;
+use itp_types::{AccountId, ShardIdentifier};
 use log::*;
 use rustls::{ServerConfig, ServerSession, Session, StreamOwned};
 use sgx_types::*;
@@ -82,25 +83,29 @@ where
 	}
 
 	/// Sends all relevant data of the specific shard to the client.
-	fn handle_shard_request_from_client(&mut self) -> EnclaveResult<()> {
+	fn handle_shard_request_from_client(&mut self) -> EnclaveResult<AccountId> {
 		println!(
 			"    [Enclave] (MU-RA-Server) handle_shard_request_from_client, calling read_shard()"
 		);
-		let shard = self.await_shard_request_from_client()?;
+		let request = self.await_shard_request_from_client()?;
 		println!("    [Enclave] (MU-RA-Server) handle_shard_request_from_client, await_shard_request_from_client() OK");
 		println!("    [Enclave] (MU-RA-Server) handle_shard_request_from_client, write_all()");
-		self.write_provisioning_payloads(&shard)
+		self.write_provisioning_payloads(&request.shard)?;
+		Ok(request.account)
 	}
 
 	/// Read the shard of the state the client wants to receive.
-	fn await_shard_request_from_client(&mut self) -> EnclaveResult<ShardIdentifier> {
+	fn await_shard_request_from_client(&mut self) -> EnclaveResult<ClientProvisioningRequest> {
 		let mut shard_holder = ShardIdentifier::default();
 		let shard = shard_holder.as_fixed_bytes_mut();
+		let mut request = [0u8; std::mem::size_of::<ClientProvisioningRequest>()];
 		println!(
 			"    [Enclave] (MU-RA-Server) await_shard_request_from_client, calling read_exact()"
 		);
-		self.tls_stream.read_exact(shard)?;
-		Ok(shard.into())
+		self.tls_stream.read_exact(&mut request)?;
+		let request: ClientProvisioningRequest = Decode::decode(&mut request.as_slice())
+			.expect("matching byte size can't fail to decode");
+		Ok(request)
 	}
 
 	/// Sends all relevant data to the client.
@@ -253,21 +258,24 @@ pub(crate) fn run_state_provisioning_server_internal<
 	)?;
 	let (server_session, tcp_stream) = tls_server_session_stream(socket_fd, server_config)?;
 
-	// todo: verify client signer belongs to a registered enclave on integritee network with a
-	// matching or whitelisted MRENCLAVE as replacement for MU RA #1385
-
 	let provisioning = ProvisioningPayload::from(WorkerModeProvider::worker_mode());
 
 	let mut server =
 		TlsServer::new(StreamOwned::new(server_session, tcp_stream), seal_handler, provisioning);
 
+	// todo: verify client signer belongs to a registered enclave on integritee network with a
+	// matching or whitelisted MRENCLAVE as replacement for MU RA #1385
+
 	println!("    [Enclave] (MU-RA-Server) MU-RA successful sending keys");
 	println!(
 		"    [Enclave] (MU-RA-Server) MU-RA successful, calling handle_shard_request_from_client()"
 	);
-	server.handle_shard_request_from_client()
+	let client_account = server.handle_shard_request_from_client()?;
 
+	info!("will make client account 0x{} a proxy of vault", hex::encode(client_account.clone()));
 	// todo! add client account as a proxy to shard vault account
+
+	Ok(())
 }
 
 fn tls_server_session_stream(
