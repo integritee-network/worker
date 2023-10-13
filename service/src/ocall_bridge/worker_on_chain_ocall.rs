@@ -145,14 +145,12 @@ where
 							e
 						);
 					}
-				} else {
-					if let Err(e) = api.submit_opaque_extrinsic(&call.encode().into()) {
-						error!(
-							"Could not send extrinsic to node: {:?}, error: {:?}",
-							serde_json::to_string(&call),
-							e
-						);
-					}
+				} else if let Err(e) = api.submit_opaque_extrinsic(&call.encode().into()) {
+					error!(
+						"Could not send extrinsic to node: {:?}, error: {:?}",
+						serde_json::to_string(&call),
+						e
+					);
 				}
 			}
 		}

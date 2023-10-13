@@ -599,17 +599,15 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 				"shard vault account is already initialized in state: {}",
 				shard_vault.to_ss58check()
 			);
+		} else if we_are_primary_validateer {
+			println!("initializing proxied shard vault account now");
+			enclave.init_proxied_shard_vault(shard).unwrap();
+			println!(
+				"initialized shard vault account: : {}",
+				enclave.get_ecc_vault_pubkey(shard).unwrap().to_ss58check()
+			);
 		} else {
-			if we_are_primary_validateer {
-				println!("initializing proxied shard vault account now");
-				enclave.init_proxied_shard_vault(shard).unwrap();
-				println!(
-					"initialized shard vault account: : {}",
-					enclave.get_ecc_vault_pubkey(shard).unwrap().to_ss58check()
-				);
-			} else {
-				panic!("no vault account has been initialized and we are not the primary worker");
-			}
+			panic!("no vault account has been initialized and we are not the primary worker");
 		}
 	}
 
