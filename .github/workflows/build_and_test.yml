@@ -126,7 +126,6 @@ jobs:
           docker images --all
 
   code-quality:
-    name: ${{ matrix.check }}
     runs-on: ubuntu-latest
     container: "integritee/integritee-dev:0.2.2"
     strategy:
