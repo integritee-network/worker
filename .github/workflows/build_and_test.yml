@@ -125,55 +125,51 @@ jobs:
           fi
           docker images --all
 
-  clippy:
+  code-quality:
     runs-on: ubuntu-latest
     container: "integritee/integritee-dev:0.2.2"
+    strategy:
+      fail-fast: false
+      matrix:
+        check: [
+          # Worker
+          # Use release mode as the CI runs out of disk space otherwise.
+          cargo clippy --release -- -D warnings,
+          cargo clippy --release --features evm -- -D warnings,
+          cargo clippy --release --features sidechain -- -D warnings,
+          cargo clippy --release --features teeracle -- -D warnings,
+          cargo clippy --release --features offchain-worker -- -D warnings,
+
+          # Enclave
+          cd enclave-runtime && cargo clippy -- -D warnings,
+          cd enclave-runtime && cargo clippy --features evm -- -D warnings,
+          cd enclave-runtime && cargo clippy --features sidechain -- -D warnings,
+          cd enclave-runtime && cargo clippy --features teeracle -- -D warnings,
+          cd enclave-runtime && cargo clippy --features offchain-worker -- -D warnings,
+
+          # Fmt
+          cargo fmt --all -- --check,
+          cd enclave-runtime && cargo fmt --all -- --check,
+        ]
     steps:
       - uses: actions/checkout@v3
-      - name: init rust
-        # enclave is not in the same workspace
+      - name: init-rust-target
+        # Enclave is not in the same workspace
         run: rustup show && cd enclave-runtime && rustup show
 
-      - name: Clippy default features
-        run: cargo clippy -- -D warnings
-      - name: Enclave # Enclave is separate as it's not in the workspace
-        run: cd enclave-runtime && cargo clippy -- -D warnings
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.check }}
 
-      - name: Clippy with EVM feature
-        run: |
-          cargo clippy --features evm -- -D warnings
-          cd enclave-runtime && cargo clippy --features evm -- -D warnings
+      - name: ${{ matrix.check }}
+        run: ${{ matrix.check }}
 
-      - name: Clippy with Sidechain feature
-        run: |
-          cargo clippy --features sidechain -- -D warnings
-          cd enclave-runtime && cargo clippy --features sidechain -- -D warnings
-
-      - name: Clippy with Teeracle feature
-        run: |
-          cargo clippy --features teeracle -- -D warnings
-          cd enclave-runtime && cargo clippy --features teeracle -- -D warnings
-
-      - name: Clippy with Offchain-worker feature
-        run: |
-          cargo clippy --features offchain-worker -- -D warnings
-          cd enclave-runtime && cargo clippy --features offchain-worker -- -D warnings
-
-      - name: Fail-fast; cancel other jobs
-        if: failure()
-        uses: andymckay/cancel-action@0.3
-
-  fmt:
+  toml-fmt:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: init rust
         run: rustup show
-
-      - name: Worker & Client
-        run: cargo fmt --all -- --check
-      - name: Enclave # Enclave is separate as it's not in the workspace
-        run: cd enclave-runtime && cargo fmt --all -- --check
 
       - name: Install taplo
         run: cargo install taplo-cli --locked
@@ -362,7 +358,7 @@ jobs:
     runs-on: integritee-builder-sgx
     name: Release Build of teeracle
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [build-test, integration-tests]
+    needs: [ build-test, integration-tests ]
 
     strategy:
       fail-fast: false
@@ -436,8 +432,8 @@ jobs:
 
       - name: Save released teeracle
         run: |
-            docker image save integritee/${{ matrix.flavor_id }}:${{ github.ref_name }} | gzip > integritee-worker-${{ matrix.flavor_id }}-${{ github.ref_name }}.tar.gz
-            docker images --all
+          docker image save integritee/${{ matrix.flavor_id }}:${{ github.ref_name }} | gzip > integritee-worker-${{ matrix.flavor_id }}-${{ github.ref_name }}.tar.gz
+          docker images --all
 
       - name: Upload teeracle image
         uses: actions/upload-artifact@v3
@@ -447,16 +443,16 @@ jobs:
 
       - name: Delete images
         run: |
-            if [[ "$(docker images -q integritee/${{ matrix.flavor_id }}:${{ github.ref_name }} 2> /dev/null)" != "" ]]; then
-                docker image rmi --force integritee/${{ matrix.flavor_id }}:${{ github.ref_name }} 2>/dev/null
-            fi
-            docker images --all
+          if [[ "$(docker images -q integritee/${{ matrix.flavor_id }}:${{ github.ref_name }} 2> /dev/null)" != "" ]]; then
+              docker image rmi --force integritee/${{ matrix.flavor_id }}:${{ github.ref_name }} 2>/dev/null
+          fi
+          docker images --all
 
   release:
     runs-on: ubuntu-latest
     name: Draft Release
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [build-test, integration-tests, release-build]
+    needs: [ build-test, integration-tests, release-build ]
     outputs:
       release_url: ${{ steps.create-release.outputs.html_url }}
       asset_upload_url: ${{ steps.create-release.outputs.upload_url }}
