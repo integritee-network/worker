@@ -50,6 +50,8 @@ pub enum Error {
 	MissingGenesisHeader,
 	#[error("Could not find last finalized block of the parentchain")]
 	MissingLastFinalizedBlock,
+	#[error("Error during the block sync process: {0}")]
+	BlockSync(String),
 	#[error("{0}")]
 	Custom(Box<dyn std::error::Error + Sync + Send + 'static>),
 }
