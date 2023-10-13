@@ -6,17 +6,23 @@ Light client storage can also be provisioned to avoid re-synching the entire par
 
 ```mermaid
 sequenceDiagram
-participant server
-participant client
-server ->> server: generate shielding & state encryption key
-server ->> server: init_shard & sync parentchains
-client ->> server: enclave_request_state_provisioning
-activate client
-client ->> client: qe_get_target_info
+participant untrusted_server
+participant enclave_server
+participant enclave_client
+participant untrusted_client
+enclave_server ->> enclave_server: generate shielding & state encryption key
+enclave_server ->> enclave_server: init_shard & sync parentchains
+untrusted_client ->> untrusted_server: connect TCP
+untrusted_client ->> enclave_client: request_state_provisioning
+activate enclave_client
+untrusted_server ->> enclave_server: run_state_provisioning_server
+activate enclave_server
+enclave_client ->> enclave_server: open TLS session (including MU RA)
+enclave_client ->> enclave_server: request_state_provisioning(shard, account)
+enclave_server ->> enclave_client: write_provisioning_payloads
+enclave_server ->> enclave_server: add client as vault proxy for shard
 
-
-
-deactivate client
-
-
+deactivate enclave_client
+deactivate enclave_server
+untrusted_client --> untrusted_server: disconnect TCP
 ```

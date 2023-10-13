@@ -125,10 +125,6 @@ pub(crate) fn init_proxied_shard_vault_internal(shard: ShardIdentifier) -> Encla
 	let (state_lock, mut state) = state_handler.load_for_mutation(&shard)?;
 	state.state.insert(SHARD_VAULT_KEY.into(), vault.public().0.to_vec());
 	state_handler.write_after_mutation(state, state_lock, &shard)?;
-	// todo!
-	// parentchain-query: if shard vault not yet existing or self not proxy:
-
-	// xt: send funds from enclave account to new vault account (panic if not enough funds)
 
 	info!("send existential funds from enclave account to vault account");
 	let call_ids = node_metadata_repo
@@ -168,12 +164,6 @@ pub(crate) fn init_proxied_shard_vault_internal(shard: ShardIdentifier) -> Encla
 	let xts = vault_extrinsics_factory.create_extrinsics(&[call], None)?;
 
 	ocall_api.send_to_parentchain(xts, &ParentchainId::Integritee, false)?;
-
-	// xt: delegate proxy authority to its own enclave accountid proxy.add_proxy() (panic if fails)
-	// caveat: must send from vault account. how to sign extrinsics with other keypair?
-	// sth like: extrinsics_factory.with_signer(keypair).create_extrinsics(
-	// write vault accountid to STF State (SgxExternalitiesType) with key ShardVaultAccountId to make it available also beyond service restart for non-primary SCV later
-	// return and log vault accountId
 	Ok(())
 }
 

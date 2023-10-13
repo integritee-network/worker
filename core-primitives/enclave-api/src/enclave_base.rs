@@ -57,7 +57,7 @@ pub trait EnclaveBase: Send + Sync + 'static {
 	/// Initialize a new shard.
 	fn init_shard(&self, shard: Vec<u8>) -> EnclaveResult<()>;
 
-	/// Initialize a new shard.
+	/// Initialize a new shard vault account and register enclave signer as its proxy.
 	fn init_proxied_shard_vault(&self, shard: &ShardIdentifier) -> EnclaveResult<()>;
 
 	/// Trigger the import of parentchain block explicitly. Used when initializing a light-client
@@ -77,6 +77,7 @@ pub trait EnclaveBase: Send + Sync + 'static {
 
 	fn get_ecc_signing_pubkey(&self) -> EnclaveResult<ed25519::Public>;
 
+	/// retrieve vault account from shard state
 	fn get_ecc_vault_pubkey(&self, shard: &ShardIdentifier) -> EnclaveResult<ed25519::Public>;
 
 	fn get_fingerprint(&self) -> EnclaveResult<EnclaveFingerprint>;
