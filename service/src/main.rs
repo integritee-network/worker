@@ -681,17 +681,6 @@ fn init_target_parentchain<E>(
 		let last_synched_header =
 			parentchain_handler.sync_parentchain(last_synched_header).unwrap();
 
-		//setup_proxied_shard_vault
-		//println!("initializing proxied shard vault account now");
-		// todo: generic for targetA/B
-		//enclave.init_proxied_shard_vault(shard.encode());
-
-		// if we are primary validateer and if doesn't exist, create a pure_proxy for shard vault
-		// todo
-
-		// check if exists
-		//tee_account_id
-
 		// start parentchain syncing loop (subscribe to header updates)
 		thread::Builder::new()
 			.name(format!("{:?}_parentchain_sync_loop", parentchain_id))
@@ -761,12 +750,6 @@ where
 		.unwrap_or_else(|_| {
 			panic!("[{:?}] Could not set the node metadata in the enclave", parentchain_id)
 		});
-
-	// todo!: ensure shard vault proxy exists
-	// should only be registered by primary worker for shard
-	// check if metadata contains proxy pallet and issue warning otherwise
-	// check if shard vault exists (must derive accountid from primary worker and index
-	// let enclave compose proxy.create_pure(proxyType: Any, delay:0, index:0)
 
 	(parentchain_handler, last_synced_header)
 }
