@@ -41,6 +41,7 @@ use crate::{
 		GLOBAL_TARGET_B_SOLOCHAIN_HANDLER_COMPONENT,
 	},
 	rpc::worker_api_direct::sidechain_io_handler,
+	shard_vault::init_proxied_shard_vault,
 	utils::{
 		get_node_metadata_repository_from_integritee_solo_or_parachain,
 		get_node_metadata_repository_from_target_a_solo_or_parachain,
@@ -76,12 +77,12 @@ use std::{
 	string::{String, ToString},
 	vec::Vec,
 };
-
 mod attestation;
 mod empty_impls;
 mod initialization;
 mod ipfs;
 mod ocall;
+mod shard_vault;
 mod utils;
 
 pub mod error;
@@ -218,36 +219,6 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u3
 	pubkey_slice.clone_from_slice(&signer_public);
 
 	sgx_status_t::SGX_SUCCESS
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn get_ecc_vault_pubkey(
-	shard: *const u8,
-	shard_size: u32,
-	pubkey: *mut u8,
-	pubkey_size: u32,
-) -> sgx_status_t {
-	let shard = ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
-	let state_handler = match GLOBAL_STATE_HANDLER_COMPONENT.get() {
-		Ok(s) => s,
-		Err(e) => {
-			error!("{:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
-	};
-
-	/*let vault_pubkey: Vec<u8> = state_handler
-			.execute_on_current(&shard, |state, _| state.state.get::<Vec<u8>>(&SHARD_VAULT_KEY.into()))
-			.unwrap()
-			.unwrap()
-			.to_vec();
-
-		let pubkey_slice = slice::from_raw_parts_mut(pubkey, pubkey_size as usize);
-		//debug!("Restored ECC pubkey: {:?}", signer_public);
-
-		pubkey_slice.clone_from_slice(&vault_pubkey);
-	*/
-	sgx_status_t::SGX_ERROR_UNEXPECTED
 }
 
 #[no_mangle]
@@ -454,22 +425,6 @@ pub unsafe extern "C" fn init_shard(shard: *const u8, shard_size: u32) -> sgx_st
 
 	if let Err(e) = initialization::init_shard(shard_identifier) {
 		error!("Failed to initialize shard ({:?}): {:?}", shard_identifier, e);
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
-	}
-
-	sgx_status_t::SGX_SUCCESS
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn init_proxied_shard_vault(
-	shard: *const u8,
-	shard_size: u32,
-) -> sgx_status_t {
-	let shard_identifier =
-		ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
-
-	if let Err(e) = initialization::init_proxied_shard_vault(shard_identifier) {
-		error!("Failed to initialize proxied shard vault ({:?}): {:?}", shard_identifier, e);
 		return sgx_status_t::SGX_ERROR_UNEXPECTED
 	}
 
