@@ -140,10 +140,6 @@ jobs:
   strategy:
     fail-fast: false
     matrix:
-      # We need to compile `test-no-std` separately, otherwise we have std leaks from the build-deps.
-      #
-      # `test-no-std` is only meant to check if the `substrate-api-client` compiles to `no_std`, hence
-      # we omit clippy and test there.
       check: [
         # Worker
         cargo clippy -- -D warnings,
@@ -166,7 +162,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: init-rust-target
-        # enclave is not in the same workspace
+        # Enclave is not in the same workspace
         run: rustup show && cd enclave-runtime && rustup show
 
       - uses: Swatinem/rust-cache@v2
