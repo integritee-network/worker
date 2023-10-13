@@ -149,7 +149,7 @@ jobs:
 
           # Fmt
           cargo fmt --all -- --check
-            cd enclave-runtime && cargo fmt --all -- --check
+          cd enclave-runtime && cargo fmt --all -- --check
         ]
     steps:
       - uses: actions/checkout@v3
