@@ -125,7 +125,8 @@ jobs:
           fi
           docker images --all
 
-  name: "Code Quality:" ${{ matrix.check }}
+  code-quality:
+    name: ${{ matrix.check }}
     runs-on: ubuntu-latest
     container: "integritee/integritee-dev:0.2.2"
     strategy:
