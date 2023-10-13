@@ -49,7 +49,7 @@ use crate::{
 	Hash,
 };
 use base58::ToBase58;
-use codec::{Compact, Encode};
+use codec::Encode;
 use itc_direct_rpc_server::{
 	create_determine_watch, rpc_connection_registry::ConnectionRegistry,
 	rpc_ws_handler::RpcWsHandler,
@@ -60,16 +60,6 @@ use itc_tls_websocket_server::{
 };
 use itp_attestation_handler::IntelAttestationHandler;
 use itp_component_container::{ComponentGetter, ComponentInitializer};
-use itp_extrinsics_factory::CreateExtrinsics;
-use itp_node_api::{
-	api_client::{PairSignature, StaticExtrinsicSigner},
-	metadata::{
-		pallet_proxy::PROXY_DEPOSIT,
-		provider::{AccessNodeMetadata, Error as MetadataProviderError},
-	},
-};
-use itp_nonce_cache::NonceCache;
-use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_primitives_cache::GLOBAL_PRIMITIVES_CACHE;
 use itp_settings::files::{
 	INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_DB_PATH, STATE_SNAPSHOTS_CACHE_SIZE,
@@ -78,8 +68,6 @@ use itp_settings::files::{
 use itp_sgx_crypto::{
 	get_aes_repository, get_ed25519_repository, get_rsa3072_repository, key_repository::AccessKey,
 };
-use itp_sgx_externalities::SgxExternalitiesTrait;
-use itp_stf_interface::SHARD_VAULT_KEY;
 use itp_stf_state_handler::{
 	file_io::StateDir, handle_state::HandleState, query_shard_state::QueryShardState,
 	state_snapshot_repository::VersionedStateAccess,
@@ -87,17 +75,10 @@ use itp_stf_state_handler::{
 };
 use itp_top_pool::pool::Options as PoolOptions;
 use itp_top_pool_author::author::AuthorTopFilter;
-use itp_types::{
-	parentchain::{AccountId, Address, Balance, ParentchainId, ProxyType},
-	OpaqueCall, ShardIdentifier,
-};
+use itp_types::{parentchain::ParentchainId, ShardIdentifier};
 use its_sidechain::block_composer::BlockComposer;
 use log::*;
-use sp_core::{
-	blake2_256,
-	crypto::{DeriveJunction, Pair},
-	ed25519,
-};
+use sp_core::crypto::Pair;
 use std::{collections::HashMap, path::PathBuf, string::String, sync::Arc};
 pub(crate) fn init_enclave(
 	mu_ra_url: String,

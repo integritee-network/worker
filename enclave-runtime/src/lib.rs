@@ -41,7 +41,6 @@ use crate::{
 		GLOBAL_TARGET_B_SOLOCHAIN_HANDLER_COMPONENT,
 	},
 	rpc::worker_api_direct::sidechain_io_handler,
-	shard_vault::init_proxied_shard_vault,
 	utils::{
 		get_node_metadata_repository_from_integritee_solo_or_parachain,
 		get_node_metadata_repository_from_target_a_solo_or_parachain,
@@ -61,8 +60,6 @@ use itp_node_api::metadata::NodeMetadata;
 use itp_nonce_cache::{MutateNonce, Nonce};
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
 use itp_sgx_crypto::key_repository::AccessPubkey;
-use itp_stf_interface::SHARD_VAULT_KEY;
-use itp_stf_state_handler::handle_state::HandleState;
 use itp_storage::{StorageProof, StorageProofChecker};
 use itp_types::{ShardIdentifier, SignedBlock};
 use itp_utils::write_slice_and_whitespace_pad;

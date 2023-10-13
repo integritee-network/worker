@@ -26,17 +26,18 @@ use crate::{
 		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
 	},
 	ocall::OcallApi,
+	shard_vault::add_shard_vault_proxy,
 	tls_ra::seal_handler::UnsealStateAndKeys,
 	GLOBAL_STATE_HANDLER_COMPONENT,
 };
 use codec::Decode;
-use itp_attestation_handler::{cert::parse_cert_issuer, RemoteAttestationType};
+use itp_attestation_handler::RemoteAttestationType;
 use itp_component_container::ComponentGetter;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
-use itp_types::{AccountId, ShardIdentifier};
+use itp_types::ShardIdentifier;
 use log::*;
-use rustls::{ServerConfig, ServerSession, Session, StreamOwned};
+use rustls::{ServerConfig, ServerSession, StreamOwned};
 use sgx_types::*;
 use std::{
 	backtrace::{self, PrintFormat},
@@ -83,7 +84,7 @@ where
 	}
 
 	/// Sends all relevant data of the specific shard to the client.
-	fn handle_shard_request_from_client(&mut self) -> EnclaveResult<AccountId> {
+	fn handle_shard_request_from_client(&mut self) -> EnclaveResult<()> {
 		println!(
 			"    [Enclave] (MU-RA-Server) handle_shard_request_from_client, calling read_shard()"
 		);
@@ -91,13 +92,19 @@ where
 		println!("    [Enclave] (MU-RA-Server) handle_shard_request_from_client, await_shard_request_from_client() OK");
 		println!("    [Enclave] (MU-RA-Server) handle_shard_request_from_client, write_all()");
 		self.write_provisioning_payloads(&request.shard)?;
-		Ok(request.account)
+
+		info!(
+			"will make client account 0x{} a proxy of vault for shard {:?}",
+			hex::encode(request.account.clone()),
+			request.shard
+		);
+		add_shard_vault_proxy(request.shard, request.account)?;
+
+		Ok(())
 	}
 
 	/// Read the shard of the state the client wants to receive.
 	fn await_shard_request_from_client(&mut self) -> EnclaveResult<ClientProvisioningRequest> {
-		let mut shard_holder = ShardIdentifier::default();
-		let shard = shard_holder.as_fixed_bytes_mut();
 		let mut request = [0u8; std::mem::size_of::<ClientProvisioningRequest>()];
 		println!(
 			"    [Enclave] (MU-RA-Server) await_shard_request_from_client, calling read_exact()"
@@ -270,12 +277,7 @@ pub(crate) fn run_state_provisioning_server_internal<
 	println!(
 		"    [Enclave] (MU-RA-Server) MU-RA successful, calling handle_shard_request_from_client()"
 	);
-	let client_account = server.handle_shard_request_from_client()?;
-
-	info!("will make client account 0x{} a proxy of vault", hex::encode(client_account.clone()));
-	// todo! add client account as a proxy to shard vault account
-
-	Ok(())
+	server.handle_shard_request_from_client()
 }
 
 fn tls_server_session_stream(
