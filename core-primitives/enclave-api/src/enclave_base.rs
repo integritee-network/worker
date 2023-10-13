@@ -25,6 +25,7 @@ use itp_enclave_api_ffi as ffi;
 use itp_settings::worker::{
 	HEADER_MAX_SIZE, MR_ENCLAVE_SIZE, SHIELDING_KEY_SIZE, SIGNING_KEY_SIZE,
 };
+use itp_types::ShardIdentifier;
 use log::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;
@@ -57,7 +58,7 @@ pub trait EnclaveBase: Send + Sync + 'static {
 	fn init_shard(&self, shard: Vec<u8>) -> EnclaveResult<()>;
 
 	/// Initialize a new shard.
-	fn init_proxied_shard_vault(&self, shard: Vec<u8>) -> EnclaveResult<()>;
+	fn init_proxied_shard_vault(&self, shard: &ShardIdentifier) -> EnclaveResult<()>;
 
 	/// Trigger the import of parentchain block explicitly. Used when initializing a light-client
 	/// with a triggered import dispatcher.
@@ -76,7 +77,7 @@ pub trait EnclaveBase: Send + Sync + 'static {
 
 	fn get_ecc_signing_pubkey(&self) -> EnclaveResult<ed25519::Public>;
 
-	fn get_ecc_vault_pubkey(&self, shard: Vec<u8>) -> EnclaveResult<ed25519::Public>;
+	fn get_ecc_vault_pubkey(&self, shard: &ShardIdentifier) -> EnclaveResult<ed25519::Public>;
 
 	fn get_fingerprint(&self) -> EnclaveResult<EnclaveFingerprint>;
 }
@@ -169,11 +170,17 @@ impl EnclaveBase for Enclave {
 		Ok(())
 	}
 
-	fn init_proxied_shard_vault(&self, shard: Vec<u8>) -> EnclaveResult<()> {
+	fn init_proxied_shard_vault(&self, shard: &ShardIdentifier) -> EnclaveResult<()> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 
+		let shard_bytes = shard.encode();
 		let result = unsafe {
-			ffi::init_proxied_shard_vault(self.eid, &mut retval, shard.as_ptr(), shard.len() as u32)
+			ffi::init_proxied_shard_vault(
+				self.eid,
+				&mut retval,
+				shard_bytes.as_ptr(),
+				shard_bytes.len() as u32,
+			)
 		};
 
 		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
@@ -293,16 +300,17 @@ impl EnclaveBase for Enclave {
 		Ok(ed25519::Public::from_raw(pubkey))
 	}
 
-	fn get_ecc_vault_pubkey(&self, shard: Vec<u8>) -> EnclaveResult<ed25519::Public> {
+	fn get_ecc_vault_pubkey(&self, shard: &ShardIdentifier) -> EnclaveResult<ed25519::Public> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
 		let mut pubkey = [0u8; SIGNING_KEY_SIZE];
+		let shard_bytes = shard.encode();
 
 		let result = unsafe {
 			ffi::get_ecc_vault_pubkey(
 				self.eid,
 				&mut retval,
-				shard.as_ptr(),
-				shard.len() as u32,
+				shard_bytes.as_ptr(),
+				shard_bytes.len() as u32,
 				pubkey.as_mut_ptr(),
 				pubkey.len() as u32,
 			)

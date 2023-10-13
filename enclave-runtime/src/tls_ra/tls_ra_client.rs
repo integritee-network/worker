@@ -243,6 +243,8 @@ pub unsafe extern "C" fn request_state_provisioning(
 }
 
 /// Internal [`request_state_provisioning`] function to be able to use the handy `?` operator.
+// allowing clippy rant because this fn will be refactored with MU RA deprecation
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAndKeys>(
 	socket_fd: c_int,
 	sign_type: sgx_quote_sign_type_t,

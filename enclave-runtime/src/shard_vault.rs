@@ -42,7 +42,7 @@ use itp_sgx_crypto::key_repository::AccessKey;
 use itp_stf_interface::SHARD_VAULT_KEY;
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_types::{
-	parentchain::{AccountId, Address, Balance, ParentchainId, ProxyType},
+	parentchain::{AccountId, Address, ParentchainId, ProxyType},
 	OpaqueCall, ShardIdentifier,
 };
 use log::*;
@@ -85,8 +85,8 @@ pub unsafe extern "C" fn get_ecc_vault_pubkey(
 	};
 
 	let pubkey_slice = slice::from_raw_parts_mut(pubkey, pubkey_size as usize);
-	pubkey_slice.clone_from_slice(&shard_vault.encode().as_slice());
-	sgx_status_t::SGX_ERROR_UNEXPECTED
+	pubkey_slice.clone_from_slice(shard_vault.encode().as_slice());
+	sgx_status_t::SGX_SUCCESS
 }
 
 /// reads the shard vault account id form state if it has been initialized previously
@@ -98,10 +98,11 @@ pub(crate) fn get_shard_vault_account(shard: ShardIdentifier) -> EnclaveResult<A
 			state
 				.state
 				.get::<Vec<u8>>(&SHARD_VAULT_KEY.into())
-				.map(|v| Decode::decode(&mut v.clone().as_slice()).ok())
-				.flatten()
+				.and_then(|v| Decode::decode(&mut v.clone().as_slice()).ok())
 		})?
-		.ok_or(Error::Other("failed to fetch shard vault account. has it been initialized?".into()))
+		.ok_or_else(|| {
+			Error::Other("failed to fetch shard vault account. has it been initialized?".into())
+		})
 }
 
 pub(crate) fn init_proxied_shard_vault_internal(shard: ShardIdentifier) -> EnclaveResult<()> {
@@ -119,7 +120,7 @@ pub(crate) fn init_proxied_shard_vault_internal(shard: ShardIdentifier) -> Encla
 		.map_err(|_| Error::Other("failed to derive shard vault keypair".into()))?
 		.0;
 
-	info!("shard vault account derived pubkey: 0x{}", hex::encode(vault.public().0.clone()));
+	info!("shard vault account derived pubkey: 0x{}", hex::encode(vault.public().0));
 
 	let (state_lock, mut state) = state_handler.load_for_mutation(&shard)?;
 	state.state.insert(SHARD_VAULT_KEY.into(), vault.public().0.to_vec());
@@ -137,7 +138,7 @@ pub(crate) fn init_proxied_shard_vault_internal(shard: ShardIdentifier) -> Encla
 	let call = OpaqueCall::from_tuple(&(
 		call_ids,
 		Address::from(AccountId::from(vault.public().0)),
-		Compact(Balance::from(PROXY_DEPOSIT)),
+		Compact(PROXY_DEPOSIT),
 	));
 
 	info!("vault funding call: 0x{}", hex::encode(call.0.clone()));

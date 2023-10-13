@@ -594,8 +594,23 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			})
 			.unwrap();
 
-		println!("initializing proxied shard vault account now");
-		enclave.init_proxied_shard_vault(shard.encode());
+		if let Ok(shard_vault) = enclave.get_ecc_vault_pubkey(shard) {
+			println!(
+				"shard vault account is already initialized in state: {}",
+				shard_vault.to_ss58check()
+			);
+		} else {
+			if we_are_primary_validateer {
+				println!("initializing proxied shard vault account now");
+				enclave.init_proxied_shard_vault(shard).unwrap();
+				println!(
+					"initialized shard vault account: : {}",
+					enclave.get_ecc_vault_pubkey(shard).unwrap().to_ss58check()
+				);
+			} else {
+				panic!("no vault account has been initialized and we are not the primary worker");
+			}
+		}
 	}
 
 	// ------------------------------------------------------------------------
@@ -608,7 +623,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			&enclave,
 			&tee_accountid,
 			url,
-			shard,
 			ParentchainId::TargetA,
 			is_development_mode,
 		)
@@ -619,7 +633,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			&enclave,
 			&tee_accountid,
 			url,
-			shard,
 			ParentchainId::TargetB,
 			is_development_mode,
 		)
@@ -641,7 +654,6 @@ fn init_target_parentchain<E>(
 	enclave: &Arc<E>,
 	tee_account_id: &AccountId32,
 	url: String,
-	shard: &ShardIdentifier,
 	parentchain_id: ParentchainId,
 	is_development_mode: bool,
 ) where

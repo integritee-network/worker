@@ -52,7 +52,7 @@ where
 	) -> Result<rustls::ClientCertVerified, rustls::TLSError> {
 		debug!("client cert: {:?}", certs);
 		let issuer = cert::parse_cert_issuer(&certs[0].0).unwrap();
-		info!("client signer (issuer) is: 0x{}", hex::encode(issuer.clone()));
+		info!("client signer (issuer) is: 0x{}", hex::encode(issuer));
 
 		// This call will automatically verify cert is properly signed
 		if self.skip_ra {
@@ -107,7 +107,7 @@ where
 	) -> Result<rustls::ServerCertVerified, rustls::TLSError> {
 		debug!("server cert: {:?}", certs);
 		let issuer = cert::parse_cert_issuer(&certs[0].0).unwrap();
-		info!("server signer (issuer) is: 0x{}", hex::encode(issuer.clone()));
+		info!("server signer (issuer) is: 0x{}", hex::encode(issuer));
 
 		if self.skip_ra {
 			warn!("Skip verifying ra-report");

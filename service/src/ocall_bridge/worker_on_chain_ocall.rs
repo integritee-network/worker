@@ -25,8 +25,7 @@ use log::*;
 use sp_runtime::OpaqueExtrinsic;
 use std::{sync::Arc, vec::Vec};
 use substrate_api_client::{
-	ac_primitives::serde_impls::StorageKey, rpc_api::SubmitAndWatchUntilSuccess, GetStorage,
-	SubmitAndWatch, SubmitExtrinsic, XtStatus,
+	ac_primitives::serde_impls::StorageKey, GetStorage, SubmitAndWatch, SubmitExtrinsic, XtStatus,
 };
 
 pub struct WorkerOnChainOCall<F> {

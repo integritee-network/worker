@@ -257,7 +257,9 @@ where
 				// the extrinsic will be sent and potentially deplete the vault at the current state which
 				// is nothing to worry about before we solve mentioned issue.
 				let vault_pubkey: [u8; 32] = get_storage_by_key_hash(SHARD_VAULT_KEY.into())
-					.ok_or(StfError::Dispatch("shard vault key hasn't been set".to_string()))?;
+					.ok_or_else(|| {
+						StfError::Dispatch("shard vault key hasn't been set".to_string())
+					})?;
 				let vault_address = Address::from(AccountId::from(vault_pubkey));
 				let vault_transfer_call = OpaqueCall::from_tuple(&(
 					node_metadata_repo
