@@ -156,6 +156,14 @@ jobs:
         # Enclave is not in the same workspace
         run: rustup show && cd enclave-runtime && rustup show
 
+      - name: Free up disk space
+        if: startsWith(runner.name, 'GitHub Actions')
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          swap-storage: false
+          large-packages: false
+
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.check }}
