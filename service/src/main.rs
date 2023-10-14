@@ -387,9 +387,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	let tokio_handle = tokio_handle_getter.get_handle();
 
-	#[cfg(feature = "teeracle")]
-	let teeracle_tokio_handle = tokio_handle.clone();
-
 	// ------------------------------------------------------------------------
 	// Get the public key of our TEE.
 	let tee_accountid = enclave_account(enclave.as_ref());
@@ -455,7 +452,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			&config,
 			enclave.clone(),
 			sidechain_storage.clone(),
-			tokio_handle,
+			&tokio_handle,
 		);
 	}
 
