@@ -226,7 +226,7 @@ where
 
 		while last_synced_header.number() < until_header.number() {
 			last_synced_header = self.sync_parentchain(last_synced_header)?;
-			trace!("[{:?}] synced block number: {}", id, last_synced_header.number);
+			println!("[{:?}] synced block number: #{}", id, last_synced_header.number);
 		}
 		self.trigger_parentchain_block_import()?;
 

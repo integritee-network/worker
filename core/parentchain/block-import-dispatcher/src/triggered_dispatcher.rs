@@ -163,6 +163,7 @@ where
 		&self,
 		predicate: impl Fn(&BlockImporter::SignedBlockType) -> bool,
 	) -> Result<Option<BlockImporter::SignedBlockType>> {
+		trace!("Import of parentchain blocks and events has been triggered");
 		let blocks_to_import =
 			self.import_queue.pop_until(predicate).map_err(Error::ImportQueue)?;
 
@@ -174,7 +175,7 @@ where
 		let latest_imported_block = blocks_to_import.last().map(|b| (*b).clone());
 
 		trace!(
-			"Import of parentchain blocks and events has been triggered, importing {} blocks and {} events from queue",
+			"Importing {} blocks and {} events from queue",
 			blocks_to_import.len(),
 			events_to_import.len(),
 		);
