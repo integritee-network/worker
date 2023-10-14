@@ -539,34 +539,52 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	initialization_handler.registered_on_parentchain();
 
-	// ------------------------------------------------------------------------
-	// initialize teeracle interval
-	#[cfg(feature = "teeracle")]
-	if WorkerModeProvider::worker_mode() == WorkerMode::Teeracle {
-		schedule_periodic_reregistration_thread(
-			send_register_xt,
-			run_config.reregister_teeracle_interval(),
-		);
+	match WorkerModeProvider::worker_mode() {
+		WorkerMode::Teeracle => {
+			// ------------------------------------------------------------------------
+			// initialize teeracle interval
+			#[cfg(feature = "teeracle")]
+			schedule_periodic_reregistration_thread(
+				send_register_xt,
+				run_config.reregister_teeracle_interval(),
+			);
 
-		start_periodic_market_update(
-			&integritee_rpc_api,
-			run_config.teeracle_update_interval(),
-			enclave.as_ref(),
-			&teeracle_tokio_handle,
-		);
-	}
+			#[cfg(feature = "teeracle")]
+			start_periodic_market_update(
+				&integritee_rpc_api,
+				run_config.teeracle_update_interval(),
+				enclave.as_ref(),
+				&tokio_handle.clone(),
+			);
+		},
+		WorkerMode::OffChainWorker => {
+			println!("*** [+] Finished initializing light client, syncing parentchain...");
 
-	if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
-		println!("*** [+] Finished initializing light client, syncing parentchain...");
+			// Syncing all parentchain blocks, this might take a while..
+			let last_synced_header =
+				parentchain_handler.sync_parentchain(last_synced_header).unwrap();
 
-		// Syncing all parentchain blocks, this might take a while..
-		let mut last_synced_header =
-			parentchain_handler.sync_parentchain(last_synced_header).unwrap();
+			// ------------------------------------------------------------------------
+			// start parentchain syncing loop (subscribe to header updates)
+			thread::Builder::new()
+				.name("parentchain_sync_loop".to_owned())
+				.spawn(move || {
+					if let Err(e) = subscribe_to_parentchain_new_headers(
+						parentchain_handler,
+						last_synced_header,
+					) {
+						error!("Parentchain block syncing terminated with a failure: {:?}", e);
+					}
+					println!("[!] Parentchain block syncing has terminated");
+				})
+				.unwrap();
+		},
+		WorkerMode::Sidechain => {
+			println!("*** [+] Finished initializing light client, syncing parentchain...");
 
-		// ------------------------------------------------------------------------
-		// Initialize the sidechain
-		if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain {
-			last_synced_header = sidechain_init_block_production(
+			// ------------------------------------------------------------------------
+			// Initialize the sidechain
+			let last_synced_header = sidechain_init_block_production(
 				enclave.clone(),
 				&register_enclave_xt_header,
 				we_are_primary_validateer,
@@ -575,26 +593,28 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 				&last_synced_header,
 			)
 			.unwrap();
-		}
 
-		// ------------------------------------------------------------------------
-		// start parentchain syncing loop (subscribe to header updates)
-		thread::Builder::new()
-			.name("parentchain_sync_loop".to_owned())
-			.spawn(move || {
-				if let Err(e) =
-					subscribe_to_parentchain_new_headers(parentchain_handler, last_synced_header)
-				{
-					error!("Parentchain block syncing terminated with a failure: {:?}", e);
-				}
-				println!("[!] Parentchain block syncing has terminated");
-			})
-			.unwrap();
-	}
+			// ------------------------------------------------------------------------
+			// start parentchain syncing loop (subscribe to header updates)
+			thread::Builder::new()
+				.name("parentchain_sync_loop".to_owned())
+				.spawn(move || {
+					if let Err(e) = subscribe_to_parentchain_new_headers(
+						parentchain_handler,
+						last_synced_header,
+					) {
+						error!("Parentchain block syncing terminated with a failure: {:?}", e);
+					}
+					println!("[!] Parentchain block syncing has terminated");
+				})
+				.unwrap();
 
-	// ------------------------------------------------------------------------
-	if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain {
-		spawn_worker_for_shard_polling(shard, integritee_rpc_api.clone(), initialization_handler);
+			spawn_worker_for_shard_polling(
+				shard,
+				integritee_rpc_api.clone(),
+				initialization_handler,
+			);
+		},
 	}
 
 	if let Some(url) = config.target_a_parentchain_rpc_endpoint() {
