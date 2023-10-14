@@ -1024,7 +1024,7 @@ fn start_parentchain_header_subscription_thread<E: EnclaveBase + Sidechain>(
 	parentchain_handler: Arc<ParentchainHandler<ParentchainApi, E>>,
 	last_synced_header: Header,
 ) {
-	let parentchain_id = parentchain_handler.parentchain_id().clone();
+	let parentchain_id = *parentchain_handler.parentchain_id();
 	thread::Builder::new()
 		.name(format!("{:?}_parentchain_sync_loop", parentchain_id))
 		.spawn(move || {

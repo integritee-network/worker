@@ -176,7 +176,7 @@ where
 			);
 		}
 
-		return Ok(synced_until)
+		Ok(synced_until)
 	}
 
 	fn trigger_parentchain_block_import(&self) -> ServiceResult<()> {
