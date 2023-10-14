@@ -227,7 +227,7 @@ where
 
 			// Tested above that last_synced_header.number < current_block_number (i.e. chunk_target).
 			last_synced_header = self.sync_blocks(last_synced_header.number + 1, chunk_target)?;
-			trace!("[{:?}] synced block number: #{}", id, last_synced_header.number);
+			println!("[{:?}] synced block number: #{}", id, last_synced_header.number);
 
 			// Verify and import blocks into the light client. This can't be done after the loop
 			// because the import is mandatory to remove them from RAM. When we register on
@@ -255,14 +255,14 @@ where
 		}
 
 		let blocks = self.parentchain_api.get_blocks(from, to)?;
-		println!("[+] [{:?}] Found {} block(s) to sync", id, blocks.len());
+		debug!("[+] [{:?}] Found {} block(s) to sync", id, blocks.len());
 
 		let events: Vec<Vec<u8>> = blocks
 			.iter()
 			.map(|block| self.parentchain_api.get_events_for_block(Some(block.block.header.hash())))
 			.collect::<Result<Vec<_>, _>>()?;
 
-		println!("[+] [{:?}] Found {} event vector(s) to sync", id, events.len());
+		debug!("[+] [{:?}] Found {} event vector(s) to sync", id, events.len());
 
 		let events_proofs: Vec<StorageProof> = blocks
 			.iter()
