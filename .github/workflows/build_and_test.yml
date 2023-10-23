@@ -61,8 +61,8 @@ jobs:
         run: |
           fingerprint=$RANDOM
           echo "FINGERPRINT=$fingerprint" >> $GITHUB_ENV
-          // Convert sgx mode to lowercase as enforced by docker
-          echo "IMAGE_SUFFIX="${${{ matrix.sgx_mode }},,}"-${{ matrix.flavor_id }}-${{ github.sha }}" >> $GITHUB_ENV
+          sgx_mode_lower=$(echo "${${{ matrix.sgx_mode }},,}")
+          echo "IMAGE_SUFFIX=$sgx_mode_lower-${{ matrix.flavor_id }}-${{ github.sha }}" >> $GITHUB_ENV
           if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
              echo "DOCKER_DEVICES=--device=/dev/sgx/enclave --device=/dev/sgx/provision" >> $GITHUB_ENV
              echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd --volume /etc/sgx_default_qcnl.conf:/etc/sgx_default_qcnl.conf" >> $GITHUB_ENV
@@ -256,8 +256,8 @@ jobs:
       - name: Set env
         run: |
           version=$RANDOM
-          // Convert sgx mode to lowercase as enforced by docker
-          echo "IMAGE_SUFFIX="${${{ matrix.sgx_mode }},,}"-${{ matrix.flavor_id }}-${{ github.sha }}" >> $GITHUB_ENV
+          sgx_mode_lower=$(echo "${${{ matrix.sgx_mode }},,}")
+          echo "IMAGE_SUFFIX=$sgx_mode_lower-${{ matrix.flavor_id }}-${{ github.sha }}" >> $GITHUB_ENV
           echo "FLAVOR_ID=${{ matrix.flavor_id }}" >> $GITHUB_ENV
           echo "PROJECT=${{ matrix.flavor_id }}-${{ matrix.demo_name }}" >> $GITHUB_ENV
           echo "VERSION=dev.$version" >> $GITHUB_ENV
@@ -401,8 +401,8 @@ jobs:
         run: |
           fingerprint=$RANDOM
           echo "FINGERPRINT=$fingerprint" >> $GITHUB_ENV
-          // Convert sgx mode to lowercase as enforced by docker
-          echo "IMAGE_SUFFIX="${${{ matrix.sgx_mode }},,}"-${{ matrix.flavor_id }}-${{ github.sha }}" >> $GITHUB_ENV
+          sgx_mode_lower=$(echo "${${{ matrix.sgx_mode }},,}")
+          echo "IMAGE_SUFFIX=$sgx_mode_lower-${{ matrix.flavor_id }}-${{ github.sha }}" >> $GITHUB_ENV
           if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
               echo "DOCKER_DEVICES=--device=/dev/sgx/enclave --device=/dev/sgx/provision" >> $GITHUB_ENV
               echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd --volume /etc/sgx_default_qcnl.conf:/etc/sgx_default_qcnl.conf" >> $GITHUB_ENV
