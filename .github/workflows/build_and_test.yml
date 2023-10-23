@@ -116,10 +116,16 @@ jobs:
           name: integritee-cli-client-${{ env.IMAGE_SUFFIX }}.tar.gz
           path: integritee-cli-client-${{ env.IMAGE_SUFFIX }}.tar.gz
 
-      - name: Upload Enclave Digest File
+      - name: Create Enclave Digest File
         run: |
           mrenclave_hex=$(make mrenclave | grep -o -E '[0-9a-fA-F]{64}')
           echo "$mrenclave_hex" > mrenclave-${{ env.IMAGE_SUFFIX }}.hex
+
+      - name: Upload Enclave Digest File
+        uses: actions/upload-artifact@v3
+        with:
+          name: mrenclave-${{ env.IMAGE_SUFFIX }}.hex
+          path: mrenclave-${{ env.IMAGE_SUFFIX }}.hex
 
       - name: Delete images
         run: |
