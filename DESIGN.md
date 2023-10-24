@@ -64,7 +64,7 @@ sequenceDiagram
     
     validateer_1 ->> integritee_network: register_sgx_enclave()
 
-    validateer_1 ->> integritee_network: register_sgx_enclave()
+    validateer_2 ->> integritee_network: register_sgx_enclave()
     
     validateer_2 ->> validateer_1: sidechain_fetchBlocksFromPeer()
 
