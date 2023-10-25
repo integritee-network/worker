@@ -167,7 +167,10 @@ pub(crate) fn init_proxied_shard_vault_internal(shard: ShardIdentifier) -> Encla
 	Ok(())
 }
 
-pub(crate) fn add_shard_vault_proxy(shard: ShardIdentifier, proxy: AccountId) -> EnclaveResult<()> {
+pub(crate) fn add_shard_vault_proxy(
+	shard: ShardIdentifier,
+	proxy: &AccountId,
+) -> EnclaveResult<()> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	if !state_handler.shard_exists(&shard).unwrap() {
 		return Err(Error::Other("shard not initialized".into()))
@@ -186,7 +189,7 @@ pub(crate) fn add_shard_vault_proxy(shard: ShardIdentifier, proxy: AccountId) ->
 
 	let add_proxy_call = OpaqueCall::from_tuple(&(
 		node_metadata_repo.get_from_metadata(|m| m.add_proxy_call_indexes())??,
-		Address::from(proxy),
+		Address::from(proxy.clone()),
 		ProxyType::Any,
 		0u32, // delay
 	));

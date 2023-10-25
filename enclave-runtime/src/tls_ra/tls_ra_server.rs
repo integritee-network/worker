@@ -98,8 +98,12 @@ where
 			hex::encode(request.account.clone()),
 			request.shard
 		);
-		add_shard_vault_proxy(request.shard, request.account)?;
-
+		if let Err(e) = add_shard_vault_proxy(request.shard, &request.account) {
+			// we can't be sure that registering the proxy will succeed onchain at this point,
+			// therefore we can accept an error here as the client has to verify anyway and
+			// retry if it failed
+			error!("failed to add shard vault proxy for {:?}: {:?}", request.account, e);
+		};
 		Ok(())
 	}
 
