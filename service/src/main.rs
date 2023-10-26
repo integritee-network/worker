@@ -594,7 +594,9 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			})
 			.unwrap();
 
-		if let Ok(shard_vault) = enclave.get_ecc_vault_pubkey(shard) {
+		if WorkerModeProvider::worker_mode() == WorkerMode::OffChainWorker {
+			info!("skipping shard vault check because not yet supported for offchain worker");
+		} else if let Ok(shard_vault) = enclave.get_ecc_vault_pubkey(shard) {
 			println!(
 				"shard vault account is already initialized in state: {}",
 				shard_vault.to_ss58check()
