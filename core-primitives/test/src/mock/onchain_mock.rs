@@ -180,6 +180,7 @@ impl EnclaveOnChainOCallApi for OnchainMock {
 		&self,
 		_extrinsics: Vec<OpaqueExtrinsic>,
 		_: &ParentchainId,
+		_: bool,
 	) -> SgxResult<()> {
 		Ok(())
 	}

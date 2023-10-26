@@ -57,6 +57,13 @@ extern "C" {
 		shard_size: u32,
 	) -> sgx_status_t;
 
+	pub fn init_proxied_shard_vault(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		shard: *const u8,
+		shard_size: u32,
+	) -> sgx_status_t;
+
 	pub fn trigger_parentchain_block_import(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
@@ -106,6 +113,15 @@ extern "C" {
 	pub fn get_ecc_signing_pubkey(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
+		pubkey: *mut u8,
+		pubkey_size: u32,
+	) -> sgx_status_t;
+
+	pub fn get_ecc_vault_pubkey(
+		eid: sgx_enclave_id_t,
+		retval: *mut sgx_status_t,
+		shard: *const u8,
+		shard_size: u32,
 		pubkey: *mut u8,
 		pubkey_size: u32,
 	) -> sgx_status_t;

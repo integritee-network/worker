@@ -22,15 +22,20 @@ use sp_core::{H160, H256, U256};
 use std::vec::Vec;
 
 use crate::{helpers::ensure_enclave_signer_account, StfError, TrustedOperation};
-use codec::{Decode, Encode};
+use codec::{Compact, Decode, Encode};
 use frame_support::{ensure, traits::UnfilteredDispatchable};
+#[cfg(feature = "evm")]
+use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{Runtime, System};
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
-use itp_node_api_metadata::pallet_enclave_bridge::EnclaveBridgeCallIndexes;
-use itp_stf_interface::ExecuteCall;
+use itp_node_api_metadata::{
+	pallet_balances::BalancesCallIndexes, pallet_enclave_bridge::EnclaveBridgeCallIndexes,
+	pallet_proxy::ProxyCallIndexes,
+};
+use itp_stf_interface::{ExecuteCall, SHARD_VAULT_KEY};
 use itp_stf_primitives::types::{AccountId, KeyPair, ShardIdentifier, Signature};
-use itp_types::OpaqueCall;
+use itp_types::{parentchain::ProxyType, Address, OpaqueCall};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
 use sp_io::hashing::blake2_256;
@@ -38,10 +43,8 @@ use sp_runtime::{traits::Verify, MultiAddress};
 use std::{format, prelude::v1::*, sync::Arc};
 
 #[cfg(feature = "evm")]
-use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
-
-#[cfg(feature = "evm")]
 use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_address};
+use crate::helpers::get_storage_by_key_hash;
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
@@ -242,13 +245,35 @@ where
 					shard
 				);
 				unshield_funds(account_incognito, value)?;
+
 				calls.push(OpaqueCall::from_tuple(&(
 					node_metadata_repo.get_from_metadata(|m| m.unshield_funds_call_indexes())??,
 					shard,
-					beneficiary,
+					beneficiary.clone(),
 					value,
 					call_hash,
 				)));
+				// todo: the following is a placeholder dummy which will replace the above with #1257.
+				// the extrinsic will be sent and potentially deplete the vault at the current state which
+				// is nothing to worry about before we solve mentioned issue.
+				let vault_pubkey: [u8; 32] = get_storage_by_key_hash(SHARD_VAULT_KEY.into())
+					.ok_or_else(|| {
+						StfError::Dispatch("shard vault key hasn't been set".to_string())
+					})?;
+				let vault_address = Address::from(AccountId::from(vault_pubkey));
+				let vault_transfer_call = OpaqueCall::from_tuple(&(
+					node_metadata_repo
+						.get_from_metadata(|m| m.transfer_keep_alive_call_indexes())??,
+					Address::from(beneficiary),
+					Compact(value),
+				));
+				let proxy_call = OpaqueCall::from_tuple(&(
+					node_metadata_repo.get_from_metadata(|m| m.proxy_call_indexes())??,
+					vault_address,
+					None::<ProxyType>,
+					vault_transfer_call,
+				));
+				calls.push(proxy_call);
 				Ok(())
 			},
 			TrustedCall::balance_shield(enclave_account, who, value) => {

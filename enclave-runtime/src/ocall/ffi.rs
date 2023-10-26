@@ -113,6 +113,7 @@ extern "C" {
 		extrinsics_size: u32,
 		parentchain_id: *const u8,
 		parentchain_id_size: u32,
+		await_each_inclusion: c_int,
 	) -> sgx_status_t;
 
 	pub fn ocall_read_ipfs(

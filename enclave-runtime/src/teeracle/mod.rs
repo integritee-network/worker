@@ -19,7 +19,7 @@ use crate::{
 	error::{Error, Result},
 	initialization::global_components::GLOBAL_OCALL_API_COMPONENT,
 	utils::{
-		get_extrinsic_factory_from_solo_or_parachain,
+		get_extrinsic_factory_from_integritee_solo_or_parachain,
 		get_node_metadata_repository_from_integritee_solo_or_parachain,
 	},
 };
@@ -46,7 +46,7 @@ use sp_runtime::OpaqueExtrinsic;
 use std::{string::String, vec::Vec};
 
 fn update_weather_data_internal(weather_info: WeatherInfo) -> Result<Vec<OpaqueExtrinsic>> {
-	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
+	let extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 
 	let mut extrinsic_calls: Vec<OpaqueCall> = Vec::new();
@@ -198,7 +198,7 @@ fn update_market_data_internal(
 	crypto_currency: String,
 	fiat_currency: String,
 ) -> Result<Vec<OpaqueExtrinsic>> {
-	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
+	let extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 
 	let mut extrinsic_calls: Vec<OpaqueCall> = Vec::new();

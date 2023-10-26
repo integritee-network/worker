@@ -213,6 +213,7 @@ pub trait WorkerOnChainBridge {
 		&self,
 		extrinsics_encoded: Vec<u8>,
 		parentchain_id: Vec<u8>,
+		await_each_inclusion: bool,
 	) -> OCallBridgeResult<()>;
 }
 
