@@ -119,7 +119,7 @@ jobs:
 
       - name: Create Enclave Digest File
         run: |
-          mrenclave_hex=$(docker run integritee-worker-${{ env.IMAGE_SUFFIX }} mrenclave)
+          mrenclave_hex=$(docker run integritee-worker-${{ env.IMAGE_SUFFIX }} mrenclave | grep -oP ':\s*\K[a-fA-F0-9]+')
           echo "$mrenclave_hex" > mrenclave-${{ env.IMAGE_SUFFIX }}.hex
 
       - name: Upload Enclave Digest File
