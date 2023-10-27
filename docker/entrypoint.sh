@@ -7,7 +7,7 @@ if [ "$1" = "mrenclave" ]; then
     $SGX_ENCLAVE_SIGNER dump \
       -enclave /usr/local/bin/enclave.signed.so \
       -dumpfile df.out && \
-        /usr/local/bin/extract_identity < df.out && rm df.out | grep -o -E '[0-9a-fA-F]{64}'
+        /usr/local/bin/extract_identity < df.out && rm df.out | grep -oP ':\s*\K[a-fA-F0-9]+'
 
 else
     # If no specific command is provided, execute the default unnamed command
