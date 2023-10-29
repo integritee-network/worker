@@ -61,6 +61,8 @@ jobs:
         run: |
           fingerprint=$RANDOM
           echo "FINGERPRINT=$fingerprint" >> $GITHUB_ENV
+          SGX_MODE_LOWERCASE=$(echo "${${{ matrix.sgx_mode }},,}")
+          echo "IMAGE_SUFFIX=$SGX_MODE_LOWERCASE-${{ matrix.flavor_id }}-${{ github.sha }}" >> $GITHUB_ENV
           if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
              echo "DOCKER_DEVICES=--device=/dev/sgx/enclave --device=/dev/sgx/provision" >> $GITHUB_ENV
              echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd --volume /etc/sgx_default_qcnl.conf:/etc/sgx_default_qcnl.conf" >> $GITHUB_ENV
@@ -79,7 +81,7 @@ jobs:
         env:
           DOCKER_BUILDKIT: 1
         run: >
-          docker build -t integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}
+          docker build -t integritee-worker-${{ env.IMAGE_SUFFIX }}
           --target deployed-worker
           --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg FINGERPRINT=${FINGERPRINT} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=${{ matrix.sgx_mode }}
           -f build.Dockerfile .
@@ -88,7 +90,7 @@ jobs:
         env:
           DOCKER_BUILDKIT: 1
         run: >
-          docker build -t integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}
+          docker build -t integritee-cli-client-${{ env.IMAGE_SUFFIX }}
           --target deployed-client
           --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }}
           -f build.Dockerfile .
@@ -96,32 +98,43 @@ jobs:
       - run: docker images --all
 
       - name: Test Enclave # cargo test is not supported in the enclave, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
-        run: docker run ${{ env.DOCKER_DEVICES }} ${{ env.DOCKER_VOLUMES }} integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} test --all
+        run: docker run ${{ env.DOCKER_DEVICES }} ${{ env.DOCKER_VOLUMES }} integritee-worker-${{ env.IMAGE_SUFFIX }} test --all
 
       - name: Export worker image(s)
         run: |
-          docker image save integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} | gzip > integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
-          docker image save integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} | gzip > integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
+          docker image save integritee-worker-${{ env.IMAGE_SUFFIX }} | gzip > integritee-worker-${{ env.IMAGE_SUFFIX }}.tar.gz
+          docker image save integritee-cli-client-${{ env.IMAGE_SUFFIX }} | gzip > integritee-cli-client-${{ env.IMAGE_SUFFIX }}.tar.gz
 
       - name: Upload worker image
         uses: actions/upload-artifact@v3
         with:
-          name: integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
-          path: integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
+          name: integritee-worker-${{ env.IMAGE_SUFFIX }}.tar.gz
+          path: integritee-worker-${{ env.IMAGE_SUFFIX }}.tar.gz
 
       - name: Upload CLI client image
         uses: actions/upload-artifact@v3
         with:
-          name: integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
-          path: integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
+          name: integritee-cli-client-${{ env.IMAGE_SUFFIX }}.tar.gz
+          path: integritee-cli-client-${{ env.IMAGE_SUFFIX }}.tar.gz
+
+      - name: Create Enclave Digest File
+        run: |
+          mrenclave_hex=$(docker run integritee-worker-${{ env.IMAGE_SUFFIX }} mrenclave | grep -oP ':\s*\K[a-fA-F0-9]+')
+          echo "$mrenclave_hex" > mrenclave-${{ env.IMAGE_SUFFIX }}.hex
+
+      - name: Upload Enclave Digest File
+        uses: actions/upload-artifact@v3
+        with:
+          name: mrenclave-${{ env.IMAGE_SUFFIX }}.hex
+          path: mrenclave-${{ env.IMAGE_SUFFIX }}.hex
 
       - name: Delete images
         run: |
-          if [[ "$(docker images -q integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} 2> /dev/null)" != "" ]]; then
-              docker image rmi --force integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} 2>/dev/null
+          if [[ "$(docker images -q integritee-worker-${{ env.IMAGE_SUFFIX }} 2> /dev/null)" != "" ]]; then
+              docker image rmi --force integritee-worker-${{ env.IMAGE_SUFFIX }} 2>/dev/null
           fi
-          if [[ "$(docker images -q integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} 2> /dev/null)" != "" ]]; then
-              docker image rmi --force integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} 2>/dev/null
+          if [[ "$(docker images -q integritee-cli-client-${{ env.IMAGE_SUFFIX }} 2> /dev/null)" != "" ]]; then
+              docker image rmi --force integritee-cli-client-${{ env.IMAGE_SUFFIX }} 2>/dev/null
           fi
           docker images --all
 
@@ -243,6 +256,8 @@ jobs:
       - name: Set env
         run: |
           version=$RANDOM
+          SGX_MODE_LOWERCASE=$(echo "${${{ matrix.sgx_mode }},,}")
+          echo "IMAGE_SUFFIX=$SGX_MODE_LOWERCASE-${{ matrix.flavor_id }}-${{ github.sha }}" >> $GITHUB_ENV
           echo "FLAVOR_ID=${{ matrix.flavor_id }}" >> $GITHUB_ENV
           echo "PROJECT=${{ matrix.flavor_id }}-${{ matrix.demo_name }}" >> $GITHUB_ENV
           echo "VERSION=dev.$version" >> $GITHUB_ENV
@@ -261,21 +276,21 @@ jobs:
       - name: Download Worker Image
         uses: actions/download-artifact@v3
         with:
-          name: integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
+          name: integritee-worker-${{ env.IMAGE_SUFFIX }}.tar.gz
           path: .
 
       - name: Download CLI client Image
         uses: actions/download-artifact@v3
         with:
-          name: integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
+          name: integritee-cli-client-${{ env.IMAGE_SUFFIX }}.tar.gz
           path: .
 
       - name: Load Worker & Client Images
         env:
           DOCKER_BUILDKIT: 1
         run: |
-          docker image load --input integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
-          docker image load --input integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }}.tar.gz
+          docker image load --input integritee-worker-${{ env.IMAGE_SUFFIX }}.tar.gz
+          docker image load --input integritee-cli-client-${{ env.IMAGE_SUFFIX }}.tar.gz
           docker images --all
 
       ##
@@ -290,8 +305,8 @@ jobs:
           if [[ "$(docker images -q ${{ env.CLIENT_IMAGE_TAG }} 2> /dev/null)" == "" ]]; then
              docker image rmi --force ${{ env.CLIENT_IMAGE_TAG }} 2>/dev/null
           fi
-          docker tag integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.WORKER_IMAGE_TAG }}
-          docker tag integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} ${{ env.CLIENT_IMAGE_TAG }}
+          docker tag integritee-worker-${{ env.IMAGE_SUFFIX }} ${{ env.WORKER_IMAGE_TAG }}
+          docker tag integritee-cli-client-${{ env.IMAGE_SUFFIX }} ${{ env.CLIENT_IMAGE_TAG }}
           docker pull integritee/integritee-node:1.1.3
           docker tag integritee/integritee-node:1.1.3 ${{ env.INTEGRITEE_NODE }}
           docker images --all
@@ -337,11 +352,11 @@ jobs:
 
       - name: Delete images
         run: |
-          if [[ "$(docker images -q integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} 2> /dev/null)" != "" ]]; then
-              docker image rmi --force integritee-worker-${{ matrix.flavor_id }}-${{ github.sha }} 2>/dev/null
+          if [[ "$(docker images -q integritee-worker-${{ env.IMAGE_SUFFIX }} 2> /dev/null)" != "" ]]; then
+              docker image rmi --force integritee-worker-${{ env.IMAGE_SUFFIX }} 2>/dev/null
           fi
-          if [[ "$(docker images -q integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} 2> /dev/null)" != "" ]]; then
-              docker image rmi --force integritee-cli-client-${{ matrix.flavor_id }}-${{ github.sha }} 2>/dev/null
+          if [[ "$(docker images -q integritee-cli-client-${{ env.IMAGE_SUFFIX }} 2> /dev/null)" != "" ]]; then
+              docker image rmi --force integritee-cli-client-${{ env.IMAGE_SUFFIX }} 2>/dev/null
           fi
           if [[ "$(docker images -q ${{ env.WORKER_IMAGE_TAG }} 2> /dev/null)" != "" ]]; then
              docker image rmi --force ${{ env.WORKER_IMAGE_TAG }} 2>/dev/null
@@ -386,6 +401,8 @@ jobs:
         run: |
           fingerprint=$RANDOM
           echo "FINGERPRINT=$fingerprint" >> $GITHUB_ENV
+          SGX_MODE_LOWERCASE=$(echo "${${{ matrix.sgx_mode }},,}")
+          echo "IMAGE_SUFFIX=$SGX_MODE_LOWERCASE-${{ matrix.flavor_id }}-${{ github.sha }}" >> $GITHUB_ENV
           if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
               echo "DOCKER_DEVICES=--device=/dev/sgx/enclave --device=/dev/sgx/provision" >> $GITHUB_ENV
               echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd --volume /etc/sgx_default_qcnl.conf:/etc/sgx_default_qcnl.conf" >> $GITHUB_ENV

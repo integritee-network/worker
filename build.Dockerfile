@@ -124,14 +124,17 @@ WORKDIR /usr/local/bin
 
 COPY --from=builder /opt/sgxsdk /opt/sgxsdk
 COPY --from=builder /home/ubuntu/work/worker/bin/* ./
+COPY --from=builder /home/ubuntu/work/worker/extract_identity ./
 COPY --from=builder /lib/x86_64-linux-gnu/libsgx* /lib/x86_64-linux-gnu/
 COPY --from=builder /lib/x86_64-linux-gnu/libdcap* /lib/x86_64-linux-gnu/
 
 RUN chmod +x /usr/local/bin/integritee-service
+RUN chmod +x /usr/local/bin/extract_identity
 RUN ls -al /usr/local/bin
 
 # checks
 ENV SGX_SDK /opt/sgxsdk
+ENV SGX_ENCLAVE_SIGNER $SGX_SDK/bin/x64/sgx_sign
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/intel/sgx-aesm-service/aesm:$SGX_SDK/sdk_libs
 ENV AESM_PATH=/opt/intel/sgx-aesm-service/aesm
 
