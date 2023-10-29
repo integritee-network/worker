@@ -30,7 +30,7 @@
 use crate::{
 	initialization::global_components::GLOBAL_ATTESTATION_HANDLER_COMPONENT,
 	utils::{
-		get_extrinsic_factory_from_solo_or_parachain,
+		get_extrinsic_factory_from_integritee_solo_or_parachain,
 		get_node_metadata_repository_from_integritee_solo_or_parachain,
 	},
 	Error as EnclaveError, Result as EnclaveResult,
@@ -381,7 +381,7 @@ pub fn generate_ias_skip_ra_extrinsic_from_der_cert_internal(
 }
 
 fn create_extrinsics(call: OpaqueCall) -> EnclaveResult<OpaqueExtrinsic> {
-	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
+	let extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
 	let extrinsics = extrinsics_factory.create_extrinsics(&[call], None)?;
 
 	Ok(extrinsics[0].clone())
@@ -459,7 +459,7 @@ pub fn generate_generic_register_collateral_extrinsic<F>(
 where
 	F: Fn(&NodeMetadata) -> Result<[u8; 2], MetadataError>,
 {
-	let extrinsics_factory = get_extrinsic_factory_from_solo_or_parachain()?;
+	let extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
 
 	let node_metadata_repo = get_node_metadata_repository_from_integritee_solo_or_parachain()?;
 	let call_ids = node_metadata_repo

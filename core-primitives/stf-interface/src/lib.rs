@@ -33,6 +33,8 @@ pub mod parentchain_pallet;
 pub mod sudo_pallet;
 pub mod system_pallet;
 
+pub const SHARD_VAULT_KEY: &str = "ShardVaultPubKey";
+
 /// Interface to initialize a new state.
 pub trait InitState<State, AccountId> {
 	/// Initialize a new state for a given enclave account.

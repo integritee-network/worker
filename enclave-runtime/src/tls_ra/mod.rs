@@ -19,6 +19,7 @@
 //! including the remote attestation and tls / tcp connection part.
 
 use codec::{Decode, Encode, MaxEncodedLen};
+use itp_types::{AccountId, ShardIdentifier};
 
 mod authentication;
 pub mod seal_handler;
@@ -70,4 +71,11 @@ impl Opcode {
 	pub fn to_bytes(self) -> [u8; 1] {
 		(self as u8).to_be_bytes()
 	}
+}
+
+/// The data structure to be sent by the client to request provisioning
+#[derive(Clone, Debug, Eq, PartialEq, Decode, Encode, MaxEncodedLen)]
+pub struct ClientProvisioningRequest {
+	pub shard: ShardIdentifier,
+	pub account: AccountId,
 }
