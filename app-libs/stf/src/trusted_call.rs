@@ -21,11 +21,7 @@ use sp_core::{H160, H256, U256};
 #[cfg(feature = "evm")]
 use std::vec::Vec;
 
-use crate::{
-	best_energy_helpers::storage::merkle_roots_map_key, helpers::ensure_enclave_signer_account,
-	StfError, TrustedOperation,
-};
-use binary_merkle_tree::merkle_root;
+use crate::{helpers::ensure_enclave_signer_account, StfError, TrustedOperation};
 use codec::{Compact, Decode, Encode};
 use frame_support::{ensure, traits::UnfilteredDispatchable};
 #[cfg(feature = "evm")]
@@ -42,19 +38,23 @@ use itp_stf_primitives::types::{AccountId, KeyPair, ShardIdentifier, Signature};
 use itp_types::{parentchain::ProxyType, Address, OpaqueCall};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
-use simplyr_lib::{pay_as_bid_matching, MarketInput, MarketOutput, Order};
 use sp_io::hashing::blake2_256;
-use sp_runtime::{
-	traits::{Keccak256, Verify},
-	MultiAddress,
-};
+use sp_runtime::{traits::Verify, MultiAddress};
 use std::{format, prelude::v1::*, sync::Arc};
 
 #[cfg(feature = "evm")]
 use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_address};
 use crate::helpers::get_storage_by_key_hash;
 
-use crate::best_energy_helpers::{write_orders, write_results, ORDERS_DIR, RESULTS_DIR};
+// Group imports that are for OLI to make upstream merges easier.
+use crate::best_energy_helpers::{
+	storage::merkle_roots_map_key, write_orders, write_results, ORDERS_DIR, RESULTS_DIR,
+};
+use binary_merkle_tree::merkle_root;
+use itp_stf_primitives::types::OrdersString;
+use simplyr_lib::{pay_as_bid_matching, MarketInput, MarketOutput, Order};
+use sp_runtime::traits::Keccak256;
+use std::{fs, time::Instant};
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
