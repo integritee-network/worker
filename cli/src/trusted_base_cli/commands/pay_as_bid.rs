@@ -42,7 +42,7 @@ impl PayAsBidCommand {
 			Ok(res) => Ok(CliResultOk::PayAsBidOutput(res)),
 			Err(e) => {
 				log::error!("Error: {}", e);
-				Err(CliError::TrustedOp { msg: "Error savings Orders".into() })
+				Err(CliError::TrustedOp { msg: format!("Error in saving Orders: {:?}", e) })
 			},
 		}
 	}
@@ -68,7 +68,10 @@ pub(crate) fn pay_as_bid(
 	match res {
 		Ok(opt) => match opt {
 			Some(_results) => Ok(Some(_results)),
-			None => Ok(None),
+			None => {
+				println!("CLI None pay_as_bid None block");
+				Ok(None)
+			},
 		},
 		Err(err) => {
 			log::error!("Error in saving Orders: {}", err);
