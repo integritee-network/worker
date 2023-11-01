@@ -93,6 +93,7 @@ pub trait EnclaveOnChainOCallApi: Clone + Send + Sync {
 		&self,
 		extrinsics: Vec<OpaqueExtrinsic>,
 		parentchain_id: &ParentchainId,
+		await_each_inclusion: bool,
 	) -> SgxResult<()>;
 
 	fn worker_request<V: Encode + Decode>(

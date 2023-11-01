@@ -279,6 +279,8 @@ where
 		let _result = ecc_handle.open();
 		let (prv_k, pub_k) = ecc_handle.create_key_pair()?;
 		info!("Enclave Attestation] Generated ephemeral ECDSA keypair:");
+		debug!("     pubkey X is {:02x}", pub_k.gx.iter().format(""));
+		debug!("     pubkey Y is {:02x}", pub_k.gy.iter().format(""));
 
 		let qe_quote = if !skip_ra {
 			let qe_quote = match self.retrieve_qe_dcap_quote(

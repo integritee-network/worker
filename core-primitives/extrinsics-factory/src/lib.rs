@@ -88,6 +88,15 @@ where
 	) -> Self {
 		ExtrinsicsFactory { genesis_hash, signer, nonce_cache, node_metadata_repository }
 	}
+
+	pub fn with_signer(&self, signer: Signer, nonce_cache: Arc<NonceCache>) -> Self {
+		ExtrinsicsFactory {
+			genesis_hash: self.genesis_hash,
+			signer,
+			nonce_cache,
+			node_metadata_repository: self.node_metadata_repository.clone(),
+		}
+	}
 }
 
 impl<Signer, NonceCache, NodeMetadataRepository> CreateExtrinsics
@@ -170,6 +179,33 @@ pub mod tests {
 		assert_eq!(nonce_cache.get_nonce().unwrap(), Nonce(opaque_calls.len() as NonceValue));
 	}
 
+	#[test]
+	pub fn with_signer_works() {
+		let nonce_cache1 = Arc::new(NonceCache::default());
+		*nonce_cache1.load_for_mutation().unwrap() = Nonce(42);
+
+		let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadata::default()));
+		let extrinsics_factory = ExtrinsicsFactory::new(
+			test_genesis_hash(),
+			StaticExtrinsicSigner::<_, PairSignature>::new(test_account()),
+			nonce_cache1.clone(),
+			node_metadata_repo,
+		);
+
+		let nonce_cache2 = Arc::new(NonceCache::default());
+		let extrinsics_factory = extrinsics_factory.with_signer(
+			StaticExtrinsicSigner::<_, PairSignature>::new(test_account2()),
+			nonce_cache2.clone(),
+		);
+
+		let opaque_calls = [OpaqueCall(vec![3u8; 42]), OpaqueCall(vec![12u8, 78])];
+		let xts = extrinsics_factory.create_extrinsics(&opaque_calls, None).unwrap();
+
+		assert_eq!(opaque_calls.len(), xts.len());
+		assert_eq!(nonce_cache2.get_nonce().unwrap(), Nonce(opaque_calls.len() as NonceValue));
+		assert_eq!(nonce_cache1.get_nonce().unwrap(), Nonce(42));
+	}
+
 	// #[test]
 	// pub fn xts_have_increasing_nonce() {
 	// 	let nonce_cache = Arc::new(NonceCache::default());
@@ -192,6 +228,10 @@ pub mod tests {
 
 	fn test_account() -> ed25519::Pair {
 		ed25519::Pair::from_seed(b"42315678901234567890123456789012")
+	}
+
+	fn test_account2() -> ed25519::Pair {
+		ed25519::Pair::from_seed(b"12315678901234567890123456789012")
 	}
 
 	fn test_genesis_hash() -> H256 {

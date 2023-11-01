@@ -72,6 +72,7 @@ fn server_addr(port: u16) -> String {
 
 pub fn test_tls_ra_server_client_networking() {
 	let shard = ShardIdentifier::default();
+	let client_account = AccountId::from([42; 32]);
 	let shielding_key_encoded = vec![1, 2, 3];
 	let state_key_encoded = vec![5, 2, 3, 7];
 	let state_encoded = Vec::from([1u8; 26000]); // Have a decently sized state, so read() must be called multiple times.
@@ -118,6 +119,7 @@ pub fn test_tls_ra_server_client_networking() {
 		shard,
 		SKIP_RA,
 		client_seal_handler.clone(),
+		client_account,
 	);
 
 	// Ensure server thread has finished.
@@ -139,6 +141,7 @@ pub fn test_tls_ra_server_client_networking() {
 
 // Test state and key provisioning with 'real' data structures.
 pub fn test_state_and_key_provisioning() {
+	let client_account = AccountId::from([42; 32]);
 	let state_key = Aes::new([3u8; 16], [0u8; 16]);
 	let shielding_key = Rsa3072KeyPair::new().unwrap();
 	let initialized_state = EnclaveStf::init_state(AccountId::new([1u8; 32]));
@@ -168,6 +171,7 @@ pub fn test_state_and_key_provisioning() {
 		shard,
 		SKIP_RA,
 		client_seal_handler,
+		client_account,
 	);
 
 	// Ensure server thread has finished.

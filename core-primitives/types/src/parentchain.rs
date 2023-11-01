@@ -33,6 +33,15 @@ pub type AccountId = sp_core::crypto::AccountId32;
 pub type AccountData = pallet_balances::AccountData<Balance>;
 pub type AccountInfo = frame_system::AccountInfo<Index, AccountData>;
 pub type Address = MultiAddress<AccountId, ()>;
+// todo! make generic
+/// The type used to represent the kinds of proxying allowed.
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, Debug)]
+pub enum ProxyType {
+	Any,
+	NonTransfer,
+	Governance,
+	Staking,
+}
 
 // Block Types
 pub type BlockNumber = u32;

@@ -18,7 +18,7 @@
 
 use crate::ocall_bridge::bridge_api::{Bridge, WorkerOnChainBridge};
 use log::*;
-use sgx_types::sgx_status_t;
+use sgx_types::{c_int, sgx_status_t};
 use std::{slice, sync::Arc, vec::Vec};
 
 /// # Safety
@@ -30,12 +30,14 @@ pub unsafe extern "C" fn ocall_send_to_parentchain(
 	extrinsics_encoded_size: u32,
 	parentchain_id: *const u8,
 	parentchain_id_size: u32,
+	await_each_inclusion: c_int,
 ) -> sgx_status_t {
 	send_to_parentchain(
 		extrinsics_encoded,
 		extrinsics_encoded_size,
 		parentchain_id,
 		parentchain_id_size,
+		await_each_inclusion == 1,
 		Bridge::get_oc_api(),
 	)
 }
@@ -45,6 +47,7 @@ fn send_to_parentchain(
 	extrinsics_encoded_size: u32,
 	parentchain_id: *const u8,
 	parentchain_id_size: u32,
+	await_each_inclusion: bool,
 	oc_api: Arc<dyn WorkerOnChainBridge>,
 ) -> sgx_status_t {
 	let extrinsics_encoded_vec: Vec<u8> = unsafe {
@@ -54,7 +57,7 @@ fn send_to_parentchain(
 	let parentchain_id: Vec<u8> =
 		unsafe { Vec::from(slice::from_raw_parts(parentchain_id, parentchain_id_size as usize)) };
 
-	match oc_api.send_to_parentchain(extrinsics_encoded_vec, parentchain_id) {
+	match oc_api.send_to_parentchain(extrinsics_encoded_vec, parentchain_id, await_each_inclusion) {
 		Ok(_) => sgx_status_t::SGX_SUCCESS,
 		Err(e) => {
 			error!("send extrinsics_encoded failed: {:?}", e);

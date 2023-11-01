@@ -74,12 +74,12 @@ use std::{
 	string::{String, ToString},
 	vec::Vec,
 };
-
 mod attestation;
 mod empty_impls;
 mod initialization;
 mod ipfs;
 mod ocall;
+mod shard_vault;
 mod utils;
 
 pub mod error;

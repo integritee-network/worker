@@ -164,7 +164,7 @@ where
 {
 	fn send_extrinsics(&mut self, extrinsics: Vec<OpaqueExtrinsic>) -> Result<(), Error> {
 		self.ocall_api
-			.send_to_parentchain(extrinsics, &self.parentchain_id)
+			.send_to_parentchain(extrinsics, &self.parentchain_id, false)
 			.map_err(|e| {
 				Error::Other(
 					format!("[{:?}] Failed to send extrinsics: {}", self.parentchain_id, e).into(),

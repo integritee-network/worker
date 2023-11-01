@@ -234,6 +234,31 @@ pub fn percent_decode(orig: String) -> EnclaveResult<String> {
 	Ok(ret)
 }
 
+pub fn parse_cert_issuer(cert_der: &[u8]) -> SgxResult<Vec<u8>> {
+	// Before we reach here, Webpki already verified the cert is properly signed
+
+	// Search for Public Key prime256v1 OID
+	let prime256v1_oid = &[0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01, 0x07];
+	let mut offset = cert_der
+		.windows(prime256v1_oid.len())
+		.position(|window| window == prime256v1_oid)
+		.ok_or(sgx_status_t::SGX_ERROR_UNEXPECTED)?;
+	offset += 11; // 10 + TAG (0x03)
+
+	// Obtain Public Key length
+	let mut len = cert_der[offset] as usize;
+	if len > 0x80 {
+		len = (cert_der[offset + 1] as usize) * 0x100 + (cert_der[offset + 2] as usize);
+		offset += 2;
+	}
+
+	// Obtain Public Key
+	offset += 1;
+	let pub_k = cert_der[offset + 2..offset + len].to_vec(); // skip "00 04"
+
+	Ok(pub_k)
+}
+
 // FIXME: This code is redundant with the host call of the integritee-node
 pub fn verify_mra_cert<A>(
 	cert_der: &[u8],
@@ -346,6 +371,7 @@ where
 		verify_attn_report(attn_report_raw, pub_k, attestation_ocall)
 	} else {
 		// TODO Refactor state provisioning to not use MURA #1385
+		// TODO DCAP is currently just passed through! SECURITY!!!
 		Ok(())
 	}
 }
