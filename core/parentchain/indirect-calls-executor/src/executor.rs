@@ -28,9 +28,11 @@ use binary_merkle_tree::merkle_root;
 use codec::Encode;
 use core::marker::PhantomData;
 use ita_stf::{
-	privacy_sidechain_inherent::HandleParentchainEvents, TrustedCall, TrustedCallSigned,
+	TrustedCall, TrustedCallSigned,
 };
-use itc_parentchain::{ExtrinsicStatus, FilterEvents};
+use itp_types::parentchain::{
+	HandleParentchainEvents, ExtrinsicStatus, FilterEvents,
+};
 use itp_node_api::metadata::{
 	pallet_enclave_bridge::EnclaveBridgeCallIndexes, provider::AccessNodeMetadata,
 	NodeMetadataTrait,
@@ -146,21 +148,10 @@ impl<
 			})?
 			.ok_or_else(|| Error::Other("Could not create events from metadata".into()))?;
 
-		let xt_statuses = events.get_extrinsic_statuses()?;
+		let xt_statuses = events.get_extrinsic_statuses().map_err(|_| Error::Other(format!("Error when shielding for privacy sidechain").into()))?;
 		trace!("xt_statuses:: {:?}", xt_statuses);
 
-		ParentchainEventHandler::handle_events(&events)?;
-		// let filter_events = events.get_transfer_events();
-
-		// if let Ok(events) = filter_events {
-		// 	events
-		// 		.iter()
-		// 		.filter(|&event| event.to == ParentchainEventHandler::SHIELDING_ACCOUNT)
-		// 		.try_for_each(|event| {
-		// 			info!("transfer_event: {}", event);
-		// 			ParentchainEventHandler::shield_funds(&event.from, event.amount)
-		// 		})?;
-		// }
+		ParentchainEventHandler::handle_events(events)?;
 
 		// This would be catastrophic but should never happen
 		if xt_statuses.len() != block.extrinsics().len() {

@@ -17,7 +17,7 @@
 
 use crate::{
 	error::Result,
-	event_filter::{FilterEvents, MockEvents},
+	event_filter::{MockEvents, FilterableEvents},
 	indirect_calls::{
 		InvokeArgs, ShieldFundsArgs, TransferToAliceShieldsFundsArgs, ALICE_ACCOUNT_ID,
 	},
@@ -26,7 +26,7 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
-use itc_parentchain::FilterEvents;
+use itp_types::parentchain::{FilterEvents};
 use itp_api_client_types::{Events, Metadata};
 use itp_node_api::metadata::{
 	pallet_balances::BalancesCallIndexes, NodeMetadata, NodeMetadataTrait,
@@ -46,7 +46,7 @@ pub trait EventsFromMetadata<NodeMetadata> {
 pub struct EventCreator;
 
 impl<NodeMetadata: TryInto<Metadata> + Clone> EventsFromMetadata<NodeMetadata> for EventCreator {
-	type Output = Events<H256>;
+	type Output = FilterableEvents;
 
 	fn create_from_metadata(
 		metadata: NodeMetadata,
@@ -54,7 +54,7 @@ impl<NodeMetadata: TryInto<Metadata> + Clone> EventsFromMetadata<NodeMetadata> f
 		events: &[u8],
 	) -> Option<Self::Output> {
 		let raw_metadata: Metadata = metadata.try_into().ok()?;
-		Some(Events::<H256>::new(raw_metadata, block_hash, events.to_vec()))
+		Some(FilterableEvents(Events::<H256>::new(raw_metadata, block_hash, events.to_vec())))
 	}
 }
 

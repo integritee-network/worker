@@ -15,11 +15,16 @@
 
 */
 
-//! Parentchain specific params. Be sure to change them if your node uses different types.
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+
+#[cfg(feature = "sgx")]
+use sgx_tstd as std;
 
 use codec::{Decode, Encode};
 use sp_runtime::{generic::Header as HeaderG, traits::BlakeTwo256, MultiAddress, MultiSignature};
 use sp_std::vec::Vec;
+
+use itp_utils::stringify::account_id_to_string;
 
 use substrate_api_client::ac_node_api::StaticEvent;
 
@@ -59,9 +64,10 @@ pub trait IdentifyParentchain {
 }
 
 pub trait FilterEvents {
-	fn get_extrinsic_statuses(&self) -> Result<Vec<ExtrinsicStatus>>;
+	type Error: From<ParentchainError>;
+	fn get_extrinsic_statuses(&self) -> core::result::Result<Vec<ExtrinsicStatus>, Self::Error>;
 
-	fn get_transfer_events(&self) -> Result<Vec<BalanceTransfer>>;
+	fn get_transfer_events(&self) -> core::result::Result<Vec<BalanceTransfer>, Self::Error>;
 }
 
 #[derive(Encode, Decode, Debug)]
@@ -93,18 +99,46 @@ pub struct BalanceTransfer {
 	pub amount: Balance,
 }
 
+impl core::fmt::Display for BalanceTransfer {
+	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+		let message = format!(
+			"BalanceTransfer :: from: {}, to: {}, amount: {}",
+			account_id_to_string::<AccountId>(&self.from),
+			account_id_to_string::<AccountId>(&self.to),
+			self.amount
+		);
+		write!(f, "{}", message)
+	}
+}
+
 impl StaticEvent for BalanceTransfer {
 	const PALLET: &'static str = "Balances";
 	const EVENT: &'static str = "Transfer";
 }
 
-pub struct ParentchainEventHandler;
-
 pub trait HandleParentchainEvents {
 	const SHIELDING_ACCOUNT: AccountId;
-	fn shield_funds(account: &AccountId, amount: Balance) -> Result<(), ParentchainError>;
+	fn handle_events(events: impl FilterEvents) -> core::result::Result<(), ParentchainError>;
+	fn shield_funds(account: &AccountId, amount: Balance) -> core::result::Result<(), ParentchainError>;
 }
 
+#[derive(Debug)]
 pub enum ParentchainError {
 	ShieldFundsFailure,
+}
+
+impl core::fmt::Display for ParentchainError {
+	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+		let mut message: &str = "";
+		match &self {
+			ParentchainError::ShieldFundsFailure => {
+				message = "Parentchain Error: ShieldFundsFailure";
+			}
+		}
+		write!(f, "{}", message)
+	}
+}
+
+impl From<ParentchainError> for () {
+	fn from(_: ParentchainError) -> Self {}
 }

@@ -20,6 +20,7 @@ use crate::sgx_reexport_prelude::*;
 
 use sgx_types::sgx_status_t;
 use std::{boxed::Box, format};
+use itp_types::parentchain::ParentchainError;
 
 pub type Result<T> = core::result::Result<T, Error>;
 
@@ -38,6 +39,12 @@ pub enum Error {
 	Crypto(itp_sgx_crypto::Error),
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
+}
+
+impl From<ParentchainError> for Error {
+	fn from(e: ParentchainError) -> Self {
+		Self::Other(format!("{:?}", e).into())
+	}
 }
 
 impl From<sgx_status_t> for Error {

@@ -19,12 +19,13 @@ use crate::StfError;
 use frame_support::traits::UnfilteredDispatchable;
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{Runtime, System};
-use itc_parentchain::FilterEvents;
-use itp_types::types::{
-	AccountId, HandleParentchainEvents, ParentchainError, ParentchainEventHandler,
+use itp_types::parentchain::{
+	AccountId, HandleParentchainEvents, ParentchainError,
+	FilterEvents, BalanceTransfer,
 };
 use sp_runtime::MultiAddress;
 use std::format;
+use log::*;
 
 type Seed = [u8; 32];
 
@@ -32,6 +33,8 @@ const ALICE_ENCODED: Seed = [
 	212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133, 88, 133,
 	76, 205, 227, 154, 86, 132, 231, 165, 109, 162, 125,
 ];
+
+pub struct ParentchainEventHandler;
 
 impl HandleParentchainEvents for ParentchainEventHandler {
 	const SHIELDING_ACCOUNT: AccountId = AccountId::new(ALICE_ENCODED);
@@ -70,17 +73,5 @@ impl HandleParentchainEvents for ParentchainEventHandler {
 		.map_err(|e| ParentchainError::ShieldFundsFailure)?;
 
 		Ok(())
-	}
-}
-
-impl Display for BalanceTransfer {
-	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-		let message = format!(
-			"BalanceTransfer :: from: {}, to: {}, amount: {}",
-			account_id_to_string::<AccountId>(&self.from),
-			account_id_to_string::<AccountId>(&self.to),
-			self.amount
-		);
-		write!(f, "{}", message)
 	}
 }

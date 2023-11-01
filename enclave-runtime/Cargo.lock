@@ -2383,6 +2383,7 @@ dependencies = [
  "enclave-bridge-primitives",
  "frame-system",
  "itp-sgx-runtime-primitives",
+ "itp-utils",
  "pallet-balances",
  "parity-scale-codec",
  "primitive-types",
@@ -2391,6 +2392,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
+ "substrate-api-client",
  "teerex-primitives",
 ]
 

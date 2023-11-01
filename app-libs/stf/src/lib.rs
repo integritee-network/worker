@@ -36,7 +36,7 @@ use derive_more::Display;
 use itp_node_api_metadata::Error as MetadataError;
 use itp_node_api_metadata_provider::Error as MetadataProviderError;
 use itp_stf_primitives::types::AccountId;
-use itp_types::types::ParentchainError;
+use itp_types::parentchain::ParentchainError;
 use std::string::String;
 
 pub use getter::*;
@@ -80,7 +80,7 @@ pub enum StfError {
 
 impl From<ParentchainError> for StfError {
 	fn from(e: ParentchainError) -> Self {
-		StfError::Dispatch(format!("Shield funds error: {:?}", e.error))
+		StfError::Dispatch(format!("Shield funds error: {:?}", e))
 	}
 }
 

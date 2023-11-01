@@ -18,11 +18,15 @@
 
 use crate::error::{Error, Result};
 use codec::{Decode, Encode};
-use ita_stf::{privacy_sidechain_inherent::PrivacySidechainTrait, StfError};
-use itc_parentchain::{BalanceTransfer, ExtrinsicFailed, ExtrinsicSuccess};
+use ita_stf::StfError;
 use itp_api_client_types::{Events, StaticEvent};
 use itp_sgx_runtime_primitives::types::{AccountId, Balance};
-use itp_types::H256;
+use itp_types::{
+	parentchain::{
+		HandleParentchainEvents, BalanceTransfer, ExtrinsicFailed, ExtrinsicSuccess,
+		FilterEvents, ExtrinsicStatus, ParentchainError,
+	},
+	H256};
 use itp_utils::stringify::account_id_to_string;
 use std::{fmt::Display, format, vec::Vec};
 
@@ -32,9 +36,24 @@ impl From<StfError> for Error {
 	}
 }
 
-impl FilterEvents for Events<H256> {
-	fn get_extrinsic_statuses(&self) -> Result<Vec<ExtrinsicStatus>> {
+pub struct FilterableEvents(pub Events<H256>);
+
+pub trait IntoEvents<E> {
+	fn into_events(&self) -> &E;
+}
+
+impl IntoEvents<Events<H256>> for FilterableEvents {
+	fn into_events(&self) -> &Events<H256> {
+		&self.0
+	}
+}
+
+impl FilterEvents for FilterableEvents {
+	type Error = StfError;
+
+	fn get_extrinsic_statuses(&self) -> core::result::Result<Vec<ExtrinsicStatus>, Self::Error> {
 		Ok(self
+			.into_events()
 			.iter()
 			.filter_map(|ev| {
 				ev.and_then(|ev| {
@@ -54,8 +73,9 @@ impl FilterEvents for Events<H256> {
 			.collect())
 	}
 
-	fn get_transfer_events(&self) -> Result<Vec<BalanceTransfer>> {
+	fn get_transfer_events(&self) -> core::result::Result<Vec<BalanceTransfer>, Self::Error> {
 		Ok(self
+			.into_events()
 			.iter()
 			.flatten() // flatten filters out the nones
 			.filter_map(|ev| match ev.as_event::<BalanceTransfer>() {
@@ -77,11 +97,12 @@ impl FilterEvents for Events<H256> {
 pub struct MockEvents;
 
 impl FilterEvents for MockEvents {
-	fn get_extrinsic_statuses(&self) -> Result<Vec<ExtrinsicStatus>> {
+	type Error = ();
+	fn get_extrinsic_statuses(&self) -> core::result::Result<Vec<ExtrinsicStatus>, Self::Error> {
 		Ok(Vec::from([ExtrinsicStatus::Success]))
 	}
 
-	fn get_transfer_events(&self) -> Result<Vec<BalanceTransfer>> {
+	fn get_transfer_events(&self) -> core::result::Result<Vec<BalanceTransfer>, Self::Error> {
 		let transfer = BalanceTransfer {
 			to: [0u8; 32].into(),
 			from: [0u8; 32].into(),
@@ -93,9 +114,12 @@ impl FilterEvents for MockEvents {
 
 pub struct MockPrivacySidechain;
 
-impl PrivacySidechainTrait for MockPrivacySidechain {
+impl HandleParentchainEvents for MockPrivacySidechain {
 	const SHIELDING_ACCOUNT: AccountId = AccountId::new([0u8; 32]);
-	fn shield_funds(_: &AccountId, _: Balance) -> core::result::Result<(), StfError> {
+	fn handle_events(_: impl itp_types::parentchain::FilterEvents) -> core::result::Result<(), ParentchainError> {
+		Ok(())
+	}
+	fn shield_funds(_: &AccountId, _: Balance) -> core::result::Result<(), ParentchainError> {
 		Ok(())
 	}
 }
