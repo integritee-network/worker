@@ -45,6 +45,7 @@ pub enum BufferError {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use alloc::vec;
 
 	#[test]
 	fn write_slice_and_whitespace_pad_returns_error_if_buffer_too_small() {
