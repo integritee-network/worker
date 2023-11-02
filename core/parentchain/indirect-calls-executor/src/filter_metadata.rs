@@ -175,10 +175,13 @@ where
 		let index = xt.call_index;
 		let call_args = &mut &xt.call_args[..];
 		log::trace!("[TransferToAliceShieldsFundsFilter] attempting to execute indirect call with index {:?}", index);
-		if index == metadata.transfer_call_index().ok()?
-			|| index == metadata.transfer_allow_death_call_index().ok()?
+		if index == metadata.transfer_call_indexes().ok()?
+			|| index == metadata.transfer_keep_alive_call_indexes().ok()?
+			|| index == metadata.transfer_allow_death_call_indexes().ok()?
 		{
-			log::debug!("found `transfer` or `transfer_allow_death` call.");
+			log::debug!(
+				"found `transfer` or `transfer_allow_death` or `transfer_keep_alive` call."
+			);
 			let args = decode_and_log_error::<TransferToAliceShieldsFundsArgs>(call_args)?;
 			if args.destination == ALICE_ACCOUNT_ID.into() {
 				Some(IndirectCall::TransferToAliceShieldsFunds(args))

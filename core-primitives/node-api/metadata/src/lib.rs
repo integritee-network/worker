@@ -20,7 +20,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use crate::{
-	error::Result, pallet_enclave_bridge::EnclaveBridgeCallIndexes,
+	error::Result, pallet_balances::BalancesCallIndexes,
+	pallet_enclave_bridge::EnclaveBridgeCallIndexes, pallet_proxy::ProxyCallIndexes,
 	pallet_sidechain::SidechainCallIndexes, pallet_teerex::TeerexCallIndexes,
 };
 use codec::{Decode, Encode};
@@ -32,6 +33,7 @@ pub use itp_api_client_types::{Metadata, MetadataError};
 pub mod error;
 pub mod pallet_balances;
 pub mod pallet_enclave_bridge;
+pub mod pallet_proxy;
 pub mod pallet_sidechain;
 pub mod pallet_teeracle;
 pub mod pallet_teerex;
@@ -40,11 +42,20 @@ pub mod pallet_teerex;
 pub mod metadata_mocks;
 
 pub trait NodeMetadataTrait:
-	TeerexCallIndexes + EnclaveBridgeCallIndexes + SidechainCallIndexes
+	TeerexCallIndexes
+	+ EnclaveBridgeCallIndexes
+	+ SidechainCallIndexes
+	+ ProxyCallIndexes
+	+ BalancesCallIndexes
 {
 }
-impl<T: TeerexCallIndexes + EnclaveBridgeCallIndexes + SidechainCallIndexes> NodeMetadataTrait
-	for T
+impl<
+		T: TeerexCallIndexes
+			+ EnclaveBridgeCallIndexes
+			+ SidechainCallIndexes
+			+ ProxyCallIndexes
+			+ BalancesCallIndexes,
+	> NodeMetadataTrait for T
 {
 }
 

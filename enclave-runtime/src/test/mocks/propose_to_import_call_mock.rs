@@ -52,6 +52,7 @@ impl EnclaveOnChainOCallApi for ProposeToImportOCallApi {
 		&self,
 		_extrinsics: Vec<OpaqueExtrinsic>,
 		_: &ParentchainId,
+		_: bool,
 	) -> SgxResult<()> {
 		Ok(())
 	}

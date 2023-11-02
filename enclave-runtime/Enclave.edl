@@ -58,6 +58,10 @@ enclave {
 			[in, size=shard_size] uint8_t* shard, uint32_t shard_size
 		);
 
+		public sgx_status_t init_proxied_shard_vault(
+			[in, size=shard_size] uint8_t* shard, uint32_t shard_size
+		);
+
 		public sgx_status_t trigger_parentchain_block_import(
 			[in, size=parentchain_id_size] uint8_t* parentchain_id, uint32_t parentchain_id_size
 		);
@@ -85,6 +89,10 @@ enclave {
 			[out, size=pubkey_size] uint8_t* pubkey, uint32_t pubkey_size);
 
 		public sgx_status_t get_ecc_signing_pubkey(
+			[out, size=pubkey_size] uint8_t* pubkey, uint32_t pubkey_size);
+
+		public sgx_status_t get_ecc_vault_pubkey(
+			[in, size=shard_size] uint8_t* shard, uint32_t shard_size,
 			[out, size=pubkey_size] uint8_t* pubkey, uint32_t pubkey_size);
 
 		public sgx_status_t get_mrenclave(
@@ -242,7 +250,8 @@ enclave {
 
 		sgx_status_t ocall_send_to_parentchain(
 			[in, size = extrinsics_size] uint8_t * extrinsics, uint32_t extrinsics_size,
-			[in, size=parentchain_id_size] uint8_t* parentchain_id, uint32_t parentchain_id_size
+			[in, size=parentchain_id_size] uint8_t* parentchain_id, uint32_t parentchain_id_size,
+			int await_each_inclusion
 		);
 	};
 };

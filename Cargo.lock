@@ -3693,6 +3693,7 @@ dependencies = [
 name = "itp-stf-executor"
 version = "0.9.0"
 dependencies = [
+ "hex",
  "ita-stf",
  "itc-parentchain-test",
  "itp-node-api",
