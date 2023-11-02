@@ -143,8 +143,6 @@ jobs:
     runs-on: integritee-builder-sgx
     steps:
       - uses: actions/checkout@v3
-      - name: init-rust-target
-        run: rustup show
 
       - uses: Swatinem/rust-cache@v2
 
