@@ -33,7 +33,8 @@ use crate::{
 };
 use ita_sgx_runtime::Runtime;
 use ita_stf::{
-	privacy_sidechain_inherent::PrivacySidechain, Getter, State as StfState, Stf, TrustedCallSigned,
+	privacy_sidechain_inherent::ParentchainEventHandler, Getter, State as StfState, Stf,
+	TrustedCallSigned,
 };
 use itc_direct_rpc_server::{
 	rpc_connection_registry::ConnectionRegistry, rpc_responder::RpcResponder,
@@ -155,7 +156,7 @@ pub type EnclaveIndirectCallsExecutor<IndirectCallsFilter> = IndirectCallsExecut
 	EnclaveNodeMetadataRepository,
 	IndirectCallsFilter,
 	EventCreator,
-	PrivacySidechain,
+	ParentchainEventHandler,
 >;
 
 pub type EnclaveValidatorAccessor = ValidatorAccessor<

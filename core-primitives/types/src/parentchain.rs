@@ -15,14 +15,10 @@
 
 */
 
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-
-#[cfg(feature = "sgx")]
-use sgx_tstd as std;
-
+use alloc::{format, vec::Vec};
 use codec::{Decode, Encode};
+use sp_core::bounded::alloc;
 use sp_runtime::{generic::Header as HeaderG, traits::BlakeTwo256, MultiAddress, MultiSignature};
-use sp_std::vec::Vec;
 
 use itp_utils::stringify::account_id_to_string;
 
@@ -109,7 +105,7 @@ pub struct BalanceTransfer {
 }
 
 impl core::fmt::Display for BalanceTransfer {
-	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
 		let message = format!(
 			"BalanceTransfer :: from: {}, to: {}, amount: {}",
 			account_id_to_string::<AccountId>(&self.from),
@@ -128,7 +124,10 @@ impl StaticEvent for BalanceTransfer {
 pub trait HandleParentchainEvents {
 	const SHIELDING_ACCOUNT: AccountId;
 	fn handle_events(events: impl FilterEvents) -> core::result::Result<(), ParentchainError>;
-	fn shield_funds(account: &AccountId, amount: Balance) -> core::result::Result<(), ParentchainError>;
+	fn shield_funds(
+		account: &AccountId,
+		amount: Balance,
+	) -> core::result::Result<(), ParentchainError>;
 }
 
 #[derive(Debug)]
@@ -137,12 +136,12 @@ pub enum ParentchainError {
 }
 
 impl core::fmt::Display for ParentchainError {
-	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-		let mut message: &str = "";
+	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+		let message;
 		match &self {
 			ParentchainError::ShieldFundsFailure => {
 				message = "Parentchain Error: ShieldFundsFailure";
-			}
+			},
 		}
 		write!(f, "{}", message)
 	}
