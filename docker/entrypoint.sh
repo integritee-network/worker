@@ -8,6 +8,7 @@ if [ "$1" = "mrenclave" ]; then
       -enclave /usr/local/bin/enclave.signed.so \
       -dumpfile df.out && \
         /usr/local/bin/extract_identity < df.out && rm df.out | grep -oP ':\s*\K[a-fA-F0-9]+'
+
 else
     # If no specific command is provided, execute the default unnamed command
 
