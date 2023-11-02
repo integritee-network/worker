@@ -26,9 +26,10 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::env;
-
+#[cfg(build)]
 fn main() {
+	use std::env;
+
 	let sdk_dir = env::var("SGX_SDK").unwrap_or_else(|_| "/opt/intel/sgxsdk".to_string());
 	let is_sim = env::var("SGX_MODE").unwrap_or_else(|_| "HW".to_string());
 
@@ -38,7 +39,6 @@ fn main() {
 	// This file is only here if the edger8r has been run before.
 	// cargo test fails if it doesn't exist, but we don't need it
 	// for tests.
-	#[cfg(not(test))]
 	println!("cargo:rustc-link-lib=static=Enclave_u");
 
 	println!("cargo:rustc-link-search=native={}/lib64", sdk_dir);
@@ -63,4 +63,9 @@ fn main() {
 			println!("cargo:rustc-link-lib=dylib=sgx_uae_service");
 		},
 	}
+}
+
+#[cfg(not(build))]
+fn main() {
+	// We don't have do anything here if we run tests for example.
 }

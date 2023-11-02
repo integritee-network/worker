@@ -16,9 +16,10 @@
 
 */
 
-use std::env;
-
+#[cfg(build)]
 fn main() {
+	use std::env;
+
 	let sdk_dir = env::var("SGX_SDK").unwrap_or_else(|_| "/opt/intel/sgxsdk".to_string());
 	let is_sim = env::var("SGX_MODE").unwrap_or_else(|_| "HW".to_string());
 
@@ -39,4 +40,9 @@ fn main() {
 			println!("cargo:rustc-link-lib=dylib=sgx_uae_service");
 		},
 	}
+}
+
+#[cfg(not(build))]
+fn main() {
+	// We don't have do anything here if we run tests for example.
 }
