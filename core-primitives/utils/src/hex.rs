@@ -17,9 +17,11 @@
 
 //! Hex encoding utility functions.
 
+// Todo: merge with hex_display
+
 use crate::error::{Error, Result};
+use alloc::{string::String, vec::Vec};
 use codec::{Decode, Encode};
-use std::{string::String, vec::Vec};
 
 /// Trait to encode a given value to a hex string, prefixed with "0x".
 pub trait ToHexPrefixed {

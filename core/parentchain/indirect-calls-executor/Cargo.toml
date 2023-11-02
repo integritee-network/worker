@@ -64,7 +64,6 @@ std = [
     "itp-api-client-types/std",
     "itp-types/std",
     "itp-sgx-runtime-primitives/std",
-    "itp-utils/std",
     "log/std",
     #substrate
     "binary-merkle-tree/std",
