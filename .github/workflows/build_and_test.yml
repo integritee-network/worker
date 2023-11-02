@@ -138,6 +138,20 @@ jobs:
           fi
           docker images --all
 
+    # Run this as a separate job because we want it to be on the integritee host for speed.
+    cargo-test:
+      runs-on: integritee-builder-sgx
+      container: "integritee/integritee-dev:0.2.2"
+      steps:
+        - uses: actions/checkout@v3
+        - name: init-rust-target
+          run: rustup show
+
+        - uses: Swatinem/rust-cache@v2
+
+        - name: cargo test
+          run: cargo test --features cargo-test
+
   code-quality:
     runs-on: ubuntu-latest
     container: "integritee/integritee-dev:0.2.2"
