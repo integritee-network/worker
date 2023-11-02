@@ -77,7 +77,7 @@ jobs:
           buildkitd-flags: --debug
           driver: docker-container
 
-      - name: Build Worker & Run Cargo Test
+      - name: Build Worker
         env:
           DOCKER_BUILDKIT: 1
         run: >
@@ -97,8 +97,11 @@ jobs:
 
       - run: docker images --all
 
+      - name: Cargo test in worker
+        run: docker run -rm integritee-worker-${{ env.IMAGE_SUFFIX }} cargo-test
+
       - name: Test Enclave # cargo test is not supported in the enclave, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
-        run: docker run ${{ env.DOCKER_DEVICES }} ${{ env.DOCKER_VOLUMES }} integritee-worker-${{ env.IMAGE_SUFFIX }} test --all
+        run: docker run -rm ${{ env.DOCKER_DEVICES }} ${{ env.DOCKER_VOLUMES }} integritee-worker-${{ env.IMAGE_SUFFIX }} test --all
 
       - name: Export worker image(s)
         run: |

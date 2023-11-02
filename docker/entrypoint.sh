@@ -8,7 +8,12 @@ if [ "$1" = "mrenclave" ]; then
       -enclave /usr/local/bin/enclave.signed.so \
       -dumpfile df.out && \
         /usr/local/bin/extract_identity < df.out && rm df.out | grep -oP ':\s*\K[a-fA-F0-9]+'
-
+elif [ "$1" = "cargo-test" ]; then
+    echo "Running cargo test"
+    # Remove the first argument (which is 'cargo-test')
+    shift
+    # Pass all the remaining arguments to the 'cargo test' command
+    cargo test "$@"
 else
     # If no specific command is provided, execute the default unnamed command
 
