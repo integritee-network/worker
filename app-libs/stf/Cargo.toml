@@ -53,7 +53,6 @@ evm_std = ["evm", "ita-sgx-runtime/evm_std"]
 sgx = [
     "sgx_tstd",
     "itp-sgx-externalities/sgx",
-    "itp-utils/sgx",
     "sp-io/sgx",
     "itp-node-api/sgx",
     "itp-node-api-metadata-provider/sgx",
@@ -70,7 +69,6 @@ std = [
     "itp-stf-interface/std",
     "itp-storage/std",
     "itp-types/std",
-    "itp-utils/std",
     "itp-node-api/std",
     "itp-node-api-metadata/std",
     "itp-node-api-metadata-provider/std",

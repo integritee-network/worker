@@ -18,14 +18,13 @@
 //! Utility methods to stringify certain types that don't have a working
 //! `Debug` implementation on `sgx`.
 
+use crate::hex_display::{AsBytesRef, HexDisplay};
+use alloc::{format, string::String};
 use codec::Encode;
-use sp_core::{crypto::Public, hexdisplay::HexDisplay};
-use std::{format, string::String};
 
 /// Convert a sp_core public type to string.
-pub fn public_to_string<T: Public>(t: &T) -> String {
-	let crypto_pair = t.as_ref();
-	format!("{}", HexDisplay::from(&crypto_pair))
+pub fn public_to_string<T: AsBytesRef>(t: &T) -> String {
+	format!("{}", HexDisplay::from(t))
 }
 
 pub fn account_id_to_string<AccountId: Encode>(account: &AccountId) -> String {
