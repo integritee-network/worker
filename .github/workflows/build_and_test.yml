@@ -97,9 +97,6 @@ jobs:
 
       - run: docker images --all
 
-      - name: Cargo test in worker
-        run: docker run -rm integritee-worker-${{ env.IMAGE_SUFFIX }} cargo-test --release
-
       - name: Test Enclave # cargo test is not supported in the enclave, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
         run: docker run -rm ${{ env.DOCKER_DEVICES }} ${{ env.DOCKER_VOLUMES }} integritee-worker-${{ env.IMAGE_SUFFIX }} test --all
 
@@ -149,6 +146,7 @@ jobs:
       matrix:
         check: [
           # Worker
+          cargo test --release
           # Use release mode as the CI runs out of disk space otherwise.
           cargo clippy --release -- -D warnings,
           cargo clippy --release --features evm -- -D warnings,
