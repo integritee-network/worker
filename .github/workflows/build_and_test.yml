@@ -38,6 +38,11 @@ jobs:
             host: ubuntu-latest
             sgx_mode: SW
             additional_features: dcap
+          - flavor_id: offchain-worker
+            mode: offchain-worker
+            host: ubuntu-latest
+            sgx_mode: HW
+            additional_features: dcap
 
     steps:
       - uses: actions/checkout@v3
@@ -83,6 +88,7 @@ jobs:
       - run: docker images --all
 
       - name: Test Enclave # cargo test is not supported in the enclave, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
+        if: ${{ matrix.sgx_mode != 'HW' }} # Change for OLI, can't run these tests in HW mode on Github Hosted Runners
         run: docker run ${{ env.DOCKER_DEVICES }} ${{ env.DOCKER_VOLUMES }} integritee-worker-${{ env.IMAGE_SUFFIX }} test --all
 
       - name: Export worker image(s)
