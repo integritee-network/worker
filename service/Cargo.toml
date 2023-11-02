@@ -86,6 +86,9 @@ production = ["itp-settings/production"]
 teeracle = ["itp-settings/teeracle"]
 dcap = []
 attesteer = ["dcap"]
+# necessary to run cargo tests without any preliminaries
+# https://github.com/rust-lang/cargo/issues/2549
+cargo-test = []
 
 [dev-dependencies]
 # crates.io
