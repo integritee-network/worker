@@ -141,7 +141,6 @@ jobs:
   # Run this as a separate job because we want it to be on the integritee host for speed.
   cargo-test:
     runs-on: integritee-builder-sgx
-    container: "integritee/integritee-dev:0.2.2"
     steps:
       - uses: actions/checkout@v3
       - name: init-rust-target
