@@ -342,6 +342,8 @@ mod tests {
 
 	#[test]
 	fn yield_next_slot_returns_none_when_slot_equals_last_slot() {
+		let _lock =
+			LastSlot.set_last_slot(slot_from_timestamp_and_duration(duration_now(), SLOT_DURATION));
 		assert!(yield_next_slot::<_, ParentchainBlock>(
 			duration_now(),
 			SLOT_DURATION,
@@ -354,6 +356,8 @@ mod tests {
 
 	#[test]
 	fn yield_next_slot_returns_next_slot() {
+		let _lock =
+			LastSlot.set_last_slot(slot_from_timestamp_and_duration(duration_now(), SLOT_DURATION));
 		assert!(yield_next_slot::<_, ParentchainBlock>(
 			duration_now() + SLOT_DURATION,
 			SLOT_DURATION,

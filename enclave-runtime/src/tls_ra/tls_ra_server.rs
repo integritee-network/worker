@@ -17,7 +17,7 @@
 
 //! Implementation of the server part of the state provisioning.
 
-use super::{authentication::ClientAuth, Opcode, TcpHeader};
+use super::{authentication::ClientAuth, ClientProvisioningRequest, Opcode, TcpHeader};
 use crate::{
 	attestation::create_ra_report_and_signature,
 	error::{Error as EnclaveError, Result as EnclaveResult},
@@ -26,9 +26,11 @@ use crate::{
 		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
 	},
 	ocall::OcallApi,
+	shard_vault::add_shard_vault_proxy,
 	tls_ra::seal_handler::UnsealStateAndKeys,
 	GLOBAL_STATE_HANDLER_COMPONENT,
 };
+use codec::Decode;
 use itp_attestation_handler::RemoteAttestationType;
 use itp_component_container::ComponentGetter;
 use itp_ocall_api::EnclaveAttestationOCallApi;
@@ -82,25 +84,43 @@ where
 	}
 
 	/// Sends all relevant data of the specific shard to the client.
-	fn write_shard(&mut self) -> EnclaveResult<()> {
-		println!("    [Enclave] (MU-RA-Server) write_shard, calling read_shard()");
-		let shard = self.read_shard()?;
-		println!("    [Enclave] (MU-RA-Server) write_shard, read_shard() OK");
-		println!("    [Enclave] (MU-RA-Server) write_shard, write_all()");
-		self.write_all(&shard)
+	fn handle_shard_request_from_client(&mut self) -> EnclaveResult<()> {
+		println!(
+			"    [Enclave] (MU-RA-Server) handle_shard_request_from_client, calling read_shard()"
+		);
+		let request = self.await_shard_request_from_client()?;
+		println!("    [Enclave] (MU-RA-Server) handle_shard_request_from_client, await_shard_request_from_client() OK");
+		println!("    [Enclave] (MU-RA-Server) handle_shard_request_from_client, write_all()");
+		self.write_provisioning_payloads(&request.shard)?;
+
+		info!(
+			"will make client account 0x{} a proxy of vault for shard {:?}",
+			hex::encode(request.account.clone()),
+			request.shard
+		);
+		if let Err(e) = add_shard_vault_proxy(request.shard, &request.account) {
+			// we can't be sure that registering the proxy will succeed onchain at this point,
+			// therefore we can accept an error here as the client has to verify anyway and
+			// retry if it failed
+			error!("failed to add shard vault proxy for {:?}: {:?}", request.account, e);
+		};
+		Ok(())
 	}
 
 	/// Read the shard of the state the client wants to receive.
-	fn read_shard(&mut self) -> EnclaveResult<ShardIdentifier> {
-		let mut shard_holder = ShardIdentifier::default();
-		let shard = shard_holder.as_fixed_bytes_mut();
-		println!("    [Enclave] (MU-RA-Server) read_shard, calling read_exact()");
-		self.tls_stream.read_exact(shard)?;
-		Ok(shard.into())
+	fn await_shard_request_from_client(&mut self) -> EnclaveResult<ClientProvisioningRequest> {
+		let mut request = [0u8; std::mem::size_of::<ClientProvisioningRequest>()];
+		println!(
+			"    [Enclave] (MU-RA-Server) await_shard_request_from_client, calling read_exact()"
+		);
+		self.tls_stream.read_exact(&mut request)?;
+		let request: ClientProvisioningRequest = Decode::decode(&mut request.as_slice())
+			.expect("matching byte size can't fail to decode");
+		Ok(request)
 	}
 
 	/// Sends all relevant data to the client.
-	fn write_all(&mut self, shard: &ShardIdentifier) -> EnclaveResult<()> {
+	fn write_provisioning_payloads(&mut self, shard: &ShardIdentifier) -> EnclaveResult<()> {
 		debug!("Provisioning is set to: {:?}", self.provisioning_payload);
 		match self.provisioning_payload {
 			ProvisioningPayload::Everything => {
@@ -248,14 +268,20 @@ pub(crate) fn run_state_provisioning_server_internal<
 		skip_ra == 1,
 	)?;
 	let (server_session, tcp_stream) = tls_server_session_stream(socket_fd, server_config)?;
+
 	let provisioning = ProvisioningPayload::from(WorkerModeProvider::worker_mode());
 
 	let mut server =
 		TlsServer::new(StreamOwned::new(server_session, tcp_stream), seal_handler, provisioning);
 
+	// todo: verify client signer belongs to a registered enclave on integritee network with a
+	// matching or whitelisted MRENCLAVE as replacement for MU RA #1385
+
 	println!("    [Enclave] (MU-RA-Server) MU-RA successful sending keys");
-	println!("    [Enclave] (MU-RA-Server) MU-RA successful, calling write_shard()");
-	server.write_shard()
+	println!(
+		"    [Enclave] (MU-RA-Server) MU-RA successful, calling handle_shard_request_from_client()"
+	);
+	server.handle_shard_request_from_client()
 }
 
 fn tls_server_session_stream(
@@ -279,6 +305,7 @@ fn tls_server_config<A: EnclaveAttestationOCallApi + 'static>(
 	#[cfg(feature = "dcap")]
 	let attestation_type = RemoteAttestationType::Dcap;
 
+	// report will be signed with server enclave ed25519 signing key
 	let (key_der, cert_der) = create_ra_report_and_signature(
 		skip_ra,
 		attestation_type,
@@ -287,6 +314,7 @@ fn tls_server_config<A: EnclaveAttestationOCallApi + 'static>(
 		quote_size,
 	)?;
 
+	// ClientAuth will perform MU RA as part of authentication process
 	let mut cfg = rustls::ServerConfig::new(Arc::new(ClientAuth::new(true, skip_ra, ocall_api)));
 	let certs = vec![rustls::Certificate(cert_der)];
 	let privkey = rustls::PrivateKey(key_der);

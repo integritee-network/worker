@@ -593,6 +593,24 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 				println!("[!] Parentchain block syncing has terminated");
 			})
 			.unwrap();
+
+		if WorkerModeProvider::worker_mode() == WorkerMode::OffChainWorker {
+			info!("skipping shard vault check because not yet supported for offchain worker");
+		} else if let Ok(shard_vault) = enclave.get_ecc_vault_pubkey(shard) {
+			println!(
+				"shard vault account is already initialized in state: {}",
+				shard_vault.to_ss58check()
+			);
+		} else if we_are_primary_validateer {
+			println!("initializing proxied shard vault account now");
+			enclave.init_proxied_shard_vault(shard).unwrap();
+			println!(
+				"initialized shard vault account: : {}",
+				enclave.get_ecc_vault_pubkey(shard).unwrap().to_ss58check()
+			);
+		} else {
+			panic!("no vault account has been initialized and we are not the primary worker");
+		}
 	}
 
 	// ------------------------------------------------------------------------

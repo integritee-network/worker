@@ -24,7 +24,9 @@ use itp_types::{parentchain::ParentchainId, WorkerRequest, WorkerResponse};
 use log::*;
 use sp_runtime::OpaqueExtrinsic;
 use std::{sync::Arc, vec::Vec};
-use substrate_api_client::{ac_primitives::serde_impls::StorageKey, GetStorage, SubmitExtrinsic};
+use substrate_api_client::{
+	ac_primitives::serde_impls::StorageKey, GetStorage, SubmitAndWatch, SubmitExtrinsic, XtStatus,
+};
 
 pub struct WorkerOnChainOCall<F> {
 	integritee_api_factory: Arc<F>,
@@ -107,6 +109,7 @@ where
 		&self,
 		extrinsics_encoded: Vec<u8>,
 		parentchain_id: Vec<u8>,
+		await_each_inlcusion: bool,
 	) -> OCallBridgeResult<()> {
 		// TODO: improve error handling, using a mut status is not good design?
 		let mut status: OCallBridgeResult<()> = Ok(());
@@ -125,13 +128,24 @@ where
 		if !extrinsics.is_empty() {
 			let parentchain_id = ParentchainId::decode(&mut parentchain_id.as_slice())?;
 			debug!(
-				"Enclave wants to send {} extrinsics to parentchain: {:?}",
+				"Enclave wants to send {} extrinsics to parentchain: {:?}. await each inclusion: {:?}",
 				extrinsics.len(),
-				parentchain_id
+				parentchain_id, await_each_inlcusion
 			);
 			let api = self.create_api(parentchain_id)?;
 			for call in extrinsics.into_iter() {
-				if let Err(e) = api.submit_opaque_extrinsic(&call.encode().into()) {
+				if await_each_inlcusion {
+					if let Err(e) = api.submit_and_watch_opaque_extrinsic_until(
+						&call.encode().into(),
+						XtStatus::InBlock,
+					) {
+						error!(
+							"Could not send extrinsic to node: {:?}, error: {:?}",
+							serde_json::to_string(&call),
+							e
+						);
+					}
+				} else if let Err(e) = api.submit_opaque_extrinsic(&call.encode().into()) {
 					error!(
 						"Could not send extrinsic to node: {:?}, error: {:?}",
 						serde_json::to_string(&call),
@@ -140,7 +154,6 @@ where
 				}
 			}
 		}
-
 		status
 	}
 }

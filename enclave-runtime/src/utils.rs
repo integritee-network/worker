@@ -147,8 +147,8 @@ pub(crate) fn get_node_metadata_repository_from_target_b_solo_or_parachain(
 	Ok(metadata_repository)
 }
 
-pub(crate) fn get_extrinsic_factory_from_solo_or_parachain() -> Result<Arc<EnclaveExtrinsicsFactory>>
-{
+pub(crate) fn get_extrinsic_factory_from_integritee_solo_or_parachain(
+) -> Result<Arc<EnclaveExtrinsicsFactory>> {
 	let extrinsics_factory =
 		if let Ok(solochain_handler) = GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT.get() {
 			solochain_handler.extrinsics_factory.clone()

@@ -25,6 +25,7 @@ use itc_parentchain::primitives::{
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain, EnclaveResult};
 use itp_settings::worker::MR_ENCLAVE_SIZE;
 use itp_storage::StorageProof;
+use itp_types::ShardIdentifier;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_core::ed25519;
 
@@ -60,6 +61,10 @@ impl EnclaveBase for EnclaveMock {
 		unimplemented!()
 	}
 
+	fn init_proxied_shard_vault(&self, _shard: &ShardIdentifier) -> EnclaveResult<()> {
+		unimplemented!()
+	}
+
 	fn trigger_parentchain_block_import(&self, _: &ParentchainId) -> EnclaveResult<()> {
 		unimplemented!()
 	}
@@ -77,6 +82,10 @@ impl EnclaveBase for EnclaveMock {
 	}
 
 	fn get_ecc_signing_pubkey(&self) -> EnclaveResult<ed25519::Public> {
+		unreachable!()
+	}
+
+	fn get_ecc_vault_pubkey(&self, shard: &ShardIdentifier) -> EnclaveResult<ed25519::Public> {
 		unreachable!()
 	}
 

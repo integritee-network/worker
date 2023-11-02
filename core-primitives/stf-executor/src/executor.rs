@@ -127,6 +127,9 @@ where
 			state.prune_state_diff();
 		}
 
+		for call in extrinsic_call_backs.clone() {
+			trace!("trusted_call wants to send encoded call: 0x{}", hex::encode(call.encode()));
+		}
 		Ok(ExecutedOperation::success(operation_hash, top_or_hash, extrinsic_call_backs))
 	}
 }
