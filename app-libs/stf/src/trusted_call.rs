@@ -319,7 +319,7 @@ where
 
 				let first_order = parsed_orders
 					.get(0)
-					.ok_or_else(|| StfError::Dispatch(format!("No [valid]orders supplied.")))?;
+					.ok_or_else(|| StfError::Dispatch("No [valid]orders supplied.".to_string()))?;
 
 				let timestamp = &first_order.time_slot;
 
