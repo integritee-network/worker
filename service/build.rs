@@ -34,6 +34,11 @@ fn main() {
 
 	// NOTE: if the crate is a workspace member rustc-paths are relative from the root directory
 	println!("cargo:rustc-link-search=native=./lib");
+
+	// This file is only here if the edger8r has been run before.
+	// cargo test fails if it doesn't exist, but we don't need it
+	// for tests.
+	#[cfg(not(test))]
 	println!("cargo:rustc-link-lib=static=Enclave_u");
 
 	println!("cargo:rustc-link-search=native={}/lib64", sdk_dir);
