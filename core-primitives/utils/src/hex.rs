@@ -72,6 +72,7 @@ pub fn decode_hex<T: AsRef<[u8]>>(message: T) -> Result<Vec<u8>> {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use alloc::string::ToString;
 
 	#[test]
 	fn hex_encode_decode_works() {
