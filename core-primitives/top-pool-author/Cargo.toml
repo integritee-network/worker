@@ -54,7 +54,6 @@ std = [
     "itp-stf-state-handler/std",
     "itp-top-pool/std",
     "itp-types/std",
-    "itp-utils/std",
     "jsonrpc-core",
     "log/std",
     "thiserror",
@@ -67,7 +66,6 @@ sgx = [
     "itp-sgx-crypto/sgx",
     "itp-stf-state-handler/sgx",
     "itp-top-pool/sgx",
-    "itp-utils/sgx",
     "thiserror_sgx",
 ]
 test = ["itp-test/sgx", "itp-top-pool/mocks"]
