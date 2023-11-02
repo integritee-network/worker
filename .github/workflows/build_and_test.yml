@@ -146,7 +146,7 @@ jobs:
       matrix:
         check: [
           # Worker
-          cargo test --release
+          cargo test --release,
           # Use release mode as the CI runs out of disk space otherwise.
           cargo clippy --release -- -D warnings,
           cargo clippy --release --features evm -- -D warnings,
