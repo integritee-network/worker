@@ -16,11 +16,12 @@
 */
 
 use crate::{DetermineWatch, DirectRpcError, DirectRpcResult, RpcHash};
+use alloc::format;
 use codec::Decode;
 use itp_rpc::{RpcResponse, RpcReturnValue};
 use itp_types::DirectRequestStatus;
 use itp_utils::FromHexPrefixed;
-use std::{boxed::Box, marker::PhantomData};
+use std::marker::PhantomData;
 
 pub struct RpcWatchExtractor<Hash>
 where
@@ -55,7 +56,7 @@ where
 
 	fn must_be_watched(&self, rpc_response: &RpcResponse) -> DirectRpcResult<Option<Self::Hash>> {
 		let rpc_return_value = RpcReturnValue::from_hex(&rpc_response.result)
-			.map_err(|e| DirectRpcError::Other(Box::new(e)))?;
+			.map_err(|e| DirectRpcError::Other(format!("{:?}", e).into()))?;
 
 		if !rpc_return_value.do_watch {
 			return Ok(None)
