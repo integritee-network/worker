@@ -2401,12 +2401,8 @@ dependencies = [
 name = "itp-utils"
 version = "0.9.0"
 dependencies = [
- "frame-support",
  "hex",
  "parity-scale-codec",
- "sgx_tstd",
- "sp-core",
- "thiserror 1.0.9",
 ]
 
 [[package]]

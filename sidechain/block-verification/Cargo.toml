@@ -34,7 +34,6 @@ std = [
     "thiserror",
     # local
     "itp-types/std",
-    "itp-utils/std",
     "its-primitives/std",
     # substrate
     "frame-support/std",
@@ -43,7 +42,6 @@ std = [
     "sp-runtime/std",
 ]
 sgx = [
-    "itp-utils/sgx",
     "sgx_tstd",
     "thiserror-sgx",
 ]

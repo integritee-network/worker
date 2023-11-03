@@ -131,7 +131,7 @@ where
 					Ok(acc) => acc,
 					Err(msg) => {
 						let error_msg: String =
-							format!("Could not retrieve pending trusted calls due to: {}", msg);
+							format!("Could not retrieve pending trusted calls due to: {:?}", msg);
 						return Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
 					},
 				};
