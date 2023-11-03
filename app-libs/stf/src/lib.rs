@@ -31,12 +31,14 @@ pub use ita_sgx_runtime::{Balance, Index};
 #[cfg(feature = "std")]
 pub use my_node_runtime::{Balance, Index};
 
+use alloc::format;
 use codec::{Decode, Encode};
 use derive_more::Display;
 use itp_node_api_metadata::Error as MetadataError;
 use itp_node_api_metadata_provider::Error as MetadataProviderError;
 use itp_stf_primitives::types::AccountId;
 use itp_types::parentchain::ParentchainError;
+use sp_core::bounded::alloc;
 use std::string::String;
 
 pub use getter::*;
