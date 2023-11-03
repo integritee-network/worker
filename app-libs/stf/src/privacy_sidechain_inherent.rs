@@ -15,17 +15,12 @@
 
 */
 
-use crate::StfError;
 use frame_support::traits::UnfilteredDispatchable;
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{Runtime, System};
-use itp_types::parentchain::{
-	AccountId, HandleParentchainEvents, ParentchainError,
-	FilterEvents, BalanceTransfer,
-};
-use sp_runtime::MultiAddress;
-use std::format;
+use itp_types::parentchain::{AccountId, FilterEvents, HandleParentchainEvents, ParentchainError};
 use log::*;
+use sp_runtime::MultiAddress;
 
 type Seed = [u8; 32];
 
@@ -50,7 +45,7 @@ impl HandleParentchainEvents for ParentchainEventHandler {
 					info!("transfer_event: {}", event);
 					Self::shield_funds(&event.from, event.amount)
 				})
-				.map_err(|e| ParentchainError::ShieldFundsFailure)?;
+				.map_err(|_| ParentchainError::ShieldFundsFailure)?;
 		}
 
 		Ok(())
@@ -70,7 +65,7 @@ impl HandleParentchainEvents for ParentchainEventHandler {
 			new_free: account_info.data.free + amount,
 		}
 		.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
-		.map_err(|e| ParentchainError::ShieldFundsFailure)?;
+		.map_err(|_| ParentchainError::ShieldFundsFailure)?;
 
 		Ok(())
 	}

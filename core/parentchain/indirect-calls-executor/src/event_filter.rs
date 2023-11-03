@@ -16,19 +16,18 @@
 */
 //! Various way to filter Parentchain events
 
-use crate::error::{Error, Result};
-use codec::{Decode, Encode};
+use crate::error::Error;
 use ita_stf::StfError;
-use itp_api_client_types::{Events, StaticEvent};
+use itp_api_client_types::Events;
 use itp_sgx_runtime_primitives::types::{AccountId, Balance};
 use itp_types::{
 	parentchain::{
-		HandleParentchainEvents, BalanceTransfer, ExtrinsicFailed, ExtrinsicSuccess,
-		FilterEvents, ExtrinsicStatus, ParentchainError,
+		BalanceTransfer, ExtrinsicFailed, ExtrinsicStatus, ExtrinsicSuccess, FilterEvents,
+		HandleParentchainEvents, ParentchainError,
 	},
-	H256};
-use itp_utils::stringify::account_id_to_string;
-use std::{fmt::Display, format, vec::Vec};
+	H256,
+};
+use std::{format, vec::Vec};
 
 impl From<StfError> for Error {
 	fn from(a: StfError) -> Self {
@@ -36,14 +35,15 @@ impl From<StfError> for Error {
 	}
 }
 
+#[derive(Clone)]
 pub struct FilterableEvents(pub Events<H256>);
 
-pub trait IntoEvents<E> {
-	fn into_events(&self) -> &E;
+pub trait ToEvents<E> {
+	fn to_events(&self) -> &E;
 }
 
-impl IntoEvents<Events<H256>> for FilterableEvents {
-	fn into_events(&self) -> &Events<H256> {
+impl ToEvents<Events<H256>> for FilterableEvents {
+	fn to_events(&self) -> &Events<H256> {
 		&self.0
 	}
 }
@@ -53,7 +53,7 @@ impl FilterEvents for FilterableEvents {
 
 	fn get_extrinsic_statuses(&self) -> core::result::Result<Vec<ExtrinsicStatus>, Self::Error> {
 		Ok(self
-			.into_events()
+			.to_events()
 			.iter()
 			.filter_map(|ev| {
 				ev.and_then(|ev| {
@@ -75,7 +75,7 @@ impl FilterEvents for FilterableEvents {
 
 	fn get_transfer_events(&self) -> core::result::Result<Vec<BalanceTransfer>, Self::Error> {
 		Ok(self
-			.into_events()
+			.to_events()
 			.iter()
 			.flatten() // flatten filters out the nones
 			.filter_map(|ev| match ev.as_event::<BalanceTransfer>() {
@@ -116,7 +116,9 @@ pub struct MockPrivacySidechain;
 
 impl HandleParentchainEvents for MockPrivacySidechain {
 	const SHIELDING_ACCOUNT: AccountId = AccountId::new([0u8; 32]);
-	fn handle_events(_: impl itp_types::parentchain::FilterEvents) -> core::result::Result<(), ParentchainError> {
+	fn handle_events(
+		_: impl itp_types::parentchain::FilterEvents,
+	) -> core::result::Result<(), ParentchainError> {
 		Ok(())
 	}
 	fn shield_funds(_: &AccountId, _: Balance) -> core::result::Result<(), ParentchainError> {

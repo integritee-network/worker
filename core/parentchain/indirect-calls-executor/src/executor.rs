@@ -147,8 +147,8 @@ impl<
 			})?
 			.ok_or_else(|| Error::Other("Could not create events from metadata".into()))?;
 
-		let xt_statuses = events.get_extrinsic_statuses().map_err(|_| {
-			Error::Other(format!("Error when shielding for privacy sidechain").into())
+		let xt_statuses = events.get_extrinsic_statuses().map_err(|e| {
+			Error::Other(format!("Error when shielding for privacy sidechain {:?}", e).into())
 		})?;
 		trace!("xt_statuses:: {:?}", xt_statuses);
 

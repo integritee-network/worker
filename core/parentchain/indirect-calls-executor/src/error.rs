@@ -18,9 +18,9 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
+use itp_types::parentchain::ParentchainError;
 use sgx_types::sgx_status_t;
 use std::{boxed::Box, format};
-use itp_types::parentchain::ParentchainError;
 
 pub type Result<T> = core::result::Result<T, Error>;
 

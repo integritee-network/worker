@@ -17,7 +17,7 @@
 
 use crate::{
 	error::Result,
-	event_filter::{MockEvents, FilterableEvents},
+	event_filter::{FilterableEvents, MockEvents},
 	indirect_calls::{
 		InvokeArgs, ShieldFundsArgs, TransferToAliceShieldsFundsArgs, ALICE_ACCOUNT_ID,
 	},
@@ -26,12 +26,11 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
-use itp_types::parentchain::{FilterEvents};
 use itp_api_client_types::{Events, Metadata};
 use itp_node_api::metadata::{
 	pallet_balances::BalancesCallIndexes, NodeMetadata, NodeMetadataTrait,
 };
-use itp_types::H256;
+use itp_types::{parentchain::FilterEvents, H256};
 
 pub trait EventsFromMetadata<NodeMetadata> {
 	type Output: FilterEvents;

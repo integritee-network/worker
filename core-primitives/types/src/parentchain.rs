@@ -69,7 +69,7 @@ pub trait IdentifyParentchain {
 }
 
 pub trait FilterEvents {
-	type Error: From<ParentchainError>;
+	type Error: From<ParentchainError> + core::fmt::Debug;
 	fn get_extrinsic_statuses(&self) -> core::result::Result<Vec<ExtrinsicStatus>, Self::Error>;
 
 	fn get_transfer_events(&self) -> core::result::Result<Vec<BalanceTransfer>, Self::Error>;
@@ -137,12 +137,9 @@ pub enum ParentchainError {
 
 impl core::fmt::Display for ParentchainError {
 	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-		let message;
-		match &self {
-			ParentchainError::ShieldFundsFailure => {
-				message = "Parentchain Error: ShieldFundsFailure";
-			},
-		}
+		let message = match &self {
+			ParentchainError::ShieldFundsFailure => "Parentchain Error: ShieldFundsFailure",
+		};
 		write!(f, "{}", message)
 	}
 }
