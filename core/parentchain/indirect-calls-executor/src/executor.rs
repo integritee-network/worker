@@ -24,15 +24,11 @@ use crate::{
 	filter_metadata::{EventsFromMetadata, FilterIntoDataFrom},
 	traits::{ExecuteIndirectCalls, IndirectDispatch, IndirectExecutor},
 };
+use alloc::format;
 use binary_merkle_tree::merkle_root;
 use codec::Encode;
 use core::marker::PhantomData;
-use ita_stf::{
-	TrustedCall, TrustedCallSigned,
-};
-use itp_types::parentchain::{
-	HandleParentchainEvents, ExtrinsicStatus, FilterEvents,
-};
+use ita_stf::{TrustedCall, TrustedCallSigned};
 use itp_node_api::metadata::{
 	pallet_enclave_bridge::EnclaveBridgeCallIndexes, provider::AccessNodeMetadata,
 	NodeMetadataTrait,
@@ -41,7 +37,10 @@ use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, Shieldin
 use itp_stf_executor::traits::StfEnclaveSigning;
 use itp_stf_primitives::types::AccountId;
 use itp_top_pool_author::traits::AuthorApi;
-use itp_types::{OpaqueCall, ShardIdentifier, H256};
+use itp_types::{
+	parentchain::{ExtrinsicStatus, FilterEvents, HandleParentchainEvents},
+	OpaqueCall, ShardIdentifier, H256,
+};
 use log::*;
 use sp_core::blake2_256;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header, Keccak256};
@@ -148,7 +147,9 @@ impl<
 			})?
 			.ok_or_else(|| Error::Other("Could not create events from metadata".into()))?;
 
-		let xt_statuses = events.get_extrinsic_statuses().map_err(|_| Error::Other(format!("Error when shielding for privacy sidechain").into()))?;
+		let xt_statuses = events.get_extrinsic_statuses().map_err(|_| {
+			Error::Other(format!("Error when shielding for privacy sidechain").into())
+		})?;
 		trace!("xt_statuses:: {:?}", xt_statuses);
 
 		ParentchainEventHandler::handle_events(events)?;
