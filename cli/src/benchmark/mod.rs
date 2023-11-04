@@ -29,7 +29,7 @@ use codec::Decode;
 use hdrhistogram::Histogram;
 use ita_stf::{Getter, Index, TrustedCall, TrustedGetter, TrustedOperation};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
-use itp_stf_primitives::types::KeyPair;
+use itp_stf_primitives::{traits::TrustedCallSigning, types::KeyPair};
 use itp_types::{
 	Balance, ShardIdentifier, TrustedOperationStatus,
 	TrustedOperationStatus::{InSidechainBlock, Submitted},
