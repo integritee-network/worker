@@ -21,10 +21,10 @@ use crate::{
 	traits::{StateUpdateProposer, StfEnclaveSigning},
 	BatchExecutionResult, ExecutedOperation,
 };
-use codec::Encode;
+use codec::{Decode, Encode};
 use ita_stf::{
 	hash::{Hash, TrustedOperationOrHash},
-	Getter, TrustedCall, TrustedCallSigned, TrustedOperation,
+	TrustedCall, TrustedCallSigned, TrustedOperation,
 };
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_primitives::types::{AccountId, KeyPair, ShardIdentifier};
@@ -36,6 +36,7 @@ use std::{boxed::Box, marker::PhantomData, ops::Deref, time::Duration, vec::Vec}
 #[cfg(feature = "std")]
 use std::sync::RwLock;
 
+use itp_stf_primitives::traits::GetterAuthorization;
 #[cfg(feature = "sgx")]
 use std::sync::SgxRwLock as RwLock;
 
@@ -137,11 +138,25 @@ pub struct GetStateMock<StateType> {
 	_phantom: PhantomData<StateType>,
 }
 
-impl<StateType> GetState<StateType> for GetStateMock<StateType>
+pub enum GetterMock {
+	Public,
+	Trusted,
+}
+impl GetterAuthorization for GetterMock {
+	fn is_authorized(&self) -> bool {
+		match self {
+			Self::Trusted => false,
+			Self::Public => true,
+		}
+	}
+}
+
+impl<StateType, G> GetState<StateType, G> for GetStateMock<StateType>
 where
 	StateType: Encode,
+	G: Decode + GetterAuthorization,
 {
-	fn get_state(_getter: Getter, state: &mut StateType) -> Result<Option<Vec<u8>>> {
+	fn get_state(_getter: G, state: &mut StateType) -> Result<Option<Vec<u8>>> {
 		Ok(Some(state.encode()))
 	}
 }

@@ -115,7 +115,8 @@ pub type EnclaveStateInitializer =
 	StateInitializer<StfState, EnclaveStf, EnclaveShieldingKeyRepository>;
 pub type EnclaveStateHandler =
 	StateHandler<EnclaveStateSnapshotRepository, EnclaveStateObserver, EnclaveStateInitializer>;
-pub type EnclaveGetterExecutor = GetterExecutor<EnclaveStateObserver, StfStateGetter<EnclaveStf>>;
+pub type EnclaveGetterExecutor =
+	GetterExecutor<EnclaveStateObserver, StfStateGetter<EnclaveStf>, Getter>;
 pub type EnclaveOCallApi = OcallApi;
 pub type EnclaveNodeMetadataRepository = NodeMetadataRepository<NodeMetadata>;
 pub type EnclaveStfExecutor =

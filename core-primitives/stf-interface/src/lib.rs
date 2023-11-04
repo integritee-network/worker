@@ -67,9 +67,9 @@ where
 }
 
 /// Interface to execute state reading getters on a state.
-pub trait StateGetterInterface<Getter, State> {
+pub trait StateGetterInterface<G, S> {
 	/// Execute a getter on a specific state.
-	fn execute_getter(state: &mut State, getter: Getter) -> Option<Vec<u8>>;
+	fn execute_getter(state: &mut S, getter: G) -> Option<Vec<u8>>;
 }
 
 /// Trait used to abstract the call execution.

@@ -18,7 +18,10 @@
 use codec::{Decode, Encode};
 use ita_sgx_runtime::System;
 use itp_stf_interface::ExecuteGetter;
-use itp_stf_primitives::types::{AccountId, KeyPair, Signature};
+use itp_stf_primitives::{
+	traits::GetterAuthorization,
+	types::{AccountId, KeyPair, Signature},
+};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
 use sp_runtime::traits::Verify;
@@ -49,6 +52,15 @@ impl From<PublicGetter> for Getter {
 impl From<TrustedGetterSigned> for Getter {
 	fn from(item: TrustedGetterSigned) -> Self {
 		Getter::trusted(item)
+	}
+}
+
+impl GetterAuthorization for Getter {
+	fn is_authorized(&self) -> bool {
+		match self {
+			Self::trusted(ref getter) => getter.verify_signature(),
+			Self::public(_) => true,
+		}
 	}
 }
 

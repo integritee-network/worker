@@ -15,7 +15,7 @@
 
 */
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
-pub mod traits;
-pub mod types;
+/// checks authorization of stf getters
+pub trait GetterAuthorization {
+	fn is_authorized(&self) -> bool;
+}

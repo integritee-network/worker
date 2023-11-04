@@ -20,7 +20,7 @@
 
 use crate::{error::Result, state_getter::GetState};
 use codec::Decode;
-use ita_stf::Getter;
+use itp_stf_primitives::traits::GetterAuthorization;
 use itp_stf_state_observer::traits::ObserveState;
 use itp_types::ShardIdentifier;
 use log::*;
@@ -35,28 +35,30 @@ pub trait ExecuteGetter {
 	) -> Result<Option<Vec<u8>>>;
 }
 
-pub struct GetterExecutor<StateObserver, StateGetter> {
+pub struct GetterExecutor<StateObserver, StateGetter, G> {
 	state_observer: Arc<StateObserver>,
 	_phantom: PhantomData<StateGetter>,
+	_phantom_getter: PhantomData<G>,
 }
 
-impl<StateObserver, StateGetter> GetterExecutor<StateObserver, StateGetter> {
+impl<StateObserver, StateGetter, G> GetterExecutor<StateObserver, StateGetter, G> {
 	pub fn new(state_observer: Arc<StateObserver>) -> Self {
-		Self { state_observer, _phantom: Default::default() }
+		Self { state_observer, _phantom: Default::default(), _phantom_getter: Default::default() }
 	}
 }
 
-impl<StateObserver, StateGetter> ExecuteGetter for GetterExecutor<StateObserver, StateGetter>
+impl<StateObserver, StateGetter, G> ExecuteGetter for GetterExecutor<StateObserver, StateGetter, G>
 where
 	StateObserver: ObserveState,
-	StateGetter: GetState<StateObserver::StateType>,
+	StateGetter: GetState<StateObserver::StateType, G>,
+	G: Decode + GetterAuthorization,
 {
 	fn execute_getter(
 		&self,
 		shard: &ShardIdentifier,
 		encoded_signed_getter: Vec<u8>,
 	) -> Result<Option<Vec<u8>>> {
-		let getter: Getter = Decode::decode(&mut encoded_signed_getter.as_slice())?;
+		let getter: G = Decode::decode(&mut encoded_signed_getter.as_slice())?;
 		trace!("Successfully decoded trusted getter");
 
 		let getter_timer_start = Instant::now();
