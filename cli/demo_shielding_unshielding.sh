@@ -195,8 +195,8 @@ wait_assert_state ${MRENCLAVE} ${ICGACCOUNTBOB} balance ${AMOUNT_TRANSFER}
 echo "✔ ok"
 echo ""
 
-echo "* Un-shield ${AMOUNT_UNSHIELD} tokens from Alice's incognito account"
-${CLIENT} trusted --mrenclave ${MRENCLAVE} --xt-signer //Alice unshield-funds ${ICGACCOUNTALICE} //Alice ${AMOUNT_UNSHIELD}
+echo "* Un-shield ${AMOUNT_UNSHIELD} tokens from Alice's incognito account to Ferie's L1 account"
+${CLIENT} trusted --mrenclave ${MRENCLAVE} unshield-funds ${ICGACCOUNTALICE} //Ferdie ${AMOUNT_UNSHIELD}
 echo ""
 
 echo "* Wait and assert Alice's incognito account balance... "
