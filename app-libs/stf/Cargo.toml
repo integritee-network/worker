@@ -18,6 +18,7 @@ sgx_tstd = { branch = "master", features = ["untrusted_fs", "net", "backtrace"],
 
 # local crates
 ita-sgx-runtime = { default-features = false, path = "../sgx-runtime" }
+itc-parentchain-indirect-calls-executor = { path = "../../core/parentchain/indirect-calls-executor", default-features = false }
 itp-hashing = { default-features = false, path = "../../core-primitives/hashing" }
 itp-node-api = { default-features = false, path = "../../core-primitives/node-api" }
 itp-node-api-metadata = { default-features = false, path = "../../core-primitives/node-api/metadata" }

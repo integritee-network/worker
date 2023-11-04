@@ -123,8 +123,12 @@ impl StaticEvent for BalanceTransfer {
 
 pub trait HandleParentchainEvents {
 	const SHIELDING_ACCOUNT: AccountId;
-	fn handle_events(events: impl FilterEvents) -> core::result::Result<(), ParentchainError>;
-	fn shield_funds(
+	fn handle_events<Executor>(
+		executor: &Executor,
+		events: impl FilterEvents,
+	) -> core::result::Result<(), ParentchainError>;
+	fn shield_funds<Executor>(
+		executor: &Executor,
 		account: &AccountId,
 		amount: Balance,
 	) -> core::result::Result<(), ParentchainError>;

@@ -227,6 +227,7 @@ where
 		while last_synced_header.number() < until_header.number() {
 			last_synced_header = self.sync_parentchain(last_synced_header)?;
 			trace!("[{:?}] synced block number: {}", id, last_synced_header.number);
+			std::thread::sleep(std::time::Duration::from_secs(1));
 		}
 		self.trigger_parentchain_block_import()?;
 

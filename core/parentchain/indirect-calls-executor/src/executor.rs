@@ -152,7 +152,7 @@ impl<
 		})?;
 		trace!("xt_statuses:: {:?}", xt_statuses);
 
-		ParentchainEventHandler::handle_events(events)?;
+		ParentchainEventHandler::handle_events(self, events)?;
 
 		// This would be catastrophic but should never happen
 		if xt_statuses.len() != block.extrinsics().len() {

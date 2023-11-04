@@ -15,9 +15,12 @@
 
 */
 
+use crate::{TrustedCall, TrustedOperation};
+use codec::Encode;
 use frame_support::traits::UnfilteredDispatchable;
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{Runtime, System};
+use itc_parentchain_indirect_calls_executor::traits::IndirectExecutor;
 use itp_types::parentchain::{AccountId, FilterEvents, HandleParentchainEvents, ParentchainError};
 use log::*;
 use sp_runtime::MultiAddress;
@@ -34,7 +37,10 @@ pub struct ParentchainEventHandler;
 impl HandleParentchainEvents for ParentchainEventHandler {
 	const SHIELDING_ACCOUNT: AccountId = AccountId::new(ALICE_ENCODED);
 
-	fn handle_events(events: impl FilterEvents) -> Result<(), ParentchainError> {
+	fn handle_events<Executor: IndirectExecutor>(
+		executor: &Executor,
+		events: impl FilterEvents,
+	) -> Result<(), ParentchainError> {
 		let filter_events = events.get_transfer_events();
 
 		if let Ok(events) = filter_events {
@@ -43,7 +49,8 @@ impl HandleParentchainEvents for ParentchainEventHandler {
 				.filter(|&event| event.to == Self::SHIELDING_ACCOUNT)
 				.try_for_each(|event| {
 					info!("transfer_event: {}", event);
-					Self::shield_funds(&event.from, event.amount)
+					call = IndirectCall::ShieldFunds(ShieldFundsArgs{ })
+					Self::shield_funds(executor, &event.from, event.amount)
 				})
 				.map_err(|_| ParentchainError::ShieldFundsFailure)?;
 		}
@@ -51,7 +58,11 @@ impl HandleParentchainEvents for ParentchainEventHandler {
 		Ok(())
 	}
 
-	fn shield_funds(account: &AccountId, amount: Balance) -> Result<(), ParentchainError> {
+	fn shield_funds<Executor: IndirectExecutor>(
+		executor: &Executor,
+		account: &AccountId,
+		amount: Balance,
+	) -> Result<(), ParentchainError> {
 		let account_info = System::account(&account);
 		log::info!(
 			"shielding for {:?} amount {} new_free {} new_reserved {}",
@@ -60,12 +71,14 @@ impl HandleParentchainEvents for ParentchainEventHandler {
 			account_info.data.free + amount,
 			account_info.data.reserved
 		);
-		ita_sgx_runtime::BalancesCall::<Runtime>::force_set_balance {
-			who: MultiAddress::Id(account.clone()),
-			new_free: account_info.data.free + amount,
-		}
-		.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
-		.map_err(|_| ParentchainError::ShieldFundsFailure)?;
+		let shard = executor.get_default_shard();
+		let trusted_call =
+			TrustedCall::balance_shield(executor.get_enclave_account()?, account, amount);
+		let signed_trusted_call = executor.sign_call_with_self(&trusted_call, &shard)?;
+		let trusted_operation = TrustedOperation::indirect_call(signed_trusted_call);
+
+		let encrypted_trusted_call = executor.encrypt(&trusted_operation.encode())?;
+		executor.submit_trusted_call(shard, encrypted_trusted_call);
 
 		Ok(())
 	}

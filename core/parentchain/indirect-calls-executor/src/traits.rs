@@ -16,9 +16,11 @@
 */
 
 use crate::error::Result;
-use ita_stf::{TrustedCall, TrustedCallSigned};
 use itp_stf_primitives::types::AccountId;
-use itp_types::{OpaqueCall, ShardIdentifier, H256};
+use itp_types::{
+	parentchain::{Balance, BalanceTransfer, ExtrinsicStatus, ParentchainError},
+	OpaqueCall, ShardIdentifier, H256,
+};
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header};
 use std::vec::Vec;
 
@@ -66,9 +68,9 @@ pub trait IndirectExecutor {
 
 	fn get_default_shard(&self) -> ShardIdentifier;
 
-	fn sign_call_with_self(
+	fn sign_call_with_self<TC, TCS>(
 		&self,
-		trusted_call: &TrustedCall,
+		trusted_call: &TC,
 		shard: &ShardIdentifier,
-	) -> Result<TrustedCallSigned>;
+	) -> Result<TCS>;
 }
