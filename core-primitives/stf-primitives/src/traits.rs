@@ -15,7 +15,21 @@
 
 */
 
+use crate::types::{KeyPair, ShardIdentifier};
+use itp_sgx_runtime_primitives::types::Index;
 /// checks authorization of stf getters
 pub trait GetterAuthorization {
 	fn is_authorized(&self) -> bool;
+}
+
+/// knows how to sign a trusted call input and provides a signed output
+pub trait TrustedCallSigning {
+	type Output;
+	fn sign(
+		&self,
+		pair: &KeyPair,
+		nonce: Index,
+		mrenclave: &[u8; 32],
+		shard: &ShardIdentifier,
+	) -> Self::Output;
 }

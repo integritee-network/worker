@@ -34,7 +34,10 @@ use itp_node_api_metadata::{
 	pallet_proxy::ProxyCallIndexes,
 };
 use itp_stf_interface::{ExecuteCall, SHARD_VAULT_KEY};
-use itp_stf_primitives::types::{AccountId, KeyPair, ShardIdentifier, Signature};
+use itp_stf_primitives::{
+	traits::TrustedCallSigning,
+	types::{AccountId, KeyPair, ShardIdentifier, Signature},
+};
 use itp_types::{parentchain::ProxyType, Address, OpaqueCall};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
@@ -115,20 +118,23 @@ impl TrustedCall {
 			TrustedCall::evm_create2(sender_account, ..) => sender_account,
 		}
 	}
+}
 
-	pub fn sign(
+impl TrustedCallSigning for TrustedCall {
+	type Output = TrustedCallSigned;
+	fn sign(
 		&self,
 		pair: &KeyPair,
 		nonce: Index,
 		mrenclave: &[u8; 32],
 		shard: &ShardIdentifier,
-	) -> TrustedCallSigned {
+	) -> Self::Output {
 		let mut payload = self.encode();
 		payload.append(&mut nonce.encode());
 		payload.append(&mut mrenclave.encode());
 		payload.append(&mut shard.encode());
 
-		TrustedCallSigned { call: self.clone(), nonce, signature: pair.sign(payload.as_slice()) }
+		Self::Output { call: self.clone(), nonce, signature: pair.sign(payload.as_slice()) }
 	}
 }
 

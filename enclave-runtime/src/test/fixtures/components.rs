@@ -21,14 +21,13 @@ use codec::Encode;
 use ita_stf::{TrustedCall, TrustedCallSigned, TrustedOperation};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
-use itp_stf_primitives::types::KeyPair;
+use itp_stf_primitives::{traits::TrustedCallSigning, types::KeyPair};
 use itp_top_pool::pool::Options as PoolOptions;
 use itp_top_pool_author::api::SidechainApi;
 use itp_types::{Block as ParentchainBlock, ShardIdentifier};
 use sp_core::{ed25519, Pair, H256};
 use sp_runtime::traits::Header as HeaderTrait;
 use std::{boxed::Box, sync::Arc, vec::Vec};
-
 pub(crate) fn create_top_pool() -> Arc<TestTopPool> {
 	let rpc_responder = Arc::new(TestRpcResponder::new());
 	let sidechain_api = Arc::new(SidechainApi::<ParentchainBlock>::new());

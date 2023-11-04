@@ -2224,6 +2224,7 @@ dependencies = [
 name = "itp-stf-primitives"
 version = "0.9.0"
 dependencies = [
+ "itp-sgx-runtime-primitives",
  "parity-scale-codec",
  "sp-core",
  "sp-runtime",

@@ -26,14 +26,13 @@ use itc_parentchain_test::ParentchainHeaderBuilder;
 use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_externalities::SgxExternalitiesTrait;
-use itp_stf_primitives::types::ShardIdentifier;
+use itp_stf_primitives::{traits::TrustedCallSigning, types::ShardIdentifier};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{handle_state_mock::HandleStateMock, onchain_mock::OnchainMock};
 use itp_types::H256;
 use sp_core::Pair;
 use sp_runtime::app_crypto::sp_core::blake2_256;
 use std::{sync::Arc, time::Duration, vec};
-
 // FIXME: Create unit tests for update_states, execute_shield_funds, execute_trusted_call, execute_trusted_call_on_stf #554
 
 pub fn propose_state_update_executes_all_calls_given_enough_time() {

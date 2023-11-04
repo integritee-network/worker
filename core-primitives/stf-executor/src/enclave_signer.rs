@@ -26,7 +26,10 @@ use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{ed25519_derivation::DeriveEd25519, key_repository::AccessKey};
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_interface::system_pallet::SystemPalletAccountInterface;
-use itp_stf_primitives::types::{AccountId, KeyPair};
+use itp_stf_primitives::{
+	traits::TrustedCallSigning,
+	types::{AccountId, KeyPair},
+};
 use itp_stf_state_observer::traits::ObserveState;
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{Index, ShardIdentifier};

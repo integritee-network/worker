@@ -51,7 +51,7 @@ use itp_stf_interface::{
 	system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface},
 	StateCallInterface,
 };
-use itp_stf_primitives::types::ShardIdentifier;
+use itp_stf_primitives::{traits::TrustedCallSigning, types::ShardIdentifier};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::handle_state_mock;
 use itp_top_pool_author::{test_utils::submit_operation_to_top_pool, traits::AuthorApi};
@@ -72,7 +72,6 @@ use sgx_types::size_t;
 use sp_core::{crypto::Pair, ed25519 as spEd25519, H256};
 use sp_runtime::traits::Header as HeaderT;
 use std::{string::String, sync::Arc, time::Duration, vec::Vec};
-
 #[no_mangle]
 pub extern "C" fn test_main_entrance() -> size_t {
 	rsgx_unit_tests!(

@@ -27,14 +27,16 @@ use ita_stf::{
 	TrustedCall, TrustedCallSigned, TrustedOperation,
 };
 use itp_sgx_externalities::SgxExternalitiesTrait;
-use itp_stf_primitives::types::{AccountId, KeyPair, ShardIdentifier};
+use itp_stf_primitives::{
+	traits::TrustedCallSigning,
+	types::{AccountId, KeyPair, ShardIdentifier},
+};
 use itp_types::H256;
 use sp_core::Pair;
 use sp_runtime::traits::Header as HeaderTrait;
-use std::{boxed::Box, marker::PhantomData, ops::Deref, time::Duration, vec::Vec};
-
 #[cfg(feature = "std")]
 use std::sync::RwLock;
+use std::{boxed::Box, marker::PhantomData, ops::Deref, time::Duration, vec::Vec};
 
 use itp_stf_primitives::traits::GetterAuthorization;
 #[cfg(feature = "sgx")]
