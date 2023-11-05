@@ -32,7 +32,7 @@ use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_stf_interface::{
 	parentchain_pallet::ParentchainPalletInterface, StateCallInterface, UpdateState,
 };
-use itp_stf_primitives::types::ShardIdentifier;
+use itp_stf_primitives::{traits::TrustedCallVerification, types::ShardIdentifier};
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_time_utils::duration_now;
 use itp_types::{parentchain::ParentchainId, storage::StorageEntryVerified, OpaqueCall, H256};
@@ -41,7 +41,6 @@ use sp_runtime::traits::Header as HeaderTrait;
 use std::{
 	collections::BTreeMap, fmt::Debug, marker::PhantomData, sync::Arc, time::Duration, vec::Vec,
 };
-
 pub struct StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf> {
 	ocall_api: Arc<OCallApi>,
 	state_handler: Arc<StateHandler>,

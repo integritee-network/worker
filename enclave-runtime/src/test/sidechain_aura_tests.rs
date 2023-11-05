@@ -148,7 +148,7 @@ pub fn produce_sidechain_block_and_import_it() {
 
 	// Ensure we have exactly two trusted calls in our TOP pool, and no getters.
 	assert_eq!(2, top_pool_author.get_pending_trusted_calls(shard_id).len());
-	assert!(top_pool_author.get_pending_trusted_getters(shard_id).is_empty());
+	assert!(top_pool_author.get_pending_getters(shard_id).is_empty());
 
 	info!("Setup AURA SlotInfo");
 	let timestamp = duration_now();

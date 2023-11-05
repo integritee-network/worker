@@ -40,9 +40,8 @@ use crate::{
 };
 use codec::Encode;
 use core::{hash, result::Result};
-use ita_stf::TrustedOperation as StfTrustedOperation;
 use itc_direct_rpc_server::SendRpcResponse;
-use itp_stf_primitives::types::ShardIdentifier;
+use itp_stf_primitives::types::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
 use itp_types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::channel::mpsc::{channel, Sender};
 use sp_runtime::{
@@ -98,25 +97,26 @@ impl<Hash, Ex, Error> ValidatedOperation<Hash, Ex, Error> {
 }
 
 /// A type of validated operation stored in the pool.
-pub type ValidatedOperationFor<B> =
-	ValidatedOperation<ExtrinsicHash<B>, StfTrustedOperation, <B as ChainApi>::Error>;
+pub type ValidatedOperationFor<B, TOP> =
+	ValidatedOperation<ExtrinsicHash<B>, TOP, <B as ChainApi>::Error>;
 
 /// Pool that deals with validated operations.
-pub struct ValidatedPool<B: ChainApi, R: SendRpcResponse>
+pub struct ValidatedPool<B: ChainApi, R: SendRpcResponse, TOP>
 where
 	R: SendRpcResponse<Hash = ExtrinsicHash<B>>,
 {
 	api: Arc<B>,
 	options: Options,
 	listener: RwLock<Listener<ExtrinsicHash<B>, R>>,
-	pool: RwLock<base::BasePool<ExtrinsicHash<B>, StfTrustedOperation>>,
+	pool: RwLock<base::BasePool<ExtrinsicHash<B>, TOP>>,
 	import_notification_sinks: Mutex<Vec<Sender<ExtrinsicHash<B>>>>,
 	rotator: PoolRotator<ExtrinsicHash<B>>,
 }
 
-impl<B: ChainApi, R> ValidatedPool<B, R>
+impl<B: ChainApi, R, TOP> ValidatedPool<B, R, TOP>
 where
 	R: SendRpcResponse<Hash = ExtrinsicHash<B>>,
+	TOP: core::fmt::Debug + Send + Sync + Clone,
 {
 	/// Create a new operation pool.
 	pub fn new(options: Options, api: Arc<B>, rpc_response_sender: Arc<R>) -> Self {
@@ -164,7 +164,7 @@ where
 	/// Imports a bunch of pre-validated operations to the pool.
 	pub fn submit(
 		&self,
-		txs: impl IntoIterator<Item = ValidatedOperationFor<B>>,
+		txs: impl IntoIterator<Item = ValidatedOperationFor<B, TOP>>,
 		shard: ShardIdentifier,
 	) -> Vec<Result<ExtrinsicHash<B>, B::Error>> {
 		let results = txs
@@ -192,7 +192,7 @@ where
 	/// Submit single pre-validated operation to the pool.
 	fn submit_one(
 		&self,
-		tx: ValidatedOperationFor<B>,
+		tx: ValidatedOperationFor<B, TOP>,
 		shard: ShardIdentifier,
 	) -> Result<ExtrinsicHash<B>, B::Error> {
 		match tx {
@@ -278,7 +278,7 @@ where
 	/// Import a single extrinsic and starts to watch their progress in the pool.
 	pub fn submit_and_watch(
 		&self,
-		tx: ValidatedOperationFor<B>,
+		tx: ValidatedOperationFor<B, TOP>,
 		shard: ShardIdentifier,
 	) -> Result<ExtrinsicHash<B>, B::Error> {
 		match tx {
@@ -307,7 +307,7 @@ where
 	/// Transactions that are missing from the pool are not submitted.
 	pub fn resubmit(
 		&self,
-		mut updated_transactions: HashMap<ExtrinsicHash<B>, ValidatedOperationFor<B>>,
+		mut updated_transactions: HashMap<ExtrinsicHash<B>, ValidatedOperationFor<B, TOP>>,
 		shard: ShardIdentifier,
 	) {
 		#[derive(Debug, Clone, Copy, PartialEq)]
@@ -456,7 +456,7 @@ where
 		&self,
 		hash: &ExtrinsicHash<B>,
 		shard: ShardIdentifier,
-	) -> Option<TransactionFor<B>> {
+	) -> Option<TransactionFor<B, TOP>> {
 		self.pool.read().unwrap().ready_by_hash(hash, shard)
 	}
 
@@ -465,7 +465,7 @@ where
 		&self,
 		tags: impl IntoIterator<Item = Tag>,
 		shard: ShardIdentifier,
-	) -> Result<PruneStatus<ExtrinsicHash<B>, StfTrustedOperation>, B::Error> {
+	) -> Result<PruneStatus<ExtrinsicHash<B>, TOP>, B::Error> {
 		// Perform tag-based pruning in the base pool
 		let status = self.pool.write().unwrap().prune_tags(tags, shard);
 		// Notify event listeners of all operations
@@ -489,7 +489,7 @@ where
 		at: &BlockId<B::Block>,
 		known_imported_hashes: impl IntoIterator<Item = ExtrinsicHash<B>> + Clone,
 		pruned_hashes: Vec<ExtrinsicHash<B>>,
-		pruned_xts: Vec<ValidatedOperationFor<B>>,
+		pruned_xts: Vec<ValidatedOperationFor<B, TOP>>,
 		shard: ShardIdentifier,
 	) -> Result<(), B::Error>
 	where
@@ -624,7 +624,7 @@ where
 		hashes: &[ExtrinsicHash<B>],
 		shard: ShardIdentifier,
 		inblock: bool,
-	) -> Vec<TransactionFor<B>> {
+	) -> Vec<TransactionFor<B, TOP>> {
 		// early exit in case there is no invalid operations.
 		if hashes.is_empty() {
 			return vec![]
@@ -651,7 +651,10 @@ where
 	}
 
 	/// Get an iterator for ready operations ordered by priority
-	pub fn ready(&self, shard: ShardIdentifier) -> impl Iterator<Item = TransactionFor<B>> + Send {
+	pub fn ready(
+		&self,
+		shard: ShardIdentifier,
+	) -> impl Iterator<Item = TransactionFor<B, TOP>> + Send {
 		self.pool.read().unwrap().ready(shard)
 	}
 

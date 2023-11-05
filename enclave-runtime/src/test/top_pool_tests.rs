@@ -52,6 +52,7 @@ use itp_node_api::{
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_stf_executor::enclave_signer::StfEnclaveSigner;
+use itp_stf_primitives::traits::TrustedCallVerification;
 use itp_stf_state_observer::mock::ObserveStateMock;
 use itp_test::mock::metrics_ocall_mock::MetricsOCallMock;
 use itp_top_pool_author::{top_filter::AllowAllTopsFilter, traits::AuthorApi};
@@ -62,7 +63,6 @@ use sgx_crypto_helper::RsaKeyPair;
 use sp_core::{ed25519, Pair};
 use sp_runtime::{MultiSignature, OpaqueExtrinsic};
 use std::{sync::Arc, vec::Vec};
-
 pub fn process_indirect_call_in_top_pool() {
 	let _ = env_logger::builder().is_test(true).try_init();
 	info!("Setting up test.");

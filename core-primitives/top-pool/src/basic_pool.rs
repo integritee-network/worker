@@ -36,10 +36,13 @@ use crate::{
 	},
 };
 use alloc::{boxed::Box, string::String, sync::Arc};
+use codec::Encode;
 use core::pin::Pin;
-use ita_stf::TrustedOperation as StfTrustedOperation;
 use itc_direct_rpc_server::SendRpcResponse;
-use itp_stf_primitives::types::ShardIdentifier;
+use itp_stf_primitives::{
+	traits::PoolTransactionValidation,
+	types::{ShardIdentifier, TrustedOperation as StfTrustedOperation},
+};
 use its_primitives::types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::{
 	channel::oneshot,
@@ -54,9 +57,10 @@ use std::{collections::HashMap, vec, vec::Vec};
 type BoxedReadyIterator<Hash, Data> =
 	Box<dyn Iterator<Item = Arc<TrustedOperation<Hash, Data>>> + Send>;
 
-type ReadyIteratorFor<PoolApi> = BoxedReadyIterator<ExtrinsicHash<PoolApi>, StfTrustedOperation>;
+type ReadyIteratorFor<PoolApi, TOP> = BoxedReadyIterator<ExtrinsicHash<PoolApi>, TOP>;
 
-type PolledIterator<PoolApi> = Pin<Box<dyn Future<Output = ReadyIteratorFor<PoolApi>> + Send>>;
+type PolledIterator<PoolApi, TOP> =
+	Pin<Box<dyn Future<Output = ReadyIteratorFor<PoolApi, TOP>> + Send>>;
 
 struct ReadyPoll<T, Block: BlockT> {
 	updated_at: NumberFor<Block>,
@@ -97,22 +101,23 @@ impl<T, Block: BlockT> ReadyPoll<T, Block> {
 }
 
 /// Basic implementation of operation pool that can be customized by providing PoolApi.
-pub struct BasicPool<PoolApi, Block, RpcResponse>
+pub struct BasicPool<PoolApi, Block, RpcResponse, TOP>
 where
 	Block: BlockT,
 	PoolApi: ChainApi<Block = Block> + 'static,
 	RpcResponse: SendRpcResponse<Hash = ExtrinsicHash<PoolApi>>,
 {
-	pool: Arc<Pool<PoolApi, RpcResponse>>,
+	pool: Arc<Pool<PoolApi, RpcResponse, TOP>>,
 	_api: Arc<PoolApi>,
-	ready_poll: Arc<Mutex<ReadyPoll<ReadyIteratorFor<PoolApi>, Block>>>,
+	ready_poll: Arc<Mutex<ReadyPoll<ReadyIteratorFor<PoolApi, TOP>, Block>>>,
 }
 
-impl<PoolApi, Block, RpcResponse> BasicPool<PoolApi, Block, RpcResponse>
+impl<PoolApi, Block, RpcResponse, TOP> BasicPool<PoolApi, Block, RpcResponse, TOP>
 where
 	Block: BlockT,
 	PoolApi: ChainApi<Block = Block> + 'static,
 	RpcResponse: SendRpcResponse<Hash = ExtrinsicHash<PoolApi>>,
+	TOP: Clone + Encode + PoolTransactionValidation + core::fmt::Debug + Sync + Send,
 {
 	/// Create new basic operation pool with provided api and custom
 	/// revalidation type.
@@ -134,25 +139,27 @@ where
 
 // FIXME: obey clippy
 #[allow(clippy::type_complexity)]
-impl<PoolApi, Block, RpcResponse> TrustedOperationPool for BasicPool<PoolApi, Block, RpcResponse>
+impl<PoolApi, Block, RpcResponse, TOP> TrustedOperationPool<TOP>
+	for BasicPool<PoolApi, Block, RpcResponse, TOP>
 where
 	Block: BlockT,
 	PoolApi: ChainApi<Block = Block> + 'static,
 	<PoolApi as ChainApi>::Error: IntoPoolError,
 	RpcResponse: SendRpcResponse<Hash = ExtrinsicHash<PoolApi>> + 'static,
+	TOP: Send + Sync + PoolTransactionValidation + core::fmt::Debug + Encode + Clone + 'static,
 {
 	type Block = PoolApi::Block;
 	type Hash = ExtrinsicHash<PoolApi>;
-	type InPoolOperation = TrustedOperation<TxHash<Self>, StfTrustedOperation>;
+	type InPoolOperation = TrustedOperation<TxHash, TOP>;
 	type Error = PoolApi::Error;
 
 	fn submit_at(
 		&self,
 		at: &BlockId<Self::Block>,
 		source: TrustedOperationSource,
-		ops: Vec<StfTrustedOperation>,
+		ops: Vec<TOP>,
 		shard: ShardIdentifier,
-	) -> PoolFuture<Vec<Result<TxHash<Self>, Self::Error>>, Self::Error> {
+	) -> PoolFuture<Vec<Result<TxHash, Self::Error>>, Self::Error> {
 		let pool = self.pool.clone();
 		let at = *at;
 		async move { pool.submit_at(&at, source, ops, shard).await }.boxed()
@@ -162,9 +169,9 @@ where
 		&self,
 		at: &BlockId<Self::Block>,
 		source: TrustedOperationSource,
-		op: StfTrustedOperation,
+		op: TOP,
 		shard: ShardIdentifier,
-	) -> PoolFuture<TxHash<Self>, Self::Error> {
+	) -> PoolFuture<TxHash, Self::Error> {
 		let pool = self.pool.clone();
 		let at = *at;
 		async move { pool.submit_one(&at, source, op, shard).await }.boxed()
@@ -174,9 +181,9 @@ where
 		&self,
 		at: &BlockId<Self::Block>,
 		source: TrustedOperationSource,
-		xt: StfTrustedOperation,
+		xt: TOP,
 		shard: ShardIdentifier,
-	) -> PoolFuture<TxHash<Self>, Self::Error> {
+	) -> PoolFuture<TxHash, Self::Error> {
 		let at = *at;
 		let pool = self.pool.clone();
 		async move { pool.submit_and_watch(&at, source, xt, shard).await }.boxed()
@@ -186,9 +193,9 @@ where
 		&self,
 		at: NumberFor<Self::Block>,
 		shard: ShardIdentifier,
-	) -> PolledIterator<PoolApi> {
+	) -> PolledIterator<PoolApi, TOP> {
 		if self.ready_poll.lock().unwrap().updated_at() >= at {
-			let iterator: ReadyIteratorFor<PoolApi> =
+			let iterator: ReadyIteratorFor<PoolApi, TOP> =
 				Box::new(self.pool.validated_pool().ready(shard));
 			return Box::pin(ready(iterator))
 		}
@@ -201,7 +208,7 @@ where
 		}))
 	}
 
-	fn ready(&self, shard: ShardIdentifier) -> ReadyIteratorFor<PoolApi> {
+	fn ready(&self, shard: ShardIdentifier) -> ReadyIteratorFor<PoolApi, TOP> {
 		Box::new(self.pool.validated_pool().ready(shard))
 	}
 
@@ -211,7 +218,7 @@ where
 
 	fn remove_invalid(
 		&self,
-		hashes: &[TxHash<Self>],
+		hashes: &[TxHash],
 		shard: ShardIdentifier,
 		inblock: bool,
 	) -> Vec<Arc<Self::InPoolOperation>> {
@@ -222,21 +229,21 @@ where
 		self.pool.validated_pool().status(shard)
 	}
 
-	fn import_notification_stream(&self) -> ImportNotificationStream<TxHash<Self>> {
+	fn import_notification_stream(&self) -> ImportNotificationStream<TxHash> {
 		self.pool.validated_pool().import_notification_stream()
 	}
 
-	fn on_broadcasted(&self, propagations: HashMap<TxHash<Self>, Vec<String>>) {
+	fn on_broadcasted(&self, propagations: HashMap<TxHash, Vec<String>>) {
 		self.pool.validated_pool().on_broadcasted(propagations)
 	}
 
-	fn hash_of(&self, xt: &StfTrustedOperation) -> TxHash<Self> {
+	fn hash_of(&self, xt: &TOP) -> TxHash {
 		self.pool.hash_of(xt)
 	}
 
 	fn ready_transaction(
 		&self,
-		hash: &TxHash<Self>,
+		hash: &TxHash,
 		shard: ShardIdentifier,
 	) -> Option<Arc<Self::InPoolOperation>> {
 		self.pool.validated_pool().ready_by_hash(hash, shard)

@@ -19,11 +19,15 @@
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
+use core::fmt::Debug;
 
 use crate::error;
 use codec::Encode;
-use ita_stf::{Getter, TrustedCallSigned, TrustedOperation as StfTrustedOperation};
-use itp_stf_primitives::types::ShardIdentifier;
+use ita_stf::{Getter, TrustedCallSigned};
+use itp_stf_primitives::{
+	traits::{PoolTransactionValidation, TrustedCallVerification},
+	types::ShardIdentifier,
+};
 use itp_top_pool::{
 	pool::{ChainApi, ExtrinsicHash, NumberFor},
 	primitives::TrustedOperationSource,
@@ -44,66 +48,47 @@ use std::{boxed::Box, marker::PhantomData, pin::Pin, vec, vec::Vec};
 pub type Result<T> = core::result::Result<T, ()>;
 
 /// The operation pool logic for full client.
-pub struct SidechainApi<Block> {
-	_marker: PhantomData<Block>,
+pub struct SidechainApi<Block, TCS> {
+	_marker: PhantomData<(Block, TCS)>,
 }
 
-impl<Block> SidechainApi<Block> {
+impl<Block, TCS> SidechainApi<Block, TCS>
+where
+	TCS: TrustedCallVerification,
+{
 	/// Create new operation pool logic.
 	pub fn new() -> Self {
 		SidechainApi { _marker: Default::default() }
 	}
-
-	fn validate_trusted_call(trusted_call_signed: TrustedCallSigned) -> ValidTransaction {
-		let from = trusted_call_signed.call.sender_account();
-		let requires = vec![];
-		let provides = vec![(from, trusted_call_signed.nonce).encode()];
-
-		ValidTransaction { priority: 1 << 20, requires, provides, longevity: 64, propagate: true }
-	}
 }
 
-impl<Block> Default for SidechainApi<Block> {
+impl<Block, TCS> Default for SidechainApi<Block, TCS>
+where
+	TCS: TrustedCallVerification + Sync + Send,
+{
 	fn default() -> Self {
 		Self::new()
 	}
 }
 
-impl<Block> ChainApi for SidechainApi<Block>
+impl<Block, TCS> ChainApi for SidechainApi<Block, TCS>
 where
 	Block: BlockT,
+	TCS: TrustedCallVerification + Sync + Send,
 {
 	type Block = Block;
 	type Error = error::Error;
 	type ValidationFuture =
 		Pin<Box<dyn Future<Output = error::Result<TransactionValidity>> + Send>>;
-	type BodyFuture = Ready<error::Result<Option<Vec<StfTrustedOperation>>>>;
+	type BodyFuture = Ready<error::Result<Option<bool>>>;
 
-	fn validate_transaction(
+	fn validate_transaction<TOP: PoolTransactionValidation>(
 		&self,
 		_source: TrustedOperationSource,
-		uxt: StfTrustedOperation,
+		uxt: TOP,
 		_shard: ShardIdentifier,
 	) -> Self::ValidationFuture {
-		let operation = match uxt {
-			StfTrustedOperation::direct_call(signed_call) =>
-				Self::validate_trusted_call(signed_call),
-			StfTrustedOperation::indirect_call(signed_call) =>
-				Self::validate_trusted_call(signed_call),
-			StfTrustedOperation::get(getter) => match getter {
-				Getter::public(_) =>
-					return Box::pin(ready(Ok(Err(TransactionValidityError::Unknown(
-						UnknownTransaction::CannotLookup,
-					))))),
-				Getter::trusted(trusted_getter) => ValidTransaction {
-					priority: 1 << 20,
-					requires: vec![],
-					provides: vec![trusted_getter.signature.encode()],
-					longevity: 64,
-					propagate: true,
-				},
-			},
-		};
+		let operation = uxt.validate();
 		Box::pin(ready(Ok(Ok(operation))))
 	}
 
@@ -129,12 +114,12 @@ where
 		})
 	}
 
-	fn hash_and_length(&self, ex: &StfTrustedOperation) -> (ExtrinsicHash<Self>, usize) {
+	fn hash_and_length<TOP: Encode + Debug>(&self, ex: &TOP) -> (ExtrinsicHash<Self>, usize) {
 		debug!("[Pool] creating hash of {:?}", ex);
 		ex.using_encoded(|x| (<<Block::Header as HeaderT>::Hashing as HashT>::hash(x), x.len()))
 	}
 
-	fn block_body(&self, _id: &BlockId<Self::Block>) -> Self::BodyFuture {
+	fn block_body<TOP>(&self, _id: &BlockId<Self::Block>) -> Self::BodyFuture {
 		ready(Ok(None))
 	}
 }

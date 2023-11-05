@@ -15,10 +15,16 @@
 
 */
 extern crate alloc;
+use crate::traits::{PoolTransactionValidation, TrustedCallVerification};
 use alloc::boxed::Box;
-use codec::Compact;
-use sp_core::{crypto::AccountId32, ed25519, sr25519, Pair, H256};
-use sp_runtime::{traits::Verify, MultiSignature};
+use codec::{Compact, Decode, Encode};
+use sp_core::{blake2_256, crypto::AccountId32, ed25519, sr25519, Pair, H256};
+use sp_runtime::{
+	traits::Verify,
+	transaction_validity::{TransactionValidityError, UnknownTransaction, ValidTransaction},
+	MultiSignature,
+};
+use sp_std::vec;
 
 pub type Signature = MultiSignature;
 pub type AuthorityId = <Signature as Verify>::Signer;
@@ -51,5 +57,83 @@ impl From<ed25519::Pair> for KeyPair {
 impl From<sr25519::Pair> for KeyPair {
 	fn from(x: sr25519::Pair) -> Self {
 		KeyPair::Sr25519(Box::new(x))
+	}
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+#[allow(non_camel_case_types)]
+pub enum TrustedOperation<TCS, G>
+where
+	TCS: Encode,
+	G: Encode,
+{
+	indirect_call(TCS),
+	direct_call(TCS),
+	get(G),
+}
+
+impl<TCS, G> From<G> for TrustedOperation<TCS, G>
+where
+	TCS: Encode,
+	G: Encode,
+{
+	fn from(item: G) -> Self {
+		TrustedOperation::get(item)
+	}
+}
+
+impl<TCS, G> itp_hashing::Hash<H256> for TrustedOperation<TCS, G>
+where
+	TCS: Encode,
+	G: Encode,
+{
+	fn hash(&self) -> H256 {
+		blake2_256(&self.encode()).into()
+	}
+}
+
+impl<TCS, G> TrustedOperation<TCS, G>
+where
+	TCS: TrustedCallVerification + Encode,
+	G: Encode,
+{
+	pub fn to_call(&self) -> Option<&TCS> {
+		match self {
+			TrustedOperation::direct_call(c) => Some(c),
+			TrustedOperation::indirect_call(c) => Some(c),
+			_ => None,
+		}
+	}
+
+	pub fn signed_caller_account(&self) -> Option<&AccountId> {
+		match self {
+			TrustedOperation::direct_call(c) => Some(c.sender_account()),
+			TrustedOperation::indirect_call(c) => Some(c.sender_account()),
+			_ => None,
+		}
+	}
+
+	fn validate_trusted_call(trusted_call_signed: &TCS) -> ValidTransaction {
+		let from = trusted_call_signed.sender_account();
+		let requires = vec![];
+		let provides = vec![(from, trusted_call_signed.nonce()).encode()];
+
+		ValidTransaction { priority: 1 << 20, requires, provides, longevity: 64, propagate: true }
+	}
+}
+
+impl<TCS, G> PoolTransactionValidation for TrustedOperation<TCS, G>
+where
+	TCS: TrustedCallVerification + Encode,
+	G: Encode + PoolTransactionValidation,
+{
+	fn validate(&self) -> Result<ValidTransaction, TransactionValidityError> {
+		match self {
+			TrustedOperation::direct_call(trusted_call_signed) =>
+				Ok(Self::validate_trusted_call(trusted_call_signed)),
+			TrustedOperation::indirect_call(trusted_call_signed) =>
+				Ok(Self::validate_trusted_call(trusted_call_signed)),
+			TrustedOperation::get(getter) => getter.validate(),
+		}
 	}
 }

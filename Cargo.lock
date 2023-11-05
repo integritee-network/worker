@@ -3073,6 +3073,7 @@ dependencies = [
  "sp-io 7.0.0",
  "sp-keyring",
  "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -3732,10 +3733,12 @@ dependencies = [
 name = "itp-stf-primitives"
 version = "0.9.0"
 dependencies = [
+ "itp-hashing",
  "itp-sgx-runtime-primitives",
  "parity-scale-codec",
  "sp-core",
  "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -3847,6 +3850,7 @@ dependencies = [
  "derive_more",
  "ita-stf",
  "itc-direct-rpc-server",
+ "itp-sgx-runtime-primitives",
  "itp-stf-primitives",
  "itp-types",
  "its-primitives",

@@ -21,7 +21,7 @@ use sp_core::{H160, H256, U256};
 #[cfg(feature = "evm")]
 use std::vec::Vec;
 
-use crate::{helpers::ensure_enclave_signer_account, StfError, TrustedOperation};
+use crate::{helpers::ensure_enclave_signer_account, Getter, StfError};
 use codec::{Compact, Decode, Encode};
 use frame_support::{ensure, traits::UnfilteredDispatchable};
 #[cfg(feature = "evm")]
@@ -35,8 +35,8 @@ use itp_node_api_metadata::{
 };
 use itp_stf_interface::{ExecuteCall, SHARD_VAULT_KEY};
 use itp_stf_primitives::{
-	traits::TrustedCallSigning,
-	types::{AccountId, KeyPair, ShardIdentifier, Signature},
+	traits::{TrustedCallSigning, TrustedCallVerification},
+	types::{AccountId, KeyPair, ShardIdentifier, Signature, TrustedOperation},
 };
 use itp_types::{parentchain::ProxyType, Address, OpaqueCall};
 use itp_utils::stringify::account_id_to_string;
@@ -150,19 +150,32 @@ impl TrustedCallSigned {
 		TrustedCallSigned { call, nonce, signature }
 	}
 
-	pub fn verify_signature(&self, mrenclave: &[u8; 32], shard: &ShardIdentifier) -> bool {
+	pub fn into_trusted_operation(
+		self,
+		direct: bool,
+	) -> TrustedOperation<TrustedCallSigned, Getter> {
+		match direct {
+			true => TrustedOperation::direct_call(self),
+			false => TrustedOperation::indirect_call(self),
+		}
+	}
+}
+
+impl TrustedCallVerification for TrustedCallSigned {
+	fn sender_account(&self) -> &AccountId {
+		self.call.sender_account()
+	}
+
+	fn nonce(&self) -> Index {
+		self.nonce
+	}
+
+	fn verify_signature(&self, mrenclave: &[u8; 32], shard: &ShardIdentifier) -> bool {
 		let mut payload = self.call.encode();
 		payload.append(&mut self.nonce.encode());
 		payload.append(&mut mrenclave.encode());
 		payload.append(&mut shard.encode());
 		self.signature.verify(payload.as_slice(), self.call.sender_account())
-	}
-
-	pub fn into_trusted_operation(self, direct: bool) -> TrustedOperation {
-		match direct {
-			true => TrustedOperation::direct_call(self),
-			false => TrustedOperation::indirect_call(self),
-		}
 	}
 }
 

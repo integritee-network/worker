@@ -25,6 +25,7 @@ use itp_stf_primitives::{
 use itp_utils::stringify::account_id_to_string;
 use log::*;
 use sp_runtime::traits::Verify;
+use sp_std::vec;
 use std::prelude::v1::*;
 
 #[cfg(feature = "evm")]
@@ -33,8 +34,12 @@ use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 #[cfg(feature = "evm")]
 use crate::evm_helpers::{get_evm_account, get_evm_account_codes, get_evm_account_storages};
 
+use itp_stf_primitives::traits::PoolTransactionValidation;
 #[cfg(feature = "evm")]
 use sp_core::{H160, H256};
+use sp_runtime::transaction_validity::{
+	TransactionValidityError, UnknownTransaction, ValidTransaction,
+};
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
@@ -60,6 +65,22 @@ impl GetterAuthorization for Getter {
 		match self {
 			Self::trusted(ref getter) => getter.verify_signature(),
 			Self::public(_) => true,
+		}
+	}
+}
+
+impl PoolTransactionValidation for Getter {
+	fn validate(&self) -> Result<ValidTransaction, TransactionValidityError> {
+		match self {
+			Self::public(_) =>
+				return Err(TransactionValidityError::Unknown(UnknownTransaction::CannotLookup)),
+			Self::trusted(trusted_getter_signed) => Ok(ValidTransaction {
+				priority: 1 << 20,
+				requires: vec![],
+				provides: vec![trusted_getter_signed.signature.encode()],
+				longevity: 64,
+				propagate: true,
+			}),
 		}
 	}
 }

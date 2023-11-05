@@ -24,16 +24,21 @@ use crate::{
 	primitives::TrustedOperationSource,
 	validated_pool::{ValidatedOperation, ValidatedPool},
 };
+use codec::Encode;
 use core::matches;
-use ita_stf::TrustedOperation as StfTrustedOperation;
 use itc_direct_rpc_server::SendRpcResponse;
-use itp_stf_primitives::types::ShardIdentifier;
+use itp_stf_primitives::{
+	traits::PoolTransactionValidation,
+	types::{ShardIdentifier, TrustedOperation as StfTrustedOperation},
+};
 use itp_types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::{channel::mpsc::Receiver, future, Future};
 use sp_runtime::{
 	generic::BlockId,
 	traits::{self, Block as BlockT, SaturatedConversion},
-	transaction_validity::{TransactionTag as Tag, TransactionValidity, TransactionValidityError},
+	transaction_validity::{
+		TransactionTag as Tag, TransactionValidity, TransactionValidityError, ValidTransaction,
+	},
 };
 use std::{collections::HashMap, format, sync::Arc, time::Instant, vec::Vec};
 
@@ -49,10 +54,10 @@ pub type ExtrinsicHash<A> = <<A as ChainApi>::Block as traits::Block>::Hash;
 /// Block number type for the ChainApi
 pub type NumberFor<A> = traits::NumberFor<<A as ChainApi>::Block>;
 /// A type of operation stored in the pool
-pub type TransactionFor<A> = Arc<base::TrustedOperation<ExtrinsicHash<A>, StfTrustedOperation>>;
+pub type TransactionFor<A, TOP> = Arc<base::TrustedOperation<ExtrinsicHash<A>, TOP>>;
 /// A type of validated operation stored in the pool.
-pub type ValidatedOperationFor<A> =
-	ValidatedOperation<ExtrinsicHash<A>, StfTrustedOperation, <A as ChainApi>::Error>;
+pub type ValidatedOperationFor<A, TOP> =
+	ValidatedOperation<ExtrinsicHash<A>, TOP, <A as ChainApi>::Error>;
 
 /// Concrete extrinsic validation and query logic.
 pub trait ChainApi: Send + Sync {
@@ -63,16 +68,13 @@ pub trait ChainApi: Send + Sync {
 	/// Validate operation future.
 	type ValidationFuture: Future<Output = Result<TransactionValidity, Self::Error>> + Send + Unpin;
 	/// Body future (since block body might be remote)
-	type BodyFuture: Future<Output = Result<Option<Vec<StfTrustedOperation>>, Self::Error>>
-		+ Unpin
-		+ Send
-		+ 'static;
+	type BodyFuture: Future<Output = Result<Option<bool>, Self::Error>> + Unpin + Send + 'static;
 
 	/// Verify extrinsic at given block.
-	fn validate_transaction(
+	fn validate_transaction<TOP: PoolTransactionValidation>(
 		&self,
 		source: TrustedOperationSource,
-		uxt: StfTrustedOperation,
+		uxt: TOP,
 		shard: ShardIdentifier,
 	) -> Self::ValidationFuture;
 
@@ -89,10 +91,10 @@ pub trait ChainApi: Send + Sync {
 	) -> Result<Option<SidechainBlockHash>, Self::Error>;
 
 	/// Returns hash and encoding length of the extrinsic.
-	fn hash_and_length(&self, uxt: &StfTrustedOperation) -> (ExtrinsicHash<Self>, usize);
+	fn hash_and_length<TOP: Encode>(&self, uxt: &TOP) -> (ExtrinsicHash<Self>, usize);
 
 	/// Returns a block body given the block id.
-	fn block_body(&self, at: &BlockId<Self::Block>) -> Self::BodyFuture;
+	fn block_body<TOP>(&self, at: &BlockId<Self::Block>) -> Self::BodyFuture;
 }
 
 /// Pool configuration options.
@@ -125,18 +127,19 @@ enum CheckBannedBeforeVerify {
 }
 
 /// Extrinsics pool that performs validation.
-pub struct Pool<B: ChainApi, R>
+pub struct Pool<B: ChainApi, R, TOP>
 where
 	R: SendRpcResponse<Hash = ExtrinsicHash<B>>,
 {
-	validated_pool: Arc<ValidatedPool<B, R>>,
+	validated_pool: Arc<ValidatedPool<B, R, TOP>>,
 }
 
-impl<B: ChainApi, R> Pool<B, R>
+impl<B: ChainApi, R, TOP> Pool<B, R, TOP>
 where
 	//<<B as ChainApi>::Block as sp_runtime::traits::Block>::Hash: Serialize,
 	<B as ChainApi>::Error: error::IntoPoolError,
 	R: SendRpcResponse<Hash = ExtrinsicHash<B>>,
+	TOP: Encode + Clone + PoolTransactionValidation + core::fmt::Debug + Send + Sync,
 {
 	/// Create a new operation pool.
 	pub fn new(options: Options, api: Arc<B>, rpc_response_sender: Arc<R>) -> Self {
@@ -148,7 +151,7 @@ where
 		&self,
 		at: &BlockId<B::Block>,
 		source: TrustedOperationSource,
-		xts: impl IntoIterator<Item = StfTrustedOperation>,
+		xts: impl IntoIterator<Item = TOP>,
 		shard: ShardIdentifier,
 	) -> Result<Vec<Result<ExtrinsicHash<B>, B::Error>>, B::Error> {
 		let xts = xts.into_iter().map(|xt| (source, xt));
@@ -164,7 +167,7 @@ where
 		&self,
 		at: &BlockId<B::Block>,
 		source: TrustedOperationSource,
-		xts: impl IntoIterator<Item = StfTrustedOperation>,
+		xts: impl IntoIterator<Item = TOP>,
 		shard: ShardIdentifier,
 	) -> Result<Vec<Result<ExtrinsicHash<B>, B::Error>>, B::Error> {
 		let xts = xts.into_iter().map(|xt| (source, xt));
@@ -178,7 +181,7 @@ where
 		&self,
 		at: &BlockId<B::Block>,
 		source: TrustedOperationSource,
-		xt: StfTrustedOperation,
+		xt: TOP,
 		shard: ShardIdentifier,
 	) -> Result<ExtrinsicHash<B>, B::Error> {
 		let res = self.submit_at(at, source, std::iter::once(xt), shard).await?.pop();
@@ -190,7 +193,7 @@ where
 		&self,
 		at: &BlockId<B::Block>,
 		source: TrustedOperationSource,
-		xt: StfTrustedOperation,
+		xt: TOP,
 		shard: ShardIdentifier,
 	) -> Result<ExtrinsicHash<B>, B::Error> {
 		//TODO
@@ -206,7 +209,7 @@ where
 	/// Resubmit some operation that were validated elsewhere.
 	pub fn resubmit(
 		&self,
-		revalidated_transactions: HashMap<ExtrinsicHash<B>, ValidatedOperationFor<B>>,
+		revalidated_transactions: HashMap<ExtrinsicHash<B>, ValidatedOperationFor<B, TOP>>,
 		shard: ShardIdentifier,
 	) {
 		let now = Instant::now();
@@ -256,7 +259,7 @@ where
 		&self,
 		at: &BlockId<B::Block>,
 		_parent: &BlockId<B::Block>,
-		extrinsics: &[StfTrustedOperation],
+		extrinsics: &[TOP],
 		shard: ShardIdentifier,
 	) -> Result<(), B::Error> {
 		log::debug!(
@@ -365,7 +368,7 @@ where
 	}
 
 	/// Returns operation hash
-	pub fn hash_of(&self, xt: &StfTrustedOperation) -> ExtrinsicHash<B> {
+	pub fn hash_of(&self, xt: &TOP) -> ExtrinsicHash<B> {
 		self.validated_pool.api().hash_and_length(xt).0
 	}
 
@@ -380,10 +383,10 @@ where
 	async fn verify(
 		&self,
 		at: &BlockId<B::Block>,
-		xts: impl IntoIterator<Item = (TrustedOperationSource, StfTrustedOperation)>,
+		xts: impl IntoIterator<Item = (TrustedOperationSource, TOP)>,
 		check: CheckBannedBeforeVerify,
 		shard: ShardIdentifier,
-	) -> Result<HashMap<ExtrinsicHash<B>, ValidatedOperationFor<B>>, B::Error> {
+	) -> Result<HashMap<ExtrinsicHash<B>, ValidatedOperationFor<B, TOP>>, B::Error> {
 		//FIXME: Nicer verify
 		// we need a block number to compute tx validity
 		//let block_number = self.resolve_block_number(at)?;
@@ -409,10 +412,10 @@ where
 		//block_number: NumberFor<B>,
 		block_number: i8,
 		source: TrustedOperationSource,
-		xt: StfTrustedOperation,
+		xt: TOP,
 		check: CheckBannedBeforeVerify,
 		shard: ShardIdentifier,
-	) -> (ExtrinsicHash<B>, ValidatedOperationFor<B>) {
+	) -> (ExtrinsicHash<B>, ValidatedOperationFor<B, TOP>) {
 		let (hash, bytes) = self.validated_pool.api().hash_and_length(&xt);
 
 		let ignore_banned = matches!(check, CheckBannedBeforeVerify::No);
@@ -454,12 +457,12 @@ where
 	}
 
 	/// get a reference to the underlying validated pool.
-	pub fn validated_pool(&self) -> &ValidatedPool<B, R> {
+	pub fn validated_pool(&self) -> &ValidatedPool<B, R, TOP> {
 		&self.validated_pool
 	}
 }
 
-impl<B: ChainApi, R> Clone for Pool<B, R>
+impl<B: ChainApi, R, TOP> Clone for Pool<B, R, TOP>
 where
 	<B as ChainApi>::Error: error::IntoPoolError,
 	R: SendRpcResponse<Hash = ExtrinsicHash<B>>,
@@ -625,7 +628,7 @@ pub mod tests {
 		}
 
 		/// Hash the extrinsic.
-		fn hash_and_length(&self, uxt: &StfTrustedOperation) -> (BlockHash<Self>, usize) {
+		fn hash_and_length(&self, uxt: &StfTrustedOperation) -> (BlockHash, usize) {
 			let encoded = uxt.encode();
 			let len = encoded.len();
 			(tests::Hashing::hash_of(&encoded), len)

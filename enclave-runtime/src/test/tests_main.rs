@@ -272,7 +272,7 @@ fn test_submit_trusted_getter_to_top_pool() {
 	)
 	.unwrap();
 
-	let getters = top_pool_author.get_pending_trusted_getters(shard);
+	let getters = top_pool_author.get_pending_getters(shard);
 
 	// then
 	assert_eq!(getters[0], TrustedOperation::get(Getter::trusted(signed_getter)));
@@ -310,7 +310,7 @@ fn test_differentiate_getter_and_call_works() {
 	.unwrap();
 
 	let calls = top_pool_author.get_pending_trusted_calls(shard);
-	let getters = top_pool_author.get_pending_trusted_getters(shard);
+	let getters = top_pool_author.get_pending_getters(shard);
 
 	// then
 	assert_eq!(calls[0], trusted_operation);

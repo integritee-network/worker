@@ -15,8 +15,9 @@
 
 */
 
-use crate::types::{KeyPair, ShardIdentifier};
+use crate::types::{AccountId, KeyPair, ShardIdentifier};
 use itp_sgx_runtime_primitives::types::Index;
+use sp_runtime::transaction_validity::{TransactionValidityError, ValidTransaction};
 /// checks authorization of stf getters
 pub trait GetterAuthorization {
 	fn is_authorized(&self) -> bool;
@@ -32,4 +33,18 @@ pub trait TrustedCallSigning {
 		mrenclave: &[u8; 32],
 		shard: &ShardIdentifier,
 	) -> Self::Output;
+}
+
+/// enables TrustedCallSigned verification
+pub trait TrustedCallVerification {
+	fn sender_account(&self) -> &AccountId;
+
+	fn nonce(&self) -> Index;
+
+	fn verify_signature(&self, mrenclave: &[u8; 32], shard: &ShardIdentifier) -> bool;
+}
+
+/// validation for top pool
+pub trait PoolTransactionValidation {
+	fn validate(&self) -> Result<ValidTransaction, TransactionValidityError>;
 }
