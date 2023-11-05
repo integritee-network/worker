@@ -127,7 +127,7 @@ pub type TxHash = H256;
 /// Block hash type for a pool.
 pub type BlockHash = H256;
 /// Type of operations event stream for a pool.
-pub type TrustedOperationStatusStreamFor<P> = TrustedOperationStatusStream<TxHash, BlockHash>;
+pub type TrustedOperationStatusStreamFor = TrustedOperationStatusStream<TxHash, BlockHash>;
 
 /// Typical future type used in operation pool api.
 pub type PoolFuture<T, E> = Pin<Box<dyn Future<Output = Result<T, E>> + Send>>;

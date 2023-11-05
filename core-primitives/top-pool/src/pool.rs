@@ -18,10 +18,11 @@
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
+use core::marker::PhantomData;
 
 use crate::{
 	base_pool as base, error,
-	primitives::TrustedOperationSource,
+	primitives::{TrustedOperationSource, TxHash},
 	validated_pool::{ValidatedOperation, ValidatedPool},
 };
 use codec::Encode;
@@ -90,7 +91,7 @@ pub trait ChainApi: Send + Sync {
 	) -> Result<Option<SidechainBlockHash>, Self::Error>;
 
 	/// Returns hash and encoding length of the extrinsic.
-	fn hash_and_length<TOP: Encode>(&self, uxt: &TOP) -> (ExtrinsicHash<Self>, usize);
+	fn hash_and_length<TOP: Encode>(&self, uxt: &TOP) -> (TxHash, usize);
 
 	/// Returns a block body given the block id.
 	fn block_body<TOP>(&self, at: &BlockId<Self::Block>) -> Self::BodyFuture;
@@ -128,21 +129,24 @@ enum CheckBannedBeforeVerify {
 /// Extrinsics pool that performs validation.
 pub struct Pool<B: ChainApi, R, TOP>
 where
-	R: SendRpcResponse<Hash = ExtrinsicHash<B>>,
+	R: SendRpcResponse<Hash = TxHash>,
 {
 	validated_pool: Arc<ValidatedPool<B, R, TOP>>,
+	_phantom: PhantomData<R>,
 }
 
 impl<B: ChainApi, R, TOP> Pool<B, R, TOP>
 where
-	//<<B as ChainApi>::Block as sp_runtime::traits::Block>::Hash: Serialize,
 	<B as ChainApi>::Error: error::IntoPoolError,
-	R: SendRpcResponse<Hash = ExtrinsicHash<B>>,
+	R: SendRpcResponse<Hash = TxHash>,
 	TOP: Encode + Clone + PoolTransactionValidation + core::fmt::Debug + Send + Sync,
 {
 	/// Create a new operation pool.
 	pub fn new(options: Options, api: Arc<B>, rpc_response_sender: Arc<R>) -> Self {
-		Pool { validated_pool: Arc::new(ValidatedPool::new(options, api, rpc_response_sender)) }
+		Pool {
+			validated_pool: Arc::new(ValidatedPool::new(options, api, rpc_response_sender)),
+			_phantom: Default::default(),
+		}
 	}
 
 	/// Imports a bunch of unverified extrinsics to the pool
@@ -152,7 +156,7 @@ where
 		source: TrustedOperationSource,
 		xts: impl IntoIterator<Item = TOP>,
 		shard: ShardIdentifier,
-	) -> Result<Vec<Result<ExtrinsicHash<B>, B::Error>>, B::Error> {
+	) -> Result<Vec<Result<TxHash, B::Error>>, B::Error> {
 		let xts = xts.into_iter().map(|xt| (source, xt));
 		let validated_transactions =
 			self.verify(at, xts, CheckBannedBeforeVerify::Yes, shard).await?;
@@ -168,7 +172,7 @@ where
 		source: TrustedOperationSource,
 		xts: impl IntoIterator<Item = TOP>,
 		shard: ShardIdentifier,
-	) -> Result<Vec<Result<ExtrinsicHash<B>, B::Error>>, B::Error> {
+	) -> Result<Vec<Result<TxHash, B::Error>>, B::Error> {
 		let xts = xts.into_iter().map(|xt| (source, xt));
 		let validated_transactions =
 			self.verify(at, xts, CheckBannedBeforeVerify::No, shard).await?;
@@ -182,7 +186,7 @@ where
 		source: TrustedOperationSource,
 		xt: TOP,
 		shard: ShardIdentifier,
-	) -> Result<ExtrinsicHash<B>, B::Error> {
+	) -> Result<TxHash, B::Error> {
 		let res = self.submit_at(at, source, std::iter::once(xt), shard).await?.pop();
 		res.expect("One extrinsic passed; one result returned; qed")
 	}
@@ -194,7 +198,7 @@ where
 		source: TrustedOperationSource,
 		xt: TOP,
 		shard: ShardIdentifier,
-	) -> Result<ExtrinsicHash<B>, B::Error> {
+	) -> Result<TxHash, B::Error> {
 		//TODO
 		//let block_number = self.resolve_block_number(at)?;
 		// dummy value:
@@ -208,7 +212,7 @@ where
 	/// Resubmit some operation that were validated elsewhere.
 	pub fn resubmit(
 		&self,
-		revalidated_transactions: HashMap<ExtrinsicHash<B>, ValidatedOperationFor<B, TOP>>,
+		revalidated_transactions: HashMap<TxHash, ValidatedOperationFor<B, TOP>>,
 		shard: ShardIdentifier,
 	) {
 		let now = Instant::now();
@@ -228,7 +232,7 @@ where
 	pub fn prune_known(
 		&self,
 		at: &BlockId<B::Block>,
-		hashes: &[ExtrinsicHash<B>],
+		hashes: &[TxHash],
 		shard: ShardIdentifier,
 	) -> Result<(), B::Error> {
 		// Get details of all extrinsics that are already in the pool
@@ -328,7 +332,7 @@ where
 		&self,
 		at: &BlockId<B::Block>,
 		tags: impl IntoIterator<Item = Tag>,
-		known_imported_hashes: impl IntoIterator<Item = ExtrinsicHash<B>> + Clone,
+		known_imported_hashes: impl IntoIterator<Item = TxHash> + Clone,
 		shard: ShardIdentifier,
 	) -> Result<(), B::Error> {
 		log::debug!(target: "txpool", "Pruning at {:?}", at);
@@ -367,7 +371,7 @@ where
 	}
 
 	/// Returns operation hash
-	pub fn hash_of(&self, xt: &TOP) -> ExtrinsicHash<B> {
+	pub fn hash_of(&self, xt: &TOP) -> TxHash {
 		self.validated_pool.api().hash_and_length(xt).0
 	}
 
@@ -385,7 +389,7 @@ where
 		xts: impl IntoIterator<Item = (TrustedOperationSource, TOP)>,
 		check: CheckBannedBeforeVerify,
 		shard: ShardIdentifier,
-	) -> Result<HashMap<ExtrinsicHash<B>, ValidatedOperationFor<B, TOP>>, B::Error> {
+	) -> Result<HashMap<TxHash, ValidatedOperationFor<B, TOP>>, B::Error> {
 		//FIXME: Nicer verify
 		// we need a block number to compute tx validity
 		//let block_number = self.resolve_block_number(at)?;
@@ -414,7 +418,7 @@ where
 		xt: TOP,
 		check: CheckBannedBeforeVerify,
 		shard: ShardIdentifier,
-	) -> (ExtrinsicHash<B>, ValidatedOperationFor<B, TOP>) {
+	) -> (TxHash, ValidatedOperationFor<B, TOP>) {
 		let (hash, bytes) = self.validated_pool.api().hash_and_length(&xt);
 
 		let ignore_banned = matches!(check, CheckBannedBeforeVerify::No);
@@ -464,10 +468,10 @@ where
 impl<B: ChainApi, R, TOP> Clone for Pool<B, R, TOP>
 where
 	<B as ChainApi>::Error: error::IntoPoolError,
-	R: SendRpcResponse<Hash = ExtrinsicHash<B>>,
+	R: SendRpcResponse<Hash = TxHash>,
 {
 	fn clone(&self) -> Self {
-		Self { validated_pool: self.validated_pool.clone() }
+		Self { validated_pool: self.validated_pool.clone(), _phantom: Default::default() }
 	}
 }
 

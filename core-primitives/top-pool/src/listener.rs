@@ -32,7 +32,7 @@ use std::{collections::HashMap, hash, string::String, sync::Arc, vec, vec::Vec};
 #[derive(Default)]
 pub struct Listener<R>
 where
-	R: SendRpcResponse,
+	R: SendRpcResponse<Hash = TxHash>,
 {
 	watchers: HashMap<TxHash, Watcher<R>>,
 	finality_watchers: LinkedHashMap<SidechainBlockHash, Vec<TxHash>>,

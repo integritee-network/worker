@@ -548,9 +548,9 @@ impl<Ex> ReadyOperations<Ex> {
 }
 
 /// Iterator of ready operations ordered by priority.
-pub struct BestIterator<Hash, Ex> {
-	all: ReadOnlyTrackedMap<Hash, ReadyTx<Ex>>,
-	awaiting: HashMap<Hash, (usize, OperationRef<Ex>)>,
+pub struct BestIterator<Ex> {
+	all: ReadOnlyTrackedMap<TxHash, ReadyTx<Ex>>,
+	awaiting: HashMap<TxHash, (usize, OperationRef<Ex>)>,
 	best: BTreeSet<OperationRef<Ex>>,
 }
 
@@ -564,7 +564,7 @@ pub struct BestIterator<Hash, Ex> {
 	fn default() ->  self.awaiting.insert("NA", (0, tx_default))
 }*/
 
-impl<Hash: hash::Hash + Member + Ord, Ex> BestIterator<Hash, Ex> {
+impl<Ex> BestIterator<Ex> {
 	/// Depending on number of satisfied requirements insert given ref
 	/// either to awaiting set or to best set.
 	fn best_or_awaiting(&mut self, satisfied: usize, tx_ref: OperationRef<Ex>) {
@@ -578,7 +578,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> BestIterator<Hash, Ex> {
 	}
 }
 
-impl<Hash: hash::Hash + Member + Ord, Ex> Iterator for BestIterator<Hash, Ex> {
+impl<Ex> Iterator for BestIterator<Ex> {
 	type Item = Arc<TrustedOperation<Ex>>;
 
 	fn next(&mut self) -> Option<Self::Item> {

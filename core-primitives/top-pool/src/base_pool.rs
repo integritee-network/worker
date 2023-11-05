@@ -119,8 +119,8 @@ impl<Extrinsic> InPoolOperation for TrustedOperation<Extrinsic> {
 		&self.data
 	}
 
-	fn hash(&self) -> &TxHash {
-		&self.hash
+	fn hash(&self) -> TxHash {
+		self.hash
 	}
 
 	fn priority(&self) -> &Priority {

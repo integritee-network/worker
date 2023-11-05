@@ -114,7 +114,7 @@ where
 		})
 	}
 
-	fn hash_and_length<TOP: Encode + Debug>(&self, ex: &TOP) -> (ExtrinsicHash<Self>, usize) {
+	fn hash_and_length<TOP: Encode + Debug>(&self, ex: &TOP) -> (TxHash, usize) {
 		debug!("[Pool] creating hash of {:?}", ex);
 		ex.using_encoded(|x| (<<Block::Header as HeaderT>::Hashing as HashT>::hash(x), x.len()))
 	}

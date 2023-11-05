@@ -37,7 +37,7 @@ use crate::{
 };
 use alloc::{boxed::Box, string::String, sync::Arc};
 use codec::Encode;
-use core::pin::Pin;
+use core::{marker::PhantomData, pin::Pin};
 use itc_direct_rpc_server::SendRpcResponse;
 use itp_stf_primitives::{
 	traits::PoolTransactionValidation,
@@ -103,18 +103,19 @@ pub struct BasicPool<PoolApi, Block, RpcResponse, TOP>
 where
 	Block: BlockT,
 	PoolApi: ChainApi<Block = Block> + 'static,
-	RpcResponse: SendRpcResponse<Hash = ExtrinsicHash<PoolApi>>,
+	RpcResponse: SendRpcResponse<Hash = TxHash>,
 {
 	pool: Arc<Pool<PoolApi, RpcResponse, TOP>>,
 	_api: Arc<PoolApi>,
 	ready_poll: Arc<Mutex<ReadyPoll<ReadyIteratorFor<TOP>, Block>>>,
+	_phantom: PhantomData<RpcResponse>,
 }
 
 impl<PoolApi, Block, RpcResponse, TOP> BasicPool<PoolApi, Block, RpcResponse, TOP>
 where
 	Block: BlockT,
 	PoolApi: ChainApi<Block = Block> + 'static,
-	RpcResponse: SendRpcResponse<Hash = ExtrinsicHash<PoolApi>>,
+	RpcResponse: SendRpcResponse<Hash = TxHash>,
 	TOP: Clone + Encode + PoolTransactionValidation + core::fmt::Debug + Sync + Send,
 {
 	/// Create new basic operation pool with provided api and custom
@@ -131,7 +132,12 @@ where
 		<PoolApi as ChainApi>::Error: IntoPoolError,
 	{
 		let pool = Arc::new(Pool::new(options, pool_api.clone(), rpc_response_sender));
-		BasicPool { _api: pool_api, pool, ready_poll: Default::default() }
+		BasicPool {
+			_api: pool_api,
+			pool,
+			ready_poll: Default::default(),
+			_phantom: Default::default(),
+		}
 	}
 }
 
@@ -143,7 +149,7 @@ where
 	Block: BlockT,
 	PoolApi: ChainApi<Block = Block> + 'static,
 	<PoolApi as ChainApi>::Error: IntoPoolError,
-	RpcResponse: SendRpcResponse<Hash = ExtrinsicHash<PoolApi>> + 'static,
+	RpcResponse: SendRpcResponse<Hash = TxHash> + 'static,
 	TOP: Send + Sync + PoolTransactionValidation + core::fmt::Debug + Encode + Clone + 'static,
 {
 	type Block = PoolApi::Block;

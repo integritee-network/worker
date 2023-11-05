@@ -39,7 +39,7 @@ use crate::{
 	rotator::PoolRotator,
 };
 use codec::Encode;
-use core::{hash, result::Result};
+use core::{hash, marker::PhantomData, result::Result};
 use itc_direct_rpc_server::SendRpcResponse;
 use itp_stf_primitives::types::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
 use itp_types::BlockHash as SidechainBlockHash;
@@ -106,15 +106,16 @@ where
 {
 	api: Arc<B>,
 	options: Options,
-	listener: RwLock<Listener<TxHash>>,
+	listener: RwLock<Listener<R>>,
 	pool: RwLock<base::BasePool<TOP>>,
-	import_notification_sinks: Mutex<Vec<Sender<ExtrinsicHash<B>>>>,
+	import_notification_sinks: Mutex<Vec<Sender<TxHash>>>,
 	rotator: PoolRotator,
+	_phantom: PhantomData<R>,
 }
 
 impl<B: ChainApi, R, TOP> ValidatedPool<B, R, TOP>
 where
-	R: SendRpcResponse<Hash = ExtrinsicHash<B>>,
+	R: SendRpcResponse<Hash = TxHash>,
 	TOP: core::fmt::Debug + Send + Sync + Clone,
 {
 	/// Create a new operation pool.
@@ -127,16 +128,17 @@ where
 			pool: RwLock::new(base_pool),
 			import_notification_sinks: Default::default(),
 			rotator: Default::default(),
+			_phantom: Default::default(),
 		}
 	}
 
 	/// Bans given set of hashes.
-	pub fn ban(&self, now: &Instant, hashes: impl IntoIterator<Item = ExtrinsicHash<B>>) {
+	pub fn ban(&self, now: &Instant, hashes: impl IntoIterator<Item = TxHash>) {
 		self.rotator.ban(now, hashes)
 	}
 
 	/// Returns true if operation with given hash is currently banned from the pool.
-	pub fn is_banned(&self, hash: &ExtrinsicHash<B>) -> bool {
+	pub fn is_banned(&self, hash: &TxHash) -> bool {
 		self.rotator.is_banned(hash)
 	}
 
@@ -147,7 +149,7 @@ where
 	/// It checks if the operation is already imported or banned. If so, it returns an error.
 	pub fn check_is_known(
 		&self,
-		tx_hash: &ExtrinsicHash<B>,
+		tx_hash: &TxHash,
 		ignore_banned: bool,
 		shard: ShardIdentifier,
 	) -> Result<(), B::Error> {
@@ -230,7 +232,7 @@ where
 		}
 	}
 
-	fn enforce_limits(&self, shard: ShardIdentifier) -> HashSet<ExtrinsicHash<B>> {
+	fn enforce_limits(&self, shard: ShardIdentifier) -> HashSet<TxHash> {
 		let status = self.pool.read().unwrap().status(shard);
 		let ready_limit = &self.options.ready;
 		let future_limit = &self.options.future;
@@ -438,7 +440,7 @@ where
 	/// For each extrinsic, returns tags that it provides (if known), or None (if it is unknown).
 	pub fn extrinsics_tags(
 		&self,
-		hashes: &[ExtrinsicHash<B>],
+		hashes: &[TxHash],
 		shard: ShardIdentifier,
 	) -> Vec<Option<Vec<Tag>>> {
 		self.pool
@@ -453,7 +455,7 @@ where
 	/// Get ready operation by hash
 	pub fn ready_by_hash(
 		&self,
-		hash: &ExtrinsicHash<B>,
+		hash: &TxHash,
 		shard: ShardIdentifier,
 	) -> Option<TransactionFor<TOP>> {
 		self.pool.read().unwrap().ready_by_hash(hash, shard)
@@ -486,8 +488,8 @@ where
 	pub fn resubmit_pruned(
 		&self,
 		at: &BlockId<B::Block>,
-		known_imported_hashes: impl IntoIterator<Item = ExtrinsicHash<B>> + Clone,
-		pruned_hashes: Vec<ExtrinsicHash<B>>,
+		known_imported_hashes: impl IntoIterator<Item = TxHash> + Clone,
+		pruned_hashes: Vec<TxHash>,
 		pruned_xts: Vec<ValidatedOperationFor<B, TOP>>,
 		shard: ShardIdentifier,
 	) -> Result<(), B::Error>
@@ -521,7 +523,7 @@ where
 	pub fn fire_pruned(
 		&self,
 		at: &BlockId<B::Block>,
-		hashes: impl Iterator<Item = ExtrinsicHash<B>>,
+		hashes: impl Iterator<Item = TxHash>,
 	) -> Result<(), B::Error> {
 		let header_hash = self
 			.api
@@ -562,7 +564,7 @@ where
 				.map(|tx| tx.hash)
 				.collect::<Vec<_>>()
 		};
-		let futures_to_remove: Vec<ExtrinsicHash<B>> = {
+		let futures_to_remove: Vec<TxHash> = {
 			let p = self.pool.read().unwrap();
 			let mut hashes = Vec::new();
 			for tx in p.futures(shard) {
@@ -596,7 +598,7 @@ where
 	///
 	/// Consumers of this stream should use the `ready` method to actually get the
 	/// pending operations in the right order.
-	pub fn import_notification_stream(&self) -> EventStream<ExtrinsicHash<B>> {
+	pub fn import_notification_stream(&self) -> EventStream<TxHash> {
 		const CHANNEL_BUFFER_SIZE: usize = 1024;
 
 		let (sink, stream) = channel(CHANNEL_BUFFER_SIZE);
@@ -620,7 +622,7 @@ where
 	/// still be valid so we want to be able to re-import them.
 	pub fn remove_invalid(
 		&self,
-		hashes: &[ExtrinsicHash<B>],
+		hashes: &[TxHash],
 		shard: ShardIdentifier,
 		inblock: bool,
 	) -> Vec<TransactionFor<TOP>> {
@@ -689,7 +691,7 @@ where
 	}
 
 	/// Notify the listener of top inclusion in sidechain block
-	pub fn on_block_imported(&self, hashes: &[ExtrinsicHash<B>], block_hash: SidechainBlockHash) {
+	pub fn on_block_imported(&self, hashes: &[TxHash], block_hash: SidechainBlockHash) {
 		for top_hash in hashes.iter() {
 			self.listener.write().unwrap().in_block(top_hash, block_hash);
 		}
