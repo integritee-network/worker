@@ -19,7 +19,7 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
-use crate::watcher::Watcher;
+use crate::{primitives::TxHash, watcher::Watcher};
 use codec::Encode;
 use itc_direct_rpc_server::SendRpcResponse;
 use itp_types::BlockHash as SidechainBlockHash;
@@ -30,23 +30,21 @@ use std::{collections::HashMap, hash, string::String, sync::Arc, vec, vec::Vec};
 
 /// Extrinsic pool default listener.
 #[derive(Default)]
-pub struct Listener<H, R>
+pub struct Listener<R>
 where
-	H: hash::Hash + Eq,
 	R: SendRpcResponse,
 {
-	watchers: HashMap<H, Watcher<H, R>>,
-	finality_watchers: LinkedHashMap<SidechainBlockHash, Vec<H>>,
+	watchers: HashMap<TxHash, Watcher<R>>,
+	finality_watchers: LinkedHashMap<SidechainBlockHash, Vec<TxHash>>,
 	rpc_response_sender: Arc<R>,
 }
 
 /// Maximum number of blocks awaiting finality at any time.
 const MAX_FINALITY_WATCHERS: usize = 512;
 
-impl<H, R> Listener<H, R>
+impl<R> Listener<R>
 where
-	H: hash::Hash + traits::Member + Encode,
-	R: SendRpcResponse<Hash = H>,
+	R: SendRpcResponse<Hash = TxHash>,
 {
 	pub fn new(rpc_response_sender: Arc<R>) -> Self {
 		Listener {
@@ -56,9 +54,9 @@ where
 		}
 	}
 
-	fn fire<F>(&mut self, hash: &H, fun: F)
+	fn fire<F>(&mut self, hash: &TxHash, fun: F)
 	where
-		F: FnOnce(&mut Watcher<H, R>),
+		F: FnOnce(&mut Watcher<R>),
 	{
 		let clean = if let Some(h) = self.watchers.get_mut(hash) {
 			fun(h);
@@ -75,19 +73,19 @@ where
 	/// Creates a new watcher for given verified extrinsic.
 	///
 	/// The watcher can be used to subscribe to life-cycle events of that extrinsic.
-	pub fn create_watcher(&mut self, hash: H) {
+	pub fn create_watcher(&mut self, hash: TxHash) {
 		let new_watcher = Watcher::new_watcher(hash.clone(), self.rpc_response_sender.clone());
 		self.watchers.insert(hash, new_watcher);
 	}
 
 	/// Notify the listeners about extrinsic broadcast.
-	pub fn broadcasted(&mut self, hash: &H, peers: Vec<String>) {
+	pub fn broadcasted(&mut self, hash: &TxHash, peers: Vec<String>) {
 		trace!(target: "txpool", "[{:?}] Broadcasted", hash);
 		self.fire(hash, |watcher| watcher.broadcast(peers));
 	}
 
 	/// New operation was added to the ready pool or promoted from the future pool.
-	pub fn ready(&mut self, tx: &H, old: Option<&H>) {
+	pub fn ready(&mut self, tx: &TxHash, old: Option<&TxHash>) {
 		trace!(target: "txpool", "[{:?}] Ready (replaced with {:?})", tx, old);
 		self.fire(tx, |watcher| watcher.ready());
 		if let Some(old) = old {
@@ -96,13 +94,13 @@ where
 	}
 
 	/// New operation was added to the future pool.
-	pub fn future(&mut self, tx: &H) {
+	pub fn future(&mut self, tx: &TxHash) {
 		trace!(target: "txpool", "[{:?}] Future", tx);
 		self.fire(tx, |watcher| watcher.future());
 	}
 
 	/// TrustedOperation was dropped from the pool because of the limit.
-	pub fn dropped(&mut self, tx: &H, by: Option<&H>) {
+	pub fn dropped(&mut self, tx: &TxHash, by: Option<&TxHash>) {
 		trace!(target: "txpool", "[{:?}] Dropped (replaced with {:?})", tx, by);
 		self.fire(tx, |watcher| match by {
 			Some(_) => watcher.usurped(),
@@ -111,13 +109,13 @@ where
 	}
 
 	/// TrustedOperation was removed as invalid.
-	pub fn invalid(&mut self, tx: &H) {
+	pub fn invalid(&mut self, tx: &TxHash) {
 		self.fire(tx, |watcher| watcher.invalid());
 	}
 
 	/// TrustedOperation was pruned from the pool.
 	#[allow(clippy::or_fun_call)]
-	pub fn pruned(&mut self, block_hash: SidechainBlockHash, tx: &H) {
+	pub fn pruned(&mut self, block_hash: SidechainBlockHash, tx: &TxHash) {
 		debug!(target: "txpool", "[{:?}] Pruned at {:?}", tx, block_hash);
 		self.fire(tx, |s| s.in_block(block_hash));
 		self.finality_watchers.entry(block_hash).or_insert(vec![]).push(tx.clone());
@@ -132,7 +130,7 @@ where
 	}
 
 	/// TrustedOperation in block.
-	pub fn in_block(&mut self, tx: &H, block_hash: SidechainBlockHash) {
+	pub fn in_block(&mut self, tx: &TxHash, block_hash: SidechainBlockHash) {
 		self.fire(tx, |s| s.in_block(block_hash));
 	}
 

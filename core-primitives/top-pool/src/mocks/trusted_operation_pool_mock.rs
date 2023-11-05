@@ -116,8 +116,8 @@ impl TrustedOperationPoolMock {
 
 	fn map_stf_top_to_tx(
 		stf_top: &StfTrustedOperation,
-	) -> Arc<TrustedOperation<TxHash, StfTrustedOperation>> {
-		Arc::new(TrustedOperation::<TxHash, StfTrustedOperation> {
+	) -> Arc<TrustedOperation<StfTrustedOperation>> {
+		Arc::new(TrustedOperation::<StfTrustedOperation> {
 			data: stf_top.clone(),
 			bytes: 0,
 			hash: hash_of_top(stf_top),
@@ -133,8 +133,7 @@ impl TrustedOperationPoolMock {
 
 impl<TOP> TrustedOperationPool<TOP> for TrustedOperationPoolMock {
 	type Block = Block;
-	type Hash = H256;
-	type InPoolOperation = TrustedOperation<TxHash, TOP>;
+	type InPoolOperation = TrustedOperation<TOP>;
 	type Error = Error;
 
 	#[allow(clippy::type_complexity)]
@@ -253,7 +252,7 @@ impl<TOP> TrustedOperationPool<TOP> for TrustedOperationPoolMock {
 		unimplemented!()
 	}
 
-	fn on_block_imported(&self, _hashes: &[Self::Hash], _block_hash: SidechainBlockHash) {}
+	fn on_block_imported(&self, _hashes: &[TxHash], _block_hash: SidechainBlockHash) {}
 }
 
 fn default_pool_status() -> PoolStatus {

@@ -54,10 +54,9 @@ pub type ExtrinsicHash<A> = <<A as ChainApi>::Block as traits::Block>::Hash;
 /// Block number type for the ChainApi
 pub type NumberFor<A> = traits::NumberFor<<A as ChainApi>::Block>;
 /// A type of operation stored in the pool
-pub type TransactionFor<A, TOP> = Arc<base::TrustedOperation<ExtrinsicHash<A>, TOP>>;
+pub type TransactionFor<TOP> = Arc<base::TrustedOperation<TOP>>;
 /// A type of validated operation stored in the pool.
-pub type ValidatedOperationFor<A, TOP> =
-	ValidatedOperation<ExtrinsicHash<A>, TOP, <A as ChainApi>::Error>;
+pub type ValidatedOperationFor<A, TOP> = ValidatedOperation<TOP, <A as ChainApi>::Error>;
 
 /// Concrete extrinsic validation and query logic.
 pub trait ChainApi: Send + Sync {
@@ -548,23 +547,24 @@ pub mod tests {
 		clear_requirements: Arc<Mutex<HashSet<H256>>>,
 		add_requirements: Arc<Mutex<HashSet<H256>>>,
 	}
+	type TrustedOperationMock = StfTrustedOperation<u8, u8>;
 
 	impl ChainApi for TestApi {
 		type Block = tests::Block;
 		type Error = error::Error;
 		type ValidationFuture = futures::future::Ready<error::Result<TransactionValidity>>;
-		type BodyFuture = futures::future::Ready<error::Result<Option<Vec<StfTrustedOperation>>>>;
+		type BodyFuture = futures::future::Ready<error::Result<Option<Vec<TrustedOperationMock>>>>;
 
 		/// Verify extrinsic at given block.
-		fn validate_transaction(
+		fn validate_transaction<TrustedOperationMock>(
 			&self,
 			_source: TrustedOperationSource,
-			uxt: StfTrustedOperation,
+			uxt: TrustedOperationMock,
 			_shard: ShardIdentifier,
 		) -> Self::ValidationFuture {
 			let hash = self.hash_and_length(&uxt).0;
 			let nonce: Index = match uxt {
-				StfTrustedOperation::direct_call(signed_call) => signed_call.nonce,
+				TrustedOperationMock::direct_call(signed_call) => signed_call.nonce,
 				_ => 0,
 			};
 
@@ -628,27 +628,25 @@ pub mod tests {
 		}
 
 		/// Hash the extrinsic.
-		fn hash_and_length(&self, uxt: &StfTrustedOperation) -> (BlockHash, usize) {
+		fn hash_and_length<TrustedOperationMock>(
+			&self,
+			uxt: &TrustedOperationMock,
+		) -> (SidechainBlockHash, usize) {
 			let encoded = uxt.encode();
 			let len = encoded.len();
 			(tests::Hashing::hash_of(&encoded), len)
 		}
 
-		fn block_body(&self, _id: &BlockId<Self::Block>) -> Self::BodyFuture {
+		fn block_body<TrustedOperationMock>(&self, _id: &BlockId<Self::Block>) -> Self::BodyFuture {
 			futures::future::ready(Ok(None))
 		}
 	}
 
-	fn to_top(call: TrustedCall, nonce: Index) -> TrustedOperation {
-		let msg = &b"test-message"[..];
-		let (pair, _) = ed25519::Pair::generate();
-
-		let signature = pair.sign(&msg);
-		let multi_sig = MultiSignature::from(signature);
-		TrustedCallSigned::new(call, nonce, multi_sig).into_trusted_operation(true)
+	fn top(nonce: Index) -> TrustedOperationMock {
+		TrustedOperationMock { nonce, nonce }
 	}
 
-	fn test_pool() -> Pool<TestApi, RpcResponderMock<H256>> {
+	fn test_pool() -> Pool<TestApi, RpcResponderMock<H256>, TrustedOperationMock> {
 		Pool::new(
 			Default::default(),
 			TestApi::default().into(),

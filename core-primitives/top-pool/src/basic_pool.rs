@@ -54,13 +54,11 @@ use sp_runtime::{
 };
 use std::{collections::HashMap, vec, vec::Vec};
 
-type BoxedReadyIterator<Hash, Data> =
-	Box<dyn Iterator<Item = Arc<TrustedOperation<Hash, Data>>> + Send>;
+type BoxedReadyIterator<Data> = Box<dyn Iterator<Item = Arc<TrustedOperation<Data>>> + Send>;
 
-type ReadyIteratorFor<PoolApi, TOP> = BoxedReadyIterator<ExtrinsicHash<PoolApi>, TOP>;
+type ReadyIteratorFor<TOP> = BoxedReadyIterator<TOP>;
 
-type PolledIterator<PoolApi, TOP> =
-	Pin<Box<dyn Future<Output = ReadyIteratorFor<PoolApi, TOP>> + Send>>;
+type PolledIterator<TOP> = Pin<Box<dyn Future<Output = ReadyIteratorFor<TOP>> + Send>>;
 
 struct ReadyPoll<T, Block: BlockT> {
 	updated_at: NumberFor<Block>,
@@ -109,7 +107,7 @@ where
 {
 	pool: Arc<Pool<PoolApi, RpcResponse, TOP>>,
 	_api: Arc<PoolApi>,
-	ready_poll: Arc<Mutex<ReadyPoll<ReadyIteratorFor<PoolApi, TOP>, Block>>>,
+	ready_poll: Arc<Mutex<ReadyPoll<ReadyIteratorFor<TOP>, Block>>>,
 }
 
 impl<PoolApi, Block, RpcResponse, TOP> BasicPool<PoolApi, Block, RpcResponse, TOP>
@@ -149,8 +147,7 @@ where
 	TOP: Send + Sync + PoolTransactionValidation + core::fmt::Debug + Encode + Clone + 'static,
 {
 	type Block = PoolApi::Block;
-	type Hash = ExtrinsicHash<PoolApi>;
-	type InPoolOperation = TrustedOperation<TxHash, TOP>;
+	type InPoolOperation = TrustedOperation<TOP>;
 	type Error = PoolApi::Error;
 
 	fn submit_at(
@@ -189,14 +186,9 @@ where
 		async move { pool.submit_and_watch(&at, source, xt, shard).await }.boxed()
 	}
 
-	fn ready_at(
-		&self,
-		at: NumberFor<Self::Block>,
-		shard: ShardIdentifier,
-	) -> PolledIterator<PoolApi, TOP> {
+	fn ready_at(&self, at: NumberFor<Self::Block>, shard: ShardIdentifier) -> PolledIterator<TOP> {
 		if self.ready_poll.lock().unwrap().updated_at() >= at {
-			let iterator: ReadyIteratorFor<PoolApi, TOP> =
-				Box::new(self.pool.validated_pool().ready(shard));
+			let iterator: ReadyIteratorFor<TOP> = Box::new(self.pool.validated_pool().ready(shard));
 			return Box::pin(ready(iterator))
 		}
 
@@ -208,7 +200,7 @@ where
 		}))
 	}
 
-	fn ready(&self, shard: ShardIdentifier) -> ReadyIteratorFor<PoolApi, TOP> {
+	fn ready(&self, shard: ShardIdentifier) -> ReadyIteratorFor<TOP> {
 		Box::new(self.pool.validated_pool().ready(shard))
 	}
 
@@ -249,7 +241,7 @@ where
 		self.pool.validated_pool().ready_by_hash(hash, shard)
 	}
 
-	fn on_block_imported(&self, hashes: &[Self::Hash], block_hash: SidechainBlockHash) {
+	fn on_block_imported(&self, hashes: &[TxHash], block_hash: SidechainBlockHash) {
 		self.pool.validated_pool().on_block_imported(hashes, block_hash);
 	}
 }

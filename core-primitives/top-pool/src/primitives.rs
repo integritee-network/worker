@@ -139,13 +139,11 @@ pub type PoolFuture<T, E> = Pin<Box<dyn Future<Output = Result<T, E>> + Send>>;
 pub trait InPoolOperation {
 	/// TrustedOperation type.
 	type TrustedOperation;
-	/// TrustedOperation hash type.
-	type Hash;
 
 	/// Get the reference to the operation data.
 	fn data(&self) -> &Self::TrustedOperation;
 	/// Get hash of the operation.
-	fn hash(&self) -> &Self::Hash;
+	fn hash(&self) -> TxHash;
 	/// Get priority of the operation.
 	fn priority(&self) -> &TransactionPriority;
 	/// Get longevity of the operation.
@@ -162,10 +160,8 @@ pub trait InPoolOperation {
 pub trait TrustedOperationPool<TOP>: Send + Sync {
 	/// Block type.
 	type Block: BlockT;
-	/// TrustedOperation hash type.
-	type Hash: Hash + Eq + Member;
 	/// In-pool operation type.
-	type InPoolOperation: InPoolOperation<TrustedOperation = TOP, Hash = TxHash>;
+	type InPoolOperation: InPoolOperation<TrustedOperation = TOP>;
 	/// Error type.
 	type Error: From<error::Error> + error::IntoPoolError;
 
@@ -258,7 +254,7 @@ pub trait TrustedOperationPool<TOP>: Send + Sync {
 	) -> Option<Arc<Self::InPoolOperation>>;
 
 	/// Notify the listener of top inclusion in sidechain block
-	fn on_block_imported(&self, hashes: &[Self::Hash], block_hash: SidechainBlockHash);
+	fn on_block_imported(&self, hashes: &[TxHash], block_hash: SidechainBlockHash);
 }
 
 /// The source of the transaction.
