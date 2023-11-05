@@ -30,14 +30,14 @@ use itp_stf_primitives::{
 };
 use itp_top_pool::{
 	pool::{ChainApi, ExtrinsicHash, NumberFor},
-	primitives::TrustedOperationSource,
+	primitives::{TrustedOperationSource, TxHash},
 };
 use itp_types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::future::{ready, Future, Ready};
 use log::*;
 use sp_runtime::{
 	generic::BlockId,
-	traits::{Block as BlockT, Hash as HashT, Header as HeaderT},
+	traits::{BlakeTwo256, Block as BlockT, Hash as HashT, Header as HeaderT},
 	transaction_validity::{
 		TransactionValidity, TransactionValidityError, UnknownTransaction, ValidTransaction,
 	},
@@ -74,7 +74,7 @@ where
 impl<Block, TCS> ChainApi for SidechainApi<Block, TCS>
 where
 	Block: BlockT,
-	TCS: TrustedCallVerification + Sync + Send,
+	TCS: TrustedCallVerification + Sync + Send + Debug,
 {
 	type Block = Block;
 	type Error = error::Error;
@@ -89,7 +89,7 @@ where
 		_shard: ShardIdentifier,
 	) -> Self::ValidationFuture {
 		let operation = uxt.validate();
-		Box::pin(ready(Ok(Ok(operation))))
+		Box::pin(ready(Ok(operation)))
 	}
 
 	fn block_id_to_number(
@@ -116,7 +116,7 @@ where
 
 	fn hash_and_length<TOP: Encode + Debug>(&self, ex: &TOP) -> (TxHash, usize) {
 		debug!("[Pool] creating hash of {:?}", ex);
-		ex.using_encoded(|x| (<<Block::Header as HeaderT>::Hashing as HashT>::hash(x), x.len()))
+		ex.using_encoded(|x| (BlakeTwo256::hash(x), x.len()))
 	}
 
 	fn block_body<TOP>(&self, _id: &BlockId<Self::Block>) -> Self::BodyFuture {
@@ -130,11 +130,12 @@ mod tests {
 	use futures::executor;
 	use ita_stf::{PublicGetter, TrustedCall, TrustedOperation};
 	use itp_stf_primitives::types::{KeyPair, ShardIdentifier};
+	use itp_top_pool::mocks::trusted_operation_pool_mock::TrustedCallSignedMock;
 	use itp_types::Block as ParentchainBlock;
 	use sp_core::{ed25519, Pair};
 	use sp_keyring::AccountKeyring;
 
-	type TestChainApi = SidechainApi<ParentchainBlock>;
+	type TestChainApi = SidechainApi<ParentchainBlock, TrustedCallSignedMock>;
 
 	type Seed = [u8; 32];
 	const TEST_SEED: Seed = *b"12345678901234567890123456789012";
@@ -142,7 +143,7 @@ mod tests {
 	#[test]
 	fn indirect_calls_are_valid() {
 		let chain_api = TestChainApi::default();
-		let operation = create_indirect_trusted_operation();
+		let operation = TrustedOperationMock::indirect_call(TrustedCallSignedMock);
 
 		let validation = executor::block_on(chain_api.validate_transaction(
 			TrustedOperationSource::Local,
@@ -157,7 +158,7 @@ mod tests {
 	#[test]
 	fn public_getters_are_not_valid() {
 		let chain_api = TestChainApi::default();
-		let public_getter = TrustedOperation::get(Getter::public(PublicGetter::some_value));
+		let public_getter = TrustedOperationMock::get(GetterMock);
 
 		let validation = executor::block_on(chain_api.validate_transaction(
 			TrustedOperationSource::Local,
@@ -167,19 +168,5 @@ mod tests {
 		.unwrap();
 
 		assert!(validation.is_err());
-	}
-
-	fn create_indirect_trusted_operation() -> TrustedOperation {
-		let trusted_call_signed = TrustedCall::balance_transfer(
-			AccountKeyring::Alice.public().into(),
-			AccountKeyring::Bob.public().into(),
-			1000u128,
-		)
-		.sign(&KeyPair::Ed25519(Box::new(signer())), 1, &[1u8; 32], &ShardIdentifier::default());
-		TrustedOperation::indirect_call(trusted_call_signed)
-	}
-
-	fn signer() -> ed25519::Pair {
-		ed25519::Pair::from_seed(&TEST_SEED)
 	}
 }

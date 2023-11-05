@@ -35,7 +35,7 @@ use itp_stf_primitives::{
 };
 use itp_stf_state_handler::query_shard_state::QueryShardState;
 use itp_top_pool::{
-	error::{Error as PoolError, IntoPoolError},
+	error::{Error as PoolError, Error, IntoPoolError},
 	primitives::{
 		BlockHash, InPoolOperation, PoolFuture, TrustedOperationPool, TrustedOperationSource,
 		TxHash,
@@ -73,7 +73,7 @@ const TX_SOURCE: TrustedOperationSource = TrustedOperationSource::External;
 ///
 pub struct Author<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi, TCS, G>
 where
-	TopPool: TrustedOperationPool + Sync + Send + 'static,
+	TopPool: TrustedOperationPool<StfTrustedOperation<TCS, G>> + Sync + Send + 'static,
 	TopFilter: Filter<Value = StfTrustedOperation<TCS, G>>,
 	StateFacade: QueryShardState,
 	ShieldingKeyRepository: AccessKey,
@@ -91,7 +91,7 @@ where
 impl<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi, TCS, G>
 	Author<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi, TCS, G>
 where
-	TopPool: TrustedOperationPool + Sync + Send + 'static,
+	TopPool: TrustedOperationPool<StfTrustedOperation<TCS, G>> + Sync + Send + 'static,
 	TopFilter: Filter<Value = StfTrustedOperation<TCS, G>>,
 	StateFacade: QueryShardState,
 	ShieldingKeyRepository: AccessKey,
@@ -120,7 +120,7 @@ enum TopSubmissionMode {
 impl<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi, TCS, G>
 	Author<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi, TCS, G>
 where
-	TopPool: TrustedOperationPool + Sync + Send + 'static,
+	TopPool: TrustedOperationPool<StfTrustedOperation<TCS, G>> + Sync + Send + 'static,
 	TopFilter: Filter<Value = StfTrustedOperation<TCS, G>>,
 	StateFacade: QueryShardState,
 	ShieldingKeyRepository: AccessKey,
@@ -198,7 +198,7 @@ where
 						trusted_operation,
 						shard,
 					)
-					.map_err(map_top_error::<TopPool>),
+					.map_err(map_top_error::<TopPool, TCS, G>),
 			),
 
 			TopSubmissionMode::SubmitWatch => Box::pin(
@@ -209,7 +209,7 @@ where
 						trusted_operation,
 						shard,
 					)
-					.map_err(map_top_error::<TopPool>),
+					.map_err(map_top_error::<TopPool, TCS, G>),
 			),
 		}
 	}
@@ -253,7 +253,13 @@ where
 	}
 }
 
-fn map_top_error<P: TrustedOperationPool>(error: P::Error) -> RpcError {
+fn map_top_error<P: TrustedOperationPool<StfTrustedOperation<TCS, G>>, TCS, G>(
+	error: P::Error,
+) -> RpcError
+where
+	TCS: Encode,
+	G: Encode,
+{
 	StateRpcError::PoolError(
 		error
 			.into_pool_error()
@@ -267,14 +273,14 @@ impl<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi, TCS, G>
 	AuthorApi<TxHash, BlockHash, TCS, G>
 	for Author<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi, TCS, G>
 where
-	TopPool: TrustedOperationPool + Sync + Send + 'static,
+	TopPool: TrustedOperationPool<StfTrustedOperation<TCS, G>> + Sync + Send + 'static,
 	TopFilter: Filter<Value = StfTrustedOperation<TCS, G>>,
 	StateFacade: QueryShardState,
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
 	G: Encode + Clone + PoolTransactionValidation + core::fmt::Debug + Send + Sync,
-	TCS: Encode + Clone + core::fmt::Debug + Send + Sync,
+	TCS: Encode + Clone + core::fmt::Debug + Send + Sync + TrustedCallVerification,
 {
 	fn submit_top(&self, ext: Vec<u8>, shard: ShardIdentifier) -> PoolFuture<TxHash, RpcError> {
 		self.process_top(ext, shard, TopSubmissionMode::Submit)
@@ -357,7 +363,7 @@ where
 impl<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi, TCS, G> OnBlockImported
 	for Author<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi, TCS, G>
 where
-	TopPool: TrustedOperationPool + Sync + Send + 'static,
+	TopPool: TrustedOperationPool<StfTrustedOperation<TCS, G>> + Sync + Send + 'static,
 	TopFilter: Filter<Value = StfTrustedOperation<TCS, G>>,
 	StateFacade: QueryShardState,
 	ShieldingKeyRepository: AccessKey,
@@ -366,7 +372,7 @@ where
 	G: Encode + Clone + PoolTransactionValidation + core::fmt::Debug + Send + Sync,
 	TCS: Encode + Clone + core::fmt::Debug + Send + Sync,
 {
-	type Hash = <TopPool as TrustedOperationPool>::Hash;
+	type Hash = TxHash;
 
 	fn on_block_imported(&self, hashes: &[Self::Hash], block_hash: SidechainBlockHash) {
 		self.top_pool.on_block_imported(hashes, block_hash)

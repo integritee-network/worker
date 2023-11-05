@@ -59,8 +59,8 @@ pub struct TrustedOperationPoolMock<TOP: Encode + Clone + Send + Sync + 'static>
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum GetterMock {
-	public,
-	trusted,
+	public(u8),
+	trusted(u8),
 }
 
 impl PoolTransactionValidation for GetterMock {

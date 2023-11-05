@@ -18,7 +18,7 @@
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
-use core::marker::PhantomData;
+use core::{fmt::Debug, marker::PhantomData};
 
 use crate::{
 	base_pool as base, error,
@@ -91,7 +91,7 @@ pub trait ChainApi: Send + Sync {
 	) -> Result<Option<SidechainBlockHash>, Self::Error>;
 
 	/// Returns hash and encoding length of the extrinsic.
-	fn hash_and_length<TOP: Encode>(&self, uxt: &TOP) -> (TxHash, usize);
+	fn hash_and_length<TOP: Encode + core::fmt::Debug>(&self, uxt: &TOP) -> (TxHash, usize);
 
 	/// Returns a block body given the block id.
 	fn block_body<TOP>(&self, at: &BlockId<Self::Block>) -> Self::BodyFuture;

@@ -33,8 +33,11 @@ use ita_stf::{
 	hash::{Hash, TrustedOperationOrHash},
 	Getter, TrustedGetterSigned,
 };
-use itp_stf_primitives::types::{AccountId, TrustedOperation as StfTrustedOperation};
-use itp_top_pool::primitives::PoolFuture;
+use itp_stf_primitives::{
+	traits::TrustedCallVerification,
+	types::{AccountId, TrustedOperation as StfTrustedOperation},
+};
+use itp_top_pool::{mocks::trusted_operation_pool_mock::GetterMock, primitives::PoolFuture};
 use itp_types::ShardIdentifier;
 use jsonrpc_core::{futures::future::ready, Error as RpcError};
 use sp_core::{blake2_256, H256};
@@ -98,7 +101,7 @@ where
 
 impl<TCS, G> AuthorApi<H256, H256, TCS, G> for AuthorApiMock<H256, H256, TCS, G>
 where
-	TCS: Encode,
+	TCS: Encode + TrustedCallVerification,
 	G: Encode,
 {
 	fn submit_top(&self, extrinsic: Vec<u8>, shard: ShardIdentifier) -> PoolFuture<H256, RpcError> {
@@ -123,11 +126,11 @@ where
 			.unwrap()
 			.get(&shard)
 			.map(|encoded_operations| {
-				let mut trusted_getters: Vec<StfTrustedOperation<TCS, G>> = Vec::new();
+				let mut trusted_getters: Vec<StfTrustedOperation<TCS, GetterMock>> = Vec::new();
 				for encoded_operation in encoded_operations {
 					if let Some(g) = Self::decode_trusted_getter_signed(encoded_operation) {
 						trusted_getters
-							.push(StfTrustedOperation::<TCS, G>::get(Getter::trusted(g)));
+							.push(StfTrustedOperation::<TCS, G>::get(GetterMock::trusted(g)));
 					}
 				}
 				trusted_getters
@@ -219,16 +222,17 @@ impl<TCS, G> OnBlockImported for AuthorApiMock<H256, H256, TCS, G> {
 mod tests {
 
 	use super::*;
-	use crate::test_fixtures::{create_indirect_trusted_operation, shard_id};
+	use crate::test_fixtures::shard_id;
 	use codec::Encode;
 	use futures::executor::block_on;
+	use itp_top_pool::mocks::trusted_operation_pool_mock::TrustedCallSignedMock;
 	use std::vec;
 
 	#[test]
 	fn submitted_tops_can_be_removed_again() {
-		let author = AuthorApiMock::<H256, H256>::default();
+		let author = AuthorApiMock::<H256, H256, TrustedCallSignedMock, GetterMock>::default();
 		let shard = shard_id();
-		let trusted_operation = create_indirect_trusted_operation();
+		let trusted_operation = TrustedOperationMock::indirect_call(TrustedCallSignedMock);
 
 		let _ = block_on(author.submit_top(trusted_operation.encode(), shard)).unwrap();
 
