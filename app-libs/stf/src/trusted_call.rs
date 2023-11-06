@@ -312,14 +312,20 @@ where
 					})?;
 				}
 
-				let orders: Vec<Order> = serde_json::from_str(&orders_string).map_err(|err| {
-					StfError::Dispatch(format!("Error serializing to JSON: {}", err))
-				})?;
+				let parsed_orders: Vec<Order> =
+					serde_json::from_str(&orders_string).map_err(|err| {
+						StfError::Dispatch(format!("Error serializing to JSON: {}", err))
+					})?;
 
-				let market_input = MarketInput { orders: orders.clone() };
-				let orders_encoded: Vec<Vec<u8>> = orders.iter().map(|o| o.encode()).collect();
+				let first_order = parsed_orders
+					.get(0)
+					.ok_or_else(|| StfError::Dispatch("No [valid]orders supplied.".to_string()))?;
 
-				let timestamp = &orders[0].time_slot;
+				let timestamp = &first_order.time_slot;
+
+				let market_input = MarketInput { orders: parsed_orders.clone() };
+				let orders_encoded: Vec<Vec<u8>> =
+					parsed_orders.iter().map(|o| o.encode()).collect();
 
 				let orders_path = format!("{}/{}.json", ORDERS_DIR, timestamp);
 
@@ -331,7 +337,7 @@ where
 				let order_merkle_root = merkle_root::<Keccak256, _>(orders_encoded);
 				let pay_as_bid: MarketOutput = pay_as_bid_matching(&market_input);
 
-				write_orders(timestamp, &orders)?;
+				write_orders(timestamp, &parsed_orders)?;
 
 				write_results(timestamp, pay_as_bid)?;
 
@@ -340,7 +346,7 @@ where
 				// sp::io::set(storage_map_key());
 
 				sp_io::storage::set(
-					&merkle_roots_map_key(orders[0].time_slot.clone()),
+					&merkle_roots_map_key(timestamp.to_string()),
 					&order_merkle_root.encode(),
 				);
 
