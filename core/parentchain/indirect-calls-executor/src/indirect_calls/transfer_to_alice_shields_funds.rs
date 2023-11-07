@@ -17,8 +17,8 @@
 
 use crate::{error::Result, IndirectDispatch, IndirectExecutor};
 use codec::{Decode, Encode};
-use ita_stf::{TrustedCall, TrustedOperation};
-use itp_stf_primitives::types::AccountId;
+use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
+use itp_stf_primitives::types::{AccountId, TrustedOperation};
 use itp_types::Balance;
 use log::info;
 use sp_runtime::MultiAddress;
@@ -64,7 +64,8 @@ impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for TransferToAliceS
 				self.value,
 			);
 			let signed_trusted_call = executor.sign_call_with_self(&trusted_call, &shard)?;
-			let trusted_operation = TrustedOperation::indirect_call(signed_trusted_call);
+			let trusted_operation =
+				TrustedOperation::<TrustedCallSigned, Getter>::indirect_call(signed_trusted_call);
 
 			let encrypted_trusted_call = executor.encrypt(&trusted_operation.encode())?;
 			executor.submit_trusted_call(shard, encrypted_trusted_call);

@@ -28,7 +28,7 @@ use crate::{
 use binary_merkle_tree::merkle_root;
 use codec::Encode;
 use core::marker::PhantomData;
-use ita_stf::{TrustedCall, TrustedCallSigned};
+use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
 use itp_node_api::metadata::{
 	pallet_enclave_bridge::EnclaveBridgeCallIndexes, provider::AccessNodeMetadata,
 	NodeMetadataTrait,
@@ -109,8 +109,8 @@ impl<
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
 		+ ShieldingCryptoEncrypt<Error = itp_sgx_crypto::Error>,
-	StfEnclaveSigner: StfEnclaveSigning,
-	TopPoolAuthor: AuthorApi<H256, H256> + Send + Sync + 'static,
+	StfEnclaveSigner: StfEnclaveSigning<TrustedCallSigned>,
+	TopPoolAuthor: AuthorApi<H256, H256, TrustedCallSigned, Getter> + Send + Sync + 'static,
 	NodeMetadataProvider: AccessNodeMetadata,
 	FilterIndirectCalls: FilterIntoDataFrom<NodeMetadataProvider::MetadataType>,
 	NodeMetadataProvider::MetadataType: NodeMetadataTrait + Clone,
@@ -226,8 +226,8 @@ impl<
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
 		+ ShieldingCryptoEncrypt<Error = itp_sgx_crypto::Error>,
-	StfEnclaveSigner: StfEnclaveSigning,
-	TopPoolAuthor: AuthorApi<H256, H256> + Send + Sync + 'static,
+	StfEnclaveSigner: StfEnclaveSigning<TrustedCallSigned>,
+	TopPoolAuthor: AuthorApi<H256, H256, TrustedCallSigned, Getter> + Send + Sync + 'static,
 {
 	fn submit_trusted_call(&self, shard: ShardIdentifier, encrypted_trusted_call: Vec<u8>) {
 		if let Err(e) = futures::executor::block_on(
@@ -276,7 +276,6 @@ mod test {
 		parentchain_parser::ParentchainExtrinsicParser,
 	};
 	use codec::{Decode, Encode};
-	use ita_stf::TrustedOperation;
 	use itc_parentchain_test::ParentchainBlockBuilder;
 	use itp_node_api::{
 		api_client::{
@@ -287,7 +286,7 @@ mod test {
 	};
 	use itp_sgx_crypto::mocks::KeyRepositoryMock;
 	use itp_stf_executor::mocks::StfEnclaveSignerMock;
-	use itp_stf_primitives::types::AccountId;
+	use itp_stf_primitives::types::{AccountId, TrustedOperation};
 	use itp_test::mock::shielding_crypto_mock::ShieldingCryptoMock;
 	use itp_top_pool_author::mocks::AuthorApiMock;
 	use itp_types::{
@@ -299,7 +298,7 @@ mod test {
 
 	type TestShieldingKeyRepo = KeyRepositoryMock<ShieldingCryptoMock>;
 	type TestStfEnclaveSigner = StfEnclaveSignerMock;
-	type TestTopPoolAuthor = AuthorApiMock<H256, H256>;
+	type TestTopPoolAuthor = AuthorApiMock<H256, H256, TrustedCallSigned, Getter>;
 	type TestNodeMetadataRepository = NodeMetadataRepository<NodeMetadataMock>;
 	type TestIndirectCallExecutor = IndirectCallsExecutor<
 		TestShieldingKeyRepo,

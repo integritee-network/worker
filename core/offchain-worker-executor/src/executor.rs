@@ -16,7 +16,7 @@
 */
 
 use crate::error::Result;
-use ita_stf::hash::TrustedOperationOrHash;
+use ita_stf::{Getter, TrustedCallSigned};
 use itc_parentchain_light_client::{
 	concurrent_access::ValidatorAccess, BlockNumberOps, ExtrinsicSender, LightClientState,
 	NumberFor,
@@ -24,6 +24,7 @@ use itc_parentchain_light_client::{
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_stf_executor::{traits::StateUpdateProposer, ExecutedOperation};
 use itp_stf_interface::system_pallet::SystemPalletEventInterface;
+use itp_stf_primitives::types::TrustedOperationOrHash;
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{OpaqueCall, ShardIdentifier, H256};
@@ -75,8 +76,8 @@ impl<
 		Stf,
 	> where
 	ParentchainBlock: Block<Hash = H256>,
-	StfExecutor: StateUpdateProposer,
-	TopPoolAuthor: AuthorApi<H256, ParentchainBlock::Hash>,
+	StfExecutor: StateUpdateProposer<TrustedCallSigned, Getter>,
+	TopPoolAuthor: AuthorApi<H256, ParentchainBlock::Hash, TrustedCallSigned, Getter>,
 	StateHandler: QueryShardState + HandleState<StateT = StfExecutor::Externalities>,
 	ValidatorAccessor: ValidatorAccess<ParentchainBlock> + Send + Sync + 'static,
 	ExtrinsicsFactory: CreateExtrinsics,
@@ -128,11 +129,14 @@ impl<
 				.append(&mut batch_execution_result.get_extrinsic_callbacks().clone());
 
 			let failed_operations = batch_execution_result.get_failed_operations();
-			let successful_operations: Vec<ExecutedOperation> = batch_execution_result
-				.get_executed_operation_hashes()
-				.into_iter()
-				.map(|h| ExecutedOperation::success(h, TrustedOperationOrHash::Hash(h), Vec::new()))
-				.collect();
+			let successful_operations: Vec<ExecutedOperation<TrustedCallSigned, Getter>> =
+				batch_execution_result
+					.get_executed_operation_hashes()
+					.into_iter()
+					.map(|h| {
+						ExecutedOperation::success(h, TrustedOperationOrHash::Hash(h), Vec::new())
+					})
+					.collect();
 
 			// Remove all not successfully executed operations from the top pool.
 			self.remove_calls_from_pool(&shard, failed_operations);
@@ -164,7 +168,7 @@ impl<
 	fn apply_state_update(
 		&self,
 		shard: &ShardIdentifier,
-		updated_state: <StfExecutor as StateUpdateProposer>::Externalities,
+		updated_state: <StfExecutor as StateUpdateProposer<TrustedCallSigned, Getter>>::Externalities,
 	) -> Result<()> {
 		self.state_handler.reset(updated_state, shard)?;
 		Ok(())
@@ -182,8 +186,8 @@ impl<
 	fn remove_calls_from_pool(
 		&self,
 		shard: &ShardIdentifier,
-		executed_calls: Vec<ExecutedOperation>,
-	) -> Vec<ExecutedOperation> {
+		executed_calls: Vec<ExecutedOperation<TrustedCallSigned, Getter>>,
+	) -> Vec<ExecutedOperation<TrustedCallSigned, Getter>> {
 		let executed_calls_tuple: Vec<_> = executed_calls
 			.iter()
 			.map(|e| (e.trusted_operation_or_hash.clone(), e.is_success()))
@@ -220,7 +224,7 @@ mod tests {
 	type TestStateHandler = HandleStateMock;
 	type TestStfInterface = SystemPalletEventInterfaceMock;
 	type State = <TestStateHandler as HandleState>::StateT;
-	type TestTopPoolAuthor = AuthorApiMock<H256, H256>;
+	type TestTopPoolAuthor = AuthorApiMock<H256, H256, TrustedCallSigned, Getter>;
 	type TestStfExecutor = StfExecutorMock<State>;
 	type TestValidatorAccess = ValidatorAccessMock;
 	type TestExtrinsicsFactory = ExtrinsicsFactoryMock;
