@@ -21,7 +21,12 @@ use sp_core::{H160, H256, U256};
 #[cfg(feature = "evm")]
 use std::vec::Vec;
 
-use crate::{helpers::ensure_enclave_signer_account, Getter, StfError};
+#[cfg(feature = "evm")]
+use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_address};
+use crate::{
+	helpers::{ensure_enclave_signer_account, get_storage_by_key_hash},
+	Getter, StfError,
+};
 use codec::{Compact, Decode, Encode};
 use frame_support::{ensure, traits::UnfilteredDispatchable};
 #[cfg(feature = "evm")]
@@ -41,17 +46,18 @@ use itp_stf_primitives::{
 use itp_types::{parentchain::ProxyType, Address, OpaqueCall};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
+use sp_core::{
+	crypto::{AccountId32, UncheckedFrom},
+	ed25519,
+};
 use sp_io::hashing::blake2_256;
-use sp_runtime::{traits::Verify, MultiAddress};
+use sp_runtime::{traits::Verify, MultiAddress, MultiSignature};
 use std::{format, prelude::v1::*, sync::Arc};
-
-#[cfg(feature = "evm")]
-use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_address};
-use crate::helpers::get_storage_by_key_hash;
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum TrustedCall {
+	noop(AccountId),
 	balance_set_balance(AccountId, AccountId, Balance, Balance),
 	balance_transfer(AccountId, AccountId, Balance),
 	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
@@ -104,18 +110,19 @@ pub enum TrustedCall {
 impl TrustedCall {
 	pub fn sender_account(&self) -> &AccountId {
 		match self {
-			TrustedCall::balance_set_balance(sender_account, ..) => sender_account,
-			TrustedCall::balance_transfer(sender_account, ..) => sender_account,
-			TrustedCall::balance_unshield(sender_account, ..) => sender_account,
-			TrustedCall::balance_shield(sender_account, ..) => sender_account,
+			Self::noop(sender_account) => sender_account,
+			Self::balance_set_balance(sender_account, ..) => sender_account,
+			Self::balance_transfer(sender_account, ..) => sender_account,
+			Self::balance_unshield(sender_account, ..) => sender_account,
+			Self::balance_shield(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
-			TrustedCall::evm_withdraw(sender_account, ..) => sender_account,
+			Self::evm_withdraw(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
-			TrustedCall::evm_call(sender_account, ..) => sender_account,
+			Self::evm_call(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
-			TrustedCall::evm_create(sender_account, ..) => sender_account,
+			Self::evm_create(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
-			TrustedCall::evm_create2(sender_account, ..) => sender_account,
+			Self::evm_create2(sender_account, ..) => sender_account,
 		}
 	}
 }
@@ -160,6 +167,15 @@ impl TrustedCallSigned {
 	}
 }
 
+impl Default for TrustedCallSigned {
+	fn default() -> Self {
+		Self {
+			call: TrustedCall::noop(AccountId32::unchecked_from([0u8; 32].into())),
+			nonce: 0,
+			signature: MultiSignature::Ed25519(ed25519::Signature::unchecked_from([0u8; 64])),
+		}
+	}
+}
 impl TrustedCallVerification for TrustedCallSigned {
 	fn sender_account(&self) -> &AccountId {
 		self.call.sender_account()
@@ -211,6 +227,10 @@ where
 		System::inc_account_nonce(&sender);
 
 		match self.call {
+			TrustedCall::noop(who) => {
+				debug!("noop called by {}", account_id_to_string(&who),);
+				Ok::<(), Self::Error>(())
+			},
 			TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
 				ensure!(is_root::<Runtime, AccountId>(&root), Self::Error::MissingPrivileges(root));
 				debug!(
@@ -432,6 +452,7 @@ where
 	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
 		let key_hashes = Vec::new();
 		match self.call {
+			TrustedCall::noop(_) => debug!("No storage updates needed..."),
 			TrustedCall::balance_set_balance(_, _, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_transfer(_, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_unshield(_, _, _, _) => debug!("No storage updates needed..."),

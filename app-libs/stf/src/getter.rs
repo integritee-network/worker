@@ -48,6 +48,11 @@ pub enum Getter {
 	trusted(TrustedGetterSigned),
 }
 
+impl Default for Getter {
+	fn default() -> Self {
+		Getter::public(PublicGetter::some_value)
+	}
+}
 impl From<PublicGetter> for Getter {
 	fn from(item: PublicGetter) -> Self {
 		Getter::public(item)

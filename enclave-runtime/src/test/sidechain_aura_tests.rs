@@ -32,7 +32,7 @@ use crate::{
 use codec::Decode;
 use ita_stf::{
 	test_genesis::{endowed_account, second_endowed_account, unendowed_account},
-	Balance, StatePayload, TrustedCall, TrustedOperation,
+	Balance, Getter, TrustedCall, TrustedCallSigned,
 };
 use itc_parentchain::light_client::mocks::validator_access_mock::ValidatorAccessMock;
 use itc_parentchain_test::ParentchainHeaderBuilder;
@@ -46,6 +46,7 @@ use itp_settings::{
 use itp_sgx_crypto::{Aes, ShieldingCryptoEncrypt, StateCrypto};
 use itp_sgx_externalities::SgxExternalitiesDiffType;
 use itp_stf_interface::system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface};
+use itp_stf_primitives::types::{StatePayload, TrustedOperation};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock};
 use itp_time_utils::duration_now;
@@ -102,7 +103,7 @@ pub fn produce_sidechain_block_and_import_it() {
 
 	let top_pool_author = Arc::new(TestTopPoolAuthor::new(
 		top_pool,
-		AllowAllTopsFilter {},
+		AllowAllTopsFilter::<TrustedCallSigned, Getter>::new(),
 		state_handler.clone(),
 		shielding_key_repo,
 		Arc::new(MetricsOCallMock::default()),
@@ -234,7 +235,7 @@ fn encrypted_trusted_operation_transfer_balance<
 ) -> Vec<u8> {
 	let call = TrustedCall::balance_transfer(from.public().into(), to, amount);
 	let call_signed = sign_trusted_call(&call, attestation_api, shard_id, from);
-	let trusted_operation = TrustedOperation::direct_call(call_signed);
+	let trusted_operation = TrustedOperation::<TrustedCallSigned, Getter>::direct_call(call_signed);
 	encrypt_trusted_operation(shielding_key, &trusted_operation)
 }
 

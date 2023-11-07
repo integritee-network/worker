@@ -18,10 +18,13 @@
 
 use crate::test::mocks::types::{TestOCallApi, TestRpcResponder, TestSigner, TestTopPool};
 use codec::Encode;
-use ita_stf::{TrustedCall, TrustedCallSigned, TrustedOperation};
+use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
-use itp_stf_primitives::{traits::TrustedCallSigning, types::KeyPair};
+use itp_stf_primitives::{
+	traits::TrustedCallSigning,
+	types::{KeyPair, TrustedOperation},
+};
 use itp_top_pool::pool::Options as PoolOptions;
 use itp_top_pool_author::api::SidechainApi;
 use itp_types::{Block as ParentchainBlock, ShardIdentifier};
@@ -30,7 +33,7 @@ use sp_runtime::traits::Header as HeaderTrait;
 use std::{boxed::Box, sync::Arc, vec::Vec};
 pub(crate) fn create_top_pool() -> Arc<TestTopPool> {
 	let rpc_responder = Arc::new(TestRpcResponder::new());
-	let sidechain_api = Arc::new(SidechainApi::<ParentchainBlock>::new());
+	let sidechain_api = Arc::new(SidechainApi::<ParentchainBlock, TrustedCallSigned>::new());
 	Arc::new(TestTopPool::create(PoolOptions::default(), sidechain_api, rpc_responder))
 }
 
@@ -47,7 +50,7 @@ pub(crate) fn create_ocall_api<Header: HeaderTrait<Hash = H256>>(
 
 pub(crate) fn encrypt_trusted_operation<ShieldingKey: ShieldingCryptoEncrypt>(
 	shielding_key: &ShieldingKey,
-	trusted_operation: &TrustedOperation,
+	trusted_operation: &TrustedOperation<TrustedCallSigned, Getter>,
 ) -> Vec<u8> {
 	let encoded_operation = trusted_operation.encode();
 	shielding_key.encrypt(encoded_operation.as_slice()).unwrap()

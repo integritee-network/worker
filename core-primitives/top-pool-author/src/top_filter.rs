@@ -33,6 +33,12 @@ pub struct CallsOnlyFilter<TCS, G> {
 	_phantom: PhantomData<(TCS, G)>,
 }
 
+impl<TCS, G> CallsOnlyFilter<TCS, G> {
+	pub fn new() -> Self {
+		Self { _phantom: Default::default() }
+	}
+}
+
 impl<TCS, G> Filter for CallsOnlyFilter<TCS, G>
 where
 	TCS: Encode + Debug,
@@ -49,6 +55,12 @@ where
 /// Filter that allows all TOPs (i.e. not filter at all)
 pub struct AllowAllTopsFilter<TCS, G> {
 	_phantom: PhantomData<(TCS, G)>,
+}
+
+impl<TCS, G> AllowAllTopsFilter<TCS, G> {
+	pub fn new() -> Self {
+		Self { _phantom: Default::default() }
+	}
 }
 
 impl<TCS, G> Filter for AllowAllTopsFilter<TCS, G>
@@ -68,6 +80,12 @@ pub struct GettersOnlyFilter<TCS, G> {
 	_phantom: PhantomData<(TCS, G)>,
 }
 
+impl<TCS, G> GettersOnlyFilter<TCS, G> {
+	pub fn new() -> Self {
+		Self { _phantom: Default::default() }
+	}
+}
+
 impl<TCS, G> Filter for GettersOnlyFilter<TCS, G>
 where
 	TCS: Encode + Debug,
@@ -83,6 +101,12 @@ where
 /// Filter for indirect calls only (no getters, no direct calls).
 pub struct IndirectCallsOnlyFilter<TCS, G> {
 	_phantom: PhantomData<(TCS, G)>,
+}
+
+impl<TCS, G> IndirectCallsOnlyFilter<TCS, G> {
+	pub fn new() -> Self {
+		Self { _phantom: Default::default() }
+	}
 }
 
 impl<TCS, G> Filter for IndirectCallsOnlyFilter<TCS, G>
@@ -102,6 +126,12 @@ pub struct NoDirectCallsFilter<TCS, G> {
 	_phantom: PhantomData<(TCS, G)>,
 }
 
+impl<TCS, G> NoDirectCallsFilter<TCS, G> {
+	pub fn new() -> Self {
+		Self { _phantom: Default::default() }
+	}
+}
+
 impl<TCS, G> Filter for NoDirectCallsFilter<TCS, G>
 where
 	TCS: Encode + Debug,
@@ -117,6 +147,12 @@ where
 /// Filter to deny all trusted operations.
 pub struct DenyAllFilter<TCS, G> {
 	_phantom: PhantomData<(TCS, G)>,
+}
+
+impl<TCS, G> DenyAllFilter<TCS, G> {
+	pub fn new() -> Self {
+		Self { _phantom: Default::default() }
+	}
 }
 
 impl<TCS, G> Filter for DenyAllFilter<TCS, G>

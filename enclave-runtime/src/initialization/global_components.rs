@@ -72,7 +72,7 @@ use itp_stf_executor::{
 	enclave_signer::StfEnclaveSigner, executor::StfExecutor, getter_executor::GetterExecutor,
 	state_getter::StfStateGetter,
 };
-use itp_stf_primitives::types::Hash;
+use itp_stf_primitives::types::{Hash, TrustedOperation};
 use itp_stf_state_handler::{
 	file_io::sgx::SgxStateFileIo, state_initializer::StateInitializer,
 	state_snapshot_repository::StateSnapshotRepository, StateHandler,
@@ -119,14 +119,22 @@ pub type EnclaveGetterExecutor =
 	GetterExecutor<EnclaveStateObserver, StfStateGetter<EnclaveStf>, Getter>;
 pub type EnclaveOCallApi = OcallApi;
 pub type EnclaveNodeMetadataRepository = NodeMetadataRepository<NodeMetadata>;
-pub type EnclaveStfExecutor =
-	StfExecutor<EnclaveOCallApi, EnclaveStateHandler, EnclaveNodeMetadataRepository, EnclaveStf>;
+pub type EnclaveStfExecutor = StfExecutor<
+	EnclaveOCallApi,
+	EnclaveStateHandler,
+	EnclaveNodeMetadataRepository,
+	EnclaveStf,
+	EnclaveTrustedCallSigned,
+	EnclaveGetter,
+>;
 pub type EnclaveStfEnclaveSigner = StfEnclaveSigner<
 	EnclaveOCallApi,
 	EnclaveStateObserver,
 	EnclaveShieldingKeyRepository,
 	EnclaveStf,
 	EnclaveTopPoolAuthor,
+	EnclaveTrustedCallSigned,
+	EnclaveGetter,
 >;
 pub type EnclaveAttestationHandler =
 	IntelAttestationHandler<EnclaveOCallApi, EnclaveSigningKeyRepository>;
@@ -136,7 +144,7 @@ pub type EnclaveRpcWsHandler =
 	RpcWsHandler<RpcWatchExtractor<Hash>, EnclaveRpcConnectionRegistry, Hash>;
 pub type EnclaveWebSocketServer = TungsteniteWsServer<EnclaveRpcWsHandler, FromFileConfigProvider>;
 pub type EnclaveRpcResponder = RpcResponder<EnclaveRpcConnectionRegistry, Hash, RpcResponseChannel>;
-pub type EnclaveSidechainApi = SidechainApi<ParentchainBlock>;
+pub type EnclaveSidechainApi = SidechainApi<ParentchainBlock, EnclaveTrustedCallSigned>;
 
 // Parentchain types relevant for all parentchains
 pub type EnclaveLightClientSeal =
@@ -263,14 +271,21 @@ pub type TargetBParentchainBlockImportDispatcher = BlockImportDispatcher<
 >;
 
 /// Sidechain types
-pub type EnclaveTopPool = BasicPool<EnclaveSidechainApi, ParentchainBlock, EnclaveRpcResponder>;
+pub type EnclaveTopPool = BasicPool<
+	EnclaveSidechainApi,
+	ParentchainBlock,
+	EnclaveRpcResponder,
+	TrustedOperation<EnclaveTrustedCallSigned, EnclaveGetter>,
+>;
 
 pub type EnclaveTopPoolAuthor = Author<
 	EnclaveTopPool,
-	AuthorTopFilter,
+	AuthorTopFilter<EnclaveTrustedCallSigned, EnclaveGetter>,
 	EnclaveStateHandler,
 	EnclaveShieldingKeyRepository,
 	EnclaveOCallApi,
+	EnclaveTrustedCallSigned,
+	EnclaveGetter,
 >;
 pub type EnclaveSidechainBlockComposer =
 	BlockComposer<ParentchainBlock, SignedSidechainBlock, Pair, EnclaveStateKeyRepository>;

@@ -17,7 +17,6 @@
 
 pub mod global_components;
 pub mod parentchain;
-
 use crate::{
 	error::{Error, Result as EnclaveResult},
 	initialization::global_components::{
@@ -50,6 +49,7 @@ use crate::{
 };
 use base58::ToBase58;
 use codec::Encode;
+use ita_stf::{Getter, TrustedCallSigned};
 use itc_direct_rpc_server::{
 	create_determine_watch, rpc_connection_registry::ConnectionRegistry,
 	rpc_ws_handler::RpcWsHandler,
@@ -304,7 +304,7 @@ pub fn create_top_pool_author(
 
 	Arc::new(EnclaveTopPoolAuthor::new(
 		top_pool,
-		AuthorTopFilter {},
+		AuthorTopFilter::<TrustedCallSigned, Getter>::new(),
 		state_handler,
 		shielding_key_repository,
 		ocall_api,
