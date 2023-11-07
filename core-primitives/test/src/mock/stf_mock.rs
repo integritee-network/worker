@@ -14,19 +14,65 @@
 	limitations under the License.
 
 */
+use alloc::sync::Arc;
 use codec::{Decode, Encode};
+use core::{fmt::Debug, marker::PhantomData};
+use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, NodeMetadataTrait};
+use itp_node_api_metadata_provider::{
+	error::Result as MetadataResult, AccessNodeMetadata, NodeMetadataRepository,
+};
+use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesDiffType, SgxExternalitiesTrait};
+use itp_stf_interface::{ExecuteCall, StateCallInterface, UpdateState};
 use itp_stf_primitives::{
 	traits::{
 		GetterAuthorization, PoolTransactionValidation, TrustedCallSigning, TrustedCallVerification,
 	},
 	types::{KeyPair, TrustedOperation},
 };
-use itp_types::{AccountId, Balance, Index, ShardIdentifier, Signature};
+use itp_types::{
+	parentchain::ParentchainId, AccountId, Balance, Index, OpaqueCall, ShardIdentifier, Signature,
+};
 use sp_runtime::transaction_validity::{
 	TransactionValidityError, UnknownTransaction, ValidTransaction,
 };
+use sp_std::{vec, vec::Vec};
 
-type TrustedOperationMock = TrustedOperation<TrustedCallSignedMock, GetterMock>;
+// a few dummy types
+type NodeMetadataRepositoryMock = NodeMetadataRepository<NodeMetadataMock>;
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum StfMockError {
+	Dummy,
+}
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+pub struct StfMock {
+	state: SgxExternalities,
+}
+
+impl UpdateState<SgxExternalities, SgxExternalitiesDiffType> for StfMock {
+	fn apply_state_diff(state: &mut SgxExternalities, map_update: SgxExternalitiesDiffType) {}
+
+	fn storage_hashes_to_update_on_block(_parentchain_id: &ParentchainId) -> Vec<Vec<u8>> {
+		vec![]
+	}
+}
+
+impl StateCallInterface<TrustedCallSignedMock, SgxExternalities, NodeMetadataRepositoryMock>
+	for StfMock
+{
+	type Error = StfMockError;
+
+	fn execute_call(
+		_state: &mut SgxExternalities,
+		_call: TrustedCallSignedMock,
+		_calls: &mut Vec<OpaqueCall>,
+		_node_metadata_repo: Arc<NodeMetadataRepositoryMock>,
+	) -> Result<(), Self::Error> {
+		Ok(())
+	}
+}
+
+pub type TrustedOperationMock = TrustedOperation<TrustedCallSignedMock, GetterMock>;
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
@@ -83,6 +129,22 @@ impl TrustedCallSignedMock {
 			true => TrustedOperation::direct_call(self),
 			false => TrustedOperation::indirect_call(self),
 		}
+	}
+}
+
+impl ExecuteCall<NodeMetadataRepositoryMock> for TrustedCallSignedMock {
+	type Error = StfMockError;
+
+	fn execute(
+		self,
+		_calls: &mut Vec<OpaqueCall>,
+		_node_metadata_repo: Arc<NodeMetadataRepositoryMock>,
+	) -> Result<(), Self::Error> {
+		Ok(())
+	}
+
+	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
+		Vec::new()
 	}
 }
 

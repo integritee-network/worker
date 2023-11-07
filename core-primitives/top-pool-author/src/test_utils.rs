@@ -37,8 +37,8 @@ where
 	R: AuthorApi<H256, H256, TCS, G>,
 	S: ShieldingCryptoEncrypt,
 	S::Error: Debug,
-	TCS: Encode + Send + Sync,
-	G: Encode + Send + Sync,
+	TCS: Encode + Debug + Send + Sync,
+	G: Encode + Debug + Send + Sync,
 {
 	let top_encrypted = shielding_key.encrypt(&top.encode()).unwrap();
 	let submit_future = async { author.watch_top(top_encrypted, shard).await };

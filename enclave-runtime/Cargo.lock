@@ -2306,6 +2306,8 @@ dependencies = [
  "derive_more",
  "ita-stf",
  "itp-enclave-bridge-storage",
+ "itp-node-api",
+ "itp-node-api-metadata-provider",
  "itp-ocall-api",
  "itp-sgx-crypto",
  "itp-sgx-externalities",

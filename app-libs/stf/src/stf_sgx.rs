@@ -19,7 +19,7 @@
 use crate::test_genesis::test_genesis_setup;
 
 use crate::{helpers::enclave_signer_account, Stf, StfError, ENCLAVE_ACCOUNT_KEY};
-use codec::Encode;
+use codec::{Decode, Encode};
 use frame_support::traits::{OriginTrait, UnfilteredDispatchable};
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_sgx_externalities::SgxExternalitiesTrait;
@@ -29,7 +29,7 @@ use itp_stf_interface::{
 	system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface},
 	ExecuteCall, ExecuteGetter, InitState, StateCallInterface, StateGetterInterface, UpdateState,
 };
-use itp_stf_primitives::types::ShardIdentifier;
+use itp_stf_primitives::{traits::TrustedCallVerification, types::ShardIdentifier};
 use itp_storage::storage_value_key;
 use itp_types::{parentchain::ParentchainId, OpaqueCall};
 use itp_utils::stringify::account_id_to_string;
@@ -37,8 +37,7 @@ use log::*;
 use sp_runtime::traits::StaticLookup;
 use std::{fmt::Debug, format, prelude::v1::*, sync::Arc, vec};
 
-impl<Call, Getter, State, Runtime, AccountId> InitState<State, AccountId>
-	for Stf<Call, Getter, State, Runtime>
+impl<TCS, G, State, Runtime, AccountId> InitState<State, AccountId> for Stf<TCS, G, State, Runtime>
 where
 	State: SgxExternalitiesTrait + Debug,
 	<State as SgxExternalitiesTrait>::SgxExternalitiesType: core::default::Default,
@@ -91,9 +90,9 @@ where
 	}
 }
 
-impl<Call, Getter, State, Runtime>
+impl<TCS, G, State, Runtime>
 	UpdateState<State, <State as SgxExternalitiesTrait>::SgxExternalitiesDiffType>
-	for Stf<Call, Getter, State, Runtime>
+	for Stf<TCS, G, State, Runtime>
 where
 	State: SgxExternalitiesTrait + Debug,
 	<State as SgxExternalitiesTrait>::SgxExternalitiesType: core::default::Default,
@@ -124,19 +123,26 @@ where
 	}
 }
 
-impl<Call, Getter, State, Runtime, NodeMetadataRepository>
-	StateCallInterface<Call, State, NodeMetadataRepository> for Stf<Call, Getter, State, Runtime>
+impl<TCS, G, State, Runtime, NodeMetadataRepository>
+	StateCallInterface<TCS, State, NodeMetadataRepository> for Stf<TCS, G, State, Runtime>
 where
-	Call: ExecuteCall<NodeMetadataRepository>,
+	TCS: ExecuteCall<NodeMetadataRepository>
+		+ Encode
+		+ Decode
+		+ Debug
+		+ Clone
+		+ Sync
+		+ Send
+		+ TrustedCallVerification,
 	State: SgxExternalitiesTrait + Debug,
 	NodeMetadataRepository: AccessNodeMetadata,
 	NodeMetadataRepository::MetadataType: NodeMetadataTrait,
 {
-	type Error = Call::Error;
+	type Error = TCS::Error;
 
 	fn execute_call(
 		state: &mut State,
-		call: Call,
+		call: TCS,
 		calls: &mut Vec<OpaqueCall>,
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {
@@ -144,18 +150,17 @@ where
 	}
 }
 
-impl<Call, Getter, State, Runtime> StateGetterInterface<Getter, State>
-	for Stf<Call, Getter, State, Runtime>
+impl<TCS, G, State, Runtime> StateGetterInterface<G, State> for Stf<TCS, G, State, Runtime>
 where
-	Getter: ExecuteGetter,
+	G: ExecuteGetter,
 	State: SgxExternalitiesTrait + Debug,
 {
-	fn execute_getter(state: &mut State, getter: Getter) -> Option<Vec<u8>> {
+	fn execute_getter(state: &mut State, getter: G) -> Option<Vec<u8>> {
 		state.execute_with(|| getter.execute())
 	}
 }
 
-impl<Call, Getter, State, Runtime> SudoPalletInterface<State> for Stf<Call, Getter, State, Runtime>
+impl<TCS, G, State, Runtime> SudoPalletInterface<State> for Stf<TCS, G, State, Runtime>
 where
 	State: SgxExternalitiesTrait,
 	Runtime: frame_system::Config + pallet_sudo::Config,
@@ -171,8 +176,8 @@ where
 	}
 }
 
-impl<Call, Getter, State, Runtime, AccountId> SystemPalletAccountInterface<State, AccountId>
-	for Stf<Call, Getter, State, Runtime>
+impl<TCS, G, State, Runtime, AccountId> SystemPalletAccountInterface<State, AccountId>
+	for Stf<TCS, G, State, Runtime>
 where
 	State: SgxExternalitiesTrait,
 	Runtime: frame_system::Config<AccountId = AccountId>,
@@ -194,8 +199,7 @@ where
 	}
 }
 
-impl<Call, Getter, State, Runtime> SystemPalletEventInterface<State>
-	for Stf<Call, Getter, State, Runtime>
+impl<TCS, G, State, Runtime> SystemPalletEventInterface<State> for Stf<TCS, G, State, Runtime>
 where
 	State: SgxExternalitiesTrait,
 	Runtime: frame_system::Config,
@@ -228,8 +232,8 @@ where
 	}
 }
 
-impl<Call, Getter, State, Runtime, ParentchainHeader>
-	ParentchainPalletInterface<State, ParentchainHeader> for Stf<Call, Getter, State, Runtime>
+impl<TCS, G, State, Runtime, ParentchainHeader> ParentchainPalletInterface<State, ParentchainHeader>
+	for Stf<TCS, G, State, Runtime>
 where
 	State: SgxExternalitiesTrait,
 	Runtime: frame_system::Config<Header = ParentchainHeader> + pallet_parentchain::Config,

@@ -17,10 +17,6 @@
 
 use crate::{executor::StfExecutor, traits::StateUpdateProposer};
 use codec::Encode;
-use ita_stf::{
-	stf_sgx_tests::StfState,
-	test_genesis::{endowed_account, test_genesis_setup},
-};
 use itc_parentchain_test::ParentchainHeaderBuilder;
 use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_ocall_api::EnclaveAttestationOCallApi;
@@ -30,10 +26,10 @@ use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{
 	handle_state_mock::HandleStateMock,
 	onchain_mock::OnchainMock,
-	stf_mock::{GetterMock, TrustedCallMock, TrustedCallSignedMock},
+	stf_mock::{GetterMock, StfMock, TrustedCallMock, TrustedCallSignedMock},
 };
-use itp_types::H256;
-use sp_core::Pair;
+use itp_types::{Balance, H256};
+use sp_core::{ed25519, Pair};
 use sp_runtime::app_crypto::sp_core::blake2_256;
 use std::{sync::Arc, time::Duration, vec};
 // FIXME: Create unit tests for update_states, execute_shield_funds, execute_trusted_call, execute_trusted_call_on_stf #554
@@ -206,7 +202,7 @@ fn stf_executor() -> (
 		OnchainMock,
 		HandleStateMock,
 		NodeMetadataRepository<NodeMetadataMock>,
-		StfState,
+		StfMock,
 		TrustedCallSignedMock,
 		GetterMock,
 	>,
@@ -233,4 +229,12 @@ pub(crate) fn init_state_and_shard_with_state_handler<S: HandleState<StateT = St
 	state_handler.write_after_mutation(state.clone(), lock, &shard).unwrap();
 
 	(state, shard)
+}
+
+pub fn endowed_account() -> ed25519::Pair {
+	ed25519::Pair::from_seed(&[42u8; 32].into())
+}
+
+pub fn test_genesis_setup(state: &mut impl SgxExternalitiesTrait) {
+	// set alice sudo account
 }

@@ -17,6 +17,7 @@
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
+use core::fmt::Debug;
 
 use crate::{
 	client_error::Error as ClientError,
@@ -78,8 +79,8 @@ where
 	StateFacade: QueryShardState,
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
-	TCS: Encode + Clone + core::fmt::Debug + Send + Sync,
-	G: Encode + Clone + PoolTransactionValidation + core::fmt::Debug + Send + Sync,
+	TCS: Encode + Clone + Debug + Send + Sync,
+	G: Encode + Clone + PoolTransactionValidation + Debug + Send + Sync,
 {
 	top_pool: Arc<TopPool>,
 	top_filter: TopFilter,
@@ -97,8 +98,8 @@ where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
-	TCS: Encode + Clone + core::fmt::Debug + Send + Sync,
-	G: Encode + Clone + PoolTransactionValidation + core::fmt::Debug + Send + Sync,
+	TCS: Encode + Clone + Debug + Send + Sync,
+	G: Encode + Clone + PoolTransactionValidation + Debug + Send + Sync,
 {
 	/// Create new instance of Authoring API.
 	pub fn new(
@@ -126,22 +127,8 @@ where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
-	TCS: Encode
-		+ Decode
-		+ Clone
-		+ core::fmt::Debug
-		+ Send
-		+ Sync
-		+ TrustedCallVerification
-		+ 'static,
-	G: Encode
-		+ Decode
-		+ Clone
-		+ PoolTransactionValidation
-		+ core::fmt::Debug
-		+ Send
-		+ Sync
-		+ 'static,
+	TCS: Encode + Decode + Clone + Debug + Send + Sync + TrustedCallVerification + 'static,
+	G: Encode + Decode + Clone + PoolTransactionValidation + Debug + Send + Sync + 'static,
 {
 	fn process_top(
 		&self,
@@ -271,8 +258,8 @@ fn map_top_error<P: TrustedOperationPool<StfTrustedOperation<TCS, G>>, TCS, G>(
 	error: P::Error,
 ) -> RpcError
 where
-	TCS: Encode,
-	G: Encode,
+	TCS: Encode + Debug,
+	G: Encode + Debug,
 {
 	StateRpcError::PoolError(
 		error
@@ -293,22 +280,8 @@ where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
-	G: Encode
-		+ Decode
-		+ Clone
-		+ PoolTransactionValidation
-		+ core::fmt::Debug
-		+ Send
-		+ Sync
-		+ 'static,
-	TCS: Encode
-		+ Decode
-		+ Clone
-		+ core::fmt::Debug
-		+ Send
-		+ Sync
-		+ TrustedCallVerification
-		+ 'static,
+	G: Encode + Decode + Clone + PoolTransactionValidation + Debug + Send + Sync + 'static,
+	TCS: Encode + Decode + Clone + Debug + Send + Sync + TrustedCallVerification + 'static,
 {
 	fn submit_top(&self, ext: Vec<u8>, shard: ShardIdentifier) -> PoolFuture<TxHash, RpcError> {
 		self.process_top(ext, shard, TopSubmissionMode::Submit)
@@ -397,8 +370,8 @@ where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
-	G: Encode + Clone + PoolTransactionValidation + core::fmt::Debug + Send + Sync,
-	TCS: Encode + Clone + core::fmt::Debug + Send + Sync,
+	G: Encode + Clone + PoolTransactionValidation + Debug + Send + Sync,
+	TCS: Encode + Clone + Debug + Send + Sync,
 {
 	type Hash = TxHash;
 

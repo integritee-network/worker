@@ -18,7 +18,7 @@ extern crate alloc;
 use crate::traits::{PoolTransactionValidation, TrustedCallVerification};
 use alloc::boxed::Box;
 use codec::{Compact, Decode, Encode};
-use core::marker::PhantomData;
+use core::{fmt::Debug, marker::PhantomData};
 use sp_core::{blake2_256, crypto::AccountId32, ed25519, sr25519, Pair, H256};
 use sp_runtime::{
 	traits::Verify,
@@ -64,8 +64,8 @@ impl From<sr25519::Pair> for KeyPair {
 #[allow(non_camel_case_types)]
 pub enum TrustedOperation<TCS, G>
 where
-	TCS: Encode,
-	G: Encode,
+	TCS: Encode + Debug,
+	G: Encode + Debug,
 {
 	indirect_call(TCS),
 	direct_call(TCS),
@@ -74,8 +74,8 @@ where
 
 impl<TCS, G> From<G> for TrustedOperation<TCS, G>
 where
-	TCS: Encode,
-	G: Encode,
+	TCS: Encode + Debug,
+	G: Encode + Debug,
 {
 	fn from(item: G) -> Self {
 		TrustedOperation::get(item)
@@ -94,8 +94,8 @@ where
 
 impl<TCS, G> TrustedOperation<TCS, G>
 where
-	TCS: TrustedCallVerification + Encode,
-	G: Encode,
+	TCS: TrustedCallVerification + Encode + Debug,
+	G: Encode + Debug,
 {
 	pub fn to_call(&self) -> Option<&TCS> {
 		match self {
@@ -128,8 +128,8 @@ where
 
 impl<TCS, G> PoolTransactionValidation for TrustedOperation<TCS, G>
 where
-	TCS: TrustedCallVerification + Encode,
-	G: Encode + PoolTransactionValidation,
+	TCS: TrustedCallVerification + Encode + Debug,
+	G: Encode + PoolTransactionValidation + Debug,
 {
 	fn validate(&self) -> Result<ValidTransaction, TransactionValidityError> {
 		match self {
@@ -148,8 +148,8 @@ where
 #[derive(Clone, Debug, Encode, Decode, PartialEq)]
 pub enum TrustedOperationOrHash<TCS, G>
 where
-	TCS: Encode + Send + Sync,
-	G: Encode + Send + Sync,
+	TCS: Encode + Debug + Send + Sync,
+	G: Encode + Debug + Send + Sync,
 {
 	/// The hash of the call.
 	Hash(H256),
@@ -161,8 +161,8 @@ where
 
 impl<TCS, G> TrustedOperationOrHash<TCS, G>
 where
-	TCS: Encode + Send + Sync,
-	G: Encode + Send + Sync,
+	TCS: Encode + Debug + Send + Sync,
+	G: Encode + Debug + Send + Sync,
 {
 	pub fn from_top(top: TrustedOperation<TCS, G>) -> Self {
 		TrustedOperationOrHash::Operation(Box::new(top))

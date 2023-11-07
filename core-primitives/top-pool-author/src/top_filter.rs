@@ -16,7 +16,7 @@
 */
 
 use codec::{Encode, EncodeAppend};
-use core::marker::PhantomData;
+use core::{fmt::Debug, marker::PhantomData};
 use itp_stf_primitives::types::TrustedOperation as StfTrustedOperation;
 
 /// Trait for filtering values
@@ -35,8 +35,8 @@ pub struct CallsOnlyFilter<TCS, G> {
 
 impl<TCS, G> Filter for CallsOnlyFilter<TCS, G>
 where
-	TCS: Encode,
-	G: Encode,
+	TCS: Encode + Debug,
+	G: Encode + Debug,
 {
 	type Value = StfTrustedOperation<TCS, G>;
 
@@ -53,8 +53,8 @@ pub struct AllowAllTopsFilter<TCS, G> {
 
 impl<TCS, G> Filter for AllowAllTopsFilter<TCS, G>
 where
-	TCS: Encode,
-	G: Encode,
+	TCS: Encode + Debug,
+	G: Encode + Debug,
 {
 	type Value = StfTrustedOperation<TCS, G>;
 
@@ -70,8 +70,8 @@ pub struct GettersOnlyFilter<TCS, G> {
 
 impl<TCS, G> Filter for GettersOnlyFilter<TCS, G>
 where
-	TCS: Encode,
-	G: Encode,
+	TCS: Encode + Debug,
+	G: Encode + Debug,
 {
 	type Value = StfTrustedOperation<TCS, G>;
 
@@ -87,8 +87,8 @@ pub struct IndirectCallsOnlyFilter<TCS, G> {
 
 impl<TCS, G> Filter for IndirectCallsOnlyFilter<TCS, G>
 where
-	TCS: Encode,
-	G: Encode,
+	TCS: Encode + Debug,
+	G: Encode + Debug,
 {
 	type Value = StfTrustedOperation<TCS, G>;
 
@@ -104,8 +104,8 @@ pub struct NoDirectCallsFilter<TCS, G> {
 
 impl<TCS, G> Filter for NoDirectCallsFilter<TCS, G>
 where
-	TCS: Encode,
-	G: Encode,
+	TCS: Encode + Debug,
+	G: Encode + Debug,
 {
 	type Value = StfTrustedOperation<TCS, G>;
 
@@ -121,8 +121,8 @@ pub struct DenyAllFilter<TCS, G> {
 
 impl<TCS, G> Filter for DenyAllFilter<TCS, G>
 where
-	TCS: Encode,
-	G: Encode,
+	TCS: Encode + Debug,
+	G: Encode + Debug,
 {
 	type Value = StfTrustedOperation<TCS, G>;
 

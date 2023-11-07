@@ -139,8 +139,8 @@ where
 impl<Externalities, TCS, G> BatchExecutionResult<Externalities, TCS, G>
 where
 	Externalities: SgxExternalitiesTrait + Encode,
-	TCS: Encode + Decode + Debug + Send + Sync,
-	G: Encode + Decode + Debug + Send + Sync,
+	TCS: Encode + Decode + Debug + Clone + Send + Sync,
+	G: Encode + Decode + Debug + Clone + Send + Sync,
 {
 	pub fn get_extrinsic_callbacks(&self) -> Vec<OpaqueCall> {
 		self.executed_operations

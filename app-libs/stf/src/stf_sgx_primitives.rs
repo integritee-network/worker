@@ -25,6 +25,6 @@ pub mod types {
 	pub type StateDiffType = itp_sgx_externalities::SgxExternalitiesDiffType;
 }
 
-pub struct Stf<Call, Getter, State, Runtime> {
-	phantom_data: PhantomData<(Call, Getter, State, Runtime)>,
+pub struct Stf<TCS, G, State, Runtime> {
+	phantom_data: PhantomData<(TCS, G, State, Runtime)>,
 }

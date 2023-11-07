@@ -54,7 +54,7 @@ pub struct SidechainApi<Block, TCS> {
 
 impl<Block, TCS> SidechainApi<Block, TCS>
 where
-	TCS: TrustedCallVerification,
+	TCS: TrustedCallVerification + Debug,
 {
 	/// Create new operation pool logic.
 	pub fn new() -> Self {
@@ -64,7 +64,7 @@ where
 
 impl<Block, TCS> Default for SidechainApi<Block, TCS>
 where
-	TCS: TrustedCallVerification + Sync + Send,
+	TCS: TrustedCallVerification + Debug + Sync + Send,
 {
 	fn default() -> Self {
 		Self::new()

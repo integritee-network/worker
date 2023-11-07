@@ -21,7 +21,7 @@ use crate::{
 	H256,
 };
 use codec::{Decode, Encode};
-use core::marker::PhantomData;
+use core::{fmt::Debug, marker::PhantomData};
 use ita_stf::{TrustedCall, TrustedCallSigned};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{ed25519_derivation::DeriveEd25519, key_repository::AccessKey};
@@ -64,8 +64,8 @@ where
 	Stf: SystemPalletAccountInterface<StateObserver::StateType, AccountId>,
 	Stf::Index: Into<Index>,
 	TopPoolAuthor: AuthorApi<H256, H256, TCS, G> + Send + Sync + 'static,
-	TCS: Encode + Decode + Send + Sync,
-	G: Encode + Decode + Send + Sync,
+	TCS: Encode + Decode + Debug + Send + Sync,
+	G: Encode + Decode + Debug + Send + Sync,
 {
 	pub fn new(
 		state_observer: Arc<StateObserver>,
@@ -109,15 +109,15 @@ where
 	Stf: SystemPalletAccountInterface<StateObserver::StateType, AccountId>,
 	Stf::Index: Into<Index>,
 	TopPoolAuthor: AuthorApi<H256, H256, TCS, G> + Send + Sync + 'static,
-	TCS: Encode + Decode + Send + Sync,
-	G: Encode + Decode + Send + Sync,
+	TCS: Encode + Decode + Debug + Send + Sync,
+	G: Encode + Decode + Debug + Send + Sync,
 {
 	fn get_enclave_account(&self) -> Result<AccountId> {
 		let enclave_call_signing_key = self.get_enclave_call_signing_key()?;
 		Ok(enclave_call_signing_key.public().into())
 	}
 
-	fn sign_call_with_self<TC: Encode + TrustedCallSigning<TCS>>(
+	fn sign_call_with_self<TC: Encode + Debug + TrustedCallSigning<TCS>>(
 		&self,
 		trusted_call: &TC,
 		shard: &ShardIdentifier,

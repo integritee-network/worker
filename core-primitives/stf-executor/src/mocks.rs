@@ -122,12 +122,12 @@ impl Default for StfEnclaveSignerMock {
 	}
 }
 
-impl<TCS: Encode> StfEnclaveSigning<TCS> for StfEnclaveSignerMock {
+impl<TCS: Encode + Debug> StfEnclaveSigning<TCS> for StfEnclaveSignerMock {
 	fn get_enclave_account(&self) -> Result<AccountId> {
 		Ok(self.signer.public().into())
 	}
 
-	fn sign_call_with_self<TC: Encode + TrustedCallSigning<TCS>>(
+	fn sign_call_with_self<TC: Encode + Debug + TrustedCallSigning<TCS>>(
 		&self,
 		trusted_call: &TC,
 		shard: &ShardIdentifier,
