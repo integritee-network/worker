@@ -33,19 +33,15 @@ use crate::{
 		TrustedOperationSource, TxHash,
 	},
 };
-use codec::{Decode, Encode};
-use core::{future::Future, marker::PhantomData, pin::Pin};
-use itp_sgx_runtime_primitives::types::Index;
-use itp_stf_primitives::{
-	traits::{PoolTransactionValidation, TrustedCallVerification},
-	types::Signature,
-};
-use itp_types::{AccountId, Block, BlockHash as SidechainBlockHash, ShardIdentifier, H256};
+use codec::{Encode};
+use core::{future::Future, pin::Pin};
+
+
+use itp_types::{Block, BlockHash as SidechainBlockHash, ShardIdentifier, H256};
 use jsonrpc_core::futures::future::ready;
 use sp_runtime::{
 	generic::BlockId,
 	traits::{BlakeTwo256, Hash, NumberFor},
-	transaction_validity::{TransactionValidityError, UnknownTransaction, ValidTransaction},
 };
 use std::{boxed::Box, collections::HashMap, string::String, sync::Arc, vec, vec::Vec};
 

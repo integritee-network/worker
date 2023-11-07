@@ -25,10 +25,10 @@ use crate::{
 	tracked_map::{self, ReadOnlyTrackedMap, TrackedMap},
 };
 use alloc::{boxed::Box, collections::BTreeSet, sync::Arc, vec, vec::Vec};
-use core::{cmp, cmp::Ord, default::Default, hash};
+use core::{cmp, cmp::Ord, default::Default};
 use itp_stf_primitives::types::ShardIdentifier;
 use log::trace;
-use sp_runtime::{traits::Member, transaction_validity::TransactionTag as Tag};
+use sp_runtime::{transaction_validity::TransactionTag as Tag};
 use std::collections::{HashMap, HashSet};
 
 type TopErrorResult<Ex> = error::Result<(Vec<Arc<TrustedOperation<Ex>>>, Vec<TxHash>)>;

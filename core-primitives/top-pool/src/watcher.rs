@@ -21,12 +21,12 @@
 extern crate alloc;
 use crate::primitives::TxHash;
 use alloc::{string::String, sync::Arc, vec::Vec};
-use codec::Encode;
+
 use itc_direct_rpc_server::SendRpcResponse;
 use itp_types::{BlockHash as SidechainBlockHash, TrustedOperationStatus};
 use log::*;
-use sp_runtime::traits;
-use std::hash;
+
+
 
 /// Extrinsic watcher.
 ///

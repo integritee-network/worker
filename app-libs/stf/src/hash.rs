@@ -15,13 +15,13 @@
 
 */
 
-use crate::{Getter, TrustedCallSigned, TrustedGetter};
-use codec::{Decode, Encode};
+use crate::{TrustedGetter};
+use codec::{Encode};
 pub use itp_hashing::Hash;
-use itp_stf_primitives::types::TrustedOperation;
+
 use itp_types::H256;
 use sp_core::blake2_256;
-use std::{boxed::Box, vec::Vec};
+
 
 impl Hash<H256> for TrustedGetter {
 	fn hash(&self) -> H256 {

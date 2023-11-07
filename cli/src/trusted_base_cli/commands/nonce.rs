@@ -20,7 +20,7 @@ use crate::{
 	trusted_operation::perform_trusted_operation, Cli, CliResult, CliResultOk,
 };
 use codec::Decode;
-use ita_stf::{Index, TrustedGetter};
+use ita_stf::{Index};
 use itp_stf_primitives::types::{KeyPair, TrustedOperation};
 use log::*;
 use sp_core::Pair;

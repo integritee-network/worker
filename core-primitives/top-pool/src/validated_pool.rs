@@ -34,19 +34,19 @@ use crate::{
 	base_pool::PruneStatus,
 	error,
 	listener::Listener,
-	pool::{ChainApi, EventStream, ExtrinsicHash, Options, TransactionFor},
+	pool::{ChainApi, EventStream, Options, TransactionFor},
 	primitives::{PoolStatus, TrustedOperationSource, TxHash},
 	rotator::PoolRotator,
 };
 use codec::Encode;
-use core::{hash, marker::PhantomData, result::Result};
+use core::{marker::PhantomData, result::Result};
 use itc_direct_rpc_server::SendRpcResponse;
-use itp_stf_primitives::types::{ShardIdentifier, TrustedOperation as StfTrustedOperation};
+use itp_stf_primitives::types::{ShardIdentifier};
 use itp_types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::channel::mpsc::{channel, Sender};
 use sp_runtime::{
 	generic::BlockId,
-	traits::{self, SaturatedConversion},
+	traits::{SaturatedConversion},
 	transaction_validity::{TransactionTag as Tag, ValidTransaction},
 };
 use std::{

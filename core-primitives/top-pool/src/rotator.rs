@@ -29,8 +29,7 @@ use std::sync::RwLock;
 
 use crate::{base_pool::TrustedOperation, primitives::TxHash};
 use std::{
-	collections::HashMap,
-	hash, iter,
+	collections::HashMap, iter,
 	time::{Duration, Instant},
 };
 

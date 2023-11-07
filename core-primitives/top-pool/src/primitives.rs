@@ -8,17 +8,16 @@ use crate::error;
 use alloc::{boxed::Box, string::String, sync::Arc, vec::Vec};
 use byteorder::{BigEndian, ByteOrder};
 use codec::{Decode, Encode};
-use core::{hash::Hash, pin::Pin};
+use core::{pin::Pin};
 use itp_stf_primitives::{
-	traits::PoolTransactionValidation,
-	types::{ShardIdentifier, TrustedOperation as StfTrustedOperation},
+	types::{ShardIdentifier},
 };
 use itp_types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::{channel::mpsc::Receiver, Future, Stream};
 use sp_core::H256;
 use sp_runtime::{
 	generic::BlockId,
-	traits::{Block as BlockT, Member, NumberFor},
+	traits::{Block as BlockT, NumberFor},
 	transaction_validity::{TransactionLongevity, TransactionPriority, TransactionTag},
 };
 use std::collections::HashMap;

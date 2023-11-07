@@ -29,7 +29,7 @@ use std::sync::Mutex;
 use crate::{
 	base_pool::TrustedOperation,
 	error::IntoPoolError,
-	pool::{ChainApi, ExtrinsicHash, Options as PoolOptions, Pool},
+	pool::{ChainApi, Options as PoolOptions, Pool},
 	primitives::{
 		ImportNotificationStream, PoolFuture, PoolStatus, TrustedOperationPool,
 		TrustedOperationSource, TxHash,
@@ -41,7 +41,7 @@ use core::{marker::PhantomData, pin::Pin};
 use itc_direct_rpc_server::SendRpcResponse;
 use itp_stf_primitives::{
 	traits::PoolTransactionValidation,
-	types::{ShardIdentifier, TrustedOperation as StfTrustedOperation},
+	types::{ShardIdentifier},
 };
 use its_primitives::types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::{
