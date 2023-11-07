@@ -18,14 +18,14 @@ extern crate alloc;
 use crate::traits::{PoolTransactionValidation, TrustedCallVerification};
 use alloc::boxed::Box;
 use codec::{Compact, Decode, Encode};
+use core::marker::PhantomData;
 use sp_core::{blake2_256, crypto::AccountId32, ed25519, sr25519, Pair, H256};
 use sp_runtime::{
 	traits::Verify,
 	transaction_validity::{TransactionValidityError, UnknownTransaction, ValidTransaction},
 	MultiSignature,
 };
-use sp_std::vec;
-
+use sp_std::{vec, vec::Vec};
 pub type Signature = MultiSignature;
 pub type AuthorityId = <Signature as Verify>::Signer;
 pub type AccountId = AccountId32;
@@ -82,15 +82,15 @@ where
 	}
 }
 
-impl<TCS, G> itp_hashing::Hash<H256> for TrustedOperation<TCS, G>
-where
-	TCS: Encode,
-	G: Encode,
-{
-	fn hash(&self) -> H256 {
-		blake2_256(&self.encode()).into()
-	}
-}
+// impl<TCS, G> itp_hashing::Hash<H256> for TrustedOperation<TCS, G>
+// where
+// 	TCS: Encode,
+// 	G: Encode,
+// {
+// 	fn hash(&self) -> H256 {
+// 		blake2_256(&self.encode()).into()
+// 	}
+// }
 
 impl<TCS, G> TrustedOperation<TCS, G>
 where
@@ -120,6 +120,10 @@ where
 
 		ValidTransaction { priority: 1 << 20, requires, provides, longevity: 64, propagate: true }
 	}
+
+	pub fn hash(&self) -> H256 {
+		blake2_256(&self.encode()).into()
+	}
 }
 
 impl<TCS, G> PoolTransactionValidation for TrustedOperation<TCS, G>
@@ -134,6 +138,69 @@ where
 			TrustedOperation::indirect_call(trusted_call_signed) =>
 				Ok(Self::validate_trusted_call(trusted_call_signed)),
 			TrustedOperation::get(getter) => getter.validate(),
+		}
+	}
+}
+
+/// Trusted operation Or hash
+///
+/// Allows to refer to trusted calls either by its raw representation or its hash.
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
+pub enum TrustedOperationOrHash<TCS, G>
+where
+	TCS: Encode + Send + Sync,
+	G: Encode + Send + Sync,
+{
+	/// The hash of the call.
+	Hash(H256),
+	/// Raw extrinsic bytes.
+	OperationEncoded(Vec<u8>),
+	/// Raw extrinsic
+	Operation(Box<TrustedOperation<TCS, G>>),
+}
+
+impl<TCS, G> TrustedOperationOrHash<TCS, G>
+where
+	TCS: Encode + Send + Sync,
+	G: Encode + Send + Sync,
+{
+	pub fn from_top(top: TrustedOperation<TCS, G>) -> Self {
+		TrustedOperationOrHash::Operation(Box::new(top))
+	}
+}
+
+/// Payload to be sent to peers for a state update.
+#[derive(PartialEq, Eq, Clone, Debug, Encode, Decode)]
+pub struct StatePayload<StateUpdate: Encode> {
+	/// State hash before the `state_update` was applied.
+	state_hash_apriori: H256,
+	/// State hash after the `state_update` was applied.
+	state_hash_aposteriori: H256,
+	/// State diff applied to state with hash `state_hash_apriori`
+	/// leading to state with hash `state_hash_aposteriori`.
+	state_update: StateUpdate,
+}
+
+impl<StateUpdate: Encode> StatePayload<StateUpdate> {
+	/// Get state hash before the `state_update` was applied.
+	pub fn state_hash_apriori(&self) -> H256 {
+		self.state_hash_apriori
+	}
+	/// Get state hash after the `state_update` was applied.
+	pub fn state_hash_aposteriori(&self) -> H256 {
+		self.state_hash_aposteriori
+	}
+	/// Reference to the `state_update`.
+	pub fn state_update(&self) -> &StateUpdate {
+		&self.state_update
+	}
+
+	/// Create new `StatePayload` instance.
+	pub fn new(apriori: H256, aposteriori: H256, update: StateUpdate) -> Self {
+		Self {
+			state_hash_apriori: apriori,
+			state_hash_aposteriori: aposteriori,
+			state_update: update,
 		}
 	}
 }

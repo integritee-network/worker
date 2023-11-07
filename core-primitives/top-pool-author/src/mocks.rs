@@ -29,15 +29,12 @@ use crate::{
 	traits::{AuthorApi, OnBlockImported},
 };
 use codec::{Decode, Encode};
-use ita_stf::{
-	hash::{Hash, TrustedOperationOrHash},
-	Getter, TrustedGetterSigned,
-};
 use itp_stf_primitives::{
 	traits::TrustedCallVerification,
-	types::{AccountId, TrustedOperation as StfTrustedOperation},
+	types::{AccountId, TrustedOperation as StfTrustedOperation, TrustedOperationOrHash},
 };
-use itp_top_pool::{mocks::trusted_operation_pool_mock::GetterMock, primitives::PoolFuture};
+use itp_test::mock::stf_mock::GetterMock;
+use itp_top_pool::primitives::PoolFuture;
 use itp_types::ShardIdentifier;
 use jsonrpc_core::{futures::future::ready, Error as RpcError};
 use sp_core::{blake2_256, H256};
@@ -52,22 +49,12 @@ pub struct AuthorApiMock<Hash, BlockHash, TCS, G> {
 
 impl<Hash, BlockHash, TCS, G> AuthorApiMock<Hash, BlockHash, TCS, G>
 where
-	TCS: Encode,
-	G: Encode,
+	TCS: Encode + Decode + Send + Sync + TrustedCallVerification,
+	G: Encode + Decode + Send + Sync,
 {
-	fn decode_trusted_operation(
-		mut encoded_operation: &[u8],
-	) -> Option<StfTrustedOperation<TCS, G>> {
-		StfTrustedOperation::<TCS, G>::decode(&mut encoded_operation).ok()
-	}
-
-	fn decode_trusted_getter_signed(mut encoded_operation: &[u8]) -> Option<TrustedGetterSigned> {
-		TrustedGetterSigned::decode(&mut encoded_operation).ok()
-	}
-
 	fn remove_top(
 		&self,
-		bytes_or_hash: Vec<TrustedOperationOrHash<H256>>,
+		bytes_or_hash: Vec<TrustedOperationOrHash<TCS, G>>,
 		shard: ShardIdentifier,
 		_inblock: bool,
 	) -> Result<Vec<H256>> {
@@ -101,8 +88,8 @@ where
 
 impl<TCS, G> AuthorApi<H256, H256, TCS, G> for AuthorApiMock<H256, H256, TCS, G>
 where
-	TCS: Encode + TrustedCallVerification,
-	G: Encode,
+	TCS: Encode + Decode + Clone + TrustedCallVerification + Send + Sync,
+	G: Encode + Decode + Clone + Send + Sync,
 {
 	fn submit_top(&self, extrinsic: Vec<u8>, shard: ShardIdentifier) -> PoolFuture<H256, RpcError> {
 		let mut write_lock = self.tops.write().unwrap();
@@ -126,11 +113,10 @@ where
 			.unwrap()
 			.get(&shard)
 			.map(|encoded_operations| {
-				let mut trusted_getters: Vec<StfTrustedOperation<TCS, GetterMock>> = Vec::new();
+				let mut trusted_getters: Vec<StfTrustedOperation<TCS, G>> = Vec::new();
 				for encoded_operation in encoded_operations {
-					if let Some(g) = Self::decode_trusted_getter_signed(encoded_operation) {
-						trusted_getters
-							.push(StfTrustedOperation::<TCS, G>::get(GetterMock::trusted(g)));
+					if let Ok(g) = G::decode(&mut encoded_operation.as_slice()) {
+						trusted_getters.push(StfTrustedOperation::<TCS, G>::get(g));
 					}
 				}
 				trusted_getters
@@ -149,8 +135,8 @@ where
 			.map(|encoded_operations| {
 				let mut trusted_operations: Vec<StfTrustedOperation<TCS, G>> = Vec::new();
 				for encoded_operation in encoded_operations {
-					if let Some(o) = Self::decode_trusted_operation(encoded_operation) {
-						trusted_operations.push(o);
+					if let Ok(o) = TCS::decode(&mut encoded_operation.as_slice()) {
+						trusted_operations.push(StfTrustedOperation::direct_call(o));
 					}
 				}
 				trusted_operations
@@ -170,9 +156,10 @@ where
 			.map(|encoded_operations| {
 				let mut trusted_operations: Vec<StfTrustedOperation<TCS, G>> = Vec::new();
 				for encoded_operation in encoded_operations {
-					if let Some(o) = Self::decode_trusted_operation(encoded_operation) {
-						if o.signed_caller_account() == Some(account) {
-							trusted_operations.push(o);
+					if let Ok(o) = TCS::decode(&mut encoded_operation.as_slice()) {
+						let top = StfTrustedOperation::direct_call(o);
+						if top.signed_caller_account() == Some(account) {
+							trusted_operations.push(top);
 						}
 					}
 				}
@@ -193,8 +180,8 @@ where
 	fn remove_calls_from_pool(
 		&self,
 		shard: ShardIdentifier,
-		executed_calls: Vec<(TrustedOperationOrHash<H256>, bool)>,
-	) -> Vec<TrustedOperationOrHash<H256>> {
+		executed_calls: Vec<(TrustedOperationOrHash<TCS, G>, bool)>,
+	) -> Vec<TrustedOperationOrHash<TCS, G>> {
 		let mut remove_attempts_lock = self.remove_attempts.write().unwrap();
 		*remove_attempts_lock += 1;
 
@@ -225,7 +212,7 @@ mod tests {
 	use crate::test_fixtures::shard_id;
 	use codec::Encode;
 	use futures::executor::block_on;
-	use itp_top_pool::mocks::trusted_operation_pool_mock::TrustedCallSignedMock;
+	use itp_test::mock::stf_mock::TrustedCallSignedMock;
 	use std::vec;
 
 	#[test]
@@ -240,7 +227,10 @@ mod tests {
 		assert_eq!(1, author.get_pending_trusted_calls(shard).len());
 		assert_eq!(0, author.get_pending_getters(shard).len());
 
-		let trusted_operation_or_hash = TrustedOperationOrHash::from_top(trusted_operation.clone());
+		let trusted_operation_or_hash =
+			TrustedOperationOrHash::<TrustedCallSignedMock, GetterMock>::from_top(
+				trusted_operation.clone(),
+			);
 		let removed_tops = author.remove_top(vec![trusted_operation_or_hash], shard, true).unwrap();
 
 		assert_eq!(1, removed_tops.len());

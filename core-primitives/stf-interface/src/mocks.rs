@@ -23,9 +23,11 @@ use crate::{
 	StateCallInterface, StateGetterInterface, UpdateState,
 };
 use alloc::{string::String, sync::Arc, vec::Vec};
-use core::marker::PhantomData;
+use codec::{Decode, Encode};
+use core::{fmt::Debug, marker::PhantomData};
 use itp_node_api_metadata::metadata_mocks::NodeMetadataMock;
 use itp_node_api_metadata_provider::NodeMetadataRepository;
+use itp_stf_primitives::traits::TrustedCallVerification;
 use itp_types::{parentchain::ParentchainId, AccountId, Index, OpaqueCall};
 
 #[derive(Default)]
@@ -51,15 +53,16 @@ impl<State, StateDiff> UpdateState<State, StateDiff> for StateInterfaceMock<Stat
 	}
 }
 
-impl<Call, State, StateDiff>
-	StateCallInterface<Call, State, NodeMetadataRepository<NodeMetadataMock>>
+impl<TCS, State, StateDiff> StateCallInterface<TCS, State, NodeMetadataRepository<NodeMetadataMock>>
 	for StateInterfaceMock<State, StateDiff>
+where
+	TCS: Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
 {
 	type Error = String;
 
 	fn execute_call(
 		_state: &mut State,
-		_call: Call,
+		_call: TCS,
 		_calls: &mut Vec<OpaqueCall>,
 		_node_metadata_repo: Arc<NodeMetadataRepository<NodeMetadataMock>>,
 	) -> Result<(), Self::Error> {

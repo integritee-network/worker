@@ -5,8 +5,11 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
 [dependencies]
+codec = { version = "3.0.0", default-features = false, features = ["derive"], package = "parity-scale-codec" }
+
 itp-node-api-metadata = { path = "../node-api/metadata", default-features = false }
 itp-node-api-metadata-provider = { path = "../node-api/metadata-provider", default-features = false }
+itp-stf-primitives = { path = "../stf-primitives", default-features = false }
 itp-types = { default-features = false, path = "../types" }
 
 [features]

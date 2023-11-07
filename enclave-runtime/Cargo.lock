@@ -2218,7 +2218,9 @@ version = "0.8.0"
 dependencies = [
  "itp-node-api-metadata",
  "itp-node-api-metadata-provider",
+ "itp-stf-primitives",
  "itp-types",
+ "parity-scale-codec",
 ]
 
 [[package]]
@@ -2308,6 +2310,7 @@ dependencies = [
  "itp-sgx-crypto",
  "itp-sgx-externalities",
  "itp-stf-interface",
+ "itp-stf-primitives",
  "itp-stf-state-handler",
  "itp-storage",
  "itp-time-utils",

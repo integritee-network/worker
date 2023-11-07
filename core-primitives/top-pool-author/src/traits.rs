@@ -20,22 +20,23 @@ use crate::sgx_reexport_prelude::*;
 use codec::Encode;
 
 use crate::error::Result;
-use ita_stf::hash;
-use itp_stf_primitives::types::{AccountId, TrustedOperation as StfTrustedOperation};
+use itp_stf_primitives::types::{
+	AccountId, TrustedOperation as StfTrustedOperation, TrustedOperationOrHash,
+};
 use itp_top_pool::primitives::PoolFuture;
 use itp_types::{BlockHash as SidechainBlockHash, ShardIdentifier, H256};
 use jsonrpc_core::Error as RpcError;
 use std::vec::Vec;
 
 /// Trait alias for a full STF author API
-pub trait FullAuthor<TCS: Encode, G: Encode> =
+pub trait FullAuthor<TCS: Encode + Send + Sync + 'static, G: Encode + Send + Sync + 'static> =
 	AuthorApi<H256, H256, TCS, G> + OnBlockImported<Hash = H256> + Send + Sync + 'static;
 
 /// Authoring RPC API
 pub trait AuthorApi<Hash, BlockHash, TCS, G>
 where
-	TCS: Encode,
-	G: Encode,
+	TCS: Encode + Send + Sync,
+	G: Encode + Send + Sync,
 {
 	/// Submit encoded extrinsic for inclusion in block.
 	fn submit_top(&self, extrinsic: Vec<u8>, shard: ShardIdentifier) -> PoolFuture<Hash, RpcError>;
@@ -71,8 +72,8 @@ where
 	fn remove_calls_from_pool(
 		&self,
 		shard: ShardIdentifier,
-		executed_calls: Vec<(hash::TrustedOperationOrHash<Hash>, bool)>,
-	) -> Vec<hash::TrustedOperationOrHash<Hash>>;
+		executed_calls: Vec<(TrustedOperationOrHash<TCS, G>, bool)>,
+	) -> Vec<TrustedOperationOrHash<TCS, G>>;
 
 	/// Submit an extrinsic to watch.
 	///

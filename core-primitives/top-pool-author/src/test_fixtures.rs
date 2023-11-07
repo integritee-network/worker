@@ -17,7 +17,7 @@
 
 use codec::Encode;
 use itp_stf_primitives::types::{KeyPair, ShardIdentifier};
-use itp_top_pool::mocks::trusted_operation_pool_mock::TrustedCallSignedMock;
+use itp_test::mock::stf_mock::TrustedCallSignedMock;
 use sp_core::{ed25519, Pair};
 use sp_runtime::traits::{BlakeTwo256, Hash};
 use std::{boxed::Box, vec};

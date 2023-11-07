@@ -120,21 +120,20 @@ impl TrustedCall {
 	}
 }
 
-impl TrustedCallSigning for TrustedCall {
-	type Output = TrustedCallSigned;
+impl TrustedCallSigning<TrustedCallSigned> for TrustedCall {
 	fn sign(
 		&self,
 		pair: &KeyPair,
 		nonce: Index,
 		mrenclave: &[u8; 32],
 		shard: &ShardIdentifier,
-	) -> Self::Output {
+	) -> TrustedCallSigned {
 		let mut payload = self.encode();
 		payload.append(&mut nonce.encode());
 		payload.append(&mut mrenclave.encode());
 		payload.append(&mut shard.encode());
 
-		Self::Output { call: self.clone(), nonce, signature: pair.sign(payload.as_slice()) }
+		TrustedCallSigned { call: self.clone(), nonce, signature: pair.sign(payload.as_slice()) }
 	}
 }
 

@@ -22,14 +22,11 @@ use crate::{
 	BatchExecutionResult, ExecutedOperation,
 };
 use codec::{Decode, Encode};
-use ita_stf::{
-	hash::{Hash, TrustedOperationOrHash},
-	TrustedCall, TrustedCallSigned, TrustedOperation,
-};
+use core::fmt::Debug;
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
-	types::{AccountId, KeyPair, ShardIdentifier},
+	types::{AccountId, KeyPair, ShardIdentifier, TrustedOperationOrHash},
 };
 use itp_types::H256;
 use sp_core::Pair;
@@ -38,7 +35,10 @@ use sp_runtime::traits::Header as HeaderTrait;
 use std::sync::RwLock;
 use std::{boxed::Box, marker::PhantomData, ops::Deref, time::Duration, vec::Vec};
 
-use itp_stf_primitives::traits::GetterAuthorization;
+use itp_stf_primitives::{
+	traits::{GetterAuthorization, TrustedCallVerification},
+	types::TrustedOperation,
+};
 #[cfg(feature = "sgx")]
 use std::sync::SgxRwLock as RwLock;
 
@@ -58,20 +58,22 @@ impl<State: Clone> StfExecutorMock<State> {
 	}
 }
 
-impl<State> StateUpdateProposer for StfExecutorMock<State>
+impl<State, TCS, G> StateUpdateProposer<TCS, G> for StfExecutorMock<State>
 where
 	State: SgxExternalitiesTrait + Encode + Clone,
+	TCS: Encode + Decode + Clone + Debug + Send + Sync + TrustedCallVerification,
+	G: Encode + Decode + Clone + Debug + Send + Sync,
 {
 	type Externalities = State;
 
 	fn propose_state_update<PH, F>(
 		&self,
-		trusted_calls: &[TrustedOperation],
+		trusted_calls: &[TrustedOperation<TCS, G>],
 		_header: &PH,
 		_shard: &ShardIdentifier,
 		_max_exec_duration: Duration,
 		prepare_state_function: F,
-	) -> Result<BatchExecutionResult<Self::Externalities>>
+	) -> Result<BatchExecutionResult<Self::Externalities, TCS, G>>
 	where
 		PH: HeaderTrait<Hash = H256>,
 		F: FnOnce(Self::Externalities) -> Self::Externalities,
@@ -82,11 +84,11 @@ where
 
 		*lock = updated_state.clone();
 
-		let executed_operations: Vec<ExecutedOperation> = trusted_calls
+		let executed_operations: Vec<ExecutedOperation<TCS, G>> = trusted_calls
 			.iter()
 			.map(|c| {
 				let operation_hash = c.hash();
-				let top_or_hash = TrustedOperationOrHash::from_top(c.clone());
+				let top_or_hash = TrustedOperationOrHash::<TCS, G>::from_top(c.clone());
 				ExecutedOperation::success(operation_hash, top_or_hash, Vec::new())
 			})
 			.collect();
@@ -120,16 +122,16 @@ impl Default for StfEnclaveSignerMock {
 	}
 }
 
-impl StfEnclaveSigning for StfEnclaveSignerMock {
+impl<TCS: Encode> StfEnclaveSigning<TCS> for StfEnclaveSignerMock {
 	fn get_enclave_account(&self) -> Result<AccountId> {
 		Ok(self.signer.public().into())
 	}
 
-	fn sign_call_with_self(
+	fn sign_call_with_self<TC: Encode + TrustedCallSigning<TCS>>(
 		&self,
-		trusted_call: &TrustedCall,
+		trusted_call: &TC,
 		shard: &ShardIdentifier,
-	) -> Result<TrustedCallSigned> {
+	) -> Result<TCS> {
 		Ok(trusted_call.sign(&KeyPair::Ed25519(Box::new(self.signer)), 1, &self.mr_enclave, shard))
 	}
 }
@@ -138,19 +140,6 @@ impl StfEnclaveSigning for StfEnclaveSignerMock {
 #[derive(Default)]
 pub struct GetStateMock<StateType> {
 	_phantom: PhantomData<StateType>,
-}
-
-pub enum GetterMock {
-	Public,
-	Trusted,
-}
-impl GetterAuthorization for GetterMock {
-	fn is_authorized(&self) -> bool {
-		match self {
-			Self::Trusted => false,
-			Self::Public => true,
-		}
-	}
 }
 
 impl<StateType, G> GetState<StateType, G> for GetStateMock<StateType>

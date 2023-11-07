@@ -21,7 +21,8 @@ use std::sync::{SgxRwLock as RwLock, SgxRwLockWriteGuard as RwLockWriteGuard};
 #[cfg(feature = "std")]
 use std::sync::{RwLock, RwLockWriteGuard};
 
-use ita_stf::{hash::Hash, State as StfState};
+use itp_sgx_externalities::{SgxExternalities as StfState, StateHash};
+
 use itp_stf_state_handler::{
 	error::{Error, Result},
 	handle_state::HandleState,

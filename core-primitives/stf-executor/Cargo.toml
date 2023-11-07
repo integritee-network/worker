@@ -48,6 +48,7 @@ itp-test = { path = "../test", default-features = false, optional = true }
 [dev-dependencies]
 itp-stf-state-observer = { path = "../stf-state-observer", features = ["mocks"] }
 itp-stf-interface = { path = "../stf-interface", features = ["mocks"] }
+itp-top-pool = { path = "../top-pool", features = ["mocks"] }
 
 [features]
 default = ["std"]

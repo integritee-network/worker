@@ -25,13 +25,13 @@ use crate::{
 	traits::{AuthorApi, OnBlockImported},
 };
 use codec::{Decode, Encode};
-use ita_stf::{hash, Getter};
+use ita_stf::Getter;
 use itp_enclave_metrics::EnclaveMetric;
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt};
 use itp_stf_primitives::{
 	traits::{PoolTransactionValidation, TrustedCallVerification},
-	types::{AccountId, TrustedOperation as StfTrustedOperation},
+	types::{AccountId, TrustedOperation as StfTrustedOperation, TrustedOperationOrHash},
 };
 use itp_stf_state_handler::query_shard_state::QueryShardState;
 use itp_top_pool::{
@@ -126,8 +126,22 @@ where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
-	TCS: Encode + Decode + Clone + core::fmt::Debug + Send + Sync + TrustedCallVerification,
-	G: Encode + Decode + Clone + PoolTransactionValidation + core::fmt::Debug + Send + Sync,
+	TCS: Encode
+		+ Decode
+		+ Clone
+		+ core::fmt::Debug
+		+ Send
+		+ Sync
+		+ TrustedCallVerification
+		+ 'static,
+	G: Encode
+		+ Decode
+		+ Clone
+		+ PoolTransactionValidation
+		+ core::fmt::Debug
+		+ Send
+		+ Sync
+		+ 'static,
 {
 	fn process_top(
 		&self,
@@ -181,7 +195,7 @@ where
 				trusted_call_signed,
 				self.hash_of(&trusted_operation)
 			);
-		} else if let StfTrustedOperation::<TCS, G>::get(getter) = trusted_operation {
+		} else if let StfTrustedOperation::<TCS, G>::get(ref getter) = trusted_operation {
 			debug!(
 				"Submitting trusted or public getter to TOP pool: {:?}, TOP hash: {:?}",
 				getter,
@@ -216,13 +230,13 @@ where
 
 	fn remove_top(
 		&self,
-		bytes_or_hash: hash::TrustedOperationOrHash<TxHash>,
+		bytes_or_hash: TrustedOperationOrHash<TCS, G>,
 		shard: ShardIdentifier,
 		inblock: bool,
 	) -> Result<TxHash> {
 		let hash = match bytes_or_hash {
-			hash::TrustedOperationOrHash::Hash(h) => Ok(h),
-			hash::TrustedOperationOrHash::OperationEncoded(bytes) => {
+			TrustedOperationOrHash::Hash(h) => Ok(h),
+			TrustedOperationOrHash::OperationEncoded(bytes) => {
 				match Decode::decode(&mut bytes.as_slice()) {
 					Ok(op) => Ok(self.top_pool.hash_of(&op)),
 					Err(e) => {
@@ -231,7 +245,7 @@ where
 					},
 				}
 			},
-			hash::TrustedOperationOrHash::Operation(op) => Ok(self.top_pool.hash_of(&op)),
+			TrustedOperationOrHash::Operation(op) => Ok(self.top_pool.hash_of(&op)),
 		}?;
 
 		debug!("removing {:?} from top pool", hash);
@@ -279,8 +293,22 @@ where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
-	G: Encode + Clone + PoolTransactionValidation + core::fmt::Debug + Send + Sync,
-	TCS: Encode + Clone + core::fmt::Debug + Send + Sync + TrustedCallVerification,
+	G: Encode
+		+ Decode
+		+ Clone
+		+ PoolTransactionValidation
+		+ core::fmt::Debug
+		+ Send
+		+ Sync
+		+ 'static,
+	TCS: Encode
+		+ Decode
+		+ Clone
+		+ core::fmt::Debug
+		+ Send
+		+ Sync
+		+ TrustedCallVerification
+		+ 'static,
 {
 	fn submit_top(&self, ext: Vec<u8>, shard: ShardIdentifier) -> PoolFuture<TxHash, RpcError> {
 		self.process_top(ext, shard, TopSubmissionMode::Submit)
@@ -341,8 +369,8 @@ where
 	fn remove_calls_from_pool(
 		&self,
 		shard: ShardIdentifier,
-		executed_calls: Vec<(hash::TrustedOperationOrHash<TxHash>, bool)>,
-	) -> Vec<hash::TrustedOperationOrHash<TxHash>> {
+		executed_calls: Vec<(TrustedOperationOrHash<TCS, G>, bool)>,
+	) -> Vec<TrustedOperationOrHash<TCS, G>> {
 		let mut failed_to_remove = Vec::new();
 		for (executed_call, inblock) in executed_calls {
 			if let Err(e) = self.remove_top(executed_call.clone(), shard, inblock) {

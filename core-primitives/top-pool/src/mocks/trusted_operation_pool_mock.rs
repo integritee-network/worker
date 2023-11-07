@@ -38,7 +38,7 @@ use core::{future::Future, marker::PhantomData, pin::Pin};
 use itp_sgx_runtime_primitives::types::Index;
 use itp_stf_primitives::{
 	traits::{PoolTransactionValidation, TrustedCallVerification},
-	types::{Signature, TrustedOperation as StfTrustedOperationGeneric},
+	types::Signature,
 };
 use itp_types::{AccountId, Block, BlockHash as SidechainBlockHash, ShardIdentifier, H256};
 use jsonrpc_core::futures::future::ready;
@@ -55,42 +55,6 @@ use std::{boxed::Box, collections::HashMap, string::String, sync::Arc, vec, vec:
 pub struct TrustedOperationPoolMock<TOP: Encode + Clone + Send + Sync + 'static> {
 	submitted_transactions: RwLock<HashMap<ShardIdentifier, TxPayload<TOP>>>,
 }
-
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
-#[allow(non_camel_case_types)]
-pub enum GetterMock {
-	public(u8),
-	trusted(u8),
-}
-
-impl PoolTransactionValidation for GetterMock {
-	fn validate(&self) -> Result<ValidTransaction, TransactionValidityError> {
-		Err(TransactionValidityError::Unknown(UnknownTransaction::CannotLookup))
-	}
-}
-
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
-pub struct TrustedCallSignedMock {
-	pub sender: AccountId,
-	pub nonce: Index,
-	pub signature: Signature,
-}
-
-impl TrustedCallVerification for TrustedCallSignedMock {
-	fn sender_account(&self) -> &AccountId {
-		&self.sender
-	}
-
-	fn nonce(&self) -> Index {
-		self.nonce
-	}
-
-	fn verify_signature(&self, _mrenclave: &[u8; 32], _shard: &ShardIdentifier) -> bool {
-		true
-	}
-}
-
-type TrustedOperationMock = StfTrustedOperationGeneric<TrustedCallSignedMock, GetterMock>;
 
 /// Transaction payload
 #[derive(Clone, PartialEq)]

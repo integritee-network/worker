@@ -21,10 +21,14 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
+extern crate core;
 
 use alloc::{sync::Arc, vec::Vec};
+use codec::{Decode, Encode};
+use core::fmt::Debug;
 use itp_node_api_metadata::NodeMetadataTrait;
 use itp_node_api_metadata_provider::AccessNodeMetadata;
+use itp_stf_primitives::traits::TrustedCallVerification;
 use itp_types::{parentchain::ParentchainId, OpaqueCall};
 
 #[cfg(feature = "mocks")]
@@ -50,17 +54,18 @@ pub trait UpdateState<State, StateDiff> {
 }
 
 /// Interface to execute state mutating calls on a state.
-pub trait StateCallInterface<Call, State, NodeMetadataRepository>
+pub trait StateCallInterface<TCS, State, NodeMetadataRepository>
 where
 	NodeMetadataRepository: AccessNodeMetadata,
 	NodeMetadataRepository::MetadataType: NodeMetadataTrait,
+	TCS: Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
 {
 	type Error;
 
 	/// Execute a call on a specific state. Callbacks are added as an `OpaqueCall`.
 	fn execute_call(
 		state: &mut State,
-		call: Call,
+		call: TCS,
 		calls: &mut Vec<OpaqueCall>,
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error>;

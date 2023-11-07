@@ -129,8 +129,8 @@ mod tests {
 	use super::*;
 	use futures::executor;
 	use ita_stf::{PublicGetter, TrustedCall, TrustedOperation};
+	use itp_est::mock::stf_mock::TrustedCallSignedMock;
 	use itp_stf_primitives::types::{KeyPair, ShardIdentifier};
-	use itp_top_pool::mocks::trusted_operation_pool_mock::TrustedCallSignedMock;
 	use itp_types::Block as ParentchainBlock;
 	use sp_core::{ed25519, Pair};
 	use sp_keyring::AccountKeyring;

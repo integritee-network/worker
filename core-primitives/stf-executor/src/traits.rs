@@ -16,10 +16,14 @@
 */
 
 use crate::{error::Result, BatchExecutionResult};
-use codec::Encode;
-use ita_stf::{ParentchainHeader, TrustedCall, TrustedCallSigned, TrustedOperation};
+use codec::{Decode, Encode};
+use core::fmt::Debug;
+use ita_stf::ParentchainHeader;
 use itp_sgx_externalities::SgxExternalitiesTrait;
-use itp_stf_primitives::types::{AccountId, ShardIdentifier};
+use itp_stf_primitives::{
+	traits::TrustedCallSigning,
+	types::{AccountId, ShardIdentifier, TrustedOperation},
+};
 use itp_types::{parentchain::ParentchainId, H256};
 use sp_runtime::traits::Header as HeaderTrait;
 use std::time::Duration;
@@ -33,18 +37,25 @@ pub enum StatePostProcessing {
 /// Allows signing of a trusted call with the enclave account that is registered in the STF.
 ///
 /// The signing key is derived from the shielding key, which guarantees that all enclaves sign the same key.
-pub trait StfEnclaveSigning {
+pub trait StfEnclaveSigning<TCS>
+where
+	TCS: Encode,
+{
 	fn get_enclave_account(&self) -> Result<AccountId>;
 
-	fn sign_call_with_self(
+	fn sign_call_with_self<TC: Encode + TrustedCallSigning<TCS>>(
 		&self,
-		trusted_call: &TrustedCall,
+		trusted_call: &TC,
 		shard: &ShardIdentifier,
-	) -> Result<TrustedCallSigned>;
+	) -> Result<TCS>;
 }
 
 /// Proposes a state update to `Externalities`.
-pub trait StateUpdateProposer {
+pub trait StateUpdateProposer<TCS, G>
+where
+	TCS: Encode + Decode + Debug + Send + Sync,
+	G: Encode + Decode + Debug + Send + Sync,
+{
 	type Externalities: SgxExternalitiesTrait + Encode;
 
 	/// Executes trusted calls within a given time frame without permanent state mutation.
@@ -53,12 +64,12 @@ pub trait StateUpdateProposer {
 	/// If the time expires, any remaining trusted calls within the batch will be ignored.
 	fn propose_state_update<PH, F>(
 		&self,
-		trusted_calls: &[TrustedOperation],
+		trusted_calls: &[TrustedOperation<TCS, G>],
 		header: &PH,
 		shard: &ShardIdentifier,
 		max_exec_duration: Duration,
 		prepare_state_function: F,
-	) -> Result<BatchExecutionResult<Self::Externalities>>
+	) -> Result<BatchExecutionResult<Self::Externalities, TCS, G>>
 	where
 		PH: HeaderTrait<Hash = H256>,
 		F: FnOnce(Self::Externalities) -> Self::Externalities;

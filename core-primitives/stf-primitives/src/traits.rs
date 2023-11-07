@@ -24,15 +24,14 @@ pub trait GetterAuthorization {
 }
 
 /// knows how to sign a trusted call input and provides a signed output
-pub trait TrustedCallSigning {
-	type Output;
+pub trait TrustedCallSigning<TCS> {
 	fn sign(
 		&self,
 		pair: &KeyPair,
 		nonce: Index,
 		mrenclave: &[u8; 32],
 		shard: &ShardIdentifier,
-	) -> Self::Output;
+	) -> TCS;
 }
 
 /// enables TrustedCallSigned verification
