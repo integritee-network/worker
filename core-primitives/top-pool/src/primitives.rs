@@ -8,10 +8,8 @@ use crate::error;
 use alloc::{boxed::Box, string::String, sync::Arc, vec::Vec};
 use byteorder::{BigEndian, ByteOrder};
 use codec::{Decode, Encode};
-use core::{pin::Pin};
-use itp_stf_primitives::{
-	types::{ShardIdentifier},
-};
+use core::pin::Pin;
+use itp_stf_primitives::types::ShardIdentifier;
 use itp_types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::{channel::mpsc::Receiver, Future, Stream};
 use sp_core::H256;

@@ -15,13 +15,12 @@
 
 */
 
-use crate::{TrustedGetter};
-use codec::{Encode};
+use crate::TrustedGetter;
+use codec::Encode;
 pub use itp_hashing::Hash;
 
 use itp_types::H256;
 use sp_core::blake2_256;
-
 
 impl Hash<H256> for TrustedGetter {
 	fn hash(&self) -> H256 {

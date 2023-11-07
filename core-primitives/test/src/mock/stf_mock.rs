@@ -16,12 +16,10 @@
 */
 use alloc::sync::Arc;
 use codec::{Decode, Encode};
-use core::{fmt::Debug};
-use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock};
-use itp_node_api_metadata_provider::{
-	NodeMetadataRepository,
-};
-use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesDiffType, SgxExternalitiesTrait};
+use core::fmt::Debug;
+use itp_node_api::metadata::metadata_mocks::NodeMetadataMock;
+use itp_node_api_metadata_provider::NodeMetadataRepository;
+use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesDiffType};
 use itp_stf_interface::{ExecuteCall, StateCallInterface, UpdateState};
 use itp_stf_primitives::{
 	traits::{

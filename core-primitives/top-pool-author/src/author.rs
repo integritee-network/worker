@@ -26,7 +26,6 @@ use crate::{
 	traits::{AuthorApi, OnBlockImported},
 };
 use codec::{Decode, Encode};
-use ita_stf::Getter;
 use itp_enclave_metrics::EnclaveMetric;
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt};
@@ -36,7 +35,7 @@ use itp_stf_primitives::{
 };
 use itp_stf_state_handler::query_shard_state::QueryShardState;
 use itp_top_pool::{
-	error::{Error as PoolError, Error, IntoPoolError},
+	error::{Error as PoolError, IntoPoolError},
 	primitives::{
 		BlockHash, InPoolOperation, PoolFuture, TrustedOperationPool, TrustedOperationSource,
 		TxHash,

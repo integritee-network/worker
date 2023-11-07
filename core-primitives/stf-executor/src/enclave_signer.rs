@@ -22,7 +22,6 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use core::{fmt::Debug, marker::PhantomData};
-use ita_stf::{TrustedCall, TrustedCallSigned};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{ed25519_derivation::DeriveEd25519, key_repository::AccessKey};
 use itp_sgx_externalities::SgxExternalitiesTrait;

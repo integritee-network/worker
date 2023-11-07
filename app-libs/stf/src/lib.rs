@@ -31,7 +31,6 @@ pub use ita_sgx_runtime::{Balance, Index};
 #[cfg(feature = "std")]
 pub use my_node_runtime::{Balance, Index};
 
-
 use derive_more::Display;
 use itp_node_api_metadata::Error as MetadataError;
 use itp_node_api_metadata_provider::Error as MetadataProviderError;

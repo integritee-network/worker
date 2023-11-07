@@ -34,7 +34,6 @@ use itp_stf_primitives::{
 	traits::TrustedCallVerification,
 	types::{AccountId, TrustedOperation as StfTrustedOperation, TrustedOperationOrHash},
 };
-use itp_test::mock::stf_mock::GetterMock;
 use itp_top_pool::primitives::PoolFuture;
 use itp_types::ShardIdentifier;
 use jsonrpc_core::{futures::future::ready, Error as RpcError};

@@ -26,8 +26,6 @@ use itc_direct_rpc_server::SendRpcResponse;
 use itp_types::{BlockHash as SidechainBlockHash, TrustedOperationStatus};
 use log::*;
 
-
-
 /// Extrinsic watcher.
 ///
 /// Represents a stream of status updates for particular extrinsic.

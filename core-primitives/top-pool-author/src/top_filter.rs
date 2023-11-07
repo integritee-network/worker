@@ -15,7 +15,7 @@
 
 */
 
-use codec::{Encode, EncodeAppend};
+use codec::Encode;
 use core::{fmt::Debug, marker::PhantomData};
 use itp_stf_primitives::types::TrustedOperation as StfTrustedOperation;
 

@@ -33,9 +33,8 @@ use crate::{
 		TrustedOperationSource, TxHash,
 	},
 };
-use codec::{Encode};
+use codec::Encode;
 use core::{future::Future, pin::Pin};
-
 
 use itp_types::{Block, BlockHash as SidechainBlockHash, ShardIdentifier, H256};
 use jsonrpc_core::futures::future::ready;

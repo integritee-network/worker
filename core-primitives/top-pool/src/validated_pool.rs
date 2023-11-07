@@ -38,15 +38,14 @@ use crate::{
 	primitives::{PoolStatus, TrustedOperationSource, TxHash},
 	rotator::PoolRotator,
 };
-use codec::Encode;
 use core::{marker::PhantomData, result::Result};
 use itc_direct_rpc_server::SendRpcResponse;
-use itp_stf_primitives::types::{ShardIdentifier};
+use itp_stf_primitives::types::ShardIdentifier;
 use itp_types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::channel::mpsc::{channel, Sender};
 use sp_runtime::{
 	generic::BlockId,
-	traits::{SaturatedConversion},
+	traits::SaturatedConversion,
 	transaction_validity::{TransactionTag as Tag, ValidTransaction},
 };
 use std::{

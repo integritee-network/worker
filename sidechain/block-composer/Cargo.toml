@@ -16,8 +16,8 @@ itp-settings = { path = "../../core-primitives/settings", default-features = fal
 itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", default-features = false }
 itp-sgx-externalities = { path = "../../core-primitives/substrate-sgx/externalities", default-features = false }
 itp-stf-executor = { path = "../../core-primitives/stf-executor", default-features = false }
-itp-stf-primitives = { path = "../../core-primitives/stf-primitives", default-features = false }
 itp-stf-interface = { path = "../../core-primitives/stf-interface", default-features = false }
+itp-stf-primitives = { path = "../../core-primitives/stf-primitives", default-features = false }
 itp-time-utils = { path = "../../core-primitives/time-utils", default-features = false }
 itp-top-pool-author = { path = "../../core-primitives/top-pool-author", default-features = false }
 itp-types = { path = "../../core-primitives/types", default-features = false }

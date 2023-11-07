@@ -28,14 +28,12 @@ use crate::{
 	ready::ReadyOperations,
 };
 use alloc::{fmt, sync::Arc, vec, vec::Vec};
-use core::{iter};
+use core::iter;
 use itp_stf_primitives::types::ShardIdentifier;
 use log::{debug, trace, warn};
 use sp_core::hexdisplay::HexDisplay;
-use sp_runtime::{
-	transaction_validity::{
-		TransactionLongevity as Longevity, TransactionPriority as Priority, TransactionTag as Tag,
-	},
+use sp_runtime::transaction_validity::{
+	TransactionLongevity as Longevity, TransactionPriority as Priority, TransactionTag as Tag,
 };
 use std::collections::HashSet;
 

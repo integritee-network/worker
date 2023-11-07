@@ -39,10 +39,7 @@ use alloc::{boxed::Box, string::String, sync::Arc};
 use codec::Encode;
 use core::{marker::PhantomData, pin::Pin};
 use itc_direct_rpc_server::SendRpcResponse;
-use itp_stf_primitives::{
-	traits::PoolTransactionValidation,
-	types::{ShardIdentifier},
-};
+use itp_stf_primitives::{traits::PoolTransactionValidation, types::ShardIdentifier};
 use its_primitives::types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::{
 	channel::oneshot,

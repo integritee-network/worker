@@ -18,7 +18,7 @@ extern crate alloc;
 use crate::traits::{PoolTransactionValidation, TrustedCallVerification};
 use alloc::boxed::Box;
 use codec::{Compact, Decode, Encode};
-use core::{fmt::Debug};
+use core::fmt::Debug;
 use sp_core::{blake2_256, crypto::AccountId32, ed25519, sr25519, Pair, H256};
 use sp_runtime::{
 	traits::Verify,

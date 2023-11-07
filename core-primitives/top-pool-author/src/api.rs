@@ -23,13 +23,12 @@ use core::fmt::Debug;
 
 use crate::error;
 use codec::Encode;
-use ita_stf::{Getter, TrustedCallSigned};
 use itp_stf_primitives::{
 	traits::{PoolTransactionValidation, TrustedCallVerification},
 	types::ShardIdentifier,
 };
 use itp_top_pool::{
-	pool::{ChainApi, ExtrinsicHash, NumberFor},
+	pool::{ChainApi, NumberFor},
 	primitives::{TrustedOperationSource, TxHash},
 };
 use itp_types::BlockHash as SidechainBlockHash;
@@ -37,12 +36,10 @@ use jsonrpc_core::futures::future::{ready, Future, Ready};
 use log::*;
 use sp_runtime::{
 	generic::BlockId,
-	traits::{BlakeTwo256, Block as BlockT, Hash as HashT, Header as HeaderT},
-	transaction_validity::{
-		TransactionValidity, TransactionValidityError, UnknownTransaction, ValidTransaction,
-	},
+	traits::{BlakeTwo256, Block as BlockT, Hash as HashT},
+	transaction_validity::TransactionValidity,
 };
-use std::{boxed::Box, marker::PhantomData, pin::Pin, vec, vec::Vec};
+use std::{boxed::Box, marker::PhantomData, pin::Pin};
 
 /// Future that resolves to account nonce.
 pub type Result<T> = core::result::Result<T, ()>;
