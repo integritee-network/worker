@@ -23,10 +23,8 @@ use crate::{
 	Cli, CliResult, CliResultOk,
 };
 use codec::Decode;
-use ita_stf::{
-	evm_helpers::evm_create_address, Index, TrustedCall, TrustedGetter, TrustedOperation,
-};
-use itp_stf_primitives::types::KeyPair;
+use ita_stf::{evm_helpers::evm_create_address, Index, TrustedCall, TrustedGetter};
+use itp_stf_primitives::types::{KeyPair, TrustedOperation};
 use itp_types::AccountId;
 use log::*;
 use pallet_evm::{AddressMapping, HashedAddressMapping};
