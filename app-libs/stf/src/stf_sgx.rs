@@ -29,7 +29,7 @@ use itp_stf_interface::{
 	ExecuteCall, ExecuteGetter, InitState, StateCallInterface, StateGetterInterface, UpdateState,
 };
 use itp_stf_primitives::{
-	error::StfError, traits::TrustedCallVerification, types::ShardIdentifier,
+	error::StfError, traits::TrustedCallVerification,
 };
 use itp_storage::storage_value_key;
 use itp_types::{parentchain::ParentchainId, OpaqueCall};

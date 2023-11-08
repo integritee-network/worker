@@ -58,18 +58,16 @@ mod tests {
 	use core::assert_matches::assert_matches;
 	use itp_sgx_externalities::SgxExternalitiesDiffType;
 	use itp_stf_interface::mocks::StateInterfaceMock;
-	use itp_test::mock::stf_mock::TrustedGetterMock;
+	use itp_test::mock::stf_mock::{StfMock, TrustedGetterMock, TrustedGetterSignedMock};
 	use itp_types::AccountId;
 	use sp_core::{ed25519, Pair};
 
-	type TestStf = StateInterfaceMock<SgxExternalities, SgxExternalitiesDiffType>;
-	type TestStateGetter = StfStateGetter<TestStf>;
+	type TestStateGetter = StfStateGetter<StfMock>;
 
 	#[test]
 	fn upon_false_signature_get_stf_state_errs() {
-		let sender = AccountId::from([0; 32]);
-		let wrong_signer = ed25519::Pair::from_seed(b"12345678901234567890123456789012");
-		let signed_getter = TrustedGetterMock::free_balance(sender).sign(&wrong_signer.into());
+		let signed_getter =
+			TrustedGetterSignedMock { getter: TrustedGetterMock::some_value, signature: false };
 		let mut state = SgxExternalities::default();
 
 		assert_matches!(
@@ -80,9 +78,7 @@ mod tests {
 
 	#[test]
 	fn state_getter_is_executed_if_signature_is_correct() {
-		let sender = ed25519::Pair::from_seed(b"12345678901234567890123456789012");
-		let signed_getter =
-			TrustedGetter::free_balance(sender.public().into()).sign(&sender.into());
+		let signed_getter = TrustedGetterMock::some_value;
 		let mut state = SgxExternalities::default();
 		assert!(TestStateGetter::get_state(signed_getter.into(), &mut state).is_ok());
 	}

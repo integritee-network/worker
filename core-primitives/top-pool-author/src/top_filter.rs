@@ -171,17 +171,18 @@ where
 mod tests {
 
 	use super::*;
-	use codec::Encode;
-	use itp_stf_primitives::types::KeyPair;
-	use itp_types::ShardIdentifier;
-	use sp_core::{ed25519, Pair};
-	use sp_runtime::traits::{BlakeTwo256, Hash};
+	
+	
+	use itp_test::mock::stf_mock::{
+		mock_top_direct_trusted_call_signed, mock_top_indirect_trusted_call_signed,
+		mock_top_trusted_getter_signed,
+	};
+	
+	
+	
 	use std::{
-		boxed::Box,
 		string::{String, ToString},
 	};
-
-	type TrustedOperationMock = StfTrustedOperation<u8, u8>;
 
 	#[test]
 	fn filter_returns_none_if_values_is_filtered_out() {
@@ -205,58 +206,46 @@ mod tests {
 
 	#[test]
 	fn allow_all_tops_filter_works() {
-		let filter = AllowAllTopsFilter;
+		let filter = AllowAllTopsFilter::new();
 
-		assert!(filter.filter(&trusted_getter()));
-		assert!(filter.filter(&trusted_indirect_call()));
-		assert!(filter.filter(&trusted_direct_call()));
+		assert!(filter.filter(&mock_top_trusted_getter_signed()));
+		assert!(filter.filter(&mock_top_indirect_trusted_call_signed()));
+		assert!(filter.filter(&mock_top_direct_trusted_call_signed()));
 	}
 
 	#[test]
 	fn getters_only_filter_works() {
-		let filter = GettersOnlyFilter;
+		let filter = GettersOnlyFilter::new();
 
-		assert!(filter.filter(&trusted_getter()));
-		assert!(!filter.filter(&trusted_indirect_call()));
-		assert!(!filter.filter(&trusted_direct_call()));
+		assert!(filter.filter(&mock_top_trusted_getter_signed()));
+		assert!(!filter.filter(&mock_top_indirect_trusted_call_signed()));
+		assert!(!filter.filter(&mock_top_direct_trusted_call_signed()));
 	}
 
 	#[test]
 	fn no_direct_calls_filter_works() {
-		let filter = NoDirectCallsFilter;
+		let filter = NoDirectCallsFilter::new();
 
-		assert!(!filter.filter(&trusted_direct_call()));
-		assert!(filter.filter(&trusted_indirect_call()));
-		assert!(filter.filter(&trusted_getter()));
+		assert!(!filter.filter(&mock_top_direct_trusted_call_signed()));
+		assert!(filter.filter(&mock_top_indirect_trusted_call_signed()));
+		assert!(filter.filter(&mock_top_trusted_getter_signed()));
 	}
 
 	#[test]
 	fn indirect_calls_only_filter_works() {
-		let filter = IndirectCallsOnlyFilter;
+		let filter = IndirectCallsOnlyFilter::new();
 
-		assert!(!filter.filter(&trusted_direct_call()));
-		assert!(filter.filter(&trusted_indirect_call()));
-		assert!(!filter.filter(&trusted_getter()));
+		assert!(!filter.filter(&mock_top_direct_trusted_call_signed()));
+		assert!(filter.filter(&mock_top_indirect_trusted_call_signed()));
+		assert!(!filter.filter(&mock_top_trusted_getter_signed()));
 	}
 
 	#[test]
 	fn calls_only_filter_works() {
-		let filter = CallsOnlyFilter;
+		let filter = CallsOnlyFilter::new();
 
-		assert!(filter.filter(&trusted_direct_call()));
-		assert!(filter.filter(&trusted_indirect_call()));
-		assert!(!filter.filter(&trusted_getter()));
-	}
-
-	fn trusted_direct_call() -> TrustedOperationMock {
-		TrustedOperationMock::direct_call(0)
-	}
-
-	fn trusted_indirect_call() -> TrustedOperationMock {
-		TrustedOperationMock::indirect_call(0)
-	}
-
-	fn trusted_getter() -> TrustedOperationMock {
-		TrustedOperationMock::get(0)
+		assert!(filter.filter(&mock_top_direct_trusted_call_signed()));
+		assert!(filter.filter(&mock_top_indirect_trusted_call_signed()));
+		assert!(!filter.filter(&mock_top_trusted_getter_signed()));
 	}
 }

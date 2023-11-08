@@ -173,6 +173,7 @@ where
 mod tests {
 	use super::*;
 	use itp_sgx_externalities::SgxExternalities;
+	use itp_test::mock::stf_mock::{GetterMock, TrustedCallSignedMock};
 
 	#[test]
 	fn is_success_works() {
@@ -212,8 +213,8 @@ mod tests {
 	}
 
 	fn batch_execution_result(
-		executed_calls: Vec<ExecutedOperation<TCS, G>>,
-	) -> BatchExecutionResult<SgxExternalities> {
+		executed_calls: Vec<ExecutedOperation<TrustedCallSignedMock, GetterMock>>,
+	) -> BatchExecutionResult<SgxExternalities, TrustedCallSignedMock, GetterMock> {
 		BatchExecutionResult {
 			executed_operations: executed_calls,
 			state_hash_before_execution: H256::default(),
@@ -221,11 +222,17 @@ mod tests {
 		}
 	}
 
-	fn create_failed_operation_from_u8(int: u8) -> ExecutedOperation<TCS, G> {
-		ExecutedOperation::<TCS, G>::failed(TrustedOperationOrHash::Hash(H256::from([int; 32])))
+	fn create_failed_operation_from_u8(
+		int: u8,
+	) -> ExecutedOperation<TrustedCallSignedMock, GetterMock> {
+		ExecutedOperation::<TrustedCallSignedMock, GetterMock>::failed(
+			TrustedOperationOrHash::Hash(H256::from([int; 32])),
+		)
 	}
 
-	fn create_success_operation_from_u8(int: u8) -> (ExecutedOperation<TCS, G>, H256) {
+	fn create_success_operation_from_u8(
+		int: u8,
+	) -> (ExecutedOperation<TrustedCallSignedMock, GetterMock>, H256) {
 		let hash = H256::from([int; 32]);
 		let opaque_call: Vec<OpaqueCall> = vec![OpaqueCall(vec![int; 10])];
 		let operation =

@@ -40,7 +40,7 @@ use itp_node_api_metadata::{
 };
 use itp_stf_interface::{ExecuteCall, SHARD_VAULT_KEY};
 use itp_stf_primitives::{
-	error::{StfError, StfResult},
+	error::{StfError},
 	traits::{TrustedCallSigning, TrustedCallVerification},
 	types::{AccountId, KeyPair, ShardIdentifier, Signature, TrustedOperation},
 };

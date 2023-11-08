@@ -479,6 +479,8 @@ pub mod tests {
 		primitives::from_low_u64_to_be_h256,
 	};
 	use codec::{Decode, Encode};
+	use itp_stf_primitives::types::Nonce;
+	use itp_test::mock::stf_mock::{TrustedCallMock, TrustedOperationMock};
 	use itp_types::Header;
 	use jsonrpc_core::{futures, futures::executor::block_on};
 	use parity_util_mem::MallocSizeOf;
@@ -535,7 +537,7 @@ pub mod tests {
 	/// Test RPC responder
 	pub type TestRpcResponder = RpcResponderMock<H256>;
 
-	const INVALID_NONCE: Index = 254;
+	const INVALID_NONCE: Nonce = 254;
 	const SOURCE: TrustedOperationSource = TrustedOperationSource::External;
 
 	#[derive(Clone, Debug, Default)]
@@ -545,7 +547,6 @@ pub mod tests {
 		clear_requirements: Arc<Mutex<HashSet<H256>>>,
 		add_requirements: Arc<Mutex<HashSet<H256>>>,
 	}
-	type TrustedOperationMock = StfTrustedOperation<u8, u8>;
 
 	impl ChainApi for TestApi {
 		type Block = tests::Block;
@@ -561,7 +562,7 @@ pub mod tests {
 			_shard: ShardIdentifier,
 		) -> Self::ValidationFuture {
 			let hash = self.hash_and_length(&uxt).0;
-			let nonce: Index = match uxt {
+			let nonce: Nonce = match uxt {
 				TrustedOperationMock::direct_call(signed_call) => signed_call.nonce,
 				_ => 0,
 			};
@@ -640,7 +641,7 @@ pub mod tests {
 		}
 	}
 
-	fn top(nonce: Index) -> TrustedOperationMock {
+	fn top(nonce: Nonce) -> TrustedOperationMock {
 		TrustedOperationMock { nonce, nonce }
 	}
 
@@ -663,7 +664,7 @@ pub mod tests {
 			&BlockId::Number(0),
 			SOURCE,
 			to_top(
-				TrustedCall::balance_transfer(
+				TrustedCallMock::balance_transfer(
 					tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
 					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
 					5,
@@ -687,7 +688,7 @@ pub mod tests {
 		let pool = test_pool();
 		let shard = ShardIdentifier::default();
 		let top = to_top(
-			TrustedCall::balance_transfer(
+			TrustedCallMock::balance_transfer(
 				tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
 				tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
 				5,
@@ -718,7 +719,7 @@ pub mod tests {
 				&BlockId::Number(0),
 				SOURCE,
 				to_top(
-					TrustedCall::balance_transfer(
+					TrustedCallMock::balance_transfer(
 						tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
 						tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
 						5,
@@ -732,7 +733,7 @@ pub mod tests {
 				&BlockId::Number(0),
 				SOURCE,
 				to_top(
-					TrustedCall::balance_transfer(
+					TrustedCallMock::balance_transfer(
 						tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
 						tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
 						5,
@@ -747,7 +748,7 @@ pub mod tests {
 				&BlockId::Number(0),
 				SOURCE,
 				to_top(
-					TrustedCall::balance_transfer(
+					TrustedCallMock::balance_transfer(
 						tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
 						tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
 						5,
@@ -780,7 +781,7 @@ pub mod tests {
 			&BlockId::Number(0),
 			SOURCE,
 			to_top(
-				TrustedCall::balance_transfer(
+				TrustedCallMock::balance_transfer(
 					tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
 					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
 					5,
@@ -794,7 +795,7 @@ pub mod tests {
 			&BlockId::Number(0),
 			SOURCE,
 			to_top(
-				TrustedCall::balance_transfer(
+				TrustedCallMock::balance_transfer(
 					tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
 					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
 					5,
@@ -808,7 +809,7 @@ pub mod tests {
 			&BlockId::Number(0),
 			SOURCE,
 			to_top(
-				TrustedCall::balance_transfer(
+				TrustedCallMock::balance_transfer(
 					tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
 					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
 					5,
@@ -840,7 +841,7 @@ pub mod tests {
 			&BlockId::Number(0),
 			SOURCE,
 			to_top(
-				TrustedCall::balance_transfer(
+				TrustedCallMock::balance_transfer(
 					tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
 					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
 					5,
@@ -874,7 +875,7 @@ pub mod tests {
 			&BlockId::Number(0),
 			SOURCE,
 			to_top(
-				TrustedCall::balance_transfer(
+				TrustedCallMock::balance_transfer(
 					tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
 					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
 					5,
@@ -891,7 +892,7 @@ pub mod tests {
 			&BlockId::Number(0),
 			SOURCE,
 			to_top(
-				TrustedCall::balance_transfer(
+				TrustedCallMock::balance_transfer(
 					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
 					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
 					5,
@@ -924,7 +925,7 @@ pub mod tests {
 			&BlockId::Number(0),
 			SOURCE,
 			to_top(
-				TrustedCall::balance_transfer(
+				TrustedCallMock::balance_transfer(
 					tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
 					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
 					5,
@@ -951,7 +952,7 @@ pub mod tests {
 			&BlockId::Number(0),
 			SOURCE,
 			to_top(
-				TrustedCall::balance_transfer(
+				TrustedCallMock::balance_transfer(
 					tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
 					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
 					5,

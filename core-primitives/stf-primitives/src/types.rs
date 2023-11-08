@@ -47,6 +47,12 @@ impl KeyPair {
 			Self::Ed25519(pair) => pair.sign(payload).into(),
 		}
 	}
+	pub fn account_id(&self) -> AccountId {
+		match self {
+			Self::Sr25519(pair) => pair.public().into(),
+			Self::Ed25519(pair) => pair.public().into(),
+		}
+	}
 }
 
 impl From<ed25519::Pair> for KeyPair {

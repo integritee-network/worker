@@ -107,6 +107,7 @@ pub mod tests {
 	use super::*;
 	use crate::primitives::TrustedOperationSource;
 	use codec::Encode;
+	use sp_core::blake2_256;
 
 	type Ex = ();
 
@@ -115,7 +116,7 @@ pub mod tests {
 	}
 
 	fn hash(index: u64) -> TxHash {
-		[index; 4].encode().into()
+		blake2_256(index.encode().as_slice()).into()
 	}
 
 	fn tx() -> (TxHash, TrustedOperation<Ex>) {

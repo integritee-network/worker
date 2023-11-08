@@ -39,6 +39,7 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 # dev dependencies (for tests)
 [dev-dependencies]
 parity-util-mem = { version = "0.12.0", default-features = false, features = ["primitive-types"] }
+itp-test = { path = "../test", default-features = false }
 
 [features]
 default = ["std"]

@@ -19,8 +19,11 @@ use codec::{Decode, Encode};
 use core::fmt::Debug;
 use itp_node_api::metadata::metadata_mocks::NodeMetadataMock;
 use itp_node_api_metadata_provider::NodeMetadataRepository;
+
 use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesDiffType, SgxExternalitiesTrait};
-use itp_stf_interface::{ExecuteCall, InitState, StateCallInterface, UpdateState};
+use itp_stf_interface::{
+	ExecuteCall, InitState, StateCallInterface, StateGetterInterface, UpdateState,
+};
 use itp_stf_primitives::{
 	traits::{
 		GetterAuthorization, PoolTransactionValidation, TrustedCallSigning, TrustedCallVerification,
@@ -30,11 +33,11 @@ use itp_stf_primitives::{
 use itp_types::{
 	parentchain::ParentchainId, AccountId, Balance, Index, OpaqueCall, ShardIdentifier, Signature,
 };
+use sp_core::{sr25519, Pair};
 use sp_runtime::transaction_validity::{
 	TransactionValidityError, UnknownTransaction, ValidTransaction,
 };
 use sp_std::{vec, vec::Vec};
-
 // a few dummy types
 type NodeMetadataRepositoryMock = NodeMetadataRepository<NodeMetadataMock>;
 
@@ -71,8 +74,14 @@ impl StateCallInterface<TrustedCallSignedMock, SgxExternalities, NodeMetadataRep
 }
 
 impl InitState<SgxExternalities, AccountId> for StfMock {
-	fn init_state(enclave_account: AccountId) -> SgxExternalities {
+	fn init_state(_enclave_account: AccountId) -> SgxExternalities {
 		SgxExternalities::new(Default::default())
+	}
+}
+
+impl StateGetterInterface<GetterMock, SgxExternalities> for StfMock {
+	fn execute_getter(_state: &mut SgxExternalities, _getter: GetterMock) -> Option<Vec<u8>> {
+		Some(vec![42])
 	}
 }
 
@@ -136,6 +145,12 @@ impl TrustedCallSignedMock {
 	}
 }
 
+impl Default for TrustedCallSignedMock {
+	fn default() -> Self {
+		mock_trusted_call_signed()
+	}
+}
+
 impl ExecuteCall<NodeMetadataRepositoryMock> for TrustedCallSignedMock {
 	type Error = StfMockError;
 
@@ -173,6 +188,12 @@ pub enum GetterMock {
 	trusted(TrustedGetterSignedMock),
 }
 
+impl Default for GetterMock {
+	fn default() -> Self {
+		GetterMock::public(PublicGetterMock::some_value)
+	}
+}
+
 impl PoolTransactionValidation for GetterMock {
 	fn validate(&self) -> Result<ValidTransaction, TransactionValidityError> {
 		Err(TransactionValidityError::Unknown(UnknownTransaction::CannotLookup))
@@ -182,7 +203,7 @@ impl PoolTransactionValidation for GetterMock {
 impl GetterAuthorization for GetterMock {
 	fn is_authorized(&self) -> bool {
 		match self {
-			Self::trusted(_) => false,
+			Self::trusted(tgs) => tgs.signature,
 			Self::public(_) => true,
 		}
 	}
@@ -204,4 +225,38 @@ pub enum TrustedGetterMock {
 pub struct TrustedGetterSignedMock {
 	pub getter: TrustedGetterMock,
 	pub signature: bool,
+}
+
+const MOCK_SEED: [u8; 32] = *b"34567890123456789012345678901234";
+
+pub fn mock_key_pair() -> KeyPair {
+	KeyPair::Sr25519(Box::new(sr25519::Pair::from_seed(&MOCK_SEED)))
+}
+
+pub fn mock_trusted_call_signed() -> TrustedCallSignedMock {
+	TrustedCallMock::balance_transfer(
+		mock_key_pair().account_id(),
+		mock_key_pair().account_id(),
+		42,
+	)
+	.sign(&mock_key_pair(), 0, &[0u8; 32], &ShardIdentifier::default())
+}
+
+pub fn mock_top_direct_trusted_call_signed() -> TrustedOperationMock {
+	TrustedOperationMock::direct_call(mock_trusted_call_signed())
+}
+
+pub fn mock_top_indirect_trusted_call_signed() -> TrustedOperationMock {
+	TrustedOperationMock::indirect_call(mock_trusted_call_signed())
+}
+
+pub fn mock_top_trusted_getter_signed() -> TrustedOperationMock {
+	TrustedOperationMock::get(GetterMock::trusted(TrustedGetterSignedMock {
+		getter: TrustedGetterMock::some_value,
+		signature: true,
+	}))
+}
+
+pub fn mock_top_public_getter() -> TrustedOperationMock {
+	TrustedOperationMock::get(GetterMock::public(PublicGetterMock::some_value))
 }

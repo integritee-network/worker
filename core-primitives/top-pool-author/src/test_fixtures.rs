@@ -16,11 +16,11 @@
 */
 
 use codec::Encode;
-use itp_stf_primitives::types::{KeyPair, ShardIdentifier};
-use itp_test::mock::stf_mock::TrustedCallSignedMock;
+use itp_stf_primitives::types::{ShardIdentifier};
+
 use sp_core::{ed25519, Pair};
 use sp_runtime::traits::{BlakeTwo256, Hash};
-use std::{boxed::Box, vec};
+use std::{vec};
 
 type Seed = [u8; 32];
 const TEST_SEED: Seed = *b"12345678901234567890123456789012";

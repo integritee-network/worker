@@ -212,14 +212,16 @@ mod tests {
 	use crate::test_fixtures::shard_id;
 	use codec::Encode;
 	use futures::executor::block_on;
-	use itp_test::mock::stf_mock::TrustedCallSignedMock;
+	use itp_test::mock::stf_mock::{
+		mock_top_indirect_trusted_call_signed, GetterMock, TrustedCallSignedMock,
+	};
 	use std::vec;
 
 	#[test]
 	fn submitted_tops_can_be_removed_again() {
 		let author = AuthorApiMock::<H256, H256, TrustedCallSignedMock, GetterMock>::default();
 		let shard = shard_id();
-		let trusted_operation = TrustedOperationMock::indirect_call(TrustedCallSignedMock);
+		let trusted_operation = mock_top_indirect_trusted_call_signed();
 
 		let _ = block_on(author.submit_top(trusted_operation.encode(), shard)).unwrap();
 

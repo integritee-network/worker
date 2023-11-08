@@ -3854,6 +3854,7 @@ dependencies = [
  "itc-direct-rpc-server",
  "itp-sgx-runtime-primitives",
  "itp-stf-primitives",
+ "itp-test",
  "itp-types",
  "its-primitives",
  "jsonrpc-core 18.0.0 (registry+https://github.com/rust-lang/crates.io-index)",

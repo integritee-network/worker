@@ -125,21 +125,30 @@ where
 mod tests {
 	use super::*;
 	use futures::executor;
-	use itp_stf_primitives::types::{KeyPair, ShardIdentifier};
-	use itp_test::mock::stf_mock::{GetterMock, TrustedCallSignedMock, TrustedOperationMock};
-	use itp_types::Block as ParentchainBlock;
+	use itp_stf_primitives::{
+		types::{ShardIdentifier},
+	};
+	use itp_test::mock::stf_mock::{
+		mock_top_indirect_trusted_call_signed, mock_top_public_getter, TrustedCallSignedMock,
+	};
+	use itp_types::{AccountId, Block as ParentchainBlock};
 	use sp_core::{ed25519, Pair};
-	use sp_keyring::AccountKeyring;
+	
 
 	type TestChainApi = SidechainApi<ParentchainBlock, TrustedCallSignedMock>;
 
 	type Seed = [u8; 32];
 	const TEST_SEED: Seed = *b"12345678901234567890123456789012";
 
+	pub fn endowed_account() -> ed25519::Pair {
+		ed25519::Pair::from_seed(&[42u8; 32].into())
+	}
+
 	#[test]
 	fn indirect_calls_are_valid() {
 		let chain_api = TestChainApi::default();
-		let operation = TrustedOperationMock::indirect_call(TrustedCallSignedMock);
+		let _account: AccountId = endowed_account().public().into();
+		let operation = mock_top_indirect_trusted_call_signed();
 
 		let validation = executor::block_on(chain_api.validate_transaction(
 			TrustedOperationSource::Local,
@@ -154,7 +163,7 @@ mod tests {
 	#[test]
 	fn public_getters_are_not_valid() {
 		let chain_api = TestChainApi::default();
-		let public_getter = TrustedOperationMock::get(GetterMock);
+		let public_getter = mock_top_public_getter();
 
 		let validation = executor::block_on(chain_api.validate_transaction(
 			TrustedOperationSource::Local,
