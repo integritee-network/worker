@@ -82,13 +82,11 @@ where
 mod tests {
 	use super::*;
 	use codec::{Decode, Encode};
-	
+
 	use itp_stf_state_observer::mock::ObserveStateMock;
 	use itp_test::mock::stf_mock::{
 		GetterMock, PublicGetterMock, TrustedGetterMock, TrustedGetterSignedMock,
 	};
-	
-	
 
 	type TestState = u64;
 	type TestStateObserver = ObserveStateMock<TestState>;

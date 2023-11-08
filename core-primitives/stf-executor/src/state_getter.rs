@@ -56,13 +56,10 @@ where
 mod tests {
 	use super::*;
 	use core::assert_matches::assert_matches;
-	
-	
+
 	use itp_test::mock::stf_mock::{
 		GetterMock, StfMock, TrustedGetterMock, TrustedGetterSignedMock,
 	};
-	
-	
 
 	type TestStateGetter = StfStateGetter<StfMock>;
 

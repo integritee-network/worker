@@ -32,14 +32,13 @@ use itp_test::mock::{
 	shielding_crypto_mock::ShieldingCryptoMock,
 	stf_mock::{
 		mock_top_direct_trusted_call_signed, mock_top_indirect_trusted_call_signed,
-		mock_top_trusted_getter_signed, GetterMock,
-		TrustedCallSignedMock, TrustedOperationMock,
+		mock_top_trusted_getter_signed, GetterMock, TrustedCallSignedMock, TrustedOperationMock,
 	},
 };
 use itp_top_pool::mocks::trusted_operation_pool_mock::TrustedOperationPoolMock;
 
 use sgx_crypto_helper::{rsa3072::Rsa3072KeyPair, RsaKeyPair};
-use sp_core::{H256};
+use sp_core::H256;
 use std::sync::Arc;
 
 type TestAuthor<Filter> = Author<

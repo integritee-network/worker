@@ -26,12 +26,6 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
-
-
-
-
-
-
 pub use getter::*;
 pub use stf_sgx_primitives::{types::*, Stf};
 pub use trusted_call::*;

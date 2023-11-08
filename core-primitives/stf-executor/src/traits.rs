@@ -23,7 +23,7 @@ use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{AccountId, ShardIdentifier, TrustedOperation},
 };
-use itp_types::{H256};
+use itp_types::H256;
 use sp_runtime::traits::Header as HeaderTrait;
 use std::time::Duration;
 

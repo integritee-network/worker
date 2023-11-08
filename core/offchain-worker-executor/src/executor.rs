@@ -219,17 +219,14 @@ mod tests {
 	use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
 	use itp_sgx_externalities::SgxExternalitiesTrait;
 	use itp_stf_executor::mocks::StfExecutorMock;
-	
+
 	use itp_test::mock::{
 		handle_state_mock::HandleStateMock,
-		stf_mock::{
-			mock_top_direct_trusted_call_signed, GetterMock,
-			TrustedCallSignedMock,
-		},
+		stf_mock::{mock_top_direct_trusted_call_signed, GetterMock, TrustedCallSignedMock},
 	};
 	use itp_top_pool_author::mocks::AuthorApiMock;
 	use itp_types::Block as ParentchainBlock;
-	
+
 	use std::boxed::Box;
 
 	type TestStateHandler = HandleStateMock;

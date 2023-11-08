@@ -480,8 +480,7 @@ pub mod tests {
 	use codec::{Decode, Encode};
 	use itp_stf_primitives::types::Nonce;
 	use itp_test::mock::stf_mock::{
-		mock_top_direct_trusted_call_signed, mock_trusted_call_signed,
-		TrustedOperationMock,
+		mock_top_direct_trusted_call_signed, mock_trusted_call_signed, TrustedOperationMock,
 	};
 	use itp_types::Header;
 	use jsonrpc_core::{
@@ -491,10 +490,8 @@ pub mod tests {
 	use parity_util_mem::MallocSizeOf;
 	use serde::Serialize;
 	use sp_application_crypto::ed25519;
-	use sp_core::{hash::H256};
-	use sp_runtime::{
-		traits::{BlakeTwo256, Extrinsic as ExtrinsicT, Hash, Verify},
-	};
+	use sp_core::hash::H256;
+	use sp_runtime::traits::{BlakeTwo256, Extrinsic as ExtrinsicT, Hash, Verify};
 	use std::{collections::HashSet, sync::Mutex};
 
 	#[derive(Clone, PartialEq, Eq, Encode, Decode, core::fmt::Debug, Serialize, MallocSizeOf)]
