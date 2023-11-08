@@ -33,7 +33,11 @@ use itp_stf_primitives::{
 };
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_time_utils::duration_now;
-use itp_types::{parentchain::ParentchainId, storage::StorageEntryVerified, OpaqueCall, H256};
+use itp_types::{
+	parentchain::{Header as ParentchainHeader, ParentchainId},
+	storage::StorageEntryVerified,
+	OpaqueCall, H256,
+};
 use log::*;
 use sp_runtime::traits::Header as HeaderTrait;
 use std::{
@@ -138,8 +142,8 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G, PCH, PCID>
-	StfUpdateState<PCH, PCID>
+impl<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G>
+	StfUpdateState<ParentchainHeader, ParentchainId>
 	for StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
@@ -149,16 +153,20 @@ where
 	Stf: UpdateState<
 			StateHandler::StateT,
 			<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
-		> + ParentchainPalletInterface<StateHandler::StateT, PCH>,
+		> + ParentchainPalletInterface<StateHandler::StateT, ParentchainHeader>,
 	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
 		IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>,
-	<Stf as ParentchainPalletInterface<StateHandler::StateT, PCH>>::Error: Debug,
+	<Stf as ParentchainPalletInterface<StateHandler::StateT, ParentchainHeader>>::Error: Debug,
 	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
 		From<BTreeMap<Vec<u8>, Option<Vec<u8>>>>,
 	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
 	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
 {
-	fn update_states(&self, header: &PCH, parentchain_id: &ParentchainId) -> Result<()> {
+	fn update_states(
+		&self,
+		header: &ParentchainHeader,
+		parentchain_id: &ParentchainId,
+	) -> Result<()> {
 		debug!("Update STF storage upon block import!");
 		let storage_hashes = Stf::storage_hashes_to_update_on_block(parentchain_id);
 
@@ -202,28 +210,27 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G, PCH>
-	StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G, PCH>
+impl<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G>
+	StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G>
 where
 	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
 		From<BTreeMap<Vec<u8>, Option<Vec<u8>>>> + IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>,
-	<Stf as ParentchainPalletInterface<StateHandler::StateT, PCH>>::Error: Debug,
+	<Stf as ParentchainPalletInterface<StateHandler::StateT, ParentchainHeader>>::Error: Debug,
 	NodeMetadataRepository: AccessNodeMetadata,
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
 	StateHandler: HandleState<HashType = H256> + QueryShardState,
 	StateHandler::StateT: Encode + SgxExternalitiesTrait,
-	Stf: ParentchainPalletInterface<StateHandler::StateT, PCH>
+	Stf: ParentchainPalletInterface<StateHandler::StateT, ParentchainHeader>
 		+ UpdateState<
 			StateHandler::StateT,
 			<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
 		>,
 	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
 	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
-	PCH: Encode,
 {
 	fn initialize_new_shards(
 		&self,
-		header: &PCH,
+		header: &ParentchainHeader,
 		state_diff_update: &BTreeMap<Vec<u8>, Option<Vec<u8>>>,
 		shards: &Vec<u8>,
 	) -> Result<()> {
