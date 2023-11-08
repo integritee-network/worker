@@ -56,30 +56,33 @@ where
 mod tests {
 	use super::*;
 	use core::assert_matches::assert_matches;
-	use itp_sgx_externalities::SgxExternalitiesDiffType;
-	use itp_stf_interface::mocks::StateInterfaceMock;
-	use itp_test::mock::stf_mock::{StfMock, TrustedGetterMock, TrustedGetterSignedMock};
-	use itp_types::AccountId;
-	use sp_core::{ed25519, Pair};
+	
+	
+	use itp_test::mock::stf_mock::{
+		GetterMock, StfMock, TrustedGetterMock, TrustedGetterSignedMock,
+	};
+	
+	
 
 	type TestStateGetter = StfStateGetter<StfMock>;
 
 	#[test]
 	fn upon_false_signature_get_stf_state_errs() {
-		let signed_getter =
+		let getter =
 			TrustedGetterSignedMock { getter: TrustedGetterMock::some_value, signature: false };
 		let mut state = SgxExternalities::default();
 
 		assert_matches!(
-			TestStateGetter::get_state(signed_getter.into(), &mut state),
+			TestStateGetter::get_state(GetterMock::trusted(getter), &mut state),
 			Err(Error::OperationHasInvalidSignature)
 		);
 	}
 
 	#[test]
 	fn state_getter_is_executed_if_signature_is_correct() {
-		let signed_getter = TrustedGetterMock::some_value;
+		let getter =
+			TrustedGetterSignedMock { getter: TrustedGetterMock::some_value, signature: true };
 		let mut state = SgxExternalities::default();
-		assert!(TestStateGetter::get_state(signed_getter.into(), &mut state).is_ok());
+		assert!(TestStateGetter::get_state(GetterMock::trusted(getter), &mut state).is_ok());
 	}
 }

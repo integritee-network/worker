@@ -873,9 +873,9 @@ pub mod tests {
 			)
 			.unwrap();
 		let mut it = pool.ready(shard).into_iter().map(|tx| tx.data[0]);
-		assert_eq!(it.next(), Some(hash(4)));
-		assert_eq!(it.next(), Some(hash(1)));
-		assert_eq!(it.next(), Some(hoash(3)));
+		assert_eq!(it.next(), Some(4));
+		assert_eq!(it.next(), Some(1));
+		assert_eq!(it.next(), Some(3));
 		assert_eq!(it.next(), None);
 		assert_eq!(
 			res,
@@ -1117,7 +1117,7 @@ pub mod tests {
 		assert_eq!(pool.future.len(shard), 1);
 
 		// when
-		pool.remove_subtree(&[6, 1], shard);
+		pool.remove_subtree(&[hash(6), hash(1)], shard);
 
 		// then
 		assert_eq!(pool.ready(shard).count(), 1);

@@ -552,7 +552,7 @@ pub mod tests {
 		type Block = tests::Block;
 		type Error = error::Error;
 		type ValidationFuture = futures::future::Ready<error::Result<TransactionValidity>>;
-		type BodyFuture = futures::future::Ready<error::Result<Option<Vec<TrustedOperationMock>>>>;
+		type BodyFuture = futures::future::Ready<error::Result<Option<bool>>>;
 
 		/// Verify extrinsic at given block.
 		fn validate_transaction<TrustedOperationMock>(
@@ -663,14 +663,7 @@ pub mod tests {
 		let hash = block_on(pool.submit_one(
 			&BlockId::Number(0),
 			SOURCE,
-			to_top(
-				TrustedCallMock::balance_transfer(
-					tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-					5,
-				),
-				0,
-			),
+			mock_top_trusted_call_signed(),
 			shard,
 		))
 		.unwrap();

@@ -125,15 +125,12 @@ where
 mod tests {
 	use super::*;
 	use futures::executor;
-	use itp_stf_primitives::{
-		types::{ShardIdentifier},
-	};
+	use itp_stf_primitives::types::ShardIdentifier;
 	use itp_test::mock::stf_mock::{
 		mock_top_indirect_trusted_call_signed, mock_top_public_getter, TrustedCallSignedMock,
 	};
 	use itp_types::{AccountId, Block as ParentchainBlock};
 	use sp_core::{ed25519, Pair};
-	
 
 	type TestChainApi = SidechainApi<ParentchainBlock, TrustedCallSignedMock>;
 

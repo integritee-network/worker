@@ -82,13 +82,13 @@ where
 mod tests {
 	use super::*;
 	use codec::{Decode, Encode};
-	use itp_stf_primitives::types::AccountId;
+	
 	use itp_stf_state_observer::mock::ObserveStateMock;
 	use itp_test::mock::stf_mock::{
 		GetterMock, PublicGetterMock, TrustedGetterMock, TrustedGetterSignedMock,
 	};
-	use sp_core::ed25519::Signature;
-	use sp_runtime::MultiSignature;
+	
+	
 
 	type TestState = u64;
 	type TestStateObserver = ObserveStateMock<TestState>;
