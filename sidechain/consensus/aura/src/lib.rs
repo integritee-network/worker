@@ -28,6 +28,7 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 #[macro_use]
 extern crate sgx_tstd as std;
+extern crate core;
 
 use core::marker::PhantomData;
 use itc_parentchain_block_import_dispatcher::triggered_dispatcher::TriggerParentchainBlockImport;

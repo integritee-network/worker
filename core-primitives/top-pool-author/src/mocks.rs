@@ -41,7 +41,11 @@ use sp_core::{blake2_256, H256};
 use std::{boxed::Box, collections::HashMap, marker::PhantomData, vec, vec::Vec};
 
 #[derive(Default)]
-pub struct AuthorApiMock<Hash, BlockHash, TCS, G> {
+pub struct AuthorApiMock<Hash, BlockHash, TCS, G>
+where
+	TCS: PartialEq + Encode + Decode + Debug + Send + Sync + TrustedCallVerification,
+	G: PartialEq + Encode + Decode + Debug + Send + Sync,
+{
 	tops: RwLock<HashMap<ShardIdentifier, Vec<Vec<u8>>>>,
 	_phantom: PhantomData<(Hash, BlockHash, TCS, G)>,
 	pub remove_attempts: RwLock<usize>,
@@ -199,7 +203,11 @@ where
 	}
 }
 
-impl<TCS, G> OnBlockImported for AuthorApiMock<H256, H256, TCS, G> {
+impl<TCS, G> OnBlockImported for AuthorApiMock<H256, H256, TCS, G>
+where
+	TCS: PartialEq + Encode + Decode + Debug + Send + Sync + TrustedCallVerification,
+	G: PartialEq + Encode + Decode + Debug + Send + Sync,
+{
 	type Hash = H256;
 
 	fn on_block_imported(&self, _hashes: &[Self::Hash], _block_hash: H256) {}

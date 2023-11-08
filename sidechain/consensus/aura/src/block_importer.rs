@@ -17,21 +17,21 @@
 //! Implementation of the sidechain block importer struct.
 //! Imports sidechain blocks and applies the accompanying state diff to its state.
 
+use codec::{Decode, Encode};
+use core::fmt::Debug;
 // Reexport BlockImport trait which implements fn block_import()
-pub use its_consensus_common::BlockImport;
-
 use crate::{AuraVerifier, EnclaveOnChainOCallApi, SidechainBlockTrait};
-use ita_stf::{Getter, TrustedCallSigned};
 use itc_parentchain_block_import_dispatcher::triggered_dispatcher::TriggerParentchainBlockImport;
 use itp_enclave_metrics::EnclaveMetric;
 use itp_ocall_api::{EnclaveMetricsOCallApi, EnclaveSidechainOCallApi};
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::{key_repository::AccessKey, StateCrypto};
 use itp_sgx_externalities::SgxExternalities;
-use itp_stf_primitives::types::TrustedOperationOrHash;
+use itp_stf_primitives::{traits::TrustedCallVerification, types::TrustedOperationOrHash};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_top_pool_author::traits::{AuthorApi, OnBlockImported};
 use itp_types::H256;
+pub use its_consensus_common::BlockImport;
 use its_consensus_common::Error as ConsensusError;
 use its_primitives::traits::{
 	BlockData, Header as HeaderTrait, ShardIdentifierFor, SignedBlock as SignedBlockTrait,
@@ -56,13 +56,15 @@ pub struct BlockImporter<
 	StateKeyRepository,
 	TopPoolAuthor,
 	ParentchainBlockImporter,
+	TCS,
+	G,
 > {
 	state_handler: Arc<StateHandler>,
 	state_key_repository: Arc<StateKeyRepository>,
 	top_pool_author: Arc<TopPoolAuthor>,
 	parentchain_block_importer: Arc<ParentchainBlockImporter>,
 	ocall_api: Arc<OCallApi>,
-	_phantom: PhantomData<(Authority, ParentchainBlock, SignedSidechainBlock)>,
+	_phantom: PhantomData<(Authority, ParentchainBlock, SignedSidechainBlock, TCS, G)>,
 }
 
 impl<
@@ -74,6 +76,8 @@ impl<
 		StateKeyRepository,
 		TopPoolAuthor,
 		ParentchainBlockImporter,
+		TCS,
+		G,
 	>
 	BlockImporter<
 		Authority,
@@ -84,6 +88,8 @@ impl<
 		StateKeyRepository,
 		TopPoolAuthor,
 		ParentchainBlockImporter,
+		TCS,
+		G,
 	> where
 	Authority: Pair,
 	Authority::Public: std::fmt::Debug + UncheckedFrom<[u8; 32]>,
@@ -100,10 +106,12 @@ impl<
 	StateHandler: HandleState<StateT = SgxExternalities>,
 	StateKeyRepository: AccessKey,
 	<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
-	TopPoolAuthor: AuthorApi<H256, H256, TrustedCallSigned, Getter> + OnBlockImported<Hash = H256>,
+	TopPoolAuthor: AuthorApi<H256, H256, TCS, G> + OnBlockImported<Hash = H256>,
 	ParentchainBlockImporter: TriggerParentchainBlockImport<SignedBlockType = SignedParentchainBlock<ParentchainBlock>>
 		+ Send
 		+ Sync,
+	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
+	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
 {
 	pub fn new(
 		state_handler: Arc<StateHandler>,
@@ -159,6 +167,8 @@ impl<
 		StateKeyRepository,
 		TopPoolAuthor,
 		ParentchainBlockImporter,
+		TCS,
+		G,
 	> BlockImport<ParentchainBlock, SignedSidechainBlock>
 	for BlockImporter<
 		Authority,
@@ -169,6 +179,8 @@ impl<
 		StateKeyRepository,
 		TopPoolAuthor,
 		ParentchainBlockImporter,
+		TCS,
+		G,
 	> where
 	Authority: Pair,
 	Authority::Public: std::fmt::Debug + UncheckedFrom<[u8; 32]>,
@@ -185,10 +197,12 @@ impl<
 	StateHandler: HandleState<StateT = SgxExternalities>,
 	StateKeyRepository: AccessKey,
 	<StateKeyRepository as AccessKey>::KeyType: StateCrypto,
-	TopPoolAuthor: AuthorApi<H256, H256, TrustedCallSigned, Getter> + OnBlockImported<Hash = H256>,
+	TopPoolAuthor: AuthorApi<H256, H256, TCS, G> + OnBlockImported<Hash = H256>,
 	ParentchainBlockImporter: TriggerParentchainBlockImport<SignedBlockType = SignedParentchainBlock<ParentchainBlock>>
 		+ Send
 		+ Sync,
+	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
+	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
 {
 	type Verifier = AuraVerifier<Authority, ParentchainBlock, SignedSidechainBlock, OCallApi>;
 	type SidechainState = SgxExternalities;

@@ -60,6 +60,8 @@ type TestBlockImporter = BlockImporter<
 	TestStateKeyRepo,
 	TestTopPoolAuthor,
 	TestParentchainBlockImportTrigger,
+	TrustedCallSignedMock,
+	GetterMock,
 >;
 
 fn state_key() -> Aes {
