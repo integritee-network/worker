@@ -19,7 +19,6 @@ use codec::{Decode, Encode};
 use core::fmt::Debug;
 use itp_node_api::metadata::metadata_mocks::NodeMetadataMock;
 use itp_node_api_metadata_provider::NodeMetadataRepository;
-
 use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesDiffType, SgxExternalitiesTrait};
 use itp_stf_interface::{
 	ExecuteCall, InitState, StateCallInterface, StateGetterInterface, UpdateState,
@@ -28,7 +27,7 @@ use itp_stf_primitives::{
 	traits::{
 		GetterAuthorization, PoolTransactionValidation, TrustedCallSigning, TrustedCallVerification,
 	},
-	types::{KeyPair, TrustedOperation},
+	types::{KeyPair, Nonce, TrustedOperation},
 };
 use itp_types::{
 	parentchain::ParentchainId, AccountId, Balance, Index, OpaqueCall, ShardIdentifier, Signature,
@@ -147,7 +146,7 @@ impl TrustedCallSignedMock {
 
 impl Default for TrustedCallSignedMock {
 	fn default() -> Self {
-		mock_trusted_call_signed()
+		mock_trusted_call_signed(0)
 	}
 }
 
@@ -233,21 +232,21 @@ pub fn mock_key_pair() -> KeyPair {
 	KeyPair::Sr25519(Box::new(sr25519::Pair::from_seed(&MOCK_SEED)))
 }
 
-pub fn mock_trusted_call_signed() -> TrustedCallSignedMock {
+pub fn mock_trusted_call_signed(nonce: Nonce) -> TrustedCallSignedMock {
 	TrustedCallMock::balance_transfer(
 		mock_key_pair().account_id(),
 		mock_key_pair().account_id(),
 		42,
 	)
-	.sign(&mock_key_pair(), 0, &[0u8; 32], &ShardIdentifier::default())
+	.sign(&mock_key_pair(), nonce, &[0u8; 32], &ShardIdentifier::default())
 }
 
 pub fn mock_top_direct_trusted_call_signed() -> TrustedOperationMock {
-	TrustedOperationMock::direct_call(mock_trusted_call_signed())
+	TrustedOperationMock::direct_call(mock_trusted_call_signed(0))
 }
 
 pub fn mock_top_indirect_trusted_call_signed() -> TrustedOperationMock {
-	TrustedOperationMock::indirect_call(mock_trusted_call_signed())
+	TrustedOperationMock::indirect_call(mock_trusted_call_signed(0))
 }
 
 pub fn mock_top_trusted_getter_signed() -> TrustedOperationMock {

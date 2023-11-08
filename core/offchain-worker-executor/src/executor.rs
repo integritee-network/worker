@@ -219,14 +219,17 @@ mod tests {
 	use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
 	use itp_sgx_externalities::SgxExternalitiesTrait;
 	use itp_stf_executor::mocks::StfExecutorMock;
-	use itp_stf_primitives::types::{KeyPair, TrustedOperation};
+	
 	use itp_test::mock::{
 		handle_state_mock::HandleStateMock,
-		stf_mock::{GetterMock, TrustedCallMock, TrustedCallSignedMock, TrustedGetterMock},
+		stf_mock::{
+			mock_top_direct_trusted_call_signed, GetterMock,
+			TrustedCallSignedMock,
+		},
 	};
 	use itp_top_pool_author::mocks::AuthorApiMock;
 	use itp_types::Block as ParentchainBlock;
-	use sp_core::{ed25519, Pair};
+	
 	use std::boxed::Box;
 
 	type TestStateHandler = HandleStateMock;
@@ -283,7 +286,7 @@ mod tests {
 	fn executing_tops_from_pool_works() {
 		let stf_executor = Arc::new(TestStfExecutor::new(State::default()));
 		let top_pool_author = Arc::new(TestTopPoolAuthor::default());
-		top_pool_author.submit_top(create_trusted_operation().encode(), shard());
+		top_pool_author.submit_top(mock_top_direct_trusted_call_signed().encode(), shard());
 
 		assert_eq!(1, top_pool_author.pending_tops(shard()).unwrap().len());
 
@@ -326,20 +329,6 @@ mod tests {
 			validator_access,
 			extrinsics_factory,
 		)
-	}
-
-	fn create_trusted_operation() -> TrustedOperation<TrustedCallMock, TrustedGetterMock> {
-		let sender = ed25519::Pair::from_seed(b"33345678901234567890123456789012");
-		let receiver = ed25519::Pair::from_seed(b"14565678901234567890123456789012");
-
-		let trusted_call = TrustedCallMock::noop(sender.public().into());
-		let call_signed =
-			trusted_call.sign(&KeyPair::Ed25519(Box::new(sender)), 0, &mr_enclave(), &shard());
-		TrustedOperation::indirect_call(call_signed)
-	}
-
-	fn mr_enclave() -> [u8; 32] {
-		[4u8; 32]
 	}
 
 	fn shard() -> ShardIdentifier {

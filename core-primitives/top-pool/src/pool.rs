@@ -86,7 +86,7 @@ pub trait ChainApi: Send + Sync {
 	) -> Result<Option<SidechainBlockHash>, Self::Error>;
 
 	/// Returns hash and encoding length of the extrinsic.
-	fn hash_and_length<TOP: Encode + core::fmt::Debug>(&self, uxt: &TOP) -> (TxHash, usize);
+	fn hash_and_length<TOP: Encode + Debug>(&self, uxt: &TOP) -> (TxHash, usize);
 
 	/// Returns a block body given the block id.
 	fn block_body<TOP>(&self, at: &BlockId<Self::Block>) -> Self::BodyFuture;
@@ -472,7 +472,6 @@ where
 
 #[cfg(test)]
 pub mod tests {
-
 	use super::*;
 	use crate::{
 		base_pool::Limit, mocks::rpc_responder_mock::RpcResponderMock,
@@ -480,17 +479,21 @@ pub mod tests {
 	};
 	use codec::{Decode, Encode};
 	use itp_stf_primitives::types::Nonce;
-	use itp_test::mock::stf_mock::{TrustedCallMock, TrustedOperationMock};
+	use itp_test::mock::stf_mock::{
+		mock_top_direct_trusted_call_signed, mock_trusted_call_signed,
+		TrustedOperationMock,
+	};
 	use itp_types::Header;
-	use jsonrpc_core::{futures, futures::executor::block_on};
+	use jsonrpc_core::{
+		futures,
+		futures::{executor::block_on, future::ready},
+	};
 	use parity_util_mem::MallocSizeOf;
 	use serde::Serialize;
 	use sp_application_crypto::ed25519;
-	use sp_core::{hash::H256, Pair};
+	use sp_core::{hash::H256};
 	use sp_runtime::{
 		traits::{BlakeTwo256, Extrinsic as ExtrinsicT, Hash, Verify},
-		transaction_validity::{InvalidTransaction as InvalidTrustedOperation, ValidTransaction},
-		MultiSignature,
 	};
 	use std::{collections::HashSet, sync::Mutex};
 
@@ -555,53 +558,14 @@ pub mod tests {
 		type BodyFuture = futures::future::Ready<error::Result<Option<bool>>>;
 
 		/// Verify extrinsic at given block.
-		fn validate_transaction<TrustedOperationMock>(
+		fn validate_transaction<TOP: PoolTransactionValidation>(
 			&self,
 			_source: TrustedOperationSource,
-			uxt: TrustedOperationMock,
+			uxt: TOP,
 			_shard: ShardIdentifier,
 		) -> Self::ValidationFuture {
-			let hash = self.hash_and_length(&uxt).0;
-			let nonce: Nonce = match uxt {
-				TrustedOperationMock::direct_call(signed_call) => signed_call.nonce,
-				_ => 0,
-			};
-
-			// This is used to control the test flow.
-			if nonce > 0 {
-				let opt = self.delay.lock().unwrap().take();
-				if let Some(delay) = opt {
-					if delay.recv().is_err() {
-						println!("Error waiting for delay!");
-					}
-				}
-			}
-
-			if self.invalidate.lock().unwrap().contains(&hash) {
-				return futures::future::ready(Ok(InvalidTrustedOperation::Custom(0).into()))
-			}
-
-			futures::future::ready(if nonce > 254 {
-				Ok(InvalidTrustedOperation::Stale.into())
-			} else {
-				let mut operation = ValidTransaction {
-					priority: 4,
-					requires: if nonce > 0 { vec![vec![nonce as u8 - 1]] } else { vec![] },
-					provides: if nonce == INVALID_NONCE { vec![] } else { vec![vec![nonce as u8]] },
-					longevity: 3,
-					propagate: true,
-				};
-
-				if self.clear_requirements.lock().unwrap().contains(&hash) {
-					operation.requires.clear();
-				}
-
-				if self.add_requirements.lock().unwrap().contains(&hash) {
-					operation.requires.push(vec![128]);
-				}
-
-				Ok(Ok(operation))
-			})
+			let operation = uxt.validate();
+			ready(Ok(operation))
 		}
 
 		/// Returns a block number given the block id.
@@ -627,22 +591,15 @@ pub mod tests {
 		}
 
 		/// Hash the extrinsic.
-		fn hash_and_length<TrustedOperationMock>(
-			&self,
-			uxt: &TrustedOperationMock,
-		) -> (SidechainBlockHash, usize) {
+		fn hash_and_length<TOP: Encode + Debug>(&self, uxt: &TOP) -> (SidechainBlockHash, usize) {
 			let encoded = uxt.encode();
 			let len = encoded.len();
 			(tests::Hashing::hash_of(&encoded), len)
 		}
 
-		fn block_body<TrustedOperationMock>(&self, _id: &BlockId<Self::Block>) -> Self::BodyFuture {
+		fn block_body<TOP>(&self, _id: &BlockId<Self::Block>) -> Self::BodyFuture {
 			futures::future::ready(Ok(None))
 		}
-	}
-
-	fn top(nonce: Nonce) -> TrustedOperationMock {
-		TrustedOperationMock { nonce, nonce }
 	}
 
 	fn test_pool() -> Pool<TestApi, RpcResponderMock<H256>, TrustedOperationMock> {
@@ -663,7 +620,7 @@ pub mod tests {
 		let hash = block_on(pool.submit_one(
 			&BlockId::Number(0),
 			SOURCE,
-			mock_top_trusted_call_signed(),
+			mock_top_direct_trusted_call_signed(),
 			shard,
 		))
 		.unwrap();
@@ -680,14 +637,7 @@ pub mod tests {
 		// given
 		let pool = test_pool();
 		let shard = ShardIdentifier::default();
-		let top = to_top(
-			TrustedCallMock::balance_transfer(
-				tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-				tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-				5,
-			),
-			0,
-		);
+		let top = mock_top_direct_trusted_call_signed();
 
 		// when
 		pool.validated_pool.rotator().ban(&Instant::now(), vec![pool.hash_of(&top)]);
@@ -711,28 +661,14 @@ pub mod tests {
 			let hash0 = block_on(pool.submit_one(
 				&BlockId::Number(0),
 				SOURCE,
-				to_top(
-					TrustedCallMock::balance_transfer(
-						tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-						tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-						5,
-					),
-					0,
-				),
+				TrustedOperationMock::direct_call(mock_trusted_call_signed(0)),
 				shard,
 			))
 			.unwrap();
 			let hash1 = block_on(pool.submit_one(
 				&BlockId::Number(0),
 				SOURCE,
-				to_top(
-					TrustedCallMock::balance_transfer(
-						tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-						tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-						5,
-					),
-					1,
-				),
+				TrustedOperationMock::direct_call(mock_trusted_call_signed(1)),
 				shard,
 			))
 			.unwrap();
@@ -740,14 +676,7 @@ pub mod tests {
 			let _hash = block_on(pool.submit_one(
 				&BlockId::Number(0),
 				SOURCE,
-				to_top(
-					TrustedCallMock::balance_transfer(
-						tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-						tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-						5,
-					),
-					3,
-				),
+				TrustedOperationMock::direct_call(mock_trusted_call_signed(3)),
 				shard,
 			))
 			.unwrap();
@@ -773,42 +702,21 @@ pub mod tests {
 		let hash1 = block_on(pool.submit_one(
 			&BlockId::Number(0),
 			SOURCE,
-			to_top(
-				TrustedCallMock::balance_transfer(
-					tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-					5,
-				),
-				0,
-			),
+			TrustedOperationMock::direct_call(mock_trusted_call_signed(0)),
 			shard,
 		))
 		.unwrap();
 		let hash2 = block_on(pool.submit_one(
 			&BlockId::Number(0),
 			SOURCE,
-			to_top(
-				TrustedCallMock::balance_transfer(
-					tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-					5,
-				),
-				1,
-			),
+			TrustedOperationMock::direct_call(mock_trusted_call_signed(1)),
 			shard,
 		))
 		.unwrap();
 		let hash3 = block_on(pool.submit_one(
 			&BlockId::Number(0),
 			SOURCE,
-			to_top(
-				TrustedCallMock::balance_transfer(
-					tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-					5,
-				),
-				3,
-			),
+			TrustedOperationMock::direct_call(mock_trusted_call_signed(3)),
 			shard,
 		))
 		.unwrap();
@@ -833,14 +741,7 @@ pub mod tests {
 		let hash1 = block_on(pool.submit_one(
 			&BlockId::Number(0),
 			SOURCE,
-			to_top(
-				TrustedCallMock::balance_transfer(
-					tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-					5,
-				),
-				0,
-			),
+			TrustedOperationMock::direct_call(mock_trusted_call_signed(0)),
 			shard,
 		))
 		.unwrap();
@@ -867,14 +768,7 @@ pub mod tests {
 		let hash1 = block_on(pool.submit_one(
 			&BlockId::Number(0),
 			SOURCE,
-			to_top(
-				TrustedCallMock::balance_transfer(
-					tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-					5,
-				),
-				1,
-			),
+			TrustedOperationMock::direct_call(mock_trusted_call_signed(1)),
 			shard,
 		))
 		.unwrap();
@@ -884,14 +778,7 @@ pub mod tests {
 		let hash2 = block_on(pool.submit_one(
 			&BlockId::Number(0),
 			SOURCE,
-			to_top(
-				TrustedCallMock::balance_transfer(
-					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-					5,
-				),
-				10,
-			),
+			TrustedOperationMock::direct_call(mock_trusted_call_signed(10)),
 			shard,
 		))
 		.unwrap();
@@ -917,14 +804,7 @@ pub mod tests {
 		block_on(pool.submit_one(
 			&BlockId::Number(0),
 			SOURCE,
-			to_top(
-				TrustedCallMock::balance_transfer(
-					tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-					5,
-				),
-				1,
-			),
+			TrustedOperationMock::direct_call(mock_trusted_call_signed(1)),
 			shard,
 		))
 		.unwrap_err();
@@ -944,14 +824,7 @@ pub mod tests {
 		let err = block_on(pool.submit_one(
 			&BlockId::Number(0),
 			SOURCE,
-			to_top(
-				TrustedCallMock::balance_transfer(
-					tests::AccountId::from_h256(from_low_u64_to_be_h256(1)).into(),
-					tests::AccountId::from_h256(from_low_u64_to_be_h256(2)).into(),
-					5,
-				),
-				INVALID_NONCE,
-			),
+			TrustedOperationMock::direct_call(mock_trusted_call_signed(INVALID_NONCE)),
 			shard,
 		))
 		.unwrap_err();

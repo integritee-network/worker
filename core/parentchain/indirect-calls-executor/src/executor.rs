@@ -286,7 +286,10 @@ mod test {
 	};
 	use itp_sgx_crypto::mocks::KeyRepositoryMock;
 	use itp_stf_executor::mocks::StfEnclaveSignerMock;
-	use itp_stf_primitives::types::{AccountId, TrustedOperation};
+	use itp_stf_primitives::{
+		traits::TrustedCallVerification,
+		types::{AccountId, TrustedOperation},
+	};
 	use itp_test::mock::shielding_crypto_mock::ShieldingCryptoMock;
 	use itp_top_pool_author::mocks::AuthorApiMock;
 	use itp_types::{
@@ -359,8 +362,10 @@ mod test {
 		let submitted_extrinsic =
 			top_pool_author.pending_tops(shard_id()).unwrap().first().cloned().unwrap();
 		let decrypted_extrinsic = shielding_key.decrypt(&submitted_extrinsic).unwrap();
-		let decoded_operation =
-			TrustedOperation::decode(&mut decrypted_extrinsic.as_slice()).unwrap();
+		let decoded_operation = TrustedOperation::<TrustedCallSigned, Getter>::decode(
+			&mut decrypted_extrinsic.as_slice(),
+		)
+		.unwrap();
 		assert_matches!(decoded_operation, TrustedOperation::indirect_call(_));
 		let trusted_call_signed = decoded_operation.to_call().unwrap();
 		assert!(trusted_call_signed.verify_signature(&mr_enclave, &shard_id()));
