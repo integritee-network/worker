@@ -25,7 +25,7 @@ use log::*;
 use std::vec::Vec;
 
 /// Abstraction for accessing state with a getter.
-pub trait GetState<StateType, G: Decode + GetterAuthorization> {
+pub trait GetState<StateType, G: PartialEq + Decode + GetterAuthorization> {
 	/// Executes a trusted getter on a state and return its value, if available.
 	///
 	/// Also verifies the signature of the trusted getter and returns an error
@@ -40,7 +40,7 @@ pub struct StfStateGetter<Stf> {
 impl<Stf, G> GetState<SgxExternalities, G> for StfStateGetter<Stf>
 where
 	Stf: StateGetterInterface<G, SgxExternalities>,
-	G: Decode + GetterAuthorization,
+	G: PartialEq + Decode + GetterAuthorization,
 {
 	fn get_state(getter: G, state: &mut SgxExternalities) -> Result<Option<Vec<u8>>> {
 		if !getter.is_authorized() {
@@ -56,9 +56,9 @@ where
 mod tests {
 	use super::*;
 	use core::assert_matches::assert_matches;
-	use ita_stf::TrustedGetter;
 	use itp_sgx_externalities::SgxExternalitiesDiffType;
 	use itp_stf_interface::mocks::StateInterfaceMock;
+	use itp_test::mock::stf_mock::TrustedGetterMock;
 	use itp_types::AccountId;
 	use sp_core::{ed25519, Pair};
 
@@ -69,7 +69,7 @@ mod tests {
 	fn upon_false_signature_get_stf_state_errs() {
 		let sender = AccountId::from([0; 32]);
 		let wrong_signer = ed25519::Pair::from_seed(b"12345678901234567890123456789012");
-		let signed_getter = TrustedGetter::free_balance(sender).sign(&wrong_signer.into());
+		let signed_getter = TrustedGetterMock::free_balance(sender).sign(&wrong_signer.into());
 		let mut state = SgxExternalities::default();
 
 		assert_matches!(

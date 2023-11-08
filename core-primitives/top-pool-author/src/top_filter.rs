@@ -41,8 +41,8 @@ impl<TCS, G> CallsOnlyFilter<TCS, G> {
 
 impl<TCS, G> Filter for CallsOnlyFilter<TCS, G>
 where
-	TCS: Encode + Debug,
-	G: Encode + Debug,
+	TCS: PartialEq + Encode + Debug,
+	G: PartialEq + Encode + Debug,
 {
 	type Value = StfTrustedOperation<TCS, G>;
 
@@ -65,8 +65,8 @@ impl<TCS, G> AllowAllTopsFilter<TCS, G> {
 
 impl<TCS, G> Filter for AllowAllTopsFilter<TCS, G>
 where
-	TCS: Encode + Debug,
-	G: Encode + Debug,
+	TCS: PartialEq + Encode + Debug,
+	G: PartialEq + Encode + Debug,
 {
 	type Value = StfTrustedOperation<TCS, G>;
 
@@ -88,8 +88,8 @@ impl<TCS, G> GettersOnlyFilter<TCS, G> {
 
 impl<TCS, G> Filter for GettersOnlyFilter<TCS, G>
 where
-	TCS: Encode + Debug,
-	G: Encode + Debug,
+	TCS: PartialEq + Encode + Debug,
+	G: PartialEq + Encode + Debug,
 {
 	type Value = StfTrustedOperation<TCS, G>;
 
@@ -111,8 +111,8 @@ impl<TCS, G> IndirectCallsOnlyFilter<TCS, G> {
 
 impl<TCS, G> Filter for IndirectCallsOnlyFilter<TCS, G>
 where
-	TCS: Encode + Debug,
-	G: Encode + Debug,
+	TCS: PartialEq + Encode + Debug,
+	G: PartialEq + Encode + Debug,
 {
 	type Value = StfTrustedOperation<TCS, G>;
 
@@ -134,8 +134,8 @@ impl<TCS, G> NoDirectCallsFilter<TCS, G> {
 
 impl<TCS, G> Filter for NoDirectCallsFilter<TCS, G>
 where
-	TCS: Encode + Debug,
-	G: Encode + Debug,
+	TCS: PartialEq + Encode + Debug,
+	G: PartialEq + Encode + Debug,
 {
 	type Value = StfTrustedOperation<TCS, G>;
 
@@ -157,8 +157,8 @@ impl<TCS, G> DenyAllFilter<TCS, G> {
 
 impl<TCS, G> Filter for DenyAllFilter<TCS, G>
 where
-	TCS: Encode + Debug,
-	G: Encode + Debug,
+	TCS: PartialEq + Encode + Debug,
+	G: PartialEq + Encode + Debug,
 {
 	type Value = StfTrustedOperation<TCS, G>;
 
@@ -172,7 +172,6 @@ mod tests {
 
 	use super::*;
 	use codec::Encode;
-	use ita_stf::{Getter, TrustedCall, TrustedCallSigned, TrustedGetter};
 	use itp_stf_primitives::types::KeyPair;
 	use itp_types::ShardIdentifier;
 	use sp_core::{ed25519, Pair};

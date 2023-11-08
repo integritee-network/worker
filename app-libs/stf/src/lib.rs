@@ -26,11 +26,6 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
-#[cfg(feature = "sgx")]
-pub use ita_sgx_runtime::{Balance, Index};
-#[cfg(feature = "std")]
-pub use my_node_runtime::{Balance, Index};
-
 use derive_more::Display;
 use itp_node_api_metadata::Error as MetadataError;
 use itp_node_api_metadata_provider::Error as MetadataProviderError;
@@ -55,34 +50,3 @@ pub mod test_genesis;
 pub mod trusted_call;
 
 pub(crate) const ENCLAVE_ACCOUNT_KEY: &str = "Enclave_Account_Key";
-
-pub type StfResult<T> = Result<T, StfError>;
-
-#[derive(Debug, Display, PartialEq, Eq)]
-pub enum StfError {
-	#[display(fmt = "Insufficient privileges {:?}, are you sure you are root?", _0)]
-	MissingPrivileges(AccountId),
-	#[display(fmt = "Valid enclave signer account is required")]
-	RequireEnclaveSignerAccount,
-	#[display(fmt = "Error dispatching runtime call. {:?}", _0)]
-	Dispatch(String),
-	#[display(fmt = "Not enough funds to perform operation")]
-	MissingFunds,
-	#[display(fmt = "Invalid Nonce {:?} != {:?}", _0, _1)]
-	InvalidNonce(Index, Index),
-	StorageHashMismatch,
-	InvalidStorageDiff,
-	InvalidMetadata,
-}
-
-impl From<MetadataError> for StfError {
-	fn from(_e: MetadataError) -> Self {
-		StfError::InvalidMetadata
-	}
-}
-
-impl From<MetadataProviderError> for StfError {
-	fn from(_e: MetadataProviderError) -> Self {
-		StfError::InvalidMetadata
-	}
-}

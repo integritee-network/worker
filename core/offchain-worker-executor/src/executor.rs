@@ -16,7 +16,8 @@
 */
 
 use crate::error::Result;
-use ita_stf::{Getter, TrustedCallSigned};
+use codec::{Decode, Encode};
+use core::fmt::Debug;
 use itc_parentchain_light_client::{
 	concurrent_access::ValidatorAccess, BlockNumberOps, ExtrinsicSender, LightClientState,
 	NumberFor,
@@ -24,7 +25,7 @@ use itc_parentchain_light_client::{
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_stf_executor::{traits::StateUpdateProposer, ExecutedOperation};
 use itp_stf_interface::system_pallet::SystemPalletEventInterface;
-use itp_stf_primitives::types::TrustedOperationOrHash;
+use itp_stf_primitives::{traits::TrustedCallVerification, types::TrustedOperationOrHash};
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{OpaqueCall, ShardIdentifier, H256};
@@ -48,13 +49,15 @@ pub struct Executor<
 	ValidatorAccessor,
 	ExtrinsicsFactory,
 	Stf,
+	TCS,
+	G,
 > {
 	top_pool_author: Arc<TopPoolAuthor>,
 	stf_executor: Arc<StfExecutor>,
 	state_handler: Arc<StateHandler>,
 	validator_accessor: Arc<ValidatorAccessor>,
 	extrinsics_factory: Arc<ExtrinsicsFactory>,
-	_phantom: PhantomData<(ParentchainBlock, Stf)>,
+	_phantom: PhantomData<(ParentchainBlock, Stf, TCS, G)>,
 }
 
 impl<
@@ -65,6 +68,8 @@ impl<
 		ValidatorAccessor,
 		ExtrinsicsFactory,
 		Stf,
+		TCS,
+		G,
 	>
 	Executor<
 		ParentchainBlock,
@@ -74,15 +79,19 @@ impl<
 		ValidatorAccessor,
 		ExtrinsicsFactory,
 		Stf,
+		TCS,
+		G,
 	> where
 	ParentchainBlock: Block<Hash = H256>,
-	StfExecutor: StateUpdateProposer<TrustedCallSigned, Getter>,
-	TopPoolAuthor: AuthorApi<H256, ParentchainBlock::Hash, TrustedCallSigned, Getter>,
+	StfExecutor: StateUpdateProposer<TCS, G>,
+	TopPoolAuthor: AuthorApi<H256, ParentchainBlock::Hash, TCS, G>,
 	StateHandler: QueryShardState + HandleState<StateT = StfExecutor::Externalities>,
 	ValidatorAccessor: ValidatorAccess<ParentchainBlock> + Send + Sync + 'static,
 	ExtrinsicsFactory: CreateExtrinsics,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	Stf: SystemPalletEventInterface<StfExecutor::Externalities>,
+	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
+	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
 {
 	pub fn new(
 		top_pool_author: Arc<TopPoolAuthor>,
@@ -129,14 +138,11 @@ impl<
 				.append(&mut batch_execution_result.get_extrinsic_callbacks().clone());
 
 			let failed_operations = batch_execution_result.get_failed_operations();
-			let successful_operations: Vec<ExecutedOperation<TrustedCallSigned, Getter>> =
-				batch_execution_result
-					.get_executed_operation_hashes()
-					.into_iter()
-					.map(|h| {
-						ExecutedOperation::success(h, TrustedOperationOrHash::Hash(h), Vec::new())
-					})
-					.collect();
+			let successful_operations: Vec<ExecutedOperation<TCS, G>> = batch_execution_result
+				.get_executed_operation_hashes()
+				.into_iter()
+				.map(|h| ExecutedOperation::success(h, TrustedOperationOrHash::Hash(h), Vec::new()))
+				.collect();
 
 			// Remove all not successfully executed operations from the top pool.
 			self.remove_calls_from_pool(&shard, failed_operations);
@@ -168,7 +174,7 @@ impl<
 	fn apply_state_update(
 		&self,
 		shard: &ShardIdentifier,
-		updated_state: <StfExecutor as StateUpdateProposer<TrustedCallSigned, Getter>>::Externalities,
+		updated_state: <StfExecutor as StateUpdateProposer<TCS, G>>::Externalities,
 	) -> Result<()> {
 		self.state_handler.reset(updated_state, shard)?;
 		Ok(())
@@ -186,8 +192,8 @@ impl<
 	fn remove_calls_from_pool(
 		&self,
 		shard: &ShardIdentifier,
-		executed_calls: Vec<ExecutedOperation<TrustedCallSigned, Getter>>,
-	) -> Vec<ExecutedOperation<TrustedCallSigned, Getter>> {
+		executed_calls: Vec<ExecutedOperation<TCS, G>>,
+	) -> Vec<ExecutedOperation<TCS, G>> {
 		let executed_calls_tuple: Vec<_> = executed_calls
 			.iter()
 			.map(|e| (e.trusted_operation_or_hash.clone(), e.is_success()))
@@ -209,13 +215,15 @@ mod tests {
 
 	use super::*;
 	use codec::{Decode, Encode};
-	use ita_stf::{TrustedCall, TrustedOperation};
 	use itc_parentchain_light_client::mocks::validator_access_mock::ValidatorAccessMock;
 	use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
 	use itp_sgx_externalities::SgxExternalitiesTrait;
 	use itp_stf_executor::mocks::StfExecutorMock;
-	use itp_stf_primitives::types::KeyPair;
-	use itp_test::mock::handle_state_mock::HandleStateMock;
+	use itp_stf_primitives::types::{KeyPair, TrustedOperation};
+	use itp_test::mock::{
+		handle_state_mock::HandleStateMock,
+		stf_mock::{GetterMock, TrustedCallMock, TrustedCallSignedMock, TrustedGetterMock},
+	};
 	use itp_top_pool_author::mocks::AuthorApiMock;
 	use itp_types::Block as ParentchainBlock;
 	use sp_core::{ed25519, Pair};
@@ -224,7 +232,7 @@ mod tests {
 	type TestStateHandler = HandleStateMock;
 	type TestStfInterface = SystemPalletEventInterfaceMock;
 	type State = <TestStateHandler as HandleState>::StateT;
-	type TestTopPoolAuthor = AuthorApiMock<H256, H256, TrustedCallSigned, Getter>;
+	type TestTopPoolAuthor = AuthorApiMock<H256, H256, TrustedCallSignedMock, GetterMock>;
 	type TestStfExecutor = StfExecutorMock<State>;
 	type TestValidatorAccess = ValidatorAccessMock;
 	type TestExtrinsicsFactory = ExtrinsicsFactoryMock;
@@ -236,6 +244,8 @@ mod tests {
 		TestValidatorAccess,
 		TestExtrinsicsFactory,
 		TestStfInterface,
+		TrustedCallSignedMock,
+		GetterMock,
 	>;
 
 	const EVENT_COUNT_KEY: &[u8] = b"event_count";
@@ -318,15 +328,11 @@ mod tests {
 		)
 	}
 
-	fn create_trusted_operation() -> TrustedOperation {
+	fn create_trusted_operation() -> TrustedOperation<TrustedCallMock, TrustedGetterMock> {
 		let sender = ed25519::Pair::from_seed(b"33345678901234567890123456789012");
 		let receiver = ed25519::Pair::from_seed(b"14565678901234567890123456789012");
 
-		let trusted_call = TrustedCall::balance_transfer(
-			sender.public().into(),
-			receiver.public().into(),
-			10000u128,
-		);
+		let trusted_call = TrustedCallMock::noop(sender.public().into());
 		let call_signed =
 			trusted_call.sign(&KeyPair::Ed25519(Box::new(sender)), 0, &mr_enclave(), &shard());
 		TrustedOperation::indirect_call(call_signed)

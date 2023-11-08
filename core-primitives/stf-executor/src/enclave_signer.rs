@@ -63,8 +63,8 @@ where
 	Stf: SystemPalletAccountInterface<StateObserver::StateType, AccountId>,
 	Stf::Index: Into<Index>,
 	TopPoolAuthor: AuthorApi<H256, H256, TCS, G> + Send + Sync + 'static,
-	TCS: Encode + Decode + Debug + Send + Sync,
-	G: Encode + Decode + Debug + Send + Sync,
+	TCS: PartialEq + Encode + Decode + Debug + Send + Sync,
+	G: PartialEq + Encode + Decode + Debug + Send + Sync,
 {
 	pub fn new(
 		state_observer: Arc<StateObserver>,
@@ -108,8 +108,8 @@ where
 	Stf: SystemPalletAccountInterface<StateObserver::StateType, AccountId>,
 	Stf::Index: Into<Index>,
 	TopPoolAuthor: AuthorApi<H256, H256, TCS, G> + Send + Sync + 'static,
-	TCS: Encode + Decode + Debug + Send + Sync,
-	G: Encode + Decode + Debug + Send + Sync,
+	TCS: PartialEq + Encode + Decode + Debug + Send + Sync,
+	G: PartialEq + Encode + Decode + Debug + Send + Sync,
 {
 	fn get_enclave_account(&self) -> Result<AccountId> {
 		let enclave_call_signing_key = self.get_enclave_call_signing_key()?;

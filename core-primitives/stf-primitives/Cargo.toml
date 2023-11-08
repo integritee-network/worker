@@ -7,6 +7,7 @@ edition = "2021"
 [dependencies]
 # crates.io
 codec = { version = "3.0.0", default-features = false, features = ["derive"], package = "parity-scale-codec" }
+derive_more = { version = "0.99.5" }
 
 # Substrate dependencies
 itp-hashing = { default-features = false, path = "../../core-primitives/hashing" }

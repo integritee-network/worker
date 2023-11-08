@@ -56,7 +56,7 @@ impl<State, StateDiff> UpdateState<State, StateDiff> for StateInterfaceMock<Stat
 impl<TCS, State, StateDiff> StateCallInterface<TCS, State, NodeMetadataRepository<NodeMetadataMock>>
 	for StateInterfaceMock<State, StateDiff>
 where
-	TCS: Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
+	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
 {
 	type Error = String;
 

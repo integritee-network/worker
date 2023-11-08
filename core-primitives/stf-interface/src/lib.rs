@@ -58,7 +58,7 @@ pub trait StateCallInterface<TCS, State, NodeMetadataRepository>
 where
 	NodeMetadataRepository: AccessNodeMetadata,
 	NodeMetadataRepository::MetadataType: NodeMetadataTrait,
-	TCS: Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
+	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
 {
 	type Error;
 

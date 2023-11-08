@@ -51,7 +51,7 @@ pub struct SidechainApi<Block, TCS> {
 
 impl<Block, TCS> SidechainApi<Block, TCS>
 where
-	TCS: TrustedCallVerification + Debug,
+	TCS: PartialEq + TrustedCallVerification + Debug,
 {
 	/// Create new operation pool logic.
 	pub fn new() -> Self {
@@ -61,7 +61,7 @@ where
 
 impl<Block, TCS> Default for SidechainApi<Block, TCS>
 where
-	TCS: TrustedCallVerification + Debug + Sync + Send,
+	TCS: PartialEq + TrustedCallVerification + Debug + Sync + Send,
 {
 	fn default() -> Self {
 		Self::new()
@@ -71,7 +71,7 @@ where
 impl<Block, TCS> ChainApi for SidechainApi<Block, TCS>
 where
 	Block: BlockT,
-	TCS: TrustedCallVerification + Sync + Send + Debug,
+	TCS: PartialEq + TrustedCallVerification + Sync + Send + Debug,
 {
 	type Block = Block;
 	type Error = error::Error;
@@ -125,9 +125,8 @@ where
 mod tests {
 	use super::*;
 	use futures::executor;
-	use ita_stf::{PublicGetter, TrustedCall, TrustedOperation};
-	use itp_est::mock::stf_mock::TrustedCallSignedMock;
 	use itp_stf_primitives::types::{KeyPair, ShardIdentifier};
+	use itp_test::mock::stf_mock::{GetterMock, TrustedCallSignedMock, TrustedOperationMock};
 	use itp_types::Block as ParentchainBlock;
 	use sp_core::{ed25519, Pair};
 	use sp_keyring::AccountKeyring;

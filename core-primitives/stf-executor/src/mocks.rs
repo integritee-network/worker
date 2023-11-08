@@ -61,8 +61,8 @@ impl<State: Clone> StfExecutorMock<State> {
 impl<State, TCS, G> StateUpdateProposer<TCS, G> for StfExecutorMock<State>
 where
 	State: SgxExternalitiesTrait + Encode + Clone,
-	TCS: Encode + Decode + Clone + Debug + Send + Sync + TrustedCallVerification,
-	G: Encode + Decode + Clone + Debug + Send + Sync,
+	TCS: PartialEq + Encode + Decode + Clone + Debug + Send + Sync + TrustedCallVerification,
+	G: PartialEq + Encode + Decode + Clone + Debug + Send + Sync,
 {
 	type Externalities = State;
 
@@ -122,7 +122,7 @@ impl Default for StfEnclaveSignerMock {
 	}
 }
 
-impl<TCS: Encode + Debug> StfEnclaveSigning<TCS> for StfEnclaveSignerMock {
+impl<TCS: PartialEq + Encode + Debug> StfEnclaveSigning<TCS> for StfEnclaveSignerMock {
 	fn get_enclave_account(&self) -> Result<AccountId> {
 		Ok(self.signer.public().into())
 	}
@@ -145,7 +145,7 @@ pub struct GetStateMock<StateType> {
 impl<StateType, G> GetState<StateType, G> for GetStateMock<StateType>
 where
 	StateType: Encode,
-	G: Decode + GetterAuthorization,
+	G: PartialEq + Decode + GetterAuthorization,
 {
 	fn get_state(_getter: G, state: &mut StateType) -> Result<Option<Vec<u8>>> {
 		Ok(Some(state.encode()))

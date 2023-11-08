@@ -61,7 +61,7 @@ pub fn public_api_rpc_handler<Author, GetterExecutor, AccessShieldingKey>(
 ) -> IoHandler
 where
 	Author: AuthorApi<H256, H256, TrustedCallSigned, Getter> + Send + Sync + 'static,
-	GetterExecutor: ExecuteGetter + Send + Sync + 'static,
+	GetterExecutor: ExecuteGetter + PartialEq + Send + Sync + 'static,
 	AccessShieldingKey: AccessPubkey<KeyType = Rsa3072PubKey> + Send + Sync + 'static,
 {
 	let io = IoHandler::new();
@@ -220,7 +220,7 @@ where
 	io
 }
 
-fn execute_getter_inner<G: ExecuteGetter>(
+fn execute_getter_inner<G: PartialEq + ExecuteGetter>(
 	getter_executor: &G,
 	params: Params,
 ) -> Result<Option<Vec<u8>>, String> {

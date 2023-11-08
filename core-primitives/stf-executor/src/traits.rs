@@ -18,7 +18,6 @@
 use crate::{error::Result, BatchExecutionResult};
 use codec::{Decode, Encode};
 use core::fmt::Debug;
-use ita_stf::ParentchainHeader;
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
@@ -39,7 +38,7 @@ pub enum StatePostProcessing {
 /// The signing key is derived from the shielding key, which guarantees that all enclaves sign the same key.
 pub trait StfEnclaveSigning<TCS>
 where
-	TCS: Encode + Debug,
+	TCS: PartialEq + Encode + Debug,
 {
 	fn get_enclave_account(&self) -> Result<AccountId>;
 
@@ -53,8 +52,8 @@ where
 /// Proposes a state update to `Externalities`.
 pub trait StateUpdateProposer<TCS, G>
 where
-	TCS: Encode + Decode + Debug + Send + Sync,
-	G: Encode + Decode + Debug + Send + Sync,
+	TCS: PartialEq + Encode + Decode + Debug + Send + Sync,
+	G: PartialEq + Encode + Decode + Debug + Send + Sync,
 {
 	type Externalities: SgxExternalitiesTrait + Encode;
 
@@ -78,10 +77,6 @@ where
 /// Updates the STF state for a specific header.
 ///
 /// Cannot be implemented for a generic header currently, because the runtime expects a ParentchainHeader.
-pub trait StfUpdateState {
-	fn update_states(
-		&self,
-		header: &ParentchainHeader,
-		parentchain_id: &ParentchainId,
-	) -> Result<()>;
+pub trait StfUpdateState<PCH, PCID> {
+	fn update_states(&self, header: &PCH, parentchain_id: &PCID) -> Result<()>;
 }

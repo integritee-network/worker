@@ -29,6 +29,7 @@ use sp_std::{vec, vec::Vec};
 pub type Signature = MultiSignature;
 pub type AuthorityId = <Signature as Verify>::Signer;
 pub type AccountId = AccountId32;
+pub type Nonce = u32;
 pub type Hash = H256;
 pub type BalanceTransferFn = ([u8; 2], AccountId, Compact<u128>);
 pub type ShardIdentifier = H256;
@@ -64,8 +65,8 @@ impl From<sr25519::Pair> for KeyPair {
 #[allow(non_camel_case_types)]
 pub enum TrustedOperation<TCS, G>
 where
-	TCS: Encode + Debug,
-	G: Encode + Debug,
+	TCS: PartialEq + Encode + Debug,
+	G: PartialEq + Encode + Debug,
 {
 	indirect_call(TCS),
 	direct_call(TCS),
@@ -74,8 +75,8 @@ where
 
 impl<TCS, G> From<G> for TrustedOperation<TCS, G>
 where
-	TCS: Encode + Debug,
-	G: Encode + Debug,
+	TCS: PartialEq + Encode + Debug,
+	G: PartialEq + Encode + Debug,
 {
 	fn from(item: G) -> Self {
 		TrustedOperation::get(item)
@@ -84,8 +85,8 @@ where
 
 // impl<TCS, G> itp_hashing::Hash<H256> for TrustedOperation<TCS, G>
 // where
-// 	TCS: Encode,
-// 	G: Encode,
+// 	TCS: PartialEq + Encode,
+// 	G: PartialEq + Encode,
 // {
 // 	fn hash(&self) -> H256 {
 // 		blake2_256(&self.encode()).into()
@@ -94,8 +95,8 @@ where
 
 impl<TCS, G> TrustedOperation<TCS, G>
 where
-	TCS: TrustedCallVerification + Encode + Debug,
-	G: Encode + Debug,
+	TCS: PartialEq + TrustedCallVerification + Encode + Debug,
+	G: PartialEq + Encode + Debug,
 {
 	pub fn to_call(&self) -> Option<&TCS> {
 		match self {
@@ -128,8 +129,8 @@ where
 
 impl<TCS, G> PoolTransactionValidation for TrustedOperation<TCS, G>
 where
-	TCS: TrustedCallVerification + Encode + Debug,
-	G: Encode + PoolTransactionValidation + Debug,
+	TCS: PartialEq + TrustedCallVerification + Encode + Debug,
+	G: PartialEq + Encode + PoolTransactionValidation + Debug,
 {
 	fn validate(&self) -> Result<ValidTransaction, TransactionValidityError> {
 		match self {
@@ -148,8 +149,8 @@ where
 #[derive(Clone, Debug, Encode, Decode, PartialEq)]
 pub enum TrustedOperationOrHash<TCS, G>
 where
-	TCS: Encode + Debug + Send + Sync,
-	G: Encode + Debug + Send + Sync,
+	TCS: PartialEq + Encode + Debug + Send + Sync,
+	G: PartialEq + Encode + Debug + Send + Sync,
 {
 	/// The hash of the call.
 	Hash(H256),
@@ -161,8 +162,8 @@ where
 
 impl<TCS, G> TrustedOperationOrHash<TCS, G>
 where
-	TCS: Encode + Debug + Send + Sync,
-	G: Encode + Debug + Send + Sync,
+	TCS: PartialEq + Encode + Debug + Send + Sync,
+	G: PartialEq + Encode + Debug + Send + Sync,
 {
 	pub fn from_top(top: TrustedOperation<TCS, G>) -> Self {
 		TrustedOperationOrHash::Operation(Box::new(top))

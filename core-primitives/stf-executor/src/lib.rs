@@ -87,8 +87,8 @@ impl ExecutionStatus {
 #[derive(Clone, Debug, PartialEq)]
 pub struct ExecutedOperation<TCS, G>
 where
-	TCS: Encode + Decode + Debug + Send + Sync,
-	G: Encode + Decode + Debug + Send + Sync,
+	TCS: PartialEq + Encode + Decode + Debug + Send + Sync,
+	G: PartialEq + Encode + Decode + Debug + Send + Sync,
 {
 	pub status: ExecutionStatus,
 	pub trusted_operation_or_hash: TrustedOperationOrHash<TCS, G>,
@@ -96,8 +96,8 @@ where
 
 impl<TCS, G> ExecutedOperation<TCS, G>
 where
-	TCS: Encode + Decode + Debug + Send + Sync,
-	G: Encode + Decode + Debug + Send + Sync,
+	TCS: PartialEq + Encode + Decode + Debug + Send + Sync,
+	G: PartialEq + Encode + Decode + Debug + Send + Sync,
 {
 	/// Constructor for a successfully executed trusted operation.
 	pub fn success(
@@ -128,8 +128,8 @@ where
 #[derive(Clone, Debug)]
 pub struct BatchExecutionResult<Externalities: SgxExternalitiesTrait + Encode, TCS, G>
 where
-	TCS: Encode + Decode + Debug + Send + Sync,
-	G: Encode + Decode + Debug + Send + Sync,
+	TCS: PartialEq + Encode + Decode + Debug + Send + Sync,
+	G: PartialEq + Encode + Decode + Debug + Send + Sync,
 {
 	pub state_hash_before_execution: H256,
 	pub executed_operations: Vec<ExecutedOperation<TCS, G>>,
@@ -139,8 +139,8 @@ where
 impl<Externalities, TCS, G> BatchExecutionResult<Externalities, TCS, G>
 where
 	Externalities: SgxExternalitiesTrait + Encode,
-	TCS: Encode + Decode + Debug + Clone + Send + Sync,
-	G: Encode + Decode + Debug + Clone + Send + Sync,
+	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
+	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
 {
 	pub fn get_extrinsic_callbacks(&self) -> Vec<OpaqueCall> {
 		self.executed_operations

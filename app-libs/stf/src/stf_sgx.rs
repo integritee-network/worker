@@ -17,8 +17,7 @@
 
 #[cfg(feature = "test")]
 use crate::test_genesis::test_genesis_setup;
-
-use crate::{helpers::enclave_signer_account, Stf, StfError, ENCLAVE_ACCOUNT_KEY};
+use crate::{helpers::enclave_signer_account, Stf, ENCLAVE_ACCOUNT_KEY};
 use codec::{Decode, Encode};
 use frame_support::traits::{OriginTrait, UnfilteredDispatchable};
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
@@ -29,7 +28,9 @@ use itp_stf_interface::{
 	system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface},
 	ExecuteCall, ExecuteGetter, InitState, StateCallInterface, StateGetterInterface, UpdateState,
 };
-use itp_stf_primitives::{traits::TrustedCallVerification, types::ShardIdentifier};
+use itp_stf_primitives::{
+	error::StfError, traits::TrustedCallVerification, types::ShardIdentifier,
+};
 use itp_storage::storage_value_key;
 use itp_types::{parentchain::ParentchainId, OpaqueCall};
 use itp_utils::stringify::account_id_to_string;
@@ -116,7 +117,7 @@ where
 	fn storage_hashes_to_update_on_block(parentchain_id: &ParentchainId) -> Vec<Vec<u8>> {
 		// Get all shards that are currently registered.
 		match parentchain_id {
-			ParentchainId::Integritee => vec![shards_key_hash()],
+			ParentchainId::Integritee => vec![], // shards_key_hash() moved to stf_executor and is currently unused
 			ParentchainId::TargetA => vec![],
 			ParentchainId::TargetB => vec![],
 		}
@@ -126,7 +127,8 @@ where
 impl<TCS, G, State, Runtime, NodeMetadataRepository>
 	StateCallInterface<TCS, State, NodeMetadataRepository> for Stf<TCS, G, State, Runtime>
 where
-	TCS: ExecuteCall<NodeMetadataRepository>
+	TCS: PartialEq
+		+ ExecuteCall<NodeMetadataRepository>
 		+ Encode
 		+ Decode
 		+ Debug
@@ -152,7 +154,7 @@ where
 
 impl<TCS, G, State, Runtime> StateGetterInterface<G, State> for Stf<TCS, G, State, Runtime>
 where
-	G: ExecuteGetter,
+	G: PartialEq + ExecuteGetter,
 	State: SgxExternalitiesTrait + Debug,
 {
 	fn execute_getter(state: &mut State, getter: G) -> Option<Vec<u8>> {
@@ -253,16 +255,6 @@ where
 		})?;
 		Ok(())
 	}
-}
-
-pub fn storage_hashes_to_update_per_shard(_shard: &ShardIdentifier) -> Vec<Vec<u8>> {
-	Vec::new()
-}
-
-pub fn shards_key_hash() -> Vec<u8> {
-	// here you have to point to a storage value containing a Vec of
-	// ShardIdentifiers the enclave uses this to autosubscribe to no shards
-	vec![]
 }
 
 /// Creates valid enclave account with a balance that is above the existential deposit.

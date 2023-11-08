@@ -78,8 +78,8 @@ where
 	StateFacade: QueryShardState,
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
-	TCS: Encode + Clone + Debug + Send + Sync,
-	G: Encode + Clone + PoolTransactionValidation + Debug + Send + Sync,
+	TCS: PartialEq + Encode + Clone + Debug + Send + Sync,
+	G: PartialEq + Encode + Clone + PoolTransactionValidation + Debug + Send + Sync,
 {
 	top_pool: Arc<TopPool>,
 	top_filter: TopFilter,
@@ -97,8 +97,8 @@ where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
-	TCS: Encode + Clone + Debug + Send + Sync,
-	G: Encode + Clone + PoolTransactionValidation + Debug + Send + Sync,
+	TCS: PartialEq + Encode + Clone + Debug + Send + Sync,
+	G: PartialEq + Encode + Clone + PoolTransactionValidation + Debug + Send + Sync,
 {
 	/// Create new instance of Authoring API.
 	pub fn new(
@@ -126,8 +126,24 @@ where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
-	TCS: Encode + Decode + Clone + Debug + Send + Sync + TrustedCallVerification + 'static,
-	G: Encode + Decode + Clone + PoolTransactionValidation + Debug + Send + Sync + 'static,
+	TCS: PartialEq
+		+ Encode
+		+ Decode
+		+ Clone
+		+ Debug
+		+ Send
+		+ Sync
+		+ TrustedCallVerification
+		+ 'static,
+	G: PartialEq
+		+ Encode
+		+ Decode
+		+ Clone
+		+ PoolTransactionValidation
+		+ Debug
+		+ Send
+		+ Sync
+		+ 'static,
 {
 	fn process_top(
 		&self,
@@ -257,8 +273,8 @@ fn map_top_error<P: TrustedOperationPool<StfTrustedOperation<TCS, G>>, TCS, G>(
 	error: P::Error,
 ) -> RpcError
 where
-	TCS: Encode + Debug,
-	G: Encode + Debug,
+	TCS: PartialEq + Encode + Debug,
+	G: PartialEq + Encode + Debug,
 {
 	StateRpcError::PoolError(
 		error
@@ -279,8 +295,24 @@ where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
-	G: Encode + Decode + Clone + PoolTransactionValidation + Debug + Send + Sync + 'static,
-	TCS: Encode + Decode + Clone + Debug + Send + Sync + TrustedCallVerification + 'static,
+	G: PartialEq
+		+ Encode
+		+ Decode
+		+ Clone
+		+ PoolTransactionValidation
+		+ Debug
+		+ Send
+		+ Sync
+		+ 'static,
+	TCS: PartialEq
+		+ Encode
+		+ Decode
+		+ Clone
+		+ Debug
+		+ Send
+		+ Sync
+		+ TrustedCallVerification
+		+ 'static,
 {
 	fn submit_top(&self, ext: Vec<u8>, shard: ShardIdentifier) -> PoolFuture<TxHash, RpcError> {
 		self.process_top(ext, shard, TopSubmissionMode::Submit)
@@ -369,8 +401,8 @@ where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
-	G: Encode + Clone + PoolTransactionValidation + Debug + Send + Sync,
-	TCS: Encode + Clone + Debug + Send + Sync,
+	G: PartialEq + Encode + Clone + PoolTransactionValidation + Debug + Send + Sync,
+	TCS: PartialEq + Encode + Clone + Debug + Send + Sync,
 {
 	type Hash = TxHash;
 

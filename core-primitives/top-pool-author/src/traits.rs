@@ -31,15 +31,15 @@ use std::vec::Vec;
 
 /// Trait alias for a full STF author API
 pub trait FullAuthor<
-	TCS: Encode + Debug + Send + Sync + 'static,
-	G: Encode + Debug + Send + Sync + 'static,
+	TCS: PartialEq + Encode + Debug + Send + Sync + 'static,
+	G: PartialEq + Encode + Debug + Send + Sync + 'static,
 > = AuthorApi<H256, H256, TCS, G> + OnBlockImported<Hash = H256> + Send + Sync + 'static;
 
 /// Authoring RPC API
 pub trait AuthorApi<Hash, BlockHash, TCS, G>
 where
-	TCS: Encode + Debug + Send + Sync,
-	G: Encode + Debug + Send + Sync,
+	TCS: PartialEq + Encode + Debug + Send + Sync,
+	G: PartialEq + Encode + Debug + Send + Sync,
 {
 	/// Submit encoded extrinsic for inclusion in block.
 	fn submit_top(&self, extrinsic: Vec<u8>, shard: ShardIdentifier) -> PoolFuture<Hash, RpcError>;

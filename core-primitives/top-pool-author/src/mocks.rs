@@ -49,8 +49,8 @@ pub struct AuthorApiMock<Hash, BlockHash, TCS, G> {
 
 impl<Hash, BlockHash, TCS, G> AuthorApiMock<Hash, BlockHash, TCS, G>
 where
-	TCS: Encode + Decode + Debug + Send + Sync + TrustedCallVerification,
-	G: Encode + Decode + Debug + Send + Sync,
+	TCS: PartialEq + Encode + Decode + Debug + Send + Sync + TrustedCallVerification,
+	G: PartialEq + Encode + Decode + Debug + Send + Sync,
 {
 	fn remove_top(
 		&self,
@@ -88,8 +88,8 @@ where
 
 impl<TCS, G> AuthorApi<H256, H256, TCS, G> for AuthorApiMock<H256, H256, TCS, G>
 where
-	TCS: Encode + Decode + Debug + Clone + TrustedCallVerification + Send + Sync,
-	G: Encode + Decode + Debug + Clone + Send + Sync,
+	TCS: PartialEq + Encode + Decode + Debug + Clone + TrustedCallVerification + Send + Sync,
+	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
 {
 	fn submit_top(&self, extrinsic: Vec<u8>, shard: ShardIdentifier) -> PoolFuture<H256, RpcError> {
 		let mut write_lock = self.tops.write().unwrap();

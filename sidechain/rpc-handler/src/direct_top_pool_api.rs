@@ -43,8 +43,8 @@ pub fn add_top_pool_direct_rpc_methods<R, TCS, G>(
 ) -> IoHandler
 where
 	R: AuthorApi<Hash, Hash, TCS, G> + Send + Sync + 'static,
-	TCS: Encode + Decode + Debug + Send + Sync + 'static,
-	G: Encode + Decode + Debug + Send + Sync + 'static,
+	TCS: PartialEq + Encode + Decode + Debug + Send + Sync + 'static,
+	G: PartialEq + Encode + Decode + Debug + Send + Sync + 'static,
 {
 	// author_submitAndWatchExtrinsic
 	let author_submit_and_watch_extrinsic_name: &str = "author_submitAndWatchExtrinsic";
@@ -177,8 +177,8 @@ fn compute_hex_encoded_return_error(error_msg: &str) -> String {
 fn author_submit_extrinsic_inner<R, TCS, G>(author: Arc<R>, params: Params) -> Result<Hash, String>
 where
 	R: AuthorApi<Hash, Hash, TCS, G> + Send + Sync + 'static,
-	TCS: Encode + Decode + Debug + Send + Sync + 'static,
-	G: Encode + Decode + Debug + Send + Sync + 'static,
+	TCS: PartialEq + Encode + Decode + Debug + Send + Sync + 'static,
+	G: PartialEq + Encode + Decode + Debug + Send + Sync + 'static,
 {
 	debug!("Author submit and watch trusted operation..");
 

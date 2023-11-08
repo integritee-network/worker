@@ -25,7 +25,7 @@ use std::vec::Vec;
 use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_address};
 use crate::{
 	helpers::{ensure_enclave_signer_account, get_storage_by_key_hash},
-	Getter, StfError,
+	Getter,
 };
 use codec::{Compact, Decode, Encode};
 use frame_support::{ensure, traits::UnfilteredDispatchable};
@@ -40,6 +40,7 @@ use itp_node_api_metadata::{
 };
 use itp_stf_interface::{ExecuteCall, SHARD_VAULT_KEY};
 use itp_stf_primitives::{
+	error::{StfError, StfResult},
 	traits::{TrustedCallSigning, TrustedCallVerification},
 	types::{AccountId, KeyPair, ShardIdentifier, Signature, TrustedOperation},
 };
@@ -285,7 +286,10 @@ where
 				unshield_funds(account_incognito, value)?;
 
 				calls.push(OpaqueCall::from_tuple(&(
-					node_metadata_repo.get_from_metadata(|m| m.unshield_funds_call_indexes())??,
+					node_metadata_repo
+						.get_from_metadata(|m| m.unshield_funds_call_indexes())
+						.map_err(|_| StfError::InvalidMetadata)?
+						.map_err(|_| StfError::InvalidMetadata)?,
 					shard,
 					beneficiary.clone(),
 					value,
@@ -301,12 +305,17 @@ where
 				let vault_address = Address::from(AccountId::from(vault_pubkey));
 				let vault_transfer_call = OpaqueCall::from_tuple(&(
 					node_metadata_repo
-						.get_from_metadata(|m| m.transfer_keep_alive_call_indexes())??,
+						.get_from_metadata(|m| m.transfer_keep_alive_call_indexes())
+						.map_err(|_| StfError::InvalidMetadata)?
+						.map_err(|_| StfError::InvalidMetadata)?,
 					Address::from(beneficiary),
 					Compact(value),
 				));
 				let proxy_call = OpaqueCall::from_tuple(&(
-					node_metadata_repo.get_from_metadata(|m| m.proxy_call_indexes())??,
+					node_metadata_repo
+						.get_from_metadata(|m| m.proxy_call_indexes())
+						.map_err(|_| StfError::InvalidMetadata)?
+						.map_err(|_| StfError::InvalidMetadata)?,
 					vault_address,
 					None::<ProxyType>,
 					vault_transfer_call,
@@ -321,7 +330,10 @@ where
 
 				// Send proof of execution on chain.
 				calls.push(OpaqueCall::from_tuple(&(
-					node_metadata_repo.get_from_metadata(|m| m.publish_hash_call_indexes())??,
+					node_metadata_repo
+						.get_from_metadata(|m| m.publish_hash_call_indexes())
+						.map_err(|_| StfError::InvalidMetadata)?
+						.map_err(|_| StfError::InvalidMetadata)?,
 					call_hash,
 					Vec::<itp_types::H256>::new(),
 					b"shielded some funds!".to_vec(),

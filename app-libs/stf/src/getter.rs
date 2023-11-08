@@ -78,7 +78,7 @@ impl PoolTransactionValidation for Getter {
 	fn validate(&self) -> Result<ValidTransaction, TransactionValidityError> {
 		match self {
 			Self::public(_) =>
-				return Err(TransactionValidityError::Unknown(UnknownTransaction::CannotLookup)),
+				Err(TransactionValidityError::Unknown(UnknownTransaction::CannotLookup)),
 			Self::trusted(trusted_getter_signed) => Ok(ValidTransaction {
 				priority: 1 << 20,
 				requires: vec![],

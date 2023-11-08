@@ -335,6 +335,8 @@ pub type EnclaveOffchainWorkerExecutor = itc_offchain_worker_executor::executor:
 	EnclaveValidatorAccessor,
 	EnclaveExtrinsicsFactory,
 	EnclaveStf,
+	EnclaveTrustedCallSigned,
+	EnclaveGetter,
 >;
 
 // Base component instances

@@ -7,6 +7,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 # sgx dependencies
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
@@ -18,7 +19,6 @@ thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linu
 thiserror = { version = "1.0", optional = true }
 
 # local dependencies
-ita-stf = { path = "../../app-libs/stf", default-features = false }
 itc-parentchain-light-client = { path = "../../core/parentchain/light-client", default-features = false }
 itp-extrinsics-factory = { path = "../../core-primitives/extrinsics-factory", default-features = false }
 itp-stf-executor = { path = "../../core-primitives/stf-executor", default-features = false }
@@ -38,7 +38,6 @@ log = { version = "0.4", default-features = false }
 [dev-dependencies]
 itp-stf-primitives = { path = "../../core-primitives/stf-primitives", default-features = false }
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
-ita-stf = { path = "../../app-libs/stf" }
 itc-parentchain-light-client = { path = "../../core/parentchain/light-client", features = ["mocks"] }
 itp-extrinsics-factory = { path = "../../core-primitives/extrinsics-factory", features = ["mocks"] }
 itp-stf-executor = { path = "../../core-primitives/stf-executor", features = ["mocks"] }
@@ -51,7 +50,6 @@ sp-io = { path = "../../core-primitives/substrate-sgx/sp-io" }
 [features]
 default = ["std"]
 std = [
-    "ita-stf/std",
     "itc-parentchain-light-client/std",
     "itp-extrinsics-factory/std",
     "itp-stf-executor/std",
@@ -64,7 +62,6 @@ std = [
     "thiserror",
 ]
 sgx = [
-    "ita-stf/sgx",
     "itc-parentchain-light-client/sgx",
     "itp-extrinsics-factory/sgx",
     "itp-stf-executor/sgx",

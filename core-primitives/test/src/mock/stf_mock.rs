@@ -163,8 +163,8 @@ impl TrustedCallVerification for TrustedCallSignedMock {
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum GetterMock {
-	public(u8),
-	trusted(u8),
+	public(PublicGetterMock),
+	trusted(TrustedGetterSignedMock),
 }
 
 impl PoolTransactionValidation for GetterMock {
@@ -180,4 +180,22 @@ impl GetterAuthorization for GetterMock {
 			Self::public(_) => true,
 		}
 	}
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+#[allow(non_camel_case_types)]
+pub enum PublicGetterMock {
+	some_value,
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+#[allow(non_camel_case_types)]
+pub enum TrustedGetterMock {
+	some_value,
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+pub struct TrustedGetterSignedMock {
+	pub getter: TrustedGetterMock,
+	pub signature: bool,
 }
