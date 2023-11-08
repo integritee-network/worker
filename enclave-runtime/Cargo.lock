@@ -2240,7 +2240,6 @@ dependencies = [
 name = "itp-stf-state-handler"
 version = "0.9.0"
 dependencies = [
- "ita-stf",
  "itp-hashing",
  "itp-settings",
  "itp-sgx-crypto",
@@ -2305,7 +2304,6 @@ name = "itp-test"
 version = "0.9.0"
 dependencies = [
  "derive_more",
- "ita-stf",
  "itp-enclave-bridge-storage",
  "itp-node-api",
  "itp-node-api-metadata-provider",
@@ -2341,7 +2339,6 @@ version = "0.9.0"
 dependencies = [
  "byteorder 1.4.3",
  "derive_more",
- "ita-stf",
  "itc-direct-rpc-server",
  "itp-sgx-runtime-primitives",
  "itp-stf-primitives",
@@ -2365,7 +2362,6 @@ name = "itp-top-pool-author"
 version = "0.9.0"
 dependencies = [
  "derive_more",
- "ita-stf",
  "itp-enclave-metrics",
  "itp-ocall-api",
  "itp-sgx-crypto",

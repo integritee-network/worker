@@ -19,8 +19,8 @@ use codec::{Decode, Encode};
 use core::fmt::Debug;
 use itp_node_api::metadata::metadata_mocks::NodeMetadataMock;
 use itp_node_api_metadata_provider::NodeMetadataRepository;
-use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesDiffType};
-use itp_stf_interface::{ExecuteCall, StateCallInterface, UpdateState};
+use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesDiffType, SgxExternalitiesTrait};
+use itp_stf_interface::{ExecuteCall, InitState, StateCallInterface, UpdateState};
 use itp_stf_primitives::{
 	traits::{
 		GetterAuthorization, PoolTransactionValidation, TrustedCallSigning, TrustedCallVerification,
@@ -67,6 +67,12 @@ impl StateCallInterface<TrustedCallSignedMock, SgxExternalities, NodeMetadataRep
 		_node_metadata_repo: Arc<NodeMetadataRepositoryMock>,
 	) -> Result<(), Self::Error> {
 		Ok(())
+	}
+}
+
+impl InitState<SgxExternalities, AccountId> for StfMock {
+	fn init_state(enclave_account: AccountId) -> SgxExternalities {
+		SgxExternalities::new(Default::default())
 	}
 }
 

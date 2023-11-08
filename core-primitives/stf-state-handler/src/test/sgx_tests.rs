@@ -26,14 +26,13 @@ use crate::{
 	test::mocks::initialize_state_mock::InitializeStateMock,
 };
 use codec::{Decode, Encode};
-use ita_stf::{State as StfState, StateType as StfStateType};
 use itp_hashing::Hash;
 use itp_sgx_crypto::{
 	get_aes_repository,
 	key_repository::{AccessKey, KeyRepository},
 	Aes, AesSeal, StateCrypto,
 };
-use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
+use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait, SgxExternalitiesType};
 use itp_sgx_io::write;
 use itp_sgx_temp_dir::TempDir;
 use itp_stf_state_observer::state_observer::StateObserver;
@@ -43,12 +42,12 @@ use std::{sync::Arc, thread, vec::Vec};
 const STATE_SNAPSHOTS_CACHE_SIZE: usize = 3;
 
 type StateKeyRepository = KeyRepository<Aes, AesSeal>;
-type TestStateInitializer = InitializeStateMock<StfState>;
+type TestStateInitializer = InitializeStateMock<SgxExternalities>;
 type TestStateFileIo = SgxStateFileIo<StateKeyRepository, SgxExternalities>;
 type TestStateRepository = StateSnapshotRepository<TestStateFileIo>;
 type TestStateRepositoryLoader =
 	StateSnapshotRepositoryLoader<TestStateFileIo, TestStateInitializer>;
-type TestStateObserver = StateObserver<StfState>;
+type TestStateObserver = StateObserver<SgxExternalities>;
 type TestStateHandler = StateHandler<TestStateRepository, TestStateObserver, TestStateInitializer>;
 
 // Fixme: Move this test to sgx-runtime:
@@ -60,7 +59,7 @@ pub fn test_sgx_state_decode_encode_works() {
 
 	// when
 	let encoded_state = state.state.encode();
-	let state2 = StfStateType::decode(&mut encoded_state.as_slice()).unwrap();
+	let state2 = SgxExternalitiesType::decode(&mut encoded_state.as_slice()).unwrap();
 
 	// then
 	assert_eq!(state.state, state2);
@@ -80,7 +79,7 @@ pub fn test_encrypt_decrypt_state_type_works() {
 	state_key.encrypt(&mut state_buffer).unwrap();
 
 	state_key.decrypt(&mut state_buffer).unwrap();
-	let decoded = StfStateType::decode(&mut state_buffer.as_slice()).unwrap();
+	let decoded = SgxExternalitiesType::decode(&mut state_buffer.as_slice()).unwrap();
 
 	// then
 	assert_eq!(state.state, decoded);
@@ -231,7 +230,7 @@ pub fn test_file_io_get_state_hash_works() {
 
 	let state_id = 1234u128;
 	let state_hash = file_io
-		.initialize_shard(&shard, state_id, &StfState::new(Default::default()))
+		.initialize_shard(&shard, state_id, &SgxExternalities::new(Default::default()))
 		.unwrap();
 	assert_eq!(state_hash, file_io.compute_hash(&shard, state_id).unwrap());
 
@@ -285,7 +284,7 @@ pub fn test_list_state_ids_ignores_files_not_matching_the_pattern() {
 	write(&[0, 1, 2, 3, 4, 5], invalid_state_file_path).unwrap();
 
 	file_io
-		.initialize_shard(&shard, 1234, &StfState::new(Default::default()))
+		.initialize_shard(&shard, 1234, &SgxExternalities::new(Default::default()))
 		.unwrap();
 
 	assert_eq!(1, file_io.list_state_ids_for_shard(&shard).unwrap().len());
@@ -298,7 +297,8 @@ pub fn test_in_memory_state_initializes_from_shard_directory() {
 
 	let file_io =
 		create_in_memory_state_io_from_shards_directories(&state_dir.shards_directory()).unwrap();
-	let state_initializer = Arc::new(TestStateInitializer::new(StfState::new(Default::default())));
+	let state_initializer =
+		Arc::new(TestStateInitializer::new(SgxExternalities::new(Default::default())));
 	let state_repository_loader =
 		StateSnapshotRepositoryLoader::new(file_io.clone(), state_initializer);
 	let state_snapshot_repository = state_repository_loader
@@ -314,7 +314,8 @@ fn initialize_state_handler(
 	state_dir: StateDir,
 ) -> Arc<TestStateHandler> {
 	let file_io = Arc::new(TestStateFileIo::new(state_key_access, state_dir));
-	let state_initializer = Arc::new(TestStateInitializer::new(StfState::new(Default::default())));
+	let state_initializer =
+		Arc::new(TestStateInitializer::new(SgxExternalities::new(Default::default())));
 	let state_repository_loader =
 		TestStateRepositoryLoader::new(file_io, state_initializer.clone());
 	let state_observer = Arc::new(TestStateObserver::default());
@@ -341,10 +342,10 @@ fn update_state(
 	state_handler.write_after_mutation(state_to_mutate, lock, shard).unwrap()
 }
 
-fn given_hello_world_state() -> StfState {
+fn given_hello_world_state() -> SgxExternalities {
 	let key: Vec<u8> = "hello".encode();
 	let value: Vec<u8> = "world".encode();
-	let mut state = StfState::new(Default::default());
+	let mut state = SgxExternalities::new(Default::default());
 	state.insert(key, value);
 	state
 }

@@ -344,7 +344,7 @@ fn into_map(
 	storage_entries.into_iter().map(|e| e.into_tuple()).collect()
 }
 
-// todo: we need to clarify where these functions belong and if we need them at all. moved them from ita_stf but we can no longer depend on that
+// todo: we need to clarify where these functions belong and if we need them at all. moved them from ita-stf but we can no longer depend on that
 pub fn storage_hashes_to_update_per_shard(_shard: &ShardIdentifier) -> Vec<Vec<u8>> {
 	Vec::new()
 }
