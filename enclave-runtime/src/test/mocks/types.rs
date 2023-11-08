@@ -101,4 +101,6 @@ pub type TestBlockImporter = BlockImporter<
 	TestStateKeyRepo,
 	TestTopPoolAuthor,
 	TestParentchainBlockImportTrigger,
+	TrustedCallSigned,
+	Getter,
 >;

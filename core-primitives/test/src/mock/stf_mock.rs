@@ -14,7 +14,7 @@
 	limitations under the License.
 
 */
-use alloc::sync::Arc;
+use alloc::{boxed::Box, sync::Arc};
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use itp_node_api::metadata::metadata_mocks::NodeMetadataMock;
@@ -168,7 +168,7 @@ impl ExecuteCall<NodeMetadataRepositoryMock> for TrustedCallSignedMock {
 
 impl TrustedCallVerification for TrustedCallSignedMock {
 	fn sender_account(&self) -> &AccountId {
-		&self.call.sender_account()
+		self.call.sender_account()
 	}
 
 	fn nonce(&self) -> Index {

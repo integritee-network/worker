@@ -151,7 +151,7 @@ impl<Extrinsic: Clone> TrustedOperation<Extrinsic> {
 		TrustedOperation {
 			data: self.data.clone(),
 			bytes: self.bytes,
-			hash: self.hash.clone(),
+			hash: self.hash,
 			priority: self.priority,
 			source: self.source,
 			valid_till: self.valid_till,
@@ -296,7 +296,7 @@ impl<Ex: fmt::Debug> BasePool<Ex> {
 				return Err(error::Error::RejectedFutureTrustedOperation)
 			}
 
-			let hash = tx.operation.hash.clone();
+			let hash = tx.operation.hash;
 			self.future.import(tx, shard);
 			return Ok(Imported::Future { hash })
 		}
@@ -312,7 +312,7 @@ impl<Ex: fmt::Debug> BasePool<Ex> {
 		tx: WaitingTrustedOperations<Ex>,
 		shard: ShardIdentifier,
 	) -> error::Result<Imported<Ex>> {
-		let hash = tx.operation.hash.clone();
+		let hash = tx.operation.hash;
 		let mut promoted = vec![];
 		let mut failed = vec![];
 		let mut removed = vec![];
@@ -325,7 +325,7 @@ impl<Ex: fmt::Debug> BasePool<Ex> {
 			to_import.append(&mut self.future.satisfy_tags(&tx.operation.provides, shard));
 
 			// import this operation
-			let current_hash = tx.operation.hash.clone();
+			let current_hash = tx.operation.hash;
 			match self.ready.import(tx, shard) {
 				Ok(mut replaced) => {
 					if !first {
@@ -431,7 +431,7 @@ impl<Ex: fmt::Debug> BasePool<Ex> {
 			);
 
 			if let Some(minimal) = minimal {
-				removed.append(&mut self.remove_subtree(&[minimal.operation.hash.clone()], shard))
+				removed.append(&mut self.remove_subtree(&[minimal.operation.hash], shard))
 			} else {
 				break
 			}
@@ -453,7 +453,7 @@ impl<Ex: fmt::Debug> BasePool<Ex> {
 			);
 
 			if let Some(minimal) = minimal {
-				removed.append(&mut self.remove_subtree(&[minimal.operation.hash.clone()], shard))
+				removed.append(&mut self.remove_subtree(&[minimal.operation.hash], shard))
 			} else {
 				break
 			}
@@ -514,7 +514,7 @@ impl<Ex: fmt::Debug> BasePool<Ex> {
 		let mut promoted = vec![];
 		let mut failed = vec![];
 		for tx in to_import {
-			let hash = tx.operation.hash.clone();
+			let hash = tx.operation.hash;
 			match self.import_to_ready(tx, shard) {
 				Ok(res) => promoted.push(res),
 				Err(_e) => {

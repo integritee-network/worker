@@ -235,6 +235,6 @@ pub fn endowed_account() -> ed25519::Pair {
 	ed25519::Pair::from_seed(&[42u8; 32].into())
 }
 
-pub fn test_genesis_setup(state: &mut impl SgxExternalitiesTrait) {
+pub fn test_genesis_setup(_state: &mut impl SgxExternalitiesTrait) {
 	// set alice sudo account
 }

@@ -299,6 +299,8 @@ pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 	EnclaveTopPoolAuthor,
 	// For now the sidechain does only support one parentchain.
 	IntegriteeParentchainTriggeredBlockImportDispatcher,
+	EnclaveTrustedCallSigned,
+	EnclaveGetter,
 >;
 pub type EnclaveSidechainBlockImportQueue = ImportQueue<SignedSidechainBlock>;
 pub type EnclaveBlockImportConfirmationHandler = BlockImportConfirmationHandler<

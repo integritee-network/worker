@@ -161,11 +161,11 @@ impl<Ex> FutureTrustedOperations<Ex> {
 		// Add all tags that are missing
 		for tag in &tx.missing_tags {
 			let entry = tx_pool_wanted_map.entry(tag.clone()).or_insert_with(HashSet::new);
-			entry.insert(tx.operation.hash.clone());
+			entry.insert(tx.operation.hash);
 		}
 
 		// Add the operation to a by-hash waiting map
-		tx_pool_waiting_map.insert(tx.operation.hash.clone(), tx);
+		tx_pool_waiting_map.insert(tx.operation.hash, tx);
 	}
 
 	/// Returns true if given hash is part of the queue.

@@ -262,7 +262,7 @@ where
 			.remove_invalid(&[hash], shard, inblock)
 			// Only remove a single element, so first should return Ok().
 			.first()
-			.map(|o| o.hash().clone())
+			.map(|o| o.hash())
 			.ok_or(PoolError::InvalidTrustedOperation)?;
 
 		Ok(removed_op_hash)

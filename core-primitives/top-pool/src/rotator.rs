@@ -65,7 +65,7 @@ impl PoolRotator {
 		let mut banned = self.banned_until.write().unwrap();
 
 		for hash in hashes {
-			banned.insert(hash.clone(), *now + self.ban_time);
+			banned.insert(hash, *now + self.ban_time);
 		}
 
 		if banned.len() > 2 * EXPECTED_SIZE {
@@ -90,7 +90,7 @@ impl PoolRotator {
 			return false
 		}
 
-		self.ban(now, iter::once(xt.hash.clone()));
+		self.ban(now, iter::once(xt.hash));
 		true
 	}
 

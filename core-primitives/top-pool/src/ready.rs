@@ -203,7 +203,7 @@ impl<Ex> ReadyOperations<Ex> {
 
 		*current_insertion_id += 1;
 		let insertion_id = *current_insertion_id;
-		let hash = tx.operation.hash.clone();
+		let hash = tx.operation.hash;
 		let operation = tx.operation;
 
 		let (replaced, unlocks) = self.replace_previous(&operation, shard)?;
@@ -224,7 +224,7 @@ impl<Ex> ReadyOperations<Ex> {
 			// Check if the operation that satisfies the tag is still in the queue.
 			if let Some(other) = tag_map.get(tag) {
 				let tx = ready.get_mut(other).expect(HASH_READY);
-				tx.unlocks.push(hash.clone());
+				tx.unlocks.push(hash);
 				// this operation depends on some other, so it doesn't go to best directly.
 				goes_to_best = false;
 			} else {
@@ -237,7 +237,7 @@ impl<Ex> ReadyOperations<Ex> {
 		// only entries that have been removed.
 
 		for tag in &operation.provides {
-			tag_map.insert(tag.clone(), hash.clone());
+			tag_map.insert(tag.clone(), hash);
 		}
 
 		let operation = OperationRef { operation, insertion_id };
@@ -283,7 +283,7 @@ impl<Ex> ReadyOperations<Ex> {
 		hash: &TxHash,
 		shard: ShardIdentifier,
 	) -> Option<Arc<TrustedOperation<Ex>>> {
-		self.by_hashes(&[hash.clone()], shard).into_iter().next().unwrap_or(None)
+		self.by_hashes(&[*hash], shard).into_iter().next().unwrap_or(None)
 	}
 
 	/// Retrieve operations by hash
@@ -573,7 +573,7 @@ impl<Ex> BestIterator<Ex> {
 			self.best.insert(tx_ref);
 		} else {
 			// otherwise we're still awaiting for some deps
-			self.awaiting.insert(tx_ref.operation.hash.clone(), (satisfied, tx_ref));
+			self.awaiting.insert(tx_ref.operation.hash, (satisfied, tx_ref));
 		}
 	}
 }

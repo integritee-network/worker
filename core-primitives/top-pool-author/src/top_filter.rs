@@ -39,6 +39,12 @@ impl<TCS, G> CallsOnlyFilter<TCS, G> {
 	}
 }
 
+impl<TCS, G> Default for CallsOnlyFilter<TCS, G> {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 impl<TCS, G> Filter for CallsOnlyFilter<TCS, G>
 where
 	TCS: PartialEq + Encode + Debug,
@@ -60,6 +66,12 @@ pub struct AllowAllTopsFilter<TCS, G> {
 impl<TCS, G> AllowAllTopsFilter<TCS, G> {
 	pub fn new() -> Self {
 		Self { _phantom: Default::default() }
+	}
+}
+
+impl<TCS, G> Default for AllowAllTopsFilter<TCS, G> {
+	fn default() -> Self {
+		Self::new()
 	}
 }
 
@@ -86,6 +98,12 @@ impl<TCS, G> GettersOnlyFilter<TCS, G> {
 	}
 }
 
+impl<TCS, G> Default for GettersOnlyFilter<TCS, G> {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 impl<TCS, G> Filter for GettersOnlyFilter<TCS, G>
 where
 	TCS: PartialEq + Encode + Debug,
@@ -106,6 +124,12 @@ pub struct IndirectCallsOnlyFilter<TCS, G> {
 impl<TCS, G> IndirectCallsOnlyFilter<TCS, G> {
 	pub fn new() -> Self {
 		Self { _phantom: Default::default() }
+	}
+}
+
+impl<TCS, G> Default for IndirectCallsOnlyFilter<TCS, G> {
+	fn default() -> Self {
+		Self::new()
 	}
 }
 
@@ -132,6 +156,12 @@ impl<TCS, G> NoDirectCallsFilter<TCS, G> {
 	}
 }
 
+impl<TCS, G> Default for NoDirectCallsFilter<TCS, G> {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 impl<TCS, G> Filter for NoDirectCallsFilter<TCS, G>
 where
 	TCS: PartialEq + Encode + Debug,
@@ -155,6 +185,12 @@ impl<TCS, G> DenyAllFilter<TCS, G> {
 	}
 }
 
+impl<TCS, G> Default for DenyAllFilter<TCS, G> {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 impl<TCS, G> Filter for DenyAllFilter<TCS, G>
 where
 	TCS: PartialEq + Encode + Debug,
@@ -171,18 +207,13 @@ where
 mod tests {
 
 	use super::*;
-	
-	
+
 	use itp_test::mock::stf_mock::{
 		mock_top_direct_trusted_call_signed, mock_top_indirect_trusted_call_signed,
 		mock_top_trusted_getter_signed,
 	};
-	
-	
-	
-	use std::{
-		string::{String, ToString},
-	};
+
+	use std::string::{String, ToString};
 
 	#[test]
 	fn filter_returns_none_if_values_is_filtered_out() {

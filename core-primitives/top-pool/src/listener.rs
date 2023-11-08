@@ -74,7 +74,7 @@ where
 	///
 	/// The watcher can be used to subscribe to life-cycle events of that extrinsic.
 	pub fn create_watcher(&mut self, hash: TxHash) {
-		let new_watcher = Watcher::new_watcher(hash.clone(), self.rpc_response_sender.clone());
+		let new_watcher = Watcher::new_watcher(hash, self.rpc_response_sender.clone());
 		self.watchers.insert(hash, new_watcher);
 	}
 
@@ -118,7 +118,7 @@ where
 	pub fn pruned(&mut self, block_hash: SidechainBlockHash, tx: &TxHash) {
 		debug!(target: "txpool", "[{:?}] Pruned at {:?}", tx, block_hash);
 		self.fire(tx, |s| s.in_block(block_hash));
-		self.finality_watchers.entry(block_hash).or_insert(vec![]).push(tx.clone());
+		self.finality_watchers.entry(block_hash).or_insert(vec![]).push(*tx);
 
 		while self.finality_watchers.len() > MAX_FINALITY_WATCHERS {
 			if let Some((_hash, txs)) = self.finality_watchers.pop_front() {
