@@ -139,8 +139,8 @@ where
 			.map(|encoded_operations| {
 				let mut trusted_operations: Vec<StfTrustedOperation<TCS, G>> = Vec::new();
 				for encoded_operation in encoded_operations {
-					if let Ok(o) = TCS::decode(&mut encoded_operation.as_slice()) {
-						trusted_operations.push(StfTrustedOperation::direct_call(o));
+					if let Ok(o) = StfTrustedOperation::decode(&mut encoded_operation.as_slice()) {
+						trusted_operations.push(o);
 					}
 				}
 				trusted_operations

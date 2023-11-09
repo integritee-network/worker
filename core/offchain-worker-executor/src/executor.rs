@@ -117,11 +117,11 @@ impl<
 		let mut parentchain_effects: Vec<OpaqueCall> = Vec::new();
 
 		let shards = self.state_handler.list_shards()?;
-		debug!("Executing calls on {} shard(s)", shards.len());
+		trace!("Executing calls on {} shard(s)", shards.len());
 
 		for shard in shards {
 			let trusted_calls = self.top_pool_author.get_pending_trusted_calls(shard);
-			debug!("Executing {} trusted calls on shard {:?}", trusted_calls.len(), shard);
+			trace!("Executing {} trusted calls on shard {:?}", trusted_calls.len(), shard);
 
 			let batch_execution_result = self.stf_executor.propose_state_update(
 				&trusted_calls,
@@ -227,6 +227,7 @@ mod tests {
 	use itp_top_pool_author::mocks::AuthorApiMock;
 	use itp_types::Block as ParentchainBlock;
 
+	use itp_test::mock::stf_mock::mock_top_indirect_trusted_call_signed;
 	use std::boxed::Box;
 
 	type TestStateHandler = HandleStateMock;
@@ -280,17 +281,18 @@ mod tests {
 	}
 
 	#[test]
-	fn executing_tops_from_pool_works() {
+	fn executing_tops_from_pool_works_and_empties_pool() {
 		let stf_executor = Arc::new(TestStfExecutor::new(State::default()));
 		let top_pool_author = Arc::new(TestTopPoolAuthor::default());
-		top_pool_author.submit_top(mock_top_direct_trusted_call_signed().encode(), shard());
+		top_pool_author.submit_top(mock_top_indirect_trusted_call_signed().encode(), shard());
 
 		assert_eq!(1, top_pool_author.pending_tops(shard()).unwrap().len());
 
 		let executor = create_executor(top_pool_author.clone(), stf_executor);
-		executor.execute().unwrap();
 
-		assert!(top_pool_author.pending_tops(shard()).unwrap().is_empty());
+		assert!(executor.execute().is_ok());
+
+		assert_eq!(0, top_pool_author.pending_tops(shard()).unwrap().len());
 	}
 
 	#[test]
