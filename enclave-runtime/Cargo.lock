@@ -2317,11 +2317,13 @@ dependencies = [
  "itp-time-utils",
  "itp-types",
  "jsonrpc-core",
+ "log",
  "parity-scale-codec",
  "sgx_crypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
+ "sp-io",
  "sp-runtime",
  "sp-std",
 ]

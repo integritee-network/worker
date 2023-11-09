@@ -32,11 +32,13 @@ use itp_stf_primitives::{
 use itp_types::{
 	parentchain::ParentchainId, AccountId, Balance, Index, OpaqueCall, ShardIdentifier, Signature,
 };
+use log::*;
 use sp_core::{sr25519, Pair};
 use sp_runtime::transaction_validity::{
 	TransactionValidityError, UnknownTransaction, ValidTransaction,
 };
 use sp_std::{vec, vec::Vec};
+use std::{thread::sleep, time::Duration};
 // a few dummy types
 type NodeMetadataRepositoryMock = NodeMetadataRepository<NodeMetadataMock>;
 
@@ -63,12 +65,12 @@ impl StateCallInterface<TrustedCallSignedMock, SgxExternalities, NodeMetadataRep
 	type Error = StfMockError;
 
 	fn execute_call(
-		_state: &mut SgxExternalities,
-		_call: TrustedCallSignedMock,
-		_calls: &mut Vec<OpaqueCall>,
-		_node_metadata_repo: Arc<NodeMetadataRepositoryMock>,
+		state: &mut SgxExternalities,
+		call: TrustedCallSignedMock,
+		calls: &mut Vec<OpaqueCall>,
+		node_metadata_repo: Arc<NodeMetadataRepositoryMock>,
 	) -> Result<(), Self::Error> {
-		Ok(())
+		state.execute_with(|| call.execute(calls, node_metadata_repo))
 	}
 }
 
@@ -89,13 +91,17 @@ pub type TrustedOperationMock = TrustedOperation<TrustedCallSignedMock, GetterMo
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum TrustedCallMock {
+	noop(AccountId),
 	balance_transfer(AccountId, AccountId, Balance),
+	waste_time_ms(AccountId, u64),
 }
 
 impl TrustedCallMock {
 	pub fn sender_account(&self) -> &AccountId {
 		match self {
+			Self::noop(sender_account) => sender_account,
 			Self::balance_transfer(sender_account, ..) => sender_account,
+			Self::waste_time_ms(sender_account, ..) => sender_account,
 		}
 	}
 }
@@ -158,7 +164,20 @@ impl ExecuteCall<NodeMetadataRepositoryMock> for TrustedCallSignedMock {
 		_calls: &mut Vec<OpaqueCall>,
 		_node_metadata_repo: Arc<NodeMetadataRepositoryMock>,
 	) -> Result<(), Self::Error> {
-		Ok(())
+		match self.call {
+			TrustedCallMock::noop(_) => Ok(()),
+			TrustedCallMock::balance_transfer(_, _, balance) => {
+				info!("touching state");
+				sp_io::storage::set(b"dummy_key", &balance.encode());
+				Ok(())
+			},
+			TrustedCallMock::waste_time_ms(_, ms) => {
+				sp_io::storage::set(b"dummy_key_waste_time", &42u8.encode());
+				info!("executing stf call waste_time_ms. sleeping for {}ms", ms);
+				sleep(Duration::from_millis(ms));
+				Ok(())
+			},
+		}
 	}
 
 	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {

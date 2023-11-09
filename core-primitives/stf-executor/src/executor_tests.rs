@@ -29,6 +29,7 @@ use itp_test::mock::{
 	stf_mock::{GetterMock, StfMock, TrustedCallMock, TrustedCallSignedMock},
 };
 use itp_types::H256;
+use log::info;
 use sp_core::{ed25519, Pair};
 use sp_runtime::app_crypto::sp_core::blake2_256;
 use std::{sync::Arc, time::Duration, vec};
@@ -87,29 +88,31 @@ pub fn propose_state_update_executes_only_one_trusted_call_given_not_enough_time
 	let mrenclave = ocall_api.get_mrenclave_of_self().unwrap().m;
 	let (_, shard) = init_state_and_shard_with_state_handler(state_handler.as_ref());
 	let sender = endowed_account();
-	let signed_call_1 = TrustedCallMock::balance_transfer(
-		sender.public().into(),
-		sender.public().into(),
-		42,
-	)
-	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
+	let signed_call_1 = TrustedCallMock::waste_time_ms(sender.public().into(), 10).sign(
+		&sender.clone().into(),
+		0,
+		&mrenclave,
+		&shard,
+	);
 	let trusted_operation_1 = signed_call_1.into_trusted_operation(true);
 	let call_operation_hash_1: H256 = blake2_256(&trusted_operation_1.encode()).into();
 
-	let signed_call_2 =
-		TrustedCallMock::balance_transfer(sender.public().into(), sender.public().into(), 100)
-			.sign(&sender.clone().into(), 0, &mrenclave, &shard);
+	let signed_call_2 = TrustedCallMock::waste_time_ms(sender.public().into(), 10).sign(
+		&sender.clone().into(),
+		0,
+		&mrenclave,
+		&shard,
+	);
 	let trusted_operation_2 = signed_call_2.into_trusted_operation(true);
 
 	let (_, old_state_hash) = state_handler.load_cloned(&shard).unwrap();
-
 	// when
 	let batch_execution_result = stf_executor
 		.propose_state_update(
 			&vec![trusted_operation_1.clone(), trusted_operation_2.clone()],
 			&ParentchainHeaderBuilder::default().build(),
 			&shard,
-			Duration::from_nanos(50_000),
+			Duration::from_millis(5),
 			|state| state,
 		)
 		.unwrap();
@@ -120,6 +123,43 @@ pub fn propose_state_update_executes_only_one_trusted_call_given_not_enough_time
 	assert_eq!(batch_execution_result.get_executed_operation_hashes(), vec![call_operation_hash_1]);
 	// Ensure that state has been updated and not actually written.
 	assert_ne!(
+		state_handler.load_cloned(&shard).unwrap().0,
+		batch_execution_result.state_after_execution
+	);
+}
+
+pub fn propose_state_update_executes_noop_leaving_state_untouched() {
+	// given
+	let (stf_executor, ocall_api, state_handler) = stf_executor();
+	let mrenclave = ocall_api.get_mrenclave_of_self().unwrap().m;
+	let (_, shard) = init_state_and_shard_with_state_handler(state_handler.as_ref());
+	let sender = endowed_account();
+	let signed_call_1 = TrustedCallMock::noop(sender.public().into()).sign(
+		&sender.clone().into(),
+		0,
+		&mrenclave,
+		&shard,
+	);
+	let trusted_operation_1 = signed_call_1.into_trusted_operation(true);
+	let call_operation_hash_1: H256 = blake2_256(&trusted_operation_1.encode()).into();
+
+	let (_, old_state_hash) = state_handler.load_cloned(&shard).unwrap();
+	// when
+	let batch_execution_result = stf_executor
+		.propose_state_update(
+			&vec![trusted_operation_1.clone()],
+			&ParentchainHeaderBuilder::default().build(),
+			&shard,
+			Duration::from_millis(5), // 1000 yields 0, 2000 yields 1, 4000 yields 1, 25_000 yields 2
+			|state| state,
+		)
+		.unwrap();
+
+	// then
+	assert_eq!(old_state_hash, batch_execution_result.state_hash_before_execution);
+	assert_eq!(batch_execution_result.executed_operations.len(), 1);
+	assert_eq!(batch_execution_result.get_executed_operation_hashes(), vec![call_operation_hash_1]);
+	assert_eq!(
 		state_handler.load_cloned(&shard).unwrap().0,
 		batch_execution_result.state_after_execution
 	);

@@ -3829,11 +3829,13 @@ dependencies = [
  "itp-time-utils",
  "itp-types",
  "jsonrpc-core 18.0.0 (git+https://github.com/scs/jsonrpc?branch=no_std_v18)",
+ "log 0.4.19",
  "parity-scale-codec",
  "sgx_crypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
+ "sp-io 7.0.0",
  "sp-runtime",
  "sp-std",
 ]
