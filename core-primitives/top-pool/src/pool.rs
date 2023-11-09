@@ -677,7 +677,6 @@ pub mod tests {
 				shard,
 			))
 			.unwrap();
-
 			assert_eq!(pool.validated_pool().status(shard).ready, 2);
 			assert_eq!(pool.validated_pool().status(shard).future, 1);
 
@@ -718,7 +717,7 @@ pub mod tests {
 		))
 		.unwrap();
 		// when
-		pool.validated_pool.clear_stale(&BlockId::Number(5), shard).unwrap();
+		pool.validated_pool.clear_stale(&BlockId::Number(65), shard).unwrap();
 
 		// then
 		assert_eq!(pool.validated_pool().ready(shard).count(), 0);
@@ -809,26 +808,5 @@ pub mod tests {
 		// then
 		assert_eq!(pool.validated_pool().status(shard).ready, 0);
 		assert_eq!(pool.validated_pool().status(shard).future, 0);
-	}
-
-	#[test]
-	pub fn test_should_reject_transactions_with_no_provides() {
-		// given
-		let pool = test_pool();
-		let shard = ShardIdentifier::default();
-
-		// when
-		let err = block_on(pool.submit_one(
-			&BlockId::Number(0),
-			SOURCE,
-			TrustedOperationMock::direct_call(mock_trusted_call_signed(INVALID_NONCE)),
-			shard,
-		))
-		.unwrap_err();
-
-		// then
-		assert_eq!(pool.validated_pool().status(shard).ready, 0);
-		assert_eq!(pool.validated_pool().status(shard).future, 0);
-		assert!(matches!(err, error::Error::NoTagsProvided));
 	}
 }

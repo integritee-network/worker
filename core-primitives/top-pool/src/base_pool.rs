@@ -1150,7 +1150,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![1u8],
 				bytes: 1,
-				hash: hash(5),
+				hash: hash(1),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![],
@@ -1244,7 +1244,7 @@ pub mod tests {
 				}
 			),
 			"TrustedOperation { \
-hash: 4, priority: 1000, valid_till: 64, bytes: 1, propagate: true, \
+hash: 0x0404040404040404040404040404040404040404040404040404040404040404, priority: 1000, valid_till: 64, bytes: 1, propagate: true, \
 source: External, requires: [03,02], provides: [04], data: [4]}"
 				.to_owned()
 		);

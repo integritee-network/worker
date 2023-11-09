@@ -122,7 +122,11 @@ where
 
 	fn validate_trusted_call(trusted_call_signed: &TCS) -> ValidTransaction {
 		let from = trusted_call_signed.sender_account();
-		let requires = vec![];
+		let requires = if trusted_call_signed.nonce() == 0 {
+			vec![]
+		} else {
+			vec![(from, trusted_call_signed.nonce() - 1).encode()]
+		};
 		let provides = vec![(from, trusted_call_signed.nonce()).encode()];
 
 		ValidTransaction { priority: 1 << 20, requires, provides, longevity: 64, propagate: true }
