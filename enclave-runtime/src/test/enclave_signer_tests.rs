@@ -38,6 +38,7 @@ use itp_top_pool_author::{mocks::AuthorApiMock, traits::AuthorApi};
 use sgx_crypto_helper::{rsa3072::Rsa3072KeyPair, RsaKeyPair};
 use sp_core::Pair;
 use std::{sync::Arc, vec::Vec};
+
 type ShieldingKeyRepositoryMock = KeyRepositoryMock<Rsa3072KeyPair>;
 type TestStf = Stf<TrustedCallSigned, GetterExecutorMock, SgxExternalities, Runtime>;
 
@@ -100,6 +101,7 @@ pub fn nonce_is_computed_correctly() {
 		shielding_key_repo,
 		top_pool_author.clone(),
 	);
+	assert_eq!(enclave_account, enclave_signer.get_enclave_account().unwrap());
 
 	// create the first trusted_call and submit it
 	let trusted_call_1 =
@@ -107,12 +109,11 @@ pub fn nonce_is_computed_correctly() {
 	let trusted_call_1_signed =
 		enclave_signer.sign_call_with_self(&trusted_call_1, &shard).unwrap();
 	top_pool_author.submit_top(
-		TrustedOperation::<TrustedCallSigned, Getter>::indirect_call(trusted_call_1_signed.clone())
+		TrustedOperation::<TrustedCallSigned, Getter>::direct_call(trusted_call_1_signed.clone())
 			.encode(),
 		shard,
 	);
 	assert_eq!(1, top_pool_author.get_pending_trusted_calls_for(shard, &enclave_account).len());
-
 	// create the second trusted_call and submit it
 	let trusted_call_2 =
 		TrustedCall::balance_shield(enclave_account.clone(), AccountId::new([2u8; 32]), 200u128);

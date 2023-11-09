@@ -160,8 +160,8 @@ where
 			.map(|encoded_operations| {
 				let mut trusted_operations: Vec<StfTrustedOperation<TCS, G>> = Vec::new();
 				for encoded_operation in encoded_operations {
-					if let Ok(o) = TCS::decode(&mut encoded_operation.as_slice()) {
-						let top = StfTrustedOperation::direct_call(o);
+					if let Ok(top) = StfTrustedOperation::decode(&mut encoded_operation.as_slice())
+					{
 						if top.signed_caller_account() == Some(account) {
 							trusted_operations.push(top);
 						}
