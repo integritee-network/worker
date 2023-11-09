@@ -24,14 +24,16 @@ use crate::{
 };
 use codec::Decode;
 use ita_stf::{evm_helpers::evm_create_address, Index, TrustedCall, TrustedGetter};
-use itp_stf_primitives::types::{KeyPair, TrustedOperation};
+use itp_stf_primitives::{
+	traits::TrustedCallSigning,
+	types::{KeyPair, TrustedOperation},
+};
 use itp_types::AccountId;
 use log::*;
 use pallet_evm::{AddressMapping, HashedAddressMapping};
 use sp_core::{crypto::Ss58Codec, Pair, H160, U256};
 use sp_runtime::traits::BlakeTwo256;
 use std::vec::Vec;
-
 #[derive(Parser)]
 pub struct EvmCreateCommands {
 	/// Sender's incognito AccountId in ss58check format

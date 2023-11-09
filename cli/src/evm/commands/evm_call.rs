@@ -24,12 +24,14 @@ use crate::{
 };
 use codec::Decode;
 use ita_stf::{Index, TrustedCall, TrustedGetter};
-use itp_stf_primitives::types::{KeyPair, TrustedOperation};
+use itp_stf_primitives::{
+	traits::TrustedCallSigning,
+	types::{KeyPair, TrustedOperation},
+};
 use itp_types::AccountId;
 use log::*;
 use sp_core::{crypto::Ss58Codec, Pair, H160, U256};
 use std::{boxed::Box, vec::Vec};
-
 #[derive(Parser)]
 pub struct EvmCallCommands {
 	/// Sender's incognito AccountId in ss58check format

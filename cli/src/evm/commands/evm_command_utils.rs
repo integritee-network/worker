@@ -14,13 +14,16 @@
 	limitations under the License.
 
 */
+
 #[macro_export]
 macro_rules! get_layer_two_evm_nonce {
 	($signer_pair:ident, $cli:ident, $trusted_args:ident ) => {{
-		let top: TrustedOperation<TrustedCallSigned, Getter> =
+		use ita_stf::{Getter, TrustedCallSigned};
+
+		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
 			TrustedGetter::evm_nonce($signer_pair.public().into())
-				.sign(&KeyPair::Sr25519(Box::new($signer_pair.clone())))
-				.into();
+				.sign(&KeyPair::Sr25519(Box::new($signer_pair.clone()))),
+		));
 		let res = perform_trusted_operation($cli, $trusted_args, &top).unwrap_or_default();
 		let nonce = match res {
 			Some(n) => Index::decode(&mut n.as_slice()).unwrap_or(0),
