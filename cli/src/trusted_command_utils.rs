@@ -125,7 +125,7 @@ pub(crate) fn get_pair_from_str(trusted_args: &TrustedCli, account: &str) -> sr2
 				.expect("store should exist");
 			info!("store opened");
 			let public_key = &sr25519::AppPublic::from_ss58check(account).unwrap();
-			info!("public_key: {:#?}", &public_key);
+			info!("public_key: {:?}", &public_key);
 			let _pair = store.key_pair::<sr25519::AppPair>(public_key).unwrap().unwrap();
 			info!("key pair fetched");
 			drop(store);

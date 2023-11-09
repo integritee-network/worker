@@ -119,12 +119,12 @@ impl<OracleSourceInfo: Into<TradingInfo>> OracleSource<OracleSourceInfo> for Coi
 		let response = match response {
 			Ok(response) => response,
 			Err(e) => {
-				error!("coingecko execute_exchange_rate_request() failed with: {:#?}", &e);
+				error!("coingecko execute_exchange_rate_request() failed with: {:?}", &e);
 				return Err(Error::RestClient(e))
 			},
 		};
 
-		debug!("coingecko received response: {:#?}", &response);
+		debug!("coingecko received response: {:?}", &response);
 		let list = response.0;
 		if list.is_empty() {
 			return Err(Error::NoValidData(COINGECKO_URL.to_string(), trading_pair.key()))

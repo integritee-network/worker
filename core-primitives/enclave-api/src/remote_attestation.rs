@@ -367,7 +367,7 @@ impl RemoteAttestation for Enclave {
 		if res == sgx_quote3_error_t::SGX_QL_SUCCESS {
 			Ok(())
 		} else {
-			error!("Setting logging function failed with: {:#?}", res);
+			error!("Setting logging function failed with: {:?}", res);
 			Err(Error::SgxQuote(res))
 		}
 	}
@@ -803,7 +803,7 @@ pub extern "C" fn forward_qpl_log(log_level: sgx_ql_log_level_t, log_slice_ptr: 
 	// This is safe, as the previous block checks for `NULL` pointer.
 	let slice = unsafe { core::ffi::CStr::from_ptr(log_slice_ptr) };
 	match log_level {
-		sgx_ql_log_level_t::SGX_QL_LOG_INFO => info!("[QPL - INFO], {:#?}", slice),
-		sgx_ql_log_level_t::SGX_QL_LOG_ERROR => error!("[QPL - ERROR], {:#?}", slice),
+		sgx_ql_log_level_t::SGX_QL_LOG_INFO => info!("[QPL - INFO], {:?}", slice),
+		sgx_ql_log_level_t::SGX_QL_LOG_ERROR => error!("[QPL - ERROR], {:?}", slice),
 	}
 }
