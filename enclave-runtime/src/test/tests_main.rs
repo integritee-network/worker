@@ -488,12 +488,12 @@ fn test_signature_must_match_public_sender_in_call() {
 	let (top_pool_author, _, shard, mrenclave, shielding_key, _, stf_executor) = test_setup();
 
 	// create accounts
-	let sender = funded_pair();
-	let receiver = unfunded_public();
+	let receiver = funded_pair();
+	let victim = unfunded_public();
 
 	let trusted_operation =
-		TrustedCall::balance_transfer(receiver.into(), sender.public().into(), 1000)
-			.sign(&sender.clone().into(), 10, &mrenclave, &shard)
+		TrustedCall::balance_transfer(victim.into(), receiver.public().into(), 1000)
+			.sign(&receiver.clone().into(), 10, &mrenclave, &shard)
 			.into_trusted_operation(true);
 
 	submit_operation_to_top_pool(
@@ -508,7 +508,7 @@ fn test_signature_must_match_public_sender_in_call() {
 	let executed_batch = execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_author);
 
 	// then
-	assert!(!executed_batch.executed_operations[0].is_success());
+	assert_eq!(executed_batch.executed_operations.len(), 0);
 }
 
 fn test_invalid_nonce_call_is_not_executed() {
@@ -536,7 +536,7 @@ fn test_invalid_nonce_call_is_not_executed() {
 	let executed_batch = execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_author);
 
 	// then
-	assert!(!executed_batch.executed_operations[0].is_success());
+	assert_eq!(executed_batch.executed_operations.len(), 0);
 }
 
 fn test_non_root_shielding_call_is_not_executed() {
