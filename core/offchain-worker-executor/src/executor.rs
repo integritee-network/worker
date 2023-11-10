@@ -120,6 +120,10 @@ impl<
 		trace!("Executing calls on {} shard(s)", shards.len());
 
 		for shard in shards {
+			debug!(
+				"executing pending tops in top pool with status: {:?}",
+				self.top_pool_author.get_status(shard)
+			);
 			let trusted_calls = self.top_pool_author.get_pending_trusted_calls(shard);
 			trace!("Executing {} trusted calls on shard {:?}", trusted_calls.len(), shard);
 

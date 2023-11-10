@@ -34,7 +34,7 @@ use itp_stf_primitives::{
 	traits::TrustedCallVerification,
 	types::{AccountId, TrustedOperation as StfTrustedOperation, TrustedOperationOrHash},
 };
-use itp_top_pool::primitives::PoolFuture;
+use itp_top_pool::primitives::{PoolFuture, PoolStatus};
 use itp_types::ShardIdentifier;
 use jsonrpc_core::{futures::future::ready, Error as RpcError};
 use sp_core::{blake2_256, H256};
@@ -144,6 +144,28 @@ where
 					}
 				}
 				trusted_operations
+			})
+			.unwrap_or_default()
+	}
+
+	fn get_status(&self, shard: ShardIdentifier) -> PoolStatus {
+		self.tops
+			.read()
+			.unwrap()
+			.get(&shard)
+			.map(|encoded_operations| {
+				let mut trusted_operations: Vec<StfTrustedOperation<TCS, G>> = Vec::new();
+				for encoded_operation in encoded_operations {
+					if let Ok(o) = StfTrustedOperation::decode(&mut encoded_operation.as_slice()) {
+						trusted_operations.push(o);
+					}
+				}
+				PoolStatus {
+					ready: trusted_operations.len(),
+					ready_bytes: trusted_operations.encode().len(),
+					future: 0,
+					future_bytes: 0,
+				}
 			})
 			.unwrap_or_default()
 	}

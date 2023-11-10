@@ -21,7 +21,7 @@ use sp_runtime::{
 use std::collections::HashMap;
 
 /// TrustedOperation pool status.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct PoolStatus {
 	/// Number of operations in the ready queue.
 	pub ready: usize,

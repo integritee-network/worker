@@ -37,8 +37,8 @@ use itp_stf_state_handler::query_shard_state::QueryShardState;
 use itp_top_pool::{
 	error::{Error as PoolError, IntoPoolError},
 	primitives::{
-		BlockHash, InPoolOperation, PoolFuture, TrustedOperationPool, TrustedOperationSource,
-		TxHash,
+		BlockHash, InPoolOperation, PoolFuture, PoolStatus, TrustedOperationPool,
+		TrustedOperationSource, TxHash,
 	},
 };
 use itp_types::{BlockHash as SidechainBlockHash, ShardIdentifier};
@@ -352,6 +352,10 @@ where
 					|| matches!(o, StfTrustedOperation::<TCS, G>::indirect_call(_))
 			})
 			.collect()
+	}
+
+	fn get_status(&self, shard: ShardIdentifier) -> PoolStatus {
+		self.top_pool.status(shard)
 	}
 
 	fn get_pending_trusted_calls_for(

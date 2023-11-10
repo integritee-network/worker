@@ -24,7 +24,7 @@ use crate::error::Result;
 use itp_stf_primitives::types::{
 	AccountId, TrustedOperation as StfTrustedOperation, TrustedOperationOrHash,
 };
-use itp_top_pool::primitives::PoolFuture;
+use itp_top_pool::primitives::{PoolFuture, PoolStatus};
 use itp_types::{BlockHash as SidechainBlockHash, ShardIdentifier, H256};
 use jsonrpc_core::Error as RpcError;
 use std::vec::Vec;
@@ -53,9 +53,12 @@ where
 	/// Returns all pending trusted getters.
 	fn get_pending_getters(&self, shard: ShardIdentifier) -> Vec<StfTrustedOperation<TCS, G>>;
 
-	/// Returns all pending trusted calls.
+	/// Returns all pending trusted calls (in ready state).
 	fn get_pending_trusted_calls(&self, shard: ShardIdentifier)
 		-> Vec<StfTrustedOperation<TCS, G>>;
+
+	/// Returns pool status
+	fn get_status(&self, shard: ShardIdentifier) -> PoolStatus;
 
 	/// Returns all pending trusted calls for a given `account`
 	fn get_pending_trusted_calls_for(

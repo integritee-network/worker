@@ -504,11 +504,10 @@ fn test_signature_must_match_public_sender_in_call() {
 	)
 	.unwrap();
 
-	// when
 	let executed_batch = execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_author);
 
-	// then
-	assert_eq!(executed_batch.executed_operations.len(), 0);
+	// the top pool doesn't verify signatures, the call will only fail upon execution
+	assert!(!executed_batch.executed_operations[0].is_success());
 }
 
 fn test_invalid_nonce_call_is_not_executed() {
@@ -532,11 +531,10 @@ fn test_invalid_nonce_call_is_not_executed() {
 	)
 	.unwrap();
 
-	// when
 	let executed_batch = execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_author);
 
-	// then
-	assert_eq!(executed_batch.executed_operations.len(), 0);
+	// due to #1488, even invalid nonces will enter the pool ready state, so we can only verify that the call will fail
+	assert!(!executed_batch.executed_operations[0].is_success());
 }
 
 fn test_non_root_shielding_call_is_not_executed() {
