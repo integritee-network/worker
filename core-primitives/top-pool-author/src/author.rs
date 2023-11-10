@@ -176,9 +176,12 @@ where
 				Err(_) => return Box::pin(ready(Err(ClientError::BadFormat.into()))),
 			};
 
+		trace!("decrypted indirect invocation: {:?}", trusted_operation);
+
 		// apply top filter - return error if this specific type of trusted operation
 		// is not allowed by the filter
 		if !self.top_filter.filter(&trusted_operation) {
+			warn!("unsupported operation");
 			return Box::pin(ready(Err(ClientError::UnsupportedOperation.into())))
 		}
 

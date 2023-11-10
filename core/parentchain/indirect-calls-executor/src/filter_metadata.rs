@@ -31,6 +31,7 @@ use itp_node_api::metadata::{
 	pallet_balances::BalancesCallIndexes, NodeMetadata, NodeMetadataTrait,
 };
 use itp_types::H256;
+use log::trace;
 
 pub trait EventsFromMetadata<NodeMetadata> {
 	type Output: FilterEvents;
@@ -208,6 +209,7 @@ pub enum IndirectCall {
 
 impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for IndirectCall {
 	fn dispatch(&self, executor: &Executor) -> Result<()> {
+		trace!("dispatching indirect call {:?}", self);
 		match self {
 			IndirectCall::ShieldFunds(shieldfunds_args) => shieldfunds_args.dispatch(executor),
 			IndirectCall::Invoke(invoke_args) => invoke_args.dispatch(executor),
