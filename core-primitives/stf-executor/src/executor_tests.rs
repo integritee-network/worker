@@ -29,7 +29,6 @@ use itp_test::mock::{
 	stf_mock::{GetterMock, StfMock, TrustedCallMock, TrustedCallSignedMock},
 };
 use itp_types::H256;
-use log::info;
 use sp_core::{ed25519, Pair};
 use sp_runtime::app_crypto::sp_core::blake2_256;
 use std::{sync::Arc, time::Duration, vec};

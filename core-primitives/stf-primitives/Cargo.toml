@@ -23,5 +23,6 @@ std = [
     "codec/std",
     # substrate
     "sp-core/std",
+    "sp-std/std",
     "sp-runtime/std",
 ]
