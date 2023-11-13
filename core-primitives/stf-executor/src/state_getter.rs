@@ -45,7 +45,7 @@ where
 	fn get_state(getter: G, state: &mut SgxExternalities) -> Result<Option<Vec<u8>>> {
 		if !getter.is_authorized() {
 			error!("getter authorization failed");
-			return Err(Error::OperationHasInvalidSignature)
+			return Err(Error::GetterIsNotAuthorized)
 		}
 		debug!("getter authorized. calling into STF to get state");
 		Ok(Stf::execute_getter(state, getter))
@@ -71,7 +71,7 @@ mod tests {
 
 		assert_matches!(
 			TestStateGetter::get_state(GetterMock::trusted(getter), &mut state),
-			Err(Error::OperationHasInvalidSignature)
+			Err(Error::GetterIsNotAuthorized)
 		);
 	}
 

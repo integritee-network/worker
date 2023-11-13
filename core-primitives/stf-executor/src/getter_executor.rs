@@ -64,7 +64,7 @@ where
 		shard: &ShardIdentifier,
 		encoded_signed_getter: Vec<u8>,
 	) -> Result<Option<Vec<u8>>> {
-		let getter: G = Decode::decode(&mut encoded_signed_getter.as_slice())?;
+		let getter = G::decode(&mut encoded_signed_getter.as_slice())?;
 		trace!("Successfully decoded trusted getter");
 
 		let getter_timer_start = Instant::now();
