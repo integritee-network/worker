@@ -21,35 +21,36 @@ use crate::{
 	base_pool::TrustedOperation,
 	error,
 	future::WaitingTrustedOperations,
+	primitives::TxHash,
 	tracked_map::{self, ReadOnlyTrackedMap, TrackedMap},
 };
 use alloc::{boxed::Box, collections::BTreeSet, sync::Arc, vec, vec::Vec};
-use core::{cmp, cmp::Ord, default::Default, hash};
+use core::{cmp, cmp::Ord, default::Default};
 use itp_stf_primitives::types::ShardIdentifier;
 use log::trace;
-use sp_runtime::{traits::Member, transaction_validity::TransactionTag as Tag};
+use sp_runtime::transaction_validity::TransactionTag as Tag;
 use std::collections::{HashMap, HashSet};
 
-type TopErrorResult<Hash, Ex> = error::Result<(Vec<Arc<TrustedOperation<Hash, Ex>>>, Vec<Hash>)>;
+type TopErrorResult<Ex> = error::Result<(Vec<Arc<TrustedOperation<Ex>>>, Vec<TxHash>)>;
 
 /// An in-pool operation reference.
 ///
 /// Should be cheap to clone.
 #[derive(Debug)]
-pub struct OperationRef<Hash, Ex> {
+pub struct OperationRef<Ex> {
 	/// The actual operation data.
-	pub operation: Arc<TrustedOperation<Hash, Ex>>,
+	pub operation: Arc<TrustedOperation<Ex>>,
 	/// Unique id when operation was inserted into the pool.
 	pub insertion_id: u64,
 }
 
-impl<Hash, Ex> Clone for OperationRef<Hash, Ex> {
+impl<Ex> Clone for OperationRef<Ex> {
 	fn clone(&self) -> Self {
 		OperationRef { operation: self.operation.clone(), insertion_id: self.insertion_id }
 	}
 }
 
-impl<Hash, Ex> Ord for OperationRef<Hash, Ex> {
+impl<Ex> Ord for OperationRef<Ex> {
 	fn cmp(&self, other: &Self) -> cmp::Ordering {
 		self.operation
 			.priority
@@ -59,25 +60,25 @@ impl<Hash, Ex> Ord for OperationRef<Hash, Ex> {
 	}
 }
 
-impl<Hash, Ex> PartialOrd for OperationRef<Hash, Ex> {
+impl<Ex> PartialOrd for OperationRef<Ex> {
 	fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
 		Some(self.cmp(other))
 	}
 }
 
-impl<Hash, Ex> PartialEq for OperationRef<Hash, Ex> {
+impl<Ex> PartialEq for OperationRef<Ex> {
 	fn eq(&self, other: &Self) -> bool {
 		self.cmp(other) == cmp::Ordering::Equal
 	}
 }
-impl<Hash, Ex> Eq for OperationRef<Hash, Ex> {}
+impl<Ex> Eq for OperationRef<Ex> {}
 
 #[derive(Debug)]
-pub struct ReadyTx<Hash, Ex> {
+pub struct ReadyTx<Ex> {
 	/// A reference to a operation
-	pub operation: OperationRef<Hash, Ex>,
+	pub operation: OperationRef<Ex>,
 	/// A list of operations that get unlocked by this one
-	pub unlocks: Vec<Hash>,
+	pub unlocks: Vec<TxHash>,
 	/// How many required tags are provided inherently
 	///
 	/// Some operations might be already pruned from the queue,
@@ -85,7 +86,7 @@ pub struct ReadyTx<Hash, Ex> {
 	pub requires_offset: usize,
 }
 
-impl<Hash: Clone, Ex> Clone for ReadyTx<Hash, Ex> {
+impl<Ex> Clone for ReadyTx<Ex> {
 	fn clone(&self) -> Self {
 		ReadyTx {
 			operation: self.operation.clone(),
@@ -103,24 +104,24 @@ qed
 "#;
 
 #[derive(Debug)]
-pub struct ReadyOperations<Hash: hash::Hash + Eq + Ord, Ex> {
+pub struct ReadyOperations<Ex> {
 	/// Insertion id
 	insertion_id: HashMap<ShardIdentifier, u64>,
 	/// tags that are provided by Ready operations
-	provided_tags: HashMap<ShardIdentifier, HashMap<Tag, Hash>>,
+	provided_tags: HashMap<ShardIdentifier, HashMap<Tag, TxHash>>,
 	/// Trusted Operations that are ready (i.e. don't have any requirements external to the pool)
-	ready: HashMap<ShardIdentifier, TrackedMap<Hash, ReadyTx<Hash, Ex>>>,
+	ready: HashMap<ShardIdentifier, TrackedMap<TxHash, ReadyTx<Ex>>>,
 	/// Best operations that are ready to be included to the block without any other previous operation.
-	best: HashMap<ShardIdentifier, BTreeSet<OperationRef<Hash, Ex>>>,
+	best: HashMap<ShardIdentifier, BTreeSet<OperationRef<Ex>>>,
 }
 
-impl<Hash, Ex> tracked_map::Size for ReadyTx<Hash, Ex> {
+impl<Ex> tracked_map::Size for ReadyTx<Ex> {
 	fn size(&self) -> usize {
 		self.operation.operation.bytes
 	}
 }
 
-impl<Hash: hash::Hash + Eq + Ord, Ex> Default for ReadyOperations<Hash, Ex> {
+impl<Ex> Default for ReadyOperations<Ex> {
 	fn default() -> Self {
 		ReadyOperations {
 			insertion_id: Default::default(),
@@ -131,9 +132,9 @@ impl<Hash: hash::Hash + Eq + Ord, Ex> Default for ReadyOperations<Hash, Ex> {
 	}
 }
 
-impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
+impl<Ex> ReadyOperations<Ex> {
 	/// Borrows a map of tags that are provided by operations in this queue.
-	pub fn provided_tags(&self, shard: ShardIdentifier) -> Option<&HashMap<Tag, Hash>> {
+	pub fn provided_tags(&self, shard: ShardIdentifier) -> Option<&HashMap<Tag, TxHash>> {
 		if let Some(tag_pool) = &self.provided_tags.get(&shard) {
 			return Some(tag_pool)
 		}
@@ -151,10 +152,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 	///    - operations that are valid for a shorter time go first
 	/// 4. Lastly we sort by the time in the queue
 	///    - operations that are longer in the queue go first
-	pub fn get(
-		&self,
-		shard: ShardIdentifier,
-	) -> impl Iterator<Item = Arc<TrustedOperation<Hash, Ex>>> {
+	pub fn get(&self, shard: ShardIdentifier) -> impl Iterator<Item = Arc<TrustedOperation<Ex>>> {
 		// check if shard tx pool exists
 		if let Some(ready_map) = self.ready.get(&shard) {
 			return BestIterator {
@@ -163,7 +161,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 				awaiting: Default::default(),
 			}
 		}
-		let tracked_map: TrackedMap<Hash, ReadyTx<Hash, Ex>> = Default::default();
+		let tracked_map: TrackedMap<TxHash, ReadyTx<Ex>> = Default::default();
 		BestIterator {
 			all: tracked_map.get_read_only_clone(),
 			best: Default::default(),
@@ -183,9 +181,9 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 	/// Returns operations that were replaced by the one imported.
 	pub fn import(
 		&mut self,
-		tx: WaitingTrustedOperations<Hash, Ex>,
+		tx: WaitingTrustedOperations<Ex>,
 		shard: ShardIdentifier,
-	) -> error::Result<Vec<Arc<TrustedOperation<Hash, Ex>>>> {
+	) -> error::Result<Vec<Arc<TrustedOperation<Ex>>>> {
 		assert!(
 			tx.is_ready(),
 			"Only ready operations can be imported. Missing: {:?}",
@@ -205,28 +203,28 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 
 		*current_insertion_id += 1;
 		let insertion_id = *current_insertion_id;
-		let hash = tx.operation.hash.clone();
+		let hash = tx.operation.hash;
 		let operation = tx.operation;
 
 		let (replaced, unlocks) = self.replace_previous(&operation, shard)?;
 
 		let mut goes_to_best = true;
 		let tracked_ready = self.ready.entry(shard).or_insert_with(|| {
-			let x: TrackedMap<Hash, ReadyTx<Hash, Ex>> = Default::default();
+			let x: TrackedMap<TxHash, ReadyTx<Ex>> = Default::default();
 			x
 		});
 		let mut ready = tracked_ready.write();
 		let mut requires_offset = 0;
 		// Add links to operations that unlock the current one
 		let tag_map = self.provided_tags.entry(shard).or_insert_with(|| {
-			let x: HashMap<Tag, Hash> = Default::default();
+			let x: HashMap<Tag, TxHash> = Default::default();
 			x
 		});
 		for tag in &operation.requires {
 			// Check if the operation that satisfies the tag is still in the queue.
 			if let Some(other) = tag_map.get(tag) {
 				let tx = ready.get_mut(other).expect(HASH_READY);
-				tx.unlocks.push(hash.clone());
+				tx.unlocks.push(hash);
 				// this operation depends on some other, so it doesn't go to best directly.
 				goes_to_best = false;
 			} else {
@@ -239,14 +237,14 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 		// only entries that have been removed.
 
 		for tag in &operation.provides {
-			tag_map.insert(tag.clone(), hash.clone());
+			tag_map.insert(tag.clone(), hash);
 		}
 
 		let operation = OperationRef { operation, insertion_id };
 
 		// insert to best if it doesn't require any other operation to be included before it
 		let best_set = self.best.entry(shard).or_insert_with(|| {
-			let x: BTreeSet<OperationRef<Hash, Ex>> = Default::default();
+			let x: BTreeSet<OperationRef<Ex>> = Default::default();
 			x
 		});
 		if goes_to_best {
@@ -260,7 +258,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 	}
 
 	/// Fold a list of ready operations to compute a single value.
-	pub fn fold<R, F: FnMut(Option<R>, &ReadyTx<Hash, Ex>) -> Option<R>>(
+	pub fn fold<R, F: FnMut(Option<R>, &ReadyTx<Ex>) -> Option<R>>(
 		&mut self,
 		f: F,
 		shard: ShardIdentifier,
@@ -272,7 +270,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 	}
 
 	/// Returns true if given hash is part of the queue.
-	pub fn contains(&self, hash: &Hash, shard: ShardIdentifier) -> bool {
+	pub fn contains(&self, hash: &TxHash, shard: ShardIdentifier) -> bool {
 		if let Some(ready_map) = self.ready.get(&shard) {
 			return ready_map.read().contains_key(hash)
 		}
@@ -282,18 +280,18 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 	/// Retrive operation by hash
 	pub fn by_hash(
 		&self,
-		hash: &Hash,
+		hash: &TxHash,
 		shard: ShardIdentifier,
-	) -> Option<Arc<TrustedOperation<Hash, Ex>>> {
-		self.by_hashes(&[hash.clone()], shard).into_iter().next().unwrap_or(None)
+	) -> Option<Arc<TrustedOperation<Ex>>> {
+		self.by_hashes(&[*hash], shard).into_iter().next().unwrap_or(None)
 	}
 
 	/// Retrieve operations by hash
 	pub fn by_hashes(
 		&self,
-		hashes: &[Hash],
+		hashes: &[TxHash],
 		shard: ShardIdentifier,
-	) -> Vec<Option<Arc<TrustedOperation<Hash, Ex>>>> {
+	) -> Vec<Option<Arc<TrustedOperation<Ex>>>> {
 		if let Some(ready_map) = self.ready.get(&shard) {
 			let ready = ready_map.read();
 			return hashes
@@ -311,9 +309,9 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 	/// All removed operations are returned.
 	pub fn remove_subtree(
 		&mut self,
-		hashes: &[Hash],
+		hashes: &[TxHash],
 		shard: ShardIdentifier,
-	) -> Vec<Arc<TrustedOperation<Hash, Ex>>> {
+	) -> Vec<Arc<TrustedOperation<Ex>>> {
 		let to_remove = hashes.to_vec();
 		self.remove_subtree_with_tag_filter(to_remove, None, shard)
 	}
@@ -325,10 +323,10 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 	/// that will stay in the pool, so that we can early exit and avoid descending.
 	fn remove_subtree_with_tag_filter(
 		&mut self,
-		mut to_remove: Vec<Hash>,
+		mut to_remove: Vec<TxHash>,
 		provides_tag_filter: Option<HashSet<Tag>>,
 		shard: ShardIdentifier,
-	) -> Vec<Arc<TrustedOperation<Hash, Ex>>> {
+	) -> Vec<Arc<TrustedOperation<Ex>>> {
 		let mut removed = vec![];
 		if let Some(ready_map) = self.ready.get_mut(&shard) {
 			let mut ready = ready_map.write();
@@ -384,7 +382,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 		&mut self,
 		tag: Tag,
 		shard: ShardIdentifier,
-	) -> Vec<Arc<TrustedOperation<Hash, Ex>>> {
+	) -> Vec<Arc<TrustedOperation<Ex>>> {
 		let mut removed = vec![];
 		let mut to_remove = vec![tag];
 
@@ -481,9 +479,9 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 	/// and a list of hashes that are still in pool and gets unlocked by the new operation.
 	fn replace_previous(
 		&mut self,
-		tx: &TrustedOperation<Hash, Ex>,
+		tx: &TrustedOperation<Ex>,
 		shard: ShardIdentifier,
-	) -> TopErrorResult<Hash, Ex> {
+	) -> TopErrorResult<Ex> {
 		if let Some(provided_tag_map) = self.provided_tags.get(&shard) {
 			let (to_remove, unlocks) = {
 				// check if we are replacing a operation
@@ -550,10 +548,10 @@ impl<Hash: hash::Hash + Member + Ord, Ex> ReadyOperations<Hash, Ex> {
 }
 
 /// Iterator of ready operations ordered by priority.
-pub struct BestIterator<Hash, Ex> {
-	all: ReadOnlyTrackedMap<Hash, ReadyTx<Hash, Ex>>,
-	awaiting: HashMap<Hash, (usize, OperationRef<Hash, Ex>)>,
-	best: BTreeSet<OperationRef<Hash, Ex>>,
+pub struct BestIterator<Ex> {
+	all: ReadOnlyTrackedMap<TxHash, ReadyTx<Ex>>,
+	awaiting: HashMap<TxHash, (usize, OperationRef<Ex>)>,
+	best: BTreeSet<OperationRef<Ex>>,
 }
 
 /*impl Default for BestIterator<Hash, Ex> {
@@ -566,22 +564,22 @@ pub struct BestIterator<Hash, Ex> {
 	fn default() ->  self.awaiting.insert("NA", (0, tx_default))
 }*/
 
-impl<Hash: hash::Hash + Member + Ord, Ex> BestIterator<Hash, Ex> {
+impl<Ex> BestIterator<Ex> {
 	/// Depending on number of satisfied requirements insert given ref
 	/// either to awaiting set or to best set.
-	fn best_or_awaiting(&mut self, satisfied: usize, tx_ref: OperationRef<Hash, Ex>) {
+	fn best_or_awaiting(&mut self, satisfied: usize, tx_ref: OperationRef<Ex>) {
 		if satisfied >= tx_ref.operation.requires.len() {
 			// If we have satisfied all deps insert to best
 			self.best.insert(tx_ref);
 		} else {
 			// otherwise we're still awaiting for some deps
-			self.awaiting.insert(tx_ref.operation.hash.clone(), (satisfied, tx_ref));
+			self.awaiting.insert(tx_ref.operation.hash, (satisfied, tx_ref));
 		}
 	}
 }
 
-impl<Hash: hash::Hash + Member + Ord, Ex> Iterator for BestIterator<Hash, Ex> {
-	type Item = Arc<TrustedOperation<Hash, Ex>>;
+impl<Ex> Iterator for BestIterator<Ex> {
+	type Item = Arc<TrustedOperation<Ex>>;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		loop {
@@ -630,12 +628,18 @@ fn remove_item<T: PartialEq>(vec: &mut Vec<T>, item: &T) {
 pub mod tests {
 	use super::*;
 	use crate::primitives::TrustedOperationSource as Source;
+	use codec::Encode;
+	use sp_core::blake2_256;
 
-	fn tx(id: u8) -> TrustedOperation<u64, Vec<u8>> {
+	fn hash(index: u64) -> TxHash {
+		blake2_256(index.encode().as_slice()).into()
+	}
+
+	fn tx(id: u8) -> TrustedOperation<Vec<u8>> {
 		TrustedOperation {
 			data: vec![id],
 			bytes: 1,
-			hash: id as u64,
+			hash: hash(id as u64),
 			priority: 1,
 			valid_till: 2,
 			requires: vec![vec![1], vec![2]],
@@ -645,11 +649,11 @@ pub mod tests {
 		}
 	}
 
-	fn import<H: hash::Hash + Eq + Member + Ord, Ex>(
-		ready: &mut ReadyOperations<H, Ex>,
-		tx: TrustedOperation<H, Ex>,
+	fn import<Ex>(
+		ready: &mut ReadyOperations<Ex>,
+		tx: TrustedOperation<Ex>,
 		shard: ShardIdentifier,
-	) -> error::Result<Vec<Arc<TrustedOperation<H, Ex>>>> {
+	) -> error::Result<Vec<Arc<TrustedOperation<Ex>>>> {
 		let x = WaitingTrustedOperations::new(tx, ready.provided_tags(shard), &[]);
 		ready.import(x, shard)
 	}
@@ -740,7 +744,7 @@ pub mod tests {
 		let tx5 = TrustedOperation {
 			data: vec![5],
 			bytes: 1,
-			hash: 5,
+			hash: hash(5),
 			priority: 1,
 			valid_till: u64::max_value(), // use the max_value() here for testing.
 			requires: vec![tx1.provides[0].clone()],

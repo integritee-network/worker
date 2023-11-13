@@ -37,6 +37,7 @@ pub type PalletString = Vec<u8>;
 pub type PalletString = String;
 
 pub use sp_core::{crypto::AccountId32 as AccountId, H256};
+pub type Nonce = u32;
 
 pub use itp_sgx_runtime_primitives::types::*;
 

@@ -193,14 +193,14 @@ fn main() {
 	let quoting_enclave_target_info = match enclave.qe_get_target_info() {
 		Ok(target_info) => Some(target_info),
 		Err(e) => {
-			warn!("Setting up DCAP - qe_get_target_info failed with error: {:#?}, continuing.", e);
+			warn!("Setting up DCAP - qe_get_target_info failed with error: {:?}, continuing.", e);
 			None
 		},
 	};
 	let quote_size = match enclave.qe_get_quote_size() {
 		Ok(size) => Some(size),
 		Err(e) => {
-			warn!("Setting up DCAP - qe_get_quote_size failed with error: {:#?}, continuing.", e);
+			warn!("Setting up DCAP - qe_get_quote_size failed with error: {:?}, continuing.", e);
 			None
 		},
 	};

@@ -8,21 +8,20 @@ use crate::error;
 use alloc::{boxed::Box, string::String, sync::Arc, vec::Vec};
 use byteorder::{BigEndian, ByteOrder};
 use codec::{Decode, Encode};
-use core::{hash::Hash, pin::Pin};
-use ita_stf::TrustedOperation as StfTrustedOperation;
+use core::pin::Pin;
 use itp_stf_primitives::types::ShardIdentifier;
 use itp_types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::{channel::mpsc::Receiver, Future, Stream};
 use sp_core::H256;
 use sp_runtime::{
 	generic::BlockId,
-	traits::{Block as BlockT, Member, NumberFor},
+	traits::{Block as BlockT, NumberFor},
 	transaction_validity::{TransactionLongevity, TransactionPriority, TransactionTag},
 };
 use std::collections::HashMap;
 
 /// TrustedOperation pool status.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct PoolStatus {
 	/// Number of operations in the ready queue.
 	pub ready: usize,
@@ -121,11 +120,11 @@ pub type TrustedOperationStatusStream<Hash, BlockHash> =
 pub type ImportNotificationStream<H> = Receiver<H>;
 
 /// TrustedOperation hash type for a pool.
-pub type TxHash<P> = <P as TrustedOperationPool>::Hash;
+pub type TxHash = H256;
 /// Block hash type for a pool.
-pub type BlockHash<P> = <<P as TrustedOperationPool>::Block as BlockT>::Hash;
+pub type BlockHash = H256;
 /// Type of operations event stream for a pool.
-pub type TrustedOperationStatusStreamFor<P> = TrustedOperationStatusStream<TxHash<P>, BlockHash<P>>;
+pub type TrustedOperationStatusStreamFor = TrustedOperationStatusStream<TxHash, BlockHash>;
 
 /// Typical future type used in operation pool api.
 pub type PoolFuture<T, E> = Pin<Box<dyn Future<Output = Result<T, E>> + Send>>;
@@ -137,13 +136,11 @@ pub type PoolFuture<T, E> = Pin<Box<dyn Future<Output = Result<T, E>> + Send>>;
 pub trait InPoolOperation {
 	/// TrustedOperation type.
 	type TrustedOperation;
-	/// TrustedOperation hash type.
-	type Hash;
 
 	/// Get the reference to the operation data.
 	fn data(&self) -> &Self::TrustedOperation;
 	/// Get hash of the operation.
-	fn hash(&self) -> &Self::Hash;
+	fn hash(&self) -> TxHash;
 	/// Get priority of the operation.
 	fn priority(&self) -> &TransactionPriority;
 	/// Get longevity of the operation.
@@ -157,16 +154,11 @@ pub trait InPoolOperation {
 }
 
 /// TrustedOperation pool interface.
-pub trait TrustedOperationPool: Send + Sync {
+pub trait TrustedOperationPool<TOP>: Send + Sync {
 	/// Block type.
 	type Block: BlockT;
-	/// TrustedOperation hash type.
-	type Hash: Hash + Eq + Member;
 	/// In-pool operation type.
-	type InPoolOperation: InPoolOperation<
-		TrustedOperation = StfTrustedOperation,
-		Hash = TxHash<Self>,
-	>;
+	type InPoolOperation: InPoolOperation<TrustedOperation = TOP>;
 	/// Error type.
 	type Error: From<error::Error> + error::IntoPoolError;
 
@@ -179,27 +171,27 @@ pub trait TrustedOperationPool: Send + Sync {
 		&self,
 		at: &BlockId<Self::Block>,
 		source: TrustedOperationSource,
-		xts: Vec<StfTrustedOperation>,
+		xts: Vec<TOP>,
 		shard: ShardIdentifier,
-	) -> PoolFuture<Vec<Result<TxHash<Self>, Self::Error>>, Self::Error>;
+	) -> PoolFuture<Vec<Result<TxHash, Self::Error>>, Self::Error>;
 
 	/// Returns a future that imports one unverified operation to the pool.
 	fn submit_one(
 		&self,
 		at: &BlockId<Self::Block>,
 		source: TrustedOperationSource,
-		xt: StfTrustedOperation,
+		xt: TOP,
 		shard: ShardIdentifier,
-	) -> PoolFuture<TxHash<Self>, Self::Error>;
+	) -> PoolFuture<TxHash, Self::Error>;
 
 	/// Returns a future that import a single operation and starts to watch their progress in the pool.
 	fn submit_and_watch(
 		&self,
 		at: &BlockId<Self::Block>,
 		source: TrustedOperationSource,
-		xt: StfTrustedOperation,
+		xt: TOP,
 		shard: ShardIdentifier,
-	) -> PoolFuture<TxHash<Self>, Self::Error>;
+	) -> PoolFuture<TxHash, Self::Error>;
 
 	// *** Block production / Networking
 	/// Get an iterator for ready operations ordered by priority.
@@ -231,7 +223,7 @@ pub trait TrustedOperationPool: Send + Sync {
 	/// Remove operations identified by given hashes (and dependent operations) from the pool.
 	fn remove_invalid(
 		&self,
-		hashes: &[TxHash<Self>],
+		hashes: &[TxHash],
 		shard: ShardIdentifier,
 		inblock: bool,
 	) -> Vec<Arc<Self::InPoolOperation>>;
@@ -242,24 +234,24 @@ pub trait TrustedOperationPool: Send + Sync {
 
 	// *** logging / RPC / networking
 	/// Return an event stream of operations imported to the pool.
-	fn import_notification_stream(&self) -> ImportNotificationStream<TxHash<Self>>;
+	fn import_notification_stream(&self) -> ImportNotificationStream<TxHash>;
 
 	// *** networking
 	/// Notify the pool about operations broadcast.
-	fn on_broadcasted(&self, propagations: HashMap<TxHash<Self>, Vec<String>>);
+	fn on_broadcasted(&self, propagations: HashMap<TxHash, Vec<String>>);
 
 	/// Returns operation hash
-	fn hash_of(&self, xt: &StfTrustedOperation) -> TxHash<Self>;
+	fn hash_of(&self, xt: &TOP) -> TxHash;
 
 	/// Return specific ready operation by hash, if there is one.
 	fn ready_transaction(
 		&self,
-		hash: &TxHash<Self>,
+		hash: &TxHash,
 		shard: ShardIdentifier,
 	) -> Option<Arc<Self::InPoolOperation>>;
 
 	/// Notify the listener of top inclusion in sidechain block
-	fn on_block_imported(&self, hashes: &[Self::Hash], block_hash: SidechainBlockHash);
+	fn on_block_imported(&self, hashes: &[TxHash], block_hash: SidechainBlockHash);
 }
 
 /// The source of the transaction.

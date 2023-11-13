@@ -17,10 +17,10 @@
 
 use crate::error::{Error, Result};
 use codec::Encode;
-use ita_stf::StatePayload;
 use itp_settings::worker::BLOCK_NUMBER_FINALIZATION_DIFF;
 use itp_sgx_crypto::{key_repository::AccessKey, StateCrypto};
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
+use itp_stf_primitives::types::StatePayload;
 use itp_time_utils::now_as_millis;
 use itp_types::{ShardIdentifier, H256};
 use its_primitives::traits::{

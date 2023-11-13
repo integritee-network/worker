@@ -20,7 +20,7 @@
 
 use crate::{error::Result, state_getter::GetState};
 use codec::Decode;
-use ita_stf::Getter;
+use itp_stf_primitives::traits::GetterAuthorization;
 use itp_stf_state_observer::traits::ObserveState;
 use itp_types::ShardIdentifier;
 use log::*;
@@ -35,28 +35,36 @@ pub trait ExecuteGetter {
 	) -> Result<Option<Vec<u8>>>;
 }
 
-pub struct GetterExecutor<StateObserver, StateGetter> {
+pub struct GetterExecutor<StateObserver, StateGetter, G>
+where
+	G: PartialEq,
+{
 	state_observer: Arc<StateObserver>,
 	_phantom: PhantomData<StateGetter>,
+	_phantom_getter: PhantomData<G>,
 }
 
-impl<StateObserver, StateGetter> GetterExecutor<StateObserver, StateGetter> {
+impl<StateObserver, StateGetter, G> GetterExecutor<StateObserver, StateGetter, G>
+where
+	G: PartialEq,
+{
 	pub fn new(state_observer: Arc<StateObserver>) -> Self {
-		Self { state_observer, _phantom: Default::default() }
+		Self { state_observer, _phantom: Default::default(), _phantom_getter: Default::default() }
 	}
 }
 
-impl<StateObserver, StateGetter> ExecuteGetter for GetterExecutor<StateObserver, StateGetter>
+impl<StateObserver, StateGetter, G> ExecuteGetter for GetterExecutor<StateObserver, StateGetter, G>
 where
 	StateObserver: ObserveState,
-	StateGetter: GetState<StateObserver::StateType>,
+	StateGetter: GetState<StateObserver::StateType, G>,
+	G: PartialEq + Decode + GetterAuthorization,
 {
 	fn execute_getter(
 		&self,
 		shard: &ShardIdentifier,
 		encoded_signed_getter: Vec<u8>,
 	) -> Result<Option<Vec<u8>>> {
-		let getter: Getter = Decode::decode(&mut encoded_signed_getter.as_slice())?;
+		let getter = G::decode(&mut encoded_signed_getter.as_slice())?;
 		trace!("Successfully decoded trusted getter");
 
 		let getter_timer_start = Instant::now();
@@ -74,30 +82,30 @@ where
 mod tests {
 	use super::*;
 	use codec::{Decode, Encode};
-	use ita_stf::{PublicGetter, TrustedGetter, TrustedGetterSigned};
-	use itp_stf_primitives::types::AccountId;
+
 	use itp_stf_state_observer::mock::ObserveStateMock;
-	use sp_core::ed25519::Signature;
-	use sp_runtime::MultiSignature;
+	use itp_test::mock::stf_mock::{
+		GetterMock, PublicGetterMock, TrustedGetterMock, TrustedGetterSignedMock,
+	};
 
 	type TestState = u64;
 	type TestStateObserver = ObserveStateMock<TestState>;
 
 	struct TestStateGetter;
-	impl GetState<TestState> for TestStateGetter {
-		fn get_state(_getter: Getter, state: &mut TestState) -> Result<Option<Vec<u8>>> {
+	impl GetState<TestState, GetterMock> for TestStateGetter {
+		fn get_state(_getter: GetterMock, state: &mut TestState) -> Result<Option<Vec<u8>>> {
 			Ok(Some(state.encode()))
 		}
 	}
 
-	type TestGetterExecutor = GetterExecutor<TestStateObserver, TestStateGetter>;
+	type TestGetterExecutor = GetterExecutor<TestStateObserver, TestStateGetter, GetterMock>;
 
 	#[test]
 	fn executing_getters_works() {
 		let test_state = 23489u64;
 		let state_observer = Arc::new(TestStateObserver::new(test_state));
 		let getter_executor = TestGetterExecutor::new(state_observer);
-		let getter = Getter::trusted(dummy_trusted_getter());
+		let getter = GetterMock::trusted(dummy_trusted_getter());
 
 		let state_result = getter_executor
 			.execute_getter(&ShardIdentifier::default(), getter.encode())
@@ -112,7 +120,7 @@ mod tests {
 		let test_state = 23489u64;
 		let state_observer = Arc::new(TestStateObserver::new(test_state));
 		let getter_executor = TestGetterExecutor::new(state_observer);
-		let getter = Getter::public(PublicGetter::some_value);
+		let getter = GetterMock::public(PublicGetterMock::some_value);
 
 		let state_result = getter_executor
 			.execute_getter(&ShardIdentifier::default(), getter.encode())
@@ -121,10 +129,9 @@ mod tests {
 		let decoded_state: TestState = Decode::decode(&mut state_result.as_slice()).unwrap();
 		assert_eq!(decoded_state, test_state);
 	}
-	fn dummy_trusted_getter() -> TrustedGetterSigned {
-		TrustedGetterSigned::new(
-			TrustedGetter::nonce(AccountId::new([0u8; 32])),
-			MultiSignature::Ed25519(Signature::from_raw([0u8; 64])),
-		)
+	fn dummy_trusted_getter() -> TrustedGetterSignedMock {
+		TrustedGetterSignedMock { getter: TrustedGetterMock::some_value, signature: true }
+		//			TrustedGetter::nonce(AccountId::new([0u8; 32])),
+		//			MultiSignature::Ed25519(Signature::from_raw([0u8; 64])),
 	}
 }

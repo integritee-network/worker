@@ -24,46 +24,43 @@ pub extern crate alloc;
 use crate::{
 	error,
 	future::{FutureTrustedOperations, WaitingTrustedOperations},
-	primitives::{InPoolOperation, PoolStatus, TrustedOperationSource as Source},
+	primitives::{InPoolOperation, PoolStatus, TrustedOperationSource as Source, TxHash},
 	ready::ReadyOperations,
 };
 use alloc::{fmt, sync::Arc, vec, vec::Vec};
-use core::{hash, iter};
+use core::iter;
 use itp_stf_primitives::types::ShardIdentifier;
 use log::{debug, trace, warn};
 use sp_core::hexdisplay::HexDisplay;
-use sp_runtime::{
-	traits::Member,
-	transaction_validity::{
-		TransactionLongevity as Longevity, TransactionPriority as Priority, TransactionTag as Tag,
-	},
+use sp_runtime::transaction_validity::{
+	TransactionLongevity as Longevity, TransactionPriority as Priority, TransactionTag as Tag,
 };
 use std::collections::HashSet;
 
 /// Successful import result.
 #[derive(Debug, PartialEq, Eq)]
-pub enum Imported<Hash, Ex> {
+pub enum Imported<Ex> {
 	/// TrustedOperation was successfully imported to Ready queue.
 	Ready {
 		/// Hash of operation that was successfully imported.
-		hash: Hash,
+		hash: TxHash,
 		/// operations that got promoted from the Future queue.
-		promoted: Vec<Hash>,
+		promoted: Vec<TxHash>,
 		/// operations that failed to be promoted from the Future queue and are now discarded.
-		failed: Vec<Hash>,
+		failed: Vec<TxHash>,
 		/// operations removed from the Ready pool (replaced).
-		removed: Vec<Arc<TrustedOperation<Hash, Ex>>>,
+		removed: Vec<Arc<TrustedOperation<Ex>>>,
 	},
 	/// TrustedOperation was successfully imported to Future queue.
 	Future {
 		/// Hash of operation that was successfully imported.
-		hash: Hash,
+		hash: TxHash,
 	},
 }
 
-impl<Hash, Ex> Imported<Hash, Ex> {
+impl<Ex> Imported<Ex> {
 	/// Returns the hash of imported operation.
-	pub fn hash(&self) -> &Hash {
+	pub fn hash(&self) -> &TxHash {
 		use self::Imported::*;
 		match *self {
 			Ready { ref hash, .. } => hash,
@@ -74,24 +71,24 @@ impl<Hash, Ex> Imported<Hash, Ex> {
 
 /// Status of pruning the queue.
 #[derive(Debug)]
-pub struct PruneStatus<Hash, Ex> {
+pub struct PruneStatus<Ex> {
 	/// A list of imports that satisfying the tag triggered.
-	pub promoted: Vec<Imported<Hash, Ex>>,
+	pub promoted: Vec<Imported<Ex>>,
 	/// A list of operations that failed to be promoted and now are discarded.
-	pub failed: Vec<Hash>,
+	pub failed: Vec<TxHash>,
 	/// A list of operations that got pruned from the ready queue.
-	pub pruned: Vec<Arc<TrustedOperation<Hash, Ex>>>,
+	pub pruned: Vec<Arc<TrustedOperation<Ex>>>,
 }
 
 /// Immutable operation
 #[derive(PartialEq, Eq, Clone)]
-pub struct TrustedOperation<Hash, Extrinsic> {
+pub struct TrustedOperation<Extrinsic> {
 	/// Raw extrinsic representing that operation.
 	pub data: Extrinsic,
 	/// Number of bytes encoding of the operation requires.
 	pub bytes: usize,
 	/// TrustedOperation hash (unique)
-	pub hash: Hash,
+	pub hash: TxHash,
 	/// TrustedOperation priority (higher = better)
 	pub priority: Priority,
 	/// At which block the operation becomes invalid?
@@ -106,22 +103,21 @@ pub struct TrustedOperation<Hash, Extrinsic> {
 	pub source: Source,
 }
 
-impl<Hash, Extrinsic> AsRef<Extrinsic> for TrustedOperation<Hash, Extrinsic> {
+impl<Extrinsic> AsRef<Extrinsic> for TrustedOperation<Extrinsic> {
 	fn as_ref(&self) -> &Extrinsic {
 		&self.data
 	}
 }
 
-impl<Hash, Extrinsic> InPoolOperation for TrustedOperation<Hash, Extrinsic> {
+impl<Extrinsic> InPoolOperation for TrustedOperation<Extrinsic> {
 	type TrustedOperation = Extrinsic;
-	type Hash = Hash;
 
 	fn data(&self) -> &Extrinsic {
 		&self.data
 	}
 
-	fn hash(&self) -> &Hash {
-		&self.hash
+	fn hash(&self) -> TxHash {
+		self.hash
 	}
 
 	fn priority(&self) -> &Priority {
@@ -145,7 +141,7 @@ impl<Hash, Extrinsic> InPoolOperation for TrustedOperation<Hash, Extrinsic> {
 	}
 }
 
-impl<Hash: Clone, Extrinsic: Clone> TrustedOperation<Hash, Extrinsic> {
+impl<Extrinsic: Clone> TrustedOperation<Extrinsic> {
 	/// Explicit operation clone.
 	///
 	/// TrustedOperation should be cloned only if absolutely necessary && we want
@@ -155,7 +151,7 @@ impl<Hash: Clone, Extrinsic: Clone> TrustedOperation<Hash, Extrinsic> {
 		TrustedOperation {
 			data: self.data.clone(),
 			bytes: self.bytes,
-			hash: self.hash.clone(),
+			hash: self.hash,
 			priority: self.priority,
 			source: self.source,
 			valid_till: self.valid_till,
@@ -166,9 +162,8 @@ impl<Hash: Clone, Extrinsic: Clone> TrustedOperation<Hash, Extrinsic> {
 	}
 }
 
-impl<Hash, Extrinsic> fmt::Debug for TrustedOperation<Hash, Extrinsic>
+impl<Extrinsic> fmt::Debug for TrustedOperation<Extrinsic>
 where
-	Hash: fmt::Debug,
 	Extrinsic: fmt::Debug,
 {
 	fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -215,10 +210,10 @@ const RECENTLY_PRUNED_TAGS: usize = 2;
 /// Most likely it is required to revalidate them and recompute set of
 /// required tags.
 #[derive(Debug)]
-pub struct BasePool<Hash: hash::Hash + Eq + Ord, Ex> {
+pub struct BasePool<Ex> {
 	reject_future_operations: bool,
-	future: FutureTrustedOperations<Hash, Ex>,
-	ready: ReadyOperations<Hash, Ex>,
+	future: FutureTrustedOperations<Ex>,
+	ready: ReadyOperations<Ex>,
 	/// Store recently pruned tags (for last two invocations).
 	///
 	/// This is used to make sure we don't accidentally put
@@ -227,13 +222,13 @@ pub struct BasePool<Hash: hash::Hash + Eq + Ord, Ex> {
 	recently_pruned_index: usize,
 }
 
-impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> Default for BasePool<Hash, Ex> {
+impl<Ex: fmt::Debug> Default for BasePool<Ex> {
 	fn default() -> Self {
 		Self::new(false)
 	}
 }
 
-impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
+impl<Ex: fmt::Debug> BasePool<Ex> {
 	/// Create new pool given reject_future_operations flag.
 	pub fn new(reject_future_operations: bool) -> Self {
 		BasePool {
@@ -262,7 +257,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	}
 
 	/// Returns if the operation for the given hash is already imported.
-	pub fn is_imported(&self, tx_hash: &Hash, shard: ShardIdentifier) -> bool {
+	pub fn is_imported(&self, tx_hash: &TxHash, shard: ShardIdentifier) -> bool {
 		self.future.contains(tx_hash, shard) || self.ready.contains(tx_hash, shard)
 	}
 
@@ -275,9 +270,9 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	/// ready to be included in the block.
 	pub fn import(
 		&mut self,
-		tx: TrustedOperation<Hash, Ex>,
+		tx: TrustedOperation<Ex>,
 		shard: ShardIdentifier,
-	) -> error::Result<Imported<Hash, Ex>> {
+	) -> error::Result<Imported<Ex>> {
 		if self.is_imported(&tx.hash, shard) {
 			return Err(error::Error::AlreadyImported)
 		}
@@ -301,7 +296,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 				return Err(error::Error::RejectedFutureTrustedOperation)
 			}
 
-			let hash = tx.operation.hash.clone();
+			let hash = tx.operation.hash;
 			self.future.import(tx, shard);
 			return Ok(Imported::Future { hash })
 		}
@@ -314,10 +309,10 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	/// NOTE the operation has to have all requirements satisfied.
 	fn import_to_ready(
 		&mut self,
-		tx: WaitingTrustedOperations<Hash, Ex>,
+		tx: WaitingTrustedOperations<Ex>,
 		shard: ShardIdentifier,
-	) -> error::Result<Imported<Hash, Ex>> {
-		let hash = tx.operation.hash.clone();
+	) -> error::Result<Imported<Ex>> {
+		let hash = tx.operation.hash;
 		let mut promoted = vec![];
 		let mut failed = vec![];
 		let mut removed = vec![];
@@ -330,7 +325,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 			to_import.append(&mut self.future.satisfy_tags(&tx.operation.provides, shard));
 
 			// import this operation
-			let current_hash = tx.operation.hash.clone();
+			let current_hash = tx.operation.hash;
 			match self.ready.import(tx, shard) {
 				Ok(mut replaced) => {
 					if !first {
@@ -369,10 +364,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	}
 
 	/// Returns an iterator over ready operations in the pool.
-	pub fn ready(
-		&self,
-		shard: ShardIdentifier,
-	) -> impl Iterator<Item = Arc<TrustedOperation<Hash, Ex>>> {
+	pub fn ready(&self, shard: ShardIdentifier) -> impl Iterator<Item = Arc<TrustedOperation<Ex>>> {
 		self.ready.get(shard)
 	}
 
@@ -382,10 +374,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	}
 
 	/// Returns an iterator over future operations in the pool.
-	pub fn futures(
-		&self,
-		shard: ShardIdentifier,
-	) -> impl Iterator<Item = &TrustedOperation<Hash, Ex>> {
+	pub fn futures(&self, shard: ShardIdentifier) -> impl Iterator<Item = &TrustedOperation<Ex>> {
 		self.future.all(shard)
 	}
 
@@ -395,9 +384,9 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	/// iterator an `Option` is produced (so the resulting `Vec` always have the same length).
 	pub fn by_hashes(
 		&self,
-		hashes: &[Hash],
+		hashes: &[TxHash],
 		shard: ShardIdentifier,
-	) -> Vec<Option<Arc<TrustedOperation<Hash, Ex>>>> {
+	) -> Vec<Option<Arc<TrustedOperation<Ex>>>> {
 		let ready = self.ready.by_hashes(hashes, shard);
 		let future = self.future.by_hashes(hashes, shard);
 
@@ -407,9 +396,9 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	/// Returns pool operation by hash.
 	pub fn ready_by_hash(
 		&self,
-		hash: &Hash,
+		hash: &TxHash,
 		shard: ShardIdentifier,
-	) -> Option<Arc<TrustedOperation<Hash, Ex>>> {
+	) -> Option<Arc<TrustedOperation<Ex>>> {
 		self.ready.by_hash(hash, shard)
 	}
 
@@ -423,7 +412,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 		ready: &Limit,
 		future: &Limit,
 		shard: ShardIdentifier,
-	) -> Vec<Arc<TrustedOperation<Hash, Ex>>> {
+	) -> Vec<Arc<TrustedOperation<Ex>>> {
 		let mut removed = vec![];
 
 		while ready.is_exceeded(self.ready.len(shard), self.ready.bytes(shard)) {
@@ -442,7 +431,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 			);
 
 			if let Some(minimal) = minimal {
-				removed.append(&mut self.remove_subtree(&[minimal.operation.hash.clone()], shard))
+				removed.append(&mut self.remove_subtree(&[minimal.operation.hash], shard))
 			} else {
 				break
 			}
@@ -464,7 +453,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 			);
 
 			if let Some(minimal) = minimal {
-				removed.append(&mut self.remove_subtree(&[minimal.operation.hash.clone()], shard))
+				removed.append(&mut self.remove_subtree(&[minimal.operation.hash], shard))
 			} else {
 				break
 			}
@@ -483,16 +472,16 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 	/// and you don't want them to be stored in the pool use `prune_tags` method.
 	pub fn remove_subtree(
 		&mut self,
-		hashes: &[Hash],
+		hashes: &[TxHash],
 		shard: ShardIdentifier,
-	) -> Vec<Arc<TrustedOperation<Hash, Ex>>> {
+	) -> Vec<Arc<TrustedOperation<Ex>>> {
 		let mut removed = self.ready.remove_subtree(hashes, shard);
 		removed.extend(self.future.remove(hashes, shard));
 		removed
 	}
 
 	/// Removes and returns all operations from the future queue.
-	pub fn clear_future(&mut self, shard: ShardIdentifier) -> Vec<Arc<TrustedOperation<Hash, Ex>>> {
+	pub fn clear_future(&mut self, shard: ShardIdentifier) -> Vec<Arc<TrustedOperation<Ex>>> {
 		self.future.clear(shard)
 	}
 
@@ -506,7 +495,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 		&mut self,
 		tags: impl IntoIterator<Item = Tag>,
 		shard: ShardIdentifier,
-	) -> PruneStatus<Hash, Ex> {
+	) -> PruneStatus<Ex> {
 		let mut to_import = vec![];
 		let mut pruned = vec![];
 		let recently_pruned = &mut self.recently_pruned[self.recently_pruned_index];
@@ -525,7 +514,7 @@ impl<Hash: hash::Hash + Member + Ord, Ex: fmt::Debug> BasePool<Hash, Ex> {
 		let mut promoted = vec![];
 		let mut failed = vec![];
 		for tx in to_import {
-			let hash = tx.operation.hash.clone();
+			let hash = tx.operation.hash;
 			match self.import_to_ready(tx, shard) {
 				Ok(res) => promoted.push(res),
 				Err(_e) => {
@@ -570,10 +559,13 @@ pub mod tests {
 
 	use super::*;
 	use alloc::borrow::ToOwned;
+	use itp_types::H256;
 
-	type Hash = u64;
+	fn hash(index: u8) -> H256 {
+		[index; 32].into()
+	}
 
-	fn test_pool() -> BasePool<Hash, Vec<u8>> {
+	fn test_pool() -> BasePool<Vec<u8>> {
 		BasePool::default()
 	}
 
@@ -588,7 +580,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![1u8],
 				bytes: 1,
-				hash: 1u64,
+				hash: hash(1),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![],
@@ -616,7 +608,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![1u8],
 				bytes: 1,
-				hash: 1,
+				hash: hash(1),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![],
@@ -631,7 +623,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![1u8],
 				bytes: 1,
-				hash: 1,
+				hash: hash(1),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![],
@@ -659,7 +651,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![1u8],
 				bytes: 1,
-				hash: 1,
+				hash: hash(1),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![vec![0]],
@@ -676,7 +668,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![2u8],
 				bytes: 1,
-				hash: 2,
+				hash: hash(2),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![],
@@ -704,7 +696,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![1u8],
 				bytes: 1,
-				hash: 1,
+				hash: hash(1),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![vec![0]],
@@ -719,7 +711,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![3u8],
 				bytes: 1,
-				hash: 3,
+				hash: hash(3),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![vec![2]],
@@ -734,7 +726,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![2u8],
 				bytes: 1,
-				hash: 2,
+				hash: hash(2),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![vec![1]],
@@ -749,7 +741,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![4u8],
 				bytes: 1,
-				hash: 4,
+				hash: hash(4),
 				priority: 1_000u64,
 				valid_till: 64u64,
 				requires: vec![vec![3], vec![4]],
@@ -768,7 +760,7 @@ pub mod tests {
 				TrustedOperation {
 					data: vec![5u8],
 					bytes: 1,
-					hash: 5,
+					hash: hash(5),
 					priority: 5u64,
 					valid_till: 64u64,
 					requires: vec![],
@@ -792,8 +784,8 @@ pub mod tests {
 		assert_eq!(
 			res,
 			Imported::Ready {
-				hash: 5,
-				promoted: vec![1, 2, 3, 4],
+				hash: hash(5),
+				promoted: vec![hash(1), hash(2), hash(3), hash(4)],
 				failed: vec![],
 				removed: vec![]
 			}
@@ -809,7 +801,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![1u8],
 				bytes: 1,
-				hash: 1,
+				hash: hash(1),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![vec![0]],
@@ -824,7 +816,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![3u8],
 				bytes: 1,
-				hash: 3,
+				hash: hash(3),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![vec![1]],
@@ -843,7 +835,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![2u8],
 				bytes: 1,
-				hash: 2,
+				hash: hash(2),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![vec![2]],
@@ -869,7 +861,7 @@ pub mod tests {
 				TrustedOperation {
 					data: vec![4u8],
 					bytes: 1,
-					hash: 4,
+					hash: hash(4),
 					priority: 50u64,
 					valid_till: 64u64,
 					requires: vec![],
@@ -887,7 +879,12 @@ pub mod tests {
 		assert_eq!(it.next(), None);
 		assert_eq!(
 			res,
-			Imported::Ready { hash: 4, promoted: vec![1, 3], failed: vec![2], removed: vec![] }
+			Imported::Ready {
+				hash: hash(4),
+				promoted: vec![hash(1), hash(3)],
+				failed: vec![hash(2)],
+				removed: vec![]
+			}
 		);
 		assert_eq!(pool.future.len(shard), 0);
 	}
@@ -901,7 +898,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![1u8],
 				bytes: 1,
-				hash: 1,
+				hash: hash(1),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![vec![0]],
@@ -916,7 +913,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![3u8],
 				bytes: 1,
-				hash: 3,
+				hash: hash(3),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![vec![1]],
@@ -935,7 +932,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![2u8],
 				bytes: 1,
-				hash: 2,
+				hash: hash(2),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![vec![2]],
@@ -961,7 +958,7 @@ pub mod tests {
 				TrustedOperation {
 					data: vec![4u8],
 					bytes: 1,
-					hash: 4,
+					hash: hash(4),
 					priority: 1u64, // lower priority than Tx(2)
 					valid_till: 64u64,
 					requires: vec![],
@@ -990,7 +987,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![5u8; 1024],
 				bytes: 1,
-				hash: 5,
+				hash: hash(5),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![],
@@ -1005,7 +1002,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![3u8; 1024],
 				bytes: 1,
-				hash: 7,
+				hash: hash(7),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![],
@@ -1029,7 +1026,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![5u8],
 				bytes: 1,
-				hash: 5,
+				hash: hash(5),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![],
@@ -1044,7 +1041,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![1u8],
 				bytes: 1,
-				hash: 1,
+				hash: hash(1),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![vec![0]],
@@ -1059,7 +1056,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![3u8],
 				bytes: 1,
-				hash: 3,
+				hash: hash(3),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![vec![2]],
@@ -1074,7 +1071,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![2u8],
 				bytes: 1,
-				hash: 2,
+				hash: hash(2),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![vec![1]],
@@ -1089,7 +1086,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![4u8],
 				bytes: 1,
-				hash: 4,
+				hash: hash(4),
 				priority: 1_000u64,
 				valid_till: 64u64,
 				requires: vec![vec![3], vec![4]],
@@ -1105,7 +1102,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![6u8],
 				bytes: 1,
-				hash: 6,
+				hash: hash(6),
 				priority: 1_000u64,
 				valid_till: 64u64,
 				requires: vec![vec![11]],
@@ -1120,7 +1117,7 @@ pub mod tests {
 		assert_eq!(pool.future.len(shard), 1);
 
 		// when
-		pool.remove_subtree(&[6, 1], shard);
+		pool.remove_subtree(&[hash(6), hash(1)], shard);
 
 		// then
 		assert_eq!(pool.ready(shard).count(), 1);
@@ -1137,7 +1134,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![5u8],
 				bytes: 1,
-				hash: 5,
+				hash: hash(5),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![vec![0]],
@@ -1153,7 +1150,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![1u8],
 				bytes: 1,
-				hash: 1,
+				hash: hash(1),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![],
@@ -1168,7 +1165,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![2u8],
 				bytes: 1,
-				hash: 2,
+				hash: hash(2),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![vec![2]],
@@ -1183,7 +1180,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![3u8],
 				bytes: 1,
-				hash: 3,
+				hash: hash(3),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![vec![1]],
@@ -1198,7 +1195,7 @@ pub mod tests {
 			TrustedOperation {
 				data: vec![4u8],
 				bytes: 1,
-				hash: 4,
+				hash: hash(4),
 				priority: 1_000u64,
 				valid_till: 64u64,
 				requires: vec![vec![3], vec![2]],
@@ -1221,7 +1218,7 @@ pub mod tests {
 		assert_eq!(result.failed.len(), 0);
 		assert_eq!(
 			result.promoted[0],
-			Imported::Ready { hash: 5, promoted: vec![], failed: vec![], removed: vec![] }
+			Imported::Ready { hash: hash(5), promoted: vec![], failed: vec![], removed: vec![] }
 		);
 		assert_eq!(result.promoted.len(), 1);
 		assert_eq!(pool.future.len(shard), 0);
@@ -1237,7 +1234,7 @@ pub mod tests {
 				TrustedOperation {
 					data: vec![4u8],
 					bytes: 1,
-					hash: 4,
+					hash: hash(4),
 					priority: 1_000u64,
 					valid_till: 64u64,
 					requires: vec![vec![3], vec![2]],
@@ -1247,7 +1244,7 @@ pub mod tests {
 				}
 			),
 			"TrustedOperation { \
-hash: 4, priority: 1000, valid_till: 64, bytes: 1, propagate: true, \
+hash: 0x0404040404040404040404040404040404040404040404040404040404040404, priority: 1000, valid_till: 64, bytes: 1, propagate: true, \
 source: External, requires: [03,02], provides: [04], data: [4]}"
 				.to_owned()
 		);
@@ -1258,7 +1255,7 @@ source: External, requires: [03,02], provides: [04], data: [4]}"
 		assert!(TrustedOperation {
 			data: vec![4u8],
 			bytes: 1,
-			hash: 4,
+			hash: hash(4),
 			priority: 1_000u64,
 			valid_till: 64u64,
 			requires: vec![vec![3], vec![2]],
@@ -1271,7 +1268,7 @@ source: External, requires: [03,02], provides: [04], data: [4]}"
 		assert!(!TrustedOperation {
 			data: vec![4u8],
 			bytes: 1,
-			hash: 4,
+			hash: hash(4),
 			priority: 1_000u64,
 			valid_till: 64u64,
 			requires: vec![vec![3], vec![2]],
@@ -1296,7 +1293,7 @@ source: External, requires: [03,02], provides: [04], data: [4]}"
 			TrustedOperation {
 				data: vec![5u8],
 				bytes: 1,
-				hash: 5,
+				hash: hash(5),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![vec![0]],
@@ -1324,7 +1321,7 @@ source: External, requires: [03,02], provides: [04], data: [4]}"
 			TrustedOperation {
 				data: vec![5u8],
 				bytes: 1,
-				hash: 5,
+				hash: hash(5),
 				priority: 5u64,
 				valid_till: 64u64,
 				requires: vec![vec![0]],
@@ -1359,7 +1356,7 @@ source: External, requires: [03,02], provides: [04], data: [4]}"
 				TrustedOperation {
 					data: vec![5u8],
 					bytes: 1,
-					hash: 5,
+					hash: hash(5),
 					priority: 5u64,
 					valid_till: 64u64,
 					requires: vec![vec![0]],

@@ -27,9 +27,12 @@ use crate::{
 };
 use codec::Decode;
 use hdrhistogram::Histogram;
-use ita_stf::{Getter, Index, TrustedCall, TrustedGetter, TrustedOperation};
+use ita_stf::{Getter, Index, TrustedCall, TrustedCallSigned, TrustedGetter};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
-use itp_stf_primitives::types::KeyPair;
+use itp_stf_primitives::{
+	traits::TrustedCallSigning,
+	types::{KeyPair, TrustedOperation},
+};
 use itp_types::{
 	Balance, ShardIdentifier, TrustedOperationStatus,
 	TrustedOperationStatus::{InSidechainBlock, Submitted},
@@ -147,7 +150,7 @@ impl BenchmarkCommand {
 			let initial_balance = 10000000;
 
 			// Transfer amount from Alice to new account.
-			let top: TrustedOperation = TrustedCall::balance_transfer(
+			let top: TrustedOperation<TrustedCallSigned, Getter> = TrustedCall::balance_transfer(
 				funding_account_keys.public().into(),
 				account.public().into(),
 				initial_balance,
@@ -205,7 +208,7 @@ impl BenchmarkCommand {
 					let nonce = get_nonce(client.account.clone(), shard, &client.client_api);
 
 					// Transfer money from client account to new account.
-					let top: TrustedOperation = TrustedCall::balance_transfer(
+					let top: TrustedOperation<TrustedCallSigned, Getter> = TrustedCall::balance_transfer(
 						client.account.public().into(),
 						new_account.public().into(),
 						EXISTENTIAL_DEPOSIT,

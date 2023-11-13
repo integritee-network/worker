@@ -14,10 +14,9 @@
 	limitations under the License.
 
 */
-
 use codec::Encode;
 use ita_sgx_runtime::Runtime;
-use ita_stf::{Stf, TrustedCall, TrustedCallSigned, TrustedOperation};
+use ita_stf::{Getter, Stf, TrustedCall, TrustedCallSigned};
 use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{
@@ -29,7 +28,10 @@ use itp_stf_interface::{
 	mocks::GetterExecutorMock, system_pallet::SystemPalletAccountInterface, InitState,
 	StateCallInterface,
 };
-use itp_stf_primitives::types::{AccountId, ShardIdentifier};
+use itp_stf_primitives::{
+	traits::TrustedCallVerification,
+	types::{AccountId, ShardIdentifier, TrustedOperation},
+};
 use itp_stf_state_observer::mock::ObserveStateMock;
 use itp_test::mock::onchain_mock::OnchainMock;
 use itp_top_pool_author::{mocks::AuthorApiMock, traits::AuthorApi};
@@ -64,7 +66,7 @@ pub fn enclave_signer_signatures_are_valid() {
 		Arc::new(ObserveStateMock::new(TestStf::init_state(enclave_account.clone())));
 	let shard = ShardIdentifier::default();
 	let mr_enclave = ocall_api.get_mrenclave_of_self().unwrap();
-	let enclave_signer = StfEnclaveSigner::<_, _, _, TestStf, _>::new(
+	let enclave_signer = StfEnclaveSigner::<_, _, _, TestStf, _, TrustedCallSigned, Getter>::new(
 		state_observer,
 		ocall_api,
 		shielding_key_repo,
@@ -93,29 +95,35 @@ pub fn nonce_is_computed_correctly() {
 	let state_observer: Arc<ObserveStateMock<SgxExternalities>> =
 		Arc::new(ObserveStateMock::new(state.clone()));
 	let shard = ShardIdentifier::default();
-	let enclave_signer = StfEnclaveSigner::<_, _, _, TestStf, _>::new(
+	let enclave_signer = StfEnclaveSigner::<_, _, _, TestStf, _, TrustedCallSigned, Getter>::new(
 		state_observer,
 		ocall_api,
 		shielding_key_repo,
 		top_pool_author.clone(),
 	);
+	assert_eq!(enclave_account, enclave_signer.get_enclave_account().unwrap());
 
 	// create the first trusted_call and submit it
 	let trusted_call_1 =
 		TrustedCall::balance_shield(enclave_account.clone(), AccountId::new([1u8; 32]), 100u128);
 	let trusted_call_1_signed =
 		enclave_signer.sign_call_with_self(&trusted_call_1, &shard).unwrap();
-	top_pool_author
-		.submit_top(TrustedOperation::indirect_call(trusted_call_1_signed.clone()).encode(), shard);
+	top_pool_author.submit_top(
+		TrustedOperation::<TrustedCallSigned, Getter>::direct_call(trusted_call_1_signed.clone())
+			.encode(),
+		shard,
+	);
 	assert_eq!(1, top_pool_author.get_pending_trusted_calls_for(shard, &enclave_account).len());
-
 	// create the second trusted_call and submit it
 	let trusted_call_2 =
 		TrustedCall::balance_shield(enclave_account.clone(), AccountId::new([2u8; 32]), 200u128);
 	let trusted_call_2_signed =
 		enclave_signer.sign_call_with_self(&trusted_call_2, &shard).unwrap();
-	top_pool_author
-		.submit_top(TrustedOperation::indirect_call(trusted_call_2_signed.clone()).encode(), shard);
+	top_pool_author.submit_top(
+		TrustedOperation::<TrustedCallSigned, Getter>::indirect_call(trusted_call_2_signed.clone())
+			.encode(),
+		shard,
+	);
 	assert_eq!(2, top_pool_author.get_pending_trusted_calls_for(shard, &enclave_account).len());
 	// there should be no pending trusted calls for non-enclave-account
 	assert_eq!(

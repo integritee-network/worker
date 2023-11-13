@@ -48,7 +48,7 @@ pub fn get_state_request_works() {
 	let state: TestState = 78234u64;
 	let state_observer = Arc::new(ObserveStateMock::<TestState>::new(state));
 	let getter_executor =
-		Arc::new(GetterExecutor::<_, GetStateMock<TestState>>::new(state_observer));
+		Arc::new(GetterExecutor::<_, GetStateMock<TestState>, Getter>::new(state_observer));
 	let top_pool_author = Arc::new(AuthorApiMock::default());
 
 	let io_handler =
