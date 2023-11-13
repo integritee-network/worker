@@ -21,7 +21,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
-extern crate core;
 
 use alloc::{sync::Arc, vec::Vec};
 use codec::{Decode, Encode};
