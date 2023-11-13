@@ -23,8 +23,11 @@
 extern crate alloc;
 
 use alloc::{sync::Arc, vec::Vec};
+use codec::{Decode, Encode};
+use core::fmt::Debug;
 use itp_node_api_metadata::NodeMetadataTrait;
 use itp_node_api_metadata_provider::AccessNodeMetadata;
+use itp_stf_primitives::traits::TrustedCallVerification;
 use itp_types::{parentchain::ParentchainId, OpaqueCall};
 
 #[cfg(feature = "mocks")]
@@ -50,26 +53,27 @@ pub trait UpdateState<State, StateDiff> {
 }
 
 /// Interface to execute state mutating calls on a state.
-pub trait StateCallInterface<Call, State, NodeMetadataRepository>
+pub trait StateCallInterface<TCS, State, NodeMetadataRepository>
 where
 	NodeMetadataRepository: AccessNodeMetadata,
 	NodeMetadataRepository::MetadataType: NodeMetadataTrait,
+	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
 {
 	type Error;
 
 	/// Execute a call on a specific state. Callbacks are added as an `OpaqueCall`.
 	fn execute_call(
 		state: &mut State,
-		call: Call,
+		call: TCS,
 		calls: &mut Vec<OpaqueCall>,
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error>;
 }
 
 /// Interface to execute state reading getters on a state.
-pub trait StateGetterInterface<Getter, State> {
+pub trait StateGetterInterface<G, S> {
 	/// Execute a getter on a specific state.
-	fn execute_getter(state: &mut State, getter: Getter) -> Option<Vec<u8>>;
+	fn execute_getter(state: &mut S, getter: G) -> Option<Vec<u8>>;
 }
 
 /// Trait used to abstract the call execution.

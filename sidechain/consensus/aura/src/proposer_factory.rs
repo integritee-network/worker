@@ -18,6 +18,7 @@
 use crate::slot_proposer::{ExternalitiesFor, SlotProposer};
 use codec::Encode;
 use finality_grandpa::BlockNumberOps;
+use ita_stf::{Getter, TrustedCallSigned};
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_stf_executor::traits::StateUpdateProposer;
 use itp_top_pool_author::traits::AuthorApi;
@@ -76,8 +77,9 @@ where
 	SignedSidechainBlock::Block: SidechainBlockTrait<Public = sp_core::ed25519::Public>,
 	<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType:
 		HeaderTrait<ShardIdentifier = H256>,
-	TopPoolAuthor: AuthorApi<H256, ParentchainBlock::Hash> + Send + Sync + 'static,
-	StfExecutor: StateUpdateProposer + Send + Sync + 'static,
+	TopPoolAuthor:
+		AuthorApi<H256, ParentchainBlock::Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	StfExecutor: StateUpdateProposer<TrustedCallSigned, Getter> + Send + Sync + 'static,
 	ExternalitiesFor<StfExecutor>:
 		SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash,
 	<ExternalitiesFor<StfExecutor> as SgxExternalitiesTrait>::SgxExternalitiesType: Encode,

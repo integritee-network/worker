@@ -314,9 +314,9 @@ where
 		let _ = ecc_handle.close();
 
 		debug!("[Enclave] Generated ECC cert info:");
-		trace!("[Enclave] Generated ECC cert info: key_der={:#?}", &key_der);
-		trace!("[Enclave] Generated ECC cert info: cert_der={:#?}", &cert_der);
-		trace!("[Enclave] Generated ECC cert info: qe_quote={:#?}", &qe_quote);
+		trace!("[Enclave] Generated ECC cert info: key_der={:?}", &key_der);
+		trace!("[Enclave] Generated ECC cert info: cert_der={:?}", &cert_der);
+		trace!("[Enclave] Generated ECC cert info: qe_quote={:?}", &qe_quote);
 		Ok((key_der, cert_der, qe_quote))
 	}
 }

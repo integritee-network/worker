@@ -15,7 +15,9 @@
 
 */
 
-use ita_stf::TrustedOperation;
+use codec::Encode;
+use core::{fmt::Debug, marker::PhantomData};
+use itp_stf_primitives::types::TrustedOperation as StfTrustedOperation;
 
 /// Trait for filtering values
 ///
@@ -27,22 +29,58 @@ pub trait Filter {
 }
 
 /// Filter for calls only (no getters).
-pub struct CallsOnlyFilter;
+pub struct CallsOnlyFilter<TCS, G> {
+	_phantom: PhantomData<(TCS, G)>,
+}
 
-impl Filter for CallsOnlyFilter {
-	type Value = TrustedOperation;
+impl<TCS, G> CallsOnlyFilter<TCS, G> {
+	pub fn new() -> Self {
+		Self { _phantom: Default::default() }
+	}
+}
+
+impl<TCS, G> Default for CallsOnlyFilter<TCS, G> {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
+impl<TCS, G> Filter for CallsOnlyFilter<TCS, G>
+where
+	TCS: PartialEq + Encode + Debug,
+	G: PartialEq + Encode + Debug,
+{
+	type Value = StfTrustedOperation<TCS, G>;
 
 	fn filter(&self, value: &Self::Value) -> bool {
-		matches!(value, TrustedOperation::direct_call(_))
-			|| matches!(value, TrustedOperation::indirect_call(_))
+		matches!(value, Self::Value::direct_call(_))
+			|| matches!(value, Self::Value::indirect_call(_))
 	}
 }
 
 /// Filter that allows all TOPs (i.e. not filter at all)
-pub struct AllowAllTopsFilter;
+pub struct AllowAllTopsFilter<TCS, G> {
+	_phantom: PhantomData<(TCS, G)>,
+}
 
-impl Filter for AllowAllTopsFilter {
-	type Value = TrustedOperation;
+impl<TCS, G> AllowAllTopsFilter<TCS, G> {
+	pub fn new() -> Self {
+		Self { _phantom: Default::default() }
+	}
+}
+
+impl<TCS, G> Default for AllowAllTopsFilter<TCS, G> {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
+impl<TCS, G> Filter for AllowAllTopsFilter<TCS, G>
+where
+	TCS: PartialEq + Encode + Debug,
+	G: PartialEq + Encode + Debug,
+{
+	type Value = StfTrustedOperation<TCS, G>;
 
 	fn filter(&self, _value: &Self::Value) -> bool {
 		true
@@ -50,43 +88,115 @@ impl Filter for AllowAllTopsFilter {
 }
 
 /// Filter that allows only trusted getters
-pub struct GettersOnlyFilter;
+pub struct GettersOnlyFilter<TCS, G> {
+	_phantom: PhantomData<(TCS, G)>,
+}
 
-impl Filter for GettersOnlyFilter {
-	type Value = TrustedOperation;
+impl<TCS, G> GettersOnlyFilter<TCS, G> {
+	pub fn new() -> Self {
+		Self { _phantom: Default::default() }
+	}
+}
+
+impl<TCS, G> Default for GettersOnlyFilter<TCS, G> {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
+impl<TCS, G> Filter for GettersOnlyFilter<TCS, G>
+where
+	TCS: PartialEq + Encode + Debug,
+	G: PartialEq + Encode + Debug,
+{
+	type Value = StfTrustedOperation<TCS, G>;
 
 	fn filter(&self, value: &Self::Value) -> bool {
-		matches!(value, TrustedOperation::get(_))
+		matches!(value, Self::Value::get(_))
 	}
 }
 
 /// Filter for indirect calls only (no getters, no direct calls).
-pub struct IndirectCallsOnlyFilter;
+pub struct IndirectCallsOnlyFilter<TCS, G> {
+	_phantom: PhantomData<(TCS, G)>,
+}
 
-impl Filter for IndirectCallsOnlyFilter {
-	type Value = TrustedOperation;
+impl<TCS, G> IndirectCallsOnlyFilter<TCS, G> {
+	pub fn new() -> Self {
+		Self { _phantom: Default::default() }
+	}
+}
+
+impl<TCS, G> Default for IndirectCallsOnlyFilter<TCS, G> {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
+impl<TCS, G> Filter for IndirectCallsOnlyFilter<TCS, G>
+where
+	TCS: PartialEq + Encode + Debug,
+	G: PartialEq + Encode + Debug,
+{
+	type Value = StfTrustedOperation<TCS, G>;
 
 	fn filter(&self, value: &Self::Value) -> bool {
-		matches!(value, TrustedOperation::indirect_call(_))
+		matches!(value, Self::Value::indirect_call(_))
 	}
 }
 
 /// Filter that allows no direct calls, only indirect and getters.
-pub struct NoDirectCallsFilter;
+pub struct NoDirectCallsFilter<TCS, G> {
+	_phantom: PhantomData<(TCS, G)>,
+}
 
-impl Filter for NoDirectCallsFilter {
-	type Value = TrustedOperation;
+impl<TCS, G> NoDirectCallsFilter<TCS, G> {
+	pub fn new() -> Self {
+		Self { _phantom: Default::default() }
+	}
+}
+
+impl<TCS, G> Default for NoDirectCallsFilter<TCS, G> {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
+impl<TCS, G> Filter for NoDirectCallsFilter<TCS, G>
+where
+	TCS: PartialEq + Encode + Debug,
+	G: PartialEq + Encode + Debug,
+{
+	type Value = StfTrustedOperation<TCS, G>;
 
 	fn filter(&self, value: &Self::Value) -> bool {
-		!matches!(value, TrustedOperation::direct_call(_))
+		!matches!(value, Self::Value::direct_call(_))
 	}
 }
 
 /// Filter to deny all trusted operations.
-pub struct DenyAllFilter;
+pub struct DenyAllFilter<TCS, G> {
+	_phantom: PhantomData<(TCS, G)>,
+}
 
-impl Filter for DenyAllFilter {
-	type Value = TrustedOperation;
+impl<TCS, G> DenyAllFilter<TCS, G> {
+	pub fn new() -> Self {
+		Self { _phantom: Default::default() }
+	}
+}
+
+impl<TCS, G> Default for DenyAllFilter<TCS, G> {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
+impl<TCS, G> Filter for DenyAllFilter<TCS, G>
+where
+	TCS: PartialEq + Encode + Debug,
+	G: PartialEq + Encode + Debug,
+{
+	type Value = StfTrustedOperation<TCS, G>;
 
 	fn filter(&self, _value: &Self::Value) -> bool {
 		false
@@ -97,19 +207,13 @@ impl Filter for DenyAllFilter {
 mod tests {
 
 	use super::*;
-	use codec::Encode;
-	use ita_stf::{Getter, TrustedCall, TrustedCallSigned, TrustedGetter};
-	use itp_stf_primitives::types::KeyPair;
-	use itp_types::ShardIdentifier;
-	use sp_core::{ed25519, Pair};
-	use sp_runtime::traits::{BlakeTwo256, Hash};
-	use std::{
-		boxed::Box,
-		string::{String, ToString},
+
+	use itp_test::mock::stf_mock::{
+		mock_top_direct_trusted_call_signed, mock_top_indirect_trusted_call_signed,
+		mock_top_trusted_getter_signed,
 	};
 
-	type Seed = [u8; 32];
-	const TEST_SEED: Seed = *b"12345678901234567890123456789012";
+	use std::string::{String, ToString};
 
 	#[test]
 	fn filter_returns_none_if_values_is_filtered_out() {
@@ -133,81 +237,46 @@ mod tests {
 
 	#[test]
 	fn allow_all_tops_filter_works() {
-		let filter = AllowAllTopsFilter;
+		let filter = AllowAllTopsFilter::new();
 
-		assert!(filter.filter(&trusted_getter()));
-		assert!(filter.filter(&trusted_indirect_call()));
-		assert!(filter.filter(&trusted_direct_call()));
+		assert!(filter.filter(&mock_top_trusted_getter_signed()));
+		assert!(filter.filter(&mock_top_indirect_trusted_call_signed()));
+		assert!(filter.filter(&mock_top_direct_trusted_call_signed()));
 	}
 
 	#[test]
 	fn getters_only_filter_works() {
-		let filter = GettersOnlyFilter;
+		let filter = GettersOnlyFilter::new();
 
-		assert!(filter.filter(&trusted_getter()));
-		assert!(!filter.filter(&trusted_indirect_call()));
-		assert!(!filter.filter(&trusted_direct_call()));
+		assert!(filter.filter(&mock_top_trusted_getter_signed()));
+		assert!(!filter.filter(&mock_top_indirect_trusted_call_signed()));
+		assert!(!filter.filter(&mock_top_direct_trusted_call_signed()));
 	}
 
 	#[test]
 	fn no_direct_calls_filter_works() {
-		let filter = NoDirectCallsFilter;
+		let filter = NoDirectCallsFilter::new();
 
-		assert!(!filter.filter(&trusted_direct_call()));
-		assert!(filter.filter(&trusted_indirect_call()));
-		assert!(filter.filter(&trusted_getter()));
+		assert!(!filter.filter(&mock_top_direct_trusted_call_signed()));
+		assert!(filter.filter(&mock_top_indirect_trusted_call_signed()));
+		assert!(filter.filter(&mock_top_trusted_getter_signed()));
 	}
 
 	#[test]
 	fn indirect_calls_only_filter_works() {
-		let filter = IndirectCallsOnlyFilter;
+		let filter = IndirectCallsOnlyFilter::new();
 
-		assert!(!filter.filter(&trusted_direct_call()));
-		assert!(filter.filter(&trusted_indirect_call()));
-		assert!(!filter.filter(&trusted_getter()));
+		assert!(!filter.filter(&mock_top_direct_trusted_call_signed()));
+		assert!(filter.filter(&mock_top_indirect_trusted_call_signed()));
+		assert!(!filter.filter(&mock_top_trusted_getter_signed()));
 	}
 
 	#[test]
 	fn calls_only_filter_works() {
-		let filter = CallsOnlyFilter;
+		let filter = CallsOnlyFilter::new();
 
-		assert!(filter.filter(&trusted_direct_call()));
-		assert!(filter.filter(&trusted_indirect_call()));
-		assert!(!filter.filter(&trusted_getter()));
-	}
-
-	fn trusted_direct_call() -> TrustedOperation {
-		TrustedOperation::direct_call(trusted_call_signed())
-	}
-
-	fn trusted_indirect_call() -> TrustedOperation {
-		TrustedOperation::indirect_call(trusted_call_signed())
-	}
-
-	fn trusted_getter() -> TrustedOperation {
-		let account = test_account();
-		let getter = TrustedGetter::free_balance(account.public().into());
-		let trusted_getter_signed =
-			Getter::trusted(getter.sign(&KeyPair::Ed25519(Box::new(account))));
-		TrustedOperation::from(trusted_getter_signed)
-	}
-
-	fn trusted_call_signed() -> TrustedCallSigned {
-		let account = test_account();
-		let call =
-			TrustedCall::balance_shield(account.public().into(), account.public().into(), 12u128);
-		call.sign(&KeyPair::Ed25519(Box::new(account)), 0, &mr_enclave(), &shard_id())
-	}
-
-	fn test_account() -> ed25519::Pair {
-		ed25519::Pair::from_seed(&TEST_SEED)
-	}
-
-	fn shard_id() -> ShardIdentifier {
-		BlakeTwo256::hash(vec![1u8, 2u8, 3u8].as_slice().encode().as_slice())
-	}
-
-	fn mr_enclave() -> [u8; 32] {
-		[1u8; 32]
+		assert!(filter.filter(&mock_top_direct_trusted_call_signed()));
+		assert!(filter.filter(&mock_top_indirect_trusted_call_signed()));
+		assert!(!filter.filter(&mock_top_trusted_getter_signed()));
 	}
 }

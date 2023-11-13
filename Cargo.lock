@@ -3048,7 +3048,6 @@ dependencies = [
  "derive_more",
  "frame-support",
  "frame-system",
- "hex",
  "integritee-node-runtime",
  "ita-sgx-runtime",
  "itp-hashing",
@@ -3074,6 +3073,7 @@ dependencies = [
  "sp-io 7.0.0",
  "sp-keyring",
  "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -3100,7 +3100,6 @@ dependencies = [
 name = "itc-offchain-worker-executor"
 version = "0.9.0"
 dependencies = [
- "ita-stf",
  "itc-parentchain-light-client",
  "itp-extrinsics-factory",
  "itp-sgx-externalities",
@@ -3694,7 +3693,6 @@ name = "itp-stf-executor"
 version = "0.9.0"
 dependencies = [
  "hex",
- "ita-stf",
  "itc-parentchain-test",
  "itp-node-api",
  "itp-ocall-api",
@@ -3707,6 +3705,7 @@ dependencies = [
  "itp-storage",
  "itp-test",
  "itp-time-utils",
+ "itp-top-pool",
  "itp-top-pool-author",
  "itp-types",
  "log 0.4.19",
@@ -3726,24 +3725,28 @@ version = "0.8.0"
 dependencies = [
  "itp-node-api-metadata",
  "itp-node-api-metadata-provider",
+ "itp-stf-primitives",
  "itp-types",
+ "parity-scale-codec",
 ]
 
 [[package]]
 name = "itp-stf-primitives"
 version = "0.9.0"
 dependencies = [
+ "derive_more",
+ "itp-hashing",
  "itp-sgx-runtime-primitives",
  "parity-scale-codec",
  "sp-core",
  "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
 name = "itp-stf-state-handler"
 version = "0.9.0"
 dependencies = [
- "ita-stf",
  "itp-hashing",
  "itp-settings",
  "itp-sgx-crypto",
@@ -3813,22 +3816,26 @@ name = "itp-test"
 version = "0.9.0"
 dependencies = [
  "derive_more",
- "ita-stf",
  "itp-enclave-bridge-storage",
+ "itp-node-api",
+ "itp-node-api-metadata-provider",
  "itp-ocall-api",
  "itp-sgx-crypto",
  "itp-sgx-externalities",
  "itp-stf-interface",
+ "itp-stf-primitives",
  "itp-stf-state-handler",
  "itp-storage",
  "itp-time-utils",
  "itp-types",
  "jsonrpc-core 18.0.0 (git+https://github.com/scs/jsonrpc?branch=no_std_v18)",
+ "log 0.4.19",
  "parity-scale-codec",
  "sgx_crypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
+ "sp-io 7.0.0",
  "sp-runtime",
  "sp-std",
 ]
@@ -3846,9 +3853,10 @@ version = "0.9.0"
 dependencies = [
  "byteorder 1.4.3",
  "derive_more",
- "ita-stf",
  "itc-direct-rpc-server",
+ "itp-sgx-runtime-primitives",
  "itp-stf-primitives",
+ "itp-test",
  "itp-types",
  "its-primitives",
  "jsonrpc-core 18.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3874,7 +3882,6 @@ version = "0.9.0"
 dependencies = [
  "derive_more",
  "futures 0.3.28",
- "ita-stf",
  "itp-enclave-metrics",
  "itp-ocall-api",
  "itp-sgx-crypto",
@@ -3907,17 +3914,14 @@ dependencies = [
  "frame-system",
  "integritee-node-runtime",
  "itp-sgx-runtime-primitives",
- "itp-utils",
  "pallet-balances",
  "parity-scale-codec",
  "primitive-types",
  "serde 1.0.188",
  "serde_json 1.0.106",
- "sgx_tstd",
  "sp-core",
  "sp-runtime",
  "sp-std",
- "substrate-api-client",
  "teerex-primitives",
 ]
 
@@ -3940,6 +3944,7 @@ dependencies = [
  "itp-sgx-externalities",
  "itp-stf-executor",
  "itp-stf-interface",
+ "itp-stf-primitives",
  "itp-time-utils",
  "itp-top-pool-author",
  "itp-types",
@@ -3991,6 +3996,7 @@ dependencies = [
  "itp-sgx-crypto",
  "itp-sgx-externalities",
  "itp-stf-executor",
+ "itp-stf-primitives",
  "itp-stf-state-handler",
  "itp-storage",
  "itp-test",
