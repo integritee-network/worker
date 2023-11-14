@@ -16,16 +16,12 @@
 
 */
 
-use crate::{error::Error, EnclaveResult};
+use crate::EnclaveResult;
 use codec::Decode;
 use core::fmt::Debug;
-use frame_support::ensure;
 use itc_parentchain::primitives::{ParentchainId, ParentchainInitParams};
-use itp_enclave_api_ffi as ffi;
-use itp_settings::worker::HEADER_MAX_SIZE;
 use itp_types::ShardIdentifier;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
-use sgx_types::*;
 use sp_core::ed25519;
 use teerex_primitives::EnclaveFingerprint;
 
