@@ -15,10 +15,6 @@
 
 */
 
-use crate::{config::Config, enclave::api::*, setup};
-use clap::ArgMatches;
-use itp_enclave_api::enclave_test::EnclaveTest;
-
 pub mod commons;
 pub mod mock;
 
@@ -29,7 +25,14 @@ pub mod mocks;
 // #[cfg(test)]
 // pub mod parentchain_handler_test;
 
+#[cfg(feature = "link-binary")]
+use clap::ArgMatches;
+
+#[cfg(feature = "link-binary")]
 pub fn run_enclave_tests(matches: &ArgMatches) {
+	use crate::{config::Config, enclave::api::*, setup};
+	use itp_enclave_api::enclave_test::EnclaveTest;
+
 	println!("*** Starting Test enclave");
 	let config = Config::from(matches);
 	setup::purge_files_from_dir(config.data_dir()).unwrap();

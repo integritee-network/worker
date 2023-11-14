@@ -14,11 +14,10 @@
 	limitations under the License.
 
 */
-
-use crate::StfError;
 use frame_support::traits::UnfilteredDispatchable;
 use ita_sgx_runtime::{Balance, Runtime, System};
 use itp_sgx_externalities::SgxExternalitiesTrait;
+use itp_stf_primitives::error::StfError;
 use itp_storage::storage_value_key;
 use log::*;
 use sgx_tstd as std;

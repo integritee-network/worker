@@ -23,10 +23,10 @@ use crate::{
 };
 use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode};
-use ita_stf::{TrustedGetter, TrustedOperation};
+use ita_stf::{Getter, TrustedCallSigned, TrustedGetter};
 use itc_rpc_client::direct_client::DirectApi;
 use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
-use itp_stf_primitives::types::{AccountId, KeyPair, ShardIdentifier};
+use itp_stf_primitives::types::{AccountId, KeyPair, ShardIdentifier, TrustedOperation};
 use itp_types::DirectRequestStatus;
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use log::*;
@@ -40,10 +40,12 @@ use substrate_client_keystore::LocalKeystore;
 #[macro_export]
 macro_rules! get_layer_two_nonce {
 	($signer_pair:ident, $cli: ident, $trusted_args:ident ) => {{
+		use ita_stf::{Getter, TrustedCallSigned, TrustedGetter};
 		use $crate::trusted_command_utils::get_pending_trusted_calls_for;
-		let top: TrustedOperation = TrustedGetter::nonce($signer_pair.public().into())
-			.sign(&KeyPair::Sr25519(Box::new($signer_pair.clone())))
-			.into();
+		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
+			TrustedGetter::nonce($signer_pair.public().into())
+				.sign(&KeyPair::Sr25519(Box::new($signer_pair.clone()))),
+		));
 		// final nonce = current system nonce + pending tx count, panic early
 		let res = perform_trusted_operation($cli, $trusted_args, &top).unwrap_or_default();
 		let nonce = match res {
@@ -64,9 +66,9 @@ const TRUSTED_KEYSTORE_PATH: &str = "my_trusted_keystore";
 pub(crate) fn get_balance(cli: &Cli, trusted_args: &TrustedCli, arg_who: &str) -> Option<u128> {
 	debug!("arg_who = {:?}", arg_who);
 	let who = get_pair_from_str(trusted_args, arg_who);
-	let top: TrustedOperation = TrustedGetter::free_balance(who.public().into())
-		.sign(&KeyPair::Sr25519(Box::new(who)))
-		.into();
+	let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
+		TrustedGetter::free_balance(who.public().into()).sign(&KeyPair::Sr25519(Box::new(who))),
+	));
 	let res = perform_trusted_operation(cli, trusted_args, &top).unwrap_or(None);
 	debug!("received result for balance");
 	decode_balance(res)
@@ -123,7 +125,7 @@ pub(crate) fn get_pair_from_str(trusted_args: &TrustedCli, account: &str) -> sr2
 				.expect("store should exist");
 			info!("store opened");
 			let public_key = &sr25519::AppPublic::from_ss58check(account).unwrap();
-			info!("public_key: {:#?}", &public_key);
+			info!("public_key: {:?}", &public_key);
 			let _pair = store.key_pair::<sr25519::AppPair>(public_key).unwrap().unwrap();
 			info!("key pair fetched");
 			drop(store);
@@ -137,7 +139,7 @@ pub(crate) fn get_pending_trusted_calls_for(
 	cli: &Cli,
 	trusted_args: &TrustedCli,
 	who: &AccountId,
-) -> Vec<TrustedOperation> {
+) -> Vec<TrustedOperation<TrustedCallSigned, Getter>> {
 	let shard = read_shard(trusted_args).unwrap();
 	let direct_api = get_worker_api_direct(cli);
 	let rpc_method = "author_pendingTrustedCallsFor".to_owned();

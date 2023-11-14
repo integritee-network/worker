@@ -15,19 +15,13 @@
 
 */
 
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-use crate::sgx_reexport_prelude::*;
-
-use std::boxed::Box;
+use alloc::string::String;
 
 pub type Result<T> = core::result::Result<T, Error>;
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug)]
 pub enum Error {
-	#[error("Could not decode from hex data: {0}")]
 	Hex(hex::FromHexError),
-	#[error("Parity Scale Codec: {0}")]
 	Codec(codec::Error),
-	#[error(transparent)]
-	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),
+	Other(String),
 }

@@ -15,38 +15,12 @@
 
 */
 
+use crate::TrustedGetter;
+use codec::Encode;
 pub use itp_hashing::Hash;
 
-use crate::{TrustedGetter, TrustedOperation};
-use codec::{Decode, Encode};
 use itp_types::H256;
 use sp_core::blake2_256;
-use std::{boxed::Box, vec::Vec};
-
-/// Trusted operation Or hash
-///
-/// Allows to refer to trusted calls either by its raw representation or its hash.
-#[derive(Clone, Debug, Encode, Decode, PartialEq)]
-pub enum TrustedOperationOrHash<Hash> {
-	/// The hash of the call.
-	Hash(Hash),
-	/// Raw extrinsic bytes.
-	OperationEncoded(Vec<u8>),
-	/// Raw extrinsic
-	Operation(Box<TrustedOperation>),
-}
-
-impl<Hash> TrustedOperationOrHash<Hash> {
-	pub fn from_top(top: TrustedOperation) -> Self {
-		TrustedOperationOrHash::Operation(Box::new(top))
-	}
-}
-
-impl Hash<H256> for TrustedOperation {
-	fn hash(&self) -> H256 {
-		blake2_256(&self.encode()).into()
-	}
-}
 
 impl Hash<H256> for TrustedGetter {
 	fn hash(&self) -> H256 {

@@ -16,27 +16,33 @@
 
 */
 
-use crate::{error::Error, Enclave, EnclaveResult};
-use frame_support::ensure;
-use itp_enclave_api_ffi as ffi;
-use log::*;
-use sgx_types::sgx_status_t;
+use crate::EnclaveResult;
 
 pub trait EnclaveTest: Send + Sync + 'static {
 	fn test_main_entrance(&self) -> EnclaveResult<()>;
 }
 
-impl EnclaveTest for Enclave {
-	fn test_main_entrance(&self) -> EnclaveResult<()> {
-		let mut retval = sgx_status_t::SGX_SUCCESS;
+#[cfg(feature = "implement-ffi")]
+mod impl_ffi {
+	use super::EnclaveTest;
+	use crate::{error::Error, Enclave, EnclaveResult};
+	use frame_support::ensure;
+	use itp_enclave_api_ffi as ffi;
+	use log::*;
+	use sgx_types::sgx_status_t;
 
-		let result = unsafe { ffi::test_main_entrance(self.eid, &mut retval) };
+	impl EnclaveTest for Enclave {
+		fn test_main_entrance(&self) -> EnclaveResult<()> {
+			let mut retval = sgx_status_t::SGX_SUCCESS;
 
-		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
-		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+			let result = unsafe { ffi::test_main_entrance(self.eid, &mut retval) };
 
-		debug!("[+] successfully executed enclave test main");
+			ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+			ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
 
-		Ok(())
+			debug!("[+] successfully executed enclave test main");
+
+			Ok(())
+		}
 	}
 }

@@ -18,9 +18,9 @@
 
 pub extern crate alloc;
 
-use crate::base_pool::TrustedOperation;
+use crate::{base_pool::TrustedOperation, primitives::TxHash};
 use alloc::{boxed::Box, fmt, sync::Arc, vec, vec::Vec};
-use core::hash;
+
 use itp_stf_primitives::types::ShardIdentifier;
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::transaction_validity::TransactionTag as Tag;
@@ -30,16 +30,16 @@ use std::{
 };
 
 /// TrustedOperation with partially satisfied dependencies.
-pub struct WaitingTrustedOperations<Hash, Ex> {
+pub struct WaitingTrustedOperations<Ex> {
 	/// TrustedOperation details.
-	pub operation: Arc<TrustedOperation<Hash, Ex>>,
+	pub operation: Arc<TrustedOperation<Ex>>,
 	/// Tags that are required and have not been satisfied yet by other operations in the pool.
 	pub missing_tags: HashSet<Tag>,
 	/// Time of import to the Future Queue.
 	pub imported_at: Instant,
 }
 
-impl<Hash: fmt::Debug, Ex: fmt::Debug> fmt::Debug for WaitingTrustedOperations<Hash, Ex> {
+impl<Ex: fmt::Debug> fmt::Debug for WaitingTrustedOperations<Ex> {
 	fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
 		write!(fmt, "WaitingTrustedOperations {{ ")?;
 		//write!(fmt, "imported_at: {:?}, ", self.imported_at)?;
@@ -56,7 +56,7 @@ impl<Hash: fmt::Debug, Ex: fmt::Debug> fmt::Debug for WaitingTrustedOperations<H
 	}
 }
 
-impl<Hash, Ex> Clone for WaitingTrustedOperations<Hash, Ex> {
+impl<Ex> Clone for WaitingTrustedOperations<Ex> {
 	fn clone(&self) -> Self {
 		WaitingTrustedOperations {
 			operation: self.operation.clone(),
@@ -66,14 +66,14 @@ impl<Hash, Ex> Clone for WaitingTrustedOperations<Hash, Ex> {
 	}
 }
 
-impl<Hash, Ex> WaitingTrustedOperations<Hash, Ex> {
+impl<Ex> WaitingTrustedOperations<Ex> {
 	/// Creates a new `WaitingTrustedOperations`.
 	///
 	/// Computes the set of missing tags based on the requirements and tags that
 	/// are provided by all operations in the ready queue.
 	pub fn new(
-		operation: TrustedOperation<Hash, Ex>,
-		provided: Option<&HashMap<Tag, Hash>>,
+		operation: TrustedOperation<Ex>,
+		provided: Option<&HashMap<Tag, TxHash>>,
 		recently_pruned: &[HashSet<Tag>],
 	) -> Self {
 		let missing_tags = operation
@@ -119,14 +119,14 @@ impl<Hash, Ex> WaitingTrustedOperations<Hash, Ex> {
 /// Contains operations that are still awaiting for some other operations that
 /// could provide a tag that they require.
 #[derive(Debug)]
-pub struct FutureTrustedOperations<Hash: hash::Hash + Eq, Ex> {
+pub struct FutureTrustedOperations<Ex> {
 	/// tags that are not yet provided by any operation and we await for them
-	wanted_tags: HashMap<ShardIdentifier, HashMap<Tag, HashSet<Hash>>>,
+	wanted_tags: HashMap<ShardIdentifier, HashMap<Tag, HashSet<TxHash>>>,
 	/// Transactions waiting for a particular other operation
-	waiting: HashMap<ShardIdentifier, HashMap<Hash, WaitingTrustedOperations<Hash, Ex>>>,
+	waiting: HashMap<ShardIdentifier, HashMap<TxHash, WaitingTrustedOperations<Ex>>>,
 }
 
-impl<Hash: hash::Hash + Eq, Ex> Default for FutureTrustedOperations<Hash, Ex> {
+impl<Ex> Default for FutureTrustedOperations<Ex> {
 	fn default() -> Self {
 		FutureTrustedOperations { wanted_tags: Default::default(), waiting: Default::default() }
 	}
@@ -140,14 +140,14 @@ qed
 #";
 
 #[allow(clippy::len_without_is_empty)]
-impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
+impl<Ex> FutureTrustedOperations<Ex> {
 	/// Import operation to Future queue.
 	///
 	/// Only operations that don't have all their tags satisfied should occupy
 	/// the Future queue.
 	/// As soon as required tags are provided by some other operations that are ready
 	/// we should remove the operations from here and move them to the Ready queue.
-	pub fn import(&mut self, tx: WaitingTrustedOperations<Hash, Ex>, shard: ShardIdentifier) {
+	pub fn import(&mut self, tx: WaitingTrustedOperations<Ex>, shard: ShardIdentifier) {
 		assert!(!tx.is_ready(), "TrustedOperation is ready.");
 		if let Some(tx_pool_waiting) = self.waiting.get(&shard) {
 			assert!(
@@ -161,15 +161,15 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
 		// Add all tags that are missing
 		for tag in &tx.missing_tags {
 			let entry = tx_pool_wanted_map.entry(tag.clone()).or_insert_with(HashSet::new);
-			entry.insert(tx.operation.hash.clone());
+			entry.insert(tx.operation.hash);
 		}
 
 		// Add the operation to a by-hash waiting map
-		tx_pool_waiting_map.insert(tx.operation.hash.clone(), tx);
+		tx_pool_waiting_map.insert(tx.operation.hash, tx);
 	}
 
 	/// Returns true if given hash is part of the queue.
-	pub fn contains(&self, hash: &Hash, shard: ShardIdentifier) -> bool {
+	pub fn contains(&self, hash: &TxHash, shard: ShardIdentifier) -> bool {
 		if let Some(tx_pool_waiting) = self.waiting.get(&shard) {
 			return tx_pool_waiting.contains_key(hash)
 		}
@@ -179,9 +179,9 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
 	/// Returns a list of known operations
 	pub fn by_hashes(
 		&self,
-		hashes: &[Hash],
+		hashes: &[TxHash],
 		shard: ShardIdentifier,
-	) -> Vec<Option<Arc<TrustedOperation<Hash, Ex>>>> {
+	) -> Vec<Option<Arc<TrustedOperation<Ex>>>> {
 		if let Some(tx_pool_waiting) = self.waiting.get(&shard) {
 			return hashes
 				.iter()
@@ -199,7 +199,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
 		&mut self,
 		tags: impl IntoIterator<Item = T>,
 		shard: ShardIdentifier,
-	) -> Vec<WaitingTrustedOperations<Hash, Ex>> {
+	) -> Vec<WaitingTrustedOperations<Ex>> {
 		let mut became_ready = vec![];
 
 		for tag in tags {
@@ -231,9 +231,9 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
 	/// Returns a list of actually removed operations.
 	pub fn remove(
 		&mut self,
-		hashes: &[Hash],
+		hashes: &[TxHash],
 		shard: ShardIdentifier,
-	) -> Vec<Arc<TrustedOperation<Hash, Ex>>> {
+	) -> Vec<Arc<TrustedOperation<Ex>>> {
 		let mut removed = vec![];
 		if let Some(tx_pool_waiting) = self.waiting.get_mut(&shard) {
 			if let Some(tx_pool_wanted) = self.wanted_tags.get_mut(&shard) {
@@ -261,7 +261,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
 	}
 
 	/// Fold a list of future operations to compute a single value.
-	pub fn fold<R, F: FnMut(Option<R>, &WaitingTrustedOperations<Hash, Ex>) -> Option<R>>(
+	pub fn fold<R, F: FnMut(Option<R>, &WaitingTrustedOperations<Ex>) -> Option<R>>(
 		&mut self,
 		f: F,
 		shard: ShardIdentifier,
@@ -276,7 +276,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
 	pub fn all(
 		&self,
 		shard: ShardIdentifier,
-	) -> Box<dyn Iterator<Item = &TrustedOperation<Hash, Ex>> + '_> {
+	) -> Box<dyn Iterator<Item = &TrustedOperation<Ex>> + '_> {
 		if let Some(tx_pool) = self.waiting.get(&shard) {
 			return Box::new(tx_pool.values().map(|waiting| &*waiting.operation))
 		}
@@ -284,7 +284,7 @@ impl<Hash: hash::Hash + Eq + Clone, Ex> FutureTrustedOperations<Hash, Ex> {
 	}
 
 	/// Removes and returns all future operations.
-	pub fn clear(&mut self, shard: ShardIdentifier) -> Vec<Arc<TrustedOperation<Hash, Ex>>> {
+	pub fn clear(&mut self, shard: ShardIdentifier) -> Vec<Arc<TrustedOperation<Ex>>> {
 		if let Some(wanted_tx_pool) = self.wanted_tags.get_mut(&shard) {
 			wanted_tx_pool.clear();
 			return self

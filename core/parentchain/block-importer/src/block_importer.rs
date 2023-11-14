@@ -25,7 +25,10 @@ use itc_parentchain_light_client::{
 };
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_stf_executor::traits::StfUpdateState;
-use itp_types::{parentchain::IdentifyParentchain, OpaqueCall, H256};
+use itp_types::{
+	parentchain::{IdentifyParentchain, ParentchainId},
+	OpaqueCall, H256,
+};
 use log::*;
 use sp_runtime::{
 	generic::SignedBlock as SignedBlockG,
@@ -96,7 +99,7 @@ impl<
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256, Header = ParentchainHeader>,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	ValidatorAccessor: ValidatorAccess<ParentchainBlock> + IdentifyParentchain,
-	StfExecutor: StfUpdateState,
+	StfExecutor: StfUpdateState<ParentchainHeader, ParentchainId>,
 	ExtrinsicsFactory: CreateExtrinsics,
 	IndirectCallsExecutor: ExecuteIndirectCalls,
 {

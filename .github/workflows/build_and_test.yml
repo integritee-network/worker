@@ -62,7 +62,7 @@ jobs:
           buildkitd-flags: --debug
           driver: docker-container
 
-      - name: Build Worker & Run Cargo Test
+      - name: Build Worker
         env:
           DOCKER_BUILDKIT: 1
         run: >
@@ -83,7 +83,7 @@ jobs:
       - run: docker images --all
 
       - name: Test Enclave # cargo test is not supported in the enclave, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
-        run: docker run ${{ env.DOCKER_DEVICES }} ${{ env.DOCKER_VOLUMES }} integritee-worker-${{ env.IMAGE_SUFFIX }} test --all
+        run: docker run --rm ${{ env.DOCKER_DEVICES }} ${{ env.DOCKER_VOLUMES }} integritee-worker-${{ env.IMAGE_SUFFIX }} test --all
 
       - name: Export worker image(s)
         run: |
@@ -130,6 +130,8 @@ jobs:
       fail-fast: false
       matrix:
         check: [
+          # Workspace
+          cargo test,
           # Worker
           # Use release mode as the CI runs out of disk space otherwise.
           cargo clippy --release -- -D warnings,

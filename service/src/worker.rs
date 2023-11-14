@@ -20,7 +20,7 @@
 /// This should serve as a proof of concept for a potential refactoring design. Ultimately, everything
 /// from the main.rs should be covered by the worker struct here - hidden and split across
 /// multiple traits.
-use crate::{config::Config, error::Error, TrackInitialization};
+use crate::{config::Config, error::Error, initialized_service::TrackInitialization};
 use async_trait::async_trait;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use itp_node_api::{api_client::PalletTeerexApi, node_api_factory::CreateNodeApi};

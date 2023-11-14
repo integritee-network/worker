@@ -19,36 +19,34 @@
 //! Extrinsics status updates.
 
 extern crate alloc;
+use crate::primitives::TxHash;
 use alloc::{string::String, sync::Arc, vec::Vec};
-use codec::Encode;
+
 use itc_direct_rpc_server::SendRpcResponse;
 use itp_types::{BlockHash as SidechainBlockHash, TrustedOperationStatus};
 use log::*;
-use sp_runtime::traits;
-use std::hash;
 
 /// Extrinsic watcher.
 ///
 /// Represents a stream of status updates for particular extrinsic.
 #[derive(Debug)]
-pub struct Watcher<H, S> {
+pub struct Watcher<S> {
 	//receiver: TracingUnboundedReceiver<TrustedOperationStatus<H, BH>>,
-	hash: H,
+	hash: TxHash,
 	is_in_block: bool,
 	rpc_response_sender: Arc<S>,
 }
 
-impl<H, S> Watcher<H, S>
+impl<S> Watcher<S>
 where
-	H: hash::Hash + Encode + traits::Member,
-	S: SendRpcResponse<Hash = H>,
+	S: SendRpcResponse<Hash = TxHash>,
 {
 	/// Returns the operation hash.
-	pub fn hash(&self) -> &H {
+	pub fn hash(&self) -> &TxHash {
 		&self.hash
 	}
 
-	pub fn new_watcher(hash: H, rpc_response_sender: Arc<S>) -> Self {
+	pub fn new_watcher(hash: TxHash, rpc_response_sender: Arc<S>) -> Self {
 		Watcher { hash, is_in_block: false, rpc_response_sender }
 	}
 
@@ -120,7 +118,7 @@ where
 	}
 
 	fn send(&mut self, status: TrustedOperationStatus) {
-		if let Err(e) = self.rpc_response_sender.update_status_event(self.hash().clone(), status) {
+		if let Err(e) = self.rpc_response_sender.update_status_event(*self.hash(), status) {
 			error!("failed to send status update to rpc client: {:?}", e);
 		}
 	}

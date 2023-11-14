@@ -105,7 +105,7 @@ where
 				Err(e) =>
 					if tries < number_of_tries {
 						error!(
-							"Getting exchange rate from {} failed with {}, trying again in {:#?}.",
+							"Getting exchange rate from {} failed with {}, trying again in {:?}.",
 							&base_url, e, request_timeout
 						);
 						debug!("Check that the API endpoint is available, for coingecko: https://status.coingecko.com/");

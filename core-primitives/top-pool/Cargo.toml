@@ -10,8 +10,8 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
 # local dependencies
-ita-stf = { path = "../../app-libs/stf", default-features = false }
 itc-direct-rpc-server = { path = "../../core/direct-rpc-server", default-features = false }
+itp-sgx-runtime-primitives = { path = "../../core-primitives/sgx-runtime-primitives", default-features = false }
 itp-stf-primitives = { path = "../stf-primitives", default-features = false }
 itp-types = { path = "../types", default-features = false }
 its-primitives = { path = "../../sidechain/primitives", default-features = false }
@@ -39,20 +39,19 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 # dev dependencies (for tests)
 [dev-dependencies]
 parity-util-mem = { version = "0.12.0", default-features = false, features = ["primitive-types"] }
+itp-test = { path = "../test", default-features = false }
 
 [features]
 default = ["std"]
 sgx = [
     "sgx_tstd",
     "sgx_types",
-    "ita-stf/sgx",
     "itc-direct-rpc-server/sgx",
     "jsonrpc-core_sgx",
     "linked-hash-map_sgx",
     "thiserror_sgx",
 ]
 std = [
-    "ita-stf/std",
     "itc-direct-rpc-server/std",
     "itp-types/std",
     "its-primitives/std",

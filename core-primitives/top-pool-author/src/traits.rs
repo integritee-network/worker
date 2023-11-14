@@ -17,41 +17,55 @@
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
+use codec::Encode;
+use core::fmt::Debug;
 
 use crate::error::Result;
-use ita_stf::{hash, TrustedOperation};
-use itp_stf_primitives::types::AccountId;
-use itp_top_pool::primitives::PoolFuture;
+use itp_stf_primitives::types::{
+	AccountId, TrustedOperation as StfTrustedOperation, TrustedOperationOrHash,
+};
+use itp_top_pool::primitives::{PoolFuture, PoolStatus};
 use itp_types::{BlockHash as SidechainBlockHash, ShardIdentifier, H256};
 use jsonrpc_core::Error as RpcError;
 use std::vec::Vec;
 
 /// Trait alias for a full STF author API
-pub trait FullAuthor = AuthorApi<H256, H256> + OnBlockImported<Hash = H256> + Send + Sync + 'static;
+pub trait FullAuthor<
+	TCS: PartialEq + Encode + Debug + Send + Sync + 'static,
+	G: PartialEq + Encode + Debug + Send + Sync + 'static,
+> = AuthorApi<H256, H256, TCS, G> + OnBlockImported<Hash = H256> + Send + Sync + 'static;
 
 /// Authoring RPC API
-pub trait AuthorApi<Hash, BlockHash> {
+pub trait AuthorApi<Hash, BlockHash, TCS, G>
+where
+	TCS: PartialEq + Encode + Debug + Send + Sync,
+	G: PartialEq + Encode + Debug + Send + Sync,
+{
 	/// Submit encoded extrinsic for inclusion in block.
 	fn submit_top(&self, extrinsic: Vec<u8>, shard: ShardIdentifier) -> PoolFuture<Hash, RpcError>;
 
 	/// Return hash of Trusted Operation
-	fn hash_of(&self, xt: &TrustedOperation) -> Hash;
+	fn hash_of(&self, xt: &StfTrustedOperation<TCS, G>) -> Hash;
 
 	/// Returns all pending operations, potentially grouped by sender.
 	fn pending_tops(&self, shard: ShardIdentifier) -> Result<Vec<Vec<u8>>>;
 
 	/// Returns all pending trusted getters.
-	fn get_pending_trusted_getters(&self, shard: ShardIdentifier) -> Vec<TrustedOperation>;
+	fn get_pending_getters(&self, shard: ShardIdentifier) -> Vec<StfTrustedOperation<TCS, G>>;
 
-	/// Returns all pending trusted calls.
-	fn get_pending_trusted_calls(&self, shard: ShardIdentifier) -> Vec<TrustedOperation>;
+	/// Returns all pending trusted calls (in ready state).
+	fn get_pending_trusted_calls(&self, shard: ShardIdentifier)
+		-> Vec<StfTrustedOperation<TCS, G>>;
+
+	/// Returns pool status
+	fn get_status(&self, shard: ShardIdentifier) -> PoolStatus;
 
 	/// Returns all pending trusted calls for a given `account`
 	fn get_pending_trusted_calls_for(
 		&self,
 		shard: ShardIdentifier,
 		account: &AccountId,
-	) -> Vec<TrustedOperation>;
+	) -> Vec<StfTrustedOperation<TCS, G>>;
 
 	/// returns all shards which are currently present in the tops in the pool
 	fn get_shards(&self) -> Vec<ShardIdentifier>;
@@ -64,8 +78,8 @@ pub trait AuthorApi<Hash, BlockHash> {
 	fn remove_calls_from_pool(
 		&self,
 		shard: ShardIdentifier,
-		executed_calls: Vec<(hash::TrustedOperationOrHash<Hash>, bool)>,
-	) -> Vec<hash::TrustedOperationOrHash<Hash>>;
+		executed_calls: Vec<(TrustedOperationOrHash<TCS, G>, bool)>,
+	) -> Vec<TrustedOperationOrHash<TCS, G>>;
 
 	/// Submit an extrinsic to watch.
 	///

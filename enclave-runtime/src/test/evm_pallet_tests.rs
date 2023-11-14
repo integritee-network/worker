@@ -28,7 +28,7 @@ use ita_stf::{
 use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_interface::StateCallInterface;
-use itp_stf_primitives::types::KeyPair;
+use itp_stf_primitives::{traits::TrustedCallSigning, types::KeyPair};
 use itp_types::{AccountId, OpaqueCall, ShardIdentifier};
 use primitive_types::H256;
 use sp_core::{crypto::Pair, H160, U256};
