@@ -11,11 +11,6 @@
 //! around it with a simple `fn ecall(call: CallEnum) -> Result<D: Decode>`, which wraps one single
 //! ffi function.
 
-#[cfg(all(feature = "std", feature = "sgx"))]
-compile_error!(
-	"feature \"implement-ffi\" and feature \"no-linking\" cannot be enabled at the same time"
-);
-
 use crate::error::Error;
 use sgx_types::*;
 
