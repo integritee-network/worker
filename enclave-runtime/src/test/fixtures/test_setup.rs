@@ -27,7 +27,7 @@ use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{ed25519_derivation::DeriveEd25519, mocks::KeyRepositoryMock};
 use itp_sgx_externalities::SgxExternalities;
 use itp_stf_executor::executor::StfExecutor;
-use itp_stf_primitives::types::ShardIdentifier;
+use itp_stf_primitives::types::{ShardIdentifier, TrustedOperation};
 use itp_test::mock::{
 	handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock,
 	shielding_crypto_mock::ShieldingCryptoMock,
@@ -37,21 +37,33 @@ use itp_top_pool_author::{api::SidechainApi, author::Author, top_filter::AllowAl
 use itp_types::{Block, MrEnclave};
 use sp_core::{crypto::Pair, ed25519 as spEd25519};
 use std::sync::Arc;
-
-pub type TestRpcResponder = RpcResponderMock<ExtrinsicHash<SidechainApi<Block>>>;
-pub type TestTopPool = BasicPool<SidechainApi<Block>, Block, TestRpcResponder>;
+pub type TestRpcResponder = RpcResponderMock<ExtrinsicHash<SidechainApi<Block, TrustedCallSigned>>>;
+pub type TestTopPool = BasicPool<
+	SidechainApi<Block, TrustedCallSigned>,
+	Block,
+	TestRpcResponder,
+	TrustedOperation<TrustedCallSigned, Getter>,
+>;
 pub type TestShieldingKeyRepo = KeyRepositoryMock<ShieldingCryptoMock>;
 pub type TestTopPoolAuthor = Author<
 	TestTopPool,
-	AllowAllTopsFilter,
+	AllowAllTopsFilter<TrustedCallSigned, Getter>,
 	HandleStateMock,
 	TestShieldingKeyRepo,
 	MetricsOCallMock,
+	TrustedCallSigned,
+	Getter,
 >;
 pub type TestStf = Stf<TrustedCallSigned, Getter, SgxExternalities, Runtime>;
 
-pub type TestStfExecutor =
-	StfExecutor<OcallApi, HandleStateMock, NodeMetadataRepository<NodeMetadataMock>, TestStf>;
+pub type TestStfExecutor = StfExecutor<
+	OcallApi,
+	HandleStateMock,
+	NodeMetadataRepository<NodeMetadataMock>,
+	TestStf,
+	TrustedCallSigned,
+	Getter,
+>;
 
 /// Returns all the things that are commonly used in tests and runs
 /// `ensure_no_empty_shard_directory_exists`
@@ -83,7 +95,7 @@ pub fn test_setup() -> (
 	(
 		Arc::new(TestTopPoolAuthor::new(
 			Arc::new(top_pool),
-			AllowAllTopsFilter,
+			AllowAllTopsFilter::<TrustedCallSigned, Getter>::new(),
 			state_handler.clone(),
 			shielding_key_repo,
 			Arc::new(MetricsOCallMock::default()),
@@ -98,7 +110,7 @@ pub fn test_setup() -> (
 }
 
 pub fn test_top_pool() -> TestTopPool {
-	let chain_api = Arc::new(SidechainApi::<Block>::new());
+	let chain_api = Arc::new(SidechainApi::<Block, TrustedCallSigned>::new());
 	let top_pool =
 		BasicPool::create(Default::default(), chain_api, Arc::new(TestRpcResponder::new()));
 

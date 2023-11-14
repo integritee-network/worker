@@ -16,13 +16,10 @@
 
 */
 
-use crate::{error::Error, Enclave, EnclaveResult};
+use crate::EnclaveResult;
 use codec::Encode;
-use frame_support::ensure;
-use itp_enclave_api_ffi as ffi;
 use itp_storage::StorageProof;
 use itp_types::parentchain::ParentchainId;
-use sgx_types::sgx_status_t;
 use sp_runtime::generic::SignedBlock;
 
 /// trait for handling blocks on the side chain
@@ -40,49 +37,62 @@ pub trait Sidechain: Send + Sync + 'static {
 	fn execute_trusted_calls(&self) -> EnclaveResult<()>;
 }
 
-impl Sidechain for Enclave {
-	fn sync_parentchain<ParentchainBlock: Encode>(
-		&self,
-		blocks: &[SignedBlock<ParentchainBlock>],
-		events: &[Vec<u8>],
-		events_proofs: &[StorageProof],
-		parentchain_id: &ParentchainId,
-	) -> EnclaveResult<()> {
-		let mut retval = sgx_status_t::SGX_SUCCESS;
-		let blocks_enc = blocks.encode();
-		let events_enc = events.encode();
-		let events_proofs_enc = events_proofs.encode();
-		let parentchain_id_enc = parentchain_id.encode();
+#[cfg(feature = "implement-ffi")]
+mod impl_ffi {
+	use super::Sidechain;
+	use crate::{error::Error, Enclave, EnclaveResult};
+	use codec::Encode;
+	use frame_support::ensure;
+	use itp_enclave_api_ffi as ffi;
+	use itp_storage::StorageProof;
+	use itp_types::parentchain::ParentchainId;
+	use sgx_types::sgx_status_t;
+	use sp_runtime::generic::SignedBlock;
 
-		let result = unsafe {
-			ffi::sync_parentchain(
-				self.eid,
-				&mut retval,
-				blocks_enc.as_ptr(),
-				blocks_enc.len(),
-				events_enc.as_ptr(),
-				events_enc.len(),
-				events_proofs_enc.as_ptr(),
-				events_proofs_enc.len(),
-				parentchain_id_enc.as_ptr(),
-				parentchain_id_enc.len() as u32,
-			)
-		};
+	impl Sidechain for Enclave {
+		fn sync_parentchain<ParentchainBlock: Encode>(
+			&self,
+			blocks: &[SignedBlock<ParentchainBlock>],
+			events: &[Vec<u8>],
+			events_proofs: &[StorageProof],
+			parentchain_id: &ParentchainId,
+		) -> EnclaveResult<()> {
+			let mut retval = sgx_status_t::SGX_SUCCESS;
+			let blocks_enc = blocks.encode();
+			let events_enc = events.encode();
+			let events_proofs_enc = events_proofs.encode();
+			let parentchain_id_enc = parentchain_id.encode();
 
-		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
-		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+			let result = unsafe {
+				ffi::sync_parentchain(
+					self.eid,
+					&mut retval,
+					blocks_enc.as_ptr(),
+					blocks_enc.len(),
+					events_enc.as_ptr(),
+					events_enc.len(),
+					events_proofs_enc.as_ptr(),
+					events_proofs_enc.len(),
+					parentchain_id_enc.as_ptr(),
+					parentchain_id_enc.len() as u32,
+				)
+			};
 
-		Ok(())
-	}
+			ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+			ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
 
-	fn execute_trusted_calls(&self) -> EnclaveResult<()> {
-		let mut retval = sgx_status_t::SGX_SUCCESS;
+			Ok(())
+		}
 
-		let result = unsafe { ffi::execute_trusted_calls(self.eid, &mut retval) };
+		fn execute_trusted_calls(&self) -> EnclaveResult<()> {
+			let mut retval = sgx_status_t::SGX_SUCCESS;
 
-		ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
-		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+			let result = unsafe { ffi::execute_trusted_calls(self.eid, &mut retval) };
 
-		Ok(())
+			ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+			ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+
+			Ok(())
+		}
 	}
 }

@@ -120,7 +120,7 @@ impl Send for SendWithCertificateVerification {
 			Ok(response) => Ok(response),
 			Err(e) => {
 				error!(
-					"SendWithCertificateVerification::execute_send_request received error: {:#?}",
+					"SendWithCertificateVerification::execute_send_request received error: {:?}",
 					&e
 				);
 				Err(Error::HttpReqError(e))

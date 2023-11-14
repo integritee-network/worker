@@ -40,6 +40,7 @@ use its_primitives::{
 };
 use log::*;
 pub use sp_consensus_slots::Slot;
+use sp_core::ByteArray;
 use sp_runtime::{
 	app_crypto::Pair,
 	traits::{Block as ParentchainBlockTrait, Header as ParentchainHeaderTrait},
@@ -127,8 +128,8 @@ where
 		expected_author == block.block_data().block_author(),
 		ConsensusError::InvalidAuthority(format!(
 			"Expected author: {}, author found in block: {}",
-			public_to_string(expected_author),
-			public_to_string(block.block_data().block_author())
+			public_to_string(&expected_author.to_raw_vec()),
+			public_to_string(&block.block_data().block_author().to_raw_vec())
 		))
 	);
 

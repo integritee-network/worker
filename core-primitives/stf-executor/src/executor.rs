@@ -21,36 +21,42 @@ use crate::{
 	BatchExecutionResult, ExecutedOperation,
 };
 use codec::{Decode, Encode};
-use ita_stf::{
-	hash::{Hash, TrustedOperationOrHash},
-	stf_sgx::{shards_key_hash, storage_hashes_to_update_per_shard},
-	ParentchainHeader, TrustedCallSigned, TrustedOperation,
-};
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_stf_interface::{
 	parentchain_pallet::ParentchainPalletInterface, StateCallInterface, UpdateState,
 };
-use itp_stf_primitives::types::ShardIdentifier;
+use itp_stf_primitives::{
+	traits::TrustedCallVerification,
+	types::{ShardIdentifier, TrustedOperation, TrustedOperationOrHash},
+};
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_time_utils::duration_now;
-use itp_types::{parentchain::ParentchainId, storage::StorageEntryVerified, OpaqueCall, H256};
+use itp_types::{
+	parentchain::{Header as ParentchainHeader, ParentchainId},
+	storage::StorageEntryVerified,
+	OpaqueCall, H256,
+};
 use log::*;
 use sp_runtime::traits::Header as HeaderTrait;
 use std::{
-	collections::BTreeMap, fmt::Debug, marker::PhantomData, sync::Arc, time::Duration, vec::Vec,
+	collections::BTreeMap, fmt::Debug, marker::PhantomData, sync::Arc, time::Duration, vec,
+	vec::Vec,
 };
-
-pub struct StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf> {
+pub struct StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G>
+where
+	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
+	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
+{
 	ocall_api: Arc<OCallApi>,
 	state_handler: Arc<StateHandler>,
 	node_metadata_repo: Arc<NodeMetadataRepository>,
-	_phantom: PhantomData<Stf>,
+	_phantom: PhantomData<(Stf, TCS, G)>,
 }
 
-impl<OCallApi, StateHandler, NodeMetadataRepository, Stf>
-	StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf>
+impl<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G>
+	StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
 	StateHandler: HandleState<HashType = H256>,
@@ -60,10 +66,12 @@ where
 	Stf: UpdateState<
 			StateHandler::StateT,
 			<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
-		> + StateCallInterface<TrustedCallSigned, StateHandler::StateT, NodeMetadataRepository>,
+		> + StateCallInterface<TCS, StateHandler::StateT, NodeMetadataRepository>,
 	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
 		IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)> + From<BTreeMap<Vec<u8>, Option<Vec<u8>>>>,
-	<Stf as StateCallInterface<TrustedCallSigned, StateHandler::StateT, NodeMetadataRepository>>::Error: Debug,
+	<Stf as StateCallInterface<TCS, StateHandler::StateT, NodeMetadataRepository>>::Error: Debug,
+	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
+	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
 {
 	pub fn new(
 		ocall_api: Arc<OCallApi>,
@@ -82,11 +90,11 @@ where
 	fn execute_trusted_call_on_stf<PH>(
 		&self,
 		state: &mut StateHandler::StateT,
-		trusted_operation: &TrustedOperation,
+		trusted_operation: &TrustedOperation<TCS, G>,
 		_header: &PH,
 		shard: &ShardIdentifier,
 		post_processing: StatePostProcessing,
-	) -> Result<ExecutedOperation>
+	) -> Result<ExecutedOperation<TCS, G>>
 	where
 		PH: HeaderTrait<Hash = H256>,
 	{
@@ -108,7 +116,7 @@ where
 			return Ok(ExecutedOperation::failed(top_or_hash))
 		}
 
-		debug!("execute on STF, call with nonce {}", trusted_call.nonce);
+		debug!("execute on STF, call with nonce {}", trusted_call.nonce());
 		let mut extrinsic_call_backs: Vec<OpaqueCall> = Vec::new();
 		if let Err(e) = Stf::execute_call(
 			state,
@@ -134,8 +142,9 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler, NodeMetadataRepository, Stf> StfUpdateState
-	for StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf>
+impl<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G>
+	StfUpdateState<ParentchainHeader, ParentchainId>
+	for StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
 	StateHandler: HandleState<HashType = H256> + QueryShardState,
@@ -150,6 +159,8 @@ where
 	<Stf as ParentchainPalletInterface<StateHandler::StateT, ParentchainHeader>>::Error: Debug,
 	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
 		From<BTreeMap<Vec<u8>, Option<Vec<u8>>>>,
+	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
+	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
 {
 	fn update_states(
 		&self,
@@ -188,7 +199,7 @@ where
 			return Ok(())
 		}
 
-		// look for new shards an initialize them
+		// look for new shards and initialize them
 		if let Some(maybe_shards) = state_diff_update.get(&shards_key_hash()) {
 			match maybe_shards {
 				Some(shards) => self.initialize_new_shards(header, &state_diff_update, &shards)?,
@@ -199,8 +210,8 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler, NodeMetadataRepository, Stf>
-	StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf>
+impl<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G>
+	StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G>
 where
 	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
 		From<BTreeMap<Vec<u8>, Option<Vec<u8>>>> + IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>,
@@ -214,6 +225,8 @@ where
 			StateHandler::StateT,
 			<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
 		>,
+	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
+	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
 {
 	fn initialize_new_shards(
 		&self,
@@ -250,8 +263,8 @@ where
 	}
 }
 
-impl<OCallApi, StateHandler, NodeMetadataRepository, Stf> StateUpdateProposer
-	for StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf>
+impl<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G> StateUpdateProposer<TCS, G>
+	for StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G>
 where
 	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
 	StateHandler: HandleState<HashType = H256>,
@@ -262,23 +275,25 @@ where
 	Stf: UpdateState<
 			StateHandler::StateT,
 			<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
-		> + StateCallInterface<TrustedCallSigned, StateHandler::StateT, NodeMetadataRepository>,
+		> + StateCallInterface<TCS, StateHandler::StateT, NodeMetadataRepository>,
 	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
 		IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>,
 	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
 		From<BTreeMap<Vec<u8>, Option<Vec<u8>>>>,
-	<Stf as StateCallInterface<TrustedCallSigned, StateHandler::StateT, NodeMetadataRepository>>::Error: Debug,
+	<Stf as StateCallInterface<TCS, StateHandler::StateT, NodeMetadataRepository>>::Error: Debug,
+	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
+	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
 {
 	type Externalities = StateHandler::StateT;
 
 	fn propose_state_update<PH, F>(
 		&self,
-		trusted_calls: &[TrustedOperation],
+		trusted_calls: &[TrustedOperation<TCS, G>],
 		header: &PH,
 		shard: &ShardIdentifier,
 		max_exec_duration: Duration,
 		prepare_state_function: F,
-	) -> Result<BatchExecutionResult<Self::Externalities>>
+	) -> Result<BatchExecutionResult<Self::Externalities, TCS, G>>
 	where
 		PH: HeaderTrait<Hash = H256>,
 		F: FnOnce(Self::Externalities) -> Self::Externalities,
@@ -289,7 +304,7 @@ where
 
 		// Execute any pre-processing steps.
 		let mut state = prepare_state_function(state);
-		let mut executed_and_failed_calls = Vec::<ExecutedOperation>::new();
+		let mut executed_and_failed_calls = Vec::<ExecutedOperation<TCS, G>>::new();
 
 		// Iterate through all calls until time is over.
 		for trusted_call_signed in trusted_calls.into_iter() {
@@ -327,4 +342,15 @@ fn into_map(
 	storage_entries: Vec<StorageEntryVerified<Vec<u8>>>,
 ) -> BTreeMap<Vec<u8>, Option<Vec<u8>>> {
 	storage_entries.into_iter().map(|e| e.into_tuple()).collect()
+}
+
+// todo: we need to clarify where these functions belong and if we need them at all. moved them from ita-stf but we can no longer depend on that
+pub fn storage_hashes_to_update_per_shard(_shard: &ShardIdentifier) -> Vec<Vec<u8>> {
+	Vec::new()
+}
+
+pub fn shards_key_hash() -> Vec<u8> {
+	// here you have to point to a storage value containing a Vec of
+	// ShardIdentifiers the enclave uses this to autosubscribe to no shards
+	vec![]
 }

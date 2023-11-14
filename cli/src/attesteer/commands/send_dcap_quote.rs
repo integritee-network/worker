@@ -35,7 +35,7 @@ impl SendDcapQuoteCmd {
 		let direct_api = get_worker_api_direct(cli);
 		let hex_encoded_quote = match read_to_string(&self.quote) {
 			Ok(hex_encoded_quote) => hex_encoded_quote,
-			Err(e) => panic!("Opening hex encoded DCAP quote file failed: {:#?}", e),
+			Err(e) => panic!("Opening hex encoded DCAP quote file failed: {:?}", e),
 		};
 
 		let rpc_method = "attesteer_forwardDcapQuote".to_owned();

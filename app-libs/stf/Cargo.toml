@@ -39,6 +39,7 @@ pallet-sudo = { default-features = false, git = "https://github.com/paritytech/s
 sp-application-crypto = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 # scs / integritee
 my-node-runtime = { package = "integritee-node-runtime", optional = true, git = "https://github.com/integritee-network/integritee-node.git", branch = "sdk-v0.12.0-polkadot-v0.9.42" }
@@ -58,7 +59,6 @@ evm_std = ["evm", "ita-sgx-runtime/evm_std"]
 sgx = [
     "sgx_tstd",
     "itp-sgx-externalities/sgx",
-    "itp-utils/sgx",
     "sp-io/sgx",
     "itp-node-api/sgx",
     "itp-node-api-metadata-provider/sgx",
@@ -75,7 +75,6 @@ std = [
     "itp-stf-interface/std",
     "itp-storage/std",
     "itp-types/std",
-    "itp-utils/std",
     "itp-node-api/std",
     "itp-node-api-metadata/std",
     "itp-node-api-metadata-provider/std",

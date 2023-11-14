@@ -7,3 +7,8 @@ edition = "2021"
 
 [dependencies]
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+
+[features]
+# necessary to run cargo tests without any preliminaries
+# See: https://github.com/rust-lang/cargo/issues/2549
+link-sgx-libs = []
