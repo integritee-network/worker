@@ -22,7 +22,6 @@ use itp_stf_primitives::traits::{IndirectExecutor, TrustedCallVerification};
 use itp_utils::stringify::account_id_to_string;
 use sp_core::bounded::alloc;
 use sp_runtime::{generic::Header as HeaderG, traits::BlakeTwo256, MultiAddress, MultiSignature};
-use sp_std::boxed::Box;
 use substrate_api_client::ac_node_api::StaticEvent;
 
 pub type StorageProof = Vec<Vec<u8>>;
