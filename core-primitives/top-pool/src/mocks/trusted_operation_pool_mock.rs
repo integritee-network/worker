@@ -35,7 +35,7 @@ use crate::{
 };
 use codec::Encode;
 use core::{future::Future, pin::Pin};
-use ita_stf::TrustedOperation as StfTrustedOperation;
+
 use itp_types::{Block, BlockHash as SidechainBlockHash, ShardIdentifier, H256};
 use jsonrpc_core::futures::future::ready;
 use sp_runtime::{
@@ -47,35 +47,33 @@ use std::{boxed::Box, collections::HashMap, string::String, sync::Arc, vec, vec:
 /// Mock for the trusted operation pool
 ///
 /// To be used in unit tests
-pub struct TrustedOperationPoolMock {
-	submitted_transactions: RwLock<HashMap<ShardIdentifier, TxPayload>>,
+pub struct TrustedOperationPoolMock<TOP: Encode + Clone + Send + Sync + 'static> {
+	submitted_transactions: RwLock<HashMap<ShardIdentifier, TxPayload<TOP>>>,
 }
 
 /// Transaction payload
 #[derive(Clone, PartialEq)]
-pub struct TxPayload {
-	pub block_id: BlockId<<TrustedOperationPoolMock as TrustedOperationPool>::Block>,
+pub struct TxPayload<TOP: Encode + Clone + Send + Sync + 'static> {
+	pub block_id: BlockId<<TrustedOperationPoolMock<TOP> as TrustedOperationPool<TOP>>::Block>,
 	pub source: TrustedOperationSource,
-	pub xts: Vec<StfTrustedOperation>,
+	pub xts: Vec<TOP>,
 	pub shard: ShardIdentifier,
 }
 
-impl Default for TrustedOperationPoolMock {
+impl<TOP: Encode + Clone + Send + Sync + 'static> Default for TrustedOperationPoolMock<TOP> {
 	fn default() -> Self {
-		TrustedOperationPoolMock { submitted_transactions: RwLock::new(HashMap::new()) }
+		TrustedOperationPoolMock::<TOP> { submitted_transactions: RwLock::new(HashMap::new()) }
 	}
 }
 
-impl TrustedOperationPoolMock {
-	pub fn get_last_submitted_transactions(&self) -> HashMap<ShardIdentifier, TxPayload> {
+impl<TOP: Encode + Clone + Send + Sync + 'static> TrustedOperationPoolMock<TOP> {
+	pub fn get_last_submitted_transactions(&self) -> HashMap<ShardIdentifier, TxPayload<TOP>> {
 		let transactions = self.submitted_transactions.read().unwrap();
 		transactions.clone()
 	}
 
-	fn map_stf_top_to_tx(
-		stf_top: &StfTrustedOperation,
-	) -> Arc<TrustedOperation<TxHash<Self>, StfTrustedOperation>> {
-		Arc::new(TrustedOperation::<TxHash<Self>, StfTrustedOperation> {
+	fn map_stf_top_to_tx(stf_top: &TOP) -> Arc<TrustedOperation<TOP>> {
+		Arc::new(TrustedOperation::<TOP> {
 			data: stf_top.clone(),
 			bytes: 0,
 			hash: hash_of_top(stf_top),
@@ -89,10 +87,12 @@ impl TrustedOperationPoolMock {
 	}
 }
 
-impl TrustedOperationPool for TrustedOperationPoolMock {
+impl<TOP> TrustedOperationPool<TOP> for TrustedOperationPoolMock<TOP>
+where
+	TOP: Encode + Clone + Sync + Send + 'static,
+{
 	type Block = Block;
-	type Hash = H256;
-	type InPoolOperation = TrustedOperation<TxHash<Self>, StfTrustedOperation>;
+	type InPoolOperation = TrustedOperation<TOP>;
 	type Error = Error;
 
 	#[allow(clippy::type_complexity)]
@@ -100,13 +100,13 @@ impl TrustedOperationPool for TrustedOperationPoolMock {
 		&self,
 		at: &BlockId<Self::Block>,
 		source: TrustedOperationSource,
-		xts: Vec<StfTrustedOperation>,
+		xts: Vec<TOP>,
 		shard: ShardIdentifier,
-	) -> PoolFuture<Vec<Result<TxHash<Self>, Self::Error>>, Self::Error> {
+	) -> PoolFuture<Vec<Result<TxHash, Self::Error>>, Self::Error> {
 		let mut transactions = self.submitted_transactions.write().unwrap();
 		transactions.insert(shard, TxPayload { block_id: *at, source, xts: xts.clone(), shard });
 
-		let top_hashes: Vec<Result<TxHash<Self>, Self::Error>> =
+		let top_hashes: Vec<Result<TxHash, Self::Error>> =
 			xts.iter().map(|top| Ok(hash_of_top(top))).collect();
 
 		Box::pin(ready(Ok(top_hashes)))
@@ -116,9 +116,9 @@ impl TrustedOperationPool for TrustedOperationPoolMock {
 		&self,
 		at: &BlockId<Self::Block>,
 		source: TrustedOperationSource,
-		xt: StfTrustedOperation,
+		xt: TOP,
 		shard: ShardIdentifier,
-	) -> PoolFuture<TxHash<Self>, Self::Error> {
+	) -> PoolFuture<TxHash, Self::Error> {
 		let mut transactions = self.submitted_transactions.write().unwrap();
 		transactions
 			.insert(shard, TxPayload { block_id: *at, source, xts: vec![xt.clone()], shard });
@@ -132,9 +132,9 @@ impl TrustedOperationPool for TrustedOperationPoolMock {
 		&self,
 		at: &BlockId<Self::Block>,
 		source: TrustedOperationSource,
-		xt: StfTrustedOperation,
+		xt: TOP,
 		shard: ShardIdentifier,
-	) -> PoolFuture<TxHash<Self>, Self::Error> {
+	) -> PoolFuture<TxHash, Self::Error> {
 		self.submit_one(at, source, xt, shard)
 	}
 
@@ -171,7 +171,7 @@ impl TrustedOperationPool for TrustedOperationPoolMock {
 
 	fn remove_invalid(
 		&self,
-		_hashes: &[TxHash<Self>],
+		_hashes: &[TxHash],
 		_shard: ShardIdentifier,
 		_inblock: bool,
 	) -> Vec<Arc<Self::InPoolOperation>> {
@@ -191,33 +191,33 @@ impl TrustedOperationPool for TrustedOperationPoolMock {
 			.unwrap_or_else(default_pool_status)
 	}
 
-	fn import_notification_stream(&self) -> ImportNotificationStream<TxHash<Self>> {
+	fn import_notification_stream(&self) -> ImportNotificationStream<TxHash> {
 		unimplemented!()
 	}
 
-	fn on_broadcasted(&self, _propagations: HashMap<TxHash<Self>, Vec<String>>) {
+	fn on_broadcasted(&self, _propagations: HashMap<TxHash, Vec<String>>) {
 		unimplemented!()
 	}
 
-	fn hash_of(&self, xt: &StfTrustedOperation) -> TxHash<Self> {
+	fn hash_of(&self, xt: &TOP) -> TxHash {
 		hash_of_top(xt)
 	}
 
 	fn ready_transaction(
 		&self,
-		_hash: &TxHash<Self>,
+		_hash: &TxHash,
 		_shard: ShardIdentifier,
 	) -> Option<Arc<Self::InPoolOperation>> {
 		unimplemented!()
 	}
 
-	fn on_block_imported(&self, _hashes: &[Self::Hash], _block_hash: SidechainBlockHash) {}
+	fn on_block_imported(&self, _hashes: &[TxHash], _block_hash: SidechainBlockHash) {}
 }
 
 fn default_pool_status() -> PoolStatus {
 	PoolStatus { ready: 0, ready_bytes: 0, future: 0, future_bytes: 0 }
 }
 
-fn hash_of_top(top: &StfTrustedOperation) -> H256 {
+fn hash_of_top<TOP: Encode>(top: &TOP) -> H256 {
 	top.using_encoded(|x| BlakeTwo256::hash(x))
 }

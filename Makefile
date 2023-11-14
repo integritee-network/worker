@@ -76,13 +76,13 @@ ifeq ($(SGX_PRODUCTION), 1)
 	SGX_ENCLAVE_CONFIG = "enclave-runtime/Enclave.config.production.xml"
 	SGX_SIGN_KEY = $(SGX_COMMERCIAL_KEY)
 	SGX_SIGN_PASSFILE = $(SGX_PASSFILE)
-	WORKER_FEATURES := --features=production,$(WORKER_MODE),$(WORKER_FEATURES),$(ADDITIONAL_FEATURES)
+	WORKER_FEATURES := --features=production,link-binary,$(WORKER_MODE),$(WORKER_FEATURES),$(ADDITIONAL_FEATURES)
 else
 	SGX_ENCLAVE_MODE = "Development Mode"
 	SGX_ENCLAVE_CONFIG = "enclave-runtime/Enclave.config.xml"
 	SGX_SIGN_KEY = "enclave-runtime/Enclave_private.pem"
 	SGX_SIGN_PASSFILE = ""
-	WORKER_FEATURES := --features=default,$(WORKER_MODE),$(WORKER_FEATURES),$(ADDITIONAL_FEATURES)
+	WORKER_FEATURES := --features=default,link-binary,$(WORKER_MODE),$(WORKER_FEATURES),$(ADDITIONAL_FEATURES)
 endif
 
 CLIENT_FEATURES = --features=$(WORKER_MODE),$(ADDITIONAL_FEATURES)
@@ -170,7 +170,7 @@ $(Worker_Enclave_u_Object): service/Enclave_u.o
 
 $(Worker_Name): $(Worker_Enclave_u_Object) $(SRC_Files)
 	@echo
-	@echo "Building the integritee-service"
+	@echo "Building the integritee-service: $(Worker_Rust_Flags)"
 	@SGX_SDK=$(SGX_SDK) SGX_MODE=$(SGX_MODE) cargo build -p integritee-service $(Worker_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	cp $(Worker_Rust_Path)/integritee-service ./bin
@@ -178,7 +178,7 @@ $(Worker_Name): $(Worker_Enclave_u_Object) $(SRC_Files)
 ######## Integritee-client objects ########
 $(Client_Name): $(SRC_Files)
 	@echo
-	@echo "Building the integritee-cli"
+	@echo "Building the integritee-cli $(Client_Rust_Flags)"
 	@cargo build -p integritee-cli $(Client_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	cp $(Client_Rust_Path)/$(Client_Binary) ./bin

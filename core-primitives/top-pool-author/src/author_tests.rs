@@ -17,58 +17,63 @@
 
 use crate::{
 	author::Author,
-	test_fixtures::{
-		create_indirect_trusted_operation, shard_id, trusted_call_signed, trusted_getter_signed,
-	},
+	test_fixtures::shard_id,
 	test_utils::submit_operation_to_top_pool,
 	top_filter::{AllowAllTopsFilter, Filter, GettersOnlyFilter},
 	traits::AuthorApi,
 };
 use codec::{Decode, Encode};
-use ita_stf::TrustedOperation;
 use itp_sgx_crypto::{mocks::KeyRepositoryMock, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
+
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{
-	handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock,
+	handle_state_mock::HandleStateMock,
+	metrics_ocall_mock::MetricsOCallMock,
 	shielding_crypto_mock::ShieldingCryptoMock,
+	stf_mock::{
+		mock_top_direct_trusted_call_signed, mock_top_indirect_trusted_call_signed,
+		mock_top_trusted_getter_signed, GetterMock, TrustedCallSignedMock, TrustedOperationMock,
+	},
 };
 use itp_top_pool::mocks::trusted_operation_pool_mock::TrustedOperationPoolMock;
+
 use sgx_crypto_helper::{rsa3072::Rsa3072KeyPair, RsaKeyPair};
 use sp_core::H256;
 use std::sync::Arc;
 
 type TestAuthor<Filter> = Author<
-	TrustedOperationPoolMock,
+	TrustedOperationPoolMock<TrustedOperationMock>,
 	Filter,
 	HandleStateMock,
 	KeyRepositoryMock<ShieldingCryptoMock>,
 	MetricsOCallMock,
+	TrustedCallSignedMock,
+	GetterMock,
 >;
 
 #[test]
 fn top_encryption_works() {
-	let trusted_call = TrustedOperation::from(trusted_call_signed());
-	let trusted_getter = TrustedOperation::from(trusted_getter_signed());
-
-	assert_eq!(trusted_call, encrypt_and_decrypt_top(&trusted_call));
-	assert_eq!(trusted_getter, encrypt_and_decrypt_top(&trusted_getter));
+	let top_call = mock_top_direct_trusted_call_signed();
+	let top_getter = mock_top_trusted_getter_signed();
+	assert_eq!(top_call, encrypt_and_decrypt_top(&top_call));
+	assert_eq!(top_getter, encrypt_and_decrypt_top(&top_getter));
 }
 
-fn encrypt_and_decrypt_top(top: &TrustedOperation) -> TrustedOperation {
+fn encrypt_and_decrypt_top(top: &TrustedOperationMock) -> TrustedOperationMock {
 	let encryption_key = Rsa3072KeyPair::new().unwrap();
 	let encrypted_top = encryption_key.encrypt(top.encode().as_slice()).unwrap();
 	let decrypted_top = encryption_key.decrypt(encrypted_top.as_slice()).unwrap();
 
-	TrustedOperation::decode(&mut decrypted_top.as_slice()).unwrap()
+	TrustedOperationMock::decode(&mut decrypted_top.as_slice()).unwrap()
 }
 
 #[test]
 fn submitting_to_author_inserts_in_pool() {
-	let (author, top_pool, shielding_key) = create_author_with_filter(AllowAllTopsFilter);
-	let top = TrustedOperation::from(trusted_getter_signed());
+	let (author, top_pool, shielding_key) = create_author_with_filter(AllowAllTopsFilter::new());
+	let top_getter = mock_top_trusted_getter_signed();
 
 	let submit_response: H256 =
-		submit_operation_to_top_pool(&author, &top, &shielding_key, shard_id()).unwrap();
+		submit_operation_to_top_pool(&author, &top_getter, &shielding_key, shard_id()).unwrap();
 
 	assert!(!submit_response.is_zero());
 
@@ -78,10 +83,10 @@ fn submitting_to_author_inserts_in_pool() {
 
 #[test]
 fn submitting_call_to_author_when_top_is_filtered_returns_error() {
-	let (author, top_pool, shielding_key) = create_author_with_filter(GettersOnlyFilter);
-	let top = TrustedOperation::direct_call(trusted_call_signed());
-
-	let submit_response = submit_operation_to_top_pool(&author, &top, &shielding_key, shard_id());
+	let (author, top_pool, shielding_key) = create_author_with_filter(GettersOnlyFilter::new());
+	let top_call = mock_top_direct_trusted_call_signed();
+	let submit_response =
+		submit_operation_to_top_pool(&author, &top_call, &shielding_key, shard_id());
 
 	assert!(submit_response.is_err());
 	assert!(top_pool.get_last_submitted_transactions().is_empty());
@@ -89,11 +94,11 @@ fn submitting_call_to_author_when_top_is_filtered_returns_error() {
 
 #[test]
 fn submitting_getter_to_author_when_top_is_filtered_inserts_in_pool() {
-	let (author, top_pool, shielding_key) = create_author_with_filter(GettersOnlyFilter);
-	let top = TrustedOperation::from(trusted_getter_signed());
+	let (author, top_pool, shielding_key) = create_author_with_filter(GettersOnlyFilter::new());
 
+	let top_getter = mock_top_trusted_getter_signed();
 	let submit_response =
-		submit_operation_to_top_pool(&author, &top, &shielding_key, shard_id()).unwrap();
+		submit_operation_to_top_pool(&author, &top_getter, &shielding_key, shard_id()).unwrap();
 
 	assert!(!submit_response.is_zero());
 	assert_eq!(1, top_pool.get_last_submitted_transactions().len());
@@ -101,11 +106,9 @@ fn submitting_getter_to_author_when_top_is_filtered_inserts_in_pool() {
 
 #[test]
 fn submitting_direct_call_works() {
-	let trusted_operation = TrustedOperation::direct_call(trusted_call_signed());
-	let (author, top_pool, shielding_key) = create_author_with_filter(AllowAllTopsFilter);
-
-	let _ = submit_operation_to_top_pool(&author, &trusted_operation, &shielding_key, shard_id())
-		.unwrap();
+	let (author, top_pool, shielding_key) = create_author_with_filter(AllowAllTopsFilter::new());
+	let top_call = mock_top_direct_trusted_call_signed();
+	let _ = submit_operation_to_top_pool(&author, &top_call, &shielding_key, shard_id()).unwrap();
 
 	assert_eq!(1, top_pool.get_last_submitted_transactions().len());
 	assert_eq!(1, author.get_pending_trusted_calls(shard_id()).len());
@@ -113,19 +116,18 @@ fn submitting_direct_call_works() {
 
 #[test]
 fn submitting_indirect_call_works() {
-	let (author, top_pool, shielding_key) = create_author_with_filter(AllowAllTopsFilter);
-	let trusted_operation = create_indirect_trusted_operation();
+	let (author, top_pool, shielding_key) = create_author_with_filter(AllowAllTopsFilter::new());
+	let top_call = mock_top_indirect_trusted_call_signed();
 
-	let _ = submit_operation_to_top_pool(&author, &trusted_operation, &shielding_key, shard_id())
-		.unwrap();
+	let _ = submit_operation_to_top_pool(&author, &top_call, &shielding_key, shard_id()).unwrap();
 
 	assert_eq!(1, top_pool.get_last_submitted_transactions().len());
 	assert_eq!(1, author.get_pending_trusted_calls(shard_id()).len());
 }
 
-fn create_author_with_filter<F: Filter<Value = TrustedOperation>>(
+fn create_author_with_filter<F: Filter<Value = TrustedOperationMock>>(
 	filter: F,
-) -> (TestAuthor<F>, Arc<TrustedOperationPoolMock>, ShieldingCryptoMock) {
+) -> (TestAuthor<F>, Arc<TrustedOperationPoolMock<TrustedOperationMock>>, ShieldingCryptoMock) {
 	let top_pool = Arc::new(TrustedOperationPoolMock::default());
 
 	let shard_id = shard_id();

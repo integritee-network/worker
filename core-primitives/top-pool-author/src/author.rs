@@ -17,6 +17,7 @@
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
+use core::fmt::Debug;
 
 use crate::{
 	client_error::Error as ClientError,
@@ -25,17 +26,19 @@ use crate::{
 	traits::{AuthorApi, OnBlockImported},
 };
 use codec::{Decode, Encode};
-use ita_stf::{hash, Getter, TrustedOperation};
 use itp_enclave_metrics::EnclaveMetric;
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt};
-use itp_stf_primitives::types::AccountId;
+use itp_stf_primitives::{
+	traits::{PoolTransactionValidation, TrustedCallVerification},
+	types::{AccountId, TrustedOperation as StfTrustedOperation, TrustedOperationOrHash},
+};
 use itp_stf_state_handler::query_shard_state::QueryShardState;
 use itp_top_pool::{
 	error::{Error as PoolError, IntoPoolError},
 	primitives::{
-		BlockHash, InPoolOperation, PoolFuture, TrustedOperationPool, TrustedOperationSource,
-		TxHash,
+		BlockHash, InPoolOperation, PoolFuture, PoolStatus, TrustedOperationPool,
+		TrustedOperationSource, TxHash,
 	},
 };
 use itp_types::{BlockHash as SidechainBlockHash, ShardIdentifier};
@@ -49,17 +52,17 @@ use std::{boxed::Box, sync::Arc, vec::Vec};
 
 /// Define type of TOP filter that is used in the Author
 #[cfg(feature = "sidechain")]
-pub type AuthorTopFilter = crate::top_filter::CallsOnlyFilter;
+pub type AuthorTopFilter<TCS, G> = crate::top_filter::CallsOnlyFilter<TCS, G>;
 
 // This is different from upstream, direct calls are ok in the OLI case, as they
 //  come from a centralized instance.
 #[cfg(feature = "offchain-worker")]
-pub type AuthorTopFilter = crate::top_filter::CallsOnlyFilter;
+pub type AuthorTopFilter<TCS, G> = crate::top_filter::CallsOnlyFilter<TCS, G>;
 #[cfg(feature = "teeracle")] // Teeracle currently does not process any trusted operations
-pub type AuthorTopFilter = crate::top_filter::DenyAllFilter;
+pub type AuthorTopFilter<TCS, G> = crate::top_filter::DenyAllFilter<TCS, G>;
 
 #[cfg(not(any(feature = "sidechain", feature = "offchain-worker", feature = "teeracle")))]
-pub type AuthorTopFilter = crate::top_filter::CallsOnlyFilter;
+pub type AuthorTopFilter<TCS, G> = crate::top_filter::CallsOnlyFilter<TCS, G>;
 
 /// Currently we treat all RPC operations as externals.
 ///
@@ -71,13 +74,15 @@ const TX_SOURCE: TrustedOperationSource = TrustedOperationSource::External;
 /// Authoring API for RPC calls
 ///
 ///
-pub struct Author<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi>
+pub struct Author<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi, TCS, G>
 where
-	TopPool: TrustedOperationPool + Sync + Send + 'static,
-	TopFilter: Filter<Value = TrustedOperation>,
+	TopPool: TrustedOperationPool<StfTrustedOperation<TCS, G>> + Sync + Send + 'static,
+	TopFilter: Filter<Value = StfTrustedOperation<TCS, G>>,
 	StateFacade: QueryShardState,
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
+	TCS: PartialEq + Encode + Clone + Debug + Send + Sync,
+	G: PartialEq + Encode + Clone + PoolTransactionValidation + Debug + Send + Sync,
 {
 	top_pool: Arc<TopPool>,
 	top_filter: TopFilter,
@@ -86,15 +91,17 @@ where
 	ocall_api: Arc<OCallApi>,
 }
 
-impl<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi>
-	Author<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi>
+impl<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi, TCS, G>
+	Author<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi, TCS, G>
 where
-	TopPool: TrustedOperationPool + Sync + Send + 'static,
-	TopFilter: Filter<Value = TrustedOperation>,
+	TopPool: TrustedOperationPool<StfTrustedOperation<TCS, G>> + Sync + Send + 'static,
+	TopFilter: Filter<Value = StfTrustedOperation<TCS, G>>,
 	StateFacade: QueryShardState,
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
+	TCS: PartialEq + Encode + Clone + Debug + Send + Sync,
+	G: PartialEq + Encode + Clone + PoolTransactionValidation + Debug + Send + Sync,
 {
 	/// Create new instance of Authoring API.
 	pub fn new(
@@ -113,22 +120,40 @@ enum TopSubmissionMode {
 	SubmitWatch,
 }
 
-impl<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi>
-	Author<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi>
+impl<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi, TCS, G>
+	Author<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi, TCS, G>
 where
-	TopPool: TrustedOperationPool + Sync + Send + 'static,
-	TopFilter: Filter<Value = TrustedOperation>,
+	TopPool: TrustedOperationPool<StfTrustedOperation<TCS, G>> + Sync + Send + 'static,
+	TopFilter: Filter<Value = StfTrustedOperation<TCS, G>>,
 	StateFacade: QueryShardState,
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
+	TCS: PartialEq
+		+ Encode
+		+ Decode
+		+ Clone
+		+ Debug
+		+ Send
+		+ Sync
+		+ TrustedCallVerification
+		+ 'static,
+	G: PartialEq
+		+ Encode
+		+ Decode
+		+ Clone
+		+ PoolTransactionValidation
+		+ Debug
+		+ Send
+		+ Sync
+		+ 'static,
 {
 	fn process_top(
 		&self,
 		ext: Vec<u8>,
 		shard: ShardIdentifier,
 		submission_mode: TopSubmissionMode,
-	) -> PoolFuture<TxHash<TopPool>, RpcError> {
+	) -> PoolFuture<TxHash, RpcError> {
 		// check if shard exists
 		match self.state_facade.shard_exists(&shard) {
 			Err(_) => return Box::pin(ready(Err(ClientError::InvalidShard.into()))),
@@ -148,14 +173,18 @@ where
 			Err(_) => return Box::pin(ready(Err(ClientError::BadFormatDecipher.into()))),
 		};
 		// decode call
-		let trusted_operation = match TrustedOperation::decode(&mut request_vec.as_slice()) {
-			Ok(op) => op,
-			Err(_) => return Box::pin(ready(Err(ClientError::BadFormat.into()))),
-		};
+		let trusted_operation =
+			match StfTrustedOperation::<TCS, G>::decode(&mut request_vec.as_slice()) {
+				Ok(op) => op,
+				Err(_) => return Box::pin(ready(Err(ClientError::BadFormat.into()))),
+			};
+
+		trace!("decrypted indirect invocation: {:?}", trusted_operation);
 
 		// apply top filter - return error if this specific type of trusted operation
 		// is not allowed by the filter
 		if !self.top_filter.filter(&trusted_operation) {
+			warn!("unsupported operation");
 			return Box::pin(ready(Err(ClientError::UnsupportedOperation.into())))
 		}
 
@@ -171,15 +200,13 @@ where
 		if let Some(trusted_call_signed) = trusted_operation.to_call() {
 			debug!(
 				"Submitting trusted call to TOP pool: {:?}, TOP hash: {:?}",
-				trusted_call_signed.call,
+				trusted_call_signed,
 				self.hash_of(&trusted_operation)
 			);
-		} else if let TrustedOperation::get(Getter::trusted(ref trusted_getter_signed)) =
-			trusted_operation
-		{
+		} else if let StfTrustedOperation::<TCS, G>::get(ref getter) = trusted_operation {
 			debug!(
-				"Submitting trusted getter to TOP pool: {:?}, TOP hash: {:?}",
-				trusted_getter_signed.getter,
+				"Submitting trusted or public getter to TOP pool: {:?}, TOP hash: {:?}",
+				getter,
 				self.hash_of(&trusted_operation)
 			);
 		}
@@ -193,7 +220,7 @@ where
 						trusted_operation,
 						shard,
 					)
-					.map_err(map_top_error::<TopPool>),
+					.map_err(map_top_error::<TopPool, TCS, G>),
 			),
 
 			TopSubmissionMode::SubmitWatch => Box::pin(
@@ -204,20 +231,20 @@ where
 						trusted_operation,
 						shard,
 					)
-					.map_err(map_top_error::<TopPool>),
+					.map_err(map_top_error::<TopPool, TCS, G>),
 			),
 		}
 	}
 
 	fn remove_top(
 		&self,
-		bytes_or_hash: hash::TrustedOperationOrHash<TxHash<TopPool>>,
+		bytes_or_hash: TrustedOperationOrHash<TCS, G>,
 		shard: ShardIdentifier,
 		inblock: bool,
-	) -> Result<TxHash<TopPool>> {
+	) -> Result<TxHash> {
 		let hash = match bytes_or_hash {
-			hash::TrustedOperationOrHash::Hash(h) => Ok(h),
-			hash::TrustedOperationOrHash::OperationEncoded(bytes) => {
+			TrustedOperationOrHash::Hash(h) => Ok(h),
+			TrustedOperationOrHash::OperationEncoded(bytes) => {
 				match Decode::decode(&mut bytes.as_slice()) {
 					Ok(op) => Ok(self.top_pool.hash_of(&op)),
 					Err(e) => {
@@ -226,7 +253,7 @@ where
 					},
 				}
 			},
-			hash::TrustedOperationOrHash::Operation(op) => Ok(self.top_pool.hash_of(&op)),
+			TrustedOperationOrHash::Operation(op) => Ok(self.top_pool.hash_of(&op)),
 		}?;
 
 		debug!("removing {:?} from top pool", hash);
@@ -241,14 +268,20 @@ where
 			.remove_invalid(&[hash], shard, inblock)
 			// Only remove a single element, so first should return Ok().
 			.first()
-			.map(|o| o.hash().clone())
+			.map(|o| o.hash())
 			.ok_or(PoolError::InvalidTrustedOperation)?;
 
 		Ok(removed_op_hash)
 	}
 }
 
-fn map_top_error<P: TrustedOperationPool>(error: P::Error) -> RpcError {
+fn map_top_error<P: TrustedOperationPool<StfTrustedOperation<TCS, G>>, TCS, G>(
+	error: P::Error,
+) -> RpcError
+where
+	TCS: PartialEq + Encode + Debug,
+	G: PartialEq + Encode + Debug,
+{
 	StateRpcError::PoolError(
 		error
 			.into_pool_error()
@@ -258,27 +291,41 @@ fn map_top_error<P: TrustedOperationPool>(error: P::Error) -> RpcError {
 	.into()
 }
 
-impl<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi>
-	AuthorApi<TxHash<TopPool>, BlockHash<TopPool>>
-	for Author<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi>
+impl<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi, TCS, G>
+	AuthorApi<TxHash, BlockHash, TCS, G>
+	for Author<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi, TCS, G>
 where
-	TopPool: TrustedOperationPool + Sync + Send + 'static,
-	TopFilter: Filter<Value = TrustedOperation>,
+	TopPool: TrustedOperationPool<StfTrustedOperation<TCS, G>> + Sync + Send + 'static,
+	TopFilter: Filter<Value = StfTrustedOperation<TCS, G>>,
 	StateFacade: QueryShardState,
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
+	G: PartialEq
+		+ Encode
+		+ Decode
+		+ Clone
+		+ PoolTransactionValidation
+		+ Debug
+		+ Send
+		+ Sync
+		+ 'static,
+	TCS: PartialEq
+		+ Encode
+		+ Decode
+		+ Clone
+		+ Debug
+		+ Send
+		+ Sync
+		+ TrustedCallVerification
+		+ 'static,
 {
-	fn submit_top(
-		&self,
-		ext: Vec<u8>,
-		shard: ShardIdentifier,
-	) -> PoolFuture<TxHash<TopPool>, RpcError> {
+	fn submit_top(&self, ext: Vec<u8>, shard: ShardIdentifier) -> PoolFuture<TxHash, RpcError> {
 		self.process_top(ext, shard, TopSubmissionMode::Submit)
 	}
 
 	/// Get hash of TrustedOperation
-	fn hash_of(&self, xt: &TrustedOperation) -> TxHash<TopPool> {
+	fn hash_of(&self, xt: &StfTrustedOperation<TCS, G>) -> TxHash {
 		self.top_pool.hash_of(xt)
 	}
 
@@ -286,32 +333,39 @@ where
 		Ok(self.top_pool.ready(shard).map(|top| top.data().encode()).collect())
 	}
 
-	fn get_pending_trusted_getters(&self, shard: ShardIdentifier) -> Vec<TrustedOperation> {
+	fn get_pending_getters(&self, shard: ShardIdentifier) -> Vec<StfTrustedOperation<TCS, G>> {
 		self.top_pool
 			.ready(shard)
 			.map(|o| o.data().clone())
 			.into_iter()
-			.filter(|o| matches!(o, TrustedOperation::get(Getter::trusted(_))))
+			.filter(|o| matches!(o, StfTrustedOperation::<TCS, G>::get(_)))
 			.collect()
 	}
 
-	fn get_pending_trusted_calls(&self, shard: ShardIdentifier) -> Vec<TrustedOperation> {
+	fn get_pending_trusted_calls(
+		&self,
+		shard: ShardIdentifier,
+	) -> Vec<StfTrustedOperation<TCS, G>> {
 		self.top_pool
 			.ready(shard)
 			.map(|o| o.data().clone())
 			.into_iter()
 			.filter(|o| {
-				matches!(o, TrustedOperation::direct_call(_))
-					|| matches!(o, TrustedOperation::indirect_call(_))
+				matches!(o, StfTrustedOperation::<TCS, G>::direct_call(_))
+					|| matches!(o, StfTrustedOperation::<TCS, G>::indirect_call(_))
 			})
 			.collect()
+	}
+
+	fn get_status(&self, shard: ShardIdentifier) -> PoolStatus {
+		self.top_pool.status(shard)
 	}
 
 	fn get_pending_trusted_calls_for(
 		&self,
 		shard: ShardIdentifier,
 		account: &AccountId,
-	) -> Vec<TrustedOperation> {
+	) -> Vec<StfTrustedOperation<TCS, G>> {
 		self.get_pending_trusted_calls(shard)
 			.into_iter()
 			.filter(|o| o.signed_caller_account() == Some(account))
@@ -329,8 +383,8 @@ where
 	fn remove_calls_from_pool(
 		&self,
 		shard: ShardIdentifier,
-		executed_calls: Vec<(hash::TrustedOperationOrHash<TxHash<TopPool>>, bool)>,
-	) -> Vec<hash::TrustedOperationOrHash<TxHash<TopPool>>> {
+		executed_calls: Vec<(TrustedOperationOrHash<TCS, G>, bool)>,
+	) -> Vec<TrustedOperationOrHash<TCS, G>> {
 		let mut failed_to_remove = Vec::new();
 		for (executed_call, inblock) in executed_calls {
 			if let Err(e) = self.remove_top(executed_call.clone(), shard, inblock) {
@@ -343,26 +397,24 @@ where
 		failed_to_remove
 	}
 
-	fn watch_top(
-		&self,
-		ext: Vec<u8>,
-		shard: ShardIdentifier,
-	) -> PoolFuture<TxHash<TopPool>, RpcError> {
+	fn watch_top(&self, ext: Vec<u8>, shard: ShardIdentifier) -> PoolFuture<TxHash, RpcError> {
 		self.process_top(ext, shard, TopSubmissionMode::SubmitWatch)
 	}
 }
 
-impl<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi> OnBlockImported
-	for Author<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi>
+impl<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi, TCS, G> OnBlockImported
+	for Author<TopPool, TopFilter, StateFacade, ShieldingKeyRepository, OCallApi, TCS, G>
 where
-	TopPool: TrustedOperationPool + Sync + Send + 'static,
-	TopFilter: Filter<Value = TrustedOperation>,
+	TopPool: TrustedOperationPool<StfTrustedOperation<TCS, G>> + Sync + Send + 'static,
+	TopFilter: Filter<Value = StfTrustedOperation<TCS, G>>,
 	StateFacade: QueryShardState,
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
+	G: PartialEq + Encode + Clone + PoolTransactionValidation + Debug + Send + Sync,
+	TCS: PartialEq + Encode + Clone + Debug + Send + Sync,
 {
-	type Hash = <TopPool as TrustedOperationPool>::Hash;
+	type Hash = TxHash;
 
 	fn on_block_imported(&self, hashes: &[Self::Hash], block_hash: SidechainBlockHash) {
 		self.top_pool.on_block_imported(hashes, block_hash)

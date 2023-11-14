@@ -17,23 +17,14 @@
 
 //! General utility functions.
 
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 
-#[cfg(all(feature = "std", feature = "sgx"))]
-compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
-
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-extern crate sgx_tstd as std;
-
-// re-export module to properly feature gate sgx and regular std environment
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-pub mod sgx_reexport_prelude {
-	pub use thiserror_sgx as thiserror;
-}
+extern crate alloc;
 
 pub mod buffer;
 pub mod error;
 pub mod hex;
+pub mod hex_display;
 pub mod stringify;
 
 // Public re-exports.
@@ -41,4 +32,3 @@ pub use self::{
 	buffer::write_slice_and_whitespace_pad,
 	hex::{FromHexPrefixed, ToHexPrefixed},
 };
-pub use error::Error;

@@ -15,7 +15,7 @@
 
 */
 
-use crate::{IsInitialized, TrackInitialization};
+use crate::initialized_service::{IsInitialized, TrackInitialization};
 
 pub struct TrackInitializationMock;
 

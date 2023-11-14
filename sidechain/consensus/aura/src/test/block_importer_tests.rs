@@ -23,7 +23,11 @@ use itc_parentchain_test::{ParentchainBlockBuilder, ParentchainHeaderBuilder};
 use itp_sgx_crypto::{aes::Aes, mocks::KeyRepositoryMock, StateCrypto};
 use itp_sgx_externalities::SgxExternalitiesDiffType;
 use itp_stf_state_handler::handle_state::HandleState;
-use itp_test::mock::{handle_state_mock::HandleStateMock, onchain_mock::OnchainMock};
+use itp_test::mock::{
+	handle_state_mock::HandleStateMock,
+	onchain_mock::OnchainMock,
+	stf_mock::{GetterMock, TrustedCallSignedMock},
+};
 use itp_time_utils::{duration_now, now_as_millis};
 use itp_top_pool_author::mocks::AuthorApiMock;
 use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader, H256};
@@ -43,7 +47,7 @@ use sp_keyring::ed25519::Keyring;
 use sp_runtime::generic::SignedBlock as SignedParentchainBlock;
 use std::sync::Arc;
 
-type TestTopPoolAuthor = AuthorApiMock<H256, H256>;
+type TestTopPoolAuthor = AuthorApiMock<H256, H256, TrustedCallSignedMock, GetterMock>;
 type TestParentchainBlockImportTrigger =
 	TriggerParentchainBlockImportMock<SignedParentchainBlock<ParentchainBlock>>;
 type TestStateKeyRepo = KeyRepositoryMock<Aes>;
@@ -56,6 +60,8 @@ type TestBlockImporter = BlockImporter<
 	TestStateKeyRepo,
 	TestTopPoolAuthor,
 	TestParentchainBlockImportTrigger,
+	TrustedCallSignedMock,
+	GetterMock,
 >;
 
 fn state_key() -> Aes {

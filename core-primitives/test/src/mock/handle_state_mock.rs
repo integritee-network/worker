@@ -21,7 +21,8 @@ use std::sync::{SgxRwLock as RwLock, SgxRwLockWriteGuard as RwLockWriteGuard};
 #[cfg(feature = "std")]
 use std::sync::{RwLock, RwLockWriteGuard};
 
-use ita_stf::{hash::Hash, State as StfState};
+use itp_sgx_externalities::{SgxExternalities as StfState, StateHash};
+
 use itp_stf_state_handler::{
 	error::{Error, Result},
 	handle_state::HandleState,
@@ -121,8 +122,8 @@ impl QueryShardState for HandleStateMock {
 pub mod tests {
 
 	use super::*;
+	use crate::mock::stf_mock::StfMock;
 	use codec::{Decode, Encode};
-	use ita_stf::stf_sgx_tests::StfState;
 	use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait, SgxExternalitiesType};
 	use itp_stf_interface::InitState;
 	use itp_types::ShardIdentifier;
@@ -185,7 +186,7 @@ pub mod tests {
 		state_handler.initialize_shard(shard).unwrap();
 
 		let (lock, _) = state_handler.load_for_mutation(&shard).unwrap();
-		let initial_state = StfState::init_state(AccountId32::new([0u8; 32]));
+		let initial_state = StfMock::init_state(AccountId32::new([0u8; 32]));
 		let state_hash_before_execution = initial_state.hash();
 		state_handler.write_after_mutation(initial_state, lock, &shard).unwrap();
 
@@ -195,7 +196,7 @@ pub mod tests {
 	}
 
 	pub fn ensure_encode_and_encrypt_does_not_affect_state_hash() {
-		let state = StfState::init_state(AccountId32::new([0u8; 32]));
+		let state = StfMock::init_state(AccountId32::new([0u8; 32]));
 		let state_hash_before_execution = state.hash();
 
 		let encoded_state = state.state.encode();

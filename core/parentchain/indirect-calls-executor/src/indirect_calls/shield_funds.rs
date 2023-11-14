@@ -17,12 +17,11 @@
 
 use crate::{error::Result, IndirectDispatch, IndirectExecutor};
 use codec::{Decode, Encode};
-use ita_stf::{TrustedCall, TrustedOperation};
-use itp_stf_primitives::types::AccountId;
+use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
+use itp_stf_primitives::types::{AccountId, TrustedOperation};
 use itp_types::{Balance, ShardIdentifier};
 use log::{debug, info};
 use std::vec::Vec;
-
 /// Arguments of the Integritee-Parachain's shield fund dispatchable.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub struct ShieldFundsArgs {
@@ -43,7 +42,8 @@ impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for ShieldFundsArgs 
 		let enclave_account_id = executor.get_enclave_account()?;
 		let trusted_call = TrustedCall::balance_shield(enclave_account_id, account, self.amount);
 		let signed_trusted_call = executor.sign_call_with_self(&trusted_call, &self.shard)?;
-		let trusted_operation = TrustedOperation::indirect_call(signed_trusted_call);
+		let trusted_operation =
+			TrustedOperation::<TrustedCallSigned, Getter>::indirect_call(signed_trusted_call);
 
 		let encrypted_trusted_call = executor.encrypt(&trusted_operation.encode())?;
 		executor.submit_trusted_call(self.shard, encrypted_trusted_call);

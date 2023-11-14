@@ -16,18 +16,17 @@
 */
 
 use crate::config::Config;
-use itp_enclave_api::{
-	enclave_base::EnclaveBase, error::Error as EnclaveApiError, Enclave, EnclaveResult,
-};
+use itp_enclave_api::{enclave_base::EnclaveBase, error::Error as EnclaveApiError, EnclaveResult};
 use itp_settings::files::{ENCLAVE_FILE, ENCLAVE_TOKEN};
 use log::*;
 use sgx_types::*;
-use sgx_urts::SgxEnclave;
 use std::{
 	fs::File,
 	io::{Read, Write},
 	path::PathBuf,
 };
+
+use itp_enclave_api::{Enclave, SgxEnclave};
 
 pub fn enclave_init(config: &Config) -> EnclaveResult<Enclave> {
 	const LEN: usize = 1024;

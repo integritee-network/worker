@@ -19,11 +19,12 @@ use crate::{
 	response_channel::ResponseChannel, DirectRpcError, DirectRpcResult, RpcConnectionRegistry,
 	RpcHash, SendRpcResponse,
 };
+use alloc::format;
 use itp_rpc::{RpcResponse, RpcReturnValue};
 use itp_types::{DirectRequestStatus, TrustedOperationStatus};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use log::*;
-use std::{boxed::Box, sync::Arc, vec::Vec};
+use std::{sync::Arc, vec::Vec};
 
 pub struct RpcResponder<Registry, Hash, ResponseChannelType>
 where
@@ -85,7 +86,7 @@ where
 		let mut new_response = rpc_response.clone();
 
 		let mut result = RpcReturnValue::from_hex(&rpc_response.result)
-			.map_err(|e| DirectRpcError::Other(Box::new(e)))?;
+			.map_err(|e| DirectRpcError::Other(format!("{:?}", e).into()))?;
 
 		let do_watch = continue_watching(&status_update);
 

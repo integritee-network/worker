@@ -36,7 +36,7 @@ impl SendIasAttestationReportCmd {
 		let direct_api = get_worker_api_direct(cli);
 		let hex_encoded_report = match read_to_string(&self.report) {
 			Ok(hex_encoded_report) => hex_encoded_report,
-			Err(e) => panic!("Opening hex encoded IAS attestation report file failed: {:#?}", e),
+			Err(e) => panic!("Opening hex encoded IAS attestation report file failed: {:?}", e),
 		};
 
 		//let request = Request { shard, cyphertext: hex_encoded_quote.to_vec() };

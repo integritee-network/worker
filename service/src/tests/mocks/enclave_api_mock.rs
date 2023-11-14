@@ -85,7 +85,7 @@ impl EnclaveBase for EnclaveMock {
 		unreachable!()
 	}
 
-	fn get_ecc_vault_pubkey(&self, shard: &ShardIdentifier) -> EnclaveResult<ed25519::Public> {
+	fn get_ecc_vault_pubkey(&self, _shard: &ShardIdentifier) -> EnclaveResult<ed25519::Public> {
 		unreachable!()
 	}
 

@@ -26,6 +26,7 @@ use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMet
 use itp_sgx_crypto::{mocks::KeyRepositoryMock, Aes};
 use itp_sgx_externalities::SgxExternalities;
 use itp_stf_executor::executor::StfExecutor;
+use itp_stf_primitives::types::TrustedOperation;
 use itp_test::mock::{
 	handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock,
 	onchain_mock::OnchainMock,
@@ -60,20 +61,32 @@ pub type TestParentchainBlockImportTrigger =
 
 pub type TestNodeMetadataRepository = NodeMetadataRepository<NodeMetadataMock>;
 
-pub type TestStfExecutor =
-	StfExecutor<TestOCallApi, TestStateHandler, TestNodeMetadataRepository, TestStf>;
+pub type TestStfExecutor = StfExecutor<
+	TestOCallApi,
+	TestStateHandler,
+	TestNodeMetadataRepository,
+	TestStf,
+	TrustedCallSigned,
+	Getter,
+>;
 
 pub type TestRpcResponder = RpcResponderMock<H256>;
 
-pub type TestTopPool =
-	BasicPool<SidechainApi<ParentchainBlock>, ParentchainBlock, TestRpcResponder>;
+pub type TestTopPool = BasicPool<
+	SidechainApi<ParentchainBlock, TrustedCallSigned>,
+	ParentchainBlock,
+	TestRpcResponder,
+	TrustedOperation<TrustedCallSigned, Getter>,
+>;
 
 pub type TestTopPoolAuthor = Author<
 	TestTopPool,
-	AllowAllTopsFilter,
+	AllowAllTopsFilter<TrustedCallSigned, Getter>,
 	TestStateHandler,
 	TestShieldingKeyRepo,
 	MetricsOCallMock,
+	TrustedCallSigned,
+	Getter,
 >;
 
 pub type TestBlockComposer =
@@ -88,4 +101,6 @@ pub type TestBlockImporter = BlockImporter<
 	TestStateKeyRepo,
 	TestTopPoolAuthor,
 	TestParentchainBlockImportTrigger,
+	TrustedCallSigned,
+	Getter,
 >;

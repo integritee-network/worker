@@ -17,6 +17,7 @@
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
+use core::fmt::Debug;
 
 #[cfg(feature = "std")]
 use rust_base58::base58::FromBase58;
@@ -36,12 +37,14 @@ use std::{borrow::ToOwned, format, string::String, sync::Arc, vec, vec::Vec};
 
 type Hash = sp_core::H256;
 
-pub fn add_top_pool_direct_rpc_methods<R>(
+pub fn add_top_pool_direct_rpc_methods<R, TCS, G>(
 	top_pool_author: Arc<R>,
 	mut io_handler: IoHandler,
 ) -> IoHandler
 where
-	R: AuthorApi<Hash, Hash> + Send + Sync + 'static,
+	R: AuthorApi<Hash, Hash, TCS, G> + Send + Sync + 'static,
+	TCS: PartialEq + Encode + Decode + Debug + Send + Sync + 'static,
+	G: PartialEq + Encode + Decode + Debug + Send + Sync + 'static,
 {
 	// author_submitAndWatchExtrinsic
 	let author_submit_and_watch_extrinsic_name: &str = "author_submitAndWatchExtrinsic";
@@ -131,7 +134,7 @@ where
 					Ok(acc) => acc,
 					Err(msg) => {
 						let error_msg: String =
-							format!("Could not retrieve pending trusted calls due to: {}", msg);
+							format!("Could not retrieve pending trusted calls due to: {:?}", msg);
 						return Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
 					},
 				};
@@ -171,10 +174,12 @@ fn compute_hex_encoded_return_error(error_msg: &str) -> String {
 	RpcReturnValue::from_error_message(error_msg).to_hex()
 }
 
-fn author_submit_extrinsic_inner<R: AuthorApi<Hash, Hash> + Send + Sync + 'static>(
-	author: Arc<R>,
-	params: Params,
-) -> Result<Hash, String> {
+fn author_submit_extrinsic_inner<R, TCS, G>(author: Arc<R>, params: Params) -> Result<Hash, String>
+where
+	R: AuthorApi<Hash, Hash, TCS, G> + Send + Sync + 'static,
+	TCS: PartialEq + Encode + Decode + Debug + Send + Sync + 'static,
+	G: PartialEq + Encode + Decode + Debug + Send + Sync + 'static,
+{
 	debug!("Author submit and watch trusted operation..");
 
 	let hex_encoded_params = params.parse::<Vec<String>>().map_err(|e| format!("{:?}", e))?;

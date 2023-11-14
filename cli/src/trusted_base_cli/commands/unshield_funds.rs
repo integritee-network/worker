@@ -23,13 +23,15 @@ use crate::{
 	Cli, CliResult, CliResultOk,
 };
 use codec::Decode;
-use ita_stf::{Index, TrustedCall, TrustedGetter, TrustedOperation};
-use itp_stf_primitives::types::KeyPair;
+use ita_stf::{Getter, Index, TrustedCall, TrustedCallSigned};
+use itp_stf_primitives::{
+	traits::TrustedCallSigning,
+	types::{KeyPair, TrustedOperation},
+};
 use log::*;
 use my_node_runtime::Balance;
 use sp_core::{crypto::Ss58Codec, Pair};
 use std::boxed::Box;
-
 #[derive(Parser)]
 pub struct UnshieldFundsCommand {
 	/// Sender's incognito AccountId in ss58check format
@@ -58,7 +60,7 @@ impl UnshieldFundsCommand {
 
 		let (mrenclave, shard) = get_identifiers(trusted_args);
 		let nonce = get_layer_two_nonce!(from, cli, trusted_args);
-		let top: TrustedOperation =
+		let top: TrustedOperation<TrustedCallSigned, Getter> =
 			TrustedCall::balance_unshield(from.public().into(), to, self.amount, shard)
 				.sign(&KeyPair::Sr25519(Box::new(from)), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct);

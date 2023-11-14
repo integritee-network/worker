@@ -25,6 +25,7 @@ use crate::{
 use codec::Encode;
 use core::result::Result;
 use ita_sgx_runtime::Runtime;
+use ita_stf::{Getter, TrustedCallSigned};
 use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, ExtrinsicSender};
 use itp_primitives_cache::{GetPrimitives, GLOBAL_PRIMITIVES_CACHE};
 use itp_rpc::RpcReturnValue;
@@ -39,7 +40,6 @@ use jsonrpc_core::{serde_json::json, IoHandler, Params, Value};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_runtime::OpaqueExtrinsic;
 use std::{borrow::ToOwned, format, str, string::String, sync::Arc, vec::Vec};
-
 fn compute_hex_encoded_return_error(error_msg: &str) -> String {
 	RpcReturnValue::from_error_message(error_msg).to_hex()
 }
@@ -60,7 +60,7 @@ pub fn public_api_rpc_handler<Author, GetterExecutor, AccessShieldingKey>(
 	shielding_key: Arc<AccessShieldingKey>,
 ) -> IoHandler
 where
-	Author: AuthorApi<H256, H256> + Send + Sync + 'static,
+	Author: AuthorApi<H256, H256, TrustedCallSigned, Getter> + Send + Sync + 'static,
 	GetterExecutor: ExecuteGetter + Send + Sync + 'static,
 	AccessShieldingKey: AccessPubkey<KeyType = Rsa3072PubKey> + Send + Sync + 'static,
 {
@@ -220,8 +220,8 @@ where
 	io
 }
 
-fn execute_getter_inner<G: ExecuteGetter>(
-	getter_executor: &G,
+fn execute_getter_inner<GE: ExecuteGetter>(
+	getter_executor: &GE,
 	params: Params,
 ) -> Result<Option<Vec<u8>>, String> {
 	let hex_encoded_params = params.parse::<Vec<String>>().map_err(|e| format!("{:?}", e))?;

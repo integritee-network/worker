@@ -34,20 +34,18 @@ use crate::{
 	base_pool::PruneStatus,
 	error,
 	listener::Listener,
-	pool::{ChainApi, EventStream, ExtrinsicHash, Options, TransactionFor},
-	primitives::{PoolStatus, TrustedOperationSource},
+	pool::{ChainApi, EventStream, Options, TransactionFor},
+	primitives::{PoolStatus, TrustedOperationSource, TxHash},
 	rotator::PoolRotator,
 };
-use codec::Encode;
-use core::{hash, result::Result};
-use ita_stf::TrustedOperation as StfTrustedOperation;
+use core::{marker::PhantomData, result::Result};
 use itc_direct_rpc_server::SendRpcResponse;
 use itp_stf_primitives::types::ShardIdentifier;
 use itp_types::BlockHash as SidechainBlockHash;
 use jsonrpc_core::futures::channel::mpsc::{channel, Sender};
 use sp_runtime::{
 	generic::BlockId,
-	traits::{self, SaturatedConversion},
+	traits::SaturatedConversion,
 	transaction_validity::{TransactionTag as Tag, ValidTransaction},
 };
 use std::{
@@ -62,22 +60,22 @@ use std::{
 
 /// Pre-validated operation. Validated pool only accepts operations wrapped in this enum.
 #[derive(Debug)]
-pub enum ValidatedOperation<Hash, Ex, Error> {
+pub enum ValidatedOperation<Ex, Error> {
 	/// TrustedOperation that has been validated successfully.
-	Valid(base::TrustedOperation<Hash, Ex>),
+	Valid(base::TrustedOperation<Ex>),
 	/// TrustedOperation that is invalid.
-	Invalid(Hash, Error),
+	Invalid(TxHash, Error),
 	/// TrustedOperation which validity can't be determined.
 	///
 	/// We're notifying watchers about failure, if 'unknown' operation is submitted.
-	Unknown(Hash, Error),
+	Unknown(TxHash, Error),
 }
 
-impl<Hash, Ex, Error> ValidatedOperation<Hash, Ex, Error> {
+impl<Ex, Error> ValidatedOperation<Ex, Error> {
 	/// Consume validity result, operation data and produce ValidTransaction.
 	pub fn valid_at(
 		at: u64,
-		hash: Hash,
+		hash: TxHash,
 		source: TrustedOperationSource,
 		data: Ex,
 		bytes: usize,
@@ -98,25 +96,26 @@ impl<Hash, Ex, Error> ValidatedOperation<Hash, Ex, Error> {
 }
 
 /// A type of validated operation stored in the pool.
-pub type ValidatedOperationFor<B> =
-	ValidatedOperation<ExtrinsicHash<B>, StfTrustedOperation, <B as ChainApi>::Error>;
+pub type ValidatedOperationFor<B, TOP> = ValidatedOperation<TOP, <B as ChainApi>::Error>;
 
 /// Pool that deals with validated operations.
-pub struct ValidatedPool<B: ChainApi, R: SendRpcResponse>
+pub struct ValidatedPool<B: ChainApi, R: SendRpcResponse, TOP>
 where
-	R: SendRpcResponse<Hash = ExtrinsicHash<B>>,
+	R: SendRpcResponse<Hash = TxHash>,
 {
 	api: Arc<B>,
 	options: Options,
-	listener: RwLock<Listener<ExtrinsicHash<B>, R>>,
-	pool: RwLock<base::BasePool<ExtrinsicHash<B>, StfTrustedOperation>>,
-	import_notification_sinks: Mutex<Vec<Sender<ExtrinsicHash<B>>>>,
-	rotator: PoolRotator<ExtrinsicHash<B>>,
+	listener: RwLock<Listener<R>>,
+	pool: RwLock<base::BasePool<TOP>>,
+	import_notification_sinks: Mutex<Vec<Sender<TxHash>>>,
+	rotator: PoolRotator,
+	_phantom: PhantomData<R>,
 }
 
-impl<B: ChainApi, R> ValidatedPool<B, R>
+impl<B: ChainApi, R, TOP> ValidatedPool<B, R, TOP>
 where
-	R: SendRpcResponse<Hash = ExtrinsicHash<B>>,
+	R: SendRpcResponse<Hash = TxHash>,
+	TOP: core::fmt::Debug + Send + Sync + Clone,
 {
 	/// Create a new operation pool.
 	pub fn new(options: Options, api: Arc<B>, rpc_response_sender: Arc<R>) -> Self {
@@ -128,16 +127,17 @@ where
 			pool: RwLock::new(base_pool),
 			import_notification_sinks: Default::default(),
 			rotator: Default::default(),
+			_phantom: Default::default(),
 		}
 	}
 
 	/// Bans given set of hashes.
-	pub fn ban(&self, now: &Instant, hashes: impl IntoIterator<Item = ExtrinsicHash<B>>) {
+	pub fn ban(&self, now: &Instant, hashes: impl IntoIterator<Item = TxHash>) {
 		self.rotator.ban(now, hashes)
 	}
 
 	/// Returns true if operation with given hash is currently banned from the pool.
-	pub fn is_banned(&self, hash: &ExtrinsicHash<B>) -> bool {
+	pub fn is_banned(&self, hash: &TxHash) -> bool {
 		self.rotator.is_banned(hash)
 	}
 
@@ -148,7 +148,7 @@ where
 	/// It checks if the operation is already imported or banned. If so, it returns an error.
 	pub fn check_is_known(
 		&self,
-		tx_hash: &ExtrinsicHash<B>,
+		tx_hash: &TxHash,
 		ignore_banned: bool,
 		shard: ShardIdentifier,
 	) -> Result<(), B::Error> {
@@ -164,9 +164,9 @@ where
 	/// Imports a bunch of pre-validated operations to the pool.
 	pub fn submit(
 		&self,
-		txs: impl IntoIterator<Item = ValidatedOperationFor<B>>,
+		txs: impl IntoIterator<Item = ValidatedOperationFor<B, TOP>>,
 		shard: ShardIdentifier,
-	) -> Vec<Result<ExtrinsicHash<B>, B::Error>> {
+	) -> Vec<Result<TxHash, B::Error>> {
 		let results = txs
 			.into_iter()
 			.map(|validated_tx| self.submit_one(validated_tx, shard))
@@ -192,9 +192,9 @@ where
 	/// Submit single pre-validated operation to the pool.
 	fn submit_one(
 		&self,
-		tx: ValidatedOperationFor<B>,
+		tx: ValidatedOperationFor<B, TOP>,
 		shard: ShardIdentifier,
-	) -> Result<ExtrinsicHash<B>, B::Error> {
+	) -> Result<TxHash, B::Error> {
 		match tx {
 			ValidatedOperation::Valid(tx) => {
 				let imported =
@@ -231,7 +231,7 @@ where
 		}
 	}
 
-	fn enforce_limits(&self, shard: ShardIdentifier) -> HashSet<ExtrinsicHash<B>> {
+	fn enforce_limits(&self, shard: ShardIdentifier) -> HashSet<TxHash> {
 		let status = self.pool.read().unwrap().status(shard);
 		let ready_limit = &self.options.ready;
 		let future_limit = &self.options.future;
@@ -278,9 +278,9 @@ where
 	/// Import a single extrinsic and starts to watch their progress in the pool.
 	pub fn submit_and_watch(
 		&self,
-		tx: ValidatedOperationFor<B>,
+		tx: ValidatedOperationFor<B, TOP>,
 		shard: ShardIdentifier,
-	) -> Result<ExtrinsicHash<B>, B::Error> {
+	) -> Result<TxHash, B::Error> {
 		match tx {
 			ValidatedOperation::Valid(tx) => {
 				let hash_result = self
@@ -307,7 +307,7 @@ where
 	/// Transactions that are missing from the pool are not submitted.
 	pub fn resubmit(
 		&self,
-		mut updated_transactions: HashMap<ExtrinsicHash<B>, ValidatedOperationFor<B>>,
+		mut updated_transactions: HashMap<TxHash, ValidatedOperationFor<B, TOP>>,
 		shard: ShardIdentifier,
 	) {
 		#[derive(Debug, Clone, Copy, PartialEq)]
@@ -439,7 +439,7 @@ where
 	/// For each extrinsic, returns tags that it provides (if known), or None (if it is unknown).
 	pub fn extrinsics_tags(
 		&self,
-		hashes: &[ExtrinsicHash<B>],
+		hashes: &[TxHash],
 		shard: ShardIdentifier,
 	) -> Vec<Option<Vec<Tag>>> {
 		self.pool
@@ -454,9 +454,9 @@ where
 	/// Get ready operation by hash
 	pub fn ready_by_hash(
 		&self,
-		hash: &ExtrinsicHash<B>,
+		hash: &TxHash,
 		shard: ShardIdentifier,
-	) -> Option<TransactionFor<B>> {
+	) -> Option<TransactionFor<TOP>> {
 		self.pool.read().unwrap().ready_by_hash(hash, shard)
 	}
 
@@ -465,7 +465,7 @@ where
 		&self,
 		tags: impl IntoIterator<Item = Tag>,
 		shard: ShardIdentifier,
-	) -> Result<PruneStatus<ExtrinsicHash<B>, StfTrustedOperation>, B::Error> {
+	) -> Result<PruneStatus<TOP>, B::Error> {
 		// Perform tag-based pruning in the base pool
 		let status = self.pool.write().unwrap().prune_tags(tags, shard);
 		// Notify event listeners of all operations
@@ -487,9 +487,9 @@ where
 	pub fn resubmit_pruned(
 		&self,
 		at: &BlockId<B::Block>,
-		known_imported_hashes: impl IntoIterator<Item = ExtrinsicHash<B>> + Clone,
-		pruned_hashes: Vec<ExtrinsicHash<B>>,
-		pruned_xts: Vec<ValidatedOperationFor<B>>,
+		known_imported_hashes: impl IntoIterator<Item = TxHash> + Clone,
+		pruned_hashes: Vec<TxHash>,
+		pruned_xts: Vec<ValidatedOperationFor<B, TOP>>,
 		shard: ShardIdentifier,
 	) -> Result<(), B::Error>
 	where
@@ -522,7 +522,7 @@ where
 	pub fn fire_pruned(
 		&self,
 		at: &BlockId<B::Block>,
-		hashes: impl Iterator<Item = ExtrinsicHash<B>>,
+		hashes: impl Iterator<Item = TxHash>,
 	) -> Result<(), B::Error> {
 		let header_hash = self
 			.api
@@ -563,7 +563,7 @@ where
 				.map(|tx| tx.hash)
 				.collect::<Vec<_>>()
 		};
-		let futures_to_remove: Vec<ExtrinsicHash<B>> = {
+		let futures_to_remove: Vec<TxHash> = {
 			let p = self.pool.read().unwrap();
 			let mut hashes = Vec::new();
 			for tx in p.futures(shard) {
@@ -584,7 +584,7 @@ where
 
 	/// Get rotator reference.
 	/// only used for test
-	pub fn rotator(&self) -> &PoolRotator<ExtrinsicHash<B>> {
+	pub fn rotator(&self) -> &PoolRotator {
 		&self.rotator
 	}
 
@@ -597,7 +597,7 @@ where
 	///
 	/// Consumers of this stream should use the `ready` method to actually get the
 	/// pending operations in the right order.
-	pub fn import_notification_stream(&self) -> EventStream<ExtrinsicHash<B>> {
+	pub fn import_notification_stream(&self) -> EventStream<TxHash> {
 		const CHANNEL_BUFFER_SIZE: usize = 1024;
 
 		let (sink, stream) = channel(CHANNEL_BUFFER_SIZE);
@@ -606,7 +606,7 @@ where
 	}
 
 	/// Invoked when extrinsics are broadcasted.
-	pub fn on_broadcasted(&self, propagated: HashMap<ExtrinsicHash<B>, Vec<String>>) {
+	pub fn on_broadcasted(&self, propagated: HashMap<TxHash, Vec<String>>) {
 		let mut listener = self.listener.write().unwrap();
 		for (hash, peers) in propagated.into_iter() {
 			listener.broadcasted(&hash, peers);
@@ -621,10 +621,10 @@ where
 	/// still be valid so we want to be able to re-import them.
 	pub fn remove_invalid(
 		&self,
-		hashes: &[ExtrinsicHash<B>],
+		hashes: &[TxHash],
 		shard: ShardIdentifier,
 		inblock: bool,
-	) -> Vec<TransactionFor<B>> {
+	) -> Vec<TransactionFor<TOP>> {
 		// early exit in case there is no invalid operations.
 		if hashes.is_empty() {
 			return vec![]
@@ -651,7 +651,10 @@ where
 	}
 
 	/// Get an iterator for ready operations ordered by priority
-	pub fn ready(&self, shard: ShardIdentifier) -> impl Iterator<Item = TransactionFor<B>> + Send {
+	pub fn ready(
+		&self,
+		shard: ShardIdentifier,
+	) -> impl Iterator<Item = TransactionFor<TOP>> + Send {
 		self.pool.read().unwrap().ready(shard)
 	}
 
@@ -687,17 +690,16 @@ where
 	}
 
 	/// Notify the listener of top inclusion in sidechain block
-	pub fn on_block_imported(&self, hashes: &[ExtrinsicHash<B>], block_hash: SidechainBlockHash) {
+	pub fn on_block_imported(&self, hashes: &[TxHash], block_hash: SidechainBlockHash) {
 		for top_hash in hashes.iter() {
 			self.listener.write().unwrap().in_block(top_hash, block_hash);
 		}
 	}
 }
 
-fn fire_events<H, R, Ex>(listener: &mut Listener<H, R>, imported: &base::Imported<H, Ex>)
+fn fire_events<R, Ex>(listener: &mut Listener<R>, imported: &base::Imported<Ex>)
 where
-	H: hash::Hash + Eq + traits::Member + Encode, // + Serialize,
-	R: SendRpcResponse<Hash = H>,
+	R: SendRpcResponse<Hash = TxHash>,
 {
 	match *imported {
 		base::Imported::Ready { ref promoted, ref failed, ref removed, ref hash } => {

@@ -14,11 +14,9 @@
 	limitations under the License.
 
 */
-use crate::{
-	helpers::{get_storage_double_map, get_storage_map},
-	AccountId, Index,
-};
+use crate::helpers::{get_storage_double_map, get_storage_map};
 use itp_storage::StorageHasher;
+use itp_types::{AccountId, Nonce};
 use sha3::{Digest, Keccak256};
 use sp_core::{H160, H256};
 use std::prelude::v1::*;
@@ -39,7 +37,7 @@ pub fn get_evm_account_storages(evm_account: &H160, index: &H256) -> Option<H256
 }
 
 // FIXME: Once events are available, these addresses should be read from events.
-pub fn evm_create_address(caller: H160, nonce: Index) -> H160 {
+pub fn evm_create_address(caller: H160, nonce: Nonce) -> H160 {
 	let mut stream = rlp::RlpStream::new_list(2);
 	stream.append(&caller);
 	stream.append(&nonce);

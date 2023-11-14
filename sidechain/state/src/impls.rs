@@ -37,8 +37,8 @@ where
 		info!("Current state size: {}", self.state().encoded_size());
 		debug!("Current hash: {}", self.hash());
 		debug!("State_payload hash: {}", state_payload.state_hash_apriori());
-		debug!("self is: {:#?}", &self);
-		debug!("state_payload is: {:#?}", &state_payload);
+		debug!("self is: {:?}", &self);
+		debug!("state_payload is: {:?}", &state_payload);
 		ensure!(self.hash() == state_payload.state_hash_apriori(), Error::InvalidAprioriHash);
 
 		self.execute_with(|| {

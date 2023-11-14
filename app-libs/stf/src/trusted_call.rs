@@ -21,7 +21,12 @@ use sp_core::{H160, H256, U256};
 #[cfg(feature = "evm")]
 use std::vec::Vec;
 
-use crate::{helpers::ensure_enclave_signer_account, StfError, TrustedOperation};
+#[cfg(feature = "evm")]
+use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_address};
+use crate::{
+	helpers::{ensure_enclave_signer_account, get_storage_by_key_hash},
+	Getter,
+};
 use codec::{Compact, Decode, Encode};
 use frame_support::{ensure, traits::UnfilteredDispatchable};
 #[cfg(feature = "evm")]
@@ -34,17 +39,21 @@ use itp_node_api_metadata::{
 	pallet_proxy::ProxyCallIndexes,
 };
 use itp_stf_interface::{ExecuteCall, SHARD_VAULT_KEY};
-use itp_stf_primitives::types::{AccountId, KeyPair, ShardIdentifier, Signature};
+use itp_stf_primitives::{
+	error::StfError,
+	traits::{TrustedCallSigning, TrustedCallVerification},
+	types::{AccountId, KeyPair, ShardIdentifier, Signature, TrustedOperation},
+};
 use itp_types::{parentchain::ProxyType, Address, OpaqueCall};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
+use sp_core::{
+	crypto::{AccountId32, UncheckedFrom},
+	ed25519,
+};
 use sp_io::hashing::blake2_256;
-use sp_runtime::{traits::Verify, MultiAddress};
+use sp_runtime::{traits::Verify, MultiAddress, MultiSignature};
 use std::{format, prelude::v1::*, sync::Arc};
-
-#[cfg(feature = "evm")]
-use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_address};
-use crate::helpers::get_storage_by_key_hash;
 
 // Group imports that are for OLI to make upstream merges easier.
 use crate::best_energy_helpers::{
@@ -59,6 +68,7 @@ use std::{fs, time::Instant};
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum TrustedCall {
+	noop(AccountId),
 	balance_set_balance(AccountId, AccountId, Balance, Balance),
 	balance_transfer(AccountId, AccountId, Balance),
 	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
@@ -112,23 +122,26 @@ pub enum TrustedCall {
 impl TrustedCall {
 	pub fn sender_account(&self) -> &AccountId {
 		match self {
-			TrustedCall::balance_set_balance(sender_account, ..) => sender_account,
-			TrustedCall::balance_transfer(sender_account, ..) => sender_account,
-			TrustedCall::balance_unshield(sender_account, ..) => sender_account,
-			TrustedCall::balance_shield(sender_account, ..) => sender_account,
-			TrustedCall::pay_as_bid(sender_account, _orders_string) => sender_account,
+			Self::noop(sender_account) => sender_account,
+			Self::balance_set_balance(sender_account, ..) => sender_account,
+			Self::balance_transfer(sender_account, ..) => sender_account,
+			Self::balance_unshield(sender_account, ..) => sender_account,
+			Self::balance_shield(sender_account, ..) => sender_account,
+			Self::pay_as_bid(sender_account, _orders_string) => sender_account,
 			#[cfg(feature = "evm")]
-			TrustedCall::evm_withdraw(sender_account, ..) => sender_account,
+			Self::evm_withdraw(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
-			TrustedCall::evm_call(sender_account, ..) => sender_account,
+			Self::evm_call(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
-			TrustedCall::evm_create(sender_account, ..) => sender_account,
+			Self::evm_create(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
-			TrustedCall::evm_create2(sender_account, ..) => sender_account,
+			Self::evm_create2(sender_account, ..) => sender_account,
 		}
 	}
+}
 
-	pub fn sign(
+impl TrustedCallSigning<TrustedCallSigned> for TrustedCall {
+	fn sign(
 		&self,
 		pair: &KeyPair,
 		nonce: Index,
@@ -156,19 +169,41 @@ impl TrustedCallSigned {
 		TrustedCallSigned { call, nonce, signature }
 	}
 
-	pub fn verify_signature(&self, mrenclave: &[u8; 32], shard: &ShardIdentifier) -> bool {
+	pub fn into_trusted_operation(
+		self,
+		direct: bool,
+	) -> TrustedOperation<TrustedCallSigned, Getter> {
+		match direct {
+			true => TrustedOperation::direct_call(self),
+			false => TrustedOperation::indirect_call(self),
+		}
+	}
+}
+
+impl Default for TrustedCallSigned {
+	fn default() -> Self {
+		Self {
+			call: TrustedCall::noop(AccountId32::unchecked_from([0u8; 32].into())),
+			nonce: 0,
+			signature: MultiSignature::Ed25519(ed25519::Signature::unchecked_from([0u8; 64])),
+		}
+	}
+}
+impl TrustedCallVerification for TrustedCallSigned {
+	fn sender_account(&self) -> &AccountId {
+		self.call.sender_account()
+	}
+
+	fn nonce(&self) -> Index {
+		self.nonce
+	}
+
+	fn verify_signature(&self, mrenclave: &[u8; 32], shard: &ShardIdentifier) -> bool {
 		let mut payload = self.call.encode();
 		payload.append(&mut self.nonce.encode());
 		payload.append(&mut mrenclave.encode());
 		payload.append(&mut shard.encode());
 		self.signature.verify(payload.as_slice(), self.call.sender_account())
-	}
-
-	pub fn into_trusted_operation(self, direct: bool) -> TrustedOperation {
-		match direct {
-			true => TrustedOperation::direct_call(self),
-			false => TrustedOperation::indirect_call(self),
-		}
 	}
 }
 
@@ -205,6 +240,10 @@ where
 		System::inc_account_nonce(&sender);
 
 		match self.call {
+			TrustedCall::noop(who) => {
+				debug!("noop called by {}", account_id_to_string(&who),);
+				Ok::<(), Self::Error>(())
+			},
 			TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
 				ensure!(is_root::<Runtime, AccountId>(&root), Self::Error::MissingPrivileges(root));
 				debug!(
@@ -259,7 +298,10 @@ where
 				unshield_funds(account_incognito, value)?;
 
 				calls.push(OpaqueCall::from_tuple(&(
-					node_metadata_repo.get_from_metadata(|m| m.unshield_funds_call_indexes())??,
+					node_metadata_repo
+						.get_from_metadata(|m| m.unshield_funds_call_indexes())
+						.map_err(|_| StfError::InvalidMetadata)?
+						.map_err(|_| StfError::InvalidMetadata)?,
 					shard,
 					beneficiary.clone(),
 					value,
@@ -275,12 +317,17 @@ where
 				let vault_address = Address::from(AccountId::from(vault_pubkey));
 				let vault_transfer_call = OpaqueCall::from_tuple(&(
 					node_metadata_repo
-						.get_from_metadata(|m| m.transfer_keep_alive_call_indexes())??,
+						.get_from_metadata(|m| m.transfer_keep_alive_call_indexes())
+						.map_err(|_| StfError::InvalidMetadata)?
+						.map_err(|_| StfError::InvalidMetadata)?,
 					Address::from(beneficiary),
 					Compact(value),
 				));
 				let proxy_call = OpaqueCall::from_tuple(&(
-					node_metadata_repo.get_from_metadata(|m| m.proxy_call_indexes())??,
+					node_metadata_repo
+						.get_from_metadata(|m| m.proxy_call_indexes())
+						.map_err(|_| StfError::InvalidMetadata)?
+						.map_err(|_| StfError::InvalidMetadata)?,
 					vault_address,
 					None::<ProxyType>,
 					vault_transfer_call,
@@ -295,7 +342,10 @@ where
 
 				// Send proof of execution on chain.
 				calls.push(OpaqueCall::from_tuple(&(
-					node_metadata_repo.get_from_metadata(|m| m.publish_hash_call_indexes())??,
+					node_metadata_repo
+						.get_from_metadata(|m| m.publish_hash_call_indexes())
+						.map_err(|_| StfError::InvalidMetadata)?
+						.map_err(|_| StfError::InvalidMetadata)?,
 					call_hash,
 					Vec::<itp_types::H256>::new(),
 					b"shielded some funds!".to_vec(),
@@ -489,6 +539,7 @@ where
 	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
 		let key_hashes = Vec::new();
 		match self.call {
+			TrustedCall::noop(_) => debug!("No storage updates needed..."),
 			TrustedCall::balance_set_balance(_, _, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_transfer(_, _, _) => debug!("No storage updates needed..."),
 			TrustedCall::balance_unshield(_, _, _, _) => debug!("No storage updates needed..."),

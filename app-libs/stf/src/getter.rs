@@ -15,21 +15,34 @@ use crate::best_energy_helpers::{get_merkle_proof_for_actor_from_file, read_mark
 use binary_merkle_tree::MerkleProof;
 use codec::{Decode, Encode};
 use ita_sgx_runtime::System;
-#[cfg(feature = "evm")]
-use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 use itp_stf_interface::ExecuteGetter;
-use itp_stf_primitives::types::{AccountId, ActorId, KeyPair, Signature, Timestamp};
+use itp_stf_primitives::{
+	traits::GetterAuthorization,
+	types::{AccountId, KeyPair, Signature},
+};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::Verify;
-use std::{prelude::v1::*, time::Instant};
+use sp_std::vec;
+use std::prelude::v1::*;
+
+#[cfg(feature = "evm")]
+use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 
 #[cfg(feature = "evm")]
 use crate::evm_helpers::{get_evm_account, get_evm_account_codes, get_evm_account_storages};
 
+use itp_stf_primitives::traits::PoolTransactionValidation;
 #[cfg(feature = "evm")]
 use sp_core::{H160, H256};
+use sp_runtime::transaction_validity::{
+	TransactionValidityError, UnknownTransaction, ValidTransaction,
+};
+
+// Oli
+use itp_stf_primitives::types::{ActorId, Timestamp};
+use std::time::Instant;
 
 /// Custom Merkle proof that implements codec
 /// The difference to the original one is that implements the scale-codec and that the fields contain u32 instead of usize.
@@ -79,6 +92,11 @@ pub enum Getter {
 	trusted(TrustedGetterSigned),
 }
 
+impl Default for Getter {
+	fn default() -> Self {
+		Getter::public(PublicGetter::some_value)
+	}
+}
 impl From<PublicGetter> for Getter {
 	fn from(item: PublicGetter) -> Self {
 		Getter::public(item)
@@ -88,6 +106,31 @@ impl From<PublicGetter> for Getter {
 impl From<TrustedGetterSigned> for Getter {
 	fn from(item: TrustedGetterSigned) -> Self {
 		Getter::trusted(item)
+	}
+}
+
+impl GetterAuthorization for Getter {
+	fn is_authorized(&self) -> bool {
+		match self {
+			Self::trusted(ref getter) => getter.verify_signature(),
+			Self::public(_) => true,
+		}
+	}
+}
+
+impl PoolTransactionValidation for Getter {
+	fn validate(&self) -> Result<ValidTransaction, TransactionValidityError> {
+		match self {
+			Self::public(_) =>
+				Err(TransactionValidityError::Unknown(UnknownTransaction::CannotLookup)),
+			Self::trusted(trusted_getter_signed) => Ok(ValidTransaction {
+				priority: 1 << 20,
+				requires: vec![],
+				provides: vec![trusted_getter_signed.signature.encode()],
+				longevity: 64,
+				propagate: true,
+			}),
+		}
 	}
 }
 
