@@ -38,13 +38,15 @@ mod utils;
 mod worker;
 mod worker_peers_updater;
 
-#[cfg(features = "link-binary")]
+#[cfg(feature = "link-binary")]
 mod main_impl;
 
+#[cfg(feature = "link-binary")]
 fn main() {
-	#[cfg(features = "link-binary")]
 	main_impl::main();
+}
 
-	#[cfg(not(features = "link-binary"))]
+#[cfg(not(feature = "link-binary"))]
+fn main() {
 	panic!("tried to run the binary without linking. Make sure to pass `--feature link-binary`")
 }

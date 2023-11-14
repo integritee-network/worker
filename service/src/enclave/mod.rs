@@ -15,6 +15,6 @@
 
 */
 
-#[cfg(features = "link-binary")]
+#[cfg(feature = "link-binary")]
 pub mod api;
 pub mod tls_ra;

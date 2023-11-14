@@ -6,6 +6,11 @@ use crate::utils::check_files;
 
 use crate::{
 	account_funding::{setup_account_funding, EnclaveAccountInfoProvider},
+	config::Config,
+	enclave::{
+		api::enclave_init,
+		tls_ra::{enclave_request_state_provisioning, enclave_run_state_provisioning_server},
+	},
 	error::Error,
 	globals::tokio_handle::{GetTokioHandle, GlobalTokioHandle},
 	initialized_service::{
@@ -16,17 +21,17 @@ use crate::{
 	},
 	parentchain_handler::{HandleParentchain, ParentchainHandler},
 	prometheus_metrics::{start_metrics_server, EnclaveMetricsReceiver, MetricsHandler},
+	setup,
 	sidechain_setup::{sidechain_init_block_production, sidechain_start_untrusted_rpc_server},
 	sync_block_broadcaster::SyncBlockBroadcaster,
+	sync_state, tests,
 	utils::extract_shard,
 	worker::Worker,
 	worker_peers_updater::WorkerPeersUpdater,
 };
 use base58::ToBase58;
-use clap::{load_yaml, App};
+use clap::{load_yaml, App, ArgMatches};
 use codec::{Decode, Encode};
-use config::Config;
-use enclave::tls_ra::{enclave_request_state_provisioning, enclave_run_state_provisioning_server};
 use itp_enclave_api::{
 	direct_request::DirectRequest,
 	enclave_base::EnclaveBase,
@@ -53,12 +58,11 @@ use substrate_api_client::{
 	api::XtStatus, rpc::HandleSubscription, GetChainInfo, SubmitAndWatch, SubscribeChain,
 	SubscribeEvents,
 };
+
 use teerex_primitives::AnySigner;
 
 #[cfg(feature = "dcap")]
 use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
-
-use enclave::api::enclave_init;
 
 use itp_enclave_api::Enclave;
 
@@ -71,7 +75,7 @@ use std::{str, sync::Arc, thread, time::Duration};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[cfg(features = "link-binary")]
+#[cfg(feature = "link-binary")]
 pub type EnclaveWorker =
 	Worker<Config, NodeApiFactory, Enclave, InitializationHandler<WorkerModeProvider>>;
 pub type Event = substrate_api_client::ac_node_api::EventRecord<RuntimeEvent, Hash>;
@@ -98,7 +102,7 @@ pub(crate) fn main() {
 
 	let clean_reset = matches.is_present("clean-reset");
 	if clean_reset {
-		setup::purge_files_from_dir(config.data_dir()).unwrap();
+		crate::setup::purge_files_from_dir(config.data_dir()).unwrap();
 	}
 
 	// build the entire dependency tree

@@ -25,10 +25,12 @@ pub mod mocks;
 // #[cfg(test)]
 // pub mod parentchain_handler_test;
 
-#[cfg(features = "link-binary")]
+#[cfg(feature = "link-binary")]
+use clap::ArgMatches;
+
+#[cfg(feature = "link-binary")]
 pub fn run_enclave_tests(matches: &ArgMatches) {
 	use crate::{config::Config, enclave::api::*, setup};
-	use clap::ArgMatches;
 	use itp_enclave_api::enclave_test::EnclaveTest;
 
 	println!("*** Starting Test enclave");

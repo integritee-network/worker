@@ -170,7 +170,7 @@ $(Worker_Enclave_u_Object): service/Enclave_u.o
 
 $(Worker_Name): $(Worker_Enclave_u_Object) $(SRC_Files)
 	@echo
-	@echo "Building the integritee-service"
+	@echo "Building the integritee-service: $(Worker_Rust_Flags)"
 	@SGX_SDK=$(SGX_SDK) SGX_MODE=$(SGX_MODE) cargo build -p integritee-service $(Worker_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	cp $(Worker_Rust_Path)/integritee-service ./bin
@@ -178,7 +178,7 @@ $(Worker_Name): $(Worker_Enclave_u_Object) $(SRC_Files)
 ######## Integritee-client objects ########
 $(Client_Name): $(SRC_Files)
 	@echo
-	@echo "Building the integritee-cli"
+	@echo "Building the integritee-cli $(Client_Rust_Flags)"
 	@cargo build -p integritee-cli $(Client_Rust_Flags)
 	@echo "Cargo  =>  $@"
 	cp $(Client_Rust_Path)/$(Client_Binary) ./bin
