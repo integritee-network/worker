@@ -16,9 +16,9 @@
 */
 
 use crate::{
+	config::Config,
 	error::{Error, ServiceResult},
 	parentchain_handler::HandleParentchain,
-	Config,
 };
 use futures::executor::block_on;
 use itp_enclave_api::{

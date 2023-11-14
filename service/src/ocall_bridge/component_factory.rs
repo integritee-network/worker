@@ -17,6 +17,7 @@
 */
 
 use crate::{
+	globals::tokio_handle::GetTokioHandle,
 	ocall_bridge::{
 		bridge_api::{
 			GetOCallBridgeComponents, IpfsBridge, MetricsBridge, RemoteAttestationBridge,
@@ -31,7 +32,6 @@ use crate::{
 	prometheus_metrics::ReceiveEnclaveMetrics,
 	sync_block_broadcaster::BroadcastBlocks,
 	worker_peers_updater::UpdateWorkerPeers,
-	GetTokioHandle,
 };
 use itp_enclave_api::remote_attestation::RemoteAttestationCallBacks;
 use itp_node_api::node_api_factory::CreateNodeApi;
