@@ -29,6 +29,7 @@ pub mod mocks;
 // #[cfg(test)]
 // pub mod parentchain_handler_test;
 
+#[cfg(features = "link-binary")]
 pub fn run_enclave_tests(matches: &ArgMatches) {
 	println!("*** Starting Test enclave");
 	let config = Config::from(matches);

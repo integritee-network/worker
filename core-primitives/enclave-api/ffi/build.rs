@@ -17,7 +17,7 @@
 */
 
 fn main() {
-	if cfg!(not(feature = "cargo-test")) {
+	if cfg!(feature = "link-sgx-libs") {
 		use std::env;
 
 		let sdk_dir = env::var("SGX_SDK").unwrap_or_else(|_| "/opt/intel/sgxsdk".to_string());

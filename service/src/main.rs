@@ -45,17 +45,13 @@ use base58::ToBase58;
 use clap::{load_yaml, App};
 use codec::{Decode, Encode};
 use config::Config;
-use enclave::{
-	api::enclave_init,
-	tls_ra::{enclave_request_state_provisioning, enclave_run_state_provisioning_server},
-};
+use enclave::tls_ra::{enclave_request_state_provisioning, enclave_run_state_provisioning_server};
 use itp_enclave_api::{
 	direct_request::DirectRequest,
 	enclave_base::EnclaveBase,
 	remote_attestation::{RemoteAttestation, TlsRemoteAttestation},
 	sidechain::Sidechain,
 	teeracle_api::TeeracleApi,
-	Enclave,
 };
 use itp_node_api::{
 	api_client::{AccountApi, PalletTeerexApi, ParentchainApi},
@@ -80,6 +76,12 @@ use teerex_primitives::AnySigner;
 
 #[cfg(feature = "dcap")]
 use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
+
+#[cfg(features = "link-binary")]
+use enclave::api::enclave_init;
+
+#[cfg(features = "link-binary")]
+use itp_enclave_api::Enclave;
 
 use enclave_bridge_primitives::ShardIdentifier;
 use itc_parentchain::primitives::ParentchainId;
@@ -110,10 +112,15 @@ mod worker_peers_updater;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[cfg(features = "link-binary")]
 pub type EnclaveWorker =
 	Worker<Config, NodeApiFactory, Enclave, InitializationHandler<WorkerModeProvider>>;
 pub type Event = substrate_api_client::ac_node_api::EventRecord<RuntimeEvent, Hash>;
 
+#[cfg(not(features = "link-binary"))]
+fn main() {}
+
+#[cfg(features = "link-binary")]
 fn main() {
 	// Setup logging
 	env_logger::init();

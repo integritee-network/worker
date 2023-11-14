@@ -11,4 +11,4 @@ sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-s
 [features]
 # necessary to run cargo tests without any preliminaries
 # See: https://github.com/rust-lang/cargo/issues/2549
-cargo-test = []
+link-sgx-libs = []

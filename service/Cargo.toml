@@ -37,7 +37,6 @@ primitive-types = { version = "0.12.1", default-features = false, features = ["c
 
 sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_urts = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # local
 itc-parentchain = { path = "../core/parentchain/parentchain-crate" }
@@ -86,9 +85,17 @@ production = ["itp-settings/production"]
 teeracle = ["itp-settings/teeracle"]
 dcap = []
 attesteer = ["dcap"]
-# necessary to run cargo tests without any preliminaries
-# https://github.com/rust-lang/cargo/issues/2549
-cargo-test = []
+# Must be enabled to build a binary and link it with the enclave successfully.
+# This flag is set in the makefile.
+#
+# Must not be enabled to run cargo test without an sgx-sdk providing environment
+# https://github.com/rust-lang/cargo/issues/2549.
+#
+# It has been chosen to not make this a default feature because this makes test execution
+# more ergonomic as we can simply do `cargo test` on the whole workspace like this.
+link-binary = [
+    "itp-enclave-api/real-ffi"
+]
 
 [dev-dependencies]
 # crates.io

@@ -16,7 +16,7 @@
 
 */
 
-use crate::{error::Error, Enclave, EnclaveResult};
+use crate::{error::Error, EnclaveResult};
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use frame_support::ensure;
@@ -31,6 +31,9 @@ use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sgx_types::*;
 use sp_core::ed25519;
 use teerex_primitives::EnclaveFingerprint;
+
+#[cfg(feature = "real-ffi")]
+use crate::Enclave;
 
 /// Trait for base/common Enclave API functions
 pub trait EnclaveBase: Send + Sync + 'static {
@@ -84,6 +87,7 @@ pub trait EnclaveBase: Send + Sync + 'static {
 }
 
 /// EnclaveApi implementation for Enclave struct
+#[cfg(feature = "real-ffi")]
 impl EnclaveBase for Enclave {
 	fn init(
 		&self,

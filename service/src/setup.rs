@@ -19,7 +19,7 @@
 use crate::error::{Error, ServiceResult};
 use base58::ToBase58;
 use codec::Encode;
-use itp_enclave_api::{enclave_base::EnclaveBase, Enclave};
+use itp_enclave_api::enclave_base::EnclaveBase;
 use itp_settings::files::{
 	INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_DB_PATH, SHARDS_PATH, SHIELDING_KEY_FILE,
 	SIDECHAIN_STORAGE_PATH, SIGNING_KEY_FILE, TARGET_A_PARENTCHAIN_LIGHT_CLIENT_DB_PATH,
@@ -28,6 +28,9 @@ use itp_settings::files::{
 use itp_types::ShardIdentifier;
 use log::*;
 use std::{fs, fs::File, path::Path};
+
+#[cfg(features = "link-binary")]
+use itp_enclave_api::Enclave;
 
 /// Purge all worker files from `dir`.
 pub(crate) fn purge_files_from_dir(dir: &Path) -> ServiceResult<()> {
@@ -40,6 +43,7 @@ pub(crate) fn purge_files_from_dir(dir: &Path) -> ServiceResult<()> {
 }
 
 /// Initializes the shard and generates the key files.
+#[cfg(features = "link-binary")]
 pub(crate) fn initialize_shard_and_keys(
 	enclave: &Enclave,
 	shard_identifier: &ShardIdentifier,
@@ -54,6 +58,7 @@ pub(crate) fn initialize_shard_and_keys(
 	Ok(())
 }
 
+#[cfg(features = "link-binary")]
 pub(crate) fn init_shard(enclave: &Enclave, shard_identifier: &ShardIdentifier) {
 	match enclave.init_shard(shard_identifier.encode()) {
 		Err(e) => {
@@ -65,6 +70,7 @@ pub(crate) fn init_shard(enclave: &Enclave, shard_identifier: &ShardIdentifier) 
 	}
 }
 
+#[cfg(features = "link-binary")]
 pub(crate) fn generate_signing_key_file(enclave: &Enclave) {
 	info!("*** Get the signing key from the TEE\n");
 	let pubkey = enclave.get_ecc_signing_pubkey().unwrap();
@@ -79,6 +85,7 @@ pub(crate) fn generate_signing_key_file(enclave: &Enclave) {
 	}
 }
 
+#[cfg(features = "link-binary")]
 pub(crate) fn generate_shielding_key_file(enclave: &Enclave) {
 	info!("*** Get the public key from the TEE\n");
 	let pubkey = enclave.get_rsa_shielding_pubkey().unwrap();

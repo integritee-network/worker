@@ -16,10 +16,13 @@
 
 */
 
-use crate::{error::Error, Enclave, EnclaveResult};
+use crate::{error::Error, EnclaveResult};
 use frame_support::ensure;
 use itp_enclave_api_ffi as ffi;
 use sgx_types::sgx_status_t;
+
+#[cfg(feature = "real-ffi")]
+use crate::Enclave;
 
 pub trait DirectRequest: Send + Sync + 'static {
 	// Todo: Vec<u8> shall be replaced by D: Decode, E: Encode but this is currently
@@ -27,6 +30,7 @@ pub trait DirectRequest: Send + Sync + 'static {
 	fn rpc(&self, request: Vec<u8>) -> EnclaveResult<Vec<u8>>;
 }
 
+#[cfg(feature = "real-ffi")]
 impl DirectRequest for Enclave {
 	fn rpc(&self, request: Vec<u8>) -> EnclaveResult<Vec<u8>> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;

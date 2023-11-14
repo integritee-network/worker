@@ -16,7 +16,7 @@
 
 */
 
-use crate::{error::Error, Enclave, EnclaveResult};
+use crate::{error::Error, EnclaveResult};
 use codec::Encode;
 use frame_support::ensure;
 use itp_enclave_api_ffi as ffi;
@@ -24,6 +24,9 @@ use itp_storage::StorageProof;
 use itp_types::parentchain::ParentchainId;
 use sgx_types::sgx_status_t;
 use sp_runtime::generic::SignedBlock;
+
+#[cfg(feature = "real-ffi")]
+use crate::Enclave;
 
 /// trait for handling blocks on the side chain
 pub trait Sidechain: Send + Sync + 'static {
@@ -40,6 +43,7 @@ pub trait Sidechain: Send + Sync + 'static {
 	fn execute_trusted_calls(&self) -> EnclaveResult<()>;
 }
 
+#[cfg(feature = "real-ffi")]
 impl Sidechain for Enclave {
 	fn sync_parentchain<ParentchainBlock: Encode>(
 		&self,
