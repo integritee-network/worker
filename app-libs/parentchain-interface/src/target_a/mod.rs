@@ -14,6 +14,8 @@
 	limitations under the License.
 
 */
+mod event_filter;
+mod event_handler;
 mod extrinsic_parser;
 use crate::{
 	decode_and_log_error,
@@ -23,6 +25,8 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
+pub use event_filter::FilterableEvents;
+pub use event_handler::ParentchainEventHandler;
 pub use extrinsic_parser::ParentchainExtrinsicParser;
 use extrinsic_parser::ParseExtrinsic;
 use ita_stf::TrustedCallSigned;

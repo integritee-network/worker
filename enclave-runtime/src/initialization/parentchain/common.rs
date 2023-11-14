@@ -24,15 +24,16 @@ use crate::{
 			EnclaveParentchainSigner, EnclaveStfExecutor, EnclaveValidatorAccessor,
 			IntegriteeParentchainBlockImportDispatcher, IntegriteeParentchainBlockImporter,
 			IntegriteeParentchainImmediateBlockImportDispatcher,
-			IntegriteeParentchainIndirectExecutor,
+			IntegriteeParentchainIndirectCallsExecutor,
 			IntegriteeParentchainTriggeredBlockImportDispatcher,
 			TargetAParentchainBlockImportDispatcher, TargetAParentchainBlockImporter,
-			TargetAParentchainImmediateBlockImportDispatcher, TargetAParentchainIndirectExecutor,
-			TargetBParentchainBlockImportDispatcher, TargetBParentchainBlockImporter,
-			TargetBParentchainImmediateBlockImportDispatcher, TargetBParentchainIndirectExecutor,
-			GLOBAL_OCALL_API_COMPONENT, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
-			GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
-			GLOBAL_STATE_OBSERVER_COMPONENT, GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
+			TargetAParentchainImmediateBlockImportDispatcher,
+			TargetAParentchainIndirectCallsExecutor, TargetBParentchainBlockImportDispatcher,
+			TargetBParentchainBlockImporter, TargetBParentchainImmediateBlockImportDispatcher,
+			TargetBParentchainIndirectCallsExecutor, GLOBAL_OCALL_API_COMPONENT,
+			GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT,
+			GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STATE_OBSERVER_COMPONENT,
+			GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
 		},
 		EnclaveStfEnclaveSigner,
 	},
@@ -61,7 +62,7 @@ pub(crate) fn create_integritee_parentchain_block_importer(
 		shielding_key_repository.clone(),
 		top_pool_author.clone(),
 	));
-	let indirect_calls_executor = Arc::new(IntegriteeParentchainIndirectExecutor::new(
+	let indirect_calls_executor = Arc::new(IntegriteeParentchainIndirectCallsExecutor::new(
 		shielding_key_repository,
 		stf_enclave_signer,
 		top_pool_author,
@@ -92,7 +93,7 @@ pub(crate) fn create_target_a_parentchain_block_importer(
 		shielding_key_repository.clone(),
 		top_pool_author.clone(),
 	));
-	let indirect_calls_executor = Arc::new(TargetAParentchainIndirectExecutor::new(
+	let indirect_calls_executor = Arc::new(TargetAParentchainIndirectCallsExecutor::new(
 		shielding_key_repository,
 		stf_enclave_signer,
 		top_pool_author,
@@ -123,7 +124,7 @@ pub(crate) fn create_target_b_parentchain_block_importer(
 		shielding_key_repository.clone(),
 		top_pool_author.clone(),
 	));
-	let indirect_calls_executor = Arc::new(TargetBParentchainIndirectExecutor::new(
+	let indirect_calls_executor = Arc::new(TargetBParentchainIndirectCallsExecutor::new(
 		shielding_key_repository,
 		stf_enclave_signer,
 		top_pool_author,

@@ -40,38 +40,3 @@ impl From<StfError> for Error {
 pub trait ToEvents<E> {
 	fn to_events(&self) -> &E;
 }
-
-pub struct MockEvents;
-
-impl FilterEvents for MockEvents {
-	type Error = ();
-	fn get_extrinsic_statuses(&self) -> core::result::Result<Vec<ExtrinsicStatus>, Self::Error> {
-		Ok(Vec::from([ExtrinsicStatus::Success]))
-	}
-
-	fn get_transfer_events(&self) -> core::result::Result<Vec<BalanceTransfer>, Self::Error> {
-		let transfer = BalanceTransfer {
-			to: [0u8; 32].into(),
-			from: [0u8; 32].into(),
-			amount: Balance::default(),
-		};
-		Ok(Vec::from([transfer]))
-	}
-}
-
-pub struct MockPrivacySidechain<Executor> {
-	_phantom: PhantomData<Executor>,
-}
-
-impl<Executor> HandleParentchainEvents<Executor, TrustedCallSignedMock, Error>
-	for MockPrivacySidechain<Executor>
-where
-	Executor: IndirectExecutor<TrustedCallSignedMock, Error>,
-{
-	fn handle_events(
-		_: &Executor,
-		_: impl itp_types::parentchain::FilterEvents,
-	) -> core::result::Result<(), Error> {
-		Ok(())
-	}
-}

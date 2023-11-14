@@ -15,7 +15,7 @@
 
 */
 
-use crate::{error::Result, event_filter::MockEvents, IndirectDispatch};
+use crate::{error::Result, IndirectDispatch};
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use itp_api_client_types::{Events, Metadata};
@@ -54,20 +54,6 @@ where
 	) -> Option<Self::Output> {
 		let raw_metadata: Metadata = metadata.try_into().ok()?;
 		Some(Events::<H256>::new(raw_metadata, block_hash, events.to_vec()).into())
-	}
-}
-
-pub struct TestEventCreator;
-
-impl<NodeMetadata> EventsFromMetadata<NodeMetadata> for TestEventCreator {
-	type Output = MockEvents;
-
-	fn create_from_metadata(
-		_metadata: NodeMetadata,
-		_block_hash: H256,
-		_events: &[u8],
-	) -> Option<Self::Output> {
-		Some(MockEvents)
 	}
 }
 

@@ -300,11 +300,7 @@ pub(crate) fn hash_of<T: Encode>(xt: &T) -> H256 {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{
-		event_filter::MockPrivacySidechain,
-		filter_metadata::{ShieldFundsAndInvokeFilter, TestEventCreator},
-		parentchain_parser::ParentchainExtrinsicParser,
-	};
+	use crate::mock::*;
 	use codec::{Decode, Encode};
 	use itc_parentchain_test::ParentchainBlockBuilder;
 	use itp_node_api::{
@@ -341,12 +337,15 @@ mod test {
 		TestStfEnclaveSigner,
 		TestTopPoolAuthor,
 		TestNodeMetadataRepository,
-		ShieldFundsAndInvokeFilter<ParentchainExtrinsicParser>,
+		MockExtrinsicFilter<MockParentchainExtrinsicParser>,
 		TestEventCreator,
-		MockPrivacySidechain,
+		MockParentchainEventHandler<IndirectExecutor<TrustedCallSignedMock, Error>>,
+		TrustedCallSignedMock,
+		GetterMock,
 	>;
 
 	type Seed = [u8; 32];
+
 	const TEST_SEED: Seed = *b"12345678901234567890123456789012";
 
 	#[test]
@@ -505,6 +504,7 @@ mod test {
 			ParentchainAdditionalParams::default(),
 		)
 	}
+
 	fn test_fixtures(
 		mr_enclave: [u8; 32],
 		metadata: NodeMetadataMock,

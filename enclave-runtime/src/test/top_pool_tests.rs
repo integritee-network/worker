@@ -137,9 +137,11 @@ pub fn submit_shielding_call_to_top_pool() {
 			_,
 			_,
 			_,
-			ShieldFundsAndInvokeFilter<ParentchainExtrinsicParser>,
+			integritee::ShieldFundsAndInvokeFilter<integritee::ParentchainExtrinsicParser>,
 			TestEventCreator,
-			MockPrivacySidechain,
+			integritee::ParentchainEventHandler,
+			TrustedCallSigned,
+			Getter,
 		>::new(
 			shielding_key_repo, enclave_signer, top_pool_author.clone(), node_meta_data_repository
 		);
