@@ -27,6 +27,10 @@ use sp_runtime::traits::Verify;
 use sp_std::vec;
 use std::prelude::v1::*;
 
+// Oli only
+use itp_stf_primitives::types::{ActorId, Timestamp};
+use std::time::Instant;
+
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 
@@ -39,10 +43,6 @@ use sp_core::{H160, H256};
 use sp_runtime::transaction_validity::{
 	TransactionValidityError, UnknownTransaction, ValidTransaction,
 };
-
-// Oli
-use itp_stf_primitives::types::{ActorId, Timestamp};
-use std::time::Instant;
 
 /// Custom Merkle proof that implements codec
 /// The difference to the original one is that implements the scale-codec and that the fields contain u32 instead of usize.

@@ -17,8 +17,8 @@ use crate::{
 };
 
 use codec::Decode;
-use ita_stf::{MerkleProofWithCodec, TrustedGetter, TrustedOperation};
-use itp_stf_primitives::types::KeyPair;
+use ita_stf::{Getter, MerkleProofWithCodec, TrustedCallSigned, TrustedGetter};
+use itp_stf_primitives::types::{KeyPair, TrustedOperation};
 use log::debug;
 use sp_core::{Pair, H256};
 
@@ -64,10 +64,11 @@ pub(crate) fn pay_as_bid_proof(
 	debug!("arg_who = {:?}", arg_who);
 	let who = get_pair_from_str(trusted_args, arg_who);
 
-	let top: TrustedOperation =
+	let top: TrustedOperation<TrustedCallSigned, Getter> = Getter::trusted(
 		TrustedGetter::pay_as_bid_proof(who.public().into(), timestamp, actor_id)
-			.sign(&KeyPair::Sr25519(Box::new(who)))
-			.into();
+			.sign(&KeyPair::Sr25519(Box::new(who))),
+	)
+	.into();
 
 	let res = perform_trusted_operation(cli, trusted_args, &top).unwrap();
 

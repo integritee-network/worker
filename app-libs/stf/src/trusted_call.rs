@@ -406,7 +406,10 @@ where
 				// Send proof of execution on chain.
 				// calls is in the scope from the outside
 				calls.push(OpaqueCall::from_tuple(&(
-					node_metadata_repo.get_from_metadata(|m| m.publish_hash_call_indexes())??,
+					node_metadata_repo
+						.get_from_metadata(|m| m.publish_hash_call_indexes())
+						.map_err(|_| StfError::InvalidMetadata)?
+						.map_err(|_| StfError::InvalidMetadata)?,
 					order_merkle_root,
 					Vec::<itp_types::H256>::new(), // you can ignore this for now. Clients could subscribe to the hashes here to be notified when a new hash is published.
 					b"Published merkle root of an order!".to_vec(),

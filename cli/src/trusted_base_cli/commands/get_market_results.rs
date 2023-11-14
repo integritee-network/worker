@@ -18,8 +18,8 @@ use crate::{
 
 use crate::CliError;
 use codec::Decode;
-use ita_stf::{TrustedGetter, TrustedOperation};
-use itp_stf_primitives::types::KeyPair;
+use ita_stf::{Getter, TrustedCallSigned, TrustedGetter};
+use itp_stf_primitives::types::{KeyPair, TrustedOperation};
 use log::debug;
 use simplyr_lib::MarketOutput;
 use sp_core::Pair;
@@ -53,9 +53,11 @@ pub(crate) fn get_market_results(
 	debug!("arg_who = {:?}", arg_who);
 	let who = get_pair_from_str(trusted_args, arg_who);
 
-	let top: TrustedOperation = TrustedGetter::get_market_results(who.public().into(), timestamp)
-		.sign(&KeyPair::Sr25519(Box::new(who)))
-		.into();
+	let top: TrustedOperation<TrustedCallSigned, Getter> = Getter::trusted(
+		TrustedGetter::get_market_results(who.public().into(), timestamp)
+			.sign(&KeyPair::Sr25519(Box::new(who))),
+	)
+	.into();
 
 	let res = perform_trusted_operation(cli, trusted_args, &top).unwrap();
 
