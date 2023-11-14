@@ -43,7 +43,6 @@ mod needs_enclave {
 	use std::{fs, fs::File, path::Path};
 
 	/// Initializes the shard and generates the key files.
-	#[cfg(feature = "link-binary")]
 	pub(crate) fn initialize_shard_and_keys(
 		enclave: &Enclave,
 		shard_identifier: &ShardIdentifier,
@@ -58,7 +57,6 @@ mod needs_enclave {
 		Ok(())
 	}
 
-	#[cfg(feature = "link-binary")]
 	pub(crate) fn init_shard(enclave: &Enclave, shard_identifier: &ShardIdentifier) {
 		use base58::ToBase58;
 
@@ -76,7 +74,6 @@ mod needs_enclave {
 		}
 	}
 
-	#[cfg(feature = "link-binary")]
 	pub(crate) fn generate_signing_key_file(enclave: &Enclave) {
 		info!("*** Get the signing key from the TEE\n");
 		let pubkey = enclave.get_ecc_signing_pubkey().unwrap();
@@ -91,7 +88,6 @@ mod needs_enclave {
 		}
 	}
 
-	#[cfg(feature = "link-binary")]
 	pub(crate) fn generate_shielding_key_file(enclave: &Enclave) {
 		info!("*** Get the public key from the TEE\n");
 		let pubkey = enclave.get_rsa_shielding_pubkey().unwrap();
