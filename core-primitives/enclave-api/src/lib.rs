@@ -12,7 +12,6 @@
 //! ffi function.
 
 use crate::error::Error;
-use sgx_types::*;
 
 pub mod direct_request;
 pub mod enclave_base;
@@ -25,6 +24,9 @@ pub mod utils;
 
 #[cfg(feature = "implement-ffi")]
 pub use sgx_urts::SgxEnclave;
+
+#[cfg(feature = "implement-ffi")]
+use sgx_types::sgx_enclave_id_t;
 
 pub type EnclaveResult<T> = Result<T, Error>;
 
