@@ -23,7 +23,7 @@ use itc_parentchain_indirect_calls_executor::{
 	IndirectDispatch,
 };
 use itp_stf_primitives::{
-	traits::{IndirectExecutor, TrustedCallSigning, TrustedCallVerification},
+	traits::{IndirectExecutor},
 	types::{AccountId, TrustedOperation},
 };
 use itp_types::Balance;

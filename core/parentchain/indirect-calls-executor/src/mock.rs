@@ -5,23 +5,23 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
-use itp_api_client_types::{Events, Metadata};
+
 use itp_node_api::{
 	api_client::{CallIndex, PairSignature, UncheckedExtrinsicV4},
-	metadata::{pallet_balances::BalancesCallIndexes, NodeMetadata, NodeMetadataTrait},
+	metadata::{NodeMetadataTrait},
 };
 use itp_sgx_runtime_primitives::types::{AccountId, Balance};
-use itp_stf_primitives::{error::StfError, traits::IndirectExecutor, types::Signature};
+use itp_stf_primitives::{traits::IndirectExecutor, types::Signature};
 use itp_test::mock::stf_mock::{GetterMock, TrustedCallMock, TrustedCallSignedMock};
 use itp_types::{
 	parentchain::{
-		BalanceTransfer, ExtrinsicFailed, ExtrinsicStatus, ExtrinsicSuccess, FilterEvents,
-		HandleParentchainEvents, ParentchainError,
+		BalanceTransfer, ExtrinsicStatus, FilterEvents,
+		HandleParentchainEvents,
 	},
 	Address, Request, ShardIdentifier, H256,
 };
 use log::*;
-use std::{format, vec::Vec};
+use std::{vec::Vec};
 
 /// Default filter we use for the Integritee-Parachain.
 pub struct MockExtrinsicFilter<ExtrinsicParser> {
@@ -212,7 +212,7 @@ impl<Executor: IndirectExecutor<TrustedCallSignedMock, Error>>
 
 		debug!("decrypt the account id");
 		let account_vec = executor.decrypt(&self.account_encrypted)?;
-		let account = AccountId::decode(&mut account_vec.as_slice())?;
+		let _account = AccountId::decode(&mut account_vec.as_slice())?;
 
 		let enclave_account_id = executor.get_enclave_account()?;
 		let trusted_call = TrustedCallMock::noop(enclave_account_id);

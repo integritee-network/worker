@@ -34,10 +34,7 @@
 mod event_filter;
 mod event_handler;
 mod extrinsic_parser;
-use crate::{
-	decode_and_log_error,
-	indirect_calls::transfer_to_alice_shields_funds::TransferToAliceShieldsFundsArgs,
-};
+
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
 pub use event_filter::FilterableEvents;
@@ -52,7 +49,7 @@ use itc_parentchain_indirect_calls_executor::{
 };
 use itp_node_api::metadata::pallet_balances::BalancesCallIndexes;
 use itp_stf_primitives::traits::IndirectExecutor;
-use log::trace;
+
 /// The default indirect call (extrinsic-triggered) of the Target-A-Parachain.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub enum IndirectCall {}
@@ -60,7 +57,7 @@ pub enum IndirectCall {}
 impl<Executor: IndirectExecutor<TrustedCallSigned, Error>>
 	IndirectDispatch<Executor, TrustedCallSigned> for IndirectCall
 {
-	fn dispatch(&self, executor: &Executor) -> Result<()> {
+	fn dispatch(&self, _executor: &Executor) -> Result<()> {
 		unimplemented!("no indirect calls defined for target_b");
 	}
 }
@@ -78,8 +75,8 @@ where
 	type ParseParentchainMetadata = ExtrinsicParser;
 
 	fn filter_into_from_metadata(
-		encoded_data: &[u8],
-		metadata: &NodeMetadata,
+		_encoded_data: &[u8],
+		_metadata: &NodeMetadata,
 	) -> Option<Self::Output> {
 		unimplemented!("no indirect calls filter has been implemented for target_b");
 		None

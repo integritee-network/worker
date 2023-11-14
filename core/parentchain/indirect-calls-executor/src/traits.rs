@@ -19,12 +19,10 @@ use crate::{error::Result, Error};
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use itp_stf_primitives::{
-	traits::{IndirectExecutor, TrustedCallSigning, TrustedCallVerification},
-	types::AccountId,
+	traits::{IndirectExecutor, TrustedCallVerification},
 };
 use itp_types::{
-	parentchain::{Balance, BalanceTransfer, ExtrinsicStatus, ParentchainError},
-	OpaqueCall, ShardIdentifier, H256,
+	OpaqueCall, H256,
 };
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header};
 use std::vec::Vec;

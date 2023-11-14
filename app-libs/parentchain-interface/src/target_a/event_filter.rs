@@ -18,16 +18,15 @@
 
 use itc_parentchain_indirect_calls_executor::event_filter::ToEvents;
 use itp_api_client_types::Events;
-use itp_sgx_runtime_primitives::types::{AccountId, Balance};
-use itp_stf_primitives::error::StfError;
+
+
 use itp_types::{
 	parentchain::{
 		BalanceTransfer, ExtrinsicFailed, ExtrinsicStatus, ExtrinsicSuccess, FilterEvents,
-		HandleParentchainEvents, ParentchainError,
 	},
 	H256,
 };
-use std::{format, vec::Vec};
+use std::{vec::Vec};
 
 #[derive(Clone)]
 pub struct FilterableEvents(pub Events<H256>);

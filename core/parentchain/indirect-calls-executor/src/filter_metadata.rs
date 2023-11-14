@@ -20,11 +20,11 @@ use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use itp_api_client_types::{Events, Metadata};
 use itp_node_api::metadata::{
-	pallet_balances::BalancesCallIndexes, NodeMetadata, NodeMetadataTrait,
+	NodeMetadata,
 };
 use itp_stf_primitives::traits::IndirectExecutor;
 use itp_types::{parentchain::FilterEvents, H256};
-use log::trace;
+
 
 pub trait EventsFromMetadata<NodeMetadata> {
 	type Output: FilterEvents;

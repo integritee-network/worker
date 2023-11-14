@@ -15,20 +15,19 @@
 
 */
 
-use codec::{Decode, Encode};
-use core::{fmt::Debug, marker::PhantomData};
-use frame_support::traits::UnfilteredDispatchable;
+
+
+
 pub use ita_sgx_runtime::{Balance, Index};
-use ita_sgx_runtime::{Runtime, System};
-use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
+
+use ita_stf::{TrustedCallSigned};
 use itc_parentchain_indirect_calls_executor::error::Error;
 use itp_stf_primitives::{
-	traits::{IndirectExecutor, TrustedCallVerification},
-	types::TrustedOperation,
+	traits::{IndirectExecutor},
 };
-use itp_types::parentchain::{AccountId, FilterEvents, HandleParentchainEvents, ParentchainError};
+use itp_types::parentchain::{FilterEvents, HandleParentchainEvents};
 use log::*;
-use sp_runtime::MultiAddress;
+
 
 pub struct ParentchainEventHandler {}
 
@@ -37,7 +36,7 @@ impl<Executor> HandleParentchainEvents<Executor, TrustedCallSigned, Error>
 where
 	Executor: IndirectExecutor<TrustedCallSigned, Error>,
 {
-	fn handle_events(executor: &Executor, events: impl FilterEvents) -> Result<(), Error> {
+	fn handle_events(_executor: &Executor, _events: impl FilterEvents) -> Result<(), Error> {
 		debug!("not handling any events for target B");
 		Ok(())
 	}
