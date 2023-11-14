@@ -16,10 +16,12 @@
 */
 //! Various way to filter Parentchain events
 
-use crate::{error::Error, IndirectExecutor};
+use crate::error::Error;
+use core::marker::PhantomData;
 use itp_api_client_types::Events;
 use itp_sgx_runtime_primitives::types::{AccountId, Balance};
-use itp_stf_primitives::error::StfError;
+use itp_stf_primitives::{error::StfError, traits::IndirectExecutor};
+use itp_test::mock::stf_mock::TrustedCallSignedMock;
 use itp_types::{
 	parentchain::{
 		BalanceTransfer, ExtrinsicFailed, ExtrinsicStatus, ExtrinsicSuccess, FilterEvents,
@@ -57,21 +59,19 @@ impl FilterEvents for MockEvents {
 	}
 }
 
-pub struct MockPrivacySidechain;
+pub struct MockPrivacySidechain<Executor> {
+	_phantom: PhantomData<Executor>,
+}
 
-impl HandleParentchainEvents for MockPrivacySidechain {
-	const SHIELDING_ACCOUNT: AccountId = AccountId::new([0u8; 32]);
-	fn handle_events<Executor>(
+impl<Executor> HandleParentchainEvents<Executor, TrustedCallSignedMock, Error>
+	for MockPrivacySidechain<Executor>
+where
+	Executor: IndirectExecutor<TrustedCallSignedMock, Error>,
+{
+	fn handle_events(
 		_: &Executor,
 		_: impl itp_types::parentchain::FilterEvents,
-	) -> core::result::Result<(), ParentchainError> {
-		Ok(())
-	}
-	fn shield_funds<Executor>(
-		_: &Executor,
-		_: &AccountId,
-		_: Balance,
-	) -> core::result::Result<(), ParentchainError> {
+	) -> core::result::Result<(), Error> {
 		Ok(())
 	}
 }

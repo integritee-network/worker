@@ -17,11 +17,12 @@
 
 use alloc::{format, vec::Vec};
 use codec::{Decode, Encode};
+use core::fmt::Debug;
+use itp_stf_primitives::traits::{IndirectExecutor, TrustedCallVerification};
+use itp_utils::stringify::account_id_to_string;
 use sp_core::bounded::alloc;
 use sp_runtime::{generic::Header as HeaderG, traits::BlakeTwo256, MultiAddress, MultiSignature};
-
-use itp_utils::stringify::account_id_to_string;
-
+use sp_std::boxed::Box;
 use substrate_api_client::ac_node_api::StaticEvent;
 
 pub type StorageProof = Vec<Vec<u8>>;
@@ -121,17 +122,15 @@ impl StaticEvent for BalanceTransfer {
 	const EVENT: &'static str = "Transfer";
 }
 
-pub trait HandleParentchainEvents {
-	const SHIELDING_ACCOUNT: AccountId;
-	fn handle_events<Executor>(
+pub trait HandleParentchainEvents<Executor, TCS, Error>
+where
+	Executor: IndirectExecutor<TCS, Error>,
+	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
+{
+	fn handle_events(
 		executor: &Executor,
 		events: impl FilterEvents,
-	) -> core::result::Result<(), ParentchainError>;
-	fn shield_funds<Executor>(
-		executor: &Executor,
-		account: &AccountId,
-		amount: Balance,
-	) -> core::result::Result<(), ParentchainError>;
+	) -> core::result::Result<(), Error>;
 }
 
 #[derive(Debug)]

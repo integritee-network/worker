@@ -15,13 +15,14 @@
 
 */
 
-use crate::{error::Result, event_filter::MockEvents, IndirectDispatch, IndirectExecutor};
+use crate::{error::Result, event_filter::MockEvents, IndirectDispatch};
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use itp_api_client_types::{Events, Metadata};
 use itp_node_api::metadata::{
 	pallet_balances::BalancesCallIndexes, NodeMetadata, NodeMetadataTrait,
 };
+use itp_stf_primitives::traits::IndirectExecutor;
 use itp_types::{parentchain::FilterEvents, H256};
 use log::trace;
 
@@ -91,6 +92,7 @@ pub struct DenyAll;
 
 mod seal {
 	use super::*;
+	use crate::Error;
 	use core::fmt::Debug;
 	use itp_stf_primitives::traits::TrustedCallVerification;
 
@@ -107,7 +109,7 @@ mod seal {
 		}
 	}
 
-	impl<Executor: IndirectExecutor<TCS>, TCS> IndirectDispatch<Executor, TCS> for CantExecute
+	impl<Executor: IndirectExecutor<TCS, Error>, TCS> IndirectDispatch<Executor, TCS> for CantExecute
 	where
 		TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
 	{

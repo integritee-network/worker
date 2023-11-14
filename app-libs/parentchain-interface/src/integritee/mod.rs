@@ -25,13 +25,17 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
+pub use event_filter::FilterableEvents;
 pub use event_handler::ParentchainEventHandler;
 pub use extrinsic_parser::ParentchainExtrinsicParser;
 use ita_stf::TrustedCallSigned;
 use itc_parentchain_indirect_calls_executor::{
-	error::Result, filter_metadata::FilterIntoDataFrom, IndirectDispatch, IndirectExecutor,
+	error::{Error, Result},
+	filter_metadata::FilterIntoDataFrom,
+	IndirectDispatch,
 };
 use itp_node_api::metadata::NodeMetadataTrait;
+use itp_stf_primitives::traits::IndirectExecutor;
 use log::trace;
 /// The default indirect call (extrinsic-triggered) of the Integritee-Parachain.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
@@ -40,8 +44,8 @@ pub enum IndirectCall {
 	Invoke(InvokeArgs),
 }
 
-impl<Executor: IndirectExecutor<TrustedCallSigned>> IndirectDispatch<Executor, TrustedCallSigned>
-	for IndirectCall
+impl<Executor: IndirectExecutor<TrustedCallSigned, Error>>
+	IndirectDispatch<Executor, TrustedCallSigned> for IndirectCall
 {
 	fn dispatch(&self, executor: &Executor) -> Result<()> {
 		trace!("dispatching indirect call {:?}", self);

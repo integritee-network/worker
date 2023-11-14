@@ -22,7 +22,7 @@ use crate::sgx_reexport_prelude::*;
 use crate::{
 	error::{Error, Result},
 	filter_metadata::{EventsFromMetadata, FilterIntoDataFrom},
-	traits::{ExecuteIndirectCalls, IndirectDispatch, IndirectExecutor},
+	traits::{ExecuteIndirectCalls, IndirectDispatch},
 };
 use alloc::format;
 use binary_merkle_tree::merkle_root;
@@ -35,7 +35,7 @@ use itp_node_api::metadata::{
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
 use itp_stf_executor::traits::StfEnclaveSigning;
 use itp_stf_primitives::{
-	traits::{TrustedCallSigning, TrustedCallVerification},
+	traits::{IndirectExecutor, TrustedCallSigning, TrustedCallVerification},
 	types::AccountId,
 };
 use itp_top_pool_author::traits::AuthorApi;
@@ -136,7 +136,7 @@ impl<
 	NodeMetadataProvider::MetadataType: NodeMetadataTrait + Clone,
 	FilterIndirectCalls::Output: IndirectDispatch<Self, TCS> + Encode + Debug,
 	EventCreator: EventsFromMetadata<NodeMetadataProvider::MetadataType>,
-	ParentchainEventHandler: HandleParentchainEvents,
+	ParentchainEventHandler: HandleParentchainEvents<Self, TCS, Error>,
 	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
 	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
 {
@@ -238,7 +238,7 @@ impl<
 		PrivacySidechain,
 		TCS,
 		G,
-	> IndirectExecutor<TCS>
+	> IndirectExecutor<TCS, Error>
 	for IndirectCallsExecutor<
 		ShieldingKeyRepository,
 		StfEnclaveSigner,

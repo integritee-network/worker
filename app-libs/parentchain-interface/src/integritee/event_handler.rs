@@ -20,9 +20,12 @@ use core::{fmt::Debug, marker::PhantomData};
 use frame_support::traits::UnfilteredDispatchable;
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{Runtime, System};
-use ita_stf::{TrustedCall, TrustedCallSigned};
-use itc_parentchain_indirect_calls_executor::traits::IndirectExecutor;
-use itp_stf_primitives::{traits::TrustedCallVerification, types::TrustedOperation};
+use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
+use itc_parentchain_indirect_calls_executor::error::Error;
+use itp_stf_primitives::{
+	traits::{IndirectExecutor, TrustedCallVerification},
+	types::TrustedOperation,
+};
 use itp_types::parentchain::{AccountId, FilterEvents, HandleParentchainEvents, ParentchainError};
 use log::*;
 use sp_runtime::MultiAddress;
@@ -33,42 +36,16 @@ const ALICE_ENCODED: Seed = [
 	76, 205, 227, 154, 86, 132, 231, 165, 109, 162, 125,
 ];
 
-pub struct ParentchainEventHandler<TCS> {
-	_phantom: PhantomData<TCS>,
-}
+const SHIELDING_ACCOUNT: AccountId = AccountId::new(ALICE_ENCODED);
 
-impl<TCS> HandleParentchainEvents for ParentchainEventHandler<TCS>
-where
-	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
-{
-	const SHIELDING_ACCOUNT: AccountId = AccountId::new(ALICE_ENCODED);
+pub struct ParentchainEventHandler {}
 
-	fn handle_events<Executor>(
-		executor: &Executor,
-		events: impl FilterEvents,
-	) -> Result<(), ParentchainError> {
-		let filter_events = events.get_transfer_events();
-
-		if let Ok(events) = filter_events {
-			events
-				.iter()
-				.filter(|&event| event.to == Self::SHIELDING_ACCOUNT)
-				.try_for_each(|event| {
-					info!("transfer_event: {}", event);
-					//call = IndirectCall::ShieldFunds(ShieldFundsArgs{ })
-					Self::shield_funds(executor, &event.from, event.amount)
-				})
-				.map_err(|_| ParentchainError::ShieldFundsFailure)?;
-		}
-
-		Ok(())
-	}
-
-	fn shield_funds<Executor>(
+impl ParentchainEventHandler {
+	fn shield_funds<Executor: IndirectExecutor<TrustedCallSigned, Error>>(
 		executor: &Executor,
 		account: &AccountId,
 		amount: Balance,
-	) -> Result<(), ParentchainError> {
+	) -> Result<(), Error> {
 		let account_info = System::account(&account);
 		log::info!(
 			"shielding for {:?} amount {} new_free {} new_reserved {}",
@@ -79,13 +56,37 @@ where
 		);
 		let shard = executor.get_default_shard();
 		let trusted_call =
-			TrustedCall::balance_shield(executor.get_enclave_account()?, account, amount);
+			TrustedCall::balance_shield(executor.get_enclave_account()?, account.clone(), amount);
 		let signed_trusted_call = executor.sign_call_with_self(&trusted_call, &shard)?;
-		let trusted_operation = TrustedOperation::indirect_call(signed_trusted_call);
+		let trusted_operation =
+			TrustedOperation::<TrustedCallSigned, Getter>::indirect_call(signed_trusted_call);
 
 		let encrypted_trusted_call = executor.encrypt(&trusted_operation.encode())?;
 		executor.submit_trusted_call(shard, encrypted_trusted_call);
 
+		Ok(())
+	}
+}
+
+impl<Executor> HandleParentchainEvents<Executor, TrustedCallSigned, Error>
+	for ParentchainEventHandler
+where
+	Executor: IndirectExecutor<TrustedCallSigned, Error>,
+{
+	fn handle_events(executor: &Executor, events: impl FilterEvents) -> Result<(), Error> {
+		let filter_events = events.get_transfer_events();
+
+		if let Ok(events) = filter_events {
+			events
+				.iter()
+				.filter(|&event| event.to == SHIELDING_ACCOUNT)
+				.try_for_each(|event| {
+					info!("transfer_event: {}", event);
+					//call = IndirectCall::ShieldFunds(ShieldFundsArgs{ })
+					Self::shield_funds(executor, &event.from, event.amount)
+				})
+				.map_err(|_| ParentchainError::ShieldFundsFailure)?;
+		}
 		Ok(())
 	}
 }

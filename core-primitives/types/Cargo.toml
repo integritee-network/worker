@@ -18,6 +18,7 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 
 # local dependencies
 itp-sgx-runtime-primitives = { path = "../../core-primitives/sgx-runtime-primitives", default-features = false }
+itp-stf-primitives = { path = "../../core-primitives/stf-primitives", default-features = false }
 itp-utils = { path = "../../core-primitives/utils", default-features = false }
 
 # scs
@@ -46,6 +47,7 @@ std = [
     "serde_json/std",
     "primitive-types/std",
     "itp-sgx-runtime-primitives/std",
+    "itp-stf-primitives/std",
     "itp-utils/std",
     "substrate-api-client/std",
     "teerex-primitives/std",

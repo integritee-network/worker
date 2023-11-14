@@ -18,9 +18,12 @@
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
-use itc_parentchain_indirect_calls_executor::{error::Result, IndirectDispatch, IndirectExecutor};
+use itc_parentchain_indirect_calls_executor::{
+	error::{Error, Result},
+	IndirectDispatch,
+};
 use itp_stf_primitives::{
-	traits::{TrustedCallSigning, TrustedCallVerification},
+	traits::{IndirectExecutor, TrustedCallSigning, TrustedCallVerification},
 	types::{AccountId, TrustedOperation},
 };
 use itp_types::Balance;
@@ -55,8 +58,8 @@ pub const ALICE_ACCOUNT_ID: AccountId = AccountId::new([
 	76, 205, 227, 154, 86, 132, 231, 165, 109, 162, 125,
 ]);
 
-impl<Executor: IndirectExecutor<TrustedCallSigned>> IndirectDispatch<Executor, TrustedCallSigned>
-	for TransferToAliceShieldsFundsArgs
+impl<Executor: IndirectExecutor<TrustedCallSigned, Error>>
+	IndirectDispatch<Executor, TrustedCallSigned> for TransferToAliceShieldsFundsArgs
 {
 	fn dispatch(&self, executor: &Executor) -> Result<()> {
 		if self.destination == ALICE_ACCOUNT_ID.into() {

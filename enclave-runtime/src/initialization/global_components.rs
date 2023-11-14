@@ -19,7 +19,6 @@
 //!
 //! This allows the crates themselves to stay as generic as possible
 //! and ensures that the global instances are initialized once.
-
 use crate::{
 	initialization::parentchain::{
 		integritee_parachain::IntegriteeParachainHandler,
@@ -31,7 +30,7 @@ use crate::{
 	rpc::rpc_response_channel::RpcResponseChannel,
 	tls_ra::seal_handler::SealHandler,
 };
-use ita_parentchain_interface::{integritee, target_a};
+use ita_parentchain_interface::{integritee, target_a, target_b};
 use ita_sgx_runtime::Runtime;
 use ita_stf::{Getter, State as StfState, Stf, TrustedCallSigned};
 
@@ -178,8 +177,9 @@ pub type EnclaveParentchainEventImportQueue = ImportQueue<Vec<u8>>;
 
 // Stuff for the integritee parentchain
 
-pub type IntegriteeParentchainIndirectExecutor =
-	EnclaveIndirectCallsExecutor<ShieldFundsAndInvokeFilter<ParentchainExtrinsicParser>>;
+pub type IntegriteeParentchainIndirectExecutor = EnclaveIndirectCallsExecutor<
+	integritee::ShieldFundsAndInvokeFilter<integritee::ParentchainExtrinsicParser>,
+>;
 
 pub type IntegriteeParentchainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
@@ -211,8 +211,9 @@ pub type IntegriteeParentchainBlockImportDispatcher = BlockImportDispatcher<
 ///
 /// Also note that the extrinsic parser must be changed if the signed extra contains the
 /// `AssetTxPayment`.
-pub type TargetAParentchainIndirectExecutor =
-	EnclaveIndirectCallsExecutor<TransferToAliceShieldsFundsFilter<ParentchainExtrinsicParser>>;
+pub type TargetAParentchainIndirectExecutor = EnclaveIndirectCallsExecutor<
+	target_a::TransferToAliceShieldsFundsFilter<target_a::ParentchainExtrinsicParser>,
+>;
 
 pub type TargetAParentchainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
@@ -244,8 +245,9 @@ pub type TargetAParentchainBlockImportDispatcher = BlockImportDispatcher<
 ///
 /// Also note that the extrinsic parser must be changed if the signed extra contains the
 /// `AssetTxPayment`.
-pub type TargetBParentchainIndirectExecutor =
-	EnclaveIndirectCallsExecutor<TransferToAliceShieldsFundsFilter<ParentchainExtrinsicParser>>;
+pub type TargetBParentchainIndirectExecutor = EnclaveIndirectCallsExecutor<
+	target_b::TargetBExtrinsicFilter<target_b::ParentchainExtrinsicParser>,
+>;
 
 pub type TargetBParentchainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
