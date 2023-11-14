@@ -26,7 +26,7 @@ use log::*;
 use sgx_types::*;
 use teerex_primitives::Fmspc;
 
-#[cfg(feature = "real-ffi")]
+#[cfg(feature = "implement-ffi")]
 use crate::Enclave;
 
 const OS_SYSTEM_PATH: &str = "/usr/lib/x86_64-linux-gnu/";
@@ -134,7 +134,7 @@ pub trait TlsRemoteAttestation {
 	) -> EnclaveResult<()>;
 }
 
-#[cfg(feature = "real-ffi")]
+#[cfg(feature = "implement-ffi")]
 impl RemoteAttestation for Enclave {
 	fn generate_ias_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;
@@ -474,7 +474,7 @@ impl RemoteAttestation for Enclave {
 	}
 }
 
-#[cfg(feature = "real-ffi")]
+#[cfg(feature = "implement-ffi")]
 impl RemoteAttestationCallBacks for Enclave {
 	fn init_quote(&self) -> EnclaveResult<(sgx_target_info_t, sgx_epid_group_id_t)> {
 		let mut ti: sgx_target_info_t = sgx_target_info_t::default();
@@ -687,7 +687,7 @@ impl RemoteAttestationCallBacks for Enclave {
 	}
 }
 
-#[cfg(feature = "real-ffi")]
+#[cfg(feature = "implement-ffi")]
 impl TlsRemoteAttestation for Enclave {
 	fn run_state_provisioning_server(
 		&self,

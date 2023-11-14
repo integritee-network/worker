@@ -21,7 +21,7 @@ use frame_support::ensure;
 use itp_enclave_api_ffi as ffi;
 use sgx_types::sgx_status_t;
 
-#[cfg(feature = "real-ffi")]
+#[cfg(feature = "implement-ffi")]
 use crate::Enclave;
 
 pub trait DirectRequest: Send + Sync + 'static {
@@ -30,7 +30,7 @@ pub trait DirectRequest: Send + Sync + 'static {
 	fn rpc(&self, request: Vec<u8>) -> EnclaveResult<Vec<u8>>;
 }
 
-#[cfg(feature = "real-ffi")]
+#[cfg(feature = "implement-ffi")]
 impl DirectRequest for Enclave {
 	fn rpc(&self, request: Vec<u8>) -> EnclaveResult<Vec<u8>> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;

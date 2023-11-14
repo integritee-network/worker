@@ -22,14 +22,14 @@ use itp_enclave_api_ffi as ffi;
 use log::*;
 use sgx_types::sgx_status_t;
 
-#[cfg(feature = "real-ffi")]
+#[cfg(feature = "implement-ffi")]
 use crate::Enclave;
 
 pub trait EnclaveTest: Send + Sync + 'static {
 	fn test_main_entrance(&self) -> EnclaveResult<()>;
 }
 
-#[cfg(feature = "real-ffi")]
+#[cfg(feature = "implement-ffi")]
 impl EnclaveTest for Enclave {
 	fn test_main_entrance(&self) -> EnclaveResult<()> {
 		let mut retval = sgx_status_t::SGX_SUCCESS;

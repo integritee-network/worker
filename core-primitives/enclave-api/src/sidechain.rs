@@ -25,7 +25,7 @@ use itp_types::parentchain::ParentchainId;
 use sgx_types::sgx_status_t;
 use sp_runtime::generic::SignedBlock;
 
-#[cfg(feature = "real-ffi")]
+#[cfg(feature = "implement-ffi")]
 use crate::Enclave;
 
 /// trait for handling blocks on the side chain
@@ -43,7 +43,7 @@ pub trait Sidechain: Send + Sync + 'static {
 	fn execute_trusted_calls(&self) -> EnclaveResult<()>;
 }
 
-#[cfg(feature = "real-ffi")]
+#[cfg(feature = "implement-ffi")]
 impl Sidechain for Enclave {
 	fn sync_parentchain<ParentchainBlock: Encode>(
 		&self,

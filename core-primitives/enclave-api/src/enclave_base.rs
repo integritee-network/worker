@@ -32,7 +32,7 @@ use sgx_types::*;
 use sp_core::ed25519;
 use teerex_primitives::EnclaveFingerprint;
 
-#[cfg(feature = "real-ffi")]
+#[cfg(feature = "implement-ffi")]
 use crate::Enclave;
 
 /// Trait for base/common Enclave API functions
@@ -87,7 +87,7 @@ pub trait EnclaveBase: Send + Sync + 'static {
 }
 
 /// EnclaveApi implementation for Enclave struct
-#[cfg(feature = "real-ffi")]
+#[cfg(feature = "implement-ffi")]
 impl EnclaveBase for Enclave {
 	fn init(
 		&self,

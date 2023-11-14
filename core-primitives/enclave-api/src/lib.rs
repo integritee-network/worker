@@ -13,7 +13,7 @@
 
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!(
-	"feature \"real-ffi\" and feature \"no-linking\" cannot be enabled at the same time"
+	"feature \"implement-ffi\" and feature \"no-linking\" cannot be enabled at the same time"
 );
 
 use crate::error::Error;
@@ -28,19 +28,19 @@ pub mod sidechain;
 pub mod teeracle_api;
 pub mod utils;
 
-#[cfg(feature = "real-ffi")]
+#[cfg(feature = "implement-ffi")]
 pub use sgx_urts::SgxEnclave;
 
 pub type EnclaveResult<T> = Result<T, Error>;
 
-#[cfg(feature = "real-ffi")]
+#[cfg(feature = "implement-ffi")]
 #[derive(Clone, Debug, Default)]
 pub struct Enclave {
 	eid: sgx_enclave_id_t,
 	sgx_enclave: SgxEnclave,
 }
 
-#[cfg(feature = "real-ffi")]
+#[cfg(feature = "implement-ffi")]
 impl Enclave {
 	pub fn new(sgx_enclave: SgxEnclave) -> Self {
 		Enclave { eid: sgx_enclave.geteid(), sgx_enclave }

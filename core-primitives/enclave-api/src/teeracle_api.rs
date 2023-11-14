@@ -22,7 +22,7 @@ use itp_enclave_api_ffi as ffi;
 use log::*;
 use sgx_types::*;
 
-#[cfg(feature = "real-ffi")]
+#[cfg(feature = "implement-ffi")]
 use crate::Enclave;
 
 pub trait TeeracleApi: Send + Sync + 'static {
@@ -37,7 +37,7 @@ pub trait TeeracleApi: Send + Sync + 'static {
 	fn update_weather_data_xt(&self, longitude: &str, latitude: &str) -> EnclaveResult<Vec<u8>>;
 }
 
-#[cfg(feature = "real-ffi")]
+#[cfg(feature = "implement-ffi")]
 impl TeeracleApi for Enclave {
 	fn update_market_data_xt(
 		&self,

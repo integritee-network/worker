@@ -94,7 +94,7 @@ attesteer = ["dcap"]
 # It has been chosen to not make this a default feature because this makes test execution
 # more ergonomic as we can simply do `cargo test` on the whole workspace like this.
 link-binary = [
-    "itp-enclave-api/real-ffi"
+    "itp-enclave-api/implement-ffi"
 ]
 
 [dev-dependencies]
