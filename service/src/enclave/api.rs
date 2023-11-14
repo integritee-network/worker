@@ -26,10 +26,8 @@ use std::{
 	path::PathBuf,
 };
 
-#[cfg(features = "link-binary")]
 use itp_enclave_api::{Enclave, SgxEnclave};
 
-#[cfg(features = "link-binary")]
 pub fn enclave_init(config: &Config) -> EnclaveResult<Enclave> {
 	const LEN: usize = 1024;
 	let mut launch_token = [0; LEN];
