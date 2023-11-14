@@ -145,8 +145,9 @@ jobs:
       fail-fast: false
       matrix:
         check: [
+          # Workspace
+          cargo test,
           # Worker
-          cargo test --features cargo-test,
           # Use release mode as the CI runs out of disk space otherwise.
           cargo clippy --release -- -D warnings,
           cargo clippy --release --features evm -- -D warnings,
