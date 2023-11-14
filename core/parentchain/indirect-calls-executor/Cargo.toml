@@ -17,9 +17,9 @@ itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-feature
 itp-sgx-runtime-primitives = { path = "../../../core-primitives/sgx-runtime-primitives", default-features = false }
 itp-stf-executor = { path = "../../../core-primitives/stf-executor", default-features = false }
 itp-stf-primitives = { path = "../../../core-primitives/stf-primitives", default-features = false }
+itp-test = { path = "../../../core-primitives/test", default-features = false }
 itp-top-pool-author = { path = "../../../core-primitives/top-pool-author", default-features = false }
 itp-types = { path = "../../../core-primitives/types", default-features = false }
-itp-test = { path = "../../../core-primitives/test", default-features = false }
 itp-utils = { path = "../../../core-primitives/utils", default-features = false }
 
 # sgx enabled external libraries

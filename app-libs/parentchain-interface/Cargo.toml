@@ -10,8 +10,8 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # local dependencies
-ita-stf = { path = "../stf", default-features = false }
 ita-sgx-runtime = { path = "../sgx-runtime", default-features = false }
+ita-stf = { path = "../stf", default-features = false }
 itc-parentchain-indirect-calls-executor = { path = "../../core/parentchain/indirect-calls-executor", default-features = false }
 itp-api-client-types = { path = "../../core-primitives/node-api/api-client-types", default-features = false }
 itp-node-api = { path = "../../core-primitives/node-api", default-features = false }
@@ -39,9 +39,9 @@ log = { version = "0.4", default-features = false }
 
 # substrate dep
 binary-merkle-tree = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 [dev-dependencies]
 env_logger = "0.9.0"
@@ -91,4 +91,3 @@ sgx = [
     "itp-top-pool-author/sgx",
     "thiserror_sgx",
 ]
-
