@@ -23,8 +23,8 @@ use crate::{
 	Cli, CliError, CliResult, CliResultOk,
 };
 use codec::Decode;
-use ita_stf::{Index, TrustedCall, TrustedGetter, TrustedOperation};
-use itp_stf_primitives::types::KeyPair;
+use ita_stf::{Index, TrustedCall, TrustedGetter};
+use itp_stf_primitives::types::{KeyPair, TrustedOperation};
 use log::debug;
 use sp_core::Pair;
 

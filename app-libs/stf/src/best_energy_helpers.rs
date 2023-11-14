@@ -1,6 +1,7 @@
-use crate::{MerkleProofWithCodec, StfError};
+use crate::MerkleProofWithCodec;
 use binary_merkle_tree::merkle_proof;
 use codec::Encode;
+use itp_stf_primitives::error::StfError;
 use simplyr_lib::{MarketOutput, Order};
 use sp_core::H256;
 use sp_runtime::traits::Keccak256;

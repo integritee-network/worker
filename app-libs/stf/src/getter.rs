@@ -30,7 +30,7 @@ use sp_std::vec;
 use std::prelude::v1::*;
 
 // Oli only
-use itp_stf_primitives::types::ActorId;
+use itp_stf_primitives::types::{ActorId, Timestamp};
 use std::time::Instant;
 
 #[cfg(feature = "evm")]

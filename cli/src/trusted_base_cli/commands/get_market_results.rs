@@ -18,8 +18,8 @@ use crate::{
 
 use crate::CliError;
 use codec::Decode;
-use ita_stf::{TrustedGetter, TrustedOperation};
-use itp_stf_primitives::types::KeyPair;
+use ita_stf::TrustedGetter;
+use itp_stf_primitives::types::{KeyPair, TrustedOperation};
 use log::debug;
 use simplyr_lib::MarketOutput;
 use sp_core::Pair;

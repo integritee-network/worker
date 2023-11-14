@@ -17,8 +17,8 @@ use crate::{
 };
 
 use codec::Decode;
-use ita_stf::{MerkleProofWithCodec, TrustedGetter, TrustedOperation};
-use itp_stf_primitives::types::KeyPair;
+use ita_stf::{MerkleProofWithCodec, TrustedGetter};
+use itp_stf_primitives::types::{KeyPair, TrustedOperation};
 use log::debug;
 use sp_core::{Pair, H256};
 
