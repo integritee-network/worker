@@ -339,7 +339,7 @@ mod test {
 		TestNodeMetadataRepository,
 		MockExtrinsicFilter<MockParentchainExtrinsicParser>,
 		TestEventCreator,
-		MockParentchainEventHandler<IndirectExecutor<TrustedCallSignedMock, Error>>,
+		MockParentchainEventHandler,
 		TrustedCallSignedMock,
 		GetterMock,
 	>;

@@ -180,12 +180,10 @@ impl FilterEvents for MockEvents {
 	}
 }
 
-pub struct MockParentchainEventHandler<Executor> {
-	_phantom: PhantomData<Executor>,
-}
+pub struct MockParentchainEventHandler {}
 
 impl<Executor> HandleParentchainEvents<Executor, TrustedCallSignedMock, Error>
-	for MockParentchainEventHandler<Executor>
+	for MockParentchainEventHandler
 where
 	Executor: IndirectExecutor<TrustedCallSignedMock, Error>,
 {
