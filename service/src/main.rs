@@ -16,6 +16,7 @@
 */
 
 #![cfg_attr(test, feature(assert_matches))]
+#![allow(unused)]
 
 mod account_funding;
 mod config;
