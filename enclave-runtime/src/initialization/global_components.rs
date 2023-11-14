@@ -33,7 +33,6 @@ use crate::{
 use ita_parentchain_interface::{integritee, target_a, target_b};
 use ita_sgx_runtime::Runtime;
 use ita_stf::{Getter, State as StfState, Stf, TrustedCallSigned};
-
 use itc_direct_rpc_server::{
 	rpc_connection_registry::ConnectionRegistry, rpc_responder::RpcResponder,
 	rpc_watch_extractor::RpcWatchExtractor, rpc_ws_handler::RpcWsHandler,
@@ -170,8 +169,8 @@ pub type IntegriteeParentchainIndirectCallsExecutor = IndirectCallsExecutor<
 	integritee::ShieldFundsAndInvokeFilter<integritee::ParentchainExtrinsicParser>,
 	EventCreator<integritee::FilterableEvents>,
 	integritee::ParentchainEventHandler,
-	TrustedCallSigned,
-	Getter,
+	EnclaveTrustedCallSigned,
+	EnclaveGetter,
 >;
 
 pub type IntegriteeParentchainBlockImporter = ParentchainBlockImporter<
@@ -212,8 +211,8 @@ pub type TargetAParentchainIndirectCallsExecutor = IndirectCallsExecutor<
 	target_a::TransferToAliceShieldsFundsFilter<target_a::ParentchainExtrinsicParser>,
 	EventCreator<target_a::FilterableEvents>,
 	target_a::ParentchainEventHandler,
-	TrustedCallSigned,
-	Getter,
+	EnclaveTrustedCallSigned,
+	EnclaveGetter,
 >;
 
 pub type TargetAParentchainBlockImporter = ParentchainBlockImporter<
@@ -254,8 +253,8 @@ pub type TargetBParentchainIndirectCallsExecutor = IndirectCallsExecutor<
 	target_b::TargetBExtrinsicFilter<target_b::ParentchainExtrinsicParser>,
 	EventCreator<target_b::FilterableEvents>,
 	target_b::ParentchainEventHandler,
-	TrustedCallSigned,
-	Getter,
+	EnclaveTrustedCallSigned,
+	EnclaveGetter,
 >;
 
 pub type TargetBParentchainBlockImporter = ParentchainBlockImporter<

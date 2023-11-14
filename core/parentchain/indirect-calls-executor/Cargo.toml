@@ -61,6 +61,7 @@ std = [
     "itp-stf-executor/std",
     "itp-top-pool-author/std",
     "itp-api-client-types/std",
+    "itp-test/std",
     "itp-types/std",
     "itp-sgx-runtime-primitives/std",
     "log/std",

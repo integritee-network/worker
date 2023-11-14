@@ -67,6 +67,7 @@ std = [
     "rlp/std",
     # local
     "ita-sgx-runtime/std",
+    "itc-parentchain-indirect-calls-executor/std",
     "itp-hashing/std",
     "itp-sgx-externalities/std",
     "itp-stf-interface/std",

@@ -41,7 +41,7 @@ pub mod sgx_reexport_prelude {
 }
 
 mod executor;
-mod mock;
+pub mod mock;
 pub mod traits;
 
 pub mod error;
