@@ -23,8 +23,11 @@ use crate::{
 	Cli, CliError, CliResult, CliResultOk,
 };
 use codec::Decode;
-use ita_stf::{Index, TrustedCall, TrustedGetter};
-use itp_stf_primitives::types::{KeyPair, TrustedOperation};
+use ita_stf::{Getter, Index, TrustedCall, TrustedCallSigned};
+use itp_stf_primitives::{
+	traits::TrustedCallSigning,
+	types::{KeyPair, TrustedOperation},
+};
 use log::debug;
 use sp_core::Pair;
 
@@ -59,7 +62,7 @@ pub(crate) fn pay_as_bid(
 	let signer = get_pair_from_str(trusted_args, arg_who);
 	let (mrenclave, shard) = get_identifiers(trusted_args);
 	let nonce = get_layer_two_nonce!(signer, cli, trusted_args);
-	let top: TrustedOperation =
+	let top: TrustedOperation<TrustedCallSigned, Getter> =
 		TrustedCall::pay_as_bid(who.public().into(), orders_string.to_string())
 			.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
 			.into_trusted_operation(trusted_args.direct);
