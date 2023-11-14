@@ -32,5 +32,5 @@ itp-types = { path = "../types" }
 default = []
 implement-ffi = [
     "sgx_urts",
-    "itp-enclave-api-ffi/link-sgx-libs"
+    "itp-enclave-api-ffi/link-sgx-libs",
 ]
