@@ -56,7 +56,6 @@ std = [
     "sp-io/std",
     "sp-runtime/std",
     "sp-std/std",
-    "sgx-crypto-helper/std",
 ]
 sgx = [
     "itp-node-api/sgx",
