@@ -16,7 +16,12 @@
 */
 
 use crate::error::Result;
-use itp_stf_primitives::types::AccountId;
+use codec::{Decode, Encode};
+use core::fmt::Debug;
+use itp_stf_primitives::{
+	traits::{TrustedCallSigning, TrustedCallVerification},
+	types::AccountId,
+};
 use itp_types::{
 	parentchain::{Balance, BalanceTransfer, ExtrinsicStatus, ParentchainError},
 	OpaqueCall, ShardIdentifier, H256,
@@ -51,13 +56,19 @@ pub trait ExecuteIndirectCalls {
 }
 
 /// Trait that should be implemented on indirect calls to be executed.
-pub trait IndirectDispatch<E: IndirectExecutor> {
+pub trait IndirectDispatch<E: IndirectExecutor<TCS>, TCS>
+where
+	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
+{
 	fn dispatch(&self, executor: &E) -> Result<()>;
 }
 
 /// Trait to be implemented on the executor to serve helper methods of the executor
 /// to the `IndirectDispatch` implementation.
-pub trait IndirectExecutor {
+pub trait IndirectExecutor<TCS>
+where
+	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
+{
 	fn submit_trusted_call(&self, shard: ShardIdentifier, encrypted_trusted_call: Vec<u8>);
 
 	fn decrypt(&self, encrypted: &[u8]) -> Result<Vec<u8>>;
@@ -68,7 +79,7 @@ pub trait IndirectExecutor {
 
 	fn get_default_shard(&self) -> ShardIdentifier;
 
-	fn sign_call_with_self<TC, TCS>(
+	fn sign_call_with_self<TC: Encode + Debug + TrustedCallSigning<TCS>>(
 		&self,
 		trusted_call: &TC,
 		shard: &ShardIdentifier,

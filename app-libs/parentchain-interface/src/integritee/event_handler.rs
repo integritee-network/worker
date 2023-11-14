@@ -15,16 +15,17 @@
 
 */
 
-use crate::{TrustedCall, TrustedOperation};
-use codec::Encode;
+use codec::{Decode, Encode};
+use core::{fmt::Debug, marker::PhantomData};
 use frame_support::traits::UnfilteredDispatchable;
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{Runtime, System};
+use ita_stf::{TrustedCall, TrustedCallSigned};
 use itc_parentchain_indirect_calls_executor::traits::IndirectExecutor;
+use itp_stf_primitives::{traits::TrustedCallVerification, types::TrustedOperation};
 use itp_types::parentchain::{AccountId, FilterEvents, HandleParentchainEvents, ParentchainError};
 use log::*;
 use sp_runtime::MultiAddress;
-
 type Seed = [u8; 32];
 
 const ALICE_ENCODED: Seed = [
@@ -32,12 +33,17 @@ const ALICE_ENCODED: Seed = [
 	76, 205, 227, 154, 86, 132, 231, 165, 109, 162, 125,
 ];
 
-pub struct ParentchainEventHandler;
+pub struct ParentchainEventHandler<TCS> {
+	_phantom: PhantomData<TCS>,
+}
 
-impl HandleParentchainEvents for ParentchainEventHandler {
+impl<TCS> HandleParentchainEvents for ParentchainEventHandler<TCS>
+where
+	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
+{
 	const SHIELDING_ACCOUNT: AccountId = AccountId::new(ALICE_ENCODED);
 
-	fn handle_events<Executor: IndirectExecutor>(
+	fn handle_events<Executor>(
 		executor: &Executor,
 		events: impl FilterEvents,
 	) -> Result<(), ParentchainError> {
@@ -49,7 +55,7 @@ impl HandleParentchainEvents for ParentchainEventHandler {
 				.filter(|&event| event.to == Self::SHIELDING_ACCOUNT)
 				.try_for_each(|event| {
 					info!("transfer_event: {}", event);
-					call = IndirectCall::ShieldFunds(ShieldFundsArgs{ })
+					//call = IndirectCall::ShieldFunds(ShieldFundsArgs{ })
 					Self::shield_funds(executor, &event.from, event.amount)
 				})
 				.map_err(|_| ParentchainError::ShieldFundsFailure)?;
@@ -58,7 +64,7 @@ impl HandleParentchainEvents for ParentchainEventHandler {
 		Ok(())
 	}
 
-	fn shield_funds<Executor: IndirectExecutor>(
+	fn shield_funds<Executor>(
 		executor: &Executor,
 		account: &AccountId,
 		amount: Balance,

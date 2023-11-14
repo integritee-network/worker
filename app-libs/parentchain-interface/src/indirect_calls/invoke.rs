@@ -15,8 +15,9 @@
 
 */
 
-use crate::{error::Result, IndirectDispatch, IndirectExecutor};
 use codec::{Decode, Encode};
+use ita_stf::TrustedCallSigned;
+use itc_parentchain_indirect_calls_executor::{error::Result, IndirectDispatch, IndirectExecutor};
 use itp_types::Request;
 
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
@@ -24,7 +25,9 @@ pub struct InvokeArgs {
 	request: Request,
 }
 
-impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for InvokeArgs {
+impl<Executor: IndirectExecutor<TrustedCallSigned>> IndirectDispatch<Executor, TrustedCallSigned>
+	for InvokeArgs
+{
 	fn dispatch(&self, executor: &Executor) -> Result<()> {
 		log::debug!("Found trusted call extrinsic, submitting it to the top pool");
 		executor.submit_trusted_call(self.request.shard, self.request.cyphertext.clone());

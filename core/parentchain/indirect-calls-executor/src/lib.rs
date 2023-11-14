@@ -40,13 +40,11 @@ pub mod sgx_reexport_prelude {
 }
 
 mod executor;
-mod traits;
+pub mod traits;
 
 pub mod error;
 pub mod event_filter;
 pub mod filter_metadata;
-pub mod indirect_calls;
-pub mod parentchain_parser;
 
 pub use error::{Error, Result};
 pub use executor::IndirectCallsExecutor;

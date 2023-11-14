@@ -1,5 +1,5 @@
 /*
-	Copyright 2021 Integritee AG and Supercomputing Systems AG
+	Copyright 2021 Integritee AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -15,10 +15,18 @@
 
 */
 
-mod invoke;
-mod shield_funds;
-mod transfer_to_alice_shields_funds;
+use codec::Decode;
+pub mod indirect_calls;
+pub mod integritee;
+pub mod target_a;
+pub mod target_b;
 
-pub use invoke::InvokeArgs;
-pub use shield_funds::ShieldFundsArgs;
-pub use transfer_to_alice_shields_funds::{TransferToAliceShieldsFundsArgs, ALICE_ACCOUNT_ID};
+pub fn decode_and_log_error<V: Decode>(encoded: &mut &[u8]) -> Option<V> {
+	match V::decode(encoded) {
+		Ok(v) => Some(v),
+		Err(e) => {
+			log::warn!("Could not decode. {:?}", e);
+			None
+		},
+	}
+}

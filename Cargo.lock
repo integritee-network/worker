@@ -3004,6 +3004,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "ita-parentchain-interface"
+version = "0.9.0"
+dependencies = [
+ "binary-merkle-tree",
+ "bs58",
+ "env_logger",
+ "futures 0.3.28",
+ "futures 0.3.8",
+ "ita-stf",
+ "itc-parentchain-indirect-calls-executor",
+ "itc-parentchain-test",
+ "itp-api-client-types",
+ "itp-node-api",
+ "itp-ocall-api",
+ "itp-sgx-crypto",
+ "itp-sgx-runtime-primitives",
+ "itp-stf-executor",
+ "itp-stf-primitives",
+ "itp-test",
+ "itp-top-pool-author",
+ "itp-types",
+ "itp-utils",
+ "log 0.4.19",
+ "parity-scale-codec",
+ "sgx_tstd",
+ "sgx_types",
+ "sp-core",
+ "sp-runtime",
+ "thiserror 1.0.40",
+ "thiserror 1.0.9",
+]
+
+[[package]]
 name = "ita-sgx-runtime"
 version = "0.9.0"
 dependencies = [
@@ -3048,8 +3081,10 @@ dependencies = [
  "derive_more",
  "frame-support",
  "frame-system",
+ "hex",
  "integritee-node-runtime",
  "ita-sgx-runtime",
+ "itc-parentchain-indirect-calls-executor",
  "itp-hashing",
  "itp-node-api",
  "itp-node-api-metadata",
@@ -3178,7 +3213,6 @@ dependencies = [
  "env_logger",
  "futures 0.3.28",
  "futures 0.3.8",
- "ita-stf",
  "itc-parentchain-test",
  "itp-api-client-types",
  "itp-node-api",
@@ -3914,14 +3948,17 @@ dependencies = [
  "frame-system",
  "integritee-node-runtime",
  "itp-sgx-runtime-primitives",
+ "itp-utils",
  "pallet-balances",
  "parity-scale-codec",
  "primitive-types",
  "serde 1.0.188",
  "serde_json 1.0.106",
+ "sgx_tstd",
  "sp-core",
  "sp-runtime",
  "sp-std",
+ "substrate-api-client",
  "teerex-primitives",
 ]
 

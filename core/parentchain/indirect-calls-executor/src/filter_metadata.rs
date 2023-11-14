@@ -15,15 +15,7 @@
 
 */
 
-use crate::{
-	error::Result,
-	event_filter::{FilterableEvents, MockEvents},
-	indirect_calls::{
-		InvokeArgs, ShieldFundsArgs, TransferToAliceShieldsFundsArgs, ALICE_ACCOUNT_ID,
-	},
-	parentchain_parser::ParseExtrinsic,
-	IndirectDispatch, IndirectExecutor,
-};
+use crate::{error::Result, event_filter::MockEvents, IndirectDispatch, IndirectExecutor};
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use itp_api_client_types::{Events, Metadata};
@@ -43,9 +35,15 @@ pub trait EventsFromMetadata<NodeMetadata> {
 	) -> Option<Self::Output>;
 }
 
-pub struct EventCreator;
+pub struct EventCreator<FilterableEvents> {
+	_phantom: PhantomData<FilterableEvents>,
+}
 
-impl<NodeMetadata: TryInto<Metadata> + Clone> EventsFromMetadata<NodeMetadata> for EventCreator {
+impl<NodeMetadata: TryInto<Metadata> + Clone, FilterableEvents> EventsFromMetadata<NodeMetadata>
+	for EventCreator<FilterableEvents>
+where
+	FilterableEvents: From<Events<H256>> + FilterEvents,
+{
 	type Output = FilterableEvents;
 
 	fn create_from_metadata(
@@ -54,7 +52,7 @@ impl<NodeMetadata: TryInto<Metadata> + Clone> EventsFromMetadata<NodeMetadata> f
 		events: &[u8],
 	) -> Option<Self::Output> {
 		let raw_metadata: Metadata = metadata.try_into().ok()?;
-		Some(FilterableEvents(Events::<H256>::new(raw_metadata, block_hash, events.to_vec())))
+		Some(Events::<H256>::new(raw_metadata, block_hash, events.to_vec()).into())
 	}
 }
 
@@ -91,145 +89,10 @@ pub trait FilterIntoDataFrom<NodeMetadata> {
 /// Indirect calls filter denying all indirect calls.
 pub struct DenyAll;
 
-/// Simple demo filter for testing.
-///
-/// A transfer to Alice will issue the corresponding balance to Alice in the enclave.
-/// It does not do anything else.
-pub struct TransferToAliceShieldsFundsFilter<ExtrinsicParser> {
-	_phantom: PhantomData<ExtrinsicParser>,
-}
-/// Default filter we use for the Integritee-Parachain.
-pub struct ShieldFundsAndInvokeFilter<ExtrinsicParser> {
-	_phantom: PhantomData<ExtrinsicParser>,
-}
-
-impl<ExtrinsicParser, NodeMetadata: NodeMetadataTrait> FilterIntoDataFrom<NodeMetadata>
-	for ShieldFundsAndInvokeFilter<ExtrinsicParser>
-where
-	ExtrinsicParser: ParseExtrinsic,
-{
-	type Output = IndirectCall;
-	type ParseParentchainMetadata = ExtrinsicParser;
-
-	fn filter_into_from_metadata(
-		encoded_data: &[u8],
-		metadata: &NodeMetadata,
-	) -> Option<Self::Output> {
-		let call_mut = &mut &encoded_data[..];
-
-		// Todo: the filter should not need to parse, only filter. This should directly be configured
-		// in the indirect executor.
-		let xt = match Self::ParseParentchainMetadata::parse(call_mut) {
-			Ok(xt) => xt,
-			Err(e) => {
-				log::error!(
-					"[ShieldFundsAndInvokeFilter] Could not parse parentchain extrinsic: {:?}",
-					e
-				);
-				return None
-			},
-		};
-		let index = xt.call_index;
-		let call_args = &mut &xt.call_args[..];
-		log::trace!(
-			"[ShieldFundsAndInvokeFilter] attempting to execute indirect call with index {:?}",
-			index
-		);
-		if index == metadata.shield_funds_call_indexes().ok()? {
-			log::debug!("executing shield funds call");
-			let args = decode_and_log_error::<ShieldFundsArgs>(call_args)?;
-			Some(IndirectCall::ShieldFunds(args))
-		} else if index == metadata.invoke_call_indexes().ok()? {
-			log::debug!("executing invoke call");
-			let args = decode_and_log_error::<InvokeArgs>(call_args)?;
-			Some(IndirectCall::Invoke(args))
-		} else {
-			None
-		}
-	}
-}
-
-impl<ExtrinsicParser, NodeMetadata: BalancesCallIndexes> FilterIntoDataFrom<NodeMetadata>
-	for TransferToAliceShieldsFundsFilter<ExtrinsicParser>
-where
-	ExtrinsicParser: ParseExtrinsic,
-{
-	type Output = IndirectCall;
-	type ParseParentchainMetadata = ExtrinsicParser;
-
-	fn filter_into_from_metadata(
-		encoded_data: &[u8],
-		metadata: &NodeMetadata,
-	) -> Option<Self::Output> {
-		let call_mut = &mut &encoded_data[..];
-
-		// Todo: the filter should not need to parse, only filter. This should directly be configured
-		// in the indirect executor.
-		let xt = match Self::ParseParentchainMetadata::parse(call_mut) {
-			Ok(xt) => xt,
-			Err(e) => {
-				log::error!("[TransferToAliceShieldsFundsFilter] Could not parse parentchain extrinsic: {:?}", e);
-				return None
-			},
-		};
-		let index = xt.call_index;
-		let call_args = &mut &xt.call_args[..];
-		log::trace!("[TransferToAliceShieldsFundsFilter] attempting to execute indirect call with index {:?}", index);
-		if index == metadata.transfer_call_indexes().ok()?
-			|| index == metadata.transfer_keep_alive_call_indexes().ok()?
-			|| index == metadata.transfer_allow_death_call_indexes().ok()?
-		{
-			log::debug!(
-				"found `transfer` or `transfer_allow_death` or `transfer_keep_alive` call."
-			);
-			let args = decode_and_log_error::<TransferToAliceShieldsFundsArgs>(call_args)?;
-			if args.destination == ALICE_ACCOUNT_ID.into() {
-				Some(IndirectCall::TransferToAliceShieldsFunds(args))
-			} else {
-				log::debug!("Parentchain transfer was not for Alice; ignoring...");
-				// No need to put it into the top pool if it isn't executed in the first place.
-				None
-			}
-		} else {
-			None
-		}
-	}
-}
-
-/// The default indirect call of the Integritee-Parachain.
-///
-/// Todo: Move or provide a template in app-libs such that users
-/// can implemeent their own indirect call there.
-#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
-pub enum IndirectCall {
-	ShieldFunds(ShieldFundsArgs),
-	Invoke(InvokeArgs),
-	TransferToAliceShieldsFunds(TransferToAliceShieldsFundsArgs),
-}
-
-impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for IndirectCall {
-	fn dispatch(&self, executor: &Executor) -> Result<()> {
-		trace!("dispatching indirect call {:?}", self);
-		match self {
-			IndirectCall::ShieldFunds(shieldfunds_args) => shieldfunds_args.dispatch(executor),
-			IndirectCall::Invoke(invoke_args) => invoke_args.dispatch(executor),
-			IndirectCall::TransferToAliceShieldsFunds(args) => args.dispatch(executor),
-		}
-	}
-}
-
-fn decode_and_log_error<V: Decode>(encoded: &mut &[u8]) -> Option<V> {
-	match V::decode(encoded) {
-		Ok(v) => Some(v),
-		Err(e) => {
-			log::warn!("Could not decode. {:?}", e);
-			None
-		},
-	}
-}
-
 mod seal {
 	use super::*;
+	use core::fmt::Debug;
+	use itp_stf_primitives::traits::TrustedCallVerification;
 
 	/// Stub struct for the `DenyAll` filter that never executes anything.
 	#[derive(Debug, Encode)]
@@ -244,7 +107,10 @@ mod seal {
 		}
 	}
 
-	impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for CantExecute {
+	impl<Executor: IndirectExecutor<TCS>, TCS> IndirectDispatch<Executor, TCS> for CantExecute
+	where
+		TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
+	{
 		fn dispatch(&self, _: &Executor) -> Result<()> {
 			// We should never get here because `CantExecute` is in a private module and the trait
 			// implementation is sealed and always returns `None` instead of a `CantExecute` instance.

@@ -35,7 +35,6 @@ pub mod evm_helpers;
 pub mod getter;
 pub mod hash;
 pub mod helpers;
-pub mod privacy_sidechain_inherent;
 pub mod stf_sgx;
 pub mod stf_sgx_primitives;
 #[cfg(all(feature = "test", feature = "sgx"))]

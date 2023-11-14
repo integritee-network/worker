@@ -29,15 +29,14 @@ use crate::test::{
 	},
 };
 use codec::Encode;
+use ita_parentchain_interface::integritee::ShieldFundsAndInvokeFilter;
 use ita_stf::{
 	test_genesis::{endowed_account, unendowed_account},
 	Getter, TrustedCall, TrustedCallSigned,
 };
 use itc_parentchain::indirect_calls_executor::{
-	event_filter::MockPrivacySidechain,
-	filter_metadata::{ShieldFundsAndInvokeFilter, TestEventCreator},
-	parentchain_parser::ParentchainExtrinsicParser,
-	ExecuteIndirectCalls, IndirectCallsExecutor,
+	event_filter::MockPrivacySidechain, filter_metadata::TestEventCreator,
+	parentchain_parser::ParentchainExtrinsicParser, ExecuteIndirectCalls, IndirectCallsExecutor,
 };
 use itc_parentchain_test::{ParentchainBlockBuilder, ParentchainHeaderBuilder};
 use itp_node_api::{

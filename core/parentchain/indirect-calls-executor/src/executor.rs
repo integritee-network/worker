@@ -26,16 +26,18 @@ use crate::{
 };
 use alloc::format;
 use binary_merkle_tree::merkle_root;
-use codec::Encode;
+use codec::{Decode, Encode};
 use core::marker::PhantomData;
-use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
 use itp_node_api::metadata::{
 	pallet_enclave_bridge::EnclaveBridgeCallIndexes, provider::AccessNodeMetadata,
 	NodeMetadataTrait,
 };
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
 use itp_stf_executor::traits::StfEnclaveSigning;
-use itp_stf_primitives::types::AccountId;
+use itp_stf_primitives::{
+	traits::{TrustedCallSigning, TrustedCallVerification},
+	types::AccountId,
+};
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{
 	parentchain::{ExtrinsicStatus, FilterEvents, HandleParentchainEvents},
@@ -54,12 +56,14 @@ pub struct IndirectCallsExecutor<
 	IndirectCallsFilter,
 	EventCreator,
 	ParentchainEventHandler,
+	TCS,
+	G,
 > {
 	pub(crate) shielding_key_repo: Arc<ShieldingKeyRepository>,
 	pub(crate) stf_enclave_signer: Arc<StfEnclaveSigner>,
 	pub(crate) top_pool_author: Arc<TopPoolAuthor>,
 	pub(crate) node_meta_data_provider: Arc<NodeMetadataProvider>,
-	_phantom: PhantomData<(IndirectCallsFilter, EventCreator, ParentchainEventHandler)>,
+	_phantom: PhantomData<(IndirectCallsFilter, EventCreator, ParentchainEventHandler, TCS, G)>,
 }
 impl<
 		ShieldingKeyRepository,
@@ -69,6 +73,8 @@ impl<
 		IndirectCallsFilter,
 		EventCreator,
 		ParentchainEventHandler,
+		TCS,
+		G,
 	>
 	IndirectCallsExecutor<
 		ShieldingKeyRepository,
@@ -78,6 +84,8 @@ impl<
 		IndirectCallsFilter,
 		EventCreator,
 		ParentchainEventHandler,
+		TCS,
+		G,
 	>
 {
 	pub fn new(
@@ -104,6 +112,8 @@ impl<
 		FilterIndirectCalls,
 		EventCreator,
 		ParentchainEventHandler,
+		TCS,
+		G,
 	> ExecuteIndirectCalls
 	for IndirectCallsExecutor<
 		ShieldingKeyRepository,
@@ -113,18 +123,22 @@ impl<
 		FilterIndirectCalls,
 		EventCreator,
 		ParentchainEventHandler,
+		TCS,
+		G,
 	> where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
 		+ ShieldingCryptoEncrypt<Error = itp_sgx_crypto::Error>,
-	StfEnclaveSigner: StfEnclaveSigning<TrustedCallSigned>,
-	TopPoolAuthor: AuthorApi<H256, H256, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	StfEnclaveSigner: StfEnclaveSigning<TCS>,
+	TopPoolAuthor: AuthorApi<H256, H256, TCS, G> + Send + Sync + 'static,
 	NodeMetadataProvider: AccessNodeMetadata,
 	FilterIndirectCalls: FilterIntoDataFrom<NodeMetadataProvider::MetadataType>,
 	NodeMetadataProvider::MetadataType: NodeMetadataTrait + Clone,
-	FilterIndirectCalls::Output: IndirectDispatch<Self> + Encode + Debug,
+	FilterIndirectCalls::Output: IndirectDispatch<Self, TCS> + Encode + Debug,
 	EventCreator: EventsFromMetadata<NodeMetadataProvider::MetadataType>,
 	ParentchainEventHandler: HandleParentchainEvents,
+	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
+	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
 {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
@@ -222,7 +236,9 @@ impl<
 		FilterIndirectCalls,
 		EventFilter,
 		PrivacySidechain,
-	> IndirectExecutor
+		TCS,
+		G,
+	> IndirectExecutor<TCS>
 	for IndirectCallsExecutor<
 		ShieldingKeyRepository,
 		StfEnclaveSigner,
@@ -231,12 +247,16 @@ impl<
 		FilterIndirectCalls,
 		EventFilter,
 		PrivacySidechain,
+		TCS,
+		G,
 	> where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
 		+ ShieldingCryptoEncrypt<Error = itp_sgx_crypto::Error>,
-	StfEnclaveSigner: StfEnclaveSigning<TrustedCallSigned>,
-	TopPoolAuthor: AuthorApi<H256, H256, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	StfEnclaveSigner: StfEnclaveSigning<TCS>,
+	TopPoolAuthor: AuthorApi<H256, H256, TCS, G> + Send + Sync + 'static,
+	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
+	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
 {
 	fn submit_trusted_call(&self, shard: ShardIdentifier, encrypted_trusted_call: Vec<u8>) {
 		if let Err(e) = futures::executor::block_on(
@@ -264,11 +284,11 @@ impl<
 		self.top_pool_author.list_handled_shards().first().copied().unwrap_or_default()
 	}
 
-	fn sign_call_with_self(
+	fn sign_call_with_self<TC: Encode + Debug + TrustedCallSigning<TCS>>(
 		&self,
-		trusted_call: &TrustedCall,
+		trusted_call: &TC,
 		shard: &ShardIdentifier,
-	) -> Result<TrustedCallSigned> {
+	) -> Result<TCS> {
 		Ok(self.stf_enclave_signer.sign_call_with_self(trusted_call, shard)?)
 	}
 }
@@ -300,7 +320,10 @@ mod test {
 		traits::TrustedCallVerification,
 		types::{AccountId, TrustedOperation},
 	};
-	use itp_test::mock::shielding_crypto_mock::ShieldingCryptoMock;
+	use itp_test::mock::{
+		shielding_crypto_mock::ShieldingCryptoMock,
+		stf_mock::{GetterMock, TrustedCallSignedMock},
+	};
 	use itp_top_pool_author::mocks::AuthorApiMock;
 	use itp_types::{
 		parentchain::Address, Block, CallWorkerFn, Request, ShardIdentifier, ShieldFundsFn,
@@ -311,7 +334,7 @@ mod test {
 
 	type TestShieldingKeyRepo = KeyRepositoryMock<ShieldingCryptoMock>;
 	type TestStfEnclaveSigner = StfEnclaveSignerMock;
-	type TestTopPoolAuthor = AuthorApiMock<H256, H256, TrustedCallSigned, Getter>;
+	type TestTopPoolAuthor = AuthorApiMock<H256, H256, TrustedCallSignedMock, GetterMock>;
 	type TestNodeMetadataRepository = NodeMetadataRepository<NodeMetadataMock>;
 	type TestIndirectCallExecutor = IndirectCallsExecutor<
 		TestShieldingKeyRepo,
@@ -373,7 +396,7 @@ mod test {
 		let submitted_extrinsic =
 			top_pool_author.pending_tops(shard_id()).unwrap().first().cloned().unwrap();
 		let decrypted_extrinsic = shielding_key.decrypt(&submitted_extrinsic).unwrap();
-		let decoded_operation = TrustedOperation::<TrustedCallSigned, Getter>::decode(
+		let decoded_operation = TrustedOperation::<TrustedCallSignedMock, GetterMock>::decode(
 			&mut decrypted_extrinsic.as_slice(),
 		)
 		.unwrap();

@@ -31,11 +31,10 @@ use crate::{
 	rpc::rpc_response_channel::RpcResponseChannel,
 	tls_ra::seal_handler::SealHandler,
 };
+use ita_parentchain_interface::{integritee, target_a};
 use ita_sgx_runtime::Runtime;
-use ita_stf::{
-	privacy_sidechain_inherent::ParentchainEventHandler, Getter, State as StfState, Stf,
-	TrustedCallSigned,
-};
+use ita_stf::{Getter, State as StfState, Stf, TrustedCallSigned};
+
 use itc_direct_rpc_server::{
 	rpc_connection_registry::ConnectionRegistry, rpc_responder::RpcResponder,
 	rpc_watch_extractor::RpcWatchExtractor, rpc_ws_handler::RpcWsHandler,
@@ -46,13 +45,7 @@ use itc_parentchain::{
 		BlockImportDispatcher,
 	},
 	block_importer::ParentchainBlockImporter,
-	indirect_calls_executor::{
-		filter_metadata::{
-			EventCreator, ShieldFundsAndInvokeFilter, TransferToAliceShieldsFundsFilter,
-		},
-		parentchain_parser::ParentchainExtrinsicParser,
-		IndirectCallsExecutor,
-	},
+	indirect_calls_executor::{filter_metadata::EventCreator, IndirectCallsExecutor},
 	light_client::{
 		concurrent_access::ValidatorAccessor, io::LightClientStateSealSync,
 		light_validation::LightValidation, light_validation_state::LightValidationState,
@@ -164,8 +157,10 @@ pub type EnclaveIndirectCallsExecutor<IndirectCallsFilter> = IndirectCallsExecut
 	EnclaveTopPoolAuthor,
 	EnclaveNodeMetadataRepository,
 	IndirectCallsFilter,
-	EventCreator,
-	ParentchainEventHandler,
+	EventCreator<integritee::FilterableEvents>,
+	integritee::ParentchainEventHandler,
+	TrustedCallSigned,
+	Getter,
 >;
 
 pub type EnclaveValidatorAccessor = ValidatorAccessor<

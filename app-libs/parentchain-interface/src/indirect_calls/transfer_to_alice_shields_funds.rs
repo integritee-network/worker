@@ -15,14 +15,17 @@
 
 */
 
-use crate::{error::Result, IndirectDispatch, IndirectExecutor};
 use codec::{Decode, Encode};
+use core::fmt::Debug;
 use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
-use itp_stf_primitives::types::{AccountId, TrustedOperation};
+use itc_parentchain_indirect_calls_executor::{error::Result, IndirectDispatch, IndirectExecutor};
+use itp_stf_primitives::{
+	traits::{TrustedCallSigning, TrustedCallVerification},
+	types::{AccountId, TrustedOperation},
+};
 use itp_types::Balance;
 use log::info;
 use sp_runtime::MultiAddress;
-
 /// Arguments of a parentchains `transfer` or `transfer_allow_death` dispatchable.
 ///
 /// This is a simple demo indirect call where a transfer to alice on chain will transfer
@@ -52,7 +55,9 @@ pub const ALICE_ACCOUNT_ID: AccountId = AccountId::new([
 	76, 205, 227, 154, 86, 132, 231, 165, 109, 162, 125,
 ]);
 
-impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for TransferToAliceShieldsFundsArgs {
+impl<Executor: IndirectExecutor<TrustedCallSigned>> IndirectDispatch<Executor, TrustedCallSigned>
+	for TransferToAliceShieldsFundsArgs
+{
 	fn dispatch(&self, executor: &Executor) -> Result<()> {
 		if self.destination == ALICE_ACCOUNT_ID.into() {
 			info!("Found Transfer to Alice extrinsic in block: \nAmount: {}", self.value);
