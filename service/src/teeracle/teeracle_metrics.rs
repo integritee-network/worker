@@ -15,7 +15,7 @@
 
 */
 
-use crate::{error::ServiceResult, Error};
+use crate::error::{Error, ServiceResult};
 use itp_enclave_metrics::ExchangeRateOracleMetric;
 use lazy_static::lazy_static;
 use prometheus::{
