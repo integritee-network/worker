@@ -2911,7 +2911,6 @@ dependencies = [
  "sgx-verify",
  "sgx_crypto_helper",
  "sgx_types",
- "sgx_urts",
  "sha2 0.7.1",
  "sp-consensus-grandpa",
  "sp-core",

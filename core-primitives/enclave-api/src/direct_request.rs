@@ -16,10 +16,7 @@
 
 */
 
-use crate::{error::Error, Enclave, EnclaveResult};
-use frame_support::ensure;
-use itp_enclave_api_ffi as ffi;
-use sgx_types::sgx_status_t;
+use crate::EnclaveResult;
 
 pub trait DirectRequest: Send + Sync + 'static {
 	// Todo: Vec<u8> shall be replaced by D: Decode, E: Encode but this is currently
@@ -27,26 +24,35 @@ pub trait DirectRequest: Send + Sync + 'static {
 	fn rpc(&self, request: Vec<u8>) -> EnclaveResult<Vec<u8>>;
 }
 
-impl DirectRequest for Enclave {
-	fn rpc(&self, request: Vec<u8>) -> EnclaveResult<Vec<u8>> {
-		let mut retval = sgx_status_t::SGX_SUCCESS;
-		let response_len = 8192;
-		let mut response: Vec<u8> = vec![0u8; response_len as usize];
+#[cfg(feature = "implement-ffi")]
+mod impl_ffi {
+	use super::DirectRequest;
+	use crate::{error::Error, Enclave, EnclaveResult};
+	use frame_support::ensure;
+	use itp_enclave_api_ffi as ffi;
+	use sgx_types::sgx_status_t;
 
-		let res = unsafe {
-			ffi::call_rpc_methods(
-				self.eid,
-				&mut retval,
-				request.as_ptr(),
-				request.len() as u32,
-				response.as_mut_ptr(),
-				response_len,
-			)
-		};
+	impl DirectRequest for Enclave {
+		fn rpc(&self, request: Vec<u8>) -> EnclaveResult<Vec<u8>> {
+			let mut retval = sgx_status_t::SGX_SUCCESS;
+			let response_len = 8192;
+			let mut response: Vec<u8> = vec![0u8; response_len as usize];
 
-		ensure!(res == sgx_status_t::SGX_SUCCESS, Error::Sgx(res));
-		ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+			let res = unsafe {
+				ffi::call_rpc_methods(
+					self.eid,
+					&mut retval,
+					request.as_ptr(),
+					request.len() as u32,
+					response.as_mut_ptr(),
+					response_len,
+				)
+			};
 
-		Ok(response)
+			ensure!(res == sgx_status_t::SGX_SUCCESS, Error::Sgx(res));
+			ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+
+			Ok(response)
+		}
 	}
 }

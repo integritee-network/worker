@@ -17,10 +17,10 @@
 */
 
 use crate::{
+	globals::tokio_handle::GetTokioHandle,
 	ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, SidechainBridge},
 	sync_block_broadcaster::BroadcastBlocks,
 	worker_peers_updater::UpdateWorkerPeers,
-	GetTokioHandle,
 };
 use codec::{Decode, Encode};
 use itp_types::{BlockHash, ShardIdentifier};
