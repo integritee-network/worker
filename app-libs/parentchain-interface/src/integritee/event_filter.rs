@@ -30,6 +30,7 @@ use std::vec::Vec;
 #[derive(Clone)]
 pub struct FilterableEvents(pub Events<H256>);
 
+// todo: improve: https://github.com/integritee-network/worker/pull/1378#discussion_r1393933766
 impl ToEvents<Events<H256>> for FilterableEvents {
 	fn to_events(&self) -> &Events<H256> {
 		&self.0
