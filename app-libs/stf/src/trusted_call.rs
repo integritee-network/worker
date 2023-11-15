@@ -41,7 +41,7 @@ use itp_node_api_metadata::{
 use itp_stf_interface::{ExecuteCall, SHARD_VAULT_KEY};
 use itp_stf_primitives::{
 	error::StfError,
-	traits::{TrustedCallSigning, TrustedCallVerification},
+	traits::{FromTrustedCall, TrustedCallSigning, TrustedCallVerification},
 	types::{AccountId, KeyPair, ShardIdentifier, Signature, TrustedOperation},
 };
 use itp_types::{parentchain::ProxyType, Address, OpaqueCall};
@@ -128,7 +128,8 @@ impl TrustedCall {
 	}
 }
 
-impl TrustedCallSigning<TrustedCallSigned> for TrustedCall {
+impl TrustedCallSigning for TrustedCall {
+	type TCS = TrustedCallSigned;
 	fn sign(
 		&self,
 		pair: &KeyPair,
@@ -152,11 +153,14 @@ pub struct TrustedCallSigned {
 	pub signature: Signature,
 }
 
-impl TrustedCallSigned {
-	pub fn new(call: TrustedCall, nonce: Index, signature: Signature) -> Self {
-		TrustedCallSigned { call, nonce, signature }
+impl FromTrustedCall for TrustedCallSigned {
+	type TC = TrustedCall;
+	fn from_trusted_call(call: Self::TC, nonce: Index, signature: Signature) -> Self {
+		TrustedCallSignedMock { call, nonce, signature }
 	}
+}
 
+impl TrustedCallSigned {
 	pub fn into_trusted_operation(
 		self,
 		direct: bool,

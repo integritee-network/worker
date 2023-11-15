@@ -14,7 +14,7 @@
 	limitations under the License.
 
 */
-use crate::types::{AccountId, KeyPair, ShardIdentifier};
+use crate::types::{AccountId, KeyPair, ShardIdentifier, Signature};
 use alloc::vec::Vec;
 use codec::{Decode, Encode};
 use core::fmt::Debug;
@@ -26,14 +26,15 @@ pub trait GetterAuthorization {
 }
 
 /// knows how to sign a trusted call input and provides a signed output
-pub trait TrustedCallSigning<TCS> {
+pub trait TrustedCallSigning {
+	type TCS: FromTrustedCall;
 	fn sign(
 		&self,
 		pair: &KeyPair,
 		nonce: Index,
 		mrenclave: &[u8; 32],
 		shard: &ShardIdentifier,
-	) -> TCS;
+	) -> Self::TCS;
 }
 
 /// enables TrustedCallSigned verification
@@ -43,6 +44,11 @@ pub trait TrustedCallVerification {
 	fn nonce(&self) -> Index;
 
 	fn verify_signature(&self, mrenclave: &[u8; 32], shard: &ShardIdentifier) -> bool;
+}
+
+pub trait FromTrustedCall {
+	type TC;
+	fn from_trusted_call(call: Self::TC, nonce: Index, signature: Signature) -> Self;
 }
 
 /// validation for top pool
@@ -66,7 +72,7 @@ where
 
 	fn get_default_shard(&self) -> ShardIdentifier;
 
-	fn sign_call_with_self<TC: Encode + Debug + TrustedCallSigning<TCS>>(
+	fn sign_call_with_self<TC: Encode + Debug + TrustedCallSigning>(
 		&self,
 		trusted_call: &TC,
 		shard: &ShardIdentifier,

@@ -42,7 +42,7 @@ where
 {
 	fn get_enclave_account(&self) -> Result<AccountId>;
 
-	fn sign_call_with_self<TC: Encode + Debug + TrustedCallSigning<TCS>>(
+	fn sign_call_with_self<TC: Encode + Debug + TrustedCallSigning>(
 		&self,
 		trusted_call: &TC,
 		shard: &ShardIdentifier,

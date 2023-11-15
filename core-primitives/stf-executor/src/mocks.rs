@@ -127,7 +127,7 @@ impl<TCS: PartialEq + Encode + Debug> StfEnclaveSigning<TCS> for StfEnclaveSigne
 		Ok(self.signer.public().into())
 	}
 
-	fn sign_call_with_self<TC: Encode + Debug + TrustedCallSigning<TCS>>(
+	fn sign_call_with_self<TC: Encode + Debug + TrustedCallSigning>(
 		&self,
 		trusted_call: &TC,
 		shard: &ShardIdentifier,

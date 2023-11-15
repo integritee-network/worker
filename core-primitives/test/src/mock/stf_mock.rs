@@ -25,7 +25,8 @@ use itp_stf_interface::{
 };
 use itp_stf_primitives::{
 	traits::{
-		GetterAuthorization, PoolTransactionValidation, TrustedCallSigning, TrustedCallVerification,
+		FromTrustedCall, GetterAuthorization, PoolTransactionValidation, TrustedCallSigning,
+		TrustedCallVerification,
 	},
 	types::{KeyPair, Nonce, TrustedOperation},
 };
@@ -39,6 +40,7 @@ use sp_runtime::transaction_validity::{
 };
 use sp_std::{vec, vec::Vec};
 use std::{thread::sleep, time::Duration};
+
 // a few dummy types
 type NodeMetadataRepositoryMock = NodeMetadataRepository<NodeMetadataMock>;
 
@@ -106,7 +108,8 @@ impl TrustedCallMock {
 	}
 }
 
-impl TrustedCallSigning<TrustedCallSignedMock> for TrustedCallMock {
+impl TrustedCallSigning for TrustedCallMock {
+	type TCS = TrustedCallSignedMock;
 	fn sign(
 		&self,
 		pair: &KeyPair,
@@ -119,11 +122,7 @@ impl TrustedCallSigning<TrustedCallSignedMock> for TrustedCallMock {
 		payload.append(&mut mrenclave.encode());
 		payload.append(&mut shard.encode());
 
-		TrustedCallSignedMock {
-			call: self.clone(),
-			nonce,
-			signature: pair.sign(payload.as_slice()),
-		}
+		Self::TCS::from_trusted_call(self.clone(), nonce, pair.sign(payload.as_slice()))
 	}
 }
 
@@ -134,11 +133,14 @@ pub struct TrustedCallSignedMock {
 	pub signature: Signature,
 }
 
-impl TrustedCallSignedMock {
-	pub fn new(call: TrustedCallMock, nonce: Index, signature: Signature) -> Self {
+impl FromTrustedCall for TrustedCallSignedMock {
+	type TC = TrustedCallMock;
+	fn from_trusted_call(call: Self::TC, nonce: Index, signature: Signature) -> Self {
 		TrustedCallSignedMock { call, nonce, signature }
 	}
+}
 
+impl TrustedCallSignedMock {
 	pub fn into_trusted_operation(
 		self,
 		direct: bool,

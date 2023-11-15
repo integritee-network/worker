@@ -27,7 +27,7 @@ use itp_sgx_crypto::{ed25519_derivation::DeriveEd25519, key_repository::AccessKe
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_interface::system_pallet::SystemPalletAccountInterface;
 use itp_stf_primitives::{
-	traits::TrustedCallSigning,
+	traits::{FromTrustedCall, TrustedCallSigning},
 	types::{AccountId, KeyPair},
 };
 use itp_stf_state_observer::traits::ObserveState;
@@ -108,7 +108,7 @@ where
 	Stf: SystemPalletAccountInterface<StateObserver::StateType, AccountId>,
 	Stf::Index: Into<Index>,
 	TopPoolAuthor: AuthorApi<H256, H256, TCS, G> + Send + Sync + 'static,
-	TCS: PartialEq + Encode + Decode + Debug + Send + Sync,
+	TCS: PartialEq + Encode + Decode + Debug + Send + Sync + FromTrustedCall,
 	G: PartialEq + Encode + Decode + Debug + Send + Sync,
 {
 	fn get_enclave_account(&self) -> Result<AccountId> {
@@ -116,7 +116,7 @@ where
 		Ok(enclave_call_signing_key.public().into())
 	}
 
-	fn sign_call_with_self<TC: Encode + Debug + TrustedCallSigning<TCS>>(
+	fn sign_call_with_self<TC: Encode + Debug + TrustedCallSigning>(
 		&self,
 		trusted_call: &TC,
 		shard: &ShardIdentifier,
@@ -134,11 +134,13 @@ where
 			Index::try_from(pending_tx_count).map_err(|e| Error::Other(e.into()))?;
 		let adjusted_nonce: Index = current_nonce.into() + pending_tx_count;
 
-		Ok(trusted_call.sign(
-			&KeyPair::Ed25519(Box::new(enclave_call_signing_key)),
-			adjusted_nonce,
-			&mr_enclave.m,
-			shard,
-		))
+		Ok(trusted_call
+			.sign(
+				&KeyPair::Ed25519(Box::new(enclave_call_signing_key)),
+				adjusted_nonce,
+				&mr_enclave.m,
+				shard,
+			)
+			.into())
 	}
 }
