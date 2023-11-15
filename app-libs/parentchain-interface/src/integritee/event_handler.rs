@@ -17,7 +17,6 @@
 
 use codec::Encode;
 
-use ita_sgx_runtime::System;
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
 use itc_parentchain_indirect_calls_executor::error::Error;
@@ -42,14 +41,7 @@ impl ParentchainEventHandler {
 		account: &AccountId,
 		amount: Balance,
 	) -> Result<(), Error> {
-		let account_info = System::account(&account);
-		log::info!(
-			"shielding for {:?} amount {} new_free {} new_reserved {}",
-			account,
-			amount,
-			account_info.data.free + amount,
-			account_info.data.reserved
-		);
+		log::info!("shielding for {:?} amount {}", account, amount,);
 		let shard = executor.get_default_shard();
 		let trusted_call =
 			TrustedCall::balance_shield(executor.get_enclave_account()?, account.clone(), amount);
