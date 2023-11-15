@@ -91,10 +91,9 @@ jobs:
       - name: Test Enclave # cargo test is not supported in the enclave, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
         run: docker run --rm ${{ env.DOCKER_DEVICES }} ${{ env.DOCKER_VOLUMES }} integritee-worker-${{ env.IMAGE_SUFFIX }} test --all
 
-      - name: Export worker image(s)
+      - name: Export worker image
         run: |
           docker image save integritee-worker-${{ env.IMAGE_SUFFIX }} | gzip > integritee-worker-${{ env.IMAGE_SUFFIX }}.tar.gz
-          docker image save integritee-cli-client-${{ env.IMAGE_SUFFIX }} | gzip > integritee-cli-client-${{ env.IMAGE_SUFFIX }}.tar.gz
 
       - name: Upload worker image
         uses: actions/upload-artifact@v3
@@ -180,6 +179,10 @@ jobs:
           -f build.Dockerfile .
 
       - run: docker images --all
+
+      - name: Export client image
+        run: |
+          docker image save integritee-cli-client-${{ env.IMAGE_SUFFIX }} | gzip > integritee-cli-client-${{ env.IMAGE_SUFFIX }}.tar.gz
 
       - name: Upload CLI client image
         uses: actions/upload-artifact@v3
