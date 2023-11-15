@@ -16,6 +16,11 @@ serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 
 # local dependencies
 itp-sgx-runtime-primitives = { path = "../../core-primitives/sgx-runtime-primitives", default-features = false }
+itp-stf-primitives = { path = "../../core-primitives/stf-primitives", default-features = false }
+itp-utils = { path = "../../core-primitives/utils", default-features = false }
+
+# scs
+substrate-api-client = { default-features = false, features = ["sync-api"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }
 
 # substrate-deps
 frame-system = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
@@ -40,6 +45,9 @@ std = [
     "serde_json/std",
     "primitive-types/std",
     "itp-sgx-runtime-primitives/std",
+    "itp-stf-primitives/std",
+    "itp-utils/std",
+    "substrate-api-client/std",
     "teerex-primitives/std",
     "enclave-bridge-primitives/std",
     # substrate

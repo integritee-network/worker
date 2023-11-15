@@ -29,14 +29,13 @@ use crate::test::{
 	},
 };
 use codec::Encode;
+use ita_parentchain_interface::integritee;
 use ita_stf::{
 	test_genesis::{endowed_account, unendowed_account},
 	Getter, TrustedCall, TrustedCallSigned,
 };
 use itc_parentchain::indirect_calls_executor::{
-	filter_metadata::{ShieldFundsAndInvokeFilter, TestEventCreator},
-	parentchain_parser::ParentchainExtrinsicParser,
-	ExecuteIndirectCalls, IndirectCallsExecutor,
+	mock::TestEventCreator, ExecuteIndirectCalls, IndirectCallsExecutor,
 };
 use itc_parentchain_test::{ParentchainBlockBuilder, ParentchainHeaderBuilder};
 use itp_node_api::{
@@ -135,8 +134,11 @@ pub fn submit_shielding_call_to_top_pool() {
 			_,
 			_,
 			_,
-			ShieldFundsAndInvokeFilter<ParentchainExtrinsicParser>,
+			integritee::ShieldFundsAndInvokeFilter<integritee::ParentchainExtrinsicParser>,
 			TestEventCreator,
+			integritee::ParentchainEventHandler,
+			TrustedCallSigned,
+			Getter,
 		>::new(
 			shielding_key_repo, enclave_signer, top_pool_author.clone(), node_meta_data_repository
 		);

@@ -25,4 +25,5 @@ std = [
     "sp-core/std",
     "sp-std/std",
     "sp-runtime/std",
+    "itp-sgx-runtime-primitives/std",
 ]

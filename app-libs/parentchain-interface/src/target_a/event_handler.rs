@@ -15,19 +15,23 @@
 
 */
 
-use crate::{error::Result, IndirectDispatch, IndirectExecutor};
-use codec::{Decode, Encode};
-use itp_types::Request;
+pub use ita_sgx_runtime::{Balance, Index};
 
-#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
-pub struct InvokeArgs {
-	request: Request,
-}
+use ita_stf::TrustedCallSigned;
+use itc_parentchain_indirect_calls_executor::error::Error;
+use itp_stf_primitives::traits::IndirectExecutor;
+use itp_types::parentchain::{FilterEvents, HandleParentchainEvents};
+use log::*;
 
-impl<Executor: IndirectExecutor> IndirectDispatch<Executor> for InvokeArgs {
-	fn dispatch(&self, executor: &Executor) -> Result<()> {
-		log::debug!("Found trusted call extrinsic, submitting it to the top pool");
-		executor.submit_trusted_call(self.request.shard, self.request.cyphertext.clone());
+pub struct ParentchainEventHandler {}
+
+impl<Executor> HandleParentchainEvents<Executor, TrustedCallSigned, Error>
+	for ParentchainEventHandler
+where
+	Executor: IndirectExecutor<TrustedCallSigned, Error>,
+{
+	fn handle_events(_executor: &Executor, _events: impl FilterEvents) -> Result<(), Error> {
+		debug!("not handling any events for target A");
 		Ok(())
 	}
 }

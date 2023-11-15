@@ -2,6 +2,7 @@
 
 members = [
     "app-libs/oracle",
+    "app-libs/parentchain-interface",
     "app-libs/sgx-runtime",
     "app-libs/stf",
     "cli",

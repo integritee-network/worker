@@ -8,6 +8,7 @@ edition = "2021"
 # crates.io
 codec = { version = "3.0.0", default-features = false, features = ["derive"], package = "parity-scale-codec" }
 derive_more = { version = "0.99.5" }
+hex = { version = "0.4", default-features = false }
 log = { version = "0.4", default-features = false }
 rlp = { version = "0.5", default-features = false }
 sha3 = { version = "0.10", default-features = false }
@@ -17,6 +18,7 @@ sgx_tstd = { branch = "master", features = ["untrusted_fs", "net", "backtrace"],
 
 # local crates
 ita-sgx-runtime = { default-features = false, path = "../sgx-runtime" }
+itc-parentchain-indirect-calls-executor = { path = "../../core/parentchain/indirect-calls-executor", default-features = false }
 itp-hashing = { default-features = false, path = "../../core-primitives/hashing" }
 itp-node-api = { default-features = false, path = "../../core-primitives/node-api" }
 itp-node-api-metadata = { default-features = false, path = "../../core-primitives/node-api/metadata" }
@@ -65,6 +67,7 @@ std = [
     "rlp/std",
     # local
     "ita-sgx-runtime/std",
+    "itc-parentchain-indirect-calls-executor/std",
     "itp-hashing/std",
     "itp-sgx-externalities/std",
     "itp-stf-interface/std",

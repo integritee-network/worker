@@ -1,5 +1,5 @@
 /*
-	Copyright 2021 Integritee AG and Supercomputing Systems AG
+	Copyright 2021 Integritee AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -14,20 +14,25 @@
 	limitations under the License.
 
 */
-//! Various way to filter Parentchain events
 
-use crate::error::Error;
+#![cfg_attr(all(not(target_env = "sgx"), not(feature = "std")), no_std)]
+#![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
-use itp_stf_primitives::error::StfError;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+extern crate sgx_tstd as std;
 
-use std::format;
+use codec::Decode;
+pub mod indirect_calls;
+pub mod integritee;
+pub mod target_a;
+pub mod target_b;
 
-impl From<StfError> for Error {
-	fn from(a: StfError) -> Self {
-		Error::Other(format!("Error when shielding for privacy sidechain {:?}", a).into())
+pub fn decode_and_log_error<V: Decode>(encoded: &mut &[u8]) -> Option<V> {
+	match V::decode(encoded) {
+		Ok(v) => Some(v),
+		Err(e) => {
+			log::warn!("Could not decode. {:?}", e);
+			None
+		},
 	}
-}
-
-pub trait ToEvents<E> {
-	fn to_events(&self) -> &E;
 }

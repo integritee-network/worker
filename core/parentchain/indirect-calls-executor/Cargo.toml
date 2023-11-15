@@ -10,7 +10,6 @@ sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sd
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # local dependencies
-ita-stf = { path = "../../../app-libs/stf", default-features = false }
 itp-api-client-types = { path = "../../../core-primitives/node-api/api-client-types", default-features = false }
 itp-node-api = { path = "../../../core-primitives/node-api", default-features = false }
 itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
@@ -18,6 +17,7 @@ itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-feature
 itp-sgx-runtime-primitives = { path = "../../../core-primitives/sgx-runtime-primitives", default-features = false }
 itp-stf-executor = { path = "../../../core-primitives/stf-executor", default-features = false }
 itp-stf-primitives = { path = "../../../core-primitives/stf-primitives", default-features = false }
+itp-test = { path = "../../../core-primitives/test", default-features = false }
 itp-top-pool-author = { path = "../../../core-primitives/top-pool-author", default-features = false }
 itp-types = { path = "../../../core-primitives/types", default-features = false }
 itp-utils = { path = "../../../core-primitives/utils", default-features = false }
@@ -55,13 +55,13 @@ std = [
     "bs58/std",
     "codec/std",
     "futures",
-    "ita-stf/std",
     "itp-node-api/std",
     "itp-ocall-api/std",
     "itp-sgx-crypto/std",
     "itp-stf-executor/std",
     "itp-top-pool-author/std",
     "itp-api-client-types/std",
+    "itp-test/std",
     "itp-types/std",
     "itp-sgx-runtime-primitives/std",
     "log/std",
@@ -74,10 +74,10 @@ std = [
 sgx = [
     "sgx_tstd",
     "futures_sgx",
-    "ita-stf/sgx",
     "itp-node-api/sgx",
     "itp-sgx-crypto/sgx",
     "itp-stf-executor/sgx",
     "itp-top-pool-author/sgx",
+    "itp-test/sgx",
     "thiserror_sgx",
 ]

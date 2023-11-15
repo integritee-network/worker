@@ -1,0 +1,93 @@
+[package]
+name = "ita-parentchain-interface"
+version = "0.9.0"
+authors = ["Integritee AG <hello@integritee.network>"]
+edition = "2021"
+
+[dependencies]
+# sgx dependencies
+sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+
+# local dependencies
+ita-sgx-runtime = { path = "../sgx-runtime", default-features = false }
+ita-stf = { path = "../stf", default-features = false }
+itc-parentchain-indirect-calls-executor = { path = "../../core/parentchain/indirect-calls-executor", default-features = false }
+itp-api-client-types = { path = "../../core-primitives/node-api/api-client-types", default-features = false }
+itp-node-api = { path = "../../core-primitives/node-api", default-features = false }
+itp-ocall-api = { path = "../../core-primitives/ocall-api", default-features = false }
+itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", default-features = false }
+itp-sgx-runtime-primitives = { path = "../../core-primitives/sgx-runtime-primitives", default-features = false }
+itp-stf-executor = { path = "../../core-primitives/stf-executor", default-features = false }
+itp-stf-primitives = { path = "../../core-primitives/stf-primitives", default-features = false }
+itp-top-pool-author = { path = "../../core-primitives/top-pool-author", default-features = false }
+itp-types = { path = "../../core-primitives/types", default-features = false }
+itp-utils = { path = "../../core-primitives/utils", default-features = false }
+
+# sgx enabled external libraries
+futures_sgx = { package = "futures", git = "https://github.com/mesalock-linux/futures-rs-sgx", optional = true }
+thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
+
+# std compatible external libraries (make sure these versions match with the sgx-enabled ones above)
+futures = { version = "0.3.8", optional = true }
+thiserror = { version = "1.0", optional = true }
+
+# no-std compatible libraries
+bs58 = { version = "0.4.0", default-features = false, features = ["alloc"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+log = { version = "0.4", default-features = false }
+
+# substrate dep
+binary-merkle-tree = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+
+[dev-dependencies]
+env_logger = "0.9.0"
+itp-node-api = { path = "../../core-primitives/node-api", features = ["mocks"] }
+itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", features = ["mocks"] }
+itp-stf-executor = { path = "../../core-primitives/stf-executor", features = ["mocks"] }
+itp-test = { path = "../../core-primitives/test" }
+itp-top-pool-author = { path = "../../core-primitives/top-pool-author", features = ["mocks"] }
+itc-parentchain-test = { path = "../../core/parentchain/test" }
+
+
+[features]
+default = ["std"]
+std = [
+    "bs58/std",
+    "codec/std",
+    "futures",
+    "ita-sgx-runtime/std",
+    "ita-stf/std",
+    "itc-parentchain-indirect-calls-executor/std",
+    "itp-api-client-types/std",
+    "itp-node-api/std",
+    "itp-ocall-api/std",
+    "itp-sgx-crypto/std",
+    "itp-sgx-runtime-primitives/std",
+    "itp-stf-executor/std",
+    "itp-stf-primitives/std",
+    "itp-top-pool-author/std",
+    "itp-types/std",
+    "itp-utils/std",
+    "log/std",
+    #substrate
+    "binary-merkle-tree/std",
+    "sp-core/std",
+    "sp-runtime/std",
+    "frame-support/std",
+    "thiserror",
+]
+sgx = [
+    "sgx_tstd",
+    "futures_sgx",
+    "ita-stf/sgx",
+    "itc-parentchain-indirect-calls-executor/sgx",
+    "itp-node-api/sgx",
+    "itp-sgx-crypto/sgx",
+    "itp-stf-executor/sgx",
+    "itp-top-pool-author/sgx",
+    "thiserror_sgx",
+]

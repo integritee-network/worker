@@ -27,6 +27,8 @@
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
 
+extern crate alloc;
+
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
@@ -37,15 +39,14 @@ pub mod sgx_reexport_prelude {
 	pub use thiserror_sgx as thiserror;
 }
 
-mod event_filter;
 mod executor;
-mod traits;
+pub mod mock;
+pub mod traits;
 
 pub mod error;
+pub mod event_filter;
 pub mod filter_metadata;
-pub mod indirect_calls;
-pub mod parentchain_parser;
 
 pub use error::{Error, Result};
 pub use executor::IndirectCallsExecutor;
-pub use traits::{ExecuteIndirectCalls, IndirectDispatch, IndirectExecutor};
+pub use traits::{ExecuteIndirectCalls, IndirectDispatch};
