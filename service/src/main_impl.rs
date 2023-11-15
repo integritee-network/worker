@@ -520,7 +520,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 				&integritee_rpc_api,
 				run_config.teeracle_update_interval(),
 				enclave.as_ref(),
-				&tokio_handle.clone(),
+				&tokio_handle,
 			);
 		},
 		WorkerMode::OffChainWorker => {
