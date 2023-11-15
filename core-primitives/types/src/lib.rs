@@ -20,7 +20,6 @@
 
 use crate::storage::StorageEntry;
 use codec::{Decode, Encode};
-
 use sp_std::vec::Vec;
 
 pub mod parentchain;

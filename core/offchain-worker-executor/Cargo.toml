@@ -57,6 +57,7 @@ std = [
     "itp-stf-primitives/std",
     "itp-stf-state-handler/std",
     "itp-top-pool-author/std",
+    "itp-types/std",
     "sp-core/std",
     "sp-runtime/std",
     "thiserror",

@@ -79,6 +79,5 @@ sgx = [
     "itp-stf-executor/sgx",
     "itp-top-pool-author/sgx",
     "itp-test/sgx",
-    "itp-types/sgx",
     "thiserror_sgx",
 ]
