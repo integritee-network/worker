@@ -530,20 +530,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			let last_synced_header =
 				parentchain_handler.sync_parentchain(last_synced_header).unwrap();
 
-			// ------------------------------------------------------------------------
-			// start parentchain syncing loop (subscribe to header updates)
-			thread::Builder::new()
-				.name("parentchain_sync_loop".to_owned())
-				.spawn(move || {
-					if let Err(e) = subscribe_to_parentchain_new_headers(
-						parentchain_handler,
-						last_synced_header,
-					) {
-						error!("Parentchain block syncing terminated with a failure: {:?}", e);
-					}
-					println!("[!] Parentchain block syncing has terminated");
-				})
-				.unwrap();
+			start_parentchain_header_subscription_thread(parentchain_handler, last_synced_header);
 		},
 		WorkerMode::Sidechain => {
 			println!("*** [+] Finished initializing light client, syncing parentchain...");
@@ -560,20 +547,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			)
 			.unwrap();
 
-			// ------------------------------------------------------------------------
-			// start parentchain syncing loop (subscribe to header updates)
-			thread::Builder::new()
-				.name("parentchain_sync_loop".to_owned())
-				.spawn(move || {
-					if let Err(e) = subscribe_to_parentchain_new_headers(
-						parentchain_handler,
-						last_synced_header,
-					) {
-						error!("Parentchain block syncing terminated with a failure: {:?}", e);
-					}
-					println!("[!] Parentchain block syncing has terminated");
-				})
-				.unwrap();
+			start_parentchain_header_subscription_thread(parentchain_handler, last_synced_header);
 
 			spawn_worker_for_shard_polling(
 				shard,
@@ -648,21 +622,7 @@ fn init_target_parentchain<E>(
 		let last_synched_header =
 			parentchain_handler.sync_parentchain(last_synched_header).unwrap();
 
-		// start parentchain syncing loop (subscribe to header updates)
-		thread::Builder::new()
-			.name(format!("{:?}_parentchain_sync_loop", parentchain_id))
-			.spawn(move || {
-				if let Err(e) =
-					subscribe_to_parentchain_new_headers(parentchain_handler, last_synched_header)
-				{
-					error!(
-						"[{:?}] parentchain block syncing terminated with a failure: {:?}",
-						parentchain_id, e
-					);
-				}
-				println!("[!] [{:?}] parentchain block syncing has terminated", parentchain_id);
-			})
-			.unwrap();
+		start_parentchain_header_subscription_thread(parentchain_handler, last_synched_header)
 	}
 
 	// Subscribe to events and print them.
@@ -1023,6 +983,27 @@ fn send_extrinsic(
 			None
 		},
 	}
+}
+
+fn start_parentchain_header_subscription_thread<E: EnclaveBase + Sidechain>(
+	parentchain_handler: Arc<ParentchainHandler<ParentchainApi, E>>,
+	last_synced_header: Header,
+) {
+	let parentchain_id = parentchain_handler.parentchain_id().clone();
+	thread::Builder::new()
+		.name(format!("{:?}_parentchain_sync_loop", parentchain_id))
+		.spawn(move || {
+			if let Err(e) =
+				subscribe_to_parentchain_new_headers(parentchain_handler, last_synced_header)
+			{
+				error!(
+					"[{:?}] parentchain block syncing terminated with a failure: {:?}",
+					parentchain_id, e
+				);
+			}
+			println!("[!] [{:?}] parentchain block syncing has terminated", parentchain_id);
+		})
+		.unwrap();
 }
 
 /// Subscribe to the node API finalized heads stream and trigger a parent chain sync
