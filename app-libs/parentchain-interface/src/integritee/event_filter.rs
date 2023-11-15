@@ -19,14 +19,13 @@
 use itc_parentchain_indirect_calls_executor::event_filter::ToEvents;
 use itp_api_client_types::Events;
 
-
 use itp_types::{
 	parentchain::{
 		BalanceTransfer, ExtrinsicFailed, ExtrinsicStatus, ExtrinsicSuccess, FilterEvents,
 	},
 	H256,
 };
-use std::{vec::Vec};
+use std::vec::Vec;
 
 #[derive(Clone)]
 pub struct FilterableEvents(pub Events<H256>);
@@ -34,6 +33,12 @@ pub struct FilterableEvents(pub Events<H256>);
 impl ToEvents<Events<H256>> for FilterableEvents {
 	fn to_events(&self) -> &Events<H256> {
 		&self.0
+	}
+}
+
+impl From<Events<H256>> for FilterableEvents {
+	fn from(ev: Events<H256>) -> Self {
+		Self(ev)
 	}
 }
 

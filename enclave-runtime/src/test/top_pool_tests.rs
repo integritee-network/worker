@@ -35,6 +35,7 @@ use ita_stf::{
 	Getter, TrustedCall, TrustedCallSigned,
 };
 use itc_parentchain::indirect_calls_executor::{
+	filter_metadata::EventCreator,
 	mock::{MockParentchainEventHandler, TestEventCreator},
 	ExecuteIndirectCalls, IndirectCallsExecutor,
 };
