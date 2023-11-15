@@ -19,12 +19,9 @@ use crate::{error::Result, IndirectDispatch};
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use itp_api_client_types::{Events, Metadata};
-use itp_node_api::metadata::{
-	NodeMetadata,
-};
+use itp_node_api::metadata::NodeMetadata;
 use itp_stf_primitives::traits::IndirectExecutor;
 use itp_types::{parentchain::FilterEvents, H256};
-
 
 pub trait EventsFromMetadata<NodeMetadata> {
 	type Output: FilterEvents;

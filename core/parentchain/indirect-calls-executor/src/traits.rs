@@ -18,12 +18,8 @@
 use crate::{error::Result, Error};
 use codec::{Decode, Encode};
 use core::fmt::Debug;
-use itp_stf_primitives::{
-	traits::{IndirectExecutor, TrustedCallVerification},
-};
-use itp_types::{
-	OpaqueCall, H256,
-};
+use itp_stf_primitives::traits::{IndirectExecutor, TrustedCallVerification};
+use itp_types::{OpaqueCall, H256};
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header};
 use std::vec::Vec;
 

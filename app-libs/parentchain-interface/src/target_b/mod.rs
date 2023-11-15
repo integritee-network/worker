@@ -49,6 +49,7 @@ use itc_parentchain_indirect_calls_executor::{
 };
 use itp_node_api::metadata::pallet_balances::BalancesCallIndexes;
 use itp_stf_primitives::traits::IndirectExecutor;
+use log::error;
 
 /// The default indirect call (extrinsic-triggered) of the Target-A-Parachain.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
@@ -58,7 +59,7 @@ impl<Executor: IndirectExecutor<TrustedCallSigned, Error>>
 	IndirectDispatch<Executor, TrustedCallSigned> for IndirectCall
 {
 	fn dispatch(&self, _executor: &Executor) -> Result<()> {
-		unimplemented!("no indirect calls defined for target_b");
+		Err(Error::Other("no indirect calls defined for target_b".into()))
 	}
 }
 
@@ -78,7 +79,7 @@ where
 		_encoded_data: &[u8],
 		_metadata: &NodeMetadata,
 	) -> Option<Self::Output> {
-		unimplemented!("no indirect calls filter has been implemented for target_b");
+		error!("no indirect calls filter has been implemented for target_b");
 		None
 	}
 }

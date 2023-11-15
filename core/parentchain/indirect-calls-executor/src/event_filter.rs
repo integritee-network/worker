@@ -18,12 +18,9 @@
 
 use crate::error::Error;
 
+use itp_stf_primitives::error::StfError;
 
-
-use itp_stf_primitives::{error::StfError};
-
-
-use std::{format};
+use std::format;
 
 impl From<StfError> for Error {
 	fn from(a: StfError) -> Self {

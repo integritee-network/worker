@@ -8,20 +8,17 @@ use core::marker::PhantomData;
 
 use itp_node_api::{
 	api_client::{CallIndex, PairSignature, UncheckedExtrinsicV4},
-	metadata::{NodeMetadataTrait},
+	metadata::NodeMetadataTrait,
 };
 use itp_sgx_runtime_primitives::types::{AccountId, Balance};
 use itp_stf_primitives::{traits::IndirectExecutor, types::Signature};
 use itp_test::mock::stf_mock::{GetterMock, TrustedCallMock, TrustedCallSignedMock};
 use itp_types::{
-	parentchain::{
-		BalanceTransfer, ExtrinsicStatus, FilterEvents,
-		HandleParentchainEvents,
-	},
+	parentchain::{BalanceTransfer, ExtrinsicStatus, FilterEvents, HandleParentchainEvents},
 	Address, Request, ShardIdentifier, H256,
 };
 use log::*;
-use std::{vec::Vec};
+use std::vec::Vec;
 
 /// Default filter we use for the Integritee-Parachain.
 pub struct MockExtrinsicFilter<ExtrinsicParser> {
