@@ -17,7 +17,7 @@
 
 use crate::{
 	error::{Error, Result},
-	traits::StfEnclaveSigning,
+	traits::{StfEnclaveSigning, StfShardVaultQuery},
 	H256,
 };
 use codec::{Decode, Encode};
@@ -25,7 +25,7 @@ use core::{fmt::Debug, marker::PhantomData};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::{ed25519_derivation::DeriveEd25519, key_repository::AccessKey};
 use itp_sgx_externalities::SgxExternalitiesTrait;
-use itp_stf_interface::system_pallet::SystemPalletAccountInterface;
+use itp_stf_interface::{system_pallet::SystemPalletAccountInterface, ShardVaultQuery};
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{AccountId, KeyPair},
@@ -60,7 +60,8 @@ where
 	StateObserver::StateType: SgxExternalitiesTrait,
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: DeriveEd25519,
-	Stf: SystemPalletAccountInterface<StateObserver::StateType, AccountId>,
+	Stf: SystemPalletAccountInterface<StateObserver::StateType, AccountId>
+		+ ShardVaultQuery<StateObserver::StateType>,
 	Stf::Index: Into<Index>,
 	TopPoolAuthor: AuthorApi<H256, H256, TCS, G> + Send + Sync + 'static,
 	TCS: PartialEq + Encode + Decode + Debug + Send + Sync,
@@ -105,7 +106,8 @@ where
 	StateObserver::StateType: SgxExternalitiesTrait,
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: DeriveEd25519,
-	Stf: SystemPalletAccountInterface<StateObserver::StateType, AccountId>,
+	Stf: SystemPalletAccountInterface<StateObserver::StateType, AccountId>
+		+ ShardVaultQuery<StateObserver::StateType>,
 	Stf::Index: Into<Index>,
 	TopPoolAuthor: AuthorApi<H256, H256, TCS, G> + Send + Sync + 'static,
 	TCS: PartialEq + Encode + Decode + Debug + Send + Sync,
@@ -140,5 +142,27 @@ where
 			&mr_enclave.m,
 			shard,
 		))
+	}
+}
+
+impl<OCallApi, StateObserver, ShieldingKeyRepository, Stf, TopPoolAuthor, TCS, G> StfShardVaultQuery
+	for StfEnclaveSigner<OCallApi, StateObserver, ShieldingKeyRepository, Stf, TopPoolAuthor, TCS, G>
+where
+	OCallApi: EnclaveAttestationOCallApi,
+	StateObserver: ObserveState,
+	StateObserver::StateType: SgxExternalitiesTrait,
+	ShieldingKeyRepository: AccessKey,
+	<ShieldingKeyRepository as AccessKey>::KeyType: DeriveEd25519,
+	Stf: SystemPalletAccountInterface<StateObserver::StateType, AccountId>
+		+ ShardVaultQuery<StateObserver::StateType>,
+	Stf::Index: Into<Index>,
+	TopPoolAuthor: AuthorApi<H256, H256, TCS, G> + Send + Sync + 'static,
+	TCS: PartialEq + Encode + Decode + Debug + Send + Sync,
+	G: PartialEq + Encode + Decode + Debug + Send + Sync,
+{
+	fn get_shard_vault(&self, shard: &ShardIdentifier) -> Result<AccountId> {
+		let vault = self.state_observer.observe_state(shard, move |state| Stf::get_vault(state))?;
+
+		vault.ok_or_else(|| Error::Other("shard vault undefined".into()))
 	}
 }
