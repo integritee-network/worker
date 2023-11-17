@@ -138,7 +138,7 @@ impl<TCS: PartialEq + Encode + Debug> StfEnclaveSigning<TCS> for StfEnclaveSigne
 }
 
 impl StfShardVaultQuery for StfEnclaveSignerMock {
-	fn get_shard_vault(&self, shard: &ShardIdentifier) -> Result<AccountId> {
+	fn get_shard_vault(&self, _shard: &ShardIdentifier) -> Result<AccountId> {
 		Err(crate::error::Error::Other("shard vault undefined".into()))
 	}
 }

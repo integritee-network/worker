@@ -170,7 +170,7 @@ where
 {
 	fn get_vault(state: &mut State) -> Option<AccountId> {
 		state
-			.get(&SHARD_VAULT_KEY.as_bytes())
+			.get(SHARD_VAULT_KEY.as_bytes())
 			.and_then(|v| Decode::decode(&mut v.clone().as_slice()).ok())
 	}
 }
