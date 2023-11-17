@@ -167,8 +167,9 @@ impl<
 		trace!("xt_statuses:: {:?}", xt_statuses);
 
 		let shard = self.get_default_shard();
-		let vault = self.stf_enclave_signer.get_shard_vault(&shard)?;
-		ParentchainEventHandler::handle_events(self, events, &vault)?;
+		if let Ok(vault) = self.stf_enclave_signer.get_shard_vault(&shard) {
+			ParentchainEventHandler::handle_events(self, events, &vault)?;
+		}
 
 		// This would be catastrophic but should never happen
 		if xt_statuses.len() != block.extrinsics().len() {

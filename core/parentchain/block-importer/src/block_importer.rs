@@ -144,7 +144,7 @@ impl<
 				Ok(executed_shielding_calls) => {
 					calls.push(executed_shielding_calls);
 				},
-				Err(_) => error!("[{:?}] Error executing relevant extrinsics", id),
+				Err(e) => error!("[{:?}] Error executing relevant extrinsics: {:?}", id, e),
 			};
 
 			info!(

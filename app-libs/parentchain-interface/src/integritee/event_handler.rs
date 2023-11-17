@@ -68,7 +68,7 @@ where
 				.iter()
 				.filter(|&event| event.to == *vault_account)
 				.try_for_each(|event| {
-					info!("transfer_event: {}", event);
+					info!("found transfer_event to vault account: {}", event);
 					//call = IndirectCall::ShieldFunds(ShieldFundsArgs{ })
 					Self::shield_funds(executor, &event.from, event.amount)
 				})
