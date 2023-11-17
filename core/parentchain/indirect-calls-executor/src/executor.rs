@@ -60,7 +60,7 @@ pub struct IndirectCallsExecutor<
 	G,
 > {
 	pub(crate) shielding_key_repo: Arc<ShieldingKeyRepository>,
-	pub(crate) stf_enclave_signer: Arc<StfEnclaveSigner>,
+	pub stf_enclave_signer: Arc<StfEnclaveSigner>,
 	pub(crate) top_pool_author: Arc<TopPoolAuthor>,
 	pub(crate) node_meta_data_provider: Arc<NodeMetadataProvider>,
 	_phantom: PhantomData<(IndirectCallsFilter, EventCreator, ParentchainEventHandler, TCS, G)>,

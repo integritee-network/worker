@@ -20,7 +20,10 @@ use crate::{
 		generate_dcap_ra_extrinsic_from_quote_internal,
 		generate_ias_ra_extrinsic_from_der_cert_internal,
 	},
-	utils::get_validator_accessor_from_solo_or_parachain,
+	utils::{
+		get_stf_enclave_signer_from_solo_or_parachain,
+		get_validator_accessor_from_solo_or_parachain,
+	},
 };
 use codec::Encode;
 use core::result::Result;
@@ -30,7 +33,7 @@ use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, Extrinsi
 use itp_primitives_cache::{GetPrimitives, GLOBAL_PRIMITIVES_CACHE};
 use itp_rpc::RpcReturnValue;
 use itp_sgx_crypto::key_repository::AccessPubkey;
-use itp_stf_executor::getter_executor::ExecuteGetter;
+use itp_stf_executor::{getter_executor::ExecuteGetter, traits::StfShardVaultQuery};
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{DirectRequestStatus, Request, ShardIdentifier, H256};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
@@ -40,6 +43,7 @@ use jsonrpc_core::{serde_json::json, IoHandler, Params, Value};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_runtime::OpaqueExtrinsic;
 use std::{borrow::ToOwned, format, str, string::String, sync::Arc, vec::Vec};
+
 fn compute_hex_encoded_return_error(error_msg: &str) -> String {
 	RpcReturnValue::from_error_message(error_msg).to_hex()
 }
@@ -64,8 +68,10 @@ where
 	GetterExecutor: ExecuteGetter + Send + Sync + 'static,
 	AccessShieldingKey: AccessPubkey<KeyType = Rsa3072PubKey> + Send + Sync + 'static,
 {
-	let mut io =
-		direct_top_pool_api::add_top_pool_direct_rpc_methods(top_pool_author, IoHandler::new());
+	let mut io = direct_top_pool_api::add_top_pool_direct_rpc_methods(
+		top_pool_author.clone(),
+		IoHandler::new(),
+	);
 
 	io.add_sync_method("author_getShieldingKey", move |_: Params| {
 		let rsa_pubkey = match shielding_key.retrieve_pubkey() {
@@ -86,6 +92,32 @@ where
 		};
 		let json_value =
 			RpcReturnValue::new(rsa_pubkey_json.encode(), false, DirectRequestStatus::Ok);
+		Ok(json!(json_value.to_hex()))
+	});
+
+	let local_top_pool_author = top_pool_author.clone();
+	io.add_sync_method("author_getShardVault", move |_: Params| {
+		let shard =
+			local_top_pool_author.list_handled_shards().first().copied().unwrap_or_default();
+		if let Ok(stf_enclave_signer) = get_stf_enclave_signer_from_solo_or_parachain() {
+			if let Ok(vault) = stf_enclave_signer.get_shard_vault(&shard) {
+				let json_value =
+					RpcReturnValue::new(vault.encode(), false, DirectRequestStatus::Ok);
+				Ok(json!(json_value.to_hex()))
+			} else {
+				Ok(json!(compute_hex_encoded_return_error("failed to get shard vault").to_hex()))
+			}
+		} else {
+			Ok(json!(compute_hex_encoded_return_error(
+				"failed to get stf_enclave_signer to get shard vault"
+			)
+			.to_hex()))
+		}
+	});
+
+	io.add_sync_method("author_getShard", move |_: Params| {
+		let shard = top_pool_author.list_handled_shards().first().copied().unwrap_or_default();
+		let json_value = RpcReturnValue::new(shard.encode(), false, DirectRequestStatus::Ok);
 		Ok(json!(json_value.to_hex()))
 	});
 

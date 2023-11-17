@@ -788,6 +788,7 @@ dependencies = [
  "itc-direct-rpc-server",
  "itc-offchain-worker-executor",
  "itc-parentchain",
+ "itc-parentchain-block-import-dispatcher",
  "itc-parentchain-test",
  "itc-tls-websocket-server",
  "itp-attestation-handler",
