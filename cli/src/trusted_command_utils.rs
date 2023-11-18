@@ -91,7 +91,12 @@ pub(crate) fn get_keystore_path(trusted_args: &TrustedCli) -> PathBuf {
 }
 
 pub(crate) fn get_identifiers(trusted_args: &TrustedCli) -> ([u8; 32], ShardIdentifier) {
-	let mrenclave = mrenclave_from_base58(&trusted_args.mrenclave);
+	let mrenclave = mrenclave_from_base58(
+		&trusted_args
+			.mrenclave
+			.as_ref()
+			.expect("argument '--mrenclave' must be provided for this command"),
+	);
 	let shard = match &trusted_args.shard {
 		Some(val) =>
 			ShardIdentifier::from_slice(&val.from_base58().expect("shard has to be base58 encoded")),

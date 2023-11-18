@@ -43,7 +43,7 @@ use std::boxed::Box;
 pub struct GetShardVaultCommand {}
 
 impl GetShardVaultCommand {
-	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
+	pub(crate) fn run(&self, cli: &Cli, _trusted_args: &TrustedCli) -> CliResult {
 		let direct_api = get_worker_api_direct(cli);
 		let rpc_method = "author_getShardVault".to_owned();
 		let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(rpc_method, vec![]).unwrap();

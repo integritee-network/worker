@@ -25,7 +25,7 @@ use crate::trusted_base_cli::TrustedBaseCommand;
 pub struct TrustedCli {
 	/// targeted worker MRENCLAVE
 	#[clap(short, long)]
-	pub(crate) mrenclave: String,
+	pub(crate) mrenclave: Option<String>,
 
 	/// shard identifier
 	#[clap(short, long)]
