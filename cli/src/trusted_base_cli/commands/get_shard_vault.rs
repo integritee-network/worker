@@ -16,28 +16,20 @@
 */
 
 use crate::{
-	command_utils::get_worker_api_direct,
-	get_layer_two_nonce,
-	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_identifiers, get_pair_from_str},
-	trusted_operation::perform_trusted_operation,
-	Cli, CliError, CliResult, CliResultOk,
+	command_utils::get_worker_api_direct, trusted_cli::TrustedCli, Cli, CliError, CliResult,
+	CliResultOk,
 };
-use base58::ToBase58;
-use codec::{Decode, Encode};
-use ita_stf::{Getter, Index, TrustedCall, TrustedCallSigned};
+
+use codec::Decode;
+
 use itc_rpc_client::direct_client::DirectApi;
 use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
-use itp_stf_primitives::{
-	traits::TrustedCallSigning,
-	types::{KeyPair, TrustedOperation},
-};
+
 use itp_types::{AccountId, DirectRequestStatus};
 use itp_utils::FromHexPrefixed;
 use log::*;
-use my_node_runtime::Balance;
-use sp_core::{crypto::Ss58Codec, Pair, H256};
-use std::boxed::Box;
+
+use sp_core::crypto::Ss58Codec;
 
 #[derive(Parser)]
 pub struct GetShardVaultCommand {}
