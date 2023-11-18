@@ -92,7 +92,7 @@ pub(crate) fn get_keystore_path(trusted_args: &TrustedCli) -> PathBuf {
 
 pub(crate) fn get_identifiers(trusted_args: &TrustedCli) -> ([u8; 32], ShardIdentifier) {
 	let mrenclave = mrenclave_from_base58(
-		&trusted_args
+		trusted_args
 			.mrenclave
 			.as_ref()
 			.expect("argument '--mrenclave' must be provided for this command"),
