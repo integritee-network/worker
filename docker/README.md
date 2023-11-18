@@ -28,11 +28,11 @@ Starts all services (node and workers), using the `integritee-worker:dev` images
 ### Demo indirect invocation (M6)
 Build
 ```
-COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < demo-indirect-invocation.yml) build --build-arg WORKER_MODE_ARG=offchain-worker
+COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < demo-shielding-unshielding-multiworker.yml) build --build-arg WORKER_MODE_ARG=offchain-worker
 ```
 Run
 ```
-FLAVOR_ID=offchain-worker docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < demo-indirect-invocation.yml) up demo-indirect-invocation --exit-code-from demo-indirect-invocation
+FLAVOR_ID=offchain-worker docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < demo-shielding-unshielding-multiworker.yml) up demo-shielding-unshielding-multiworker --exit-code-from demo-shielding-unshielding-multiworker
 ```
 ### Demo direct call (M8)
 

@@ -46,10 +46,9 @@ where
 	TCS: PartialEq + Encode + Decode + Debug + Send + Sync + 'static,
 	G: PartialEq + Encode + Decode + Debug + Send + Sync + 'static,
 {
-	// author_submitAndWatchExtrinsic
-	let author_submit_and_watch_extrinsic_name: &str = "author_submitAndWatchExtrinsic";
 	let watch_author = top_pool_author.clone();
-	io_handler.add_sync_method(author_submit_and_watch_extrinsic_name, move |params: Params| {
+	io_handler.add_sync_method("author_submitAndWatchExtrinsic", move |params: Params| {
+		debug!("worker_api_direct rpc was called: author_submitAndWatchExtrinsic");
 		let json_value = match author_submit_extrinsic_inner(watch_author.clone(), params) {
 			Ok(hash_value) => RpcReturnValue {
 				do_watch: true,
@@ -64,10 +63,9 @@ where
 		Ok(json!(json_value))
 	});
 
-	// author_submitExtrinsic
-	let author_submit_extrinsic_name: &str = "author_submitExtrinsic";
 	let submit_author = top_pool_author.clone();
-	io_handler.add_sync_method(author_submit_extrinsic_name, move |params: Params| {
+	io_handler.add_sync_method("author_submitExtrinsic", move |params: Params| {
+		debug!("worker_api_direct rpc was called: author_submitExtrinsic");
 		let json_value = match author_submit_extrinsic_inner(submit_author.clone(), params) {
 			Ok(hash_value) => RpcReturnValue {
 				do_watch: false,
@@ -82,10 +80,9 @@ where
 		Ok(json!(json_value))
 	});
 
-	// author_pendingExtrinsics
-	let author_pending_extrinsic_name: &str = "author_pendingExtrinsics";
 	let pending_author = top_pool_author.clone();
-	io_handler.add_sync_method(author_pending_extrinsic_name, move |params: Params| {
+	io_handler.add_sync_method("author_pendingExtrinsics", move |params: Params| {
+		debug!("worker_api_direct rpc was called: author_pendingExtrinsics");
 		match params.parse::<Vec<String>>() {
 			Ok(shards) => {
 				let mut retrieved_operations = vec![];
@@ -116,10 +113,9 @@ where
 		}
 	});
 
-	// author_pendingTrustedCallsFor
-	let author_pending_trusted_calls_for_name: &str = "author_pendingTrustedCallsFor";
 	let pending_author = top_pool_author;
-	io_handler.add_sync_method(author_pending_trusted_calls_for_name, move |params: Params| {
+	io_handler.add_sync_method("author_pendingTrustedCallsFor", move |params: Params| {
+		debug!("worker_api_direct rpc was called: author_pendingTrustedCallsFor");
 		match params.parse::<(String, String)>() {
 			Ok((shard_base58, account_hex)) => {
 				let shard = match decode_shard_from_base58(shard_base58.as_str()) {
