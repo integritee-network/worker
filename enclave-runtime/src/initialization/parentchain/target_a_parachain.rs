@@ -25,13 +25,15 @@ use crate::{
 	error::Result,
 	initialization::{
 		global_components::{
-			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOCallApi,
-			EnclaveStfExecutor, EnclaveValidatorAccessor, TargetAParentchainBlockImportDispatcher,
-			GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
-			GLOBAL_TARGET_A_PARENTCHAIN_LIGHT_CLIENT_SEAL, GLOBAL_TARGET_A_PARENTCHAIN_NONCE_CACHE,
+			EnclaveNodeMetadataRepository, EnclaveOCallApi, EnclaveStfExecutor,
+			EnclaveValidatorAccessor, TargetAExtrinsicsFactory,
+			TargetAParentchainBlockImportDispatcher, GLOBAL_OCALL_API_COMPONENT,
+			GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_TARGET_A_PARENTCHAIN_LIGHT_CLIENT_SEAL,
+			GLOBAL_TARGET_A_PARENTCHAIN_NONCE_CACHE,
 		},
 		parentchain::common::{
-			create_extrinsics_factory, create_target_a_offchain_immediate_import_dispatcher,
+			create_target_a_extrinsics_factory,
+			create_target_a_offchain_immediate_import_dispatcher,
 			create_target_a_parentchain_block_importer,
 		},
 	},
@@ -50,7 +52,7 @@ pub struct TargetAParachainHandler {
 	pub node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
 	pub stf_executor: Arc<EnclaveStfExecutor>,
 	pub validator_accessor: Arc<EnclaveValidatorAccessor>,
-	pub extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
+	pub extrinsics_factory: Arc<TargetAExtrinsicsFactory>,
 	pub import_dispatcher: Arc<TargetAParentchainBlockImportDispatcher>,
 }
 
@@ -76,7 +78,7 @@ impl TargetAParachainHandler {
 
 		let genesis_hash = validator_accessor.execute_on_validator(|v| v.genesis_hash())?;
 
-		let extrinsics_factory = create_extrinsics_factory(
+		let extrinsics_factory = create_target_a_extrinsics_factory(
 			genesis_hash,
 			GLOBAL_TARGET_A_PARENTCHAIN_NONCE_CACHE.clone(),
 			node_metadata_repository.clone(),

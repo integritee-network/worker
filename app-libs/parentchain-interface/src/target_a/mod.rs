@@ -27,8 +27,11 @@ use codec::{Decode, Encode};
 use core::marker::PhantomData;
 pub use event_filter::FilterableEvents;
 pub use event_handler::ParentchainEventHandler;
-pub use extrinsic_parser::ParentchainExtrinsicParser;
 use extrinsic_parser::ParseExtrinsic;
+pub use extrinsic_parser::{
+	ParentchainAdditionalParams, ParentchainAdditionalSigned, ParentchainExtrinsicParams,
+	ParentchainExtrinsicParser, ParentchainSignedExtra,
+};
 use ita_stf::TrustedCallSigned;
 use itc_parentchain_indirect_calls_executor::{
 	error::{Error, Result},

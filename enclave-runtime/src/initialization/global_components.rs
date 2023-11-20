@@ -143,8 +143,36 @@ pub type EnclaveSidechainApi = SidechainApi<ParentchainBlock, EnclaveTrustedCall
 // Parentchain types relevant for all parentchains
 pub type EnclaveLightClientSeal =
 	LightClientStateSealSync<ParentchainBlock, LightValidationState<ParentchainBlock>>;
-pub type EnclaveExtrinsicsFactory =
-	ExtrinsicsFactory<EnclaveParentchainSigner, NonceCache, EnclaveNodeMetadataRepository>;
+
+pub type IntegriteeExtrinsicsFactory = ExtrinsicsFactory<
+	EnclaveParentchainSigner,
+	NonceCache,
+	EnclaveNodeMetadataRepository,
+	integritee::ParentchainExtrinsicParams,
+	integritee::ParentchainAdditionalParams,
+	integritee::ParentchainSignedExtra,
+	integritee::ParentchainAdditionalSigned,
+>;
+
+pub type TargetAExtrinsicsFactory = ExtrinsicsFactory<
+	EnclaveParentchainSigner,
+	NonceCache,
+	EnclaveNodeMetadataRepository,
+	target_a::ParentchainExtrinsicParams,
+	target_a::ParentchainAdditionalParams,
+	target_a::ParentchainSignedExtra,
+	target_a::ParentchainAdditionalSigned,
+>;
+
+pub type TargetBExtrinsicsFactory = ExtrinsicsFactory<
+	EnclaveParentchainSigner,
+	NonceCache,
+	EnclaveNodeMetadataRepository,
+	target_b::ParentchainExtrinsicParams,
+	target_b::ParentchainAdditionalParams,
+	target_b::ParentchainSignedExtra,
+	target_b::ParentchainAdditionalSigned,
+>;
 
 pub type EnclaveValidatorAccessor = ValidatorAccessor<
 	LightValidation<ParentchainBlock, EnclaveOCallApi>,
@@ -177,7 +205,7 @@ pub type IntegriteeParentchainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
 	EnclaveValidatorAccessor,
 	EnclaveStfExecutor,
-	EnclaveExtrinsicsFactory,
+	IntegriteeExtrinsicsFactory,
 	IntegriteeParentchainIndirectCallsExecutor,
 >;
 
@@ -219,7 +247,7 @@ pub type TargetAParentchainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
 	EnclaveValidatorAccessor,
 	EnclaveStfExecutor,
-	EnclaveExtrinsicsFactory,
+	TargetAExtrinsicsFactory,
 	TargetAParentchainIndirectCallsExecutor,
 >;
 
@@ -261,7 +289,7 @@ pub type TargetBParentchainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
 	EnclaveValidatorAccessor,
 	EnclaveStfExecutor,
-	EnclaveExtrinsicsFactory,
+	TargetBExtrinsicsFactory,
 	TargetBParentchainIndirectCallsExecutor,
 >;
 
@@ -316,7 +344,7 @@ pub type EnclaveBlockImportConfirmationHandler = BlockImportConfirmationHandler<
 	ParentchainBlock,
 	<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType,
 	EnclaveNodeMetadataRepository,
-	EnclaveExtrinsicsFactory,
+	IntegriteeExtrinsicsFactory,
 	EnclaveValidatorAccessor,
 >;
 pub type EnclaveSidechainBlockSyncer = PeerBlockSync<
@@ -344,7 +372,7 @@ pub type EnclaveOffchainWorkerExecutor = itc_offchain_worker_executor::executor:
 	EnclaveStfExecutor,
 	EnclaveStateHandler,
 	EnclaveValidatorAccessor,
-	EnclaveExtrinsicsFactory,
+	IntegriteeExtrinsicsFactory,
 	EnclaveStf,
 	EnclaveTrustedCallSigned,
 	EnclaveGetter,

@@ -45,7 +45,15 @@ pub use substrate_api_client::{
 
 // traits from the api-client
 pub mod traits {
+	use itp_types::parentchain::Index;
 	pub use substrate_api_client::{GetAccountInformation, GetChainInfo, GetStorage};
+
+	pub trait ExtrinsicParamsAdjustments<AdditionalParams> {
+		fn with_nonce(&self, nonce: Index) -> Self;
+		fn with_additional_params(&self, additional_params: AdditionalParams) -> Self;
+		fn with_spec_version(&self, version: u32) -> Self;
+		fn with_transaction_version(&self, version: u32) -> Self;
+	}
 }
 
 pub type ParentchainPlainTip = PlainTip<Balance>;

@@ -117,7 +117,7 @@ impl<
 
 			let xts = self
 				.extrinsics_factory
-				.create_extrinsics(&[opaque_call], None)
+				.create_extrinsics(&[opaque_call])
 				.map_err(|e| Error::Other(e.into()))?;
 
 			debug!("Sending sidechain block import confirmation extrinsic..");

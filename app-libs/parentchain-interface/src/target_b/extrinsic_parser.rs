@@ -18,8 +18,20 @@
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use itp_node_api::api_client::{
-	Address, CallIndex, PairSignature, ParentchainSignedExtra, Signature, UncheckedExtrinsicV4,
+	Address, CallIndex, GenericExtrinsicParams, PairSignature, PlainTip, Signature,
+	UncheckedExtrinsicV4,
 };
+
+use itp_types::parentchain::{Balance, Hash};
+
+// re-export integritee network types
+pub use itp_node_api::api_client::{
+	GenericAdditionalSigned, ParentchainAdditionalParams, ParentchainPlainTip as ParentchainTip,
+	ParentchainRuntimeConfig, ParentchainSignedExtra, Signature as ParentchainSignature,
+};
+pub type ParentchainAdditionalSigned = GenericAdditionalSigned<Hash>;
+pub type ParentchainExtrinsicParams =
+	GenericExtrinsicParams<ParentchainRuntimeConfig, PlainTip<Balance>>;
 
 pub struct ExtrinsicParser<SignedExtra> {
 	_phantom: PhantomData<SignedExtra>,

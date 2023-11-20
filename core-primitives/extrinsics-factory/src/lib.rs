@@ -33,12 +33,16 @@ use codec::Encode;
 use error::Result;
 use itp_node_api::{
 	api_client::{
-		ExtrinsicParams, ParentchainAdditionalParams, ParentchainExtrinsicParams, SignExtrinsic,
+		traits::ExtrinsicParamsAdjustments, ExtrinsicParams, ParentchainAdditionalParams,
+		ParentchainExtrinsicParams, SignExtrinsic,
 	},
 	metadata::{provider::AccessNodeMetadata, NodeMetadata},
 };
 use itp_nonce_cache::{MutateNonce, Nonce};
-use itp_types::{parentchain::AccountId, OpaqueCall};
+use itp_types::{
+	parentchain::{AccountId, Hash, Index},
+	OpaqueCall,
+};
 use sp_core::H256;
 use sp_runtime::{generic::Era, OpaqueExtrinsic};
 use std::{sync::Arc, vec::Vec};
@@ -53,87 +57,148 @@ pub mod mock;
 ///
 /// Also increases the nonce counter for each extrinsic that is created.
 pub trait CreateExtrinsics {
-	fn create_extrinsics(
-		&self,
-		calls: &[OpaqueCall],
-		extrinsics_params: Option<ParentchainAdditionalParams>,
-	) -> Result<Vec<OpaqueExtrinsic>>;
+	fn create_extrinsics(&self, calls: &[OpaqueCall]) -> Result<Vec<OpaqueExtrinsic>>;
 }
 
 /// Extrinsics factory
-pub struct ExtrinsicsFactory<Signer, NonceCache, NodeMetadataRepository>
-where
+pub struct ExtrinsicsFactory<
+	Signer,
+	NonceCache,
+	NodeMetadataRepository,
+	MyExtrinsicParams,
+	MyAdditionalParams,
+	MySignedExtra,
+	MyAdditionalSigned,
+> where
 	Signer: SignExtrinsic<AccountId>,
 	NonceCache: MutateNonce,
 	NodeMetadataRepository: AccessNodeMetadata<MetadataType = NodeMetadata>,
+	MyExtrinsicParams: ExtrinsicParams<
+		Index,
+		Hash,
+		AdditionalParams = MyAdditionalParams,
+		SignedExtra = MySignedExtra,
+		AdditionalSigned = MyAdditionalSigned,
+	>,
 {
 	genesis_hash: H256,
 	signer: Signer,
+	extrinsic_params: MyExtrinsicParams,
 	nonce_cache: Arc<NonceCache>,
 	node_metadata_repository: Arc<NodeMetadataRepository>,
 }
 
-impl<Signer, NonceCache, NodeMetadataRepository>
-	ExtrinsicsFactory<Signer, NonceCache, NodeMetadataRepository>
-where
+impl<
+		Signer,
+		NonceCache,
+		NodeMetadataRepository,
+		MyExtrinsicParams,
+		MyAdditionalParams,
+		MySignedExtra,
+		MyAdditionalSigned,
+	>
+	ExtrinsicsFactory<
+		Signer,
+		NonceCache,
+		NodeMetadataRepository,
+		MyExtrinsicParams,
+		MyAdditionalParams,
+		MySignedExtra,
+		MyAdditionalSigned,
+	> where
 	Signer: SignExtrinsic<AccountId>,
 	NonceCache: MutateNonce,
 	NodeMetadataRepository: AccessNodeMetadata<MetadataType = NodeMetadata>,
+	MyExtrinsicParams: Clone
+		+ ExtrinsicParams<
+			Index,
+			Hash,
+			AdditionalParams = MyAdditionalParams,
+			SignedExtra = MySignedExtra,
+			AdditionalSigned = MyAdditionalSigned,
+		>,
+	MySignedExtra: Encode,
+	MyAdditionalSigned: Encode,
 {
 	pub fn new(
 		genesis_hash: H256,
 		signer: Signer,
+		extrinsic_params: MyExtrinsicParams,
 		nonce_cache: Arc<NonceCache>,
 		node_metadata_repository: Arc<NodeMetadataRepository>,
 	) -> Self {
-		ExtrinsicsFactory { genesis_hash, signer, nonce_cache, node_metadata_repository }
+		ExtrinsicsFactory {
+			genesis_hash,
+			signer,
+			extrinsic_params,
+			nonce_cache,
+			node_metadata_repository,
+		}
 	}
 
 	pub fn with_signer(&self, signer: Signer, nonce_cache: Arc<NonceCache>) -> Self {
 		ExtrinsicsFactory {
 			genesis_hash: self.genesis_hash,
 			signer,
+			extrinsic_params: self.extrinsic_params.clone(),
 			nonce_cache,
 			node_metadata_repository: self.node_metadata_repository.clone(),
 		}
 	}
 }
 
-impl<Signer, NonceCache, NodeMetadataRepository> CreateExtrinsics
-	for ExtrinsicsFactory<Signer, NonceCache, NodeMetadataRepository>
-where
+impl<
+		Signer,
+		NonceCache,
+		NodeMetadataRepository,
+		MyExtrinsicParams,
+		MyAdditionalParams,
+		MySignedExtra,
+		MyAdditionalSigned,
+	> CreateExtrinsics
+	for ExtrinsicsFactory<
+		Signer,
+		NonceCache,
+		NodeMetadataRepository,
+		MyExtrinsicParams,
+		MyAdditionalParams,
+		MySignedExtra,
+		MyAdditionalSigned,
+	> where
 	Signer: SignExtrinsic<AccountId>,
 	NonceCache: MutateNonce,
 	NodeMetadataRepository: AccessNodeMetadata<MetadataType = NodeMetadata>,
+	MyExtrinsicParams: Clone
+		+ ExtrinsicParamsAdjustments<MyAdditionalParams>
+		+ ExtrinsicParams<
+			Index,
+			Hash,
+			AdditionalParams = MyAdditionalParams,
+			SignedExtra = MySignedExtra,
+			AdditionalSigned = MyAdditionalSigned,
+		>,
+	MySignedExtra: Encode + Copy,
+	MyAdditionalSigned: Encode + Copy,
 {
-	fn create_extrinsics(
-		&self,
-		calls: &[OpaqueCall],
-		extrinsics_params: Option<ParentchainAdditionalParams>,
-	) -> Result<Vec<OpaqueExtrinsic>> {
+	fn create_extrinsics(&self, calls: &[OpaqueCall]) -> Result<Vec<OpaqueExtrinsic>> {
 		let mut nonce_lock = self.nonce_cache.load_for_mutation()?;
 		let mut nonce_value = nonce_lock.0;
-
-		let additional_extrinsic_params = extrinsics_params.unwrap_or_else(|| {
-			ParentchainAdditionalParams::new().era(Era::Immortal, self.genesis_hash).tip(0)
-		});
 
 		let (runtime_spec_version, runtime_transaction_version) =
 			self.node_metadata_repository.get_from_metadata(|m| {
 				(m.get_runtime_version(), m.get_runtime_transaction_version())
 			})?;
 
+		let mut xt_params = self
+			.extrinsic_params
+			.with_spec_version(runtime_spec_version)
+			.with_transaction_version(runtime_transaction_version);
+
 		let extrinsics_buffer: Vec<OpaqueExtrinsic> = calls
 			.iter()
 			.map(|call| {
-				let extrinsic_params = ParentchainExtrinsicParams::new(
-					runtime_spec_version,
-					runtime_transaction_version,
-					nonce_value,
-					self.genesis_hash,
-					additional_extrinsic_params,
-				);
-				let xt = compose_extrinsic_offline!(&self.signer, call, extrinsic_params).encode();
+				xt_params = xt_params.with_nonce(nonce_value);
+				let xt = compose_extrinsic_offline!(&self.signer, call, xt_params.clone()).encode();
 				nonce_value += 1;
 				xt
 			})
@@ -173,7 +238,7 @@ pub mod tests {
 		);
 
 		let opaque_calls = [OpaqueCall(vec![3u8; 42]), OpaqueCall(vec![12u8, 78])];
-		let xts = extrinsics_factory.create_extrinsics(&opaque_calls, None).unwrap();
+		let xts = extrinsics_factory.create_extrinsics(&opaque_calls).unwrap();
 
 		assert_eq!(opaque_calls.len(), xts.len());
 		assert_eq!(nonce_cache.get_nonce().unwrap(), Nonce(opaque_calls.len() as NonceValue));
@@ -199,7 +264,7 @@ pub mod tests {
 		);
 
 		let opaque_calls = [OpaqueCall(vec![3u8; 42]), OpaqueCall(vec![12u8, 78])];
-		let xts = extrinsics_factory.create_extrinsics(&opaque_calls, None).unwrap();
+		let xts = extrinsics_factory.create_extrinsics(&opaque_calls).unwrap();
 
 		assert_eq!(opaque_calls.len(), xts.len());
 		assert_eq!(nonce_cache2.get_nonce().unwrap(), Nonce(opaque_calls.len() as NonceValue));

@@ -19,17 +19,19 @@ use crate::{
 	error::Result,
 	initialization::{
 		global_components::{
-			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOffchainWorkerExecutor,
+			EnclaveNodeMetadataRepository, EnclaveOffchainWorkerExecutor,
 			EnclaveParentchainBlockImportQueue, EnclaveParentchainEventImportQueue,
 			EnclaveParentchainSigner, EnclaveStfExecutor, EnclaveValidatorAccessor,
-			IntegriteeParentchainBlockImportDispatcher, IntegriteeParentchainBlockImporter,
+			IntegriteeExtrinsicsFactory, IntegriteeParentchainBlockImportDispatcher,
+			IntegriteeParentchainBlockImporter,
 			IntegriteeParentchainImmediateBlockImportDispatcher,
 			IntegriteeParentchainIndirectCallsExecutor,
-			IntegriteeParentchainTriggeredBlockImportDispatcher,
+			IntegriteeParentchainTriggeredBlockImportDispatcher, TargetAExtrinsicsFactory,
 			TargetAParentchainBlockImportDispatcher, TargetAParentchainBlockImporter,
 			TargetAParentchainImmediateBlockImportDispatcher,
-			TargetAParentchainIndirectCallsExecutor, TargetBParentchainBlockImportDispatcher,
-			TargetBParentchainBlockImporter, TargetBParentchainImmediateBlockImportDispatcher,
+			TargetAParentchainIndirectCallsExecutor, TargetBExtrinsicsFactory,
+			TargetBParentchainBlockImportDispatcher, TargetBParentchainBlockImporter,
+			TargetBParentchainImmediateBlockImportDispatcher,
 			TargetBParentchainIndirectCallsExecutor, GLOBAL_OCALL_API_COMPONENT,
 			GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT,
 			GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STATE_OBSERVER_COMPONENT,
@@ -48,7 +50,7 @@ use std::sync::Arc;
 pub(crate) fn create_integritee_parentchain_block_importer(
 	validator_access: Arc<EnclaveValidatorAccessor>,
 	stf_executor: Arc<EnclaveStfExecutor>,
-	extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
+	extrinsics_factory: Arc<IntegriteeExtrinsicsFactory>,
 	node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
 ) -> Result<IntegriteeParentchainBlockImporter> {
 	let state_observer = GLOBAL_STATE_OBSERVER_COMPONENT.get()?;
@@ -79,7 +81,7 @@ pub(crate) fn create_integritee_parentchain_block_importer(
 pub(crate) fn create_target_a_parentchain_block_importer(
 	validator_access: Arc<EnclaveValidatorAccessor>,
 	stf_executor: Arc<EnclaveStfExecutor>,
-	extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
+	extrinsics_factory: Arc<TargetAExtrinsicsFactory>,
 	node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
 ) -> Result<TargetAParentchainBlockImporter> {
 	let state_observer = GLOBAL_STATE_OBSERVER_COMPONENT.get()?;
@@ -110,7 +112,7 @@ pub(crate) fn create_target_a_parentchain_block_importer(
 pub(crate) fn create_target_b_parentchain_block_importer(
 	validator_access: Arc<EnclaveValidatorAccessor>,
 	stf_executor: Arc<EnclaveStfExecutor>,
-	extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
+	extrinsics_factory: Arc<TargetBExtrinsicsFactory>,
 	node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
 ) -> Result<TargetBParentchainBlockImporter> {
 	let state_observer = GLOBAL_STATE_OBSERVER_COMPONENT.get()?;
@@ -138,14 +140,44 @@ pub(crate) fn create_target_b_parentchain_block_importer(
 	))
 }
 
-pub(crate) fn create_extrinsics_factory(
+pub(crate) fn create_integritee_extrinsics_factory(
 	genesis_hash: H256,
 	nonce_cache: Arc<NonceCache>,
 	node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
-) -> Result<Arc<EnclaveExtrinsicsFactory>> {
+) -> Result<Arc<IntegriteeExtrinsicsFactory>> {
 	let signer = GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT.get()?.retrieve_key()?;
 
-	Ok(Arc::new(EnclaveExtrinsicsFactory::new(
+	Ok(Arc::new(IntegriteeExtrinsicsFactory::new(
+		genesis_hash,
+		EnclaveParentchainSigner::new(signer),
+		nonce_cache,
+		node_metadata_repository,
+	)))
+}
+
+pub(crate) fn create_target_a_extrinsics_factory(
+	genesis_hash: H256,
+	nonce_cache: Arc<NonceCache>,
+	node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
+) -> Result<Arc<TargetAExtrinsicsFactory>> {
+	let signer = GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT.get()?.retrieve_key()?;
+
+	Ok(Arc::new(TargetAExtrinsicsFactory::new(
+		genesis_hash,
+		EnclaveParentchainSigner::new(signer),
+		nonce_cache,
+		node_metadata_repository,
+	)))
+}
+
+pub(crate) fn create_target_b_extrinsics_factory(
+	genesis_hash: H256,
+	nonce_cache: Arc<NonceCache>,
+	node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
+) -> Result<Arc<TargetBExtrinsicsFactory>> {
+	let signer = GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT.get()?.retrieve_key()?;
+
+	Ok(Arc::new(TargetBExtrinsicsFactory::new(
 		genesis_hash,
 		EnclaveParentchainSigner::new(signer),
 		nonce_cache,
@@ -157,7 +189,7 @@ pub(crate) fn create_integritee_offchain_immediate_import_dispatcher(
 	stf_executor: Arc<EnclaveStfExecutor>,
 	block_importer: IntegriteeParentchainBlockImporter,
 	validator_access: Arc<EnclaveValidatorAccessor>,
-	extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
+	extrinsics_factory: Arc<IntegriteeExtrinsicsFactory>,
 ) -> Result<Arc<IntegriteeParentchainBlockImportDispatcher>> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
@@ -187,7 +219,7 @@ pub(crate) fn create_target_a_offchain_immediate_import_dispatcher(
 	stf_executor: Arc<EnclaveStfExecutor>,
 	block_importer: TargetAParentchainBlockImporter,
 	validator_access: Arc<EnclaveValidatorAccessor>,
-	extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
+	extrinsics_factory: Arc<TargetAExtrinsicsFactory>,
 ) -> Result<Arc<TargetAParentchainBlockImportDispatcher>> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
@@ -217,7 +249,7 @@ pub(crate) fn create_target_b_offchain_immediate_import_dispatcher(
 	stf_executor: Arc<EnclaveStfExecutor>,
 	block_importer: TargetBParentchainBlockImporter,
 	validator_access: Arc<EnclaveValidatorAccessor>,
-	extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
+	extrinsics_factory: Arc<TargetBExtrinsicsFactory>,
 ) -> Result<Arc<TargetBParentchainBlockImportDispatcher>> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
