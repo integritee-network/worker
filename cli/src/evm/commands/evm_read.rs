@@ -56,20 +56,15 @@ impl EvmReadCommands {
 			TrustedGetter::evm_account_storages(sender_acc, execution_address, H256::zero())
 				.sign(&KeyPair::Sr25519(Box::new(sender))),
 		));
-		let res = perform_trusted_operation(cli, trusted_args, &top)?;
-
-		debug!("received result for balance");
-		if let Some(v) = res {
-			if let Ok(vd) = H256::decode(&mut v.as_slice()) {
+		match perform_trusted_operation::<H256>(cli, trusted_args, &top) {
+			Ok(hash) => {
 				println!("{:?}", vd);
-				Ok(CliResultOk::H256 { hash: vd })
-			} else {
-				error!("could not decode value. {:x?}", v);
-				Err(CliError::EvmRead { msg: format!("could not decode value. {:x?}", v) })
-			}
-		} else {
-			error!("Nothing in state!");
-			Err(CliError::EvmRead { msg: "Nothing in state!".to_string() })
+				Ok(CliResultOk::H256 { hash })
+			},
+			Err(e) => {
+				error!("Nothing in state! Reason: {:?} !", e);
+				Err(CliError::EvmRead { msg: "Nothing in state!".to_string() })
+			},
 		}
 	}
 }

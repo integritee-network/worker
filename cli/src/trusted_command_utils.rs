@@ -47,11 +47,9 @@ macro_rules! get_layer_two_nonce {
 				.sign(&KeyPair::Sr25519(Box::new($signer_pair.clone()))),
 		));
 		// final nonce = current system nonce + pending tx count, panic early
-		let res = perform_trusted_operation($cli, $trusted_args, &top).unwrap_or_default();
-		let nonce = match res {
-			Some(n) => Index::decode(&mut n.as_slice()).unwrap_or(0),
-			None => 0,
-		};
+		let nonce = perform_trusted_operation::<Index>($cli, $trusted_args, &top)
+			.ok()
+			.unwrap_or_default();
 		debug!("got system nonce: {:?}", nonce);
 		let pending_tx_count =
 			get_pending_trusted_calls_for($cli, $trusted_args, &$signer_pair.public().into()).len();
@@ -69,20 +67,7 @@ pub(crate) fn get_balance(cli: &Cli, trusted_args: &TrustedCli, arg_who: &str) -
 	let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
 		TrustedGetter::free_balance(who.public().into()).sign(&KeyPair::Sr25519(Box::new(who))),
 	));
-	let res = perform_trusted_operation(cli, trusted_args, &top).unwrap_or(None);
-	debug!("received result for balance");
-	decode_balance(res)
-}
-
-pub(crate) fn decode_balance(maybe_encoded_balance: Option<Vec<u8>>) -> Option<Balance> {
-	maybe_encoded_balance.and_then(|encoded_balance| {
-		if let Ok(vd) = Balance::decode(&mut encoded_balance.as_slice()) {
-			Some(vd)
-		} else {
-			warn!("Could not decode balance. maybe hasn't been set? {:x?}", encoded_balance);
-			None
-		}
-	})
+	perform_trusted_operation::<Balance>(cli, trusted_args, &top).ok()
 }
 
 pub(crate) fn get_keystore_path(trusted_args: &TrustedCli) -> PathBuf {

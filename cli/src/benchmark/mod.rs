@@ -19,9 +19,7 @@ use crate::{
 	command_utils::get_worker_api_direct,
 	get_layer_two_nonce,
 	trusted_cli::TrustedCli,
-	trusted_command_utils::{
-		decode_balance, get_identifiers, get_keystore_path, get_pair_from_str,
-	},
+	trusted_command_utils::{get_identifiers, get_keystore_path, get_pair_from_str},
 	trusted_operation::{get_json_request, get_state, perform_trusted_operation, wait_until},
 	Cli, CliResult, CliResultOk, SR25519_KEY_TYPE,
 };
@@ -289,13 +287,8 @@ fn get_nonce(
 	);
 
 	let getter_start_timer = Instant::now();
-	let getter_result = get_state(direct_client, shard, &getter).unwrap_or_default();
+	let nonce = get_state::<Index>(direct_client, shard, &getter).ok().unwrap_or_default();
 	let getter_execution_time = getter_start_timer.elapsed().as_millis();
-
-	let nonce = match getter_result {
-		Some(encoded_nonce) => Index::decode(&mut encoded_nonce.as_slice()).unwrap(),
-		None => Default::default(),
-	};
 	info!("Nonce getter execution took {} ms", getter_execution_time,);
 	debug!("Retrieved {:?} nonce for {:?}", nonce, account.public());
 	nonce
@@ -374,4 +367,15 @@ fn is_submitted(s: TrustedOperationStatus) -> bool {
 
 fn is_sidechain_block(s: TrustedOperationStatus) -> bool {
 	matches!(s, InSidechainBlock(_))
+}
+
+fn decode_balance(maybe_encoded_balance: Option<Vec<u8>>) -> Option<Balance> {
+	maybe_encoded_balance.and_then(|encoded_balance| {
+		if let Ok(vd) = Balance::decode(&mut encoded_balance.as_slice()) {
+			Some(vd)
+		} else {
+			warn!("Could not decode balance. maybe hasn't been set? {:x?}", encoded_balance);
+			None
+		}
+	})
 }
