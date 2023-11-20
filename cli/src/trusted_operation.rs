@@ -222,7 +222,12 @@ pub fn read_shard(trusted_args: &TrustedCli) -> StdResult<ShardIdentifier, codec
 			Ok(s) => ShardIdentifier::decode(&mut &s[..]),
 			_ => panic!("shard argument must be base58 encoded"),
 		},
-		None => match trusted_args.mrenclave.from_base58() {
+		None => match trusted_args
+			.mrenclave
+			.as_ref()
+			.expect("at least argument '--mrenclave' must be provided for this command")
+			.from_base58()
+		{
 			Ok(s) => ShardIdentifier::decode(&mut &s[..]),
 			_ => panic!("mrenclave argument must be base58 encoded"),
 		},

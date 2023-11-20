@@ -17,8 +17,8 @@
 use crate::{
 	error::{Error, Result},
 	initialization::global_components::{
-		EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveStfExecutor,
-		EnclaveValidatorAccessor, IntegriteeParentchainBlockImportDispatcher,
+		EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveStfEnclaveSigner,
+		EnclaveStfExecutor, EnclaveValidatorAccessor, IntegriteeParentchainBlockImportDispatcher,
 		IntegriteeParentchainTriggeredBlockImportDispatcher,
 		GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT,
 		GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT, GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT,
@@ -27,6 +27,7 @@ use crate::{
 	},
 };
 use codec::{Decode, Input};
+use itc_parentchain_block_import_dispatcher::BlockImportDispatcher;
 use itp_component_container::ComponentGetter;
 use std::{result::Result as StdResult, slice, sync::Arc};
 
@@ -170,4 +171,29 @@ pub(crate) fn get_stf_executor_from_solo_or_parachain() -> Result<Arc<EnclaveStf
 			return Err(Error::NoIntegriteeParentchainAssigned)
 		};
 	Ok(stf_executor)
+}
+
+pub(crate) fn get_stf_enclave_signer_from_solo_or_parachain() -> Result<Arc<EnclaveStfEnclaveSigner>>
+{
+	let stf_enclave_signer =
+		if let Ok(solochain_handler) = GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT.get() {
+			match &*solochain_handler.import_dispatcher {
+				BlockImportDispatcher::TriggeredDispatcher(dispatcher) =>
+					dispatcher.block_importer.indirect_calls_executor.stf_enclave_signer.clone(),
+				BlockImportDispatcher::ImmediateDispatcher(dispatcher) =>
+					dispatcher.block_importer.indirect_calls_executor.stf_enclave_signer.clone(),
+				_ => return Err(Error::NoIntegriteeParentchainAssigned),
+			}
+		} else if let Ok(parachain_handler) = GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT.get() {
+			match &*parachain_handler.import_dispatcher {
+				BlockImportDispatcher::TriggeredDispatcher(dispatcher) =>
+					dispatcher.block_importer.indirect_calls_executor.stf_enclave_signer.clone(),
+				BlockImportDispatcher::ImmediateDispatcher(dispatcher) =>
+					dispatcher.block_importer.indirect_calls_executor.stf_enclave_signer.clone(),
+				_ => return Err(Error::NoIntegriteeParentchainAssigned),
+			}
+		} else {
+			return Err(Error::NoIntegriteeParentchainAssigned)
+		};
+	Ok(stf_enclave_signer)
 }

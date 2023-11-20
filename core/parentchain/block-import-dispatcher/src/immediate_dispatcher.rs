@@ -22,7 +22,7 @@ use std::{boxed::Box, vec::Vec};
 
 /// Block import dispatcher that immediately imports the blocks, without any processing or queueing.
 pub struct ImmediateDispatcher<BlockImporter> {
-	block_importer: BlockImporter,
+	pub block_importer: BlockImporter,
 	import_event_observers: Vec<Box<dyn Fn() + Send + Sync + 'static>>,
 }
 
