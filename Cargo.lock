@@ -3221,6 +3221,7 @@ dependencies = [
  "itp-sgx-crypto",
  "itp-sgx-runtime-primitives",
  "itp-stf-executor",
+ "itp-stf-interface",
  "itp-stf-primitives",
  "itp-test",
  "itp-top-pool-author",

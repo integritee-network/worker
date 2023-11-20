@@ -33,7 +33,7 @@ use itp_node_api::metadata::{
 	NodeMetadataTrait,
 };
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
-use itp_stf_executor::traits::StfEnclaveSigning;
+use itp_stf_executor::traits::{StfEnclaveSigning, StfShardVaultQuery};
 use itp_stf_primitives::{
 	traits::{IndirectExecutor, TrustedCallSigning, TrustedCallVerification},
 	types::AccountId,
@@ -129,7 +129,7 @@ impl<
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
 		+ ShieldingCryptoEncrypt<Error = itp_sgx_crypto::Error>,
-	StfEnclaveSigner: StfEnclaveSigning<TCS>,
+	StfEnclaveSigner: StfEnclaveSigning<TCS> + StfShardVaultQuery,
 	TopPoolAuthor: AuthorApi<H256, H256, TCS, G> + Send + Sync + 'static,
 	NodeMetadataProvider: AccessNodeMetadata,
 	FilterIndirectCalls: FilterIntoDataFrom<NodeMetadataProvider::MetadataType>,
@@ -166,7 +166,10 @@ impl<
 		})?;
 		trace!("xt_statuses:: {:?}", xt_statuses);
 
-		ParentchainEventHandler::handle_events(self, events)?;
+		let shard = self.get_default_shard();
+		if let Ok(vault) = self.stf_enclave_signer.get_shard_vault(&shard) {
+			ParentchainEventHandler::handle_events(self, events, &vault)?;
+		}
 
 		// This would be catastrophic but should never happen
 		if xt_statuses.len() != block.extrinsics().len() {
@@ -253,7 +256,7 @@ impl<
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
 		+ ShieldingCryptoEncrypt<Error = itp_sgx_crypto::Error>,
-	StfEnclaveSigner: StfEnclaveSigning<TCS>,
+	StfEnclaveSigner: StfEnclaveSigning<TCS> + StfShardVaultQuery,
 	TopPoolAuthor: AuthorApi<H256, H256, TCS, G> + Send + Sync + 'static,
 	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
 	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,

@@ -187,6 +187,7 @@ where
 	fn handle_events(
 		_: &Executor,
 		_: impl itp_types::parentchain::FilterEvents,
+		_: &AccountId,
 	) -> core::result::Result<(), Error> {
 		Ok(())
 	}

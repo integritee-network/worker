@@ -22,16 +22,8 @@ use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
 use itc_parentchain_indirect_calls_executor::error::Error;
 use itp_stf_primitives::{traits::IndirectExecutor, types::TrustedOperation};
 use itp_types::parentchain::{AccountId, FilterEvents, HandleParentchainEvents, ParentchainError};
+use itp_utils::hex::hex_encode;
 use log::*;
-
-type Seed = [u8; 32];
-
-const ALICE_ENCODED: Seed = [
-	212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133, 88, 133,
-	76, 205, 227, 154, 86, 132, 231, 165, 109, 162, 125,
-];
-
-const SHIELDING_ACCOUNT: AccountId = AccountId::new(ALICE_ENCODED);
 
 pub struct ParentchainEventHandler {}
 
@@ -61,15 +53,22 @@ impl<Executor> HandleParentchainEvents<Executor, TrustedCallSigned, Error>
 where
 	Executor: IndirectExecutor<TrustedCallSigned, Error>,
 {
-	fn handle_events(executor: &Executor, events: impl FilterEvents) -> Result<(), Error> {
+	fn handle_events(
+		executor: &Executor,
+		events: impl FilterEvents,
+		vault_account: &AccountId,
+	) -> Result<(), Error> {
 		let filter_events = events.get_transfer_events();
-
+		trace!(
+			"filtering transfer events to shard vault account: {}",
+			hex_encode(vault_account.encode().as_slice())
+		);
 		if let Ok(events) = filter_events {
 			events
 				.iter()
-				.filter(|&event| event.to == SHIELDING_ACCOUNT)
+				.filter(|&event| event.to == *vault_account)
 				.try_for_each(|event| {
-					info!("transfer_event: {}", event);
+					info!("found transfer_event to vault account: {}", event);
 					//call = IndirectCall::ShieldFunds(ShieldFundsArgs{ })
 					Self::shield_funds(executor, &event.from, event.amount)
 				})
