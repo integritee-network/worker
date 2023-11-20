@@ -129,6 +129,7 @@ where
 	fn handle_events(
 		executor: &Executor,
 		events: impl FilterEvents,
+		vault_account: &AccountId,
 	) -> core::result::Result<(), Error>;
 }
 

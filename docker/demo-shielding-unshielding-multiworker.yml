@@ -1,5 +1,5 @@
 services:
-  demo-indirect-invocation:
+  demo-shielding-unshielding-multiworker:
     image: integritee-cli:${VERSION:-dev}
     devices:
       - "${SGX_PROVISION:-/dev/null}:/dev/sgx/provision"
@@ -24,7 +24,7 @@ services:
     networks:
       - integritee-test-network
     entrypoint:
-      "/usr/local/worker-cli/demo_indirect_invocation.sh -p 9912 -u ws://integritee-node
+      "/usr/local/worker-cli/demo_shielding_unshielding_multiworker.sh -p 9912 -u ws://integritee-node
       -V wss://integritee-worker-1 -A 2011 -W wss://integritee-worker-2 -B 2012 -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"
 networks:

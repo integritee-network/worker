@@ -17,8 +17,9 @@
 
 use crate::{
 	trusted_base_cli::commands::{
-		balance::BalanceCommand, nonce::NonceCommand, set_balance::SetBalanceCommand,
-		transfer::TransferCommand, unshield_funds::UnshieldFundsCommand,
+		balance::BalanceCommand, get_shard::GetShardCommand, get_shard_vault::GetShardVaultCommand,
+		nonce::NonceCommand, set_balance::SetBalanceCommand, transfer::TransferCommand,
+		unshield_funds::UnshieldFundsCommand,
 	},
 	trusted_cli::TrustedCli,
 	trusted_command_utils::get_keystore_path,
@@ -54,6 +55,12 @@ pub enum TrustedBaseCommand {
 	/// gets the nonce of a given account, taking the pending trusted calls
 	/// in top pool in consideration
 	Nonce(NonceCommand),
+
+	/// get shard for this worker
+	GetShard(GetShardCommand),
+
+	/// get shard vault for shielding (if defined for this worker)
+	GetShardVault(GetShardVaultCommand),
 }
 
 impl TrustedBaseCommand {
@@ -66,6 +73,8 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::Balance(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::UnshieldFunds(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::Nonce(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::GetShard(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::GetShardVault(cmd) => cmd.run(cli, trusted_cli),
 		}
 	}
 }

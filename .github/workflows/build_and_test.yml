@@ -272,7 +272,7 @@ jobs:
         include:
           - test: M6
             flavor_id: sidechain
-            demo_name: demo-indirect-invocation
+            demo_name: demo-shielding-unshielding-multiworker
             host: test-runner-sgx
             sgx_mode: HW
           - test: M8
@@ -287,7 +287,7 @@ jobs:
             sgx_mode: HW
           - test: M6
             flavor_id: offchain-worker
-            demo_name: demo-indirect-invocation
+            demo_name: demo-shielding-unshielding-multiworker
             host: test-runner-sgx
             sgx_mode: HW
           - test: Teeracle

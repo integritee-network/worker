@@ -16,6 +16,7 @@ itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features 
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
 itp-sgx-runtime-primitives = { path = "../../../core-primitives/sgx-runtime-primitives", default-features = false }
 itp-stf-executor = { path = "../../../core-primitives/stf-executor", default-features = false }
+itp-stf-interface = { path = "../../../core-primitives/stf-interface", default-features = false }
 itp-stf-primitives = { path = "../../../core-primitives/stf-primitives", default-features = false }
 itp-test = { path = "../../../core-primitives/test", default-features = false }
 itp-top-pool-author = { path = "../../../core-primitives/top-pool-author", default-features = false }
@@ -59,6 +60,7 @@ std = [
     "itp-ocall-api/std",
     "itp-sgx-crypto/std",
     "itp-stf-executor/std",
+    "itp-stf-interface/std",
     "itp-top-pool-author/std",
     "itp-api-client-types/std",
     "itp-test/std",

@@ -49,6 +49,10 @@ where
 	) -> Result<TCS>;
 }
 
+pub trait StfShardVaultQuery {
+	fn get_shard_vault(&self, shard: &ShardIdentifier) -> Result<AccountId>;
+}
+
 /// Proposes a state update to `Externalities`.
 pub trait StateUpdateProposer<TCS, G>
 where

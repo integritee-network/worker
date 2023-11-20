@@ -47,7 +47,7 @@ pub struct ParentchainBlockImporter<
 	validator_accessor: Arc<ValidatorAccessor>,
 	stf_executor: Arc<StfExecutor>,
 	extrinsics_factory: Arc<ExtrinsicsFactory>,
-	indirect_calls_executor: Arc<IndirectCallsExecutor>,
+	pub indirect_calls_executor: Arc<IndirectCallsExecutor>,
 	_phantom: PhantomData<ParentchainBlock>,
 }
 
@@ -144,7 +144,7 @@ impl<
 				Ok(executed_shielding_calls) => {
 					calls.push(executed_shielding_calls);
 				},
-				Err(_) => error!("[{:?}] Error executing relevant extrinsics", id),
+				Err(e) => error!("[{:?}] Error executing relevant extrinsics: {:?}", id, e),
 			};
 
 			info!(

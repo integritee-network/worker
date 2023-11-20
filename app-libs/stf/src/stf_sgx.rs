@@ -26,11 +26,15 @@ use itp_stf_interface::{
 	parentchain_pallet::ParentchainPalletInterface,
 	sudo_pallet::SudoPalletInterface,
 	system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface},
-	ExecuteCall, ExecuteGetter, InitState, StateCallInterface, StateGetterInterface, UpdateState,
+	ExecuteCall, ExecuteGetter, InitState, ShardVaultQuery, StateCallInterface,
+	StateGetterInterface, UpdateState, SHARD_VAULT_KEY,
 };
 use itp_stf_primitives::{error::StfError, traits::TrustedCallVerification};
 use itp_storage::storage_value_key;
-use itp_types::{parentchain::ParentchainId, OpaqueCall};
+use itp_types::{
+	parentchain::{AccountId, ParentchainId},
+	OpaqueCall,
+};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
 use sp_runtime::traits::StaticLookup;
@@ -157,6 +161,17 @@ where
 {
 	fn execute_getter(state: &mut State, getter: G) -> Option<Vec<u8>> {
 		state.execute_with(|| getter.execute())
+	}
+}
+
+impl<TCS, G, State, Runtime> ShardVaultQuery<State> for Stf<TCS, G, State, Runtime>
+where
+	State: SgxExternalitiesTrait + Debug,
+{
+	fn get_vault(state: &mut State) -> Option<AccountId> {
+		state
+			.get(SHARD_VAULT_KEY.as_bytes())
+			.and_then(|v| Decode::decode(&mut v.clone().as_slice()).ok())
 	}
 }
 
