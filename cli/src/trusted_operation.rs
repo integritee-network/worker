@@ -306,11 +306,7 @@ fn send_direct_request<T: Decode + Debug>(
 					if !return_value.do_watch {
 						debug!("do watch is false, closing connection");
 						direct_api.close().unwrap();
-						let value = T::decode(&mut return_value.value.as_slice()).map_err(|e| {
-							TrustedOperationError::Default {
-								msg: format!("Could not decode result value: {:?}", e),
-							}
-						})?;
+						let value = decode_response_value(&mut return_value.value.as_slice())?;
 						return Ok(value)
 					}
 				};
