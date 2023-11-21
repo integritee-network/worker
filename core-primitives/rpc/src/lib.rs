@@ -49,10 +49,17 @@ impl RpcReturnValue {
 }
 
 #[derive(Clone, Encode, Decode, Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Id {
+	Number(u32),
+	Text(String),
+}
+
+#[derive(Clone, Encode, Decode, Debug, Serialize, Deserialize)]
 pub struct RpcResponse {
 	pub jsonrpc: String,
 	pub result: String, // hex encoded RpcReturnValue
-	pub id: u32,
+	pub id: Id,
 }
 
 #[derive(Clone, Encode, Decode, Serialize, Deserialize)]
@@ -60,7 +67,7 @@ pub struct RpcRequest {
 	pub jsonrpc: String,
 	pub method: String,
 	pub params: Vec<String>,
-	pub id: i32,
+	pub id: Id,
 }
 
 impl RpcRequest {
@@ -68,6 +75,42 @@ impl RpcRequest {
 		method: String,
 		params: Vec<String>,
 	) -> Result<String, serde_json::Error> {
-		serde_json::to_string(&RpcRequest { jsonrpc: "2.0".to_owned(), method, params, id: 1 })
+		serde_json::to_string(&RpcRequest {
+			jsonrpc: "2.0".to_owned(),
+			method,
+			params,
+			id: Id::Number(1),
+		})
+	}
+}
+
+#[cfg(test)]
+pub mod tests {
+	use crate::Id;
+
+	#[test]
+	pub fn deserialize_string_id() {
+		let id: Id = serde_json::from_str(r#""1""#).unwrap();
+		assert!(matches!(id, Id::Text(t) if t == "1"))
+	}
+
+	#[test]
+	pub fn deserialize_number_id() {
+		let id: Id = serde_json::from_str(r#"1"#).unwrap();
+		assert!(matches!(id, Id::Number(t) if t == 1))
+	}
+
+	#[test]
+	pub fn serialize_string_id() {
+		let id = Id::Text("1".to_string());
+		let serialized = serde_json::to_string(&id).unwrap();
+		assert_eq!(serialized, r#""1""#)
+	}
+
+	#[test]
+	pub fn serialize_number_id() {
+		let id = Id::Number(1);
+		let serialized = serde_json::to_string(&id).unwrap();
+		assert_eq!(serialized, r#"1"#)
 	}
 }
