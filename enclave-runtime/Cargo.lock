@@ -2059,6 +2059,7 @@ dependencies = [
  "itp-node-api",
  "itp-nonce-cache",
  "itp-types",
+ "itp-utils",
  "log",
  "parity-scale-codec",
  "sgx_tstd",

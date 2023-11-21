@@ -17,7 +17,7 @@
 
 use crate::ApiResult;
 use itp_api_client_types::{
-	traits::GetAccountInformation, Api, Config, ParentchainRuntimeConfig, Request,
+	traits::GetAccountInformation, Api, Config, ParentchainPlainTipRuntimeConfig, Request,
 };
 
 /// ApiClient extension that contains some convenience methods around accounts.
@@ -31,13 +31,13 @@ pub trait AccountApi {
 	fn get_free_balance(&self, who: &Self::AccountId) -> ApiResult<Self::Balance>;
 }
 
-impl<Client> AccountApi for Api<ParentchainRuntimeConfig, Client>
+impl<Client> AccountApi for Api<ParentchainPlainTipRuntimeConfig, Client>
 where
 	Client: Request,
 {
-	type AccountId = <ParentchainRuntimeConfig as Config>::AccountId;
-	type Index = <ParentchainRuntimeConfig as Config>::Index;
-	type Balance = <ParentchainRuntimeConfig as Config>::Balance;
+	type AccountId = <ParentchainPlainTipRuntimeConfig as Config>::AccountId;
+	type Index = <ParentchainPlainTipRuntimeConfig as Config>::Index;
+	type Balance = <ParentchainPlainTipRuntimeConfig as Config>::Balance;
 
 	fn get_nonce_of(&self, who: &Self::AccountId) -> ApiResult<Self::Index> {
 		Ok(self.get_account_info(who)?.map(|info| info.nonce).unwrap_or_default())

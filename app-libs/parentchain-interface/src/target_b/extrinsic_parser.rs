@@ -26,8 +26,7 @@ use itp_types::parentchain::{Balance, Hash};
 // re-export integritee network types
 pub use itp_node_api::api_client::{
 	ParentchainAdditionalParams, ParentchainAdditionalSigned, ParentchainExtrinsicParams,
-	ParentchainRuntimeConfig, ParentchainSignedExtra, ParentchainTip,
-	Signature as ParentchainSignature,
+	ParentchainSignedExtra, ParentchainTip, Signature as ParentchainSignature,
 };
 
 pub struct ExtrinsicParser<SignedExtra> {

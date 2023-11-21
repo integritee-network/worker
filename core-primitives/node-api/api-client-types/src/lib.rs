@@ -180,7 +180,20 @@ impl Default for ParentchainAdditionalParams {
 	}
 }
 use sp_runtime::generic::Era;
-pub use DefaultRuntimeConfig as ParentchainRuntimeConfig;
+use substrate_api_client::ac_primitives::WithExtrinsicParams;
+
+/// Standard runtime config for Substrate and Polkadot nodes.
+pub type ParentchainPlainTipRuntimeConfig =
+	WithExtrinsicParams<AssetRuntimeConfig, PlainTipExtrinsicParams<AssetRuntimeConfig>>;
+
+/// runtime config for chains like Asset Hub or Encointer
+pub type ParentchainAssetTipRuntimeConfig =
+	WithExtrinsicParams<AssetRuntimeConfig, AssetTipExtrinsicParams<AssetRuntimeConfig>>;
+
+/// A struct representing the signed extra and additional parameters required
+/// to construct a transaction and pay in token fees.
+pub type PlainTipExtrinsicParams<T> = GenericExtrinsicParams<T, PlainTip<<T as Config>::Balance>>;
+pub type AssetTipExtrinsicParams<T> = GenericExtrinsicParams<T, AssetTip<<T as Config>::Balance>>;
 
 pub type ParentchainUncheckedExtrinsic<Call> =
 	UncheckedExtrinsicV4<Address, Call, PairSignature, ParentchainSignedExtra>;
@@ -196,7 +209,7 @@ pub use api::*;
 
 #[cfg(feature = "std")]
 mod api {
-	use super::ParentchainRuntimeConfig;
+	use super::{ParentchainAssetTipRuntimeConfig, ParentchainPlainTipRuntimeConfig};
 	use sp_runtime::generic::SignedBlock as GenericSignedBlock;
 	use substrate_api_client::Api;
 
@@ -212,5 +225,6 @@ mod api {
 
 	pub type SignedBlock = GenericSignedBlock<Block>;
 
-	pub type ParentchainApi = Api<ParentchainRuntimeConfig, TungsteniteRpcClient>;
+	pub type ParentchainPlainTipApi = Api<ParentchainPlainTipRuntimeConfig, TungsteniteRpcClient>;
+	pub type ParentchainAssetTipApi = Api<ParentchainAssetTipRuntimeConfig, TungsteniteRpcClient>;
 }

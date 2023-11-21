@@ -54,6 +54,7 @@ pub trait ChainApi {
 	fn grandpa_authorities_proof(&self, hash: Option<Self::Hash>) -> ApiResult<StorageProof>;
 	fn get_events_value_proof(&self, block_hash: Option<Self::Hash>) -> ApiResult<StorageProof>;
 	fn get_events_for_block(&self, block_hash: Option<Self::Hash>) -> ApiResult<RawEvents>;
+	fn set_signer()
 }
 
 impl<RuntimeConfig, Client> ChainApi for Api<RuntimeConfig, Client>

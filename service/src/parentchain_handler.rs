@@ -22,7 +22,6 @@ use itc_parentchain::{
 	light_client::light_client_init_params::{GrandpaParams, SimpleParams},
 	primitives::{ParentchainId, ParentchainInitParams},
 };
-use itp_api_client_types::ParentchainApi;
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
 use itp_node_api::api_client::ChainApi;
 use itp_storage::StorageProof;
@@ -65,7 +64,7 @@ pub(crate) struct ParentchainHandler<ParentchainApi, EnclaveApi> {
 
 // #TODO: #1451: Reintroduce `ParentchainApi: ChainApi` once there is no trait bound conflict
 // any more with the api-clients own trait definitions.
-impl<EnclaveApi> ParentchainHandler<ParentchainApi, EnclaveApi>
+impl<ParentchainApi: ChainApi, EnclaveApi> ParentchainHandler<ParentchainApi, EnclaveApi>
 where
 	EnclaveApi: EnclaveBase,
 {
@@ -130,7 +129,8 @@ where
 	}
 }
 
-impl<EnclaveApi> HandleParentchain for ParentchainHandler<ParentchainApi, EnclaveApi>
+impl<ParentchainApi, EnclaveApi> HandleParentchain
+	for ParentchainHandler<ParentchainApi, EnclaveApi>
 where
 	EnclaveApi: Sidechain + EnclaveBase,
 {

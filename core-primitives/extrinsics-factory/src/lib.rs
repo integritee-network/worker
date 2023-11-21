@@ -20,6 +20,7 @@
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
 
+extern crate core;
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
@@ -30,6 +31,7 @@ pub mod sgx_reexport_prelude {
 }
 
 use codec::Encode;
+use core::fmt::Debug;
 use error::Result;
 use itp_node_api::{
 	api_client::{
@@ -43,6 +45,8 @@ use itp_types::{
 	parentchain::{AccountId, Hash, Index},
 	OpaqueCall,
 };
+use itp_utils::hex::hex_encode;
+use log::trace;
 use sp_core::H256;
 use sp_runtime::{generic::Era, OpaqueExtrinsic};
 use std::{sync::Arc, vec::Vec};
@@ -169,6 +173,7 @@ impl<
 	NonceCache: MutateNonce,
 	NodeMetadataRepository: AccessNodeMetadata<MetadataType = NodeMetadata>,
 	MyExtrinsicParams: Clone
+		+ Debug
 		+ ExtrinsicParamsAdjustments<MyAdditionalParams>
 		+ ExtrinsicParams<
 			Index,
@@ -198,6 +203,8 @@ impl<
 			.iter()
 			.map(|call| {
 				xt_params = xt_params.with_nonce(nonce_value);
+				trace!("create_extrinsic: encoded call: {} ", hex_encode(&call.encode()));
+				trace!("   extrinsic params: {:?}", xt_params);
 				let xt = compose_extrinsic_offline!(&self.signer, call, xt_params.clone()).encode();
 				nonce_value += 1;
 				xt

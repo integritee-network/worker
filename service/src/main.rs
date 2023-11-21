@@ -25,6 +25,7 @@ mod error;
 mod globals;
 mod initialized_service;
 mod ocall_bridge;
+mod parentchain_config;
 mod parentchain_handler;
 mod prometheus_metrics;
 mod setup;

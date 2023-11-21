@@ -18,7 +18,6 @@
 
 use crate::ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, WorkerOnChainBridge};
 use codec::{Decode, Encode};
-use itp_api_client_types::ParentchainApi;
 use itp_node_api::node_api_factory::CreateNodeApi;
 use itp_types::{parentchain::ParentchainId, WorkerRequest, WorkerResponse};
 use log::*;
@@ -49,7 +48,7 @@ impl<F> WorkerOnChainOCall<F> {
 }
 
 impl<F: CreateNodeApi> WorkerOnChainOCall<F> {
-	pub fn create_api(&self, parentchain_id: ParentchainId) -> OCallBridgeResult<ParentchainApi> {
+	pub fn create_api(&self, parentchain_id: ParentchainId) -> OCallBridgeResult<F::Api> {
 		Ok(match parentchain_id {
 			ParentchainId::Integritee => self.integritee_api_factory.create_api()?,
 			ParentchainId::TargetA => self

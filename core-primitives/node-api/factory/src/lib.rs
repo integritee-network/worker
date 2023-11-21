@@ -16,12 +16,15 @@
 
 */
 
-use itp_api_client_types::{ParentchainApi, TungsteniteRpcClient};
+use itp_api_client_extensions::PalletTeerexApi;
+use itp_api_client_types::{Request, TungsteniteRpcClient};
 use sp_core::sr25519;
+use std::marker::PhantomData;
 
 /// Trait to create a node API, based on a node URL and signer.
 pub trait CreateNodeApi {
-	fn create_api(&self) -> Result<ParentchainApi>;
+	type Api: PalletTeerexApi;
+	fn create_api(&self) -> Result<Self::Api>;
 }
 
 /// Node API factory error.
@@ -49,25 +52,34 @@ impl From<itp_api_client_types::ApiClientError> for NodeApiFactoryError {
 
 pub type Result<T> = std::result::Result<T, NodeApiFactoryError>;
 
-/// Node API factory implementation.
-pub struct NodeApiFactory {
-	node_url: String,
-	signer: sr25519::Pair,
+pub trait ParentchainApiWrapper {
+	type Api: PalletTeerexApi;
+	type Client;
+	fn new_api(client: Self::Client, signer: sr25519::Pair) -> Result<Self::Api>;
 }
 
-impl NodeApiFactory {
+/// Node API factory implementation.
+pub struct NodeApiFactory<ApiWrapper> {
+	node_url: String,
+	signer: sr25519::Pair,
+	_phantom: PhantomData<ApiWrapper>,
+}
+
+impl<ApiWrapper> NodeApiFactory<ApiWrapper> {
 	pub fn new(url: String, signer: sr25519::Pair) -> Self {
-		NodeApiFactory { node_url: url, signer }
+		NodeApiFactory { node_url: url, signer, _phantom: Default::default() }
 	}
 }
 
-impl CreateNodeApi for NodeApiFactory {
-	fn create_api(&self) -> Result<ParentchainApi> {
+impl<ApiWrapper> CreateNodeApi for NodeApiFactory<ApiWrapper>
+where
+	ApiWrapper: ParentchainApiWrapper<Client = TungsteniteRpcClient>,
+{
+	type Api = ApiWrapper::Api;
+	fn create_api(&self) -> Result<Self::Api> {
 		let rpc_client = TungsteniteRpcClient::new(self.node_url.as_str(), 5)
 			.map_err(NodeApiFactoryError::FailedToCreateRpcClient)?;
-		let mut api =
-			ParentchainApi::new(rpc_client).map_err(NodeApiFactoryError::FailedToCreateNodeApi)?;
-		api.set_signer(self.signer.clone().into());
+		let mut api = ApiWrapper::new_api(rpc_client, self.signer.clone())?;
 		Ok(api)
 	}
 }
