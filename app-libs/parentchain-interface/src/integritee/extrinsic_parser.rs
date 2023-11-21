@@ -14,28 +14,24 @@
 	limitations under the License.
 
 */
-
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use itp_node_api::api_client::{
-	Address, CallIndex, DefaultRuntimeConfig, GenericExtrinsicParams, PairSignature, PlainTip,
-	Signature, UncheckedExtrinsicV4,
+	Address, CallIndex, DefaultRuntimeConfig, GenericAdditionalSigned, GenericExtrinsicParams,
+	PairSignature, Signature, UncheckedExtrinsicV4,
 };
 use itp_types::parentchain::{Balance, Hash};
 
 // re-export integritee network types
 pub use itp_node_api::api_client::{
-	GenericAdditionalSigned, ParentchainAdditionalParams, ParentchainPlainTip as ParentchainTip,
-	ParentchainRuntimeConfig, ParentchainSignedExtra, Signature as ParentchainSignature,
+	ParentchainAdditionalParams, ParentchainAdditionalSigned, ParentchainExtrinsicParams,
+	ParentchainRuntimeConfig, ParentchainSignedExtra, ParentchainTip,
+	Signature as ParentchainSignature,
 };
-pub type ParentchainExtrinsicParams =
-	GenericExtrinsicParams<ParentchainRuntimeConfig, PlainTip<Balance>>;
 
 pub struct ExtrinsicParser<SignedExtra> {
 	_phantom: PhantomData<SignedExtra>,
 }
-
-pub type ParentchainAdditionalSigned = GenericAdditionalSigned<Hash>;
 
 /// Parses the extrinsics corresponding to the parentchain.
 pub type ParentchainExtrinsicParser = ExtrinsicParser<ParentchainSignedExtra>;

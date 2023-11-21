@@ -19,20 +19,22 @@ use crate::{
 	error::Result,
 	initialization::{
 		global_components::{
-			EnclaveNodeMetadataRepository, EnclaveOffchainWorkerExecutor,
-			EnclaveParentchainBlockImportQueue, EnclaveParentchainEventImportQueue,
-			EnclaveParentchainSigner, EnclaveStfExecutor, EnclaveValidatorAccessor,
-			IntegriteeExtrinsicsFactory, IntegriteeParentchainBlockImportDispatcher,
+			EnclaveNodeMetadataRepository, EnclaveParentchainBlockImportQueue,
+			EnclaveParentchainEventImportQueue, EnclaveParentchainSigner, EnclaveStfExecutor,
+			EnclaveValidatorAccessor, IntegriteeExtrinsicsFactory,
+			IntegriteeOffchainWorkerExecutor, IntegriteeParentchainBlockImportDispatcher,
 			IntegriteeParentchainBlockImporter,
 			IntegriteeParentchainImmediateBlockImportDispatcher,
 			IntegriteeParentchainIndirectCallsExecutor,
 			IntegriteeParentchainTriggeredBlockImportDispatcher, TargetAExtrinsicsFactory,
-			TargetAParentchainBlockImportDispatcher, TargetAParentchainBlockImporter,
-			TargetAParentchainImmediateBlockImportDispatcher,
-			TargetAParentchainIndirectCallsExecutor, TargetBExtrinsicsFactory,
-			TargetBParentchainBlockImportDispatcher, TargetBParentchainBlockImporter,
-			TargetBParentchainImmediateBlockImportDispatcher,
-			TargetBParentchainIndirectCallsExecutor, GLOBAL_OCALL_API_COMPONENT,
+			TargetAOffchainWorkerExecutor, TargetAParentchainBlockImportDispatcher,
+			TargetAParentchainBlockImporter, TargetAParentchainImmediateBlockImportDispatcher,
+			TargetAParentchainIndirectCallsExecutor,
+			TargetAParentchainTriggeredBlockImportDispatcher, TargetBExtrinsicsFactory,
+			TargetBOffchainWorkerExecutor, TargetBParentchainBlockImportDispatcher,
+			TargetBParentchainBlockImporter, TargetBParentchainImmediateBlockImportDispatcher,
+			TargetBParentchainIndirectCallsExecutor,
+			TargetBParentchainTriggeredBlockImportDispatcher, GLOBAL_OCALL_API_COMPONENT,
 			GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT,
 			GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STATE_OBSERVER_COMPONENT,
 			GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
@@ -40,7 +42,9 @@ use crate::{
 		EnclaveStfEnclaveSigner,
 	},
 };
+use ita_parentchain_interface::{integritee, target_a, target_b};
 use itp_component_container::ComponentGetter;
+use itp_node_api::api_client::ExtrinsicParams;
 use itp_nonce_cache::NonceCache;
 use itp_sgx_crypto::key_repository::AccessKey;
 use log::*;
@@ -150,6 +154,13 @@ pub(crate) fn create_integritee_extrinsics_factory(
 	Ok(Arc::new(IntegriteeExtrinsicsFactory::new(
 		genesis_hash,
 		EnclaveParentchainSigner::new(signer),
+		integritee::ParentchainExtrinsicParams::new(
+			0,
+			0,
+			0,
+			genesis_hash,
+			integritee::ParentchainAdditionalParams::default(),
+		),
 		nonce_cache,
 		node_metadata_repository,
 	)))
@@ -165,6 +176,13 @@ pub(crate) fn create_target_a_extrinsics_factory(
 	Ok(Arc::new(TargetAExtrinsicsFactory::new(
 		genesis_hash,
 		EnclaveParentchainSigner::new(signer),
+		target_a::ParentchainExtrinsicParams::new(
+			0,
+			0,
+			0,
+			genesis_hash,
+			target_a::ParentchainAdditionalParams::default(),
+		),
 		nonce_cache,
 		node_metadata_repository,
 	)))
@@ -180,6 +198,13 @@ pub(crate) fn create_target_b_extrinsics_factory(
 	Ok(Arc::new(TargetBExtrinsicsFactory::new(
 		genesis_hash,
 		EnclaveParentchainSigner::new(signer),
+		target_b::ParentchainExtrinsicParams::new(
+			0,
+			0,
+			0,
+			genesis_hash,
+			target_b::ParentchainAdditionalParams::default(),
+		),
 		nonce_cache,
 		node_metadata_repository,
 	)))
@@ -194,7 +219,7 @@ pub(crate) fn create_integritee_offchain_immediate_import_dispatcher(
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 
-	let offchain_worker_executor = Arc::new(EnclaveOffchainWorkerExecutor::new(
+	let offchain_worker_executor = Arc::new(IntegriteeOffchainWorkerExecutor::new(
 		top_pool_author,
 		stf_executor,
 		state_handler,
@@ -224,7 +249,7 @@ pub(crate) fn create_target_a_offchain_immediate_import_dispatcher(
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 
-	let offchain_worker_executor = Arc::new(EnclaveOffchainWorkerExecutor::new(
+	let offchain_worker_executor = Arc::new(TargetAOffchainWorkerExecutor::new(
 		top_pool_author,
 		stf_executor,
 		state_handler,
@@ -254,7 +279,7 @@ pub(crate) fn create_target_b_offchain_immediate_import_dispatcher(
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 
-	let offchain_worker_executor = Arc::new(EnclaveOffchainWorkerExecutor::new(
+	let offchain_worker_executor = Arc::new(TargetBOffchainWorkerExecutor::new(
 		top_pool_author,
 		stf_executor,
 		state_handler,
@@ -275,7 +300,7 @@ pub(crate) fn create_target_b_offchain_immediate_import_dispatcher(
 	))))
 }
 
-pub(crate) fn create_sidechain_triggered_import_dispatcher(
+pub(crate) fn create_sidechain_triggered_import_dispatcher_for_integritee(
 	block_importer: IntegriteeParentchainBlockImporter,
 ) -> Arc<IntegriteeParentchainBlockImportDispatcher> {
 	let parentchain_block_import_queue = EnclaveParentchainBlockImportQueue::default();
@@ -286,6 +311,36 @@ pub(crate) fn create_sidechain_triggered_import_dispatcher(
 		parentchain_event_import_queue,
 	);
 	Arc::new(IntegriteeParentchainBlockImportDispatcher::new_triggered_dispatcher(Arc::new(
+		triggered_dispatcher,
+	)))
+}
+
+pub(crate) fn create_sidechain_triggered_import_dispatcher_for_target_a(
+	block_importer: TargetAParentchainBlockImporter,
+) -> Arc<TargetAParentchainBlockImportDispatcher> {
+	let parentchain_block_import_queue = EnclaveParentchainBlockImportQueue::default();
+	let parentchain_event_import_queue = EnclaveParentchainEventImportQueue::default();
+	let triggered_dispatcher = TargetAParentchainTriggeredBlockImportDispatcher::new(
+		block_importer,
+		parentchain_block_import_queue,
+		parentchain_event_import_queue,
+	);
+	Arc::new(TargetAParentchainBlockImportDispatcher::new_triggered_dispatcher(Arc::new(
+		triggered_dispatcher,
+	)))
+}
+
+pub(crate) fn create_sidechain_triggered_import_dispatcher_for_target_b(
+	block_importer: TargetBParentchainBlockImporter,
+) -> Arc<TargetBParentchainBlockImportDispatcher> {
+	let parentchain_block_import_queue = EnclaveParentchainBlockImportQueue::default();
+	let parentchain_event_import_queue = EnclaveParentchainEventImportQueue::default();
+	let triggered_dispatcher = TargetBParentchainTriggeredBlockImportDispatcher::new(
+		block_importer,
+		parentchain_block_import_queue,
+		parentchain_event_import_queue,
+	);
+	Arc::new(TargetBParentchainBlockImportDispatcher::new_triggered_dispatcher(Arc::new(
 		triggered_dispatcher,
 	)))
 }

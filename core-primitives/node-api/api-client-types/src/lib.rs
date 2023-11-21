@@ -22,6 +22,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use codec::{Decode, Encode};
 pub use itp_types::parentchain::{
 	AccountData, AccountId, AccountInfo, Address, Balance, Hash, Index, Signature as PairSignature,
 };
@@ -56,31 +57,140 @@ pub mod traits {
 	}
 }
 
-pub type ParentchainPlainTip = PlainTip<Balance>;
-pub type ParentchainAssetTip = AssetTip<Balance>;
-
 /// Configuration for the ExtrinsicParams.
 ///
 /// Valid for the default integritee node
-pub type ParentchainExtrinsicParams =
-	GenericExtrinsicParams<DefaultRuntimeConfig, ParentchainPlainTip>;
-pub type ParentchainAdditionalParams = GenericAdditionalParams<ParentchainPlainTip, Hash>;
-pub use DefaultRuntimeConfig as ParentchainRuntimeConfig;
+#[derive(Decode, Encode, Clone, Eq, PartialEq, Debug)]
+pub struct ParentchainExtrinsicParams {
+	era: Era,
+	nonce: Index,
+	tip: ParentchainTip,
+	spec_version: u32,
+	transaction_version: u32,
+	genesis_hash: Hash,
+	mortality_checkpoint: Hash,
+}
 
-// Pay in asset fees.
-//
-// This needs to be used if the node uses the `pallet_asset_tx_payment`.
-//pub type ParentchainExtrinsicParams =  GenericExtrinsicParams<AssetRuntimeConfig, AssetTip>;
-// pub type ParentchainAdditionalParams = GenericAdditionalParams<AssetRuntimeConfig, Hash>;
+pub type ParentchainAdditionalSigned = GenericAdditionalSigned<Hash>;
+
+pub type ParentchainTip = PlainTip<Balance>;
+// in case integritee would use the  `pallet_asset_tx_payment`.
+//pub type ParentchainTip = AssetTip<Balance>
+
+impl ExtrinsicParams<Index, Hash> for ParentchainExtrinsicParams {
+	type AdditionalParams = ParentchainAdditionalParams;
+	type SignedExtra = ParentchainSignedExtra;
+	type AdditionalSigned = ParentchainAdditionalSigned;
+
+	fn new(
+		spec_version: u32,
+		transaction_version: u32,
+		nonce: Index,
+		genesis_hash: Hash,
+		additional_params: Self::AdditionalParams,
+	) -> Self {
+		Self {
+			era: additional_params.era,
+			tip: additional_params.tip,
+			spec_version,
+			transaction_version,
+			genesis_hash,
+			mortality_checkpoint: additional_params.mortality_checkpoint.unwrap_or(genesis_hash),
+			nonce,
+		}
+	}
+
+	fn signed_extra(&self) -> Self::SignedExtra {
+		Self::SignedExtra { era: self.era, nonce: self.nonce, tip: self.tip }
+	}
+
+	fn additional_signed(&self) -> Self::AdditionalSigned {
+		(
+			(),
+			self.spec_version,
+			self.transaction_version,
+			self.genesis_hash,
+			self.mortality_checkpoint,
+			(),
+			(),
+			(),
+		)
+	}
+}
+
+impl ExtrinsicParamsAdjustments<ParentchainAdditionalParams> for ParentchainExtrinsicParams {
+	fn with_nonce(&self, nonce: Index) -> Self {
+		Self {
+			era: self.era,
+			tip: self.tip,
+			spec_version: self.spec_version,
+			transaction_version: self.transaction_version,
+			genesis_hash: self.genesis_hash,
+			mortality_checkpoint: self.mortality_checkpoint,
+			nonce,
+		}
+	}
+	fn with_additional_params(&self, additional_params: ParentchainAdditionalParams) -> Self {
+		Self {
+			era: additional_params.era,
+			tip: additional_params.tip,
+			spec_version: self.spec_version,
+			transaction_version: self.transaction_version,
+			genesis_hash: self.genesis_hash,
+			mortality_checkpoint: additional_params
+				.mortality_checkpoint
+				.unwrap_or(self.genesis_hash),
+			nonce: self.nonce,
+		}
+	}
+	fn with_spec_version(&self, spec_version: u32) -> Self {
+		Self {
+			era: self.era,
+			tip: self.tip,
+			spec_version,
+			transaction_version: self.transaction_version,
+			genesis_hash: self.genesis_hash,
+			mortality_checkpoint: self.mortality_checkpoint,
+			nonce: self.nonce,
+		}
+	}
+	fn with_transaction_version(&self, transaction_version: u32) -> Self {
+		Self {
+			era: self.era,
+			tip: self.tip,
+			spec_version: self.spec_version,
+			transaction_version,
+			genesis_hash: self.genesis_hash,
+			mortality_checkpoint: self.mortality_checkpoint,
+			nonce: self.nonce,
+		}
+	}
+}
+
+#[derive(Decode, Encode, Copy, Clone, Eq, PartialEq, Debug)]
+pub struct ParentchainAdditionalParams {
+	era: Era,
+	mortality_checkpoint: Option<Hash>,
+	tip: ParentchainTip,
+}
+
+impl Default for ParentchainAdditionalParams {
+	fn default() -> Self {
+		Self { era: Era::Immortal, mortality_checkpoint: None, tip: ParentchainTip::default() }
+	}
+}
+use sp_runtime::generic::Era;
+pub use DefaultRuntimeConfig as ParentchainRuntimeConfig;
 
 pub type ParentchainUncheckedExtrinsic<Call> =
 	UncheckedExtrinsicV4<Address, Call, PairSignature, ParentchainSignedExtra>;
-pub type ParentchainSignedExtra = GenericSignedExtra<ParentchainPlainTip, Index>;
+pub type ParentchainSignedExtra = GenericSignedExtra<ParentchainTip, Index>;
 pub type ParentchainSignature = Signature<ParentchainSignedExtra>;
 
 /// Signature type of the [UncheckedExtrinsicV4].
 pub type Signature<SignedExtra> = Option<(Address, PairSignature, SignedExtra)>;
 
+use crate::traits::ExtrinsicParamsAdjustments;
 #[cfg(feature = "std")]
 pub use api::*;
 

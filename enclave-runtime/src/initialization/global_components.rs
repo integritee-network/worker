@@ -366,13 +366,37 @@ pub type EnclaveSealHandler = SealHandler<
 	EnclaveStateHandler,
 	EnclaveLightClientSeal,
 >;
-pub type EnclaveOffchainWorkerExecutor = itc_offchain_worker_executor::executor::Executor<
+pub type IntegriteeOffchainWorkerExecutor = itc_offchain_worker_executor::executor::Executor<
 	ParentchainBlock,
 	EnclaveTopPoolAuthor,
 	EnclaveStfExecutor,
 	EnclaveStateHandler,
 	EnclaveValidatorAccessor,
 	IntegriteeExtrinsicsFactory,
+	EnclaveStf,
+	EnclaveTrustedCallSigned,
+	EnclaveGetter,
+>;
+
+pub type TargetAOffchainWorkerExecutor = itc_offchain_worker_executor::executor::Executor<
+	ParentchainBlock,
+	EnclaveTopPoolAuthor,
+	EnclaveStfExecutor,
+	EnclaveStateHandler,
+	EnclaveValidatorAccessor,
+	TargetAExtrinsicsFactory,
+	EnclaveStf,
+	EnclaveTrustedCallSigned,
+	EnclaveGetter,
+>;
+
+pub type TargetBOffchainWorkerExecutor = itc_offchain_worker_executor::executor::Executor<
+	ParentchainBlock,
+	EnclaveTopPoolAuthor,
+	EnclaveStfExecutor,
+	EnclaveStateHandler,
+	EnclaveValidatorAccessor,
+	TargetBExtrinsicsFactory,
 	EnclaveStf,
 	EnclaveTrustedCallSigned,
 	EnclaveGetter,

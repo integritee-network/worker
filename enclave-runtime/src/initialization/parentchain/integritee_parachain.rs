@@ -30,7 +30,7 @@ use crate::{
 			create_integritee_extrinsics_factory,
 			create_integritee_offchain_immediate_import_dispatcher,
 			create_integritee_parentchain_block_importer,
-			create_sidechain_triggered_import_dispatcher,
+			create_sidechain_triggered_import_dispatcher_for_integritee,
 		},
 	},
 };
@@ -101,7 +101,8 @@ impl IntegriteeParachainHandler {
 				validator_accessor.clone(),
 				extrinsics_factory.clone(),
 			)?,
-			WorkerMode::Sidechain => create_sidechain_triggered_import_dispatcher(block_importer),
+			WorkerMode::Sidechain =>
+				create_sidechain_triggered_import_dispatcher_for_integritee(block_importer),
 			WorkerMode::Teeracle =>
 				Arc::new(IntegriteeParentchainBlockImportDispatcher::new_empty_dispatcher()),
 		};

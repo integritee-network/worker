@@ -5,6 +5,8 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
 [dependencies]
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+
 # integritee-node
 my-node-runtime = { package = "integritee-node-runtime", optional = true, git = "https://github.com/integritee-network/integritee-node.git", branch = "sdk-v0.12.0-polkadot-v0.9.42" }
 
@@ -22,6 +24,7 @@ itp-types = { default-features = false, path = "../../types" }
 [features]
 default = ["std"]
 std = [
+    "codec/std",
     "itp-types/std",
     "substrate-api-client/std",
     "substrate-api-client/tungstenite-client",

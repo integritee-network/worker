@@ -32,6 +32,7 @@ use crate::{
 			GLOBAL_TARGET_A_PARENTCHAIN_NONCE_CACHE,
 		},
 		parentchain::common::{
+			create_sidechain_triggered_import_dispatcher_for_target_a,
 			create_target_a_extrinsics_factory,
 			create_target_a_offchain_immediate_import_dispatcher,
 			create_target_a_parentchain_block_importer,
@@ -105,7 +106,7 @@ impl TargetAParachainHandler {
 				extrinsics_factory.clone(),
 			)?,
 			WorkerMode::Sidechain =>
-				unimplemented!("Can't run target a chain in sidechain mode yet."),
+				create_sidechain_triggered_import_dispatcher_for_target_a(block_importer),
 			WorkerMode::Teeracle =>
 				Arc::new(TargetAParentchainBlockImportDispatcher::new_empty_dispatcher()),
 		};
