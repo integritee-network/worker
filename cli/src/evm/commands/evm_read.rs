@@ -19,7 +19,6 @@ use crate::{
 	trusted_cli::TrustedCli, trusted_command_utils::get_pair_from_str,
 	trusted_operation::perform_trusted_operation, Cli, CliError, CliResult, CliResultOk,
 };
-use codec::Decode;
 use ita_stf::{Getter, TrustedCallSigned, TrustedGetter};
 use itp_stf_primitives::types::{KeyPair, TrustedOperation};
 use itp_types::AccountId;
@@ -58,7 +57,7 @@ impl EvmReadCommands {
 		));
 		match perform_trusted_operation::<H256>(cli, trusted_args, &top) {
 			Ok(hash) => {
-				println!("{:?}", vd);
+				println!("{:?}", hash);
 				Ok(CliResultOk::H256 { hash })
 			},
 			Err(e) => {

@@ -22,7 +22,6 @@ use crate::{
 	trusted_operation::perform_trusted_operation,
 	Cli, CliResult, CliResultOk,
 };
-use codec::Decode;
 use ita_stf::{evm_helpers::evm_create_address, Index, TrustedCall, TrustedGetter};
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
@@ -80,7 +79,7 @@ impl EvmCreateCommands {
 		.sign(&from.into(), nonce, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
 
-		let _ = perform_trusted_operation::<()>(cli, trusted_args, &top)?;
+		perform_trusted_operation::<()>(cli, trusted_args, &top)?;
 
 		let execution_address = evm_create_address(sender_evm_acc, evm_account_nonce);
 		info!("trusted call evm_create executed");

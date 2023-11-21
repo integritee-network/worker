@@ -22,7 +22,6 @@ use crate::{
 	trusted_operation::perform_trusted_operation,
 	Cli, CliResult, CliResultOk,
 };
-use codec::Decode;
 use ita_stf::{Index, TrustedCall, TrustedGetter};
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
