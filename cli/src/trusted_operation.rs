@@ -196,8 +196,6 @@ fn send_indirect_request<T: Decode + Debug>(
 				};
 
 				if confirmed_block_hash == block_hash {
-					// encode and decode to target type, this should probably read value from parachain event and
-					// return that result instead of block hash
 					let value = decode_response_value(&mut block_hash.encode().as_slice())?;
 					return Ok(value)
 				}
