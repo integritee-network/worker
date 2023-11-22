@@ -22,7 +22,7 @@ use itp_node_api::api_client::{AccountApi, ChainApi, UncheckedExtrinsicV4};
 use itp_settings::worker::{
 	EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS, REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS,
 };
-use itp_types::parentchain::{AccountId, Address, Balance, Hash, Index};
+use itp_types::parentchain::{AccountId, Address, Balance, Hash, Index, Signature};
 use log::*;
 use sp_core::{
 	crypto::{AccountId32, Ss58Codec},
@@ -59,7 +59,13 @@ impl<ParentchainApi> EnclaveAccountInfoProvider<ParentchainApi> {
 	}
 }
 
-pub fn setup_account_funding<
+pub fn setup_account_funding<ParentchainApi, Call>(
+	api: &ParentchainApi,
+	accountid: &AccountId32,
+	encoded_extrinsic: Vec<u8>,
+	is_development_mode: bool,
+) -> ServiceResult<()>
+where
 	ParentchainApi: AccountApi<AccountId = AccountId, Balance = Balance, Index = Index>
 		+ GetBalance<Balance = Balance>
 		+ GetTransactionPayment<Balance = Balance>
@@ -74,13 +80,10 @@ pub fn setup_account_funding<
 			>,
 		> + SubmitAndWatch<Hash = Hash>
 		+ ChainApi<Signer = sr25519::Pair>,
-	Call,
->(
-	api: &ParentchainApi,
-	accountid: &AccountId32,
-	encoded_extrinsic: Vec<u8>,
-	is_development_mode: bool,
-) -> ServiceResult<()> {
+	ParentchainApi::Signature: Encode,
+	ParentchainApi::SignedExtra: Encode,
+	Call: Encode,
+{
 	// Account funds
 	if is_development_mode {
 		// Development mode, the faucet will ensure that the enclave has enough funds
@@ -112,7 +115,11 @@ pub fn setup_account_funding<
 }
 
 // Alice plays the faucet and sends some funds to the account if balance is low
-fn ensure_account_has_funds<
+fn ensure_account_has_funds<ParentchainApi, Call>(
+	api: &ParentchainApi,
+	accountid: &AccountId32,
+) -> Result<(), Error>
+where
 	ParentchainApi: AccountApi<AccountId = AccountId, Balance = Balance, Index = Index>
 		+ GetBalance<Balance = Balance>
 		+ BalancesExtrinsics<
@@ -126,11 +133,10 @@ fn ensure_account_has_funds<
 			>,
 		> + SubmitAndWatch<Hash = Hash>
 		+ ChainApi<Signer = sr25519::Pair>,
-	Call,
->(
-	api: &ParentchainApi,
-	accountid: &AccountId32,
-) -> Result<(), Error> {
+	ParentchainApi::Signature: Encode,
+	ParentchainApi::SignedExtra: Encode,
+	Call: Encode,
+{
 	// check account balance
 	let free_balance = api.get_free_balance(accountid)?;
 	info!("TEE's free balance = {:?} (Account: {})", free_balance, accountid);
@@ -179,12 +185,15 @@ where
 			Extrinsic<Call> = UncheckedExtrinsicV4<
 				Address,
 				Call,
-				ParentchainApi::Signature,
-				ParentchainApi::SignedExtra,
+				<ParentchainApi as ChainApi>::Signature,
+				<ParentchainApi as ChainApi>::SignedExtra,
 			>,
 		> + SubmitAndWatch<Hash = Hash>
 		+ AccountApi<AccountId = AccountId, Balance = Balance, Index = Index>
 		+ ChainApi<Signer = sr25519::Pair>,
+	ParentchainApi::Signature: Encode,
+	ParentchainApi::SignedExtra: Encode,
+	Call: Encode,
 {
 	let alice = AccountKeyring::Alice.pair();
 	let alice_acc = AccountId32::from(*alice.public().as_array_ref());
@@ -206,9 +215,9 @@ where
 	alice_signer_api.set_signer(alice.into());
 
 	println!("[+] send extrinsic: bootstrap funding Enclave from Alice's funds");
-	let xt = alice_signer_api
-		.balance_transfer_allow_death(MultiAddress::Id(accountid.clone()), funding_amount);
-	let xt_report = alice_signer_api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock)?;
+	let xt =
+		alice_signer_api.balance_transfer_allow_death(accountid.clone().into(), funding_amount);
+	let xt_report = alice_signer_api.submit_and_watch_extrinsic_until::<Address, _, ParentchainApi::Signature, ParentchainApi::SignedExtra>(xt, XtStatus::InBlock)?;
 	info!(
 		"[<] L1 extrinsic success. extrinsic hash: {:?} / status: {:?}",
 		xt_report.extrinsic_hash, xt_report.status
