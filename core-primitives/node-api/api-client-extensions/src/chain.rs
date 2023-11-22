@@ -37,7 +37,9 @@ pub trait ChainApi {
 	type Header;
 	type BlockNumber;
 	type Signer;
-	type Extrinsic<C>;
+	type Address;
+	type Signature;
+	type SignedExtra;
 
 	fn last_finalized_block(&self) -> ApiResult<Option<GenericSignedBlock<Self::Block>>>;
 	fn signed_block(
@@ -77,12 +79,9 @@ where
 	type Block = RuntimeConfig::Block;
 	type BlockNumber = RuntimeConfig::BlockNumber;
 	type Signer = RuntimeConfig::ExtrinsicSigner;
-	type Extrinsic<C> = UncheckedExtrinsicV4<
-		RuntimeConfig::Address,
-		C,
-		RuntimeConfig::Signature,
-		RuntimeConfig::SignedExtra,
-	>;
+	type Address = RuntimeConfig::Address;
+	type Signature = RuntimeConfig::Signature;
+	type SignedExtra = RuntimeConfig::SignedExtra;
 
 	fn last_finalized_block(&self) -> ApiResult<Option<GenericSignedBlock<Self::Block>>> {
 		self.get_finalized_head()?

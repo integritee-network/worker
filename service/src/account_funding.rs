@@ -66,7 +66,12 @@ pub fn setup_account_funding<
 		+ BalancesExtrinsics<
 			Address = Address,
 			Balance = Balance,
-			Extrinsic<Call> = <ParentchainApi as ChainApi>::Extrinsic<Call>,
+			Extrinsic<Call> = UncheckedExtrinsicV4<
+				Address,
+				Call,
+				ParentchainApi::Signature,
+				ParentchainApi::SignedExtra,
+			>,
 		> + SubmitAndWatch<Hash = Hash>
 		+ ChainApi<Signer = sr25519::Pair>,
 	Call,
@@ -113,7 +118,12 @@ fn ensure_account_has_funds<
 		+ BalancesExtrinsics<
 			Address = Address,
 			Balance = Balance,
-			Extrinsic<Call> = <ParentchainApi as ChainApi>::Extrinsic<Call>,
+			Extrinsic<Call> = UncheckedExtrinsicV4<
+				Address,
+				Call,
+				ParentchainApi::Signature,
+				ParentchainApi::SignedExtra,
+			>,
 		> + SubmitAndWatch<Hash = Hash>
 		+ ChainApi<Signer = sr25519::Pair>,
 	Call,
@@ -166,7 +176,12 @@ where
 	ParentchainApi: BalancesExtrinsics<
 			Address = Address,
 			Balance = Balance,
-			Extrinsic<Call> = <ParentchainApi as ChainApi>::Extrinsic<Call>,
+			Extrinsic<Call> = UncheckedExtrinsicV4<
+				Address,
+				Call,
+				ParentchainApi::Signature,
+				ParentchainApi::SignedExtra,
+			>,
 		> + SubmitAndWatch<Hash = Hash>
 		+ AccountApi<AccountId = AccountId, Balance = Balance, Index = Index>
 		+ ChainApi<Signer = sr25519::Pair>,

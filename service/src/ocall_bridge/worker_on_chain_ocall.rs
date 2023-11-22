@@ -67,7 +67,7 @@ impl<F: CreateNodeApi> WorkerOnChainOCall<F> {
 
 impl<F> WorkerOnChainBridge for WorkerOnChainOCall<F>
 where
-	F: CreateNodeApi,
+	F: CreateNodeApi + GetStorage,
 {
 	fn worker_request(
 		&self,

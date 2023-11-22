@@ -39,6 +39,7 @@ use its_peer_fetch::FetchBlocksFromPeer;
 use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use its_storage::BlockStorage;
 use std::sync::Arc;
+use substrate_api_client::GetStorage;
 
 /// Concrete implementation, should be moved out of the OCall Bridge, into the worker
 /// since the OCall bridge itself should not know any concrete types to ensure
@@ -134,7 +135,7 @@ impl<
 		TokioHandle,
 		MetricsReceiver,
 	> where
-	NodeApi: CreateNodeApi + 'static,
+	NodeApi: CreateNodeApi + GetStorage + 'static,
 	Broadcaster: BroadcastBlocks + 'static,
 	EnclaveApi: RemoteAttestationCallBacks + 'static,
 	Storage: BlockStorage<SignedSidechainBlock> + 'static,
