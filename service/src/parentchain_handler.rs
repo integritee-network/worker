@@ -133,6 +133,7 @@ impl<ParentchainApi, EnclaveApi> HandleParentchain
 	for ParentchainHandler<ParentchainApi, EnclaveApi>
 where
 	EnclaveApi: Sidechain + EnclaveBase,
+	ParentchainApi: ChainApi,
 {
 	fn init_parentchain_components(&self) -> ServiceResult<Header> {
 		Ok(self

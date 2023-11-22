@@ -16,7 +16,9 @@
 */
 
 use crate::error::{Error, ServiceResult};
-use itp_node_api::api_client::{AccountApi, UncheckedExtrinsicV4};
+use codec::Encode;
+use itp_api_client_types::ParentchainUncheckedExtrinsic;
+use itp_node_api::api_client::{AccountApi, ChainApi, UncheckedExtrinsicV4};
 use itp_settings::worker::{
 	EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS, REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS,
 };
@@ -24,10 +26,10 @@ use itp_types::parentchain::{AccountId, Address, Balance, Hash, Index};
 use log::*;
 use sp_core::{
 	crypto::{AccountId32, Ss58Codec},
-	Pair,
+	sr25519, Pair,
 };
 use sp_keyring::AccountKeyring;
-use sp_runtime::MultiAddress;
+use sp_runtime::{MultiAddress, OpaqueExtrinsic};
 use substrate_api_client::{
 	extrinsic::BalancesExtrinsics, GetBalance, GetTransactionPayment, SubmitAndWatch, XtStatus,
 };
@@ -61,8 +63,13 @@ pub fn setup_account_funding<
 	ParentchainApi: AccountApi<AccountId = AccountId, Balance = Balance, Index = Index>
 		+ GetBalance<Balance = Balance>
 		+ GetTransactionPayment<Balance = Balance>
-		+ BalancesExtrinsics<Address = Address, Balance = Balance>
-		+ SubmitAndWatch<Hash = Hash>,
+		+ BalancesExtrinsics<
+			Address = Address,
+			Balance = Balance,
+			Extrinsic<Call> = <ParentchainApi as ChainApi>::Extrinsic<Call>,
+		> + SubmitAndWatch<Hash = Hash>
+		+ ChainApi<Signer = sr25519::Pair>,
+	Call,
 >(
 	api: &ParentchainApi,
 	accountid: &AccountId32,
@@ -72,7 +79,7 @@ pub fn setup_account_funding<
 	// Account funds
 	if is_development_mode {
 		// Development mode, the faucet will ensure that the enclave has enough funds
-		ensure_account_has_funds(api, accountid)?;
+		ensure_account_has_funds::<ParentchainApi, Call>(api, accountid)?;
 	} else {
 		// Production mode, there is no faucet.
 		let registration_fees = enclave_registration_fees(api, encoded_extrinsic)?;
@@ -103,8 +110,13 @@ pub fn setup_account_funding<
 fn ensure_account_has_funds<
 	ParentchainApi: AccountApi<AccountId = AccountId, Balance = Balance, Index = Index>
 		+ GetBalance<Balance = Balance>
-		+ BalancesExtrinsics<Address = Address, Balance = Balance>
-		+ SubmitAndWatch<Hash = Hash>,
+		+ BalancesExtrinsics<
+			Address = Address,
+			Balance = Balance,
+			Extrinsic<Call> = <ParentchainApi as ChainApi>::Extrinsic<Call>,
+		> + SubmitAndWatch<Hash = Hash>
+		+ ChainApi<Signer = sr25519::Pair>,
+	Call,
 >(
 	api: &ParentchainApi,
 	accountid: &AccountId32,
@@ -122,7 +134,7 @@ fn ensure_account_has_funds<
 
 	if missing_funds > 0 {
 		info!("Transfer {:?} from Alice to {}", missing_funds, accountid);
-		bootstrap_funds_from_alice(api, accountid, missing_funds)?;
+		bootstrap_funds_from_alice::<ParentchainApi, Call>(api, accountid, missing_funds)?;
 	}
 	Ok(())
 }
@@ -145,15 +157,19 @@ fn enclave_registration_fees<ParentchainApi: GetTransactionPayment<Balance = Bal
 }
 
 // Alice sends some funds to the account
-fn bootstrap_funds_from_alice<ParentchainApi>(
+fn bootstrap_funds_from_alice<ParentchainApi, Call>(
 	api: &ParentchainApi,
 	accountid: &AccountId32,
 	funding_amount: u128,
 ) -> Result<(), Error>
 where
-	ParentchainApi: BalancesExtrinsics<Address = Address, Balance = Balance>
-		+ SubmitAndWatch<Hash = Hash>
-		+ AccountApi<AccountId = AccountId, Balance = Balance, Index = Index>,
+	ParentchainApi: BalancesExtrinsics<
+			Address = Address,
+			Balance = Balance,
+			Extrinsic<Call> = <ParentchainApi as ChainApi>::Extrinsic<Call>,
+		> + SubmitAndWatch<Hash = Hash>
+		+ AccountApi<AccountId = AccountId, Balance = Balance, Index = Index>
+		+ ChainApi<Signer = sr25519::Pair>,
 {
 	let alice = AccountKeyring::Alice.pair();
 	let alice_acc = AccountId32::from(*alice.public().as_array_ref());

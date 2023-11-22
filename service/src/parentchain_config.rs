@@ -52,9 +52,9 @@ impl ParentchainApiWrapper for IntegriteeParentchainApiWrapper {
 		client: Self::Client,
 		signer: sr25519::Pair,
 	) -> Result<Self::Api, NodeApiFactoryError> {
-		Ok(Self::Api::new(client)
-			.map_err(NodeApiFactoryError::FailedToCreateNodeApi)?
-			.set_signer(signer.into()))
+		let mut api = Self::Api::new(client).map_err(NodeApiFactoryError::FailedToCreateNodeApi)?;
+		api.set_signer(signer.into());
+		Ok(api)
 	}
 }
 pub struct TargetAParentchainApiWrapper(Api<TargetARuntimeConfig, TungsteniteRpcClient>);
@@ -65,9 +65,9 @@ impl ParentchainApiWrapper for TargetAParentchainApiWrapper {
 		client: Self::Client,
 		signer: sr25519::Pair,
 	) -> Result<Self::Api, NodeApiFactoryError> {
-		Ok(Self::Api::new(client)
-			.map_err(NodeApiFactoryError::FailedToCreateNodeApi)?
-			.set_signer(signer.into()))
+		let mut api = Self::Api::new(client).map_err(NodeApiFactoryError::FailedToCreateNodeApi)?;
+		api.set_signer(signer.into());
+		Ok(api)
 	}
 }
 pub struct TargetBParentchainApiWrapper(Api<TargetBRuntimeConfig, TungsteniteRpcClient>);
@@ -78,9 +78,9 @@ impl ParentchainApiWrapper for TargetBParentchainApiWrapper {
 		client: Self::Client,
 		signer: sr25519::Pair,
 	) -> Result<Self::Api, NodeApiFactoryError> {
-		Ok(Self::Api::new(client)
-			.map_err(NodeApiFactoryError::FailedToCreateNodeApi)?
-			.set_signer(signer.into()))
+		let mut api = Self::Api::new(client).map_err(NodeApiFactoryError::FailedToCreateNodeApi)?;
+		api.set_signer(signer.into());
+		Ok(api)
 	}
 }
 

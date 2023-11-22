@@ -16,14 +16,17 @@
 */
 
 use crate::{ApiClientError, ApiResult};
+use codec::Encode;
 use itp_api_client_types::{
 	storage_key,
 	traits::{GetChainInfo, GetStorage},
-	Api, Config, Request, StorageKey,
+	Api, Config, ExtrinsicParams, Request, StorageKey,
 };
 use itp_types::parentchain::{BlockNumber, StorageProof};
 use sp_consensus_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use sp_runtime::generic::SignedBlock as GenericSignedBlock;
+use std::ops::Deref;
+use substrate_api_client::ac_primitives::UncheckedExtrinsicV4;
 
 type RawEvents = Vec<u8>;
 
@@ -33,6 +36,8 @@ pub trait ChainApi {
 	type Block;
 	type Header;
 	type BlockNumber;
+	type Signer;
+	type Extrinsic<C>;
 
 	fn last_finalized_block(&self) -> ApiResult<Option<GenericSignedBlock<Self::Block>>>;
 	fn signed_block(
@@ -54,18 +59,30 @@ pub trait ChainApi {
 	fn grandpa_authorities_proof(&self, hash: Option<Self::Hash>) -> ApiResult<StorageProof>;
 	fn get_events_value_proof(&self, block_hash: Option<Self::Hash>) -> ApiResult<StorageProof>;
 	fn get_events_for_block(&self, block_hash: Option<Self::Hash>) -> ApiResult<RawEvents>;
-	fn set_signer()
+	fn set_signer(&mut self, signer: Self::Signer) -> ApiResult<()>;
+	//get_storage_proof_by_keys
+	//fn get_opaque_storage_by_key(&mut self, signer: Self::Signer) -> ApiResult<()>;
+	//fn submit_and_watch_opaque_extrinsic_until(&mut self, signer: Self::Signer) -> ApiResult<()>;
+	//fn submit_opaque_extrinsic(&mut self, signer: Self::Signer) -> ApiResult<()>;
 }
 
 impl<RuntimeConfig, Client> ChainApi for Api<RuntimeConfig, Client>
 where
-	RuntimeConfig: Config<BlockNumber = BlockNumber>,
+	RuntimeConfig: Config<BlockNumber = BlockNumber>
+		+ ExtrinsicParams<<RuntimeConfig as Config>::Index, <RuntimeConfig as Config>::Hash>,
 	Client: Request,
 {
 	type Hash = RuntimeConfig::Hash;
 	type Header = RuntimeConfig::Header;
 	type Block = RuntimeConfig::Block;
 	type BlockNumber = RuntimeConfig::BlockNumber;
+	type Signer = RuntimeConfig::ExtrinsicSigner;
+	type Extrinsic<C> = UncheckedExtrinsicV4<
+		RuntimeConfig::Address,
+		C,
+		RuntimeConfig::Signature,
+		RuntimeConfig::SignedExtra,
+	>;
 
 	fn last_finalized_block(&self) -> ApiResult<Option<GenericSignedBlock<Self::Block>>> {
 		self.get_finalized_head()?
@@ -139,5 +156,10 @@ where
 	fn get_events_for_block(&self, block_hash: Option<Self::Hash>) -> ApiResult<RawEvents> {
 		let key = storage_key("System", "Events");
 		Ok(self.get_opaque_storage_by_key(key, block_hash)?.unwrap_or_default())
+	}
+
+	fn set_signer(&mut self, signer: Self::Signer) -> ApiResult<()> {
+		self.set_signer(signer);
+		Ok(())
 	}
 }
