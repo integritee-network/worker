@@ -99,6 +99,7 @@ pub type TargetBParentchainApi = Api<TargetBRuntimeConfig, TungsteniteRpcClient>
 
 pub struct IntegriteeParentchainApiWrapper(Api<IntegriteeRuntimeConfig, TungsteniteRpcClient>);
 
+// fixme: this is an ugly hack because api-client's 'new()' isn't part of any trait we could implement therefore we can't use the fn new() on generic api types
 impl ParentchainApiWrapper for IntegriteeParentchainApiWrapper {
 	type Api = IntegriteeParentchainApi;
 	type Client = TungsteniteRpcClient;
