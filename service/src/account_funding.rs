@@ -31,7 +31,8 @@ use sp_core::{
 use sp_keyring::AccountKeyring;
 use sp_runtime::{MultiAddress, OpaqueExtrinsic};
 use substrate_api_client::{
-	extrinsic::BalancesExtrinsics, GetBalance, GetTransactionPayment, SubmitAndWatch, XtStatus,
+	extrinsic::{balances::TransferAllowDeathCall, BalancesExtrinsics},
+	GetBalance, GetTransactionPayment, SubmitAndWatch, XtStatus,
 };
 
 /// Information about the enclave on-chain account.
@@ -59,7 +60,7 @@ impl<ParentchainApi> EnclaveAccountInfoProvider<ParentchainApi> {
 	}
 }
 
-pub fn setup_account_funding<ParentchainApi, Call>(
+pub fn setup_account_funding<ParentchainApi>(
 	api: &ParentchainApi,
 	accountid: &AccountId32,
 	encoded_extrinsic: Vec<u8>,
@@ -72,22 +73,21 @@ where
 		+ BalancesExtrinsics<
 			Address = Address,
 			Balance = Balance,
-			Extrinsic<Call> = UncheckedExtrinsicV4<
+			Extrinsic<TransferAllowDeathCall<Address, Balance>> = UncheckedExtrinsicV4<
 				Address,
-				Call,
-				ParentchainApi::Signature,
-				ParentchainApi::SignedExtra,
+				TransferAllowDeathCall<Address, Balance>,
+				<ParentchainApi as ChainApi>::Signature,
+				<ParentchainApi as ChainApi>::SignedExtra,
 			>,
 		> + SubmitAndWatch<Hash = Hash>
 		+ ChainApi<Signer = sr25519::Pair>,
 	ParentchainApi::Signature: Encode,
 	ParentchainApi::SignedExtra: Encode,
-	Call: Encode,
 {
 	// Account funds
 	if is_development_mode {
 		// Development mode, the faucet will ensure that the enclave has enough funds
-		ensure_account_has_funds::<ParentchainApi, Call>(api, accountid)?;
+		ensure_account_has_funds(api, accountid)?;
 	} else {
 		// Production mode, there is no faucet.
 		let registration_fees = enclave_registration_fees(api, encoded_extrinsic)?;
@@ -115,7 +115,7 @@ where
 }
 
 // Alice plays the faucet and sends some funds to the account if balance is low
-fn ensure_account_has_funds<ParentchainApi, Call>(
+fn ensure_account_has_funds<ParentchainApi>(
 	api: &ParentchainApi,
 	accountid: &AccountId32,
 ) -> Result<(), Error>
@@ -125,17 +125,16 @@ where
 		+ BalancesExtrinsics<
 			Address = Address,
 			Balance = Balance,
-			Extrinsic<Call> = UncheckedExtrinsicV4<
+			Extrinsic<TransferAllowDeathCall<Address, Balance>> = UncheckedExtrinsicV4<
 				Address,
-				Call,
-				ParentchainApi::Signature,
-				ParentchainApi::SignedExtra,
+				TransferAllowDeathCall<Address, Balance>,
+				<ParentchainApi as ChainApi>::Signature,
+				<ParentchainApi as ChainApi>::SignedExtra,
 			>,
 		> + SubmitAndWatch<Hash = Hash>
 		+ ChainApi<Signer = sr25519::Pair>,
 	ParentchainApi::Signature: Encode,
 	ParentchainApi::SignedExtra: Encode,
-	Call: Encode,
 {
 	// check account balance
 	let free_balance = api.get_free_balance(accountid)?;
@@ -150,7 +149,7 @@ where
 
 	if missing_funds > 0 {
 		info!("Transfer {:?} from Alice to {}", missing_funds, accountid);
-		bootstrap_funds_from_alice::<ParentchainApi, Call>(api, accountid, missing_funds)?;
+		bootstrap_funds_from_alice(api, accountid, missing_funds)?;
 	}
 	Ok(())
 }
@@ -173,7 +172,7 @@ fn enclave_registration_fees<ParentchainApi: GetTransactionPayment<Balance = Bal
 }
 
 // Alice sends some funds to the account
-fn bootstrap_funds_from_alice<ParentchainApi, Call>(
+fn bootstrap_funds_from_alice<ParentchainApi>(
 	api: &ParentchainApi,
 	accountid: &AccountId32,
 	funding_amount: u128,
@@ -182,9 +181,9 @@ where
 	ParentchainApi: BalancesExtrinsics<
 			Address = Address,
 			Balance = Balance,
-			Extrinsic<Call> = UncheckedExtrinsicV4<
+			Extrinsic<TransferAllowDeathCall<Address, Balance>> = UncheckedExtrinsicV4<
 				Address,
-				Call,
+				TransferAllowDeathCall<Address, Balance>,
 				<ParentchainApi as ChainApi>::Signature,
 				<ParentchainApi as ChainApi>::SignedExtra,
 			>,
@@ -193,7 +192,6 @@ where
 		+ ChainApi<Signer = sr25519::Pair>,
 	ParentchainApi::Signature: Encode,
 	ParentchainApi::SignedExtra: Encode,
-	Call: Encode,
 {
 	let alice = AccountKeyring::Alice.pair();
 	let alice_acc = AccountId32::from(*alice.public().as_array_ref());
@@ -217,7 +215,7 @@ where
 	println!("[+] send extrinsic: bootstrap funding Enclave from Alice's funds");
 	let xt =
 		alice_signer_api.balance_transfer_allow_death(accountid.clone().into(), funding_amount);
-	let xt_report = alice_signer_api.submit_and_watch_extrinsic_until::<Address, _, ParentchainApi::Signature, ParentchainApi::SignedExtra>(xt, XtStatus::InBlock)?;
+	let xt_report = alice_signer_api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock)?;
 	info!(
 		"[<] L1 extrinsic success. extrinsic hash: {:?} / status: {:?}",
 		xt_report.extrinsic_hash, xt_report.status
