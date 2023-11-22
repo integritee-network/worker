@@ -59,6 +59,7 @@ pub struct ParentchainSignedExtra {
 }
 
 pub type ParentchainAdditionalSigned = ((), u32, u32, Hash, Hash, (), (), ());
+
 impl ExtrinsicParams<Index, Hash> for ParentchainExtrinsicParams {
 	type AdditionalParams = ParentchainAdditionalParams;
 	type SignedExtra = ParentchainSignedExtra;

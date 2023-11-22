@@ -448,7 +448,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	// Init parentchain specific stuff. Needed for parentchain communication.
 
 	let (parentchain_handler, last_synced_header) =
-		init_parentchain(&enclave, &integritee_rpc_api, &tee_accountid, ParentchainId::Integritee);
+		init_integritee_parentchain(&enclave, &integritee_rpc_api, &tee_accountid);
 
 	#[cfg(feature = "dcap")]
 	register_collateral(
@@ -662,7 +662,7 @@ fn init_target_parentchain<E, ApiFactory>(
 ) where
 	E: EnclaveBase + Sidechain,
 	ApiFactory: CreateNodeApi,
-	ApiFactory::Api: ChainApi
+	ApiFactory::Api: ChainApi<Hash = Hash>
 		+ AccountApi
 		+ GetTransactionPayment
 		+ GetBalance
@@ -733,13 +733,54 @@ fn init_parentchain<E, ParentchainApi>(
 ) -> (Arc<ParentchainHandler<ParentchainApi, E>>, Header)
 where
 	E: EnclaveBase + Sidechain,
-	ParentchainApi: ChainApi
+	ParentchainApi: ChainApi<Hash = Hash>
 		+ AccountApi
 		+ GetTransactionPayment
 		+ GetBalance
 		+ BalancesExtrinsics
 		+ SubmitAndWatch,
 {
+	let parentchain_handler = Arc::new(
+		ParentchainHandler::new_with_automatic_light_client_allocation(
+			node_api.clone(),
+			enclave.clone(),
+			parentchain_id,
+		)
+		.unwrap(),
+	);
+	let last_synced_header = parentchain_handler.init_parentchain_components().unwrap();
+	println!("[{:?}] last synced parentchain block: {}", parentchain_id, last_synced_header.number);
+
+	let nonce = node_api.get_nonce_of(tee_account_id).unwrap();
+	info!("[{:?}] Enclave nonce = {:?}", parentchain_id, nonce);
+	enclave.set_nonce(nonce, parentchain_id).unwrap_or_else(|_| {
+		panic!("[{:?}] Could not set nonce of enclave. Returning here...", parentchain_id)
+	});
+
+	let metadata = node_api.metadata().clone();
+	let runtime_spec_version = node_api.runtime_version().spec_version;
+	let runtime_transaction_version = node_api.runtime_version().transaction_version;
+	enclave
+		.set_node_metadata(
+			NodeMetadata::new(metadata, runtime_spec_version, runtime_transaction_version).encode(),
+			parentchain_id,
+		)
+		.unwrap_or_else(|_| {
+			panic!("[{:?}] Could not set the node metadata in the enclave", parentchain_id)
+		});
+
+	(parentchain_handler, last_synced_header)
+}
+
+fn init_integritee_parentchain<E>(
+	enclave: &Arc<E>,
+	node_api: &IntegriteeParentchainApi,
+	tee_account_id: &AccountId32,
+) -> (Arc<ParentchainHandler<IntegriteeParentchainApi, E>>, Header)
+where
+	E: EnclaveBase + Sidechain,
+{
+	let parentchain_id = ParentchainId::Integritee;
 	let parentchain_handler = Arc::new(
 		ParentchainHandler::new_with_automatic_light_client_allocation(
 			node_api.clone(),
@@ -1050,7 +1091,7 @@ fn send_extrinsic<ParentchainApi>(
 	is_development_mode: bool,
 ) -> Option<Hash>
 where
-	ParentchainApi: ChainApi
+	ParentchainApi: ChainApi<Hash = Hash>
 		+ SubmitAndWatch
 		+ BalancesExtrinsics
 		+ GetTransactionPayment
@@ -1091,7 +1132,7 @@ fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain, ParentchainA
 	mut last_synced_header: Header,
 ) -> Result<(), Error>
 where
-	ParentchainApi: ChainApi,
+	ParentchainApi: ChainApi<Hash = Hash>,
 {
 	// TODO: this should be implemented by parentchain_handler directly, and not via
 	// exposed parentchain_api
