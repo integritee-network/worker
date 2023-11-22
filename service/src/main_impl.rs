@@ -52,12 +52,12 @@ use its_peer_fetch::{
 use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use its_storage::{interface::FetchBlocks, BlockPruner, SidechainStorageLock};
 use log::*;
-use my_node_runtime::{Hash, Header, RuntimeEvent};
+use my_node_runtime::RuntimeEvent;
 use sgx_types::*;
 use sp_runtime::traits::Header as HeaderT;
 use substrate_api_client::{
-	api::XtStatus, rpc::HandleSubscription, GetChainInfo, SubmitAndWatch, SubscribeChain,
-	SubscribeEvents,
+	api::XtStatus, rpc::HandleSubscription, GetBalance, GetChainInfo, GetTransactionPayment,
+	SubmitAndWatch, SubscribeChain, SubscribeEvents,
 };
 
 use teerex_primitives::AnySigner;
@@ -72,10 +72,13 @@ use crate::parentchain_config::{
 };
 use enclave_bridge_primitives::ShardIdentifier;
 use itc_parentchain::primitives::ParentchainId;
+use itp_node_api::api_client::ChainApi;
+use itp_types::parentchain::{Hash, Header};
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
 use sp_runtime::MultiSigner;
 use std::{str, sync::Arc, thread, time::Duration};
+use substrate_api_client::extrinsic::BalancesExtrinsics;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -650,7 +653,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	}
 }
 
-fn init_target_parentchain<E, ApiFactory: CreateNodeApi>(
+fn init_target_parentchain<E, ApiFactory>(
 	enclave: &Arc<E>,
 	tee_account_id: &AccountId32,
 	api_factory: ApiFactory,
@@ -658,6 +661,13 @@ fn init_target_parentchain<E, ApiFactory: CreateNodeApi>(
 	is_development_mode: bool,
 ) where
 	E: EnclaveBase + Sidechain,
+	ApiFactory: CreateNodeApi,
+	ApiFactory::Api: ChainApi
+		+ AccountApi
+		+ GetTransactionPayment
+		+ GetBalance
+		+ BalancesExtrinsics
+		+ SubmitAndWatch,
 {
 	println!("Initializing parentchain {:?}", parentchain_id);
 	let node_api = api_factory
@@ -715,14 +725,20 @@ fn init_target_parentchain<E, ApiFactory: CreateNodeApi>(
 		.unwrap();
 }
 
-fn init_parentchain<E>(
+fn init_parentchain<E, ParentchainApi>(
 	enclave: &Arc<E>,
-	node_api: &IntegriteeParentchainApi,
+	node_api: &ParentchainApi,
 	tee_account_id: &AccountId32,
 	parentchain_id: ParentchainId,
-) -> (Arc<ParentchainHandler<IntegriteeParentchainApi, E>>, Header)
+) -> (Arc<ParentchainHandler<ParentchainApi, E>>, Header)
 where
 	E: EnclaveBase + Sidechain,
+	ParentchainApi: ChainApi
+		+ AccountApi
+		+ GetTransactionPayment
+		+ GetBalance
+		+ BalancesExtrinsics
+		+ SubmitAndWatch,
 {
 	let parentchain_handler = Arc::new(
 		ParentchainHandler::new_with_automatic_light_client_allocation(
@@ -1032,7 +1048,15 @@ fn send_extrinsic<ParentchainApi>(
 	api: &ParentchainApi,
 	fee_payer: &AccountId32,
 	is_development_mode: bool,
-) -> Option<Hash> {
+) -> Option<Hash>
+where
+	ParentchainApi: ChainApi
+		+ SubmitAndWatch
+		+ BalancesExtrinsics
+		+ GetTransactionPayment
+		+ GetBalance
+		+ AccountApi,
+{
 	// ensure account funds
 	if let Err(x) = setup_account_funding(api, fee_payer, extrinsic.clone(), is_development_mode) {
 		error!("Ensure enclave funding failed: {:?}", x);
@@ -1065,7 +1089,10 @@ fn send_extrinsic<ParentchainApi>(
 fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain, ParentchainApi>(
 	parentchain_handler: Arc<ParentchainHandler<ParentchainApi, E>>,
 	mut last_synced_header: Header,
-) -> Result<(), Error> {
+) -> Result<(), Error>
+where
+	ParentchainApi: ChainApi,
+{
 	// TODO: this should be implemented by parentchain_handler directly, and not via
 	// exposed parentchain_api
 	let mut subscription = parentchain_handler

@@ -75,8 +75,8 @@ where
 	Client: Request,
 {
 	type Hash = RuntimeConfig::Hash;
-	type Header = RuntimeConfig::Header;
 	type Block = RuntimeConfig::Block;
+	type Header = RuntimeConfig::Header;
 	type BlockNumber = RuntimeConfig::BlockNumber;
 	type Signer = RuntimeConfig::ExtrinsicSigner;
 	type Address = RuntimeConfig::Address;

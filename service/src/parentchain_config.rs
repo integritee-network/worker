@@ -18,13 +18,15 @@
 use ita_parentchain_interface::{integritee, target_a, target_b};
 use itc_parentchain::primitives::ParentchainId;
 use itp_node_api::{
-	api_client::{Api, ApiClientError, AssetRuntimeConfig},
+	api_client::{Api, ApiClientError, ApiResult, AssetRuntimeConfig, StorageKey},
 	node_api_factory::{NodeApiFactory, NodeApiFactoryError, ParentchainApiWrapper},
 };
+use itp_types::parentchain::Hash;
 use sp_core::sr25519;
 use substrate_api_client::{
-	ac_primitives::WithExtrinsicParams,
+	ac_primitives::{Bytes, WithExtrinsicParams},
 	rpc::{Request, TungsteniteRpcClient},
+	ExtrinsicReport, GetStorage, ReadProof, SubmitAndWatch, SubmitExtrinsic, XtStatus,
 };
 
 /// Standard runtime config for Substrate and Polkadot nodes.
@@ -43,6 +45,52 @@ pub enum ParentchainApiLocal {
 	Integritee(IntegriteeParentchainApi),
 	TargetA(TargetAParentchainApi),
 	TargetB(TargetBParentchainApi),
+}
+
+impl ParentchainApiLocal {
+	pub fn get_opaque_storage_by_key(
+		&self,
+		storage_key: StorageKey,
+		at_block: Option<Hash>,
+	) -> ApiResult<Option<Vec<u8>>> {
+		match self {
+			Self::Integritee(api) => api.get_opaque_storage_by_key(storage_key, at_block),
+			Self::TargetA(api) => api.get_opaque_storage_by_key(storage_key, at_block),
+			Self::TargetB(api) => api.get_opaque_storage_by_key(storage_key, at_block),
+		}
+	}
+	pub fn get_storage_proof_by_keys(
+		&self,
+		storage_keys: Vec<StorageKey>,
+		at_block: Option<Hash>,
+	) -> ApiResult<Option<ReadProof<Hash>>> {
+		match self {
+			Self::Integritee(api) => api.get_storage_proof_by_keys(storage_keys, at_block),
+			Self::TargetA(api) => api.get_storage_proof_by_keys(storage_keys, at_block),
+			Self::TargetB(api) => api.get_storage_proof_by_keys(storage_keys, at_block),
+		}
+	}
+	pub fn submit_and_watch_opaque_extrinsic_until(
+		&self,
+		encoded_extrinsic: &Bytes,
+		watch_until: XtStatus,
+	) -> ApiResult<ExtrinsicReport<Hash>> {
+		match self {
+			Self::Integritee(api) =>
+				api.submit_and_watch_opaque_extrinsic_until(encoded_extrinsic, watch_until),
+			Self::TargetA(api) =>
+				api.submit_and_watch_opaque_extrinsic_until(encoded_extrinsic, watch_until),
+			Self::TargetB(api) =>
+				api.submit_and_watch_opaque_extrinsic_until(encoded_extrinsic, watch_until),
+		}
+	}
+	pub fn submit_opaque_extrinsic(&self, encoded_extrinsic: &Bytes) -> ApiResult<Hash> {
+		match self {
+			Self::Integritee(api) => api.submit_opaque_extrinsic(encoded_extrinsic),
+			Self::TargetA(api) => api.submit_opaque_extrinsic(encoded_extrinsic),
+			Self::TargetB(api) => api.submit_opaque_extrinsic(encoded_extrinsic),
+		}
+	}
 }
 
 pub type IntegriteeParentchainApi = Api<IntegriteeRuntimeConfig, TungsteniteRpcClient>;
