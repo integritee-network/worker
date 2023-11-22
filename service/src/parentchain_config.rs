@@ -39,6 +39,12 @@ pub type TargetARuntimeConfig =
 pub type TargetBRuntimeConfig =
 	WithExtrinsicParams<AssetRuntimeConfig, target_b::ParentchainExtrinsicParams>;
 
+pub enum ParentchainApiLocal {
+	Integritee(IntegriteeParentchainApi),
+	TargetA(TargetAParentchainApi),
+	TargetB(TargetBParentchainApi),
+}
+
 pub type IntegriteeParentchainApi = Api<IntegriteeRuntimeConfig, TungsteniteRpcClient>;
 pub type TargetAParentchainApi = Api<TargetARuntimeConfig, TungsteniteRpcClient>;
 pub type TargetBParentchainApi = Api<TargetBRuntimeConfig, TungsteniteRpcClient>;
@@ -81,17 +87,5 @@ impl ParentchainApiWrapper for TargetBParentchainApiWrapper {
 		let mut api = Self::Api::new(client).map_err(NodeApiFactoryError::FailedToCreateNodeApi)?;
 		api.set_signer(signer.into());
 		Ok(api)
-	}
-}
-
-pub fn get_node_api_factory<Api>(
-	parentchain_id: ParentchainId,
-	url: String,
-	signer: sr25519::Pair,
-) -> NodeApiFactory<Api> {
-	match parentchain_id {
-		ParentchainId::Integritee => NodeApiFactory::<IntegriteeParentchainApi>::new(url, signer),
-		ParentchainId::TargetA => NodeApiFactory::<TargetAParentchainApi>::new(url, signer),
-		ParentchainId::TargetB => NodeApiFactory::<TargetBParentchainApi>::new(url, signer),
 	}
 }

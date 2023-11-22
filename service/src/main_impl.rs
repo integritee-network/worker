@@ -19,7 +19,7 @@ use crate::{
 	ocall_bridge::{
 		bridge_api::Bridge as OCallBridge, component_factory::OCallBridgeComponentFactory,
 	},
-	parentchain_config::{get_node_api_factory, IntegriteeParentchainApi},
+	parentchain_config::{IntegriteeParentchainApi, TargetAParentchainApi, TargetBParentchainApi},
 	parentchain_handler::{HandleParentchain, ParentchainHandler},
 	prometheus_metrics::{start_metrics_server, EnclaveMetricsReceiver, MetricsHandler},
 	setup,
@@ -67,6 +67,9 @@ use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
 
 use itp_enclave_api::Enclave;
 
+use crate::parentchain_config::{
+	IntegriteeParentchainApiWrapper, TargetAParentchainApiWrapper, TargetBParentchainApiWrapper,
+};
 use enclave_bridge_primitives::ShardIdentifier;
 use itc_parentchain::primitives::ParentchainId;
 use sp_core::crypto::{AccountId32, Ss58Codec};
@@ -79,7 +82,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg(feature = "link-binary")]
 pub type EnclaveWorker = Worker<
 	Config,
-	NodeApiFactory<IntegriteeParentchainApi>,
+	NodeApiFactory<IntegriteeParentchainApiWrapper>,
 	Enclave,
 	InitializationHandler<WorkerModeProvider>,
 >;
@@ -118,8 +121,7 @@ pub(crate) fn main() {
 		)
 		.unwrap(),
 	);
-	let node_api_factory = Arc::new(get_node_api_factory(
-		ParentchainId::Integritee,
+	let node_api_factory = Arc::new(NodeApiFactory::<IntegriteeParentchainApiWrapper>::new(
 		config.integritee_rpc_endpoint(),
 		AccountKeyring::Alice.pair(),
 	));
@@ -142,8 +144,7 @@ pub(crate) fn main() {
 
 	let maybe_target_a_parentchain_api_factory =
 		config.target_a_parentchain_rpc_endpoint().map(|url| {
-			Arc::new(get_node_api_factory(
-				ParentchainId::TargetA,
+			Arc::new(NodeApiFactory::<TargetAParentchainApiWrapper>::new(
 				url,
 				AccountKeyring::Alice.pair(),
 			))
@@ -151,8 +152,7 @@ pub(crate) fn main() {
 
 	let maybe_target_b_parentchain_api_factory =
 		config.target_b_parentchain_rpc_endpoint().map(|url| {
-			Arc::new(get_node_api_factory(
-				ParentchainId::TargetB,
+			Arc::new(NodeApiFactory::<TargetBParentchainApiWrapper>::new(
 				url,
 				AccountKeyring::Alice.pair(),
 			))
@@ -602,8 +602,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	let maybe_target_a_parentchain_api_factory =
 		config.target_a_parentchain_rpc_endpoint().map(|url| {
-			Arc::new(get_node_api_factory(
-				ParentchainId::TargetA,
+			Arc::new(NodeApiFactory::<TargetAParentchainApiWrapper>::new(
 				url,
 				AccountKeyring::Alice.pair(),
 			))
@@ -611,8 +610,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	let maybe_target_b_parentchain_api_factory =
 		config.target_b_parentchain_rpc_endpoint().map(|url| {
-			Arc::new(get_node_api_factory(
-				ParentchainId::TargetB,
+			Arc::new(NodeApiFactory::<TargetBParentchainApiWrapper>::new(
 				url,
 				AccountKeyring::Alice.pair(),
 			))

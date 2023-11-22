@@ -19,7 +19,10 @@
 use crate::ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, WorkerOnChainBridge};
 use codec::{Decode, Encode};
 use itp_node_api::node_api_factory::CreateNodeApi;
-use itp_types::{parentchain::ParentchainId, WorkerRequest, WorkerResponse};
+use itp_types::{
+	parentchain::{Hash, ParentchainId},
+	WorkerRequest, WorkerResponse,
+};
 use log::*;
 use sp_runtime::OpaqueExtrinsic;
 use std::{sync::Arc, vec::Vec};
@@ -27,17 +30,17 @@ use substrate_api_client::{
 	ac_primitives::serde_impls::StorageKey, GetStorage, SubmitAndWatch, SubmitExtrinsic, XtStatus,
 };
 
-pub struct WorkerOnChainOCall<F> {
-	integritee_api_factory: Arc<F>,
-	target_a_parentchain_api_factory: Option<Arc<F>>,
-	target_b_parentchain_api_factory: Option<Arc<F>>,
+pub struct WorkerOnChainOCall<FI, FA, FB> {
+	integritee_api_factory: Arc<FI>,
+	target_a_parentchain_api_factory: Option<Arc<FA>>,
+	target_b_parentchain_api_factory: Option<Arc<FB>>,
 }
 
-impl<F> WorkerOnChainOCall<F> {
+impl<FI, FA, FB> WorkerOnChainOCall<FI, FA, FB> {
 	pub fn new(
-		integritee_api_factory: Arc<F>,
-		target_a_parentchain_api_factory: Option<Arc<F>>,
-		target_b_parentchain_api_factory: Option<Arc<F>>,
+		integritee_api_factory: Arc<FI>,
+		target_a_parentchain_api_factory: Option<Arc<FA>>,
+		target_b_parentchain_api_factory: Option<Arc<FB>>,
 	) -> Self {
 		WorkerOnChainOCall {
 			integritee_api_factory,
@@ -47,7 +50,12 @@ impl<F> WorkerOnChainOCall<F> {
 	}
 }
 
-impl<F: CreateNodeApi> WorkerOnChainOCall<F> {
+impl<FI, FA, FB> WorkerOnChainOCall<FI, FA, FB>
+where
+	FI: CreateNodeApi,
+	FA: CreateNodeApi,
+	FB: CreateNodeApi,
+{
 	pub fn create_api(&self, parentchain_id: ParentchainId) -> OCallBridgeResult<F::Api> {
 		Ok(match parentchain_id {
 			ParentchainId::Integritee => self.integritee_api_factory.create_api()?,
@@ -65,9 +73,14 @@ impl<F: CreateNodeApi> WorkerOnChainOCall<F> {
 	}
 }
 
-impl<F> WorkerOnChainBridge for WorkerOnChainOCall<F>
+impl<FI, FA, FB> WorkerOnChainBridge for WorkerOnChainOCall<FI, FA, FB>
 where
-	F: CreateNodeApi + GetStorage,
+	FI: CreateNodeApi,
+	FI::Api: GetStorage<Hash = Hash> + SubmitAndWatch + SubmitExtrinsic,
+	FA: CreateNodeApi,
+	FA::Api: GetStorage<Hash = Hash> + SubmitAndWatch + SubmitExtrinsic,
+	FB: CreateNodeApi,
+	FB::Api: GetStorage<Hash = Hash> + SubmitAndWatch + SubmitExtrinsic,
 {
 	fn worker_request(
 		&self,
