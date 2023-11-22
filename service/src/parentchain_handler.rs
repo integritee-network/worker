@@ -16,7 +16,10 @@
 
 */
 
-use crate::error::{Error, ServiceResult};
+use crate::{
+	error::{Error, ServiceResult},
+	parentchain_config::IntegriteeParentchainApi,
+};
 use codec::{Decode, Encode};
 use itc_parentchain::{
 	light_client::light_client_init_params::{GrandpaParams, SimpleParams},
@@ -25,15 +28,12 @@ use itc_parentchain::{
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
 use itp_node_api::api_client::ChainApi;
 use itp_storage::StorageProof;
-use itp_types::{
-	parentchain::{BlockNumber, Hash, Header},
-	Block,
-};
 use log::*;
+use my_node_runtime::Header;
 use sp_consensus_grandpa::VersionedAuthorityList;
-use sp_runtime::traits::{Block as BlockT, Header as HeaderTrait};
+use sp_runtime::traits::Header as HeaderTrait;
 use std::{cmp::min, sync::Arc};
-use substrate_api_client::ac_primitives::Header as HeaderT;
+use substrate_api_client::ac_primitives::{Block, Header as HeaderT};
 
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
 
@@ -67,13 +67,12 @@ pub(crate) struct ParentchainHandler<ParentchainApi, EnclaveApi> {
 
 // #TODO: #1451: Reintroduce `ParentchainApi: ChainApi` once there is no trait bound conflict
 // any more with the api-clients own trait definitions.
-impl<ParentchainApi, EnclaveApi> ParentchainHandler<ParentchainApi, EnclaveApi>
+impl<EnclaveApi> ParentchainHandler<IntegriteeParentchainApi, EnclaveApi>
 where
 	EnclaveApi: EnclaveBase,
-	ParentchainApi: ChainApi<Header = Header>,
 {
 	pub fn new(
-		parentchain_api: ParentchainApi,
+		parentchain_api: IntegriteeParentchainApi,
 		enclave_api: Arc<EnclaveApi>,
 		parentchain_init_params: ParentchainInitParams,
 	) -> Self {
@@ -82,7 +81,7 @@ where
 
 	// FIXME: Necessary in the future? Fix with #1080
 	pub fn new_with_automatic_light_client_allocation(
-		parentchain_api: ParentchainApi,
+		parentchain_api: IntegriteeParentchainApi,
 		enclave_api: Arc<EnclaveApi>,
 		id: ParentchainId,
 	) -> ServiceResult<Self> {
@@ -100,7 +99,16 @@ where
 
 			let authority_list = VersionedAuthorityList::from(grandpas);
 
-			(id, GrandpaParams::new(genesis_header, authority_list.into(), grandpa_proof)).into()
+			(
+				id,
+				GrandpaParams::new(
+					// #TODO: #1451: clean up type hacks
+					Header::decode(&mut genesis_header.encode().as_slice())?,
+					authority_list.into(),
+					grandpa_proof,
+				),
+			)
+				.into()
 		} else {
 			(
 				id,
@@ -115,7 +123,7 @@ where
 		Ok(Self::new(parentchain_api, enclave_api, parentchain_init_params))
 	}
 
-	pub fn parentchain_api(&self) -> &ParentchainApi {
+	pub fn parentchain_api(&self) -> &IntegriteeParentchainApi {
 		&self.parentchain_api
 	}
 
@@ -124,12 +132,9 @@ where
 	}
 }
 
-impl<ParentchainApi, EnclaveApi> HandleParentchain
-	for ParentchainHandler<ParentchainApi, EnclaveApi>
+impl<EnclaveApi> HandleParentchain for ParentchainHandler<IntegriteeParentchainApi, EnclaveApi>
 where
 	EnclaveApi: Sidechain + EnclaveBase,
-	ParentchainApi:
-		ChainApi<Header = Header, Block = Block, BlockNumber = BlockNumber, Hash = Hash>,
 {
 	fn init_parentchain_components(&self) -> ServiceResult<Header> {
 		Ok(self
@@ -155,7 +160,7 @@ where
 		loop {
 			let block_chunk_to_sync = self.parentchain_api.get_blocks(
 				until_synced_header.number + 1,
-				min(until_synced_header.number + BLOCK_SYNC_BATCH_SIZE, *curr_block_number),
+				min(until_synced_header.number + BLOCK_SYNC_BATCH_SIZE, curr_block_number),
 			)?;
 			println!("[+] [{:?}] Found {} block(s) to sync", id, block_chunk_to_sync.len());
 			if block_chunk_to_sync.is_empty() {

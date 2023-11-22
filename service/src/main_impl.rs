@@ -496,7 +496,12 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	let tee_accountid_clone = tee_accountid.clone();
 	let send_register_xt = move || {
 		println!("[+] Send register enclave extrinsic");
-		send_extrinsic(register_xt(), &node_api2, &tee_accountid_clone, is_development_mode)
+		send_integritee_extrinsic(
+			register_xt(),
+			&node_api2,
+			&tee_accountid_clone,
+			is_development_mode,
+		)
 	};
 
 	// Todo: Can't unwrap here because the extrinsic is for some reason not found in the block
@@ -1054,7 +1059,7 @@ fn register_quotes_from_marblerun(
 	for quote in quotes {
 		match enclave.generate_dcap_ra_extrinsic_from_quote(url.clone(), &quote) {
 			Ok(xt) => {
-				send_extrinsic(xt, api, accountid, is_development_mode);
+				send_integritee_extrinsic(xt, api, accountid, is_development_mode);
 			},
 			Err(e) => {
 				error!("Extracting information from quote failed: {}", e)
@@ -1076,28 +1081,20 @@ fn register_collateral(
 		let (fmspc, _tcb_info) = extract_tcb_info_from_raw_dcap_quote(&dcap_quote).unwrap();
 		println!("[>] DCAP setup: register QE collateral");
 		let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc).unwrap();
-		send_extrinsic(uxt, api, accountid, is_development_mode);
+		send_integritee_extrinsic(uxt, api, accountid, is_development_mode);
 
 		println!("[>] DCAP setup: register TCB info");
 		let uxt = enclave.generate_register_tcb_info_extrinsic(fmspc).unwrap();
-		send_extrinsic(uxt, api, accountid, is_development_mode);
+		send_integritee_extrinsic(uxt, api, accountid, is_development_mode);
 	}
 }
 
-fn send_extrinsic<ParentchainApi>(
+fn send_integritee_extrinsic(
 	extrinsic: Vec<u8>,
-	api: &ParentchainApi,
+	api: &IntegriteeParentchainApi,
 	fee_payer: &AccountId32,
 	is_development_mode: bool,
-) -> Option<Hash>
-where
-	ParentchainApi: ChainApi<Hash = Hash>
-		+ SubmitAndWatch
-		+ BalancesExtrinsics
-		+ GetTransactionPayment
-		+ GetBalance
-		+ AccountApi,
-{
+) -> Option<Hash> {
 	// ensure account funds
 	if let Err(x) = setup_account_funding(api, fee_payer, extrinsic.clone(), is_development_mode) {
 		error!("Ensure enclave funding failed: {:?}", x);
