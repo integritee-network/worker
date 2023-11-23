@@ -285,19 +285,6 @@ where
 				);
 				unshield_funds(account_incognito, value)?;
 
-				calls.push(OpaqueCall::from_tuple(&(
-					node_metadata_repo
-						.get_from_metadata(|m| m.unshield_funds_call_indexes())
-						.map_err(|_| StfError::InvalidMetadata)?
-						.map_err(|_| StfError::InvalidMetadata)?,
-					shard,
-					beneficiary.clone(),
-					value,
-					call_hash,
-				)));
-				// todo: the following is a placeholder dummy which will replace the above with #1257.
-				// the extrinsic will be sent and potentially deplete the vault at the current state which
-				// is nothing to worry about before we solve mentioned issue.
 				let vault_pubkey: [u8; 32] = get_storage_by_key_hash(SHARD_VAULT_KEY.into())
 					.ok_or_else(|| {
 						StfError::Dispatch("shard vault key hasn't been set".to_string())
