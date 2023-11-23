@@ -24,7 +24,7 @@ set -e
 # TEST_BALANCE_RUN is either "first" or "second"
 # if -m file is set, the mrenclave will be read from file
 
-while getopts ":m:p:P:t:u:V:C:" opt; do
+while getopts ":m:p:P:t:u:V:C:a:A:" opt; do
     case $opt in
         t)
             TEST=$OPTARG
@@ -44,7 +44,7 @@ while getopts ":m:p:P:t:u:V:C:" opt; do
         u)
             INTEGRITEE_RPC_URL=$OPTARG
             ;;
-        U)
+        A)
             TARGET_A_RPC_URL=$OPTARG
             ;;
         V)
@@ -63,8 +63,8 @@ done
 INTEGRITEE_RPC_PORT=${INTEGRITEE_RPC_PORT:-9944}
 INTEGRITEE_RPC_URL=${INTEGRITEE_RPC_URL:-"ws://127.0.0.1"}
 
-TARGET_A_RPC_PORT=${INTEGRITEE_RPC_PORT:-9954}
-TARGET_A_RPC_URL=${INTEGRITEE_RPC_URL:-"ws://127.0.0.1"}
+TARGET_A_RPC_PORT=${TARGET_A_RPC_PORT:-9954}
+TARGET_A_RPC_URL=${TARGET_A_RPC_URL:-"ws://127.0.0.1"}
 
 WORKER_1_PORT=${WORKER_1_PORT:-2000}
 WORKER_1_URL=${WORKER_1_URL:-"wss://127.0.0.1"}
@@ -73,7 +73,8 @@ CLIENT_BIN=${CLIENT_BIN:-"./../bin/integritee-cli"}
 
 echo "Using client binary ${CLIENT_BIN}"
 ${CLIENT_BIN} --version
-echo "Using node uri ${INTEGRITEE_RPC_URL}:${INTEGRITEE_RPC_PORT}"
+echo "Using integritee node uri ${INTEGRITEE_RPC_URL}:${INTEGRITEE_RPC_PORT}"
+echo "Using target_a node uri ${TARGET_A_RPC_URL}:${TARGET_A_RPC_PORT}"
 echo "Using trusted-worker uri ${WORKER_1_URL}:${WORKER_1_PORT}"
 echo ""
 
@@ -100,7 +101,7 @@ esac
 echo "using call type: ${CALLTYPE} (empty means indirect)"
 
 # interval and max rounds to wait to check the given account balance in sidechain
-WAIT_INTERVAL_SECONDS=10
+WAIT_INTERVAL_SECONDS=6
 WAIT_ROUNDS=20
 
 # Poll and assert the given account's state is equal to expected,
@@ -116,7 +117,7 @@ function wait_assert_state()
         if [ $state -eq "$4" ]; then
             return
         else
-            :
+            echo -n "."
         fi
     done
     echo
@@ -191,7 +192,7 @@ echo ""
 # Asssert the initial balance of Charlie incognito
 # The initial balance of Bob incognito should always be 0, as Bob is newly created
 BALANCE_INCOGNITO_CHARLIE=0
-BALANCE_FERDIE=$(${CLIENT_A} balance //Ferdie)
+BALANCE_A_FERDIE=$(${CLIENT_A} balance //Ferdie)
 
 case $TEST in
     first)
@@ -205,6 +206,7 @@ case $TEST in
 esac
 
 echo "* Shield ${AMOUNT_SHIELD} tokens from TARGET_A to Charlie's account on L2"
+${CLIENT_A} transfer //Alice //Charlie $((AMOUNT_SHIELD * 2))
 ${CLIENT_A} transfer //Charlie ${VAULT} ${AMOUNT_SHIELD}
 echo ""
 
@@ -238,8 +240,8 @@ echo "* Wait and assert Charlie's incognito account balance... "
 wait_assert_state ${MRENCLAVE} //Charlie balance $(( BALANCE_INCOGNITO_CHARLIE + AMOUNT_SHIELD - AMOUNT_TRANSFER - AMOUNT_UNSHIELD ))
 echo "✔ ok"
 
-echo "* Wait and assert Charlie's incognito account balance... "
-wait_assert_state_target_a //Charlie balance $(( BALANCE_FERDIE + AMOUNT_UNSHIELD ))
+echo "* Wait and assert Ferdie's Target A account balance... "
+wait_assert_state_target_a //Ferdie balance $(( BALANCE_A_FERDIE + AMOUNT_UNSHIELD ))
 echo "✔ ok"
 
 echo "* Wait and assert Bob's incognito account balance... "
