@@ -19,17 +19,18 @@ use crate::{
 	error::Result,
 	initialization::{
 		global_components::{
-			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOCallApi,
-			EnclaveStfExecutor, EnclaveValidatorAccessor,
+			EnclaveNodeMetadataRepository, EnclaveOCallApi, EnclaveStfExecutor,
+			EnclaveValidatorAccessor, IntegriteeExtrinsicsFactory,
 			IntegriteeParentchainBlockImportDispatcher,
 			GLOBAL_INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_SEAL,
 			GLOBAL_INTEGRITEE_PARENTCHAIN_NONCE_CACHE, GLOBAL_OCALL_API_COMPONENT,
 			GLOBAL_STATE_HANDLER_COMPONENT,
 		},
 		parentchain::common::{
-			create_extrinsics_factory, create_integritee_offchain_immediate_import_dispatcher,
+			create_integritee_extrinsics_factory,
+			create_integritee_offchain_immediate_import_dispatcher,
 			create_integritee_parentchain_block_importer,
-			create_sidechain_triggered_import_dispatcher,
+			create_sidechain_triggered_import_dispatcher_for_integritee,
 		},
 	},
 };
@@ -46,7 +47,7 @@ pub struct IntegriteeSolochainHandler {
 	pub node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
 	pub stf_executor: Arc<EnclaveStfExecutor>,
 	pub validator_accessor: Arc<EnclaveValidatorAccessor>,
-	pub extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
+	pub extrinsics_factory: Arc<IntegriteeExtrinsicsFactory>,
 	pub import_dispatcher: Arc<IntegriteeParentchainBlockImportDispatcher>,
 }
 
@@ -73,7 +74,7 @@ impl IntegriteeSolochainHandler {
 
 		let genesis_hash = validator_accessor.execute_on_validator(|v| v.genesis_hash())?;
 
-		let extrinsics_factory = create_extrinsics_factory(
+		let extrinsics_factory = create_integritee_extrinsics_factory(
 			genesis_hash,
 			GLOBAL_INTEGRITEE_PARENTCHAIN_NONCE_CACHE.clone(),
 			node_metadata_repository.clone(),
@@ -99,7 +100,8 @@ impl IntegriteeSolochainHandler {
 				validator_accessor.clone(),
 				extrinsics_factory.clone(),
 			)?,
-			WorkerMode::Sidechain => create_sidechain_triggered_import_dispatcher(block_importer),
+			WorkerMode::Sidechain =>
+				create_sidechain_triggered_import_dispatcher_for_integritee(block_importer),
 			WorkerMode::Teeracle =>
 				Arc::new(IntegriteeParentchainBlockImportDispatcher::new_empty_dispatcher()),
 		};

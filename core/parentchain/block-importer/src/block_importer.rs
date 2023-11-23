@@ -156,8 +156,7 @@ impl<
 		}
 
 		// Create extrinsics for all `unshielding` and `block processed` calls we've gathered.
-		let parentchain_extrinsics =
-			self.extrinsics_factory.create_extrinsics(calls.as_slice(), None)?;
+		let parentchain_extrinsics = self.extrinsics_factory.create_extrinsics(calls.as_slice())?;
 
 		// Sending the extrinsic requires mut access because the validator caches the sent extrinsics internally.
 		self.validator_accessor

@@ -25,24 +25,26 @@ use crate::{
 	error::Result,
 	initialization::{
 		global_components::{
-			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOCallApi,
-			EnclaveStfExecutor, EnclaveValidatorAccessor, TargetBParentchainBlockImportDispatcher,
-			GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
-			GLOBAL_TARGET_B_PARENTCHAIN_LIGHT_CLIENT_SEAL, GLOBAL_TARGET_B_PARENTCHAIN_NONCE_CACHE,
+			EnclaveNodeMetadataRepository, EnclaveOCallApi, EnclaveStfExecutor,
+			EnclaveValidatorAccessor, TargetBExtrinsicsFactory,
+			TargetBParentchainBlockImportDispatcher, GLOBAL_OCALL_API_COMPONENT,
+			GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_TARGET_B_PARENTCHAIN_LIGHT_CLIENT_SEAL,
+			GLOBAL_TARGET_B_PARENTCHAIN_NONCE_CACHE,
 		},
 		parentchain::common::{
-			create_extrinsics_factory, create_target_b_offchain_immediate_import_dispatcher,
+			create_sidechain_triggered_import_dispatcher_for_target_b,
+			create_target_b_extrinsics_factory,
+			create_target_b_offchain_immediate_import_dispatcher,
 			create_target_b_parentchain_block_importer,
 		},
 	},
 };
 use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, LightClientState};
+pub use itc_parentchain::primitives::{ParachainBlock, ParachainHeader, ParachainParams};
 use itp_component_container::ComponentGetter;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
 use itp_types::parentchain::ParentchainId;
 use std::{path::PathBuf, sync::Arc};
-
-pub use itc_parentchain::primitives::{ParachainBlock, ParachainHeader, ParachainParams};
 
 #[derive(Clone)]
 pub struct TargetBParachainHandler {
@@ -50,7 +52,7 @@ pub struct TargetBParachainHandler {
 	pub node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
 	pub stf_executor: Arc<EnclaveStfExecutor>,
 	pub validator_accessor: Arc<EnclaveValidatorAccessor>,
-	pub extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
+	pub extrinsics_factory: Arc<TargetBExtrinsicsFactory>,
 	pub import_dispatcher: Arc<TargetBParentchainBlockImportDispatcher>,
 }
 
@@ -76,7 +78,7 @@ impl TargetBParachainHandler {
 
 		let genesis_hash = validator_accessor.execute_on_validator(|v| v.genesis_hash())?;
 
-		let extrinsics_factory = create_extrinsics_factory(
+		let extrinsics_factory = create_target_b_extrinsics_factory(
 			genesis_hash,
 			GLOBAL_TARGET_B_PARENTCHAIN_NONCE_CACHE.clone(),
 			node_metadata_repository.clone(),
@@ -103,7 +105,7 @@ impl TargetBParachainHandler {
 				extrinsics_factory.clone(),
 			)?,
 			WorkerMode::Sidechain =>
-				unimplemented!("Can't run target B chain in sidechain mode yet."),
+				create_sidechain_triggered_import_dispatcher_for_target_b(block_importer),
 			WorkerMode::Teeracle =>
 				Arc::new(TargetBParentchainBlockImportDispatcher::new_empty_dispatcher()),
 		};

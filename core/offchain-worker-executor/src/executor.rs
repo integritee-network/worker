@@ -185,9 +185,8 @@ impl<
 	}
 
 	fn send_parentchain_effects(&self, parentchain_effects: Vec<OpaqueCall>) -> Result<()> {
-		let extrinsics = self
-			.extrinsics_factory
-			.create_extrinsics(parentchain_effects.as_slice(), None)?;
+		let extrinsics =
+			self.extrinsics_factory.create_extrinsics(parentchain_effects.as_slice())?;
 		self.validator_accessor
 			.execute_mut_on_validator(|v| v.send_extrinsics(extrinsics))?;
 		Ok(())

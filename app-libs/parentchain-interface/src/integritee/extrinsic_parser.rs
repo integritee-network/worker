@@ -14,12 +14,141 @@
 	limitations under the License.
 
 */
-
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
+use itp_api_client_types::traits::ExtrinsicParamsAdjustments;
 use itp_node_api::api_client::{
-	Address, CallIndex, PairSignature, ParentchainSignedExtra, Signature, UncheckedExtrinsicV4,
+	Address, CallIndex, DefaultRuntimeConfig, ExtrinsicParams, GenericAdditionalSigned,
+	GenericExtrinsicParams, PairSignature, Signature, UncheckedExtrinsicV4,
 };
+use itp_types::parentchain::{Balance, Hash, Index};
+use sp_runtime::generic::Era;
+
+// re-export integritee network types
+pub use itp_node_api::api_client::{ParentchainTip, Signature as ParentchainSignature};
+
+#[derive(Decode, Encode, Clone, Eq, PartialEq, Debug)]
+pub struct ParentchainExtrinsicParams {
+	era: Era,
+	nonce: Index,
+	tip: ParentchainTip,
+	spec_version: u32,
+	transaction_version: u32,
+	genesis_hash: Hash,
+	mortality_checkpoint: Hash,
+}
+
+#[derive(Decode, Encode, Copy, Clone, Eq, PartialEq, Debug)]
+pub struct ParentchainAdditionalParams {
+	era: Era,
+	mortality_checkpoint: Option<Hash>,
+	tip: ParentchainTip,
+}
+impl Default for ParentchainAdditionalParams {
+	fn default() -> Self {
+		Self { era: Era::Immortal, mortality_checkpoint: None, tip: ParentchainTip::default() }
+	}
+}
+
+#[derive(Decode, Encode, Copy, Clone, Eq, PartialEq, Debug)]
+pub struct ParentchainSignedExtra {
+	pub era: Era,
+	#[codec(compact)]
+	pub nonce: Index,
+	pub tip: ParentchainTip,
+}
+
+pub type ParentchainAdditionalSigned = ((), u32, u32, Hash, Hash, (), (), ());
+
+impl ExtrinsicParams<Index, Hash> for ParentchainExtrinsicParams {
+	type AdditionalParams = ParentchainAdditionalParams;
+	type SignedExtra = ParentchainSignedExtra;
+	type AdditionalSigned = ParentchainAdditionalSigned;
+
+	fn new(
+		spec_version: u32,
+		transaction_version: u32,
+		nonce: Index,
+		genesis_hash: Hash,
+		additional_params: Self::AdditionalParams,
+	) -> Self {
+		Self {
+			era: additional_params.era,
+			tip: additional_params.tip,
+			spec_version,
+			transaction_version,
+			genesis_hash,
+			mortality_checkpoint: additional_params.mortality_checkpoint.unwrap_or(genesis_hash),
+			nonce,
+		}
+	}
+
+	fn signed_extra(&self) -> Self::SignedExtra {
+		Self::SignedExtra { era: self.era, nonce: self.nonce, tip: self.tip }
+	}
+
+	fn additional_signed(&self) -> Self::AdditionalSigned {
+		(
+			(),
+			self.spec_version,
+			self.transaction_version,
+			self.genesis_hash,
+			self.mortality_checkpoint,
+			(),
+			(),
+			(),
+		)
+	}
+}
+
+impl ExtrinsicParamsAdjustments<ParentchainAdditionalParams> for ParentchainExtrinsicParams {
+	fn with_nonce(&self, nonce: Index) -> Self {
+		Self {
+			era: self.era,
+			tip: self.tip,
+			spec_version: self.spec_version,
+			transaction_version: self.transaction_version,
+			genesis_hash: self.genesis_hash,
+			mortality_checkpoint: self.mortality_checkpoint,
+			nonce,
+		}
+	}
+	fn with_additional_params(&self, additional_params: ParentchainAdditionalParams) -> Self {
+		Self {
+			era: additional_params.era,
+			tip: additional_params.tip,
+			spec_version: self.spec_version,
+			transaction_version: self.transaction_version,
+			genesis_hash: self.genesis_hash,
+			mortality_checkpoint: additional_params
+				.mortality_checkpoint
+				.unwrap_or(self.genesis_hash),
+			nonce: self.nonce,
+		}
+	}
+	fn with_spec_version(&self, spec_version: u32) -> Self {
+		Self {
+			era: self.era,
+			tip: self.tip,
+			spec_version,
+			transaction_version: self.transaction_version,
+			genesis_hash: self.genesis_hash,
+			mortality_checkpoint: self.mortality_checkpoint,
+			nonce: self.nonce,
+		}
+	}
+	fn with_transaction_version(&self, transaction_version: u32) -> Self {
+		Self {
+			era: self.era,
+			tip: self.tip,
+			spec_version: self.spec_version,
+			transaction_version,
+			genesis_hash: self.genesis_hash,
+			mortality_checkpoint: self.mortality_checkpoint,
+			nonce: self.nonce,
+		}
+	}
+}
 
 pub struct ExtrinsicParser<SignedExtra> {
 	_phantom: PhantomData<SignedExtra>,

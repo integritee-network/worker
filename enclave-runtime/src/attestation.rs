@@ -382,7 +382,7 @@ pub fn generate_ias_skip_ra_extrinsic_from_der_cert_internal(
 
 fn create_extrinsics(call: OpaqueCall) -> EnclaveResult<OpaqueExtrinsic> {
 	let extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
-	let extrinsics = extrinsics_factory.create_extrinsics(&[call], None)?;
+	let extrinsics = extrinsics_factory.create_extrinsics(&[call])?;
 
 	Ok(extrinsics[0].clone())
 }
@@ -468,7 +468,7 @@ where
 	info!("    [Enclave] Compose register collateral call: {:?}", call_ids);
 	let call = OpaqueCall::from_tuple(&(call_ids, collateral_data, data_signature, issuer_chain));
 
-	let extrinsic = extrinsics_factory.create_extrinsics(&[call], None)?[0].clone();
+	let extrinsic = extrinsics_factory.create_extrinsics(&[call])?[0].clone();
 	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
 		return EnclaveError::BufferError(e).into()
 	};

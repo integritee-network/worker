@@ -2875,6 +2875,7 @@ dependencies = [
  "hex",
  "integritee-node-runtime",
  "ipfs-api",
+ "ita-parentchain-interface",
  "itc-parentchain",
  "itc-parentchain-test",
  "itc-rest-client",
@@ -3010,6 +3011,7 @@ dependencies = [
  "bs58",
  "env_logger",
  "frame-support",
+ "frame-system",
  "futures 0.3.28",
  "futures 0.3.8",
  "ita-sgx-runtime",
@@ -3029,6 +3031,7 @@ dependencies = [
  "itp-utils",
  "log 0.4.19",
  "parity-scale-codec",
+ "scale-info",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
@@ -3424,6 +3427,7 @@ version = "0.9.0"
 dependencies = [
  "integritee-node-runtime",
  "itp-types",
+ "parity-scale-codec",
  "sp-core",
  "sp-runtime",
  "substrate-api-client",
@@ -3536,6 +3540,7 @@ dependencies = [
  "itp-node-api",
  "itp-nonce-cache",
  "itp-types",
+ "itp-utils",
  "log 0.4.19",
  "parity-scale-codec",
  "sgx_tstd",
@@ -3586,6 +3591,7 @@ dependencies = [
 name = "itp-node-api-factory"
 version = "0.9.0"
 dependencies = [
+ "itp-api-client-extensions",
  "itp-api-client-types",
  "sp-core",
  "thiserror 1.0.40",

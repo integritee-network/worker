@@ -17,8 +17,9 @@
 use crate::{
 	error::{Error, Result},
 	initialization::global_components::{
-		EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveStfEnclaveSigner,
-		EnclaveStfExecutor, EnclaveValidatorAccessor, IntegriteeParentchainBlockImportDispatcher,
+		EnclaveNodeMetadataRepository, EnclaveStfEnclaveSigner, EnclaveStfExecutor,
+		EnclaveValidatorAccessor, IntegriteeExtrinsicsFactory,
+		IntegriteeParentchainBlockImportDispatcher,
 		IntegriteeParentchainTriggeredBlockImportDispatcher,
 		GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT,
 		GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT, GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT,
@@ -149,7 +150,7 @@ pub(crate) fn get_node_metadata_repository_from_target_b_solo_or_parachain(
 }
 
 pub(crate) fn get_extrinsic_factory_from_integritee_solo_or_parachain(
-) -> Result<Arc<EnclaveExtrinsicsFactory>> {
+) -> Result<Arc<IntegriteeExtrinsicsFactory>> {
 	let extrinsics_factory =
 		if let Ok(solochain_handler) = GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT.get() {
 			solochain_handler.extrinsics_factory.clone()

@@ -28,11 +28,7 @@ use std::vec::Vec;
 pub struct ExtrinsicsFactoryMock;
 
 impl CreateExtrinsics for ExtrinsicsFactoryMock {
-	fn create_extrinsics(
-		&self,
-		_calls: &[OpaqueCall],
-		_additional_params: Option<ParentchainAdditionalParams>,
-	) -> Result<Vec<OpaqueExtrinsic>> {
+	fn create_extrinsics(&self, _calls: &[OpaqueCall]) -> Result<Vec<OpaqueExtrinsic>> {
 		// Intention was to map an OpaqueCall to some dummy OpaqueExtrinsic,
 		// so the output vector has the same size as the input one (and thus can be tested from the outside).
 		// However, it doesn't seem to be possible to construct an empty of dummy OpaqueExtrinsic,

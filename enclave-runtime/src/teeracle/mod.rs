@@ -59,7 +59,7 @@ fn update_weather_data_internal(weather_info: WeatherInfo) -> Result<Vec<OpaqueE
 			error!("[-] Failed to get the newest longitude from OpenMeteo. {:?}", e);
 		},
 	};
-	let extrinsics = extrinsics_factory.create_extrinsics(extrinsic_calls.as_slice(), None)?;
+	let extrinsics = extrinsics_factory.create_extrinsics(extrinsic_calls.as_slice())?;
 	Ok(extrinsics)
 }
 
@@ -223,7 +223,7 @@ fn update_market_data_internal(
 		},
 	};
 
-	let extrinsics = extrinsics_factory.create_extrinsics(extrinsic_calls.as_slice(), None)?;
+	let extrinsics = extrinsics_factory.create_extrinsics(extrinsic_calls.as_slice())?;
 	Ok(extrinsics)
 }
 

@@ -16,13 +16,15 @@
 
 */
 
-use crate::error::{Error, ServiceResult};
+use crate::{
+	error::{Error, ServiceResult},
+	parentchain_config::IntegriteeParentchainApi,
+};
 use codec::{Decode, Encode};
 use itc_parentchain::{
 	light_client::light_client_init_params::{GrandpaParams, SimpleParams},
 	primitives::{ParentchainId, ParentchainInitParams},
 };
-use itp_api_client_types::ParentchainApi;
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
 use itp_node_api::api_client::ChainApi;
 use itp_storage::StorageProof;
@@ -65,12 +67,12 @@ pub(crate) struct ParentchainHandler<ParentchainApi, EnclaveApi> {
 
 // #TODO: #1451: Reintroduce `ParentchainApi: ChainApi` once there is no trait bound conflict
 // any more with the api-clients own trait definitions.
-impl<EnclaveApi> ParentchainHandler<ParentchainApi, EnclaveApi>
+impl<EnclaveApi> ParentchainHandler<IntegriteeParentchainApi, EnclaveApi>
 where
 	EnclaveApi: EnclaveBase,
 {
 	pub fn new(
-		parentchain_api: ParentchainApi,
+		parentchain_api: IntegriteeParentchainApi,
 		enclave_api: Arc<EnclaveApi>,
 		parentchain_init_params: ParentchainInitParams,
 	) -> Self {
@@ -79,7 +81,7 @@ where
 
 	// FIXME: Necessary in the future? Fix with #1080
 	pub fn new_with_automatic_light_client_allocation(
-		parentchain_api: ParentchainApi,
+		parentchain_api: IntegriteeParentchainApi,
 		enclave_api: Arc<EnclaveApi>,
 		id: ParentchainId,
 	) -> ServiceResult<Self> {
@@ -121,7 +123,7 @@ where
 		Ok(Self::new(parentchain_api, enclave_api, parentchain_init_params))
 	}
 
-	pub fn parentchain_api(&self) -> &ParentchainApi {
+	pub fn parentchain_api(&self) -> &IntegriteeParentchainApi {
 		&self.parentchain_api
 	}
 
@@ -130,7 +132,7 @@ where
 	}
 }
 
-impl<EnclaveApi> HandleParentchain for ParentchainHandler<ParentchainApi, EnclaveApi>
+impl<EnclaveApi> HandleParentchain for ParentchainHandler<IntegriteeParentchainApi, EnclaveApi>
 where
 	EnclaveApi: Sidechain + EnclaveBase,
 {

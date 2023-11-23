@@ -16,11 +16,20 @@
 
 */
 
-use crate::ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, WorkerOnChainBridge};
+use crate::{
+	ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, WorkerOnChainBridge},
+	parentchain_config::{
+		IntegriteeParentchainApi, IntegriteeParentchainApiWrapper, ParentchainApiLocal,
+		TargetAParentchainApi, TargetAParentchainApiWrapper, TargetBParentchainApi,
+		TargetBParentchainApiWrapper,
+	},
+};
 use codec::{Decode, Encode};
-use itp_api_client_types::ParentchainApi;
-use itp_node_api::node_api_factory::CreateNodeApi;
-use itp_types::{parentchain::ParentchainId, WorkerRequest, WorkerResponse};
+use itp_node_api::node_api_factory::{CreateNodeApi, NodeApiFactory};
+use itp_types::{
+	parentchain::{Hash, ParentchainId},
+	WorkerRequest, WorkerResponse,
+};
 use log::*;
 use sp_runtime::OpaqueExtrinsic;
 use std::{sync::Arc, vec::Vec};
@@ -28,17 +37,17 @@ use substrate_api_client::{
 	ac_primitives::serde_impls::StorageKey, GetStorage, SubmitAndWatch, SubmitExtrinsic, XtStatus,
 };
 
-pub struct WorkerOnChainOCall<F> {
-	integritee_api_factory: Arc<F>,
-	target_a_parentchain_api_factory: Option<Arc<F>>,
-	target_b_parentchain_api_factory: Option<Arc<F>>,
+pub struct WorkerOnChainOCall {
+	integritee_api_factory: Arc<NodeApiFactory<IntegriteeParentchainApiWrapper>>,
+	target_a_parentchain_api_factory: Option<Arc<NodeApiFactory<TargetAParentchainApiWrapper>>>,
+	target_b_parentchain_api_factory: Option<Arc<NodeApiFactory<TargetBParentchainApiWrapper>>>,
 }
 
-impl<F> WorkerOnChainOCall<F> {
+impl WorkerOnChainOCall {
 	pub fn new(
-		integritee_api_factory: Arc<F>,
-		target_a_parentchain_api_factory: Option<Arc<F>>,
-		target_b_parentchain_api_factory: Option<Arc<F>>,
+		integritee_api_factory: Arc<NodeApiFactory<IntegriteeParentchainApiWrapper>>,
+		target_a_parentchain_api_factory: Option<Arc<NodeApiFactory<TargetAParentchainApiWrapper>>>,
+		target_b_parentchain_api_factory: Option<Arc<NodeApiFactory<TargetBParentchainApiWrapper>>>,
 	) -> Self {
 		WorkerOnChainOCall {
 			integritee_api_factory,
@@ -48,28 +57,31 @@ impl<F> WorkerOnChainOCall<F> {
 	}
 }
 
-impl<F: CreateNodeApi> WorkerOnChainOCall<F> {
-	pub fn create_api(&self, parentchain_id: ParentchainId) -> OCallBridgeResult<ParentchainApi> {
+impl WorkerOnChainOCall {
+	pub fn create_api(
+		&self,
+		parentchain_id: ParentchainId,
+	) -> OCallBridgeResult<ParentchainApiLocal> {
 		Ok(match parentchain_id {
-			ParentchainId::Integritee => self.integritee_api_factory.create_api()?,
-			ParentchainId::TargetA => self
-				.target_a_parentchain_api_factory
-				.as_ref()
-				.ok_or(OCallBridgeError::TargetAParentchainNotInitialized)
-				.and_then(|f| f.create_api().map_err(Into::into))?,
-			ParentchainId::TargetB => self
-				.target_b_parentchain_api_factory
-				.as_ref()
-				.ok_or(OCallBridgeError::TargetBParentchainNotInitialized)
-				.and_then(|f| f.create_api().map_err(Into::into))?,
+			ParentchainId::Integritee =>
+				ParentchainApiLocal::Integritee(self.integritee_api_factory.create_api()?),
+			ParentchainId::TargetA => ParentchainApiLocal::TargetA(
+				self.target_a_parentchain_api_factory
+					.as_ref()
+					.ok_or(OCallBridgeError::TargetAParentchainNotInitialized)
+					.and_then(|f| f.create_api().map_err(Into::into))?,
+			),
+			ParentchainId::TargetB => ParentchainApiLocal::TargetB(
+				self.target_b_parentchain_api_factory
+					.as_ref()
+					.ok_or(OCallBridgeError::TargetBParentchainNotInitialized)
+					.and_then(|f| f.create_api().map_err(Into::into))?,
+			),
 		})
 	}
 }
 
-impl<F> WorkerOnChainBridge for WorkerOnChainOCall<F>
-where
-	F: CreateNodeApi,
-{
+impl WorkerOnChainBridge for WorkerOnChainOCall {
 	fn worker_request(
 		&self,
 		request: Vec<u8>,
