@@ -81,6 +81,7 @@ std = [
     "sp-core/std",
     "sp-runtime/std",
     "frame-support/std",
+    "frame-system/std",
     "thiserror",
 ]
 sgx = [
