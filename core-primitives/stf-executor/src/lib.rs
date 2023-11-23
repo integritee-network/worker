@@ -28,7 +28,7 @@ use codec::{Decode, Encode};
 use core::fmt::Debug;
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_primitives::types::TrustedOperationOrHash;
-use itp_types::{OpaqueCall, H256};
+use itp_types::{parentchain::ParentchainCall, OpaqueCall, H256};
 use std::vec::Vec;
 
 // re-export module to properly feature gate sgx and regular std environment
@@ -60,12 +60,12 @@ pub mod mocks;
 /// any extrinsic callbacks (e.g. unshield extrinsics) that need to be executed on-chain
 #[derive(Clone, Debug, PartialEq)]
 pub enum ExecutionStatus {
-	Success(H256, Vec<OpaqueCall>),
+	Success(H256, Vec<ParentchainCall>),
 	Failure,
 }
 
 impl ExecutionStatus {
-	pub fn get_extrinsic_callbacks(&self) -> Vec<OpaqueCall> {
+	pub fn get_extrinsic_callbacks(&self) -> Vec<ParentchainCall> {
 		match self {
 			ExecutionStatus::Success(_, opaque_calls) => opaque_calls.clone(),
 			_ => Vec::new(),
@@ -102,7 +102,7 @@ where
 	pub fn success(
 		operation_hash: H256,
 		trusted_operation_or_hash: TrustedOperationOrHash<TCS, G>,
-		extrinsic_call_backs: Vec<OpaqueCall>,
+		extrinsic_call_backs: Vec<ParentchainCall>,
 	) -> Self {
 		ExecutedOperation {
 			status: ExecutionStatus::Success(operation_hash, extrinsic_call_backs),
@@ -141,7 +141,7 @@ where
 	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
 	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
 {
-	pub fn get_extrinsic_callbacks(&self) -> Vec<OpaqueCall> {
+	pub fn get_extrinsic_callbacks(&self) -> Vec<ParentchainCall> {
 		self.executed_operations
 			.iter()
 			.flat_map(|e| e.status.get_extrinsic_callbacks())

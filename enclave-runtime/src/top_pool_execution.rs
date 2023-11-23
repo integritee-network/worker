@@ -44,7 +44,7 @@ use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::key_repository::AccessKey;
 use itp_stf_state_handler::query_shard_state::QueryShardState;
 use itp_time_utils::duration_now;
-use itp_types::{Block, OpaqueCall, H256};
+use itp_types::{parentchain::ParentchainCall, Block, OpaqueCall, H256};
 use its_primitives::{
 	traits::{
 		Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor, SignedBlock,
@@ -152,14 +152,15 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 				block_composer,
 			);
 
-			let (blocks, opaque_calls) = exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _, _>(
-				slot.clone(),
-				authority,
-				ocall_api.clone(),
-				parentchain_import_dispatcher,
-				env,
-				shards,
-			)?;
+			let (blocks, parentchain_calls) =
+				exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _, _>(
+					slot.clone(),
+					authority,
+					ocall_api.clone(),
+					parentchain_import_dispatcher,
+					env,
+					shards,
+				)?;
 
 			debug!("Aura executed successfully");
 
@@ -170,7 +171,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 
 			send_blocks_and_extrinsics::<Block, _, _, _, _>(
 				blocks,
-				opaque_calls,
+				parentchain_calls,
 				ocall_api,
 				validator_access.as_ref(),
 				extrinsics_factory.as_ref(),
@@ -203,7 +204,7 @@ pub(crate) fn exec_aura_on_slot<
 	block_import_trigger: Arc<BlockImportTrigger>,
 	proposer_environment: PEnvironment,
 	shards: Vec<ShardIdentifierFor<SignedSidechainBlock>>,
-) -> Result<(Vec<SignedSidechainBlock>, Vec<OpaqueCall>)>
+) -> Result<(Vec<SignedSidechainBlock>, Vec<ParentchainCall>)>
 where
 	ParentchainBlock: BlockTrait<Hash = H256>,
 	SignedSidechainBlock:
@@ -231,13 +232,13 @@ where
 	)
 	.with_claim_strategy(SlotClaimStrategy::RoundRobin);
 
-	let (blocks, xts): (Vec<_>, Vec<_>) =
+	let (blocks, pxts): (Vec<_>, Vec<_>) =
 		PerShardSlotWorkerScheduler::on_slot(&mut aura, slot, shards)
 			.into_iter()
 			.map(|r| (r.block, r.parentchain_effects))
 			.unzip();
 
-	let opaque_calls: Vec<OpaqueCall> = xts.into_iter().flatten().collect();
+	let opaque_calls: Vec<ParentchainCall> = pxts.into_iter().flatten().collect();
 	Ok((blocks, opaque_calls))
 }
 
@@ -250,7 +251,7 @@ pub(crate) fn send_blocks_and_extrinsics<
 	ExtrinsicsFactory,
 >(
 	blocks: Vec<SignedSidechainBlock>,
-	opaque_calls: Vec<OpaqueCall>,
+	parentchain_calls: Vec<ParentchainCall>,
 	ocall_api: Arc<OCallApi>,
 	validator_access: &ValidatorAccessor,
 	extrinsics_factory: &ExtrinsicsFactory,
@@ -266,7 +267,32 @@ where
 	debug!("Proposing {} sidechain block(s) (broadcasting to peers)", blocks.len());
 	ocall_api.propose_sidechain_blocks(blocks)?;
 
-	let xts = extrinsics_factory.create_extrinsics(opaque_calls.as_slice(), None)?;
+	let integritee_calls: Vec<OpaqueCall> = parentchain_calls
+		.iter()
+		.filter_map(|parentchain_call| parentchain_call.as_integritee())
+		.collect();
+	let target_a_calls: Vec<OpaqueCall> = parentchain_calls
+		.iter()
+		.filter_map(|parentchain_call| parentchain_call.as_integritee())
+		.collect();
+	let target_b_calls: Vec<OpaqueCall> = parentchain_calls
+		.iter()
+		.filter_map(|parentchain_call| parentchain_call.as_integritee())
+		.collect();
+	debug!(
+		"stf wants to send calls to parentchains: Integritee: {} TargetA: {} TargetB: {}",
+		integritee_calls.len(),
+		target_a_calls.len(),
+		target_b_calls.len()
+	);
+	if !target_a_calls.is_empty() {
+		warn!("sending extrinsics to target A unimplemented")
+	};
+	if !target_b_calls.is_empty() {
+		warn!("sending extrinsics to target B unimplemented")
+	};
+
+	let xts = extrinsics_factory.create_extrinsics(integritee_calls.as_slice(), None)?;
 
 	debug!("Sending sidechain block(s) confirmation extrinsic.. ");
 	validator_access.execute_mut_on_validator(|v| v.send_extrinsics(xts))?;

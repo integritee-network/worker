@@ -30,7 +30,8 @@ use itp_stf_primitives::{
 	types::{KeyPair, Nonce, TrustedOperation},
 };
 use itp_types::{
-	parentchain::ParentchainId, AccountId, Balance, Index, OpaqueCall, ShardIdentifier, Signature,
+	parentchain::{ParentchainCall, ParentchainId},
+	AccountId, Balance, Index, OpaqueCall, ShardIdentifier, Signature,
 };
 use log::*;
 use sp_core::{sr25519, Pair};
@@ -39,6 +40,7 @@ use sp_runtime::transaction_validity::{
 };
 use sp_std::{vec, vec::Vec};
 use std::{thread::sleep, time::Duration};
+
 // a few dummy types
 type NodeMetadataRepositoryMock = NodeMetadataRepository<NodeMetadataMock>;
 
@@ -67,7 +69,7 @@ impl StateCallInterface<TrustedCallSignedMock, SgxExternalities, NodeMetadataRep
 	fn execute_call(
 		state: &mut SgxExternalities,
 		call: TrustedCallSignedMock,
-		calls: &mut Vec<OpaqueCall>,
+		calls: &mut Vec<ParentchainCall>,
 		node_metadata_repo: Arc<NodeMetadataRepositoryMock>,
 	) -> Result<(), Self::Error> {
 		state.execute_with(|| call.execute(calls, node_metadata_repo))
@@ -161,7 +163,7 @@ impl ExecuteCall<NodeMetadataRepositoryMock> for TrustedCallSignedMock {
 
 	fn execute(
 		self,
-		_calls: &mut Vec<OpaqueCall>,
+		_calls: &mut Vec<ParentchainCall>,
 		_node_metadata_repo: Arc<NodeMetadataRepositoryMock>,
 	) -> Result<(), Self::Error> {
 		match self.call {

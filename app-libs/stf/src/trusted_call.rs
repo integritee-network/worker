@@ -44,7 +44,10 @@ use itp_stf_primitives::{
 	traits::{TrustedCallSigning, TrustedCallVerification},
 	types::{AccountId, KeyPair, ShardIdentifier, Signature, TrustedOperation},
 };
-use itp_types::{parentchain::ProxyType, Address, OpaqueCall};
+use itp_types::{
+	parentchain::{ParentchainCall, ProxyType},
+	Address, OpaqueCall,
+};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
 use sp_core::{
@@ -214,7 +217,7 @@ where
 
 	fn execute(
 		self,
-		calls: &mut Vec<OpaqueCall>,
+		calls: &mut Vec<ParentchainCall>,
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {
 		let sender = self.call.sender_account().clone();
@@ -307,7 +310,7 @@ where
 					None::<ProxyType>,
 					vault_transfer_call,
 				));
-				calls.push(proxy_call);
+				calls.push(ParentchainCall::Integritee(proxy_call));
 				Ok(())
 			},
 			TrustedCall::balance_shield(enclave_account, who, value) => {
@@ -316,7 +319,7 @@ where
 				shield_funds(who, value)?;
 
 				// Send proof of execution on chain.
-				calls.push(OpaqueCall::from_tuple(&(
+				calls.push(ParentchainCall::Integritee(OpaqueCall::from_tuple(&(
 					node_metadata_repo
 						.get_from_metadata(|m| m.publish_hash_call_indexes())
 						.map_err(|_| StfError::InvalidMetadata)?
@@ -324,7 +327,7 @@ where
 					call_hash,
 					Vec::<itp_types::H256>::new(),
 					b"shielded some funds!".to_vec(),
-				)));
+				))));
 				Ok(())
 			},
 			#[cfg(feature = "evm")]

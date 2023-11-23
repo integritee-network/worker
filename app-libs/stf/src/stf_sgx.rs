@@ -32,7 +32,7 @@ use itp_stf_interface::{
 use itp_stf_primitives::{error::StfError, traits::TrustedCallVerification};
 use itp_storage::storage_value_key;
 use itp_types::{
-	parentchain::{AccountId, ParentchainId},
+	parentchain::{AccountId, ParentchainCall, ParentchainId},
 	OpaqueCall,
 };
 use itp_utils::stringify::account_id_to_string;
@@ -147,7 +147,7 @@ where
 	fn execute_call(
 		state: &mut State,
 		call: TCS,
-		calls: &mut Vec<OpaqueCall>,
+		calls: &mut Vec<ParentchainCall>,
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {
 		state.execute_with(|| call.execute(calls, node_metadata_repo))

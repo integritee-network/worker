@@ -55,6 +55,7 @@ mod mocks;
 #[cfg(test)]
 mod per_shard_slot_worker_tests;
 
+use itp_types::parentchain::ParentchainCall;
 #[cfg(feature = "std")]
 pub use slot_stream::*;
 pub use slots::*;
@@ -68,7 +69,7 @@ pub struct SlotResult<SignedSidechainBlock: SignedSidechainBlockTrait> {
 	///
 	/// Any sidechain stf that invokes a parentchain stf must not commit its state change
 	/// before the parentchain effect has been finalized.
-	pub parentchain_effects: Vec<OpaqueCall>,
+	pub parentchain_effects: Vec<ParentchainCall>,
 }
 
 /// A worker that should be invoked at every new slot for a specific shard.

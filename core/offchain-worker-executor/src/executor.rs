@@ -28,7 +28,7 @@ use itp_stf_interface::system_pallet::SystemPalletEventInterface;
 use itp_stf_primitives::{traits::TrustedCallVerification, types::TrustedOperationOrHash};
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_top_pool_author::traits::AuthorApi;
-use itp_types::{OpaqueCall, ShardIdentifier, H256};
+use itp_types::{parentchain::ParentchainCall, OpaqueCall, ShardIdentifier, H256};
 use log::*;
 use sp_runtime::traits::Block;
 use std::{marker::PhantomData, sync::Arc, time::Duration, vec::Vec};
@@ -114,7 +114,7 @@ impl<
 		let max_duration = Duration::from_secs(5);
 		let latest_parentchain_header = self.get_latest_parentchain_header()?;
 
-		let mut parentchain_effects: Vec<OpaqueCall> = Vec::new();
+		let mut parentchain_effects: Vec<ParentchainCall> = Vec::new();
 
 		let shards = self.state_handler.list_shards()?;
 		trace!("Executing calls on {} shard(s)", shards.len());
@@ -184,10 +184,34 @@ impl<
 		Ok(())
 	}
 
-	fn send_parentchain_effects(&self, parentchain_effects: Vec<OpaqueCall>) -> Result<()> {
-		let extrinsics = self
-			.extrinsics_factory
-			.create_extrinsics(parentchain_effects.as_slice(), None)?;
+	fn send_parentchain_effects(&self, parentchain_effects: Vec<ParentchainCall>) -> Result<()> {
+		let integritee_calls: Vec<OpaqueCall> = parentchain_effects
+			.iter()
+			.filter_map(|parentchain_call| parentchain_call.as_integritee())
+			.collect();
+		let target_a_calls: Vec<OpaqueCall> = parentchain_effects
+			.iter()
+			.filter_map(|parentchain_call| parentchain_call.as_integritee())
+			.collect();
+		let target_b_calls: Vec<OpaqueCall> = parentchain_effects
+			.iter()
+			.filter_map(|parentchain_call| parentchain_call.as_integritee())
+			.collect();
+		debug!(
+			"stf wants to send calls to parentchains: Integritee: {} TargetA: {} TargetB: {}",
+			integritee_calls.len(),
+			target_a_calls.len(),
+			target_b_calls.len()
+		);
+		if !target_a_calls.is_empty() {
+			warn!("sending extrinsics to target A unimplemented")
+		};
+		if !target_b_calls.is_empty() {
+			warn!("sending extrinsics to target B unimplemented")
+		};
+
+		let extrinsics =
+			self.extrinsics_factory.create_extrinsics(integritee_calls.as_slice(), None)?;
 		self.validator_accessor
 			.execute_mut_on_validator(|v| v.send_extrinsics(extrinsics))?;
 		Ok(())

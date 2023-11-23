@@ -22,6 +22,8 @@
 extern crate sgx_tstd as std;
 
 use codec::Decode;
+use itp_types::OpaqueCall;
+
 pub mod indirect_calls;
 pub mod integritee;
 pub mod target_a;
