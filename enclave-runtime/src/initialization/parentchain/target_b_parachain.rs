@@ -42,6 +42,7 @@ use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
 use itp_types::parentchain::ParentchainId;
 use std::{path::PathBuf, sync::Arc};
 
+use crate::initialization::parentchain::common::create_sidechain_triggered_import_dispatcher_for_target_b;
 pub use itc_parentchain::primitives::{ParachainBlock, ParachainHeader, ParachainParams};
 
 #[derive(Clone)]
@@ -103,7 +104,7 @@ impl TargetBParachainHandler {
 				extrinsics_factory.clone(),
 			)?,
 			WorkerMode::Sidechain =>
-				unimplemented!("Can't run target B chain in sidechain mode yet."),
+				create_sidechain_triggered_import_dispatcher_for_target_b(block_importer),
 			WorkerMode::Teeracle =>
 				Arc::new(TargetBParentchainBlockImportDispatcher::new_empty_dispatcher()),
 		};

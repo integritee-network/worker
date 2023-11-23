@@ -28,9 +28,12 @@ use crate::{
 			IntegriteeParentchainTriggeredBlockImportDispatcher,
 			TargetAParentchainBlockImportDispatcher, TargetAParentchainBlockImporter,
 			TargetAParentchainImmediateBlockImportDispatcher,
-			TargetAParentchainIndirectCallsExecutor, TargetBParentchainBlockImportDispatcher,
-			TargetBParentchainBlockImporter, TargetBParentchainImmediateBlockImportDispatcher,
-			TargetBParentchainIndirectCallsExecutor, GLOBAL_OCALL_API_COMPONENT,
+			TargetAParentchainIndirectCallsExecutor,
+			TargetAParentchainTriggeredBlockImportDispatcher,
+			TargetBParentchainBlockImportDispatcher, TargetBParentchainBlockImporter,
+			TargetBParentchainImmediateBlockImportDispatcher,
+			TargetBParentchainIndirectCallsExecutor,
+			TargetBParentchainTriggeredBlockImportDispatcher, GLOBAL_OCALL_API_COMPONENT,
 			GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT,
 			GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STATE_OBSERVER_COMPONENT,
 			GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
@@ -254,6 +257,36 @@ pub(crate) fn create_sidechain_triggered_import_dispatcher(
 		parentchain_event_import_queue,
 	);
 	Arc::new(IntegriteeParentchainBlockImportDispatcher::new_triggered_dispatcher(Arc::new(
+		triggered_dispatcher,
+	)))
+}
+
+pub(crate) fn create_sidechain_triggered_import_dispatcher_for_target_a(
+	block_importer: TargetAParentchainBlockImporter,
+) -> Arc<TargetAParentchainBlockImportDispatcher> {
+	let parentchain_block_import_queue = EnclaveParentchainBlockImportQueue::default();
+	let parentchain_event_import_queue = EnclaveParentchainEventImportQueue::default();
+	let triggered_dispatcher = TargetAParentchainTriggeredBlockImportDispatcher::new(
+		block_importer,
+		parentchain_block_import_queue,
+		parentchain_event_import_queue,
+	);
+	Arc::new(TargetAParentchainBlockImportDispatcher::new_triggered_dispatcher(Arc::new(
+		triggered_dispatcher,
+	)))
+}
+
+pub(crate) fn create_sidechain_triggered_import_dispatcher_for_target_b(
+	block_importer: TargetBParentchainBlockImporter,
+) -> Arc<TargetBParentchainBlockImportDispatcher> {
+	let parentchain_block_import_queue = EnclaveParentchainBlockImportQueue::default();
+	let parentchain_event_import_queue = EnclaveParentchainEventImportQueue::default();
+	let triggered_dispatcher = TargetBParentchainTriggeredBlockImportDispatcher::new(
+		block_importer,
+		parentchain_block_import_queue,
+		parentchain_event_import_queue,
+	);
+	Arc::new(TargetBParentchainBlockImportDispatcher::new_triggered_dispatcher(Arc::new(
 		triggered_dispatcher,
 	)))
 }

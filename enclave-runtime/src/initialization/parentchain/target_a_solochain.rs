@@ -36,6 +36,7 @@ use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
 use itp_types::parentchain::ParentchainId;
 use std::{path::PathBuf, sync::Arc};
 
+use crate::initialization::parentchain::common::create_sidechain_triggered_import_dispatcher_for_target_a;
 pub use itc_parentchain::primitives::{SolochainBlock, SolochainHeader, SolochainParams};
 
 pub struct TargetASolochainHandler {
@@ -96,7 +97,7 @@ impl TargetASolochainHandler {
 				extrinsics_factory.clone(),
 			)?,
 			WorkerMode::Sidechain =>
-				unimplemented!("Can't run target a chain in sidechain mode yet."),
+				create_sidechain_triggered_import_dispatcher_for_target_a(block_importer),
 			WorkerMode::Teeracle =>
 				Arc::new(TargetAParentchainBlockImportDispatcher::new_empty_dispatcher()),
 		};
