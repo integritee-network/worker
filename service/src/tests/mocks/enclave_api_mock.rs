@@ -61,7 +61,11 @@ impl EnclaveBase for EnclaveMock {
 		unimplemented!()
 	}
 
-	fn init_proxied_shard_vault(&self, _shard: &ShardIdentifier) -> EnclaveResult<()> {
+	fn init_proxied_shard_vault(
+		&self,
+		_shard: &ShardIdentifier,
+		_parentchain_id: &ParentchainId,
+	) -> EnclaveResult<()> {
 		unimplemented!()
 	}
 
