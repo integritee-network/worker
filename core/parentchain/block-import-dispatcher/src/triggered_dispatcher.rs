@@ -101,8 +101,10 @@ where
 		blocks: Vec<SignedBlockType>,
 		events: Vec<RawEventsPerBlock>,
 	) -> Result<()> {
+		let parentchain_id = self.block_importer.parentchain_id();
 		trace!(
-			"Pushing parentchain block(s) and event(s) ({}) ({}) to import queue",
+			"[{:?}] Pushing parentchain block(s) and event(s) ({}) ({}) to import queue",
+			parentchain_id,
 			blocks.len(),
 			events.len()
 		);
@@ -130,9 +132,10 @@ where
 		let events_to_import = self.events_queue.pop_all().map_err(Error::ImportQueue)?;
 
 		let latest_imported_block = blocks_to_import.last().map(|b| (*b).clone());
-
+		let parentchain_id = self.block_importer.parentchain_id();
 		trace!(
-			"Trigger import of all parentchain blocks and events in queue ({}) ({})",
+			"[{:?}] Trigger import of all parentchain blocks and events in queue ({}) ({})",
+			parentchain_id,
 			blocks_to_import.len(),
 			events_to_import.len()
 		);
@@ -147,9 +150,10 @@ where
 	fn import_all_but_latest(&self) -> Result<()> {
 		let blocks_to_import = self.import_queue.pop_all_but_last().map_err(Error::ImportQueue)?;
 		let events_to_import = self.events_queue.pop_all_but_last().map_err(Error::ImportQueue)?;
-
+		let parentchain_id = self.block_importer.parentchain_id();
 		trace!(
-			"Trigger import of all parentchain blocks and events, except the latest, from queue ({}) ({})",
+			"[{:?}] Trigger import of all parentchain blocks and events, except the latest, from queue ({}) ({})",
+			parentchain_id,
 			blocks_to_import.len(),
 			events_to_import.len()
 		);
@@ -172,9 +176,10 @@ where
 			.map_err(Error::ImportQueue)?;
 
 		let latest_imported_block = blocks_to_import.last().map(|b| (*b).clone());
-
+		let parentchain_id = self.block_importer.parentchain_id();
 		trace!(
-			"Import of parentchain blocks and events has been triggered, importing {} blocks and {} events from queue",
+			"[{:?}] Import of parentchain blocks and events has been triggered, importing {} blocks and {} events from queue",
+			parentchain_id,
 			blocks_to_import.len(),
 			events_to_import.len(),
 		);
@@ -190,16 +195,20 @@ where
 		&self,
 		predicate: impl Fn(&BlockImporter::SignedBlockType) -> bool,
 	) -> Result<Option<BlockImporter::SignedBlockType>> {
+		let parentchain_id = self.block_importer.parentchain_id();
 		trace!(
-			"Peek find parentchain import queue (currently has {} elements)",
+			"[{:?}] Peek find parentchain import queue (currently has {} elements)",
+			parentchain_id,
 			self.import_queue.peek_queue_size().unwrap_or(0)
 		);
 		self.import_queue.peek_find(predicate).map_err(Error::ImportQueue)
 	}
 
 	fn peek_latest(&self) -> Result<Option<BlockImporter::SignedBlockType>> {
+		let parentchain_id = self.block_importer.parentchain_id();
 		trace!(
-			"Peek latest parentchain import queue (currently has {} elements)",
+			"[{:?}] Peek latest parentchain import queue (currently has {} elements)",
+			parentchain_id,
 			self.import_queue.peek_queue_size().unwrap_or(0)
 		);
 		self.import_queue.peek_last().map_err(Error::ImportQueue)

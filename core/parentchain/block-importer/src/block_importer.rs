@@ -44,7 +44,7 @@ pub struct ParentchainBlockImporter<
 	ExtrinsicsFactory,
 	IndirectCallsExecutor,
 > {
-	validator_accessor: Arc<ValidatorAccessor>,
+	pub validator_accessor: Arc<ValidatorAccessor>,
 	stf_executor: Arc<StfExecutor>,
 	extrinsics_factory: Arc<ExtrinsicsFactory>,
 	pub indirect_calls_executor: Arc<IndirectCallsExecutor>,
@@ -164,5 +164,9 @@ impl<
 			.execute_mut_on_validator(|v| v.send_extrinsics(parentchain_extrinsics))?;
 
 		Ok(())
+	}
+
+	fn parentchain_id(&self) -> ParentchainId {
+		self.validator_accessor.parentchain_id()
 	}
 }

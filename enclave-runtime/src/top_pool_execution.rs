@@ -27,7 +27,8 @@ use crate::{
 		get_extrinsic_factory_from_integritee_solo_or_parachain,
 		get_extrinsic_factory_from_target_a_solo_or_parachain,
 		get_extrinsic_factory_from_target_b_solo_or_parachain,
-		get_stf_executor_from_solo_or_parachain, get_triggered_dispatcher_from_solo_or_parachain,
+		get_stf_executor_from_solo_or_parachain,
+		get_triggered_dispatcher_from_integritee_solo_or_parachain,
 		get_validator_accessor_from_integritee_solo_or_parachain,
 		get_validator_accessor_from_target_a_solo_or_parachain,
 		get_validator_accessor_from_target_b_solo_or_parachain,
@@ -96,7 +97,12 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 
 	let slot_beginning_timestamp = duration_now();
 
-	let parentchain_import_dispatcher = get_triggered_dispatcher_from_solo_or_parachain()?;
+	let integritee_parentchain_import_dispatcher =
+		get_triggered_dispatcher_from_integritee_solo_or_parachain()?;
+	let maybe_target_a_parentchain_import_dispatcher =
+		get_triggered_dispatcher_from_target_a_solo_or_parachain().unwrap_or(None);
+	let maybe_target_b_parentchain_import_dispatcher =
+		get_triggered_dispatcher_from_target_b_solo_or_parachain().unwrap_or(None);
 
 	let validator_access = get_validator_accessor_from_integritee_solo_or_parachain()?;
 
@@ -159,7 +165,9 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 					slot.clone(),
 					authority,
 					ocall_api.clone(),
-					parentchain_import_dispatcher,
+					integritee_parentchain_import_dispatcher,
+					maybe_target_a_parentchain_import_dispatcher,
+					maybe_target_b_parentchain_import_dispatcher,
 					env,
 					shards,
 				)?;
@@ -197,7 +205,9 @@ pub(crate) fn exec_aura_on_slot<
 	slot: SlotInfo<ParentchainBlock>,
 	authority: Authority,
 	ocall_api: Arc<OCallApi>,
-	block_import_trigger: Arc<BlockImportTrigger>,
+	integritee_block_import_trigger: Arc<BlockImportTrigger>,
+	maybe_target_a_block_import_trigger: Option<Arc<BlockImportTrigger>>,
+	maybe_target_b_block_import_trigger: Option<Arc<BlockImportTrigger>>,
 	proposer_environment: PEnvironment,
 	shards: Vec<ShardIdentifierFor<SignedSidechainBlock>>,
 ) -> Result<(Vec<SignedSidechainBlock>, Vec<ParentchainCall>)>
@@ -223,7 +233,9 @@ where
 	let mut aura = Aura::<_, ParentchainBlock, SignedSidechainBlock, PEnvironment, _, _>::new(
 		authority,
 		ocall_api.as_ref().clone(),
-		block_import_trigger,
+		integritee_block_import_trigger,
+		maybe_target_a_block_import_trigger,
+		maybe_target_b_block_import_trigger,
 		proposer_environment,
 	)
 	.with_claim_strategy(SlotClaimStrategy::RoundRobin);

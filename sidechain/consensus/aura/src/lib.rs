@@ -33,6 +33,7 @@ use core::marker::PhantomData;
 use itc_parentchain_block_import_dispatcher::triggered_dispatcher::TriggerParentchainBlockImport;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_time_utils::duration_now;
+use itp_types::parentchain::ParentchainId;
 use its_block_verification::slot::slot_author;
 use its_consensus_common::{Environment, Error as ConsensusError, Proposer};
 use its_consensus_slots::{SimpleSlotWorker, Slot, SlotInfo};
@@ -70,7 +71,9 @@ pub struct Aura<
 > {
 	authority_pair: AuthorityPair,
 	ocall_api: OcallApi,
-	parentchain_import_trigger: Arc<ImportTrigger>,
+	parentchain_integritee_import_trigger: Arc<ImportTrigger>,
+	maybe_parentchain_target_a_import_trigger: Option<Arc<ImportTrigger>>,
+	maybe_parentchain_target_b_import_trigger: Option<Arc<ImportTrigger>>,
 	environment: Environment,
 	claim_strategy: SlotClaimStrategy,
 	_phantom: PhantomData<(AuthorityPair, ParentchainBlock, SidechainBlock)>,
@@ -82,13 +85,17 @@ impl<AuthorityPair, ParentchainBlock, SidechainBlock, Environment, OcallApi, Imp
 	pub fn new(
 		authority_pair: AuthorityPair,
 		ocall_api: OcallApi,
-		parentchain_import_trigger: Arc<ImportTrigger>,
+		parentchain_integritee_import_trigger: Arc<ImportTrigger>,
+		maybe_parentchain_target_a_import_trigger: Option<Arc<ImportTrigger>>,
+		maybe_parentchain_target_b_import_trigger: Option<Arc<ImportTrigger>>,
 		environment: Environment,
 	) -> Self {
 		Self {
 			authority_pair,
 			ocall_api,
-			parentchain_import_trigger,
+			parentchain_integritee_import_trigger,
+			maybe_parentchain_target_a_import_trigger,
+			maybe_parentchain_target_b_import_trigger,
 			environment,
 			claim_strategy: SlotClaimStrategy::RoundRobin,
 			_phantom: Default::default(),
@@ -99,6 +106,25 @@ impl<AuthorityPair, ParentchainBlock, SidechainBlock, Environment, OcallApi, Imp
 		self.claim_strategy = claim_strategy;
 
 		self
+	}
+
+	fn get_import_trigger(
+		&self,
+		parentchain_id: ParentchainId,
+	) -> Result<Arc<ImportTrigger>, ConsensusError> {
+		match parentchain_id {
+			ParentchainId::Integritee => Ok(self.parentchain_integritee_import_trigger.clone()),
+			ParentchainId::TargetA => Ok(self
+				.maybe_parentchain_target_a_import_trigger
+				.clone()
+				.ok_or(ConsensusError::Other("no target_a assigned".into()))?
+				.clone()),
+			ParentchainId::TargetB => Ok(self
+				.maybe_parentchain_target_b_import_trigger
+				.clone()
+				.ok_or(ConsensusError::Other("no target_b assigned".into()))?
+				.clone()),
+		}
 	}
 }
 
@@ -200,9 +226,10 @@ where
 	fn import_parentchain_blocks_until(
 		&self,
 		parentchain_header_hash: &<ParentchainBlock::Header as ParentchainHeaderTrait>::Hash,
+		parentchain_id: ParentchainId,
 	) -> Result<Option<ParentchainBlock::Header>, ConsensusError> {
-		let maybe_parentchain_block = self
-			.parentchain_import_trigger
+		let import_trigger = self.get_import_trigger(parentchain_id)?;
+		let maybe_parentchain_block = import_trigger
 			.import_until(|parentchain_block| {
 				parentchain_block.block.hash() == *parentchain_header_hash
 			})
@@ -213,9 +240,10 @@ where
 
 	fn peek_latest_parentchain_header(
 		&self,
+		parentchain_id: ParentchainId,
 	) -> Result<Option<ParentchainBlock::Header>, ConsensusError> {
-		let maybe_parentchain_block = self
-			.parentchain_import_trigger
+		let import_trigger = self.get_import_trigger(parentchain_id)?;
+		let maybe_parentchain_block = import_trigger
 			.peek_latest()
 			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
 

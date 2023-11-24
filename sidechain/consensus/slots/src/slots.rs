@@ -64,7 +64,11 @@ pub struct SlotInfo<ParentchainBlock: ParentchainBlockTrait> {
 	/// The time at which the slot ends.
 	pub ends_at: Duration,
 	/// Last imported parentchain header, potentially outdated.
-	pub last_imported_parentchain_head: ParentchainBlock::Header,
+	pub last_imported_integritee_parentchain_head: ParentchainBlock::Header,
+	/// Last imported parentchain header, potentially outdated.
+	pub maybe_last_imported_target_a_parentchain_head: Option<ParentchainBlock::Header>,
+	/// Last imported parentchain header, potentially outdated.
+	pub maybe_last_imported_target_b_parentchain_head: Option<ParentchainBlock::Header>,
 }
 
 impl<ParentchainBlock: ParentchainBlockTrait> SlotInfo<ParentchainBlock> {
@@ -76,14 +80,18 @@ impl<ParentchainBlock: ParentchainBlockTrait> SlotInfo<ParentchainBlock> {
 		timestamp: Duration,
 		duration: Duration,
 		ends_at: Duration,
-		parentchain_head: ParentchainBlock::Header,
+		last_imported_integritee_parentchain_head: ParentchainBlock::Header,
+		maybe_last_imported_target_a_parentchain_head: Option<ParentchainBlock::Header>,
+		maybe_last_imported_target_b_parentchain_head: Option<ParentchainBlock::Header>,
 	) -> Self {
 		Self {
 			slot,
 			timestamp,
 			duration,
 			ends_at,
-			last_imported_parentchain_head: parentchain_head,
+			last_imported_integritee_parentchain_head,
+			maybe_last_imported_target_a_parentchain_head,
+			maybe_last_imported_target_b_parentchain_head,
 		}
 	}
 
@@ -99,7 +107,7 @@ impl<ParentchainBlock: ParentchainBlockTrait> SlotInfo<ParentchainBlock> {
 /// The time at which the slot ends.
 ///
 /// !! Slot duration needs to be the 'global' slot duration that is used for the sidechain.
-/// Do not use this with 'custom' slot durations, as used e.g. for the shard slots.  
+/// Do not use this with 'custom' slot durations, as used e.g. for the shard slots.
 pub fn slot_ends_at(slot: Slot, slot_duration: Duration) -> Duration {
 	Duration::from_millis(*slot.saturating_add(1u64) * (slot_duration.as_millis() as u64))
 }
@@ -131,7 +139,9 @@ pub(crate) fn timestamp_within_slot<
 pub fn yield_next_slot<SlotGetter, ParentchainBlock>(
 	timestamp: Duration,
 	duration: Duration,
-	header: ParentchainBlock::Header,
+	integritee_header: ParentchainBlock::Header,
+	maybe_target_a_header: Option<ParentchainBlock::Header>,
+	maybe_target_b_header: Option<ParentchainBlock::Header>,
 	last_slot_getter: &mut SlotGetter,
 ) -> Result<Option<SlotInfo<ParentchainBlock>>, ConsensusError>
 where
@@ -152,7 +162,15 @@ where
 	last_slot_getter.set_last_slot(slot)?;
 
 	let slot_ends_time = slot_ends_at(slot, duration);
-	Ok(Some(SlotInfo::new(slot, timestamp, duration, slot_ends_time, header)))
+	Ok(Some(SlotInfo::new(
+		slot,
+		timestamp,
+		duration,
+		slot_ends_time,
+		integritee_header,
+		maybe_target_a_header,
+		maybe_target_b_header,
+	)))
 }
 
 pub trait LastSlotTrait {

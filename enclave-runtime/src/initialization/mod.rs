@@ -42,7 +42,7 @@ use crate::{
 	utils::{
 		get_extrinsic_factory_from_integritee_solo_or_parachain,
 		get_node_metadata_repository_from_integritee_solo_or_parachain,
-		get_triggered_dispatcher_from_solo_or_parachain,
+		get_triggered_dispatcher_from_integritee_solo_or_parachain,
 		get_validator_accessor_from_integritee_solo_or_parachain,
 	},
 	Hash,
@@ -211,7 +211,8 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 	let state_key_repository = GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.get()?;
 
-	let parentchain_block_import_dispatcher = get_triggered_dispatcher_from_solo_or_parachain()?;
+	let parentchain_block_import_dispatcher =
+		get_triggered_dispatcher_from_integritee_solo_or_parachain()?;
 
 	let signer = GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT.get()?.retrieve_key()?;
 

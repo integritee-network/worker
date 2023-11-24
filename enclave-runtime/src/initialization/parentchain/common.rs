@@ -20,17 +20,19 @@ use crate::{
 	initialization::{
 		global_components::{
 			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOffchainWorkerExecutor,
-			EnclaveParentchainBlockImportQueue, EnclaveParentchainEventImportQueue,
 			EnclaveParentchainSigner, EnclaveStfExecutor, EnclaveValidatorAccessor,
-			IntegriteeParentchainBlockImportDispatcher, IntegriteeParentchainBlockImporter,
+			IntegriteeParentchainBlockImportDispatcher, IntegriteeParentchainBlockImportQueue,
+			IntegriteeParentchainBlockImporter, IntegriteeParentchainEventImportQueue,
 			IntegriteeParentchainImmediateBlockImportDispatcher,
 			IntegriteeParentchainIndirectCallsExecutor,
 			IntegriteeParentchainTriggeredBlockImportDispatcher,
-			TargetAParentchainBlockImportDispatcher, TargetAParentchainBlockImporter,
+			TargetAParentchainBlockImportDispatcher, TargetAParentchainBlockImportQueue,
+			TargetAParentchainBlockImporter, TargetAParentchainEventImportQueue,
 			TargetAParentchainImmediateBlockImportDispatcher,
 			TargetAParentchainIndirectCallsExecutor,
 			TargetAParentchainTriggeredBlockImportDispatcher,
-			TargetBParentchainBlockImportDispatcher, TargetBParentchainBlockImporter,
+			TargetBParentchainBlockImportDispatcher, TargetBParentchainBlockImportQueue,
+			TargetBParentchainBlockImporter, TargetBParentchainEventImportQueue,
 			TargetBParentchainImmediateBlockImportDispatcher,
 			TargetBParentchainIndirectCallsExecutor,
 			TargetBParentchainTriggeredBlockImportDispatcher, GLOBAL_OCALL_API_COMPONENT,
@@ -249,8 +251,8 @@ pub(crate) fn create_target_b_offchain_immediate_import_dispatcher(
 pub(crate) fn create_sidechain_triggered_import_dispatcher(
 	block_importer: IntegriteeParentchainBlockImporter,
 ) -> Arc<IntegriteeParentchainBlockImportDispatcher> {
-	let parentchain_block_import_queue = EnclaveParentchainBlockImportQueue::default();
-	let parentchain_event_import_queue = EnclaveParentchainEventImportQueue::default();
+	let parentchain_block_import_queue = IntegriteeParentchainBlockImportQueue::default();
+	let parentchain_event_import_queue = IntegriteeParentchainEventImportQueue::default();
 	let triggered_dispatcher = IntegriteeParentchainTriggeredBlockImportDispatcher::new(
 		block_importer,
 		parentchain_block_import_queue,
@@ -264,8 +266,8 @@ pub(crate) fn create_sidechain_triggered_import_dispatcher(
 pub(crate) fn create_sidechain_triggered_import_dispatcher_for_target_a(
 	block_importer: TargetAParentchainBlockImporter,
 ) -> Arc<TargetAParentchainBlockImportDispatcher> {
-	let parentchain_block_import_queue = EnclaveParentchainBlockImportQueue::default();
-	let parentchain_event_import_queue = EnclaveParentchainEventImportQueue::default();
+	let parentchain_block_import_queue = TargetAParentchainBlockImportQueue::default();
+	let parentchain_event_import_queue = TargetAParentchainEventImportQueue::default();
 	let triggered_dispatcher = TargetAParentchainTriggeredBlockImportDispatcher::new(
 		block_importer,
 		parentchain_block_import_queue,
@@ -279,8 +281,8 @@ pub(crate) fn create_sidechain_triggered_import_dispatcher_for_target_a(
 pub(crate) fn create_sidechain_triggered_import_dispatcher_for_target_b(
 	block_importer: TargetBParentchainBlockImporter,
 ) -> Arc<TargetBParentchainBlockImportDispatcher> {
-	let parentchain_block_import_queue = EnclaveParentchainBlockImportQueue::default();
-	let parentchain_event_import_queue = EnclaveParentchainEventImportQueue::default();
+	let parentchain_block_import_queue = TargetBParentchainBlockImportQueue::default();
+	let parentchain_event_import_queue = TargetBParentchainEventImportQueue::default();
 	let triggered_dispatcher = TargetBParentchainTriggeredBlockImportDispatcher::new(
 		block_importer,
 		parentchain_block_import_queue,

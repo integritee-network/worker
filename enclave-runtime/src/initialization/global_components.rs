@@ -152,12 +152,16 @@ pub type EnclaveValidatorAccessor = ValidatorAccessor<
 	EnclaveLightClientSeal,
 >;
 
-pub type EnclaveParentchainBlockImportQueue = ImportQueue<SignedParentchainBlock>;
+pub type IntegriteeParentchainBlockImportQueue = ImportQueue<SignedParentchainBlock>;
+pub type TargetAParentchainBlockImportQueue = ImportQueue<SignedParentchainBlock>;
+pub type TargetBParentchainBlockImportQueue = ImportQueue<SignedParentchainBlock>;
 
 /// Import queue for the events
 ///
 /// Note: `Vec<u8>` is correct. It should not be `Vec<Vec<u8>`
-pub type EnclaveParentchainEventImportQueue = ImportQueue<Vec<u8>>;
+pub type IntegriteeParentchainEventImportQueue = ImportQueue<Vec<u8>>;
+pub type TargetAParentchainEventImportQueue = ImportQueue<Vec<u8>>;
+pub type TargetBParentchainEventImportQueue = ImportQueue<Vec<u8>>;
 
 // Stuff for the integritee parentchain
 
@@ -183,8 +187,8 @@ pub type IntegriteeParentchainBlockImporter = ParentchainBlockImporter<
 
 pub type IntegriteeParentchainTriggeredBlockImportDispatcher = TriggeredDispatcher<
 	IntegriteeParentchainBlockImporter,
-	EnclaveParentchainBlockImportQueue,
-	EnclaveParentchainEventImportQueue,
+	IntegriteeParentchainBlockImportQueue,
+	IntegriteeParentchainEventImportQueue,
 >;
 
 pub type IntegriteeParentchainImmediateBlockImportDispatcher =
@@ -225,8 +229,8 @@ pub type TargetAParentchainBlockImporter = ParentchainBlockImporter<
 
 pub type TargetAParentchainTriggeredBlockImportDispatcher = TriggeredDispatcher<
 	TargetAParentchainBlockImporter,
-	EnclaveParentchainBlockImportQueue,
-	EnclaveParentchainEventImportQueue,
+	TargetAParentchainBlockImportQueue,
+	TargetAParentchainEventImportQueue,
 >;
 
 pub type TargetAParentchainImmediateBlockImportDispatcher =
@@ -267,8 +271,8 @@ pub type TargetBParentchainBlockImporter = ParentchainBlockImporter<
 
 pub type TargetBParentchainTriggeredBlockImportDispatcher = TriggeredDispatcher<
 	TargetBParentchainBlockImporter,
-	EnclaveParentchainBlockImportQueue,
-	EnclaveParentchainEventImportQueue,
+	TargetBParentchainBlockImportQueue,
+	TargetBParentchainEventImportQueue,
 >;
 
 pub type TargetBParentchainImmediateBlockImportDispatcher =

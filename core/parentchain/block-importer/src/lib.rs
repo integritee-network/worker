@@ -39,6 +39,7 @@ pub mod block_importer_mock;
 pub use block_importer::*;
 
 use error::Result;
+use itp_types::parentchain::ParentchainId;
 use std::vec::Vec;
 
 /// Block import from the parentchain.
@@ -55,4 +56,6 @@ pub trait ImportParentchainBlocks {
 		blocks_to_import: Vec<Self::SignedBlockType>,
 		events_to_import: Vec<Vec<u8>>,
 	) -> Result<()>;
+
+	fn parentchain_id(&self) -> ParentchainId;
 }
