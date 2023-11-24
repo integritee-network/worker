@@ -152,12 +152,10 @@ pub fn ensure_events_get_reset_upon_block_proposal() {
 	let propose_to_block_import_ocall_api =
 		Arc::new(ProposeToImportOCallApi::new(parentchain_header, block_importer));
 
-	send_blocks_and_extrinsics::<ParentchainBlock, _, _, _, _>(
+	send_blocks_and_extrinsics::<ParentchainBlock, _, _>(
 		blocks,
 		opaque_calls,
 		propose_to_block_import_ocall_api,
-		&validator_access,
-		&extrinsics_factory,
 	)
 	.unwrap();
 

@@ -25,8 +25,12 @@ use crate::{
 	sync::{EnclaveLock, EnclaveStateRWLock},
 	utils::{
 		get_extrinsic_factory_from_integritee_solo_or_parachain,
+		get_extrinsic_factory_from_target_a_solo_or_parachain,
+		get_extrinsic_factory_from_target_b_solo_or_parachain,
 		get_stf_executor_from_solo_or_parachain, get_triggered_dispatcher_from_solo_or_parachain,
-		get_validator_accessor_from_solo_or_parachain,
+		get_validator_accessor_from_integritee_solo_or_parachain,
+		get_validator_accessor_from_target_a_solo_or_parachain,
+		get_validator_accessor_from_target_b_solo_or_parachain,
 	},
 };
 use codec::Encode;
@@ -94,7 +98,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 
 	let parentchain_import_dispatcher = get_triggered_dispatcher_from_solo_or_parachain()?;
 
-	let validator_access = get_validator_accessor_from_solo_or_parachain()?;
+	let validator_access = get_validator_accessor_from_integritee_solo_or_parachain()?;
 
 	// This gets the latest imported block. We accept that all of AURA, up until the block production
 	// itself, will  operate on a parentchain block that is potentially outdated by one block
@@ -122,8 +126,6 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 
 	let block_composer = GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT.get()?;
-
-	let extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
 
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 
@@ -169,13 +171,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 
 			log_remaining_slot_duration(&slot, "After AURA");
 
-			send_blocks_and_extrinsics::<Block, _, _, _, _>(
-				blocks,
-				parentchain_calls,
-				ocall_api,
-				validator_access.as_ref(),
-				extrinsics_factory.as_ref(),
-			)?;
+			send_blocks_and_extrinsics::<Block, _, _>(blocks, parentchain_calls, ocall_api)?;
 
 			log_remaining_slot_duration(&slot, "After broadcasting and sending extrinsic");
 		},
@@ -243,59 +239,53 @@ where
 }
 
 /// Broadcasts sidechain blocks to fellow peers and sends opaque calls as extrinsic to the parentchain.
-pub(crate) fn send_blocks_and_extrinsics<
-	ParentchainBlock,
-	SignedSidechainBlock,
-	OCallApi,
-	ValidatorAccessor,
-	ExtrinsicsFactory,
->(
+pub(crate) fn send_blocks_and_extrinsics<ParentchainBlock, SignedSidechainBlock, OCallApi>(
 	blocks: Vec<SignedSidechainBlock>,
 	parentchain_calls: Vec<ParentchainCall>,
 	ocall_api: Arc<OCallApi>,
-	validator_access: &ValidatorAccessor,
-	extrinsics_factory: &ExtrinsicsFactory,
 ) -> Result<()>
 where
 	ParentchainBlock: BlockTrait,
 	SignedSidechainBlock: SignedBlock + 'static,
 	OCallApi: EnclaveSidechainOCallApi,
-	ValidatorAccessor: ValidatorAccess<ParentchainBlock> + Send + Sync + 'static,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
-	ExtrinsicsFactory: CreateExtrinsics,
 {
 	debug!("Proposing {} sidechain block(s) (broadcasting to peers)", blocks.len());
 	ocall_api.propose_sidechain_blocks(blocks)?;
 
-	let integritee_calls: Vec<OpaqueCall> = parentchain_calls
+	let calls: Vec<OpaqueCall> = parentchain_calls
 		.iter()
 		.filter_map(|parentchain_call| parentchain_call.as_integritee())
 		.collect();
-	let target_a_calls: Vec<OpaqueCall> = parentchain_calls
+	debug!("Enclave wants to send {} extrinsics to Integritee Parentchain", calls.len());
+	if !calls.is_empty() {
+		let extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
+		let xts = extrinsics_factory.create_extrinsics(calls.as_slice(), None)?;
+		let validator_access = get_validator_accessor_from_integritee_solo_or_parachain()?;
+		validator_access.execute_mut_on_validator(|v| v.send_extrinsics(xts))?;
+	}
+	let calls: Vec<OpaqueCall> = parentchain_calls
 		.iter()
-		.filter_map(|parentchain_call| parentchain_call.as_integritee())
+		.filter_map(|parentchain_call| parentchain_call.as_target_a())
 		.collect();
-	let target_b_calls: Vec<OpaqueCall> = parentchain_calls
+	debug!("Enclave wants to send {} extrinsics to TargetA Parentchain", calls.len());
+	if !calls.is_empty() {
+		let extrinsics_factory = get_extrinsic_factory_from_target_a_solo_or_parachain()?;
+		let xts = extrinsics_factory.create_extrinsics(calls.as_slice(), None)?;
+		let validator_access = get_validator_accessor_from_target_a_solo_or_parachain()?;
+		validator_access.execute_mut_on_validator(|v| v.send_extrinsics(xts))?;
+	}
+	let calls: Vec<OpaqueCall> = parentchain_calls
 		.iter()
-		.filter_map(|parentchain_call| parentchain_call.as_integritee())
+		.filter_map(|parentchain_call| parentchain_call.as_target_b())
 		.collect();
-	debug!(
-		"stf wants to send calls to parentchains: Integritee: {} TargetA: {} TargetB: {}",
-		integritee_calls.len(),
-		target_a_calls.len(),
-		target_b_calls.len()
-	);
-	if !target_a_calls.is_empty() {
-		warn!("sending extrinsics to target A unimplemented")
-	};
-	if !target_b_calls.is_empty() {
-		warn!("sending extrinsics to target B unimplemented")
-	};
-
-	let xts = extrinsics_factory.create_extrinsics(integritee_calls.as_slice(), None)?;
-
-	debug!("Sending sidechain block(s) confirmation extrinsic.. ");
-	validator_access.execute_mut_on_validator(|v| v.send_extrinsics(xts))?;
+	debug!("Enclave wants to send {} extrinsics to TargetB Parentchain", calls.len());
+	if !calls.is_empty() {
+		let extrinsics_factory = get_extrinsic_factory_from_target_b_solo_or_parachain()?;
+		let xts = extrinsics_factory.create_extrinsics(calls.as_slice(), None)?;
+		let validator_access = get_validator_accessor_from_target_b_solo_or_parachain()?;
+		validator_access.execute_mut_on_validator(|v| v.send_extrinsics(xts))?;
+	}
 
 	Ok(())
 }

@@ -96,7 +96,7 @@ pub(crate) fn get_triggered_dispatcher(
 	Ok(triggered_dispatcher)
 }
 
-pub(crate) fn get_validator_accessor_from_solo_or_parachain(
+pub(crate) fn get_validator_accessor_from_integritee_solo_or_parachain(
 ) -> Result<Arc<EnclaveValidatorAccessor>> {
 	let validator_accessor =
 		if let Ok(solochain_handler) = GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT.get() {
@@ -105,6 +105,32 @@ pub(crate) fn get_validator_accessor_from_solo_or_parachain(
 			parachain_handler.validator_accessor.clone()
 		} else {
 			return Err(Error::NoIntegriteeParentchainAssigned)
+		};
+	Ok(validator_accessor)
+}
+
+pub(crate) fn get_validator_accessor_from_target_a_solo_or_parachain(
+) -> Result<Arc<EnclaveValidatorAccessor>> {
+	let validator_accessor =
+		if let Ok(solochain_handler) = GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT.get() {
+			solochain_handler.validator_accessor.clone()
+		} else if let Ok(parachain_handler) = GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT.get() {
+			parachain_handler.validator_accessor.clone()
+		} else {
+			return Err(Error::NoTargetAParentchainAssigned)
+		};
+	Ok(validator_accessor)
+}
+
+pub(crate) fn get_validator_accessor_from_target_b_solo_or_parachain(
+) -> Result<Arc<EnclaveValidatorAccessor>> {
+	let validator_accessor =
+		if let Ok(solochain_handler) = GLOBAL_TARGET_B_SOLOCHAIN_HANDLER_COMPONENT.get() {
+			solochain_handler.validator_accessor.clone()
+		} else if let Ok(parachain_handler) = GLOBAL_TARGET_B_PARACHAIN_HANDLER_COMPONENT.get() {
+			parachain_handler.validator_accessor.clone()
+		} else {
+			return Err(Error::NoTargetBParentchainAssigned)
 		};
 	Ok(validator_accessor)
 }

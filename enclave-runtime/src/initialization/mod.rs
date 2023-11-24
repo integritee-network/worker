@@ -43,7 +43,7 @@ use crate::{
 		get_extrinsic_factory_from_integritee_solo_or_parachain,
 		get_node_metadata_repository_from_integritee_solo_or_parachain,
 		get_triggered_dispatcher_from_solo_or_parachain,
-		get_validator_accessor_from_solo_or_parachain,
+		get_validator_accessor_from_integritee_solo_or_parachain,
 	},
 	Hash,
 };
@@ -226,7 +226,7 @@ pub(crate) fn init_enclave_sidechain_components() -> EnclaveResult<()> {
 	let sidechain_block_import_queue = GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.get()?;
 	let metadata_repository = get_node_metadata_repository_from_integritee_solo_or_parachain()?;
 	let extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
-	let validator_accessor = get_validator_accessor_from_solo_or_parachain()?;
+	let validator_accessor = get_validator_accessor_from_integritee_solo_or_parachain()?;
 
 	let sidechain_block_import_confirmation_handler =
 		Arc::new(EnclaveBlockImportConfirmationHandler::new(

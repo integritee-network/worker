@@ -191,11 +191,11 @@ impl<
 			.collect();
 		let target_a_calls: Vec<OpaqueCall> = parentchain_effects
 			.iter()
-			.filter_map(|parentchain_call| parentchain_call.as_integritee())
+			.filter_map(|parentchain_call| parentchain_call.as_target_a())
 			.collect();
 		let target_b_calls: Vec<OpaqueCall> = parentchain_effects
 			.iter()
-			.filter_map(|parentchain_call| parentchain_call.as_integritee())
+			.filter_map(|parentchain_call| parentchain_call.as_target_b())
 			.collect();
 		debug!(
 			"stf wants to send calls to parentchains: Integritee: {} TargetA: {} TargetB: {}",
