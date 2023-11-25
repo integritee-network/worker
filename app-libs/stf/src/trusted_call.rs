@@ -310,7 +310,7 @@ where
 					None::<ProxyType>,
 					vault_transfer_call,
 				));
-				calls.push(ParentchainCall::Integritee(proxy_call));
+				calls.push(ParentchainCall::TargetA(proxy_call));
 				Ok(())
 			},
 			TrustedCall::balance_shield(enclave_account, who, value) => {

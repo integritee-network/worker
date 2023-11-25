@@ -125,6 +125,21 @@ function wait_assert_state()
     exit 1
 }
 
+function wait_assert_state_target_a()
+{
+    for i in $(seq 1 $WAIT_ROUNDS); do
+        sleep $WAIT_INTERVAL_SECONDS
+        state=$(${CLIENT_A} "$2" "$1")
+        if [ $state -eq "$3" ]; then
+            return
+        else
+            echo -n "."
+        fi
+    done
+    echo
+    echo "Assert $1 $2 failed, expected = $3, actual = $state"
+    exit 1
+}
 # Do a live query and assert the given account's state is equal to expected
 # usage:
 #   assert_state <mrenclave> <account> <state-name> <expected-state>
@@ -141,25 +156,6 @@ function assert_state()
     fi
     echo
     echo "Assert $2 $3 failed, expected = $4, actual = $state"
-    exit 1
-}
-
-# Do a live query and assert the given account's state is equal to expected
-# usage:
-#   assert_state_target_a <account> <state-name> <expected-state>
-function assert_state_target_a()
-{
-    state=$(${CLIENT_A} "$2" "$1")
-    if [ -z "$state" ]; then
-        echo "Query $1 $2 failed"
-        exit 1
-    fi
-
-    if [ $state -eq "$3" ]; then
-        return
-    fi
-    echo
-    echo "Assert $1 $2 failed, expected = $3, actual = $state"
     exit 1
 }
 
@@ -220,7 +216,7 @@ echo "✔ ok"
 echo ""
 
 echo "* Send ${AMOUNT_TRANSFER} funds from Charlie's L2 account to Bob's incognito account"
-$CLIENT trusted --mrenclave ${MRENCLAVE} transfer //Charlie ${ICGACCOUNTBOB} ${AMOUNT_TRANSFER}
+$CLIENT trusted $CALLTYPE --mrenclave ${MRENCLAVE} transfer //Charlie ${ICGACCOUNTBOB} ${AMOUNT_TRANSFER}
 echo ""
 
 echo "* Wait and assert Charlie's L2 account balance... "
@@ -233,7 +229,7 @@ echo "✔ ok"
 echo ""
 
 echo "* Un-shield ${AMOUNT_UNSHIELD} tokens from Charlie's incognito account to Ferie's L1 account"
-${CLIENT} trusted --mrenclave ${MRENCLAVE} unshield-funds //Charlie //Ferdie ${AMOUNT_UNSHIELD}
+${CLIENT} trusted $CALLTYPE --mrenclave ${MRENCLAVE} unshield-funds //Charlie //Ferdie ${AMOUNT_UNSHIELD}
 echo ""
 
 echo "* Wait and assert Charlie's incognito account balance... "

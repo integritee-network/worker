@@ -101,7 +101,7 @@ where
 			if args.destination == ALICE_ACCOUNT_ID.into() {
 				Some(IndirectCall::TransferToAliceShieldsFunds(args))
 			} else {
-				log::debug!("Parentchain transfer was not for Alice; ignoring...");
+				log::debug!("Parentchain transfer extrinsic was not for Alice; ignoring...");
 				// No need to put it into the top pool if it isn't executed in the first place.
 				None
 			}
