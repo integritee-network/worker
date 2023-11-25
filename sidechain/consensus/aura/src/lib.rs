@@ -29,11 +29,13 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 #[macro_use]
 extern crate sgx_tstd as std;
 
+use codec::Encode;
 use core::marker::PhantomData;
 use itc_parentchain_block_import_dispatcher::triggered_dispatcher::TriggerParentchainBlockImport;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_time_utils::duration_now;
 use itp_types::parentchain::ParentchainId;
+use itp_utils::hex::hex_encode;
 use its_block_verification::slot::slot_author;
 use its_consensus_common::{Environment, Error as ConsensusError, Proposer};
 use its_consensus_slots::{SimpleSlotWorker, Slot, SlotInfo};
@@ -252,6 +254,7 @@ impl<
 		&self,
 		parentchain_header_hash: &<ParentchainBlock::Header as ParentchainHeaderTrait>::Hash,
 	) -> Result<Option<ParentchainBlock::Header>, ConsensusError> {
+		log::trace!(target: self.logging_target(), "import Integritee blocks until {}", hex_encode(parentchain_header_hash.encode().as_ref()));
 		let maybe_parentchain_block = self
 			.parentchain_integritee_import_trigger
 			.import_until(|parentchain_block| {
@@ -266,6 +269,7 @@ impl<
 		&self,
 		parentchain_header_hash: &<ParentchainBlock::Header as ParentchainHeaderTrait>::Hash,
 	) -> Result<Option<ParentchainBlock::Header>, ConsensusError> {
+		log::trace!(target: self.logging_target(), "import TargetA blocks until {}", hex_encode(parentchain_header_hash.encode().as_ref()));
 		let maybe_parentchain_block = self
 			.maybe_parentchain_target_a_import_trigger
 			.clone()
@@ -282,6 +286,7 @@ impl<
 		&self,
 		parentchain_header_hash: &<ParentchainBlock::Header as ParentchainHeaderTrait>::Hash,
 	) -> Result<Option<ParentchainBlock::Header>, ConsensusError> {
+		log::trace!(target: self.logging_target(), "import TargetB blocks until {}", hex_encode(parentchain_header_hash.encode().as_ref()));
 		let maybe_parentchain_block = self
 			.maybe_parentchain_target_b_import_trigger
 			.clone()

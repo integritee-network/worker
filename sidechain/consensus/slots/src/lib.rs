@@ -234,6 +234,11 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 					return None
 				},
 			};
+		trace!(
+			target: logging_target,
+			"on_slot: a priori latest Integritee block number: {:?}",
+			latest_integritee_parentchain_header.number()
+		);
 		// fixme: we need proper error handling here. we just assume there is no target_a if there is an error here, which is very brittle
 		let maybe_latest_target_a_parentchain_header =
 			match self.peek_latest_target_a_parentchain_header() {
@@ -247,6 +252,12 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 					None
 				},
 			};
+		trace!(
+			target: logging_target,
+			"on_slot: a priori latest TargetA block number: {:?}",
+			maybe_latest_target_a_parentchain_header.clone().map(|h| h.number().clone())
+		);
+
 		let maybe_latest_target_b_parentchain_header =
 			match self.peek_latest_target_b_parentchain_header() {
 				Ok(Some(peeked_header)) => Some(peeked_header),
@@ -259,6 +270,11 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 					None
 				},
 			};
+		trace!(
+			target: logging_target,
+			"on_slot: a priori latest TargetB block number: {:?}",
+			maybe_latest_target_b_parentchain_header.clone().map(|h| h.number().clone())
+		);
 
 		let epoch_data = match self.epoch_data(&latest_integritee_parentchain_header, shard, slot) {
 			Ok(epoch_data) => epoch_data,
@@ -291,39 +307,69 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 		) {
 			Ok(h) => h,
 			Err(e) => {
-				warn!(
-					target: logging_target,
-					"Failed to import and retrieve Integritee parentchain block header: {:?}", e
-				);
-				return None
-			},
-		};
-
-		let maybe_last_imported_target_a_header = match self
-			.import_target_a_parentchain_blocks_until(&latest_integritee_parentchain_header.hash())
-		{
-			Ok(h) => Some(h),
-			Err(e) => {
 				debug!(
 					target: logging_target,
-					"Failed to import and retrieve parentchain block header: {:?}", e
+					"Failed to import Integritee blocks until nr{:?}: {:?}",
+					latest_integritee_parentchain_header.number(),
+					e
 				);
 				None
 			},
 		};
+		trace!(
+			target: logging_target,
+			"on_slot: a posteriori latest Integritee block number: {:?}",
+			last_imported_integritee_header.clone().map(|h| h.number().clone())
+		);
 
-		let maybe_last_imported_target_b_header = match self
-			.import_target_b_parentchain_blocks_until(&latest_integritee_parentchain_header.hash())
-		{
-			Ok(h) => Some(h),
-			Err(e) => {
-				debug!(
-					target: logging_target,
-					"Failed to import and retrieve parentchain block header: {:?}", e
-				);
+		let maybe_last_imported_target_a_header =
+			if let Some(ref header) = maybe_latest_target_a_parentchain_header {
+				match self.import_target_a_parentchain_blocks_until(&header.hash()) {
+					Ok(Some(h)) => Some(h),
+					Ok(None) => None,
+					Err(e) => {
+						debug!(
+							target: logging_target,
+							"Failed to import TargetA blocks until nr{:?}: {:?}",
+							header.number(),
+							e
+						);
+						None
+					},
+				}
+			} else {
 				None
-			},
-		};
+			};
+		trace!(
+			target: logging_target,
+			"on_slot: a posteriori latest TargetA block number: {:?}",
+			maybe_last_imported_target_a_header.map(|h| h.number().clone())
+		);
+
+		let maybe_last_imported_target_b_header =
+			if let Some(ref header) = maybe_latest_target_b_parentchain_header {
+				match self.import_target_b_parentchain_blocks_until(&header.hash()) {
+					Ok(Some(h)) => Some(h),
+					Ok(None) => None,
+					Err(e) => {
+						debug!(
+							target: logging_target,
+							"Failed to import TargetB blocks until nr{:?}: {:?}",
+							header.number(),
+							e
+						);
+						None
+					},
+				}
+			} else {
+				None
+			};
+
+		trace!(
+			target: logging_target,
+			"on_slot: a posteriori latest TargetB block number: {:?}",
+			maybe_last_imported_target_b_header.map(|h| h.number().clone())
+		);
 
 		let proposer = match self.proposer(latest_integritee_parentchain_header.clone(), shard) {
 			Ok(p) => p,
@@ -432,8 +478,14 @@ impl<ParentchainBlock: ParentchainBlockTrait, T: SimpleSlotWorker<ParentchainBlo
 				slot_info.maybe_last_imported_target_b_parentchain_head.clone(),
 			);
 
-			match SimpleSlotWorker::on_slot(self, shard_slot, shard) {
-				Some(res) => slot_results.push(res),
+			match SimpleSlotWorker::on_slot(self, shard_slot.clone(), shard) {
+				Some(res) => {
+					slot_results.push(res);
+					debug!(
+						target: logging_target,
+						"on_slot: produced block for slot: {:?} in shard {:?}", shard_slot, shard
+					)
+				},
 				None => info!(
 					target: logging_target,
 					"Did not produce a block for slot {} in shard {:?}", *slot_info.slot, shard
