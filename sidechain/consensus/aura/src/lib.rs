@@ -67,27 +67,47 @@ pub struct Aura<
 	SidechainBlock,
 	Environment,
 	OcallApi,
-	ImportTrigger,
+	IntegriteeImportTrigger,
+	TargetAImportTrigger,
+	TargetBImportTrigger,
 > {
 	authority_pair: AuthorityPair,
 	ocall_api: OcallApi,
-	parentchain_integritee_import_trigger: Arc<ImportTrigger>,
-	maybe_parentchain_target_a_import_trigger: Option<Arc<ImportTrigger>>,
-	maybe_parentchain_target_b_import_trigger: Option<Arc<ImportTrigger>>,
+	parentchain_integritee_import_trigger: Arc<IntegriteeImportTrigger>,
+	maybe_parentchain_target_a_import_trigger: Option<Arc<TargetAImportTrigger>>,
+	maybe_parentchain_target_b_import_trigger: Option<Arc<TargetBImportTrigger>>,
 	environment: Environment,
 	claim_strategy: SlotClaimStrategy,
 	_phantom: PhantomData<(AuthorityPair, ParentchainBlock, SidechainBlock)>,
 }
 
-impl<AuthorityPair, ParentchainBlock, SidechainBlock, Environment, OcallApi, ImportTrigger>
-	Aura<AuthorityPair, ParentchainBlock, SidechainBlock, Environment, OcallApi, ImportTrigger>
+impl<
+		AuthorityPair,
+		ParentchainBlock,
+		SidechainBlock,
+		Environment,
+		OcallApi,
+		IntegriteeImportTrigger,
+		TargetAImportTrigger,
+		TargetBImportTrigger,
+	>
+	Aura<
+		AuthorityPair,
+		ParentchainBlock,
+		SidechainBlock,
+		Environment,
+		OcallApi,
+		IntegriteeImportTrigger,
+		TargetAImportTrigger,
+		TargetBImportTrigger,
+	>
 {
 	pub fn new(
 		authority_pair: AuthorityPair,
 		ocall_api: OcallApi,
-		parentchain_integritee_import_trigger: Arc<ImportTrigger>,
-		maybe_parentchain_target_a_import_trigger: Option<Arc<ImportTrigger>>,
-		maybe_parentchain_target_b_import_trigger: Option<Arc<ImportTrigger>>,
+		parentchain_integritee_import_trigger: Arc<IntegriteeImportTrigger>,
+		maybe_parentchain_target_a_import_trigger: Option<Arc<TargetAImportTrigger>>,
+		maybe_parentchain_target_b_import_trigger: Option<Arc<TargetBImportTrigger>>,
 		environment: Environment,
 	) -> Self {
 		Self {
@@ -106,25 +126,6 @@ impl<AuthorityPair, ParentchainBlock, SidechainBlock, Environment, OcallApi, Imp
 		self.claim_strategy = claim_strategy;
 
 		self
-	}
-
-	fn get_import_trigger(
-		&self,
-		parentchain_id: ParentchainId,
-	) -> Result<Arc<ImportTrigger>, ConsensusError> {
-		match parentchain_id {
-			ParentchainId::Integritee => Ok(self.parentchain_integritee_import_trigger.clone()),
-			ParentchainId::TargetA => Ok(self
-				.maybe_parentchain_target_a_import_trigger
-				.clone()
-				.ok_or(ConsensusError::Other("no target_a assigned".into()))?
-				.clone()),
-			ParentchainId::TargetB => Ok(self
-				.maybe_parentchain_target_b_import_trigger
-				.clone()
-				.ok_or(ConsensusError::Other("no target_b assigned".into()))?
-				.clone()),
-		}
 	}
 }
 
@@ -145,10 +146,26 @@ type AuthorityId<P> = <P as Pair>::Public;
 type ShardIdentifierFor<SignedSidechainBlock> =
 	<<<SignedSidechainBlock as SignedBlock>::Block as SidechainBlockTrait>::HeaderType as HeaderTrait>::ShardIdentifier;
 
-impl<AuthorityPair, ParentchainBlock, SignedSidechainBlock, E, OcallApi, ImportTrigger>
-	SimpleSlotWorker<ParentchainBlock>
-	for Aura<AuthorityPair, ParentchainBlock, SignedSidechainBlock, E, OcallApi, ImportTrigger>
-where
+impl<
+		AuthorityPair,
+		ParentchainBlock,
+		SignedSidechainBlock,
+		E,
+		OcallApi,
+		IntegriteeImportTrigger,
+		TargetAImportTrigger,
+		TargetBImportTrigger,
+	> SimpleSlotWorker<ParentchainBlock>
+	for Aura<
+		AuthorityPair,
+		ParentchainBlock,
+		SignedSidechainBlock,
+		E,
+		OcallApi,
+		IntegriteeImportTrigger,
+		TargetAImportTrigger,
+		TargetBImportTrigger,
+	> where
 	AuthorityPair: Pair,
 	AuthorityPair::Public: UncheckedFrom<[u8; 32]>,
 	// todo: Relax hash trait bound, but this needs a change to some other parts in the code.
@@ -157,7 +174,11 @@ where
 	E::Proposer: Proposer<ParentchainBlock, SignedSidechainBlock>,
 	SignedSidechainBlock: SignedBlock + Send + 'static,
 	OcallApi: ValidateerFetch + EnclaveOnChainOCallApi + Send + 'static,
-	ImportTrigger:
+	IntegriteeImportTrigger:
+		TriggerParentchainBlockImport<SignedBlockType = SignedParentchainBlock<ParentchainBlock>>,
+	TargetAImportTrigger:
+		TriggerParentchainBlockImport<SignedBlockType = SignedParentchainBlock<ParentchainBlock>>,
+	TargetBImportTrigger:
 		TriggerParentchainBlockImport<SignedBlockType = SignedParentchainBlock<ParentchainBlock>>,
 {
 	type Proposer = E::Proposer;
@@ -223,13 +244,16 @@ where
 		proposing_remaining_duration(slot_info, duration_now())
 	}
 
-	fn import_parentchain_blocks_until(
+	// Design remark: the following may seem too explicit and it certainly could be abstracted.
+	// however, as pretty soon we may not want to assume same Block types for all parentchains,
+	// it may make sense to abstract once we do that.
+
+	fn import_integritee_parentchain_blocks_until(
 		&self,
 		parentchain_header_hash: &<ParentchainBlock::Header as ParentchainHeaderTrait>::Hash,
-		parentchain_id: ParentchainId,
 	) -> Result<Option<ParentchainBlock::Header>, ConsensusError> {
-		let import_trigger = self.get_import_trigger(parentchain_id)?;
-		let maybe_parentchain_block = import_trigger
+		let maybe_parentchain_block = self
+			.parentchain_integritee_import_trigger
 			.import_until(|parentchain_block| {
 				parentchain_block.block.hash() == *parentchain_header_hash
 			})
@@ -238,12 +262,69 @@ where
 		Ok(maybe_parentchain_block.map(|b| b.block.header().clone()))
 	}
 
-	fn peek_latest_parentchain_header(
+	fn import_target_a_parentchain_blocks_until(
 		&self,
-		parentchain_id: ParentchainId,
+		parentchain_header_hash: &<ParentchainBlock::Header as ParentchainHeaderTrait>::Hash,
 	) -> Result<Option<ParentchainBlock::Header>, ConsensusError> {
-		let import_trigger = self.get_import_trigger(parentchain_id)?;
-		let maybe_parentchain_block = import_trigger
+		let maybe_parentchain_block = self
+			.maybe_parentchain_target_a_import_trigger
+			.clone()
+			.ok_or(ConsensusError::Other("no target_a assigned".into()))?
+			.import_until(|parentchain_block| {
+				parentchain_block.block.hash() == *parentchain_header_hash
+			})
+			.map_err(|e| ConsensusError::Other(e.into()))?;
+
+		Ok(maybe_parentchain_block.map(|b| b.block.header().clone()))
+	}
+
+	fn import_target_b_parentchain_blocks_until(
+		&self,
+		parentchain_header_hash: &<ParentchainBlock::Header as ParentchainHeaderTrait>::Hash,
+	) -> Result<Option<ParentchainBlock::Header>, ConsensusError> {
+		let maybe_parentchain_block = self
+			.maybe_parentchain_target_b_import_trigger
+			.clone()
+			.ok_or(ConsensusError::Other("no target_b assigned".into()))?
+			.import_until(|parentchain_block| {
+				parentchain_block.block.hash() == *parentchain_header_hash
+			})
+			.map_err(|e| ConsensusError::Other(e.into()))?;
+
+		Ok(maybe_parentchain_block.map(|b| b.block.header().clone()))
+	}
+
+	fn peek_latest_integritee_parentchain_header(
+		&self,
+	) -> Result<Option<ParentchainBlock::Header>, ConsensusError> {
+		let maybe_parentchain_block = self
+			.parentchain_integritee_import_trigger
+			.peek_latest()
+			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
+
+		Ok(maybe_parentchain_block.map(|b| b.block.header().clone()))
+	}
+
+	fn peek_latest_target_a_parentchain_header(
+		&self,
+	) -> Result<Option<ParentchainBlock::Header>, ConsensusError> {
+		let maybe_parentchain_block = self
+			.maybe_parentchain_target_a_import_trigger
+			.clone()
+			.ok_or(ConsensusError::Other("no target_a assigned".into()))?
+			.peek_latest()
+			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
+
+		Ok(maybe_parentchain_block.map(|b| b.block.header().clone()))
+	}
+
+	fn peek_latest_target_b_parentchain_header(
+		&self,
+	) -> Result<Option<ParentchainBlock::Header>, ConsensusError> {
+		let maybe_parentchain_block = self
+			.maybe_parentchain_target_b_import_trigger
+			.clone()
+			.ok_or(ConsensusError::Other("no target_b assigned".into()))?
 			.peek_latest()
 			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
 
@@ -287,6 +368,12 @@ where
 		.iter()
 		.map(|account| P::Public::unchecked_from(*account.as_ref()))
 		.collect())
+}
+
+pub enum AnyImportTrigger<Integritee, TargetA, TargetB> {
+	Integritee(Integritee),
+	TargetA(TargetA),
+	TargetB(TargetB),
 }
 
 #[cfg(test)]

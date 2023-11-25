@@ -168,17 +168,33 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 	///
 	/// Returns the header of the latest imported block. In case no block was imported with this trigger,
 	/// None is returned.
-	fn import_parentchain_blocks_until(
+	fn import_integritee_parentchain_blocks_until(
 		&self,
 		last_imported_parentchain_header: &<ParentchainBlock::Header as ParentchainHeaderTrait>::Hash,
-		parentchain_id: ParentchainId,
+	) -> Result<Option<ParentchainBlock::Header>, ConsensusError>;
+
+	fn import_target_a_parentchain_blocks_until(
+		&self,
+		last_imported_parentchain_header: &<ParentchainBlock::Header as ParentchainHeaderTrait>::Hash,
+	) -> Result<Option<ParentchainBlock::Header>, ConsensusError>;
+
+	fn import_target_b_parentchain_blocks_until(
+		&self,
+		last_imported_parentchain_header: &<ParentchainBlock::Header as ParentchainHeaderTrait>::Hash,
 	) -> Result<Option<ParentchainBlock::Header>, ConsensusError>;
 
 	/// Peek the parentchain import queue for the latest block in queue.
 	/// Does not perform the import or mutate the queue.
-	fn peek_latest_parentchain_header(
+	fn peek_latest_integritee_parentchain_header(
 		&self,
-		parentchain_id: ParentchainId,
+	) -> Result<Option<ParentchainBlock::Header>, ConsensusError>;
+
+	fn peek_latest_target_a_parentchain_header(
+		&self,
+	) -> Result<Option<ParentchainBlock::Header>, ConsensusError>;
+
+	fn peek_latest_target_b_parentchain_header(
+		&self,
 	) -> Result<Option<ParentchainBlock::Header>, ConsensusError>;
 
 	/// Implements [`SlotWorker::on_slot`]. This is an adaption from
@@ -207,7 +223,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 		}
 
 		let latest_integritee_parentchain_header =
-			match self.peek_latest_parentchain_header(ParentchainId::Integritee) {
+			match self.peek_latest_integritee_parentchain_header() {
 				Ok(Some(peeked_header)) => peeked_header,
 				Ok(None) => slot_info.last_imported_integritee_parentchain_head.clone(),
 				Err(e) => {
@@ -220,7 +236,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 			};
 		// fixme: we need proper error handling here. we just assume there is no target_a if there is an error here, which is very brittle
 		let maybe_latest_target_a_parentchain_header =
-			match self.peek_latest_parentchain_header(ParentchainId::TargetA) {
+			match self.peek_latest_target_a_parentchain_header() {
 				Ok(Some(peeked_header)) => Some(peeked_header),
 				Ok(None) => slot_info.maybe_last_imported_target_a_parentchain_head.clone(),
 				Err(e) => {
@@ -232,7 +248,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 				},
 			};
 		let maybe_latest_target_b_parentchain_header =
-			match self.peek_latest_parentchain_header(ParentchainId::TargetB) {
+			match self.peek_latest_target_b_parentchain_header() {
 				Ok(Some(peeked_header)) => Some(peeked_header),
 				Ok(None) => slot_info.maybe_last_imported_target_b_parentchain_head.clone(),
 				Err(e) => {
@@ -270,9 +286,8 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 		let _claim = self.claim_slot(&latest_integritee_parentchain_header, slot, &epoch_data)?;
 
 		// Import the peeked parentchain header(s).
-		let last_imported_integritee_header = match self.import_parentchain_blocks_until(
+		let last_imported_integritee_header = match self.import_integritee_parentchain_blocks_until(
 			&latest_integritee_parentchain_header.hash(),
-			ParentchainId::Integritee,
 		) {
 			Ok(h) => h,
 			Err(e) => {
@@ -284,10 +299,9 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 			},
 		};
 
-		let maybe_last_imported_target_a_header = match self.import_parentchain_blocks_until(
-			&latest_integritee_parentchain_header.hash(),
-			ParentchainId::TargetA,
-		) {
+		let maybe_last_imported_target_a_header = match self
+			.import_target_a_parentchain_blocks_until(&latest_integritee_parentchain_header.hash())
+		{
 			Ok(h) => Some(h),
 			Err(e) => {
 				debug!(
@@ -298,10 +312,9 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 			},
 		};
 
-		let maybe_last_imported_target_b_header = match self.import_parentchain_blocks_until(
-			&latest_integritee_parentchain_header.hash(),
-			ParentchainId::TargetB,
-		) {
+		let maybe_last_imported_target_b_header = match self
+			.import_target_b_parentchain_blocks_until(&latest_integritee_parentchain_header.hash())
+		{
 			Ok(h) => Some(h),
 			Err(e) => {
 				debug!(

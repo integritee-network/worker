@@ -114,9 +114,10 @@ pub(crate) fn get_triggered_dispatcher_from_target_b_solo_or_parachain(
 		};
 	Ok(dispatcher)
 }
-pub(crate) fn get_triggered_dispatcher<ImportDispatcher, TriggeredImportDispatcher>(
-	dispatcher: Arc<ImportDispatcher>,
-) -> Result<Arc<TriggeredImportDispatcher>> {
+
+pub(crate) fn get_triggered_dispatcher<TriggeredDispatcher, T>(
+	dispatcher: Arc<BlockImportDispatcher<TriggeredDispatcher, T>>,
+) -> Result<Arc<TriggeredDispatcher>> {
 	let triggered_dispatcher = dispatcher
 		.triggered_dispatcher()
 		.ok_or(Error::ExpectedTriggeredImportDispatcher)?;

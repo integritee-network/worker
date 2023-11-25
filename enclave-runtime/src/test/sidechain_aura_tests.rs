@@ -155,8 +155,15 @@ pub fn produce_sidechain_block_and_import_it() {
 	let timestamp = duration_now();
 	let slot = slot_from_timestamp_and_duration(duration_now(), SLOT_DURATION);
 	let ends_at = timestamp + SLOT_DURATION;
-	let slot_info =
-		SlotInfo::new(slot, timestamp, SLOT_DURATION, ends_at, parentchain_header.clone());
+	let slot_info = SlotInfo::new(
+		slot,
+		timestamp,
+		SLOT_DURATION,
+		ends_at,
+		parentchain_header.clone(),
+		None,
+		None,
+	);
 
 	info!("Test setup is done.");
 
@@ -164,11 +171,13 @@ pub fn produce_sidechain_block_and_import_it() {
 
 	info!("Executing AURA on slot..");
 	let (blocks, opaque_calls) =
-		exec_aura_on_slot::<_, ParentchainBlock, SignedSidechainBlock, _, _, _>(
+		exec_aura_on_slot::<_, ParentchainBlock, SignedSidechainBlock, _, _, _, _, _>(
 			slot_info,
 			signer,
 			ocall_api.clone(),
 			parentchain_block_import_trigger.clone(),
+			None::<Arc<TestParentchainBlockImportTrigger>>,
+			None::<Arc<TestParentchainBlockImportTrigger>>,
 			proposer_environment,
 			shards,
 		)

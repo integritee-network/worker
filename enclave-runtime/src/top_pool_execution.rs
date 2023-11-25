@@ -29,6 +29,8 @@ use crate::{
 		get_extrinsic_factory_from_target_b_solo_or_parachain,
 		get_stf_executor_from_solo_or_parachain,
 		get_triggered_dispatcher_from_integritee_solo_or_parachain,
+		get_triggered_dispatcher_from_target_a_solo_or_parachain,
+		get_triggered_dispatcher_from_target_b_solo_or_parachain,
 		get_validator_accessor_from_integritee_solo_or_parachain,
 		get_validator_accessor_from_target_a_solo_or_parachain,
 		get_validator_accessor_from_target_b_solo_or_parachain,
@@ -100,27 +102,51 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	let integritee_parentchain_import_dispatcher =
 		get_triggered_dispatcher_from_integritee_solo_or_parachain()?;
 	let maybe_target_a_parentchain_import_dispatcher =
-		get_triggered_dispatcher_from_target_a_solo_or_parachain().unwrap_or(None);
+		get_triggered_dispatcher_from_target_a_solo_or_parachain().ok();
 	let maybe_target_b_parentchain_import_dispatcher =
-		get_triggered_dispatcher_from_target_b_solo_or_parachain().unwrap_or(None);
+		get_triggered_dispatcher_from_target_b_solo_or_parachain().ok();
 
-	let validator_access = get_validator_accessor_from_integritee_solo_or_parachain()?;
+	// todo: is this really correct? are these blocks already processed into top-pool?
+	let maybe_latest_target_a_parentchain_header =
+		if let Some(ref triggered_dispatcher) = maybe_target_a_parentchain_import_dispatcher {
+			let validator_access = get_validator_accessor_from_target_a_solo_or_parachain()?;
+			Some(validator_access.execute_on_validator(|v| {
+				let latest_parentchain_header = v.latest_finalized_header()?;
+				Ok(latest_parentchain_header)
+			})?)
+		} else {
+			None
+		};
+
+	let maybe_latest_target_b_parentchain_header =
+		if let Some(ref triggered_dispatcher) = maybe_target_b_parentchain_import_dispatcher {
+			let validator_access = get_validator_accessor_from_target_b_solo_or_parachain()?;
+			Some(validator_access.execute_on_validator(|v| {
+				let latest_parentchain_header = v.latest_finalized_header()?;
+				Ok(latest_parentchain_header)
+			})?)
+		} else {
+			None
+		};
+
+	let integritee_validator_access = get_validator_accessor_from_integritee_solo_or_parachain()?;
 
 	// This gets the latest imported block. We accept that all of AURA, up until the block production
 	// itself, will  operate on a parentchain block that is potentially outdated by one block
 	// (in case we have a block in the queue, but not imported yet).
-	let current_parentchain_header = validator_access.execute_on_validator(|v| {
-		let latest_parentchain_header = v.latest_finalized_header()?;
-		Ok(latest_parentchain_header)
-	})?;
+	let current_integritee_parentchain_header =
+		integritee_validator_access.execute_on_validator(|v| {
+			let latest_parentchain_header = v.latest_finalized_header()?;
+			Ok(latest_parentchain_header)
+		})?;
 
 	// Import any sidechain blocks that are in the import queue. In case we are missing blocks,
 	// a peer sync will happen. If that happens, the slot time might already be used up just by this import.
 	let sidechain_block_import_queue_worker =
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT.get()?;
 
-	let latest_parentchain_header =
-		sidechain_block_import_queue_worker.process_queue(&current_parentchain_header)?;
+	let latest_integritee_parentchain_header = sidechain_block_import_queue_worker
+		.process_queue(&current_integritee_parentchain_header)?;
 
 	trace!(
 		"Elapsed time to process sidechain block import queue: {} ms",
@@ -142,7 +168,9 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	match yield_next_slot(
 		slot_beginning_timestamp,
 		SLOT_DURATION,
-		latest_parentchain_header,
+		latest_integritee_parentchain_header,
+		maybe_latest_target_a_parentchain_header,
+		maybe_latest_target_b_parentchain_header,
 		&mut LastSlot,
 	)? {
 		Some(slot) => {
@@ -161,7 +189,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 			);
 
 			let (blocks, parentchain_calls) =
-				exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _, _>(
+				exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _, _, _, _>(
 					slot.clone(),
 					authority,
 					ocall_api.clone(),
@@ -200,14 +228,16 @@ pub(crate) fn exec_aura_on_slot<
 	SignedSidechainBlock,
 	OCallApi,
 	PEnvironment,
-	BlockImportTrigger,
+	IntegriteeBlockImportTrigger,
+	TargetABlockImportTrigger,
+	TargetBBlockImportTrigger,
 >(
 	slot: SlotInfo<ParentchainBlock>,
 	authority: Authority,
 	ocall_api: Arc<OCallApi>,
-	integritee_block_import_trigger: Arc<BlockImportTrigger>,
-	maybe_target_a_block_import_trigger: Option<Arc<BlockImportTrigger>>,
-	maybe_target_b_block_import_trigger: Option<Arc<BlockImportTrigger>>,
+	integritee_block_import_trigger: Arc<IntegriteeBlockImportTrigger>,
+	maybe_target_a_block_import_trigger: Option<Arc<TargetABlockImportTrigger>>,
+	maybe_target_b_block_import_trigger: Option<Arc<TargetBBlockImportTrigger>>,
 	proposer_environment: PEnvironment,
 	shards: Vec<ShardIdentifierFor<SignedSidechainBlock>>,
 ) -> Result<(Vec<SignedSidechainBlock>, Vec<ParentchainCall>)>
@@ -225,20 +255,25 @@ where
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	PEnvironment:
 		Environment<ParentchainBlock, SignedSidechainBlock, Error = ConsensusError> + Send + Sync,
-	BlockImportTrigger:
+	IntegriteeBlockImportTrigger:
+		TriggerParentchainBlockImport<SignedBlockType = SignedParentchainBlock<ParentchainBlock>>,
+	TargetABlockImportTrigger:
+		TriggerParentchainBlockImport<SignedBlockType = SignedParentchainBlock<ParentchainBlock>>,
+	TargetBBlockImportTrigger:
 		TriggerParentchainBlockImport<SignedBlockType = SignedParentchainBlock<ParentchainBlock>>,
 {
 	debug!("[Aura] Executing aura for slot: {:?}", slot);
 
-	let mut aura = Aura::<_, ParentchainBlock, SignedSidechainBlock, PEnvironment, _, _>::new(
-		authority,
-		ocall_api.as_ref().clone(),
-		integritee_block_import_trigger,
-		maybe_target_a_block_import_trigger,
-		maybe_target_b_block_import_trigger,
-		proposer_environment,
-	)
-	.with_claim_strategy(SlotClaimStrategy::RoundRobin);
+	let mut aura =
+		Aura::<_, ParentchainBlock, SignedSidechainBlock, PEnvironment, _, _, _, _>::new(
+			authority,
+			ocall_api.as_ref().clone(),
+			integritee_block_import_trigger,
+			maybe_target_a_block_import_trigger,
+			maybe_target_b_block_import_trigger,
+			proposer_environment,
+		)
+		.with_claim_strategy(SlotClaimStrategy::RoundRobin);
 
 	let (blocks, pxts): (Vec<_>, Vec<_>) =
 		PerShardSlotWorkerScheduler::on_slot(&mut aura, slot, shards)
