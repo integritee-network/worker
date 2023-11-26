@@ -32,14 +32,14 @@ pallet-teerex = { git = "https://github.com/integritee-network/pallets.git", bra
 # `default-features = false` to remove the jsonrpsee dependency.
 enclave-bridge-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.0-polkadot-v0.9.42" }
 # disable unsupported jsonrpcsee
-substrate-api-client = { default-features = false, features = ["std", "sync-api"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }
-substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }
 pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-application-crypto = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-keystore = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+substrate-api-client = { default-features = false, features = ["std", "sync-api"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }
+substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }
 
 # local dependencies
 ita-stf = { path = "../app-libs/stf" }

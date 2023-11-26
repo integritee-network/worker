@@ -12,10 +12,10 @@ lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
 log = { version = "0.4", default-features = false }
 
 # local deps
+futures-timer = { version = "3.0", optional = true }
 itp-types = { path = "../../../core-primitives/types", default-features = false }
 its-block-verification = { path = "../../block-verification", default-features = false }
 its-primitives = { path = "../../primitives", default-features = false }
-futures-timer = { version = "3.0", optional = true }
 
 # sgx deps
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["untrusted_time"] }
