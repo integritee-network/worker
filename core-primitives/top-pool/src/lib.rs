@@ -28,7 +28,6 @@ extern crate sgx_tstd as std;
 pub mod sgx_reexport_prelude {
 	pub use jsonrpc_core_sgx as jsonrpc_core;
 	pub use linked_hash_map_sgx as linked_hash_map;
-	pub use thiserror_sgx as thiserror;
 }
 
 pub mod base_pool;

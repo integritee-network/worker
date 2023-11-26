@@ -45,14 +45,12 @@ itp-settings = { path = "../settings" }
 itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
 itp-sgx-io = { path = "../sgx/io", default-features = false }
 itp-time-utils = { path = "../time-utils", default-features = false }
-itp-types = { path = "../types", default-features = false }
 
 # integritee
 httparse = { default-features = false, git = "https://github.com/integritee-network/httparse-sgx", branch = "sgx-experimental" }
 
 # substrate deps
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 [features]
 default = ["std"]
@@ -74,10 +72,8 @@ std = [
     "itp-ocall-api/std",
     "itp-sgx-io/std",
     "itp-sgx-crypto/std",
-    "itp-types/std",
     # substrate
     "sp-core/std",
-    "sp-runtime/std",
     # integritee
     "httparse/std",
 ]

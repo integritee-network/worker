@@ -6,9 +6,6 @@ edition = "2021"
 
 [dependencies]
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
-
-# sgx dependencies
-sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_crypto_helper", default-features = false, optional = true }
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["untrusted_time"] }
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
@@ -21,7 +18,6 @@ itp-stf-interface = { path = "../stf-interface", default-features = false }
 itp-stf-primitives = { path = "../stf-primitives", default-features = false }
 itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
 itp-stf-state-observer = { path = "../stf-state-observer", default-features = false }
-itp-storage = { path = "../storage", default-features = false }
 itp-time-utils = { path = "../time-utils", default-features = false }
 itp-top-pool-author = { path = "../top-pool-author", default-features = false }
 itp-types = { path = "../types", default-features = false }
@@ -62,7 +58,6 @@ std = [
     "itp-stf-state-handler/std",
     "itp-stf-state-observer/std",
     "itp-top-pool-author/std",
-    "itp-storage/std",
     "itp-types/std",
     "itp-time-utils/std",
     # crates.io
@@ -81,7 +76,6 @@ sgx = [
     "itp-stf-state-handler/sgx",
     "itp-stf-state-observer/sgx",
     "itp-top-pool-author/sgx",
-    "itp-storage/sgx",
     "itp-time-utils/sgx",
     "thiserror_sgx",
 ]
@@ -89,6 +83,5 @@ test = [
     "itc-parentchain-test",
     "itp-node-api/mocks",
     "itp-test",
-    "sgx-crypto-helper",
 ]
 mocks = []

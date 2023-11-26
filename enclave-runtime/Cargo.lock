@@ -794,7 +794,6 @@ dependencies = [
  "itp-attestation-handler",
  "itp-component-container",
  "itp-extrinsics-factory",
- "itp-hashing",
  "itp-import-queue",
  "itp-node-api",
  "itp-node-api-metadata",
@@ -805,7 +804,6 @@ dependencies = [
  "itp-settings",
  "itp-sgx-crypto",
  "itp-sgx-externalities",
- "itp-sgx-io",
  "itp-sgx-temp-dir",
  "itp-stf-executor",
  "itp-stf-interface",
@@ -813,7 +811,6 @@ dependencies = [
  "itp-stf-state-handler",
  "itp-stf-state-observer",
  "itp-storage",
- "itp-teerex-storage",
  "itp-test",
  "itp-time-utils",
  "itp-top-pool",
@@ -832,8 +829,6 @@ dependencies = [
  "primitive-types",
  "rust-base58",
  "rustls 0.19.0 (git+https://github.com/mesalock-linux/rustls?rev=sgx_1.1.3)",
- "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx?tag=sgx_1.1.3)",
- "serde_derive 1.0.118",
  "serde_json 1.0.60 (git+https://github.com/mesalock-linux/serde-json-sgx?tag=sgx_1.1.3)",
  "sgx_rand",
  "sgx_serialize",
@@ -848,7 +843,6 @@ dependencies = [
  "sgx_types",
  "sp-core",
  "sp-runtime",
- "sp-std",
  "teerex-primitives",
  "webpki",
 ]
@@ -1654,10 +1648,9 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "serde 1.0.188",
- "serde_json 1.0.96",
  "sgx_tstd",
  "substrate-fixed",
- "thiserror 1.0.9",
+ "thiserror",
  "url",
 ]
 
@@ -1665,30 +1658,20 @@ dependencies = [
 name = "ita-parentchain-interface"
 version = "0.9.0"
 dependencies = [
- "binary-merkle-tree",
  "bs58",
- "frame-support",
- "futures 0.3.8",
  "ita-sgx-runtime",
  "ita-stf",
  "itc-parentchain-indirect-calls-executor",
  "itp-api-client-types",
  "itp-node-api",
- "itp-ocall-api",
- "itp-sgx-crypto",
- "itp-sgx-runtime-primitives",
- "itp-stf-executor",
  "itp-stf-primitives",
- "itp-top-pool-author",
  "itp-types",
  "itp-utils",
  "log",
  "parity-scale-codec",
  "sgx_tstd",
- "sgx_types",
  "sp-core",
  "sp-runtime",
- "thiserror 1.0.9",
 ]
 
 [[package]]
@@ -1729,16 +1712,12 @@ dependencies = [
 name = "ita-stf"
 version = "0.9.0"
 dependencies = [
- "derive_more",
  "frame-support",
  "frame-system",
- "hex",
  "ita-sgx-runtime",
- "itc-parentchain-indirect-calls-executor",
  "itp-hashing",
  "itp-node-api",
  "itp-node-api-metadata",
- "itp-node-api-metadata-provider",
  "itp-sgx-externalities",
  "itp-stf-interface",
  "itp-stf-primitives",
@@ -1753,7 +1732,6 @@ dependencies = [
  "rlp",
  "sgx_tstd",
  "sha3 0.10.8",
- "sp-application-crypto",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -1773,9 +1751,8 @@ dependencies = [
  "parity-scale-codec",
  "serde_json 1.0.96",
  "sgx_tstd",
- "sgx_types",
  "sp-runtime",
- "thiserror 1.0.9",
+ "thiserror",
 ]
 
 [[package]]
@@ -1793,10 +1770,8 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "sgx_tstd",
- "sgx_types",
- "sp-core",
  "sp-runtime",
- "thiserror 1.0.9",
+ "thiserror",
 ]
 
 [[package]]
@@ -1821,8 +1796,7 @@ dependencies = [
  "log",
  "sgx_tstd",
  "sgx_types",
- "sp-runtime",
- "thiserror 1.0.9",
+ "thiserror",
 ]
 
 [[package]]
@@ -1833,7 +1807,6 @@ dependencies = [
  "itc-parentchain-indirect-calls-executor",
  "itc-parentchain-light-client",
  "itp-extrinsics-factory",
- "itp-settings",
  "itp-stf-executor",
  "itp-types",
  "log",
@@ -1841,7 +1814,7 @@ dependencies = [
  "sgx_tstd",
  "sgx_types",
  "sp-runtime",
- "thiserror 1.0.9",
+ "thiserror",
 ]
 
 [[package]]
@@ -1853,33 +1826,27 @@ dependencies = [
  "futures 0.3.8",
  "itp-api-client-types",
  "itp-node-api",
- "itp-ocall-api",
  "itp-sgx-crypto",
  "itp-sgx-runtime-primitives",
  "itp-stf-executor",
- "itp-stf-interface",
  "itp-stf-primitives",
  "itp-test",
  "itp-top-pool-author",
  "itp-types",
- "itp-utils",
  "log",
  "parity-scale-codec",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
  "sp-runtime",
- "thiserror 1.0.9",
+ "thiserror",
 ]
 
 [[package]]
 name = "itc-parentchain-light-client"
 version = "0.9.0"
 dependencies = [
- "derive_more",
  "finality-grandpa",
- "frame-system",
- "hash-db 0.15.2",
  "itc-parentchain-test",
  "itp-ocall-api",
  "itp-sgx-io",
@@ -1887,34 +1854,21 @@ dependencies = [
  "itp-storage",
  "itp-test",
  "itp-types",
- "lazy_static",
  "log",
- "num-traits 0.2.15",
  "parity-scale-codec",
  "sgx_tstd",
  "sgx_types",
- "sp-application-crypto",
  "sp-consensus-grandpa",
- "sp-core",
  "sp-runtime",
- "sp-trie",
- "thiserror 1.0.9",
+ "thiserror",
 ]
 
 [[package]]
 name = "itc-parentchain-test"
 version = "0.9.0"
 dependencies = [
- "frame-support",
- "frame-system",
  "itp-types",
- "log",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-io",
  "sp-runtime",
- "sp-std",
 ]
 
 [[package]]
@@ -1928,8 +1882,7 @@ dependencies = [
  "serde 1.0.188",
  "serde_json 1.0.96",
  "sgx_tstd",
- "sgx_types",
- "thiserror 1.0.9",
+ "thiserror",
  "url",
 ]
 
@@ -1944,11 +1897,9 @@ dependencies = [
  "mio-extras",
  "rcgen",
  "rustls 0.19.0 (git+https://github.com/mesalock-linux/rustls?branch=mesalock_sgx)",
- "sgx_crypto_helper",
  "sgx_tstd",
- "sgx_types",
  "sp-core",
- "thiserror 1.0.9",
+ "thiserror",
  "tungstenite",
  "webpki",
  "yasna",
@@ -1982,7 +1933,6 @@ name = "itp-api-client-types"
 version = "0.9.0"
 dependencies = [
  "itp-types",
- "sp-core",
  "sp-runtime",
  "substrate-api-client",
 ]
@@ -2003,7 +1953,6 @@ dependencies = [
  "itp-sgx-crypto",
  "itp-sgx-io",
  "itp-time-utils",
- "itp-types",
  "log",
  "num-bigint",
  "parity-scale-codec",
@@ -2015,8 +1964,7 @@ dependencies = [
  "sgx_tstd",
  "sgx_types",
  "sp-core",
- "sp-runtime",
- "thiserror 1.0.9",
+ "thiserror",
  "webpki",
  "webpki-roots 0.21.0 (git+https://github.com/mesalock-linux/webpki-roots?branch=mesalock_sgx)",
  "yasna",
@@ -2027,7 +1975,7 @@ name = "itp-component-container"
 version = "0.8.0"
 dependencies = [
  "sgx_tstd",
- "thiserror 1.0.9",
+ "thiserror",
 ]
 
 [[package]]
@@ -2035,7 +1983,6 @@ name = "itp-enclave-bridge-storage"
 version = "0.9.0"
 dependencies = [
  "itp-storage",
- "itp-types",
  "parity-scale-codec",
  "sp-std",
 ]
@@ -2056,14 +2003,13 @@ dependencies = [
  "itp-node-api",
  "itp-nonce-cache",
  "itp-types",
- "log",
  "parity-scale-codec",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
  "sp-runtime",
  "substrate-api-client",
- "thiserror 1.0.9",
+ "thiserror",
 ]
 
 [[package]]
@@ -2079,7 +2025,7 @@ version = "0.8.0"
 dependencies = [
  "sgx_tstd",
  "sgx_types",
- "thiserror 1.0.9",
+ "thiserror",
 ]
 
 [[package]]
@@ -2107,16 +2053,15 @@ version = "0.9.0"
 dependencies = [
  "itp-node-api-metadata",
  "sgx_tstd",
- "thiserror 1.0.9",
+ "thiserror",
 ]
 
 [[package]]
 name = "itp-nonce-cache"
 version = "0.8.0"
 dependencies = [
- "lazy_static",
  "sgx_tstd",
- "thiserror 1.0.9",
+ "thiserror",
 ]
 
 [[package]]
@@ -2139,7 +2084,7 @@ version = "0.9.0"
 dependencies = [
  "lazy_static",
  "sgx_tstd",
- "thiserror 1.0.9",
+ "thiserror",
 ]
 
 [[package]]
@@ -2163,13 +2108,11 @@ version = "0.9.0"
 dependencies = [
  "aes",
  "derive_more",
- "itp-settings",
  "itp-sgx-io",
  "itp-sgx-temp-dir",
  "log",
  "ofb",
  "parity-scale-codec",
- "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx?tag=sgx_1.1.3)",
  "serde_json 1.0.60 (git+https://github.com/mesalock-linux/serde-json-sgx?tag=sgx_1.1.3)",
  "sgx_crypto_helper",
  "sgx_rand",
@@ -2232,19 +2175,17 @@ dependencies = [
  "itp-stf-primitives",
  "itp-stf-state-handler",
  "itp-stf-state-observer",
- "itp-storage",
  "itp-test",
  "itp-time-utils",
  "itp-top-pool-author",
  "itp-types",
  "log",
  "parity-scale-codec",
- "sgx_crypto_helper",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
  "sp-runtime",
- "thiserror 1.0.9",
+ "thiserror",
 ]
 
 [[package]]
@@ -2263,7 +2204,6 @@ name = "itp-stf-primitives"
 version = "0.9.0"
 dependencies = [
  "derive_more",
- "itp-hashing",
  "itp-sgx-runtime-primitives",
  "parity-scale-codec",
  "sp-core",
@@ -2285,15 +2225,13 @@ dependencies = [
  "itp-stf-state-observer",
  "itp-time-utils",
  "itp-types",
- "lazy_static",
  "log",
  "parity-scale-codec",
  "rust-base58",
- "sgx_tcrypto",
  "sgx_tstd",
  "sgx_types",
  "sp-core",
- "thiserror 1.0.9",
+ "thiserror",
 ]
 
 [[package]]
@@ -2302,9 +2240,8 @@ version = "0.9.0"
 dependencies = [
  "itp-types",
  "log",
- "parity-scale-codec",
  "sgx_tstd",
- "thiserror 1.0.9",
+ "thiserror",
 ]
 
 [[package]]
@@ -2322,23 +2259,13 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-trie",
- "thiserror 1.0.9",
-]
-
-[[package]]
-name = "itp-teerex-storage"
-version = "0.9.0"
-dependencies = [
- "itp-storage",
- "itp-types",
- "sp-std",
+ "thiserror",
 ]
 
 [[package]]
 name = "itp-test"
 version = "0.9.0"
 dependencies = [
- "derive_more",
  "itp-enclave-bridge-storage",
  "itp-node-api",
  "itp-node-api-metadata-provider",
@@ -2377,7 +2304,6 @@ dependencies = [
  "byteorder 1.4.3",
  "derive_more",
  "itc-direct-rpc-server",
- "itp-sgx-runtime-primitives",
  "itp-stf-primitives",
  "itp-types",
  "its-primitives",
@@ -2387,11 +2313,9 @@ dependencies = [
  "parity-scale-codec",
  "serde 1.0.188",
  "sgx_tstd",
- "sgx_types",
  "sp-application-crypto",
  "sp-core",
  "sp-runtime",
- "thiserror 1.0.9",
 ]
 
 [[package]]
@@ -2407,22 +2331,18 @@ dependencies = [
  "itp-test",
  "itp-top-pool",
  "itp-types",
- "itp-utils",
  "jsonrpc-core",
  "log",
  "parity-scale-codec",
  "sgx_tstd",
- "sgx_types",
  "sp-core",
  "sp-runtime",
- "thiserror 1.0.9",
 ]
 
 [[package]]
 name = "itp-types"
 version = "0.9.0"
 dependencies = [
- "chrono 0.4.26",
  "enclave-bridge-primitives",
  "frame-system",
  "itp-sgx-runtime-primitives",
@@ -2430,9 +2350,6 @@ dependencies = [
  "itp-utils",
  "pallet-balances",
  "parity-scale-codec",
- "primitive-types",
- "serde 1.0.188",
- "serde_json 1.0.96",
  "sp-core",
  "sp-runtime",
  "sp-std",
@@ -2452,13 +2369,11 @@ dependencies = [
 name = "its-block-composer"
 version = "0.9.0"
 dependencies = [
- "ita-stf",
  "itp-node-api",
  "itp-settings",
  "itp-sgx-crypto",
  "itp-sgx-externalities",
  "itp-stf-executor",
- "itp-stf-interface",
  "itp-stf-primitives",
  "itp-time-utils",
  "itp-top-pool-author",
@@ -2471,7 +2386,7 @@ dependencies = [
  "sgx_types",
  "sp-core",
  "sp-runtime",
- "thiserror 1.0.9",
+ "thiserror",
 ]
 
 [[package]]
@@ -2487,7 +2402,7 @@ dependencies = [
  "sp-consensus-slots",
  "sp-core",
  "sp-runtime",
- "thiserror 1.0.9",
+ "thiserror",
 ]
 
 [[package]]
@@ -2495,7 +2410,6 @@ name = "its-consensus-aura"
 version = "0.9.0"
 dependencies = [
  "finality-grandpa",
- "frame-support",
  "ita-stf",
  "itc-parentchain-block-import-dispatcher",
  "itp-enclave-metrics",
@@ -2509,7 +2423,6 @@ dependencies = [
  "itp-time-utils",
  "itp-top-pool-author",
  "itp-types",
- "itp-utils",
  "its-block-composer",
  "its-block-verification",
  "its-consensus-common",
@@ -2546,7 +2459,7 @@ dependencies = [
  "sgx_tstd",
  "sgx_types",
  "sp-runtime",
- "thiserror 1.0.9",
+ "thiserror",
 ]
 
 [[package]]
@@ -2555,7 +2468,6 @@ version = "0.9.0"
 dependencies = [
  "derive_more",
  "itp-settings",
- "itp-sgx-io",
  "itp-time-utils",
  "itp-types",
  "its-block-verification",
@@ -2578,7 +2490,6 @@ dependencies = [
  "scale-info",
  "serde 1.0.188",
  "sp-core",
- "sp-io",
  "sp-runtime",
  "sp-std",
 ]
@@ -2598,7 +2509,6 @@ dependencies = [
  "parity-scale-codec",
  "rust-base58",
  "sgx_tstd",
- "sgx_types",
  "sp-core",
 ]
 
@@ -2626,12 +2536,10 @@ dependencies = [
  "its-primitives",
  "log",
  "parity-scale-codec",
- "serde 1.0.188",
  "sgx_tstd",
  "sp-core",
  "sp-io",
- "sp-std",
- "thiserror 1.0.9",
+ "thiserror",
 ]
 
 [[package]]
@@ -2639,11 +2547,8 @@ name = "its-validateer-fetch"
 version = "0.9.0"
 dependencies = [
  "derive_more",
- "frame-support",
  "itp-enclave-bridge-storage",
  "itp-ocall-api",
- "itp-storage",
- "itp-teerex-storage",
  "itp-types",
  "its-primitives",
  "log",
@@ -2651,7 +2556,6 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
- "thiserror 1.0.40",
 ]
 
 [[package]]
@@ -2661,7 +2565,7 @@ source = "git+https://github.com/scs/jsonrpc?branch=no_std_v18#0faf53c491c3222b9
 dependencies = [
  "futures 0.3.8",
  "log",
- "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx)",
+ "serde 1.0.118",
  "serde_derive 1.0.118",
  "serde_json 1.0.60 (git+https://github.com/mesalock-linux/serde-json-sgx)",
 ]
@@ -3826,14 +3730,6 @@ checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 [[package]]
 name = "serde"
 version = "1.0.118"
-source = "git+https://github.com/mesalock-linux/serde-sgx?tag=sgx_1.1.3#db0226f1d5d70fca6b96af2c285851502204e21c"
-dependencies = [
- "sgx_tstd",
-]
-
-[[package]]
-name = "serde"
-version = "1.0.118"
 source = "git+https://github.com/mesalock-linux/serde-sgx#db0226f1d5d70fca6b96af2c285851502204e21c"
 dependencies = [
  "serde_derive 1.0.118",
@@ -3854,7 +3750,7 @@ name = "serde-big-array"
 version = "0.3.0"
 source = "git+https://github.com/mesalock-linux/serde-big-array-sgx#94122c5167aee38b39b09a620a60db2c28cf7428"
 dependencies = [
- "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx)",
+ "serde 1.0.118",
  "serde_derive 1.0.118",
 ]
 
@@ -3887,7 +3783,7 @@ dependencies = [
  "indexmap 1.6.1",
  "itoa 0.4.5",
  "ryu",
- "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx)",
+ "serde 1.0.118",
  "sgx_tstd",
 ]
 
@@ -3898,7 +3794,7 @@ source = "git+https://github.com/mesalock-linux/serde-json-sgx#380893814ad2a0577
 dependencies = [
  "itoa 0.4.5",
  "ryu",
- "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx)",
+ "serde 1.0.118",
  "sgx_tstd",
 ]
 
@@ -3939,7 +3835,7 @@ version = "1.1.6"
 source = "git+https://github.com/apache/incubator-teaclave-sgx-sdk?branch=master#f1776a7cec1caab2959813f87bb4924805b92011"
 dependencies = [
  "itertools",
- "serde 1.0.118 (git+https://github.com/mesalock-linux/serde-sgx)",
+ "serde 1.0.118",
  "serde-big-array",
  "serde_derive 1.0.118",
  "sgx_tcrypto",
@@ -4409,21 +4305,12 @@ dependencies = [
 name = "sp-io"
 version = "7.0.0"
 dependencies = [
- "environmental 1.1.3",
- "hash-db 0.15.2",
  "itp-sgx-externalities",
  "libsecp256k1",
  "log",
  "parity-scale-codec",
  "sgx_tstd",
- "sgx_types",
  "sp-core",
- "sp-runtime-interface",
- "sp-std",
- "sp-tracing",
- "sp-wasm-interface",
- "tracing",
- "tracing-core",
 ]
 
 [[package]]
@@ -4780,16 +4667,7 @@ version = "1.0.9"
 source = "git+https://github.com/mesalock-linux/thiserror-sgx?tag=sgx_1.1.3#c2f806b88616e06aab0af770366a76885d974fdc"
 dependencies = [
  "sgx_tstd",
- "thiserror-impl 1.0.9",
-]
-
-[[package]]
-name = "thiserror"
-version = "1.0.40"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "978c9a314bd8dc99be594bc3c175faaa9794be04a5a5e153caba6915336cebac"
-dependencies = [
- "thiserror-impl 1.0.40",
+ "thiserror-impl",
 ]
 
 [[package]]
@@ -4800,17 +4678,6 @@ dependencies = [
  "proc-macro2",
  "quote 1.0.33",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "thiserror-impl"
-version = "1.0.40"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9456a42c5b0d803c8cd86e73dd7cc9edd429499f37a3550d286d5e86720569f"
-dependencies = [
- "proc-macro2",
- "quote 1.0.33",
- "syn 2.0.33",
 ]
 
 [[package]]
@@ -4917,7 +4784,7 @@ dependencies = [
  "rustls 0.19.0 (git+https://github.com/mesalock-linux/rustls?tag=sgx_1.1.3)",
  "sgx_tstd",
  "sha1",
- "thiserror 1.0.9",
+ "thiserror",
  "url",
  "utf-8",
  "webpki",
