@@ -1043,16 +1043,16 @@ fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 		.parentchain_api()
 		.subscribe_finalized_heads()
 		.map_err(Error::ApiClient)?;
-
+	let parentchain_id = parentchain_handler.parentchain_id();
 	loop {
 		let new_header = subscription
 			.next()
 			.ok_or(Error::ApiSubscriptionDisconnected)?
 			.map_err(|e| Error::ApiClient(e.into()))?;
 
-		println!(
-			"[+] Received finalized header update ({}), syncing parent chain...",
-			new_header.number
+		info!(
+			"[{:?}] Received finalized header update ({}), syncing parent chain...",
+			parentchain_id, new_header.number
 		);
 
 		last_synced_header = parentchain_handler.sync_parentchain(last_synced_header)?;

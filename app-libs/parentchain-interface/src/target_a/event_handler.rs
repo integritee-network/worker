@@ -33,7 +33,7 @@ impl ParentchainEventHandler {
 		account: &AccountId,
 		amount: Balance,
 	) -> Result<(), Error> {
-		log::info!("shielding for {:?} amount {}", account, amount,);
+		trace!("[TargetA] shielding for {:?} amount {}", account, amount,);
 		let shard = executor.get_default_shard();
 		let trusted_call =
 			TrustedCall::balance_shield(executor.get_enclave_account()?, account.clone(), amount);
@@ -60,7 +60,7 @@ where
 	) -> Result<(), Error> {
 		let filter_events = events.get_transfer_events();
 		trace!(
-			"filtering transfer events to shard vault account: {}",
+			"[TargetA] filtering transfer events to shard vault account: {}",
 			hex_encode(vault_account.encode().as_slice())
 		);
 		if let Ok(events) = filter_events {
@@ -68,8 +68,7 @@ where
 				.iter()
 				.filter(|&event| event.to == *vault_account)
 				.try_for_each(|event| {
-					info!("found transfer_event to vault account: {}", event);
-					//call = IndirectCall::ShieldFunds(ShieldFundsArgs{ })
+					std::println!("⣿TargetA⣿ found transfer event to shard vault account: {} will shield to {}", event.amount, hex_encode(event.from.encode().as_ref()));
 					Self::shield_funds(executor, &event.from, event.amount)
 				})
 				.map_err(|_| ParentchainError::ShieldFundsFailure)?;
