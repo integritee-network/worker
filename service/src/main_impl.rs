@@ -3,7 +3,6 @@ use crate::teeracle::{schedule_periodic_reregistration_thread, start_periodic_ma
 
 #[cfg(not(feature = "dcap"))]
 use crate::utils::check_files;
-
 use crate::{
 	account_funding::{setup_account_funding, EnclaveAccountInfoProvider},
 	config::Config,
@@ -52,6 +51,7 @@ use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use its_storage::{interface::FetchBlocks, BlockPruner, SidechainStorageLock};
 use log::*;
 use my_node_runtime::{Hash, Header, RuntimeEvent};
+use regex::Regex;
 use sgx_types::*;
 use sp_runtime::traits::Header as HeaderT;
 use substrate_api_client::{
@@ -71,7 +71,8 @@ use itc_parentchain::primitives::ParentchainId;
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
 use sp_runtime::MultiSigner;
-use std::{str, sync::Arc, thread, time::Duration};
+use std::{fmt::Debug, str, sync::Arc, thread, time::Duration};
+use substrate_api_client::ac_node_api::{EventRecord, Phase::ApplyExtrinsic};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -613,7 +614,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	println!("[+] [{:?}] Subscribed to events. waiting...", ParentchainId::Integritee);
 	loop {
 		if let Some(Ok(events)) = subscription.next_events::<RuntimeEvent, Hash>() {
-			print_events(events)
+			print_events(events, ParentchainId::Integritee)
 		}
 	}
 }
@@ -680,7 +681,7 @@ fn init_target_parentchain<E>(
 		.name(format!("{:?}_parentchain_event_subscription", parentchain_id))
 		.spawn(move || loop {
 			if let Some(Ok(events)) = subscription.next_events::<RuntimeEvent, Hash>() {
-				print_events(events)
+				print_events(events, parentchain_id)
 			}
 		})
 		.unwrap();
@@ -760,159 +761,21 @@ fn spawn_worker_for_shard_polling<InitializationHandler>(
 	});
 }
 
-fn print_events(events: Vec<Event>) {
+fn print_events<R, H>(events: Vec<EventRecord<R, H>>, parentchain_id: ParentchainId)
+where
+	R: Debug,
+{
 	for evr in &events {
-		debug!("Decoded: phase = {:?}, event = {:?}", evr.phase, evr.event);
-		match &evr.event {
-			RuntimeEvent::Balances(be) => {
-				info!("[+] Received balances event");
-				debug!("{:?}", be);
-				match &be {
-					pallet_balances::Event::Transfer {
-						from: transactor,
-						to: dest,
-						amount: value,
-					} => {
-						debug!("    Transactor:  {:?}", transactor.to_ss58check());
-						debug!("    Destination: {:?}", dest.to_ss58check());
-						debug!("    Value:       {:?}", value);
-					},
-					_ => {
-						trace!("Ignoring unsupported balances event");
-					},
-				}
-			},
-			RuntimeEvent::Teerex(re) => {
-				debug!("{:?}", re);
-				match &re {
-					my_node_runtime::pallet_teerex::Event::AddedSgxEnclave {
-						registered_by,
-						worker_url,
-						..
-					} => {
-						println!("[+] Received AddedEnclave event");
-						println!("    Sender (Worker):  {:?}", registered_by);
-						println!(
-							"    Registered URL: {:?}",
-							str::from_utf8(&worker_url.clone().unwrap_or("none".into())).unwrap()
-						);
-					},
-					_ => {
-						trace!("Ignoring unsupported pallet_teerex event");
-					},
-				}
-			},
-			RuntimeEvent::EnclaveBridge(re) => {
-				debug!("{:?}", re);
-				match &re {
-					my_node_runtime::pallet_enclave_bridge::Event::IndirectInvocationRegistered(
-						shard,
-					) => {
-						println!(
-							"[+] Received trusted call for shard {}",
-							shard.encode().to_base58()
-						);
-					},
-					my_node_runtime::pallet_enclave_bridge::Event::ProcessedParentchainBlock {
-						shard,
-						block_hash,
-						trusted_calls_merkle_root,
-						block_number,
-					} => {
-						info!("[+] Received ProcessedParentchainBlock event");
-						debug!("    for shard:    {:?}", shard);
-						debug!("    Block Hash: {:?}", hex::encode(block_hash));
-						debug!("    Merkle Root: {:?}", hex::encode(trusted_calls_merkle_root));
-						debug!("    Block Number: {:?}", block_number);
-					},
-					my_node_runtime::pallet_enclave_bridge::Event::ShieldFunds {
-						shard,
-						encrypted_beneficiary,
-						amount,
-					} => {
-						info!("[+] Received ShieldFunds event");
-						debug!("    for shard:    {:?}", shard);
-						debug!("    for enc. beneficiary:    {:?}", encrypted_beneficiary);
-						debug!("    Amount:    {:?}", amount);
-					},
-					my_node_runtime::pallet_enclave_bridge::Event::UnshieldedFunds {
-						shard,
-						beneficiary,
-						amount,
-					} => {
-						info!("[+] Received UnshieldedFunds event");
-						debug!("    for shard:    {:?}", shard);
-						debug!("    beneficiary:    {:?}", beneficiary);
-						debug!("    Amount:    {:?}", amount);
-					},
-					_ => {
-						trace!("Ignoring unsupported pallet_enclave_bridge event");
-					},
-				}
-			},
-			#[cfg(feature = "teeracle")]
-			RuntimeEvent::Teeracle(re) => {
-				debug!("{:?}", re);
-				match &re {
-					my_node_runtime::pallet_teeracle::Event::ExchangeRateUpdated {
-						data_source,
-						trading_pair,
-						exchange_rate,
-					} => {
-						println!("[+] Received ExchangeRateUpdated event");
-						println!("    Data source:  {}", data_source);
-						println!("    trading pair:  {}", trading_pair);
-						println!("    Exchange rate: {:?}", exchange_rate);
-					},
-					my_node_runtime::pallet_teeracle::Event::ExchangeRateDeleted {
-						data_source,
-						trading_pair,
-					} => {
-						println!("[+] Received ExchangeRateDeleted event");
-						println!("    Data source:  {}", data_source);
-						println!("    trading pair:  {}", trading_pair);
-					},
-					my_node_runtime::pallet_teeracle::Event::AddedToWhitelist {
-						data_source,
-						enclave_fingerprint,
-					} => {
-						println!("[+] Received AddedToWhitelist event");
-						println!("    Data source:  {}", data_source);
-						println!("    fingerprint:  {:?}", enclave_fingerprint);
-					},
-					my_node_runtime::pallet_teeracle::Event::RemovedFromWhitelist {
-						data_source,
-						enclave_fingerprint,
-					} => {
-						println!("[+] Received RemovedFromWhitelist event");
-						println!("    Data source:  {}", data_source);
-						println!("    fingerprint:  {:?}", enclave_fingerprint);
-					},
-					_ => {
-						trace!("Ignoring unsupported pallet_teeracle event");
-					},
-				}
-			},
-			#[cfg(feature = "sidechain")]
-			RuntimeEvent::Sidechain(re) => match &re {
-				my_node_runtime::pallet_sidechain::Event::FinalizedSidechainBlock {
-					shard,
-					block_header_hash,
-					validateer,
-				} => {
-					info!("[+] Received FinalizedSidechainBlock event");
-					debug!("    for shard:    {:?}", shard);
-					debug!("    From:    {:?}", hex::encode(block_header_hash));
-					debug!("    validateer: {:?}", validateer);
-				},
-				_ => {
-					trace!("Ignoring unsupported pallet_sidechain event");
-				},
-			},
-			_ => {
-				trace!("Ignoring event {:?}", evr);
-			},
+		if evr.phase == ApplyExtrinsic(0) {
+			// not interested in intrinsics
+			continue
 		}
+		let re = Regex::new(r"\s[0-9a-f]*\s\(").unwrap();
+		let event_str = re
+			.replace_all(format!("{:?}", evr.event).as_str(), "(")
+			.replace("RuntimeEvent::", "")
+			.replace("Event::", "");
+		println!("[{}] Event: {}", parentchain_id, event_str);
 	}
 }
 

@@ -68,7 +68,7 @@ where
 				.iter()
 				.filter(|&event| event.to == *vault_account)
 				.try_for_each(|event| {
-					std::println!("⣿TargetA⣿ found transfer event to shard vault account: {} will shield to {}", event.amount, hex_encode(event.from.encode().as_ref()));
+					std::println!("⣿TargetA⣿ 🛡 found transfer event to shard vault account: {} will shield to {}", event.amount, hex_encode(event.from.encode().as_ref()));
 					Self::shield_funds(executor, &event.from, event.amount)
 				})
 				.map_err(|_| ParentchainError::ShieldFundsFailure)?;

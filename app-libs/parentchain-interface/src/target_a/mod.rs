@@ -29,6 +29,7 @@ pub use event_filter::FilterableEvents;
 pub use event_handler::ParentchainEventHandler;
 pub use extrinsic_parser::ParentchainExtrinsicParser;
 use extrinsic_parser::ParseExtrinsic;
+use frame_support::sp_tracing::debug;
 use ita_stf::TrustedCallSigned;
 use itc_parentchain_indirect_calls_executor::{
 	error::{Error, Result},
@@ -49,10 +50,15 @@ impl<Executor: IndirectExecutor<TrustedCallSigned, Error>>
 	IndirectDispatch<Executor, TrustedCallSigned> for IndirectCall
 {
 	fn dispatch(&self, executor: &Executor) -> Result<()> {
+		debug!("shielding from TargetA extrinsic to Alice suppressed");
+		/*
 		trace!("dispatching indirect call {:?}", self);
 		match self {
 			IndirectCall::TransferToAliceShieldsFunds(args) => args.dispatch(executor),
 		}
+
+		 */
+		Ok(())
 	}
 }
 

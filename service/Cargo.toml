@@ -26,6 +26,7 @@ serde_json = "1.0"
 thiserror = "1.0"
 tokio = { version = "1.6.1", features = ["full"] }
 warp = "0.3"
+regex = "1.9.5"
 
 
 # ipfs
@@ -60,6 +61,7 @@ its-storage = { path = "../sidechain/storage" }
 # scs / integritee
 
 my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node.git", branch = "sdk-v0.12.0-polkadot-v0.9.42" }
+#my-node-runtime = { package = "integritee-runtime", git = "https://github.com/integritee-network/parachain.git", tag = "1.6.2" }
 sgx-verify = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.0-polkadot-v0.9.42" }
 # `default-features = false` to remove the jsonrpsee dependency.
 enclave-bridge-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.0-polkadot-v0.9.42" }

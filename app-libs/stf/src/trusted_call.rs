@@ -262,8 +262,9 @@ where
 			},
 			TrustedCall::balance_transfer(from, to, value) => {
 				let origin = ita_sgx_runtime::RuntimeOrigin::signed(from.clone());
-				std::println!(
-					"⣿STF⣿ 🤫 balance_transfer({}, {}, {})",
+				std::println!("⣿STF⣿ 🔄 balance_transfer from ⣿⣿⣿ to ⣿⣿⣿ amount ⣿⣿⣿");
+				info!(
+					"from {}, to {}, amount {}",
 					account_id_to_string(&from),
 					account_id_to_string(&to),
 					value
@@ -280,7 +281,14 @@ where
 			},
 			TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
 				std::println!(
-					"⣿STF⣿ 🤫 balance_unshield({}, {}, {}, {})",
+					"⣿STF⣿ 🛡👐 balance_unshield({}, {}, {}, {})",
+					account_id_to_string(&account_incognito),
+					account_id_to_string(&beneficiary),
+					value,
+					shard
+				);
+				info!(
+					"balance_unshield(from (L2): {}, to (L1): {}, amount {}, shard {})",
 					account_id_to_string(&account_incognito),
 					account_id_to_string(&beneficiary),
 					value,

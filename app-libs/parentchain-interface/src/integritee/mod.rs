@@ -36,7 +36,7 @@ use itc_parentchain_indirect_calls_executor::{
 };
 use itp_node_api::metadata::NodeMetadataTrait;
 use itp_stf_primitives::traits::IndirectExecutor;
-use log::trace;
+use log::{debug, trace};
 /// The default indirect call (extrinsic-triggered) of the Integritee-Parachain.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub enum IndirectCall {
@@ -50,7 +50,11 @@ impl<Executor: IndirectExecutor<TrustedCallSigned, Error>>
 	fn dispatch(&self, executor: &Executor) -> Result<()> {
 		trace!("dispatching indirect call {:?}", self);
 		match self {
-			IndirectCall::ShieldFunds(shieldfunds_args) => shieldfunds_args.dispatch(executor),
+			IndirectCall::ShieldFunds(shieldfunds_args) => {
+				debug!("shielding from Integritee suppressed");
+				//shieldfunds_args.dispatch(executor)
+				Ok(())
+			},
 			IndirectCall::Invoke(invoke_args) => invoke_args.dispatch(executor),
 		}
 	}

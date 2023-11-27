@@ -2904,6 +2904,7 @@ dependencies = [
  "parse_duration",
  "primitive-types",
  "prometheus",
+ "regex 1.9.5",
  "scale-info",
  "serde 1.0.188",
  "serde_derive 1.0.188",

@@ -65,6 +65,18 @@ pub enum ParentchainId {
 	TargetB,
 }
 
+#[cfg(feature = "std")]
+impl std::fmt::Display for ParentchainId {
+	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+		let message = match self {
+			ParentchainId::Integritee => "L1:Integritee",
+			ParentchainId::TargetA => "L1:AssetHub",
+			ParentchainId::TargetB => "L1:UNDEFINED",
+		};
+		write!(f, "{}", message)
+	}
+}
+
 pub trait IdentifyParentchain {
 	fn parentchain_id(&self) -> ParentchainId;
 }
@@ -137,12 +149,15 @@ where
 #[derive(Debug)]
 pub enum ParentchainError {
 	ShieldFundsFailure,
+	FunctionalitySuppressed,
 }
 
 impl core::fmt::Display for ParentchainError {
 	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
 		let message = match &self {
 			ParentchainError::ShieldFundsFailure => "Parentchain Error: ShieldFundsFailure",
+			ParentchainError::FunctionalitySuppressed =>
+				"Parentchain Error: FunctionalitySuppressed",
 		};
 		write!(f, "{}", message)
 	}
