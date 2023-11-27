@@ -58,6 +58,9 @@ use sp_io::hashing::blake2_256;
 use sp_runtime::{traits::Verify, MultiAddress, MultiSignature};
 use std::{format, prelude::v1::*, sync::Arc};
 
+// fixme: this if  a temporary hack only
+pub const TX_FEE: Balance = 100000000;
+
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum TrustedCall {
@@ -263,12 +266,27 @@ where
 			TrustedCall::balance_transfer(from, to, value) => {
 				let origin = ita_sgx_runtime::RuntimeOrigin::signed(from.clone());
 				std::println!("⣿STF⣿ 🔄 balance_transfer from ⣿⣿⣿ to ⣿⣿⣿ amount ⣿⣿⣿");
+				let vault_pubkey: [u8; 32] = get_storage_by_key_hash(SHARD_VAULT_KEY.into())
+					.ok_or_else(|| {
+						StfError::Dispatch("shard vault key hasn't been set".to_string())
+					})?;
+				// fixme: apply fees through standard frame process and tune it
+				let fee = TX_FEE;
 				info!(
-					"from {}, to {}, amount {}",
+					"from {}, to {}, amount {}, fee {}",
 					account_id_to_string(&from),
 					account_id_to_string(&to),
-					value
+					value,
+					fee
 				);
+				ita_sgx_runtime::BalancesCall::<Runtime>::transfer {
+					dest: MultiAddress::Id(vault_pubkey.into()),
+					value: fee,
+				}
+				.dispatch_bypass_filter(origin.clone())
+				.map_err(|e| {
+					Self::Error::Dispatch(format!("Balance Transfer error: {:?}", e.error))
+				})?;
 				ita_sgx_runtime::BalancesCall::<Runtime>::transfer {
 					dest: MultiAddress::Id(to),
 					value,
@@ -281,11 +299,9 @@ where
 			},
 			TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
 				std::println!(
-					"⣿STF⣿ 🛡👐 balance_unshield({}, {}, {}, {})",
-					account_id_to_string(&account_incognito),
+					"⣿STF⣿ 🛡👐 balance_unshield to {}, amount {}",
 					account_id_to_string(&beneficiary),
-					value,
-					shard
+					value
 				);
 				info!(
 					"balance_unshield(from (L2): {}, to (L1): {}, amount {}, shard {})",
@@ -490,10 +506,13 @@ fn unshield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
 }
 
 fn shield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
+	//fixme: make fee configurable and send fee to vault account on L2
+	let fee = amount / 100;
+
 	let account_info = System::account(&account);
 	ita_sgx_runtime::BalancesCall::<Runtime>::force_set_balance {
 		who: MultiAddress::Id(account),
-		new_free: account_info.data.free + amount,
+		new_free: account_info.data.free + amount - fee,
 	}
 	.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
 	.map_err(|e| StfError::Dispatch(format!("Shield funds error: {:?}", e.error)))?;
