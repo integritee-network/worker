@@ -149,15 +149,14 @@ where
 #[derive(Debug)]
 pub enum ParentchainError {
 	ShieldFundsFailure,
-	FunctionalitySuppressed,
+	FunctionalityDisabled,
 }
 
 impl core::fmt::Display for ParentchainError {
 	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
 		let message = match &self {
 			ParentchainError::ShieldFundsFailure => "Parentchain Error: ShieldFundsFailure",
-			ParentchainError::FunctionalitySuppressed =>
-				"Parentchain Error: FunctionalitySuppressed",
+			ParentchainError::FunctionalityDisabled => "Parentchain Error: FunctionalityDisabled",
 		};
 		write!(f, "{}", message)
 	}

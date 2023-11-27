@@ -299,18 +299,36 @@ where
 			},
 			TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
 				std::println!(
-					"⣿STF⣿ 🛡👐 balance_unshield to {}, amount {}",
+					"⣿STF⣿ 🛡👐 balance_unshield from ⣿⣿⣿ to {}, amount {}",
 					account_id_to_string(&beneficiary),
 					value
 				);
+				let vault_pubkey: [u8; 32] = get_storage_by_key_hash(SHARD_VAULT_KEY.into())
+					.ok_or_else(|| {
+						StfError::Dispatch("shard vault key hasn't been set".to_string())
+					})?;
+				// fixme: apply fees through standard frame process and tune it. has to be at least two L1 transfer's fees
+				let fee = TX_FEE * 3;
+
 				info!(
-					"balance_unshield(from (L2): {}, to (L1): {}, amount {}, shard {})",
+					"balance_unshield(from (L2): {}, to (L1): {}, amount {} (+fee: {}), shard {})",
 					account_id_to_string(&account_incognito),
 					account_id_to_string(&beneficiary),
 					value,
+					fee,
 					shard
 				);
-				unshield_funds(account_incognito, value)?;
+
+				let origin = ita_sgx_runtime::RuntimeOrigin::signed(account_incognito.clone());
+				ita_sgx_runtime::BalancesCall::<Runtime>::transfer {
+					dest: MultiAddress::Id(vault_pubkey.into()),
+					value: fee,
+				}
+				.dispatch_bypass_filter(origin)
+				.map_err(|e| {
+					Self::Error::Dispatch(format!("Balance Unshielding error: {:?}", e.error))
+				})?;
+				burn_funds(account_incognito, value)?;
 
 				let vault_pubkey: [u8; 32] = get_storage_by_key_hash(SHARD_VAULT_KEY.into())
 					.ok_or_else(|| {
@@ -490,7 +508,7 @@ where
 	}
 }
 
-fn unshield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
+fn burn_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
 	let account_info = System::account(&account);
 	if account_info.data.free < amount {
 		return Err(StfError::MissingFunds)
@@ -501,14 +519,26 @@ fn unshield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
 		new_free: account_info.data.free - amount,
 	}
 	.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
-	.map_err(|e| StfError::Dispatch(format!("Unshield funds error: {:?}", e.error)))?;
+	.map_err(|e| StfError::Dispatch(format!("Burn funds error: {:?}", e.error)))?;
 	Ok(())
 }
 
 fn shield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
 	//fixme: make fee configurable and send fee to vault account on L2
-	let fee = amount / 100;
+	let fee = amount / 571; // approx 0.175%
 
+	// endow fee to vault
+	let vault_pubkey: [u8; 32] = get_storage_by_key_hash(SHARD_VAULT_KEY.into())
+		.ok_or_else(|| StfError::Dispatch("shard vault key hasn't been set".to_string()))?;
+	let account_info = System::account(&AccountId::from(vault_pubkey));
+	ita_sgx_runtime::BalancesCall::<Runtime>::force_set_balance {
+		who: MultiAddress::Id(vault_pubkey.into()),
+		new_free: account_info.data.free + fee,
+	}
+	.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
+	.map_err(|e| StfError::Dispatch(format!("Shield funds error: {:?}", e.error)))?;
+
+	// endow shieding amount - fee to beneficiary
 	let account_info = System::account(&account);
 	ita_sgx_runtime::BalancesCall::<Runtime>::force_set_balance {
 		who: MultiAddress::Id(account),

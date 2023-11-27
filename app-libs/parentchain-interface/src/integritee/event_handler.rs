@@ -71,7 +71,7 @@ where
 					info!("found transfer_event to vault account: {}", event);
 					debug!("shielding from Integritee suppressed");
 					//Self::shield_funds(executor, &event.from, event.amount)
-					Err(ParentchainError::FunctionalitySuppressed)
+					Err(ParentchainError::FunctionalityDisabled)
 				})?;
 			//.map_err(|_| ParentchainError::ShieldFundsFailure)?;
 		}

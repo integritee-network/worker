@@ -93,11 +93,10 @@ pub unsafe extern "C" fn get_ecc_vault_pubkey(
 	let shard_vault = match get_shard_vault_account(shard) {
 		Ok(account) => account,
 		Err(e) => {
-			error!("Failed to fetch shard vault account: {:?}", e);
+			warn!("Failed to fetch shard vault account: {:?}", e);
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	};
-
 	let pubkey_slice = slice::from_raw_parts_mut(pubkey, pubkey_size as usize);
 	pubkey_slice.clone_from_slice(shard_vault.encode().as_slice());
 	sgx_status_t::SGX_SUCCESS
