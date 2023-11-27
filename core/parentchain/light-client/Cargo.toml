@@ -20,6 +20,8 @@ itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features 
 itp-sgx-io = { path = "../../../core-primitives/sgx/io", default-features = false }
 itp-storage = { path = "../../../core-primitives/storage", default-features = false }
 itp-types = { path = "../../../core-primitives/types", default-features = false }
+
+# substrate deps
 sp-consensus-grandpa = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 

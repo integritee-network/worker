@@ -6,6 +6,8 @@ edition = "2021"
 
 [dependencies]
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
+
+# sgx dependencies
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["untrusted_time"] }
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 

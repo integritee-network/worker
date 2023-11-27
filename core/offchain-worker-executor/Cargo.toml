@@ -26,6 +26,8 @@ itp-stf-primitives = { path = "../../core-primitives/stf-primitives", default-fe
 itp-stf-state-handler = { path = "../../core-primitives/stf-state-handler", default-features = false }
 itp-top-pool-author = { path = "../../core-primitives/top-pool-author", default-features = false }
 itp-types = { path = "../../core-primitives/types", default-features = false }
+
+# Substrate dependencies
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 # no-std compatible libraries
