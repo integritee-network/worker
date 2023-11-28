@@ -8,11 +8,7 @@ license = "Apache-2.0"
 edition = "2021"
 
 [dependencies]
-chrono = { version = "0.4.19", default-features = false, features = ["alloc"] }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-primitive-types = { version = "0.12.1", default-features = false, features = ["codec"] }
-serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
-serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 
 # local dependencies
 itp-sgx-runtime-primitives = { path = "../../core-primitives/sgx-runtime-primitives", default-features = false }
@@ -31,7 +27,6 @@ sp-std = { default-features = false, git = "https://github.com/paritytech/substr
 
 # integritee-node
 enclave-bridge-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.0-polkadot-v0.9.42" }
-my-node-runtime = { package = "integritee-node-runtime", optional = true, git = "https://github.com/integritee-network/integritee-node.git", branch = "sdk-v0.12.0-polkadot-v0.9.42" }
 teerex-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.0-polkadot-v0.9.42" }
 
 
@@ -39,11 +34,6 @@ teerex-primitives = { default-features = false, git = "https://github.com/integr
 default = ["std"]
 std = [
     "codec/std",
-    "chrono/std",
-    "my-node-runtime",
-    "serde/std",
-    "serde_json/std",
-    "primitive-types/std",
     "itp-sgx-runtime-primitives/std",
     "itp-stf-primitives/std",
     "itp-utils/std",

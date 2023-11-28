@@ -114,9 +114,8 @@ where
 			"    [Enclave] (MU-RA-Server) await_shard_request_from_client, calling read_exact()"
 		);
 		self.tls_stream.read_exact(&mut request)?;
-		let request: ClientProvisioningRequest = Decode::decode(&mut request.as_slice())
-			.expect("matching byte size can't fail to decode");
-		Ok(request)
+		ClientProvisioningRequest::decode(&mut request.as_slice())
+			.map_err(|_| EnclaveError::Other("matching byte size can't fail to decode".into()))
 	}
 
 	/// Sends all relevant data to the client.

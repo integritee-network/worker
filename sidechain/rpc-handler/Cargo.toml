@@ -7,7 +7,6 @@ edition = "2021"
 [dependencies]
 # sgx dependencies
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # local dependencies
 itp-rpc = { path = "../../core-primitives/rpc", default-features = false }
