@@ -141,7 +141,7 @@ pub fn produce_sidechain_block_and_import_it() {
 		&shielding_key,
 		sender_with_low_balance,
 		receiver.public().into(),
-		200000,
+		ita_stf::test_genesis::SECOND_ENDOWED_ACC_FUNDS + 1,
 	);
 	info!("Add trusted operations to TOP pool..");
 	executor::block_on(top_pool_author.submit_top(trusted_operation, shard_id)).unwrap();

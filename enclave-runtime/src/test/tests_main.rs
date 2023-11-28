@@ -57,7 +57,7 @@ use itp_stf_primitives::{
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::handle_state_mock;
 use itp_top_pool_author::{test_utils::submit_operation_to_top_pool, traits::AuthorApi};
-use itp_types::{AccountId, Block, Header};
+use itp_types::{AccountId, Balance, Block, Header};
 use its_primitives::{
 	traits::{
 		Block as BlockTrait, BlockData, Header as SidechainHeaderTrait,
@@ -382,9 +382,13 @@ fn test_create_state_diff() {
 
 	let sender = funded_pair();
 	let receiver = unfunded_public();
-
-	let signed_call = TrustedCall::balance_transfer(sender.public().into(), receiver.into(), 1000)
-		.sign(&sender.clone().into(), 0, &mrenclave, &shard);
+	const TX_AMOUNT: Balance = 1_000_000_000_000;
+	let signed_call = TrustedCall::balance_transfer(
+		sender.public().into(),
+		receiver.into(),
+		TX_AMOUNT,
+	)
+	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
 	let trusted_operation = direct_top(signed_call);
 
 	submit_operation_to_top_pool(
@@ -424,10 +428,13 @@ fn test_create_state_diff() {
 		get_from_state_diff(&state_diff, &account_key_hash::<AccountId>(&receiver.into()));
 
 	// state diff should consist of the following updates:
-	// (last_hash, sidechain block_number, sender_funds, receiver_funds, [no clear, after polkadot_v0.9.26 update], events)
-	assert_eq!(state_diff.len(), 6);
-	assert_eq!(receiver_acc_info.data.free, 1000);
-	assert_eq!(sender_acc_info.data.free, 1000);
+	// (last_hash, sidechain block_number, sender_funds, receiver_funds, fee_recipient account [no clear, after polkadot_v0.9.26 update], events)
+	assert_eq!(state_diff.len(), 7);
+	assert_eq!(receiver_acc_info.data.free, TX_AMOUNT);
+	assert_eq!(
+		sender_acc_info.data.free,
+		ita_stf::test_genesis::ENDOWED_ACC_FUNDS - TX_AMOUNT - ita_stf::STF_TX_FEE
+	);
 }
 
 fn test_executing_call_updates_account_nonce() {
@@ -615,7 +622,7 @@ pub fn test_retrieve_events() {
 	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
 	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, repo).unwrap();
 
-	assert_eq!(TestStf::get_events(&mut state).len(), 3);
+	assert_eq!(TestStf::get_events(&mut state).len(), 4);
 }
 
 pub fn test_retrieve_event_count() {
@@ -640,7 +647,7 @@ pub fn test_retrieve_event_count() {
 	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, repo).unwrap();
 
 	let event_count = TestStf::get_event_count(&mut state);
-	assert_eq!(event_count, 3);
+	assert_eq!(event_count, 4);
 }
 
 pub fn test_reset_events() {
@@ -663,7 +670,7 @@ pub fn test_reset_events() {
 	let receiver_acc_info = TestStf::get_account_data(&mut state, &receiver.public().into());
 	assert_eq!(receiver_acc_info.free, transfer_value);
 	// Ensure that there really have been events generated.
-	assert_eq!(TestStf::get_events(&mut state).len(), 3);
+	assert_eq!(TestStf::get_events(&mut state).len(), 4);
 
 	// Remove the events.
 	TestStf::reset_events(&mut state);

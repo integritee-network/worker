@@ -24,7 +24,7 @@ use std::vec::Vec;
 #[cfg(feature = "evm")]
 use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_address};
 use crate::{
-	helpers::{ensure_enclave_signer_account, get_storage_by_key_hash},
+	helpers::{enclave_signer_account, ensure_enclave_signer_account, get_storage_by_key_hash},
 	Getter,
 };
 use codec::{Compact, Decode, Encode};
@@ -57,9 +57,6 @@ use sp_core::{
 use sp_io::hashing::blake2_256;
 use sp_runtime::{traits::Verify, MultiAddress, MultiSignature};
 use std::{format, prelude::v1::*, sync::Arc};
-
-// fixme: this if  a temporary hack only
-pub const TX_FEE: Balance = 100000000;
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
@@ -266,12 +263,10 @@ where
 			TrustedCall::balance_transfer(from, to, value) => {
 				let origin = ita_sgx_runtime::RuntimeOrigin::signed(from.clone());
 				std::println!("⣿STF⣿ 🔄 balance_transfer from ⣿⣿⣿ to ⣿⣿⣿ amount ⣿⣿⣿");
-				let vault_pubkey: [u8; 32] = get_storage_by_key_hash(SHARD_VAULT_KEY.into())
-					.ok_or_else(|| {
-						StfError::Dispatch("shard vault key hasn't been set".to_string())
-					})?;
+				// endow fee to enclave (self)
+				let fee_recipient: AccountId = enclave_signer_account();
 				// fixme: apply fees through standard frame process and tune it
-				let fee = TX_FEE;
+				let fee = crate::STF_TX_FEE;
 				info!(
 					"from {}, to {}, amount {}, fee {}",
 					account_id_to_string(&from),
@@ -280,7 +275,7 @@ where
 					fee
 				);
 				ita_sgx_runtime::BalancesCall::<Runtime>::transfer {
-					dest: MultiAddress::Id(vault_pubkey.into()),
+					dest: MultiAddress::Id(fee_recipient),
 					value: fee,
 				}
 				.dispatch_bypass_filter(origin.clone())
@@ -303,12 +298,10 @@ where
 					account_id_to_string(&beneficiary),
 					value
 				);
-				let vault_pubkey: [u8; 32] = get_storage_by_key_hash(SHARD_VAULT_KEY.into())
-					.ok_or_else(|| {
-						StfError::Dispatch("shard vault key hasn't been set".to_string())
-					})?;
+				// endow fee to enclave (self)
+				let fee_recipient: AccountId = enclave_signer_account();
 				// fixme: apply fees through standard frame process and tune it. has to be at least two L1 transfer's fees
-				let fee = TX_FEE * 3;
+				let fee = crate::STF_TX_FEE * 3;
 
 				info!(
 					"balance_unshield(from (L2): {}, to (L1): {}, amount {} (+fee: {}), shard {})",
@@ -321,7 +314,7 @@ where
 
 				let origin = ita_sgx_runtime::RuntimeOrigin::signed(account_incognito.clone());
 				ita_sgx_runtime::BalancesCall::<Runtime>::transfer {
-					dest: MultiAddress::Id(vault_pubkey.into()),
+					dest: MultiAddress::Id(fee_recipient),
 					value: fee,
 				}
 				.dispatch_bypass_filter(origin)
@@ -527,12 +520,12 @@ fn shield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
 	//fixme: make fee configurable and send fee to vault account on L2
 	let fee = amount / 571; // approx 0.175%
 
-	// endow fee to vault
-	let vault_pubkey: [u8; 32] = get_storage_by_key_hash(SHARD_VAULT_KEY.into())
-		.ok_or_else(|| StfError::Dispatch("shard vault key hasn't been set".to_string()))?;
-	let account_info = System::account(&AccountId::from(vault_pubkey));
+	// endow fee to enclave (self)
+	let fee_recipient: AccountId = enclave_signer_account();
+
+	let account_info = System::account(&AccountId::from(fee_recipient.clone()));
 	ita_sgx_runtime::BalancesCall::<Runtime>::force_set_balance {
-		who: MultiAddress::Id(vault_pubkey.into()),
+		who: MultiAddress::Id(fee_recipient),
 		new_free: account_info.data.free + fee,
 	}
 	.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
