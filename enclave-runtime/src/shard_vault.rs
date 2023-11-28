@@ -107,7 +107,10 @@ pub(crate) fn get_shard_vault_account(shard: ShardIdentifier) -> EnclaveResult<A
 
 pub(crate) fn init_proxied_shard_vault_internal(shard: ShardIdentifier) -> EnclaveResult<()> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
-	if !state_handler.shard_exists(&shard).unwrap() {
+	if !state_handler
+		.shard_exists(&shard)
+		.map_err(|_| Error::Other("get shard_exists failed".into()))?
+	{
 		return Err(Error::Other("shard not initialized".into()))
 	};
 
@@ -172,7 +175,10 @@ pub(crate) fn add_shard_vault_proxy(
 	proxy: &AccountId,
 ) -> EnclaveResult<()> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
-	if !state_handler.shard_exists(&shard).unwrap() {
+	if !state_handler
+		.shard_exists(&shard)
+		.map_err(|_| Error::Other("get shard_exists failed".into()))?
+	{
 		return Err(Error::Other("shard not initialized".into()))
 	};
 

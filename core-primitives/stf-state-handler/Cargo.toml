@@ -5,8 +5,6 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
 [dependencies]
-# sgx dependencies
-sgx_tcrypto = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
@@ -34,7 +32,6 @@ thiserror = { version = "1.0", optional = true }
 
 # no-std dependencies
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
 log = { version = "0.4", default-features = false }
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
@@ -59,7 +56,6 @@ std = [
 ]
 sgx = [
     "sgx_tstd",
-    "sgx_tcrypto",
     "rust-base58_sgx",
     "itp-sgx-crypto/sgx",
     "itp-sgx-externalities/sgx",
