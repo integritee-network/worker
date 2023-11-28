@@ -144,8 +144,9 @@ mod impl_ffi {
 			let mut retval = sgx_status_t::SGX_SUCCESS;
 
 			let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
+			let mut unchecked_extrinsic_size: u32 = 0;
 
-			trace!("Generating dcap_ra_extrinsic with URL: {}", w_url);
+			trace!("Generating ias_ra_extrinsic with URL: {}", w_url);
 
 			let url = w_url.encode();
 
@@ -157,6 +158,7 @@ mod impl_ffi {
 					url.len() as u32,
 					unchecked_extrinsic.as_mut_ptr(),
 					unchecked_extrinsic.len() as u32,
+					&mut unchecked_extrinsic_size as *mut u32,
 					skip_ra.into(),
 				)
 			};
@@ -164,7 +166,7 @@ mod impl_ffi {
 			ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 			ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
 
-			Ok(unchecked_extrinsic)
+			Ok(Vec::from(&unchecked_extrinsic[..unchecked_extrinsic_size as usize]))
 		}
 		fn generate_dcap_ra_extrinsic_from_quote(
 			&self,
@@ -173,6 +175,7 @@ mod impl_ffi {
 		) -> EnclaveResult<Vec<u8>> {
 			let mut retval = sgx_status_t::SGX_SUCCESS;
 			let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
+			let mut unchecked_extrinsic_size: u32 = 0;
 			let url = url.encode();
 
 			let result = unsafe {
@@ -185,13 +188,14 @@ mod impl_ffi {
 					quote.len() as u32,
 					unchecked_extrinsic.as_mut_ptr(),
 					unchecked_extrinsic.len() as u32,
+					&mut unchecked_extrinsic_size as *mut u32,
 				)
 			};
 
 			ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 			ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
 
-			Ok(unchecked_extrinsic.to_vec())
+			Ok(Vec::from(&unchecked_extrinsic[..unchecked_extrinsic_size as usize]))
 		}
 
 		fn generate_dcap_ra_quote(&self, skip_ra: bool) -> EnclaveResult<Vec<u8>> {
@@ -250,7 +254,7 @@ mod impl_ffi {
 			trace!("Generating dcap_ra_extrinsic with URL: {}", w_url);
 
 			let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
-
+			let mut unchecked_extrinsic_size: u32 = 0;
 			let url = w_url.encode();
 
 			let result = unsafe {
@@ -261,6 +265,7 @@ mod impl_ffi {
 					url.len() as u32,
 					unchecked_extrinsic.as_mut_ptr(),
 					unchecked_extrinsic.len() as u32,
+					&mut unchecked_extrinsic_size as *mut u32,
 					skip_ra.into(),
 					quoting_enclave_target_info.as_ref(),
 					quote_size.as_ref(),
@@ -270,7 +275,7 @@ mod impl_ffi {
 			ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 			ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
 
-			Ok(unchecked_extrinsic)
+			Ok(Vec::from(&unchecked_extrinsic[..unchecked_extrinsic_size as usize]))
 		}
 
 		fn generate_register_quoting_enclave_extrinsic(
@@ -279,6 +284,7 @@ mod impl_ffi {
 		) -> EnclaveResult<Vec<u8>> {
 			let mut retval = sgx_status_t::SGX_SUCCESS;
 			let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
+			let mut unchecked_extrinsic_size: u32 = 0;
 
 			trace!("Generating register quoting enclave");
 
@@ -291,6 +297,7 @@ mod impl_ffi {
 					collateral_ptr,
 					unchecked_extrinsic.as_mut_ptr(),
 					unchecked_extrinsic.len() as u32,
+					&mut unchecked_extrinsic_size as *mut u32,
 				)
 			};
 			let free_status = unsafe { sgx_ql_free_quote_verification_collateral(collateral_ptr) };
@@ -301,12 +308,13 @@ mod impl_ffi {
 				Error::SgxQuote(free_status)
 			);
 
-			Ok(unchecked_extrinsic)
+			Ok(Vec::from(&unchecked_extrinsic[..unchecked_extrinsic_size as usize]))
 		}
 
 		fn generate_register_tcb_info_extrinsic(&self, fmspc: Fmspc) -> EnclaveResult<Vec<u8>> {
 			let mut retval = sgx_status_t::SGX_SUCCESS;
 			let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
+			let mut unchecked_extrinsic_size: u32 = 0;
 
 			trace!("Generating tcb_info registration");
 
@@ -319,6 +327,7 @@ mod impl_ffi {
 					collateral_ptr,
 					unchecked_extrinsic.as_mut_ptr(),
 					unchecked_extrinsic.len() as u32,
+					&mut unchecked_extrinsic_size as *mut u32,
 				)
 			};
 			let free_status = unsafe { sgx_ql_free_quote_verification_collateral(collateral_ptr) };
@@ -329,7 +338,7 @@ mod impl_ffi {
 				Error::SgxQuote(free_status)
 			);
 
-			Ok(unchecked_extrinsic)
+			Ok(Vec::from(&unchecked_extrinsic[..unchecked_extrinsic_size as usize]))
 		}
 
 		fn dump_ias_ra_cert_to_disk(&self) -> EnclaveResult<()> {

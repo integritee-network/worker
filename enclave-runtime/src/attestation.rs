@@ -128,7 +128,8 @@ pub unsafe extern "C" fn generate_ias_ra_extrinsic(
 	w_url: *const u8,
 	w_url_size: u32,
 	unchecked_extrinsic: *mut u8,
-	unchecked_extrinsic_size: u32,
+	unchecked_extrinsic_max_size: u32,
+	unchecked_extrinsic_size: *mut u32,
 	skip_ra: c_int,
 ) -> sgx_status_t {
 	if w_url.is_null() || unchecked_extrinsic.is_null() {
@@ -137,17 +138,18 @@ pub unsafe extern "C" fn generate_ias_ra_extrinsic(
 	let mut url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
 	let url = String::decode(&mut url_slice).expect("Could not decode url slice to a valid String");
 	let extrinsic_slice =
-		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
+		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_max_size as usize);
 
 	let extrinsic = match generate_ias_ra_extrinsic_internal(url, skip_ra == 1) {
 		Ok(xt) => xt,
 		Err(e) => return e.into(),
 	};
 
-	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
-		return EnclaveError::BufferError(e).into()
-	};
-
+	*unchecked_extrinsic_size =
+		match write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
+			Ok(l) => l as u32,
+			Err(e) => return EnclaveError::BufferError(e).into(),
+		};
 	sgx_status_t::SGX_SUCCESS
 }
 
@@ -156,7 +158,8 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic(
 	w_url: *const u8,
 	w_url_size: u32,
 	unchecked_extrinsic: *mut u8,
-	unchecked_extrinsic_size: u32,
+	unchecked_extrinsic_max_size: u32,
+	unchecked_extrinsic_size: *mut u32,
 	skip_ra: c_int,
 	quoting_enclave_target_info: Option<&sgx_target_info_t>,
 	quote_size: Option<&u32>,
@@ -167,7 +170,7 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic(
 	let mut url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
 	let url = String::decode(&mut url_slice).expect("Could not decode url slice to a valid String");
 	let extrinsic_slice =
-		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
+		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_max_size as usize);
 
 	let extrinsic = match generate_dcap_ra_extrinsic_internal(
 		url,
@@ -179,9 +182,11 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic(
 		Err(e) => return e.into(),
 	};
 
-	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
-		return EnclaveError::BufferError(e).into()
-	};
+	*unchecked_extrinsic_size =
+		match write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
+			Ok(l) => l as u32,
+			Err(e) => return EnclaveError::BufferError(e).into(),
+		};
 	sgx_status_t::SGX_SUCCESS
 }
 
@@ -261,7 +266,8 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic_from_quote(
 	quote: *const u8,
 	quote_size: u32,
 	unchecked_extrinsic: *mut u8,
-	unchecked_extrinsic_size: u32,
+	unchecked_extrinsic_max_size: u32,
+	unchecked_extrinsic_size: *mut u32,
 ) -> sgx_status_t {
 	if w_url.is_null() || unchecked_extrinsic.is_null() {
 		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
@@ -270,7 +276,7 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic_from_quote(
 	let url = String::decode(&mut url_slice).expect("Could not decode url slice to a valid String");
 
 	let extrinsic_slice =
-		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
+		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_max_size as usize);
 
 	let quote_slice = slice::from_raw_parts(quote, quote_size as usize);
 
@@ -279,9 +285,11 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic_from_quote(
 		Err(e) => return e.into(),
 	};
 
-	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
-		return EnclaveError::BufferError(e).into()
-	};
+	*unchecked_extrinsic_size =
+		match write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
+			Ok(l) => l as u32,
+			Err(e) => return EnclaveError::BufferError(e).into(),
+		};
 	sgx_status_t::SGX_SUCCESS
 }
 
@@ -391,13 +399,14 @@ fn create_extrinsics(call: OpaqueCall) -> EnclaveResult<OpaqueExtrinsic> {
 pub unsafe extern "C" fn generate_register_quoting_enclave_extrinsic(
 	collateral: *const sgx_ql_qve_collateral_t,
 	unchecked_extrinsic: *mut u8,
-	unchecked_extrinsic_size: u32,
+	unchecked_extrinsic_max_size: u32,
+	unchecked_extrinsic_size: *mut u32,
 ) -> sgx_status_t {
 	if unchecked_extrinsic.is_null() || collateral.is_null() {
 		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
 	}
 	let extrinsic_slice =
-		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
+		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_max_size as usize);
 	let collateral = SgxQlQveCollateral::from_c_type(&*collateral);
 	let collateral_data = match collateral.get_quoting_enclave_split() {
 		Some(d) => d,
@@ -405,30 +414,31 @@ pub unsafe extern "C" fn generate_register_quoting_enclave_extrinsic(
 	};
 
 	let call_index_getter = |m: &NodeMetadata| m.register_quoting_enclave_call_indexes();
-	let extrinsic = generate_generic_register_collateral_extrinsic(
+	*unchecked_extrinsic_size = match generate_generic_register_collateral_extrinsic(
 		call_index_getter,
 		extrinsic_slice,
 		&collateral_data.0,
 		&collateral_data.1,
 		&collateral.qe_identity_issuer_chain,
-	);
-	match extrinsic {
-		Ok(_) => sgx_status_t::SGX_SUCCESS,
-		Err(e) => e.into(),
-	}
+	) {
+		Ok(l) => l as u32,
+		Err(e) => return e.into(),
+	};
+	sgx_status_t::SGX_SUCCESS
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn generate_register_tcb_info_extrinsic(
 	collateral: *const sgx_ql_qve_collateral_t,
 	unchecked_extrinsic: *mut u8,
-	unchecked_extrinsic_size: u32,
+	unchecked_extrinsic_max_size: u32,
+	unchecked_extrinsic_size: *mut u32,
 ) -> sgx_status_t {
 	if unchecked_extrinsic.is_null() || collateral.is_null() {
 		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
 	}
 	let extrinsic_slice =
-		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
+		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_max_size as usize);
 	let collateral = SgxQlQveCollateral::from_c_type(&*collateral);
 	let collateral_data = match collateral.get_tcb_info_split() {
 		Some(d) => d,
@@ -436,17 +446,17 @@ pub unsafe extern "C" fn generate_register_tcb_info_extrinsic(
 	};
 
 	let call_index_getter = |m: &NodeMetadata| m.register_tcb_info_call_indexes();
-	let extrinsic = generate_generic_register_collateral_extrinsic(
+	*unchecked_extrinsic_size = match generate_generic_register_collateral_extrinsic(
 		call_index_getter,
 		extrinsic_slice,
 		&collateral_data.0,
 		&collateral_data.1,
 		&collateral.tcb_info_issuer_chain,
-	);
-	match extrinsic {
-		Ok(_) => sgx_status_t::SGX_SUCCESS,
-		Err(e) => e.into(),
-	}
+	) {
+		Ok(l) => l as u32,
+		Err(e) => return e.into(),
+	};
+	sgx_status_t::SGX_SUCCESS
 }
 
 pub fn generate_generic_register_collateral_extrinsic<F>(
@@ -455,12 +465,10 @@ pub fn generate_generic_register_collateral_extrinsic<F>(
 	collateral_data: &str,
 	data_signature: &[u8],
 	issuer_chain: &[u8],
-) -> EnclaveResult<()>
+) -> EnclaveResult<usize>
 where
 	F: Fn(&NodeMetadata) -> Result<[u8; 2], MetadataError>,
 {
-	let extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
-
 	let node_metadata_repo = get_node_metadata_repository_from_integritee_solo_or_parachain()?;
 	let call_ids = node_metadata_repo
 		.get_from_metadata(getter)?
@@ -468,11 +476,9 @@ where
 	info!("    [Enclave] Compose register collateral call: {:?}", call_ids);
 	let call = OpaqueCall::from_tuple(&(call_ids, collateral_data, data_signature, issuer_chain));
 
-	let extrinsic = extrinsics_factory.create_extrinsics(&[call], None)?[0].clone();
-	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
-		return EnclaveError::BufferError(e).into()
-	};
-	Ok(())
+	let xt = create_extrinsics(call)?;
+	write_slice_and_whitespace_pad(extrinsic_slice, xt.encode())
+		.map_err(|e| EnclaveError::Other(Box::new(e)))
 }
 
 #[no_mangle]
