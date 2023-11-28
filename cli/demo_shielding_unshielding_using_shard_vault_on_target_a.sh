@@ -80,6 +80,7 @@ echo ""
 
 # the parentchain token is 12 decimal
 UNIT=$(( 10 ** 12 ))
+FEE_TOLERANCE=$((10 ** 11))
 
 # make these amounts greater than ED
 AMOUNT_SHIELD=$(( 6 * UNIT ))
@@ -114,14 +115,14 @@ function wait_assert_state()
     for i in $(seq 1 $WAIT_ROUNDS); do
         sleep $WAIT_INTERVAL_SECONDS
         state=$(${CLIENT} trusted --mrenclave "$1" "$3" "$2")
-        if [ $state -eq "$4" ]; then
+        if (( $4 >= state ? $4 - state < FEE_TOLERANCE : state - $4 < FEE_TOLERANCE)); then
             return
         else
             echo -n "."
         fi
     done
     echo
-    echo "Assert $2 $3 failed, expected = $4, actual = $state"
+    echo "Assert $2 $3 failed, expected = $4, actual = $state, tolerance = $FEE_TOLERANCE"
     exit 1
 }
 
@@ -130,14 +131,14 @@ function wait_assert_state_target_a()
     for i in $(seq 1 $WAIT_ROUNDS); do
         sleep $WAIT_INTERVAL_SECONDS
         state=$(${CLIENT_A} "$2" "$1")
-        if [ $state -eq "$3" ]; then
+        if (( $4 >= state ? $4 - state < FEE_TOLERANCE : state - $4 < FEE_TOLERANCE)); then
             return
         else
             echo -n "."
         fi
     done
     echo
-    echo "Assert $1 $2 failed, expected = $3, actual = $state"
+    echo "Assert $2 $3 failed, expected = $4, actual = $state, tolerance = $FEE_TOLERANCE"
     exit 1
 }
 # Do a live query and assert the given account's state is equal to expected
