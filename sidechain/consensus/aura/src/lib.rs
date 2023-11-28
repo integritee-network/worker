@@ -403,7 +403,14 @@ mod tests {
 		onchain_mock: OnchainMock,
 		trigger_parentchain_import: Arc<TriggerParentchainBlockImportMock<SignedParentchainBlock>>,
 	) -> TestAura {
-		Aura::new(Keyring::Alice.pair(), onchain_mock, trigger_parentchain_import, EnvironmentMock)
+		Aura::new(
+			Keyring::Alice.pair(),
+			onchain_mock,
+			trigger_parentchain_import,
+			None,
+			None,
+			EnvironmentMock,
+		)
 	}
 
 	fn get_default_aura() -> TestAura {
@@ -417,7 +424,9 @@ mod tests {
 			timestamp: now,
 			duration: SLOT_DURATION,
 			ends_at: now + SLOT_DURATION,
-			last_imported_parentchain_head: header.clone(),
+			last_imported_integritee_parentchain_head: header.clone(),
+			maybe_last_imported_target_a_parentchain_head: None,
+			maybe_last_imported_target_b_parentchain_head: None,
 		}
 	}
 
@@ -533,7 +542,9 @@ mod tests {
 			timestamp: now,
 			duration: nano_dur,
 			ends_at: now + nano_dur,
-			last_imported_parentchain_head: ParentchainHeaderBuilder::default().build(),
+			last_imported_integritee_parentchain_head: ParentchainHeaderBuilder::default().build(),
+			maybe_last_imported_target_a_parentchain_head: None,
+			maybe_last_imported_target_b_parentchain_head: None,
 		};
 
 		let result = PerShardSlotWorkerScheduler::on_slot(

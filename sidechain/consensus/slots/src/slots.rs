@@ -231,7 +231,9 @@ mod tests {
 			timestamp: duration_now(),
 			duration: SLOT_DURATION,
 			ends_at: duration_now() + SLOT_DURATION,
-			last_imported_parentchain_head: ParentchainHeaderBuilder::default().build(),
+			last_imported_integritee_parentchain_head: ParentchainHeaderBuilder::default().build(),
+			maybe_last_imported_target_a_parentchain_head: None,
+			maybe_last_imported_target_b_parentchain_head: None,
 		}
 	}
 
@@ -270,11 +272,18 @@ mod tests {
 		let slot: Slot = 1000.into();
 
 		let slot_end_time = slot_ends_at(slot, SLOT_DURATION);
-		let slot_one: SlotInfo<ParentchainBlock> =
-			SlotInfo::new(slot, timestamp, SLOT_DURATION, slot_end_time, pc_header.clone());
+		let slot_one: SlotInfo<ParentchainBlock> = SlotInfo::new(
+			slot,
+			timestamp,
+			SLOT_DURATION,
+			slot_end_time,
+			pc_header.clone(),
+			None,
+			None,
+		);
 		thread::sleep(Duration::from_millis(200));
 		let slot_two: SlotInfo<ParentchainBlock> =
-			SlotInfo::new(slot, timestamp, SLOT_DURATION, slot_end_time, pc_header);
+			SlotInfo::new(slot, timestamp, SLOT_DURATION, slot_end_time, pc_header, None, None);
 
 		let difference_of_ends_at =
 			(slot_one.ends_at.as_millis()).abs_diff(slot_two.ends_at.as_millis());
@@ -294,7 +303,9 @@ mod tests {
 			timestamp: duration_now() - Duration::from_secs(5),
 			duration: SLOT_DURATION,
 			ends_at: duration_now() + SLOT_DURATION - Duration::from_secs(5),
-			last_imported_parentchain_head: ParentchainHeaderBuilder::default().build(),
+			last_imported_integritee_parentchain_head: ParentchainHeaderBuilder::default().build(),
+			maybe_last_imported_target_a_parentchain_head: None,
+			maybe_last_imported_target_b_parentchain_head: None,
 		};
 		assert!(slot.duration_remaining().is_none());
 	}
@@ -306,7 +317,9 @@ mod tests {
 			timestamp: duration_now() - Duration::from_secs(5),
 			duration: SLOT_DURATION,
 			ends_at: duration_now() + Duration::from_secs(60),
-			last_imported_parentchain_head: ParentchainHeaderBuilder::default().build(),
+			last_imported_integritee_parentchain_head: ParentchainHeaderBuilder::default().build(),
+			maybe_last_imported_target_a_parentchain_head: None,
+			maybe_last_imported_target_b_parentchain_head: None,
 		};
 		let maybe_duration_remaining = slot.duration_remaining();
 		assert!(maybe_duration_remaining.is_some());
@@ -322,7 +335,7 @@ mod tests {
 
 		thread::sleep(SLOT_DURATION * 2);
 		let slot: SlotInfo<ParentchainBlock> =
-			SlotInfo::new(slot, timestamp, SLOT_DURATION, slot_end_time, pc_header);
+			SlotInfo::new(slot, timestamp, SLOT_DURATION, slot_end_time, pc_header, None, None);
 
 		assert!(slot.ends_at < duration_now());
 	}
@@ -366,6 +379,8 @@ mod tests {
 			duration_now(),
 			SLOT_DURATION,
 			ParentchainHeaderBuilder::default().build(),
+			None,
+			None,
 			&mut LastSlot,
 		)
 		.unwrap()
@@ -380,6 +395,8 @@ mod tests {
 			duration_now() + SLOT_DURATION,
 			SLOT_DURATION,
 			ParentchainHeaderBuilder::default().build(),
+			None,
+			None,
 			&mut LastSlot
 		)
 		.unwrap()
@@ -393,6 +410,8 @@ mod tests {
 				duration_now(),
 				Default::default(),
 				ParentchainHeaderBuilder::default().build(),
+				None,
+				None,
 				&mut LastSlot,
 			),
 			"Tried to yield next slot with 0 duration",
