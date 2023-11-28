@@ -31,7 +31,7 @@ use itp_stf_primitives::{
 };
 use itp_types::{
 	parentchain::{ParentchainCall, ParentchainId},
-	AccountId, Balance, Index, OpaqueCall, ShardIdentifier, Signature,
+	AccountId, Balance, Index, ShardIdentifier, Signature,
 };
 use log::*;
 use sp_core::{sr25519, Pair};

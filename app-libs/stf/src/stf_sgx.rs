@@ -33,7 +33,6 @@ use itp_stf_primitives::{error::StfError, traits::TrustedCallVerification};
 use itp_storage::storage_value_key;
 use itp_types::{
 	parentchain::{AccountId, ParentchainCall, ParentchainId},
-	OpaqueCall,
 };
 use itp_utils::stringify::account_id_to_string;
 use log::*;

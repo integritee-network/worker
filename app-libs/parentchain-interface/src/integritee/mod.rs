@@ -50,7 +50,7 @@ impl<Executor: IndirectExecutor<TrustedCallSigned, Error>>
 	fn dispatch(&self, executor: &Executor) -> Result<()> {
 		trace!("dispatching indirect call {:?}", self);
 		match self {
-			IndirectCall::ShieldFunds(shieldfunds_args) => {
+			IndirectCall::ShieldFunds(_shieldfunds_args) => {
 				debug!("shielding from Integritee suppressed");
 				//shieldfunds_args.dispatch(executor)
 				Ok(())

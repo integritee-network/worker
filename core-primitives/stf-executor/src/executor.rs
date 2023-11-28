@@ -36,7 +36,7 @@ use itp_time_utils::duration_now;
 use itp_types::{
 	parentchain::{Header as ParentchainHeader, ParentchainCall, ParentchainId},
 	storage::StorageEntryVerified,
-	OpaqueCall, H256,
+	H256,
 };
 use log::*;
 use sp_runtime::traits::Header as HeaderTrait;

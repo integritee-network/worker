@@ -28,7 +28,7 @@ use codec::{Decode, Encode};
 use core::fmt::Debug;
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_primitives::types::TrustedOperationOrHash;
-use itp_types::{parentchain::ParentchainCall, OpaqueCall, H256};
+use itp_types::{parentchain::ParentchainCall, H256};
 use std::vec::Vec;
 
 // re-export module to properly feature gate sgx and regular std environment
@@ -173,6 +173,7 @@ mod tests {
 	use super::*;
 	use itp_sgx_externalities::SgxExternalities;
 	use itp_test::mock::stf_mock::{GetterMock, TrustedCallSignedMock};
+	use itp_types::OpaqueCall;
 
 	#[test]
 	fn is_success_works() {

@@ -108,7 +108,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 
 	// todo: is this really correct? are these blocks already processed into top-pool?
 	let maybe_latest_target_a_parentchain_header =
-		if let Some(ref triggered_dispatcher) = maybe_target_a_parentchain_import_dispatcher {
+		if let Some(ref _triggered_dispatcher) = maybe_target_a_parentchain_import_dispatcher {
 			let validator_access = get_validator_accessor_from_target_a_solo_or_parachain()?;
 			Some(validator_access.execute_on_validator(|v| {
 				let latest_parentchain_header = v.latest_finalized_header()?;
@@ -119,7 +119,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 		};
 
 	let maybe_latest_target_b_parentchain_header =
-		if let Some(ref triggered_dispatcher) = maybe_target_b_parentchain_import_dispatcher {
+		if let Some(ref _triggered_dispatcher) = maybe_target_b_parentchain_import_dispatcher {
 			let validator_access = get_validator_accessor_from_target_b_solo_or_parachain()?;
 			Some(validator_access.execute_on_validator(|v| {
 				let latest_parentchain_header = v.latest_finalized_header()?;
@@ -222,6 +222,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 }
 
 /// Executes aura for the given `slot`.
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn exec_aura_on_slot<
 	Authority,
 	ParentchainBlock,

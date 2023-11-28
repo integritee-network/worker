@@ -34,7 +34,7 @@ use core::marker::PhantomData;
 use itc_parentchain_block_import_dispatcher::triggered_dispatcher::TriggerParentchainBlockImport;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_time_utils::duration_now;
-use itp_types::parentchain::ParentchainId;
+
 use itp_utils::hex::hex_encode;
 use its_block_verification::slot::slot_author;
 use its_consensus_common::{Environment, Error as ConsensusError, Proposer};
@@ -273,7 +273,7 @@ impl<
 		let maybe_parentchain_block = self
 			.maybe_parentchain_target_a_import_trigger
 			.clone()
-			.ok_or(ConsensusError::Other("no target_a assigned".into()))?
+			.ok_or_else(|| ConsensusError::Other("no target_a assigned".into()))?
 			.import_until(|parentchain_block| {
 				parentchain_block.block.hash() == *parentchain_header_hash
 			})
@@ -290,7 +290,7 @@ impl<
 		let maybe_parentchain_block = self
 			.maybe_parentchain_target_b_import_trigger
 			.clone()
-			.ok_or(ConsensusError::Other("no target_b assigned".into()))?
+			.ok_or_else(|| ConsensusError::Other("no target_b assigned".into()))?
 			.import_until(|parentchain_block| {
 				parentchain_block.block.hash() == *parentchain_header_hash
 			})
@@ -316,7 +316,7 @@ impl<
 		let maybe_parentchain_block = self
 			.maybe_parentchain_target_a_import_trigger
 			.clone()
-			.ok_or(ConsensusError::Other("no target_a assigned".into()))?
+			.ok_or_else(|| ConsensusError::Other("no target_a assigned".into()))?
 			.peek_latest()
 			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
 
@@ -329,7 +329,7 @@ impl<
 		let maybe_parentchain_block = self
 			.maybe_parentchain_target_b_import_trigger
 			.clone()
-			.ok_or(ConsensusError::Other("no target_b assigned".into()))?
+			.ok_or_else(|| ConsensusError::Other("no target_b assigned".into()))?
 			.peek_latest()
 			.map_err(|e| ConsensusError::Other(format!("{:?}", e).into()))?;
 

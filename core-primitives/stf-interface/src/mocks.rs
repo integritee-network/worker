@@ -30,7 +30,7 @@ use itp_node_api_metadata_provider::NodeMetadataRepository;
 use itp_stf_primitives::traits::TrustedCallVerification;
 use itp_types::{
 	parentchain::{ParentchainCall, ParentchainId},
-	AccountId, Index, OpaqueCall,
+	AccountId, Index,
 };
 
 #[derive(Default)]

@@ -38,7 +38,7 @@ use itc_parentchain_indirect_calls_executor::{
 };
 use itp_node_api::metadata::pallet_balances::BalancesCallIndexes;
 use itp_stf_primitives::traits::IndirectExecutor;
-use log::trace;
+
 
 /// The default indirect call (extrinsic-triggered) of the Target-A-Parachain.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
@@ -49,7 +49,7 @@ pub enum IndirectCall {
 impl<Executor: IndirectExecutor<TrustedCallSigned, Error>>
 	IndirectDispatch<Executor, TrustedCallSigned> for IndirectCall
 {
-	fn dispatch(&self, executor: &Executor) -> Result<()> {
+	fn dispatch(&self, _executor: &Executor) -> Result<()> {
 		debug!("shielding from TargetA extrinsic to Alice suppressed");
 		/*
 		trace!("dispatching indirect call {:?}", self);

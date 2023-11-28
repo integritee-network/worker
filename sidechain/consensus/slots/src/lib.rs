@@ -34,7 +34,7 @@ extern crate sgx_tstd as std;
 use codec::Encode;
 use derive_more::From;
 use itp_time_utils::{duration_difference, duration_now};
-use itp_types::OpaqueCall;
+
 use its_consensus_common::{Error as ConsensusError, Proposer};
 use its_primitives::traits::{
 	Block as SidechainBlockTrait, Header as HeaderTrait, ShardIdentifierFor,
@@ -55,7 +55,7 @@ mod mocks;
 #[cfg(test)]
 mod per_shard_slot_worker_tests;
 
-use itp_types::parentchain::{ParentchainCall, ParentchainId};
+use itp_types::parentchain::ParentchainCall;
 #[cfg(feature = "std")]
 pub use slot_stream::*;
 pub use slots::*;
@@ -255,7 +255,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 		trace!(
 			target: logging_target,
 			"on_slot: a priori latest TargetA block number: {:?}",
-			maybe_latest_target_a_parentchain_header.clone().map(|h| h.number().clone())
+			maybe_latest_target_a_parentchain_header.clone().map(|h| *h.number())
 		);
 
 		let maybe_latest_target_b_parentchain_header =
@@ -273,7 +273,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 		trace!(
 			target: logging_target,
 			"on_slot: a priori latest TargetB block number: {:?}",
-			maybe_latest_target_b_parentchain_header.clone().map(|h| h.number().clone())
+			maybe_latest_target_b_parentchain_header.clone().map(|h| *h.number())
 		);
 
 		let epoch_data = match self.epoch_data(&latest_integritee_parentchain_header, shard, slot) {
@@ -319,7 +319,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 		trace!(
 			target: logging_target,
 			"on_slot: a posteriori latest Integritee block number: {:?}",
-			last_imported_integritee_header.clone().map(|h| h.number().clone())
+			last_imported_integritee_header.clone().map(|h| *h.number())
 		);
 
 		let maybe_last_imported_target_a_header =
@@ -343,7 +343,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 		trace!(
 			target: logging_target,
 			"on_slot: a posteriori latest TargetA block number: {:?}",
-			maybe_last_imported_target_a_header.map(|h| h.number().clone())
+			maybe_last_imported_target_a_header.map(|h| *h.number())
 		);
 
 		let maybe_last_imported_target_b_header =
@@ -368,7 +368,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 		trace!(
 			target: logging_target,
 			"on_slot: a posteriori latest TargetB block number: {:?}",
-			maybe_last_imported_target_b_header.map(|h| h.number().clone())
+			maybe_last_imported_target_b_header.map(|h| *h.number())
 		);
 
 		let proposer = match self.proposer(latest_integritee_parentchain_header.clone(), shard) {
@@ -401,8 +401,8 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 			println!(
 				"Syncing Parentchain block numbers Integritee:{:?} TargetA: {:?}, TargetB: {:?} at Sidechain block number  {:?} ",
 				latest_integritee_parentchain_header.number(),
-				maybe_latest_target_a_parentchain_header.map(|h| h.number().clone()),
-				maybe_latest_target_b_parentchain_header.map(|h| h.number().clone()),
+				maybe_latest_target_a_parentchain_header.map(|h| *h.number()),
+				maybe_latest_target_b_parentchain_header.map(|h| *h.number()),
 				proposing.block.block().header().block_number()
 			);
 		}

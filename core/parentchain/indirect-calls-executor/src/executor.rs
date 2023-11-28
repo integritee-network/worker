@@ -40,7 +40,7 @@ use itp_stf_primitives::{
 };
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{
-	parentchain::{ExtrinsicStatus, FilterEvents, HandleParentchainEvents, ParentchainError},
+	parentchain::{ExtrinsicStatus, FilterEvents, HandleParentchainEvents},
 	OpaqueCall, ShardIdentifier, H256,
 };
 use log::*;
