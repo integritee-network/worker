@@ -8,7 +8,6 @@ license = "Apache-2.0"
 edition = "2021"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
 
 # sgx dependencies
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["untrusted_time"], optional = true }
@@ -23,7 +22,6 @@ its-primitives = { path = "../primitives", default_features = false, features = 
 [features]
 default = ["std"]
 std = [
-    "codec/std",
     "itp-types/std",
     "its-primitives/std",
     # substrate

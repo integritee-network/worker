@@ -459,8 +459,6 @@ pub fn generate_generic_register_collateral_extrinsic<F>(
 where
 	F: Fn(&NodeMetadata) -> Result<[u8; 2], MetadataError>,
 {
-	let extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
-
 	let node_metadata_repo = get_node_metadata_repository_from_integritee_solo_or_parachain()?;
 	let call_ids = node_metadata_repo
 		.get_from_metadata(getter)?
@@ -468,7 +466,7 @@ where
 	info!("    [Enclave] Compose register collateral call: {:?}", call_ids);
 	let call = OpaqueCall::from_tuple(&(call_ids, collateral_data, data_signature, issuer_chain));
 
-	let extrinsic = extrinsics_factory.create_extrinsics(&[call], None)?[0].clone();
+	let extrinsic = create_extrinsics(call)?;
 	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
 		return EnclaveError::BufferError(e).into()
 	};

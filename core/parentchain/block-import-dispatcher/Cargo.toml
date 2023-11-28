@@ -21,7 +21,6 @@ thiserror = { version = "1.0", optional = true }
 
 # crates.io no-std compatible libraries
 log = { version = "0.4", default-features = false }
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 [dev-dependencies]
 itc-parentchain-block-importer = { path = "../block-importer", features = ["mocks"] }
@@ -35,7 +34,6 @@ std = [
     "itp-import-queue/std",
     # no-std compatible libraries
     "log/std",
-    "sp-runtime/std",
     # std-only compatible libraries
     "thiserror",
 ]
