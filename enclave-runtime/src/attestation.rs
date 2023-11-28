@@ -478,7 +478,7 @@ where
 
 	let xt = create_extrinsics(call)?;
 	write_slice_and_whitespace_pad(extrinsic_slice, xt.encode())
-		.map_err(|e| EnclaveError::Other(Box::new(e)))
+		.map_err(|e| format!("{:?}", e).into())
 }
 
 #[no_mangle]
