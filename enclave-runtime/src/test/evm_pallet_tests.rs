@@ -125,10 +125,7 @@ pub fn test_evm_counter() {
 	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
 	TestStf::execute_call(&mut state, trusted_call, &mut parentchain_calls, repo).unwrap();
 
-	let opaque_vec = parentchain_calls
-		.iter()
-		.filter_map(|pc| if ParentchainCall::Integritee(c) == pc { Some(c) } else { None })
-		.collect();
+	let opaque_vec = parentchain_calls.iter().filter_map(|pc| pc.as_integritee()).collect();
 	// then
 	assert_eq!(
 		execution_address,
