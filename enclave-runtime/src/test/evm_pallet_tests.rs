@@ -29,7 +29,7 @@ use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMet
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_interface::StateCallInterface;
 use itp_stf_primitives::{traits::TrustedCallSigning, types::KeyPair};
-use itp_types::{AccountId, OpaqueCall, ShardIdentifier};
+use itp_types::{parentchain::ParentchainCall, AccountId, OpaqueCall, ShardIdentifier};
 use primitive_types::H256;
 use sp_core::{crypto::Pair, H160, U256};
 use std::{sync::Arc, vec::Vec};
@@ -90,7 +90,7 @@ pub fn test_evm_call() {
 pub fn test_evm_counter() {
 	// given
 	let (_, mut state, shard, mrenclave, ..) = test_setup();
-	let mut opaque_vec = Vec::new();
+	let mut parentchain_calls = Vec::new();
 
 	// Create the sender account.
 	let sender = funded_pair();
@@ -123,8 +123,12 @@ pub fn test_evm_counter() {
 	// when
 	let execution_address = evm_create_address(sender_evm_acc, 0);
 	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
-	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, repo).unwrap();
+	TestStf::execute_call(&mut state, trusted_call, &mut parentchain_calls, repo).unwrap();
 
+	let opaque_vec = parentchain_calls
+		.iter()
+		.filter_map(|pc| if ParentchainCall::Integritee(c) == pc { Some(c) } else { None })
+		.collect();
 	// then
 	assert_eq!(
 		execution_address,
