@@ -28,9 +28,7 @@ use core::fmt::Debug;
 use itp_node_api_metadata::NodeMetadataTrait;
 use itp_node_api_metadata_provider::AccessNodeMetadata;
 use itp_stf_primitives::traits::TrustedCallVerification;
-use itp_types::{
-	parentchain::{AccountId, ParentchainCall, ParentchainId},
-};
+use itp_types::parentchain::{AccountId, ParentchainCall, ParentchainId};
 
 #[cfg(feature = "mocks")]
 pub mod mocks;

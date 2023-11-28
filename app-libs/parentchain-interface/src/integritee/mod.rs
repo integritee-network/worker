@@ -36,7 +36,7 @@ use itc_parentchain_indirect_calls_executor::{
 };
 use itp_node_api::metadata::NodeMetadataTrait;
 use itp_stf_primitives::traits::IndirectExecutor;
-use log::{debug, trace};
+use log::trace;
 /// The default indirect call (extrinsic-triggered) of the Integritee-Parachain.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub enum IndirectCall {

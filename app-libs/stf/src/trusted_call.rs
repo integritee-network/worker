@@ -523,7 +523,7 @@ fn shield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
 	// endow fee to enclave (self)
 	let fee_recipient: AccountId = enclave_signer_account();
 
-	let account_info = System::account(&AccountId::from(fee_recipient.clone()));
+	let account_info = System::account(&fee_recipient);
 	ita_sgx_runtime::BalancesCall::<Runtime>::force_set_balance {
 		who: MultiAddress::Id(fee_recipient),
 		new_free: account_info.data.free + fee,
