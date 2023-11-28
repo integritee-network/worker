@@ -390,5 +390,6 @@ fn connection_can_be_closed(top_status: TrustedOperationStatus) -> bool {
 			| TrustedOperationStatus::Future
 			| TrustedOperationStatus::Ready
 			| TrustedOperationStatus::Broadcast
+			| TrustedOperationStatus::Invalid
 	)
 }
