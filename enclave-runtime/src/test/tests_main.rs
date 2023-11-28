@@ -290,12 +290,11 @@ fn test_differentiate_getter_and_call_works() {
 	// create accounts
 	let sender = funded_pair();
 
-	let signed_getter =
-		TrustedGetter::free_balance(sender.public().into()).sign(&sender.clone().into());
+	let signed_getter = TrustedGetter::free_balance(sender.public().into()).sign(&sender.into());
 
 	let signed_call =
 		TrustedCall::balance_set_balance(sender.public().into(), sender.public().into(), 42, 42)
-			.sign(&sender.clone().into(), 0, &mrenclave, &shard);
+			.sign(&sender.into(), 0, &mrenclave, &shard);
 	let trusted_operation = direct_top(signed_call);
 
 	// when
@@ -352,8 +351,7 @@ fn test_create_block_and_confirmation_works() {
 	// when
 	let execution_result = execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_author);
 
-	let executed_operation_hashes =
-		execution_result.get_executed_operation_hashes().iter().copied().collect();
+	let executed_operation_hashes = execution_result.get_executed_operation_hashes().to_vec();
 
 	let signed_block = block_composer
 		.compose_block(
@@ -388,7 +386,7 @@ fn test_create_state_diff() {
 		receiver.into(),
 		TX_AMOUNT,
 	)
-	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
+	.sign(&sender.into(), 0, &mrenclave, &shard);
 	let trusted_operation = direct_top(signed_call);
 
 	submit_operation_to_top_pool(
@@ -402,8 +400,7 @@ fn test_create_state_diff() {
 	// when
 	let execution_result = execute_trusted_calls(&shard, stf_executor.as_ref(), &top_pool_author);
 
-	let executed_operation_hashes =
-		execution_result.get_executed_operation_hashes().iter().copied().collect();
+	let executed_operation_hashes = execution_result.get_executed_operation_hashes().to_vec();
 
 	let signed_block = block_composer
 		.compose_block(
@@ -422,10 +419,10 @@ fn test_create_state_diff() {
 
 	// then
 	let sender_acc_info: AccountInfo =
-		get_from_state_diff(&state_diff, &account_key_hash::<AccountId>(&sender.public().into()));
+		get_from_state_diff(state_diff, &account_key_hash::<AccountId>(&sender.public().into()));
 
 	let receiver_acc_info: AccountInfo =
-		get_from_state_diff(&state_diff, &account_key_hash::<AccountId>(&receiver.into()));
+		get_from_state_diff(state_diff, &account_key_hash::<AccountId>(&receiver.into()));
 
 	// state diff should consist of the following updates:
 	// (last_hash, sidechain block_number, sender_funds, receiver_funds, fee_recipient account [no clear, after polkadot_v0.9.26 update], events)
@@ -446,7 +443,7 @@ fn test_executing_call_updates_account_nonce() {
 
 	let trusted_operation =
 		TrustedCall::balance_transfer(sender.public().into(), receiver.into(), 1000)
-			.sign(&sender.clone().into(), 0, &mrenclave, &shard)
+			.sign(&sender.into(), 0, &mrenclave, &shard)
 			.into_trusted_operation(false);
 
 	submit_operation_to_top_pool(
@@ -485,9 +482,9 @@ fn test_call_set_update_parentchain_block() {
 
 	TestStf::update_parentchain_block(&mut state, header.clone()).unwrap();
 
-	assert_eq!(header.hash(), state.execute_with(|| Parentchain::block_hash()));
-	assert_eq!(parent_hash, state.execute_with(|| Parentchain::parent_hash()));
-	assert_eq!(block_number, state.execute_with(|| Parentchain::block_number()));
+	assert_eq!(header.hash(), state.execute_with(Parentchain::block_hash));
+	assert_eq!(parent_hash, state.execute_with(Parentchain::parent_hash));
+	assert_eq!(block_number, state.execute_with(Parentchain::block_number));
 }
 
 fn test_signature_must_match_public_sender_in_call() {
@@ -500,7 +497,7 @@ fn test_signature_must_match_public_sender_in_call() {
 
 	let trusted_operation =
 		TrustedCall::balance_transfer(victim.into(), receiver.public().into(), 1000)
-			.sign(&receiver.clone().into(), 10, &mrenclave, &shard)
+			.sign(&receiver.into(), 10, &mrenclave, &shard)
 			.into_trusted_operation(true);
 
 	submit_operation_to_top_pool(
@@ -527,7 +524,7 @@ fn test_invalid_nonce_call_is_not_executed() {
 
 	let trusted_operation =
 		TrustedCall::balance_transfer(sender.public().into(), receiver.into(), 1000)
-			.sign(&sender.clone().into(), 10, &mrenclave, &shard)
+			.sign(&sender.into(), 10, &mrenclave, &shard)
 			.into_trusted_operation(true);
 
 	submit_operation_to_top_pool(
@@ -551,8 +548,12 @@ fn test_non_root_shielding_call_is_not_executed() {
 	let sender = funded_pair();
 	let sender_acc: AccountId = sender.public().into();
 
-	let signed_call = TrustedCall::balance_shield(sender_acc.clone(), sender_acc.clone(), 1000)
-		.sign(&sender.into(), 0, &mrenclave, &shard);
+	let signed_call = TrustedCall::balance_shield(sender_acc.clone(), sender_acc, 1000).sign(
+		&sender.into(),
+		0,
+		&mrenclave,
+		&shard,
+	);
 
 	submit_operation_to_top_pool(
 		top_pool_author.as_ref(),
@@ -576,12 +577,9 @@ fn test_shielding_call_with_enclave_self_is_executed() {
 	let sender_account: AccountId = sender.public().into();
 	let enclave_call_signer = enclave_call_signer(&shielding_key);
 
-	let signed_call = TrustedCall::balance_shield(
-		enclave_call_signer.public().into(),
-		sender_account.clone(),
-		1000,
-	)
-	.sign(&enclave_call_signer.into(), 0, &mrenclave, &shard);
+	let signed_call =
+		TrustedCall::balance_shield(enclave_call_signer.public().into(), sender_account, 1000)
+			.sign(&enclave_call_signer.into(), 0, &mrenclave, &shard);
 	let trusted_operation =
 		TrustedOperation::<TrustedCallSigned, Getter>::indirect_call(signed_call);
 
@@ -618,7 +616,7 @@ pub fn test_retrieve_events() {
 		receiver.public().into(),
 		transfer_value,
 	)
-	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
+	.sign(&sender.into(), 0, &mrenclave, &shard);
 	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
 	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, repo).unwrap();
 
@@ -640,7 +638,7 @@ pub fn test_retrieve_event_count() {
 		receiver.public().into(),
 		transfer_value,
 	)
-	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
+	.sign(&sender.into(), 0, &mrenclave, &shard);
 
 	// when
 	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
@@ -664,7 +662,7 @@ pub fn test_reset_events() {
 		receiver.public().into(),
 		transfer_value,
 	)
-	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
+	.sign(&sender.into(), 0, &mrenclave, &shard);
 	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
 	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, repo).unwrap();
 	let receiver_acc_info = TestStf::get_account_data(&mut state, &receiver.public().into());
@@ -685,19 +683,18 @@ fn execute_trusted_calls(
 	top_pool_author: &TestTopPoolAuthor,
 ) -> BatchExecutionResult<State, TrustedCallSigned, Getter> {
 	let top_pool_calls = top_pool_author.get_pending_trusted_calls(*shard);
-	let execution_result = stf_executor
+	stf_executor
 		.propose_state_update(
 			&top_pool_calls,
 			&latest_parentchain_header(),
-			&shard,
+			shard,
 			Duration::from_millis(600),
 			|mut s| {
 				s.set_block_number(&s.get_block_number().map_or(1, |n| n + 1));
 				s
 			},
 		)
-		.unwrap();
-	execution_result
+		.unwrap()
 }
 
 // helper functions

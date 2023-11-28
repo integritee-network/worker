@@ -31,7 +31,7 @@ fn test_ocall_read_write_ipfs() {
 	OcallApi.read_ipfs(&cid).unwrap();
 
 	let cid_str = std::str::from_utf8(&cid.0).unwrap();
-	let mut f = File::open(&cid_str).unwrap();
+	let mut f = File::open(cid_str).unwrap();
 	let mut content_buf = Vec::new();
 	f.read_to_end(&mut content_buf).unwrap();
 	info!("reading file {:?} of size {} bytes", f, &content_buf.len());
