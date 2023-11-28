@@ -16,9 +16,6 @@ thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linu
 # std compatible external libraries (make sure these versions match with the sgx-enabled ones above)
 thiserror = { version = "1.0", optional = true }
 
-# no-std dependencies
-lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
-
 [features]
 default = ["std"]
 std = [

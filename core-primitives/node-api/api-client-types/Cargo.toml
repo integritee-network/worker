@@ -12,7 +12,6 @@ my-node-runtime = { package = "integritee-node-runtime", optional = true, git = 
 substrate-api-client = { default-features = false, features = ["sync-api"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }
 
 # substrate
-sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 # local
@@ -25,7 +24,6 @@ std = [
     "itp-types/std",
     "substrate-api-client/std",
     "substrate-api-client/tungstenite-client",
-    "sp-core/std",
     "sp-runtime/std",
     "my-node-runtime",
 ]

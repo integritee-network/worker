@@ -29,7 +29,6 @@ extern crate sgx_tstd as std;
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub mod sgx_reexport_prelude {
 	pub use jsonrpc_core_sgx as jsonrpc_core;
-	pub use thiserror_sgx as thiserror;
 }
 
 pub mod api;

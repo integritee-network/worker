@@ -8,9 +8,6 @@ edition = "2021"
 # crates.io
 codec = { version = "3.0.0", default-features = false, features = ["derive"], package = "parity-scale-codec" }
 derive_more = { version = "0.99.5" }
-
-# Substrate dependencies
-itp-hashing = { default-features = false, path = "../../core-primitives/hashing" }
 itp-sgx-runtime-primitives = { path = "../../core-primitives/sgx-runtime-primitives", default-features = false }
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
