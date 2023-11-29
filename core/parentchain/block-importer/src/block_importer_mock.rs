@@ -21,6 +21,7 @@ use crate::{
 	error::{Error, Result},
 	ImportParentchainBlocks,
 };
+use itp_types::parentchain::ParentchainId;
 use std::{sync::RwLock, vec::Vec};
 
 /// Mock implementation for the block importer.
@@ -57,5 +58,8 @@ where
 		})?;
 		imported_blocks_lock.extend(blocks_to_import);
 		Ok(())
+	}
+	fn parentchain_id(&self) -> ParentchainId {
+		ParentchainId::Integritee
 	}
 }

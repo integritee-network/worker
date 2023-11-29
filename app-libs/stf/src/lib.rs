@@ -44,3 +44,6 @@ pub mod test_genesis;
 pub mod trusted_call;
 
 pub(crate) const ENCLAVE_ACCOUNT_KEY: &str = "Enclave_Account_Key";
+
+// fixme: this if  a temporary hack only
+pub const STF_TX_FEE: Balance = 100000000;

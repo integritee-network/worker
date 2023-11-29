@@ -25,18 +25,18 @@ use crate::{
 			GLOBAL_TARGET_A_PARENTCHAIN_LIGHT_CLIENT_SEAL, GLOBAL_TARGET_A_PARENTCHAIN_NONCE_CACHE,
 		},
 		parentchain::common::{
-			create_extrinsics_factory, create_target_a_offchain_immediate_import_dispatcher,
+			create_extrinsics_factory, create_sidechain_triggered_import_dispatcher_for_target_a,
+			create_target_a_offchain_immediate_import_dispatcher,
 			create_target_a_parentchain_block_importer,
 		},
 	},
 };
 use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, LightClientState};
+pub use itc_parentchain::primitives::{SolochainBlock, SolochainHeader, SolochainParams};
 use itp_component_container::ComponentGetter;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
 use itp_types::parentchain::ParentchainId;
 use std::{path::PathBuf, sync::Arc};
-
-pub use itc_parentchain::primitives::{SolochainBlock, SolochainHeader, SolochainParams};
 
 pub struct TargetASolochainHandler {
 	pub genesis_header: SolochainHeader,
@@ -96,7 +96,7 @@ impl TargetASolochainHandler {
 				extrinsics_factory.clone(),
 			)?,
 			WorkerMode::Sidechain =>
-				unimplemented!("Can't run target a chain in sidechain mode yet."),
+				create_sidechain_triggered_import_dispatcher_for_target_a(block_importer),
 			WorkerMode::Teeracle =>
 				Arc::new(TargetAParentchainBlockImportDispatcher::new_empty_dispatcher()),
 		};

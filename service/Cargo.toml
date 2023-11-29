@@ -19,6 +19,7 @@ log = "0.4"
 parking_lot = "0.12.1"
 parse_duration = "2.1.1"
 prometheus = { version = "0.13.0", features = ["process"] }
+regex = "1.9.5"
 scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
 serde = "1.0"
 serde_derive = "1.0"
@@ -59,6 +60,7 @@ its-storage = { path = "../sidechain/storage" }
 # scs / integritee
 
 my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node.git", branch = "sdk-v0.12.0-polkadot-v0.9.42" }
+#my-node-runtime = { package = "integritee-runtime", git = "https://github.com/integritee-network/parachain.git", tag = "1.6.2" }
 sgx-verify = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.0-polkadot-v0.9.42" }
 # `default-features = false` to remove the jsonrpsee dependency.
 enclave-bridge-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.0-polkadot-v0.9.42" }

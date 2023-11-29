@@ -29,7 +29,7 @@ use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMet
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_interface::StateCallInterface;
 use itp_stf_primitives::{traits::TrustedCallSigning, types::KeyPair};
-use itp_types::{AccountId, OpaqueCall, ShardIdentifier};
+use itp_types::{parentchain::ParentchainCall, AccountId, ShardIdentifier};
 use primitive_types::H256;
 use sp_core::{crypto::Pair, H160, U256};
 use std::{sync::Arc, vec::Vec};
@@ -37,7 +37,7 @@ use std::{sync::Arc, vec::Vec};
 pub fn test_evm_call() {
 	// given
 	let (_, mut state, shard, mrenclave, ..) = test_setup();
-	let mut opaque_vec = Vec::new();
+	let mut parentchain_calls = Vec::new();
 
 	// Create the sender account.
 	let sender = funded_pair();
@@ -74,11 +74,11 @@ pub fn test_evm_call() {
 		Some(U256::from(0)),
 		Vec::new(),
 	)
-	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
+	.sign(&sender.into(), 0, &mrenclave, &shard);
 
 	// when
 	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
-	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, repo).unwrap();
+	TestStf::execute_call(&mut state, trusted_call, &mut parentchain_calls, repo).unwrap();
 
 	// then
 	assert_eq!(
@@ -90,7 +90,7 @@ pub fn test_evm_call() {
 pub fn test_evm_counter() {
 	// given
 	let (_, mut state, shard, mrenclave, ..) = test_setup();
-	let mut opaque_vec = Vec::new();
+	let mut parentchain_calls = Vec::new();
 
 	// Create the sender account.
 	let sender = funded_pair();
@@ -118,12 +118,12 @@ pub fn test_evm_counter() {
 		Some(U256::from(0)),
 		Vec::new(),
 	)
-	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
+	.sign(&sender.into(), 0, &mrenclave, &shard);
 
 	// when
 	let execution_address = evm_create_address(sender_evm_acc, 0);
 	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
-	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, repo).unwrap();
+	TestStf::execute_call(&mut state, trusted_call, &mut parentchain_calls, repo).unwrap();
 
 	// then
 	assert_eq!(
@@ -155,11 +155,11 @@ pub fn test_evm_counter() {
 		inc_function_input.to_vec(),
 		1,
 		1,
-		sender.clone().into(),
+		sender.into(),
 		&mrenclave,
 		&shard,
 		&mut state,
-		&mut opaque_vec,
+		&mut parentchain_calls,
 		2,
 	);
 
@@ -171,11 +171,11 @@ pub fn test_evm_counter() {
 		Vec::new(), // Empty input calls the fallback function.
 		2,
 		2,
-		sender.clone().into(),
+		sender.into(),
 		&mrenclave,
 		&shard,
 		&mut state,
-		&mut opaque_vec,
+		&mut parentchain_calls,
 		5,
 	);
 
@@ -188,11 +188,11 @@ pub fn test_evm_counter() {
 		inc_function_input,
 		3,
 		3,
-		sender.clone().into(),
+		sender.into(),
 		&mrenclave,
 		&shard,
 		&mut state,
-		&mut opaque_vec,
+		&mut parentchain_calls,
 		6,
 	);
 
@@ -205,21 +205,22 @@ pub fn test_evm_counter() {
 		array_bytes::hex2bytes(&format!("{}{}", function_hash, add_value)).unwrap();
 
 	execute_and_verify_evm_call(
-		sender_acc.clone(),
+		sender_acc,
 		sender_evm_acc,
 		execution_address,
 		add_function_input,
 		4,
 		4,
-		sender.clone().into(),
+		sender.into(),
 		&mrenclave,
 		&shard,
 		&mut state,
-		&mut opaque_vec,
+		&mut parentchain_calls,
 		8,
 	);
 }
 
+#[allow(clippy::too_many_arguments)]
 fn execute_and_verify_evm_call(
 	sender_acc: AccountId,
 	sender_evm_acc: H160,
@@ -231,7 +232,7 @@ fn execute_and_verify_evm_call(
 	mrenclave: &[u8; 32],
 	shard: &ShardIdentifier,
 	state: &mut State,
-	calls: &mut Vec<OpaqueCall>,
+	calls: &mut Vec<ParentchainCall>,
 	counter_expected: u64,
 ) {
 	let inc_call = TrustedCall::evm_call(
@@ -246,7 +247,7 @@ fn execute_and_verify_evm_call(
 		Some(U256::from(evm_nonce)),
 		Vec::new(),
 	)
-	.sign(&pair, nonce, &mrenclave, &shard);
+	.sign(&pair, nonce, mrenclave, shard);
 	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
 	TestStf::execute_call(state, inc_call, calls, repo).unwrap();
 
@@ -259,7 +260,7 @@ fn execute_and_verify_evm_call(
 pub fn test_evm_create() {
 	// given
 	let (_, mut state, shard, mrenclave, ..) = test_setup();
-	let mut opaque_vec = Vec::new();
+	let mut parentchain_calls = Vec::new();
 
 	// Create the sender account.
 	let sender = funded_pair();
@@ -277,7 +278,7 @@ pub fn test_evm_create() {
 	let smart_contract = array_bytes::hex2bytes(smart_contract).unwrap();
 
 	let trusted_call = TrustedCall::evm_create(
-		sender_acc.clone(),
+		sender_acc,
 		sender_evm_acc,
 		smart_contract,
 		U256::from(0), // value
@@ -287,14 +288,14 @@ pub fn test_evm_create() {
 		Some(U256::from(0)),
 		Vec::new(),
 	)
-	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
+	.sign(&sender.into(), 0, &mrenclave, &shard);
 
 	// Should be the first call of the evm account
 	let nonce = state.execute_with(|| System::account_nonce(&sender_evm_substrate_addr));
 	assert_eq!(nonce, 0);
 	let execution_address = evm_create_address(sender_evm_acc, nonce);
 	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
-	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, repo).unwrap();
+	TestStf::execute_call(&mut state, trusted_call, &mut parentchain_calls, repo).unwrap();
 
 	assert_eq!(
 		execution_address,
@@ -313,7 +314,7 @@ pub fn test_evm_create() {
 pub fn test_evm_create2() {
 	// given
 	let (_, mut state, shard, mrenclave, ..) = test_setup();
-	let mut opaque_vec = Vec::new();
+	let mut parentchain_calls = Vec::new();
 
 	// Create the sender account.
 	let sender = funded_pair();
@@ -332,7 +333,7 @@ pub fn test_evm_create2() {
 	let smart_contract = array_bytes::hex2bytes(smart_contract).unwrap();
 
 	let trusted_call = TrustedCall::evm_create2(
-		sender_acc.clone(),
+		sender_acc,
 		sender_evm_acc,
 		smart_contract.clone(),
 		salt,
@@ -343,13 +344,13 @@ pub fn test_evm_create2() {
 		Some(U256::from(0)),
 		Vec::new(),
 	)
-	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
+	.sign(&sender.into(), 0, &mrenclave, &shard);
 
 	// when
 	let code_hash = create_code_hash(&smart_contract);
 	let execution_address = evm_create2_address(sender_evm_acc, salt, code_hash);
 	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
-	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, repo).unwrap();
+	TestStf::execute_call(&mut state, trusted_call, &mut parentchain_calls, repo).unwrap();
 
 	// then
 	assert_eq!(

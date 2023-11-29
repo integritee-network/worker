@@ -34,9 +34,7 @@ use ita_stf::{
 	test_genesis::{endowed_account, second_endowed_account, unendowed_account},
 	Balance, Getter, TrustedCall, TrustedCallSigned,
 };
-use itc_parentchain::light_client::mocks::validator_access_mock::ValidatorAccessMock;
 use itc_parentchain_test::ParentchainHeaderBuilder;
-use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
 use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_settings::{
@@ -97,7 +95,7 @@ pub fn produce_sidechain_block_and_import_it() {
 	let stf_executor = Arc::new(TestStfExecutor::new(
 		ocall_api.clone(),
 		state_handler.clone(),
-		node_metadata_repo.clone(),
+		node_metadata_repo,
 	));
 	let top_pool = create_top_pool();
 
@@ -116,11 +114,9 @@ pub fn produce_sidechain_block_and_import_it() {
 		parentchain_block_import_trigger.clone(),
 		ocall_api.clone(),
 	));
-	let block_composer = Arc::new(TestBlockComposer::new(signer.clone(), state_key_repo.clone()));
+	let block_composer = Arc::new(TestBlockComposer::new(signer, state_key_repo));
 	let proposer_environment =
-		ProposerFactory::new(top_pool_author.clone(), stf_executor.clone(), block_composer);
-	let extrinsics_factory = ExtrinsicsFactoryMock::default();
-	let validator_access = ValidatorAccessMock::default();
+		ProposerFactory::new(top_pool_author.clone(), stf_executor, block_composer);
 
 	info!("Create trusted operations..");
 	let sender = endowed_account();
@@ -141,7 +137,7 @@ pub fn produce_sidechain_block_and_import_it() {
 		&shielding_key,
 		sender_with_low_balance,
 		receiver.public().into(),
-		200000,
+		ita_stf::test_genesis::SECOND_ENDOWED_ACC_FUNDS + 1,
 	);
 	info!("Add trusted operations to TOP pool..");
 	executor::block_on(top_pool_author.submit_top(trusted_operation, shard_id)).unwrap();
@@ -155,8 +151,15 @@ pub fn produce_sidechain_block_and_import_it() {
 	let timestamp = duration_now();
 	let slot = slot_from_timestamp_and_duration(duration_now(), SLOT_DURATION);
 	let ends_at = timestamp + SLOT_DURATION;
-	let slot_info =
-		SlotInfo::new(slot, timestamp, SLOT_DURATION, ends_at, parentchain_header.clone());
+	let slot_info = SlotInfo::new(
+		slot,
+		timestamp,
+		SLOT_DURATION,
+		ends_at,
+		parentchain_header.clone(),
+		None,
+		None,
+	);
 
 	info!("Test setup is done.");
 
@@ -164,11 +167,13 @@ pub fn produce_sidechain_block_and_import_it() {
 
 	info!("Executing AURA on slot..");
 	let (blocks, opaque_calls) =
-		exec_aura_on_slot::<_, ParentchainBlock, SignedSidechainBlock, _, _, _>(
+		exec_aura_on_slot::<_, ParentchainBlock, SignedSidechainBlock, _, _, _, _, _>(
 			slot_info,
 			signer,
-			ocall_api.clone(),
+			ocall_api,
 			parentchain_block_import_trigger.clone(),
+			None::<Arc<TestParentchainBlockImportTrigger>>,
+			None::<Arc<TestParentchainBlockImportTrigger>>,
 			proposer_environment,
 			shards,
 		)
@@ -195,12 +200,10 @@ pub fn produce_sidechain_block_and_import_it() {
 	let propose_to_block_import_ocall_api =
 		Arc::new(ProposeToImportOCallApi::new(parentchain_header, block_importer));
 
-	send_blocks_and_extrinsics::<ParentchainBlock, _, _, _, _>(
+	send_blocks_and_extrinsics::<ParentchainBlock, _, _>(
 		blocks,
 		opaque_calls,
 		propose_to_block_import_ocall_api,
-		&validator_access,
-		&extrinsics_factory,
 	)
 	.unwrap();
 
@@ -219,7 +222,7 @@ pub fn produce_sidechain_block_and_import_it() {
 	let free_balance = TestStf::get_account_data(&mut state, &receiver.public().into()).free;
 	assert_eq!(free_balance, transfered_amount);
 	assert!(TestStf::get_event_count(&mut state) > 0);
-	assert!(TestStf::get_events(&mut state).len() > 0);
+	assert!(!TestStf::get_events(&mut state).is_empty());
 }
 
 fn encrypted_trusted_operation_transfer_balance<

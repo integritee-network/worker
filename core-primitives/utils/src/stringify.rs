@@ -28,5 +28,5 @@ pub fn public_to_string<T: AsBytesRef>(t: &T) -> String {
 }
 
 pub fn account_id_to_string<AccountId: Encode>(account: &AccountId) -> String {
-	format!("{}", HexDisplay::from(&account.encode()))
+	format!("0x{}", HexDisplay::from(&account.encode()))
 }

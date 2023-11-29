@@ -15,6 +15,7 @@
 
 */
 
+use crate::OpaqueCall;
 use alloc::{format, vec::Vec};
 use codec::{Decode, Encode};
 use core::fmt::Debug;
@@ -62,6 +63,18 @@ pub enum ParentchainId {
 	TargetA,
 	/// Another target chain containing custom business logic.
 	TargetB,
+}
+
+#[cfg(feature = "std")]
+impl std::fmt::Display for ParentchainId {
+	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+		let message = match self {
+			ParentchainId::Integritee => "L1:Integritee",
+			ParentchainId::TargetA => "L1:AssetHub",
+			ParentchainId::TargetB => "L1:UNDEFINED",
+		};
+		write!(f, "{}", message)
+	}
 }
 
 pub trait IdentifyParentchain {
@@ -136,12 +149,14 @@ where
 #[derive(Debug)]
 pub enum ParentchainError {
 	ShieldFundsFailure,
+	FunctionalityDisabled,
 }
 
 impl core::fmt::Display for ParentchainError {
 	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
 		let message = match &self {
 			ParentchainError::ShieldFundsFailure => "Parentchain Error: ShieldFundsFailure",
+			ParentchainError::FunctionalityDisabled => "Parentchain Error: FunctionalityDisabled",
 		};
 		write!(f, "{}", message)
 	}
@@ -149,4 +164,58 @@ impl core::fmt::Display for ParentchainError {
 
 impl From<ParentchainError> for () {
 	fn from(_: ParentchainError) -> Self {}
+}
+
+/// a wrapper to target calls to specific parentchains
+#[derive(Encode, Debug, Clone, PartialEq, Eq)]
+pub enum ParentchainCall {
+	Integritee(OpaqueCall),
+	TargetA(OpaqueCall),
+	TargetB(OpaqueCall),
+}
+
+impl ParentchainCall {
+	pub fn as_integritee(&self) -> Option<OpaqueCall> {
+		if let Self::Integritee(call) = self {
+			Some(call.clone())
+		} else {
+			None
+		}
+	}
+	pub fn as_target_a(&self) -> Option<OpaqueCall> {
+		if let Self::TargetA(call) = self {
+			Some(call.clone())
+		} else {
+			None
+		}
+	}
+	pub fn as_target_b(&self) -> Option<OpaqueCall> {
+		if let Self::TargetB(call) = self {
+			Some(call.clone())
+		} else {
+			None
+		}
+	}
+	pub fn as_opaque_call_for(&self, parentchain_id: ParentchainId) -> Option<OpaqueCall> {
+		match parentchain_id {
+			ParentchainId::Integritee =>
+				if let Self::Integritee(call) = self {
+					Some(call.clone())
+				} else {
+					None
+				},
+			ParentchainId::TargetA =>
+				if let Self::TargetA(call) = self {
+					Some(call.clone())
+				} else {
+					None
+				},
+			ParentchainId::TargetB =>
+				if let Self::TargetB(call) = self {
+					Some(call.clone())
+				} else {
+					None
+				},
+		}
+	}
 }

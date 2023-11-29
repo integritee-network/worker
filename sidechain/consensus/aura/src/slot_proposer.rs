@@ -148,7 +148,7 @@ where
 			.map_err(|e| ConsensusError::Other(e.to_string().into()))?;
 
 		info!(
-			"Queue/Timeslot/Transactions: {:?};{};{}",
+			"Queue/Timeslot/Transactions: {:?};{}ms;{}",
 			trusted_calls.len(),
 			max_duration.as_millis(),
 			number_executed_transactions

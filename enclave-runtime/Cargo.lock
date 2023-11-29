@@ -2423,6 +2423,7 @@ dependencies = [
  "itp-time-utils",
  "itp-top-pool-author",
  "itp-types",
+ "itp-utils",
  "its-block-composer",
  "its-block-verification",
  "its-consensus-common",
