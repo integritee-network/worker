@@ -169,37 +169,43 @@ fn send_indirect_request<T: Decode + Debug>(
 	info!("Waiting for execution confirmation from enclave...");
 	let mut subscription = chain_api.subscribe_events().unwrap();
 	loop {
-		let event_records = subscription.next_events::<RuntimeEvent, Hash>().unwrap().unwrap();
-		for event_record in event_records {
-			if let RuntimeEvent::EnclaveBridge(EnclaveBridgeEvent::ProcessedParentchainBlock {
-				shard,
-				block_hash: confirmed_block_hash,
-				trusted_calls_merkle_root,
-				block_number: confirmed_block_number,
-			}) = event_record.event
-			{
-				info!("Confirmation of ProcessedParentchainBlock received");
-				debug!("shard: {:?}", shard);
-				debug!("confirmed parentchain block Hash: {:?}", block_hash);
-				debug!("trusted calls merkle root: {:?}", trusted_calls_merkle_root);
-				debug!("Confirmed stf block Hash: {:?}", confirmed_block_hash);
-				if let Err(e) = check_if_received_event_exceeds_expected(
-					&chain_api,
-					block_hash,
-					confirmed_block_hash,
-					confirmed_block_number,
-				) {
-					error!("ProcessedParentchainBlock event: {:?}", e);
-					return Err(TrustedOperationError::Default {
-						msg: format!("ProcessedParentchainBlock event: {:?}", e),
-					})
-				};
+		let event_result = subscription.next_events::<RuntimeEvent, Hash>();
+		if let Some(Ok(event_records)) = event_result {
+			for event_record in event_records {
+				if let RuntimeEvent::EnclaveBridge(
+					EnclaveBridgeEvent::ProcessedParentchainBlock {
+						shard,
+						block_hash: confirmed_block_hash,
+						trusted_calls_merkle_root,
+						block_number: confirmed_block_number,
+					},
+				) = event_record.event
+				{
+					info!("Confirmation of ProcessedParentchainBlock received");
+					debug!("shard: {:?}", shard);
+					debug!("confirmed parentchain block Hash: {:?}", block_hash);
+					debug!("trusted calls merkle root: {:?}", trusted_calls_merkle_root);
+					debug!("Confirmed stf block Hash: {:?}", confirmed_block_hash);
+					if let Err(e) = check_if_received_event_exceeds_expected(
+						&chain_api,
+						block_hash,
+						confirmed_block_hash,
+						confirmed_block_number,
+					) {
+						error!("ProcessedParentchainBlock event: {:?}", e);
+						return Err(TrustedOperationError::Default {
+							msg: format!("ProcessedParentchainBlock event: {:?}", e),
+						})
+					};
 
-				if confirmed_block_hash == block_hash {
-					let value = decode_response_value(&mut block_hash.encode().as_slice())?;
-					return Ok(value)
+					if confirmed_block_hash == block_hash {
+						let value = decode_response_value(&mut block_hash.encode().as_slice())?;
+						return Ok(value)
+					}
 				}
 			}
+		} else {
+			warn!("Error in event subscription: {:?}", event_result)
 		}
 	}
 }
@@ -405,5 +411,6 @@ fn connection_can_be_closed(top_status: TrustedOperationStatus) -> bool {
 			| TrustedOperationStatus::Future
 			| TrustedOperationStatus::Ready
 			| TrustedOperationStatus::Broadcast
+			| TrustedOperationStatus::Invalid
 	)
 }

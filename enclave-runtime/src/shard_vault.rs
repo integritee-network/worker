@@ -22,7 +22,11 @@ use crate::{
 	},
 	utils::{
 		get_extrinsic_factory_from_integritee_solo_or_parachain,
+		get_extrinsic_factory_from_target_a_solo_or_parachain,
+		get_extrinsic_factory_from_target_b_solo_or_parachain,
 		get_node_metadata_repository_from_integritee_solo_or_parachain,
+		get_node_metadata_repository_from_target_a_solo_or_parachain,
+		get_node_metadata_repository_from_target_b_solo_or_parachain, DecodeRaw,
 	},
 };
 use codec::{Compact, Decode, Encode};
@@ -54,11 +58,21 @@ use std::{slice, sync::Arc, vec::Vec};
 pub unsafe extern "C" fn init_proxied_shard_vault(
 	shard: *const u8,
 	shard_size: u32,
+	parentchain_id: *const u8,
+	parentchain_id_size: u32,
 ) -> sgx_status_t {
 	let shard_identifier =
 		ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
+	let parentchain_id =
+		match ParentchainId::decode_raw(parentchain_id, parentchain_id_size as usize) {
+			Ok(id) => id,
+			Err(e) => {
+				error!("Could not decode parentchain id: {:?}", e);
+				return sgx_status_t::SGX_ERROR_UNEXPECTED
+			},
+		};
 
-	if let Err(e) = init_proxied_shard_vault_internal(shard_identifier) {
+	if let Err(e) = init_proxied_shard_vault_internal(shard_identifier, parentchain_id) {
 		error!("Failed to initialize proxied shard vault ({:?}): {:?}", shard_identifier, e);
 		return sgx_status_t::SGX_ERROR_UNEXPECTED
 	}
@@ -79,11 +93,10 @@ pub unsafe extern "C" fn get_ecc_vault_pubkey(
 	let shard_vault = match get_shard_vault_account(shard) {
 		Ok(account) => account,
 		Err(e) => {
-			error!("Failed to fetch shard vault account: {:?}", e);
+			warn!("Failed to fetch shard vault account: {:?}", e);
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	};
-
 	let pubkey_slice = slice::from_raw_parts_mut(pubkey, pubkey_size as usize);
 	pubkey_slice.clone_from_slice(shard_vault.encode().as_slice());
 	sgx_status_t::SGX_SUCCESS
@@ -105,7 +118,10 @@ pub(crate) fn get_shard_vault_account(shard: ShardIdentifier) -> EnclaveResult<A
 		})
 }
 
-pub(crate) fn init_proxied_shard_vault_internal(shard: ShardIdentifier) -> EnclaveResult<()> {
+pub(crate) fn init_proxied_shard_vault_internal(
+	shard: ShardIdentifier,
+	parentchain_id: ParentchainId,
+) -> EnclaveResult<()> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	if !state_handler
 		.shard_exists(&shard)
@@ -116,20 +132,41 @@ pub(crate) fn init_proxied_shard_vault_internal(shard: ShardIdentifier) -> Encla
 
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 	let enclave_signer = GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT.get()?.retrieve_key()?;
-	let enclave_extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
-	let node_metadata_repo = get_node_metadata_repository_from_integritee_solo_or_parachain()?;
+
 	let vault = enclave_signer
 		.derive(vec![DeriveJunction::hard(shard.encode())].into_iter(), None)
 		.map_err(|_| Error::Other("failed to derive shard vault keypair".into()))?
 		.0;
-
 	info!("shard vault account derived pubkey: 0x{}", hex::encode(vault.public().0));
 
-	let (state_lock, mut state) = state_handler.load_for_mutation(&shard)?;
-	state.state.insert(SHARD_VAULT_KEY.into(), vault.public().0.to_vec());
-	state_handler.write_after_mutation(state, state_lock, &shard)?;
+	let (enclave_extrinsics_factory, node_metadata_repo) = match parentchain_id {
+		ParentchainId::Integritee => {
+			let (state_lock, mut state) = state_handler.load_for_mutation(&shard)?;
+			state.state.insert(SHARD_VAULT_KEY.into(), vault.public().0.to_vec());
+			state_handler.write_after_mutation(state, state_lock, &shard)?;
+			let enclave_extrinsics_factory =
+				get_extrinsic_factory_from_integritee_solo_or_parachain()?;
+			let node_metadata_repo =
+				get_node_metadata_repository_from_integritee_solo_or_parachain()?;
+			(enclave_extrinsics_factory, node_metadata_repo)
+		},
+		ParentchainId::TargetA => {
+			let enclave_extrinsics_factory =
+				get_extrinsic_factory_from_target_a_solo_or_parachain()?;
+			let node_metadata_repo =
+				get_node_metadata_repository_from_target_a_solo_or_parachain()?;
+			(enclave_extrinsics_factory, node_metadata_repo)
+		},
+		ParentchainId::TargetB => {
+			let enclave_extrinsics_factory =
+				get_extrinsic_factory_from_target_b_solo_or_parachain()?;
+			let node_metadata_repo =
+				get_node_metadata_repository_from_target_b_solo_or_parachain()?;
+			(enclave_extrinsics_factory, node_metadata_repo)
+		},
+	};
 
-	info!("send existential funds from enclave account to vault account");
+	info!("[{:?}] send existential funds from enclave account to vault account", parentchain_id);
 	let call_ids = node_metadata_repo
 		.get_from_metadata(|m| m.call_indexes("Balances", "transfer_keep_alive"))?
 		.map_err(MetadataProviderError::MetadataError)?;
@@ -140,18 +177,18 @@ pub(crate) fn init_proxied_shard_vault_internal(shard: ShardIdentifier) -> Encla
 		Compact(PROXY_DEPOSIT),
 	));
 
-	info!("vault funding call: 0x{}", hex::encode(call.0.clone()));
+	info!("[{:?}] vault funding call: 0x{}", parentchain_id, hex::encode(call.0.clone()));
 	let xts = enclave_extrinsics_factory.create_extrinsics(&[call], None)?;
 
 	//this extrinsic must be included in a block before we can move on. otherwise the next will fail
-	ocall_api.send_to_parentchain(xts, &ParentchainId::Integritee, true)?;
+	ocall_api.send_to_parentchain(xts, &parentchain_id, true)?;
 
 	// we are assuming nonce=0 here.
 	let nonce_cache = Arc::new(NonceCache::default());
 	let vault_extrinsics_factory = enclave_extrinsics_factory
 		.with_signer(StaticExtrinsicSigner::<_, PairSignature>::new(vault), nonce_cache);
 
-	info!("register enclave signer as proxy for shard vault");
+	info!("[{:?}] register enclave signer as proxy for shard vault", parentchain_id);
 	let call_ids = node_metadata_repo
 		.get_from_metadata(|m| m.call_indexes("Proxy", "add_proxy"))?
 		.map_err(MetadataProviderError::MetadataError)?;
@@ -163,10 +200,10 @@ pub(crate) fn init_proxied_shard_vault_internal(shard: ShardIdentifier) -> Encla
 		0u32, // delay
 	));
 
-	info!("add proxy call: 0x{}", hex::encode(call.0.clone()));
+	info!("[{:?}] add proxy call: 0x{}", parentchain_id, hex::encode(call.0.clone()));
 	let xts = vault_extrinsics_factory.create_extrinsics(&[call], None)?;
 
-	ocall_api.send_to_parentchain(xts, &ParentchainId::Integritee, false)?;
+	ocall_api.send_to_parentchain(xts, &parentchain_id, false)?;
 	Ok(())
 }
 

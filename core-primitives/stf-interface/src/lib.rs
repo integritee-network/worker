@@ -28,10 +28,7 @@ use core::fmt::Debug;
 use itp_node_api_metadata::NodeMetadataTrait;
 use itp_node_api_metadata_provider::AccessNodeMetadata;
 use itp_stf_primitives::traits::TrustedCallVerification;
-use itp_types::{
-	parentchain::{AccountId, ParentchainId},
-	OpaqueCall,
-};
+use itp_types::parentchain::{AccountId, ParentchainCall, ParentchainId};
 
 #[cfg(feature = "mocks")]
 pub mod mocks;
@@ -73,7 +70,7 @@ where
 	fn execute_call(
 		state: &mut State,
 		call: TCS,
-		calls: &mut Vec<OpaqueCall>,
+		calls: &mut Vec<ParentchainCall>,
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error>;
 }
@@ -95,7 +92,7 @@ where
 	/// Execute a call. Callbacks are added as an `OpaqueCall`.
 	fn execute(
 		self,
-		calls: &mut Vec<OpaqueCall>,
+		calls: &mut Vec<ParentchainCall>,
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error>;
 

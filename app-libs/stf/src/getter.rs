@@ -171,7 +171,7 @@ impl ExecuteGetter for TrustedGetterSigned {
 				let info = System::account(&who);
 				debug!("TrustedGetter free_balance");
 				debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
-				debug!("Account free balance is {}", info.data.free);
+				std::println!("⣿STF⣿ 🔍 TrustedGetter query: free balance for ⣿⣿⣿ is ⣿⣿⣿",);
 				Some(info.data.free.encode())
 			},
 			TrustedGetter::reserved_balance(who) => {

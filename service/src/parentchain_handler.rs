@@ -149,7 +149,7 @@ where
 			.ok_or(Error::MissingLastFinalizedBlock)?;
 		let curr_block_number = curr_block.block.header().number();
 
-		println!(
+		info!(
 			"[{:?}] Syncing blocks from {} to {}",
 			id, last_synced_header.number, curr_block_number
 		);
@@ -160,7 +160,7 @@ where
 				until_synced_header.number + 1,
 				min(until_synced_header.number + BLOCK_SYNC_BATCH_SIZE, curr_block_number),
 			)?;
-			println!("[+] [{:?}] Found {} block(s) to sync", id, block_chunk_to_sync.len());
+			info!("[{:?}] Found {} block(s) to sync", id, block_chunk_to_sync.len());
 			if block_chunk_to_sync.is_empty() {
 				return Ok(until_synced_header)
 			}
@@ -172,7 +172,7 @@ where
 				})
 				.collect::<Result<Vec<_>, _>>()?;
 
-			println!("[+] [{:?}] Found {} event vector(s) to sync", id, events_chunk_to_sync.len());
+			info!("[{:?}] Found {} event vector(s) to sync", id, events_chunk_to_sync.len());
 
 			let events_proofs_chunk_to_sync: Vec<StorageProof> = block_chunk_to_sync
 				.iter()
@@ -192,7 +192,7 @@ where
 				.last()
 				.map(|b| b.block.header.clone())
 				.ok_or(Error::EmptyChunk)?;
-			println!(
+			info!(
 				"[{:?}] Synced {} out of {} finalized parentchain blocks",
 				id, until_synced_header.number, curr_block_number,
 			);

@@ -90,8 +90,7 @@ pub fn test_tls_ra_server_client_networking() {
 	let client_shielding_key = Arc::new(RwLock::new(Vec::new()));
 	let client_state_key = Arc::new(RwLock::new(initial_client_state_key.clone()));
 	let client_state = Arc::new(RwLock::new(initial_client_state.clone()));
-	let client_light_client_state =
-		Arc::new(RwLock::new(initial_client_light_client_state.clone()));
+	let client_light_client_state = Arc::new(RwLock::new(initial_client_light_client_state));
 
 	let client_seal_handler = SealHandlerMock::new(
 		client_shielding_key.clone(),
@@ -118,7 +117,7 @@ pub fn test_tls_ra_server_client_networking() {
 		Some(&QUOTE_SIZE),
 		shard,
 		SKIP_RA,
-		client_seal_handler.clone(),
+		client_seal_handler,
 		client_account,
 	);
 

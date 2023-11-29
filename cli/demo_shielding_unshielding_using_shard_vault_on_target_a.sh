@@ -24,7 +24,7 @@ set -e
 # TEST_BALANCE_RUN is either "first" or "second"
 # if -m file is set, the mrenclave will be read from file
 
-while getopts ":m:p:P:t:u:V:C:" opt; do
+while getopts ":m:p:P:t:u:V:C:a:A:" opt; do
     case $opt in
         t)
             TEST=$OPTARG
@@ -35,11 +35,17 @@ while getopts ":m:p:P:t:u:V:C:" opt; do
         p)
             INTEGRITEE_RPC_PORT=$OPTARG
             ;;
+        a)
+            TARGET_A_RPC_PORT=$OPTARG
+            ;;
         P)
             WORKER_1_PORT=$OPTARG
             ;;
         u)
             INTEGRITEE_RPC_URL=$OPTARG
+            ;;
+        A)
+            TARGET_A_RPC_URL=$OPTARG
             ;;
         V)
             WORKER_1_URL=$OPTARG
@@ -57,6 +63,9 @@ done
 INTEGRITEE_RPC_PORT=${INTEGRITEE_RPC_PORT:-9944}
 INTEGRITEE_RPC_URL=${INTEGRITEE_RPC_URL:-"ws://127.0.0.1"}
 
+TARGET_A_RPC_PORT=${TARGET_A_RPC_PORT:-9954}
+TARGET_A_RPC_URL=${TARGET_A_RPC_URL:-"ws://127.0.0.1"}
+
 WORKER_1_PORT=${WORKER_1_PORT:-2000}
 WORKER_1_URL=${WORKER_1_URL:-"wss://127.0.0.1"}
 
@@ -64,7 +73,8 @@ CLIENT_BIN=${CLIENT_BIN:-"./../bin/integritee-cli"}
 
 echo "Using client binary ${CLIENT_BIN}"
 ${CLIENT_BIN} --version
-echo "Using node uri ${INTEGRITEE_RPC_URL}:${INTEGRITEE_RPC_PORT}"
+echo "Using integritee node uri ${INTEGRITEE_RPC_URL}:${INTEGRITEE_RPC_PORT}"
+echo "Using target_a node uri ${TARGET_A_RPC_URL}:${TARGET_A_RPC_PORT}"
 echo "Using trusted-worker uri ${WORKER_1_URL}:${WORKER_1_PORT}"
 echo ""
 
@@ -79,16 +89,20 @@ AMOUNT_UNSHIELD=$(( 1 * UNIT ))
 
 CLIENT="${CLIENT_BIN} -p ${INTEGRITEE_RPC_PORT} -P ${WORKER_1_PORT} -u ${INTEGRITEE_RPC_URL} -U ${WORKER_1_URL}"
 
+# for talking to TARGET_A L1
+CLIENT_A="${CLIENT_BIN} -p ${TARGET_A_RPC_PORT} -P ${WORKER_1_PORT} -u ${TARGET_A_RPC_URL} -U ${WORKER_1_URL}"
+
 # offchain-worker only suppports indirect calls
 CALLTYPE=
 case "$FLAVOR_ID" in
     sidechain) CALLTYPE="--direct" ;;
     offchain-worker) : ;;
-    *) echo "unsupported flavor_id" ; exit 1 ;;
+    *) CALLTYPE="--direct" ;;
 esac
+echo "using call type: ${CALLTYPE} (empty means indirect)"
 
 # interval and max rounds to wait to check the given account balance in sidechain
-WAIT_INTERVAL_SECONDS=10
+WAIT_INTERVAL_SECONDS=6
 WAIT_ROUNDS=20
 
 # Poll and assert the given account's state is equal to expected,
@@ -104,7 +118,7 @@ function wait_assert_state()
         if (( $4 >= state ? $4 - state < FEE_TOLERANCE : state - $4 < FEE_TOLERANCE)); then
             return
         else
-            :
+            echo -n "."
         fi
     done
     echo
@@ -112,6 +126,21 @@ function wait_assert_state()
     exit 1
 }
 
+function wait_assert_state_target_a()
+{
+    for i in $(seq 1 $WAIT_ROUNDS); do
+        sleep $WAIT_INTERVAL_SECONDS
+        state=$(${CLIENT_A} "$2" "$1")
+        if (( $4 >= state ? $4 - state < FEE_TOLERANCE : state - $4 < FEE_TOLERANCE)); then
+            return
+        else
+            echo -n "."
+        fi
+    done
+    echo
+    echo "Assert $2 $3 failed, expected = $4, actual = $state, tolerance = $FEE_TOLERANCE"
+    exit 1
+}
 # Do a live query and assert the given account's state is equal to expected
 # usage:
 #   assert_state <mrenclave> <account> <state-name> <expected-state>
@@ -146,36 +175,40 @@ else
 fi
 [[ -z $MRENCLAVE ]] && { echo "MRENCLAVE is empty. cannot continue" ; exit 1; }
 
-echo "* Create a new incognito account for Alice"
-ICGACCOUNTALICE=//AliceIncognito
-echo "  Alice's incognito account = ${ICGACCOUNTALICE}"
-echo ""
 
 echo "* Create a new incognito account for Bob"
 ICGACCOUNTBOB=$(${CLIENT} trusted --mrenclave ${MRENCLAVE} new-account)
 echo "  Bob's incognito account = ${ICGACCOUNTBOB}"
 echo ""
 
-# Asssert the initial balance of Alice incognito
-# The initial balance of Bob incognito should always be 0, as Bob is newly created
-BALANCE_INCOGNITO_ALICE=0
-case $TEST in
-    first)
-        wait_assert_state ${MRENCLAVE} ${ICGACCOUNTALICE} balance 0 ;;
-    second)
-        wait_assert_state ${MRENCLAVE} ${ICGACCOUNTALICE} balance $(( AMOUNT_SHIELD - AMOUNT_TRANSFER - AMOUNT_UNSHIELD ))
-        BALANCE_INCOGNITO_ALICE=$(( AMOUNT_SHIELD - AMOUNT_TRANSFER - AMOUNT_UNSHIELD )) ;;
-    *)
-        echo "unsupported test mode"
-        exit 1 ;;
-esac
-
-echo "* Shield ${AMOUNT_SHIELD} tokens to Alice's incognito account"
-${CLIENT} shield-funds //Alice ${ICGACCOUNTALICE} ${AMOUNT_SHIELD} ${MRENCLAVE}
+echo "* Query shard vault account"
+VAULT=$(${CLIENT} trusted get-shard-vault)
+echo "  shard vault account = ${VAULT}"
 echo ""
 
-echo "* Wait and assert Alice's incognito account balance... "
-wait_assert_state ${MRENCLAVE} ${ICGACCOUNTALICE} balance $(( BALANCE_INCOGNITO_ALICE + AMOUNT_SHIELD ))
+# Asssert the initial balance of Charlie incognito
+# The initial balance of Bob incognito should always be 0, as Bob is newly created
+BALANCE_INCOGNITO_CHARLIE=0
+BALANCE_A_FERDIE=$(${CLIENT_A} balance //Ferdie)
+
+case $TEST in
+    first)
+        wait_assert_state ${MRENCLAVE} //Charlie balance 0 ;;
+    second)
+        wait_assert_state ${MRENCLAVE} //Charlie balance $(( AMOUNT_SHIELD - AMOUNT_TRANSFER - AMOUNT_UNSHIELD ))
+        BALANCE_INCOGNITO_CHARLIE=$(( AMOUNT_SHIELD - AMOUNT_TRANSFER - AMOUNT_UNSHIELD )) ;;
+    *)
+        echo "assuming first run of test"
+        wait_assert_state ${MRENCLAVE} //Charlie balance 0 ;;
+esac
+
+echo "* Shield ${AMOUNT_SHIELD} tokens from TARGET_A to Charlie's account on L2"
+${CLIENT_A} transfer //Alice //Charlie $((AMOUNT_SHIELD * 2))
+${CLIENT_A} transfer //Charlie ${VAULT} ${AMOUNT_SHIELD}
+echo ""
+
+echo "* Wait and assert Charlie's L2 account balance... "
+wait_assert_state ${MRENCLAVE} //Charlie balance $(( BALANCE_INCOGNITO_CHARLIE + AMOUNT_SHIELD ))
 echo "✔ ok"
 
 echo "* Wait and assert Bob's incognito account balance... "
@@ -183,12 +216,12 @@ wait_assert_state ${MRENCLAVE} ${ICGACCOUNTBOB} balance 0
 echo "✔ ok"
 echo ""
 
-echo "* Send ${AMOUNT_TRANSFER} funds from Alice's incognito account to Bob's incognito account"
-$CLIENT trusted --mrenclave ${MRENCLAVE} transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNT_TRANSFER}
+echo "* Send ${AMOUNT_TRANSFER} funds from Charlie's L2 account to Bob's incognito account"
+$CLIENT trusted $CALLTYPE --mrenclave ${MRENCLAVE} transfer //Charlie ${ICGACCOUNTBOB} ${AMOUNT_TRANSFER}
 echo ""
 
-echo "* Wait and assert Alice's incognito account balance... "
-wait_assert_state ${MRENCLAVE} ${ICGACCOUNTALICE} balance $(( BALANCE_INCOGNITO_ALICE + AMOUNT_SHIELD - AMOUNT_TRANSFER ))
+echo "* Wait and assert Charlie's L2 account balance... "
+wait_assert_state ${MRENCLAVE} //Charlie balance $(( BALANCE_INCOGNITO_CHARLIE + AMOUNT_SHIELD - AMOUNT_TRANSFER ))
 echo "✔ ok"
 
 echo "* Wait and assert Bob's incognito account balance... "
@@ -196,25 +229,30 @@ wait_assert_state ${MRENCLAVE} ${ICGACCOUNTBOB} balance ${AMOUNT_TRANSFER}
 echo "✔ ok"
 echo ""
 
-echo "* Un-shield ${AMOUNT_UNSHIELD} tokens from Alice's incognito account to Ferie's L1 account"
-${CLIENT} trusted --mrenclave ${MRENCLAVE} unshield-funds ${ICGACCOUNTALICE} //Ferdie ${AMOUNT_UNSHIELD}
+echo "* Un-shield ${AMOUNT_UNSHIELD} tokens from Charlie's incognito account to Ferie's L1 account"
+${CLIENT} trusted $CALLTYPE --mrenclave ${MRENCLAVE} unshield-funds //Charlie //Ferdie ${AMOUNT_UNSHIELD}
 echo ""
 
-echo "* Wait and assert Alice's incognito account balance... "
-wait_assert_state ${MRENCLAVE} ${ICGACCOUNTALICE} balance $(( BALANCE_INCOGNITO_ALICE + AMOUNT_SHIELD - AMOUNT_TRANSFER - AMOUNT_UNSHIELD ))
+echo "* Wait and assert Charlie's incognito account balance... "
+wait_assert_state ${MRENCLAVE} //Charlie balance $(( BALANCE_INCOGNITO_CHARLIE + AMOUNT_SHIELD - AMOUNT_TRANSFER - AMOUNT_UNSHIELD ))
+echo "✔ ok"
+
+echo "* Wait and assert Ferdie's Target A account balance... "
+wait_assert_state_target_a //Ferdie balance $(( BALANCE_A_FERDIE + AMOUNT_UNSHIELD ))
 echo "✔ ok"
 
 echo "* Wait and assert Bob's incognito account balance... "
 wait_assert_state ${MRENCLAVE} ${ICGACCOUNTBOB} balance ${AMOUNT_TRANSFER}
 echo "✔ ok"
 
-# Test the nonce handling, using Bob's incognito account as the sender as Alice's
+# Test the nonce handling, using Bob's incognito account as the sender as Charlie's
 # balance needs to be verified in the second round while Bob is newly created each time
 
 echo "* Create a new incognito account for Charlie"
 ICGACCOUNTCHARLIE=$(${CLIENT} trusted --mrenclave ${MRENCLAVE} new-account)
 echo "  Charlie's incognito account = ${ICGACCOUNTCHARLIE}"
 echo ""
+
 
 echo "* Assert Bob's incognito initial nonce..."
 assert_state ${MRENCLAVE} ${ICGACCOUNTBOB} nonce 0

@@ -25,7 +25,7 @@ use crate::{
 };
 use codec::Decode;
 use hdrhistogram::Histogram;
-use ita_stf::{Getter, Index, TrustedCall, TrustedCallSigned, TrustedGetter};
+use ita_stf::{Getter, Index, TrustedCall, TrustedCallSigned, TrustedGetter, STF_TX_FEE};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
@@ -64,7 +64,7 @@ pub struct BenchmarkCommand {
 
 	/// The number of iterations to execute for each client
 	#[clap(default_value_t = 30)]
-	number_iterations: u32,
+	number_iterations: u128,
 
 	/// Adds a random wait before each transaction. This is the lower bound for the interval in ms.
 	#[clap(default_value_t = 0)]
@@ -136,16 +136,15 @@ impl BenchmarkCommand {
 		println!("Nonce for account {}: {}", self.funding_account, nonce_start);
 
 		let mut accounts = Vec::new();
-
+		let initial_balance = (self.number_iterations + 1) * (STF_TX_FEE + EXISTENTIAL_DEPOSIT);
 		// Setup new accounts and initialize them with money from Alice.
 		for i in 0..self.number_clients {
 			let nonce = i + nonce_start;
-			println!("Initializing account {}", i);
+			println!("Initializing account {} with initial amount {:?}", i, initial_balance);
 
 			// Create new account to use.
 			let a = LocalKeystore::sr25519_generate_new(&store, SR25519_KEY_TYPE, None).unwrap();
 			let account = get_pair_from_str(trusted_args, a.to_string().as_str());
-			let initial_balance = 10000000;
 
 			// Transfer amount from Alice to new account.
 			let top: TrustedOperation<TrustedCallSigned, Getter> = TrustedCall::balance_transfer(
@@ -231,7 +230,7 @@ impl BenchmarkCommand {
 					output.push(result);
 
 					// FIXME: We probably should re-fund the account in this case.
-					if client.current_balance <= EXISTENTIAL_DEPOSIT {
+					if client.current_balance <= EXISTENTIAL_DEPOSIT + STF_TX_FEE {
 						error!("Account {:?} does not have enough balance anymore. Finishing benchmark early", client.account.public());
 						break;
 					}

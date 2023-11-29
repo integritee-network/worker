@@ -69,8 +69,9 @@ where
 				.filter(|&event| event.to == *vault_account)
 				.try_for_each(|event| {
 					info!("found transfer_event to vault account: {}", event);
-					//call = IndirectCall::ShieldFunds(ShieldFundsArgs{ })
+					//debug!("shielding from Integritee suppressed");
 					Self::shield_funds(executor, &event.from, event.amount)
+					//Err(ParentchainError::FunctionalityDisabled)
 				})
 				.map_err(|_| ParentchainError::ShieldFundsFailure)?;
 		}

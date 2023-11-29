@@ -28,6 +28,11 @@ impl<Hash> RpcResponderMock<Hash> {
 		RpcResponderMock { _hash: PhantomData }
 	}
 }
+impl<Hash> Default for RpcResponderMock<Hash> {
+	fn default() -> Self {
+		Self::new()
+	}
+}
 
 impl<Hash> SendRpcResponse for RpcResponderMock<Hash>
 where
