@@ -97,6 +97,7 @@ impl Sidechain for EnclaveMock {
 		_events: &[Vec<u8>],
 		_events_proofs: &[StorageProof],
 		_: &ParentchainId,
+		_: bool,
 	) -> EnclaveResult<()> {
 		Ok(())
 	}

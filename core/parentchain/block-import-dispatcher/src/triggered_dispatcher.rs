@@ -232,7 +232,11 @@ mod tests {
 		let dispatcher = test_fixtures();
 
 		dispatcher
-			.dispatch_import(vec![1, 2, 3, 4, 5], vec![vec![1], vec![2], vec![3], vec![4], vec![5]])
+			.dispatch_import(
+				vec![1, 2, 3, 4, 5],
+				vec![vec![1], vec![2], vec![3], vec![4], vec![5]],
+				false,
+			)
 			.unwrap();
 
 		assert!(dispatcher.block_importer.get_all_imported_blocks().is_empty());
@@ -248,10 +252,14 @@ mod tests {
 		let dispatcher = test_fixtures();
 
 		dispatcher
-			.dispatch_import(vec![1, 2, 3, 4, 5], vec![vec![1], vec![2], vec![3], vec![4], vec![5]])
+			.dispatch_import(
+				vec![1, 2, 3, 4, 5],
+				vec![vec![1], vec![2], vec![3], vec![4], vec![5]],
+				false,
+			)
 			.unwrap();
 		dispatcher
-			.dispatch_import(vec![6, 7, 8], vec![vec![6], vec![7], vec![8]])
+			.dispatch_import(vec![6, 7, 8], vec![vec![6], vec![7], vec![8]], false)
 			.unwrap();
 
 		assert!(dispatcher.block_importer.get_all_imported_blocks().is_empty());
@@ -266,7 +274,7 @@ mod tests {
 	fn triggering_import_all_empties_queue() {
 		let dispatcher = test_fixtures();
 
-		dispatcher.dispatch_import(vec![1, 2, 3, 4, 5], vec![]).unwrap();
+		dispatcher.dispatch_import(vec![1, 2, 3, 4, 5], vec![], false).unwrap();
 		let latest_imported = dispatcher.import_all().unwrap().unwrap();
 
 		assert_eq!(latest_imported, 5);
@@ -278,7 +286,7 @@ mod tests {
 	fn triggering_import_all_on_empty_queue_imports_none() {
 		let dispatcher = test_fixtures();
 
-		dispatcher.dispatch_import(vec![], vec![]).unwrap();
+		dispatcher.dispatch_import(vec![], vec![], false).unwrap();
 		let maybe_latest_imported = dispatcher.import_all().unwrap();
 
 		assert!(maybe_latest_imported.is_none());
@@ -295,7 +303,11 @@ mod tests {
 		let dispatcher = test_fixtures();
 
 		dispatcher
-			.dispatch_import(vec![1, 2, 3, 4, 5], vec![vec![1], vec![2], vec![3], vec![4], vec![5]])
+			.dispatch_import(
+				vec![1, 2, 3, 4, 5],
+				vec![vec![1], vec![2], vec![3], vec![4], vec![5]],
+				false,
+			)
 			.unwrap();
 		let latest_imported =
 			dispatcher.import_until(|i: &SignedBlockType| i == &4).unwrap().unwrap();
@@ -311,7 +323,11 @@ mod tests {
 		let dispatcher = test_fixtures();
 
 		dispatcher
-			.dispatch_import(vec![1, 2, 3, 4, 5], vec![vec![1], vec![2], vec![3], vec![4], vec![5]])
+			.dispatch_import(
+				vec![1, 2, 3, 4, 5],
+				vec![vec![1], vec![2], vec![3], vec![4], vec![5]],
+				false,
+			)
 			.unwrap();
 		let maybe_latest_imported = dispatcher.import_until(|i: &SignedBlockType| i == &8).unwrap();
 
@@ -328,7 +344,7 @@ mod tests {
 	fn trigger_import_all_but_latest_works() {
 		let dispatcher = test_fixtures();
 
-		dispatcher.dispatch_import(vec![1, 2, 3, 4, 5], vec![]).unwrap();
+		dispatcher.dispatch_import(vec![1, 2, 3, 4, 5], vec![], false).unwrap();
 		dispatcher.import_all_but_latest().unwrap();
 
 		assert_eq!(dispatcher.block_importer.get_all_imported_blocks(), vec![1, 2, 3, 4]);

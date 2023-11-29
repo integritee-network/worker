@@ -100,7 +100,7 @@ mod tests {
 			counter_clone.increment();
 		});
 
-		dispatcher.dispatch_import(vec![1u32, 2u32], vec![]).unwrap();
+		dispatcher.dispatch_import(vec![1u32, 2u32], vec![], false).unwrap();
 
 		assert_eq!(1, notification_counter.get_counter());
 	}
