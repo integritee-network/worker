@@ -106,7 +106,6 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	let maybe_target_b_parentchain_import_dispatcher =
 		get_triggered_dispatcher_from_target_b_solo_or_parachain().ok();
 
-	// todo: is this really correct? are these blocks already processed into top-pool?
 	let maybe_latest_target_a_parentchain_header =
 		if let Some(ref _triggered_dispatcher) = maybe_target_a_parentchain_import_dispatcher {
 			let validator_access = get_validator_accessor_from_target_a_solo_or_parachain()?;
