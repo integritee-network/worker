@@ -65,10 +65,6 @@ impl EnclaveBase for EnclaveMock {
 		unimplemented!()
 	}
 
-	fn trigger_parentchain_block_import(&self, _: &ParentchainId) -> EnclaveResult<()> {
-		unimplemented!()
-	}
-
 	fn set_nonce(&self, _: u32, _: ParentchainId) -> EnclaveResult<()> {
 		unimplemented!()
 	}
