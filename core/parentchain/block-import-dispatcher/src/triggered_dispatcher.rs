@@ -100,15 +100,23 @@ where
 		&self,
 		blocks: Vec<SignedBlockType>,
 		events: Vec<RawEventsPerBlock>,
+		is_syncing: bool,
 	) -> Result<()> {
 		trace!(
-			"Pushing parentchain block(s) and event(s) ({}) ({}) to import queue",
+			"Triggered dispatcher received block(s) and event(s) ({}) ({})",
 			blocks.len(),
 			events.len()
 		);
-		// Push all the blocks to be dispatched into the queue.
-		self.events_queue.push_multiple(events).map_err(Error::ImportQueue)?;
-		self.import_queue.push_multiple(blocks).map_err(Error::ImportQueue)
+		if is_syncing {
+			trace!("Triggered is in sync mode, immediately importing blocks and events");
+			self.block_importer
+				.import_parentchain_blocks(blocks, events)
+				.map_err(|e| Error::BlockImport(e))
+		} else {
+			trace!("pushing blocks and events to import queues");
+			self.events_queue.push_multiple(events).map_err(Error::ImportQueue)?;
+			self.import_queue.push_multiple(blocks).map_err(Error::ImportQueue)
+		}
 	}
 }
 

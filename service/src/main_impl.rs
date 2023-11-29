@@ -528,7 +528,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 			// Syncing all parentchain blocks, this might take a while..
 			let last_synced_header =
-				parentchain_handler.sync_parentchain(last_synced_header).unwrap();
+				parentchain_handler.sync_parentchain(last_synced_header, true).unwrap();
 
 			start_parentchain_header_subscription_thread(parentchain_handler, last_synced_header);
 		},
@@ -620,7 +620,7 @@ fn init_target_parentchain<E>(
 
 		// Syncing all parentchain blocks, this might take a while..
 		let last_synched_header =
-			parentchain_handler.sync_parentchain(last_synched_header).unwrap();
+			parentchain_handler.sync_parentchain(last_synched_header, true).unwrap();
 
 		start_parentchain_header_subscription_thread(parentchain_handler, last_synched_header)
 	}
@@ -1030,7 +1030,7 @@ fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 			new_header.number
 		);
 
-		last_synced_header = parentchain_handler.sync_parentchain(last_synced_header)?;
+		last_synced_header = parentchain_handler.sync_parentchain(last_synced_header, false)?;
 	}
 }
 

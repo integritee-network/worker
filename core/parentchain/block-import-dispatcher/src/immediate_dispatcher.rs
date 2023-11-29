@@ -47,7 +47,14 @@ impl<BlockImporter, SignedBlockType> DispatchBlockImport<SignedBlockType>
 where
 	BlockImporter: ImportParentchainBlocks<SignedBlockType = SignedBlockType>,
 {
-	fn dispatch_import(&self, blocks: Vec<SignedBlockType>, events: Vec<Vec<u8>>) -> Result<()> {
+	fn dispatch_import(
+		&self,
+		blocks: Vec<SignedBlockType>,
+		events: Vec<Vec<u8>>,
+		_is_syncing: bool,
+	) -> Result<()> {
+		// _is_syncing does not matter for the immediate dispatcher, behavoiur is the same. Immediate block import.
+
 		debug!("Importing {} parentchain blocks", blocks.len());
 		self.block_importer.import_parentchain_blocks(blocks, events)?;
 		debug!("Notifying {} observers of import", self.import_event_observers.len());

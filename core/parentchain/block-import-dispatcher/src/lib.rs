@@ -45,7 +45,12 @@ pub trait DispatchBlockImport<SignedBlockType> {
 	/// Dispatch blocks to be imported.
 	///
 	/// The blocks may be imported immediately, get queued, delayed or grouped.
-	fn dispatch_import(&self, blocks: Vec<SignedBlockType>, events: Vec<Vec<u8>>) -> Result<()>;
+	fn dispatch_import(
+		&self,
+		blocks: Vec<SignedBlockType>,
+		events: Vec<Vec<u8>>,
+		is_syncing: bool,
+	) -> Result<()>;
 }
 
 /// Wrapper for the actual dispatchers. Allows to define one global type for
@@ -96,15 +101,20 @@ where
 	TriggeredDispatcher: DispatchBlockImport<SignedBlockType>,
 	ImmediateDispatcher: DispatchBlockImport<SignedBlockType>,
 {
-	fn dispatch_import(&self, blocks: Vec<SignedBlockType>, events: Vec<Vec<u8>>) -> Result<()> {
+	fn dispatch_import(
+		&self,
+		blocks: Vec<SignedBlockType>,
+		events: Vec<Vec<u8>>,
+		is_syncing: bool,
+	) -> Result<()> {
 		match self {
 			BlockImportDispatcher::TriggeredDispatcher(dispatcher) => {
 				log::info!("TRIGGERED DISPATCHER MATCH");
-				dispatcher.dispatch_import(blocks, events)
+				dispatcher.dispatch_import(blocks, events, is_syncing)
 			},
 			BlockImportDispatcher::ImmediateDispatcher(dispatcher) => {
 				log::info!("IMMEDIATE DISPATCHER MATCH");
-				dispatcher.dispatch_import(blocks, events)
+				dispatcher.dispatch_import(blocks, events, is_syncing)
 			},
 			BlockImportDispatcher::EmptyDispatcher => {
 				log::info!("EMPTY DISPATCHER DISPATCHER MATCH");

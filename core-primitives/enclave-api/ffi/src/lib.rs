@@ -84,6 +84,7 @@ extern "C" {
 		events_proofs_size: usize,
 		parentchain_id: *const u8,
 		parentchain_id_size: u32,
+		is_syncing: c_int,
 	) -> sgx_status_t;
 
 	pub fn set_nonce(
