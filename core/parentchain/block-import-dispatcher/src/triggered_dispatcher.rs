@@ -111,7 +111,7 @@ where
 			trace!("Triggered is in sync mode, immediately importing blocks and events");
 			self.block_importer
 				.import_parentchain_blocks(blocks, events)
-				.map_err(|e| Error::BlockImport(e))
+				.map_err(Error::BlockImport)
 		} else {
 			trace!("pushing blocks and events to import queues");
 			self.events_queue.push_multiple(events).map_err(Error::ImportQueue)?;
