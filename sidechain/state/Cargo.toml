@@ -8,7 +8,6 @@ edition = "2021"
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive", "chain-error"] }
 frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 log = { version = "0.4", default-features = false }
-serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 
 # optional std deps
 thiserror = { version = "1.0.9", optional = true }
@@ -27,7 +26,6 @@ sp-io = { optional = true, default-features = false, features = ["disable_oom", 
 
 # substrate deps
 sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 # test deps
 [dev-dependencies]
@@ -37,9 +35,7 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 default = ["std"]
 std = [
     "log/std",
-    "serde/std",
     # substrate
-    "sp-std/std",
     "sp-core/std",
     # local crates
     "itp-sgx-externalities/std",

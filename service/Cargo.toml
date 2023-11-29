@@ -30,7 +30,6 @@ warp = "0.3"
 
 # ipfs
 ipfs-api = "0.11.0"
-sha2 = { version = "0.7", default-features = false }
 
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 primitive-types = { version = "0.12.1", default-features = false, features = ["codec"] }
@@ -69,7 +68,6 @@ teerex-primitives = { git = "https://github.com/integritee-network/pallets.git",
 
 # Substrate dependencies
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-frame-system = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-consensus-grandpa = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }

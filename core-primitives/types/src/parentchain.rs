@@ -15,11 +15,14 @@
 
 */
 
-//! Parentchain specific params. Be sure to change them if your node uses different types.
-
+use alloc::{format, vec::Vec};
 use codec::{Decode, Encode};
+use core::fmt::Debug;
+use itp_stf_primitives::traits::{IndirectExecutor, TrustedCallVerification};
+use itp_utils::stringify::account_id_to_string;
+use sp_core::bounded::alloc;
 use sp_runtime::{generic::Header as HeaderG, traits::BlakeTwo256, MultiAddress, MultiSignature};
-use sp_std::vec::Vec;
+use substrate_api_client::ac_node_api::StaticEvent;
 
 pub type StorageProof = Vec<Vec<u8>>;
 
@@ -63,4 +66,87 @@ pub enum ParentchainId {
 
 pub trait IdentifyParentchain {
 	fn parentchain_id(&self) -> ParentchainId;
+}
+
+pub trait FilterEvents {
+	type Error: From<ParentchainError> + core::fmt::Debug;
+	fn get_extrinsic_statuses(&self) -> core::result::Result<Vec<ExtrinsicStatus>, Self::Error>;
+
+	fn get_transfer_events(&self) -> core::result::Result<Vec<BalanceTransfer>, Self::Error>;
+}
+
+#[derive(Encode, Decode, Debug)]
+pub struct ExtrinsicSuccess;
+
+impl StaticEvent for ExtrinsicSuccess {
+	const PALLET: &'static str = "System";
+	const EVENT: &'static str = "ExtrinsicSuccess";
+}
+
+#[derive(Encode, Decode)]
+pub struct ExtrinsicFailed;
+
+impl StaticEvent for ExtrinsicFailed {
+	const PALLET: &'static str = "System";
+	const EVENT: &'static str = "ExtrinsicFailed";
+}
+
+#[derive(Debug)]
+pub enum ExtrinsicStatus {
+	Success,
+	Failed,
+}
+
+#[derive(Encode, Decode, Debug)]
+pub struct BalanceTransfer {
+	pub from: AccountId,
+	pub to: AccountId,
+	pub amount: Balance,
+}
+
+impl core::fmt::Display for BalanceTransfer {
+	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+		let message = format!(
+			"BalanceTransfer :: from: {}, to: {}, amount: {}",
+			account_id_to_string::<AccountId>(&self.from),
+			account_id_to_string::<AccountId>(&self.to),
+			self.amount
+		);
+		write!(f, "{}", message)
+	}
+}
+
+impl StaticEvent for BalanceTransfer {
+	const PALLET: &'static str = "Balances";
+	const EVENT: &'static str = "Transfer";
+}
+
+pub trait HandleParentchainEvents<Executor, TCS, Error>
+where
+	Executor: IndirectExecutor<TCS, Error>,
+	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
+{
+	fn handle_events(
+		executor: &Executor,
+		events: impl FilterEvents,
+		vault_account: &AccountId,
+	) -> core::result::Result<(), Error>;
+}
+
+#[derive(Debug)]
+pub enum ParentchainError {
+	ShieldFundsFailure,
+}
+
+impl core::fmt::Display for ParentchainError {
+	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+		let message = match &self {
+			ParentchainError::ShieldFundsFailure => "Parentchain Error: ShieldFundsFailure",
+		};
+		write!(f, "{}", message)
+	}
+}
+
+impl From<ParentchainError> for () {
+	fn from(_: ParentchainError) -> Self {}
 }

@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-derive_more = { version = "0.99.5" }
 log = { version = "0.4", default-features = false }
 sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_crypto_helper", default-features = false }
 
@@ -16,6 +15,7 @@ sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-s
 
 # substrate deps
 sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], path = "../../core-primitives/substrate-sgx/sp-io" }
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
@@ -32,25 +32,24 @@ itp-stf-state-handler = { path = "../stf-state-handler", default-features = fals
 itp-storage = { path = "../storage", default-features = false }
 itp-time-utils = { path = "../time-utils", default-features = false }
 itp-types = { path = "../types", default-features = false, features = ["test"] }
-sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], path = "../../core-primitives/substrate-sgx/sp-io" }
 
 
 [features]
 default = ["std"]
 std = [
     "codec/std",
+    "itp-enclave-bridge-storage/std",
+    "itp-node-api-metadata-provider/std",
+    "itp-node-api/std",
+    "itp-ocall-api/std",
     "itp-sgx-crypto/std",
     "itp-sgx-externalities/std",
     "itp-stf-interface/std",
     "itp-stf-primitives/std",
     "itp-stf-state-handler/std",
     "itp-storage/std",
-    "itp-enclave-bridge-storage/std",
     "itp-time-utils/std",
     "itp-types/std",
-    "itp-node-api/std",
-    "itp-node-api-metadata-provider/std",
-    "itp-ocall-api/std",
     "log/std",
     "sp-core/std",
     "sp-io/std",

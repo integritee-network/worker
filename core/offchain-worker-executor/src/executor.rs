@@ -226,7 +226,7 @@ mod tests {
 
 	use itp_test::mock::{
 		handle_state_mock::HandleStateMock,
-		stf_mock::{mock_top_direct_trusted_call_signed, GetterMock, TrustedCallSignedMock},
+		stf_mock::{GetterMock, TrustedCallSignedMock},
 	};
 	use itp_top_pool_author::mocks::AuthorApiMock;
 	use itp_types::Block as ParentchainBlock;

@@ -51,7 +51,11 @@ where
 		_sni: Option<&DNSName>,
 	) -> Result<rustls::ClientCertVerified, rustls::TLSError> {
 		debug!("client cert: {:?}", certs);
-		let issuer = cert::parse_cert_issuer(&certs[0].0).unwrap();
+		let issuer =
+			certs.get(0).ok_or(rustls::TLSError::NoCertificatesPresented).and_then(|cert| {
+				cert::parse_cert_issuer(&cert.0)
+					.map_err(|_| rustls::TLSError::NoCertificatesPresented)
+			})?;
 		info!("client signer (issuer) is: 0x{}", hex::encode(issuer));
 
 		// This call will automatically verify cert is properly signed
@@ -106,7 +110,11 @@ where
 		_ocsp: &[u8],
 	) -> Result<rustls::ServerCertVerified, rustls::TLSError> {
 		debug!("server cert: {:?}", certs);
-		let issuer = cert::parse_cert_issuer(&certs[0].0).unwrap();
+		let issuer =
+			certs.get(0).ok_or(rustls::TLSError::NoCertificatesPresented).and_then(|cert| {
+				cert::parse_cert_issuer(&cert.0)
+					.map_err(|_| rustls::TLSError::NoCertificatesPresented)
+			})?;
 		info!("server signer (issuer) is: 0x{}", hex::encode(issuer));
 
 		if self.skip_ra {

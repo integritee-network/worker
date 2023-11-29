@@ -20,8 +20,6 @@
 
 use crate::storage::StorageEntry;
 use codec::{Decode, Encode};
-#[cfg(feature = "sgx")]
-use sgx_tstd as std;
 use sp_std::vec::Vec;
 
 pub mod parentchain;

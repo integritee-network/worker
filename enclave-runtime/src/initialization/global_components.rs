@@ -19,7 +19,6 @@
 //!
 //! This allows the crates themselves to stay as generic as possible
 //! and ensures that the global instances are initialized once.
-
 use crate::{
 	initialization::parentchain::{
 		integritee_parachain::IntegriteeParachainHandler,
@@ -31,6 +30,7 @@ use crate::{
 	rpc::rpc_response_channel::RpcResponseChannel,
 	tls_ra::seal_handler::SealHandler,
 };
+use ita_parentchain_interface::{integritee, target_a, target_b};
 use ita_sgx_runtime::Runtime;
 use ita_stf::{Getter, State as StfState, Stf, TrustedCallSigned};
 use itc_direct_rpc_server::{
@@ -43,13 +43,7 @@ use itc_parentchain::{
 		BlockImportDispatcher,
 	},
 	block_importer::ParentchainBlockImporter,
-	indirect_calls_executor::{
-		filter_metadata::{
-			EventCreator, ShieldFundsAndInvokeFilter, TransferToAliceShieldsFundsFilter,
-		},
-		parentchain_parser::ParentchainExtrinsicParser,
-		IndirectCallsExecutor,
-	},
+	indirect_calls_executor::{filter_metadata::EventCreator, IndirectCallsExecutor},
 	light_client::{
 		concurrent_access::ValidatorAccessor, io::LightClientStateSealSync,
 		light_validation::LightValidation, light_validation_state::LightValidationState,
@@ -152,18 +146,6 @@ pub type EnclaveLightClientSeal =
 pub type EnclaveExtrinsicsFactory =
 	ExtrinsicsFactory<EnclaveParentchainSigner, NonceCache, EnclaveNodeMetadataRepository>;
 
-/// The enclave's generic indirect executor type.
-///
-/// The `IndirectCallsFilter` calls filter can be configured per parentchain.
-pub type EnclaveIndirectCallsExecutor<IndirectCallsFilter> = IndirectCallsExecutor<
-	EnclaveShieldingKeyRepository,
-	EnclaveStfEnclaveSigner,
-	EnclaveTopPoolAuthor,
-	EnclaveNodeMetadataRepository,
-	IndirectCallsFilter,
-	EventCreator,
->;
-
 pub type EnclaveValidatorAccessor = ValidatorAccessor<
 	LightValidation<ParentchainBlock, EnclaveOCallApi>,
 	ParentchainBlock,
@@ -179,15 +161,24 @@ pub type EnclaveParentchainEventImportQueue = ImportQueue<Vec<u8>>;
 
 // Stuff for the integritee parentchain
 
-pub type IntegriteeParentchainIndirectExecutor =
-	EnclaveIndirectCallsExecutor<ShieldFundsAndInvokeFilter<ParentchainExtrinsicParser>>;
+pub type IntegriteeParentchainIndirectCallsExecutor = IndirectCallsExecutor<
+	EnclaveShieldingKeyRepository,
+	EnclaveStfEnclaveSigner,
+	EnclaveTopPoolAuthor,
+	EnclaveNodeMetadataRepository,
+	integritee::ShieldFundsAndInvokeFilter<integritee::ParentchainExtrinsicParser>,
+	EventCreator<integritee::FilterableEvents>,
+	integritee::ParentchainEventHandler,
+	EnclaveTrustedCallSigned,
+	EnclaveGetter,
+>;
 
 pub type IntegriteeParentchainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
 	EnclaveValidatorAccessor,
 	EnclaveStfExecutor,
 	EnclaveExtrinsicsFactory,
-	IntegriteeParentchainIndirectExecutor,
+	IntegriteeParentchainIndirectCallsExecutor,
 >;
 
 pub type IntegriteeParentchainTriggeredBlockImportDispatcher = TriggeredDispatcher<
@@ -212,15 +203,24 @@ pub type IntegriteeParentchainBlockImportDispatcher = BlockImportDispatcher<
 ///
 /// Also note that the extrinsic parser must be changed if the signed extra contains the
 /// `AssetTxPayment`.
-pub type TargetAParentchainIndirectExecutor =
-	EnclaveIndirectCallsExecutor<TransferToAliceShieldsFundsFilter<ParentchainExtrinsicParser>>;
+pub type TargetAParentchainIndirectCallsExecutor = IndirectCallsExecutor<
+	EnclaveShieldingKeyRepository,
+	EnclaveStfEnclaveSigner,
+	EnclaveTopPoolAuthor,
+	EnclaveNodeMetadataRepository,
+	target_a::TransferToAliceShieldsFundsFilter<target_a::ParentchainExtrinsicParser>,
+	EventCreator<target_a::FilterableEvents>,
+	target_a::ParentchainEventHandler,
+	EnclaveTrustedCallSigned,
+	EnclaveGetter,
+>;
 
 pub type TargetAParentchainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
 	EnclaveValidatorAccessor,
 	EnclaveStfExecutor,
 	EnclaveExtrinsicsFactory,
-	TargetAParentchainIndirectExecutor,
+	TargetAParentchainIndirectCallsExecutor,
 >;
 
 pub type TargetAParentchainTriggeredBlockImportDispatcher = TriggeredDispatcher<
@@ -245,15 +245,24 @@ pub type TargetAParentchainBlockImportDispatcher = BlockImportDispatcher<
 ///
 /// Also note that the extrinsic parser must be changed if the signed extra contains the
 /// `AssetTxPayment`.
-pub type TargetBParentchainIndirectExecutor =
-	EnclaveIndirectCallsExecutor<TransferToAliceShieldsFundsFilter<ParentchainExtrinsicParser>>;
+pub type TargetBParentchainIndirectCallsExecutor = IndirectCallsExecutor<
+	EnclaveShieldingKeyRepository,
+	EnclaveStfEnclaveSigner,
+	EnclaveTopPoolAuthor,
+	EnclaveNodeMetadataRepository,
+	target_b::TargetBExtrinsicFilter<target_b::ParentchainExtrinsicParser>,
+	EventCreator<target_b::FilterableEvents>,
+	target_b::ParentchainEventHandler,
+	EnclaveTrustedCallSigned,
+	EnclaveGetter,
+>;
 
 pub type TargetBParentchainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
 	EnclaveValidatorAccessor,
 	EnclaveStfExecutor,
 	EnclaveExtrinsicsFactory,
-	TargetBParentchainIndirectExecutor,
+	TargetBParentchainIndirectCallsExecutor,
 >;
 
 pub type TargetBParentchainTriggeredBlockImportDispatcher = TriggeredDispatcher<

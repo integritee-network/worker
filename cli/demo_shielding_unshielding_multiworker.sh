@@ -58,4 +58,12 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 "${SCRIPT_DIR}"/demo_shielding_unshielding.sh -p "${INTEGRITEE_RPC_PORT}" -u "${INTEGRITEE_RPC_URL}" -V "${WORKER_1_URL}" -P "${WORKER_1_PORT}" -C "${CLIENT_BIN}" -t first
 "${SCRIPT_DIR}"/demo_shielding_unshielding.sh -p "${INTEGRITEE_RPC_PORT}" -u "${INTEGRITEE_RPC_URL}" -V "${WORKER_2_URL}" -P "${WORKER_2_PORT}" -C "${CLIENT_BIN}" -t second
 
+if [ "$FLAVOR_ID" = offchain-worker ]; then
+    echo "offchain-worker does not support shard vault shielding, therefore we skip those tests"
+    exit 0
+fi
+
+"${SCRIPT_DIR}"/demo_shielding_unshielding_using_shard_vault.sh -p "${INTEGRITEE_RPC_PORT}" -u "${INTEGRITEE_RPC_URL}" -V "${WORKER_1_URL}" -P "${WORKER_1_PORT}" -C "${CLIENT_BIN}" -t first
+"${SCRIPT_DIR}"/demo_shielding_unshielding_using_shard_vault.sh -p "${INTEGRITEE_RPC_PORT}" -u "${INTEGRITEE_RPC_URL}" -V "${WORKER_2_URL}" -P "${WORKER_2_PORT}" -C "${CLIENT_BIN}" -t second
+
 exit 0

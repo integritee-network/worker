@@ -15,10 +15,11 @@
 
 */
 
-use crate::error::Result;
-use ita_stf::{TrustedCall, TrustedCallSigned};
-use itp_stf_primitives::types::AccountId;
-use itp_types::{OpaqueCall, ShardIdentifier, H256};
+use crate::{error::Result, Error};
+use codec::{Decode, Encode};
+use core::fmt::Debug;
+use itp_stf_primitives::traits::{IndirectExecutor, TrustedCallVerification};
+use itp_types::{OpaqueCall, H256};
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header};
 use std::vec::Vec;
 
@@ -49,26 +50,9 @@ pub trait ExecuteIndirectCalls {
 }
 
 /// Trait that should be implemented on indirect calls to be executed.
-pub trait IndirectDispatch<E: IndirectExecutor> {
+pub trait IndirectDispatch<E: IndirectExecutor<TCS, Error>, TCS>
+where
+	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
+{
 	fn dispatch(&self, executor: &E) -> Result<()>;
-}
-
-/// Trait to be implemented on the executor to serve helper methods of the executor
-/// to the `IndirectDispatch` implementation.
-pub trait IndirectExecutor {
-	fn submit_trusted_call(&self, shard: ShardIdentifier, encrypted_trusted_call: Vec<u8>);
-
-	fn decrypt(&self, encrypted: &[u8]) -> Result<Vec<u8>>;
-
-	fn encrypt(&self, value: &[u8]) -> Result<Vec<u8>>;
-
-	fn get_enclave_account(&self) -> Result<AccountId>;
-
-	fn get_default_shard(&self) -> ShardIdentifier;
-
-	fn sign_call_with_self(
-		&self,
-		trusted_call: &TrustedCall,
-		shard: &ShardIdentifier,
-	) -> Result<TrustedCallSigned>;
 }

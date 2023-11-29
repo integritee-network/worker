@@ -6,12 +6,8 @@ edition = "2021"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive", "chain-error"] }
-derive_more = { version = "0.99.5" }
 finality-grandpa = { version = "0.16.0", default-features = false, features = ["derive-codec"] }
-hash-db = { version = "0.15.2", default-features = false }
-lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
 log = { version = "0.4", default-features = false }
-num = { package = "num-traits", version = "0.2", default-features = false }
 thiserror = { version = "1.0.26", optional = true }
 
 # sgx-deps
@@ -26,12 +22,8 @@ itp-storage = { path = "../../../core-primitives/storage", default-features = fa
 itp-types = { path = "../../../core-primitives/types", default-features = false }
 
 # substrate deps
-frame-system = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-sp-application-crypto = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-consensus-grandpa = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-sp-trie = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 # test & mock dependencies
 itc-parentchain-test = { optional = true, default-features = false, path = "../../../core/parentchain/test" }
@@ -48,19 +40,13 @@ itp-sgx-temp-dir = { version = "0.1", path = "../../../core-primitives/sgx/temp-
 default = ["std"]
 std = [
     "codec/std",
-    "hash-db/std",
-    "num/std",
     "log/std",
     "finality-grandpa/std",
     "thiserror",
 
     # substrate deps
-    "frame-system/std",
-    "sp-core/std",
-    "sp-application-crypto/std",
     "sp-consensus-grandpa/std",
     "sp-runtime/std",
-    "sp-trie/std",
 
     # local deps
     "itp-ocall-api/std",

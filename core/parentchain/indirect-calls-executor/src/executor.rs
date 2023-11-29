@@ -21,23 +21,28 @@ use crate::sgx_reexport_prelude::*;
 
 use crate::{
 	error::{Error, Result},
-	event_filter::{ExtrinsicStatus, FilterEvents},
 	filter_metadata::{EventsFromMetadata, FilterIntoDataFrom},
-	traits::{ExecuteIndirectCalls, IndirectDispatch, IndirectExecutor},
+	traits::{ExecuteIndirectCalls, IndirectDispatch},
 };
+use alloc::format;
 use binary_merkle_tree::merkle_root;
-use codec::Encode;
+use codec::{Decode, Encode};
 use core::marker::PhantomData;
-use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
 use itp_node_api::metadata::{
 	pallet_enclave_bridge::EnclaveBridgeCallIndexes, provider::AccessNodeMetadata,
 	NodeMetadataTrait,
 };
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
-use itp_stf_executor::traits::StfEnclaveSigning;
-use itp_stf_primitives::types::AccountId;
+use itp_stf_executor::traits::{StfEnclaveSigning, StfShardVaultQuery};
+use itp_stf_primitives::{
+	traits::{IndirectExecutor, TrustedCallSigning, TrustedCallVerification},
+	types::AccountId,
+};
 use itp_top_pool_author::traits::AuthorApi;
-use itp_types::{OpaqueCall, ShardIdentifier, H256};
+use itp_types::{
+	parentchain::{ExtrinsicStatus, FilterEvents, HandleParentchainEvents},
+	OpaqueCall, ShardIdentifier, H256,
+};
 use log::*;
 use sp_core::blake2_256;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header, Keccak256};
@@ -50,12 +55,15 @@ pub struct IndirectCallsExecutor<
 	NodeMetadataProvider,
 	IndirectCallsFilter,
 	EventCreator,
+	ParentchainEventHandler,
+	TCS,
+	G,
 > {
 	pub(crate) shielding_key_repo: Arc<ShieldingKeyRepository>,
-	pub(crate) stf_enclave_signer: Arc<StfEnclaveSigner>,
+	pub stf_enclave_signer: Arc<StfEnclaveSigner>,
 	pub(crate) top_pool_author: Arc<TopPoolAuthor>,
 	pub(crate) node_meta_data_provider: Arc<NodeMetadataProvider>,
-	_phantom: PhantomData<(IndirectCallsFilter, EventCreator)>,
+	_phantom: PhantomData<(IndirectCallsFilter, EventCreator, ParentchainEventHandler, TCS, G)>,
 }
 impl<
 		ShieldingKeyRepository,
@@ -64,6 +72,9 @@ impl<
 		NodeMetadataProvider,
 		IndirectCallsFilter,
 		EventCreator,
+		ParentchainEventHandler,
+		TCS,
+		G,
 	>
 	IndirectCallsExecutor<
 		ShieldingKeyRepository,
@@ -72,6 +83,9 @@ impl<
 		NodeMetadataProvider,
 		IndirectCallsFilter,
 		EventCreator,
+		ParentchainEventHandler,
+		TCS,
+		G,
 	>
 {
 	pub fn new(
@@ -97,6 +111,9 @@ impl<
 		NodeMetadataProvider,
 		FilterIndirectCalls,
 		EventCreator,
+		ParentchainEventHandler,
+		TCS,
+		G,
 	> ExecuteIndirectCalls
 	for IndirectCallsExecutor<
 		ShieldingKeyRepository,
@@ -105,17 +122,23 @@ impl<
 		NodeMetadataProvider,
 		FilterIndirectCalls,
 		EventCreator,
+		ParentchainEventHandler,
+		TCS,
+		G,
 	> where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
 		+ ShieldingCryptoEncrypt<Error = itp_sgx_crypto::Error>,
-	StfEnclaveSigner: StfEnclaveSigning<TrustedCallSigned>,
-	TopPoolAuthor: AuthorApi<H256, H256, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	StfEnclaveSigner: StfEnclaveSigning<TCS> + StfShardVaultQuery,
+	TopPoolAuthor: AuthorApi<H256, H256, TCS, G> + Send + Sync + 'static,
 	NodeMetadataProvider: AccessNodeMetadata,
 	FilterIndirectCalls: FilterIntoDataFrom<NodeMetadataProvider::MetadataType>,
 	NodeMetadataProvider::MetadataType: NodeMetadataTrait + Clone,
-	FilterIndirectCalls::Output: IndirectDispatch<Self> + Encode + Debug,
+	FilterIndirectCalls::Output: IndirectDispatch<Self, TCS> + Encode + Debug,
 	EventCreator: EventsFromMetadata<NodeMetadataProvider::MetadataType>,
+	ParentchainEventHandler: HandleParentchainEvents<Self, TCS, Error>,
+	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
+	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
 {
 	fn execute_indirect_calls_in_extrinsics<ParentchainBlock>(
 		&self,
@@ -138,13 +161,14 @@ impl<
 			})?
 			.ok_or_else(|| Error::Other("Could not create events from metadata".into()))?;
 
-		let xt_statuses = events.get_extrinsic_statuses()?;
+		let xt_statuses = events.get_extrinsic_statuses().map_err(|e| {
+			Error::Other(format!("Error when shielding for privacy sidechain {:?}", e).into())
+		})?;
 		trace!("xt_statuses:: {:?}", xt_statuses);
 
-		let filter_events = events.get_transfer_events();
-
-		if let Ok(events) = filter_events {
-			events.iter().for_each(|event| info!("Found transfer_event: {:?}", event))
+		let shard = self.get_default_shard();
+		if let Ok(vault) = self.stf_enclave_signer.get_shard_vault(&shard) {
+			ParentchainEventHandler::handle_events(self, events, &vault)?;
 		}
 
 		// This would be catastrophic but should never happen
@@ -214,7 +238,10 @@ impl<
 		NodeMetadataProvider,
 		FilterIndirectCalls,
 		EventFilter,
-	> IndirectExecutor
+		PrivacySidechain,
+		TCS,
+		G,
+	> IndirectExecutor<TCS, Error>
 	for IndirectCallsExecutor<
 		ShieldingKeyRepository,
 		StfEnclaveSigner,
@@ -222,12 +249,17 @@ impl<
 		NodeMetadataProvider,
 		FilterIndirectCalls,
 		EventFilter,
+		PrivacySidechain,
+		TCS,
+		G,
 	> where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
 		+ ShieldingCryptoEncrypt<Error = itp_sgx_crypto::Error>,
-	StfEnclaveSigner: StfEnclaveSigning<TrustedCallSigned>,
-	TopPoolAuthor: AuthorApi<H256, H256, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	StfEnclaveSigner: StfEnclaveSigning<TCS> + StfShardVaultQuery,
+	TopPoolAuthor: AuthorApi<H256, H256, TCS, G> + Send + Sync + 'static,
+	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
+	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
 {
 	fn submit_trusted_call(&self, shard: ShardIdentifier, encrypted_trusted_call: Vec<u8>) {
 		if let Err(e) = futures::executor::block_on(
@@ -255,11 +287,11 @@ impl<
 		self.top_pool_author.list_handled_shards().first().copied().unwrap_or_default()
 	}
 
-	fn sign_call_with_self(
+	fn sign_call_with_self<TC: Encode + Debug + TrustedCallSigning<TCS>>(
 		&self,
-		trusted_call: &TrustedCall,
+		trusted_call: &TC,
 		shard: &ShardIdentifier,
-	) -> Result<TrustedCallSigned> {
+	) -> Result<TCS> {
 		Ok(self.stf_enclave_signer.sign_call_with_self(trusted_call, shard)?)
 	}
 }
@@ -271,10 +303,7 @@ pub(crate) fn hash_of<T: Encode>(xt: &T) -> H256 {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{
-		filter_metadata::{ShieldFundsAndInvokeFilter, TestEventCreator},
-		parentchain_parser::ParentchainExtrinsicParser,
-	};
+	use crate::mock::*;
 	use codec::{Decode, Encode};
 	use itc_parentchain_test::ParentchainBlockBuilder;
 	use itp_node_api::{
@@ -290,7 +319,10 @@ mod test {
 		traits::TrustedCallVerification,
 		types::{AccountId, TrustedOperation},
 	};
-	use itp_test::mock::shielding_crypto_mock::ShieldingCryptoMock;
+	use itp_test::mock::{
+		shielding_crypto_mock::ShieldingCryptoMock,
+		stf_mock::{GetterMock, TrustedCallSignedMock},
+	};
 	use itp_top_pool_author::mocks::AuthorApiMock;
 	use itp_types::{
 		parentchain::Address, Block, CallWorkerFn, Request, ShardIdentifier, ShieldFundsFn,
@@ -301,18 +333,22 @@ mod test {
 
 	type TestShieldingKeyRepo = KeyRepositoryMock<ShieldingCryptoMock>;
 	type TestStfEnclaveSigner = StfEnclaveSignerMock;
-	type TestTopPoolAuthor = AuthorApiMock<H256, H256, TrustedCallSigned, Getter>;
+	type TestTopPoolAuthor = AuthorApiMock<H256, H256, TrustedCallSignedMock, GetterMock>;
 	type TestNodeMetadataRepository = NodeMetadataRepository<NodeMetadataMock>;
 	type TestIndirectCallExecutor = IndirectCallsExecutor<
 		TestShieldingKeyRepo,
 		TestStfEnclaveSigner,
 		TestTopPoolAuthor,
 		TestNodeMetadataRepository,
-		ShieldFundsAndInvokeFilter<ParentchainExtrinsicParser>,
+		MockExtrinsicFilter<MockParentchainExtrinsicParser>,
 		TestEventCreator,
+		MockParentchainEventHandler,
+		TrustedCallSignedMock,
+		GetterMock,
 	>;
 
 	type Seed = [u8; 32];
+
 	const TEST_SEED: Seed = *b"12345678901234567890123456789012";
 
 	#[test]
@@ -362,7 +398,7 @@ mod test {
 		let submitted_extrinsic =
 			top_pool_author.pending_tops(shard_id()).unwrap().first().cloned().unwrap();
 		let decrypted_extrinsic = shielding_key.decrypt(&submitted_extrinsic).unwrap();
-		let decoded_operation = TrustedOperation::<TrustedCallSigned, Getter>::decode(
+		let decoded_operation = TrustedOperation::<TrustedCallSignedMock, GetterMock>::decode(
 			&mut decrypted_extrinsic.as_slice(),
 		)
 		.unwrap();
@@ -471,6 +507,7 @@ mod test {
 			ParentchainAdditionalParams::default(),
 		)
 	}
+
 	fn test_fixtures(
 		mr_enclave: [u8; 32],
 		metadata: NodeMetadataMock,

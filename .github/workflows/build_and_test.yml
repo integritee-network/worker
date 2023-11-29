@@ -86,36 +86,20 @@ jobs:
           --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg FINGERPRINT=${FINGERPRINT} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=${{ matrix.sgx_mode }}
           -f build.Dockerfile .
 
-      - name: Build CLI client
-        env:
-          DOCKER_BUILDKIT: 1
-        run: >
-          docker build -t integritee-cli-client-${{ env.IMAGE_SUFFIX }}
-          --target deployed-client
-          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }}
-          -f build.Dockerfile .
-
       - run: docker images --all
 
       - name: Test Enclave # cargo test is not supported in the enclave, see: https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
         run: docker run --rm ${{ env.DOCKER_DEVICES }} ${{ env.DOCKER_VOLUMES }} integritee-worker-${{ env.IMAGE_SUFFIX }} test --all
 
-      - name: Export worker image(s)
+      - name: Export worker image
         run: |
           docker image save integritee-worker-${{ env.IMAGE_SUFFIX }} | gzip > integritee-worker-${{ env.IMAGE_SUFFIX }}.tar.gz
-          docker image save integritee-cli-client-${{ env.IMAGE_SUFFIX }} | gzip > integritee-cli-client-${{ env.IMAGE_SUFFIX }}.tar.gz
 
       - name: Upload worker image
         uses: actions/upload-artifact@v3
         with:
           name: integritee-worker-${{ env.IMAGE_SUFFIX }}.tar.gz
           path: integritee-worker-${{ env.IMAGE_SUFFIX }}.tar.gz
-
-      - name: Upload CLI client image
-        uses: actions/upload-artifact@v3
-        with:
-          name: integritee-cli-client-${{ env.IMAGE_SUFFIX }}.tar.gz
-          path: integritee-cli-client-${{ env.IMAGE_SUFFIX }}.tar.gz
 
       - name: Create Enclave Digest File
         run: |
@@ -133,6 +117,81 @@ jobs:
           if [[ "$(docker images -q integritee-worker-${{ env.IMAGE_SUFFIX }} 2> /dev/null)" != "" ]]; then
               docker image rmi --force integritee-worker-${{ env.IMAGE_SUFFIX }} 2>/dev/null
           fi
+          docker images --all
+
+  build-client:
+    runs-on: ${{ matrix.host }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - flavor_id: sidechain
+            mode: sidechain
+            host: integritee-builder-sgx
+            sgx_mode: HW
+            additional_features: dcap
+          - flavor_id: offchain-worker
+            mode: offchain-worker
+            host: integritee-builder-sgx
+            sgx_mode: HW
+            additional_features: dcap
+          - flavor_id: teeracle
+            mode: teeracle
+            host: integritee-builder-sgx
+            sgx_mode: HW
+            additional_features: dcap
+          - flavor_id: sidechain-evm
+            mode: sidechain
+            additional_features: evm,dcap
+            host: integritee-builder-sgx
+            sgx_mode: HW
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set env
+        run: |
+          fingerprint=$RANDOM
+          echo "FINGERPRINT=$fingerprint" >> $GITHUB_ENV
+          SGX_MODE_LOWERCASE=$(echo "${${{ matrix.sgx_mode }},,}")
+          echo "IMAGE_SUFFIX=$SGX_MODE_LOWERCASE-${{ matrix.flavor_id }}-${{ github.sha }}" >> $GITHUB_ENV
+          if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
+             echo "DOCKER_DEVICES=--device=/dev/sgx/enclave --device=/dev/sgx/provision" >> $GITHUB_ENV
+             echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd --volume /etc/sgx_default_qcnl.conf:/etc/sgx_default_qcnl.conf" >> $GITHUB_ENV
+          else
+             echo "DOCKER_DEVICES=" >> $GITHUB_ENV
+             echo "DOCKER_VOLUMES=" >> $GITHUB_ENV
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          buildkitd-flags: --debug
+          driver: docker-container
+
+      - name: Build CLI client
+        env:
+          DOCKER_BUILDKIT: 1
+        run: >
+          docker build -t integritee-cli-client-${{ env.IMAGE_SUFFIX }}
+          --target deployed-client
+          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }}
+          -f build.Dockerfile .
+
+      - run: docker images --all
+
+      - name: Export client image
+        run: |
+          docker image save integritee-cli-client-${{ env.IMAGE_SUFFIX }} | gzip > integritee-cli-client-${{ env.IMAGE_SUFFIX }}.tar.gz
+
+      - name: Upload CLI client image
+        uses: actions/upload-artifact@v3
+        with:
+          name: integritee-cli-client-${{ env.IMAGE_SUFFIX }}.tar.gz
+          path: integritee-cli-client-${{ env.IMAGE_SUFFIX }}.tar.gz
+
+      - name: Delete images
+        run: |
           if [[ "$(docker images -q integritee-cli-client-${{ env.IMAGE_SUFFIX }} 2> /dev/null)" != "" ]]; then
               docker image rmi --force integritee-cli-client-${{ env.IMAGE_SUFFIX }} 2>/dev/null
           fi
@@ -198,7 +257,7 @@ jobs:
   integration-tests:
     runs-on: ${{ matrix.host }}
     if: ${{ always() }}
-    needs: build-test
+    needs: [build-test, build-client]
     env:
       WORKER_IMAGE_TAG: integritee-worker:dev
       CLIENT_IMAGE_TAG: integritee-cli:dev
@@ -213,7 +272,7 @@ jobs:
         include:
           - test: M6
             flavor_id: sidechain
-            demo_name: demo-indirect-invocation
+            demo_name: demo-shielding-unshielding-multiworker
             host: test-runner-sgx
             sgx_mode: HW
           - test: M8
@@ -228,7 +287,7 @@ jobs:
             sgx_mode: HW
           - test: M6
             flavor_id: offchain-worker
-            demo_name: demo-indirect-invocation
+            demo_name: demo-shielding-unshielding-multiworker
             host: test-runner-sgx
             sgx_mode: HW
           - test: Teeracle

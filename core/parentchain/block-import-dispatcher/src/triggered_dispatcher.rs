@@ -62,7 +62,7 @@ pub trait TriggerParentchainBlockImport {
 /// Dispatcher for block imports that retains blocks until the import is triggered, using the
 /// `TriggerParentchainBlockImport` trait implementation.
 pub struct TriggeredDispatcher<BlockImporter, BlockImportQueue, EventsImportQueue> {
-	block_importer: BlockImporter,
+	pub block_importer: BlockImporter,
 	import_queue: BlockImportQueue,
 	events_queue: EventsImportQueue,
 }

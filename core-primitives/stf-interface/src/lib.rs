@@ -28,7 +28,10 @@ use core::fmt::Debug;
 use itp_node_api_metadata::NodeMetadataTrait;
 use itp_node_api_metadata_provider::AccessNodeMetadata;
 use itp_stf_primitives::traits::TrustedCallVerification;
-use itp_types::{parentchain::ParentchainId, OpaqueCall};
+use itp_types::{
+	parentchain::{AccountId, ParentchainId},
+	OpaqueCall,
+};
 
 #[cfg(feature = "mocks")]
 pub mod mocks;
@@ -42,6 +45,11 @@ pub const SHARD_VAULT_KEY: &str = "ShardVaultPubKey";
 pub trait InitState<State, AccountId> {
 	/// Initialize a new state for a given enclave account.
 	fn init_state(enclave_account: AccountId) -> State;
+}
+
+/// Interface to query shard vault account for shard
+pub trait ShardVaultQuery<S> {
+	fn get_vault(state: &mut S) -> Option<AccountId>;
 }
 
 /// Interface for all functions calls necessary to update an already
