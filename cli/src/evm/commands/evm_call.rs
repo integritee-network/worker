@@ -22,7 +22,6 @@ use crate::{
 	trusted_operation::perform_trusted_operation,
 	Cli, CliResult, CliResultOk,
 };
-use codec::Decode;
 use ita_stf::{Index, TrustedCall, TrustedGetter};
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
@@ -82,7 +81,7 @@ impl EvmCallCommands {
 		)
 		.sign(&KeyPair::Sr25519(Box::new(sender)), nonce, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
-		Ok(perform_trusted_operation(cli, trusted_args, &function_call)
+		Ok(perform_trusted_operation::<()>(cli, trusted_args, &function_call)
 			.map(|_| CliResultOk::None)?)
 	}
 }
