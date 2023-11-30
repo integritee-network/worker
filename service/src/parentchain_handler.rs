@@ -42,10 +42,11 @@ pub trait HandleParentchain {
 
 	/// Fetches the parentchain blocks to sync from the parentchain and feeds them to the enclave.
 	/// Returns the latest synced block header.
-	fn sync_parentchain(&self, last_synced_header: Header) -> ServiceResult<Header>;
-
-	/// Triggers the import of the synced parentchain blocks inside the enclave.
-	fn trigger_parentchain_block_import(&self) -> ServiceResult<()>;
+	fn sync_parentchain(
+		&self,
+		last_synced_header: Header,
+		is_syncing: bool,
+	) -> ServiceResult<Header>;
 
 	/// Syncs and directly imports parentchain blocks from the latest synced header
 	/// until the specified until_header.
@@ -140,7 +141,11 @@ where
 			.init_parentchain_components(self.parentchain_init_params.clone())?)
 	}
 
-	fn sync_parentchain(&self, last_synced_header: Header) -> ServiceResult<Header> {
+	fn sync_parentchain(
+		&self,
+		last_synced_header: Header,
+		is_syncing: bool,
+	) -> ServiceResult<Header> {
 		let id = self.parentchain_id();
 		trace!("[{:?}] Getting current head", id);
 		let curr_block = self
@@ -186,6 +191,7 @@ where
 				events_chunk_to_sync.as_slice(),
 				events_proofs_chunk_to_sync.as_slice(),
 				self.parentchain_id(),
+				is_syncing,
 			)?;
 
 			let api_client_until_synced_header = block_chunk_to_sync
@@ -204,11 +210,6 @@ where
 		}
 	}
 
-	fn trigger_parentchain_block_import(&self) -> ServiceResult<()> {
-		trace!("[{:?}] trigger parentchain block import", self.parentchain_id());
-		Ok(self.enclave_api.trigger_parentchain_block_import(self.parentchain_id())?)
-	}
-
 	fn sync_and_import_parentchain_until(
 		&self,
 		last_synced_header: &Header,
@@ -225,12 +226,10 @@ where
 		let mut last_synced_header = last_synced_header.clone();
 
 		while last_synced_header.number() < until_header.number() {
-			last_synced_header = self.sync_parentchain(last_synced_header)?;
-			trace!("[{:?}] synced block number: {}", id, last_synced_header.number);
+			last_synced_header = self.sync_parentchain(last_synced_header, true)?;
+			println!("[{:?}] synced block number: #{}", id, last_synced_header.number);
 			std::thread::sleep(std::time::Duration::from_secs(1));
 		}
-		self.trigger_parentchain_block_import()?;
-
 		Ok(last_synced_header)
 	}
 }

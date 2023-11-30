@@ -40,7 +40,7 @@ pub(crate) fn sidechain_start_untrusted_rpc_server<Enclave, SidechainStorage>(
 	config: &Config,
 	enclave: Arc<Enclave>,
 	sidechain_storage: Arc<SidechainStorage>,
-	tokio_handle: Handle,
+	tokio_handle: &Handle,
 ) where
 	Enclave: DirectRequest + Clone,
 	SidechainStorage: BlockPruner + FetchBlocks<SignedSidechainBlock> + Sync + Send + 'static,

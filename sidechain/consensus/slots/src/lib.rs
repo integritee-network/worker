@@ -399,7 +399,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 
 		if last_imported_integritee_header.is_some() {
 			println!(
-				"Syncing Parentchain block numbers Integritee:{:?} TargetA: {:?}, TargetB: {:?} at Sidechain block number  {:?} ",
+				"Syncing Parentchains: Integritee: {:?} TargetA: {:?}, TargetB: {:?}, Sidechain: {:?}",
 				latest_integritee_parentchain_header.number(),
 				maybe_latest_target_a_parentchain_header.map(|h| *h.number()),
 				maybe_latest_target_b_parentchain_header.map(|h| *h.number()),
