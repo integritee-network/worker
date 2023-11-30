@@ -29,9 +29,7 @@ use crate::{
 };
 use ita_sgx_runtime::Runtime;
 use ita_stf::{helpers::set_block_number, Getter, TrustedCallSigned};
-use itc_parentchain::light_client::mocks::validator_access_mock::ValidatorAccessMock;
 use itc_parentchain_test::ParentchainHeaderBuilder;
-use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
 use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMetadataRepository};
 use itp_settings::{
 	sidechain::SLOT_DURATION,
@@ -85,7 +83,7 @@ pub fn ensure_events_get_reset_upon_block_proposal() {
 	let stf_executor = Arc::new(TestStfExecutor::new(
 		ocall_api.clone(),
 		state_handler.clone(),
-		node_metadata_repo.clone(),
+		node_metadata_repo,
 	));
 	let top_pool = create_top_pool();
 
@@ -104,11 +102,8 @@ pub fn ensure_events_get_reset_upon_block_proposal() {
 		parentchain_block_import_trigger.clone(),
 		ocall_api.clone(),
 	));
-	let block_composer = Arc::new(TestBlockComposer::new(signer.clone(), state_key_repo.clone()));
-	let proposer_environment =
-		ProposerFactory::new(top_pool_author.clone(), stf_executor.clone(), block_composer);
-	let extrinsics_factory = ExtrinsicsFactoryMock::default();
-	let validator_access = ValidatorAccessMock::default();
+	let block_composer = Arc::new(TestBlockComposer::new(signer, state_key_repo));
+	let proposer_environment = ProposerFactory::new(top_pool_author, stf_executor, block_composer);
 
 	// Add some events to the state.
 	let topic_hash = H256::from([7; 32]);
@@ -133,16 +128,25 @@ pub fn ensure_events_get_reset_upon_block_proposal() {
 	let timestamp = duration_now();
 	let slot = slot_from_timestamp_and_duration(duration_now(), SLOT_DURATION);
 	let ends_at = timestamp + SLOT_DURATION;
-	let slot_info =
-		SlotInfo::new(slot, timestamp, SLOT_DURATION, ends_at, parentchain_header.clone());
+	let slot_info = SlotInfo::new(
+		slot,
+		timestamp,
+		SLOT_DURATION,
+		ends_at,
+		parentchain_header.clone(),
+		None,
+		None,
+	);
 
 	info!("Executing AURA on slot..");
 	let (blocks, opaque_calls) =
-		exec_aura_on_slot::<_, ParentchainBlock, SignedSidechainBlock, _, _, _>(
+		exec_aura_on_slot::<_, ParentchainBlock, SignedSidechainBlock, _, _, _, _, _>(
 			slot_info,
 			signer,
-			ocall_api.clone(),
-			parentchain_block_import_trigger.clone(),
+			ocall_api,
+			parentchain_block_import_trigger,
+			None::<Arc<TestParentchainBlockImportTrigger>>,
+			None::<Arc<TestParentchainBlockImportTrigger>>,
 			proposer_environment,
 			shards,
 		)
@@ -152,12 +156,10 @@ pub fn ensure_events_get_reset_upon_block_proposal() {
 	let propose_to_block_import_ocall_api =
 		Arc::new(ProposeToImportOCallApi::new(parentchain_header, block_importer));
 
-	send_blocks_and_extrinsics::<ParentchainBlock, _, _, _, _>(
+	send_blocks_and_extrinsics::<ParentchainBlock, _, _>(
 		blocks,
 		opaque_calls,
 		propose_to_block_import_ocall_api,
-		&validator_access,
-		&extrinsics_factory,
 	)
 	.unwrap();
 

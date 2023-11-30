@@ -111,10 +111,7 @@ pub fn test_setup() -> (
 
 pub fn test_top_pool() -> TestTopPool {
 	let chain_api = Arc::new(SidechainApi::<Block, TrustedCallSigned>::new());
-	let top_pool =
-		BasicPool::create(Default::default(), chain_api, Arc::new(TestRpcResponder::new()));
-
-	top_pool
+	BasicPool::create(Default::default(), chain_api, Arc::new(TestRpcResponder::new()))
 }
 
 pub fn enclave_call_signer<Source: DeriveEd25519>(key_source: &Source) -> spEd25519::Pair {

@@ -64,7 +64,11 @@ pub struct SlotInfo<ParentchainBlock: ParentchainBlockTrait> {
 	/// The time at which the slot ends.
 	pub ends_at: Duration,
 	/// Last imported parentchain header, potentially outdated.
-	pub last_imported_parentchain_head: ParentchainBlock::Header,
+	pub last_imported_integritee_parentchain_head: ParentchainBlock::Header,
+	/// Last imported parentchain header, potentially outdated.
+	pub maybe_last_imported_target_a_parentchain_head: Option<ParentchainBlock::Header>,
+	/// Last imported parentchain header, potentially outdated.
+	pub maybe_last_imported_target_b_parentchain_head: Option<ParentchainBlock::Header>,
 }
 
 impl<ParentchainBlock: ParentchainBlockTrait> SlotInfo<ParentchainBlock> {
@@ -76,14 +80,18 @@ impl<ParentchainBlock: ParentchainBlockTrait> SlotInfo<ParentchainBlock> {
 		timestamp: Duration,
 		duration: Duration,
 		ends_at: Duration,
-		parentchain_head: ParentchainBlock::Header,
+		last_imported_integritee_parentchain_head: ParentchainBlock::Header,
+		maybe_last_imported_target_a_parentchain_head: Option<ParentchainBlock::Header>,
+		maybe_last_imported_target_b_parentchain_head: Option<ParentchainBlock::Header>,
 	) -> Self {
 		Self {
 			slot,
 			timestamp,
 			duration,
 			ends_at,
-			last_imported_parentchain_head: parentchain_head,
+			last_imported_integritee_parentchain_head,
+			maybe_last_imported_target_a_parentchain_head,
+			maybe_last_imported_target_b_parentchain_head,
 		}
 	}
 
@@ -99,7 +107,7 @@ impl<ParentchainBlock: ParentchainBlockTrait> SlotInfo<ParentchainBlock> {
 /// The time at which the slot ends.
 ///
 /// !! Slot duration needs to be the 'global' slot duration that is used for the sidechain.
-/// Do not use this with 'custom' slot durations, as used e.g. for the shard slots.  
+/// Do not use this with 'custom' slot durations, as used e.g. for the shard slots.
 pub fn slot_ends_at(slot: Slot, slot_duration: Duration) -> Duration {
 	Duration::from_millis(*slot.saturating_add(1u64) * (slot_duration.as_millis() as u64))
 }
@@ -131,7 +139,9 @@ pub(crate) fn timestamp_within_slot<
 pub fn yield_next_slot<SlotGetter, ParentchainBlock>(
 	timestamp: Duration,
 	duration: Duration,
-	header: ParentchainBlock::Header,
+	integritee_header: ParentchainBlock::Header,
+	maybe_target_a_header: Option<ParentchainBlock::Header>,
+	maybe_target_b_header: Option<ParentchainBlock::Header>,
 	last_slot_getter: &mut SlotGetter,
 ) -> Result<Option<SlotInfo<ParentchainBlock>>, ConsensusError>
 where
@@ -152,7 +162,15 @@ where
 	last_slot_getter.set_last_slot(slot)?;
 
 	let slot_ends_time = slot_ends_at(slot, duration);
-	Ok(Some(SlotInfo::new(slot, timestamp, duration, slot_ends_time, header)))
+	Ok(Some(SlotInfo::new(
+		slot,
+		timestamp,
+		duration,
+		slot_ends_time,
+		integritee_header,
+		maybe_target_a_header,
+		maybe_target_b_header,
+	)))
 }
 
 pub trait LastSlotTrait {
@@ -213,7 +231,9 @@ mod tests {
 			timestamp: duration_now(),
 			duration: SLOT_DURATION,
 			ends_at: duration_now() + SLOT_DURATION,
-			last_imported_parentchain_head: ParentchainHeaderBuilder::default().build(),
+			last_imported_integritee_parentchain_head: ParentchainHeaderBuilder::default().build(),
+			maybe_last_imported_target_a_parentchain_head: None,
+			maybe_last_imported_target_b_parentchain_head: None,
 		}
 	}
 
@@ -252,11 +272,18 @@ mod tests {
 		let slot: Slot = 1000.into();
 
 		let slot_end_time = slot_ends_at(slot, SLOT_DURATION);
-		let slot_one: SlotInfo<ParentchainBlock> =
-			SlotInfo::new(slot, timestamp, SLOT_DURATION, slot_end_time, pc_header.clone());
+		let slot_one: SlotInfo<ParentchainBlock> = SlotInfo::new(
+			slot,
+			timestamp,
+			SLOT_DURATION,
+			slot_end_time,
+			pc_header.clone(),
+			None,
+			None,
+		);
 		thread::sleep(Duration::from_millis(200));
 		let slot_two: SlotInfo<ParentchainBlock> =
-			SlotInfo::new(slot, timestamp, SLOT_DURATION, slot_end_time, pc_header);
+			SlotInfo::new(slot, timestamp, SLOT_DURATION, slot_end_time, pc_header, None, None);
 
 		let difference_of_ends_at =
 			(slot_one.ends_at.as_millis()).abs_diff(slot_two.ends_at.as_millis());
@@ -276,7 +303,9 @@ mod tests {
 			timestamp: duration_now() - Duration::from_secs(5),
 			duration: SLOT_DURATION,
 			ends_at: duration_now() + SLOT_DURATION - Duration::from_secs(5),
-			last_imported_parentchain_head: ParentchainHeaderBuilder::default().build(),
+			last_imported_integritee_parentchain_head: ParentchainHeaderBuilder::default().build(),
+			maybe_last_imported_target_a_parentchain_head: None,
+			maybe_last_imported_target_b_parentchain_head: None,
 		};
 		assert!(slot.duration_remaining().is_none());
 	}
@@ -288,7 +317,9 @@ mod tests {
 			timestamp: duration_now() - Duration::from_secs(5),
 			duration: SLOT_DURATION,
 			ends_at: duration_now() + Duration::from_secs(60),
-			last_imported_parentchain_head: ParentchainHeaderBuilder::default().build(),
+			last_imported_integritee_parentchain_head: ParentchainHeaderBuilder::default().build(),
+			maybe_last_imported_target_a_parentchain_head: None,
+			maybe_last_imported_target_b_parentchain_head: None,
 		};
 		let maybe_duration_remaining = slot.duration_remaining();
 		assert!(maybe_duration_remaining.is_some());
@@ -304,7 +335,7 @@ mod tests {
 
 		thread::sleep(SLOT_DURATION * 2);
 		let slot: SlotInfo<ParentchainBlock> =
-			SlotInfo::new(slot, timestamp, SLOT_DURATION, slot_end_time, pc_header);
+			SlotInfo::new(slot, timestamp, SLOT_DURATION, slot_end_time, pc_header, None, None);
 
 		assert!(slot.ends_at < duration_now());
 	}
@@ -348,6 +379,8 @@ mod tests {
 			duration_now(),
 			SLOT_DURATION,
 			ParentchainHeaderBuilder::default().build(),
+			None,
+			None,
 			&mut LastSlot,
 		)
 		.unwrap()
@@ -362,6 +395,8 @@ mod tests {
 			duration_now() + SLOT_DURATION,
 			SLOT_DURATION,
 			ParentchainHeaderBuilder::default().build(),
+			None,
+			None,
 			&mut LastSlot
 		)
 		.unwrap()
@@ -375,6 +410,8 @@ mod tests {
 				duration_now(),
 				Default::default(),
 				ParentchainHeaderBuilder::default().build(),
+				None,
+				None,
 				&mut LastSlot,
 			),
 			"Tried to yield next slot with 0 duration",

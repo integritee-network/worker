@@ -27,7 +27,6 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 #[macro_use]
 extern crate sgx_tstd as std;
 
-use itp_types::OpaqueCall;
 use its_primitives::traits::{ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait};
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::{time::Duration, vec::Vec};
@@ -50,6 +49,7 @@ pub use block_import::*;
 pub use block_import_confirmation_handler::*;
 pub use block_import_queue_worker::*;
 pub use error::*;
+use itp_types::parentchain::ParentchainCall;
 pub use peer_block_sync::*;
 
 pub trait Verifier<ParentchainBlock, SignedSidechainBlock>: Send + Sync
@@ -110,5 +110,5 @@ pub struct Proposal<SignedSidechainBlock: SignedSidechainBlockTrait> {
 	///
 	/// Any sidechain stf that invokes a parentchain stf must not commit its state change
 	/// before the parentchain effect has been finalized.
-	pub parentchain_effects: Vec<OpaqueCall>,
+	pub parentchain_effects: Vec<ParentchainCall>,
 }

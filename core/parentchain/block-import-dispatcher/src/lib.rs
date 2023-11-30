@@ -109,15 +109,15 @@ where
 	) -> Result<()> {
 		match self {
 			BlockImportDispatcher::TriggeredDispatcher(dispatcher) => {
-				log::info!("TRIGGERED DISPATCHER MATCH");
+				log::trace!("TRIGGERED DISPATCHER MATCH");
 				dispatcher.dispatch_import(blocks, events, is_syncing)
 			},
 			BlockImportDispatcher::ImmediateDispatcher(dispatcher) => {
-				log::info!("IMMEDIATE DISPATCHER MATCH");
+				log::trace!("IMMEDIATE DISPATCHER MATCH");
 				dispatcher.dispatch_import(blocks, events, is_syncing)
 			},
 			BlockImportDispatcher::EmptyDispatcher => {
-				log::info!("EMPTY DISPATCHER DISPATCHER MATCH");
+				log::trace!("EMPTY DISPATCHER DISPATCHER MATCH");
 				Err(Error::NoDispatcherAssigned)
 			},
 		}

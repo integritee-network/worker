@@ -34,9 +34,9 @@ use itp_stf_primitives::{
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_time_utils::duration_now;
 use itp_types::{
-	parentchain::{Header as ParentchainHeader, ParentchainId},
+	parentchain::{Header as ParentchainHeader, ParentchainCall, ParentchainId},
 	storage::StorageEntryVerified,
-	OpaqueCall, H256,
+	H256,
 };
 use log::*;
 use sp_runtime::traits::Header as HeaderTrait;
@@ -44,6 +44,7 @@ use std::{
 	collections::BTreeMap, fmt::Debug, marker::PhantomData, sync::Arc, time::Duration, vec,
 	vec::Vec,
 };
+
 pub struct StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G>
 where
 	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
@@ -117,7 +118,7 @@ where
 		}
 
 		debug!("execute on STF, call with nonce {}", trusted_call.nonce());
-		let mut extrinsic_call_backs: Vec<OpaqueCall> = Vec::new();
+		let mut extrinsic_call_backs: Vec<ParentchainCall> = Vec::new();
 		if let Err(e) = Stf::execute_call(
 			state,
 			trusted_call.clone(),
@@ -136,7 +137,20 @@ where
 		}
 
 		for call in extrinsic_call_backs.clone() {
-			trace!("trusted_call wants to send encoded call: 0x{}", hex::encode(call.encode()));
+			match call {
+				ParentchainCall::Integritee(opaque_call) => trace!(
+					"trusted_call wants to send encoded call to [Integritee] parentchain: 0x{}",
+					hex::encode(opaque_call.encode())
+				),
+				ParentchainCall::TargetA(opaque_call) => trace!(
+					"trusted_call wants to send encoded call to [TargetA] parentchain: 0x{}",
+					hex::encode(opaque_call.encode())
+				),
+				ParentchainCall::TargetB(opaque_call) => trace!(
+					"trusted_call wants to send encoded call to [TargetB] parentchain: 0x{}",
+					hex::encode(opaque_call.encode())
+				),
+			}
 		}
 		Ok(ExecutedOperation::success(operation_hash, top_or_hash, extrinsic_call_backs))
 	}

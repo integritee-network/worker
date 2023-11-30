@@ -504,7 +504,12 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 		trace!("Not importing any parentchain blocks");
 		return Ok(())
 	}
-
+	trace!(
+		"[{:?}] Dispatching Import of {} blocks and {} events",
+		id,
+		blocks_to_sync.len(),
+		events_to_sync.len()
+	);
 	match id {
 		ParentchainId::Integritee => {
 			if let Ok(handler) = GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT.get() {
