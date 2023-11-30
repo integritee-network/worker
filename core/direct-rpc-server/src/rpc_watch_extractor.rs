@@ -80,13 +80,17 @@ pub mod tests {
 		rpc_response_builder::RpcResponseBuilder, rpc_return_value_builder::RpcReturnValueBuilder,
 	};
 	use codec::Encode;
+	use itp_rpc::Id;
 	use itp_types::TrustedOperationStatus;
 
 	#[test]
 	fn invalid_rpc_response_returns_error() {
 		let watch_extractor = RpcWatchExtractor::<String>::new();
-		let rpc_response =
-			RpcResponse { id: 1u32, jsonrpc: String::from("json"), result: "hello".to_string() };
+		let rpc_response = RpcResponse {
+			id: Id::Number(1u32),
+			jsonrpc: String::from("json"),
+			result: "hello".to_string(),
+		};
 
 		assert!(watch_extractor.must_be_watched(&rpc_response).is_err());
 	}

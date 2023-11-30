@@ -16,7 +16,7 @@
 */
 
 use crate::builders::rpc_return_value_builder::RpcReturnValueBuilder;
-use itp_rpc::{RpcResponse, RpcReturnValue};
+use itp_rpc::{Id, RpcResponse, RpcReturnValue};
 use itp_utils::ToHexPrefixed;
 
 /// builder pattern for RpcResponse
@@ -52,7 +52,7 @@ impl RpcResponseBuilder {
 
 	#[allow(unused)]
 	pub fn build(self) -> RpcResponse {
-		let id = self.maybe_id.unwrap_or(1u32);
+		let id = Id::Number(self.maybe_id.unwrap_or(1u32));
 		let json_rpc = self.maybe_json_rpc.unwrap_or(String::from("json_rpc"));
 		let result = self
 			.maybe_result

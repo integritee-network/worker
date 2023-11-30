@@ -82,6 +82,7 @@ where
 #[cfg(test)]
 pub mod tests {
 	use super::*;
+	use itp_rpc::Id;
 
 	type TestRegistry = ConnectionRegistry<String, u64>;
 
@@ -119,6 +120,6 @@ pub mod tests {
 	}
 
 	fn dummy_rpc_response() -> RpcResponse {
-		RpcResponse { jsonrpc: String::new(), result: Default::default(), id: 1u32 }
+		RpcResponse { jsonrpc: String::new(), result: Default::default(), id: Id::Number(1u32) }
 	}
 }
