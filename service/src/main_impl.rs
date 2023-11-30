@@ -552,21 +552,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 			start_parentchain_header_subscription_thread(parentchain_handler, last_synced_header);
 
-			if let Ok(shard_vault) = enclave.get_ecc_vault_pubkey(shard) {
-				println!(
-					"[Integritee] shard vault account is already initialized in state: {}",
-					shard_vault.to_ss58check()
-				);
-			} else if we_are_primary_validateer {
-				println!("[Integritee] initializing proxied shard vault account now");
-				enclave.init_proxied_shard_vault(shard, &ParentchainId::Integritee).unwrap();
-				println!(
-					"[Integritee] initialized shard vault account: : {}",
-					enclave.get_ecc_vault_pubkey(shard).unwrap().to_ss58check()
-				);
-			} else {
-				panic!("[Integritee] no vault account has been initialized and we are not the primary worker");
-			}
+			init_provided_shard_vault(shard, &enclave, we_are_primary_validateer);
 
 			spawn_worker_for_shard_polling(
 				shard,
@@ -607,6 +593,30 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		if let Some(Ok(events)) = subscription.next_events::<RuntimeEvent, Hash>() {
 			print_events(events, ParentchainId::Integritee)
 		}
+	}
+}
+
+fn init_provided_shard_vault<E: EnclaveBase>(
+	shard: &ShardIdentifier,
+	enclave: &Arc<E>,
+	we_are_primary_validateer: bool,
+) {
+	if let Ok(shard_vault) = enclave.get_ecc_vault_pubkey(shard) {
+		println!(
+			"[Integritee] shard vault account is already initialized in state: {}",
+			shard_vault.to_ss58check()
+		);
+	} else if we_are_primary_validateer {
+		println!("[Integritee] initializing proxied shard vault account now");
+		enclave.init_proxied_shard_vault(shard, &ParentchainId::Integritee).unwrap();
+		println!(
+			"[Integritee] initialized shard vault account: : {}",
+			enclave.get_ecc_vault_pubkey(shard).unwrap().to_ss58check()
+		);
+	} else {
+		panic!(
+			"[Integritee] no vault account has been initialized and we are not the primary worker"
+		);
 	}
 }
 
