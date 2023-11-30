@@ -32,6 +32,7 @@ pub trait Sidechain: Send + Sync + 'static {
 		events: &[Vec<u8>],
 		events_proofs: &[StorageProof],
 		parentchain_id: &ParentchainId,
+		is_syncing: bool,
 	) -> EnclaveResult<()>;
 
 	fn execute_trusted_calls(&self) -> EnclaveResult<()>;
@@ -56,6 +57,7 @@ mod impl_ffi {
 			events: &[Vec<u8>],
 			events_proofs: &[StorageProof],
 			parentchain_id: &ParentchainId,
+			is_syncing: bool,
 		) -> EnclaveResult<()> {
 			let mut retval = sgx_status_t::SGX_SUCCESS;
 			let blocks_enc = blocks.encode();
@@ -75,6 +77,7 @@ mod impl_ffi {
 					events_proofs_enc.len(),
 					parentchain_id_enc.as_ptr(),
 					parentchain_id_enc.len() as u32,
+					is_syncing.into(),
 				)
 			};
 

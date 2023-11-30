@@ -63,17 +63,14 @@ enclave {
 			[in, size=parentchain_id_size] uint8_t* parentchain_id, uint32_t parentchain_id_size
 		);
 
-		public sgx_status_t trigger_parentchain_block_import(
-			[in, size=parentchain_id_size] uint8_t* parentchain_id, uint32_t parentchain_id_size
-		);
-
 		public sgx_status_t execute_trusted_calls();
 
 		public sgx_status_t sync_parentchain(
 			[in, size=blocks_size] uint8_t* blocks, size_t blocks_size,
 			[in, size=events_size] uint8_t* events, size_t events_size,
 			[in, size=events_proofs_size] uint8_t* events_proofs, size_t events_proofs_size,
-			[in, size=parentchain_id_size] uint8_t* parentchain_id, uint32_t parentchain_id_size
+			[in, size=parentchain_id_size] uint8_t* parentchain_id, uint32_t parentchain_id_size,
+			int is_syncing
 		);
 
 		public sgx_status_t set_nonce(
