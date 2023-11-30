@@ -22,7 +22,6 @@ use crate::{
 	trusted_operation::perform_trusted_operation,
 	Cli, CliResult, CliResultOk,
 };
-use codec::Decode;
 use ita_stf::{Getter, Index, TrustedCall, TrustedCallSigned};
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
@@ -65,7 +64,8 @@ impl TransferCommand {
 			TrustedCall::balance_transfer(from.public().into(), to, self.amount)
 				.sign(&KeyPair::Sr25519(Box::new(from)), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct);
-		let res = perform_trusted_operation(cli, trusted_args, &top).map(|_| CliResultOk::None)?;
+		let res =
+			perform_trusted_operation::<()>(cli, trusted_args, &top).map(|_| CliResultOk::None)?;
 		info!("trusted call transfer executed");
 		Ok(res)
 	}
