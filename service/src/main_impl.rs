@@ -862,7 +862,11 @@ fn send_extrinsic(
 	}
 
 	info!("[>] send extrinsic");
-	trace!("  encoded extrinsic: 0x{:}", hex::encode(extrinsic.clone()));
+	trace!(
+		"  encoded extrinsic len: {}, payload: 0x{:}",
+		extrinsic.len(),
+		hex::encode(extrinsic.clone())
+	);
 
 	// fixme: wait ...until_success doesn't work due to https://github.com/scs/substrate-api-client/issues/624
 	// fixme: currently, we don't verify if the extrinsic was a success here
