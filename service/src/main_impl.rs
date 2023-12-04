@@ -59,7 +59,7 @@ use substrate_api_client::{
 	SubscribeEvents,
 };
 
-use teerex_primitives::AnySigner;
+use teerex_primitives::{AnySigner, MultiEnclave};
 
 #[cfg(feature = "dcap")]
 use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
@@ -183,15 +183,6 @@ pub(crate) fn main() {
 
 		let node_api =
 			node_api_factory.create_api().expect("Failed to create parentchain node API");
-
-		if run_config.request_state() {
-			sync_state::sync_state::<_, _, WorkerModeProvider>(
-				&node_api,
-				&shard,
-				enclave.as_ref(),
-				run_config.skip_ra(),
-			);
-		}
 
 		start_worker::<_, _, _, _, WorkerModeProvider>(
 			config,
@@ -496,15 +487,47 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		register_enclave_xt_header.number(),
 		register_enclave_xt_header.hash()
 	);
+	// double-check
+	let my_enclave = integritee_rpc_api
+		.enclave(&tee_accountid, None)
+		.unwrap()
+		.expect("our enclave should be registered at this point");
+	trace!("verified that our enclave is registered: {:?}", my_enclave);
 
 	let we_are_primary_validateer =
-		we_are_primary_worker(&integritee_rpc_api, shard, &tee_accountid).unwrap();
-
-	if we_are_primary_validateer {
-		println!("[+] We are the primary worker");
-	} else {
-		println!("[+] We are NOT the primary worker");
-	}
+		match integritee_rpc_api.primary_worker_for_shard(shard, None).unwrap() {
+			Some(primary_enclave) => match primary_enclave.instance_signer() {
+				AnySigner::Known(MultiSigner::Ed25519(primary)) =>
+					if primary.encode() == tee_accountid.encode() {
+						println!("We are primary worker on this shard and we have been previously running.");
+						true
+					} else {
+						println!(
+							"We are NOT primary worker. The primary worker is {}.",
+							primary.to_ss58check(),
+						);
+						info!("The primary worker enclave is {:?}", primary_enclave);
+						//obtain provisioning from last active worker
+						sync_state::sync_state::<_, _, WorkerModeProvider>(
+							&integritee_rpc_api,
+							&shard,
+							enclave.as_ref(),
+							skip_ra,
+						);
+						false
+					},
+				_ => {
+					panic!(
+						"the primary worker for shard {:?} has unknown signer type: {:?}",
+						shard, primary_enclave
+					);
+				},
+			},
+			None => {
+				println!("We are the primary worker on this shard and the shard is untouched. Will initialize it");
+				true
+			},
+		};
 
 	initialization_handler.registered_on_parentchain();
 
@@ -938,38 +961,4 @@ fn enclave_account<E: EnclaveBase>(enclave_api: &E) -> AccountId32 {
 	let tee_public = enclave_api.get_ecc_signing_pubkey().unwrap();
 	trace!("[+] Got ed25519 account of TEE = {}", tee_public.to_ss58check());
 	AccountId32::from(*tee_public.as_array_ref())
-}
-
-/// Checks if we are the first validateer to register on the parentchain.
-fn we_are_primary_worker(
-	node_api: &ParentchainApi,
-	shard: &ShardIdentifier,
-	enclave_account: &AccountId32,
-) -> Result<bool, Error> {
-	// are we registered? else fail.
-	node_api
-		.enclave(enclave_account, None)?
-		.expect("our enclave should be registered at this point");
-	trace!("our enclave is registered");
-	match node_api.primary_worker_for_shard(shard, None).unwrap() {
-		Some(enclave) =>
-			match enclave.instance_signer() {
-				AnySigner::Known(MultiSigner::Ed25519(primary)) =>
-					if primary.encode() == enclave_account.encode() {
-						debug!("We are primary worker on this shard adn we have been previously running.");
-						Ok(true)
-					} else {
-						debug!("The primary worker is {}", primary.to_ss58check());
-						Ok(false)
-					},
-				_ => {
-					warn!("the primary worker is of unknown type");
-					Ok(false)
-				},
-			},
-		None => {
-			debug!("We are the primary worker on this shard and the shard is untouched");
-			Ok(true)
-		},
-	}
 }
