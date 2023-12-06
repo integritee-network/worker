@@ -478,11 +478,13 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		send_extrinsic(register_xt(), &node_api2, &tee_accountid_clone, is_development_mode)
 	};
 
-	// Todo: Can't unwrap here because the extrinsic is for some reason not found in the block
-	// even if it was successful: https://github.com/scs/substrate-api-client/issues/624.
-	let register_enclave_block_hash = send_register_xt();
-	let api_register_enclave_xt_header =
-		integritee_rpc_api.get_header(register_enclave_block_hash).unwrap().unwrap();
+	let register_enclave_block_hash =
+		send_register_xt().expect("enclave RA registration must be successful to continue");
+
+	let api_register_enclave_xt_header = integritee_rpc_api
+		.get_header(Some(register_enclave_block_hash))
+		.unwrap()
+		.unwrap();
 
 	// TODO: #1451: Fix api-client type hacks
 	let register_enclave_xt_header =
@@ -868,8 +870,6 @@ fn send_extrinsic(
 		hex::encode(extrinsic.clone())
 	);
 
-	// fixme: wait ...until_success doesn't work due to https://github.com/scs/substrate-api-client/issues/624
-	// fixme: currently, we don't verify if the extrinsic was a success here
 	match api.submit_and_watch_opaque_extrinsic_until(&extrinsic.into(), XtStatus::Finalized) {
 		Ok(xt_report) => {
 			info!(
@@ -879,8 +879,7 @@ fn send_extrinsic(
 			xt_report.block_hash
 		},
 		Err(e) => {
-			error!("ExtrinsicFailed {:?}", e);
-			None
+			panic!("Extrinsic failed {:?} parentchain genesis: {:?}", e, api.genesis_hash());
 		},
 	}
 }
