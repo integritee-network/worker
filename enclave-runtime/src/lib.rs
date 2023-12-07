@@ -531,7 +531,7 @@ pub unsafe extern "C" fn get_shard_birth_header(
 	};
 	trace!("fetched shard birth header from state: {:?}", shard_birth);
 
-	let mut birth_slice = slice::from_raw_parts_mut(birth, birth_size as usize);
+	let birth_slice = slice::from_raw_parts_mut(birth, birth_size as usize);
 	if let Err(e) = write_slice_and_whitespace_pad(birth_slice, shard_birth.encode()) {
 		return Error::BufferError(e).into()
 	};

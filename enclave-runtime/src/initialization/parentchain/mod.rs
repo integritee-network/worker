@@ -16,7 +16,7 @@
 */
 
 use crate::{
-	error::{Error, Result},
+	error::Result,
 	get_shard_birth_parentchain_header_internal,
 	initialization::{
 		global_components::{
