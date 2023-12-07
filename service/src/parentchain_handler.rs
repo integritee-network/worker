@@ -164,7 +164,7 @@ where
 		// verify that the last_synced_header is indeed a block from this chain
 		self.parentchain_api
 			.get_block(Some(last_synced_header.hash()))?
-			.ok_or(Error::UnknownBlockHeader(last_synced_header.hash()))?;
+			.ok_or_else(|| Error::UnknownBlockHeader(last_synced_header.hash()))?;
 
 		info!(
 			"[{:?}] Syncing blocks from {} to {}",
