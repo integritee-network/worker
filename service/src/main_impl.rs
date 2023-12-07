@@ -414,6 +414,17 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		);
 	}
 
+	// ------------------------------------------------------------------------
+	// Init parentchain specific stuff. Needed early for parentchain communication.
+	let (integritee_parentchain_handler, integritee_last_synced_header_at_last_run) =
+		init_parentchain(
+			&enclave,
+			&integritee_rpc_api,
+			&tee_accountid,
+			ParentchainId::Integritee,
+			shard,
+		);
+
 	#[cfg(feature = "dcap")]
 	register_collateral(
 		&integritee_rpc_api,
@@ -531,15 +542,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		};
 	debug!("getting shard birth: {:?}", enclave.get_shard_birth_header(shard));
 	initialization_handler.registered_on_parentchain();
-
-	let (integritee_parentchain_handler, integritee_last_synced_header_at_last_run) =
-		init_parentchain(
-			&enclave,
-			&integritee_rpc_api,
-			&tee_accountid,
-			ParentchainId::Integritee,
-			shard,
-		);
 
 	match WorkerModeProvider::worker_mode() {
 		WorkerMode::Teeracle => {

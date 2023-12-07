@@ -56,7 +56,7 @@ pub(crate) fn create_integritee_parentchain_block_importer(
 	stf_executor: Arc<EnclaveStfExecutor>,
 	extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
 	node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
-	birth_header: Header,
+	maybe_birth_header: Option<Header>,
 ) -> Result<IntegriteeParentchainBlockImporter> {
 	let state_observer = GLOBAL_STATE_OBSERVER_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
@@ -80,7 +80,7 @@ pub(crate) fn create_integritee_parentchain_block_importer(
 		stf_executor,
 		extrinsics_factory,
 		indirect_calls_executor,
-		Some(birth_header),
+		maybe_birth_header,
 	))
 }
 

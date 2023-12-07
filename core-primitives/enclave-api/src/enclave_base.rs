@@ -255,12 +255,11 @@ mod impl_ffi {
 			shard: &ShardIdentifier,
 		) -> EnclaveResult<(ParentchainId, Header)> {
 			let mut retval = sgx_status_t::SGX_SUCCESS;
-			let mut birth =
-				[0u8; std::mem::size_of::<Header>() + std::mem::size_of::<ParentchainId>()];
+			let mut birth = [0u8; HEADER_MAX_SIZE + std::mem::size_of::<ParentchainId>()];
 			let shard_bytes = shard.encode();
 
 			let result = unsafe {
-				ffi::get_ecc_vault_pubkey(
+				ffi::get_shard_birth_header(
 					self.eid,
 					&mut retval,
 					shard_bytes.as_ptr(),
