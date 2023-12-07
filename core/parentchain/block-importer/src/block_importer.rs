@@ -134,7 +134,7 @@ impl<
 				if let Some(birth_header) = self.maybe_birth_header.clone() {
 					if signed_block.block.header().number < birth_header.number {
 						trace!(
-							"fast-syncing block import, ignoring any invocations up to block {:}",
+							"fast-syncing block import, ignoring any invocations before block {:}",
 							birth_header.number
 						);
 						continue

@@ -579,6 +579,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			let last_synced_header = integritee_parentchain_handler
 				.sync_parentchain_until_latest_finalized(
 					integritee_last_synced_header_at_last_run,
+					*shard,
 					true,
 				)
 				.unwrap();
@@ -586,6 +587,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			start_parentchain_header_subscription_thread(
 				integritee_parentchain_handler,
 				last_synced_header,
+				*shard,
 			);
 
 			info!("skipping shard vault check because not yet supported for offchain worker");
@@ -602,12 +604,14 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 				integritee_parentchain_handler.clone(),
 				sidechain_storage,
 				&integritee_last_synced_header_at_last_run,
+				*shard,
 			)
 			.unwrap();
 
 			start_parentchain_header_subscription_thread(
 				integritee_parentchain_handler,
 				last_synced_header,
+				*shard,
 			);
 
 			init_provided_shard_vault(shard, &enclave, we_are_primary_validateer);
@@ -710,10 +714,14 @@ fn init_target_parentchain<E>(
 
 		// Syncing all parentchain blocks, this might take a while..
 		let last_synched_header = parentchain_handler
-			.sync_parentchain_until_latest_finalized(last_synched_header, true)
+			.sync_parentchain_until_latest_finalized(last_synched_header, *shard, true)
 			.unwrap();
 
-		start_parentchain_header_subscription_thread(parentchain_handler, last_synched_header)
+		start_parentchain_header_subscription_thread(
+			parentchain_handler,
+			last_synched_header,
+			*shard,
+		)
 	}
 	println!("[{:?}] initializing proxied shard vault account now", parentchain_id);
 	enclave.init_proxied_shard_vault(shard, &parentchain_id).unwrap();
@@ -946,13 +954,14 @@ fn send_extrinsic(
 fn start_parentchain_header_subscription_thread<E: EnclaveBase + Sidechain>(
 	parentchain_handler: Arc<ParentchainHandler<ParentchainApi, E>>,
 	last_synced_header: Header,
+	shard: ShardIdentifier,
 ) {
 	let parentchain_id = *parentchain_handler.parentchain_id();
 	thread::Builder::new()
 		.name(format!("{:?}_parentchain_sync_loop", parentchain_id))
 		.spawn(move || {
 			if let Err(e) =
-				subscribe_to_parentchain_new_headers(parentchain_handler, last_synced_header)
+				subscribe_to_parentchain_new_headers(parentchain_handler, last_synced_header, shard)
 			{
 				error!(
 					"[{:?}] parentchain block syncing terminated with a failure: {:?}",
@@ -969,6 +978,7 @@ fn start_parentchain_header_subscription_thread<E: EnclaveBase + Sidechain>(
 fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 	parentchain_handler: Arc<ParentchainHandler<ParentchainApi, E>>,
 	mut last_synced_header: Header,
+	shard: ShardIdentifier,
 ) -> Result<(), Error> {
 	// TODO: this should be implemented by parentchain_handler directly, and not via
 	// exposed parentchain_api
@@ -988,8 +998,11 @@ fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 			parentchain_id, new_header.number
 		);
 
-		last_synced_header = parentchain_handler
-			.sync_parentchain_until_latest_finalized(last_synced_header, false)?;
+		last_synced_header = parentchain_handler.sync_parentchain_until_latest_finalized(
+			last_synced_header,
+			shard,
+			false,
+		)?;
 	}
 }
 

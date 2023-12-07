@@ -49,7 +49,8 @@ pub trait HandleParentchain {
 	fn sync_parentchain_until_latest_finalized(
 		&self,
 		last_synced_header: Header,
-		is_syncing: bool,
+		shard: ShardIdentifier,
+		immediate_import: bool,
 	) -> ServiceResult<Header>;
 
 	/// Syncs and directly imports parentchain blocks from the latest synced header
@@ -58,6 +59,7 @@ pub trait HandleParentchain {
 		&self,
 		last_synced_header: &Header,
 		until_header: &Header,
+		shard: ShardIdentifier,
 	) -> ServiceResult<Header>;
 }
 
@@ -151,7 +153,8 @@ where
 	fn sync_parentchain_until_latest_finalized(
 		&self,
 		last_synced_header: Header,
-		ignore_invocations: bool,
+		shard: ShardIdentifier,
+		immediate_import: bool,
 	) -> ServiceResult<Header> {
 		let id = self.parentchain_id();
 		trace!("[{:?}] Getting current head", id);
@@ -170,9 +173,17 @@ where
 			"[{:?}] Syncing blocks from {} to {}",
 			id, last_synced_header.number, curr_block_number
 		);
-		//		let (birth_parentchain_id, birth_header) =
-		//			self.enclave_api.get_shard_birth_header(shard)?;
-		//		trace!("shard_birth header is from {:?}: {:?}", birth_parentchain_id, birth_header);
+		let maybe_birth = self.enclave_api.get_shard_birth_header(&shard).ok();
+		let maybe_birth_header = if let Some((birth_parentchain_id, birth_header)) = maybe_birth {
+			trace!("shard_birth header is from {:?}: {:?}", birth_parentchain_id, birth_header);
+			if *id == birth_parentchain_id {
+				Some(birth_header)
+			} else {
+				None
+			}
+		} else {
+			None
+		};
 
 		let mut until_synced_header = last_synced_header;
 		loop {
@@ -185,32 +196,49 @@ where
 				return Ok(until_synced_header)
 			}
 
-			let events_chunk_to_sync: Vec<Vec<u8>> = block_chunk_to_sync
-				.iter()
-				.map(|block| {
-					self.parentchain_api.get_events_for_block(Some(block.block.header.hash()))
-				})
-				.collect::<Result<Vec<_>, _>>()?;
+			let skip_invocations = if let Some(birth_header) = maybe_birth_header.clone() {
+				let max_blocknumber_in_chunk =
+					block_chunk_to_sync.last().map_or_else(|| 0, |b| b.block.header.number());
+				if max_blocknumber_in_chunk < *birth_header.number() {
+					trace!("skipping invocations for fast-sync for blocks older than shard birth: {} < {}", max_blocknumber_in_chunk, birth_header.number());
+					true
+				} else {
+					false
+				}
+			} else {
+				false
+			};
 
-			info!(
-				"[{:?}] Found {} event vector(s) to sync in this chunk",
-				id,
-				events_chunk_to_sync.len()
-			);
+			let events_chunk_to_sync: Vec<Vec<u8>> = if skip_invocations {
+				vec![]
+			} else {
+				let evs = block_chunk_to_sync
+					.iter()
+					.map(|block| {
+						self.parentchain_api.get_events_for_block(Some(block.block.header.hash()))
+					})
+					.collect::<Result<Vec<_>, _>>()?;
+				info!("[{:?}] Found {} event vector(s) to sync in this chunk", id, evs.len());
+				evs
+			};
 
-			let events_proofs_chunk_to_sync: Vec<StorageProof> = block_chunk_to_sync
-				.iter()
-				.map(|block| {
-					self.parentchain_api.get_events_value_proof(Some(block.block.header.hash()))
-				})
-				.collect::<Result<Vec<_>, _>>()?;
+			let events_proofs_chunk_to_sync: Vec<StorageProof> = if skip_invocations {
+				vec![]
+			} else {
+				block_chunk_to_sync
+					.iter()
+					.map(|block| {
+						self.parentchain_api.get_events_value_proof(Some(block.block.header.hash()))
+					})
+					.collect::<Result<Vec<_>, _>>()?
+			};
 
 			self.enclave_api.sync_parentchain(
 				block_chunk_to_sync.as_slice(),
 				events_chunk_to_sync.as_slice(),
 				events_proofs_chunk_to_sync.as_slice(),
 				self.parentchain_id(),
-				ignore_invocations,
+				immediate_import,
 			)?;
 
 			let api_client_until_synced_header = block_chunk_to_sync
@@ -233,6 +261,7 @@ where
 		&self,
 		last_synced_header: &Header,
 		until_header: &Header,
+		shard: ShardIdentifier,
 	) -> ServiceResult<Header> {
 		let id = self.parentchain_id();
 
@@ -246,7 +275,7 @@ where
 
 		while last_synced_header.number() < until_header.number() {
 			last_synced_header =
-				self.sync_parentchain_until_latest_finalized(last_synced_header, true)?;
+				self.sync_parentchain_until_latest_finalized(last_synced_header, shard, true)?;
 			println!("[{:?}] synced block number: #{}", id, last_synced_header.number);
 			std::thread::sleep(std::time::Duration::from_secs(1));
 		}
