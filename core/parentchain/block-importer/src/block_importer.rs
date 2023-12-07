@@ -18,7 +18,7 @@
 //! Imports parentchain blocks and executes any indirect calls found in the extrinsics.
 
 use crate::{error::Result, ImportParentchainBlocks};
-use codec::Decode;
+
 use ita_stf::ParentchainHeader;
 use itc_parentchain_indirect_calls_executor::ExecuteIndirectCalls;
 use itc_parentchain_light_client::{
@@ -28,7 +28,7 @@ use itp_extrinsics_factory::CreateExtrinsics;
 use itp_stf_executor::traits::StfUpdateState;
 use itp_types::{
 	parentchain::{Header, IdentifyParentchain, ParentchainId},
-	OpaqueCall, ShardIdentifier, H256,
+	OpaqueCall, H256,
 };
 use log::*;
 use sp_runtime::{

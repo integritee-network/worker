@@ -25,7 +25,7 @@ use itc_parentchain::primitives::{
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain, EnclaveResult};
 use itp_settings::worker::MR_ENCLAVE_SIZE;
 use itp_storage::StorageProof;
-use itp_types::ShardIdentifier;
+use itp_types::{parentchain::Header, ShardIdentifier};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_core::ed25519;
 
@@ -66,6 +66,22 @@ impl EnclaveBase for EnclaveMock {
 		_shard: &ShardIdentifier,
 		_parentchain_id: &ParentchainId,
 	) -> EnclaveResult<()> {
+		unimplemented!()
+	}
+
+	fn init_shard_birth_parentchain_header(
+		&self,
+		shard: &ShardIdentifier,
+		parentchain_id: &ParentchainId,
+		header: &Header,
+	) -> EnclaveResult<()> {
+		unimplemented!()
+	}
+
+	fn get_shard_birth_header(
+		&self,
+		shard: &ShardIdentifier,
+	) -> EnclaveResult<(ParentchainId, Header)> {
 		unimplemented!()
 	}
 
