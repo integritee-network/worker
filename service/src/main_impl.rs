@@ -543,6 +543,17 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	debug!("getting shard birth: {:?}", enclave.get_shard_birth_header(shard));
 	initialization_handler.registered_on_parentchain();
 
+	// re-initialize integritee parentchain to make sure to use birth_header for fast-sync
+	// todo: this should only be necessary if we are the primary validateer running for the first time
+	let (integritee_parentchain_handler, integritee_last_synced_header_at_last_run) =
+		init_parentchain(
+			&enclave,
+			&integritee_rpc_api,
+			&tee_accountid,
+			ParentchainId::Integritee,
+			shard,
+		);
+
 	match WorkerModeProvider::worker_mode() {
 		WorkerMode::Teeracle => {
 			// ------------------------------------------------------------------------

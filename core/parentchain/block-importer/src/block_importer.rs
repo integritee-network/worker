@@ -138,10 +138,6 @@ impl<
 							birth_header.number
 						);
 						continue
-					} else {
-						trace!(
-							"only Integritee parentchain is supported for shard birth fast-syncing"
-						);
 					}
 				}
 			}
