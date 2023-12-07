@@ -47,7 +47,7 @@ use crate::{
 		get_node_metadata_repository_from_target_b_solo_or_parachain, utf8_str_from_raw, DecodeRaw,
 	},
 };
-use codec::Decode;
+use codec::{Decode, Encode};
 use core::ffi::c_int;
 use itc_parentchain::{block_import_dispatcher::DispatchBlockImport, primitives::ParentchainId};
 use itp_component_container::ComponentGetter;
@@ -56,8 +56,10 @@ use itp_node_api::metadata::NodeMetadata;
 use itp_nonce_cache::{MutateNonce, Nonce};
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
 use itp_sgx_crypto::key_repository::AccessPubkey;
+use itp_stf_interface::SHARD_BIRTH_HEADER_KEY;
+use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_storage::{StorageProof, StorageProofChecker};
-use itp_types::{ShardIdentifier, SignedBlock};
+use itp_types::{parentchain::Header, ShardIdentifier, SignedBlock};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use once_cell::sync::OnceCell;
@@ -424,6 +426,116 @@ pub unsafe extern "C" fn init_shard(shard: *const u8, shard_size: u32) -> sgx_st
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn init_shard_birth_parentchain_header(
+	shard: *const u8,
+	shard_size: u32,
+	parentchain_id: *const u8,
+	parentchain_id_size: u32,
+	header: *const u8,
+	header_size: u32,
+) -> sgx_status_t {
+	let shard_identifier =
+		ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
+	let header = match Header::decode(&mut slice::from_raw_parts(header, header_size as usize)) {
+		Ok(hdr) => hdr,
+		Err(e) => {
+			error!("Could not decode header: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+	let parentchain_id =
+		match ParentchainId::decode_raw(parentchain_id, parentchain_id_size as usize) {
+			Ok(id) => id,
+			Err(e) => {
+				error!("Could not decode parentchain id: {:?}", e);
+				return sgx_status_t::SGX_ERROR_UNEXPECTED
+			},
+		};
+
+	if let Err(e) =
+		init_shard_birth_parentchain_header_internal(shard_identifier, parentchain_id, header)
+	{
+		error!(
+			"Failed to initialize first relevant parentchain header [{:?}]: {:?}",
+			parentchain_id, e
+		);
+		return sgx_status_t::SGX_ERROR_UNEXPECTED
+	}
+	sgx_status_t::SGX_SUCCESS
+}
+
+fn init_shard_birth_parentchain_header_internal(
+	shard: ShardIdentifier,
+	parentchain_id: ParentchainId,
+	header: Header,
+) -> Result<()> {
+	if let Ok((id, _hdr)) = get_shard_birth_parentchain_header_internal(shard) {
+		error!("first relevant parentchain header has been initialized: {:?}", id);
+		return Err(Error::Other(
+			"first relevant parentchain header has been previously initialized".into(),
+		))
+	}
+	debug!("initializing shard birth header: {:?}", parentchain_id);
+
+	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
+	if !state_handler
+		.shard_exists(&shard)
+		.map_err(|_| Error::Other("get shard_exists failed".into()))?
+	{
+		return Err(Error::Other("shard not initialized".into()))
+	};
+
+	let (state_lock, mut state) = state_handler.load_for_mutation(&shard)?;
+	let value = (parentchain_id, header);
+	state.state.insert(SHARD_BIRTH_HEADER_KEY.into(), value.encode());
+	state_handler.write_after_mutation(state, state_lock, &shard)?;
+	Ok(())
+}
+
+/// reads the shard vault account id form state if it has been initialized previously
+pub(crate) fn get_shard_birth_parentchain_header_internal(
+	shard: ShardIdentifier,
+) -> Result<(ParentchainId, Header)> {
+	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
+
+	state_handler
+		.execute_on_current(&shard, |state, _| {
+			state
+				.state
+				.get::<Vec<u8>>(&SHARD_BIRTH_HEADER_KEY.into())
+				.and_then(|v| Decode::decode(&mut v.clone().as_slice()).ok())
+		})?
+		.ok_or_else(|| {
+			Error::Other(
+				"failed to fetch shard birth parentchain header. has it been initialized?".into(),
+			)
+		})
+}
+
+/// reads the shard vault account id form state if it has been initialized previously
+#[no_mangle]
+pub unsafe extern "C" fn get_shard_birth_header(
+	shard: *const u8,
+	shard_size: u32,
+	birth: *mut u8,
+	birth_size: u32,
+) -> sgx_status_t {
+	let shard = ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
+
+	let shard_birth = match get_shard_birth_parentchain_header_internal(shard) {
+		Ok(account) => account,
+		Err(e) => {
+			warn!("Failed to fetch birth header: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+	trace!("fetched shard birth header from state: {:?}", shard_birth);
+	let birth_slice = slice::from_raw_parts_mut(birth, birth_size as usize);
+	birth_slice.clone_from_slice(shard_birth.encode().as_slice());
+	sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn sync_parentchain(
 	blocks_to_sync: *const u8,
 	blocks_to_sync_size: usize,
@@ -465,18 +577,19 @@ unsafe fn sync_parentchain_internal(
 	is_syncing: bool,
 ) -> Result<()> {
 	let blocks_to_sync = Vec::<SignedBlock>::decode_raw(blocks_to_sync, blocks_to_sync_size)?;
+	let events_to_sync = Vec::<Vec<u8>>::decode_raw(events_to_sync, events_to_sync_size)?;
 	let events_proofs_to_sync =
 		Vec::<StorageProof>::decode_raw(events_proofs_to_sync, events_proofs_to_sync_size)?;
 	let parentchain_id = ParentchainId::decode_raw(parentchain_id, parentchain_id_size as usize)?;
 
-	let blocks_to_sync_merkle_roots: Vec<sp_core::H256> =
-		blocks_to_sync.iter().map(|block| block.block.header.state_root).collect();
-
-	if let Err(e) = validate_events(&events_proofs_to_sync, &blocks_to_sync_merkle_roots) {
-		return e.into()
+	if !events_proofs_to_sync.is_empty() {
+		let blocks_to_sync_merkle_roots: Vec<sp_core::H256> =
+			blocks_to_sync.iter().map(|block| block.block.header.state_root).collect();
+		// fixme: vulnerability! https://github.com/integritee-network/worker/issues/1518
+		if let Err(e) = validate_events(&events_proofs_to_sync, &blocks_to_sync_merkle_roots) {
+			return e.into()
+		}
 	}
-
-	let events_to_sync = Vec::<Vec<u8>>::decode_raw(events_to_sync, events_to_sync_size)?;
 
 	dispatch_parentchain_blocks_for_import::<WorkerModeProvider>(
 		blocks_to_sync,

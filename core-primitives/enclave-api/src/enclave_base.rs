@@ -20,7 +20,7 @@ use crate::EnclaveResult;
 use codec::Decode;
 use core::fmt::Debug;
 use itc_parentchain::primitives::{ParentchainId, ParentchainInitParams};
-use itp_types::ShardIdentifier;
+use itp_types::{parentchain::Header, ShardIdentifier};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_core::ed25519;
 use teerex_primitives::EnclaveFingerprint;
@@ -57,6 +57,19 @@ pub trait EnclaveBase: Send + Sync + 'static {
 		parentchain_id: &ParentchainId,
 	) -> EnclaveResult<()>;
 
+	/// Initialize parentchain checkpoint after which invocations will be processed
+	fn init_shard_birth_parentchain_header(
+		&self,
+		shard: &ShardIdentifier,
+		parentchain_id: &ParentchainId,
+		header: &Header,
+	) -> EnclaveResult<()>;
+
+	fn get_shard_birth_header(
+		&self,
+		shard: &ShardIdentifier,
+	) -> EnclaveResult<(ParentchainId, Header)>;
+
 	fn set_nonce(&self, nonce: u32, parentchain_id: ParentchainId) -> EnclaveResult<()>;
 
 	fn set_node_metadata(
@@ -88,7 +101,7 @@ mod impl_ffi {
 	use itp_settings::worker::{
 		HEADER_MAX_SIZE, MR_ENCLAVE_SIZE, SHIELDING_KEY_SIZE, SIGNING_KEY_SIZE,
 	};
-	use itp_types::ShardIdentifier;
+	use itp_types::{parentchain::Header, ShardIdentifier};
 	use log::*;
 	use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 	use sgx_types::*;
@@ -206,6 +219,62 @@ mod impl_ffi {
 			ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
 
 			Ok(())
+		}
+
+		fn init_shard_birth_parentchain_header(
+			&self,
+			shard: &ShardIdentifier,
+			parentchain_id: &ParentchainId,
+			header: &Header,
+		) -> EnclaveResult<()> {
+			let mut retval = sgx_status_t::SGX_SUCCESS;
+			let parentchain_id_enc = parentchain_id.encode();
+			let header_bytes = header.encode();
+			let shard_bytes = shard.encode();
+			let result = unsafe {
+				ffi::init_shard_birth_parentchain_header(
+					self.eid,
+					&mut retval,
+					shard_bytes.as_ptr(),
+					shard_bytes.len() as u32,
+					parentchain_id_enc.as_ptr(),
+					parentchain_id_enc.len() as u32,
+					header_bytes.as_ptr(),
+					header_bytes.len() as u32,
+				)
+			};
+
+			ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+			ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+
+			Ok(())
+		}
+
+		fn get_shard_birth_header(
+			&self,
+			shard: &ShardIdentifier,
+		) -> EnclaveResult<(ParentchainId, Header)> {
+			let mut retval = sgx_status_t::SGX_SUCCESS;
+			let mut birth =
+				[0u8; std::mem::size_of::<Header>() + std::mem::size_of::<ParentchainId>()];
+			let shard_bytes = shard.encode();
+
+			let result = unsafe {
+				ffi::get_ecc_vault_pubkey(
+					self.eid,
+					&mut retval,
+					shard_bytes.as_ptr(),
+					shard_bytes.len() as u32,
+					birth.as_mut_ptr(),
+					birth.len() as u32,
+				)
+			};
+
+			ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+			ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+			let (birth_parentchain_id, birth_header): (ParentchainId, Header) =
+				Decode::decode(&mut birth.as_slice())?;
+			Ok((birth_parentchain_id, birth_header))
 		}
 
 		fn set_nonce(&self, nonce: u32, parentchain_id: ParentchainId) -> EnclaveResult<()> {

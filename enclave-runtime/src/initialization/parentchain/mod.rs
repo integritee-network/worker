@@ -16,7 +16,8 @@
 */
 
 use crate::{
-	error::Result,
+	error::{Error, Result},
+	get_shard_birth_parentchain_header_internal,
 	initialization::{
 		global_components::{
 			GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT,
@@ -58,63 +59,85 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 	encoded_params: Vec<u8>,
 ) -> Result<Vec<u8>> {
 	match ParentchainInitParams::decode(&mut encoded_params.as_slice())? {
-		ParentchainInitParams::Parachain { id, params } => match id {
-			ParentchainId::Integritee => {
-				let handler =
-					IntegriteeParachainHandler::init::<WorkerModeProvider>(base_path, params)?;
-				let header = handler
-					.validator_accessor
-					.execute_on_validator(|v| v.latest_finalized_header())?;
-				GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT.initialize(handler.into());
-				Ok(header.encode())
-			},
-			ParentchainId::TargetA => {
-				let handler =
-					TargetAParachainHandler::init::<WorkerModeProvider>(base_path, params)?;
-				let header = handler
-					.validator_accessor
-					.execute_on_validator(|v| v.latest_finalized_header())?;
-				GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT.initialize(handler.into());
-				Ok(header.encode())
-			},
-			ParentchainId::TargetB => {
-				let handler =
-					TargetBParachainHandler::init::<WorkerModeProvider>(base_path, params)?;
-				let header = handler
-					.validator_accessor
-					.execute_on_validator(|v| v.latest_finalized_header())?;
-				GLOBAL_TARGET_B_PARACHAIN_HANDLER_COMPONENT.initialize(handler.into());
-				Ok(header.encode())
-			},
+		ParentchainInitParams::Parachain { id, shard, params } => {
+			let (birth_parachain_id, birth_header) =
+				get_shard_birth_parentchain_header_internal(shard)?;
+			if birth_parachain_id != ParentchainId::Integritee {
+				unimplemented!("only Integritee parentchain is supported for shard birth");
+			}
+			// todo: query timestamp of birth header to give a birth reference to target_a/b as well in order to fast-sync
+			match id {
+				ParentchainId::Integritee => {
+					let handler = IntegriteeParachainHandler::init::<WorkerModeProvider>(
+						base_path,
+						params,
+						birth_header,
+					)?;
+					let header = handler
+						.validator_accessor
+						.execute_on_validator(|v| v.latest_finalized_header())?;
+					GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT.initialize(handler.into());
+					Ok(header.encode())
+				},
+				ParentchainId::TargetA => {
+					let handler =
+						TargetAParachainHandler::init::<WorkerModeProvider>(base_path, params)?;
+					let header = handler
+						.validator_accessor
+						.execute_on_validator(|v| v.latest_finalized_header())?;
+					GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT.initialize(handler.into());
+					Ok(header.encode())
+				},
+				ParentchainId::TargetB => {
+					let handler =
+						TargetBParachainHandler::init::<WorkerModeProvider>(base_path, params)?;
+					let header = handler
+						.validator_accessor
+						.execute_on_validator(|v| v.latest_finalized_header())?;
+					GLOBAL_TARGET_B_PARACHAIN_HANDLER_COMPONENT.initialize(handler.into());
+					Ok(header.encode())
+				},
+			}
 		},
-		ParentchainInitParams::Solochain { id, params } => match id {
-			ParentchainId::Integritee => {
-				let handler =
-					IntegriteeSolochainHandler::init::<WorkerModeProvider>(base_path, params)?;
-				let header = handler
-					.validator_accessor
-					.execute_on_validator(|v| v.latest_finalized_header())?;
-				GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT.initialize(handler.into());
-				Ok(header.encode())
-			},
-			ParentchainId::TargetA => {
-				let handler =
-					TargetASolochainHandler::init::<WorkerModeProvider>(base_path, params)?;
-				let header = handler
-					.validator_accessor
-					.execute_on_validator(|v| v.latest_finalized_header())?;
-				GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT.initialize(handler.into());
-				Ok(header.encode())
-			},
-			ParentchainId::TargetB => {
-				let handler =
-					TargetBSolochainHandler::init::<WorkerModeProvider>(base_path, params)?;
-				let header = handler
-					.validator_accessor
-					.execute_on_validator(|v| v.latest_finalized_header())?;
-				GLOBAL_TARGET_B_SOLOCHAIN_HANDLER_COMPONENT.initialize(handler.into());
-				Ok(header.encode())
-			},
+		ParentchainInitParams::Solochain { id, shard, params } => {
+			let (birth_parachain_id, birth_header) =
+				get_shard_birth_parentchain_header_internal(shard)?;
+			if birth_parachain_id != ParentchainId::Integritee {
+				unimplemented!("only Integritee parentchain is supported for shard birth");
+			}
+			// todo: query timestamp of birth header to give a birth reference to target_a/b as well in order to fast-sync
+			match id {
+				ParentchainId::Integritee => {
+					let handler = IntegriteeSolochainHandler::init::<WorkerModeProvider>(
+						base_path,
+						params,
+						birth_header,
+					)?;
+					let header = handler
+						.validator_accessor
+						.execute_on_validator(|v| v.latest_finalized_header())?;
+					GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT.initialize(handler.into());
+					Ok(header.encode())
+				},
+				ParentchainId::TargetA => {
+					let handler =
+						TargetASolochainHandler::init::<WorkerModeProvider>(base_path, params)?;
+					let header = handler
+						.validator_accessor
+						.execute_on_validator(|v| v.latest_finalized_header())?;
+					GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT.initialize(handler.into());
+					Ok(header.encode())
+				},
+				ParentchainId::TargetB => {
+					let handler =
+						TargetBSolochainHandler::init::<WorkerModeProvider>(base_path, params)?;
+					let header = handler
+						.validator_accessor
+						.execute_on_validator(|v| v.latest_finalized_header())?;
+					GLOBAL_TARGET_B_SOLOCHAIN_HANDLER_COMPONENT.initialize(handler.into());
+					Ok(header.encode())
+				},
+			}
 		},
 	}
 }

@@ -789,6 +789,7 @@ dependencies = [
  "itc-offchain-worker-executor",
  "itc-parentchain",
  "itc-parentchain-block-import-dispatcher",
+ "itc-parentchain-block-importer",
  "itc-parentchain-test",
  "itc-tls-websocket-server",
  "itp-attestation-handler",

@@ -18,6 +18,7 @@
 //! Imports parentchain blocks and executes any indirect calls found in the extrinsics.
 
 use crate::{error::Result, ImportParentchainBlocks};
+use codec::Decode;
 use ita_stf::ParentchainHeader;
 use itc_parentchain_indirect_calls_executor::ExecuteIndirectCalls;
 use itc_parentchain_light_client::{
@@ -26,8 +27,8 @@ use itc_parentchain_light_client::{
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_stf_executor::traits::StfUpdateState;
 use itp_types::{
-	parentchain::{IdentifyParentchain, ParentchainId},
-	OpaqueCall, H256,
+	parentchain::{Header, IdentifyParentchain, ParentchainId},
+	OpaqueCall, ShardIdentifier, H256,
 };
 use log::*;
 use sp_runtime::{
@@ -48,6 +49,7 @@ pub struct ParentchainBlockImporter<
 	stf_executor: Arc<StfExecutor>,
 	extrinsics_factory: Arc<ExtrinsicsFactory>,
 	pub indirect_calls_executor: Arc<IndirectCallsExecutor>,
+	maybe_birth_header: Option<Header>,
 	_phantom: PhantomData<ParentchainBlock>,
 }
 
@@ -71,12 +73,14 @@ impl<
 		stf_executor: Arc<StfExecutor>,
 		extrinsics_factory: Arc<ExtrinsicsFactory>,
 		indirect_calls_executor: Arc<IndirectCallsExecutor>,
+		maybe_birth_header: Option<Header>,
 	) -> Self {
 		ParentchainBlockImporter {
 			validator_accessor,
 			stf_executor,
 			extrinsics_factory,
 			indirect_calls_executor,
+			maybe_birth_header,
 			_phantom: Default::default(),
 		}
 	}
@@ -123,6 +127,23 @@ impl<
 			{
 				error!("[{:?}] Header submission to light client failed: {:?}", id, e);
 				return Err(e.into())
+			}
+
+			// check if we can fast-sync
+			if id == ParentchainId::Integritee {
+				if let Some(birth_header) = self.maybe_birth_header.clone() {
+					if signed_block.block.header().number < birth_header.number {
+						trace!(
+							"fast-syncing block import, ignoring any invocations up to block {:}",
+							birth_header.number
+						);
+						continue
+					} else {
+						trace!(
+							"only Integritee parentchain is supported for shard birth fast-syncing"
+						);
+					}
+				}
 			}
 
 			let block = signed_block.block;

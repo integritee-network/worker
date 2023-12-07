@@ -16,7 +16,7 @@
 
 use codec::Error as CodecError;
 use itp_node_api::api_client::ApiClientError;
-use itp_types::ShardIdentifier;
+use itp_types::{parentchain::Hash, ShardIdentifier};
 
 pub type ServiceResult<T> = Result<T, Error>;
 
@@ -50,6 +50,8 @@ pub enum Error {
 	MissingGenesisHeader,
 	#[error("Could not find last finalized block of the parentchain")]
 	MissingLastFinalizedBlock,
+	#[error("Could not find block in parentchain")]
+	UnknownBlockHeader(Hash),
 	#[error("{0}")]
 	Custom(Box<dyn std::error::Error + Sync + Send + 'static>),
 }

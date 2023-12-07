@@ -75,7 +75,7 @@ where
 			"We're the first validateer to be registered, syncing parentchain blocks until the one we have registered ourselves on."
 		);
 		updated_header =
-			Some(parentchain_handler.sync_and_import_parentchain_until(
+			Some(parentchain_handler.await_sync_and_import_parentchain_until_at_least(
 				last_synced_header,
 				register_enclave_xt_header,
 			)?);

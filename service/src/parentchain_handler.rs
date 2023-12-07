@@ -26,12 +26,16 @@ use itp_api_client_types::ParentchainApi;
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
 use itp_node_api::api_client::ChainApi;
 use itp_storage::StorageProof;
+use itp_types::ShardIdentifier;
 use log::*;
 use my_node_runtime::Header;
 use sp_consensus_grandpa::VersionedAuthorityList;
 use sp_runtime::traits::Header as HeaderTrait;
 use std::{cmp::min, sync::Arc};
-use substrate_api_client::ac_primitives::{Block, Header as HeaderT};
+use substrate_api_client::{
+	ac_primitives::{Block, Header as HeaderT},
+	GetChainInfo,
+};
 
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
 
@@ -42,15 +46,15 @@ pub trait HandleParentchain {
 
 	/// Fetches the parentchain blocks to sync from the parentchain and feeds them to the enclave.
 	/// Returns the latest synced block header.
-	fn sync_parentchain(
+	fn sync_parentchain_until_latest_finalized(
 		&self,
 		last_synced_header: Header,
 		is_syncing: bool,
 	) -> ServiceResult<Header>;
 
 	/// Syncs and directly imports parentchain blocks from the latest synced header
-	/// until the specified until_header.
-	fn sync_and_import_parentchain_until(
+	/// until at least the specified until_header.
+	fn await_sync_and_import_parentchain_until_at_least(
 		&self,
 		last_synced_header: &Header,
 		until_header: &Header,
@@ -83,6 +87,7 @@ where
 		parentchain_api: ParentchainApi,
 		enclave_api: Arc<EnclaveApi>,
 		id: ParentchainId,
+		shard: ShardIdentifier,
 	) -> ServiceResult<Self> {
 		let genesis_hash = parentchain_api.get_genesis_hash()?;
 		let genesis_header =
@@ -100,6 +105,7 @@ where
 
 			(
 				id,
+				shard,
 				GrandpaParams::new(
 					// #TODO: #1451: clean up type hacks
 					Header::decode(&mut genesis_header.encode().as_slice())?,
@@ -111,6 +117,7 @@ where
 		} else {
 			(
 				id,
+				shard,
 				SimpleParams::new(
 					// #TODO: #1451: clean up type hacks
 					Header::decode(&mut genesis_header.encode().as_slice())?,
@@ -141,10 +148,10 @@ where
 			.init_parentchain_components(self.parentchain_init_params.clone())?)
 	}
 
-	fn sync_parentchain(
+	fn sync_parentchain_until_latest_finalized(
 		&self,
 		last_synced_header: Header,
-		is_syncing: bool,
+		ignore_invocations: bool,
 	) -> ServiceResult<Header> {
 		let id = self.parentchain_id();
 		trace!("[{:?}] Getting current head", id);
@@ -154,10 +161,18 @@ where
 			.ok_or(Error::MissingLastFinalizedBlock)?;
 		let curr_block_number = curr_block.block.header().number();
 
+		// verify that the last_synced_header is indeed a block from this chain
+		self.parentchain_api
+			.get_block(Some(last_synced_header.hash()))?
+			.ok_or(Error::UnknownBlockHeader(last_synced_header.hash()))?;
+
 		info!(
 			"[{:?}] Syncing blocks from {} to {}",
 			id, last_synced_header.number, curr_block_number
 		);
+		//		let (birth_parentchain_id, birth_header) =
+		//			self.enclave_api.get_shard_birth_header(shard)?;
+		//		trace!("shard_birth header is from {:?}: {:?}", birth_parentchain_id, birth_header);
 
 		let mut until_synced_header = last_synced_header;
 		loop {
@@ -165,7 +180,7 @@ where
 				until_synced_header.number + 1,
 				min(until_synced_header.number + BLOCK_SYNC_BATCH_SIZE, curr_block_number),
 			)?;
-			info!("[{:?}] Found {} block(s) to sync", id, block_chunk_to_sync.len());
+			info!("[{:?}] Found {} block(s) to sync in this chunk", id, block_chunk_to_sync.len());
 			if block_chunk_to_sync.is_empty() {
 				return Ok(until_synced_header)
 			}
@@ -177,7 +192,11 @@ where
 				})
 				.collect::<Result<Vec<_>, _>>()?;
 
-			info!("[{:?}] Found {} event vector(s) to sync", id, events_chunk_to_sync.len());
+			info!(
+				"[{:?}] Found {} event vector(s) to sync in this chunk",
+				id,
+				events_chunk_to_sync.len()
+			);
 
 			let events_proofs_chunk_to_sync: Vec<StorageProof> = block_chunk_to_sync
 				.iter()
@@ -191,7 +210,7 @@ where
 				events_chunk_to_sync.as_slice(),
 				events_proofs_chunk_to_sync.as_slice(),
 				self.parentchain_id(),
-				is_syncing,
+				ignore_invocations,
 			)?;
 
 			let api_client_until_synced_header = block_chunk_to_sync
@@ -210,7 +229,7 @@ where
 		}
 	}
 
-	fn sync_and_import_parentchain_until(
+	fn await_sync_and_import_parentchain_until_at_least(
 		&self,
 		last_synced_header: &Header,
 		until_header: &Header,
@@ -226,7 +245,8 @@ where
 		let mut last_synced_header = last_synced_header.clone();
 
 		while last_synced_header.number() < until_header.number() {
-			last_synced_header = self.sync_parentchain(last_synced_header, true)?;
+			last_synced_header =
+				self.sync_parentchain_until_latest_finalized(last_synced_header, true)?;
 			println!("[{:?}] synced block number: #{}", id, last_synced_header.number);
 			std::thread::sleep(std::time::Duration::from_secs(1));
 		}

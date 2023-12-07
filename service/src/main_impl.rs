@@ -414,12 +414,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		);
 	}
 
-	// ------------------------------------------------------------------------
-	// Init parentchain specific stuff. Needed for parentchain communication.
-
-	let (parentchain_handler, last_synced_header) =
-		init_parentchain(&enclave, &integritee_rpc_api, &tee_accountid, ParentchainId::Integritee);
-
 	#[cfg(feature = "dcap")]
 	register_collateral(
 		&integritee_rpc_api,
@@ -525,11 +519,27 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			},
 			None => {
 				println!("We are the primary worker on this shard and the shard is untouched. Will initialize it");
+				enclave
+					.init_shard_birth_parentchain_header(
+						shard,
+						&ParentchainId::Integritee,
+						&register_enclave_xt_header,
+					)
+					.unwrap();
 				true
 			},
 		};
-
+	debug!("getting shard birth: {:?}", enclave.get_shard_birth_header(shard));
 	initialization_handler.registered_on_parentchain();
+
+	let (integritee_parentchain_handler, integritee_last_synced_header_at_last_run) =
+		init_parentchain(
+			&enclave,
+			&integritee_rpc_api,
+			&tee_accountid,
+			ParentchainId::Integritee,
+			shard,
+		);
 
 	match WorkerModeProvider::worker_mode() {
 		WorkerMode::Teeracle => {
@@ -553,10 +563,17 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			println!("*** [+] Finished initializing light client, syncing parentchain...");
 
 			// Syncing all parentchain blocks, this might take a while..
-			let last_synced_header =
-				parentchain_handler.sync_parentchain(last_synced_header, true).unwrap();
+			let last_synced_header = integritee_parentchain_handler
+				.sync_parentchain_until_latest_finalized(
+					integritee_last_synced_header_at_last_run,
+					true,
+				)
+				.unwrap();
 
-			start_parentchain_header_subscription_thread(parentchain_handler, last_synced_header);
+			start_parentchain_header_subscription_thread(
+				integritee_parentchain_handler,
+				last_synced_header,
+			);
 
 			info!("skipping shard vault check because not yet supported for offchain worker");
 		},
@@ -569,13 +586,16 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 				enclave.clone(),
 				&register_enclave_xt_header,
 				we_are_primary_validateer,
-				parentchain_handler.clone(),
+				integritee_parentchain_handler.clone(),
 				sidechain_storage,
-				&last_synced_header,
+				&integritee_last_synced_header_at_last_run,
 			)
 			.unwrap();
 
-			start_parentchain_header_subscription_thread(parentchain_handler, last_synced_header);
+			start_parentchain_header_subscription_thread(
+				integritee_parentchain_handler,
+				last_synced_header,
+			);
 
 			init_provided_shard_vault(shard, &enclave, we_are_primary_validateer);
 
@@ -667,7 +687,7 @@ fn init_target_parentchain<E>(
 		});
 
 	let (parentchain_handler, last_synched_header) =
-		init_parentchain(enclave, &node_api, tee_account_id, parentchain_id);
+		init_parentchain(enclave, &node_api, tee_account_id, parentchain_id, shard);
 
 	if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
 		println!(
@@ -676,8 +696,9 @@ fn init_target_parentchain<E>(
 		);
 
 		// Syncing all parentchain blocks, this might take a while..
-		let last_synched_header =
-			parentchain_handler.sync_parentchain(last_synched_header, true).unwrap();
+		let last_synched_header = parentchain_handler
+			.sync_parentchain_until_latest_finalized(last_synched_header, true)
+			.unwrap();
 
 		start_parentchain_header_subscription_thread(parentchain_handler, last_synched_header)
 	}
@@ -704,6 +725,7 @@ fn init_parentchain<E>(
 	node_api: &ParentchainApi,
 	tee_account_id: &AccountId32,
 	parentchain_id: ParentchainId,
+	shard: &ShardIdentifier,
 ) -> (Arc<ParentchainHandler<ParentchainApi, E>>, Header)
 where
 	E: EnclaveBase + Sidechain,
@@ -713,6 +735,7 @@ where
 			node_api.clone(),
 			enclave.clone(),
 			parentchain_id,
+			*shard,
 		)
 		.unwrap(),
 	);
@@ -952,7 +975,8 @@ fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 			parentchain_id, new_header.number
 		);
 
-		last_synced_header = parentchain_handler.sync_parentchain(last_synced_header, false)?;
+		last_synced_header = parentchain_handler
+			.sync_parentchain_until_latest_finalized(last_synced_header, false)?;
 	}
 }
 

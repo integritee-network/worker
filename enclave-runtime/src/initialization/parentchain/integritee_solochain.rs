@@ -36,7 +36,7 @@ use crate::{
 use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, LightClientState};
 use itp_component_container::ComponentGetter;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
-use itp_types::parentchain::ParentchainId;
+use itp_types::parentchain::{Header, ParentchainId};
 use std::{path::PathBuf, sync::Arc};
 
 pub use itc_parentchain::primitives::{SolochainBlock, SolochainHeader, SolochainParams};
@@ -54,6 +54,7 @@ impl IntegriteeSolochainHandler {
 	pub fn init<WorkerModeProvider: ProvideWorkerMode>(
 		_base_path: PathBuf,
 		params: SolochainParams,
+		birth_header: Header,
 	) -> Result<Self> {
 		let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 		let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
@@ -90,6 +91,7 @@ impl IntegriteeSolochainHandler {
 			stf_executor.clone(),
 			extrinsics_factory.clone(),
 			node_metadata_repository.clone(),
+			birth_header,
 		)?;
 
 		let import_dispatcher = match WorkerModeProvider::worker_mode() {
