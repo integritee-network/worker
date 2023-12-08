@@ -16,10 +16,11 @@
 */
 
 use codec::Encode;
+use enclave_bridge_primitives::ShardSignerStatus;
 use itp_node_api::api_client::{ApiResult, PalletTeerexApi};
 use itp_types::{
-	AccountId, MultiEnclave, SgxBuildMode, SgxEnclave, SgxReportData, SgxStatus, ShardIdentifier,
-	H256 as Hash,
+	parentchain::BlockNumber, AccountId, MultiEnclave, SgxBuildMode, SgxEnclave, SgxReportData,
+	SgxStatus, ShardIdentifier, H256 as Hash,
 };
 
 pub struct TestNodeApi;
@@ -79,6 +80,15 @@ impl PalletTeerexApi for TestNodeApi {
 	) -> ApiResult<Option<MultiEnclave<Vec<u8>>>> {
 		unreachable!()
 	}
+
+	fn shard_status(
+		&self,
+		_: &ShardIdentifier,
+		_at_block: Option<Hash>,
+	) -> ApiResult<Option<Vec<ShardSignerStatus<AccountId, BlockNumber>>>> {
+		unreachable!()
+	}
+
 	fn latest_ipfs_hash(
 		&self,
 		_: &ShardIdentifier,
