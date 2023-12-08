@@ -49,7 +49,7 @@ pub trait DispatchBlockImport<SignedBlockType> {
 		&self,
 		blocks: Vec<SignedBlockType>,
 		events: Vec<Vec<u8>>,
-		is_syncing: bool,
+		immediate_import: bool,
 	) -> Result<()>;
 }
 
@@ -105,16 +105,16 @@ where
 		&self,
 		blocks: Vec<SignedBlockType>,
 		events: Vec<Vec<u8>>,
-		is_syncing: bool,
+		immediate_import: bool,
 	) -> Result<()> {
 		match self {
 			BlockImportDispatcher::TriggeredDispatcher(dispatcher) => {
 				log::trace!("TRIGGERED DISPATCHER MATCH");
-				dispatcher.dispatch_import(blocks, events, is_syncing)
+				dispatcher.dispatch_import(blocks, events, immediate_import)
 			},
 			BlockImportDispatcher::ImmediateDispatcher(dispatcher) => {
 				log::trace!("IMMEDIATE DISPATCHER MATCH");
-				dispatcher.dispatch_import(blocks, events, is_syncing)
+				dispatcher.dispatch_import(blocks, events, immediate_import)
 			},
 			BlockImportDispatcher::EmptyDispatcher => {
 				log::trace!("EMPTY DISPATCHER DISPATCHER MATCH");

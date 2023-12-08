@@ -550,7 +550,7 @@ pub unsafe extern "C" fn sync_parentchain(
 	events_proofs_to_sync_size: usize,
 	parentchain_id: *const u8,
 	parentchain_id_size: u32,
-	is_syncing: c_int,
+	immediate_import: c_int,
 ) -> sgx_status_t {
 	if let Err(e) = sync_parentchain_internal(
 		blocks_to_sync,
@@ -561,7 +561,7 @@ pub unsafe extern "C" fn sync_parentchain(
 		events_proofs_to_sync_size,
 		parentchain_id,
 		parentchain_id_size,
-		is_syncing == 1,
+		immediate_import == 1,
 	) {
 		error!("Error synching parentchain: {:?}", e);
 	}
@@ -579,7 +579,7 @@ unsafe fn sync_parentchain_internal(
 	events_proofs_to_sync_size: usize,
 	parentchain_id: *const u8,
 	parentchain_id_size: u32,
-	is_syncing: bool,
+	immediate_import: bool,
 ) -> Result<()> {
 	let blocks_to_sync = Vec::<SignedBlock>::decode_raw(blocks_to_sync, blocks_to_sync_size)?;
 	let events_to_sync = Vec::<Vec<u8>>::decode_raw(events_to_sync, events_to_sync_size)?;
@@ -600,7 +600,7 @@ unsafe fn sync_parentchain_internal(
 		blocks_to_sync,
 		events_to_sync,
 		&parentchain_id,
-		is_syncing,
+		immediate_import,
 	)
 }
 
@@ -616,7 +616,7 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 	blocks_to_sync: Vec<SignedBlock>,
 	events_to_sync: Vec<Vec<u8>>,
 	id: &ParentchainId,
-	is_syncing: bool,
+	immediate_import: bool,
 ) -> Result<()> {
 	if WorkerModeProvider::worker_mode() == WorkerMode::Teeracle {
 		trace!("Not importing any parentchain blocks");
@@ -634,13 +634,13 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 				handler.import_dispatcher.dispatch_import(
 					blocks_to_sync,
 					events_to_sync,
-					is_syncing,
+					immediate_import,
 				)?;
 			} else if let Ok(handler) = GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT.get() {
 				handler.import_dispatcher.dispatch_import(
 					blocks_to_sync,
 					events_to_sync,
-					is_syncing,
+					immediate_import,
 				)?;
 			} else {
 				return Err(Error::NoIntegriteeParentchainAssigned)
@@ -651,13 +651,13 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 				handler.import_dispatcher.dispatch_import(
 					blocks_to_sync,
 					events_to_sync,
-					is_syncing,
+					immediate_import,
 				)?;
 			} else if let Ok(handler) = GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT.get() {
 				handler.import_dispatcher.dispatch_import(
 					blocks_to_sync,
 					events_to_sync,
-					is_syncing,
+					immediate_import,
 				)?;
 			} else {
 				return Err(Error::NoTargetAParentchainAssigned)
@@ -668,13 +668,13 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 				handler.import_dispatcher.dispatch_import(
 					blocks_to_sync,
 					events_to_sync,
-					is_syncing,
+					immediate_import,
 				)?;
 			} else if let Ok(handler) = GLOBAL_TARGET_B_PARACHAIN_HANDLER_COMPONENT.get() {
 				handler.import_dispatcher.dispatch_import(
 					blocks_to_sync,
 					events_to_sync,
-					is_syncing,
+					immediate_import,
 				)?;
 			} else {
 				return Err(Error::NoTargetBParentchainAssigned)

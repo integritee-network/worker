@@ -51,9 +51,9 @@ where
 		&self,
 		blocks: Vec<SignedBlockType>,
 		events: Vec<Vec<u8>>,
-		_is_syncing: bool,
+		_immediate_import: bool,
 	) -> Result<()> {
-		// _is_syncing does not matter for the immediate dispatcher, behavoiur is the same. Immediate block import.
+		// _immediate_import does not matter for the immediate dispatcher, behavoiur is the same. Immediate block import.
 
 		debug!("Importing {} parentchain blocks", blocks.len());
 		self.block_importer.import_parentchain_blocks(blocks, events)?;

@@ -80,7 +80,7 @@ enclave {
 			[in, size=events_size] uint8_t* events, size_t events_size,
 			[in, size=events_proofs_size] uint8_t* events_proofs, size_t events_proofs_size,
 			[in, size=parentchain_id_size] uint8_t* parentchain_id, uint32_t parentchain_id_size,
-			int is_syncing
+			int immediate_import
 		);
 
 		public sgx_status_t set_nonce(
