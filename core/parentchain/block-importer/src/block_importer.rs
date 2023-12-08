@@ -131,7 +131,7 @@ impl<
 
 			// check if we can fast-sync
 			if id == ParentchainId::Integritee {
-				if let Some(birth_header) = self.maybe_birth_header.clone() {
+				if let Some(ref birth_header) = self.maybe_birth_header {
 					if signed_block.block.header().number < birth_header.number {
 						trace!(
 							"fast-syncing block import, ignoring any invocations before block {:}",
