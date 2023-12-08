@@ -771,7 +771,7 @@ dependencies = [
 
 [[package]]
 name = "enclave-runtime"
-version = "0.12.1"
+version = "0.12.2"
 dependencies = [
  "array-bytes 6.1.0",
  "cid",
@@ -789,6 +789,7 @@ dependencies = [
  "itc-offchain-worker-executor",
  "itc-parentchain",
  "itc-parentchain-block-import-dispatcher",
+ "itc-parentchain-block-importer",
  "itc-parentchain-test",
  "itc-tls-websocket-server",
  "itp-attestation-handler",

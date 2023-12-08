@@ -37,6 +37,7 @@ pub mod sudo_pallet;
 pub mod system_pallet;
 
 pub const SHARD_VAULT_KEY: &str = "ShardVaultPubKey";
+pub const SHARD_CREATION_HEADER_KEY: &str = "ShardCreationHeaderKey";
 
 /// Interface to initialize a new state.
 pub trait InitState<State, AccountId> {

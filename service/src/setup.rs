@@ -50,10 +50,10 @@ mod needs_enclave {
 		println!("[+] Initialize the shard");
 		init_shard(enclave, shard_identifier);
 
-		println!("[+] Generate key files");
-		generate_signing_key_file(enclave);
-		generate_shielding_key_file(enclave);
-
+		let pubkey = enclave.get_ecc_signing_pubkey().unwrap();
+		debug!("Enclave signing key (public) raw: {:?}", pubkey);
+		let pubkey = enclave.get_rsa_shielding_pubkey().unwrap();
+		debug!("Enclave shielding key (public) raw (may be overwritten later): {:?}", pubkey);
 		Ok(())
 	}
 

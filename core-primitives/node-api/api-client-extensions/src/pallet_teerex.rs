@@ -17,7 +17,9 @@
 
 use crate::ApiResult;
 use itp_api_client_types::{traits::GetStorage, Api, Config, Request};
-use itp_types::{AccountId, IpfsHash, MultiEnclave, ShardIdentifier, ShardStatus};
+use itp_types::{
+	AccountId, IpfsHash, MultiEnclave, ShardIdentifier, ShardSignerStatus, ShardStatus,
+};
 use log::error;
 
 pub const TEEREX: &str = "Teerex";
@@ -40,6 +42,11 @@ pub trait PalletTeerexApi {
 		shard: &ShardIdentifier,
 		at_block: Option<Self::Hash>,
 	) -> ApiResult<Option<MultiEnclave<Vec<u8>>>>;
+	fn shard_status(
+		&self,
+		shard: &ShardIdentifier,
+		at_block: Option<Self::Hash>,
+	) -> ApiResult<Option<Vec<ShardSignerStatus>>>;
 	fn latest_ipfs_hash(
 		&self,
 		shard: &ShardIdentifier,
@@ -98,6 +105,14 @@ where
 					)
 				},
 			)
+	}
+
+	fn shard_status(
+		&self,
+		shard: &ShardIdentifier,
+		at_block: Option<Self::Hash>,
+	) -> ApiResult<Option<Vec<ShardSignerStatus>>> {
+		self.get_storage_map(ENCLAVE_BRIDGE, "ShardStatus", shard, at_block)
 	}
 
 	fn latest_ipfs_hash(

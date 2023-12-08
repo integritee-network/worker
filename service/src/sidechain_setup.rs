@@ -28,7 +28,7 @@ use itp_settings::{
 	files::{SIDECHAIN_PURGE_INTERVAL, SIDECHAIN_PURGE_LIMIT},
 	sidechain::SLOT_DURATION,
 };
-use itp_types::Header;
+use itp_types::{Header, ShardIdentifier};
 use its_consensus_slots::start_slot_worker;
 use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use its_storage::{interface::FetchBlocks, start_sidechain_pruning_loop, BlockPruner};
@@ -61,6 +61,7 @@ pub(crate) fn sidechain_init_block_production<Enclave, SidechainStorage, Parentc
 	parentchain_handler: Arc<ParentchainHandler>,
 	sidechain_storage: Arc<SidechainStorage>,
 	last_synced_header: &Header,
+	shard: ShardIdentifier,
 ) -> ServiceResult<Header>
 where
 	Enclave: EnclaveBase + Sidechain,
@@ -75,9 +76,10 @@ where
 			"We're the first validateer to be registered, syncing parentchain blocks until the one we have registered ourselves on."
 		);
 		updated_header =
-			Some(parentchain_handler.sync_and_import_parentchain_until(
+			Some(parentchain_handler.await_sync_and_import_parentchain_until_at_least(
 				last_synced_header,
 				register_enclave_xt_header,
+				shard,
 			)?);
 	}
 

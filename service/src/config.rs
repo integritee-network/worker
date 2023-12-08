@@ -265,8 +265,6 @@ pub struct RunConfig {
 	skip_ra: bool,
 	/// Set this flag if running in development mode to bootstrap enclave account on parentchain via //Alice.
 	dev: bool,
-	/// Request key and state provisioning from a peer worker.
-	request_state: bool,
 	/// Shard identifier base58 encoded. Defines the shard that this worker operates on. Default is mrenclave.
 	shard: Option<String>,
 	/// Optional teeracle update interval
@@ -284,10 +282,6 @@ impl RunConfig {
 
 	pub fn dev(&self) -> bool {
 		self.dev
-	}
-
-	pub fn request_state(&self) -> bool {
-		self.request_state
 	}
 
 	pub fn shard(&self) -> Option<&str> {
@@ -319,7 +313,6 @@ impl From<&ArgMatches<'_>> for RunConfig {
 	fn from(m: &ArgMatches<'_>) -> Self {
 		let skip_ra = m.is_present("skip-ra");
 		let dev = m.is_present("dev");
-		let request_state = m.is_present("request-state");
 		let shard = m.value_of("shard").map(|s| s.to_string());
 		let teeracle_update_interval = m.value_of("teeracle-interval").map(|i| {
 			parse(i).unwrap_or_else(|e| panic!("teeracle-interval parsing error {:?}", e))
@@ -337,7 +330,6 @@ impl From<&ArgMatches<'_>> for RunConfig {
 		Self {
 			skip_ra,
 			dev,
-			request_state,
 			shard,
 			teeracle_update_interval,
 			reregister_teeracle_interval,
@@ -464,7 +456,6 @@ mod test {
 		let empty_args = ArgMatches::default();
 		let run_config = RunConfig::from(&empty_args);
 
-		assert_eq!(run_config.request_state, false);
 		assert_eq!(run_config.dev, false);
 		assert_eq!(run_config.skip_ra, false);
 		assert!(run_config.shard.is_none());
@@ -477,7 +468,6 @@ mod test {
 
 		let mut args = ArgMatches::default();
 		args.args = HashMap::from([
-			("request-state", Default::default()),
 			("dev", Default::default()),
 			("skip-ra", Default::default()),
 			("shard", Default::default()),
@@ -489,7 +479,6 @@ mod test {
 
 		let run_config = RunConfig::from(&args);
 
-		assert_eq!(run_config.request_state, true);
 		assert_eq!(run_config.dev, true);
 		assert_eq!(run_config.skip_ra, true);
 		assert_eq!(run_config.shard.unwrap(), shard_identifier.to_string());

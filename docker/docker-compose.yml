@@ -72,7 +72,7 @@ services:
       interval: 10s
       timeout: 10s
       retries: 25
-    command: "--clean-reset --data-dir /tmp/worker2 --ws-external -M integritee-worker-2 -T wss://integritee-worker-2 -u ws://integritee-node -U ws://integritee-worker-2 -P 2012 -w 2102 -p 9912 -h 4646 run --dev --request-state ${ADDITIONAL_RUNTIME_FLAGS}"
+    command: "--clean-reset --data-dir /tmp/worker2 --ws-external -M integritee-worker-2 -T wss://integritee-worker-2 -u ws://integritee-node -U ws://integritee-worker-2 -P 2012 -w 2102 -p 9912 -h 4646 run --dev ${ADDITIONAL_RUNTIME_FLAGS}"
     restart: "no"
 networks:
   integritee-test-network:

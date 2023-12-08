@@ -100,7 +100,7 @@ where
 		&self,
 		blocks: Vec<SignedBlockType>,
 		events: Vec<RawEventsPerBlock>,
-		is_syncing: bool,
+		immediate_import: bool,
 	) -> Result<()> {
 		let parentchain_id = self.block_importer.parentchain_id();
 		trace!(
@@ -109,7 +109,7 @@ where
 			blocks.len(),
 			events.len()
 		);
-		if is_syncing {
+		if immediate_import {
 			trace!(
 				"[{:?}] Triggered is in sync mode, immediately importing blocks and events",
 				parentchain_id

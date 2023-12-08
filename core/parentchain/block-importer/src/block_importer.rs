@@ -18,6 +18,7 @@
 //! Imports parentchain blocks and executes any indirect calls found in the extrinsics.
 
 use crate::{error::Result, ImportParentchainBlocks};
+
 use ita_stf::ParentchainHeader;
 use itc_parentchain_indirect_calls_executor::ExecuteIndirectCalls;
 use itc_parentchain_light_client::{
@@ -26,7 +27,7 @@ use itc_parentchain_light_client::{
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_stf_executor::traits::StfUpdateState;
 use itp_types::{
-	parentchain::{IdentifyParentchain, ParentchainId},
+	parentchain::{Header, IdentifyParentchain, ParentchainId},
 	OpaqueCall, H256,
 };
 use log::*;
@@ -48,6 +49,7 @@ pub struct ParentchainBlockImporter<
 	stf_executor: Arc<StfExecutor>,
 	extrinsics_factory: Arc<ExtrinsicsFactory>,
 	pub indirect_calls_executor: Arc<IndirectCallsExecutor>,
+	maybe_creation_header: Option<Header>,
 	_phantom: PhantomData<ParentchainBlock>,
 }
 
@@ -71,12 +73,14 @@ impl<
 		stf_executor: Arc<StfExecutor>,
 		extrinsics_factory: Arc<ExtrinsicsFactory>,
 		indirect_calls_executor: Arc<IndirectCallsExecutor>,
+		maybe_creation_header: Option<Header>,
 	) -> Self {
 		ParentchainBlockImporter {
 			validator_accessor,
 			stf_executor,
 			extrinsics_factory,
 			indirect_calls_executor,
+			maybe_creation_header,
 			_phantom: Default::default(),
 		}
 	}
@@ -122,7 +126,21 @@ impl<
 				.execute_mut_on_validator(|v| v.submit_block(&signed_block))
 			{
 				error!("[{:?}] Header submission to light client failed: {:?}", id, e);
+
 				return Err(e.into())
+			}
+
+			// check if we can fast-sync
+			if id == ParentchainId::Integritee {
+				if let Some(ref creation_header) = self.maybe_creation_header {
+					if signed_block.block.header().number < creation_header.number {
+						trace!(
+							"fast-syncing block import, ignoring any invocations before block {:}",
+							creation_header.number
+						);
+						continue
+					}
+				}
 			}
 
 			let block = signed_block.block;
