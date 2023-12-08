@@ -512,13 +512,16 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 							primary.to_ss58check(),
 						);
 						info!("The primary worker enclave is {:?}", primary_enclave);
-						//obtain provisioning from last active worker
-						sync_state::sync_state::<_, _, WorkerModeProvider>(
-							&integritee_rpc_api,
-							&shard,
-							enclave.as_ref(),
-							skip_ra,
-						);
+						if enclave.get_shard_birth_header(shard).is_err() {
+							//obtain provisioning from last active worker
+							info!("my state doesn't know the birth header of the shard. will request provisioning");
+							sync_state::sync_state::<_, _, WorkerModeProvider>(
+								&integritee_rpc_api,
+								&shard,
+								enclave.as_ref(),
+								skip_ra,
+							);
+						}
 						false
 					},
 				_ => {

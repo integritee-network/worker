@@ -470,9 +470,10 @@ fn init_shard_birth_parentchain_header_internal(
 	header: Header,
 ) -> Result<()> {
 	if let Ok((id, _hdr)) = get_shard_birth_parentchain_header_internal(shard) {
-		error!("first relevant parentchain header has been initialized: {:?}", id);
+		error!("first relevant parentchain header has been previously initialized. cannot change: {:?}", id);
 		return Err(Error::Other(
-			"first relevant parentchain header has been previously initialized".into(),
+			"first relevant parentchain header has been previously initialized. cannot change"
+				.into(),
 		))
 	}
 	debug!("initializing shard birth header: {:?}", parentchain_id);

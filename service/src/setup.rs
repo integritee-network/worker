@@ -52,6 +52,7 @@ mod needs_enclave {
 
 		println!("[+] Generate key files");
 		generate_signing_key_file(enclave);
+		// if we are not the primary worker, this might be overwritten later upon provisioning
 		generate_shielding_key_file(enclave);
 
 		Ok(())
