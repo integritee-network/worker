@@ -17,7 +17,7 @@
 
 use crate::{
 	error::Result,
-	get_shard_birth_parentchain_header_internal,
+	get_shard_creation_parentchain_header_internal,
 	initialization::{
 		global_components::{
 			GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT,
@@ -61,24 +61,26 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 ) -> Result<Vec<u8>> {
 	match ParentchainInitParams::decode(&mut encoded_params.as_slice())? {
 		ParentchainInitParams::Parachain { id, shard, params } => {
-			let maybe_birth: Option<(ParentchainId, Header)> =
-				get_shard_birth_parentchain_header_internal(shard).ok();
-			let maybe_birth_header = if let Some((birth_parachain_id, birth_header)) = maybe_birth {
-				if birth_parachain_id != ParentchainId::Integritee {
-					unimplemented!("only Integritee parentchain is supported for shard birth");
+			let maybe_creation: Option<(ParentchainId, Header)> =
+				get_shard_creation_parentchain_header_internal(shard).ok();
+			let maybe_creation_header = if let Some((creation_parachain_id, creation_header)) =
+				maybe_creation
+			{
+				if creation_parachain_id != ParentchainId::Integritee {
+					unimplemented!("only Integritee parentchain is supported for shard creation");
 				}
-				Some(birth_header)
+				Some(creation_header)
 			} else {
 				None
 			};
 
-			// todo: query timestamp of birth header to give a birth reference to target_a/b as well in order to fast-sync
+			// todo: query timestamp of creation header to give a creation reference to target_a/b as well in order to fast-sync
 			match id {
 				ParentchainId::Integritee => {
 					let handler = IntegriteeParachainHandler::init::<WorkerModeProvider>(
 						base_path,
 						params,
-						maybe_birth_header,
+						maybe_creation_header,
 					)?;
 					let header = handler
 						.validator_accessor
@@ -107,23 +109,25 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 			}
 		},
 		ParentchainInitParams::Solochain { id, shard, params } => {
-			let maybe_birth: Option<(ParentchainId, Header)> =
-				get_shard_birth_parentchain_header_internal(shard).ok();
-			let maybe_birth_header = if let Some((birth_parachain_id, birth_header)) = maybe_birth {
-				if birth_parachain_id != ParentchainId::Integritee {
-					unimplemented!("only Integritee parentchain is supported for shard birth");
+			let maybe_creation: Option<(ParentchainId, Header)> =
+				get_shard_creation_parentchain_header_internal(shard).ok();
+			let maybe_creation_header = if let Some((creation_parachain_id, creation_header)) =
+				maybe_creation
+			{
+				if creation_parachain_id != ParentchainId::Integritee {
+					unimplemented!("only Integritee parentchain is supported for shard creation");
 				}
-				Some(birth_header)
+				Some(creation_header)
 			} else {
 				None
 			};
-			// todo: query timestamp of birth header to give a birth reference to target_a/b as well in order to fast-sync
+			// todo: query timestamp of creation header to give a creation reference to target_a/b as well in order to fast-sync
 			match id {
 				ParentchainId::Integritee => {
 					let handler = IntegriteeSolochainHandler::init::<WorkerModeProvider>(
 						base_path,
 						params,
-						maybe_birth_header,
+						maybe_creation_header,
 					)?;
 					let header = handler
 						.validator_accessor

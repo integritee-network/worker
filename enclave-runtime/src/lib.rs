@@ -56,7 +56,7 @@ use itp_node_api::metadata::NodeMetadata;
 use itp_nonce_cache::{MutateNonce, Nonce};
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
 use itp_sgx_crypto::key_repository::AccessPubkey;
-use itp_stf_interface::SHARD_BIRTH_HEADER_KEY;
+use itp_stf_interface::SHARD_CREATION_HEADER_KEY;
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_storage::{StorageProof, StorageProofChecker};
 use itp_types::{parentchain::Header, ShardIdentifier, SignedBlock};
@@ -426,7 +426,7 @@ pub unsafe extern "C" fn init_shard(shard: *const u8, shard_size: u32) -> sgx_st
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn init_shard_birth_parentchain_header(
+pub unsafe extern "C" fn init_shard_creation_parentchain_header(
 	shard: *const u8,
 	shard_size: u32,
 	parentchain_id: *const u8,
@@ -453,7 +453,7 @@ pub unsafe extern "C" fn init_shard_birth_parentchain_header(
 		};
 
 	if let Err(e) =
-		init_shard_birth_parentchain_header_internal(shard_identifier, parentchain_id, header)
+		init_shard_creation_parentchain_header_internal(shard_identifier, parentchain_id, header)
 	{
 		error!(
 			"Failed to initialize first relevant parentchain header [{:?}]: {:?}",
@@ -464,19 +464,19 @@ pub unsafe extern "C" fn init_shard_birth_parentchain_header(
 	sgx_status_t::SGX_SUCCESS
 }
 
-fn init_shard_birth_parentchain_header_internal(
+fn init_shard_creation_parentchain_header_internal(
 	shard: ShardIdentifier,
 	parentchain_id: ParentchainId,
 	header: Header,
 ) -> Result<()> {
-	if let Ok((id, _hdr)) = get_shard_birth_parentchain_header_internal(shard) {
+	if let Ok((id, _hdr)) = get_shard_creation_parentchain_header_internal(shard) {
 		error!("first relevant parentchain header has been previously initialized. cannot change: {:?}", id);
 		return Err(Error::Other(
 			"first relevant parentchain header has been previously initialized. cannot change"
 				.into(),
 		))
 	}
-	debug!("initializing shard birth header: {:?}", parentchain_id);
+	debug!("initializing shard creation header: {:?}", parentchain_id);
 
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	if !state_handler
@@ -488,13 +488,13 @@ fn init_shard_birth_parentchain_header_internal(
 
 	let (state_lock, mut state) = state_handler.load_for_mutation(&shard)?;
 	let value = (parentchain_id, header);
-	state.state.insert(SHARD_BIRTH_HEADER_KEY.into(), value.encode());
+	state.state.insert(SHARD_CREATION_HEADER_KEY.into(), value.encode());
 	state_handler.write_after_mutation(state, state_lock, &shard)?;
 	Ok(())
 }
 
 /// reads the shard vault account id form state if it has been initialized previously
-pub(crate) fn get_shard_birth_parentchain_header_internal(
+pub(crate) fn get_shard_creation_parentchain_header_internal(
 	shard: ShardIdentifier,
 ) -> Result<(ParentchainId, Header)> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
@@ -503,37 +503,38 @@ pub(crate) fn get_shard_birth_parentchain_header_internal(
 		.execute_on_current(&shard, |state, _| {
 			state
 				.state
-				.get::<Vec<u8>>(&SHARD_BIRTH_HEADER_KEY.into())
+				.get::<Vec<u8>>(&SHARD_CREATION_HEADER_KEY.into())
 				.and_then(|v| Decode::decode(&mut v.clone().as_slice()).ok())
 		})?
 		.ok_or_else(|| {
 			Error::Other(
-				"failed to fetch shard birth parentchain header. has it been initialized?".into(),
+				"failed to fetch shard creation parentchain header. has it been initialized?"
+					.into(),
 			)
 		})
 }
 
 /// reads the shard vault account id form state if it has been initialized previously
 #[no_mangle]
-pub unsafe extern "C" fn get_shard_birth_header(
+pub unsafe extern "C" fn get_shard_creation_header(
 	shard: *const u8,
 	shard_size: u32,
-	birth: *mut u8,
-	birth_size: u32,
+	creation: *mut u8,
+	creation_size: u32,
 ) -> sgx_status_t {
 	let shard = ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
 
-	let shard_birth = match get_shard_birth_parentchain_header_internal(shard) {
-		Ok(birth) => birth,
+	let shard_creation = match get_shard_creation_parentchain_header_internal(shard) {
+		Ok(creation) => creation,
 		Err(e) => {
-			warn!("Failed to fetch birth header: {:?}", e);
+			warn!("Failed to fetch creation header: {:?}", e);
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	};
-	trace!("fetched shard birth header from state: {:?}", shard_birth);
+	trace!("fetched shard creation header from state: {:?}", shard_creation);
 
-	let birth_slice = slice::from_raw_parts_mut(birth, birth_size as usize);
-	if let Err(e) = write_slice_and_whitespace_pad(birth_slice, shard_birth.encode()) {
+	let creation_slice = slice::from_raw_parts_mut(creation, creation_size as usize);
+	if let Err(e) = write_slice_and_whitespace_pad(creation_slice, shard_creation.encode()) {
 		return Error::BufferError(e).into()
 	};
 	sgx_status_t::SGX_SUCCESS

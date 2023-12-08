@@ -512,9 +512,9 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 							primary.to_ss58check(),
 						);
 						info!("The primary worker enclave is {:?}", primary_enclave);
-						if enclave.get_shard_birth_header(shard).is_err() {
+						if enclave.get_shard_creation_header(shard).is_err() {
 							//obtain provisioning from last active worker
-							info!("my state doesn't know the birth header of the shard. will request provisioning");
+							info!("my state doesn't know the creation header of the shard. will request provisioning");
 							sync_state::sync_state::<_, _, WorkerModeProvider>(
 								&integritee_rpc_api,
 								&shard,
@@ -534,7 +534,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			None => {
 				println!("We are the primary worker on this shard and the shard is untouched. Will initialize it");
 				enclave
-					.init_shard_birth_parentchain_header(
+					.init_shard_creation_parentchain_header(
 						shard,
 						&ParentchainId::Integritee,
 						&register_enclave_xt_header,
@@ -543,10 +543,10 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 				true
 			},
 		};
-	debug!("getting shard birth: {:?}", enclave.get_shard_birth_header(shard));
+	debug!("getting shard creation: {:?}", enclave.get_shard_creation_header(shard));
 	initialization_handler.registered_on_parentchain();
 
-	// re-initialize integritee parentchain to make sure to use birth_header for fast-sync
+	// re-initialize integritee parentchain to make sure to use creation_header for fast-sync
 	// todo: this should only be necessary if we are the primary validateer running for the first time
 	let (integritee_parentchain_handler, integritee_last_synced_header_at_last_run) =
 		init_parentchain(

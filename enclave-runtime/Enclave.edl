@@ -63,15 +63,15 @@ enclave {
 			[in, size=parentchain_id_size] uint8_t* parentchain_id, uint32_t parentchain_id_size
 		);
 
-		public sgx_status_t init_shard_birth_parentchain_header(
+		public sgx_status_t init_shard_creation_parentchain_header(
 		    [in, size=shard_size] uint8_t* shard, uint32_t shard_size,
 			[in, size=parentchain_id_size] uint8_t* parentchain_id, uint32_t parentchain_id_size,
     		[in, size=header_size] uint8_t* header, uint32_t header_size
 		);
 
-		public sgx_status_t get_shard_birth_header(
+		public sgx_status_t get_shard_creation_header(
 			[in, size=shard_size] uint8_t* shard, uint32_t shard_size,
-			[out, size=birth_size] uint8_t* birth, uint32_t birth_size);
+			[out, size=creation_size] uint8_t* creation, uint32_t creation_size);
 
 		public sgx_status_t execute_trusted_calls();
 

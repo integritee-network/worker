@@ -55,7 +55,7 @@ impl IntegriteeParachainHandler {
 	pub fn init<WorkerModeProvider: ProvideWorkerMode>(
 		_base_path: PathBuf,
 		params: ParachainParams,
-		maybe_birth_header: Option<Header>,
+		maybe_creation_header: Option<Header>,
 	) -> Result<Self> {
 		let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 		let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
@@ -92,7 +92,7 @@ impl IntegriteeParachainHandler {
 			stf_executor.clone(),
 			extrinsics_factory.clone(),
 			node_metadata_repository.clone(),
-			maybe_birth_header,
+			maybe_creation_header,
 		)?;
 
 		let import_dispatcher = match WorkerModeProvider::worker_mode() {

@@ -49,7 +49,7 @@ pub struct ParentchainBlockImporter<
 	stf_executor: Arc<StfExecutor>,
 	extrinsics_factory: Arc<ExtrinsicsFactory>,
 	pub indirect_calls_executor: Arc<IndirectCallsExecutor>,
-	maybe_birth_header: Option<Header>,
+	maybe_creation_header: Option<Header>,
 	_phantom: PhantomData<ParentchainBlock>,
 }
 
@@ -73,14 +73,14 @@ impl<
 		stf_executor: Arc<StfExecutor>,
 		extrinsics_factory: Arc<ExtrinsicsFactory>,
 		indirect_calls_executor: Arc<IndirectCallsExecutor>,
-		maybe_birth_header: Option<Header>,
+		maybe_creation_header: Option<Header>,
 	) -> Self {
 		ParentchainBlockImporter {
 			validator_accessor,
 			stf_executor,
 			extrinsics_factory,
 			indirect_calls_executor,
-			maybe_birth_header,
+			maybe_creation_header,
 			_phantom: Default::default(),
 		}
 	}
@@ -126,16 +126,17 @@ impl<
 				.execute_mut_on_validator(|v| v.submit_block(&signed_block))
 			{
 				error!("[{:?}] Header submission to light client failed: {:?}", id, e);
+
 				return Err(e.into())
 			}
 
 			// check if we can fast-sync
 			if id == ParentchainId::Integritee {
-				if let Some(ref birth_header) = self.maybe_birth_header {
-					if signed_block.block.header().number < birth_header.number {
+				if let Some(ref creation_header) = self.maybe_creation_header {
+					if signed_block.block.header().number < creation_header.number {
 						trace!(
 							"fast-syncing block import, ignoring any invocations before block {:}",
-							birth_header.number
+							creation_header.number
 						);
 						continue
 					}

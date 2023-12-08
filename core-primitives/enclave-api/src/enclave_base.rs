@@ -58,14 +58,14 @@ pub trait EnclaveBase: Send + Sync + 'static {
 	) -> EnclaveResult<()>;
 
 	/// Initialize parentchain checkpoint after which invocations will be processed
-	fn init_shard_birth_parentchain_header(
+	fn init_shard_creation_parentchain_header(
 		&self,
 		shard: &ShardIdentifier,
 		parentchain_id: &ParentchainId,
 		header: &Header,
 	) -> EnclaveResult<()>;
 
-	fn get_shard_birth_header(
+	fn get_shard_creation_header(
 		&self,
 		shard: &ShardIdentifier,
 	) -> EnclaveResult<(ParentchainId, Header)>;
@@ -221,7 +221,7 @@ mod impl_ffi {
 			Ok(())
 		}
 
-		fn init_shard_birth_parentchain_header(
+		fn init_shard_creation_parentchain_header(
 			&self,
 			shard: &ShardIdentifier,
 			parentchain_id: &ParentchainId,
@@ -232,7 +232,7 @@ mod impl_ffi {
 			let header_bytes = header.encode();
 			let shard_bytes = shard.encode();
 			let result = unsafe {
-				ffi::init_shard_birth_parentchain_header(
+				ffi::init_shard_creation_parentchain_header(
 					self.eid,
 					&mut retval,
 					shard_bytes.as_ptr(),
@@ -250,30 +250,30 @@ mod impl_ffi {
 			Ok(())
 		}
 
-		fn get_shard_birth_header(
+		fn get_shard_creation_header(
 			&self,
 			shard: &ShardIdentifier,
 		) -> EnclaveResult<(ParentchainId, Header)> {
 			let mut retval = sgx_status_t::SGX_SUCCESS;
-			let mut birth = [0u8; HEADER_MAX_SIZE + std::mem::size_of::<ParentchainId>()];
+			let mut creation = [0u8; HEADER_MAX_SIZE + std::mem::size_of::<ParentchainId>()];
 			let shard_bytes = shard.encode();
 
 			let result = unsafe {
-				ffi::get_shard_birth_header(
+				ffi::get_shard_creation_header(
 					self.eid,
 					&mut retval,
 					shard_bytes.as_ptr(),
 					shard_bytes.len() as u32,
-					birth.as_mut_ptr(),
-					birth.len() as u32,
+					creation.as_mut_ptr(),
+					creation.len() as u32,
 				)
 			};
 
 			ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 			ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
-			let (birth_parentchain_id, birth_header): (ParentchainId, Header) =
-				Decode::decode(&mut birth.as_slice())?;
-			Ok((birth_parentchain_id, birth_header))
+			let (creation_parentchain_id, creation_header): (ParentchainId, Header) =
+				Decode::decode(&mut creation.as_slice())?;
+			Ok((creation_parentchain_id, creation_header))
 		}
 
 		fn set_nonce(&self, nonce: u32, parentchain_id: ParentchainId) -> EnclaveResult<()> {
