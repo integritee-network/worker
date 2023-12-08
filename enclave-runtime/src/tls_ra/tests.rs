@@ -128,13 +128,14 @@ pub fn test_tls_ra_server_client_networking() {
 	assert_eq!(*client_shielding_key.read().unwrap(), shielding_key_encoded);
 	assert_eq!(*client_light_client_state.read().unwrap(), light_client_state_encoded);
 
-	// State and state-key are provisioned only in sidechain mode
-	if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain {
-		assert_eq!(*client_state.read().unwrap(), state_encoded);
-		assert_eq!(*client_state_key.read().unwrap(), state_key_encoded);
-	} else {
+	// State and state-key are provisioned only in sidechain or OCW mode
+	if WorkerModeProvider::worker_mode() == WorkerMode::Teeracle {
 		assert_eq!(*client_state.read().unwrap(), initial_client_state);
 		assert_eq!(*client_state_key.read().unwrap(), initial_client_state_key);
+	} else {
+		// Sidechain or OffchainWorker
+		assert_eq!(*client_state.read().unwrap(), state_encoded);
+		assert_eq!(*client_state_key.read().unwrap(), state_key_encoded);
 	}
 }
 
