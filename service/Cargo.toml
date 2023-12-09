@@ -39,6 +39,7 @@ sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teacla
 sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 # local
+ita-parentchain-interface = { path = "../app-libs/parentchain-interface" }
 itc-parentchain = { path = "../core/parentchain/parentchain-crate" }
 itc-rest-client = { path = "../core/rest-client" }
 itc-rpc-client = { path = "../core/rpc-client" }

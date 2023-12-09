@@ -28,6 +28,10 @@ use core::marker::PhantomData;
 pub use event_filter::FilterableEvents;
 pub use event_handler::ParentchainEventHandler;
 pub use extrinsic_parser::ParentchainExtrinsicParser;
+#[cfg(feature = "std")]
+pub use integritee_parachain_runtime::{
+	Block, Hash, Header, Runtime, RuntimeCall, RuntimeEvent, UncheckedExtrinsic,
+};
 use ita_stf::TrustedCallSigned;
 use itc_parentchain_indirect_calls_executor::{
 	error::{Error, Result},
@@ -37,6 +41,7 @@ use itc_parentchain_indirect_calls_executor::{
 use itp_node_api::metadata::NodeMetadataTrait;
 use itp_stf_primitives::traits::IndirectExecutor;
 use log::trace;
+
 /// The default indirect call (extrinsic-triggered) of the Integritee-Parachain.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub enum IndirectCall {

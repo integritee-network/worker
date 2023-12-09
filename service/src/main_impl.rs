@@ -655,7 +655,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	let mut subscription = integritee_rpc_api.subscribe_events().unwrap();
 	println!("[+] [{:?}] Subscribed to events. waiting...", ParentchainId::Integritee);
 	loop {
-		if let Some(Ok(events)) = subscription.next_events::<RuntimeEvent, Hash>() {
+		if let Some(Ok(events)) = subscription.next_events::<ita_parentchain_interface::integritee::RuntimeEvent, ita_parentchain_interface::integritee::Hash>() {
 			print_events(events, ParentchainId::Integritee)
 		}
 	}
