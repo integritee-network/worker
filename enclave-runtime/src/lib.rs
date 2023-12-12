@@ -564,6 +564,7 @@ pub unsafe extern "C" fn sync_parentchain(
 		immediate_import == 1,
 	) {
 		error!("Error synching parentchain: {:?}", e);
+		return sgx_status_t::SGX_ERROR_UNEXPECTED
 	}
 
 	sgx_status_t::SGX_SUCCESS

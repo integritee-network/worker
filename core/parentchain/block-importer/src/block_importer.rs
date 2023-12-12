@@ -33,7 +33,7 @@ use itp_types::{
 use log::*;
 use sp_runtime::{
 	generic::SignedBlock as SignedBlockG,
-	traits::{Block as ParentchainBlockTrait, NumberFor},
+	traits::{Block as ParentchainBlockTrait, Header as HeaderT, NumberFor},
 };
 use std::{marker::PhantomData, sync::Arc, vec::Vec};
 
@@ -125,7 +125,7 @@ impl<
 				.validator_accessor
 				.execute_mut_on_validator(|v| v.submit_block(&signed_block))
 			{
-				error!("[{:?}] Header submission to light client failed: {:?}", id, e);
+				error!("[{:?}] Header submission to light client failed for block number {} and hash {:?}: {:?}", id, signed_block.block.header().number(), signed_block.block.hash(), e);
 
 				return Err(e.into())
 			}
