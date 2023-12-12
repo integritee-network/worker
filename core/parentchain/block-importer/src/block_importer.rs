@@ -35,7 +35,7 @@ use sp_runtime::{
 	generic::SignedBlock as SignedBlockG,
 	traits::{Block as ParentchainBlockTrait, Header as HeaderT, NumberFor},
 };
-use std::{marker::PhantomData, sync::Arc, vec::Vec};
+use std::{marker::PhantomData, sync::Arc, vec, vec::Vec};
 
 /// Parentchain block import implementation.
 pub struct ParentchainBlockImporter<
@@ -117,9 +117,19 @@ impl<
 		let mut calls = Vec::<OpaqueCall>::new();
 		let id = self.validator_accessor.parentchain_id();
 
-		debug!("[{:?}] Import blocks to light-client!", id);
+		debug!(
+			"[{:?}] Import {} blocks to light-client. event blocks {}",
+			id,
+			blocks_to_import.len(),
+			events_to_import.len()
+		);
+		let events_to_import_aligned: Vec<Vec<u8>> = if events_to_import.is_empty() {
+			vec![vec![]; blocks_to_import.len()]
+		} else {
+			events_to_import
+		};
 		for (signed_block, raw_events) in
-			blocks_to_import.into_iter().zip(events_to_import.into_iter())
+			blocks_to_import.into_iter().zip(events_to_import_aligned.into_iter())
 		{
 			if let Err(e) = self
 				.validator_accessor
