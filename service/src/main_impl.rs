@@ -533,7 +533,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			},
 			None => {
 				println!("We are the primary worker on this shard and the shard is untouched. Will initialize it");
-				setup::init_shard(enclave.as_ref(), &shard).unwrap();
+				setup::init_shard(enclave.as_ref(), shard);
 				enclave
 					.init_shard_creation_parentchain_header(
 						shard,
