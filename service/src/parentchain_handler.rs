@@ -37,7 +37,7 @@ use substrate_api_client::{
 	GetChainInfo,
 };
 
-const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
+const BLOCK_SYNC_BATCH_SIZE: u32 = 10;
 
 pub trait HandleParentchain {
 	/// Initializes all parentchain specific components on the enclave side.
