@@ -29,7 +29,6 @@ pub use event_filter::FilterableEvents;
 pub use event_handler::ParentchainEventHandler;
 pub use extrinsic_parser::ParentchainExtrinsicParser;
 use extrinsic_parser::ParseExtrinsic;
-#[cfg(feature = "std")]
 pub use integritee_solochain_runtime::{
 	Block, Hash, Header, Runtime, RuntimeCall, RuntimeEvent, UncheckedExtrinsic,
 };

@@ -28,7 +28,6 @@ use core::marker::PhantomData;
 pub use event_filter::FilterableEvents;
 pub use event_handler::ParentchainEventHandler;
 pub use extrinsic_parser::ParentchainExtrinsicParser;
-#[cfg(feature = "std")]
 pub use integritee_parachain_runtime::{
 	Block, Hash, Header, Runtime, RuntimeCall, RuntimeEvent, UncheckedExtrinsic,
 };
