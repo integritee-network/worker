@@ -513,7 +513,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 						);
 						info!("The primary worker enclave is {:?}", primary_enclave);
 						if enclave.get_shard_creation_header(shard).is_err() {
-							//obtain provisioning from last active worker
+							//obtain provisioning from last active worker as this hasn't been done before
 							info!("my state doesn't know the creation header of the shard. will request provisioning");
 							sync_state::sync_state::<_, _, WorkerModeProvider>(
 								&integritee_rpc_api,
@@ -533,6 +533,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			},
 			None => {
 				println!("We are the primary worker on this shard and the shard is untouched. Will initialize it");
+				enclave.init_shard(shard.encode()).unwrap();
 				enclave
 					.init_shard_creation_parentchain_header(
 						shard,
