@@ -22,12 +22,13 @@ use mockall::predicate::*;
 use mockall::*;
 
 use crate::worker::{UpdatePeers, WorkerResult};
+use itp_types::ShardIdentifier;
 use std::sync::Arc;
 
 /// Updates the peers of the global worker.
 #[cfg_attr(test, automock)]
 pub trait UpdateWorkerPeers {
-	fn update_peers(&self) -> WorkerResult<()>;
+	fn update_peers(&self, shard: ShardIdentifier) -> WorkerResult<()>;
 }
 
 pub struct WorkerPeersUpdater<WorkerType> {
@@ -44,7 +45,7 @@ impl<WorkerType> UpdateWorkerPeers for WorkerPeersUpdater<WorkerType>
 where
 	WorkerType: UpdatePeers,
 {
-	fn update_peers(&self) -> WorkerResult<()> {
-		self.worker.update_peers()
+	fn update_peers(&self, shard: ShardIdentifier) -> WorkerResult<()> {
+		self.worker.update_peers(shard)
 	}
 }
