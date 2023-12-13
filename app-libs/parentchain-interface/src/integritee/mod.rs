@@ -29,7 +29,8 @@ pub use event_filter::FilterableEvents;
 pub use event_handler::ParentchainEventHandler;
 pub use extrinsic_parser::ParentchainExtrinsicParser;
 pub use integritee_parachain_runtime::{
-	Block, Hash, Header, Runtime, RuntimeCall, RuntimeEvent, UncheckedExtrinsic,
+	AccountId, Balance, BalancesCall, Block, Hash, Header, Runtime, RuntimeCall, RuntimeEvent,
+	Signature, UncheckedExtrinsic,
 };
 use ita_stf::TrustedCallSigned;
 use itc_parentchain_indirect_calls_executor::{

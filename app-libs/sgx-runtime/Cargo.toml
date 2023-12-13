@@ -23,7 +23,7 @@ frame-system-benchmarking = { optional = true, default-features = false, git = "
 frame-system-rpc-runtime-api = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 pallet-aura = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 pallet-balances = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-pallet-grandpa = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+#pallet-grandpa = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 pallet-insecure-randomness-collective-flip = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 pallet-sudo = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 pallet-timestamp = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
@@ -43,7 +43,7 @@ sp-version = { default-features = false, git = "https://github.com/paritytech/su
 
 # Integritee dependencies
 pallet-evm = { default-features = false, optional = true, git = "https://github.com/integritee-network/frontier.git", branch = "bar/polkadot-v0.9.42" }
-pallet-parentchain = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.0-polkadot-v0.9.42" }
+pallet-parentchain = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.2-polkadot-v0.9.42" }
 
 [features]
 default = ["std"]

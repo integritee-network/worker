@@ -18,7 +18,7 @@
 use crate::{command_utils::get_chain_api, Cli, CliResult, CliResultOk};
 use base58::ToBase58;
 use codec::Encode;
-use ita_parentchain_interface::integritee::{Hash, RuntimeEvent};
+use ita_parentchain_interface::integritee::{Hash, Runtime, RuntimeEvent};
 use log::*;
 use substrate_api_client::SubscribeEvents;
 
@@ -59,102 +59,6 @@ impl ListenCommand {
 				Ok(evts) =>
 					for evr in &evts {
 						println!("decoded: phase {:?} event {:?}", evr.phase, evr.event);
-						match &evr.event {
-							RuntimeEvent::Balances(be) => {
-								println!(">>>>>>>>>> balances event: {:?}", be);
-								match &be {
-									pallet_balances::Event::Transfer { from, to, amount } => {
-										println!("From: {:?}", from);
-										println!("To: {:?}", to);
-										println!("Value: {:?}", amount);
-									},
-									_ => {
-										debug!("ignoring unsupported balances event");
-									},
-								}
-							},
-							RuntimeEvent::Teerex(ee) => {
-								println!(">>>>>>>>>> integritee teerex event: {:?}", ee);
-								count += 1;
-								match &ee {
-									ita_parentchain_interface::integritee::pallet_teerex::Event::AddedSgxEnclave{
-										registered_by,
-										worker_url, ..
-									}
-									 => {
-										println!(
-											"AddedEnclave: {:?} at url {}",
-											registered_by,
-											String::from_utf8(worker_url.clone().unwrap_or("none".into()).to_vec())
-												.unwrap_or_else(|_| "error".to_string())
-										);
-									},
-									ita_parentchain_interface::integritee::pallet_teerex::Event::RemovedSovereignEnclave(
-										accountid,
-									) => {
-										println!("RemovedEnclave: {:?}", accountid);
-									},
-									ita_parentchain_interface::integritee::pallet_teerex::Event::RemovedProxiedEnclave(
-										eia,
-									) => {
-										println!("RemovedEnclave: {:?}", eia);
-									},
-									_ => debug!("ignoring unsupported teerex event: {:?}", ee),
-								}
-							},
-							RuntimeEvent::EnclaveBridge(ee) => {
-								println!(">>>>>>>>>> integritee enclave bridge event: {:?}", ee);
-								count += 1;
-								match &ee {
-									ita_parentchain_interface::integritee::pallet_enclave_bridge::Event::IndirectInvocationRegistered(shard) => {
-										println!(
-											"Forwarded request for shard {}",
-											shard.encode().to_base58()
-										);
-									},
-									ita_parentchain_interface::integritee::pallet_enclave_bridge::Event::ProcessedParentchainBlock {
-										shard,
-										block_hash,
-										trusted_calls_merkle_root,
-										block_number,
-									} => {
-										println!(
-											"ProcessedParentchainBlock from {} with hash {:?}, number {} and merkle root {:?}",
-											shard, block_hash, trusted_calls_merkle_root, block_number
-										);
-									},
-									ita_parentchain_interface::integritee::pallet_enclave_bridge::Event::ShieldFunds {
-										shard, encrypted_beneficiary, amount
-									} => {
-										println!("ShieldFunds on shard {:?} for {:?}. amount: {:?}", shard, encrypted_beneficiary, amount);
-									},
-									ita_parentchain_interface::integritee::pallet_enclave_bridge::Event::UnshieldedFunds {
-										shard, beneficiary, amount
-									} => {
-										println!("UnshieldFunds on shard {:?} for {:?}. amount: {:?}", shard, beneficiary, amount);
-									},
-									_ => debug!("ignoring unsupported enclave_bridge event: {:?}", ee),
-								}
-							},
-							RuntimeEvent::Sidechain(ee) => {
-								println!(">>>>>>>>>> integritee sidechain event: {:?}", ee);
-								count += 1;
-								match &ee {
-									ita_parentchain_interface::integritee::pallet_sidechain::Event::FinalizedSidechainBlock {
-										shard,
-										block_header_hash,
-										validateer,
-									} => {
-										println!(
-											"ProposedSidechainBlock on shard {} from {} with hash {:?}",
-											shard, validateer, block_header_hash
-										);
-									},
-									_ => debug!("ignoring unsupported sidechain event: {:?}", ee),
-								}
-							},
-							_ => debug!("ignoring unsupported module event: {:?}", evr.event),
-						}
 					},
 				Err(_) => error!("couldn't decode event record list"),
 			}
