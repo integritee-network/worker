@@ -31,6 +31,7 @@ use crate::{
 use base58::ToBase58;
 use clap::{load_yaml, App, ArgMatches};
 use codec::{Decode, Encode};
+use ita_parentchain_interface::integritee::{Hash, Header, RuntimeEvent};
 use itp_enclave_api::{
 	direct_request::DirectRequest,
 	enclave_base::EnclaveBase,
@@ -50,7 +51,6 @@ use its_peer_fetch::{
 use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use its_storage::{interface::FetchBlocks, BlockPruner, SidechainStorageLock};
 use log::*;
-use my_node_runtime::{Hash, Header, RuntimeEvent};
 use regex::Regex;
 use sgx_types::*;
 use sp_runtime::traits::Header as HeaderT;

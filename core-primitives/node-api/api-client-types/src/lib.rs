@@ -86,6 +86,7 @@ mod api {
 	// runtime dependency here.
 	// pub use itp_types::Block;
 	pub use my_node_runtime::{Block, Runtime, UncheckedExtrinsic};
+	//pub use ita_parentchain_interface::integritee::{Block, Runtime, UncheckedExtrinsic};
 
 	pub use substrate_api_client::{
 		api::Error as ApiClientError,

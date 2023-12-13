@@ -18,8 +18,8 @@
 use crate::{command_utils::get_chain_api, Cli, CliResult, CliResultOk};
 use base58::ToBase58;
 use codec::Encode;
+use ita_parentchain_interface::integritee::{Hash, RuntimeEvent};
 use log::*;
-use my_node_runtime::{Hash, RuntimeEvent};
 use substrate_api_client::SubscribeEvents;
 
 #[derive(Parser)]
@@ -77,7 +77,7 @@ impl ListenCommand {
 								println!(">>>>>>>>>> integritee teerex event: {:?}", ee);
 								count += 1;
 								match &ee {
-									my_node_runtime::pallet_teerex::Event::AddedSgxEnclave{
+									ita_parentchain_interface::integritee::pallet_teerex::Event::AddedSgxEnclave{
 										registered_by,
 										worker_url, ..
 									}
@@ -89,12 +89,12 @@ impl ListenCommand {
 												.unwrap_or_else(|_| "error".to_string())
 										);
 									},
-									my_node_runtime::pallet_teerex::Event::RemovedSovereignEnclave(
+									ita_parentchain_interface::integritee::pallet_teerex::Event::RemovedSovereignEnclave(
 										accountid,
 									) => {
 										println!("RemovedEnclave: {:?}", accountid);
 									},
-									my_node_runtime::pallet_teerex::Event::RemovedProxiedEnclave(
+									ita_parentchain_interface::integritee::pallet_teerex::Event::RemovedProxiedEnclave(
 										eia,
 									) => {
 										println!("RemovedEnclave: {:?}", eia);
@@ -106,13 +106,13 @@ impl ListenCommand {
 								println!(">>>>>>>>>> integritee enclave bridge event: {:?}", ee);
 								count += 1;
 								match &ee {
-									my_node_runtime::pallet_enclave_bridge::Event::IndirectInvocationRegistered(shard) => {
+									ita_parentchain_interface::integritee::pallet_enclave_bridge::Event::IndirectInvocationRegistered(shard) => {
 										println!(
 											"Forwarded request for shard {}",
 											shard.encode().to_base58()
 										);
 									},
-									my_node_runtime::pallet_enclave_bridge::Event::ProcessedParentchainBlock {
+									ita_parentchain_interface::integritee::pallet_enclave_bridge::Event::ProcessedParentchainBlock {
 										shard,
 										block_hash,
 										trusted_calls_merkle_root,
@@ -123,12 +123,12 @@ impl ListenCommand {
 											shard, block_hash, trusted_calls_merkle_root, block_number
 										);
 									},
-									my_node_runtime::pallet_enclave_bridge::Event::ShieldFunds {
+									ita_parentchain_interface::integritee::pallet_enclave_bridge::Event::ShieldFunds {
 										shard, encrypted_beneficiary, amount
 									} => {
 										println!("ShieldFunds on shard {:?} for {:?}. amount: {:?}", shard, encrypted_beneficiary, amount);
 									},
-									my_node_runtime::pallet_enclave_bridge::Event::UnshieldedFunds {
+									ita_parentchain_interface::integritee::pallet_enclave_bridge::Event::UnshieldedFunds {
 										shard, beneficiary, amount
 									} => {
 										println!("UnshieldFunds on shard {:?} for {:?}. amount: {:?}", shard, beneficiary, amount);
@@ -140,7 +140,7 @@ impl ListenCommand {
 								println!(">>>>>>>>>> integritee sidechain event: {:?}", ee);
 								count += 1;
 								match &ee {
-									my_node_runtime::pallet_sidechain::Event::FinalizedSidechainBlock {
+									ita_parentchain_interface::integritee::pallet_sidechain::Event::FinalizedSidechainBlock {
 										shard,
 										block_header_hash,
 										validateer,

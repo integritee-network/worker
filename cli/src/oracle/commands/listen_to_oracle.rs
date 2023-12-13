@@ -16,10 +16,10 @@
 */
 
 use crate::{command_utils::get_chain_api, Cli};
+use ita_parentchain_interface::integritee::{Hash, RuntimeEvent};
 use itp_node_api::api_client::ParentchainApi;
 use itp_time_utils::{duration_now, remaining_time};
 use log::{debug, info};
-use my_node_runtime::{Hash, RuntimeEvent};
 use std::time::Duration;
 use substrate_api_client::{ac_node_api::EventRecord, SubscribeEvents};
 
@@ -71,7 +71,7 @@ fn report_event_count(event_records: Vec<Event>) -> EventCount {
 		info!("received event {:?}", event_record.event);
 		if let RuntimeEvent::Teeracle(event) = &event_record.event {
 			match &event {
-				my_node_runtime::pallet_teeracle::Event::OracleUpdated {
+				ita_parentchain_interface::integritee::pallet_teeracle::Event::OracleUpdated {
 					oracle_data_name,
 					data_source,
 				} => {

@@ -18,6 +18,7 @@
 
 use crate::error::{Error, ServiceResult};
 use codec::{Decode, Encode};
+use ita_parentchain_interface::integritee::Header;
 use itc_parentchain::{
 	light_client::light_client_init_params::{GrandpaParams, SimpleParams},
 	primitives::{ParentchainId, ParentchainInitParams},
@@ -28,7 +29,6 @@ use itp_node_api::api_client::ChainApi;
 use itp_storage::StorageProof;
 use itp_types::ShardIdentifier;
 use log::*;
-use my_node_runtime::Header;
 use sp_consensus_grandpa::VersionedAuthorityList;
 use sp_runtime::traits::Header as HeaderTrait;
 use std::{cmp::min, sync::Arc};
