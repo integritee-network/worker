@@ -3928,6 +3928,7 @@ dependencies = [
  "itp-sgx-externalities",
  "itp-test",
  "itp-types",
+ "itp-utils",
  "its-block-verification",
  "its-primitives",
  "its-state",

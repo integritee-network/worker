@@ -27,14 +27,23 @@ use crate::{
 	},
 	ocall::OcallApi,
 	tls_ra::{seal_handler::SealStateAndKeys, ClientProvisioningRequest},
+	utils::{
+		get_extrinsic_factory_from_integritee_solo_or_parachain,
+		get_validator_accessor_from_integritee_solo_or_parachain,
+	},
 	GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 };
 use codec::Encode;
+use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, ExtrinsicSender};
 use itp_attestation_handler::{RemoteAttestationType, DEV_HOSTNAME};
 use itp_component_container::ComponentGetter;
+use itp_extrinsics_factory::CreateExtrinsics;
+use itp_node_api::metadata::provider::AccessNodeMetadata;
+use itp_node_api_metadata::pallet_sidechain::SidechainCallIndexes;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::key_repository::AccessPubkey;
-use itp_types::{AccountId, ShardIdentifier};
+use itp_types::{AccountId, OpaqueCall, ShardIdentifier, SidechainBlockNumber, H256};
+use itp_utils::hex::hex_encode;
 use log::*;
 use rustls::{ClientConfig, ClientSession, Stream};
 use sgx_types::*;
@@ -239,7 +248,43 @@ pub unsafe extern "C" fn request_state_provisioning(
 		return e.into()
 	};
 
+	if let Err(e) = touch_shard(shard) {
+		error!("touch shard error: {:?}", e);
+		return sgx_status_t::SGX_ERROR_UNEXPECTED
+	}
 	sgx_status_t::SGX_SUCCESS
+}
+
+fn touch_shard(shard: ShardIdentifier) -> EnclaveResult<()> {
+	// send confirmation about provisioning to chain to signal that we're ready to serve the shard (this will not yield an event because secondary validateers are ignored.)
+	// fixme: it would be more elegant to have a separate dispatchable for this like `touch_shard` so we don't need to abuse this call
+	// https://github.com/integritee-network/pallets/issues/232
+	let extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
+	let validator_access = get_validator_accessor_from_integritee_solo_or_parachain()?;
+
+	let call = extrinsics_factory
+		.node_metadata_repository
+		.get_from_metadata(|m| m.confirm_imported_sidechain_block_indexes())
+		.map_err(|e| EnclaveError::Other(e.into()))?
+		.map_err(|e| EnclaveError::Other(format!("{:?}", e).into()))?;
+
+	let opaque_call = OpaqueCall::from_tuple(&(
+		call,
+		shard,
+		SidechainBlockNumber::from(0u8),
+		SidechainBlockNumber::from(0u8),
+		H256::default(),
+	));
+	debug!("encoded call: {}", hex_encode(opaque_call.encode().as_slice()));
+	let xts = extrinsics_factory
+		.create_extrinsics(&[opaque_call], None)
+		.map_err(|e| EnclaveError::Other(e.into()))?;
+
+	info!("Sending dummy sidechain block import confirmation extrinsic to touch the shard and signal that we're ready to receive sidechain blocks.");
+	validator_access
+		.execute_mut_on_validator(|v| v.send_extrinsics(xts))
+		.map_err(|e| EnclaveError::Other(e.into()))?;
+	Ok(())
 }
 
 /// Internal [`request_state_provisioning`] function to be able to use the handy `?` operator.

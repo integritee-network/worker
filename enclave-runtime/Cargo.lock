@@ -2453,6 +2453,7 @@ dependencies = [
  "itp-settings",
  "itp-sgx-crypto",
  "itp-types",
+ "itp-utils",
  "its-block-verification",
  "its-primitives",
  "its-state",
