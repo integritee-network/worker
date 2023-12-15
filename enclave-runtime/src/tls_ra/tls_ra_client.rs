@@ -248,6 +248,7 @@ pub unsafe extern "C" fn request_state_provisioning(
 		return e.into()
 	};
 
+	// fixme: this needs only be called in sidechain mode. no harm though
 	if let Err(e) = touch_shard(shard) {
 		error!("touch shard error: {:?}", e);
 		return sgx_status_t::SGX_ERROR_UNEXPECTED

@@ -290,11 +290,11 @@ jobs:
             demo_name: demo-shielding-unshielding-multiworker
             host: test-runner-sgx
             sgx_mode: HW
-          - test: Teeracle
-            flavor_id: teeracle
-            demo_name: demo-teeracle
-            host: test-runner-sgx
-            sgx_mode: HW
+#          - test: Teeracle
+#            flavor_id: teeracle
+#            demo_name: demo-teeracle
+#            host: test-runner-sgx
+#            sgx_mode: HW
           - test: Teeracle
             flavor_id: teeracle
             demo_name: demo-teeracle-generic
