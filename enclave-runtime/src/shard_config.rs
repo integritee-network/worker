@@ -16,47 +16,36 @@
 
 use crate::{
 	error::{Error, Result as EnclaveResult},
-	initialization::global_components::{
-		GLOBAL_OCALL_API_COMPONENT, GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT,
-		GLOBAL_STATE_HANDLER_COMPONENT,
-	},
 	utils::{
 		get_extrinsic_factory_from_integritee_solo_or_parachain,
-		get_extrinsic_factory_from_target_a_solo_or_parachain,
-		get_extrinsic_factory_from_target_b_solo_or_parachain,
-		get_node_metadata_repository_from_integritee_solo_or_parachain,
-		get_node_metadata_repository_from_target_a_solo_or_parachain,
-		get_node_metadata_repository_from_target_b_solo_or_parachain,
-		get_stf_enclave_signer_from_solo_or_parachain, DecodeRaw,
+		get_stf_enclave_signer_from_solo_or_parachain,
 	},
 };
-use codec::{Compact, Decode, Encode};
+use codec::{Encode};
 use enclave_bridge_primitives::ShardConfig;
-use itp_component_container::ComponentGetter;
+
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::{
-	api_client::{PairSignature, StaticExtrinsicSigner},
 	metadata::{
 		pallet_enclave_bridge::EnclaveBridgeCallIndexes,
-		pallet_proxy::PROXY_DEPOSIT,
-		provider::{AccessNodeMetadata, Error as MetadataProviderError},
+		provider::{AccessNodeMetadata},
 	},
 };
-use itp_node_api_metadata::pallet_proxy::ProxyCallIndexes;
-use itp_nonce_cache::NonceCache;
+
+
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
-use itp_sgx_crypto::key_repository::AccessKey;
-use itp_stf_interface::SHARD_VAULT_KEY;
-use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
+
+
+
 use itp_types::{
-	parentchain::{AccountId, Address, BlockNumber, Header, ParentchainId, ProxyType},
+	parentchain::{AccountId, BlockNumber, ParentchainId},
 	OpaqueCall, ShardIdentifier,
 };
 use itp_utils::hex::hex_encode;
 use log::*;
-use sgx_types::sgx_status_t;
-use sp_core::crypto::{DeriveJunction, Pair};
-use std::{slice, sync::Arc, vec::Vec};
+
+
+
 use teerex_primitives::EnclaveFingerprint;
 
 pub(crate) fn init_shard_config(shard: ShardIdentifier) -> EnclaveResult<()> {
