@@ -771,11 +771,12 @@ dependencies = [
 
 [[package]]
 name = "enclave-runtime"
-version = "0.12.2"
+version = "0.12.6"
 dependencies = [
  "array-bytes 6.1.0",
  "cid",
  "derive_more",
+ "enclave-bridge-primitives",
  "env_logger",
  "frame-support",
  "frame-system",

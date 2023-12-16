@@ -542,6 +542,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 						&register_enclave_xt_header,
 					)
 					.unwrap();
+				debug!("shard config should be initialized on integritee network now");
 				true
 			},
 		};

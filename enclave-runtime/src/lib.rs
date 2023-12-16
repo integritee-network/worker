@@ -42,25 +42,34 @@ use crate::{
 	},
 	rpc::worker_api_direct::sidechain_io_handler,
 	utils::{
+		get_extrinsic_factory_from_integritee_solo_or_parachain,
 		get_node_metadata_repository_from_integritee_solo_or_parachain,
 		get_node_metadata_repository_from_target_a_solo_or_parachain,
-		get_node_metadata_repository_from_target_b_solo_or_parachain, utf8_str_from_raw, DecodeRaw,
+		get_node_metadata_repository_from_target_b_solo_or_parachain,
+		get_stf_enclave_signer_from_solo_or_parachain, utf8_str_from_raw, DecodeRaw,
 	},
 };
 use codec::{Decode, Encode};
 use core::ffi::c_int;
 use itc_parentchain::{block_import_dispatcher::DispatchBlockImport, primitives::ParentchainId};
 use itp_component_container::ComponentGetter;
+use itp_extrinsics_factory::CreateExtrinsics;
 use itp_import_queue::PushToQueue;
-use itp_node_api::metadata::NodeMetadata;
+use itp_node_api::metadata::{
+	pallet_enclave_bridge::EnclaveBridgeCallIndexes, provider::AccessNodeMetadata, NodeMetadata,
+};
 use itp_nonce_cache::{MutateNonce, Nonce};
+use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
 use itp_sgx_crypto::key_repository::AccessPubkey;
 use itp_stf_interface::SHARD_CREATION_HEADER_KEY;
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_storage::{StorageProof, StorageProofChecker};
-use itp_types::{parentchain::Header, ShardIdentifier, SignedBlock};
-use itp_utils::write_slice_and_whitespace_pad;
+use itp_types::{
+	parentchain::{AccountId, BlockNumber, Header},
+	OpaqueCall, ShardIdentifier, SignedBlock,
+};
+use itp_utils::{hex::hex_encode, write_slice_and_whitespace_pad};
 use log::*;
 use once_cell::sync::OnceCell;
 use sgx_types::sgx_status_t;
@@ -71,11 +80,13 @@ use std::{
 	string::{String, ToString},
 	vec::Vec,
 };
+
 mod attestation;
 mod empty_impls;
 mod initialization;
 mod ipfs;
 mod ocall;
+mod shard_config;
 mod shard_vault;
 mod utils;
 
@@ -490,6 +501,8 @@ fn init_shard_creation_parentchain_header_internal(
 	let value = (parentchain_id, header);
 	state.state.insert(SHARD_CREATION_HEADER_KEY.into(), value.encode());
 	state_handler.write_after_mutation(state, state_lock, &shard)?;
+
+	shard_config::init_shard_config(shard);
 	Ok(())
 }
 

@@ -26,6 +26,7 @@ use crate::{
 		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
 	},
 	ocall::OcallApi,
+	shard_config::init_shard_config,
 	tls_ra::{seal_handler::SealStateAndKeys, ClientProvisioningRequest},
 	utils::{
 		get_extrinsic_factory_from_integritee_solo_or_parachain,
@@ -249,43 +250,11 @@ pub unsafe extern "C" fn request_state_provisioning(
 	};
 
 	// fixme: this needs only be called in sidechain mode. no harm though
-	if let Err(e) = touch_shard(shard) {
+	if let Err(e) = init_shard_config(shard) {
 		error!("touch shard error: {:?}", e);
 		return sgx_status_t::SGX_ERROR_UNEXPECTED
 	}
 	sgx_status_t::SGX_SUCCESS
-}
-
-fn touch_shard(shard: ShardIdentifier) -> EnclaveResult<()> {
-	// send confirmation about provisioning to chain to signal that we're ready to serve the shard (this will not yield an event because secondary validateers are ignored.)
-	// fixme: it would be more elegant to have a separate dispatchable for this like `touch_shard` so we don't need to abuse this call
-	// https://github.com/integritee-network/pallets/issues/232
-	let extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
-	let validator_access = get_validator_accessor_from_integritee_solo_or_parachain()?;
-
-	let call = extrinsics_factory
-		.node_metadata_repository
-		.get_from_metadata(|m| m.confirm_imported_sidechain_block_indexes())
-		.map_err(|e| EnclaveError::Other(e.into()))?
-		.map_err(|e| EnclaveError::Other(format!("{:?}", e).into()))?;
-
-	let opaque_call = OpaqueCall::from_tuple(&(
-		call,
-		shard,
-		SidechainBlockNumber::from(0u8),
-		SidechainBlockNumber::from(0u8),
-		H256::default(),
-	));
-	debug!("encoded call: {}", hex_encode(opaque_call.encode().as_slice()));
-	let xts = extrinsics_factory
-		.create_extrinsics(&[opaque_call], None)
-		.map_err(|e| EnclaveError::Other(e.into()))?;
-
-	info!("Sending dummy sidechain block import confirmation extrinsic to touch the shard and signal that we're ready to receive sidechain blocks.");
-	validator_access
-		.execute_mut_on_validator(|v| v.send_extrinsics(xts))
-		.map_err(|e| EnclaveError::Other(e.into()))?;
-	Ok(())
 }
 
 /// Internal [`request_state_provisioning`] function to be able to use the handy `?` operator.
