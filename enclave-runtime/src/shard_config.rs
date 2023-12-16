@@ -21,21 +21,15 @@ use crate::{
 		get_stf_enclave_signer_from_solo_or_parachain,
 	},
 };
-use codec::{Encode};
+use codec::Encode;
 use enclave_bridge_primitives::ShardConfig;
 
 use itp_extrinsics_factory::CreateExtrinsics;
-use itp_node_api::{
-	metadata::{
-		pallet_enclave_bridge::EnclaveBridgeCallIndexes,
-		provider::{AccessNodeMetadata},
-	},
+use itp_node_api::metadata::{
+	pallet_enclave_bridge::EnclaveBridgeCallIndexes, provider::AccessNodeMetadata,
 };
 
-
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
-
-
 
 use itp_types::{
 	parentchain::{AccountId, BlockNumber, ParentchainId},
@@ -43,8 +37,6 @@ use itp_types::{
 };
 use itp_utils::hex::hex_encode;
 use log::*;
-
-
 
 use teerex_primitives::EnclaveFingerprint;
 

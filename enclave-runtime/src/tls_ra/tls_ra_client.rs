@@ -35,8 +35,6 @@ use codec::Encode;
 use itp_attestation_handler::{RemoteAttestationType, DEV_HOSTNAME};
 use itp_component_container::ComponentGetter;
 
-
-
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::key_repository::AccessPubkey;
 use itp_types::{AccountId, ShardIdentifier};

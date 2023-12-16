@@ -53,9 +53,7 @@ use itc_parentchain::{block_import_dispatcher::DispatchBlockImport, primitives::
 use itp_component_container::ComponentGetter;
 
 use itp_import_queue::PushToQueue;
-use itp_node_api::metadata::{
-	NodeMetadata,
-};
+use itp_node_api::metadata::NodeMetadata;
 use itp_nonce_cache::{MutateNonce, Nonce};
 
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
@@ -63,10 +61,8 @@ use itp_sgx_crypto::key_repository::AccessPubkey;
 use itp_stf_interface::SHARD_CREATION_HEADER_KEY;
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_storage::{StorageProof, StorageProofChecker};
-use itp_types::{
-	parentchain::{Header}, ShardIdentifier, SignedBlock,
-};
-use itp_utils::{write_slice_and_whitespace_pad};
+use itp_types::{parentchain::Header, ShardIdentifier, SignedBlock};
+use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use once_cell::sync::OnceCell;
 use sgx_types::sgx_status_t;
