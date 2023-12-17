@@ -26,7 +26,7 @@ use std::boxed::Box;
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
 	#[error("Current state is empty (not set)")]
-	CurrentStateEmpty,
+	CurrentShardStateEmpty,
 	#[error("Could not acquire lock, lock is poisoned")]
 	LockPoisoning,
 	#[error(transparent)]

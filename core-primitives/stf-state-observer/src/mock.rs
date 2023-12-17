@@ -59,7 +59,7 @@ where
 				debug!("State value: {:?}", state);
 				Ok(observation_func(state))
 			},
-			None => Err(Error::CurrentStateEmpty),
+			None => Err(Error::CurrentShardStateEmpty),
 		}
 	}
 }
