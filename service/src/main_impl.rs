@@ -500,13 +500,13 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		.expect("our enclave should be registered at this point");
 	trace!("verified that our enclave is registered: {:?}", my_enclave);
 
-	let we_are_primary_validateer =
+	let (we_are_primary_validateer, re_init_parentchain_needed) =
 		match integritee_rpc_api.primary_worker_for_shard(shard, None).unwrap() {
 			Some(primary_enclave) => match primary_enclave.instance_signer() {
 				AnySigner::Known(MultiSigner::Ed25519(primary)) =>
 					if primary.encode() == tee_accountid.encode() {
 						println!("We are primary worker on this shard and we have been previously running.");
-						true
+						(true, false)
 					} else {
 						println!(
 							"We are NOT primary worker. The primary worker is {}.",
@@ -523,7 +523,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 								skip_ra,
 							);
 						}
-						false
+						(false, false)
 					},
 				_ => {
 					panic!(
@@ -535,30 +535,35 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			None => {
 				println!("We are the primary worker on this shard and the shard is untouched. Will initialize it");
 				enclave.init_shard(shard.encode()).unwrap();
-				enclave
-					.init_shard_creation_parentchain_header(
-						shard,
-						&ParentchainId::Integritee,
-						&register_enclave_xt_header,
-					)
-					.unwrap();
-				debug!("shard config should be initialized on integritee network now");
-				true
+				if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
+					enclave
+						.init_shard_creation_parentchain_header(
+							shard,
+							&ParentchainId::Integritee,
+							&register_enclave_xt_header,
+						)
+						.unwrap();
+					debug!("shard config should be initialized on integritee network now");
+					(true, true)
+				} else {
+					(true, false)
+				}
 			},
 		};
 	debug!("getting shard creation: {:?}", enclave.get_shard_creation_header(shard));
 	initialization_handler.registered_on_parentchain();
 
-	// re-initialize integritee parentchain to make sure to use creation_header for fast-sync
-	// todo: this should only be necessary if we are the primary validateer running for the first time
-	let (integritee_parentchain_handler, integritee_last_synced_header_at_last_run) =
-		init_parentchain(
-			&enclave,
-			&integritee_rpc_api,
-			&tee_accountid,
-			ParentchainId::Integritee,
-			shard,
-		);
+	if re_init_parentchain_needed {
+		// re-initialize integritee parentchain to make sure to use creation_header for fast-sync
+		let (integritee_parentchain_handler, integritee_last_synced_header_at_last_run) =
+			init_parentchain(
+				&enclave,
+				&integritee_rpc_api,
+				&tee_accountid,
+				ParentchainId::Integritee,
+				shard,
+			);
+	}
 
 	match WorkerModeProvider::worker_mode() {
 		WorkerMode::Teeracle => {
