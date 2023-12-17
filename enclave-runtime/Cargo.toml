@@ -1,6 +1,6 @@
 [package]
 name = "enclave-runtime"
-version = "0.12.2"
+version = "0.12.6"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
@@ -86,8 +86,9 @@ webpki = { git = "https://github.com/mesalock-linux/webpki", branch = "mesalock_
 base58 = { rev = "sgx_1.1.3", package = "rust-base58", default-features = false, features = ["mesalock_sgx"], git = "https://github.com/mesalock-linux/rust-base58-sgx" }
 
 cid = { default-features = false, git = "https://github.com/whalelephant/rust-cid", branch = "nstd" }
+enclave-bridge-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.6-polkadot-v0.9.42" }
 multibase = { default-features = false, git = "https://github.com/whalelephant/rust-multibase", branch = "nstd" }
-teerex-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.0-polkadot-v0.9.42" }
+teerex-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.6-polkadot-v0.9.42" }
 
 # local deps
 ita-oracle = { path = "../app-libs/oracle", default-features = false, optional = true, features = ["sgx"] }

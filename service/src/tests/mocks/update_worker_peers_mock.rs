@@ -16,11 +16,12 @@
 */
 
 use crate::{worker::WorkerResult, worker_peers_updater::UpdateWorkerPeers};
+use itp_types::ShardIdentifier;
 
 pub struct UpdateWorkerPeersMock;
 
 impl UpdateWorkerPeers for UpdateWorkerPeersMock {
-	fn update_peers(&self) -> WorkerResult<()> {
+	fn update_peers(&self, shard: ShardIdentifier) -> WorkerResult<()> {
 		Ok(())
 	}
 }

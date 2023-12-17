@@ -85,7 +85,7 @@ impl<StateType> ObserveState for StateObserver<StateType> {
 
 		match current_state_map_lock.get_mut(shard) {
 			Some(s) => Ok(observation_func(s)),
-			None => Err(Error::CurrentStateEmpty),
+			None => Err(Error::CurrentShardStateEmpty),
 		}
 	}
 }
@@ -112,7 +112,7 @@ mod tests {
 
 		assert_matches!(
 			state_observer.observe_state(&shard(), |_| { () }),
-			Err(Error::CurrentStateEmpty)
+			Err(Error::CurrentShardStateEmpty)
 		);
 	}
 

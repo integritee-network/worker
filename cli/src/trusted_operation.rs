@@ -104,7 +104,7 @@ pub(crate) fn get_state<T: Decode + Debug>(
 		})?;
 
 	if rpc_return_value.status == DirectRequestStatus::Error {
-		println!("[Error] {}", String::decode(&mut rpc_return_value.value.as_slice()).unwrap());
+		error!("{}", String::decode(&mut rpc_return_value.value.as_slice()).unwrap());
 		return Err(TrustedOperationError::Default {
 			msg: "[Error] DirectRequestStatus::Error".to_string(),
 		})
@@ -281,7 +281,7 @@ fn send_direct_request<T: Decode + Debug>(
 						DirectRequestStatus::Error => {
 							debug!("request status is error");
 							if let Ok(value) = String::decode(&mut return_value.value.as_slice()) {
-								println!("[Error] {}", value);
+								error!("{}", value);
 							}
 							direct_api.close().unwrap();
 							return Err(TrustedOperationError::Default {
@@ -369,7 +369,7 @@ pub(crate) fn wait_until(
 								if let Ok(value) =
 									String::decode(&mut return_value.value.as_slice())
 								{
-									println!("[Error] {}", value);
+									error!("{}", value);
 								}
 								return None
 							},

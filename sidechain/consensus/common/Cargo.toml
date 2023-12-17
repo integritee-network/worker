@@ -20,6 +20,7 @@ itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features 
 itp-settings = { path = "../../../core-primitives/settings" }
 itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
 itp-types = { path = "../../../core-primitives/types", default-features = false }
+itp-utils = { path = "../../../core-primitives/utils", default-features = false }
 its-block-verification = { path = "../../block-verification", optional = true, default-features = false }
 its-primitives = { path = "../../primitives", default-features = false }
 its-state = { path = "../../state", default-features = false }
@@ -58,6 +59,7 @@ std = [
     "itp-sgx-crypto/std",
     "itp-sgx-externalities/std",
     "itp-types/std",
+    "itp-utils/std",
     "its-primitives/std",
     "its-block-verification/std",
     "its-state/std",

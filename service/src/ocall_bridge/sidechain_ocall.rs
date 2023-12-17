@@ -25,10 +25,13 @@ use crate::{
 use codec::{Decode, Encode};
 use itp_types::{BlockHash, ShardIdentifier};
 use its_peer_fetch::FetchBlocksFromPeer;
-use its_primitives::{traits::Block, types::SignedBlock as SignedSidechainBlock};
+use its_primitives::{
+	traits::{Block, Header},
+	types::SignedBlock as SignedSidechainBlock,
+};
 use its_storage::BlockStorage;
 use log::*;
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 pub struct SidechainOCall<BlockBroadcaster, Storage, PeerUpdater, PeerBlockFetcher, TokioHandle> {
 	block_broadcaster: Arc<BlockBroadcaster>,
@@ -83,21 +86,34 @@ where
 				},
 			};
 
-		if !signed_blocks.is_empty() {
-			info!(
-				"Enclave produced sidechain blocks: {:?}",
-				signed_blocks
-					.iter()
-					.map(|b| b.block.header().block_number)
-					.collect::<Vec<u64>>()
-			);
-		} else {
+		if signed_blocks.is_empty() {
 			debug!("Enclave did not produce sidechain blocks");
+			return status
 		}
+
+		info!(
+			"Enclave produced sidechain blocks: {:?}",
+			signed_blocks
+				.iter()
+				.map(|b| b.block.header().block_number)
+				.collect::<Vec<u64>>()
+		);
+
+		let shards: Vec<ShardIdentifier> = signed_blocks
+			.iter()
+			.map(|b| b.block.header().shard_id())
+			.collect::<HashSet<_>>()
+			.into_iter()
+			.collect();
+
+		if shards.len() > 1 {
+			error!("operating multiple shards is not supported");
+		}
+		let shard = shards[0];
 
 		// FIXME: When & where should peers be updated?
 		debug!("Updating peers..");
-		if let Err(e) = self.peer_updater.update_peers() {
+		if let Err(e) = self.peer_updater.update_peers(shard) {
 			error!("Error updating peers: {:?}", e);
 		// Fixme: returning an error here results in a `HeaderAncestryMismatch` error.
 		// status = sgx_status_t::SGX_ERROR_UNEXPECTED;

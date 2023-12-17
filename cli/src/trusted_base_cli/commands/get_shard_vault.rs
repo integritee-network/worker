@@ -51,7 +51,7 @@ impl GetShardVaultCommand {
 			})?;
 
 		if rpc_return_value.status == DirectRequestStatus::Error {
-			println!("[Error] {}", String::decode(&mut rpc_return_value.value.as_slice()).unwrap());
+			error!("{}", String::decode(&mut rpc_return_value.value.as_slice()).unwrap());
 			return Err(CliError::WorkerRpcApi { msg: "rpc error".to_string() })
 		}
 

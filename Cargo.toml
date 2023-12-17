@@ -83,6 +83,9 @@ sgx_types = { version = "1.1.6", git = "https://github.com/apache/incubator-teac
 sgx_ucrypto = { version = "1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master" }
 sgx_urts = { version = "1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master" }
 
+[patch.crates-io]
+ring = { git = "https://github.com/betrusted-io/ring-xous", branch = "0.16.20-cleanup" }
+
 #[patch."https://github.com/integritee-network/integritee-node"]
 #my-node-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network//integritee-node", branch = "ab/integrate-pallet-teerex-refactoring" }
 

@@ -70,7 +70,7 @@ where
 	genesis_hash: H256,
 	signer: Signer,
 	nonce_cache: Arc<NonceCache>,
-	node_metadata_repository: Arc<NodeMetadataRepository>,
+	pub node_metadata_repository: Arc<NodeMetadataRepository>,
 }
 
 impl<Signer, NonceCache, NodeMetadataRepository>
