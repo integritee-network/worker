@@ -112,7 +112,7 @@ mod tests {
 
 		assert_matches!(
 			state_observer.observe_state(&shard(), |_| { () }),
-			Err(Error::CurrentStateEmpty)
+			Err(Error::CurrentShardStateEmpty)
 		);
 	}
 
