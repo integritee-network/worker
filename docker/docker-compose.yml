@@ -35,7 +35,7 @@ services:
       - "${AESMD:-/dev/null}:/var/run/aesmd"
       - "${SGX_QCNL:-/dev/null}:/etc/sgx_default_qcnl.conf"
     environment:
-      - RUST_LOG=info,substrate_api_client=warn,ws=warn,mio=warn,ac_node_api=warn,sp_io=warn,tungstenite=warn
+      - RUST_LOG=info,substrate_api_client=warn,ws=warn,mio=warn,ac_node_api=warn,sp_io=warn,tungstenite=warn,integritee_service=debug,enclave_runtime=debug
     networks:
       - integritee-test-network
     healthcheck:
@@ -64,7 +64,7 @@ services:
       - "${AESMD:-/dev/null}:/var/run/aesmd"
       - "${SGX_QCNL:-/dev/null}:/etc/sgx_default_qcnl.conf"
     environment:
-      - RUST_LOG=info,substrate_api_client=warn,ws=warn,mio=warn,ac_node_api=warn,sp_io=warn,tungstenite=warn
+      - RUST_LOG=info,substrate_api_client=warn,ws=warn,mio=warn,ac_node_api=warn,sp_io=warn,tungstenite=warn,integritee_service=debug,enclave_runtime=debug
     networks:
       - integritee-test-network
     healthcheck:
