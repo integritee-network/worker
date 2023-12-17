@@ -523,7 +523,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 								skip_ra,
 							);
 						}
-						(false, false)
+						(false, true)
 					},
 				_ => {
 					panic!(
@@ -554,7 +554,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	initialization_handler.registered_on_parentchain();
 
 	if re_init_parentchain_needed {
-		// re-initialize integritee parentchain to make sure to use creation_header for fast-sync
+		// re-initialize integritee parentchain to make sure to use creation_header for fast-sync or the provisioned light client state
 		let (integritee_parentchain_handler, integritee_last_synced_header_at_last_run) =
 			init_parentchain(
 				&enclave,
