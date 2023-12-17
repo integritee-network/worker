@@ -495,7 +495,7 @@ fn init_shard_creation_parentchain_header_internal(
 	state.state.insert(SHARD_CREATION_HEADER_KEY.into(), value.encode());
 	state_handler.write_after_mutation(state, state_lock, &shard)?;
 
-	shard_config::init_shard_config(shard);
+	shard_config::init_shard_config(shard)?;
 	Ok(())
 }
 
