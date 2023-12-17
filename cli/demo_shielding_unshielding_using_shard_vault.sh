@@ -113,19 +113,21 @@ function wait_assert_state()
     exit 1
 }
 
+# usage:
+#   wait_assert_state_parentchain <account> <state-name> <expected-state>
 function wait_assert_state_parentchain()
 {
     for i in $(seq 1 $WAIT_ROUNDS); do
         sleep $WAIT_INTERVAL_SECONDS
         state=$(${CLIENT} "$2" "$1")
-        if (( $4 >= state ? $4 - state < FEE_TOLERANCE : state - $4 < FEE_TOLERANCE)); then
+        if (( $3 >= state ? $3 - state < FEE_TOLERANCE : state - $3 < FEE_TOLERANCE)); then
             return
         else
             echo -n "."
         fi
     done
     echo
-    echo "Assert $2 $3 failed, expected = $4, actual = $state, tolerance = $FEE_TOLERANCE"
+    echo "Assert $1 $2 failed, expected = $3, actual = $state, tolerance = $FEE_TOLERANCE"
     exit 1
 }
 
