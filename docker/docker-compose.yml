@@ -1,6 +1,6 @@
 services:
   "integritee-node-${VERSION}":
-    image: "${INTEGRITEE_NODE:-integritee/integritee-node:1.1.3}"
+    image: "${INTEGRITEE_NODE:-integritee/integritee-node:1.1.4}"
     hostname: integritee-node
     devices:
       - "${SGX_PROVISION:-/dev/null}:/dev/sgx/provision"
