@@ -553,17 +553,19 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	debug!("getting shard creation: {:?}", enclave.get_shard_creation_header(shard));
 	initialization_handler.registered_on_parentchain();
 
-	if re_init_parentchain_needed {
-		// re-initialize integritee parentchain to make sure to use creation_header for fast-sync or the provisioned light client state
-		let (integritee_parentchain_handler, integritee_last_synced_header_at_last_run) =
+	let (integritee_parentchain_handler, integritee_last_synced_header_at_last_run) =
+		if re_init_parentchain_needed {
+			// re-initialize integritee parentchain to make sure to use creation_header for fast-sync or the provisioned light client state
 			init_parentchain(
 				&enclave,
 				&integritee_rpc_api,
 				&tee_accountid,
 				ParentchainId::Integritee,
 				shard,
-			);
-	}
+			)
+		} else {
+			(integritee_parentchain_handler, integritee_last_synced_header_at_last_run)
+		};
 
 	match WorkerModeProvider::worker_mode() {
 		WorkerMode::Teeracle => {
