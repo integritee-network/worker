@@ -1675,6 +1675,7 @@ dependencies = [
  "bs58",
  "ita-sgx-runtime",
  "ita-stf",
+ "itc-parentchain",
  "itc-parentchain-indirect-calls-executor",
  "itp-api-client-types",
  "itp-node-api",

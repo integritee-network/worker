@@ -17,6 +17,10 @@
 mod event_filter;
 mod event_handler;
 mod extrinsic_parser;
+
+#[cfg(feature = "std")]
+pub mod event_subscriber;
+
 use crate::{
 	decode_and_log_error,
 	indirect_calls::{
@@ -42,6 +46,21 @@ use itc_parentchain_indirect_calls_executor::{
 use itp_node_api::metadata::pallet_balances::BalancesCallIndexes;
 use itp_stf_primitives::traits::IndirectExecutor;
 use log::{debug, trace};
+
+#[cfg(feature = "std")]
+pub mod parachain {
+	pub use integritee_parachain_runtime::{
+		AccountId, Balance, BalancesCall, Block, Hash, Header, Runtime, RuntimeCall, RuntimeEvent,
+		Signature, UncheckedExtrinsic,
+	};
+}
+#[cfg(feature = "std")]
+pub mod solochain {
+	pub use integritee_solochain_runtime::{
+		AccountId, Balance, BalancesCall, Block, Hash, Header, Runtime, RuntimeCall, RuntimeEvent,
+		Signature, UncheckedExtrinsic,
+	};
+}
 
 /// The default indirect call (extrinsic-triggered) of the Target-A-Parachain.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]

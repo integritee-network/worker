@@ -17,7 +17,10 @@
 
 mod event_filter;
 mod event_handler;
+#[cfg(feature = "std")]
+pub mod event_subscriber;
 mod extrinsic_parser;
+
 use crate::{
 	decode_and_log_error,
 	indirect_calls::{invoke::InvokeArgs, shield_funds::ShieldFundsArgs},
@@ -28,6 +31,16 @@ use core::marker::PhantomData;
 pub use event_filter::FilterableEvents;
 pub use event_handler::ParentchainEventHandler;
 pub use extrinsic_parser::ParentchainExtrinsicParser;
+use ita_stf::TrustedCallSigned;
+use itc_parentchain_indirect_calls_executor::{
+	error::{Error, Result},
+	filter_metadata::FilterIntoDataFrom,
+	IndirectDispatch,
+};
+use itp_node_api::metadata::NodeMetadataTrait;
+use itp_stf_primitives::traits::IndirectExecutor;
+use log::trace;
+
 #[cfg(feature = "std")]
 pub mod parachain {
 	pub use integritee_parachain_runtime::{
@@ -42,15 +55,6 @@ pub mod solochain {
 		Signature, UncheckedExtrinsic,
 	};
 }
-use ita_stf::TrustedCallSigned;
-use itc_parentchain_indirect_calls_executor::{
-	error::{Error, Result},
-	filter_metadata::FilterIntoDataFrom,
-	IndirectDispatch,
-};
-use itp_node_api::metadata::NodeMetadataTrait;
-use itp_stf_primitives::traits::IndirectExecutor;
-use log::trace;
 
 /// The default indirect call (extrinsic-triggered) of the Integritee-Parachain.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]

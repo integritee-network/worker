@@ -663,22 +663,10 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		)
 	}
 
-	// ------------------------------------------------------------------------
-	// Subscribe to events and print them.
-	println!("*** [{:?}] Subscribing to events", ParentchainId::Integritee);
-	let mut subscription = integritee_rpc_api.subscribe_events().unwrap();
-	println!("[+] [{:?}] Subscribed to events. waiting...", ParentchainId::Integritee);
-	loop {
-		if integritee_parentchain_init_params.is_parachain() {
-			if let Some(Ok(events)) = subscription.next_events::<ita_parentchain_interface::integritee::parachain::RuntimeEvent, ita_parentchain_interface::integritee::parachain::Hash>() {
- 				print_events(events, ParentchainId::Integritee)
-		}
-		} else {
-			if let Some(Ok(events)) = subscription.next_events::<ita_parentchain_interface::integritee::solochain::RuntimeEvent, ita_parentchain_interface::integritee::solochain::Hash>() {
-				print_events(events, ParentchainId::Integritee)
-			}
-		}
-	}
+	ita_parentchain_interface::integritee::event_subscriber::subscribe_to_parentchain_events(
+		&integritee_rpc_api,
+		integritee_parentchain_init_params,
+	);
 }
 
 fn init_provided_shard_vault<E: EnclaveBase>(
@@ -751,7 +739,7 @@ fn init_target_parentchain<E>(
 			.unwrap();
 
 		start_parentchain_header_subscription_thread(
-			parentchain_handler,
+			parentchain_handler.clone(),
 			last_synched_header,
 			*shard,
 		)
@@ -759,19 +747,22 @@ fn init_target_parentchain<E>(
 	println!("[{:?}] initializing proxied shard vault account now", parentchain_id);
 	enclave.init_proxied_shard_vault(shard, &parentchain_id).unwrap();
 
-	// Subscribe to events and print them.
-	println!("*** [{:?}] Subscribing to events...", parentchain_id);
-	let mut subscription = node_api.subscribe_events().unwrap();
-	println!("[+] [{:?}] Subscribed to events. waiting...", parentchain_id);
-
-	thread::Builder::new()
-		.name(format!("{:?}_parentchain_event_subscription", parentchain_id))
-		.spawn(move || loop {
-			if let Some(Ok(events)) = subscription.next_events::<RuntimeEvent, Hash>() {
-				print_events(events, parentchain_id)
-			}
-		})
-		.unwrap();
+	let parentchain_init_params = parentchain_handler.parentchain_init_params.clone();
+	match parentchain_id {
+		ParentchainId::Integritee => error!("illegal parentchain id"),
+		ParentchainId::TargetA => {
+			ita_parentchain_interface::target_a::event_subscriber::subscribe_to_parentchain_events(
+				&node_api,
+				parentchain_init_params,
+			);
+		},
+		ParentchainId::TargetB => {
+			ita_parentchain_interface::target_b::event_subscriber::subscribe_to_parentchain_events(
+				&node_api,
+				parentchain_init_params,
+			);
+		},
+	}
 }
 
 fn init_parentchain<E>(
@@ -848,24 +839,6 @@ fn spawn_worker_for_shard_polling<InitializationHandler>(
 			thread::sleep(Duration::from_secs(POLL_INTERVAL_SECS));
 		}
 	});
-}
-
-fn print_events<R, H>(events: Vec<EventRecord<R, H>>, parentchain_id: ParentchainId)
-where
-	R: Debug,
-{
-	for evr in &events {
-		if evr.phase == ApplyExtrinsic(0) {
-			// not interested in intrinsics
-			continue
-		}
-		let re = Regex::new(r"\s[0-9a-f]*\s\(").unwrap();
-		let event_str = re
-			.replace_all(format!("{:?}", evr.event).as_str(), "(")
-			.replace("RuntimeEvent::", "")
-			.replace("Event::", "");
-		println!("[{}] Event: {}", parentchain_id, event_str);
-	}
 }
 
 #[cfg(feature = "attesteer")]
