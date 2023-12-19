@@ -585,7 +585,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			);
 		},
 		WorkerMode::OffChainWorker => {
-			println!("*** [+] Finished initializing light client, syncing parentchain...");
+			println!("[Integritee:OCW] Finished initializing light client, syncing parentchain...");
 
 			// Syncing all parentchain blocks, this might take a while..
 			let last_synced_header = integritee_parentchain_handler
@@ -605,7 +605,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			info!("skipping shard vault check because not yet supported for offchain worker");
 		},
 		WorkerMode::Sidechain => {
-			println!("*** [+] Finished initializing light client, syncing parentchain...");
+			println!("[Integritee:SCW] Finished initializing light client, syncing parentchain...");
 
 			// ------------------------------------------------------------------------
 			// Initialize the sidechain
@@ -729,7 +729,7 @@ fn init_target_parentchain<E>(
 
 	if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
 		println!(
-			"*** [+] [{:?}] Finished initializing light client, syncing parentchain...",
+			"[{:?}] Finished initializing light client, syncing parentchain...",
 			parentchain_id
 		);
 
@@ -748,21 +748,25 @@ fn init_target_parentchain<E>(
 	enclave.init_proxied_shard_vault(shard, &parentchain_id).unwrap();
 
 	let parentchain_init_params = parentchain_handler.parentchain_init_params.clone();
-	match parentchain_id {
-		ParentchainId::Integritee => error!("illegal parentchain id"),
-		ParentchainId::TargetA => {
-			ita_parentchain_interface::target_a::event_subscriber::subscribe_to_parentchain_events(
-				&node_api,
-				parentchain_init_params,
-			);
-		},
-		ParentchainId::TargetB => {
-			ita_parentchain_interface::target_b::event_subscriber::subscribe_to_parentchain_events(
-				&node_api,
-				parentchain_init_params,
-			);
-		},
-	}
+
+	thread::Builder::new()
+		.name(format!("{:?}_parentchain_event_subscription", parentchain_id))
+		.spawn(move || match parentchain_id {
+			ParentchainId::Integritee => error!("illegal parentchain id"),
+			ParentchainId::TargetA => {
+				ita_parentchain_interface::target_a::event_subscriber::subscribe_to_parentchain_events(
+					&node_api,
+					parentchain_init_params,
+				);
+			},
+			ParentchainId::TargetB => {
+				ita_parentchain_interface::target_b::event_subscriber::subscribe_to_parentchain_events(
+					&node_api,
+					parentchain_init_params,
+				);
+			},
+		})
+		.unwrap();
 }
 
 fn init_parentchain<E>(
