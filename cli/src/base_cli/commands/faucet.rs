@@ -19,7 +19,7 @@ use crate::{
 	command_utils::{get_accountid_from_str, get_chain_api},
 	Cli, CliResult, CliResultOk,
 };
-use ita_parentchain_interface::integritee::{BalancesCall, RuntimeCall};
+use ita_parentchain_interface::integritee::parachain::{BalancesCall, RuntimeCall};
 use sp_keyring::AccountKeyring;
 use sp_runtime::MultiAddress;
 use std::vec::Vec;

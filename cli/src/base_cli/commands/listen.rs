@@ -18,7 +18,7 @@
 use crate::{command_utils::get_chain_api, Cli, CliResult, CliResultOk};
 use base58::ToBase58;
 use codec::Encode;
-use ita_parentchain_interface::integritee::{Hash, Runtime, RuntimeEvent};
+use ita_parentchain_interface::integritee::parachain::{Hash, Runtime, RuntimeEvent};
 use log::*;
 use substrate_api_client::SubscribeEvents;
 

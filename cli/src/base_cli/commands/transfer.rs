@@ -19,7 +19,7 @@ use crate::{
 	command_utils::{get_accountid_from_str, get_chain_api, *},
 	Cli, CliResult, CliResultOk,
 };
-use ita_parentchain_interface::integritee::Balance;
+use ita_parentchain_interface::integritee::parachain::Balance;
 use log::*;
 use sp_core::{crypto::Ss58Codec, Pair};
 use substrate_api_client::{

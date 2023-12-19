@@ -31,7 +31,7 @@ use crate::{
 use base58::ToBase58;
 use clap::{load_yaml, App, ArgMatches};
 use codec::{Decode, Encode};
-use ita_parentchain_interface::integritee::{Hash, Header, RuntimeEvent};
+use ita_parentchain_interface::integritee::parachain::{Hash, Header, RuntimeEvent};
 use itp_enclave_api::{
 	direct_request::DirectRequest,
 	enclave_base::EnclaveBase,
@@ -668,7 +668,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	let mut subscription = integritee_rpc_api.subscribe_events().unwrap();
 	println!("[+] [{:?}] Subscribed to events. waiting...", ParentchainId::Integritee);
 	loop {
-		if let Some(Ok(events)) = subscription.next_events::<ita_parentchain_interface::integritee::RuntimeEvent, ita_parentchain_interface::integritee::Hash>() {
+		if let Some(Ok(events)) = subscription.next_events::<ita_parentchain_interface::integritee::parachain::RuntimeEvent, ita_parentchain_interface::integritee::parachain::Hash>() {
 			print_events(events, ParentchainId::Integritee)
 		}
 	}

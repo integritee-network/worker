@@ -24,7 +24,7 @@ use crate::{
 use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode, Input};
 use enclave_bridge_primitives::Request;
-use ita_parentchain_interface::integritee::{Hash, RuntimeEvent};
+use ita_parentchain_interface::integritee::parachain::{Hash, RuntimeEvent};
 use ita_stf::{Getter, TrustedCallSigned};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
 use itp_node_api::api_client::{ParentchainApi, ENCLAVE_BRIDGE};
