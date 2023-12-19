@@ -564,7 +564,8 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 				shard,
 			);
 	}
-
+	let integritee_parentchain_init_params =
+		integritee_parentchain_handler.parentchain_init_params.clone();
 	match WorkerModeProvider::worker_mode() {
 		WorkerMode::Teeracle => {
 			// ------------------------------------------------------------------------
@@ -668,8 +669,14 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	let mut subscription = integritee_rpc_api.subscribe_events().unwrap();
 	println!("[+] [{:?}] Subscribed to events. waiting...", ParentchainId::Integritee);
 	loop {
-		if let Some(Ok(events)) = subscription.next_events::<ita_parentchain_interface::integritee::parachain::RuntimeEvent, ita_parentchain_interface::integritee::parachain::Hash>() {
-			print_events(events, ParentchainId::Integritee)
+		if integritee_parentchain_init_params.is_parachain() {
+			if let Some(Ok(events)) = subscription.next_events::<ita_parentchain_interface::integritee::parachain::RuntimeEvent, ita_parentchain_interface::integritee::parachain::Hash>() {
+ 				print_events(events, ParentchainId::Integritee)
+		}
+		} else {
+			if let Some(Ok(events)) = subscription.next_events::<ita_parentchain_interface::integritee::solochain::RuntimeEvent, ita_parentchain_interface::integritee::solochain::Hash>() {
+				print_events(events, ParentchainId::Integritee)
+			}
 		}
 	}
 }

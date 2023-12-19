@@ -67,7 +67,7 @@ pub trait HandleParentchain {
 pub(crate) struct ParentchainHandler<ParentchainApi, EnclaveApi> {
 	parentchain_api: ParentchainApi,
 	enclave_api: Arc<EnclaveApi>,
-	parentchain_init_params: ParentchainInitParams,
+	pub parentchain_init_params: ParentchainInitParams,
 }
 
 // #TODO: #1451: Reintroduce `ParentchainApi: ChainApi` once there is no trait bound conflict

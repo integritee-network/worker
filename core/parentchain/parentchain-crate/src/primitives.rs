@@ -46,6 +46,12 @@ impl ParentchainInitParams {
 			Self::Parachain { id, .. } => id,
 		}
 	}
+	pub fn is_solochain(&self) -> bool {
+		matches!(self, Self::Solochain { id: _, shard: _, params: _ })
+	}
+	pub fn is_parachain(&self) -> bool {
+		matches!(self, Self::Parachain { id: _, shard: _, params: _ })
+	}
 }
 
 impl From<(ParentchainId, ShardIdentifier, SolochainParams)> for ParentchainInitParams {
