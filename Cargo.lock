@@ -4105,7 +4105,7 @@ dependencies = [
 [[package]]
 name = "integritee-runtime"
 version = "1.6.39"
-source = "git+https://github.com/integritee-network/parachain?branch=sdk-v0.12.6-polkadot-v0.9.42#b89c65131ecdd724c5ece77e8a7e927b44b83588"
+source = "git+https://github.com/integritee-network/parachain?branch=sdk-v0.12.6-polkadot-v0.9.42#2b6ef6f81e84b18736ad441aa861f7e18a69607c"
 dependencies = [
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
@@ -4650,7 +4650,7 @@ name = "itc-rpc-server"
 version = "0.9.0"
 dependencies = [
  "anyhow",
- "env_logger 0.10.0",
+ "env_logger 0.9.3",
  "itp-enclave-api",
  "itp-rpc",
  "itp-utils",
@@ -8396,7 +8396,7 @@ dependencies = [
 [[package]]
 name = "parachains-common"
 version = "1.4.0"
-source = "git+https://github.com/integritee-network/parachain?branch=sdk-v0.12.6-polkadot-v0.9.42#b89c65131ecdd724c5ece77e8a7e927b44b83588"
+source = "git+https://github.com/integritee-network/parachain?branch=sdk-v0.12.6-polkadot-v0.9.42#2b6ef6f81e84b18736ad441aa861f7e18a69607c"
 dependencies = [
  "frame-executive",
  "frame-support",
