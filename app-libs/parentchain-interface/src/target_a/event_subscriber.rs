@@ -20,15 +20,13 @@ pub fn subscribe_to_parentchain_events(
 					format!("[L1Event:{}Para]", PARENTCHAIN_NAME),
 				)
 			}
-		} else {
-			if let Some(Ok(events)) =
-				subscription.next_events::<super::solochain::RuntimeEvent, super::solochain::Hash>()
-			{
-				print_events::<super::solochain::RuntimeEvent, super::solochain::Hash>(
-					events,
-					format!("[L1Event:{}Solo]", PARENTCHAIN_NAME),
-				)
-			}
+		} else if let Some(Ok(events)) =
+			subscription.next_events::<super::solochain::RuntimeEvent, super::solochain::Hash>()
+		{
+			print_events::<super::solochain::RuntimeEvent, super::solochain::Hash>(
+				events,
+				format!("[L1Event:{}Solo]", PARENTCHAIN_NAME),
+			)
 		}
 	}
 }

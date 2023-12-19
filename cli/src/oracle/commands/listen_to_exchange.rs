@@ -16,7 +16,7 @@
 */
 
 use crate::{command_utils::get_chain_api, Cli};
-use ita_parentchain_interface::integritee::parachain::{Hash, RuntimeEvent};
+use ita_parentchain_interface::integritee::solochain::{Hash, RuntimeEvent};
 use itp_node_api::api_client::ParentchainApi;
 use itp_time_utils::{duration_now, remaining_time};
 use log::{debug, info, trace};
@@ -56,7 +56,7 @@ pub fn count_exchange_rate_update_events(api: &ParentchainApi, duration: Duratio
 				info!("received event {:?}", event_record.event);
 				if let RuntimeEvent::Teeracle(event) = &event_record.event {
 					match &event {
-						ita_parentchain_interface::integritee::parachain::pallet_teeracle::Event::ExchangeRateUpdated {
+						ita_parentchain_interface::integritee::solochain::pallet_teeracle::Event::ExchangeRateUpdated {
 							data_source,
 							trading_pair,
 							exchange_rate,

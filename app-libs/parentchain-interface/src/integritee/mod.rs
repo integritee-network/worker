@@ -44,15 +44,15 @@ use log::trace;
 #[cfg(feature = "std")]
 pub mod parachain {
 	pub use integritee_parachain_runtime::{
-		AccountId, Balance, BalancesCall, Block, Hash, Header, Runtime, RuntimeCall, RuntimeEvent,
-		Signature, UncheckedExtrinsic,
+		pallet_teeracle, AccountId, Balance, BalancesCall, Block, Hash, Header, Runtime,
+		RuntimeCall, RuntimeEvent, Signature, UncheckedExtrinsic,
 	};
 }
 #[cfg(feature = "std")]
 pub mod solochain {
 	pub use integritee_solochain_runtime::{
-		AccountId, Balance, BalancesCall, Block, Hash, Header, Runtime, RuntimeCall, RuntimeEvent,
-		Signature, UncheckedExtrinsic,
+		pallet_teeracle, AccountId, Balance, BalancesCall, Block, Hash, Header, Runtime,
+		RuntimeCall, RuntimeEvent, Signature, UncheckedExtrinsic,
 	};
 }
 
