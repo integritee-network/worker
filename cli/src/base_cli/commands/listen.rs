@@ -16,9 +16,7 @@
 */
 
 use crate::{command_utils::get_chain_api, Cli, CliResult, CliResultOk};
-use base58::ToBase58;
-use codec::Encode;
-use ita_parentchain_interface::integritee::parachain::{Hash, Runtime, RuntimeEvent};
+use ita_parentchain_interface::integritee::parachain::{Hash, RuntimeEvent};
 use log::*;
 use substrate_api_client::SubscribeEvents;
 
@@ -38,7 +36,7 @@ impl ListenCommand {
 		println!("{:?} {:?}", self.events, self.blocks);
 		let api = get_chain_api(cli);
 		info!("Subscribing to events");
-		let mut count = 0u32;
+		let count = 0u32;
 		let mut blocks = 0u32;
 		let mut subscription = api.subscribe_events().unwrap();
 		loop {

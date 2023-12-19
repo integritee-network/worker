@@ -1,14 +1,7 @@
-use crate::{print_events, trim_event};
-use core::fmt::Debug;
+use crate::print_events;
 use itc_parentchain::primitives::ParentchainInitParams;
 use itp_api_client_types::ParentchainApi;
-use itp_types::parentchain::ParentchainId;
-use log::*;
-use regex::Regex;
-use substrate_api_client::{
-	ac_node_api::{EventRecord, Phase::ApplyExtrinsic},
-	SubscribeEvents,
-};
+use substrate_api_client::SubscribeEvents;
 
 const PARENTCHAIN_NAME: &str = "Integritee";
 pub fn subscribe_to_parentchain_events(

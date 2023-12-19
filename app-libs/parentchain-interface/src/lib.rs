@@ -23,7 +23,6 @@ extern crate core;
 extern crate sgx_tstd as std;
 
 use codec::Decode;
-use core::fmt::Debug;
 #[cfg(feature = "std")]
 use regex::Regex;
 #[cfg(feature = "std")]
@@ -53,7 +52,7 @@ pub fn trim_event(event: String) -> String {
 #[cfg(feature = "std")]
 fn print_events<R, H>(events: Vec<EventRecord<R, H>>, prefix: String)
 where
-	R: Debug,
+	R: core::fmt::Debug,
 {
 	for evr in &events {
 		if evr.phase == ApplyExtrinsic(0) {
