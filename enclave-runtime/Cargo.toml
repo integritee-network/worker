@@ -6,6 +6,7 @@ edition = "2021"
 
 [workspace]
 members = []
+#resolver = "2"
 
 [lib]
 name = "enclave_runtime"
@@ -168,3 +169,7 @@ sgx_tseal = { version = "1.1.6", git = "https://github.com/apache/incubator-teac
 sgx_tstd = { version = "1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master" }
 sgx_tunittest = { version = "1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master" }
 sgx_types = { version = "1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master" }
+
+#[patch."https://github.com/integritee-network/parachain"]
+#integritee-runtime = { path = "../../parachain/polkadot-parachains/integritee-runtime"}
+#parachains-common = { path = "../../parachain/polkadot-parachains/common"}
