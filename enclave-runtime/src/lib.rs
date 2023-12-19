@@ -51,9 +51,11 @@ use codec::{Decode, Encode};
 use core::ffi::c_int;
 use itc_parentchain::{block_import_dispatcher::DispatchBlockImport, primitives::ParentchainId};
 use itp_component_container::ComponentGetter;
+
 use itp_import_queue::PushToQueue;
 use itp_node_api::metadata::NodeMetadata;
 use itp_nonce_cache::{MutateNonce, Nonce};
+
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
 use itp_sgx_crypto::key_repository::AccessPubkey;
 use itp_stf_interface::SHARD_CREATION_HEADER_KEY;
@@ -71,11 +73,13 @@ use std::{
 	string::{String, ToString},
 	vec::Vec,
 };
+
 mod attestation;
 mod empty_impls;
 mod initialization;
 mod ipfs;
 mod ocall;
+mod shard_config;
 mod shard_vault;
 mod utils;
 
@@ -490,6 +494,8 @@ fn init_shard_creation_parentchain_header_internal(
 	let value = (parentchain_id, header);
 	state.state.insert(SHARD_CREATION_HEADER_KEY.into(), value.encode());
 	state_handler.write_after_mutation(state, state_lock, &shard)?;
+
+	shard_config::init_shard_config(shard)?;
 	Ok(())
 }
 
@@ -564,6 +570,7 @@ pub unsafe extern "C" fn sync_parentchain(
 		immediate_import == 1,
 	) {
 		error!("Error synching parentchain: {:?}", e);
+		return sgx_status_t::SGX_ERROR_UNEXPECTED
 	}
 
 	sgx_status_t::SGX_SUCCESS

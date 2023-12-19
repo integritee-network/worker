@@ -46,7 +46,7 @@ pub struct StfEnclaveSigner<
 	G,
 > {
 	state_observer: Arc<StateObserver>,
-	ocall_api: Arc<OCallApi>,
+	pub ocall_api: Arc<OCallApi>,
 	shielding_key_repo: Arc<ShieldingKeyRepository>,
 	top_pool_author: Arc<TopPoolAuthor>,
 	_phantom: PhantomData<(Stf, TCS, G)>,

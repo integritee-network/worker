@@ -196,7 +196,12 @@ where
 				until_synced_header.number + 1,
 				min(until_synced_header.number + BLOCK_SYNC_BATCH_SIZE, curr_block_number),
 			)?;
-			info!("[{:?}] Found {} block(s) to sync in this chunk", id, block_chunk_to_sync.len());
+			info!(
+				"[{:?}] Found {} block(s) to sync in this chunk. immediate import={} ",
+				id,
+				block_chunk_to_sync.len(),
+				immediate_import
+			);
 			if block_chunk_to_sync.is_empty() {
 				return Ok(until_synced_header)
 			}
@@ -252,7 +257,7 @@ where
 				.ok_or(Error::EmptyChunk)?;
 			info!(
 				"[{:?}] Synced {} out of {} finalized parentchain blocks",
-				id, until_synced_header.number, curr_block_number,
+				id, api_client_until_synced_header.number, curr_block_number,
 			);
 
 			// #TODO: #1451: fix api/client types

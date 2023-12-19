@@ -1,6 +1,6 @@
 [package]
 name = "integritee-cli"
-version = "0.12.2"
+version = "0.12.6"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
@@ -30,8 +30,9 @@ pallet-enclave-bridge = { git = "https://github.com/integritee-network/pallets.g
 pallet-evm = { optional = true, git = "https://github.com/integritee-network/frontier.git", branch = "bar/polkadot-v0.9.42" }
 pallet-teerex = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.6-polkadot-v0.9.42" }
 pallet-sidechain = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.6-polkadot-v0.9.42" }
-# `default-features = false` to remove the jsonrpsee dependency.
 enclave-bridge-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.6-polkadot-v0.9.42" }
+
+# `default-features = false` to remove the jsonrpsee dependency.
 # disable unsupported jsonrpcsee
 substrate-api-client = { default-features = false, features = ["std", "sync-api"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }
 substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }

@@ -26,6 +26,7 @@ use core::iter::Iterator;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_storage::{Error as StorageError, StorageProof, StorageProofChecker};
 use itp_types::parentchain::{IdentifyParentchain, ParentchainId};
+use log::error;
 use sp_runtime::{
 	generic::SignedBlock,
 	traits::{Block as ParentchainBlockTrait, Header as HeaderTrait},
@@ -145,6 +146,13 @@ where
 		let relay = self.light_validation_state.get_relay_mut();
 
 		if relay.last_finalized_block_header.hash() != *header.parent_hash() {
+			error!("header ancestry mismatch! last imported was block nr {:?} with hash {:?}, attempting to import nr {:?} with hash {:?} and ancestor {:?}",
+				relay.last_finalized_block_header.number(),
+				relay.last_finalized_block_header.hash(),
+				header.number(),
+				header.hash(),
+				header.parent_hash()
+			);
 			return Err(Error::HeaderAncestryMismatch)
 		}
 

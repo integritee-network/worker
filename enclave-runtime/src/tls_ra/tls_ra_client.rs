@@ -26,15 +26,19 @@ use crate::{
 		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
 	},
 	ocall::OcallApi,
+	shard_config::init_shard_config,
 	tls_ra::{seal_handler::SealStateAndKeys, ClientProvisioningRequest},
 	GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
 };
 use codec::Encode;
+
 use itp_attestation_handler::{RemoteAttestationType, DEV_HOSTNAME};
 use itp_component_container::ComponentGetter;
+
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_sgx_crypto::key_repository::AccessPubkey;
 use itp_types::{AccountId, ShardIdentifier};
+
 use log::*;
 use rustls::{ClientConfig, ClientSession, Stream};
 use sgx_types::*;
@@ -239,6 +243,11 @@ pub unsafe extern "C" fn request_state_provisioning(
 		return e.into()
 	};
 
+	// fixme: this needs only be called in sidechain mode. no harm though
+	if let Err(e) = init_shard_config(shard) {
+		error!("touch shard error: {:?}", e);
+		return sgx_status_t::SGX_ERROR_UNEXPECTED
+	}
 	sgx_status_t::SGX_SUCCESS
 }
 
