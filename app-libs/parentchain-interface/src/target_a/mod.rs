@@ -53,9 +53,9 @@ pub mod parachain {
 }
 #[cfg(feature = "std")]
 pub mod solochain {
-	pub use integritee_solochain_runtime::{
-		AccountId, Balance, BalancesCall, Block, Hash, Header, Runtime, RuntimeCall, RuntimeEvent,
-		Signature, UncheckedExtrinsic,
+	pub use polkadot_primitives::{AccountId, Balance, Hash, Signature};
+	pub use rococo_relaychain_runtime::{
+		BalancesCall, Block, Header, Runtime, RuntimeCall, RuntimeEvent, UncheckedExtrinsic,
 	};
 }
 
