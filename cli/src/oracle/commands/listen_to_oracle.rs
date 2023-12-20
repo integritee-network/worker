@@ -15,15 +15,13 @@
 
 */
 
-use crate::{command_utils::get_chain_api, trusted_operation::TrustedOperationError, Cli};
-use ita_parentchain_interface::integritee::{parachain, solochain};
+use crate::{command_utils::get_chain_api, Cli};
 use itp_node_api::api_client::ParentchainApi;
 use itp_time_utils::{duration_now, remaining_time};
-use itp_types::parentchain::{OracleUpdated, ProcessedParentchainBlock};
+use itp_types::parentchain::OracleUpdated;
 use log::*;
-use pallet_teeracle::Event as TeeracleEvent;
 use std::time::Duration;
-use substrate_api_client::{ac_node_api::Phase::ApplyExtrinsic, SubscribeEvents};
+use substrate_api_client::SubscribeEvents;
 
 /// Listen to exchange rate events.
 #[derive(Debug, Clone, Parser)]
