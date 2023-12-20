@@ -1,5 +1,5 @@
 [workspace]
-
+resolver = "2"
 members = [
     "app-libs/oracle",
     "app-libs/parentchain-interface",
@@ -70,7 +70,6 @@ members = [
     "sidechain/state",
     "sidechain/validateer-fetch",
 ]
-resolver = "2"
 
 [patch."https://github.com/apache/teaclave-sgx-sdk.git"]
 sgx_alloc = { version = "1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master" }

@@ -47,10 +47,10 @@ impl ParentchainInitParams {
 		}
 	}
 	pub fn is_solochain(&self) -> bool {
-		matches!(self, Self::Solochain { id: _, shard: _, params: _ })
+		matches!(self, Self::Solochain { .. })
 	}
 	pub fn is_parachain(&self) -> bool {
-		matches!(self, Self::Parachain { id: _, shard: _, params: _ })
+		matches!(self, Self::Parachain { .. })
 	}
 }
 

@@ -18,7 +18,7 @@ lazy_static = "1.4.0"
 log = "0.4"
 parking_lot = "0.12.1"
 parse_duration = "2.1.1"
-prometheus = { version = "0.13.0", features = ["process"], default-features = false } # do not enable std here!
+prometheus = { version = "0.13.0", features = ["process"], default-features = false } # Enabling std lead to protobuf dependency conflicts with substrate, and we don't need it.
 regex = "1.9.5"
 scale-info = { version = "2.10.0", default-features = false, features = ["derive"] }
 serde = "1.0"
