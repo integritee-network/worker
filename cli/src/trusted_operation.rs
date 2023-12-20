@@ -215,7 +215,7 @@ fn send_indirect_request<T: Decode + Debug>(
 						// not interested in intrinsics
 						continue
 					}
-					println!("decoded solo: phase {:?} event {:?}", evr.phase, evr.event);
+					info!("decoded solo: phase {:?} event {:?}", evr.phase, evr.event);
 					if let solochain::RuntimeEvent::EnclaveBridge(
 						EnclaveBridgeEvent::ProcessedParentchainBlock {
 							shard: _,
@@ -269,7 +269,7 @@ fn send_indirect_request<T: Decode + Debug>(
 						continue
 					}
 
-					println!("decoded para: phase {:?} event {:?}", evr.phase, evr.event);
+					info!("decoded para: phase {:?} event {:?}", evr.phase, evr.event);
 					if let parachain::RuntimeEvent::EnclaveBridge(
 						EnclaveBridgeEvent::ProcessedParentchainBlock {
 							shard: _,

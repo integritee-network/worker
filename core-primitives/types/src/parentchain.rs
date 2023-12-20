@@ -15,7 +15,7 @@
 
 */
 
-use crate::OpaqueCall;
+use crate::{OpaqueCall, PalletString};
 use alloc::{format, vec::Vec};
 use codec::{Decode, Encode};
 use core::fmt::Debug;
@@ -24,6 +24,7 @@ use itp_utils::stringify::account_id_to_string;
 use sp_core::bounded::alloc;
 use sp_runtime::{generic::Header as HeaderG, traits::BlakeTwo256, MultiAddress, MultiSignature};
 use substrate_api_client::ac_node_api::StaticEvent;
+use teerex_primitives::{SgxAttestationMethod, SgxStatus};
 
 pub type StorageProof = Vec<Vec<u8>>;
 
@@ -132,6 +133,32 @@ impl core::fmt::Display for BalanceTransfer {
 impl StaticEvent for BalanceTransfer {
 	const PALLET: &'static str = "Balances";
 	const EVENT: &'static str = "Transfer";
+}
+
+#[derive(Encode, Decode, Debug)]
+pub struct AddedSgxEnclave {
+	pub registered_by: AccountId,
+	pub worker_url: Option<PalletString>,
+	pub tcb_status: Option<SgxStatus>,
+	pub attestation_method: SgxAttestationMethod,
+}
+
+impl core::fmt::Display for crate::parentchain::AddedSgxEnclave {
+	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+		let message = format!(
+			"AddedSgxEnclave :: from: {}, url: {:?}, status: {:?}, method: {:?}",
+			account_id_to_string::<AccountId>(&self.registered_by),
+			self.worker_url,
+			self.tcb_status,
+			self.attestation_method
+		);
+		write!(f, "{}", message)
+	}
+}
+
+impl StaticEvent for crate::parentchain::AddedSgxEnclave {
+	const PALLET: &'static str = "Teerex";
+	const EVENT: &'static str = "AddedSgxEnclave";
 }
 
 pub trait HandleParentchainEvents<Executor, TCS, Error>

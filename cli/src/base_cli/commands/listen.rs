@@ -17,8 +17,10 @@
 
 use crate::{command_utils::get_chain_api, Cli, CliResult, CliResultOk};
 use ita_parentchain_interface::integritee::{parachain, solochain};
+use itp_node_api::api_client::EventDetails;
+use itp_types::parentchain::{AddedSgxEnclave, BalanceTransfer};
 use log::*;
-use substrate_api_client::{ac_node_api::Phase::ApplyExtrinsic, SubscribeEvents};
+use substrate_api_client::{ac_node_api::Phase::ApplyExtrinsic, GetChainInfo, SubscribeEvents};
 
 #[derive(Parser)]
 pub struct ListenCommand {
@@ -51,40 +53,36 @@ impl ListenCommand {
 				}
 			};
 
-			let maybe_event_results_solo =
-				subscription.next_events::<solochain::RuntimeEvent, solochain::Hash>();
-			let maybe_event_results_para =
-				subscription.next_events::<parachain::RuntimeEvent, parachain::Hash>();
-
+			let events = subscription.next_events_from_metadata().unwrap().unwrap();
 			blocks += 1;
-			match maybe_event_results_solo {
-				Some(Ok(evts)) => {
-					for evr in &evts {
-						if evr.phase == ApplyExtrinsic(0) {
-							// not interested in intrinsics
-							continue
-						}
-						println!("decoded solo: phase {:?} event {:?}", evr.phase, evr.event);
-						count += 1;
-					}
-					continue
-				},
-				Some(_) => debug!("couldn't decode event solo record list"),
-				None => debug!("couldn't decode event solo record list"),
-			}
-			match maybe_event_results_para {
-				Some(Ok(evts)) =>
-					for evr in &evts {
-						if evr.phase == ApplyExtrinsic(0) {
-							// not interested in intrinsics
-							continue
-						}
-
-						println!("decoded para: phase {:?} event {:?}", evr.phase, evr.event);
-						count += 1;
+			let header = api.get_header(None).unwrap().unwrap();
+			println!("block number (HEAD): {}", header.number);
+			for event in events.iter() {
+				let event = event.unwrap();
+				count += 1;
+				match event.pallet_name() {
+					"System" => continue,
+					"TransactionPayment" => continue,
+					"Treasury" => continue,
+					"Balances" => match event.variant_name() {
+						"Deposit" => continue,
+						"Withdraw" => continue,
+						"Transfer" =>
+							if let Ok(Some(ev)) = event.as_event::<BalanceTransfer>() {
+								println!("{:?}", ev);
+							},
+						_ => println!("{}::{}", event.pallet_name(), event.variant_name()),
 					},
-				Some(_) => debug!("couldn't decode para event record list"),
-				None => debug!("couldn't decode para event record list"),
+					"Teerex" => match event.variant_name() {
+						"AddedSgxEnclave" => {
+							if let Ok(Some(ev)) = event.as_event::<AddedSgxEnclave>() {
+								println!("Teerex::{:?}", ev);
+							}
+						},
+						_ => println!("{}::{}", event.pallet_name(), event.variant_name()),
+					},
+					_ => println!("{}::{}", event.pallet_name(), event.variant_name()),
+				}
 			}
 		}
 	}
