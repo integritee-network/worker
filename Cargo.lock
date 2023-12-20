@@ -4099,6 +4099,7 @@ dependencies = [
  "sp-runtime",
  "substrate-api-client",
  "substrate-client-keystore",
+ "teeracle-primitives",
  "thiserror 1.0.44",
  "urlencoding",
 ]
@@ -5301,6 +5302,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "substrate-api-client",
+ "teeracle-primitives",
  "teerex-primitives",
 ]
 

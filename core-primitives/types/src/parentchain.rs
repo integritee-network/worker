@@ -15,7 +15,7 @@
 
 */
 
-use crate::{OpaqueCall, PalletString};
+use crate::{OpaqueCall, PalletString, ShardIdentifier};
 use alloc::{format, vec::Vec};
 use codec::{Decode, Encode};
 use core::fmt::Debug;
@@ -24,8 +24,8 @@ use itp_utils::stringify::account_id_to_string;
 use sp_core::bounded::alloc;
 use sp_runtime::{generic::Header as HeaderG, traits::BlakeTwo256, MultiAddress, MultiSignature};
 use substrate_api_client::ac_node_api::StaticEvent;
+use teeracle_primitives::ExchangeRate;
 use teerex_primitives::{SgxAttestationMethod, SgxStatus};
-
 pub type StorageProof = Vec<Vec<u8>>;
 
 // Basic Types.
@@ -156,9 +156,75 @@ impl core::fmt::Display for crate::parentchain::AddedSgxEnclave {
 	}
 }
 
+impl StaticEvent for crate::parentchain::ProcessedParentchainBlock {
+	const PALLET: &'static str = "EnclaveBridge";
+	const EVENT: &'static str = "ProcessedParentchainBlock";
+}
+
+#[derive(Encode, Decode, Debug)]
+pub struct ProcessedParentchainBlock {
+	pub shard: ShardIdentifier,
+	pub block_hash: Hash,
+	pub trusted_calls_merkle_root: Hash,
+	pub block_number: BlockNumber,
+}
+
+impl core::fmt::Display for crate::parentchain::ProcessedParentchainBlock {
+	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+		let message = format!(
+			"ProcessedParentchainBlock :: nr {} shard: {}, merkle: {:?}, block hash {:?}",
+			self.block_number, self.shard, self.trusted_calls_merkle_root, self.block_hash
+		);
+		write!(f, "{}", message)
+	}
+}
+
 impl StaticEvent for crate::parentchain::AddedSgxEnclave {
-	const PALLET: &'static str = "Teerex";
-	const EVENT: &'static str = "AddedSgxEnclave";
+	const PALLET: &'static str = "EnclaveBridge";
+	const EVENT: &'static str = "ProcessedParentchainBlock";
+}
+
+#[derive(Encode, Decode, Debug)]
+pub struct OracleUpdated {
+	pub oracle_data_name: PalletString,
+	pub data_source: PalletString,
+}
+
+impl core::fmt::Display for crate::parentchain::OracleUpdated {
+	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+		let message = format!(
+			"OracleUpdated :: data name {:?} source: {:?}",
+			self.oracle_data_name, self.data_source,
+		);
+		write!(f, "{}", message)
+	}
+}
+
+impl StaticEvent for crate::parentchain::OracleUpdated {
+	const PALLET: &'static str = "Teeracle";
+	const EVENT: &'static str = "OracleUpdated";
+}
+
+#[derive(Encode, Decode, Debug)]
+pub struct ExchangeRateUpdated {
+	pub data_source: PalletString,
+	pub trading_pair: PalletString,
+	pub exchange_rate: ExchangeRate,
+}
+
+impl core::fmt::Display for crate::parentchain::ExchangeRateUpdated {
+	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+		let message = format!(
+			"OracleUpdated :: source {:?} trading pair: {:?}",
+			self.data_source, self.trading_pair,
+		);
+		write!(f, "{}", message)
+	}
+}
+
+impl StaticEvent for crate::parentchain::ExchangeRateUpdated {
+	const PALLET: &'static str = "Teeracle";
+	const EVENT: &'static str = "ExchangeRateUpdated";
 }
 
 pub trait HandleParentchainEvents<Executor, TCS, Error>

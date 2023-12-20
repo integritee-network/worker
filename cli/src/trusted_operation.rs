@@ -31,7 +31,9 @@ use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_stf_primitives::types::{ShardIdentifier, TrustedOperation};
 use itp_types::{
-	parentchain::{BlockHash, BlockNumber},
+	parentchain::{
+		AddedSgxEnclave, BalanceTransfer, BlockHash, BlockNumber, ProcessedParentchainBlock,
+	},
 	DirectRequestStatus, TrustedOperationStatus,
 };
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
@@ -199,119 +201,53 @@ fn send_indirect_request<T: Decode + Debug>(
 	let mut blocks = 0u32;
 	let mut subscription = chain_api.subscribe_events().unwrap();
 	loop {
-		let maybe_event_results_solo =
-			subscription.next_events::<solochain::RuntimeEvent, solochain::Hash>();
-		let maybe_event_results_para =
-			subscription.next_events::<parachain::RuntimeEvent, parachain::Hash>();
-
+		let events = subscription.next_events_from_metadata().unwrap().unwrap();
 		blocks += 1;
 		if blocks > TIMEOUT_BLOCKS {
 			return Err(TrustedOperationError::ConfirmationTimedOut(blocks))
 		}
-		match maybe_event_results_solo {
-			Some(Ok(evts)) => {
-				for evr in &evts {
-					if evr.phase == ApplyExtrinsic(0) {
-						// not interested in intrinsics
-						continue
-					}
-					info!("decoded solo: phase {:?} event {:?}", evr.phase, evr.event);
-					if let solochain::RuntimeEvent::EnclaveBridge(
-						EnclaveBridgeEvent::ProcessedParentchainBlock {
-							shard: _,
-							block_hash: confirmed_block_hash,
-							trusted_calls_merkle_root: _,
-							block_number: confirmed_block_number,
-						},
-					) = evr.event
-					{
-						debug!(
-							"Invocation block Number we're waiting for: {:?}",
-							invocation_block_number
-						);
-						debug!("Confirmed block Number: {:?}", confirmed_block_number);
-						// The returned block number belongs to a subsequent event. We missed our event and can break the loop.
-						if confirmed_block_number > invocation_block_number {
-							return Err(TrustedOperationError::ConfirmedBlockNumberTooHigh(
-								confirmed_block_number,
-								invocation_block_number,
-							))
+		for event in events.iter() {
+			let event = event.unwrap();
+			match event.pallet_name() {
+				"EnclaveBridge" => match event.variant_name() {
+					"ProcessedParentchainBlock" => {
+						if let Ok(Some(ev)) = event.as_event::<ProcessedParentchainBlock>() {
+							println!("EnclaveBridge::{:?}", ev);
+							debug!(
+								"Invocation block Number we're waiting for: {:?}",
+								invocation_block_number
+							);
+							debug!("Confirmed block Number: {:?}", ev.block_number);
+							// The returned block number belongs to a subsequent event. We missed our event and can break the loop.
+							if ev.block_number > invocation_block_number {
+								return Err(TrustedOperationError::ConfirmedBlockNumberTooHigh(
+									ev.block_number,
+									invocation_block_number,
+								))
+							}
+							// The block number is correct, but the block hash does not fit.
+							if invocation_block_number == ev.block_number
+								&& invocation_block_hash != ev.block_hash
+							{
+								return Err(
+									TrustedOperationError::ConfirmedBlockHashDoesNotMatchExpected(
+										ev.block_hash,
+										invocation_block_hash,
+									),
+								)
+							}
+							if ev.block_hash == invocation_block_hash {
+								let value = decode_response_value(
+									&mut invocation_block_hash.encode().as_slice(),
+								)?;
+								return Ok(value)
+							}
 						}
-						// The block number is correct, but the block hash does not fit.
-						if invocation_block_number == confirmed_block_number
-							&& invocation_block_hash != confirmed_block_hash
-						{
-							return Err(
-								TrustedOperationError::ConfirmedBlockHashDoesNotMatchExpected(
-									confirmed_block_hash,
-									invocation_block_hash,
-								),
-							)
-						}
-						if confirmed_block_hash == invocation_block_hash {
-							let value = decode_response_value(
-								&mut invocation_block_hash.encode().as_slice(),
-							)?;
-							return Ok(value)
-						}
-					}
-				}
-				continue
-			},
-			Some(_) => debug!("couldn't decode event solo record list"),
-			None => debug!("couldn't decode event solo record list"),
-		}
-		match maybe_event_results_para {
-			Some(Ok(evts)) =>
-				for evr in &evts {
-					if evr.phase == ApplyExtrinsic(0) {
-						// not interested in intrinsics
-						continue
-					}
-
-					info!("decoded para: phase {:?} event {:?}", evr.phase, evr.event);
-					if let parachain::RuntimeEvent::EnclaveBridge(
-						EnclaveBridgeEvent::ProcessedParentchainBlock {
-							shard: _,
-							block_hash: confirmed_block_hash,
-							trusted_calls_merkle_root: _,
-							block_number: confirmed_block_number,
-						},
-					) = evr.event
-					{
-						debug!(
-							"Invocation block Number we're waiting for: {:?}",
-							invocation_block_number
-						);
-						debug!("Confirmed block Number: {:?}", confirmed_block_number);
-						// The returned block number belongs to a subsequent event. We missed our event and can break the loop.
-						if confirmed_block_number > invocation_block_number {
-							return Err(TrustedOperationError::ConfirmedBlockNumberTooHigh(
-								confirmed_block_number,
-								invocation_block_number,
-							))
-						}
-						// The block number is correct, but the block hash does not fit.
-						if invocation_block_number == confirmed_block_number
-							&& invocation_block_hash != confirmed_block_hash
-						{
-							return Err(
-								TrustedOperationError::ConfirmedBlockHashDoesNotMatchExpected(
-									confirmed_block_hash,
-									invocation_block_hash,
-								),
-							)
-						}
-						if confirmed_block_hash == invocation_block_hash {
-							let value = decode_response_value(
-								&mut invocation_block_hash.encode().as_slice(),
-							)?;
-							return Ok(value)
-						}
-					}
+					},
+					_ => continue,
 				},
-			Some(_) => debug!("couldn't decode para event record list"),
-			None => debug!("couldn't decode para event record list"),
+				_ => continue,
+			}
 		}
 	}
 }

@@ -15,10 +15,11 @@
 
 */
 
-use crate::{command_utils::get_chain_api, Cli};
+use crate::{command_utils::get_chain_api, trusted_operation::TrustedOperationError, Cli};
 use ita_parentchain_interface::integritee::{parachain, solochain};
 use itp_node_api::api_client::ParentchainApi;
 use itp_time_utils::{duration_now, remaining_time};
+use itp_types::parentchain::{OracleUpdated, ProcessedParentchainBlock};
 use log::*;
 use pallet_teeracle::Event as TeeracleEvent;
 use std::time::Duration;
@@ -49,60 +50,23 @@ fn count_oracle_update_events(api: &ParentchainApi, duration: Duration) -> Event
 	let mut subscription = api.subscribe_events().unwrap();
 	let mut count = 0;
 	while remaining_time(stop).unwrap_or_default() > Duration::ZERO {
-		let maybe_event_results_solo =
-			subscription.next_events::<solochain::RuntimeEvent, solochain::Hash>();
-		let maybe_event_results_para =
-			subscription.next_events::<parachain::RuntimeEvent, parachain::Hash>();
-		match maybe_event_results_solo {
-			Some(Ok(evts)) => {
-				for evr in &evts {
-					if evr.phase == ApplyExtrinsic(0) {
-						// not interested in intrinsics
-						continue
-					}
-					println!("decoded solo: phase {:?} event {:?}", evr.phase, evr.event);
-					if let solochain::RuntimeEvent::Teeracle(TeeracleEvent::OracleUpdated {
-						oracle_data_name,
-						data_source,
-					}) = evr.event.clone()
-					{
-						count += 1;
-						debug!("Received OracleUpdated event");
-						println!(
-							"OracleUpdated: ORACLE_NAME : {}, SRC : {}",
-							oracle_data_name, data_source
-						);
-					}
-				}
-				continue
-			},
-			Some(_) => debug!("couldn't decode event solo record list"),
-			None => debug!("couldn't decode event solo record list"),
-		}
-		match maybe_event_results_para {
-			Some(Ok(evts)) =>
-				for evr in &evts {
-					if evr.phase == ApplyExtrinsic(0) {
-						// not interested in intrinsics
-						continue
-					}
-
-					println!("decoded para: phase {:?} event {:?}", evr.phase, evr.event);
-					if let parachain::RuntimeEvent::Teeracle(TeeracleEvent::OracleUpdated {
-						oracle_data_name,
-						data_source,
-					}) = evr.event.clone()
-					{
-						count += 1;
-						debug!("Received OracleUpdated event");
-						println!(
-							"OracleUpdated: ORACLE_NAME : {}, SRC : {}",
-							oracle_data_name, data_source
-						);
-					}
+		let events = subscription.next_events_from_metadata().unwrap().unwrap();
+		for event in events.iter() {
+			let event = event.unwrap();
+			match event.pallet_name() {
+				"Teeracle" => match event.variant_name() {
+					"OracleUpdated" =>
+						if let Ok(Some(ev)) = event.as_event::<OracleUpdated>() {
+							count += 1;
+							println!(
+								"OracleUpdated: ORACLE_NAME : {}, SRC : {}",
+								ev.oracle_data_name, ev.data_source
+							);
+						},
+					_ => continue,
 				},
-			Some(_) => debug!("couldn't decode para event record list"),
-			None => debug!("couldn't decode para event record list"),
+				_ => continue,
+			}
 		}
 	}
 	debug!("Received {} ExchangeRateUpdated event(s) in total", count);
