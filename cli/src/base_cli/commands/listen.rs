@@ -58,7 +58,7 @@ impl ListenCommand {
 
 			blocks += 1;
 			match maybe_event_results_solo {
-				Some(Ok(evts)) =>
+				Some(Ok(evts)) => {
 					for evr in &evts {
 						if evr.phase == ApplyExtrinsic(0) {
 							// not interested in intrinsics
@@ -66,7 +66,9 @@ impl ListenCommand {
 						}
 						println!("decoded solo: phase {:?} event {:?}", evr.phase, evr.event);
 						count += 1;
-					},
+					}
+					continue
+				},
 				Some(_) => debug!("couldn't decode event solo record list"),
 				None => debug!("couldn't decode event solo record list"),
 			}
