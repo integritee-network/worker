@@ -16,9 +16,9 @@
 */
 
 use crate::{command_utils::get_chain_api, Cli, CliResult, CliResultOk};
-use ita_parentchain_interface::integritee::parachain::{Hash, RuntimeEvent};
+use ita_parentchain_interface::integritee::{parachain, solochain};
 use log::*;
-use substrate_api_client::SubscribeEvents;
+use substrate_api_client::{ac_node_api::Phase::ApplyExtrinsic, SubscribeEvents};
 
 #[derive(Parser)]
 pub struct ListenCommand {
@@ -35,8 +35,8 @@ impl ListenCommand {
 	pub(crate) fn run(&self, cli: &Cli) -> CliResult {
 		println!("{:?} {:?}", self.events, self.blocks);
 		let api = get_chain_api(cli);
-		info!("Subscribing to events");
-		let count = 0u32;
+		info!("Subscribing to events (solo or para)");
+		let mut count = 0u32;
 		let mut blocks = 0u32;
 		let mut subscription = api.subscribe_events().unwrap();
 		loop {
@@ -51,14 +51,38 @@ impl ListenCommand {
 				}
 			};
 
-			let event_results = subscription.next_events::<RuntimeEvent, Hash>().unwrap();
+			let maybe_event_results_solo =
+				subscription.next_events::<solochain::RuntimeEvent, solochain::Hash>();
+			let maybe_event_results_para =
+				subscription.next_events::<parachain::RuntimeEvent, parachain::Hash>();
+
 			blocks += 1;
-			match event_results {
-				Ok(evts) =>
+			match maybe_event_results_solo {
+				Some(Ok(evts)) =>
 					for evr in &evts {
-						println!("decoded: phase {:?} event {:?}", evr.phase, evr.event);
+						if evr.phase == ApplyExtrinsic(0) {
+							// not interested in intrinsics
+							continue
+						}
+						println!("decoded solo: phase {:?} event {:?}", evr.phase, evr.event);
+						count += 1;
 					},
-				Err(_) => error!("couldn't decode event record list"),
+				Some(_) => debug!("couldn't decode event solo record list"),
+				None => debug!("couldn't decode event solo record list"),
+			}
+			match maybe_event_results_para {
+				Some(Ok(evts)) =>
+					for evr in &evts {
+						if evr.phase == ApplyExtrinsic(0) {
+							// not interested in intrinsics
+							continue
+						}
+
+						println!("decoded para: phase {:?} event {:?}", evr.phase, evr.event);
+						count += 1;
+					},
+				Some(_) => debug!("couldn't decode para event record list"),
+				None => debug!("couldn't decode para event record list"),
 			}
 		}
 	}
