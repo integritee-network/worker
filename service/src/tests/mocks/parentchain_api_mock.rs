@@ -19,7 +19,7 @@ use itc_parentchain_test::{ParentchainBlockBuilder, ParentchainHeaderBuilder};
 use itp_node_api::api_client::{ApiResult, ChainApi};
 use itp_types::{
 	parentchain::{Hash, Header, StorageProof},
-	H256,Block, SignedBlock
+	Block, SignedBlock, H256,
 };
 use sp_consensus_grandpa::AuthorityList;
 
