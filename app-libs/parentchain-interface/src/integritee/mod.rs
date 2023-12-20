@@ -17,8 +17,7 @@
 
 mod event_filter;
 mod event_handler;
-#[cfg(feature = "std")]
-pub mod event_subscriber;
+
 mod extrinsic_parser;
 
 use crate::{

@@ -18,9 +18,6 @@ mod event_filter;
 mod event_handler;
 mod extrinsic_parser;
 
-#[cfg(feature = "std")]
-pub mod event_subscriber;
-
 use crate::{
 	decode_and_log_error,
 	indirect_calls::{

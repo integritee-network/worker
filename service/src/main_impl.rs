@@ -663,9 +663,9 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		)
 	}
 
-	ita_parentchain_interface::integritee::event_subscriber::subscribe_to_parentchain_events(
+	ita_parentchain_interface::event_subscriber::subscribe_to_parentchain_events(
 		&integritee_rpc_api,
-		integritee_parentchain_init_params,
+		ParentchainId::Integritee,
 	);
 }
 
@@ -751,20 +751,11 @@ fn init_target_parentchain<E>(
 
 	thread::Builder::new()
 		.name(format!("{:?}_parentchain_event_subscription", parentchain_id))
-		.spawn(move || match parentchain_id {
-			ParentchainId::Integritee => error!("illegal parentchain id"),
-			ParentchainId::TargetA => {
-				ita_parentchain_interface::target_a::event_subscriber::subscribe_to_parentchain_events(
-					&node_api,
-					parentchain_init_params,
-				);
-			},
-			ParentchainId::TargetB => {
-				ita_parentchain_interface::target_b::event_subscriber::subscribe_to_parentchain_events(
-					&node_api,
-					parentchain_init_params,
-				);
-			},
+		.spawn(move || {
+			ita_parentchain_interface::event_subscriber::subscribe_to_parentchain_events(
+				&node_api,
+				parentchain_id,
+			)
 		})
 		.unwrap();
 }

@@ -22,11 +22,9 @@
 extern crate sgx_tstd as std;
 
 use codec::Decode;
-#[cfg(feature = "std")]
-use regex::Regex;
-#[cfg(feature = "std")]
-use substrate_api_client::ac_node_api::{EventRecord, Phase::ApplyExtrinsic};
 
+#[cfg(feature = "std")]
+pub mod event_subscriber;
 pub mod indirect_calls;
 pub mod integritee;
 pub mod target_a;
@@ -39,25 +37,5 @@ pub fn decode_and_log_error<V: Decode>(encoded: &mut &[u8]) -> Option<V> {
 			log::warn!("Could not decode. {:?}", e);
 			None
 		},
-	}
-}
-
-#[cfg(feature = "std")]
-/// trims Debug fmt output for events to be easily readable on logs
-pub fn trim_event(event: String) -> String {
-	let re = Regex::new(r"\s[0-9a-f]*\s\(").unwrap();
-	re.replace_all(&event, "(").replace("RuntimeEvent::", "").replace("Event::", "")
-}
-#[cfg(feature = "std")]
-fn print_events<R, H>(events: Vec<EventRecord<R, H>>, prefix: String)
-where
-	R: core::fmt::Debug,
-{
-	for evr in &events {
-		if evr.phase == ApplyExtrinsic(0) {
-			// not interested in intrinsics
-			continue
-		}
-		println!("{} {}", prefix, trim_event(format!("{:?}", evr.event)));
 	}
 }

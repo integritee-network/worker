@@ -19,9 +19,6 @@ mod event_filter;
 mod event_handler;
 mod extrinsic_parser;
 
-#[cfg(feature = "std")]
-pub mod event_subscriber;
-
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
 pub use event_filter::FilterableEvents;
