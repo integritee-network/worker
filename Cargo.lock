@@ -4082,6 +4082,7 @@ dependencies = [
  "pallet-enclave-bridge",
  "pallet-evm",
  "pallet-sidechain",
+ "pallet-teeracle",
  "pallet-teerex",
  "parity-scale-codec",
  "rand 0.8.5",

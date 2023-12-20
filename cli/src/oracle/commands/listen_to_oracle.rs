@@ -16,12 +16,16 @@
 */
 
 use crate::{command_utils::get_chain_api, Cli};
-use ita_parentchain_interface::integritee::solochain::{Hash, RuntimeEvent};
+use ita_parentchain_interface::integritee::{parachain, solochain};
 use itp_node_api::api_client::ParentchainApi;
 use itp_time_utils::{duration_now, remaining_time};
 use log::{debug, info};
+use pallet_teeracle::Event as TeeracleEvent;
 use std::time::Duration;
-use substrate_api_client::{ac_node_api::EventRecord, SubscribeEvents};
+use substrate_api_client::{
+	ac_node_api::{EventRecord, Phase::ApplyExtrinsic},
+	SubscribeEvents,
+};
 
 /// Listen to exchange rate events.
 #[derive(Debug, Clone, Parser)]
@@ -50,42 +54,61 @@ fn count_oracle_update_events(api: &ParentchainApi, duration: Duration) -> Event
 	let mut subscription = api.subscribe_events().unwrap();
 	let mut count = 0;
 
-	while remaining_time(stop).unwrap_or_default() > Duration::ZERO {
-		let events_result = subscription.next_events::<RuntimeEvent, Hash>();
-		let event_count = match events_result {
-			Some(Ok(event_records)) => {
-				debug!("Could not successfully decode event_bytes {:?}", event_records);
-				report_event_count(event_records)
-			},
-			_ => 0,
-		};
-		count += event_count;
-	}
-	debug!("Received {} ExchangeRateUpdated event(s) in total", count);
-	count
-}
-
-fn report_event_count(event_records: Vec<Event>) -> EventCount {
-	let mut count = 0;
-	event_records.iter().for_each(|event_record| {
-		info!("received event {:?}", event_record.event);
-		if let RuntimeEvent::Teeracle(event) = &event_record.event {
-			match &event {
-				ita_parentchain_interface::integritee::solochain::pallet_teeracle::Event::OracleUpdated {
+	let maybe_event_results_solo =
+		subscription.next_events::<solochain::RuntimeEvent, solochain::Hash>();
+	let maybe_event_results_para =
+		subscription.next_events::<parachain::RuntimeEvent, parachain::Hash>();
+	match maybe_event_results_solo {
+		Some(Ok(evts)) => {
+			for evr in &evts {
+				if evr.phase == ApplyExtrinsic(0) {
+					// not interested in intrinsics
+					continue
+				}
+				println!("decoded solo: phase {:?} event {:?}", evr.phase, evr.event);
+				if let solochain::RuntimeEvent::Teeracle(TeeracleEvent::OracleUpdated {
 					oracle_data_name,
 					data_source,
-				} => {
+				}) = evr.event
+				{
+					count += 1;
+					debug!("Received ExchangeRateUpdated event");
+					println!(
+						"ExchangeRateUpdated: TRADING_PAIR : {}, SRC : {}, VALUE :{:?}",
+						trading_pair, data_source, exchange_rate
+					);
+				}
+			}
+			continue
+		},
+		Some(_) => debug!("couldn't decode event solo record list"),
+		None => debug!("couldn't decode event solo record list"),
+	}
+	match maybe_event_results_para {
+		Some(Ok(evts)) =>
+			for evr in &evts {
+				if evr.phase == ApplyExtrinsic(0) {
+					// not interested in intrinsics
+					continue
+				}
+
+				println!("decoded para: phase {:?} event {:?}", evr.phase, evr.event);
+				if let parachain::RuntimeEvent::Teeracle(TeeracleEvent::OracleUpdated {
+					oracle_data_name,
+					data_source,
+				}) = evr.event
+				{
 					count += 1;
 					debug!("Received OracleUpdated event");
 					println!(
 						"OracleUpdated: ORACLE_NAME : {}, SRC : {}",
 						oracle_data_name, data_source
 					);
-				},
-				// Can just remove this and ignore handling this case
-				_ => debug!("ignoring teeracle event: {:?}", event),
-			}
-		}
-	});
+				}
+			},
+		Some(_) => debug!("couldn't decode para event record list"),
+		None => debug!("couldn't decode para event record list"),
+	}
+	debug!("Received {} ExchangeRateUpdated event(s) in total", count);
 	count
 }

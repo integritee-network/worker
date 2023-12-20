@@ -31,6 +31,7 @@ pallet-enclave-bridge = { git = "https://github.com/integritee-network/pallets.g
 pallet-evm = { optional = true, git = "https://github.com/integritee-network/frontier.git", branch = "bar/polkadot-v0.9.42" }
 pallet-sidechain = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.6-polkadot-v0.9.42" }
 pallet-teerex = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.6-polkadot-v0.9.42" }
+pallet-teeracle = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.6-polkadot-v0.9.42" }
 
 # `default-features = false` to remove the jsonrpsee dependency.
 # disable unsupported jsonrpcsee
