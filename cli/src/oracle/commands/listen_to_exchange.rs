@@ -15,11 +15,11 @@
 
 */
 
-use crate::{command_utils::get_chain_api, trusted_operation::TrustedOperationError, Cli};
+use crate::{command_utils::get_chain_api, Cli};
 use ita_parentchain_interface::integritee::{parachain, solochain};
 use itp_node_api::api_client::ParentchainApi;
 use itp_time_utils::{duration_now, remaining_time};
-use log::{debug, info, trace};
+use log::*;
 use pallet_teeracle::Event as TeeracleEvent;
 use std::time::Duration;
 use substrate_api_client::{ac_node_api::Phase::ApplyExtrinsic, SubscribeEvents};
@@ -67,7 +67,7 @@ pub fn count_exchange_rate_update_events(api: &ParentchainApi, duration: Duratio
 						data_source,
 						trading_pair,
 						exchange_rate,
-					}) = evr.event
+					}) = evr.event.clone()
 					{
 						count += 1;
 						debug!("Received ExchangeRateUpdated event");
@@ -95,7 +95,7 @@ pub fn count_exchange_rate_update_events(api: &ParentchainApi, duration: Duratio
 						data_source,
 						trading_pair,
 						exchange_rate,
-					}) = evr.event
+					}) = evr.event.clone()
 					{
 						count += 1;
 						debug!("Received ExchangeRateUpdated event");
