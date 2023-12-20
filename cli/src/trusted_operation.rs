@@ -23,7 +23,7 @@ use crate::{
 use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode, Input};
 use enclave_bridge_primitives::Request;
-use ita_parentchain_interface::integritee::{parachain, solochain};
+use ita_parentchain_interface::integritee::{solochain};
 use ita_stf::{Getter, TrustedCallSigned};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
 use itp_node_api::api_client::{ApiClientError, ENCLAVE_BRIDGE};
@@ -32,13 +32,13 @@ use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_stf_primitives::types::{ShardIdentifier, TrustedOperation};
 use itp_types::{
 	parentchain::{
-		AddedSgxEnclave, BalanceTransfer, BlockHash, BlockNumber, ProcessedParentchainBlock,
+		BlockHash, BlockNumber, ProcessedParentchainBlock,
 	},
 	DirectRequestStatus, TrustedOperationStatus,
 };
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use log::*;
-use pallet_enclave_bridge::Event as EnclaveBridgeEvent;
+
 use sp_core::H256;
 use std::{
 	fmt::Debug,
@@ -47,7 +47,7 @@ use std::{
 	time::Instant,
 };
 use substrate_api_client::{
-	ac_compose_macros::compose_extrinsic, ac_node_api::Phase::ApplyExtrinsic, GetChainInfo,
+	ac_compose_macros::compose_extrinsic, GetChainInfo,
 	SubmitAndWatch, SubscribeEvents, XtStatus,
 };
 use thiserror::Error;

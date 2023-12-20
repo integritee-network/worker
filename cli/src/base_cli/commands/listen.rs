@@ -16,11 +16,11 @@
 */
 
 use crate::{command_utils::get_chain_api, Cli, CliResult, CliResultOk};
-use ita_parentchain_interface::integritee::{parachain, solochain};
-use itp_node_api::api_client::EventDetails;
+
+
 use itp_types::parentchain::{AddedSgxEnclave, BalanceTransfer};
 use log::*;
-use substrate_api_client::{ac_node_api::Phase::ApplyExtrinsic, GetChainInfo, SubscribeEvents};
+use substrate_api_client::{GetChainInfo, SubscribeEvents};
 
 #[derive(Parser)]
 pub struct ListenCommand {
