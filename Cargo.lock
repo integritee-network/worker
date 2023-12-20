@@ -4793,7 +4793,6 @@ dependencies = [
 name = "itp-api-client-types"
 version = "0.9.0"
 dependencies = [
- "integritee-runtime",
  "itp-types",
  "sp-runtime",
  "substrate-api-client",

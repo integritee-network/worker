@@ -15,7 +15,7 @@
 
 */
 
-//! Contains type definitions to talk to the node.
+//! Contains semi-generic type definitions to talk to the node without depending on an implementation of Runtime.
 //!
 //! You need to update this if you have a signed extension in your node that
 //! is different from the integritee-node, e.g., if you use the `pallet_asset_tx_payment`.
@@ -79,21 +79,12 @@ pub use api::*;
 #[cfg(feature = "std")]
 mod api {
 	use super::ParentchainRuntimeConfig;
-	use sp_runtime::generic::SignedBlock as GenericSignedBlock;
 	use substrate_api_client::Api;
-
-	// We should probably switch to the opaque block, then we can get rid of the
-	// runtime dependency here.
-	// pub use itp_types::Block;
-	pub use my_node_runtime::{Block, Runtime, UncheckedExtrinsic};
-	//pub use ita_parentchain_interface::integritee::{Block, Runtime, UncheckedExtrinsic};
 
 	pub use substrate_api_client::{
 		api::Error as ApiClientError,
 		rpc::{tungstenite_client::TungsteniteRpcClient, Error as RpcClientError},
 	};
-
-	pub type SignedBlock = GenericSignedBlock<Block>;
 
 	pub type ParentchainApi = Api<ParentchainRuntimeConfig, TungsteniteRpcClient>;
 }

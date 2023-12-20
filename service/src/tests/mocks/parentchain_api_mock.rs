@@ -16,10 +16,10 @@
 */
 
 use itc_parentchain_test::{ParentchainBlockBuilder, ParentchainHeaderBuilder};
-use itp_node_api::api_client::{ApiResult, Block, ChainApi, SignedBlock};
+use itp_node_api::api_client::{ApiResult, ChainApi};
 use itp_types::{
 	parentchain::{Hash, Header, StorageProof},
-	H256,
+	H256,Block, SignedBlock
 };
 use sp_consensus_grandpa::AuthorityList;
 
