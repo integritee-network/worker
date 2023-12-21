@@ -119,7 +119,9 @@ pub unsafe extern "C" fn init(
 	encoded_base_dir_size: u32,
 ) -> sgx_status_t {
 	// Initialize the logging environment in the enclave.
-	env_logger::init();
+	env_logger::builder()
+		.format_timestamp(Some(env_logger::TimestampPrecision::Micros))
+		.init();
 
 	let mu_ra_url =
 		match String::decode(&mut slice::from_raw_parts(mu_ra_addr, mu_ra_addr_size as usize))

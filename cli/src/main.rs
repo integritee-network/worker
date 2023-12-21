@@ -19,7 +19,9 @@ use clap::Parser;
 use integritee_cli::{commands, Cli};
 
 fn main() {
-	env_logger::init();
+	env_logger::builder()
+		.format_timestamp(Some(env_logger::TimestampPrecision::Millis))
+		.init();
 
 	let cli = Cli::parse();
 
