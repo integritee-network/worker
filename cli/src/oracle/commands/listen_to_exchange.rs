@@ -18,8 +18,8 @@
 use crate::{command_utils::get_chain_api, Cli};
 use itp_node_api::api_client::ParentchainApi;
 use itp_time_utils::{duration_now, remaining_time};
-use log::{debug, info, trace};
-use my_node_runtime::{Hash, RuntimeEvent};
+use itp_types::parentchain::ExchangeRateUpdated;
+use log::*;
 use std::time::Duration;
 use substrate_api_client::SubscribeEvents;
 
@@ -50,27 +50,22 @@ pub fn count_exchange_rate_update_events(api: &ParentchainApi, duration: Duratio
 	let mut count = 0;
 
 	while remaining_time(stop).unwrap_or_default() > Duration::ZERO {
-		let events_result = subscription.next_events::<RuntimeEvent, Hash>().unwrap();
-		if let Ok(events) = events_result {
-			for event_record in &events {
-				info!("received event {:?}", event_record.event);
-				if let RuntimeEvent::Teeracle(event) = &event_record.event {
-					match &event {
-						my_node_runtime::pallet_teeracle::Event::ExchangeRateUpdated {
-							data_source,
-							trading_pair,
-							exchange_rate,
-						} => {
+		let events = subscription.next_events_from_metadata().unwrap().unwrap();
+		for event in events.iter() {
+			let event = event.unwrap();
+			match event.pallet_name() {
+				"Teeracle" => match event.variant_name() {
+					"ExchangeRateUpdated" =>
+						if let Ok(Some(ev)) = event.as_event::<ExchangeRateUpdated>() {
 							count += 1;
-							debug!("Received ExchangeRateUpdated event");
 							println!(
-								"ExchangeRateUpdated: TRADING_PAIR : {}, SRC : {}, VALUE :{:?}",
-								trading_pair, data_source, exchange_rate
+								"ExchangeRateUpdated: rate: {} {:?}, source {:?}",
+								ev.exchange_rate, ev.trading_pair, ev.data_source,
 							);
 						},
-						_ => trace!("ignoring teeracle event: {:?}", event),
-					}
-				}
+					_ => continue,
+				},
+				_ => continue,
 			}
 		}
 	}

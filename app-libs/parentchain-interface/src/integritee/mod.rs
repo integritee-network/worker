@@ -17,7 +17,9 @@
 
 mod event_filter;
 mod event_handler;
+
 mod extrinsic_parser;
+
 use crate::{
 	decode_and_log_error,
 	indirect_calls::{invoke::InvokeArgs, shield_funds::ShieldFundsArgs},
@@ -37,6 +39,22 @@ use itc_parentchain_indirect_calls_executor::{
 use itp_node_api::metadata::NodeMetadataTrait;
 use itp_stf_primitives::traits::IndirectExecutor;
 use log::trace;
+
+#[cfg(feature = "std")]
+pub mod parachain {
+	pub use integritee_parachain_runtime::{
+		pallet_teeracle, AccountId, Balance, BalancesCall, Block, Hash, Header, Runtime,
+		RuntimeCall, RuntimeEvent, Signature, UncheckedExtrinsic,
+	};
+}
+#[cfg(feature = "std")]
+pub mod solochain {
+	pub use integritee_solochain_runtime::{
+		pallet_teeracle, AccountId, Balance, BalancesCall, Block, Hash, Header, Runtime,
+		RuntimeCall, RuntimeEvent, Signature, UncheckedExtrinsic,
+	};
+}
+
 /// The default indirect call (extrinsic-triggered) of the Integritee-Parachain.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub enum IndirectCall {

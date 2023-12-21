@@ -19,8 +19,8 @@ use crate::{
 	command_utils::{get_accountid_from_str, get_chain_api, *},
 	Cli, CliResult, CliResultOk,
 };
+use ita_parentchain_interface::integritee::parachain::Balance;
 use log::*;
-use my_node_runtime::Balance;
 use sp_core::{crypto::Ss58Codec, Pair};
 use substrate_api_client::{
 	extrinsic::BalancesExtrinsics, GetAccountInformation, SubmitAndWatch, XtStatus,
