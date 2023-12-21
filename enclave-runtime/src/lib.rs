@@ -120,7 +120,7 @@ pub unsafe extern "C" fn init(
 ) -> sgx_status_t {
 	// Initialize the logging environment in the enclave.
 	env_logger::builder()
-		.format_timestamp(Some(env_logger::TimestampPrecision::Millis))
+		.format_timestamp(Some(env_logger::TimestampPrecision::Micros))
 		.init();
 
 	let mu_ra_url =
