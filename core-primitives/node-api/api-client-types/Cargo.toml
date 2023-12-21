@@ -5,18 +5,9 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
 [dependencies]
-# integritee-node
-my-node-runtime = { package = "integritee-node-runtime", optional = true, git = "https://github.com/integritee-network/integritee-node.git", branch = "sdk-v0.12.6-polkadot-v0.9.42" }
-
-# scs
-substrate-api-client = { default-features = false, features = ["sync-api"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }
-
-# substrate
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-
-# local
 itp-types = { default-features = false, path = "../../types" }
-
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+substrate-api-client = { default-features = false, features = ["sync-api"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }
 
 [features]
 default = ["std"]
@@ -25,5 +16,4 @@ std = [
     "substrate-api-client/std",
     "substrate-api-client/tungstenite-client",
     "sp-runtime/std",
-    "my-node-runtime",
 ]

@@ -5,6 +5,7 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
 [workspace]
+resolver = "2"
 members = []
 
 [lib]
@@ -144,6 +145,7 @@ itp-sgx-temp-dir = { version = "0.1", default-features = false, optional = true,
 env_logger = { git = "https://github.com/integritee-network/env_logger-sgx" }
 getrandom = { git = "https://github.com/integritee-network/getrandom-sgx", branch = "update-v2.3" }
 log = { git = "https://github.com/integritee-network/log-sgx" }
+ring = { git = "https://github.com/betrusted-io/ring-xous", branch = "0.16.20-cleanup" }
 
 [patch."https://github.com/mesalock-linux/log-sgx"]
 log = { git = "https://github.com/integritee-network/log-sgx" }
@@ -167,3 +169,7 @@ sgx_tseal = { version = "1.1.6", git = "https://github.com/apache/incubator-teac
 sgx_tstd = { version = "1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master" }
 sgx_tunittest = { version = "1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master" }
 sgx_types = { version = "1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master" }
+
+#[patch."https://github.com/integritee-network/parachain"]
+#integritee-runtime = { path = "../../parachain/polkadot-parachains/integritee-runtime"}
+#parachains-common = { path = "../../parachain/polkadot-parachains/common"}

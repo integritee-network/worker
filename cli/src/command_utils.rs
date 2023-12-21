@@ -17,10 +17,10 @@
 
 use crate::Cli;
 use base58::FromBase58;
+use ita_parentchain_interface::integritee::parachain::{AccountId, Signature};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use itp_node_api::api_client::{ParentchainApi, TungsteniteRpcClient};
 use log::*;
-use my_node_runtime::{AccountId, Signature};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_application_crypto::sr25519;
 use sp_core::{crypto::Ss58Codec, Pair};
