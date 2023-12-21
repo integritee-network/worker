@@ -16,11 +16,10 @@
 */
 
 use crate::{command_utils::get_chain_api, Cli, CliResult, CliResultOk};
-use base58::ToBase58;
-use codec::Encode;
+
+use itp_types::parentchain::{AddedSgxEnclave, BalanceTransfer};
 use log::*;
-use my_node_runtime::{Hash, RuntimeEvent};
-use substrate_api_client::SubscribeEvents;
+use substrate_api_client::{GetChainInfo, SubscribeEvents};
 
 #[derive(Parser)]
 pub struct ListenCommand {
@@ -37,7 +36,7 @@ impl ListenCommand {
 	pub(crate) fn run(&self, cli: &Cli) -> CliResult {
 		println!("{:?} {:?}", self.events, self.blocks);
 		let api = get_chain_api(cli);
-		info!("Subscribing to events");
+		info!("Subscribing to events (solo or para)");
 		let mut count = 0u32;
 		let mut blocks = 0u32;
 		let mut subscription = api.subscribe_events().unwrap();
@@ -53,110 +52,36 @@ impl ListenCommand {
 				}
 			};
 
-			let event_results = subscription.next_events::<RuntimeEvent, Hash>().unwrap();
+			let events = subscription.next_events_from_metadata().unwrap().unwrap();
 			blocks += 1;
-			match event_results {
-				Ok(evts) =>
-					for evr in &evts {
-						println!("decoded: phase {:?} event {:?}", evr.phase, evr.event);
-						match &evr.event {
-							RuntimeEvent::Balances(be) => {
-								println!(">>>>>>>>>> balances event: {:?}", be);
-								match &be {
-									pallet_balances::Event::Transfer { from, to, amount } => {
-										println!("From: {:?}", from);
-										println!("To: {:?}", to);
-										println!("Value: {:?}", amount);
-									},
-									_ => {
-										debug!("ignoring unsupported balances event");
-									},
-								}
+			let header = api.get_header(None).unwrap().unwrap();
+			println!("block number (HEAD): {}", header.number);
+			for event in events.iter() {
+				let event = event.unwrap();
+				count += 1;
+				match event.pallet_name() {
+					"System" => continue,
+					"TransactionPayment" => continue,
+					"Treasury" => continue,
+					"Balances" => match event.variant_name() {
+						"Deposit" => continue,
+						"Withdraw" => continue,
+						"Transfer" =>
+							if let Ok(Some(ev)) = event.as_event::<BalanceTransfer>() {
+								println!("{:?}", ev);
 							},
-							RuntimeEvent::Teerex(ee) => {
-								println!(">>>>>>>>>> integritee teerex event: {:?}", ee);
-								count += 1;
-								match &ee {
-									my_node_runtime::pallet_teerex::Event::AddedSgxEnclave{
-										registered_by,
-										worker_url, ..
-									}
-									 => {
-										println!(
-											"AddedEnclave: {:?} at url {}",
-											registered_by,
-											String::from_utf8(worker_url.clone().unwrap_or("none".into()).to_vec())
-												.unwrap_or_else(|_| "error".to_string())
-										);
-									},
-									my_node_runtime::pallet_teerex::Event::RemovedSovereignEnclave(
-										accountid,
-									) => {
-										println!("RemovedEnclave: {:?}", accountid);
-									},
-									my_node_runtime::pallet_teerex::Event::RemovedProxiedEnclave(
-										eia,
-									) => {
-										println!("RemovedEnclave: {:?}", eia);
-									},
-									_ => debug!("ignoring unsupported teerex event: {:?}", ee),
-								}
-							},
-							RuntimeEvent::EnclaveBridge(ee) => {
-								println!(">>>>>>>>>> integritee enclave bridge event: {:?}", ee);
-								count += 1;
-								match &ee {
-									my_node_runtime::pallet_enclave_bridge::Event::IndirectInvocationRegistered(shard) => {
-										println!(
-											"Forwarded request for shard {}",
-											shard.encode().to_base58()
-										);
-									},
-									my_node_runtime::pallet_enclave_bridge::Event::ProcessedParentchainBlock {
-										shard,
-										block_hash,
-										trusted_calls_merkle_root,
-										block_number,
-									} => {
-										println!(
-											"ProcessedParentchainBlock from {} with hash {:?}, number {} and merkle root {:?}",
-											shard, block_hash, trusted_calls_merkle_root, block_number
-										);
-									},
-									my_node_runtime::pallet_enclave_bridge::Event::ShieldFunds {
-										shard, encrypted_beneficiary, amount
-									} => {
-										println!("ShieldFunds on shard {:?} for {:?}. amount: {:?}", shard, encrypted_beneficiary, amount);
-									},
-									my_node_runtime::pallet_enclave_bridge::Event::UnshieldedFunds {
-										shard, beneficiary, amount
-									} => {
-										println!("UnshieldFunds on shard {:?} for {:?}. amount: {:?}", shard, beneficiary, amount);
-									},
-									_ => debug!("ignoring unsupported enclave_bridge event: {:?}", ee),
-								}
-							},
-							RuntimeEvent::Sidechain(ee) => {
-								println!(">>>>>>>>>> integritee sidechain event: {:?}", ee);
-								count += 1;
-								match &ee {
-									my_node_runtime::pallet_sidechain::Event::FinalizedSidechainBlock {
-										shard,
-										block_header_hash,
-										validateer,
-									} => {
-										println!(
-											"ProposedSidechainBlock on shard {} from {} with hash {:?}",
-											shard, validateer, block_header_hash
-										);
-									},
-									_ => debug!("ignoring unsupported sidechain event: {:?}", ee),
-								}
-							},
-							_ => debug!("ignoring unsupported module event: {:?}", evr.event),
-						}
+						_ => println!("{}::{}", event.pallet_name(), event.variant_name()),
 					},
-				Err(_) => error!("couldn't decode event record list"),
+					"Teerex" => match event.variant_name() {
+						"AddedSgxEnclave" => {
+							if let Ok(Some(ev)) = event.as_event::<AddedSgxEnclave>() {
+								println!("Teerex::{:?}", ev);
+							}
+						},
+						_ => println!("{}::{}", event.pallet_name(), event.variant_name()),
+					},
+					_ => println!("{}::{}", event.pallet_name(), event.variant_name()),
+				}
 			}
 		}
 	}

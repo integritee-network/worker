@@ -1,5 +1,5 @@
 [workspace]
-
+resolver = "2"
 members = [
     "app-libs/oracle",
     "app-libs/parentchain-interface",

@@ -17,24 +17,26 @@
 
 use crate::{
 	command_utils::{get_chain_api, get_pair_from_str, get_shielding_key, get_worker_api_direct},
-	error::{Error, Result},
 	trusted_cli::TrustedCli,
 	Cli,
 };
 use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode, Input};
 use enclave_bridge_primitives::Request;
+use ita_parentchain_interface::integritee::solochain;
 use ita_stf::{Getter, TrustedCallSigned};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
-use itp_node_api::api_client::{ParentchainApi, ENCLAVE_BRIDGE};
+use itp_node_api::api_client::{ApiClientError, ENCLAVE_BRIDGE};
 use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_stf_primitives::types::{ShardIdentifier, TrustedOperation};
-use itp_types::{BlockNumber, DirectRequestStatus, TrustedOperationStatus};
+use itp_types::{
+	parentchain::{BlockHash, BlockNumber, ProcessedParentchainBlock},
+	DirectRequestStatus, TrustedOperationStatus,
+};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use log::*;
-use my_node_runtime::{Hash, RuntimeEvent};
-use pallet_enclave_bridge::Event as EnclaveBridgeEvent;
+
 use sp_core::H256;
 use std::{
 	fmt::Debug,
@@ -47,12 +49,33 @@ use substrate_api_client::{
 };
 use thiserror::Error;
 
+const TIMEOUT_BLOCKS: BlockNumber = 10;
+
 #[derive(Debug, Error)]
 pub(crate) enum TrustedOperationError {
-	#[error("extrinsic L1 error: {msg:?}")]
-	Extrinsic { msg: String },
+	#[error("{0:?}")]
+	ApiClient(ApiClientError),
+	#[error("Could not retrieve Header from node")]
+	MissingBlock,
+	#[error("confirmation timed out after ({0:?}) blocks")]
+	ConfirmationTimedOut(BlockNumber),
+	#[error("Confirmed Block Number ({0:?}) exceeds expected one ({0:?})")]
+	ConfirmedBlockNumberTooHigh(
+		itp_types::parentchain::BlockNumber,
+		itp_types::parentchain::BlockNumber,
+	),
+	#[error("Confirmed Block Hash ({0:?}) does not match expected one ({0:?})")]
+	ConfirmedBlockHashDoesNotMatchExpected(BlockHash, BlockHash),
+	#[error("invocation extrinsic L1 error: {msg:?}")]
+	IndirectInvocationFailed { msg: String },
 	#[error("default error: {msg:?}")]
 	Default { msg: String },
+}
+
+impl From<ApiClientError> for TrustedOperationError {
+	fn from(error: ApiClientError) -> Self {
+		Self::ApiClient(error)
+	}
 }
 
 pub(crate) type TrustedOpResult<T> = StdResult<T, TrustedOperationError>;
@@ -148,7 +171,9 @@ fn send_indirect_request<T: Decode + Debug>(
 	let request = Request { shard, cyphertext: call_encrypted };
 	let xt = compose_extrinsic!(&chain_api, ENCLAVE_BRIDGE, "invoke", request);
 
-	let block_hash = match chain_api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock) {
+	let invocation_block_hash = match chain_api
+		.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock)
+	{
 		Ok(xt_report) => {
 			println!(
 				"[+] invoke TrustedOperation extrinsic success. extrinsic hash: {:?} / status: {:?} / block hash: {:?}",
@@ -158,77 +183,70 @@ fn send_indirect_request<T: Decode + Debug>(
 		},
 		Err(e) => {
 			error!("invoke TrustedOperation extrinsic failed {:?}", e);
-			return Err(TrustedOperationError::Extrinsic { msg: format!("{:?}", e) })
+			return Err(TrustedOperationError::IndirectInvocationFailed { msg: format!("{:?}", e) })
 		},
 	};
-
+	let invocation_block_number = chain_api
+		.get_header(Some(invocation_block_hash))?
+		.ok_or(TrustedOperationError::MissingBlock)?
+		.number;
 	info!(
-		"Trusted call extrinsic sent for shard {} and successfully included in parentchain block with hash {:?}.",
-		shard.encode().to_base58(), block_hash
+		"Trusted call extrinsic sent for shard {} and successfully included in parentchain block {} with hash {:?}.",
+		shard.encode().to_base58(), invocation_block_number, invocation_block_hash
 	);
 	info!("Waiting for execution confirmation from enclave...");
+	let mut blocks = 0u32;
 	let mut subscription = chain_api.subscribe_events().unwrap();
 	loop {
-		let event_result = subscription.next_events::<RuntimeEvent, Hash>();
-		if let Some(Ok(event_records)) = event_result {
-			for event_record in event_records {
-				if let RuntimeEvent::EnclaveBridge(
-					EnclaveBridgeEvent::ProcessedParentchainBlock {
-						shard,
-						block_hash: confirmed_block_hash,
-						trusted_calls_merkle_root,
-						block_number: confirmed_block_number,
+		let events = subscription.next_events_from_metadata().unwrap().unwrap();
+		blocks += 1;
+		if blocks > TIMEOUT_BLOCKS {
+			return Err(TrustedOperationError::ConfirmationTimedOut(blocks))
+		}
+		for event in events.iter() {
+			let event = event.unwrap();
+			match event.pallet_name() {
+				"EnclaveBridge" => match event.variant_name() {
+					"ProcessedParentchainBlock" => {
+						if let Ok(Some(ev)) = event.as_event::<ProcessedParentchainBlock>() {
+							println!("EnclaveBridge::{:?}", ev);
+							debug!(
+								"Invocation block Number we're waiting for: {:?}",
+								invocation_block_number
+							);
+							debug!("Confirmed block Number: {:?}", ev.block_number);
+							// The returned block number belongs to a subsequent event. We missed our event and can break the loop.
+							if ev.block_number > invocation_block_number {
+								return Err(TrustedOperationError::ConfirmedBlockNumberTooHigh(
+									ev.block_number,
+									invocation_block_number,
+								))
+							}
+							// The block number is correct, but the block hash does not fit.
+							if invocation_block_number == ev.block_number
+								&& invocation_block_hash != ev.block_hash
+							{
+								return Err(
+									TrustedOperationError::ConfirmedBlockHashDoesNotMatchExpected(
+										ev.block_hash,
+										invocation_block_hash,
+									),
+								)
+							}
+							if ev.block_hash == invocation_block_hash {
+								let value = decode_response_value(
+									&mut invocation_block_hash.encode().as_slice(),
+								)?;
+								return Ok(value)
+							}
+						}
 					},
-				) = event_record.event
-				{
-					info!("Confirmation of ProcessedParentchainBlock received");
-					debug!("shard: {:?}", shard);
-					debug!("confirmed parentchain block Hash: {:?}", block_hash);
-					debug!("trusted calls merkle root: {:?}", trusted_calls_merkle_root);
-					debug!("Confirmed stf block Hash: {:?}", confirmed_block_hash);
-					if let Err(e) = check_if_received_event_exceeds_expected(
-						&chain_api,
-						block_hash,
-						confirmed_block_hash,
-						confirmed_block_number,
-					) {
-						error!("ProcessedParentchainBlock event: {:?}", e);
-						return Err(TrustedOperationError::Default {
-							msg: format!("ProcessedParentchainBlock event: {:?}", e),
-						})
-					};
-
-					if confirmed_block_hash == block_hash {
-						let value = decode_response_value(&mut block_hash.encode().as_slice())?;
-						return Ok(value)
-					}
-				}
+					_ => continue,
+				},
+				_ => continue,
 			}
-		} else {
-			warn!("Error in event subscription: {:?}", event_result)
 		}
 	}
-}
-
-fn check_if_received_event_exceeds_expected(
-	chain_api: &ParentchainApi,
-	block_hash: Hash,
-	confirmed_block_hash: Hash,
-	confirmed_block_number: BlockNumber,
-) -> Result<()> {
-	let block_number = chain_api.get_header(Some(block_hash))?.ok_or(Error::MissingBlock)?.number;
-
-	info!("Expected block Number: {:?}", block_number);
-	info!("Confirmed block Number: {:?}", confirmed_block_number);
-	// The returned block number belongs to a subsequent event. We missed our event and can break the loop.
-	if confirmed_block_number > block_number {
-		return Err(Error::ConfirmedBlockNumberTooHigh(confirmed_block_number, block_number))
-	}
-	// The block number is correct, but the block hash does not fit.
-	if block_number == confirmed_block_number && block_hash != confirmed_block_hash {
-		return Err(Error::ConfirmedBlockHashDoesNotMatchExpected(confirmed_block_hash, block_hash))
-	}
-	Ok(())
 }
 
 pub fn read_shard(trusted_args: &TrustedCli) -> StdResult<ShardIdentifier, codec::Error> {
@@ -290,7 +308,9 @@ fn send_direct_request<T: Decode + Debug>(
 						},
 						DirectRequestStatus::TrustedOperationStatus(status) => {
 							debug!("request status is: {:?}", status);
-							if let Ok(value) = Hash::decode(&mut return_value.value.as_slice()) {
+							if let Ok(value) =
+								solochain::Hash::decode(&mut return_value.value.as_slice())
+							{
 								println!("Trusted call {:?} is {:?}", value, status);
 							}
 							if connection_can_be_closed(status) {
@@ -375,7 +395,8 @@ pub(crate) fn wait_until(
 							},
 							DirectRequestStatus::TrustedOperationStatus(status) => {
 								debug!("request status is: {:?}", status);
-								if let Ok(value) = Hash::decode(&mut return_value.value.as_slice())
+								if let Ok(value) =
+									solochain::Hash::decode(&mut return_value.value.as_slice())
 								{
 									println!("Trusted call {:?} is {:?}", value, status);
 									if until(status.clone()) {

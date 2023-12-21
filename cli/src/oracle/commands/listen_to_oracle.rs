@@ -18,10 +18,10 @@
 use crate::{command_utils::get_chain_api, Cli};
 use itp_node_api::api_client::ParentchainApi;
 use itp_time_utils::{duration_now, remaining_time};
-use log::{debug, info};
-use my_node_runtime::{Hash, RuntimeEvent};
+use itp_types::parentchain::OracleUpdated;
+use log::*;
 use std::time::Duration;
-use substrate_api_client::{ac_node_api::EventRecord, SubscribeEvents};
+use substrate_api_client::SubscribeEvents;
 
 /// Listen to exchange rate events.
 #[derive(Debug, Clone, Parser)]
@@ -31,8 +31,6 @@ pub struct ListenToOracleEventsCmd {
 }
 
 type EventCount = u32;
-type Event = EventRecord<RuntimeEvent, Hash>;
-
 impl ListenToOracleEventsCmd {
 	pub fn run(&self, cli: &Cli) {
 		let api = get_chain_api(cli);
@@ -49,43 +47,26 @@ fn count_oracle_update_events(api: &ParentchainApi, duration: Duration) -> Event
 	//subscribe to events
 	let mut subscription = api.subscribe_events().unwrap();
 	let mut count = 0;
-
 	while remaining_time(stop).unwrap_or_default() > Duration::ZERO {
-		let events_result = subscription.next_events::<RuntimeEvent, Hash>();
-		let event_count = match events_result {
-			Some(Ok(event_records)) => {
-				debug!("Could not successfully decode event_bytes {:?}", event_records);
-				report_event_count(event_records)
-			},
-			_ => 0,
-		};
-		count += event_count;
-	}
-	debug!("Received {} ExchangeRateUpdated event(s) in total", count);
-	count
-}
-
-fn report_event_count(event_records: Vec<Event>) -> EventCount {
-	let mut count = 0;
-	event_records.iter().for_each(|event_record| {
-		info!("received event {:?}", event_record.event);
-		if let RuntimeEvent::Teeracle(event) = &event_record.event {
-			match &event {
-				my_node_runtime::pallet_teeracle::Event::OracleUpdated {
-					oracle_data_name,
-					data_source,
-				} => {
-					count += 1;
-					debug!("Received OracleUpdated event");
-					println!(
-						"OracleUpdated: ORACLE_NAME : {}, SRC : {}",
-						oracle_data_name, data_source
-					);
+		let events = subscription.next_events_from_metadata().unwrap().unwrap();
+		for event in events.iter() {
+			let event = event.unwrap();
+			match event.pallet_name() {
+				"Teeracle" => match event.variant_name() {
+					"OracleUpdated" =>
+						if let Ok(Some(ev)) = event.as_event::<OracleUpdated>() {
+							count += 1;
+							println!(
+								"OracleUpdated: ORACLE_NAME : {}, SRC : {}",
+								ev.oracle_data_name, ev.data_source
+							);
+						},
+					_ => continue,
 				},
-				// Can just remove this and ignore handling this case
-				_ => debug!("ignoring teeracle event: {:?}", event),
+				_ => continue,
 			}
 		}
-	});
+	}
+	debug!("Received {} ExchangeRateUpdated event(s) in total", count);
 	count
 }

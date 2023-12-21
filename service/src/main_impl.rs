@@ -31,6 +31,7 @@ use crate::{
 use base58::ToBase58;
 use clap::{load_yaml, App, ArgMatches};
 use codec::{Decode, Encode};
+use ita_parentchain_interface::integritee::parachain::{Hash, Header, RuntimeEvent};
 use itp_enclave_api::{
 	direct_request::DirectRequest,
 	enclave_base::EnclaveBase,
@@ -50,7 +51,6 @@ use its_peer_fetch::{
 use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use its_storage::{interface::FetchBlocks, BlockPruner, SidechainStorageLock};
 use log::*;
-use my_node_runtime::{Hash, Header, RuntimeEvent};
 use regex::Regex;
 use sgx_types::*;
 use sp_runtime::traits::Header as HeaderT;
@@ -586,7 +586,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			);
 		},
 		WorkerMode::OffChainWorker => {
-			println!("*** [+] Finished initializing light client, syncing parentchain...");
+			println!("[Integritee:OCW] Finished initializing light client, syncing parentchain...");
 
 			// Syncing all parentchain blocks, this might take a while..
 			let last_synced_header = integritee_parentchain_handler
@@ -606,7 +606,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			info!("skipping shard vault check because not yet supported for offchain worker");
 		},
 		WorkerMode::Sidechain => {
-			println!("*** [+] Finished initializing light client, syncing parentchain...");
+			println!("[Integritee:SCW] Finished initializing light client, syncing parentchain...");
 
 			// ------------------------------------------------------------------------
 			// Initialize the sidechain
@@ -664,16 +664,10 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		)
 	}
 
-	// ------------------------------------------------------------------------
-	// Subscribe to events and print them.
-	println!("*** [{:?}] Subscribing to events", ParentchainId::Integritee);
-	let mut subscription = integritee_rpc_api.subscribe_events().unwrap();
-	println!("[+] [{:?}] Subscribed to events. waiting...", ParentchainId::Integritee);
-	loop {
-		if let Some(Ok(events)) = subscription.next_events::<RuntimeEvent, Hash>() {
-			print_events(events, ParentchainId::Integritee)
-		}
-	}
+	ita_parentchain_interface::event_subscriber::subscribe_to_parentchain_events(
+		&integritee_rpc_api,
+		ParentchainId::Integritee,
+	);
 }
 
 fn init_provided_shard_vault<E: EnclaveBase>(
@@ -736,7 +730,7 @@ fn init_target_parentchain<E>(
 
 	if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
 		println!(
-			"*** [+] [{:?}] Finished initializing light client, syncing parentchain...",
+			"[{:?}] Finished initializing light client, syncing parentchain...",
 			parentchain_id
 		);
 
@@ -746,7 +740,7 @@ fn init_target_parentchain<E>(
 			.unwrap();
 
 		start_parentchain_header_subscription_thread(
-			parentchain_handler,
+			parentchain_handler.clone(),
 			last_synched_header,
 			*shard,
 		)
@@ -754,17 +748,15 @@ fn init_target_parentchain<E>(
 	println!("[{:?}] initializing proxied shard vault account now", parentchain_id);
 	enclave.init_proxied_shard_vault(shard, &parentchain_id).unwrap();
 
-	// Subscribe to events and print them.
-	println!("*** [{:?}] Subscribing to events...", parentchain_id);
-	let mut subscription = node_api.subscribe_events().unwrap();
-	println!("[+] [{:?}] Subscribed to events. waiting...", parentchain_id);
+	let parentchain_init_params = parentchain_handler.parentchain_init_params.clone();
 
 	thread::Builder::new()
 		.name(format!("{:?}_parentchain_event_subscription", parentchain_id))
-		.spawn(move || loop {
-			if let Some(Ok(events)) = subscription.next_events::<RuntimeEvent, Hash>() {
-				print_events(events, parentchain_id)
-			}
+		.spawn(move || {
+			ita_parentchain_interface::event_subscriber::subscribe_to_parentchain_events(
+				&node_api,
+				parentchain_id,
+			)
 		})
 		.unwrap();
 }
@@ -843,24 +835,6 @@ fn spawn_worker_for_shard_polling<InitializationHandler>(
 			thread::sleep(Duration::from_secs(POLL_INTERVAL_SECS));
 		}
 	});
-}
-
-fn print_events<R, H>(events: Vec<EventRecord<R, H>>, parentchain_id: ParentchainId)
-where
-	R: Debug,
-{
-	for evr in &events {
-		if evr.phase == ApplyExtrinsic(0) {
-			// not interested in intrinsics
-			continue
-		}
-		let re = Regex::new(r"\s[0-9a-f]*\s\(").unwrap();
-		let event_str = re
-			.replace_all(format!("{:?}", evr.event).as_str(), "(")
-			.replace("RuntimeEvent::", "")
-			.replace("Event::", "");
-		println!("[{}] Event: {}", parentchain_id, event_str);
-	}
 }
 
 #[cfg(feature = "attesteer")]
