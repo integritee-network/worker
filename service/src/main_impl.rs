@@ -84,7 +84,9 @@ pub type Event = substrate_api_client::ac_node_api::EventRecord<RuntimeEvent, Ha
 
 pub(crate) fn main() {
 	// Setup logging
-	env_logger::init();
+	env_logger::builder()
+		.format_timestamp(Some(env_logger::TimestampPrecision::Millis))
+		.init();
 
 	let yml = load_yaml!("cli.yml");
 	let matches = App::from_yaml(yml).get_matches();
