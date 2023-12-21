@@ -45,7 +45,7 @@ use itp_stf_primitives::{
 	types::{AccountId, KeyPair, ShardIdentifier, Signature, TrustedOperation},
 };
 use itp_types::{
-	parentchain::{ParentchainCall, ProxyType},
+	parentchain::{ParentchainCall, ParentchainId, ProxyType},
 	Address, OpaqueCall,
 };
 use itp_utils::stringify::account_id_to_string;
@@ -57,6 +57,10 @@ use sp_core::{
 use sp_io::hashing::blake2_256;
 use sp_runtime::{traits::Verify, MultiAddress, MultiSignature};
 use std::{format, prelude::v1::*, sync::Arc};
+
+// fixme: this shall be configurable https://github.com/integritee-network/worker/issues/1539
+/// define which parentchain's native token is considered the native token of the sidechain STF and can be shielded and unshielded
+const NATIVE_TOKEN_PARENTCHAIN: ParentchainId = ParentchainId::Integritee;
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
@@ -345,7 +349,12 @@ where
 					None::<ProxyType>,
 					vault_transfer_call,
 				));
-				calls.push(ParentchainCall::TargetA(proxy_call));
+				let parentchain_call = match NATIVE_TOKEN_PARENTCHAIN {
+					ParentchainId::Integritee => ParentchainCall::Integritee(proxy_call),
+					ParentchainId::TargetA => ParentchainCall::TargetA(proxy_call),
+					ParentchainId::TargetB => ParentchainCall::TargetB(proxy_call),
+				};
+				calls.push(parentchain_call);
 				Ok(())
 			},
 			TrustedCall::balance_shield(enclave_account, who, value) => {
