@@ -18,7 +18,7 @@
 
 use crate::error::{Error, ServiceResult};
 use codec::{Decode, Encode};
-use ita_parentchain_interface::integritee::solochain::Header;
+use ita_parentchain_interface::integritee::Header;
 use itc_parentchain::{
 	light_client::light_client_init_params::{GrandpaParams, SimpleParams},
 	primitives::{ParentchainId, ParentchainInitParams},

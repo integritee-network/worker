@@ -23,7 +23,6 @@ use crate::{
 use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode, Input};
 use enclave_bridge_primitives::Request;
-use ita_parentchain_interface::integritee::solochain;
 use ita_stf::{Getter, TrustedCallSigned};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
 use itp_node_api::api_client::{ApiClientError, ENCLAVE_BRIDGE};
@@ -37,6 +36,7 @@ use itp_types::{
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use log::*;
 
+use itp_types::parentchain::Hash;
 use sp_core::H256;
 use std::{
 	fmt::Debug,
@@ -308,9 +308,7 @@ fn send_direct_request<T: Decode + Debug>(
 						},
 						DirectRequestStatus::TrustedOperationStatus(status) => {
 							debug!("request status is: {:?}", status);
-							if let Ok(value) =
-								solochain::Hash::decode(&mut return_value.value.as_slice())
-							{
+							if let Ok(value) = Hash::decode(&mut return_value.value.as_slice()) {
 								println!("Trusted call {:?} is {:?}", value, status);
 							}
 							if connection_can_be_closed(status) {
@@ -395,8 +393,7 @@ pub(crate) fn wait_until(
 							},
 							DirectRequestStatus::TrustedOperationStatus(status) => {
 								debug!("request status is: {:?}", status);
-								if let Ok(value) =
-									solochain::Hash::decode(&mut return_value.value.as_slice())
+								if let Ok(value) = Hash::decode(&mut return_value.value.as_slice())
 								{
 									println!("Trusted call {:?} is {:?}", value, status);
 									if until(status.clone()) {

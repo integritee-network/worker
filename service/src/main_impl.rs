@@ -31,7 +31,7 @@ use crate::{
 use base58::ToBase58;
 use clap::{load_yaml, App, ArgMatches};
 use codec::{Decode, Encode};
-use ita_parentchain_interface::integritee::parachain::{Hash, Header, RuntimeEvent};
+use ita_parentchain_interface::integritee::{Hash, Header};
 use itp_enclave_api::{
 	direct_request::DirectRequest,
 	enclave_base::EnclaveBase,
@@ -80,7 +80,6 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg(feature = "link-binary")]
 pub type EnclaveWorker =
 	Worker<Config, NodeApiFactory, Enclave, InitializationHandler<WorkerModeProvider>>;
-pub type Event = substrate_api_client::ac_node_api::EventRecord<RuntimeEvent, Hash>;
 
 pub(crate) fn main() {
 	// Setup logging
