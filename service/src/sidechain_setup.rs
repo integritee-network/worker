@@ -46,7 +46,10 @@ pub(crate) fn sidechain_start_untrusted_rpc_server<Enclave, SidechainStorage>(
 	SidechainStorage: BlockPruner + FetchBlocks<SignedSidechainBlock> + Sync + Send + 'static,
 {
 	let untrusted_url = config.untrusted_worker_url();
-	println!("[+] Untrusted RPC server listening on {}", &untrusted_url);
+	debug!(
+		"starting untrusted RPC server listening to sidechain blocks from peers on {}",
+		&untrusted_url
+	);
 	let _untrusted_rpc_join_handle = tokio_handle.spawn(async move {
 		itc_rpc_server::run_server(&untrusted_url, enclave, sidechain_storage)
 			.await
