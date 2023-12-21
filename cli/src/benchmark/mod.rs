@@ -225,7 +225,7 @@ impl BenchmarkCommand {
 
 					let balance = get_balance(client.account.clone(), shard, &client.client_api);
 					println!("Balance: {}", balance.unwrap_or_default());
-					assert_eq!(client.current_balance, balance.unwrap());
+					assert_eq!(client.current_balance, balance.unwrap_or_default());
 
 					output.push(result);
 
