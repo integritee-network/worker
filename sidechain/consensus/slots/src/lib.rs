@@ -214,10 +214,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 		let remaining_duration = self.proposing_remaining_duration(&slot_info);
 
 		if remaining_duration == Duration::default() {
-			debug!(
-				target: logging_target,
-				"Skipping proposal slot {} since there's no time left to propose", *slot,
-			);
+			debug!("Skipping proposal slot {} since there's no time left to propose", *slot,);
 
 			return None
 		}
@@ -227,15 +224,11 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 				Ok(Some(peeked_header)) => peeked_header,
 				Ok(None) => slot_info.last_imported_integritee_parentchain_head.clone(),
 				Err(e) => {
-					warn!(
-						target: logging_target,
-						"Failed to peek latest Integritee parentchain block header: {:?}", e
-					);
+					warn!("Failed to peek latest Integritee parentchain block header: {:?}", e);
 					return None
 				},
 			};
 		trace!(
-			target: logging_target,
 			"on_slot: a priori latest Integritee block number: {:?}",
 			latest_integritee_parentchain_header.number()
 		);
@@ -245,15 +238,11 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 				Ok(Some(peeked_header)) => Some(peeked_header),
 				Ok(None) => slot_info.maybe_last_imported_target_a_parentchain_head.clone(),
 				Err(e) => {
-					debug!(
-						target: logging_target,
-						"Failed to peek latest target_a_parentchain block header: {:?}", e
-					);
+					debug!("Failed to peek latest target_a_parentchain block header: {:?}", e);
 					None
 				},
 			};
 		trace!(
-			target: logging_target,
 			"on_slot: a priori latest TargetA block number: {:?}",
 			maybe_latest_target_a_parentchain_header.clone().map(|h| *h.number())
 		);
@@ -263,15 +252,11 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 				Ok(Some(peeked_header)) => Some(peeked_header),
 				Ok(None) => slot_info.maybe_last_imported_target_b_parentchain_head.clone(),
 				Err(e) => {
-					debug!(
-						target: logging_target,
-						"Failed to peek latest target_a_parentchain block header: {:?}", e
-					);
+					debug!("Failed to peek latest target_a_parentchain block header: {:?}", e);
 					None
 				},
 			};
 		trace!(
-			target: logging_target,
 			"on_slot: a priori latest TargetB block number: {:?}",
 			maybe_latest_target_b_parentchain_header.clone().map(|h| *h.number())
 		);
@@ -280,7 +265,6 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 			Ok(epoch_data) => epoch_data,
 			Err(e) => {
 				warn!(
-					target: logging_target,
 					"Unable to fetch epoch data at block {:?}: {:?}",
 					latest_integritee_parentchain_header.hash(),
 					e,
@@ -293,10 +277,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 		let authorities_len = self.authorities_len(&epoch_data);
 
 		if !authorities_len.map(|a| a > 0).unwrap_or(false) {
-			debug!(
-				target: logging_target,
-				"Skipping proposal slot. Authorities len {:?}", authorities_len
-			);
+			debug!("Skipping proposal slot. Authorities len {:?}", authorities_len);
 		}
 
 		let _claim = self.claim_slot(&latest_integritee_parentchain_header, slot, &epoch_data)?;
@@ -308,7 +289,6 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 			Ok(h) => h,
 			Err(e) => {
 				debug!(
-					target: logging_target,
 					"Failed to import Integritee blocks until nr{:?}: {:?}",
 					latest_integritee_parentchain_header.number(),
 					e
@@ -317,7 +297,6 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 			},
 		};
 		trace!(
-			target: logging_target,
 			"on_slot: a posteriori latest Integritee block number: {:?}",
 			last_imported_integritee_header.clone().map(|h| *h.number())
 		);
@@ -329,7 +308,6 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 					Ok(None) => None,
 					Err(e) => {
 						debug!(
-							target: logging_target,
 							"Failed to import TargetA blocks until nr{:?}: {:?}",
 							header.number(),
 							e
@@ -341,7 +319,6 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 				None
 			};
 		trace!(
-			target: logging_target,
 			"on_slot: a posteriori latest TargetA block number: {:?}",
 			maybe_last_imported_target_a_header.map(|h| *h.number())
 		);
@@ -353,7 +330,6 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 					Ok(None) => None,
 					Err(e) => {
 						debug!(
-							target: logging_target,
 							"Failed to import TargetB blocks until nr{:?}: {:?}",
 							header.number(),
 							e
@@ -366,7 +342,6 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 			};
 
 		trace!(
-			target: logging_target,
 			"on_slot: a posteriori latest TargetB block number: {:?}",
 			maybe_last_imported_target_b_header.map(|h| *h.number())
 		);
@@ -374,7 +349,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 		let proposer = match self.proposer(latest_integritee_parentchain_header.clone(), shard) {
 			Ok(p) => p,
 			Err(e) => {
-				warn!(target: logging_target, "Could not create proposer: {:?}", e);
+				warn!("Could not create proposer: {:?}", e);
 				return None
 			},
 		};
@@ -382,14 +357,14 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 		let proposing = match proposer.propose(remaining_duration) {
 			Ok(p) => p,
 			Err(e) => {
-				warn!(target: logging_target, "Could not propose: {:?}", e);
+				warn!("Could not propose: {:?}", e);
 				return None
 			},
 		};
 
 		if !timestamp_within_slot(&slot_info, &proposing.block) {
 			warn!(
-				target: logging_target,
+
 				"⌛️ Discarding proposal for slot {}, block number {}; block production took too long",
 				*slot, proposing.block.block().header().block_number(),
 			);
@@ -459,10 +434,7 @@ impl<ParentchainBlock: ParentchainBlockTrait, T: SimpleSlotWorker<ParentchainBlo
 			// important to check against millis here. We had the corner-case in production
 			// setup where `shard_remaining_duration` contained only nanos.
 			if shard_remaining_duration.as_millis() == u128::default() {
-				info!(
-					target: logging_target,
-					"⌛️ Could not produce blocks for all shards; block production took too long",
-				);
+				info!("⌛️ Could not produce blocks for all shards; block production took too long",);
 
 				return slot_results
 			}
@@ -482,13 +454,13 @@ impl<ParentchainBlock: ParentchainBlockTrait, T: SimpleSlotWorker<ParentchainBlo
 				Some(res) => {
 					slot_results.push(res);
 					debug!(
-						target: logging_target,
-						"on_slot: produced block for slot: {:?} in shard {:?}", shard_slot, shard
+						"on_slot: produced block for slot: {:?} in shard {:?}",
+						shard_slot, shard
 					)
 				},
 				None => info!(
-					target: logging_target,
-					"Did not produce a block for slot {} in shard {:?}", *slot_info.slot, shard
+					"Did not produce a block for slot {} in shard {:?}",
+					*slot_info.slot, shard
 				),
 			}
 
