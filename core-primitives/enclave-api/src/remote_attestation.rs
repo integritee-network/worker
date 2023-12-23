@@ -807,13 +807,13 @@ mod impl_ffi {
 	}
 
 	fn create_system_path(file_name: &str) -> String {
-		info!("create_system_path:: file_name={}", &file_name);
+		trace!("create_system_path:: file_name={}", &file_name);
 		let default_path = format!("{}{}", OS_SYSTEM_PATH, file_name);
 
 		let full_path = find_library_by_name(file_name).unwrap_or(default_path);
 
 		let c_terminated_path = format!("{}{}", full_path, C_STRING_ENDING);
-		info!("create_system_path:: created path={}", &c_terminated_path);
+		trace!("create_system_path:: created path={}", &c_terminated_path);
 		c_terminated_path
 	}
 

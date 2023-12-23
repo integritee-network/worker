@@ -294,7 +294,7 @@ pub unsafe extern "C" fn set_node_metadata(
 		},
 	};
 
-	info!("Successfully set the node meta data");
+	trace!("Successfully set the node meta data");
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -699,7 +699,7 @@ fn validate_events(
 	events_proofs: &Vec<StorageProof>,
 	blocks_merkle_roots: &Vec<sp_core::H256>,
 ) -> Result<()> {
-	info!(
+	debug!(
 		"Validating events, events_proofs_length: {:?}, blocks_merkle_roots_lengths: {:?}",
 		events_proofs.len(),
 		blocks_merkle_roots.len()

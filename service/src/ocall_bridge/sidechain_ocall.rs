@@ -112,22 +112,22 @@ where
 		let shard = shards[0];
 
 		// FIXME: When & where should peers be updated?
-		debug!("Updating peers..");
+		trace!("Updating peers..");
 		if let Err(e) = self.peer_updater.update_peers(shard) {
 			error!("Error updating peers: {:?}", e);
 		// Fixme: returning an error here results in a `HeaderAncestryMismatch` error.
 		// status = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		} else {
-			info!("Successfully updated peers");
+			debug!("Successfully updated peers");
 		}
 
-		debug!("Broadcasting sidechain blocks ...");
+		trace!("Broadcasting sidechain blocks ...");
 		if let Err(e) = self.block_broadcaster.broadcast_blocks(signed_blocks) {
 			error!("Error broadcasting blocks: {:?}", e);
 		// Fixme: returning an error here results in a `HeaderAncestryMismatch` error.
 		// status = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		} else {
-			info!("Successfully broadcast blocks");
+			debug!("Successfully broadcast blocks");
 		}
 
 		status

@@ -100,13 +100,13 @@ impl<
 	ValidatorAccessor: ValidatorAccess<ParentchainBlock> + Send + Sync + 'static,
 {
 	fn confirm_import(&self, header: &SidechainHeader, shard: &ShardIdentifier) -> Result<()> {
-		let call = self
-			.metadata_repository
-			.get_from_metadata(|m| m.confirm_imported_sidechain_block_indexes())
-			.map_err(|e| Error::Other(e.into()))?
-			.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
-
 		if header.block_number() == header.next_finalization_block_number() {
+			let call = self
+				.metadata_repository
+				.get_from_metadata(|m| m.confirm_imported_sidechain_block_indexes())
+				.map_err(|e| Error::Other(e.into()))?
+				.map_err(|e| Error::Other(format!("{:?}", e).into()))?;
+
 			let opaque_call = OpaqueCall::from_tuple(&(
 				call,
 				shard,

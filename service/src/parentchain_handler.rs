@@ -196,7 +196,7 @@ where
 				until_synced_header.number + 1,
 				min(until_synced_header.number + BLOCK_SYNC_BATCH_SIZE, curr_block_number),
 			)?;
-			info!(
+			debug!(
 				"[{:?}] Found {} block(s) to sync in this chunk. immediate import={} ",
 				id,
 				block_chunk_to_sync.len(),
@@ -228,7 +228,7 @@ where
 						self.parentchain_api.get_events_for_block(Some(block.block.header.hash()))
 					})
 					.collect::<Result<Vec<_>, _>>()?;
-				info!("[{:?}] Found {} event vector(s) to sync in this chunk", id, evs.len());
+				debug!("[{:?}] Found {} event vector(s) to sync in this chunk", id, evs.len());
 				evs
 			};
 
@@ -255,7 +255,7 @@ where
 				.last()
 				.map(|b| b.block.header.clone())
 				.ok_or(Error::EmptyChunk)?;
-			info!(
+			debug!(
 				"[{:?}] Synced {} out of {} finalized parentchain blocks",
 				id, api_client_until_synced_header.number, curr_block_number,
 			);
