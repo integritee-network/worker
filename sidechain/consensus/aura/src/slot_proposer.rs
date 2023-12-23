@@ -148,10 +148,10 @@ where
 			.map_err(|e| ConsensusError::Other(e.to_string().into()))?;
 
 		info!(
-			"Queue/Timeslot/Transactions: {:?};{}ms;{}",
+			"sidechain block production summary: processed {}/{} in {}ms",
+			number_executed_transactions,
 			trusted_calls.len(),
 			max_duration.as_millis(),
-			number_executed_transactions
 		);
 
 		Ok(Proposal { block: sidechain_block, parentchain_effects: parentchain_extrinsics })
