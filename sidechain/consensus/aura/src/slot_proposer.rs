@@ -124,6 +124,7 @@ where
 
 		// Remove all not successfully executed operations from the top pool.
 		let failed_operations = batch_execution_result.get_failed_operations();
+		let nr_failed_operations = failed_operations.len();
 		self.top_pool_author.remove_calls_from_pool(
 			self.shard,
 			failed_operations
@@ -147,9 +148,11 @@ where
 			)
 			.map_err(|e| ConsensusError::Other(e.to_string().into()))?;
 
-		info!(
-			"sidechain block production summary: processed {}/{} in {}ms",
+		println!(
+			"[Sidechain] propose block {} summary: executed {} failed {} from {} in queue in {}ms",
+			sidechain_block.block().header().block_number(),
 			number_executed_transactions,
+			nr_failed_operations,
 			trusted_calls.len(),
 			max_duration.as_millis(),
 		);
