@@ -209,7 +209,6 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 		shard: ShardIdentifierFor<Self::Output>,
 	) -> Option<SlotResult<Self::Output>> {
 		let (_timestamp, slot) = (slot_info.timestamp, slot_info.slot);
-		let logging_target = self.logging_target();
 
 		let remaining_duration = self.proposing_remaining_duration(&slot_info);
 
@@ -420,8 +419,6 @@ impl<ParentchainBlock: ParentchainBlockTrait, T: SimpleSlotWorker<ParentchainBlo
 		slot_info: SlotInfo<ParentchainBlock>,
 		shards: Vec<Self::ShardIdentifier>,
 	) -> Self::Output {
-		let logging_target = SimpleSlotWorker::logging_target(self);
-
 		let mut remaining_shards = shards.len();
 		let mut slot_results = Vec::with_capacity(remaining_shards);
 
