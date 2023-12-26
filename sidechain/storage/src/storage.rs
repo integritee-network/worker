@@ -216,8 +216,13 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		block_number: BlockNumber,
 	) -> Result<()> {
 		let last_block = self.get_last_block_of_shard(shard)?;
+		trace!("pruning sidechain blocks older than {} for shard {:?}", block_number, shard);
 		if last_block.number == block_number {
 			// given block number is last block of chain - purge whole shard
+			info!(
+				"pruning entire sidechain shard no new blocks after {}, shard: {:?}",
+				block_number, shard
+			);
 			self.purge_shard(shard)
 		} else {
 			// iterate through chain and add all blocks to WriteBatch (delete cmd)

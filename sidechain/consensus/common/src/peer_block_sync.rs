@@ -204,8 +204,9 @@ where
 				_ => Err(e),
 			},
 			Ok(latest_parentchain_header) => {
-				info!("Successfully imported broadcast sidechain block (number: {}, author: {}), based on parentchain block {:?}",
-					sidechain_block_number, hex_encode(sidechain_block.block().block_data().block_author().encode().as_slice()), latest_parentchain_header.number());
+				println!("[Sidechain] imported block (number: {}, tcalls: {}, author: {}), based on parentchain block {:?}",
+					sidechain_block_number, sidechain_block.block().block_data().signed_top_hashes().len(),
+						 hex_encode(sidechain_block.block().block_data().block_author().encode().as_slice()) ,latest_parentchain_header.number());
 
 				// We confirm the successful block import. Only in this case, not when we're in
 				// on-boarding and importing blocks that were fetched from a peer.
