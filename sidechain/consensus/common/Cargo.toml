@@ -8,6 +8,7 @@ edition = "2021"
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
 log = { version = "0.4", default-features = false }
 thiserror = { version = "1.0.26", optional = true }
+itertools = { version = "0.10.1", default-features = false, features = ["use_alloc"] }
 
 # local deps
 fork-tree = { path = "../../fork-tree", default-features = false }
@@ -51,6 +52,7 @@ std = [
     "thiserror",
     # local
     "itc-parentchain-light-client/std",
+    "itertools/std",
     "itp-import-queue/std",
     "itp-extrinsics-factory/std",
     "itp-node-api-metadata/std",
