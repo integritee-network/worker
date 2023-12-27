@@ -110,7 +110,7 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
 				.iter()
 				.map(|b| (b.block().header().block_number(), b))
 				.collect::<Vec<(SidechainBlockNumber, &SignedSidechainBlock)>>();
-			sorted_candidates.sort_by(|a, b| a.0.cmp(&b.0));
+			sorted_candidates.sort_by_key(|a| a.0);
 			number_of_imported_blocks = sorted_candidates
 				.iter()
 				.group_by(|&a| a.0)
@@ -119,7 +119,7 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
 					let mut competitors: Vec<&SignedSidechainBlock> =
 						competitors.map(|&c| c.1).collect();
 					// deterministic import order decreases chances for forks
-					competitors.sort_by(|a, b| a.block().hash().cmp(&b.block().hash()));
+					competitors.sort_by_key(|a| a.block().hash());
 					trace!("nr of competitors for block {}: {}", block_number, competitors.len());
 					let mut winner = None;
 					for block in competitors {
