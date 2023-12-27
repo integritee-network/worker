@@ -52,7 +52,7 @@ std = [
     "thiserror",
     # local
     "itc-parentchain-light-client/std",
-    "itertools/std",
+    "itertools/use_std",
     "itp-import-queue/std",
     "itp-extrinsics-factory/std",
     "itp-node-api-metadata/std",
