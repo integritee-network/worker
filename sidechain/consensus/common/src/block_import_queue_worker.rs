@@ -15,7 +15,7 @@
 
 */
 
-use crate::{Error, Result, SyncBlockFromPeer};
+use crate::{Result, SyncBlockFromPeer};
 use core::marker::PhantomData;
 use itertools::Itertools;
 use itp_import_queue::{PeekQueue, PopFromQueue};
@@ -111,7 +111,7 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
 				.map(|b| (b.block().header().block_number(), b))
 				.collect::<Vec<(SidechainBlockNumber, &SignedSidechainBlock)>>();
 			sorted_candidates.sort_by(|a, b| a.0.cmp(&b.0));
-			let imported_blocks: Vec<&SignedSidechainBlock> = sorted_candidates
+			number_of_imported_blocks = sorted_candidates
 				.iter()
 				.group_by(|&a| a.0)
 				.into_iter()
@@ -134,10 +134,9 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
 					}
 					winner
 				})
-				.collect();
-			number_of_imported_blocks = imported_blocks.len();
+				.count();
 		}
 		Self::record_timings(start_time, number_of_imported_blocks);
-		return Ok(latest_imported_parentchain_header)
+		Ok(latest_imported_parentchain_header)
 	}
 }
