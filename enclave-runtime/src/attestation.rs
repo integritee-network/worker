@@ -298,12 +298,12 @@ pub fn generate_dcap_ra_extrinsic_from_quote_internal(
 	quote: &[u8],
 ) -> EnclaveResult<OpaqueExtrinsic> {
 	let node_metadata_repo = get_node_metadata_repository_from_integritee_solo_or_parachain()?;
-	info!("    [Enclave] Compose register enclave getting callIDs:");
+	trace!("    [Enclave] Compose register enclave getting callIDs:");
 
 	let call_ids = node_metadata_repo
 		.get_from_metadata(|m| m.register_sgx_enclave_call_indexes())?
 		.map_err(MetadataProviderError::MetadataError)?;
-	info!("    [Enclave] Compose register enclave call DCAP IDs: {:?}", call_ids);
+	trace!("    [Enclave] Compose register enclave call DCAP IDs: {:?}", call_ids);
 	let call = OpaqueCall::from_tuple(&(
 		call_ids,
 		quote,
@@ -311,7 +311,7 @@ pub fn generate_dcap_ra_extrinsic_from_quote_internal(
 		SgxAttestationMethod::Dcap { proxied: false },
 	));
 
-	info!("    [Enclave] Compose register enclave got extrinsic, returning");
+	trace!("    [Enclave] Compose register enclave got extrinsic, returning");
 	create_extrinsics(call)
 }
 
@@ -320,12 +320,12 @@ pub fn generate_dcap_skip_ra_extrinsic_from_mr_enclave(
 	quote: &[u8],
 ) -> EnclaveResult<OpaqueExtrinsic> {
 	let node_metadata_repo = get_node_metadata_repository_from_integritee_solo_or_parachain()?;
-	info!("    [Enclave] Compose register enclave (skip-ra) getting callIDs:");
+	trace!("    [Enclave] Compose register enclave (skip-ra) getting callIDs:");
 
 	let call_ids = node_metadata_repo
 		.get_from_metadata(|m| m.register_sgx_enclave_call_indexes())?
 		.map_err(MetadataProviderError::MetadataError)?;
-	info!("    [Enclave] Compose register enclave (skip-ra) call DCAP IDs: {:?}", call_ids);
+	trace!("    [Enclave] Compose register enclave (skip-ra) call DCAP IDs: {:?}", call_ids);
 	let call = OpaqueCall::from_tuple(&(
 		call_ids,
 		quote,

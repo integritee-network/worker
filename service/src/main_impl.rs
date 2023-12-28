@@ -31,7 +31,7 @@ use crate::{
 use base58::ToBase58;
 use clap::{load_yaml, App, ArgMatches};
 use codec::{Decode, Encode};
-use ita_parentchain_interface::integritee::parachain::{Hash, Header, RuntimeEvent};
+use ita_parentchain_interface::integritee::{Hash, Header};
 use itp_enclave_api::{
 	direct_request::DirectRequest,
 	enclave_base::EnclaveBase,
@@ -80,11 +80,12 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg(feature = "link-binary")]
 pub type EnclaveWorker =
 	Worker<Config, NodeApiFactory, Enclave, InitializationHandler<WorkerModeProvider>>;
-pub type Event = substrate_api_client::ac_node_api::EventRecord<RuntimeEvent, Hash>;
 
 pub(crate) fn main() {
 	// Setup logging
-	env_logger::init();
+	env_logger::builder()
+		.format_timestamp(Some(env_logger::TimestampPrecision::Millis))
+		.init();
 
 	let yml = load_yaml!("cli.yml");
 	let matches = App::from_yaml(yml).get_matches();
@@ -523,7 +524,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 								skip_ra,
 							);
 						}
-						(false, false)
+						(false, true)
 					},
 				_ => {
 					panic!(
@@ -553,19 +554,20 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	debug!("getting shard creation: {:?}", enclave.get_shard_creation_header(shard));
 	initialization_handler.registered_on_parentchain();
 
-	if re_init_parentchain_needed {
-		// re-initialize integritee parentchain to make sure to use creation_header for fast-sync
-		let (integritee_parentchain_handler, integritee_last_synced_header_at_last_run) =
+	let (integritee_parentchain_handler, integritee_last_synced_header_at_last_run) =
+		if re_init_parentchain_needed {
+			// re-initialize integritee parentchain to make sure to use creation_header for fast-sync or the provisioned light client state
 			init_parentchain(
 				&enclave,
 				&integritee_rpc_api,
 				&tee_accountid,
 				ParentchainId::Integritee,
 				shard,
-			);
-	}
-	let integritee_parentchain_init_params =
-		integritee_parentchain_handler.parentchain_init_params.clone();
+			)
+		} else {
+			(integritee_parentchain_handler, integritee_last_synced_header_at_last_run)
+		};
+
 	match WorkerModeProvider::worker_mode() {
 		WorkerMode::Teeracle => {
 			// ------------------------------------------------------------------------

@@ -39,21 +39,12 @@ use itc_parentchain_indirect_calls_executor::{
 use itp_node_api::metadata::NodeMetadataTrait;
 use itp_stf_primitives::traits::IndirectExecutor;
 use log::trace;
+use sp_runtime::traits::BlakeTwo256;
 
-#[cfg(feature = "std")]
-pub mod parachain {
-	pub use integritee_parachain_runtime::{
-		pallet_teeracle, AccountId, Balance, BalancesCall, Block, Hash, Header, Runtime,
-		RuntimeCall, RuntimeEvent, Signature, UncheckedExtrinsic,
-	};
-}
-#[cfg(feature = "std")]
-pub mod solochain {
-	pub use integritee_solochain_runtime::{
-		pallet_teeracle, AccountId, Balance, BalancesCall, Block, Hash, Header, Runtime,
-		RuntimeCall, RuntimeEvent, Signature, UncheckedExtrinsic,
-	};
-}
+pub type BlockNumber = u32;
+pub type Header = sp_runtime::generic::Header<BlockNumber, BlakeTwo256>;
+pub use itp_types::parentchain::{AccountId, Balance, Hash};
+pub type Signature = sp_runtime::MultiSignature;
 
 /// The default indirect call (extrinsic-triggered) of the Integritee-Parachain.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]

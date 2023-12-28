@@ -9,7 +9,7 @@ license = "Apache-2.0"
 edition = "2021"
 
 [dependencies]
-log = { version = "0.4.17", default-features = false }
+log = { version = "0.4", default-features = false }
 thiserror = { version = "1.0.26", optional = true }
 
 # local deps

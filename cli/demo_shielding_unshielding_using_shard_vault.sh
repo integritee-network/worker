@@ -113,6 +113,24 @@ function wait_assert_state()
     exit 1
 }
 
+# usage:
+#   wait_assert_state_parentchain <account> <state-name> <expected-state>
+function wait_assert_state_parentchain()
+{
+    for i in $(seq 1 $WAIT_ROUNDS); do
+        sleep $WAIT_INTERVAL_SECONDS
+        state=$(${CLIENT} "$2" "$1")
+        if (( $3 >= state ? $3 - state < FEE_TOLERANCE : state - $3 < FEE_TOLERANCE)); then
+            return
+        else
+            echo -n "."
+        fi
+    done
+    echo
+    echo "Assert $1 $2 failed, expected = $3, actual = $state, tolerance = $FEE_TOLERANCE"
+    exit 1
+}
+
 # Do a live query and assert the given account's state is equal to expected
 # usage:
 #   assert_state <mrenclave> <account> <state-name> <expected-state>
@@ -161,6 +179,8 @@ echo ""
 # Asssert the initial balance of Charlie incognito
 # The initial balance of Bob incognito should always be 0, as Bob is newly created
 BALANCE_INCOGNITO_CHARLIE=0
+BALANCE_FERDIE=$(${CLIENT} balance //Ferdie)
+
 case $TEST in
     first)
         wait_assert_state ${MRENCLAVE} //Charlie balance 0 ;;
@@ -204,6 +224,10 @@ echo ""
 
 echo "* Wait and assert Charlie's incognito account balance... "
 wait_assert_state ${MRENCLAVE} //Charlie balance $(( BALANCE_INCOGNITO_CHARLIE + AMOUNT_SHIELD - AMOUNT_TRANSFER - AMOUNT_UNSHIELD ))
+echo "✔ ok"
+
+echo "* Wait and assert Ferdie's Parentchain account balance... "
+wait_assert_state_parentchain //Ferdie balance $(( BALANCE_FERDIE + AMOUNT_UNSHIELD ))
 echo "✔ ok"
 
 echo "* Wait and assert Bob's incognito account balance... "

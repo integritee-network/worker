@@ -86,6 +86,7 @@ where
 			debug!("No blocks to broadcast, returning");
 			return Ok(())
 		}
+		let nr_blocks = blocks.len();
 
 		let blocks_json = vec![to_json_value(blocks)?];
 		let peers = self
@@ -97,6 +98,8 @@ where
 			.map(|l| l.clone())?;
 
 		self.initialization_handler.sidechain_block_produced();
+
+		let nr_peers = peers.len();
 
 		for url in peers {
 			let blocks = blocks_json.clone();
@@ -122,6 +125,7 @@ where
 				}
 			});
 		}
+		info!("broadcast {} block(s) to {} peers", nr_blocks, nr_peers);
 		Ok(())
 	}
 }

@@ -119,7 +119,9 @@ pub unsafe extern "C" fn init(
 	encoded_base_dir_size: u32,
 ) -> sgx_status_t {
 	// Initialize the logging environment in the enclave.
-	env_logger::init();
+	env_logger::builder()
+		.format_timestamp(Some(env_logger::TimestampPrecision::Micros))
+		.init();
 
 	let mu_ra_url =
 		match String::decode(&mut slice::from_raw_parts(mu_ra_addr, mu_ra_addr_size as usize))
@@ -292,7 +294,7 @@ pub unsafe extern "C" fn set_node_metadata(
 		},
 	};
 
-	info!("Successfully set the node meta data");
+	trace!("Successfully set the node meta data");
 
 	sgx_status_t::SGX_SUCCESS
 }
@@ -697,7 +699,7 @@ fn validate_events(
 	events_proofs: &Vec<StorageProof>,
 	blocks_merkle_roots: &Vec<sp_core::H256>,
 ) -> Result<()> {
-	info!(
+	debug!(
 		"Validating events, events_proofs_length: {:?}, blocks_merkle_roots_lengths: {:?}",
 		events_proofs.len(),
 		blocks_merkle_roots.len()

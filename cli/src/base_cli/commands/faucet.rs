@@ -19,11 +19,15 @@ use crate::{
 	command_utils::{get_accountid_from_str, get_chain_api},
 	Cli, CliResult, CliResultOk,
 };
-use ita_parentchain_interface::integritee::parachain::{BalancesCall, RuntimeCall};
+use codec::Compact;
+use itp_types::{parentchain::AccountId, OpaqueCall};
 use sp_keyring::AccountKeyring;
 use sp_runtime::MultiAddress;
 use std::vec::Vec;
-use substrate_api_client::{ac_compose_macros::compose_extrinsic_offline, SubmitExtrinsic};
+use substrate_api_client::{
+	ac_compose_macros::{compose_call, compose_extrinsic_offline},
+	SubmitExtrinsic,
+};
 
 const PREFUNDING_AMOUNT: u128 = 1_000_000_000;
 
@@ -41,15 +45,15 @@ impl FaucetCommand {
 		let mut nonce = api.get_nonce().unwrap();
 		for account in &self.accounts {
 			let to = get_accountid_from_str(account);
+			let call = OpaqueCall::from_tuple(&compose_call!(
+				api.metadata(),
+				"Balances",
+				"transfer_keep_alive",
+				MultiAddress::<AccountId, ()>::Id(to.clone()),
+				Compact(PREFUNDING_AMOUNT)
+			));
 			#[allow(clippy::redundant_clone)]
-			let xt = compose_extrinsic_offline!(
-				api.signer().unwrap(),
-				RuntimeCall::Balances(BalancesCall::transfer {
-					dest: MultiAddress::Id(to.clone()),
-					value: PREFUNDING_AMOUNT
-				}),
-				api.extrinsic_params(nonce)
-			);
+			let xt = compose_extrinsic_offline!(api.signer().unwrap(), call, api.extrinsic_params(nonce));
 			// send and watch extrinsic until finalized
 			println!("Faucet drips to {} (Alice's nonce={})", to, nonce);
 			let _blockh = api.submit_extrinsic(xt).unwrap();

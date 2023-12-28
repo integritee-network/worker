@@ -28,9 +28,6 @@ regex = { optional = true, version = "1.9.5" }
 integritee-parachain-runtime = { package = "integritee-runtime", git = "https://github.com/integritee-network/parachain", branch = "sdk-v0.12.6-polkadot-v0.9.42", default-features = false, optional = true }
 integritee-solochain-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node.git/", branch = "sdk-v0.12.6-polkadot-v0.9.42", default-features = false, optional = true }
 
-polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42", default-features = false, optional = true }
-rococo-relaychain-runtime = { package = "rococo-runtime", git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42", default-features = false, optional = true }
-
 substrate-api-client = { optional = true, default-features = false, features = ["std", "sync-api"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }
 
 
@@ -72,8 +69,6 @@ std = [
     "substrate-api-client",
     "integritee-parachain-runtime/std",
     "integritee-solochain-runtime/std",
-    "rococo-relaychain-runtime/std",
-    "polkadot-primitives/std",
 ]
 sgx = [
     "sgx_tstd",

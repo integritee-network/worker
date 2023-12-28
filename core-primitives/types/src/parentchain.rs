@@ -70,9 +70,9 @@ pub enum ParentchainId {
 impl std::fmt::Display for ParentchainId {
 	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
 		let message = match self {
-			ParentchainId::Integritee => "L1:Integritee",
-			ParentchainId::TargetA => "L1:AssetHub",
-			ParentchainId::TargetB => "L1:UNDEFINED",
+			ParentchainId::Integritee => "Integritee",
+			ParentchainId::TargetA => "TargetA",
+			ParentchainId::TargetB => "TargetB",
 		};
 		write!(f, "{}", message)
 	}
