@@ -19,7 +19,11 @@
 use crate::test_genesis::test_genesis_setup;
 use crate::{helpers::enclave_signer_account, Stf, ENCLAVE_ACCOUNT_KEY};
 use codec::{Decode, Encode};
-use frame_support::traits::{OriginTrait, UnfilteredDispatchable};
+use frame_support::{
+	instances::Instance1,
+	traits::{OriginTrait, UnfilteredDispatchable},
+};
+use ita_sgx_runtime::ParentchainInstanceIntegritee;
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_interface::{
@@ -248,16 +252,17 @@ impl<TCS, G, State, Runtime, ParentchainHeader> ParentchainPalletInterface<State
 	for Stf<TCS, G, State, Runtime>
 where
 	State: SgxExternalitiesTrait,
-	Runtime: frame_system::Config<Header = ParentchainHeader> + pallet_parentchain::Config,
+	Runtime:
+		frame_system::Config<Header = ParentchainHeader> + pallet_parentchain::Config<Instance1>,
 {
 	type Error = StfError;
 
-	fn update_parentchain_block(
+	fn update_parentchain_integritee_block(
 		state: &mut State,
 		header: ParentchainHeader,
 	) -> Result<(), Self::Error> {
 		state.execute_with(|| {
-			pallet_parentchain::Call::<Runtime>::set_block { header }
+			pallet_parentchain::Call::<Runtime, Instance1>::set_block { header }
 				.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
 				.map_err(|e| {
 					Self::Error::Dispatch(format!("Update parentchain block error: {:?}", e.error))

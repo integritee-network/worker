@@ -26,9 +26,9 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 # integritee-node
-enclave-bridge-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.6-polkadot-v0.9.42" }
-teeracle-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.6-polkadot-v0.9.42" }
-teerex-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.6-polkadot-v0.9.42" }
+enclave-bridge-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.10-polkadot-v0.9.42" }
+teeracle-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.10-polkadot-v0.9.42" }
+teerex-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.10-polkadot-v0.9.42" }
 
 [features]
 default = ["std"]

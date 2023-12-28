@@ -500,7 +500,7 @@ dependencies = [
 [[package]]
 name = "common-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.6-polkadot-v0.9.42#94aa66fbe63d0d5bc848b9cf8f7a71fa34ef8ce8"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.10-polkadot-v0.9.42#91321c805edc1e94d9ba04a5a6d74d63cf6c59e6"
 dependencies = [
  "derive_more",
  "parity-scale-codec",
@@ -756,7 +756,7 @@ dependencies = [
 [[package]]
 name = "enclave-bridge-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.6-polkadot-v0.9.42#94aa66fbe63d0d5bc848b9cf8f7a71fa34ef8ce8"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.10-polkadot-v0.9.42#91321c805edc1e94d9ba04a5a6d74d63cf6c59e6"
 dependencies = [
  "common-primitives",
  "log",
@@ -3001,12 +3001,13 @@ dependencies = [
 
 [[package]]
 name = "pallet-parentchain"
-version = "0.9.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.6-polkadot-v0.9.42#94aa66fbe63d0d5bc848b9cf8f7a71fa34ef8ce8"
+version = "0.10.0"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.10-polkadot-v0.9.42#91321c805edc1e94d9ba04a5a6d74d63cf6c59e6"
 dependencies = [
  "frame-support",
  "frame-system",
  "log",
+ "pallet-balances",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
@@ -4622,7 +4623,7 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 [[package]]
 name = "teeracle-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.6-polkadot-v0.9.42#94aa66fbe63d0d5bc848b9cf8f7a71fa34ef8ce8"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.10-polkadot-v0.9.42#91321c805edc1e94d9ba04a5a6d74d63cf6c59e6"
 dependencies = [
  "common-primitives",
  "sp-std",
@@ -4632,7 +4633,7 @@ dependencies = [
 [[package]]
 name = "teerex-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.6-polkadot-v0.9.42#94aa66fbe63d0d5bc848b9cf8f7a71fa34ef8ce8"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.10-polkadot-v0.9.42#91321c805edc1e94d9ba04a5a6d74d63cf6c59e6"
 dependencies = [
  "common-primitives",
  "derive_more",

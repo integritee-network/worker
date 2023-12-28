@@ -32,7 +32,7 @@ use crate::{
 	tls_ra,
 };
 use codec::Decode;
-use ita_sgx_runtime::Parentchain;
+use ita_sgx_runtime::ParentchainIntegritee;
 use ita_stf::{
 	helpers::{account_key_hash, set_block_number},
 	stf_sgx_tests,
@@ -480,11 +480,11 @@ fn test_call_set_update_parentchain_block() {
 		Default::default(),
 	);
 
-	TestStf::update_parentchain_block(&mut state, header.clone()).unwrap();
+	TestStf::update_parentchain_integritee_block(&mut state, header.clone()).unwrap();
 
-	assert_eq!(header.hash(), state.execute_with(Parentchain::block_hash));
-	assert_eq!(parent_hash, state.execute_with(Parentchain::parent_hash));
-	assert_eq!(block_number, state.execute_with(Parentchain::block_number));
+	assert_eq!(Some(header.hash()), state.execute_with(ParentchainIntegritee::block_hash));
+	assert_eq!(Some(parent_hash), state.execute_with(ParentchainIntegritee::parent_hash));
+	assert_eq!(Some(block_number), state.execute_with(ParentchainIntegritee::block_number));
 }
 
 fn test_signature_must_match_public_sender_in_call() {

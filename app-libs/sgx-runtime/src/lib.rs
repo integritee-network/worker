@@ -259,7 +259,20 @@ impl pallet_sudo::Config for Runtime {
 	type RuntimeCall = RuntimeCall;
 }
 
-impl pallet_parentchain::Config for Runtime {
+pub type ParentchainInstanceIntegritee = pallet_parentchain::Instance1;
+impl pallet_parentchain::Config<ParentchainInstanceIntegritee> for Runtime {
+	type WeightInfo = ();
+	type RuntimeEvent = RuntimeEvent;
+}
+
+pub type ParentchainInstanceTargetA = pallet_parentchain::Instance2;
+impl pallet_parentchain::Config<crate::ParentchainInstanceTargetA> for Runtime {
+	type WeightInfo = ();
+	type RuntimeEvent = RuntimeEvent;
+}
+
+pub type ParentchainInstanceTargetB = pallet_parentchain::Instance3;
+impl pallet_parentchain::Config<crate::ParentchainInstanceTargetB> for Runtime {
 	type WeightInfo = ();
 	type RuntimeEvent = RuntimeEvent;
 }
@@ -272,12 +285,15 @@ construct_runtime!(
 		NodeBlock = opaque::Block,
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
-		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
-		Parentchain: pallet_parentchain::{Pallet, Call, Storage, Event<T>},
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
+		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 1,
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
+		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 3,
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 4,
+
+		ParentchainIntegritee: pallet_parentchain::<Instance1>::{Pallet, Call, Event<T>} = 10,
+		ParentchainTargetA: pallet_parentchain::<Instance2>::{Pallet, Call, Event<T>} = 11,
+		ParentchainTargetB: pallet_parentchain::<Instance3>::{Pallet, Call, Event<T>} = 12,
 	}
 );
 
@@ -292,14 +308,17 @@ construct_runtime!(
 		NodeBlock = opaque::Block,
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>},
-		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
-		Parentchain: pallet_parentchain::{Pallet, Call, Storage, Event<T>},
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
+		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 1,
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
+		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 3,
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 4,
 
-		Evm: pallet_evm::{Pallet, Call, Storage, Config, Event<T>},
+		ParentchainIntegritee: pallet_parentchain::<Instance1>::{Pallet, Call, Event<T>} = 10,
+		ParentchainTargetA: pallet_parentchain::<Instance2>::{Pallet, Call, Event<T>} = 11,
+		ParentchainTargetB: pallet_parentchain::<Instance3>::{Pallet, Call, Event<T>} = 12,
+
+		Evm: pallet_evm::{Pallet, Call, Storage, Config, Event<T>} = 20,
 	}
 );
 
