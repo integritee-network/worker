@@ -19,7 +19,6 @@ use crate::{Result, SyncBlockFromPeer};
 use core::marker::PhantomData;
 use itertools::Itertools;
 use itp_import_queue::{PeekQueue, PopFromQueue};
-use itp_types::SidechainBlockNumber;
 use its_primitives::traits::{
 	Block as BlockTrait, Header, SignedBlock as SignedSidechainBlockTrait,
 };
@@ -106,33 +105,32 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
 		);
 
 		if let Ok(candidates) = self.block_import_queue.pop_all() {
-			let mut sorted_candidates = candidates
+			number_of_imported_blocks = candidates
 				.iter()
 				.map(|b| (b.block().header().block_number(), b))
-				.collect::<Vec<(SidechainBlockNumber, &SignedSidechainBlock)>>();
-			sorted_candidates.sort_by_key(|a| a.0);
-			number_of_imported_blocks = sorted_candidates
-				.iter()
+				.sorted_by_key(|a| a.0)
 				.group_by(|&a| a.0)
 				.into_iter()
 				.filter_map(|(block_number, competitors)| {
 					let mut competitors: Vec<&SignedSidechainBlock> =
-						competitors.map(|&c| c.1).collect();
+						competitors.map(|c| c.1).collect();
 					// deterministic import order decreases chances for forks
 					competitors.sort_by_key(|a| a.block().hash());
 					trace!("nr of competitors for block {}: {}", block_number, competitors.len());
-					let mut winner = None;
-					for block in competitors {
-						if let Ok(parentchain_header) = self.peer_block_syncer.import_or_sync_block(
-							block.clone(),
-							&latest_imported_parentchain_header,
-						) {
-							latest_imported_parentchain_header = parentchain_header;
-							winner = Some(block);
-							break
-						};
-					}
-					winner
+
+					// returns the first block satisfying the predicate
+					competitors.into_iter().find_map(|block| {
+						self.peer_block_syncer
+							.import_or_sync_block(
+								block.clone(),
+								&latest_imported_parentchain_header,
+							)
+							.ok()
+							.and_then(|parentchain_header| {
+								latest_imported_parentchain_header = parentchain_header;
+								Some(block)
+							})
+					})
 				})
 				.count();
 		}
