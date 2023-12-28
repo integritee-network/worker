@@ -19,15 +19,14 @@
 use crate::test_genesis::test_genesis_setup;
 use crate::{helpers::enclave_signer_account, Stf, ENCLAVE_ACCOUNT_KEY};
 use codec::{Decode, Encode};
-use frame_support::{
-	instances::Instance1,
-	traits::{OriginTrait, UnfilteredDispatchable},
+use frame_support::traits::{OriginTrait, UnfilteredDispatchable};
+use ita_sgx_runtime::{
+	ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
 };
-use ita_sgx_runtime::ParentchainInstanceIntegritee;
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_interface::{
-	parentchain_pallet::ParentchainPalletInterface,
+	parentchain_pallet::ParentchainPalletInstancesInterface,
 	sudo_pallet::SudoPalletInterface,
 	system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface},
 	ExecuteCall, ExecuteGetter, InitState, ShardVaultQuery, StateCallInterface,
@@ -248,12 +247,14 @@ where
 	}
 }
 
-impl<TCS, G, State, Runtime, ParentchainHeader> ParentchainPalletInterface<State, ParentchainHeader>
-	for Stf<TCS, G, State, Runtime>
+impl<TCS, G, State, Runtime, ParentchainHeader>
+	ParentchainPalletInstancesInterface<State, ParentchainHeader> for Stf<TCS, G, State, Runtime>
 where
 	State: SgxExternalitiesTrait,
-	Runtime:
-		frame_system::Config<Header = ParentchainHeader> + pallet_parentchain::Config<Instance1>,
+	Runtime: frame_system::Config<Header = ParentchainHeader>
+		+ pallet_parentchain::Config<ParentchainInstanceIntegritee>
+		+ pallet_parentchain::Config<ParentchainInstanceTargetA>
+		+ pallet_parentchain::Config<ParentchainInstanceTargetB>,
 {
 	type Error = StfError;
 
@@ -262,10 +263,47 @@ where
 		header: ParentchainHeader,
 	) -> Result<(), Self::Error> {
 		state.execute_with(|| {
-			pallet_parentchain::Call::<Runtime, Instance1>::set_block { header }
+			pallet_parentchain::Call::<Runtime, ParentchainInstanceIntegritee>::set_block { header }
 				.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
 				.map_err(|e| {
-					Self::Error::Dispatch(format!("Update parentchain block error: {:?}", e.error))
+					Self::Error::Dispatch(format!(
+						"Update parentchain integritee block error: {:?}",
+						e.error
+					))
+				})
+		})?;
+		Ok(())
+	}
+
+	fn update_parentchain_target_a_block(
+		state: &mut State,
+		header: ParentchainHeader,
+	) -> Result<(), Self::Error> {
+		state.execute_with(|| {
+			pallet_parentchain::Call::<Runtime, ParentchainInstanceTargetA>::set_block { header }
+				.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
+				.map_err(|e| {
+					Self::Error::Dispatch(format!(
+						"Update parentchain target_a block error: {:?}",
+						e.error
+					))
+				})
+		})?;
+		Ok(())
+	}
+
+	fn update_parentchain_target_b_block(
+		state: &mut State,
+		header: ParentchainHeader,
+	) -> Result<(), Self::Error> {
+		state.execute_with(|| {
+			pallet_parentchain::Call::<Runtime, ParentchainInstanceTargetB>::set_block { header }
+				.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
+				.map_err(|e| {
+					Self::Error::Dispatch(format!(
+						"Update parentchain target_b block error: {:?}",
+						e.error
+					))
 				})
 		})?;
 		Ok(())
