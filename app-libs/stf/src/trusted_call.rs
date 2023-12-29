@@ -24,7 +24,7 @@ use std::vec::Vec;
 #[cfg(feature = "evm")]
 use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_address};
 use crate::{
-	helpers::{enclave_signer_account, ensure_enclave_signer_account, get_storage_by_key_hash},
+	helpers::{enclave_signer_account, ensure_enclave_signer_account, shard_vault},
 	Getter,
 };
 use codec::{Compact, Decode, Encode};
@@ -38,7 +38,7 @@ use itp_node_api_metadata::{
 	pallet_balances::BalancesCallIndexes, pallet_enclave_bridge::EnclaveBridgeCallIndexes,
 	pallet_proxy::ProxyCallIndexes,
 };
-use itp_stf_interface::{ExecuteCall, SHARD_VAULT_KEY};
+use itp_stf_interface::ExecuteCall;
 use itp_stf_primitives::{
 	error::StfError,
 	traits::{TrustedCallSigning, TrustedCallVerification},
@@ -57,10 +57,6 @@ use sp_core::{
 use sp_io::hashing::blake2_256;
 use sp_runtime::{traits::Verify, MultiAddress, MultiSignature};
 use std::{format, prelude::v1::*, sync::Arc};
-
-// fixme: this shall be configurable https://github.com/integritee-network/worker/issues/1539
-/// define which parentchain's native token is considered the native token of the sidechain STF and can be shielded and unshielded
-const NATIVE_TOKEN_PARENTCHAIN: ParentchainId = ParentchainId::Integritee;
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
@@ -327,11 +323,10 @@ where
 				})?;
 				burn_funds(account_incognito, value)?;
 
-				let vault_pubkey: [u8; 32] = get_storage_by_key_hash(SHARD_VAULT_KEY.into())
-					.ok_or_else(|| {
-						StfError::Dispatch("shard vault key hasn't been set".to_string())
-					})?;
-				let vault_address = Address::from(AccountId::from(vault_pubkey));
+				let (vault, parentchain_id) = shard_vault().ok_or_else(|| {
+					StfError::Dispatch("shard vault key hasn't been set".to_string())
+				})?;
+				let vault_address = Address::from(vault);
 				let vault_transfer_call = OpaqueCall::from_tuple(&(
 					node_metadata_repo
 						.get_from_metadata(|m| m.transfer_keep_alive_call_indexes())
@@ -349,7 +344,7 @@ where
 					None::<ProxyType>,
 					vault_transfer_call,
 				));
-				let parentchain_call = match NATIVE_TOKEN_PARENTCHAIN {
+				let parentchain_call = match parentchain_id {
 					ParentchainId::Integritee => ParentchainCall::Integritee(proxy_call),
 					ParentchainId::TargetA => ParentchainCall::TargetA(proxy_call),
 					ParentchainId::TargetB => ParentchainCall::TargetB(proxy_call),

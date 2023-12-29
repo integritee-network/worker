@@ -45,7 +45,7 @@ pub trait ParentchainPalletInstancesInterface<State, ParentchainHeader> {
 		parentchain_id: ParentchainId,
 	) -> Result<(), Self::Error>;
 
-	fn get_shard_vault(
+	fn get_shard_vault_ensure_single_parentchain(
 		state: &mut State,
 	) -> Result<Option<(AccountId, ParentchainId)>, Self::Error>;
 }

@@ -17,7 +17,10 @@
 
 #[cfg(feature = "test")]
 use crate::test_genesis::test_genesis_setup;
-use crate::{helpers::enclave_signer_account, Stf, ENCLAVE_ACCOUNT_KEY};
+use crate::{
+	helpers::{enclave_signer_account, shard_vault},
+	Stf, ENCLAVE_ACCOUNT_KEY,
+};
 use codec::{Decode, Encode};
 use frame_support::traits::{OriginTrait, UnfilteredDispatchable};
 use ita_sgx_runtime::{
@@ -31,7 +34,7 @@ use itp_stf_interface::{
 	sudo_pallet::SudoPalletInterface,
 	system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface},
 	ExecuteCall, ExecuteGetter, InitState, ShardVaultQuery, StateCallInterface,
-	StateGetterInterface, UpdateState, SHARD_VAULT_KEY,
+	StateGetterInterface, UpdateState,
 };
 use itp_stf_primitives::{error::StfError, traits::TrustedCallVerification};
 use itp_storage::storage_value_key;
@@ -170,9 +173,7 @@ where
 	State: SgxExternalitiesTrait + Debug,
 {
 	fn get_vault(state: &mut State) -> Option<AccountId> {
-		state
-			.get(SHARD_VAULT_KEY.as_bytes())
-			.and_then(|v| Decode::decode(&mut v.clone().as_slice()).ok())
+		state.execute_with(|| shard_vault().map(|vault_id| vault_id.0))
 	}
 }
 
@@ -316,7 +317,9 @@ where
 		vault: AccountId,
 		parentchain_id: ParentchainId,
 	) -> Result<(), Self::Error> {
-		if let Some((existing_vault, existing_id)) = Self::get_shard_vault(state)? {
+		if let Some((existing_vault, existing_id)) =
+			Self::get_shard_vault_ensure_single_parentchain(state)?
+		{
 			if existing_id != parentchain_id {
 				return Err(Self::Error::ShardVaultOnMultipleParentchainsNotAllowed)
 			}
@@ -357,7 +360,7 @@ where
 		Ok(())
 	}
 
-	fn get_shard_vault(
+	fn get_shard_vault_ensure_single_parentchain(
 		state: &mut State,
 	) -> Result<Option<(AccountId, ParentchainId)>, Self::Error> {
 		state.execute_with(|| {
