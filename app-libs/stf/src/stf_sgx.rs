@@ -22,6 +22,7 @@ use codec::{Decode, Encode};
 use frame_support::traits::{OriginTrait, UnfilteredDispatchable};
 use ita_sgx_runtime::{
 	ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
+	ParentchainIntegritee, ParentchainTargetA, ParentchainTargetB,
 };
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_sgx_externalities::SgxExternalitiesTrait;
@@ -251,10 +252,11 @@ impl<TCS, G, State, Runtime, ParentchainHeader>
 	ParentchainPalletInstancesInterface<State, ParentchainHeader> for Stf<TCS, G, State, Runtime>
 where
 	State: SgxExternalitiesTrait,
-	Runtime: frame_system::Config<Header = ParentchainHeader>
+	Runtime: frame_system::Config<Header = ParentchainHeader, AccountId = AccountId>
 		+ pallet_parentchain::Config<ParentchainInstanceIntegritee>
 		+ pallet_parentchain::Config<ParentchainInstanceTargetA>
 		+ pallet_parentchain::Config<ParentchainInstanceTargetB>,
+	<<Runtime as frame_system::Config>::Lookup as StaticLookup>::Source: From<AccountId>,
 {
 	type Error = StfError;
 
@@ -307,6 +309,67 @@ where
 				})
 		})?;
 		Ok(())
+	}
+
+	fn init_shard_vault_account(
+		state: &mut State,
+		vault: AccountId,
+		parentchain_id: ParentchainId,
+	) -> Result<(), Self::Error> {
+		state.execute_with(|| match parentchain_id {
+			ParentchainId::Integritee => pallet_parentchain::Call::<
+				Runtime,
+				ParentchainInstanceIntegritee,
+			>::init_shard_vault {
+				account: vault.into(),
+			}
+			.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
+			.map_err(|e| {
+				Self::Error::Dispatch(format!("Init shard vault account error: {:?}", e.error))
+			}),
+			ParentchainId::TargetA =>
+				pallet_parentchain::Call::<Runtime, ParentchainInstanceTargetA>::init_shard_vault {
+					account: AccountId::from(vault),
+				}
+				.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
+				.map_err(|e| {
+					Self::Error::Dispatch(format!("Init shard vault account error: {:?}", e.error))
+				}),
+			ParentchainId::TargetB =>
+				pallet_parentchain::Call::<Runtime, ParentchainInstanceTargetB>::init_shard_vault {
+					account: AccountId::from(vault),
+				}
+				.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
+				.map_err(|e| {
+					Self::Error::Dispatch(format!("Init shard vault account error: {:?}", e.error))
+				}),
+		})?;
+		Ok(())
+	}
+
+	fn get_shard_vault(
+		state: &mut State,
+	) -> Result<Option<(AccountId, ParentchainId)>, Self::Error> {
+		state.execute_with(|| {
+			let vaults: Vec<(AccountId, ParentchainId)> = [
+				(ParentchainIntegritee::shard_vault(), ParentchainId::Integritee),
+				(ParentchainTargetA::shard_vault(), ParentchainId::TargetA),
+				(ParentchainTargetB::shard_vault(), ParentchainId::TargetB),
+			]
+			.into_iter()
+			.filter_map(|vp| if vp.0.is_some() { Some((vp.0.unwrap(), vp.1)) } else { None })
+			.collect();
+			if vaults.len() > 1 {
+				Err(Self::Error::Dispatch(format!(
+					"shard vault assigned to more than one parentchain: {:?}",
+					vaults
+				)))
+			} else if vaults.is_empty() {
+				Ok(None)
+			} else {
+				Ok(Some(vaults[0].clone()))
+			}
+		})
 	}
 }
 

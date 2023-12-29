@@ -13,13 +13,13 @@
 	See the License for the specific language governing permissions and
 	limitations under the License.
 */
-
 use crate::{
 	error::{Error, Result as EnclaveResult},
 	initialization::global_components::{
 		GLOBAL_OCALL_API_COMPONENT, GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT,
 		GLOBAL_STATE_HANDLER_COMPONENT,
 	},
+	std::string::ToString,
 	utils::{
 		get_extrinsic_factory_from_integritee_solo_or_parachain,
 		get_extrinsic_factory_from_target_a_solo_or_parachain,
@@ -30,6 +30,7 @@ use crate::{
 	},
 };
 use codec::{Compact, Decode, Encode};
+use ita_stf::Stf;
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::{
@@ -43,10 +44,10 @@ use itp_node_api_metadata::pallet_proxy::ProxyCallIndexes;
 use itp_nonce_cache::NonceCache;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_sgx_crypto::key_repository::AccessKey;
-use itp_stf_interface::SHARD_VAULT_KEY;
+use itp_stf_interface::{parentchain_pallet::ParentchainPalletInstancesInterface, SHARD_VAULT_KEY};
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_types::{
-	parentchain::{AccountId, Address, ParentchainId, ProxyType},
+	parentchain::{AccountId, Address, Header as ParentchainHeader, ParentchainId, ProxyType},
 	OpaqueCall, ShardIdentifier,
 };
 use log::*;
@@ -138,7 +139,10 @@ pub(crate) fn init_proxied_shard_vault_internal(
 		.map_err(|_| Error::Other("failed to derive shard vault keypair".into()))?
 		.0;
 	info!("shard vault account derived pubkey: 0x{}", hex::encode(vault.public().0));
-
+	let (state_lock, mut state) = state_handler.load_for_mutation(&shard)?;
+	Stf::init_shard_vault_account(&mut state, vault.public().into(), parentchain_id)
+		.map_err(|e| Error::Stf(e.to_string()));
+	state_handler.write_after_mutation(state, state_lock, &shard)?;
 	let (enclave_extrinsics_factory, node_metadata_repo) = match parentchain_id {
 		ParentchainId::Integritee => {
 			let (state_lock, mut state) = state_handler.load_for_mutation(&shard)?;
