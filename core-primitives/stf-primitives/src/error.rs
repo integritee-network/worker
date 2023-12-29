@@ -38,4 +38,6 @@ pub enum StfError {
 	InvalidMetadata,
 	ShardVaultOnMultipleParentchainsNotAllowed,
 	ChangingShardVaultAccountNotAllowed,
+	WrongParentchainIdForShardVault,
+	NoShardVaultAssigned,
 }

@@ -21,7 +21,9 @@ pub use ita_sgx_runtime::{Balance, Index};
 use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
 use itc_parentchain_indirect_calls_executor::error::Error;
 use itp_stf_primitives::{traits::IndirectExecutor, types::TrustedOperation};
-use itp_types::parentchain::{AccountId, FilterEvents, HandleParentchainEvents, ParentchainError};
+use itp_types::parentchain::{
+	AccountId, FilterEvents, HandleParentchainEvents, ParentchainError, ParentchainId,
+};
 use itp_utils::hex::hex_encode;
 use log::*;
 
@@ -35,8 +37,13 @@ impl ParentchainEventHandler {
 	) -> Result<(), Error> {
 		log::info!("shielding for {:?} amount {}", account, amount,);
 		let shard = executor.get_default_shard();
-		let trusted_call =
-			TrustedCall::balance_shield(executor.get_enclave_account()?, account.clone(), amount);
+		// todo: ensure this parentchain is assigned for the shard vault!
+		let trusted_call = TrustedCall::balance_shield(
+			executor.get_enclave_account()?,
+			account.clone(),
+			amount,
+			ParentchainId::Integritee,
+		);
 		let signed_trusted_call = executor.sign_call_with_self(&trusted_call, &shard)?;
 		let trusted_operation =
 			TrustedOperation::<TrustedCallSigned, Getter>::indirect_call(signed_trusted_call);

@@ -33,7 +33,7 @@ use itc_parentchain_indirect_calls_executor::{
 };
 use itp_node_api::metadata::pallet_balances::BalancesCallIndexes;
 use itp_stf_primitives::traits::IndirectExecutor;
-use log::error;
+use log::*;
 
 /// The default indirect call (extrinsic-triggered) of the Target-A-Parachain.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
@@ -63,7 +63,7 @@ where
 		_encoded_data: &[u8],
 		_metadata: &NodeMetadata,
 	) -> Option<Self::Output> {
-		error!("no indirect calls filter has been implemented for target_b");
+		warn!("no indirect calls filter has been implemented for target_b");
 		None
 	}
 }

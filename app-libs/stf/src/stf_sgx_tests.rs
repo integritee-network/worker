@@ -23,6 +23,7 @@ use itp_stf_interface::{
 	StateCallInterface,
 };
 use itp_stf_primitives::types::{AccountId, Signature};
+use itp_types::parentchain::ParentchainId;
 use sp_core::{
 	ed25519::{Pair as Ed25519Pair, Signature as Ed25519Signature},
 	Pair,
@@ -52,6 +53,7 @@ pub fn shield_funds_increments_signer_account_nonce() {
 			enclave_call_signer.public().into(),
 			AccountId::new([1u8; 32]),
 			500u128,
+			ParentchainId::Integritee,
 		),
 		0,
 		Signature::Ed25519(Ed25519Signature([0u8; 64])),

@@ -65,7 +65,7 @@ pub enum TrustedCall {
 	balance_set_balance(AccountId, AccountId, Balance, Balance),
 	balance_transfer(AccountId, AccountId, Balance),
 	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
-	balance_shield(AccountId, AccountId, Balance), // (Root, AccountIncognito, Amount)
+	balance_shield(AccountId, AccountId, Balance, ParentchainId), // (Root, AccountIncognito, Amount, origin parentchain)
 	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance), // (Origin, Address EVM Account, Value)
 	// (Origin, Source, Target, Input, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
@@ -352,9 +352,21 @@ where
 				calls.push(parentchain_call);
 				Ok(())
 			},
-			TrustedCall::balance_shield(enclave_account, who, value) => {
+			TrustedCall::balance_shield(enclave_account, who, value, parentchain_id) => {
 				ensure_enclave_signer_account(&enclave_account)?;
-				debug!("balance_shield({}, {})", account_id_to_string(&who), value);
+				debug!(
+					"balance_shield({}, {}, {:?})",
+					account_id_to_string(&who),
+					value,
+					parentchain_id
+				);
+				let (_vault_account, vault_parentchain_id) =
+					shard_vault().ok_or_else(|| StfError::NoShardVaultAssigned)?;
+				ensure!(
+					parentchain_id == vault_parentchain_id,
+					StfError::WrongParentchainIdForShardVault
+				);
+				std::println!("⣿STF⣿ 🛡 will shield to {}", account_id_to_string(&who));
 				shield_funds(who, value)?;
 
 				// Send proof of execution on chain.
@@ -493,11 +505,11 @@ where
 	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
 		let key_hashes = Vec::new();
 		match self.call {
-			TrustedCall::noop(_) => debug!("No storage updates needed..."),
-			TrustedCall::balance_set_balance(_, _, _, _) => debug!("No storage updates needed..."),
-			TrustedCall::balance_transfer(_, _, _) => debug!("No storage updates needed..."),
-			TrustedCall::balance_unshield(_, _, _, _) => debug!("No storage updates needed..."),
-			TrustedCall::balance_shield(_, _, _) => debug!("No storage updates needed..."),
+			TrustedCall::noop(..) => debug!("No storage updates needed..."),
+			TrustedCall::balance_set_balance(..) => debug!("No storage updates needed..."),
+			TrustedCall::balance_transfer(..) => debug!("No storage updates needed..."),
+			TrustedCall::balance_unshield(..) => debug!("No storage updates needed..."),
+			TrustedCall::balance_shield(..) => debug!("No storage updates needed..."),
 			#[cfg(feature = "evm")]
 			_ => debug!("No storage updates needed..."),
 		};

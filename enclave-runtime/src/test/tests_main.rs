@@ -57,7 +57,7 @@ use itp_stf_primitives::{
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::handle_state_mock;
 use itp_top_pool_author::{test_utils::submit_operation_to_top_pool, traits::AuthorApi};
-use itp_types::{AccountId, Balance, Block, Header};
+use itp_types::{parentchain::ParentchainId, AccountId, Balance, Block, Header};
 use its_primitives::{
 	traits::{
 		Block as BlockTrait, BlockData, Header as SidechainHeaderTrait,
@@ -548,12 +548,13 @@ fn test_non_root_shielding_call_is_not_executed() {
 	let sender = funded_pair();
 	let sender_acc: AccountId = sender.public().into();
 
-	let signed_call = TrustedCall::balance_shield(sender_acc.clone(), sender_acc, 1000).sign(
-		&sender.into(),
-		0,
-		&mrenclave,
-		&shard,
-	);
+	let signed_call = TrustedCall::balance_shield(
+		sender_acc.clone(),
+		sender_acc,
+		1000,
+		ParentchainId::Integritee,
+	)
+	.sign(&sender.into(), 0, &mrenclave, &shard);
 
 	submit_operation_to_top_pool(
 		top_pool_author.as_ref(),
@@ -577,9 +578,13 @@ fn test_shielding_call_with_enclave_self_is_executed() {
 	let sender_account: AccountId = sender.public().into();
 	let enclave_call_signer = enclave_call_signer(&shielding_key);
 
-	let signed_call =
-		TrustedCall::balance_shield(enclave_call_signer.public().into(), sender_account, 1000)
-			.sign(&enclave_call_signer.into(), 0, &mrenclave, &shard);
+	let signed_call = TrustedCall::balance_shield(
+		enclave_call_signer.public().into(),
+		sender_account,
+		1000,
+		ParentchainId::Integritee,
+	)
+	.sign(&enclave_call_signer.into(), 0, &mrenclave, &shard);
 	let trusted_operation =
 		TrustedOperation::<TrustedCallSigned, Getter>::indirect_call(signed_call);
 

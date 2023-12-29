@@ -26,9 +26,10 @@ use itp_stf_primitives::{
 	traits::IndirectExecutor,
 	types::{AccountId, TrustedOperation},
 };
-use itp_types::Balance;
+use itp_types::{parentchain::ParentchainId, Balance};
 use log::info;
 use sp_runtime::MultiAddress;
+
 /// Arguments of a parentchains `transfer` or `transfer_allow_death` dispatchable.
 ///
 /// This is a simple demo indirect call where a transfer to alice on chain will transfer
@@ -69,6 +70,7 @@ impl<Executor: IndirectExecutor<TrustedCallSigned, Error>>
 				executor.get_enclave_account()?,
 				ALICE_ACCOUNT_ID,
 				self.value,
+				ParentchainId::Integritee,
 			);
 			let signed_trusted_call = executor.sign_call_with_self(&trusted_call, &shard)?;
 			let trusted_operation =
