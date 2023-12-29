@@ -2468,6 +2468,7 @@ version = "0.9.0"
 dependencies = [
  "fork-tree",
  "itc-parentchain-light-client",
+ "itertools 0.10.5",
  "itp-extrinsics-factory",
  "itp-import-queue",
  "itp-node-api-metadata",

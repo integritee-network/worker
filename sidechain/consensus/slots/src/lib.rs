@@ -296,7 +296,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 			},
 		};
 		trace!(
-			"on_slot: a posteriori latest Integritee block number: {:?}",
+			"on_slot: a posteriori latest Integritee block number (if there is a new one): {:?}",
 			last_imported_integritee_header.clone().map(|h| *h.number())
 		);
 

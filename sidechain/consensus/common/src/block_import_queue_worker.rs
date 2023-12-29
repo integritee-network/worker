@@ -15,13 +15,16 @@
 
 */
 
-use crate::{Error, Result, SyncBlockFromPeer};
+use crate::{Result, SyncBlockFromPeer};
 use core::marker::PhantomData;
-use itp_import_queue::PopFromQueue;
-use its_primitives::traits::{Block as BlockTrait, SignedBlock as SignedSidechainBlockTrait};
-use log::debug;
+use itertools::Itertools;
+use itp_import_queue::{PeekQueue, PopFromQueue};
+use its_primitives::traits::{
+	Block as BlockTrait, Header, SignedBlock as SignedSidechainBlockTrait,
+};
+use log::{debug, trace};
 use sp_runtime::traits::Block as ParentchainBlockTrait;
-use std::{sync::Arc, time::Instant};
+use std::{sync::Arc, time::Instant, vec::Vec};
 
 /// Trait to trigger working the sidechain block import queue.
 pub trait ProcessBlockImportQueue<ParentchainBlockHeader> {
@@ -49,7 +52,7 @@ where
 	ParentchainBlock: ParentchainBlockTrait,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
 	SignedSidechainBlock::Block: BlockTrait,
-	BlockImportQueue: PopFromQueue<ItemType = SignedSidechainBlock>,
+	BlockImportQueue: PopFromQueue<ItemType = SignedSidechainBlock> + PeekQueue,
 	PeerBlockSyncer: SyncBlockFromPeer<ParentchainBlock::Header, SignedSidechainBlock>,
 {
 	pub fn new(
@@ -85,7 +88,7 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
 	ParentchainBlock: ParentchainBlockTrait,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
 	SignedSidechainBlock::Block: BlockTrait,
-	BlockImportQueue: PopFromQueue<ItemType = SignedSidechainBlock>,
+	BlockImportQueue: PopFromQueue<ItemType = SignedSidechainBlock> + PeekQueue,
 	PeerBlockSyncer: SyncBlockFromPeer<ParentchainBlock::Header, SignedSidechainBlock>,
 {
 	fn process_queue(
@@ -93,28 +96,42 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
 		current_parentchain_header: &ParentchainBlock::Header,
 	) -> Result<ParentchainBlock::Header> {
 		let mut latest_imported_parentchain_header = current_parentchain_header.clone();
-		let mut number_of_imported_blocks = 0usize;
 		let start_time = Instant::now();
 
-		loop {
-			match self.block_import_queue.pop_front() {
-				Ok(maybe_block) => match maybe_block {
-					Some(block) => {
-						latest_imported_parentchain_header = self
-							.peer_block_syncer
-							.sync_block(block, &latest_imported_parentchain_header)?;
-						number_of_imported_blocks += 1;
-					},
-					None => {
-						Self::record_timings(start_time, number_of_imported_blocks);
-						return Ok(latest_imported_parentchain_header)
-					},
-				},
-				Err(e) => {
-					Self::record_timings(start_time, number_of_imported_blocks);
-					return Err(Error::FailedToPopBlockImportQueue(e))
-				},
-			}
-		}
+		trace!(
+			"processing import queue with {:?} sidechain blocks",
+			self.block_import_queue.peek_queue_size()
+		);
+
+		let number_of_imported_blocks = self
+			.block_import_queue
+			.pop_all()?
+			.iter()
+			.map(|b| (b.block().header().block_number(), b))
+			.sorted_by_key(|a| a.0)
+			.group_by(|&a| a.0)
+			.into_iter()
+			.filter_map(|(block_number, competitors)| {
+				let mut competitors: Vec<&SignedSidechainBlock> =
+					competitors.map(|c| c.1).collect();
+				// deterministic import order decreases chances for forks
+				competitors.sort_by_key(|a| a.block().hash());
+				trace!("nr of competitors for block {}: {}", block_number, competitors.len());
+
+				// returns the first block satisfying the predicate
+				competitors.into_iter().find_map(|block| {
+					self.peer_block_syncer
+						.import_or_sync_block(block.clone(), &latest_imported_parentchain_header)
+						.ok()
+						.map(|parentchain_header| {
+							latest_imported_parentchain_header = parentchain_header;
+							block
+						})
+				})
+			})
+			.count();
+
+		Self::record_timings(start_time, number_of_imported_blocks);
+		Ok(latest_imported_parentchain_header)
 	}
 }

@@ -3776,6 +3776,7 @@ dependencies = [
  "fork-tree",
  "itc-parentchain-light-client",
  "itc-parentchain-test",
+ "itertools 0.10.5",
  "itp-extrinsics-factory",
  "itp-import-queue",
  "itp-node-api-metadata",

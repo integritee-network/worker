@@ -6,6 +6,7 @@ edition = "2021"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
+itertools = { version = "0.10.1", default-features = false, features = ["use_alloc"] }
 log = { version = "0.4", default-features = false }
 thiserror = { version = "1.0.26", optional = true }
 
@@ -51,6 +52,7 @@ std = [
     "thiserror",
     # local
     "itc-parentchain-light-client/std",
+    "itertools/use_std",
     "itp-import-queue/std",
     "itp-extrinsics-factory/std",
     "itp-node-api-metadata/std",
