@@ -334,7 +334,7 @@ where
 				Runtime,
 				ParentchainInstanceIntegritee,
 			>::init_shard_vault {
-				account: vault.into(),
+				account: vault,
 			}
 			.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
 			.map_err(|e| {
@@ -342,7 +342,7 @@ where
 			}),
 			ParentchainId::TargetA =>
 				pallet_parentchain::Call::<Runtime, ParentchainInstanceTargetA>::init_shard_vault {
-					account: AccountId::from(vault),
+					account: vault,
 				}
 				.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
 				.map_err(|e| {
@@ -350,7 +350,7 @@ where
 				}),
 			ParentchainId::TargetB =>
 				pallet_parentchain::Call::<Runtime, ParentchainInstanceTargetB>::init_shard_vault {
-					account: AccountId::from(vault),
+					account: vault,
 				}
 				.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
 				.map_err(|e| {
