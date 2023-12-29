@@ -18,6 +18,7 @@
 use clap::ArgMatches;
 use itc_rest_client::rest_client::Url;
 use itp_settings::teeracle::{DEFAULT_MARKET_DATA_UPDATE_INTERVAL, ONE_DAY, THIRTY_MINUTES};
+use itp_types::parentchain::ParentchainId;
 use parse_duration::parse;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -273,6 +274,8 @@ pub struct RunConfig {
 	reregister_teeracle_interval: Option<Duration>,
 	/// Marblerun's Prometheus endpoint base URL
 	marblerun_base_url: Option<String>,
+	/// parentchain which should be used for shielding/unshielding the stf's native token
+	pub shielding_target: Option<ParentchainId>,
 }
 
 impl RunConfig {
@@ -327,6 +330,15 @@ impl From<&ArgMatches<'_>> for RunConfig {
 				.to_string()
 		});
 
+		let shielding_target = m.value_of("shielding-target").map(|i| match i {
+			"integritee" => ParentchainId::Integritee,
+			"target_a" => ParentchainId::TargetA,
+			"target_b" => ParentchainId::TargetB,
+			_ => panic!(
+				"failed to parse shielding-target: {} must be one of integritee|target_a|target_b",
+				i
+			),
+		});
 		Self {
 			skip_ra,
 			dev,
@@ -334,6 +346,7 @@ impl From<&ArgMatches<'_>> for RunConfig {
 			teeracle_update_interval,
 			reregister_teeracle_interval,
 			marblerun_base_url,
+			shielding_target,
 		}
 	}
 }

@@ -628,13 +628,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 				*shard,
 			);
 
-			init_provided_shard_vault(
-				shard,
-				&enclave,
-				&integritee_rpc_api,
-				we_are_primary_validateer,
-			);
-
 			spawn_worker_for_shard_polling(
 				shard,
 				integritee_rpc_api.clone(),
@@ -643,27 +636,41 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		},
 	}
 
-	if let Some(url) = config.target_a_parentchain_rpc_endpoint() {
-		init_target_parentchain(
+	let maybe_target_a_rpc_api = if let Some(url) = config.target_a_parentchain_rpc_endpoint() {
+		Some(init_target_parentchain(
 			&enclave,
 			&tee_accountid,
 			url,
 			shard,
 			ParentchainId::TargetA,
 			is_development_mode,
-		)
-	}
+		))
+	} else {
+		None
+	};
 
-	if let Some(url) = config.target_b_parentchain_rpc_endpoint() {
-		init_target_parentchain(
+	let maybe_target_b_rpc_api = if let Some(url) = config.target_b_parentchain_rpc_endpoint() {
+		Some(init_target_parentchain(
 			&enclave,
 			&tee_accountid,
 			url,
 			shard,
 			ParentchainId::TargetB,
 			is_development_mode,
-		)
-	}
+		))
+	} else {
+		None
+	};
+
+	init_provided_shard_vault(
+		shard,
+		&enclave,
+		integritee_rpc_api.clone(),
+		maybe_target_a_rpc_api,
+		maybe_target_b_rpc_api,
+		run_config.shielding_target,
+		we_are_primary_validateer,
+	);
 
 	ita_parentchain_interface::event_subscriber::subscribe_to_parentchain_events(
 		&integritee_rpc_api,
@@ -674,34 +681,46 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 fn init_provided_shard_vault<E: EnclaveBase>(
 	shard: &ShardIdentifier,
 	enclave: &Arc<E>,
-	node_api: &ParentchainApi,
+	integritee_rpc_api: ParentchainApi,
+	maybe_target_a_rpc_api: Option<ParentchainApi>,
+	maybe_target_b_rpc_api: Option<ParentchainApi>,
+	shielding_target: Option<ParentchainId>,
 	we_are_primary_validateer: bool,
 ) {
+	let shielding_target = shielding_target.unwrap_or(ParentchainId::Integritee);
+	let rpc_api = match shielding_target {
+		ParentchainId::Integritee => integritee_rpc_api,
+		ParentchainId::TargetA => maybe_target_a_rpc_api
+			.expect("target A must be initialized to be used as shielding target"),
+		ParentchainId::TargetB => maybe_target_b_rpc_api
+			.expect("target B must be initialized to be used as shielding target"),
+	};
 	if let Ok(shard_vault) = enclave.get_ecc_vault_pubkey(shard) {
 		// verify if proxy is set up on chain
-		let nonce = node_api.get_account_nonce(&AccountId::from(shard_vault)).unwrap();
+		let nonce = rpc_api.get_account_nonce(&AccountId::from(shard_vault)).unwrap();
 		println!(
-			"[Integritee] shard vault account is already initialized in state: {} with nonce {}",
+			"[{:?}] shard vault account is already initialized in state: {} with nonce {}",
+			shielding_target,
 			shard_vault.to_ss58check(),
 			nonce
 		);
 		if nonce == 0 && we_are_primary_validateer {
 			println!(
-				"[Integritee] nonce = 0 means shard vault not properly set up on chain. will retry"
+				"[{:?}] nonce = 0 means shard vault not properly set up on chain. will retry",
+				shielding_target
 			);
-			enclave.init_proxied_shard_vault(shard, &ParentchainId::Integritee).unwrap();
+			enclave.init_proxied_shard_vault(shard, &shielding_target).unwrap();
 		}
 	} else if we_are_primary_validateer {
-		println!("[Integritee] initializing proxied shard vault account now");
-		enclave.init_proxied_shard_vault(shard, &ParentchainId::Integritee).unwrap();
+		println!("[{:?}] initializing proxied shard vault account now", shielding_target);
+		enclave.init_proxied_shard_vault(shard, &shielding_target).unwrap();
 		println!(
-			"[Integritee] initialized shard vault account: : {}",
+			"[{:?}] initialized shard vault account: : {}",
+			shielding_target,
 			enclave.get_ecc_vault_pubkey(shard).unwrap().to_ss58check()
 		);
 	} else {
-		panic!(
-			"[Integritee] no vault account has been initialized and we are not the primary worker"
-		);
+		panic!("no vault account has been initialized and we are not the primary worker");
 	}
 }
 
@@ -712,7 +731,8 @@ fn init_target_parentchain<E>(
 	shard: &ShardIdentifier,
 	parentchain_id: ParentchainId,
 	is_development_mode: bool,
-) where
+) -> ParentchainApi
+where
 	E: EnclaveBase + Sidechain,
 {
 	println!("Initializing parentchain {:?} with url: {}", parentchain_id, url);
@@ -746,20 +766,20 @@ fn init_target_parentchain<E>(
 			*shard,
 		)
 	}
-	println!("[{:?}] initializing proxied shard vault account now", parentchain_id);
-	enclave.init_proxied_shard_vault(shard, &parentchain_id).unwrap();
 
 	let parentchain_init_params = parentchain_handler.parentchain_init_params.clone();
 
+	let node_api_clone = node_api.clone();
 	thread::Builder::new()
 		.name(format!("{:?}_parentchain_event_subscription", parentchain_id))
 		.spawn(move || {
 			ita_parentchain_interface::event_subscriber::subscribe_to_parentchain_events(
-				&node_api,
+				&node_api_clone,
 				parentchain_id,
 			)
 		})
 		.unwrap();
+	node_api
 }
 
 fn init_parentchain<E>(
