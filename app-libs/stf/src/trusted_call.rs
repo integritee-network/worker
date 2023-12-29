@@ -361,7 +361,7 @@ where
 					parentchain_id
 				);
 				let (_vault_account, vault_parentchain_id) =
-					shard_vault().ok_or_else(|| StfError::NoShardVaultAssigned)?;
+					shard_vault().ok_or(StfError::NoShardVaultAssigned)?;
 				ensure!(
 					parentchain_id == vault_parentchain_id,
 					StfError::WrongParentchainIdForShardVault
