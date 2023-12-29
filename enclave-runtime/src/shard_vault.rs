@@ -16,7 +16,7 @@
 use crate::{
 	error::{Error, Result as EnclaveResult},
 	initialization::global_components::{
-		GLOBAL_OCALL_API_COMPONENT, GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT,
+		EnclaveStf, GLOBAL_OCALL_API_COMPONENT, GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT,
 		GLOBAL_STATE_HANDLER_COMPONENT,
 	},
 	std::string::ToString,
@@ -140,7 +140,7 @@ pub(crate) fn init_proxied_shard_vault_internal(
 		.0;
 	info!("shard vault account derived pubkey: 0x{}", hex::encode(vault.public().0));
 	let (state_lock, mut state) = state_handler.load_for_mutation(&shard)?;
-	Stf::init_shard_vault_account(&mut state, vault.public().into(), parentchain_id)
+	EnclaveStf::init_shard_vault_account(&mut state, vault.public().into(), parentchain_id)
 		.map_err(|e| Error::Stf(e.to_string()));
 	state_handler.write_after_mutation(state, state_lock, &shard)?;
 	let (enclave_extrinsics_factory, node_metadata_repo) = match parentchain_id {
