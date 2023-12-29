@@ -316,6 +316,16 @@ where
 		vault: AccountId,
 		parentchain_id: ParentchainId,
 	) -> Result<(), Self::Error> {
+		if let Some((existing_vault, existing_id)) = Self::get_shard_vault(state)? {
+			if existing_id != parentchain_id {
+				return Err(Self::Error::ShardVaultOnMultipleParentchainsNotAllowed)
+			}
+			if existing_vault != vault {
+				return Err(Self::Error::ChangingShardVaultAccountNotAllowed)
+			}
+			warn!("attempting to init shard vault which has already been initialized");
+			return Ok(())
+		}
 		state.execute_with(|| match parentchain_id {
 			ParentchainId::Integritee => pallet_parentchain::Call::<
 				Runtime,
