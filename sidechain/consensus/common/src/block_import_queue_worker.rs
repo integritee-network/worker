@@ -96,7 +96,6 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
 		current_parentchain_header: &ParentchainBlock::Header,
 	) -> Result<ParentchainBlock::Header> {
 		let mut latest_imported_parentchain_header = current_parentchain_header.clone();
-		let mut number_of_imported_blocks = 0usize;
 		let start_time = Instant::now();
 
 		trace!(
@@ -104,7 +103,7 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
 			self.block_import_queue.peek_queue_size()
 		);
 
-		number_of_imported_blocks = self
+		let number_of_imported_blocks = self
 			.block_import_queue
 			.pop_all()?
 			.iter()
@@ -124,9 +123,9 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
 					self.peer_block_syncer
 						.import_or_sync_block(block.clone(), &latest_imported_parentchain_header)
 						.ok()
-						.and_then(|parentchain_header| {
+						.map(|parentchain_header| {
 							latest_imported_parentchain_header = parentchain_header;
-							Some(block)
+							block
 						})
 				})
 			})
