@@ -55,7 +55,10 @@ use itp_stf_primitives::{traits::TrustedCallVerification, types::TrustedOperatio
 use itp_stf_state_observer::mock::ObserveStateMock;
 use itp_test::mock::metrics_ocall_mock::MetricsOCallMock;
 use itp_top_pool_author::{top_filter::AllowAllTopsFilter, traits::AuthorApi};
-use itp_types::{parentchain::Address, AccountId, Block, ShardIdentifier, ShieldFundsFn, H256};
+use itp_types::{
+	parentchain::{Address, ParentchainId},
+	AccountId, Block, ShardIdentifier, ShieldFundsFn, H256,
+};
 use jsonrpc_core::futures::executor;
 use log::*;
 use sgx_crypto_helper::RsaKeyPair;
@@ -128,20 +131,23 @@ pub fn submit_shielding_call_to_top_pool() {
 		));
 	let node_meta_data_repository = Arc::new(NodeMetadataRepository::default());
 	node_meta_data_repository.set_metadata(NodeMetadataMock::new());
-	let indirect_calls_executor =
-		IndirectCallsExecutor::<
-			_,
-			_,
-			_,
-			_,
-			integritee::ShieldFundsAndInvokeFilter<integritee::ParentchainExtrinsicParser>,
-			TestEventCreator,
-			integritee::ParentchainEventHandler,
-			TrustedCallSigned,
-			Getter,
-		>::new(
-			shielding_key_repo, enclave_signer, top_pool_author.clone(), node_meta_data_repository
-		);
+	let indirect_calls_executor = IndirectCallsExecutor::<
+		_,
+		_,
+		_,
+		_,
+		integritee::ShieldFundsAndInvokeFilter<integritee::ParentchainExtrinsicParser>,
+		TestEventCreator,
+		integritee::ParentchainEventHandler,
+		TrustedCallSigned,
+		Getter,
+	>::new(
+		shielding_key_repo,
+		enclave_signer,
+		top_pool_author.clone(),
+		node_meta_data_repository,
+		ParentchainId::Integritee,
+	);
 
 	let block_with_shielding_call = create_shielding_call_extrinsic(shard_id, &shielding_key);
 

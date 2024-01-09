@@ -40,7 +40,7 @@ use itp_stf_primitives::{
 };
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{
-	parentchain::{ExtrinsicStatus, FilterEvents, HandleParentchainEvents},
+	parentchain::{ExtrinsicStatus, FilterEvents, HandleParentchainEvents, ParentchainId},
 	OpaqueCall, ShardIdentifier, H256,
 };
 use log::*;
@@ -63,6 +63,7 @@ pub struct IndirectCallsExecutor<
 	pub stf_enclave_signer: Arc<StfEnclaveSigner>,
 	pub(crate) top_pool_author: Arc<TopPoolAuthor>,
 	pub(crate) node_meta_data_provider: Arc<NodeMetadataProvider>,
+	pub parentchain_id: ParentchainId,
 	_phantom: PhantomData<(IndirectCallsFilter, EventCreator, ParentchainEventHandler, TCS, G)>,
 }
 impl<
@@ -93,12 +94,14 @@ impl<
 		stf_enclave_signer: Arc<StfEnclaveSigner>,
 		top_pool_author: Arc<TopPoolAuthor>,
 		node_meta_data_provider: Arc<NodeMetadataProvider>,
+		parentchain_id: ParentchainId,
 	) -> Self {
 		IndirectCallsExecutor {
 			shielding_key_repo,
 			stf_enclave_signer,
 			top_pool_author,
 			node_meta_data_provider,
+			parentchain_id,
 			_phantom: Default::default(),
 		}
 	}
@@ -144,7 +147,7 @@ impl<
 		&self,
 		block: &ParentchainBlock,
 		events: &[u8],
-	) -> Result<OpaqueCall>
+	) -> Result<Option<OpaqueCall>>
 	where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	{
@@ -200,12 +203,17 @@ impl<
 			}
 		}
 		debug!("successfully processed {} indirect invocations", executed_calls.len());
-		// Include a processed parentchain block confirmation for each block.
-		self.create_processed_parentchain_block_call::<ParentchainBlock>(
-			block_hash,
-			executed_calls,
-			block_number,
-		)
+		if self.parentchain_id == ParentchainId::Integritee {
+			// Include a processed parentchain block confirmation for each block.
+			return Ok(Some(self.create_processed_parentchain_block_call::<ParentchainBlock>(
+				block_hash,
+				executed_calls,
+				block_number,
+			)?))
+		} else {
+			// fixme: send other type of confirmation here:  https://github.com/integritee-network/worker/issues/1567
+			Ok(None)
+		}
 	}
 
 	fn create_processed_parentchain_block_call<ParentchainBlock>(
