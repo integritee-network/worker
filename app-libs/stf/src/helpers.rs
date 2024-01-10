@@ -112,12 +112,17 @@ pub fn set_block_number(block_number: u32) {
 /// get shard vault from any of the parentchain interfaces
 /// We assume it has been ensured elsewhere that there can't be multiple shard vaults on multiple parentchains
 pub fn shard_vault() -> Option<(AccountId, ParentchainId)> {
+	get_shard_vaults().into_iter().next()
+}
+
+/// We assume it has been ensured elsewhere that there can't be multiple shard vaults on multiple parentchains
+pub fn get_shard_vaults() -> Vec<(AccountId, ParentchainId)> {
 	[
 		(ParentchainIntegritee::shard_vault(), ParentchainId::Integritee),
 		(ParentchainTargetA::shard_vault(), ParentchainId::TargetA),
 		(ParentchainTargetB::shard_vault(), ParentchainId::TargetB),
 	]
 	.into_iter()
-	.filter_map(|vp| if vp.0.is_some() { Some((vp.0.unwrap(), vp.1)) } else { None })
-	.next()
+	.filter_map(|vp| vp.0.map(|v| (v, vp.1)))
+	.collect()
 }

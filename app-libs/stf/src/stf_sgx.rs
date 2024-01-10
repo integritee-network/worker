@@ -18,14 +18,13 @@
 #[cfg(feature = "test")]
 use crate::test_genesis::test_genesis_setup;
 use crate::{
-	helpers::{enclave_signer_account, shard_vault},
+	helpers::{enclave_signer_account, get_shard_vaults, shard_vault},
 	Stf, ENCLAVE_ACCOUNT_KEY,
 };
 use codec::{Decode, Encode};
 use frame_support::traits::{OriginTrait, UnfilteredDispatchable};
 use ita_sgx_runtime::{
 	ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
-	ParentchainIntegritee, ParentchainTargetA, ParentchainTargetB,
 };
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_sgx_externalities::SgxExternalitiesTrait;
@@ -364,23 +363,14 @@ where
 		state: &mut State,
 	) -> Result<Option<(AccountId, ParentchainId)>, Self::Error> {
 		state.execute_with(|| {
-			let vaults: Vec<(AccountId, ParentchainId)> = [
-				(ParentchainIntegritee::shard_vault(), ParentchainId::Integritee),
-				(ParentchainTargetA::shard_vault(), ParentchainId::TargetA),
-				(ParentchainTargetB::shard_vault(), ParentchainId::TargetB),
-			]
-			.into_iter()
-			.filter_map(|vp| if vp.0.is_some() { Some((vp.0.unwrap(), vp.1)) } else { None })
-			.collect();
-			if vaults.len() > 1 {
-				Err(Self::Error::Dispatch(format!(
+			let vaults = get_shard_vaults();
+			match vaults.len() {
+				0 => Ok(None),
+				1 => Ok(Some(vaults[0].clone())),
+				_ => Err(Self::Error::Dispatch(format!(
 					"shard vault assigned to more than one parentchain: {:?}",
 					vaults
-				)))
-			} else if vaults.is_empty() {
-				Ok(None)
-			} else {
-				Ok(Some(vaults[0].clone()))
+				))),
 			}
 		})
 	}
