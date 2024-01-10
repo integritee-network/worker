@@ -17,12 +17,12 @@
 */
 
 use super::test_setup::TestStf;
-use ita_stf::State;
+use ita_stf::{stf_sgx_tests::StfState, State};
 use itp_sgx_externalities::{SgxExternalities, SgxExternalitiesTrait};
-use itp_stf_interface::InitState;
+use itp_stf_interface::{parentchain_pallet::ParentchainPalletInstancesInterface, InitState};
 use itp_stf_primitives::types::AccountId;
 use itp_stf_state_handler::handle_state::HandleState;
-use itp_types::ShardIdentifier;
+use itp_types::{parentchain::ParentchainId, ShardIdentifier};
 
 /// Returns an empty `State` with the corresponding `ShardIdentifier`.
 pub fn init_state<S: HandleState<StateT = SgxExternalities>>(
@@ -34,6 +34,10 @@ pub fn init_state<S: HandleState<StateT = SgxExternalities>>(
 	let _hash = state_handler.initialize_shard(shard).unwrap();
 	let (lock, _) = state_handler.load_for_mutation(&shard).unwrap();
 	let mut state = TestStf::init_state(enclave_account);
+
+	let vault = AccountId::new([42u8; 32]);
+	StfState::init_shard_vault_account(&mut state, vault, ParentchainId::Integritee).unwrap();
+
 	state.prune_state_diff();
 
 	state_handler.write_after_mutation(state.clone(), lock, &shard).unwrap();
