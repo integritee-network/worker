@@ -90,8 +90,8 @@ pub unsafe extern "C" fn get_ecc_vault_pubkey(
 ) -> sgx_status_t {
 	let shard = ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
 
-	let shard_vault = match get_shard_vault_account(shard) {
-		Ok(account) => account,
+	let shard_vault = match get_shard_vault_internal(shard) {
+		Ok((account, _)) => account,
 		Err(e) => {
 			warn!("Failed to fetch shard vault account: {:?}", e);
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
@@ -103,7 +103,9 @@ pub unsafe extern "C" fn get_ecc_vault_pubkey(
 }
 
 /// reads the shard vault account id form state if it has been initialized previously
-pub(crate) fn get_shard_vault_account(shard: ShardIdentifier) -> EnclaveResult<AccountId> {
+pub(crate) fn get_shard_vault_internal(
+	shard: ShardIdentifier,
+) -> EnclaveResult<(AccountId, ParentchainId)> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let (_state_lock, mut state) = state_handler.load_for_mutation(&shard)?;
 	EnclaveStf::get_vault(&mut state).ok_or_else(|| {
@@ -213,14 +215,25 @@ pub(crate) fn add_shard_vault_proxy(
 	};
 
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
-	let enclave_extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
-	let node_metadata_repo = get_node_metadata_repository_from_integritee_solo_or_parachain()?;
-	let vault = get_shard_vault_account(shard)?;
+	let (vault, parentchain_id) = get_shard_vault_internal(shard)?;
+
+	let enclave_extrinsics_factory = match parentchain_id {
+		ParentchainId::Integritee => get_extrinsic_factory_from_integritee_solo_or_parachain()?,
+		ParentchainId::TargetA => get_extrinsic_factory_from_target_a_solo_or_parachain()?,
+		ParentchainId::TargetB => get_extrinsic_factory_from_target_b_solo_or_parachain()?,
+	};
+	let node_metadata_repo = match parentchain_id {
+		ParentchainId::Integritee =>
+			get_node_metadata_repository_from_integritee_solo_or_parachain()?,
+		ParentchainId::TargetA => get_node_metadata_repository_from_target_a_solo_or_parachain()?,
+		ParentchainId::TargetB => get_node_metadata_repository_from_target_b_solo_or_parachain()?,
+	};
 
 	debug!(
-		"adding proxy 0x{} to shard vault account 0x{}",
+		"adding proxy 0x{} to shard vault account 0x{} on {:?}",
 		hex::encode(proxy.clone()),
-		hex::encode(vault.clone())
+		hex::encode(vault.clone()),
+		parentchain_id,
 	);
 
 	let add_proxy_call = OpaqueCall::from_tuple(&(

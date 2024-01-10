@@ -170,7 +170,7 @@ impl<
 		trace!("xt_statuses:: {:?}", xt_statuses);
 
 		let shard = self.get_default_shard();
-		if let Ok(vault) = self.stf_enclave_signer.get_shard_vault(&shard) {
+		if let Ok((vault, _parentchain_id)) = self.stf_enclave_signer.get_shard_vault(&shard) {
 			ParentchainEventHandler::handle_events(self, events, &vault)?;
 		}
 

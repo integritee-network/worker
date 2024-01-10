@@ -172,8 +172,8 @@ impl<TCS, G, State, Runtime> ShardVaultQuery<State> for Stf<TCS, G, State, Runti
 where
 	State: SgxExternalitiesTrait + Debug,
 {
-	fn get_vault(state: &mut State) -> Option<AccountId> {
-		state.execute_with(|| shard_vault().map(|vault_id| vault_id.0))
+	fn get_vault(state: &mut State) -> Option<(AccountId, ParentchainId)> {
+		state.execute_with(|| shard_vault())
 	}
 }
 

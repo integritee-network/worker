@@ -40,6 +40,7 @@ use itp_stf_primitives::{
 	traits::{GetterAuthorization, TrustedCallVerification},
 	types::TrustedOperation,
 };
+use itp_types::parentchain::ParentchainId;
 #[cfg(feature = "sgx")]
 use std::sync::SgxRwLock as RwLock;
 
@@ -138,7 +139,7 @@ impl<TCS: PartialEq + Encode + Debug> StfEnclaveSigning<TCS> for StfEnclaveSigne
 }
 
 impl StfShardVaultQuery for StfEnclaveSignerMock {
-	fn get_shard_vault(&self, _shard: &ShardIdentifier) -> Result<AccountId> {
+	fn get_shard_vault(&self, _shard: &ShardIdentifier) -> Result<(AccountId, ParentchainId)> {
 		Err(crate::error::Error::Other("shard vault undefined".into()))
 	}
 }

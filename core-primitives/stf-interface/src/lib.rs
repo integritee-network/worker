@@ -46,7 +46,7 @@ pub trait InitState<State, AccountId> {
 
 /// Interface to query shard vault account for shard
 pub trait ShardVaultQuery<S> {
-	fn get_vault(state: &mut S) -> Option<AccountId>;
+	fn get_vault(state: &mut S) -> Option<(AccountId, ParentchainId)>;
 }
 
 /// Interface for all functions calls necessary to update an already
