@@ -31,8 +31,8 @@ use sp_core::{
 use sp_keyring::AccountKeyring;
 use sp_runtime::MultiAddress;
 use substrate_api_client::{
-	ac_compose_macros::compose_extrinsic, extrinsic::BalancesExtrinsics, GetBalance, GetStorage,
-	GetTransactionPayment, SubmitAndWatch, XtStatus,
+	ac_compose_macros::compose_extrinsic, ac_primitives::Bytes, extrinsic::BalancesExtrinsics,
+	GetBalance, GetStorage, GetTransactionPayment, SubmitAndWatch, XtStatus,
 };
 use teerex_primitives::SgxAttestationMethod;
 
@@ -115,7 +115,7 @@ fn ensure_account_has_funds(api: &ParentchainApi, accountid: &AccountId32) -> Re
 	// Check if this is an integritee chain and Compose a register_sgx_enclave extrinsic
 	if let Ok(ra_renewal) = api.get_constant::<Moment>("Teerex", "MaxAttestationRenewalPeriod") {
 		info!("this chain has the teerex pallet. estimating RA fees");
-		let encoded_xt = compose_extrinsic!(
+		let encoded_xt: Bytes = compose_extrinsic!(
 			api,
 			TEEREX,
 			"register_sgx_enclave",
@@ -123,13 +123,10 @@ fn ensure_account_has_funds(api: &ParentchainApi, accountid: &AccountId32) -> Re
 			Some(vec![0u8; MAX_URL_LEN]),
 			SgxAttestationMethod::Dcap { proxied: false }
 		)
-		.encode();
-		let tx_fee = api
-			.get_fee_details(&encoded_xt.clone().into(), None)
-			.unwrap()
-			.unwrap()
-			.inclusion_fee
-			.unwrap();
+		.encode()
+		.into();
+		let tx_fee =
+			api.get_fee_details(&encoded_xt, None).unwrap().unwrap().inclusion_fee.unwrap();
 		let ra_fee = tx_fee.base_fee + tx_fee.len_fee + tx_fee.adjusted_weight_fee;
 		info!(
 			"one enclave registration costs {:?} and needs to be renewed every {:?}h",
@@ -223,15 +220,11 @@ pub fn shard_vault_initial_funds(api: &ParentchainApi) -> Result<Balance, Error>
 
 /// precise estimation of a single transfer fee
 pub fn estimate_transfer_fee(api: &ParentchainApi) -> Result<Balance, Error> {
-	let encoded_xt = api
+	let encoded_xt: Bytes = api
 		.balance_transfer_allow_death(AccountId::from([0u8; 32]).into(), 1000000000000)
-		.encode();
-	let tx_fee = api
-		.get_fee_details(&encoded_xt.clone().into(), None)
-		.unwrap()
-		.unwrap()
-		.inclusion_fee
-		.unwrap();
+		.encode()
+		.into();
+	let tx_fee = api.get_fee_details(&encoded_xt, None).unwrap().unwrap().inclusion_fee.unwrap();
 	let transfer_fee = tx_fee.base_fee + tx_fee.len_fee + tx_fee.adjusted_weight_fee;
 	Ok(transfer_fee)
 }
