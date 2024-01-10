@@ -19,7 +19,10 @@ use crate::error::{Error, ServiceResult};
 use codec::Encode;
 use itp_node_api::api_client::{AccountApi, ParentchainApi, TEEREX};
 use itp_settings::worker::REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS;
-use itp_types::parentchain::{AccountId, Balance};
+use itp_types::{
+	parentchain::{AccountId, Balance},
+	Moment,
+};
 use log::*;
 use sp_core::{
 	crypto::{AccountId32, Ss58Codec},
@@ -69,7 +72,7 @@ pub fn setup_account_funding(
 		ensure_account_has_funds(api, accountid)?;
 	} else {
 		// Production mode, there is no faucet.
-		let registration_fees = enclave_registration_fees(api, encoded_extrinsic)?;
+		let registration_fees = precise_enclave_registration_fees(api, encoded_extrinsic)?;
 		info!("Registration fees = {:?}", registration_fees);
 		let free_balance = api.get_free_balance(accountid)?;
 		info!("TEE's free balance = {:?}", free_balance);
@@ -103,45 +106,40 @@ fn ensure_account_has_funds(api: &ParentchainApi, accountid: &AccountId32) -> Re
 	info!("Existential deposit is = {:?}", existential_deposit);
 
 	let mut min_required_funds: Balance = existential_deposit;
-
 	min_required_funds += shard_vault_initial_funds(api)?;
 
-	let encoded_xt = api
-		.balance_transfer_allow_death(AccountId::from([0u8; 32]).into(), 1000000000000)
-		.encode();
-	let tx_fee = api
-		.get_fee_details(&encoded_xt.clone().into(), None)
-		.unwrap()
-		.unwrap()
-		.inclusion_fee
-		.unwrap();
-	let transfer_fee = tx_fee.base_fee + tx_fee.len_fee + tx_fee.adjusted_weight_fee;
-	info!("one transfer costs {:?}", transfer_fee);
-
+	let transfer_fee = estimate_transfer_fee(api)?;
+	info!("a single transfer costs {:?}", transfer_fee);
 	min_required_funds += 1000 * transfer_fee;
 
-	// Compose a register_sgx_enclave extrinsic
-	let quote_dummy = [0u8; SGX_RA_PROOF_MAX_LEN];
-
-	let encoded_xt = compose_extrinsic!(
-		api,
-		TEEREX,
-		"register_sgx_enclave",
-		vec![0u8; SGX_RA_PROOF_MAX_LEN],
-		Some(vec![0u8; MAX_URL_LEN]),
-		SgxAttestationMethod::Dcap { proxied: false }
-	)
-	.encode();
-	let tx_fee = api
-		.get_fee_details(&encoded_xt.clone().into(), None)
-		.unwrap()
-		.unwrap()
-		.inclusion_fee
-		.unwrap();
-	let ra_fee = tx_fee.base_fee + tx_fee.len_fee + tx_fee.adjusted_weight_fee;
-	info!("one enclave registration costs {:?}", ra_fee);
-
-	min_required_funds += 5 * ra_fee;
+	// Check if this is an integritee chain and Compose a register_sgx_enclave extrinsic
+	if let Ok(ra_renewal) = api.get_constant::<Moment>("Teerex", "MaxAttestationRenewalPeriod") {
+		info!("this chain has the teerex pallet. estimating RA fees");
+		let encoded_xt = compose_extrinsic!(
+			api,
+			TEEREX,
+			"register_sgx_enclave",
+			vec![0u8; SGX_RA_PROOF_MAX_LEN],
+			Some(vec![0u8; MAX_URL_LEN]),
+			SgxAttestationMethod::Dcap { proxied: false }
+		)
+		.encode();
+		let tx_fee = api
+			.get_fee_details(&encoded_xt.clone().into(), None)
+			.unwrap()
+			.unwrap()
+			.inclusion_fee
+			.unwrap();
+		let ra_fee = tx_fee.base_fee + tx_fee.len_fee + tx_fee.adjusted_weight_fee;
+		info!(
+			"one enclave registration costs {:?} and needs to be renewed every {:?}h",
+			ra_fee,
+			ra_renewal / 1_000 / 3_600
+		);
+		min_required_funds += 5 * ra_fee;
+	} else {
+		info!("this chain has no teerex pallet, no need to add RA fees");
+	}
 
 	info!(
 		"we estimate the funding requirement for the primary validateer (worst case) to be {:?}",
@@ -156,7 +154,7 @@ fn ensure_account_has_funds(api: &ParentchainApi, accountid: &AccountId32) -> Re
 	Ok(())
 }
 
-fn enclave_registration_fees(
+fn precise_enclave_registration_fees(
 	api: &ParentchainApi,
 	encoded_extrinsic: Vec<u8>,
 ) -> Result<u128, Error> {
@@ -217,6 +215,23 @@ fn bootstrap_funds_from_alice(
 pub fn shard_vault_initial_funds(api: &ParentchainApi) -> Result<Balance, Error> {
 	let proxy_deposit_base: Balance = api.get_constant("Proxy", "ProxyDepositBase")?;
 	let proxy_deposit_factor: Balance = api.get_constant("Proxy", "ProxyDepositFactor")?;
+	let transfer_fee = estimate_transfer_fee(api)?;
+	let existential_deposit = api.get_existential_deposit()?;
 	info!("Proxy Deposit is {:?} base + {:?} per proxy", proxy_deposit_base, proxy_deposit_factor);
-	Ok(proxy_deposit_base + 10 * proxy_deposit_factor)
+	Ok(proxy_deposit_base + 10 * proxy_deposit_factor + 500 * transfer_fee + existential_deposit)
+}
+
+/// precise estimation of a single transfer fee
+pub fn estimate_transfer_fee(api: &ParentchainApi) -> Result<Balance, Error> {
+	let encoded_xt = api
+		.balance_transfer_allow_death(AccountId::from([0u8; 32]).into(), 1000000000000)
+		.encode();
+	let tx_fee = api
+		.get_fee_details(&encoded_xt.clone().into(), None)
+		.unwrap()
+		.unwrap()
+		.inclusion_fee
+		.unwrap();
+	let transfer_fee = tx_fee.base_fee + tx_fee.len_fee + tx_fee.adjusted_weight_fee;
+	Ok(transfer_fee)
 }

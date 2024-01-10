@@ -671,7 +671,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		maybe_target_b_rpc_api,
 		run_config.shielding_target,
 		we_are_primary_validateer,
-		shard_vault_initial_funds(&integritee_rpc_api).unwrap(),
 	);
 
 	ita_parentchain_interface::event_subscriber::subscribe_to_parentchain_events(
@@ -688,7 +687,6 @@ fn init_provided_shard_vault<E: EnclaveBase>(
 	maybe_target_b_rpc_api: Option<ParentchainApi>,
 	shielding_target: Option<ParentchainId>,
 	we_are_primary_validateer: bool,
-	funding_balance: Balance,
 ) {
 	let shielding_target = shielding_target.unwrap_or(ParentchainId::Integritee);
 	let rpc_api = match shielding_target {
@@ -698,6 +696,7 @@ fn init_provided_shard_vault<E: EnclaveBase>(
 		ParentchainId::TargetB => maybe_target_b_rpc_api
 			.expect("target B must be initialized to be used as shielding target"),
 	};
+	let funding_balance = shard_vault_initial_funds(&rpc_api).unwrap();
 	if let Ok(shard_vault) = enclave.get_ecc_vault_pubkey(shard) {
 		// verify if proxy is set up on chain
 		let nonce = rpc_api.get_account_nonce(&AccountId::from(shard_vault)).unwrap();
