@@ -173,7 +173,7 @@ where
 	State: SgxExternalitiesTrait + Debug,
 {
 	fn get_vault(state: &mut State) -> Option<(AccountId, ParentchainId)> {
-		state.execute_with(|| shard_vault())
+		state.execute_with(shard_vault)
 	}
 }
 
