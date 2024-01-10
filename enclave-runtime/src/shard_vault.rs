@@ -29,15 +29,12 @@ use crate::{
 		get_node_metadata_repository_from_target_b_solo_or_parachain, DecodeRaw,
 	},
 };
-use codec::{Compact, Encode};
+use codec::{Compact, Decode, Encode};
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::{
 	api_client::{PairSignature, StaticExtrinsicSigner},
-	metadata::{
-		pallet_proxy::PROXY_DEPOSIT,
-		provider::{AccessNodeMetadata, Error as MetadataProviderError},
-	},
+	metadata::provider::{AccessNodeMetadata, Error as MetadataProviderError},
 };
 use itp_node_api_metadata::pallet_proxy::ProxyCallIndexes;
 use itp_nonce_cache::NonceCache;
@@ -46,7 +43,7 @@ use itp_sgx_crypto::key_repository::AccessKey;
 use itp_stf_interface::{parentchain_pallet::ParentchainPalletInstancesInterface, ShardVaultQuery};
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_types::{
-	parentchain::{AccountId, Address, ParentchainId, ProxyType},
+	parentchain::{AccountId, Address, Balance, ParentchainId, ProxyType},
 	OpaqueCall, ShardIdentifier,
 };
 use log::*;
@@ -60,9 +57,22 @@ pub unsafe extern "C" fn init_proxied_shard_vault(
 	shard_size: u32,
 	parentchain_id: *const u8,
 	parentchain_id_size: u32,
+	funding_balance: *const u8,
+	funding_balance_size: u32,
 ) -> sgx_status_t {
 	let shard_identifier =
 		ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
+	let funding_balance = match Balance::decode(&mut slice::from_raw_parts(
+		funding_balance,
+		funding_balance_size as usize,
+	)) {
+		Ok(bal) => bal,
+		Err(e) => {
+			error!("Could not decode funding_balance: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
 	let parentchain_id =
 		match ParentchainId::decode_raw(parentchain_id, parentchain_id_size as usize) {
 			Ok(id) => id,
@@ -72,7 +82,9 @@ pub unsafe extern "C" fn init_proxied_shard_vault(
 			},
 		};
 
-	if let Err(e) = init_proxied_shard_vault_internal(shard_identifier, parentchain_id) {
+	if let Err(e) =
+		init_proxied_shard_vault_internal(shard_identifier, parentchain_id, funding_balance)
+	{
 		error!("Failed to initialize proxied shard vault ({:?}): {:?}", shard_identifier, e);
 		return sgx_status_t::SGX_ERROR_UNEXPECTED
 	}
@@ -116,6 +128,7 @@ pub(crate) fn get_shard_vault_internal(
 pub(crate) fn init_proxied_shard_vault_internal(
 	shard: ShardIdentifier,
 	parentchain_id: ParentchainId,
+	funding_balance: Balance,
 ) -> EnclaveResult<()> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	if !state_handler
@@ -161,7 +174,10 @@ pub(crate) fn init_proxied_shard_vault_internal(
 		},
 	};
 
-	info!("[{:?}] send existential funds from enclave account to vault account", parentchain_id);
+	info!(
+		"[{:?}] send existential funds from enclave account to vault account: {:?}",
+		parentchain_id, funding_balance
+	);
 	let call_ids = node_metadata_repo
 		.get_from_metadata(|m| m.call_indexes("Balances", "transfer_keep_alive"))?
 		.map_err(MetadataProviderError::MetadataError)?;
@@ -169,7 +185,7 @@ pub(crate) fn init_proxied_shard_vault_internal(
 	let call = OpaqueCall::from_tuple(&(
 		call_ids,
 		Address::from(AccountId::from(vault.public().0)),
-		Compact(PROXY_DEPOSIT),
+		Compact(funding_balance),
 	));
 
 	info!("[{:?}] vault funding call: 0x{}", parentchain_id, hex::encode(call.0.clone()));

@@ -66,9 +66,10 @@ use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
 
 use itp_enclave_api::Enclave;
 
+use crate::account_funding::shard_vault_initial_funds;
 use enclave_bridge_primitives::ShardIdentifier;
 use itc_parentchain::primitives::ParentchainId;
-use itp_types::parentchain::AccountId;
+use itp_types::parentchain::{AccountId, Balance};
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
 use sp_runtime::MultiSigner;
@@ -670,6 +671,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		maybe_target_b_rpc_api,
 		run_config.shielding_target,
 		we_are_primary_validateer,
+		shard_vault_initial_funds(&integritee_rpc_api).unwrap(),
 	);
 
 	ita_parentchain_interface::event_subscriber::subscribe_to_parentchain_events(
@@ -686,6 +688,7 @@ fn init_provided_shard_vault<E: EnclaveBase>(
 	maybe_target_b_rpc_api: Option<ParentchainApi>,
 	shielding_target: Option<ParentchainId>,
 	we_are_primary_validateer: bool,
+	funding_balance: Balance,
 ) {
 	let shielding_target = shielding_target.unwrap_or(ParentchainId::Integritee);
 	let rpc_api = match shielding_target {
@@ -709,11 +712,13 @@ fn init_provided_shard_vault<E: EnclaveBase>(
 				"[{:?}] nonce = 0 means shard vault not properly set up on chain. will retry",
 				shielding_target
 			);
-			enclave.init_proxied_shard_vault(shard, &shielding_target).unwrap();
+			enclave.init_proxied_shard_vault(shard, &shielding_target, 0u128).unwrap();
 		}
 	} else if we_are_primary_validateer {
 		println!("[{:?}] initializing proxied shard vault account now", shielding_target);
-		enclave.init_proxied_shard_vault(shard, &shielding_target).unwrap();
+		enclave
+			.init_proxied_shard_vault(shard, &shielding_target, funding_balance)
+			.unwrap();
 		println!(
 			"[{:?}] initialized shard vault account: : {}",
 			shielding_target,

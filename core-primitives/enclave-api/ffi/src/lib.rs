@@ -65,6 +65,8 @@ extern "C" {
 		shard_size: u32,
 		parentchain_id: *const u8,
 		parentchain_id_size: u32,
+		funding_balance: *const u8,
+		funding_balance_size: u32,
 	) -> sgx_status_t;
 
 	pub fn init_shard_creation_parentchain_header(

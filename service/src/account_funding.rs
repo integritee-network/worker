@@ -16,11 +16,10 @@
 */
 
 use crate::error::{Error, ServiceResult};
-use itp_node_api::api_client::{AccountApi, ParentchainApi};
-use itp_settings::worker::{
-	EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS, REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS,
-};
-use itp_types::parentchain::Balance;
+use codec::Encode;
+use itp_node_api::api_client::{AccountApi, ParentchainApi, TEEREX};
+use itp_settings::worker::REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS;
+use itp_types::parentchain::{AccountId, Balance};
 use log::*;
 use sp_core::{
 	crypto::{AccountId32, Ss58Codec},
@@ -29,9 +28,13 @@ use sp_core::{
 use sp_keyring::AccountKeyring;
 use sp_runtime::MultiAddress;
 use substrate_api_client::{
-	extrinsic::BalancesExtrinsics, GetBalance, GetTransactionPayment, SubmitAndWatch, XtStatus,
+	ac_compose_macros::compose_extrinsic, extrinsic::BalancesExtrinsics, GetBalance, GetStorage,
+	GetTransactionPayment, SubmitAndWatch, XtStatus,
 };
+use teerex_primitives::SgxAttestationMethod;
 
+const SGX_RA_PROOF_MAX_LEN: usize = 5000;
+const MAX_URL_LEN: usize = 256;
 /// Information about the enclave on-chain account.
 pub trait EnclaveAccountInfo {
 	fn free_balance(&self) -> ServiceResult<Balance>;
@@ -99,8 +102,51 @@ fn ensure_account_has_funds(api: &ParentchainApi, accountid: &AccountId32) -> Re
 	let existential_deposit = api.get_existential_deposit()?;
 	info!("Existential deposit is = {:?}", existential_deposit);
 
-	let min_required_funds =
-		existential_deposit.saturating_mul(EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS);
+	let mut min_required_funds: Balance = existential_deposit;
+
+	min_required_funds += shard_vault_initial_funds(api)?;
+
+	let encoded_xt = api
+		.balance_transfer_allow_death(AccountId::from([0u8; 32]).into(), 1000000000000)
+		.encode();
+	let tx_fee = api
+		.get_fee_details(&encoded_xt.clone().into(), None)
+		.unwrap()
+		.unwrap()
+		.inclusion_fee
+		.unwrap();
+	let transfer_fee = tx_fee.base_fee + tx_fee.len_fee + tx_fee.adjusted_weight_fee;
+	info!("one transfer costs {:?}", transfer_fee);
+
+	min_required_funds += 1000 * transfer_fee;
+
+	// Compose a register_sgx_enclave extrinsic
+	let quote_dummy = [0u8; SGX_RA_PROOF_MAX_LEN];
+
+	let encoded_xt = compose_extrinsic!(
+		api,
+		TEEREX,
+		"register_sgx_enclave",
+		vec![0u8; SGX_RA_PROOF_MAX_LEN],
+		Some(vec![0u8; MAX_URL_LEN]),
+		SgxAttestationMethod::Dcap { proxied: false }
+	)
+	.encode();
+	let tx_fee = api
+		.get_fee_details(&encoded_xt.clone().into(), None)
+		.unwrap()
+		.unwrap()
+		.inclusion_fee
+		.unwrap();
+	let ra_fee = tx_fee.base_fee + tx_fee.len_fee + tx_fee.adjusted_weight_fee;
+	info!("one enclave registration costs {:?}", ra_fee);
+
+	min_required_funds += 5 * ra_fee;
+
+	info!(
+		"we estimate the funding requirement for the primary validateer (worst case) to be {:?}",
+		min_required_funds
+	);
 	let missing_funds = min_required_funds.saturating_sub(free_balance);
 
 	if missing_funds > 0 {
@@ -127,7 +173,7 @@ fn enclave_registration_fees(
 	}
 }
 
-// Alice sends some funds to the account
+/// Alice sends some funds to the account. only for dev chains testing
 fn bootstrap_funds_from_alice(
 	api: &ParentchainApi,
 	accountid: &AccountId32,
@@ -165,4 +211,12 @@ fn bootstrap_funds_from_alice(
 	trace!("TEE's NEW free balance = {:?}", free_balance);
 
 	Ok(())
+}
+
+/// precise estimation of necessary funds to register a hardcoded number of proxies
+pub fn shard_vault_initial_funds(api: &ParentchainApi) -> Result<Balance, Error> {
+	let proxy_deposit_base: Balance = api.get_constant("Proxy", "ProxyDepositBase")?;
+	let proxy_deposit_factor: Balance = api.get_constant("Proxy", "ProxyDepositFactor")?;
+	info!("Proxy Deposit is {:?} base + {:?} per proxy", proxy_deposit_base, proxy_deposit_factor);
+	Ok(proxy_deposit_base + 10 * proxy_deposit_factor)
 }

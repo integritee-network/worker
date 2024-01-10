@@ -25,11 +25,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 log = { version = "0.4", default-features = false }
 regex = { optional = true, version = "1.9.5" }
 
-integritee-parachain-runtime = { package = "integritee-runtime", git = "https://github.com/integritee-network/parachain", branch = "sdk-v0.12.6-polkadot-v0.9.42", default-features = false, optional = true }
-integritee-solochain-runtime = { package = "integritee-node-runtime", git = "https://github.com/integritee-network/integritee-node.git/", branch = "sdk-v0.12.6-polkadot-v0.9.42", default-features = false, optional = true }
-
 substrate-api-client = { optional = true, default-features = false, features = ["std", "sync-api"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }
-
 
 # substrate dep
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
@@ -67,8 +63,6 @@ std = [
     "sp-core/std",
     "sp-runtime/std",
     "substrate-api-client",
-    "integritee-parachain-runtime/std",
-    "integritee-solochain-runtime/std",
 ]
 sgx = [
     "sgx_tstd",
