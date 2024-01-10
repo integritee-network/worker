@@ -205,7 +205,7 @@ impl<
 		debug!("successfully processed {} indirect invocations", executed_calls.len());
 		if self.parentchain_id == ParentchainId::Integritee {
 			// Include a processed parentchain block confirmation for each block.
-			return Ok(Some(self.create_processed_parentchain_block_call::<ParentchainBlock>(
+			Ok(Some(self.create_processed_parentchain_block_call::<ParentchainBlock>(
 				block_hash,
 				executed_calls,
 				block_number,
@@ -530,6 +530,7 @@ mod test {
 			stf_enclave_signer,
 			top_pool_author.clone(),
 			node_metadata_repo,
+			ParentchainId::Integritee,
 		);
 
 		(executor, top_pool_author, shielding_key_repo)

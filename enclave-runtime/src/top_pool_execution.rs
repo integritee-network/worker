@@ -163,7 +163,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	let shards = state_handler.list_shards()?;
 
 	let (_, vault_target) =
-		get_shard_vault_internal(*shards.get(0).ok_or_else(|| Error::NoShardAssigned)?)?;
+		get_shard_vault_internal(*shards.get(0).ok_or(Error::NoShardAssigned)?)?;
 	trace!("using StfExecutor from {:?} parentchain", vault_target);
 	let stf_executor = match vault_target {
 		ParentchainId::Integritee => get_stf_executor_from_integritee_solo_or_parachain()?,
