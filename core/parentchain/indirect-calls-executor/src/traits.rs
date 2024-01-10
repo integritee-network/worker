@@ -32,7 +32,7 @@ pub trait ExecuteIndirectCalls {
 		&self,
 		block: &ParentchainBlock,
 		events: &[u8],
-	) -> Result<OpaqueCall>
+	) -> Result<Option<OpaqueCall>>
 	where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>;
 

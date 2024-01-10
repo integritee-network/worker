@@ -24,7 +24,7 @@ use std::vec::Vec;
 #[cfg(feature = "evm")]
 use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_address};
 use crate::{
-	helpers::{enclave_signer_account, ensure_enclave_signer_account, get_storage_by_key_hash},
+	helpers::{enclave_signer_account, ensure_enclave_signer_account, shard_vault},
 	Getter,
 };
 use codec::{Compact, Decode, Encode};
@@ -38,7 +38,7 @@ use itp_node_api_metadata::{
 	pallet_balances::BalancesCallIndexes, pallet_enclave_bridge::EnclaveBridgeCallIndexes,
 	pallet_proxy::ProxyCallIndexes,
 };
-use itp_stf_interface::{ExecuteCall, SHARD_VAULT_KEY};
+use itp_stf_interface::ExecuteCall;
 use itp_stf_primitives::{
 	error::StfError,
 	traits::{TrustedCallSigning, TrustedCallVerification},
@@ -58,10 +58,6 @@ use sp_io::hashing::blake2_256;
 use sp_runtime::{traits::Verify, MultiAddress, MultiSignature};
 use std::{format, prelude::v1::*, sync::Arc};
 
-// fixme: this shall be configurable https://github.com/integritee-network/worker/issues/1539
-/// define which parentchain's native token is considered the native token of the sidechain STF and can be shielded and unshielded
-const NATIVE_TOKEN_PARENTCHAIN: ParentchainId = ParentchainId::Integritee;
-
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum TrustedCall {
@@ -69,7 +65,7 @@ pub enum TrustedCall {
 	balance_set_balance(AccountId, AccountId, Balance, Balance),
 	balance_transfer(AccountId, AccountId, Balance),
 	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
-	balance_shield(AccountId, AccountId, Balance), // (Root, AccountIncognito, Amount)
+	balance_shield(AccountId, AccountId, Balance, ParentchainId), // (Root, AccountIncognito, Amount, origin parentchain)
 	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance), // (Origin, Address EVM Account, Value)
 	// (Origin, Source, Target, Input, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
@@ -327,11 +323,10 @@ where
 				})?;
 				burn_funds(account_incognito, value)?;
 
-				let vault_pubkey: [u8; 32] = get_storage_by_key_hash(SHARD_VAULT_KEY.into())
-					.ok_or_else(|| {
-						StfError::Dispatch("shard vault key hasn't been set".to_string())
-					})?;
-				let vault_address = Address::from(AccountId::from(vault_pubkey));
+				let (vault, parentchain_id) = shard_vault().ok_or_else(|| {
+					StfError::Dispatch("shard vault key hasn't been set".to_string())
+				})?;
+				let vault_address = Address::from(vault);
 				let vault_transfer_call = OpaqueCall::from_tuple(&(
 					node_metadata_repo
 						.get_from_metadata(|m| m.transfer_keep_alive_call_indexes())
@@ -349,7 +344,7 @@ where
 					None::<ProxyType>,
 					vault_transfer_call,
 				));
-				let parentchain_call = match NATIVE_TOKEN_PARENTCHAIN {
+				let parentchain_call = match parentchain_id {
 					ParentchainId::Integritee => ParentchainCall::Integritee(proxy_call),
 					ParentchainId::TargetA => ParentchainCall::TargetA(proxy_call),
 					ParentchainId::TargetB => ParentchainCall::TargetB(proxy_call),
@@ -357,9 +352,21 @@ where
 				calls.push(parentchain_call);
 				Ok(())
 			},
-			TrustedCall::balance_shield(enclave_account, who, value) => {
+			TrustedCall::balance_shield(enclave_account, who, value, parentchain_id) => {
 				ensure_enclave_signer_account(&enclave_account)?;
-				debug!("balance_shield({}, {})", account_id_to_string(&who), value);
+				debug!(
+					"balance_shield({}, {}, {:?})",
+					account_id_to_string(&who),
+					value,
+					parentchain_id
+				);
+				let (_vault_account, vault_parentchain_id) =
+					shard_vault().ok_or(StfError::NoShardVaultAssigned)?;
+				ensure!(
+					parentchain_id == vault_parentchain_id,
+					StfError::WrongParentchainIdForShardVault
+				);
+				std::println!("⣿STF⣿ 🛡 will shield to {}", account_id_to_string(&who));
 				shield_funds(who, value)?;
 
 				// Send proof of execution on chain.
@@ -498,11 +505,11 @@ where
 	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
 		let key_hashes = Vec::new();
 		match self.call {
-			TrustedCall::noop(_) => debug!("No storage updates needed..."),
-			TrustedCall::balance_set_balance(_, _, _, _) => debug!("No storage updates needed..."),
-			TrustedCall::balance_transfer(_, _, _) => debug!("No storage updates needed..."),
-			TrustedCall::balance_unshield(_, _, _, _) => debug!("No storage updates needed..."),
-			TrustedCall::balance_shield(_, _, _) => debug!("No storage updates needed..."),
+			TrustedCall::noop(..) => debug!("No storage updates needed..."),
+			TrustedCall::balance_set_balance(..) => debug!("No storage updates needed..."),
+			TrustedCall::balance_transfer(..) => debug!("No storage updates needed..."),
+			TrustedCall::balance_unshield(..) => debug!("No storage updates needed..."),
+			TrustedCall::balance_shield(..) => debug!("No storage updates needed..."),
 			#[cfg(feature = "evm")]
 			_ => debug!("No storage updates needed..."),
 		};

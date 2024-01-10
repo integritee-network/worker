@@ -21,6 +21,8 @@ use codec::{Decode, Encode};
 use core::fmt::Debug;
 use itp_stf_primitives::traits::{IndirectExecutor, TrustedCallVerification};
 use itp_utils::stringify::account_id_to_string;
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 use sp_core::bounded::alloc;
 use sp_runtime::{generic::Header as HeaderG, traits::BlakeTwo256, MultiAddress, MultiSignature};
 use substrate_api_client::ac_node_api::StaticEvent;
@@ -57,6 +59,7 @@ pub type BlockHash = sp_core::H256;
 pub type Signature = MultiSignature;
 
 #[derive(Encode, Decode, Copy, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum ParentchainId {
 	/// The Integritee Parentchain, the trust root of the enclave and serving finality to sidechains.
 	Integritee,

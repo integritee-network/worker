@@ -17,17 +17,23 @@
 
 #[cfg(feature = "test")]
 use crate::test_genesis::test_genesis_setup;
-use crate::{helpers::enclave_signer_account, Stf, ENCLAVE_ACCOUNT_KEY};
+use crate::{
+	helpers::{enclave_signer_account, get_shard_vaults, shard_vault},
+	Stf, ENCLAVE_ACCOUNT_KEY,
+};
 use codec::{Decode, Encode};
 use frame_support::traits::{OriginTrait, UnfilteredDispatchable};
+use ita_sgx_runtime::{
+	ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
+};
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_interface::{
-	parentchain_pallet::ParentchainPalletInterface,
+	parentchain_pallet::ParentchainPalletInstancesInterface,
 	sudo_pallet::SudoPalletInterface,
 	system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface},
 	ExecuteCall, ExecuteGetter, InitState, ShardVaultQuery, StateCallInterface,
-	StateGetterInterface, UpdateState, SHARD_VAULT_KEY,
+	StateGetterInterface, UpdateState,
 };
 use itp_stf_primitives::{error::StfError, traits::TrustedCallVerification};
 use itp_storage::storage_value_key;
@@ -165,10 +171,8 @@ impl<TCS, G, State, Runtime> ShardVaultQuery<State> for Stf<TCS, G, State, Runti
 where
 	State: SgxExternalitiesTrait + Debug,
 {
-	fn get_vault(state: &mut State) -> Option<AccountId> {
-		state
-			.get(SHARD_VAULT_KEY.as_bytes())
-			.and_then(|v| Decode::decode(&mut v.clone().as_slice()).ok())
+	fn get_vault(state: &mut State) -> Option<(AccountId, ParentchainId)> {
+		state.execute_with(shard_vault)
 	}
 }
 
@@ -244,26 +248,131 @@ where
 	}
 }
 
-impl<TCS, G, State, Runtime, ParentchainHeader> ParentchainPalletInterface<State, ParentchainHeader>
-	for Stf<TCS, G, State, Runtime>
+impl<TCS, G, State, Runtime, ParentchainHeader>
+	ParentchainPalletInstancesInterface<State, ParentchainHeader> for Stf<TCS, G, State, Runtime>
 where
 	State: SgxExternalitiesTrait,
-	Runtime: frame_system::Config<Header = ParentchainHeader> + pallet_parentchain::Config,
+	Runtime: frame_system::Config<Header = ParentchainHeader, AccountId = AccountId>
+		+ pallet_parentchain::Config<ParentchainInstanceIntegritee>
+		+ pallet_parentchain::Config<ParentchainInstanceTargetA>
+		+ pallet_parentchain::Config<ParentchainInstanceTargetB>,
+	<<Runtime as frame_system::Config>::Lookup as StaticLookup>::Source: From<AccountId>,
 {
 	type Error = StfError;
 
-	fn update_parentchain_block(
+	fn update_parentchain_integritee_block(
 		state: &mut State,
 		header: ParentchainHeader,
 	) -> Result<(), Self::Error> {
 		state.execute_with(|| {
-			pallet_parentchain::Call::<Runtime>::set_block { header }
+			pallet_parentchain::Call::<Runtime, ParentchainInstanceIntegritee>::set_block { header }
 				.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
 				.map_err(|e| {
-					Self::Error::Dispatch(format!("Update parentchain block error: {:?}", e.error))
+					Self::Error::Dispatch(format!(
+						"Update parentchain integritee block error: {:?}",
+						e.error
+					))
 				})
 		})?;
 		Ok(())
+	}
+
+	fn update_parentchain_target_a_block(
+		state: &mut State,
+		header: ParentchainHeader,
+	) -> Result<(), Self::Error> {
+		state.execute_with(|| {
+			pallet_parentchain::Call::<Runtime, ParentchainInstanceTargetA>::set_block { header }
+				.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
+				.map_err(|e| {
+					Self::Error::Dispatch(format!(
+						"Update parentchain target_a block error: {:?}",
+						e.error
+					))
+				})
+		})?;
+		Ok(())
+	}
+
+	fn update_parentchain_target_b_block(
+		state: &mut State,
+		header: ParentchainHeader,
+	) -> Result<(), Self::Error> {
+		state.execute_with(|| {
+			pallet_parentchain::Call::<Runtime, ParentchainInstanceTargetB>::set_block { header }
+				.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
+				.map_err(|e| {
+					Self::Error::Dispatch(format!(
+						"Update parentchain target_b block error: {:?}",
+						e.error
+					))
+				})
+		})?;
+		Ok(())
+	}
+
+	fn init_shard_vault_account(
+		state: &mut State,
+		vault: AccountId,
+		parentchain_id: ParentchainId,
+	) -> Result<(), Self::Error> {
+		if let Some((existing_vault, existing_id)) =
+			Self::get_shard_vault_ensure_single_parentchain(state)?
+		{
+			if existing_id != parentchain_id {
+				return Err(Self::Error::ShardVaultOnMultipleParentchainsNotAllowed)
+			}
+			if existing_vault != vault {
+				return Err(Self::Error::ChangingShardVaultAccountNotAllowed)
+			}
+			warn!("attempting to init shard vault which has already been initialized");
+			return Ok(())
+		}
+		state.execute_with(|| match parentchain_id {
+			ParentchainId::Integritee => pallet_parentchain::Call::<
+				Runtime,
+				ParentchainInstanceIntegritee,
+			>::init_shard_vault {
+				account: vault,
+			}
+			.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
+			.map_err(|e| {
+				Self::Error::Dispatch(format!("Init shard vault account error: {:?}", e.error))
+			}),
+			ParentchainId::TargetA =>
+				pallet_parentchain::Call::<Runtime, ParentchainInstanceTargetA>::init_shard_vault {
+					account: vault,
+				}
+				.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
+				.map_err(|e| {
+					Self::Error::Dispatch(format!("Init shard vault account error: {:?}", e.error))
+				}),
+			ParentchainId::TargetB =>
+				pallet_parentchain::Call::<Runtime, ParentchainInstanceTargetB>::init_shard_vault {
+					account: vault,
+				}
+				.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
+				.map_err(|e| {
+					Self::Error::Dispatch(format!("Init shard vault account error: {:?}", e.error))
+				}),
+		})?;
+		Ok(())
+	}
+
+	fn get_shard_vault_ensure_single_parentchain(
+		state: &mut State,
+	) -> Result<Option<(AccountId, ParentchainId)>, Self::Error> {
+		state.execute_with(|| {
+			let vaults = get_shard_vaults();
+			match vaults.len() {
+				0 => Ok(None),
+				1 => Ok(Some(vaults[0].clone())),
+				_ => Err(Self::Error::Dispatch(format!(
+					"shard vault assigned to more than one parentchain: {:?}",
+					vaults
+				))),
+			}
+		})
 	}
 }
 

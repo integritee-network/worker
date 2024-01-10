@@ -50,6 +50,7 @@ pub struct ParentchainBlockImporter<
 	extrinsics_factory: Arc<ExtrinsicsFactory>,
 	pub indirect_calls_executor: Arc<IndirectCallsExecutor>,
 	maybe_creation_header: Option<Header>,
+	pub parentchain_id: ParentchainId,
 	_phantom: PhantomData<ParentchainBlock>,
 }
 
@@ -74,6 +75,7 @@ impl<
 		extrinsics_factory: Arc<ExtrinsicsFactory>,
 		indirect_calls_executor: Arc<IndirectCallsExecutor>,
 		maybe_creation_header: Option<Header>,
+		parentchain_id: ParentchainId,
 	) -> Self {
 		ParentchainBlockImporter {
 			validator_accessor,
@@ -81,6 +83,7 @@ impl<
 			extrinsics_factory,
 			indirect_calls_executor,
 			maybe_creation_header,
+			parentchain_id,
 			_phantom: Default::default(),
 		}
 	}
@@ -169,9 +172,10 @@ impl<
 				.indirect_calls_executor
 				.execute_indirect_calls_in_extrinsics(&block, &raw_events)
 			{
-				Ok(executed_shielding_calls) => {
-					calls.push(executed_shielding_calls);
+				Ok(Some(confirm_processed_parentchain_block_call)) => {
+					calls.push(confirm_processed_parentchain_block_call);
 				},
+				Ok(None) => trace!("omitting confirmation call to non-integritee parentchain"),
 				Err(e) => error!("[{:?}] Error executing relevant extrinsics: {:?}", id, e),
 			};
 

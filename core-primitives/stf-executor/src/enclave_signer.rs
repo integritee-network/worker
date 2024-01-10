@@ -32,7 +32,7 @@ use itp_stf_primitives::{
 };
 use itp_stf_state_observer::traits::ObserveState;
 use itp_top_pool_author::traits::AuthorApi;
-use itp_types::{Index, ShardIdentifier};
+use itp_types::{parentchain::ParentchainId, Index, ShardIdentifier};
 use sp_core::{ed25519::Pair as Ed25519Pair, Pair};
 use std::{boxed::Box, sync::Arc};
 
@@ -160,7 +160,7 @@ where
 	TCS: PartialEq + Encode + Decode + Debug + Send + Sync,
 	G: PartialEq + Encode + Decode + Debug + Send + Sync,
 {
-	fn get_shard_vault(&self, shard: &ShardIdentifier) -> Result<AccountId> {
+	fn get_shard_vault(&self, shard: &ShardIdentifier) -> Result<(AccountId, ParentchainId)> {
 		let vault = self.state_observer.observe_state(shard, move |state| Stf::get_vault(state))?;
 
 		vault.ok_or_else(|| Error::Other("shard vault undefined".into()))

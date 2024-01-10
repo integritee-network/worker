@@ -15,13 +15,37 @@
 
 */
 
+use itp_types::parentchain::{AccountId, ParentchainId};
+
 /// Interface trait of the parentchain pallet.
-pub trait ParentchainPalletInterface<State, ParentchainHeader> {
+pub trait ParentchainPalletInstancesInterface<State, ParentchainHeader> {
 	type Error;
 
 	/// Updates the block number, block hash and parent hash of the parentchain block.
-	fn update_parentchain_block(
+	fn update_parentchain_integritee_block(
 		state: &mut State,
 		header: ParentchainHeader,
 	) -> Result<(), Self::Error>;
+
+	/// Updates the block number, block hash and parent hash of the parentchain block.
+	fn update_parentchain_target_a_block(
+		state: &mut State,
+		header: ParentchainHeader,
+	) -> Result<(), Self::Error>;
+
+	/// Updates the block number, block hash and parent hash of the parentchain block.
+	fn update_parentchain_target_b_block(
+		state: &mut State,
+		header: ParentchainHeader,
+	) -> Result<(), Self::Error>;
+
+	fn init_shard_vault_account(
+		state: &mut State,
+		vault: AccountId,
+		parentchain_id: ParentchainId,
+	) -> Result<(), Self::Error>;
+
+	fn get_shard_vault_ensure_single_parentchain(
+		state: &mut State,
+	) -> Result<Option<(AccountId, ParentchainId)>, Self::Error>;
 }

@@ -36,7 +36,6 @@ pub mod parentchain_pallet;
 pub mod sudo_pallet;
 pub mod system_pallet;
 
-pub const SHARD_VAULT_KEY: &str = "ShardVaultPubKey";
 pub const SHARD_CREATION_HEADER_KEY: &str = "ShardCreationHeaderKey";
 
 /// Interface to initialize a new state.
@@ -47,7 +46,7 @@ pub trait InitState<State, AccountId> {
 
 /// Interface to query shard vault account for shard
 pub trait ShardVaultQuery<S> {
-	fn get_vault(state: &mut S) -> Option<AccountId>;
+	fn get_vault(state: &mut S) -> Option<(AccountId, ParentchainId)>;
 }
 
 /// Interface for all functions calls necessary to update an already

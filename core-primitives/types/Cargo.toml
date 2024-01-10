@@ -9,6 +9,7 @@ edition = "2021"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
 
 # local dependencies
 itp-sgx-runtime-primitives = { path = "../../core-primitives/sgx-runtime-primitives", default-features = false }
@@ -26,9 +27,9 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 # integritee-node
-enclave-bridge-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.6-polkadot-v0.9.42" }
-teeracle-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.6-polkadot-v0.9.42" }
-teerex-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.6-polkadot-v0.9.42" }
+enclave-bridge-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.10-polkadot-v0.9.42" }
+teeracle-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.10-polkadot-v0.9.42" }
+teerex-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.10-polkadot-v0.9.42" }
 
 [features]
 default = ["std"]
@@ -44,6 +45,7 @@ std = [
     # substrate
     "frame-system/std",
     "pallet-balances/std",
+    "serde/std",
     "sp-std/std",
     "sp-core/std",
     "sp-runtime/std",

@@ -19,8 +19,6 @@ use crate::{error::Result, NodeMetadata};
 
 /// Pallet name:
 const PROXY: &str = "Proxy";
-/// the deposit needed to register up to 20 proxies in native parentchain token
-pub const PROXY_DEPOSIT: u128 = 21_000_000_000_000;
 
 pub trait ProxyCallIndexes {
 	fn add_proxy_call_indexes(&self) -> Result<[u8; 2]>;

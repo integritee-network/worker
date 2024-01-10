@@ -36,4 +36,8 @@ pub enum StfError {
 	StorageHashMismatch,
 	InvalidStorageDiff,
 	InvalidMetadata,
+	ShardVaultOnMultipleParentchainsNotAllowed,
+	ChangingShardVaultAccountNotAllowed,
+	WrongParentchainIdForShardVault,
+	NoShardVaultAssigned,
 }

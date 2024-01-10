@@ -16,8 +16,13 @@
 */
 use crate::ENCLAVE_ACCOUNT_KEY;
 use codec::{Decode, Encode};
-use itp_stf_primitives::error::{StfError, StfResult};
+use ita_sgx_runtime::{ParentchainIntegritee, ParentchainTargetA, ParentchainTargetB};
+use itp_stf_primitives::{
+	error::{StfError, StfResult},
+	types::AccountId,
+};
 use itp_storage::{storage_double_map_key, storage_map_key, storage_value_key, StorageHasher};
+use itp_types::parentchain::ParentchainId;
 use itp_utils::stringify::account_id_to_string;
 use log::*;
 use std::prelude::v1::*;
@@ -102,4 +107,22 @@ pub fn ensure_enclave_signer_account<AccountId: Encode + Decode + PartialEq>(
 
 pub fn set_block_number(block_number: u32) {
 	sp_io::storage::set(&storage_value_key("System", "Number"), &block_number.encode());
+}
+
+/// get shard vault from any of the parentchain interfaces
+/// We assume it has been ensured elsewhere that there can't be multiple shard vaults on multiple parentchains
+pub fn shard_vault() -> Option<(AccountId, ParentchainId)> {
+	get_shard_vaults().into_iter().next()
+}
+
+/// We assume it has been ensured elsewhere that there can't be multiple shard vaults on multiple parentchains
+pub fn get_shard_vaults() -> Vec<(AccountId, ParentchainId)> {
+	[
+		(ParentchainIntegritee::shard_vault(), ParentchainId::Integritee),
+		(ParentchainTargetA::shard_vault(), ParentchainId::TargetA),
+		(ParentchainTargetB::shard_vault(), ParentchainId::TargetB),
+	]
+	.into_iter()
+	.filter_map(|vp| vp.0.map(|v| (v, vp.1)))
+	.collect()
 }

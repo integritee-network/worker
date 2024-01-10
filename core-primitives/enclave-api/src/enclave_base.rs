@@ -20,7 +20,7 @@ use crate::EnclaveResult;
 use codec::Decode;
 use core::fmt::Debug;
 use itc_parentchain::primitives::{ParentchainId, ParentchainInitParams};
-use itp_types::{parentchain::Header, ShardIdentifier};
+use itp_types::{parentchain::Header, Balance, ShardIdentifier};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_core::ed25519;
 use teerex_primitives::EnclaveFingerprint;
@@ -55,6 +55,7 @@ pub trait EnclaveBase: Send + Sync + 'static {
 		&self,
 		shard: &ShardIdentifier,
 		parentchain_id: &ParentchainId,
+		funding_balance: Balance,
 	) -> EnclaveResult<()>;
 
 	/// Initialize parentchain checkpoint after which invocations will be processed
@@ -101,7 +102,10 @@ mod impl_ffi {
 	use itp_settings::worker::{
 		HEADER_MAX_SIZE, MR_ENCLAVE_SIZE, SHIELDING_KEY_SIZE, SIGNING_KEY_SIZE,
 	};
-	use itp_types::{parentchain::Header, ShardIdentifier};
+	use itp_types::{
+		parentchain::{Balance, Header},
+		ShardIdentifier,
+	};
 	use log::*;
 	use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 	use sgx_types::*;
@@ -200,9 +204,11 @@ mod impl_ffi {
 			&self,
 			shard: &ShardIdentifier,
 			parentchain_id: &ParentchainId,
+			funding_balance: Balance,
 		) -> EnclaveResult<()> {
 			let mut retval = sgx_status_t::SGX_SUCCESS;
 			let parentchain_id_enc = parentchain_id.encode();
+			let funding_balance_enc = funding_balance.encode();
 			let shard_bytes = shard.encode();
 			let result = unsafe {
 				ffi::init_proxied_shard_vault(
@@ -212,6 +218,8 @@ mod impl_ffi {
 					shard_bytes.len() as u32,
 					parentchain_id_enc.as_ptr(),
 					parentchain_id_enc.len() as u32,
+					funding_balance_enc.as_ptr(),
+					funding_balance_enc.len() as u32,
 				)
 			};
 

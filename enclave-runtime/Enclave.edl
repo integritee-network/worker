@@ -60,7 +60,8 @@ enclave {
 
 		public sgx_status_t init_proxied_shard_vault(
 			[in, size=shard_size] uint8_t* shard, uint32_t shard_size,
-			[in, size=parentchain_id_size] uint8_t* parentchain_id, uint32_t parentchain_id_size
+			[in, size=parentchain_id_size] uint8_t* parentchain_id, uint32_t parentchain_id_size,
+			[in, size=funding_balance_size] uint8_t* funding_balance, uint32_t funding_balance_size
 		);
 
 		public sgx_status_t init_shard_creation_parentchain_header(

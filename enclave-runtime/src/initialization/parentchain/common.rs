@@ -46,7 +46,7 @@ use crate::{
 use itp_component_container::ComponentGetter;
 use itp_nonce_cache::NonceCache;
 use itp_sgx_crypto::key_repository::AccessKey;
-use itp_types::parentchain::Header;
+use itp_types::parentchain::{Header, ParentchainId};
 use log::*;
 use sp_core::H256;
 use std::sync::Arc;
@@ -74,6 +74,7 @@ pub(crate) fn create_integritee_parentchain_block_importer(
 		stf_enclave_signer,
 		top_pool_author,
 		node_metadata_repository,
+		ParentchainId::Integritee,
 	));
 	Ok(IntegriteeParentchainBlockImporter::new(
 		validator_access,
@@ -81,6 +82,7 @@ pub(crate) fn create_integritee_parentchain_block_importer(
 		extrinsics_factory,
 		indirect_calls_executor,
 		maybe_creation_header,
+		ParentchainId::Integritee,
 	))
 }
 
@@ -106,6 +108,7 @@ pub(crate) fn create_target_a_parentchain_block_importer(
 		stf_enclave_signer,
 		top_pool_author,
 		node_metadata_repository,
+		ParentchainId::TargetA,
 	));
 	Ok(TargetAParentchainBlockImporter::new(
 		validator_access,
@@ -113,6 +116,7 @@ pub(crate) fn create_target_a_parentchain_block_importer(
 		extrinsics_factory,
 		indirect_calls_executor,
 		None,
+		ParentchainId::TargetA,
 	))
 }
 
@@ -138,6 +142,7 @@ pub(crate) fn create_target_b_parentchain_block_importer(
 		stf_enclave_signer,
 		top_pool_author,
 		node_metadata_repository,
+		ParentchainId::TargetB,
 	));
 	Ok(TargetBParentchainBlockImporter::new(
 		validator_access,
@@ -145,6 +150,7 @@ pub(crate) fn create_target_b_parentchain_block_importer(
 		extrinsics_factory,
 		indirect_calls_executor,
 		None,
+		ParentchainId::TargetB,
 	))
 }
 

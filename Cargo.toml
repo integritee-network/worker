@@ -94,15 +94,16 @@ ring = { git = "https://github.com/betrusted-io/ring-xous", branch = "0.16.20-cl
 #substrate-client-keystore = { path = "../../scs/substrate-api-client/client-keystore" }
 
 #[patch."https://github.com/integritee-network/pallets.git"]
-#pallet-claims = { git = "https://github.com/integritee-network//pallets", branch = "ab/shard-config-upgradability-2" }
-#pallet-enclave-bridge = { git = "https://github.com/integritee-network//pallets", branch = "ab/shard-config-upgradability-2" }
-#pallet-teerex = { git = "https://github.com/integritee-network//pallets", branch = "ab/shard-config-upgradability-2" }
-#pallet-sidechain = { git = "https://github.com/integritee-network//pallets", branch = "ab/shard-config-upgradability-2" }
-#sgx-verify = { git = "https://github.com/integritee-network//pallets", branch = "ab/shard-config-upgradability-2" }
-#pallet-teeracle = { git = "https://github.com/integritee-network//pallets", branch = "ab/shard-config-upgradability-2" }
-#test-utils = { git = "https://github.com/integritee-network//pallets", branch = "ab/shard-config-upgradability-2" }
-#claims-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/shard-config-upgradability-2" }
-#enclave-bridge-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/shard-config-upgradability-2" }
-#teerex-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/shard-config-upgradability-2" }
-#teeracle-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/shard-config-upgradability-2" }
-#common-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/shard-config-upgradability-2" }
+#pallet-claims = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
+#pallet-enclave-bridge = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
+#pallet-teerex = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
+#pallet-sidechain = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
+#pallet-parentchain = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
+#sgx-verify = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
+#pallet-teeracle = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
+#test-utils = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
+#claims-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
+#enclave-bridge-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
+#teerex-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
+#teeracle-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
+#common-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }

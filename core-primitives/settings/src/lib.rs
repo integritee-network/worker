@@ -82,10 +82,7 @@ pub mod worker {
 	pub const SIGNING_KEY_SIZE: usize = 32;
 	// size of the MR enclave
 	pub const MR_ENCLAVE_SIZE: usize = 32;
-	// Factors to tune the initial amount of enclave funding:
-	// Should be set to a value that ensures that the enclave can register itself
-	// and the worker can run for a certain time. Only for development.
-	pub const EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS: u128 = 200_000;
+
 	// Should be set to a value that ensures that the enclave can register itself
 	// and that the worker can start.
 	pub const REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS: u128 = 10;

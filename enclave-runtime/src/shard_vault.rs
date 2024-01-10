@@ -13,13 +13,13 @@
 	See the License for the specific language governing permissions and
 	limitations under the License.
 */
-
 use crate::{
 	error::{Error, Result as EnclaveResult},
 	initialization::global_components::{
-		GLOBAL_OCALL_API_COMPONENT, GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT,
+		EnclaveStf, GLOBAL_OCALL_API_COMPONENT, GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT,
 		GLOBAL_STATE_HANDLER_COMPONENT,
 	},
+	std::string::ToString,
 	utils::{
 		get_extrinsic_factory_from_integritee_solo_or_parachain,
 		get_extrinsic_factory_from_target_a_solo_or_parachain,
@@ -34,25 +34,22 @@ use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::{
 	api_client::{PairSignature, StaticExtrinsicSigner},
-	metadata::{
-		pallet_proxy::PROXY_DEPOSIT,
-		provider::{AccessNodeMetadata, Error as MetadataProviderError},
-	},
+	metadata::provider::{AccessNodeMetadata, Error as MetadataProviderError},
 };
 use itp_node_api_metadata::pallet_proxy::ProxyCallIndexes;
 use itp_nonce_cache::NonceCache;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_sgx_crypto::key_repository::AccessKey;
-use itp_stf_interface::SHARD_VAULT_KEY;
+use itp_stf_interface::{parentchain_pallet::ParentchainPalletInstancesInterface, ShardVaultQuery};
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_types::{
-	parentchain::{AccountId, Address, ParentchainId, ProxyType},
+	parentchain::{AccountId, Address, Balance, ParentchainId, ProxyType},
 	OpaqueCall, ShardIdentifier,
 };
 use log::*;
 use sgx_types::sgx_status_t;
 use sp_core::crypto::{DeriveJunction, Pair};
-use std::{slice, sync::Arc, vec::Vec};
+use std::{slice, sync::Arc};
 
 #[no_mangle]
 pub unsafe extern "C" fn init_proxied_shard_vault(
@@ -60,9 +57,22 @@ pub unsafe extern "C" fn init_proxied_shard_vault(
 	shard_size: u32,
 	parentchain_id: *const u8,
 	parentchain_id_size: u32,
+	funding_balance: *const u8,
+	funding_balance_size: u32,
 ) -> sgx_status_t {
 	let shard_identifier =
 		ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
+	let funding_balance = match Balance::decode(&mut slice::from_raw_parts(
+		funding_balance,
+		funding_balance_size as usize,
+	)) {
+		Ok(bal) => bal,
+		Err(e) => {
+			error!("Could not decode funding_balance: {:?}", e);
+			return sgx_status_t::SGX_ERROR_UNEXPECTED
+		},
+	};
+
 	let parentchain_id =
 		match ParentchainId::decode_raw(parentchain_id, parentchain_id_size as usize) {
 			Ok(id) => id,
@@ -72,7 +82,9 @@ pub unsafe extern "C" fn init_proxied_shard_vault(
 			},
 		};
 
-	if let Err(e) = init_proxied_shard_vault_internal(shard_identifier, parentchain_id) {
+	if let Err(e) =
+		init_proxied_shard_vault_internal(shard_identifier, parentchain_id, funding_balance)
+	{
 		error!("Failed to initialize proxied shard vault ({:?}): {:?}", shard_identifier, e);
 		return sgx_status_t::SGX_ERROR_UNEXPECTED
 	}
@@ -90,8 +102,8 @@ pub unsafe extern "C" fn get_ecc_vault_pubkey(
 ) -> sgx_status_t {
 	let shard = ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
 
-	let shard_vault = match get_shard_vault_account(shard) {
-		Ok(account) => account,
+	let shard_vault = match get_shard_vault_internal(shard) {
+		Ok((account, _)) => account,
 		Err(e) => {
 			warn!("Failed to fetch shard vault account: {:?}", e);
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
@@ -103,24 +115,20 @@ pub unsafe extern "C" fn get_ecc_vault_pubkey(
 }
 
 /// reads the shard vault account id form state if it has been initialized previously
-pub(crate) fn get_shard_vault_account(shard: ShardIdentifier) -> EnclaveResult<AccountId> {
+pub(crate) fn get_shard_vault_internal(
+	shard: ShardIdentifier,
+) -> EnclaveResult<(AccountId, ParentchainId)> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
-
-	state_handler
-		.execute_on_current(&shard, |state, _| {
-			state
-				.state
-				.get::<Vec<u8>>(&SHARD_VAULT_KEY.into())
-				.and_then(|v| Decode::decode(&mut v.clone().as_slice()).ok())
-		})?
-		.ok_or_else(|| {
-			Error::Other("failed to fetch shard vault account. has it been initialized?".into())
-		})
+	let (_state_lock, mut state) = state_handler.load_for_mutation(&shard)?;
+	EnclaveStf::get_vault(&mut state).ok_or_else(|| {
+		Error::Other("failed to fetch shard vault account. has it been initialized?".into())
+	})
 }
 
 pub(crate) fn init_proxied_shard_vault_internal(
 	shard: ShardIdentifier,
 	parentchain_id: ParentchainId,
+	funding_balance: Balance,
 ) -> EnclaveResult<()> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	if !state_handler
@@ -138,12 +146,12 @@ pub(crate) fn init_proxied_shard_vault_internal(
 		.map_err(|_| Error::Other("failed to derive shard vault keypair".into()))?
 		.0;
 	info!("shard vault account derived pubkey: 0x{}", hex::encode(vault.public().0));
-
+	let (state_lock, mut state) = state_handler.load_for_mutation(&shard)?;
+	EnclaveStf::init_shard_vault_account(&mut state, vault.public().into(), parentchain_id)
+		.map_err(|e| Error::Stf(e.to_string()))?;
+	state_handler.write_after_mutation(state, state_lock, &shard)?;
 	let (enclave_extrinsics_factory, node_metadata_repo) = match parentchain_id {
 		ParentchainId::Integritee => {
-			let (state_lock, mut state) = state_handler.load_for_mutation(&shard)?;
-			state.state.insert(SHARD_VAULT_KEY.into(), vault.public().0.to_vec());
-			state_handler.write_after_mutation(state, state_lock, &shard)?;
 			let enclave_extrinsics_factory =
 				get_extrinsic_factory_from_integritee_solo_or_parachain()?;
 			let node_metadata_repo =
@@ -166,7 +174,10 @@ pub(crate) fn init_proxied_shard_vault_internal(
 		},
 	};
 
-	info!("[{:?}] send existential funds from enclave account to vault account", parentchain_id);
+	info!(
+		"[{:?}] send existential funds from enclave account to vault account: {:?}",
+		parentchain_id, funding_balance
+	);
 	let call_ids = node_metadata_repo
 		.get_from_metadata(|m| m.call_indexes("Balances", "transfer_keep_alive"))?
 		.map_err(MetadataProviderError::MetadataError)?;
@@ -174,7 +185,7 @@ pub(crate) fn init_proxied_shard_vault_internal(
 	let call = OpaqueCall::from_tuple(&(
 		call_ids,
 		Address::from(AccountId::from(vault.public().0)),
-		Compact(PROXY_DEPOSIT),
+		Compact(funding_balance),
 	));
 
 	info!("[{:?}] vault funding call: 0x{}", parentchain_id, hex::encode(call.0.clone()));
@@ -220,14 +231,25 @@ pub(crate) fn add_shard_vault_proxy(
 	};
 
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
-	let enclave_extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
-	let node_metadata_repo = get_node_metadata_repository_from_integritee_solo_or_parachain()?;
-	let vault = get_shard_vault_account(shard)?;
+	let (vault, parentchain_id) = get_shard_vault_internal(shard)?;
+
+	let enclave_extrinsics_factory = match parentchain_id {
+		ParentchainId::Integritee => get_extrinsic_factory_from_integritee_solo_or_parachain()?,
+		ParentchainId::TargetA => get_extrinsic_factory_from_target_a_solo_or_parachain()?,
+		ParentchainId::TargetB => get_extrinsic_factory_from_target_b_solo_or_parachain()?,
+	};
+	let node_metadata_repo = match parentchain_id {
+		ParentchainId::Integritee =>
+			get_node_metadata_repository_from_integritee_solo_or_parachain()?,
+		ParentchainId::TargetA => get_node_metadata_repository_from_target_a_solo_or_parachain()?,
+		ParentchainId::TargetB => get_node_metadata_repository_from_target_b_solo_or_parachain()?,
+	};
 
 	debug!(
-		"adding proxy 0x{} to shard vault account 0x{}",
+		"adding proxy 0x{} to shard vault account 0x{} on {:?}",
 		hex::encode(proxy.clone()),
-		hex::encode(vault.clone())
+		hex::encode(vault.clone()),
+		parentchain_id,
 	);
 
 	let add_proxy_call = OpaqueCall::from_tuple(&(

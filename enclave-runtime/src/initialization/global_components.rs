@@ -212,7 +212,7 @@ pub type TargetAParentchainIndirectCallsExecutor = IndirectCallsExecutor<
 	EnclaveStfEnclaveSigner,
 	EnclaveTopPoolAuthor,
 	EnclaveNodeMetadataRepository,
-	target_a::TransferToAliceShieldsFundsFilter<target_a::ParentchainExtrinsicParser>,
+	target_a::TargetAExtrinsicFilter<target_a::ParentchainExtrinsicParser>,
 	EventCreator<target_a::FilterableEvents>,
 	target_a::ParentchainEventHandler,
 	EnclaveTrustedCallSigned,
