@@ -70,9 +70,18 @@ impl StateCallInterface<TrustedCallSignedMock, SgxExternalities, NodeMetadataRep
 		state: &mut SgxExternalities,
 		call: TrustedCallSignedMock,
 		calls: &mut Vec<ParentchainCall>,
-		node_metadata_repo: Arc<NodeMetadataRepositoryMock>,
+		node_metadata_repo_integritee: Arc<NodeMetadataRepositoryMock>,
+		maybe_node_metadata_repo_target_a: Option<Arc<NodeMetadataRepositoryMock>>,
+		maybe_node_metadata_repo_target_b: Option<Arc<NodeMetadataRepositoryMock>>,
 	) -> Result<(), Self::Error> {
-		state.execute_with(|| call.execute(calls, node_metadata_repo))
+		state.execute_with(|| {
+			call.execute(
+				calls,
+				node_metadata_repo_integritee,
+				maybe_node_metadata_repo_target_a,
+				maybe_node_metadata_repo_target_b,
+			)
+		})
 	}
 }
 
@@ -165,6 +174,8 @@ impl ExecuteCall<NodeMetadataRepositoryMock> for TrustedCallSignedMock {
 		self,
 		_calls: &mut Vec<ParentchainCall>,
 		_node_metadata_repo: Arc<NodeMetadataRepositoryMock>,
+		_maybe_node_metadata_repo_target_a: Option<Arc<NodeMetadataRepositoryMock>>,
+		_maybe_node_metadata_repo_target_b: Option<Arc<NodeMetadataRepositoryMock>>,
 	) -> Result<(), Self::Error> {
 		match self.call {
 			TrustedCallMock::noop(_) => Ok(()),

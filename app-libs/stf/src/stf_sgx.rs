@@ -152,9 +152,18 @@ where
 		state: &mut State,
 		call: TCS,
 		calls: &mut Vec<ParentchainCall>,
-		node_metadata_repo: Arc<NodeMetadataRepository>,
+		node_metadata_repo_integritee: Arc<NodeMetadataRepository>,
+		maybe_node_metadata_repo_target_a: Option<Arc<NodeMetadataRepository>>,
+		maybe_node_metadata_repo_target_b: Option<Arc<NodeMetadataRepository>>,
 	) -> Result<(), Self::Error> {
-		state.execute_with(|| call.execute(calls, node_metadata_repo))
+		state.execute_with(|| {
+			call.execute(
+				calls,
+				node_metadata_repo_integritee,
+				maybe_node_metadata_repo_target_a,
+				maybe_node_metadata_repo_target_b,
+			)
+		})
 	}
 }
 

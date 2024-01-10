@@ -52,7 +52,9 @@ where
 {
 	ocall_api: Arc<OCallApi>,
 	state_handler: Arc<StateHandler>,
-	node_metadata_repo: Arc<NodeMetadataRepository>,
+	node_metadata_repo_integritee: Arc<NodeMetadataRepository>,
+	maybe_node_metadata_repo_target_a: Option<Arc<NodeMetadataRepository>>,
+	maybe_node_metadata_repo_target_b: Option<Arc<NodeMetadataRepository>>,
 	_phantom: PhantomData<(Stf, TCS, G)>,
 }
 
@@ -77,9 +79,18 @@ where
 	pub fn new(
 		ocall_api: Arc<OCallApi>,
 		state_handler: Arc<StateHandler>,
-		node_metadata_repo: Arc<NodeMetadataRepository>,
+		node_metadata_repo_integritee: Arc<NodeMetadataRepository>,
+		maybe_node_metadata_repo_target_a: Option<Arc<NodeMetadataRepository>>,
+		maybe_node_metadata_repo_target_b: Option<Arc<NodeMetadataRepository>>,
 	) -> Self {
-		StfExecutor { ocall_api, state_handler, node_metadata_repo, _phantom: PhantomData }
+		StfExecutor {
+			ocall_api,
+			state_handler,
+			node_metadata_repo_integritee,
+			maybe_node_metadata_repo_target_a,
+			maybe_node_metadata_repo_target_b,
+			_phantom: PhantomData,
+		}
 	}
 
 	/// Execute a trusted call on the STF
@@ -123,7 +134,9 @@ where
 			state,
 			trusted_call.clone(),
 			&mut extrinsic_call_backs,
-			self.node_metadata_repo.clone(),
+			self.node_metadata_repo_integritee.clone(),
+			self.maybe_node_metadata_repo_target_a.clone(),
+			self.maybe_node_metadata_repo_target_b.clone(),
 		) {
 			error!("Stf execute failed: {:?}", e);
 			return Ok(ExecutedOperation::failed(top_or_hash))

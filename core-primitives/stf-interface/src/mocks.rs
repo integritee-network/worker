@@ -67,7 +67,9 @@ where
 		_state: &mut State,
 		_call: TCS,
 		_calls: &mut Vec<ParentchainCall>,
-		_node_metadata_repo: Arc<NodeMetadataRepository<NodeMetadataMock>>,
+		_node_metadata_repo_integritee: Arc<NodeMetadataRepository<NodeMetadataMock>>,
+		_node_metadata_repo_target_a: Option<Arc<NodeMetadataRepository<NodeMetadataMock>>>,
+		_node_metadata_repo_target_b: Option<Arc<NodeMetadataRepository<NodeMetadataMock>>>,
 	) -> Result<(), Self::Error> {
 		unimplemented!()
 	}
@@ -103,7 +105,9 @@ impl ExecuteCall<NodeMetadataRepository<NodeMetadataMock>> for CallExecutorMock 
 	fn execute(
 		self,
 		_calls: &mut Vec<ParentchainCall>,
-		_node_metadata_repo: Arc<NodeMetadataRepository<NodeMetadataMock>>,
+		_node_metadata_repo_integritee: Arc<NodeMetadataRepository<NodeMetadataMock>>,
+		_node_metadata_repo_target_a: Option<Arc<NodeMetadataRepository<NodeMetadataMock>>>,
+		_node_metadata_repo_target_b: Option<Arc<NodeMetadataRepository<NodeMetadataMock>>>,
 	) -> Result<(), Self::Error> {
 		unimplemented!()
 	}

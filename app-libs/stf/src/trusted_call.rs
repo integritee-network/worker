@@ -218,7 +218,9 @@ where
 	fn execute(
 		self,
 		calls: &mut Vec<ParentchainCall>,
-		node_metadata_repo: Arc<NodeMetadataRepository>,
+		node_metadata_repo_integritee: Arc<NodeMetadataRepository>,
+		maybe_node_metadata_repo_target_a: Option<Arc<NodeMetadataRepository>>,
+		maybe_node_metadata_repo_target_b: Option<Arc<NodeMetadataRepository>>,
 	) -> Result<(), Self::Error> {
 		let sender = self.call.sender_account().clone();
 		let call_hash = blake2_256(&self.call.encode());
@@ -326,9 +328,21 @@ where
 				let (vault, parentchain_id) = shard_vault().ok_or_else(|| {
 					StfError::Dispatch("shard vault key hasn't been set".to_string())
 				})?;
+				trace!(
+					"will use vault {:?} on {:?} to unshield",
+					account_id_to_string(&vault),
+					parentchain_id
+				);
+				let parentchain_metadata = match parentchain_id {
+					ParentchainId::Integritee => node_metadata_repo_integritee,
+					ParentchainId::TargetA => maybe_node_metadata_repo_target_a
+						.ok_or_else(|| Self::Error::InvalidMetadata)?,
+					ParentchainId::TargetB => maybe_node_metadata_repo_target_b
+						.ok_or_else(|| Self::Error::InvalidMetadata)?,
+				};
 				let vault_address = Address::from(vault);
 				let vault_transfer_call = OpaqueCall::from_tuple(&(
-					node_metadata_repo
+					parentchain_metadata
 						.get_from_metadata(|m| m.transfer_keep_alive_call_indexes())
 						.map_err(|_| StfError::InvalidMetadata)?
 						.map_err(|_| StfError::InvalidMetadata)?,
@@ -336,7 +350,7 @@ where
 					Compact(value),
 				));
 				let proxy_call = OpaqueCall::from_tuple(&(
-					node_metadata_repo
+					parentchain_metadata
 						.get_from_metadata(|m| m.proxy_call_indexes())
 						.map_err(|_| StfError::InvalidMetadata)?
 						.map_err(|_| StfError::InvalidMetadata)?,
@@ -371,7 +385,7 @@ where
 
 				// Send proof of execution on chain.
 				calls.push(ParentchainCall::Integritee(OpaqueCall::from_tuple(&(
-					node_metadata_repo
+					node_metadata_repo_integritee
 						.get_from_metadata(|m| m.publish_hash_call_indexes())
 						.map_err(|_| StfError::InvalidMetadata)?
 						.map_err(|_| StfError::InvalidMetadata)?,
