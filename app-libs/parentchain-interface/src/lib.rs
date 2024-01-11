@@ -34,7 +34,7 @@ pub fn decode_and_log_error<V: Decode>(encoded: &mut &[u8]) -> Option<V> {
 	match V::decode(encoded) {
 		Ok(v) => Some(v),
 		Err(e) => {
-			log::warn!("Could not decode. {:?}", e);
+			log::warn!("Could not decode. {:?}: raw: {:?}", e, encoded);
 			None
 		},
 	}

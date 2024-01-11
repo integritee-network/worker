@@ -61,6 +61,7 @@ use itp_sgx_crypto::key_repository::AccessPubkey;
 use itp_stf_interface::SHARD_CREATION_HEADER_KEY;
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_storage::{StorageProof, StorageProofChecker};
+use itp_time_utils::now_as_millis;
 use itp_types::{parentchain::Header, ShardIdentifier, SignedBlock};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
@@ -484,6 +485,8 @@ fn init_shard_creation_parentchain_header_internal(
 	}
 	debug!("initializing shard creation header: {:?}", parentchain_id);
 
+	let creation_timestamp = now_as_millis();
+	info!("now as millis: {:?}", creation_timestamp);
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	if !state_handler
 		.shard_exists(&shard)

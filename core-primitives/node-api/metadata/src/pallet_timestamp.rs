@@ -14,12 +14,17 @@
 	limitations under the License.
 
 */
+use crate::{error::Result, NodeMetadata};
 
-pub mod invoke;
-pub mod shield_funds;
-pub mod timestamp_set;
-pub mod transfer_to_alice_shields_funds;
+/// Pallet' name:
+const TIMESTAMP: &str = "Timestamp";
 
-pub use invoke::InvokeArgs;
-pub use shield_funds::ShieldFundsArgs;
-pub use transfer_to_alice_shields_funds::{TransferToAliceShieldsFundsArgs, ALICE_ACCOUNT_ID};
+pub trait TimestampCallIndexes {
+	fn timestamp_set_call_indexes(&self) -> Result<[u8; 2]>;
+}
+
+impl TimestampCallIndexes for NodeMetadata {
+	fn timestamp_set_call_indexes(&self) -> Result<[u8; 2]> {
+		self.call_indexes(TIMESTAMP, "set")
+	}
+}

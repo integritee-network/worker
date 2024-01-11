@@ -93,17 +93,17 @@ ring = { git = "https://github.com/betrusted-io/ring-xous", branch = "0.16.20-cl
 #substrate-api-client = { path = "../../scs/substrate-api-client" }
 #substrate-client-keystore = { path = "../../scs/substrate-api-client/client-keystore" }
 
-#[patch."https://github.com/integritee-network/pallets.git"]
-#pallet-claims = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
-#pallet-enclave-bridge = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
-#pallet-teerex = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
-#pallet-sidechain = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
-#pallet-parentchain = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
-#sgx-verify = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
-#pallet-teeracle = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
-#test-utils = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
-#claims-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
-#enclave-bridge-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
-#teerex-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
-#teeracle-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
-#common-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/make_parentchain_pallet_instantiable" }
+[patch."https://github.com/integritee-network/pallets.git"]
+pallet-claims = { git = "https://github.com/integritee-network//pallets", branch = "ab/parentchian-set-timestamp" }
+pallet-enclave-bridge = { git = "https://github.com/integritee-network//pallets", branch = "ab/parentchian-set-timestamp" }
+pallet-teerex = { git = "https://github.com/integritee-network//pallets", branch = "ab/parentchian-set-timestamp" }
+pallet-sidechain = { git = "https://github.com/integritee-network//pallets", branch = "ab/parentchian-set-timestamp" }
+pallet-parentchain = { git = "https://github.com/integritee-network//pallets", branch = "ab/parentchian-set-timestamp" }
+sgx-verify = { git = "https://github.com/integritee-network//pallets", branch = "ab/parentchian-set-timestamp" }
+pallet-teeracle = { git = "https://github.com/integritee-network//pallets", branch = "ab/parentchian-set-timestamp" }
+test-utils = { git = "https://github.com/integritee-network//pallets", branch = "ab/parentchian-set-timestamp" }
+claims-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/parentchian-set-timestamp" }
+enclave-bridge-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/parentchian-set-timestamp" }
+teerex-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/parentchian-set-timestamp" }
+teeracle-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/parentchian-set-timestamp" }
+common-primitives = { git = "https://github.com/integritee-network//pallets", branch = "ab/parentchian-set-timestamp" }

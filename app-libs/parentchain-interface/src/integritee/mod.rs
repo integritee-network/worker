@@ -22,7 +22,9 @@ mod extrinsic_parser;
 
 use crate::{
 	decode_and_log_error,
-	indirect_calls::{invoke::InvokeArgs, shield_funds::ShieldFundsArgs},
+	indirect_calls::{
+		invoke::InvokeArgs, shield_funds::ShieldFundsArgs, timestamp_set::TimestampSetArgs,
+	},
 	integritee::extrinsic_parser::ParseExtrinsic,
 };
 use codec::{Decode, Encode};
@@ -51,6 +53,7 @@ pub type Signature = sp_runtime::MultiSignature;
 pub enum IndirectCall {
 	ShieldFunds(ShieldFundsArgs),
 	Invoke(InvokeArgs),
+	TimestampSet(TimestampSetArgs),
 }
 
 impl<Executor: IndirectExecutor<TrustedCallSigned, Error>>
@@ -61,6 +64,7 @@ impl<Executor: IndirectExecutor<TrustedCallSigned, Error>>
 		match self {
 			IndirectCall::ShieldFunds(shieldfunds_args) => shieldfunds_args.dispatch(executor),
 			IndirectCall::Invoke(invoke_args) => invoke_args.dispatch(executor),
+			IndirectCall::TimestampSet(timestamp_set_args) => timestamp_set_args.dispatch(executor),
 		}
 	}
 }
@@ -110,6 +114,10 @@ where
 			log::debug!("executing invoke call");
 			let args = decode_and_log_error::<InvokeArgs>(call_args)?;
 			Some(IndirectCall::Invoke(args))
+		} else if index == metadata.timestamp_set_call_indexes().ok()? {
+			log::debug!("found timestamp set extrinsic");
+			let args = decode_and_log_error::<TimestampSetArgs>(call_args)?;
+			Some(IndirectCall::TimestampSet(args))
 		} else {
 			None
 		}
