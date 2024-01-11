@@ -18,15 +18,12 @@
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use itp_node_api::api_client::{
-	Address, CallIndex, PairSignature, ParentchainSignedExtra, Signature, UncheckedExtrinsicV4,
+	Address, CallIndex, PairSignature, Signature, UncheckedExtrinsicV4,
 };
 
 pub struct ExtrinsicParser<SignedExtra> {
 	_phantom: PhantomData<SignedExtra>,
 }
-
-/// Parses the extrinsics corresponding to the parentchain.
-pub type ParentchainExtrinsicParser = ExtrinsicParser<ParentchainSignedExtra>;
 
 /// Partially interpreted extrinsic containing the `signature` and the `call_index` whereas
 /// the `call_args` remain in encoded form.

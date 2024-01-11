@@ -18,35 +18,41 @@
 mod event_filter;
 mod event_handler;
 
-mod extrinsic_parser;
-
 use crate::{
 	decode_and_log_error,
+	extrinsic_parser::ParseExtrinsic,
 	indirect_calls::{
 		invoke::InvokeArgs, shield_funds::ShieldFundsArgs, timestamp_set::TimestampSetArgs,
 	},
-	integritee::extrinsic_parser::ParseExtrinsic,
 };
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
 pub use event_filter::FilterableEvents;
 pub use event_handler::ParentchainEventHandler;
-pub use extrinsic_parser::ParentchainExtrinsicParser;
 use ita_stf::TrustedCallSigned;
 use itc_parentchain_indirect_calls_executor::{
 	error::{Error, Result},
 	filter_metadata::FilterIntoDataFrom,
 	IndirectDispatch,
 };
-use itp_node_api::metadata::NodeMetadataTrait;
+use itp_api_client_types::ParentchainSignedExtra;
+use itp_node_api::metadata::{
+	pallet_enclave_bridge::EnclaveBridgeCallIndexes, pallet_timestamp::TimestampCallIndexes,
+	NodeMetadata, NodeMetadataTrait,
+};
 use itp_stf_primitives::traits::IndirectExecutor;
-use log::trace;
+use log::*;
 use sp_runtime::traits::BlakeTwo256;
 
 pub type BlockNumber = u32;
 pub type Header = sp_runtime::generic::Header<BlockNumber, BlakeTwo256>;
+use crate::extrinsic_parser::ExtrinsicParser;
 pub use itp_types::parentchain::{AccountId, Balance, Hash};
+
 pub type Signature = sp_runtime::MultiSignature;
+
+/// Parses the extrinsics corresponding to the parentchain.
+pub type ParentchainExtrinsicParser = ExtrinsicParser<ParentchainSignedExtra>;
 
 /// The default indirect call (extrinsic-triggered) of the Integritee-Parachain.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
@@ -60,7 +66,7 @@ impl<Executor: IndirectExecutor<TrustedCallSigned, Error>>
 	IndirectDispatch<Executor, TrustedCallSigned> for IndirectCall
 {
 	fn dispatch(&self, executor: &Executor) -> Result<()> {
-		trace!("dispatching indirect call {:?}", self);
+		trace!("[Integritee] dispatching indirect call {:?}", self);
 		match self {
 			IndirectCall::ShieldFunds(shieldfunds_args) => shieldfunds_args.dispatch(executor),
 			IndirectCall::Invoke(invoke_args) => invoke_args.dispatch(executor),
@@ -70,17 +76,13 @@ impl<Executor: IndirectExecutor<TrustedCallSigned, Error>>
 }
 
 /// Default filter we use for the Integritee-Parachain.
-pub struct ShieldFundsAndInvokeFilter<ExtrinsicParser> {
-	_phantom: PhantomData<ExtrinsicParser>,
-}
+pub struct ExtrinsicFilter {}
 
-impl<ExtrinsicParser, NodeMetadata: NodeMetadataTrait> FilterIntoDataFrom<NodeMetadata>
-	for ShieldFundsAndInvokeFilter<ExtrinsicParser>
-where
-	ExtrinsicParser: ParseExtrinsic,
+impl<NodeMetadata: EnclaveBridgeCallIndexes + TimestampCallIndexes> FilterIntoDataFrom<NodeMetadata>
+	for ExtrinsicFilter
 {
 	type Output = IndirectCall;
-	type ParseParentchainMetadata = ExtrinsicParser;
+	type ParseParentchainMetadata = ParentchainExtrinsicParser;
 
 	fn filter_into_from_metadata(
 		encoded_data: &[u8],
@@ -93,29 +95,23 @@ where
 		let xt = match Self::ParseParentchainMetadata::parse(call_mut) {
 			Ok(xt) => xt,
 			Err(e) => {
-				log::error!(
-					"[ShieldFundsAndInvokeFilter] Could not parse parentchain extrinsic: {:?}",
-					e
-				);
+				error!("ExtrinsicFilter: Could not parse parentchain extrinsic: {:?}", e);
 				return None
 			},
 		};
 		let index = xt.call_index;
 		let call_args = &mut &xt.call_args[..];
-		log::trace!(
-			"[ShieldFundsAndInvokeFilter] attempting to execute indirect call with index {:?}",
-			index
-		);
+		trace!("ExtrinsicFilter: attempting to execute indirect call with index {:?}", index);
 		if index == metadata.shield_funds_call_indexes().ok()? {
-			log::debug!("executing shield funds call");
+			debug!("ExtrinsicFilter: executing shield funds call");
 			let args = decode_and_log_error::<ShieldFundsArgs>(call_args)?;
 			Some(IndirectCall::ShieldFunds(args))
 		} else if index == metadata.invoke_call_indexes().ok()? {
-			log::debug!("executing invoke call");
+			debug!("ExtrinsicFilter: executing invoke call");
 			let args = decode_and_log_error::<InvokeArgs>(call_args)?;
 			Some(IndirectCall::Invoke(args))
 		} else if index == metadata.timestamp_set_call_indexes().ok()? {
-			log::debug!("found timestamp set extrinsic");
+			debug!("ExtrinsicFilter: found timestamp set extrinsic");
 			let args = decode_and_log_error::<TimestampSetArgs>(call_args)?;
 			Some(IndirectCall::TimestampSet(args))
 		} else {

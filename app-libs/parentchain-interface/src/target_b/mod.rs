@@ -17,23 +17,25 @@
 
 mod event_filter;
 mod event_handler;
-mod extrinsic_parser;
 
+use crate::extrinsic_parser::{ExtrinsicParser, ParseExtrinsic};
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
 pub use event_filter::FilterableEvents;
 pub use event_handler::ParentchainEventHandler;
-pub use extrinsic_parser::ParentchainExtrinsicParser;
-use extrinsic_parser::ParseExtrinsic;
 use ita_stf::TrustedCallSigned;
 use itc_parentchain_indirect_calls_executor::{
 	error::{Error, Result},
 	filter_metadata::FilterIntoDataFrom,
 	IndirectDispatch,
 };
+use itp_api_client_types::ParentchainSignedExtra;
 use itp_node_api::metadata::pallet_balances::BalancesCallIndexes;
 use itp_stf_primitives::traits::IndirectExecutor;
 use log::*;
+
+/// Parses the extrinsics corresponding to the parentchain.
+pub type ParentchainExtrinsicParser = ExtrinsicParser<ParentchainSignedExtra>;
 
 /// The default indirect call (extrinsic-triggered) of the Target-A-Parachain.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]

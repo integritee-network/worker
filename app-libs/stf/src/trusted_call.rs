@@ -32,7 +32,10 @@ use frame_support::{ensure, traits::UnfilteredDispatchable};
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 pub use ita_sgx_runtime::{Balance, Index};
-use ita_sgx_runtime::{Runtime, System};
+use ita_sgx_runtime::{
+	ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB, Runtime,
+	System,
+};
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_node_api_metadata::{
 	pallet_balances::BalancesCallIndexes, pallet_enclave_bridge::EnclaveBridgeCallIndexes,
@@ -386,13 +389,38 @@ where
 			TrustedCall::timestamp_set(enclave_account, now, parentchain_id) => {
 				ensure_enclave_signer_account(&enclave_account)?;
 				debug!("timestamp_set({}, {:?})", now, parentchain_id);
-				// Todo: the timestamp should be set on the parentchain pallet corresponding to parentchain_id. not the timestamp pallet of the stf state!!!!
-				ita_sgx_runtime::TimestampCall::<Runtime>::set { now }
+				match parentchain_id {
+					ParentchainId::Integritee => ita_sgx_runtime::ParentchainPalletCall::<
+						Runtime,
+						ParentchainInstanceIntegritee,
+					>::set_now {
+						now,
+					}
 					.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
 					.map_err(|e| {
 						Self::Error::Dispatch(format!("Timestamp Set error: {:?}", e.error))
-					})?;
-
+					})?,
+					ParentchainId::TargetA => ita_sgx_runtime::ParentchainPalletCall::<
+						Runtime,
+						ParentchainInstanceTargetA,
+					>::set_now {
+						now,
+					}
+					.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
+					.map_err(|e| {
+						Self::Error::Dispatch(format!("Timestamp Set error: {:?}", e.error))
+					})?,
+					ParentchainId::TargetB => ita_sgx_runtime::ParentchainPalletCall::<
+						Runtime,
+						ParentchainInstanceTargetB,
+					>::set_now {
+						now,
+					}
+					.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
+					.map_err(|e| {
+						Self::Error::Dispatch(format!("Timestamp Set error: {:?}", e.error))
+					})?,
+				};
 				Ok(())
 			},
 
