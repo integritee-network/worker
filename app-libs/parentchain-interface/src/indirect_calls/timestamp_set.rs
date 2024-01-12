@@ -15,7 +15,9 @@
 
 */
 
+use crate::{Integritee, ParentchainInstance, TargetA, TargetB};
 use codec::{Compact, Decode, Encode};
+use core::{any::TypeId, marker::PhantomData};
 use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
 use itc_parentchain_indirect_calls_executor::{
 	error::{Error, Result},
@@ -25,20 +27,29 @@ use itp_stf_primitives::{traits::IndirectExecutor, types::TrustedOperation};
 use itp_types::{parentchain::ParentchainId, Moment};
 use log::info;
 
-/// Arguments of the Integritee-Parachain's shield fund dispatchable.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
-pub struct TimestampSetArgs {
+pub struct TimestampSetArgs<I: ParentchainInstance> {
 	now: Compact<Moment>,
+	_phantom: PhantomData<I>,
 }
 
-impl<Executor: IndirectExecutor<TrustedCallSigned, Error>>
-	IndirectDispatch<Executor, TrustedCallSigned> for TimestampSetArgs
+impl<Executor: IndirectExecutor<TrustedCallSigned, Error>, I: ParentchainInstance + 'static>
+	IndirectDispatch<Executor, TrustedCallSigned> for TimestampSetArgs<I>
 {
 	fn dispatch(&self, executor: &Executor) -> Result<()> {
 		info!("Found TimestampSet extrinsic in block: now = {:?}", self.now);
 		let enclave_account_id = executor.get_enclave_account()?;
+		let parentchain_id = if TypeId::of::<I>() == TypeId::of::<Integritee>() {
+			ParentchainId::Integritee
+		} else if TypeId::of::<I>() == TypeId::of::<TargetA>() {
+			ParentchainId::TargetA
+		} else if TypeId::of::<I>() == TypeId::of::<TargetB>() {
+			ParentchainId::TargetB
+		} else {
+			return Err(Error::Other("unknown parentchain instance".into()))
+		};
 		let trusted_call =
-			TrustedCall::timestamp_set(enclave_account_id, self.now.0, ParentchainId::Integritee);
+			TrustedCall::timestamp_set(enclave_account_id, self.now.0, parentchain_id);
 		let shard = executor.get_default_shard();
 		let signed_trusted_call = executor.sign_call_with_self(&trusted_call, &shard)?;
 		let trusted_operation =

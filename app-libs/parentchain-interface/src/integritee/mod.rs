@@ -24,9 +24,9 @@ use crate::{
 	indirect_calls::{
 		invoke::InvokeArgs, shield_funds::ShieldFundsArgs, timestamp_set::TimestampSetArgs,
 	},
+	Integritee,
 };
 use codec::{Decode, Encode};
-use core::marker::PhantomData;
 pub use event_filter::FilterableEvents;
 pub use event_handler::ParentchainEventHandler;
 use ita_stf::TrustedCallSigned;
@@ -38,7 +38,6 @@ use itc_parentchain_indirect_calls_executor::{
 use itp_api_client_types::ParentchainSignedExtra;
 use itp_node_api::metadata::{
 	pallet_enclave_bridge::EnclaveBridgeCallIndexes, pallet_timestamp::TimestampCallIndexes,
-	NodeMetadata, NodeMetadataTrait,
 };
 use itp_stf_primitives::traits::IndirectExecutor;
 use log::*;
@@ -59,14 +58,14 @@ pub type ParentchainExtrinsicParser = ExtrinsicParser<ParentchainSignedExtra>;
 pub enum IndirectCall {
 	ShieldFunds(ShieldFundsArgs),
 	Invoke(InvokeArgs),
-	TimestampSet(TimestampSetArgs),
+	TimestampSet(TimestampSetArgs<Integritee>),
 }
 
 impl<Executor: IndirectExecutor<TrustedCallSigned, Error>>
 	IndirectDispatch<Executor, TrustedCallSigned> for IndirectCall
 {
 	fn dispatch(&self, executor: &Executor) -> Result<()> {
-		trace!("[Integritee] dispatching indirect call {:?}", self);
+		trace!("dispatching indirect call {:?}", self);
 		match self {
 			IndirectCall::ShieldFunds(shieldfunds_args) => shieldfunds_args.dispatch(executor),
 			IndirectCall::Invoke(invoke_args) => invoke_args.dispatch(executor),
@@ -112,7 +111,7 @@ impl<NodeMetadata: EnclaveBridgeCallIndexes + TimestampCallIndexes> FilterIntoDa
 			Some(IndirectCall::Invoke(args))
 		} else if index == metadata.timestamp_set_call_indexes().ok()? {
 			debug!("ExtrinsicFilter: found timestamp set extrinsic");
-			let args = decode_and_log_error::<TimestampSetArgs>(call_args)?;
+			let args = decode_and_log_error::<TimestampSetArgs<Integritee>>(call_args)?;
 			Some(IndirectCall::TimestampSet(args))
 		} else {
 			None

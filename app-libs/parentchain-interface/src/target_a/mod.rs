@@ -20,14 +20,10 @@ mod event_handler;
 use crate::{
 	decode_and_log_error,
 	extrinsic_parser::{ExtrinsicParser, ParseExtrinsic},
-	indirect_calls::{
-		timestamp_set::TimestampSetArgs,
-		transfer_to_alice_shields_funds::TransferToAliceShieldsFundsArgs, InvokeArgs,
-		ShieldFundsArgs,
-	},
+	indirect_calls::timestamp_set::TimestampSetArgs,
+	TargetA,
 };
 use codec::{Decode, Encode};
-use core::marker::PhantomData;
 pub use event_filter::FilterableEvents;
 pub use event_handler::ParentchainEventHandler;
 use ita_stf::TrustedCallSigned;
@@ -37,9 +33,7 @@ use itc_parentchain_indirect_calls_executor::{
 	IndirectDispatch,
 };
 use itp_api_client_types::ParentchainSignedExtra;
-use itp_node_api::metadata::{
-	pallet_balances::BalancesCallIndexes, pallet_timestamp::TimestampCallIndexes, NodeMetadata,
-};
+use itp_node_api::metadata::pallet_timestamp::TimestampCallIndexes;
 use itp_stf_primitives::traits::IndirectExecutor;
 use log::*;
 
@@ -49,14 +43,14 @@ pub type ParentchainExtrinsicParser = ExtrinsicParser<ParentchainSignedExtra>;
 /// The default indirect call (extrinsic-triggered) of the Target-A-Parachain.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
 pub enum IndirectCall {
-	TimestampSet(TimestampSetArgs),
+	TimestampSet(TimestampSetArgs<TargetA>),
 }
 
 impl<Executor: IndirectExecutor<TrustedCallSigned, Error>>
 	IndirectDispatch<Executor, TrustedCallSigned> for IndirectCall
 {
 	fn dispatch(&self, executor: &Executor) -> Result<()> {
-		trace!("[TargetA] dispatching indirect call {:?}", self);
+		trace!("dispatching indirect call {:?}", self);
 		match self {
 			IndirectCall::TimestampSet(timestamp_set_args) => timestamp_set_args.dispatch(executor),
 		}
@@ -89,7 +83,7 @@ impl<NodeMetadata: TimestampCallIndexes> FilterIntoDataFrom<NodeMetadata> for Ex
 		trace!("ExtrinsicFilter: attempting to execute indirect call with index {:?}", index);
 		if index == metadata.timestamp_set_call_indexes().ok()? {
 			debug!("ExtrinsicFilter: found timestamp set extrinsic");
-			let args = decode_and_log_error::<TimestampSetArgs>(call_args)?;
+			let args = decode_and_log_error::<TimestampSetArgs<TargetA>>(call_args)?;
 			Some(IndirectCall::TimestampSet(args))
 		} else {
 			None

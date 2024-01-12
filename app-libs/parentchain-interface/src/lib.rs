@@ -21,7 +21,7 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
-use codec::Decode;
+use codec::{Decode, Encode};
 
 #[cfg(feature = "std")]
 pub mod event_subscriber;
@@ -30,6 +30,20 @@ pub mod indirect_calls;
 pub mod integritee;
 pub mod target_a;
 pub mod target_b;
+
+pub trait ParentchainInstance {}
+
+#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
+pub struct Integritee;
+impl ParentchainInstance for Integritee {}
+
+#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
+pub struct TargetA;
+impl ParentchainInstance for TargetA {}
+
+#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
+pub struct TargetB;
+impl ParentchainInstance for TargetB {}
 
 pub fn decode_and_log_error<V: Decode>(encoded: &mut &[u8]) -> Option<V> {
 	match V::decode(encoded) {
