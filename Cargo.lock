@@ -2859,6 +2859,7 @@ dependencies = [
  "itp-node-api",
  "itp-node-api-metadata",
  "itp-sgx-externalities",
+ "itp-sgx-runtime-primitives",
  "itp-stf-interface",
  "itp-stf-primitives",
  "itp-storage",

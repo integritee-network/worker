@@ -115,8 +115,8 @@ fn init_shard_creation_parentchain_header_internal(
 	};
 
 	let (state_lock, mut state) = state_handler.load_for_mutation(&shard)?;
-	let value = (parentchain_id, header);
-	state.state.insert(SHARD_CREATION_HEADER_KEY.into(), value.encode());
+	EnclaveStf::set_creation_block(&mut state, header, parentchain_id)
+		.map_err(|e| Error::Stf(e.to_string()))?;
 	state_handler.write_after_mutation(state, state_lock, &shard)?;
 
 	shard_config::init_shard_config(shard)?;
@@ -129,19 +129,12 @@ pub(crate) fn get_shard_creation_parentchain_header_internal(
 ) -> EnclaveResult<(ParentchainId, Header)> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 
-	state_handler
-		.execute_on_current(&shard, |state, _| {
-			state
-				.state
-				.get::<Vec<u8>>(&SHARD_CREATION_HEADER_KEY.into())
-				.and_then(|v| Decode::decode(&mut v.clone().as_slice()).ok())
-		})?
-		.ok_or_else(|| {
-			Error::Other(
-				"failed to fetch shard creation parentchain header. has it been initialized?"
-					.into(),
-			)
-		})
+	// TODO: get creation block number, hash, Option<timestamp> from all parentchains and return in single type ShardCreationInfo
+
+	let (_state_lock, mut state) = state_handler.load_for_mutation(&shard)?;
+	EnclaveStf::get_shard_creation_info(&mut state).ok_or_else(|| {
+		Error::Other("failed to fetch shard vault account. has it been initialized?".into())
+	})
 }
 
 /// reads the shard vault account id form state if it has been initialized previously

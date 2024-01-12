@@ -126,3 +126,14 @@ pub fn get_shard_vaults() -> Vec<(AccountId, ParentchainId)> {
 	.filter_map(|vp| vp.0.map(|v| (v, vp.1)))
 	.collect()
 }
+
+pub fn get_creation_block_numbershard_vaults() -> Vec<(AccountId, ParentchainId)> {
+	[
+		(ParentchainIntegritee::shard_vault(), ParentchainId::Integritee),
+		(ParentchainTargetA::shard_vault(), ParentchainId::TargetA),
+		(ParentchainTargetB::shard_vault(), ParentchainId::TargetB),
+	]
+	.into_iter()
+	.filter_map(|vp| vp.0.map(|v| (v, vp.1)))
+	.collect()
+}

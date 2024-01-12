@@ -359,6 +359,46 @@ where
 		Ok(())
 	}
 
+	fn set_creation_block(
+		state: &mut State,
+		header: ParentchainHeader,
+		parentchain_id: ParentchainId,
+	) -> Result<(), Self::Error> {
+		state.execute_with(|| match parentchain_id {
+			ParentchainId::Integritee => pallet_parentchain::Call::<
+				Runtime,
+				ParentchainInstanceIntegritee,
+			>::set_creation_block {
+				header,
+			}
+			.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
+			.map_err(|e| {
+				Self::Error::Dispatch(format!("Init shard vault account error: {:?}", e.error))
+			}),
+			ParentchainId::TargetA => pallet_parentchain::Call::<
+				Runtime,
+				ParentchainInstanceTargetA,
+			>::set_creation_block {
+				header,
+			}
+			.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
+			.map_err(|e| {
+				Self::Error::Dispatch(format!("Init shard vault account error: {:?}", e.error))
+			}),
+			ParentchainId::TargetB => pallet_parentchain::Call::<
+				Runtime,
+				ParentchainInstanceTargetB,
+			>::set_creation_block {
+				header,
+			}
+			.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
+			.map_err(|e| {
+				Self::Error::Dispatch(format!("Init shard vault account error: {:?}", e.error))
+			}),
+		})?;
+		Ok(())
+	}
+
 	fn get_shard_vault_ensure_single_parentchain(
 		state: &mut State,
 	) -> Result<Option<(AccountId, ParentchainId)>, Self::Error> {
