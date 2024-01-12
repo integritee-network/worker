@@ -17,7 +17,6 @@
 
 use crate::{
 	error::Result,
-	get_shard_creation_parentchain_header_internal,
 	initialization::{
 		global_components::{
 			GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT,
@@ -34,6 +33,7 @@ use crate::{
 			target_b_solochain::TargetBSolochainHandler,
 		},
 	},
+	shard_creation_info::get_shard_creation_parentchain_header_internal,
 };
 use codec::{Decode, Encode};
 use integritee_parachain::IntegriteeParachainHandler;

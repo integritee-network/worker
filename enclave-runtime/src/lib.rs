@@ -58,11 +58,9 @@ use itp_nonce_cache::{MutateNonce, Nonce};
 
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
 use itp_sgx_crypto::key_repository::AccessPubkey;
-use itp_stf_interface::SHARD_CREATION_HEADER_KEY;
-use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
+use itp_stf_state_handler::handle_state::HandleState;
 use itp_storage::{StorageProof, StorageProofChecker};
-use itp_time_utils::now_as_millis;
-use itp_types::{parentchain::Header, ShardIdentifier, SignedBlock};
+use itp_types::{ShardIdentifier, SignedBlock};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use once_cell::sync::OnceCell;
@@ -81,6 +79,7 @@ mod initialization;
 mod ipfs;
 mod ocall;
 mod shard_config;
+mod shard_creation_info;
 mod shard_vault;
 mod utils;
 
@@ -429,125 +428,6 @@ pub unsafe extern "C" fn init_shard(shard: *const u8, shard_size: u32) -> sgx_st
 		return sgx_status_t::SGX_ERROR_UNEXPECTED
 	}
 
-	sgx_status_t::SGX_SUCCESS
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn init_shard_creation_parentchain_header(
-	shard: *const u8,
-	shard_size: u32,
-	parentchain_id: *const u8,
-	parentchain_id_size: u32,
-	header: *const u8,
-	header_size: u32,
-) -> sgx_status_t {
-	let shard_identifier =
-		ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
-	let header = match Header::decode(&mut slice::from_raw_parts(header, header_size as usize)) {
-		Ok(hdr) => hdr,
-		Err(e) => {
-			error!("Could not decode header: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
-	};
-	let parentchain_id =
-		match ParentchainId::decode_raw(parentchain_id, parentchain_id_size as usize) {
-			Ok(id) => id,
-			Err(e) => {
-				error!("Could not decode parentchain id: {:?}", e);
-				return sgx_status_t::SGX_ERROR_UNEXPECTED
-			},
-		};
-
-	if let Err(e) =
-		init_shard_creation_parentchain_header_internal(shard_identifier, parentchain_id, header)
-	{
-		error!(
-			"Failed to initialize first relevant parentchain header [{:?}]: {:?}",
-			parentchain_id, e
-		);
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
-	}
-	sgx_status_t::SGX_SUCCESS
-}
-
-fn init_shard_creation_parentchain_header_internal(
-	shard: ShardIdentifier,
-	parentchain_id: ParentchainId,
-	header: Header,
-) -> Result<()> {
-	if let Ok((id, _hdr)) = get_shard_creation_parentchain_header_internal(shard) {
-		error!("first relevant parentchain header has been previously initialized. cannot change: {:?}", id);
-		return Err(Error::Other(
-			"first relevant parentchain header has been previously initialized. cannot change"
-				.into(),
-		))
-	}
-	debug!("initializing shard creation header: {:?}", parentchain_id);
-
-	let creation_timestamp = now_as_millis();
-	info!("now as millis: {:?}", creation_timestamp);
-	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
-	if !state_handler
-		.shard_exists(&shard)
-		.map_err(|_| Error::Other("get shard_exists failed".into()))?
-	{
-		return Err(Error::Other("shard not initialized".into()))
-	};
-
-	let (state_lock, mut state) = state_handler.load_for_mutation(&shard)?;
-	let value = (parentchain_id, header);
-	state.state.insert(SHARD_CREATION_HEADER_KEY.into(), value.encode());
-	state_handler.write_after_mutation(state, state_lock, &shard)?;
-
-	shard_config::init_shard_config(shard)?;
-	Ok(())
-}
-
-/// reads the shard vault account id form state if it has been initialized previously
-pub(crate) fn get_shard_creation_parentchain_header_internal(
-	shard: ShardIdentifier,
-) -> Result<(ParentchainId, Header)> {
-	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
-
-	state_handler
-		.execute_on_current(&shard, |state, _| {
-			state
-				.state
-				.get::<Vec<u8>>(&SHARD_CREATION_HEADER_KEY.into())
-				.and_then(|v| Decode::decode(&mut v.clone().as_slice()).ok())
-		})?
-		.ok_or_else(|| {
-			Error::Other(
-				"failed to fetch shard creation parentchain header. has it been initialized?"
-					.into(),
-			)
-		})
-}
-
-/// reads the shard vault account id form state if it has been initialized previously
-#[no_mangle]
-pub unsafe extern "C" fn get_shard_creation_header(
-	shard: *const u8,
-	shard_size: u32,
-	creation: *mut u8,
-	creation_size: u32,
-) -> sgx_status_t {
-	let shard = ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
-
-	let shard_creation = match get_shard_creation_parentchain_header_internal(shard) {
-		Ok(creation) => creation,
-		Err(e) => {
-			warn!("Failed to fetch creation header: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
-	};
-	trace!("fetched shard creation header from state: {:?}", shard_creation);
-
-	let creation_slice = slice::from_raw_parts_mut(creation, creation_size as usize);
-	if let Err(e) = write_slice_and_whitespace_pad(creation_slice, shard_creation.encode()) {
-		return Error::BufferError(e).into()
-	};
 	sgx_status_t::SGX_SUCCESS
 }
 
