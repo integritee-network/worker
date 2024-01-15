@@ -47,7 +47,7 @@ use crate::{
 		get_node_metadata_repository_from_target_b_solo_or_parachain, utf8_str_from_raw, DecodeRaw,
 	},
 };
-use codec::{Decode};
+use codec::Decode;
 use core::ffi::c_int;
 use itc_parentchain::{block_import_dispatcher::DispatchBlockImport, primitives::ParentchainId};
 use itp_component_container::ComponentGetter;
@@ -58,7 +58,6 @@ use itp_nonce_cache::{MutateNonce, Nonce};
 
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode, WorkerModeProvider};
 use itp_sgx_crypto::key_repository::AccessPubkey;
-use itp_stf_state_handler::handle_state::HandleState;
 use itp_storage::{StorageProof, StorageProofChecker};
 use itp_types::{ShardIdentifier, SignedBlock};
 use itp_utils::write_slice_and_whitespace_pad;

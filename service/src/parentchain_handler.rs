@@ -198,7 +198,7 @@ where
 				return Ok(until_synced_header)
 			}
 
-			let skip_invocations = if let Some(creation_block) = maybe_creation_block.clone() {
+			let skip_invocations = if let Some(creation_block) = maybe_creation_block {
 				let max_blocknumber_in_chunk =
 					block_chunk_to_sync.last().map_or_else(|| 0, |b| b.block.header.number());
 				if max_blocknumber_in_chunk < creation_block.number {
