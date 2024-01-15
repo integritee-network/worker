@@ -755,6 +755,15 @@ where
 			panic!("[{:?}] Could not fund parentchain enclave account", parentchain_id)
 		});
 
+	// we attempt to set shard creation for this parentchain in case it hasn't been done before
+	let api_head = node_api.get_header(None).unwrap().unwrap();
+	// TODO: #1451: Fix api-client type hacks
+	let head = Header::decode(&mut api_head.encode().as_slice())
+		.expect("Can decode previously encoded header; qed");
+	enclave
+		.init_shard_creation_parentchain_header(shard, &parentchain_id, &head)
+		.unwrap();
+
 	let (parentchain_handler, last_synched_header) =
 		init_parentchain(enclave, &node_api, tee_account_id, parentchain_id, shard);
 
