@@ -185,10 +185,6 @@ where
 		debug!("Update STF storage upon block import!");
 		let storage_hashes = Stf::storage_hashes_to_update_on_block(parentchain_id);
 
-		if storage_hashes.is_empty() {
-			return Ok(())
-		}
-
 		// global requests they are the same for every shard
 		let state_diff_update = self
 			.ocall_api

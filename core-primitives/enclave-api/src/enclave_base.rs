@@ -20,6 +20,7 @@ use crate::EnclaveResult;
 use codec::Decode;
 use core::fmt::Debug;
 use itc_parentchain::primitives::{ParentchainId, ParentchainInitParams};
+use itp_stf_interface::ShardCreationInfo;
 use itp_types::{parentchain::Header, Balance, ShardIdentifier};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_core::ed25519;
@@ -66,10 +67,7 @@ pub trait EnclaveBase: Send + Sync + 'static {
 		header: &Header,
 	) -> EnclaveResult<()>;
 
-	fn get_shard_creation_info(
-		&self,
-		shard: &ShardIdentifier,
-	) -> EnclaveResult<(ParentchainId, Header)>;
+	fn get_shard_creation_info(&self, shard: &ShardIdentifier) -> EnclaveResult<ShardCreationInfo>;
 
 	fn set_nonce(&self, nonce: u32, parentchain_id: ParentchainId) -> EnclaveResult<()>;
 
@@ -262,7 +260,7 @@ mod impl_ffi {
 		fn get_shard_creation_info(
 			&self,
 			shard: &ShardIdentifier,
-		) -> EnclaveResult<(ParentchainId, Header)> {
+		) -> EnclaveResult<ShardCreationInfo> {
 			let mut retval = sgx_status_t::SGX_SUCCESS;
 			let mut creation_info = [0u8; std::mem::size_of::<ShardCreationInfo>()];
 			let shard_bytes = shard.encode();
@@ -280,9 +278,7 @@ mod impl_ffi {
 
 			ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 			ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
-			let (creation_parentchain_id, creation_header): (ParentchainId, Header) =
-				Decode::decode(&mut creation_info.as_slice())?;
-			Ok((creation_parentchain_id, creation_header))
+			Decode::decode(&mut creation_info.as_slice()).map_err(|e| Error::Codec(e.into()))
 		}
 
 		fn set_nonce(&self, nonce: u32, parentchain_id: ParentchainId) -> EnclaveResult<()> {

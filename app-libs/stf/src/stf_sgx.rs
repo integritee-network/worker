@@ -266,6 +266,7 @@ where
 		+ pallet_parentchain::Config<ParentchainInstanceTargetA>
 		+ pallet_parentchain::Config<ParentchainInstanceTargetB>,
 	<<Runtime as frame_system::Config>::Lookup as StaticLookup>::Source: From<AccountId>,
+	ParentchainHeader: Debug,
 {
 	type Error = StfError;
 
@@ -273,6 +274,7 @@ where
 		state: &mut State,
 		header: ParentchainHeader,
 	) -> Result<(), Self::Error> {
+		trace!("updating integritee parentchain block : {:?}", header);
 		state.execute_with(|| {
 			pallet_parentchain::Call::<Runtime, ParentchainInstanceIntegritee>::set_block { header }
 				.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
@@ -290,6 +292,7 @@ where
 		state: &mut State,
 		header: ParentchainHeader,
 	) -> Result<(), Self::Error> {
+		trace!("updating target_a parentchain block: {:?}", header);
 		state.execute_with(|| {
 			pallet_parentchain::Call::<Runtime, ParentchainInstanceTargetA>::set_block { header }
 				.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
@@ -307,6 +310,7 @@ where
 		state: &mut State,
 		header: ParentchainHeader,
 	) -> Result<(), Self::Error> {
+		trace!("updating target_b parentchain block: {:?}", header);
 		state.execute_with(|| {
 			pallet_parentchain::Call::<Runtime, ParentchainInstanceTargetB>::set_block { header }
 				.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())

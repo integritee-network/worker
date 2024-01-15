@@ -391,36 +391,22 @@ where
 				debug!("timestamp_set({}, {:?})", now, parentchain_id);
 				match parentchain_id {
 					ParentchainId::Integritee => {
-						let this_block_number = ParentchainIntegritee::block_number();
-						trace!("this block number: {:?}", this_block_number);
-						let creation_block_number = ParentchainIntegritee::creation_block_number();
-						trace!("creation block number: {:?}", creation_block_number);
-						this_block_number.map(|this| {
-							creation_block_number.map(|creation| {
-								if this == creation {
-									info!(
-										"found shard creation block timestamp: ({}, {:?})",
-										now, parentchain_id
-									);
-									ita_sgx_runtime::ParentchainPalletCall::<
-										Runtime,
-										ParentchainInstanceIntegritee,
-									>::set_creation_timestamp {
-										creation: now,
-									}
-									.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
-									.map_err(|e| {
-										Self::Error::Dispatch(format!(
-											"Timestamp Set error: {:?}",
-											e.error
-										))
-									})
-									.ok()
-								} else {
-									None
-								}
-							})
-						});
+						if ParentchainIntegritee::creation_timestamp().is_none() {
+							debug!(
+								"initializing creation timestamp({}, {:?})",
+								now, parentchain_id
+							);
+							ita_sgx_runtime::ParentchainPalletCall::<
+								Runtime,
+								ParentchainInstanceIntegritee,
+							>::set_creation_timestamp {
+								creation: now,
+							}
+							.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
+							.map_err(|e| {
+								Self::Error::Dispatch(format!("Timestamp Set error: {:?}", e.error))
+							})?;
+						};
 						ita_sgx_runtime::ParentchainPalletCall::<
 							Runtime,
 							ParentchainInstanceIntegritee,
