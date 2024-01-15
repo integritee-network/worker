@@ -28,7 +28,7 @@ use itp_extrinsics_factory::CreateExtrinsics;
 use itp_stf_executor::traits::StfUpdateState;
 use itp_stf_interface::ShardCreationInfo;
 use itp_types::{
-	parentchain::{Header, IdentifyParentchain, ParentchainId},
+	parentchain::{IdentifyParentchain, ParentchainId},
 	OpaqueCall, H256,
 };
 use log::*;
