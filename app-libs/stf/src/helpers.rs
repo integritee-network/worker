@@ -23,9 +23,7 @@ use itp_stf_primitives::{
 	types::AccountId,
 };
 use itp_storage::{storage_double_map_key, storage_map_key, storage_value_key, StorageHasher};
-use itp_types::{
-	parentchain::{ParentchainId},
-};
+use itp_types::parentchain::ParentchainId;
 use itp_utils::stringify::account_id_to_string;
 use log::*;
 use std::prelude::v1::*;

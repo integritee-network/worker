@@ -36,7 +36,7 @@ use crate::{
 use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, LightClientState};
 use itp_component_container::ComponentGetter;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
-use itp_types::parentchain::{ParentchainId};
+use itp_types::parentchain::ParentchainId;
 use std::{path::PathBuf, sync::Arc};
 
 pub use itc_parentchain::primitives::{SolochainBlock, SolochainHeader, SolochainParams};

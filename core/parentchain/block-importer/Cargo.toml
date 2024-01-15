@@ -15,7 +15,7 @@ itc-parentchain-indirect-calls-executor = { path = "../indirect-calls-executor",
 itc-parentchain-light-client = { path = "../light-client", default-features = false }
 itp-extrinsics-factory = { path = "../../../core-primitives/extrinsics-factory", default-features = false }
 itp-stf-executor = { path = "../../../core-primitives/stf-executor", default-features = false }
-itp-stf-interface = { path = "../../../core-primitives/stf-interface", default-features = false  }
+itp-stf-interface = { path = "../../../core-primitives/stf-interface", default-features = false }
 itp-types = { path = "../../../core-primitives/types", default-features = false }
 
 # sgx enabled external libraries

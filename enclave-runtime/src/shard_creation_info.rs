@@ -15,33 +15,26 @@
 */
 use crate::{
 	error::{Error, Result as EnclaveResult},
-	initialization::global_components::{
-		EnclaveStf,
-		GLOBAL_STATE_HANDLER_COMPONENT,
-	},
+	initialization::global_components::{EnclaveStf, GLOBAL_STATE_HANDLER_COMPONENT},
 	shard_config,
 	std::string::ToString,
-	utils::{
-		DecodeRaw,
-	},
+	utils::DecodeRaw,
 };
 use codec::{Decode, Encode};
 use itp_component_container::ComponentGetter;
-
-
-
 
 use itp_stf_interface::{
 	parentchain_pallet::ParentchainPalletInstancesInterface, ShardCreationInfo, ShardCreationQuery,
 };
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_types::{
-	parentchain::{Header, ParentchainId}, ShardIdentifier,
+	parentchain::{Header, ParentchainId},
+	ShardIdentifier,
 };
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use sgx_types::sgx_status_t;
-use std::{slice};
+use std::slice;
 
 #[no_mangle]
 pub unsafe extern "C" fn init_shard_creation_parentchain_header(
