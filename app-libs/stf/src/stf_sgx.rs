@@ -18,7 +18,7 @@
 #[cfg(feature = "test")]
 use crate::test_genesis::test_genesis_setup;
 use crate::{
-	helpers::{enclave_signer_account, get_shard_vaults, shard_vault},
+	helpers::{enclave_signer_account, get_shard_vaults, shard_creation_info, shard_vault},
 	Stf, ENCLAVE_ACCOUNT_KEY,
 };
 use codec::{Decode, Encode};
@@ -32,8 +32,8 @@ use itp_stf_interface::{
 	parentchain_pallet::ParentchainPalletInstancesInterface,
 	sudo_pallet::SudoPalletInterface,
 	system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface},
-	ExecuteCall, ExecuteGetter, InitState, ShardVaultQuery, StateCallInterface,
-	StateGetterInterface, UpdateState,
+	ExecuteCall, ExecuteGetter, InitState, ShardCreationInfo, ShardCreationQuery, ShardVaultQuery,
+	StateCallInterface, StateGetterInterface, UpdateState,
 };
 use itp_stf_primitives::{error::StfError, traits::TrustedCallVerification};
 use itp_storage::storage_value_key;
@@ -176,6 +176,15 @@ where
 	}
 }
 
+impl<TCS, G, State, Runtime> ShardCreationQuery<State> for Stf<TCS, G, State, Runtime>
+where
+	State: SgxExternalitiesTrait + Debug,
+{
+	fn get_shard_creation_info(state: &mut State) -> ShardCreationInfo {
+		state.execute_with(shard_creation_info)
+	}
+}
+
 impl<TCS, G, State, Runtime> SudoPalletInterface<State> for Stf<TCS, G, State, Runtime>
 where
 	State: SgxExternalitiesTrait,
@@ -257,6 +266,7 @@ where
 		+ pallet_parentchain::Config<ParentchainInstanceTargetA>
 		+ pallet_parentchain::Config<ParentchainInstanceTargetB>,
 	<<Runtime as frame_system::Config>::Lookup as StaticLookup>::Source: From<AccountId>,
+	ParentchainHeader: Debug,
 {
 	type Error = StfError;
 
@@ -264,6 +274,7 @@ where
 		state: &mut State,
 		header: ParentchainHeader,
 	) -> Result<(), Self::Error> {
+		trace!("updating integritee parentchain block : {:?}", header);
 		state.execute_with(|| {
 			pallet_parentchain::Call::<Runtime, ParentchainInstanceIntegritee>::set_block { header }
 				.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
@@ -281,6 +292,7 @@ where
 		state: &mut State,
 		header: ParentchainHeader,
 	) -> Result<(), Self::Error> {
+		trace!("updating target_a parentchain block: {:?}", header);
 		state.execute_with(|| {
 			pallet_parentchain::Call::<Runtime, ParentchainInstanceTargetA>::set_block { header }
 				.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
@@ -298,6 +310,7 @@ where
 		state: &mut State,
 		header: ParentchainHeader,
 	) -> Result<(), Self::Error> {
+		trace!("updating target_b parentchain block: {:?}", header);
 		state.execute_with(|| {
 			pallet_parentchain::Call::<Runtime, ParentchainInstanceTargetB>::set_block { header }
 				.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
@@ -355,6 +368,46 @@ where
 				.map_err(|e| {
 					Self::Error::Dispatch(format!("Init shard vault account error: {:?}", e.error))
 				}),
+		})?;
+		Ok(())
+	}
+
+	fn set_creation_block(
+		state: &mut State,
+		header: ParentchainHeader,
+		parentchain_id: ParentchainId,
+	) -> Result<(), Self::Error> {
+		state.execute_with(|| match parentchain_id {
+			ParentchainId::Integritee => pallet_parentchain::Call::<
+				Runtime,
+				ParentchainInstanceIntegritee,
+			>::set_creation_block {
+				header,
+			}
+			.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
+			.map_err(|e| {
+				Self::Error::Dispatch(format!("Init shard vault account error: {:?}", e.error))
+			}),
+			ParentchainId::TargetA => pallet_parentchain::Call::<
+				Runtime,
+				ParentchainInstanceTargetA,
+			>::set_creation_block {
+				header,
+			}
+			.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
+			.map_err(|e| {
+				Self::Error::Dispatch(format!("Init shard vault account error: {:?}", e.error))
+			}),
+			ParentchainId::TargetB => pallet_parentchain::Call::<
+				Runtime,
+				ParentchainInstanceTargetB,
+			>::set_creation_block {
+				header,
+			}
+			.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
+			.map_err(|e| {
+				Self::Error::Dispatch(format!("Init shard vault account error: {:?}", e.error))
+			}),
 		})?;
 		Ok(())
 	}

@@ -173,22 +173,14 @@ where
 			"[{:?}] Syncing blocks from {} to {}",
 			id, last_synced_header.number, curr_block_number
 		);
-		let maybe_creation = self.enclave_api.get_shard_creation_header(&shard).ok();
-		let maybe_creation_header =
-			if let Some((creation_parentchain_id, creation_header)) = maybe_creation {
-				trace!(
-					"shard_creation header is from {:?}: {:?}",
-					creation_parentchain_id,
-					creation_header
-				);
-				if *id == creation_parentchain_id {
-					Some(creation_header)
-				} else {
-					None
-				}
-			} else {
-				None
-			};
+		let creation_info = self.enclave_api.get_shard_creation_info(&shard)?;
+		let maybe_creation_block = if let Some(creation_block) = creation_info.for_parentchain(*id)
+		{
+			trace!("[{:?}] shard creation block: {:?}", id, creation_block);
+			Some(creation_block)
+		} else {
+			None
+		};
 
 		let mut until_synced_header = last_synced_header;
 		loop {
@@ -206,11 +198,11 @@ where
 				return Ok(until_synced_header)
 			}
 
-			let skip_invocations = if let Some(creation_header) = maybe_creation_header.clone() {
+			let skip_invocations = if let Some(creation_block) = maybe_creation_block {
 				let max_blocknumber_in_chunk =
 					block_chunk_to_sync.last().map_or_else(|| 0, |b| b.block.header.number());
-				if max_blocknumber_in_chunk < *creation_header.number() {
-					trace!("skipping invocations for fast-sync for blocks older than shard creation: {} < {}", max_blocknumber_in_chunk, creation_header.number());
+				if max_blocknumber_in_chunk < creation_block.number {
+					trace!("skipping invocations for fast-sync for blocks older than shard creation: {} < {}", max_blocknumber_in_chunk, creation_block.number);
 					true
 				} else {
 					false

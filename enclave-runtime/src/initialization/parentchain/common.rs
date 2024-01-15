@@ -46,7 +46,8 @@ use crate::{
 use itp_component_container::ComponentGetter;
 use itp_nonce_cache::NonceCache;
 use itp_sgx_crypto::key_repository::AccessKey;
-use itp_types::parentchain::{Header, ParentchainId};
+use itp_stf_interface::ShardCreationInfo;
+use itp_types::parentchain::ParentchainId;
 use log::*;
 use sp_core::H256;
 use std::sync::Arc;
@@ -56,7 +57,7 @@ pub(crate) fn create_integritee_parentchain_block_importer(
 	stf_executor: Arc<EnclaveStfExecutor>,
 	extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
 	node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
-	maybe_creation_header: Option<Header>,
+	shard_creation_info: ShardCreationInfo,
 ) -> Result<IntegriteeParentchainBlockImporter> {
 	let state_observer = GLOBAL_STATE_OBSERVER_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
@@ -81,7 +82,7 @@ pub(crate) fn create_integritee_parentchain_block_importer(
 		stf_executor,
 		extrinsics_factory,
 		indirect_calls_executor,
-		maybe_creation_header,
+		shard_creation_info,
 		ParentchainId::Integritee,
 	))
 }
@@ -91,6 +92,7 @@ pub(crate) fn create_target_a_parentchain_block_importer(
 	stf_executor: Arc<EnclaveStfExecutor>,
 	extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
 	node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
+	shard_creation_info: ShardCreationInfo,
 ) -> Result<TargetAParentchainBlockImporter> {
 	let state_observer = GLOBAL_STATE_OBSERVER_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
@@ -115,7 +117,7 @@ pub(crate) fn create_target_a_parentchain_block_importer(
 		stf_executor,
 		extrinsics_factory,
 		indirect_calls_executor,
-		None,
+		shard_creation_info,
 		ParentchainId::TargetA,
 	))
 }
@@ -125,6 +127,7 @@ pub(crate) fn create_target_b_parentchain_block_importer(
 	stf_executor: Arc<EnclaveStfExecutor>,
 	extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
 	node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
+	shard_creation_info: ShardCreationInfo,
 ) -> Result<TargetBParentchainBlockImporter> {
 	let state_observer = GLOBAL_STATE_OBSERVER_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
@@ -149,7 +152,7 @@ pub(crate) fn create_target_b_parentchain_block_importer(
 		stf_executor,
 		extrinsics_factory,
 		indirect_calls_executor,
-		None,
+		shard_creation_info,
 		ParentchainId::TargetB,
 	))
 }

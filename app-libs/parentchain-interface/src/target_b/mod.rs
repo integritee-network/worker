@@ -17,53 +17,77 @@
 
 mod event_filter;
 mod event_handler;
-mod extrinsic_parser;
 
+use crate::{
+	decode_and_log_error,
+	extrinsic_parser::{ExtrinsicParser, ParseExtrinsic},
+	indirect_calls::timestamp_set::TimestampSetArgs,
+	TargetB,
+};
 use codec::{Decode, Encode};
-use core::marker::PhantomData;
 pub use event_filter::FilterableEvents;
 pub use event_handler::ParentchainEventHandler;
-pub use extrinsic_parser::ParentchainExtrinsicParser;
-use extrinsic_parser::ParseExtrinsic;
 use ita_stf::TrustedCallSigned;
 use itc_parentchain_indirect_calls_executor::{
 	error::{Error, Result},
 	filter_metadata::FilterIntoDataFrom,
 	IndirectDispatch,
 };
-use itp_node_api::metadata::pallet_balances::BalancesCallIndexes;
+use itp_api_client_types::ParentchainSignedExtra;
+use itp_node_api::metadata::pallet_timestamp::TimestampCallIndexes;
 use itp_stf_primitives::traits::IndirectExecutor;
 use log::*;
 
+/// Parses the extrinsics corresponding to the parentchain.
+pub type ParentchainExtrinsicParser = ExtrinsicParser<ParentchainSignedExtra>;
+
 /// The default indirect call (extrinsic-triggered) of the Target-A-Parachain.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
-pub enum IndirectCall {}
+pub enum IndirectCall {
+	TimestampSet(TimestampSetArgs<TargetB>),
+}
 
 impl<Executor: IndirectExecutor<TrustedCallSigned, Error>>
 	IndirectDispatch<Executor, TrustedCallSigned> for IndirectCall
 {
-	fn dispatch(&self, _executor: &Executor) -> Result<()> {
-		Err(Error::Other("no indirect calls defined for target_b".into()))
+	fn dispatch(&self, executor: &Executor) -> Result<()> {
+		trace!("dispatching indirect call {:?}", self);
+		match self {
+			IndirectCall::TimestampSet(timestamp_set_args) => timestamp_set_args.dispatch(executor),
+		}
 	}
 }
 
-pub struct TargetBExtrinsicFilter<ExtrinsicParser> {
-	_phantom: PhantomData<ExtrinsicParser>,
-}
+pub struct ExtrinsicFilter {}
 
-impl<ExtrinsicParser, NodeMetadata: BalancesCallIndexes> FilterIntoDataFrom<NodeMetadata>
-	for TargetBExtrinsicFilter<ExtrinsicParser>
-where
-	ExtrinsicParser: ParseExtrinsic,
-{
+impl<NodeMetadata: TimestampCallIndexes> FilterIntoDataFrom<NodeMetadata> for ExtrinsicFilter {
 	type Output = IndirectCall;
-	type ParseParentchainMetadata = ExtrinsicParser;
+	type ParseParentchainMetadata = ParentchainExtrinsicParser;
 
 	fn filter_into_from_metadata(
-		_encoded_data: &[u8],
-		_metadata: &NodeMetadata,
+		encoded_data: &[u8],
+		metadata: &NodeMetadata,
 	) -> Option<Self::Output> {
-		warn!("no indirect calls filter has been implemented for target_b");
-		None
+		let call_mut = &mut &encoded_data[..];
+
+		// Todo: the filter should not need to parse, only filter. This should directly be configured
+		// in the indirect executor.
+		let xt = match Self::ParseParentchainMetadata::parse(call_mut) {
+			Ok(xt) => xt,
+			Err(e) => {
+				error!("ExtrinsicFilter: Could not parse parentchain extrinsic: {:?}", e);
+				return None
+			},
+		};
+		let index = xt.call_index;
+		let call_args = &mut &xt.call_args[..];
+		trace!("ExtrinsicFilter: attempting to execute indirect call with index {:?}", index);
+		if index == metadata.timestamp_set_call_indexes().ok()? {
+			debug!("ExtrinsicFilter: found timestamp set extrinsic");
+			let args = decode_and_log_error::<TimestampSetArgs<TargetB>>(call_args)?;
+			Some(IndirectCall::TimestampSet(args))
+		} else {
+			None
+		}
 	}
 }

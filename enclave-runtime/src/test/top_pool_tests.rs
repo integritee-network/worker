@@ -136,7 +136,7 @@ pub fn submit_shielding_call_to_top_pool() {
 		_,
 		_,
 		_,
-		integritee::ShieldFundsAndInvokeFilter<integritee::ParentchainExtrinsicParser>,
+		integritee::ExtrinsicFilter,
 		TestEventCreator,
 		integritee::ParentchainEventHandler,
 		TrustedCallSigned,

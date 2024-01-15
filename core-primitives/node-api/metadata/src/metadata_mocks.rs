@@ -19,6 +19,7 @@ use crate::{
 	error::Result, pallet_balances::BalancesCallIndexes,
 	pallet_enclave_bridge::EnclaveBridgeCallIndexes, pallet_proxy::ProxyCallIndexes,
 	pallet_sidechain::SidechainCallIndexes, pallet_teerex::TeerexCallIndexes,
+	pallet_timestamp::TimestampCallIndexes,
 };
 use codec::{Decode, Encode};
 
@@ -56,6 +57,8 @@ pub struct NodeMetadataMock {
 	transfer: u8,
 	transfer_keep_alive: u8,
 	transfer_allow_death: u8,
+	timestamp_module: u8,
+	timestamp_set: u8,
 	runtime_spec_version: u32,
 	runtime_transaction_version: u32,
 }
@@ -85,6 +88,8 @@ impl NodeMetadataMock {
 			transfer: 7u8,
 			transfer_keep_alive: 3u8,
 			transfer_allow_death: 0u8,
+			timestamp_module: 3,
+			timestamp_set: 0,
 			runtime_spec_version: 25,
 			runtime_transaction_version: 4,
 		}
@@ -166,5 +171,11 @@ impl BalancesCallIndexes for NodeMetadataMock {
 
 	fn transfer_allow_death_call_indexes(&self) -> Result<[u8; 2]> {
 		Ok([self.balances_module, self.transfer_allow_death])
+	}
+}
+
+impl TimestampCallIndexes for NodeMetadataMock {
+	fn timestamp_set_call_indexes(&self) -> Result<[u8; 2]> {
+		Ok([self.timestamp_module, self.timestamp_set])
 	}
 }

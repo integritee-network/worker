@@ -740,7 +740,7 @@ dependencies = [
 [[package]]
 name = "common-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.10-polkadot-v0.9.42#91321c805edc1e94d9ba04a5a6d74d63cf6c59e6"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.11-polkadot-v0.9.42#094b1e982b4637ebfbf5afb985100417215d49a0"
 dependencies = [
  "derive_more",
  "parity-scale-codec",
@@ -1216,7 +1216,7 @@ dependencies = [
 [[package]]
 name = "enclave-bridge-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.10-polkadot-v0.9.42#91321c805edc1e94d9ba04a5a6d74d63cf6c59e6"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.11-polkadot-v0.9.42#094b1e982b4637ebfbf5afb985100417215d49a0"
 dependencies = [
  "common-primitives",
  "log 0.4.20",
@@ -2581,7 +2581,7 @@ dependencies = [
 
 [[package]]
 name = "integritee-cli"
-version = "0.12.10"
+version = "0.12.11"
 dependencies = [
  "array-bytes 6.1.0",
  "base58",
@@ -2631,7 +2631,7 @@ dependencies = [
 
 [[package]]
 name = "integritee-service"
-version = "0.12.10"
+version = "0.12.11"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2655,6 +2655,7 @@ dependencies = [
  "itp-enclave-metrics",
  "itp-node-api",
  "itp-settings",
+ "itp-stf-interface",
  "itp-storage",
  "itp-types",
  "itp-utils",
@@ -2859,6 +2860,7 @@ dependencies = [
  "itp-node-api",
  "itp-node-api-metadata",
  "itp-sgx-externalities",
+ "itp-sgx-runtime-primitives",
  "itp-stf-interface",
  "itp-stf-primitives",
  "itp-storage",
@@ -2957,6 +2959,7 @@ dependencies = [
  "itc-parentchain-light-client",
  "itp-extrinsics-factory",
  "itp-stf-executor",
+ "itp-stf-interface",
  "itp-types",
  "log 0.4.20",
  "parity-scale-codec",
@@ -3227,6 +3230,7 @@ dependencies = [
  "itc-parentchain",
  "itp-enclave-api-ffi",
  "itp-settings",
+ "itp-stf-interface",
  "itp-storage",
  "itp-types",
  "log 0.4.20",
@@ -5154,7 +5158,7 @@ dependencies = [
 [[package]]
 name = "pallet-enclave-bridge"
 version = "0.12.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.10-polkadot-v0.9.42#91321c805edc1e94d9ba04a5a6d74d63cf6c59e6"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.11-polkadot-v0.9.42#094b1e982b4637ebfbf5afb985100417215d49a0"
 dependencies = [
  "enclave-bridge-primitives",
  "frame-support",
@@ -5212,8 +5216,8 @@ dependencies = [
 
 [[package]]
 name = "pallet-parentchain"
-version = "0.10.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.10-polkadot-v0.9.42#91321c805edc1e94d9ba04a5a6d74d63cf6c59e6"
+version = "0.11.0"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.11-polkadot-v0.9.42#094b1e982b4637ebfbf5afb985100417215d49a0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5231,7 +5235,7 @@ dependencies = [
 [[package]]
 name = "pallet-sidechain"
 version = "0.11.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.10-polkadot-v0.9.42#91321c805edc1e94d9ba04a5a6d74d63cf6c59e6"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.11-polkadot-v0.9.42#094b1e982b4637ebfbf5afb985100417215d49a0"
 dependencies = [
  "enclave-bridge-primitives",
  "frame-support",
@@ -5268,7 +5272,7 @@ dependencies = [
 [[package]]
 name = "pallet-teeracle"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.10-polkadot-v0.9.42#91321c805edc1e94d9ba04a5a6d74d63cf6c59e6"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.11-polkadot-v0.9.42#094b1e982b4637ebfbf5afb985100417215d49a0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5288,7 +5292,7 @@ dependencies = [
 [[package]]
 name = "pallet-teerex"
 version = "0.10.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.10-polkadot-v0.9.42#91321c805edc1e94d9ba04a5a6d74d63cf6c59e6"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.11-polkadot-v0.9.42#094b1e982b4637ebfbf5afb985100417215d49a0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -6813,7 +6817,7 @@ dependencies = [
 [[package]]
 name = "sgx-verify"
 version = "0.1.4"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.10-polkadot-v0.9.42#91321c805edc1e94d9ba04a5a6d74d63cf6c59e6"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.11-polkadot-v0.9.42#094b1e982b4637ebfbf5afb985100417215d49a0"
 dependencies = [
  "base64 0.13.1",
  "chrono 0.4.26",
@@ -7088,7 +7092,7 @@ checksum = "43b2853a4d09f215c24cc5489c992ce46052d359b5109343cbafbf26bc62f8a3"
 [[package]]
 name = "sidechain-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.10-polkadot-v0.9.42#91321c805edc1e94d9ba04a5a6d74d63cf6c59e6"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.11-polkadot-v0.9.42#094b1e982b4637ebfbf5afb985100417215d49a0"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -7973,7 +7977,7 @@ checksum = "1d2faeef5759ab89935255b1a4cd98e0baf99d1085e37d36599c625dac49ae8e"
 [[package]]
 name = "teeracle-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.10-polkadot-v0.9.42#91321c805edc1e94d9ba04a5a6d74d63cf6c59e6"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.11-polkadot-v0.9.42#094b1e982b4637ebfbf5afb985100417215d49a0"
 dependencies = [
  "common-primitives",
  "sp-std",
@@ -7983,7 +7987,7 @@ dependencies = [
 [[package]]
 name = "teerex-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.10-polkadot-v0.9.42#91321c805edc1e94d9ba04a5a6d74d63cf6c59e6"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.11-polkadot-v0.9.42#094b1e982b4637ebfbf5afb985100417215d49a0"
 dependencies = [
  "common-primitives",
  "derive_more",

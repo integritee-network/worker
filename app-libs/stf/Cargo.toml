@@ -20,6 +20,7 @@ itp-hashing = { default-features = false, path = "../../core-primitives/hashing"
 itp-node-api = { default-features = false, path = "../../core-primitives/node-api" }
 itp-node-api-metadata = { default-features = false, path = "../../core-primitives/node-api/metadata" }
 itp-sgx-externalities = { default-features = false, path = "../../core-primitives/substrate-sgx/externalities" }
+itp-sgx-runtime-primitives = { default-features = false, path = "../../core-primitives/sgx-runtime-primitives" }
 itp-stf-interface = { default-features = false, path = "../../core-primitives/stf-interface" }
 itp-stf-primitives = { default-features = false, path = "../../core-primitives/stf-primitives" }
 itp-storage = { default-features = false, path = "../../core-primitives/storage" }
@@ -31,7 +32,7 @@ sp-io = { default-features = false, features = ["disable_oom", "disable_panic_ha
 frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 frame-system = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 pallet-balances = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-pallet-parentchain = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.10-polkadot-v0.9.42" }
+pallet-parentchain = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
 pallet-sudo = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }

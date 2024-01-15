@@ -17,6 +17,7 @@
 use crate::ENCLAVE_ACCOUNT_KEY;
 use codec::{Decode, Encode};
 use ita_sgx_runtime::{ParentchainIntegritee, ParentchainTargetA, ParentchainTargetB};
+use itp_stf_interface::{BlockMetadata, ShardCreationInfo};
 use itp_stf_primitives::{
 	error::{StfError, StfResult},
 	types::AccountId,
@@ -125,4 +126,37 @@ pub fn get_shard_vaults() -> Vec<(AccountId, ParentchainId)> {
 	.into_iter()
 	.filter_map(|vp| vp.0.map(|v| (v, vp.1)))
 	.collect()
+}
+
+pub fn shard_creation_info() -> ShardCreationInfo {
+	let maybe_integritee_info: Option<BlockMetadata> =
+		ParentchainIntegritee::creation_block_number().and_then(|number| {
+			ParentchainIntegritee::creation_block_hash().map(|hash| BlockMetadata {
+				number,
+				hash,
+				timestamp: ParentchainIntegritee::creation_timestamp(),
+			})
+		});
+	let maybe_target_a_info: Option<BlockMetadata> = ParentchainTargetA::creation_block_number()
+		.and_then(|number| {
+			ParentchainTargetA::creation_block_hash().map(|hash| BlockMetadata {
+				number,
+				hash,
+				timestamp: ParentchainTargetA::creation_timestamp(),
+			})
+		});
+	let maybe_target_b_info: Option<BlockMetadata> = ParentchainTargetB::creation_block_number()
+		.and_then(|number| {
+			ParentchainTargetB::creation_block_hash().map(|hash| BlockMetadata {
+				number,
+				hash,
+				timestamp: ParentchainTargetB::creation_timestamp(),
+			})
+		});
+
+	ShardCreationInfo {
+		integritee: maybe_integritee_info,
+		target_a: maybe_target_a_info,
+		target_b: maybe_target_b_info,
+	}
 }

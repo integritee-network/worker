@@ -70,7 +70,7 @@ enclave {
     		[in, size=header_size] uint8_t* header, uint32_t header_size
 		);
 
-		public sgx_status_t get_shard_creation_header(
+		public sgx_status_t get_shard_creation_info(
 			[in, size=shard_size] uint8_t* shard, uint32_t shard_size,
 			[out, size=creation_size] uint8_t* creation, uint32_t creation_size);
 

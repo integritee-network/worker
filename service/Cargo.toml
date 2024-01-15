@@ -1,6 +1,6 @@
 [package]
 name = "integritee-service"
-version = "0.12.10"
+version = "0.12.11"
 authors = ["Integritee AG <hello@integritee.network>"]
 build = "build.rs"
 edition = "2021"
@@ -49,6 +49,7 @@ itp-enclave-api = { path = "../core-primitives/enclave-api" }
 itp-enclave-metrics = { path = "../core-primitives/enclave-metrics" }
 itp-node-api = { path = "../core-primitives/node-api" }
 itp-settings = { path = "../core-primitives/settings" }
+itp-stf-interface = { path = "../core-primitives/stf-interface" }
 itp-storage = { path = "../core-primitives/storage" }
 itp-types = { path = "../core-primitives/types" }
 itp-utils = { path = "../core-primitives/utils" }
@@ -58,12 +59,12 @@ its-primitives = { path = "../sidechain/primitives" }
 its-rpc-handler = { path = "../sidechain/rpc-handler" }
 its-storage = { path = "../sidechain/storage" }
 
-sgx-verify = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.10-polkadot-v0.9.42" }
+sgx-verify = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
 # `default-features = false` to remove the jsonrpsee dependency.
-enclave-bridge-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.10-polkadot-v0.9.42" }
+enclave-bridge-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
 # disable unsupported jsonrpcsee
 substrate-api-client = { default-features = false, features = ["std", "sync-api"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }
-teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.10-polkadot-v0.9.42" }
+teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
 
 # Substrate dependencies
 frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }

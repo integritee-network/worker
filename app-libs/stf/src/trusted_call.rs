@@ -32,7 +32,10 @@ use frame_support::{ensure, traits::UnfilteredDispatchable};
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 pub use ita_sgx_runtime::{Balance, Index};
-use ita_sgx_runtime::{Runtime, System};
+use ita_sgx_runtime::{
+	ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
+	ParentchainIntegritee, Runtime, System,
+};
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_node_api_metadata::{
 	pallet_balances::BalancesCallIndexes, pallet_enclave_bridge::EnclaveBridgeCallIndexes,
@@ -46,7 +49,7 @@ use itp_stf_primitives::{
 };
 use itp_types::{
 	parentchain::{ParentchainCall, ParentchainId, ProxyType},
-	Address, OpaqueCall,
+	Address, Moment, OpaqueCall,
 };
 use itp_utils::stringify::account_id_to_string;
 use log::*;
@@ -66,6 +69,7 @@ pub enum TrustedCall {
 	balance_transfer(AccountId, AccountId, Balance),
 	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
 	balance_shield(AccountId, AccountId, Balance, ParentchainId), // (Root, AccountIncognito, Amount, origin parentchain)
+	timestamp_set(AccountId, Moment, ParentchainId),              // (Root, now)
 	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance), // (Origin, Address EVM Account, Value)
 	// (Origin, Source, Target, Input, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
@@ -119,6 +123,7 @@ impl TrustedCall {
 			Self::balance_transfer(sender_account, ..) => sender_account,
 			Self::balance_unshield(sender_account, ..) => sender_account,
 			Self::balance_shield(sender_account, ..) => sender_account,
+			Self::timestamp_set(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
 			Self::evm_withdraw(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
@@ -381,6 +386,62 @@ where
 				))));
 				Ok(())
 			},
+			TrustedCall::timestamp_set(enclave_account, now, parentchain_id) => {
+				ensure_enclave_signer_account(&enclave_account)?;
+				debug!("timestamp_set({}, {:?})", now, parentchain_id);
+				match parentchain_id {
+					ParentchainId::Integritee => {
+						if ParentchainIntegritee::creation_timestamp().is_none() {
+							debug!(
+								"initializing creation timestamp({}, {:?})",
+								now, parentchain_id
+							);
+							ita_sgx_runtime::ParentchainPalletCall::<
+								Runtime,
+								ParentchainInstanceIntegritee,
+							>::set_creation_timestamp {
+								creation: now,
+							}
+							.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
+							.map_err(|e| {
+								Self::Error::Dispatch(format!("Timestamp Set error: {:?}", e.error))
+							})?;
+						};
+						ita_sgx_runtime::ParentchainPalletCall::<
+							Runtime,
+							ParentchainInstanceIntegritee,
+						>::set_now {
+							now,
+						}
+						.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
+						.map_err(|e| {
+							Self::Error::Dispatch(format!("Timestamp Set error: {:?}", e.error))
+						})?
+					},
+					ParentchainId::TargetA => ita_sgx_runtime::ParentchainPalletCall::<
+						Runtime,
+						ParentchainInstanceTargetA,
+					>::set_now {
+						now,
+					}
+					.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
+					.map_err(|e| {
+						Self::Error::Dispatch(format!("Timestamp Set error: {:?}", e.error))
+					})?,
+					ParentchainId::TargetB => ita_sgx_runtime::ParentchainPalletCall::<
+						Runtime,
+						ParentchainInstanceTargetB,
+					>::set_now {
+						now,
+					}
+					.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
+					.map_err(|e| {
+						Self::Error::Dispatch(format!("Timestamp Set error: {:?}", e.error))
+					})?,
+				};
+				Ok(())
+			},
+
 			#[cfg(feature = "evm")]
 			TrustedCall::evm_withdraw(from, address, value) => {
 				debug!("evm_withdraw({}, {}, {})", account_id_to_string(&from), address, value);
@@ -510,6 +571,7 @@ where
 			TrustedCall::balance_transfer(..) => debug!("No storage updates needed..."),
 			TrustedCall::balance_unshield(..) => debug!("No storage updates needed..."),
 			TrustedCall::balance_shield(..) => debug!("No storage updates needed..."),
+			TrustedCall::timestamp_set(..) => debug!("No storage updates needed..."),
 			#[cfg(feature = "evm")]
 			_ => debug!("No storage updates needed..."),
 		};
