@@ -482,9 +482,10 @@ unsafe fn sync_parentchain_internal(
 		let blocks_to_sync_merkle_roots: Vec<sp_core::H256> =
 			blocks_to_sync.iter().map(|block| block.block.header.state_root).collect();
 		// fixme: vulnerability! https://github.com/integritee-network/worker/issues/1518
-		if let Err(e) = validate_events(&events_proofs_to_sync, &blocks_to_sync_merkle_roots) {
-			return e.into()
-		}
+		// until fixed properly, we deactivate it altogether in the scope of #1547
+		//if let Err(e) = validate_events(&events_proofs_to_sync, &blocks_to_sync_merkle_roots) {
+		//	return e.into()
+		//}
 	}
 
 	dispatch_parentchain_blocks_for_import::<WorkerModeProvider>(
