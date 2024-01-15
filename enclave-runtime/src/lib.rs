@@ -47,7 +47,7 @@ use crate::{
 		get_node_metadata_repository_from_target_b_solo_or_parachain, utf8_str_from_raw, DecodeRaw,
 	},
 };
-use codec::{Decode, Encode};
+use codec::{Decode};
 use core::ffi::c_int;
 use itc_parentchain::{block_import_dispatcher::DispatchBlockImport, primitives::ParentchainId};
 use itp_component_container::ComponentGetter;

@@ -38,6 +38,7 @@ std = [
     "itc-parentchain-light-client/std",
     "itp-extrinsics-factory/std",
     "itp-stf-executor/std",
+    "itp-stf-interface/std",
     "itp-types/std",
     # no-std compatible libraries
     "codec/std",

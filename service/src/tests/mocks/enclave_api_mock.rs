@@ -24,6 +24,7 @@ use itc_parentchain::primitives::{
 };
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain, EnclaveResult};
 use itp_settings::worker::MR_ENCLAVE_SIZE;
+use itp_stf_interface::ShardCreationInfo;
 use itp_storage::StorageProof;
 use itp_types::{
 	parentchain::{Balance, Header},
@@ -82,10 +83,7 @@ impl EnclaveBase for EnclaveMock {
 		unimplemented!()
 	}
 
-	fn get_shard_creation_info(
-		&self,
-		shard: &ShardIdentifier,
-	) -> EnclaveResult<(ParentchainId, Header)> {
+	fn get_shard_creation_info(&self, shard: &ShardIdentifier) -> EnclaveResult<ShardCreationInfo> {
 		unimplemented!()
 	}
 

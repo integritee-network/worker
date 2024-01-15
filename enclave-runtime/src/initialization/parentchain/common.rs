@@ -47,7 +47,7 @@ use itp_component_container::ComponentGetter;
 use itp_nonce_cache::NonceCache;
 use itp_sgx_crypto::key_repository::AccessKey;
 use itp_stf_interface::ShardCreationInfo;
-use itp_types::parentchain::{Header, ParentchainId};
+use itp_types::parentchain::{ParentchainId};
 use log::*;
 use sp_core::H256;
 use std::sync::Arc;

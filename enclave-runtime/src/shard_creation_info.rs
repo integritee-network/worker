@@ -16,42 +16,32 @@
 use crate::{
 	error::{Error, Result as EnclaveResult},
 	initialization::global_components::{
-		EnclaveStf, GLOBAL_OCALL_API_COMPONENT, GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT,
+		EnclaveStf,
 		GLOBAL_STATE_HANDLER_COMPONENT,
 	},
 	shard_config,
 	std::string::ToString,
 	utils::{
-		get_extrinsic_factory_from_integritee_solo_or_parachain,
-		get_extrinsic_factory_from_target_a_solo_or_parachain,
-		get_extrinsic_factory_from_target_b_solo_or_parachain,
-		get_node_metadata_repository_from_integritee_solo_or_parachain,
-		get_node_metadata_repository_from_target_a_solo_or_parachain,
-		get_node_metadata_repository_from_target_b_solo_or_parachain, DecodeRaw,
+		DecodeRaw,
 	},
 };
 use codec::{Decode, Encode};
 use itp_component_container::ComponentGetter;
-use itp_node_api::{
-	api_client::{PairSignature, StaticExtrinsicSigner},
-	metadata::provider::{AccessNodeMetadata, Error as MetadataProviderError},
-};
-use itp_node_api_metadata::pallet_proxy::ProxyCallIndexes;
-use itp_nonce_cache::NonceCache;
-use itp_ocall_api::EnclaveOnChainOCallApi;
+
+
+
+
 use itp_stf_interface::{
 	parentchain_pallet::ParentchainPalletInstancesInterface, ShardCreationInfo, ShardCreationQuery,
-	ShardVaultQuery, SHARD_CREATION_HEADER_KEY,
 };
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_types::{
-	parentchain::{Header, ParentchainId},
-	OpaqueCall, ShardIdentifier,
+	parentchain::{Header, ParentchainId}, ShardIdentifier,
 };
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use sgx_types::sgx_status_t;
-use std::{slice, vec::Vec};
+use std::{slice};
 
 #[no_mangle]
 pub unsafe extern "C" fn init_shard_creation_parentchain_header(
@@ -97,7 +87,7 @@ fn init_shard_creation_parentchain_header_internal(
 	parentchain_id: ParentchainId,
 	header: Header,
 ) -> EnclaveResult<()> {
-	if let Some(creation_block) =
+	if let Some(_creation_block) =
 		get_shard_creation_info_internal(shard)?.for_parentchain(parentchain_id)
 	{
 		error!("first relevant parentchain header has been previously initialized. cannot change: {:?}", parentchain_id);

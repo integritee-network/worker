@@ -44,7 +44,7 @@ use itc_parentchain::{
 };
 use itp_component_container::ComponentInitializer;
 use itp_settings::worker_mode::ProvideWorkerMode;
-use itp_types::parentchain::Header;
+
 use std::{path::PathBuf, vec::Vec};
 
 mod common;

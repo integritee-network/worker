@@ -41,7 +41,7 @@ use std::{path::PathBuf, sync::Arc};
 
 pub use itc_parentchain::primitives::{ParachainBlock, ParachainHeader, ParachainParams};
 use itp_stf_interface::ShardCreationInfo;
-use itp_types::parentchain::Header;
+
 #[derive(Clone)]
 pub struct IntegriteeParachainHandler {
 	pub genesis_header: ParachainHeader,

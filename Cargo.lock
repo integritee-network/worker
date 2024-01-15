@@ -2655,6 +2655,7 @@ dependencies = [
  "itp-enclave-metrics",
  "itp-node-api",
  "itp-settings",
+ "itp-stf-interface",
  "itp-storage",
  "itp-types",
  "itp-utils",
