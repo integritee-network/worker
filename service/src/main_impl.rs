@@ -515,7 +515,12 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 							primary.to_ss58check(),
 						);
 						info!("The primary worker enclave is {:?}", primary_enclave);
-						if enclave.get_shard_creation_info(shard).is_err() {
+						if enclave
+							.get_shard_creation_info(shard)
+							.unwrap()
+							.for_parentchain(ParentchainId::Integritee)
+							.is_none()
+						{
 							//obtain provisioning from last active worker as this hasn't been done before
 							info!("my state doesn't know the creation header of the shard. will request provisioning");
 							sync_state::sync_state::<_, _, WorkerModeProvider>(
