@@ -26,6 +26,7 @@ use itc_parentchain_light_client::{
 };
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_stf_executor::traits::StfUpdateState;
+use itp_stf_interface::ShardCreationInfo;
 use itp_types::{
 	parentchain::{Header, IdentifyParentchain, ParentchainId},
 	OpaqueCall, H256,
@@ -49,7 +50,7 @@ pub struct ParentchainBlockImporter<
 	stf_executor: Arc<StfExecutor>,
 	extrinsics_factory: Arc<ExtrinsicsFactory>,
 	pub indirect_calls_executor: Arc<IndirectCallsExecutor>,
-	maybe_creation_header: Option<Header>,
+	shard_creation_info: ShardCreationInfo,
 	pub parentchain_id: ParentchainId,
 	_phantom: PhantomData<ParentchainBlock>,
 }
@@ -74,7 +75,7 @@ impl<
 		stf_executor: Arc<StfExecutor>,
 		extrinsics_factory: Arc<ExtrinsicsFactory>,
 		indirect_calls_executor: Arc<IndirectCallsExecutor>,
-		maybe_creation_header: Option<Header>,
+		shard_creation_info: ShardCreationInfo,
 		parentchain_id: ParentchainId,
 	) -> Self {
 		ParentchainBlockImporter {
@@ -82,7 +83,7 @@ impl<
 			stf_executor,
 			extrinsics_factory,
 			indirect_calls_executor,
-			maybe_creation_header,
+			shard_creation_info,
 			parentchain_id,
 			_phantom: Default::default(),
 		}
@@ -144,15 +145,13 @@ impl<
 			}
 
 			// check if we can fast-sync
-			if id == ParentchainId::Integritee {
-				if let Some(ref creation_header) = self.maybe_creation_header {
-					if signed_block.block.header().number < creation_header.number {
-						trace!(
-							"fast-syncing block import, ignoring any invocations before block {:}",
-							creation_header.number
-						);
-						continue
-					}
+			if let Some(creation_block) = self.shard_creation_info.for_parentchain(id) {
+				if signed_block.block.header().number < creation_block.number {
+					trace!(
+						"fast-syncing block import, ignoring any invocations before block {:}",
+						creation_block.number
+					);
+					continue
 				}
 			}
 

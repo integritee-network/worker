@@ -40,6 +40,7 @@ use itp_types::parentchain::{Header, ParentchainId};
 use std::{path::PathBuf, sync::Arc};
 
 pub use itc_parentchain::primitives::{SolochainBlock, SolochainHeader, SolochainParams};
+use itp_stf_interface::ShardCreationInfo;
 
 pub struct IntegriteeSolochainHandler {
 	pub genesis_header: SolochainHeader,
@@ -54,7 +55,7 @@ impl IntegriteeSolochainHandler {
 	pub fn init<WorkerModeProvider: ProvideWorkerMode>(
 		_base_path: PathBuf,
 		params: SolochainParams,
-		maybe_creation_header: Option<Header>,
+		shard_creation_info: ShardCreationInfo,
 	) -> Result<Self> {
 		let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 		let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
@@ -91,7 +92,7 @@ impl IntegriteeSolochainHandler {
 			stf_executor.clone(),
 			extrinsics_factory.clone(),
 			node_metadata_repository.clone(),
-			maybe_creation_header,
+			shard_creation_info,
 		)?;
 
 		let import_dispatcher = match WorkerModeProvider::worker_mode() {

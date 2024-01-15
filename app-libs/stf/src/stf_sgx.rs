@@ -18,7 +18,7 @@
 #[cfg(feature = "test")]
 use crate::test_genesis::test_genesis_setup;
 use crate::{
-	helpers::{enclave_signer_account, get_shard_vaults, shard_vault},
+	helpers::{enclave_signer_account, get_shard_vaults, shard_creation_info, shard_vault},
 	Stf, ENCLAVE_ACCOUNT_KEY,
 };
 use codec::{Decode, Encode};
@@ -32,8 +32,8 @@ use itp_stf_interface::{
 	parentchain_pallet::ParentchainPalletInstancesInterface,
 	sudo_pallet::SudoPalletInterface,
 	system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface},
-	ExecuteCall, ExecuteGetter, InitState, ShardVaultQuery, StateCallInterface,
-	StateGetterInterface, UpdateState,
+	ExecuteCall, ExecuteGetter, InitState, ShardCreationInfo, ShardCreationQuery, ShardVaultQuery,
+	StateCallInterface, StateGetterInterface, UpdateState,
 };
 use itp_stf_primitives::{error::StfError, traits::TrustedCallVerification};
 use itp_storage::storage_value_key;
@@ -173,6 +173,15 @@ where
 {
 	fn get_vault(state: &mut State) -> Option<(AccountId, ParentchainId)> {
 		state.execute_with(shard_vault)
+	}
+}
+
+impl<TCS, G, State, Runtime> ShardCreationQuery<State> for Stf<TCS, G, State, Runtime>
+where
+	State: SgxExternalitiesTrait + Debug,
+{
+	fn get_shard_creation_info(state: &mut State) -> ShardCreationInfo {
+		state.execute_with(shard_creation_info)
 	}
 }
 

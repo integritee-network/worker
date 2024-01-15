@@ -24,6 +24,7 @@ teerex-primitives = { git = "https://github.com/integritee-network/pallets.git",
 itc-parentchain = { path = "../../core/parentchain/parentchain-crate" }
 itp-enclave-api-ffi = { path = "ffi" }
 itp-settings = { path = "../settings" }
+itp-stf-interface = { path = "../stf-interface" }
 itp-storage = { path = "../storage" }
 itp-types = { path = "../types" }
 

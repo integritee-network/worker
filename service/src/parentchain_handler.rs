@@ -173,7 +173,7 @@ where
 			"[{:?}] Syncing blocks from {} to {}",
 			id, last_synced_header.number, curr_block_number
 		);
-		let maybe_creation = self.enclave_api.get_shard_creation_header(&shard).ok();
+		let maybe_creation = self.enclave_api.get_shard_creation_info(&shard).ok();
 		let maybe_creation_header =
 			if let Some((creation_parentchain_id, creation_header)) = maybe_creation {
 				trace!(

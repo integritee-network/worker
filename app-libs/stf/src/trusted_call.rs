@@ -33,8 +33,8 @@ use frame_support::{ensure, traits::UnfilteredDispatchable};
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{
-	ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB, Runtime,
-	System,
+	ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
+	ParentchainIntegritee, Runtime, System,
 };
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_node_api_metadata::{
@@ -390,16 +390,48 @@ where
 				ensure_enclave_signer_account(&enclave_account)?;
 				debug!("timestamp_set({}, {:?})", now, parentchain_id);
 				match parentchain_id {
-					ParentchainId::Integritee => ita_sgx_runtime::ParentchainPalletCall::<
-						Runtime,
-						ParentchainInstanceIntegritee,
-					>::set_now {
-						now,
-					}
-					.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
-					.map_err(|e| {
-						Self::Error::Dispatch(format!("Timestamp Set error: {:?}", e.error))
-					})?,
+					ParentchainId::Integritee => {
+						let this_block_number = ParentchainIntegritee::block_number();
+						trace!("this block number: {:?}", this_block_number);
+						let creation_block_number = ParentchainIntegritee::creation_block_number();
+						trace!("creation block number: {:?}", creation_block_number);
+						this_block_number.map(|this| {
+							creation_block_number.map(|creation| {
+								if this == creation {
+									info!(
+										"found shard creation block timestamp: ({}, {:?})",
+										now, parentchain_id
+									);
+									ita_sgx_runtime::ParentchainPalletCall::<
+										Runtime,
+										ParentchainInstanceIntegritee,
+									>::set_creation_timestamp {
+										creation: now,
+									}
+									.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
+									.map_err(|e| {
+										Self::Error::Dispatch(format!(
+											"Timestamp Set error: {:?}",
+											e.error
+										))
+									})
+									.ok()
+								} else {
+									None
+								}
+							})
+						});
+						ita_sgx_runtime::ParentchainPalletCall::<
+							Runtime,
+							ParentchainInstanceIntegritee,
+						>::set_now {
+							now,
+						}
+						.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
+						.map_err(|e| {
+							Self::Error::Dispatch(format!("Timestamp Set error: {:?}", e.error))
+						})?
+					},
 					ParentchainId::TargetA => ita_sgx_runtime::ParentchainPalletCall::<
 						Runtime,
 						ParentchainInstanceTargetA,

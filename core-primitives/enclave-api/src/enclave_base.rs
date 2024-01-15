@@ -66,7 +66,7 @@ pub trait EnclaveBase: Send + Sync + 'static {
 		header: &Header,
 	) -> EnclaveResult<()>;
 
-	fn get_shard_creation_header(
+	fn get_shard_creation_info(
 		&self,
 		shard: &ShardIdentifier,
 	) -> EnclaveResult<(ParentchainId, Header)>;
@@ -102,6 +102,7 @@ mod impl_ffi {
 	use itp_settings::worker::{
 		HEADER_MAX_SIZE, MR_ENCLAVE_SIZE, SHIELDING_KEY_SIZE, SIGNING_KEY_SIZE,
 	};
+	use itp_stf_interface::ShardCreationInfo;
 	use itp_types::{
 		parentchain::{Balance, Header},
 		ShardIdentifier,
@@ -258,29 +259,29 @@ mod impl_ffi {
 			Ok(())
 		}
 
-		fn get_shard_creation_header(
+		fn get_shard_creation_info(
 			&self,
 			shard: &ShardIdentifier,
 		) -> EnclaveResult<(ParentchainId, Header)> {
 			let mut retval = sgx_status_t::SGX_SUCCESS;
-			let mut creation = [0u8; HEADER_MAX_SIZE + std::mem::size_of::<ParentchainId>()];
+			let mut creation_info = [0u8; std::mem::size_of::<ShardCreationInfo>()];
 			let shard_bytes = shard.encode();
 
 			let result = unsafe {
-				ffi::get_shard_creation_header(
+				ffi::get_shard_creation_info(
 					self.eid,
 					&mut retval,
 					shard_bytes.as_ptr(),
 					shard_bytes.len() as u32,
-					creation.as_mut_ptr(),
-					creation.len() as u32,
+					creation_info.as_mut_ptr(),
+					creation_info.len() as u32,
 				)
 			};
 
 			ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 			ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
 			let (creation_parentchain_id, creation_header): (ParentchainId, Header) =
-				Decode::decode(&mut creation.as_slice())?;
+				Decode::decode(&mut creation_info.as_slice())?;
 			Ok((creation_parentchain_id, creation_header))
 		}
 

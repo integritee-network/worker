@@ -82,7 +82,7 @@ impl EnclaveBase for EnclaveMock {
 		unimplemented!()
 	}
 
-	fn get_shard_creation_header(
+	fn get_shard_creation_info(
 		&self,
 		shard: &ShardIdentifier,
 	) -> EnclaveResult<(ParentchainId, Header)> {

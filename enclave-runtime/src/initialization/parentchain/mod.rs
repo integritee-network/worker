@@ -33,7 +33,7 @@ use crate::{
 			target_b_solochain::TargetBSolochainHandler,
 		},
 	},
-	shard_creation_info::get_shard_creation_parentchain_header_internal,
+	shard_creation_info::get_shard_creation_info_internal,
 };
 use codec::{Decode, Encode};
 use integritee_parachain::IntegriteeParachainHandler;
@@ -61,18 +61,7 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 ) -> Result<Vec<u8>> {
 	match ParentchainInitParams::decode(&mut encoded_params.as_slice())? {
 		ParentchainInitParams::Parachain { id, shard, params } => {
-			let maybe_creation: Option<(ParentchainId, Header)> =
-				get_shard_creation_parentchain_header_internal(shard).ok();
-			let maybe_creation_header = if let Some((creation_parachain_id, creation_header)) =
-				maybe_creation
-			{
-				if creation_parachain_id != ParentchainId::Integritee {
-					unimplemented!("only Integritee parentchain is supported for shard creation");
-				}
-				Some(creation_header)
-			} else {
-				None
-			};
+			let shard_creation_info = get_shard_creation_info_internal(shard)?;
 
 			// todo: query timestamp of creation header to give a creation reference to target_a/b as well in order to fast-sync
 			match id {
@@ -80,7 +69,7 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 					let handler = IntegriteeParachainHandler::init::<WorkerModeProvider>(
 						base_path,
 						params,
-						maybe_creation_header,
+						shard_creation_info,
 					)?;
 					let header = handler
 						.validator_accessor
@@ -89,8 +78,11 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 					Ok(header.encode())
 				},
 				ParentchainId::TargetA => {
-					let handler =
-						TargetAParachainHandler::init::<WorkerModeProvider>(base_path, params)?;
+					let handler = TargetAParachainHandler::init::<WorkerModeProvider>(
+						base_path,
+						params,
+						shard_creation_info,
+					)?;
 					let header = handler
 						.validator_accessor
 						.execute_on_validator(|v| v.latest_finalized_header())?;
@@ -98,8 +90,11 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 					Ok(header.encode())
 				},
 				ParentchainId::TargetB => {
-					let handler =
-						TargetBParachainHandler::init::<WorkerModeProvider>(base_path, params)?;
+					let handler = TargetBParachainHandler::init::<WorkerModeProvider>(
+						base_path,
+						params,
+						shard_creation_info,
+					)?;
 					let header = handler
 						.validator_accessor
 						.execute_on_validator(|v| v.latest_finalized_header())?;
@@ -109,25 +104,14 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 			}
 		},
 		ParentchainInitParams::Solochain { id, shard, params } => {
-			let maybe_creation: Option<(ParentchainId, Header)> =
-				get_shard_creation_parentchain_header_internal(shard).ok();
-			let maybe_creation_header = if let Some((creation_parachain_id, creation_header)) =
-				maybe_creation
-			{
-				if creation_parachain_id != ParentchainId::Integritee {
-					unimplemented!("only Integritee parentchain is supported for shard creation");
-				}
-				Some(creation_header)
-			} else {
-				None
-			};
+			let shard_creation_info = get_shard_creation_info_internal(shard)?;
 			// todo: query timestamp of creation header to give a creation reference to target_a/b as well in order to fast-sync
 			match id {
 				ParentchainId::Integritee => {
 					let handler = IntegriteeSolochainHandler::init::<WorkerModeProvider>(
 						base_path,
 						params,
-						maybe_creation_header,
+						shard_creation_info,
 					)?;
 					let header = handler
 						.validator_accessor
@@ -136,8 +120,11 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 					Ok(header.encode())
 				},
 				ParentchainId::TargetA => {
-					let handler =
-						TargetASolochainHandler::init::<WorkerModeProvider>(base_path, params)?;
+					let handler = TargetASolochainHandler::init::<WorkerModeProvider>(
+						base_path,
+						params,
+						shard_creation_info,
+					)?;
 					let header = handler
 						.validator_accessor
 						.execute_on_validator(|v| v.latest_finalized_header())?;
@@ -145,8 +132,11 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 					Ok(header.encode())
 				},
 				ParentchainId::TargetB => {
-					let handler =
-						TargetBSolochainHandler::init::<WorkerModeProvider>(base_path, params)?;
+					let handler = TargetBSolochainHandler::init::<WorkerModeProvider>(
+						base_path,
+						params,
+						shard_creation_info,
+					)?;
 					let header = handler
 						.validator_accessor
 						.execute_on_validator(|v| v.latest_finalized_header())?;

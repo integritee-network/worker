@@ -40,8 +40,8 @@ use itp_node_api_metadata::pallet_proxy::ProxyCallIndexes;
 use itp_nonce_cache::NonceCache;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_stf_interface::{
-	parentchain_pallet::ParentchainPalletInstancesInterface, ShardVaultQuery,
-	SHARD_CREATION_HEADER_KEY,
+	parentchain_pallet::ParentchainPalletInstancesInterface, ShardCreationInfo, ShardCreationQuery,
+	ShardVaultQuery, SHARD_CREATION_HEADER_KEY,
 };
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_types::{
@@ -97,8 +97,10 @@ fn init_shard_creation_parentchain_header_internal(
 	parentchain_id: ParentchainId,
 	header: Header,
 ) -> EnclaveResult<()> {
-	if let Ok((id, _hdr)) = get_shard_creation_parentchain_header_internal(shard) {
-		error!("first relevant parentchain header has been previously initialized. cannot change: {:?}", id);
+	if let Some(creation_block) =
+		get_shard_creation_info_internal(shard)?.for_parentchain(parentchain_id)
+	{
+		error!("first relevant parentchain header has been previously initialized. cannot change: {:?}", parentchain_id);
 		return Err(Error::Other(
 			"first relevant parentchain header has been previously initialized. cannot change"
 				.into(),
@@ -124,22 +126,17 @@ fn init_shard_creation_parentchain_header_internal(
 }
 
 /// reads the shard vault account id form state if it has been initialized previously
-pub(crate) fn get_shard_creation_parentchain_header_internal(
+pub(crate) fn get_shard_creation_info_internal(
 	shard: ShardIdentifier,
-) -> EnclaveResult<(ParentchainId, Header)> {
+) -> EnclaveResult<ShardCreationInfo> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
-
-	// TODO: get creation block number, hash, Option<timestamp> from all parentchains and return in single type ShardCreationInfo
-
 	let (_state_lock, mut state) = state_handler.load_for_mutation(&shard)?;
-	EnclaveStf::get_shard_creation_info(&mut state).ok_or_else(|| {
-		Error::Other("failed to fetch shard vault account. has it been initialized?".into())
-	})
+	Ok(EnclaveStf::get_shard_creation_info(&mut state))
 }
 
 /// reads the shard vault account id form state if it has been initialized previously
 #[no_mangle]
-pub unsafe extern "C" fn get_shard_creation_header(
+pub unsafe extern "C" fn get_shard_creation_info(
 	shard: *const u8,
 	shard_size: u32,
 	creation: *mut u8,
@@ -147,17 +144,17 @@ pub unsafe extern "C" fn get_shard_creation_header(
 ) -> sgx_status_t {
 	let shard = ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
 
-	let shard_creation = match get_shard_creation_parentchain_header_internal(shard) {
+	let shard_creation_info = match get_shard_creation_info_internal(shard) {
 		Ok(creation) => creation,
 		Err(e) => {
 			warn!("Failed to fetch creation header: {:?}", e);
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	};
-	trace!("fetched shard creation header from state: {:?}", shard_creation);
+	trace!("fetched shard creation header from state: {:?}", shard_creation_info);
 
 	let creation_slice = slice::from_raw_parts_mut(creation, creation_size as usize);
-	if let Err(e) = write_slice_and_whitespace_pad(creation_slice, shard_creation.encode()) {
+	if let Err(e) = write_slice_and_whitespace_pad(creation_slice, shard_creation_info.encode()) {
 		return Error::BufferError(e).into()
 	};
 	sgx_status_t::SGX_SUCCESS

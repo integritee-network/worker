@@ -1823,6 +1823,7 @@ dependencies = [
  "itc-parentchain-light-client",
  "itp-extrinsics-factory",
  "itp-stf-executor",
+ "itp-stf-interface",
  "itp-types",
  "log",
  "parity-scale-codec",

@@ -41,6 +41,7 @@ use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, LightCli
 pub use itc_parentchain::primitives::{ParachainBlock, ParachainHeader, ParachainParams};
 use itp_component_container::ComponentGetter;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
+use itp_stf_interface::ShardCreationInfo;
 use itp_types::parentchain::ParentchainId;
 use std::{path::PathBuf, sync::Arc};
 
@@ -58,6 +59,7 @@ impl TargetBParachainHandler {
 	pub fn init<WorkerModeProvider: ProvideWorkerMode>(
 		_base_path: PathBuf,
 		params: ParachainParams,
+		shard_creation_info: ShardCreationInfo,
 	) -> Result<Self> {
 		let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 		let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
@@ -93,6 +95,7 @@ impl TargetBParachainHandler {
 			stf_executor.clone(),
 			extrinsics_factory.clone(),
 			node_metadata_repository.clone(),
+			shard_creation_info,
 		)?;
 
 		let import_dispatcher = match WorkerModeProvider::worker_mode() {

@@ -80,7 +80,7 @@ extern "C" {
 		header_size: u32,
 	) -> sgx_status_t;
 
-	pub fn get_shard_creation_header(
+	pub fn get_shard_creation_info(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
 		shard: *const u8,
