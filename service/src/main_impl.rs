@@ -73,7 +73,7 @@ use itp_types::parentchain::{AccountId, Balance};
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
 use sp_runtime::MultiSigner;
-use std::{fmt::Debug, str, sync::Arc, thread, time::Duration};
+use std::{fmt::Debug, path::PathBuf, str, sync::Arc, thread, time::Duration};
 use substrate_api_client::ac_node_api::{EventRecord, Phase::ApplyExtrinsic};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -103,6 +103,13 @@ pub(crate) fn main() {
 	info!("*** Starting service in SGX debug mode");
 
 	info!("*** Running worker in mode: {:?} \n", WorkerModeProvider::worker_mode());
+
+	let mut lockfile = PathBuf::from(config.data_dir());
+	lockfile.push("worker.lock");
+	while std::fs::metadata(lockfile.clone()).is_ok() {
+		println!("lockfile is present, will wait for it to disappear {:?}", lockfile);
+		thread::sleep(std::time::Duration::from_secs(5));
+	}
 
 	let clean_reset = matches.is_present("clean-reset");
 	if clean_reset {
@@ -760,9 +767,8 @@ where
 	// TODO: #1451: Fix api-client type hacks
 	let head = Header::decode(&mut api_head.encode().as_slice())
 		.expect("Can decode previously encoded header; qed");
-	enclave
-		.init_shard_creation_parentchain_header(shard, &parentchain_id, &head)
-		.unwrap();
+	// we ignore failure
+	let _ = enclave.init_shard_creation_parentchain_header(shard, &parentchain_id, &head);
 
 	let (parentchain_handler, last_synched_header) =
 		init_parentchain(enclave, &node_api, tee_account_id, parentchain_id, shard);

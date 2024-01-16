@@ -123,12 +123,16 @@ impl<B: Block, LightClientState: Decode + Encode + Debug> LightClientSealing
 		Ok(unsealed.using_encoded(|bytes| seal(bytes, self.db_path()))?)
 	}
 
+	// unseals db with automatic failover to db backup
 	fn unseal(&self) -> Result<LightClientState> {
-		Ok(unseal(self.db_path()).map(|b| Decode::decode(&mut b.as_slice()))??)
+		Ok(unseal(self.db_path())
+			.or(unseal(self.backup_path()))
+			.map(|b| Decode::decode(&mut b.as_slice()))??)
 	}
 
+	// checks if either the db or its backup can be opened
 	fn exists(&self) -> bool {
-		SgxFile::open(self.db_path()).is_ok()
+		SgxFile::open(self.db_path()).or(SgxFile::open(self.backup_path())).is_ok()
 	}
 
 	fn path(&self) -> &Path {
@@ -206,7 +210,7 @@ where
 
 	if !seal.exists() {
 		info!(
-			"[{:?}] ChainRelay DB not found, creating new! {}",
+			"[{:?}] ChainRelay DB for grandpa validator not found, creating new! {}",
 			seal.parentchain_id(),
 			seal.path().display()
 		);
@@ -258,7 +262,10 @@ where
 	LightClientSeal: LightClientSealing<LightClientState = LightValidationState<B>>,
 {
 	if !seal.exists() {
-		info!("[Enclave] ChainRelay DB not found, creating new! {}", seal.path().display());
+		info!(
+			"[Enclave] ChainRelay DB for parachain validator not found, creating new! {}",
+			seal.path().display()
+		);
 		let validator = init_parachain_validator::<B, OCallApi>(
 			ocall_api,
 			RelayState::new(params.genesis_header, Default::default()).into(),
