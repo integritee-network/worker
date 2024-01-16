@@ -44,7 +44,7 @@ use itc_parentchain::{
 };
 use itp_component_container::ComponentInitializer;
 use itp_settings::worker_mode::ProvideWorkerMode;
-
+use log::*;
 use std::{path::PathBuf, vec::Vec};
 
 mod common;
@@ -61,6 +61,10 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 ) -> Result<Vec<u8>> {
 	match ParentchainInitParams::decode(&mut encoded_params.as_slice())? {
 		ParentchainInitParams::Parachain { id, shard, params } => {
+			info!(
+				"[{:?}] initializing parachain parentchain components for shard: {:?}",
+				id, shard
+			);
 			let shard_creation_info = get_shard_creation_info_internal(shard)?;
 
 			// todo: query timestamp of creation header to give a creation reference to target_a/b as well in order to fast-sync
@@ -104,6 +108,10 @@ pub(crate) fn init_parentchain_components<WorkerModeProvider: ProvideWorkerMode>
 			}
 		},
 		ParentchainInitParams::Solochain { id, shard, params } => {
+			info!(
+				"[{:?}] initializing solochain parentchain components for shard: {:?}",
+				id, shard
+			);
 			let shard_creation_info = get_shard_creation_info_internal(shard)?;
 			// todo: query timestamp of creation header to give a creation reference to target_a/b as well in order to fast-sync
 			match id {

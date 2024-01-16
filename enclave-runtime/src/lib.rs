@@ -394,8 +394,6 @@ pub unsafe extern "C" fn init_parentchain_components(
 	latest_header: *mut u8,
 	latest_header_size: usize,
 ) -> sgx_status_t {
-	info!("Initializing light client!");
-
 	let encoded_params = slice::from_raw_parts(params, params_size);
 	let latest_header_slice = slice::from_raw_parts_mut(latest_header, latest_header_size);
 
