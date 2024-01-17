@@ -4,7 +4,7 @@ use crate::teeracle::{schedule_periodic_reregistration_thread, start_periodic_ma
 #[cfg(not(feature = "dcap"))]
 use crate::utils::check_files;
 use crate::{
-	account_funding::{setup_account_funding, EnclaveAccountInfoProvider},
+	account_funding::{setup_reasonable_account_funding, EnclaveAccountInfoProvider},
 	config::Config,
 	enclave::{
 		api::enclave_init,
@@ -55,8 +55,8 @@ use regex::Regex;
 use sgx_types::*;
 use sp_runtime::traits::Header as HeaderT;
 use substrate_api_client::{
-	api::XtStatus, rpc::HandleSubscription, GetAccountInformation, GetChainInfo, SubmitAndWatch,
-	SubscribeChain, SubscribeEvents,
+	api::XtStatus, rpc::HandleSubscription, GetAccountInformation, GetBalance, GetChainInfo,
+	SubmitAndWatch, SubscribeChain, SubscribeEvents,
 };
 
 use teerex_primitives::{AnySigner, MultiEnclave};
@@ -66,14 +66,14 @@ use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
 
 use itp_enclave_api::Enclave;
 
-use crate::account_funding::shard_vault_initial_funds;
+use crate::{account_funding::shard_vault_initial_funds, error::ServiceResult};
 use enclave_bridge_primitives::ShardIdentifier;
 use itc_parentchain::primitives::ParentchainId;
 use itp_types::parentchain::{AccountId, Balance};
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
 use sp_runtime::MultiSigner;
-use std::{fmt::Debug, path::PathBuf, str, sync::Arc, thread, time::Duration};
+use std::{fmt::Debug, path::PathBuf, str, str::Utf8Error, sync::Arc, thread, time::Duration};
 use substrate_api_client::ac_node_api::{EventRecord, Phase::ApplyExtrinsic};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -481,7 +481,12 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	let tee_accountid_clone = tee_accountid.clone();
 	let send_register_xt = move || {
 		println!("[+] Send register enclave extrinsic");
-		send_extrinsic(register_xt(), &node_api2, &tee_accountid_clone, is_development_mode)
+		send_integritee_extrinsic(
+			register_xt(),
+			&node_api2,
+			&tee_accountid_clone,
+			is_development_mode,
+		)
 	};
 
 	let register_enclave_block_hash =
@@ -756,11 +761,15 @@ where
 		.create_api()
 		.unwrap_or_else(|_| panic!("[{:?}] Failed to create parentchain node API", parentchain_id));
 
-	// some random bytes not too small to ensure that the enclave has enough funds
-	setup_account_funding(&node_api, tee_account_id, [0u8; 100].into(), is_development_mode)
-		.unwrap_or_else(|_| {
-			panic!("[{:?}] Could not fund parentchain enclave account", parentchain_id)
-		});
+	setup_reasonable_account_funding(
+		&node_api,
+		tee_account_id,
+		parentchain_id,
+		is_development_mode,
+	)
+	.unwrap_or_else(|_| {
+		panic!("[{:?}] Could not fund parentchain enclave account", parentchain_id)
+	});
 
 	// we attempt to set shard creation for this parentchain in case it hasn't been done before
 	let api_head = node_api.get_header(None).unwrap().unwrap();
@@ -934,7 +943,7 @@ fn register_quotes_from_marblerun(
 	for quote in quotes {
 		match enclave.generate_dcap_ra_extrinsic_from_quote(url.clone(), &quote) {
 			Ok(xt) => {
-				send_extrinsic(xt, api, accountid, is_development_mode);
+				send_integritee_extrinsic(xt, api, accountid, is_development_mode);
 			},
 			Err(e) => {
 				error!("Extracting information from quote failed: {}", e)
@@ -956,33 +965,40 @@ fn register_collateral(
 		let (fmspc, _tcb_info) = extract_tcb_info_from_raw_dcap_quote(&dcap_quote).unwrap();
 		println!("[>] DCAP setup: register QE collateral");
 		let uxt = enclave.generate_register_quoting_enclave_extrinsic(fmspc).unwrap();
-		send_extrinsic(uxt, api, accountid, is_development_mode);
+		send_integritee_extrinsic(uxt, api, accountid, is_development_mode);
 
 		println!("[>] DCAP setup: register TCB info");
 		let uxt = enclave.generate_register_tcb_info_extrinsic(fmspc).unwrap();
-		send_extrinsic(uxt, api, accountid, is_development_mode);
+		send_integritee_extrinsic(uxt, api, accountid, is_development_mode);
 	}
 }
 
-fn send_extrinsic(
+fn send_integritee_extrinsic(
 	extrinsic: Vec<u8>,
 	api: &ParentchainApi,
 	fee_payer: &AccountId32,
 	is_development_mode: bool,
-) -> Option<Hash> {
-	// ensure account funds
-	if let Err(x) = setup_account_funding(api, fee_payer, extrinsic.clone(), is_development_mode) {
-		error!("Ensure enclave funding failed: {:?}", x);
-		// Return without registering the enclave. This will fail and the transaction will be banned for 30min.
-		return None
-	}
-
-	info!("[>] send extrinsic");
+) -> ServiceResult<Hash> {
+	let fee = crate::account_funding::estimate_fee(api, extrinsic.clone())?;
+	let ed = api.get_existential_deposit()?;
+	let free = api.get_free_balance(fee_payer)?;
+	let missing_funds = fee.saturating_add(ed).saturating_sub(free);
+	info!("[Integritee] send extrinsic");
+	debug!("fee: {:?}, ed: {:?}, free: {:?} => missing: {:?}", fee, ed, free, missing_funds);
 	trace!(
 		"  encoded extrinsic len: {}, payload: 0x{:}",
 		extrinsic.len(),
 		hex::encode(extrinsic.clone())
 	);
+
+	if missing_funds > 0 {
+		setup_reasonable_account_funding(
+			api,
+			fee_payer,
+			ParentchainId::Integritee,
+			is_development_mode,
+		)?
+	}
 
 	match api.submit_and_watch_opaque_extrinsic_until(&extrinsic.into(), XtStatus::Finalized) {
 		Ok(xt_report) => {
@@ -990,7 +1006,7 @@ fn send_extrinsic(
 				"[+] L1 extrinsic success. extrinsic hash: {:?} / status: {:?}",
 				xt_report.extrinsic_hash, xt_report.status
 			);
-			xt_report.block_hash
+			xt_report.block_hash.ok_or(Error::Custom("no extrinsic hash returned".into()))
 		},
 		Err(e) => {
 			panic!("Extrinsic failed {:?} parentchain genesis: {:?}", e, api.genesis_hash());

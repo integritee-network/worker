@@ -80,10 +80,10 @@ fn init_shard_creation_parentchain_header_internal(
 	parentchain_id: ParentchainId,
 	header: Header,
 ) -> EnclaveResult<()> {
-	if let Some(_creation_block) =
+	if let Some(creation_block) =
 		get_shard_creation_info_internal(shard)?.for_parentchain(parentchain_id)
 	{
-		error!("first relevant parentchain header has been previously initialized. cannot change: {:?}", parentchain_id);
+		error!("first relevant parentchain header has been previously initialized to {:?}. cannot change: {:?}", creation_block.number, parentchain_id);
 		return Err(Error::Other(
 			"first relevant parentchain header has been previously initialized. cannot change"
 				.into(),
