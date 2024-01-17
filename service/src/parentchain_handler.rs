@@ -18,6 +18,7 @@
 
 use crate::error::{Error, ServiceResult};
 use codec::{Decode, Encode};
+use humantime::format_duration;
 use ita_parentchain_interface::integritee::Header;
 use itc_parentchain::{
 	light_client::light_client_init_params::{GrandpaParams, SimpleParams},
@@ -27,11 +28,12 @@ use itp_api_client_types::ParentchainApi;
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
 use itp_node_api::api_client::ChainApi;
 use itp_storage::StorageProof;
+use itp_time_utils::duration_now;
 use itp_types::ShardIdentifier;
 use log::*;
 use sp_consensus_grandpa::VersionedAuthorityList;
 use sp_runtime::traits::Header as HeaderTrait;
-use std::{cmp::min, sync::Arc};
+use std::{cmp::min, sync::Arc, time::Duration};
 use substrate_api_client::{
 	ac_primitives::{Block, Header as HeaderT},
 	GetChainInfo,
@@ -163,7 +165,7 @@ where
 			.last_finalized_block()?
 			.ok_or(Error::MissingLastFinalizedBlock)?;
 		let curr_block_number = curr_block.block.header().number();
-
+		let last_synced_header_number = last_synced_header.number;
 		// verify that the last_synced_header is indeed a block from this chain
 		self.parentchain_api
 			.get_block(Some(last_synced_header.hash()))?
@@ -171,7 +173,7 @@ where
 
 		info!(
 			"[{:?}] Syncing blocks from {} to {}",
-			id, last_synced_header.number, curr_block_number
+			id, last_synced_header_number, curr_block_number
 		);
 		let creation_info = self.enclave_api.get_shard_creation_info(&shard)?;
 		let maybe_creation_block = if let Some(creation_block) = creation_info.for_parentchain(*id)
@@ -182,12 +184,25 @@ where
 			None
 		};
 
+		let start_time = duration_now();
 		let mut until_synced_header = last_synced_header;
 		loop {
 			let block_chunk_to_sync = self.parentchain_api.get_blocks(
 				until_synced_header.number + 1,
 				min(until_synced_header.number + BLOCK_SYNC_BATCH_SIZE, curr_block_number),
 			)?;
+			if block_chunk_to_sync.len() == BLOCK_SYNC_BATCH_SIZE as usize {
+				let now = duration_now();
+				let total_blocks = curr_block_number.saturating_sub(last_synced_header_number);
+				let remaining_blocks = curr_block_number.saturating_sub(until_synced_header.number);
+				let remaining_time_estimate: Duration = (now.saturating_sub(start_time))
+					.saturating_mul(remaining_blocks)
+					/ (total_blocks.saturating_sub(remaining_blocks) + 1);
+				info!(
+					"[{:?}] syncing parentchain to {}. already synced until block {}. immediate import={}. est. remaining: {}",
+					id, curr_block_number, until_synced_header.number, immediate_import, format_duration(remaining_time_estimate)
+				);
+			}
 			debug!(
 				"[{:?}] Found {} block(s) to sync in this chunk. immediate import={} ",
 				id,

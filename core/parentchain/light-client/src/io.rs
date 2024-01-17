@@ -123,12 +123,50 @@ impl<B: Block, LightClientState: Decode + Encode + Debug> LightClientSealing
 		Ok(unsealed.using_encoded(|bytes| seal(bytes, self.db_path()))?)
 	}
 
+	// unseals db with automatic failover to db backup
 	fn unseal(&self) -> Result<LightClientState> {
-		Ok(unseal(self.db_path()).map(|b| Decode::decode(&mut b.as_slice()))??)
+		Ok(unseal(self.db_path())
+			.or_else(|e| {
+				warn!(
+					"can't unseal db at {:?}. error {:?}. trying backup at {:?}",
+					self.db_path(),
+					e,
+					self.backup_path()
+				);
+				// create a copy because we will overwrite the db in the next step
+				fs::copy(self.db_path(), self.db_path().with_extension("cantunseal")).and_then(
+					|_| {
+						fs::copy(self.backup_path(), self.db_path()).and_then(|_| {
+							unseal(self.db_path()).map_err(|e| {
+								warn!("{:?}", e);
+								e
+							})
+						})
+					},
+				)
+			})
+			.map(|b| Decode::decode(&mut b.as_slice()))??)
 	}
 
+	// checks if either the db or its backup can be opened in opaque mode (no unseal)
 	fn exists(&self) -> bool {
-		SgxFile::open(self.db_path()).is_ok()
+		debug!("check if db exists at {:?}", self.db_path());
+		fs::File::open(self.db_path())
+			.or_else(|e| {
+				warn!(
+					"can't open db at {:?}. error: {:?}. trying restore backup at {:?}",
+					self.db_path(),
+					e,
+					self.backup_path()
+				);
+				fs::copy(self.backup_path(), self.db_path())
+					.and_then(|_| fs::File::open(self.db_path()))
+					.map_err(|e| {
+						warn!("{:?}", e);
+						e
+					})
+			})
+			.is_ok()
 	}
 
 	fn path(&self) -> &Path {
@@ -206,7 +244,7 @@ where
 
 	if !seal.exists() {
 		info!(
-			"[{:?}] ChainRelay DB not found, creating new! {}",
+			"[{:?}] ChainRelay DB for grandpa validator not found, creating new! {}",
 			seal.parentchain_id(),
 			seal.path().display()
 		);
@@ -257,8 +295,13 @@ where
 	OCallApi: EnclaveOnChainOCallApi,
 	LightClientSeal: LightClientSealing<LightClientState = LightValidationState<B>>,
 {
+	trace!("[{:?}]  init light client db", parentchain_id);
 	if !seal.exists() {
-		info!("[Enclave] ChainRelay DB not found, creating new! {}", seal.path().display());
+		info!(
+			"[{:?}] ChainRelay DB for parachain validator not found, creating new! {}",
+			parentchain_id,
+			seal.path().display()
+		);
 		let validator = init_parachain_validator::<B, OCallApi>(
 			ocall_api,
 			RelayState::new(params.genesis_header, Default::default()).into(),
@@ -269,6 +312,7 @@ where
 	}
 
 	let validation_state = seal.unseal()?;
+	info!("unseal success");
 	let genesis_hash = validation_state.genesis_hash()?;
 
 	let init_state = if genesis_hash == params.genesis_header.hash() {

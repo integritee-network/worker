@@ -52,6 +52,8 @@ pub enum Error {
 	MissingLastFinalizedBlock,
 	#[error("Could not find block in parentchain")]
 	UnknownBlockHeader(Hash),
+	#[error("Enclave has not enough funds to send extrinsic")]
+	LowEnclaveBalance,
 	#[error("{0}")]
 	Custom(Box<dyn std::error::Error + Sync + Send + 'static>),
 }

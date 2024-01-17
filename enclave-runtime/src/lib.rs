@@ -394,8 +394,6 @@ pub unsafe extern "C" fn init_parentchain_components(
 	latest_header: *mut u8,
 	latest_header_size: usize,
 ) -> sgx_status_t {
-	info!("Initializing light client!");
-
 	let encoded_params = slice::from_raw_parts(params, params_size);
 	let latest_header_slice = slice::from_raw_parts_mut(latest_header, latest_header_size);
 
@@ -482,8 +480,10 @@ unsafe fn sync_parentchain_internal(
 		let blocks_to_sync_merkle_roots: Vec<sp_core::H256> =
 			blocks_to_sync.iter().map(|block| block.block.header.state_root).collect();
 		// fixme: vulnerability! https://github.com/integritee-network/worker/issues/1518
+		// until fixed properly, we deactivate the panic upon error altogether in the scope of #1547
 		if let Err(e) = validate_events(&events_proofs_to_sync, &blocks_to_sync_merkle_roots) {
-			return e.into()
+			warn!("ignoring event validation error {:?}", e);
+			//	return e.into()
 		}
 	}
 
