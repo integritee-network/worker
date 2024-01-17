@@ -29,6 +29,8 @@ pub fn subscribe_to_parentchain_events(api: &ParentchainApi, parentchain_id: Par
 			let event = event.unwrap();
 			match event.pallet_name() {
 				"System" => continue,
+				"ParaInclusion" => continue,
+				"MessageQueue" => continue,
 				"TransactionPayment" => continue,
 				"Treasury" => continue,
 				"Balances" => match event.variant_name() {
