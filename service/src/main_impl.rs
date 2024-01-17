@@ -625,20 +625,20 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			info!("skipping shard vault check because not yet supported for offchain worker");
 		},
 		WorkerMode::Sidechain => {
-			println!("[Integritee:SCW] Finished initializing light client, syncing parentchain...");
+			println!("[Integritee:SCV] Finished initializing light client, syncing integritee parentchain...");
 
-			// ------------------------------------------------------------------------
-			// Initialize the sidechain
-			let last_synced_header = sidechain_init_block_production(
-				enclave.clone(),
-				&register_enclave_xt_header,
-				we_are_primary_validateer,
-				integritee_parentchain_handler.clone(),
-				sidechain_storage,
-				&integritee_last_synced_header_at_last_run,
-				*shard,
-			)
-			.unwrap();
+			let last_synced_header = if we_are_primary_validateer {
+				info!("We're the first validateer to be registered, syncing parentchain blocks until the one we have registered ourselves on.");
+				integritee_parentchain_handler
+					.await_sync_and_import_parentchain_until_at_least(
+						&integritee_last_synced_header_at_last_run,
+						&register_enclave_xt_header,
+						*shard,
+					)
+					.unwrap()
+			} else {
+				integritee_last_synced_header_at_last_run
+			};
 
 			start_parentchain_header_subscription_thread(
 				integritee_parentchain_handler,
@@ -689,6 +689,12 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		run_config.shielding_target,
 		we_are_primary_validateer,
 	);
+
+	if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain {
+		println!("[Integritee:SCV] starting block production");
+		let last_synced_header =
+			sidechain_init_block_production(enclave.clone(), sidechain_storage).unwrap();
+	}
 
 	ita_parentchain_interface::event_subscriber::subscribe_to_parentchain_events(
 		&integritee_rpc_api,

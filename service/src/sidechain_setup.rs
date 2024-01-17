@@ -57,35 +57,14 @@ pub(crate) fn sidechain_start_untrusted_rpc_server<Enclave, SidechainStorage>(
 	});
 }
 
-pub(crate) fn sidechain_init_block_production<Enclave, SidechainStorage, ParentchainHandler>(
+pub(crate) fn sidechain_init_block_production<Enclave, SidechainStorage>(
 	enclave: Arc<Enclave>,
-	register_enclave_xt_header: &Header,
-	we_are_primary_validateer: bool,
-	parentchain_handler: Arc<ParentchainHandler>,
 	sidechain_storage: Arc<SidechainStorage>,
-	last_synced_header: &Header,
-	shard: ShardIdentifier,
-) -> ServiceResult<Header>
+) -> ServiceResult<()>
 where
 	Enclave: EnclaveBase + Sidechain,
 	SidechainStorage: BlockPruner + FetchBlocks<SignedSidechainBlock> + Sync + Send + 'static,
-	ParentchainHandler: HandleParentchain,
 {
-	// If we're the first validateer to register, also trigger parentchain block import.
-	let mut updated_header: Option<Header> = None;
-
-	if we_are_primary_validateer {
-		info!(
-			"We're the first validateer to be registered, syncing parentchain blocks until the one we have registered ourselves on."
-		);
-		updated_header =
-			Some(parentchain_handler.await_sync_and_import_parentchain_until_at_least(
-				last_synced_header,
-				register_enclave_xt_header,
-				shard,
-			)?);
-	}
-
 	// ------------------------------------------------------------------------
 	// Initialize sidechain components (has to be AFTER init_parentchain_components()
 	enclave.init_enclave_sidechain_components().unwrap();
@@ -119,7 +98,7 @@ where
 		})
 		.map_err(|e| Error::Custom(Box::new(e)))?;
 
-	Ok(updated_header.unwrap_or_else(|| last_synced_header.clone()))
+	Ok(())
 }
 
 /// Execute trusted operations in the enclave.
