@@ -39,7 +39,7 @@ pub(crate) mod teeracle_metrics;
 /// Currently, this is only used for the teeracle, but could also be used for other flavors in the
 /// future.
 pub(crate) fn schedule_periodic_reregistration_thread(
-	send_register_xt: impl Fn() -> Option<Hash> + std::marker::Send + 'static,
+	send_register_xt: impl Fn() -> ServiceResult<Hash> + std::marker::Send + 'static,
 	period: Duration,
 ) {
 	println!("Schedule periodic enclave reregistration every: {:?}", period);
@@ -50,7 +50,7 @@ pub(crate) fn schedule_periodic_reregistration_thread(
 			schedule_periodic(
 				|| {
 					trace!("Reregistering the enclave.");
-					if let Some(block_hash) = send_register_xt() {
+					if let Ok(block_hash) = send_register_xt() {
 						println!(
 							"✅ Successfully reregistered the enclave. Block hash: {}.",
 							block_hash
