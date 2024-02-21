@@ -70,6 +70,7 @@ std = [
     "frame-executive/std",
     "frame-support/std",
     "frame-system/std",
+    "pallet-aura/std",
     "pallet-balances/std",
     "pallet-sudo/std",
     "pallet-timestamp/std",
