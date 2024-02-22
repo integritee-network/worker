@@ -1,6 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{dispatch::DispatchResult, ensure, storage::PrefixIterator};
+use frame_support::{dispatch::DispatchResult, ensure};
 use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_core::MaxEncodedLen;
@@ -27,9 +27,8 @@ pub struct Raffle<AccountId: Debug> {
 #[frame_support::pallet]
 pub mod pallet {
 	use crate::{weights::WeightInfo, Raffle, RaffleIndex, Shuffle, WinnerCount};
-	use frame_support::{pallet_prelude::*, sp_runtime::traits::Header};
-	use frame_system::{pallet_prelude::*, AccountInfo};
-	use sp_runtime::traits::{AtLeast32Bit, Scale};
+	use frame_support::pallet_prelude::*;
+	use frame_system::pallet_prelude::*;
 
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 	#[pallet::pallet]
