@@ -99,6 +99,20 @@ mod register_for_raffle {
 			);
 		})
 	}
+
+	#[test]
+	fn register_for_raffle_errs_for_nonexistent_raffle() {
+		new_test_ext().execute_with(|| {
+			let raffle_index = 0;
+			assert_err!(
+				Raffles::register_for_raffle(
+					RuntimeOrigin::signed(AccountKeyring::Bob.into()),
+					raffle_index
+				),
+				Error::<Test>::NonexistentRaffle
+			);
+		})
+	}
 }
 
 mod draw_winners {
@@ -108,7 +122,7 @@ mod draw_winners {
 	use sp_keyring::AccountKeyring;
 
 	#[test]
-	fn register_for_raffle_works() {
+	fn draw_winners_works() {
 		new_test_ext().execute_with(|| {
 			let winner_count = 2;
 			assert_ok!(Raffles::add_raffle(
@@ -174,6 +188,115 @@ mod draw_winners {
 					AccountKeyring::Bob.to_account_id(),
 				],
 			}));
+
+			assert_eq!(Raffles::ongoing_raffles(0).unwrap().registration_open, false)
+		})
+	}
+
+	#[test]
+	fn register_for_raffle_works_if_less_registrations_than_winners() {
+		new_test_ext().execute_with(|| {
+			let winner_count = 2;
+			assert_ok!(Raffles::add_raffle(
+				RuntimeOrigin::signed(AccountKeyring::Alice.into()),
+				winner_count
+			));
+
+			let raffle_index = 0;
+
+			// register bob for raffle and ensure he is signed up
+			assert_ok!(Raffles::register_for_raffle(
+				RuntimeOrigin::signed(AccountKeyring::Bob.into()),
+				raffle_index
+			));
+			System::assert_last_event(RuntimeEvent::Raffles(RaffleEvent::RaffleRegistration {
+				who: AccountKeyring::Bob.to_account_id(),
+				index: raffle_index,
+			}));
+			assert_eq!(Raffles::raffle_registrations(0), vec![AccountKeyring::Bob.to_account_id()]);
+
+			// draw winners and check if they are the expected ones given our shuffle source
+			assert_ok!(Raffles::draw_winners(
+				RuntimeOrigin::signed(AccountKeyring::Alice.into()),
+				raffle_index
+			));
+
+			System::assert_last_event(RuntimeEvent::Raffles(RaffleEvent::WinnersDrawn {
+				index: raffle_index,
+				winners: vec![AccountKeyring::Bob.to_account_id()],
+			}));
+
+			assert_eq!(Raffles::ongoing_raffles(0).unwrap().registration_open, false)
+		})
+	}
+
+	#[test]
+	fn draw_winners_errs_for_nonexistent_raffle() {
+		new_test_ext().execute_with(|| {
+			let raffle_index = 0;
+
+			assert_err!(
+				Raffles::draw_winners(
+					RuntimeOrigin::signed(AccountKeyring::Bob.into()),
+					raffle_index
+				),
+				Error::<Test>::NonexistentRaffle
+			);
+		})
+	}
+
+	#[test]
+	fn ensure_only_raffle_owner_can_draw_winners() {
+		new_test_ext().execute_with(|| {
+			let winner_count = 2;
+			assert_ok!(Raffles::add_raffle(
+				RuntimeOrigin::signed(AccountKeyring::Alice.into()),
+				winner_count
+			));
+
+			let raffle_index = 0;
+
+			assert_err!(
+				Raffles::draw_winners(
+					RuntimeOrigin::signed(AccountKeyring::Bob.into()),
+					raffle_index
+				),
+				Error::<Test>::OnlyRaffleOwnerCanDrawWinners
+			);
+		})
+	}
+
+	#[test]
+	fn registering_fails_after_raffle_registrations_are_closed() {
+		new_test_ext().execute_with(|| {
+			let winner_count = 2;
+			assert_ok!(Raffles::add_raffle(
+				RuntimeOrigin::signed(AccountKeyring::Alice.into()),
+				winner_count
+			));
+
+			let raffle_index = 0;
+
+			// draw winners and check if they are the expected ones given our shuffle source
+			assert_ok!(Raffles::draw_winners(
+				RuntimeOrigin::signed(AccountKeyring::Alice.into()),
+				raffle_index
+			));
+
+			System::assert_last_event(RuntimeEvent::Raffles(RaffleEvent::WinnersDrawn {
+				index: raffle_index,
+				winners: vec![],
+			}));
+
+			assert_eq!(Raffles::ongoing_raffles(0).unwrap().registration_open, false);
+
+			assert_err!(
+				Raffles::draw_winners(
+					RuntimeOrigin::signed(AccountKeyring::Alice.into()),
+					raffle_index
+				),
+				Error::<Test>::RegistrationsClosed
+			);
 		})
 	}
 }
