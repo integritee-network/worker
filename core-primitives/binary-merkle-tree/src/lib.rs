@@ -1,6 +1,5 @@
 // Todo: I think we can upstream the codec change, then we can delete this crate.
 
-use core::num::TryFromIntError;
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
@@ -22,23 +21,22 @@ pub struct MerkleProofWithCodec<H, L> {
 	///
 	/// This is needed to detect a case where we have an odd number of leaves that "get promoted"
 	/// to upper layers.
-	pub number_of_leaves: u32,
+	pub number_of_leaves: u64,
 	/// Index of the leaf the proof is for (0-based).
-	pub leaf_index: u32,
+	pub leaf_index: u64,
 	/// Leaf content.
 	pub leaf: L,
 }
 
-impl<H, L> TryFrom<MerkleProof<H, L>> for MerkleProofWithCodec<H, L> {
-	type Error = TryFromIntError;
-
-	fn try_from(source: MerkleProof<H, L>) -> Result<Self, TryFromIntError> {
-		Ok(Self {
+impl<H, L> From<MerkleProof<H, L>> for MerkleProofWithCodec<H, L> {
+	fn from(source: MerkleProof<H, L>) -> Self {
+		Self {
 			root: source.root,
 			proof: source.proof,
-			number_of_leaves: source.number_of_leaves.try_into()?,
-			leaf_index: source.leaf_index.try_into()?,
+			// usize to u64 can't panic
+			number_of_leaves: source.number_of_leaves as u64,
+			leaf_index: source.leaf_index as u64,
 			leaf: source.leaf,
-		})
+		}
 	}
 }
