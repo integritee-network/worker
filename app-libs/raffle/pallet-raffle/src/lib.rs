@@ -171,15 +171,22 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	pub fn merkle_root(accounts: &[T::AccountId]) -> H256 {
-		merkle_root::<Keccak256, _>(accounts.iter().map(Encode::encode))
-	}
-
 	pub fn merkle_proof_for_registration(
 		index: RaffleIndex,
 		account: &T::AccountId,
 	) -> Option<MerkleProofWithCodec<H256, Vec<u8>>> {
 		let registrations = Self::raffle_registrations(index);
+		Self::merkle_proof(account, &registrations)
+	}
+
+	pub(crate) fn merkle_root(accounts: &[T::AccountId]) -> H256 {
+		merkle_root::<Keccak256, _>(accounts.iter().map(Encode::encode))
+	}
+
+	pub(crate) fn merkle_proof(
+		account: &T::AccountId,
+		registrations: &[T::AccountId],
+	) -> Option<MerkleProofWithCodec<H256, Vec<u8>>> {
 		let leaf_index = Self::merkle_leaf_index_for_registration(account, &registrations)?;
 		Some(
 			merkle_proof::<Keccak256, _, _>(registrations.iter().map(Encode::encode), leaf_index)
@@ -187,7 +194,7 @@ impl<T: Config> Pallet<T> {
 		)
 	}
 
-	pub fn merkle_leaf_index_for_registration(
+	pub(crate) fn merkle_leaf_index_for_registration(
 		account: &T::AccountId,
 		registrations: &[T::AccountId],
 	) -> Option<usize> {

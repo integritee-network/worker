@@ -292,6 +292,33 @@ mod draw_winners {
 }
 
 #[test]
+fn merkle_proof_works() {
+	use sp_runtime::traits::Keccak256;
+
+	let registrations = vec![
+		AccountKeyring::Bob.to_account_id(),
+		AccountKeyring::Charlie.to_account_id(),
+		AccountKeyring::Eve.to_account_id(),
+	];
+
+	let root = Raffles::merkle_root(&registrations);
+
+	let proof = Raffles::merkle_proof(&AccountKeyring::Bob.to_account_id(), &registrations)
+		.expect("Bob is part of the set; qed");
+
+	assert!(itp_binary_merkle_tree::verify_proof::<Keccak256, _, _>(
+		&root,
+		proof.proof.clone(),
+		proof
+			.number_of_leaves
+			.try_into()
+			.expect("Target Architecture needs usize > 32bits "),
+		proof.leaf_index.try_into().expect("Target Architecture needs usize > 32bits "),
+		&proof.leaf,
+	))
+}
+
+#[test]
 fn mock_shuffle_works() {
 	use crate::{mock::MockShuffler, Shuffle};
 
