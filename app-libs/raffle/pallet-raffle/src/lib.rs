@@ -1,6 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::storage::PrefixIterator;
+use frame_support::{dispatch::DispatchResult, ensure, storage::PrefixIterator};
 use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_core::MaxEncodedLen;
@@ -21,11 +21,12 @@ pub type WinnerCount = u32;
 pub struct Raffle<AccountId: Debug> {
 	owner: AccountId,
 	winner_count: WinnerCount,
+	registration_open: bool,
 }
 
 #[frame_support::pallet]
 pub mod pallet {
-	use crate::{weights::WeightInfo, Raffle, RaffleIndex, WinnerCount};
+	use crate::{weights::WeightInfo, Raffle, RaffleIndex, Shuffle, WinnerCount};
 	use frame_support::{pallet_prelude::*, sp_runtime::traits::Header};
 	use frame_system::{pallet_prelude::*, AccountInfo};
 	use sp_runtime::traits::{AtLeast32Bit, Scale};
@@ -41,6 +42,14 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		type WeightInfo: WeightInfo;
+
+		/// Implements random shuffling of values.
+		///
+		/// If you use this on-chain you need to make sure to have a deterministic seed base
+		/// on on-chain values. If you use this in sgx, we want to make sure that the randomness
+		/// is as secure as possible, hence use the sgx's randomness source, which use hardware
+		/// secured randomness source: https://en.wikipedia.org/wiki/RDRAND.
+		type Shuffle: Shuffle;
 	}
 
 	#[pallet::event]
@@ -51,12 +60,19 @@ pub mod pallet {
 
 		/// Someone has registered for a raffle
 		RaffleRegistration { who: T::AccountId, index: RaffleIndex },
+
+		/// Winners were drawn of a raffle
+		WinnersDrawn { index: RaffleIndex, winners: Vec<T::AccountId> },
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
 		/// The raffle does not exist
 		NonexistentRaffle,
+		/// The registrations for that raffles are closed
+		RegistrationsClosed,
+		/// Only the raffle owner can draw the winners
+		OnlyRaffleOwnerCanDrawWinners,
 	}
 
 	/// Ongoing raffles.
@@ -92,7 +108,7 @@ pub mod pallet {
 			let sender = ensure_signed(origin)?;
 			let index = Self::raffle_count();
 
-			let raffle = Raffle { owner: sender, winner_count };
+			let raffle = Raffle { owner: sender, winner_count, registration_open: true };
 
 			OnGoingRaffles::<T>::insert(index, &raffle);
 			RaffleCount::<T>::put(index + 1);
@@ -107,11 +123,24 @@ pub mod pallet {
 			let sender = ensure_signed(origin)?;
 
 			ensure!(OnGoingRaffles::<T>::contains_key(index), Error::<T>::NonexistentRaffle);
+			ensure!(
+				OnGoingRaffles::<T>::get(index)
+					.expect("Asserted above that the key exists; qed")
+					.registration_open,
+				Error::<T>::RegistrationsClosed
+			);
 
 			Registrations::<T>::insert(index, &sender, ());
 
 			Self::deposit_event(Event::RaffleRegistration { who: sender, index });
 			Ok(())
+		}
+
+		#[pallet::call_index(2)]
+		#[pallet::weight(T::WeightInfo::draw_winners())]
+		pub fn draw_winners(origin: OriginFor<T>, index: RaffleIndex) -> DispatchResult {
+			let sender = ensure_signed(origin)?;
+			Self::try_draw_winners(sender, index)
 		}
 	}
 }
@@ -120,4 +149,26 @@ impl<T: Config> Pallet<T> {
 	pub fn raffle_registrations(index: RaffleIndex) -> Vec<T::AccountId> {
 		Registrations::<T>::iter_prefix(index).map(|kv| kv.0).collect()
 	}
+
+	fn try_draw_winners(owner: T::AccountId, index: RaffleIndex) -> DispatchResult {
+		let raffle =
+			OnGoingRaffles::<T>::get(index).ok_or_else(|| Error::<T>::NonexistentRaffle)?;
+		ensure!(raffle.registration_open, Error::<T>::RegistrationsClosed);
+		ensure!(raffle.owner == owner, Error::<T>::OnlyRaffleOwnerCanDrawWinners);
+
+		let mut registrations = Self::raffle_registrations(index);
+		<T as Config>::Shuffle::shuffle(&mut registrations);
+
+		let count = core::cmp::min(registrations.len(), raffle.winner_count as usize);
+		let winners = registrations[..count].to_vec();
+
+		OnGoingRaffles::<T>::mutate(index, |r| r.as_mut().map(|r| r.registration_open = false));
+
+		Self::deposit_event(Event::WinnersDrawn { index, winners });
+		Ok(())
+	}
+}
+
+pub trait Shuffle {
+	fn shuffle<T>(values: &mut [T]);
 }

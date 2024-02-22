@@ -15,9 +15,9 @@
 
 */
 use crate as pallet_raffles;
+use crate::Shuffle;
 use frame_support::parameter_types;
 use frame_system as system;
-use pallet_raffles::Config;
 use sp_core::H256;
 use sp_keyring::AccountKeyring;
 use sp_runtime::{
@@ -63,6 +63,18 @@ parameter_types! {
 impl pallet_raffles::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
+	type Shuffle = MockShuffler;
+}
+
+pub struct MockShuffler;
+
+impl Shuffle for MockShuffler {
+	/// Switch the first two values if there are at least two values.
+	fn shuffle<T>(values: &mut [T]) {
+		if values.len() > 1 {
+			values.swap(0, 1);
+		}
+	}
 }
 
 impl frame_system::Config for Test {
