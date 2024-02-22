@@ -4,6 +4,7 @@ members = [
     "app-libs/oracle",
     "app-libs/parentchain-interface",
     "app-libs/raffle/stf",
+    "app-libs/raffle/pallet-raffle",
     "app-libs/sgx-runtime",
     "app-libs/stf",
     "cli",

@@ -5276,6 +5276,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-raffles"
+version = "0.11.0"
+dependencies = [
+ "env_logger 0.9.3",
+ "frame-support",
+ "frame-system",
+ "log 0.4.20",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "serde 1.0.193",
+ "sp-core",
+ "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-sidechain"
 version = "0.11.0"
 source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.11-polkadot-v0.9.42#094b1e982b4637ebfbf5afb985100417215d49a0"
