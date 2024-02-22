@@ -1,9 +1,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{dispatch::DispatchResult, ensure};
+use itp_binary_merkle_tree::{merkle_proof, merkle_root, MerkleProofWithCodec};
 use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
-use sp_core::MaxEncodedLen;
+use sp_core::{MaxEncodedLen, H256};
+use sp_runtime::traits::Keccak256;
 use sp_std::fmt::Debug;
 
 pub use pallet::*;
@@ -29,6 +31,7 @@ pub mod pallet {
 	use crate::{weights::WeightInfo, Raffle, RaffleIndex, Shuffle, WinnerCount};
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+	use sp_core::H256;
 
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 	#[pallet::pallet]
@@ -61,7 +64,7 @@ pub mod pallet {
 		RaffleRegistration { who: T::AccountId, index: RaffleIndex },
 
 		/// Winners were drawn of a raffle
-		WinnersDrawn { index: RaffleIndex, winners: Vec<T::AccountId> },
+		WinnersDrawn { index: RaffleIndex, winners: Vec<T::AccountId>, winners_root: H256 },
 	}
 
 	#[pallet::error]
@@ -156,6 +159,7 @@ impl<T: Config> Pallet<T> {
 		ensure!(raffle.owner == owner, Error::<T>::OnlyRaffleOwnerCanDrawWinners);
 
 		let mut registrations = Self::raffle_registrations(index);
+		let winners_root = Self::merkle_root(&registrations);
 		<T as Config>::Shuffle::shuffle(&mut registrations);
 
 		let count = core::cmp::min(registrations.len(), raffle.winner_count as usize);
@@ -163,8 +167,31 @@ impl<T: Config> Pallet<T> {
 
 		OnGoingRaffles::<T>::mutate(index, |r| r.as_mut().map(|r| r.registration_open = false));
 
-		Self::deposit_event(Event::WinnersDrawn { index, winners });
+		Self::deposit_event(Event::WinnersDrawn { index, winners, winners_root });
 		Ok(())
+	}
+
+	pub fn merkle_root(accounts: &[T::AccountId]) -> H256 {
+		merkle_root::<Keccak256, _>(accounts.iter().map(Encode::encode))
+	}
+
+	pub fn merkle_proof_for_registration(
+		index: RaffleIndex,
+		account: &T::AccountId,
+	) -> Option<MerkleProofWithCodec<H256, Vec<u8>>> {
+		let registrations = Self::raffle_registrations(index);
+		let leaf_index = Self::merkle_leaf_index_for_registration(account, &registrations)?;
+		Some(
+			merkle_proof::<Keccak256, _, _>(registrations.iter().map(Encode::encode), leaf_index)
+				.into(),
+		)
+	}
+
+	pub fn merkle_leaf_index_for_registration(
+		account: &T::AccountId,
+		registrations: &[T::AccountId],
+	) -> Option<usize> {
+		registrations.iter().position(|a| a == account)
 	}
 }
 

@@ -4,7 +4,7 @@ use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
 // re-export the original one implementing all the merkle/logic.
-pub use binary_merkle_tree::{merkle_proof, MerkleProof};
+pub use binary_merkle_tree::{merkle_proof, merkle_root, MerkleProof};
 
 /// Custom Merkle proof that implements codec
 /// The difference to the original one is that implements the scale-codec and that the fields contain u32 instead of usize.

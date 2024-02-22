@@ -5282,6 +5282,7 @@ dependencies = [
  "env_logger 0.9.3",
  "frame-support",
  "frame-system",
+ "itp-binary-merkle-tree",
  "log 0.4.20",
  "pallet-balances",
  "parity-scale-codec",
