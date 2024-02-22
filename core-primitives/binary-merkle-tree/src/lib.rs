@@ -33,7 +33,7 @@ impl<H, L> From<MerkleProof<H, L>> for MerkleProofWithCodec<H, L> {
 		Self {
 			root: source.root,
 			proof: source.proof,
-			// usize to u64 can't panic
+			// usize as u64 can't panic
 			number_of_leaves: source.number_of_leaves as u64,
 			leaf_index: source.leaf_index as u64,
 			leaf: source.leaf,

@@ -170,7 +170,7 @@ mod draw_winners {
 					AccountKeyring::Charlie.to_account_id(),
 					AccountKeyring::Bob.to_account_id(),
 				],
-				winners_root: Raffles::merkle_root(&vec![
+				registrations_root: Raffles::merkle_root(&vec![
 					AccountKeyring::Bob.to_account_id(),
 					AccountKeyring::Charlie.to_account_id(),
 					AccountKeyring::Eve.to_account_id(),
@@ -212,7 +212,9 @@ mod draw_winners {
 			System::assert_last_event(RuntimeEvent::Raffles(RaffleEvent::WinnersDrawn {
 				index: raffle_index,
 				winners: vec![AccountKeyring::Bob.to_account_id()],
-				winners_root: Raffles::merkle_root(&vec![AccountKeyring::Bob.to_account_id()]),
+				registrations_root: Raffles::merkle_root(
+					&vec![AccountKeyring::Bob.to_account_id()],
+				),
 			}));
 
 			assert_eq!(Raffles::ongoing_raffles(0).unwrap().registration_open, false)
@@ -275,7 +277,7 @@ mod draw_winners {
 			System::assert_last_event(RuntimeEvent::Raffles(RaffleEvent::WinnersDrawn {
 				index: raffle_index,
 				winners: vec![],
-				winners_root: Raffles::merkle_root(&[]),
+				registrations_root: Raffles::merkle_root(&[]),
 			}));
 
 			assert_eq!(Raffles::ongoing_raffles(0).unwrap().registration_open, false);

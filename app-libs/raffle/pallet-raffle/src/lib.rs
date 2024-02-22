@@ -47,9 +47,9 @@ pub mod pallet {
 
 		/// Implements random shuffling of values.
 		///
-		/// If you use this on-chain you need to make sure to have a deterministic seed base
-		/// on on-chain values. If you use this in sgx, we want to make sure that the randomness
-		/// is as secure as possible, hence use the sgx's randomness source, which use hardware
+		/// If you use this on-chain you need to make sure to have a deterministic seed based
+		/// on-chain values. If you use this in SGX, we want to make sure that the randomness
+		/// is as secure as possible, hence we  use the SGX's randomness, which uses a hardware
 		/// secured randomness source: https://en.wikipedia.org/wiki/RDRAND.
 		type Shuffle: Shuffle;
 	}
@@ -64,7 +64,7 @@ pub mod pallet {
 		RaffleRegistration { who: T::AccountId, index: RaffleIndex },
 
 		/// Winners were drawn of a raffle
-		WinnersDrawn { index: RaffleIndex, winners: Vec<T::AccountId>, winners_root: H256 },
+		WinnersDrawn { index: RaffleIndex, winners: Vec<T::AccountId>, registrations_root: H256 },
 	}
 
 	#[pallet::error]
@@ -159,7 +159,7 @@ impl<T: Config> Pallet<T> {
 		ensure!(raffle.owner == owner, Error::<T>::OnlyRaffleOwnerCanDrawWinners);
 
 		let mut registrations = Self::raffle_registrations(index);
-		let winners_root = Self::merkle_root(&registrations);
+		let registrations_root = Self::merkle_root(&registrations);
 		<T as Config>::Shuffle::shuffle(&mut registrations);
 
 		let count = core::cmp::min(registrations.len(), raffle.winner_count as usize);
@@ -167,7 +167,7 @@ impl<T: Config> Pallet<T> {
 
 		OnGoingRaffles::<T>::mutate(index, |r| r.as_mut().map(|r| r.registration_open = false));
 
-		Self::deposit_event(Event::WinnersDrawn { index, winners, winners_root });
+		Self::deposit_event(Event::WinnersDrawn { index, winners, registrations_root });
 		Ok(())
 	}
 
