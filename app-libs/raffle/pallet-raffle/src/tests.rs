@@ -15,22 +15,11 @@
 
 */
 use crate::{mock::*, Error, Event as RaffleEvent, Raffle};
-use frame_support::{assert_err, assert_noop, assert_ok};
-use frame_system::AccountInfo;
-use pallet_balances::AccountData;
-use sp_core::H256;
+use frame_support::{assert_err, assert_ok};
 use sp_keyring::AccountKeyring;
-use sp_runtime::{
-	generic,
-	traits::{BlakeTwo256, Header as HeaderT},
-	DispatchError::BadOrigin,
-};
 
 mod add_raffle {
 	use super::*;
-	use crate::{OnGoingRaffles, Raffle};
-	use frame_support::assert_ok;
-	use sp_keyring::AccountKeyring;
 
 	#[test]
 	fn add_raffle_works() {
@@ -58,9 +47,6 @@ mod add_raffle {
 
 mod register_for_raffle {
 	use super::*;
-	use crate::Raffle;
-	use frame_support::assert_ok;
-	use sp_keyring::AccountKeyring;
 
 	#[test]
 	fn register_for_raffle_works() {
@@ -117,9 +103,6 @@ mod register_for_raffle {
 
 mod draw_winners {
 	use super::*;
-	use crate::Raffle;
-	use frame_support::assert_ok;
-	use sp_keyring::AccountKeyring;
 
 	#[test]
 	fn draw_winners_works() {
