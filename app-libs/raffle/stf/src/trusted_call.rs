@@ -39,6 +39,7 @@ use itp_types::{
 };
 use itp_utils::stringify::account_id_to_string;
 use log::*;
+use pallet_raffles::{RaffleCount, RaffleIndex, WinnerCount};
 use sp_core::{
 	crypto::{AccountId32, UncheckedFrom},
 	ed25519,
@@ -50,17 +51,17 @@ use std::{format, prelude::v1::*, sync::Arc};
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum RaffleTrustedCall {
-	createRaffle(AccountId),
-	drawWinners(AccountId, AccountId, Balance, Balance),
-	registerForRaffle(AccountId, AccountId, Balance),
+	createRaffle { origin: AccountId, winner_count: WinnerCount },
+	registerForRaffle { origin: AccountId, raffle_index: RaffleIndex },
+	drawWinners { origin: AccountId, raffle_index: RaffleIndex },
 }
 
 impl RaffleTrustedCall {
 	pub fn sender_account(&self) -> &AccountId {
 		match self {
-			Self::createRaffle(sender_account) => sender_account,
-			Self::drawWinners(sender_account, ..) => sender_account,
-			Self::registerForRaffle(sender_account, ..) => sender_account,
+			Self::createRaffle { origin, .. } => origin,
+			Self::drawWinners { origin, .. } => origin,
+			Self::registerForRaffle { origin, .. } => origin,
 		}
 	}
 }
@@ -78,16 +79,16 @@ where
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {
 		match self {
-			Self::createRaffle(who) => {
-				debug!("createRaffle called by {}", account_id_to_string(&who),);
+			Self::createRaffle { origin, winner_count } => {
+				debug!("createRaffle called by {}", account_id_to_string(&origin),);
 				Ok::<(), Self::Error>(())
 			},
-			Self::drawWinners(who, ..) => {
-				debug!("drawWinners called by {}", account_id_to_string(&who),);
+			Self::registerForRaffle { origin, raffle_index } => {
+				debug!("registerForRaffle {}", account_id_to_string(&origin),);
 				Ok::<(), Self::Error>(())
 			},
-			Self::registerForRaffle(who, ..) => {
-				debug!("registerForRaffle {}", account_id_to_string(&who),);
+			Self::drawWinners { origin, raffle_index } => {
+				debug!("drawWinners called by {}", account_id_to_string(&origin),);
 				Ok::<(), Self::Error>(())
 			},
 		}

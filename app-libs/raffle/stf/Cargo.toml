@@ -11,6 +11,8 @@ log = { version = "0.4", default-features = false }
 rlp = { version = "0.5", default-features = false }
 sha3 = { version = "0.10", default-features = false }
 
+pallet-raffles = { path = "../pallet-raffle", default-features = false }
+
 # sgx deps
 sgx_tstd = { branch = "master", features = ["untrusted_fs", "net", "backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
@@ -45,10 +47,11 @@ sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "po
 [features]
 default = ["std"]
 sgx = [
-    "sgx_tstd",
-    "itp-sgx-externalities/sgx",
-    "sp-io/sgx",
+    "ita-sgx-runtime/sgx",
     "itp-node-api/sgx",
+    "itp-sgx-externalities/sgx",
+    "sgx_tstd",
+    "sp-io/sgx",
 ]
 std = [
     # crates.io
@@ -64,6 +67,7 @@ std = [
     "itp-types/std",
     "itp-node-api/std",
     "itp-node-api-metadata/std",
+    "pallet-raffles/std",
     # substrate
     "sp-core/std",
     "pallet-balances/std",
