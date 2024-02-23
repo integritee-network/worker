@@ -392,3 +392,20 @@ impl_runtime_apis! {
 	}
 
 }
+
+// Todo: the below helper should be implemented generically on `T: frame_system::Config`
+// in a core lib.
+pub type RuntimeEventOf<T> = <T as frame_system::Config>::RuntimeEvent;
+pub type HashOf<T> = <T as frame_system::Config>::Hash;
+use frame_system::EventRecord;
+impl Runtime {
+	pub fn read_events() -> Vec<EventRecord<RuntimeEventOf<Runtime>, HashOf<Runtime>>> {
+		frame_system::Pallet::<Runtime>::read_events_no_consensus()
+			.map(|e| *e)
+			.collect()
+	}
+
+	pub fn last_event() -> Option<EventRecord<RuntimeEventOf<Runtime>, HashOf<Runtime>>> {
+		Runtime::read_events().last().cloned()
+	}
+}

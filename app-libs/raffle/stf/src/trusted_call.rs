@@ -81,6 +81,29 @@ where
 		match self {
 			Self::createRaffle { origin, winner_count } => {
 				debug!("createRaffle called by {}", account_id_to_string(&origin),);
+				let origin = ita_sgx_runtime::RuntimeOrigin::signed(origin.clone());
+
+				pallet_raffles::Call::<Runtime>::add_raffle { winner_count }
+					.dispatch_bypass_filter(origin.clone())
+					.map_err(|e| {
+						Self::Error::Dispatch(format!("Create Raffle error: {:?}", e.error))
+					})?;
+
+				let raffle_event = Runtime::last_event().ok_or_else(|| {
+					Self::Error::Dispatch(format!("Could not find raffle created event"))
+				})?;
+
+				// Send proof of execution on chain.
+				calls.push(ParentchainCall::Integritee(OpaqueCall::from_tuple(&(
+					node_metadata_repo
+						.get_from_metadata(|m| m.publish_hash_call_indexes())
+						.map_err(|_| Self::Error::InvalidMetadata)?
+						.map_err(|_| Self::Error::InvalidMetadata)?,
+					itp_types::H256::default(), // don't bother with the call hash for now.
+					Vec::<itp_types::H256>::new(),
+					format!("{:?}", raffle_event),
+				))));
+
 				Ok::<(), Self::Error>(())
 			},
 			Self::registerForRaffle { origin, raffle_index } => {
