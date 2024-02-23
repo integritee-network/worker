@@ -36,6 +36,7 @@ mod command_utils;
 mod evm;
 #[cfg(feature = "teeracle")]
 mod oracle;
+mod raffle;
 mod trusted_base_cli;
 mod trusted_cli;
 mod trusted_command_utils;

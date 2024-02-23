@@ -52,7 +52,7 @@ pub use pallet_raffles::{RaffleCount, RaffleIndex, WinnerCount};
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum RaffleTrustedCall {
-	createRaffle { origin: AccountId, winner_count: WinnerCount },
+	addRaffle { origin: AccountId, winner_count: WinnerCount },
 	registerForRaffle { origin: AccountId, raffle_index: RaffleIndex },
 	drawWinners { origin: AccountId, raffle_index: RaffleIndex },
 }
@@ -60,7 +60,7 @@ pub enum RaffleTrustedCall {
 impl RaffleTrustedCall {
 	pub fn sender_account(&self) -> &AccountId {
 		match self {
-			Self::createRaffle { origin, .. } => origin,
+			Self::addRaffle { origin, .. } => origin,
 			Self::drawWinners { origin, .. } => origin,
 			Self::registerForRaffle { origin, .. } => origin,
 		}
@@ -80,7 +80,7 @@ where
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {
 		match self {
-			Self::createRaffle { origin, winner_count } => {
+			Self::addRaffle { origin, winner_count } => {
 				debug!("createRaffle called by {}", account_id_to_string(&origin),);
 				let origin = ita_sgx_runtime::RuntimeOrigin::signed(origin.clone());
 
