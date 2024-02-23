@@ -2892,6 +2892,7 @@ version = "0.9.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "ita-raffle-stf",
  "ita-sgx-runtime",
  "itp-hashing",
  "itp-node-api",

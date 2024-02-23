@@ -61,6 +61,9 @@ use sp_io::hashing::blake2_256;
 use sp_runtime::{traits::Verify, MultiAddress, MultiSignature};
 use std::{format, prelude::v1::*, sync::Arc};
 
+// raflle stuff
+use ita_raffle_stf::RaffleTrustedCall;
+
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum TrustedCall {
@@ -70,6 +73,7 @@ pub enum TrustedCall {
 	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
 	balance_shield(AccountId, AccountId, Balance, ParentchainId), // (Root, AccountIncognito, Amount, origin parentchain)
 	timestamp_set(AccountId, Moment, ParentchainId),              // (Root, now)
+	raffle(RaffleTrustedCall),
 	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance), // (Origin, Address EVM Account, Value)
 	// (Origin, Source, Target, Input, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
@@ -124,6 +128,7 @@ impl TrustedCall {
 			Self::balance_unshield(sender_account, ..) => sender_account,
 			Self::balance_shield(sender_account, ..) => sender_account,
 			Self::timestamp_set(sender_account, ..) => sender_account,
+			Self::raffle(call) => call.sender_account(),
 			#[cfg(feature = "evm")]
 			Self::evm_withdraw(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
@@ -441,7 +446,7 @@ where
 				};
 				Ok(())
 			},
-
+			TrustedCall::raffle(call) => call.execute(calls, node_metadata_repo),
 			#[cfg(feature = "evm")]
 			TrustedCall::evm_withdraw(from, address, value) => {
 				debug!("evm_withdraw({}, {}, {})", account_id_to_string(&from), address, value);
@@ -572,7 +577,6 @@ where
 			TrustedCall::balance_unshield(..) => debug!("No storage updates needed..."),
 			TrustedCall::balance_shield(..) => debug!("No storage updates needed..."),
 			TrustedCall::timestamp_set(..) => debug!("No storage updates needed..."),
-			#[cfg(feature = "evm")]
 			_ => debug!("No storage updates needed..."),
 		};
 		key_hashes

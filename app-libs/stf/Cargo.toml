@@ -11,6 +11,8 @@ log = { version = "0.4", default-features = false }
 rlp = { version = "0.5", default-features = false }
 sha3 = { version = "0.10", default-features = false }
 
+ita-raffle-stf = { default-features = false, path = "../raffle/stf" }
+
 # sgx deps
 sgx_tstd = { branch = "master", features = ["untrusted_fs", "net", "backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
@@ -47,10 +49,12 @@ default = ["std"]
 evm = ["ita-sgx-runtime/evm"]
 evm_std = ["evm", "ita-sgx-runtime/evm_std"]
 sgx = [
-    "sgx_tstd",
-    "itp-sgx-externalities/sgx",
-    "sp-io/sgx",
+    "ita-raffle-stf/sgx",
+    "ita-sgx-runtime/sgx",
     "itp-node-api/sgx",
+    "itp-sgx-externalities/sgx",
+    "sgx_tstd",
+    "sp-io/sgx",
 ]
 std = [
     # crates.io
@@ -58,6 +62,7 @@ std = [
     "log/std",
     "rlp/std",
     # local
+    "ita-raffle-stf/std",
     "ita-sgx-runtime/std",
     "itp-hashing/std",
     "itp-sgx-externalities/std",
