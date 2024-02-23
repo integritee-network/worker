@@ -84,7 +84,6 @@ read -r MRENCLAVE <<< "$($CLIENT list-workers | awk '/  MRENCLAVE: / { print $2;
 
 # Create Raffle
 echo "* Alice creates a raffle"
-# shellcheck disable=SC2006
 RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct add-raffle //Alice 2`
 echo "Result: ${RESULT}"
 
@@ -93,12 +92,22 @@ RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct get-all-raffles`
 echo "Result: ${RESULT}"
 
 # Have some users register for the raffle with index 0
+echo "* Register Bob for the first raffle"
 RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct register-for-raffle //Bob 0`
 echo "Result: ${RESULT}"
+
+echo "* Register Charlie for the first raffle"
 RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct register-for-raffle //Charlie 0`
+echo "Result: ${RESULT}"
+
+echo "* Register Dave for the first raffle"
 RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct register-for-raffle //Dave 0`
+echo "Result: ${RESULT}"
 
 # Draw winners
+echo "* Draws the Winners"
+RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct draw-winners //Alice 0`
+echo "Result: ${RESULT}"
 
 # Get proof
 

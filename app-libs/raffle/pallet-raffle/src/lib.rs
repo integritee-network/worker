@@ -90,6 +90,12 @@ pub mod pallet {
 	pub type OnGoingRaffles<T: Config> =
 		StorageMap<_, Blake2_128Concat, RaffleIndex, Raffle<T::AccountId>, OptionQuery>;
 
+	/// Ongoing raffles.
+	#[pallet::storage]
+	#[pallet::getter(fn winners)]
+	pub type Winners<T: Config> =
+		StorageMap<_, Blake2_128Concat, RaffleIndex, Vec<T::AccountId>, OptionQuery>;
+
 	#[pallet::storage]
 	#[pallet::getter(fn registrations)]
 	pub type Registrations<T: Config> = StorageDoubleMap<
@@ -179,6 +185,7 @@ impl<T: Config> Pallet<T> {
 		let winners = registrations[..count].to_vec();
 
 		OnGoingRaffles::<T>::mutate(index, |r| r.as_mut().map(|r| r.registration_open = false));
+		Winners::<T>::insert(&index, &winners);
 
 		Self::deposit_event(Event::WinnersDrawn { index, winners, registrations_root });
 		Ok(())

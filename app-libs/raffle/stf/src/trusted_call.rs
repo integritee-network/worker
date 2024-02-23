@@ -124,7 +124,43 @@ where
 			},
 			Self::drawWinners { origin, raffle_index } => {
 				debug!("drawWinners called by {}", account_id_to_string(&origin),);
-				Ok::<(), Self::Error>(())
+				let origin = ita_sgx_runtime::RuntimeOrigin::signed(origin.clone());
+
+				pallet_raffles::Call::<Runtime>::draw_winners { index: raffle_index }
+					.dispatch_bypass_filter(origin.clone())
+					.map_err(|e| {
+						Self::Error::Dispatch(format!("Create Raffle error: {:?}", e.error))
+					})?;
+
+				Runtime::read_events()
+					.last()
+					.map(|event_record| -> Result<(), Self::Error> {
+						match &event_record.event {
+							ita_sgx_runtime::RuntimeEvent::Raffles(
+								pallet_raffles::Event::WinnersDrawn { index, winners, registrations_root },
+							) => {
+								calls.push(ParentchainCall::Integritee(OpaqueCall::from_tuple(&(
+									node_metadata_repo
+										.get_from_metadata(|m| m.publish_hash_call_indexes())
+										.map_err(|_| Self::Error::InvalidMetadata)?
+										.map_err(|_| Self::Error::InvalidMetadata)?,
+									itp_types::H256::default(), // don't bother with the call hash for now.
+									Vec::<itp_types::H256>::new(),
+									// Todo: Simple forwarding of the runtime event does not work
+									// as the debug implementation is <wasm:stripped>.
+									format!("Raffle Winners Drawn: index: {}, winners: {:?}, registrations_merkle_root: {}", index, winners, registrations_root),
+								))));
+							},
+							_ =>
+								return Err(Self::Error::Dispatch(format!(
+									"AddRaffle: Could not find expected winners drawn event"
+								))),
+						}
+						Ok::<(), Self::Error>(())
+					}).transpose()?.
+					ok_or_else(|| Self::Error::Dispatch(format!(
+					"Could not find expected event."
+				)))
 			},
 		}
 	}
