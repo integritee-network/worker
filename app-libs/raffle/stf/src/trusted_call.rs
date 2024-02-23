@@ -91,8 +91,6 @@ where
 						.map_err(|_| Self::Error::InvalidMetadata)?,
 					itp_types::H256::default(), // don't bother with the call hash for now.
 					Vec::<itp_types::H256>::new(),
-					// Todo: Simple forwarding of the runtime event does not work
-					// as the debug implementation is <wasm:stripped>.
 					format!("Raffle Added: index: {}, {:?}", index, raffle),
 				))));
 
@@ -115,8 +113,6 @@ where
 						.map_err(|_| Self::Error::InvalidMetadata)?,
 					itp_types::H256::default(), // don't bother with the call hash for now.
 					Vec::<itp_types::H256>::new(),
-					// Todo: Simple forwarding of the runtime event does not work
-					// as the debug implementation is <wasm:stripped>.
 					format!("Someone registered for raffle with index: {}", raffle_index),
 				))));
 
