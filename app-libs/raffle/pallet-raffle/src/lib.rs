@@ -20,6 +20,12 @@ pub type RaffleIndex = u32;
 pub type WinnerCount = u32;
 
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq, TypeInfo, MaxEncodedLen)]
+pub struct RaffleMetadata<AccountId: Debug> {
+	index: RaffleIndex,
+	raffle: Raffle<AccountId>,
+}
+
+#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq, TypeInfo, MaxEncodedLen)]
 pub struct Raffle<AccountId: Debug> {
 	owner: AccountId,
 	winner_count: WinnerCount,
@@ -149,6 +155,12 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
+	pub fn all_ongoing_raffles() -> Vec<RaffleMetadata<T::AccountId>> {
+		OnGoingRaffles::<T>::iter()
+			.map(|kv| RaffleMetadata { index: kv.0, raffle: kv.1 })
+			.collect()
+	}
+
 	pub fn raffle_registrations(index: RaffleIndex) -> Vec<T::AccountId> {
 		Registrations::<T>::iter_prefix(index).map(|kv| kv.0).collect()
 	}

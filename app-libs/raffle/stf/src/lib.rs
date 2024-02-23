@@ -3,6 +3,9 @@
 #[cfg(not(feature = "std"))]
 extern crate alloc;
 
+mod getter;
 mod trusted_call;
 
-pub use trusted_call::{RaffleCount, RaffleIndex, RaffleTrustedCall, WinnerCount};
+pub use getter::{RafflePublicGetter, RaffleTrustedGetter};
+pub use pallet_raffles::{self, RaffleCount, RaffleIndex, RaffleMetadata, WinnerCount};
+pub use trusted_call::RaffleTrustedCall;
