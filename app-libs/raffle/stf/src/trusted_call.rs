@@ -26,7 +26,11 @@ use itp_stf_primitives::{error::StfError, types::AccountId};
 use itp_types::{parentchain::ParentchainCall, OpaqueCall};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
-use std::{format, prelude::v1::*, sync::Arc};
+use sp_core::bounded::alloc;
+use sp_std::{sync::Arc, vec::Vec};
+
+#[cfg(not(feature = "std"))]
+use alloc::format;
 
 pub use pallet_raffles::{RaffleCount, RaffleIndex, WinnerCount};
 
