@@ -92,7 +92,11 @@ echo "* All ongoing raffles"
 RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct get-all-raffles`
 echo "Result: ${RESULT}"
 
-# Have some users register for the raffle draw
+# Have some users register for the raffle with index 0
+RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct register-for-raffle //Bob 0`
+echo "Result: ${RESULT}"
+RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct register-for-raffle //Charlie 0`
+RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct register-for-raffle //Dave 0`
 
 # Draw winners
 

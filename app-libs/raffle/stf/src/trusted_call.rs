@@ -99,7 +99,27 @@ where
 				Ok::<(), Self::Error>(())
 			},
 			Self::registerForRaffle { origin, raffle_index } => {
-				debug!("registerForRaffle {}", account_id_to_string(&origin),);
+				debug!("registerForRaffle called by {}", account_id_to_string(&origin),);
+				let origin = ita_sgx_runtime::RuntimeOrigin::signed(origin.clone());
+
+				pallet_raffles::Call::<Runtime>::register_for_raffle { index: raffle_index }
+					.dispatch_bypass_filter(origin.clone())
+					.map_err(|e| {
+						Self::Error::Dispatch(format!("Create Raffle error: {:?}", e.error))
+					})?;
+
+				calls.push(ParentchainCall::Integritee(OpaqueCall::from_tuple(&(
+					node_metadata_repo
+						.get_from_metadata(|m| m.publish_hash_call_indexes())
+						.map_err(|_| Self::Error::InvalidMetadata)?
+						.map_err(|_| Self::Error::InvalidMetadata)?,
+					itp_types::H256::default(), // don't bother with the call hash for now.
+					Vec::<itp_types::H256>::new(),
+					// Todo: Simple forwarding of the runtime event does not work
+					// as the debug implementation is <wasm:stripped>.
+					format!("Someone registered for raffle with index: {}", raffle_index),
+				))));
+
 				Ok::<(), Self::Error>(())
 			},
 			Self::drawWinners { origin, raffle_index } => {
