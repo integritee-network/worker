@@ -1,5 +1,12 @@
 // Todo: I think we can upstream the codec change, then we can delete this crate.
 
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(not(feature = "std"))]
+extern crate alloc;
+#[cfg(not(feature = "std"))]
+use alloc::vec::Vec;
+
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 

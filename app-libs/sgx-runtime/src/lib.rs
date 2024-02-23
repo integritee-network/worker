@@ -405,7 +405,9 @@ impl Runtime {
 			.collect()
 	}
 
-	pub fn last_event() -> Option<EventRecord<RuntimeEventOf<Runtime>, HashOf<Runtime>>> {
-		Runtime::read_events().last().cloned()
-	}
+	// Todo: derive `Clone` for event record in `no_std`.
+	// Supply upstream PR.
+	// pub fn last_event() -> Option<EventRecord<RuntimeEventOf<Runtime>, HashOf<Runtime>>> {
+	// 	Runtime::read_events().last().cloned()
+	// }
 }

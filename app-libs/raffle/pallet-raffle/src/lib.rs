@@ -6,7 +6,7 @@ use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_core::{MaxEncodedLen, H256};
 use sp_runtime::traits::Keccak256;
-use sp_std::fmt::Debug;
+use sp_std::{fmt::Debug, vec::Vec};
 
 pub use pallet::*;
 
@@ -32,6 +32,7 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use sp_core::H256;
+	use sp_std::vec::Vec;
 
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 	#[pallet::pallet]

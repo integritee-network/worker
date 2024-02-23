@@ -89,7 +89,7 @@ where
 						Self::Error::Dispatch(format!("Create Raffle error: {:?}", e.error))
 					})?;
 
-				let raffle_event = Runtime::last_event().ok_or_else(|| {
+				let raffle_event = Runtime::read_events().last().ok_or_else(|| {
 					Self::Error::Dispatch(format!("Could not find raffle created event"))
 				})?;
 
