@@ -310,7 +310,8 @@ impl pallet_raffles::Shuffle for SgxShuffle {
 	/// Switch the first two values if there are at least two values.
 	fn shuffle<T>(values: &mut [T]) {
 		use sgx_rand::Rng;
-		let mut rng = sgx_rand::SgxRng::new();
+		let mut rng =
+			sgx_rand::SgxRng::new().expect("Can't fail, internal up returns Ok directly; qed");
 		rng.shuffle(values);
 	}
 }
