@@ -311,7 +311,7 @@ impl pallet_raffles::Shuffle for SgxShuffle {
 	fn shuffle<T>(values: &mut [T]) {
 		use sgx_rand::Rng;
 		let mut rng = sgx_rand::SgxRng::new();
-		rng::shuffle(values);
+		rng.shuffle(values);
 	}
 }
 
