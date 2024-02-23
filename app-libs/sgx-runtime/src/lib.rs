@@ -281,6 +281,40 @@ impl pallet_parentchain::Config<crate::ParentchainInstanceTargetB> for Runtime {
 	type Moment = Moment;
 }
 
+impl pallet_raffles::Config for Runtime {
+	type WeightInfo = ();
+	type RuntimeEvent = RuntimeEvent;
+
+	#[cfg(feature = "sgx")]
+	type Shuffle = SgxShuffle;
+
+	#[cfg(not(feature = "sgx"))]
+	type Shuffle = MockShuffler;
+}
+
+pub struct MockShuffler;
+
+impl pallet_raffles::Shuffle for MockShuffler {
+	/// Switch the first two values if there are at least two values.
+	fn shuffle<T>(values: &mut [T]) {
+		if values.len() > 1 {
+			values.swap(0, 1);
+		}
+	}
+}
+
+pub struct SgxShuffle;
+
+#[cfg(feature = "sgx")]
+impl pallet_raffles::Shuffle for SgxShuffle {
+	/// Switch the first two values if there are at least two values.
+	fn shuffle<T>(values: &mut [T]) {
+		use sgx_rand::Rng;
+		let mut rng = sgx_rand::SgxRng::new();
+		rng::shuffle(values);
+	}
+}
+
 // The plain sgx-runtime without the `evm-pallet`
 #[cfg(not(feature = "evm"))]
 construct_runtime!(
@@ -298,6 +332,8 @@ construct_runtime!(
 		ParentchainIntegritee: pallet_parentchain::<Instance1>::{Pallet, Call, Event<T>} = 10,
 		ParentchainTargetA: pallet_parentchain::<Instance2>::{Pallet, Call, Event<T>} = 11,
 		ParentchainTargetB: pallet_parentchain::<Instance3>::{Pallet, Call, Event<T>} = 12,
+
+		Raffles: pallet_raffles,
 	}
 );
 

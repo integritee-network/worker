@@ -13,6 +13,7 @@ scale-info = { version = "2.10.0", default-features = false, features = ["derive
 
 # local dependencies
 itp-sgx-runtime-primitives = { path = "../../core-primitives/sgx-runtime-primitives", default-features = false }
+pallet-raffles = { default-features = false, path = "../raffle/pallet-raffle" }
 
 # Substrate dependencies
 frame-benchmarking = { optional = true, default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
@@ -44,6 +45,9 @@ sp-version = { default-features = false, git = "https://github.com/paritytech/su
 pallet-evm = { default-features = false, optional = true, git = "https://github.com/integritee-network/frontier.git", branch = "bar/polkadot-v0.9.42" }
 pallet-parentchain = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
 
+# Raffle Demo
+sgx_rand = { optional = true, version = "1.1.6", git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master" }
+
 [features]
 default = ["std"]
 # Compile the sgx-runtime with evm-pallet support in `no_std`.
@@ -53,6 +57,9 @@ evm_std = [
     "evm",            # Activate the `feature = evm` for the compiler flags.
     "std",
     "pallet-evm/std",
+]
+sgx = [
+    "sgx_rand",
 ]
 runtime-benchmarks = [
     "frame-benchmarking",
@@ -76,6 +83,7 @@ std = [
     "pallet-timestamp/std",
     "pallet-transaction-payment/std",
     "pallet-parentchain/std",
+    "pallet-raffles/std",
     "sp-api/std",
     "sp-core/std",
     "sp-inherents/std",

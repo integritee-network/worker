@@ -1703,6 +1703,7 @@ dependencies = [
  "pallet-evm",
  "pallet-insecure-randomness-collective-flip",
  "pallet-parentchain",
+ "pallet-raffles",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
@@ -1993,6 +1994,15 @@ dependencies = [
  "webpki",
  "webpki-roots 0.21.0 (git+https://github.com/mesalock-linux/webpki-roots?branch=mesalock_sgx)",
  "yasna",
+]
+
+[[package]]
+name = "itp-binary-merkle-tree"
+version = "0.1.0"
+dependencies = [
+ "binary-merkle-tree",
+ "parity-scale-codec",
+ "serde 1.0.192",
 ]
 
 [[package]]
@@ -3014,6 +3024,23 @@ dependencies = [
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-raffles"
+version = "0.11.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "itp-binary-merkle-tree",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "serde 1.0.192",
  "sp-core",
  "sp-io",
  "sp-runtime",
