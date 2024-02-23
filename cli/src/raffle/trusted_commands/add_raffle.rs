@@ -51,8 +51,6 @@ impl AddRaffleCmd {
 		let (mrenclave, shard) = get_identifiers(trusted_args);
 		let nonce = get_layer_two_nonce!(sender, cli, trusted_args);
 
-		println!("calling smart contract function");
-
 		let add_raffle_call =
 			RaffleTrustedCall::addRaffle { origin: sender_acc, winner_count: self.winner_count };
 
