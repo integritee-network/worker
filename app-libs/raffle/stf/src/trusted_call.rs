@@ -74,39 +74,27 @@ where
 						Self::Error::Dispatch(format!("Create Raffle error: {:?}", e.error))
 					})?;
 
-				// Todo: not sure what is better, reading the event or trying to read from storage.
-				Runtime::read_events()
-					.last()
-					.map(|event_record| -> Result<(), Self::Error> {
-						match &event_record.event {
-							ita_sgx_runtime::RuntimeEvent::Raffles(
-								pallet_raffles::Event::RaffleAdded { index, raffle },
-							) => {
-								calls.push(ParentchainCall::Integritee(OpaqueCall::from_tuple(&(
-									node_metadata_repo
-										.get_from_metadata(|m| m.publish_hash_call_indexes())
-										.map_err(|_| Self::Error::InvalidMetadata)?
-										.map_err(|_| Self::Error::InvalidMetadata)?,
-									itp_types::H256::default(), // don't bother with the call hash for now.
-									Vec::<itp_types::H256>::new(),
-									// Todo: Simple forwarding of the runtime event does not work
-									// as the debug implementation is <wasm:stripped>.
-									format!("Raffle Added: index: {}, raffle: {:?}", index, raffle),
-								))));
-							},
-							_ =>
-								return Err(Self::Error::Dispatch(format!(
-									"AddRaffle: Could not find expected raffle created event"
-								))),
-						}
-						Ok(())
-					})
-					.transpose()?
+				// call was successfull so we should find our raffle now on the last index.
+				let index = pallet_raffles::Pallet::<Runtime>::raffle_count();
+				let raffle = pallet_raffles::Pallet::<Runtime>::ongoing_raffles(index - 1)
 					.ok_or_else(|| {
+						// This should never happen if the pallet works correctly.
 						Self::Error::Dispatch(format!(
-							"AddRaffle: Could not find expected raffle created event"
+							"AddRaffle: Could not find expected raffle, critical pallet bug."
 						))
 					})?;
+
+				calls.push(ParentchainCall::Integritee(OpaqueCall::from_tuple(&(
+					node_metadata_repo
+						.get_from_metadata(|m| m.publish_hash_call_indexes())
+						.map_err(|_| Self::Error::InvalidMetadata)?
+						.map_err(|_| Self::Error::InvalidMetadata)?,
+					itp_types::H256::default(), // don't bother with the call hash for now.
+					Vec::<itp_types::H256>::new(),
+					// Todo: Simple forwarding of the runtime event does not work
+					// as the debug implementation is <wasm:stripped>.
+					format!("Raffle Added: index: {}, {:?}", index, raffle),
+				))));
 
 				Ok::<(), Self::Error>(())
 			},
