@@ -17,16 +17,15 @@
 
 use crate::{
 	trusted_cli::TrustedCli, trusted_command_utils::get_pair_from_str,
-	trusted_operation::perform_trusted_operation, Cli, CliError, CliResult, CliResultOk,
+	trusted_operation::perform_trusted_operation, Cli, CliResult, CliResultOk,
 };
 use ita_stf::{
 	merkle_tree::{verify_proof, Keccak256, MerkleProofWithCodec},
-	Getter, RaffleIndex, RaffleTrustedGetter, TrustedCallSigned, TrustedGetter,
+	Getter, RaffleIndex, RaffleTrustedGetter, TrustedGetter,
 };
-use itp_stf_primitives::types::{KeyPair, TrustedOperation};
 use itp_types::AccountId;
 use log::*;
-use sp_core::{crypto::Ss58Codec, Pair, H160, H256};
+use sp_core::{crypto::Ss58Codec, Pair, H256};
 
 #[derive(Debug, Parser)]
 pub struct GetAndVerifyRegistrationProof {

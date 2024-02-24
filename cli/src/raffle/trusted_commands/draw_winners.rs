@@ -22,15 +22,15 @@ use crate::{
 	trusted_operation::perform_trusted_operation,
 	Cli, CliResult, CliResultOk,
 };
-use ita_stf::{Index, RaffleIndex, RaffleTrustedCall, TrustedCall, TrustedGetter, WinnerCount};
+use ita_stf::{Index, RaffleIndex, RaffleTrustedCall, TrustedCall};
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{KeyPair, TrustedOperation},
 };
 use itp_types::AccountId;
 use log::*;
-use sp_core::{crypto::Ss58Codec, Pair, H160, U256};
-use std::{boxed::Box, vec::Vec};
+use sp_core::{crypto::Ss58Codec, Pair};
+use std::boxed::Box;
 
 #[derive(Debug, Parser)]
 pub struct DrawWinnersCmd {

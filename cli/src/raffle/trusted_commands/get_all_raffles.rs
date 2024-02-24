@@ -16,24 +16,13 @@
 */
 
 use crate::{
-	get_layer_two_nonce,
-	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_identifiers, get_pair_from_str},
-	trusted_operation::perform_trusted_operation,
-	Cli, CliResult, CliResultOk,
+	trusted_cli::TrustedCli, trusted_operation::perform_trusted_operation, Cli, CliResult,
+	CliResultOk,
 };
-use ita_stf::{
-	Getter, Index, PublicGetter, RaffleMetadata, RafflePublicGetter, RaffleTrustedCall,
-	TrustedCall, TrustedGetter, WinnerCount,
-};
-use itp_stf_primitives::{
-	traits::TrustedCallSigning,
-	types::{KeyPair, TrustedOperation},
-};
+use ita_stf::{Getter, PublicGetter, RaffleMetadata, RafflePublicGetter};
 use itp_types::AccountId;
 use log::*;
-use sp_core::{crypto::Ss58Codec, Pair, H160, U256};
-use std::{boxed::Box, vec::Vec};
+use std::vec::Vec;
 
 #[derive(Debug, Parser)]
 pub struct GetAllRafflesCmd;
