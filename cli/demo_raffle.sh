@@ -124,25 +124,3 @@ echo "* Get and verify the registration proof for Dave"
 RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct get-and-verify-registration-proof //Dave 0`
 echo "Result: ${RESULT}"
 echo ""
-
-#sleep 5
-#
-#echo "* Getting market results market algorithm"
-#MARKET_RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct get-market-results //Alice ${TIMESTAMP}`
-#echo "Proof: ${MARKET_RESULT}"
-#
-#echo "* Getting merkle proof for orders"
-#PROOF=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct pay-as-bid-proof //Alice ${TIMESTAMP} ${ACTOR_ID}`
-#echo "Proof: ${PROOF}"
-#
-#echo "* Verifying merkle proof"
-#RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} verify-proof ${PROOF}`
-#
-#if [ "${RESULT}" = true ]; then
-#    echo "Merkle proof is correct"
-#    echo ""
-#    exit 0
-#else
-#    echo "Merkle Proof was wrong."
-#    exit 1
-#fi
