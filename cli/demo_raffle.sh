@@ -68,15 +68,13 @@ WORKER1URL=${WORKER1URL:-"wss://127.0.0.1"}
 
 CLIENT_BIN=${CLIENT_BIN:-"./../bin/integritee-cli"}
 
-# Timestamp needs to match the one from the provided orders file.
-# Otherwise, you will get a results/proof not found error.
-TIMESTAMP=${TIMESTAMP:-"2023-03-04T05:06:07+00:00"}
-ORDERS_FILE=${ORDERS_FILE:-"../bin/orders/order_10_users.json"}
-ACTOR_ID=${ACTOR_ID:-"actor_0"}
+RAFFLE_INDEX=1
+WINNER_COUNT=2
 
 echo "Using client binary ${CLIENT_BIN}"
 echo "Using node uri ${NODEURL}:${NPORT}"
 echo "Using trusted-worker uri ${WORKER1URL}:${WORKER1PORT}"
+echo "Using raffle index ${RAFFLE_INDEX}"
 echo ""
 
 CLIENT="${CLIENT_BIN} -p ${NPORT} -P ${WORKER1PORT} -u ${NODEURL} -U ${WORKER1URL}"
@@ -84,43 +82,46 @@ read -r MRENCLAVE <<< "$($CLIENT list-workers | awk '/  MRENCLAVE: / { print $2;
 
 # Create Raffle
 echo "* Alice creates a raffle"
-RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct add-raffle //Alice 2`
+RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct add-raffle //Alice ${WINNER_COUNT}`
 echo "Result: ${RESULT}"
 
 echo "* All ongoing raffles"
 RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct get-all-raffles`
 echo "Result: ${RESULT}"
 
-# Have some users register for the raffle with index 0
-echo "* Register Bob for the first raffle"
-RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct register-for-raffle //Bob 0`
+# Have some users register for the raffle
+echo "* Register Some users for the for raffle number :${RAFFLE_INDEX}"
+echo "* Register Bob..."
+RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct register-for-raffle //Bob ${RAFFLE_INDEX}`
 echo "Result: ${RESULT}"
 
-echo "* Register Charlie for the first raffle"
-RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct register-for-raffle //Charlie 0`
+echo "* Register Charlie..."
+RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct register-for-raffle //Charlie ${RAFFLE_INDEX}`
 echo "Result: ${RESULT}"
 
-echo "* Register Dave for the first raffle"
-RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct register-for-raffle //Dave 0`
+echo "* Register Dave..."
+RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct register-for-raffle //Dave ${RAFFLE_INDEX}`
 echo "Result: ${RESULT}"
 
 # Draw winners
 echo "* Draw the Winners"
-RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct draw-winners //Alice 0`
+RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct draw-winners //Alice ${RAFFLE_INDEX}`
 echo "Result: ${RESULT}"
 
-# Get and verify the registration proof
-echo "* Get and verify the registration proof for Bob"
-RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct get-and-verify-registration-proof //Bob 0`
-echo "Result: ${RESULT}"
-echo ""
+# Get and verify the registration
+echo "* Get and verify the registration proofs"
 
-echo "* Get and verify the registration proof for Charlie"
-RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct get-and-verify-registration-proof //Charlie 0`
+echo "* Verify Bob's registration"
+RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct get-and-verify-registration-proof //Bob ${RAFFLE_INDEX}`
 echo "Result: ${RESULT}"
 echo ""
 
-echo "* Get and verify the registration proof for Dave"
-RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct get-and-verify-registration-proof //Dave 0`
+echo "* Verify Charlie's registration"
+RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct get-and-verify-registration-proof //Charlie ${RAFFLE_INDEX}`
+echo "Result: ${RESULT}"
+echo ""
+
+echo "* Verify Dave's registration"
+RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct get-and-verify-registration-proof //Dave ${RAFFLE_INDEX}`
 echo "Result: ${RESULT}"
 echo ""
