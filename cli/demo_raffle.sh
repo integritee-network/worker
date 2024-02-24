@@ -68,7 +68,7 @@ WORKER1URL=${WORKER1URL:-"wss://127.0.0.1"}
 
 CLIENT_BIN=${CLIENT_BIN:-"./../bin/integritee-cli"}
 
-RAFFLE_INDEX=1
+RAFFLE_INDEX=0
 WINNER_COUNT=2
 
 echo "Using client binary ${CLIENT_BIN}"
