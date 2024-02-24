@@ -133,19 +133,35 @@ where
 					.map(|event_record| -> Result<(), Self::Error> {
 						match &event_record.event {
 							ita_sgx_runtime::RuntimeEvent::Raffles(
-								pallet_raffles::Event::WinnersDrawn { index, winners, registrations_root },
+								pallet_raffles::Event::WinnersDrawn {
+									index,
+									winners,
+									registrations_root,
+								},
 							) => {
+								let publish_hash_indexes = node_metadata_repo
+									.get_from_metadata(|m| m.publish_hash_call_indexes())
+									.map_err(|_| Self::Error::InvalidMetadata)?
+									.map_err(|_| Self::Error::InvalidMetadata)?;
+
+								// Separate extrinsics other wise we hit the data limit currently
 								calls.push(ParentchainCall::Integritee(OpaqueCall::from_tuple(&(
-									node_metadata_repo
-										.get_from_metadata(|m| m.publish_hash_call_indexes())
-										.map_err(|_| Self::Error::InvalidMetadata)?
-										.map_err(|_| Self::Error::InvalidMetadata)?,
+									publish_hash_indexes,
 									itp_types::H256::default(), // don't bother with the call hash for now.
-									Vec::<itp_types::H256>::new(),
-									// Todo: Simple forwarding of the runtime event does not work
-									// as the debug implementation is <wasm:stripped>.
-									format!("Raffle Winners Drawn: index: {}, winners: {:?}, registrations_merkle_root: {}", index, winners, registrations_root),
+									registrations_root,
+									format!("Raffle Winners Drawn: index: {}", index),
 								))));
+
+								for w in winners.iter().map(account_id_to_string) {
+									calls.push(ParentchainCall::Integritee(
+										OpaqueCall::from_tuple(&(
+											publish_hash_indexes,
+											itp_types::H256::default(), // don't bother with the call hash for now.
+											Vec::<itp_types::H256>::new(),
+											format!("Raffle Winners: {:?}", w),
+										)),
+									));
+								}
 							},
 							_ =>
 								return Err(Self::Error::Dispatch(format!(
@@ -153,10 +169,9 @@ where
 								))),
 						}
 						Ok::<(), Self::Error>(())
-					}).transpose()?.
-					ok_or_else(|| Self::Error::Dispatch(format!(
-					"Could not find expected event."
-				)))
+					})
+					.transpose()?
+					.ok_or_else(|| Self::Error::Dispatch(format!("Could not find expected event.")))
 			},
 		}
 	}
