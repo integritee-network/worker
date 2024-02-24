@@ -15,6 +15,7 @@
 
 */
 
+use crate::RaffleIndex;
 use codec::{Decode, Encode};
 use ita_sgx_runtime::Runtime;
 use itp_stf_interface::ExecuteGetter;
@@ -30,13 +31,13 @@ pub enum RafflePublicGetter {
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum RaffleTrustedGetter {
-	merkle_proof(AccountId),
+	merkle_proof { origin: AccountId, raffle_index: RaffleIndex },
 }
 
 impl RaffleTrustedGetter {
 	pub fn sender_account(&self) -> &AccountId {
 		match self {
-			Self::merkle_proof(account) => account,
+			Self::merkle_proof { origin, .. } => origin,
 		}
 	}
 }
@@ -44,7 +45,12 @@ impl RaffleTrustedGetter {
 impl ExecuteGetter for RaffleTrustedGetter {
 	fn execute(self) -> Option<Vec<u8>> {
 		match self {
-			Self::merkle_proof(_) => Some(42u32.encode()),
+			Self::merkle_proof { origin, raffle_index } =>
+				pallet_raffles::Pallet::<Runtime>::merkle_proof_for_registration(
+					raffle_index,
+					&origin,
+				)
+				.map(|proof| proof.encode()),
 		}
 	}
 

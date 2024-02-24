@@ -7,5 +7,7 @@ mod getter;
 mod trusted_call;
 
 pub use getter::{RafflePublicGetter, RaffleTrustedGetter};
-pub use pallet_raffles::{self, RaffleCount, RaffleIndex, RaffleMetadata, WinnerCount};
+pub use pallet_raffles::{
+	self, merkle_tree, RaffleCount, RaffleIndex, RaffleMetadata, WinnerCount,
+};
 pub use trusted_call::RaffleTrustedCall;

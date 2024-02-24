@@ -62,7 +62,9 @@ use sp_runtime::{traits::Verify, MultiAddress, MultiSignature};
 use std::{format, prelude::v1::*, sync::Arc};
 
 // raflle stuff
-pub use ita_raffle_stf::{RaffleCount, RaffleIndex, RaffleTrustedCall, WinnerCount};
+pub use ita_raffle_stf::{
+	merkle_tree, RaffleCount, RaffleIndex, RaffleMetadata, RaffleTrustedCall, WinnerCount,
+};
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]

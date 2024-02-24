@@ -1,10 +1,8 @@
-use crate::{Cli, CliResult};
-
-use crate::{
-	raffle::trusted_commands::{DrawWinnersCmd, RegisterForRaffleCmd},
-	trusted_cli::TrustedCli,
+use crate::{trusted_cli::TrustedCli, Cli, CliResult};
+use trusted_commands::{
+	AddRaffleCmd, DrawWinnersCmd, GetAllRafflesCmd, GetAndVerifyRegistrationProof,
+	RegisterForRaffleCmd,
 };
-use trusted_commands::{AddRaffleCmd, GetAllRafflesCmd};
 
 mod trusted_commands;
 
@@ -22,6 +20,9 @@ pub enum RaffleTrustedCommand {
 
 	/// Get all ongoing raffles
 	GetAllRaffles(GetAllRafflesCmd),
+
+	/// Get and verify the proof of raffle registration
+	GetAndVerifyRegistrationProof(GetAndVerifyRegistrationProof),
 }
 
 impl RaffleTrustedCommand {
@@ -31,6 +32,7 @@ impl RaffleTrustedCommand {
 			Self::RegisterForRaffle(cmd) => cmd.run(cli, trusted_args),
 			Self::DrawWinners(cmd) => cmd.run(cli, trusted_args),
 			Self::GetAllRaffles(cmd) => cmd.run(cli, trusted_args),
+			Self::GetAndVerifyRegistrationProof(cmd) => cmd.run(cli, trusted_args),
 		}
 	}
 }

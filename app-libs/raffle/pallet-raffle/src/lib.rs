@@ -10,6 +10,13 @@ use sp_std::{fmt::Debug, vec::Vec};
 
 pub use pallet::*;
 
+pub mod merkle_tree {
+	pub use itp_binary_merkle_tree::{
+		merkle_proof, merkle_root, verify_proof, MerkleProofWithCodec,
+	};
+	pub use sp_runtime::traits::Keccak256;
+}
+
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
