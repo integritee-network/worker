@@ -105,13 +105,25 @@ RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct register-for-raffle //
 echo "Result: ${RESULT}"
 
 # Draw winners
-echo "* Draws the Winners"
+echo "* Draw the Winners"
 RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct draw-winners //Alice 0`
 echo "Result: ${RESULT}"
 
-# Get proof
+# Get and verify the registration proof
+echo "* Get and verify the registration proof for Bob"
+RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct get-and-verify-registration-proof //Bob 0`
+echo "Result: ${RESULT}"
+echo ""
 
-# Verify proof
+echo "* Get and verify the registration proof for Charlie"
+RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct get-and-verify-registration-proof //Charlie 0`
+echo "Result: ${RESULT}"
+echo ""
+
+echo "* Get and verify the registration proof for Dave"
+RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct get-and-verify-registration-proof //Dave 0`
+echo "Result: ${RESULT}"
+echo ""
 
 #sleep 5
 #
