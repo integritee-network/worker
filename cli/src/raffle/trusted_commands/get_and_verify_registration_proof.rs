@@ -69,6 +69,8 @@ impl GetAndVerifyRegistrationProof {
 			&proof.leaf,
 		);
 
+		println!("Proof is valid: {:?}", is_valid);
+
 		Ok(CliResultOk::String { string: format!("Merkle proof is valid: {}", is_valid) })
 	}
 }
