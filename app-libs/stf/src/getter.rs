@@ -28,9 +28,7 @@ use sp_runtime::traits::Verify;
 use sp_std::vec;
 use std::prelude::v1::*;
 
-pub use ita_raffle_stf::{
-	RaffleCount, RaffleIndex, RaffleMetadata, RafflePublicGetter, RaffleTrustedGetter, WinnerCount,
-};
+pub use ita_raffle_stf::{RafflePublicGetter, RaffleTrustedGetter};
 
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
