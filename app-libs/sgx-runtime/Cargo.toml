@@ -46,14 +46,9 @@ pallet-parentchain = { default-features = false, git = "https://github.com/integ
 
 [features]
 default = ["std"]
-# Compile the sgx-runtime with evm-pallet support in `no_std`.
+# Compile the sgx-runtime with evm support.
 evm = ["pallet-evm"]
-# Compile the sgx-runtime with evm-pallet support in `std`.
-evm_std = [
-    "evm",            # Activate the `feature = evm` for the compiler flags.
-    "std",
-    "pallet-evm/std",
-]
+
 runtime-benchmarks = [
     "frame-benchmarking",
     "frame-support/runtime-benchmarks",
@@ -67,6 +62,7 @@ std = [
     "codec/std",
     "scale-info/std",
     "itp-sgx-runtime-primitives/std",
+    "pallet-evm?/std",
     "frame-executive/std",
     "frame-support/std",
     "frame-system/std",
