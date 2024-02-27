@@ -1,0 +1,19 @@
+[package]
+name = "itp-binary-merkle-tree"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+parity-scale-codec = { version = "3.0.0", default-features = false, features = ["derive"], package = "parity-scale-codec" }
+serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
+
+binary-merkle-tree = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+
+[features]
+std = [
+    "parity-scale-codec/std",
+    "serde/std",
+    "binary-merkle-tree/std",
+]
