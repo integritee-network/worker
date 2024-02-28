@@ -3179,6 +3179,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "itp-binary-merkle-tree"
+version = "0.1.0"
+dependencies = [
+ "binary-merkle-tree",
+ "parity-scale-codec",
+ "serde 1.0.193",
+]
+
+[[package]]
 name = "itp-component-container"
 version = "0.8.0"
 dependencies = [
