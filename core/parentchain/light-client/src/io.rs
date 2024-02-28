@@ -34,7 +34,6 @@ use std::{
 	boxed::Box,
 	fs,
 	path::{Path, PathBuf},
-	sgxfs::SgxFile,
 	sync::Arc,
 };
 
