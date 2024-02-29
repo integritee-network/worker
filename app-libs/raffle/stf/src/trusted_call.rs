@@ -66,10 +66,10 @@ where
 		match self {
 			Self::addRaffle { origin, winner_count } => {
 				debug!("createRaffle called by {}", account_id_to_string(&origin),);
-				let origin = ita_sgx_runtime::RuntimeOrigin::signed(origin.clone());
+				let origin = ita_sgx_runtime::RuntimeOrigin::signed(origin);
 
 				pallet_raffles::Call::<Runtime>::add_raffle { winner_count }
-					.dispatch_bypass_filter(origin.clone())
+					.dispatch_bypass_filter(origin)
 					.map_err(|e| {
 						Self::Error::Dispatch(format!("Create Raffle error: {:?}", e.error))
 					})?;
@@ -79,9 +79,10 @@ where
 				let raffle = pallet_raffles::Pallet::<Runtime>::ongoing_raffles(index - 1)
 					.ok_or_else(|| {
 						// This should never happen if the pallet works correctly.
-						Self::Error::Dispatch(format!(
+						Self::Error::Dispatch(
 							"AddRaffle: Could not find expected raffle, critical pallet bug."
-						))
+								.to_string(),
+						)
 					})?;
 
 				calls.push(ParentchainCall::Integritee(OpaqueCall::from_tuple(&(
@@ -98,10 +99,10 @@ where
 			},
 			Self::registerForRaffle { origin, raffle_index } => {
 				debug!("registerForRaffle called by {}", account_id_to_string(&origin),);
-				let origin = ita_sgx_runtime::RuntimeOrigin::signed(origin.clone());
+				let origin = ita_sgx_runtime::RuntimeOrigin::signed(origin);
 
 				pallet_raffles::Call::<Runtime>::register_for_raffle { index: raffle_index }
-					.dispatch_bypass_filter(origin.clone())
+					.dispatch_bypass_filter(origin)
 					.map_err(|e| {
 						Self::Error::Dispatch(format!("Create Raffle error: {:?}", e.error))
 					})?;
@@ -120,10 +121,10 @@ where
 			},
 			Self::drawWinners { origin, raffle_index } => {
 				debug!("drawWinners called by {}", account_id_to_string(&origin),);
-				let origin = ita_sgx_runtime::RuntimeOrigin::signed(origin.clone());
+				let origin = ita_sgx_runtime::RuntimeOrigin::signed(origin);
 
 				pallet_raffles::Call::<Runtime>::draw_winners { index: raffle_index }
-					.dispatch_bypass_filter(origin.clone())
+					.dispatch_bypass_filter(origin)
 					.map_err(|e| {
 						Self::Error::Dispatch(format!("Create Raffle error: {:?}", e.error))
 					})?;
@@ -164,14 +165,17 @@ where
 								}
 							},
 							_ =>
-								return Err(Self::Error::Dispatch(format!(
+								return Err(Self::Error::Dispatch(
 									"AddRaffle: Could not find expected winners drawn event"
-								))),
+										.to_string(),
+								)),
 						}
 						Ok::<(), Self::Error>(())
 					})
 					.transpose()?
-					.ok_or_else(|| Self::Error::Dispatch(format!("Could not find expected event.")))
+					.ok_or_else(|| {
+						Self::Error::Dispatch("Could not find expected event.".to_string())
+					})
 			},
 		}
 	}
