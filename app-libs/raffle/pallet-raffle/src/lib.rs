@@ -214,10 +214,9 @@ impl<T: Config> Pallet<T> {
 		registrations: &[T::AccountId],
 	) -> Option<MerkleProofWithCodec<H256, Vec<u8>>> {
 		let leaf_index = Self::merkle_leaf_index_for_registration(account, registrations)?;
-		Some(
-			merkle_proof::<Keccak256, _, _>(registrations.iter().map(Encode::encode), leaf_index)
-				.into(),
-		)
+		let p =
+			merkle_proof::<Keccak256, _, _>(registrations.iter().map(Encode::encode), leaf_index);
+		Some(p.into())
 	}
 
 	pub(crate) fn merkle_leaf_index_for_registration(
