@@ -126,7 +126,7 @@ where
 				pallet_raffles::Call::<Runtime>::draw_winners { index: raffle_index }
 					.dispatch_bypass_filter(origin)
 					.map_err(|e| {
-						Self::Error::Dispatch(format!("Create Raffle error: {:?}", e.error))
+						Self::Error::Dispatch(format!("Draw winners error: {:?}", e.error))
 					})?;
 
 				Runtime::read_events()
@@ -145,12 +145,18 @@ where
 									.map_err(|_| Self::Error::InvalidMetadata)?
 									.map_err(|_| Self::Error::InvalidMetadata)?;
 
-								// Separate extrinsics other wise we hit the data limit currently
 								calls.push(ParentchainCall::Integritee(OpaqueCall::from_tuple(&(
 									publish_hash_indexes,
 									itp_types::H256::default(), // don't bother with the call hash for now.
-									registrations_root,
+									Vec::<itp_types::H256>::new(),
 									format!("Raffle Winners Drawn: index: {}", index),
+								))));
+
+								calls.push(ParentchainCall::Integritee(OpaqueCall::from_tuple(&(
+									publish_hash_indexes,
+									itp_types::H256::default(), // don't bother with the call hash for now.
+									Vec::<itp_types::H256>::new(),
+									format!("Registrations root: {}", registrations_root),
 								))));
 
 								for w in winners.iter().map(account_id_to_string) {
@@ -159,7 +165,7 @@ where
 											publish_hash_indexes,
 											itp_types::H256::default(), // don't bother with the call hash for now.
 											Vec::<itp_types::H256>::new(),
-											format!("Raffle Winners: {:?}", w),
+											format!("Raffle Winner 1: {:?}", w),
 										)),
 									));
 								}
