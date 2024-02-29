@@ -246,7 +246,7 @@ jobs:
         run: rustup show
 
       - name: Install taplo
-        run: cargo install taplo-cli --locked
+        run: cargo install --version 0.8.1 taplo-cli --locked
       - name: Cargo.toml fmt
         run: taplo fmt --check
 

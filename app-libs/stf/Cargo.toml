@@ -47,7 +47,6 @@ sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "po
 [features]
 default = ["std"]
 evm = ["ita-sgx-runtime/evm"]
-evm_std = ["evm", "ita-sgx-runtime/evm_std"]
 sgx = [
     "ita-raffle-stf/sgx",
     "ita-sgx-runtime/sgx",

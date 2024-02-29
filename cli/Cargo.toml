@@ -61,7 +61,7 @@ itp-utils = { path = "../core-primitives/utils" }
 
 [features]
 default = []
-evm = ["ita-stf/evm_std", "pallet-evm"]
+evm = ["ita-stf/evm", "pallet-evm"]
 teeracle = []
 sidechain = []
 offchain-worker = []
