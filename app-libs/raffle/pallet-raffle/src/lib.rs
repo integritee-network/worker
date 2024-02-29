@@ -179,8 +179,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn try_draw_winners(owner: T::AccountId, index: RaffleIndex) -> DispatchResult {
-		let raffle =
-			OnGoingRaffles::<T>::get(index).ok_or_else(|| Error::<T>::NonexistentRaffle)?;
+		let raffle = OnGoingRaffles::<T>::get(index).ok_or(Error::<T>::NonexistentRaffle)?;
 		ensure!(raffle.registration_open, Error::<T>::RegistrationsClosed);
 		ensure!(raffle.owner == owner, Error::<T>::OnlyRaffleOwnerCanDrawWinners);
 
@@ -192,7 +191,7 @@ impl<T: Config> Pallet<T> {
 		let winners = registrations[..count].to_vec();
 
 		OnGoingRaffles::<T>::mutate(index, |r| r.as_mut().map(|r| r.registration_open = false));
-		Winners::<T>::insert(&index, &winners);
+		Winners::<T>::insert(index, &winners);
 
 		Self::deposit_event(Event::WinnersDrawn { index, winners, registrations_root });
 		Ok(())
@@ -214,7 +213,7 @@ impl<T: Config> Pallet<T> {
 		account: &T::AccountId,
 		registrations: &[T::AccountId],
 	) -> Option<MerkleProofWithCodec<H256, Vec<u8>>> {
-		let leaf_index = Self::merkle_leaf_index_for_registration(account, &registrations)?;
+		let leaf_index = Self::merkle_leaf_index_for_registration(account, registrations)?;
 		Some(
 			merkle_proof::<Keccak256, _, _>(registrations.iter().map(Encode::encode), leaf_index)
 				.into(),
