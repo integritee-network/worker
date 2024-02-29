@@ -181,10 +181,7 @@ where
 	}
 
 	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
-		let key_hashes = Vec::new();
-		match self {
-			_ => debug!("No storage updates needed..."),
-		};
-		key_hashes
+		debug!("No storage updates needed...");
+		Vec::new()
 	}
 }
