@@ -77,6 +77,7 @@ echo "Using trusted-worker uri ${WORKER1URL}:${WORKER1PORT}"
 echo "Using raffle index ${RAFFLE_INDEX}"
 echo ""
 
+echo "* Query the first registered raffle TEE onchain"
 CLIENT="${CLIENT_BIN} -p ${NPORT} -P ${WORKER1PORT} -u ${NODEURL} -U ${WORKER1URL}"
 read -r MRENCLAVE <<< "$($CLIENT list-workers | awk '/  MRENCLAVE: / { print $2; exit }')"
 
@@ -90,18 +91,20 @@ RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct get-all-raffles`
 echo "Result: ${RESULT}"
 
 # Have some users register for the raffle
-echo "* Register Some users for the for raffle number :${RAFFLE_INDEX}"
-echo "* Register Bob..."
-RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct register-for-raffle //Bob ${RAFFLE_INDEX}`
-echo "Result: ${RESULT}"
+USER_COUNT=50
+echo "* Registering ${USER_COUNT} users for the for raffle number :${RAFFLE_INDEX}..."
 
-echo "* Register Charlie..."
-RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct register-for-raffle //Charlie ${RAFFLE_INDEX}`
-echo "Result: ${RESULT}"
+for ((i=1; i<=USER_COUNT; i++)); do
+  # Register 200 users in the background
+  RESULT=$($CLIENT trusted --mrenclave "$MRENCLAVE" --direct register-for-raffle "//RaffleUser${i}" "$RAFFLE_INDEX") &
+done
 
-echo "* Register Dave..."
-RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct register-for-raffle //Dave ${RAFFLE_INDEX}`
-echo "Result: ${RESULT}"
+# await background processes
+wait
+echo "Registered ${USER_COUNT} users"
+
+# ensure the next parentchain block is created so that we get a separate block for the draw winners event
+sleep 12
 
 # Draw winners
 echo "* Draw the Winners"
@@ -111,17 +114,7 @@ echo "Result: ${RESULT}"
 # Get and verify the registration
 echo "* Get and verify the registration proofs"
 
-echo "* Verify Bob's registration"
-RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct get-and-verify-registration-proof //Bob ${RAFFLE_INDEX}`
-echo "Result: ${RESULT}"
-echo ""
-
-echo "* Verify Charlie's registration"
-RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct get-and-verify-registration-proof //Charlie ${RAFFLE_INDEX}`
-echo "Result: ${RESULT}"
-echo ""
-
-echo "* Verify Dave's registration"
-RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct get-and-verify-registration-proof //Dave ${RAFFLE_INDEX}`
+echo "* Verify the a users registration"
+RESULT=`$CLIENT trusted --mrenclave ${MRENCLAVE} --direct get-and-verify-registration-proof //RaffleUser10 ${RAFFLE_INDEX}`
 echo "Result: ${RESULT}"
 echo ""
