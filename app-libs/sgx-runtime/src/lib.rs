@@ -360,6 +360,8 @@ construct_runtime!(
 		ParentchainTargetB: pallet_parentchain::<Instance3>::{Pallet, Call, Event<T>} = 12,
 
 		Evm: pallet_evm::{Pallet, Call, Storage, Config, Event<T>} = 20,
+
+		Raffles: pallet_raffles = 20,
 	}
 );
 
