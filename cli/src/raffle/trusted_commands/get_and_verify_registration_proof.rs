@@ -32,7 +32,7 @@ pub struct GetAndVerifyRegistrationProof {
 	/// Sender's incognito AccountId in ss58check format
 	from: String,
 
-	/// Execution address of the smart contract
+	/// Raffle index to get the proof for
 	raffle_index: RaffleIndex,
 }
 

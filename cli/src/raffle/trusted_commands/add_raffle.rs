@@ -37,7 +37,7 @@ pub struct AddRaffleCmd {
 	/// Sender's incognito AccountId in ss58check format
 	from: String,
 
-	/// Winner count of hte raffle
+	/// Winner count of the raffle
 	winner_count: WinnerCount,
 }
 

@@ -307,11 +307,11 @@ pub struct SgxShuffle;
 
 #[cfg(feature = "sgx")]
 impl pallet_raffles::Shuffle for SgxShuffle {
-	/// Switch the first two values if there are at least two values.
+	/// Use SGX's true RNG to shuffle the values.
 	fn shuffle<T>(values: &mut [T]) {
 		use sgx_rand::Rng;
 		let mut rng =
-			sgx_rand::SgxRng::new().expect("Can't fail, internal up returns Ok directly; qed");
+			sgx_rand::SgxRng::new().expect("Can't fail, internal new returns Ok directly; qed");
 		rng.shuffle(values);
 	}
 }
@@ -334,7 +334,7 @@ construct_runtime!(
 		ParentchainTargetA: pallet_parentchain::<Instance2>::{Pallet, Call, Event<T>} = 11,
 		ParentchainTargetB: pallet_parentchain::<Instance3>::{Pallet, Call, Event<T>} = 12,
 
-		Raffles: pallet_raffles,
+		Raffles: pallet_raffles = 20,
 	}
 );
 

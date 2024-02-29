@@ -6,7 +6,7 @@ use trusted_commands::{
 
 mod trusted_commands;
 
-/// Attesteer subcommands for the CLI.
+/// affle subcommands for the CLI.
 #[derive(Debug, clap::Subcommand)]
 pub enum RaffleTrustedCommand {
 	/// Add a new raffle
@@ -15,7 +15,7 @@ pub enum RaffleTrustedCommand {
 	/// Register for a raffle
 	RegisterForRaffle(RegisterForRaffleCmd),
 
-	/// Register for a raffle
+	/// Draw winners of a raffle
 	DrawWinners(DrawWinnersCmd),
 
 	/// Get all ongoing raffles
