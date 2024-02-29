@@ -29,7 +29,7 @@ use log::*;
 use sp_std::{sync::Arc, vec::Vec};
 
 #[cfg(not(feature = "std"))]
-use alloc::format;
+use alloc::{format, string::ToString};
 
 pub use pallet_raffles::{RaffleCount, RaffleIndex, WinnerCount};
 
