@@ -281,6 +281,41 @@ impl pallet_parentchain::Config<crate::ParentchainInstanceTargetB> for Runtime {
 	type Moment = Moment;
 }
 
+impl pallet_raffles::Config for Runtime {
+	type WeightInfo = ();
+	type RuntimeEvent = RuntimeEvent;
+
+	#[cfg(feature = "sgx")]
+	type Shuffle = SgxShuffle;
+
+	#[cfg(not(feature = "sgx"))]
+	type Shuffle = MockShuffler;
+}
+
+pub struct MockShuffler;
+
+impl pallet_raffles::Shuffle for MockShuffler {
+	/// Switch the first two values if there are at least two values.
+	fn shuffle<T>(values: &mut [T]) {
+		if values.len() > 1 {
+			values.swap(0, 1);
+		}
+	}
+}
+
+pub struct SgxShuffle;
+
+#[cfg(feature = "sgx")]
+impl pallet_raffles::Shuffle for SgxShuffle {
+	/// Use SGX's true RNG to shuffle the values.
+	fn shuffle<T>(values: &mut [T]) {
+		use sgx_rand::Rng;
+		let mut rng =
+			sgx_rand::SgxRng::new().expect("Can't fail, internal new returns Ok directly; qed");
+		rng.shuffle(values);
+	}
+}
+
 // The plain sgx-runtime without the `evm-pallet`
 #[cfg(not(feature = "evm"))]
 construct_runtime!(
@@ -298,6 +333,8 @@ construct_runtime!(
 		ParentchainIntegritee: pallet_parentchain::<Instance1>::{Pallet, Call, Event<T>} = 10,
 		ParentchainTargetA: pallet_parentchain::<Instance2>::{Pallet, Call, Event<T>} = 11,
 		ParentchainTargetB: pallet_parentchain::<Instance3>::{Pallet, Call, Event<T>} = 12,
+
+		Raffles: pallet_raffles = 30,
 	}
 );
 
@@ -323,6 +360,8 @@ construct_runtime!(
 		ParentchainTargetB: pallet_parentchain::<Instance3>::{Pallet, Call, Event<T>} = 12,
 
 		Evm: pallet_evm::{Pallet, Call, Storage, Config, Event<T>} = 20,
+
+		Raffles: pallet_raffles = 30,
 	}
 );
 
@@ -355,4 +394,23 @@ impl_runtime_apis! {
 		}
 	}
 
+}
+
+// Todo: the below helper should be implemented generically on `T: frame_system::Config`
+// in a core lib.
+pub type RuntimeEventOf<T> = <T as frame_system::Config>::RuntimeEvent;
+pub type HashOf<T> = <T as frame_system::Config>::Hash;
+use frame_system::EventRecord;
+impl Runtime {
+	pub fn read_events() -> Vec<EventRecord<RuntimeEventOf<Runtime>, HashOf<Runtime>>> {
+		frame_system::Pallet::<Runtime>::read_events_no_consensus()
+			.map(|e| *e)
+			.collect()
+	}
+
+	// Todo: derive `Clone` for event record in `no_std`.
+	// Supply upstream PR.
+	// pub fn last_event() -> Option<EventRecord<RuntimeEventOf<Runtime>, HashOf<Runtime>>> {
+	// 	Runtime::read_events().last().cloned()
+	// }
 }

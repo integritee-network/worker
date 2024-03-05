@@ -1,5 +1,5 @@
 [package]
-name = "ita-stf"
+name = "ita-raffle-stf"
 version = "0.9.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
@@ -11,24 +11,24 @@ log = { version = "0.4", default-features = false }
 rlp = { version = "0.5", default-features = false }
 sha3 = { version = "0.10", default-features = false }
 
-ita-raffle-stf = { default-features = false, path = "../raffle/stf" }
+pallet-raffles = { path = "../pallet-raffle", default-features = false }
 
 # sgx deps
 sgx_tstd = { branch = "master", features = ["untrusted_fs", "net", "backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
 # local crates
-ita-sgx-runtime = { default-features = false, path = "../sgx-runtime" }
-itp-hashing = { default-features = false, path = "../../core-primitives/hashing" }
-itp-node-api = { default-features = false, path = "../../core-primitives/node-api" }
-itp-node-api-metadata = { default-features = false, path = "../../core-primitives/node-api/metadata" }
-itp-sgx-externalities = { default-features = false, path = "../../core-primitives/substrate-sgx/externalities" }
-itp-sgx-runtime-primitives = { default-features = false, path = "../../core-primitives/sgx-runtime-primitives" }
-itp-stf-interface = { default-features = false, path = "../../core-primitives/stf-interface" }
-itp-stf-primitives = { default-features = false, path = "../../core-primitives/stf-primitives" }
-itp-storage = { default-features = false, path = "../../core-primitives/storage" }
-itp-types = { default-features = false, path = "../../core-primitives/types" }
-itp-utils = { default-features = false, path = "../../core-primitives/utils" }
-sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], path = "../../core-primitives/substrate-sgx/sp-io" }
+ita-sgx-runtime = { default-features = false, path = "../../sgx-runtime" }
+itp-hashing = { default-features = false, path = "../../../core-primitives/hashing" }
+itp-node-api = { default-features = false, path = "../../../core-primitives/node-api" }
+itp-node-api-metadata = { default-features = false, path = "../../../core-primitives/node-api/metadata" }
+itp-sgx-externalities = { default-features = false, path = "../../../core-primitives/substrate-sgx/externalities" }
+itp-sgx-runtime-primitives = { default-features = false, path = "../../../core-primitives/sgx-runtime-primitives" }
+itp-stf-interface = { default-features = false, path = "../../../core-primitives/stf-interface" }
+itp-stf-primitives = { default-features = false, path = "../../../core-primitives/stf-primitives" }
+itp-storage = { default-features = false, path = "../../../core-primitives/storage" }
+itp-types = { default-features = false, path = "../../../core-primitives/types" }
+itp-utils = { default-features = false, path = "../../../core-primitives/utils" }
+sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], path = "../../../core-primitives/substrate-sgx/sp-io" }
 
 # Substrate dependencies
 frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
@@ -46,9 +46,7 @@ sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "po
 
 [features]
 default = ["std"]
-evm = ["ita-sgx-runtime/evm"]
 sgx = [
-    "ita-raffle-stf/sgx",
     "ita-sgx-runtime/sgx",
     "itp-node-api/sgx",
     "itp-sgx-externalities/sgx",
@@ -61,7 +59,6 @@ std = [
     "log/std",
     "rlp/std",
     # local
-    "ita-raffle-stf/std",
     "ita-sgx-runtime/std",
     "itp-hashing/std",
     "itp-sgx-externalities/std",
@@ -70,6 +67,7 @@ std = [
     "itp-types/std",
     "itp-node-api/std",
     "itp-node-api-metadata/std",
+    "pallet-raffles/std",
     # substrate
     "sp-core/std",
     "pallet-balances/std",
