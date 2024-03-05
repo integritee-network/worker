@@ -154,9 +154,9 @@ where
 
 								calls.push(ParentchainCall::Integritee(OpaqueCall::from_tuple(&(
 									publish_hash_indexes,
-									itp_types::H256::default(), // don't bother with the call hash for now.
+									registrations_root,
 									Vec::<itp_types::H256>::new(),
-									format!("Registrations root: {}", registrations_root),
+									format!("Registrations Root"),
 								))));
 
 								for w in winners.iter().map(account_id_to_string) {
