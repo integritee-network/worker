@@ -34,7 +34,7 @@ use std::boxed::Box;
 
 #[derive(Parser)]
 pub struct SetBalanceCommand {
-	/// sender's AccountId in ss58check format
+	/// subject's AccountId in ss58check format
 	account: String,
 
 	/// amount to be transferred
