@@ -22,6 +22,7 @@ use crate::{
 	trusted_operation::perform_trusted_operation,
 	Cli, CliResult, CliResultOk,
 };
+use base58::ToBase58;
 use ita_parentchain_interface::integritee::Balance;
 use ita_stf::{Getter, Index, TrustedCall, TrustedCallSigned};
 use itp_stf_primitives::{
@@ -54,11 +55,11 @@ impl TransferCommand {
 		let (mrenclave, shard) = get_identifiers(trusted_args);
 		let nonce = get_layer_two_nonce!(from, cli, trusted_args);
 		println!(
-			"send trusted call transfer from {} to {}: {}, nonce: {}",
+			"send trusted call transfer from {} to {}: {}, nonce: {}, signing using mrenclave: {} and shard: {}",
 			from.public(),
 			to,
 			self.amount,
-			nonce
+			nonce, mrenclave.to_base58(), shard.0.to_base58()
 		);
 		let top: TrustedOperation<TrustedCallSigned, Getter> =
 			TrustedCall::balance_transfer(from.public().into(), to, self.amount)
