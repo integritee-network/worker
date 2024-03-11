@@ -43,6 +43,12 @@ pub mod stf_sgx_tests;
 pub mod test_genesis;
 pub mod trusted_call;
 
+// raflle stuff
+pub use ita_raffle_stf::{
+	merkle_tree, RaffleCount, RaffleIndex, RaffleMetadata, RafflePublicGetter, RaffleTrustedCall,
+	RaffleTrustedGetter, WinnerCount,
+};
+
 pub(crate) const ENCLAVE_ACCOUNT_KEY: &str = "Enclave_Account_Key";
 
 // fixme: this if  a temporary hack only

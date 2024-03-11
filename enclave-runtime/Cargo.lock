@@ -1681,6 +1681,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "ita-raffle-stf"
+version = "0.9.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "ita-sgx-runtime",
+ "itp-hashing",
+ "itp-node-api",
+ "itp-node-api-metadata",
+ "itp-sgx-externalities",
+ "itp-sgx-runtime-primitives",
+ "itp-stf-interface",
+ "itp-stf-primitives",
+ "itp-storage",
+ "itp-types",
+ "itp-utils",
+ "log",
+ "pallet-balances",
+ "pallet-parentchain",
+ "pallet-raffles",
+ "pallet-sudo",
+ "parity-scale-codec",
+ "rlp",
+ "sgx_tstd",
+ "sha3 0.10.8",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "ita-sgx-runtime"
 version = "0.9.0"
 dependencies = [
@@ -1691,11 +1723,13 @@ dependencies = [
  "pallet-balances",
  "pallet-evm",
  "pallet-parentchain",
+ "pallet-raffles",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
  "parity-scale-codec",
  "scale-info",
+ "sgx_rand",
  "sp-api",
  "sp-core",
  "sp-runtime",
@@ -1709,6 +1743,7 @@ version = "0.9.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "ita-raffle-stf",
  "ita-sgx-runtime",
  "itp-hashing",
  "itp-node-api",
@@ -1974,6 +2009,15 @@ dependencies = [
  "webpki",
  "webpki-roots 0.21.0 (git+https://github.com/mesalock-linux/webpki-roots?branch=mesalock_sgx)",
  "yasna",
+]
+
+[[package]]
+name = "itp-binary-merkle-tree"
+version = "0.8.0"
+dependencies = [
+ "binary-merkle-tree",
+ "parity-scale-codec",
+ "serde 1.0.192",
 ]
 
 [[package]]
@@ -2965,6 +3009,23 @@ dependencies = [
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-raffles"
+version = "0.11.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "itp-binary-merkle-tree",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "serde 1.0.192",
  "sp-core",
  "sp-io",
  "sp-runtime",

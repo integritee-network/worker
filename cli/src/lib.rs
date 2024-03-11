@@ -36,6 +36,7 @@ mod command_utils;
 mod evm;
 #[cfg(feature = "teeracle")]
 mod oracle;
+mod raffle;
 mod trusted_base_cli;
 mod trusted_cli;
 mod trusted_command_utils;
@@ -104,6 +105,9 @@ pub enum CliResultOk {
 	/// Result of "EvmCreateCommands": execution_address
 	H160 {
 		hash: H160,
+	},
+	String {
+		string: String,
 	},
 	// TODO should ideally be removed; or at least drastically less used
 	// We WANT all commands exposed by the cli to return something useful for the caller(ie instead of printing)
