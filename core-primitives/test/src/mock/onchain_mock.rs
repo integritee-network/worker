@@ -18,11 +18,11 @@
 
 use codec::{Decode, Encode};
 use core::fmt::Debug;
-use itp_enclave_bridge_storage::{EnclaveBridgeStorage, EnclaveBridgeStorageKeys};
 use itp_ocall_api::{
 	EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi,
 	EnclaveSidechainOCallApi,
 };
+use itp_pallet_storage::{EnclaveBridgeStorage, EnclaveBridgeStorageKeys};
 use itp_storage::Error::StorageValueUnavailable;
 use itp_types::{
 	parentchain::ParentchainId, storage::StorageEntryVerified, AccountId, BlockHash,
