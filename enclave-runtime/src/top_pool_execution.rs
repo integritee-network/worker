@@ -145,6 +145,12 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 			Ok(latest_parentchain_header)
 		})?;
 
+	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
+
+	// get latest finalized sidechain block
+	// todo
+	// ocall_api.get_storage_verified()
+
 	// Import any sidechain blocks that are in the import queue. In case we are missing blocks,
 	// a peer sync will happen. If that happens, the slot time might already be used up just by this import.
 	let sidechain_block_import_queue_worker =
@@ -174,8 +180,6 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 
 	let block_composer = GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT.get()?;
-
-	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 
 	let authority = GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT.get()?.retrieve_key()?;
 
