@@ -3641,6 +3641,7 @@ dependencies = [
  "pallet-balances",
  "parity-scale-codec",
  "serde 1.0.193",
+ "sidechain-primitives",
  "sp-core",
  "sp-runtime",
  "sp-std",

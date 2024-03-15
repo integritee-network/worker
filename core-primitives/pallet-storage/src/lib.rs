@@ -54,19 +54,19 @@ impl<S: StoragePrefix> TeerexStorageKeys for S {
 	}
 }
 
-pub struct SidechainStorage;
+pub struct SidechainPalletStorage;
 
-impl StoragePrefix for SidechainStorage {
+impl StoragePrefix for SidechainPalletStorage {
 	fn prefix() -> &'static str {
 		"Sidechain"
 	}
 }
 
-pub trait SidechainStorageKeys {
+pub trait SidechainPalletStorageKeys {
 	fn latest_sidechain_block_confirmation(shard: ShardIdentifier) -> Vec<u8>;
 }
 
-impl<S: StoragePrefix> SidechainStorageKeys for S {
+impl<S: StoragePrefix> SidechainPalletStorageKeys for S {
 	fn latest_sidechain_block_confirmation(shard: ShardIdentifier) -> Vec<u8> {
 		storage_map_key(
 			Self::prefix(),

@@ -19,7 +19,7 @@ use crate::{BlockImport, ConfirmBlockImport, Error, Result};
 use codec::Encode;
 use core::{fmt::Debug, marker::PhantomData};
 use itp_ocall_api::EnclaveSidechainOCallApi;
-use itp_types::H256;
+use itp_types::{parentchain::SidechainBlockConfirmation, H256};
 use itp_utils::hex::hex_encode;
 use its_primitives::{
 	traits::{
@@ -45,6 +45,7 @@ where
 		&self,
 		sidechain_block: SignedSidechainBlock,
 		last_imported_parentchain_header: &ParentchainHeader,
+		maybe_latest_sidechain_block_confirmation: &Option<SidechainBlockConfirmation>,
 	) -> Result<ParentchainHeader>;
 
 	fn import_block(
@@ -170,6 +171,7 @@ where
 		&self,
 		sidechain_block: SignedSidechainBlock,
 		current_parentchain_header: &ParentchainBlock::Header,
+		maybe_latest_sidechain_block_confirmation: &Option<SidechainBlockConfirmation>,
 	) -> Result<ParentchainBlock::Header> {
 		let shard_identifier = sidechain_block.block().header().shard_id();
 		let sidechain_block_number = sidechain_block.block().header().block_number();
@@ -218,7 +220,7 @@ where
 
 				// We confirm the successful block import. Only in this case, not when we're in
 				// on-boarding and importing blocks that were fetched from a peer.
-				if let Err(e) = self.import_confirmation_handler.confirm_import(sidechain_block.block().header(), &shard_identifier) {
+				if let Err(e) = self.import_confirmation_handler.confirm_import(sidechain_block.block().header(), &shard_identifier, maybe_latest_sidechain_block_confirmation) {
 					error!("Failed to confirm sidechain block import: {:?}", e);
 				}
 

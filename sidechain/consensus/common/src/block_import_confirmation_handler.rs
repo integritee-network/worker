@@ -23,7 +23,7 @@ use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api_metadata::{pallet_sidechain::SidechainCallIndexes, NodeMetadataTrait};
 use itp_node_api_metadata_provider::AccessNodeMetadata;
 use itp_settings::worker::BLOCK_NUMBER_FINALIZATION_DIFF;
-use itp_types::{OpaqueCall, ShardIdentifier};
+use itp_types::{parentchain::SidechainBlockConfirmation, OpaqueCall, ShardIdentifier};
 use its_primitives::traits::Header as HeaderTrait;
 use log::*;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
@@ -31,7 +31,12 @@ use std::{marker::PhantomData, sync::Arc};
 
 /// Trait to confirm a sidechain block import.
 pub trait ConfirmBlockImport<SidechainHeader> {
-	fn confirm_import(&self, header: &SidechainHeader, shard: &ShardIdentifier) -> Result<()>;
+	fn confirm_import(
+		&self,
+		header: &SidechainHeader,
+		shard: &ShardIdentifier,
+		maybe_last_sidechain_block_confirmation: &Option<SidechainBlockConfirmation>,
+	) -> Result<()>;
 }
 
 /// Creates and sends a sidechain block import confirmation extrsinic to the parentchain.
@@ -99,7 +104,12 @@ impl<
 	ExtrinsicsFactory: CreateExtrinsics,
 	ValidatorAccessor: ValidatorAccess<ParentchainBlock> + Send + Sync + 'static,
 {
-	fn confirm_import(&self, header: &SidechainHeader, shard: &ShardIdentifier) -> Result<()> {
+	fn confirm_import(
+		&self,
+		header: &SidechainHeader,
+		shard: &ShardIdentifier,
+		maybe_last_sidechain_block_confirmation: &Option<SidechainBlockConfirmation>,
+	) -> Result<()> {
 		if header.block_number() == header.next_finalization_block_number() {
 			let call = self
 				.metadata_repository
@@ -110,9 +120,12 @@ impl<
 			let opaque_call = OpaqueCall::from_tuple(&(
 				call,
 				shard,
-				header.block_number(),
-				header.next_finalization_block_number() + BLOCK_NUMBER_FINALIZATION_DIFF,
-				header.hash(),
+				maybe_last_sidechain_block_confirmation,
+				SidechainBlockConfirmation {
+					block_number: header.next_finalization_block_number()
+						+ BLOCK_NUMBER_FINALIZATION_DIFF,
+					block_header_hash: header.hash(),
+				},
 			));
 
 			let xts = self

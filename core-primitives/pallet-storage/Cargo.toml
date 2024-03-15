@@ -16,7 +16,7 @@ itp-types = { path = "../types", default-features = false }
 default = ["std"]
 std = [
     "codec/std",
-    "sp-std/std",
     "itp-storage/std",
     "itp-types/std",
+    "sp-std/std",
 ]
