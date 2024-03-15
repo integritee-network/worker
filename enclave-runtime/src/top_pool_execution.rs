@@ -50,12 +50,13 @@ use itc_parentchain::{
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_ocall_api::{EnclaveOnChainOCallApi, EnclaveSidechainOCallApi};
+use itp_pallet_storage::{SidechainPalletStorage, SidechainPalletStorageKeys};
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::key_repository::AccessKey;
 use itp_stf_state_handler::query_shard_state::QueryShardState;
 use itp_time_utils::duration_now;
 use itp_types::{
-	parentchain::{ParentchainCall, ParentchainId},
+	parentchain::{ParentchainCall, ParentchainId, SidechainBlockConfirmation},
 	Block, OpaqueCall, H256,
 };
 use its_primitives::{
@@ -145,25 +146,45 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 			Ok(latest_parentchain_header)
 		})?;
 
+	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
+	let shards = state_handler.list_shards()?;
+	let shard = *shards.get(0).ok_or(Error::NoShardAssigned)?;
+	if shards.len() > 1 {
+		return Err(Error::TooManyShardsAssigned)
+	};
+
+	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
+
+	// get latest finalized sidechain block
+	let maybe_latest_sidechain_block_confirmation: Option<SidechainBlockConfirmation> = ocall_api
+		.get_storage_verified(
+			SidechainPalletStorage::latest_sidechain_block_confirmation(shard),
+			&current_integritee_parentchain_header,
+			&ParentchainId::Integritee,
+		)?
+		.value;
+	trace!(
+		"fetched latest finalized sidechain block for shard {:?}: {:?}",
+		shard,
+		maybe_latest_sidechain_block_confirmation
+	);
+
 	// Import any sidechain blocks that are in the import queue. In case we are missing blocks,
 	// a peer sync will happen. If that happens, the slot time might already be used up just by this import.
 	let sidechain_block_import_queue_worker =
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT.get()?;
 
-	let latest_integritee_parentchain_header = sidechain_block_import_queue_worker
-		.process_queue(&current_integritee_parentchain_header)?;
+	let latest_integritee_parentchain_header = sidechain_block_import_queue_worker.process_queue(
+		&current_integritee_parentchain_header,
+		maybe_latest_sidechain_block_confirmation,
+	)?;
 
 	trace!(
 		"Elapsed time to process sidechain block import queue: {} ms",
 		start_time.elapsed().as_millis()
 	);
 
-	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
-
-	let shards = state_handler.list_shards()?;
-
-	let (_, vault_target) =
-		get_shard_vault_internal(*shards.get(0).ok_or(Error::NoShardAssigned)?)?;
+	let (_, vault_target) = get_shard_vault_internal(shard)?;
 	trace!("using StfExecutor from {:?} parentchain", vault_target);
 	let stf_executor = match vault_target {
 		ParentchainId::Integritee => get_stf_executor_from_integritee_solo_or_parachain()?,
@@ -174,8 +195,6 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 
 	let block_composer = GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT.get()?;
-
-	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 
 	let authority = GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT.get()?.retrieve_key()?;
 

@@ -1,10 +1,11 @@
 [package]
-name = "itp-teerex-storage"
+name = "itp-pallet-storage"
 version = "0.9.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
 [dependencies]
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 #local deps
@@ -14,7 +15,8 @@ itp-types = { path = "../types", default-features = false }
 [features]
 default = ["std"]
 std = [
-    "sp-std/std",
+    "codec/std",
     "itp-storage/std",
     "itp-types/std",
+    "sp-std/std",
 ]

@@ -19,7 +19,7 @@ use crate::{BlockImport, ConfirmBlockImport, Error, Result};
 use codec::Encode;
 use core::{fmt::Debug, marker::PhantomData};
 use itp_ocall_api::EnclaveSidechainOCallApi;
-use itp_types::H256;
+use itp_types::{parentchain::SidechainBlockConfirmation, H256};
 use itp_utils::hex::hex_encode;
 use its_primitives::{
 	traits::{
@@ -45,6 +45,7 @@ where
 		&self,
 		sidechain_block: SignedSidechainBlock,
 		last_imported_parentchain_header: &ParentchainHeader,
+		maybe_latest_sidechain_block_confirmation: &Option<SidechainBlockConfirmation>,
 	) -> Result<ParentchainHeader>;
 
 	fn import_block(
@@ -170,6 +171,7 @@ where
 		&self,
 		sidechain_block: SignedSidechainBlock,
 		current_parentchain_header: &ParentchainBlock::Header,
+		maybe_latest_sidechain_block_confirmation: &Option<SidechainBlockConfirmation>,
 	) -> Result<ParentchainBlock::Header> {
 		let shard_identifier = sidechain_block.block().header().shard_id();
 		let sidechain_block_number = sidechain_block.block().header().block_number();
@@ -218,7 +220,7 @@ where
 
 				// We confirm the successful block import. Only in this case, not when we're in
 				// on-boarding and importing blocks that were fetched from a peer.
-				if let Err(e) = self.import_confirmation_handler.confirm_import(sidechain_block.block().header(), &shard_identifier) {
+				if let Err(e) = self.import_confirmation_handler.confirm_import(sidechain_block.block().header(), &shard_identifier, maybe_latest_sidechain_block_confirmation) {
 					error!("Failed to confirm sidechain block import: {:?}", e);
 				}
 
@@ -276,7 +278,7 @@ mod tests {
 			create_peer_syncer(block_importer_mock.clone(), sidechain_ocall_api.clone());
 
 		peer_syncer
-			.import_or_sync_block(signed_sidechain_block, &parentchain_header)
+			.import_or_sync_block(signed_sidechain_block, &parentchain_header, &None)
 			.unwrap();
 
 		assert_eq!(1, block_importer_mock.get_imported_blocks().len());
@@ -300,7 +302,7 @@ mod tests {
 		let signed_sidechain_block = SidechainBlockBuilder::default().build_signed();
 
 		let sync_result =
-			peer_syncer.import_or_sync_block(signed_sidechain_block, &parentchain_header);
+			peer_syncer.import_or_sync_block(signed_sidechain_block, &parentchain_header, &None);
 
 		assert_matches!(sync_result, Err(Error::InvalidAuthority(_)));
 		assert_eq!(1, block_importer_mock.get_imported_blocks().len());
@@ -328,7 +330,7 @@ mod tests {
 		let signed_sidechain_block = SidechainBlockBuilder::default().build_signed();
 
 		peer_syncer
-			.import_or_sync_block(signed_sidechain_block, &parentchain_header)
+			.import_or_sync_block(signed_sidechain_block, &parentchain_header, &None)
 			.unwrap();
 
 		assert_eq!(4, block_importer_mock.get_imported_blocks().len());

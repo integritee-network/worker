@@ -2557,7 +2557,7 @@ dependencies = [
 
 [[package]]
 name = "integritee-cli"
-version = "0.12.11"
+version = "0.12.12"
 dependencies = [
  "array-bytes 6.1.0",
  "base58",
@@ -2607,7 +2607,7 @@ dependencies = [
 
 [[package]]
 name = "integritee-service"
-version = "0.12.11"
+version = "0.12.12"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3228,15 +3228,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "itp-enclave-bridge-storage"
-version = "0.9.0"
-dependencies = [
- "itp-storage",
- "parity-scale-codec",
- "sp-std",
-]
-
-[[package]]
 name = "itp-enclave-metrics"
 version = "0.9.0"
 dependencies = [
@@ -3346,6 +3337,16 @@ dependencies = [
  "sgx_types",
  "sp-core",
  "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "itp-pallet-storage"
+version = "0.9.0"
+dependencies = [
+ "itp-storage",
+ "itp-types",
+ "parity-scale-codec",
  "sp-std",
 ]
 
@@ -3544,22 +3545,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "itp-teerex-storage"
-version = "0.9.0"
-dependencies = [
- "itp-storage",
- "itp-types",
- "sp-std",
-]
-
-[[package]]
 name = "itp-test"
 version = "0.9.0"
 dependencies = [
- "itp-enclave-bridge-storage",
  "itp-node-api",
  "itp-node-api-metadata-provider",
  "itp-ocall-api",
+ "itp-pallet-storage",
  "itp-sgx-crypto",
  "itp-sgx-externalities",
  "itp-stf-interface",
@@ -3649,6 +3641,7 @@ dependencies = [
  "pallet-balances",
  "parity-scale-codec",
  "serde 1.0.193",
+ "sidechain-primitives",
  "sp-core",
  "sp-runtime",
  "sp-std",
@@ -3927,8 +3920,8 @@ version = "0.9.0"
 dependencies = [
  "derive_more",
  "itc-parentchain-test",
- "itp-enclave-bridge-storage",
  "itp-ocall-api",
+ "itp-pallet-storage",
  "itp-test",
  "itp-types",
  "its-primitives",

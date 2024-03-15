@@ -42,6 +42,7 @@ pub enum Error {
 	ExpectedTriggeredImportDispatcher,
 	CouldNotDispatchBlockImport,
 	NoShardAssigned,
+	TooManyShardsAssigned,
 	NoIntegriteeParentchainAssigned,
 	NoTargetAParentchainAssigned,
 	NoTargetBParentchainAssigned,

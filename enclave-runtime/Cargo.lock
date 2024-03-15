@@ -771,7 +771,7 @@ dependencies = [
 
 [[package]]
 name = "enclave-runtime"
-version = "0.12.11"
+version = "0.12.12"
 dependencies = [
  "array-bytes 6.2.2",
  "cid",
@@ -801,6 +801,7 @@ dependencies = [
  "itp-node-api-metadata",
  "itp-nonce-cache",
  "itp-ocall-api",
+ "itp-pallet-storage",
  "itp-primitives-cache",
  "itp-rpc",
  "itp-settings",
@@ -1985,15 +1986,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "itp-enclave-bridge-storage"
-version = "0.9.0"
-dependencies = [
- "itp-storage",
- "parity-scale-codec",
- "sp-std",
-]
-
-[[package]]
 name = "itp-enclave-metrics"
 version = "0.9.0"
 dependencies = [
@@ -2081,6 +2073,16 @@ dependencies = [
  "sgx_types",
  "sp-core",
  "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "itp-pallet-storage"
+version = "0.9.0"
+dependencies = [
+ "itp-storage",
+ "itp-types",
+ "parity-scale-codec",
  "sp-std",
 ]
 
@@ -2272,10 +2274,10 @@ dependencies = [
 name = "itp-test"
 version = "0.9.0"
 dependencies = [
- "itp-enclave-bridge-storage",
  "itp-node-api",
  "itp-node-api-metadata-provider",
  "itp-ocall-api",
+ "itp-pallet-storage",
  "itp-sgx-crypto",
  "itp-sgx-externalities",
  "itp-stf-interface",
@@ -2357,6 +2359,7 @@ dependencies = [
  "pallet-balances",
  "parity-scale-codec",
  "serde 1.0.192",
+ "sidechain-primitives",
  "sp-core",
  "sp-runtime",
  "sp-std",
@@ -2558,8 +2561,8 @@ name = "its-validateer-fetch"
 version = "0.9.0"
 dependencies = [
  "derive_more",
- "itp-enclave-bridge-storage",
  "itp-ocall-api",
+ "itp-pallet-storage",
  "itp-types",
  "its-primitives",
  "log",
@@ -3955,6 +3958,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "sidechain-primitives"
+version = "0.1.0"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.11-polkadot-v0.9.42#094b1e982b4637ebfbf5afb985100417215d49a0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde 1.0.192",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "signature"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4640,7 +4657,7 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "digest 0.10.7",
  "static_assertions",
 ]

@@ -1,6 +1,6 @@
 [package]
 name = "enclave-runtime"
-version = "0.12.11"
+version = "0.12.12"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
@@ -111,6 +111,7 @@ itp-node-api = { path = "../core-primitives/node-api", default-features = false,
 itp-node-api-metadata = { path = "../core-primitives/node-api/metadata", default-features = false }
 itp-nonce-cache = { path = "../core-primitives/nonce-cache", default-features = false, features = ["sgx"] }
 itp-ocall-api = { path = "../core-primitives/ocall-api", default-features = false }
+itp-pallet-storage = { path = "../core-primitives/pallet-storage", default-features = false }
 itp-primitives-cache = { path = "../core-primitives/primitives-cache", default-features = false, features = ["sgx"] }
 itp-rpc = { path = "../core-primitives/rpc", default-features = false, features = ["sgx"] }
 itp-settings = { path = "../core-primitives/settings" }

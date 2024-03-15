@@ -28,6 +28,7 @@ sp-std = { default-features = false, git = "https://github.com/paritytech/substr
 
 # integritee-node
 enclave-bridge-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
 teeracle-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
 teerex-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
 
@@ -35,19 +36,19 @@ teerex-primitives = { default-features = false, git = "https://github.com/integr
 default = ["std"]
 std = [
     "codec/std",
+    "enclave-bridge-primitives/std",
+    "frame-system/std",
     "itp-sgx-runtime-primitives/std",
     "itp-stf-primitives/std",
     "itp-utils/std",
-    "substrate-api-client/std",
-    "teerex-primitives/std",
-    "teeracle-primitives/std",
-    "enclave-bridge-primitives/std",
-    # substrate
-    "frame-system/std",
     "pallet-balances/std",
     "serde/std",
-    "sp-std/std",
+    "sidechain-primitives/std",
     "sp-core/std",
     "sp-runtime/std",
+    "sp-std/std",
+    "substrate-api-client/std",
+    "teeracle-primitives/std",
+    "teerex-primitives/std",
 ]
 test = []
