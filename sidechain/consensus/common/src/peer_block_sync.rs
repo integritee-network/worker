@@ -278,7 +278,7 @@ mod tests {
 			create_peer_syncer(block_importer_mock.clone(), sidechain_ocall_api.clone());
 
 		peer_syncer
-			.import_or_sync_block(signed_sidechain_block, &parentchain_header)
+			.import_or_sync_block(signed_sidechain_block, &parentchain_header, &None)
 			.unwrap();
 
 		assert_eq!(1, block_importer_mock.get_imported_blocks().len());
@@ -302,7 +302,7 @@ mod tests {
 		let signed_sidechain_block = SidechainBlockBuilder::default().build_signed();
 
 		let sync_result =
-			peer_syncer.import_or_sync_block(signed_sidechain_block, &parentchain_header);
+			peer_syncer.import_or_sync_block(signed_sidechain_block, &parentchain_header, &None);
 
 		assert_matches!(sync_result, Err(Error::InvalidAuthority(_)));
 		assert_eq!(1, block_importer_mock.get_imported_blocks().len());
@@ -330,7 +330,7 @@ mod tests {
 		let signed_sidechain_block = SidechainBlockBuilder::default().build_signed();
 
 		peer_syncer
-			.import_or_sync_block(signed_sidechain_block, &parentchain_header)
+			.import_or_sync_block(signed_sidechain_block, &parentchain_header, &None)
 			.unwrap();
 
 		assert_eq!(4, block_importer_mock.get_imported_blocks().len());
