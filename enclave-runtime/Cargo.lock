@@ -15,7 +15,7 @@ dependencies = [
 [[package]]
 name = "ac-compose-macros"
 version = "0.4.2"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0#d31ce7684a60a55b943b3355b2dacc6d0edcc371"
+source = "git+https://github.com/brenzi/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0-retracted#480823e6a82236c4d6eb3a488a56f4bce2c4be2c"
 dependencies = [
  "ac-primitives",
  "log",
@@ -25,7 +25,7 @@ dependencies = [
 [[package]]
 name = "ac-node-api"
 version = "0.5.1"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0#d31ce7684a60a55b943b3355b2dacc6d0edcc371"
+source = "git+https://github.com/brenzi/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0-retracted#480823e6a82236c4d6eb3a488a56f4bce2c4be2c"
 dependencies = [
  "ac-primitives",
  "bitvec",
@@ -50,7 +50,7 @@ dependencies = [
 [[package]]
 name = "ac-primitives"
 version = "0.9.0"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0#d31ce7684a60a55b943b3355b2dacc6d0edcc371"
+source = "git+https://github.com/brenzi/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0-retracted#480823e6a82236c4d6eb3a488a56f4bce2c4be2c"
 dependencies = [
  "impl-serde",
  "parity-scale-codec",
@@ -4404,7 +4404,7 @@ checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 [[package]]
 name = "substrate-api-client"
 version = "0.14.0"
-source = "git+https://github.com/scs/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0#d31ce7684a60a55b943b3355b2dacc6d0edcc371"
+source = "git+https://github.com/brenzi/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0-retracted#480823e6a82236c4d6eb3a488a56f4bce2c4be2c"
 dependencies = [
  "ac-compose-macros",
  "ac-node-api",
