@@ -65,7 +65,7 @@ sgx-verify = { git = "https://github.com/integritee-network/pallets.git", branch
 # `default-features = false` to remove the jsonrpsee dependency.
 enclave-bridge-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
 # disable unsupported jsonrpcsee
-substrate-api-client = { default-features = false, features = ["std", "sync-api"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }
+substrate-api-client = { default-features = false, features = ["std", "sync-api"], git = "https://github.com/brenzi/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0-retracted" }
 teerex-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
 
 # Substrate dependencies
