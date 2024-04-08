@@ -15,7 +15,7 @@ dependencies = [
 [[package]]
 name = "ac-compose-macros"
 version = "0.4.2"
-source = "git+https://github.com/brenzi/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0-retracted#480823e6a82236c4d6eb3a488a56f4bce2c4be2c"
+source = "git+https://github.com/brenzi/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0-retracted#d01bc07fe0c8a8db1451d0d5c8bf82493b274d80"
 dependencies = [
  "ac-primitives",
  "log 0.4.20",
@@ -25,7 +25,7 @@ dependencies = [
 [[package]]
 name = "ac-node-api"
 version = "0.5.1"
-source = "git+https://github.com/brenzi/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0-retracted#480823e6a82236c4d6eb3a488a56f4bce2c4be2c"
+source = "git+https://github.com/brenzi/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0-retracted#d01bc07fe0c8a8db1451d0d5c8bf82493b274d80"
 dependencies = [
  "ac-primitives",
  "bitvec",
@@ -50,7 +50,7 @@ dependencies = [
 [[package]]
 name = "ac-primitives"
 version = "0.9.0"
-source = "git+https://github.com/brenzi/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0-retracted#480823e6a82236c4d6eb3a488a56f4bce2c4be2c"
+source = "git+https://github.com/brenzi/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0-retracted#d01bc07fe0c8a8db1451d0d5c8bf82493b274d80"
 dependencies = [
  "frame-system",
  "impl-serde",
@@ -740,7 +740,7 @@ dependencies = [
 [[package]]
 name = "common-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.11-polkadot-v0.9.42#094b1e982b4637ebfbf5afb985100417215d49a0"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.13.0-polkadot-v0.9.42#abf29acd41a0fca9cd7025b297b6a9fa272a122f"
 dependencies = [
  "derive_more",
  "parity-scale-codec",
@@ -1216,7 +1216,7 @@ dependencies = [
 [[package]]
 name = "enclave-bridge-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.11-polkadot-v0.9.42#094b1e982b4637ebfbf5afb985100417215d49a0"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.13.0-polkadot-v0.9.42#abf29acd41a0fca9cd7025b297b6a9fa272a122f"
 dependencies = [
  "common-primitives",
  "log 0.4.20",
@@ -2557,7 +2557,7 @@ dependencies = [
 
 [[package]]
 name = "integritee-cli"
-version = "0.12.12"
+version = "0.13.0"
 dependencies = [
  "array-bytes 6.1.0",
  "base58",
@@ -2607,7 +2607,7 @@ dependencies = [
 
 [[package]]
 name = "integritee-service"
-version = "0.12.12"
+version = "0.13.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5110,7 +5110,7 @@ dependencies = [
 [[package]]
 name = "pallet-enclave-bridge"
 version = "0.12.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.11-polkadot-v0.9.42#094b1e982b4637ebfbf5afb985100417215d49a0"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.13.0-polkadot-v0.9.42#abf29acd41a0fca9cd7025b297b6a9fa272a122f"
 dependencies = [
  "enclave-bridge-primitives",
  "frame-support",
@@ -5155,7 +5155,7 @@ dependencies = [
 [[package]]
 name = "pallet-parentchain"
 version = "0.11.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.11-polkadot-v0.9.42#094b1e982b4637ebfbf5afb985100417215d49a0"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.13.0-polkadot-v0.9.42#abf29acd41a0fca9cd7025b297b6a9fa272a122f"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5173,7 +5173,7 @@ dependencies = [
 [[package]]
 name = "pallet-sidechain"
 version = "0.11.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.11-polkadot-v0.9.42#094b1e982b4637ebfbf5afb985100417215d49a0"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.13.0-polkadot-v0.9.42#abf29acd41a0fca9cd7025b297b6a9fa272a122f"
 dependencies = [
  "enclave-bridge-primitives",
  "frame-support",
@@ -5210,7 +5210,7 @@ dependencies = [
 [[package]]
 name = "pallet-teeracle"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.11-polkadot-v0.9.42#094b1e982b4637ebfbf5afb985100417215d49a0"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.13.0-polkadot-v0.9.42#abf29acd41a0fca9cd7025b297b6a9fa272a122f"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5230,7 +5230,7 @@ dependencies = [
 [[package]]
 name = "pallet-teerex"
 version = "0.10.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.11-polkadot-v0.9.42#094b1e982b4637ebfbf5afb985100417215d49a0"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.13.0-polkadot-v0.9.42#abf29acd41a0fca9cd7025b297b6a9fa272a122f"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -6710,7 +6710,7 @@ dependencies = [
 [[package]]
 name = "sgx-verify"
 version = "0.1.4"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.11-polkadot-v0.9.42#094b1e982b4637ebfbf5afb985100417215d49a0"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.13.0-polkadot-v0.9.42#abf29acd41a0fca9cd7025b297b6a9fa272a122f"
 dependencies = [
  "base64 0.13.1",
  "chrono 0.4.26",
@@ -6985,7 +6985,7 @@ checksum = "43b2853a4d09f215c24cc5489c992ce46052d359b5109343cbafbf26bc62f8a3"
 [[package]]
 name = "sidechain-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.11-polkadot-v0.9.42#094b1e982b4637ebfbf5afb985100417215d49a0"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.13.0-polkadot-v0.9.42#abf29acd41a0fca9cd7025b297b6a9fa272a122f"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -7709,7 +7709,7 @@ dependencies = [
 [[package]]
 name = "substrate-api-client"
 version = "0.14.0"
-source = "git+https://github.com/brenzi/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0-retracted#480823e6a82236c4d6eb3a488a56f4bce2c4be2c"
+source = "git+https://github.com/brenzi/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0-retracted#d01bc07fe0c8a8db1451d0d5c8bf82493b274d80"
 dependencies = [
  "ac-compose-macros",
  "ac-node-api",
@@ -7747,7 +7747,7 @@ dependencies = [
 [[package]]
 name = "substrate-client-keystore"
 version = "0.9.1"
-source = "git+https://github.com/brenzi/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0-retracted#480823e6a82236c4d6eb3a488a56f4bce2c4be2c"
+source = "git+https://github.com/brenzi/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0-retracted#d01bc07fe0c8a8db1451d0d5c8bf82493b274d80"
 dependencies = [
  "array-bytes 4.2.0",
  "async-trait",
@@ -7826,7 +7826,7 @@ checksum = "1d2faeef5759ab89935255b1a4cd98e0baf99d1085e37d36599c625dac49ae8e"
 [[package]]
 name = "teeracle-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.11-polkadot-v0.9.42#094b1e982b4637ebfbf5afb985100417215d49a0"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.13.0-polkadot-v0.9.42#abf29acd41a0fca9cd7025b297b6a9fa272a122f"
 dependencies = [
  "common-primitives",
  "sp-std",
@@ -7836,7 +7836,7 @@ dependencies = [
 [[package]]
 name = "teerex-primitives"
 version = "0.1.0"
-source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.12.11-polkadot-v0.9.42#094b1e982b4637ebfbf5afb985100417215d49a0"
+source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.13.0-polkadot-v0.9.42#abf29acd41a0fca9cd7025b297b6a9fa272a122f"
 dependencies = [
  "common-primitives",
  "derive_more",
@@ -8319,7 +8319,7 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "digest 0.10.7",
  "rand 0.8.5",
  "static_assertions",
