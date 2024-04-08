@@ -1,6 +1,6 @@
 [package]
 name = "integritee-cli"
-version = "0.12.12"
+version = "0.13.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
@@ -25,14 +25,14 @@ thiserror = "1.0"
 urlencoding = "2.1.3"
 
 # scs / integritee
-enclave-bridge-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
+enclave-bridge-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.13.0-polkadot-v0.9.42" }
 ita-parentchain-interface = { path = "../app-libs/parentchain-interface" }
-pallet-enclave-bridge = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
+pallet-enclave-bridge = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.13.0-polkadot-v0.9.42" }
 pallet-evm = { optional = true, git = "https://github.com/integritee-network/frontier.git", branch = "bar/polkadot-v0.9.42" }
-pallet-sidechain = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
-pallet-teeracle = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
-pallet-teerex = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
-teeracle-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
+pallet-sidechain = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.13.0-polkadot-v0.9.42" }
+pallet-teeracle = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.13.0-polkadot-v0.9.42" }
+pallet-teerex = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.13.0-polkadot-v0.9.42" }
+teeracle-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.13.0-polkadot-v0.9.42" }
 
 # `default-features = false` to remove the jsonrpsee dependency.
 # disable unsupported jsonrpcsee
