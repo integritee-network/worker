@@ -28,6 +28,8 @@ use sp_runtime::traits::Verify;
 use sp_std::vec;
 use std::prelude::v1::*;
 
+pub use ita_raffle_stf::{RafflePublicGetter, RaffleTrustedGetter};
+
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 
@@ -94,6 +96,7 @@ impl PoolTransactionValidation for Getter {
 #[allow(non_camel_case_types)]
 pub enum PublicGetter {
 	some_value,
+	raffle(RafflePublicGetter),
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -102,6 +105,7 @@ pub enum TrustedGetter {
 	free_balance(AccountId),
 	reserved_balance(AccountId),
 	nonce(AccountId),
+	raffle(RaffleTrustedGetter),
 	#[cfg(feature = "evm")]
 	evm_nonce(AccountId),
 	#[cfg(feature = "evm")]
@@ -116,6 +120,7 @@ impl TrustedGetter {
 			TrustedGetter::free_balance(sender_account) => sender_account,
 			TrustedGetter::reserved_balance(sender_account) => sender_account,
 			TrustedGetter::nonce(sender_account) => sender_account,
+			TrustedGetter::raffle(getter) => getter.sender_account(),
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_nonce(sender_account) => sender_account,
 			#[cfg(feature = "evm")]
@@ -187,6 +192,7 @@ impl ExecuteGetter for TrustedGetterSigned {
 				debug!("Account nonce is {}", nonce);
 				Some(nonce.encode())
 			},
+			TrustedGetter::raffle(getter) => getter.execute(),
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_nonce(who) => {
 				let evm_account = get_evm_account(&who);
@@ -228,6 +234,7 @@ impl ExecuteGetter for PublicGetter {
 	fn execute(self) -> Option<Vec<u8>> {
 		match self {
 			PublicGetter::some_value => Some(42u32.encode()),
+			PublicGetter::raffle(getter) => getter.execute(),
 		}
 	}
 
