@@ -16,8 +16,8 @@
 */
 
 use crate::error::{Error, Result};
-use itp_enclave_bridge_storage::{EnclaveBridgeStorage, EnclaveBridgeStorageKeys};
 use itp_ocall_api::EnclaveOnChainOCallApi;
+use itp_pallet_storage::{EnclaveBridgeStorage, EnclaveBridgeStorageKeys};
 use itp_types::{
 	parentchain::{AccountId, ParentchainId},
 	ShardSignerStatus,

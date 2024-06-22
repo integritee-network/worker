@@ -15,8 +15,8 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 # local deps
-itp-enclave-bridge-storage = { path = "../../core-primitives/enclave-bridge-storage", default-features = false }
 itp-ocall-api = { path = "../../core-primitives/ocall-api", default-features = false }
+itp-pallet-storage = { path = "../../core-primitives/pallet-storage", default-features = false }
 itp-types = { path = "../../core-primitives/types", default-features = false }
 its-primitives = { path = "../primitives", default-features = false }
 
@@ -30,7 +30,7 @@ std = [
     "itp-types/std",
     "itp-ocall-api/std",
     "its-primitives/std",
-    "itp-enclave-bridge-storage/std",
+    "itp-pallet-storage/std",
 ]
 
 [dev-dependencies]

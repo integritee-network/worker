@@ -23,6 +23,7 @@ use itp_stf_primitives::traits::{IndirectExecutor, TrustedCallVerification};
 use itp_utils::stringify::account_id_to_string;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+pub use sidechain_primitives::SidechainBlockConfirmation;
 use sp_core::bounded::alloc;
 use sp_runtime::{generic::Header as HeaderG, traits::BlakeTwo256, MultiAddress, MultiSignature};
 use substrate_api_client::ac_node_api::StaticEvent;

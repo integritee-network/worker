@@ -19,6 +19,7 @@ use crate::{Result, SyncBlockFromPeer};
 use core::marker::PhantomData;
 use itertools::Itertools;
 use itp_import_queue::{PeekQueue, PopFromQueue};
+use itp_types::parentchain::SidechainBlockConfirmation;
 use its_primitives::traits::{
 	Block as BlockTrait, Header, SignedBlock as SignedSidechainBlockTrait,
 };
@@ -32,6 +33,7 @@ pub trait ProcessBlockImportQueue<ParentchainBlockHeader> {
 	fn process_queue(
 		&self,
 		current_parentchain_header: &ParentchainBlockHeader,
+		maybe_latest_sidechain_block_confirmation: Option<SidechainBlockConfirmation>,
 	) -> Result<ParentchainBlockHeader>;
 }
 
@@ -94,6 +96,7 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
 	fn process_queue(
 		&self,
 		current_parentchain_header: &ParentchainBlock::Header,
+		maybe_latest_sidechain_block_confirmation: Option<SidechainBlockConfirmation>,
 	) -> Result<ParentchainBlock::Header> {
 		let mut latest_imported_parentchain_header = current_parentchain_header.clone();
 		let start_time = Instant::now();
@@ -121,7 +124,11 @@ impl<ParentchainBlock, SignedSidechainBlock, BlockImportQueue, PeerBlockSyncer>
 				// returns the first block satisfying the predicate
 				competitors.into_iter().find_map(|block| {
 					self.peer_block_syncer
-						.import_or_sync_block(block.clone(), &latest_imported_parentchain_header)
+						.import_or_sync_block(
+							block.clone(),
+							&latest_imported_parentchain_header,
+							&maybe_latest_sidechain_block_confirmation,
+						)
 						.ok()
 						.map(|parentchain_header| {
 							latest_imported_parentchain_header = parentchain_header;

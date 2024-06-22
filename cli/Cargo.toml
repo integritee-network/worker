@@ -1,6 +1,6 @@
 [package]
 name = "integritee-cli"
-version = "0.12.11"
+version = "0.13.1"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
@@ -25,19 +25,19 @@ thiserror = "1.0"
 urlencoding = "2.1.3"
 
 # scs / integritee
-enclave-bridge-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
+enclave-bridge-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.13.0-polkadot-v0.9.42" }
 ita-parentchain-interface = { path = "../app-libs/parentchain-interface" }
-pallet-enclave-bridge = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
+pallet-enclave-bridge = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.13.0-polkadot-v0.9.42" }
 pallet-evm = { optional = true, git = "https://github.com/integritee-network/frontier.git", branch = "bar/polkadot-v0.9.42" }
-pallet-sidechain = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
-pallet-teeracle = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
-pallet-teerex = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
-teeracle-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
+pallet-sidechain = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.13.0-polkadot-v0.9.42" }
+pallet-teeracle = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.13.0-polkadot-v0.9.42" }
+pallet-teerex = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.13.0-polkadot-v0.9.42" }
+teeracle-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.13.0-polkadot-v0.9.42" }
 
 # `default-features = false` to remove the jsonrpsee dependency.
 # disable unsupported jsonrpcsee
-substrate-api-client = { default-features = false, features = ["std", "sync-api"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }
-substrate-client-keystore = { git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }
+substrate-api-client = { default-features = false, features = ["std", "sync-api"], git = "https://github.com/brenzi/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0-retracted" }
+substrate-client-keystore = { git = "https://github.com/brenzi/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0-retracted" }
 
 # substrate dependencies
 pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
@@ -61,7 +61,7 @@ itp-utils = { path = "../core-primitives/utils" }
 
 [features]
 default = []
-evm = ["ita-stf/evm_std", "pallet-evm"]
+evm = ["ita-stf/evm", "pallet-evm"]
 teeracle = []
 sidechain = []
 offchain-worker = []

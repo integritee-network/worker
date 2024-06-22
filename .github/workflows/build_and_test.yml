@@ -246,7 +246,7 @@ jobs:
         run: rustup show
 
       - name: Install taplo
-        run: cargo install taplo-cli --locked
+        run: cargo install --version 0.8.1 taplo-cli --locked
       - name: Cargo.toml fmt
         run: taplo fmt --check
 
@@ -323,7 +323,7 @@ jobs:
           echo "PROJECT=${{ matrix.flavor_id }}-${{ matrix.demo_name }}" >> $GITHUB_ENV
           echo "VERSION=dev.$version" >> $GITHUB_ENV
           echo "WORKER_IMAGE_TAG=integritee-worker:dev.$version" >> $GITHUB_ENV
-          echo "INTEGRITEE_NODE=integritee-node:1.1.4.$version" >> $GITHUB_ENV
+          echo "INTEGRITEE_NODE=integritee-node:1.1.6.$version" >> $GITHUB_ENV
           echo "CLIENT_IMAGE_TAG=integritee-cli:dev.$version" >> $GITHUB_ENV
           if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
              echo "SGX_PROVISION=/dev/sgx/provision" >> $GITHUB_ENV
@@ -368,8 +368,8 @@ jobs:
           fi
           docker tag integritee-worker-${{ env.IMAGE_SUFFIX }} ${{ env.WORKER_IMAGE_TAG }}
           docker tag integritee-cli-client-${{ env.IMAGE_SUFFIX }} ${{ env.CLIENT_IMAGE_TAG }}
-          docker pull integritee/integritee-node:1.1.4
-          docker tag integritee/integritee-node:1.1.4 ${{ env.INTEGRITEE_NODE }}
+          docker pull integritee/integritee-node:1.1.6
+          docker tag integritee/integritee-node:1.1.6 ${{ env.INTEGRITEE_NODE }}
           docker images --all
 
       ##
@@ -508,21 +508,44 @@ jobs:
           --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg SGX_COMMERCIAL_KEY=enclave-runtime/intel_sgx.pem --build-arg SGX_PASSFILE=enclave-runtime/passfile.txt --build-arg SGX_PRODUCTION=1 --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }} --build-arg SGX_MODE=${{ matrix.sgx_mode }}
           -f build.Dockerfile .
 
-      - name: Save released teeracle
+      - name: Build Worker CLI
+        env:
+          DOCKER_BUILDKIT: 1
+        run: >
+          docker build -t integritee/${{ matrix.flavor_id }}-cli:${{ github.ref_name }}
+          --target deployed-client
+          --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }}
+          -f build.Dockerfile .
+
+      - name: Save worker docker image
         run: |
           docker image save integritee/${{ matrix.flavor_id }}:${{ github.ref_name }} | gzip > integritee-worker-${{ matrix.flavor_id }}-${{ github.ref_name }}.tar.gz
           docker images --all
 
-      - name: Upload teeracle image
+      - name: Save CLI docker image
+        run: |
+          docker image save integritee/${{ matrix.flavor_id }}-cli:${{ github.ref_name }} | gzip > ${{ matrix.flavor_id }}-cli-${{ github.ref_name }}.tar.gz
+          docker images --all
+
+      - name: Upload image
         uses: actions/upload-artifact@v3
         with:
           name: integritee-worker-${{ matrix.flavor_id }}-${{ github.ref_name }}.tar.gz
           path: integritee-worker-${{ matrix.flavor_id }}-${{ github.ref_name }}.tar.gz
 
+      - name: Upload cli image
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.flavor_id }}-cli-${{ github.ref_name }}.tar.gz
+          path: ${{ matrix.flavor_id }}-cli-${{ github.ref_name }}.tar.gz
+
       - name: Delete images
         run: |
           if [[ "$(docker images -q integritee/${{ matrix.flavor_id }}:${{ github.ref_name }} 2> /dev/null)" != "" ]]; then
               docker image rmi --force integritee/${{ matrix.flavor_id }}:${{ github.ref_name }} 2>/dev/null
+          fi
+          if [[ "$(docker images -q integritee/${{ matrix.flavor_id }}-cli:${{ github.ref_name }} 2> /dev/null)" != "" ]]; then
+              docker image rmi --force integritee/${{ matrix.flavor_id }}-cli:${{ github.ref_name }} 2>/dev/null
           fi
           docker images --all
 
@@ -537,16 +560,28 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Download Worker Image
+      - name: Download Teeracle Image
         uses: actions/download-artifact@v3
         with:
           name: integritee-worker-teeracle-${{ github.ref_name }}.tar.gz
           path: .
 
-      - name: Download Worker Image
+      - name: Download Sidechain Image
         uses: actions/download-artifact@v3
         with:
           name: integritee-worker-sidechain-${{ github.ref_name }}.tar.gz
+          path: .
+
+      - name: Download Sidechain Cli Image
+        uses: actions/download-artifact@v3
+        with:
+          name: sidechain-cli-${{ github.ref_name }}.tar.gz
+          path: .
+
+      - name: Download Teeracle Cli Image
+        uses: actions/download-artifact@v3
+        with:
+          name: teeracle-cli-${{ github.ref_name }}.tar.gz
           path: .
 
       #
@@ -594,6 +629,8 @@ jobs:
           files: |
             integritee-worker-teeracle-${{ github.ref_name }}.tar.gz
             integritee-worker-sidechain-${{ github.ref_name }}.tar.gz
+            sidechain-cli-${{ github.ref_name }}.tar.gz
+            teeracle-cli-${{ github.ref_name }}.tar.gz
             integritee-client
             integritee-demo-validateer
             enclave.signed.so

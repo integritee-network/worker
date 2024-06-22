@@ -17,7 +17,7 @@ itp-stf-primitives = { path = "../../core-primitives/stf-primitives", default-fe
 itp-utils = { path = "../../core-primitives/utils", default-features = false }
 
 # scs
-substrate-api-client = { default-features = false, features = ["sync-api"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }
+substrate-api-client = { default-features = false, features = ["sync-api"], git = "https://github.com/brenzi/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0-retracted" }
 
 # substrate-deps
 frame-system = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
@@ -27,27 +27,28 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 # integritee-node
-enclave-bridge-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
-teeracle-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
-teerex-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.12.11-polkadot-v0.9.42" }
+enclave-bridge-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.13.0-polkadot-v0.9.42" }
+sidechain-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.13.0-polkadot-v0.9.42" }
+teeracle-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.13.0-polkadot-v0.9.42" }
+teerex-primitives = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.13.0-polkadot-v0.9.42" }
 
 [features]
 default = ["std"]
 std = [
     "codec/std",
+    "enclave-bridge-primitives/std",
+    "frame-system/std",
     "itp-sgx-runtime-primitives/std",
     "itp-stf-primitives/std",
     "itp-utils/std",
-    "substrate-api-client/std",
-    "teerex-primitives/std",
-    "teeracle-primitives/std",
-    "enclave-bridge-primitives/std",
-    # substrate
-    "frame-system/std",
     "pallet-balances/std",
     "serde/std",
-    "sp-std/std",
+    "sidechain-primitives/std",
     "sp-core/std",
     "sp-runtime/std",
+    "sp-std/std",
+    "substrate-api-client/std",
+    "teeracle-primitives/std",
+    "teerex-primitives/std",
 ]
 test = []
