@@ -7,7 +7,7 @@ edition = "2021"
 [dependencies]
 itp-types = { default-features = false, path = "../../types" }
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-substrate-api-client = { default-features = false, features = ["sync-api"], git = "https://github.com/brenzi/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0-retracted" }
+substrate-api-client = { default-features = false, features = ["sync-api"], git = "https://github.com/encointer/substrate-api-client.git", branch = "v0.9.42-tag-v0.14.0-retracted-check-metadata-hash" }
 
 [features]
 default = ["std"]

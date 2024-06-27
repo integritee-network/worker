@@ -36,8 +36,8 @@ teeracle-primitives = { git = "https://github.com/integritee-network/pallets.git
 
 # `default-features = false` to remove the jsonrpsee dependency.
 # disable unsupported jsonrpcsee
-substrate-api-client = { default-features = false, features = ["std", "sync-api"], git = "https://github.com/brenzi/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0-retracted" }
-substrate-client-keystore = { git = "https://github.com/brenzi/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0-retracted" }
+substrate-api-client = { default-features = false, features = ["std", "sync-api"], git = "https://github.com/encointer/substrate-api-client.git", branch = "v0.9.42-tag-v0.14.0-retracted-check-metadata-hash" }
+substrate-client-keystore = { git = "https://github.com/encointer/substrate-api-client.git", branch = "v0.9.42-tag-v0.14.0-retracted-check-metadata-hash" }
 
 # substrate dependencies
 pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }

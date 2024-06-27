@@ -15,7 +15,7 @@ dependencies = [
 [[package]]
 name = "ac-compose-macros"
 version = "0.4.2"
-source = "git+https://github.com/brenzi/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0-retracted#d01bc07fe0c8a8db1451d0d5c8bf82493b274d80"
+source = "git+https://github.com/encointer/substrate-api-client.git?branch=v0.9.42-tag-v0.14.0-retracted-check-metadata-hash#eddca35c73b5e2e3d0371fa923a0ba605c2f0d61"
 dependencies = [
  "ac-primitives",
  "log 0.4.20",
@@ -25,7 +25,7 @@ dependencies = [
 [[package]]
 name = "ac-node-api"
 version = "0.5.1"
-source = "git+https://github.com/brenzi/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0-retracted#d01bc07fe0c8a8db1451d0d5c8bf82493b274d80"
+source = "git+https://github.com/encointer/substrate-api-client.git?branch=v0.9.42-tag-v0.14.0-retracted-check-metadata-hash#eddca35c73b5e2e3d0371fa923a0ba605c2f0d61"
 dependencies = [
  "ac-primitives",
  "bitvec",
@@ -50,7 +50,7 @@ dependencies = [
 [[package]]
 name = "ac-primitives"
 version = "0.9.0"
-source = "git+https://github.com/brenzi/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0-retracted#d01bc07fe0c8a8db1451d0d5c8bf82493b274d80"
+source = "git+https://github.com/encointer/substrate-api-client.git?branch=v0.9.42-tag-v0.14.0-retracted-check-metadata-hash#eddca35c73b5e2e3d0371fa923a0ba605c2f0d61"
 dependencies = [
  "frame-system",
  "impl-serde",
@@ -7709,7 +7709,7 @@ dependencies = [
 [[package]]
 name = "substrate-api-client"
 version = "0.14.0"
-source = "git+https://github.com/brenzi/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0-retracted#d01bc07fe0c8a8db1451d0d5c8bf82493b274d80"
+source = "git+https://github.com/encointer/substrate-api-client.git?branch=v0.9.42-tag-v0.14.0-retracted-check-metadata-hash#eddca35c73b5e2e3d0371fa923a0ba605c2f0d61"
 dependencies = [
  "ac-compose-macros",
  "ac-node-api",
@@ -7747,7 +7747,7 @@ dependencies = [
 [[package]]
 name = "substrate-client-keystore"
 version = "0.9.1"
-source = "git+https://github.com/brenzi/substrate-api-client.git?branch=polkadot-v0.9.42-tag-v0.14.0-retracted#d01bc07fe0c8a8db1451d0d5c8bf82493b274d80"
+source = "git+https://github.com/encointer/substrate-api-client.git?branch=v0.9.42-tag-v0.14.0-retracted-check-metadata-hash#eddca35c73b5e2e3d0371fa923a0ba605c2f0d61"
 dependencies = [
  "array-bytes 4.2.0",
  "async-trait",

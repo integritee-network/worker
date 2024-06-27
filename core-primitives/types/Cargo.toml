@@ -17,7 +17,7 @@ itp-stf-primitives = { path = "../../core-primitives/stf-primitives", default-fe
 itp-utils = { path = "../../core-primitives/utils", default-features = false }
 
 # scs
-substrate-api-client = { default-features = false, features = ["sync-api"], git = "https://github.com/brenzi/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0-retracted" }
+substrate-api-client = { default-features = false, features = ["sync-api"], git = "https://github.com/encointer/substrate-api-client.git", branch = "v0.9.42-tag-v0.14.0-retracted-check-metadata-hash" }
 
 # substrate-deps
 frame-system = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
