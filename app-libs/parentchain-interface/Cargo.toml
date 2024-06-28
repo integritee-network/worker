@@ -25,7 +25,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 log = { version = "0.4", default-features = false }
 regex = { optional = true, version = "1.9.5" }
 
-substrate-api-client = { optional = true, default-features = false, features = ["std", "sync-api"], git = "https://github.com/brenzi/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0-retracted" }
+substrate-api-client = { optional = true, default-features = false, features = ["std", "sync-api"], git = "https://github.com/encointer/substrate-api-client.git", branch = "v0.9.42-tag-v0.14.0-retracted-check-metadata-hash" }
 
 # substrate dep
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }

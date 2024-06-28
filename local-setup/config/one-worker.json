@@ -7,13 +7,10 @@
         "--dev",
         "-lruntime=info",
         "-lteerex=debug",
-        "--ws-port",
-        "9944",
         "--port",
         "30390",
         "--rpc-port",
-        "9933",
-        "--ws-external",
+        "9944",
         "--rpc-external"
       ]
     }
