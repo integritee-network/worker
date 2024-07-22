@@ -16,7 +16,7 @@
 
 */
 
-use crate::{rpc::worker_api_direct::public_api_rpc_handler, Hash};
+use crate::{rpc::common_api::add_common_api, Hash};
 use codec::{Decode, Encode};
 use ita_stf::{Getter, TrustedGetter, TrustedGetterSigned};
 use itc_direct_rpc_server::{
@@ -32,6 +32,7 @@ use itp_stf_state_observer::mock::ObserveStateMock;
 use itp_top_pool_author::mocks::AuthorApiMock;
 use itp_types::{AccountId, DirectRequestStatus, Request, ShardIdentifier};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
+use jsonrpc_core::IoHandler;
 use sp_core::ed25519::Signature;
 use sp_runtime::MultiSignature;
 use std::{string::ToString, sync::Arc, vec::Vec};
@@ -51,8 +52,9 @@ pub fn get_state_request_works() {
 		Arc::new(GetterExecutor::<_, GetStateMock<TestState>, Getter>::new(state_observer));
 	let top_pool_author = Arc::new(AuthorApiMock::default());
 
-	let io_handler =
-		public_api_rpc_handler(top_pool_author, getter_executor, Arc::new(rsa_repository));
+	let mut io_handler = IoHandler::new();
+	add_common_api(&mut io_handler, top_pool_author, getter_executor, Arc::new(rsa_repository));
+
 	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));
 
 	let getter = Getter::trusted(TrustedGetterSigned::new(

@@ -13,7 +13,6 @@
 
 use crate::error::Error;
 
-pub mod direct_request;
 pub mod enclave_base;
 pub mod enclave_test;
 pub mod error;

@@ -25,10 +25,7 @@ use jsonrpc_core::{IoHandler, Params, Value};
 use log::*;
 use std::{borrow::ToOwned, fmt::Debug, string::String, vec::Vec};
 
-pub fn add_import_block_rpc_method<ImportFn, Error>(
-	import_fn: ImportFn,
-	mut io_handler: IoHandler,
-) -> IoHandler
+pub fn add_import_block_rpc_method<ImportFn, Error>(import_fn: ImportFn, io_handler: &mut IoHandler)
 where
 	ImportFn: Fn(SignedBlock) -> Result<(), Error> + Sync + Send + 'static,
 	Error: Debug,
@@ -61,8 +58,6 @@ where
 
 		Ok(Value::String("ok".to_owned()))
 	});
-
-	io_handler
 }
 
 #[cfg(test)]

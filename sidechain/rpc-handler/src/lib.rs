@@ -31,6 +31,36 @@ pub mod sgx_reexport_prelude {
 	pub use rust_base58_sgx as base58;
 }
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
+
+use crate::{
+	direct_top_pool_api::add_top_pool_direct_rpc_methods,
+	import_block_api::add_import_block_rpc_method,
+};
+use codec::{Decode, Encode};
+use core::fmt::Debug;
+use itp_import_queue::{ImportQueue, PushToQueue};
+use itp_top_pool_author::traits::AuthorApi;
+use its_primitives::types::SignedBlock;
+use jsonrpc_core::IoHandler;
+use std::sync::Arc;
+
 pub mod constants;
-pub mod direct_top_pool_api;
-pub mod import_block_api;
+mod direct_top_pool_api;
+mod import_block_api;
+
+type Hash = sp_core::H256;
+
+pub fn add_sidechain_api<R, TCS, G>(
+	io_handler: &mut IoHandler,
+	top_pool_author: Arc<R>,
+	sidechain_import_queue: Arc<ImportQueue<SignedBlock>>,
+) where
+	R: AuthorApi<Hash, Hash, TCS, G> + Send + Sync + 'static,
+	TCS: PartialEq + Encode + Decode + Debug + Send + Sync + 'static,
+	G: PartialEq + Encode + Decode + Debug + Send + Sync + 'static,
+{
+	add_top_pool_direct_rpc_methods(top_pool_author, io_handler);
+	add_import_block_rpc_method(move |block| sidechain_import_queue.push_single(block), io_handler);
+}

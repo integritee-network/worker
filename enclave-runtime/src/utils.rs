@@ -65,15 +65,6 @@ unsafe impl<D: Decode> DecodeRaw for D {
 	}
 }
 
-pub unsafe fn utf8_str_from_raw<'a>(
-	data: *const u8,
-	len: usize,
-) -> StdResult<&'a str, std::str::Utf8Error> {
-	let bytes = slice::from_raw_parts(data, len);
-
-	std::str::from_utf8(bytes)
-}
-
 // FIXME: When solving #1080, these helper functions should be obsolete, because no dynamic allocation
 // is necessary anymore.
 pub(crate) fn get_triggered_dispatcher_from_integritee_solo_or_parachain(
