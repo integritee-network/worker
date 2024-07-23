@@ -37,6 +37,7 @@ use itp_stf_executor::{getter_executor::ExecuteGetter, traits::StfShardVaultQuer
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{DirectRequestStatus, Request, ShardIdentifier, H256};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
+use its_rpc_handler::direct_top_pool_api::add_top_pool_direct_rpc_methods;
 use jsonrpc_core::{serde_json::json, IoHandler, Params, Value};
 use log::debug;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
@@ -57,6 +58,8 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey>(
 	GetterExecutor: ExecuteGetter + Send + Sync + 'static,
 	AccessShieldingKey: AccessPubkey<KeyType = Rsa3072PubKey> + Send + Sync + 'static,
 {
+	add_top_pool_direct_rpc_methods(top_pool_author.clone(), io_handler);
+
 	io_handler.add_sync_method("author_getShieldingKey", move |_: Params| {
 		debug!("worker_api_direct rpc was called: author_getShieldingKey");
 		let rsa_pubkey = match shielding_key.retrieve_pubkey() {

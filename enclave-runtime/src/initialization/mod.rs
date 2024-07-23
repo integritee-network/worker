@@ -187,8 +187,7 @@ pub(crate) fn init_enclave(
 		let sidechain_block_import_queue = Arc::new(EnclaveSidechainBlockImportQueue::default());
 		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.initialize(sidechain_block_import_queue);
 		let sidechain_import_queue = GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.get()?;
-		let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
-		add_sidechain_api(&mut io_handler, top_pool_author, sidechain_import_queue);
+		add_sidechain_api(&mut io_handler, sidechain_import_queue);
 	}
 
 	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));
