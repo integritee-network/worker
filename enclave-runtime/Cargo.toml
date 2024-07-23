@@ -131,7 +131,7 @@ itp-types = { path = "../core-primitives/types", default-features = false }
 itp-utils = { path = "../core-primitives/utils", default-features = false }
 its-block-verification = { path = "../sidechain/block-verification", default-features = false }
 its-primitives = { path = "../sidechain/primitives", default-features = false }
-its-rpc-handler = { path = "../sidechain/rpc-handler", default-features = false, features = ["sgx"]}
+its-rpc-handler = { path = "../sidechain/rpc-handler", default-features = false, features = ["sgx"] }
 its-sidechain = { path = "../sidechain/sidechain-crate", default-features = false, features = ["sgx"] }
 
 # substrate deps
