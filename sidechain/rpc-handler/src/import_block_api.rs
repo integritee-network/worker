@@ -70,8 +70,9 @@ pub mod tests {
 	}
 
 	fn io_handler() -> IoHandler {
-		let io_handler = IoHandler::new();
-		add_import_block_rpc_method::<_, String>(|_| Ok(()), io_handler)
+		let mut io_handler = IoHandler::new();
+		add_import_block_rpc_method::<_, String>(|_| Ok(()), &mut io_handler);
+		io_handler
 	}
 
 	#[test]
