@@ -9,6 +9,7 @@ edition = "2021"
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
 # local dependencies
+itp-import-queue = { path = "../../core-primitives/import-queue", default-features = false }
 itp-rpc = { path = "../../core-primitives/rpc", default-features = false }
 itp-stf-primitives = { path = "../../core-primitives/stf-primitives", default-features = false }
 itp-top-pool-author = { path = "../../core-primitives/top-pool-author", default-features = false }
@@ -32,6 +33,7 @@ sp-core = { default-features = false, features = ["full_crypto"], git = "https:/
 [features]
 default = ["std"]
 std = [
+    "itp-import-queue/std",
     "itp-rpc/std",
     "itp-stf-primitives/std",
     "itp-top-pool-author/std",
@@ -43,6 +45,7 @@ std = [
 ]
 sgx = [
     "sgx_tstd",
+    "itp-import-queue/sgx",
     "itp-rpc/sgx",
     "itp-top-pool-author/sgx",
     "jsonrpc-core_sgx",

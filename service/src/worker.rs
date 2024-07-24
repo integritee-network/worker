@@ -25,6 +25,7 @@ use async_trait::async_trait;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use itp_node_api::{api_client::PalletTeerexApi, node_api_factory::CreateNodeApi};
 use itp_types::ShardIdentifier;
+use itp_utils::ToHexPrefixed;
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use its_rpc_handler::constants::RPC_METHOD_NAME_IMPORT_BLOCKS;
 use jsonrpsee::{
@@ -88,7 +89,8 @@ where
 		}
 		let nr_blocks = blocks.len();
 
-		let blocks_json = vec![to_json_value(blocks)?];
+		let encoded_blocks = blocks.to_hex();
+
 		let peers = self
 			.peers
 			.read()
@@ -102,22 +104,12 @@ where
 		let nr_peers = peers.len();
 
 		for url in peers {
-			let blocks = blocks_json.clone();
-
+			let encoded_blocks_cloned = encoded_blocks.clone();
 			tokio::spawn(async move {
 				debug!("Broadcasting block to peer with address: {:?}", url);
 				// FIXME: Websocket connection to a worker should stay, once established.
-				let client = match WsClientBuilder::default().build(&url).await {
-					Ok(c) => c,
-					Err(e) => {
-						error!("Failed to create websocket client for block broadcasting (target url: {}): {:?}", url, e);
-						return
-					},
-				};
-
-				if let Err(e) =
-					client.request::<Vec<u8>>(RPC_METHOD_NAME_IMPORT_BLOCKS, blocks.into()).await
-				{
+				let direct_client = DirectWorkerApi::new(url.clone());
+				if let Err(e) = direct_client.import_sidechain_blocks(encoded_blocks_cloned) {
 					error!(
 						"Broadcast block request ({}) to {} failed: {:?}",
 						RPC_METHOD_NAME_IMPORT_BLOCKS, url, e
@@ -169,18 +161,7 @@ where
 			))
 			.unwrap();
 			trace!("found peer rpc url: {}", enclave_url);
-			let worker_api_direct = DirectWorkerApi::new(enclave_url.clone().into());
-			match worker_api_direct.get_untrusted_worker_url() {
-				Ok(untrusted_worker_url) => {
-					peer_urls.push(untrusted_worker_url);
-				},
-				Err(e) => {
-					error!(
-						"Failed to get untrusted worker url (enclave: {}): {:?}",
-						enclave_url, e
-					);
-				},
-			}
+			peer_urls.push(enclave_url.into());
 		}
 		debug!("found {} peers in shard state for {:?}", peer_urls.len(), shard);
 		Ok(peer_urls)

@@ -18,7 +18,8 @@
 use super::*;
 use crate::mock::MockSidechainBlockFetcher;
 use itp_rpc::RpcResponse;
-use its_rpc_handler::constants::RPC_METHOD_NAME_IMPORT_BLOCKS;
+use its_primitives::types::{header::ShardIdentifier, BlockHash};
+use its_rpc_handler::constants::RPC_METHOD_NAME_FETCH_BLOCKS_FROM_PEER;
 use its_test::sidechain_block_builder::{SidechainBlockBuilder, SidechainBlockBuilderTrait};
 use jsonrpsee::{
 	types::{to_json_value, traits::Client},
@@ -35,22 +36,19 @@ fn init() {
 #[tokio::test]
 async fn test_client_calls() {
 	init();
-	let addr =
-		run_server("127.0.0.1:0", Arc::new(TestEnclave), Arc::new(MockSidechainBlockFetcher))
-			.await
-			.unwrap();
+	let addr = run_server("127.0.0.1:0", Arc::new(MockSidechainBlockFetcher)).await.unwrap();
 	info!("ServerAddress: {:?}", addr);
 
 	let url = format!("ws://{}", addr);
 	let client = WsClientBuilder::default().build(&url).await.unwrap();
+	let param_json =
+		to_json_value((BlockHash::default(), Option::<()>::None, ShardIdentifier::default()))
+			.unwrap();
 	let response: Vec<u8> = client
-		.request(
-			RPC_METHOD_NAME_IMPORT_BLOCKS,
-			vec![to_json_value(vec![SidechainBlockBuilder::default().build_signed()]).unwrap()]
-				.into(),
-		)
+		.request(RPC_METHOD_NAME_FETCH_BLOCKS_FROM_PEER, vec![param_json].into())
 		.await
 		.unwrap();
 
-	assert!(RpcResponse::decode(&mut response.as_slice()).is_ok());
+	//received no blocks from server
+	assert!(response.is_empty());
 }

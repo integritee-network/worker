@@ -22,23 +22,23 @@ use crate::{
 	initialization::global_components::{
 		EnclaveBlockImportConfirmationHandler, EnclaveGetterExecutor, EnclaveLightClientSeal,
 		EnclaveOCallApi, EnclaveRpcConnectionRegistry, EnclaveRpcResponder,
-		EnclaveShieldingKeyRepository, EnclaveSidechainApi, EnclaveSidechainBlockImportQueue,
-		EnclaveSidechainBlockImportQueueWorker, EnclaveSidechainBlockImporter,
-		EnclaveSidechainBlockSyncer, EnclaveStateFileIo, EnclaveStateHandler,
-		EnclaveStateInitializer, EnclaveStateObserver, EnclaveStateSnapshotRepository,
-		EnclaveStfEnclaveSigner, EnclaveTopPool, EnclaveTopPoolAuthor,
-		GLOBAL_ATTESTATION_HANDLER_COMPONENT, GLOBAL_INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_SEAL,
-		GLOBAL_OCALL_API_COMPONENT, GLOBAL_RPC_WS_HANDLER_COMPONENT,
-		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT,
-		GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
-		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT, GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT,
-		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
-		GLOBAL_STATE_OBSERVER_COMPONENT, GLOBAL_TARGET_A_PARENTCHAIN_LIGHT_CLIENT_SEAL,
+		EnclaveShieldingKeyRepository, EnclaveSidechainApi, EnclaveSidechainBlockImportQueueWorker,
+		EnclaveSidechainBlockImporter, EnclaveSidechainBlockSyncer, EnclaveStateFileIo,
+		EnclaveStateHandler, EnclaveStateInitializer, EnclaveStateObserver,
+		EnclaveStateSnapshotRepository, EnclaveStfEnclaveSigner, EnclaveTopPool,
+		EnclaveTopPoolAuthor, GLOBAL_ATTESTATION_HANDLER_COMPONENT,
+		GLOBAL_INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_SEAL, GLOBAL_OCALL_API_COMPONENT,
+		GLOBAL_RPC_WS_HANDLER_COMPONENT, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
+		GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT,
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
+		GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
+		GLOBAL_STATE_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_OBSERVER_COMPONENT,
+		GLOBAL_TARGET_A_PARENTCHAIN_LIGHT_CLIENT_SEAL,
 		GLOBAL_TARGET_B_PARENTCHAIN_LIGHT_CLIENT_SEAL, GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
 		GLOBAL_WEB_SOCKET_SERVER_COMPONENT,
 	},
 	ocall::OcallApi,
-	rpc::{rpc_response_channel::RpcResponseChannel, worker_api_direct::public_api_rpc_handler},
+	rpc::{common_api::add_common_api, rpc_response_channel::RpcResponseChannel},
 	utils::{
 		get_extrinsic_factory_from_integritee_solo_or_parachain,
 		get_node_metadata_repository_from_integritee_solo_or_parachain,
@@ -77,6 +77,7 @@ use itp_top_pool::pool::Options as PoolOptions;
 use itp_top_pool_author::author::AuthorTopFilter;
 use itp_types::{parentchain::ParentchainId, ShardIdentifier};
 use its_sidechain::block_composer::BlockComposer;
+use jsonrpc_core::IoHandler;
 use log::*;
 use sp_core::crypto::Pair;
 use std::{collections::HashMap, path::PathBuf, string::String, sync::Arc};
@@ -175,13 +176,22 @@ pub(crate) fn init_enclave(
 	GLOBAL_TOP_POOL_AUTHOR_COMPONENT.initialize(top_pool_author.clone());
 
 	let getter_executor = Arc::new(EnclaveGetterExecutor::new(state_observer));
-	let io_handler =
-		public_api_rpc_handler(top_pool_author, getter_executor, shielding_key_repository);
+
+	let mut io_handler = IoHandler::new();
+	add_common_api(&mut io_handler, top_pool_author, getter_executor, shielding_key_repository);
+
+	#[cfg(feature = "sidechain")]
+	{
+		use crate::initialization::global_components::EnclaveSidechainBlockImportQueue;
+		use its_rpc_handler::add_sidechain_api;
+		let sidechain_block_import_queue = Arc::new(EnclaveSidechainBlockImportQueue::default());
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.initialize(sidechain_block_import_queue);
+		let sidechain_import_queue = GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.get()?;
+		add_sidechain_api(&mut io_handler, sidechain_import_queue);
+	}
+
 	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));
 	GLOBAL_RPC_WS_HANDLER_COMPONENT.initialize(rpc_handler);
-
-	let sidechain_block_import_queue = Arc::new(EnclaveSidechainBlockImportQueue::default());
-	GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT.initialize(sidechain_block_import_queue);
 
 	let attestation_handler =
 		Arc::new(IntelAttestationHandler::new(ocall_api, signing_key_repository));

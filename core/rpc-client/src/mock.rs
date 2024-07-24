@@ -89,6 +89,10 @@ impl DirectApi for DirectClientMock {
 		Metadata::try_from(metadata).map_err(|e| e.into())
 	}
 
+	fn import_sidechain_blocks(&self, _blocks_encoded: String) -> Result<()> {
+		Ok(())
+	}
+
 	fn send(&self, _request: &str) -> Result<()> {
 		unimplemented!()
 	}

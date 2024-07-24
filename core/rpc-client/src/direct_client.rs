@@ -51,6 +51,7 @@ pub trait DirectApi {
 	fn get_mu_ra_url(&self) -> Result<String>;
 	fn get_untrusted_worker_url(&self) -> Result<String>;
 	fn get_state_metadata(&self) -> Result<Metadata>;
+	fn import_sidechain_blocks(&self, blocks_encoded: String) -> Result<()>;
 
 	fn send(&self, request: &str) -> Result<()>;
 	/// Close any open websocket connection.
@@ -153,6 +154,15 @@ impl DirectApi for DirectClient {
 		let metadata = RuntimeMetadataPrefixed::decode(&mut rpc_return_value.value.as_slice())?;
 		println!("[+] Got metadata of enclave runtime");
 		Metadata::try_from(metadata).map_err(|e| e.into())
+	}
+
+	fn import_sidechain_blocks(&self, sidechain_blocks_encoded: String) -> Result<()> {
+		let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(
+			"sidechain_importBlock".to_owned(),
+			vec![sidechain_blocks_encoded],
+		)?;
+		self.get(&jsonrpc_call)?;
+		Ok(())
 	}
 
 	fn send(&self, request: &str) -> Result<()> {

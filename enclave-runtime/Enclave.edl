@@ -184,11 +184,6 @@ enclave {
 			int skip_ra
 		);
 
-		public sgx_status_t call_rpc_methods(
-			[in, size=request_len] uint8_t* request, uint32_t request_len,
-			[out, size=response_len] uint8_t* response, uint32_t response_len
-		);
-
 		public size_t test_main_entrance();
 	};
 

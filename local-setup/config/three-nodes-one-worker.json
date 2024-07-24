@@ -60,6 +60,8 @@
       "source": "bin",
       "flags": [
         "--clean-reset",
+        "-T",
+        "wss://localhost",
         "-P",
         "2000",
         "-p",

@@ -39,9 +39,8 @@ type Hash = sp_core::H256;
 
 pub fn add_top_pool_direct_rpc_methods<R, TCS, G>(
 	top_pool_author: Arc<R>,
-	mut io_handler: IoHandler,
-) -> IoHandler
-where
+	io_handler: &mut IoHandler,
+) where
 	R: AuthorApi<Hash, Hash, TCS, G> + Send + Sync + 'static,
 	TCS: PartialEq + Encode + Decode + Debug + Send + Sync + 'static,
 	G: PartialEq + Encode + Decode + Debug + Send + Sync + 'static,
@@ -149,8 +148,6 @@ where
 			},
 		}
 	});
-
-	io_handler
 }
 
 // converts the rpc methods vector to a string and adds commas and brackets for readability

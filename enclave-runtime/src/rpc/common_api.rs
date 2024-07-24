@@ -37,44 +37,30 @@ use itp_stf_executor::{getter_executor::ExecuteGetter, traits::StfShardVaultQuer
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{DirectRequestStatus, Request, ShardIdentifier, H256};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
-use its_primitives::types::block::SignedBlock;
-use its_sidechain::rpc_handler::{direct_top_pool_api, import_block_api};
+use its_rpc_handler::direct_top_pool_api::add_top_pool_direct_rpc_methods;
 use jsonrpc_core::{serde_json::json, IoHandler, Params, Value};
 use log::debug;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_runtime::OpaqueExtrinsic;
-use std::{borrow::ToOwned, format, str, string::String, sync::Arc, vec::Vec};
+use std::{format, str, string::String, sync::Arc, vec::Vec};
 
 fn compute_hex_encoded_return_error(error_msg: &str) -> String {
 	RpcReturnValue::from_error_message(error_msg).to_hex()
 }
 
-fn get_all_rpc_methods_string(io_handler: &IoHandler) -> String {
-	let method_string = io_handler
-		.iter()
-		.map(|rp_tuple| rp_tuple.0.to_owned())
-		.collect::<Vec<String>>()
-		.join(", ");
-
-	format!("methods: [{}]", method_string)
-}
-
-pub fn public_api_rpc_handler<Author, GetterExecutor, AccessShieldingKey>(
+pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey>(
+	io_handler: &mut IoHandler,
 	top_pool_author: Arc<Author>,
 	getter_executor: Arc<GetterExecutor>,
 	shielding_key: Arc<AccessShieldingKey>,
-) -> IoHandler
-where
+) where
 	Author: AuthorApi<H256, H256, TrustedCallSigned, Getter> + Send + Sync + 'static,
 	GetterExecutor: ExecuteGetter + Send + Sync + 'static,
 	AccessShieldingKey: AccessPubkey<KeyType = Rsa3072PubKey> + Send + Sync + 'static,
 {
-	let mut io = direct_top_pool_api::add_top_pool_direct_rpc_methods(
-		top_pool_author.clone(),
-		IoHandler::new(),
-	);
+	add_top_pool_direct_rpc_methods(top_pool_author.clone(), io_handler);
 
-	io.add_sync_method("author_getShieldingKey", move |_: Params| {
+	io_handler.add_sync_method("author_getShieldingKey", move |_: Params| {
 		debug!("worker_api_direct rpc was called: author_getShieldingKey");
 		let rsa_pubkey = match shielding_key.retrieve_pubkey() {
 			Ok(key) => key,
@@ -98,7 +84,7 @@ where
 	});
 
 	let local_top_pool_author = top_pool_author.clone();
-	io.add_sync_method("author_getShardVault", move |_: Params| {
+	io_handler.add_sync_method("author_getShardVault", move |_: Params| {
 		debug!("worker_api_direct rpc was called: author_getShardVault");
 		let shard =
 			local_top_pool_author.list_handled_shards().first().copied().unwrap_or_default();
@@ -118,14 +104,14 @@ where
 		}
 	});
 
-	io.add_sync_method("author_getShard", move |_: Params| {
+	io_handler.add_sync_method("author_getShard", move |_: Params| {
 		debug!("worker_api_direct rpc was called: author_getShard");
 		let shard = top_pool_author.list_handled_shards().first().copied().unwrap_or_default();
 		let json_value = RpcReturnValue::new(shard.encode(), false, DirectRequestStatus::Ok);
 		Ok(json!(json_value.to_hex()))
 	});
 
-	io.add_sync_method("author_getMuRaUrl", move |_: Params| {
+	io_handler.add_sync_method("author_getMuRaUrl", move |_: Params| {
 		debug!("worker_api_direct rpc was called: author_getMuRaUrl");
 		let url = match GLOBAL_PRIMITIVES_CACHE.get_mu_ra_url() {
 			Ok(url) => url,
@@ -139,7 +125,7 @@ where
 		Ok(json!(json_value.to_hex()))
 	});
 
-	io.add_sync_method("author_getUntrustedUrl", move |_: Params| {
+	io_handler.add_sync_method("author_getUntrustedUrl", move |_: Params| {
 		debug!("worker_api_direct rpc was called: author_getUntrustedUrl");
 		let url = match GLOBAL_PRIMITIVES_CACHE.get_untrusted_worker_url() {
 			Ok(url) => url,
@@ -153,26 +139,26 @@ where
 		Ok(json!(json_value.to_hex()))
 	});
 
-	io.add_sync_method("chain_subscribeAllHeads", |_: Params| {
+	io_handler.add_sync_method("chain_subscribeAllHeads", |_: Params| {
 		debug!("worker_api_direct rpc was called: chain_subscribeAllHeads");
 		let parsed = "world";
 		Ok(Value::String(format!("hello, {}", parsed)))
 	});
 
-	io.add_sync_method("state_getMetadata", |_: Params| {
+	io_handler.add_sync_method("state_getMetadata", |_: Params| {
 		debug!("worker_api_direct rpc was called: tate_getMetadata");
 		let metadata = Runtime::metadata();
 		let json_value = RpcReturnValue::new(metadata.into(), false, DirectRequestStatus::Ok);
 		Ok(json!(json_value.to_hex()))
 	});
 
-	io.add_sync_method("state_getRuntimeVersion", |_: Params| {
+	io_handler.add_sync_method("state_getRuntimeVersion", |_: Params| {
 		debug!("worker_api_direct rpc was called: state_getRuntimeVersion");
 		let parsed = "world";
 		Ok(Value::String(format!("hello, {}", parsed)))
 	});
 
-	io.add_sync_method("state_executeGetter", move |params: Params| {
+	io_handler.add_sync_method("state_executeGetter", move |params: Params| {
 		debug!("worker_api_direct rpc was called: state_executeGetter");
 		let json_value = match execute_getter_inner(getter_executor.as_ref(), params) {
 			Ok(state_getter_value) => RpcReturnValue {
@@ -186,7 +172,7 @@ where
 		Ok(json!(json_value))
 	});
 
-	io.add_sync_method("attesteer_forwardDcapQuote", move |params: Params| {
+	io_handler.add_sync_method("attesteer_forwardDcapQuote", move |params: Params| {
 		debug!("worker_api_direct rpc was called: attesteer_forwardDcapQuote");
 		let json_value = match forward_dcap_quote_inner(params) {
 			Ok(val) => RpcReturnValue {
@@ -201,7 +187,7 @@ where
 		Ok(json!(json_value))
 	});
 
-	io.add_sync_method("attesteer_forwardIasAttestationReport", move |params: Params| {
+	io_handler.add_sync_method("attesteer_forwardIasAttestationReport", move |params: Params| {
 		debug!("worker_api_direct rpc was called: attesteer_forwardIasAttestationReport");
 		let json_value = match attesteer_forward_ias_attestation_report_inner(params) {
 			Ok(val) => RpcReturnValue {
@@ -216,31 +202,23 @@ where
 		Ok(json!(json_value))
 	});
 
-	io.add_sync_method("system_health", |_: Params| {
+	io_handler.add_sync_method("system_health", |_: Params| {
 		debug!("worker_api_direct rpc was called: system_health");
 		let parsed = "world";
 		Ok(Value::String(format!("hello, {}", parsed)))
 	});
 
-	io.add_sync_method("system_name", |_: Params| {
+	io_handler.add_sync_method("system_name", |_: Params| {
 		debug!("worker_api_direct rpc was called: system_name");
 		let parsed = "world";
 		Ok(Value::String(format!("hello, {}", parsed)))
 	});
 
-	io.add_sync_method("system_version", |_: Params| {
+	io_handler.add_sync_method("system_version", |_: Params| {
 		debug!("worker_api_direct rpc was called: system_version");
 		let parsed = "world";
 		Ok(Value::String(format!("hello, {}", parsed)))
 	});
-
-	let rpc_methods_string = get_all_rpc_methods_string(&io);
-	io.add_sync_method("rpc_methods", move |_: Params| {
-		debug!("worker_api_direct rpc was called: rpc_methods");
-		Ok(Value::String(rpc_methods_string.to_owned()))
-	});
-
-	io
 }
 
 fn execute_getter_inner<GE: ExecuteGetter>(
@@ -314,34 +292,4 @@ fn attesteer_forward_ias_attestation_report_inner(
 		.unwrap();
 
 	Ok(ext)
-}
-
-pub fn sidechain_io_handler<ImportFn, Error>(import_fn: ImportFn) -> IoHandler
-where
-	ImportFn: Fn(SignedBlock) -> Result<(), Error> + Sync + Send + 'static,
-	Error: std::fmt::Debug,
-{
-	let io = IoHandler::new();
-	import_block_api::add_import_block_rpc_method(import_fn, io)
-}
-
-#[cfg(feature = "test")]
-pub mod tests {
-	use super::*;
-	use std::string::ToString;
-
-	pub fn test_given_io_handler_methods_then_retrieve_all_names_as_string() {
-		let mut io = IoHandler::new();
-		let method_names: [&str; 4] = ["method1", "another_method", "fancy_thing", "solve_all"];
-
-		for method_name in method_names.iter() {
-			io.add_sync_method(method_name, |_: Params| Ok(Value::String("".to_string())));
-		}
-
-		let method_string = get_all_rpc_methods_string(&io);
-
-		for method_name in method_names.iter() {
-			assert!(method_string.contains(method_name));
-		}
-	}
 }
