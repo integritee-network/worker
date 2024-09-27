@@ -1,0 +1,47 @@
+[package]
+name = "pallet-parentchain"
+description = "The remote attestation registry and verification pallet for integritee blockchains and parachains"
+version = "0.11.0"
+authors = ["Integritee AG <hello@integritee.network>"]
+homepage = "https://integritee.network/"
+repository = "https://github.com/integritee-network/pallets/"
+license = "Apache-2.0"
+edition = "2021"
+
+[dependencies]
+codec = { version = "3.0.0", default-features = false, features = ["derive"], package = "parity-scale-codec" }
+log = { version = "0.4.14", default-features = false }
+scale-info = { version = "2.10.0", default-features = false, features = ["derive"] }
+serde = { version = "1.0.13", features = ["derive"], optional = true }
+
+# substrate dependencies
+frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+frame-system = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+pallet-balances = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-io = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+
+[dev-dependencies]
+env_logger = "0.9.0"
+sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "log/std",
+    "scale-info/std",
+    "serde",
+    # substrate dependencies
+    "frame-support/std",
+    "frame-system/std",
+    "pallet-balances/std",
+    "sp-core/std",
+    "sp-io/std",
+    "sp-runtime/std",
+    "sp-std/std",
+]
+
+try-runtime = ["frame-support/try-runtime"]

@@ -13,6 +13,7 @@ scale-info = { version = "2.10.0", default-features = false, features = ["derive
 
 # local dependencies
 itp-sgx-runtime-primitives = { path = "../../core-primitives/sgx-runtime-primitives", default-features = false }
+pallet-parentchain = { default-features = false, path = "pallets/parentchain" }
 
 # Substrate dependencies
 frame-executive = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
@@ -30,7 +31,6 @@ sp-version = { default-features = false, git = "https://github.com/paritytech/su
 
 # Integritee dependencies
 pallet-evm = { default-features = false, optional = true, git = "https://github.com/integritee-network/frontier.git", branch = "bar/polkadot-v0.9.42" }
-pallet-parentchain = { default-features = false, git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.13.0-polkadot-v0.9.42" }
 
 [features]
 default = ["std"]
