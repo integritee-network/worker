@@ -4,6 +4,8 @@ members = [
     "app-libs/oracle",
     "app-libs/parentchain-interface",
     "app-libs/sgx-runtime",
+    "app-libs/sgx-runtime/pallets/parentchain",
+    "app-libs/sgx-runtime/pallets/guess-the-number",
     "app-libs/stf",
     "cli",
     "core/direct-rpc-server",

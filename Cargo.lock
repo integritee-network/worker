@@ -5154,6 +5154,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-guess-the-number"
+version = "0.11.0"
+dependencies = [
+ "env_logger 0.9.3",
+ "frame-support",
+ "frame-system",
+ "log 0.4.20",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "serde 1.0.193",
+ "sp-core",
+ "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-parentchain"
 version = "0.11.0"
 dependencies = [
