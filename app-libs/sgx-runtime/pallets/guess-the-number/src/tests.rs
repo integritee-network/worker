@@ -14,209 +14,131 @@
 	limitations under the License.
 
 */
-use crate::{mock::*, Error, Event as ParentchainEvent};
+use crate::{mock::*, Error, Event};
 use frame_support::{assert_err, assert_noop, assert_ok};
+use frame_support::pallet_prelude::DispatchResultWithPostInfo;
+use frame_support::traits::Hooks;
 use frame_system::AccountInfo;
 use pallet_balances::AccountData;
 use sp_core::H256;
 use sp_keyring::AccountKeyring;
-use sp_runtime::{
-	generic,
-	traits::{BlakeTwo256, Header as HeaderT},
-	DispatchError::BadOrigin,
-};
+use sp_runtime::{generic, traits::{BlakeTwo256, Header as HeaderT}, DispatchError, DispatchError::BadOrigin};
+use sp_runtime::traits::Scale;
 
-pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
+const TEN_MIN: u64 = 600_000;
+const ONE_DAY: u64 = 86_400_000;
 
+/// Run until a particular block.
+pub fn run_to_block(n: u64) {
+    while System::block_number() < n {
+        if System::block_number() > 1 {
+            System::on_finalize(System::block_number());
+        }
+        Timestamp::on_finalize(System::block_number());
+        System::set_block_number(System::block_number() + 1);
+        System::on_initialize(System::block_number());
+    }
+}
+
+pub fn set_timestamp(t: u64) {
+    let _ = pallet_timestamp::Pallet::<Test>::set(RuntimeOrigin::none(), t);
+}
+
+pub fn assert_dispatch_err(actual: DispatchResultWithPostInfo, expected: DispatchError) {
+    assert_eq!(actual.unwrap_err().error, expected)
+}
+
+pub fn get_num_events<T: frame_system::Config>() -> usize {
+    frame_system::Pallet::<T>::events().len()
+}
+pub fn events<T: frame_system::Config>() -> Vec<T::RuntimeEvent> {
+    let events = frame_system::Pallet::<T>::events()
+        .into_iter()
+        .map(|evt| evt.event)
+        .collect::<Vec<_>>();
+    frame_system::Pallet::<T>::reset_events();
+    events
+}
+pub fn last_event<T: frame_system::Config>() -> Option<T::RuntimeEvent> {
+    event_at_index::<T>(get_num_events::<T>() - 1)
+}
+
+pub fn event_at_index<T: frame_system::Config>(index: usize) -> Option<T::RuntimeEvent> {
+    let events = frame_system::Pallet::<T>::events();
+    if events.len() < index {
+        return None;
+    }
+    let frame_system::EventRecord { event, .. } = &events[index];
+    Some(event.clone())
+}
 #[test]
-fn verify_storage_works() {
-	let block_number = 3;
-	let parent_hash = H256::from_low_u64_be(420);
-
-	let header: Header = HeaderT::new(
-		block_number,
-		Default::default(),
-		Default::default(),
-		parent_hash,
-		Default::default(),
-	);
-	let hash = header.hash();
-
-	new_test_ext().execute_with(|| {
-		assert_ok!(ParentchainIntegritee::set_block(RuntimeOrigin::root(), header));
-		assert_eq!(ParentchainIntegritee::block_number().unwrap(), block_number);
-		assert_eq!(ParentchainIntegritee::parent_hash().unwrap(), parent_hash);
-		assert_eq!(ParentchainIntegritee::block_hash().unwrap(), hash);
-
-		System::assert_last_event(RuntimeEvent::ParentchainIntegritee(
-			ParentchainEvent::SetBlock { block_number, parent_hash, block_hash: hash },
-		));
-	})
+fn round_progression_works() {
+    new_test_ext().execute_with(|| {
+        System::set_block_number(System::block_number() + 1); // this is needed to assert events
+        assert!(true)
+    })
 }
 
 #[test]
-fn multi_pallet_instance_storage_works() {
-	let block_number = 3;
-	let parent_hash = H256::from_low_u64_be(420);
-
-	let header: Header = HeaderT::new(
-		block_number,
-		Default::default(),
-		Default::default(),
-		parent_hash,
-		Default::default(),
-	);
-	let hash = header.hash();
-
-	let block_number_a = 5;
-	let parent_hash_a = H256::from_low_u64_be(421);
-
-	let header_a: Header = HeaderT::new(
-		block_number_a,
-		Default::default(),
-		Default::default(),
-		parent_hash_a,
-		Default::default(),
-	);
-	let hash_a = header_a.hash();
-
-	new_test_ext().execute_with(|| {
-		assert_ok!(ParentchainIntegritee::set_block(RuntimeOrigin::root(), header));
-		assert_eq!(ParentchainIntegritee::block_number().unwrap(), block_number);
-		assert_eq!(ParentchainIntegritee::parent_hash().unwrap(), parent_hash);
-		assert_eq!(ParentchainIntegritee::block_hash().unwrap(), hash);
-
-		System::assert_last_event(RuntimeEvent::ParentchainIntegritee(
-			ParentchainEvent::SetBlock { block_number, parent_hash, block_hash: hash },
-		));
-
-		assert_ok!(ParentchainTargetA::set_block(RuntimeOrigin::root(), header_a));
-		assert_eq!(ParentchainTargetA::block_number().unwrap(), block_number_a);
-		assert_eq!(ParentchainTargetA::parent_hash().unwrap(), parent_hash_a);
-		assert_eq!(ParentchainTargetA::block_hash().unwrap(), hash_a);
-
-		System::assert_last_event(RuntimeEvent::ParentchainTargetA(ParentchainEvent::SetBlock {
-			block_number: block_number_a,
-			parent_hash: parent_hash_a,
-			block_hash: hash_a,
-		}));
-
-		// double check previous storage
-		assert_eq!(ParentchainIntegritee::block_number().unwrap(), block_number);
-		assert_eq!(ParentchainIntegritee::block_hash().unwrap(), hash);
-	})
+fn push_by_one_day_errs_with_bad_origin() {
+    new_test_ext().execute_with(|| {
+        assert_dispatch_err(
+            GuessTheNumber::push_by_one_day(RuntimeOrigin::signed(AccountKeyring::Bob.into())),
+            DispatchError::BadOrigin,
+        );
+    });
 }
 
 #[test]
-fn non_root_account_errs() {
-	let header = HeaderT::new(
-		1,
-		Default::default(),
-		Default::default(),
-		[69; 32].into(),
-		Default::default(),
-	);
+fn timestamp_callback_works() {
+    new_test_ext().execute_with(|| {
+        //large offset since 1970 to when first block is generated
+        const GENESIS_TIME: u64 = 1_585_058_843_000;
+        const ONE_DAY: u64 = 86_400_000;
+        System::set_block_number(0);
 
-	new_test_ext().execute_with(|| {
-		let root = AccountKeyring::Ferdie.to_account_id();
-		assert_err!(
-			ParentchainIntegritee::set_block(RuntimeOrigin::signed(root), header),
-			BadOrigin
-		);
-	})
+        set_timestamp(GENESIS_TIME);
+
+        assert_eq!(GuessTheNumber::current_round_index(), 1);
+        assert_eq!(
+            GuessTheNumber::next_round_timestamp(),
+            (GENESIS_TIME - GENESIS_TIME.rem(ONE_DAY)) + ONE_DAY
+        );
+
+        run_to_block(1);
+        set_timestamp(GENESIS_TIME + ONE_DAY);
+        assert_eq!(GuessTheNumber::current_round_index(), 2);
+
+        run_to_block(2);
+        set_timestamp(GENESIS_TIME + 2 * ONE_DAY);
+        assert_eq!(GuessTheNumber::current_round_index(), 3);
+    });
 }
 
 #[test]
-fn init_shard_vault_works() {
-	new_test_ext().execute_with(|| {
-		let vault = AccountKeyring::Alice.to_account_id();
-		assert_ok!(ParentchainIntegritee::init_shard_vault(RuntimeOrigin::root(), vault.clone()));
-		assert_eq!(ParentchainIntegritee::shard_vault().unwrap(), vault);
+fn push_one_day_works() {
+    new_test_ext().execute_with(|| {
+        System::set_block_number(System::block_number() + 1); // this is needed to assert events
+        let genesis_time: u64 = 0 * TEN_MIN + 1;
 
-		System::assert_last_event(RuntimeEvent::ParentchainIntegritee(
-			ParentchainEvent::ShardVaultInitialized { account: vault.clone() },
-		));
-		assert_noop!(
-			ParentchainIntegritee::init_shard_vault(RuntimeOrigin::root(), vault.clone()),
-			Error::<Test, ParentchainInstanceIntegritee>::ShardVaultAlreadyInitialized
-		);
-	})
-}
-#[test]
-fn init_parentchain_genesis_hash_works() {
-	new_test_ext().execute_with(|| {
-		let genesis = H256::default();
-		assert_ok!(ParentchainIntegritee::init_parentchain_genesis_hash(
-			RuntimeOrigin::root(),
-			genesis
-		));
-		assert_eq!(ParentchainIntegritee::parentchain_genesis_hash().unwrap(), genesis);
+        System::set_block_number(0);
+        set_timestamp(genesis_time);
 
-		System::assert_last_event(RuntimeEvent::ParentchainIntegritee(
-			ParentchainEvent::ParentchainGenesisInitialized { hash: genesis },
-		));
-		assert_noop!(
-			ParentchainIntegritee::init_parentchain_genesis_hash(RuntimeOrigin::root(), genesis),
-			Error::<Test, ParentchainInstanceIntegritee>::GenesisAlreadyInitialized
-		);
-	})
-}
-#[test]
-fn force_account_info_works() {
-	new_test_ext().execute_with(|| {
-		let vault = AccountKeyring::Alice.to_account_id();
-		let account_info = AccountInfo {
-			nonce: 42,
-			consumers: 1,
-			providers: 1,
-			sufficients: 1,
-			data: AccountData {
-				free: 123456789,
-				reserved: 23456,
-				frozen: 345,
-				flags: Default::default(),
-			},
-		};
-		assert_ok!(ParentchainIntegritee::force_account_info(
-			RuntimeOrigin::root(),
-			vault.clone(),
-			account_info.clone()
-		));
-		assert_eq!(ParentchainIntegritee::account(&vault), account_info);
+        assert_eq!(
+            GuessTheNumber::next_round_timestamp(),
+            (genesis_time - genesis_time.rem(ONE_DAY)) + ONE_DAY
+        );
 
-		System::assert_last_event(RuntimeEvent::ParentchainIntegritee(
-			ParentchainEvent::AccountInfoForcedFor { account: vault.clone() },
-		));
-	})
-}
 
-#[test]
-fn set_now_works() {
-	new_test_ext().execute_with(|| {
-		let now = 111u64;
-		assert_ok!(ParentchainIntegritee::set_now(RuntimeOrigin::root(), now));
-		assert_eq!(ParentchainIntegritee::now(), Some(now));
-	})
-}
+        run_to_block(1);
+        set_timestamp(genesis_time + TEN_MIN);
 
-#[test]
-fn set_creation_timestamp_works() {
-	new_test_ext().execute_with(|| {
-		let now = 111u64;
-		assert_ok!(ParentchainIntegritee::set_creation_timestamp(RuntimeOrigin::root(), now));
-		assert_eq!(ParentchainIntegritee::creation_timestamp(), Some(now));
-	})
-}
+        assert_ok!(GuessTheNumber::push_by_one_day(RuntimeOrigin::signed(master())));
 
-#[test]
-fn set_creation_block_works() {
-	let parent_hash = H256::from_low_u64_be(420);
-	let header =
-		Header::new(1, Default::default(), Default::default(), parent_hash, Default::default());
-	let hash = header.hash();
-	new_test_ext().execute_with(|| {
-		assert_ok!(ParentchainIntegritee::set_creation_block(RuntimeOrigin::root(), header));
-		assert_eq!(ParentchainIntegritee::creation_block_hash(), Some(hash));
-		assert_eq!(ParentchainIntegritee::creation_block_number(), Some(1));
-	})
+        assert_eq!(last_event::<Test>(), Some(Event::RoundSchedulePushedByOneDay.into()));
+        assert_eq!(
+            GuessTheNumber::next_round_timestamp(),
+            (genesis_time - genesis_time.rem(ONE_DAY)) + 2 * ONE_DAY
+        );
+    });
 }
