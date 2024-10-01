@@ -53,19 +53,14 @@ pub mod pallet {
     pub enum Error<T> {}
 
     #[pallet::storage]
-    #[pallet::getter(fn parent_hash)]
-    pub(super) type ParentHash<T: Config> =
-    StorageValue<_, T::Hash, OptionQuery>;
-
-    #[pallet::storage]
     #[pallet::getter(fn current_round_index)]
     pub(super) type CurrentRoundIndex<T: Config> =
     StorageValue<_, u32, ValueQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn winning_number)]
-    pub(super) type WinningNumber<T: Config> =
-    StorageValue<_, u32, ValueQuery>;
+    #[pallet::getter(fn lucky_number)]
+    pub(super) type LuckyNumber<T: Config> =
+    StorageValue<_, u32, OptionQuery>;
 
 
     #[pallet::type_value]
@@ -123,10 +118,10 @@ impl<T: Config> Pallet<T> {
     fn start_round() -> DispatchResult {
         let current_round_index = <CurrentRoundIndex<T>>::get();
         info!("starting round {}", current_round_index);
-        let winning_number = T::Randomness::random_u32(0, 10_000);
+        let lucky_number = T::Randomness::random_u32(0, 10_000);
         // todo: delete this log
-        info!("winning number:  {}", winning_number);
-        <WinningNumber<T>>::put(winning_number);
+        info!("winning number:  {}", lucky_number);
+        <LuckyNumber<T>>::put(lucky_number);
         Ok(())
     }
 
@@ -143,8 +138,11 @@ impl<T: Config> Pallet<T> {
             let next = (now - now.rem(T::MomentsPerDay::get()))
                 .saturating_add(T::RoundDuration::get());
             <NextRoundTimestamp<T>>::put(next);
+            if Self::start_round().is_err() {
+                warn!("start first round failed")
+            };
         } else if Self::next_round_timestamp() < now && Self::progress_round().is_err() {
-            warn!("progress ceremony phase failed");
+            warn!("progress round phase failed");
         };
     }
 }

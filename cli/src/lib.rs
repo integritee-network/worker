@@ -37,6 +37,7 @@ mod evm;
 #[cfg(feature = "teeracle")]
 mod oracle;
 mod trusted_base_cli;
+mod guess_the_number;
 mod trusted_cli;
 mod trusted_command_utils;
 mod trusted_operation;
@@ -59,67 +60,73 @@ pub(crate) const ED25519_KEY_TYPE: KeyTypeId = KeyTypeId(*b"ed25");
 #[clap(name = "integritee-cli")]
 #[clap(version = VERSION)]
 #[clap(author = "Integritee AG <hello@integritee.network>")]
-#[cfg_attr(feature = "teeracle", clap(about = "interact with integritee-node and teeracle", long_about = None))]
-#[cfg_attr(feature = "sidechain", clap(about = "interact with integritee-node and sidechain", long_about = None))]
-#[cfg_attr(feature = "offchain-worker", clap(about = "interact with integritee-node and offchain-worker", long_about = None))]
+#[cfg_attr(feature = "teeracle", clap(about = "interact with integritee-node and teeracle", long_about = None
+))]
+#[cfg_attr(feature = "sidechain", clap(about = "interact with integritee-node and sidechain", long_about = None
+))]
+#[cfg_attr(feature = "offchain-worker", clap(about = "interact with integritee-node and offchain-worker", long_about = None
+))]
 #[clap(after_help = "stf subcommands depend on the stf crate this has been built against")]
 pub struct Cli {
-	/// node url
-	#[clap(short = 'u', long, default_value_t = String::from("ws://127.0.0.1"))]
-	node_url: String,
+    /// node url
+    #[clap(short = 'u', long, default_value_t = String::from("ws://127.0.0.1"))]
+    node_url: String,
 
-	/// node port
-	#[clap(short = 'p', long, default_value_t = String::from("9944"))]
-	node_port: String,
+    /// node port
+    #[clap(short = 'p', long, default_value_t = String::from("9944"))]
+    node_port: String,
 
-	/// worker url
-	#[clap(short = 'U', long, default_value_t = String::from("wss://127.0.0.1"))]
-	worker_url: String,
+    /// worker url
+    #[clap(short = 'U', long, default_value_t = String::from("wss://127.0.0.1"))]
+    worker_url: String,
 
-	/// worker direct invocation port
-	#[clap(short = 'P', long, default_value_t = String::from("2000"))]
-	trusted_worker_port: String,
+    /// worker direct invocation port
+    #[clap(short = 'P', long, default_value_t = String::from("2000"))]
+    trusted_worker_port: String,
 
-	#[clap(subcommand)]
-	command: Commands,
+    #[clap(subcommand)]
+    command: Commands,
 }
 
 pub enum CliResultOk {
-	PubKeysBase58 {
-		pubkeys_sr25519: Option<Vec<String>>,
-		pubkeys_ed25519: Option<Vec<String>>,
-	},
-	Balance {
-		balance: u128,
-	},
-	MrEnclaveBase58 {
-		mr_enclaves: Vec<String>,
-	},
-	Metadata {
-		metadata: Metadata,
-	},
-	H256 {
-		hash: H256,
-	},
-	/// Result of "EvmCreateCommands": execution_address
-	H160 {
-		hash: H160,
-	},
-	// TODO should ideally be removed; or at least drastically less used
-	// We WANT all commands exposed by the cli to return something useful for the caller(ie instead of printing)
-	None,
+    PubKeysBase58 {
+        pubkeys_sr25519: Option<Vec<String>>,
+        pubkeys_ed25519: Option<Vec<String>>,
+    },
+    Balance {
+        balance: u128,
+    },
+    MrEnclaveBase58 {
+        mr_enclaves: Vec<String>,
+    },
+    Metadata {
+        metadata: Metadata,
+    },
+    H256 {
+        hash: H256,
+    },
+    /// Result of "EvmCreateCommands": execution_address
+    H160 {
+        hash: H160,
+    },
+    U32 {
+        value: u32,
+    },
+    // TODO should ideally be removed; or at least drastically less used
+    // We WANT all commands exposed by the cli to return something useful for the caller(ie instead of printing)
+    None,
 }
 
 #[derive(Debug, Error)]
 pub enum CliError {
-	#[error("extrinsic error: {:?}", msg)]
-	Extrinsic { msg: String },
-	#[error("trusted operation error: {:?}", msg)]
-	TrustedOp { msg: String },
-	#[error("EvmReadCommands error: {:?}", msg)]
-	EvmRead { msg: String },
-	#[error("worker rpc api error: {:?}", msg)]
-	WorkerRpcApi { msg: String },
+    #[error("extrinsic error: {:?}", msg)]
+    Extrinsic { msg: String },
+    #[error("trusted operation error: {:?}", msg)]
+    TrustedOp { msg: String },
+    #[error("EvmReadCommands error: {:?}", msg)]
+    EvmRead { msg: String },
+    #[error("worker rpc api error: {:?}", msg)]
+    WorkerRpcApi { msg: String },
 }
 
 pub type CliResult = Result<CliResultOk, CliError>;
@@ -129,7 +136,7 @@ pub type CliResult = Result<CliResultOk, CliError>;
 ///
 /// eg: `SetBalanceCommand`,`TransferCommand`,`UnshieldFundsCommand`
 impl From<trusted_operation::TrustedOperationError> for CliError {
-	fn from(value: trusted_operation::TrustedOperationError) -> Self {
-		CliError::TrustedOp { msg: value.to_string() }
-	}
+    fn from(value: trusted_operation::TrustedOperationError) -> Self {
+        CliError::TrustedOp { msg: value.to_string() }
+    }
 }
