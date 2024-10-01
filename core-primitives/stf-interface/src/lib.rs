@@ -29,8 +29,8 @@ use itp_node_api_metadata::NodeMetadataTrait;
 use itp_node_api_metadata_provider::AccessNodeMetadata;
 use itp_stf_primitives::traits::TrustedCallVerification;
 use itp_types::{
-	parentchain::{AccountId, BlockHash, BlockNumber, ParentchainCall, ParentchainId},
-	Moment,
+    parentchain::{AccountId, BlockHash, BlockNumber, ParentchainCall, ParentchainId},
+    Moment,
 };
 
 #[cfg(feature = "mocks")]
@@ -43,99 +43,99 @@ pub const SHARD_CREATION_HEADER_KEY: &str = "ShardCreationHeaderKey";
 
 /// Interface to initialize a new state.
 pub trait InitState<State, AccountId> {
-	/// Initialize a new state for a given enclave account.
-	fn init_state(enclave_account: AccountId) -> State;
+    /// Initialize a new state for a given enclave account.
+    fn init_state(enclave_account: AccountId) -> State;
 }
 
 /// Interface to query shard vault account for shard
 pub trait ShardVaultQuery<S> {
-	fn get_vault(state: &mut S) -> Option<(AccountId, ParentchainId)>;
+    fn get_vault(state: &mut S) -> Option<(AccountId, ParentchainId)>;
 }
 
 /// Interface to query shard creation block information for shard on a specified parentchain
 pub trait ShardCreationQuery<S> {
-	fn get_shard_creation_info(state: &mut S) -> ShardCreationInfo;
+    fn get_shard_creation_info(state: &mut S) -> ShardCreationInfo;
 }
 
 /// Interface for all functions calls necessary to update an already
 /// initialized state.
 pub trait UpdateState<State, StateDiff> {
-	/// Updates a given state for
-	fn apply_state_diff(state: &mut State, state_diff: StateDiff);
-	fn storage_hashes_to_update_on_block(parentchain_id: &ParentchainId) -> Vec<Vec<u8>>;
+    /// Updates a given state for
+    fn apply_state_diff(state: &mut State, state_diff: StateDiff);
+    fn storage_hashes_to_update_on_block(parentchain_id: &ParentchainId) -> Vec<Vec<u8>>;
 }
 
 /// Interface to execute state mutating calls on a state.
 pub trait StateCallInterface<TCS, State, NodeMetadataRepository>
 where
-	NodeMetadataRepository: AccessNodeMetadata,
-	NodeMetadataRepository::MetadataType: NodeMetadataTrait,
-	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
+    NodeMetadataRepository: AccessNodeMetadata,
+    NodeMetadataRepository::MetadataType: NodeMetadataTrait,
+    TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
 {
-	type Error;
+    type Error;
 
-	/// Execute a call on a specific state. Callbacks are added as an `OpaqueCall`.
-	fn execute_call(
-		state: &mut State,
-		call: TCS,
-		calls: &mut Vec<ParentchainCall>,
-		node_metadata_repo: Arc<NodeMetadataRepository>,
-	) -> Result<(), Self::Error>;
+    /// Execute a call on a specific state. Callbacks are added as an `OpaqueCall`.
+    fn execute_call(
+        state: &mut State,
+        call: TCS,
+        calls: &mut Vec<ParentchainCall>,
+        node_metadata_repo: Arc<NodeMetadataRepository>,
+    ) -> Result<(), Self::Error>;
 }
 
 /// Interface to execute state reading getters on a state.
 pub trait StateGetterInterface<G, S> {
-	/// Execute a getter on a specific state.
-	fn execute_getter(state: &mut S, getter: G) -> Option<Vec<u8>>;
+    /// Execute a getter on a specific state.
+    fn execute_getter(state: &mut S, getter: G) -> Option<Vec<u8>>;
 }
 
 /// Trait used to abstract the call execution.
 pub trait ExecuteCall<NodeMetadataRepository>
 where
-	NodeMetadataRepository: AccessNodeMetadata,
-	NodeMetadataRepository::MetadataType: NodeMetadataTrait,
+    NodeMetadataRepository: AccessNodeMetadata,
+    NodeMetadataRepository::MetadataType: NodeMetadataTrait,
 {
-	type Error;
+    type Error;
 
-	/// Execute a call. Callbacks are added as an `OpaqueCall`.
-	fn execute(
-		self,
-		calls: &mut Vec<ParentchainCall>,
-		node_metadata_repo: Arc<NodeMetadataRepository>,
-	) -> Result<(), Self::Error>;
+    /// Execute a call. Callbacks are added as an `OpaqueCall`.
+    fn execute(
+        self,
+        calls: &mut Vec<ParentchainCall>,
+        node_metadata_repo: Arc<NodeMetadataRepository>,
+    ) -> Result<(), Self::Error>;
 
-	/// Get storages hashes that should be updated for a specific call.
-	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>>;
+    /// Get storages hashes that should be updated for a specific call.
+    fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>>;
 }
 
 /// Trait used to abstract the getter execution.
 pub trait ExecuteGetter {
-	/// Execute a getter.
-	fn execute(self) -> Option<Vec<u8>>;
-	/// Get storages hashes that should be updated for a specific getter.
-	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>>;
+    /// Execute a getter.
+    fn execute(self) -> Option<Vec<u8>>;
+    /// Get storages hashes that should be updated for a specific getter.
+    fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>>;
 }
 
 #[derive(Debug, Clone, Copy, Encode, Decode)]
 pub struct BlockMetadata {
-	pub number: BlockNumber,
-	pub hash: BlockHash,
-	pub timestamp: Option<Moment>,
+    pub number: BlockNumber,
+    pub hash: BlockHash,
+    pub timestamp: Option<Moment>,
 }
 
 #[derive(Debug, Clone, Copy, Encode, Decode)]
 pub struct ShardCreationInfo {
-	pub integritee: Option<BlockMetadata>,
-	pub target_a: Option<BlockMetadata>,
-	pub target_b: Option<BlockMetadata>,
+    pub integritee: Option<BlockMetadata>,
+    pub target_a: Option<BlockMetadata>,
+    pub target_b: Option<BlockMetadata>,
 }
 
 impl ShardCreationInfo {
-	pub fn for_parentchain(&self, id: ParentchainId) -> Option<BlockMetadata> {
-		match id {
-			ParentchainId::Integritee => self.integritee,
-			ParentchainId::TargetA => self.target_a,
-			ParentchainId::TargetB => self.target_b,
-		}
-	}
+    pub fn for_parentchain(&self, id: ParentchainId) -> Option<BlockMetadata> {
+        match id {
+            ParentchainId::Integritee => self.integritee,
+            ParentchainId::TargetA => self.target_a,
+            ParentchainId::TargetB => self.target_b,
+        }
+    }
 }

@@ -1728,6 +1728,7 @@ dependencies = [
  "pallet-balances",
  "pallet-parentchain",
  "pallet-sudo",
+ "pallet-timestamp",
  "parity-scale-codec",
  "rlp",
  "sgx_tstd",
