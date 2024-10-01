@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
 #[cfg(feature = "sgx")]
 use sgx_rand::{Rng, thread_rng};
 
@@ -19,6 +21,17 @@ impl Randomness for SgxRandomness {
     fn random_u32(min: u32, max: u32) -> u32 {
         let mut rng = thread_rng();  // Use thread-local random number generator
         rng.gen_range(min..=max)
+    }
+}
+
+#[cfg(not(feature = "sgx"))]
+impl Randomness for SgxRandomness {
+    fn shuffle<T>(_values: &mut [T]) {
+        unimplemented!()
+    }
+
+    fn random_u32(_min: u32, _max: u32) -> u32 {
+        unimplemented!()
     }
 }
 

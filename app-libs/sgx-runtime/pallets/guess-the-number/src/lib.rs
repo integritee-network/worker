@@ -4,8 +4,8 @@ use frame_support::dispatch::DispatchResult;
 use frame_support::pallet_prelude::Get;
 use frame_support::traits::OnTimestampSet;
 use log::{info, warn};
-use sp_runtime::traits::{CheckedDiv, One, Saturating, Zero};
-use sp_std::{ops::Rem, prelude::*};
+use sp_runtime::traits::{Saturating, Zero};
+use sp_std::{ops::Rem};
 use itp_randomness::Randomness;
 pub use pallet::*;
 
@@ -13,9 +13,9 @@ pub use pallet::*;
 pub mod pallet {
     use super::*;
     use crate::{weights::WeightInfo};
-    use frame_support::{pallet_prelude::*, sp_runtime::traits::Header};
-    use frame_system::{pallet_prelude::*, AccountInfo};
-    use sp_runtime::traits::{AtLeast32Bit, Scale, Zero};
+    use frame_support::{pallet_prelude::*};
+    use frame_system::{pallet_prelude::*};
+    use sp_runtime::traits::{Zero};
 
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
     #[pallet::pallet]
