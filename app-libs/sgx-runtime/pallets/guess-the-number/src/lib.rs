@@ -145,7 +145,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(1)]
-        #[pallet::weight((<T as Config>::WeightInfo::push_by_one_day(), DispatchClass::Normal, Pays::Yes)
+        #[pallet::weight((<T as Config>::WeightInfo::guess(), DispatchClass::Normal, Pays::Yes)
         )]
         pub fn guess(origin: OriginFor<T>, guess: GuessType) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
@@ -209,7 +209,7 @@ where
     fn end_round() -> DispatchResult {
         let current_round_index = <CurrentRoundIndex<T>>::get();
         info!("ending round {}", current_round_index);
-
+        Self::payout_winners();
         <LastWinners<T>>::put(Self::winners());
         <Winners<T>>::kill();
         <LastWinningDistance<T>>::put(Self::winning_distance().unwrap_or(GuessType::MAX));
@@ -228,7 +228,11 @@ where
         <LuckyNumber<T>>::put(lucky_number);
         Ok(())
     }
-
+}
+impl<T: Config> OnTimestampSet<T::Moment> for Pallet<T>
+where
+    sp_core::H256: From<<T as frame_system::Config>::Hash>,
+{
     fn on_timestamp_set(now: T::Moment) {
         if Self::next_round_timestamp() == T::Moment::zero() {
             // only executed in first block after genesis.
@@ -248,11 +252,6 @@ where
         } else if Self::next_round_timestamp() < now && Self::progress_round().is_err() {
             warn!("progress round phase failed");
         };
-    }
-}
-impl<T: Config> OnTimestampSet<T::Moment> for Pallet<T> {
-    fn on_timestamp_set(moment: T::Moment) {
-        Self::on_timestamp_set(moment)
     }
 }
 #[cfg(test)]
