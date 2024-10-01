@@ -15,8 +15,8 @@
 
 */
 pub use crate as dut;
-use frame_support::{ord_parameter_types, parameter_types};
-use frame_support::traits::EitherOfDiverse;
+use frame_support::{ord_parameter_types, parameter_types, PalletId};
+use frame_support::traits::{ConstU8, EitherOfDiverse};
 use frame_system as system;
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use sp_core::crypto::AccountId32;
@@ -73,6 +73,7 @@ ord_parameter_types! {
 parameter_types! {
 	pub const MomentsPerDay: u64 = 86_400_000; // [ms/d]
     pub const RoundDuration: u64 = 86_400_000; // [ms/d]
+    pub const GtnPalletId: PalletId = PalletId(*b"gsstnmbr");
 }
 impl dut::Config for Test {
     type RuntimeEvent = RuntimeEvent;
@@ -81,6 +82,10 @@ impl dut::Config for Test {
     type WeightInfo = ();
     type RoundDuration = RoundDuration;
     type Randomness = MockRandomness;
+    type Currency = Balances;
+    type PalletId = GtnPalletId;
+    type MaxAttempts = ConstU8<10>;
+    type MaxWinners = ConstU8<12>;
 }
 
 parameter_types! {

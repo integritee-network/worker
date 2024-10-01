@@ -138,7 +138,7 @@ fn timestamp_callback_works() {
         assert_eq!(GuessTheNumber::current_round_index(), 2);
 
         // mock random
-        assert_eq!(GuessTheNumber::winning_number(), 5000);
+        assert_eq!(GuessTheNumber::lucky_number(), Some(5000));
 
         run_to_block(2);
         set_timestamp(GENESIS_TIME + 2 * ONE_DAY);

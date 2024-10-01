@@ -1,13 +1,25 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use codec::Decode;
 use frame_support::dispatch::DispatchResult;
 use frame_support::pallet_prelude::Get;
-use frame_support::traits::OnTimestampSet;
+use frame_support::traits::{ConstU8, Currency, ExistenceRequirement, OnTimestampSet};
+use frame_support::PalletId;
 use log::{info, warn};
-use sp_runtime::traits::{Saturating, Zero};
-use sp_std::{ops::Rem};
+use sp_core::H256;
+use sp_runtime::traits::{CheckedDiv, Hash, Saturating, Zero};
+use sp_std::{ops::Rem, cmp::min};
 use itp_randomness::Randomness;
+use sp_runtime::SaturatedConversion;
+
 pub use pallet::*;
+
+pub type BalanceOf<T> =
+<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+
+pub type GuessType = u32;
+pub type RoundIndexType = u32;
+
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -41,6 +53,17 @@ pub mod pallet {
 
         /// random source and tooling
         type Randomness: Randomness;
+
+        type Currency: Currency<Self::AccountId>;
+        /// The pallet id, used for deriving technical account ID for the pot.
+        #[pallet::constant]
+        type PalletId: Get<PalletId>;
+
+        #[pallet::constant]
+        type MaxAttempts: Get<u8>;
+
+        #[pallet::constant]
+        type MaxWinners: Get<u8>;
     }
 
     #[pallet::event]
@@ -50,18 +73,49 @@ pub mod pallet {
     }
 
     #[pallet::error]
-    pub enum Error<T> {}
+    pub enum Error<T> {
+        NoDrawYet,
+        TooManyWinners,
+    }
 
     #[pallet::storage]
     #[pallet::getter(fn current_round_index)]
     pub(super) type CurrentRoundIndex<T: Config> =
-    StorageValue<_, u32, ValueQuery>;
+    StorageValue<_, RoundIndexType, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn lucky_number)]
     pub(super) type LuckyNumber<T: Config> =
-    StorageValue<_, u32, OptionQuery>;
+    StorageValue<_, GuessType, OptionQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn guess_attempts)]
+    pub(super) type GuessAttempts<T: Config> =
+    StorageMap<_, Blake2_128Concat, T::AccountId, u8, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn last_winning_distance)]
+    pub(super) type LastWinningDistance<T: Config> =
+    StorageValue<_, GuessType, OptionQuery>;
+    #[pallet::storage]
+    #[pallet::getter(fn winning_distance)]
+    pub(super) type WinningDistance<T: Config> =
+    StorageValue<_, GuessType, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn last_winners)]
+    pub(super) type LastWinners<T: Config> =
+    StorageValue<_, BoundedVec<T::AccountId, T::MaxWinners>, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn winners)]
+    pub(super) type Winners<T: Config> =
+    StorageValue<_, BoundedVec<T::AccountId, T::MaxWinners>, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn winnings)]
+    pub(super) type Winnings<T: Config> =
+    StorageValue<_, BalanceOf<T>, ValueQuery>;
 
     #[pallet::type_value]
     pub(super) fn DefaultForNextRoundTimestamp<T: Config>() -> T::Moment {
@@ -89,10 +143,46 @@ pub mod pallet {
             Self::deposit_event(Event::RoundSchedulePushedByOneDay);
             Ok(().into())
         }
+
+        #[pallet::call_index(1)]
+        #[pallet::weight((<T as Config>::WeightInfo::push_by_one_day(), DispatchClass::Normal, Pays::Yes)
+        )]
+        pub fn guess(origin: OriginFor<T>, guess: GuessType) -> DispatchResultWithPostInfo {
+            let sender = ensure_signed(origin)?;
+            ensure!(Self::guess_attempts(&sender) < T::MaxAttempts::get(), "Guess exceeds max attempts");
+            let lucky_number = <LuckyNumber<T>>::get().ok_or_else(|| Error::<T>::NoDrawYet)?;
+            let distance = GuessType::abs_diff(lucky_number, guess);
+            if distance <= Self::winning_distance().unwrap_or(GuessType::MAX) {
+                <WinningDistance<T>>::put(distance);
+                Winners::<T>::try_append(sender.clone()).map_err(|_| Error::<T>::TooManyWinners)?;
+            }
+            Ok(().into())
+        }
     }
 }
 
-impl<T: Config> Pallet<T> {
+impl<T: Config> Pallet<T>
+where
+    sp_core::H256: From<<T as frame_system::Config>::Hash>,
+{
+    pub fn get_pot_account() -> T::AccountId {
+        let pot_identifier = <T as Config>::PalletId::get().0.as_slice();
+        let pot_id_hash: H256 = T::Hashing::hash_of(&pot_identifier).into();
+        T::AccountId::decode(&mut pot_id_hash.as_bytes())
+            .expect("32 bytes can always construct an AccountId32")
+    }
+
+    pub fn payout_winners() {
+        let pot = Self::get_pot_account();
+        let winners = Self::winners();
+        let winnings = min(Self::winnings(), T::Currency::free_balance(&pot));
+        let winnings_per_winner = winnings.checked_div(&BalanceOf::<T>::saturated_from(winners.len() as u32)).unwrap_or_default();
+
+        let _ = winners.iter().map(|winner| {
+            let _ = T::Currency::transfer(&pot, &winner, winnings_per_winner, ExistenceRequirement::AllowDeath);
+        }).collect();
+    }
+
     fn progress_round() -> DispatchResult {
         let current_round_index = <CurrentRoundIndex<T>>::get();
         let last_round_timestamp = Self::next_round_timestamp();
@@ -112,12 +202,19 @@ impl<T: Config> Pallet<T> {
     fn end_round() -> DispatchResult {
         let current_round_index = <CurrentRoundIndex<T>>::get();
         info!("ending round {}", current_round_index);
+
+        <LastWinners<T>>::put(Self::winners());
+        <Winners<T>>::kill();
+        <LastWinningDistance<T>>::put(Self::winning_distance().unwrap_or(GuessType::MAX));
+        <WinningDistance<T>>::kill();
+
         Ok(())
     }
 
     fn start_round() -> DispatchResult {
         let current_round_index = <CurrentRoundIndex<T>>::get();
         info!("starting round {}", current_round_index);
+
         let lucky_number = T::Randomness::random_u32(0, 10_000);
         // todo: delete this log
         info!("winning number:  {}", lucky_number);
