@@ -6,6 +6,7 @@ use frame_support::traits::OnTimestampSet;
 use log::{info, warn};
 use sp_runtime::traits::{CheckedDiv, One, Saturating, Zero};
 use sp_std::{ops::Rem, prelude::*};
+use itp_randomness::Randomness;
 pub use pallet::*;
 
 #[frame_support::pallet]
@@ -37,6 +38,9 @@ pub mod pallet {
 
         /// Required origin to interfere with the scheduling (though can always be Root)
         type GameMaster: EnsureOrigin<Self::RuntimeOrigin>;
+
+        /// random source and tooling
+        type Randomness: Randomness;
     }
 
     #[pallet::event]
@@ -57,6 +61,12 @@ pub mod pallet {
     #[pallet::getter(fn current_round_index)]
     pub(super) type CurrentRoundIndex<T: Config> =
     StorageValue<_, u32, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn winning_number)]
+    pub(super) type WinningNumber<T: Config> =
+    StorageValue<_, u32, ValueQuery>;
+
 
     #[pallet::type_value]
     pub(super) fn DefaultForNextRoundTimestamp<T: Config>() -> T::Moment {
@@ -90,8 +100,9 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
     fn progress_round() -> DispatchResult {
         let current_round_index = <CurrentRoundIndex<T>>::get();
-
         let last_round_timestamp = Self::next_round_timestamp();
+
+        Self::end_round()?;
 
         let next_round_index = current_round_index.saturating_add(1);
         <CurrentRoundIndex<T>>::put(next_round_index);
@@ -99,9 +110,25 @@ impl<T: Config> Pallet<T> {
 
         let next = last_round_timestamp.saturating_add(T::RoundDuration::get());
         <NextRoundTimestamp<T>>::put(next);
+
+        Self::start_round()
+    }
+
+    fn end_round() -> DispatchResult {
+        let current_round_index = <CurrentRoundIndex<T>>::get();
+        info!("ending round {}", current_round_index);
         Ok(())
     }
 
+    fn start_round() -> DispatchResult {
+        let current_round_index = <CurrentRoundIndex<T>>::get();
+        info!("starting round {}", current_round_index);
+        let winning_number = T::Randomness::random_u32(0, 10_000);
+        // todo: delete this log
+        info!("winning number:  {}", winning_number);
+        <WinningNumber<T>>::put(winning_number);
+        Ok(())
+    }
 
     fn on_timestamp_set(now: T::Moment) {
         if Self::next_round_timestamp() == T::Moment::zero() {

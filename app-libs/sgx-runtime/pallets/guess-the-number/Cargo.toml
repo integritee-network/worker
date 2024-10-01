@@ -24,6 +24,8 @@ sp-io = { default-features = false, git = "https://github.com/paritytech/substra
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
+itp-randomness = { path = "../../../../core-primitives/randomness" }
+
 [dev-dependencies]
 env_logger = "0.9.0"
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }

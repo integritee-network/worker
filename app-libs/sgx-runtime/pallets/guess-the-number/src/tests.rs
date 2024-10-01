@@ -90,32 +90,6 @@ fn push_by_one_day_errs_with_bad_origin() {
 }
 
 #[test]
-fn timestamp_callback_works() {
-    new_test_ext().execute_with(|| {
-        //large offset since 1970 to when first block is generated
-        const GENESIS_TIME: u64 = 1_585_058_843_000;
-        const ONE_DAY: u64 = 86_400_000;
-        System::set_block_number(0);
-
-        set_timestamp(GENESIS_TIME);
-
-        assert_eq!(GuessTheNumber::current_round_index(), 1);
-        assert_eq!(
-            GuessTheNumber::next_round_timestamp(),
-            (GENESIS_TIME - GENESIS_TIME.rem(ONE_DAY)) + ONE_DAY
-        );
-
-        run_to_block(1);
-        set_timestamp(GENESIS_TIME + ONE_DAY);
-        assert_eq!(GuessTheNumber::current_round_index(), 2);
-
-        run_to_block(2);
-        set_timestamp(GENESIS_TIME + 2 * ONE_DAY);
-        assert_eq!(GuessTheNumber::current_round_index(), 3);
-    });
-}
-
-#[test]
 fn push_one_day_works() {
     new_test_ext().execute_with(|| {
         System::set_block_number(System::block_number() + 1); // this is needed to assert events
@@ -140,5 +114,34 @@ fn push_one_day_works() {
             GuessTheNumber::next_round_timestamp(),
             (genesis_time - genesis_time.rem(ONE_DAY)) + 2 * ONE_DAY
         );
+    });
+}
+
+#[test]
+fn timestamp_callback_works() {
+    new_test_ext().execute_with(|| {
+        //large offset since 1970 to when first block is generated
+        const GENESIS_TIME: u64 = 1_585_058_843_000;
+        const ONE_DAY: u64 = 86_400_000;
+        System::set_block_number(0);
+
+        set_timestamp(GENESIS_TIME);
+
+        assert_eq!(GuessTheNumber::current_round_index(), 1);
+        assert_eq!(
+            GuessTheNumber::next_round_timestamp(),
+            (GENESIS_TIME - GENESIS_TIME.rem(ONE_DAY)) + ONE_DAY
+        );
+
+        run_to_block(1);
+        set_timestamp(GENESIS_TIME + ONE_DAY);
+        assert_eq!(GuessTheNumber::current_round_index(), 2);
+
+        // mock random
+        assert_eq!(GuessTheNumber::winning_number(), 5000);
+
+        run_to_block(2);
+        set_timestamp(GENESIS_TIME + 2 * ONE_DAY);
+        assert_eq!(GuessTheNumber::current_round_index(), 3);
     });
 }

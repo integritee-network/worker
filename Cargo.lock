@@ -3361,6 +3361,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "itp-randomness"
+version = "0.1.0"
+dependencies = [
+ "sgx_rand",
+]
+
+[[package]]
 name = "itp-rpc"
 version = "0.9.0"
 dependencies = [
@@ -5160,6 +5167,7 @@ dependencies = [
  "env_logger 0.9.3",
  "frame-support",
  "frame-system",
+ "itp-randomness",
  "log 0.4.20",
  "pallet-balances",
  "pallet-timestamp",

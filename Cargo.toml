@@ -39,6 +39,7 @@ members = [
     "core-primitives/ocall-api",
     "core-primitives/pallet-storage",
     "core-primitives/primitives-cache",
+    "core-primitives/randomness",
     "core-primitives/rpc",
     "core-primitives/settings",
     "core-primitives/sgx/crypto",

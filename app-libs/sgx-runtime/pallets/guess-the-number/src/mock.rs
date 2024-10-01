@@ -27,6 +27,7 @@ use sp_runtime::{
     generic,
     traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 };
+use itp_randomness::MockRandomness;
 
 pub type Signature = sp_runtime::MultiSignature;
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
@@ -79,6 +80,7 @@ impl dut::Config for Test {
     type MomentsPerDay = MomentsPerDay;
     type WeightInfo = ();
     type RoundDuration = RoundDuration;
+    type Randomness = MockRandomness;
 }
 
 parameter_types! {
