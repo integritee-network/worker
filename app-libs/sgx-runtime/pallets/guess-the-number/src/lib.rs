@@ -75,6 +75,7 @@ pub mod pallet {
     #[pallet::error]
     pub enum Error<T> {
         NoDrawYet,
+        TooManyAttempts,
         TooManyWinners,
     }
 
@@ -105,12 +106,12 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn last_winners)]
     pub(super) type LastWinners<T: Config> =
-    StorageValue<_, BoundedVec<T::AccountId, T::MaxWinners>, ValueQuery>;
+    StorageValue<_, Vec<T::AccountId>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn winners)]
     pub(super) type Winners<T: Config> =
-    StorageValue<_, BoundedVec<T::AccountId, T::MaxWinners>, ValueQuery>;
+    StorageValue<_, Vec<T::AccountId>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn winnings)]
@@ -137,7 +138,6 @@ pub mod pallet {
         )]
         pub fn push_by_one_day(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             T::GameMaster::ensure_origin(origin)?;
-
             let tnext = Self::next_round_timestamp().saturating_add(T::MomentsPerDay::get());
             <NextRoundTimestamp<T>>::put(tnext);
             Self::deposit_event(Event::RoundSchedulePushedByOneDay);
@@ -149,12 +149,17 @@ pub mod pallet {
         )]
         pub fn guess(origin: OriginFor<T>, guess: GuessType) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
-            ensure!(Self::guess_attempts(&sender) < T::MaxAttempts::get(), "Guess exceeds max attempts");
+            ensure!(Self::guess_attempts(&sender) < T::MaxAttempts::get(), Error::<T>::TooManyAttempts);
             let lucky_number = <LuckyNumber<T>>::get().ok_or_else(|| Error::<T>::NoDrawYet)?;
             let distance = GuessType::abs_diff(lucky_number, guess);
             if distance <= Self::winning_distance().unwrap_or(GuessType::MAX) {
                 <WinningDistance<T>>::put(distance);
-                Winners::<T>::try_append(sender.clone()).map_err(|_| Error::<T>::TooManyWinners)?;
+                let mut winners = <Winners<T>>::get();
+                ensure!(winners.len() < T::MaxWinners::get() as usize, Error::<T>::TooManyWinners);
+                if !winners.contains(&sender) {
+                    winners.push(sender.clone());
+                    Winners::<T>::put(winners);
+                }
             }
             Ok(().into())
         }
@@ -166,8 +171,8 @@ where
     sp_core::H256: From<<T as frame_system::Config>::Hash>,
 {
     pub fn get_pot_account() -> T::AccountId {
-        let pot_identifier = <T as Config>::PalletId::get().0.as_slice();
-        let pot_id_hash: H256 = T::Hashing::hash_of(&pot_identifier).into();
+        let pot_identifier = <T as Config>::PalletId::get();
+        let pot_id_hash: H256 = T::Hashing::hash_of(&pot_identifier.0.as_slice()).into();
         T::AccountId::decode(&mut pot_id_hash.as_bytes())
             .expect("32 bytes can always construct an AccountId32")
     }
@@ -178,9 +183,11 @@ where
         let winnings = min(Self::winnings(), T::Currency::free_balance(&pot));
         let winnings_per_winner = winnings.checked_div(&BalanceOf::<T>::saturated_from(winners.len() as u32)).unwrap_or_default();
 
-        let _ = winners.iter().map(|winner| {
-            let _ = T::Currency::transfer(&pot, &winner, winnings_per_winner, ExistenceRequirement::AllowDeath);
-        }).collect();
+        for winner in winners {
+            if T::Currency::transfer(&pot, &winner, winnings_per_winner, ExistenceRequirement::AllowDeath).is_err() {
+                warn!("error transferring reards")
+            };
+        }
     }
 
     fn progress_round() -> DispatchResult {
