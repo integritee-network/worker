@@ -143,7 +143,8 @@ where
     State: SgxExternalitiesTrait + Debug,
     NodeMetadataRepository: AccessNodeMetadata,
     NodeMetadataRepository::MetadataType: NodeMetadataTrait,
-//Runtime: frame_system::Config + OnTimestampSet<Moment>,
+    Runtime: frame_system::Config + frame_pallet_timestamp::Config,
+    <Runtime as frame_pallet_timestamp::Config>::Moment: std::convert::From<u64>,
 {
     type Error = TCS::Error;
 
@@ -160,8 +161,8 @@ where
         trace!("on_initialize called");
         state.execute_with(|| {
             // the timestamp has been set as raw value already, but the hooks haven't been executed
-            let timestamp = Timestamp::get();
-            //Runtime::on_timestamp_set(timestamp);
+            let timestamp = Timestamp::now();
+            <Runtime::OnTimestampSet as OnTimestampSet<_>>::on_timestamp_set(timestamp.into());
             //if Timestamp::set(timestamp).is_err() {
             //	warn!("Timestamp was not set");
             //};

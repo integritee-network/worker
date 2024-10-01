@@ -20,7 +20,7 @@ impl Randomness for SgxRandomness {
 
     fn random_u32(min: u32, max: u32) -> u32 {
         let mut rng = thread_rng();  // Use thread-local random number generator
-        rng.gen_range(min..=max)
+        rng.gen_range(min, max)
     }
 }
 
