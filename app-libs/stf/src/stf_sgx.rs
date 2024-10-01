@@ -39,7 +39,7 @@ use sp_runtime::traits::StaticLookup;
 use std::{fmt::Debug, format, prelude::v1::*, sync::Arc, vec};
 use itp_node_api_metadata::pallet_timestamp;
 use itp_sgx_runtime_primitives::types::Moment;
-use itp_stf_primitives::traits::StateUpdateBlockHooks;
+
 
 impl<TCS, G, State, Runtime, AccountId> InitState<State, AccountId> for Stf<TCS, G, State, Runtime>
 where
@@ -94,29 +94,6 @@ where
     }
 }
 
-/// this implementation is only needed for sidechain implementations where blocks need to be initialized and finalized
-impl<TCS, G, State, Runtime> StateUpdateBlockHooks<State> for Stf<TCS, G, State, Runtime>
-where
-    State: SgxExternalitiesTrait + Debug,
-    <State as SgxExternalitiesTrait>::SgxExternalitiesType: core::default::Default,
-    Runtime: frame_system::Config + OnTimestampSet<Moment>,
-{
-    fn on_initialize(state: &mut State) {
-        trace!("on_initialize called");
-        state.execute_with(|| {
-            // the timestamp has been set as raw value already, but the hooks haven't been executed
-            let timestamp = Timestamp::get();
-            Runtime::on_timestamp_set(timestamp);
-            //if Timestamp::set(timestamp).is_err() {
-            //	warn!("Timestamp was not set");
-            //};
-        });
-    }
-    fn on_finalize(_state: &mut State) {
-        trace!("on_finalize called");
-    }
-}
-
 
 impl<TCS, G, State, Runtime>
 UpdateState<State, <State as SgxExternalitiesTrait>::SgxExternalitiesDiffType>
@@ -166,6 +143,7 @@ where
     State: SgxExternalitiesTrait + Debug,
     NodeMetadataRepository: AccessNodeMetadata,
     NodeMetadataRepository::MetadataType: NodeMetadataTrait,
+//Runtime: frame_system::Config + OnTimestampSet<Moment>,
 {
     type Error = TCS::Error;
 
@@ -176,6 +154,23 @@ where
         node_metadata_repo: Arc<NodeMetadataRepository>,
     ) -> Result<(), Self::Error> {
         state.execute_with(|| call.execute(calls, node_metadata_repo))
+    }
+
+    fn on_initialize(state: &mut State) -> Result<(), Self::Error> {
+        trace!("on_initialize called");
+        state.execute_with(|| {
+            // the timestamp has been set as raw value already, but the hooks haven't been executed
+            let timestamp = Timestamp::get();
+            //Runtime::on_timestamp_set(timestamp);
+            //if Timestamp::set(timestamp).is_err() {
+            //	warn!("Timestamp was not set");
+            //};
+        });
+        Ok(())
+    }
+    fn on_finalize(_state: &mut State) -> Result<(), Self::Error> {
+        trace!("on_finalize called");
+        Ok(())
     }
 }
 

@@ -81,6 +81,12 @@ where
         calls: &mut Vec<ParentchainCall>,
         node_metadata_repo: Arc<NodeMetadataRepository>,
     ) -> Result<(), Self::Error>;
+
+    /// to be executed before any TrustedCalls in this batch/block
+    fn on_initialize(state: &mut State) -> Result<(), Self::Error>;
+
+    /// to be executed after any TrustedCalls in this batch/block
+    fn on_finalize(state: &mut State) -> Result<(), Self::Error>;
 }
 
 /// Interface to execute state reading getters on a state.

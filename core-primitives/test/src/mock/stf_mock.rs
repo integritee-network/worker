@@ -40,7 +40,7 @@ use sp_runtime::transaction_validity::{
 };
 use sp_std::{vec, vec::Vec};
 use std::{thread::sleep, time::Duration};
-use itp_stf_primitives::traits::StateUpdateBlockHooks;
+
 
 // a few dummy types
 type NodeMetadataRepositoryMock = NodeMetadataRepository<NodeMetadataMock>;
@@ -52,16 +52,6 @@ pub enum StfMockError {
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub struct StfMock {
     state: SgxExternalities,
-}
-
-impl StateUpdateBlockHooks<SgxExternalities> for StfMock
-{
-    fn on_initialize(_state: &mut SgxExternalities) {
-        trace!("on_initialize called");
-    }
-    fn on_finalize(_state: &mut SgxExternalities) {
-        trace!("on_finalize called");
-    }
 }
 
 impl UpdateState<SgxExternalities, SgxExternalitiesDiffType> for StfMock {
@@ -84,6 +74,15 @@ for StfMock
         node_metadata_repo: Arc<NodeMetadataRepositoryMock>,
     ) -> Result<(), Self::Error> {
         state.execute_with(|| call.execute(calls, node_metadata_repo))
+    }
+
+    fn on_initialize(_state: &mut SgxExternalities) -> Result<(), Self::Error> {
+        trace!("on_initialize called");
+        Ok(())
+    }
+    fn on_finalize(_state: &mut SgxExternalities) -> Result<(), Self::Error> {
+        trace!("on_finalize called");
+        Ok(())
     }
 }
 

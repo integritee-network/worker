@@ -32,7 +32,7 @@ use itp_types::{parentchain::ParentchainCall, OpaqueCall, ShardIdentifier, H256}
 use log::*;
 use sp_runtime::traits::Block;
 use std::{marker::PhantomData, sync::Arc, time::Duration, vec::Vec};
-use itp_stf_primitives::traits::StateUpdateBlockHooks;
+
 
 /// Off-chain worker executor implementation.
 ///
@@ -91,7 +91,7 @@ where
     ValidatorAccessor: ValidatorAccess<ParentchainBlock> + Send + Sync + 'static,
     ExtrinsicsFactory: CreateExtrinsics,
     NumberFor<ParentchainBlock>: BlockNumberOps,
-    Stf: SystemPalletEventInterface<StfExecutor::Externalities> + StateUpdateBlockHooks<StateHandler::StateT>,
+    Stf: SystemPalletEventInterface<StfExecutor::Externalities>,
     TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
     G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
 {

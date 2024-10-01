@@ -60,7 +60,7 @@ use sp_core::{
 use sp_io::hashing::blake2_256;
 use sp_runtime::{traits::Verify, MultiAddress, MultiSignature};
 use std::{format, prelude::v1::*, sync::Arc};
-use itp_stf_primitives::traits::StateUpdateBlockHooks;
+
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]

@@ -44,7 +44,7 @@ use std::{
     collections::BTreeMap, fmt::Debug, marker::PhantomData, sync::Arc, time::Duration, vec,
     vec::Vec,
 };
-use itp_stf_primitives::traits::StateUpdateBlockHooks;
+
 
 pub struct StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G>
 where
@@ -68,7 +68,7 @@ where
     Stf: UpdateState<
         StateHandler::StateT,
         <StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
-    > + StateCallInterface<TCS, StateHandler::StateT, NodeMetadataRepository> + StateUpdateBlockHooks<StateHandler::StateT>,
+    > + StateCallInterface<TCS, StateHandler::StateT, NodeMetadataRepository>,
     <StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
     IntoIterator<Item=(Vec<u8>, Option<Vec<u8>>)> + From<BTreeMap<Vec<u8>, Option<Vec<u8>>>>,
     <Stf as StateCallInterface<TCS, StateHandler::StateT, NodeMetadataRepository>>::Error: Debug,
@@ -168,7 +168,7 @@ where
     Stf: UpdateState<
         StateHandler::StateT,
         <StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
-    > + ParentchainPalletInstancesInterface<StateHandler::StateT, ParentchainHeader> + StateUpdateBlockHooks<StateHandler::StateT>,
+    > + ParentchainPalletInstancesInterface<StateHandler::StateT, ParentchainHeader>,
     <StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
     IntoIterator<Item=(Vec<u8>, Option<Vec<u8>>)>,
     <Stf as ParentchainPalletInstancesInterface<StateHandler::StateT, ParentchainHeader>>::Error:
@@ -237,7 +237,7 @@ where
     + UpdateState<
         StateHandler::StateT,
         <StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
-    > + StateUpdateBlockHooks<StateHandler::StateT>,
+    >,
     TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
     G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
 {
@@ -288,7 +288,7 @@ where
     Stf: UpdateState<
         StateHandler::StateT,
         <StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
-    > + StateCallInterface<TCS, StateHandler::StateT, NodeMetadataRepository> + StateUpdateBlockHooks<StateHandler::StateT>,
+    > + StateCallInterface<TCS, StateHandler::StateT, NodeMetadataRepository>,
     <StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
     IntoIterator<Item=(Vec<u8>, Option<Vec<u8>>)>,
     <StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
