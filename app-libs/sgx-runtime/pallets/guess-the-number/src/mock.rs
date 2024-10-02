@@ -15,7 +15,7 @@
 
 */
 pub use crate as dut;
-use dut::Config;
+
 use frame_support::{
 	ord_parameter_types, parameter_types,
 	traits::{ConstU8, EitherOfDiverse},

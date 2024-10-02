@@ -15,23 +15,21 @@
 
 */
 use crate::{
-	mock::{RuntimeEvent::GuessTheNumber as GuessTheNumberEvent, *},
+	mock::{*},
 	BalanceOf, Error, Event,
 };
 use frame_support::{
-	assert_err, assert_noop, assert_ok,
+	assert_err, assert_ok,
 	pallet_prelude::DispatchResultWithPostInfo,
 	traits::{Currency, Hooks},
 };
-use frame_system::AccountInfo;
-use pallet_balances::AccountData;
-use sp_core::H256;
+
+
+
 use sp_keyring::AccountKeyring;
 use sp_runtime::{
-	generic,
-	traits::{BlakeTwo256, Header as HeaderT, Scale},
+	traits::{Header as HeaderT, Scale},
 	DispatchError,
-	DispatchError::BadOrigin,
 };
 
 const TEN_MIN: u64 = 600_000;

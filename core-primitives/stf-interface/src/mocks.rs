@@ -72,7 +72,7 @@ where
 		unimplemented!()
 	}
 
-	fn on_initialize(_state: &mut State, now: Moment) -> Result<(), Self::Error> {
+	fn on_initialize(_state: &mut State, _now: Moment) -> Result<(), Self::Error> {
 		unimplemented!()
 	}
 	fn on_finalize(_state: &mut State) -> Result<(), Self::Error> {

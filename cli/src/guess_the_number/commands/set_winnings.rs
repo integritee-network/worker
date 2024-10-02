@@ -29,7 +29,7 @@ use itp_stf_primitives::{
 	types::{KeyPair, TrustedOperation},
 };
 use log::*;
-use sp_core::{crypto::Ss58Codec, Pair};
+use sp_core::{Pair};
 use std::boxed::Box;
 
 #[derive(Parser)]

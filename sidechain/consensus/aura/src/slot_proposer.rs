@@ -20,7 +20,7 @@ use finality_grandpa::BlockNumberOps;
 use ita_stf::{Getter, TrustedCallSigned};
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_stf_executor::traits::StateUpdateProposer;
-use itp_time_utils::now_as_millis;
+
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::H256;
 use its_block_composer::ComposeBlock;
