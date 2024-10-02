@@ -15,19 +15,21 @@
 
 */
 pub use crate as dut;
-use frame_support::{ord_parameter_types, parameter_types, PalletId};
-use frame_support::traits::{ConstU8, EitherOfDiverse};
+use dut::Config;
+use frame_support::{
+	ord_parameter_types, parameter_types,
+	traits::{ConstU8, EitherOfDiverse},
+	PalletId,
+};
 use frame_system as system;
 use frame_system::{EnsureRoot, EnsureSignedBy};
-use sp_core::crypto::AccountId32;
-use dut::Config;
-use sp_core::H256;
+use itp_randomness::MockRandomness;
+use sp_core::{crypto::AccountId32, H256};
 use sp_keyring::AccountKeyring;
 use sp_runtime::{
-    generic,
-    traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+	generic,
+	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 };
-use itp_randomness::MockRandomness;
 
 pub type Signature = sp_runtime::MultiSignature;
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
@@ -37,21 +39,21 @@ pub type BlockNumber = u64;
 pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 pub type UncheckedExtrinsic =
-generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
+	generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
 
 pub type Moment = u64;
 
 pub fn master() -> AccountId {
-    AccountId::from(AccountKeyring::Alice)
+	AccountId::from(AccountKeyring::Alice)
 }
 
 pub type SignedExtra = (
-    frame_system::CheckSpecVersion<Test>,
-    frame_system::CheckTxVersion<Test>,
-    frame_system::CheckGenesis<Test>,
-    frame_system::CheckEra<Test>,
-    frame_system::CheckNonce<Test>,
-    frame_system::CheckWeight<Test>,
+	frame_system::CheckSpecVersion<Test>,
+	frame_system::CheckTxVersion<Test>,
+	frame_system::CheckGenesis<Test>,
+	frame_system::CheckEra<Test>,
+	frame_system::CheckNonce<Test>,
+	frame_system::CheckWeight<Test>,
 );
 
 frame_support::construct_runtime!(
@@ -62,7 +64,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Config, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Config<T>, Event<T>},
-        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 		GuessTheNumber: dut::{Pallet, Call, Event<T>},
 	}
 );
@@ -72,20 +74,20 @@ ord_parameter_types! {
 }
 parameter_types! {
 	pub const MomentsPerDay: u64 = 86_400_000; // [ms/d]
-    pub const RoundDuration: u64 = 86_400_000; // [ms/d]
-    pub const GtnPalletId: PalletId = PalletId(*b"gsstnmbr");
+	pub const RoundDuration: u64 = 86_400_000; // [ms/d]
+	pub const GtnPalletId: PalletId = PalletId(*b"gsstnmbr");
 }
 impl dut::Config for Test {
-    type RuntimeEvent = RuntimeEvent;
-    type GameMaster = EitherOfDiverse<EnsureSignedBy<Alice, AccountId32>, EnsureRoot<AccountId32>>;
-    type MomentsPerDay = MomentsPerDay;
-    type WeightInfo = ();
-    type RoundDuration = RoundDuration;
-    type Randomness = MockRandomness;
-    type Currency = Balances;
-    type PalletId = GtnPalletId;
-    type MaxAttempts = ConstU8<10>;
-    type MaxWinners = ConstU8<12>;
+	type RuntimeEvent = RuntimeEvent;
+	type GameMaster = EitherOfDiverse<EnsureSignedBy<Alice, AccountId32>, EnsureRoot<AccountId32>>;
+	type MomentsPerDay = MomentsPerDay;
+	type WeightInfo = ();
+	type RoundDuration = RoundDuration;
+	type Randomness = MockRandomness;
+	type Currency = Balances;
+	type PalletId = GtnPalletId;
+	type MaxAttempts = ConstU8<10>;
+	type MaxWinners = ConstU8<12>;
 }
 
 parameter_types! {
@@ -93,40 +95,40 @@ parameter_types! {
 }
 
 impl frame_system::Config for Test {
-    type BaseCallFilter = frame_support::traits::Everything;
-    type BlockWeights = ();
-    type BlockLength = ();
-    type DbWeight = ();
-    type RuntimeOrigin = RuntimeOrigin;
-    type Index = u64;
-    type RuntimeCall = RuntimeCall;
-    type BlockNumber = BlockNumber;
-    type Hash = H256;
-    type Hashing = BlakeTwo256;
-    type AccountId = AccountId;
-    type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
-    type RuntimeEvent = RuntimeEvent;
-    type BlockHashCount = BlockHashCount;
-    type Version = ();
-    type PalletInfo = PalletInfo;
-    type AccountData = pallet_balances::AccountData<Balance>;
-    type OnNewAccount = ();
-    type OnKilledAccount = ();
-    type SystemWeightInfo = ();
-    type SS58Prefix = ();
-    type OnSetCode = ();
-    type MaxConsumers = frame_support::traits::ConstU32<16>;
+	type BaseCallFilter = frame_support::traits::Everything;
+	type BlockWeights = ();
+	type BlockLength = ();
+	type DbWeight = ();
+	type RuntimeOrigin = RuntimeOrigin;
+	type Index = u64;
+	type RuntimeCall = RuntimeCall;
+	type BlockNumber = BlockNumber;
+	type Hash = H256;
+	type Hashing = BlakeTwo256;
+	type AccountId = AccountId;
+	type Lookup = IdentityLookup<Self::AccountId>;
+	type Header = Header;
+	type RuntimeEvent = RuntimeEvent;
+	type BlockHashCount = BlockHashCount;
+	type Version = ();
+	type PalletInfo = PalletInfo;
+	type AccountData = pallet_balances::AccountData<Balance>;
+	type OnNewAccount = ();
+	type OnKilledAccount = ();
+	type SystemWeightInfo = ();
+	type SS58Prefix = ();
+	type OnSetCode = ();
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 parameter_types! {
 	pub const MinimumPeriod: Moment = 3000;
 }
 impl pallet_timestamp::Config for Test {
-    type Moment = Moment;
-    type OnTimestampSet = GuessTheNumber;
-    type MinimumPeriod = MinimumPeriod;
-    type WeightInfo = ();
+	type Moment = Moment;
+	type OnTimestampSet = GuessTheNumber;
+	type MinimumPeriod = MinimumPeriod;
+	type WeightInfo = ();
 }
 pub type Balance = u64;
 
@@ -135,31 +137,31 @@ parameter_types! {
 }
 
 impl pallet_balances::Config for Test {
-    type MaxLocks = ();
-    type Balance = u64;
-    type DustRemoval = ();
-    type RuntimeEvent = RuntimeEvent;
-    type ExistentialDeposit = ExistentialDeposit;
-    type AccountStore = System;
-    type WeightInfo = ();
-    type MaxReserves = ();
-    type ReserveIdentifier = ();
-    type HoldIdentifier = ();
-    type FreezeIdentifier = ();
-    type MaxHolds = ();
-    type MaxFreezes = ();
+	type MaxLocks = ();
+	type Balance = u64;
+	type DustRemoval = ();
+	type RuntimeEvent = RuntimeEvent;
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = System;
+	type WeightInfo = ();
+	type MaxReserves = ();
+	type ReserveIdentifier = ();
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ();
+	type MaxFreezes = ();
 }
 
 // This function basically just builds a genesis storage key/value store according to
 // our desired mockup. RA from enclave compiled in debug mode is allowed
 pub fn new_test_ext() -> sp_io::TestExternalities {
-    let mut t = system::GenesisConfig::default().build_storage::<Test>().unwrap();
-    pallet_balances::GenesisConfig::<Test> {
-        balances: vec![(AccountKeyring::Alice.to_account_id(), 1 << 60)],
-    }
-        .assimilate_storage(&mut t)
-        .unwrap();
-    let mut ext: sp_io::TestExternalities = t.into();
-    ext.execute_with(|| System::set_block_number(1));
-    ext
+	let mut t = system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	pallet_balances::GenesisConfig::<Test> {
+		balances: vec![(AccountKeyring::Alice.to_account_id(), 1 << 60)],
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
+	let mut ext: sp_io::TestExternalities = t.into();
+	ext.execute_with(|| System::set_block_number(1));
+	ext
 }

@@ -16,17 +16,17 @@
 */
 
 use crate::{
-    get_layer_two_nonce,
-    trusted_cli::TrustedCli,
-    trusted_command_utils::{get_identifiers, get_pair_from_str},
-    trusted_operation::perform_trusted_operation,
-    Cli, CliResult, CliResultOk,
+	get_layer_two_nonce,
+	trusted_cli::TrustedCli,
+	trusted_command_utils::{get_identifiers, get_pair_from_str},
+	trusted_operation::perform_trusted_operation,
+	Cli, CliResult, CliResultOk,
 };
 use ita_parentchain_interface::integritee::Balance;
 use ita_stf::{Getter, Index, TrustedCall, TrustedCallSigned};
 use itp_stf_primitives::{
-    traits::TrustedCallSigning,
-    types::{KeyPair, TrustedOperation},
+	traits::TrustedCallSigning,
+	types::{KeyPair, TrustedOperation},
 };
 use log::*;
 use sp_core::{crypto::Ss58Codec, Pair};
@@ -34,26 +34,24 @@ use std::boxed::Box;
 
 #[derive(Parser)]
 pub struct GuessCommand {
-    /// sender's AccountId in ss58check format, mnemonic or hex seed
-    player: String,
-    /// amount to be transferred
-    guess: u32,
+	/// sender's AccountId in ss58check format, mnemonic or hex seed
+	player: String,
+	/// amount to be transferred
+	guess: u32,
 }
 
 impl GuessCommand {
-    pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-        let signer = get_pair_from_str(trusted_args, &self.player);
+	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
+		let signer = get_pair_from_str(trusted_args, &self.player);
 
-        println!("send trusted call guess-the-number ({}, {})", signer.public(), self.guess);
+		println!("send trusted call guess-the-number ({}, {})", signer.public(), self.guess);
 
-        let (mrenclave, shard) = get_identifiers(trusted_args);
-        let nonce = get_layer_two_nonce!(signer, cli, trusted_args);
-        let top: TrustedOperation<TrustedCallSigned, Getter> = TrustedCall::guess_the_number(
-            signer.public().into(),
-            self.guess.into(),
-        )
-            .sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
-            .into_trusted_operation(trusted_args.direct);
-        Ok(perform_trusted_operation::<()>(cli, trusted_args, &top).map(|_| CliResultOk::None)?)
-    }
+		let (mrenclave, shard) = get_identifiers(trusted_args);
+		let nonce = get_layer_two_nonce!(signer, cli, trusted_args);
+		let top: TrustedOperation<TrustedCallSigned, Getter> =
+			TrustedCall::guess_the_number(signer.public().into(), self.guess.into())
+				.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
+				.into_trusted_operation(trusted_args.direct);
+		Ok(perform_trusted_operation::<()>(cli, trusted_args, &top).map(|_| CliResultOk::None)?)
+	}
 }

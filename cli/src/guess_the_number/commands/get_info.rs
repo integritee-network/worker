@@ -14,25 +14,25 @@
 	limitations under the License.
 
 */
-use sp_core::crypto::Ss58Codec;
+use crate::{
+	trusted_cli::TrustedCli, trusted_operation::perform_trusted_operation, Cli, CliResult,
+	CliResultOk,
+};
 use ita_stf::{Getter, GuessTheNumberInfo, PublicGetter, TrustedCallSigned};
 use itp_stf_primitives::types::TrustedOperation;
-use crate::{
-    trusted_cli::TrustedCli, Cli, CliResult, CliResultOk,
-};
-use crate::trusted_operation::perform_trusted_operation;
+use sp_core::crypto::Ss58Codec;
 
 #[derive(Parser)]
 pub struct GetInfoCommand {}
 
 impl GetInfoCommand {
-    pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-        let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::public(
-            PublicGetter::guess_the_number_info),
-        );
-        let info: GuessTheNumberInfo = perform_trusted_operation(cli, trusted_args, &top).unwrap();
-        println!("{:?}", info);
-        println!("pot account: {}", info.account.to_ss58check());
-        Ok(CliResultOk::GuessTheNumberPotInfo { info })
-    }
+	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
+		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::public(
+			PublicGetter::guess_the_number_info,
+		));
+		let info: GuessTheNumberInfo = perform_trusted_operation(cli, trusted_args, &top).unwrap();
+		println!("{:?}", info);
+		println!("pot account: {}", info.account.to_ss58check());
+		Ok(CliResultOk::GuessTheNumberPotInfo { info })
+	}
 }

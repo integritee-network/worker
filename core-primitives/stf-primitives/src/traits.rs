@@ -22,62 +22,62 @@ use itp_sgx_runtime_primitives::types::Index;
 use sp_runtime::transaction_validity::{TransactionValidityError, ValidTransaction};
 /// checks authorization of stf getters
 pub trait GetterAuthorization {
-    fn is_authorized(&self) -> bool;
+	fn is_authorized(&self) -> bool;
 }
 
 /// knows how to sign a trusted call input and provides a signed output
 pub trait TrustedCallSigning<TCS> {
-    fn sign(
-        &self,
-        pair: &KeyPair,
-        nonce: Index,
-        mrenclave: &[u8; 32],
-        shard: &ShardIdentifier,
-    ) -> TCS;
+	fn sign(
+		&self,
+		pair: &KeyPair,
+		nonce: Index,
+		mrenclave: &[u8; 32],
+		shard: &ShardIdentifier,
+	) -> TCS;
 }
 
 /// enables TrustedCallSigned verification
 pub trait TrustedCallVerification {
-    fn sender_account(&self) -> &AccountId;
+	fn sender_account(&self) -> &AccountId;
 
-    fn nonce(&self) -> Index;
+	fn nonce(&self) -> Index;
 
-    fn verify_signature(&self, mrenclave: &[u8; 32], shard: &ShardIdentifier) -> bool;
+	fn verify_signature(&self, mrenclave: &[u8; 32], shard: &ShardIdentifier) -> bool;
 }
 
 /// enables common hooks for STF interaction in the context of blocks or batch execution
 pub trait StateUpdateBlockHooks<State> {
-    /// to be executed before any TrustedCalls in this batch/block
-    fn on_initialize(state: &mut State);
+	/// to be executed before any TrustedCalls in this batch/block
+	fn on_initialize(state: &mut State);
 
-    /// to be executed after any TrustedCalls in this batch/block
-    fn on_finalize(state: &mut State);
+	/// to be executed after any TrustedCalls in this batch/block
+	fn on_finalize(state: &mut State);
 }
 
 /// validation for top pool
 pub trait PoolTransactionValidation {
-    fn validate(&self) -> Result<ValidTransaction, TransactionValidityError>;
+	fn validate(&self) -> Result<ValidTransaction, TransactionValidityError>;
 }
 
 /// Trait to be implemented on the executor to serve helper methods of the executor
 /// to the `IndirectDispatch` implementation.
 pub trait IndirectExecutor<TCS, Error>
 where
-    TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
+	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
 {
-    fn submit_trusted_call(&self, shard: ShardIdentifier, encrypted_trusted_call: Vec<u8>);
+	fn submit_trusted_call(&self, shard: ShardIdentifier, encrypted_trusted_call: Vec<u8>);
 
-    fn decrypt(&self, encrypted: &[u8]) -> Result<Vec<u8>, Error>;
+	fn decrypt(&self, encrypted: &[u8]) -> Result<Vec<u8>, Error>;
 
-    fn encrypt(&self, value: &[u8]) -> Result<Vec<u8>, Error>;
+	fn encrypt(&self, value: &[u8]) -> Result<Vec<u8>, Error>;
 
-    fn get_enclave_account(&self) -> Result<AccountId, Error>;
+	fn get_enclave_account(&self) -> Result<AccountId, Error>;
 
-    fn get_default_shard(&self) -> ShardIdentifier;
+	fn get_default_shard(&self) -> ShardIdentifier;
 
-    fn sign_call_with_self<TC: Encode + Debug + TrustedCallSigning<TCS>>(
-        &self,
-        trusted_call: &TC,
-        shard: &ShardIdentifier,
-    ) -> Result<TCS, Error>;
+	fn sign_call_with_self<TC: Encode + Debug + TrustedCallSigning<TCS>>(
+		&self,
+		trusted_call: &TC,
+		shard: &ShardIdentifier,
+	) -> Result<TCS, Error>;
 }

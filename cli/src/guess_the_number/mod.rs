@@ -15,36 +15,33 @@
 
 */
 
-use crate::{
-    trusted_cli::TrustedCli,
-    Cli, CliResult,
+use crate::{trusted_cli::TrustedCli, Cli, CliResult};
+use commands::{
+	get_info::GetInfoCommand, guess::GuessCommand, push_by_one_day::PushByOneDayCommand,
+	set_winnings::SetWinningsCommand,
 };
-use commands::get_info::GetInfoCommand;
-use commands::set_winnings::SetWinningsCommand;
-use commands::push_by_one_day::PushByOneDayCommand;
-use commands::guess::GuessCommand;
 
 mod commands;
 
 #[derive(Subcommand)]
 pub enum GuessTheNumberCommand {
-    /// get public info for the guess-the-number game
-    GetInfo(GetInfoCommand),
-    /// set winnings amount (must be game master)
-    SetWinnings(SetWinningsCommand),
-    /// push the end of this round by one day (must be game master)
-    PushByOneDay(PushByOneDayCommand),
-    /// submit a guess as a player
-    Guess(GuessCommand),
+	/// get public info for the guess-the-number game
+	GetInfo(GetInfoCommand),
+	/// set winnings amount (must be game master)
+	SetWinnings(SetWinningsCommand),
+	/// push the end of this round by one day (must be game master)
+	PushByOneDay(PushByOneDayCommand),
+	/// submit a guess as a player
+	Guess(GuessCommand),
 }
 
 impl GuessTheNumberCommand {
-    pub fn run(&self, cli: &Cli, trusted_cli: &TrustedCli) -> CliResult {
-        match self {
-            GuessTheNumberCommand::GetInfo(cmd) => cmd.run(cli, trusted_cli),
-            GuessTheNumberCommand::SetWinnings(cmd) => cmd.run(cli, trusted_cli),
-            GuessTheNumberCommand::PushByOneDay(cmd) => cmd.run(cli, trusted_cli),
-            GuessTheNumberCommand::Guess(cmd) => cmd.run(cli, trusted_cli),
-        }
-    }
+	pub fn run(&self, cli: &Cli, trusted_cli: &TrustedCli) -> CliResult {
+		match self {
+			GuessTheNumberCommand::GetInfo(cmd) => cmd.run(cli, trusted_cli),
+			GuessTheNumberCommand::SetWinnings(cmd) => cmd.run(cli, trusted_cli),
+			GuessTheNumberCommand::PushByOneDay(cmd) => cmd.run(cli, trusted_cli),
+			GuessTheNumberCommand::Guess(cmd) => cmd.run(cli, trusted_cli),
+		}
+	}
 }

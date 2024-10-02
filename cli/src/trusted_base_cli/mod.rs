@@ -16,14 +16,15 @@
 */
 
 use crate::{
-    trusted_base_cli::commands::{
-        balance::BalanceCommand, get_shard::GetShardCommand, get_shard_vault::GetShardVaultCommand,
-        nonce::NonceCommand, set_balance::SetBalanceCommand, transfer::TransferCommand,
-        unshield_funds::UnshieldFundsCommand, get_total_issuance::GetTotalIssuanceCommand,
-    },
-    trusted_cli::TrustedCli,
-    trusted_command_utils::get_keystore_path,
-    Cli, CliResult, CliResultOk, ED25519_KEY_TYPE, SR25519_KEY_TYPE,
+	trusted_base_cli::commands::{
+		balance::BalanceCommand, get_shard::GetShardCommand, get_shard_vault::GetShardVaultCommand,
+		get_total_issuance::GetTotalIssuanceCommand, nonce::NonceCommand,
+		set_balance::SetBalanceCommand, transfer::TransferCommand,
+		unshield_funds::UnshieldFundsCommand,
+	},
+	trusted_cli::TrustedCli,
+	trusted_command_utils::get_keystore_path,
+	Cli, CliResult, CliResultOk, ED25519_KEY_TYPE, SR25519_KEY_TYPE,
 };
 use log::*;
 use sp_core::crypto::Ss58Codec;
@@ -34,82 +35,82 @@ mod commands;
 
 #[derive(Subcommand)]
 pub enum TrustedBaseCommand {
-    /// generates a new incognito account for the given shard
-    NewAccount,
+	/// generates a new incognito account for the given shard
+	NewAccount,
 
-    /// lists all incognito accounts in a given shard
-    ListAccounts,
+	/// lists all incognito accounts in a given shard
+	ListAccounts,
 
-    /// send funds from one incognito account to another
-    Transfer(TransferCommand),
+	/// send funds from one incognito account to another
+	Transfer(TransferCommand),
 
-    /// ROOT call to set some account balance to an arbitrary number
-    SetBalance(SetBalanceCommand),
+	/// ROOT call to set some account balance to an arbitrary number
+	SetBalance(SetBalanceCommand),
 
-    /// query balance for incognito account in keystore
-    Balance(BalanceCommand),
+	/// query balance for incognito account in keystore
+	Balance(BalanceCommand),
 
-    /// Transfer funds from an incognito account to an parentchain account
-    UnshieldFunds(UnshieldFundsCommand),
+	/// Transfer funds from an incognito account to an parentchain account
+	UnshieldFunds(UnshieldFundsCommand),
 
-    /// gets the nonce of a given account, taking the pending trusted calls
-    /// in top pool in consideration
-    Nonce(NonceCommand),
+	/// gets the nonce of a given account, taking the pending trusted calls
+	/// in top pool in consideration
+	Nonce(NonceCommand),
 
-    /// get shard for this worker
-    GetShard(GetShardCommand),
+	/// get shard for this worker
+	GetShard(GetShardCommand),
 
-    /// get shard vault for shielding (if defined for this worker)
-    GetShardVault(GetShardVaultCommand),
+	/// get shard vault for shielding (if defined for this worker)
+	GetShardVault(GetShardVaultCommand),
 
-    /// get total issuance of this shard's native token
-    GetTotalIssuance(GetTotalIssuanceCommand),
+	/// get total issuance of this shard's native token
+	GetTotalIssuance(GetTotalIssuanceCommand),
 }
 
 impl TrustedBaseCommand {
-    pub fn run(&self, cli: &Cli, trusted_cli: &TrustedCli) -> CliResult {
-        match self {
-            TrustedBaseCommand::NewAccount => new_account(trusted_cli),
-            TrustedBaseCommand::ListAccounts => list_accounts(trusted_cli),
-            TrustedBaseCommand::Transfer(cmd) => cmd.run(cli, trusted_cli),
-            TrustedBaseCommand::SetBalance(cmd) => cmd.run(cli, trusted_cli),
-            TrustedBaseCommand::Balance(cmd) => cmd.run(cli, trusted_cli),
-            TrustedBaseCommand::UnshieldFunds(cmd) => cmd.run(cli, trusted_cli),
-            TrustedBaseCommand::Nonce(cmd) => cmd.run(cli, trusted_cli),
-            TrustedBaseCommand::GetShard(cmd) => cmd.run(cli, trusted_cli),
-            TrustedBaseCommand::GetShardVault(cmd) => cmd.run(cli, trusted_cli),
-            TrustedBaseCommand::GetTotalIssuance(cmd) => cmd.run(cli, trusted_cli),
-        }
-    }
+	pub fn run(&self, cli: &Cli, trusted_cli: &TrustedCli) -> CliResult {
+		match self {
+			TrustedBaseCommand::NewAccount => new_account(trusted_cli),
+			TrustedBaseCommand::ListAccounts => list_accounts(trusted_cli),
+			TrustedBaseCommand::Transfer(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::SetBalance(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::Balance(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::UnshieldFunds(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::Nonce(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::GetShard(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::GetShardVault(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::GetTotalIssuance(cmd) => cmd.run(cli, trusted_cli),
+		}
+	}
 }
 
 fn new_account(trusted_args: &TrustedCli) -> CliResult {
-    let store = LocalKeystore::open(get_keystore_path(trusted_args), None).unwrap();
-    let key = LocalKeystore::sr25519_generate_new(&store, SR25519_KEY_TYPE, None).unwrap();
-    drop(store);
-    info!("new account {}", key.to_ss58check());
-    let key_str = key.to_ss58check();
-    println!("{}", key_str);
+	let store = LocalKeystore::open(get_keystore_path(trusted_args), None).unwrap();
+	let key = LocalKeystore::sr25519_generate_new(&store, SR25519_KEY_TYPE, None).unwrap();
+	drop(store);
+	info!("new account {}", key.to_ss58check());
+	let key_str = key.to_ss58check();
+	println!("{}", key_str);
 
-    Ok(CliResultOk::PubKeysBase58 { pubkeys_sr25519: Some(vec![key_str]), pubkeys_ed25519: None })
+	Ok(CliResultOk::PubKeysBase58 { pubkeys_sr25519: Some(vec![key_str]), pubkeys_ed25519: None })
 }
 
 fn list_accounts(trusted_args: &TrustedCli) -> CliResult {
-    let store = LocalKeystore::open(get_keystore_path(trusted_args), None).unwrap();
-    info!("sr25519 keys:");
-    for pubkey in store.sr25519_public_keys(SR25519_KEY_TYPE).into_iter() {
-        println!("{}", pubkey.to_ss58check());
-    }
-    info!("ed25519 keys:");
-    let pubkeys: Vec<String> = store
-        .ed25519_public_keys(ED25519_KEY_TYPE)
-        .into_iter()
-        .map(|pubkey| pubkey.to_ss58check())
-        .collect();
-    for pubkey in &pubkeys {
-        println!("{}", pubkey);
-    }
-    drop(store);
+	let store = LocalKeystore::open(get_keystore_path(trusted_args), None).unwrap();
+	info!("sr25519 keys:");
+	for pubkey in store.sr25519_public_keys(SR25519_KEY_TYPE).into_iter() {
+		println!("{}", pubkey.to_ss58check());
+	}
+	info!("ed25519 keys:");
+	let pubkeys: Vec<String> = store
+		.ed25519_public_keys(ED25519_KEY_TYPE)
+		.into_iter()
+		.map(|pubkey| pubkey.to_ss58check())
+		.collect();
+	for pubkey in &pubkeys {
+		println!("{}", pubkey);
+	}
+	drop(store);
 
-    Ok(CliResultOk::PubKeysBase58 { pubkeys_sr25519: None, pubkeys_ed25519: Some(pubkeys) })
+	Ok(CliResultOk::PubKeysBase58 { pubkeys_sr25519: None, pubkeys_ed25519: Some(pubkeys) })
 }

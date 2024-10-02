@@ -14,24 +14,24 @@
 	limitations under the License.
 
 */
-use sp_core::crypto::Ss58Codec;
+use crate::{
+	trusted_cli::TrustedCli, trusted_operation::perform_trusted_operation, Cli, CliResult,
+	CliResultOk,
+};
 use ita_stf::{Balance, Getter, GuessTheNumberInfo, PublicGetter, TrustedCallSigned};
 use itp_stf_primitives::types::TrustedOperation;
-use crate::{
-    trusted_cli::TrustedCli, Cli, CliResult, CliResultOk,
-};
-use crate::trusted_operation::perform_trusted_operation;
+use sp_core::crypto::Ss58Codec;
 
 #[derive(Parser)]
 pub struct GetTotalIssuanceCommand {}
 
 impl GetTotalIssuanceCommand {
-    pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-        let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::public(
-            PublicGetter::total_issuance),
-        );
-        let issuance: Balance = perform_trusted_operation(cli, trusted_args, &top).unwrap();
-        println!("{:?}", issuance);
-        Ok(CliResultOk::Balance { balance: issuance })
-    }
+	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
+		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::public(
+			PublicGetter::total_issuance,
+		));
+		let issuance: Balance = perform_trusted_operation(cli, trusted_args, &top).unwrap();
+		println!("{:?}", issuance);
+		Ok(CliResultOk::Balance { balance: issuance })
+	}
 }
