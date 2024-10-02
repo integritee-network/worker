@@ -34,7 +34,7 @@ use std::boxed::Box;
 
 #[derive(Parser)]
 pub struct SetWinningsCommand {
-    /// sender's AccountId in ss58check format. must by authorized as GuessMaster
+    /// sender's AccountId in ss58check format, mnemonic or hex seed. must by authorized as GuessMaster
     master: String,
     /// amount to be transferred
     winnings: Balance,

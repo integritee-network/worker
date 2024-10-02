@@ -16,19 +16,19 @@
 */
 
 use crate::{
-	trusted_cli::TrustedCli, trusted_command_utils::get_balance, Cli, CliResult, CliResultOk,
+    trusted_cli::TrustedCli, trusted_command_utils::get_balance, Cli, CliResult, CliResultOk,
 };
 
 #[derive(Parser)]
 pub struct BalanceCommand {
-	/// AccountId in ss58check format
-	account: String,
+    /// AccountId in ss58check format, mnemonic or hex seed
+    account: String,
 }
 
 impl BalanceCommand {
-	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let balance = get_balance(cli, trusted_args, &self.account).unwrap_or_default();
-		println!("{}", balance);
-		Ok(CliResultOk::Balance { balance })
-	}
+    pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
+        let balance = get_balance(cli, trusted_args, &self.account).unwrap_or_default();
+        println!("{}", balance);
+        Ok(CliResultOk::Balance { balance })
+    }
 }

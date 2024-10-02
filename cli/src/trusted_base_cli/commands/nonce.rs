@@ -16,8 +16,8 @@
 */
 
 use crate::{
-	get_layer_two_nonce, trusted_cli::TrustedCli, trusted_command_utils::get_pair_from_str,
-	trusted_operation::perform_trusted_operation, Cli, CliResult, CliResultOk,
+    get_layer_two_nonce, trusted_cli::TrustedCli, trusted_command_utils::get_pair_from_str,
+    trusted_operation::perform_trusted_operation, Cli, CliResult, CliResultOk,
 };
 use ita_stf::Index;
 use itp_stf_primitives::types::{KeyPair, TrustedOperation};
@@ -26,14 +26,14 @@ use sp_core::Pair;
 
 #[derive(Parser)]
 pub struct NonceCommand {
-	/// AccountId in ss58check format
-	account: String,
+    /// AccountId in ss58check format, mnemonic or hex seed
+    account: String,
 }
 
 impl NonceCommand {
-	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let who = get_pair_from_str(trusted_args, &self.account);
-		println!("{}", get_layer_two_nonce!(who, cli, trusted_args));
-		Ok(CliResultOk::None)
-	}
+    pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
+        let who = get_pair_from_str(trusted_args, &self.account);
+        println!("{}", get_layer_two_nonce!(who, cli, trusted_args));
+        Ok(CliResultOk::None)
+    }
 }

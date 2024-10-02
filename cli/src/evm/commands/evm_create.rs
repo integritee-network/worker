@@ -16,16 +16,16 @@
 */
 
 use crate::{
-	get_layer_two_evm_nonce, get_layer_two_nonce,
-	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_identifiers, get_pair_from_str},
-	trusted_operation::perform_trusted_operation,
-	Cli, CliResult, CliResultOk,
+    get_layer_two_evm_nonce, get_layer_two_nonce,
+    trusted_cli::TrustedCli,
+    trusted_command_utils::{get_identifiers, get_pair_from_str},
+    trusted_operation::perform_trusted_operation,
+    Cli, CliResult, CliResultOk,
 };
 use ita_stf::{evm_helpers::evm_create_address, Index, TrustedCall, TrustedGetter};
 use itp_stf_primitives::{
-	traits::TrustedCallSigning,
-	types::{KeyPair, TrustedOperation},
+    traits::TrustedCallSigning,
+    types::{KeyPair, TrustedOperation},
 };
 use itp_types::AccountId;
 use log::*;
@@ -35,55 +35,55 @@ use sp_runtime::traits::BlakeTwo256;
 use std::vec::Vec;
 #[derive(Parser)]
 pub struct EvmCreateCommands {
-	/// Sender's incognito AccountId in ss58check format
-	from: String,
+    /// Sender's incognito AccountId in ss58check format, mnemonic or hex seed
+    from: String,
 
-	/// Smart Contract in Hex format
-	smart_contract: String,
+    /// Smart Contract in Hex format
+    smart_contract: String,
 }
 
 impl EvmCreateCommands {
-	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let from = get_pair_from_str(trusted_args, &self.from);
-		let from_acc: AccountId = from.public().into();
-		println!("from ss58 is {}", from.public().to_ss58check());
+    pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
+        let from = get_pair_from_str(trusted_args, &self.from);
+        let from_acc: AccountId = from.public().into();
+        println!("from ss58 is {}", from.public().to_ss58check());
 
-		let mut sender_evm_acc_slice: [u8; 20] = [0; 20];
-		sender_evm_acc_slice
-			.copy_from_slice((<[u8; 32]>::from(from_acc.clone())).get(0..20).unwrap());
-		let sender_evm_acc: H160 = sender_evm_acc_slice.into();
+        let mut sender_evm_acc_slice: [u8; 20] = [0; 20];
+        sender_evm_acc_slice
+            .copy_from_slice((<[u8; 32]>::from(from_acc.clone())).get(0..20).unwrap());
+        let sender_evm_acc: H160 = sender_evm_acc_slice.into();
 
-		let (mrenclave, shard) = get_identifiers(trusted_args);
+        let (mrenclave, shard) = get_identifiers(trusted_args);
 
-		let sender_evm_substrate_addr =
-			HashedAddressMapping::<BlakeTwo256>::into_account_id(sender_evm_acc);
-		println!(
-			"Trying to get nonce of evm account {:?}",
-			sender_evm_substrate_addr.to_ss58check()
-		);
+        let sender_evm_substrate_addr =
+            HashedAddressMapping::<BlakeTwo256>::into_account_id(sender_evm_acc);
+        println!(
+            "Trying to get nonce of evm account {:?}",
+            sender_evm_substrate_addr.to_ss58check()
+        );
 
-		let nonce = get_layer_two_nonce!(from, cli, trusted_args);
-		let evm_account_nonce = get_layer_two_evm_nonce!(from, cli, trusted_args);
+        let nonce = get_layer_two_nonce!(from, cli, trusted_args);
+        let evm_account_nonce = get_layer_two_evm_nonce!(from, cli, trusted_args);
 
-		let top = TrustedCall::evm_create(
-			from_acc,
-			sender_evm_acc,
-			array_bytes::hex2bytes(&self.smart_contract).unwrap().to_vec(),
-			U256::from(0),
-			967295,        // gas limit
-			U256::from(1), // max_fee_per_gas !>= min_gas_price defined in runtime
-			None,
-			None,
-			Vec::new(),
-		)
-		.sign(&from.into(), nonce, &mrenclave, &shard)
-		.into_trusted_operation(trusted_args.direct);
+        let top = TrustedCall::evm_create(
+            from_acc,
+            sender_evm_acc,
+            array_bytes::hex2bytes(&self.smart_contract).unwrap().to_vec(),
+            U256::from(0),
+            967295,        // gas limit
+            U256::from(1), // max_fee_per_gas !>= min_gas_price defined in runtime
+            None,
+            None,
+            Vec::new(),
+        )
+            .sign(&from.into(), nonce, &mrenclave, &shard)
+            .into_trusted_operation(trusted_args.direct);
 
-		perform_trusted_operation::<()>(cli, trusted_args, &top)?;
+        perform_trusted_operation::<()>(cli, trusted_args, &top)?;
 
-		let execution_address = evm_create_address(sender_evm_acc, evm_account_nonce);
-		info!("trusted call evm_create executed");
-		println!("Created the smart contract with address {:?}", execution_address);
-		Ok(CliResultOk::H160 { hash: execution_address })
-	}
+        let execution_address = evm_create_address(sender_evm_acc, evm_account_nonce);
+        info!("trusted call evm_create executed");
+        println!("Created the smart contract with address {:?}", execution_address);
+        Ok(CliResultOk::H160 { hash: execution_address })
+    }
 }

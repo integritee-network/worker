@@ -34,15 +34,15 @@ use std::boxed::Box;
 
 #[derive(Parser)]
 pub struct GuessCommand {
-    /// sender's AccountId in ss58check format. must by authorized as GuessMaster
-    master: String,
+    /// sender's AccountId in ss58check format, mnemonic or hex seed
+    player: String,
     /// amount to be transferred
     guess: u32,
 }
 
 impl GuessCommand {
     pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-        let signer = get_pair_from_str(trusted_args, &self.master);
+        let signer = get_pair_from_str(trusted_args, &self.player);
 
         println!("send trusted call guess-the-number ({}, {})", signer.public(), self.guess);
 

@@ -28,9 +28,13 @@ mod commands;
 
 #[derive(Subcommand)]
 pub enum GuessTheNumberCommand {
+    /// get public info for the guess-the-number game
     GetInfo(GetInfoCommand),
+    /// set winnings amount (must be game master)
     SetWinnings(SetWinningsCommand),
+    /// push the end of this round by one day (must be game master)
     PushByOneDay(PushByOneDayCommand),
+    /// submit a guess as a player
     Guess(GuessCommand),
 }
 

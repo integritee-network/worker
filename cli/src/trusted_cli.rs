@@ -53,7 +53,8 @@ pub enum TrustedCommand {
     #[clap(flatten)]
     EvmCommands(EvmCommand),
 
-    #[clap(flatten)]
+    /// commands for our guess-the-number game
+    #[clap(subcommand)]
     GuessTheNumber(GuessTheNumberCommand),
 
     /// Run Benchmark
