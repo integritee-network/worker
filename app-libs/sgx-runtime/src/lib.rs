@@ -70,7 +70,7 @@ pub use frame_support::{
     },
     StorageValue,
 };
-use frame_support::traits::EitherOfDiverse;
+use frame_support::traits::{ConstU8, EitherOfDiverse};
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use itp_sgx_runtime_primitives::types::Moment;
 pub use pallet_balances::Call as BalancesCall;
@@ -291,6 +291,7 @@ ord_parameter_types! {
 parameter_types! {
 	pub const MomentsPerDay: u64 = 86_400_000; // [ms/d]
     pub const RoundDuration: u64 = 7 * 86_400_000; // [ms/d]
+    pub const GtnPalletId: PalletId = PalletId(*b"gsstnmbr");
 }
 impl pallet_guess_the_number::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
@@ -299,6 +300,10 @@ impl pallet_guess_the_number::Config for Runtime {
     type WeightInfo = ();
     type RoundDuration = RoundDuration;
     type Randomness = SgxRandomness;
+    type Currency = Balances;
+    type PalletId = GtnPalletId;
+    type MaxAttempts = ConstU8<10>;
+    type MaxWinners = ConstU8<12>;
 }
 
 // The plain sgx-runtime without the `evm-pallet`

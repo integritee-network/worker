@@ -129,7 +129,10 @@ pub mod pallet {
     StorageValue<_, T::Moment, ValueQuery, DefaultForNextRoundTimestamp<T>>;
 
     #[pallet::call]
-    impl<T: Config> Pallet<T> {
+    impl<T: Config> Pallet<T>
+    where
+        sp_core::H256: From<<T as frame_system::Config>::Hash>,
+    {
         /// Push next round by one entire day
         ///
         /// May only be called from `T::GameMaster`.
@@ -159,6 +162,7 @@ pub mod pallet {
         pub fn guess(origin: OriginFor<T>, guess: GuessType) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             ensure!(Self::guess_attempts(&sender) < T::MaxAttempts::get(), Error::<T>::TooManyAttempts);
+            <GuessAttempts<T>>::mutate(&sender, |a| *a += 1u8);
             let lucky_number = <LuckyNumber<T>>::get().ok_or_else(|| Error::<T>::NoDrawYet)?;
             let distance = GuessType::abs_diff(lucky_number, guess);
             let last_winning_distance = Self::winning_distance().unwrap_or(crate::GuessType::MAX);
@@ -199,7 +203,7 @@ where
 
         for winner in winners {
             if T::Currency::transfer(&pot, &winner, winnings_per_winner, ExistenceRequirement::AllowDeath).is_err() {
-                warn!("error transferring reards")
+                warn!("error transferring rewards")
             };
         }
     }
@@ -228,7 +232,7 @@ where
         <Winners<T>>::kill();
         <LastWinningDistance<T>>::put(Self::winning_distance().unwrap_or(GuessType::MAX));
         <WinningDistance<T>>::kill();
-
+        let _ = <GuessAttempts<T>>::clear(T::MaxAttempts::get().into(), None);
         Ok(())
     }
 

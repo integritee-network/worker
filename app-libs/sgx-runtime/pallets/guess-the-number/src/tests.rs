@@ -183,6 +183,38 @@ fn guessing_and_ranking_works() {
 }
 
 #[test]
+fn guessing_limit_works() {
+    new_test_ext().execute_with(|| {
+        //large offset since 1970 to when first block is generated
+
+        System::set_block_number(0);
+        set_timestamp(GENESIS_TIME);
+        assert_eq!(GuessTheNumber::current_round_index(), 1);
+
+        let bob = AccountKeyring::Bob.to_account_id();
+        assert_ok!(GuessTheNumber::guess(RuntimeOrigin::signed(bob.clone()), 4987));
+        assert_ok!(GuessTheNumber::guess(RuntimeOrigin::signed(bob.clone()), 4987));
+        assert_ok!(GuessTheNumber::guess(RuntimeOrigin::signed(bob.clone()), 4987));
+        assert_ok!(GuessTheNumber::guess(RuntimeOrigin::signed(bob.clone()), 4987));
+        assert_ok!(GuessTheNumber::guess(RuntimeOrigin::signed(bob.clone()), 4987));
+        assert_ok!(GuessTheNumber::guess(RuntimeOrigin::signed(bob.clone()), 4987));
+        assert_ok!(GuessTheNumber::guess(RuntimeOrigin::signed(bob.clone()), 4987));
+        assert_ok!(GuessTheNumber::guess(RuntimeOrigin::signed(bob.clone()), 4987));
+        assert_ok!(GuessTheNumber::guess(RuntimeOrigin::signed(bob.clone()), 4987));
+        assert_ok!(GuessTheNumber::guess(RuntimeOrigin::signed(bob.clone()), 4987));
+        assert_err!(GuessTheNumber::guess(RuntimeOrigin::signed(bob.clone()), 4987), Error::<Test>::TooManyAttempts);
+
+        // end this round
+        run_to_block(1);
+        set_timestamp(GENESIS_TIME + ONE_DAY);
+        assert_eq!(GuessTheNumber::current_round_index(), 2);
+
+        // counter should be reset
+        assert_ok!(GuessTheNumber::guess(RuntimeOrigin::signed(bob.clone()), 4987));
+    });
+}
+
+#[test]
 fn winning_and_payout_works() {
     new_test_ext().execute_with(|| {
         //large offset since 1970 to when first block is generated
