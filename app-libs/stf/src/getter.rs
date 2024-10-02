@@ -16,7 +16,7 @@
 */
 
 use codec::{Decode, Encode};
-use ita_sgx_runtime::{System, GuessTheNumber};
+use ita_sgx_runtime::{System, GuessTheNumber, GuessType};
 use itp_stf_interface::ExecuteGetter;
 use itp_stf_primitives::{
     traits::GetterAuthorization,
@@ -40,6 +40,7 @@ use sp_core::{H160, H256};
 use sp_runtime::transaction_validity::{
     TransactionValidityError, UnknownTransaction, ValidTransaction,
 };
+use itp_sgx_runtime_primitives::types::{Balance, Moment};
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
@@ -96,6 +97,7 @@ pub enum PublicGetter {
     some_value,
     guess_the_number_last_lucky_number,
     guess_the_number_last_winning_distance,
+    guess_the_number_info,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -238,10 +240,41 @@ impl ExecuteGetter for PublicGetter {
                 // todo! return suiting value, not this one
                 GuessTheNumber::lucky_number().map(|guess| guess.encode())
             }
+            PublicGetter::guess_the_number_info => {
+                let account = GuessTheNumber::get_pot_account();
+                let winnings = GuessTheNumber::winnings();
+                let next_round_timestamp = GuessTheNumber::next_round_timestamp();
+                let maybe_last_winning_distance = GuessTheNumber::last_winning_distance();
+                let last_winners = GuessTheNumber::last_winners();
+                let maybe_last_lucky_number = GuessTheNumber::last_lucky_number();
+                let info = System::account(&account);
+                debug!("TrustedGetter GuessTheNumber Pot Info");
+                debug!("AccountInfo for pot {} is {:?}", account_id_to_string(&account), info);
+                std::println!("⣿STF⣿ 🔍 TrustedGetter query: guess-the-number pot info");
+                Some(GuessTheNumberInfo {
+                    account,
+                    balance: info.data.free,
+                    winnings,
+                    next_round_timestamp,
+                    last_winners,
+                    maybe_last_lucky_number,
+                    maybe_last_winning_distance,
+                }.encode())
+            }
         }
     }
 
     fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
         Vec::new()
     }
+}
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq)]
+pub struct GuessTheNumberInfo {
+    pub account: AccountId,
+    pub balance: Balance,
+    pub winnings: Balance,
+    pub next_round_timestamp: Moment,
+    pub last_winners: Vec<AccountId>,
+    pub maybe_last_lucky_number: Option<GuessType>,
+    pub maybe_last_winning_distance: Option<GuessType>,
 }

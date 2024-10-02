@@ -3,14 +3,15 @@
 use codec::Decode;
 use frame_support::dispatch::DispatchResult;
 use frame_support::pallet_prelude::Get;
-use frame_support::traits::{ConstU8, Currency, ExistenceRequirement, OnTimestampSet};
+use frame_support::traits::{Currency, ExistenceRequirement, OnTimestampSet};
 use frame_support::PalletId;
-use log::{info, warn};
+use log::*;
 use sp_core::H256;
 use sp_runtime::traits::{CheckedDiv, Hash, Saturating, Zero};
 use sp_std::{ops::Rem, cmp::min};
 use itp_randomness::Randomness;
 use sp_runtime::SaturatedConversion;
+use sp_std::{vec, vec::Vec};
 
 pub use pallet::*;
 
@@ -85,6 +86,11 @@ pub mod pallet {
     StorageValue<_, RoundIndexType, ValueQuery>;
 
     #[pallet::storage]
+    #[pallet::getter(fn last_lucky_number)]
+    pub(super) type LastLuckyNumber<T: Config> =
+    StorageValue<_, GuessType, OptionQuery>;
+
+    #[pallet::storage]
     #[pallet::getter(fn lucky_number)]
     pub(super) type LuckyNumber<T: Config> =
     StorageValue<_, GuessType, OptionQuery>;
@@ -143,6 +149,7 @@ pub mod pallet {
             T::GameMaster::ensure_origin(origin)?;
             let tnext = Self::next_round_timestamp().saturating_add(T::MomentsPerDay::get());
             <NextRoundTimestamp<T>>::put(tnext);
+            debug!("pushing next round by one day");
             Self::deposit_event(Event::RoundSchedulePushedByOneDay);
             Ok(().into())
         }
@@ -152,6 +159,7 @@ pub mod pallet {
         )]
         pub fn set_winnings(origin: OriginFor<T>, winnings: BalanceOf<T>) -> DispatchResultWithPostInfo {
             T::GameMaster::ensure_origin(origin)?;
+            debug!("setting winnings");
             <Winnings<T>>::put(winnings);
             Ok(().into())
         }
@@ -232,17 +240,16 @@ where
         <Winners<T>>::kill();
         <LastWinningDistance<T>>::put(Self::winning_distance().unwrap_or(GuessType::MAX));
         <WinningDistance<T>>::kill();
+        <LastLuckyNumber<T>>::put(Self::lucky_number().unwrap_or(0u32.into()));
         let _ = <GuessAttempts<T>>::clear(T::MaxAttempts::get().into(), None);
         Ok(())
     }
 
     fn start_round() -> DispatchResult {
         let current_round_index = <CurrentRoundIndex<T>>::get();
-        info!("starting round {}", current_round_index);
-
+        let round_end_timestamp = Self::next_round_timestamp();
+        info!("starting round {}, lasting until {:?}", current_round_index, round_end_timestamp);
         let lucky_number = T::Randomness::random_u32(0, 10_000);
-        // todo: delete this log
-        info!("winning number:  {}", lucky_number);
         <LuckyNumber<T>>::put(lucky_number);
         Ok(())
     }

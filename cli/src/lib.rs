@@ -50,6 +50,7 @@ use itp_node_api::api_client::Metadata;
 use sp_application_crypto::KeyTypeId;
 use sp_core::{H160, H256};
 use thiserror::Error;
+use ita_stf::GuessTheNumberInfo;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -111,6 +112,9 @@ pub enum CliResultOk {
     },
     U32 {
         value: u32,
+    },
+    GuessTheNumberPotInfo {
+        info: GuessTheNumberInfo,
     },
     // TODO should ideally be removed; or at least drastically less used
     // We WANT all commands exposed by the cli to return something useful for the caller(ie instead of printing)

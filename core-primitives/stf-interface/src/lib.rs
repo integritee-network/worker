@@ -83,7 +83,7 @@ where
     ) -> Result<(), Self::Error>;
 
     /// to be executed before any TrustedCalls in this batch/block
-    fn on_initialize(state: &mut State) -> Result<(), Self::Error>;
+    fn on_initialize(state: &mut State, now: Moment) -> Result<(), Self::Error>;
 
     /// to be executed after any TrustedCalls in this batch/block
     fn on_finalize(state: &mut State) -> Result<(), Self::Error>;

@@ -28,10 +28,7 @@ use core::{fmt::Debug, marker::PhantomData};
 use itp_node_api_metadata::metadata_mocks::NodeMetadataMock;
 use itp_node_api_metadata_provider::NodeMetadataRepository;
 use itp_stf_primitives::traits::TrustedCallVerification;
-use itp_types::{
-    parentchain::{ParentchainCall, ParentchainId},
-    AccountId, Index,
-};
+use itp_types::{parentchain::{ParentchainCall, ParentchainId}, AccountId, Index, Moment};
 
 #[derive(Default)]
 pub struct StateInterfaceMock<State, StateDiff> {
@@ -72,7 +69,7 @@ where
         unimplemented!()
     }
 
-    fn on_initialize(_state: &mut State) -> Result<(), Self::Error> {
+    fn on_initialize(_state: &mut State, now: Moment) -> Result<(), Self::Error> {
         unimplemented!()
     }
     fn on_finalize(_state: &mut State) -> Result<(), Self::Error> {

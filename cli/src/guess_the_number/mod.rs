@@ -19,20 +19,28 @@ use crate::{
     trusted_cli::TrustedCli,
     Cli, CliResult,
 };
-use crate::guess_the_number::commands::get_last_lucky_number::GetLastLuckyNumberCommand;
+use commands::get_info::GetInfoCommand;
+use commands::set_winnings::SetWinningsCommand;
+use commands::push_by_one_day::PushByOneDayCommand;
+use commands::guess::GuessCommand;
 
 mod commands;
 
 #[derive(Subcommand)]
 pub enum GuessTheNumberCommand {
-    // get the lucky number drawn in the previous round
-    GetLastLuckyNumber(GetLastLuckyNumberCommand),
+    GetInfo(GetInfoCommand),
+    SetWinnings(SetWinningsCommand),
+    PushByOneDay(PushByOneDayCommand),
+    Guess(GuessCommand),
 }
 
 impl GuessTheNumberCommand {
     pub fn run(&self, cli: &Cli, trusted_cli: &TrustedCli) -> CliResult {
         match self {
-            GuessTheNumberCommand::GetLastLuckyNumber(cmd) => cmd.run(cli, trusted_cli),
+            GuessTheNumberCommand::GetInfo(cmd) => cmd.run(cli, trusted_cli),
+            GuessTheNumberCommand::SetWinnings(cmd) => cmd.run(cli, trusted_cli),
+            GuessTheNumberCommand::PushByOneDay(cmd) => cmd.run(cli, trusted_cli),
+            GuessTheNumberCommand::Guess(cmd) => cmd.run(cli, trusted_cli),
         }
     }
 }

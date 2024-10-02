@@ -34,7 +34,7 @@ use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{
     ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
-    ParentchainIntegritee, Runtime, System,
+    ParentchainIntegritee, Runtime, System, GuessType,
 };
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_node_api_metadata::{
@@ -114,6 +114,9 @@ pub enum TrustedCall {
         Option<U256>,
         Vec<(H160, Vec<H256>)>,
     ),
+    guess_the_number_set_winnings(AccountId, Balance),
+    guess_the_number_push_by_one_day(AccountId),
+    guess_the_number(AccountId, GuessType),
 }
 
 impl TrustedCall {
@@ -133,6 +136,9 @@ impl TrustedCall {
             Self::evm_create(sender_account, ..) => sender_account,
             #[cfg(feature = "evm")]
             Self::evm_create2(sender_account, ..) => sender_account,
+            Self::guess_the_number_set_winnings(sender_account, ..) => sender_account,
+            Self::guess_the_number_push_by_one_day(sender_account) => sender_account,
+            Self::guess_the_number(sender_account, ..) => sender_account,
         }
     }
 }
@@ -560,6 +566,38 @@ where
                 info!("Trying to create evm contract with address {:?}", contract_address);
                 Ok(())
             }
+            TrustedCall::guess_the_number_set_winnings(sender, winnings) => {
+                // authorization happens in pallet itself, we just pass authentication
+                let origin = ita_sgx_runtime::RuntimeOrigin::signed(sender.clone());
+                std::println!("⣿STF⣿ guess-the-number set winnings to {}", winnings);
+                ita_sgx_runtime::GuessTheNumberCall::<Runtime>::set_winnings { winnings }
+                    .dispatch_bypass_filter(origin)
+                    .map_err(|e| {
+                        Self::Error::Dispatch(format!("GuessTheNumber Set winnings error: {:?}", e.error))
+                    })?;
+                Ok::<(), Self::Error>(())
+            }
+            TrustedCall::guess_the_number_push_by_one_day(sender) => {
+                // authorization happens in pallet itself, we just pass authentication
+                let origin = ita_sgx_runtime::RuntimeOrigin::signed(sender.clone());
+                std::println!("⣿STF⣿ guess-the-number push by one day");
+                ita_sgx_runtime::GuessTheNumberCall::<Runtime>::push_by_one_day {}
+                    .dispatch_bypass_filter(origin)
+                    .map_err(|e| {
+                        Self::Error::Dispatch(format!("GuessTheNumber push by one day error: {:?}", e.error))
+                    })?;
+                Ok::<(), Self::Error>(())
+            }
+            TrustedCall::guess_the_number(sender, guess) => {
+                let origin = ita_sgx_runtime::RuntimeOrigin::signed(sender.clone());
+                std::println!("⣿STF⣿ guess-the-number: someone is attempting a guess");
+                ita_sgx_runtime::GuessTheNumberCall::<Runtime>::guess { guess }
+                    .dispatch_bypass_filter(origin)
+                    .map_err(|e| {
+                        Self::Error::Dispatch(format!("GuessTheNumber guess error: {:?}", e.error))
+                    })?;
+                Ok::<(), Self::Error>(())
+            }
         }?;
         Ok(())
     }
@@ -573,7 +611,6 @@ where
             TrustedCall::balance_unshield(..) => debug!("No storage updates needed..."),
             TrustedCall::balance_shield(..) => debug!("No storage updates needed..."),
             TrustedCall::timestamp_set(..) => debug!("No storage updates needed..."),
-            #[cfg(feature = "evm")]
             _ => debug!("No storage updates needed..."),
         };
         key_hashes

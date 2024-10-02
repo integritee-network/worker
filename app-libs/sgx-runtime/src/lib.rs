@@ -71,16 +71,20 @@ pub use frame_support::{
     StorageValue,
 };
 use frame_support::traits::{ConstU8, EitherOfDiverse};
+use frame_support::PalletId;
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use itp_sgx_runtime_primitives::types::Moment;
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_parentchain::Call as ParentchainPalletCall;
+pub use pallet_guess_the_number::Call as GuessTheNumberCall;
+pub use pallet_guess_the_number::GuessType;
 pub use pallet_timestamp::Call as TimestampCall;
 use sp_core::crypto::AccountId32;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 use itp_randomness::SgxRandomness;
+
 
 /// Block type as expected by this sgx-runtime.
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;

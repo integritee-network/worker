@@ -29,10 +29,7 @@ use itp_stf_primitives::{
     },
     types::{KeyPair, Nonce, TrustedOperation},
 };
-use itp_types::{
-    parentchain::{ParentchainCall, ParentchainId},
-    AccountId, Balance, Index, ShardIdentifier, Signature,
-};
+use itp_types::{parentchain::{ParentchainCall, ParentchainId}, AccountId, Balance, Index, Moment, ShardIdentifier, Signature};
 use log::*;
 use sp_core::{sr25519, Pair};
 use sp_runtime::transaction_validity::{
@@ -76,8 +73,8 @@ for StfMock
         state.execute_with(|| call.execute(calls, node_metadata_repo))
     }
 
-    fn on_initialize(_state: &mut SgxExternalities) -> Result<(), Self::Error> {
-        trace!("on_initialize called");
+    fn on_initialize(_state: &mut SgxExternalities, now: Moment) -> Result<(), Self::Error> {
+        trace!("on_initialize called at epoch {}", now);
         Ok(())
     }
     fn on_finalize(_state: &mut SgxExternalities) -> Result<(), Self::Error> {

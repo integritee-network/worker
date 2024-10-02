@@ -17,7 +17,7 @@
 
 #[cfg(feature = "test")]
 use crate::test_genesis::test_genesis_setup;
-use crate::{helpers::{enclave_signer_account, get_shard_vaults, shard_creation_info, shard_vault}, Stf, TrustedCallSigned, ENCLAVE_ACCOUNT_KEY};
+use crate::{helpers::{enclave_signer_account, get_shard_vaults, shard_creation_info, shard_vault}, Stf, ENCLAVE_ACCOUNT_KEY};
 use codec::{Decode, Encode};
 use frame_support::traits::{OnTimestampSet, OriginTrait, UnfilteredDispatchable};
 use ita_sgx_runtime::{ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB, Timestamp};
@@ -37,9 +37,7 @@ use itp_utils::stringify::account_id_to_string;
 use log::*;
 use sp_runtime::traits::StaticLookup;
 use std::{fmt::Debug, format, prelude::v1::*, sync::Arc, vec};
-use itp_node_api_metadata::pallet_timestamp;
 use itp_sgx_runtime_primitives::types::Moment;
-
 
 impl<TCS, G, State, Runtime, AccountId> InitState<State, AccountId> for Stf<TCS, G, State, Runtime>
 where
@@ -157,15 +155,13 @@ where
         state.execute_with(|| call.execute(calls, node_metadata_repo))
     }
 
-    fn on_initialize(state: &mut State) -> Result<(), Self::Error> {
-        trace!("on_initialize called");
+    fn on_initialize(state: &mut State, now: Moment) -> Result<(), Self::Error> {
+        trace!("on_initialize called at epoch {}", now);
         state.execute_with(|| {
-            // the timestamp has been set as raw value already, but the hooks haven't been executed
-            let timestamp = Timestamp::now();
-            <Runtime::OnTimestampSet as OnTimestampSet<_>>::on_timestamp_set(timestamp.into());
-            //if Timestamp::set(timestamp).is_err() {
-            //	warn!("Timestamp was not set");
-            //};
+            // as pallet_timestamp doesn't export set_timestamp in no_std, we need to re-build the same behaviour
+            sp_io::storage::set(&storage_value_key("Timestamp", "Now"), &now.encode());
+            sp_io::storage::set(&storage_value_key("Timestamp", "DidUpdate"), &true.encode());
+            <Runtime::OnTimestampSet as OnTimestampSet<_>>::on_timestamp_set(now.into());
         });
         Ok(())
     }

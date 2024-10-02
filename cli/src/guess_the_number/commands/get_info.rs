@@ -14,7 +14,8 @@
 	limitations under the License.
 
 */
-use ita_stf::{Getter, PublicGetter, TrustedCallSigned};
+use sp_core::crypto::Ss58Codec;
+use ita_stf::{Getter, GuessTheNumberInfo, PublicGetter, TrustedCallSigned};
 use itp_stf_primitives::types::TrustedOperation;
 use crate::{
     trusted_cli::TrustedCli, Cli, CliResult, CliResultOk,
@@ -22,15 +23,16 @@ use crate::{
 use crate::trusted_operation::perform_trusted_operation;
 
 #[derive(Parser)]
-pub struct GetLastLuckyNumberCommand {}
+pub struct GetInfoCommand {}
 
-impl GetLastLuckyNumberCommand {
+impl GetInfoCommand {
     pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
         let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::public(
-            PublicGetter::guess_the_number_last_lucky_number),
+            PublicGetter::guess_the_number_info),
         );
-        let lucky_number = perform_trusted_operation::<u32>(cli, trusted_args, &top).unwrap();
-        println!("{}", lucky_number);
-        Ok(CliResultOk::U32 { value: lucky_number })
+        let info: GuessTheNumberInfo = perform_trusted_operation(cli, trusted_args, &top).unwrap();
+        println!("{:?}", info);
+        println!("pot account: {}", info.account.to_ss58check());
+        Ok(CliResultOk::GuessTheNumberPotInfo { info })
     }
 }

@@ -33,55 +33,60 @@ pub(crate) const KEYSTORE_PATH: &str = "my_keystore";
 
 /// Retrieves the public shielding key via the enclave websocket server.
 pub(crate) fn get_shielding_key(cli: &Cli) -> Result<Rsa3072PubKey, String> {
-	let worker_api_direct = get_worker_api_direct(cli);
-	worker_api_direct.get_rsa_pubkey().map_err(|e| e.to_string())
+    let worker_api_direct = get_worker_api_direct(cli);
+    worker_api_direct.get_rsa_pubkey().map_err(|e| e.to_string())
 }
 
 pub(crate) fn get_chain_api(cli: &Cli) -> ParentchainApi {
-	let url = format!("{}:{}", cli.node_url, cli.node_port);
-	info!("connecting to {}", url);
-	ParentchainApi::new(TungsteniteRpcClient::new(&url, 5).unwrap()).unwrap()
+    let url = format!("{}:{}", cli.node_url, cli.node_port);
+    info!("connecting to {}", url);
+    ParentchainApi::new(TungsteniteRpcClient::new(&url, 5).unwrap()).unwrap()
 }
 
 pub(crate) fn get_accountid_from_str(account: &str) -> AccountId {
-	match &account[..2] {
-		"//" => AccountPublic::from(sr25519::Pair::from_string(account, None).unwrap().public())
-			.into_account(),
-		_ => AccountPublic::from(sr25519::Public::from_ss58check(account).unwrap()).into_account(),
-	}
+    match &account[..2] {
+        "//" => AccountPublic::from(sr25519::Pair::from_string(account, None).unwrap().public())
+            .into_account(),
+        _ => AccountPublic::from(sr25519::Public::from_ss58check(account).unwrap()).into_account(),
+    }
 }
 
 pub(crate) fn get_worker_api_direct(cli: &Cli) -> DirectWorkerApi {
-	let url = format!("{}:{}", cli.worker_url, cli.trusted_worker_port);
-	info!("Connecting to integritee-service-direct-port on '{}'", url);
-	DirectWorkerApi::new(url)
+    let url = format!("{}:{}", cli.worker_url, cli.trusted_worker_port);
+    info!("Connecting to integritee-service-direct-port on '{}'", url);
+    DirectWorkerApi::new(url)
 }
 
 /// get a pair either form keyring (well known keys) or from the store
 pub(crate) fn get_pair_from_str(account: &str) -> sr25519::AppPair {
-	info!("getting pair for {}", account);
-	match &account[..2] {
-		"//" => sr25519::AppPair::from_string(account, None).unwrap(),
-		_ => {
-			info!("fetching from keystore at {}", &KEYSTORE_PATH);
-			// open store without password protection
-			let store = LocalKeystore::open(PathBuf::from(&KEYSTORE_PATH), None)
-				.expect("store should exist");
-			info!("store opened");
-			let _pair = store
-				.key_pair::<sr25519::AppPair>(
-					&sr25519::Public::from_ss58check(account).unwrap().into(),
-				)
-				.unwrap()
-				.unwrap();
-			drop(store);
-			_pair
-		},
-	}
+    info!("getting pair for {}", account);
+    match &account[..2] {
+        "//" => sr25519::AppPair::from_string(account, None).unwrap(),
+        "0x" => sr25519::AppPair::from_string_with_seed(account, None).unwrap().0,
+        _ => {
+            if sr25519::Public::from_ss58check(account).is_err() {
+                // could be mnemonic phrase
+                return sr25519::AppPair::from_string_with_seed(account, None).unwrap().0;
+            }
+            info!("fetching from keystore at {}", &KEYSTORE_PATH);
+            // open store without password protection
+            let store = LocalKeystore::open(PathBuf::from(&KEYSTORE_PATH), None)
+                .expect("store should exist");
+            info!("store opened");
+            let _pair = store
+                .key_pair::<sr25519::AppPair>(
+                    &sr25519::Public::from_ss58check(account).unwrap().into(),
+                )
+                .unwrap()
+                .unwrap();
+            drop(store);
+            _pair
+        }
+    }
 }
 
 pub(crate) fn mrenclave_from_base58(src: &str) -> [u8; 32] {
-	let mut mrenclave = [0u8; 32];
-	mrenclave.copy_from_slice(&src.from_base58().expect("mrenclave has to be base58 encoded"));
-	mrenclave
+    let mut mrenclave = [0u8; 32];
+    mrenclave.copy_from_slice(&src.from_base58().expect("mrenclave has to be base58 encoded"));
+    mrenclave
 }
