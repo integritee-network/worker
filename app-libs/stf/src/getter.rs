@@ -16,7 +16,7 @@
 */
 
 use codec::{Decode, Encode};
-use ita_sgx_runtime::{System, GuessTheNumber, GuessType};
+use ita_sgx_runtime::{System, Balances, GuessTheNumber, GuessType};
 use itp_stf_interface::ExecuteGetter;
 use itp_stf_primitives::{
     traits::GetterAuthorization,
@@ -95,6 +95,7 @@ impl PoolTransactionValidation for Getter {
 #[allow(non_camel_case_types)]
 pub enum PublicGetter {
     some_value,
+    total_issuance,
     guess_the_number_last_lucky_number,
     guess_the_number_last_winning_distance,
     guess_the_number_info,
@@ -232,6 +233,9 @@ impl ExecuteGetter for PublicGetter {
     fn execute(self) -> Option<Vec<u8>> {
         match self {
             PublicGetter::some_value => Some(42u32.encode()),
+            PublicGetter::total_issuance => {
+                Some(Balances::total_issuance().encode())
+            }
             PublicGetter::guess_the_number_last_lucky_number => {
                 // todo! return suiting value, not this one
                 GuessTheNumber::lucky_number().map(|guess| guess.encode())
