@@ -16,10 +16,10 @@
 */
 
 use crate::{
-	command_utils::{get_worker_api_direct, mrenclave_from_base58},
-	trusted_cli::TrustedCli,
-	trusted_operation::{perform_trusted_operation, read_shard},
-	Cli,
+    command_utils::{get_worker_api_direct, mrenclave_from_base58},
+    trusted_cli::TrustedCli,
+    trusted_operation::{perform_trusted_operation, read_shard},
+    Cli,
 };
 use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode};
@@ -62,98 +62,102 @@ macro_rules! get_layer_two_nonce {
 const TRUSTED_KEYSTORE_PATH: &str = "my_trusted_keystore";
 
 pub(crate) fn get_balance(cli: &Cli, trusted_args: &TrustedCli, arg_who: &str) -> Option<u128> {
-	debug!("arg_who = {:?}", arg_who);
-	let who = get_pair_from_str(trusted_args, arg_who);
-	let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
-		TrustedGetter::free_balance(who.public().into()).sign(&KeyPair::Sr25519(Box::new(who))),
-	));
-	perform_trusted_operation::<Balance>(cli, trusted_args, &top).ok()
+    debug!("arg_who = {:?}", arg_who);
+    let who = get_pair_from_str(trusted_args, arg_who);
+    let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
+        TrustedGetter::free_balance(who.public().into()).sign(&KeyPair::Sr25519(Box::new(who))),
+    ));
+    perform_trusted_operation::<Balance>(cli, trusted_args, &top).ok()
 }
 
 pub(crate) fn get_keystore_path(trusted_args: &TrustedCli) -> PathBuf {
-	let (_mrenclave, shard) = get_identifiers(trusted_args);
-	PathBuf::from(&format!("{}/{}", TRUSTED_KEYSTORE_PATH, shard.encode().to_base58()))
+    let (_mrenclave, shard) = get_identifiers(trusted_args);
+    PathBuf::from(&format!("{}/{}", TRUSTED_KEYSTORE_PATH, shard.encode().to_base58()))
 }
 
 pub(crate) fn get_identifiers(trusted_args: &TrustedCli) -> ([u8; 32], ShardIdentifier) {
-	let mrenclave = mrenclave_from_base58(
-		trusted_args
-			.mrenclave
-			.as_ref()
-			.expect("argument '--mrenclave' must be provided for this command"),
-	);
-	let shard = match &trusted_args.shard {
-		Some(val) =>
-			ShardIdentifier::from_slice(&val.from_base58().expect("shard has to be base58 encoded")),
-		None => ShardIdentifier::from_slice(&mrenclave),
-	};
-	(mrenclave, shard)
+    let mrenclave = mrenclave_from_base58(
+        trusted_args
+            .mrenclave
+            .as_ref()
+            .expect("argument '--mrenclave' must be provided for this command"),
+    );
+    let shard = match &trusted_args.shard {
+        Some(val) =>
+            ShardIdentifier::from_slice(&val.from_base58().expect("shard has to be base58 encoded")),
+        None => ShardIdentifier::from_slice(&mrenclave),
+    };
+    (mrenclave, shard)
 }
 
 // TODO this function is redundant with client::main
 pub(crate) fn get_accountid_from_str(account: &str) -> AccountId {
-	match &account[..2] {
-		"//" => sr25519::Pair::from_string(account, None)
-			.unwrap()
-			.public()
-			.into_account()
-			.into(),
-		_ => sr25519::Public::from_ss58check(account).unwrap().into_account().into(),
-	}
+    match &account[..2] {
+        "//" => sr25519::Pair::from_string(account, None)
+            .unwrap()
+            .public()
+            .into_account()
+            .into(),
+        _ => sr25519::Public::from_ss58check(account).unwrap().into_account().into(),
+    }
 }
 
 // TODO this function is ALMOST redundant with client::main
 // get a pair either form keyring (well known keys) or from the store
 pub(crate) fn get_pair_from_str(trusted_args: &TrustedCli, account: &str) -> sr25519_core::Pair {
-	info!("getting pair for {}", account);
-	match &account[..2] {
-		"//" => sr25519_core::Pair::from_string(account, None).unwrap(),
-		"0x" => sr25519_core::Pair::from_string_with_seed(account, None).unwrap().0,
-		_ => {
-			if sr25519::Public::from_ss58check(account).is_err() {
-				// could be mnemonic phrase
-				return sr25519_core::Pair::from_string_with_seed(account, None).unwrap().0
-			}
-			info!("fetching from keystore at {}", &TRUSTED_KEYSTORE_PATH);
-			// open store without password protection
-			let store = LocalKeystore::open(get_keystore_path(trusted_args), None)
-				.expect("store should exist");
-			info!("store opened");
-			let public_key = &sr25519::AppPublic::from_ss58check(account).unwrap();
-			info!("public_key: {:?}", &public_key);
-			let _pair = store.key_pair::<sr25519::AppPair>(public_key).unwrap().unwrap();
-			info!("key pair fetched");
-			drop(store);
-			_pair.into()
-		},
-	}
+    info!("getting pair for {}", account);
+    match &account[..2] {
+        "//" => sr25519_core::Pair::from_string(account, None).unwrap(),
+        "0x" => sr25519_core::Pair::from_string_with_seed(account, None).unwrap().0,
+        _ => {
+            if sr25519::Public::from_ss58check(account).is_err() {
+                // could be mnemonic phrase
+                return sr25519_core::Pair::from_string_with_seed(account, None).unwrap().0;
+            }
+            info!("fetching from keystore at {}", &TRUSTED_KEYSTORE_PATH);
+            // open store without password protection
+            let store = LocalKeystore::open(get_keystore_path(trusted_args), None)
+                .expect("store should exist");
+            info!("store opened");
+            let maybe_pair = store
+                .key_pair::<sr25519::AppPair>(
+                    &sr25519::Public::from_ss58check(account).unwrap().into(),
+                )
+                .unwrap();
+            drop(store);
+            match maybe_pair {
+                Some(pair) => pair.into(),
+                None => panic!("account not in my_trusted_keystore"),
+            }
+        }
+    }
 }
 
 // helper method to get the pending trusted calls for a given account via direct RPC
 pub(crate) fn get_pending_trusted_calls_for(
-	cli: &Cli,
-	trusted_args: &TrustedCli,
-	who: &AccountId,
+    cli: &Cli,
+    trusted_args: &TrustedCli,
+    who: &AccountId,
 ) -> Vec<TrustedOperation<TrustedCallSigned, Getter>> {
-	let shard = read_shard(trusted_args).unwrap();
-	let direct_api = get_worker_api_direct(cli);
-	let rpc_method = "author_pendingTrustedCallsFor".to_owned();
-	let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(
-		rpc_method,
-		vec![shard.encode().to_base58(), who.to_hex()],
-	)
-	.unwrap();
+    let shard = read_shard(trusted_args).unwrap();
+    let direct_api = get_worker_api_direct(cli);
+    let rpc_method = "author_pendingTrustedCallsFor".to_owned();
+    let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(
+        rpc_method,
+        vec![shard.encode().to_base58(), who.to_hex()],
+    )
+        .unwrap();
 
-	let rpc_response_str = direct_api.get(&jsonrpc_call).unwrap();
-	let rpc_response: RpcResponse = serde_json::from_str(&rpc_response_str).unwrap();
-	let rpc_return_value = RpcReturnValue::from_hex(&rpc_response.result).unwrap();
+    let rpc_response_str = direct_api.get(&jsonrpc_call).unwrap();
+    let rpc_response: RpcResponse = serde_json::from_str(&rpc_response_str).unwrap();
+    let rpc_return_value = RpcReturnValue::from_hex(&rpc_response.result).unwrap();
 
-	if rpc_return_value.status == DirectRequestStatus::Error {
-		error!("{}", String::decode(&mut rpc_return_value.value.as_slice()).unwrap());
-		direct_api.close().unwrap();
-		return vec![]
-	}
+    if rpc_return_value.status == DirectRequestStatus::Error {
+        error!("{}", String::decode(&mut rpc_return_value.value.as_slice()).unwrap());
+        direct_api.close().unwrap();
+        return vec![];
+    }
 
-	direct_api.close().unwrap();
-	Decode::decode(&mut rpc_return_value.value.as_slice()).unwrap_or_default()
+    direct_api.close().unwrap();
+    Decode::decode(&mut rpc_return_value.value.as_slice()).unwrap_or_default()
 }
