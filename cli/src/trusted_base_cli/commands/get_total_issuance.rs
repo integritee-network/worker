@@ -21,7 +21,6 @@ use crate::{
 use ita_stf::{Balance, Getter, PublicGetter, TrustedCallSigned};
 use itp_stf_primitives::types::TrustedOperation;
 
-
 #[derive(Parser)]
 pub struct GetTotalIssuanceCommand {}
 

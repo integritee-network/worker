@@ -14,17 +14,12 @@
 	limitations under the License.
 
 */
-use crate::{
-	mock::{*},
-	BalanceOf, Error, Event,
-};
+use crate::{mock::*, BalanceOf, Error, Event};
 use frame_support::{
 	assert_err, assert_ok,
 	pallet_prelude::DispatchResultWithPostInfo,
 	traits::{Currency, Hooks},
 };
-
-
 
 use sp_keyring::AccountKeyring;
 use sp_runtime::{

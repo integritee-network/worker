@@ -20,14 +20,12 @@ use crate::mock::MockSidechainBlockFetcher;
 
 use its_primitives::types::{header::ShardIdentifier, BlockHash};
 use its_rpc_handler::constants::RPC_METHOD_NAME_FETCH_BLOCKS_FROM_PEER;
-use its_test::sidechain_block_builder::{SidechainBlockBuilderTrait};
+use its_test::sidechain_block_builder::SidechainBlockBuilderTrait;
 use jsonrpsee::{
 	types::{to_json_value, traits::Client},
 	ws_client::WsClientBuilder,
 };
 use log::info;
-
-
 
 fn init() {
 	let _ = env_logger::builder().is_test(true).try_init();

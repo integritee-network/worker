@@ -24,9 +24,9 @@ use itp_sgx_externalities::{SgxExternalities as State, SgxExternalitiesTrait};
 use itp_stf_primitives::{traits::TrustedCallSigning, types::ShardIdentifier};
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_test::mock::{
-    handle_state_mock::HandleStateMock,
-    onchain_mock::OnchainMock,
-    stf_mock::{GetterMock, StfMock, TrustedCallMock, TrustedCallSignedMock},
+	handle_state_mock::HandleStateMock,
+	onchain_mock::OnchainMock,
+	stf_mock::{GetterMock, StfMock, TrustedCallMock, TrustedCallSignedMock},
 };
 use itp_types::H256;
 use sp_core::{ed25519, Pair};
@@ -35,247 +35,247 @@ use std::{sync::Arc, time::Duration, vec};
 // FIXME: Create unit tests for update_states, execute_shield_funds, execute_trusted_call, execute_trusted_call_on_stf #554
 
 pub fn propose_state_update_executes_all_calls_given_enough_time() {
-    // given
-    let (stf_executor, ocall_api, state_handler) = stf_executor();
-    let mrenclave = ocall_api.get_mrenclave_of_self().unwrap().m;
-    let (_, shard) = init_state_and_shard_with_state_handler(state_handler.as_ref());
-    let sender = endowed_account();
-    let signed_call_1 = TrustedCallMock::balance_transfer(
-        sender.public().into(),
-        sender.public().into(),
-        42,
-    )
-        .sign(&sender.clone().into(), 0, &mrenclave, &shard);
-    let trusted_operation_1 = signed_call_1.into_trusted_operation(true);
-    let call_operation_hash_1: H256 = blake2_256(&trusted_operation_1.encode()).into();
-    let signed_call_2 =
-        TrustedCallMock::balance_transfer(sender.public().into(), sender.public().into(), 100)
-            .sign(&sender.clone().into(), 1, &mrenclave, &shard);
-    let trusted_operation_2 = signed_call_2.into_trusted_operation(true);
-    let call_operation_hash_2: H256 = blake2_256(&trusted_operation_2.encode()).into();
+	// given
+	let (stf_executor, ocall_api, state_handler) = stf_executor();
+	let mrenclave = ocall_api.get_mrenclave_of_self().unwrap().m;
+	let (_, shard) = init_state_and_shard_with_state_handler(state_handler.as_ref());
+	let sender = endowed_account();
+	let signed_call_1 = TrustedCallMock::balance_transfer(
+		sender.public().into(),
+		sender.public().into(),
+		42,
+	)
+	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
+	let trusted_operation_1 = signed_call_1.into_trusted_operation(true);
+	let call_operation_hash_1: H256 = blake2_256(&trusted_operation_1.encode()).into();
+	let signed_call_2 =
+		TrustedCallMock::balance_transfer(sender.public().into(), sender.public().into(), 100)
+			.sign(&sender.clone().into(), 1, &mrenclave, &shard);
+	let trusted_operation_2 = signed_call_2.into_trusted_operation(true);
+	let call_operation_hash_2: H256 = blake2_256(&trusted_operation_2.encode()).into();
 
-    let (_, old_state_hash) = state_handler.load_cloned(&shard).unwrap();
+	let (_, old_state_hash) = state_handler.load_cloned(&shard).unwrap();
 
-    // when
-    let batch_execution_result = stf_executor
-        .propose_state_update(
-            &vec![trusted_operation_1, trusted_operation_2],
-            &ParentchainHeaderBuilder::default().build(),
-            &shard,
-            Duration::from_secs(1000),
-            |state| state,
-        )
-        .unwrap();
+	// when
+	let batch_execution_result = stf_executor
+		.propose_state_update(
+			&vec![trusted_operation_1, trusted_operation_2],
+			&ParentchainHeaderBuilder::default().build(),
+			&shard,
+			Duration::from_secs(1000),
+			|state| state,
+		)
+		.unwrap();
 
-    // then
-    assert_eq!(old_state_hash, batch_execution_result.state_hash_before_execution);
-    assert_eq!(batch_execution_result.executed_operations.len(), 2);
-    assert_eq!(
-        batch_execution_result.get_executed_operation_hashes(),
-        vec![call_operation_hash_1, call_operation_hash_2]
-    );
-    // Ensure that state has been updated and not actually written.
-    assert_ne!(
-        state_handler.load_cloned(&shard).unwrap().0,
-        batch_execution_result.state_after_execution
-    );
+	// then
+	assert_eq!(old_state_hash, batch_execution_result.state_hash_before_execution);
+	assert_eq!(batch_execution_result.executed_operations.len(), 2);
+	assert_eq!(
+		batch_execution_result.get_executed_operation_hashes(),
+		vec![call_operation_hash_1, call_operation_hash_2]
+	);
+	// Ensure that state has been updated and not actually written.
+	assert_ne!(
+		state_handler.load_cloned(&shard).unwrap().0,
+		batch_execution_result.state_after_execution
+	);
 }
 
 pub fn propose_state_update_executes_only_one_trusted_call_given_not_enough_time() {
-    // given
-    let (stf_executor, ocall_api, state_handler) = stf_executor();
-    let mrenclave = ocall_api.get_mrenclave_of_self().unwrap().m;
-    let (_, shard) = init_state_and_shard_with_state_handler(state_handler.as_ref());
-    let sender = endowed_account();
-    let signed_call_1 = TrustedCallMock::waste_time_ms(sender.public().into(), 10).sign(
-        &sender.clone().into(),
-        0,
-        &mrenclave,
-        &shard,
-    );
-    let trusted_operation_1 = signed_call_1.into_trusted_operation(true);
-    let call_operation_hash_1: H256 = blake2_256(&trusted_operation_1.encode()).into();
+	// given
+	let (stf_executor, ocall_api, state_handler) = stf_executor();
+	let mrenclave = ocall_api.get_mrenclave_of_self().unwrap().m;
+	let (_, shard) = init_state_and_shard_with_state_handler(state_handler.as_ref());
+	let sender = endowed_account();
+	let signed_call_1 = TrustedCallMock::waste_time_ms(sender.public().into(), 10).sign(
+		&sender.clone().into(),
+		0,
+		&mrenclave,
+		&shard,
+	);
+	let trusted_operation_1 = signed_call_1.into_trusted_operation(true);
+	let call_operation_hash_1: H256 = blake2_256(&trusted_operation_1.encode()).into();
 
-    let signed_call_2 = TrustedCallMock::waste_time_ms(sender.public().into(), 10).sign(
-        &sender.clone().into(),
-        0,
-        &mrenclave,
-        &shard,
-    );
-    let trusted_operation_2 = signed_call_2.into_trusted_operation(true);
+	let signed_call_2 = TrustedCallMock::waste_time_ms(sender.public().into(), 10).sign(
+		&sender.clone().into(),
+		0,
+		&mrenclave,
+		&shard,
+	);
+	let trusted_operation_2 = signed_call_2.into_trusted_operation(true);
 
-    let (_, old_state_hash) = state_handler.load_cloned(&shard).unwrap();
-    // when
-    let batch_execution_result = stf_executor
-        .propose_state_update(
-            &vec![trusted_operation_1.clone(), trusted_operation_2.clone()],
-            &ParentchainHeaderBuilder::default().build(),
-            &shard,
-            Duration::from_millis(5),
-            |state| state,
-        )
-        .unwrap();
+	let (_, old_state_hash) = state_handler.load_cloned(&shard).unwrap();
+	// when
+	let batch_execution_result = stf_executor
+		.propose_state_update(
+			&vec![trusted_operation_1.clone(), trusted_operation_2.clone()],
+			&ParentchainHeaderBuilder::default().build(),
+			&shard,
+			Duration::from_millis(5),
+			|state| state,
+		)
+		.unwrap();
 
-    // then
-    assert_eq!(old_state_hash, batch_execution_result.state_hash_before_execution);
-    assert_eq!(batch_execution_result.executed_operations.len(), 1);
-    assert_eq!(batch_execution_result.get_executed_operation_hashes(), vec![call_operation_hash_1]);
-    // Ensure that state has been updated and not actually written.
-    assert_ne!(
-        state_handler.load_cloned(&shard).unwrap().0,
-        batch_execution_result.state_after_execution
-    );
+	// then
+	assert_eq!(old_state_hash, batch_execution_result.state_hash_before_execution);
+	assert_eq!(batch_execution_result.executed_operations.len(), 1);
+	assert_eq!(batch_execution_result.get_executed_operation_hashes(), vec![call_operation_hash_1]);
+	// Ensure that state has been updated and not actually written.
+	assert_ne!(
+		state_handler.load_cloned(&shard).unwrap().0,
+		batch_execution_result.state_after_execution
+	);
 }
 
 pub fn propose_state_update_executes_noop_leaving_state_untouched() {
-    // given
-    let (stf_executor, ocall_api, state_handler) = stf_executor();
-    let mrenclave = ocall_api.get_mrenclave_of_self().unwrap().m;
-    let (_, shard) = init_state_and_shard_with_state_handler(state_handler.as_ref());
-    let sender = endowed_account();
-    let signed_call_1 = TrustedCallMock::noop(sender.public().into()).sign(
-        &sender.clone().into(),
-        0,
-        &mrenclave,
-        &shard,
-    );
-    let trusted_operation_1 = signed_call_1.into_trusted_operation(true);
-    let call_operation_hash_1: H256 = blake2_256(&trusted_operation_1.encode()).into();
+	// given
+	let (stf_executor, ocall_api, state_handler) = stf_executor();
+	let mrenclave = ocall_api.get_mrenclave_of_self().unwrap().m;
+	let (_, shard) = init_state_and_shard_with_state_handler(state_handler.as_ref());
+	let sender = endowed_account();
+	let signed_call_1 = TrustedCallMock::noop(sender.public().into()).sign(
+		&sender.clone().into(),
+		0,
+		&mrenclave,
+		&shard,
+	);
+	let trusted_operation_1 = signed_call_1.into_trusted_operation(true);
+	let call_operation_hash_1: H256 = blake2_256(&trusted_operation_1.encode()).into();
 
-    let (_, old_state_hash) = state_handler.load_cloned(&shard).unwrap();
-    // when
-    let batch_execution_result = stf_executor
-        .propose_state_update(
-            &vec![trusted_operation_1.clone()],
-            &ParentchainHeaderBuilder::default().build(),
-            &shard,
-            Duration::from_millis(5), // 1000 yields 0, 2000 yields 1, 4000 yields 1, 25_000 yields 2
-            |state| state,
-        )
-        .unwrap();
+	let (_, old_state_hash) = state_handler.load_cloned(&shard).unwrap();
+	// when
+	let batch_execution_result = stf_executor
+		.propose_state_update(
+			&vec![trusted_operation_1.clone()],
+			&ParentchainHeaderBuilder::default().build(),
+			&shard,
+			Duration::from_millis(5), // 1000 yields 0, 2000 yields 1, 4000 yields 1, 25_000 yields 2
+			|state| state,
+		)
+		.unwrap();
 
-    // then
-    assert_eq!(old_state_hash, batch_execution_result.state_hash_before_execution);
-    assert_eq!(batch_execution_result.executed_operations.len(), 1);
-    assert_eq!(batch_execution_result.get_executed_operation_hashes(), vec![call_operation_hash_1]);
-    assert_eq!(
-        state_handler.load_cloned(&shard).unwrap().0,
-        batch_execution_result.state_after_execution
-    );
+	// then
+	assert_eq!(old_state_hash, batch_execution_result.state_hash_before_execution);
+	assert_eq!(batch_execution_result.executed_operations.len(), 1);
+	assert_eq!(batch_execution_result.get_executed_operation_hashes(), vec![call_operation_hash_1]);
+	assert_eq!(
+		state_handler.load_cloned(&shard).unwrap().0,
+		batch_execution_result.state_after_execution
+	);
 }
 
 pub fn propose_state_update_executes_no_trusted_calls_given_no_time() {
-    // given
-    let (stf_executor, ocall_api, state_handler) = stf_executor();
-    let mrenclave = ocall_api.get_mrenclave_of_self().unwrap().m;
-    let (_, shard) = init_state_and_shard_with_state_handler(state_handler.as_ref());
-    let sender = endowed_account();
-    let signed_call_1 = TrustedCallMock::balance_transfer(
-        sender.public().into(),
-        sender.public().into(),
-        42,
-    )
-        .sign(&sender.clone().into(), 0, &mrenclave, &shard);
-    let trusted_operation_1 = signed_call_1.into_trusted_operation(true);
+	// given
+	let (stf_executor, ocall_api, state_handler) = stf_executor();
+	let mrenclave = ocall_api.get_mrenclave_of_self().unwrap().m;
+	let (_, shard) = init_state_and_shard_with_state_handler(state_handler.as_ref());
+	let sender = endowed_account();
+	let signed_call_1 = TrustedCallMock::balance_transfer(
+		sender.public().into(),
+		sender.public().into(),
+		42,
+	)
+	.sign(&sender.clone().into(), 0, &mrenclave, &shard);
+	let trusted_operation_1 = signed_call_1.into_trusted_operation(true);
 
-    let signed_call_2 =
-        TrustedCallMock::balance_transfer(sender.public().into(), sender.public().into(), 100)
-            .sign(&sender.clone().into(), 0, &mrenclave, &shard);
-    let trusted_operation_2 = signed_call_2.into_trusted_operation(true);
+	let signed_call_2 =
+		TrustedCallMock::balance_transfer(sender.public().into(), sender.public().into(), 100)
+			.sign(&sender.clone().into(), 0, &mrenclave, &shard);
+	let trusted_operation_2 = signed_call_2.into_trusted_operation(true);
 
-    let (_, old_state_hash) = state_handler.load_cloned(&shard).unwrap();
+	let (_, old_state_hash) = state_handler.load_cloned(&shard).unwrap();
 
-    // when
-    let batch_execution_result = stf_executor
-        .propose_state_update(
-            &vec![trusted_operation_1.clone(), trusted_operation_2.clone()],
-            &ParentchainHeaderBuilder::default().build(),
-            &shard,
-            Duration::ZERO,
-            |state| state,
-        )
-        .unwrap();
+	// when
+	let batch_execution_result = stf_executor
+		.propose_state_update(
+			&vec![trusted_operation_1.clone(), trusted_operation_2.clone()],
+			&ParentchainHeaderBuilder::default().build(),
+			&shard,
+			Duration::ZERO,
+			|state| state,
+		)
+		.unwrap();
 
-    // then
-    assert_eq!(old_state_hash, batch_execution_result.state_hash_before_execution);
-    assert_eq!(batch_execution_result.executed_operations.len(), 0);
-    assert_eq!(batch_execution_result.get_executed_operation_hashes(), vec![]);
+	// then
+	assert_eq!(old_state_hash, batch_execution_result.state_hash_before_execution);
+	assert_eq!(batch_execution_result.executed_operations.len(), 0);
+	assert_eq!(batch_execution_result.get_executed_operation_hashes(), vec![]);
 }
 
 pub fn propose_state_update_always_executes_preprocessing_step() {
-    // given
-    let shard = ShardIdentifier::default();
-    let (stf_executor, _, state_handler) = stf_executor();
-    let _init_hash = state_handler.initialize_shard(shard).unwrap();
-    let key = "my_key".encode();
-    let value = "my_value".encode();
-    let (old_state, old_state_hash) = state_handler.load_cloned(&shard).unwrap();
+	// given
+	let shard = ShardIdentifier::default();
+	let (stf_executor, _, state_handler) = stf_executor();
+	let _init_hash = state_handler.initialize_shard(shard).unwrap();
+	let key = "my_key".encode();
+	let value = "my_value".encode();
+	let (old_state, old_state_hash) = state_handler.load_cloned(&shard).unwrap();
 
-    // when
-    let batch_execution_result = stf_executor
-        .propose_state_update(
-            &vec![],
-            &ParentchainHeaderBuilder::default().build(),
-            &shard,
-            Duration::ZERO,
-            |mut state| {
-                state.insert(key.clone(), value.clone());
-                state
-            },
-        )
-        .unwrap();
+	// when
+	let batch_execution_result = stf_executor
+		.propose_state_update(
+			&vec![],
+			&ParentchainHeaderBuilder::default().build(),
+			&shard,
+			Duration::ZERO,
+			|mut state| {
+				state.insert(key.clone(), value.clone());
+				state
+			},
+		)
+		.unwrap();
 
-    // then
-    assert_eq!(old_state_hash, batch_execution_result.state_hash_before_execution);
+	// then
+	assert_eq!(old_state_hash, batch_execution_result.state_hash_before_execution);
 
-    // Ensure that state has been updated.
-    let retrieved_value = batch_execution_result.state_after_execution.get(key.as_slice()).unwrap();
-    assert_eq!(*retrieved_value, value);
-    // Ensure that state has not been actually written.
-    assert_ne!(old_state, batch_execution_result.state_after_execution);
+	// Ensure that state has been updated.
+	let retrieved_value = batch_execution_result.state_after_execution.get(key.as_slice()).unwrap();
+	assert_eq!(*retrieved_value, value);
+	// Ensure that state has not been actually written.
+	assert_ne!(old_state, batch_execution_result.state_after_execution);
 }
 
 // Helper Functions
 fn stf_executor() -> (
-    StfExecutor<
-        OnchainMock,
-        HandleStateMock,
-        NodeMetadataRepository<NodeMetadataMock>,
-        StfMock,
-        TrustedCallSignedMock,
-        GetterMock,
-    >,
-    Arc<OnchainMock>,
-    Arc<HandleStateMock>,
+	StfExecutor<
+		OnchainMock,
+		HandleStateMock,
+		NodeMetadataRepository<NodeMetadataMock>,
+		StfMock,
+		TrustedCallSignedMock,
+		GetterMock,
+	>,
+	Arc<OnchainMock>,
+	Arc<HandleStateMock>,
 ) {
-    let ocall_api = Arc::new(OnchainMock::default());
-    let state_handler = Arc::new(HandleStateMock::default());
-    let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
-    let executor = StfExecutor::new(ocall_api.clone(), state_handler.clone(), node_metadata_repo);
-    (executor, ocall_api, state_handler)
+	let ocall_api = Arc::new(OnchainMock::default());
+	let state_handler = Arc::new(HandleStateMock::default());
+	let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
+	let executor = StfExecutor::new(ocall_api.clone(), state_handler.clone(), node_metadata_repo);
+	(executor, ocall_api, state_handler)
 }
 
 /// Returns a test setup initialized `State` with the corresponding `ShardIdentifier`.
-pub(crate) fn init_state_and_shard_with_state_handler<S: HandleState<StateT=State>>(
-    state_handler: &S,
+pub(crate) fn init_state_and_shard_with_state_handler<S: HandleState<StateT = State>>(
+	state_handler: &S,
 ) -> (State, ShardIdentifier) {
-    let shard = ShardIdentifier::default();
-    let _hash = state_handler.initialize_shard(shard).unwrap();
+	let shard = ShardIdentifier::default();
+	let _hash = state_handler.initialize_shard(shard).unwrap();
 
-    let (lock, mut state) = state_handler.load_for_mutation(&shard).unwrap();
+	let (lock, mut state) = state_handler.load_for_mutation(&shard).unwrap();
 
-    #[cfg(feature = "test")]
-    test_genesis_setup(&mut state);
+	#[cfg(feature = "test")]
+	test_genesis_setup(&mut state);
 
-    state_handler.write_after_mutation(state.clone(), lock, &shard).unwrap();
+	state_handler.write_after_mutation(state.clone(), lock, &shard).unwrap();
 
-    (state, shard)
+	(state, shard)
 }
 
 pub fn endowed_account() -> ed25519::Pair {
-    ed25519::Pair::from_seed(&[42u8; 32].into())
+	ed25519::Pair::from_seed(&[42u8; 32].into())
 }
 
 pub fn test_genesis_setup(_state: &mut impl SgxExternalitiesTrait) {
-    // set alice sudo account
+	// set alice sudo account
 }
