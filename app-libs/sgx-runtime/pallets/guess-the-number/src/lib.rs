@@ -170,7 +170,7 @@ pub mod pallet {
 				Error::<T>::TooManyAttempts
 			);
 			<GuessAttempts<T>>::mutate(&sender, |a| *a += 1u8);
-			let lucky_number = <LuckyNumber<T>>::get().ok_or_else(|| Error::<T>::NoDrawYet)?;
+			let lucky_number = <LuckyNumber<T>>::get().ok_or(Error::<T>::NoDrawYet)?;
 			let distance = GuessType::abs_diff(lucky_number, guess);
 			let last_winning_distance = Self::winning_distance().unwrap_or(crate::GuessType::MAX);
 			if distance <= last_winning_distance {
@@ -179,7 +179,7 @@ pub mod pallet {
 				<WinningDistance<T>>::put(distance);
 				ensure!(winners.len() < T::MaxWinners::get() as usize, Error::<T>::TooManyWinners);
 				if !winners.contains(&sender) {
-					winners.push(sender.clone());
+					winners.push(sender);
 					Winners::<T>::put(winners);
 				}
 			}
@@ -245,7 +245,7 @@ where
 		<Winners<T>>::kill();
 		<LastWinningDistance<T>>::put(Self::winning_distance().unwrap_or(GuessType::MAX));
 		<WinningDistance<T>>::kill();
-		<LastLuckyNumber<T>>::put(Self::lucky_number().unwrap_or(0u32.into()));
+		<LastLuckyNumber<T>>::put(Self::lucky_number().unwrap_or(0));
 		let _ = <GuessAttempts<T>>::clear(T::MaxAttempts::get().into(), None);
 		Ok(())
 	}

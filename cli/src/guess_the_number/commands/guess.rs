@@ -49,7 +49,7 @@ impl GuessCommand {
 		let (mrenclave, shard) = get_identifiers(trusted_args);
 		let nonce = get_layer_two_nonce!(signer, cli, trusted_args);
 		let top: TrustedOperation<TrustedCallSigned, Getter> =
-			TrustedCall::guess_the_number(signer.public().into(), self.guess.into())
+			TrustedCall::guess_the_number(signer.public().into(), self.guess)
 				.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct);
 		Ok(perform_trusted_operation::<()>(cli, trusted_args, &top).map(|_| CliResultOk::None)?)

@@ -567,7 +567,7 @@ where
 			},
 			TrustedCall::guess_the_number_set_winnings(sender, winnings) => {
 				// authorization happens in pallet itself, we just pass authentication
-				let origin = ita_sgx_runtime::RuntimeOrigin::signed(sender.clone());
+				let origin = ita_sgx_runtime::RuntimeOrigin::signed(sender);
 				std::println!("⣿STF⣿ guess-the-number set winnings to {}", winnings);
 				ita_sgx_runtime::GuessTheNumberCall::<Runtime>::set_winnings { winnings }
 					.dispatch_bypass_filter(origin)
@@ -581,7 +581,7 @@ where
 			},
 			TrustedCall::guess_the_number_push_by_one_day(sender) => {
 				// authorization happens in pallet itself, we just pass authentication
-				let origin = ita_sgx_runtime::RuntimeOrigin::signed(sender.clone());
+				let origin = ita_sgx_runtime::RuntimeOrigin::signed(sender);
 				std::println!("⣿STF⣿ guess-the-number push by one day");
 				ita_sgx_runtime::GuessTheNumberCall::<Runtime>::push_by_one_day {}
 					.dispatch_bypass_filter(origin)
@@ -594,7 +594,7 @@ where
 				Ok::<(), Self::Error>(())
 			},
 			TrustedCall::guess_the_number(sender, guess) => {
-				let origin = ita_sgx_runtime::RuntimeOrigin::signed(sender.clone());
+				let origin = ita_sgx_runtime::RuntimeOrigin::signed(sender);
 				std::println!("⣿STF⣿ guess-the-number: someone is attempting a guess");
 				ita_sgx_runtime::GuessTheNumberCall::<Runtime>::guess { guess }
 					.dispatch_bypass_filter(origin)
