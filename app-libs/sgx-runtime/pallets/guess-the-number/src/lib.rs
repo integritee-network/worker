@@ -145,6 +145,15 @@ pub mod pallet {
         }
 
         #[pallet::call_index(1)]
+        #[pallet::weight((<T as Config>::WeightInfo::set_winnings(), DispatchClass::Normal, Pays::Yes)
+        )]
+        pub fn set_winnings(origin: OriginFor<T>, winnings: BalanceOf<T>) -> DispatchResultWithPostInfo {
+            T::GameMaster::ensure_origin(origin)?;
+            <Winnings<T>>::put(winnings);
+            Ok(().into())
+        }
+
+        #[pallet::call_index(2)]
         #[pallet::weight((<T as Config>::WeightInfo::guess(), DispatchClass::Normal, Pays::Yes)
         )]
         pub fn guess(origin: OriginFor<T>, guess: GuessType) -> DispatchResultWithPostInfo {
@@ -152,9 +161,14 @@ pub mod pallet {
             ensure!(Self::guess_attempts(&sender) < T::MaxAttempts::get(), Error::<T>::TooManyAttempts);
             let lucky_number = <LuckyNumber<T>>::get().ok_or_else(|| Error::<T>::NoDrawYet)?;
             let distance = GuessType::abs_diff(lucky_number, guess);
-            if distance <= Self::winning_distance().unwrap_or(GuessType::MAX) {
+            let last_winning_distance = Self::winning_distance().unwrap_or(crate::GuessType::MAX);
+            if distance <= last_winning_distance {
+                let mut winners = if distance == last_winning_distance {
+                    <Winners<T>>::get()
+                } else {
+                    vec![]
+                };
                 <WinningDistance<T>>::put(distance);
-                let mut winners = <Winners<T>>::get();
                 ensure!(winners.len() < T::MaxWinners::get() as usize, Error::<T>::TooManyWinners);
                 if !winners.contains(&sender) {
                     winners.push(sender.clone());
