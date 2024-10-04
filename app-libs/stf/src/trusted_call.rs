@@ -65,11 +65,13 @@ use std::{format, prelude::v1::*, sync::Arc};
 #[allow(non_camel_case_types)]
 pub enum TrustedCall {
 	noop(AccountId),
-	balance_set_balance(AccountId, AccountId, Balance, Balance),
 	balance_transfer(AccountId, AccountId, Balance),
 	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
 	balance_shield(AccountId, AccountId, Balance, ParentchainId), // (Root, AccountIncognito, Amount, origin parentchain)
 	timestamp_set(AccountId, Moment, ParentchainId),              // (Root, now)
+	guess_the_number_set_winnings(AccountId, Balance),
+	guess_the_number_push_by_one_day(AccountId),
+	guess_the_number(AccountId, GuessType),
 	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance), // (Origin, Address EVM Account, Value)
 	// (Origin, Source, Target, Input, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
@@ -113,15 +115,15 @@ pub enum TrustedCall {
 		Option<U256>,
 		Vec<(H160, Vec<H256>)>,
 	),
-	guess_the_number_set_winnings(AccountId, Balance),
-	guess_the_number_push_by_one_day(AccountId),
-	guess_the_number(AccountId, GuessType),
+	#[cfg(feature = "test")]
+	balance_set_balance(AccountId, AccountId, Balance, Balance),
 }
 
 impl TrustedCall {
 	pub fn sender_account(&self) -> &AccountId {
 		match self {
 			Self::noop(sender_account) => sender_account,
+			#[cfg(feature = "test")]
 			Self::balance_set_balance(sender_account, ..) => sender_account,
 			Self::balance_transfer(sender_account, ..) => sender_account,
 			Self::balance_unshield(sender_account, ..) => sender_account,
@@ -253,6 +255,7 @@ where
 				debug!("noop called by {}", account_id_to_string(&who),);
 				Ok::<(), Self::Error>(())
 			},
+			#[cfg(feature = "test")]
 			TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
 				ensure!(is_root::<Runtime, AccountId>(&root), Self::Error::MissingPrivileges(root));
 				debug!(
@@ -618,7 +621,8 @@ where
 		let key_hashes = Vec::new();
 		match self.call {
 			TrustedCall::noop(..) => debug!("No storage updates needed..."),
-			TrustedCall::balance_set_balance(..) => debug!("No storage updates needed..."),
+			#[cfg(feature = "test")]
+			TrustedCall::balance_set_balance(..) => debug!("No storage updates needed..."), // ROOT call to set some account balance to an arbitrary number
 			TrustedCall::balance_transfer(..) => debug!("No storage updates needed..."),
 			TrustedCall::balance_unshield(..) => debug!("No storage updates needed..."),
 			TrustedCall::balance_shield(..) => debug!("No storage updates needed..."),
@@ -671,6 +675,7 @@ fn shield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
 	Ok(())
 }
 
+#[cfg(feature = "test")]
 fn is_root<Runtime, AccountId>(account: &AccountId) -> bool
 where
 	Runtime: frame_system::Config<AccountId = AccountId> + pallet_sudo::Config,

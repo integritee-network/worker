@@ -15,6 +15,8 @@
 
 */
 
+#[cfg(feature = "test")]
+use crate::trusted_base_cli::commands::set_balance::SetBalanceCommand;
 use crate::{
 	trusted_base_cli::commands::{
 		balance::BalanceCommand, get_shard::GetShardCommand, get_shard_vault::GetShardVaultCommand,
@@ -43,6 +45,10 @@ pub enum TrustedBaseCommand {
 	/// send funds from one incognito account to another
 	Transfer(TransferCommand),
 
+	/// ROOT call to set some account balance to an arbitrary number
+	#[cfg(feature = "test")]
+	SetBalance(SetBalanceCommand),
+
 	/// query balance for incognito account in keystore
 	Balance(BalanceCommand),
 
@@ -69,6 +75,8 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::NewAccount => new_account(trusted_cli),
 			TrustedBaseCommand::ListAccounts => list_accounts(trusted_cli),
 			TrustedBaseCommand::Transfer(cmd) => cmd.run(cli, trusted_cli),
+			#[cfg(feature = "test")]
+			TrustedBaseCommand::SetBalance(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::Balance(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::UnshieldFunds(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::Nonce(cmd) => cmd.run(cli, trusted_cli),
