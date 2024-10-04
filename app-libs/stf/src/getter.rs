@@ -34,6 +34,7 @@ use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 #[cfg(feature = "evm")]
 use crate::evm_helpers::{get_evm_account, get_evm_account_codes, get_evm_account_storages};
 
+use crate::helpers::wrap_bytes;
 use itp_stf_primitives::traits::PoolTransactionValidation;
 #[cfg(feature = "evm")]
 use sp_core::{H160, H256};
@@ -143,8 +144,15 @@ impl TrustedGetterSigned {
 	}
 
 	pub fn verify_signature(&self) -> bool {
+		let encoded = self.getter.encode();
+
+		if self.signature.verify(encoded.as_slice(), self.getter.sender_account()) {
+			return true
+		};
+
+		// check if the signature is from an extension-dapp signer.
 		self.signature
-			.verify(self.getter.encode().as_slice(), self.getter.sender_account())
+			.verify(wrap_bytes(&encoded).as_slice(), self.getter.sender_account())
 	}
 }
 
@@ -233,5 +241,39 @@ impl ExecuteGetter for PublicGetter {
 
 	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
 		Vec::new()
+	}
+}
+
+mod tests {
+	use super::*;
+
+	#[test]
+	fn extension_dapp_signature_works() {
+		// This is a getter, which has been signed in the browser with the `signRaw` interface,
+		// which wraps the data in `<Bytes>...</Bytes>`
+		//
+		// see: https://github.com/polkadot-js/extension/pull/743
+		let dapp_extension_signed_getter: Vec<u8> = vec![
+			1, 0, 6, 72, 250, 19, 15, 144, 30, 85, 114, 224, 117, 219, 65, 218, 30, 241, 136, 74,
+			157, 10, 202, 233, 233, 100, 255, 63, 64, 102, 81, 215, 65, 60, 1, 192, 224, 67, 233,
+			49, 104, 156, 159, 245, 26, 136, 60, 88, 123, 174, 171, 67, 215, 124, 223, 112, 16,
+			133, 35, 138, 241, 36, 68, 27, 41, 63, 14, 103, 132, 201, 130, 216, 43, 81, 123, 71,
+			149, 215, 191, 100, 58, 182, 123, 229, 188, 245, 130, 66, 202, 126, 51, 137, 140, 56,
+			44, 176, 239, 51, 131,
+		];
+		let getter = Getter::decode(&mut dapp_extension_signed_getter.as_slice()).unwrap();
+
+		if let Getter::trusted(trusted) = getter {
+			let g = &trusted.getter;
+			let signature = &trusted.signature;
+
+			// check the signature check itself works
+			assert!(signature.verify(wrap_bytes(&g.encode()).as_slice(), g.sender_account()));
+
+			// check that the trusted getter's method works
+			assert!(trusted.verify_signature())
+		} else {
+			panic!("invalid getter")
+		}
 	}
 }

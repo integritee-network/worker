@@ -24,7 +24,7 @@ use std::vec::Vec;
 #[cfg(feature = "evm")]
 use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_address};
 use crate::{
-	helpers::{enclave_signer_account, ensure_enclave_signer_account, shard_vault},
+	helpers::{enclave_signer_account, ensure_enclave_signer_account, shard_vault, wrap_bytes},
 	Getter,
 };
 use codec::{Compact, Decode, Encode};
@@ -199,7 +199,14 @@ impl TrustedCallVerification for TrustedCallSigned {
 		payload.append(&mut self.nonce.encode());
 		payload.append(&mut mrenclave.encode());
 		payload.append(&mut shard.encode());
-		self.signature.verify(payload.as_slice(), self.call.sender_account())
+
+		if self.signature.verify(payload.as_slice(), self.call.sender_account()) {
+			return true
+		};
+
+		// check if the signature is from an extension-dapp signer.
+		self.signature
+			.verify(wrap_bytes(&payload).as_slice(), self.call.sender_account())
 	}
 }
 
