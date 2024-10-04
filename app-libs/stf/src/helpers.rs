@@ -160,3 +160,22 @@ pub fn shard_creation_info() -> ShardCreationInfo {
 		target_b: maybe_target_b_info,
 	}
 }
+
+const PREFIX: &[u8] = b"<Bytes>";
+const POSTFIX: &[u8] = b"</Bytes>";
+
+/// This function reproduces the wrapping that occurs when the
+/// `signRaw` interface is used with a signer that is injected
+/// from a dapp-extension.
+///
+/// See: https://github.com/polkadot-js/extension/pull/743
+pub fn wrap_bytes(data: &[u8]) -> Vec<u8> {
+	let total_len = PREFIX.len() + data.len() + POSTFIX.len();
+	let mut bytes_wrapped = Vec::with_capacity(total_len);
+
+	bytes_wrapped.extend_from_slice(PREFIX);
+	bytes_wrapped.extend_from_slice(data);
+	bytes_wrapped.extend_from_slice(POSTFIX);
+
+	bytes_wrapped
+}
