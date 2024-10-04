@@ -642,6 +642,21 @@ mod tests {
 	use itp_stf_primitives::types::KeyPair;
 	use sp_keyring::AccountKeyring;
 
+	use base58::FromBase58;
+
+	pub(crate) fn shard_from_base58(src: &str) -> ShardIdentifier {
+		ShardIdentifier::decode(
+			&mut src.from_base58().expect("shard has to be base58 encoded").as_slice(),
+		)
+		.unwrap()
+	}
+
+	pub(crate) fn mrenclave_from_base58(src: &str) -> [u8; 32] {
+		let mut mrenclave = [0u8; 32];
+		mrenclave.copy_from_slice(&src.from_base58().expect("mrenclave has to be base58 encoded"));
+		mrenclave
+	}
+
 	#[test]
 	fn verify_signature_works() {
 		let nonce = 21;
@@ -662,5 +677,29 @@ mod tests {
 		);
 
 		assert!(signed_call.verify_signature(&mrenclave, &shard));
+	}
+
+	#[test]
+	fn extension_dapp_verify_signature_works() {
+		// This is a getter, which has been signed in the browser with the `signRaw` interface,
+		// which wraps the data in `<Bytes>...</Bytes>`
+		//
+		// see: https://github.com/polkadot-js/extension/pull/743
+		let dapp_extension_signed_call: Vec<u8> = vec![
+			3, 6, 72, 250, 19, 15, 144, 30, 85, 114, 224, 117, 219, 65, 218, 30, 241, 136, 74, 157,
+			10, 202, 233, 233, 100, 255, 63, 64, 102, 81, 215, 65, 60, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 73, 110, 99, 111, 103, 110, 105, 116, 101, 101, 84, 101,
+			115, 116, 110, 101, 116, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 51, 1,
+			0, 0, 0, 1, 54, 194, 196, 95, 0, 150, 174, 244, 180, 4, 197, 64, 98, 123, 229, 37, 222,
+			44, 232, 93, 170, 211, 231, 95, 157, 7, 88, 164, 204, 179, 171, 14, 68, 138, 43, 37,
+			155, 15, 245, 130, 224, 239, 138, 44, 83, 46, 63, 200, 86, 5, 182, 47, 195, 144, 170,
+			1, 108, 60, 4, 72, 201, 22, 212, 143,
+		];
+		let call = TrustedCallSigned::decode(&mut dapp_extension_signed_call.as_slice()).unwrap();
+
+		let mrenclave = mrenclave_from_base58("8weGnjvG3nh6UzoYjqaTjpWjX1ouNPioA1K5134DJc5j");
+		let shard = shard_from_base58("5wePd1LYa5M49ghwgZXs55cepKbJKhj5xfzQGfPeMS7c");
+		assert!(call.verify_signature(&mrenclave, &shard))
 	}
 }
