@@ -159,7 +159,7 @@ fn guessing_and_ranking_works() {
 		assert_eq!(GuessTheNumber::winning_distance(), Some(13));
 
 		// winners are a unique set
-		assert_ok!(GuessTheNumber::guess(RuntimeOrigin::signed(bob.clone()), 4990));
+		assert_ok!(GuessTheNumber::guess(RuntimeOrigin::signed(bob.clone()), 5010));
 		assert_eq!(GuessTheNumber::winners(), vec![bob.clone()]);
 		assert_eq!(GuessTheNumber::winning_distance(), Some(10));
 

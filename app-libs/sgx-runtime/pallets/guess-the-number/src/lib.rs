@@ -169,7 +169,7 @@ pub mod pallet {
 				Self::guess_attempts(&sender) < T::MaxAttempts::get(),
 				Error::<T>::TooManyAttempts
 			);
-			<GuessAttempts<T>>::mutate(&sender, |a| *a += 1u8);
+			<GuessAttempts<T>>::mutate(&sender, |a| *a = a.saturating_add(1u8));
 			let lucky_number = <LuckyNumber<T>>::get().ok_or(Error::<T>::NoDrawYet)?;
 			let distance = GuessType::abs_diff(lucky_number, guess);
 			let last_winning_distance = Self::winning_distance().unwrap_or(crate::GuessType::MAX);
@@ -246,7 +246,7 @@ where
 		<LastWinningDistance<T>>::put(Self::winning_distance().unwrap_or(GuessType::MAX));
 		<WinningDistance<T>>::kill();
 		<LastLuckyNumber<T>>::put(Self::lucky_number().unwrap_or(0));
-		let _ = <GuessAttempts<T>>::clear(T::MaxAttempts::get().into(), None);
+		let _ = <GuessAttempts<T>>::clear(u32::MAX, None);
 		Ok(())
 	}
 
