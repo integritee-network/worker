@@ -2819,6 +2819,7 @@ dependencies = [
 name = "ita-stf"
 version = "0.9.0"
 dependencies = [
+ "base58",
  "frame-support",
  "frame-system",
  "ita-sgx-runtime",
