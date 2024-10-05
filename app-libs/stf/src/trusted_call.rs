@@ -608,6 +608,20 @@ where
 			TrustedCall::guess_the_number(sender, guess) => {
 				let origin = ita_sgx_runtime::RuntimeOrigin::signed(sender);
 				std::println!("⣿STF⣿ guess-the-number: someone is attempting a guess");
+				// endow fee to enclave (self)
+				let fee_recipient: AccountId = enclave_signer_account();
+				// fixme: apply fees through standard frame process and tune it
+				let fee = crate::STF_GUESS_FEE;
+				info!("guess fee {}", fee);
+				ita_sgx_runtime::BalancesCall::<Runtime>::transfer {
+					dest: MultiAddress::Id(fee_recipient),
+					value: fee,
+				}
+				.dispatch_bypass_filter(origin.clone())
+				.map_err(|e| {
+					Self::Error::Dispatch(format!("GuessTheNumber fee error: {:?}", e.error))
+				})?;
+
 				ita_sgx_runtime::GuessTheNumberCall::<Runtime>::guess { guess }
 					.dispatch_bypass_filter(origin)
 					.map_err(|e| {
