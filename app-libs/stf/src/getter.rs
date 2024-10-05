@@ -96,26 +96,26 @@ impl PoolTransactionValidation for Getter {
 #[allow(non_camel_case_types)]
 #[repr(u8)]
 pub enum PublicGetter {
-	some_value = 0,
-	total_issuance = 1,
-	guess_the_number_last_lucky_number = 50,
-	guess_the_number_last_winning_distance = 51,
-	guess_the_number_info = 52,
+	some_value = 0u8,
+	total_issuance = 1u8,
+	guess_the_number_last_lucky_number = 50u8,
+	guess_the_number_last_winning_distance = 51u8,
+	guess_the_number_info = 52u8,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 #[repr(u8)]
 pub enum TrustedGetter {
-	free_balance(AccountId) = 0,
-	reserved_balance(AccountId) = 1,
-	nonce(AccountId) = 2,
+	free_balance(AccountId) = 0u8,
+	reserved_balance(AccountId) = 1u8,
+	nonce(AccountId) = 2u8,
 	#[cfg(feature = "evm")]
-	evm_nonce(AccountId) = 80,
+	evm_nonce(AccountId) = 80u8,
 	#[cfg(feature = "evm")]
-	evm_account_codes(AccountId, H160) = 81,
+	evm_account_codes(AccountId, H160) = 81u8,
 	#[cfg(feature = "evm")]
-	evm_account_storages(AccountId, H160, H256) = 82,
+	evm_account_storages(AccountId, H160, H256) = 82u8,
 }
 
 impl TrustedGetter {

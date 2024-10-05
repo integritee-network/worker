@@ -65,16 +65,16 @@ use std::{format, prelude::v1::*, sync::Arc};
 #[allow(non_camel_case_types)]
 #[repr(u8)]
 pub enum TrustedCall {
-	noop(AccountId) = 0,
-	timestamp_set(AccountId, Moment, ParentchainId) = 1, // (Root, now)
-	balance_transfer(AccountId, AccountId, Balance) = 2,
-	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier) = 3, // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
-	balance_shield(AccountId, AccountId, Balance, ParentchainId) = 4, // (Root, AccountIncognito, Amount, origin parentchain)
-	guess_the_number_set_winnings(AccountId, Balance) = 50,
-	guess_the_number_push_by_one_day(AccountId) = 51,
-	guess_the_number(AccountId, GuessType) = 52,
+	noop(AccountId) = 0u8,
+	timestamp_set(AccountId, Moment, ParentchainId) = 1u8, // (Root, now)
+	balance_transfer(AccountId, AccountId, Balance) = 2u8,
+	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier) = 3u8, // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
+	balance_shield(AccountId, AccountId, Balance, ParentchainId) = 4u8, // (Root, AccountIncognito, Amount, origin parentchain)
+	guess_the_number_set_winnings(AccountId, Balance) = 50u8,
+	guess_the_number_push_by_one_day(AccountId) = 51u8,
+	guess_the_number(AccountId, GuessType) = 52u8,
 	#[cfg(feature = "evm")]
-	evm_withdraw(AccountId, H160, Balance) = 90, // (Origin, Address EVM Account, Value)
+	evm_withdraw(AccountId, H160, Balance) = 90u8, // (Origin, Address EVM Account, Value)
 	// (Origin, Source, Target, Input, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
 	#[cfg(feature = "evm")]
 	evm_call(
@@ -88,7 +88,7 @@ pub enum TrustedCall {
 		Option<U256>,
 		Option<U256>,
 		Vec<(H160, Vec<H256>)>,
-	) = 91,
+	) = 91u8,
 	// (Origin, Source, Init, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
 	#[cfg(feature = "evm")]
 	evm_create(
@@ -101,7 +101,7 @@ pub enum TrustedCall {
 		Option<U256>,
 		Option<U256>,
 		Vec<(H160, Vec<H256>)>,
-	) = 92,
+	) = 92u8,
 	// (Origin, Source, Init, Salt, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
 	#[cfg(feature = "evm")]
 	evm_create2(
@@ -115,9 +115,9 @@ pub enum TrustedCall {
 		Option<U256>,
 		Option<U256>,
 		Vec<(H160, Vec<H256>)>,
-	) = 93,
+	) = 93u8,
 	#[cfg(any(feature = "test", test))]
-	balance_set_balance(AccountId, AccountId, Balance, Balance) = 255,
+	balance_set_balance(AccountId, AccountId, Balance, Balance) = 255u8,
 }
 
 impl TrustedCall {
