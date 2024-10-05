@@ -72,28 +72,29 @@ AMOUNTTRANSFER=40000000000
 CLIENT="${CLIENT_BIN} -p ${INTEGRITEE_RPC_PORT} -P ${WORKER_1_PORT} -u ${INTEGRITEE_RPC_URL} -U ${WORKER_1_URL}"
 read -r MRENCLAVE <<< "$($CLIENT list-workers | awk '/  MRENCLAVE: / { print $2; exit }')"
 
-echo ""
-echo "* Create a new incognito account for Alice"
-ICGACCOUNTALICE=//AliceIncognito
-echo "  Alice's incognito account = ${ICGACCOUNTALICE}"
-echo ""
+VAULT=$(${CLIENT} trusted get-shard-vault)
+echo "  Vault account = ${VAULT}"
 
 echo "* Create a new incognito account for Bob"
 ICGACCOUNTBOB=//BobIncognito
 echo "  Bob's incognito account = ${ICGACCOUNTBOB}"
 echo ""
 
-echo "* Issue ${AMOUNTSHIELD} tokens to Alice's incognito account"
-${CLIENT} trusted --mrenclave ${MRENCLAVE} --direct set-balance ${ICGACCOUNTALICE} ${AMOUNTSHIELD}
+echo "* Shield ${AMOUNTSHIELD} tokens to Alice's account on L2"
+${CLIENT} transfer //Alice ${VAULT} ${AMOUNTSHIELD}
+echo ""
+
+echo "* Waiting 30 seconds"
+sleep 30
 echo ""
 
 echo "Get balance of Alice's incognito account"
-${CLIENT} trusted --mrenclave ${MRENCLAVE} balance ${ICGACCOUNTALICE}
+${CLIENT} trusted --mrenclave ${MRENCLAVE} balance //Alice
 echo ""
 
 # Send funds from Alice to Bob's account.
 echo "* Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account"
-$CLIENT trusted --mrenclave ${MRENCLAVE} --direct transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER}
+$CLIENT trusted --mrenclave ${MRENCLAVE} --direct transfer //Alice ${ICGACCOUNTBOB} ${AMOUNTTRANSFER}
 echo ""
 
 # Prevent getter being executed too early and returning an outdated result, before the transfer was made.
@@ -102,7 +103,7 @@ sleep 2
 echo ""
 
 echo "* Get balance of Alice's incognito account"
-RESULT=$(${CLIENT} trusted --mrenclave ${MRENCLAVE} balance ${ICGACCOUNTALICE} | xargs)
+RESULT=$(${CLIENT} trusted --mrenclave ${MRENCLAVE} balance //Alice | xargs)
 echo $RESULT
 echo ""
 

@@ -96,28 +96,29 @@ else
 fi
 [[ -z $MRENCLAVE ]] && { echo "MRENCLAVE is empty. cannot continue" ; exit 1; }
 
-echo ""
-echo "* Create a new incognito account for Alice"
-ICGACCOUNTALICE=//AliceIncognito
-echo "  Alice's incognito account = ${ICGACCOUNTALICE}"
-echo ""
+VAULT=$(${CLIENT} trusted get-shard-vault)
+echo "  Vault account = ${VAULT}"
 
 echo "* Create a new incognito account for Bob"
 ICGACCOUNTBOB=//BobIncognito
 echo "  Bob's incognito account = ${ICGACCOUNTBOB}"
 echo ""
 
-echo "* Issue ${INITIALFUNDS} tokens to Alice's incognito account (on worker 1)"
-${CLIENTWORKER1} trusted --mrenclave ${MRENCLAVE} --direct set-balance ${ICGACCOUNTALICE} ${INITIALFUNDS}
+echo "* Shield ${INITIALFUNDS} tokens to Alice's account on L2"
+${CLIENT} transfer //Alice ${VAULT} ${INITIALFUNDS}
+echo ""
+
+echo "* Waiting 30 seconds"
+sleep 30
 echo ""
 
 echo "Get balance of Alice's incognito account (on worker 1)"
-${CLIENTWORKER1} trusted --mrenclave ${MRENCLAVE} balance ${ICGACCOUNTALICE}
+${CLIENTWORKER1} trusted --mrenclave ${MRENCLAVE} balance //Alice
 echo ""
 
 # Send funds from Alice to Bobs account, on worker 1.
 echo "* First transfer: Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account (on worker 1)"
-$CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} --direct transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER}
+$CLIENTWORKER1 trusted --mrenclave ${MRENCLAVE} --direct transfer //Alice ${ICGACCOUNTBOB} ${AMOUNTTRANSFER}
 echo ""
 
 # Prevent nonce clash when sending direct trusted calls to different workers.
@@ -127,7 +128,7 @@ echo ""
 
 # Send funds from Alice to Bobs account, on worker 2.
 echo "* Second transfer: Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account (on worker 2)"
-$CLIENTWORKER2 trusted --mrenclave ${MRENCLAVE} --direct transfer ${ICGACCOUNTALICE} ${ICGACCOUNTBOB} ${AMOUNTTRANSFER}
+$CLIENTWORKER2 trusted --mrenclave ${MRENCLAVE} --direct transfer //Alice ${ICGACCOUNTBOB} ${AMOUNTTRANSFER}
 echo ""
 
 # Prevent getter being executed too early and returning an outdated result, before the transfer was made.
@@ -136,7 +137,7 @@ sleep 2
 echo ""
 
 echo "* Get balance of Alice's incognito account (on worker 1)"
-ALICE_BALANCE=$(${CLIENTWORKER1} trusted --mrenclave ${MRENCLAVE} balance ${ICGACCOUNTALICE} | xargs)
+ALICE_BALANCE=$(${CLIENTWORKER1} trusted --mrenclave ${MRENCLAVE} balance //Alice | xargs)
 echo "$ALICE_BALANCE"
 echo ""
 
