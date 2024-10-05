@@ -28,7 +28,7 @@ use substrate_api_client::{
 /// Add a trusted market data source to the on-chain whitelist.
 #[derive(Debug, Clone, Parser)]
 pub struct AddToWhitelistCmd {
-	/// Sender's on-chain AccountId in ss58check format.
+	/// Sender's on-chain AccountId in ss58check format, mnemonic or hex seed.
 	///
 	/// It has to be a sudo account.
 	from: String,

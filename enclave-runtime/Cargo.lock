@@ -1689,9 +1689,11 @@ dependencies = [
  "frame-executive",
  "frame-support",
  "frame-system",
+ "itp-randomness",
  "itp-sgx-runtime-primitives",
  "pallet-balances",
  "pallet-evm",
+ "pallet-guess-the-number",
  "pallet-parentchain",
  "pallet-sudo",
  "pallet-timestamp",
@@ -1726,6 +1728,7 @@ dependencies = [
  "pallet-balances",
  "pallet-parentchain",
  "pallet-sudo",
+ "pallet-timestamp",
  "parity-scale-codec",
  "rlp",
  "sgx_tstd",
@@ -2094,6 +2097,13 @@ dependencies = [
  "lazy_static",
  "sgx_tstd",
  "thiserror",
+]
+
+[[package]]
+name = "itp-randomness"
+version = "0.1.0"
+dependencies = [
+ "sgx_rand",
 ]
 
 [[package]]
@@ -2952,6 +2962,24 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "rlp",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-guess-the-number"
+version = "0.11.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "itp-randomness",
+ "log",
+ "pallet-balances",
+ "pallet-timestamp",
+ "parity-scale-codec",
  "scale-info",
  "sp-core",
  "sp-io",

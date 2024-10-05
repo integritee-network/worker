@@ -31,9 +31,9 @@ use substrate_api_client::{ac_compose_macros::compose_extrinsic, SubmitAndWatch,
 
 #[derive(Parser)]
 pub struct ShieldFundsCommand {
-	/// Sender's parentchain AccountId in ss58check format.
+	/// Sender's parentchain AccountId in ss58check format,mnemonic or hex seed.
 	from: String,
-	/// Recipient's incognito AccountId in ss58check format.
+	/// Recipient's incognito AccountId .
 	to: String,
 	/// Amount to be transferred.
 	amount: Balance,
@@ -78,9 +78,9 @@ impl ShieldFundsCommand {
 		match chain_api.submit_and_watch_extrinsic_until(xt, XtStatus::Finalized) {
 			Ok(xt_report) => {
 				println!(
-					"[+] shield funds success. extrinsic hash: {:?} / status: {:?} / block hash: {:?}",
-					xt_report.extrinsic_hash, xt_report.status, xt_report.block_hash.unwrap()
-				);
+                    "[+] shield funds success. extrinsic hash: {:?} / status: {:?} / block hash: {:?}",
+                    xt_report.extrinsic_hash, xt_report.status, xt_report.block_hash.unwrap()
+                );
 				Ok(CliResultOk::H256 { hash: xt_report.block_hash.unwrap() })
 			},
 			Err(e) => {

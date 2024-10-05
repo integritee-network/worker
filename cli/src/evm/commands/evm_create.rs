@@ -35,7 +35,7 @@ use sp_runtime::traits::BlakeTwo256;
 use std::vec::Vec;
 #[derive(Parser)]
 pub struct EvmCreateCommands {
-	/// Sender's incognito AccountId in ss58check format
+	/// Sender's incognito AccountId in ss58check format, mnemonic or hex seed
 	from: String,
 
 	/// Smart Contract in Hex format

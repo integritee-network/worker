@@ -23,7 +23,7 @@ use substrate_api_client::GetAccountInformation;
 
 #[derive(Parser)]
 pub struct BalanceCommand {
-	/// AccountId in ss58check format
+	/// AccountId in ss58check format, mnemonic or hex seed
 	account: String,
 }
 

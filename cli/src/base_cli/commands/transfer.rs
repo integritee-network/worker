@@ -28,7 +28,7 @@ use substrate_api_client::{
 
 #[derive(Parser)]
 pub struct TransferCommand {
-	/// sender's AccountId in ss58check format
+	/// sender's AccountId in ss58check format, mnemonic or hex seed
 	from: String,
 
 	/// recipient's AccountId in ss58check format

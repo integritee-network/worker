@@ -108,18 +108,27 @@ pub(crate) fn get_pair_from_str(trusted_args: &TrustedCli, account: &str) -> sr2
 	info!("getting pair for {}", account);
 	match &account[..2] {
 		"//" => sr25519_core::Pair::from_string(account, None).unwrap(),
+		"0x" => sr25519_core::Pair::from_string_with_seed(account, None).unwrap().0,
 		_ => {
+			if sr25519::Public::from_ss58check(account).is_err() {
+				// could be mnemonic phrase
+				return sr25519_core::Pair::from_string_with_seed(account, None).unwrap().0
+			}
 			info!("fetching from keystore at {}", &TRUSTED_KEYSTORE_PATH);
 			// open store without password protection
 			let store = LocalKeystore::open(get_keystore_path(trusted_args), None)
 				.expect("store should exist");
 			info!("store opened");
-			let public_key = &sr25519::AppPublic::from_ss58check(account).unwrap();
-			info!("public_key: {:?}", &public_key);
-			let _pair = store.key_pair::<sr25519::AppPair>(public_key).unwrap().unwrap();
-			info!("key pair fetched");
+			let maybe_pair = store
+				.key_pair::<sr25519::AppPair>(
+					&sr25519::Public::from_ss58check(account).unwrap().into(),
+				)
+				.unwrap();
 			drop(store);
-			_pair.into()
+			match maybe_pair {
+				Some(pair) => pair.into(),
+				None => panic!("account not in my_trusted_keystore"),
+			}
 		},
 	}
 }

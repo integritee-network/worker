@@ -14,26 +14,25 @@
 	limitations under the License.
 
 */
-
 use crate::{
-	get_layer_two_nonce, trusted_cli::TrustedCli, trusted_command_utils::get_pair_from_str,
-	trusted_operation::perform_trusted_operation, Cli, CliResult, CliResultOk,
+	trusted_cli::TrustedCli, trusted_operation::perform_trusted_operation, Cli, CliResult,
+	CliResultOk,
 };
-use ita_stf::Index;
-use itp_stf_primitives::types::{KeyPair, TrustedOperation};
-use log::*;
-use sp_core::Pair;
+use ita_stf::{Getter, GuessTheNumberInfo, PublicGetter, TrustedCallSigned};
+use itp_stf_primitives::types::TrustedOperation;
+use sp_core::crypto::Ss58Codec;
 
 #[derive(Parser)]
-pub struct NonceCommand {
-	/// AccountId in ss58check format, mnemonic or hex seed
-	account: String,
-}
+pub struct GetInfoCommand {}
 
-impl NonceCommand {
+impl GetInfoCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let who = get_pair_from_str(trusted_args, &self.account);
-		println!("{}", get_layer_two_nonce!(who, cli, trusted_args));
-		Ok(CliResultOk::None)
+		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::public(
+			PublicGetter::guess_the_number_info,
+		));
+		let info: GuessTheNumberInfo = perform_trusted_operation(cli, trusted_args, &top).unwrap();
+		println!("{:?}", info);
+		println!("pot account: {}", info.account.to_ss58check());
+		Ok(CliResultOk::GuessTheNumberPotInfo { info })
 	}
 }

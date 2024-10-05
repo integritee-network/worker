@@ -30,7 +30,7 @@ use itp_node_api_metadata_provider::NodeMetadataRepository;
 use itp_stf_primitives::traits::TrustedCallVerification;
 use itp_types::{
 	parentchain::{ParentchainCall, ParentchainId},
-	AccountId, Index,
+	AccountId, Index, Moment,
 };
 
 #[derive(Default)]
@@ -69,6 +69,13 @@ where
 		_calls: &mut Vec<ParentchainCall>,
 		_node_metadata_repo: Arc<NodeMetadataRepository<NodeMetadataMock>>,
 	) -> Result<(), Self::Error> {
+		unimplemented!()
+	}
+
+	fn on_initialize(_state: &mut State, _now: Moment) -> Result<(), Self::Error> {
+		unimplemented!()
+	}
+	fn on_finalize(_state: &mut State) -> Result<(), Self::Error> {
 		unimplemented!()
 	}
 }

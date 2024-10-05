@@ -39,7 +39,7 @@ pub use evm::{
 };
 
 use core::convert::{TryFrom, TryInto};
-use frame_support::{traits::ConstU32, weights::ConstantMultiplier};
+use frame_support::{ord_parameter_types, traits::ConstU32, weights::ConstantMultiplier};
 use pallet_transaction_payment::CurrencyAdapter;
 use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
@@ -70,10 +70,18 @@ pub use frame_support::{
 	},
 	StorageValue,
 };
+use frame_support::{
+	traits::{ConstU8, EitherOfDiverse},
+	PalletId,
+};
+use frame_system::{EnsureRoot, EnsureSignedBy};
+use itp_randomness::SgxRandomness;
 use itp_sgx_runtime_primitives::types::Moment;
 pub use pallet_balances::Call as BalancesCall;
+pub use pallet_guess_the_number::{Call as GuessTheNumberCall, GuessType};
 pub use pallet_parentchain::Call as ParentchainPalletCall;
 pub use pallet_timestamp::Call as TimestampCall;
+use sp_core::crypto::AccountId32;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
@@ -115,7 +123,6 @@ pub type Executive = frame_executive::Executive<
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
 /// to even the core data structures.
 pub mod opaque {
-
 	use sp_runtime::generic;
 	pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
 
@@ -213,7 +220,7 @@ parameter_types! {
 impl pallet_timestamp::Config for Runtime {
 	/// A timestamp: milliseconds since the unix epoch.
 	type Moment = Moment;
-	type OnTimestampSet = ();
+	type OnTimestampSet = GuessTheNumber;
 	type MinimumPeriod = MinimumPeriod;
 	type WeightInfo = ();
 }
@@ -281,6 +288,29 @@ impl pallet_parentchain::Config<crate::ParentchainInstanceTargetB> for Runtime {
 	type Moment = Moment;
 }
 
+ord_parameter_types! {
+	pub const GameMaster: AccountId32 = AccountId32::new([148, 117, 87, 242, 252, 96, 167, 29, 118, 69, 87, 119, 15, 57, 142, 82, 216, 8, 210, 102, 12, 213, 46, 76, 214, 5, 144, 153, 148, 113, 89, 95]);
+}
+
+parameter_types! {
+	pub const MomentsPerDay: u64 = 86_400_000; // [ms/d]
+	pub const RoundDuration: u64 = 7 * 86_400_000; // [ms/d]
+	pub const GtnPalletId: PalletId = PalletId(*b"gsstnmbr");
+}
+impl pallet_guess_the_number::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type GameMaster =
+		EitherOfDiverse<EnsureSignedBy<GameMaster, AccountId32>, EnsureRoot<AccountId32>>;
+	type MomentsPerDay = MomentsPerDay;
+	type WeightInfo = ();
+	type RoundDuration = RoundDuration;
+	type Randomness = SgxRandomness;
+	type Currency = Balances;
+	type PalletId = GtnPalletId;
+	type MaxAttempts = ConstU8<10>;
+	type MaxWinners = ConstU8<12>;
+}
+
 // The plain sgx-runtime without the `evm-pallet`
 #[cfg(not(feature = "evm"))]
 construct_runtime!(
@@ -298,6 +328,8 @@ construct_runtime!(
 		ParentchainIntegritee: pallet_parentchain::<Instance1>::{Pallet, Call, Event<T>} = 10,
 		ParentchainTargetA: pallet_parentchain::<Instance2>::{Pallet, Call, Event<T>} = 11,
 		ParentchainTargetB: pallet_parentchain::<Instance3>::{Pallet, Call, Event<T>} = 12,
+
+		GuessTheNumber: pallet_guess_the_number::{Pallet, Call, Storage, Event<T>} = 30,
 	}
 );
 
@@ -323,6 +355,8 @@ construct_runtime!(
 		ParentchainTargetB: pallet_parentchain::<Instance3>::{Pallet, Call, Event<T>} = 12,
 
 		Evm: pallet_evm::{Pallet, Call, Storage, Config, Event<T>} = 20,
+
+		GuessTheNumber: pallet_guess_the_number::{Pallet, Call, Storage, Event<T>} = 30,
 	}
 );
 

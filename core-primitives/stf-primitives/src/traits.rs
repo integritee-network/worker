@@ -45,6 +45,15 @@ pub trait TrustedCallVerification {
 	fn verify_signature(&self, mrenclave: &[u8; 32], shard: &ShardIdentifier) -> bool;
 }
 
+/// enables common hooks for STF interaction in the context of blocks or batch execution
+pub trait StateUpdateBlockHooks<State> {
+	/// to be executed before any TrustedCalls in this batch/block
+	fn on_initialize(state: &mut State);
+
+	/// to be executed after any TrustedCalls in this batch/block
+	fn on_finalize(state: &mut State);
+}
+
 /// validation for top pool
 pub trait PoolTransactionValidation {
 	fn validate(&self) -> Result<ValidTransaction, TransactionValidityError>;

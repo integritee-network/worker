@@ -33,7 +33,7 @@ use sp_core::{crypto::Ss58Codec, Pair, H160, U256};
 use std::{boxed::Box, vec::Vec};
 #[derive(Parser)]
 pub struct EvmCallCommands {
-	/// Sender's incognito AccountId in ss58check format
+	/// Sender's incognito AccountId in ss58check format, mnemonic or hex seed
 	from: String,
 
 	/// Execution address of the smart contract

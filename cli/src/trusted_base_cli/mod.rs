@@ -15,11 +15,13 @@
 
 */
 
+#[cfg(feature = "test")]
+use crate::trusted_base_cli::commands::set_balance::SetBalanceCommand;
 use crate::{
 	trusted_base_cli::commands::{
 		balance::BalanceCommand, get_shard::GetShardCommand, get_shard_vault::GetShardVaultCommand,
-		nonce::NonceCommand, set_balance::SetBalanceCommand, transfer::TransferCommand,
-		unshield_funds::UnshieldFundsCommand,
+		get_total_issuance::GetTotalIssuanceCommand, nonce::NonceCommand,
+		transfer::TransferCommand, unshield_funds::UnshieldFundsCommand,
 	},
 	trusted_cli::TrustedCli,
 	trusted_command_utils::get_keystore_path,
@@ -44,6 +46,7 @@ pub enum TrustedBaseCommand {
 	Transfer(TransferCommand),
 
 	/// ROOT call to set some account balance to an arbitrary number
+	#[cfg(feature = "test")]
 	SetBalance(SetBalanceCommand),
 
 	/// query balance for incognito account in keystore
@@ -61,6 +64,9 @@ pub enum TrustedBaseCommand {
 
 	/// get shard vault for shielding (if defined for this worker)
 	GetShardVault(GetShardVaultCommand),
+
+	/// get total issuance of this shard's native token
+	GetTotalIssuance(GetTotalIssuanceCommand),
 }
 
 impl TrustedBaseCommand {
@@ -69,12 +75,14 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::NewAccount => new_account(trusted_cli),
 			TrustedBaseCommand::ListAccounts => list_accounts(trusted_cli),
 			TrustedBaseCommand::Transfer(cmd) => cmd.run(cli, trusted_cli),
+			#[cfg(feature = "test")]
 			TrustedBaseCommand::SetBalance(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::Balance(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::UnshieldFunds(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::Nonce(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetShard(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetShardVault(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::GetTotalIssuance(cmd) => cmd.run(cli, trusted_cli),
 		}
 	}
 }

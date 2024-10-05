@@ -27,7 +27,7 @@ use sp_core::{crypto::Ss58Codec, Pair, H160, H256};
 
 #[derive(Parser)]
 pub struct EvmReadCommands {
-	/// Sender's incognito AccountId in ss58check format
+	/// Sender's incognito AccountId in ss58check format, mnemonic or hex seed
 	from: String,
 
 	/// Execution address of the smart contract

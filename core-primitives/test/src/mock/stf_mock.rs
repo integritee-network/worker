@@ -31,7 +31,7 @@ use itp_stf_primitives::{
 };
 use itp_types::{
 	parentchain::{ParentchainCall, ParentchainId},
-	AccountId, Balance, Index, ShardIdentifier, Signature,
+	AccountId, Balance, Index, Moment, ShardIdentifier, Signature,
 };
 use log::*;
 use sp_core::{sr25519, Pair};
@@ -73,6 +73,15 @@ impl StateCallInterface<TrustedCallSignedMock, SgxExternalities, NodeMetadataRep
 		node_metadata_repo: Arc<NodeMetadataRepositoryMock>,
 	) -> Result<(), Self::Error> {
 		state.execute_with(|| call.execute(calls, node_metadata_repo))
+	}
+
+	fn on_initialize(_state: &mut SgxExternalities, now: Moment) -> Result<(), Self::Error> {
+		trace!("on_initialize called at epoch {}", now);
+		Ok(())
+	}
+	fn on_finalize(_state: &mut SgxExternalities) -> Result<(), Self::Error> {
+		trace!("on_finalize called");
+		Ok(())
 	}
 }
 

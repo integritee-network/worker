@@ -18,7 +18,7 @@
 use crate::{
 	get_layer_two_nonce,
 	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_accountid_from_str, get_identifiers, get_pair_from_str},
+	trusted_command_utils::{get_identifiers, get_pair_from_str},
 	trusted_operation::perform_trusted_operation,
 	Cli, CliResult, CliResultOk,
 };
@@ -29,39 +29,32 @@ use itp_stf_primitives::{
 	types::{KeyPair, TrustedOperation},
 };
 use log::*;
-use sp_core::{crypto::Ss58Codec, Pair};
+use sp_core::Pair;
 use std::boxed::Box;
+
 #[derive(Parser)]
-pub struct UnshieldFundsCommand {
-	/// Sender's incognito AccountId in ss58check format, mnemonic or hex seed
-	from: String,
-
-	/// Recipient's parentchain AccountId in ss58check format
-	to: String,
-
+pub struct SetWinningsCommand {
+	/// sender's AccountId in ss58check format, mnemonic or hex seed. must by authorized as GuessMaster
+	master: String,
 	/// amount to be transferred
-	amount: Balance,
+	winnings: Balance,
 }
 
-impl UnshieldFundsCommand {
+impl SetWinningsCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let from = get_pair_from_str(trusted_args, &self.from);
-		let to = get_accountid_from_str(&self.to);
-		println!("from ss58 is {}", from.public().to_ss58check());
-		println!("to   ss58 is {}", to.to_ss58check());
+		let signer = get_pair_from_str(trusted_args, &self.master);
 
 		println!(
-			"send trusted call unshield_funds from {} to {}: {}",
-			from.public(),
-			to,
-			self.amount
+			"send trusted call guess-the-number set winnings({}, {})",
+			signer.public(),
+			self.winnings
 		);
 
 		let (mrenclave, shard) = get_identifiers(trusted_args);
-		let nonce = get_layer_two_nonce!(from, cli, trusted_args);
+		let nonce = get_layer_two_nonce!(signer, cli, trusted_args);
 		let top: TrustedOperation<TrustedCallSigned, Getter> =
-			TrustedCall::balance_unshield(from.public().into(), to, self.amount, shard)
-				.sign(&KeyPair::Sr25519(Box::new(from)), nonce, &mrenclave, &shard)
+			TrustedCall::guess_the_number_set_winnings(signer.public().into(), self.winnings)
+				.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct);
 		Ok(perform_trusted_operation::<()>(cli, trusted_args, &top).map(|_| CliResultOk::None)?)
 	}

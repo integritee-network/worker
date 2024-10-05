@@ -19,7 +19,7 @@ use crate::{benchmark::BenchmarkCommand, Cli, CliResult};
 
 #[cfg(feature = "evm")]
 use crate::evm::EvmCommand;
-use crate::trusted_base_cli::TrustedBaseCommand;
+use crate::{guess_the_number::GuessTheNumberCommand, trusted_base_cli::TrustedBaseCommand};
 
 #[derive(Args)]
 pub struct TrustedCli {
@@ -52,6 +52,10 @@ pub enum TrustedCommand {
 	#[clap(flatten)]
 	EvmCommands(EvmCommand),
 
+	/// commands for our guess-the-number game
+	#[clap(subcommand)]
+	GuessTheNumber(GuessTheNumberCommand),
+
 	/// Run Benchmark
 	Benchmark(BenchmarkCommand),
 }
@@ -63,6 +67,7 @@ impl TrustedCli {
 			TrustedCommand::Benchmark(cmd) => cmd.run(cli, self),
 			#[cfg(feature = "evm")]
 			TrustedCommand::EvmCommands(cmd) => cmd.run(cli, self),
+			TrustedCommand::GuessTheNumber(cmd) => cmd.run(cli, self),
 		}
 	}
 }

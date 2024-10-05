@@ -32,7 +32,7 @@ use itp_stf_primitives::{
 	types::{ShardIdentifier, TrustedOperation, TrustedOperationOrHash},
 };
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
-use itp_time_utils::duration_now;
+use itp_time_utils::{duration_now, now_as_millis};
 use itp_types::{
 	parentchain::{Header as ParentchainHeader, ParentchainCall, ParentchainId},
 	storage::StorageEntryVerified,
@@ -318,6 +318,10 @@ where
 		let mut state = prepare_state_function(state);
 		let mut executed_and_failed_calls = Vec::<ExecutedOperation<TCS, G>>::new();
 
+		Stf::on_initialize(&mut state, now_as_millis()).unwrap_or_else(|e| {
+			error!("on_initialize failed: {:?}", e);
+		});
+
 		// Iterate through all calls until time is over.
 		for trusted_call_signed in trusted_calls.into_iter() {
 			// Break if allowed time window is over.
@@ -337,10 +341,14 @@ where
 					executed_and_failed_calls.push(executed_or_failed_call);
 				},
 				Err(e) => {
-					error!("Fatal Error. Failed to attempt call execution: {:?}", e);
+					error!("Failed to attempt call execution: {:?}", e);
 				},
 			};
 		}
+
+		Stf::on_finalize(&mut state).unwrap_or_else(|e| {
+			error!("on_finalize failed: {:?}", e);
+		});
 
 		Ok(BatchExecutionResult {
 			executed_operations: executed_and_failed_calls,

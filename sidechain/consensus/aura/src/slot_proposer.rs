@@ -20,7 +20,7 @@ use finality_grandpa::BlockNumberOps;
 use ita_stf::{Getter, TrustedCallSigned};
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_stf_executor::traits::StateUpdateProposer;
-use itp_time_utils::now_as_millis;
+
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::H256;
 use its_block_composer::ComposeBlock;
@@ -110,7 +110,6 @@ where
 					sidechain_db.reset_events();
 					sidechain_db
 						.set_block_number(&sidechain_db.get_block_number().map_or(1, |n| n + 1));
-					sidechain_db.set_timestamp(&now_as_millis());
 					sidechain_db
 				},
 			)
@@ -149,13 +148,13 @@ where
 			.map_err(|e| ConsensusError::Other(e.to_string().into()))?;
 
 		println!(
-			"[Sidechain] propose block {} summary: executed {}, failed {}, from {} in queue in {}ms",
-			sidechain_block.block().header().block_number(),
-			number_executed_transactions,
-			nr_failed_operations,
-			trusted_calls.len(),
-			max_duration.as_millis(),
-		);
+            "[Sidechain] propose block {} summary: executed {}, failed {}, from {} in queue in {}ms",
+            sidechain_block.block().header().block_number(),
+            number_executed_transactions,
+            nr_failed_operations,
+            trusted_calls.len(),
+            max_duration.as_millis(),
+        );
 
 		Ok(Proposal { block: sidechain_block, parentchain_effects: parentchain_extrinsics })
 	}

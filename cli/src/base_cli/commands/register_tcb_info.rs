@@ -40,7 +40,7 @@ struct Platform {
 
 #[derive(Parser)]
 pub struct RegisterTcbInfoCommand {
-	/// Sender's parentchain AccountId in ss58check format.
+	/// Sender's parentchain AccountId in ss58check format,mnemonic or hex seed.
 	sender: String,
 	/// Intel's Family-Model-Stepping-Platform-Custom SKU. 6-Byte non-prefixed hex value
 	#[clap(short, long, action, conflicts_with = "all")]

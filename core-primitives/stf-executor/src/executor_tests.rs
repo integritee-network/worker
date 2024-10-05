@@ -263,6 +263,7 @@ pub(crate) fn init_state_and_shard_with_state_handler<S: HandleState<StateT = St
 	let _hash = state_handler.initialize_shard(shard).unwrap();
 
 	let (lock, mut state) = state_handler.load_for_mutation(&shard).unwrap();
+
 	test_genesis_setup(&mut state);
 
 	state_handler.write_after_mutation(state.clone(), lock, &shard).unwrap();

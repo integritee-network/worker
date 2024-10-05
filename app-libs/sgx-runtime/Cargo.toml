@@ -12,7 +12,9 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 scale-info = { version = "2.10.0", default-features = false, features = ["derive"] }
 
 # local dependencies
+itp-randomness = { path = "../../core-primitives/randomness", default-features = false }
 itp-sgx-runtime-primitives = { path = "../../core-primitives/sgx-runtime-primitives", default-features = false }
+pallet-guess-the-number = { default-features = false, path = "pallets/guess-the-number" }
 pallet-parentchain = { default-features = false, path = "pallets/parentchain" }
 
 # Substrate dependencies
@@ -36,7 +38,9 @@ pallet-evm = { default-features = false, optional = true, git = "https://github.
 default = ["std"]
 # Compile the sgx-runtime with evm support.
 evm = ["pallet-evm"]
-
+sgx = [
+    "itp-randomness/sgx",
+]
 std = [
     "codec/std",
     "scale-info/std",

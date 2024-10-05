@@ -16,7 +16,7 @@
 */
 
 use codec::{Decode, Encode};
-use ita_sgx_runtime::System;
+use ita_sgx_runtime::{Balances, GuessTheNumber, GuessType, System};
 use itp_stf_interface::ExecuteGetter;
 use itp_stf_primitives::{
 	traits::GetterAuthorization,
@@ -35,6 +35,7 @@ use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 use crate::evm_helpers::{get_evm_account, get_evm_account_codes, get_evm_account_storages};
 
 use crate::helpers::wrap_bytes;
+use itp_sgx_runtime_primitives::types::{Balance, Moment};
 use itp_stf_primitives::traits::PoolTransactionValidation;
 #[cfg(feature = "evm")]
 use sp_core::{H160, H256};
@@ -93,22 +94,30 @@ impl PoolTransactionValidation for Getter {
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
+#[repr(u8)]
+#[allow(clippy::unnecessary_cast)]
 pub enum PublicGetter {
-	some_value,
+	some_value = 0,
+	total_issuance = 1,
+	guess_the_number_last_lucky_number = 50,
+	guess_the_number_last_winning_distance = 51,
+	guess_the_number_info = 52,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
+#[repr(u8)]
+#[allow(clippy::unnecessary_cast)]
 pub enum TrustedGetter {
-	free_balance(AccountId),
-	reserved_balance(AccountId),
-	nonce(AccountId),
+	free_balance(AccountId) = 0,
+	reserved_balance(AccountId) = 1,
+	nonce(AccountId) = 2,
 	#[cfg(feature = "evm")]
-	evm_nonce(AccountId),
+	evm_nonce(AccountId) = 90,
 	#[cfg(feature = "evm")]
-	evm_account_codes(AccountId, H160),
+	evm_account_codes(AccountId, H160) = 91,
 	#[cfg(feature = "evm")]
-	evm_account_storages(AccountId, H160, H256),
+	evm_account_storages(AccountId, H160, H256) = 92,
 }
 
 impl TrustedGetter {
@@ -236,12 +245,55 @@ impl ExecuteGetter for PublicGetter {
 	fn execute(self) -> Option<Vec<u8>> {
 		match self {
 			PublicGetter::some_value => Some(42u32.encode()),
+			PublicGetter::total_issuance => Some(Balances::total_issuance().encode()),
+			PublicGetter::guess_the_number_last_lucky_number => {
+				// todo! return suiting value, not this one
+				GuessTheNumber::lucky_number().map(|guess| guess.encode())
+			},
+			PublicGetter::guess_the_number_last_winning_distance => {
+				// todo! return suiting value, not this one
+				GuessTheNumber::lucky_number().map(|guess| guess.encode())
+			},
+			PublicGetter::guess_the_number_info => {
+				let account = GuessTheNumber::get_pot_account();
+				let winnings = GuessTheNumber::winnings();
+				let next_round_timestamp = GuessTheNumber::next_round_timestamp();
+				let maybe_last_winning_distance = GuessTheNumber::last_winning_distance();
+				let last_winners = GuessTheNumber::last_winners();
+				let maybe_last_lucky_number = GuessTheNumber::last_lucky_number();
+				let info = System::account(&account);
+				debug!("TrustedGetter GuessTheNumber Pot Info");
+				debug!("AccountInfo for pot {} is {:?}", account_id_to_string(&account), info);
+				std::println!("⣿STF⣿ 🔍 TrustedGetter query: guess-the-number pot info");
+				Some(
+					GuessTheNumberInfo {
+						account,
+						balance: info.data.free,
+						winnings,
+						next_round_timestamp,
+						last_winners,
+						maybe_last_lucky_number,
+						maybe_last_winning_distance,
+					}
+					.encode(),
+				)
+			},
 		}
 	}
 
 	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
 		Vec::new()
 	}
+}
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq)]
+pub struct GuessTheNumberInfo {
+	pub account: AccountId,
+	pub balance: Balance,
+	pub winnings: Balance,
+	pub next_round_timestamp: Moment,
+	pub last_winners: Vec<AccountId>,
+	pub maybe_last_lucky_number: Option<GuessType>,
+	pub maybe_last_winning_distance: Option<GuessType>,
 }
 
 mod tests {

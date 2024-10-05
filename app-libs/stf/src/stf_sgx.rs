@@ -22,12 +22,13 @@ use crate::{
 	Stf, ENCLAVE_ACCOUNT_KEY,
 };
 use codec::{Decode, Encode};
-use frame_support::traits::{OriginTrait, UnfilteredDispatchable};
+use frame_support::traits::{OnTimestampSet, OriginTrait, UnfilteredDispatchable};
 use ita_sgx_runtime::{
 	ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
 };
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_sgx_externalities::SgxExternalitiesTrait;
+use itp_sgx_runtime_primitives::types::Moment;
 use itp_stf_interface::{
 	parentchain_pallet::ParentchainPalletInstancesInterface,
 	sudo_pallet::SudoPalletInterface,
@@ -60,7 +61,7 @@ where
 			// Do not set genesis for pallets that are meant to be on-chain
 			// use get_storage_hashes_to_update instead.
 
-			sp_io::storage::set(&storage_value_key("Balances", "TotalIssuance"), &11u128.encode());
+			sp_io::storage::set(&storage_value_key("Balances", "TotalIssuance"), &0u128.encode());
 			sp_io::storage::set(&storage_value_key("Balances", "CreationFee"), &1u128.encode());
 			sp_io::storage::set(&storage_value_key("Balances", "TransferFee"), &1u128.encode());
 			sp_io::storage::set(
@@ -144,6 +145,8 @@ where
 	State: SgxExternalitiesTrait + Debug,
 	NodeMetadataRepository: AccessNodeMetadata,
 	NodeMetadataRepository::MetadataType: NodeMetadataTrait,
+	Runtime: frame_system::Config + frame_pallet_timestamp::Config,
+	<Runtime as frame_pallet_timestamp::Config>::Moment: std::convert::From<u64>,
 {
 	type Error = TCS::Error;
 
@@ -154,6 +157,21 @@ where
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {
 		state.execute_with(|| call.execute(calls, node_metadata_repo))
+	}
+
+	fn on_initialize(state: &mut State, now: Moment) -> Result<(), Self::Error> {
+		trace!("on_initialize called at epoch {}", now);
+		state.execute_with(|| {
+			// as pallet_timestamp doesn't export set_timestamp in no_std, we need to re-build the same behaviour
+			sp_io::storage::set(&storage_value_key("Timestamp", "Now"), &now.encode());
+			sp_io::storage::set(&storage_value_key("Timestamp", "DidUpdate"), &true.encode());
+			<Runtime::OnTimestampSet as OnTimestampSet<_>>::on_timestamp_set(now.into());
+		});
+		Ok(())
+	}
+	fn on_finalize(_state: &mut State) -> Result<(), Self::Error> {
+		trace!("on_finalize called");
+		Ok(())
 	}
 }
 

@@ -2799,9 +2799,11 @@ dependencies = [
  "frame-executive",
  "frame-support",
  "frame-system",
+ "itp-randomness",
  "itp-sgx-runtime-primitives",
  "pallet-balances",
  "pallet-evm",
+ "pallet-guess-the-number",
  "pallet-parentchain",
  "pallet-sudo",
  "pallet-timestamp",
@@ -2837,6 +2839,7 @@ dependencies = [
  "pallet-balances",
  "pallet-parentchain",
  "pallet-sudo",
+ "pallet-timestamp",
  "parity-scale-codec",
  "rlp",
  "sgx_tstd",
@@ -3359,6 +3362,13 @@ dependencies = [
  "sgx_tstd",
  "thiserror 1.0.44",
  "thiserror 1.0.9",
+]
+
+[[package]]
+name = "itp-randomness"
+version = "0.1.0"
+dependencies = [
+ "sgx_rand",
 ]
 
 [[package]]
@@ -5150,6 +5160,27 @@ dependencies = [
  "scale-info",
  "sp-core",
  "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-guess-the-number"
+version = "0.11.0"
+dependencies = [
+ "env_logger 0.9.3",
+ "frame-support",
+ "frame-system",
+ "itp-randomness",
+ "log 0.4.20",
+ "pallet-balances",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "serde 1.0.193",
+ "sp-core",
+ "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
+ "sp-keyring",
  "sp-runtime",
  "sp-std",
 ]

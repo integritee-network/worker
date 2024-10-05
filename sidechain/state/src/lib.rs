@@ -155,9 +155,6 @@ pub trait SidechainSystemExt {
 	/// Get the timestamp of.
 	fn get_timestamp(&self) -> Option<Timestamp>;
 
-	/// Set the timestamp.
-	fn set_timestamp(&mut self, timestamp: &Timestamp);
-
 	/// Resets the events.
 	fn reset_events(&mut self);
 }
@@ -181,10 +178,6 @@ impl<T: SidechainState> SidechainSystemExt for T {
 
 	fn get_timestamp(&self) -> Option<Timestamp> {
 		self.get_with_name("System", "Timestamp")
-	}
-
-	fn set_timestamp(&mut self, timestamp: &Timestamp) {
-		self.set_with_name("System", "Timestamp", timestamp)
 	}
 
 	fn reset_events(&mut self) {

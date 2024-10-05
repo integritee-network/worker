@@ -30,6 +30,7 @@ pallet-parentchain = { default-features = false, path = "../sgx-runtime/pallets/
 sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], path = "../../core-primitives/substrate-sgx/sp-io" }
 
 # Substrate dependencies
+frame-pallet-timestamp = { package = "pallet-timestamp", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 frame-system = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 pallet-balances = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
@@ -70,6 +71,7 @@ std = [
     # substrate
     "sp-core/std",
     "pallet-balances/std",
+    "frame-pallet-timestamp/std",
     "pallet-sudo/std",
     "frame-system/std",
     "frame-support/std",

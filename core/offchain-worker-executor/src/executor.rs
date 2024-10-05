@@ -240,7 +240,6 @@ impl<
 
 #[cfg(test)]
 mod tests {
-
 	use super::*;
 	use codec::{Decode, Encode};
 	use itc_parentchain_light_client::mocks::validator_access_mock::ValidatorAccessMock;
