@@ -65,6 +65,8 @@ use std::{format, prelude::v1::*, sync::Arc};
 #[allow(non_camel_case_types)]
 pub enum TrustedCall {
     noop(AccountId),
+    #[cfg(any(feature = "test", test))]
+    balance_set_balance(AccountId, AccountId, Balance, Balance),
     balance_transfer(AccountId, AccountId, Balance),
     balance_unshield(AccountId, AccountId, Balance, ShardIdentifier), // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
     balance_shield(AccountId, AccountId, Balance, ParentchainId), // (Root, AccountIncognito, Amount, origin parentchain)
@@ -115,8 +117,6 @@ pub enum TrustedCall {
         Option<U256>,
         Vec<(H160, Vec<H256>)>,
     ),
-    #[cfg(any(feature = "test", test))]
-    balance_set_balance(AccountId, AccountId, Balance, Balance),
 }
 
 impl TrustedCall {
