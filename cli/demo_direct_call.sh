@@ -80,21 +80,21 @@ ICGACCOUNTBOB=//BobIncognito
 echo "  Bob's incognito account = ${ICGACCOUNTBOB}"
 echo ""
 
-echo "* Shield ${AMOUNTSHIELD} tokens to Alice's account on L2"
-${CLIENT} transfer //Alice ${VAULT} ${AMOUNTSHIELD}
+echo "* Shield ${AMOUNTSHIELD} tokens to Charlie's account on L2"
+${CLIENT} transfer //Charlie ${VAULT} ${AMOUNTSHIELD}
 echo ""
 
 echo "* Waiting 30 seconds"
 sleep 30
 echo ""
 
-echo "Get balance of Alice's incognito account"
-${CLIENT} trusted --mrenclave ${MRENCLAVE} balance //Alice
+echo "Get balance of Charlie's incognito account"
+${CLIENT} trusted --mrenclave ${MRENCLAVE} balance //Charlie
 echo ""
 
-# Send funds from Alice to Bob's account.
-echo "* Send ${AMOUNTTRANSFER} funds from Alice's incognito account to Bob's incognito account"
-$CLIENT trusted --mrenclave ${MRENCLAVE} --direct transfer //Alice ${ICGACCOUNTBOB} ${AMOUNTTRANSFER}
+# Send funds from Charlie to Bob's account.
+echo "* Send ${AMOUNTTRANSFER} funds from Charlie's incognito account to Bob's incognito account"
+$CLIENT trusted --mrenclave ${MRENCLAVE} --direct transfer //Charlie ${ICGACCOUNTBOB} ${AMOUNTTRANSFER}
 echo ""
 
 # Prevent getter being executed too early and returning an outdated result, before the transfer was made.
@@ -102,8 +102,8 @@ echo "* Waiting 2 seconds"
 sleep 2
 echo ""
 
-echo "* Get balance of Alice's incognito account"
-RESULT=$(${CLIENT} trusted --mrenclave ${MRENCLAVE} balance //Alice | xargs)
+echo "* Get balance of Charlie's incognito account"
+RESULT=$(${CLIENT} trusted --mrenclave ${MRENCLAVE} balance //Charlie | xargs)
 echo $RESULT
 echo ""
 
