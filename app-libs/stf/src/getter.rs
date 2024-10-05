@@ -113,11 +113,11 @@ pub enum TrustedGetter {
 	reserved_balance(AccountId) = 1,
 	nonce(AccountId) = 2,
 	#[cfg(feature = "evm")]
-	evm_nonce(AccountId) = 80,
+	evm_nonce(AccountId) = 90,
 	#[cfg(feature = "evm")]
-	evm_account_codes(AccountId, H160) = 81,
+	evm_account_codes(AccountId, H160) = 91,
 	#[cfg(feature = "evm")]
-	evm_account_storages(AccountId, H160, H256) = 82,
+	evm_account_storages(AccountId, H160, H256) = 92,
 }
 
 impl TrustedGetter {
