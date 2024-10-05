@@ -105,7 +105,7 @@ echo "  Bob's incognito account = ${ICGACCOUNTBOB}"
 echo ""
 
 echo "* Shield ${INITIALFUNDS} tokens to Charlie's account on L2"
-${CLIENT} transfer //Charlie ${VAULT} ${INITIALFUNDS}
+${CLIENTWORKER1} transfer //Charlie ${VAULT} ${INITIALFUNDS}
 echo ""
 
 echo "* Waiting 30 seconds"
