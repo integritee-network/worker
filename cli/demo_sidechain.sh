@@ -96,7 +96,7 @@ else
 fi
 [[ -z $MRENCLAVE ]] && { echo "MRENCLAVE is empty. cannot continue" ; exit 1; }
 
-VAULT=$(${CLIENT} trusted get-shard-vault)
+VAULT=$(${CLIENTWORKER1} trusted get-shard-vault)
 echo "  Vault account = ${VAULT}"
 
 echo "* Create a new incognito account for Bob"
