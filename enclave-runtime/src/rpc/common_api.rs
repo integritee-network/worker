@@ -115,7 +115,7 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey>(
 	io_handler.add_sync_method("author_getFingerprint", move |_: Params| {
 		debug!("worker_api_direct rpc was called: author_getFingerprint");
 		let mrenclave = get_stf_enclave_signer_from_solo_or_parachain()
-			.and_then(|enclave_signer| {
+			.map(|enclave_signer| {
 				Ok(enclave_signer.ocall_api.get_mrenclave_of_self().unwrap_or_default())
 			})
 			.unwrap_or_default();
