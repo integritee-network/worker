@@ -23,7 +23,6 @@ use crate::{
 };
 use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode};
-use ita_parentchain_interface::integritee::Balance;
 use ita_stf::{Getter, TrustedCallSigned, TrustedGetter};
 use itc_rpc_client::direct_client::DirectApi;
 use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
