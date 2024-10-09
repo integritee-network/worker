@@ -32,7 +32,7 @@ use itp_stf_primitives::{
 	types::{KeyPair, TrustedOperation},
 };
 use itp_types::{
-	Balance, ShardIdentifier, TrustedOperationStatus,
+	AccountInfo, Balance, ShardIdentifier, TrustedOperationStatus,
 	TrustedOperationStatus::{InSidechainBlock, Submitted},
 };
 use log::*;
@@ -261,7 +261,7 @@ fn get_balance(
 	direct_client: &DirectClient,
 ) -> Option<u128> {
 	let getter = Getter::trusted(
-		TrustedGetter::free_balance(account.public().into())
+		TrustedGetter::account_info(account.public().into())
 			.sign(&KeyPair::Sr25519(Box::new(account.clone()))),
 	);
 
@@ -281,12 +281,13 @@ fn get_nonce(
 	direct_client: &DirectClient,
 ) -> Index {
 	let getter = Getter::trusted(
-		TrustedGetter::nonce(account.public().into())
+		TrustedGetter::account_info(account.public().into())
 			.sign(&KeyPair::Sr25519(Box::new(account.clone()))),
 	);
 
 	let getter_start_timer = Instant::now();
-	let nonce = get_state::<Index>(direct_client, shard, &getter).ok().unwrap_or_default();
+	let info = get_state::<AccountInfo>(direct_client, shard, &getter);
+	let nonce = info.map(|i| i.nonce).ok().unwrap_or_default();
 	let getter_execution_time = getter_start_timer.elapsed().as_millis();
 	info!("Nonce getter execution took {} ms", getter_execution_time,);
 	debug!("Retrieved {:?} nonce for {:?}", nonce, account.public());
@@ -370,8 +371,8 @@ fn is_sidechain_block(s: TrustedOperationStatus) -> bool {
 
 fn decode_balance(maybe_encoded_balance: Option<Vec<u8>>) -> Option<Balance> {
 	maybe_encoded_balance.and_then(|encoded_balance| {
-		if let Ok(vd) = Balance::decode(&mut encoded_balance.as_slice()) {
-			Some(vd)
+		if let Ok(vd) = AccountInfo::decode(&mut encoded_balance.as_slice()) {
+			Some(vd.data.free)
 		} else {
 			warn!("Could not decode balance. maybe hasn't been set? {:x?}", encoded_balance);
 			None

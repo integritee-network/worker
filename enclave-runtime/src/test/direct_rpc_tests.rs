@@ -58,7 +58,7 @@ pub fn get_state_request_works() {
 	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));
 
 	let getter = Getter::trusted(TrustedGetterSigned::new(
-		TrustedGetter::nonce(AccountId::new([0u8; 32])),
+		TrustedGetter::account_info(AccountId::new([0u8; 32])),
 		MultiSignature::Ed25519(Signature::from_raw([0u8; 64])),
 	));
 

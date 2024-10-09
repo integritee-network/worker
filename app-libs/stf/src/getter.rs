@@ -109,9 +109,7 @@ pub enum PublicGetter {
 #[repr(u8)]
 #[allow(clippy::unnecessary_cast)]
 pub enum TrustedGetter {
-	free_balance(AccountId) = 0,
-	reserved_balance(AccountId) = 1,
-	nonce(AccountId) = 2,
+	account_info(AccountId) = 0,
 	#[cfg(feature = "evm")]
 	evm_nonce(AccountId) = 90,
 	#[cfg(feature = "evm")]
@@ -123,9 +121,7 @@ pub enum TrustedGetter {
 impl TrustedGetter {
 	pub fn sender_account(&self) -> &AccountId {
 		match self {
-			TrustedGetter::free_balance(sender_account) => sender_account,
-			TrustedGetter::reserved_balance(sender_account) => sender_account,
-			TrustedGetter::nonce(sender_account) => sender_account,
+			TrustedGetter::account_info(sender_account) => sender_account,
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_nonce(sender_account) => sender_account,
 			#[cfg(feature = "evm")]
@@ -184,25 +180,12 @@ impl ExecuteGetter for Getter {
 impl ExecuteGetter for TrustedGetterSigned {
 	fn execute(self) -> Option<Vec<u8>> {
 		match self.getter {
-			TrustedGetter::free_balance(who) => {
+			TrustedGetter::account_info(who) => {
 				let info = System::account(&who);
-				debug!("TrustedGetter free_balance");
+				debug!("TrustedGetter account_data");
 				debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
-				std::println!("⣿STF⣿ 🔍 TrustedGetter query: free balance for ⣿⣿⣿ is ⣿⣿⣿",);
-				Some(info.data.free.encode())
-			},
-			TrustedGetter::reserved_balance(who) => {
-				let info = System::account(&who);
-				debug!("TrustedGetter reserved_balance");
-				debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
-				debug!("Account reserved balance is {}", info.data.reserved);
-				Some(info.data.reserved.encode())
-			},
-			TrustedGetter::nonce(who) => {
-				let nonce = System::account_nonce(&who);
-				debug!("TrustedGetter nonce");
-				debug!("Account nonce is {}", nonce);
-				Some(nonce.encode())
+				std::println!("⣿STF⣿ 🔍 TrustedGetter query: account info for ⣿⣿⣿ is ⣿⣿⣿",);
+				Some(info.encode())
 			},
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_nonce(who) => {

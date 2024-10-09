@@ -20,10 +20,11 @@ use codec::Decode;
 use ita_sgx_runtime::Runtime;
 use ita_stf::{
 	test_genesis::{endowed_account, test_genesis_setup, ENDOWED_ACC_FUNDS},
-	Balance, Getter, Stf, TrustedCallSigned, TrustedGetter,
+	Getter, Stf, TrustedCallSigned, TrustedGetter,
 };
 use itp_sgx_externalities::SgxExternalities;
 use itp_stf_executor::state_getter::{GetState, StfStateGetter};
+use itp_types::AccountInfo;
 use sp_core::Pair;
 
 type TestState = SgxExternalities;
@@ -32,14 +33,15 @@ type TestStfStateGetter = StfStateGetter<TestStf>;
 
 pub fn state_getter_works() {
 	let sender = endowed_account();
-	let signed_getter = TrustedGetter::free_balance(sender.public().into()).sign(&sender.into());
+	let signed_getter = TrustedGetter::account_info(sender.public().into()).sign(&sender.into());
 	let mut state = test_state();
 
-	let encoded_balance = TestStfStateGetter::get_state(signed_getter.into(), &mut state)
+	let encoded_info = TestStfStateGetter::get_state(signed_getter.into(), &mut state)
 		.unwrap()
 		.unwrap();
 
-	let balance = Balance::decode(&mut encoded_balance.as_slice()).unwrap();
+	let info = AccountInfo::decode(&mut encoded_info.as_slice()).unwrap();
+	let balance = info.data.free;
 
 	assert_eq!(balance, ENDOWED_ACC_FUNDS);
 }
