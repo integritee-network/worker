@@ -116,7 +116,7 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey>(
 		debug!("worker_api_direct rpc was called: author_getFingerprint");
 		let mrenclave = get_stf_enclave_signer_from_solo_or_parachain()
 			.map(|enclave_signer| {
-				Ok(enclave_signer.ocall_api.get_mrenclave_of_self().unwrap_or_default())
+				enclave_signer.ocall_api.get_mrenclave_of_self().unwrap_or_default()
 			})
 			.unwrap_or_default();
 		let fingerprint = EnclaveFingerprint::from(mrenclave.m);
