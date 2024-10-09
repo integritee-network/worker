@@ -4,7 +4,7 @@ set -euo pipefail
 # Verifies that auto shielding transfers sent to vault account: //Alice are verified from sender //Bob
 #
 
-while getopts ":m:p:A:u:V:w:x:y:z:C:" opt; do
+while getopts ":p:A:u:V:w:x:y:z:C:" opt; do
     case $opt in
         p)
             INTEGRITEE_RPC_PORT=$OPTARG
@@ -109,11 +109,9 @@ echo "* Query on-chain enclave registry:"
 ${CLIENT} list-workers
 echo ""
 
-# this will always take the first MRENCLAVE found in the registry !!
-read MRENCLAVE <<< $($CLIENT list-workers | awk '/  MRENCLAVE: / { print $2; exit }')
-echo "Reading MRENCLAVE from worker list: ${MRENCLAVE}"
-
-[[ -z $MRENCLAVE ]] && { echo "MRENCLAVE is empty. cannot continue" ; exit 1; }
+# we simply believe the enclave here without verifying the teerex RA
+MRENCLAVE="$($CLIENT trusted get-fingerprint)"
+echo "Using MRENCLAVE: ${MRENCLAVE}"
 
 VAULTACCOUNT=//Alice
 ## Sender account to shield for

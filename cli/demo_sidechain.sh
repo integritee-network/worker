@@ -20,16 +20,13 @@
 #
 # usage:
 #  export RUST_LOG_LOG=integritee-cli=info,ita_stf=info
-#  demo_sidechain.sh -p <NODEPORT> -A <WORKER_1_PORT> -B <WORKER_2_PORT> -m file
+#  demo_sidechain.sh -p <NODEPORT> -A <WORKER_1_PORT> -B <WORKER_2_PORT>
 #
 # TEST_BALANCE_RUN is either "first" or "second"
-# if -m file is set, the mrenclave will be read from file.
+.
 
-while getopts ":m:p:A:B:t:u:W:V:C:" opt; do
+while getopts ":p:A:B:t:u:W:V:C:" opt; do
     case $opt in
-        m)
-            READ_MRENCLAVE=$OPTARG
-            ;;
         p)
             INTEGRITEE_RPC_PORT=$OPTARG
             ;;
@@ -85,16 +82,9 @@ AMOUNTTRANSFER=$((2 * UNIT))
 CLIENTWORKER1="${CLIENT_BIN} -p ${INTEGRITEE_RPC_PORT} -P ${WORKER_1_PORT} -u ${INTEGRITEE_RPC_URL} -U ${WORKER_1_URL}"
 CLIENTWORKER2="${CLIENT_BIN} -p ${INTEGRITEE_RPC_PORT} -P ${WORKER_2_PORT} -u ${INTEGRITEE_RPC_URL} -U ${WORKER_2_URL}"
 
-if [ "$READ_MRENCLAVE" = "file" ]
-then
-    read MRENCLAVE <<< $(cat ~/mrenclave.b58)
-    echo "Reading MRENCLAVE from file: ${MRENCLAVE}"
-else
-    # This will always take the first MRENCLAVE found in the registry !!
-    read MRENCLAVE <<< $($CLIENTWORKER1 list-workers | awk '/  MRENCLAVE: / { print $2; exit }')
-    echo "Reading MRENCLAVE from worker list: ${MRENCLAVE}"
-fi
-[[ -z $MRENCLAVE ]] && { echo "MRENCLAVE is empty. cannot continue" ; exit 1; }
+# we simply believe the enclave here without verifying the teerex RA
+MRENCLAVE="$($CLIENTWORKER1 trusted get-fingerprint)"
+echo "Using MRENCLAVE: ${MRENCLAVE}"
 
 VAULT=$(${CLIENTWORKER1} trusted get-shard-vault)
 echo "  Vault account = ${VAULT}"

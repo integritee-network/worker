@@ -19,7 +19,8 @@
 use crate::trusted_base_cli::commands::set_balance::SetBalanceCommand;
 use crate::{
 	trusted_base_cli::commands::{
-		balance::BalanceCommand, get_shard::GetShardCommand, get_shard_vault::GetShardVaultCommand,
+		balance::BalanceCommand, get_fingerprint::GetFingerprintCommand,
+		get_shard::GetShardCommand, get_shard_vault::GetShardVaultCommand,
 		get_total_issuance::GetTotalIssuanceCommand, nonce::NonceCommand,
 		transfer::TransferCommand, unshield_funds::UnshieldFundsCommand,
 	},
@@ -59,6 +60,9 @@ pub enum TrustedBaseCommand {
 	/// in top pool in consideration
 	Nonce(NonceCommand),
 
+	/// get fingerprint (AKA MRENCLAVE) for this worker
+	GetFingerprint(GetFingerprintCommand),
+
 	/// get shard for this worker
 	GetShard(GetShardCommand),
 
@@ -80,6 +84,7 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::Balance(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::UnshieldFunds(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::Nonce(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::GetFingerprint(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetShard(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetShardVault(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetTotalIssuance(cmd) => cmd.run(cli, trusted_cli),

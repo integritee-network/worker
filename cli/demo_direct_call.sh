@@ -16,18 +16,15 @@
 # then run this script
 
 # usage:
-#  demo_direct_call.sh -p <NODEPORT> -P <WORKERPORT> -t <TEST_BALANCE_RUN> -m file
+#  demo_direct_call.sh -p <NODEPORT> -P <WORKERPORT> -t <TEST_BALANCE_RUN>
 #
 # TEST_BALANCE_RUN is either "first" or "second"
-# if -m file is set, the mrenclave will be read from file
 
-while getopts ":m:p:P:t:u:V:C:" opt; do
+
+while getopts ":p:P:t:u:V:C:" opt; do
     case $opt in
         t)
             TEST=$OPTARG
-            ;;
-        m)
-            READ_MRENCLAVE=$OPTARG
             ;;
         p)
             INTEGRITEE_RPC_PORT=$OPTARG
@@ -70,7 +67,9 @@ AMOUNTSHIELD=50000000000
 AMOUNTTRANSFER=40000000000
 
 CLIENT="${CLIENT_BIN} -p ${INTEGRITEE_RPC_PORT} -P ${WORKER_1_PORT} -u ${INTEGRITEE_RPC_URL} -U ${WORKER_1_URL}"
-read -r MRENCLAVE <<< "$($CLIENT list-workers | awk '/  MRENCLAVE: / { print $2; exit }')"
+# we simply believe the enclave here without verifying the teerex RA
+MRENCLAVE="$($CLIENT trusted get-fingerprint)"
+echo "Using MRENCLAVE: ${MRENCLAVE}"
 
 VAULT=$(${CLIENT} trusted get-shard-vault)
 echo "  Vault account = ${VAULT}"

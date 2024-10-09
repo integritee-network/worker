@@ -97,8 +97,8 @@ pub enum CliResultOk {
 	Balance {
 		balance: u128,
 	},
-	MrEnclaveBase58 {
-		mr_enclaves: Vec<String>,
+	FingerprintBase58 {
+		fingerprints: Vec<String>,
 	},
 	Metadata {
 		metadata: Metadata,

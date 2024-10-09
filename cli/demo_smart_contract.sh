@@ -62,10 +62,9 @@ echo "Using trusted-worker uri ${WORKER_URL}:${WORKER_PORT}"
 
 CLIENTWORKER="${CLIENT_BIN} -p ${INTEGRITEE_RPC_PORT} -P ${WORKER_PORT} -u ${INTEGRITEE_RPC_URL} -U ${WORKER_URL}"
 
-
-# this will always take the first MRENCLAVE found in the registry !!
-read -r MRENCLAVE <<< "$($CLIENTWORKER list-workers | awk '/  MRENCLAVE: / { print $2; exit }')"
-echo "Reading MRENCLAVE from worker list: ${MRENCLAVE}"
+# we simply believe the enclave here without verifying the teerex RA
+MRENCLAVE="$($CLIENTWORKER trusted get-fingerprint)"
+echo "Using MRENCLAVE: ${MRENCLAVE}"
 
 ACCOUNTALICE=//Alice
 

@@ -90,12 +90,9 @@ echo "* Query on-chain enclave registry:"
 ${CLIENT} list-workers
 echo ""
 
-# this will always take the first MRENCLAVE found in the registry !!
-read MRENCLAVE <<< $($CLIENT list-workers | awk '/  MRENCLAVE: / { print $2; exit }')
-echo "Reading MRENCLAVE from worker list: ${MRENCLAVE}"
-
-[[ -z $MRENCLAVE ]] && { echo "MRENCLAVE is empty. cannot continue" ; exit 1; }
-echo ""
+# we simply believe the enclave here without verifying the teerex RA
+MRENCLAVE="$($CLIENT trusted get-fingerprint)"
+echo "Using MRENCLAVE: ${MRENCLAVE}"
 
 echo "Listen to OracleUpdated events for ${DURATION} seconds. There should be no trusted oracle source!"
 
