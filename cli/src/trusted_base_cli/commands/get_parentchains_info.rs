@@ -18,24 +18,19 @@ use crate::{
 	trusted_cli::TrustedCli, trusted_operation::perform_trusted_operation, Cli, CliResult,
 	CliResultOk,
 };
-use ita_stf::{
-	guess_the_number::{GuessTheNumberInfo, GuessTheNumberPublicGetter},
-	Getter, PublicGetter, TrustedCallSigned,
-};
+use ita_stf::{Getter, ParentchainsInfo, PublicGetter, TrustedCallSigned};
 use itp_stf_primitives::types::TrustedOperation;
-use sp_core::crypto::Ss58Codec;
 
 #[derive(Parser)]
-pub struct GetInfoCommand {}
+pub struct GetParentchainsInfoCommand {}
 
-impl GetInfoCommand {
+impl GetParentchainsInfoCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
 		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::public(
-			PublicGetter::guess_the_number(GuessTheNumberPublicGetter::guess_the_number_info),
+			PublicGetter::parentchains_info,
 		));
-		let info: GuessTheNumberInfo = perform_trusted_operation(cli, trusted_args, &top).unwrap();
+		let info: ParentchainsInfo = perform_trusted_operation(cli, trusted_args, &top).unwrap();
 		println!("{:?}", info);
-		println!("pot account: {}", info.account.to_ss58check());
-		Ok(CliResultOk::GuessTheNumberPotInfo { info })
+		Ok(CliResultOk::ParentchainsInfo { info })
 	}
 }

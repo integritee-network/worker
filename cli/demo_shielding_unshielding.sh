@@ -19,18 +19,15 @@ set -e
 # then run this script
 
 # usage:
-#  demo_shielding_unshielding.sh -p <NODEPORT> -P <WORKERPORT> -t <TEST_BALANCE_RUN> -m file
+#  demo_shielding_unshielding.sh -p <NODEPORT> -P <WORKERPORT> -t <TEST_BALANCE_RUN>
 #
 # TEST_BALANCE_RUN is either "first" or "second"
-# if -m file is set, the mrenclave will be read from file
 
-while getopts ":m:p:P:t:u:V:C:" opt; do
+
+while getopts ":p:P:t:u:V:C:" opt; do
     case $opt in
         t)
             TEST=$OPTARG
-            ;;
-        m)
-            READ_MRENCLAVE=$OPTARG
             ;;
         p)
             INTEGRITEE_RPC_PORT=$OPTARG
@@ -135,16 +132,9 @@ echo "* Query on-chain enclave registry:"
 ${CLIENT} list-workers
 echo ""
 
-if [ "$READ_MRENCLAVE" = "file" ]
-then
-    read MRENCLAVE <<< $(cat ~/mrenclave.b58)
-    echo "Reading MRENCLAVE from file: ${MRENCLAVE}"
-else
-    # this will always take the first MRENCLAVE found in the registry !!
-    read MRENCLAVE <<< $($CLIENT list-workers | awk '/  MRENCLAVE: / { print $2; exit }')
-    echo "Reading MRENCLAVE from worker list: ${MRENCLAVE}"
-fi
-[[ -z $MRENCLAVE ]] && { echo "MRENCLAVE is empty. cannot continue" ; exit 1; }
+# we simply believe the enclave here without verifying the teerex RA
+MRENCLAVE="$($CLIENT trusted get-fingerprint)"
+echo "Using MRENCLAVE: ${MRENCLAVE}"
 
 echo "* Create a new incognito account for Alice"
 ICGACCOUNTALICE=//AliceIncognito

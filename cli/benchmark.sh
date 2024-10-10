@@ -1,10 +1,7 @@
 #!/bin/bash
 
-while getopts ":m:p:A:u:V:C:" opt; do
+while getopts ":p:A:u:V:C:" opt; do
     case $opt in
-        m)
-            READMRENCLAVE=$OPTARG
-            ;;
         p)
             NPORT=$OPTARG
             ;;
@@ -40,16 +37,9 @@ echo "Using trusted-worker uri ${WORKER1URL}:${WORKER1PORT}"
 
 CLIENTWORKER1="${CLIENT_BIN} -p ${NPORT} -P ${WORKER1PORT} -u ${NODEURL} -U ${WORKER1URL}"
 
-if [ "$READMRENCLAVE" = "file" ]
-then
-    read -r MRENCLAVE <<< "$(cat ~/mrenclave.b58)"
-    echo "Reading MRENCLAVE from file: ${MRENCLAVE}"
-else
-    # this will always take the first MRENCLAVE found in the registry !!
-    read -r MRENCLAVE <<< "$($CLIENTWORKER1 list-workers | awk '/  MRENCLAVE: / { print $2; exit }')"
-    echo "Reading MRENCLAVE from worker list: ${MRENCLAVE}"
-fi
-[[ -z $MRENCLAVE ]] && { echo "MRENCLAVE is empty. cannot continue" ; exit 1; }
+# we simply believe the enclave here without verifying the teerex RA
+MRENCLAVE="$($CLIENTWORKER1 trusted get-fingerprint)"
+echo "Using MRENCLAVE: ${MRENCLAVE}"
 
 # needed when many clients are started
 ulimit -S -n 4096

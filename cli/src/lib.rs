@@ -46,7 +46,7 @@ pub mod commands;
 
 use crate::commands::Commands;
 use clap::Parser;
-use ita_stf::GuessTheNumberInfo;
+use ita_stf::{guess_the_number::GuessTheNumberInfo, ParentchainsInfo};
 use itp_node_api::api_client::Metadata;
 use sp_application_crypto::KeyTypeId;
 use sp_core::{H160, H256};
@@ -97,8 +97,8 @@ pub enum CliResultOk {
 	Balance {
 		balance: u128,
 	},
-	MrEnclaveBase58 {
-		mr_enclaves: Vec<String>,
+	FingerprintBase58 {
+		fingerprints: Vec<String>,
 	},
 	Metadata {
 		metadata: Metadata,
@@ -112,6 +112,12 @@ pub enum CliResultOk {
 	},
 	U32 {
 		value: u32,
+	},
+	ParentchainsInfo {
+		info: ParentchainsInfo,
+	},
+	GuessAttempts {
+		value: u8,
 	},
 	GuessTheNumberPotInfo {
 		info: GuessTheNumberInfo,

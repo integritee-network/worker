@@ -261,7 +261,7 @@ fn test_submit_trusted_getter_to_top_pool() {
 
 	let sender = funded_pair();
 
-	let signed_getter = TrustedGetter::free_balance(sender.public().into()).sign(&sender.into());
+	let signed_getter = TrustedGetter::account_info(sender.public().into()).sign(&sender.into());
 
 	// when
 	submit_operation_to_top_pool(
@@ -288,7 +288,7 @@ fn test_differentiate_getter_and_call_works() {
 	// create accounts
 	let sender = funded_pair();
 
-	let signed_getter = TrustedGetter::free_balance(sender.public().into()).sign(&sender.into());
+	let signed_getter = TrustedGetter::account_info(sender.public().into()).sign(&sender.into());
 
 	let signed_call =
 		TrustedCall::balance_set_balance(sender.public().into(), sender.public().into(), 42, 42)

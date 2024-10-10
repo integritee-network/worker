@@ -158,5 +158,5 @@ fn list_workers(cli: &Cli) -> CliResult {
 			enclave.fingerprint().0.to_base58()
 		})
 		.collect();
-	Ok(CliResultOk::MrEnclaveBase58 { mr_enclaves: fingerprints })
+	Ok(CliResultOk::FingerprintBase58 { fingerprints })
 }

@@ -30,12 +30,13 @@ use core::result::Result;
 use ita_sgx_runtime::Runtime;
 use ita_stf::{Getter, TrustedCallSigned};
 use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, ExtrinsicSender};
+use itp_ocall_api::EnclaveAttestationOCallApi;
 use itp_primitives_cache::{GetPrimitives, GLOBAL_PRIMITIVES_CACHE};
 use itp_rpc::RpcReturnValue;
 use itp_sgx_crypto::key_repository::AccessPubkey;
 use itp_stf_executor::{getter_executor::ExecuteGetter, traits::StfShardVaultQuery};
 use itp_top_pool_author::traits::AuthorApi;
-use itp_types::{DirectRequestStatus, Request, ShardIdentifier, H256};
+use itp_types::{DirectRequestStatus, EnclaveFingerprint, Request, ShardIdentifier, H256};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use its_rpc_handler::direct_top_pool_api::add_top_pool_direct_rpc_methods;
 use jsonrpc_core::{serde_json::json, IoHandler, Params, Value};
@@ -108,6 +109,18 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey>(
 		debug!("worker_api_direct rpc was called: author_getShard");
 		let shard = top_pool_author.list_handled_shards().first().copied().unwrap_or_default();
 		let json_value = RpcReturnValue::new(shard.encode(), false, DirectRequestStatus::Ok);
+		Ok(json!(json_value.to_hex()))
+	});
+
+	io_handler.add_sync_method("author_getFingerprint", move |_: Params| {
+		debug!("worker_api_direct rpc was called: author_getFingerprint");
+		let mrenclave = get_stf_enclave_signer_from_solo_or_parachain()
+			.map(|enclave_signer| {
+				enclave_signer.ocall_api.get_mrenclave_of_self().unwrap_or_default()
+			})
+			.unwrap_or_default();
+		let fingerprint = EnclaveFingerprint::from(mrenclave.m);
+		let json_value = RpcReturnValue::new(fingerprint.encode(), false, DirectRequestStatus::Ok);
 		Ok(json!(json_value.to_hex()))
 	});
 
