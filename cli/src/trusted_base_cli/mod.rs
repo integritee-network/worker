@@ -20,9 +20,9 @@ use crate::trusted_base_cli::commands::set_balance::SetBalanceCommand;
 use crate::{
 	trusted_base_cli::commands::{
 		balance::BalanceCommand, get_fingerprint::GetFingerprintCommand,
-		get_shard::GetShardCommand, get_shard_vault::GetShardVaultCommand,
-		get_total_issuance::GetTotalIssuanceCommand, nonce::NonceCommand,
-		transfer::TransferCommand, unshield_funds::UnshieldFundsCommand,
+		get_parentchains_info::GetParentchainsInfoCommand, get_shard::GetShardCommand,
+		get_shard_vault::GetShardVaultCommand, get_total_issuance::GetTotalIssuanceCommand,
+		nonce::NonceCommand, transfer::TransferCommand, unshield_funds::UnshieldFundsCommand,
 	},
 	trusted_cli::TrustedCli,
 	trusted_command_utils::get_keystore_path,
@@ -71,6 +71,9 @@ pub enum TrustedBaseCommand {
 
 	/// get total issuance of this shard's native token
 	GetTotalIssuance(GetTotalIssuanceCommand),
+
+	/// get info for all parentchains' sync status
+	GetParentchainsInfo(GetParentchainsInfoCommand),
 }
 
 impl TrustedBaseCommand {
@@ -85,6 +88,7 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::UnshieldFunds(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::Nonce(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetFingerprint(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::GetParentchainsInfo(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetShard(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetShardVault(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetTotalIssuance(cmd) => cmd.run(cli, trusted_cli),

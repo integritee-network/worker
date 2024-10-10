@@ -16,7 +16,10 @@
 */
 
 use codec::{Decode, Encode};
-use ita_sgx_runtime::{Balances, GuessTheNumber, GuessType, System};
+use ita_sgx_runtime::{
+	Balances, GuessTheNumber, GuessType, ParentchainIntegritee, ParentchainTargetA,
+	ParentchainTargetB, System,
+};
 use itp_stf_interface::ExecuteGetter;
 use itp_stf_primitives::{
 	traits::GetterAuthorization,
@@ -34,9 +37,10 @@ use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 #[cfg(feature = "evm")]
 use crate::evm_helpers::{get_evm_account, get_evm_account_codes, get_evm_account_storages};
 
-use crate::helpers::wrap_bytes;
+use crate::helpers::{shard_vault, wrap_bytes};
 use itp_sgx_runtime_primitives::types::{Balance, Moment};
 use itp_stf_primitives::traits::PoolTransactionValidation;
+use itp_types::parentchain::{BlockNumber, Hash, ParentchainId};
 #[cfg(feature = "evm")]
 use sp_core::{H160, H256};
 use sp_runtime::transaction_validity::{
@@ -99,9 +103,8 @@ impl PoolTransactionValidation for Getter {
 pub enum PublicGetter {
 	some_value = 0,
 	total_issuance = 1,
-	guess_the_number_last_lucky_number = 50,
-	guess_the_number_last_winning_distance = 51,
-	guess_the_number_info = 52,
+	parentchains_info = 10,
+	guess_the_number_info = 50,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -229,13 +232,40 @@ impl ExecuteGetter for PublicGetter {
 		match self {
 			PublicGetter::some_value => Some(42u32.encode()),
 			PublicGetter::total_issuance => Some(Balances::total_issuance().encode()),
-			PublicGetter::guess_the_number_last_lucky_number => {
-				// todo! return suiting value, not this one
-				GuessTheNumber::lucky_number().map(|guess| guess.encode())
-			},
-			PublicGetter::guess_the_number_last_winning_distance => {
-				// todo! return suiting value, not this one
-				GuessTheNumber::lucky_number().map(|guess| guess.encode())
+			PublicGetter::parentchains_info => {
+				let integritee = ParentchainInfo {
+					id: ParentchainId::Integritee,
+					genesis_hash: ParentchainIntegritee::parentchain_genesis_hash(),
+					block_number: ParentchainIntegritee::block_number(),
+					now: ParentchainIntegritee::now(),
+					creation_block_number: ParentchainIntegritee::creation_block_number(),
+					creation_timestamp: ParentchainIntegritee::creation_timestamp(),
+				};
+				let target_a = ParentchainInfo {
+					id: ParentchainId::TargetA,
+					genesis_hash: ParentchainTargetA::parentchain_genesis_hash(),
+					block_number: ParentchainTargetA::block_number(),
+					now: ParentchainTargetA::now(),
+					creation_block_number: ParentchainTargetA::creation_block_number(),
+					creation_timestamp: ParentchainTargetA::creation_timestamp(),
+				};
+				let target_b = ParentchainInfo {
+					id: ParentchainId::TargetB,
+					genesis_hash: ParentchainTargetB::parentchain_genesis_hash(),
+					block_number: ParentchainTargetB::block_number(),
+					now: ParentchainTargetB::now(),
+					creation_block_number: ParentchainTargetB::creation_block_number(),
+					creation_timestamp: ParentchainTargetB::creation_timestamp(),
+				};
+				let parentchains_info = ParentchainsInfo {
+					integritee,
+					target_a,
+					target_b,
+					shielding_target: shard_vault()
+						.map(|v| v.1)
+						.unwrap_or(ParentchainId::Integritee),
+				};
+				Some(parentchains_info.encode())
 			},
 			PublicGetter::guess_the_number_info => {
 				let account = GuessTheNumber::get_pot_account();
@@ -245,8 +275,8 @@ impl ExecuteGetter for PublicGetter {
 				let last_winners = GuessTheNumber::last_winners();
 				let maybe_last_lucky_number = GuessTheNumber::last_lucky_number();
 				let info = System::account(&account);
-				debug!("TrustedGetter GuessTheNumber Pot Info");
-				debug!("AccountInfo for pot {} is {:?}", account_id_to_string(&account), info);
+				trace!("TrustedGetter GuessTheNumber Pot Info");
+				trace!("AccountInfo for pot {} is {:?}", account_id_to_string(&account), info);
 				std::println!("⣿STF⣿ 🔍 TrustedGetter query: guess-the-number pot info");
 				Some(
 					GuessTheNumberInfo {
@@ -268,17 +298,55 @@ impl ExecuteGetter for PublicGetter {
 		Vec::new()
 	}
 }
+
+/// General public information about thae status of the gguess-the-number game
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq)]
 pub struct GuessTheNumberInfo {
+	/// the account of the pot used to payout winnings
 	pub account: AccountId,
+	/// the current balance of the pot
 	pub balance: Balance,
+	/// the amount which can be won every round
 	pub winnings: Balance,
+	/// the time when this round will end and the next round will start
 	pub next_round_timestamp: Moment,
+	/// the winners of the previous round
 	pub last_winners: Vec<AccountId>,
+	/// the lucky number which the enclave picked at random at the beginning of the last round
 	pub maybe_last_lucky_number: Option<GuessType>,
+	/// the distance of the best guess to the lucky_number
 	pub maybe_last_winning_distance: Option<GuessType>,
 }
 
+/// General public information about the sync status of all parentchains
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq)]
+pub struct ParentchainsInfo {
+	/// info for the integritee network parentchain
+	pub integritee: ParentchainInfo,
+	/// info for the target A parentchain
+	pub target_a: ParentchainInfo,
+	/// info for the target B parentchain
+	pub target_b: ParentchainInfo,
+	/// which of the parentchains is used as a shielding target?
+	pub shielding_target: ParentchainId,
+}
+
+/// General public information about the sync status of a parentchain
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq)]
+pub struct ParentchainInfo {
+	/// the parentchain id for internal use
+	id: ParentchainId,
+	/// the genesis hash of the parentchain
+	genesis_hash: Option<Hash>,
+	/// the last imported parentchain block number
+	block_number: Option<BlockNumber>,
+	/// the timestamp of the last imported parentchain block
+	now: Option<Moment>,
+	/// the parentchain block number which preceded the creation of this shard
+	creation_block_number: Option<BlockNumber>,
+	/// the timestamp of creation for this shard
+	creation_timestamp: Option<Moment>,
+}
 mod tests {
 	use super::*;
 
