@@ -24,6 +24,7 @@
 #![cfg_attr(all(not(target_env = "sgx"), not(feature = "std")), no_std)]
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
+extern crate alloc;
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
@@ -34,6 +35,7 @@ pub use trusted_call::*;
 #[cfg(feature = "evm")]
 pub mod evm_helpers;
 pub mod getter;
+pub mod guess_the_number;
 pub mod hash;
 pub mod helpers;
 pub mod stf_sgx;

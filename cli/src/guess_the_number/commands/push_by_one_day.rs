@@ -23,7 +23,9 @@ use crate::{
 	Cli, CliResult, CliResultOk,
 };
 
-use ita_stf::{Getter, Index, TrustedCall, TrustedCallSigned};
+use ita_stf::{
+	guess_the_number::GuessTheNumberTrustedCall, Getter, Index, TrustedCall, TrustedCallSigned,
+};
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{KeyPair, TrustedOperation},
@@ -46,10 +48,11 @@ impl PushByOneDayCommand {
 
 		let (mrenclave, shard) = get_identifiers(trusted_args);
 		let nonce = get_layer_two_nonce!(signer, cli, trusted_args);
-		let top: TrustedOperation<TrustedCallSigned, Getter> =
-			TrustedCall::guess_the_number_push_by_one_day(signer.public().into())
-				.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
-				.into_trusted_operation(trusted_args.direct);
+		let top: TrustedOperation<TrustedCallSigned, Getter> = TrustedCall::guess_the_number(
+			GuessTheNumberTrustedCall::push_by_one_day(signer.public().into()),
+		)
+		.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
+		.into_trusted_operation(trusted_args.direct);
 		Ok(perform_trusted_operation::<()>(cli, trusted_args, &top).map(|_| CliResultOk::None)?)
 	}
 }

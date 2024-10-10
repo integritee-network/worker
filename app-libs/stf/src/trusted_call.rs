@@ -24,6 +24,7 @@ use std::vec::Vec;
 #[cfg(feature = "evm")]
 use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_address};
 use crate::{
+	guess_the_number::GuessTheNumberTrustedCall,
 	helpers::{enclave_signer_account, ensure_enclave_signer_account, shard_vault, wrap_bytes},
 	Getter,
 };
@@ -33,8 +34,8 @@ use frame_support::{ensure, traits::UnfilteredDispatchable};
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{
-	GuessType, ParentchainInstanceIntegritee, ParentchainInstanceTargetA,
-	ParentchainInstanceTargetB, ParentchainIntegritee, Runtime, System,
+	ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
+	ParentchainIntegritee, Runtime, System,
 };
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_node_api_metadata::{
@@ -71,9 +72,7 @@ pub enum TrustedCall {
 	balance_transfer(AccountId, AccountId, Balance) = 2,
 	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier) = 3, // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
 	balance_shield(AccountId, AccountId, Balance, ParentchainId) = 4, // (Root, AccountIncognito, Amount, origin parentchain)
-	guess_the_number_set_winnings(AccountId, Balance) = 50,
-	guess_the_number_push_by_one_day(AccountId) = 51,
-	guess_the_number(AccountId, GuessType) = 52,
+	guess_the_number(GuessTheNumberTrustedCall) = 50,
 	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance) = 90, // (Origin, Address EVM Account, Value)
 	// (Origin, Source, Target, Input, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
@@ -139,9 +138,7 @@ impl TrustedCall {
 			Self::evm_create(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
 			Self::evm_create2(sender_account, ..) => sender_account,
-			Self::guess_the_number_set_winnings(sender_account, ..) => sender_account,
-			Self::guess_the_number_push_by_one_day(sender_account) => sender_account,
-			Self::guess_the_number(sender_account, ..) => sender_account,
+			Self::guess_the_number(call) => call.sender_account(),
 		}
 	}
 }
@@ -577,72 +574,19 @@ where
 				info!("Trying to create evm contract with address {:?}", contract_address);
 				Ok(())
 			},
-			TrustedCall::guess_the_number_set_winnings(sender, winnings) => {
-				// authorization happens in pallet itself, we just pass authentication
-				let origin = ita_sgx_runtime::RuntimeOrigin::signed(sender);
-				std::println!("⣿STF⣿ guess-the-number set winnings to {}", winnings);
-				ita_sgx_runtime::GuessTheNumberCall::<Runtime>::set_winnings { winnings }
-					.dispatch_bypass_filter(origin)
-					.map_err(|e| {
-						Self::Error::Dispatch(format!(
-							"GuessTheNumber Set winnings error: {:?}",
-							e.error
-						))
-					})?;
-				Ok::<(), Self::Error>(())
-			},
-			TrustedCall::guess_the_number_push_by_one_day(sender) => {
-				// authorization happens in pallet itself, we just pass authentication
-				let origin = ita_sgx_runtime::RuntimeOrigin::signed(sender);
-				std::println!("⣿STF⣿ guess-the-number push by one day");
-				ita_sgx_runtime::GuessTheNumberCall::<Runtime>::push_by_one_day {}
-					.dispatch_bypass_filter(origin)
-					.map_err(|e| {
-						Self::Error::Dispatch(format!(
-							"GuessTheNumber push by one day error: {:?}",
-							e.error
-						))
-					})?;
-				Ok::<(), Self::Error>(())
-			},
-			TrustedCall::guess_the_number(sender, guess) => {
-				let origin = ita_sgx_runtime::RuntimeOrigin::signed(sender);
-				std::println!("⣿STF⣿ guess-the-number: someone is attempting a guess");
-				// endow fee to enclave (self)
-				let fee_recipient: AccountId = enclave_signer_account();
-				// fixme: apply fees through standard frame process and tune it
-				let fee = crate::STF_GUESS_FEE;
-				info!("guess fee {}", fee);
-				ita_sgx_runtime::BalancesCall::<Runtime>::transfer {
-					dest: MultiAddress::Id(fee_recipient),
-					value: fee,
-				}
-				.dispatch_bypass_filter(origin.clone())
-				.map_err(|e| {
-					Self::Error::Dispatch(format!("GuessTheNumber fee error: {:?}", e.error))
-				})?;
-
-				ita_sgx_runtime::GuessTheNumberCall::<Runtime>::guess { guess }
-					.dispatch_bypass_filter(origin)
-					.map_err(|e| {
-						Self::Error::Dispatch(format!("GuessTheNumber guess error: {:?}", e.error))
-					})?;
-				Ok::<(), Self::Error>(())
-			},
+			TrustedCall::guess_the_number(call) => call.execute(calls, node_metadata_repo),
 		}?;
 		Ok(())
 	}
 
 	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
-		let key_hashes = Vec::new();
+		let mut key_hashes = Vec::new();
 		match self.call {
 			TrustedCall::noop(..) => debug!("No storage updates needed..."),
-			#[cfg(any(feature = "test", test))]
-			TrustedCall::balance_set_balance(..) => debug!("No storage updates needed..."), // ROOT call to set some account balance to an arbitrary number
-			TrustedCall::balance_transfer(..) => debug!("No storage updates needed..."),
-			TrustedCall::balance_unshield(..) => debug!("No storage updates needed..."),
-			TrustedCall::balance_shield(..) => debug!("No storage updates needed..."),
-			TrustedCall::timestamp_set(..) => debug!("No storage updates needed..."),
+			TrustedCall::guess_the_number(call) =>
+				key_hashes.append(&mut <GuessTheNumberTrustedCall as ExecuteCall<
+					NodeMetadataRepository,
+				>>::get_storage_hashes_to_update(call)),
 			_ => debug!("No storage updates needed..."),
 		};
 		key_hashes

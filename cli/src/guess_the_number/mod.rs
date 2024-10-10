@@ -15,7 +15,10 @@
 
 */
 
-use crate::{trusted_cli::TrustedCli, Cli, CliResult};
+use crate::{
+	guess_the_number::commands::get_attempts::GetAttemptsCommand, trusted_cli::TrustedCli, Cli,
+	CliResult,
+};
 use commands::{
 	get_info::GetInfoCommand, guess::GuessCommand, push_by_one_day::PushByOneDayCommand,
 	set_winnings::SetWinningsCommand,
@@ -33,6 +36,8 @@ pub enum GuessTheNumberCommand {
 	PushByOneDay(PushByOneDayCommand),
 	/// submit a guess as a player
 	Guess(GuessCommand),
+	/// how many times a player has already submitted a guess this round
+	GetAttempts(GetAttemptsCommand),
 }
 
 impl GuessTheNumberCommand {
@@ -42,6 +47,7 @@ impl GuessTheNumberCommand {
 			GuessTheNumberCommand::SetWinnings(cmd) => cmd.run(cli, trusted_cli),
 			GuessTheNumberCommand::PushByOneDay(cmd) => cmd.run(cli, trusted_cli),
 			GuessTheNumberCommand::Guess(cmd) => cmd.run(cli, trusted_cli),
+			GuessTheNumberCommand::GetAttempts(cmd) => cmd.run(cli, trusted_cli),
 		}
 	}
 }

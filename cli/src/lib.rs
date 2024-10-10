@@ -46,7 +46,7 @@ pub mod commands;
 
 use crate::commands::Commands;
 use clap::Parser;
-use ita_stf::{GuessTheNumberInfo, ParentchainsInfo};
+use ita_stf::{guess_the_number::GuessTheNumberInfo, ParentchainsInfo};
 use itp_node_api::api_client::Metadata;
 use sp_application_crypto::KeyTypeId;
 use sp_core::{H160, H256};
@@ -115,6 +115,9 @@ pub enum CliResultOk {
 	},
 	ParentchainsInfo {
 		info: ParentchainsInfo,
+	},
+	GuessAttempts {
+		value: u8,
 	},
 	GuessTheNumberPotInfo {
 		info: GuessTheNumberInfo,

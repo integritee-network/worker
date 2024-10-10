@@ -17,8 +17,7 @@
 
 use codec::{Decode, Encode};
 use ita_sgx_runtime::{
-	Balances, GuessTheNumber, GuessType, ParentchainIntegritee, ParentchainTargetA,
-	ParentchainTargetB, System,
+	Balances, ParentchainIntegritee, ParentchainTargetA, ParentchainTargetB, System,
 };
 use itp_stf_interface::ExecuteGetter;
 use itp_stf_primitives::{
@@ -37,8 +36,11 @@ use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 #[cfg(feature = "evm")]
 use crate::evm_helpers::{get_evm_account, get_evm_account_codes, get_evm_account_storages};
 
-use crate::helpers::{shard_vault, wrap_bytes};
-use itp_sgx_runtime_primitives::types::{Balance, Moment};
+use crate::{
+	guess_the_number::{GuessTheNumberPublicGetter, GuessTheNumberTrustedGetter},
+	helpers::{shard_vault, wrap_bytes},
+};
+use itp_sgx_runtime_primitives::types::Moment;
 use itp_stf_primitives::traits::PoolTransactionValidation;
 use itp_types::parentchain::{BlockNumber, Hash, ParentchainId};
 #[cfg(feature = "evm")]
@@ -104,7 +106,7 @@ pub enum PublicGetter {
 	some_value = 0,
 	total_issuance = 1,
 	parentchains_info = 10,
-	guess_the_number_info = 50,
+	guess_the_number(GuessTheNumberPublicGetter) = 50,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -113,6 +115,7 @@ pub enum PublicGetter {
 #[allow(clippy::unnecessary_cast)]
 pub enum TrustedGetter {
 	account_info(AccountId) = 0,
+	guess_the_number(GuessTheNumberTrustedGetter) = 50,
 	#[cfg(feature = "evm")]
 	evm_nonce(AccountId) = 90,
 	#[cfg(feature = "evm")]
@@ -125,6 +128,7 @@ impl TrustedGetter {
 	pub fn sender_account(&self) -> &AccountId {
 		match self {
 			TrustedGetter::account_info(sender_account) => sender_account,
+			TrustedGetter::guess_the_number(getter) => getter.sender_account(),
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_nonce(sender_account) => sender_account,
 			#[cfg(feature = "evm")]
@@ -190,6 +194,7 @@ impl ExecuteGetter for TrustedGetterSigned {
 				std::println!("⣿STF⣿ 🔍 TrustedGetter query: account info for ⣿⣿⣿ is ⣿⣿⣿",);
 				Some(info.encode())
 			},
+			TrustedGetter::guess_the_number(getter) => getter.execute(),
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_nonce(who) => {
 				let evm_account = get_evm_account(&who);
@@ -223,7 +228,13 @@ impl ExecuteGetter for TrustedGetterSigned {
 	}
 
 	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
-		Vec::new()
+		let mut key_hashes = Vec::new();
+		match self.getter {
+			TrustedGetter::guess_the_number(getter) =>
+				key_hashes.append(&mut getter.get_storage_hashes_to_update()),
+			_ => debug!("No storage updates needed..."),
+		};
+		key_hashes
 	}
 }
 
@@ -267,55 +278,19 @@ impl ExecuteGetter for PublicGetter {
 				};
 				Some(parentchains_info.encode())
 			},
-			PublicGetter::guess_the_number_info => {
-				let account = GuessTheNumber::get_pot_account();
-				let winnings = GuessTheNumber::winnings();
-				let next_round_timestamp = GuessTheNumber::next_round_timestamp();
-				let maybe_last_winning_distance = GuessTheNumber::last_winning_distance();
-				let last_winners = GuessTheNumber::last_winners();
-				let maybe_last_lucky_number = GuessTheNumber::last_lucky_number();
-				let info = System::account(&account);
-				trace!("TrustedGetter GuessTheNumber Pot Info");
-				trace!("AccountInfo for pot {} is {:?}", account_id_to_string(&account), info);
-				std::println!("⣿STF⣿ 🔍 TrustedGetter query: guess-the-number pot info");
-				Some(
-					GuessTheNumberInfo {
-						account,
-						balance: info.data.free,
-						winnings,
-						next_round_timestamp,
-						last_winners,
-						maybe_last_lucky_number,
-						maybe_last_winning_distance,
-					}
-					.encode(),
-				)
-			},
+			PublicGetter::guess_the_number(getter) => getter.execute(),
 		}
 	}
 
 	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
-		Vec::new()
+		let mut key_hashes = Vec::new();
+		match self {
+			Self::guess_the_number(getter) =>
+				key_hashes.append(&mut getter.get_storage_hashes_to_update()),
+			_ => debug!("No storage updates needed..."),
+		};
+		key_hashes
 	}
-}
-
-/// General public information about thae status of the gguess-the-number game
-#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq)]
-pub struct GuessTheNumberInfo {
-	/// the account of the pot used to payout winnings
-	pub account: AccountId,
-	/// the current balance of the pot
-	pub balance: Balance,
-	/// the amount which can be won every round
-	pub winnings: Balance,
-	/// the time when this round will end and the next round will start
-	pub next_round_timestamp: Moment,
-	/// the winners of the previous round
-	pub last_winners: Vec<AccountId>,
-	/// the lucky number which the enclave picked at random at the beginning of the last round
-	pub maybe_last_lucky_number: Option<GuessType>,
-	/// the distance of the best guess to the lucky_number
-	pub maybe_last_winning_distance: Option<GuessType>,
 }
 
 /// General public information about the sync status of all parentchains

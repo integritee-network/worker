@@ -1,3 +1,4 @@
+pub mod get_attempts;
 pub mod get_info;
 pub mod guess;
 pub mod push_by_one_day;
