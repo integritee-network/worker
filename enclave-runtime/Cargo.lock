@@ -1994,6 +1994,7 @@ dependencies = [
 name = "itp-enclave-metrics"
 version = "0.9.0"
 dependencies = [
+ "itp-types",
  "parity-scale-codec",
  "sgx_tstd",
  "substrate-fixed",

@@ -25,6 +25,7 @@ use crate::{
 	error::{Error, ServiceResult},
 };
 use async_trait::async_trait;
+use base58::ToBase58;
 use codec::{Decode, Encode};
 #[cfg(feature = "attesteer")]
 use core::time::Duration;
@@ -40,11 +41,11 @@ use lazy_static::lazy_static;
 use log::*;
 use prometheus::{
 	proto::MetricFamily, register_gauge, register_histogram, register_histogram_vec,
-	register_int_counter, register_int_gauge, Gauge, Histogram, HistogramOpts, HistogramVec,
-	IntCounter, IntGauge,
+	register_int_counter, register_int_gauge, register_int_gauge_vec, Gauge, Histogram,
+	HistogramOpts, HistogramVec, IntCounter, IntGauge, IntGaugeVec,
 };
 use serde::{Deserialize, Serialize};
-use std::{net::SocketAddr, sync::Arc};
+use std::{fmt::Debug, net::SocketAddr, sync::Arc};
 use warp::{Filter, Rejection, Reply};
 
 const DURATION_HISTOGRAM_BUCKETS: [f64; 10] =
@@ -86,6 +87,9 @@ lazy_static! {
 	static ref ENCLAVE_STF_STATE_UPDATE_EXECUTED_CALLS_FAILED_COUNT: Histogram =
 		register_histogram!(HistogramOpts::new("integritee_worker_enclave_stf_state_update_executed_calls_failed_count", "Enclave STF: how many calls have failed during execution per update proposal")
 		.buckets(COUNT_HISTOGRAM_BUCKETS.into()))
+			.unwrap();
+	static ref ENCLAVE_STF_STATE_SIZE: IntGaugeVec =
+		register_int_gauge_vec!("integritee_worker_enclave_stf_state_size_bytes", "Enclave STF state size in Bytes", &["shard"])
 			.unwrap();
 	static ref ENCLAVE_STF_RUNTIME_TOTAL_ISSUANCE: Gauge =
 		register_gauge!("integritee_worker_enclave_stf_runtime_total_issuance", "Enclave stf total issuance assuming its native token")
@@ -224,6 +228,9 @@ impl ReceiveEnclaveMetrics for EnclaveMetricsReceiver {
 				ENCLAVE_STF_STATE_UPDATE_EXECUTED_CALLS_SUCCESSFUL_COUNT.observe(count.into()),
 			EnclaveMetric::StfStateUpdateExecutedCallsFailedCount(count) =>
 				ENCLAVE_STF_STATE_UPDATE_EXECUTED_CALLS_FAILED_COUNT.observe(count.into()),
+			EnclaveMetric::StfStateSizeSet(shard, bytes) => ENCLAVE_STF_STATE_SIZE
+				.with_label_values([shard.0.to_base58().as_str()].as_slice())
+				.set(bytes as i64),
 			EnclaveMetric::StfRuntimeTotalIssuanceSet(balance) =>
 				ENCLAVE_STF_RUNTIME_TOTAL_ISSUANCE.set(balance),
 			EnclaveMetric::StfRuntimeParentchainIntegriteeProcessedBlockNumberSet(bn) =>

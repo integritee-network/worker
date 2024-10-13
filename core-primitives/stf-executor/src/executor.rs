@@ -353,6 +353,7 @@ where
 			error!("on_finalize failed: {:?}", e);
 		});
 
+		let state_size_bytes = state.size();
 		let runtime_metrics = gather_runtime_metrics(&state);
 
 		let propsing_duration = duration_now() - started_at;
@@ -366,6 +367,7 @@ where
 					successful_call_count as u32,
 				),
 				EnclaveMetric::StfStateUpdateExecutedCallsFailedCount(failed_call_count as u32),
+				EnclaveMetric::StfStateSizeSet(*shard, state_size_bytes as u32),
 				EnclaveMetric::StfRuntimeTotalIssuanceSet(runtime_metrics.total_issuance),
 				EnclaveMetric::StfRuntimeParentchainIntegriteeProcessedBlockNumberSet(
 					runtime_metrics.parentchain_integritee_processed_block_number,

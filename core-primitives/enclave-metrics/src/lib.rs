@@ -26,6 +26,7 @@ extern crate sgx_tstd as std;
 
 use codec::{Decode, Encode};
 use core::time::Duration;
+use itp_types::ShardIdentifier;
 use std::string::String;
 use substrate_fixed::types::U32F32;
 
@@ -44,6 +45,7 @@ pub enum EnclaveMetric {
 	StfStateUpdateExecutionDuration(Duration),
 	StfStateUpdateExecutedCallsSuccessfulCount(u32),
 	StfStateUpdateExecutedCallsFailedCount(u32),
+	StfStateSizeSet(ShardIdentifier, u32),
 	StfRuntimeTotalIssuanceSet(f64),
 	StfRuntimeParentchainIntegriteeProcessedBlockNumberSet(u32),
 	StfRuntimeParentchainTargetAProcessedBlockNumberSet(u32),

@@ -105,6 +105,9 @@ pub trait SgxExternalitiesTrait {
 
 	fn get(&self, k: &[u8]) -> Option<&Vec<u8>>;
 
+	/// get the state size in encoded bytes
+	fn size(&self) -> usize;
+
 	fn contains_key(&self, k: &[u8]) -> bool;
 
 	/// Get the next key in state after the given one (excluded) in lexicographic order.
@@ -160,6 +163,10 @@ where
 
 	fn get(&self, key: &[u8]) -> Option<&Vec<u8>> {
 		self.state.get(key)
+	}
+
+	fn size(&self) -> usize {
+		self.state.encoded_size()
 	}
 
 	fn contains_key(&self, key: &[u8]) -> bool {
