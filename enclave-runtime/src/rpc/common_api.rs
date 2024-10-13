@@ -65,9 +65,10 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OCallApi>(
 {
 	add_top_pool_direct_rpc_methods(top_pool_author.clone(), io_handler, ocall_api.clone());
 
+	let local_ocall_api = ocall_api.clone();
 	io_handler.add_sync_method("author_getShieldingKey", move |_: Params| {
 		debug!("worker_api_direct rpc was called: author_getShieldingKey");
-		ocall_api
+		local_ocall_api
 			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
 			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		let rsa_pubkey = match shielding_key.retrieve_pubkey() {
@@ -92,8 +93,12 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OCallApi>(
 	});
 
 	let local_top_pool_author = top_pool_author.clone();
+	let local_ocall_api = ocall_api.clone();
 	io_handler.add_sync_method("author_getShardVault", move |_: Params| {
 		debug!("worker_api_direct rpc was called: author_getShardVault");
+		local_ocall_api
+			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
+			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		let shard =
 			local_top_pool_author.list_handled_shards().first().copied().unwrap_or_default();
 		if let Ok(stf_enclave_signer) = get_stf_enclave_signer_from_solo_or_parachain() {
@@ -112,15 +117,23 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OCallApi>(
 		}
 	});
 
+	let local_ocall_api = ocall_api.clone();
 	io_handler.add_sync_method("author_getShard", move |_: Params| {
 		debug!("worker_api_direct rpc was called: author_getShard");
+		local_ocall_api
+			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
+			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		let shard = top_pool_author.list_handled_shards().first().copied().unwrap_or_default();
 		let json_value = RpcReturnValue::new(shard.encode(), false, DirectRequestStatus::Ok);
 		Ok(json!(json_value.to_hex()))
 	});
 
+	let local_ocall_api = ocall_api.clone();
 	io_handler.add_sync_method("author_getFingerprint", move |_: Params| {
 		debug!("worker_api_direct rpc was called: author_getFingerprint");
+		local_ocall_api
+			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
+			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		let mrenclave = get_stf_enclave_signer_from_solo_or_parachain()
 			.map(|enclave_signer| {
 				enclave_signer.ocall_api.get_mrenclave_of_self().unwrap_or_default()
@@ -131,8 +144,12 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OCallApi>(
 		Ok(json!(json_value.to_hex()))
 	});
 
+	let local_ocall_api = ocall_api.clone();
 	io_handler.add_sync_method("author_getMuRaUrl", move |_: Params| {
 		debug!("worker_api_direct rpc was called: author_getMuRaUrl");
+		local_ocall_api
+			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
+			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		let url = match GLOBAL_PRIMITIVES_CACHE.get_mu_ra_url() {
 			Ok(url) => url,
 			Err(status) => {
@@ -145,8 +162,12 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OCallApi>(
 		Ok(json!(json_value.to_hex()))
 	});
 
+	let local_ocall_api = ocall_api.clone();
 	io_handler.add_sync_method("author_getUntrustedUrl", move |_: Params| {
 		debug!("worker_api_direct rpc was called: author_getUntrustedUrl");
+		local_ocall_api
+			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
+			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		let url = match GLOBAL_PRIMITIVES_CACHE.get_untrusted_worker_url() {
 			Ok(url) => url,
 			Err(status) => {
@@ -159,27 +180,43 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OCallApi>(
 		Ok(json!(json_value.to_hex()))
 	});
 
-	io_handler.add_sync_method("chain_subscribeAllHeads", |_: Params| {
+	let local_ocall_api = ocall_api.clone();
+	io_handler.add_sync_method("chain_subscribeAllHeads", move |_: Params| {
 		debug!("worker_api_direct rpc was called: chain_subscribeAllHeads");
+		local_ocall_api
+			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
+			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		let parsed = "world";
 		Ok(Value::String(format!("hello, {}", parsed)))
 	});
 
-	io_handler.add_sync_method("state_getMetadata", |_: Params| {
-		debug!("worker_api_direct rpc was called: tate_getMetadata");
+	let local_ocall_api = ocall_api.clone();
+	io_handler.add_sync_method("state_getMetadata", move |_: Params| {
+		debug!("worker_api_direct rpc was called: state_getMetadata");
+		local_ocall_api
+			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
+			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		let metadata = Runtime::metadata();
 		let json_value = RpcReturnValue::new(metadata.into(), false, DirectRequestStatus::Ok);
 		Ok(json!(json_value.to_hex()))
 	});
 
-	io_handler.add_sync_method("state_getRuntimeVersion", |_: Params| {
+	let local_ocall_api = ocall_api.clone();
+	io_handler.add_sync_method("state_getRuntimeVersion", move |_: Params| {
 		debug!("worker_api_direct rpc was called: state_getRuntimeVersion");
+		local_ocall_api
+			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
+			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		let parsed = "world";
 		Ok(Value::String(format!("hello, {}", parsed)))
 	});
 
+	let local_ocall_api = ocall_api.clone();
 	io_handler.add_sync_method("state_executeGetter", move |params: Params| {
 		debug!("worker_api_direct rpc was called: state_executeGetter");
+		local_ocall_api
+			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
+			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		let json_value = match execute_getter_inner(getter_executor.as_ref(), params) {
 			Ok(state_getter_value) => RpcReturnValue {
 				do_watch: false,
@@ -192,8 +229,12 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OCallApi>(
 		Ok(json!(json_value))
 	});
 
+	let local_ocall_api = ocall_api.clone();
 	io_handler.add_sync_method("attesteer_forwardDcapQuote", move |params: Params| {
 		debug!("worker_api_direct rpc was called: attesteer_forwardDcapQuote");
+		local_ocall_api
+			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
+			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		let json_value = match forward_dcap_quote_inner(params) {
 			Ok(val) => RpcReturnValue {
 				do_watch: false,
@@ -207,8 +248,12 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OCallApi>(
 		Ok(json!(json_value))
 	});
 
+	let local_ocall_api = ocall_api.clone();
 	io_handler.add_sync_method("attesteer_forwardIasAttestationReport", move |params: Params| {
 		debug!("worker_api_direct rpc was called: attesteer_forwardIasAttestationReport");
+		local_ocall_api
+			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
+			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		let json_value = match attesteer_forward_ias_attestation_report_inner(params) {
 			Ok(val) => RpcReturnValue {
 				do_watch: false,
@@ -221,21 +266,32 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OCallApi>(
 
 		Ok(json!(json_value))
 	});
-
-	io_handler.add_sync_method("system_health", |_: Params| {
+	let local_ocall_api = ocall_api.clone();
+	io_handler.add_sync_method("system_health", move |_: Params| {
 		debug!("worker_api_direct rpc was called: system_health");
+		local_ocall_api
+			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
+			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		let parsed = "world";
 		Ok(Value::String(format!("hello, {}", parsed)))
 	});
 
-	io_handler.add_sync_method("system_name", |_: Params| {
+	let local_ocall_api = ocall_api.clone();
+	io_handler.add_sync_method("system_name", move |_: Params| {
+		local_ocall_api
+			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
+			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		debug!("worker_api_direct rpc was called: system_name");
 		let parsed = "world";
 		Ok(Value::String(format!("hello, {}", parsed)))
 	});
 
-	io_handler.add_sync_method("system_version", |_: Params| {
+	let local_ocall_api = ocall_api.clone();
+	io_handler.add_sync_method("system_version", move |_: Params| {
 		debug!("worker_api_direct rpc was called: system_version");
+		local_ocall_api
+			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
+			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		let parsed = "world";
 		Ok(Value::String(format!("hello, {}", parsed)))
 	});

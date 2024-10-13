@@ -49,13 +49,17 @@ pub fn add_top_pool_direct_rpc_methods<R, TCS, G, OCallApi>(
 	G: PartialEq + Encode + Decode + Debug + Send + Sync + 'static,
 	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
 {
-	let watch_author = top_pool_author.clone();
+	let local_author = top_pool_author.clone();
+	let local_ocall_api = ocall_api.clone();
 	io_handler.add_sync_method("author_submitAndWatchExtrinsic", move |params: Params| {
 		debug!("worker_api_direct rpc was called: author_submitAndWatchExtrinsic");
-		ocall_api
-			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
+		local_ocall_api
+			.update_metrics(vec![
+				EnclaveMetric::RpcRequestsIncrement,
+				EnclaveMetric::RpcTrustedCallsIncrement,
+			])
 			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
-		let json_value = match author_submit_extrinsic_inner(watch_author.clone(), params) {
+		let json_value = match author_submit_extrinsic_inner(local_author.clone(), params) {
 			Ok(hash_value) => RpcReturnValue {
 				do_watch: true,
 				value: hash_value.encode(),
@@ -69,10 +73,17 @@ pub fn add_top_pool_direct_rpc_methods<R, TCS, G, OCallApi>(
 		Ok(json!(json_value))
 	});
 
-	let submit_author = top_pool_author.clone();
+	let local_author = top_pool_author.clone();
+	let local_ocall_api = ocall_api.clone();
 	io_handler.add_sync_method("author_submitExtrinsic", move |params: Params| {
 		debug!("worker_api_direct rpc was called: author_submitExtrinsic");
-		let json_value = match author_submit_extrinsic_inner(submit_author.clone(), params) {
+		local_ocall_api
+			.update_metrics(vec![
+				EnclaveMetric::RpcRequestsIncrement,
+				EnclaveMetric::RpcTrustedCallsIncrement,
+			])
+			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
+		let json_value = match author_submit_extrinsic_inner(local_author.clone(), params) {
 			Ok(hash_value) => RpcReturnValue {
 				do_watch: false,
 				value: hash_value.encode(),
@@ -86,9 +97,13 @@ pub fn add_top_pool_direct_rpc_methods<R, TCS, G, OCallApi>(
 		Ok(json!(json_value))
 	});
 
-	let pending_author = top_pool_author.clone();
+	let local_author = top_pool_author.clone();
+	let local_ocall_api = ocall_api.clone();
 	io_handler.add_sync_method("author_pendingExtrinsics", move |params: Params| {
 		debug!("worker_api_direct rpc was called: author_pendingExtrinsics");
+		local_ocall_api
+			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
+			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		match params.parse::<Vec<String>>() {
 			Ok(shards) => {
 				let mut retrieved_operations = vec![];
@@ -101,7 +116,7 @@ pub fn add_top_pool_direct_rpc_methods<R, TCS, G, OCallApi>(
 							return Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
 						},
 					};
-					if let Ok(vec_of_operations) = pending_author.pending_tops(shard) {
+					if let Ok(vec_of_operations) = local_author.pending_tops(shard) {
 						retrieved_operations.push(vec_of_operations);
 					}
 				}
@@ -119,9 +134,13 @@ pub fn add_top_pool_direct_rpc_methods<R, TCS, G, OCallApi>(
 		}
 	});
 
-	let pending_author = top_pool_author;
+	let local_author = top_pool_author;
+	let local_ocall_api = ocall_api.clone();
 	io_handler.add_sync_method("author_pendingTrustedCallsFor", move |params: Params| {
 		debug!("worker_api_direct rpc was called: author_pendingTrustedCallsFor");
+		local_ocall_api
+			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
+			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		match params.parse::<(String, String)>() {
 			Ok((shard_base58, account_hex)) => {
 				let shard = match decode_shard_from_base58(shard_base58.as_str()) {
@@ -140,7 +159,7 @@ pub fn add_top_pool_direct_rpc_methods<R, TCS, G, OCallApi>(
 						return Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
 					},
 				};
-				let trusted_calls = pending_author.get_pending_trusted_calls_for(shard, &account);
+				let trusted_calls = local_author.get_pending_trusted_calls_for(shard, &account);
 				let json_value = RpcReturnValue {
 					do_watch: false,
 					value: trusted_calls.encode(),

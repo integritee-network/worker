@@ -60,8 +60,8 @@ lazy_static! {
 	static ref ENCLAVE_RPC_REQUESTS: IntCounter =
 		register_int_counter!("integritee_worker_enclave_rpc_requests", "Enclave RPC requests")
 			.unwrap();
-	static ref ENCLAVE_RPC_DIRECT_TC_RECEIVED: IntCounter =
-		register_int_counter!("integritee_worker_enclave_rpc_direct_tc_received", "Enclave RPC: how many direct trusted calls have been received")
+	static ref ENCLAVE_RPC_TC_RECEIVED: IntCounter =
+		register_int_counter!("integritee_worker_enclave_rpc_tc_received", "Enclave RPC: how many trusted calls have been received via rpc")
 			.unwrap();
 }
 
@@ -183,7 +183,7 @@ impl ReceiveEnclaveMetrics for EnclaveMetricsReceiver {
 				ENCLAVE_RPC_REQUESTS.inc();
 			},
 			EnclaveMetric::RpcTrustedCallsIncrement => {
-				ENCLAVE_RPC_DIRECT_TC_RECEIVED.inc();
+				ENCLAVE_RPC_TC_RECEIVED.inc();
 			},
 			#[cfg(feature = "teeracle")]
 			EnclaveMetric::ExchangeRateOracle(m) => update_teeracle_metrics(m)?,
