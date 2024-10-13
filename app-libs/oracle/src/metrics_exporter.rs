@@ -19,7 +19,7 @@ use crate::types::{ExchangeRate, TradingPair};
 use itp_enclave_metrics::{EnclaveMetric, ExchangeRateOracleMetric, OracleMetric};
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use log::error;
-use std::{string::String, sync::Arc, time::Instant};
+use std::{string::String, sync::Arc, time::Instant, vec, vec::Vec};
 
 /// Trait to export metrics for any Teeracle.
 pub trait ExportMetrics<MetricsInfo> {
