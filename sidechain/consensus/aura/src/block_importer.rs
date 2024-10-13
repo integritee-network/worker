@@ -90,8 +90,7 @@ impl<
 		ParentchainBlockImporter,
 		TCS,
 		G,
-	>
-where
+	> where
 	Authority: Pair,
 	Authority::Public: std::fmt::Debug + UncheckedFrom<[u8; 32]>,
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
@@ -182,8 +181,7 @@ impl<
 		ParentchainBlockImporter,
 		TCS,
 		G,
-	>
-where
+	> where
 	Authority: Pair,
 	Authority::Public: std::fmt::Debug + UncheckedFrom<[u8; 32]>,
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
