@@ -27,10 +27,12 @@ use crate::{
 };
 use codec::Encode;
 use core::result::Result;
+use frame_support::log::error;
 use ita_sgx_runtime::Runtime;
 use ita_stf::{Getter, TrustedCallSigned};
 use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, ExtrinsicSender};
-use itp_ocall_api::EnclaveAttestationOCallApi;
+use itp_enclave_metrics::EnclaveMetric;
+use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveMetricsOCallApi};
 use itp_primitives_cache::{GetPrimitives, GLOBAL_PRIMITIVES_CACHE};
 use itp_rpc::RpcReturnValue;
 use itp_sgx_crypto::key_repository::AccessPubkey;
@@ -49,20 +51,25 @@ fn compute_hex_encoded_return_error(error_msg: &str) -> String {
 	RpcReturnValue::from_error_message(error_msg).to_hex()
 }
 
-pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey>(
+pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OCallApi>(
 	io_handler: &mut IoHandler,
 	top_pool_author: Arc<Author>,
 	getter_executor: Arc<GetterExecutor>,
 	shielding_key: Arc<AccessShieldingKey>,
+	ocall_api: Arc<OCallApi>,
 ) where
 	Author: AuthorApi<H256, H256, TrustedCallSigned, Getter> + Send + Sync + 'static,
 	GetterExecutor: ExecuteGetter + Send + Sync + 'static,
 	AccessShieldingKey: AccessPubkey<KeyType = Rsa3072PubKey> + Send + Sync + 'static,
+	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
 {
-	add_top_pool_direct_rpc_methods(top_pool_author.clone(), io_handler);
+	add_top_pool_direct_rpc_methods(top_pool_author.clone(), io_handler, ocall_api.clone());
 
 	io_handler.add_sync_method("author_getShieldingKey", move |_: Params| {
 		debug!("worker_api_direct rpc was called: author_getShieldingKey");
+		ocall_api
+			.update_metric(EnclaveMetric::RpcRequestsIncrement)
+			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		let rsa_pubkey = match shielding_key.retrieve_pubkey() {
 			Ok(key) => key,
 			Err(status) => {

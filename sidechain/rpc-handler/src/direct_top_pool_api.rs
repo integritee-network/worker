@@ -26,6 +26,8 @@ use rust_base58::base58::FromBase58;
 use base58::FromBase58;
 
 use codec::{Decode, Encode};
+use itp_enclave_metrics::EnclaveMetric;
+use itp_ocall_api::EnclaveMetricsOCallApi;
 use itp_rpc::RpcReturnValue;
 use itp_stf_primitives::types::AccountId;
 use itp_top_pool_author::traits::AuthorApi;
@@ -37,17 +39,22 @@ use std::{borrow::ToOwned, format, string::String, sync::Arc, vec, vec::Vec};
 
 type Hash = sp_core::H256;
 
-pub fn add_top_pool_direct_rpc_methods<R, TCS, G>(
+pub fn add_top_pool_direct_rpc_methods<R, TCS, G, OCallApi>(
 	top_pool_author: Arc<R>,
 	io_handler: &mut IoHandler,
+	ocall_api: Arc<OCallApi>,
 ) where
 	R: AuthorApi<Hash, Hash, TCS, G> + Send + Sync + 'static,
 	TCS: PartialEq + Encode + Decode + Debug + Send + Sync + 'static,
 	G: PartialEq + Encode + Decode + Debug + Send + Sync + 'static,
+	OCallApi: EnclaveMetricsOCallApi + Send + Sync + 'static,
 {
 	let watch_author = top_pool_author.clone();
 	io_handler.add_sync_method("author_submitAndWatchExtrinsic", move |params: Params| {
 		debug!("worker_api_direct rpc was called: author_submitAndWatchExtrinsic");
+		ocall_api
+			.update_metric(EnclaveMetric::RpcRequestsIncrement)
+			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		let json_value = match author_submit_extrinsic_inner(watch_author.clone(), params) {
 			Ok(hash_value) => RpcReturnValue {
 				do_watch: true,

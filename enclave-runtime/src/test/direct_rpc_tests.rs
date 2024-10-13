@@ -29,6 +29,7 @@ use itp_sgx_crypto::get_rsa3072_repository;
 use itp_sgx_temp_dir::TempDir;
 use itp_stf_executor::{getter_executor::GetterExecutor, mocks::GetStateMock};
 use itp_stf_state_observer::mock::ObserveStateMock;
+use itp_test::mock::onchain_mock::OnchainMock;
 use itp_top_pool_author::mocks::AuthorApiMock;
 use itp_types::{AccountId, DirectRequestStatus, Request, ShardIdentifier};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
@@ -51,9 +52,15 @@ pub fn get_state_request_works() {
 	let getter_executor =
 		Arc::new(GetterExecutor::<_, GetStateMock<TestState>, Getter>::new(state_observer));
 	let top_pool_author = Arc::new(AuthorApiMock::default());
-
+	let ocall_api = Arc::new(OnchainMock::default());
 	let mut io_handler = IoHandler::new();
-	add_common_api(&mut io_handler, top_pool_author, getter_executor, Arc::new(rsa_repository));
+	add_common_api(
+		&mut io_handler,
+		top_pool_author,
+		getter_executor,
+		Arc::new(rsa_repository),
+		ocall_api,
+	);
 
 	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));
 

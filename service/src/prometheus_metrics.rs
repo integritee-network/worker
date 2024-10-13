@@ -38,7 +38,9 @@ use itc_rest_client::{
 use itp_enclave_metrics::EnclaveMetric;
 use lazy_static::lazy_static;
 use log::*;
-use prometheus::{proto::MetricFamily, register_int_gauge, IntGauge};
+use prometheus::{
+	proto::MetricFamily, register_int_counter, register_int_gauge, IntCounter, IntGauge,
+};
 use serde::{Deserialize, Serialize};
 use std::{net::SocketAddr, sync::Arc};
 use warp::{Filter, Rejection, Reply};
@@ -54,6 +56,12 @@ lazy_static! {
 			.unwrap();
 	static ref ENCLAVE_SIDECHAIN_TOP_POOL_SIZE: IntGauge =
 		register_int_gauge!("integritee_worker_enclave_sidechain_top_pool_size", "Enclave sidechain top pool size")
+			.unwrap();
+	static ref ENCLAVE_RPC_REQUESTS: IntCounter =
+		register_int_counter!("integritee_worker_enclave_rpc_requests", "Enclave RPC requests")
+			.unwrap();
+	static ref ENCLAVE_RPC_DIRECT_TC_RECEIVED: IntCounter =
+		register_int_counter!("integritee_worker_enclave_rpc_direct_tc_received", "Enclave RPC: how many direct trusted calls have been received")
 			.unwrap();
 }
 
@@ -170,6 +178,12 @@ impl ReceiveEnclaveMetrics for EnclaveMetricsReceiver {
 			},
 			EnclaveMetric::TopPoolSizeDecrement => {
 				ENCLAVE_SIDECHAIN_TOP_POOL_SIZE.dec();
+			},
+			EnclaveMetric::RpcRequestsIncrement => {
+				ENCLAVE_RPC_REQUESTS.inc();
+			},
+			EnclaveMetric::RpcTrustedCallsIncrement => {
+				ENCLAVE_RPC_DIRECT_TC_RECEIVED.inc();
 			},
 			#[cfg(feature = "teeracle")]
 			EnclaveMetric::ExchangeRateOracle(m) => update_teeracle_metrics(m)?,

@@ -178,7 +178,13 @@ pub(crate) fn init_enclave(
 	let getter_executor = Arc::new(EnclaveGetterExecutor::new(state_observer));
 
 	let mut io_handler = IoHandler::new();
-	add_common_api(&mut io_handler, top_pool_author, getter_executor, shielding_key_repository);
+	add_common_api(
+		&mut io_handler,
+		top_pool_author,
+		getter_executor,
+		shielding_key_repository,
+		ocall_api.clone(),
+	);
 
 	#[cfg(feature = "sidechain")]
 	{

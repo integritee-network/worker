@@ -105,6 +105,7 @@ itc-parentchain-test = { path = "../core/parentchain/test", default-features = f
 itc-tls-websocket-server = { path = "../core/tls-websocket-server", default-features = false, features = ["sgx"] }
 itp-attestation-handler = { path = "../core-primitives/attestation-handler", default-features = false, features = ["sgx"] }
 itp-component-container = { path = "../core-primitives/component-container", default-features = false, features = ["sgx"] }
+itp-enclave-metrics = { path = "../core-primitives/enclave-metrics", default-features = false, features = ["sgx"] }
 itp-extrinsics-factory = { path = "../core-primitives/extrinsics-factory", default-features = false, features = ["sgx"] }
 itp-import-queue = { path = "../core-primitives/import-queue", default-features = false, features = ["sgx"] }
 itp-node-api = { path = "../core-primitives/node-api", default-features = false, features = ["sgx"] }

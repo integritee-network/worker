@@ -36,6 +36,8 @@ pub enum EnclaveMetric {
 	TopPoolSizeSet(u64),
 	TopPoolSizeIncrement,
 	TopPoolSizeDecrement,
+	RpcRequestsIncrement,
+	RpcTrustedCallsIncrement,
 	ExchangeRateOracle(ExchangeRateOracleMetric),
 	// OracleMetric(OracleMetric<MetricsInfo>),
 }
