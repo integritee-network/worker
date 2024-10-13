@@ -40,7 +40,9 @@ pub enum EnclaveMetric {
 	TopPoolSizeDecrement,
 	RpcRequestsIncrement,
 	RpcTrustedCallsIncrement,
-	StfStateUpodateExecutionDuration(Duration),
+	StfStateUpdateExecutionDuration(Duration),
+	StfStateUpdateExecutedCallsSuccessfulCount(u32),
+	StfStateUpdateExecutedCallsFailedCount(u32),
 	ExchangeRateOracle(ExchangeRateOracleMetric),
 	// OracleMetric(OracleMetric<MetricsInfo>),
 }

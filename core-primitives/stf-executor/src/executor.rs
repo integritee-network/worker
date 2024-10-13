@@ -353,10 +353,17 @@ where
 		});
 
 		let propsing_duration = duration_now() - started_at;
+		let successful_call_count =
+			executed_and_failed_calls.iter().filter(|call| call.is_success()).count();
+		let failed_call_count = executed_and_failed_calls.len() - successful_call_count;
 		self.ocall_api
-			.update_metrics(vec![EnclaveMetric::StfStateUpodateExecutionDuration(
-				propsing_duration,
-			)])
+			.update_metrics(vec![
+				EnclaveMetric::StfStateUpdateExecutionDuration(propsing_duration),
+				EnclaveMetric::StfStateUpdateExecutedCallsSuccessfulCount(
+					successful_call_count as u32,
+				),
+				EnclaveMetric::StfStateUpdateExecutedCallsFailedCount(failed_call_count as u32),
+			])
 			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		Ok(BatchExecutionResult {
 			executed_operations: executed_and_failed_calls,

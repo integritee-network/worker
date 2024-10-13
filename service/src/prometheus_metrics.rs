@@ -48,6 +48,8 @@ use warp::{Filter, Rejection, Reply};
 
 const DURATION_HISTOGRAM_BUCKETS: [f64; 10] =
 	[0.0001, 0.0003, 0.0009, 0.0027, 0.0081, 0.0243, 0.0729, 0.2187, 0.6561, 1.9683];
+const COUNT_HISTOGRAM_BUCKETS: [f64; 12] =
+	[0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0, 128.0, 256.0, 512.0, 1024.0];
 
 lazy_static! {
 	/// Register all the prometheus metrics we want to monitor (aside from the default process ones).
@@ -70,6 +72,14 @@ lazy_static! {
 	static ref ENCLAVE_STF_STATE_UPDATE_EXECUTION_DURATION: Histogram =
 		register_histogram!(HistogramOpts::new("integritee_worker_enclave_stf_state_update_execution_duration", "Enclave STF: state update execution duration from before on_initialize to after on_finalize")
 		.buckets(DURATION_HISTOGRAM_BUCKETS.into()))
+			.unwrap();
+	static ref ENCLAVE_STF_STATE_UPDATE_EXECUTED_CALLS_SUCCESSFUL_COUNT: Histogram =
+		register_histogram!(HistogramOpts::new("integritee_worker_enclave_stf_state_update_executed_calls_successful_count", "Enclave STF: how many calls have successfully been executed per update proposal")
+		.buckets(COUNT_HISTOGRAM_BUCKETS.into()))
+			.unwrap();
+	static ref ENCLAVE_STF_STATE_UPDATE_EXECUTED_CALLS_FAILED_COUNT: Histogram =
+		register_histogram!(HistogramOpts::new("integritee_worker_enclave_stf_state_update_executed_calls_failed_count", "Enclave STF: how many calls have failed during execution per update proposal")
+		.buckets(COUNT_HISTOGRAM_BUCKETS.into()))
 			.unwrap();
 	static ref ENCLAVE_FINGERPRINT: IntCounter =
 		register_int_counter!("integritee_worker_enclave_fingerprint", "Enclave fingerprint AKA MRENCLAVE")
@@ -186,8 +196,12 @@ impl ReceiveEnclaveMetrics for EnclaveMetricsReceiver {
 			EnclaveMetric::TopPoolSizeDecrement => ENCLAVE_SIDECHAIN_TOP_POOL_SIZE.dec(),
 			EnclaveMetric::RpcRequestsIncrement => ENCLAVE_RPC_REQUESTS.inc(),
 			EnclaveMetric::RpcTrustedCallsIncrement => ENCLAVE_RPC_TC_RECEIVED.inc(),
-			EnclaveMetric::StfStateUpodateExecutionDuration(duration) =>
+			EnclaveMetric::StfStateUpdateExecutionDuration(duration) =>
 				ENCLAVE_STF_STATE_UPDATE_EXECUTION_DURATION.observe(duration.as_secs_f64()),
+			EnclaveMetric::StfStateUpdateExecutedCallsSuccessfulCount(count) =>
+				ENCLAVE_STF_STATE_UPDATE_EXECUTED_CALLS_SUCCESSFUL_COUNT.observe(count.into()),
+			EnclaveMetric::StfStateUpdateExecutedCallsFailedCount(count) =>
+				ENCLAVE_STF_STATE_UPDATE_EXECUTED_CALLS_FAILED_COUNT.observe(count.into()),
 			#[cfg(feature = "teeracle")]
 			EnclaveMetric::ExchangeRateOracle(m) => update_teeracle_metrics(m)?,
 			#[cfg(not(feature = "teeracle"))]
