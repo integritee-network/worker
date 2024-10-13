@@ -220,7 +220,7 @@ pub trait WorkerOnChainBridge {
 /// Trait for updating metrics from inside the enclave.
 #[cfg_attr(test, automock)]
 pub trait MetricsBridge {
-	fn update_metric(&self, metric_encoded: Vec<u8>) -> OCallBridgeResult<()>;
+	fn update_metrics(&self, metrics_encoded: Vec<u8>) -> OCallBridgeResult<()>;
 }
 
 /// Trait for all the OCalls related to sidechain operations

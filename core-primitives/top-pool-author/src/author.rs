@@ -48,7 +48,7 @@ use jsonrpc_core::{
 };
 use log::*;
 use sp_runtime::generic;
-use std::{boxed::Box, sync::Arc, vec::Vec};
+use std::{boxed::Box, sync::Arc, vec, vec::Vec};
 
 /// Define type of TOP filter that is used in the Author
 #[cfg(feature = "sidechain")]
@@ -190,7 +190,7 @@ where
 		let best_block_hash = Default::default();
 
 		// Update metric
-		if let Err(e) = self.ocall_api.update_metric(EnclaveMetric::TopPoolSizeIncrement) {
+		if let Err(e) = self.ocall_api.update_metrics(vec![EnclaveMetric::TopPoolSizeIncrement]) {
 			warn!("Failed to update metric for top pool size: {:?}", e);
 		}
 
@@ -256,7 +256,7 @@ where
 		debug!("removing {:?} from top pool", hash);
 
 		// Update metric
-		if let Err(e) = self.ocall_api.update_metric(EnclaveMetric::TopPoolSizeDecrement) {
+		if let Err(e) = self.ocall_api.update_metrics(vec![EnclaveMetric::TopPoolSizeDecrement]) {
 			warn!("Failed to update metric for top pool size: {:?}", e);
 		}
 

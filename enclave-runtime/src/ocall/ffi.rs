@@ -77,7 +77,7 @@ extern "C" {
 		resp_size: u32,
 	) -> sgx_status_t;
 
-	pub fn ocall_update_metric(
+	pub fn ocall_update_metrics(
 		ret_val: *mut sgx_status_t,
 		metric_ptr: *const u8,
 		metric_size: u32,

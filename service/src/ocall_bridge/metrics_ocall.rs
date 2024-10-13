@@ -38,14 +38,16 @@ impl<MetricsReceiver> MetricsBridge for MetricsOCall<MetricsReceiver>
 where
 	MetricsReceiver: ReceiveEnclaveMetrics,
 {
-	fn update_metric(&self, metric_encoded: Vec<u8>) -> OCallBridgeResult<()> {
-		let metric: EnclaveMetric =
-			Decode::decode(&mut metric_encoded.as_slice()).map_err(|e| {
-				OCallBridgeError::UpdateMetric(format!("Failed to decode metric: {:?}", e))
+	fn update_metrics(&self, metrics_encoded: Vec<u8>) -> OCallBridgeResult<()> {
+		let metrics: Vec<EnclaveMetric> =
+			Decode::decode(&mut metrics_encoded.as_slice()).map_err(|e| {
+				OCallBridgeError::UpdateMetric(format!("Failed to decode metrics: {:?}", e))
 			})?;
-
-		self.receiver.receive_enclave_metric(metric).map_err(|e| {
-			OCallBridgeError::UpdateMetric(format!("Failed to receive enclave metric: {:?}", e))
-		})
+		for metric in metrics.iter() {
+			self.receiver.receive_enclave_metric(metric.clone()).map_err(|e| {
+				OCallBridgeError::UpdateMetric(format!("Failed to receive enclave metric: {:?}", e))
+			})?
+		}
+		Ok(())
 	}
 }

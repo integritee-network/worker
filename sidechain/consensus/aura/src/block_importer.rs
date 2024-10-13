@@ -90,7 +90,8 @@ impl<
 		ParentchainBlockImporter,
 		TCS,
 		G,
-	> where
+	>
+where
 	Authority: Pair,
 	Authority::Public: std::fmt::Debug + UncheckedFrom<[u8; 32]>,
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
@@ -181,7 +182,8 @@ impl<
 		ParentchainBlockImporter,
 		TCS,
 		G,
-	> where
+	>
+where
 	Authority: Pair,
 	Authority::Public: std::fmt::Debug + UncheckedFrom<[u8; 32]>,
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
@@ -342,7 +344,7 @@ impl<
 		// Send metric about sidechain block height (i.e. block number)
 		let block_height_metric =
 			EnclaveMetric::SetSidechainBlockHeight(sidechain_block.header().block_number());
-		if let Err(e) = self.ocall_api.update_metric(block_height_metric) {
+		if let Err(e) = self.ocall_api.update_metrics(vec![block_height_metric]) {
 			warn!("Failed to update sidechain block height metric: {:?}", e);
 		}
 

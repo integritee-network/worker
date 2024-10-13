@@ -14,23 +14,23 @@
 	limitations under the License.
 
 */
-
 use crate::ocall::{ffi, OcallApi};
+use alloc::vec::Vec;
 use codec::Encode;
 use frame_support::ensure;
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use sgx_types::{sgx_status_t, SgxResult};
 
 impl EnclaveMetricsOCallApi for OcallApi {
-	fn update_metric<Metric: Encode>(&self, metric: Metric) -> SgxResult<()> {
+	fn update_metrics<Metric: Encode>(&self, metrics: Vec<Metric>) -> SgxResult<()> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-		let metric_encoded = metric.encode();
+		let metrics_encoded = metrics.encode();
 
 		let res = unsafe {
-			ffi::ocall_update_metric(
+			ffi::ocall_update_metrics(
 				&mut rt as *mut sgx_status_t,
-				metric_encoded.as_ptr(),
-				metric_encoded.len() as u32,
+				metrics_encoded.as_ptr(),
+				metrics_encoded.len() as u32,
 			)
 		};
 

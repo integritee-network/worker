@@ -53,7 +53,7 @@ pub fn add_top_pool_direct_rpc_methods<R, TCS, G, OCallApi>(
 	io_handler.add_sync_method("author_submitAndWatchExtrinsic", move |params: Params| {
 		debug!("worker_api_direct rpc was called: author_submitAndWatchExtrinsic");
 		ocall_api
-			.update_metric(EnclaveMetric::RpcRequestsIncrement)
+			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
 			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		let json_value = match author_submit_extrinsic_inner(watch_author.clone(), params) {
 			Ok(hash_value) => RpcReturnValue {

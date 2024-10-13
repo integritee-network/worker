@@ -68,7 +68,7 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OCallApi>(
 	io_handler.add_sync_method("author_getShieldingKey", move |_: Params| {
 		debug!("worker_api_direct rpc was called: author_getShieldingKey");
 		ocall_api
-			.update_metric(EnclaveMetric::RpcRequestsIncrement)
+			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
 			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		let rsa_pubkey = match shielding_key.retrieve_pubkey() {
 			Ok(key) => key,
