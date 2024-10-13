@@ -135,7 +135,7 @@ pub fn add_top_pool_direct_rpc_methods<R, TCS, G, OCallApi>(
 	});
 
 	let local_author = top_pool_author;
-	let local_ocall_api = ocall_api.clone();
+	let local_ocall_api = ocall_api;
 	io_handler.add_sync_method("author_pendingTrustedCallsFor", move |params: Params| {
 		debug!("worker_api_direct rpc was called: author_pendingTrustedCallsFor");
 		local_ocall_api

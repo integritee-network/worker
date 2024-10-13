@@ -286,7 +286,7 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OCallApi>(
 		Ok(Value::String(format!("hello, {}", parsed)))
 	});
 
-	let local_ocall_api = ocall_api.clone();
+	let local_ocall_api = ocall_api;
 	io_handler.add_sync_method("system_version", move |_: Params| {
 		debug!("worker_api_direct rpc was called: system_version");
 		local_ocall_api
