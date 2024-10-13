@@ -14,7 +14,6 @@
 	limitations under the License.
 
 */
-
 use crate::{
 	error::{Error, Result},
 	initialization::global_components::{
@@ -48,8 +47,9 @@ use itc_parentchain::{
 	},
 };
 use itp_component_container::ComponentGetter;
+use itp_enclave_metrics::EnclaveMetric;
 use itp_extrinsics_factory::CreateExtrinsics;
-use itp_ocall_api::{EnclaveOnChainOCallApi, EnclaveSidechainOCallApi};
+use itp_ocall_api::{EnclaveMetricsOCallApi, EnclaveOnChainOCallApi, EnclaveSidechainOCallApi};
 use itp_pallet_storage::{SidechainPalletStorage, SidechainPalletStorageKeys};
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::key_repository::AccessKey;
@@ -212,7 +212,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 				return Ok(())
 			}
 
-			log_remaining_slot_duration(&slot, "Before AURA");
+			log_remaining_slot_duration(&slot, SlotStage::BeforeAura);
 
 			let env = ProposerFactory::<Block, _, _, _>::new(
 				top_pool_author,
@@ -237,11 +237,11 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 			// Drop lock as soon as we don't need it anymore.
 			drop(_enclave_write_lock);
 
-			log_remaining_slot_duration(&slot, "After AURA");
+			log_remaining_slot_duration(&slot, SlotStage::AfterAura);
 
 			send_blocks_and_extrinsics::<Block, _, _>(blocks, parentchain_calls, ocall_api)?;
 
-			log_remaining_slot_duration(&slot, "After broadcasting and sending extrinsic");
+			log_remaining_slot_duration(&slot, SlotStage::AfterBroadcastAndExtrinsics);
 		},
 		None => {
 			debug!("No slot yielded. Skipping block production.");
@@ -372,20 +372,57 @@ where
 
 fn log_remaining_slot_duration<B: BlockTrait<Hash = H256>>(
 	slot_info: &SlotInfo<B>,
-	stage_name: &str,
+	stage: SlotStage,
 ) {
+	GLOBAL_OCALL_API_COMPONENT
+		.get()
+		.map(|ocall_api| {
+			ocall_api.update_metrics(vec![EnclaveMetric::SidechainAuraSlotRemainingTimes(
+				stage.metrics_label().into(),
+				slot_info.duration_remaining().unwrap_or_default(),
+			)])
+		})
+		.unwrap_or_else(|e| {
+			error!("failed to get ocall_api: {:?}", e);
+			Ok(())
+		})
+		.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 	match slot_info.duration_remaining() {
 		None => {
-			info!("No time remaining in slot (id: {:?}, stage: {})", slot_info.slot, stage_name);
+			info!("No time remaining in slot (id: {:?}, stage: {})", slot_info.slot, stage.log());
 		},
 		Some(remainder) => {
 			trace!(
 				"Remaining time in slot (id: {:?}, stage {}): {} ms, {}% of slot time",
 				slot_info.slot,
-				stage_name,
+				stage.log(),
 				remainder.as_millis(),
 				(remainder.as_millis() as f64 / slot_info.duration.as_millis() as f64) * 100f64
 			);
 		},
 	};
+}
+
+enum SlotStage {
+	BeforeAura,
+	AfterAura,
+	AfterBroadcastAndExtrinsics,
+}
+
+impl SlotStage {
+	fn metrics_label(&self) -> &'static str {
+		match self {
+			Self::BeforeAura => "before_aura",
+			Self::AfterAura => "after_aura",
+			Self::AfterBroadcastAndExtrinsics => "after_bcast_and_xt",
+		}
+	}
+
+	fn log(&self) -> &'static str {
+		match self {
+			Self::BeforeAura => "before AURA",
+			Self::AfterAura => "after AURA",
+			Self::AfterBroadcastAndExtrinsics => "After broadcasting and sending extrinsic",
+		}
+	}
 }

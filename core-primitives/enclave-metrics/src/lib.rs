@@ -40,6 +40,7 @@ pub enum EnclaveMetric {
 	TopPoolSizeDecrement,
 	RpcRequestsIncrement,
 	RpcTrustedCallsIncrement,
+	SidechainAuraSlotRemainingTimes(String, Duration),
 	StfStateUpdateExecutionDuration(Duration),
 	StfStateUpdateExecutedCallsSuccessfulCount(u32),
 	StfStateUpdateExecutedCallsFailedCount(u32),

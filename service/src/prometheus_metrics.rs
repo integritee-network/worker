@@ -39,8 +39,9 @@ use itp_enclave_metrics::EnclaveMetric;
 use lazy_static::lazy_static;
 use log::*;
 use prometheus::{
-	proto::MetricFamily, register_gauge, register_histogram, register_int_counter,
-	register_int_gauge, Gauge, Histogram, HistogramOpts, IntCounter, IntGauge,
+	proto::MetricFamily, register_gauge, register_histogram, register_histogram_vec,
+	register_int_counter, register_int_gauge, Gauge, Histogram, HistogramOpts, HistogramVec,
+	IntCounter, IntGauge,
 };
 use serde::{Deserialize, Serialize};
 use std::{net::SocketAddr, sync::Arc};
@@ -48,6 +49,7 @@ use warp::{Filter, Rejection, Reply};
 
 const DURATION_HISTOGRAM_BUCKETS: [f64; 10] =
 	[0.0001, 0.0003, 0.0009, 0.0027, 0.0081, 0.0243, 0.0729, 0.2187, 0.6561, 1.9683];
+const SLOT_TIME_HISTOGRAM_BUCKETS: [f64; 10] = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
 const COUNT_HISTOGRAM_BUCKETS: [f64; 12] =
 	[0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0, 128.0, 256.0, 512.0, 1024.0];
 
@@ -68,6 +70,10 @@ lazy_static! {
 			.unwrap();
 	static ref ENCLAVE_RPC_TC_RECEIVED: IntCounter =
 		register_int_counter!("integritee_worker_enclave_rpc_tc_received", "Enclave RPC: how many trusted calls have been received via rpc")
+			.unwrap();
+	static ref ENCLAVE_SIDECHAIN_AURA_REMAINING_DURATIONS: HistogramVec =
+		register_histogram_vec!(HistogramOpts::new("integritee_worker_enclave_sidechain_aura_remaining_durations", "Enclave Sidechain AURA durations: remaining time in slot for different stages")
+		.buckets(SLOT_TIME_HISTOGRAM_BUCKETS.into()), &["stage"])
 			.unwrap();
 	static ref ENCLAVE_STF_STATE_UPDATE_EXECUTION_DURATION: Histogram =
 		register_histogram!(HistogramOpts::new("integritee_worker_enclave_stf_state_update_execution_duration", "Enclave STF: state update execution duration from before on_initialize to after on_finalize")
@@ -208,6 +214,10 @@ impl ReceiveEnclaveMetrics for EnclaveMetricsReceiver {
 			EnclaveMetric::TopPoolSizeDecrement => ENCLAVE_SIDECHAIN_TOP_POOL_SIZE.dec(),
 			EnclaveMetric::RpcRequestsIncrement => ENCLAVE_RPC_REQUESTS.inc(),
 			EnclaveMetric::RpcTrustedCallsIncrement => ENCLAVE_RPC_TC_RECEIVED.inc(),
+			EnclaveMetric::SidechainAuraSlotRemainingTimes(label, duration) =>
+				ENCLAVE_SIDECHAIN_AURA_REMAINING_DURATIONS
+					.with_label_values([label.as_str()].as_slice())
+					.observe(duration.as_secs_f64()),
 			EnclaveMetric::StfStateUpdateExecutionDuration(duration) =>
 				ENCLAVE_STF_STATE_UPDATE_EXECUTION_DURATION.observe(duration.as_secs_f64()),
 			EnclaveMetric::StfStateUpdateExecutedCallsSuccessfulCount(count) =>
