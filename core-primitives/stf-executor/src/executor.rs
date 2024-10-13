@@ -21,8 +21,9 @@ use crate::{
 	BatchExecutionResult, ExecutedOperation,
 };
 use codec::{Decode, Encode};
+use itp_enclave_metrics::EnclaveMetric;
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
-use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
+use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi};
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_stf_interface::{
 	parentchain_pallet::ParentchainPalletInstancesInterface, StateCallInterface, UpdateState,
@@ -59,7 +60,7 @@ where
 impl<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G>
 	StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G>
 where
-	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
+	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + EnclaveMetricsOCallApi,
 	StateHandler: HandleState<HashType = H256>,
 	StateHandler::StateT: SgxExternalitiesTrait + Encode,
 	NodeMetadataRepository: AccessNodeMetadata,
@@ -278,7 +279,7 @@ where
 impl<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G> StateUpdateProposer<TCS, G>
 	for StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G>
 where
-	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
+	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + EnclaveMetricsOCallApi,
 	StateHandler: HandleState<HashType = H256>,
 	StateHandler::StateT: SgxExternalitiesTrait + Encode + StateHash,
 	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesType: Encode,
@@ -310,7 +311,8 @@ where
 		PH: HeaderTrait<Hash = H256>,
 		F: FnOnce(Self::Externalities) -> Self::Externalities,
 	{
-		let ends_at = duration_now() + max_exec_duration;
+		let started_at = duration_now();
+		let ends_at = started_at + max_exec_duration;
 
 		let (state, state_hash_before_execution) = self.state_handler.load_cloned(shard)?;
 
@@ -350,6 +352,12 @@ where
 			error!("on_finalize failed: {:?}", e);
 		});
 
+		let propsing_duration = duration_now() - started_at;
+		self.ocall_api
+			.update_metrics(vec![EnclaveMetric::StfStateUpodateExecutionDuration(
+				propsing_duration,
+			)])
+			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		Ok(BatchExecutionResult {
 			executed_operations: executed_and_failed_calls,
 			state_hash_before_execution,

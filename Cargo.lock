@@ -3453,6 +3453,7 @@ version = "0.9.0"
 dependencies = [
  "hex",
  "itc-parentchain-test",
+ "itp-enclave-metrics",
  "itp-node-api",
  "itp-ocall-api",
  "itp-sgx-crypto",
