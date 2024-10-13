@@ -43,7 +43,10 @@ pub enum EnclaveMetric {
 	StfStateUpdateExecutionDuration(Duration),
 	StfStateUpdateExecutedCallsSuccessfulCount(u32),
 	StfStateUpdateExecutedCallsFailedCount(u32),
-	StfTotalIssuanceSet(f64),
+	StfRuntimeTotalIssuanceSet(f64),
+	StfRuntimeParentchainIntegriteeProcessedBlockNumberSet(u32),
+	StfRuntimeParentchainTargetAProcessedBlockNumberSet(u32),
+	StfRuntimeParentchainTargetBProcessedBlockNumberSet(u32),
 	ExchangeRateOracle(ExchangeRateOracleMetric),
 	// OracleMetric(OracleMetric<MetricsInfo>),
 }

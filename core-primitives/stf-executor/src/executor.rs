@@ -36,7 +36,7 @@ use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryS
 use itp_storage::keys::storage_value_key;
 use itp_time_utils::{duration_now, now_as_millis};
 use itp_types::{
-	parentchain::{Header as ParentchainHeader, ParentchainCall, ParentchainId},
+	parentchain::{BlockNumber, Header as ParentchainHeader, ParentchainCall, ParentchainId},
 	storage::StorageEntryVerified,
 	Balance, H256,
 };
@@ -353,13 +353,7 @@ where
 			error!("on_finalize failed: {:?}", e);
 		});
 
-		// while this may not be the best abstraction, it avoids circular dependiencies
-		// with app-libs and will be suitable in 99% of cases
-		// prometheus has no support for NaN, therefore we fall back to -1
-		let total_issuance_metric: f64 = state
-			.get(&storage_value_key("Balances", "TotalIssuance"))
-			.map(|v| Balance::decode(&mut v.as_slice()).map(|b| b as f64).unwrap_or(-1.0))
-			.unwrap_or(-1.0);
+		let runtime_metrics = gather_runtime_metrics(&state);
 
 		let propsing_duration = duration_now() - started_at;
 		let successful_call_count =
@@ -372,7 +366,16 @@ where
 					successful_call_count as u32,
 				),
 				EnclaveMetric::StfStateUpdateExecutedCallsFailedCount(failed_call_count as u32),
-				EnclaveMetric::StfTotalIssuanceSet(total_issuance_metric),
+				EnclaveMetric::StfRuntimeTotalIssuanceSet(runtime_metrics.total_issuance),
+				EnclaveMetric::StfRuntimeParentchainIntegriteeProcessedBlockNumberSet(
+					runtime_metrics.parentchain_integritee_processed_block_number,
+				),
+				EnclaveMetric::StfRuntimeParentchainTargetAProcessedBlockNumberSet(
+					runtime_metrics.parentchain_target_a_processed_block_number,
+				),
+				EnclaveMetric::StfRuntimeParentchainTargetBProcessedBlockNumberSet(
+					runtime_metrics.parentchain_target_b_processed_block_number,
+				),
 			])
 			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		Ok(BatchExecutionResult {
@@ -398,4 +401,44 @@ pub fn shards_key_hash() -> Vec<u8> {
 	// here you have to point to a storage value containing a Vec of
 	// ShardIdentifiers the enclave uses this to autosubscribe to no shards
 	vec![]
+}
+
+/// assumes a common structure of sgx_runtime and extracts interesting metrics
+/// while this may not be the best abstraction, it avoids circular dependencies
+/// with app-libs and will be suitable in 99% of cases
+fn gather_runtime_metrics<State>(state: &State) -> RuntimeMetrics
+where
+	State: SgxExternalitiesTrait + Encode,
+{
+	// prometheus has no support for NaN, therefore we fall back to -1
+	let total_issuance: f64 = state
+		.get(&storage_value_key("Balances", "TotalIssuance"))
+		.map(|v| Balance::decode(&mut v.as_slice()).map(|b| b as f64).unwrap_or(-1.0))
+		.unwrap_or(-1.0);
+	// fallback to zero is fine here
+	let parentchain_integritee_processed_block_number: u32 = state
+		.get(&storage_value_key("ParentchainIntegritee", "Number"))
+		.map(|v| BlockNumber::decode(&mut v.as_slice()).unwrap_or_default())
+		.unwrap_or_default();
+	let parentchain_target_a_processed_block_number: u32 = state
+		.get(&storage_value_key("ParentchainTargetA", "Number"))
+		.map(|v| BlockNumber::decode(&mut v.as_slice()).unwrap_or_default())
+		.unwrap_or_default();
+	let parentchain_target_b_processed_block_number: u32 = state
+		.get(&storage_value_key("ParentchainTargetB", "Number"))
+		.map(|v| BlockNumber::decode(&mut v.as_slice()).unwrap_or_default())
+		.unwrap_or_default();
+	RuntimeMetrics {
+		total_issuance,
+		parentchain_integritee_processed_block_number,
+		parentchain_target_a_processed_block_number,
+		parentchain_target_b_processed_block_number,
+	}
+}
+
+struct RuntimeMetrics {
+	total_issuance: f64,
+	parentchain_integritee_processed_block_number: u32,
+	parentchain_target_a_processed_block_number: u32,
+	parentchain_target_b_processed_block_number: u32,
 }

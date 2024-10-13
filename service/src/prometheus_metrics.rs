@@ -81,8 +81,17 @@ lazy_static! {
 		register_histogram!(HistogramOpts::new("integritee_worker_enclave_stf_state_update_executed_calls_failed_count", "Enclave STF: how many calls have failed during execution per update proposal")
 		.buckets(COUNT_HISTOGRAM_BUCKETS.into()))
 			.unwrap();
-	static ref ENCLAVE_STF_TOTAL_ISSUANCE: Gauge =
-		register_gauge!("integritee_worker_enclave_stf_total_issuance", "Enclave stf total issuance assuming its native token")
+	static ref ENCLAVE_STF_RUNTIME_TOTAL_ISSUANCE: Gauge =
+		register_gauge!("integritee_worker_enclave_stf_runtime_total_issuance", "Enclave stf total issuance assuming its native token")
+			.unwrap();
+	static ref ENCLAVE_STF_RUNTIME_PARENTCHAIN_INTEGRITEE_PROCESSED_BLOCK_NUMBER: IntGauge =
+		register_int_gauge!("integritee_worker_enclave_stf_runtime_parentchain_integritee_processed_block_number", "Enclave stf. Last processed parentchain block for Integritee")
+			.unwrap();
+	static ref ENCLAVE_STF_RUNTIME_PARENTCHAIN_TARGET_A_PROCESSED_BLOCK_NUMBER: IntGauge =
+		register_int_gauge!("integritee_worker_enclave_stf_runtime_parentchain_target_a_processed_block_number", "Enclave stf. Last processed parentchain block for Target A")
+			.unwrap();
+	static ref ENCLAVE_STF_RUNTIME_PARENTCHAIN_TARGET_B_PROCESSED_BLOCK_NUMBER: IntGauge =
+		register_int_gauge!("integritee_worker_enclave_stf_runtime_parentchain_target_b_processed_block_number", "Enclave stf. Last processed parentchain block for Target B")
 			.unwrap();
 	static ref ENCLAVE_FINGERPRINT: IntCounter =
 		register_int_counter!("integritee_worker_enclave_fingerprint", "Enclave fingerprint AKA MRENCLAVE")
@@ -205,7 +214,15 @@ impl ReceiveEnclaveMetrics for EnclaveMetricsReceiver {
 				ENCLAVE_STF_STATE_UPDATE_EXECUTED_CALLS_SUCCESSFUL_COUNT.observe(count.into()),
 			EnclaveMetric::StfStateUpdateExecutedCallsFailedCount(count) =>
 				ENCLAVE_STF_STATE_UPDATE_EXECUTED_CALLS_FAILED_COUNT.observe(count.into()),
-			EnclaveMetric::StfTotalIssuanceSet(balance) => ENCLAVE_STF_TOTAL_ISSUANCE.set(balance),
+			EnclaveMetric::StfRuntimeTotalIssuanceSet(balance) =>
+				ENCLAVE_STF_RUNTIME_TOTAL_ISSUANCE.set(balance),
+			EnclaveMetric::StfRuntimeParentchainIntegriteeProcessedBlockNumberSet(bn) =>
+				ENCLAVE_STF_RUNTIME_PARENTCHAIN_INTEGRITEE_PROCESSED_BLOCK_NUMBER.set(bn.into()),
+			EnclaveMetric::StfRuntimeParentchainTargetAProcessedBlockNumberSet(bn) =>
+				ENCLAVE_STF_RUNTIME_PARENTCHAIN_TARGET_A_PROCESSED_BLOCK_NUMBER.set(bn.into()),
+			EnclaveMetric::StfRuntimeParentchainTargetBProcessedBlockNumberSet(bn) =>
+				ENCLAVE_STF_RUNTIME_PARENTCHAIN_TARGET_B_PROCESSED_BLOCK_NUMBER.set(bn.into()),
+
 			#[cfg(feature = "teeracle")]
 			EnclaveMetric::ExchangeRateOracle(m) => update_teeracle_metrics(m)?,
 			#[cfg(not(feature = "teeracle"))]
