@@ -39,8 +39,8 @@ use itp_enclave_metrics::EnclaveMetric;
 use lazy_static::lazy_static;
 use log::*;
 use prometheus::{
-	proto::MetricFamily, register_histogram, register_int_counter, register_int_gauge, Histogram,
-	HistogramOpts, IntCounter, IntGauge,
+	proto::MetricFamily, register_gauge, register_histogram, register_int_counter,
+	register_int_gauge, Gauge, Histogram, HistogramOpts, IntCounter, IntGauge,
 };
 use serde::{Deserialize, Serialize};
 use std::{net::SocketAddr, sync::Arc};
@@ -80,6 +80,9 @@ lazy_static! {
 	static ref ENCLAVE_STF_STATE_UPDATE_EXECUTED_CALLS_FAILED_COUNT: Histogram =
 		register_histogram!(HistogramOpts::new("integritee_worker_enclave_stf_state_update_executed_calls_failed_count", "Enclave STF: how many calls have failed during execution per update proposal")
 		.buckets(COUNT_HISTOGRAM_BUCKETS.into()))
+			.unwrap();
+	static ref ENCLAVE_STF_TOTAL_ISSUANCE: Gauge =
+		register_gauge!("integritee_worker_enclave_stf_total_issuance", "Enclave stf total issuance assuming its native token")
 			.unwrap();
 	static ref ENCLAVE_FINGERPRINT: IntCounter =
 		register_int_counter!("integritee_worker_enclave_fingerprint", "Enclave fingerprint AKA MRENCLAVE")
@@ -202,6 +205,7 @@ impl ReceiveEnclaveMetrics for EnclaveMetricsReceiver {
 				ENCLAVE_STF_STATE_UPDATE_EXECUTED_CALLS_SUCCESSFUL_COUNT.observe(count.into()),
 			EnclaveMetric::StfStateUpdateExecutedCallsFailedCount(count) =>
 				ENCLAVE_STF_STATE_UPDATE_EXECUTED_CALLS_FAILED_COUNT.observe(count.into()),
+			EnclaveMetric::StfTotalIssuanceSet(balance) => ENCLAVE_STF_TOTAL_ISSUANCE.set(balance),
 			#[cfg(feature = "teeracle")]
 			EnclaveMetric::ExchangeRateOracle(m) => update_teeracle_metrics(m)?,
 			#[cfg(not(feature = "teeracle"))]

@@ -33,11 +33,12 @@ use itp_stf_primitives::{
 	types::{ShardIdentifier, TrustedOperation, TrustedOperationOrHash},
 };
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
+use itp_storage::keys::storage_value_key;
 use itp_time_utils::{duration_now, now_as_millis};
 use itp_types::{
 	parentchain::{Header as ParentchainHeader, ParentchainCall, ParentchainId},
 	storage::StorageEntryVerified,
-	H256,
+	Balance, H256,
 };
 use log::*;
 use sp_runtime::traits::Header as HeaderTrait;
@@ -352,6 +353,14 @@ where
 			error!("on_finalize failed: {:?}", e);
 		});
 
+		// while this may not be the best abstraction, it avoids circular dependiencies
+		// with app-libs and will be suitable in 99% of cases
+		// prometheus has no support for NaN, therefore we fall back to -1
+		let total_issuance_metric: f64 = state
+			.get(&storage_value_key("Balances", "TotalIssuance"))
+			.map(|v| Balance::decode(&mut v.as_slice()).map(|b| b as f64).unwrap_or(-1.0))
+			.unwrap_or(-1.0);
+
 		let propsing_duration = duration_now() - started_at;
 		let successful_call_count =
 			executed_and_failed_calls.iter().filter(|call| call.is_success()).count();
@@ -363,6 +372,7 @@ where
 					successful_call_count as u32,
 				),
 				EnclaveMetric::StfStateUpdateExecutedCallsFailedCount(failed_call_count as u32),
+				EnclaveMetric::StfTotalIssuanceSet(total_issuance_metric),
 			])
 			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		Ok(BatchExecutionResult {

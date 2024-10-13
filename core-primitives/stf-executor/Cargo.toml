@@ -21,6 +21,7 @@ itp-stf-interface = { path = "../stf-interface", default-features = false }
 itp-stf-primitives = { path = "../stf-primitives", default-features = false }
 itp-stf-state-handler = { path = "../stf-state-handler", default-features = false }
 itp-stf-state-observer = { path = "../stf-state-observer", default-features = false }
+itp-storage = { path = "../storage", default-features = false }
 itp-time-utils = { path = "../time-utils", default-features = false }
 itp-top-pool-author = { path = "../top-pool-author", default-features = false }
 itp-types = { path = "../types", default-features = false }

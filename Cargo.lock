@@ -3462,6 +3462,7 @@ dependencies = [
  "itp-stf-primitives",
  "itp-stf-state-handler",
  "itp-stf-state-observer",
+ "itp-storage",
  "itp-test",
  "itp-time-utils",
  "itp-top-pool",
