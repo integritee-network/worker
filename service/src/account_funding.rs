@@ -33,7 +33,7 @@ use sp_runtime::{MultiAddress, Saturating};
 use std::{fmt::Display, thread, time::Duration};
 use substrate_api_client::{
 	ac_compose_macros::compose_extrinsic, ac_primitives::Bytes, extrinsic::BalancesExtrinsics,
-	GetBalance, GetStorage, GetTransactionPayment, SubmitAndWatch, XtStatus,
+	GetBalance, GetStorage, GetTransactionPayment, SubmitAndWatch, SystemApi, XtStatus,
 };
 use teerex_primitives::SgxAttestationMethod;
 
@@ -73,6 +73,7 @@ pub trait ParentchainAccountInfo {
 	fn free_balance(&self) -> ServiceResult<Balance>;
 	fn parentchain_id(&self) -> ServiceResult<ParentchainId>;
 	fn account_and_role(&self) -> ServiceResult<AccountAndRole>;
+	fn decimals(&self) -> ServiceResult<u64>;
 }
 
 pub struct ParentchainAccountInfoProvider {
@@ -94,6 +95,15 @@ impl ParentchainAccountInfo for ParentchainAccountInfoProvider {
 
 	fn account_and_role(&self) -> ServiceResult<AccountAndRole> {
 		Ok(self.account_and_role.clone())
+	}
+
+	fn decimals(&self) -> ServiceResult<u64> {
+		let properties = self.node_api.get_system_properties()?;
+		properties
+			.get("tokenDecimals")
+			.ok_or(Error::MissingDecimals)?
+			.as_u64()
+			.ok_or(Error::MissingDecimals)
 	}
 }
 

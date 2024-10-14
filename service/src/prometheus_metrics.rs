@@ -172,9 +172,12 @@ where
 
 	async fn update_metrics(&self) {
 		for wallet in &self.wallets {
-			if let (Ok(balance), Ok(parentchain_id), Ok(account_and_role)) =
-				(wallet.free_balance(), wallet.parentchain_id(), wallet.account_and_role())
-			{
+			if let (Ok(balance), Ok(parentchain_id), Ok(account_and_role), Ok(decimals)) = (
+				wallet.free_balance(),
+				wallet.parentchain_id(),
+				wallet.account_and_role(),
+				wallet.decimals(),
+			) {
 				ACCOUNT_FREE_BALANCE
 					.with_label_values(
 						[
@@ -183,7 +186,7 @@ where
 						]
 						.as_slice(),
 					)
-					.set(balance as f64)
+					.set(balance as f64 / (10.0f64.powf(decimals as f64)));
 			} else {
 				error!("failed to update prometheus metric for a wallet");
 			}

@@ -68,6 +68,7 @@ use itp_enclave_api::Enclave;
 use crate::{
 	account_funding::{shard_vault_initial_funds, AccountAndRole},
 	error::ServiceResult,
+	prometheus_metrics::HandleMetrics,
 };
 use enclave_bridge_primitives::ShardIdentifier;
 use itc_parentchain::primitives::ParentchainId;
@@ -922,7 +923,7 @@ fn spawn_worker_for_shard_polling<InitializationHandler>(
 					"[+] Found `WorkerForShard` on parentchain state: {:?}",
 					enclave.instance_signer()
 				);
-				break
+				break;
 			}
 			thread::sleep(Duration::from_secs(POLL_INTERVAL_SECS));
 		}
