@@ -363,19 +363,20 @@ where
 		self.ocall_api
 			.update_metrics(vec![
 				EnclaveMetric::StfStateUpdateExecutionDuration(propsing_duration),
-				EnclaveMetric::StfStateUpdateExecutedCallsSuccessfulCount(
-					successful_call_count as u32,
-				),
-				EnclaveMetric::StfStateUpdateExecutedCallsFailedCount(failed_call_count as u32),
+				EnclaveMetric::StfStateUpdateExecutedCallsCount(true, successful_call_count as u32),
+				EnclaveMetric::StfStateUpdateExecutedCallsCount(false, failed_call_count as u32),
 				EnclaveMetric::StfStateSizeSet(*shard, state_size_bytes as u32),
 				EnclaveMetric::StfRuntimeTotalIssuanceSet(runtime_metrics.total_issuance),
-				EnclaveMetric::StfRuntimeParentchainIntegriteeProcessedBlockNumberSet(
+				EnclaveMetric::StfRuntimeParentchainProcessedBlockNumberSet(
+					ParentchainId::Integritee,
 					runtime_metrics.parentchain_integritee_processed_block_number,
 				),
-				EnclaveMetric::StfRuntimeParentchainTargetAProcessedBlockNumberSet(
+				EnclaveMetric::StfRuntimeParentchainProcessedBlockNumberSet(
+					ParentchainId::TargetA,
 					runtime_metrics.parentchain_target_a_processed_block_number,
 				),
-				EnclaveMetric::StfRuntimeParentchainTargetBProcessedBlockNumberSet(
+				EnclaveMetric::StfRuntimeParentchainProcessedBlockNumberSet(
+					ParentchainId::TargetB,
 					runtime_metrics.parentchain_target_b_processed_block_number,
 				),
 			])
