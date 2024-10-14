@@ -23,6 +23,7 @@ use crate::teeracle::teeracle_metrics::update_teeracle_metrics;
 use crate::{
 	account_funding::ParentchainAccountInfo,
 	error::{Error, ServiceResult},
+	sidechain_setup::ParentchainIntegriteeSidechainInfo,
 };
 use async_trait::async_trait;
 use base58::ToBase58;
@@ -66,6 +67,9 @@ lazy_static! {
 			.unwrap();
 	static ref ENCLAVE_SIDECHAIN_TOP_POOL_SIZE: IntGauge =
 		register_int_gauge!("integritee_worker_enclave_sidechain_top_pool_size", "Enclave sidechain top pool size")
+			.unwrap();
+	static ref ENCLAVE_SIDECHAIN_LAST_FINALIZED_BLOCK_NUMBER: IntGaugeVec =
+		register_int_gauge_vec!("integritee_worker_enclave_sidechain_last_finalized_block_number", "Enclave sidechain last finalized block number (on L1)", &["shard"])
 			.unwrap();
 	static ref ENCLAVE_RPC_REQUESTS: IntCounter =
 		register_int_counter!("integritee_worker_enclave_rpc_requests", "Enclave RPC requests")
@@ -140,19 +144,22 @@ pub trait HandleMetrics {
 }
 
 /// Metrics handler implementation. This is for untrusted sources of metrics (non-enclave)
-pub struct MetricsHandler<Wallet> {
+pub struct MetricsHandler<Wallet, Sidechain> {
 	wallets: Vec<Arc<Wallet>>,
+	sidechain: Arc<Sidechain>,
 }
 
 #[async_trait]
-impl<Wallet> HandleMetrics for MetricsHandler<Wallet>
+impl<Wallet, Sidechain> HandleMetrics for MetricsHandler<Wallet, Sidechain>
 where
 	Wallet: ParentchainAccountInfo + Send + Sync,
+	Sidechain: ParentchainIntegriteeSidechainInfo + Send + Sync,
 {
 	type ReplyType = String;
 
 	async fn handle_metrics(&self) -> Result<Self::ReplyType, Rejection> {
-		self.update_metrics().await;
+		self.update_account_metrics().await;
+		self.update_sidechain_metrics().await;
 
 		let default_metrics = match gather_metrics_into_reply(&prometheus::gather()) {
 			Ok(r) => r,
@@ -166,15 +173,16 @@ where
 	}
 }
 
-impl<Wallet> MetricsHandler<Wallet>
+impl<Wallet, Sidechain> MetricsHandler<Wallet, Sidechain>
 where
 	Wallet: ParentchainAccountInfo + Send + Sync,
+	Sidechain: ParentchainIntegriteeSidechainInfo + Send + Sync,
 {
-	pub fn new(wallets: Vec<Arc<Wallet>>) -> Self {
-		MetricsHandler { wallets }
+	pub fn new(wallets: Vec<Arc<Wallet>>, sidechain: Arc<Sidechain>) -> Self {
+		MetricsHandler { wallets, sidechain }
 	}
 
-	async fn update_metrics(&self) {
+	async fn update_account_metrics(&self) {
 		for wallet in &self.wallets {
 			if let (Ok(balance), Ok(parentchain_id), Ok(account_and_role), Ok(decimals)) = (
 				wallet.free_balance(),
@@ -194,6 +202,18 @@ where
 			} else {
 				error!("failed to update prometheus metric for a wallet");
 			}
+		}
+	}
+
+	async fn update_sidechain_metrics(&self) {
+		if let (Ok(last_finalized_block_number), Ok(shard)) =
+			(self.sidechain.last_finalized_block_number(), self.sidechain.shard())
+		{
+			ENCLAVE_SIDECHAIN_LAST_FINALIZED_BLOCK_NUMBER
+				.with_label_values([format!("{}", shard.0.to_base58()).as_str()].as_slice())
+				.set(last_finalized_block_number as i64);
+		} else {
+			error!("failed to update prometheus metric for sidechain data");
 		}
 	}
 }

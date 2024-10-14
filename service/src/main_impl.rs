@@ -69,6 +69,7 @@ use crate::{
 	account_funding::{shard_vault_initial_funds, AccountAndRole},
 	error::ServiceResult,
 	prometheus_metrics::{set_static_metrics, HandleMetrics},
+	sidechain_setup::ParentchainIntegriteeSidechainInfoProvider,
 };
 use enclave_bridge_primitives::ShardIdentifier;
 use itc_parentchain::primitives::ParentchainId;
@@ -711,8 +712,13 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 				AccountAndRole::EnclaveSigner(tee_accountid.clone()),
 			)))
 		});
+		let sidechain_info_provider = Arc::new(ParentchainIntegriteeSidechainInfoProvider::new(
+			integritee_rpc_api.clone(),
+			*shard,
+		));
 
-		let metrics_handler = Arc::new(MetricsHandler::new(account_info_providers));
+		let metrics_handler =
+			Arc::new(MetricsHandler::new(account_info_providers, sidechain_info_provider));
 		let metrics_server_port = config
 			.try_parse_metrics_server_port()
 			.expect("metrics server port to be a valid port number");

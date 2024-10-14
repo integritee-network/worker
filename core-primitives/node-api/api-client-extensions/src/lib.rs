@@ -21,6 +21,7 @@ pub use substrate_api_client::{api::Error as ApiClientError, rpc::TungsteniteRpc
 
 pub mod account;
 pub mod chain;
+pub mod pallet_sidechain;
 pub mod pallet_teeracle;
 pub mod pallet_teerex;
 
