@@ -68,7 +68,7 @@ use itp_enclave_api::Enclave;
 use crate::{
 	account_funding::{shard_vault_initial_funds, AccountAndRole},
 	error::ServiceResult,
-	prometheus_metrics::HandleMetrics,
+	prometheus_metrics::{set_static_metrics, HandleMetrics},
 };
 use enclave_bridge_primitives::ShardIdentifier;
 use itc_parentchain::primitives::ParentchainId;
@@ -331,7 +331,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	let mrenclave = enclave.get_fingerprint().unwrap();
 	println!("MRENCLAVE={}", mrenclave.0.to_base58());
 	println!("MRENCLAVE in hex {:?}", hex::encode(mrenclave));
-
+	set_static_metrics(VERSION, mrenclave.0.to_base58().as_str());
 	// ------------------------------------------------------------------------
 	// let new workers call us for key provisioning
 	println!("MU-RA server listening on {}", config.mu_ra_url());

@@ -37,6 +37,7 @@ use itc_rest_client::{
 	RestGet, RestPath,
 };
 use itp_enclave_metrics::EnclaveMetric;
+use itp_types::EnclaveFingerprint;
 use lazy_static::lazy_static;
 use log::*;
 use prometheus::{
@@ -103,8 +104,8 @@ lazy_static! {
 	static ref ENCLAVE_STF_RUNTIME_PARENTCHAIN_TARGET_B_PROCESSED_BLOCK_NUMBER: IntGauge =
 		register_int_gauge!("integritee_worker_enclave_stf_runtime_parentchain_target_b_processed_block_number", "Enclave stf. Last processed parentchain block for Target B")
 			.unwrap();
-	static ref ENCLAVE_FINGERPRINT: IntCounter =
-		register_int_counter!("integritee_worker_enclave_fingerprint", "Enclave fingerprint AKA MRENCLAVE")
+	static ref ENCLAVE_LABELS: IntGaugeVec =
+		register_int_gauge_vec!("integritee_worker_enclave_labels", "Enclave labels for version and fingerprint AKA MRENCLAVE", &["version", "fingerprint"])
 			.unwrap();
 }
 
@@ -263,6 +264,9 @@ impl ReceiveEnclaveMetrics for EnclaveMetricsReceiver {
 	}
 }
 
+pub fn set_static_metrics(version: &str, fingerprint_b58: &str) {
+	ENCLAVE_LABELS.with_label_values([version, fingerprint_b58].as_slice()).set(0)
+}
 // Data structure that matches with REST API JSON
 
 #[derive(Serialize, Deserialize, Debug)]
