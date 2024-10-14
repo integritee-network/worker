@@ -355,7 +355,7 @@ where
 
 		let state_size_bytes = state.size();
 		let runtime_metrics = gather_runtime_metrics(&state);
-
+		let pending_tops = trusted_calls.len().saturating_sub(executed_and_failed_calls.len());
 		let propsing_duration = duration_now() - started_at;
 		let successful_call_count =
 			executed_and_failed_calls.iter().filter(|call| call.is_success()).count();
@@ -365,6 +365,7 @@ where
 				EnclaveMetric::StfStateUpdateExecutionDuration(propsing_duration),
 				EnclaveMetric::StfStateUpdateExecutedCallsCount(true, successful_call_count as u32),
 				EnclaveMetric::StfStateUpdateExecutedCallsCount(false, failed_call_count as u32),
+				EnclaveMetric::TopPoolSizeSet(pending_tops as u64),
 				EnclaveMetric::StfStateSizeSet(*shard, state_size_bytes as u32),
 				EnclaveMetric::StfRuntimeTotalIssuanceSet(runtime_metrics.total_issuance),
 				EnclaveMetric::StfRuntimeParentchainProcessedBlockNumberSet(

@@ -57,25 +57,24 @@ const COUNT_HISTOGRAM_BUCKETS: [f64; 12] =
 	[0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0, 128.0, 256.0, 512.0, 1024.0];
 
 lazy_static! {
-	/// Register all the prometheus metrics we want to monitor (aside from the default process ones).
-
+	// Register all the prometheus metrics we want to monitor (aside from the default process ones).
 	static ref ACCOUNT_FREE_BALANCE: GaugeVec =
 		register_gauge_vec!("integritee_worker_account_free_balance", "Free balance of an account on a parentchain with a role (lossy f64)", &["parentchain","role"])
 			.unwrap();
-	static ref ENCLAVE_SIDECHAIN_BLOCK_HEIGHT: IntGauge =
-		register_int_gauge!("integritee_worker_enclave_sidechain_block_height", "Enclave sidechain block height")
-			.unwrap();
-	static ref ENCLAVE_SIDECHAIN_TOP_POOL_SIZE: IntGauge =
-		register_int_gauge!("integritee_worker_enclave_sidechain_top_pool_size", "Enclave sidechain top pool size")
-			.unwrap();
-	static ref ENCLAVE_SIDECHAIN_LAST_FINALIZED_BLOCK_NUMBER: IntGaugeVec =
-		register_int_gauge_vec!("integritee_worker_enclave_sidechain_last_finalized_block_number", "Enclave sidechain last finalized block number (on L1)", &["shard"])
+	static ref ENCLAVE_TOP_POOL_SIZE: IntGauge =
+		register_int_gauge!("integritee_worker_enclave_top_pool_size", "pending TOPs in pool")
 			.unwrap();
 	static ref ENCLAVE_RPC_REQUESTS: IntCounter =
 		register_int_counter!("integritee_worker_enclave_rpc_requests", "Enclave RPC requests")
 			.unwrap();
 	static ref ENCLAVE_RPC_TC_RECEIVED: IntCounter =
 		register_int_counter!("integritee_worker_enclave_rpc_tc_received", "Enclave RPC: how many trusted calls have been received via rpc")
+			.unwrap();
+	static ref ENCLAVE_SIDECHAIN_BLOCK_HEIGHT: IntGauge =
+		register_int_gauge!("integritee_worker_enclave_sidechain_block_height", "Enclave sidechain block height")
+			.unwrap();
+	static ref ENCLAVE_SIDECHAIN_LAST_FINALIZED_BLOCK_NUMBER: IntGaugeVec =
+		register_int_gauge_vec!("integritee_worker_enclave_sidechain_last_finalized_block_number", "Enclave sidechain last finalized block number (on L1)", &["shard"])
 			.unwrap();
 	static ref ENCLAVE_SIDECHAIN_AURA_REMAINING_DURATIONS: HistogramVec =
 		register_histogram_vec!(HistogramOpts::new("integritee_worker_enclave_sidechain_aura_remaining_durations", "Enclave Sidechain AURA durations: remaining time in slot for different stages")
@@ -238,12 +237,9 @@ impl ReceiveEnclaveMetrics for EnclaveMetricsReceiver {
 		match metric {
 			EnclaveMetric::SetSidechainBlockHeight(h) =>
 				ENCLAVE_SIDECHAIN_BLOCK_HEIGHT.set(h as i64),
-			EnclaveMetric::TopPoolSizeSet(pool_size) =>
-				ENCLAVE_SIDECHAIN_TOP_POOL_SIZE.set(pool_size as i64),
-			EnclaveMetric::TopPoolSizeIncrement => ENCLAVE_SIDECHAIN_TOP_POOL_SIZE.inc(),
-			EnclaveMetric::TopPoolSizeDecrement => ENCLAVE_SIDECHAIN_TOP_POOL_SIZE.dec(),
-			EnclaveMetric::RpcRequestsIncrement => ENCLAVE_RPC_REQUESTS.inc(),
+			EnclaveMetric::TopPoolSizeSet(pool_size) => ENCLAVE_TOP_POOL_SIZE.set(pool_size as i64),
 			EnclaveMetric::RpcTrustedCallsIncrement => ENCLAVE_RPC_TC_RECEIVED.inc(),
+			EnclaveMetric::RpcRequestsIncrement => ENCLAVE_RPC_REQUESTS.inc(),
 			EnclaveMetric::SidechainAuraSlotRemainingTimes(label, duration) =>
 				ENCLAVE_SIDECHAIN_AURA_REMAINING_DURATIONS
 					.with_label_values([label.as_str()].as_slice())
