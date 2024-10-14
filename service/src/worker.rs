@@ -128,9 +128,11 @@ pub trait UpdatePeers {
 
 	fn set_peers(&self, peers: Vec<Url>) -> WorkerResult<()>;
 
-	fn update_peers(&self, shard: ShardIdentifier) -> WorkerResult<()> {
+	fn update_peers(&self, shard: ShardIdentifier) -> WorkerResult<u32> {
 		let peers = self.search_peers(shard)?;
-		self.set_peers(peers)
+		let peers_count = peers.len() as u32;
+		self.set_peers(peers)?;
+		Ok(peers_count)
 	}
 }
 

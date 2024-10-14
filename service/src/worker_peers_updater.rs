@@ -28,7 +28,7 @@ use std::sync::Arc;
 /// Updates the peers of the global worker.
 #[cfg_attr(test, automock)]
 pub trait UpdateWorkerPeers {
-	fn update_peers(&self, shard: ShardIdentifier) -> WorkerResult<()>;
+	fn update_peers(&self, shard: ShardIdentifier) -> WorkerResult<u32>;
 }
 
 pub struct WorkerPeersUpdater<WorkerType> {
@@ -45,7 +45,7 @@ impl<WorkerType> UpdateWorkerPeers for WorkerPeersUpdater<WorkerType>
 where
 	WorkerType: UpdatePeers,
 {
-	fn update_peers(&self, shard: ShardIdentifier) -> WorkerResult<()> {
+	fn update_peers(&self, shard: ShardIdentifier) -> WorkerResult<u32> {
 		self.worker.update_peers(shard)
 	}
 }

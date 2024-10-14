@@ -19,6 +19,7 @@
 use crate::{
 	globals::tokio_handle::GetTokioHandle,
 	ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, SidechainBridge},
+	prometheus_metrics::set_sidechain_peer_count_metric,
 	sync_block_broadcaster::BroadcastBlocks,
 	worker_peers_updater::UpdateWorkerPeers,
 };
@@ -113,22 +114,29 @@ where
 
 		// FIXME: When & where should peers be updated?
 		trace!("Updating peers..");
-		if let Err(e) = self.peer_updater.update_peers(shard) {
-			error!("Error updating peers: {:?}", e);
-		// Fixme: returning an error here results in a `HeaderAncestryMismatch` error.
-		// status = sgx_status_t::SGX_ERROR_UNEXPECTED;
-		} else {
-			debug!("Successfully updated peers");
-		}
+		let peer_count = self
+			.peer_updater
+			.update_peers(shard)
+			.map(|peer_count| {
+				debug!("successfully updated {} peers", peer_count);
+				peer_count
+			})
+			.map_err(|e| {
+				error!("Error updating peers: {:?}", e);
+				e
+			})
+			.unwrap_or_default();
+		set_sidechain_peer_count_metric(peer_count);
 
 		trace!("Broadcasting sidechain blocks ...");
-		if let Err(e) = self.block_broadcaster.broadcast_blocks(signed_blocks) {
-			error!("Error broadcasting blocks: {:?}", e);
-		// Fixme: returning an error here results in a `HeaderAncestryMismatch` error.
-		// status = sgx_status_t::SGX_ERROR_UNEXPECTED;
-		} else {
-			debug!("Successfully broadcast blocks");
-		}
+		self.block_broadcaster
+			.broadcast_blocks(signed_blocks)
+			.map(|_| debug!("Successfully broadcast blocks"))
+			.map_err(|e| {
+				error!("Error broadcasting blocks: {:?}", e);
+				e
+			})
+			.unwrap_or(());
 
 		status
 	}

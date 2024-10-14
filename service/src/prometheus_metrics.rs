@@ -77,6 +77,9 @@ lazy_static! {
 		register_histogram_vec!(HistogramOpts::new("integritee_worker_enclave_sidechain_aura_remaining_durations", "Enclave Sidechain AURA durations: remaining time in slot for different stages")
 		.buckets(SLOT_TIME_HISTOGRAM_BUCKETS.into()), &["stage"])
 			.unwrap();
+	static ref ENCLAVE_SIDECHAIN_PEER_COUNT: IntGauge =
+		register_int_gauge!("integritee_worker_enclave_sidechain_peer_count", "Enclave Sidechain peer validateer count")
+			.unwrap();
 	static ref ENCLAVE_STF_STATE_UPDATE_EXECUTION_DURATION: Histogram =
 		register_histogram!(HistogramOpts::new("integritee_worker_enclave_stf_state_update_execution_duration", "Enclave STF: state update execution duration from before on_initialize to after on_finalize")
 		.buckets(DURATION_HISTOGRAM_BUCKETS.into()))
@@ -267,6 +270,11 @@ impl ReceiveEnclaveMetrics for EnclaveMetricsReceiver {
 pub fn set_static_metrics(version: &str, fingerprint_b58: &str) {
 	ENCLAVE_LABELS.with_label_values([version, fingerprint_b58].as_slice()).set(0)
 }
+
+pub fn set_sidechain_peer_count_metric(count: u32) {
+	ENCLAVE_SIDECHAIN_PEER_COUNT.set(count as i64)
+}
+
 // Data structure that matches with REST API JSON
 
 #[derive(Serialize, Deserialize, Debug)]

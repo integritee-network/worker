@@ -22,6 +22,6 @@ pub struct UpdateWorkerPeersMock;
 
 impl UpdateWorkerPeers for UpdateWorkerPeersMock {
 	fn update_peers(&self, shard: ShardIdentifier) -> WorkerResult<()> {
-		Ok(())
+		Ok(42)
 	}
 }
