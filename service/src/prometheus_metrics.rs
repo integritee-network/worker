@@ -89,8 +89,8 @@ lazy_static! {
 		.buckets(DURATION_HISTOGRAM_BUCKETS.into()))
 			.unwrap();
 	static ref ENCLAVE_STF_STATE_UPDATE_EXECUTED_CALLS_COUNT: HistogramVec =
-		register_histogram_vec!(HistogramOpts::new("integritee_worker_enclave_stf_state_update_executed_calls_successful_count", "Enclave STF: how many calls have successfully been executed per update proposal")
-		.buckets(COUNT_HISTOGRAM_BUCKETS.into()), &["success"])
+		register_histogram_vec!(HistogramOpts::new("integritee_worker_enclave_stf_state_update_attempted_calls_count", "Enclave STF: how many calls have been attempted to execute and what was the result? per update proposal")
+		.buckets(COUNT_HISTOGRAM_BUCKETS.into()), &["result"])
 			.unwrap();
 	static ref ENCLAVE_STF_STATE_SIZE: IntGaugeVec =
 		register_int_gauge_vec!("integritee_worker_enclave_stf_state_size_bytes", "Enclave STF state size in Bytes", &["shard"])
@@ -99,7 +99,7 @@ lazy_static! {
 		register_gauge!("integritee_worker_enclave_stf_runtime_total_issuance", "Enclave stf total issuance assuming its native token")
 			.unwrap();
 	static ref ENCLAVE_STF_RUNTIME_PARENTCHAIN_PROCESSED_BLOCK_NUMBER: IntGaugeVec =
-		register_int_gauge_vec!("integritee_worker_enclave_stf_runtime_parentchain_processed_block_number", "Enclave stf. Last processed parentchain block", &["parentchain_id"])
+		register_int_gauge_vec!("integritee_worker_enclave_stf_runtime_parentchain_processed_block_number", "Enclave stf. Last processed parentchain block per parentchain", &["parentchain_id"])
 			.unwrap();
 	static ref ENCLAVE_LABELS: IntGaugeVec =
 		register_int_gauge_vec!("integritee_worker_enclave_labels", "Enclave labels for version and fingerprint AKA MRENCLAVE", &["version", "fingerprint"])
