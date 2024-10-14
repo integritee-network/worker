@@ -59,10 +59,11 @@ pub type BlockHash = sp_core::H256;
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
 
-#[derive(Encode, Decode, Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Encode, Decode, Copy, Clone, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum ParentchainId {
 	/// The Integritee Parentchain, the trust root of the enclave and serving finality to sidechains.
+	#[default]
 	Integritee,
 	/// A target chain containing custom business logic.
 	TargetA,

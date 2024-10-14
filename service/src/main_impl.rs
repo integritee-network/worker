@@ -4,7 +4,7 @@ use crate::teeracle::{schedule_periodic_reregistration_thread, start_periodic_ma
 #[cfg(not(feature = "dcap"))]
 use crate::utils::check_files;
 use crate::{
-	account_funding::{setup_reasonable_account_funding, EnclaveAccountInfoProvider},
+	account_funding::{setup_reasonable_account_funding, ParentchainAccountInfoProvider},
 	config::Config,
 	enclave::{
 		api::enclave_init,
@@ -52,7 +52,7 @@ use its_storage::{interface::FetchBlocks, BlockPruner, SidechainStorageLock};
 use log::*;
 use regex::Regex;
 use sgx_types::*;
-use sp_runtime::traits::Header as HeaderT;
+use sp_runtime::traits::{Header as HeaderT, IdentifyAccount};
 use substrate_api_client::{
 	api::XtStatus, rpc::HandleSubscription, GetAccountInformation, GetBalance, GetChainInfo,
 	SubmitAndWatch, SubscribeChain, SubscribeEvents,
@@ -65,7 +65,10 @@ use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
 
 use itp_enclave_api::Enclave;
 
-use crate::{account_funding::shard_vault_initial_funds, error::ServiceResult};
+use crate::{
+	account_funding::{shard_vault_initial_funds, AccountAndRole},
+	error::ServiceResult,
+};
 use enclave_bridge_primitives::ShardIdentifier;
 use itc_parentchain::primitives::ParentchainId;
 use itp_types::parentchain::{AccountId, Balance};
@@ -369,24 +372,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	});
 
 	// ------------------------------------------------------------------------
-	// Start prometheus metrics server.
-	if config.enable_metrics_server() {
-		let enclave_wallet = Arc::new(EnclaveAccountInfoProvider::new(
-			integritee_rpc_api.clone(),
-			tee_accountid.clone(),
-		));
-		let metrics_handler = Arc::new(MetricsHandler::new(enclave_wallet));
-		let metrics_server_port = config
-			.try_parse_metrics_server_port()
-			.expect("metrics server port to be a valid port number");
-		tokio_handle.spawn(async move {
-			if let Err(e) = start_metrics_server(metrics_handler, metrics_server_port).await {
-				error!("Unexpected error in Prometheus metrics server: {:?}", e);
-			}
-		});
-	}
-
-	// ------------------------------------------------------------------------
 	// Start trusted worker rpc server
 	if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain
 		|| WorkerModeProvider::worker_mode() == WorkerMode::OffChainWorker
@@ -502,9 +487,12 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		.expect("our enclave should be registered at this point");
 	trace!("verified that our enclave is registered: {:?}", my_enclave);
 
-	let (we_are_primary_validateer, re_init_parentchain_needed) =
-		match integritee_rpc_api.primary_worker_for_shard(shard, None).unwrap() {
-			Some(primary_enclave) => match primary_enclave.instance_signer() {
+	let (we_are_primary_validateer, re_init_parentchain_needed) = match integritee_rpc_api
+		.primary_worker_for_shard(shard, None)
+		.unwrap()
+	{
+		Some(primary_enclave) =>
+			match primary_enclave.instance_signer() {
 				AnySigner::Known(MultiSigner::Ed25519(primary)) =>
 					if primary.encode() == tee_accountid.encode() {
 						println!("We are primary worker on this shard and we have been previously running.");
@@ -539,24 +527,24 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 					);
 				},
 			},
-			None => {
-				println!("We are the primary worker on this shard and the shard is untouched. Will initialize it");
-				enclave.init_shard(shard.encode()).unwrap();
-				if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
-					enclave
-						.init_shard_creation_parentchain_header(
-							shard,
-							&ParentchainId::Integritee,
-							&register_enclave_xt_header,
-						)
-						.unwrap();
-					debug!("shard config should be initialized on integritee network now");
-					(true, true)
-				} else {
-					(true, false)
-				}
-			},
-		};
+		None => {
+			println!("We are the primary worker on this shard and the shard is untouched. Will initialize it");
+			enclave.init_shard(shard.encode()).unwrap();
+			if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
+				enclave
+					.init_shard_creation_parentchain_header(
+						shard,
+						&ParentchainId::Integritee,
+						&register_enclave_xt_header,
+					)
+					.unwrap();
+				debug!("shard config should be initialized on integritee network now");
+				(true, true)
+			} else {
+				(true, false)
+			}
+		},
+	};
 	debug!("getting shard creation: {:?}", enclave.get_shard_creation_info(shard));
 	initialization_handler.registered_on_parentchain();
 
@@ -672,11 +660,67 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		shard,
 		&enclave,
 		integritee_rpc_api.clone(),
-		maybe_target_a_rpc_api,
-		maybe_target_b_rpc_api,
+		maybe_target_a_rpc_api.clone(),
+		maybe_target_b_rpc_api.clone(),
 		run_config.shielding_target,
 		we_are_primary_validateer,
 	);
+
+	// ------------------------------------------------------------------------
+	// Start prometheus metrics server.
+	if config.enable_metrics_server() {
+		let mut account_info_providers: Vec<Arc<ParentchainAccountInfoProvider>> = vec![];
+		account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
+			ParentchainId::Integritee,
+			integritee_rpc_api.clone(),
+			AccountAndRole::EnclaveSigner(tee_accountid.clone()),
+		)));
+		let shielding_target = run_config.shielding_target.unwrap_or_default();
+		let shard_vault =
+			enclave.get_ecc_vault_pubkey(shard).expect("shard vault must be defined by now");
+		account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
+			shielding_target,
+			match shielding_target {
+				ParentchainId::Integritee => integritee_rpc_api.clone(),
+				ParentchainId::TargetA => maybe_target_a_rpc_api
+					.clone()
+					.expect("target A must be initialized to be used as shielding target"),
+				ParentchainId::TargetB => maybe_target_b_rpc_api
+					.clone()
+					.expect("target B must be initialized to be used as shielding target"),
+			},
+			AccountAndRole::ShardVault(
+				enclave
+					.get_ecc_vault_pubkey(shard)
+					.expect("shard vault must be defined by now")
+					.into(),
+			),
+		)));
+		maybe_target_a_rpc_api.map(|api| {
+			account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
+				ParentchainId::TargetA,
+				api.clone(),
+				AccountAndRole::EnclaveSigner(tee_accountid.clone()),
+			)))
+		});
+		maybe_target_b_rpc_api.map(|api| {
+			account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
+				ParentchainId::TargetB,
+				api.clone(),
+				AccountAndRole::EnclaveSigner(tee_accountid.clone()),
+			)))
+		});
+
+		let metrics_handler = Arc::new(MetricsHandler::new(account_info_providers));
+		let metrics_server_port = config
+			.try_parse_metrics_server_port()
+			.expect("metrics server port to be a valid port number");
+		tokio_handle.spawn(async move {
+			if let Err(e) = start_metrics_server(metrics_handler, metrics_server_port).await {
+				error!("Unexpected error in Prometheus metrics server: {:?}", e);
+			}
+		});
+	}
 
 	if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain {
 		println!("[Integritee:SCV] starting block production");
@@ -699,7 +743,7 @@ fn init_provided_shard_vault<E: EnclaveBase>(
 	shielding_target: Option<ParentchainId>,
 	we_are_primary_validateer: bool,
 ) {
-	let shielding_target = shielding_target.unwrap_or(ParentchainId::Integritee);
+	let shielding_target = shielding_target.unwrap_or_default();
 	let rpc_api = match shielding_target {
 		ParentchainId::Integritee => integritee_rpc_api,
 		ParentchainId::TargetA => maybe_target_a_rpc_api

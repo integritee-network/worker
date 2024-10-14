@@ -21,7 +21,7 @@
 use crate::teeracle::teeracle_metrics::update_teeracle_metrics;
 
 use crate::{
-	account_funding::EnclaveAccountInfo,
+	account_funding::ParentchainAccountInfo,
 	error::{Error, ServiceResult},
 };
 use async_trait::async_trait;
@@ -40,9 +40,9 @@ use itp_enclave_metrics::EnclaveMetric;
 use lazy_static::lazy_static;
 use log::*;
 use prometheus::{
-	proto::MetricFamily, register_gauge, register_histogram, register_histogram_vec,
-	register_int_counter, register_int_gauge, register_int_gauge_vec, Gauge, Histogram,
-	HistogramOpts, HistogramVec, IntCounter, IntGauge, IntGaugeVec,
+	proto::MetricFamily, register_gauge, register_gauge_vec, register_histogram,
+	register_histogram_vec, register_int_counter, register_int_gauge, register_int_gauge_vec,
+	Gauge, GaugeVec, Histogram, HistogramOpts, HistogramVec, IntCounter, IntGauge, IntGaugeVec,
 };
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, net::SocketAddr, sync::Arc};
@@ -57,8 +57,8 @@ const COUNT_HISTOGRAM_BUCKETS: [f64; 12] =
 lazy_static! {
 	/// Register all the prometheus metrics we want to monitor (aside from the default process ones).
 
-	static ref ENCLAVE_ACCOUNT_FREE_BALANCE: IntGauge =
-		register_int_gauge!("integritee_worker_enclave_account_free_balance", "Free balance of the enclave account")
+	static ref ACCOUNT_FREE_BALANCE: GaugeVec =
+		register_gauge_vec!("integritee_worker_account_free_balance", "Free balance of an account on a parentchain with a role (lossy f64)", &["parentchain","role"])
 			.unwrap();
 	static ref ENCLAVE_SIDECHAIN_BLOCK_HEIGHT: IntGauge =
 		register_int_gauge!("integritee_worker_enclave_sidechain_block_height", "Enclave sidechain block height")
@@ -135,15 +135,15 @@ pub trait HandleMetrics {
 	async fn handle_metrics(&self) -> Result<Self::ReplyType, Rejection>;
 }
 
-/// Metrics handler implementation.
+/// Metrics handler implementation. This is for untrusted sources of metrics (non-enclave)
 pub struct MetricsHandler<Wallet> {
-	enclave_wallet: Arc<Wallet>,
+	wallets: Vec<Arc<Wallet>>,
 }
 
 #[async_trait]
 impl<Wallet> HandleMetrics for MetricsHandler<Wallet>
 where
-	Wallet: EnclaveAccountInfo + Send + Sync,
+	Wallet: ParentchainAccountInfo + Send + Sync,
 {
 	type ReplyType = String;
 
@@ -164,20 +164,29 @@ where
 
 impl<Wallet> MetricsHandler<Wallet>
 where
-	Wallet: EnclaveAccountInfo + Send + Sync,
+	Wallet: ParentchainAccountInfo + Send + Sync,
 {
-	pub fn new(enclave_wallet: Arc<Wallet>) -> Self {
-		MetricsHandler { enclave_wallet }
+	pub fn new(wallets: Vec<Arc<Wallet>>) -> Self {
+		MetricsHandler { wallets }
 	}
 
 	async fn update_metrics(&self) {
-		match self.enclave_wallet.free_balance() {
-			Ok(b) => {
-				ENCLAVE_ACCOUNT_FREE_BALANCE.set(b as i64);
-			},
-			Err(e) => {
-				error!("Failed to fetch free balance metric, value will not be updated: {:?}", e);
-			},
+		for wallet in &self.wallets {
+			if let (Ok(balance), Ok(parentchain_id), Ok(account_and_role)) =
+				(wallet.free_balance(), wallet.parentchain_id(), wallet.account_and_role())
+			{
+				ACCOUNT_FREE_BALANCE
+					.with_label_values(
+						[
+							format!("{}", parentchain_id).as_str(),
+							format!("{}", account_and_role).as_str(),
+						]
+						.as_slice(),
+					)
+					.set(balance as f64)
+			} else {
+				error!("failed to update prometheus metric for a wallet");
+			}
 		}
 	}
 }

@@ -30,7 +30,7 @@ use sp_core::{
 };
 use sp_keyring::AccountKeyring;
 use sp_runtime::{MultiAddress, Saturating};
-use std::{thread, time::Duration};
+use std::{fmt::Display, thread, time::Duration};
 use substrate_api_client::{
 	ac_compose_macros::compose_extrinsic, ac_primitives::Bytes, extrinsic::BalancesExtrinsics,
 	GetBalance, GetStorage, GetTransactionPayment, SubmitAndWatch, XtStatus,
@@ -39,25 +39,71 @@ use teerex_primitives::SgxAttestationMethod;
 
 const SGX_RA_PROOF_MAX_LEN: usize = 5000;
 const MAX_URL_LEN: usize = 256;
-/// Information about the enclave on-chain account.
-pub trait EnclaveAccountInfo {
-	fn free_balance(&self) -> ServiceResult<Balance>;
+
+#[derive(Clone)]
+pub enum AccountAndRole {
+	EnclaveSigner(AccountId),
+	ShardVault(AccountId),
 }
 
-pub struct EnclaveAccountInfoProvider {
-	node_api: ParentchainApi,
-	account_id: AccountId32,
-}
-
-impl EnclaveAccountInfo for EnclaveAccountInfoProvider {
-	fn free_balance(&self) -> ServiceResult<Balance> {
-		self.node_api.get_free_balance(&self.account_id).map_err(|e| e.into())
+impl Display for AccountAndRole {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			AccountAndRole::EnclaveSigner(account_id) => {
+				write!(f, "EnclaveSigner({})", account_id.to_ss58check())
+			},
+			AccountAndRole::ShardVault(account_id) => {
+				write!(f, "ShardVault({})", account_id.to_ss58check())
+			},
+		}
 	}
 }
 
-impl EnclaveAccountInfoProvider {
-	pub fn new(node_api: ParentchainApi, account_id: AccountId32) -> Self {
-		EnclaveAccountInfoProvider { node_api, account_id }
+impl AccountAndRole {
+	pub fn account_id(&self) -> AccountId {
+		match self {
+			AccountAndRole::EnclaveSigner(account_id) => account_id.clone(),
+			AccountAndRole::ShardVault(account_id) => account_id.clone(),
+		}
+	}
+}
+
+/// Information about an account on a specified parentchain.
+pub trait ParentchainAccountInfo {
+	fn free_balance(&self) -> ServiceResult<Balance>;
+	fn parentchain_id(&self) -> ServiceResult<ParentchainId>;
+	fn account_and_role(&self) -> ServiceResult<AccountAndRole>;
+}
+
+pub struct ParentchainAccountInfoProvider {
+	parentchain_id: ParentchainId,
+	node_api: ParentchainApi,
+	account_and_role: AccountAndRole,
+}
+
+impl ParentchainAccountInfo for ParentchainAccountInfoProvider {
+	fn free_balance(&self) -> ServiceResult<Balance> {
+		self.node_api
+			.get_free_balance(&self.account_and_role.account_id())
+			.map_err(|e| e.into())
+	}
+
+	fn parentchain_id(&self) -> ServiceResult<ParentchainId> {
+		Ok(self.parentchain_id)
+	}
+
+	fn account_and_role(&self) -> ServiceResult<AccountAndRole> {
+		Ok(self.account_and_role.clone())
+	}
+}
+
+impl ParentchainAccountInfoProvider {
+	pub fn new(
+		parentchain_id: ParentchainId,
+		node_api: ParentchainApi,
+		account_and_role: AccountAndRole,
+	) -> Self {
+		ParentchainAccountInfoProvider { parentchain_id, node_api, account_and_role }
 	}
 }
 
