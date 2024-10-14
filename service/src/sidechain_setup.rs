@@ -79,7 +79,7 @@ impl ParentchainIntegriteeSidechainInfo for ParentchainIntegriteeSidechainInfoPr
 						}
 					})
 					.next()
-					.ok_or(Error::NoWorkerForShardFound(self.shard))
+					.ok_or_else(|| Error::NoWorkerForShardFound(self.shard))
 			})
 	}
 	fn shard(&self) -> ServiceResult<ShardIdentifier> {

@@ -199,7 +199,7 @@ where
 			(self.sidechain.last_finalized_block_number(), self.sidechain.shard())
 		{
 			ENCLAVE_SIDECHAIN_LAST_FINALIZED_BLOCK_NUMBER
-				.with_label_values([format!("{}", shard.0.to_base58()).as_str()].as_slice())
+				.with_label_values([shard.0.to_base58().as_str()].as_slice())
 				.set(last_finalized_block_number as i64);
 		} else {
 			error!("failed to update prometheus metric for sidechain data");
