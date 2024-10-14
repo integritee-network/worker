@@ -21,7 +21,7 @@ use itp_types::ShardIdentifier;
 pub struct UpdateWorkerPeersMock;
 
 impl UpdateWorkerPeers for UpdateWorkerPeersMock {
-	fn update_peers(&self, shard: ShardIdentifier) -> WorkerResult<()> {
+	fn update_peers(&self, shard: ShardIdentifier) -> WorkerResult<u32> {
 		Ok(42)
 	}
 }
