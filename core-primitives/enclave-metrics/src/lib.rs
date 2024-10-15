@@ -38,7 +38,7 @@ pub type ExchangeRate = U32F32;
 #[derive(Encode, Decode, Debug, Clone)]
 pub enum EnclaveMetric {
 	SetSidechainBlockHeight(u64),
-	TopPoolSizeSet(u64),
+	TopPoolAPrioriSizeSet(u64),
 	RpcRequestsIncrement,
 	RpcTrustedCallsIncrement,
 	SidechainAuraSlotRemainingTimes(String, Duration),

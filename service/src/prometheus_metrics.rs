@@ -69,8 +69,8 @@ lazy_static! {
 	static ref ACCOUNT_FREE_BALANCE: GaugeVec =
 		register_gauge_vec!("integritee_worker_account_free_balance", "Free balance of an account on a parentchain with a role (lossy f64)", &["parentchain","role"])
 			.unwrap();
-	static ref ENCLAVE_TOP_POOL_SIZE: IntGauge =
-		register_int_gauge!("integritee_worker_enclave_top_pool_size", "pending TOPs in pool")
+	static ref ENCLAVE_TOP_POOL_A_PRIORI_SIZE: IntGauge =
+		register_int_gauge!("integritee_worker_enclave_top_pool_a_priori_size", "pending TOPs in pool before executing the block")
 			.unwrap();
 	static ref ENCLAVE_RPC_REQUESTS: IntCounter =
 		register_int_counter!("integritee_worker_enclave_rpc_requests", "Enclave RPC requests")
@@ -252,7 +252,8 @@ impl ReceiveEnclaveMetrics for EnclaveMetricsReceiver {
 		match metric {
 			EnclaveMetric::SetSidechainBlockHeight(h) =>
 				ENCLAVE_SIDECHAIN_BLOCK_HEIGHT.set(h.try_into().unwrap_or(i64::MAX)),
-			EnclaveMetric::TopPoolSizeSet(pool_size) => ENCLAVE_TOP_POOL_SIZE.set(pool_size as i64),
+			EnclaveMetric::TopPoolAPrioriSizeSet(pool_size) =>
+				ENCLAVE_TOP_POOL_A_PRIORI_SIZE.set(pool_size as i64),
 			EnclaveMetric::RpcTrustedCallsIncrement => ENCLAVE_RPC_TC_RECEIVED.inc(),
 			EnclaveMetric::RpcRequestsIncrement => ENCLAVE_RPC_REQUESTS.inc(),
 			EnclaveMetric::SidechainAuraSlotRemainingTimes(label, duration) =>
