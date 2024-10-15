@@ -28,7 +28,11 @@ use itp_utils::FromHexPrefixed;
 use log::*;
 
 #[derive(Parser)]
-pub struct GetFingerprintCommand {}
+pub struct GetFingerprintCommand {
+	/// also print as hex
+	#[clap(short = 'x', long = "hex")]
+	hex: bool,
+}
 
 impl GetFingerprintCommand {
 	pub(crate) fn run(&self, cli: &Cli, _trusted_args: &TrustedCli) -> CliResult {
@@ -59,6 +63,9 @@ impl GetFingerprintCommand {
 			})?;
 		let fingerprint_b58 = fingerprint.encode().to_base58();
 		println!("{}", fingerprint_b58);
+		if self.hex {
+			println!("0x{}", hex::encode(fingerprint.encode()));
+		}
 		Ok(CliResultOk::FingerprintBase58 { fingerprints: vec![fingerprint_b58] })
 	}
 }
