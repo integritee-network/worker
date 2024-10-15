@@ -15,11 +15,11 @@
 
 */
 use crate::ocall::{ffi, OcallApi};
-use alloc::vec::Vec;
 use codec::Encode;
 use frame_support::ensure;
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use sgx_types::{sgx_status_t, SgxResult};
+use std::vec::Vec;
 
 impl EnclaveMetricsOCallApi for OcallApi {
 	fn update_metrics<Metric: Encode>(&self, metrics: Vec<Metric>) -> SgxResult<()> {

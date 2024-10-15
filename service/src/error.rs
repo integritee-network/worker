@@ -50,6 +50,8 @@ pub enum Error {
 	MissingGenesisHeader,
 	#[error("Could not find decimals of the parentchain in metadata")]
 	MissingDecimals,
+	#[error("Could not convert type within expected boundaries")]
+	ConversionError,
 	#[error("Could not find last finalized block of the parentchain")]
 	MissingLastFinalizedBlock,
 	#[error("Could not find block in parentchain")]

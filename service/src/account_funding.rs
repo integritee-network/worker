@@ -103,7 +103,7 @@ impl ParentchainAccountInfo for ParentchainAccountInfoProvider {
 			.get("tokenDecimals")
 			.ok_or(Error::MissingDecimals)?
 			.as_u64()
-			.ok_or(Error::MissingDecimals)
+			.ok_or(Error::ConversionError)
 	}
 }
 

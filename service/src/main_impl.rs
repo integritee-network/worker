@@ -68,7 +68,7 @@ use itp_enclave_api::Enclave;
 use crate::{
 	account_funding::{shard_vault_initial_funds, AccountAndRole},
 	error::ServiceResult,
-	prometheus_metrics::{set_static_metrics, HandleMetrics},
+	prometheus_metrics::{set_static_metrics, start_prometheus_metrics_server, HandleMetrics},
 	sidechain_setup::ParentchainIntegriteeSidechainInfoProvider,
 };
 use enclave_bridge_primitives::ShardIdentifier;
@@ -79,6 +79,7 @@ use sp_keyring::AccountKeyring;
 use sp_runtime::MultiSigner;
 use std::{fmt::Debug, path::PathBuf, str, str::Utf8Error, sync::Arc, thread, time::Duration};
 use substrate_api_client::ac_node_api::{EventRecord, Phase::ApplyExtrinsic};
+use tokio::runtime::Handle;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -668,62 +669,20 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	// ------------------------------------------------------------------------
 	// Start prometheus metrics server.
 	if config.enable_metrics_server() {
-		let mut account_info_providers: Vec<Arc<ParentchainAccountInfoProvider>> = vec![];
-		account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
-			ParentchainId::Integritee,
-			integritee_rpc_api.clone(),
-			AccountAndRole::EnclaveSigner(tee_accountid.clone()),
-		)));
-		let shielding_target = run_config.shielding_target.unwrap_or_default();
-		let shard_vault =
-			enclave.get_ecc_vault_pubkey(shard).expect("shard vault must be defined by now");
-		account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
-			shielding_target,
-			match shielding_target {
-				ParentchainId::Integritee => integritee_rpc_api.clone(),
-				ParentchainId::TargetA => maybe_target_a_rpc_api
-					.clone()
-					.expect("target A must be initialized to be used as shielding target"),
-				ParentchainId::TargetB => maybe_target_b_rpc_api
-					.clone()
-					.expect("target B must be initialized to be used as shielding target"),
-			},
-			AccountAndRole::ShardVault(
-				enclave
-					.get_ecc_vault_pubkey(shard)
-					.expect("shard vault must be defined by now")
-					.into(),
-			),
-		)));
-		maybe_target_a_rpc_api.map(|api| {
-			account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
-				ParentchainId::TargetA,
-				api.clone(),
-				AccountAndRole::EnclaveSigner(tee_accountid.clone()),
-			)))
-		});
-		maybe_target_b_rpc_api.map(|api| {
-			account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
-				ParentchainId::TargetB,
-				api.clone(),
-				AccountAndRole::EnclaveSigner(tee_accountid.clone()),
-			)))
-		});
-		let sidechain_info_provider = Arc::new(ParentchainIntegriteeSidechainInfoProvider::new(
-			integritee_rpc_api.clone(),
-			*shard,
-		));
-
-		let metrics_handler =
-			Arc::new(MetricsHandler::new(account_info_providers, sidechain_info_provider));
 		let metrics_server_port = config
 			.try_parse_metrics_server_port()
 			.expect("metrics server port to be a valid port number");
-		tokio_handle.spawn(async move {
-			if let Err(e) = start_metrics_server(metrics_handler, metrics_server_port).await {
-				error!("Unexpected error in Prometheus metrics server: {:?}", e);
-			}
-		});
+		start_prometheus_metrics_server(
+			&enclave,
+			&tee_accountid,
+			shard,
+			integritee_rpc_api.clone(),
+			maybe_target_a_rpc_api.clone(),
+			maybe_target_b_rpc_api.clone(),
+			run_config.shielding_target,
+			&tokio_handle,
+			metrics_server_port,
+		);
 	}
 
 	if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain {

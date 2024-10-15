@@ -21,15 +21,18 @@
 use crate::teeracle::teeracle_metrics::update_teeracle_metrics;
 
 use crate::{
-	account_funding::ParentchainAccountInfo,
+	account_funding::{AccountAndRole, ParentchainAccountInfo, ParentchainAccountInfoProvider},
 	error::{Error, ServiceResult},
-	sidechain_setup::ParentchainIntegriteeSidechainInfo,
+	sidechain_setup::{
+		ParentchainIntegriteeSidechainInfo, ParentchainIntegriteeSidechainInfoProvider,
+	},
 };
 use async_trait::async_trait;
 use base58::ToBase58;
 use codec::{Decode, Encode};
 #[cfg(feature = "attesteer")]
 use core::time::Duration;
+use enclave_bridge_primitives::ShardIdentifier;
 use frame_support::scale_info::TypeInfo;
 #[cfg(feature = "attesteer")]
 use itc_rest_client::{
@@ -37,17 +40,22 @@ use itc_rest_client::{
 	rest_client::{RestClient, Url as URL},
 	RestGet, RestPath,
 };
+use itp_api_client_types::ParentchainApi;
+use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
 use itp_enclave_metrics::EnclaveMetric;
-use itp_types::EnclaveFingerprint;
+use itp_types::{parentchain::ParentchainId, EnclaveFingerprint};
 use lazy_static::lazy_static;
 use log::*;
 use prometheus::{
 	proto::MetricFamily, register_gauge, register_gauge_vec, register_histogram,
-	register_histogram_vec, register_int_counter, register_int_gauge, register_int_gauge_vec,
-	Gauge, GaugeVec, Histogram, HistogramOpts, HistogramVec, IntCounter, IntGauge, IntGaugeVec,
+	register_histogram_vec, register_int_counter, register_int_counter_vec, register_int_gauge,
+	register_int_gauge_vec, Gauge, GaugeVec, Histogram, HistogramOpts, HistogramVec, IntCounter,
+	IntCounterVec, IntGauge, IntGaugeVec,
 };
 use serde::{Deserialize, Serialize};
+use sp_core::crypto::AccountId32;
 use std::{fmt::Debug, net::SocketAddr, sync::Arc};
+use tokio::runtime::Handle;
 use warp::{Filter, Rejection, Reply};
 
 const DURATION_HISTOGRAM_BUCKETS: [f64; 10] =
@@ -173,37 +181,68 @@ where
 
 	async fn update_account_metrics(&self) {
 		for wallet in &self.wallets {
-			if let (Ok(balance), Ok(parentchain_id), Ok(account_and_role), Ok(decimals)) = (
-				wallet.free_balance(),
-				wallet.parentchain_id(),
-				wallet.account_and_role(),
-				wallet.decimals(),
-			) {
-				ACCOUNT_FREE_BALANCE
-					.with_label_values(
-						[
-							format!("{}", parentchain_id).as_str(),
-							format!("{}", account_and_role).as_str(),
-						]
-						.as_slice(),
-					)
-					.set(balance as f64 / (10.0f64.powf(decimals as f64)));
-			} else {
-				error!("failed to update prometheus metric for a wallet");
-			}
+			let balance = match wallet.free_balance() {
+				Ok(balance) => balance,
+				Err(e) => {
+					error!("Failed to get free balance: {:?}", e);
+					continue
+				},
+			};
+
+			let parentchain_id = match wallet.parentchain_id() {
+				Ok(parentchain_id) => parentchain_id,
+				Err(e) => {
+					error!("Failed to get parentchain ID: {:?}", e);
+					continue
+				},
+			};
+
+			let account_and_role = match wallet.account_and_role() {
+				Ok(account_and_role) => account_and_role,
+				Err(e) => {
+					error!("Failed to get account and role: {:?}", e);
+					continue
+				},
+			};
+
+			let decimals = match wallet.decimals() {
+				Ok(decimals) => decimals,
+				Err(e) => {
+					error!("Failed to get decimals: {:?}", e);
+					continue
+				},
+			};
+
+			ACCOUNT_FREE_BALANCE
+				.with_label_values(
+					[
+						format!("{}", parentchain_id).as_str(),
+						format!("{}", account_and_role).as_str(),
+					]
+					.as_slice(),
+				)
+				.set(balance as f64 / (10.0f64.powf(decimals as f64)));
 		}
 	}
 
 	async fn update_sidechain_metrics(&self) {
-		if let (Ok(last_finalized_block_number), Ok(shard)) =
-			(self.sidechain.last_finalized_block_number(), self.sidechain.shard())
-		{
-			ENCLAVE_SIDECHAIN_LAST_FINALIZED_BLOCK_NUMBER
-				.with_label_values([shard.0.to_base58().as_str()].as_slice())
-				.set(last_finalized_block_number as i64);
-		} else {
-			error!("failed to update prometheus metric for sidechain data");
-		}
+		let last_finalized_block_number = match self.sidechain.last_finalized_block_number() {
+			Ok(bn) => bn,
+			Err(e) => {
+				error!("Failed to get last_finalized block number: {:?}", e);
+				return
+			},
+		};
+		let shard = match self.sidechain.shard() {
+			Ok(shard) => shard,
+			Err(e) => {
+				error!("Failed to get shard: {:?}", e);
+				return
+			},
+		};
+		ENCLAVE_SIDECHAIN_LAST_FINALIZED_BLOCK_NUMBER
+			.with_label_values([shard.0.to_base58().as_str()].as_slice())
+			.set(last_finalized_block_number as i64);
 	}
 }
 
@@ -236,7 +275,7 @@ impl ReceiveEnclaveMetrics for EnclaveMetricsReceiver {
 	fn receive_enclave_metric(&self, metric: EnclaveMetric) -> ServiceResult<()> {
 		match metric {
 			EnclaveMetric::SetSidechainBlockHeight(h) =>
-				ENCLAVE_SIDECHAIN_BLOCK_HEIGHT.set(h as i64),
+				ENCLAVE_SIDECHAIN_BLOCK_HEIGHT.set(h.try_into().unwrap_or(i64::MAX)),
 			EnclaveMetric::TopPoolSizeSet(pool_size) => ENCLAVE_TOP_POOL_SIZE.set(pool_size as i64),
 			EnclaveMetric::RpcTrustedCallsIncrement => ENCLAVE_RPC_TC_RECEIVED.inc(),
 			EnclaveMetric::RpcRequestsIncrement => ENCLAVE_RPC_REQUESTS.inc(),
@@ -249,10 +288,10 @@ impl ReceiveEnclaveMetrics for EnclaveMetricsReceiver {
 			EnclaveMetric::StfStateUpdateExecutedCallsCount(success, count) =>
 				ENCLAVE_STF_STATE_UPDATE_EXECUTED_CALLS_COUNT
 					.with_label_values([if success { "success" } else { "failed" }].as_slice())
-					.observe(count.into()),
+					.observe(u32::try_from(count).unwrap_or(u32::MAX).into()),
 			EnclaveMetric::StfStateSizeSet(shard, bytes) => ENCLAVE_STF_STATE_SIZE
 				.with_label_values([shard.0.to_base58().as_str()].as_slice())
-				.set(bytes as i64),
+				.set(bytes.try_into().unwrap_or(i64::MAX)),
 			EnclaveMetric::StfRuntimeTotalIssuanceSet(balance) =>
 				ENCLAVE_STF_RUNTIME_TOTAL_ISSUANCE.set(balance),
 			EnclaveMetric::StfRuntimeParentchainProcessedBlockNumberSet(parentchain_id, bn) =>
@@ -331,4 +370,73 @@ pub struct PrometheusMarblerunEventActivation {
 	pub marble_type: String,
 	pub uuid: String,
 	pub quote: String,
+}
+
+pub fn start_prometheus_metrics_server<E>(
+	enclave: &Arc<E>,
+	tee_account_id: &AccountId32,
+	shard: &ShardIdentifier,
+	integritee_rpc_api: ParentchainApi,
+	maybe_target_a_rpc_api: Option<ParentchainApi>,
+	maybe_target_b_rpc_api: Option<ParentchainApi>,
+	shielding_target: Option<ParentchainId>,
+	tokio_handle: &Handle,
+	metrics_server_port: u16,
+) where
+	E: EnclaveBase + Sidechain,
+{
+	let mut account_info_providers: Vec<Arc<ParentchainAccountInfoProvider>> = vec![];
+	account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
+		ParentchainId::Integritee,
+		integritee_rpc_api.clone(),
+		AccountAndRole::EnclaveSigner(tee_account_id.clone()),
+	)));
+	let shielding_target = shielding_target.unwrap_or_default();
+	let shard_vault =
+		enclave.get_ecc_vault_pubkey(shard).expect("shard vault must be defined by now");
+	account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
+		shielding_target,
+		match shielding_target {
+			ParentchainId::Integritee => integritee_rpc_api.clone(),
+			ParentchainId::TargetA => maybe_target_a_rpc_api
+				.clone()
+				.expect("target A must be initialized to be used as shielding target"),
+			ParentchainId::TargetB => maybe_target_b_rpc_api
+				.clone()
+				.expect("target B must be initialized to be used as shielding target"),
+		},
+		AccountAndRole::ShardVault(
+			enclave
+				.get_ecc_vault_pubkey(shard)
+				.expect("shard vault must be defined by now")
+				.into(),
+		),
+	)));
+	maybe_target_a_rpc_api.map(|api| {
+		account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
+			ParentchainId::TargetA,
+			api.clone(),
+			AccountAndRole::EnclaveSigner(tee_account_id.clone()),
+		)))
+	});
+	maybe_target_b_rpc_api.map(|api| {
+		account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
+			ParentchainId::TargetB,
+			api.clone(),
+			AccountAndRole::EnclaveSigner(tee_account_id.clone()),
+		)))
+	});
+	let sidechain_info_provider = Arc::new(ParentchainIntegriteeSidechainInfoProvider::new(
+		integritee_rpc_api.clone(),
+		*shard,
+	));
+
+	let metrics_handler =
+		Arc::new(MetricsHandler::new(account_info_providers, sidechain_info_provider));
+
+	tokio_handle.spawn(async move {
+		if let Err(e) = start_metrics_server(metrics_handler, metrics_server_port).await {
+			error!("Unexpected error in Prometheus metrics server: {:?}", e);
+		}
+	});
 }
