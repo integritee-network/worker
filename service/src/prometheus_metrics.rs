@@ -155,7 +155,7 @@ where
 	type ReplyType = String;
 
 	async fn handle_metrics(&self) -> Result<Self::ReplyType, Rejection> {
-		self.update_account_metrics().await;
+		self.update_all_account_metrics().await;
 		self.update_sidechain_metrics().await;
 
 		let default_metrics = match gather_metrics_into_reply(&prometheus::gather()) {
@@ -179,50 +179,26 @@ where
 		MetricsHandler { wallets, sidechain }
 	}
 
-	async fn update_account_metrics(&self) {
+	async fn update_all_account_metrics(&self) {
 		for wallet in &self.wallets {
-			let balance = match wallet.free_balance() {
-				Ok(balance) => balance,
-				Err(e) => {
-					error!("Failed to get free balance: {:?}", e);
-					continue
-				},
-			};
-
-			let parentchain_id = match wallet.parentchain_id() {
-				Ok(parentchain_id) => parentchain_id,
-				Err(e) => {
-					error!("Failed to get parentchain ID: {:?}", e);
-					continue
-				},
-			};
-
-			let account_and_role = match wallet.account_and_role() {
-				Ok(account_and_role) => account_and_role,
-				Err(e) => {
-					error!("Failed to get account and role: {:?}", e);
-					continue
-				},
-			};
-
-			let decimals = match wallet.decimals() {
-				Ok(decimals) => decimals,
-				Err(e) => {
-					error!("Failed to get decimals: {:?}", e);
-					continue
-				},
-			};
-
-			ACCOUNT_FREE_BALANCE
-				.with_label_values(
-					[
-						format!("{}", parentchain_id).as_str(),
-						format!("{}", account_and_role).as_str(),
-					]
-					.as_slice(),
-				)
-				.set(balance as f64 / (10.0f64.powf(decimals as f64)));
+			if let Err(e) = Self::update_wallet_metrics(wallet).await {
+				error!("Failed to update wallet metrics: {:?}", e);
+			}
 		}
+	}
+
+	async fn update_wallet_metrics(wallet: &Wallet) -> ServiceResult<()> {
+		let balance = wallet.free_balance()?;
+		let parentchain_id = wallet.parentchain_id()?;
+		let account_and_role = wallet.account_and_role()?;
+		let decimals = wallet.decimals()?;
+		ACCOUNT_FREE_BALANCE
+			.with_label_values(
+				[format!("{}", parentchain_id).as_str(), format!("{}", account_and_role).as_str()]
+					.as_slice(),
+			)
+			.set(balance as f64 / (10.0f64.powf(decimals as f64)));
+		Ok(())
 	}
 
 	async fn update_sidechain_metrics(&self) {
