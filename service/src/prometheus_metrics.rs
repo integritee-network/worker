@@ -349,6 +349,7 @@ pub struct PrometheusMarblerunEventActivation {
 	pub quote: String,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn start_prometheus_metrics_server<E>(
 	enclave: &Arc<E>,
 	tee_account_id: &AccountId32,
@@ -389,24 +390,22 @@ pub fn start_prometheus_metrics_server<E>(
 				.into(),
 		),
 	)));
-	maybe_target_a_rpc_api.map(|api| {
+	if let Some(api) = maybe_target_a_rpc_api {
 		account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
 			ParentchainId::TargetA,
-			api.clone(),
+			api,
 			AccountAndRole::EnclaveSigner(tee_account_id.clone()),
 		)))
-	});
-	maybe_target_b_rpc_api.map(|api| {
+	};
+	if let Some(api) = maybe_target_b_rpc_api {
 		account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
 			ParentchainId::TargetB,
-			api.clone(),
+			api,
 			AccountAndRole::EnclaveSigner(tee_account_id.clone()),
 		)))
-	});
-	let sidechain_info_provider = Arc::new(ParentchainIntegriteeSidechainInfoProvider::new(
-		integritee_rpc_api.clone(),
-		*shard,
-	));
+	};
+	let sidechain_info_provider =
+		Arc::new(ParentchainIntegriteeSidechainInfoProvider::new(integritee_rpc_api, *shard));
 
 	let metrics_handler =
 		Arc::new(MetricsHandler::new(account_info_providers, sidechain_info_provider));
