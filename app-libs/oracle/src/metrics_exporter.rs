@@ -19,7 +19,7 @@ use crate::types::{ExchangeRate, TradingPair};
 use itp_enclave_metrics::{EnclaveMetric, ExchangeRateOracleMetric, OracleMetric};
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use log::error;
-use std::{string::String, sync::Arc, time::Instant};
+use std::{string::String, sync::Arc, time::Instant, vec, vec::Vec};
 
 /// Trait to export metrics for any Teeracle.
 pub trait ExportMetrics<MetricsInfo> {
@@ -38,7 +38,7 @@ pub trait ExportMetrics<MetricsInfo> {
 }
 
 pub trait UpdateMetric<MetricInfo> {
-	fn update_metric(&self, metric: OracleMetric<MetricInfo>);
+	fn update_metrics(&self, metric: OracleMetric<MetricInfo>);
 }
 
 /// Metrics exporter implementation.
@@ -50,7 +50,7 @@ impl<OCallApi, MetricInfo> UpdateMetric<MetricInfo> for MetricsExporter<OCallApi
 where
 	OCallApi: EnclaveMetricsOCallApi,
 {
-	fn update_metric(&self, _metric: OracleMetric<MetricInfo>) {
+	fn update_metrics(&self, _metric: OracleMetric<MetricInfo>) {
 		// TODO: Implement me
 	}
 }
@@ -63,8 +63,10 @@ where
 		MetricsExporter { ocall_api }
 	}
 
-	fn update_metric(&self, metric: ExchangeRateOracleMetric) {
-		if let Err(e) = self.ocall_api.update_metric(EnclaveMetric::ExchangeRateOracle(metric)) {
+	fn update_metrics(&self, metrics: Vec<ExchangeRateOracleMetric>) {
+		let wrapped_metrics =
+			metrics.iter().map(|m| EnclaveMetric::ExchangeRateOracle(m.clone())).collect();
+		if let Err(e) = self.ocall_api.update_metrics(wrapped_metrics) {
 			error!("Failed to update enclave metric, sgx_status_t: {}", e)
 		}
 	}
@@ -75,14 +77,14 @@ where
 	OCallApi: EnclaveMetricsOCallApi,
 {
 	fn increment_number_requests(&self, source: String) {
-		self.update_metric(ExchangeRateOracleMetric::NumberRequestsIncrement(source));
+		self.update_metrics(vec![ExchangeRateOracleMetric::NumberRequestsIncrement(source)]);
 	}
 
 	fn record_response_time(&self, source: String, timer: Instant) {
-		self.update_metric(ExchangeRateOracleMetric::ResponseTime(
+		self.update_metrics(vec![ExchangeRateOracleMetric::ResponseTime(
 			source,
 			timer.elapsed().as_millis(),
-		));
+		)]);
 	}
 
 	fn update_exchange_rate(
@@ -91,11 +93,11 @@ where
 		exchange_rate: ExchangeRate,
 		trading_pair: TradingPair,
 	) {
-		self.update_metric(ExchangeRateOracleMetric::ExchangeRate(
+		self.update_metrics(vec![ExchangeRateOracleMetric::ExchangeRate(
 			source,
 			trading_pair.key(),
 			exchange_rate,
-		));
+		)]);
 	}
 
 	fn update_weather(&self, _source: String, _metrics_info: MetricsInfo) {

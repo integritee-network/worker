@@ -21,8 +21,9 @@ use crate::{
 	BatchExecutionResult, ExecutedOperation,
 };
 use codec::{Decode, Encode};
+use itp_enclave_metrics::EnclaveMetric;
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
-use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveOnChainOCallApi};
+use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi};
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_stf_interface::{
 	parentchain_pallet::ParentchainPalletInstancesInterface, StateCallInterface, UpdateState,
@@ -32,11 +33,12 @@ use itp_stf_primitives::{
 	types::{ShardIdentifier, TrustedOperation, TrustedOperationOrHash},
 };
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
+use itp_storage::keys::storage_value_key;
 use itp_time_utils::{duration_now, now_as_millis};
 use itp_types::{
-	parentchain::{Header as ParentchainHeader, ParentchainCall, ParentchainId},
+	parentchain::{BlockNumber, Header as ParentchainHeader, ParentchainCall, ParentchainId},
 	storage::StorageEntryVerified,
-	H256,
+	Balance, H256,
 };
 use log::*;
 use sp_runtime::traits::Header as HeaderTrait;
@@ -59,7 +61,7 @@ where
 impl<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G>
 	StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G>
 where
-	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
+	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + EnclaveMetricsOCallApi,
 	StateHandler: HandleState<HashType = H256>,
 	StateHandler::StateT: SgxExternalitiesTrait + Encode,
 	NodeMetadataRepository: AccessNodeMetadata,
@@ -278,7 +280,7 @@ where
 impl<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G> StateUpdateProposer<TCS, G>
 	for StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G>
 where
-	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
+	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi + EnclaveMetricsOCallApi,
 	StateHandler: HandleState<HashType = H256>,
 	StateHandler::StateT: SgxExternalitiesTrait + Encode + StateHash,
 	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesType: Encode,
@@ -310,7 +312,8 @@ where
 		PH: HeaderTrait<Hash = H256>,
 		F: FnOnce(Self::Externalities) -> Self::Externalities,
 	{
-		let ends_at = duration_now() + max_exec_duration;
+		let started_at = duration_now();
+		let ends_at = started_at + max_exec_duration;
 
 		let (state, state_hash_before_execution) = self.state_handler.load_cloned(shard)?;
 
@@ -350,6 +353,33 @@ where
 			error!("on_finalize failed: {:?}", e);
 		});
 
+		let state_size_bytes = state.size();
+		let runtime_metrics = gather_runtime_metrics(&state);
+		let successful_call_count =
+			executed_and_failed_calls.iter().filter(|call| call.is_success()).count();
+		let failed_call_count = executed_and_failed_calls.len() - successful_call_count;
+		self.ocall_api
+			.update_metrics(vec![
+				EnclaveMetric::StfStateUpdateExecutionDuration(duration_now() - started_at),
+				EnclaveMetric::StfStateUpdateExecutedCallsCount(true, successful_call_count as u64),
+				EnclaveMetric::StfStateUpdateExecutedCallsCount(false, failed_call_count as u64),
+				EnclaveMetric::TopPoolAPrioriSizeSet(trusted_calls.len() as u64),
+				EnclaveMetric::StfStateSizeSet(*shard, state_size_bytes as u64),
+				EnclaveMetric::StfRuntimeTotalIssuanceSet(runtime_metrics.total_issuance),
+				EnclaveMetric::StfRuntimeParentchainProcessedBlockNumberSet(
+					ParentchainId::Integritee,
+					runtime_metrics.parentchain_integritee_processed_block_number,
+				),
+				EnclaveMetric::StfRuntimeParentchainProcessedBlockNumberSet(
+					ParentchainId::TargetA,
+					runtime_metrics.parentchain_target_a_processed_block_number,
+				),
+				EnclaveMetric::StfRuntimeParentchainProcessedBlockNumberSet(
+					ParentchainId::TargetB,
+					runtime_metrics.parentchain_target_b_processed_block_number,
+				),
+			])
+			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		Ok(BatchExecutionResult {
 			executed_operations: executed_and_failed_calls,
 			state_hash_before_execution,
@@ -373,4 +403,44 @@ pub fn shards_key_hash() -> Vec<u8> {
 	// here you have to point to a storage value containing a Vec of
 	// ShardIdentifiers the enclave uses this to autosubscribe to no shards
 	vec![]
+}
+
+/// assumes a common structure of sgx_runtime and extracts interesting metrics
+/// while this may not be the best abstraction, it avoids circular dependencies
+/// with app-libs and will be suitable in 99% of cases
+fn gather_runtime_metrics<State>(state: &State) -> RuntimeMetrics
+where
+	State: SgxExternalitiesTrait + Encode,
+{
+	// prometheus has no support for NaN, therefore we fall back to -1
+	let total_issuance: f64 = state
+		.get(&storage_value_key("Balances", "TotalIssuance"))
+		.map(|v| Balance::decode(&mut v.as_slice()).map(|b| b as f64).unwrap_or(-1.0))
+		.unwrap_or(-1.0);
+	// fallback to zero is fine here
+	let parentchain_integritee_processed_block_number: u32 = state
+		.get(&storage_value_key("ParentchainIntegritee", "Number"))
+		.map(|v| BlockNumber::decode(&mut v.as_slice()).unwrap_or_default())
+		.unwrap_or_default();
+	let parentchain_target_a_processed_block_number: u32 = state
+		.get(&storage_value_key("ParentchainTargetA", "Number"))
+		.map(|v| BlockNumber::decode(&mut v.as_slice()).unwrap_or_default())
+		.unwrap_or_default();
+	let parentchain_target_b_processed_block_number: u32 = state
+		.get(&storage_value_key("ParentchainTargetB", "Number"))
+		.map(|v| BlockNumber::decode(&mut v.as_slice()).unwrap_or_default())
+		.unwrap_or_default();
+	RuntimeMetrics {
+		total_issuance,
+		parentchain_integritee_processed_block_number,
+		parentchain_target_a_processed_block_number,
+		parentchain_target_b_processed_block_number,
+	}
+}
+
+struct RuntimeMetrics {
+	total_issuance: f64,
+	parentchain_integritee_processed_block_number: u32,
+	parentchain_target_a_processed_block_number: u32,
+	parentchain_target_b_processed_block_number: u32,
 }

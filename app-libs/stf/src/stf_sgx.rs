@@ -171,6 +171,7 @@ where
 	}
 	fn on_finalize(_state: &mut State) -> Result<(), Self::Error> {
 		trace!("on_finalize called");
+
 		Ok(())
 	}
 }

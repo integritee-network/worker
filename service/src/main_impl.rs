@@ -4,7 +4,7 @@ use crate::teeracle::{schedule_periodic_reregistration_thread, start_periodic_ma
 #[cfg(not(feature = "dcap"))]
 use crate::utils::check_files;
 use crate::{
-	account_funding::{setup_reasonable_account_funding, EnclaveAccountInfoProvider},
+	account_funding::{setup_reasonable_account_funding, ParentchainAccountInfoProvider},
 	config::Config,
 	enclave::{
 		api::enclave_init,
@@ -52,7 +52,7 @@ use its_storage::{interface::FetchBlocks, BlockPruner, SidechainStorageLock};
 use log::*;
 use regex::Regex;
 use sgx_types::*;
-use sp_runtime::traits::Header as HeaderT;
+use sp_runtime::traits::{Header as HeaderT, IdentifyAccount};
 use substrate_api_client::{
 	api::XtStatus, rpc::HandleSubscription, GetAccountInformation, GetBalance, GetChainInfo,
 	SubmitAndWatch, SubscribeChain, SubscribeEvents,
@@ -65,7 +65,12 @@ use sgx_verify::extract_tcb_info_from_raw_dcap_quote;
 
 use itp_enclave_api::Enclave;
 
-use crate::{account_funding::shard_vault_initial_funds, error::ServiceResult};
+use crate::{
+	account_funding::{shard_vault_initial_funds, AccountAndRole},
+	error::ServiceResult,
+	prometheus_metrics::{set_static_metrics, start_prometheus_metrics_server, HandleMetrics},
+	sidechain_setup::ParentchainIntegriteeSidechainInfoProvider,
+};
 use enclave_bridge_primitives::ShardIdentifier;
 use itc_parentchain::primitives::ParentchainId;
 use itp_types::parentchain::{AccountId, Balance};
@@ -74,6 +79,7 @@ use sp_keyring::AccountKeyring;
 use sp_runtime::MultiSigner;
 use std::{fmt::Debug, path::PathBuf, str, str::Utf8Error, sync::Arc, thread, time::Duration};
 use substrate_api_client::ac_node_api::{EventRecord, Phase::ApplyExtrinsic};
+use tokio::runtime::Handle;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -327,7 +333,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	let mrenclave = enclave.get_fingerprint().unwrap();
 	println!("MRENCLAVE={}", mrenclave.0.to_base58());
 	println!("MRENCLAVE in hex {:?}", hex::encode(mrenclave));
-
+	set_static_metrics(VERSION, mrenclave.0.to_base58().as_str());
 	// ------------------------------------------------------------------------
 	// let new workers call us for key provisioning
 	println!("MU-RA server listening on {}", config.mu_ra_url());
@@ -367,24 +373,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			error!("Unexpected error in `is_initialized` server: {:?}", e);
 		}
 	});
-
-	// ------------------------------------------------------------------------
-	// Start prometheus metrics server.
-	if config.enable_metrics_server() {
-		let enclave_wallet = Arc::new(EnclaveAccountInfoProvider::new(
-			integritee_rpc_api.clone(),
-			tee_accountid.clone(),
-		));
-		let metrics_handler = Arc::new(MetricsHandler::new(enclave_wallet));
-		let metrics_server_port = config
-			.try_parse_metrics_server_port()
-			.expect("metrics server port to be a valid port number");
-		tokio_handle.spawn(async move {
-			if let Err(e) = start_metrics_server(metrics_handler, metrics_server_port).await {
-				error!("Unexpected error in Prometheus metrics server: {:?}", e);
-			}
-		});
-	}
 
 	// ------------------------------------------------------------------------
 	// Start trusted worker rpc server
@@ -672,11 +660,30 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		shard,
 		&enclave,
 		integritee_rpc_api.clone(),
-		maybe_target_a_rpc_api,
-		maybe_target_b_rpc_api,
+		maybe_target_a_rpc_api.clone(),
+		maybe_target_b_rpc_api.clone(),
 		run_config.shielding_target,
 		we_are_primary_validateer,
 	);
+
+	// ------------------------------------------------------------------------
+	// Start prometheus metrics server.
+	if config.enable_metrics_server() {
+		let metrics_server_port = config
+			.try_parse_metrics_server_port()
+			.expect("metrics server port to be a valid port number");
+		start_prometheus_metrics_server(
+			&enclave,
+			&tee_accountid,
+			shard,
+			integritee_rpc_api.clone(),
+			maybe_target_a_rpc_api.clone(),
+			maybe_target_b_rpc_api.clone(),
+			run_config.shielding_target,
+			&tokio_handle,
+			metrics_server_port,
+		);
+	}
 
 	if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain {
 		println!("[Integritee:SCV] starting block production");
@@ -699,7 +706,7 @@ fn init_provided_shard_vault<E: EnclaveBase>(
 	shielding_target: Option<ParentchainId>,
 	we_are_primary_validateer: bool,
 ) {
-	let shielding_target = shielding_target.unwrap_or(ParentchainId::Integritee);
+	let shielding_target = shielding_target.unwrap_or_default();
 	let rpc_api = match shielding_target {
 		ParentchainId::Integritee => integritee_rpc_api,
 		ParentchainId::TargetA => maybe_target_a_rpc_api

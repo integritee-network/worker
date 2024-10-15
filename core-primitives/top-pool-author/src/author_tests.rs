@@ -46,7 +46,6 @@ type TestAuthor<Filter> = Author<
 	Filter,
 	HandleStateMock,
 	KeyRepositoryMock<ShieldingCryptoMock>,
-	MetricsOCallMock,
 	TrustedCallSignedMock,
 	GetterMock,
 >;
@@ -140,13 +139,7 @@ fn create_author_with_filter<F: Filter<Value = TrustedOperationMock>>(
 	let ocall_mock = Arc::new(MetricsOCallMock::default());
 
 	(
-		Author::new(
-			top_pool.clone(),
-			filter,
-			Arc::new(state_facade),
-			shielding_key_repo,
-			ocall_mock,
-		),
+		Author::new(top_pool.clone(), filter, Arc::new(state_facade), shielding_key_repo),
 		top_pool,
 		encryption_key,
 	)

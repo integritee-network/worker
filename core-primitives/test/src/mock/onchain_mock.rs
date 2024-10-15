@@ -170,7 +170,7 @@ impl EnclaveSidechainOCallApi for OnchainMock {
 }
 
 impl EnclaveMetricsOCallApi for OnchainMock {
-	fn update_metric<Metric: Encode>(&self, _metric: Metric) -> SgxResult<()> {
+	fn update_metrics<Metric: Encode>(&self, _metrics: Vec<Metric>) -> SgxResult<()> {
 		Ok(())
 	}
 }

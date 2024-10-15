@@ -173,6 +173,7 @@ pub mod sgx {
 	use itp_sgx_crypto::{key_repository::AccessKey, StateCrypto};
 	use itp_sgx_externalities::SgxExternalitiesTrait;
 	use itp_sgx_io::{read as io_read, write as io_write};
+	use itp_time_utils::duration_now;
 	use itp_types::H256;
 	use log::*;
 	use std::{fs, marker::PhantomData, path::Path, sync::Arc};
@@ -241,14 +242,17 @@ pub mod sgx {
 			}
 
 			let state_path = self.state_dir.state_file_path(shard_identifier, state_id);
+			let started_at = duration_now();
 			trace!("loading state from: {:?}", state_path);
 			let state_encoded = self.read(&state_path)?;
+			let load_duration = duration_now() - started_at;
 
 			// State is now decrypted.
 			debug!(
-				"State loaded from {:?} with size {}B, deserializing...",
+				"State loaded from {:?} with size {}B in {:.4}s, deserializing...",
 				state_path,
-				state_encoded.len()
+				state_encoded.len(),
+				load_duration.as_secs_f32(),
 			);
 			let state = <State as SgxExternalitiesTrait>::SgxExternalitiesType::decode(
 				&mut state_encoded.as_slice(),
@@ -290,13 +294,16 @@ pub mod sgx {
 		) -> Result<Self::HashType> {
 			let state_path = self.state_dir.state_file_path(shard_identifier, state_id);
 			trace!("writing state to: {:?}", state_path);
-
+			let started_at = duration_now();
 			// Only save the state, the state diff is pruned.
 			let cyphertext = self.encrypt(state.state().encode())?;
 
 			let state_hash = state.hash();
 
 			io_write(&cyphertext, &state_path)?;
+
+			let write_duration = duration_now() - started_at;
+			trace!("state encrypted and stored in {:.4}s", write_duration.as_secs_f32());
 
 			Ok(state_hash)
 		}

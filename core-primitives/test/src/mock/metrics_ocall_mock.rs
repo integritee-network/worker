@@ -47,8 +47,8 @@ impl MetricsOCallMock {
 }
 
 impl EnclaveMetricsOCallApi for MetricsOCallMock {
-	fn update_metric<Metric: Encode>(&self, metric: Metric) -> SgxResult<()> {
-		self.metric_updates.write().unwrap().push(metric.encode());
+	fn update_metrics<Metric: Encode>(&self, metrics: Vec<Metric>) -> SgxResult<()> {
+		self.metric_updates.write().unwrap().push(metrics.encode());
 		Ok(())
 	}
 }

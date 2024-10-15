@@ -25,25 +25,25 @@ use std::{slice, sync::Arc};
 ///
 /// FFI are always unsafe
 #[no_mangle]
-pub unsafe extern "C" fn ocall_update_metric(
-	metric_ptr: *const u8,
-	metric_size: u32,
+pub unsafe extern "C" fn ocall_update_metrics(
+	metrics_ptr: *const u8,
+	metrics_size: u32,
 ) -> sgx_status_t {
-	update_metric(metric_ptr, metric_size, Bridge::get_metrics_api())
+	update_metrics(metrics_ptr, metrics_size, Bridge::get_metrics_api())
 }
 
-fn update_metric(
-	metric_ptr: *const u8,
-	metric_size: u32,
+fn update_metrics(
+	metrics_ptr: *const u8,
+	metrics_size: u32,
 	oc_api: Arc<dyn MetricsBridge>,
 ) -> sgx_status_t {
-	let metric_encoded: Vec<u8> =
-		unsafe { Vec::from(slice::from_raw_parts(metric_ptr, metric_size as usize)) };
+	let metrics_encoded: Vec<u8> =
+		unsafe { Vec::from(slice::from_raw_parts(metrics_ptr, metrics_size as usize)) };
 
-	match oc_api.update_metric(metric_encoded) {
+	match oc_api.update_metrics(metrics_encoded) {
 		Ok(_) => sgx_status_t::SGX_SUCCESS,
 		Err(e) => {
-			error!("update_metric o-call failed: {:?}", e);
+			error!("update_metrics o-call failed: {:?}", e);
 			sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	}

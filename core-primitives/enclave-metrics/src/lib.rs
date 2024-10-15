@@ -24,23 +24,34 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 extern crate sgx_tstd as std;
 
 use codec::{Decode, Encode};
+use core::time::Duration;
+use itp_types::{
+	parentchain::{BlockNumber, ParentchainId},
+	ShardIdentifier,
+};
 use std::string::String;
 use substrate_fixed::types::U32F32;
 
 // FIXME: Copied from ita-oracle because of cyclic deps. Should be removed after integritee-network/pallets#71
 pub type ExchangeRate = U32F32;
 
-#[derive(Encode, Decode, Debug)]
+#[derive(Encode, Decode, Debug, Clone)]
 pub enum EnclaveMetric {
 	SetSidechainBlockHeight(u64),
-	TopPoolSizeSet(u64),
-	TopPoolSizeIncrement,
-	TopPoolSizeDecrement,
+	TopPoolAPrioriSizeSet(u64),
+	RpcRequestsIncrement,
+	RpcTrustedCallsIncrement,
+	SidechainAuraSlotRemainingTimes(String, Duration),
+	StfStateUpdateExecutionDuration(Duration),
+	StfStateUpdateExecutedCallsCount(bool, u64),
+	StfStateSizeSet(ShardIdentifier, u64),
+	StfRuntimeTotalIssuanceSet(f64),
+	StfRuntimeParentchainProcessedBlockNumberSet(ParentchainId, BlockNumber),
 	ExchangeRateOracle(ExchangeRateOracleMetric),
 	// OracleMetric(OracleMetric<MetricsInfo>),
 }
 
-#[derive(Encode, Decode, Debug)]
+#[derive(Encode, Decode, Debug, Clone)]
 pub enum ExchangeRateOracleMetric {
 	/// Exchange Rate from CoinGecko - (Source, TradingPair, ExchangeRate)
 	ExchangeRate(String, String, ExchangeRate),
@@ -50,7 +61,7 @@ pub enum ExchangeRateOracleMetric {
 	NumberRequestsIncrement(String),
 }
 
-#[derive(Encode, Decode, Debug)]
+#[derive(Encode, Decode, Debug, Clone)]
 pub enum OracleMetric<MetricsInfo> {
 	OracleSpecificMetric(MetricsInfo),
 	ResponseTime(String, u128),

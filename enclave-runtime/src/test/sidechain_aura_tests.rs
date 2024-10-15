@@ -46,7 +46,7 @@ use itp_sgx_externalities::SgxExternalitiesDiffType;
 use itp_stf_interface::system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface};
 use itp_stf_primitives::types::{StatePayload, TrustedOperation};
 use itp_stf_state_handler::handle_state::HandleState;
-use itp_test::mock::{handle_state_mock::HandleStateMock, metrics_ocall_mock::MetricsOCallMock};
+use itp_test::mock::handle_state_mock::HandleStateMock;
 use itp_time_utils::duration_now;
 use itp_top_pool_author::{top_filter::AllowAllTopsFilter, traits::AuthorApi};
 use itp_types::{AccountId, Block as ParentchainBlock, ShardIdentifier};
@@ -104,7 +104,6 @@ pub fn produce_sidechain_block_and_import_it() {
 		AllowAllTopsFilter::<TrustedCallSigned, Getter>::new(),
 		state_handler.clone(),
 		shielding_key_repo,
-		Arc::new(MetricsOCallMock::default()),
 	));
 	let parentchain_block_import_trigger = Arc::new(TestParentchainBlockImportTrigger::default());
 	let block_importer = Arc::new(TestBlockImporter::new(
