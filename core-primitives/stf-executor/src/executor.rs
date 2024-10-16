@@ -170,11 +170,13 @@ where
 	Stf: UpdateState<
 			StateHandler::StateT,
 			<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
-		> + ParentchainPalletInstancesInterface<StateHandler::StateT, ParentchainHeader>,
+		> + ParentchainPalletInstancesInterface<
+			StateHandler::StateT,
+			ParentchainHeader,
+			Error = StfError,
+		>,
 	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
 		IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>,
-	<Stf as ParentchainPalletInstancesInterface<StateHandler::StateT, ParentchainHeader>>::Error:
-		Debug,
 	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
 		From<BTreeMap<Vec<u8>, Option<Vec<u8>>>>,
 	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
@@ -207,8 +209,7 @@ where
 					Stf::update_parentchain_target_a_block(&mut state, header.clone()),
 				ParentchainId::TargetB =>
 					Stf::update_parentchain_target_a_block(&mut state, header.clone()),
-			}
-			.map_err(|_| Error::Stf(StfError::Dispatch("update parentchain error".into())))?;
+			}?;
 			self.state_handler.write_after_mutation(state, state_lock, &shard_id)?;
 		}
 
