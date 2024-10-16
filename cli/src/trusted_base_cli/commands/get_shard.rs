@@ -32,7 +32,14 @@ use log::*;
 use sp_core::H256;
 
 #[derive(Parser)]
-pub struct GetShardCommand {}
+pub struct GetShardCommand {
+	/// also print as hex
+	#[clap(short = 'x', long = "hex")]
+	hex: bool,
+	/// also print as ASCII
+	#[clap(short = 'a', long = "ascii")]
+	ascii: bool,
+}
 
 impl GetShardCommand {
 	pub(crate) fn run(&self, cli: &Cli, _trusted_args: &TrustedCli) -> CliResult {
@@ -62,6 +69,12 @@ impl GetShardCommand {
 				CliError::WorkerRpcApi { msg: err.to_string() }
 			})?;
 		println!("{}", shard.encode().to_base58());
+		if self.hex {
+			println!("0x{}", hex::encode(shard));
+		}
+		if self.ascii {
+			println!("{}", String::from_utf8_lossy(&shard.encode()));
+		}
 		Ok(CliResultOk::H256 { hash: shard })
 	}
 }
