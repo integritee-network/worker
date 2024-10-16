@@ -199,12 +199,30 @@ where
 		let shards = self.state_handler.list_shards()?;
 		for shard_id in shards {
 			let (state_lock, mut state) = self.state_handler.load_for_mutation(&shard_id)?;
-			match Stf::update_parentchain_integritee_block(&mut state, header.clone()) {
-				Ok(_) => {
-					self.state_handler.write_after_mutation(state, state_lock, &shard_id)?;
-				},
-				Err(e) => error!("Could not update parentchain block. {:?}: {:?}", shard_id, e),
+			match parentchain_id {
+				ParentchainId::Integritee =>
+					Stf::update_parentchain_integritee_block(&mut state, header.clone()),
+				ParentchainId::TargetA =>
+					Stf::update_parentchain_target_a_block(&mut state, header.clone()),
+				ParentchainId::TargetB =>
+					Stf::update_parentchain_target_a_block(&mut state, header.clone()),
 			}
+			.and_then(|_| {
+				self.state_handler
+					.write_after_mutation(state, state_lock, &shard_id)
+					.unwrap_or_else(|e| {
+						error!("Could not write after mutation for shard {:?}: {:?}", shard_id, e);
+						Default::default()
+					});
+				Ok(())
+			})
+			.unwrap_or_else(|e| {
+				error!(
+					"Could not update parentchain {:?} block. {:?}: {:?}",
+					parentchain_id, shard_id, e
+				);
+				()
+			});
 		}
 
 		if parentchain_id != &ParentchainId::Integritee {
