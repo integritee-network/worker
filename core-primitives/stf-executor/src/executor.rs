@@ -29,6 +29,7 @@ use itp_stf_interface::{
 	parentchain_pallet::ParentchainPalletInstancesInterface, StateCallInterface, UpdateState,
 };
 use itp_stf_primitives::{
+	error::StfError,
 	traits::TrustedCallVerification,
 	types::{ShardIdentifier, TrustedOperation, TrustedOperationOrHash},
 };
@@ -169,11 +170,13 @@ where
 	Stf: UpdateState<
 			StateHandler::StateT,
 			<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
-		> + ParentchainPalletInstancesInterface<StateHandler::StateT, ParentchainHeader>,
+		> + ParentchainPalletInstancesInterface<
+			StateHandler::StateT,
+			ParentchainHeader,
+			Error = StfError,
+		>,
 	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
 		IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>,
-	<Stf as ParentchainPalletInstancesInterface<StateHandler::StateT, ParentchainHeader>>::Error:
-		Debug,
 	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
 		From<BTreeMap<Vec<u8>, Option<Vec<u8>>>>,
 	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
@@ -199,12 +202,15 @@ where
 		let shards = self.state_handler.list_shards()?;
 		for shard_id in shards {
 			let (state_lock, mut state) = self.state_handler.load_for_mutation(&shard_id)?;
-			match Stf::update_parentchain_integritee_block(&mut state, header.clone()) {
-				Ok(_) => {
-					self.state_handler.write_after_mutation(state, state_lock, &shard_id)?;
-				},
-				Err(e) => error!("Could not update parentchain block. {:?}: {:?}", shard_id, e),
-			}
+			match parentchain_id {
+				ParentchainId::Integritee =>
+					Stf::update_parentchain_integritee_block(&mut state, header.clone()),
+				ParentchainId::TargetA =>
+					Stf::update_parentchain_target_a_block(&mut state, header.clone()),
+				ParentchainId::TargetB =>
+					Stf::update_parentchain_target_a_block(&mut state, header.clone()),
+			}?;
+			self.state_handler.write_after_mutation(state, state_lock, &shard_id)?;
 		}
 
 		if parentchain_id != &ParentchainId::Integritee {
