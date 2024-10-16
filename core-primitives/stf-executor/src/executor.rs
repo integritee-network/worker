@@ -29,6 +29,7 @@ use itp_stf_interface::{
 	parentchain_pallet::ParentchainPalletInstancesInterface, StateCallInterface, UpdateState,
 };
 use itp_stf_primitives::{
+	error::StfError,
 	traits::TrustedCallVerification,
 	types::{ShardIdentifier, TrustedOperation, TrustedOperationOrHash},
 };
@@ -207,22 +208,8 @@ where
 				ParentchainId::TargetB =>
 					Stf::update_parentchain_target_a_block(&mut state, header.clone()),
 			}
-			.and_then(|_| {
-				self.state_handler
-					.write_after_mutation(state, state_lock, &shard_id)
-					.unwrap_or_else(|e| {
-						error!("Could not write after mutation for shard {:?}: {:?}", shard_id, e);
-						Default::default()
-					});
-				Ok(())
-			})
-			.unwrap_or_else(|e| {
-				error!(
-					"Could not update parentchain {:?} block. {:?}: {:?}",
-					parentchain_id, shard_id, e
-				);
-				()
-			});
+			.map_err(|_| Error::Stf(StfError::Dispatch("update parentchain error".into())))?;
+			self.state_handler.write_after_mutation(state, state_lock, &shard_id)?;
 		}
 
 		if parentchain_id != &ParentchainId::Integritee {
