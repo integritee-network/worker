@@ -38,7 +38,7 @@ mod commands;
 
 #[derive(Subcommand)]
 pub enum BaseCommand {
-	/// query parentchain balance for AccountId
+	/// query parentchain free balance for AccountId
 	Balance(BalanceCommand),
 
 	/// generates a new account for the integritee chain in your local keystore

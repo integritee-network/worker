@@ -40,7 +40,7 @@ pub enum TrustedBaseCommand {
 	/// generates a new incognito account for the given shard
 	NewAccount,
 
-	/// lists all incognito accounts in a given shard
+	/// lists all incognito accounts in local keystore in a given shard
 	ListAccounts,
 
 	/// send funds from one incognito account to another
