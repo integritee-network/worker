@@ -14,7 +14,6 @@
 	limitations under the License.
 
 */
-use crate::ENCLAVE_ACCOUNT_KEY;
 use codec::{Decode, Encode};
 use ita_sgx_runtime::{ParentchainIntegritee, ParentchainTargetA, ParentchainTargetB};
 use itp_stf_interface::{BlockMetadata, ShardCreationInfo};
@@ -85,9 +84,7 @@ pub fn account_key_hash<AccountId: Encode>(account: &AccountId) -> Vec<u8> {
 	storage_map_key("System", "Account", account, &StorageHasher::Blake2_128Concat)
 }
 
-pub fn enclave_signer_account<AccountId: Decode>() -> AccountId {
-	get_storage_value("Sudo", ENCLAVE_ACCOUNT_KEY).expect("No enclave account")
-}
+pub fn enclave_signer_account<AccountId: Decode>() -> AccountId {}
 
 /// Ensures an account is a registered enclave account.
 pub fn ensure_enclave_signer_account<AccountId: Encode + Decode + PartialEq>(

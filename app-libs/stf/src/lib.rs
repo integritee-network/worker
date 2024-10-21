@@ -46,8 +46,6 @@ pub mod stf_sgx_tests;
 pub mod test_genesis;
 pub mod trusted_call;
 
-pub(crate) const ENCLAVE_ACCOUNT_KEY: &str = "Enclave_Account_Key";
-
 // fixme: this if a temporary hack only. double-check decimals for target chain
 // as long as it is hard-coded, needs to be reasonable for 10 (Paseo) and 12 decimals
 pub const STF_TX_FEE: Balance = 100_000_000;

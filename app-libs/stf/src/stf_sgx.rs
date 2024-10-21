@@ -19,7 +19,7 @@
 use crate::test_genesis::test_genesis_setup;
 use crate::{
 	helpers::{enclave_signer_account, get_shard_vaults, shard_creation_info, shard_vault},
-	Stf, ENCLAVE_ACCOUNT_KEY,
+	Stf,
 };
 use codec::{Decode, Encode};
 use frame_support::traits::{OnTimestampSet, OriginTrait, UnfilteredDispatchable};
@@ -80,17 +80,6 @@ where
 
 		#[cfg(feature = "test")]
 		test_genesis_setup(&mut state);
-
-		state.execute_with(|| {
-			sp_io::storage::set(
-				&storage_value_key("Sudo", ENCLAVE_ACCOUNT_KEY),
-				&enclave_account.encode(),
-			);
-
-			if let Err(e) = create_enclave_self_account::<Runtime, AccountId>(enclave_account) {
-				error!("Failed to initialize the enclave signer account: {:?}", e);
-			}
-		});
 
 		trace!("Returning updated state: {:?}", state);
 		state
@@ -213,10 +202,6 @@ where
 
 	fn get_root(state: &mut State) -> Self::AccountId {
 		state.execute_with(|| pallet_sudo::Pallet::<Runtime>::key().expect("No root account"))
-	}
-
-	fn get_enclave_account(state: &mut State) -> Self::AccountId {
-		state.execute_with(enclave_signer_account::<Self::AccountId>)
 	}
 }
 

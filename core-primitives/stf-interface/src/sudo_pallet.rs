@@ -21,7 +21,4 @@ pub trait SudoPalletInterface<State> {
 
 	/// Get the root account for a given state.
 	fn get_root(state: &mut State) -> Self::AccountId;
-
-	/// Get the enclave account for a given state.
-	fn get_enclave_account(state: &mut State) -> Self::AccountId;
 }

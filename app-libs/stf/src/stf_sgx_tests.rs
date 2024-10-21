@@ -39,7 +39,6 @@ pub fn enclave_account_initialization_works() {
 	let account_data = StfState::get_account_data(&mut state, &enclave_account);
 
 	assert_eq!(0, StfState::get_account_nonce(&mut state, &enclave_account));
-	assert_eq!(enclave_account, StfState::get_enclave_account(&mut state));
 	assert_eq!(1000, account_data.free);
 }
 
