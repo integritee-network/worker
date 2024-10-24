@@ -17,13 +17,21 @@
 */
 
 use crate::ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, WorkerOnChainBridge};
+use chrono::Local;
 use codec::{Decode, Encode};
 use itp_api_client_types::ParentchainApi;
 use itp_node_api::node_api_factory::CreateNodeApi;
 use itp_types::{parentchain::ParentchainId, WorkerRequest, WorkerResponse};
 use log::*;
+use sp_core::blake2_256;
 use sp_runtime::OpaqueExtrinsic;
-use std::{sync::Arc, vec::Vec};
+use std::{
+	fs::{create_dir_all, File},
+	io::{self, Write},
+	path::Path,
+	sync::Arc,
+	vec::Vec,
+};
 use substrate_api_client::{
 	ac_primitives::serde_impls::StorageKey, GetStorage, SubmitAndWatch, SubmitExtrinsic, XtStatus,
 };
@@ -32,6 +40,7 @@ pub struct WorkerOnChainOCall<F> {
 	integritee_api_factory: Arc<F>,
 	target_a_parentchain_api_factory: Option<Arc<F>>,
 	target_b_parentchain_api_factory: Option<Arc<F>>,
+	log_dir: Arc<Path>,
 }
 
 impl<F> WorkerOnChainOCall<F> {
@@ -39,11 +48,13 @@ impl<F> WorkerOnChainOCall<F> {
 		integritee_api_factory: Arc<F>,
 		target_a_parentchain_api_factory: Option<Arc<F>>,
 		target_b_parentchain_api_factory: Option<Arc<F>>,
+		log_dir: Arc<Path>,
 	) -> Self {
 		WorkerOnChainOCall {
 			integritee_api_factory,
 			target_a_parentchain_api_factory,
 			target_b_parentchain_api_factory,
+			log_dir,
 		}
 	}
 }
@@ -132,6 +143,12 @@ where
 				extrinsics.len(),
 				parentchain_id, await_each_inlcusion
 			);
+			log_extrinsics_to_file(self.log_dir.clone(), parentchain_id, extrinsics.clone())
+				.map_err(|e| {
+					error!("Error logging extrinsic to disk: {}", e);
+					e
+				})
+				.unwrap_or_default();
 			let api = self.create_api(parentchain_id)?;
 			for call in extrinsics.into_iter() {
 				if await_each_inlcusion {
@@ -158,6 +175,25 @@ where
 		}
 		status
 	}
+}
+
+fn log_extrinsics_to_file(
+	log_dir: Arc<Path>,
+	parentchain_id: ParentchainId,
+	extrinsics: Vec<OpaqueExtrinsic>,
+) -> io::Result<()> {
+	let log_dir = log_dir.join(format!("log-extrinsics-to-{}", parentchain_id));
+	create_dir_all(&log_dir)?;
+	let timestamp = Local::now().format("%Y%m%d-%H%M%S-%3f").to_string();
+	let file_name = format!("extrinsics-{}.hex", timestamp);
+	let file_path = log_dir.join(file_name);
+
+	// Create the file in the specified directory
+	let mut file = File::create(file_path)?;
+	for xt in extrinsics {
+		writeln!(file, "0x{}", hex::encode(xt.encode()))?;
+	}
+	Ok(())
 }
 
 #[cfg(test)]

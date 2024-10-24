@@ -1,6 +1,6 @@
 [package]
 name = "integritee-service"
-version = "0.14.3"
+version = "0.14.4"
 authors = ["Integritee AG <hello@integritee.network>"]
 build = "build.rs"
 edition = "2021"
@@ -76,6 +76,7 @@ sp-consensus-grandpa = { git = "https://github.com/paritytech/substrate.git", br
 sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+chrono = "0.4.26"
 
 [features]
 default = []

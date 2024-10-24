@@ -15,7 +15,6 @@
 	limitations under the License.
 
 */
-
 use crate::{
 	globals::tokio_handle::GetTokioHandle,
 	ocall_bridge::{
@@ -38,7 +37,7 @@ use itp_node_api::node_api_factory::CreateNodeApi;
 use its_peer_fetch::FetchBlocksFromPeer;
 use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use its_storage::BlockStorage;
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 
 /// Concrete implementation, should be moved out of the OCall Bridge, into the worker
 /// since the OCall bridge itself should not know any concrete types to ensure
@@ -63,6 +62,7 @@ pub struct OCallBridgeComponentFactory<
 	peer_block_fetcher: Arc<PeerBlockFetcher>,
 	tokio_handle: Arc<TokioHandle>,
 	metrics_receiver: Arc<MetricsReceiver>,
+	log_dir: Arc<Path>,
 }
 
 impl<
@@ -98,6 +98,7 @@ impl<
 		peer_block_fetcher: Arc<PeerBlockFetcher>,
 		tokio_handle: Arc<TokioHandle>,
 		metrics_receiver: Arc<MetricsReceiver>,
+		log_dir: Arc<Path>,
 	) -> Self {
 		OCallBridgeComponentFactory {
 			integritee_rpc_api_factory,
@@ -110,6 +111,7 @@ impl<
 			peer_block_fetcher,
 			tokio_handle,
 			metrics_receiver,
+			log_dir,
 		}
 	}
 }
@@ -133,7 +135,8 @@ impl<
 		PeerBlockFetcher,
 		TokioHandle,
 		MetricsReceiver,
-	> where
+	>
+where
 	NodeApi: CreateNodeApi + 'static,
 	Broadcaster: BroadcastBlocks + 'static,
 	EnclaveApi: RemoteAttestationCallBacks + 'static,
@@ -162,6 +165,7 @@ impl<
 			self.integritee_rpc_api_factory.clone(),
 			self.target_a_parentchain_rpc_api_factory.clone(),
 			self.target_b_parentchain_rpc_api_factory.clone(),
+			self.log_dir.clone(),
 		))
 	}
 
