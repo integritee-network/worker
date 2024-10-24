@@ -25,11 +25,11 @@ use codec::Encode;
 use core::iter::Iterator;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_storage::{Error as StorageError, StorageProof, StorageProofChecker};
-use itp_types::parentchain::{IdentifyParentchain, ParentchainId};
+use itp_types::parentchain::{Hash, IdentifyParentchain, ParentchainId};
 use log::error;
 use sp_runtime::{
 	generic::SignedBlock,
-	traits::{Block as ParentchainBlockTrait, Header as HeaderTrait},
+	traits::{Block as ParentchainBlockTrait, Block as BlockT, Header as HeaderTrait},
 	Justifications, OpaqueExtrinsic,
 };
 use std::{boxed::Box, fmt, sync::Arc, vec::Vec};
@@ -42,11 +42,15 @@ pub struct LightValidation<Block: ParentchainBlockTrait, OcallApi> {
 	finality: Arc<Box<dyn Finality<Block> + Sync + Send + 'static>>,
 }
 
-impl<Block: ParentchainBlockTrait, OcallApi> IdentifyParentchain
-	for LightValidation<Block, OcallApi>
+impl<Block, OcallApi> IdentifyParentchain for LightValidation<Block, OcallApi>
+where
+	Block: BlockT<Hash = Hash> + ParentchainBlockTrait,
 {
 	fn parentchain_id(&self) -> ParentchainId {
 		self.parentchain_id
+	}
+	fn genesis_hash(&self) -> Option<Hash> {
+		self.light_validation_state.genesis_hash().ok()
 	}
 }
 

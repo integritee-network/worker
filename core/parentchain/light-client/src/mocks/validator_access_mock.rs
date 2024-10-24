@@ -27,7 +27,7 @@ use crate::{
 	mocks::validator_mock::ValidatorMock,
 };
 use itp_types::{
-	parentchain::{IdentifyParentchain, ParentchainId},
+	parentchain::{Hash, IdentifyParentchain, ParentchainId},
 	Block,
 };
 
@@ -62,5 +62,8 @@ impl ValidatorAccess<Block> for ValidatorAccessMock {
 impl IdentifyParentchain for ValidatorAccessMock {
 	fn parentchain_id(&self) -> ParentchainId {
 		ParentchainId::Integritee
+	}
+	fn genesis_hash(&self) -> Option<Hash> {
+		Some(Hash::default())
 	}
 }

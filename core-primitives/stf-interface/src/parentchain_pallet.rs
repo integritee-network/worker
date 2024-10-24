@@ -15,7 +15,7 @@
 
 */
 
-use itp_types::parentchain::{AccountId, ParentchainId};
+use itp_types::parentchain::{AccountId, Hash, ParentchainId};
 
 /// Interface trait of the parentchain pallet.
 pub trait ParentchainPalletInstancesInterface<State, ParentchainHeader> {
@@ -48,6 +48,12 @@ pub trait ParentchainPalletInstancesInterface<State, ParentchainHeader> {
 	fn set_creation_block(
 		state: &mut State,
 		header: ParentchainHeader,
+		parentchain_id: ParentchainId,
+	) -> Result<(), Self::Error>;
+
+	fn set_genesis_hash(
+		state: &mut State,
+		genesis_hash: Hash,
 		parentchain_id: ParentchainId,
 	) -> Result<(), Self::Error>;
 
