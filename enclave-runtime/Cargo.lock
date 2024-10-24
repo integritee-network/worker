@@ -2367,6 +2367,7 @@ name = "itp-types"
 version = "0.9.0"
 dependencies = [
  "enclave-bridge-primitives",
+ "frame-support",
  "frame-system",
  "itp-sgx-runtime-primitives",
  "itp-stf-primitives",
