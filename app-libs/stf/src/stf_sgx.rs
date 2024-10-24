@@ -38,7 +38,7 @@ use itp_stf_interface::{
 };
 use itp_stf_primitives::{error::StfError, traits::TrustedCallVerification};
 use itp_storage::storage_value_key;
-use itp_types::parentchain::{AccountId, ParentchainCall, ParentchainId};
+use itp_types::parentchain::{AccountId, Hash, ParentchainCall, ParentchainId};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
 use sp_runtime::traits::StaticLookup;
@@ -280,7 +280,7 @@ impl<TCS, G, State, Runtime, ParentchainHeader>
 	ParentchainPalletInstancesInterface<State, ParentchainHeader> for Stf<TCS, G, State, Runtime>
 where
 	State: SgxExternalitiesTrait,
-	Runtime: frame_system::Config<Header = ParentchainHeader, AccountId = AccountId>
+	Runtime: frame_system::Config<Header = ParentchainHeader, AccountId = AccountId, Hash = Hash>
 		+ pallet_parentchain::Config<ParentchainInstanceIntegritee>
 		+ pallet_parentchain::Config<ParentchainInstanceTargetA>
 		+ pallet_parentchain::Config<ParentchainInstanceTargetB>,
@@ -427,6 +427,40 @@ where
 			.map_err(|e| {
 				Self::Error::Dispatch(format!("Init shard vault account error: {:?}", e.error))
 			}),
+		})?;
+		Ok(())
+	}
+
+	fn set_genesis_hash(
+		state: &mut State,
+		genesis_hash: Hash,
+		parentchain_id: ParentchainId,
+	) -> Result<(), Self::Error> {
+		state.execute_with(|| match parentchain_id {
+			ParentchainId::Integritee => pallet_parentchain::Call::<
+				Runtime,
+				ParentchainInstanceIntegritee,
+			>::init_parentchain_genesis_hash {
+				genesis: genesis_hash,
+			}
+			.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
+			.map_err(|e| Self::Error::Dispatch(format!("Init genesis hash error: {:?}", e.error))),
+			ParentchainId::TargetA => pallet_parentchain::Call::<
+				Runtime,
+				ParentchainInstanceTargetA,
+			>::init_parentchain_genesis_hash {
+				genesis: genesis_hash,
+			}
+			.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
+			.map_err(|e| Self::Error::Dispatch(format!("Init genesis hash error: {:?}", e.error))),
+			ParentchainId::TargetB => pallet_parentchain::Call::<
+				Runtime,
+				ParentchainInstanceTargetB,
+			>::init_parentchain_genesis_hash {
+				genesis: genesis_hash,
+			}
+			.dispatch_bypass_filter(Runtime::RuntimeOrigin::root())
+			.map_err(|e| Self::Error::Dispatch(format!("Init genesis hash error: {:?}", e.error))),
 		})?;
 		Ok(())
 	}

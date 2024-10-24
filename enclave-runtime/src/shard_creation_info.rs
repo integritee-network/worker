@@ -23,12 +23,17 @@ use crate::{
 use codec::{Decode, Encode};
 use itp_component_container::ComponentGetter;
 
+use crate::utils::{
+	get_validator_accessor_from_integritee_solo_or_parachain,
+	get_validator_accessor_from_target_a_solo_or_parachain,
+	get_validator_accessor_from_target_b_solo_or_parachain,
+};
 use itp_stf_interface::{
 	parentchain_pallet::ParentchainPalletInstancesInterface, ShardCreationInfo, ShardCreationQuery,
 };
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_types::{
-	parentchain::{Header, ParentchainId},
+	parentchain::{Hash, Header, IdentifyParentchain, ParentchainId},
 	ShardIdentifier,
 };
 use itp_utils::write_slice_and_whitespace_pad;
@@ -100,14 +105,29 @@ fn init_shard_creation_parentchain_header_internal(
 	};
 
 	let (state_lock, mut state) = state_handler.load_for_mutation(&shard)?;
+
 	EnclaveStf::set_creation_block(&mut state, header, parentchain_id)
 		.map_err(|e| Error::Stf(e.to_string()))?;
+
+	let genesis_hash = get_genesis_hash(parentchain_id)?;
+	EnclaveStf::set_genesis_hash(&mut state, genesis_hash, parentchain_id)
+		.map_err(|e| Error::Stf(e.to_string()))?;
+
 	state_handler.write_after_mutation(state, state_lock, &shard)?;
 
 	shard_config::init_shard_config(shard)?;
 	Ok(())
 }
 
+fn get_genesis_hash(parentchain_id: ParentchainId) -> EnclaveResult<Hash> {
+	let va = match parentchain_id {
+		ParentchainId::Integritee => get_validator_accessor_from_integritee_solo_or_parachain(),
+		ParentchainId::TargetA => get_validator_accessor_from_target_a_solo_or_parachain(),
+		ParentchainId::TargetB => get_validator_accessor_from_target_b_solo_or_parachain(),
+	}?;
+	va.genesis_hash()
+		.ok_or_else(|| Error::Other("genesis hash missing for parentchain".into()))
+}
 /// reads the shard vault account id form state if it has been initialized previously
 pub(crate) fn get_shard_creation_info_internal(
 	shard: ShardIdentifier,

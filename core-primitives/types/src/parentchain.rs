@@ -91,6 +91,7 @@ impl std::fmt::Display for ParentchainId {
 
 pub trait IdentifyParentchain {
 	fn parentchain_id(&self) -> ParentchainId;
+	fn genesis_hash(&self) -> Option<Hash>;
 }
 
 pub trait FilterEvents {

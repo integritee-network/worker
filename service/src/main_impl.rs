@@ -778,11 +778,12 @@ where
 	// TODO: #1451: Fix api-client type hacks
 	let head = Header::decode(&mut api_head.encode().as_slice())
 		.expect("Can decode previously encoded header; qed");
-	// we ignore failure
-	let _ = enclave.init_shard_creation_parentchain_header(shard, &parentchain_id, &head);
 
 	let (parentchain_handler, last_synched_header) =
 		init_parentchain(enclave, &node_api, tee_account_id, parentchain_id, shard);
+
+	// we ignore failure
+	let _ = enclave.init_shard_creation_parentchain_header(shard, &parentchain_id, &head);
 
 	if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
 		println!(

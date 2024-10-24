@@ -27,7 +27,7 @@ use codec::{Decode, Encode};
 use core::{fmt::Debug, marker::PhantomData};
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_sgx_io::{seal, unseal};
-use itp_types::parentchain::{IdentifyParentchain, ParentchainId};
+use itp_types::parentchain::{Hash, IdentifyParentchain, ParentchainId};
 use log::*;
 use sp_runtime::traits::{Block, Header};
 use std::{
@@ -92,6 +92,9 @@ impl<B, L> LightClientStateSeal<B, L> {
 impl<B, L> IdentifyParentchain for LightClientStateSeal<B, L> {
 	fn parentchain_id(&self) -> ParentchainId {
 		self.parentchain_id
+	}
+	fn genesis_hash(&self) -> Option<Hash> {
+		None
 	}
 }
 
@@ -193,6 +196,9 @@ impl<B, LightClientState> LightClientStateSealSync<B, LightClientState> {
 impl<B, LightClientState> IdentifyParentchain for LightClientStateSealSync<B, LightClientState> {
 	fn parentchain_id(&self) -> ParentchainId {
 		self.seal.parentchain_id
+	}
+	fn genesis_hash(&self) -> Option<Hash> {
+		None
 	}
 }
 
