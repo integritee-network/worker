@@ -2557,7 +2557,7 @@ dependencies = [
 
 [[package]]
 name = "integritee-cli"
-version = "0.14.3"
+version = "0.14.4"
 dependencies = [
  "array-bytes 6.1.0",
  "base58",
@@ -2607,11 +2607,12 @@ dependencies = [
 
 [[package]]
 name = "integritee-service"
-version = "0.14.3"
+version = "0.14.4"
 dependencies = [
  "anyhow",
  "async-trait",
  "base58",
+ "chrono 0.4.26",
  "clap 2.34.0",
  "dirs",
  "enclave-bridge-primitives",
@@ -2632,6 +2633,7 @@ dependencies = [
  "itp-enclave-metrics",
  "itp-node-api",
  "itp-settings",
+ "itp-sgx-temp-dir",
  "itp-stf-interface",
  "itp-storage",
  "itp-time-utils",
@@ -3648,6 +3650,7 @@ name = "itp-types"
 version = "0.9.0"
 dependencies = [
  "enclave-bridge-primitives",
+ "frame-support",
  "frame-system",
  "itp-sgx-runtime-primitives",
  "itp-stf-primitives",

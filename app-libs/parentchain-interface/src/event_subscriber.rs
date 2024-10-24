@@ -14,9 +14,9 @@
 	limitations under the License.
 
 */
-
 use itp_api_client_types::ParentchainApi;
-use itp_types::parentchain::{AddedSgxEnclave, BalanceTransfer, ParentchainId};
+use itp_types::parentchain::{AddedSgxEnclave, BalanceTransfer, ExtrinsicFailed, ParentchainId};
+use sp_runtime::DispatchError;
 use substrate_api_client::SubscribeEvents;
 
 pub fn subscribe_to_parentchain_events(api: &ParentchainApi, parentchain_id: ParentchainId) {
@@ -28,7 +28,29 @@ pub fn subscribe_to_parentchain_events(api: &ParentchainApi, parentchain_id: Par
 		for event in events.iter() {
 			let event = event.unwrap();
 			match event.pallet_name() {
-				"System" => continue,
+				"System" => match event.variant_name() {
+					"ExtrinsicFailed" =>
+						if let Ok(Some(ev)) = event.as_event::<ExtrinsicFailed>() {
+							// filter only modules of potential interest.
+							// TODO: filter only extrinsics from enclave and use metadata to enrich message
+							match ev.dispatch_error {
+								DispatchError::Module(me) => match me.index {
+									7 => (),  // Proxy
+									9 => (),  // Utility
+									10 => (), // Balances
+									50 => (), // Teerex
+									52 => (), // Teeracle
+									53 => (), // Sidechain
+									54 => (), // EnclaveBridge
+									_ => continue,
+								},
+								DispatchError::BadOrigin => (),
+								_ => continue,
+							}
+							println!("[L1Event:{}] {:?}", parentchain_id, ev);
+						},
+					_ => continue,
+				},
 				"ParaInclusion" => continue,
 				"MessageQueue" => continue,
 				"TransactionPayment" => continue,

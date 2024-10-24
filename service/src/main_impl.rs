@@ -170,6 +170,7 @@ pub(crate) fn main() {
 		peer_sidechain_block_fetcher,
 		tokio_handle.clone(),
 		enclave_metrics_receiver,
+		config.data_dir().into(),
 	)));
 
 	let quoting_enclave_target_info = match enclave.qe_get_target_info() {

@@ -19,14 +19,20 @@ use crate::{OpaqueCall, PalletString, ShardIdentifier};
 use alloc::{format, vec::Vec};
 use codec::{Decode, Encode};
 use core::fmt::Debug;
+use frame_support::pallet_prelude::Pays;
 use itp_stf_primitives::traits::{IndirectExecutor, TrustedCallVerification};
 use itp_utils::stringify::account_id_to_string;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 pub use sidechain_primitives::SidechainBlockConfirmation;
 use sp_core::bounded::alloc;
-use sp_runtime::{generic::Header as HeaderG, traits::BlakeTwo256, MultiAddress, MultiSignature};
-use substrate_api_client::ac_node_api::StaticEvent;
+use sp_runtime::{
+	generic::Header as HeaderG, traits::BlakeTwo256, DispatchError, MultiAddress, MultiSignature,
+};
+use substrate_api_client::{
+	ac_node_api::StaticEvent,
+	ac_primitives::{DispatchClass, Weight},
+};
 use teeracle_primitives::ExchangeRate;
 use teerex_primitives::{SgxAttestationMethod, SgxStatus};
 pub type StorageProof = Vec<Vec<u8>>;
@@ -102,8 +108,20 @@ impl StaticEvent for ExtrinsicSuccess {
 	const EVENT: &'static str = "ExtrinsicSuccess";
 }
 
-#[derive(Encode, Decode)]
-pub struct ExtrinsicFailed;
+#[derive(Encode, Decode, Debug)]
+pub struct DispatchEventInfo {
+	/// Weight of this transaction.
+	pub weight: Weight,
+	/// Class of this transaction.
+	pub class: DispatchClass,
+	/// Does this transaction pay fees.
+	pub pays_fee: Pays,
+}
+#[derive(Encode, Decode, Debug)]
+pub struct ExtrinsicFailed {
+	pub dispatch_error: DispatchError,
+	pub dispatch_info: DispatchEventInfo,
+}
 
 impl StaticEvent for ExtrinsicFailed {
 	const PALLET: &'static str = "System";
