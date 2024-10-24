@@ -135,8 +135,7 @@ impl<
 		PeerBlockFetcher,
 		TokioHandle,
 		MetricsReceiver,
-	>
-where
+	> where
 	NodeApi: CreateNodeApi + 'static,
 	Broadcaster: BroadcastBlocks + 'static,
 	EnclaveApi: RemoteAttestationCallBacks + 'static,

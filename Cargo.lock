@@ -2633,6 +2633,7 @@ dependencies = [
  "itp-enclave-metrics",
  "itp-node-api",
  "itp-settings",
+ "itp-sgx-temp-dir",
  "itp-stf-interface",
  "itp-storage",
  "itp-time-utils",

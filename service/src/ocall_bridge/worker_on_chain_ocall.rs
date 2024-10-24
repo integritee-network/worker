@@ -204,6 +204,7 @@ mod tests {
 		api_client::ParentchainApi,
 		node_api_factory::{CreateNodeApi, Result as NodeApiResult},
 	};
+	use itp_sgx_temp_dir::TempDir;
 	use mockall::mock;
 
 	#[test]
@@ -216,8 +217,9 @@ mod tests {
 		}
 
 		let mock_node_api_factory = Arc::new(MockNodeApiFactory::new());
-
-		let on_chain_ocall = WorkerOnChainOCall::new(mock_node_api_factory, None, None);
+		let temp_dir = TempDir::new().unwrap();
+		let on_chain_ocall =
+			WorkerOnChainOCall::new(mock_node_api_factory, None, None, temp_dir.path().into());
 
 		let response = on_chain_ocall
 			.worker_request(Vec::<u8>::new().encode(), ParentchainId::Integritee.encode())
